@@ -10,7 +10,7 @@
       <span id="meshLabel" style="z-index: 100; font-size: 20px; color: #aaa; position: absolute; left: 10px; top: 50px;">MESH: </span>
       <span id="facesLabel" style="z-index: 100; font-size: 20px; color: #aaa; position: absolute; left: 10px; top: 70px;">FACES: </span>
       <button id="fullScreenBtn" style="cursor: pointer; text-decoration: underline; font-size: 18px; color: #aaa; position: absolute; left: 10px; top: 160px;" @click="this.requestFullscreen()">Fullscreen</button>
-     <!-- <button id="freezeBtn" style="cursor: pointer; text-decoration: underline; font-size: 18px; color: #aaa; position: absolute; left: 10px; top: 220px;" @click="this.freezeActiveMesh()">Freeze</button> -->
+      <button id="freezeBtn" style="cursor: pointer; text-decoration: underline; font-size: 18px; color: #aaa; position: absolute; left: 10px; top: 220px;" @click="this.freezeActiveMesh()">Freeze</button>
   </div>
 </template>
 

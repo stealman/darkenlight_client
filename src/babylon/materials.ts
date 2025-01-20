@@ -28,6 +28,7 @@ export const Materials = {
     getBasicMaterial(scene: Scene, name: string, pathToDiffuse: string, hasAlpha: boolean = false, invertY: boolean = true): StandardMaterial {
         const mat = new StandardMaterial(name, scene)
         mat.emissiveColor = this.sceneEmissiveColor
+        mat.specularColor = Color3.Black()
 
         const diffuseTexture = new Texture(pathToDiffuse, scene, {invertY: invertY})
         diffuseTexture.hasAlpha = hasAlpha

@@ -1,6 +1,7 @@
 import { AnimationGroup, AssetContainer, Mesh, Skeleton, Vector3 } from '@babylonjs/core'
 import { BabylonUtils } from '@/babylon/utils'
 import { Renderer } from '@/babylon/renderer'
+import { Settings } from '@/settings/settings'
 
 export class MonsterTemplate {
     id: number
@@ -66,11 +67,13 @@ export class MonsterTemplate {
 
         clone.node.getChildMeshes().forEach(mesh => {
             clone.mesh = mesh as Mesh
+            clone.mesh.alwaysSelectAsActiveMesh = true
         })
 
         clone.skeleton = entries.skeletons[0]
         clone.walkSkeleton = this.assetContainer!.skeletons[0]
         clone.mesh!.skeleton = entries.skeletons[0]
+
 
         clone.animation = entries.animationGroups[0]
         clone.animation.play(false)
@@ -97,6 +100,13 @@ export class MonsterTemplate {
         clone.node.setEnabled(true)
         clone.mesh.alwaysSelectAsActiveMesh = true
         clone.mesh.setEnabled(true)
+    }
+
+    freeClone (clone: MonsterTemplate) {
+        Renderer.unfreezeActiveMeshes()
+        this.clonesToReuse.push(clone)
+        this.clonesAct = this.clonesAct.filter(c => c !== clone)
+        this.clonesInact = this.clonesInact.filter(c => c !== clone)
     }
 
     getMaterialName (): string {

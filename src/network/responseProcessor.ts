@@ -16,6 +16,7 @@ export const ResponseProcessor = {
                 case 4: this.monsterMove(msg.d); break
                 case 6: this.charMove(msg.d); break
                 case 7: this.processWorldData(msg.d); break
+                case 8: this.removeMonster(msg.d); break
             }
         }
     },
@@ -28,7 +29,7 @@ export const ResponseProcessor = {
     },
 
     addMonster(data) {
-        MonsterManager.addMonster(data.id, data.tp, { x: data.x, z: data.z }, data.hp)
+        MonsterManager.addMonster(data.id, data.tp, { x: data.x, z: data.z }, data.hp, data.mv)
     },
 
     monsterMove(data) {
@@ -50,6 +51,9 @@ export const ResponseProcessor = {
         data.chunksAround.forEach(chunk => {
             TreeManager.consumeTrees(chunk.trees)
         })
-        console.log(data)
+    },
+
+    removeMonster(data) {
+        MonsterManager.removeMonster(data.id)
     }
 }

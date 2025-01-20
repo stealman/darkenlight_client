@@ -98,4 +98,8 @@ export class Monster {
         }
         this.insideView = visible
     }
+
+    removeMonster () {
+        this.model.removeFromScene()
+    }
 }

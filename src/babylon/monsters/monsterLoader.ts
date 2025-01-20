@@ -28,10 +28,12 @@ export const MonsterLoader = {
         const model = result.meshes[0];
         model.scaling = mobType.scale;
         model.rotation = Vector3.Zero()
+        model.alwaysSelectAsActiveMesh = true
 
         const material = Materials.getBasicMaterial(this.scene!, mobType.getMaterialName(), "/assets/models/monsters/" + mobType.textureName, true, false)
         model.getChildMeshes().forEach(mesh => {
             mesh.material = material;
+            mesh.alwaysSelectAsActiveMesh = true
             if (Settings.shadows) {
                  mesh.receiveShadows = true;
             }

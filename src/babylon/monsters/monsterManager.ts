@@ -15,7 +15,7 @@ export const MonsterManager = {
         await MonsterLoader.initialize(scene)
     },
 
-    addMonster (id: number, type: number, position: { x: number, z: number }, hp: number) {
+    addMonster (id: number, type: number, position: { x: number, z: number }, hp: number, mv: number[] | undefined) {
         type = Utils.getRandomFromTo(1, 3)
 
         if (this.monsters.has(id)) {
@@ -37,6 +37,19 @@ export const MonsterManager = {
             }
 
             this.monsters.set(id, monster)
+        }
+
+        if (mv?.length === 3) {
+            this.monsterMove(id, { x: position.x, z: position.z }, { x: mv[0], z: mv[1] }, mv[2])
+        }
+    },
+
+    removeMonster (id: number) {
+        if (this.monsters.has(id)) {
+            this.visibleMonsters.delete(id)
+            this.monsters.get(id).removeMonster()
+            this.monsters.delete(id)
+            console.log('Monster removed')
         }
     },
 

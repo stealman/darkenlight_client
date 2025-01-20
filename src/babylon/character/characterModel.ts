@@ -11,6 +11,7 @@ import { Materials } from '@/babylon/materials'
 import { WearableManager } from '@/babylon/item/wearableManager'
 import { PlayerData } from '@/data/playerData'
 import { AnimTransition } from '@/babylon/animations/animation'
+import { Renderer } from '@/babylon/renderer'
 
 export class CharacterModel {
     playerData: PlayerData
@@ -62,10 +63,6 @@ export class CharacterModel {
             const material = Materials.getBasicMaterial(scene, "steveMaterial", "/assets/models/steve/steve.jpg", false, false)
             this.model.getChildMeshes().forEach((mesh) => {
                 mesh.material = material
-                if (Settings.shadows) {
-                    // Renderer.shadow.addShadowCaster(mesh)
-                    mesh.receiveShadows = true
-                }
             });
 
             // Process animations

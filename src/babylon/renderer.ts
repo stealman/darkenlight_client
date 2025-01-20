@@ -68,6 +68,7 @@ export const Renderer = {
             this.shadow.usePercentageCloserFiltering = true;
             this.shadow.filteringQuality = 2;
             this.shadow.forceBackFacesOnly = true;
+
             this.shadow.getShadowMap().refreshRate = RenderTargetTexture.REFRESHRATE_RENDER_ONCE
         }
 
@@ -106,6 +107,7 @@ export const Renderer = {
 
         this.camera = new FreeCamera('camera1', cameraPosition, this.scene)
         this.camera.setTarget(new Vector3(0, cameraViewY, 0))
+        //this.camera.maxZ = 200
 
         // Debug layer
         if (Settings.debug) {
@@ -168,12 +170,6 @@ export const Renderer = {
             WearableManager.onFrame()
         }
 
-        if (this.frame % 10 === 0) {
-            if (!this.activeMeshesFrozen) {
-                this.freezeActiveMeshes()
-            }
-        }
-
         if (this.frame % 150 === 0) {
             MiniMap.updateMiniMap()
         }
@@ -193,11 +189,18 @@ export const Renderer = {
         }
         WorldRenderer.updateWorldParentNode()
         Connector.processMessages(actualTime)
+
         scene.render()
 
         if (!ViewportManager.viewPortInitialized) {
             ViewportManager.calculateViewport(this.camera)
             console.log("Viewport initialized")
+        }
+
+        if (this.frame % 10 === 0) {
+            if (!this.activeMeshesFrozen) {
+                this.freezeActiveMeshes()
+            }
         }
 
         this.lastFrameTime = actualTime

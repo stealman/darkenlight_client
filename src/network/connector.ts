@@ -99,7 +99,7 @@ export const Connector = {
     },
 
     doSend(msg: Message, time: number) {
-        console.log('Sending message:', msg)
+        // console.log('Sending message:', msg)
         this.socket.send(JSON.stringify(msg))
         msg['sentTime'] = time
     }

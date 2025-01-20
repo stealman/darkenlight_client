@@ -45,6 +45,7 @@ export class MonsterModel {
     worldMatrix: Matrix
 
     constructor(monsterType: MonsterType, parent: Monster) {
+        console.log('MonsterModel constructor')
         this.parent = parent
         this.type = monsterType
         this.activeAnims = new Set<MeshAnimation>()
@@ -159,10 +160,19 @@ export class MonsterModel {
     }
 
     removeFromView() {
-        MonsterLoader.monsterTemplates.get(this.template.id)?.deactivateClone(this.template)
+        if (this.initialized) {
+            MonsterLoader.monsterTemplates.get(this.template.id)?.deactivateClone(this.template)
+        }
         this.equipSet.forEach(item => {
             WearableManager.removeEquippedItem(item)
         })
+    }
+
+    removeFromScene() {
+        this.removeFromView()
+        if (this.initialized) {
+            MonsterLoader.monsterTemplates.get(this.template.id)?.freeClone(this.template)
+        }
     }
 
     doWalk() {
