@@ -49,7 +49,6 @@ export const MonsterManager = {
             this.visibleMonsters.delete(id)
             this.monsters.get(id).removeMonster()
             this.monsters.delete(id)
-            console.log('Monster removed')
         }
     },
 
@@ -60,6 +59,15 @@ export const MonsterManager = {
             mob.xPos = position.x
             mob.zPos = position.z
             mob.setTargetPoint(new Vector3(target.x, 0, target.z))
+        }
+    },
+
+    monsterMoveStop(id: number, position: { x: number, z: number }) {
+        if (this.monsters.has(id)) {
+            const mob = this.monsters.get(id)
+            mob.xPos = position.x
+            mob.zPos = position.z
+            mob.resetTargetPoint()
         }
     },
 
@@ -95,5 +103,14 @@ export const MonsterManager = {
     isMonsterInViewport(monster: Monster) {
         const myPos = Data.myChar.getPositionRounded()
         return ViewportManager.isPointInVisibleMatrix(Math.floor(monster.xPos) - myPos.x, Math.floor(monster.zPos) - myPos.z, 0)
+    },
+
+    isPointInMonster(x: number, z: number, size: number): Monster | null {
+        for (const monster of this.monsters.values()) {
+            if (Math.abs(monster.xPos - x) < size && Math.abs(monster.zPos - z) < size) {
+                return monster
+            }
+        }
+        return null
     }
 }

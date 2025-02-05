@@ -14,7 +14,7 @@ export const MyPlayer = {
     charModel: null as CharacterModel | null,
 
     movementType: 'WALK',
-    boxSize: 0.6,
+    boxSize: 0.8,
     autoAttackActive: false,
     autoAttackEnd: 0,
 
@@ -53,13 +53,14 @@ export const MyPlayer = {
             let tgtPos = new Vector3(Data.myChar.xPos + Math.cos(angle) * speed * timeRate, 0, Data.myChar.zPos -Math.sin(angle) * speed * timeRate)
 
             // Check if player can move to the target position, if not try to find an alternate position
-            if (!Utils.canCharacterMoveToPosition(this.boxSize, new Vector3(Data.myChar.xPos, 0, Data.myChar.zPos), tgtPos)) {
+            if (Utils.isMovementCollision(this.boxSize, new Vector3(Data.myChar.xPos, 0, Data.myChar.zPos), tgtPos)) {
                 const alternateMovementPos = Utils.getAlternateMovementPos(this.boxSize, angle, Data.myChar.xPos, Data.myChar.zPos, tgtPos.x, tgtPos.z, speed, timeRate)
                 if (alternateMovementPos != null) {
                     tgtPos = alternateMovementPos
                 } else {
                     tgtPos = new Vector3(Data.myChar.xPos, 0, Data.myChar.zPos)
                 }
+                Connector.sendMoveMessage(new MyCharMoveMsg())
             }
 
             Data.myChar.xPos = tgtPos.x

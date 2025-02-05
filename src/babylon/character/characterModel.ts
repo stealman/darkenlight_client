@@ -5,13 +5,11 @@ import {
     SceneLoader, Skeleton, Sound, TransformNode,
     Vector3,
 } from '@babylonjs/core'
-import { Settings } from '@/settings/settings'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { Materials } from '@/babylon/materials'
 import { WearableManager } from '@/babylon/item/wearableManager'
 import { PlayerData } from '@/data/playerData'
 import { AnimTransition } from '@/babylon/animations/animation'
-import { Renderer } from '@/babylon/renderer'
 
 export class CharacterModel {
     playerData: PlayerData

@@ -75,6 +75,11 @@ export class Monster {
         this.targetPoint = point
     }
 
+    resetTargetPoint() {
+        this.targetPoint = null
+        this.moveAngle = null
+    }
+
     calculateYPos() {
         const map = WorldData.getBlockMap()
         const coveredBlocks = Utils.getCoveredBlocks(this.xPos, this.zPos, 0.4)

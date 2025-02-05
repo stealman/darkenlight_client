@@ -17,6 +17,8 @@ export const ResponseProcessor = {
                 case 6: this.charMove(msg.d); break
                 case 7: this.processWorldData(msg.d); break
                 case 8: this.removeMonster(msg.d); break
+                case 9: this.processWorldChunkData(msg.d); break
+                case 10: this.monsterMoveStop(msg.d); break
             }
         }
     },
@@ -48,12 +50,24 @@ export const ResponseProcessor = {
     },
 
     processWorldData(data) {
-        data.chunksAround.forEach(chunk => {
-            TreeManager.consumeTrees(chunk.trees)
-        })
+        Data.worldId = data._id
+        Data.worldName = data.name
     },
 
     removeMonster(data) {
         MonsterManager.removeMonster(data.id)
-    }
+    },
+
+    processWorldChunkData(data) {
+        data.a.forEach(chunk => {
+            TreeManager.consumeTrees(chunk.trees)
+        })
+        data.r.forEach(chunk => {
+            TreeManager.removeTrees(chunk.trees)
+        })
+    },
+
+    monsterMoveStop(data) {
+        MonsterManager.monsterMoveStop(data[0], { x: data[1], z: data[2] })
+    },
 }

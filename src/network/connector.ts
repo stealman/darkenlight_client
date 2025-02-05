@@ -80,6 +80,7 @@ export const Connector = {
             }
         }
 
+        // If last move message was not sent due to timeout, send it now
         if (this.lastMoveMessage != null && this.lastSentMoveMessage != this.lastMoveMessage && time > this.lastMoveMessageTime + this.moveMessageTimeout) {
             this.doSend(this.lastMoveMessage, time)
             this.lastSentMoveMessage = this.lastMoveMessage

@@ -130,7 +130,9 @@ export class MonsterModel {
      * Approximate model rotation to the move angle
      */
     resolveModelRotation(timeRate: number) {
-        if (!this.parent.moveAngle) return
+        if (this.parent.moveAngle == null) {
+            return
+        }
 
         const myAngle = this.node.rotation.y - this.modelYAngleOffset
 
@@ -188,7 +190,7 @@ export class MonsterModel {
         this.equipSet.forEach(item => {
             item.setWalking(false)
         })
-        // this.transitionToAnimation(this.idleAnim!, true, true, 1.0)
+        this.transitionToAnimation(this.idleAnim!, true, true, 1.0)
     }
 
     transitionToAnimation(target: MeshAnimation, fadeIn: boolean = false, loop = false, speed = 1.0) {

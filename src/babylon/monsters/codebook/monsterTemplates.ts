@@ -51,7 +51,7 @@ export class MonsterTemplate {
     clone (): MonsterTemplate {
         if (this.clonesToReuse.length > 0) {
             const clone = this.clonesToReuse.pop()!
-            this.clonesAct.push(clone)
+            this.activateClone(clone)
             return clone
         }
 

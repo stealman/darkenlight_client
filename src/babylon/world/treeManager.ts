@@ -30,6 +30,17 @@ export const TreeManager = {
 
     },
 
+    removeTrees(data) {
+        data.forEach(tree => {
+            for (let i = 0; i < this.allTrees.length; i++) {
+                if (this.allTrees[i].position.x === tree.x && this.allTrees[i].position.z === tree.z) {
+                    this.allTrees.splice(i, 1)
+                    break
+                }
+            }
+        })
+    },
+
     renderTrees() {
         // Prefabs clear the matrices
         for (const key in this.prefabs) {
@@ -61,15 +72,15 @@ export const TreeManager = {
         return this.visibleTrees
     },
 
-    isPointInTree(x: number, z: number, size: number) {
+    getPointInTree(x: number, z: number, size: number): { x: number, z: number } | null {
         for (let i = 0; i < this.allTrees.length; i++) {
             const tree = this.allTrees[i]
             const combinedSize = (tree.scale + size) / 2
             if (Math.abs(tree.position.x - x) < combinedSize && Math.abs(tree.position.z - z) < combinedSize) {
-                return true
+                return { x: tree.position.x, z: tree.position.z }
             }
         }
-        return false
+        return null
     }
 }
 
