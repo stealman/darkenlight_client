@@ -9,7 +9,7 @@ import { CustomMaterial } from '@babylonjs/materials'
 export const Materials = {
     BASE_PATH: './assets/materials/',
 
-    sceneEmissiveColor: new Color3(0.35, 0.35, 0.35),
+    sceneEmissiveColor: new Color3(0.15, 0.15, 0.15),
 
     terrainMaterial: null as CustomMaterial | null,
     planeMaterial: null as StandardMaterial | null,

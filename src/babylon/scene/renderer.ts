@@ -23,7 +23,7 @@ import { MonsterManager } from '@/babylon/monsters/monsterManager'
 import { Data } from '@/data/globalData'
 import { MonsterLoader } from '@/babylon/monsters/monsterLoader'
 import { Connector } from '@/network/connector'
-import { MonsterEquipManager } from '@/babylon/item/monsterEquipManager'
+import { MobEquipManager } from '@/babylon/item/mobEquipManager'
 
 /**
  * Main Renderer
@@ -59,14 +59,14 @@ export const Renderer = {
         this.animationSpeedRatio = this.animationFrameTime / 25
         this.sunLight = new DirectionalLight("sunLight", new Vector3(0.75, -1, -0.2), this.scene)
         this.sunLight.position = new Vector3(400, 400, 400);
-        this.sunLight.intensity = 0.7
+        this.sunLight.intensity = 1
 
         this.hemisphericLight = new HemisphericLight("hemisphericLight", new Vector3(0, 1, 0), this.scene)
-        this.hemisphericLight.intensity = 0.3
+        this.hemisphericLight.intensity = 0.5
 
         if (Settings.shadows) {
             this.shadow = new ShadowGenerator(4096, this.sunLight, false)
-            this.shadow.bias = 0
+            this.shadow.bias = 0.00001
             this.shadow.setDarkness(0.1)
             this.shadow.usePoissonSampling = true
             this.shadow.forceBackFacesOnly = true
@@ -80,7 +80,7 @@ export const Renderer = {
         AudioManager.initialize(this.scene)
         MiniMap.initialize()
         await CharEquipManager.initialize(this.scene)
-        await MonsterEquipManager.initialize(this.scene)
+        await MobEquipManager.initialize(this.scene)
         console.log("wearableManager initialized")
 
         await MyPlayer.initialize(this.scene)
@@ -108,7 +108,6 @@ export const Renderer = {
 
         this.camera = new FreeCamera('camera1', cameraPosition, this.scene)
         this.camera.setTarget(new Vector3(0, cameraViewY, 0))
-        //this.camera.maxZ = 200
 
         // Debug layer
         if (Settings.debug) {
@@ -175,7 +174,7 @@ export const Renderer = {
             }
 
             CharEquipManager.onFrame()
-            MonsterEquipManager.onFrame()
+            MobEquipManager.onFrame()
         }
 
         if (this.frame % 150 === 0) {
@@ -204,12 +203,6 @@ export const Renderer = {
             console.log("Viewport initialized")
         }
 
-        if (this.frame % 10 === 0) {
-            if (!this.activeMeshesFrozen) {
-                // this.freezeActiveMeshes()
-            }
-        }
-
         this.lastFrameTime = actualTime
     },
 
@@ -219,8 +212,8 @@ export const Renderer = {
     },
 
     unfreezeActiveMeshes() {
-        this.scene.unfreezeActiveMeshes()
-        this.activeMeshesFrozen = false
+      //  this.scene.unfreezeActiveMeshes()
+       // this.activeMeshesFrozen = false
     },
 
     setCullingFrequency(scene: Scene, everyNFrames: number) {
@@ -243,7 +236,7 @@ export const Renderer = {
 
     createScene(engine: Engine) {
         this.scene = new Scene(engine)
-        this.scene.clearColor = new Color4(0.2, 0.4, 0.2)
+        this.scene.clearColor = new Color4(0, 0, 0)
         this.scene.imageProcessingConfiguration.exposure = 1.2
         this.scene.skipPointerMovePicking = true
         this.scene.autoClear = false

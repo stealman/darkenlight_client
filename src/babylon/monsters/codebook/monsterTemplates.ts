@@ -73,12 +73,12 @@ export class MonsterTemplate {
         clone.walkSkeleton = this.assetContainer!.skeletons[0]
         clone.mesh!.skeleton = entries.skeletons[0]
 
-
         clone.animation = entries.animationGroups[0]
         clone.animation.play(false)
         clone.animation?.pause()
 
         this.clonesAct.push(clone)
+        Renderer.addShadowCaster(clone.mesh)
         return clone
     }
 

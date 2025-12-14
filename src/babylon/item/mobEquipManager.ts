@@ -7,15 +7,15 @@ import {
 } from '@babylonjs/core'
 import { MonsterModel } from '@/babylon/monsters/monsterModel'
 import { CustomMaterial } from '@babylonjs/materials'
-import { CbWeaponsManager } from '@/babylon/item/codebook/cbWeapons'
-import { CbArmorsManager } from '@/babylon/item/codebook/cbArmors'
-import { CbEquipItemData } from '@/babylon/item/codebook/cbEquipItemData'
+import { MobWeaponsCbManager } from '@/babylon/item/codebook/mobWeaponsCb'
+import { MobArmorsCbManager } from '@/babylon/item/codebook/mobArmorsCb'
+import { MobEquipItemData } from '@/babylon/item/codebook/mobEquipItemData'
 
 export const BASE_EQUIP_MATERIAL_PATH = "/assets/models/equip/"
 
-export class EquipItem {
+export class MobEquipItem {
     parent: MonsterModel | null = null
-    type: EquipItemType
+    type: MobEquipItemType
     matVector: Vector2
 
     position: Vector3 = Vector3.Zero()
@@ -29,7 +29,7 @@ export class EquipItem {
     boneRotationQuaternion: Quaternion = Quaternion.Identity()
     localScale: Vector3 = Vector3.One()
 
-    constructor(type: EquipItemType, matIndex: number, parent: MonsterModel, bone: Bone, walkingBone: Bone, scale: Vector3 = Vector3.One()) {
+    constructor(type: MobEquipItemType, matIndex: number, parent: MonsterModel, bone: Bone, walkingBone: Bone, scale: Vector3 = Vector3.One()) {
         this.type = type
         this.parent = parent
         this.bone = bone
@@ -55,7 +55,7 @@ export class EquipItem {
     }
 }
 
-export class EquipItemType {
+export class MobEquipItemType {
     id: number
     name: string = ""
     mesh: Mesh | null = null
@@ -63,9 +63,9 @@ export class EquipItemType {
 
     instanceBuffer: Float32Array = new Float32Array(0)
     uvBuffer: Float32Array = new Float32Array(0)
-    cbData: CbEquipItemData
+    cbData: MobEquipItemData
 
-    constructor(data: CbEquipItemData) {
+    constructor(data: MobEquipItemData) {
         this.id = data.id
         this.cbData = data
     }
@@ -101,18 +101,18 @@ export class EquipItemType {
     }
 }
 
-export const MonsterEquipManager = {
-    itemTypes: new Map<number, EquipItemType>(),
-    equippedItems: new Map<EquipItemType, Set<EquipItem>>(),
+export const MobEquipManager = {
+    itemTypes: new Map<number, MobEquipItemType>(),
+    equippedItems: new Map<MobEquipItemType, Set<MobEquipItem>>(),
 
     colorVec: new Vector2(0, 0),
 
     async initialize(scene: Scene) {
-        await CbWeaponsManager.initMelee(this.itemTypes, scene)
-        await CbArmorsManager.initHelmets(this.itemTypes, scene)
+        await MobWeaponsCbManager.initMelee(this.itemTypes, scene)
+        await MobArmorsCbManager.initHelmets(this.itemTypes, scene)
     },
 
-    addEquippedItem(item: EquipItem) {
+    addEquippedItem(item: MobEquipItem) {
         if (!this.equippedItems.has(item.type)) {
             this.equippedItems.set(item.type, new Set())
         }
@@ -120,7 +120,7 @@ export const MonsterEquipManager = {
         item.type.updateCount(this.equippedItems.get(item.type)!.size)
     },
 
-    removeEquippedItem(item: EquipItem) {
+    removeEquippedItem(item: MobEquipItem) {
         this.equippedItems.get(item.type)?.delete(item)
         item.type.updateCount(this.equippedItems.get(item.type)!.size)
     },
