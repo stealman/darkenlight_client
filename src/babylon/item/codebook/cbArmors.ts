@@ -1,8 +1,9 @@
-import { BASE_EQUIP_MATERIAL_PATH, EquipItemType } from '@/babylon/item/wearableManager'
+import { BASE_EQUIP_MATERIAL_PATH } from '@/babylon/item/charEquipManager'
 import { Materials } from '@/babylon/materials'
 import { Scene, Vector3 } from '@babylonjs/core'
 import { BabylonUtils } from '@/babylon/utils'
 import { CbEquipItemData } from '@/babylon/item/codebook/cbEquipItemData'
+import { EquipItemType } from '@/babylon/item/monsterEquipManager'
 
 export const CbArmorsManager = {
     BASE_ARMORS_PATH: 'armors/',

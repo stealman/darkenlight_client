@@ -11,17 +11,17 @@ export const Materials = {
 
     sceneEmissiveColor: new Color3(0.35, 0.35, 0.35),
 
-    terrainMaterial: null as CustomMaterial,
-    planeMaterial: null as StandardMaterial,
-    symetricBlockMaterial1: null as CustomMaterial,
-    waterMaterial: null as StandardMaterial,
+    terrainMaterial: null as CustomMaterial | null,
+    planeMaterial: null as StandardMaterial | null,
+    symmetricBlockMaterial1: null as CustomMaterial | null,
+    waterMaterial: null as StandardMaterial | null,
 
     customMaterials: new Map<string, CustomMaterial>(),
 
     initialize(scene: Scene) {
         this.terrainMaterial = this.createTerrainMaterial1(scene)
         this.planeMaterial = this.createPlaneMaterial(scene)
-        this.symetricBlockMaterial1 = this.createSymBlockMaterial1(scene)
+        this.symmetricBlockMaterial1 = this.createSymBlockMaterial1(scene)
         this.waterMaterial = this.createWaterMaterial(scene)
     },
 
@@ -87,7 +87,7 @@ export const Materials = {
 
         mat.diffuseTexture = texture
         mat.alpha = 0.25;
-        mat.ambientColor = new Color3(1, 1, 1.0);
+        mat.ambientColor = new Color3(1, 1, 1);
         return mat
     },
 }
@@ -110,11 +110,7 @@ export const MaterialEnum1 = {
     WOOD_1: new MaterialEnum(5, new Vector2(0.5, 4.5)),
 
     getMaterialByIndex(index: number): Vector2 {
-        for (const key in MaterialEnum1) {
-            if (MaterialEnum1[key].index === index) {
-                return MaterialEnum1[key].uv
-            }
-        }
+        return Object.values(MaterialEnum1).find(item => item.index === index)?.uv;
     }
 }
 

@@ -8,8 +8,8 @@ export const ResponseProcessor = {
 
     async processResponse(response) {
         //console.log(response.length)
-        for (let i = 0; i < response.length; i++) {
-            const msg = response[i]
+        for (const element of response) {
+            const msg = element
             switch (msg.t) {
                 case 2: await this.loginResponse(msg.d); break
                 case 3: this.addMonster(msg.d); break

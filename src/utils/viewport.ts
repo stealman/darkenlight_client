@@ -1,13 +1,13 @@
 import { Frustum, Matrix, Vector3 } from '@babylonjs/core'
-import { Renderer } from '@/babylon/renderer'
+import { Renderer } from '@/babylon/scene/renderer'
 import { MiniMap } from '@/utils/minimap'
 
 export const ViewportManager = {
     viewPortInitialized: false,
     visibleTiles: [],
     visibilityMatrix: [],
-    matrixSizeBonus: 2,
-    yOffset: 3,
+    matrixSizeBonus: 4,
+    yOffset: 6,
 
     minX: 0,
     maxX: 0,
@@ -106,6 +106,11 @@ export const ViewportManager = {
             }
         }
 
+        this.minX -= this.matrixSizeBonus
+        this.maxX += this.matrixSizeBonus
+        this.minZ -= this.matrixSizeBonus
+        this.maxZ += this.matrixSizeBonus
+
         // loop through rectangular area defined by min and max x and z and find visible tiles
         this.visibleTiles = []
         for (let x = this.minX; x <= this.maxX; x++) {
@@ -118,14 +123,18 @@ export const ViewportManager = {
 
                 if (this.isPointInView(point, camera!) || this.isPointInView(point2, camera!) || this.isPointInView(point3, camera!)) {
                     this.visibleTiles.push(point)
+
+                    // Also push all neighboring tiles to have buffer
+                    const neighbors = this.getSurroundingTiles(1)
+                    for (const neighbor of neighbors) {
+                        const neighborPoint = new Vector3(x + neighbor.x, this.yOffset, z + neighbor.z)
+                        if (!this.visibleTiles.find(p => p.x === neighborPoint.x && p.z === neighborPoint.z)) {
+                            this.visibleTiles.push(neighborPoint)
+                        }
+                    }
                 }
             }
         }
-
-        this.minX -= this.matrixSizeBonus
-        this.maxX += this.matrixSizeBonus
-        this.minZ -= this.matrixSizeBonus
-        this.maxZ += this.matrixSizeBonus
 
         // create visible matrix as 2D array of boolean values
         this.visibilityMatrix = []
@@ -140,7 +149,9 @@ export const ViewportManager = {
 
         // set visible tiles to true
         for (const point of this.visibleTiles) {
-            this.visibilityMatrix[point.x][point.z] = true
+            if (point.x >= this.minX && point.x <= this.maxX && point.z >= this.minZ && point.z <= this.maxZ) {
+                this.visibilityMatrix[point.x][point.z] = true
+            }
         }
 
         this.viewPortInitialized = true

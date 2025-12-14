@@ -1,5 +1,5 @@
 import { WorldData } from '@/babylon/world/worldData'
-import { Matrix, Mesh } from '@babylonjs/core'
+import { Matrix, Mesh, Scene } from '@babylonjs/core'
 import { BabylonUtils } from '@/babylon/utils'
 import { Builder } from '@/babylon/builder'
 import { Materials, PlaneEnum1, TerrainEnum1 } from '@/babylon/materials'
@@ -9,11 +9,11 @@ import { ViewportManager } from '@/utils/viewport'
 import { Data } from '@/data/globalData'
 
 export const TerrainManager = {
-    terrainBlock1: null as Mesh,
-    terrainPlane: null as Mesh,
-    waterPlane: null as Mesh,
+    terrainBlock1: null as Mesh | null,
+    terrainPlane: null as Mesh | null,
+    waterPlane: null as Mesh | null,
 
-    initialize (scene) {
+    initialize (scene: Scene) {
 
         // Terrain and plane blocks
         this.terrainBlock1 = Builder.createBlockWithFaces(scene, WorldRenderer.worldParentNode!)
@@ -51,7 +51,6 @@ export const TerrainManager = {
         const planeMatrices = []
         const planeUvData = []
 
-        let count = 0
         for (let x = Math.max(0, myPos.x + ViewportManager.minX); x <= Math.min(map.length, myPos.x + ViewportManager.maxX); x++) {
             for (let z = Math.max(0, myPos.z + ViewportManager.minZ); z <= Math.min(map.length, myPos.z + ViewportManager.maxZ); z++) {
 
@@ -72,17 +71,13 @@ export const TerrainManager = {
                         terrainUvData1.push(TerrainEnum1.getTerrainByIndex(block.type))
                     }
                 }
-
-                count++
             }
         }
 
-        // console.log('Visible blocks ' + count)
-
         // Apply buffers for instances
-        this.terrainBlock1.thinInstanceSetBuffer("matrix", BabylonUtils.createPositionBuffer(terrainMatrices1), 16)
-        this.terrainBlock1.thinInstanceSetBuffer("uvc", BabylonUtils.createUvBuffer(terrainUvData1), 2)
-        this.terrainPlane.thinInstanceSetBuffer("matrix", BabylonUtils.createPositionBuffer(planeMatrices), 16)
-        this.terrainPlane.thinInstanceSetBuffer("uvc", BabylonUtils.createUvBuffer(planeUvData), 2)
+        this.terrainBlock1!.thinInstanceSetBuffer("matrix", BabylonUtils.createPositionBuffer(terrainMatrices1), 16)
+        this.terrainBlock1!.thinInstanceSetBuffer("uvc", BabylonUtils.createUvBuffer(terrainUvData1), 2)
+        this.terrainPlane!.thinInstanceSetBuffer("matrix", BabylonUtils.createPositionBuffer(planeMatrices), 16)
+        this.terrainPlane!.thinInstanceSetBuffer("uvc", BabylonUtils.createUvBuffer(planeUvData), 2)
     }
 }

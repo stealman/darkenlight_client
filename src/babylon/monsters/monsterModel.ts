@@ -8,8 +8,8 @@ import { MonsterLoader } from '@/babylon/monsters/monsterLoader'
 import { MonsterCodebook, MonsterType } from '@/babylon/monsters/codebook/monsterCodebook'
 import { Data } from '@/data/globalData'
 import { MeshAnimation } from '@/babylon/animations/animation'
-import { EquipItem, WearableManager } from '@/babylon/item/wearableManager'
 import { MonsterTemplate } from '@/babylon/monsters/codebook/monsterTemplates'
+import { EquipItem, MonsterEquipManager } from '@/babylon/item/monsterEquipManager'
 
 export class MonsterModel {
     parent: Monster
@@ -65,21 +65,21 @@ export class MonsterModel {
         this.initialized = true
     }
 
-    assignRhand(type, matIndex, scale = new Vector3(1, 1, 1)) {
-        this.addEquippedItem(new EquipItem(WearableManager.itemTypes.get(type), matIndex, this, this.rhandBone, this.rhandBoneW, scale))
+    assignRhand(type: number, matIndex: number, scale = new Vector3(1, 1, 1)) {
+        this.addEquippedItem(new EquipItem(MonsterEquipManager.itemTypes.get(type)!, matIndex, this, this.rhandBone, this.rhandBoneW, scale))
     }
 
-    assignChest(type, matIndex, scale = new Vector3(1, 1, 1)) {
-        this.addEquippedItem(new EquipItem(WearableManager.itemTypes.get(type), matIndex, this, this.chestBone, this.chestBoneW, scale))
+    assignChest(type: number, matIndex: number, scale = new Vector3(1, 1, 1)) {
+        this.addEquippedItem(new EquipItem(MonsterEquipManager.itemTypes.get(type)!, matIndex, this, this.chestBone, this.chestBoneW, scale))
     }
 
-    assignHelmet(type, matIndex, scale = new Vector3(1, 1, 1)) {
-        this.addEquippedItem(new EquipItem(WearableManager.itemTypes.get(type), matIndex, this, this.headBone, this.headBoneW, scale))
+    assignHelmet(type: number, matIndex: number, scale = new Vector3(1, 1, 1)) {
+        this.addEquippedItem(new EquipItem(MonsterEquipManager.itemTypes.get(type)!, matIndex, this, this.headBone, this.headBoneW, scale))
     }
 
     addEquippedItem(item: EquipItem) {
         this.equipSet.add(item)
-        WearableManager.addEquippedItem(item)
+        MonsterEquipManager.addEquippedItem(item)
     }
 
     onFrame(timeRate: number) {
@@ -157,7 +157,7 @@ export class MonsterModel {
 
         MonsterLoader.monsterTemplates.get(this.template.id)?.activateClone(this.template)
         this.equipSet.forEach(item => {
-            WearableManager.addEquippedItem(item)
+            MonsterEquipManager.addEquippedItem(item)
         })
     }
 
@@ -166,7 +166,7 @@ export class MonsterModel {
             MonsterLoader.monsterTemplates.get(this.template.id)?.deactivateClone(this.template)
         }
         this.equipSet.forEach(item => {
-            WearableManager.removeEquippedItem(item)
+            MonsterEquipManager.removeEquippedItem(item)
         })
     }
 

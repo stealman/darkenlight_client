@@ -1,4 +1,4 @@
-import { Renderer } from '@/babylon/renderer'
+import { Renderer } from '@/babylon/scene/renderer'
 import { ViewportManager } from '@/utils/viewport'
 import { loadBMPData } from '@/utils/bmpLoader'
 import { WorldData } from '@/babylon/world/worldData'

@@ -1,7 +1,6 @@
 import { AnimationGroup, AssetContainer, Mesh, Skeleton, Vector3 } from '@babylonjs/core'
 import { BabylonUtils } from '@/babylon/utils'
-import { Renderer } from '@/babylon/renderer'
-import { Settings } from '@/settings/settings'
+import { Renderer } from '@/babylon/scene/renderer'
 
 export class MonsterTemplate {
     id: number

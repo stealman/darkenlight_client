@@ -1,5 +1,5 @@
 import { AnimationGroup } from '@babylonjs/core'
-import { Renderer } from '@/babylon/renderer'
+import { Renderer } from '@/babylon/scene/renderer'
 
 export class MeshAnimation {
     animation: AnimationGroup

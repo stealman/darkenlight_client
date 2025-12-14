@@ -43,13 +43,13 @@ export const MyPlayer = {
 
             if (dx < 0.1 && dz < 0.1) {
                 Data.myChar.targetBlock = null
-                this.setMoveAngleAndSpeed(null, 0)
+                this.setMoveAngleAndSpeed(0, 0)
             }
         }
 
         if (Data.myChar.getMoveAngle() != null) {
             const speed = Data.myChar.getActualSpeed()
-            const angle = Utils.roundToTwoDecimals(Data.myChar.getMoveAngle() + Math.PI / 4)
+            const angle = Utils.roundToTwoDecimals(Data.myChar.getMoveAngle()! + Math.PI / 4)
             let tgtPos = new Vector3(Data.myChar.xPos + Math.cos(angle) * speed * timeRate, 0, Data.myChar.zPos -Math.sin(angle) * speed * timeRate)
 
             // Check if player can move to the target position, if not try to find an alternate position
@@ -91,7 +91,7 @@ export const MyPlayer = {
         return highest
     },
 
-    setMoveTypeAngle(movementType: string, angle: number | null) {
+    setMoveTypeAngle(movementType: string, angle: number) {
         this.movementType = movementType
         this.setMoveAngleAndSpeed(angle, this.movementType === 'RUN' ? Data.myChar.runSpeed : Data.myChar.walkSpeed)
 
@@ -101,7 +101,7 @@ export const MyPlayer = {
         if (point == null) {
             Data.myChar.targetBlock = null
             if (resetAngleSpeedIfNull) {
-                this.setMoveAngleAndSpeed(null, 0)
+                this.setMoveAngleAndSpeed(0, 0)
             }
         } else {
             point.x += Data.myChar.xPos
@@ -118,7 +118,7 @@ export const MyPlayer = {
     },
 
     setMoveAngleAndSpeed(angle: number | null, speed: number) {
-        Data.myChar.setMoveAngle(angle ? Utils.roundToTwoDecimals(angle) : null)
+        Data.myChar.setMoveAngle(angle ? Utils.roundToTwoDecimals(angle): null)
         Data.myChar.setActualSpeed(Utils.roundToOneDecimal(speed))
 
         Connector.sendMoveMessage(new MyCharMoveMsg())

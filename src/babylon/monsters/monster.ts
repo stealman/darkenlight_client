@@ -11,7 +11,7 @@ export class Monster {
     targetPoint: Vector3 | null = null
 
     hp: number
-    runSpeed: number
+    runSpeed: number = 0
     rotationSpeed: number = 15
     xPos: number
     zPos: number

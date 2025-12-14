@@ -7,16 +7,17 @@ import {
 } from '@babylonjs/core'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { Materials } from '@/babylon/materials'
-import { WearableManager } from '@/babylon/item/wearableManager'
+import { CharEquipManager } from '@/babylon/item/charEquipManager'
 import { PlayerData } from '@/data/playerData'
 import { AnimTransition } from '@/babylon/animations/animation'
+import { Renderer } from '@/babylon/scene/renderer'
 
 export class CharacterModel {
     playerData: PlayerData
 
-    model: AbstractMesh
+    model: AbstractMesh | undefined
     modelYAngleOffset: number = Math.PI * 1 / 4
-    skeleton: Skeleton
+    skeleton: Skeleton | undefined
     headNode: TransformNode = new TransformNode("headNode")
     torsoNode: TransformNode = new TransformNode("torsoNode")
     larmNode: TransformNode = new TransformNode("larmNode")
@@ -39,7 +40,7 @@ export class CharacterModel {
     highJabAnim: AnimationGroup | undefined
 
     actualAnim: AnimationGroup | undefined
-    animTransition: AnimTransition | null
+    animTransition: AnimTransition | null = null
 
     footStepSound: Sound | null
 
@@ -61,6 +62,7 @@ export class CharacterModel {
             const material = Materials.getBasicMaterial(scene, "steveMaterial", "/assets/models/steve/steve.jpg", false, false)
             this.model.getChildMeshes().forEach((mesh) => {
                 mesh.material = material
+                Renderer.addShadowCaster(mesh)
             });
 
             // Process animations
@@ -107,54 +109,54 @@ export class CharacterModel {
 
             this.skeleton = result.skeletons[0];
 
-            this.torsoNode.attachToBone(this.skeleton.bones.find(b => b.id === "Bone.001"), this.model) // Torso node 001
-            this.headNode.attachToBone(this.skeleton.bones.find(b => b.id === "Bone.002"), this.model) // Head node 002
-            this.larmNode.attachToBone(this.skeleton.bones.find(b => b.id === "Bone.010"), this.model) // Larm 010
-            this.rarmNode.attachToBone(this.skeleton.bones.find(b => b.id === "Bone.003"), this.model) // Rarm 003
-            this.llegNode.attachToBone(this.skeleton.bones.find(b => b.id === "Bone.008"), this.model) // Lleg 008
-            this.rlegNode.attachToBone(this.skeleton.bones.find(b => b.id === "Bone.006"), this.model) // Rleg 006
-            this.lhandNode.attachToBone(this.skeleton.bones.find(b => b.id === "Bone.012"), this.model) // Lhand 012
-            this.rhandNode.attachToBone(this.skeleton.bones.find(b => b.id === "Bone.009"), this.model) // Rhand 009
+            this.torsoNode.attachToBone(this.skeleton.bones.find(b => b.id === "Bone.001")!, this.model) // Torso node 001
+            this.headNode.attachToBone(this.skeleton.bones.find(b => b.id === "Bone.002")!, this.model) // Head node 002
+            this.larmNode.attachToBone(this.skeleton.bones.find(b => b.id === "Bone.010")!, this.model) // Larm 010
+            this.rarmNode.attachToBone(this.skeleton.bones.find(b => b.id === "Bone.003")!, this.model) // Rarm 003
+            this.llegNode.attachToBone(this.skeleton.bones.find(b => b.id === "Bone.008")!, this.model) // Lleg 008
+            this.rlegNode.attachToBone(this.skeleton.bones.find(b => b.id === "Bone.006")!, this.model) // Rleg 006
+            this.lhandNode.attachToBone(this.skeleton.bones.find(b => b.id === "Bone.012")!, this.model) // Lhand 012
+            this.rhandNode.attachToBone(this.skeleton.bones.find(b => b.id === "Bone.009")!, this.model) // Rhand 009
 
             this.assignArmor(1, 1)
-            this.assignHelmet(1, 1)
-            this.assignRightPauldron(1, 1)
-            this.assignLeftPauldron(2, 1)
-            this.assignRightLeg(1, 1)
-            this.assignLeftLeg(1, 1)
-            this.assignSword(1, 1)
+            this.assignHelmet(1, 2)
+            this.assignRightPauldron(1, 0)
+            this.assignLeftPauldron(2, 0)
+            this.assignRightLeg(1, 0)
+            this.assignLeftLeg(1, 0)
+            this.assignSword(1, 0)
 
         }).catch((error) => {
             console.error("Error loading model:", error)
         });
     }
 
-    assignHelmet(type, materialId) {
-        WearableManager.assignHelmet(this.headNode, type, materialId);
+    assignHelmet(type: number, materialId: number) {
+        CharEquipManager.assignHelmet(this.headNode, type, materialId);
     }
 
-    assignArmor(type, materialId) {
-        WearableManager.assignArmor(this.torsoNode, type, materialId);
+    assignArmor(type: number, materialId: number) {
+        CharEquipManager.assignArmor(this.torsoNode, type, materialId);
     }
 
-    assignLeftPauldron(type, materialId) {
-        WearableManager.assignPauldron(this.rarmNode, type, materialId);
+    assignLeftPauldron(type: number, materialId: number) {
+        CharEquipManager.assignPauldron(this.rarmNode, type, materialId);
     }
 
-    assignRightPauldron(type, materialId) {
-        WearableManager.assignPauldron(this.larmNode, type, materialId);
+    assignRightPauldron(type: number, materialId: number) {
+        CharEquipManager.assignPauldron(this.larmNode, type, materialId);
     }
 
-    assignLeftLeg(type, materialId) {
-        WearableManager.assignLeg(this.llegNode, type, materialId);
+    assignLeftLeg(type: number, materialId: number) {
+        CharEquipManager.assignLeg(this.llegNode, type, materialId);
     }
 
-    assignRightLeg(type, materialId) {
-        WearableManager.assignLeg(this.rlegNode, type, materialId);
+    assignRightLeg(type: number, materialId: number) {
+        CharEquipManager.assignLeg(this.rlegNode, type, materialId);
     }
 
-    assignSword(type, materialId) {
-        WearableManager.assignSword(this.rhandNode, type, materialId);
+    assignSword(type: number, materialId: number) {
+        CharEquipManager.assignSword(this.rhandNode, type, materialId);
     }
 
     startWalkAnimation() {
@@ -232,7 +234,7 @@ export class CharacterModel {
             }
         }
 
-        if (this.playerData.moveAngle != null) {
+        if (this.playerData.getMoveAngle() != null) {
             this.resolveModelYpos(timeRate)
             this.resolveModelRotation(timeRate)
         }
@@ -249,9 +251,9 @@ export class CharacterModel {
      * Approximate model rotation to the move angle
      */
     resolveModelRotation(timeRate: number) {
-        const myAngle = this.model.rotation.y - this.modelYAngleOffset
+        const myAngle = this.model!.rotation.y - this.modelYAngleOffset
 
-        let angleDifference = this.playerData.moveAngle - myAngle;
+        let angleDifference = this.playerData.getMoveAngle()! - myAngle;
         const rotationSpeed = this.playerData.rotationSpeed * timeRate;
         if (angleDifference > Math.PI) {
             angleDifference -= 2 * Math.PI;
@@ -260,10 +262,10 @@ export class CharacterModel {
         }
 
         if (Math.abs(angleDifference) < rotationSpeed) {
-            this.model.rotation.y = this.playerData.moveAngle ? this.playerData.moveAngle + this.modelYAngleOffset : 0;
+            this.model!.rotation.y = this.playerData.getMoveAngle() ? this.playerData.getMoveAngle()! + this.modelYAngleOffset : 0;
         } else {
-            this.model.rotation.y += Math.sign(angleDifference) * rotationSpeed;
+            this.model!.rotation.y += Math.sign(angleDifference) * rotationSpeed;
         }
-        this.playerData.modelRotation = this.model.rotation.y;
+        this.playerData.modelRotation = this.model!.rotation.y;
     }
 }

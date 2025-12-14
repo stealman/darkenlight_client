@@ -10,7 +10,7 @@ export class PlayerData {
     xPos: number
     zPos: number
     yPos: number
-    modelYpos: number | null = null
+    modelYpos: number = 0
     modelRotation: number = 0
     private moveAngle: number | null = null
     targetBlock: Vector3 | null = null

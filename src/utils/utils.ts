@@ -4,7 +4,7 @@ import { MonsterManager } from '@/babylon/monsters/monsterManager'
 
 export const Utils = {
 
-    getCoveredBlocks(xPos: number, zPos: number, characterWidth, blockSize = 1) {
+    getCoveredBlocks(xPos: number, zPos: number, characterWidth: number, blockSize = 1) {
         const threshold = blockSize - (characterWidth / 2);
 
         const coveredBlocks = [];
@@ -46,7 +46,7 @@ export const Utils = {
         return null
     },
 
-    getAlternateMovementPos(charBoxSize, moveAngle, charX, charZ, tgtPosX, tgtPosZ, speed, timeRate): Vector3 | null {
+    getAlternateMovementPos(charBoxSize: number, moveAngle: number, charX: number, charZ: number, tgtPosX: number, tgtPosZ: number, speed: number, timeRate: number): Vector3 | null {
         const plusTgtPosX = charX + Math.cos(moveAngle + Math.PI / 1.5) * speed * timeRate
         const plusTgtPosZ = charZ - Math.sin(moveAngle + Math.PI / 1.5) * speed * timeRate
         const plusTgtPointDistance = Vector3.Distance(new Vector3(plusTgtPosX, 0, plusTgtPosZ), new Vector3(tgtPosX, 0, tgtPosZ))
@@ -69,13 +69,14 @@ export const Utils = {
         if (!plusMovePossible && !minusMovePossible) {
             return null
         }
+        return null
     },
 
     rollDice(sides: number, fromZero: boolean = false) {
         return Math.floor(Math.random() * sides) + (fromZero ? 0 : 1)
     },
 
-    getRandomFromTo(min, max) {
+    getRandomFromTo(min: number, max: number) {
         if (min === max) return min
         return this.rollDice((1 + max) - min, true) + min
     },

@@ -8,7 +8,7 @@ export const PrefabTree1 = {
         box.position = new Vector3(0, 0, 0);
         box.isVisible = false
 
-        const blocks = []
+        const blocks: Mesh[] = []
         let y = 0
         let layer = [{ x: 0, z: 0 }, {x: -0.5, z: -1}, {x: 0, z: -1}, {x: 0.5, z: -1}, {x: -1, z: -0.5}, {x: 1, z: -0.5}, {x: -1, z: 0}, {x: 1, z: 0}, {x: -1, z: 0.5}, {x: 1, z: 0.5}, {x: -0.5, z: 1}, {x: 0, z: 1}, {x: 0.5, z: 1}, {x: 1, z: 1} ]
         layer.forEach((pos) => {
@@ -50,7 +50,7 @@ export const PrefabTree1 = {
         // Merge bloks and set material
         const merged = Mesh.MergeMeshes(blocks, true) as Mesh
         merged.parent = WorldRenderer.worldParentNode
-        merged.material = Materials.symetricBlockMaterial1
+        merged.material = Materials.symmetricBlockMaterial1
 
         return new Prefab(merged)
     }

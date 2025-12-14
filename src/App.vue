@@ -16,7 +16,7 @@
 
 <script lang="ts">
 import { ref, onMounted } from 'vue'
-import { Renderer } from './babylon/renderer'
+import { Renderer } from './babylon/scene/renderer'
 import { Settings } from '@/settings/settings'
 import { Connector } from '@/network/connector'
 import { GameManager } from '@/GameManager'

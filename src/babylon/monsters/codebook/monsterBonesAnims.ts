@@ -5,10 +5,10 @@ import { MonsterCodebook } from '@/babylon/monsters/codebook/monsterCodebook'
 export const MonsterBonesAnims = {
 
     initSkeleton(model: MonsterModel) {
-        model.chestBone = model.skeleton.bones.find(b => b.id === "Bone")
-        model.headBone = model.skeleton.bones.find(b => b.id === "Bone.001")
-        model.lhandBone = model.skeleton.bones.find(b => b.id === "Bone.005")
-        model.rhandBone = model.skeleton.bones.find(b => b.id === "Bone.008")
+        model.chestBone = model.skeleton.bones.find(b => b.id === "Bone")!
+        model.headBone = model.skeleton.bones.find(b => b.id === "Bone.001")!
+        model.lhandBone = model.skeleton.bones.find(b => b.id === "Bone.005")!
+        model.rhandBone = model.skeleton.bones.find(b => b.id === "Bone.008")!
 
         model.chestBoneW = model.template.walkSkeleton.bones.find(b => b.id === "Bone")!
         model.headBoneW = model.template.walkSkeleton.bones.find(b => b.id === "Bone.001")!
