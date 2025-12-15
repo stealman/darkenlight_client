@@ -50,7 +50,7 @@ export class CharacterModel {
 
         SceneLoader.ImportMeshAsync(
             "",
-            "/assets/models/steve/",
+            "/public/models/steve/",
             "steve.gltf",
             scene
         ).then((result) => {
@@ -59,7 +59,7 @@ export class CharacterModel {
             this.model.rotation = new Vector3(0, 0, 0)
 
             // Apply material
-            const material = Materials.getPBRMaterial(scene, "steveMaterial", "/assets/models/steve/steve.jpg", false, false, 0, 1, 1, 1)
+            const material = Materials.getPBRMaterial(scene, "steveMaterial", "/public/models/steve/steve.jpg", false, false, 0, 1, 1, 1)
             this.model.getChildMeshes().forEach((mesh) => {
                 mesh.material = material
                 Renderer.addShadowCaster(mesh)

@@ -50,7 +50,7 @@ export const PrefabTree1 = {
         // Merge bloks and set material
         const merged = Mesh.MergeMeshes(blocks, true) as Mesh
         merged.parent = WorldRenderer.worldParentNode
-        merged.material = Materials.symmetricBlockMaterial1
+        merged.material = Materials.blockMatAlpha1
 
         return new Prefab(merged)
     }

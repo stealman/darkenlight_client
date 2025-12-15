@@ -6,13 +6,15 @@ import {
 import { CustomMaterial, PBRCustomMaterial } from '@babylonjs/materials'
 
 export const Materials = {
-    BASE_PATH: './assets/materials/',
+    BASE_PATH: './public/images/materials/',
 
     sceneEmissiveColor: new Color3(0.15, 0.15, 0.15),
-
     terrainMaterial: null as PBRCustomMaterial | null,
     planeMaterial: null as PBRCustomMaterial | null,
-    symmetricBlockMaterial1: null as PBRCustomMaterial | null,
+
+    blockMatAlpha1: null as PBRCustomMaterial | null,
+    blockMat1: null as PBRCustomMaterial | null,
+
     waterMaterial: null as PBRMaterial | null,
 
     customMaterials: new Map<string, CustomMaterial>(),
@@ -21,22 +23,28 @@ export const Materials = {
     initialize(scene: Scene) {
         this.terrainMaterial = this.createTerrainMaterial1(scene)
         this.planeMaterial = this.createPlaneMaterial(scene)
-        this.symmetricBlockMaterial1 = this.createSymBlockMaterial1(scene)
+        this.blockMat1 = this.createBlockMat1(scene)
+        this.blockMatAlpha1 = this.createBlockMatAlpha1(scene)
         this.waterMaterial = this.createWaterMaterial(scene)
     },
 
     createTerrainMaterial1(scene: Scene): PBRCustomMaterial {
-        const material = this.getPBRCustomMaterial(scene, "terrain_mats1", this.BASE_PATH, 'terrain_materials_1.png', 1 / 4, 1 / 4, false)
+        const material = this.getPBRCustomMaterial(scene, "terrain_mats1", this.BASE_PATH, 'terrain_materials1.png', 1 / 4, 1 / 4, false)
         return material
     },
 
     createPlaneMaterial(scene: Scene): PBRCustomMaterial {
-        const material = this.getPBRCustomMaterial(scene, "plane_mats", this.BASE_PATH, 'plane_materials.png', 1 / 8, 1 / 8, false)
+        const material = this.getPBRCustomMaterial(scene, "plane_mats", this.BASE_PATH, 'plane_materials1.png', 1 / 8, 1 / 8, false)
         return material
     },
 
-    createSymBlockMaterial1(scene: Scene): PBRCustomMaterial {
-        const material = this.getPBRCustomMaterial(scene, "sym_block_mats1", this.BASE_PATH, 'symetric_materials_1.png', 1 / 8, 1 / 8, true)
+    createBlockMat1(scene: Scene): PBRCustomMaterial {
+        const material = this.getPBRCustomMaterial(scene, "sym_block_mats1", this.BASE_PATH, 'block_materials1.png', 1 / 8, 1 / 8, false)
+        return material
+    },
+
+    createBlockMatAlpha1(scene: Scene): PBRCustomMaterial {
+        const material = this.getPBRCustomMaterial(scene, "sym_block_mats_alpha1", this.BASE_PATH, 'block_materials_alpha1.png', 1 / 8, 1 / 8, true)
         return material
     },
 
@@ -74,9 +82,14 @@ export const Materials = {
             mat.metallic = metallic
             mat.roughness = roughness
             mat.backFaceCulling = false;
+            mat.twoSidedLighting = true;
             mat.directIntensity = directIntensity
             mat.environmentIntensity = environmentIntensity
             mat.usePhysicalLightFalloff = false;
+            if (hasAlpha) {
+                mat.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHATEST;
+                mat.alphaCutOff = 0.4;
+            }
 
             mat.AddAttribute("uvc");
             mat.Vertex_Definitions(`attribute vec2 uvc;`)

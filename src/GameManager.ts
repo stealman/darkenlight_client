@@ -18,7 +18,7 @@ export const GameManager = {
     },
 
     async loadWorldData() {
-        const mapData = await loadBMPData('./assets/map4.png') as number[][]
+        const mapData = await loadBMPData('./public/map4.png') as number[][]
         WorldData.setWorldMap(mapData)
     }
 }

@@ -119,8 +119,8 @@ class Tree1 implements Tree {
         for (let i = 0; i <= 2.5 * this.scale; i += this.scale / 2) {
             const positionMatrix = Matrix.Translation( this.position.x - myPos.x, this.position.y + i, this.position.z - myPos.z)
 
-            WorldRenderer.symmetricBlock1!.matrices.push(scaleMatrix.multiply(positionMatrix))
-            WorldRenderer.symmetricBlock1!.uvData.push(this.woodMaterial)
+            WorldRenderer.block1!.matrices.push(scaleMatrix.multiply(positionMatrix))
+            WorldRenderer.block1!.uvData.push(this.woodMaterial)
         }
     }
 }

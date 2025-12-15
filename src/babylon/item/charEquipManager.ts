@@ -11,7 +11,7 @@ import { Materials } from '@/babylon/materials'
 import { Renderer } from '@/babylon/scene/renderer'
 import { CharArmorsCbManager } from '@/babylon/item/codebook/charArmorsCb'
 
-export const BASE_EQUIP_MATERIAL_PATH = "/assets/models/equip/"
+export const BASE_EQUIP_MATERIAL_PATH = "/public/models/equip/"
 
 class CharWearableItemManager {
     namePrefix: string
@@ -33,7 +33,7 @@ class CharWearableItemManager {
 
     async initialize(scene: Scene) {
         for (const model of this.models) {
-            const result = await SceneLoader.ImportMeshAsync("", "/assets/models/equip/", model.fileName, scene);
+            const result = await SceneLoader.ImportMeshAsync("", "/public/models/equip/", model.fileName, scene);
             model.setMesh(result.meshes[0] as Mesh)
         }
         this.registerLoadedMeshes(scene)
@@ -180,10 +180,10 @@ export const CharEquipManager = {
 
     async initialize(scene: Scene) {
         CharArmorsCbManager.initialize()
-        this.armorBasicMetalManager = new CharWearableItemManager("metal_armor_basic", scene, CharArmorsCbManager.basicMetalArmorModels, "/assets/models/equip/armors/plate-metal-basic.png")
+        this.armorBasicMetalManager = new CharWearableItemManager("metal_armor_basic", scene, CharArmorsCbManager.basicMetalArmorModels, "/public/models/equip/armors/plate-metal-basic.png")
         await this.armorBasicMetalManager.initialize(scene)
 
-        const result = await SceneLoader.ImportMeshAsync("", "/assets/models/equip/weapons/", "sword_steel.glb", scene);
+        const result = await SceneLoader.ImportMeshAsync("", "/public/models/equip/weapons/", "sword_steel.glb", scene);
         this.swordDiamondMesh = result.meshes[0].getChildMeshes()[0] as Mesh
         this.swordDiamondMesh.setEnabled(false)
         this.swordDiamondMesh.scaling = new Vector3(2, 1, 1)

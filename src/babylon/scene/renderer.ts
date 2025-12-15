@@ -250,7 +250,7 @@ export const Renderer = {
         this.setCullingFrequency(this.scene, 10)
 
         this.scene.environmentTexture = CubeTexture.CreateFromPrefilteredData(
-            "assets/environment_specular.env",
+            "public/environment_specular.env",
             this.scene
         );
         this.scene.environmentIntensity = 0.2
