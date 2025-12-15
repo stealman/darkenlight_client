@@ -97,7 +97,7 @@ class Tree1 implements Tree {
         this.rotation = rotation
         this.scale = scale
         this.leafMaterial = leafMaterial
-        this.woodMaterial = MaterialEnum1.WOOD_1.uv
+        this.woodMaterial = Math.random() < 0.5 ? MaterialEnum1.WOOD_1.uv : MaterialEnum1.WOOD_2.uv
         this.leavesPrefab = TreeManager.prefabs.tree1!
     }
 

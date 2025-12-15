@@ -6,7 +6,7 @@ import {
     SceneLoader, Vector2, Vector3,
 } from '@babylonjs/core'
 import { MonsterModel } from '@/babylon/monsters/monsterModel'
-import { CustomMaterial } from '@babylonjs/materials'
+import { CustomMaterial, PBRCustomMaterial } from '@babylonjs/materials'
 import { MobWeaponsCbManager } from '@/babylon/item/codebook/mobWeaponsCb'
 import { MobArmorsCbManager } from '@/babylon/item/codebook/mobArmorsCb'
 import { MobEquipItemData } from '@/babylon/item/codebook/mobEquipItemData'
@@ -70,7 +70,7 @@ export class MobEquipItemType {
         this.cbData = data
     }
 
-    async initializeMesh(scene: Scene, fileName: string, material: CustomMaterial, position: Vector3 = Vector3.Zero(), rotation: Vector3 = Vector3.Zero(), scale: Vector3 = Vector3.One()) {
+    async initializeMesh(scene: Scene, fileName: string, material: PBRCustomMaterial, position: Vector3 = Vector3.Zero(), rotation: Vector3 = Vector3.Zero(), scale: Vector3 = Vector3.One()) {
         const result = await SceneLoader.ImportMeshAsync("", "/assets/models/equip/", fileName + ".babylon", scene);
         const source = result.meshes[0] as Mesh
 

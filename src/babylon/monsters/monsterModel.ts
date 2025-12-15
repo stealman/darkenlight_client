@@ -66,7 +66,7 @@ export class MonsterModel {
     }
 
     assignRhand(type: number, matIndex: number, scale = new Vector3(1, 1, 1)) {
-        this.addEquippedItem(new MobEquipItem(MobEquipManager.itemTypes.get(type)!, matIndex, this, this.rhandBone, this.rhandBoneW, scale))
+        // this.addEquippedItem(new MobEquipItem(MobEquipManager.itemTypes.get(type)!, matIndex, this, this.rhandBone, this.rhandBoneW, scale))
     }
 
     assignChest(type: number, matIndex: number, scale = new Vector3(1, 1, 1)) {

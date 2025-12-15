@@ -59,7 +59,7 @@ export class CharacterModel {
             this.model.rotation = new Vector3(0, 0, 0)
 
             // Apply material
-            const material = Materials.getBasicMaterial(scene, "steveMaterial", "/assets/models/steve/steve.jpg", false, false)
+            const material = Materials.getPBRMaterial(scene, "steveMaterial", "/assets/models/steve/steve.jpg", false, false, 0, 1, 1, 1)
             this.model.getChildMeshes().forEach((mesh) => {
                 mesh.material = material
                 Renderer.addShadowCaster(mesh)
@@ -118,12 +118,12 @@ export class CharacterModel {
             this.lhandNode.attachToBone(this.skeleton.bones.find(b => b.id === "Bone.012")!, this.model) // Lhand 012
             this.rhandNode.attachToBone(this.skeleton.bones.find(b => b.id === "Bone.009")!, this.model) // Rhand 009
 
-            this.assignArmor(1, 1)
-            this.assignHelmet(1, 2)
-            this.assignRightPauldron(1, 0)
-            this.assignLeftPauldron(2, 0)
-            this.assignRightLeg(1, 0)
-            this.assignLeftLeg(1, 0)
+            this.assignArmor(10, 3)
+            this.assignHelmet(20, 3)
+            this.assignRightPauldron(40, 0)
+            this.assignLeftPauldron(50, 0)
+            this.assignRightLeg(60, 0)
+            this.assignLeftLeg(60, 0)
             this.assignSword(1, 0)
 
         }).catch((error) => {

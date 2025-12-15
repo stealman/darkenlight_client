@@ -2,10 +2,9 @@ import {
     Matrix,
     Mesh,
     Scene,
-    ShadowGenerator, StandardMaterial,
+    StandardMaterial,
     TransformNode, Vector2, Vector3,
 } from '@babylonjs/core'
-import {Settings} from "@/settings/settings";
 import { Builder } from '@/babylon/builder'
 import { Materials } from '@/babylon/materials'
 import { TreeManager } from '@/babylon/world/treeManager'
@@ -33,7 +32,6 @@ export const WorldRenderer = {
         Renderer.addShadowCaster(TerrainManager.terrainPlane!)
         Renderer.addShadowCaster(this.symmetricBlock1.mesh)
         Renderer.addShadowCaster(TreeManager.prefabs.tree1!.mesh)
-
     },
 
     /**

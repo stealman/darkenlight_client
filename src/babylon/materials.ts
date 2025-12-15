@@ -1,22 +1,22 @@
 import {
     Scene,
-    StandardMaterial,
     Color3,
-    Texture, Vector2,
+    Texture, Vector2, PBRMaterial,
 } from '@babylonjs/core'
-import { CustomMaterial } from '@babylonjs/materials'
+import { CustomMaterial, PBRCustomMaterial } from '@babylonjs/materials'
 
 export const Materials = {
     BASE_PATH: './assets/materials/',
 
     sceneEmissiveColor: new Color3(0.15, 0.15, 0.15),
 
-    terrainMaterial: null as CustomMaterial | null,
-    planeMaterial: null as StandardMaterial | null,
-    symmetricBlockMaterial1: null as CustomMaterial | null,
-    waterMaterial: null as StandardMaterial | null,
+    terrainMaterial: null as PBRCustomMaterial | null,
+    planeMaterial: null as PBRCustomMaterial | null,
+    symmetricBlockMaterial1: null as PBRCustomMaterial | null,
+    waterMaterial: null as PBRMaterial | null,
 
     customMaterials: new Map<string, CustomMaterial>(),
+    pbrCustomMaterials: new Map<string, PBRCustomMaterial>(),
 
     initialize(scene: Scene) {
         this.terrainMaterial = this.createTerrainMaterial1(scene)
@@ -25,69 +25,87 @@ export const Materials = {
         this.waterMaterial = this.createWaterMaterial(scene)
     },
 
-    getBasicMaterial(scene: Scene, name: string, pathToDiffuse: string, hasAlpha: boolean = false, invertY: boolean = true): StandardMaterial {
-        const mat = new StandardMaterial(name, scene)
-        mat.emissiveColor = this.sceneEmissiveColor
-        mat.specularColor = Color3.Black()
+    createTerrainMaterial1(scene: Scene): PBRCustomMaterial {
+        const material = this.getPBRCustomMaterial(scene, "terrain_mats1", this.BASE_PATH, 'terrain_materials_1.png', 1 / 4, 1 / 4, false)
+        return material
+    },
 
-        const diffuseTexture = new Texture(pathToDiffuse, scene, {invertY: invertY})
-        diffuseTexture.hasAlpha = hasAlpha
-        mat.diffuseTexture = diffuseTexture
+    createPlaneMaterial(scene: Scene): PBRCustomMaterial {
+        const material = this.getPBRCustomMaterial(scene, "plane_mats", this.BASE_PATH, 'plane_materials.png', 1 / 8, 1 / 8, false)
+        return material
+    },
+
+    createSymBlockMaterial1(scene: Scene): PBRCustomMaterial {
+        const material = this.getPBRCustomMaterial(scene, "sym_block_mats1", this.BASE_PATH, 'symetric_materials_1.png', 1 / 8, 1 / 8, true)
+        return material
+    },
+
+    getPBRMaterial(scene: Scene, name: string, pathToDiffuse: string, hasAlpha: boolean = false, invertY: boolean, metallic: number, roughness: number, directIntensity: number, environmentIntensity: number): PBRMaterial {
+        const albedoTexture = new Texture(pathToDiffuse, scene, {invertY: invertY})
+        albedoTexture.hasAlpha = hasAlpha
+        albedoTexture.gammaSpace = true;
+
+        const mat = new PBRMaterial(name, scene)
+        mat.albedoTexture = albedoTexture
+        mat.metallic = metallic
+        mat.roughness = roughness
+        mat.directIntensity = directIntensity
+        mat.environmentIntensity = environmentIntensity
+
         return mat
     },
 
-    createTerrainMaterial1(scene: Scene): CustomMaterial {
-        return this.getCustomMaterial(scene, "terrain_mats1", 'terrain_materials_1.png', 1 / 4, 1 / 4, false)
+    getPBRCustomMaterial(scene: Scene, name: string, basePath: string, texturePath: string, uScale: number, vScale: number, hasAlpha: boolean): PBRCustomMaterial {
+        return this.getPBRCustomMaterialFrom(scene, name, basePath, texturePath, uScale, vScale, hasAlpha, 0, 1, 1, 0.5)
     },
 
-    createPlaneMaterial(scene: Scene): StandardMaterial {
-        return this.getCustomMaterial(scene, "plane_mats", 'plane_materials.png', 1 / 8, 1 / 8, false)
-    },
-
-    createSymBlockMaterial1(scene: Scene): CustomMaterial {
-        return this.getCustomMaterial(scene, "sym_block_mats", 'symetric_materials_1.png', 1 / 8, 1 / 8, true)
-    },
-
-    getCustomMaterialFrom(scene: Scene, name: string, basePath: string, texturePath: string, uScale: number, vScale: number, hasAlpha: boolean): CustomMaterial {
-        if (this.customMaterials.has(name)) {
-            return this.customMaterials.get(name)!
+    getPBRCustomMaterialFrom(scene: Scene, name: string, basePath: string, texturePath: string, uScale: number, vScale: number, hasAlpha: boolean, metallic: number, roughness: number, directIntensity: number, environmentIntensity: number): PBRCustomMaterial {
+        if (this.pbrCustomMaterials.has(name)) {
+            return this.pbrCustomMaterials.get(name)!
         } else {
+            const albedoTexture = new Texture(basePath + texturePath, scene)
+            albedoTexture.uScale = uScale
+            albedoTexture.vScale = vScale
+            albedoTexture.hasAlpha = hasAlpha
+            albedoTexture.gammaSpace = true;
 
-            const diffuseTexture = new Texture(basePath + texturePath, scene)
-            diffuseTexture.hasAlpha = hasAlpha
-            diffuseTexture.uScale = uScale
-            diffuseTexture.vScale = vScale
+            const mat = new PBRCustomMaterial(name, scene)
+            mat.albedoTexture = albedoTexture
+            mat.metallic = metallic
+            mat.roughness = roughness
+            mat.backFaceCulling = false;
+            mat.directIntensity = directIntensity
+            mat.environmentIntensity = environmentIntensity
+            mat.usePhysicalLightFalloff = false;
 
-            const mat = new CustomMaterial(name, scene)
-            mat.diffuseTexture = diffuseTexture
-            mat.specularColor = Color3.Black()
-            mat.emissiveColor = this.sceneEmissiveColor
-
-            mat.AddAttribute("uvc")
-            mat.Vertex_Definitions(`attribute vec2 uvc;`);
-            mat.Vertex_Before_PositionUpdated(`uvUpdated += uvc;`)
+            mat.AddAttribute("uvc");
+            mat.Vertex_Definitions(`attribute vec2 uvc;`)
+            mat.Vertex_Before_PositionUpdated(`uvUpdated = uvUpdated + uvc;`)
+            mat.Vertex_After_WorldPosComputed(`vAlbedoUV = uvUpdated;`)
 
             mat.freeze()
-            this.customMaterials.set(name, mat)
+            this.pbrCustomMaterials.set(name, mat)
             return mat
         }
     },
 
-    getCustomMaterial(scene: Scene, name: string, texturePath: string, uScale: number, vScale: number, hasAlpha: boolean): CustomMaterial {
-        return this.getCustomMaterialFrom(scene, name, this.BASE_PATH, texturePath, uScale, vScale, hasAlpha)
-    },
+    createWaterMaterial(scene: Scene): PBRMaterial {
+        const albedoTexture = new Texture(this.BASE_PATH + 'water.png', scene)
+        albedoTexture.uScale = 64
+        albedoTexture.vScale = 64
+        albedoTexture.gammaSpace = true;
 
-    createWaterMaterial(scene: Scene): StandardMaterial {
-        const mat = new StandardMaterial('waterMaterial', scene)
-        mat.specularColor = new Color3(0, 0, 0)
+        const mat = new PBRMaterial("waterMaterial", scene)
+        mat.albedoTexture = albedoTexture
+        mat.metallic = 0.6
+        mat.roughness = 0.4
+        mat.backFaceCulling = false;
+        mat.directIntensity = 1
+        mat.environmentIntensity = 2
+        mat.usePhysicalLightFalloff = false
+        mat.alpha = 0.25
 
-        const texture = new Texture(this.BASE_PATH + 'water.png', scene)
-        texture.uScale = 64
-        texture.vScale = 64
-
-        mat.diffuseTexture = texture
-        mat.alpha = 0.25;
-        mat.ambientColor = new Color3(1, 1, 1);
+        mat.freeze()
         return mat
     },
 }
@@ -107,7 +125,8 @@ export const MaterialEnum1 = {
     TREE_LEAF_2: new MaterialEnum(2, new Vector2(2.5, 6.5)),
     TREE_LEAF_3: new MaterialEnum(3, new Vector2(4.5, 6.5)),
     TREE_LEAF_4: new MaterialEnum(4, new Vector2(6.5, 6.5)),
-    WOOD_1: new MaterialEnum(5, new Vector2(0.5, 4.5)),
+    WOOD_1: new MaterialEnum(5, new Vector2(2.5, 4.5)),
+    WOOD_2: new MaterialEnum(5, new Vector2(0.5, 4.5)),
 
     getMaterialByIndex(index: number): Vector2 {
         return Object.values(MaterialEnum1).find(item => item.index === index)?.uv;

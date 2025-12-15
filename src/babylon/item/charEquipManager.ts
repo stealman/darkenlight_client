@@ -1,27 +1,28 @@
 import {
-    Mesh,
+    Mesh, PBRMaterial,
     Quaternion,
     Scene,
     SceneLoader,
     SolidParticle,
-    SolidParticleSystem, TransformNode, Vector2,
+    SolidParticleSystem, TransformNode,
     Vector3, Vector4,
 } from '@babylonjs/core'
 import { Materials } from '@/babylon/materials'
 import { Renderer } from '@/babylon/scene/renderer'
+import { CharArmorsCbManager } from '@/babylon/item/codebook/charArmorsCb'
 
 export const BASE_EQUIP_MATERIAL_PATH = "/assets/models/equip/"
 
-class WearableItemManager {
+class CharWearableItemManager {
     namePrefix: string
     sps: SolidParticleSystem
     spsMesh: Mesh | null = null
-    models: WearableItemModel[] = []
+    models: CharWearableItemModel[] = []
     texturePath: string
     scene: Scene
     castShadows: boolean = false
 
-    constructor(namePrefix: string, scene: Scene, models: WearableItemModel[], texturePath: string, castShadows: boolean = false) {
+    constructor(namePrefix: string, scene: Scene, models: CharWearableItemModel[], texturePath: string, castShadows: boolean = false) {
         this.namePrefix = namePrefix
         this.sps = new SolidParticleSystem(this.namePrefix + "Sps", scene, { expandable: true })
         this.models = models
@@ -55,7 +56,7 @@ class WearableItemManager {
         // Build mesh object
         this.spsMesh = this.sps.buildMesh()
         this.spsMesh.receiveShadows = true
-        this.spsMesh.material = Materials.getBasicMaterial(scene, this.namePrefix + "Mat", this.texturePath , false, true)
+        this.spsMesh.material = Materials.getPBRMaterial(scene, this.namePrefix + "Mat", this.texturePath , false, true, 1, 0.75, 2, 1)
         if (this.castShadows) {
             Renderer.addShadowCaster(this.spsMesh)
         }
@@ -120,7 +121,7 @@ class WearableItemManager {
         this.sps.setParticles();
     }
 
-    addModelMeshToSps(model: WearableItemModel) {
+    addModelMeshToSps(model: CharWearableItemModel) {
         model.mesh.rotation = model.baseRotation
         model.mesh.position = model.basePosition
 
@@ -134,7 +135,7 @@ class WearableItemManager {
     }
 }
 
-class WearableItemModel {
+export class CharWearableItemModel {
     name: string
     itemModelId: number
     mesh: Mesh
@@ -159,89 +160,72 @@ class WearableItemModel {
     }
 }
 
-const PlateArmorMaterials = [
+const BasicPlateMetalMaterials = [
     new Vector4(0.01, 0.76, 0.24, 0.99), // Iron
-    new Vector4(0.76, 0.51, 0.99, 0.74), // Mythril
+    new Vector4(0.26, 0.76, 0.49, 0.99), // Astracyte
+    new Vector4(0.51, 0.76, 0.74, 0.99), // Agapyte
+    new Vector4(0.76, 0.76, 0.99, 0.99), // Gold
     new Vector4(0.01, 0.51, 0.24, 0.74), // Redstone
+    new Vector4(0.26, 0.51, 0.49, 0.74), // Darkstone
+    new Vector4(0.51, 0.51, 0.74, 0.74), // Amethyst
+    new Vector4(0.76, 0.51, 0.99, 0.74), // Mythril
+    new Vector4(0.01, 0.26, 0.24, 0.49), // Rust iron
+    new Vector4(0.26, 0.26, 0.49, 0.49), // Shadow iron
 ]
 
-const SwordMaterials = {
-    longsword_iron : new Vector4(0, 5/6, 0.5, 1),
-    longsword_mythril : new Vector4(0.5, 5/6, 1, 1),
-}
-
 export const CharEquipManager = {
-    helmetManager: null as WearableItemManager | null,
-    armorManager: null as WearableItemManager | null,
-    pauldronManager: null as WearableItemManager | null,
-    legManager: null as WearableItemManager | null,
-    swordManager: null as WearableItemManager | null,
+    armorBasicMetalManager: null as CharWearableItemManager | null,
 
-    colorVec: new Vector2(0, 0),
+    swordDiamondMesh: null as Mesh | null,
 
     async initialize(scene: Scene) {
-        const helmModels = [
-            new WearableItemModel("male-plate-helm1", 1, "armors/helmet.babylon", new Vector3(0.46, 0.46, 0.46), new Vector3(0, 0.42, 0)),
-            new WearableItemModel("male-plate-helm2", 2, "armors/helmet_closed.babylon", new Vector3(0.46, 0.46, 0.46), new Vector3(0, 0.42, 0)),
-            ]
+        CharArmorsCbManager.initialize()
+        this.armorBasicMetalManager = new CharWearableItemManager("metal_armor_basic", scene, CharArmorsCbManager.basicMetalArmorModels, "/assets/models/equip/armors/plate-metal-basic.png")
+        await this.armorBasicMetalManager.initialize(scene)
 
-        this.helmetManager = new WearableItemManager("helm", scene, helmModels, "/assets/models/equip/armors/plate.png")
-        await this.helmetManager.initialize(scene)
+        const result = await SceneLoader.ImportMeshAsync("", "/assets/models/equip/weapons/", "sword_steel.glb", scene);
+        this.swordDiamondMesh = result.meshes[0].getChildMeshes()[0] as Mesh
+        this.swordDiamondMesh.setEnabled(false)
+        this.swordDiamondMesh.scaling = new Vector3(2, 1, 1)
+        this.swordDiamondMesh.rotation = new Vector3(Math.PI / 2, Math.PI / 2, 0)
+        this.swordDiamondMesh.receiveShadows = true
+        this.swordDiamondMesh.name = "swordDiamondMesh"
 
-        const armorModels = [
-            new WearableItemModel("male-plate-armor", 1, "armors/armor-plate.babylon", new Vector3(0.42, 0.42, 0.42), new Vector3(-0.01, 0.65, 0.03))]
+        const mat = this.swordDiamondMesh.material as PBRMaterial
+        mat.metallic = 1
+        mat.roughness = 0.75
+        mat.backFaceCulling = false;
+        mat.directIntensity = 2
+        mat.environmentIntensity = 2
 
-        this.armorManager = new WearableItemManager("armor", scene, armorModels, "/assets/models/equip/armors/plate.png")
-        await this.armorManager.initialize(scene)
-
-        const pauldronModels = [
-            new WearableItemModel("male-plate-pauldron-left", 1, "armors/pauldron-plate.babylon", new Vector3(0.48, 0.48, 0.52), new Vector3(0, -0.12, 0.065), new Vector3(0, -Math.PI / 2, 0)),
-            new WearableItemModel("male-plate-pauldron-right", 2, "armors/pauldron-plate.babylon", new Vector3(0.48, 0.48, 0.52), new Vector3(0, -0.12, -0.05), new Vector3(0, Math.PI / 2, 0))
-        ]
-
-        this.pauldronManager = new WearableItemManager("pauldron", scene, pauldronModels, "/assets/models/equip/armors/plate.png")
-        await this.pauldronManager.initialize(scene)
-
-        const legModels = [
-            new WearableItemModel("plate-legs", 1, "armors/leg-plate.babylon", new Vector3(0.26, 0.26, 0.23), new Vector3(-0.01, -0.1, 0.01))
-        ]
-        this.legManager = new WearableItemManager("legs", scene, legModels, "/assets/models/equip/armors/plate.png")
-        await this.legManager.initialize(scene)
-
-        const swordModels = [
-            new WearableItemModel("sword", 1, "weapons/sword1.babylon", new Vector3(5, 5, 5), new Vector3(0.01, 0.1, 0), new Vector3(0, Math.PI / 2, Math.PI / 2))
-        ]
-        this.swordManager = new WearableItemManager("sword", scene, swordModels, "/assets/models/equip/weapons/swords.png", true)
-        await this.swordManager.initialize(scene)
+        Renderer.addShadowCaster(this.swordDiamondMesh)
     },
 
     assignHelmet(node: TransformNode, modelId: number, materialId: number, scale: Vector3 = new Vector3(1, 1, 1)) {
-        this.helmetManager!.assignItem(node, modelId, PlateArmorMaterials[materialId], scale)
+        this.armorBasicMetalManager!.assignItem(node, modelId, BasicPlateMetalMaterials[materialId], scale)
     },
 
     assignArmor(node: TransformNode, modelId: number, materialId: number, scale: Vector3 = new Vector3(1, 1, 1)) {
-        this.armorManager!.assignItem(node, modelId, PlateArmorMaterials[materialId], scale)
+        this.armorBasicMetalManager!.assignItem(node, modelId, BasicPlateMetalMaterials[materialId], scale)
     },
 
     assignPauldron(node: TransformNode, modelId: number, materialId: number, scale: Vector3 = new Vector3(1, 1, 1)) {
-        this.pauldronManager!.assignItem(node, modelId, PlateArmorMaterials[materialId], scale)
+        this.armorBasicMetalManager!.assignItem(node, modelId, BasicPlateMetalMaterials[materialId], scale)
     },
 
     assignLeg(node: TransformNode, modelId: number, materialId: number, scale: Vector3 = new Vector3(1, 1, 1)) {
-        this.legManager!.assignItem(node, modelId, PlateArmorMaterials[materialId], scale)
+        this.armorBasicMetalManager!.assignItem(node, modelId, BasicPlateMetalMaterials[materialId], scale)
     },
 
     assignSword(node: TransformNode, modelId: number, materialId: number, scale: Vector3 = new Vector3(1, 1, 1)) {
-        this.swordManager!.assignItem(node, modelId, SwordMaterials.longsword_mythril, scale)
+        //this.swordManager!.assignItem(node, modelId, BasicPlateMetalMaterials[4], scale)
+
+        this.swordDiamondMesh!.parent = node
+        this.swordDiamondMesh!.setEnabled(true)
+
     },
 
     onFrame() {
-        this.helmetManager!.onFrame()
-        this.armorManager!.onFrame()
-        this.pauldronManager!.onFrame()
-        this.legManager!.onFrame()
-        this.swordManager!.onFrame()
+        this.armorBasicMetalManager!.onFrame()
     }
 }
-
-

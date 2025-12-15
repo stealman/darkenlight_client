@@ -11,7 +11,7 @@ export const MobWeaponsCbManager = {
 
     async initMelee(map: Map<number, MobEquipItemType>, scene: Scene) {
         this.scene = scene
-        map.set(MobWeaponsCb.LONGSWORD.id, await this.getItem(MobWeaponsCb.LONGSWORD))
+       // map.set(MobWeaponsCb.LONGSWORD.id, await this.getItem(MobWeaponsCb.LONGSWORD))
     },
 
     async getItem(data: MobEquipItemData) {
@@ -22,10 +22,10 @@ export const MobWeaponsCbManager = {
     },
 
     getMaterial(texture: string, matsX: number, matsY: number, hasAlpha: boolean = false) {
-        return Materials.getCustomMaterialFrom(this.scene!, texture, BASE_EQUIP_MATERIAL_PATH + this.BASE_WEAPONS_PATH, texture + ".png", 1 / (matsX * 2), 1 / (matsY * 2), hasAlpha)
+        return Materials.getPBRCustomMaterial(this.scene!, texture, BASE_EQUIP_MATERIAL_PATH + this.BASE_WEAPONS_PATH, texture + ".png", 1 / (matsX * 2), 1 / (matsY * 2), hasAlpha)
     }
 }
 
 export const MobWeaponsCb = {
-    LONGSWORD: new MobEquipItemData(1, "1_longsword", null,null, new Vector3(0.01, 0.1, 0), new Vector3(0, Math.PI / 2, Math.PI / 2), BabylonUtils.getSymVector(5), 2, 1),
+    //LONGSWORD: new MobEquipItemData(1, "sword_steel", null,null, new Vector3(0.01, 0.1, 0), new Vector3(0, Math.PI / 2, Math.PI / 2), BabylonUtils.getSymVector(5), 2, 1),
 }

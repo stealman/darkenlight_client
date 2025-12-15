@@ -5,7 +5,7 @@ import {
     FreeCamera,
     PointLight,
     ShadowGenerator, Color3, Color4, SceneInstrumentation, DirectionalLight, RenderTargetTexture, Mesh,
-    HemisphericLight, AbstractMesh,
+    HemisphericLight, AbstractMesh, CubeTexture,
 } from '@babylonjs/core'
 import {UnwrapRef} from "vue"
 import '@babylonjs/inspector'
@@ -67,7 +67,7 @@ export const Renderer = {
         if (Settings.shadows) {
             this.shadow = new ShadowGenerator(4096, this.sunLight, false)
             this.shadow.bias = 0.00001
-            this.shadow.setDarkness(0.1)
+            this.shadow.setDarkness(0)
             this.shadow.usePoissonSampling = true
             this.shadow.forceBackFacesOnly = true
             //this.shadow.getShadowMap().refreshRate = RenderTargetTexture.REFRESHRATE_RENDER_ONCE
@@ -248,6 +248,12 @@ export const Renderer = {
         this.scene.fogColor = new Color3(0, 0, 0)
 
         this.setCullingFrequency(this.scene, 10)
+
+        this.scene.environmentTexture = CubeTexture.CreateFromPrefilteredData(
+            "assets/environment_specular.env",
+            this.scene
+        );
+        this.scene.environmentIntensity = 0.2
     },
 
     actualizeDebug() {
