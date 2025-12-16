@@ -18,8 +18,8 @@ export const MyPlayer = {
     autoAttackActive: false,
     autoAttackEnd: 0,
 
-    initialize(scene: Scene) {
-        this.charModel = new CharacterModel(Data.myChar, scene)
+    async initialize(scene: Scene) {
+        this.charModel = await CharacterModel.create(Data.myChar, scene)
         Data.myChar.yPos = this.calculateYPos()
         Data.myChar.modelYpos = Data.myChar.yPos
     },

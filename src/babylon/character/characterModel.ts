@@ -1,6 +1,6 @@
 import {
     AbstractMesh,
-    AnimationGroup,
+    AnimationGroup, Mesh,
     Scene,
     SceneLoader, Skeleton, Sound, TransformNode,
     Vector3,
@@ -43,12 +43,21 @@ export class CharacterModel {
     animTransition: AnimTransition | null = null
 
     footStepSound: Sound | null
+    weaponMesh: Mesh | null = null
 
-    constructor(playerData: PlayerData, scene: Scene) {
+    constructor(playerData: PlayerData) {
         this.playerData = playerData
         this.footStepSound = AudioManager.footStep.clone()
+    }
 
-        SceneLoader.ImportMeshAsync(
+    static async create(data: PlayerData, scene: Scene): Promise<CharacterModel> {
+        const p = new CharacterModel(data);
+        await p.initAsync(scene);
+        return p;
+    }
+
+    async initAsync(scene: Scene) {
+        await SceneLoader.ImportMeshAsync(
             "",
             "/public/models/steve/",
             "steve.gltf",
@@ -59,7 +68,12 @@ export class CharacterModel {
             this.model.rotation = new Vector3(0, 0, 0)
 
             // Apply material
-            const material = Materials.getPBRMaterial(scene, "steveMaterial", "/public/models/steve/steve.jpg", false, false, 0, 1, 1, 1)
+            const material = Materials.getPBRMaterial(scene, "steveMaterial", "/public/models/steve/steve.jpg", false, false,  {
+                metallic: 0,
+                roughness: 1,
+                directIntensity: 1,
+                environmentIntensity: 1,
+            })
             this.model.getChildMeshes().forEach((mesh) => {
                 mesh.material = material
                 Renderer.addShadowCaster(mesh)
@@ -117,18 +131,17 @@ export class CharacterModel {
             this.rlegNode.attachToBone(this.skeleton.bones.find(b => b.id === "Bone.006")!, this.model) // Rleg 006
             this.lhandNode.attachToBone(this.skeleton.bones.find(b => b.id === "Bone.012")!, this.model) // Lhand 012
             this.rhandNode.attachToBone(this.skeleton.bones.find(b => b.id === "Bone.009")!, this.model) // Rhand 009
-
-            this.assignArmor(10, 3)
-            this.assignHelmet(20, 3)
-            this.assignRightPauldron(40, 0)
-            this.assignLeftPauldron(50, 0)
-            this.assignRightLeg(60, 0)
-            this.assignLeftLeg(60, 0)
-            this.assignSword(1, 0)
-
         }).catch((error) => {
             console.error("Error loading model:", error)
         });
+
+        this.assignArmor(10, 3)
+        this.assignHelmet(20, 3)
+        this.assignRightPauldron(40, 0)
+        this.assignLeftPauldron(50, 0)
+        this.assignRightLeg(60, 0)
+        this.assignLeftLeg(60, 0)
+        await this.assignWeapon(1)
     }
 
     assignHelmet(type: number, materialId: number) {
@@ -155,8 +168,8 @@ export class CharacterModel {
         CharEquipManager.assignLeg(this.rlegNode, type, materialId);
     }
 
-    assignSword(type: number, materialId: number) {
-        CharEquipManager.assignSword(this.rhandNode, type, materialId);
+    async assignWeapon(type: number) {
+        await CharEquipManager.assignWeapon(this, this.rhandNode, type);
     }
 
     startWalkAnimation() {

@@ -3,15 +3,13 @@ import {
     Mesh,
     Quaternion,
     Scene,
-    SceneLoader, Vector2, Vector3,
+    SceneLoader, TransformNode, Vector2, Vector3,
 } from '@babylonjs/core'
 import { MonsterModel } from '@/babylon/monsters/monsterModel'
 import { PBRCustomMaterial } from '@babylonjs/materials'
 import { MobWeaponsCbManager } from '@/babylon/item/codebook/mobWeaponsCb'
 import { MobArmorsCbManager } from '@/babylon/item/codebook/mobArmorsCb'
 import { MobEquipItemData } from '@/babylon/item/codebook/mobEquipItemData'
-
-export const BASE_EQUIP_MATERIAL_PATH = "/public/models/equip/"
 
 export class MobEquipItem {
     parent: MonsterModel | null = null
@@ -70,7 +68,7 @@ export class MobEquipItemType {
         this.cbData = data
     }
 
-    async initializeMesh(scene: Scene, fileName: string, material: PBRCustomMaterial, position: Vector3 = Vector3.Zero(), rotation: Vector3 = Vector3.Zero(), scale: Vector3 = Vector3.One()) {
+    async initializeMesh(parentNode: TransformNode, scene: Scene, fileName: string, material: PBRCustomMaterial, position: Vector3 = Vector3.Zero(), rotation: Vector3 = Vector3.Zero(), scale: Vector3 = Vector3.One()) {
         const result = await SceneLoader.ImportMeshAsync("", "/public/models/equip/", fileName + ".babylon", scene);
         const source = result.meshes[0] as Mesh
 
@@ -82,6 +80,7 @@ export class MobEquipItemType {
         this.mesh.material = material
         this.mesh.setEnabled(false)
         this.mesh.alwaysSelectAsActiveMesh = true
+        this.mesh.parent = parentNode
     }
 
     updateCount(count: number) {
@@ -109,7 +108,7 @@ export const MobEquipManager = {
 
     async initialize(scene: Scene) {
         await MobWeaponsCbManager.initMelee(this.itemTypes, scene)
-        await MobArmorsCbManager.initHelmets(this.itemTypes, scene)
+        await MobArmorsCbManager.initArmors(this.itemTypes, scene)
     },
 
     addEquippedItem(item: MobEquipItem) {

@@ -3,9 +3,8 @@ import {
     Scene,
     Vector3,
     FreeCamera,
-    PointLight,
-    ShadowGenerator, Color3, Color4, SceneInstrumentation, DirectionalLight, RenderTargetTexture, Mesh,
-    HemisphericLight, AbstractMesh, CubeTexture,
+    ShadowGenerator, Color3, Color4, SceneInstrumentation, DirectionalLight, Mesh,
+    AbstractMesh, CubeTexture,
 } from '@babylonjs/core'
 import {UnwrapRef} from "vue"
 import '@babylonjs/inspector'
@@ -50,19 +49,15 @@ export const Renderer = {
 
     shadow: {} as ShadowGenerator,
     sunLight: {} as DirectionalLight,
-    hemisphericLight: {} as HemisphericLight,
 
     async initialize(canvasRef: UnwrapRef<HTMLCanvasElement>) {
         this.engine = new Engine(canvasRef, true)
         this.createScene(this.engine)
 
         this.animationSpeedRatio = this.animationFrameTime / 25
-        this.sunLight = new DirectionalLight("sunLight", new Vector3(0.75, -1, -0.2), this.scene)
+        this.sunLight = new DirectionalLight("sunLight", new Vector3(0.75, -0.75, -0.2), this.scene)
         this.sunLight.position = new Vector3(400, 400, 400);
-        this.sunLight.intensity = 1
-
-        this.hemisphericLight = new HemisphericLight("hemisphericLight", new Vector3(0, 1, 0), this.scene)
-        this.hemisphericLight.intensity = 0.5
+        this.sunLight.intensity = 1.6
 
         if (Settings.shadows) {
             this.shadow = new ShadowGenerator(4096, this.sunLight, false)
@@ -253,7 +248,7 @@ export const Renderer = {
             "public/environment_specular.env",
             this.scene
         );
-        this.scene.environmentIntensity = 0.2
+        this.scene.environmentIntensity = 0.5
     },
 
     actualizeDebug() {

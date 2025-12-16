@@ -3,7 +3,14 @@ import {
     Color3,
     Texture, Vector2, PBRMaterial,
 } from '@babylonjs/core'
-import { CustomMaterial, PBRCustomMaterial } from '@babylonjs/materials'
+import { PBRCustomMaterial } from '@babylonjs/materials'
+
+export interface PBRBasicAtts {
+    metallic: number
+    roughness: number
+    directIntensity: number
+    environmentIntensity: number
+}
 
 export const Materials = {
     BASE_PATH: './public/images/materials/',
@@ -16,9 +23,6 @@ export const Materials = {
     blockMat1: null as PBRCustomMaterial | null,
 
     waterMaterial: null as PBRMaterial | null,
-
-    customMaterials: new Map<string, CustomMaterial>(),
-    pbrCustomMaterials: new Map<string, PBRCustomMaterial>(),
 
     initialize(scene: Scene) {
         this.terrainMaterial = this.createTerrainMaterial1(scene)
@@ -48,58 +52,59 @@ export const Materials = {
         return material
     },
 
-    getPBRMaterial(scene: Scene, name: string, pathToDiffuse: string, hasAlpha: boolean = false, invertY: boolean, metallic: number, roughness: number, directIntensity: number, environmentIntensity: number): PBRMaterial {
+    getPBRMaterial(scene: Scene, name: string, pathToDiffuse: string, hasAlpha: boolean = false, invertY: boolean, options: PBRBasicAtts): PBRMaterial {
         const albedoTexture = new Texture(pathToDiffuse, scene, {invertY: invertY})
         albedoTexture.hasAlpha = hasAlpha
         albedoTexture.gammaSpace = true;
 
         const mat = new PBRMaterial(name, scene)
         mat.albedoTexture = albedoTexture
-        mat.metallic = metallic
-        mat.roughness = roughness
-        mat.directIntensity = directIntensity
-        mat.environmentIntensity = environmentIntensity
+        mat.metallic = options.metallic
+        mat.roughness = options.roughness
+        mat.directIntensity = options.directIntensity
+        mat.environmentIntensity = options.environmentIntensity
 
         return mat
     },
 
     getPBRCustomMaterial(scene: Scene, name: string, basePath: string, texturePath: string, uScale: number, vScale: number, hasAlpha: boolean): PBRCustomMaterial {
-        return this.getPBRCustomMaterialFrom(scene, name, basePath, texturePath, uScale, vScale, hasAlpha, 0, 1, 1, 0.5)
+        return this.getPBRCustomMaterialFrom(scene, name, basePath, texturePath, uScale, vScale, hasAlpha, {
+            metallic: 0.0,
+            roughness: 1.0,
+            directIntensity: 1.0,
+            environmentIntensity: 0.75,
+            }
+        )
     },
 
-    getPBRCustomMaterialFrom(scene: Scene, name: string, basePath: string, texturePath: string, uScale: number, vScale: number, hasAlpha: boolean, metallic: number, roughness: number, directIntensity: number, environmentIntensity: number): PBRCustomMaterial {
-        if (this.pbrCustomMaterials.has(name)) {
-            return this.pbrCustomMaterials.get(name)!
-        } else {
-            const albedoTexture = new Texture(basePath + texturePath, scene)
-            albedoTexture.uScale = uScale
-            albedoTexture.vScale = vScale
-            albedoTexture.hasAlpha = hasAlpha
-            albedoTexture.gammaSpace = true;
+    getPBRCustomMaterialFrom(scene: Scene, name: string, basePath: string, texturePath: string, uScale: number, vScale: number, hasAlpha: boolean, options: PBRBasicAtts): PBRCustomMaterial {
+        const albedoTexture = new Texture(basePath + texturePath, scene)
+        albedoTexture.uScale = uScale
+        albedoTexture.vScale = vScale
+        albedoTexture.hasAlpha = hasAlpha
+        albedoTexture.gammaSpace = true;
 
-            const mat = new PBRCustomMaterial(name, scene)
-            mat.albedoTexture = albedoTexture
-            mat.metallic = metallic
-            mat.roughness = roughness
-            mat.backFaceCulling = false;
-            mat.twoSidedLighting = true;
-            mat.directIntensity = directIntensity
-            mat.environmentIntensity = environmentIntensity
-            mat.usePhysicalLightFalloff = false;
-            if (hasAlpha) {
-                mat.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHATEST;
-                mat.alphaCutOff = 0.4;
-            }
-
-            mat.AddAttribute("uvc");
-            mat.Vertex_Definitions(`attribute vec2 uvc;`)
-            mat.Vertex_Before_PositionUpdated(`uvUpdated = uvUpdated + uvc;`)
-            mat.Vertex_After_WorldPosComputed(`vAlbedoUV = uvUpdated;`)
-
-            mat.freeze()
-            this.pbrCustomMaterials.set(name, mat)
-            return mat
+        const mat = new PBRCustomMaterial(name, scene)
+        mat.albedoTexture = albedoTexture
+        mat.metallic = options.metallic
+        mat.roughness = options.roughness
+        mat.backFaceCulling = false;
+        mat.twoSidedLighting = true;
+        mat.directIntensity = options.directIntensity
+        mat.environmentIntensity = options.environmentIntensity
+        mat.usePhysicalLightFalloff = false;
+        if (hasAlpha) {
+            mat.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHATEST;
+            mat.alphaCutOff = 0.4;
         }
+
+        mat.AddAttribute("uvc");
+        mat.Vertex_Definitions(`attribute vec2 uvc;`)
+        mat.Vertex_Before_PositionUpdated(`uvUpdated = uvUpdated + uvc;`)
+        mat.Vertex_After_WorldPosComputed(`vAlbedoUV = uvUpdated;`)
+
+        mat.freeze()
+        return mat
     },
 
     createWaterMaterial(scene: Scene): PBRMaterial {
@@ -114,7 +119,7 @@ export const Materials = {
         mat.roughness = 0.4
         mat.backFaceCulling = false;
         mat.directIntensity = 1
-        mat.environmentIntensity = 2
+        mat.environmentIntensity = 0.5
         mat.usePhysicalLightFalloff = false
         mat.alpha = 0.25
 

@@ -4,7 +4,7 @@ export class MobEquipItemData {
     id: number
     name: string
     model: string
-    texture: string
+    materialSetName: string
     pos: Vector3
     rot: Vector3
     scale: Vector3
@@ -12,11 +12,11 @@ export class MobEquipItemData {
     matsY: number
     hasAlpha: boolean
 
-    constructor(id: number, name: string, model: string | null, texture: string | null, pos: Vector3, rot: Vector3, scale: Vector3, matsX: number, matsY: number, hasAlpha: boolean = false) {
+    constructor(id: number, name: string, model: string | null, materialSetName: string, pos: Vector3, rot: Vector3, scale: Vector3, matsX: number, matsY: number, hasAlpha: boolean = false) {
         this.id = id
         this.name = name
         this.model = model? model : name
-        this.texture = texture? texture : name
+        this.materialSetName = materialSetName
         this.pos = pos
         this.rot = rot
         this.scale = scale

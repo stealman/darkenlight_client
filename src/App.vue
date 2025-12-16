@@ -34,7 +34,7 @@ export default {
             Settings.shadows = !Settings.touchEnabled
             Settings.debug = !Settings.touchEnabled
             //Settings.debug = true
-            //Settings.closeView = true
+            // Settings.closeView = true
             Settings.shadows = true
             // console.log(Settings.shadows)
 

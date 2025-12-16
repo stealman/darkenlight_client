@@ -7,34 +7,41 @@ import {
     SolidParticleSystem, TransformNode,
     Vector3, Vector4,
 } from '@babylonjs/core'
-import { Materials } from '@/babylon/materials'
+import { Materials, PBRBasicAtts } from '@/babylon/materials'
 import { Renderer } from '@/babylon/scene/renderer'
 import { CharArmorsCbManager } from '@/babylon/item/codebook/charArmorsCb'
+import { CharWeaponsCbManager } from '@/babylon/item/codebook/charWeaponsCb'
+import { CharacterModel } from '@/babylon/character/characterModel'
 
 export const BASE_EQUIP_MATERIAL_PATH = "/public/models/equip/"
+export const PLATE_METAL_BASIC = 'plate-metal-basic'
 
 class CharWearableItemManager {
-    namePrefix: string
+    materialName: string
     sps: SolidParticleSystem
     spsMesh: Mesh | null = null
     models: CharWearableItemModel[] = []
     texturePath: string
+    matOptions: PBRBasicAtts
     scene: Scene
     castShadows: boolean = false
+    particleSourceParent = new TransformNode("charEquipParticleSources", this.scene)
 
-    constructor(namePrefix: string, scene: Scene, models: CharWearableItemModel[], texturePath: string, castShadows: boolean = false) {
-        this.namePrefix = namePrefix
-        this.sps = new SolidParticleSystem(this.namePrefix + "Sps", scene, { expandable: true })
+    constructor(materialName: string, scene: Scene, models: CharWearableItemModel[], texturePath: string, castShadows: boolean = false, matOptions: PBRBasicAtts) {
+        this.materialName = materialName
+        this.sps = new SolidParticleSystem(this.materialName + "Sps", scene, { expandable: true })
         this.models = models
         this.texturePath = texturePath
         this.scene = scene
         this.castShadows = castShadows
+        this.matOptions = matOptions
     }
 
     async initialize(scene: Scene) {
         for (const model of this.models) {
             const result = await SceneLoader.ImportMeshAsync("", "/public/models/equip/", model.fileName, scene);
             model.setMesh(result.meshes[0] as Mesh)
+            result.meshes[0].parent = this.particleSourceParent
         }
         this.registerLoadedMeshes(scene)
     }
@@ -56,7 +63,7 @@ class CharWearableItemManager {
         // Build mesh object
         this.spsMesh = this.sps.buildMesh()
         this.spsMesh.receiveShadows = true
-        this.spsMesh.material = Materials.getPBRMaterial(scene, this.namePrefix + "Mat", this.texturePath , false, true, 1, 0.75, 2, 1)
+        this.spsMesh.material = Materials.getPBRMaterial(scene, this.materialName + "charEquipMap", this.texturePath , false, true, this.matOptions)
         if (this.castShadows) {
             Renderer.addShadowCaster(this.spsMesh)
         }
@@ -160,45 +167,21 @@ export class CharWearableItemModel {
     }
 }
 
-const BasicPlateMetalMaterials = [
-    new Vector4(0.01, 0.76, 0.24, 0.99), // Iron
-    new Vector4(0.26, 0.76, 0.49, 0.99), // Astracyte
-    new Vector4(0.51, 0.76, 0.74, 0.99), // Agapyte
-    new Vector4(0.76, 0.76, 0.99, 0.99), // Gold
-    new Vector4(0.01, 0.51, 0.24, 0.74), // Redstone
-    new Vector4(0.26, 0.51, 0.49, 0.74), // Darkstone
-    new Vector4(0.51, 0.51, 0.74, 0.74), // Amethyst
-    new Vector4(0.76, 0.51, 0.99, 0.74), // Mythril
-    new Vector4(0.01, 0.26, 0.24, 0.49), // Rust iron
-    new Vector4(0.26, 0.26, 0.49, 0.49), // Shadow iron
-]
-
 export const CharEquipManager = {
     armorBasicMetalManager: null as CharWearableItemManager | null,
-
-    swordDiamondMesh: null as Mesh | null,
+    weaponSourceMap: new Map<number, Mesh>() as Map<number, Mesh>,
 
     async initialize(scene: Scene) {
         CharArmorsCbManager.initialize()
-        this.armorBasicMetalManager = new CharWearableItemManager("metal_armor_basic", scene, CharArmorsCbManager.basicMetalArmorModels, "/public/models/equip/armors/plate-metal-basic.png")
+        CharWeaponsCbManager.initialize()
+
+        this.armorBasicMetalManager = new CharWearableItemManager(PLATE_METAL_BASIC, scene, CharArmorsCbManager.basicMetalArmorModels, "/public/models/equip/armors/plate-metal-basic.png", false, {
+            metallic: 1.0,
+            roughness: 0.75,
+            directIntensity: 1.5,
+            environmentIntensity: 1,
+        })
         await this.armorBasicMetalManager.initialize(scene)
-
-        const result = await SceneLoader.ImportMeshAsync("", "/public/models/equip/weapons/", "sword_steel.glb", scene);
-        this.swordDiamondMesh = result.meshes[0].getChildMeshes()[0] as Mesh
-        this.swordDiamondMesh.setEnabled(false)
-        this.swordDiamondMesh.scaling = new Vector3(2, 1, 1)
-        this.swordDiamondMesh.rotation = new Vector3(Math.PI / 2, Math.PI / 2, 0)
-        this.swordDiamondMesh.receiveShadows = true
-        this.swordDiamondMesh.name = "swordDiamondMesh"
-
-        const mat = this.swordDiamondMesh.material as PBRMaterial
-        mat.metallic = 1
-        mat.roughness = 0.75
-        mat.backFaceCulling = false;
-        mat.directIntensity = 2
-        mat.environmentIntensity = 2
-
-        Renderer.addShadowCaster(this.swordDiamondMesh)
     },
 
     assignHelmet(node: TransformNode, modelId: number, materialId: number, scale: Vector3 = new Vector3(1, 1, 1)) {
@@ -217,15 +200,59 @@ export const CharEquipManager = {
         this.armorBasicMetalManager!.assignItem(node, modelId, BasicPlateMetalMaterials[materialId], scale)
     },
 
-    assignSword(node: TransformNode, modelId: number, materialId: number, scale: Vector3 = new Vector3(1, 1, 1)) {
-        //this.swordManager!.assignItem(node, modelId, BasicPlateMetalMaterials[4], scale)
+    async assignWeapon(owner: CharacterModel, node: TransformNode, weaponTypelId: number) {
+        if (!this.weaponSourceMap.has(weaponTypelId)) {
+            await this.loadWeaponModel(weaponTypelId)
+        }
+        let weapon = this.weaponSourceMap.get(weaponTypelId)!
+        if (weapon.parent) {
+            console.log("Cloning weapon mesh")
+            weapon = weapon.clone("weaponClone") as Mesh
+        }
+        weapon.parent = node
+        weapon.setEnabled(true)
+        owner.weaponMesh = weapon
+    },
 
-        this.swordDiamondMesh!.parent = node
-        this.swordDiamondMesh!.setEnabled(true)
+    async loadWeaponModel(weaponTypelId: number): Mesh | null {
+        const modelData: CharWearableItemModel = CharWeaponsCbManager.weaponModels.get(weaponTypelId)!
+        if (!modelData) {
+            console.warn(`Weapon model with ID ${weaponTypelId} not found.`)
+            return null
+        }
 
+        const result = await SceneLoader.ImportMeshAsync("", "/public/models/equip/weapons/", modelData.fileName, Renderer.scene);
+        const mesh = result.meshes[0].getChildMeshes()[0] as Mesh
+        mesh.setEnabled(false)
+        mesh.parent = null
+        mesh.scaling = modelData.baseScale
+        mesh.rotation = modelData.baseRotation
+        mesh.receiveShadows = true
+
+        const mat = mesh.material as PBRMaterial
+        mat.metallic = 1
+        mat.roughness = 0.75
+        mat.directIntensity = 1.5
+        mat.environmentIntensity = 1
+        mat.backFaceCulling = false;
+        Renderer.addShadowCaster(mesh)
+        this.weaponSourceMap.set(weaponTypelId, mesh)
     },
 
     onFrame() {
         this.armorBasicMetalManager!.onFrame()
     }
 }
+
+const BasicPlateMetalMaterials = [
+    new Vector4(0.01, 0.76, 0.24, 0.99), // Iron
+    new Vector4(0.26, 0.76, 0.49, 0.99), // Astracyte
+    new Vector4(0.51, 0.76, 0.74, 0.99), // Agapyte
+    new Vector4(0.76, 0.76, 0.99, 0.99), // Gold
+    new Vector4(0.01, 0.51, 0.24, 0.74), // Redstone
+    new Vector4(0.26, 0.51, 0.49, 0.74), // Darkstone
+    new Vector4(0.51, 0.51, 0.74, 0.74), // Amethyst
+    new Vector4(0.76, 0.51, 0.99, 0.74), // Mythril
+    new Vector4(0.01, 0.26, 0.24, 0.49), // Rust iron
+    new Vector4(0.26, 0.26, 0.49, 0.49), // Shadow iron
+]

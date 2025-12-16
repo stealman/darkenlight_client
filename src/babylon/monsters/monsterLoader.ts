@@ -30,7 +30,12 @@ export const MonsterLoader = {
         model.rotation = Vector3.Zero()
         model.alwaysSelectAsActiveMesh = true
 
-        const material = Materials.getPBRMaterial(this.scene!, mobType.getMaterialName(), "/public/models/monsters/" + mobType.textureName, true, false, 0, 1, 1, 1)
+        const material = Materials.getPBRMaterial(this.scene!, mobType.getMaterialName(), "/public/models/monsters/" + mobType.textureName, true, false, {
+            metallic: 0,
+            roughness: 1,
+            directIntensity: 1,
+            environmentIntensity: 1,
+        })
         model.getChildMeshes().forEach(mesh => {
             mesh.material = material;
             mesh.alwaysSelectAsActiveMesh = true
