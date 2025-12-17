@@ -1,7 +1,7 @@
 import { Scene, Sound } from '@babylonjs/core'
 
 export const AudioManager = {
-    BASE_PATH: './public/sounds/',
+    BASE_PATH: './sounds/',
     footStep: null as Sound,
 
     initialize(scene: Scene) {

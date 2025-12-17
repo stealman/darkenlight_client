@@ -22,7 +22,7 @@ export const MonsterLoader = {
         // Load asset container (passive data used for cloning)
         const result = await SceneLoader.LoadAssetContainerAsync(
             "",
-            "/public/models/monsters/" + mobType.meshName, this.scene!
+            "/models/monsters/" + mobType.meshName, this.scene!
         )
 
         const model = result.meshes[0];
@@ -30,7 +30,7 @@ export const MonsterLoader = {
         model.rotation = Vector3.Zero()
         model.alwaysSelectAsActiveMesh = true
 
-        const material = Materials.getPBRMaterial(this.scene!, mobType.getMaterialName(), "/public/models/monsters/" + mobType.textureName, true, false, {
+        const material = Materials.getPBRMaterial(this.scene!, mobType.getMaterialName(), "/models/monsters/" + mobType.textureName, true, false, {
             metallic: 0,
             roughness: 1,
             directIntensity: 1,

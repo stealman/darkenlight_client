@@ -212,7 +212,7 @@ export const Renderer = {
     },
 
     setCullingFrequency(scene: Scene, everyNFrames: number) {
-        scene.freezeActiveMeshes(false)
+        scene.freezeActiveMeshes(true)
         this.activeMeshesFrozen = true
 
         // Unfreeze world matrix pro rodice vseho u ceho budeme delat instancedMeshe
@@ -242,10 +242,10 @@ export const Renderer = {
         this.scene.fogEnd = 75
         this.scene.fogColor = new Color3(0, 0, 0)
 
-        this.setCullingFrequency(this.scene, 10)
+        this.setCullingFrequency(this.scene, 50)
 
         this.scene.environmentTexture = CubeTexture.CreateFromPrefilteredData(
-            "public/environment_specular.env",
+            "environment_specular.env",
             this.scene
         );
         this.scene.environmentIntensity = 0.5

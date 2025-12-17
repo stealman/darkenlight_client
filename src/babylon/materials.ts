@@ -13,7 +13,7 @@ export interface PBRBasicAtts {
 }
 
 export const Materials = {
-    BASE_PATH: './public/images/materials/',
+    BASE_PATH: './images/materials/',
 
     sceneEmissiveColor: new Color3(0.15, 0.15, 0.15),
     terrainMaterial: null as PBRCustomMaterial | null,

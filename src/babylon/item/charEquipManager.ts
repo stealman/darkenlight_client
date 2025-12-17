@@ -13,7 +13,7 @@ import { CharArmorsCbManager } from '@/babylon/item/codebook/charArmorsCb'
 import { CharWeaponsCbManager } from '@/babylon/item/codebook/charWeaponsCb'
 import { CharacterModel } from '@/babylon/character/characterModel'
 
-export const BASE_EQUIP_MATERIAL_PATH = "/public/models/equip/"
+export const BASE_EQUIP_MATERIAL_PATH = "/models/equip/"
 export const PLATE_METAL_BASIC = 'plate-metal-basic'
 
 class CharWearableItemManager {
@@ -39,7 +39,7 @@ class CharWearableItemManager {
 
     async initialize(scene: Scene) {
         for (const model of this.models) {
-            const result = await SceneLoader.ImportMeshAsync("", "/public/models/equip/", model.fileName, scene);
+            const result = await SceneLoader.ImportMeshAsync("", BASE_EQUIP_MATERIAL_PATH, model.fileName, scene);
             model.setMesh(result.meshes[0] as Mesh)
             result.meshes[0].parent = this.particleSourceParent
         }
@@ -175,7 +175,7 @@ export const CharEquipManager = {
         CharArmorsCbManager.initialize()
         CharWeaponsCbManager.initialize()
 
-        this.armorBasicMetalManager = new CharWearableItemManager(PLATE_METAL_BASIC, scene, CharArmorsCbManager.basicMetalArmorModels, "/public/models/equip/armors/plate-metal-basic.png", false, {
+        this.armorBasicMetalManager = new CharWearableItemManager(PLATE_METAL_BASIC, scene, CharArmorsCbManager.basicMetalArmorModels, "/models/equip/armors/plate-metal-basic.png", false, {
             metallic: 1.0,
             roughness: 0.75,
             directIntensity: 1.5,
@@ -221,7 +221,7 @@ export const CharEquipManager = {
             return null
         }
 
-        const result = await SceneLoader.ImportMeshAsync("", "/public/models/equip/weapons/", modelData.fileName, Renderer.scene);
+        const result = await SceneLoader.ImportMeshAsync("", "/models/equip/weapons/", modelData.fileName, Renderer.scene);
         const mesh = result.meshes[0].getChildMeshes()[0] as Mesh
         mesh.setEnabled(false)
         mesh.parent = null

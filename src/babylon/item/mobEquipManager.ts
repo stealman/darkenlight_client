@@ -26,6 +26,7 @@ export class MobEquipItem {
     localPosition: Vector3 = Vector3.Zero()
     boneRotationQuaternion: Quaternion = Quaternion.Identity()
     localScale: Vector3 = Vector3.One()
+    scaleMatrix: Matrix = Matrix.Identity()
 
     constructor(type: MobEquipItemType, matIndex: number, parent: MonsterModel, bone: Bone, walkingBone: Bone, scale: Vector3 = Vector3.One()) {
         this.type = type
@@ -38,6 +39,7 @@ export class MobEquipItem {
         const matRow = (type.cbData.matsY * 2) - ((Math.floor(matIndex / type.cbData.matsX) * 2) + 1.5)
         const matCol = ((matIndex % type.cbData.matsX) * 2) + 0.5
         this.matVector = new Vector2(matCol, matRow)
+        this.scaleMatrix = Matrix.Scaling(this.scale.x, this.scale.y, this.scale.z);
     }
 
     onFrame() {
@@ -68,8 +70,8 @@ export class MobEquipItemType {
         this.cbData = data
     }
 
-    async initializeMesh(parentNode: TransformNode, scene: Scene, fileName: string, material: PBRCustomMaterial, position: Vector3 = Vector3.Zero(), rotation: Vector3 = Vector3.Zero(), scale: Vector3 = Vector3.One()) {
-        const result = await SceneLoader.ImportMeshAsync("", "/public/models/equip/", fileName + ".babylon", scene);
+    async initializeMesh(parentNode: TransformNode, scene: Scene, fileName: string, material: PBRCustomMaterial | null, position: Vector3 = Vector3.Zero(), rotation: Vector3 = Vector3.Zero(), scale: Vector3 = Vector3.One()) {
+        const result = await SceneLoader.ImportMeshAsync("", "/models/equip/", fileName, scene);
         const source = result.meshes[0] as Mesh
 
         source.position = position
@@ -77,7 +79,23 @@ export class MobEquipItemType {
         source.scaling = scale
 
         this.mesh = Mesh.MergeMeshes([source], true)!
-        this.mesh.material = material
+        if (material != null) {
+            this.mesh.material = material
+        }
+        this.mesh.setEnabled(false)
+        this.mesh.alwaysSelectAsActiveMesh = true
+        this.mesh.parent = parentNode
+    }
+
+    async initializeMeshWeapon(parentNode: TransformNode, scene: Scene, fileName: string, material: PBRCustomMaterial | null, position: Vector3 = Vector3.Zero(), rotation: Vector3 = Vector3.Zero(), scale: Vector3 = Vector3.One()) {
+        const result = await SceneLoader.ImportMeshAsync("", "/models/equip/", fileName, scene);
+        const source = result.meshes[0].getChildMeshes()[0] as Mesh
+        source.position = position
+        source.rotation = rotation
+        source.scaling = scale
+        this.mesh = Mesh.MergeMeshes([source], true)!
+
+
         this.mesh.setEnabled(false)
         this.mesh.alwaysSelectAsActiveMesh = true
         this.mesh.parent = parentNode
@@ -133,7 +151,7 @@ export const MobEquipManager = {
                 // Every item has its position and rotation set in its onFrame() method
                 items.forEach((item) => {
                     const posMatrix = Matrix.Translation(item.position.x, item.position.y, item.position.z);
-                    const scaleMatrix = Matrix.Scaling(item.scale.x, item.scale.y, item.scale.z);
+                    const scaleMatrix = item.scaleMatrix;
                     scaleMatrix.multiply(Matrix.FromQuaternionToRef(item.quaternion, new Matrix()).multiply(posMatrix)).copyToArray(type.instanceBuffer, i * 16);
 
                     type.uvBuffer[i * 2] = item.matVector.x

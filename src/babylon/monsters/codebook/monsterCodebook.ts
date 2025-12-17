@@ -26,8 +26,8 @@ export const MonsterCodebook = {
         const mobType = model.type
 
         if (mobType.weapon) {
-            model.assignRhand(mobType.weapon.getRandomId(), mobType.weapon.mat, mobType.weapon.scale)
-        }
+            model.assignRhand(1, mobType.weapon.mat, mobType.weapon.scale)
+       }
 
         if (mobType.armor) {
             model.assignChest(mobType.armor.getRandomId(), mobType.armor.mat, mobType.armor.scale)
@@ -79,8 +79,8 @@ export const MonsterTypes = {
     SKELETON_KNIGHT: new MonsterType( 3, 1, 'Skeleton', new MonsterEquipData([1], 0.75, 0), new MonsterEquipData([1850], undefined, 8), new MonsterEquipData([1100], undefined, 8)),
 
     WITHER: new MonsterType( 10, 2,'Wither', null,null,  null),
-    WITHER_FIGHTER: new MonsterType( 11, 2, 'Wither', new MonsterEquipData([1], 0.6, 0),null, null),
-    WITHER_KNIGHT: new MonsterType( 12, 2, 'Wither', new MonsterEquipData([1], 0.75, 0), new MonsterEquipData([1850], undefined, 9), new MonsterEquipData([1100], undefined, 9)),
+    WITHER_FIGHTER: new MonsterType( 11, 2, 'Wither', new MonsterEquipData([1], 0.15, 0),null, null),
+    WITHER_KNIGHT: new MonsterType( 12, 2, 'Wither', new MonsterEquipData([1], 0.15, 0), new MonsterEquipData([1850], undefined, 9), new MonsterEquipData([1100], undefined, 9)),
 
     CAT : new MonsterType( 1000, 4,'Cat', null,null,  null),
 }

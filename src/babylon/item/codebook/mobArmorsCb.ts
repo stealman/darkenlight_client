@@ -24,7 +24,7 @@ export const MobArmorsCbManager = {
     async getItem(data: MobEquipItemData): Promise<MobEquipItemType> {
         const item = new MobEquipItemType(data)
         const material = this.materialSets.get(data.materialSetName)!
-        await item.initializeMesh(this.itemSourceParent!, this.scene!, this.BASE_ARMORS_PATH + data.model, material, data.pos, data.rot, data.scale)
+        await item.initializeMesh(this.itemSourceParent!, this.scene!, this.BASE_ARMORS_PATH + data.model + ".babylon", material, data.pos, data.rot, data.scale)
         return item
     },
 

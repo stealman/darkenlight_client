@@ -59,7 +59,7 @@ export class CharacterModel {
     async initAsync(scene: Scene) {
         await SceneLoader.ImportMeshAsync(
             "",
-            "/public/models/steve/",
+            "/models/steve/",
             "steve.gltf",
             scene
         ).then((result) => {
@@ -68,7 +68,7 @@ export class CharacterModel {
             this.model.rotation = new Vector3(0, 0, 0)
 
             // Apply material
-            const material = Materials.getPBRMaterial(scene, "steveMaterial", "/public/models/steve/steve.jpg", false, false,  {
+            const material = Materials.getPBRMaterial(scene, "steveMaterial", "/models/steve/steve.jpg", false, false,  {
                 metallic: 0,
                 roughness: 1,
                 directIntensity: 1,
