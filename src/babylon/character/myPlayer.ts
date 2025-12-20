@@ -83,8 +83,8 @@ export const MyPlayer = {
         // From map get all blocks that are covered by the player and find the highest one
         let highest = 0
         coveredBlocks.forEach(block => {
-            if (map[block.x][block.z].height > highest) {
-                highest = map[block.x][block.z].height
+            if (map[block.x][block.z].totalHeight > highest) {
+                highest = map[block.x][block.z].totalHeight
             }
         })
 

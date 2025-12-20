@@ -58,15 +58,17 @@ export const TerrainManager = {
                 if (!ViewportManager.isPointInVisibleMatrix(x - myPos.x, z - myPos.z, 2)) {
                     continue
                 }
-
                 const block = blockMap[x][z]
-                const matrix = Matrix.Translation( x - myPos.x, block.height, z - myPos.z);
+                const heightOffset = block.heightOffset
 
                 if (block.type > 0) {
                     if (planeBlockMap[x][z]) {
+                        const matrix = Matrix.Translation( x - myPos.x, block.totalHeight, z - myPos.z);
                         planeMatrices.push(matrix)
                         planeUvData.push(PlaneEnum1.getPlaneByIndex(planeBlockMap[x][z].type))
                     } else {
+                        const scaleMatrix = Matrix.Scaling(1, 1 + heightOffset, 1);
+                        const matrix = scaleMatrix.multiply(Matrix.Translation( x - myPos.x, block.height + heightOffset * 0.5, z - myPos.z));
                         terrainMatrices1.push(matrix)
                         terrainUvData1.push(TerrainEnum1.getTerrainByIndex(block.type))
                     }

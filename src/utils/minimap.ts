@@ -12,9 +12,9 @@ export const MiniMap = {
     grassColorMap: [] as string[],
 
     initialize() {
-        const blockMap: MapBlock[][] = WorldDataManager.getBlockMap()
-        this.mapWidth = blockMap[0].length
-        this.mapHeight = blockMap.length
+        //const blockMap: MapBlock[][] = WorldDataManager.getBlockMap()
+        this.mapWidth = 1024
+        this.mapHeight = 1024
 
         // Create an off-screen canvas for the full map
         this.offScreenCanvas = document.createElement("canvas")
@@ -36,25 +36,26 @@ export const MiniMap = {
         const dirtColor = "#8B4513"
         const waterColor = "#2222BB"
 
-        // mapChunk.blockMap
+        console.log("Add chunk to minimap...")
 
         // Draw the entire map once on the off-screen canvas
-        for (let y = 0; y < WorldDataManager.MAP_CHUNK_SIZE; y++) {
-            for (let x = 0; x < WorldDataManager.MAP_CHUNK_SIZE; x++) {
-                const block = blockMap[y][x]
+        for (let x = 0; x < WorldDataManager.MAP_CHUNK_SIZE; x++) {
+            for (let z = 0; z < WorldDataManager.MAP_CHUNK_SIZE; z++) {
 
-                if (block.type === 1) {
-                    if (block.height >= 5) {
-                        offScreenContext.fillStyle = dirtColor
-                    } else {
-                        offScreenContext.fillStyle = waterColor
+                const data = (blockMap[z][x] as string).split(":")
+                const height = parseInt(data[0])
+                const type = parseInt(data[1])
+
+                if (height < 6) {
+                    offScreenContext.fillStyle = waterColor
+                } else {
+                    offScreenContext.fillStyle = dirtColor
+
+                    if (type === 2) {
+                        offScreenContext.fillStyle = this.grassColorMap[height]
                     }
                 }
-
-                if (block.type === 2) {
-                    offScreenContext.fillStyle = this.grassColorMap[block.height]
-                }
-                offScreenContext.fillRect(mapChunk.z + x, mapChunk.x + y, 1, 1)
+                offScreenContext.fillRect(mapChunk.z + x, mapChunk.x + z, 1, 1)
             }
         }
     },

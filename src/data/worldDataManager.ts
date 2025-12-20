@@ -60,7 +60,7 @@ export const WorldDataManager = {
 export class WorldData {
     worldSize: number = 1024
     blockMap: MapBlock[][] = [] as MapBlock[][]
-    planeBlockMap: [][] = [] as [][]
+    planeBlockMap: MapBlock[][] = [] as MapBlock[][]
     loadedChunkCoords: Vector3[] = []
 
     constructor(size: number) {
@@ -72,25 +72,17 @@ export class WorldData {
     consumeMapChunk(mapChunk) {
         for (let i = 0; i < mapChunk.blockMap.length; i++) {
             for (let j = 0; j < mapChunk.blockMap[i].length; j++) {
-                const data = mapChunk.blockMap[i][j] as { height: number, type: number }
-                const mapBlock: MapBlock = new MapBlock(data.height, data.type)
+                const data = (mapChunk.blockMap[i][j] as string).split(":")
 
+                const mapBlock: MapBlock = new MapBlock(parseInt(data[0]), parseInt(data[1]))
                 this.blockMap[mapChunk.x + i][mapChunk.z + j] = mapBlock
-            }
-        }
 
-        for (let i = 0; i < mapChunk.planeMap.length; i++) {
-            for (let j = 0; j < mapChunk.planeMap[i].length; j++) {
-                const data = mapChunk.planeMap[i][j] as { height: number, type: number }
-                if (data.height && data.type) {
-                    const mapBlock: MapBlock = new MapBlock(data.height, data.type)
+                // Planes are marked with "P" at the end
+                if (data.length === 3 && data[2] === "P") {
                     this.planeBlockMap[mapChunk.x + i][mapChunk.z + j] = mapBlock
-                } else {
-                    this.planeBlockMap[mapChunk.x + i][mapChunk.z + j] = false
                 }
             }
         }
-
         this.loadedChunkCoords.push(new Vector3(mapChunk.x, 0, mapChunk.z))
     }
 
@@ -102,10 +94,18 @@ export class WorldData {
 export class MapBlock {
     height: number
     type: number
+    heightOffset: number
+    totalHeight: number
 
     constructor(height: number, type: number) {
         this.height = height
         this.type = type
+        this.heightOffset = this.getRenderedHeightOffset()
+        this.totalHeight = this.height + this.heightOffset
+    }
+
+    getRenderedHeightOffset() {
+        return this.type === 2 ? 0.1 : 0
     }
 
     equals(other: MapBlock) {

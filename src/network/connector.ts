@@ -21,6 +21,7 @@ export const Connector = {
         }
 
         this.socket.onmessage = (event) => {
+            //console.log(event.data.length)
            ResponseProcessor.processResponse(JSON.parse(event.data))
         }
 
