@@ -24,7 +24,7 @@ export const TreeManager = {
     consumeTrees(data: [ { x: number, z: number, size: number } ]) {
         data.forEach(tree => {
             const y = WorldDataManager.getBlockMap()[tree.x][tree.z].height + 0.5
-            this.allTrees.push(new Tree1(new Vector3(tree.x, y, tree.z), Math.floor(Math.random() * 4) * Math.PI / 2, tree.size, MaterialEnum1.getMaterialByIndex(1 + Math.floor(Math.random() * 2))))
+            this.allTrees.push(new Tree1(new Vector3(tree.x, y, tree.z), Math.floor(Math.random() * 4) * Math.PI / 2, tree.size * 1.5, MaterialEnum1.getMaterialByIndex(1 + Math.floor(Math.random() * 2))))
         })
 
     },
@@ -75,7 +75,7 @@ export const TreeManager = {
     getPointInTree(x: number, z: number, size: number): { x: number, z: number } | null {
         for (const element of this.allTrees) {
             const tree = element
-            const combinedSize = (tree.scale + size) / 2
+            const combinedSize = ((tree.scale * 0.75) + size) / 2
             if (Math.abs(tree.position.x - x) < combinedSize && Math.abs(tree.position.z - z) < combinedSize) {
                 return { x: tree.position.x, z: tree.position.z }
             }

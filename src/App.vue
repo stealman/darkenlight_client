@@ -79,7 +79,7 @@ export default {
     position: absolute;
     top: 0px;
     right: 0px;
-    background-color: green;
+    background-color: black;
     opacity: 0.65;
     border-left: 2px ridge rosybrown;
     border-bottom: 2px ridge rosybrown;

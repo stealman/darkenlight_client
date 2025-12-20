@@ -63,7 +63,7 @@ export const TerrainManager = {
 
                 if (block.type > 0) {
                     if (planeBlockMap[x][z]) {
-                        const matrix = Matrix.Translation( x - myPos.x, block.totalHeight, z - myPos.z);
+                        const matrix = Matrix.Translation( x - myPos.x, block.height + heightOffset, z - myPos.z);
                         planeMatrices.push(matrix)
                         planeUvData.push(PlaneEnum1.getPlaneByIndex(planeBlockMap[x][z].type))
                     } else {

@@ -36,7 +36,7 @@ export const MiniMap = {
         const dirtColor = "#8B4513"
         const waterColor = "#2222BB"
 
-        console.log("Add chunk to minimap...")
+        //console.log("Add chunk to minimap...")
 
         // Draw the entire map once on the off-screen canvas
         for (let x = 0; x < WorldDataManager.MAP_CHUNK_SIZE; x++) {

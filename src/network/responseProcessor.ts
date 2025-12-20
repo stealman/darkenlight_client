@@ -11,7 +11,7 @@ export const ResponseProcessor = {
     async processResponse(response) {
         for (const element of response) {
             const msg = element
-            console.log(msg.t)
+            //console.log(msg.t)
             switch (msg.t) {
                 case 2: await this.loginResponse(msg.d); break
                 case 3: this.addMonster(msg.d); break

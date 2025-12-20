@@ -33,7 +33,7 @@ export const Materials = {
     },
 
     createTerrainMaterial1(scene: Scene): PBRCustomMaterial {
-        const material = this.getPBRCustomMaterial(scene, "terrain_mats1", this.BASE_PATH, 'terrain_materials1.png', 1 / 4, 1 / 4, false)
+        const material = this.getPBRCustomMaterial(scene, "terrain_mats1", this.BASE_PATH, 'terrain_materials2.png', 1 / 8, 1 / 8, false)
         return material
     },
 
@@ -49,6 +49,7 @@ export const Materials = {
 
     createBlockMatAlpha1(scene: Scene): PBRCustomMaterial {
         const material = this.getPBRCustomMaterial(scene, "sym_block_mats_alpha1", this.BASE_PATH, 'block_materials_alpha1.png', 1 / 8, 1 / 8, true)
+        material.alpha = 0.5
         return material
     },
 
@@ -71,8 +72,8 @@ export const Materials = {
         return this.getPBRCustomMaterialFrom(scene, name, basePath, texturePath, uScale, vScale, hasAlpha, {
             metallic: 0.0,
             roughness: 1.0,
-            directIntensity: 1.0,
-            environmentIntensity: 0.75,
+            directIntensity: 0.75,
+            environmentIntensity: 1,
             }
         )
     },
@@ -121,7 +122,7 @@ export const Materials = {
         mat.directIntensity = 1
         mat.environmentIntensity = 0.5
         mat.usePhysicalLightFalloff = false
-        mat.alpha = 0.25
+        mat.alpha = 1
 
         mat.freeze()
         return mat
@@ -152,8 +153,8 @@ export const MaterialEnum1 = {
 }
 
 export const TerrainEnum1 = {
-    TERRAIN_DIRT: new MaterialEnum(1, new Vector2(2.5, 2.5)),
-    TERRAIN_GRASS: new MaterialEnum(2, new Vector2(0.5, 2.5)),
+    TERRAIN_DIRT: new MaterialEnum(1, new Vector2(2.5, 6.5)),
+    TERRAIN_GRASS: new MaterialEnum(2, new Vector2(4.5, 6.5)),
 
     getTerrainByIndex(index: number): Vector2 {
         return Object.values(TerrainEnum1).find(item => item.index === index)?.uv;
@@ -162,7 +163,7 @@ export const TerrainEnum1 = {
 
 export const PlaneEnum1 = {
     PLANE_DIRT: new MaterialEnum(1, new Vector2(2.5, 6.5)),
-    PLANE_GRASS: new MaterialEnum(2, new Vector2(0.5, 6.5)),
+    PLANE_GRASS: new MaterialEnum(2, new Vector2(4.5, 6.5)),
 
     getPlaneByIndex(index: number): Vector2 {
         return Object.values(PlaneEnum1).find(item => item.index === index)?.uv;

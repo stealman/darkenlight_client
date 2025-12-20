@@ -24,6 +24,7 @@ import { MonsterLoader } from '@/babylon/monsters/monsterLoader'
 import { Connector } from '@/network/connector'
 import { MobEquipManager } from '@/babylon/item/mobEquipManager'
 import { WorldDataManager } from '@/data/worldDataManager'
+import { WeatherManager } from '@/babylon/world/weather/weatherManager'
 
 /**
  * Main Renderer
@@ -65,7 +66,8 @@ export const Renderer = {
         this.animationSpeedRatio = this.animationFrameTime / 25
         this.sunLight = new DirectionalLight("sunLight", new Vector3(-0.75, -0.75, 0.3), this.scene)
         this.sunLight.position = new Vector3(25, 25, 25);
-        this.sunLight.intensity = 1.6
+        this.sunLight.intensity = 1
+        this.sunLight.diffuse = new Color3(1, 0.91, 0.74)
 
         if (Settings.shadows) {
             this.shadow = new ShadowGenerator(4096, this.sunLight, false)
@@ -95,6 +97,7 @@ export const Renderer = {
         Controller.initializeController(this.scene)
         Materials.initialize(this.scene)
         WorldRenderer.initialize(this.scene)
+        WeatherManager.initialize(this.scene)
 
         // Create the camera
         let cameraPosition = new Vector3(-12, 12, -12)
@@ -180,8 +183,9 @@ export const Renderer = {
             MobEquipManager.onFrame()
         }
 
-        if (this.frame % 150 === 0) {
+        if (this.frame % 60 === 0) {
             MiniMap.updateMiniMap()
+            WeatherManager.update()
         }
 
         const pos = Data.myChar.getPositionRounded()
@@ -245,9 +249,9 @@ export const Renderer = {
         this.scene.autoClearDepthAndStencil = false
 
         this.scene.fogMode = Scene.FOGMODE_LINEAR
-        this.scene.fogStart = 55
-        this.scene.fogEnd = 75
-        this.scene.fogColor = new Color3(0, 0, 0)
+        this.scene.fogStart = 30
+        this.scene.fogEnd = 50
+        this.scene.fogColor = new Color3(0.2, 0.22, 0.24)
 
         this.setCullingFrequency(this.scene, 50)
 
@@ -255,7 +259,7 @@ export const Renderer = {
             "environment_specular.env",
             this.scene
         );
-        this.scene.environmentIntensity = 0.5
+        this.scene.environmentIntensity = 0.3
     },
 
     actualizeDebug() {
