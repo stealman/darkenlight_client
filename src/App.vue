@@ -39,7 +39,6 @@ export default {
             // console.log(Settings.shadows)
 
             GameManager.initialize(canvas)
-            Connector.initialize()
         }
     });
 

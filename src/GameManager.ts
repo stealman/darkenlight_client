@@ -1,24 +1,22 @@
 import { Renderer } from '@/babylon/scene/renderer'
 import { ViewportManager } from '@/utils/viewport'
-import { loadBMPData } from '@/utils/bmpLoader'
-import { WorldData } from '@/babylon/world/worldData'
+import { WorldDataManager } from '@/data/worldDataManager'
 import { ref } from 'vue/dist/vue'
+import { Connector } from '@/network/connector'
 
 export const GameManager = {
     canvas: null as ref<HTMLCanvasElement | null>,
 
     initialize(canvas: ref<HTMLCanvasElement | null>) {
         this.canvas = canvas
+        Connector.initialize()
     },
 
     async startGame() {
-        await this.loadWorldData()
+        // Fetch world data
+        WorldDataManager.fetchWorldDataIfNeeded()
+
         await Renderer.initialize(this.canvas.value)
         ViewportManager.onResize()
-    },
-
-    async loadWorldData() {
-        const mapData = await loadBMPData('./map4.png') as number[][]
-        WorldData.setWorldMap(mapData)
     }
 }

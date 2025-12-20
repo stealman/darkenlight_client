@@ -2,7 +2,7 @@ import { Matrix, Scene, Vector2, Vector3 } from '@babylonjs/core'
 import { Prefab, WorldRenderer } from '@/babylon/world/worldRenderer'
 import { MaterialEnum1 } from '@/babylon/materials'
 import { PrefabTree1 } from '@/babylon/world/prefabs/tree1'
-import { WorldData } from '@/babylon/world/worldData'
+import { WorldDataManager } from '@/data/worldDataManager'
 import { ViewportManager } from '@/utils/viewport'
 import { Data } from '@/data/globalData'
 
@@ -23,7 +23,7 @@ export const TreeManager = {
 
     consumeTrees(data: [ { x: number, z: number, size: number } ]) {
         data.forEach(tree => {
-            const y = WorldData.getBlockMap()[tree.x][tree.z].height + 0.5
+            const y = WorldDataManager.getBlockMap()[tree.x][tree.z].height + 0.5
             this.allTrees.push(new Tree1(new Vector3(tree.x, y, tree.z), Math.floor(Math.random() * 4) * Math.PI / 2, tree.size, MaterialEnum1.getMaterialByIndex(1 + Math.floor(Math.random() * 2))))
         })
 

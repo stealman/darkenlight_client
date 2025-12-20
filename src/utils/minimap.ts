@@ -1,5 +1,4 @@
-import { MapBlock, WorldData } from '@/babylon/world/worldData'
-import { MyPlayer } from '@/babylon/character/myPlayer'
+import { MapBlock, WorldDataManager } from '@/data/worldDataManager'
 import { Data } from '@/data/globalData'
 
 export const MiniMap = {
@@ -8,8 +7,12 @@ export const MiniMap = {
     mapWidth: 0,
     mapHeight: 0,
 
+    minHeight: 6,
+    maxHeight: 32,
+    grassColorMap: [] as string[],
+
     initialize() {
-        const blockMap: MapBlock[][] = WorldData.blockMap
+        const blockMap: MapBlock[][] = WorldDataManager.getBlockMap()
         this.mapWidth = blockMap[0].length
         this.mapHeight = blockMap.length
 
@@ -17,28 +20,27 @@ export const MiniMap = {
         this.offScreenCanvas = document.createElement("canvas")
         this.offScreenCanvas.width = this.mapWidth
         this.offScreenCanvas.height = this.mapHeight
-        const offScreenContext = this.offScreenCanvas.getContext("2d")
 
+        for (let height = this.minHeight; height <= this.maxHeight; height++) {
+            const brightness = (height - this.minHeight) / (this.maxHeight - this.minHeight)
+            const greenValue = Math.round(102 + brightness * (255 - 102))
+            this.grassColorMap[height] = `#00${greenValue.toString(16).padStart(2, '0')}00`
+        }
+    },
+
+    redrawMiniMap(mapChunk) {
+        const blockMap = mapChunk.blockMap
+        const offScreenContext = this.offScreenCanvas!.getContext("2d")
         if (!offScreenContext) return
 
         const dirtColor = "#8B4513"
         const waterColor = "#2222BB"
 
-
-        // Map with grass colors based on height
-        const minHeight = 6
-        const maxHeight = 32
-        const grassColorMap: string[] = []
-
-        for (let height = minHeight; height <= maxHeight; height++) {
-            const brightness = (height - minHeight) / (maxHeight - minHeight)
-            const greenValue = Math.round(102 + brightness * (255 - 102))
-            grassColorMap[height] = `#00${greenValue.toString(16).padStart(2, '0')}00`
-        }
+        // mapChunk.blockMap
 
         // Draw the entire map once on the off-screen canvas
-        for (let y = 0; y < this.mapHeight; y++) {
-            for (let x = 0; x < this.mapWidth; x++) {
+        for (let y = 0; y < WorldDataManager.MAP_CHUNK_SIZE; y++) {
+            for (let x = 0; x < WorldDataManager.MAP_CHUNK_SIZE; x++) {
                 const block = blockMap[y][x]
 
                 if (block.type === 1) {
@@ -50,9 +52,9 @@ export const MiniMap = {
                 }
 
                 if (block.type === 2) {
-                    offScreenContext.fillStyle = grassColorMap[block.height]
+                    offScreenContext.fillStyle = this.grassColorMap[block.height]
                 }
-                offScreenContext.fillRect(x, y, 1, 1)
+                offScreenContext.fillRect(mapChunk.z + x, mapChunk.x + y, 1, 1)
             }
         }
     },

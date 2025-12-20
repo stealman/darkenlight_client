@@ -4,7 +4,7 @@ import {
     Vector3,
     FreeCamera,
     ShadowGenerator, Color3, Color4, SceneInstrumentation, DirectionalLight, Mesh,
-    AbstractMesh, CubeTexture,
+    AbstractMesh, CubeTexture, DracoCompression,
 } from '@babylonjs/core'
 import {UnwrapRef} from "vue"
 import '@babylonjs/inspector'
@@ -23,6 +23,7 @@ import { Data } from '@/data/globalData'
 import { MonsterLoader } from '@/babylon/monsters/monsterLoader'
 import { Connector } from '@/network/connector'
 import { MobEquipManager } from '@/babylon/item/mobEquipManager'
+import { WorldDataManager } from '@/data/worldDataManager'
 
 /**
  * Main Renderer
@@ -54,9 +55,16 @@ export const Renderer = {
         this.engine = new Engine(canvasRef, true)
         this.createScene(this.engine)
 
+        DracoCompression.Configuration = {
+            decoder: {
+                wasmUrl: `${window.location.origin}/models/draco/draco_decoder_gltf.wasm`,
+                fallbackUrl: `${window.location.origin}/models/draco/draco_decoder_gltf.js`,
+            }
+        };
+
         this.animationSpeedRatio = this.animationFrameTime / 25
-        this.sunLight = new DirectionalLight("sunLight", new Vector3(0.75, -0.75, -0.2), this.scene)
-        this.sunLight.position = new Vector3(400, 400, 400);
+        this.sunLight = new DirectionalLight("sunLight", new Vector3(-0.75, -0.75, 0.3), this.scene)
+        this.sunLight.position = new Vector3(25, 25, 25);
         this.sunLight.intensity = 1.6
 
         if (Settings.shadows) {
@@ -181,10 +189,9 @@ export const Renderer = {
         // If the player moved, render the world
         if (this.lastPos == null || pos.x !== this.lastPos.x || pos.z !== this.lastPos.z) {
             if (ViewportManager.viewPortInitialized) {
+                WorldDataManager.fetchWorldDataIfNeeded()
                 WorldRenderer.renderWorld()
                 this.lastPos = pos
-
-
             }
         }
 
@@ -252,7 +259,6 @@ export const Renderer = {
     },
 
     actualizeDebug() {
-        // value={1000.0 / this._sceneInstrumentation!.frameTimeCounter.lastSecAverage}
         const absoluteFPS = 1000 / this.instrumentation!.frameTimeCounter.lastSecAverage
         document.getElementById("fpsLabel")!.innerHTML = "FPS: " + this.fps + " | " + absoluteFPS.toFixed(0);
         document.getElementById("posLabel")!.innerHTML = "POS: " + Data.myChar.getPositionRounded().toString();

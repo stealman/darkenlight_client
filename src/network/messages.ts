@@ -30,3 +30,12 @@ export class MyCharMoveMsg implements Message {
         this.d = [Utils.roundToTwoDecimals(Data.myChar.xPos), Utils.roundToTwoDecimals(Data.myChar.zPos), angle, Data.myChar.getActualSpeed()]
     }
 }
+
+export class FetchWorldDataMsg implements Message {
+    t: number = 2
+    d: any
+
+    constructor(worldId: number, x: number, z: number) {
+        this.d = { worldId: worldId , x: x, z: z}
+    }
+}

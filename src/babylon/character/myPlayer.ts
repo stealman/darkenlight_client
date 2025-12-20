@@ -2,7 +2,7 @@ import {
     Scene,
     Vector3,
 } from '@babylonjs/core'
-import { WorldData } from '@/babylon/world/worldData'
+import { WorldDataManager } from '@/data/worldDataManager'
 import { CharacterModel } from '@/babylon/character/characterModel'
 import { Utils } from '@/utils/utils'
 import { Data } from '@/data/globalData'
@@ -77,7 +77,7 @@ export const MyPlayer = {
     },
 
     calculateYPos() {
-        const map = WorldData.getBlockMap()
+        const map = WorldDataManager.getBlockMap()
         const coveredBlocks = Utils.getCoveredBlocks(Data.myChar.xPos, Data.myChar.zPos, this.boxSize)
 
         // From map get all blocks that are covered by the player and find the highest one

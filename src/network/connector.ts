@@ -1,6 +1,5 @@
-import { LoginMsg, Message, MyCharMoveMsg } from '@/network/messages'
+import { LoginMsg, Message } from '@/network/messages'
 import { ResponseProcessor } from '@/network/responseProcessor'
-import { Data } from '@/data/globalData'
 
 export const Connector = {
     socket: null as WebSocket,
@@ -18,7 +17,7 @@ export const Connector = {
 
         this.socket.onopen = () => {
             console.log('WS connection estabilished')
-            this.sendLoginRequest('test', 'test')
+            Connector.sendLoginRequest('test', 'test')
         }
 
         this.socket.onmessage = (event) => {

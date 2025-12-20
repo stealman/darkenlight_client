@@ -1,4 +1,4 @@
-import { WorldData } from '@/babylon/world/worldData'
+import { WorldDataManager } from '@/data/worldDataManager'
 import { Matrix, Mesh, Scene } from '@babylonjs/core'
 import { BabylonUtils } from '@/babylon/utils'
 import { Builder } from '@/babylon/builder'
@@ -43,23 +43,23 @@ export const TerrainManager = {
 
     renderTerrain() {
         const myPos = Data.myChar.getPositionRounded()
-        const map = WorldData.getBlockMap()
-        const planeBlockMap = WorldData.getPlaneBlockMap()
+        const blockMap = WorldDataManager.getBlockMap()
+        const planeBlockMap = WorldDataManager.getPlaneBlockMap()
 
         const terrainMatrices1 = []
         const terrainUvData1 = []
         const planeMatrices = []
         const planeUvData = []
 
-        for (let x = Math.max(0, myPos.x + ViewportManager.minX); x <= Math.min(map.length, myPos.x + ViewportManager.maxX); x++) {
-            for (let z = Math.max(0, myPos.z + ViewportManager.minZ); z <= Math.min(map.length, myPos.z + ViewportManager.maxZ); z++) {
+        for (let x = Math.max(0, myPos.x + ViewportManager.minX); x <= Math.min(blockMap.length, myPos.x + ViewportManager.maxX); x++) {
+            for (let z = Math.max(0, myPos.z + ViewportManager.minZ); z <= Math.min(blockMap.length, myPos.z + ViewportManager.maxZ); z++) {
 
                 // Check if block is in visible matrix
                 if (!ViewportManager.isPointInVisibleMatrix(x - myPos.x, z - myPos.z, 2)) {
                     continue
                 }
 
-                const block = map[x][z]
+                const block = blockMap[x][z]
                 const matrix = Matrix.Translation( x - myPos.x, block.height, z - myPos.z);
 
                 if (block.type > 0) {

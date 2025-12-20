@@ -1,8 +1,8 @@
 import { PlayerData } from '@/data/playerData'
 
 export const Data = {
-    worldId: "",
-    worldName: "",
+    worldId: 0 as number,
+    worldName: "" as string,
     myChar: null as PlayerData,
 
     setMyChar(char: PlayerData) {

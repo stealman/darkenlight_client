@@ -3,13 +3,15 @@ import { Data } from '@/data/globalData'
 import { GameManager } from '@/GameManager'
 import { MonsterManager } from '@/babylon/monsters/monsterManager'
 import { TreeManager } from '@/babylon/world/treeManager'
+import { WorldDataManager } from '@/data/worldDataManager'
+import { MiniMap } from '@/utils/minimap'
 
 export const ResponseProcessor = {
 
     async processResponse(response) {
-        //console.log(response.length)
         for (const element of response) {
             const msg = element
+            console.log(msg.t)
             switch (msg.t) {
                 case 2: await this.loginResponse(msg.d); break
                 case 3: this.addMonster(msg.d); break
@@ -50,8 +52,12 @@ export const ResponseProcessor = {
     },
 
     processWorldData(data) {
-        Data.worldId = data._id
+        Data.worldId = data.id
         Data.worldName = data.name
+        if (data.mapChunk) {
+            WorldDataManager.consumeMapChunk(data.mapChunk)
+            MiniMap.redrawMiniMap(data.mapChunk)
+        }
     },
 
     removeMonster(data) {

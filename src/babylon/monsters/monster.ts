@@ -1,6 +1,6 @@
 import { MonsterModel } from '@/babylon/monsters/monsterModel'
 import { MonsterType } from '@/babylon/monsters/codebook/monsterCodebook'
-import { WorldData } from '@/babylon/world/worldData'
+import { WorldDataManager } from '@/data/worldDataManager'
 import { Utils } from '@/utils/utils'
 import { Vector3 } from '@babylonjs/core'
 
@@ -81,7 +81,7 @@ export class Monster {
     }
 
     calculateYPos() {
-        const map = WorldData.getBlockMap()
+        const map = WorldDataManager.getBlockMap()
         const coveredBlocks = Utils.getCoveredBlocks(this.xPos, this.zPos, 0.4)
 
         // From map get all blocks that are covered by the player and find the highest one
