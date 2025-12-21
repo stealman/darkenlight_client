@@ -61,8 +61,8 @@ export const MiniMap = {
     },
 
     updateMiniMap() {
-        const playerY = Data.myChar.xPos
-        const playerX = Data.myChar.zPos
+        const playerY = Data.myChar.pos.x
+        const playerX = Data.myChar.pos.z
 
         const canvas = document.getElementById("miniMapCanvas") as HTMLCanvasElement
         const context = canvas.getContext("2d")

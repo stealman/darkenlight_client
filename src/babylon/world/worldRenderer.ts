@@ -2,14 +2,13 @@ import {
     Matrix,
     Mesh,
     Scene,
-    TransformNode, Vector2, Vector3,
+    TransformNode, Vector2,
 } from '@babylonjs/core'
 import { Builder } from '@/babylon/builder'
 import { Materials } from '@/babylon/materials'
 import { TreeManager } from '@/babylon/world/treeManager'
 import { BabylonUtils } from '@/babylon/utils'
 import { TerrainManager } from '@/babylon/world/terrainManager'
-import { Data } from '@/data/globalData'
 import { Renderer } from '@/babylon/scene/renderer'
 import { PBRCustomMaterial } from '@babylonjs/materials'
 
@@ -57,11 +56,6 @@ export const WorldRenderer = {
 
         this.blockWithAlpha1!.setThinInstanceBuffers()
         this.blockWithAlpha1!.mesh.thinInstanceRefreshBoundingInfo(false);
-    },
-
-    updateWorldParentNode() {
-        this.worldParentNode!.position = new Vector3(-Data.myChar.getOffset().x, -Data.myChar.modelYpos, -Data.myChar.getOffset().z)
-        TerrainManager.waterPlane!._unFreeze()
     }
 }
 

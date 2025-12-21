@@ -27,7 +27,7 @@ export class MyCharMoveMsg implements Message {
             angle = Utils.roundToTwoDecimals(angle += Math.PI / 4)
         }
 
-        this.d = [Utils.roundToTwoDecimals(Data.myChar.xPos), Utils.roundToTwoDecimals(Data.myChar.zPos), angle, Data.myChar.getActualSpeed()]
+        this.d = [Utils.roundToTwoDecimals(Data.myChar.pos.x), Utils.roundToTwoDecimals(Data.myChar.pos.z), angle, Data.myChar.getActualSpeed()]
     }
 }
 

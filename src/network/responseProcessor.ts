@@ -44,8 +44,8 @@ export const ResponseProcessor = {
         // If received my own move, it is desync - take position
         if (data[0] === Data.myChar.id) {
             console.log('Desync')
-            Data.myChar.xPos = data[1]
-            Data.myChar.zPos = data[2]
+            Data.myChar.pos.x = data[1]
+            Data.myChar.pos.z = data[2]
             Data.myChar.setMoveAngle(data[3])
             Data.myChar.setActualSpeed(data[4])
         }

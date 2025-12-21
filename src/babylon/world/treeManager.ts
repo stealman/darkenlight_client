@@ -4,7 +4,6 @@ import { MaterialEnum1 } from '@/babylon/materials'
 import { PrefabTree1 } from '@/babylon/world/prefabs/tree1'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { ViewportManager } from '@/utils/viewport'
-import { Data } from '@/data/globalData'
 
 export const TreeManager = {
     prefabs: {
@@ -60,12 +59,11 @@ export const TreeManager = {
     },
 
     updateVisibleTrees() {
-        const myPos = Data.myChar.getPositionRounded()
         this.visibleTrees = []
 
         for (const element of this.allTrees) {
             const tree = element
-            if (ViewportManager.isPointInVisibleMatrix(Math.floor(tree.position.x) - myPos.x, Math.floor(tree.position.z) - myPos.z, 2)) {
+            if (ViewportManager.isPointInVisibleMatrix(Math.floor(tree.position.x), Math.floor(tree.position.z), 2)) {
                 this.visibleTrees.push(tree)
             }
         }
@@ -102,8 +100,7 @@ class Tree1 implements Tree {
     }
 
     renderLeaves() {
-        const myPos = Data.myChar.getPositionRounded()
-        const matrix = Matrix.Translation( this.position.x - myPos.x, this.position.y + (2 * this.scale), this.position.z - myPos.z);
+        const matrix = Matrix.Translation( this.position.x, this.position.y + (2 * this.scale), this.position.z);
         const rotationMatrix = Matrix.RotationY(this.rotation);
         const scaleMatrix = Matrix.Scaling(this.scale, this.scale, this.scale);
 
@@ -112,12 +109,11 @@ class Tree1 implements Tree {
     }
 
     renderTrunk() {
-        const myPos = Data.myChar.getPositionRounded()
         const scaleMatrix = Matrix.Scaling(this.scale / 2, this.scale / 2, this.scale / 2);
 
         // Blocks for trunk
         for (let i = 0; i <= 2.5 * this.scale; i += this.scale / 2) {
-            const positionMatrix = Matrix.Translation( this.position.x - myPos.x, this.position.y + i, this.position.z - myPos.z)
+            const positionMatrix = Matrix.Translation( this.position.x, this.position.y + i, this.position.z)
 
             WorldRenderer.block1!.matrices.push(scaleMatrix.multiply(positionMatrix))
             WorldRenderer.block1!.uvData.push(this.woodMaterial)

@@ -8,6 +8,8 @@ import {
     Vector3,
 } from '@babylonjs/core'
 import { Renderer } from '@/babylon/scene/renderer'
+import { Data } from '@/data/globalData'
+import { MyPlayer } from '@/babylon/character/myPlayer'
 export const WeatherManager = {
     actualWeather: null as WeatherEffect | null,
 
@@ -16,13 +18,12 @@ export const WeatherManager = {
     },
 
     update() {
-        /**
         if (!this.actualWeather) {
             this.actualWeather = new SnowEffect(Renderer.scene)
             this.actualWeather.start()
         }
 
-        this.actualWeather?.update()*/
+        this.actualWeather?.update()
     },
 }
 
@@ -50,6 +51,7 @@ class SnowEffect implements WeatherEffect {
             scene
         );
         snowEmitter.isVisible = false;
+        snowEmitter.parent = MyPlayer.charModel?.node
         snow.emitter = snowEmitter;
 
         snow.minSize = 0.03;

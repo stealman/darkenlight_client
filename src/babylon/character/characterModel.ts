@@ -14,6 +14,7 @@ import { Renderer } from '@/babylon/scene/renderer'
 
 export class CharacterModel {
     playerData: PlayerData
+    node: TransformNode = new TransformNode("characterModelNode")
 
     model: AbstractMesh | undefined
     modelYAngleOffset: number = Math.PI * 1 / 4
@@ -47,6 +48,7 @@ export class CharacterModel {
 
     constructor(playerData: PlayerData) {
         this.playerData = playerData
+        this.node.position = this.playerData.pos
         this.footStepSound = AudioManager.footStep.clone()
     }
 
@@ -64,6 +66,7 @@ export class CharacterModel {
             scene
         ).then((result) => {
             this.model = result.meshes[0]
+            this.model.parent = this.node
             this.model.scaling = new Vector3(0.25, 0.25, 0.25)
             this.model.rotation = new Vector3(0, 0, 0)
 
@@ -248,7 +251,7 @@ export class CharacterModel {
         }
 
         if (this.playerData.getMoveAngle() != null) {
-            this.resolveModelYpos(timeRate)
+            this.moveModel(timeRate)
             this.resolveModelRotation(timeRate)
         }
     }
@@ -256,8 +259,12 @@ export class CharacterModel {
     /**
      * Approximate model Y position to the player Y position
      */
-    resolveModelYpos(timeRate: number) {
-        this.playerData.modelYpos += (this.playerData.yPos - this.playerData.modelYpos) * this.playerData.yMoveSpeed * timeRate
+    moveModel(timeRate: number) {
+        this.playerData.pos.y += (this.playerData.logicYpos - this.playerData.pos.y) * this.playerData.yMoveSpeed * timeRate
+
+        this.node.markAsDirty("position")
+        this.node.computeWorldMatrix(true);
+        this.model!.computeWorldMatrix(true);
     }
 
     /**

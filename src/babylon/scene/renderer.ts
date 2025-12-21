@@ -65,7 +65,7 @@ export const Renderer = {
 
         this.animationSpeedRatio = this.animationFrameTime / 25
         this.sunLight = new DirectionalLight("sunLight", new Vector3(-0.75, -0.75, 0.3), this.scene)
-        this.sunLight.position = new Vector3(25, 25, 25);
+        this.sunLight.position = new Vector3(50, 50, 50);
         this.sunLight.intensity = 1
         this.sunLight.diffuse = new Color3(1, 0.91, 0.74)
 
@@ -97,7 +97,7 @@ export const Renderer = {
         Controller.initializeController(this.scene)
         Materials.initialize(this.scene)
         WorldRenderer.initialize(this.scene)
-        WeatherManager.initialize(this.scene)
+        WeatherManager.initialize()
 
         // Create the camera
         let cameraPosition = new Vector3(-12, 12, -12)
@@ -114,6 +114,7 @@ export const Renderer = {
 
         this.camera = new FreeCamera('camera1', cameraPosition, this.scene)
         this.camera.setTarget(new Vector3(0, cameraViewY, 0))
+        this.camera.parent = MyPlayer.charModel!.node
 
         // Debug layer
         if (Settings.debug) {
@@ -126,6 +127,8 @@ export const Renderer = {
             axes.zAxis.position = new Vector3(5, 0, 5)
             axes.yAxis.dispose()*/
         }
+
+        this.sunLight.parent = MyPlayer.charModel!.node
 
         // Run the game loop
         this.engine.runRenderLoop(() => {
@@ -156,7 +159,6 @@ export const Renderer = {
             return
         }
         this.frame++
-
         const actualTime = new Date().getTime()
         const timeRate = (actualTime - this.lastFrameTime) / 1000
 
@@ -179,7 +181,7 @@ export const Renderer = {
                 this.animationFrame++
             }
 
-            CharEquipManager.onFrame()
+            //CharEquipManager.onFrame()
             MobEquipManager.onFrame()
         }
 
@@ -198,8 +200,6 @@ export const Renderer = {
                 this.lastPos = pos
             }
         }
-
-        WorldRenderer.updateWorldParentNode()
         Connector.processMessages(actualTime)
 
         scene.render()
@@ -249,11 +249,17 @@ export const Renderer = {
         this.scene.autoClearDepthAndStencil = false
 
         this.scene.fogMode = Scene.FOGMODE_LINEAR
-        this.scene.fogStart = 30
+        this.scene.fogStart = 10
         this.scene.fogEnd = 50
         this.scene.fogColor = new Color3(0.2, 0.22, 0.24)
 
         this.setCullingFrequency(this.scene, 50)
+
+        this.scene.onAfterAnimationsObservable.add(() => {
+            if (this.frame > 1) {
+                CharEquipManager.onFrame()
+            }
+        })
 
         this.scene.environmentTexture = CubeTexture.CreateFromPrefilteredData(
             "environment_specular.env",

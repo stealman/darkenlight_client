@@ -108,8 +108,8 @@ export class MonsterModel {
     }
 
     resolveMovement(timeRate: number) {
-        this.node.position.x = this.parent.xPos - Data.myChar.xPos
-        this.node.position.z = this.parent.zPos - Data.myChar.zPos
+        this.node.position.x = this.parent.xPos
+        this.node.position.z = this.parent.zPos
 
         this.resolveModelYpos(timeRate)
         this.resolveModelRotation(timeRate)
@@ -122,7 +122,7 @@ export class MonsterModel {
      * Approximate model Y position to the player Y position
      */
     resolveModelYpos(timeRate: number) {
-        this.node.position.y = (this.parent.yPos - Data.myChar.modelYpos)
+        this.node.position.y = (this.parent.yPos)
         this.modelYpos = this.node.position.y
     }
 

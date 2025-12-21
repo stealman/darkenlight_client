@@ -30,7 +30,7 @@ export const TerrainManager = {
         }
 
         // Water planes
-        this.waterPlane = Builder.createHorizontalPlane(scene, WorldRenderer.worldParentNode,256, 0)
+        this.waterPlane = Builder.createHorizontalPlane(scene, WorldRenderer.worldParentNode,2048, 0)
         this.waterPlane.material = Materials.waterMaterial
         this.waterPlane.position.y = 1
         this.waterPlane.isPickable = false
@@ -55,22 +55,25 @@ export const TerrainManager = {
             for (let z = Math.max(0, myPos.z + ViewportManager.minZ); z <= Math.min(blockMap.length, myPos.z + ViewportManager.maxZ); z++) {
 
                 // Check if block is in visible matrix
-                if (!ViewportManager.isPointInVisibleMatrix(x - myPos.x, z - myPos.z, 2)) {
+                if (!ViewportManager.isPointInVisibleMatrix(x, z, 2)) {
                     continue
                 }
+
                 const block = blockMap[x][z]
                 const heightOffset = block.heightOffset
 
                 if (block.type > 0) {
                     if (planeBlockMap[x][z]) {
-                        const matrix = Matrix.Translation( x - myPos.x, block.height + heightOffset, z - myPos.z);
+                        const matrix = Matrix.Translation( x, block.height + heightOffset, z);
                         planeMatrices.push(matrix)
                         planeUvData.push(PlaneEnum1.getPlaneByIndex(planeBlockMap[x][z].type))
+                        //console.log("plane at ", x, z)
                     } else {
                         const scaleMatrix = Matrix.Scaling(1, 1 + heightOffset, 1);
-                        const matrix = scaleMatrix.multiply(Matrix.Translation( x - myPos.x, block.height + heightOffset * 0.5, z - myPos.z));
+                        const matrix = scaleMatrix.multiply(Matrix.Translation( x, block.height + heightOffset * 0.5, z));
                         terrainMatrices1.push(matrix)
                         terrainUvData1.push(TerrainEnum1.getTerrainByIndex(block.type))
+                        //console.log("terrain at ", x, z)
                     }
                 }
             }

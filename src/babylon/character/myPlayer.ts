@@ -20,8 +20,8 @@ export const MyPlayer = {
 
     async initialize(scene: Scene) {
         this.charModel = await CharacterModel.create(Data.myChar, scene)
-        Data.myChar.yPos = this.calculateYPos()
-        Data.myChar.modelYpos = Data.myChar.yPos
+        Data.myChar.pos.y = this.calculateYPos()
+        Data.myChar.logicYpos = Data.myChar.pos.y
     },
 
     onFrame(timeRate: number, actualTime: number) {
@@ -38,8 +38,8 @@ export const MyPlayer = {
 
         if (Data.myChar.targetBlock != null) {
             const targetBlock = Data.myChar.targetBlock
-            const dx = Math.abs(targetBlock.x - Data.myChar.xPos)
-            const dz = Math.abs(targetBlock.z - Data.myChar.zPos)
+            const dx = Math.abs(targetBlock.x - Data.myChar.pos.x)
+            const dz = Math.abs(targetBlock.z - Data.myChar.pos.z)
 
             if (dx < 0.1 && dz < 0.1) {
                 Data.myChar.targetBlock = null
@@ -50,22 +50,22 @@ export const MyPlayer = {
         if (Data.myChar.getMoveAngle() != null) {
             const speed = Data.myChar.getActualSpeed()
             const angle = Utils.roundToTwoDecimals(Data.myChar.getMoveAngle()! + Math.PI / 4)
-            let tgtPos = new Vector3(Data.myChar.xPos + Math.cos(angle) * speed * timeRate, 0, Data.myChar.zPos -Math.sin(angle) * speed * timeRate)
+            let tgtPos = new Vector3(Data.myChar.pos.x + Math.cos(angle) * speed * timeRate, 0, Data.myChar.pos.z -Math.sin(angle) * speed * timeRate)
 
             // Check if player can move to the target position, if not try to find an alternate position
-            if (Utils.isMovementCollision(this.boxSize, new Vector3(Data.myChar.xPos, 0, Data.myChar.zPos), tgtPos)) {
-                const alternateMovementPos = Utils.getAlternateMovementPos(this.boxSize, angle, Data.myChar.xPos, Data.myChar.zPos, tgtPos.x, tgtPos.z, speed, timeRate)
+            if (Utils.isMovementCollision(this.boxSize, new Vector3(Data.myChar.pos.x, 0, Data.myChar.pos.z), tgtPos)) {
+                const alternateMovementPos = Utils.getAlternateMovementPos(this.boxSize, angle, Data.myChar.pos.x, Data.myChar.pos.z, tgtPos.x, tgtPos.z, speed, timeRate)
                 if (alternateMovementPos != null) {
                     tgtPos = alternateMovementPos
                 } else {
-                    tgtPos = new Vector3(Data.myChar.xPos, 0, Data.myChar.zPos)
+                    tgtPos = new Vector3(Data.myChar.pos.x, 0, Data.myChar.pos.z)
                 }
                 Connector.sendMoveMessage(new MyCharMoveMsg())
             }
 
-            Data.myChar.xPos = tgtPos.x
-            Data.myChar.zPos = tgtPos.z
-            Data.myChar.yPos = this.calculateYPos()
+            Data.myChar.pos.x = tgtPos.x
+            Data.myChar.pos.z = tgtPos.z
+            Data.myChar.logicYpos = this.calculateYPos()
 
             if (this.movementType === 'RUN') { this.charModel?.startRunAnimation() }
             if (this.movementType === 'WALK') { this.charModel?.startWalkAnimation() }
@@ -78,7 +78,7 @@ export const MyPlayer = {
 
     calculateYPos() {
         const map = WorldDataManager.getBlockMap()
-        const coveredBlocks = Utils.getCoveredBlocks(Data.myChar.xPos, Data.myChar.zPos, this.boxSize)
+        const coveredBlocks = Utils.getCoveredBlocks(Data.myChar.pos.x, Data.myChar.pos.z, this.boxSize)
 
         // From map get all blocks that are covered by the player and find the highest one
         let highest = 0
@@ -104,14 +104,11 @@ export const MyPlayer = {
                 this.setMoveAngleAndSpeed(0, 0)
             }
         } else {
-            point.x += Data.myChar.xPos
-            point.z += Data.myChar.zPos
-
             // if distance > 3 then movementType is run, otherwise walk
-            const distance = Vector3.Distance(point, new Vector3(Data.myChar.xPos, 0, Data.myChar.zPos))
+            const distance = Vector3.Distance(point, new Vector3(Data.myChar.pos.x, 0, Data.myChar.pos.z))
             this.movementType = distance > 4 ? 'RUN' : 'WALK'
 
-            const angle = Math.atan2(-(point.z - Data.myChar.zPos), point.x - Data.myChar.xPos)
+            const angle = Math.atan2(-(point.z - Data.myChar.pos.z), point.x - Data.myChar.pos.x)
             this.setMoveAngleAndSpeed(angle - Math.PI / 4, this.movementType === 'RUN' ? Data.myChar.runSpeed : Data.myChar.walkSpeed)
             Data.myChar.targetBlock = point
         }

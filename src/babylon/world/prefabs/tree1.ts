@@ -1,5 +1,5 @@
 import { Mesh, MeshBuilder, Scene, Vector3 } from '@babylonjs/core'
-import { Prefab, WorldRenderer } from '@/babylon/world/worldRenderer'
+import { Prefab } from '@/babylon/world/worldRenderer'
 import { Materials } from '@/babylon/materials'
 
 export const PrefabTree1 = {
@@ -49,8 +49,9 @@ export const PrefabTree1 = {
 
         // Merge bloks and set material
         const merged = Mesh.MergeMeshes(blocks, true) as Mesh
-        merged.parent = WorldRenderer.worldParentNode
         merged.material = Materials.blockMatAlpha1
+        merged.name = "prefab_tree1"
+        merged.alwaysSelectAsActiveMesh = true
 
         return new Prefab(merged)
     }

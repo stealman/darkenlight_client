@@ -7,10 +7,9 @@ export class PlayerData {
     runSpeed: number = 3.5
     private actualSpeed: number = 0
 
-    xPos: number
-    zPos: number
-    yPos: number
-    modelYpos: number = 0
+    pos: Vector3
+    logicYpos: number = 0
+
     modelRotation: number = 0
     private moveAngle: number | null = null
     targetBlock: Vector3 | null = null
@@ -24,21 +23,12 @@ export class PlayerData {
 
     constructor(hp = 0, xPos = 0, zPos = 0, yPos = 0) {
         this.hp = hp
-        this.xPos = xPos
-        this.zPos = zPos
-        this.yPos = yPos
-        this.modelYpos = yPos
+        this.logicYpos = yPos
+        this.pos = new Vector3(xPos, yPos, zPos)
     }
 
     getPositionRounded(): Vector3 {
-        return new Vector3(Math.floor(this.xPos), this.yPos, Math.floor(this.zPos))
-    }
-
-    getOffset() {
-        return {
-            x: this.xPos - Math.floor(this.xPos),
-            z: this.zPos - Math.floor(this.zPos)
-        }
+        return new Vector3(Math.floor(this.pos.x), Math.floor(this.pos.y), Math.floor(this.pos.z))
     }
 
     setMoveAngle(angle: number | null) {

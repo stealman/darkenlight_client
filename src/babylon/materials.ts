@@ -33,7 +33,7 @@ export const Materials = {
     },
 
     createTerrainMaterial1(scene: Scene): PBRCustomMaterial {
-        const material = this.getPBRCustomMaterial(scene, "terrain_mats1", this.BASE_PATH, 'terrain_materials2.png', 1 / 8, 1 / 8, false)
+        const material = this.getPBRCustomMaterial(scene, "terrain_mats1", this.BASE_PATH, 'terrain_materials1.png', 1 / 8, 1 / 8, false)
         return material
     },
 
@@ -122,7 +122,7 @@ export const Materials = {
         mat.directIntensity = 1
         mat.environmentIntensity = 0.5
         mat.usePhysicalLightFalloff = false
-        mat.alpha = 1
+        mat.alpha = 0.25
 
         mat.freeze()
         return mat

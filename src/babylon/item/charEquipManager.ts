@@ -62,6 +62,7 @@ class CharWearableItemManager {
 
         // Build mesh object
         this.spsMesh = this.sps.buildMesh()
+        this.spsMesh.alwaysSelectAsActiveMesh = true
         this.spsMesh.receiveShadows = true
         this.spsMesh.material = Materials.getPBRMaterial(scene, this.materialName + "charEquipMap", this.texturePath , false, true, this.matOptions)
         if (this.castShadows) {
@@ -80,6 +81,7 @@ class CharWearableItemManager {
     syncParticlePosition(p: SolidParticle): void {
         if (p.obj != null) {
             const rotq = new Quaternion();
+            p.obj.computeWorldMatrix(true);
             p.obj.getWorldMatrix().decompose(null, rotq, null);
             p.rotationQuaternion = rotq;
             p.position.copyFrom(p.obj.getAbsolutePosition())

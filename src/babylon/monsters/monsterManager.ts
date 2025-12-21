@@ -101,8 +101,7 @@ export const MonsterManager = {
     },
 
     isMonsterInViewport(monster: Monster) {
-        const myPos = Data.myChar.getPositionRounded()
-        return ViewportManager.isPointInVisibleMatrix(Math.floor(monster.xPos) - myPos.x, Math.floor(monster.zPos) - myPos.z, 0)
+        return ViewportManager.isPointInVisibleMatrix(Math.floor(monster.xPos), Math.floor(monster.zPos), 0)
     },
 
     isPointInMonster(x: number, z: number, size: number): Monster | null {
