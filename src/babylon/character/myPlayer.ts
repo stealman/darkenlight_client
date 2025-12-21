@@ -63,9 +63,14 @@ export const MyPlayer = {
                 Connector.sendMoveMessage(new MyCharMoveMsg())
             }
 
-            Data.myChar.pos.x = tgtPos.x
-            Data.myChar.pos.z = tgtPos.z
-            Data.myChar.logicYpos = this.calculateYPos()
+            if (tgtPos.x < 1 || tgtPos.z < 1 || tgtPos.x > WorldDataManager.worldDataMap.get(Data.worldId)!.worldSize - 2 || tgtPos.z > WorldDataManager.worldDataMap.get(Data.worldId)!.worldSize - 2) {
+                tgtPos = new Vector3(Data.myChar.pos.x, 0, Data.myChar.pos.z)
+                this.setMoveAngleAndSpeed(0, 0)
+            } else {
+                Data.myChar.pos.x = tgtPos.x
+                Data.myChar.pos.z = tgtPos.z
+                Data.myChar.logicYpos = this.calculateYPos()
+            }
 
             if (this.movementType === 'RUN') { this.charModel?.startRunAnimation() }
             if (this.movementType === 'WALK') { this.charModel?.startWalkAnimation() }

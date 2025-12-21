@@ -66,14 +66,12 @@ export const TerrainManager = {
                     if (planeBlockMap[x][z]) {
                         const matrix = Matrix.Translation( x, block.height + heightOffset, z);
                         planeMatrices.push(matrix)
-                        planeUvData.push(PlaneEnum1.getPlaneByIndex(planeBlockMap[x][z].type))
-                        //console.log("plane at ", x, z)
+                        planeUvData.push(PlaneEnum1.getPlaneForBlock(planeBlockMap[x][z]))
                     } else {
                         const scaleMatrix = Matrix.Scaling(1, 1 + heightOffset, 1);
                         const matrix = scaleMatrix.multiply(Matrix.Translation( x, block.height + heightOffset * 0.5, z));
                         terrainMatrices1.push(matrix)
-                        terrainUvData1.push(TerrainEnum1.getTerrainByIndex(block.type))
-                        //console.log("terrain at ", x, z)
+                        terrainUvData1.push(TerrainEnum1.getTerrainForBlock(block))
                     }
                 }
             }

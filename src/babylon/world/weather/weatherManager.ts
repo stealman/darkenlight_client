@@ -7,9 +7,8 @@ import {
     Texture,
     Vector3,
 } from '@babylonjs/core'
-import { Renderer } from '@/babylon/scene/renderer'
-import { Data } from '@/data/globalData'
 import { MyPlayer } from '@/babylon/character/myPlayer'
+import { Renderer } from '@/babylon/scene/renderer'
 export const WeatherManager = {
     actualWeather: null as WeatherEffect | null,
 
@@ -72,10 +71,11 @@ class SnowEffect implements WeatherEffect {
 
         const wind = new Vector3(0.6, 0, -1.5);
         snow.direction1.set(wind.x - 0.4, -1, wind.z - 0.4)
-        snow.direction2.set(wind.x + 0.4, -1, wind.z + 0.4
-        );
+        snow.direction2.set(wind.x + 0.4, -1, wind.z + 0.4)
 
         snow.emitRate = 1000;
+
+        snow.renderingGroupId = 2;
         snow.start();
     }
 

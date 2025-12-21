@@ -78,9 +78,16 @@ export class WorldData {
                 this.blockMap[mapChunk.x + i][mapChunk.z + j] = mapBlock
 
                 // Planes are marked with "P" at the end
-                if (data.length === 3 && data[2] === "P") {
+                if (data[2] === "P") {
                     this.planeBlockMap[mapChunk.x + i][mapChunk.z + j] = mapBlock
                 }
+
+                // Snowed blocks are marked with "S" at the end
+                if (data[3] === "S") {
+                    mapBlock.snowed = true
+                }
+
+                mapBlock.presetHeightOffset()
             }
         }
         this.loadedChunkCoords.push(new Vector3(mapChunk.x, 0, mapChunk.z))
@@ -96,19 +103,27 @@ export class MapBlock {
     type: number
     heightOffset: number
     totalHeight: number
+    snowed: boolean = false
 
     constructor(height: number, type: number) {
         this.height = height
         this.type = type
+
+    }
+
+    presetHeightOffset() {
         this.heightOffset = this.getRenderedHeightOffset()
         this.totalHeight = this.height + this.heightOffset
     }
 
     getRenderedHeightOffset() {
-        return this.type === 2 ? 0.1 : 0
+        if (this.type === 2 || this.snowed) {
+            return  0.1
+        }
+        return 0
     }
 
     equals(other: MapBlock) {
-        return this.height === other.height && this.type === other.type
+        return this.height === other.height && this.type === other.type && this.snowed === other.snowed
     }
 }

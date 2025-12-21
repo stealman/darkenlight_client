@@ -4,6 +4,7 @@ import {
     Texture, Vector2, PBRMaterial,
 } from '@babylonjs/core'
 import { PBRCustomMaterial } from '@babylonjs/materials'
+import { MapBlock } from '@/data/worldDataManager'
 
 export interface PBRBasicAtts {
     metallic: number
@@ -49,7 +50,6 @@ export const Materials = {
 
     createBlockMatAlpha1(scene: Scene): PBRCustomMaterial {
         const material = this.getPBRCustomMaterial(scene, "sym_block_mats_alpha1", this.BASE_PATH, 'block_materials_alpha1.png', 1 / 8, 1 / 8, true)
-        material.alpha = 0.5
         return material
     },
 
@@ -95,8 +95,8 @@ export const Materials = {
         mat.environmentIntensity = options.environmentIntensity
         mat.usePhysicalLightFalloff = false;
         if (hasAlpha) {
-            mat.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHATEST;
-            mat.alphaCutOff = 0.4;
+            mat.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHATEST //  PBRMATERIAL_ALPHATESTANDBLEND
+            mat.alphaCutOff = 0.75;
         }
 
         mat.AddAttribute("uvc");
@@ -154,18 +154,36 @@ export const MaterialEnum1 = {
 
 export const TerrainEnum1 = {
     TERRAIN_DIRT: new MaterialEnum(1, new Vector2(2.5, 6.5)),
-    TERRAIN_GRASS: new MaterialEnum(2, new Vector2(4.5, 6.5)),
+    TERRAIN_GRASS: new MaterialEnum(2, new Vector2(0.5, 6.5)),
+    TERRAIN_ROCK: new MaterialEnum(3, new Vector2(6.5, 6.5)),
 
-    getTerrainByIndex(index: number): Vector2 {
-        return Object.values(TerrainEnum1).find(item => item.index === index)?.uv;
+    TERRAIN_SNOW_DIRT: new MaterialEnum(101, new Vector2(4.5, 6.5)),
+    TERRAIN_SNOW_GRASS: new MaterialEnum(102, new Vector2(4.5, 6.5)),
+    TERRAIN_SNOW_ROCK: new MaterialEnum(103, new Vector2(6.5, 4.5)),
+
+    getTerrainForBlock(block: MapBlock): Vector2 {
+        let type = block.type;
+        if (block.snowed) {
+            type += 100;
+        }
+        return Object.values(TerrainEnum1).find(item => item.index === type)?.uv;
     }
 }
 
 export const PlaneEnum1 = {
     PLANE_DIRT: new MaterialEnum(1, new Vector2(2.5, 6.5)),
-    PLANE_GRASS: new MaterialEnum(2, new Vector2(4.5, 6.5)),
+    PLANE_GRASS: new MaterialEnum(2, new Vector2(0.5, 6.5)),
+    PLANE_ROCK: new MaterialEnum(3, new Vector2(6.5, 6.5)),
 
-    getPlaneByIndex(index: number): Vector2 {
-        return Object.values(PlaneEnum1).find(item => item.index === index)?.uv;
+    PLANE_SNOW_DIRT: new MaterialEnum(101, new Vector2(4.5, 6.5)),
+    PLANE_SNOW_GRASS: new MaterialEnum(102, new Vector2(4.5, 6.5)),
+    PLANE_SNOW_ROCK: new MaterialEnum(103, new Vector2(4.5, 6.5)),
+
+    getPlaneForBlock(block: MapBlock): Vector2 {
+        let type = block.type;
+        if (block.snowed) {
+            type += 100;
+        }
+        return Object.values(PlaneEnum1).find(item => item.index === type)?.uv;
     }
 }

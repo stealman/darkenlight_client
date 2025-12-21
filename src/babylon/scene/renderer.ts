@@ -65,7 +65,7 @@ export const Renderer = {
 
         this.animationSpeedRatio = this.animationFrameTime / 25
         this.sunLight = new DirectionalLight("sunLight", new Vector3(-0.75, -0.75, 0.3), this.scene)
-        this.sunLight.position = new Vector3(50, 50, 50);
+        this.sunLight.position = new Vector3(40, 40, 40);
         this.sunLight.intensity = 1
         this.sunLight.diffuse = new Color3(1, 0.91, 0.74)
 
@@ -249,8 +249,8 @@ export const Renderer = {
         this.scene.autoClearDepthAndStencil = false
 
         this.scene.fogMode = Scene.FOGMODE_LINEAR
-        this.scene.fogStart = 10
-        this.scene.fogEnd = 50
+        this.scene.fogStart = 25
+        this.scene.fogEnd = 60
         this.scene.fogColor = new Color3(0.2, 0.22, 0.24)
 
         this.setCullingFrequency(this.scene, 50)

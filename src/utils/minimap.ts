@@ -10,6 +10,7 @@ export const MiniMap = {
     minHeight: 6,
     maxHeight: 32,
     grassColorMap: [] as string[],
+    snowColorMap: [] as string[],
 
     initialize() {
         //const blockMap: MapBlock[][] = WorldDataManager.getBlockMap()
@@ -25,6 +26,10 @@ export const MiniMap = {
             const brightness = (height - this.minHeight) / (this.maxHeight - this.minHeight)
             const greenValue = Math.round(102 + brightness * (255 - 102))
             this.grassColorMap[height] = `#00${greenValue.toString(16).padStart(2, '0')}00`
+
+            // snow goes from light gray to white
+            const snowValue = Math.round(128 + brightness * (255 - 128))
+            this.snowColorMap[height] = `#${snowValue.toString(16).padStart(2, '0')}${snowValue.toString(16).padStart(2, '0')}${snowValue.toString(16).padStart(2, '0')}`
         }
     },
 
@@ -35,6 +40,7 @@ export const MiniMap = {
 
         const dirtColor = "#8B4513"
         const waterColor = "#2222BB"
+        const rockColor = "#666666"
 
         //console.log("Add chunk to minimap...")
 
@@ -45,14 +51,21 @@ export const MiniMap = {
                 const data = (blockMap[z][x] as string).split(":")
                 const height = parseInt(data[0])
                 const type = parseInt(data[1])
+                const snowed  = data[3] === "S"
 
                 if (height < 6) {
                     offScreenContext.fillStyle = waterColor
                 } else {
                     offScreenContext.fillStyle = dirtColor
 
-                    if (type === 2) {
-                        offScreenContext.fillStyle = this.grassColorMap[height]
+                    if (snowed) {
+                        offScreenContext.fillStyle = this.snowColorMap[height]
+                    } else {
+                        if (type === 2) {
+                            offScreenContext.fillStyle = this.grassColorMap[height]
+                        } else if (type === 3) {
+                            offScreenContext.fillStyle = rockColor
+                        }
                     }
                 }
                 offScreenContext.fillRect(mapChunk.z + x, mapChunk.x + z, 1, 1)
