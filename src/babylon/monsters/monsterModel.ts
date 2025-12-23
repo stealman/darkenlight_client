@@ -6,7 +6,6 @@ import {
 import { Monster } from '@/babylon/monsters/monster'
 import { MonsterLoader } from '@/babylon/monsters/monsterLoader'
 import { MonsterCodebook, MonsterType } from '@/babylon/monsters/codebook/monsterCodebook'
-import { Data } from '@/data/globalData'
 import { MeshAnimation } from '@/babylon/animations/animation'
 import { MonsterTemplate } from '@/babylon/monsters/codebook/monsterTemplates'
 import { MobEquipItem, MobEquipManager } from '@/babylon/item/mobEquipManager'
@@ -108,8 +107,8 @@ export class MonsterModel {
     }
 
     resolveMovement(timeRate: number) {
-        this.node.position.x = this.parent.xPos
-        this.node.position.z = this.parent.zPos
+        this.node.position.x = this.parent.pos.x
+        this.node.position.z = this.parent.pos.z
 
         this.resolveModelYpos(timeRate)
         this.resolveModelRotation(timeRate)
@@ -122,8 +121,8 @@ export class MonsterModel {
      * Approximate model Y position to the player Y position
      */
     resolveModelYpos(timeRate: number) {
-        this.node.position.y = (this.parent.yPos)
-        this.modelYpos = this.node.position.y
+        this.parent.pos.y += (this.parent.logicYpos - this.parent.pos.y) * 15 * timeRate
+        this.node.position.y = this.parent.pos.y
     }
 
     /**

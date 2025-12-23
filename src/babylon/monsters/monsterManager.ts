@@ -4,7 +4,6 @@ import { MonsterLoader } from '@/babylon/monsters/monsterLoader'
 import { MonsterModel } from '@/babylon/monsters/monsterModel'
 import { MonsterCodebook, MonsterType } from '@/babylon/monsters/codebook/monsterCodebook'
 import { Utils } from '@/utils/utils'
-import { Data } from '@/data/globalData'
 import { ViewportManager } from '@/utils/viewport'
 
 export const MonsterManager = {
@@ -20,9 +19,9 @@ export const MonsterManager = {
 
         if (this.monsters.has(id)) {
             const mob = this.monsters.get(id)
-            mob.xPos = position.x
-            mob.zPos = position.z
-            mob.hp = hp
+            mob!.pos.x = position.x
+            mob!.pos.z = position.z
+            mob!.hp = hp
         } else {
             const monsterType: MonsterType = MonsterCodebook.getMonsterTypeById(type)
             const monster = new Monster(id, monsterType, position.x, position.z, hp)
@@ -47,7 +46,7 @@ export const MonsterManager = {
     removeMonster (id: number) {
         if (this.monsters.has(id)) {
             this.visibleMonsters.delete(id)
-            this.monsters.get(id).removeMonster()
+            this.monsters.get(id)!.removeMonster()
             this.monsters.delete(id)
         }
     },
@@ -55,19 +54,19 @@ export const MonsterManager = {
     monsterMove(id: number, position: { x: number, z: number }, target: { x: number, z: number }, speed: number) {
         if (this.monsters.has(id)) {
             const mob = this.monsters.get(id)
-            mob.runSpeed = speed
-            mob.xPos = position.x
-            mob.zPos = position.z
-            mob.setTargetPoint(new Vector3(target.x, 0, target.z))
+            mob!.runSpeed = speed
+            mob!.pos.x = position.x
+            mob!.pos.z = position.z
+            mob!.setTargetPoint(new Vector3(target.x, 0, target.z))
         }
     },
 
     monsterMoveStop(id: number, position: { x: number, z: number }) {
         if (this.monsters.has(id)) {
             const mob = this.monsters.get(id)
-            mob.xPos = position.x
-            mob.zPos = position.z
-            mob.resetTargetPoint()
+            mob!.pos.x = position.x
+            mob!.pos.z = position.z
+            mob!.resetTargetPoint()
         }
     },
 
@@ -101,12 +100,12 @@ export const MonsterManager = {
     },
 
     isMonsterInViewport(monster: Monster) {
-        return ViewportManager.isPointInVisibleMatrix(Math.floor(monster.xPos), Math.floor(monster.zPos), 0)
+        return ViewportManager.isPointInVisibleMatrix(Math.floor(monster.pos.x), Math.floor(monster.pos.z), 0)
     },
 
     isPointInMonster(x: number, z: number, size: number): Monster | null {
         for (const monster of this.monsters.values()) {
-            if (Math.abs(monster.xPos - x) < size && Math.abs(monster.zPos - z) < size) {
+            if (Math.abs(monster.pos.x - x) < size && Math.abs(monster.pos.z - z) < size) {
                 return monster
             }
         }

@@ -36,6 +36,7 @@ export const WorldRenderer = {
         Renderer.addShadowCaster(this.block1.mesh)
         Renderer.addShadowCaster(this.blockWithAlpha1.mesh)
         Renderer.addShadowCaster(TreeManager.prefabs.tree1!.mesh)
+        Renderer.addShadowCaster(TreeManager.prefabs.tree2!.mesh)
     },
 
     /**

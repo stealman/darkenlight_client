@@ -144,6 +144,8 @@ export const MaterialEnum1 = {
     TREE_LEAF_2: new MaterialEnum(2, new Vector2(2.5, 6.5)),
     TREE_LEAF_3: new MaterialEnum(3, new Vector2(4.5, 6.5)),
     TREE_LEAF_4: new MaterialEnum(4, new Vector2(6.5, 6.5)),
+    TREE_LEAF_5: new MaterialEnum(5, new Vector2(0.5, 4.5)),
+    TREE_LEAF_6: new MaterialEnum(6, new Vector2(2.5, 4.5)),
     WOOD_1: new MaterialEnum(5, new Vector2(2.5, 4.5)),
     WOOD_2: new MaterialEnum(5, new Vector2(0.5, 4.5)),
 

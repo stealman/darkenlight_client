@@ -2,7 +2,7 @@ import { Mesh, MeshBuilder, Scene, Vector3 } from '@babylonjs/core'
 import { Prefab } from '@/babylon/world/worldRenderer'
 import { Materials } from '@/babylon/materials'
 
-export const PrefabTree1 = {
+export const PrefabOak = {
     getPrefab(scene: Scene) {
         const box = MeshBuilder.CreateBox("box", { width: 0.5, height: 0.5, depth: 0.5}, scene);
         box.position = new Vector3(0, 0, 0);

@@ -13,9 +13,8 @@ export class Monster {
     hp: number
     runSpeed: number = 0
     rotationSpeed: number = 15
-    xPos: number
-    zPos: number
-    yPos: number
+    pos: Vector3
+    logicYpos: number = 0
 
     moveAngle: number | null = null
     insideView: boolean = true
@@ -24,9 +23,9 @@ export class Monster {
         this.id = id
         this.mobType = mobType
         this.hp = hp
-        this.xPos = xPos
-        this.zPos = zPos
-        this.yPos = 0
+        this.pos = new Vector3(xPos, 0, zPos)
+        this.logicYpos = this.calculateYPos()
+        this.pos.y = this.logicYpos
     }
 
     onFrame(timeRate: number, actualTime: number) {
@@ -47,30 +46,30 @@ export class Monster {
         const stepSize = this.runSpeed * timeRate
         if (this.targetPoint != null) {
 
-            const dx = Math.abs(this.targetPoint.x - this.xPos)
-            const dz = Math.abs(this.targetPoint.z - this.zPos)
+            const dx = Math.abs(this.targetPoint.x - this.pos.x)
+            const dz = Math.abs(this.targetPoint.z - this.pos.z)
 
             if (dx <= stepSize && dz <= stepSize) {
-                this.xPos = this.targetPoint.x
-                this.zPos = this.targetPoint.z
+                this.pos.x = this.targetPoint.x
+                this.pos.z = this.targetPoint.z
                 this.targetPoint = null
                 this.moveAngle = null
             }
         }
 
         if (this.moveAngle != null) {
-            this.xPos += (Math.cos(this.moveAngle + Math.PI / 4) * stepSize)
-            this.zPos -= (Math.sin(this.moveAngle + Math.PI / 4) * stepSize)
+            this.pos.x += (Math.cos(this.moveAngle + Math.PI / 4) * stepSize)
+            this.pos.z -= (Math.sin(this.moveAngle + Math.PI / 4) * stepSize)
             if (this.model.initialized) this.model.doWalk()
         } else {
             if (this.model.initialized) this.model.doIdle()
         }
 
-        this.yPos = this.calculateYPos()
+        this.logicYpos = this.calculateYPos()
     }
 
     setTargetPoint(point: Vector3) {
-        const angle = Math.atan2(-(point.z - this.zPos), point.x - this.xPos)
+        const angle = Math.atan2(-(point.z - this.pos.z), point.x - this.pos.x)
         this.moveAngle = angle - Math.PI / 4
         this.targetPoint = point
     }
@@ -82,7 +81,7 @@ export class Monster {
 
     calculateYPos() {
         const map = WorldDataManager.getBlockMap()
-        const coveredBlocks = Utils.getCoveredBlocks(this.xPos, this.zPos, 0.4)
+        const coveredBlocks = Utils.getCoveredBlocks(this.pos.x, this.pos.z, 0.4)
 
         // From map get all blocks that are covered by the player and find the highest one
         let highest = 0
