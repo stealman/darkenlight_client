@@ -13,6 +13,8 @@ export const TerrainManager = {
     terrainPlane: null as Mesh | null,
     waterPlane: null as Mesh | null,
 
+    hoverBlockMarker: null as Mesh | null,
+
     initialize (scene: Scene) {
 
         // Terrain and plane blocks
@@ -39,6 +41,8 @@ export const TerrainManager = {
         for (let i = 1.25; i <= 4.75; i += 0.25) {
             this.waterPlane.createInstance('plane' + i).position.y = i
         }
+
+        this.hoverBlockMarker = Builder.createHorizontalPlane(scene, null,1, 0)
     },
 
     renderTerrain() {
@@ -68,10 +72,36 @@ export const TerrainManager = {
                         planeMatrices.push(matrix)
                         planeUvData.push(PlaneEnum1.getPlaneForBlock(planeBlockMap[x][z]))
                     } else {
+
+                        // Find lowest height for surrounding blocks to avoid gaps
+                        let minHeight = block.height
+                        for (let offsetX = -1; offsetX <= 1; offsetX++) {
+                            for (let offsetZ = -1; offsetZ <= 1; offsetZ++) {
+                                if (offsetX === 0 && offsetZ === 0) {
+                                    continue
+                                }
+                                const neighborX = x + offsetX
+                                const neighborZ = z + offsetZ
+                                if (neighborX >= 0 && neighborX < blockMap.length && neighborZ >= 0 && neighborZ < blockMap.length) {
+                                    const neighborBlock = blockMap[neighborX][neighborZ]
+                                    if (neighborBlock.type > 0 && neighborBlock.height < minHeight) {
+                                        minHeight = neighborBlock.height
+                                    }
+                                }
+                            }
+                        }
+
                         const scaleMatrix = Matrix.Scaling(1, 1 + heightOffset, 1);
                         const matrix = scaleMatrix.multiply(Matrix.Translation( x, block.height + heightOffset * 0.5, z));
                         terrainMatrices1.push(matrix)
                         terrainUvData1.push(TerrainEnum1.getTerrainForBlock(block))
+
+                        // If minheight is lower than current block height - 1, then fill the gap with blocks
+                        for (let fillHeight = minHeight + 1; fillHeight < block.height; fillHeight++) {
+                            const fillMatrix = Matrix.Translation(x, fillHeight + heightOffset, z);
+                            terrainMatrices1.push(fillMatrix)
+                            terrainUvData1.push(TerrainEnum1.getTerrainForBlock(block, true))
+                        }
                     }
                 }
             }

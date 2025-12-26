@@ -53,7 +53,7 @@ export const MiniMap = {
                 const type = parseInt(data[1])
                 const snowed  = data[3] === "S"
 
-                if (height < 6) {
+                if (height < 5) {
                     offScreenContext.fillStyle = waterColor
                 } else {
                     offScreenContext.fillStyle = dirtColor

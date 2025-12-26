@@ -249,7 +249,7 @@ export const Renderer = {
         this.scene.autoClearDepthAndStencil = false
 
         this.scene.fogMode = Scene.FOGMODE_LINEAR
-        this.scene.fogStart = 25
+        this.scene.fogStart = 20
         this.scene.fogEnd = 60
         this.scene.fogColor = new Color3(0.2, 0.22, 0.24)
 
@@ -272,8 +272,6 @@ export const Renderer = {
         const absoluteFPS = 1000 / this.instrumentation!.frameTimeCounter.lastSecAverage
         document.getElementById("fpsLabel")!.innerHTML = "FPS: " + this.fps + " | " + absoluteFPS.toFixed(0);
         document.getElementById("posLabel")!.innerHTML = "POS: " + Data.myChar.getPositionRounded().toString();
-        document.getElementById("meshLabel")!.innerHTML = "MESH: " + this.scene.getActiveMeshes().length.toString() + " | DC: " + this.instrumentation!.drawCallsCounter.current.toString()
-        document.getElementById("facesLabel")!.innerHTML = "FACE: " + (this.scene.getActiveIndices() / 3).toString();
     },
 
     requestFullscreen() {

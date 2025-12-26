@@ -1,8 +1,24 @@
 import { Vector3 } from '@babylonjs/core'
 import { TreeManager } from '@/babylon/world/treeManager'
 import { MonsterManager } from '@/babylon/monsters/monsterManager'
+import { WorldDataManager } from '@/data/worldDataManager'
 
 export const Utils = {
+
+    calculateYPos(x: number, z: number, boxSize: number): number {
+        const map = WorldDataManager.getBlockMap()
+        const coveredBlocks = Utils.getCoveredBlocks(x, z, boxSize)
+
+        // From map get all blocks that are covered by the player and find the highest one
+        let highest = 0
+        coveredBlocks.forEach(block => {
+            if (map[block.x][block.z].totalHeight > highest) {
+                highest = map[block.x][block.z].totalHeight
+            }
+        })
+
+        return highest
+    },
 
     getCoveredBlocks(xPos: number, zPos: number, characterWidth: number, blockSize = 1) {
         const threshold = blockSize - (characterWidth / 2);
@@ -22,6 +38,14 @@ export const Utils = {
     },
 
     isMovementCollision(charSize: number, charPos: Vector3, targetPos: Vector3): {x: number, z: number} | null {
+
+        //  Check terrain height difference
+        const actualY = Utils.calculateYPos(charPos.x, charPos.z, charSize)
+        const targetY = Utils.calculateYPos(targetPos.x, targetPos.z, charSize)
+        if (Math.abs(targetY - actualY) >= 2) {
+            return {x: targetPos.x, z: targetPos.z}
+        }
+
         const pointInTree = TreeManager.getPointInTree(targetPos.x, targetPos.z, charSize)
         if (pointInTree) {
             // Check if targetPos is further away from tree than charPos

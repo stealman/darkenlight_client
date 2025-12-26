@@ -21,6 +21,8 @@ export const ResponseProcessor = {
                 case 8: this.removeMonster(msg.d); break
                 case 9: this.processWorldChunkData(msg.d); break
                 case 10: this.monsterMoveStop(msg.d); break
+                case 11: this.processWorldChangedData(msg.d); break
+                case 12: this.charMoveDesynced(msg.d); break
             }
         }
     },
@@ -41,6 +43,16 @@ export const ResponseProcessor = {
     },
 
     charMove(data) {
+        const dist = Math.sqrt( (Data.myChar.pos.x - data[1]) * (Data.myChar.pos.x - data[1]) + (Data.myChar.pos.z - data[2]) * (Data.myChar.pos.z - data[2]) )
+        if (data[0] === Data.myChar.id && dist >= 1) {
+            Data.myChar.pos.x = data[1]
+            Data.myChar.pos.z = data[2]
+            Data.myChar.setMoveAngle(data[3])
+            Data.myChar.setActualSpeed(data[4])
+        }
+    },
+
+    charMoveDesynced(data) {
         // If received my own move, it is desync - take position
         if (data[0] === Data.myChar.id) {
             console.log('Desync')
@@ -75,5 +87,9 @@ export const ResponseProcessor = {
 
     monsterMoveStop(data) {
         MonsterManager.monsterMoveStop(data[0], { x: data[1], z: data[2] })
+    },
+
+    processWorldChangedData(data) {
+        WorldDataManager.consumeMapUpdate(data.worldId, data.changes)
     },
 }

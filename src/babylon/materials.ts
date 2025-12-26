@@ -163,9 +163,9 @@ export const TerrainEnum1 = {
     TERRAIN_SNOW_GRASS: new MaterialEnum(102, new Vector2(4.5, 6.5)),
     TERRAIN_SNOW_ROCK: new MaterialEnum(103, new Vector2(6.5, 4.5)),
 
-    getTerrainForBlock(block: MapBlock): Vector2 {
+    getTerrainForBlock(block: MapBlock, ignoreSnow: boolean = false): Vector2 {
         let type = block.type;
-        if (block.snowed) {
+        if (block.snowed && !ignoreSnow) {
             type += 100;
         }
         return Object.values(TerrainEnum1).find(item => item.index === type)?.uv;

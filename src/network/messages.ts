@@ -39,3 +39,21 @@ export class FetchWorldDataMsg implements Message {
         this.d = { worldId: worldId , x: x, z: z}
     }
 }
+
+export class GMSaveMapDataMsg implements Message {
+    t: number = 1000
+    d: any
+
+    constructor() {
+
+    }
+}
+
+export class GMTerrainHeightChange implements Message {
+    t: number = 1001
+    d: any
+
+    constructor(heightData: [{ x: number, z: number, height: number }]) {
+        this.d = { heightData: heightData }
+    }
+}

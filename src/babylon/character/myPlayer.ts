@@ -20,7 +20,7 @@ export const MyPlayer = {
 
     async initialize(scene: Scene) {
         this.charModel = await CharacterModel.create(Data.myChar, scene)
-        Data.myChar.pos.y = this.calculateYPos()
+        Data.myChar.pos.y = Utils.calculateYPos(Data.myChar.pos.x, Data.myChar.pos.z, this.boxSize)
         Data.myChar.logicYpos = Data.myChar.pos.y
     },
 
@@ -69,7 +69,7 @@ export const MyPlayer = {
             } else {
                 Data.myChar.pos.x = tgtPos.x
                 Data.myChar.pos.z = tgtPos.z
-                Data.myChar.logicYpos = this.calculateYPos()
+                Data.myChar.logicYpos = Utils.calculateYPos(Data.myChar.pos.x, Data.myChar.pos.z, this.boxSize)
             }
 
             if (this.movementType === 'RUN') { this.charModel?.startRunAnimation() }
@@ -81,20 +81,7 @@ export const MyPlayer = {
         this.charModel?.onFrame(timeRate)
     },
 
-    calculateYPos() {
-        const map = WorldDataManager.getBlockMap()
-        const coveredBlocks = Utils.getCoveredBlocks(Data.myChar.pos.x, Data.myChar.pos.z, this.boxSize)
 
-        // From map get all blocks that are covered by the player and find the highest one
-        let highest = 0
-        coveredBlocks.forEach(block => {
-            if (map[block.x][block.z].totalHeight > highest) {
-                highest = map[block.x][block.z].totalHeight
-            }
-        })
-
-        return highest
-    },
 
     setMoveTypeAngle(movementType: string, angle: number) {
         this.movementType = movementType

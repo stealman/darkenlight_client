@@ -2,6 +2,7 @@ import { Data } from '@/data/globalData'
 import { Connector } from '@/network/connector'
 import { FetchWorldDataMsg } from '@/network/messages'
 import { Vector3 } from '@babylonjs/core'
+import { TerrainManager } from '@/babylon/world/terrainManager'
 
 export const WorldDataManager = {
     MAP_CHUNK_SIZE: 128 as number,
@@ -48,6 +49,10 @@ export const WorldDataManager = {
         this.worldDataMap.get(Data.worldId)!.consumeMapChunk(mapChunk)
     },
 
+    consumeMapUpdate(worldId, data) {
+        this.worldDataMap.get(worldId)!.consumeMapUpdate(data)
+    },
+
     getPlaneBlockMap() {
         return this.worldDataMap.get(Data.worldId)!.planeBlockMap;
     },
@@ -91,6 +96,32 @@ export class WorldData {
             }
         }
         this.loadedChunkCoords.push(new Vector3(mapChunk.x, 0, mapChunk.z))
+    }
+
+    consumeMapUpdate(changes) {
+        for (const change of changes) {
+            const data = change.data.split(":")
+            const block = this.blockMap[change.x][change.z]
+            block.height = parseInt(data[0])
+            block.type = parseInt(data[1])
+
+            // Planes are marked with "P" at the end
+            if (data[2] === "P") {
+                this.planeBlockMap[change.x][change.z] = block
+            } else {
+                this.planeBlockMap[change.x][change.z] = false
+            }
+
+            // Snowed blocks are marked with "S" at the end
+            if (data[3] === "S") {
+                block.snowed = true
+            } else {
+                block.snowed = false
+            }
+            block.presetHeightOffset()
+        }
+
+        TerrainManager.renderTerrain()
     }
 
     hasChunkAt(x: number, z: number): boolean {

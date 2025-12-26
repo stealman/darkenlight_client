@@ -17,7 +17,7 @@ export const Connector = {
 
         this.socket.onopen = () => {
             console.log('WS connection estabilished')
-            Connector.sendLoginRequest('test', 'test')
+            Connector.sendLoginRequest('stealman', 'test')
         }
 
         this.socket.onmessage = (event) => {

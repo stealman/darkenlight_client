@@ -1,0 +1,21 @@
+#gmPanel {
+    position: absolute;
+    top: 50px;
+    padding: 5px;
+    left: 0;
+    z-index: 10;
+    width: 200px;
+    background-color: rgba(0, 0, 0, 0.2);
+}
+
+div.gm-action-selection button {
+    display: block;
+    width: 100%;
+    margin: 4px 0;
+
+}
+
+div.gm-action-selection button:disabled {
+    color: lightgray;
+    background-color: darkslategray;
+}
