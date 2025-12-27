@@ -4,7 +4,7 @@
     padding: 5px;
     left: 0;
     z-index: 10;
-    width: 200px;
+    width: 220px;
     background-color: rgba(0, 0, 0, 0.2);
 }
 
@@ -18,4 +18,22 @@ div.gm-action-selection button {
 div.gm-action-selection button:disabled {
     color: lightgray;
     background-color: darkslategray;
+}
+
+.terrain-picker {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, 64px);
+    gap: 6px;
+}
+
+.terrain-tile {
+    width: 64px;
+    height: 64px;
+    background-repeat: no-repeat;
+    border: 1px solid #444;
+    cursor: pointer;
+}
+
+.terrain-tile.selected {
+    outline: 2px solid #4caf50;
 }

@@ -3,6 +3,7 @@ import { Connector } from '@/network/connector'
 import { FetchWorldDataMsg } from '@/network/messages'
 import { Vector3 } from '@babylonjs/core'
 import { TerrainManager } from '@/babylon/world/terrainManager'
+import { TreeManager } from '@/babylon/world/treeManager'
 
 export const WorldDataManager = {
     MAP_CHUNK_SIZE: 128 as number,
@@ -51,6 +52,8 @@ export const WorldDataManager = {
 
     consumeMapUpdate(worldId, data) {
         this.worldDataMap.get(worldId)!.consumeMapUpdate(data)
+        TreeManager.recountYPositions()
+        TreeManager.renderTrees()
     },
 
     getPlaneBlockMap() {

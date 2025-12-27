@@ -49,11 +49,11 @@ export class GMSaveMapDataMsg implements Message {
     }
 }
 
-export class GMTerrainHeightChange implements Message {
+export class GMTerrainChange implements Message {
     t: number = 1001
     d: any
 
-    constructor(heightData: [{ x: number, z: number, height: number }]) {
-        this.d = { heightData: heightData }
+    constructor(data: [{ x: number, z: number, height: number }]) {
+        this.d = { changeType: "terrain", data: data }
     }
 }

@@ -42,7 +42,7 @@ export const Utils = {
         //  Check terrain height difference
         const actualY = Utils.calculateYPos(charPos.x, charPos.z, charSize)
         const targetY = Utils.calculateYPos(targetPos.x, targetPos.z, charSize)
-        if (Math.abs(targetY - actualY) >= 2) {
+        if (Math.abs(targetY - actualY) >= 1.8) {
             return {x: targetPos.x, z: targetPos.z}
         }
 

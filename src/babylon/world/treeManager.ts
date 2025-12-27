@@ -24,7 +24,7 @@ export const TreeManager = {
     addTrees() {
     },
 
-    consumeTrees(data: [ { x: number, z: number, size: number } ]) {
+    consumeTrees(data: [ { type: number, x: number, z: number, size: number } ]) {
         data.forEach(tree => {
             const y = WorldDataManager.getBlockMap()[tree.x][tree.z].height + 0.5
             const size = tree.size
@@ -51,6 +51,13 @@ export const TreeManager = {
                 default:
                     break
             }
+        })
+    },
+
+    recountYPositions() {
+        this.allTrees.forEach(tree => {
+            const y = WorldDataManager.getBlockMap()[Math.floor(tree.position.x)][Math.floor(tree.position.z)].height + 0.5
+            tree.position.y = y
         })
     },
 

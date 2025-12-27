@@ -89,7 +89,6 @@ const requestFullscreen = () => {
     width: 100px;
     height: 100px;
     position: absolute;
-    top: 50px;
     right: 0px;
     background-color: black;
     opacity: 0.65;
@@ -110,7 +109,6 @@ const requestFullscreen = () => {
     width: max-content;
 
     background: rgba(0,0,0,0.2);
-    backdrop-filter: blur(4px);
 }
 
 #fpsLabel,
