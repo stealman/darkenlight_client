@@ -1,5 +1,5 @@
 import { LoginMsg, Message } from '@/network/messages'
-import { ResponseProcessor } from '@/network/responseProcessor'
+import { MessageProcessor } from '@/network/messageProcessor'
 
 export const Connector = {
     socket: null as WebSocket,
@@ -22,7 +22,7 @@ export const Connector = {
 
         this.socket.onmessage = (event) => {
             //console.log(event.data.length)
-           ResponseProcessor.processResponse(JSON.parse(event.data))
+           MessageProcessor.processResponse(JSON.parse(event.data))
         }
 
         this.socket.onerror = (error) => {

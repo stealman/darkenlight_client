@@ -5,6 +5,7 @@ import { WorldDataManager } from '@/data/worldDataManager'
 import { ViewportManager } from '@/utils/viewport'
 import { PrefabOak } from '@/babylon/world/prefabs/treeOak'
 import { PrefabFir } from '@/babylon/world/prefabs/treeFir'
+import { Renderer } from '@/babylon/scene/renderer'
 
 export const TreeManager = {
     prefabs: {
@@ -17,6 +18,12 @@ export const TreeManager = {
     initialize(scene: Scene) {
         this.prefabs.tree1 = PrefabOak.getPrefab(scene)
         this.prefabs.tree2 = PrefabFir.getPrefab(scene)
+    },
+
+    addAllShadowCasters() {
+        Object.values(this.prefabs).forEach(prefab => {
+            Renderer.addShadowCaster(prefab!.mesh)
+        })
     },
 
     consumeTrees(data: [ { type: number, x: number, z: number, size: number } ]) {
@@ -99,6 +106,13 @@ export const TreeManager = {
         // Prefabs update thin instance buffers
         Object.values(this.prefabs).forEach(prefab => {
             prefab?.setThinInstanceBuffers()
+
+            // Enable/disable mesh based on thin instance count
+            if (prefab!.mesh.thinInstanceCount && prefab!.mesh.thinInstanceCount > 0) {
+                prefab!.mesh.setEnabled(true)
+            } else {
+                prefab!.mesh.setEnabled(false)
+            }
         })
     },
 

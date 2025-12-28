@@ -28,6 +28,7 @@ export const GMManager = {
     shiftKeyPressed: ref(false),
     selectedTerrain: ref (0),
     selectedTree: ref (0),
+    selectedShrub: ref (0),
 
     tab: GmTabs.OVERVIEW,
 
@@ -88,8 +89,13 @@ export const GMManager = {
             if (this.selectedTree.value > 0) {
                 const treeData = { x: markerPos.x, z: markerPos.z, size: Utils.roundToOneDecimal(1.1 + Math.random() * 0.6) , type: this.selectedTree.value }
                 Connector.sendMessage(new GMBiomeChange("ADD_TREE", [treeData] ) )
-            } else if (this.selectedTree.value === -1) {
-                Connector.sendMessage(new GMBiomeChange("REMOVE_TREE", [ { x: markerPos.x, z: markerPos.z } ] ) )
+
+            } else if (this.selectedShrub.value > 0) {
+                const shrubData = { x: markerPos.x, z: markerPos.z, type: this.selectedShrub.value }
+                Connector.sendMessage(new GMBiomeChange("ADD_OBJECT", [shrubData] ) )
+
+            } else if (this.selectedTree.value === -1 && this.selectedShrub.value === -1) {
+                Connector.sendMessage(new GMBiomeChange("REMOVE_ON_TILE", [ { x: markerPos.x, z: markerPos.z } ] ) )
             }
         }
     },
@@ -135,6 +141,7 @@ export const GMManager = {
     },
 
     openTab(tab: string) {
+        // Close current tab
         switch (this.tab) {
             case GmTabs.TERRAIN_EDIT:
                 this.closeTabTerrainEdit()
@@ -145,6 +152,7 @@ export const GMManager = {
 
         }
 
+        // Open new tab
         switch (tab) {
             case GmTabs.OVERVIEW:
                 this.openTabOverview()
@@ -176,6 +184,7 @@ export const GMManager = {
         this.consumePointerMoveEvents = true
         this.consumeLeftClickEvents = true
         this.selectedTree.value = 0
+        this.selectedShrub.value = 0
         GMSceneManager.setHoverBlockMarkerSize(1)
         GMSceneManager.hoverBlockMarker?.setEnabled(true)
     },

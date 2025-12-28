@@ -28,7 +28,7 @@ export class PlayerData {
     }
 
     getPositionRounded(): Vector3 {
-        return new Vector3(Math.floor(this.pos.x), Math.floor(this.pos.y), Math.floor(this.pos.z))
+        return new Vector3(Math.round(this.pos.x), Math.round(this.pos.y), Math.round(this.pos.z))
     }
 
     setMoveAngle(angle: number | null) {

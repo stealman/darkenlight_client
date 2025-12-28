@@ -6,8 +6,9 @@ import { TreeManager } from '@/babylon/world/treeManager'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { MiniMap } from '@/utils/minimap'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
+import { StaticsManager } from '@/babylon/world/staticsManager'
 
-export const ResponseProcessor = {
+export const MessageProcessor = {
 
     async processResponse(response) {
         for (const element of response) {
@@ -26,6 +27,11 @@ export const ResponseProcessor = {
                 case 12: this.charMoveDesynced(msg.d); break
                 case 13: this.processAddTree(msg.d); break
                 case 14: this.processRemoveTree(msg.d); break
+                case 15: this.processAddStaticObject(msg.d); break
+                case 16: this.processRemoveStaticObject(msg.d); break
+                default:
+                    console.log('Unknown message type: ' + msg.t)
+                    break
             }
         }
     },
@@ -82,9 +88,11 @@ export const ResponseProcessor = {
     processWorldChunkData(data) {
         data.a.forEach(chunk => {
             TreeManager.consumeTrees(chunk.trees)
+            StaticsManager.consumeObjects(chunk.statics)
         })
         data.r.forEach(chunk => {
             TreeManager.removeTrees(chunk.trees)
+            StaticsManager.removeObjects(chunk.statics)
         })
     },
 
@@ -97,6 +105,18 @@ export const ResponseProcessor = {
     processRemoveTree(data) {
         TreeManager.removeTreeAt(data.x, data.z)
         TreeManager.renderTrees()
+        WorldRenderer.renderWorld()
+    },
+
+    processAddStaticObject(data) {
+        StaticsManager.addObject(data)
+        StaticsManager.renderObjects()
+        WorldRenderer.renderWorld()
+    },
+
+    processRemoveStaticObject(data) {
+        StaticsManager.removeObjectAt(data.x, data.z)
+        StaticsManager.renderObjects()
         WorldRenderer.renderWorld()
     },
 

@@ -5,6 +5,7 @@ import { Vector3 } from '@babylonjs/core'
 import { TerrainManager } from '@/babylon/world/terrainManager'
 import { TreeManager } from '@/babylon/world/treeManager'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
+import { StaticsManager } from '@/babylon/world/staticsManager'
 
 export const WorldDataManager = {
     MAP_CHUNK_SIZE: 128 as number,
@@ -55,6 +56,8 @@ export const WorldDataManager = {
         this.worldDataMap.get(worldId)!.consumeMapUpdate(data)
         TreeManager.recountYPositions()
         TreeManager.renderTrees()
+        StaticsManager.recountYPositions()
+        StaticsManager.renderObjects()
         WorldRenderer.renderWorld()
     },
 

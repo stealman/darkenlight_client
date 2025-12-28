@@ -2,6 +2,8 @@ import { Vector3 } from '@babylonjs/core'
 import { TreeManager } from '@/babylon/world/treeManager'
 import { MonsterManager } from '@/babylon/monsters/monsterManager'
 import { WorldDataManager } from '@/data/worldDataManager'
+import { StaticsManager } from '@/babylon/world/staticsManager'
+import { Monster } from '@/babylon/monsters/monster'
 
 export const Utils = {
 
@@ -57,14 +59,19 @@ export const Utils = {
             }
         }
 
-        const monsterInWay = MonsterManager.isPointInMonster(targetPos.x, targetPos.z, charSize)
+        const pointInStatic = StaticsManager.getPointInStatic(targetPos.x, targetPos.z, charSize)
+        if (pointInStatic) {
+            return {x: pointInStatic.x, z: pointInStatic.z}
+        }
+
+        const monsterInWay: Monster | null = MonsterManager.isPointInMonster(targetPos.x, targetPos.z, charSize)
         if (monsterInWay) {
             // Check if targetPos is further away from monster than charPos
-            const tgtDist = Vector3.Distance(new Vector3(monsterInWay.xPos, 0, monsterInWay.zPos), new Vector3(targetPos.x, 0, targetPos.z))
-            const origDist = Vector3.Distance(new Vector3(monsterInWay.xPos, 0, monsterInWay.zPos), new Vector3(charPos.x, 0, charPos.z))
+            const tgtDist = Vector3.Distance(new Vector3(monsterInWay.pos.x, 0, monsterInWay.pos.z), new Vector3(targetPos.x, 0, targetPos.z))
+            const origDist = Vector3.Distance(new Vector3(monsterInWay.pos.x, 0, monsterInWay.pos.z), new Vector3(charPos.x, 0, charPos.z))
 
             if (tgtDist < origDist) {
-                return {x: monsterInWay.xPos, z: monsterInWay.zPos}
+                return {x: monsterInWay.pos.x, z: monsterInWay.pos.z}
             }
         }
         return null

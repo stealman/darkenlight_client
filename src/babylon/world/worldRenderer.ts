@@ -11,6 +11,8 @@ import { BabylonUtils } from '@/babylon/utils'
 import { TerrainManager } from '@/babylon/world/terrainManager'
 import { Renderer } from '@/babylon/scene/renderer'
 import { PBRCustomMaterial } from '@babylonjs/materials'
+import { StaticsManager } from '@/babylon/world/staticsManager'
+import Tree from 'primevue/tree'
 
 export const WorldRenderer = {
     block1: null as SymmetricBlock | null,
@@ -30,13 +32,14 @@ export const WorldRenderer = {
         // Initialize managers
         TerrainManager.initialize(scene)
         TreeManager.initialize(scene)
+        StaticsManager.initialize(scene)
 
         Renderer.addShadowCaster(TerrainManager.terrainBlock1!)
         Renderer.addShadowCaster(TerrainManager.terrainPlane!)
         Renderer.addShadowCaster(this.block1.mesh)
         Renderer.addShadowCaster(this.blockWithAlpha1.mesh)
-        Renderer.addShadowCaster(TreeManager.prefabs.tree1!.mesh)
-        Renderer.addShadowCaster(TreeManager.prefabs.tree2!.mesh)
+        TreeManager.addAllShadowCasters()
+        StaticsManager.addAllShadowCasters()
     },
 
     /**
@@ -51,6 +54,9 @@ export const WorldRenderer = {
 
         // Render trees
         TreeManager.renderTrees()
+
+        // Render statics
+        StaticsManager.renderObjects()
 
         this.block1!.setThinInstanceBuffers()
         this.block1!.mesh.thinInstanceRefreshBoundingInfo(false);

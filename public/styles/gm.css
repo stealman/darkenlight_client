@@ -39,8 +39,6 @@ div.gm-action-selection button:disabled {
 }
 
 .tree-picker {
-    display: flex;
-    flex-wrap: wrap;
     width: 100%;
 }
 
