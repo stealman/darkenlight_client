@@ -1,9 +1,10 @@
 import { Connector } from '@/network/connector'
-import { GMSaveMapDataMsg, GMTerrainChange } from '@/network/messages'
+import { GMBiomeChange, GMSaveMapDataMsg, GMTerrainChange } from '@/network/messages'
 import { GMSceneManager } from '@/babylon/gm/GmSceneManager'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { ref } from 'vue'
 import { Vector3 } from '@babylonjs/core'
+import { Utils } from '@/utils/utils'
 
 /**
  * Main GM tabs
@@ -13,7 +14,8 @@ import { Vector3 } from '@babylonjs/core'
  */
 export const GmTabs = {
     OVERVIEW: 'overview',
-    TERRAIN_EDIT: 'terrain_edit'
+    TERRAIN_EDIT: 'terrain_edit',
+    BIOME_EDIT: 'biome_edit',
 }
 
 export const GMManager = {
@@ -25,6 +27,7 @@ export const GMManager = {
     affectedSize: ref(1),
     shiftKeyPressed: ref(false),
     selectedTerrain: ref (0),
+    selectedTree: ref (0),
 
     tab: GmTabs.OVERVIEW,
 
@@ -36,7 +39,6 @@ export const GMManager = {
             const lowestHeight = this.getLowestAffectedBlockHeight(markerPos, this.affectedSize.value)
             const highestHeight = this.getHighestAffectedBlockHeight(markerPos, this.affectedSize.value)
 
-
             for (let offsetX = -halfSize; offsetX <= halfSize; offsetX++) {
                 for (let offsetZ = -halfSize; offsetZ <= halfSize; offsetZ++) {
                     const block = WorldDataManager.getBlockMap()[markerPos.x + offsetX][markerPos.z + offsetZ]
@@ -45,17 +47,17 @@ export const GMManager = {
                     let snowed = block.snowed
 
                     // Elevation change
-                    if (this.selectedTerrain.value == 0) {
+                    if (this.selectedTerrain.value === 0) {
 
                         // For elevation UP, only elevate blocks with lowest height
                         if (!this.shiftKeyPressed.value) {
-                            if (block.height == lowestHeight) {
-                                height = height + 1
+                            if (block.height === lowestHeight) {
+                                height += 1
                             }
                         } else {
                             // For elevation DOWN, only lower blocks with highest height
-                            if (block.height == highestHeight) {
-                                height = height - 1
+                            if (block.height === highestHeight) {
+                                height -= 1
                             }
                         }
                     } else {
@@ -79,6 +81,16 @@ export const GMManager = {
                 }
             }
             Connector.sendMessage(new GMTerrainChange(data))
+        }
+
+        if (this.tab === GmTabs.BIOME_EDIT) {
+            const markerPos = new Vector3(GMSceneManager.hoverBlockMarker!.position.x, 0, GMSceneManager.hoverBlockMarker!.position.z)
+            if (this.selectedTree.value > 0) {
+                const treeData = { x: markerPos.x, z: markerPos.z, size: Utils.roundToOneDecimal(1.1 + Math.random() * 0.6) , type: this.selectedTree.value }
+                Connector.sendMessage(new GMBiomeChange("ADD_TREE", [treeData] ) )
+            } else if (this.selectedTree.value === -1) {
+                Connector.sendMessage(new GMBiomeChange("REMOVE_TREE", [ { x: markerPos.x, z: markerPos.z } ] ) )
+            }
         }
     },
 
@@ -127,6 +139,10 @@ export const GMManager = {
             case GmTabs.TERRAIN_EDIT:
                 this.closeTabTerrainEdit()
                 break
+            case GmTabs.BIOME_EDIT:
+                this.closeTabBiomeEdit()
+                break
+
         }
 
         switch (tab) {
@@ -135,6 +151,9 @@ export const GMManager = {
                 break
             case GmTabs.TERRAIN_EDIT:
                 this.openTabTerrainEdit()
+                break
+            case GmTabs.BIOME_EDIT:
+                this.openTabBiomeEdit()
                 break
         }
     },
@@ -148,6 +167,16 @@ export const GMManager = {
         this.consumePointerMoveEvents = true
         this.consumeLeftClickEvents = true
         this.consumeMiddleClickEvents = true
+        this.selectedTerrain.value = 0
+        GMSceneManager.hoverBlockMarker?.setEnabled(true)
+    },
+
+    openTabBiomeEdit() {
+        this.tab = GmTabs.BIOME_EDIT
+        this.consumePointerMoveEvents = true
+        this.consumeLeftClickEvents = true
+        this.selectedTree.value = 0
+        GMSceneManager.setHoverBlockMarkerSize(1)
         GMSceneManager.hoverBlockMarker?.setEnabled(true)
     },
 
@@ -155,6 +184,12 @@ export const GMManager = {
         this.consumePointerMoveEvents = false
         this.consumeLeftClickEvents = false
         this.consumeMiddleClickEvents = false
+        GMSceneManager.hoverBlockMarker?.setEnabled(false)
+    },
+
+    closeTabBiomeEdit() {
+        this.consumePointerMoveEvents = false
+        this.consumeLeftClickEvents = false
         GMSceneManager.hoverBlockMarker?.setEnabled(false)
     },
 

@@ -17,41 +17,48 @@ export const TreeManager = {
     initialize(scene: Scene) {
         this.prefabs.tree1 = PrefabOak.getPrefab(scene)
         this.prefabs.tree2 = PrefabFir.getPrefab(scene)
-
-        this.addTrees()
-    },
-
-    addTrees() {
     },
 
     consumeTrees(data: [ { type: number, x: number, z: number, size: number } ]) {
         data.forEach(tree => {
-            const y = WorldDataManager.getBlockMap()[tree.x][tree.z].height + 0.5
-            const size = tree.size
-            const rotation = Math.floor(Math.random() * 4) * Math.PI / 2
-            const pos = new Vector3(tree.x, y, tree.z)
-
-            switch (tree.type) {
-                case 1: this.allTrees.push(new TreeOak(pos, rotation, size, MaterialEnum1.getMaterialByIndex(1)))
-                    break
-                case 2: this.allTrees.push(new TreeOak(pos, rotation, size, MaterialEnum1.getMaterialByIndex(2)))
-                    break
-                case 3: this.allTrees.push(new TreeOak(pos, rotation, size, MaterialEnum1.getMaterialByIndex(3)))
-                    break
-                case 4: this.allTrees.push(new TreeOak(pos, rotation, size, MaterialEnum1.getMaterialByIndex(4)))
-                    break
-                case 5: this.allTrees.push(new TreeFir(pos, rotation, size, MaterialEnum1.getMaterialByIndex(1)))
-                    break
-                case 6: this.allTrees.push(new TreeFir(pos, rotation, size, MaterialEnum1.getMaterialByIndex(2)))
-                    break
-                case 7: this.allTrees.push(new TreeFir(pos, rotation, size, MaterialEnum1.getMaterialByIndex(3)))
-                    break
-                case 8: this.allTrees.push(new TreeFir(pos, rotation, size, MaterialEnum1.getMaterialByIndex(4)))
-                    break
-                default:
-                    break
-            }
+            this.addTree(tree)
         })
+    },
+
+    addTree(tree: { type: number, x: number, z: number, size: number }) {
+        const y = WorldDataManager.getBlockMap()[tree.x][tree.z].height + 0.5
+        const size = tree.size
+        const rotation = Math.floor(Math.random() * 4) * Math.PI / 2
+        const pos = new Vector3(tree.x, y, tree.z)
+
+        switch (tree.type) {
+            case 1:
+                this.allTrees.push(new TreeOak(pos, rotation, size, MaterialEnum1.getMaterialByIndex(1)))
+                break
+            case 2:
+                this.allTrees.push(new TreeOak(pos, rotation, size, MaterialEnum1.getMaterialByIndex(2)))
+                break
+            case 3:
+                this.allTrees.push(new TreeOak(pos, rotation, size, MaterialEnum1.getMaterialByIndex(3)))
+                break
+            case 4:
+                this.allTrees.push(new TreeOak(pos, rotation, size, MaterialEnum1.getMaterialByIndex(4)))
+                break
+            case 5:
+                this.allTrees.push(new TreeFir(pos, rotation, size, MaterialEnum1.getMaterialByIndex(1)))
+                break
+            case 6:
+                this.allTrees.push(new TreeFir(pos, rotation, size, MaterialEnum1.getMaterialByIndex(2)))
+                break
+            case 7:
+                this.allTrees.push(new TreeFir(pos, rotation, size, MaterialEnum1.getMaterialByIndex(3)))
+                break
+            case 8:
+                this.allTrees.push(new TreeFir(pos, rotation, size, MaterialEnum1.getMaterialByIndex(4)))
+                break
+            default:
+                break
+        }
     },
 
     recountYPositions() {
@@ -63,13 +70,17 @@ export const TreeManager = {
 
     removeTrees(data: [ { x: number, z: number } ]) {
         data.forEach(tree => {
-            for (let i = 0; i < this.allTrees.length; i++) {
-                if (this.allTrees[i].position.x === tree.x && this.allTrees[i].position.z === tree.z) {
-                    this.allTrees.splice(i, 1)
-                    break
-                }
-            }
+            this.removeTreeAt(tree.x, tree.z)
         })
+    },
+
+    removeTreeAt(x: number, z: number) {
+        for (let i = 0; i < this.allTrees.length; i++) {
+            if (this.allTrees[i].position.x === x && this.allTrees[i].position.z === z) {
+                this.allTrees.splice(i, 1)
+                break
+            }
+        }
     },
 
     renderTrees() {

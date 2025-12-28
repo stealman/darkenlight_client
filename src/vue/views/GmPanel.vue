@@ -6,6 +6,7 @@
         <div class="gm-action-selection" style="margin: 10px 0;">
             <button :disabled="actualTab === GMTabs.OVERVIEW" @click="selectTab(GMTabs.OVERVIEW)">Overview</button>
             <button :disabled="actualTab === GMTabs.TERRAIN_EDIT" @click="selectTab(GMTabs.TERRAIN_EDIT)">Terrain Edit</button>
+            <button :disabled="actualTab === GMTabs.BIOME_EDIT" @click="selectTab(GMTabs.BIOME_EDIT)">Biome</button>
         </div>
 
         <!-- Overview Action -->
@@ -61,7 +62,26 @@
             </div>
         </div>
 
+        <!-- Biome Edit Action -->
+        <div v-if="actualTab === GMTabs.BIOME_EDIT">
 
+            <!-- None and delete tree selection -->
+            <div>
+                <label class="tree-item" :class="{ selected: selectedTree === 0 }" @click="selectTree(0)">
+                    None
+                </label>
+                <label style='color: red; font-weight: bold' class="tree-item" :class="{ selected: selectedTree === -1 }" @click="selectTree(-1)">
+                    Delete
+                </label>
+            </div>
+
+            <!-- Selectable tree names -->
+            <div style="margin-top: 2vh" class="tree-picker">
+                <label v-for="tree in trees" :key="tree.id" class="tree-item" :class="{ selected: tree.id === selectedTree }" @click="selectTree(tree.id)">
+                    {{ tree.name }}
+                </label>
+            </div>
+         </div>
     </div>
 </template>
 
@@ -71,20 +91,32 @@ import { GMManager, GmTabs as GMTabs } from '@/gm/GM'
 import { ref, onMounted } from 'vue'
 
 const actualTab = ref(GMTabs.OVERVIEW)
+
+// Terrrain edit constants
+const TERRAIN_TILE_SIZE = 128
+const affectedSize = GMManager.affectedSize
 const shiftKeyPressed = GMManager.shiftKeyPressed
 const selectedTerrain = GMManager.selectedTerrain
-const affectedSize = GMManager.affectedSize
-
-const TERRAIN_TILE_SIZE = 128
-
 const terrains = [
     { id: 2, x: 0.5, y: 0.5 },
     { id: 1,  x: 2.5, y: 0.5 },
     { id: 3, x: 6.5, y: 0.5 }
 ]
-
 const snow = { id: 100, x: 4.5, y: 0.5 }
 const unsnow = { id: 101, x: 4.5, y: 0.5 }
+
+// Biome edit constants
+const selectedTree = GMManager.selectedTree
+const trees = [
+    { name: "Oak_1", id: 1 },
+    { name: "Oak_2", id: 2 },
+    { name: "Oak_3", id: 3 },
+    { name: "Oak_4", id: 4 },
+    { name: "Pine_1", id: 5 },
+    { name: "Pine_2", id: 6 },
+    { name: "Pine_3", id: 7 },
+    { name: "Pine_4", id: 8 }
+]
 
 const getTerrainStyle = (t) => ({
     backgroundImage: 'url(/images/materials/plane_materials1.png)',
@@ -93,6 +125,10 @@ const getTerrainStyle = (t) => ({
 
 const selectTerrain = (id) => {
     selectedTerrain.value = id
+}
+
+const selectTree = (id) => {
+    selectedTree.value = id
 }
 
 const saveMapData = () => {

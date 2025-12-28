@@ -37,3 +37,20 @@ div.gm-action-selection button:disabled {
 .terrain-tile.selected {
     outline: 2px solid #4caf50;
 }
+
+.tree-picker {
+    display: flex;
+    flex-wrap: wrap;
+    width: 100%;
+}
+
+.tree-item {
+    display: inline;
+    align-items: center;
+    margin: 4px 4px;
+    cursor: pointer;
+}
+
+.tree-item.selected {
+    outline: 2px solid #4caf50;
+}

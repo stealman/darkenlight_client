@@ -57,3 +57,12 @@ export class GMTerrainChange implements Message {
         this.d = { changeType: "terrain", data: data }
     }
 }
+
+export class GMBiomeChange implements Message {
+    t: number = 1002
+    d: any
+
+    constructor(changeType: string, data) {
+        this.d = { changeType: changeType, data: data }
+    }
+}

@@ -5,6 +5,7 @@ import { MonsterManager } from '@/babylon/monsters/monsterManager'
 import { TreeManager } from '@/babylon/world/treeManager'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { MiniMap } from '@/utils/minimap'
+import { WorldRenderer } from '@/babylon/world/worldRenderer'
 
 export const ResponseProcessor = {
 
@@ -23,6 +24,8 @@ export const ResponseProcessor = {
                 case 10: this.monsterMoveStop(msg.d); break
                 case 11: this.processWorldChangedData(msg.d); break
                 case 12: this.charMoveDesynced(msg.d); break
+                case 13: this.processAddTree(msg.d); break
+                case 14: this.processRemoveTree(msg.d); break
             }
         }
     },
@@ -83,6 +86,18 @@ export const ResponseProcessor = {
         data.r.forEach(chunk => {
             TreeManager.removeTrees(chunk.trees)
         })
+    },
+
+    processAddTree(data) {
+        TreeManager.addTree(data)
+        TreeManager.renderTrees()
+        WorldRenderer.renderWorld()
+    },
+
+    processRemoveTree(data) {
+        TreeManager.removeTreeAt(data.x, data.z)
+        TreeManager.renderTrees()
+        WorldRenderer.renderWorld()
     },
 
     monsterMoveStop(data) {
