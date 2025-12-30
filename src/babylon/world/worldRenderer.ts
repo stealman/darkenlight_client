@@ -12,6 +12,8 @@ import { TerrainManager } from '@/babylon/world/terrainManager'
 import { Renderer } from '@/babylon/scene/renderer'
 import { PBRCustomMaterial } from '@babylonjs/materials'
 import { StaticsManager } from '@/babylon/world/staticsManager'
+import { GMSpawns } from '@/gm/GmSpawns'
+import { GMManager, GmTabs } from '@/gm/GM'
 
 export const WorldRenderer = {
     block1: null as SymmetricBlock | null,
@@ -56,6 +58,10 @@ export const WorldRenderer = {
 
         // Render statics
         StaticsManager.renderObjects()
+
+        if (GMManager.gmPanelVisible && GMManager.tab === GmTabs.SPAWNS_EDIT) {
+            GMSpawns.renderSpawnMarkers()
+        }
 
         this.block1!.setThinInstanceBuffers()
         this.block1!.mesh.thinInstanceRefreshBoundingInfo(false);

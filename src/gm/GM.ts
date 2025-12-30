@@ -5,6 +5,7 @@ import { WorldDataManager } from '@/data/worldDataManager'
 import { ref } from 'vue'
 import { Vector3 } from '@babylonjs/core'
 import { Utils } from '@/utils/utils'
+import { GMSpawns } from '@/gm/GmSpawns'
 
 /**
  * Main GM tabs
@@ -17,6 +18,7 @@ export const GmTabs = {
     TERRAIN_EDIT: 'terrain_edit',
     BIOME_EDIT: 'biome_edit',
     WALLS_AND_FENCES_EDIT: 'walls_and_fences_edit',
+    SPAWNS_EDIT: 'spawns_edit'
 }
 
 export const GMManager = {
@@ -166,6 +168,9 @@ export const GMManager = {
             case GmTabs.WALLS_AND_FENCES_EDIT:
                 this.closeTabWallsAndFencesEdit()
                 break
+            case GmTabs.SPAWNS_EDIT:
+                this.closeTabSpawnsEdit()
+                break
 
         }
 
@@ -182,6 +187,9 @@ export const GMManager = {
                 break
             case GmTabs.WALLS_AND_FENCES_EDIT:
                 this.openTabWallsAndFencesEdit()
+                break
+            case GmTabs.SPAWNS_EDIT:
+                this.openTabSpawnsEdit()
                 break
         }
     },
@@ -218,6 +226,17 @@ export const GMManager = {
         GMSceneManager.hoverBlockMarker?.setEnabled(true)
     },
 
+    openTabSpawnsEdit() {
+        this.tab = GmTabs.SPAWNS_EDIT
+        this.consumePointerMoveEvents = true
+        this.consumeLeftClickEvents = true
+        // Load all spawns
+        GMSpawns.checkAndLoadSpawns()
+        GMSceneManager.setHoverBlockMarkerSize(1)
+        GMSceneManager.hoverBlockMarker?.setEnabled(true)
+        GMSpawns.renderSpawnMarkers()
+    },
+
     closeTabTerrainEdit() {
         this.consumePointerMoveEvents = false
         this.consumeLeftClickEvents = false
@@ -235,6 +254,13 @@ export const GMManager = {
         this.consumePointerMoveEvents = false
         this.consumeLeftClickEvents = false
         GMSceneManager.hoverBlockMarker?.setEnabled(false)
+    },
+
+    closeTabSpawnsEdit() {
+        this.consumePointerMoveEvents = false
+        this.consumeLeftClickEvents = false
+        GMSceneManager.hoverBlockMarker?.setEnabled(false)
+        GMSpawns.removeAllMarkers()
     },
 
     saveMapData() {

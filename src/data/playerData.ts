@@ -3,6 +3,8 @@ import { Vector3 } from '@babylonjs/core'
 export class PlayerData {
     id: number = 1
     hp: number
+    name: string = "Player"
+    className: string = "Warrior"
     walkSpeed: number = 2.2
     runSpeed: number = 3.5
     private actualSpeed: number = 0
@@ -21,10 +23,12 @@ export class PlayerData {
     attackCooldown: number = 1000
     attackAnimationTime: number = 800 // 1000 is base attack time
 
-    constructor(hp = 0, xPos = 0, zPos = 0, yPos = 0) {
-        this.hp = hp
-        this.logicYpos = yPos
-        this.pos = new Vector3(xPos, yPos, zPos)
+    constructor(data: any) {
+        this.hp = data.hp
+        this.logicYpos = 0
+        this.pos = new Vector3(data.x, 0, data.z)
+        this.name = data.name
+        this.className = data.cls
     }
 
     getPositionRounded(): Vector3 {

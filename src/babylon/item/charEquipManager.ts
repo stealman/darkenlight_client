@@ -1,4 +1,5 @@
 import {
+    Color3,
     Mesh, PBRMaterial,
     Quaternion,
     Scene,

@@ -1,6 +1,6 @@
 import {
     AbstractMesh,
-    AnimationGroup, Mesh,
+    AnimationGroup, Color3, Mesh,
     Scene,
     SceneLoader, Skeleton, Sound, TransformNode,
     Vector3,

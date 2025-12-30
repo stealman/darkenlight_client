@@ -13,7 +13,7 @@
 
           <div style="display:flex; gap:15px; align-items:center;">
               <button style="font-size:18px; color:#aaa;" @click="requestFullscreen()">Fullscreen</button>
-              <button style="font-size:18px; color:#aaa;" @click="toggleGmPanel()">GM Panel</button>
+              <button v-if="myCharRef?.className ==='GM'" style="font-size:18px; color:#aaa;" @click="toggleGmPanel()">GM Panel</button>
           </div>
       </div>
 
@@ -30,12 +30,13 @@ import GmPanel from '@/vue/views/gm/GmPanel.vue'
 import { GMSceneManager } from '@/babylon/gm/GmSceneManager'
 import { GMManager } from '@/gm/GM'
 import { Controller } from '@/controlls/controller'
+import { Data } from '@/data/globalData'
 
 // refs
 const canvas = ref<HTMLCanvasElement | null>(null)
 const miniMapCanvas = ref<HTMLCanvasElement | null>(null)
-
 const gmPanelVisible = ref(false)
+const myCharRef = Data.myCharRef
 
 // lifecycle
 onMounted(() => {

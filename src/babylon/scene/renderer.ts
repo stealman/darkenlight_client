@@ -4,7 +4,7 @@ import {
     Vector3,
     FreeCamera,
     ShadowGenerator, Color3, Color4, SceneInstrumentation, DirectionalLight, Mesh,
-    AbstractMesh, CubeTexture, DracoCompression,
+    AbstractMesh, CubeTexture, DracoCompression, HighlightLayer, GlowLayer,
 } from '@babylonjs/core'
 import {UnwrapRef} from "vue"
 import '@babylonjs/inspector'
@@ -14,7 +14,7 @@ import screenFull from 'screenfull'
 import {Settings} from "@/settings/settings";
 import {WorldRenderer} from "@/babylon/world/worldRenderer";
 import { MiniMap } from '@/utils/minimap'
-import { MaterialEnum1, Materials } from '@/babylon/materials'
+import { Materials } from '@/babylon/materials'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { ViewportManager } from '@/utils/viewport'
 import { CharEquipManager } from '@/babylon/item/charEquipManager'
@@ -52,6 +52,8 @@ export const Renderer = {
     shadow: {} as ShadowGenerator,
     sunLight: {} as DirectionalLight,
 
+    // glowLayer: null as GlowLayer,
+
     async initialize(canvasRef: UnwrapRef<HTMLCanvasElement>) {
         this.engine = new Engine(canvasRef, true)
         this.engine.setHardwareScalingLevel(1)
@@ -78,6 +80,10 @@ export const Renderer = {
             this.shadow.forceBackFacesOnly = true
             //this.shadow.getShadowMap().refreshRate = RenderTargetTexture.REFRESHRATE_RENDER_ONCE
         }
+
+        //this.glowLayer = new GlowLayer("hl", this.scene)
+        //this.glowLayer.intensity = 0.3
+        //this.glowLayer.blurKernelSize = 1
 
         // Initialize game objects and managers
         this.instrumentation = new SceneInstrumentation(this.scene);
@@ -183,7 +189,6 @@ export const Renderer = {
             }
 
             MobEquipManager.onFrame()
-
         }
 
         if (this.frame % 60 === 0) {

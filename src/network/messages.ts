@@ -66,3 +66,12 @@ export class GMStaticObjectChange implements Message {
         this.d = { changeType: changeType, data: data }
     }
 }
+
+export class GMLoadSpawns implements Message {
+    t: number = 1003
+    d: any
+
+    constructor() {
+        this.d = { }
+    }
+}

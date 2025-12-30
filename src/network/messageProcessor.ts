@@ -7,6 +7,7 @@ import { WorldDataManager } from '@/data/worldDataManager'
 import { MiniMap } from '@/utils/minimap'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { StaticsManager } from '@/babylon/world/staticsManager'
+import { GMSpawns } from '@/gm/GmSpawns'
 
 export const MessageProcessor = {
 
@@ -29,6 +30,7 @@ export const MessageProcessor = {
                 case 14: this.processRemoveTree(msg.d); break
                 case 15: this.processAddStaticObject(msg.d); break
                 case 16: this.processRemoveStaticObject(msg.d); break
+                case 1003: this.processGMAllSpawns(msg.d); break
                 default:
                     console.log('Unknown message type: ' + msg.t)
                     break
@@ -37,7 +39,7 @@ export const MessageProcessor = {
     },
 
     async loginResponse(data) {
-        const myChar = new PlayerData(data.hp, data.x, data.z, data.y)
+        const myChar = new PlayerData(data)
         Data.setMyChar(myChar)
         await GameManager.startGame()
         console.log('Game started')
@@ -127,4 +129,8 @@ export const MessageProcessor = {
     processWorldChangedData(data) {
         WorldDataManager.consumeMapUpdate(data.worldId, data.changes)
     },
+
+    processGMAllSpawns(data) {
+        GMSpawns.consumeAllSpawns(data.worldId, data.spawns)
+    }
 }

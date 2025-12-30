@@ -8,6 +8,7 @@
             <button :disabled="actualTab === GMTabs.TERRAIN_EDIT" @click="selectTab(GMTabs.TERRAIN_EDIT)">Terrain Edit</button>
             <button :disabled="actualTab === GMTabs.BIOME_EDIT" @click="selectTab(GMTabs.BIOME_EDIT)">Biome</button>
             <button :disabled="actualTab === GMTabs.WALLS_AND_FENCES_EDIT" @click="selectTab(GMTabs.WALLS_AND_FENCES_EDIT)">Walls & Fences</button>
+            <button :disabled="actualTab === GMTabs.SPAWNS_EDIT" @click="selectTab(GMTabs.SPAWNS_EDIT)">Spawns</button>
         </div>
 
         <!-- Overview -->
@@ -29,6 +30,11 @@
             <WallsFencesPanel />
         </div>
 
+        <!-- Spawns -->
+        <div v-if="actualTab === GMTabs.SPAWNS_EDIT">
+            <SpawnPanel />
+        </div>
+
     </div>
 </template>
 
@@ -39,6 +45,7 @@ import { ref, onMounted } from 'vue'
 import BiomePanel from '@/vue/views/gm/BiomePanel.vue'
 import TerrainPanel from '@/vue/views/gm/TerrainPanel.vue'
 import WallsFencesPanel from '@/vue/views/gm/WallsFencesPanel.vue'
+import SpawnPanel from '@/vue/views/gm/SpawnPanel.vue'
 
 const actualTab = ref(GMTabs.OVERVIEW)
 
