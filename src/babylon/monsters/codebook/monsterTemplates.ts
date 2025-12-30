@@ -36,7 +36,7 @@ export class MonsterTemplate {
     }
 
     /**
-     * Animate shared templates (walking, idle)
+     * Animate shared templates (walking)
      */
     onAnimFrame (animFrame: number) {
         if (this.clonesAct.length > 0) {

@@ -52,3 +52,23 @@ div.gm-action-selection button:disabled {
 .tree-item.selected {
     outline: 2px solid #4caf50;
 }
+
+table.gmSpawnTable input {
+    width: 50px;
+    margin-left: 10px;
+}
+
+table.gmSpawnTable input:disabled {
+    background-color: #f8f8f8;
+    color: black;
+}
+
+table.gmSpawnTable select {
+
+}
+
+table.gmSpawnTable select:disabled {
+    background-color: #fff;
+    color: black;
+}
+

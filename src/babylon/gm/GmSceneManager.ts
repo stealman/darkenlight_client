@@ -29,8 +29,8 @@ export const GMSceneManager = {
 
         const spawnMat = new StandardMaterial("spawnMarkerMat", scene)
         this.spawnMarker.material = spawnMat
-        this.spawnMarker.material.diffuseColor = new Color3(1, 0, 0)
-        this.spawnMarker.material.emissiveColor = new Color3(0.5, 0, 0)
+        this.spawnMarker.material.diffuseColor = new Color3(0.65, 0, 0)
+        this.spawnMarker.material.emissiveColor = new Color3(0.25, 0, 0)
     },
 
     updateHoverBlockMarker(x, z) {

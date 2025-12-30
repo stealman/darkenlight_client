@@ -31,6 +31,7 @@ import { GMSceneManager } from '@/babylon/gm/GmSceneManager'
 import { GMManager } from '@/gm/GM'
 import { Controller } from '@/controlls/controller'
 import { Data } from '@/data/globalData'
+import { GMSpawns } from '@/gm/GmSpawns'
 
 // refs
 const canvas = ref<HTMLCanvasElement | null>(null)
@@ -61,6 +62,12 @@ onMounted(() => {
 })
 
 const toggleGmPanel = () => {
+    if (gmPanelVisible.value) {
+        GMSceneManager.hoverBlockMarker?.setEnabled(false)
+        GMSceneManager.spawnMarker?.setEnabled(false)
+        GMSpawns.removeAllMarkers()
+    }
+
     gmPanelVisible.value = !gmPanelVisible.value
     GMSceneManager.initialize(Renderer.scene)
     GMManager.gmPanelVisible = gmPanelVisible.value

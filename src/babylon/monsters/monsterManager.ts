@@ -3,7 +3,6 @@ import { Monster } from '@/babylon/monsters/monster'
 import { MonsterLoader } from '@/babylon/monsters/monsterLoader'
 import { MonsterModel } from '@/babylon/monsters/monsterModel'
 import { MonsterCodebook, MonsterType } from '@/babylon/monsters/codebook/monsterCodebook'
-import { Utils } from '@/utils/utils'
 import { ViewportManager } from '@/utils/viewport'
 
 export const MonsterManager = {
@@ -15,8 +14,6 @@ export const MonsterManager = {
     },
 
     addMonster (id: number, type: number, position: { x: number, z: number }, hp: number, mv: number[] | undefined) {
-        type = Utils.getRandomFromTo(10, 12)
-
         if (this.monsters.has(id)) {
             const mob = this.monsters.get(id)
             mob!.pos.x = position.x

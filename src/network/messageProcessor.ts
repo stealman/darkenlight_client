@@ -31,6 +31,7 @@ export const MessageProcessor = {
                 case 15: this.processAddStaticObject(msg.d); break
                 case 16: this.processRemoveStaticObject(msg.d); break
                 case 1003: this.processGMAllSpawns(msg.d); break
+                case 1004: this.processGMSpawnChange(msg.d); break
                 default:
                     console.log('Unknown message type: ' + msg.t)
                     break
@@ -132,5 +133,9 @@ export const MessageProcessor = {
 
     processGMAllSpawns(data) {
         GMSpawns.consumeAllSpawns(data.worldId, data.spawns)
+    },
+
+    processGMSpawnChange(data) {
+        GMSpawns.spawnChange(data.worldId, data.spawn, data.deleted)
     }
 }

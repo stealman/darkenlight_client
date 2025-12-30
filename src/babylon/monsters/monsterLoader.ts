@@ -18,8 +18,7 @@ export const MonsterLoader = {
     },
 
     async loadMonsterMesh (mobType: MonsterTemplate) {
-
-        // Load asset container (passive data used for cloning)
+        // Load asset container (used for cloning)
         const result = await SceneLoader.LoadAssetContainerAsync(
             "",
             "/models/monsters/" + mobType.meshName, this.scene!
@@ -50,7 +49,7 @@ export const MonsterLoader = {
     },
 
     getMonsterClone (mobType: MonsterType): MonsterTemplate {
-        return this.monsterTemplates.get(mobType.templateId).clone()
+        return this.monsterTemplates.get(mobType.templateId)!.clone()
     },
 
     onAnimFrame (animFrame: number) {

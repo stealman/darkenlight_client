@@ -53,8 +53,8 @@ export const Materials = {
         return material
     },
 
-    getPBRMaterial(scene: Scene, name: string, pathToDiffuse: string, hasAlpha: boolean = false, invertY: boolean, options: PBRBasicAtts): PBRMaterial {
-        const albedoTexture = new Texture(pathToDiffuse, scene, {invertY: invertY})
+    getPBRMaterial(scene: Scene, name: string, pathToAlbedo: string, hasAlpha: boolean = false, invertY: boolean, options: PBRBasicAtts): PBRMaterial {
+        const albedoTexture = new Texture(pathToAlbedo, scene, {invertY: invertY})
         albedoTexture.hasAlpha = hasAlpha
         albedoTexture.gammaSpace = true;
 
