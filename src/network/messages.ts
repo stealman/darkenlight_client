@@ -75,3 +75,12 @@ export class GMLoadSpawns implements Message {
         this.d = { }
     }
 }
+
+export class GMSpawnAction implements Message {
+    t: number = 1004
+    d: any
+
+    constructor(action: string, data: any) {
+        this.d = { action: action, data: data }
+    }
+}

@@ -65,6 +65,7 @@ export const GMSceneManager = {
             spawn.markerMesh.position.z = spawn.z
             const block = WorldDataManager.getBlockMap()[Math.floor(spawn.x)][Math.floor(spawn.z)]
             spawn.markerMesh.position.y = block.totalHeight + 0.11
+            spawn.origYPos = spawn.markerMesh.position.y
         }
-    }
+    },
 }

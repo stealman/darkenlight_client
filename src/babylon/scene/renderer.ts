@@ -25,6 +25,8 @@ import { Connector } from '@/network/connector'
 import { MobEquipManager } from '@/babylon/item/mobEquipManager'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { WeatherManager } from '@/babylon/world/weather/weatherManager'
+import { GMManager, GmTabs } from '@/gm/GM'
+import { GMSpawns } from '@/gm/GmSpawns'
 
 /**
  * Main Renderer
@@ -181,7 +183,6 @@ export const Renderer = {
                 if (this.lastAnimationFrameTime > 0) {
                     timeExceeded = actualTime - this.lastAnimationFrameTime - this.animationFrameTime
                 }
-
                 MonsterLoader.onAnimFrame(this.animationFrame)
                 MonsterManager.onAnimFrame(this.animationFrame)
                 this.lastAnimationFrameTime = actualTime - timeExceeded
@@ -189,6 +190,10 @@ export const Renderer = {
             }
 
             MobEquipManager.onFrame()
+
+            if (GMManager.gmPanelVisible) {
+                GMManager.onFrame(timeRate, actualTime)
+            }
         }
 
         if (this.frame % 60 === 0) {
@@ -200,9 +205,9 @@ export const Renderer = {
             //Materials.onFrame(this.frame)
         }
 
+        // If the player moved, render the world
         const pos = Data.myChar.getPositionRounded()
 
-        // If the player moved, render the world
         if (this.lastPos == null || pos.x !== this.lastPos.x || pos.z !== this.lastPos.z) {
             if (ViewportManager.viewPortInitialized) {
                 WorldDataManager.fetchWorldDataIfNeeded()

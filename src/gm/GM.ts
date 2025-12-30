@@ -114,6 +114,11 @@ export const GMManager = {
                 Connector.sendMessage(new GMStaticObjectChange("REMOVE_ON_TILE", [ { x: markerPos.x, z: markerPos.z } ] ) )
             }
         }
+
+        if (this.tab === GmTabs.SPAWNS_EDIT) {
+            const markerPos = new Vector3(GMSceneManager.hoverBlockMarker!.position.x, 0, GMSceneManager.hoverBlockMarker!.position.z)
+            GMSpawns.onClick(markerPos.x, markerPos.z)
+        }
     },
 
     getLowestAffectedBlockHeight(centerPos: Vector3, size: number): number {
@@ -142,6 +147,12 @@ export const GMManager = {
             }
         }
         return highestHeight
+    },
+
+    onFrame(timeRate: number, actualTime: number) {
+        if (this.tab === GmTabs.SPAWNS_EDIT) {
+            GMSpawns.onFrame(timeRate, actualTime)
+        }
     },
 
     onMiddleClickEvent() {
