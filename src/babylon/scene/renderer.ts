@@ -14,7 +14,7 @@ import screenFull from 'screenfull'
 import {Settings} from "@/settings/settings";
 import {WorldRenderer} from "@/babylon/world/worldRenderer";
 import { MiniMap } from '@/utils/minimap'
-import { Materials } from '@/babylon/materials'
+import { MaterialEnum1, Materials } from '@/babylon/materials'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { ViewportManager } from '@/utils/viewport'
 import { CharEquipManager } from '@/babylon/item/charEquipManager'
@@ -54,6 +54,7 @@ export const Renderer = {
 
     async initialize(canvasRef: UnwrapRef<HTMLCanvasElement>) {
         this.engine = new Engine(canvasRef, true)
+        this.engine.setHardwareScalingLevel(1)
         this.createScene(this.engine)
 
         DracoCompression.Configuration = {
@@ -181,13 +182,17 @@ export const Renderer = {
                 this.animationFrame++
             }
 
-            //CharEquipManager.onFrame()
             MobEquipManager.onFrame()
+
         }
 
         if (this.frame % 60 === 0) {
             MiniMap.updateMiniMap()
             WeatherManager.update()
+        }
+
+        if (this.frame % 10 === 0) {
+            //Materials.onFrame(this.frame)
         }
 
         const pos = Data.myChar.getPositionRounded()
@@ -201,7 +206,6 @@ export const Renderer = {
             }
         }
         Connector.processMessages(actualTime)
-
         scene.render()
 
         if (!ViewportManager.viewPortInitialized) {

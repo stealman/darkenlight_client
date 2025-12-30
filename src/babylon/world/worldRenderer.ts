@@ -12,7 +12,6 @@ import { TerrainManager } from '@/babylon/world/terrainManager'
 import { Renderer } from '@/babylon/scene/renderer'
 import { PBRCustomMaterial } from '@babylonjs/materials'
 import { StaticsManager } from '@/babylon/world/staticsManager'
-import Tree from 'primevue/tree'
 
 export const WorldRenderer = {
     block1: null as SymmetricBlock | null,
@@ -23,7 +22,7 @@ export const WorldRenderer = {
         this.worldParentNode = new TransformNode("worldNode", scene)
 
         // Global blocks
-        this.block1 = new SymmetricBlock(Builder.createBlock(scene, this.worldParentNode), Materials.blockMat1!)
+        this.block1 = new SymmetricBlock(Builder.createWrappedBlock(scene, this.worldParentNode), Materials.blockMat1!)
         this.block1.mesh.doNotSyncBoundingInfo = true
 
         this.blockWithAlpha1 = new SymmetricBlock(Builder.createBlock(scene, this.worldParentNode), Materials.blockMatAlpha1!)

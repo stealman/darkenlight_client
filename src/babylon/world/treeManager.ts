@@ -1,6 +1,6 @@
 import { Matrix, Scene, Vector2, Vector3 } from '@babylonjs/core'
 import { Prefab, WorldRenderer } from '@/babylon/world/worldRenderer'
-import { MaterialEnum1 } from '@/babylon/materials'
+import { MaterialAlphaEnum1, MaterialEnum1 } from '@/babylon/materials'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { ViewportManager } from '@/utils/viewport'
 import { PrefabOak } from '@/babylon/world/prefabs/treeOak'
@@ -40,28 +40,28 @@ export const TreeManager = {
 
         switch (tree.type) {
             case 1:
-                this.allTrees.push(new TreeOak(pos, rotation, size, MaterialEnum1.getMaterialByIndex(1)))
+                this.allTrees.push(new TreeOak(pos, rotation, size, MaterialAlphaEnum1.getMaterialByIndex(1)))
                 break
             case 2:
-                this.allTrees.push(new TreeOak(pos, rotation, size, MaterialEnum1.getMaterialByIndex(2)))
+                this.allTrees.push(new TreeOak(pos, rotation, size, MaterialAlphaEnum1.getMaterialByIndex(2)))
                 break
             case 3:
-                this.allTrees.push(new TreeOak(pos, rotation, size, MaterialEnum1.getMaterialByIndex(3)))
+                this.allTrees.push(new TreeOak(pos, rotation, size, MaterialAlphaEnum1.getMaterialByIndex(3)))
                 break
             case 4:
-                this.allTrees.push(new TreeOak(pos, rotation, size, MaterialEnum1.getMaterialByIndex(4)))
+                this.allTrees.push(new TreeOak(pos, rotation, size, MaterialAlphaEnum1.getMaterialByIndex(4)))
                 break
             case 5:
-                this.allTrees.push(new TreeFir(pos, rotation, size, MaterialEnum1.getMaterialByIndex(1)))
+                this.allTrees.push(new TreeFir(pos, rotation, size, MaterialAlphaEnum1.getMaterialByIndex(1)))
                 break
             case 6:
-                this.allTrees.push(new TreeFir(pos, rotation, size, MaterialEnum1.getMaterialByIndex(2)))
+                this.allTrees.push(new TreeFir(pos, rotation, size, MaterialAlphaEnum1.getMaterialByIndex(2)))
                 break
             case 7:
-                this.allTrees.push(new TreeFir(pos, rotation, size, MaterialEnum1.getMaterialByIndex(3)))
+                this.allTrees.push(new TreeFir(pos, rotation, size, MaterialAlphaEnum1.getMaterialByIndex(3)))
                 break
             case 8:
-                this.allTrees.push(new TreeFir(pos, rotation, size, MaterialEnum1.getMaterialByIndex(4)))
+                this.allTrees.push(new TreeFir(pos, rotation, size, MaterialAlphaEnum1.getMaterialByIndex(4)))
                 break
             default:
                 break

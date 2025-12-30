@@ -41,6 +41,26 @@
                 </option>
             </select>
         </div>
+
+        <div style="margin-top: 1vh">
+            <label class="tree-item" :class="{ selected: 'SHRUB1x1_TALL' === selectedShrubType }" @click="selectShrubType('SHRUB1x1_TALL')">Shrub 1x1-T</label>
+            &nbsp;&nbsp;
+            <select v-if="selectedShrubType === 'SHRUB1x1_TALL'" @change="selectShrub($event.target.value)">
+                <option v-for="shrub in shrubs.filter(s => s.type ==='SHRUB1x1_TALL')" :key="shrub.id" :value="shrub.id" :selected="shrub.id === selectedShrub">
+                    {{ shrub.name }}
+                </option>
+            </select>
+        </div>
+
+        <div style="margin-top: 1vh">
+            <label class="tree-item" :class="{ selected: 'SHRUB1x1_SMALL' === selectedShrubType }" @click="selectShrubType('SHRUB1x1_SMALL')">Shrub 1x1-S</label>
+            &nbsp;&nbsp;
+            <select v-if="selectedShrubType === 'SHRUB1x1_SMALL'" @change="selectShrub($event.target.value)">
+                <option v-for="shrub in shrubs.filter(s => s.type ==='SHRUB1x1_SMALL')" :key="shrub.id" :value="shrub.id" :selected="shrub.id === selectedShrub">
+                    {{ shrub.name }}
+                </option>
+            </select>
+        </div>
     </div>
 </template>
 
@@ -71,6 +91,16 @@ const shrubs = [
     { type: "SHRUB2x2", name: "Shrub2x2_2", id: 102 },
     { type: "SHRUB2x2", name: "Shrub2x2_3", id: 103 },
     { type: "SHRUB2x2", name: "Shrub2x2_4", id: 104 },
+
+    { type: "SHRUB1x1_TALL", name: "Shrub1x1_T_1", id: 121 },
+    { type: "SHRUB1x1_TALL", name: "Shrub1x1_T_2", id: 122 },
+    { type: "SHRUB1x1_TALL", name: "Shrub1x1_T_3", id: 123 },
+    { type: "SHRUB1x1_TALL", name: "Shrub1x1_T_4", id: 124 },
+
+    { type: "SHRUB1x1_SMALL", name: "Shrub1x1_S_1", id: 141 },
+    { type: "SHRUB1x1_SMALL", name: "Shrub1x1_S_2", id: 142 },
+    { type: "SHRUB1x1_SMALL", name: "Shrub1x1_S_3", id: 143 },
+    { type: "SHRUB1x1_SMALL", name: "Shrub1x1_S_4", id: 144 },
 ]
 
 const selectTreeType = (type) => {

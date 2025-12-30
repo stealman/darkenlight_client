@@ -1,5 +1,5 @@
 import { Connector } from '@/network/connector'
-import { GMBiomeChange, GMSaveMapDataMsg, GMTerrainChange } from '@/network/messages'
+import { GMSaveMapDataMsg, GMStaticObjectChange, GMTerrainChange } from '@/network/messages'
 import { GMSceneManager } from '@/babylon/gm/GmSceneManager'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { ref } from 'vue'
@@ -16,6 +16,7 @@ export const GmTabs = {
     OVERVIEW: 'overview',
     TERRAIN_EDIT: 'terrain_edit',
     BIOME_EDIT: 'biome_edit',
+    WALLS_AND_FENCES_EDIT: 'walls_and_fences_edit',
 }
 
 export const GMManager = {
@@ -29,6 +30,8 @@ export const GMManager = {
     selectedTerrain: ref (0),
     selectedTree: ref (0),
     selectedShrub: ref (0),
+
+    selectedWallFence: ref (0),
 
     tab: GmTabs.OVERVIEW,
 
@@ -88,14 +91,25 @@ export const GMManager = {
             const markerPos = new Vector3(GMSceneManager.hoverBlockMarker!.position.x, 0, GMSceneManager.hoverBlockMarker!.position.z)
             if (this.selectedTree.value > 0) {
                 const treeData = { x: markerPos.x, z: markerPos.z, size: Utils.roundToOneDecimal(1.1 + Math.random() * 0.6) , type: this.selectedTree.value }
-                Connector.sendMessage(new GMBiomeChange("ADD_TREE", [treeData] ) )
+                Connector.sendMessage(new GMStaticObjectChange("ADD_TREE", [treeData] ) )
 
             } else if (this.selectedShrub.value > 0) {
                 const shrubData = { x: markerPos.x, z: markerPos.z, type: this.selectedShrub.value }
-                Connector.sendMessage(new GMBiomeChange("ADD_OBJECT", [shrubData] ) )
+                Connector.sendMessage(new GMStaticObjectChange("ADD_OBJECT", [shrubData] ) )
 
             } else if (this.selectedTree.value === -1 && this.selectedShrub.value === -1) {
-                Connector.sendMessage(new GMBiomeChange("REMOVE_ON_TILE", [ { x: markerPos.x, z: markerPos.z } ] ) )
+                Connector.sendMessage(new GMStaticObjectChange("REMOVE_ON_TILE", [ { x: markerPos.x, z: markerPos.z } ] ) )
+            }
+        }
+
+        if (this.tab === GmTabs.WALLS_AND_FENCES_EDIT) {
+            const markerPos = new Vector3(GMSceneManager.hoverBlockMarker!.position.x, 0, GMSceneManager.hoverBlockMarker!.position.z)
+            if (this.selectedWallFence.value > 0) {
+                const wallFenceData = { x: markerPos.x, z: markerPos.z, type: this.selectedWallFence.value }
+                Connector.sendMessage(new GMStaticObjectChange("ADD_OBJECT", [wallFenceData] ) )
+
+            } else if (this.selectedWallFence.value === -1) {
+                Connector.sendMessage(new GMStaticObjectChange("REMOVE_ON_TILE", [ { x: markerPos.x, z: markerPos.z } ] ) )
             }
         }
     },
@@ -149,6 +163,9 @@ export const GMManager = {
             case GmTabs.BIOME_EDIT:
                 this.closeTabBiomeEdit()
                 break
+            case GmTabs.WALLS_AND_FENCES_EDIT:
+                this.closeTabWallsAndFencesEdit()
+                break
 
         }
 
@@ -162,6 +179,9 @@ export const GMManager = {
                 break
             case GmTabs.BIOME_EDIT:
                 this.openTabBiomeEdit()
+                break
+            case GmTabs.WALLS_AND_FENCES_EDIT:
+                this.openTabWallsAndFencesEdit()
                 break
         }
     },
@@ -189,6 +209,15 @@ export const GMManager = {
         GMSceneManager.hoverBlockMarker?.setEnabled(true)
     },
 
+    openTabWallsAndFencesEdit() {
+        this.tab = GmTabs.WALLS_AND_FENCES_EDIT
+        this.consumePointerMoveEvents = true
+        this.consumeLeftClickEvents = true
+        this.selectedWallFence.value = 0
+        GMSceneManager.setHoverBlockMarkerSize(1)
+        GMSceneManager.hoverBlockMarker?.setEnabled(true)
+    },
+
     closeTabTerrainEdit() {
         this.consumePointerMoveEvents = false
         this.consumeLeftClickEvents = false
@@ -197,6 +226,12 @@ export const GMManager = {
     },
 
     closeTabBiomeEdit() {
+        this.consumePointerMoveEvents = false
+        this.consumeLeftClickEvents = false
+        GMSceneManager.hoverBlockMarker?.setEnabled(false)
+    },
+
+    closeTabWallsAndFencesEdit() {
         this.consumePointerMoveEvents = false
         this.consumeLeftClickEvents = false
         GMSceneManager.hoverBlockMarker?.setEnabled(false)

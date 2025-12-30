@@ -56,6 +56,19 @@ export const Builder = {
         return cube;
     },
 
+    createWrappedBlock(
+        scene: Scene,
+        parent: TransformNode | null,
+        size = 1
+    ) {
+        const cube = MeshBuilder.CreateBox('block', { width: size, height: size, depth: size, wrap: true }, scene)
+        cube.parent = parent
+        cube.position.y = -0.5
+        cube.convertToUnIndexedMesh()
+        cube.alwaysSelectAsActiveMesh = true
+        return cube
+    },
+
     createBlock(scene: Scene, parent: TransformNode | null, size = 1) {
         const cube = MeshBuilder.CreateBox("block", { width: size, depth: size, height: size }, scene);
         cube.parent = parent

@@ -8,7 +8,7 @@
 
     <!-- Elevation control -->
     <div style="margin-top: 2vh">
-        <label style='cursor: pointer;' :style="selectedTerrain == 0 ? 'border: 2px solid #4caf50' : ''" @click="selectTerrain('')">Elevation</label>&nbsp;&nbsp;&nbsp;
+        <label style='cursor: pointer;' :style="selectedTerrain == 0 ? 'border: 2px solid #4caf50' : ''" @click="selectTerrain(0)">Elevation</label>&nbsp;&nbsp;&nbsp;
         <span v-if="!shiftKeyPressed">UP</span>
         <span v-else>DOWN</span>
     </div>
@@ -57,7 +57,8 @@ const selectedTerrain = GMManager.selectedTerrain
 const terrains = [
     { id: 2, x: 0.5, y: 0.5 },
     { id: 1,  x: 2.5, y: 0.5 },
-    { id: 3, x: 6.5, y: 0.5 }
+    { id: 3, x: 6.5, y: 0.5 },
+    { id: 4, x: 0.5, y: 2.5 }
 ]
 const snow = { id: 100, x: 4.5, y: 0.5 }
 const unsnow = { id: 101, x: 4.5, y: 0.5 }

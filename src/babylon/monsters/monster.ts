@@ -1,6 +1,5 @@
 import { MonsterModel } from '@/babylon/monsters/monsterModel'
 import { MonsterType } from '@/babylon/monsters/codebook/monsterCodebook'
-import { WorldDataManager } from '@/data/worldDataManager'
 import { Utils } from '@/utils/utils'
 import { Vector3 } from '@babylonjs/core'
 
@@ -24,7 +23,7 @@ export class Monster {
         this.mobType = mobType
         this.hp = hp
         this.pos = new Vector3(xPos, 0, zPos)
-        this.logicYpos = this.calculateYPos()
+        this.logicYpos = Utils.calculateYPos(this.pos.x, this.pos.z,0.4)
         this.pos.y = this.logicYpos
     }
 
@@ -65,7 +64,7 @@ export class Monster {
             if (this.model.initialized) this.model.doIdle()
         }
 
-        this.logicYpos = this.calculateYPos()
+        this.logicYpos = Utils.calculateYPos(this.pos.x, this.pos.z,0.4)
     }
 
     setTargetPoint(point: Vector3) {
@@ -77,21 +76,6 @@ export class Monster {
     resetTargetPoint() {
         this.targetPoint = null
         this.moveAngle = null
-    }
-
-    calculateYPos() {
-        const map = WorldDataManager.getBlockMap()
-        const coveredBlocks = Utils.getCoveredBlocks(this.pos.x, this.pos.z, 0.4)
-
-        // From map get all blocks that are covered by the player and find the highest one
-        let highest = 0
-        coveredBlocks.forEach(block => {
-            if (map[block.x][block.z].height > highest) {
-                highest = map[block.x][block.z].height
-            }
-        })
-
-        return highest
     }
 
     setVisible(visible: boolean) {

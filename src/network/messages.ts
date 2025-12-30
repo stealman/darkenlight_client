@@ -58,7 +58,7 @@ export class GMTerrainChange implements Message {
     }
 }
 
-export class GMBiomeChange implements Message {
+export class GMStaticObjectChange implements Message {
     t: number = 1002
     d: any
 

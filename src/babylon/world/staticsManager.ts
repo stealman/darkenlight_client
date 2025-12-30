@@ -1,21 +1,27 @@
 import { Matrix, Scene, Vector2, Vector3 } from '@babylonjs/core'
-import { Prefab } from '@/babylon/world/worldRenderer'
-import { MaterialEnum1 } from '@/babylon/materials'
+import { Prefab, WorldRenderer } from '@/babylon/world/worldRenderer'
+import { MaterialAlphaEnum1, MaterialEnum1 } from '@/babylon/materials'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { ViewportManager } from '@/utils/viewport'
 import { StaticObjectInfo, StaticObjectsCodebook } from '@/babylon/world/staticsCodebook'
 import { PrefabShrub2x2 } from '@/babylon/world/prefabs/shrub2x2'
 import { Renderer } from '@/babylon/scene/renderer'
+import { PrefabShrub1x1_tall } from '@/babylon/world/prefabs/shrub1x1-tall'
+import { PrefabShrub1x1_small } from '@/babylon/world/prefabs/shrub1x1-small'
 
 export const StaticsManager = {
     prefabs: {
         shrub2x2: null as Prefab | null,
+        shrub1x1_tall: null as Prefab | null,
+        shrub1x1_small: null as Prefab | null,
     },
     allStatics : [] as StaticObject[],
     visibleStatics : [] as StaticObject[],
 
     initialize(scene: Scene) {
         this.prefabs.shrub2x2 = PrefabShrub2x2.getPrefab(scene)
+        this.prefabs.shrub1x1_tall = PrefabShrub1x1_tall.getPrefab(scene)
+        this.prefabs.shrub1x1_small = PrefabShrub1x1_small.getPrefab(scene)
     },
 
     addAllShadowCasters() {
@@ -31,15 +37,31 @@ export const StaticsManager = {
     },
 
     addObject(obj: { tp: number, x: number, z: number }) {
-        const y = WorldDataManager.getBlockMap()[obj.x][obj.z].height + 0.25
+        const y = WorldDataManager.getBlockMap()[obj.x][obj.z].totalHeight
         const pos = new Vector3(obj.x, y, obj.z)
         const rotation = Math.floor(Math.random() * 4) * Math.PI / 2
 
         switch (obj.tp) {
-            case 101: this.allStatics.push(new Shrub(obj.tp, pos, rotation, MaterialEnum1.getMaterialByIndex(1))); break
-            case 102: this.allStatics.push(new Shrub(obj.tp, pos, rotation, MaterialEnum1.getMaterialByIndex(2))); break
-            case 103: this.allStatics.push(new Shrub(obj.tp, pos, rotation, MaterialEnum1.getMaterialByIndex(3))); break
-            case 104: this.allStatics.push(new Shrub(obj.tp, pos, rotation, MaterialEnum1.getMaterialByIndex(4))); break
+            case 101: this.allStatics.push(new Shrub2x2(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_LIGHT.uv)); break
+            case 102: this.allStatics.push(new Shrub2x2(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_DARK.uv)); break
+            case 103: this.allStatics.push(new Shrub2x2(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_AUTUMN.uv)); break
+            case 104: this.allStatics.push(new Shrub2x2(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_NORTH.uv)); break
+
+            case 121: this.allStatics.push(new Shrub1x1_tall(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_LIGHT.uv)); break
+            case 122: this.allStatics.push(new Shrub1x1_tall(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_DARK.uv)); break
+            case 123: this.allStatics.push(new Shrub1x1_tall(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_AUTUMN.uv)); break
+            case 124: this.allStatics.push(new Shrub1x1_tall(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_NORTH.uv)); break
+
+            case 141: this.allStatics.push(new Shrub1x1_small(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_LIGHT.uv)); break
+            case 142: this.allStatics.push(new Shrub1x1_small(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_DARK.uv)); break
+            case 143: this.allStatics.push(new Shrub1x1_small(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_AUTUMN.uv)); break
+            case 144: this.allStatics.push(new Shrub1x1_small(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_NORTH.uv)); break
+
+            case 201: this.allStatics.push(new Wall2(obj.tp, pos, rotation, MaterialEnum1.BRICK_GRAY.uv)); break
+            case 202: this.allStatics.push(new Wall2(obj.tp, pos, rotation, MaterialEnum1.BRICK_RED.uv)); break
+
+            case 221: this.allStatics.push(new Wall3(obj.tp, pos, rotation, MaterialEnum1.BRICK_GRAY.uv)); break
+            case 222: this.allStatics.push(new Wall3(obj.tp, pos, rotation, MaterialEnum1.BRICK_RED.uv)); break
             default:
                 break
         }
@@ -47,8 +69,9 @@ export const StaticsManager = {
 
     recountYPositions() {
         this.allStatics.forEach(obj => {
-            const y = WorldDataManager.getBlockMap()[Math.floor(obj.position.x)][Math.floor(obj.position.z)].height + 0.25
+            const y = WorldDataManager.getBlockMap()[Math.floor(obj.position.x)][Math.floor(obj.position.z)].totalHeight
             obj.position.y = y
+            obj.renderPosition.y = y
         })
     },
 
@@ -131,11 +154,11 @@ export abstract class BaseStaticObject implements StaticObject {
     renderPosition: Vector3
     rotation: number
     material: Vector2
-    prefab: Prefab
+    prefab: Prefab | null
     objectInfo: StaticObjectInfo
     status: any
 
-    protected constructor(type: number, position: Vector3, rotation: number, material: Vector2, prefab: Prefab) {
+    protected constructor(type: number, position: Vector3, rotation: number, material: Vector2, prefab: Prefab | null) {
         this.type = type
         this.position = position
         this.rotation = rotation
@@ -182,14 +205,63 @@ export abstract class BaseStaticObject implements StaticObject {
     abstract render(): void
 }
 
-export class Shrub extends BaseStaticObject {
+export class Wall2 extends BaseStaticObject {
+    constructor(type: number, position: Vector3, rotation: number, material: Vector2) {
+        super(type, position, rotation, material, null)
+    }
+    render() {
+        for (let i = 1; i <= 2; i++) {
+            WorldRenderer.block1!.matrices.push(Matrix.Translation(this.renderPosition.x, this.renderPosition.y + i, this.renderPosition.z))
+            WorldRenderer.block1!.uvData.push(this.material)
+        }
+    }
+}
+
+export class Wall3 extends BaseStaticObject {
+    constructor(type: number, position: Vector3, rotation: number, material: Vector2) {
+        super(type, position, rotation, material, null)
+    }
+    render() {
+        for (let i = 1; i <= 3; i++) {
+            WorldRenderer.block1!.matrices.push(Matrix.Translation(this.renderPosition.x, this.renderPosition.y + i, this.renderPosition.z))
+            WorldRenderer.block1!.uvData.push(this.material)
+        }
+    }
+}
+
+export class Shrub2x2 extends BaseStaticObject {
     constructor(type: number, position: Vector3, rotation: number, material: Vector2) {
         super(type, position, rotation, material, StaticsManager.prefabs.shrub2x2!)
     }
 
     render() {
-        const matrix = Matrix.Translation(this.renderPosition.x, this.position.y, this.renderPosition.z)
-        this.prefab.matrices.push(Matrix.RotationY(this.rotation).multiply(matrix))
-        this.prefab.uvData.push(this.material)
+        const matrix = Matrix.Translation(this.renderPosition.x, this.renderPosition.y + 0.3, this.renderPosition.z)
+        this.prefab!.matrices.push(Matrix.RotationY(this.rotation).multiply(matrix))
+        this.prefab!.uvData.push(this.material)
     }
 }
+
+export class Shrub1x1_tall extends BaseStaticObject {
+    constructor(type: number, position: Vector3, rotation: number, material: Vector2) {
+        super(type, position, rotation, material, StaticsManager.prefabs.shrub1x1_tall!)
+    }
+
+    render() {
+        const matrix = Matrix.Translation(this.renderPosition.x, this.renderPosition.y + 0.3, this.renderPosition.z)
+        this.prefab!.matrices.push(Matrix.RotationY(this.rotation).multiply(matrix))
+        this.prefab!.uvData.push(this.material)
+    }
+}
+
+export class Shrub1x1_small extends BaseStaticObject {
+    constructor(type: number, position: Vector3, rotation: number, material: Vector2) {
+        super(type, position, rotation, material, StaticsManager.prefabs.shrub1x1_small!)
+    }
+
+    render() {
+        const matrix = Matrix.Translation(this.renderPosition.x, this.renderPosition.y + 0.3, this.renderPosition.z)
+        this.prefab!.matrices.push(Matrix.RotationY(this.rotation).multiply(matrix))
+        this.prefab!.uvData.push(this.material)
+    }
+}
+

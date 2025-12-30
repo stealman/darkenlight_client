@@ -44,7 +44,7 @@ export const Materials = {
     },
 
     createBlockMat1(scene: Scene): PBRCustomMaterial {
-        const material = this.getPBRCustomMaterial(scene, "sym_block_mats1", this.BASE_PATH, 'block_materials1.png', 1 / 8, 1 / 8, false)
+        const material = this.getPBRCustomMaterial(scene, "sym_block_mats1", this.BASE_PATH, 'block_materials1.png', 1 / 16, 1 / 16, false)
         return material
     },
 
@@ -89,14 +89,17 @@ export const Materials = {
         mat.albedoTexture = albedoTexture
         mat.metallic = options.metallic
         mat.roughness = options.roughness
-        mat.backFaceCulling = false;
+        mat.backFaceCulling = true;
         mat.twoSidedLighting = true;
         mat.directIntensity = options.directIntensity
         mat.environmentIntensity = options.environmentIntensity
         mat.usePhysicalLightFalloff = false;
         if (hasAlpha) {
-            mat.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHATEST //  PBRMATERIAL_ALPHATESTANDBLEND
-            mat.alphaCutOff = 0.75;
+            albedoTexture.updateSamplingMode(Texture.NEAREST_NEAREST)
+            mat.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHATEST
+            mat.useAlphaFromAlbedoTexture = true
+            mat.alphaCutOff = 0.5;
+            mat.forceAlphaTest = true
         }
 
         mat.AddAttribute("uvc");
@@ -127,6 +130,9 @@ export const Materials = {
         mat.freeze()
         return mat
     },
+
+    onFrame(frame: number) {
+    }
 }
 
 class MaterialEnum {
@@ -139,15 +145,24 @@ class MaterialEnum {
     }
 }
 
-export const MaterialEnum1 = {
-    TREE_LEAF_1: new MaterialEnum(1, new Vector2(0.5, 6.5)),
-    TREE_LEAF_2: new MaterialEnum(2, new Vector2(2.5, 6.5)),
-    TREE_LEAF_3: new MaterialEnum(3, new Vector2(4.5, 6.5)),
-    TREE_LEAF_4: new MaterialEnum(4, new Vector2(6.5, 6.5)),
+export const MaterialAlphaEnum1 = {
+    TREE_LEAF_LIGHT: new MaterialEnum(1, new Vector2(0.5, 6.5)),
+    TREE_LEAF_DARK: new MaterialEnum(2, new Vector2(2.5, 6.5)),
+    TREE_LEAF_AUTUMN: new MaterialEnum(3, new Vector2(4.5, 6.5)),
+    TREE_LEAF_NORTH: new MaterialEnum(4, new Vector2(6.5, 6.5)),
     TREE_LEAF_5: new MaterialEnum(5, new Vector2(0.5, 4.5)),
     TREE_LEAF_6: new MaterialEnum(6, new Vector2(2.5, 4.5)),
-    WOOD_1: new MaterialEnum(5, new Vector2(2.5, 4.5)),
-    WOOD_2: new MaterialEnum(5, new Vector2(0.5, 4.5)),
+
+    getMaterialByIndex(index: number): Vector2 {
+        return Object.values(MaterialAlphaEnum1).find(item => item.index === index)?.uv;
+    }
+}
+
+export const MaterialEnum1 = {
+    BRICK_RED: new MaterialEnum(1, new Vector2(0.5, 14.5)),
+    BRICK_GRAY: new MaterialEnum(2, new Vector2(2.5, 14.5)),
+    WOOD_1: new MaterialEnum(9, new Vector2(0.5, 12.5)),
+    WOOD_2: new MaterialEnum(10, new Vector2(2.5, 12.5)),
 
     getMaterialByIndex(index: number): Vector2 {
         return Object.values(MaterialEnum1).find(item => item.index === index)?.uv;
@@ -158,10 +173,12 @@ export const TerrainEnum1 = {
     TERRAIN_DIRT: new MaterialEnum(1, new Vector2(2.5, 6.5)),
     TERRAIN_GRASS: new MaterialEnum(2, new Vector2(0.5, 6.5)),
     TERRAIN_ROCK: new MaterialEnum(3, new Vector2(6.5, 6.5)),
+    TERRAIN_MUDDY_DIRT: new MaterialEnum(4, new Vector2(0.5, 4.5)),
 
     TERRAIN_SNOW_DIRT: new MaterialEnum(101, new Vector2(4.5, 6.5)),
     TERRAIN_SNOW_GRASS: new MaterialEnum(102, new Vector2(4.5, 6.5)),
     TERRAIN_SNOW_ROCK: new MaterialEnum(103, new Vector2(6.5, 4.5)),
+    TERRAIN_SNOW_MUDDY_DIRT: new MaterialEnum(104, new Vector2(4.5, 6.5)),
 
     getTerrainForBlock(block: MapBlock, ignoreSnow: boolean = false): Vector2 {
         let type = block.type;
@@ -176,10 +193,12 @@ export const PlaneEnum1 = {
     PLANE_DIRT: new MaterialEnum(1, new Vector2(2.5, 6.5)),
     PLANE_GRASS: new MaterialEnum(2, new Vector2(0.5, 6.5)),
     PLANE_ROCK: new MaterialEnum(3, new Vector2(6.5, 6.5)),
+    PLANE_MUDDY_DIRT: new MaterialEnum(4, new Vector2(0.5, 4.5)),
 
     PLANE_SNOW_DIRT: new MaterialEnum(101, new Vector2(4.5, 6.5)),
     PLANE_SNOW_GRASS: new MaterialEnum(102, new Vector2(4.5, 6.5)),
     PLANE_SNOW_ROCK: new MaterialEnum(103, new Vector2(4.5, 6.5)),
+    PLANE_SNOW_MUDDY_DIRT: new MaterialEnum(104, new Vector2(4.5, 6.5)),
 
     getPlaneForBlock(block: MapBlock): Vector2 {
         let type = block.type;
