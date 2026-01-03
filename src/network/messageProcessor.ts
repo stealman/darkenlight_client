@@ -8,6 +8,7 @@ import { MiniMap } from '@/utils/minimap'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { StaticsManager } from '@/babylon/world/staticsManager'
 import { GMSpawns } from '@/gm/GmSpawns'
+import { MyPlayer } from '@/babylon/character/myPlayer'
 
 export const MessageProcessor = {
 
@@ -30,6 +31,7 @@ export const MessageProcessor = {
                 case 14: this.processRemoveTree(msg.d); break
                 case 15: this.processAddStaticObject(msg.d); break
                 case 16: this.processRemoveStaticObject(msg.d); break
+                case 17: this.processCharacterAttack(msg.d); break
                 case 1003: this.processGMAllSpawns(msg.d); break
                 case 1004: this.processGMSpawnChange(msg.d); break
                 default:
@@ -129,6 +131,11 @@ export const MessageProcessor = {
 
     processWorldChangedData(data) {
         WorldDataManager.consumeMapUpdate(data.worldId, data.changes)
+    },
+
+    processCharacterAttack(data) {
+        console.log(data)
+        MyPlayer.doAutoAttack(data.dur)
     },
 
     processGMAllSpawns(data) {

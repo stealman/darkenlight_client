@@ -3,6 +3,7 @@ import { ViewportManager } from '@/utils/viewport'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { ref } from 'vue/dist/vue'
 import { Connector } from '@/network/connector'
+import { OverlayManager } from '@/gui/overlayManager'
 
 export const GameManager = {
     canvas: null as ref<HTMLCanvasElement | null>,
@@ -18,5 +19,6 @@ export const GameManager = {
 
         await Renderer.initialize(this.canvas.value)
         ViewportManager.onResize()
+        OverlayManager.onResize()
     }
 }

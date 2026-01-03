@@ -44,15 +44,19 @@ export class MonsterType {
     group: MonsterGroup
     templateId: number
     name: string
+    boxSize: number
+    boxHeight: number = 2
     weapon: MonsterEquipData | null
     armor:MonsterEquipData | null
     helmet: MonsterEquipData | null
 
-    constructor(id: number, group: MonsterGroup, templateId: number, name: string, weapon: MonsterEquipData | null, helmet: MonsterEquipData | null, armor: MonsterEquipData | null) {
+    constructor(id: number, group: MonsterGroup, templateId: number, name: string, boxSize: number, boxHeight: number, weapon: MonsterEquipData | null, helmet: MonsterEquipData | null, armor: MonsterEquipData | null) {
         this.id = id
         this.group = group
         this.templateId = templateId
         this.name = name
+        this.boxSize = boxSize
+        this.boxHeight = boxHeight
         this.weapon = weapon
         this.armor = armor
         this.helmet = helmet
@@ -122,14 +126,14 @@ export const MonsterGroups = {
 }
 
 export const MonsterTypes = {
-    SKELETON: new MonsterType( 1, MonsterGroups.SKELETON, 1,'Skeleton', null,null,  null),
-    SKELETON_FIGHTER: new MonsterType( 2, MonsterGroups.SKELETON, 1, 'Skeleton Fighter', new MonsterEquipData([1], 0.15, 0),null, null),
-    SKELETON_WARRIOR: new MonsterType( 3, MonsterGroups.SKELETON, 1, 'Skeleton Warrior', new MonsterEquipData([1], 0.15, 0), new MonsterEquipData([1850], undefined, 8), new MonsterEquipData([1100], undefined, 8)),
+    SKELETON: new MonsterType( 1, MonsterGroups.SKELETON, 1,'Skeleton', 0.6, 1.8,null,null,  null),
+    SKELETON_FIGHTER: new MonsterType( 2, MonsterGroups.SKELETON, 1, 'Skeleton Fighter', 0.6, 1.8, new MonsterEquipData([1], 0.15, 0),null, null),
+    SKELETON_WARRIOR: new MonsterType( 3, MonsterGroups.SKELETON, 1, 'Skeleton Warrior', 0.6, 1.8, new MonsterEquipData([1], 0.15, 0), new MonsterEquipData([1850], undefined, 8), new MonsterEquipData([1100], undefined, 8)),
 
-    WITHER: new MonsterType( 10, MonsterGroups.WITHER, 2,'Wither', null,null,  null),
-    WITHER_CHAMPION: new MonsterType( 11, MonsterGroups.WITHER, 2, 'Wither Champion', new MonsterEquipData([1], 0.15, 0),null, null),
-    WITHER_KNIGHT: new MonsterType( 12, MonsterGroups.WITHER, 2, 'Wither Knight', new MonsterEquipData([1], 0.15, 0), new MonsterEquipData([1850], undefined, 9), new MonsterEquipData([1100], undefined, 9)),
+    WITHER: new MonsterType( 10, MonsterGroups.WITHER, 2,'Wither', 0.6, 1.8,null,null,  null),
+    WITHER_CHAMPION: new MonsterType( 11, MonsterGroups.WITHER, 2, 'Wither Champion', 0.6, 1.8, new MonsterEquipData([1], 0.15, 0),null, null),
+    WITHER_KNIGHT: new MonsterType( 12, MonsterGroups.WITHER, 2, 'Wither Knight', 0.6, 1.8, new MonsterEquipData([1], 0.15, 0), new MonsterEquipData([1850], undefined, 9), new MonsterEquipData([1100], undefined, 9)),
 
-    HOUSE_CAT : new MonsterType( 1001, MonsterGroups.CAT,  4,'House Cat', null,null,  null),
-    WILD_CAT : new MonsterType( 1002, MonsterGroups.CAT, 4,'Wild Cat', null,null,  null),
+    HOUSE_CAT : new MonsterType( 1001, MonsterGroups.CAT,  4,'House Cat', 0.6, 1,null,null,  null),
+    WILD_CAT : new MonsterType( 1002, MonsterGroups.CAT, 4,'Wild Cat', 0.6, 1,null,null,  null),
 }

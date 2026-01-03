@@ -53,9 +53,6 @@ export class MonsterTemplate {
             this.activateClone(clone)
             return clone
         }
-
-        Renderer.unfreezeActiveMeshes()
-
         const entries = this.assetContainer!.instantiateModelsToScene(undefined, false, {
             doNotInstantiate: true,
         })
@@ -72,6 +69,7 @@ export class MonsterTemplate {
         clone.skeleton = entries.skeletons[0]
         clone.walkSkeleton = this.assetContainer!.skeletons[0]
         clone.mesh!.skeleton = entries.skeletons[0]
+        clone.mesh!.isPickable = true
 
         clone.animation = entries.animationGroups[0]
         clone.animation.play(false)
@@ -83,7 +81,6 @@ export class MonsterTemplate {
     }
 
     deactivateClone (clone: MonsterTemplate) {
-        Renderer.unfreezeActiveMeshes()
         this.clonesAct = this.clonesAct.filter(c => c !== clone)
         this.clonesInact.push(clone)
 
@@ -92,7 +89,6 @@ export class MonsterTemplate {
     }
 
     activateClone (clone: MonsterTemplate) {
-        Renderer.unfreezeActiveMeshes()
         this.clonesInact = this.clonesInact.filter(c => c !== clone)
         this.clonesAct.push(clone)
 
@@ -102,7 +98,6 @@ export class MonsterTemplate {
     }
 
     freeClone (clone: MonsterTemplate) {
-        Renderer.unfreezeActiveMeshes()
         this.clonesToReuse.push(clone)
         this.clonesAct = this.clonesAct.filter(c => c !== clone)
         this.clonesInact = this.clonesInact.filter(c => c !== clone)

@@ -1,4 +1,4 @@
-import { Scene, Vector3 } from '@babylonjs/core'
+import { Mesh, Scene, Vector3 } from '@babylonjs/core'
 import { Monster } from '@/babylon/monsters/monster'
 import { MonsterLoader } from '@/babylon/monsters/monsterLoader'
 import { MonsterModel } from '@/babylon/monsters/monsterModel'
@@ -101,11 +101,23 @@ export const MonsterManager = {
     },
 
     isPointInMonster(x: number, z: number, size: number): Monster | null {
+        const halfSize = size / 2
         for (const monster of this.monsters.values()) {
-            if (Math.abs(monster.pos.x - x) < size && Math.abs(monster.pos.z - z) < size) {
+            if (Math.abs(monster.pos.x - x) < size && Math.abs(monster.pos.z - z) < halfSize + monster.mobType.boxSize / 2) {
                 return monster
             }
         }
         return null
+    },
+
+    getVisibleMonstersSortedByDistance(): Monster[] {
+        const sortedMonsters = Array.from(this.monsters.values())
+            .filter(monster => this.visibleMonsters.has(monster.id))
+            .sort((a, b) => {
+                const distA = a.getDistanceFromMyPlayer()
+                const distB = b.getDistanceFromMyPlayer()
+                return distA - distB
+            })
+        return sortedMonsters
     }
 }

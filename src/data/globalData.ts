@@ -7,6 +7,8 @@ export const Data = {
     myChar: null as PlayerData,
     myCharRef: ref(null),
 
+    aaActive: true as boolean,
+
     setMyChar(char: PlayerData) {
         this.myChar = char
         this.myCharRef.value = char

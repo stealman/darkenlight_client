@@ -15,6 +15,9 @@ export const ViewportManager = {
     minZ: 0,
     maxZ: 0,
 
+    viewportWidth: 0,
+    viewportHeight: 0,
+
     getScreenPosition(mesh) {
         if (Renderer.scene == null || Renderer.camera == null || Renderer.engine == null) {
             return new Vector3(0, 0, 0)
@@ -31,6 +34,9 @@ export const ViewportManager = {
         const minDisplaySize = Math.min(window.innerHeight, window.innerWidth) / 6
         MiniMap.updateCanvasSize(minDisplaySize)
         this.viewPortInitialized = false
+
+        this.viewportWidth = window.innerWidth
+        this.viewportHeight = window.innerHeight
     },
 
     isPointInVisibleMatrix(x, z, tolerance = 0) {
@@ -203,5 +209,20 @@ export const ViewportManager = {
             }
         }
         return true
+    },
+
+    getPositionOnScreen(pos: Vector3): Vector3 | null {
+        const scene = Renderer.scene
+        const engine = Renderer.engine!
+        const camera = Renderer.camera!
+
+        const camSpacePos = Vector3.TransformCoordinates(pos, camera.getViewMatrix())
+        if (camSpacePos.z <= 0) {
+            return null
+        }
+
+        return Vector3.Project(
+            pos, Matrix.Identity(), scene.getTransformMatrix(), camera.viewport.toGlobal(engine.getRenderWidth(), engine.getRenderHeight())
+        )
     }
 }

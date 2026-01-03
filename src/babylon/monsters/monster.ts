@@ -2,8 +2,11 @@ import { MonsterModel } from '@/babylon/monsters/monsterModel'
 import { MonsterType } from '@/babylon/monsters/codebook/monsterCodebook'
 import { Utils } from '@/utils/utils'
 import { Vector3 } from '@babylonjs/core'
+import { ViewportManager } from '@/utils/viewport'
+import { Data } from '@/data/globalData'
+import { Targetable } from '@/gui/targettingManager'
 
-export class Monster {
+export class Monster implements Targetable {
     id: number
     mobType: MonsterType
     model: MonsterModel
@@ -89,5 +92,32 @@ export class Monster {
 
     removeMonster () {
         this.model.removeFromScene()
+    }
+
+    getPositionOnScreen(): Vector3 | null {
+        return ViewportManager.getPositionOnScreen(this.pos)
+    }
+
+    getDistanceFromMyPlayer(): number {
+        return Vector3.Distance(this.pos, Data.myChar.pos)
+    }
+
+    getBoxSize(): number {
+        return this.mobType.boxSize
+    }
+
+    getName(): string {
+        return this.mobType.name
+    }
+
+    getModelHeight(): number {
+        return this.mobType.boxHeight
+    }
+
+    getNameTextNodeScreenPosition(): Vector3 | null {
+        return ViewportManager.getPositionOnScreen(this.model.getNameTextNodeWorldPosition())
+    }
+    getObjectType(): string {
+        return "M"
     }
 }

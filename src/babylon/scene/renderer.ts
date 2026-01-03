@@ -27,6 +27,8 @@ import { WorldDataManager } from '@/data/worldDataManager'
 import { WeatherManager } from '@/babylon/world/weather/weatherManager'
 import { GMManager, GmTabs } from '@/gm/GM'
 import { GMSpawns } from '@/gm/GmSpawns'
+import { OverlayManager } from '@/gui/overlayManager'
+import { TargetingManager } from '@/gui/targettingManager'
 
 /**
  * Main Renderer
@@ -107,6 +109,8 @@ export const Renderer = {
         Materials.initialize(this.scene)
         WorldRenderer.initialize(this.scene)
         WeatherManager.initialize()
+        await OverlayManager.initialize()
+        await TargetingManager.initialize()
 
         // Create the camera
         let cameraPosition = new Vector3(-12, 12, -12)
@@ -147,7 +151,9 @@ export const Renderer = {
 
         window.addEventListener('resize', () => {
             this.engine?.resize()
+            OverlayManager.onResize()
             ViewportManager.onResize()
+            TargetingManager.prepareTargetSprite()
             this.lastPos = null
         })
 
@@ -190,6 +196,8 @@ export const Renderer = {
             }
 
             MobEquipManager.onFrame()
+            TargetingManager.onFrame(timeRate, actualTime)
+            OverlayManager.onFrame(timeRate, actualTime)
 
             if (GMManager.gmPanelVisible) {
                 GMManager.onFrame(timeRate, actualTime)
@@ -224,16 +232,6 @@ export const Renderer = {
         }
 
         this.lastFrameTime = actualTime
-    },
-
-    freezeActiveMeshes() {
-        this.scene.freezeActiveMeshes()
-        this.activeMeshesFrozen = true
-    },
-
-    unfreezeActiveMeshes() {
-      //  this.scene.unfreezeActiveMeshes()
-       // this.activeMeshesFrozen = false
     },
 
     setCullingFrequency(scene: Scene, everyNFrames: number) {

@@ -6,6 +6,7 @@ import { ref } from 'vue'
 import { Vector3 } from '@babylonjs/core'
 import { Utils } from '@/utils/utils'
 import { GMSpawns } from '@/gm/GmSpawns'
+import { Renderer } from '@/babylon/scene/renderer'
 
 /**
  * Main GM tabs
@@ -22,7 +23,7 @@ export const GmTabs = {
 }
 
 export const GMManager = {
-    gmPanelVisible: false,
+    gmPanelVisible: ref(false),
     consumePointerMoveEvents: false,
     consumeLeftClickEvents: false,
     consumeMiddleClickEvents: false,
@@ -36,6 +37,19 @@ export const GMManager = {
     selectedWallFence: ref (0),
 
     tab: GmTabs.OVERVIEW,
+
+    toggleGmPanel() {
+        if (this.gmPanelVisible.value) {
+            this.consumePointerMoveEvents = false
+            this.consumeLeftClickEvents = false
+            this.consumeMiddleClickEvents = false
+            GMSceneManager.hoverBlockMarker?.setEnabled(false)
+            GMSceneManager.spawnMarker?.setEnabled(false)
+            GMSpawns.removeAllMarkers()
+        }
+        GMSceneManager.initialize(Renderer.scene)
+        this.gmPanelVisible.value = !this.gmPanelVisible.value
+    },
 
     onLeftClickEvent() {
         if (this.tab === GmTabs.TERRAIN_EDIT) {

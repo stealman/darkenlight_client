@@ -1,6 +1,6 @@
 import {
     AbstractMesh,
-    AnimationGroup, Color3, Mesh,
+    AnimationGroup, Mesh,
     Scene,
     SceneLoader, Skeleton, Sound, TransformNode,
     Vector3,
@@ -203,7 +203,7 @@ export class CharacterModel {
         // Random select attack animation
         const desiredAnimation = [this.slashAnim, this.jabAnim, this.leftSlashAnim, this.rightSlashAnim, this.highJabAnim, this.slashAnim2][Math.floor(Math.random() * 6)]
         if (this.actualAnim !== desiredAnimation) {
-            this.transitionToAnimation(desiredAnimation, 0.15, false, 1.25)
+            this.transitionToAnimation(desiredAnimation, 0.15, false, 1000 / this.playerData.attackAnimationTime)
             this.actualAnim = desiredAnimation
 
             if (this.footStepSound?.isPlaying) {
@@ -252,6 +252,8 @@ export class CharacterModel {
 
         if (this.playerData.getMoveAngle() != null) {
             this.moveModel(timeRate)
+        }
+        if (this.playerData.getLookAngle() != null) {
             this.resolveModelRotation(timeRate)
         }
     }
@@ -273,7 +275,7 @@ export class CharacterModel {
     resolveModelRotation(timeRate: number) {
         const myAngle = this.model!.rotation.y - this.modelYAngleOffset
 
-        let angleDifference = this.playerData.getMoveAngle()! - myAngle;
+        let angleDifference = this.playerData.getLookAngle()! - myAngle;
         const rotationSpeed = this.playerData.rotationSpeed * timeRate;
         if (angleDifference > Math.PI) {
             angleDifference -= 2 * Math.PI;
@@ -282,7 +284,7 @@ export class CharacterModel {
         }
 
         if (Math.abs(angleDifference) < rotationSpeed) {
-            this.model!.rotation.y = this.playerData.getMoveAngle() ? this.playerData.getMoveAngle()! + this.modelYAngleOffset : 0;
+            this.model!.rotation.y = this.playerData.getLookAngle() ? this.playerData.getLookAngle()! + this.modelYAngleOffset : 0;
         } else {
             this.model!.rotation.y += Math.sign(angleDifference) * rotationSpeed;
         }

@@ -1,8 +1,12 @@
 <template>
   <div id="app">
-      <canvas ref="canvas" class="renderer">
+      <canvas ref="canvas" class="renderer noselect">
       </canvas>
-      <canvas ref="miniMapCanvas" id='miniMapCanvas' ></canvas>
+      <canvas ref="miniMapCanvas" id='miniMapCanvas' class="noselect"></canvas>
+
+      <canvas id="overlayCanvas" class="noselect"></canvas>
+
+      <TouchControllers ref='touchControls' />
 
       <!-- Top GUI panel -->
       <div class="top-bar">
@@ -32,28 +36,29 @@ import { GMManager } from '@/gm/GM'
 import { Controller } from '@/controlls/controller'
 import { Data } from '@/data/globalData'
 import { GMSpawns } from '@/gm/GmSpawns'
+import TouchControllers from '@/vue/views/touchControllers.vue'
 
 // refs
 const canvas = ref<HTMLCanvasElement | null>(null)
 const miniMapCanvas = ref<HTMLCanvasElement | null>(null)
-const gmPanelVisible = ref(false)
+const gmPanelVisible = GMManager.gmPanelVisible
 const myCharRef = Data.myCharRef
+
+const touchControls = ref();
 
 // lifecycle
 onMounted(() => {
     if (!canvas.value) return
 
-    Settings.touchEnabled =
-        'ontouchstart' in window ||
-        navigator.maxTouchPoints > 0 ||
-        // @ts-ignore – kvůli starším browserům
-        navigator.msMaxTouchPoints > 0
-
+    Settings.touchEnabled = "ontouchstart" in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0;
+    Settings.mouseEnabled = !Settings.touchEnabled;
     Settings.shadows = !Settings.touchEnabled
     Settings.debug = !Settings.touchEnabled
 
     // explicitně přebíjíš výše → nechávám stejně jako v původním kódu
     Settings.shadows = true
+
+    touchControls.value.updateControls()
 
     GameManager.initialize(canvas)
 
@@ -62,15 +67,7 @@ onMounted(() => {
 })
 
 const toggleGmPanel = () => {
-    if (gmPanelVisible.value) {
-        GMSceneManager.hoverBlockMarker?.setEnabled(false)
-        GMSceneManager.spawnMarker?.setEnabled(false)
-        GMSpawns.removeAllMarkers()
-    }
-
-    gmPanelVisible.value = !gmPanelVisible.value
-    GMSceneManager.initialize(Renderer.scene)
-    GMManager.gmPanelVisible = gmPanelVisible.value
+    GMManager.toggleGmPanel()
 }
 
 // methods → normální const funkce

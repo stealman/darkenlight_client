@@ -1,7 +1,7 @@
 import {
     AnimationGroup, Bone, Matrix,
     Mesh, Quaternion,
-    Skeleton, Vector3,
+    Skeleton, TransformNode, Vector3,
 } from '@babylonjs/core'
 import { Monster } from '@/babylon/monsters/monster'
 import { MonsterLoader } from '@/babylon/monsters/monsterLoader'
@@ -15,6 +15,7 @@ export class MonsterModel {
     type: MonsterType
     initialized: boolean = false
     node: Mesh
+    nameTextNode: TransformNode
     mesh: Mesh
 
     template: MonsterTemplate
@@ -48,6 +49,7 @@ export class MonsterModel {
         this.parent = parent
         this.type = monsterType
         this.activeAnims = new Set<MeshAnimation>()
+        this.nameTextNode = new TransformNode("nameTextNode")
     }
 
     /**
@@ -61,6 +63,9 @@ export class MonsterModel {
         this.animation = this.template.animation
 
         MonsterCodebook.initializeEquipAndAnimations(this)
+
+        this.nameTextNode.parent = this.node
+        this.nameTextNode.position.y = this.parent.getModelHeight() / this.template.scale.y
         this.initialized = true
     }
 
@@ -204,5 +209,12 @@ export class MonsterModel {
             target.start(fadeIn, speed, loop)
             this.activeAnims.add(target)
         }
+    }
+
+    getNameTextNodeWorldPosition(): Vector3 {
+        const worldMatrix = this.nameTextNode.getWorldMatrix()
+        const position = new Vector3()
+        worldMatrix.decompose(undefined, undefined, position)
+        return position
     }
 }

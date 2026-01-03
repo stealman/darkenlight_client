@@ -1,34 +1,57 @@
 import {
-    Scene,
-    Vector3,
+    Scene, Vector3,
 } from '@babylonjs/core'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { CharacterModel } from '@/babylon/character/characterModel'
 import { Utils } from '@/utils/utils'
 import { Data } from '@/data/globalData'
-import { MyCharMoveMsg } from '@/network/messages'
+import { AutoAttackBreak, MyCharMoveMsg } from '@/network/messages'
 import { Connector } from '@/network/connector'
+import { TargetingManager } from '@/gui/targettingManager'
 
 export const MyPlayer = {
     scene: null as Scene | null,
     charModel: null as CharacterModel | null,
 
     movementType: 'WALK',
-    boxSize: 0.8,
-    autoAttackActive: false,
     autoAttackEnd: 0,
 
     async initialize(scene: Scene) {
         this.charModel = await CharacterModel.create(Data.myChar, scene)
-        Data.myChar.pos.y = Utils.calculateYPos(Data.myChar.pos.x, Data.myChar.pos.z, this.boxSize)
+        Data.myChar.pos.y = Utils.calculateYPos(Data.myChar.pos.x, Data.myChar.pos.z, Data.myChar.getBoxSize())
         Data.myChar.logicYpos = Data.myChar.pos.y
     },
 
+    doAutoAttack(dur: number) {
+        const actualTime = Date.now()
+        Data.myChar.attackAnimationTime = dur
+        this.autoAttackEnd = actualTime + Data.myChar.attackAnimationTime
+
+        if (TargetingManager.selectedTarget) {
+            const angle = Utils.getAngleBetweenPoints(Data.myChar.pos, TargetingManager.selectedTarget!.pos)
+            Data.myChar.setLookAngle(angle - Math.PI / 4)
+        }
+
+        this.charModel?.doAttackAnimation()
+    },
+
     onFrame(timeRate: number, actualTime: number) {
-        if (this.autoAttackActive && actualTime - Data.myChar.lastAttackTime > Data.myChar.attackCooldown && this.autoAttackEnd <= actualTime) {
-            Data.myChar.lastAttackTime = actualTime
-            this.autoAttackEnd = actualTime + Data.myChar.attackAnimationTime
-            this.charModel?.doAttackAnimation()
+        // Auto attack in progress
+        if (this.autoAttackEnd > actualTime) {
+
+            // Cancel auto attack immediately if moving away from target
+            if (TargetingManager.selectedTarget && Data.myChar.getMoveAngle() != null) {
+                const myPos = Data.myChar.pos
+                const targetPos = TargetingManager.selectedTarget.pos
+                const moveAngle = Data.myChar.getMoveAngle()!
+                const toTarget = targetPos.subtract(myPos).normalize()
+                const moveDir = new Vector3(Math.cos(moveAngle), 0, -Math.sin(moveAngle)).normalize()
+                const dot = Vector3.Dot(moveDir, toTarget)
+                if (dot < -0.5) {
+                    this.autoAttackEnd = 0
+                    Connector.sendMessage(new AutoAttackBreak())
+                }
+            }
         }
 
         if (this.autoAttackEnd > actualTime) {
@@ -48,13 +71,14 @@ export const MyPlayer = {
         }
 
         if (Data.myChar.getMoveAngle() != null) {
+            Data.myChar.setLookAngle(Data.myChar.getMoveAngle())
             const speed = Data.myChar.getActualSpeed()
             const angle = Utils.roundToTwoDecimals(Data.myChar.getMoveAngle()! + Math.PI / 4)
             let tgtPos = new Vector3(Data.myChar.pos.x + Math.cos(angle) * speed * timeRate, 0, Data.myChar.pos.z -Math.sin(angle) * speed * timeRate)
 
             // Check if player can move to the target position, if not try to find an alternate position
-            if (Utils.isMovementCollision(this.boxSize, new Vector3(Data.myChar.pos.x, 0, Data.myChar.pos.z), tgtPos)) {
-                const alternateMovementPos = Utils.getAlternateMovementPos(this.boxSize, angle, Data.myChar.pos.x, Data.myChar.pos.z, tgtPos.x, tgtPos.z, speed, timeRate)
+            if (Utils.isMovementCollision(Data.myChar.getBoxSize(), new Vector3(Data.myChar.pos.x, 0, Data.myChar.pos.z), tgtPos)) {
+                const alternateMovementPos = Utils.getAlternateMovementPos(Data.myChar.getBoxSize(), angle, Data.myChar.pos.x, Data.myChar.pos.z, tgtPos.x, tgtPos.z, speed, timeRate)
                 if (alternateMovementPos != null) {
                     tgtPos = alternateMovementPos
                 } else {
@@ -70,7 +94,7 @@ export const MyPlayer = {
             } else {
                 Data.myChar.pos.x = tgtPos.x
                 Data.myChar.pos.z = tgtPos.z
-                Data.myChar.logicYpos = Utils.calculateYPos(Data.myChar.pos.x, Data.myChar.pos.z, this.boxSize)
+                Data.myChar.logicYpos = Utils.calculateYPos(Data.myChar.pos.x, Data.myChar.pos.z, Data.myChar.getBoxSize())
             }
 
             if (this.movementType === 'RUN') { this.charModel?.startRunAnimation() }
@@ -81,8 +105,6 @@ export const MyPlayer = {
 
         this.charModel?.onFrame(timeRate)
     },
-
-
 
     setMoveTypeAngle(movementType: string, angle: number) {
         this.movementType = movementType

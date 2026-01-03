@@ -6,7 +6,6 @@ import { StaticsManager } from '@/babylon/world/staticsManager'
 import { Monster } from '@/babylon/monsters/monster'
 
 export const Utils = {
-
     calculateYPos(x: number, z: number, boxSize: number): number {
         const map = WorldDataManager.getBlockMap()
         const coveredBlocks = Utils.getCoveredBlocks(x, z, boxSize)
@@ -101,6 +100,20 @@ export const Utils = {
             return null
         }
         return null
+    },
+
+    getAngleBetweenPoints(src: Vector3, tgt: Vector3): number {
+        return Math.atan2(
+            -(tgt.z - src.z), tgt.x - src.x
+        )
+    },
+
+    normalizeAngle(angle: number): number {
+        angle = angle % (2 * Math.PI)
+        if (angle < 0) {
+            angle += 2 * Math.PI
+        }
+        return angle
     },
 
     rollDice(sides: number, fromZero: boolean = false) {

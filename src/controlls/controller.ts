@@ -1,9 +1,10 @@
-import { Scene, PointerEventTypes, Vector3, PointerInfo } from '@babylonjs/core'
+import { Scene, PointerEventTypes, Vector3, PointerInfo} from '@babylonjs/core'
 import {MyPlayer} from "@/babylon/character/myPlayer";
 import { Settings } from '@/settings/settings'
 import { ViewportManager } from '@/utils/viewport'
 import { GMSceneManager } from '@/babylon/gm/GmSceneManager'
 import { GMManager } from '@/gm/GM'
+import { TargetingManager } from '@/gui/targettingManager'
 
 export const Controller = {
     leftPressedTime: 0,
@@ -19,15 +20,10 @@ export const Controller = {
             if (Settings.touchEnabled) {
                 if (pointerInfo.type === PointerEventTypes.POINTERDOWN) {
                     this.leftPressedTime = new Date().getTime()
-                    this.pointerPressed(pointerInfo)
+                    this.resolveLeftPressed(pointerInfo, scene)
                 }
                 if (pointerInfo.type === PointerEventTypes.POINTERUP) {
-                    if (new Date().getTime() - this.leftPressedTime < 250) {
-                        this.resolveRightUp(pointerInfo, scene)
-                    } else {
-                        MyPlayer.setTargetPoint(null)
-                    }
-                    this.leftPressedTime = 0
+
                 }
             } else {
                 // NO BUTTONS PRESSED
@@ -43,7 +39,7 @@ export const Controller = {
                         if (GMManager.consumeLeftClickEvents) {
                             GMManager.onLeftClickEvent()
                         } else {
-
+                            this.resolveLeftPressed(pointerInfo, scene)
                         }
                     }
                 }
@@ -60,19 +56,12 @@ export const Controller = {
                 // RIGHT MOUSE BUTTON DOWN
                 if (pointerInfo.type === PointerEventTypes.POINTERDOWN && pointerInfo.event.button === 2) {
                     this.rightMousePressedTime = new Date().getTime()
-                    this.pointerPressed(pointerInfo)
+                    this.resolveRightPresssed(pointerInfo)
                 }
 
                 // RIGHT MOUSE BUTTON UP
                 if (pointerInfo.type === PointerEventTypes.POINTERUP && pointerInfo.event.button === 2) {
-
-                    // Mouse right click
-                    if (new Date().getTime() - this.rightMousePressedTime < 250) {
-                        this.resolveRightUp(pointerInfo, scene)
-                    } else {
-                        MyPlayer.setTargetPoint(null)
-                    }
-
+                    MyPlayer.setTargetPoint(null)
                     this.rightMousePressedTime = 0
                 }
 
@@ -86,20 +75,40 @@ export const Controller = {
 
     processKeydown(e) {
         // Shift
-        if (e.keyCode == 16) {
-            GMManager.shiftPressed(true)
+        if (e.keyCode == 16) {GMManager.shiftPressed(true)}
+
+        // TAB
+        if (e.keyCode == 9) {
+            e.preventDefault()
+            TargetingManager.cycleThroughClosestTargets()
         }
     },
 
     processKeyup(e) {
         // Shift
-        if (e.keyCode == 16) {
-            GMManager.shiftPressed(false)
-        }
+        if (e.keyCode == 16) {GMManager.shiftPressed(false)}
+    },
+
+    resolveLeftPressed(pointerInfo, scene) {
+        const { clientX, clientY } = pointerInfo.event
+        const pick = scene.pick(clientX, clientY)
+        if (!pick?.ray) return
+        TargetingManager.resolvePickRay(pick.ray)
+    },
+
+    resolveRightPresssed(pointerInfo) {
+        const myCharPosition = ViewportManager.getScreenPosition(MyPlayer.charModel!.model)
+        const dx = pointerInfo.event.clientX - myCharPosition.x
+        const dy = pointerInfo.event.clientY - myCharPosition.y
+        const distance = Math.sqrt(dx * dx + dy * dy)
+
+        const angleRadians = Math.atan2(dy, dx)
+        MyPlayer.setTargetPoint(null, false)
+        MyPlayer.setMoveTypeAngle(distance > 150 ? 'RUN' : 'WALK', angleRadians)
     },
 
     resolveRightDrag(pointerInfo: PointerInfo) {
-        this.pointerPressed(pointerInfo)
+        this.resolveRightPresssed(pointerInfo)
     },
 
     resolveRightUp(pointerInfo, scene) {
@@ -128,16 +137,31 @@ export const Controller = {
         this.lastPointerMove = { x: clientX, y: clientY }
     },
 
-    pointerPressed(pointerInfo) {
-        const myCharPosition = ViewportManager.getScreenPosition(MyPlayer.charModel!.model)
-        const dx = pointerInfo.event.clientX - myCharPosition.x
-        const dy = pointerInfo.event.clientY - myCharPosition.y
-        const distance = Math.sqrt(dx * dx + dy * dy)
+    processJoystick(dx: number, dy: number) {
+        if (dx === 0 && dy === 0) {
+            MyPlayer.setTargetPoint(null)
+            return
+        }
 
-        const angleRadians = Math.atan2(dy, dx)
+        // Translate joystick input to screen position
+        const screenX = ViewportManager.viewportWidth / 2 + dx * (ViewportManager.viewportWidth / 2)
+        const screenY = ViewportManager.viewportHeight / 2 + dy * (ViewportManager.viewportHeight / 2)
+
+        const myCharPosition = ViewportManager.getScreenPosition(MyPlayer.charModel!.model)
+        const deltaX = screenX - myCharPosition.x
+        const deltaY = screenY - myCharPosition.y
+        const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
+
+        // If delta is too small, do not move
+        if (distance < 10) {
+            MyPlayer.setTargetPoint(null)
+            return
+        }
+
+        const angleRadians = Math.atan2(-deltaY, deltaX)
         MyPlayer.setTargetPoint(null, false)
-        MyPlayer.setMoveTypeAngle(distance > 150 ? 'RUN' : 'WALK', angleRadians)
-    }
+        MyPlayer.setMoveTypeAngle(distance > 100 ? 'RUN' : 'WALK', angleRadians)
+    },
 }
 
 

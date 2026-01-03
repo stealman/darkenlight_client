@@ -17,6 +17,15 @@ export class LoginMsg {
     }
 }
 
+export class FetchWorldDataMsg implements Message {
+    t: number = 2
+    d: any
+
+    constructor(worldId: number, x: number, z: number) {
+        this.d = { worldId: worldId , x: x, z: z}
+    }
+}
+
 export class MyCharMoveMsg implements Message {
     t: number = 5
     d: any
@@ -31,12 +40,21 @@ export class MyCharMoveMsg implements Message {
     }
 }
 
-export class FetchWorldDataMsg implements Message {
-    t: number = 2
+export class SelectAutoAttackTarget implements Message {
+    t: number = 6
     d: any
 
-    constructor(worldId: number, x: number, z: number) {
-        this.d = { worldId: worldId , x: x, z: z}
+    constructor(id: number, targetType: string) {
+        this.d = { id: id, tp: targetType }
+    }
+}
+
+export class AutoAttackBreak implements Message {
+    t: number = 7
+    d: any
+
+    constructor() {
+
     }
 }
 
