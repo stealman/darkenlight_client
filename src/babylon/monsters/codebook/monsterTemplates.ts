@@ -1,6 +1,7 @@
 import { AnimationGroup, AssetContainer, Mesh, Skeleton, Vector3 } from '@babylonjs/core'
 import { BabylonUtils } from '@/babylon/utils'
 import { Renderer } from '@/babylon/scene/renderer'
+import { Monster } from '@/babylon/monsters/monster'
 
 export class MonsterTemplate {
     id: number
@@ -18,33 +19,18 @@ export class MonsterTemplate {
     mesh: Mesh
     skeleton: Skeleton
     animation: AnimationGroup
+    monster: Monster | null = null
 
-    walkSkeleton: Skeleton
-    walkSpeedRatio: number = 4
-
-    constructor(id: number, meshName: string, textureName: string, walkSpeedRatio: number, scale: Vector3 | number) {
+    constructor(id: number, meshName: string, textureName: string, scale: Vector3 | number) {
         this.id = id
         this.meshName = meshName
         this.textureName = textureName
         this.scale = typeof scale === 'number' ? BabylonUtils.getSymVector(scale) : scale
-        this.walkSpeedRatio = walkSpeedRatio
     }
 
     setAssetContainer (assetContainer: AssetContainer) {
         this.assetContainer = assetContainer
         this.assetContainer.animationGroups[0].pause()
-    }
-
-    /**
-     * Animate shared templates (walking)
-     */
-    onAnimFrame (animFrame: number) {
-        if (this.clonesAct.length > 0) {
-            const frameNr = 75 + (animFrame * Renderer.animationSpeedRatio * this.walkSpeedRatio) % 150
-            if (this.assetContainer) {
-                this.assetContainer.animationGroups[0].goToFrame(frameNr)
-            }
-        }
     }
 
     clone (): MonsterTemplate {
@@ -57,7 +43,7 @@ export class MonsterTemplate {
             doNotInstantiate: true,
         })
 
-        const clone = new MonsterTemplate(this.id, this.meshName, this.textureName, this.walkSpeedRatio, this.scale)
+        const clone = new MonsterTemplate(this.id, this.meshName, this.textureName, this.scale)
         clone.node = entries.rootNodes[0] as Mesh
         clone.node.alwaysSelectAsActiveMesh = true
 
@@ -67,7 +53,6 @@ export class MonsterTemplate {
         })
 
         clone.skeleton = entries.skeletons[0]
-        clone.walkSkeleton = this.assetContainer!.skeletons[0]
         clone.mesh!.skeleton = entries.skeletons[0]
         clone.mesh!.isPickable = true
 
@@ -109,8 +94,8 @@ export class MonsterTemplate {
 }
 
 export const MonsterTemplates = {
-    CAT : new MonsterTemplate(4, "cat.gltf", "cat.png", 6, 0.85),
-    SKELETON: new MonsterTemplate(1,  "skeleton.gltf", "skeleton.png", 4, 0.35),
-    WITHER: new MonsterTemplate(2,  "skeleton.gltf", "wither.png", 4, 0.35),
+    CAT : new MonsterTemplate(4, "cat.gltf", "cat.png", 0.85),
+    SKELETON: new MonsterTemplate(1,  "skeleton2.gltf", "skeleton.png",  0.35),
+    WITHER: new MonsterTemplate(2,  "skeleton2.gltf", "wither.png",  0.35),
     // ZOMBIE: new MonsterTemplate(3, "zombie.gltf", "zombie.png", 4, new Vector3(0.25, 0.25, 0.25))
 }

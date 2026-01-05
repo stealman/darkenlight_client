@@ -19,7 +19,6 @@ export class MobEquipItem {
     position: Vector3 = Vector3.Zero()
     quaternion: Quaternion = Quaternion.Identity()
     bone: Bone
-    walkingBone: Bone
     activeBone: Bone
     scale: Vector3
 
@@ -28,11 +27,10 @@ export class MobEquipItem {
     localScale: Vector3 = Vector3.One()
     scaleMatrix: Matrix = Matrix.Identity()
 
-    constructor(type: MobEquipItemType, matIndex: number, parent: MonsterModel, bone: Bone, walkingBone: Bone, scale: Vector3 = Vector3.One()) {
+    constructor(type: MobEquipItemType, matIndex: number, parent: MonsterModel, bone: Bone, scale: Vector3 = Vector3.One()) {
         this.type = type
         this.parent = parent
         this.bone = bone
-        this.walkingBone = walkingBone
         this.activeBone = this.bone
         this.scale = scale
 
@@ -48,10 +46,6 @@ export class MobEquipItem {
 
         this.quaternion = this.parent!.rotationQuaternion.multiply(this.boneRotationQuaternion);
         this.position = Vector3.TransformCoordinates(this.localPosition, this.parent!.worldMatrix);
-    }
-
-    setWalking(isWalking: boolean) {
-        this.activeBone = isWalking ? this.walkingBone : this.bone
     }
 }
 

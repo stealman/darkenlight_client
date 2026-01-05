@@ -10,14 +10,10 @@ export const MonsterBonesAnims = {
         model.lhandBone = model.skeleton.bones.find(b => b.id === "Bone.005")!
         model.rhandBone = model.skeleton.bones.find(b => b.id === "Bone.008")!
 
-        model.chestBoneW = model.template.walkSkeleton.bones.find(b => b.id === "Bone")!
-        model.headBoneW = model.template.walkSkeleton.bones.find(b => b.id === "Bone.001")!
-        model.lhandBoneW = model.template.walkSkeleton.bones.find(b => b.id === "Bone.005")!
-        model.rhandBoneW = model.template.walkSkeleton.bones.find(b => b.id === "Bone.008")!
-
         const animations = [
             { name: "Idle", startFrame: 0, endFrame: 75 },
-            { name: "Walk", startFrame: 76, endFrame: 225 }
+            { name: "Walk", startFrame: 76, endFrame: 225 },
+            { name: "Attack", startFrame: 226, endFrame: 300 }
         ]
 
         const groups = animations.map(({ name, startFrame, endFrame }) => {
@@ -26,6 +22,7 @@ export const MonsterBonesAnims = {
 
         model.idleAnim = groups[0]
         model.walkAnim = groups[1]
+        model.attackAnim = groups[2]
 
         MonsterCodebook.initEquip(model)
     },

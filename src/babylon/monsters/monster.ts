@@ -14,12 +14,15 @@ export class Monster implements Targetable {
 
     hp: number
     runSpeed: number = 0
-    rotationSpeed: number = 15
+    rotationSpeed: number = 8
     pos: Vector3
     logicYpos: number = 0
 
-    moveAngle: number | null = null
+    private moveAngle: number | null = null
+    lookAngle: number | null = null
     insideView: boolean = true
+
+    autoAttackEnd: number = 0
 
     constructor(id: number, mobType: MonsterType, xPos: number, zPos: number, hp: number) {
         this.id = id
@@ -31,7 +34,10 @@ export class Monster implements Targetable {
     }
 
     onFrame(timeRate: number, actualTime: number) {
-        this.resolveMovement(timeRate)
+        if (this.autoAttackEnd > actualTime) {
+        } else {
+            this.resolveMovement(timeRate)
+        }
 
         if (this.insideView) {
             this.model.onFrame(timeRate)
@@ -42,6 +48,15 @@ export class Monster implements Targetable {
         if (this.insideView) {
             this.model.onAnimFrame(animFrame)
         }
+    }
+
+    doAutoAttack(target: Targetable, dur: number) {
+        const actualTime = Date.now()
+        this.autoAttackEnd = actualTime + dur
+
+        const angle = Utils.getAngleBetweenPoints(this.pos, target.pos)
+        this.lookAngle = (angle - Math.PI / 4)
+        this.model.doAttackMelee(dur)
     }
 
     resolveMovement(timeRate: number) {
@@ -60,6 +75,7 @@ export class Monster implements Targetable {
         }
 
         if (this.moveAngle != null) {
+            this.lookAngle = this.moveAngle
             this.pos.x += (Math.cos(this.moveAngle + Math.PI / 4) * stepSize)
             this.pos.z -= (Math.sin(this.moveAngle + Math.PI / 4) * stepSize)
             if (this.model.initialized) this.model.doWalk()

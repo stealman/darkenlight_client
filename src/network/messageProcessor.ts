@@ -32,6 +32,7 @@ export const MessageProcessor = {
                 case 15: this.processAddStaticObject(msg.d); break
                 case 16: this.processRemoveStaticObject(msg.d); break
                 case 17: this.processCharacterAttack(msg.d); break
+                case 18: this.processMonsterAttack(msg.d); break
                 case 1003: this.processGMAllSpawns(msg.d); break
                 case 1004: this.processGMSpawnChange(msg.d); break
                 default:
@@ -134,8 +135,11 @@ export const MessageProcessor = {
     },
 
     processCharacterAttack(data) {
-        console.log(data)
         MyPlayer.doAutoAttack(data.dur)
+    },
+
+    processMonsterAttack(data) {
+        MonsterManager.monsterAttack(data)
     },
 
     processGMAllSpawns(data) {

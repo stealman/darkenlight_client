@@ -270,24 +270,29 @@ export class CharacterModel {
     }
 
     /**
-     * Approximate model rotation to the move angle
+     * Rotate model fluently to the look angle
      */
     resolveModelRotation(timeRate: number) {
-        const myAngle = this.model!.rotation.y - this.modelYAngleOffset
+        const model = this.model!
+        const lookAngle = this.playerData.getLookAngle()
+        if (lookAngle == null) return
 
-        let angleDifference = this.playerData.getLookAngle()! - myAngle;
-        const rotationSpeed = this.playerData.rotationSpeed * timeRate;
-        if (angleDifference > Math.PI) {
-            angleDifference -= 2 * Math.PI;
-        } else if (angleDifference < -Math.PI) {
-            angleDifference += 2 * Math.PI;
-        }
+        const rotationSpeed = this.playerData.rotationSpeed * timeRate
 
-        if (Math.abs(angleDifference) < rotationSpeed) {
-            this.model!.rotation.y = this.playerData.getLookAngle() ? this.playerData.getLookAngle()! + this.modelYAngleOffset : 0;
+        let current = model.rotation.y - this.modelYAngleOffset
+
+        const delta = Math.atan2(
+            Math.sin(lookAngle - current),
+            Math.cos(lookAngle - current)
+        )
+
+        if (Math.abs(delta) <= rotationSpeed) {
+            current += delta
         } else {
-            this.model!.rotation.y += Math.sign(angleDifference) * rotationSpeed;
+            current += Math.sign(delta) * rotationSpeed
         }
-        this.playerData.modelRotation = this.model!.rotation.y;
+
+        model.rotation.y = current + this.modelYAngleOffset
+        this.playerData.modelRotation = model.rotation.y
     }
 }

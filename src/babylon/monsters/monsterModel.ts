@@ -28,6 +28,7 @@ export class MonsterModel {
 
     idleAnim: MeshAnimation | undefined
     walkAnim: MeshAnimation | undefined
+    attackAnim: MeshAnimation | undefined
     activeAnims: Set<MeshAnimation>
 
     equipSet: Set<MobEquipItem> = new Set()
@@ -36,10 +37,6 @@ export class MonsterModel {
     rhandBone: Bone
     lhandBone: Bone
     headBone: Bone
-    chestBoneW: Bone
-    rhandBoneW: Bone
-    lhandBoneW: Bone
-    headBoneW: Bone
 
     rotationQuaternion: Quaternion
     worldMatrix: Matrix
@@ -57,6 +54,7 @@ export class MonsterModel {
      */
     initializeModel() {
         this.template = MonsterLoader.getMonsterClone(this.type)
+        this.template.monster = this.parent
         this.node = this.template.node
         this.mesh = this.template.mesh
         this.skeleton = this.template.skeleton
@@ -70,15 +68,15 @@ export class MonsterModel {
     }
 
     assignRhand(type: number, matIndex: number, scale = new Vector3(1, 1, 1)) {
-        this.addEquippedItem(new MobEquipItem(MobEquipManager.itemTypes.get(type)!, matIndex, this, this.rhandBone, this.rhandBoneW, scale))
+        this.addEquippedItem(new MobEquipItem(MobEquipManager.itemTypes.get(type)!, matIndex, this, this.rhandBone, scale))
     }
 
     assignChest(type: number, matIndex: number, scale = new Vector3(1, 1, 1)) {
-        this.addEquippedItem(new MobEquipItem(MobEquipManager.itemTypes.get(type)!, matIndex, this, this.chestBone, this.chestBoneW, scale))
+        this.addEquippedItem(new MobEquipItem(MobEquipManager.itemTypes.get(type)!, matIndex, this, this.chestBone, scale))
     }
 
     assignHelmet(type: number, matIndex: number, scale = new Vector3(1, 1, 1)) {
-        this.addEquippedItem(new MobEquipItem(MobEquipManager.itemTypes.get(type)!, matIndex, this, this.headBone, this.headBoneW, scale))
+        this.addEquippedItem(new MobEquipItem(MobEquipManager.itemTypes.get(type)!, matIndex, this, this.headBone, scale))
     }
 
     addEquippedItem(item: MobEquipItem) {
@@ -112,8 +110,9 @@ export class MonsterModel {
     }
 
     resolveMovement(timeRate: number) {
-        this.node.position.x = this.parent.pos.x
-        this.node.position.z = this.parent.pos.z
+        // approximate to x and z position
+        this.node.position.x += (this.parent.pos.x - this.node.position.x) * 15 * timeRate
+        this.node.position.z += (this.parent.pos.z - this.node.position.z) * 15 * timeRate
 
         this.resolveModelYpos(timeRate)
         this.resolveModelRotation(timeRate)
@@ -134,13 +133,13 @@ export class MonsterModel {
      * Approximate model rotation to the move angle
      */
     resolveModelRotation(timeRate: number) {
-        if (this.parent.moveAngle == null) {
+        if (this.parent.lookAngle == null) {
             return
         }
 
         const myAngle = this.node.rotation.y - this.modelYAngleOffset
 
-        let angleDifference = this.parent.moveAngle - myAngle;
+        let angleDifference = this.parent.lookAngle - myAngle;
         const rotationSpeed = this.parent.rotationSpeed * timeRate;
         if (angleDifference > Math.PI) {
             angleDifference -= 2 * Math.PI;
@@ -149,7 +148,7 @@ export class MonsterModel {
         }
 
         if (Math.abs(angleDifference) < rotationSpeed) {
-            this.node.rotation.y = this.parent.moveAngle + this.modelYAngleOffset;
+            this.node.rotation.y = this.parent.lookAngle + this.modelYAngleOffset;
         } else {
             this.node.rotation.y += Math.sign(angleDifference) * rotationSpeed;
         }
@@ -182,19 +181,15 @@ export class MonsterModel {
     }
 
     doWalk() {
-        this.mesh.skeleton = this.template.walkSkeleton
-        this.equipSet.forEach(item => {
-            item.setWalking(true)
-        })
-        this.activeAnims.clear()
+        this.transitionToAnimation(this.walkAnim!, true, true, this.parent.mobType.walkAnimSpeed)
     }
 
     doIdle() {
-        this.mesh.skeleton = this.skeleton
-        this.equipSet.forEach(item => {
-            item.setWalking(false)
-        })
         this.transitionToAnimation(this.idleAnim!, true, true, 1.0)
+    }
+
+    doAttackMelee(dur: number) {
+        this.transitionToAnimation(this.attackAnim!, true, false, 1500 / dur)
     }
 
     transitionToAnimation(target: MeshAnimation, fadeIn: boolean = false, loop = false, speed = 1.0) {
@@ -204,7 +199,7 @@ export class MonsterModel {
             }
         })
 
-        if (!this.activeAnims.has(target!)) {
+        if (this.mesh && !this.activeAnims.has(target!)) {
             this.mesh.skeleton = this.skeleton
             target.start(fadeIn, speed, loop)
             this.activeAnims.add(target)

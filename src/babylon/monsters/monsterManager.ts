@@ -1,9 +1,10 @@
-import { Mesh, Scene, Vector3 } from '@babylonjs/core'
+import { Scene, Vector3 } from '@babylonjs/core'
 import { Monster } from '@/babylon/monsters/monster'
 import { MonsterLoader } from '@/babylon/monsters/monsterLoader'
 import { MonsterModel } from '@/babylon/monsters/monsterModel'
 import { MonsterCodebook, MonsterType } from '@/babylon/monsters/codebook/monsterCodebook'
 import { ViewportManager } from '@/utils/viewport'
+import { Data } from '@/data/globalData'
 
 export const MonsterManager = {
     monsters: new Map as Map<number, Monster>,
@@ -55,6 +56,13 @@ export const MonsterManager = {
             mob!.pos.x = position.x
             mob!.pos.z = position.z
             mob!.setTargetPoint(new Vector3(target.x, 0, target.z))
+        }
+    },
+
+    monsterAttack(data: { id: number, tgt: number, tp: string, dur: number }) {
+        const mob = this.monsters.get(data.id)
+        if (data.tp === 'C' && data.tgt === Data.myChar.id) {
+            mob?.doAutoAttack(Data.myChar, data.dur)
         }
     },
 

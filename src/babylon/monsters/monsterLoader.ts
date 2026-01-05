@@ -49,7 +49,8 @@ export const MonsterLoader = {
     },
 
     getMonsterClone (mobType: MonsterType): MonsterTemplate {
-        return this.monsterTemplates.get(mobType.templateId)!.clone()
+        const template = this.monsterTemplates.get(mobType.templateId)!.clone()
+        return template
     },
 
     onAnimFrame (animFrame: number) {
@@ -57,7 +58,6 @@ export const MonsterLoader = {
         // Animate shared templates
         this.monsterTemplates.forEach((monsterTemplate) => {
             monsterTemplate.assetContainer?.skeletons.forEach((skeleton) => skeleton.prepare())
-            monsterTemplate.onAnimFrame(animFrame)
         })
     }
 }
