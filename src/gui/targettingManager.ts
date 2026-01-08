@@ -79,6 +79,11 @@ export const TargetingManager = {
         }
     },
 
+    unselectTarget() {
+        this.selectedTarget = null
+        OverlayManager.unselectTarget()
+    },
+
     getTargetSprite(): HTMLCanvasElement | null {
         return this.targetSprite
     },

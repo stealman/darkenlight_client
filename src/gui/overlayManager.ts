@@ -19,6 +19,10 @@ export const OverlayManager = {
         TargetSelector.selectTarget(target)
     },
 
+    unselectTarget() {
+        TargetSelector.unselectTarget()
+    },
+
     onFrame(timeRate: number, actualTime: number) {
         this.overlayCtx!.clearRect(0, 0, this.overlayCanvas.width, this.overlayCanvas.height)
         TargetSelector.onFrame(timeRate, actualTime, this.overlayCtx!)
@@ -82,6 +86,10 @@ const TargetSelector = {
     selectTarget(target: Targetable) {
         this.target = target
         this.selectedTime = new Date().getTime()
+    },
+
+    unselectTarget() {
+        this.target = null
     },
 
     onFrame(timeRate: number, actualTime: number, ctx: CanvasRenderingContext2D) {

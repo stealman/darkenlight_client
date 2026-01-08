@@ -33,6 +33,7 @@ export const MessageProcessor = {
                 case 16: this.processRemoveStaticObject(msg.d); break
                 case 17: this.processCharacterAttack(msg.d); break
                 case 18: this.processMonsterAttack(msg.d); break
+                case 19: this.processCharacterAttackResult(msg.d); break
                 case 1003: this.processGMAllSpawns(msg.d); break
                 case 1004: this.processGMSpawnChange(msg.d); break
                 default:
@@ -135,7 +136,11 @@ export const MessageProcessor = {
     },
 
     processCharacterAttack(data) {
-        MyPlayer.doAutoAttack(data.dur)
+        MyPlayer.doAutoAttack(data)
+    },
+
+    processCharacterAttackResult(data) {
+        MyPlayer.resultAutoAttack(data)
     },
 
     processMonsterAttack(data) {

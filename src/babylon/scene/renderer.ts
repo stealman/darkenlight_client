@@ -189,8 +189,7 @@ export const Renderer = {
                 if (this.lastAnimationFrameTime > 0) {
                     timeExceeded = actualTime - this.lastAnimationFrameTime - this.animationFrameTime
                 }
-                MonsterLoader.onAnimFrame(this.animationFrame)
-                MonsterManager.onAnimFrame(this.animationFrame)
+                MonsterManager.onAnimFrame()
                 this.lastAnimationFrameTime = actualTime - timeExceeded
                 this.animationFrame++
             }

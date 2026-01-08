@@ -22,9 +22,9 @@ export const MyPlayer = {
         Data.myChar.logicYpos = Data.myChar.pos.y
     },
 
-    doAutoAttack(dur: number) {
+    doAutoAttack(data: any) {
         const actualTime = Date.now()
-        Data.myChar.attackAnimationTime = dur
+        Data.myChar.attackAnimationTime = data.dur
         this.autoAttackEnd = actualTime + Data.myChar.attackAnimationTime
 
         if (TargetingManager.selectedTarget) {
@@ -33,6 +33,10 @@ export const MyPlayer = {
         }
 
         this.charModel?.doAttackAnimation()
+    },
+
+    resultAutoAttack(data: any) {
+        console.log(data.res)
     },
 
     onFrame(timeRate: number, actualTime: number) {

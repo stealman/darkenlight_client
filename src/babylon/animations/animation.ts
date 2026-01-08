@@ -21,7 +21,7 @@ export class MeshAnimation {
         this.toFrame = toFrame
     }
 
-    onAnimFrame(animFrame: number) {
+    onAnimFrame() {
         if (this.running) {
             this.animation.goToFrame(this.fromFrame + this.actualFrame % (this.toFrame - this.fromFrame))
             this.actualFrame += Renderer.animationSpeedRatio * this.speed
@@ -64,6 +64,7 @@ export class MeshAnimation {
         this.running = false
         this.actualFrame = 0
         this.weightChange = 0
+        this.animation.setWeightForAllAnimatables(0)
     }
 
     fadeOut() {

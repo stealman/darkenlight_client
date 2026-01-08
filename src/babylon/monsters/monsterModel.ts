@@ -96,12 +96,12 @@ export class MonsterModel {
         })
     }
 
-    onAnimFrame(animFrame: number) {
+    onAnimFrame() {
         if (this.activeAnims.size > 0) {
             this.skeleton.prepare()
 
             this.activeAnims.forEach(anim => {
-                anim.onAnimFrame(animFrame)
+                anim.onAnimFrame()
                 if (!anim.running) {
                     this.activeAnims.delete(anim)
                 }
@@ -166,6 +166,7 @@ export class MonsterModel {
 
     removeFromView() {
         if (this.initialized) {
+            this.animation.stop()
             MonsterLoader.monsterTemplates.get(this.template.id)?.deactivateClone(this.template)
         }
         this.equipSet.forEach(item => {
@@ -189,7 +190,7 @@ export class MonsterModel {
     }
 
     doAttackMelee(dur: number) {
-        this.transitionToAnimation(this.attackAnim!, true, false, 1500 / dur)
+        this.transitionToAnimation(this.attackAnim!, true, false, 1000 / dur)
     }
 
     transitionToAnimation(target: MeshAnimation, fadeIn: boolean = false, loop = false, speed = 1.0) {
@@ -200,7 +201,6 @@ export class MonsterModel {
         })
 
         if (this.mesh && !this.activeAnims.has(target!)) {
-            this.mesh.skeleton = this.skeleton
             target.start(fadeIn, speed, loop)
             this.activeAnims.add(target)
         }

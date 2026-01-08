@@ -36,6 +36,7 @@ export class MonsterTemplate {
     clone (): MonsterTemplate {
         if (this.clonesToReuse.length > 0) {
             const clone = this.clonesToReuse.pop()!
+            clone.animation.reset()
             this.activateClone(clone)
             return clone
         }
@@ -57,8 +58,6 @@ export class MonsterTemplate {
         clone.mesh!.isPickable = true
 
         clone.animation = entries.animationGroups[0]
-        clone.animation.play(false)
-        clone.animation?.pause()
 
         this.clonesAct.push(clone)
         Renderer.addShadowCaster(clone.mesh)
@@ -95,7 +94,7 @@ export class MonsterTemplate {
 
 export const MonsterTemplates = {
     CAT : new MonsterTemplate(4, "cat.gltf", "cat.png", 0.85),
-    SKELETON: new MonsterTemplate(1,  "skeleton2.gltf", "skeleton.png",  0.35),
-    WITHER: new MonsterTemplate(2,  "skeleton2.gltf", "wither.png",  0.35),
+    SKELETON: new MonsterTemplate(1,  "skeleton.gltf", "skeleton.png",  0.35),
+    WITHER: new MonsterTemplate(2,  "skeleton.gltf", "wither.png",  0.35),
     // ZOMBIE: new MonsterTemplate(3, "zombie.gltf", "zombie.png", 4, new Vector3(0.25, 0.25, 0.25))
 }

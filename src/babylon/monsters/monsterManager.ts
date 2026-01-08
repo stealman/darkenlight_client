@@ -5,6 +5,7 @@ import { MonsterModel } from '@/babylon/monsters/monsterModel'
 import { MonsterCodebook, MonsterType } from '@/babylon/monsters/codebook/monsterCodebook'
 import { ViewportManager } from '@/utils/viewport'
 import { Data } from '@/data/globalData'
+import { TargetingManager } from '@/gui/targettingManager'
 
 export const MonsterManager = {
     monsters: new Map as Map<number, Monster>,
@@ -43,9 +44,13 @@ export const MonsterManager = {
 
     removeMonster (id: number) {
         if (this.monsters.has(id)) {
+            const mob = this.monsters.get(id)
             this.visibleMonsters.delete(id)
-            this.monsters.get(id)!.removeMonster()
             this.monsters.delete(id)
+            mob!.removeMonster()
+            if (mob === TargetingManager.selectedTarget) {
+                TargetingManager.unselectTarget()
+            }
         }
     },
 
@@ -88,9 +93,9 @@ export const MonsterManager = {
         })
     },
 
-    onAnimFrame(animFrame: number) {
+    onAnimFrame() {
         this.monsters.forEach(monster => {
-            monster.onAnimFrame(animFrame)
+            monster.onAnimFrame()
         })
     },
 

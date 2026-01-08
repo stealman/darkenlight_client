@@ -44,9 +44,9 @@ export class Monster implements Targetable {
         }
     }
 
-    onAnimFrame(animFrame: number) {
+    onAnimFrame() {
         if (this.insideView) {
-            this.model.onAnimFrame(animFrame)
+            this.model.onAnimFrame()
         }
     }
 
