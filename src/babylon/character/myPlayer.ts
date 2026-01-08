@@ -8,6 +8,7 @@ import { Data } from '@/data/globalData'
 import { AutoAttackBreak, MyCharMoveMsg } from '@/network/messages'
 import { Connector } from '@/network/connector'
 import { TargetingManager } from '@/gui/targettingManager'
+import { AudioManager } from '@/babylon/audio/audioManager'
 
 export const MyPlayer = {
     scene: null as Scene | null,
@@ -15,6 +16,7 @@ export const MyPlayer = {
 
     movementType: 'WALK',
     autoAttackEnd: 0,
+    autoAttackSoundPlayed: false,
 
     async initialize(scene: Scene) {
         this.charModel = await CharacterModel.create(Data.myChar, scene)
@@ -26,6 +28,7 @@ export const MyPlayer = {
         const actualTime = Date.now()
         Data.myChar.attackAnimationTime = data.dur
         this.autoAttackEnd = actualTime + Data.myChar.attackAnimationTime
+        this.autoAttackSoundPlayed = false
 
         if (TargetingManager.selectedTarget) {
             const angle = Utils.getAngleBetweenPoints(Data.myChar.pos, TargetingManager.selectedTarget!.pos)
@@ -37,6 +40,14 @@ export const MyPlayer = {
 
     resultAutoAttack(data: any) {
         console.log(data.res)
+        if (!this.autoAttackSoundPlayed) {
+            if (data.res.hit) {
+                AudioManager.playSwordSound()
+            } else {
+                AudioManager.playSwingMissSound()
+            }
+            this.autoAttackSoundPlayed = true
+        }
     },
 
     onFrame(timeRate: number, actualTime: number) {
@@ -61,6 +72,8 @@ export const MyPlayer = {
         if (this.autoAttackEnd > actualTime) {
             this.charModel?.onFrame(timeRate)
             return
+        } else {
+
         }
 
         if (Data.myChar.targetBlock != null) {

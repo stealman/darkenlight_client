@@ -5,6 +5,7 @@ import { Vector3 } from '@babylonjs/core'
 import { ViewportManager } from '@/utils/viewport'
 import { Data } from '@/data/globalData'
 import { Targetable } from '@/gui/targettingManager'
+import { AudioManager } from '@/babylon/audio/audioManager'
 
 export class Monster implements Targetable {
     id: number
@@ -23,6 +24,7 @@ export class Monster implements Targetable {
     insideView: boolean = true
 
     autoAttackEnd: number = 0
+    autoAttackSoundPlayed: boolean = false
 
     constructor(id: number, mobType: MonsterType, xPos: number, zPos: number, hp: number) {
         this.id = id
@@ -36,6 +38,11 @@ export class Monster implements Targetable {
     onFrame(timeRate: number, actualTime: number) {
         if (this.autoAttackEnd > actualTime) {
         } else {
+            if (this.autoAttackEnd > 0 && !this.autoAttackSoundPlayed) {
+                //AudioManager.playSwordSound()
+                this.autoAttackSoundPlayed = true
+            }
+
             this.resolveMovement(timeRate)
         }
 
@@ -53,6 +60,7 @@ export class Monster implements Targetable {
     doAutoAttack(target: Targetable, dur: number) {
         const actualTime = Date.now()
         this.autoAttackEnd = actualTime + dur
+        this.autoAttackSoundPlayed = false
 
         const angle = Utils.getAngleBetweenPoints(this.pos, target.pos)
         this.lookAngle = (angle - Math.PI / 4)

@@ -5,7 +5,7 @@ import {
     SceneLoader, Skeleton, Sound, TransformNode,
     Vector3,
 } from '@babylonjs/core'
-import { AudioManager } from '@/babylon/audio/audioManager'
+import { AudioManager, FootStepSpeeds } from '@/babylon/audio/audioManager'
 import { Materials } from '@/babylon/materials'
 import { CharEquipManager } from '@/babylon/item/charEquipManager'
 import { PlayerData } from '@/data/playerData'
@@ -180,7 +180,7 @@ export class CharacterModel {
             this.transitionToAnimation(this.walkAnim, 0.15, true, 3)
             this.actualAnim = this.walkAnim
 
-            this.footStepSound?.setPlaybackRate(0.70)
+            this.footStepSound?.setPlaybackRate(FootStepSpeeds.SNOW_WALK)
             if (!this.footStepSound?.isPlaying) {
                 this.footStepSound?.play()
             }
@@ -192,7 +192,7 @@ export class CharacterModel {
             this.transitionToAnimation(this.runAnim, 0.15, true, 3)
             this.actualAnim = this.runAnim
 
-            this.footStepSound?.setPlaybackRate(0.78)
+            this.footStepSound?.setPlaybackRate(FootStepSpeeds.SNOW_RUN)
             if (!this.footStepSound?.isPlaying) {
                 this.footStepSound?.play()
             }

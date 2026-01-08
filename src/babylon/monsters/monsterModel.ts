@@ -190,7 +190,7 @@ export class MonsterModel {
     }
 
     doAttackMelee(dur: number) {
-        this.transitionToAnimation(this.attackAnim!, true, false, 1000 / dur)
+        this.transitionToAnimation(this.attackAnim!, true, false, 1500 / dur)
     }
 
     transitionToAnimation(target: MeshAnimation, fadeIn: boolean = false, loop = false, speed = 1.0) {
