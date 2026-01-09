@@ -11,6 +11,8 @@ import { CharEquipManager } from '@/babylon/item/charEquipManager'
 import { PlayerData } from '@/data/playerData'
 import { AnimTransition } from '@/babylon/animations/animation'
 import { Renderer } from '@/babylon/scene/renderer'
+import { Data } from '@/data/globalData'
+import { MyPlayer } from '@/babylon/character/myPlayer'
 
 export class CharacterModel {
     playerData: PlayerData
@@ -42,14 +44,14 @@ export class CharacterModel {
 
     actualAnim: AnimationGroup | undefined
     animTransition: AnimTransition | null = null
-
-    footStepSound: Sound | null
     weaponMesh: Mesh | null = null
+
+    actualStepSound: Sound | null = null
+    footStepSounds: Map<string, Sound> = new Map()
 
     constructor(playerData: PlayerData) {
         this.playerData = playerData
         this.node.position = this.playerData.pos
-        this.footStepSound = AudioManager.footStep.clone()
     }
 
     static async create(data: PlayerData, scene: Scene): Promise<CharacterModel> {
@@ -180,10 +182,12 @@ export class CharacterModel {
             this.transitionToAnimation(this.walkAnim, 0.15, true, 3)
             this.actualAnim = this.walkAnim
 
-            this.footStepSound?.setPlaybackRate(FootStepSpeeds.SNOW_WALK)
-            if (!this.footStepSound?.isPlaying) {
-                this.footStepSound?.play()
+            this.actualStepSound = this.getStepSound()
+            this.actualStepSound.setPlaybackRate(this.playerData.getStepSoundSpeed())
+            if (!this.actualStepSound.isPlaying) {
+                this.actualStepSound.play()
             }
+            this.stopAllStepSounds(this.actualStepSound)
         }
     }
 
@@ -192,10 +196,24 @@ export class CharacterModel {
             this.transitionToAnimation(this.runAnim, 0.15, true, 3)
             this.actualAnim = this.runAnim
 
-            this.footStepSound?.setPlaybackRate(FootStepSpeeds.SNOW_RUN)
-            if (!this.footStepSound?.isPlaying) {
-                this.footStepSound?.play()
+            this.actualStepSound = this.getStepSound()
+            this.actualStepSound.setPlaybackRate(this.playerData.getStepSoundSpeed())
+            if (!this.actualStepSound.isPlaying) {
+                this.actualStepSound.play()
             }
+            this.stopAllStepSounds(this.actualStepSound)
+        }
+    }
+
+    checkActiveStepSound() {
+        const supposedStepSound = this.getStepSound()
+        if (this.actualStepSound?.isPlaying && this.actualStepSound !== supposedStepSound) {
+            this.actualStepSound = supposedStepSound
+            this.actualStepSound.setPlaybackRate(this.playerData.getStepSoundSpeed())
+            if (!this.actualStepSound.isPlaying) {
+                this.actualStepSound.play()
+            }
+            this.stopAllStepSounds(this.actualStepSound)
         }
     }
 
@@ -206,9 +224,7 @@ export class CharacterModel {
             this.transitionToAnimation(desiredAnimation, 0.15, false, 1000 / this.playerData.attackAnimationTime)
             this.actualAnim = desiredAnimation
 
-            if (this.footStepSound?.isPlaying) {
-                this.footStepSound?.stop()
-            }
+            this.stopAllStepSounds()
         }
     }
 
@@ -221,9 +237,24 @@ export class CharacterModel {
             this.actualAnim = desiredAnimation
         }
 
-        if (this.footStepSound?.isPlaying) {
-            this.footStepSound?.stop()
+        this.stopAllStepSounds()
+    }
+
+    getStepSound(): Sound {
+        const stepSoundType = this.playerData.getFootStepSoundType()
+        if (!this.footStepSounds.has(stepSoundType)) {
+            const sound = AudioManager.footStepSounds.get(stepSoundType)
+            this.footStepSounds.set(stepSoundType, sound!.clone()!)
         }
+        return this.footStepSounds.get(stepSoundType)!
+    }
+
+    stopAllStepSounds(except: Sound | null = null) {
+        this.footStepSounds.forEach(sound => {
+            if (sound != except && sound.isPlaying) {
+                sound.stop()
+            }
+        })
     }
 
     transitionToAnimation(targetAnim: AnimationGroup | undefined, duration: number, loop = false, speed = 1.0) {
@@ -249,6 +280,8 @@ export class CharacterModel {
                 this.animTransition = null
             }
         }
+
+        this.checkActiveStepSound()
 
         if (this.playerData.getMoveAngle() != null) {
             this.moveModel(timeRate)

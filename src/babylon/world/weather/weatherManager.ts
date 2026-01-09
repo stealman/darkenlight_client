@@ -69,7 +69,7 @@ class SnowEffect implements WeatherEffect {
 
         snow.gravity = new Vector3(0, -0.6, 0);
 
-        const wind = new Vector3(0.4, 0, -1);
+        const wind = new Vector3(0.8, 0, -2);
         snow.direction1.set(wind.x - 0.4, -1, wind.z - 0.4)
         snow.direction2.set(wind.x + 0.4, -1, wind.z + 0.4)
 

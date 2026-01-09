@@ -4,8 +4,19 @@ import { MonsterManager } from '@/babylon/monsters/monsterManager'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { StaticsManager } from '@/babylon/world/staticsManager'
 import { Monster } from '@/babylon/monsters/monster'
+import { Data } from '@/data/globalData'
 
 export const Utils = {
+
+    getAttackTargetByTypeAndId(type: string, id: number) {
+        if (type === 'M') {
+            return MonsterManager.monsters.get(id)
+        }
+        if (type === 'C') {
+            return Data.myChar
+        }
+    },
+
     calculateYPos(x: number, z: number, boxSize: number): number {
         const map = WorldDataManager.getBlockMap()
         const coveredBlocks = Utils.getCoveredBlocks(x, z, boxSize)

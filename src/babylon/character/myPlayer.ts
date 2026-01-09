@@ -14,9 +14,8 @@ export const MyPlayer = {
     scene: null as Scene | null,
     charModel: null as CharacterModel | null,
 
-    movementType: 'WALK',
+    autoAttackTarget: null as any,
     autoAttackEnd: 0,
-    autoAttackSoundPlayed: false,
 
     async initialize(scene: Scene) {
         this.charModel = await CharacterModel.create(Data.myChar, scene)
@@ -25,28 +24,25 @@ export const MyPlayer = {
     },
 
     doAutoAttack(data: any) {
+        this.autoAttackTarget = Utils.getAttackTargetByTypeAndId(data.tp, data.tgt)
+        if (!this.autoAttackTarget) {
+            return
+        }
         const actualTime = Date.now()
         Data.myChar.attackAnimationTime = data.dur
         this.autoAttackEnd = actualTime + Data.myChar.attackAnimationTime
-        this.autoAttackSoundPlayed = false
 
-        if (TargetingManager.selectedTarget) {
-            const angle = Utils.getAngleBetweenPoints(Data.myChar.pos, TargetingManager.selectedTarget!.pos)
-            Data.myChar.setLookAngle(angle - Math.PI / 4)
-        }
-
+        const angle = Utils.getAngleBetweenPoints(Data.myChar.pos, this.autoAttackTarget.pos)
+        Data.myChar.setLookAngle(angle - Math.PI / 4)
         this.charModel?.doAttackAnimation()
     },
 
-    resultAutoAttack(data: any) {
-        console.log(data.res)
-        if (!this.autoAttackSoundPlayed) {
-            if (data.res.hit) {
-                AudioManager.playSwordSound()
-            } else {
-                AudioManager.playSwingMissSound()
-            }
-            this.autoAttackSoundPlayed = true
+    autoAttackFinished(data: any) {
+        AudioManager.playWeaponSwing(Data.myChar.weaponSoundType)
+        if (data.res.hit === 'h') {
+            AudioManager.playWeaponHit(Data.myChar.weaponSoundType, this.autoAttackTarget.getBodySoundType())
+        } else if (data.res.hit === 'b' && this.autoAttackTarget.getParrySoundType()) {
+            AudioManager.playWeaponBlocked(this.autoAttackTarget.getParrySoundType())
         }
     },
 
@@ -114,8 +110,8 @@ export const MyPlayer = {
                 Data.myChar.logicYpos = Utils.calculateYPos(Data.myChar.pos.x, Data.myChar.pos.z, Data.myChar.getBoxSize())
             }
 
-            if (this.movementType === 'RUN') { this.charModel?.startRunAnimation() }
-            if (this.movementType === 'WALK') { this.charModel?.startWalkAnimation() }
+            if (Data.myChar.movementType === 'RUN') { this.charModel?.startRunAnimation() }
+            if (Data.myChar.movementType === 'WALK') { this.charModel?.startWalkAnimation() }
         } else {
             this.charModel?.stopAnimation()
         }
@@ -124,8 +120,8 @@ export const MyPlayer = {
     },
 
     setMoveTypeAngle(movementType: string, angle: number) {
-        this.movementType = movementType
-        this.setMoveAngleAndSpeed(angle, this.movementType === 'RUN' ? Data.myChar.runSpeed : Data.myChar.walkSpeed)
+        Data.myChar.movementType = movementType
+        this.setMoveAngleAndSpeed(angle, Data.myChar.movementType === 'RUN' ? Data.myChar.runSpeed : Data.myChar.walkSpeed)
 
     },
 
@@ -138,10 +134,10 @@ export const MyPlayer = {
         } else {
             // if distance > 3 then movementType is run, otherwise walk
             const distance = Vector3.Distance(point, new Vector3(Data.myChar.pos.x, 0, Data.myChar.pos.z))
-            this.movementType = distance > 4 ? 'RUN' : 'WALK'
+            Data.myChar.movementType = distance > 4 ? 'RUN' : 'WALK'
 
             const angle = Math.atan2(-(point.z - Data.myChar.pos.z), point.x - Data.myChar.pos.x)
-            this.setMoveAngleAndSpeed(angle - Math.PI / 4, this.movementType === 'RUN' ? Data.myChar.runSpeed : Data.myChar.walkSpeed)
+            this.setMoveAngleAndSpeed(angle - Math.PI / 4, Data.myChar.movementType === 'RUN' ? Data.myChar.runSpeed : Data.myChar.walkSpeed)
             Data.myChar.targetBlock = point
         }
     },

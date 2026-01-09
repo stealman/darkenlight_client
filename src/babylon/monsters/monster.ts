@@ -31,18 +31,13 @@ export class Monster implements Targetable {
         this.mobType = mobType
         this.hp = hp
         this.pos = new Vector3(xPos, 0, zPos)
-        this.logicYpos = Utils.calculateYPos(this.pos.x, this.pos.z,0.4)
+        this.logicYpos = Utils.calculateYPos(this.pos.x, this.pos.z, 0.4)
         this.pos.y = this.logicYpos
     }
 
     onFrame(timeRate: number, actualTime: number) {
         if (this.autoAttackEnd > actualTime) {
         } else {
-            if (this.autoAttackEnd > 0 && !this.autoAttackSoundPlayed) {
-                //AudioManager.playSwordSound()
-                this.autoAttackSoundPlayed = true
-            }
-
             this.resolveMovement(timeRate)
         }
 
@@ -65,6 +60,19 @@ export class Monster implements Targetable {
         const angle = Utils.getAngleBetweenPoints(this.pos, target.pos)
         this.lookAngle = (angle - Math.PI / 4)
         this.model.doAttackMelee(dur)
+    }
+
+    autoAttackFinished(data: any) {
+        AudioManager.playWeaponSwing(this.getWeaponSoundType())
+        const target = Utils.getAttackTargetByTypeAndId(data.tp, data.tgt)
+        if (!target) {
+            return
+        }
+        if (data.res.hit === 'h') {
+            AudioManager.playWeaponHit(this.getWeaponSoundType(), target.getBodySoundType())
+        } else if (data.res.hit === 'b' && target.getParrySoundType()) {
+            AudioManager.playWeaponBlocked(target.getParrySoundType())
+        }
     }
 
     resolveMovement(timeRate: number) {
@@ -91,7 +99,7 @@ export class Monster implements Targetable {
             if (this.model.initialized) this.model.doIdle()
         }
 
-        this.logicYpos = Utils.calculateYPos(this.pos.x, this.pos.z,0.4)
+        this.logicYpos = Utils.calculateYPos(this.pos.x, this.pos.z, 0.4)
     }
 
     setTargetPoint(point: Vector3) {
@@ -114,7 +122,7 @@ export class Monster implements Targetable {
         this.insideView = visible
     }
 
-    removeMonster () {
+    removeMonster() {
         this.model.removeFromScene()
     }
 
@@ -141,7 +149,20 @@ export class Monster implements Targetable {
     getNameTextNodeScreenPosition(): Vector3 | null {
         return ViewportManager.getPositionOnScreen(this.model.getNameTextNodeWorldPosition())
     }
+
     getObjectType(): string {
         return "M"
+    }
+
+    getWeaponSoundType(): string {
+        return this.mobType.weaponSoundType
+    }
+
+    getBodySoundType(): string {
+        return this.mobType.bodySoundType
+    }
+
+    getParrySoundType(): string | null {
+        return this.mobType.parrySoundType
     }
 }

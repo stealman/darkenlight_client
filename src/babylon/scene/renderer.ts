@@ -73,8 +73,9 @@ export const Renderer = {
         this.animationSpeedRatio = this.animationFrameTime / 25
         this.sunLight = new DirectionalLight("sunLight", new Vector3(-0.75, -0.75, 0.3), this.scene)
         this.sunLight.position = new Vector3(40, 40, 40);
-        this.sunLight.intensity = 1
+        this.sunLight.intensity = 0.4
         this.sunLight.diffuse = new Color3(1, 0.91, 0.74)
+        //this.sunLight.setEnabled(false)
 
         if (Settings.shadows) {
             this.shadow = new ShadowGenerator(4096, this.sunLight, false)
@@ -261,7 +262,7 @@ export const Renderer = {
 
         this.scene.fogMode = Scene.FOGMODE_LINEAR
         this.scene.fogStart = 20
-        this.scene.fogEnd = 60
+        this.scene.fogEnd = 50
         this.scene.fogColor = new Color3(0.2, 0.22, 0.24)
 
         this.setCullingFrequency(this.scene, 50)
@@ -276,7 +277,7 @@ export const Renderer = {
             "environment_specular.env",
             this.scene
         );
-        this.scene.environmentIntensity = 0.3
+        this.scene.environmentIntensity = 0.4
     },
 
     actualizeDebug() {

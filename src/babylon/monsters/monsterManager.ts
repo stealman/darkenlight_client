@@ -6,6 +6,7 @@ import { MonsterCodebook, MonsterType } from '@/babylon/monsters/codebook/monste
 import { ViewportManager } from '@/utils/viewport'
 import { Data } from '@/data/globalData'
 import { TargetingManager } from '@/gui/targettingManager'
+import { AudioManager } from '@/babylon/audio/audioManager'
 
 export const MonsterManager = {
     monsters: new Map as Map<number, Monster>,
@@ -64,11 +65,19 @@ export const MonsterManager = {
         }
     },
 
-    monsterAttack(data: { id: number, tgt: number, tp: string, dur: number }) {
+    autorAttack(data: { id: number, tgt: number, tp: string, dur: number }) {
         const mob = this.monsters.get(data.id)
         if (data.tp === 'C' && data.tgt === Data.myChar.id) {
             mob?.doAutoAttack(Data.myChar, data.dur)
         }
+    },
+
+    autoAttackFinished(data: any) {
+        const monster = this.monsters.get(data.id)
+        if (!monster) {
+            return
+        }
+        monster.autoAttackFinished(data)
     },
 
     monsterMoveStop(id: number, position: { x: number, z: number }) {

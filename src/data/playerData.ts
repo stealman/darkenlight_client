@@ -1,6 +1,8 @@
 import { Vector3 } from '@babylonjs/core'
 import { ViewportManager } from '@/utils/viewport'
 import { Targetable } from '@/gui/targettingManager'
+import { BodySoundTypes, FootStepSpeeds, FootStepTypes, WeaponSoundTypes } from '@/babylon/audio/audioManager'
+import { WorldDataManager } from '@/data/worldDataManager'
 
 export class PlayerData implements Targetable {
     id: number = 1
@@ -15,6 +17,7 @@ export class PlayerData implements Targetable {
     pos: Vector3
     logicYpos: number = 0
 
+    movementType: string = 'WALK'
     modelRotation: number = 0
     private moveAngle: number | null = null
     private lookAngle: number | null = null
@@ -25,6 +28,10 @@ export class PlayerData implements Targetable {
 
     attackCooldown: number = 2000
     attackAnimationTime: number = 1000 // 1000 is base attack time
+
+    weaponSoundType: string = WeaponSoundTypes.SWORD
+    bodySoundType: string = BodySoundTypes.HARD
+    parrySoundType: string = WeaponSoundTypes.SWORD
 
     constructor(data: any) {
         this.hp = data.hp
@@ -87,5 +94,39 @@ export class PlayerData implements Targetable {
 
     getObjectType(): string {
         return "C"
+    }
+
+    getWeaponSoundType(): string {
+        return this.weaponSoundType
+    }
+
+    getBodySoundType(): string {
+        return this.bodySoundType
+    }
+
+    getParrySoundType(): string | null {
+        return this.parrySoundType
+    }
+
+    getFootStepSoundType(): string {
+        const map = WorldDataManager.getBlockMap()
+        const block = map[Math.floor(this.pos.x)][Math.floor(this.pos.z)]
+
+        if (block.snowed) {
+            return FootStepTypes.SNOW
+        } else {
+            return FootStepTypes.DIRT
+        }
+    }
+
+    getStepSoundSpeed(): number {
+        switch (this.getFootStepSoundType()) {
+            case 'DIRT':
+                return this.movementType === 'RUN' ? FootStepSpeeds.DIRT_RUN : FootStepSpeeds.DIRT_WALK
+            case 'SNOW':
+                return this.movementType === 'RUN' ? FootStepSpeeds.SNOW_RUN : FootStepSpeeds.SNOW_WALK
+            default:
+                return this.movementType === 'RUN' ? FootStepSpeeds.SNOW_RUN : FootStepSpeeds.SNOW_WALK
+        }
     }
 }
