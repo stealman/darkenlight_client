@@ -1,10 +1,11 @@
 import { Vector3 } from '@babylonjs/core'
 import { ViewportManager } from '@/utils/viewport'
-import { Targetable } from '@/gui/targettingManager'
 import { BodySoundTypes, FootStepSpeeds, FootStepTypes, WeaponSoundTypes } from '@/babylon/audio/audioManager'
 import { WorldDataManager } from '@/data/worldDataManager'
+import { Attackable } from '@/GameManager'
+import { StepMarksRenderer } from '@/babylon/world/stepMarksRenderer'
 
-export class PlayerData implements Targetable {
+export class PlayerData implements Attackable {
     id: number = 1
     hp: number
     name: string = "Player"
@@ -33,6 +34,9 @@ export class PlayerData implements Targetable {
     bodySoundType: string = BodySoundTypes.HARD
     parrySoundType: string = WeaponSoundTypes.SWORD
 
+    lastStepMarkTime: number = 0
+    stepMarkSide: 'L' | 'R' = 'R'
+
     constructor(data: any) {
         this.hp = data.hp
         this.logicYpos = 0
@@ -41,6 +45,18 @@ export class PlayerData implements Targetable {
         this.className = data.cls
         this.attackCooldown = data.aaCd
         this.attackAnimationTime = data.aaDur
+    }
+
+    resolveStepMark(time: number, inCombat: boolean = false) {
+        const block = WorldDataManager.getBlockOnPosition(this.pos)!
+        if (!block.snowed) {
+            return
+        }
+        if (this.lastStepMarkTime < time - 250) {
+            this.lastStepMarkTime = time
+            this.stepMarkSide = this.stepMarkSide === 'L' ? 'R' : 'L'
+            StepMarksRenderer.addStepMark(this.stepMarkSide, this, this.logicYpos, this.modelRotation, time, inCombat)
+        }
     }
 
     getPositionRounded(): Vector3 {
@@ -109,9 +125,7 @@ export class PlayerData implements Targetable {
     }
 
     getFootStepSoundType(): string {
-        const map = WorldDataManager.getBlockMap()
-        const block = map[Math.floor(this.pos.x)][Math.floor(this.pos.z)]
-
+        const block = WorldDataManager.getBlockOnPosition(this.pos)!
         if (block.snowed) {
             return FootStepTypes.SNOW
         } else {

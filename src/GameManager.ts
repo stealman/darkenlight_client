@@ -4,6 +4,7 @@ import { WorldDataManager } from '@/data/worldDataManager'
 import { ref } from 'vue/dist/vue'
 import { Connector } from '@/network/connector'
 import { OverlayManager } from '@/gui/overlayManager'
+import { Targetable } from '@/gui/targettingManager'
 
 export const GameManager = {
     canvas: null as ref<HTMLCanvasElement | null>,
@@ -21,4 +22,10 @@ export const GameManager = {
         ViewportManager.onResize()
         OverlayManager.onResize()
     }
+}
+
+export interface Attackable extends Targetable {
+    getWeaponSoundType(): string
+    getBodySoundType(): string
+    getParrySoundType(): string | null
 }

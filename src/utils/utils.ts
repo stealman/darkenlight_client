@@ -5,12 +5,13 @@ import { WorldDataManager } from '@/data/worldDataManager'
 import { StaticsManager } from '@/babylon/world/staticsManager'
 import { Monster } from '@/babylon/monsters/monster'
 import { Data } from '@/data/globalData'
+import { Attackable } from '@/GameManager'
 
 export const Utils = {
 
-    getAttackTargetByTypeAndId(type: string, id: number) {
+    getAttackTargetByTypeAndId(type: string, id: number): Attackable | null {
         if (type === 'M') {
-            return MonsterManager.monsters.get(id)
+            return MonsterManager.monsters.get(id) || null
         }
         if (type === 'C') {
             return Data.myChar

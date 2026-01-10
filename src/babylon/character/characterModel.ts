@@ -5,14 +5,12 @@ import {
     SceneLoader, Skeleton, Sound, TransformNode,
     Vector3,
 } from '@babylonjs/core'
-import { AudioManager, FootStepSpeeds } from '@/babylon/audio/audioManager'
+import { AudioManager } from '@/babylon/audio/audioManager'
 import { Materials } from '@/babylon/materials'
 import { CharEquipManager } from '@/babylon/item/charEquipManager'
 import { PlayerData } from '@/data/playerData'
 import { AnimTransition } from '@/babylon/animations/animation'
 import { Renderer } from '@/babylon/scene/renderer'
-import { Data } from '@/data/globalData'
-import { MyPlayer } from '@/babylon/character/myPlayer'
 
 export class CharacterModel {
     playerData: PlayerData
@@ -64,7 +62,7 @@ export class CharacterModel {
         await SceneLoader.ImportMeshAsync(
             "",
             "/models/steve/",
-            "steve.gltf",
+            "steve2.gltf",
             scene
         ).then((result) => {
             this.model = result.meshes[0]
@@ -282,7 +280,6 @@ export class CharacterModel {
         }
 
         this.checkActiveStepSound()
-
         if (this.playerData.getMoveAngle() != null) {
             this.moveModel(timeRate)
         }

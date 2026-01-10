@@ -68,6 +68,11 @@ export const WorldDataManager = {
     getBlockMap() {
         return this.worldDataMap.get(Data.worldId)!.blockMap;
     },
+
+    getBlockOnPosition(pos: Vector3): MapBlock | null {
+        const map = WorldDataManager.getBlockMap()
+        return map[Math.floor(pos.x)][Math.floor(pos.z)]
+    }
 }
 
 export class WorldData {

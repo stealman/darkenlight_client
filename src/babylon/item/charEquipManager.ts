@@ -1,11 +1,12 @@
 import {
     Color3,
-    Mesh, PBRMaterial,
+    Color4,
+    Mesh, MeshBuilder, ParticleSystem, PBRMaterial,
     Quaternion,
     Scene,
     SceneLoader,
     SolidParticle,
-    SolidParticleSystem, TransformNode,
+    SolidParticleSystem, StandardMaterial, Texture, TrailMesh, TransformNode,
     Vector3, Vector4,
 } from '@babylonjs/core'
 import { Materials, PBRBasicAtts } from '@/babylon/materials'
@@ -13,6 +14,8 @@ import { Renderer } from '@/babylon/scene/renderer'
 import { CharArmorsCbManager } from '@/babylon/item/codebook/charArmorsCb'
 import { CharWeaponsCbManager } from '@/babylon/item/codebook/charWeaponsCb'
 import { CharacterModel } from '@/babylon/character/characterModel'
+import { Utils } from '@/utils/utils'
+import { BabylonUtils } from '@/babylon/utils'
 
 export const BASE_EQUIP_MATERIAL_PATH = "/models/equip/"
 export const PLATE_METAL_BASIC = 'plate-metal-basic'
@@ -214,8 +217,71 @@ export const CharEquipManager = {
         }
         weapon.parent = node
         weapon.setEnabled(true)
+        weapon.trailMesh = this.createSwordTrail(node)
+        this.createSwordParticles(node)
         owner.weaponMesh = weapon
     },
+
+    createSwordTrail(boneNode: TransformNode): TrailMesh {
+        const tip = new TransformNode('swordTip', Renderer.scene)
+        tip.parent = boneNode
+        tip.position = new Vector3(0, 3.5, 0)
+        const trail = new TrailMesh('swordTrail', tip, Renderer.scene, 0.5, 60, true)
+
+        const mat = new StandardMaterial('swordTrailMat', Renderer.scene)
+        mat.disableLighting = true
+        mat.emissiveColor = new Color3(1, 1, 1)
+        mat.alpha = 0.25
+        trail.material = mat
+
+        trail.setEnabled(false)
+        return trail
+    },
+
+     createSwordParticles(boneNode: TransformNode) {
+         const emitter = new TransformNode('swordSmearEmitter', Renderer.scene)
+         emitter.parent = boneNode
+         emitter.position = new Vector3(0, 2.8, 0)
+
+         const ps = new ParticleSystem('swordSmear', 400, Renderer.scene)
+         ps.particleTexture = new Texture('images/gfx/flare.png', Renderer.scene)
+
+         ps.createBoxEmitter(
+         new Vector3(0, 0, 0), // direction1
+         new Vector3( 0, 0,  0), // direction2
+         new Vector3(-0.2, -1, -0.2), // minEmitBox
+         new Vector3( 0.2,  1,  0.2)  // maxEmitBox
+         )
+
+         ps.addSizeGradient(0, 0.1, 0.25) // start: min/max
+         ps.addSizeGradient(1, 0.1, 0.1) // konec: min/max
+
+         ps.minLifeTime = 0.4
+         ps.maxLifeTime = 0.6
+
+         ps.emitRate = 400
+         ps.blendMode = ParticleSystem.BLENDMODE_ONEONE
+
+         ps.direction1 = BabylonUtils.getSymVector(-2)
+         ps.direction2 = BabylonUtils.getSymVector(2)
+         ps.minEmitPower = 0.2
+         ps.maxEmitPower = 0.5
+         ps.updateSpeed = 0.02
+
+         // Gravity upwards
+         ps.gravity = new Vector3(0, 2, 0)
+         ps.addColorGradient(0, new Color4(0.8, 0.3, 0.1, 0.5))
+         ps.addColorGradient(0.8, new Color4(0.1, 0.05, 0.01, 0.2))
+         ps.addColorGradient(1, new Color4(0.1, 0.05, 0.01, 0.00))
+
+         /**
+         ps.addColorGradient(0, new Color4(0, 0.3, 0.8, 0.5))
+         ps.addColorGradient(0.8, new Color4(0.0, 0.1, 0.25, 0.2))
+         ps.addColorGradient(1, new Color4(0, 0.1, 0.25, 0.00))*/
+
+         ps.emitter = emitter
+         ps.start()
+     },
 
     async loadWeaponModel(weaponTypelId: number): Mesh | null {
         const modelData: CharWearableItemModel = CharWeaponsCbManager.weaponModels.get(weaponTypelId)!

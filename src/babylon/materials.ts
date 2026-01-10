@@ -19,6 +19,7 @@ export const Materials = {
     sceneEmissiveColor: new Color3(0.15, 0.15, 0.15),
     terrainMaterial: null as PBRCustomMaterial | null,
     planeMaterial: null as PBRCustomMaterial | null,
+    stepMarksMaterial: null as PBRCustomMaterial | null,
 
     blockMatAlpha1: null as PBRCustomMaterial | null,
     blockMat1: null as PBRCustomMaterial | null,
@@ -31,6 +32,7 @@ export const Materials = {
         this.blockMat1 = this.createBlockMat1(scene)
         this.blockMatAlpha1 = this.createBlockMatAlpha1(scene)
         this.waterMaterial = this.createWaterMaterial(scene)
+        this.stepMarksMaterial = this.createStepMarksMaterial(scene)
     },
 
     createTerrainMaterial1(scene: Scene): PBRCustomMaterial {
@@ -41,6 +43,19 @@ export const Materials = {
     createPlaneMaterial(scene: Scene): PBRCustomMaterial {
         const material = this.getPBRCustomMaterial(scene, "plane_mats", this.BASE_PATH, 'plane_materials1.png', 1 / 8, 1 / 8, false)
         return material
+    },
+
+    createStepMarksMaterial(scene: Scene): PBRCustomMaterial {
+        const mat = this.getPBRCustomMaterial(scene, "step_marks_mats", this.BASE_PATH, 'stepmarks.png', 1 / 2, 1 / 2, false)
+        const texture = mat.albedoTexture as Texture
+        texture.hasAlpha = true
+        texture.getAlphaFromRGB = false
+        texture.updateSamplingMode(Texture.NEAREST_NEAREST)
+        mat.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHABLEND
+        mat.useAlphaFromAlbedoTexture = true
+        mat.alpha = 0.3
+        mat.forceAlphaTest = false
+        return mat
     },
 
     createBlockMat1(scene: Scene): PBRCustomMaterial {
@@ -80,9 +95,12 @@ export const Materials = {
 
     getPBRCustomMaterialFrom(scene: Scene, name: string, basePath: string, texturePath: string, uScale: number, vScale: number, hasAlpha: boolean, options: PBRBasicAtts): PBRCustomMaterial {
         const albedoTexture = new Texture(basePath + texturePath, scene)
-        albedoTexture.uScale = uScale
-        albedoTexture.vScale = vScale
-        albedoTexture.hasAlpha = hasAlpha
+        if (uScale < 1) {
+            albedoTexture.uScale = uScale
+        }
+        if (vScale < 1) {
+            albedoTexture.vScale = vScale
+        }
         albedoTexture.gammaSpace = true;
 
         const mat = new PBRCustomMaterial(name, scene)
@@ -103,9 +121,11 @@ export const Materials = {
         }
 
         mat.AddAttribute("uvc");
-        mat.Vertex_Definitions(`attribute vec2 uvc;`)
-        mat.Vertex_Before_PositionUpdated(`uvUpdated = uvUpdated + uvc;`)
-        mat.Vertex_After_WorldPosComputed(`vAlbedoUV = uvUpdated;`)
+        if (uScale < 1 || vScale < 1) {
+            mat.Vertex_Definitions(`attribute vec2 uvc;`)
+            mat.Vertex_Before_PositionUpdated(`uvUpdated = uvUpdated + uvc;`)
+            mat.Vertex_After_WorldPosComputed(`vAlbedoUV = uvUpdated;`)
+        }
 
         mat.freeze()
         return mat

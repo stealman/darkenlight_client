@@ -29,6 +29,7 @@ import { GMManager, GmTabs } from '@/gm/GM'
 import { GMSpawns } from '@/gm/GmSpawns'
 import { OverlayManager } from '@/gui/overlayManager'
 import { TargetingManager } from '@/gui/targettingManager'
+import { StepMarksRenderer } from '@/babylon/world/stepMarksRenderer'
 
 /**
  * Main Renderer
@@ -73,7 +74,7 @@ export const Renderer = {
         this.animationSpeedRatio = this.animationFrameTime / 25
         this.sunLight = new DirectionalLight("sunLight", new Vector3(-0.75, -0.75, 0.3), this.scene)
         this.sunLight.position = new Vector3(40, 40, 40);
-        this.sunLight.intensity = 0.4
+        this.sunLight.intensity = 0.2
         this.sunLight.diffuse = new Color3(1, 0.91, 0.74)
         //this.sunLight.setEnabled(false)
 
@@ -110,6 +111,7 @@ export const Renderer = {
         Materials.initialize(this.scene)
         WorldRenderer.initialize(this.scene)
         WeatherManager.initialize()
+        StepMarksRenderer.initialize(this.scene)
         await OverlayManager.initialize()
         await TargetingManager.initialize()
 
@@ -207,10 +209,12 @@ export const Renderer = {
         if (this.frame % 60 === 0) {
             MiniMap.updateMiniMap()
             WeatherManager.update()
+
         }
 
         if (this.frame % 10 === 0) {
             //Materials.onFrame(this.frame)
+            StepMarksRenderer.update(timeRate, actualTime)
         }
 
         // If the player moved, render the world
@@ -277,7 +281,7 @@ export const Renderer = {
             "environment_specular.env",
             this.scene
         );
-        this.scene.environmentIntensity = 0.4
+        this.scene.environmentIntensity = 0.2
     },
 
     actualizeDebug() {

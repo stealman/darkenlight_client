@@ -23,14 +23,14 @@ export const OverlayManager = {
         TargetSelector.unselectTarget()
     },
 
-    onFrame(timeRate: number, actualTime: number) {
+    onFrame(timeRate: number, time: number) {
         this.overlayCtx!.clearRect(0, 0, this.overlayCanvas.width, this.overlayCanvas.height)
-        TargetSelector.onFrame(timeRate, actualTime, this.overlayCtx!)
-        this.renderNames(Math.abs(this.letterSpacingFix) > 0)
+        TargetSelector.onFrame(timeRate, time, this.overlayCtx!)
+        this.renderNames(time, Math.abs(this.letterSpacingFix) > 0)
     },
 
-    renderNames(tightText: boolean) {
-        if (!TargetSelector.target) return
+    renderNames(time: number, tightText: boolean) {
+        if (!TargetSelector.target || time > TargetSelector.selectedTime + 1000) return
         const screenPos = TargetSelector.target.getNameTextNodeScreenPosition()
         if (!screenPos) return
 

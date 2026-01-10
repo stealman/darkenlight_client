@@ -6,8 +6,11 @@ import { ViewportManager } from '@/utils/viewport'
 import { Data } from '@/data/globalData'
 import { Targetable } from '@/gui/targettingManager'
 import { AudioManager } from '@/babylon/audio/audioManager'
+import { Attackable } from '@/GameManager'
+import { WorldDataManager } from '@/data/worldDataManager'
+import { StepMarksRenderer } from '@/babylon/world/stepMarksRenderer'
 
-export class Monster implements Targetable {
+export class Monster implements Attackable {
     id: number
     mobType: MonsterType
     model: MonsterModel
@@ -22,6 +25,8 @@ export class Monster implements Targetable {
     private moveAngle: number | null = null
     lookAngle: number | null = null
     insideView: boolean = true
+    lastStepMarkTime: number = 0
+    stepMarkSide: 'L' | 'R' = 'R'
 
     autoAttackEnd: number = 0
     autoAttackSoundPlayed: boolean = false
@@ -38,7 +43,7 @@ export class Monster implements Targetable {
     onFrame(timeRate: number, actualTime: number) {
         if (this.autoAttackEnd > actualTime) {
         } else {
-            this.resolveMovement(timeRate)
+            this.resolveMovement(timeRate, actualTime)
         }
 
         if (this.insideView) {
@@ -71,11 +76,11 @@ export class Monster implements Targetable {
         if (data.res.hit === 'h') {
             AudioManager.playWeaponHit(this.getWeaponSoundType(), target.getBodySoundType())
         } else if (data.res.hit === 'b' && target.getParrySoundType()) {
-            AudioManager.playWeaponBlocked(target.getParrySoundType())
+            AudioManager.playWeaponBlocked(target.getParrySoundType()!)
         }
     }
 
-    resolveMovement(timeRate: number) {
+    resolveMovement(timeRate: number, actualTime: number) {
         const stepSize = this.runSpeed * timeRate
         if (this.targetPoint != null) {
 
@@ -88,6 +93,8 @@ export class Monster implements Targetable {
                 this.targetPoint = null
                 this.moveAngle = null
             }
+
+            this.resolveStepMark(actualTime, false)
         }
 
         if (this.moveAngle != null) {
@@ -100,6 +107,18 @@ export class Monster implements Targetable {
         }
 
         this.logicYpos = Utils.calculateYPos(this.pos.x, this.pos.z, 0.4)
+    }
+
+    resolveStepMark(time: number, inCombat: boolean = false) {
+        const block = WorldDataManager.getBlockOnPosition(this.pos)!
+        if (!block.snowed) {
+            return
+        }
+        if (this.lastStepMarkTime < time - 400) {
+            this.lastStepMarkTime = time
+            this.stepMarkSide = this.stepMarkSide === 'L' ? 'R' : 'L'
+            StepMarksRenderer.addStepMark(this.stepMarkSide, this, this.logicYpos, this.model.modelRotation, time, inCombat)
+        }
     }
 
     setTargetPoint(point: Vector3) {

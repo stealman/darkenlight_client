@@ -9,12 +9,13 @@ import { AutoAttackBreak, MyCharMoveMsg } from '@/network/messages'
 import { Connector } from '@/network/connector'
 import { TargetingManager } from '@/gui/targettingManager'
 import { AudioManager } from '@/babylon/audio/audioManager'
+import { Attackable } from '@/GameManager'
 
 export const MyPlayer = {
     scene: null as Scene | null,
     charModel: null as CharacterModel | null,
 
-    autoAttackTarget: null as any,
+    autoAttackTarget: null as Attackable | null,
     autoAttackEnd: 0,
 
     async initialize(scene: Scene) {
@@ -35,20 +36,27 @@ export const MyPlayer = {
         const angle = Utils.getAngleBetweenPoints(Data.myChar.pos, this.autoAttackTarget.pos)
         Data.myChar.setLookAngle(angle - Math.PI / 4)
         this.charModel?.doAttackAnimation()
+        this.charModel?.weaponMesh.trailMesh!.setEnabled(true)
     },
 
     autoAttackFinished(data: any) {
+        this.charModel?.weaponMesh.trailMesh!.setEnabled(false)
         AudioManager.playWeaponSwing(Data.myChar.weaponSoundType)
+        if (!this.autoAttackTarget) {
+            return
+        }
+
         if (data.res.hit === 'h') {
             AudioManager.playWeaponHit(Data.myChar.weaponSoundType, this.autoAttackTarget.getBodySoundType())
         } else if (data.res.hit === 'b' && this.autoAttackTarget.getParrySoundType()) {
-            AudioManager.playWeaponBlocked(this.autoAttackTarget.getParrySoundType())
+            AudioManager.playWeaponBlocked(this.autoAttackTarget.getParrySoundType()!)
         }
     },
 
     onFrame(timeRate: number, actualTime: number) {
         // Auto attack in progress
         if (this.autoAttackEnd > actualTime) {
+            Data.myChar.resolveStepMark(actualTime, true)
 
             // Cancel auto attack immediately if moving away from target
             if (TargetingManager.selectedTarget && Data.myChar.getMoveAngle() != null) {
@@ -60,6 +68,7 @@ export const MyPlayer = {
                 const dot = Vector3.Dot(moveDir, toTarget)
                 if (dot < -0.5) {
                     this.autoAttackEnd = 0
+                    this.charModel?.weaponMesh.trailMesh!.setEnabled(false)
                     Connector.sendMessage(new AutoAttackBreak())
                 }
             }
@@ -112,10 +121,10 @@ export const MyPlayer = {
 
             if (Data.myChar.movementType === 'RUN') { this.charModel?.startRunAnimation() }
             if (Data.myChar.movementType === 'WALK') { this.charModel?.startWalkAnimation() }
+            Data.myChar.resolveStepMark(actualTime, false)
         } else {
             this.charModel?.stopAnimation()
         }
-
         this.charModel?.onFrame(timeRate)
     },
 
