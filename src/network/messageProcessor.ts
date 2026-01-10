@@ -90,7 +90,7 @@ export const MessageProcessor = {
     },
 
     removeMonster(data) {
-        MonsterManager.removeMonster(data.id)
+        MonsterManager.removeMonster(data.id, data.killer)
     },
 
     processWorldChunkData(data) {

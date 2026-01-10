@@ -17,6 +17,7 @@ export class Monster implements Attackable {
     targetPoint: Vector3 | null = null
 
     hp: number
+    killedTime: number = 0
     runSpeed: number = 0
     rotationSpeed: number = 8
     pos: Vector3
@@ -51,7 +52,7 @@ export class Monster implements Attackable {
         }
     }
 
-    onAnimFrame() {
+    onAnimFrame(timeRate: number) {
         if (this.insideView) {
             this.model.onAnimFrame()
         }
@@ -68,7 +69,10 @@ export class Monster implements Attackable {
     }
 
     autoAttackFinished(data: any) {
+        console.log("Monster auto attack finished", data)
         AudioManager.playWeaponSwing(this.getWeaponSoundType())
+        this.model.setWeaponTrailEnabled(false)
+
         const target = Utils.getAttackTargetByTypeAndId(data.tp, data.tgt)
         if (!target) {
             return
@@ -83,7 +87,7 @@ export class Monster implements Attackable {
     resolveMovement(timeRate: number, actualTime: number) {
         const stepSize = this.runSpeed * timeRate
         if (this.targetPoint != null) {
-
+            this.model.setWeaponTrailEnabled(false)
             const dx = Math.abs(this.targetPoint.x - this.pos.x)
             const dz = Math.abs(this.targetPoint.z - this.pos.z)
 
@@ -141,7 +145,7 @@ export class Monster implements Attackable {
         this.insideView = visible
     }
 
-    removeMonster() {
+    removeModel() {
         this.model.removeFromScene()
     }
 

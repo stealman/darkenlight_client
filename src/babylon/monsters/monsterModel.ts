@@ -1,6 +1,6 @@
 import {
     AnimationGroup, Bone, Matrix,
-    Mesh, Quaternion,
+    Mesh, PBRMaterial, Quaternion,
     Skeleton, TransformNode, Vector3,
 } from '@babylonjs/core'
 import { Monster } from '@/babylon/monsters/monster'
@@ -15,11 +15,13 @@ export class MonsterModel {
     type: MonsterType
     initialized: boolean = false
     node: Mesh
-    nameTextNode: TransformNode
     mesh: Mesh
+    nameTextNode: TransformNode
 
     template: MonsterTemplate
-    modelYpos: number = 0
+
+    worldMatrix: Matrix
+    rotationQuaternion: Quaternion
     modelRotation: number = 0
     modelYAngleOffset: number = Math.PI * 1 / 4
 
@@ -29,8 +31,10 @@ export class MonsterModel {
     idleAnim: MeshAnimation | undefined
     walkAnim: MeshAnimation | undefined
     attackAnim: MeshAnimation | undefined
+    attackAnim2: MeshAnimation | undefined
     activeAnims: Set<MeshAnimation>
 
+    weaponEquipItem: MobEquipItem | null = null
     equipSet: Set<MobEquipItem> = new Set()
 
     chestBone: Bone
@@ -38,8 +42,8 @@ export class MonsterModel {
     lhandBone: Bone
     headBone: Bone
 
-    rotationQuaternion: Quaternion
-    worldMatrix: Matrix
+    isDying: boolean = false
+    originalMaterial: PBRMaterial | null = null
 
     constructor(monsterType: MonsterType, parent: Monster) {
         console.log('MonsterModel constructor')
@@ -68,7 +72,8 @@ export class MonsterModel {
     }
 
     assignRhand(type: number, matIndex: number, scale = new Vector3(1, 1, 1)) {
-        this.addEquippedItem(new MobEquipItem(MobEquipManager.itemTypes.get(type)!, matIndex, this, this.rhandBone, scale))
+        this.weaponEquipItem = new MobEquipItem(MobEquipManager.itemTypes.get(type)!, matIndex, this, this.rhandBone, scale, true)
+        this.addEquippedItem(this.weaponEquipItem)
     }
 
     assignChest(type: number, matIndex: number, scale = new Vector3(1, 1, 1)) {
@@ -106,6 +111,13 @@ export class MonsterModel {
                     this.activeAnims.delete(anim)
                 }
             })
+        }
+
+        if (this.isDying) {
+            this.mesh.material!.alpha -= 0.01
+            if (this.mesh.material!.alpha < 0) {
+                this.mesh.material!.alpha = 0
+            }
         }
     }
 
@@ -155,6 +167,39 @@ export class MonsterModel {
         this.modelRotation = this.node.rotation.y;
     }
 
+    doAttackMelee(dur: number) {
+        this.transitionToAnimation(this.attackAnim2!, true, false, 1500 / dur)
+        this.setWeaponTrailEnabled(true)
+    }
+
+    doWalk() {
+        this.transitionToAnimation(this.walkAnim!, true, true, this.parent.mobType.walkAnimSpeed)
+    }
+
+    doIdle() {
+        this.transitionToAnimation(this.idleAnim!, true, true, 1.0)
+    }
+
+    doDie() {
+        this.isDying = true
+        this.originalMaterial = this.mesh.material as PBRMaterial
+        this.mesh.material = this.mesh.material!.clone(this.mesh.material!.name + '_dieClone')
+        this.mesh.material.alpha = 1
+    }
+
+    transitionToAnimation(target: MeshAnimation, fadeIn: boolean = false, loop = false, speed = 1.0) {
+        this.activeAnims.forEach(anim => {
+            if (anim !== target) {
+                anim.fadeOut()
+            }
+        })
+
+        if (this.mesh && !this.activeAnims.has(target!)) {
+            target.start(fadeIn, speed, loop)
+            this.activeAnims.add(target)
+        }
+    }
+
     addToView() {
         if (!this.initialized) this.initializeModel()
 
@@ -167,6 +212,12 @@ export class MonsterModel {
     removeFromView() {
         if (this.initialized) {
             this.animation.stop()
+
+            // Dying monsters store their original material to restore it later for clone reuse
+            if (this.originalMaterial) {
+                this.mesh.material = this.originalMaterial
+                this.originalMaterial = null
+            }
             MonsterLoader.monsterTemplates.get(this.template.id)?.deactivateClone(this.template)
         }
         this.equipSet.forEach(item => {
@@ -181,29 +232,8 @@ export class MonsterModel {
         }
     }
 
-    doWalk() {
-        this.transitionToAnimation(this.walkAnim!, true, true, this.parent.mobType.walkAnimSpeed)
-    }
-
-    doIdle() {
-        this.transitionToAnimation(this.idleAnim!, true, true, 1.0)
-    }
-
-    doAttackMelee(dur: number) {
-        this.transitionToAnimation(this.attackAnim!, true, false, 1500 / dur)
-    }
-
-    transitionToAnimation(target: MeshAnimation, fadeIn: boolean = false, loop = false, speed = 1.0) {
-        this.activeAnims.forEach(anim => {
-            if (anim !== target) {
-                anim.fadeOut()
-            }
-        })
-
-        if (this.mesh && !this.activeAnims.has(target!)) {
-            target.start(fadeIn, speed, loop)
-            this.activeAnims.add(target)
-        }
+    setWeaponTrailEnabled(enabled: boolean) {
+        this.weaponEquipItem?.weaponTrail?.setEnabled(enabled)
     }
 
     getNameTextNodeWorldPosition(): Vector3 {

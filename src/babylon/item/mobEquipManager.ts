@@ -3,13 +3,15 @@ import {
     Mesh,
     Quaternion,
     Scene,
-    SceneLoader, TransformNode, Vector2, Vector3,
+    SceneLoader, TrailMesh, TransformNode, Vector2, Vector3,
 } from '@babylonjs/core'
 import { MonsterModel } from '@/babylon/monsters/monsterModel'
 import { PBRCustomMaterial } from '@babylonjs/materials'
 import { MobWeaponsCbManager } from '@/babylon/item/codebook/mobWeaponsCb'
 import { MobArmorsCbManager } from '@/babylon/item/codebook/mobArmorsCb'
 import { MobEquipItemData } from '@/babylon/item/codebook/mobEquipItemData'
+import { Renderer } from '@/babylon/scene/renderer'
+import { Materials } from '@/babylon/materials'
 
 export class MobEquipItem {
     parent: MonsterModel | null = null
@@ -27,12 +29,17 @@ export class MobEquipItem {
     localScale: Vector3 = Vector3.One()
     scaleMatrix: Matrix = Matrix.Identity()
 
-    constructor(type: MobEquipItemType, matIndex: number, parent: MonsterModel, bone: Bone, scale: Vector3 = Vector3.One()) {
+    weaponTrail: TrailMesh | null = null
+
+    constructor(type: MobEquipItemType, matIndex: number, parent: MonsterModel, bone: Bone, scale: Vector3 = Vector3.One(), addWeaponTrail: boolean = false) {
         this.type = type
         this.parent = parent
         this.bone = bone
         this.activeBone = this.bone
         this.scale = scale
+        if (addWeaponTrail) {
+            this.weaponTrail = this.createWeaponTrail(this.bone)
+        }
 
         const matRow = (type.cbData.matsY * 2) - ((Math.floor(matIndex / type.cbData.matsX) * 2) + 1.5)
         const matCol = ((matIndex % type.cbData.matsX) * 2) + 0.5
@@ -42,13 +49,36 @@ export class MobEquipItem {
 
     onFrame() {
         this.activeBone.computeWorldMatrix(true);
-        this.activeBone.getWorldMatrix().decompose(this.localScale, this.boneRotationQuaternion, this.localPosition);
+        this.activeBone.getFinalMatrix().decompose(this.localScale, this.boneRotationQuaternion, this.localPosition);
 
         this.quaternion = this.parent!.rotationQuaternion.multiply(this.boneRotationQuaternion);
         this.position = Vector3.TransformCoordinates(this.localPosition, this.parent!.worldMatrix);
     }
+
+    createWeaponTrail(boneNode: Bone): TrailMesh {
+        const tip = new TransformNode('swordTipMob' + this.parent?.parent.id, Renderer.scene)
+        tip.attachToBone(boneNode, this.parent!.node)
+
+        // Position the tip at the weapon tip position from the codebook data and scale it according to the weapon scale
+        const p = this.type.cbData.weaponTipPosition!
+        const s = this.parent?.parent.mobType.weapon?.scale ?? Vector3.One()
+        tip.position.set(
+            p.x * s.x,
+            p.y * s.y,
+            p.z * s.z
+        )
+        const trail = new TrailMesh('swordTrail', tip, Renderer.scene, 0.3, 60, true)
+        trail.material = Materials.weaponTrailMaterial
+        trail.setEnabled(false)
+        return trail
+    }
 }
 
+/**
+ * One mesh-type for each equipable item
+ *
+ * The mesh contains thin instances for each equipped item of this type
+ */
 export class MobEquipItemType {
     id: number
     name: string = ""
@@ -88,13 +118,15 @@ export class MobEquipItemType {
         source.rotation = rotation
         source.scaling = scale
         this.mesh = Mesh.MergeMeshes([source], true)!
-
-
         this.mesh.setEnabled(false)
         this.mesh.alwaysSelectAsActiveMesh = true
         this.mesh.parent = parentNode
     }
 
+    /**
+     * Update the count of thin instances for this item type
+     * When count is zero, the mesh is disabled to save performance
+     */
     updateCount(count: number) {
         this.count = count
         this.instanceBuffer = new Float32Array(16 * count)
@@ -112,11 +144,14 @@ export class MobEquipItemType {
     }
 }
 
+/**
+ * Every item type has a single mesh with thin instances for each equipped item
+ *
+ * On each frame, the instance buffer is updated with the position and rotation of each equipped item
+ */
 export const MobEquipManager = {
     itemTypes: new Map<number, MobEquipItemType>(),
     equippedItems: new Map<MobEquipItemType, Set<MobEquipItem>>(),
-
-    colorVec: new Vector2(0, 0),
 
     async initialize(scene: Scene) {
         await MobWeaponsCbManager.initMelee(this.itemTypes, scene)
@@ -132,6 +167,9 @@ export const MobEquipManager = {
     },
 
     removeEquippedItem(item: MobEquipItem) {
+        if (item.weaponTrail) {
+            item.weaponTrail.setEnabled(false)
+        }
         this.equippedItems.get(item.type)?.delete(item)
         item.type.updateCount(this.equippedItems.get(item.type)!.size)
     },

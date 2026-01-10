@@ -21,5 +21,7 @@ export const MobWeaponsCbManager = {
 }
 
 export const MobWeaponsCb = {
-   LONGSWORD: new MobEquipItemData(1, "sword_steel", "longsword_steel","", Vector3.Zero(), new Vector3(Math.PI / 2, Math.PI / 2, 0), new Vector3(1.5, 1, 1) , 0, 0),
+   LONGSWORD: new MobEquipItemData(1, "sword_steel", "longsword_steel","",
+       Vector3.Zero(), new Vector3(Math.PI / 2, Math.PI / 2, 0), new Vector3(1.5, 1, 1) , 0, 0, false,
+       new Vector3(0, 10.5, 0)),
 }

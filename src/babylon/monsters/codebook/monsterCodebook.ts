@@ -148,7 +148,7 @@ export const MonsterTypes = {
         WeaponSoundTypes.BONE, BodySoundTypes.HARD, null),
     WITHER_CHAMPION: new MonsterType( 11, MonsterGroups.WITHER, 2, 'Wither Champion', 0.6, 1.8,4, new MonsterEquipData([1], 0.15, 0),null, null,
         WeaponSoundTypes.SWORD, BodySoundTypes.HARD, WeaponSoundTypes.SWORD),
-    WITHER_KNIGHT: new MonsterType( 12, MonsterGroups.WITHER, 2, 'Wither Knight', 0.6, 1.8,  4, new MonsterEquipData([1], 0.15, 0), new MonsterEquipData([1850], undefined, 9), new MonsterEquipData([1100], undefined, 9),
+    WITHER_KNIGHT: new MonsterType( 12, MonsterGroups.WITHER, 2, 'Wither Knight', 0.6, 1.8,  4, new MonsterEquipData([1], 0.2, 0), new MonsterEquipData([1850], undefined, 9), new MonsterEquipData([1100], undefined, 9),
         WeaponSoundTypes.SWORD, BodySoundTypes.HARD, WeaponSoundTypes.SWORD),
 
     HOUSE_CAT : new MonsterType( 1001, MonsterGroups.CAT,  4,'House Cat', 0.6, 1, 6, null,null,  null,

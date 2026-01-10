@@ -1,7 +1,7 @@
 import {
     Scene,
     Color3,
-    Texture, Vector2, PBRMaterial,
+    Texture, Vector2, PBRMaterial, StandardMaterial,
 } from '@babylonjs/core'
 import { PBRCustomMaterial } from '@babylonjs/materials'
 import { MapBlock } from '@/data/worldDataManager'
@@ -16,7 +16,6 @@ export interface PBRBasicAtts {
 export const Materials = {
     BASE_PATH: './images/materials/',
 
-    sceneEmissiveColor: new Color3(0.15, 0.15, 0.15),
     terrainMaterial: null as PBRCustomMaterial | null,
     planeMaterial: null as PBRCustomMaterial | null,
     stepMarksMaterial: null as PBRCustomMaterial | null,
@@ -25,6 +24,7 @@ export const Materials = {
     blockMat1: null as PBRCustomMaterial | null,
 
     waterMaterial: null as PBRMaterial | null,
+    weaponTrailMaterial: null as StandardMaterial | null,
 
     initialize(scene: Scene) {
         this.terrainMaterial = this.createTerrainMaterial1(scene)
@@ -33,6 +33,7 @@ export const Materials = {
         this.blockMatAlpha1 = this.createBlockMatAlpha1(scene)
         this.waterMaterial = this.createWaterMaterial(scene)
         this.stepMarksMaterial = this.createStepMarksMaterial(scene)
+        this.weaponTrailMaterial = this.createWeaponTrailMaterial(scene)
     },
 
     createTerrainMaterial1(scene: Scene): PBRCustomMaterial {
@@ -66,6 +67,15 @@ export const Materials = {
     createBlockMatAlpha1(scene: Scene): PBRCustomMaterial {
         const material = this.getPBRCustomMaterial(scene, "sym_block_mats_alpha1", this.BASE_PATH, 'block_materials_alpha1.png', 1 / 8, 1 / 8, true)
         return material
+    },
+
+    createWeaponTrailMaterial(scene: Scene): StandardMaterial {
+        const mat = new StandardMaterial('swordTrailMat', scene)
+        mat.disableLighting = true
+        mat.emissiveColor = new Color3(1, 1, 1)
+        mat.alpha = 0.25
+        mat.freeze()
+        return mat
     },
 
     getPBRMaterial(scene: Scene, name: string, pathToAlbedo: string, hasAlpha: boolean = false, invertY: boolean, options: PBRBasicAtts): PBRMaterial {

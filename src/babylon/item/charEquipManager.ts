@@ -1,6 +1,6 @@
 import {
     Color3,
-    Color4,
+    Color4, GPUParticleSystem,
     Mesh, MeshBuilder, ParticleSystem, PBRMaterial,
     Quaternion,
     Scene,
@@ -217,12 +217,12 @@ export const CharEquipManager = {
         }
         weapon.parent = node
         weapon.setEnabled(true)
-        weapon.trailMesh = this.createSwordTrail(node)
+        weapon.trailMesh = this.createWeaponTrail(node)
         this.createSwordParticles(node)
         owner.weaponMesh = weapon
     },
 
-    createSwordTrail(boneNode: TransformNode): TrailMesh {
+    createWeaponTrail(boneNode: TransformNode): TrailMesh {
         const tip = new TransformNode('swordTip', Renderer.scene)
         tip.parent = boneNode
         tip.position = new Vector3(0, 3.5, 0)
@@ -238,50 +238,46 @@ export const CharEquipManager = {
         return trail
     },
 
-     createSwordParticles(boneNode: TransformNode) {
-         const emitter = new TransformNode('swordSmearEmitter', Renderer.scene)
-         emitter.parent = boneNode
-         emitter.position = new Vector3(0, 2.8, 0)
+    createSwordParticles(boneNode: TransformNode) {
+        const emitter = new TransformNode('swordSmearEmitter', Renderer.scene)
+        emitter.parent = boneNode
+        emitter.position = new Vector3(0, 2.8, 0)
 
-         const ps = new ParticleSystem('swordSmear', 400, Renderer.scene)
-         ps.particleTexture = new Texture('images/gfx/flare.png', Renderer.scene)
+        const ps = new GPUParticleSystem("charWeaponParticles", {
+            capacity: 500
+        }, Renderer.scene);
+        ps.particleTexture = new Texture('images/gfx/flare-rect.png', Renderer.scene)
 
-         ps.createBoxEmitter(
-         new Vector3(0, 0, 0), // direction1
-         new Vector3( 0, 0,  0), // direction2
-         new Vector3(-0.2, -1, -0.2), // minEmitBox
-         new Vector3( 0.2,  1,  0.2)  // maxEmitBox
-         )
+        ps.createBoxEmitter(
+            Vector3.Zero(),
+            Vector3.Zero(),
+            new Vector3(-0.02, -1, -0.15),
+            new Vector3( 0.02,  1,  0.15)
+        )
 
-         ps.addSizeGradient(0, 0.1, 0.25) // start: min/max
-         ps.addSizeGradient(1, 0.1, 0.1) // konec: min/max
+        ps.addSizeGradient(0, 0.075)
+        ps.addSizeGradient(1, 0.04)
 
-         ps.minLifeTime = 0.4
-         ps.maxLifeTime = 0.6
+        ps.minLifeTime = 0.4
+        ps.maxLifeTime = 0.6
 
-         ps.emitRate = 400
-         ps.blendMode = ParticleSystem.BLENDMODE_ONEONE
+        ps.emitRate = 300
+        ps.blendMode = ParticleSystem.BLENDMODE_ONEONE
 
-         ps.direction1 = BabylonUtils.getSymVector(-2)
-         ps.direction2 = BabylonUtils.getSymVector(2)
-         ps.minEmitPower = 0.2
-         ps.maxEmitPower = 0.5
-         ps.updateSpeed = 0.02
+        ps.direction1 = BabylonUtils.getSymVector(-2)
+        ps.direction2 = BabylonUtils.getSymVector(2)
+        ps.minEmitPower = 0.2
+        ps.maxEmitPower = 0.5
+        ps.updateSpeed = 0.02
 
-         // Gravity upwards
-         ps.gravity = new Vector3(0, 2, 0)
-         ps.addColorGradient(0, new Color4(0.8, 0.3, 0.1, 0.5))
-         ps.addColorGradient(0.8, new Color4(0.1, 0.05, 0.01, 0.2))
-         ps.addColorGradient(1, new Color4(0.1, 0.05, 0.01, 0.00))
-
-         /**
-         ps.addColorGradient(0, new Color4(0, 0.3, 0.8, 0.5))
-         ps.addColorGradient(0.8, new Color4(0.0, 0.1, 0.25, 0.2))
-         ps.addColorGradient(1, new Color4(0, 0.1, 0.25, 0.00))*/
-
-         ps.emitter = emitter
-         ps.start()
-     },
+        // Gravity upwards
+        ps.gravity = new Vector3(0, 2, 0)
+        ps.addColorGradient(0, new Color4(0.8, 0.3, 0.1, 0.5))
+        ps.addColorGradient(0.8, new Color4(0.1, 0.05, 0.01, 0.2))
+        ps.addColorGradient(1, new Color4(0.1, 0.05, 0.01, 0.00))
+        ps.emitter = emitter
+        ps.start()
+    },
 
     async loadWeaponModel(weaponTypelId: number): Mesh | null {
         const modelData: CharWearableItemModel = CharWeaponsCbManager.weaponModels.get(weaponTypelId)!

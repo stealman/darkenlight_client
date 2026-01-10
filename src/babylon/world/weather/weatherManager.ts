@@ -40,7 +40,7 @@ class SnowEffect implements WeatherEffect {
             capacity: 25000
         }, scene);
 
-        snow.particleTexture = new Texture("images/gfx/flare.png", scene);
+        snow.particleTexture = new Texture("images/gfx/flare-rect.png", scene);
         snow.minEmitBox = new Vector3(-20, 5, -20);
         snow.maxEmitBox = new Vector3(20, 7, 20);
 
@@ -53,8 +53,8 @@ class SnowEffect implements WeatherEffect {
         snowEmitter.parent = MyPlayer.charModel?.node
         snow.emitter = snowEmitter;
 
-        snow.minSize = 0.03;
-        snow.maxSize = 0.1;
+        snow.minSize = 0.02;
+        snow.maxSize = 0.065;
 
         snow.addColorGradient(0, new Color4(1, 1, 1, 0.3))
         snow.addColorGradient(1, new Color4(1, 1, 1, 0))

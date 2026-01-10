@@ -4,7 +4,7 @@ import {
     Vector3,
     FreeCamera,
     ShadowGenerator, Color3, Color4, SceneInstrumentation, DirectionalLight, Mesh,
-    AbstractMesh, CubeTexture, DracoCompression, HighlightLayer, GlowLayer,
+    AbstractMesh, CubeTexture, DracoCompression
 } from '@babylonjs/core'
 import {UnwrapRef} from "vue"
 import '@babylonjs/inspector'
@@ -20,13 +20,11 @@ import { ViewportManager } from '@/utils/viewport'
 import { CharEquipManager } from '@/babylon/item/charEquipManager'
 import { MonsterManager } from '@/babylon/monsters/monsterManager'
 import { Data } from '@/data/globalData'
-import { MonsterLoader } from '@/babylon/monsters/monsterLoader'
 import { Connector } from '@/network/connector'
 import { MobEquipManager } from '@/babylon/item/mobEquipManager'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { WeatherManager } from '@/babylon/world/weather/weatherManager'
-import { GMManager, GmTabs } from '@/gm/GM'
-import { GMSpawns } from '@/gm/GmSpawns'
+import { GMManager} from '@/gm/GM'
 import { OverlayManager } from '@/gui/overlayManager'
 import { TargetingManager } from '@/gui/targettingManager'
 import { StepMarksRenderer } from '@/babylon/world/stepMarksRenderer'
@@ -45,8 +43,8 @@ export const Renderer = {
     fps: 0 as number,
     frame: 0 as number,
 
-    // Animations run 25 FPS
-    animationFrameTime: 40 as number,
+    // Animations run 50 FPS
+    animationFrameTime: 20 as number,
     animationSpeedRatio: 1 as number,
     animationFrame: 0 as number,
     lastFrameTime: 0 as number,
@@ -74,9 +72,9 @@ export const Renderer = {
         this.animationSpeedRatio = this.animationFrameTime / 25
         this.sunLight = new DirectionalLight("sunLight", new Vector3(-0.75, -0.75, 0.3), this.scene)
         this.sunLight.position = new Vector3(40, 40, 40);
-        this.sunLight.intensity = 0.2
-        this.sunLight.diffuse = new Color3(1, 0.91, 0.74)
-        //this.sunLight.setEnabled(false)
+        this.sunLight.intensity = 0.3
+        this.sunLight.diffuse = new Color3(1, 0.91, 0.78)
+        //this.sunLight.diffuse = new Color3(0.82, 0.91, 1)
 
         if (Settings.shadows) {
             this.shadow = new ShadowGenerator(4096, this.sunLight, false)
@@ -192,7 +190,7 @@ export const Renderer = {
                 if (this.lastAnimationFrameTime > 0) {
                     timeExceeded = actualTime - this.lastAnimationFrameTime - this.animationFrameTime
                 }
-                MonsterManager.onAnimFrame()
+                MonsterManager.onAnimFrame(timeRate)
                 this.lastAnimationFrameTime = actualTime - timeExceeded
                 this.animationFrame++
             }
@@ -281,7 +279,7 @@ export const Renderer = {
             "environment_specular.env",
             this.scene
         );
-        this.scene.environmentIntensity = 0.2
+        this.scene.environmentIntensity = 0.3
     },
 
     actualizeDebug() {

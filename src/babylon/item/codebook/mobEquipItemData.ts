@@ -11,8 +11,9 @@ export class MobEquipItemData {
     matsX: number
     matsY: number
     hasAlpha: boolean
+    weaponTipPosition: Vector3 | null = null
 
-    constructor(id: number, name: string, model: string | null, materialSetName: string, pos: Vector3, rot: Vector3, scale: Vector3, matsX: number, matsY: number, hasAlpha: boolean = false) {
+    constructor(id: number, name: string, model: string | null, materialSetName: string, pos: Vector3, rot: Vector3, scale: Vector3, matsX: number, matsY: number, hasAlpha: boolean, weaponTipPosition: Vector3 | null) {
         this.id = id
         this.name = name
         this.model = model? model : name
@@ -23,5 +24,6 @@ export class MobEquipItemData {
         this.matsX = matsX
         this.matsY = matsY
         this.hasAlpha = hasAlpha
+        this.weaponTipPosition = weaponTipPosition
     }
 }

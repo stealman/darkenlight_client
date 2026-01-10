@@ -23,23 +23,29 @@ export class MeshAnimation {
 
     onAnimFrame() {
         if (this.running) {
-            this.animation.goToFrame(this.fromFrame + this.actualFrame % (this.toFrame - this.fromFrame))
+            const range = this.toFrame - this.fromFrame
+            const local = this.loop
+                ? (this.actualFrame % range)
+                : Math.min(this.actualFrame, range)
+
+            this.animation.goToFrame(this.fromFrame + local)
             this.actualFrame += Renderer.animationSpeedRatio * this.speed
 
-            if (!this.loop && this.actualFrame >= this.toFrame) {
+            if (!this.loop && this.actualFrame >= range) {
                 this.stop()
             }
 
             if (this.weightChange !== 0) {
-                this.weight += this.weightChange
+                this.weight = Math.max(0, Math.min(1, this.weight + this.weightChange))
 
-                if (this.weight < Math.abs(this.weightChange)) {
+                this.animation.setWeightForAllAnimatables(this.weight)
+
+                if (this.weight === 0 && this.weightChange < 0) {
                     this.stop()
-                } else if (this.weight > 1) {
-                    this.weight = 1
+                }
+                if (this.weight === 1 && this.weightChange > 0) {
                     this.weightChange = 0
                 }
-                this.animation.setWeightForAllAnimatables(this.weight)
             }
         }
     }
@@ -47,7 +53,9 @@ export class MeshAnimation {
     start(fadeIn: boolean, speed: number = 1, loop: boolean = false) {
         this.speed = speed
         this.loop = loop
-        this.actualFrame = this.fromFrame
+        this.actualFrame = 0
+        this.animation.goToFrame(this.fromFrame)
+
         this.running = true
         this.weightChange = 0
 

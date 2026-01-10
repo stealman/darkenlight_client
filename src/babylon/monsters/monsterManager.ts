@@ -6,10 +6,10 @@ import { MonsterCodebook, MonsterType } from '@/babylon/monsters/codebook/monste
 import { ViewportManager } from '@/utils/viewport'
 import { Data } from '@/data/globalData'
 import { TargetingManager } from '@/gui/targettingManager'
-import { AudioManager } from '@/babylon/audio/audioManager'
 
 export const MonsterManager = {
     monsters: new Map as Map<number, Monster>,
+    killedMonsters: new Set<Monster>,
     visibleMonsters: new Set<number>(),
 
     async initialize (scene: Scene) {
@@ -43,12 +43,21 @@ export const MonsterManager = {
         }
     },
 
-    removeMonster (id: number) {
+    removeMonster (id: number, killerId: number) {
         if (this.monsters.has(id)) {
             const mob = this.monsters.get(id)
+            if (!mob) {
+                return
+            }
+
+            if (killerId != null && this.visibleMonsters.has(id)) {
+                this.monsterKilled(mob)
+            } else {
+                mob.removeModel()
+            }
+
             this.visibleMonsters.delete(id)
             this.monsters.delete(id)
-            mob!.removeMonster()
             if (mob === TargetingManager.selectedTarget) {
                 TargetingManager.unselectTarget()
             }
@@ -89,6 +98,12 @@ export const MonsterManager = {
         }
     },
 
+    monsterKilled(mob: Monster) {
+        mob.killedTime = Date.now()
+        mob.model.doDie()
+        this.killedMonsters.add(mob)
+    },
+
     onFrame(timeRate: number, actualTime: number, frame: number) {
         if (frame % 10 === 0) {
             this.updateVisibleMonsters()
@@ -100,11 +115,22 @@ export const MonsterManager = {
         this.monsters.forEach(monster => {
             monster.onFrame(timeRate, actualTime)
         })
+
+        this.killedMonsters.forEach(monster => {
+            if (actualTime - monster.killedTime > 3000) {
+                monster.removeModel()
+                this.killedMonsters.delete(monster)
+            }
+        })
     },
 
-    onAnimFrame() {
+    onAnimFrame(timeRate: number) {
         this.monsters.forEach(monster => {
-            monster.onAnimFrame()
+            monster.onAnimFrame(timeRate)
+        })
+
+        this.killedMonsters.forEach(monster => {
+            monster.onAnimFrame(timeRate)
         })
     },
 
