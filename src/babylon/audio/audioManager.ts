@@ -4,14 +4,14 @@ import { Utils } from '@/utils/utils'
 export const AudioManager = {
     BASE_PATH: './sounds/',
     BASE_PATH_SFX: './sounds/sfx/',
+    BASE_PATH_MONSTER: './sounds/monster/',
     footStepSounds: new Map<string, Sound>(),
+    deathRattleSounds: new Map<string, Sound>(),
 
     swordSwingSounds: [] as Sound[],
-
     swordHitHardSounds: [] as Sound[],
     swordHitMetalSounds: [] as Sound[],
     boneHitSounds: [] as Sound[],
-
     swordBlockSounds: [] as Sound[],
 
     initialize(scene: Scene) {
@@ -30,12 +30,14 @@ export const AudioManager = {
             playbackRate: 1,
             loop: true,
         }))
-
         this.loadSoundArray(this.swordSwingSounds, ["swing1.ogg", "swing2.ogg", "swing3.ogg"], "swordSwingSound", scene, { volume: 1, playbackRate: 1 } );
         this.loadSoundArray(this.swordHitMetalSounds, ["hit-sword-metal1.ogg"], "swordHitMetalSound", scene, { volume: 0.5, playbackRate: 1 } );
         this.loadSoundArray(this.swordHitHardSounds, ["hit-sword-hard1.ogg", "hit-sword-hard2.ogg"], "swordHitHardSound", scene, { volume: 0.5, playbackRate: 1.1 } );
         this.loadSoundArray(this.swordBlockSounds, ["block-sword1.ogg", "block-sword2.ogg"], "swordBlockSound", scene, { volume: 0.5, playbackRate: 0.9 } );
         this.loadSoundArray(this.boneHitSounds, ["hit-bone1.ogg"], "boneHitSound", scene, { volume: 0.5, playbackRate: 1 } );
+
+        // Death rattles
+        this.loadDeathRattleSound(MonsterSoundTypes.SKELETON, "death-skeleton.ogg", scene, { volume: 1.2, playbackRate: 0.85 } );
     },
 
     loadSoundArray(targetArray: [Sound], fileNames: string[], soundName: string, scene: Scene, options: { volume: number, playbackRate: number }): Sound[] {
@@ -45,6 +47,13 @@ export const AudioManager = {
             }, options);
             targetArray.push(sound);
         });
+    },
+
+    loadDeathRattleSound (type: string, fileName: string, scene: Scene, options: { volume: number, playbackRate: number }) {
+        const sound = new Sound("deathRattle" + type, AudioManager.BASE_PATH_MONSTER + fileName, scene, function() {
+            sound['loaded'] = true;
+        }, options);
+        this.deathRattleSounds.set(type, sound);
     },
 
     playWeaponSwing(type: string) {
@@ -90,6 +99,13 @@ export const AudioManager = {
             sound.play();
         }
     },
+
+    playDeathRattle(type: string) {
+        const sound = this.deathRattleSounds.get(type)!
+        if (sound['loaded']) {
+            sound.play();
+        }
+    }
 }
 
 export const FootStepTypes = {
@@ -113,4 +129,8 @@ export const BodySoundTypes = {
     HARD: 'HARD',
     SOFT: 'SOFT',
     METAL: 'METAL',
+}
+
+export const MonsterSoundTypes = {
+    SKELETON: 'SKELETON',
 }

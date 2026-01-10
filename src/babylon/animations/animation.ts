@@ -17,6 +17,7 @@ export class MeshAnimation {
         this.animation = animGroup
         this.animation.play(true)
         this.animation.pause()
+        this.animation.setWeightForAllAnimatables(0)
         this.fromFrame = fromFrame
         this.toFrame = toFrame
     }
@@ -39,7 +40,6 @@ export class MeshAnimation {
                 this.weight = Math.max(0, Math.min(1, this.weight + this.weightChange))
 
                 this.animation.setWeightForAllAnimatables(this.weight)
-
                 if (this.weight === 0 && this.weightChange < 0) {
                     this.stop()
                 }
@@ -61,7 +61,7 @@ export class MeshAnimation {
 
         if (fadeIn) {
             this.weight = 0
-            this.weightChange = 0.2
+            this.weightChange = 0.1
         } else {
             this.weight = 1
             this.animation.setWeightForAllAnimatables(this.weight)
@@ -76,7 +76,7 @@ export class MeshAnimation {
     }
 
     fadeOut() {
-        this.weightChange = -0.2
+        this.weightChange = -0.1
     }
 }
 

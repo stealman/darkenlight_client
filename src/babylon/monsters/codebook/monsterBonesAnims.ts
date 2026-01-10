@@ -32,7 +32,8 @@ export const MonsterBonesAnims = {
     initCat(model: MonsterModel) {
         const animations = [
             { name: "Idle", startFrame: 0, endFrame: 75 },
-            { name: "Walk", startFrame: 76, endFrame: 225 }
+            { name: "Walk", startFrame: 76, endFrame: 225 },
+            { name: "Attack", startFrame: 226, endFrame: 300 },
         ]
 
         const groups = animations.map(({ name, startFrame, endFrame }) => {
@@ -41,5 +42,6 @@ export const MonsterBonesAnims = {
 
         model.idleAnim = groups[0]
         model.walkAnim = groups[1]
+        model.attackAnims = [groups[2]]
     }
 }

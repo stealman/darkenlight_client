@@ -12,7 +12,7 @@ import { MobEquipItem, MobEquipManager } from '@/babylon/item/mobEquipManager'
 import { Utils } from '@/utils/utils'
 import { Renderer } from '@/babylon/scene/renderer'
 import { WorldDataManager } from '@/data/worldDataManager'
-import { FootStepTypes } from '@/babylon/audio/audioManager'
+import { AudioManager, FootStepTypes, MonsterSoundTypes } from '@/babylon/audio/audioManager'
 import { TerrainManager } from '@/babylon/world/terrainManager'
 
 export class MonsterModel {
@@ -75,6 +75,9 @@ export class MonsterModel {
         this.nameTextNode.parent = this.node
         this.nameTextNode.position.y = this.parent.getModelHeight() / this.template.scale.y
         this.initialized = true
+
+        this.node.position.x = this.parent.pos.x
+        this.node.position.z = this.parent.pos.z
     }
 
     assignRhand(type: number, matIndex: number, scale = new Vector3(1, 1, 1)) {
@@ -110,7 +113,6 @@ export class MonsterModel {
     onAnimFrame() {
         if (this.activeAnims.size > 0) {
             this.skeleton.prepare()
-
             this.activeAnims.forEach(anim => {
                 anim.onAnimFrame()
                 if (!anim.running) {
@@ -188,23 +190,31 @@ export class MonsterModel {
     }
 
     doAttackMelee(dur: number) {
+        if (this.attackAnims.length === 0) {
+            console.warn('MonsterModel.doAttackMelee called but no attack animations are assigned!')
+            return
+        }
         this.transitionToAnimation(this.attackAnims[Utils.rollDice(this.attackAnims.length, true)], true, false, 1500 / dur)
         this.setWeaponTrailEnabled(true)
     }
 
     doWalk() {
+        console.log('MonsterModel.doWalk')
         this.transitionToAnimation(this.walkAnim!, true, true, this.parent.mobType.walkAnimSpeed)
     }
 
     doIdle() {
+        console.log('MonsterModel.doIdle')
         this.transitionToAnimation(this.idleAnim!, true, true, 1.0)
     }
 
     doDie() {
-        this.isDying = true
         this.transitionToAnimation(this.deadAnim!, false, false, 2.5)
+
+        this.isDying = true
         this.disposeWeaponTrail()
         this.fadeOutTimer = new Date().getTime() + 525
+        AudioManager.playDeathRattle(MonsterSoundTypes.SKELETON)
     }
 
     transitionToAnimation(target: MeshAnimation, fadeIn: boolean = false, loop = false, speed = 1.0) {
