@@ -117,7 +117,8 @@ export const MonsterManager = {
         })
 
         this.killedMonsters.forEach(monster => {
-            if (actualTime - monster.killedTime > 3000) {
+            monster.model.onFrame(timeRate, actualTime)
+            if (actualTime - monster.killedTime > 4000) {
                 monster.removeModel()
                 this.killedMonsters.delete(monster)
             }

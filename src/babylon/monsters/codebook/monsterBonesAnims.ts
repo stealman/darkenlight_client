@@ -14,7 +14,8 @@ export const MonsterBonesAnims = {
             { name: "Idle", startFrame: 0, endFrame: 75 },
             { name: "Walk", startFrame: 76, endFrame: 225 },
             { name: "Attack", startFrame: 226, endFrame: 300 },
-            { name: "AttackSlash", startFrame: 326, endFrame: 400 }
+            { name: "AttackSlash", startFrame: 326, endFrame: 400 },
+            { name: "Dead", startFrame: 426, endFrame: 500 }
         ]
 
         const groups = animations.map(({ name, startFrame, endFrame }) => {
@@ -23,9 +24,8 @@ export const MonsterBonesAnims = {
 
         model.idleAnim = groups[0]
         model.walkAnim = groups[1]
-        model.attackAnim = groups[2]
-        model.attackAnim2 = groups[3]
-
+        model.attackAnims = [groups[2], groups[3]]
+        model.deadAnim = groups[4]
         MonsterCodebook.initEquip(model)
     },
 

@@ -1,5 +1,5 @@
-import { WorldDataManager } from '@/data/worldDataManager'
-import { Matrix, Mesh, Scene } from '@babylonjs/core'
+import { MapBlock, WorldDataManager } from '@/data/worldDataManager'
+import { Color4, Matrix, Mesh, ParticleSystem, Scene } from '@babylonjs/core'
 import { BabylonUtils } from '@/babylon/utils'
 import { Builder } from '@/babylon/builder'
 import { Materials, PlaneEnum1, TerrainEnum1 } from '@/babylon/materials'
@@ -112,5 +112,28 @@ export const TerrainManager = {
         this.terrainBlock1!.thinInstanceSetBuffer("uvc", BabylonUtils.createUvBuffer(terrainUvData1), 2)
         this.terrainPlane!.thinInstanceSetBuffer("matrix", BabylonUtils.createPositionBuffer(planeMatrices), 16)
         this.terrainPlane!.thinInstanceSetBuffer("uvc", BabylonUtils.createUvBuffer(planeUvData), 2)
+    },
+
+    setParticleSplashColorByTerrainType(ps: ParticleSystem, block: MapBlock) {
+        if (block.snowed) {
+            ps.color1 = new Color4(0.9, 0.85, 0.9, 1)
+            ps.color2 = new Color4(0.8, 0.85, 0.9, 1)
+            ps.colorDead = new Color4(0.6, 0.6, 0.7, 0.3)
+        } else if (block.type) {
+            // ROCK
+            ps.color1 = new Color4(0.4, 0.35, 0.4, 1)
+            ps.color2 = new Color4(0.3, 0.35, 0.4, 1)
+            ps.colorDead = new Color4(0.2, 0.2, 0.2, 0.3)
+        } else if (block.type) {
+            // MUDDY DIRT
+            ps.color1 = new Color4(0.45, 0.35, 0.25, 1)
+            ps.color2 = new Color4(0.35, 0.25, 0.15, 1)
+            ps.colorDead = new Color4(0.2, 0.2, 0.2, 0.3)
+        } else {
+            // DEFAULT DIRT
+            ps.color1 = new Color4(0.6, 0.5, 0.4, 1)
+            ps.color2 = new Color4(0.5, 0.4, 0.3, 1)
+            ps.colorDead = new Color4(0.3, 0.3, 0.3, 0.3)
+        }
     }
 }

@@ -1,7 +1,7 @@
 import {
-    AnimationGroup, Bone, Matrix,
-    Mesh, PBRMaterial, Quaternion,
-    Skeleton, TransformNode, Vector3,
+    AnimationGroup, Bone, Color4, Matrix,
+    Mesh, ParticleSystem, PBRMaterial, Quaternion,
+    Skeleton, Texture, TransformNode, Vector3, Vector4,
 } from '@babylonjs/core'
 import { Monster } from '@/babylon/monsters/monster'
 import { MonsterLoader } from '@/babylon/monsters/monsterLoader'
@@ -9,6 +9,11 @@ import { MonsterCodebook, MonsterType } from '@/babylon/monsters/codebook/monste
 import { MeshAnimation } from '@/babylon/animations/animation'
 import { MonsterTemplate } from '@/babylon/monsters/codebook/monsterTemplates'
 import { MobEquipItem, MobEquipManager } from '@/babylon/item/mobEquipManager'
+import { Utils } from '@/utils/utils'
+import { Renderer } from '@/babylon/scene/renderer'
+import { WorldDataManager } from '@/data/worldDataManager'
+import { FootStepTypes } from '@/babylon/audio/audioManager'
+import { TerrainManager } from '@/babylon/world/terrainManager'
 
 export class MonsterModel {
     parent: Monster
@@ -30,8 +35,8 @@ export class MonsterModel {
 
     idleAnim: MeshAnimation | undefined
     walkAnim: MeshAnimation | undefined
-    attackAnim: MeshAnimation | undefined
-    attackAnim2: MeshAnimation | undefined
+    attackAnims: MeshAnimation[] = []
+    deadAnim: MeshAnimation | undefined
     activeAnims: Set<MeshAnimation>
 
     weaponEquipItem: MobEquipItem | null = null
@@ -43,6 +48,7 @@ export class MonsterModel {
     headBone: Bone
 
     isDying: boolean = false
+    fadeOutTimer: number = 0
     originalMaterial: PBRMaterial | null = null
 
     constructor(monsterType: MonsterType, parent: Monster) {
@@ -113,21 +119,35 @@ export class MonsterModel {
             })
         }
 
-        if (this.isDying) {
+        // Dying fade out
+        if (this.isDying && this.fadeOutTimer > 0 && new Date().getTime() > this.fadeOutTimer) {
+            if (this.originalMaterial == null) {
+                this.originalMaterial = this.mesh.material as PBRMaterial
+                this.mesh.material = this.mesh.material!.clone(this.mesh.material!.name + '_dieClone')
+                this.mesh.material.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHATESTANDBLEND
+                this.mesh.material.alphaCutOff = 0.35
+
+                this.createDyingParticleEffect()
+            }
+
             this.mesh.material!.alpha -= 0.01
             if (this.mesh.material!.alpha < 0) {
                 this.mesh.material!.alpha = 0
             }
+            // burrow into the ground while fading out
+            this.node.position.y -= 0.003
         }
     }
 
     resolveMovement(timeRate: number) {
         // approximate to x and z position
-        this.node.position.x += (this.parent.pos.x - this.node.position.x) * 15 * timeRate
-        this.node.position.z += (this.parent.pos.z - this.node.position.z) * 15 * timeRate
+        if (!this.isDying) {
+            this.node.position.x += (this.parent.pos.x - this.node.position.x) * 15 * timeRate
+            this.node.position.z += (this.parent.pos.z - this.node.position.z) * 15 * timeRate
 
-        this.resolveModelYpos(timeRate)
-        this.resolveModelRotation(timeRate)
+            this.resolveModelYpos(timeRate)
+            this.resolveModelRotation(timeRate)
+        }
 
         // Actualize the world matrix immediately for equpped items to move with the model correctly
         this.mesh.computeWorldMatrix(true)
@@ -168,7 +188,7 @@ export class MonsterModel {
     }
 
     doAttackMelee(dur: number) {
-        this.transitionToAnimation(this.attackAnim2!, true, false, 1500 / dur)
+        this.transitionToAnimation(this.attackAnims[Utils.rollDice(this.attackAnims.length, true)], true, false, 1500 / dur)
         this.setWeaponTrailEnabled(true)
     }
 
@@ -182,9 +202,9 @@ export class MonsterModel {
 
     doDie() {
         this.isDying = true
-        this.originalMaterial = this.mesh.material as PBRMaterial
-        this.mesh.material = this.mesh.material!.clone(this.mesh.material!.name + '_dieClone')
-        this.mesh.material.alpha = 1
+        this.transitionToAnimation(this.deadAnim!, false, false, 2.5)
+        this.disposeWeaponTrail()
+        this.fadeOutTimer = new Date().getTime() + 525
     }
 
     transitionToAnimation(target: MeshAnimation, fadeIn: boolean = false, loop = false, speed = 1.0) {
@@ -236,10 +256,51 @@ export class MonsterModel {
         this.weaponEquipItem?.weaponTrail?.setEnabled(enabled)
     }
 
+    disposeWeaponTrail() {
+        this.weaponEquipItem?.weaponTrail?.dispose()
+    }
+
     getNameTextNodeWorldPosition(): Vector3 {
         const worldMatrix = this.nameTextNode.getWorldMatrix()
         const position = new Vector3()
         worldMatrix.decompose(undefined, undefined, position)
         return position
+    }
+
+    createDyingParticleEffect() {
+        const ps = new ParticleSystem('deathPoof', 256, Renderer.scene)
+        ps.particleTexture = new Texture("images/gfx/flare-rect.png", Renderer.scene);
+
+        // Set particle color based on terrain type
+        TerrainManager.setParticleSplashColorByTerrainType(ps, WorldDataManager.getBlockOnPosition(this.parent.pos)!)
+
+        const xOff = Math.sin(this.modelRotation + Math.PI / 2) * -0.75
+        const zOff = Math.cos(this.modelRotation + Math.PI / 2) * -0.75
+
+        const computedFallPosition = this.node.position
+        const emitter = new TransformNode('deathEmitter', Renderer.scene)
+        emitter.position.copyFrom(computedFallPosition)
+        ps.emitter = emitter
+
+        ps.minEmitBox = new Vector3(-0.7 + xOff  , -0.2, -0.7 + zOff)
+        ps.maxEmitBox = new Vector3(0.7 + xOff, 0.2, 0.7 + zOff)
+
+        ps.minLifeTime = 6
+        ps.maxLifeTime = 9
+        ps.minEmitPower = 0.15
+        ps.maxEmitPower = 0.4
+        ps.minSize = 0.12
+        ps.maxSize = 0.2
+
+        ps.direction1 = new Vector3(-0.8, 2.5, -0.8)
+        ps.direction2 = new Vector3(0.8, 4.0, 0.8)
+        ps.gravity = new Vector3(0, -1, 0)
+
+        ps.blendMode = ParticleSystem.BLENDMODE_STANDARD
+        ps.emitRate = 0
+        ps.manualEmitCount = 256
+
+        ps.disposeOnStop = true
+        ps.start()
     }
 }

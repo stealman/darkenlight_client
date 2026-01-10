@@ -69,7 +69,6 @@ export class Monster implements Attackable {
     }
 
     autoAttackFinished(data: any) {
-        console.log("Monster auto attack finished", data)
         AudioManager.playWeaponSwing(this.getWeaponSoundType())
         this.model.setWeaponTrailEnabled(false)
 
