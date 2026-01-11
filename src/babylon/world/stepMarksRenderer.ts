@@ -13,17 +13,17 @@ export const StepMarksRenderer = {
     initialize (scene: Scene) {
         this.stepMarkPlane = Builder.createHorizontalPlane(scene, null, 1, 0)
         this.stepMarkPlane.material = Materials.stepMarksMaterial
+        this.loadFromLocalStorage()
     },
-
 
     addStepMark(side: string, object: Targetable, yPos: number, rot: number, time: number, inCombat: boolean = false) {
         let tgtArray = null
-        let ttl = 120000
+        let ttl = 300000
         if (object === Data.myChar) {
             tgtArray = this.myStepMarks
         } else {
             tgtArray = this.mobStepMarks
-            ttl = 30000
+            ttl = 60000
         }
 
         if (tgtArray.length >= this.maxMarks) {
@@ -78,7 +78,49 @@ export const StepMarksRenderer = {
         this.stepMarkPlane.thinInstanceSetBuffer('matrix', buffer, 16)
         this.stepMarkPlane.thinInstanceSetBuffer('uvc', uvBuffer, 2)
         this.stepMarkPlane.thinInstanceRefreshBoundingInfo()
-    }
+    },
+
+    updateInLocalStorage() {
+        const stepMarksData = this.myStepMarks.map(mark => ({
+            pos: { x: mark.pos.x, y: mark.pos.y, z: mark.pos.z },
+            rot: mark.rot,
+            creationTime: mark.creationTime,
+            deadTime: mark.deadTime
+        }))
+        localStorage.setItem('myStepMarks', JSON.stringify(stepMarksData))
+
+        const mobStepMarksData = this.mobStepMarks.map(mark => ({
+            pos: { x: mark.pos.x, y: mark.pos.y, z: mark.pos.z },
+            rot: mark.rot,
+            creationTime: mark.creationTime,
+            deadTime: mark.deadTime
+        }))
+        localStorage.setItem('mobStepMarks', JSON.stringify(mobStepMarksData))
+    },
+
+    loadFromLocalStorage() {
+        const storedMyStepMarks = localStorage.getItem('myStepMarks')
+        if (storedMyStepMarks) {
+            const parsedMarks = JSON.parse(storedMyStepMarks)
+            this.myStepMarks = parsedMarks.map((markData: any) => new StepMark(
+                new Vector3(markData.pos.x, markData.pos.y, markData.pos.z),
+                markData.rot,
+                markData.creationTime,
+                markData.deadTime - markData.creationTime
+            ))
+        }
+
+        const storedMobStepMarks = localStorage.getItem('mobStepMarks')
+        if (storedMobStepMarks) {
+            const parsedMarks = JSON.parse(storedMobStepMarks)
+            this.mobStepMarks = parsedMarks.map((markData: any) => new StepMark(
+                new Vector3(markData.pos.x, markData.pos.y, markData.pos.z),
+                markData.rot,
+                markData.creationTime,
+                markData.deadTime - markData.creationTime
+            ))
+        }
+    },
 }
 
 class StepMark {

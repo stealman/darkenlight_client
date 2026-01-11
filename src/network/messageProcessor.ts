@@ -9,6 +9,7 @@ import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { StaticsManager } from '@/babylon/world/staticsManager'
 import { GMSpawns } from '@/gm/GmSpawns'
 import { MyPlayer } from '@/babylon/character/myPlayer'
+import { FightSplatsRenderer } from '@/babylon/world/fightSplatsRenderer'
 
 export const MessageProcessor = {
 
@@ -35,6 +36,7 @@ export const MessageProcessor = {
                 case 18: this.processMonsterAttack(msg.d); break
                 case 19: this.processCharacterAttackFinished(msg.d); break
                 case 20: this.processMonsterAttackFinished(msg.d); break
+                case 21: this.processAddFightSplats(msg.d); break
                 case 1003: this.processGMAllSpawns(msg.d); break
                 case 1004: this.processGMSpawnChange(msg.d); break
                 default:
@@ -97,10 +99,12 @@ export const MessageProcessor = {
         data.a.forEach(chunk => {
             TreeManager.consumeTrees(chunk.trees)
             StaticsManager.consumeObjects(chunk.statics)
+            FightSplatsRenderer.consumeSplats(chunk.splats)
         })
         data.r.forEach(chunk => {
             TreeManager.removeTrees(chunk.trees)
             StaticsManager.removeObjects(chunk.statics)
+            FightSplatsRenderer.removeSplats(chunk.splats)
         })
     },
 
@@ -150,6 +154,10 @@ export const MessageProcessor = {
 
     processMonsterAttackFinished(data) {
         MonsterManager.autoAttackFinished(data)
+    },
+
+    processAddFightSplats(data) {
+        FightSplatsRenderer.consumeSplats(data)
     },
 
     processGMAllSpawns(data) {

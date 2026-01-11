@@ -38,6 +38,7 @@ export const AudioManager = {
 
         // Death rattles
         this.loadDeathRattleSound(MonsterSoundTypes.SKELETON, "death-skeleton.ogg", scene, { volume: 1.2, playbackRate: 0.85 } );
+        this.loadDeathRattleSound(MonsterSoundTypes.CAT, "death-cat.ogg", scene, { volume: 0.6, playbackRate: 1 } );
     },
 
     loadSoundArray(targetArray: [Sound], fileNames: string[], soundName: string, scene: Scene, options: { volume: number, playbackRate: number }): Sound[] {
@@ -133,4 +134,5 @@ export const BodySoundTypes = {
 
 export const MonsterSoundTypes = {
     SKELETON: 'SKELETON',
+    CAT: 'CAT',
 }

@@ -4,6 +4,7 @@ import { BodySoundTypes, FootStepSpeeds, FootStepTypes, WeaponSoundTypes } from 
 import { WorldDataManager } from '@/data/worldDataManager'
 import { Attackable } from '@/GameManager'
 import { StepMarksRenderer } from '@/babylon/world/stepMarksRenderer'
+import { FightSplatTypes, SplatType } from '@/babylon/world/fightSplatsRenderer'
 
 export class PlayerData implements Attackable {
     id: number = 1
@@ -122,6 +123,10 @@ export class PlayerData implements Attackable {
 
     getParrySoundType(): string | null {
         return this.parrySoundType
+    }
+
+    getSplatType(): SplatType {
+        return FightSplatTypes.BLOOD
     }
 
     getFootStepSoundType(): string {

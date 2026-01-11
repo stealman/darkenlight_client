@@ -9,6 +9,7 @@ import { AudioManager } from '@/babylon/audio/audioManager'
 import { Attackable } from '@/GameManager'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { StepMarksRenderer } from '@/babylon/world/stepMarksRenderer'
+import { SplatType } from '@/babylon/world/fightSplatsRenderer'
 
 export class Monster implements Attackable {
     id: number
@@ -186,5 +187,9 @@ export class Monster implements Attackable {
 
     getParrySoundType(): string | null {
         return this.mobType.parrySoundType
+    }
+
+    getSplatType(): SplatType {
+        return this.mobType.splatType
     }
 }

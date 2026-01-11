@@ -51,7 +51,6 @@ export const WorldRenderer = {
 
     checkRenderWorld() {
         const pos = Data.myChar.getPositionRounded()
-
         if (this.lastPos == null || pos.x !== this.lastPos.x || pos.z !== this.lastPos.z) {
             if (ViewportManager.viewPortInitialized) {
                 WorldDataManager.fetchWorldDataIfNeeded()

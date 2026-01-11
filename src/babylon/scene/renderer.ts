@@ -28,6 +28,7 @@ import { OverlayManager } from '@/gui/overlayManager'
 import { TargetingManager } from '@/gui/targettingManager'
 import { StepMarksRenderer } from '@/babylon/world/stepMarksRenderer'
 import { Lights } from '@/babylon/scene/lights'
+import { FightSplatsRenderer } from '@/babylon/world/fightSplatsRenderer'
 
 /**
  * Main Renderer
@@ -41,11 +42,7 @@ export const Renderer = {
 
     fps: 0 as number,
     frame: 0 as number,
-
     animationSpeedRatio: 1 as number,
-    animationFrame: 0 as number,
-    lastFrameTime: 0 as number,
-    lastAnimationFrameTime: 0 as number,
 
     async initialize(canvasRef: UnwrapRef<HTMLCanvasElement>) {
         this.engine = new Engine(canvasRef, true)
@@ -76,6 +73,7 @@ export const Renderer = {
         WorldRenderer.initialize(this.scene)
         WeatherManager.initialize()
         StepMarksRenderer.initialize(this.scene)
+        FightSplatsRenderer.initialize(this.scene)
         await OverlayManager.initialize()
         await TargetingManager.initialize()
 
@@ -103,7 +101,6 @@ export const Renderer = {
             TargetingManager.prepareTargetSprite()
             WorldRenderer.lastPos = null
         })
-
         this.initialized = true
     },
 
@@ -111,14 +108,13 @@ export const Renderer = {
      * Main game loop
      */
     onFrame(scene: Scene) {
-        if (!this.initialized) {
-            return
-        }
+        if (!this.initialized) return
+
         this.frame++
         const actualTime = new Date().getTime()
         const timeRate = this.engine!.getDeltaTime() / 1000
         this.fps = Number.parseInt(this.engine!.getFps()!.toFixed());
-        
+
         if (this.frame > 1) {
             // Animation speeds are calculated to 60 FPS base
             this.animationSpeedRatio = timeRate * 60
@@ -131,14 +127,13 @@ export const Renderer = {
             TargetingManager.onFrame(timeRate, actualTime)
             OverlayManager.onFrame(timeRate, actualTime)
 
-            if (GMManager.gmPanelVisible) {
-                GMManager.onFrame(timeRate, actualTime)
-            }
+            if (GMManager.gmPanelVisible) GMManager.onFrame(timeRate, actualTime)
         }
 
         if (this.frame % 10 === 0) {
             this.actualizeDebug()
             StepMarksRenderer.update(timeRate, actualTime)
+            FightSplatsRenderer.update(timeRate, actualTime)
         }
 
         if (this.frame % 60 === 0) {
@@ -146,13 +141,14 @@ export const Renderer = {
             WeatherManager.update()
         }
 
+        if (this.frame % 600 === 0) {
+            StepMarksRenderer.updateInLocalStorage()
+        }
+
         Connector.processMessages(actualTime)
         scene.render()
 
-        if (!ViewportManager.viewPortInitialized) {
-            ViewportManager.calculateViewport(this.camera)
-        }
-        this.lastFrameTime = actualTime
+        if (!ViewportManager.viewPortInitialized) ViewportManager.calculateViewport(this.camera)
     },
 
     setCullingFrequency(scene: Scene, everyNFrames: number) {
@@ -185,12 +181,9 @@ export const Renderer = {
         this.scene.fogEnd = 50
         this.scene.fogColor = new Color3(0.2, 0.22, 0.24)
 
-        this.setCullingFrequency(this.scene, 50)
-
+        this.setCullingFrequency(this.scene, 30)
         this.scene.onAfterAnimationsObservable.add(() => {
-            if (this.frame > 1) {
-                CharEquipManager.onFrame()
-            }
+            if (this.frame > 1) CharEquipManager.onFrame()
         })
 
         this.scene.environmentTexture = CubeTexture.CreateFromPrefilteredData(

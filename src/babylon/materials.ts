@@ -19,6 +19,7 @@ export const Materials = {
     terrainMaterial: null as PBRCustomMaterial | null,
     planeMaterial: null as PBRCustomMaterial | null,
     stepMarksMaterial: null as PBRCustomMaterial | null,
+    fightSplatsMaterial: null as PBRCustomMaterial | null,
 
     blockMatAlpha1: null as PBRCustomMaterial | null,
     blockMat1: null as PBRCustomMaterial | null,
@@ -33,6 +34,7 @@ export const Materials = {
         this.blockMatAlpha1 = this.createBlockMatAlpha1(scene)
         this.waterMaterial = this.createWaterMaterial(scene)
         this.stepMarksMaterial = this.createStepMarksMaterial(scene)
+        this.fightSplatsMaterial = this.createFightSplatsMaterial(scene)
         this.weaponTrailMaterial = this.createWeaponTrailMaterial(scene)
     },
 
@@ -54,7 +56,20 @@ export const Materials = {
         texture.updateSamplingMode(Texture.NEAREST_NEAREST)
         mat.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHABLEND
         mat.useAlphaFromAlbedoTexture = true
-        mat.alpha = 0.3
+        mat.alpha = 0.4
+        mat.forceAlphaTest = false
+        return mat
+    },
+
+    createFightSplatsMaterial(scene: Scene): PBRCustomMaterial {
+        const mat = this.getPBRCustomMaterial(scene, "fight_splats_mats", this.BASE_PATH, 'fight-splats.png', 1 / 16, 1 / 16, false)
+        const texture = mat.albedoTexture as Texture
+        texture.hasAlpha = true
+        texture.getAlphaFromRGB = false
+        texture.updateSamplingMode(Texture.NEAREST_NEAREST)
+        mat.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHABLEND
+        mat.useAlphaFromAlbedoTexture = true
+        mat.alpha = 0.75
         mat.forceAlphaTest = false
         return mat
     },

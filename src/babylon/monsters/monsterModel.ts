@@ -1,7 +1,7 @@
 import {
-    AnimationGroup, Bone, Color4, Matrix,
-    Mesh, ParticleSystem, PBRMaterial, Quaternion,
-    Skeleton, Texture, TransformNode, Vector3, Vector4,
+    AnimationGroup, Bone, Matrix,
+    Mesh, ParticleSystem, Quaternion,
+    Skeleton, Texture, TransformNode, Vector3,
 } from '@babylonjs/core'
 import { Monster } from '@/babylon/monsters/monster'
 import { MonsterLoader } from '@/babylon/monsters/monsterLoader'
@@ -12,7 +12,7 @@ import { MobEquipItem, MobEquipManager } from '@/babylon/item/mobEquipManager'
 import { Utils } from '@/utils/utils'
 import { Renderer } from '@/babylon/scene/renderer'
 import { WorldDataManager } from '@/data/worldDataManager'
-import { AudioManager, FootStepTypes, MonsterSoundTypes } from '@/babylon/audio/audioManager'
+import { AudioManager } from '@/babylon/audio/audioManager'
 import { TerrainManager } from '@/babylon/world/terrainManager'
 
 export class MonsterModel {
@@ -49,7 +49,7 @@ export class MonsterModel {
 
     isDying: boolean = false
     fadeOutTimer: number = 0
-    originalMaterial: PBRMaterial | null = null
+    fadeOutStarted: boolean = false
 
     constructor(monsterType: MonsterType, parent: Monster) {
         console.log('MonsterModel constructor')
@@ -123,22 +123,12 @@ export class MonsterModel {
 
         // Dying fade out
         if (this.isDying && this.fadeOutTimer > 0 && new Date().getTime() > this.fadeOutTimer) {
-            if (this.originalMaterial == null) {
-                this.originalMaterial = this.mesh.material as PBRMaterial
-              //  this.mesh.material = this.mesh.material!.clone(this.mesh.material!.name + '_dieClone')
-              //  this.mesh.material.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHATESTANDBLEND
-               // this.mesh.material.alphaCutOff = 0.35
-
+            if (!this.fadeOutStarted) {
                 this.createDyingParticleEffect()
+                this.fadeOutStarted = true
             }
-
-            /**
-            this.mesh.material!.alpha -= 0.01
-            if (this.mesh.material!.alpha < 0) {
-                this.mesh.material!.alpha = 0
-            }*/
             // burrow into the ground while fading out
-            this.node.position.y -= 0.003
+            this.node.position.y -= 0.003 * Renderer.animationSpeedRatio
         }
     }
 
@@ -212,7 +202,7 @@ export class MonsterModel {
         this.isDying = true
         this.disposeWeaponTrail()
         this.fadeOutTimer = new Date().getTime() + 525
-        AudioManager.playDeathRattle(MonsterSoundTypes.SKELETON)
+        AudioManager.playDeathRattle(this.parent.mobType.monsterSoundType)
     }
 
     transitionToAnimation(target: MeshAnimation, fadeIn: boolean = false, loop = false, speed = 1.0) {
@@ -240,12 +230,6 @@ export class MonsterModel {
     removeFromView() {
         if (this.initialized) {
             this.animation.stop()
-
-            // Dying monsters store their original material to restore it later for clone reuse
-            if (this.originalMaterial) {
-                this.mesh.material = this.originalMaterial
-                this.originalMaterial = null
-            }
             MonsterLoader.monsterTemplates.get(this.template.id)?.deactivateClone(this.template)
         }
         this.equipSet.forEach(item => {
@@ -297,8 +281,8 @@ export class MonsterModel {
         ps.maxLifeTime = 9
         ps.minEmitPower = 0.15
         ps.maxEmitPower = 0.4
-        ps.minSize = 0.12
-        ps.maxSize = 0.2
+        ps.minSize = 0.1
+        ps.maxSize = 0.15
 
         ps.direction1 = new Vector3(-0.8, 2.5, -0.8)
         ps.direction2 = new Vector3(0.8, 4.0, 0.8)

@@ -6,6 +6,7 @@ import { OverlayManager } from '@/gui/overlayManager'
 import { Data } from '@/data/globalData'
 import { Connector } from '@/network/connector'
 import { SelectAutoAttackTarget } from '@/network/messages'
+import { SplatType } from '@/babylon/world/fightSplatsRenderer'
 
 export const TargetingManager = {
     selectedTarget: null as Targetable | null,
@@ -131,4 +132,5 @@ export interface Targetable {
     getModelHeight() : number
     getNameTextNodeScreenPosition()
     getObjectType(): string
+    getSplatType(): SplatType
 }
