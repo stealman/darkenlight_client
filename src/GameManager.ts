@@ -15,7 +15,6 @@ export const GameManager = {
     },
 
     async startGame() {
-        // Fetch world data
         WorldDataManager.fetchWorldDataIfNeeded()
 
         await Renderer.initialize(this.canvas.value)

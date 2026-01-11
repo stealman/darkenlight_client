@@ -38,7 +38,6 @@ import { Data } from '@/data/globalData'
 import { GMSpawns } from '@/gm/GmSpawns'
 import TouchControllers from '@/vue/views/touchControllers.vue'
 
-// refs
 const canvas = ref<HTMLCanvasElement | null>(null)
 const miniMapCanvas = ref<HTMLCanvasElement | null>(null)
 const gmPanelVisible = GMManager.gmPanelVisible
@@ -46,7 +45,6 @@ const myCharRef = Data.myCharRef
 
 const touchControls = ref();
 
-// lifecycle
 onMounted(() => {
     if (!canvas.value) return
 
@@ -70,7 +68,6 @@ const toggleGmPanel = () => {
     GMManager.toggleGmPanel()
 }
 
-// methods → normální const funkce
 const requestFullscreen = () => {
     Renderer.requestFullscreen()
     const btn = document.getElementById('fullScreenBtn')
@@ -79,48 +76,6 @@ const requestFullscreen = () => {
 </script>
 
 <style scoped>
-#app {
-  height: 100vh;
-  overflow: hidden;
-}
 
-.renderer {
-    width: 100%;
-    height: 100%;
-    position: relative;
-}
-
-#miniMapCanvas {
-    width: 100px;
-    height: 100px;
-    position: absolute;
-    right: 0px;
-    background-color: black;
-    opacity: 0.65;
-    border-left: 2px ridge rosybrown;
-    border-bottom: 2px ridge rosybrown;
-}
-
-.top-bar {
-    position: absolute;
-    top: 0;
-    left: 0;
-
-    display: flex;
-    align-items: center;
-    gap: 25px;
-
-    padding: 6px 10px;
-    width: max-content;
-
-    background: rgba(0,0,0,0.2);
-}
-
-#fpsLabel,
-#posLabel,
-button {
-    font-size: 18px;
-    color: #aaa;
-}
 
 </style>
