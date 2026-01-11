@@ -74,7 +74,7 @@ export const MonsterManager = {
         }
     },
 
-    autorAttack(data: { id: number, tgt: number, tp: string, dur: number }) {
+    autoAttack(data: { id: number, tgt: number, tp: string, dur: number }) {
         const mob = this.monsters.get(data.id)
         if (data.tp === 'C' && data.tgt === Data.myChar.id) {
             mob?.doAutoAttack(Data.myChar, data.dur)

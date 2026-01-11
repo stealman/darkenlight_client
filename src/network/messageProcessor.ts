@@ -145,7 +145,7 @@ export const MessageProcessor = {
     },
 
     processMonsterAttack(data) {
-        MonsterManager.autorAttack(data)
+        MonsterManager.autoAttack(data)
     },
 
     processMonsterAttackFinished(data) {

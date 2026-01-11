@@ -54,7 +54,7 @@ export class Monster implements Attackable {
 
     onAnimFrame(timeRate: number) {
         if (this.insideView) {
-            this.model.onAnimFrame()
+            this.model.onAnimFrame(timeRate)
         }
     }
 
