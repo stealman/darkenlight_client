@@ -6,6 +6,7 @@ import { ViewportManager } from '@/utils/viewport'
 import { PrefabOak } from '@/babylon/world/prefabs/treeOak'
 import { PrefabFir } from '@/babylon/world/prefabs/treeFir'
 import { Renderer } from '@/babylon/scene/renderer'
+import { Lights } from '@/babylon/scene/lights'
 
 export const TreeManager = {
     prefabs: {
@@ -22,7 +23,7 @@ export const TreeManager = {
 
     addAllShadowCasters() {
         Object.values(this.prefabs).forEach(prefab => {
-            Renderer.addShadowCaster(prefab!.mesh)
+            Lights.addShadowCaster(prefab!.mesh)
         })
     },
 

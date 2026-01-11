@@ -11,6 +11,7 @@ import { CharEquipManager } from '@/babylon/item/charEquipManager'
 import { PlayerData } from '@/data/playerData'
 import { AnimTransition } from '@/babylon/animations/animation'
 import { Renderer } from '@/babylon/scene/renderer'
+import { Lights } from '@/babylon/scene/lights'
 
 export class CharacterModel {
     playerData: PlayerData
@@ -79,7 +80,7 @@ export class CharacterModel {
             })
             this.model.getChildMeshes().forEach((mesh) => {
                 mesh.material = material
-                Renderer.addShadowCaster(mesh)
+                Lights.addShadowCaster(mesh)
             });
 
             // Process animations

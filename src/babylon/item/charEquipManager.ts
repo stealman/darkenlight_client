@@ -16,6 +16,7 @@ import { CharWeaponsCbManager } from '@/babylon/item/codebook/charWeaponsCb'
 import { CharacterModel } from '@/babylon/character/characterModel'
 import { Utils } from '@/utils/utils'
 import { BabylonUtils } from '@/babylon/utils'
+import { Lights } from '@/babylon/scene/lights'
 
 export const BASE_EQUIP_MATERIAL_PATH = "/models/equip/"
 export const PLATE_METAL_BASIC = 'plate-metal-basic'
@@ -70,7 +71,7 @@ class CharWearableItemManager {
         this.spsMesh.receiveShadows = true
         this.spsMesh.material = Materials.getPBRMaterial(scene, this.materialName + "charEquipMap", this.texturePath , false, true, this.matOptions)
         if (this.castShadows) {
-            Renderer.addShadowCaster(this.spsMesh)
+            Lights.addShadowCaster(this.spsMesh)
         }
 
         // Override function that will update particle position on setParticles() call
@@ -300,7 +301,7 @@ export const CharEquipManager = {
         mat.directIntensity = 1.5
         mat.environmentIntensity = 1
         mat.backFaceCulling = false;
-        Renderer.addShadowCaster(mesh)
+        Lights.addShadowCaster(mesh)
         this.weaponSourceMap.set(weaponTypelId, mesh)
     },
 

@@ -36,14 +36,15 @@ export class MeshAnimation {
                 this.stop()
             }
 
-            if (this.weightChange !== 0) {
-                this.weight = Math.max(0, Math.min(1, this.weight + this.weightChange))
+            const frameWeightChange = Renderer.animationSpeedRatio * this.weightChange
+            if (frameWeightChange !== 0) {
+                this.weight = Math.max(0, Math.min(1, this.weight + frameWeightChange))
 
                 this.animation.setWeightForAllAnimatables(this.weight)
-                if (this.weight === 0 && this.weightChange < 0) {
+                if (this.weight === 0 && frameWeightChange < 0) {
                     this.stop()
                 }
-                if (this.weight === 1 && this.weightChange > 0) {
+                if (this.weight === 1 && frameWeightChange > 0) {
                     this.weightChange = 0
                 }
             }
@@ -61,11 +62,11 @@ export class MeshAnimation {
 
         if (fadeIn) {
             this.weight = 0
-            this.weightChange = 0.1
+            this.weightChange = 0.075
         } else {
             this.weight = 1
-            this.animation.setWeightForAllAnimatables(this.weight)
         }
+        this.animation.setWeightForAllAnimatables(this.weight)
     }
 
     stop() {
@@ -76,7 +77,7 @@ export class MeshAnimation {
     }
 
     fadeOut() {
-        this.weightChange = -0.1
+        this.weightChange = -0.075
     }
 }
 

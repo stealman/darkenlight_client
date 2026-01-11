@@ -125,17 +125,18 @@ export class MonsterModel {
         if (this.isDying && this.fadeOutTimer > 0 && new Date().getTime() > this.fadeOutTimer) {
             if (this.originalMaterial == null) {
                 this.originalMaterial = this.mesh.material as PBRMaterial
-                this.mesh.material = this.mesh.material!.clone(this.mesh.material!.name + '_dieClone')
-                this.mesh.material.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHATESTANDBLEND
-                this.mesh.material.alphaCutOff = 0.35
+              //  this.mesh.material = this.mesh.material!.clone(this.mesh.material!.name + '_dieClone')
+              //  this.mesh.material.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHATESTANDBLEND
+               // this.mesh.material.alphaCutOff = 0.35
 
                 this.createDyingParticleEffect()
             }
 
+            /**
             this.mesh.material!.alpha -= 0.01
             if (this.mesh.material!.alpha < 0) {
                 this.mesh.material!.alpha = 0
-            }
+            }*/
             // burrow into the ground while fading out
             this.node.position.y -= 0.003
         }
@@ -191,7 +192,6 @@ export class MonsterModel {
 
     doAttackMelee(dur: number) {
         if (this.attackAnims.length === 0) {
-            console.warn('MonsterModel.doAttackMelee called but no attack animations are assigned!')
             return
         }
         this.transitionToAnimation(this.attackAnims[Utils.rollDice(this.attackAnims.length, true)], true, false, 1500 / dur)
@@ -199,17 +199,15 @@ export class MonsterModel {
     }
 
     doWalk() {
-        console.log('MonsterModel.doWalk')
         this.transitionToAnimation(this.walkAnim!, true, true, this.parent.mobType.walkAnimSpeed)
     }
 
     doIdle() {
-        console.log('MonsterModel.doIdle')
         this.transitionToAnimation(this.idleAnim!, true, true, 1.0)
     }
 
     doDie() {
-        this.transitionToAnimation(this.deadAnim!, false, false, 2.5)
+        this.transitionToAnimation(this.deadAnim!, true, false, 2.5)
 
         this.isDying = true
         this.disposeWeaponTrail()

@@ -123,6 +123,8 @@ export const MonsterManager = {
                 this.killedMonsters.delete(monster)
             }
         })
+
+        this.onAnimFrame(timeRate)
     },
 
     onAnimFrame(timeRate: number) {

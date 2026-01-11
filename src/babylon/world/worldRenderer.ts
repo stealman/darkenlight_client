@@ -2,7 +2,7 @@ import {
     Matrix,
     Mesh,
     Scene,
-    TransformNode, Vector2,
+    TransformNode, Vector2, Vector3,
 } from '@babylonjs/core'
 import { Builder } from '@/babylon/builder'
 import { Materials } from '@/babylon/materials'
@@ -14,11 +14,17 @@ import { PBRCustomMaterial } from '@babylonjs/materials'
 import { StaticsManager } from '@/babylon/world/staticsManager'
 import { GMSpawns } from '@/gm/GmSpawns'
 import { GMManager, GmTabs } from '@/gm/GM'
+import { Lights } from '@/babylon/scene/lights'
+import { Data } from '@/data/globalData'
+import { ViewportManager } from '@/utils/viewport'
+import { WorldDataManager } from '@/data/worldDataManager'
 
 export const WorldRenderer = {
     block1: null as SymmetricBlock | null,
     blockWithAlpha1: null as SymmetricBlock | null,
     worldParentNode: null as TransformNode | null,
+
+    lastPos: null as Vector3 | null,
 
     initialize(scene: Scene) {
         this.worldParentNode = new TransformNode("worldNode", scene)
@@ -35,12 +41,24 @@ export const WorldRenderer = {
         TreeManager.initialize(scene)
         StaticsManager.initialize(scene)
 
-        Renderer.addShadowCaster(TerrainManager.terrainBlock1!)
-        Renderer.addShadowCaster(TerrainManager.terrainPlane!)
-        Renderer.addShadowCaster(this.block1.mesh)
-        Renderer.addShadowCaster(this.blockWithAlpha1.mesh)
+        Lights.addShadowCaster(TerrainManager.terrainBlock1!)
+        Lights.addShadowCaster(TerrainManager.terrainPlane!)
+        Lights.addShadowCaster(this.block1.mesh)
+        Lights.addShadowCaster(this.blockWithAlpha1.mesh)
         TreeManager.addAllShadowCasters()
         StaticsManager.addAllShadowCasters()
+    },
+
+    checkRenderWorld() {
+        const pos = Data.myChar.getPositionRounded()
+
+        if (this.lastPos == null || pos.x !== this.lastPos.x || pos.z !== this.lastPos.z) {
+            if (ViewportManager.viewPortInitialized) {
+                WorldDataManager.fetchWorldDataIfNeeded()
+                WorldRenderer.renderWorld()
+                this.lastPos = pos
+            }
+        }
     },
 
     /**

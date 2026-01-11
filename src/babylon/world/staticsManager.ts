@@ -8,6 +8,7 @@ import { PrefabShrub2x2 } from '@/babylon/world/prefabs/shrub2x2'
 import { Renderer } from '@/babylon/scene/renderer'
 import { PrefabShrub1x1_tall } from '@/babylon/world/prefabs/shrub1x1-tall'
 import { PrefabShrub1x1_small } from '@/babylon/world/prefabs/shrub1x1-small'
+import { Lights } from '@/babylon/scene/lights'
 
 export const StaticsManager = {
     prefabs: {
@@ -26,7 +27,7 @@ export const StaticsManager = {
 
     addAllShadowCasters() {
         Object.values(this.prefabs).forEach(prefab => {
-            Renderer.addShadowCaster(prefab!.mesh)
+            Lights.addShadowCaster(prefab!.mesh)
         })
     },
 

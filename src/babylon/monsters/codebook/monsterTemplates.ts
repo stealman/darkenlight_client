@@ -2,6 +2,7 @@ import { AnimationGroup, AssetContainer, Mesh, Skeleton, Vector3 } from '@babylo
 import { BabylonUtils } from '@/babylon/utils'
 import { Renderer } from '@/babylon/scene/renderer'
 import { Monster } from '@/babylon/monsters/monster'
+import { Lights } from '@/babylon/scene/lights'
 
 export class MonsterTemplate {
     id: number
@@ -60,7 +61,7 @@ export class MonsterTemplate {
         clone.animation = entries.animationGroups[0]
 
         this.clonesAct.push(clone)
-        Renderer.addShadowCaster(clone.mesh)
+        Lights.addShadowCaster(clone.mesh)
         return clone
     }
 

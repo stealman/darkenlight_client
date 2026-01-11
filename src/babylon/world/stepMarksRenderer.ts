@@ -15,6 +15,7 @@ export const StepMarksRenderer = {
         this.stepMarkPlane.material = Materials.stepMarksMaterial
     },
 
+
     addStepMark(side: string, object: Targetable, yPos: number, rot: number, time: number, inCombat: boolean = false) {
         let tgtArray = null
         let ttl = 120000
