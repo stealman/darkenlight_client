@@ -4,8 +4,8 @@ import { MonsterManager } from '@/babylon/monsters/monsterManager'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { StaticsManager } from '@/babylon/world/staticsManager'
 import { Monster } from '@/babylon/monsters/monster'
-import { Data } from '@/data/globalData'
 import { Attackable } from '@/GameManager'
+import { MyPlayer } from '@/babylon/character/myPlayer'
 
 export const Utils = {
 
@@ -14,7 +14,7 @@ export const Utils = {
             return MonsterManager.monsters.get(id) || null
         }
         if (type === 'C') {
-            return Data.myChar
+            return MyPlayer.myChar
         }
     },
 

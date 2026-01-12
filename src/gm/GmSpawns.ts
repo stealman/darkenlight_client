@@ -1,10 +1,10 @@
 import { ref } from 'vue'
-import { Data } from '@/data/globalData'
 import { Connector } from '@/network/connector'
 import { GMLoadSpawns, GMSpawnAction } from '@/network/messages'
 import { InstancedMesh } from '@babylonjs/core'
 import { ViewportManager } from '@/utils/viewport'
 import { GMSceneManager } from '@/babylon/gm/GmSceneManager'
+import { MyPlayer } from '@/babylon/character/myPlayer'
 
 export const GMSpawns = {
     actualWorldId: 0,
@@ -153,7 +153,7 @@ export const GMSpawns = {
     },
 
     checkAndLoadSpawns() {
-        if (this.actualWorldId !== Data.worldId) {
+        if (this.actualWorldId !== MyPlayer.worldId) {
             Connector.sendMessage(new GMLoadSpawns())
         }
     },

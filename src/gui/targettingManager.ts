@@ -1,15 +1,15 @@
 import { MonsterManager } from '@/babylon/monsters/monsterManager'
 import { Ray, Vector3 } from '@babylonjs/core'
 import { Monster } from '@/babylon/monsters/monster'
-import { PlayerData } from '@/data/playerData'
 import { OverlayManager } from '@/gui/overlayManager'
-import { Data } from '@/data/globalData'
 import { Connector } from '@/network/connector'
 import { SelectAutoAttackTarget } from '@/network/messages'
 import { SplatType } from '@/babylon/world/fightSplatsRenderer'
 import { OnScreenMessageManager } from '@/gui/onScreenMessageManager'
 import { Settings } from '@/settings/settings'
 import { AudioManager } from '@/babylon/audio/audioManager'
+import { MyPlayer } from '@/babylon/character/myPlayer'
+import Character from '@/babylon/character/character'
 
 export const TargetingManager = {
     selectedTarget: null as Targetable | null,
@@ -44,7 +44,7 @@ export const TargetingManager = {
 
             // If target is more than 15 tiles away, clear target
             if (this.selectedTarget) {
-                if (Vector3.Distance(Data.myChar.pos, this.selectedTarget.pos) > 15) {
+                if (Vector3.Distance(MyPlayer.myChar.pos, this.selectedTarget.pos) > 15) {
                     this.unselectTarget()
                 }
             }
@@ -91,7 +91,7 @@ export const TargetingManager = {
     },
 
     resolvePickRay(ray: Ray, useSphere: boolean = false) {
-        let target: Monster | PlayerData | null = null
+        let target: Monster | Character | null = null
         MonsterManager.monsters.forEach((monster) => {
             if (MonsterManager.visibleMonsters.has(monster.id)) {
                 if (!monster.model?.mesh) return
@@ -124,7 +124,7 @@ export const TargetingManager = {
         this.selectedTarget = target
         OverlayManager.targetSelected(target!)
 
-        if (this.selectedTarget && Data.aaActive) {
+        if (this.selectedTarget && MyPlayer.aaActive) {
             Connector.sendMessage(new SelectAutoAttackTarget(this.selectedTarget!.id, this.selectedTarget!.getObjectType()))
         }
     },

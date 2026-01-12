@@ -3,13 +3,13 @@ import { MonsterType } from '@/babylon/monsters/codebook/monsterCodebook'
 import { Utils } from '@/utils/utils'
 import { Vector3 } from '@babylonjs/core'
 import { ViewportManager } from '@/utils/viewport'
-import { Data } from '@/data/globalData'
 import { Targetable } from '@/gui/targettingManager'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { Attackable } from '@/GameManager'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { StepMarksRenderer } from '@/babylon/world/stepMarksRenderer'
 import { SplatType } from '@/babylon/world/fightSplatsRenderer'
+import { MyPlayer } from '@/babylon/character/myPlayer'
 
 export class Monster implements Attackable {
     id: number
@@ -154,7 +154,7 @@ export class Monster implements Attackable {
     }
 
     getDistanceFromMyPlayer(): number {
-        return Vector3.Distance(this.pos, Data.myChar.pos)
+        return Vector3.Distance(this.pos, MyPlayer.myChar.pos)
     }
 
     getBoxSize(): number {

@@ -1,4 +1,3 @@
-import { Data } from '@/data/globalData'
 import { Connector } from '@/network/connector'
 import { FetchWorldDataMsg } from '@/network/messages'
 import { Vector3 } from '@babylonjs/core'
@@ -6,25 +5,26 @@ import { TerrainManager } from '@/babylon/world/terrainManager'
 import { TreeManager } from '@/babylon/world/treeManager'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { StaticsManager } from '@/babylon/world/staticsManager'
+import { MyPlayer } from '@/babylon/character/myPlayer'
 
 export const WorldDataManager = {
     MAP_CHUNK_SIZE: 128 as number,
     worldDataMap: new Map<number, WorldData>(),
 
     fetchWorldDataIfNeeded() {
-        if (!this.worldDataMap.has(Data.worldId)) {
-            this.worldDataMap.set(Data.worldId, new WorldData(1024))
+        if (!this.worldDataMap.has(MyPlayer.worldId)) {
+            this.worldDataMap.set(MyPlayer.worldId, new WorldData(1024))
         }
 
-        const worldData = this.worldDataMap.get(Data.worldId)!
+        const worldData = this.worldDataMap.get(MyPlayer.worldId)!
 
-        const actualPos = Data.myChar.getPositionRounded()
+        const actualPos = MyPlayer.myChar.getPositionRounded()
         const actualChunkX = Math.floor(actualPos.x / this.MAP_CHUNK_SIZE) * this.MAP_CHUNK_SIZE
         const actualChunkZ = Math.floor(actualPos.z / this.MAP_CHUNK_SIZE) * this.MAP_CHUNK_SIZE
 
         // Fetch only if we don't have the chunk yet
         if (!worldData.hasChunkAt(actualChunkX, actualChunkZ)) {
-            Connector.sendMessage(new FetchWorldDataMsg(Data.worldId, actualChunkX, actualChunkZ))
+            Connector.sendMessage(new FetchWorldDataMsg(MyPlayer.worldId, actualChunkX, actualChunkZ))
         }
 
         // Check surrounding chunks as well
@@ -42,16 +42,16 @@ export const WorldDataManager = {
             }
 
             if (!worldData.hasChunkAt(chunkX, chunkZ)) {
-                Connector.sendMessage(new FetchWorldDataMsg(Data.worldId, chunkX, chunkZ))
+                Connector.sendMessage(new FetchWorldDataMsg(MyPlayer.worldId, chunkX, chunkZ))
             }
         }
     },
 
     consumeMapChunk(mapChunk) {
-        if (!this.worldDataMap.has(Data.worldId)) {
-            this.worldDataMap.set(Data.worldId, new WorldData(1024))
+        if (!this.worldDataMap.has(MyPlayer.worldId)) {
+            this.worldDataMap.set(MyPlayer.worldId, new WorldData(1024))
         }
-        this.worldDataMap.get(Data.worldId)!.consumeMapChunk(mapChunk)
+        this.worldDataMap.get(MyPlayer.worldId)!.consumeMapChunk(mapChunk)
     },
 
     consumeMapUpdate(worldId, data) {
@@ -64,11 +64,11 @@ export const WorldDataManager = {
     },
 
     getPlaneBlockMap() {
-        return this.worldDataMap.get(Data.worldId)!.planeBlockMap;
+        return this.worldDataMap.get(MyPlayer.worldId)!.planeBlockMap;
     },
 
     getBlockMap() {
-        return this.worldDataMap.get(Data.worldId)!.blockMap;
+        return this.worldDataMap.get(MyPlayer.worldId)!.blockMap;
     },
 
     getBlockOnPosition(pos: Vector3): MapBlock | null {

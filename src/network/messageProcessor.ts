@@ -1,5 +1,4 @@
 
-import { Data } from '@/data/globalData'
 import { MonsterManager } from '@/babylon/monsters/monsterManager'
 import { TreeManager } from '@/babylon/world/treeManager'
 import { WorldDataManager } from '@/data/worldDataManager'
@@ -9,7 +8,6 @@ import { StaticsManager } from '@/babylon/world/staticsManager'
 import { GMSpawns } from '@/gm/GmSpawns'
 import { MyPlayer } from '@/babylon/character/myPlayer'
 import { FightSplatsRenderer } from '@/babylon/world/fightSplatsRenderer'
-import { PlayerData } from '@/data/playerData'
 import { GameManager } from '@/GameManager'
 
 export const MessageProcessor = {
@@ -54,9 +52,7 @@ export const MessageProcessor = {
             document.getElementById("dialog-error-content")!.innerText = data.message
             document.getElementById("dialog-error")!.style.display = 'flex'
         } else if (data.char) {
-            const myChar = new PlayerData(data.char)
-            Data.setMyChar(myChar)
-            await GameManager.startGame()
+            await GameManager.startGame(data.char)
             console.log('Game started')
         }
     },
@@ -74,30 +70,30 @@ export const MessageProcessor = {
     },
 
     charMove(data) {
-        const dist = Math.sqrt( (Data.myChar.pos.x - data[1]) * (Data.myChar.pos.x - data[1]) + (Data.myChar.pos.z - data[2]) * (Data.myChar.pos.z - data[2]) )
-        if (data[0] === Data.myChar.id && dist >= 1) {
-            Data.myChar.pos.x = data[1]
-            Data.myChar.pos.z = data[2]
-            Data.myChar.setMoveAngle(data[3])
-            Data.myChar.setActualSpeed(data[4])
+        const dist = Math.sqrt( (MyPlayer.myChar.pos.x - data[1]) * (MyPlayer.myChar.pos.x - data[1]) + (MyPlayer.myChar.pos.z - data[2]) * (MyPlayer.myChar.pos.z - data[2]) )
+        if (data[0] === MyPlayer.myChar.id && dist >= 1) {
+            MyPlayer.myChar.pos.x = data[1]
+            MyPlayer.myChar.pos.z = data[2]
+            MyPlayer.myChar.setMoveAngle(data[3])
+            MyPlayer.myChar.setActualSpeed(data[4])
         }
     },
 
     charMoveDesynced(data) {
         // If received my own move, it is desync - take position
-        if (data[0] === Data.myChar.id) {
+        if (data[0] === MyPlayer.myChar.id) {
             console.log('Desync')
-            Data.myChar.pos.x = data[1]
-            Data.myChar.pos.z = data[2]
-            Data.myChar.setMoveAngle(data[3])
-            Data.myChar.setActualSpeed(data[4])
+            MyPlayer.myChar.pos.x = data[1]
+            MyPlayer.myChar.pos.z = data[2]
+            MyPlayer.myChar.setMoveAngle(data[3])
+            MyPlayer.myChar.setActualSpeed(data[4])
         }
     },
 
     processWorldData(data) {
         console.log('World data received')
-        Data.worldId = data.id
-        Data.worldName = data.name
+        MyPlayer.worldId = data.id
+        MyPlayer.worldName = data.name
         if (data.mapChunk) {
             WorldDataManager.consumeMapChunk(data.mapChunk)
             MiniMap.redrawMiniMap(data.mapChunk)

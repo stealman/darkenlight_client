@@ -1,7 +1,7 @@
 import { Frustum, Matrix, Vector3 } from '@babylonjs/core'
 import { Renderer } from '@/babylon/scene/renderer'
 import { MiniMap } from '@/utils/minimap'
-import { Data } from '@/data/globalData'
+import { MyPlayer } from '@/babylon/character/myPlayer'
 
 export const ViewportManager = {
     viewPortInitialized: false,
@@ -44,7 +44,7 @@ export const ViewportManager = {
             return false
         }
 
-        const myPos = Data.myChar.getPositionRounded()
+        const myPos = MyPlayer.myChar.getPositionRounded()
         x -= myPos.x
         z -= myPos.z
 
@@ -72,7 +72,7 @@ export const ViewportManager = {
         const borderTiles = []
         let axisDistance = 1
         let visibleTileFound = true
-        const myPos = Data.myChar.getPositionRounded()
+        const myPos = MyPlayer.myChar.getPositionRounded()
 
         while (visibleTileFound && axisDistance < 50) {
             const points = this.getSurroundingTiles(myPos, axisDistance)

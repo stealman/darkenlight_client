@@ -18,7 +18,6 @@ import { AudioManager } from '@/babylon/audio/audioManager'
 import { ViewportManager } from '@/utils/viewport'
 import { CharEquipManager } from '@/babylon/item/charEquipManager'
 import { MonsterManager } from '@/babylon/monsters/monsterManager'
-import { Data } from '@/data/globalData'
 import { Connector } from '@/network/connector'
 import { MobEquipManager } from '@/babylon/item/mobEquipManager'
 import { WeatherManager } from '@/babylon/world/weather/weatherManager'
@@ -89,7 +88,7 @@ export const Renderer = {
     },
 
     gameStarted() {
-        Lights.sunLight.parent = MyPlayer.charModel!.node
+        Lights.sunLight.parent = MyPlayer.myModel!.node
 
         this.engine!.runRenderLoop(() => {
             this.onFrame(this.scene)
@@ -231,13 +230,13 @@ export const Renderer = {
 
         this.camera = new FreeCamera('camera1', cameraPosition, this.scene)
         this.camera.setTarget(new Vector3(0, cameraViewY, 0))
-        this.camera.parent = MyPlayer.charModel!.node
+        this.camera.parent = MyPlayer.myModel!.node
     },
 
     actualizeDebug() {
         const absoluteFPS = 1000 / this.instrumentation!.frameTimeCounter.lastSecAverage
         document.getElementById("fpsLabel")!.innerHTML = "FPS: " + this.fps + " | " + absoluteFPS.toFixed(0);
-        document.getElementById("posLabel")!.innerHTML = "POS: " + Data.myChar.getPositionRounded().toString();
+        document.getElementById("posLabel")!.innerHTML = "POS: " + MyPlayer.myChar.getPositionRounded().toString();
     },
 
     requestFullscreen() {

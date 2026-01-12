@@ -6,7 +6,7 @@ import { Materials, PlaneEnum1, TerrainEnum1 } from '@/babylon/materials'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { Settings } from '@/settings/settings'
 import { ViewportManager } from '@/utils/viewport'
-import { Data } from '@/data/globalData'
+import { MyPlayer } from '@/babylon/character/myPlayer'
 
 export const TerrainManager = {
     terrainBlock1: null as Mesh | null,
@@ -46,7 +46,7 @@ export const TerrainManager = {
     },
 
     renderTerrain() {
-        const myPos = Data.myChar.getPositionRounded()
+        const myPos = MyPlayer.myChar.getPositionRounded()
         const blockMap = WorldDataManager.getBlockMap()
         const planeBlockMap = WorldDataManager.getPlaneBlockMap()
 

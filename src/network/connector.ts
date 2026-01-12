@@ -94,7 +94,7 @@ export const Connector = {
 
         // If movement is active and lastMoveMessageTime is older than 2 seconds, send sync message
         /**
-        if (Data.myChar.getMoveAngle() != null && Data.myChar.getActualSpeed() > 0 && time > this.lastMoveMessageTime + 2000) {
+        if (MyPlayer.myChar.getMoveAngle() != null && MyPlayer.myChar.getActualSpeed() > 0 && time > this.lastMoveMessageTime + 2000) {
             this.lastMoveMessage = new MyCharMoveMsg()
             this.sendMoveMessage(this.lastMoveMessage)
 

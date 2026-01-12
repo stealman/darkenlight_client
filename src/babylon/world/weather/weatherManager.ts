@@ -50,7 +50,7 @@ class SnowEffect implements WeatherEffect {
             scene
         );
         snowEmitter.isVisible = false;
-        snowEmitter.parent = MyPlayer.charModel?.node
+        snowEmitter.parent = MyPlayer.myModel?.node
         snow.emitter = snowEmitter;
 
         snow.minSize = Settings.isDetalLevelHigh() ? 0.02 : 0.03;

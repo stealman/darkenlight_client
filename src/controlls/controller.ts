@@ -99,7 +99,7 @@ export const Controller = {
     },
 
     resolveRightPresssed(pointerInfo) {
-        const myCharPosition = ViewportManager.getScreenPosition(MyPlayer.charModel!.model)
+        const myCharPosition = ViewportManager.getScreenPosition(MyPlayer.myModel!.model)
         const dx = pointerInfo.event.clientX - myCharPosition.x
         const dy = pointerInfo.event.clientY - myCharPosition.y
         const distance = Math.sqrt(dx * dx + dy * dy)
@@ -149,7 +149,7 @@ export const Controller = {
         const screenX = ViewportManager.viewportWidth / 2 + dx * (ViewportManager.viewportWidth / 2)
         const screenY = ViewportManager.viewportHeight / 2 + dy * (ViewportManager.viewportHeight / 2)
 
-        const myCharPosition = ViewportManager.getScreenPosition(MyPlayer.charModel!.model)
+        const myCharPosition = ViewportManager.getScreenPosition(MyPlayer.myModel!.model)
         const deltaX = screenX - myCharPosition.x
         const deltaY = screenY - myCharPosition.y
         const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY)

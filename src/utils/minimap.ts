@@ -1,5 +1,5 @@
-import { MapBlock, WorldDataManager } from '@/data/worldDataManager'
-import { Data } from '@/data/globalData'
+import { WorldDataManager } from '@/data/worldDataManager'
+import { MyPlayer } from '@/babylon/character/myPlayer'
 
 export const MiniMap = {
     offScreenCanvas: null as HTMLCanvasElement | null,
@@ -74,8 +74,8 @@ export const MiniMap = {
     },
 
     updateMiniMap() {
-        const playerY = Data.myChar.pos.x
-        const playerX = Data.myChar.pos.z
+        const playerY = MyPlayer.myChar.pos.x
+        const playerX = MyPlayer.myChar.pos.z
 
         const canvas = document.getElementById("miniMapCanvas") as HTMLCanvasElement
         const context = canvas.getContext("2d")

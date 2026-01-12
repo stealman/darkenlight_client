@@ -2,8 +2,8 @@ import { Matrix, Mesh, Quaternion, Scene, Vector2, Vector3 } from '@babylonjs/co
 import { Builder } from '@/babylon/builder'
 import { Materials } from '@/babylon/materials'
 import { Targetable } from '@/gui/targettingManager'
-import { Data } from '@/data/globalData'
 import { Settings } from '@/settings/settings'
+import { MyPlayer } from '@/babylon/character/myPlayer'
 
 export const StepMarksRenderer = {
     myStepMarks: new Array<StepMark>(),
@@ -22,7 +22,7 @@ export const StepMarksRenderer = {
     addStepMark(side: string, object: Targetable, yPos: number, rot: number, time: number, inCombat: boolean = false) {
         let tgtArray = null
         let ttl = 300000
-        if (object === Data.myChar) {
+        if (object === MyPlayer.myChar) {
             tgtArray = this.myStepMarks
         } else {
             tgtArray = this.mobStepMarks

@@ -8,12 +8,12 @@ import {
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { Materials } from '@/babylon/materials'
 import { CharEquipManager } from '@/babylon/item/charEquipManager'
-import { PlayerData } from '@/data/playerData'
 import { AnimTransition } from '@/babylon/animations/animation'
 import { Lights } from '@/babylon/scene/lights'
+import Character from '@/babylon/character/character'
 
 export class CharacterModel {
-    playerData: PlayerData
+    parent: Character
     node: TransformNode = new TransformNode("characterModelNode")
 
     model: AbstractMesh | undefined
@@ -47,12 +47,12 @@ export class CharacterModel {
     actualStepSound: Sound | null = null
     footStepSounds: Map<string, Sound> = new Map()
 
-    constructor(playerData: PlayerData) {
-        this.playerData = playerData
-        this.node.position = this.playerData.pos
+    constructor(parent: Character) {
+        this.parent = parent
+        this.node.position = this.parent.pos
     }
 
-    static async create(data: PlayerData, scene: Scene): Promise<CharacterModel> {
+    static async create(data: Character, scene: Scene): Promise<CharacterModel> {
         const p = new CharacterModel(data);
         await p.initAsync(scene);
         return p;
@@ -181,7 +181,7 @@ export class CharacterModel {
             this.actualAnim = this.walkAnim
 
             this.actualStepSound = this.getStepSound()
-            this.actualStepSound.setPlaybackRate(this.playerData.getStepSoundSpeed())
+            this.actualStepSound.setPlaybackRate(this.parent.getStepSoundSpeed())
             if (!this.actualStepSound.isPlaying) {
                 this.actualStepSound.play()
             }
@@ -195,7 +195,7 @@ export class CharacterModel {
             this.actualAnim = this.runAnim
 
             this.actualStepSound = this.getStepSound()
-            this.actualStepSound.setPlaybackRate(this.playerData.getStepSoundSpeed())
+            this.actualStepSound.setPlaybackRate(this.parent.getStepSoundSpeed())
             if (!this.actualStepSound.isPlaying) {
                 this.actualStepSound.play()
             }
@@ -207,7 +207,7 @@ export class CharacterModel {
         const supposedStepSound = this.getStepSound()
         if (this.actualStepSound?.isPlaying && this.actualStepSound !== supposedStepSound) {
             this.actualStepSound = supposedStepSound
-            this.actualStepSound.setPlaybackRate(this.playerData.getStepSoundSpeed())
+            this.actualStepSound.setPlaybackRate(this.parent.getStepSoundSpeed())
             if (!this.actualStepSound.isPlaying) {
                 this.actualStepSound.play()
             }
@@ -219,7 +219,7 @@ export class CharacterModel {
         // Random select attack animation
         const desiredAnimation = [this.slashAnim, this.jabAnim, this.leftSlashAnim, this.rightSlashAnim, this.highJabAnim, this.slashAnim2][Math.floor(Math.random() * 6)]
         if (this.actualAnim !== desiredAnimation) {
-            this.transitionToAnimation(desiredAnimation, 0.15, false, 1000 / this.playerData.attackAnimationTime)
+            this.transitionToAnimation(desiredAnimation, 0.15, false, 1000 / this.parent.attackAnimationTime)
             this.actualAnim = desiredAnimation
 
             this.stopAllStepSounds()
@@ -239,7 +239,7 @@ export class CharacterModel {
     }
 
     getStepSound(): Sound {
-        const stepSoundType = this.playerData.getFootStepSoundType()
+        const stepSoundType = this.parent.getFootStepSoundType()
         if (!this.footStepSounds.has(stepSoundType)) {
             const sound = AudioManager.footStepSounds.get(stepSoundType)
             this.footStepSounds.set(stepSoundType, sound!.clone()!)
@@ -280,10 +280,10 @@ export class CharacterModel {
         }
 
         this.checkActiveStepSound()
-        if (this.playerData.getMoveAngle() != null) {
+        if (this.parent.getMoveAngle() != null) {
             this.moveModel(timeRate)
         }
-        if (this.playerData.getLookAngle() != null) {
+        if (this.parent.getLookAngle() != null) {
             this.resolveModelRotation(timeRate)
         }
     }
@@ -292,7 +292,7 @@ export class CharacterModel {
      * Approximate model Y position to the player Y position
      */
     moveModel(timeRate: number) {
-        this.playerData.pos.y += (this.playerData.logicYpos - this.playerData.pos.y) * this.playerData.yMoveSpeed * timeRate
+        this.parent.pos.y += (this.parent.logicYpos - this.parent.pos.y) * this.parent.yMoveSpeed * timeRate
 
         this.node.markAsDirty("position")
         this.node.computeWorldMatrix(true);
@@ -304,10 +304,10 @@ export class CharacterModel {
      */
     resolveModelRotation(timeRate: number) {
         const model = this.model!
-        const lookAngle = this.playerData.getLookAngle()
+        const lookAngle = this.parent.getLookAngle()
         if (lookAngle == null) return
 
-        const rotationSpeed = this.playerData.rotationSpeed * timeRate
+        const rotationSpeed = this.parent.rotationSpeed * timeRate
 
         let current = model.rotation.y - this.modelYAngleOffset
 
@@ -323,6 +323,6 @@ export class CharacterModel {
         }
 
         model.rotation.y = current + this.modelYAngleOffset
-        this.playerData.modelRotation = model.rotation.y
+        this.parent.modelRotation = model.rotation.y
     }
 }

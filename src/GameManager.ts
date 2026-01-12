@@ -6,6 +6,7 @@ import { MyPlayer } from '@/babylon/character/myPlayer'
 import { Settings } from '@/settings/settings'
 import { Connector } from '@/network/connector'
 import { LogoutMsg } from '@/network/messages'
+import Character from '@/babylon/character/character'
 
 export const GameManager = {
     started: false as boolean,
@@ -26,8 +27,9 @@ export const GameManager = {
         await Renderer.initialize(canvas)
     },
 
-    async startGame() {
-        await MyPlayer.initialize(Renderer.scene)
+    async startGame(charData) {
+        await MyPlayer.initialize(new Character(charData), Renderer.scene)
+
         Renderer.gameStarted()
         this.onResize()
         this.started = true

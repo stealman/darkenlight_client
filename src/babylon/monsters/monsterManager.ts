@@ -4,8 +4,8 @@ import { MonsterLoader } from '@/babylon/monsters/monsterLoader'
 import { MonsterModel } from '@/babylon/monsters/monsterModel'
 import { MonsterCodebook, MonsterType } from '@/babylon/monsters/codebook/monsterCodebook'
 import { ViewportManager } from '@/utils/viewport'
-import { Data } from '@/data/globalData'
 import { TargetingManager } from '@/gui/targettingManager'
+import { MyPlayer } from '@/babylon/character/myPlayer'
 
 export const MonsterManager = {
     monsters: new Map as Map<number, Monster>,
@@ -16,7 +16,7 @@ export const MonsterManager = {
         this.monsters = new Map<number, Monster>()
         this.killedMonsters = new Set<Monster>()
         this.visibleMonsters = new Set<number>()
-        await MonsterLoader.initialize(scene)
+        await MonsterLoader.initialize()
     },
 
     addMonster (id: number, type: number, position: { x: number, z: number }, hp: number, mv: number[] | undefined) {
@@ -79,8 +79,8 @@ export const MonsterManager = {
 
     autoAttack(data: { id: number, tgt: number, tp: string, dur: number }) {
         const mob = this.monsters.get(data.id)
-        if (data.tp === 'C' && data.tgt === Data.myChar.id) {
-            mob?.doAutoAttack(Data.myChar, data.dur)
+        if (data.tp === 'C' && data.tgt === MyPlayer.myChar.id) {
+            mob?.doAutoAttack(MyPlayer.myChar, data.dur)
         }
     },
 

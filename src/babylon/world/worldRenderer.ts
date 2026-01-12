@@ -9,16 +9,15 @@ import { Materials } from '@/babylon/materials'
 import { TreeManager } from '@/babylon/world/treeManager'
 import { BabylonUtils } from '@/babylon/utils'
 import { TerrainManager } from '@/babylon/world/terrainManager'
-import { Renderer } from '@/babylon/scene/renderer'
 import { PBRCustomMaterial } from '@babylonjs/materials'
 import { StaticsManager } from '@/babylon/world/staticsManager'
 import { GMSpawns } from '@/gm/GmSpawns'
 import { GMManager, GmTabs } from '@/gm/GM'
 import { Lights } from '@/babylon/scene/lights'
-import { Data } from '@/data/globalData'
 import { ViewportManager } from '@/utils/viewport'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { TargetingManager } from '@/gui/targettingManager'
+import { MyPlayer } from '@/babylon/character/myPlayer'
 
 export const WorldRenderer = {
     block1: null as SymmetricBlock | null,
@@ -52,7 +51,7 @@ export const WorldRenderer = {
     },
 
     checkRenderWorld() {
-        const pos = Data.myChar.getPositionRounded()
+        const pos = MyPlayer.myChar.getPositionRounded()
         if (this.lastPos == null || pos.x !== this.lastPos.x || pos.z !== this.lastPos.z) {
             if (ViewportManager.viewPortInitialized) {
                 WorldDataManager.fetchWorldDataIfNeeded()

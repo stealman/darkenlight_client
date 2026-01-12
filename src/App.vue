@@ -86,7 +86,6 @@ import { Renderer } from './babylon/scene/renderer'
 import { GameManager } from '@/GameManager'
 import GmPanel from '@/vue/views/gm/GmPanel.vue'
 import { GMManager } from '@/gm/GM'
-import { Data } from '@/data/globalData'
 import TouchControllers from '@/vue/views/touchControllers.vue'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { Connector } from '@/network/connector'
@@ -102,11 +101,12 @@ import {
 } from '@/vue/icons/icons'
 import { Settings } from '@/settings/settings'
 import { TargetingManager } from '@/gui/targettingManager'
+import { MyPlayer } from '@/babylon/character/myPlayer'
 
 const canvas = ref<HTMLCanvasElement | null>(null)
 const miniMapCanvas = ref<HTMLCanvasElement | null>(null)
 const gmPanelVisible = GMManager.gmPanelVisible
-const myCharRef = Data.myCharRef
+const myCharRef = MyPlayer.myCharRef
 
 const gameLoading = ref(true);
 const displayLoginDialog = ref(false);
