@@ -11,6 +11,9 @@ import { TargetingManager } from '@/gui/targettingManager'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { Attackable } from '@/GameManager'
 
+/**
+ * Controlling object for the player's character
+ */
 export const MyPlayer = {
     charModel: null as CharacterModel | null,
 

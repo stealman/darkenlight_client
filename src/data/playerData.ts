@@ -27,8 +27,6 @@ export class PlayerData implements Attackable {
 
     rotationSpeed: number = 15
     yMoveSpeed: number = 15
-
-    attackCooldown: number = 2000
     attackAnimationTime: number = 1000 // 1000 is base attack time
 
     weaponSoundType: string = WeaponSoundTypes.SWORD
@@ -44,8 +42,6 @@ export class PlayerData implements Attackable {
         this.pos = new Vector3(data.x, 0, data.z)
         this.name = data.name
         this.className = data.cls
-        this.attackCooldown = data.aaCd
-        this.attackAnimationTime = data.aaDur
     }
 
     resolveStepMark(time: number, inCombat: boolean = false) {

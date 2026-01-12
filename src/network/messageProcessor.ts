@@ -22,6 +22,7 @@ export const MessageProcessor = {
                 case 2: await this.loginResponse(msg.d); break
                 case 3: this.addMonster(msg.d); break
                 case 4: this.monsterMove(msg.d); break
+                case 5: this.addCharacter(msg.d); break
                 case 6: this.charMove(msg.d); break
                 case 7: this.processWorldData(msg.d); break
                 case 8: this.removeMonster(msg.d); break
@@ -66,6 +67,10 @@ export const MessageProcessor = {
 
     monsterMove(data) {
         MonsterManager.monsterMove(data[0], { x: data[1], z: data[2] }, { x: data[3], z: data[4] }, data[5])
+    },
+
+    addCharacter(data) {
+        console.log('Addded character: ', data)
     },
 
     charMove(data) {

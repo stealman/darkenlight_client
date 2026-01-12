@@ -45,8 +45,6 @@ export const StepMarksRenderer = {
     update(timeRate: number, time: number) {
         this.myStepMarks = this.myStepMarks.filter(mark => (time < mark.deadTime))
         this.mobStepMarks = this.mobStepMarks.filter(mark => (time < mark.deadTime))
-        console.log(this.mobStepMarks.length)
-
         this.renderStepMarks(time)
     },
 
