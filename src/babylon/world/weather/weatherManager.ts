@@ -9,6 +9,7 @@ import {
 } from '@babylonjs/core'
 import { MyPlayer } from '@/babylon/character/myPlayer'
 import { Renderer } from '@/babylon/scene/renderer'
+import { Settings } from '@/settings/settings'
 export const WeatherManager = {
     actualWeather: null as WeatherEffect | null,
 
@@ -17,7 +18,7 @@ export const WeatherManager = {
     },
 
     update() {
-        if (!this.actualWeather) {
+        if (!this.actualWeather && !Settings.isDetalLevelLow()) {
             this.actualWeather = new SnowEffect(Renderer.scene)
             this.actualWeather.start()
         }
@@ -33,7 +34,6 @@ interface WeatherEffect {
 }
 
 class SnowEffect implements WeatherEffect {
-
     constructor(scene: Scene) {
         console.log("Initializing snow effect")
         const snow = new GPUParticleSystem("snow", {

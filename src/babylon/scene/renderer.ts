@@ -33,7 +33,7 @@ import { FightSplatsRenderer } from '@/babylon/world/fightSplatsRenderer'
  * Main Renderer
  */
 export const Renderer = {
-    viewportInitialized: false,
+    //viewportInitialized: false,
     scene: null as Scene,
     instrumentation: null as SceneInstrumentation | null,
     engine: null as Engine | null,
@@ -44,7 +44,6 @@ export const Renderer = {
     animationSpeedRatio: 1 as number,
 
     async initialize(canvas: HTMLCanvasElement) {
-        console.log("Initializing renderer...")
         this.engine = new Engine(canvas, Settings.detailLevel.antialias)
         this.engine.setHardwareScalingLevel(1)
         this.createScene(this.engine)
@@ -113,12 +112,13 @@ export const Renderer = {
         }
 
         if (this.frame > 1) {
+            /**
             if (!this.viewportInitialized) {
                 ViewportManager.onResize()
                 OverlayManager.onResize()
                 this.viewportInitialized = true
             }
-
+*/
             // Animation speeds are calculated to 60 FPS base
             this.animationSpeedRatio = timeRate * 60
 

@@ -4,11 +4,23 @@ import { OverlayManager } from '@/gui/overlayManager'
 import { Targetable, TargetingManager } from '@/gui/targettingManager'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { MyPlayer } from '@/babylon/character/myPlayer'
+import { Settings } from '@/settings/settings'
 
 export const GameManager = {
     started: false as boolean,
 
     async prepareGame(canvas: HTMLCanvasElement) {
+        let storedSettings = null
+        const storedSettingsString = localStorage.getItem("STORED_SETTINGS")
+
+        // Pokud nejsou zadna nastaveni, nastavime vychozi hodnoty
+        if (!storedSettingsString) {
+            storedSettings = Settings.getDefaultSettings()
+            localStorage.setItem("STORED_SETTINGS", JSON.stringify(storedSettings))
+        } else {
+            storedSettings = JSON.parse(storedSettingsString)
+        }
+        Settings.initialize(storedSettings)
         await Renderer.initialize(canvas)
     },
 

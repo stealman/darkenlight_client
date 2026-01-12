@@ -15,13 +15,13 @@
 
                         Zařízení, na kterém hraješ.
                         <div class="dialog-actions" style="margin-top: 20px;">
-                            <button class="dialog-button" :class="currentDevice == 'DESKTOP' ? 'selected' : ''" @click="setDeviceType('DESKTOP')">PC</button>
-                            <button class="dialog-button" :class="currentDevice == 'TABLET' ? 'selected' : ''" @click="setDeviceType('TABLET')">Tablet</button>
-                            <button class="dialog-button" :class="currentDevice == 'PHONE' ? 'selected' : ''" @click="setDeviceType('PHONE')">Mobil</button>
+                            <button class="dialog-button" :class="storedSettings.deviceType == 'DESKTOP' ? 'selected' : ''" @click="setDeviceType('DESKTOP')">PC</button>
+                            <button class="dialog-button" :class="storedSettings.deviceType == 'TABLET' ? 'selected' : ''" @click="setDeviceType('TABLET')">Tablet</button>
+                            <button class="dialog-button" :class="storedSettings.deviceType == 'PHONE' ? 'selected' : ''" @click="setDeviceType('PHONE')">Mobil</button>
                         </div>
 
                         <!-- Nastaveni pro dotykova zarizeni -->
-                        <div v-if="currentDevice == 'TABLET' || currentDevice == 'PHONE'" style="margin-top: 20px;">
+                        <div v-if="storedSettings.deviceType == 'TABLET' || storedSettings.deviceType == 'PHONE'" style="margin-top: 20px;">
                             <table>
                                 <tbody>
                                 <tr>
@@ -61,7 +61,7 @@
                             <tr>
                                 <td class="item-label" style="width: 25%">Velikost HUD</td>
                                 <td  style="width: 25%">
-                                    <input class="range-slider" type="range" min="0.5" max="3" step="0.1" style="zoom: 1.5;" v-model="storedSettings.HUD_SIZE" @change="hudSizeChanged()" />
+                                    <input class="range-slider" type="range" min="0.5" max="3" step="0.1" style="zoom: 1.5;" v-model="storedSettings.hudSize" @change="hudSizeChanged()" />
                                 </td>
 
                                 <td class="item-label" style="width: 25%"></td>
@@ -79,9 +79,9 @@
 
                     Úroveň detailů grafiky.
                     <div class="dialog-actions" style="margin-top: 20px;">
-                        <button class="dialog-button" :class="storedSettings.DETAILS_LEVEL == 'HIGH' ? 'selected' : ''" @click="setDetailsLevel('HIGH')">Vysoká</button>
-                        <button class="dialog-button" :class="storedSettings.DETAILS_LEVEL == 'MEDIUM' ? 'selected' : ''" @click="setDetailsLevel('MEDIUM')">Střední</button>
-                        <button class="dialog-button" :class="storedSettings.DETAILS_LEVEL == 'LOW' ? 'selected' : ''" @click="setDetailsLevel('LOW')">Nízká</button>
+                        <button class="dialog-button" :class="storedSettings.detailLevel.name == 'HIGH' ? 'selected' : ''" @click="setDetailsLevel('HIGH')">Vysoká</button>
+                        <button class="dialog-button" :class="storedSettings.detailLevel.name == 'MEDIUM' ? 'selected' : ''" @click="setDetailsLevel('MEDIUM')">Střední</button>
+                        <button class="dialog-button" :class="storedSettings.detailLevel.name == 'LOW' ? 'selected' : ''" @click="setDetailsLevel('LOW')">Nízká</button>
                     </div>
 
                     <div style="margin-top: 10px;">
@@ -90,24 +90,24 @@
                                 <tr>
                                     <td class="item-label" style="width: 25%">Jas</td>
                                     <td  style="width: 25%">
-                                        <input class="range-slider" type="range" min="1" max="10" step="1" style="zoom: 1.5;" v-model="storedSettings.BRIGHTNESS" @change="brightnessChanged()" />
+                                        <input class="range-slider" type="range" min="1" max="10" step="1" style="zoom: 1.5;" v-model="storedSettings.brightness" @change="brightnessChanged()" />
                                     </td>
 
                                     <td class="item-label" style="width: 25%">Hustota Mlhy</td>
                                     <td  style="width: 25%">
-                                        <input class="range-slider" type="range" min="1" max="10" step="1" style="zoom: 1.5;" v-model="storedSettings.FOG_INTENSITY" @change="fogIntensityChanged()" />
+                                        <input class="range-slider" type="range" min="1" max="10" step="1" style="zoom: 1.5;" v-model="storedSettings.fogDensity" @change="fogIntensityChanged()" />
                                     </td>
                                 </tr>
 
                                 <tr>
                                     <td class="item-label" style="width: 25%">Jas označníku</td>
                                     <td  style="width: 25%">
-                                        <input class="range-slider" type="range" min="0.1" max="1" step="0.1" style="zoom: 1.5;" v-model="storedSettings.TARGET_MARKER_OPACITY" @change="targetMarkerOpacityChanged()" />
+                                        <input class="range-slider" type="range" min="0.1" max="1" step="0.1" style="zoom: 1.5;" v-model="storedSettings.targetMarkerOpacity" @change="targetMarkerOpacityChanged()" />
                                     </td>
 
                                     <td class="item-label" style="width: 25%">Zobrazit zář</td>
                                     <td  style="width: 25%">
-                                        <Checkbox name="displayGlow" input-id="displayGlow" v-model="storedSettings.DISPLAY_GLOW" binary @change="displayGlowChanged()" />
+                                        <Checkbox name="displayGlow" input-id="displayGlow" v-model="storedSettings.displayGlow" binary @change="displayGlowChanged()" />
                                     </td>
                                 </tr>
                             </tbody>
@@ -126,31 +126,7 @@
 import { onMounted, ref, watch } from 'vue'
 import { Settings } from '@/settings/settings'
 
-const getDefaultSettings = () => {
-    return {
-        DEVICE_TYPE: Settings.touchEnabled ? 'PHONE' : 'DESKTOP',
-        DETAILS_LEVEL: Settings.touchEnabled ? 'MEDIUM' : 'HIGH',
-
-        JOYSTICK_SIZE: 100,
-        JOYSTICK_BOTTOM: 50,
-        JOYSTICK_LEFT: 120,
-
-        BRIGHTNESS: 5,
-        FOG_INTENSITY: 5,
-        DISPLAY_GLOW: !Settings.touchEnabled,
-        TARGET_MARKER_OPACITY: 1,
-        AUTO_TARGETING: true,
-        AUTO_FIRE: true,
-
-        CAMERA_SENSITIVITY: Settings.touchEnabled ? 0.6 : 0.3,
-        CAMERA_LOCK: false,
-
-        HUD_SIZE: 1,
-    }
-}
-
-const currentDevice = ref('DESKTOP');
-const storedSettings = ref(getDefaultSettings())
+const storedSettings = ref(Settings)
 const emit = defineEmits(['close', 'closeWithRestartPrompt', 'deviceTypeSelected', 'touchColtrolsChanged', 'openLoginDialog'])
 
 const tabs = [
@@ -168,24 +144,6 @@ onMounted(() => {
     // Detekce touch device
     Settings.touchEnabled = "ontouchstart" in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0;
     Settings.mouseEnabled = !Settings.touchEnabled;
-
-    // Nacteni ulozenych nastaveni
-    storedSettings.value = localStorage.getItem("STORED_SETTINGS");
-
-    // Pokud nejsou zadna nastaveni, nastavime vychozi hodnoty
-    if (!storedSettings.value) {
-        storedSettings.value = getDefaultSettings()
-        storeSettings()
-    } else {
-        storedSettings.value = JSON.parse(storedSettings.value);
-
-        if (!storedSettings.value.CAMERA_SENSITIVITY) {
-            storedSettings.value.CAMERA_SENSITIVITY = storedSettings.value.DEVICE_TYPE == 'DESKTOP' ? 0.3 : 0.6
-        }
-    }
-
-    currentDevice.value = storedSettings.value.DEVICE_TYPE
-    Settings.initialize(storedSettings.value)
 })
 
 const openDialog = () => {
@@ -193,37 +151,29 @@ const openDialog = () => {
 }
 
 const setDeviceType = (deviceType) => {
-    Settings.deviceType = deviceType
-
-    storedSettings.value.DEVICE_TYPE = deviceType;
+    storedSettings.value.deviceType = deviceType
 
     // Defaultni nastaveni pro telefon a tablet
     if (deviceType == 'PHONE') {
-        storedSettings.value.JOYSTICK_BOTTOM = 50
-        storedSettings.value.JOYSTICK_LEFT = 120
-        storedSettings.value.THROTTLE_BOTTOM = 20
-        storedSettings.value.THROTTLE_LEFT = 10
-        storedSettings.value.CAMERA_SENSITIVITY = 0.6
-        storedSettings.value.HUD_SIZE = 1.2
+        storedSettings.value.joystickBottom = 50
+        storedSettings.value.joystickLeft = 120
+        storedSettings.value.joystickSize = 100
+        storedSettings.value.hudSize = 1.2
     } else if (deviceType == 'TABLET') {
-        storedSettings.value.JOYSTICK_BOTTOM = 300
-        storedSettings.value.JOYSTICK_LEFT = 120
-        storedSettings.value.THROTTLE_BOTTOM = 250
-        storedSettings.value.THROTTLE_LEFT = 10
-        storedSettings.value.CAMERA_SENSITIVITY = 0.6
-        storedSettings.value.HUD_SIZE = 1
+        storedSettings.value.joystickBottom = 300
+        storedSettings.value.joystickLeft = 120
+        storedSettings.value.joystickSize = 150
+        storedSettings.value.hudSize = 1
     } else {
-        storedSettings.value.CAMERA_SENSITIVITY = 0.3
-        storedSettings.value.HUD_SIZE = 1
+        storedSettings.value.hudSize = 1
     }
 
-    currentDevice.value = deviceType;
     storeSettings()
     emit('deviceTypeSelected');
 }
 
 const setDetailsLevel = (level) => {
-    storedSettings.value.DETAILS_LEVEL = level
+    storedSettings.value.setDetailLevel(level)
     graphicSettingsChanged.value = true;
     storeSettings()
 }
@@ -234,50 +184,49 @@ const brightnessChanged = () => {
 }
 
 const fogIntensityChanged = () => {
-    Settings.setFogIntensity(storedSettings.value.FOG_INTENSITY)
+    Settings.setFogIntensity(storedSettings.value.fogDensity)
     storeSettings()
 }
 
 const targetMarkerOpacityChanged = () => {
-    Settings.setTargetMarkerOpacity(storedSettings.value.TARGET_MARKER_OPACITY)
+    Settings.setTargetMarkerOpacity(storedSettings.value.targetMarkerOpacity)
     storeSettings()
 }
 
 const displayGlowChanged = () => {
     graphicSettingsChanged.value = true;
-    Settings.setDisplayGlow(storedSettings.value.DISPLAY_GLOW)
+    Settings.setDisplayGlow(storedSettings.value.displayGlow)
     storeSettings()
 }
 
 const joystickSizeChanged = (change) => {
-    storedSettings.value.JOYSTICK_SIZE += change;
+    storedSettings.value.joystickSize += change;
     touchControlsChanged()
 }
 
 const joystickLeftChanged = (change) => {
-    storedSettings.value.JOYSTICK_LEFT += change;
+    storedSettings.value.joystickLeft += change;
     touchControlsChanged()
 }
 
 const joystickBottomChanged = (change) => {
-    storedSettings.value.JOYSTICK_BOTTOM += change;
+    storedSettings.value.joystickBottom += change;
     touchControlsChanged()
 }
 
 const touchControlsChanged = () => {
-    // document.getElementById("setting-dialog-backdrop").style.backdropFilter = "none"
+    //document.getElementById("setting-dialog-backdrop").style.backdropFilter = "none"
     storeSettings()
-    emit('touchColtrolsChanged')
+    emit('touchColtrolsChanged');
 }
 
 const hudSizeChanged = () => {
-    Settings.setHudSize(storedSettings.value.HUD_SIZE)
-    //CockpitPanelRenderer.hudSizeChanged()
+    Settings.setHudSize(storedSettings.value.hudSize)
     storeSettings()
 }
 
 const storeSettings = () => {
-    localStorage.setItem("STORED_SETTINGS", JSON.stringify(storedSettings.value));
+   Settings.storeSettings()
 }
 
 const closeDialog = () => {

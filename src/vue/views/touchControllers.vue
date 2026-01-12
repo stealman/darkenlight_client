@@ -1,12 +1,12 @@
 <template>
     <div id="touchControllsLayer">
-        <div id="joystick-zone" style="position:absolute; width:100px; height:100px;"></div>
+        <div id="joystick-zone" style="position:absolute;left:20px;bottom:20px;width:150px;height:150px;"></div>
     </div>
 </template>
 
 <script setup>
 
-import { onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import { Controller } from '@/controlls/controller'
 import nipplejs from 'nipplejs'
 import { Settings } from '@/settings/settings'
@@ -14,14 +14,10 @@ import { Settings } from '@/settings/settings'
 let joystickManager = null;
 
 onMounted(() => {
-
+    updateFromSettings()
 })
 
-const updateControls = () => {
-    setJoystickPosition()
-}
-
-const setJoystickPosition = () => {
+const updateFromSettings = () => {
     const joystickZone = document.getElementById("joystick-zone")
 
     if (joystickManager) {
@@ -29,17 +25,17 @@ const setJoystickPosition = () => {
         joystickManager = null
     }
 
-    if (!Settings.touchEnabled) {
+    if (Settings.getDeviceType() === "DESKTOP") {
         joystickZone.style.display = "none"
         return;
     }
 
     joystickZone.style.display =  "block"
-    const joySize = 100
-    const joyPos = { left:"30px", bottom: "30px" }
+    const joySize = Settings.joystickSize
+    const joyPos = { left:"0px", bottom: "0px" }
 
-    joystickZone.style.left = 30 + "px"
-    joystickZone.style.bottom = 30 + "px"
+    joystickZone.style.left = Settings.joystickLeft + "px"
+    joystickZone.style.bottom = Settings.joystickBottom + "px"
 
     joystickManager = nipplejs.create({
         zone: joystickZone,
@@ -59,7 +55,7 @@ const setJoystickPosition = () => {
 }
 
 defineExpose({
-    updateControls
+    updateFromSettings
 })
 </script>
 

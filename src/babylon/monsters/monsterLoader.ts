@@ -38,7 +38,7 @@ export const MonsterLoader = {
         model.getChildMeshes().forEach(mesh => {
             mesh.material = material;
             mesh.alwaysSelectAsActiveMesh = true
-            if (Settings.shadows) {
+            if (Settings.isShadowsEnabled) {
                  mesh.receiveShadows = true;
             }
         });

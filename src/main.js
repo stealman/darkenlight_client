@@ -8,6 +8,7 @@ import 'primeicons/primeicons.css';
 
 import './../public/styles/main.css';
 import './../public/styles/theme.css';
+import './../public/styles/icons.css';
 import './../public/styles/gm.css';
 
 // Custom PrimeVue component styles

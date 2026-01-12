@@ -4,20 +4,19 @@
         <canvas ref="miniMapCanvas" id='miniMapCanvas' class="noselect"></canvas>
         <canvas id="overlayCanvas" class="noselect"></canvas>
 
-        <!-- Menu button
-        <div style="position: absolute; top: 5px; left: 10px;" @click="showSettingsDialog()" v-html="getHamburgerMenuSvg('icon-white', 'icon-settings')"></div> -->
+        <!-- Menu button-->
+        <div style="position: absolute; top: 50px; left: 10px;" @click="showSettingsDialog()" v-html="getHamburgerMenuSvg('icon-white', 'icon-settings')"></div>
 
-        <TouchControllers ref='touchControls' />
+        <TouchControllers v-if="!gameLoading" ref='touchControls' />
 
         <!-- Top GUI panel -->
         <div class="top-bar">
           <div style="display:flex; gap:15px; align-items:center;">
-              <div id="fpsLabel" style="font-size:20px; color:#aaa;">FPS:</div>
-              <div id="posLabel" style="font-size:20px; color:#aaa;">POS:</div>
+              <div id="fpsLabel" style="font-size:12px; color:#aaa;">FPS:</div>
+              <div id="posLabel" style="font-size:12px; color:#aaa;">POS:</div>
           </div>
 
           <div style="display:flex; gap:15px; align-items:center;">
-              <button style="font-size:18px; color:#aaa;" @click="requestFullscreen()">Fullscreen</button>
               <button v-if="myCharRef?.className ==='GM'" style="font-size:18px; color:#aaa;" @click="toggleGmPanel()">GM Panel</button>
           </div>
         </div>
@@ -33,19 +32,18 @@
 
     <LoginDialog ref="loginDialog" v-if="displayLoginDialog" @login="loginRequestSent" />
 
-    <SettingsDialog ref="settingsDialog" v-if="displaySettingsDialog"
+    <SettingsDialog ref="settingsDialog" v-show="displaySettingsDialog"
                     @close="displaySettingsDialog = false"
                     @close-with-restart-prompt="closeSettingsWithRestartPrompt"
-                    @device-type-selected="updateControls"
-                    @touch-coltrols-changed="touchControls.updateControls()"
-                    @open-login-dialog="displayLoginDialog = true"/>
+                    @touch-coltrols-changed="touchControlsChanged"
+                    @open-login-dialog="displayLoginDialog = true"
+                    @device-type-selected="deviceTypeChanged"/>
 
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, nextTick, onUnmounted } from 'vue'
 import { Renderer } from './babylon/scene/renderer'
-import { Settings } from '@/settings/settings'
 import { GameManager } from '@/GameManager'
 import GmPanel from '@/vue/views/gm/GmPanel.vue'
 import { GMManager } from '@/gm/GM'
@@ -56,6 +54,13 @@ import { Connector } from '@/network/connector'
 import LoginDialog from '@/vue/views/loginDialog.vue'
 import SettingsDialog from '@/vue/views/settingsDialog.vue'
 import { Controller } from '@/controlls/controller'
+import {
+    getFullScreenSvg,
+    getHamburgerMenuSvg,
+    getInspectSvg,
+    getTargetLockSvg,
+} from '@/vue/icons/icons'
+import { Settings } from '@/settings/settings'
 
 const canvas = ref<HTMLCanvasElement | null>(null)
 const miniMapCanvas = ref<HTMLCanvasElement | null>(null)
@@ -86,21 +91,12 @@ onMounted(async () => {
     document.addEventListener("keyup", (e) => Controller.processKeyup(e));
     await nextTick()
 
-    Settings.touchEnabled = "ontouchstart" in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0;
-    Settings.mouseEnabled = !Settings.touchEnabled;
-    Settings.shadows = !Settings.touchEnabled
-    Settings.debug = !Settings.touchEnabled
-
-    // explicitně přebíjíš výše → nechávám stejně jako v původním kódu
-    Settings.shadows = true
-
-    updateControls()
     if (document.getElementById("renderCanvas")) {
-        Connector.initialize()
-
         console.log("INIT GAME", Date.now());
+        Connector.initialize()
         await GameManager.prepareGame(document.getElementById("renderCanvas") as HTMLCanvasElement)
         console.log("GAME INITIALIZED", Date.now());
+
         gameLoading.value = false
         displayLoginDialog.value = true
 
@@ -130,23 +126,29 @@ onUnmounted(() => {
 
 const loginRequestSent = () => {
     loginRequestSentFlag.value = true;
-    //requestFullscreen()
+    if (Settings.deviceType !== "DESKTOP") {
+        requestFullscreen()
+    }
     document.oncontextmenu = () => false;
     displayLoginDialog.value = false;
 }
 
-const updateControls = () => {
-    touchControls.value.updateControls()
-}
-
 const showSettingsDialog = () => {
     displaySettingsDialog.value = true;
-    settingsDialog.value.openDialog()
+    //settingsDialog.value.openDialog()
 }
 
 const closeSettingsWithRestartPrompt = () => {
     displaySettingsDialog.value = false;
     displayRestartPrompt.value = true;
+}
+
+const touchControlsChanged = () => {
+    touchControls.value.updateFromSettings()
+}
+
+const deviceTypeChanged = () => {
+    touchControls.value.updateFromSettings()
 }
 
 const toggleGmPanel = () => {

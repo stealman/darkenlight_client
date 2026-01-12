@@ -23,31 +23,29 @@ const DetailLevels= {
 export const Settings = {
     deviceType: null as string,
     detailLevel: DetailLevels.MEDIUM,
-
-    shadows: true as boolean,
-    debug: false as boolean,
+    detailLevelName: 'MEDIUM',
 
     // For character model debugging
     closeView: false as boolean,
 
     touchEnabled: false,
     mouseEnabled: false,
-    lockedCamera: false,
-    cameraSensitivity: 0.3,
 
     brightness: 5,
     targetMarkerOpacity: 1,
     fogDensity: 4,
     displayGlow: true as boolean,
-    autoTargeting: true as boolean,
-    autoFire: true as boolean,
 
     hudSize: 1 as number,
+    joystickSize: 100 as number,
+    joystickBottom: 50 as number,
+    joystickLeft: 120 as number,
 
     initialize(storedSettings) {
-        this.deviceType = storedSettings.DEVICE_TYPE
+        console.log("Initializing settings:", storedSettings)
 
-        switch (storedSettings.DETAILS_LEVEL) {
+        this.deviceType = storedSettings.deviceType
+        switch (storedSettings.detailLevelName) {
             case 'LOW':
                 this.detailLevel = DetailLevels.LOW;
                 break;
@@ -61,19 +59,54 @@ export const Settings = {
                 this.detailLevel = DetailLevels.MEDIUM;
         }
 
-        this.brightness = parseInt(storedSettings.BRIGHTNESS)
-        this.fogDensity = parseInt(storedSettings.FOG_INTENSITY)
-        this.targetMarkerOpacity = parseFloat(storedSettings.TARGET_MARKER_OPACITY)
-        this.cameraSensitivity = parseFloat(storedSettings.CAMERA_SENSITIVITY)
-        this.lockedCamera = storedSettings.CAMERA_LOCK
-        this.displayGlow = storedSettings.DISPLAY_GLOW
-        this.autoTargeting = storedSettings.AUTO_TARGETING
-        this.autoFire = storedSettings.AUTO_FIRE
-        this.hudSize = parseFloat(storedSettings.HUD_SIZE)
+        this.brightness = parseInt(storedSettings.brightness)
+        this.fogDensity = parseInt(storedSettings.fogDensity)
+        this.targetMarkerOpacity = parseFloat(storedSettings.targetMarkerOpacity)
+        this.displayGlow = storedSettings.displayGlow
+        this.hudSize = parseFloat(storedSettings.hudSize)
+        this.joystickSize = parseInt(storedSettings.joystickSize)
+        this.joystickBottom = parseInt(storedSettings.joystickBottom)
+        this.joystickLeft = parseInt(storedSettings.joystickLeft)
+    },
+
+    getDefaultSettings() {
+        return {
+            deviceType: Settings.touchEnabled ? 'PHONE' : 'DESKTOP',
+            detailLevelName: Settings.touchEnabled ? 'MEDIUM' : 'HIGH',
+
+            joystickSize: 100,
+            joystickBottom: 50,
+            joystickLeft: 120,
+
+            brightness: 5,
+            fogDensity: 5,
+            displayGlow: !Settings.touchEnabled,
+            targetMarkerOpacity: 1,
+            hudSize: 1,
+        }
+    },
+
+    storeSettings() {
+        localStorage.setItem("STORED_SETTINGS", JSON.stringify(this))
+    },
+
+    setDetailLevel(level: string) {
+        this.detailLevelName = level
+        switch (level) {
+            case 'LOW':
+                this.detailLevel = DetailLevels.LOW
+                break
+            case 'MEDIUM':
+                this.detailLevel = DetailLevels.MEDIUM
+                break
+            case 'HIGH':
+                this.detailLevel = DetailLevels.HIGH
+                break
+        }
     },
 
     isShadowsEnabled(): boolean {
-        return this.detailLevel.shadowQuality > -1;
+        return this.detailLevel.shadowQuality > 0
     },
 
     isHudButtonsAnimationsEnabled(): boolean {

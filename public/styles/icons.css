@@ -1,0 +1,57 @@
+.icon-white {
+    fill: #bbb;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.icon-blue {
+    fill: #00f;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    opacity: 0.75
+}
+
+
+.icon-red {
+    fill: #f00;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    opacity: 0.75
+}
+
+.icon-cyan {
+    fill: var(--dialog-color);
+    transition: all 0.2s ease;
+    cursor: pointer;
+    opacity: 0.75
+}
+
+.icon-white:hover {
+    fill: #fff;
+}
+
+/* Jednotlive ikony */
+#icon-fullscreen {
+    width: 28px;
+    height: 24px;
+}
+
+#icon-settings {
+    height: 32px;
+    width: 32px;
+}
+
+#icon-inspect {
+    height: 32px;
+    width: 30px;
+}
+
+#icon-target-lock {
+    height: 64px;
+    width: 64px;
+}
+
+#icon-target-select {
+    height: 64px;
+    width: 64px;
+}

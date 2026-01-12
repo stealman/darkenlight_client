@@ -26,7 +26,7 @@ export const TerrainManager = {
         this.terrainPlane = Builder.createHorizontalPlane(scene, WorldRenderer.worldParentNode!, 1, 0)
         this.terrainPlane.material = Materials.planeMaterial
 
-        if (Settings.shadows) {
+        if (Settings.isShadowsEnabled) {
             this.terrainBlock1.receiveShadows = true
             this.terrainPlane.receiveShadows = true
         }

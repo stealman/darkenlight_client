@@ -22,9 +22,8 @@ export const Lights = {
         this.sunLight.diffuse = new Color3(1, 0.91, 0.78)
         //this.sunLight.diffuse = new Color3(0.82, 0.91, 1)
 
-        if (Settings.shadows) {
-
-            this.shadow = new ShadowGenerator(4096, this.sunLight, false)
+        if (Settings.isShadowsEnabled()) {
+            this.shadow = new ShadowGenerator(Settings.detailLevel.shadowQuality == 2 ? 4096 : 2048, this.sunLight, false)
             this.shadow.bias = 0.00001
             this.shadow.setDarkness(0)
             this.shadow.usePoissonSampling = true
@@ -38,7 +37,7 @@ export const Lights = {
     },
 
     addShadowCaster(mesh: Mesh | AbstractMesh) {
-        if (Settings.shadows) {
+        if (Settings.isShadowsEnabled()) {
             Lights.shadow.addShadowCaster(mesh)
         }
     },
