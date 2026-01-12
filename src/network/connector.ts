@@ -29,6 +29,8 @@ export const Connector = {
 
         this.socket.onclose = () => {
             console.log('Spojení uzavřeno')
+            document.getElementById("dialog-error-content")!.innerText = 'Připojení k serveru bylo ukončeno.'
+            document.getElementById("dialog-error")!.style.display = 'flex'
         }
     },
 

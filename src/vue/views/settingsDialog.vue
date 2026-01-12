@@ -3,7 +3,7 @@
         <div class="dialog-window">
             <div class="dialog-header">
                 <div v-for="tab in tabs" :key="tab.id" class="tab-item" :class="tab.id === activeTabId ? 'active' : ''" @click="activeTabId = tab.id">
-                    {{ tab.name }}
+                    <label class="noselect">{{ tab.name }}</label>
                 </div>
             </div>
             <div class="dialog-content">
@@ -53,8 +53,45 @@
                     </div>
                 </div>
 
-                <!-- GUI -->
+                <!-- Grafika -->
                 <div v-if="activeTabId == 2" >
+
+                    Úroveň detailů grafiky.
+                    <div class="dialog-actions" style="margin-top: 20px;">
+                        <button class="dialog-button" :class="storedSettings.detailLevel.name == 'HIGH' ? 'selected' : ''" @click="setDetailsLevel('HIGH')">Vysoká</button>
+                        <button class="dialog-button" :class="storedSettings.detailLevel.name == 'MEDIUM' ? 'selected' : ''" @click="setDetailsLevel('MEDIUM')">Střední</button>
+                        <button class="dialog-button" :class="storedSettings.detailLevel.name == 'LOW' ? 'selected' : ''" @click="setDetailsLevel('LOW')">Nízká</button>
+                    </div>
+
+                    <div style="margin-top: 10px;">
+                        <table>
+                            <tbody>
+                                <tr>
+                                    <td class="item-label" style="width: 25%">Jas</td>
+                                    <td  style="width: 25%">
+                                        <input class="range-slider" type="range" min="1" max="10" step="1" style="zoom: 1.5;" v-model="storedSettings.brightness" @change="brightnessChanged()" />
+                                    </td>
+
+                                    <td class="item-label" style="width: 25%">Jas označníku</td>
+                                    <td  style="width: 25%">
+                                        <input class="range-slider" type="range" min="0.1" max="1" step="0.1" style="zoom: 1.5;" v-model="storedSettings.targetMarkerOpacity" @change="targetMarkerOpacityChanged()" />
+                                    </td>
+                                </tr>
+
+                                <!--
+                                <tr>
+                                    <td class="item-label" style="width: 25%">Zobrazit zář</td>
+                                    <td  style="width: 25%">
+                                        <Checkbox name="displayGlow" input-id="displayGlow" v-model="storedSettings.displayGlow" binary @change="displayGlowChanged()" />
+                                    </td>
+                                </tr>-->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- GUI -->
+                <div v-if="activeTabId == 3" >
                     <div style="margin-top: 10px;">
                         <table>
                             <tbody>
@@ -74,48 +111,15 @@
                     </div>
                 </div>
 
-                <!-- Grafika -->
-                <div v-if="activeTabId == 3" >
 
-                    Úroveň detailů grafiky.
-                    <div class="dialog-actions" style="margin-top: 20px;">
-                        <button class="dialog-button" :class="storedSettings.detailLevel.name == 'HIGH' ? 'selected' : ''" @click="setDetailsLevel('HIGH')">Vysoká</button>
-                        <button class="dialog-button" :class="storedSettings.detailLevel.name == 'MEDIUM' ? 'selected' : ''" @click="setDetailsLevel('MEDIUM')">Střední</button>
-                        <button class="dialog-button" :class="storedSettings.detailLevel.name == 'LOW' ? 'selected' : ''" @click="setDetailsLevel('LOW')">Nízká</button>
-                    </div>
-
+                <!-- Audio -->
+                <div v-if="activeTabId == 4" >
                     <div style="margin-top: 10px;">
-                        <table>
-                            <tbody>
-                                <tr>
-                                    <td class="item-label" style="width: 25%">Jas</td>
-                                    <td  style="width: 25%">
-                                        <input class="range-slider" type="range" min="1" max="10" step="1" style="zoom: 1.5;" v-model="storedSettings.brightness" @change="brightnessChanged()" />
-                                    </td>
 
-                                    <td class="item-label" style="width: 25%">Hustota Mlhy</td>
-                                    <td  style="width: 25%">
-                                        <input class="range-slider" type="range" min="1" max="10" step="1" style="zoom: 1.5;" v-model="storedSettings.fogDensity" @change="fogIntensityChanged()" />
-                                    </td>
-                                </tr>
-
-                                <tr>
-                                    <td class="item-label" style="width: 25%">Jas označníku</td>
-                                    <td  style="width: 25%">
-                                        <input class="range-slider" type="range" min="0.1" max="1" step="0.1" style="zoom: 1.5;" v-model="storedSettings.targetMarkerOpacity" @change="targetMarkerOpacityChanged()" />
-                                    </td>
-
-                                    <td class="item-label" style="width: 25%">Zobrazit zář</td>
-                                    <td  style="width: 25%">
-                                        <Checkbox name="displayGlow" input-id="displayGlow" v-model="storedSettings.displayGlow" binary @change="displayGlowChanged()" />
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
                     </div>
-
-                    <div v-if="graphicSettingsChanged" class="text-warning" style="margin-top: 20px;">Změny v nastavení grafiky se projeví až po restartu hry</div>
                 </div>
+
+                <div v-if="graphicSettingsChanged" class="text-warning" style="margin-top: 20px;">Změny v nastavení grafiky se projeví až po restartu hry</div>
             </div>
         </div>
     </div>
@@ -125,14 +129,16 @@
 
 import { onMounted, ref, watch } from 'vue'
 import { Settings } from '@/settings/settings'
+import { Renderer } from '@/babylon/scene/renderer'
+import { Lights } from '@/babylon/scene/lights'
 
 const storedSettings = ref(Settings)
 const emit = defineEmits(['close', 'closeWithRestartPrompt', 'deviceTypeSelected', 'touchColtrolsChanged', 'openLoginDialog'])
 
 const tabs = [
     { name: 'Ovládání', id: 1 },
-    { name: 'GUI', id: 2 },
-    { name: 'Grafika', id: 3 },
+    { name: 'Grafika', id: 2 },
+    { name: 'GUI', id: 3 },
     { name: 'Zvuk', id: 4 },
     { name: 'Odhlásit', id: 5 },
 ]
@@ -179,12 +185,8 @@ const setDetailsLevel = (level) => {
 }
 
 const brightnessChanged = () => {
-    graphicSettingsChanged.value = true;
-    storeSettings()
-}
-
-const fogIntensityChanged = () => {
-    Settings.setFogIntensity(storedSettings.value.fogDensity)
+    Renderer.brightnessChanged()
+    Lights.brightnessChanged()
     storeSettings()
 }
 
@@ -215,7 +217,6 @@ const joystickBottomChanged = (change) => {
 }
 
 const touchControlsChanged = () => {
-    //document.getElementById("setting-dialog-backdrop").style.backdropFilter = "none"
     storeSettings()
     emit('touchColtrolsChanged');
 }
@@ -242,7 +243,7 @@ defineExpose({
 })
 
 watch(activeTabId, (newVal) => {
-    if (newVal == 4) {
+    if (newVal == 5) {
         emit('openLoginDialog')
         closeDialog()
     }

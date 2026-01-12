@@ -3,11 +3,12 @@ import { Builder } from '@/babylon/builder'
 import { Materials } from '@/babylon/materials'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { ViewportManager } from '@/utils/viewport'
+import { Settings } from '@/settings/settings'
 
 export const FightSplatsRenderer = {
     splats: new Array<Splat>(),
     visibleSplats: new Array<Splat>(),
-    maxSplats: 1000,
+    maxSplats: Settings.isDetalLevelHigh() ? 1000 : 200,
     ttl: 900000,
     splatPlane: null as Mesh | null,
 
@@ -23,6 +24,11 @@ export const FightSplatsRenderer = {
 
             const splat = new Splat(FightSplatTypes.getSplatById(dt.tp), pos, dt.lp, dt.s)
             this.splats.push(splat)
+
+            // If over max, remove oldest
+            if (this.splats.length > this.maxSplats) {
+                this.splats.shift()
+            }
         }
     },
 

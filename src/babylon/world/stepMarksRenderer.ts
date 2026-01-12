@@ -3,11 +3,12 @@ import { Builder } from '@/babylon/builder'
 import { Materials } from '@/babylon/materials'
 import { Targetable } from '@/gui/targettingManager'
 import { Data } from '@/data/globalData'
+import { Settings } from '@/settings/settings'
 
 export const StepMarksRenderer = {
     myStepMarks: new Array<StepMark>(),
     mobStepMarks: new Array<StepMark>(),
-    maxMarks: 500,
+    maxMarks: Settings.isDetalLevelHigh() ? 500 : 100,
     stepMarkPlane: null as Mesh | null,
 
     initialize (scene: Scene) {

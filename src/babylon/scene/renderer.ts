@@ -4,7 +4,7 @@ import {
     Vector3,
     FreeCamera,
     Color3, Color4, SceneInstrumentation,
-    CubeTexture, DracoCompression
+    CubeTexture, DracoCompression, Material,
 } from '@babylonjs/core'
 import '@babylonjs/inspector'
 import { Controller } from '@/controlls/controller'
@@ -28,6 +28,7 @@ import { TargetingManager } from '@/gui/targettingManager'
 import { StepMarksRenderer } from '@/babylon/world/stepMarksRenderer'
 import { Lights } from '@/babylon/scene/lights'
 import { FightSplatsRenderer } from '@/babylon/world/fightSplatsRenderer'
+import { OnScreenMessageManager } from '@/gui/onScreenMessageManager'
 
 /**
  * Main Renderer
@@ -42,6 +43,7 @@ export const Renderer = {
     fps: 0 as number,
     frame: 0 as number,
     animationSpeedRatio: 1 as number,
+    pendingMatFreeze: false as boolean,
 
     async initialize(canvas: HTMLCanvasElement) {
         this.engine = new Engine(canvas, Settings.detailLevel.antialias)
@@ -112,13 +114,6 @@ export const Renderer = {
         }
 
         if (this.frame > 1) {
-            /**
-            if (!this.viewportInitialized) {
-                ViewportManager.onResize()
-                OverlayManager.onResize()
-                this.viewportInitialized = true
-            }
-*/
             // Animation speeds are calculated to 60 FPS base
             this.animationSpeedRatio = timeRate * 60
 
@@ -129,6 +124,7 @@ export const Renderer = {
             MobEquipManager.onFrame()
             TargetingManager.onFrame(timeRate, actualTime)
             OverlayManager.onFrame(timeRate, actualTime)
+            OnScreenMessageManager.onFrame(actualTime)
 
             if (GMManager.gmPanelVisible) GMManager.onFrame(timeRate, actualTime)
         }
@@ -192,8 +188,22 @@ export const Renderer = {
         this.scene.environmentTexture = CubeTexture.CreateFromPrefilteredData(
             "environment_specular.env",
             this.scene
-        );
-        this.scene.environmentIntensity = 0.3
+        )
+        this.brightnessChanged()
+    },
+
+    brightnessChanged() {
+        Materials.unFreezeAll()
+        this.scene.environmentIntensity = 0.2 + Settings.brightness * 0.02
+
+        this.scene.markAllMaterialsAsDirty(Material.MiscDirtyFlag)
+        if (!this.pendingMatFreeze) {
+            this.pendingMatFreeze = true
+            this.scene.onAfterRenderObservable.addOnce(() => {
+                Materials.freezeAll()
+                this.pendingMatFreeze = false
+            })
+        }
     },
 
     createCamera() {

@@ -48,10 +48,15 @@ export const MessageProcessor = {
     },
 
     async loginResponse(data) {
-        const myChar = new PlayerData(data)
-        Data.setMyChar(myChar)
-        await GameManager.startGame()
-        console.log('Game started')
+        if (data.message) {
+            document.getElementById("dialog-error-content")!.innerText = data.message
+            document.getElementById("dialog-error")!.style.display = 'flex'
+        } else {
+            const myChar = new PlayerData(data)
+            Data.setMyChar(myChar)
+            await GameManager.startGame()
+            console.log('Game started')
+        }
     },
 
     addMonster(data) {

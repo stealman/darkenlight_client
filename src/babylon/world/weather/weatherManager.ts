@@ -37,7 +37,7 @@ class SnowEffect implements WeatherEffect {
     constructor(scene: Scene) {
         console.log("Initializing snow effect")
         const snow = new GPUParticleSystem("snow", {
-            capacity: 25000
+            capacity: Settings.isDetalLevelHigh() ? 25000 : 12500
         }, scene);
 
         snow.particleTexture = new Texture("images/gfx/flare-rect.png", scene);
@@ -53,8 +53,8 @@ class SnowEffect implements WeatherEffect {
         snowEmitter.parent = MyPlayer.charModel?.node
         snow.emitter = snowEmitter;
 
-        snow.minSize = 0.02;
-        snow.maxSize = 0.065;
+        snow.minSize = Settings.isDetalLevelHigh() ? 0.02 : 0.03;
+        snow.maxSize = Settings.isDetalLevelHigh() ? 0.065 : 0.08;
 
         snow.addColorGradient(0, new Color4(1, 1, 1, 0.3))
         snow.addColorGradient(1, new Color4(1, 1, 1, 0))

@@ -18,6 +18,7 @@ import { Lights } from '@/babylon/scene/lights'
 import { Data } from '@/data/globalData'
 import { ViewportManager } from '@/utils/viewport'
 import { WorldDataManager } from '@/data/worldDataManager'
+import { TargetingManager } from '@/gui/targettingManager'
 
 export const WorldRenderer = {
     block1: null as SymmetricBlock | null,
@@ -55,6 +56,7 @@ export const WorldRenderer = {
             if (ViewportManager.viewPortInitialized) {
                 WorldDataManager.fetchWorldDataIfNeeded()
                 WorldRenderer.renderWorld()
+                TargetingManager.resetCycleIndex()
                 this.lastPos = pos
             }
         }

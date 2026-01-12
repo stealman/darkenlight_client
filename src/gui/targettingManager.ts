@@ -7,6 +7,8 @@ import { Data } from '@/data/globalData'
 import { Connector } from '@/network/connector'
 import { SelectAutoAttackTarget } from '@/network/messages'
 import { SplatType } from '@/babylon/world/fightSplatsRenderer'
+import { OnScreenMessageManager } from '@/gui/onScreenMessageManager'
+import { Settings } from '@/settings/settings'
 
 export const TargetingManager = {
     selectedTarget: null as Targetable | null,
@@ -15,13 +17,42 @@ export const TargetingManager = {
     targetCycleIndex: -1,
     lastCycleTime: 0 as number,
 
+    pointerDownTime: -1 as number,
+    autoTargetingEnabled: false as boolean,
+    lastAutoTargetTime: 0 as number,
+
     async initialize() {
         this.prepareTargetSprite()
+        this.autoTargetingEnabled = Settings.autoTarget
+
+        console.log('TargetingManager initialized ' + Settings.autoTarget)
     },
 
     onFrame(timeRate: number, actualTime: number) {
-        if (actualTime - this.lastCycleTime > 3000) {
-            this.targetCycleIndex = -1
+        if (actualTime - this.lastCycleTime > 1250) this.resetCycleIndex()
+
+        if (this.pointerDownTime > -1 && Date.now() - this.pointerDownTime > 1000) {
+            this.autoTargetingEnabled = !this.autoTargetingEnabled
+            this.pointerDownTime = -1
+            Settings.autoTarget = this.autoTargetingEnabled
+            Settings.storeSettings()
+            OnScreenMessageManager.addMessage(`Auto-Zaměření ${this.autoTargetingEnabled ? 'Zapnuto' : 'Vypnuto'}`)
+        }
+
+        // Auto-targeting every second if enabled and no target selected
+        if (this.autoTargetingEnabled && this.lastAutoTargetTime + 1000 < actualTime) {
+
+            // If target is more than 15 tiles away, clear target
+            if (this.selectedTarget) {
+                if (Vector3.Distance(Data.myChar.pos, this.selectedTarget.pos) > 15) {
+                    this.unselectTarget()
+                }
+            }
+
+            if (this.selectedTarget == null) {
+                this.cycleThroughClosestTargets()
+                this.lastAutoTargetTime = actualTime
+            }
         }
     },
 
@@ -31,14 +62,32 @@ export const TargetingManager = {
         // Cycle through first 6 closest targets
         const maxTargetsToCycle = 6
         const targetsToConsider = sortedMobs.slice(0, maxTargetsToCycle)
+        if (targetsToConsider.length === 0) return
+
 
         this.targetCycleIndex = (this.targetCycleIndex + 1) % targetsToConsider.length
-        const target = targetsToConsider[this.targetCycleIndex]
+        let target = targetsToConsider[this.targetCycleIndex]
+
+        // If target is the selected target, skip to next
+        if (target === this.selectedTarget) {
+            this.targetCycleIndex = (this.targetCycleIndex + 1) % targetsToConsider.length
+            target = targetsToConsider[this.targetCycleIndex]
+        }
 
         if (target) {
+            console.log('Auto-targeting to:', target.getName())
             this.setSelectedTarget(target)
         }
         this.lastCycleTime = Date.now()
+    },
+
+    onPointerDown() {
+        this.pointerDownTime = Date.now()
+        this.cycleThroughClosestTargets()
+    },
+
+    onPointerUp() {
+        this.pointerDownTime = -1
     },
 
     resolvePickRay(ray: Ray, useSphere: boolean = false) {
@@ -87,6 +136,10 @@ export const TargetingManager = {
 
     getTargetSprite(): HTMLCanvasElement | null {
         return this.targetSprite
+    },
+
+    resetCycleIndex() {
+        this.targetCycleIndex = -1
     },
 
     prepareTargetSprite() {

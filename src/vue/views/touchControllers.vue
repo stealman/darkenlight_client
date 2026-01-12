@@ -32,10 +32,12 @@ const updateFromSettings = () => {
 
     joystickZone.style.display =  "block"
     const joySize = Settings.joystickSize
-    const joyPos = { left:"0px", bottom: "0px" }
+    const joyPos = { left: Math.round(joySize / 2) + "px", bottom: Math.round(joySize / 2) + "px" }
 
     joystickZone.style.left = Settings.joystickLeft + "px"
     joystickZone.style.bottom = Settings.joystickBottom + "px"
+    joystickZone.style.width = joySize + "px"
+    joystickZone.style.height = joySize + "px"
 
     joystickManager = nipplejs.create({
         zone: joystickZone,
@@ -52,6 +54,14 @@ const updateFromSettings = () => {
     });
 
     joystickManager.on("end", () => Controller.processJoystick(0, 0));
+
+    setButtonsPosition()
+}
+
+const setButtonsPosition = (storedSettings) => {
+    document.getElementById("btn-target-lock").style.left = (Settings.joystickLeft + Settings.joystickSize - 20) + "px"
+    document.getElementById("btn-target-lock").style.bottom = (Settings.joystickBottom + Settings.joystickSize - 20) + "px"
+    document.getElementById("btn-target-lock").style.display = "block"
 }
 
 defineExpose({

@@ -1,0 +1,40 @@
+div#onscreen-messages-panel {
+    position: absolute;
+    top: 45vh;
+    right: 35vw;
+    width: 30vw;
+    flex-direction: column;
+    justify-content: space-between;
+
+    pointer-events: none;
+}
+
+div#onscreen-messages-panel div.onscreen-message {
+    margin-bottom: 1vh;
+    font-size: 18px;
+    text-align: center;
+    animation: fadeOut 0.5s ease-in-out forwards;
+    animation-delay: 1s;
+    opacity: 1;
+
+    background-color: rgba(0, 0, 0, 0.5);
+    border-radius: 10px;
+    padding: 5px;
+}
+
+div#onscreen-messages-panel div.onscreen-message.cyan {
+    color: rgba(128, 192, 192, 0.85);
+}
+
+div#onscreen-messages-panel div.onscreen-message.gray {
+    color: rgba(200, 200, 200, 0.85);
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+    }
+}

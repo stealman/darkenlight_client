@@ -18,7 +18,6 @@ export const Lights = {
     initialize(scene: Scene) {
         this.sunLight = new DirectionalLight("sunLight", new Vector3(-0.75, -0.75, 0.3), scene)
         this.sunLight.position = new Vector3(30, 30, 30);
-        this.sunLight.intensity = 0.6
         this.sunLight.diffuse = new Color3(1, 0.91, 0.78)
         //this.sunLight.diffuse = new Color3(0.82, 0.91, 1)
 
@@ -34,6 +33,8 @@ export const Lights = {
         //this.glowLayer = new GlowLayer("hl", this.scene)
         //this.glowLayer.intensity = 0.3
         //this.glowLayer.blurKernelSize = 1
+
+        this.brightnessChanged()
     },
 
     addShadowCaster(mesh: Mesh | AbstractMesh) {
@@ -41,4 +42,8 @@ export const Lights = {
             Lights.shadow.addShadowCaster(mesh)
         }
     },
+
+    brightnessChanged() {
+        this.sunLight.intensity = 0.4 + Settings.brightness * 0.04
+    }
 }

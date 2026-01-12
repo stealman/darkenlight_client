@@ -1,27 +1,37 @@
 <template>
     <div id="app">
         <canvas id="renderCanvas" ref="canvas" class="renderer noselect"></canvas>
-        <canvas ref="miniMapCanvas" id='miniMapCanvas' class="noselect"></canvas>
+        <canvas v-show="loginRequestSentFlag" ref="miniMapCanvas" id='miniMapCanvas' class="noselect"></canvas>
         <canvas id="overlayCanvas" class="noselect"></canvas>
 
-        <!-- Menu button-->
-        <div style="position: absolute; top: 50px; left: 10px;" @click="showSettingsDialog()" v-html="getHamburgerMenuSvg('icon-white', 'icon-settings')"></div>
+        <!-- Display game GUI only after login request is sent -->
+        <div v-show="loginRequestSentFlag">
 
-        <TouchControllers v-if="!gameLoading" ref='touchControls' />
+            <!-- Menu button-->
+            <div style="position: absolute; top: 50px; left: 10px;" @click="showSettingsDialog()" v-html="getHamburgerMenuSvg('icon-white', 'icon-settings')"></div>
 
-        <!-- Top GUI panel -->
-        <div class="top-bar">
-          <div style="display:flex; gap:15px; align-items:center;">
-              <div id="fpsLabel" style="font-size:12px; color:#aaa;">FPS:</div>
-              <div id="posLabel" style="font-size:12px; color:#aaa;">POS:</div>
-          </div>
+            <TouchControllers v-if="!gameLoading" ref='touchControls' />
 
-          <div style="display:flex; gap:15px; align-items:center;">
-              <button v-if="myCharRef?.className ==='GM'" style="font-size:18px; color:#aaa;" @click="toggleGmPanel()">GM Panel</button>
-          </div>
+            <!-- Target Lock  -->
+            <label id="btn-target-lock" style="display: none; opacity: 0.65; position: absolute; width: 64px; height: 64px;" v-html="getTargetLockSvg('icon-blue', 'icon-target-lock')"
+                   @pointerdown="TargetingManager.onPointerDown()" @pointerup="TargetingManager.onPointerUp()" ></label>
+
+            <!-- Top GUI panel -->
+            <div class="top-bar">
+              <div style="display:flex; gap:15px; align-items:center;">
+                  <div id="fpsLabel" style="font-size:12px; color:#aaa;">FPS:</div>
+                  <div id="posLabel" style="font-size:12px; color:#aaa;">POS:</div>
+              </div>
+
+              <div style="display:flex; gap:15px; align-items:center;">
+                  <button v-if="myCharRef?.className ==='GM'" style="font-size:18px; color:#aaa;" @click="toggleGmPanel()">GM Panel</button>
+              </div>
+            </div>
+
+            <GmPanel id='gmPanel' v-if="gmPanelVisible" />
+
+            <OnScreenMessages />
         </div>
-
-        <GmPanel id='gmPanel' v-if="gmPanelVisible" />
     </div>
 
     <div class="dialog-backdrop" style="background-color: #000;" v-if="gameLoading" >
@@ -39,6 +49,35 @@
                     @open-login-dialog="displayLoginDialog = true"
                     @device-type-selected="deviceTypeChanged"/>
 
+    <!-- Restart prompt pokud v nastaveni doslo ke zmenam ktere to vyzadauji -->
+    <div class="dialog-backdrop" v-if="displayRestartPrompt" @click.self="displayRestartPrompt = false">
+        <div class="dialog-window adaptive">
+            <div class="dialog-header" style="margin-top: 20px;">Restart hry</div>
+            <div class="dialog-content" style="text-align: center;">
+                Pro aplikaci nových nastavení je potřeba restartovat hru.
+                <div class="dialog-actions" style="margin-top: 20px;">
+                    <button class="dialog-button" @click="reloadPage">Restartovat</button>
+                    <button class="dialog-button" @click="displayRestartPrompt = false">Později</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chybovy dialog -->
+    <div class="dialog-backdrop" id="dialog-error" style="display: none;">
+        <div class="dialog-window adaptive">
+            <div class="dialog-header text-warning" style="margin-top: 20px;">Došlo k chybě</div>
+            <div class="dialog-content" style="text-align: center;">
+                <div id="dialog-error-content"></div>
+
+                <div style="margin-top: 5vh;">Chcete hru restartovat ?</div>
+                <div class="dialog-actions" style="margin-top: 20px;">
+                    <button class="dialog-button" @click="reloadPage">Restartovat</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </template>
 
 <script setup lang="ts">
@@ -53,6 +92,7 @@ import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { Connector } from '@/network/connector'
 import LoginDialog from '@/vue/views/loginDialog.vue'
 import SettingsDialog from '@/vue/views/settingsDialog.vue'
+import OnScreenMessages from '@/vue/views/onScreenMessages.vue'
 import { Controller } from '@/controlls/controller'
 import {
     getFullScreenSvg,
@@ -61,6 +101,7 @@ import {
     getTargetLockSvg,
 } from '@/vue/icons/icons'
 import { Settings } from '@/settings/settings'
+import { TargetingManager } from '@/gui/targettingManager'
 
 const canvas = ref<HTMLCanvasElement | null>(null)
 const miniMapCanvas = ref<HTMLCanvasElement | null>(null)
@@ -153,6 +194,10 @@ const deviceTypeChanged = () => {
 
 const toggleGmPanel = () => {
     GMManager.toggleGmPanel()
+}
+
+const reloadPage = () => {
+    window.location.reload();
 }
 
 const requestFullscreen = () => {

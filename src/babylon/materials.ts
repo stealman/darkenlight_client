@@ -177,8 +177,31 @@ export const Materials = {
     },
 
     onFrame(frame: number) {
+    },
+
+    unFreezeAll() {
+        this.terrainMaterial?.unfreeze()
+        this.planeMaterial?.unfreeze()
+        this.blockMat1?.unfreeze()
+        this.blockMatAlpha1?.unfreeze()
+        this.waterMaterial?.unfreeze()
+        this.stepMarksMaterial?.unfreeze()
+        this.fightSplatsMaterial?.unfreeze()
+        this.weaponTrailMaterial?.unfreeze()
+    },
+
+    freezeAll() {
+        this.terrainMaterial?.freeze()
+        this.planeMaterial?.freeze()
+        this.blockMat1?.freeze()
+        this.blockMatAlpha1?.freeze()
+        this.waterMaterial?.freeze()
+        this.stepMarksMaterial?.freeze()
+        this.fightSplatsMaterial?.freeze()
+        this.weaponTrailMaterial?.freeze()
     }
 }
+
 
 class MaterialEnum {
     index: number

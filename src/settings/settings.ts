@@ -33,7 +33,6 @@ export const Settings = {
 
     brightness: 5,
     targetMarkerOpacity: 1,
-    fogDensity: 4,
     displayGlow: true as boolean,
 
     hudSize: 1 as number,
@@ -41,9 +40,9 @@ export const Settings = {
     joystickBottom: 50 as number,
     joystickLeft: 120 as number,
 
-    initialize(storedSettings) {
-        console.log("Initializing settings:", storedSettings)
+    autoTarget: false as boolean,
 
+    initialize(storedSettings) {
         this.deviceType = storedSettings.deviceType
         switch (storedSettings.detailLevelName) {
             case 'LOW':
@@ -58,15 +57,16 @@ export const Settings = {
             default:
                 this.detailLevel = DetailLevels.MEDIUM;
         }
+        this.detailLevelName = storedSettings.detailLevelName
 
         this.brightness = parseInt(storedSettings.brightness)
-        this.fogDensity = parseInt(storedSettings.fogDensity)
         this.targetMarkerOpacity = parseFloat(storedSettings.targetMarkerOpacity)
         this.displayGlow = storedSettings.displayGlow
         this.hudSize = parseFloat(storedSettings.hudSize)
         this.joystickSize = parseInt(storedSettings.joystickSize)
         this.joystickBottom = parseInt(storedSettings.joystickBottom)
         this.joystickLeft = parseInt(storedSettings.joystickLeft)
+        this.autoTarget = storedSettings.autoTarget
     },
 
     getDefaultSettings() {
@@ -79,10 +79,11 @@ export const Settings = {
             joystickLeft: 120,
 
             brightness: 5,
-            fogDensity: 5,
             displayGlow: !Settings.touchEnabled,
             targetMarkerOpacity: 1,
             hudSize: 1,
+
+            autoTarget: false,
         }
     },
 
@@ -131,11 +132,6 @@ export const Settings = {
 
     isPhoneOrTablet(): boolean {
         return this.deviceType === 'PHONE' || this.deviceType === 'TABLET'
-    },
-
-    setFogIntensity(value: number) {
-        //this.fogDensity = value;
-        //getScene().fogDensity = 0.000015 * this.fogDensity
     },
 
     setTargetMarkerOpacity(value: number) {

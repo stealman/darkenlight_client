@@ -9,7 +9,12 @@ import 'primeicons/primeicons.css';
 import './../public/styles/main.css';
 import './../public/styles/theme.css';
 import './../public/styles/icons.css';
+import './../public/styles/range-slider.css';
+import './../public/styles/onscreen-messages.css';
+
 import './../public/styles/gm.css';
+
+
 
 // Custom PrimeVue component styles
 import './../public/styles/primevue/checkbox.css';
