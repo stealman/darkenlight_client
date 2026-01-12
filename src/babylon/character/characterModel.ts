@@ -10,7 +10,6 @@ import { Materials } from '@/babylon/materials'
 import { CharEquipManager } from '@/babylon/item/charEquipManager'
 import { PlayerData } from '@/data/playerData'
 import { AnimTransition } from '@/babylon/animations/animation'
-import { Renderer } from '@/babylon/scene/renderer'
 import { Lights } from '@/babylon/scene/lights'
 
 export class CharacterModel {

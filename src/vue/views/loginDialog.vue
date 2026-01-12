@@ -2,7 +2,7 @@
     <div class="dialog-backdrop" >
         <div class="dialog-window">
             <div class="dialog-header">
-                Přihlášit jako host
+                Přihlásit jako host
             </div>
             <div class="dialog-content">
                 <table>
@@ -107,11 +107,11 @@ const doLogin = () => {
     if (form.login && form.password) {
         Connector.sendLoginRequest(form.login, form.password)
         emit('login');
-    } else if (form.pilotName) {
+    } else if (form.charName) {
         Connector.sendLoginRequest(undefined, undefined, form.charName)
         emit('login');
     } else {
-        alert("Zadejte přihlašovací jméno nebo jméno pilota");
+        alert("Zadejte přihlašovací jméno a heslo, nebo jméno postavy hosta");
         return;
     }
 }

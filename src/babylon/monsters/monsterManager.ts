@@ -13,6 +13,9 @@ export const MonsterManager = {
     visibleMonsters: new Set<number>(),
 
     async initialize (scene: Scene) {
+        this.monsters = new Map<number, Monster>()
+        this.killedMonsters = new Set<Monster>()
+        this.visibleMonsters = new Set<number>()
         await MonsterLoader.initialize(scene)
     },
 

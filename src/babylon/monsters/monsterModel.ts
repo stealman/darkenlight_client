@@ -14,6 +14,7 @@ import { Renderer } from '@/babylon/scene/renderer'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { TerrainManager } from '@/babylon/world/terrainManager'
+import { Settings } from '@/settings/settings'
 
 export class MonsterModel {
     parent: Monster
@@ -260,7 +261,8 @@ export class MonsterModel {
     }
 
     createDyingParticleEffect() {
-        const ps = new ParticleSystem('deathPoof', 256, Renderer.scene)
+        const particleCount = Settings.detailLevel.level * 100
+        const ps = new ParticleSystem('deathPoof', particleCount, Renderer.scene)
         ps.particleTexture = new Texture("images/gfx/flare-rect.png", Renderer.scene);
 
         // Set particle color based on terrain type
@@ -290,7 +292,7 @@ export class MonsterModel {
 
         ps.blendMode = ParticleSystem.BLENDMODE_STANDARD
         ps.emitRate = 0
-        ps.manualEmitCount = 256
+        ps.manualEmitCount = particleCount
 
         ps.disposeOnStop = true
         ps.start()

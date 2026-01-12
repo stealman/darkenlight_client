@@ -5,6 +5,7 @@ export const AudioManager = {
     BASE_PATH: './sounds/',
     BASE_PATH_SFX: './sounds/sfx/',
     BASE_PATH_MONSTER: './sounds/monster/',
+    BASE_PATH_GUI: './sounds/gui/',
     footStepSounds: new Map<string, Sound>(),
     deathRattleSounds: new Map<string, Sound>(),
 
@@ -13,6 +14,8 @@ export const AudioManager = {
     swordHitMetalSounds: [] as Sound[],
     boneHitSounds: [] as Sound[],
     swordBlockSounds: [] as Sound[],
+
+    guiButtonClickSound: null as Sound | null,
 
     initialize(scene: Scene) {
         this.footStepSounds.set(FootStepTypes.SNOW, new Sound("footStepSnow", AudioManager.BASE_PATH_SFX + "steps-snow.ogg", scene, function() {
@@ -39,6 +42,13 @@ export const AudioManager = {
         // Death rattles
         this.loadDeathRattleSound(MonsterSoundTypes.SKELETON, "death-skeleton.ogg", scene, { volume: 1.2, playbackRate: 0.85 } );
         this.loadDeathRattleSound(MonsterSoundTypes.CAT, "death-cat.ogg", scene, { volume: 0.6, playbackRate: 1 } );
+
+        this.guiButtonClickSound = new Sound("guiButtonClick", AudioManager.BASE_PATH_GUI + "button-click.ogg", scene, function() {
+            AudioManager.guiButtonClickSound!['loaded'] = true;
+        }, {
+            volume: 1.5,
+            playbackRate: 1,
+        });
     },
 
     loadSoundArray(targetArray: [Sound], fileNames: string[], soundName: string, scene: Scene, options: { volume: number, playbackRate: number }): Sound[] {
@@ -105,6 +115,12 @@ export const AudioManager = {
         const sound = this.deathRattleSounds.get(type)!
         if (sound['loaded']) {
             sound.play();
+        }
+    },
+
+    playGuiButtonClick() {
+        if (this.guiButtonClickSound && this.guiButtonClickSound['loaded']) {
+            this.guiButtonClickSound.play();
         }
     }
 }

@@ -133,7 +133,7 @@ import { Renderer } from '@/babylon/scene/renderer'
 import { Lights } from '@/babylon/scene/lights'
 
 const storedSettings = ref(Settings)
-const emit = defineEmits(['close', 'closeWithRestartPrompt', 'deviceTypeSelected', 'touchColtrolsChanged', 'openLoginDialog'])
+const emit = defineEmits(['close', 'closeWithRestartPrompt', 'deviceTypeSelected', 'touchColtrolsChanged', 'logout'])
 
 const tabs = [
     { name: 'Ovládání', id: 1 },
@@ -244,7 +244,8 @@ defineExpose({
 
 watch(activeTabId, (newVal) => {
     if (newVal == 5) {
-        emit('openLoginDialog')
+        emit('logout')
+        activeTabId.value = 1
         closeDialog()
     }
 })

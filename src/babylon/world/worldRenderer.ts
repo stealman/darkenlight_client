@@ -28,6 +28,7 @@ export const WorldRenderer = {
     lastPos: null as Vector3 | null,
 
     initialize(scene: Scene) {
+        this.lastPos = null
         this.worldParentNode = new TransformNode("worldNode", scene)
 
         // Global blocks

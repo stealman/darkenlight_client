@@ -13,6 +13,7 @@ export const OverlayManager = {
         this.overlayCanvas = document.getElementById("overlayCanvas") as HTMLCanvasElement
         this.overlayCtx = this.overlayCanvas.getContext("2d")
         this.overlayCtx!.lineWidth = 1
+        TargetSelector.unselectTarget()
     },
 
     targetSelected(target: Targetable) {

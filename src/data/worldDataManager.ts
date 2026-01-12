@@ -42,13 +42,15 @@ export const WorldDataManager = {
             }
 
             if (!worldData.hasChunkAt(chunkX, chunkZ)) {
-                //console.log("Fetching surrounding world data chunk at:", chunkX, chunkZ)
                 Connector.sendMessage(new FetchWorldDataMsg(Data.worldId, chunkX, chunkZ))
             }
         }
     },
 
     consumeMapChunk(mapChunk) {
+        if (!this.worldDataMap.has(Data.worldId)) {
+            this.worldDataMap.set(Data.worldId, new WorldData(1024))
+        }
         this.worldDataMap.get(Data.worldId)!.consumeMapChunk(mapChunk)
     },
 

@@ -4,15 +4,14 @@ import { WorldDataManager } from '@/data/worldDataManager'
 import { Spawn } from '@/gm/GmSpawns'
 
 export const GMSceneManager = {
-    scene: null as Scene | null,
+    initialized: false,
     hoverBlockMarker: null as Mesh | null,
     spawnMarker: null as Mesh | null,
 
     initialize (scene: Scene) {
-        if (this.scene) {
+        if (this.initialized) {
             return
         }
-        this.scene = scene
 
         // Hover Block Marker
         this.hoverBlockMarker = Builder.createHorizontalPlane(scene, null,1, 0)
@@ -31,6 +30,8 @@ export const GMSceneManager = {
         this.spawnMarker.material = spawnMat
         this.spawnMarker.material.diffuseColor = new Color3(0.65, 0, 0)
         this.spawnMarker.material.emissiveColor = new Color3(0.25, 0, 0)
+
+        this.initialized = true
     },
 
     updateHoverBlockMarker(x, z) {

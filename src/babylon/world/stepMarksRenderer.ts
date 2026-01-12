@@ -8,13 +8,15 @@ import { Settings } from '@/settings/settings'
 export const StepMarksRenderer = {
     myStepMarks: new Array<StepMark>(),
     mobStepMarks: new Array<StepMark>(),
-    maxMarks: Settings.isDetalLevelHigh() ? 500 : 100,
+    maxMarks: 250,
     stepMarkPlane: null as Mesh | null,
 
     initialize (scene: Scene) {
+        this.maxMarks = Settings.isDetalLevelHigh() ? 500 : 250
         this.stepMarkPlane = Builder.createHorizontalPlane(scene, null, 1, 0)
         this.stepMarkPlane.material = Materials.stepMarksMaterial
         this.loadFromLocalStorage()
+
     },
 
     addStepMark(side: string, object: Targetable, yPos: number, rot: number, time: number, inCombat: boolean = false) {
@@ -43,6 +45,8 @@ export const StepMarksRenderer = {
     update(timeRate: number, time: number) {
         this.myStepMarks = this.myStepMarks.filter(mark => (time < mark.deadTime))
         this.mobStepMarks = this.mobStepMarks.filter(mark => (time < mark.deadTime))
+        console.log(this.mobStepMarks.length)
+
         this.renderStepMarks(time)
     },
 

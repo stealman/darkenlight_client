@@ -5,6 +5,7 @@ import { ViewportManager } from '@/utils/viewport'
 import { GMSceneManager } from '@/babylon/gm/GmSceneManager'
 import { GMManager } from '@/gm/GM'
 import { TargetingManager } from '@/gui/targettingManager'
+import { AudioManager } from '@/babylon/audio/audioManager'
 
 export const Controller = {
     leftPressedTime: 0,
@@ -79,6 +80,7 @@ export const Controller = {
 
         // TAB
         if (e.keyCode == 9) {
+            AudioManager.playGuiButtonClick()
             e.preventDefault()
             TargetingManager.cycleThroughClosestTargets()
         }

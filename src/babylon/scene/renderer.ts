@@ -34,7 +34,7 @@ import { OnScreenMessageManager } from '@/gui/onScreenMessageManager'
  * Main Renderer
  */
 export const Renderer = {
-    //viewportInitialized: false,
+    canvas: null as HTMLCanvasElement | null,
     scene: null as Scene,
     instrumentation: null as SceneInstrumentation | null,
     engine: null as Engine | null,
@@ -45,7 +45,9 @@ export const Renderer = {
     animationSpeedRatio: 1 as number,
     pendingMatFreeze: false as boolean,
 
+
     async initialize(canvas: HTMLCanvasElement) {
+        this.canvas = canvas
         this.engine = new Engine(canvas, Settings.detailLevel.antialias)
         this.engine.setHardwareScalingLevel(1)
         this.createScene(this.engine)
@@ -95,6 +97,15 @@ export const Renderer = {
         })
     },
 
+    gameStopped() {
+        this.engine!.stopRenderLoop()
+        this.scene.dispose()
+        this.camera?.dispose()
+        this.camera = null
+        this.engine?.dispose()
+        this.initialize(this.canvas!)
+    },
+
     /**
      * Main game loop
      */
@@ -109,7 +120,6 @@ export const Renderer = {
 
             // Schovam debug labely na mobilu
             if (Settings.isPhoneOrTablet()) {
-
             }
         }
 

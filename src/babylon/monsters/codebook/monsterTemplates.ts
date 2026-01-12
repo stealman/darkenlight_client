@@ -1,6 +1,5 @@
 import { AnimationGroup, AssetContainer, Mesh, Skeleton, Vector3 } from '@babylonjs/core'
 import { BabylonUtils } from '@/babylon/utils'
-import { Renderer } from '@/babylon/scene/renderer'
 import { Monster } from '@/babylon/monsters/monster'
 import { Lights } from '@/babylon/scene/lights'
 

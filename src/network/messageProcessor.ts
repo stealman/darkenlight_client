@@ -38,6 +38,7 @@ export const MessageProcessor = {
                 case 19: this.processCharacterAttackFinished(msg.d); break
                 case 20: this.processMonsterAttackFinished(msg.d); break
                 case 21: this.processAddFightSplats(msg.d); break
+                case 22: this.processLoggedFromAnotherDevice(); break
                 case 1003: this.processGMAllSpawns(msg.d); break
                 case 1004: this.processGMSpawnChange(msg.d); break
                 default:
@@ -51,8 +52,8 @@ export const MessageProcessor = {
         if (data.message) {
             document.getElementById("dialog-error-content")!.innerText = data.message
             document.getElementById("dialog-error")!.style.display = 'flex'
-        } else {
-            const myChar = new PlayerData(data)
+        } else if (data.char) {
+            const myChar = new PlayerData(data.char)
             Data.setMyChar(myChar)
             await GameManager.startGame()
             console.log('Game started')
@@ -89,6 +90,7 @@ export const MessageProcessor = {
     },
 
     processWorldData(data) {
+        console.log('World data received')
         Data.worldId = data.id
         Data.worldName = data.name
         if (data.mapChunk) {
@@ -164,6 +166,12 @@ export const MessageProcessor = {
 
     processAddFightSplats(data) {
         FightSplatsRenderer.consumeSplats(data)
+    },
+
+    processLoggedFromAnotherDevice() {
+        console.log('Logged from another device')
+        document.getElementById("dialog-error-content")!.innerText = 'Byli jste odhlášeni, protože jste se přihlásili z jiného zařízení.'
+        document.getElementById("dialog-error")!.style.display = 'flex'
     },
 
     processGMAllSpawns(data) {

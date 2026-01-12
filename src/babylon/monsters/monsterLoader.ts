@@ -1,18 +1,18 @@
-import { Mesh, Scene, SceneLoader, Vector3 } from '@babylonjs/core'
+import { Mesh, SceneLoader, Vector3 } from '@babylonjs/core'
 import { Materials } from '@/babylon/materials'
 import { Settings } from '@/settings/settings'
 import { MonsterType } from '@/babylon/monsters/codebook/monsterCodebook'
 import { MonsterTemplate, MonsterTemplates } from '@/babylon/monsters/codebook/monsterTemplates'
+import { Renderer } from '@/babylon/scene/renderer'
 
 export const MonsterLoader = {
-    scene: null as Scene,
     monstersMeshes: [] as Mesh[],
     monsterTemplates: new Map<number, MonsterTemplate>(),
 
-    async initialize (scene: Scene) {
-        this.scene = scene
-
+    async initialize () {
+        this.monstersMeshes = []
         for (const key in MonsterTemplates) {
+            console.log("Loading monster mesh: " + key)
             await this.loadMonsterMesh(MonsterTemplates[key])
         }
     },
@@ -21,7 +21,7 @@ export const MonsterLoader = {
         // Load asset container (used for cloning)
         const result = await SceneLoader.LoadAssetContainerAsync(
             "",
-            "/models/monsters/" + mobType.meshName, this.scene!
+            "/models/monsters/" + mobType.meshName, Renderer.scene
         )
 
         const model = result.meshes[0];
@@ -29,7 +29,7 @@ export const MonsterLoader = {
         model.rotation = Vector3.Zero()
         model.alwaysSelectAsActiveMesh = true
 
-        const material = Materials.getPBRMaterial(this.scene!, mobType.getMaterialName(), "/models/monsters/" + mobType.textureName, true, false, {
+        const material = Materials.getPBRMaterial(Renderer.scene, mobType.getMaterialName(), "/models/monsters/" + mobType.textureName, true, false, {
             metallic: 0,
             roughness: 1,
             directIntensity: 1,

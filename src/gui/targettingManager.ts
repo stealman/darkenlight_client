@@ -9,6 +9,7 @@ import { SelectAutoAttackTarget } from '@/network/messages'
 import { SplatType } from '@/babylon/world/fightSplatsRenderer'
 import { OnScreenMessageManager } from '@/gui/onScreenMessageManager'
 import { Settings } from '@/settings/settings'
+import { AudioManager } from '@/babylon/audio/audioManager'
 
 export const TargetingManager = {
     selectedTarget: null as Targetable | null,
@@ -23,9 +24,8 @@ export const TargetingManager = {
 
     async initialize() {
         this.prepareTargetSprite()
+        this.selectedTarget = null
         this.autoTargetingEnabled = Settings.autoTarget
-
-        console.log('TargetingManager initialized ' + Settings.autoTarget)
     },
 
     onFrame(timeRate: number, actualTime: number) {
@@ -75,13 +75,13 @@ export const TargetingManager = {
         }
 
         if (target) {
-            console.log('Auto-targeting to:', target.getName())
             this.setSelectedTarget(target)
         }
         this.lastCycleTime = Date.now()
     },
 
     onPointerDown() {
+        AudioManager.playGuiButtonClick()
         this.pointerDownTime = Date.now()
         this.cycleThroughClosestTargets()
     },

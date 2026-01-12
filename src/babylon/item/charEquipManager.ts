@@ -1,7 +1,7 @@
 import {
     Color3,
     Color4, GPUParticleSystem,
-    Mesh, MeshBuilder, ParticleSystem, PBRMaterial,
+    Mesh, ParticleSystem, PBRMaterial,
     Quaternion,
     Scene,
     SceneLoader,
@@ -14,7 +14,6 @@ import { Renderer } from '@/babylon/scene/renderer'
 import { CharArmorsCbManager } from '@/babylon/item/codebook/charArmorsCb'
 import { CharWeaponsCbManager } from '@/babylon/item/codebook/charWeaponsCb'
 import { CharacterModel } from '@/babylon/character/characterModel'
-import { Utils } from '@/utils/utils'
 import { BabylonUtils } from '@/babylon/utils'
 import { Lights } from '@/babylon/scene/lights'
 
@@ -37,7 +36,6 @@ class CharWearableItemManager {
         this.sps = new SolidParticleSystem(this.materialName + "Sps", scene, { expandable: true })
         this.models = models
         this.texturePath = texturePath
-        this.scene = scene
         this.castShadows = castShadows
         this.matOptions = matOptions
     }
@@ -179,6 +177,7 @@ export const CharEquipManager = {
     weaponSourceMap: new Map<number, Mesh>() as Map<number, Mesh>,
 
     async initialize(scene: Scene) {
+        this.weaponSourceMap = new Map<number, Mesh>()
         CharArmorsCbManager.initialize()
         CharWeaponsCbManager.initialize()
 

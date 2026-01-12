@@ -34,8 +34,14 @@ export const Connector = {
         }
     },
 
-    sendLoginRequest(username: string, password: string) {
-        const loginMsg = new LoginMsg(username, password)
+    closeConnection() {
+        if (this.socket) {
+            this.socket.close()
+        }
+    },
+
+    sendLoginRequest(username: string, password: string, guestName: string | null) {
+        const loginMsg = new LoginMsg(username, password, guestName)
         this.socket.send(JSON.stringify(loginMsg))
     },
 

@@ -12,7 +12,6 @@ import { AudioManager } from '@/babylon/audio/audioManager'
 import { Attackable } from '@/GameManager'
 
 export const MyPlayer = {
-    scene: null as Scene | null,
     charModel: null as CharacterModel | null,
 
     autoAttackTarget: null as Attackable | null,
@@ -22,6 +21,12 @@ export const MyPlayer = {
         this.charModel = await CharacterModel.create(Data.myChar, scene)
         Data.myChar.pos.y = Utils.calculateYPos(Data.myChar.pos.x, Data.myChar.pos.z, Data.myChar.getBoxSize())
         Data.myChar.logicYpos = Data.myChar.pos.y
+    },
+
+    reset() {
+        this.charModel = null
+        this.autoAttackTarget = null
+        this.autoAttackEnd = 0
     },
 
     doAutoAttack(data: any) {

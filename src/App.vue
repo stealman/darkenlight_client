@@ -46,7 +46,7 @@
                     @close="displaySettingsDialog = false"
                     @close-with-restart-prompt="closeSettingsWithRestartPrompt"
                     @touch-coltrols-changed="touchControlsChanged"
-                    @open-login-dialog="displayLoginDialog = true"
+                    @logout="logout"
                     @device-type-selected="deviceTypeChanged"/>
 
     <!-- Restart prompt pokud v nastaveni doslo ke zmenam ktere to vyzadauji -->
@@ -142,8 +142,6 @@ onMounted(async () => {
         displayLoginDialog.value = true
 
         // Auto login
-
-        /**
         const loginForm = localStorage.getItem("LOGIN_FORM");
         if (loginForm) {
             const form = JSON.parse(loginForm);
@@ -157,7 +155,7 @@ onMounted(async () => {
             }
         } else {
             displayLoginDialog.value = true;
-        }*/
+        }
     }
 })
 
@@ -176,7 +174,6 @@ const loginRequestSent = () => {
 
 const showSettingsDialog = () => {
     displaySettingsDialog.value = true;
-    //settingsDialog.value.openDialog()
 }
 
 const closeSettingsWithRestartPrompt = () => {
@@ -198,6 +195,11 @@ const toggleGmPanel = () => {
 
 const reloadPage = () => {
     window.location.reload();
+}
+
+const logout = () => {
+    displayLoginDialog.value = true
+    GameManager.stopGame()
 }
 
 const requestFullscreen = () => {

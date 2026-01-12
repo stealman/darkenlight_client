@@ -10,10 +10,12 @@ export class LoginMsg {
     t: number = 1
     login: string
     password: string
+    guestName: string | null
 
-    constructor(login: string, password: string) {
+    constructor(login: string, password: string, guestName: string | null) {
         this.login = login
         this.password = password
+        this.guestName = guestName
     }
 }
 
@@ -43,7 +45,6 @@ export class MyCharMoveMsg implements Message {
 export class SelectAutoAttackTarget implements Message {
     t: number = 6
     d: any
-
     constructor(id: number, targetType: string) {
         this.d = { id: id, tp: targetType }
     }
@@ -52,19 +53,19 @@ export class SelectAutoAttackTarget implements Message {
 export class AutoAttackBreak implements Message {
     t: number = 7
     d: any
+    constructor() {}
+}
 
-    constructor() {
-
-    }
+export class LogoutMsg implements Message {
+    t: number = 8
+    d: any
+    constructor() {}
 }
 
 export class GMSaveMapDataMsg implements Message {
     t: number = 1000
     d: any
-
-    constructor() {
-
-    }
+    constructor() {}
 }
 
 export class GMTerrainChange implements Message {
