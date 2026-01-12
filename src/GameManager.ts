@@ -1,25 +1,30 @@
 import { Renderer } from '@/babylon/scene/renderer'
 import { ViewportManager } from '@/utils/viewport'
-import { WorldDataManager } from '@/data/worldDataManager'
-import { ref } from 'vue/dist/vue'
-import { Connector } from '@/network/connector'
 import { OverlayManager } from '@/gui/overlayManager'
-import { Targetable } from '@/gui/targettingManager'
+import { Targetable, TargetingManager } from '@/gui/targettingManager'
+import { WorldDataManager } from '@/data/worldDataManager'
+import { MyPlayer } from '@/babylon/character/myPlayer'
 
 export const GameManager = {
-    canvas: null as ref<HTMLCanvasElement | null>,
+    started: false as boolean,
 
-    initialize(canvas: ref<HTMLCanvasElement | null>) {
-        this.canvas = canvas
-        Connector.initialize()
+    async prepareGame(canvas: HTMLCanvasElement) {
+        await Renderer.initialize(canvas)
     },
 
     async startGame() {
         WorldDataManager.fetchWorldDataIfNeeded()
+        await MyPlayer.initialize(Renderer.scene)
+        Renderer.gameStarted()
+        this.onResize()
+        this.started = true
+    },
 
-        await Renderer.initialize(this.canvas.value)
-        ViewportManager.onResize()
+    onResize() {
+        Renderer.engine!.resize();
         OverlayManager.onResize()
+        ViewportManager.onResize()
+        TargetingManager.prepareTargetSprite()
     }
 }
 

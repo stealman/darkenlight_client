@@ -1,0 +1,54 @@
+/* Checkbox container */
+.p-checkbox {
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+}
+
+/* Skrytí defaultního input */
+.p-checkbox input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+/* Vlastní vizuální box */
+.p-checkbox-box {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--dialog-color);
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    background-color: var(--dialog-bg);
+    box-shadow: 0 0 4px var(--dialog-glow);
+}
+
+/* Checkmark */
+.p-checkbox-box .p-checkbox-icon {
+    color: var(--dialog-color);
+    font-size: 16px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+/* Checked state */
+.p-checkbox.p-checkbox-checked .p-checkbox-box {
+    background-color: var(--dialog-color);
+    border-color: var(--dialog-color-dark);
+}
+
+.p-checkbox.p-checkbox-checked .p-checkbox-icon {
+    opacity: 1;
+    color: white; /* nebo --dialog-bg pokud chceš kontrast */
+}
+
+/* Hover efekt */
+.p-checkbox:hover .p-checkbox-box {
+    border-color: var(--dialog-color-dark);
+    box-shadow: 0 0 6px var(--dialog-glow);
+}

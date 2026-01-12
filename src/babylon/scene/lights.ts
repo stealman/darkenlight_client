@@ -1,4 +1,12 @@
-import { AbstractMesh, Color3, DirectionalLight, Mesh, Scene, ShadowGenerator, Vector3 } from '@babylonjs/core'
+import {
+    AbstractMesh,
+    Color3,
+    DirectionalLight,
+    Mesh,
+    Scene,
+    ShadowGenerator,
+    Vector3,
+} from '@babylonjs/core'
 import { Settings } from '@/settings/settings'
 
 export const Lights = {
@@ -15,6 +23,7 @@ export const Lights = {
         //this.sunLight.diffuse = new Color3(0.82, 0.91, 1)
 
         if (Settings.shadows) {
+
             this.shadow = new ShadowGenerator(4096, this.sunLight, false)
             this.shadow.bias = 0.00001
             this.shadow.setDarkness(0)

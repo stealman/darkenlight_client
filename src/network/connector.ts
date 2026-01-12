@@ -17,11 +17,10 @@ export const Connector = {
 
         this.socket.onopen = () => {
             console.log('WS connection estabilished')
-            Connector.sendLoginRequest('stealman', 'test')
         }
 
-        this.socket.onmessage = (event) => {
-           MessageProcessor.processResponse(JSON.parse(event.data))
+        this.socket.onmessage = async (event) => {
+           await MessageProcessor.processResponse(JSON.parse(event.data))
         }
 
         this.socket.onerror = (error) => {

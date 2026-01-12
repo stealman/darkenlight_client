@@ -1,0 +1,227 @@
+:root {
+    --dialog-color: #1abcbc;
+    --dialog-color-dark: #056c6c;
+    --dialog-glow: #108095;
+    --dialog-bg: rgba(10, 20, 20, 0.85);
+
+    --panel-color: #8abcfc;
+    --panel-color-dark: #458cbc;
+    --panel-glow: #1060a0;
+    --panel-bg: rgba(10, 20, 40, 0.85);
+}
+
+.text-warning {
+    color: #f39c12;
+}
+
+/* backdrop */
+.dialog-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    /*backdrop-filter: blur(4px);*/
+    animation: fadeIn 0.3s ease;
+}
+
+/* dialog window */
+.dialog-window {
+    background: var(--dialog-bg);
+    border-radius: 8px;
+    padding: 10px;
+    padding-top: 0;
+    width: 600px;
+    min-height: 300px;
+    max-width: 90%;
+    max-height: 75%;
+    box-shadow: 0 0 20px var(--dialog-glow), 0 0 40px rgba(0,0,0,0.4);
+    text-align: center;
+    color: #fff;
+    border: 1px solid var(--dialog-color);
+    animation: scaleIn 0.25s ease;
+}
+
+.dialog-window.adaptive {
+    min-height: auto;
+    height: auto;
+}
+
+/* header */
+.dialog-header {
+    font-size: 1.2rem;
+    margin-bottom: 15px;
+    text-shadow: 0 0 5px var(--dialog-color);
+}
+
+/* content */
+.dialog-content {
+    font-size: 0.8rem;
+    line-height: 1.5;
+}
+
+/* buttons */
+.dialog-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.dialog-button {
+    background: var(--dialog-color);
+    color: white;
+    border: 2px solid var(--dialog-color);
+    border-radius: 4px;
+    padding: 10px 20px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    box-shadow: 0 0 10px var(--dialog-glow);
+    transition: all 0.2s ease;
+    opacity: 0.8;
+}
+
+.dialog-button.selected {
+    cursor: default;
+    background: var(--dialog-color-dark);
+    border: 2px solid var(--dialog-color);
+    animation: borderPulse 1.2s infinite;
+}
+
+.dialog-button:hover {
+    box-shadow: 0 0 40px var(--dialog-glow);
+    opacity: 1;
+}
+
+.dialog-header div.tab-item {
+    display: inline-block;
+    padding: 5px 10px;
+    margin: 0 2px;
+    border-radius: 0px 0px 6px 6px;
+    background: var(--dialog-color);
+    cursor: pointer;
+    transition: background 0.2s ease;
+    font-size: 1rem;
+}
+
+.dialog-header div.tab-item.active {
+    background: var(--dialog-color-dark);
+    box-shadow: 0 0 10px var(--dialog-glow);
+}
+
+.dialog-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.dialog-content::-webkit-scrollbar-track {
+    background: var(--dialog-color-dark);
+    border-radius: 4px;
+}
+
+.dialog-content::-webkit-scrollbar-thumb {
+    background: var(--dialog-color);
+    border-radius: 4px;
+}
+
+.dialog-content::-webkit-scrollbar-thumb:hover {
+    background: #09f;
+}
+
+.dialog-content {
+    scrollbar-width: thin;
+    scrollbar-color: var(--dialog-color) #111;
+}
+
+.dialog-content table {
+    color: white;
+    font-size: 0.8rem;
+    line-height: 1.5;
+    width: 100%;
+}
+
+.dialog-content table td {
+    padding-top: 3px;
+    padding-bottom: 3px;
+}
+
+.dialog-content table button {
+    padding: 5px 15px;
+    font-size: 1.2rem;
+    margin: 5px;
+}
+
+.dialog-content table .item-label {
+    text-align: right;
+    padding-right: 20px;
+    width: 120px;
+}
+
+.dialog-content input[type="text"],
+.dialog-content input[type="password"] {
+    border: 1px solid var(--dialog-color-dark);
+    background: none;
+    height: 1.5rem;
+    color: white;
+    padding: 5px 10px;
+}
+
+.dialog-content input[type="text"]:focus,
+.dialog-content input[type="password"]:focus {
+    outline: none;
+    border: 1px solid var(--dialog-color);
+    box-shadow: 0 0 10px var(--dialog-glow);
+    animation: borderPulse 1.2s infinite;
+}
+
+.panel-button {
+    background: var(--panel-color-dark);
+    color: white;
+    border: 2px solid var(--panel-color);
+    border-radius: 4px;
+    padding: 10px 20px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    box-shadow: 0 0 10px var(--panel-glow);
+    transition: all 0.2s ease;
+    opacity: 0.8;
+}
+
+.panel-button.selected {
+    cursor: default;
+    background: var(--panel-color-dark);
+    border: 2px solid var(--panel-color);
+    animation: borderPulse 1.2s infinite;
+}
+
+.panel-button:hover {
+    background: var(--panel-color);
+    box-shadow: 0 0 40px var(--panel-glow);
+    opacity: 1;
+}
+
+/* animations */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+    from { transform: scale(0.9); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes borderPulse {
+    0% {
+        border-color: var(--dialog-color);
+    }
+    50% {
+        border-color: var(--dialog-color-dark);
+    }
+    100% {
+        border-color: var(--dialog-color);
+    }
+}

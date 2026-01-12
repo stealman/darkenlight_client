@@ -1,6 +1,5 @@
-import { PlayerData } from '@/data/playerData'
+
 import { Data } from '@/data/globalData'
-import { GameManager } from '@/GameManager'
 import { MonsterManager } from '@/babylon/monsters/monsterManager'
 import { TreeManager } from '@/babylon/world/treeManager'
 import { WorldDataManager } from '@/data/worldDataManager'
@@ -10,6 +9,8 @@ import { StaticsManager } from '@/babylon/world/staticsManager'
 import { GMSpawns } from '@/gm/GmSpawns'
 import { MyPlayer } from '@/babylon/character/myPlayer'
 import { FightSplatsRenderer } from '@/babylon/world/fightSplatsRenderer'
+import { PlayerData } from '@/data/playerData'
+import { GameManager } from '@/GameManager'
 
 export const MessageProcessor = {
 

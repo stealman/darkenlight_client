@@ -6,7 +6,6 @@ import {
     Color3, Color4, SceneInstrumentation,
     CubeTexture, DracoCompression
 } from '@babylonjs/core'
-import {UnwrapRef} from "vue"
 import '@babylonjs/inspector'
 import { Controller } from '@/controlls/controller'
 import {MyPlayer} from "@/babylon/character/myPlayer"
@@ -34,7 +33,7 @@ import { FightSplatsRenderer } from '@/babylon/world/fightSplatsRenderer'
  * Main Renderer
  */
 export const Renderer = {
-    initialized: false,
+    viewportInitialized: false,
     scene: null as Scene,
     instrumentation: null as SceneInstrumentation | null,
     engine: null as Engine | null,
@@ -44,8 +43,9 @@ export const Renderer = {
     frame: 0 as number,
     animationSpeedRatio: 1 as number,
 
-    async initialize(canvasRef: UnwrapRef<HTMLCanvasElement>) {
-        this.engine = new Engine(canvasRef, true)
+    async initialize(canvas: HTMLCanvasElement) {
+        console.log("Initializing renderer...")
+        this.engine = new Engine(canvas, Settings.detailLevel.antialias)
         this.engine.setHardwareScalingLevel(1)
         this.createScene(this.engine)
 
@@ -65,7 +65,6 @@ export const Renderer = {
         MiniMap.initialize()
         await CharEquipManager.initialize(this.scene)
         await MobEquipManager.initialize(this.scene)
-        await MyPlayer.initialize(this.scene)
         await MonsterManager.initialize(this.scene)
 
         Controller.initializeController(this.scene)
@@ -77,45 +76,49 @@ export const Renderer = {
         await OverlayManager.initialize()
         await TargetingManager.initialize()
 
-        // Create camera
-        this.createCamera()
-
         // Debug layer
+        /**
         if (Settings.debug) {
             this.scene.debugLayer.show({
                 embedMode: true
             })
-        }
+        }*/
+    },
+
+    gameStarted() {
         Lights.sunLight.parent = MyPlayer.charModel!.node
 
-        // Run the game loop
-        this.engine.runRenderLoop(() => {
+        this.engine!.runRenderLoop(() => {
             this.onFrame(this.scene)
             this.scene.render()
         })
-
-        window.addEventListener('resize', () => {
-            this.engine?.resize()
-            OverlayManager.onResize()
-            ViewportManager.onResize()
-            TargetingManager.prepareTargetSprite()
-            WorldRenderer.lastPos = null
-        })
-        this.initialized = true
     },
 
     /**
      * Main game loop
      */
     onFrame(scene: Scene) {
-        if (!this.initialized) return
-
         this.frame++
         const actualTime = new Date().getTime()
         const timeRate = this.engine!.getDeltaTime() / 1000
         this.fps = Number.parseInt(this.engine!.getFps()!.toFixed());
 
+        if (this.camera == null) {
+            this.createCamera()
+
+            // Schovam debug labely na mobilu
+            if (Settings.isPhoneOrTablet()) {
+
+            }
+        }
+
         if (this.frame > 1) {
+            if (!this.viewportInitialized) {
+                ViewportManager.onResize()
+                OverlayManager.onResize()
+                this.viewportInitialized = true
+            }
+
             // Animation speeds are calculated to 60 FPS base
             this.animationSpeedRatio = timeRate * 60
 
