@@ -6,9 +6,9 @@ import {
     SceneLoader, Texture, TrailMesh, TransformNode, Vector2, Vector3, Vector4,
 } from '@babylonjs/core'
 import { PBRCustomMaterial } from '@babylonjs/materials'
-import { MobWeaponsCbManager } from '@/babylon/item/codebook/mobWeaponsCb'
-import { MobArmorsCbManager } from '@/babylon/item/codebook/mobArmorsCb'
-import { MobEquipItemData } from '@/babylon/item/codebook/mobEquipItemData'
+import { WeaponsCbManager } from '@/babylon/item/codebook/weaponsCb'
+import { ArmorsCbManager } from '@/babylon/item/codebook/armorsCb'
+import { EquipItemData } from '@/babylon/item/codebook/equipItemData'
 import { Renderer } from '@/babylon/scene/renderer'
 import { Materials } from '@/babylon/materials'
 import { Lights } from '@/babylon/scene/lights'
@@ -142,9 +142,9 @@ export class MobEquipItemType {
 
     instanceBuffer: Float32Array = new Float32Array(0)
     uvBuffer: Float32Array = new Float32Array(0)
-    cbData: MobEquipItemData
+    cbData: EquipItemData
 
-    constructor(data: MobEquipItemData) {
+    constructor(data: EquipItemData) {
         this.id = data.id
         this.cbData = data
     }
@@ -206,13 +206,13 @@ export class MobEquipItemType {
  *
  * On each frame, the instance buffer is updated with the position and rotation of each equipped item
  */
-export const MobEquipManager = {
+export const EquipManager = {
     itemTypes: new Map<number, MobEquipItemType>(),
     equippedItems: new Map<MobEquipItemType, Set<MobEquipItem>>(),
 
     async initialize(scene: Scene) {
-        await MobWeaponsCbManager.initMelee(this.itemTypes, scene)
-        await MobArmorsCbManager.initArmors(this.itemTypes, scene)
+        await WeaponsCbManager.initMelee(this.itemTypes, scene)
+        await ArmorsCbManager.initArmors(this.itemTypes, scene)
     },
 
     addEquippedItem(item: MobEquipItem) {

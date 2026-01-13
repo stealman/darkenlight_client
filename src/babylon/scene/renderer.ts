@@ -18,7 +18,7 @@ import { AudioManager } from '@/babylon/audio/audioManager'
 import { ViewportManager } from '@/utils/viewport'
 import { MonsterManager } from '@/babylon/monsters/monsterManager'
 import { Connector } from '@/network/connector'
-import { MobEquipManager } from '@/babylon/item/mobEquipManager'
+import { EquipManager } from '@/babylon/item/equipManager'
 import { WeatherManager } from '@/babylon/world/weather/weatherManager'
 import { GMManager} from '@/gm/GM'
 import { OverlayManager } from '@/gui/overlayManager'
@@ -66,7 +66,7 @@ export const Renderer = {
         AudioManager.initialize(this.scene)
         MiniMap.initialize()
         CharacterManager.initialize()
-        await MobEquipManager.initialize(this.scene)
+        await EquipManager.initialize(this.scene)
         await MonsterManager.initialize()
 
         Controller.initializeController(this.scene)
@@ -129,7 +129,7 @@ export const Renderer = {
             CharacterManager.onFrame(timeRate, actualTime, this.frame)
             MonsterManager.onFrame(timeRate, actualTime, this.frame)
 
-            MobEquipManager.onFrame()
+            EquipManager.onFrame()
             TargetingManager.onFrame(timeRate, actualTime)
             OverlayManager.onFrame(timeRate, actualTime)
             OnScreenMessageManager.onFrame(actualTime)

@@ -9,7 +9,7 @@ import { MonsterLoader } from '@/babylon/monsters/monsterLoader'
 import { MonsterCodebook, MonsterType } from '@/babylon/monsters/codebook/monsterCodebook'
 import { MeshAnimation } from '@/babylon/animations/animation'
 import { MonsterTemplate } from '@/babylon/monsters/codebook/monsterTemplates'
-import { EquipBearer, MobEquipItem, MobEquipManager } from '@/babylon/item/mobEquipManager'
+import { EquipBearer, MobEquipItem, EquipManager } from '@/babylon/item/equipManager'
 import { Utils } from '@/utils/utils'
 import { Renderer } from '@/babylon/scene/renderer'
 import { WorldDataManager } from '@/data/worldDataManager'
@@ -82,21 +82,21 @@ export class MonsterModel implements EquipBearer {
     }
 
     assignRhand(type: number, matIndex: number, scale = Vector3.One(), rotation: Vector3 | null, position: Vector3 | null) {
-        this.weaponEquipItem = new MobEquipItem(MobEquipManager.itemTypes.get(type)!, matIndex, this, this.rhandBone, scale, rotation, position, true)
+        this.weaponEquipItem = new MobEquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.rhandBone, scale, rotation, position, true)
         this.addEquippedItem(this.weaponEquipItem)
     }
 
     assignChest(type: number, matIndex: number, scale = Vector3.One(), rotation: Vector3 | null, position: Vector3 | null) {
-        this.addEquippedItem(new MobEquipItem(MobEquipManager.itemTypes.get(type)!, matIndex, this, this.chestBone, scale, rotation, position))
+        this.addEquippedItem(new MobEquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.chestBone, scale, rotation, position))
     }
 
     assignHelmet(type: number, matIndex: number, scale = Vector3.One(), rotation: Vector3 | null, position: Vector3 | null) {
-        this.addEquippedItem(new MobEquipItem(MobEquipManager.itemTypes.get(type)!, matIndex, this, this.headBone, scale, rotation, position))
+        this.addEquippedItem(new MobEquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.headBone, scale, rotation, position))
     }
 
     addEquippedItem(item: MobEquipItem) {
         this.equipSet.add(item)
-        MobEquipManager.addEquippedItem(item)
+        EquipManager.addEquippedItem(item)
     }
 
     onFrame(timeRate: number) {
@@ -224,7 +224,7 @@ export class MonsterModel implements EquipBearer {
 
         MonsterLoader.monsterTemplates.get(this.template.id)?.activateClone(this.template)
         this.equipSet.forEach(item => {
-            MobEquipManager.addEquippedItem(item)
+            EquipManager.addEquippedItem(item)
         })
     }
 
@@ -234,7 +234,7 @@ export class MonsterModel implements EquipBearer {
             MonsterLoader.monsterTemplates.get(this.template.id)?.deactivateClone(this.template)
         }
         this.equipSet.forEach(item => {
-            MobEquipManager.removeEquippedItem(item)
+            EquipManager.removeEquippedItem(item)
         })
     }
 

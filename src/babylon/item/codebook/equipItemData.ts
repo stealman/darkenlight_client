@@ -1,6 +1,6 @@
 import { Vector3 } from '@babylonjs/core'
 
-export class MobEquipItemData {
+export class EquipItemData {
     id: number
     name: string
     model: string

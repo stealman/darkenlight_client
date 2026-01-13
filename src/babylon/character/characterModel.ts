@@ -12,7 +12,7 @@ import Character from '@/babylon/character/character'
 import { Renderer } from '@/babylon/scene/renderer'
 import { Utils } from '@/utils/utils'
 import { MyPlayer } from '@/data/myPlayer'
-import { EquipBearer, MobEquipItem, MobEquipManager } from '@/babylon/item/mobEquipManager'
+import { EquipBearer, MobEquipItem, EquipManager } from '@/babylon/item/equipManager'
 import { BabylonUtils } from '@/babylon/utils'
 
 export class CharacterModel implements EquipBearer {
@@ -146,38 +146,38 @@ export class CharacterModel implements EquipBearer {
     }
 
     assignArmor(type: number, matIndex: number) {
-        this.addEquippedItem(new MobEquipItem(MobEquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.001")!, null, null, null))
+        this.addEquippedItem(new MobEquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.001")!, null, null, null))
     }
 
     assignHelmet(type: number, matIndex: number) {
-        this.addEquippedItem(new MobEquipItem(MobEquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.002")!, null, null, null))
+        this.addEquippedItem(new MobEquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.002")!, null, null, null))
     }
 
     assignLeftPauldron(type: number, matIndex: number) {
-        this.addEquippedItem(new MobEquipItem(MobEquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.010")!, null, new Vector3(0, - Math.PI / 2, 0), null))
+        this.addEquippedItem(new MobEquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.010")!, null, new Vector3(0, - Math.PI / 2, 0), null))
     }
 
     assignRightPauldron(type: number, matIndex: number) {
-        this.addEquippedItem(new MobEquipItem(MobEquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.003")!, null, new Vector3(0, Math.PI / 2, 0), new Vector3(0.02, 0, 0.02)))
+        this.addEquippedItem(new MobEquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.003")!, null, new Vector3(0, Math.PI / 2, 0), new Vector3(0.02, 0, 0.02)))
     }
 
     assignLeftLeg(type: number, matIndex: number) {
-        this.addEquippedItem(new MobEquipItem(MobEquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.008")!, null, null, null))
+        this.addEquippedItem(new MobEquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.008")!, null, null, null))
     }
 
     assignRightLeg(type: number, matIndex: number) {
-        this.addEquippedItem(new MobEquipItem(MobEquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.006")!, null, null, null))
+        this.addEquippedItem(new MobEquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.006")!, null, null, null))
     }
 
     assignWeapon(type: number, matIndex: number) {
-        this.weaponEquipItem = new MobEquipItem(MobEquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.009")!, null, new Vector3(Math.PI / 2, Math.PI / 2, 0), null, true)
+        this.weaponEquipItem = new MobEquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.009")!, null, new Vector3(Math.PI / 2, Math.PI / 2, 0), null, true)
         this.weaponEquipItem.createSwordParticles(this.rhandNode)
         this.addEquippedItem(this.weaponEquipItem)
     }
 
     addEquippedItem(item: MobEquipItem) {
         this.equipSet.add(item)
-        MobEquipManager.addEquippedItem(item)
+        EquipManager.addEquippedItem(item)
     }
 
     startWalkAnimation() {
