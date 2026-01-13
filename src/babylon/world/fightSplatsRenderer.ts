@@ -8,7 +8,7 @@ import { Settings } from '@/settings/settings'
 export const FightSplatsRenderer = {
     splats: new Array<Splat>(),
     visibleSplats: new Array<Splat>(),
-    maxSplats: Settings.isDetalLevelHigh() ? 1000 : 200,
+    maxSplats: Settings.isDetalLevelHigh() ? 1000 : 150,
     ttl: 900000,
     splatPlane: null as Mesh | null,
 

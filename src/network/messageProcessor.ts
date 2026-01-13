@@ -16,7 +16,7 @@ export const MessageProcessor = {
     async processResponse(response) {
         for (const element of response) {
             const msg = element
-            //console.log(msg.t)
+            //console.log(msg.t + ":" + msg.d)
             switch (msg.t) {
                 case 2: await this.loginResponse(msg.d); break
                 case 3: this.addMonster(msg.d); break
@@ -39,6 +39,7 @@ export const MessageProcessor = {
                 case 20: this.processMonsterAttackFinished(msg.d); break
                 case 21: this.processAddFightSplats(msg.d); break
                 case 22: this.processLoggedFromAnotherDevice(); break
+                case 23: this.removeCharacter(msg.d); break
                 case 1003: this.processGMAllSpawns(msg.d); break
                 case 1004: this.processGMSpawnChange(msg.d); break
                 default:
@@ -68,6 +69,10 @@ export const MessageProcessor = {
 
     async addCharacter(data) {
         await CharacterManager.addCharacter(data)
+    },
+
+    removeCharacter(data) {
+        CharacterManager.removeCharacter(data)
     },
 
     charMove(data) {

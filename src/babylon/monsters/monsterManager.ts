@@ -150,13 +150,16 @@ export const MonsterManager = {
 
         this.monsters.forEach((monster, id) => {
             if (this.isMonsterInViewport(monster)) {
-                this.visibleMonsters.add(id)
+                const distanceToPlayer = monster.getDistanceFromMyPlayer()
+                if (distanceToPlayer <= MyPlayer.visibilityRadius) {
+                    this.visibleMonsters.add(id)
+                }
             }
         })
     },
 
     isMonsterInViewport(monster: Monster) {
-        return ViewportManager.isPointInVisibleMatrix(Math.floor(monster.pos.x), Math.floor(monster.pos.z), 0)
+        return ViewportManager.isPointInVisibleMatrix(Math.floor(monster.pos.x), Math.floor(monster.pos.z), 2)
     },
 
     isPointInMonster(x: number, z: number, size: number): Monster | null {

@@ -61,8 +61,8 @@ class Character implements Attackable {
         this.logicYpos = this.pos.y
     }
 
-    async createModel() {
-        this.model = await CharacterModel.create(this)
+    async createModel(init: boolean) {
+        this.model = await CharacterModel.create(this, init)
     }
 
     onFrame(timeRate: number, actualTime: number, myChar: boolean) {
@@ -275,6 +275,10 @@ class Character implements Attackable {
             default:
                 return this.movementType === 'RUN' ? FootStepSpeeds.SNOW_RUN : FootStepSpeeds.SNOW_WALK
         }
+    }
+
+    getDistanceFromMyPlayer(): number {
+        return Vector3.Distance(this.pos, MyPlayer.myChar.pos)
     }
 }
 

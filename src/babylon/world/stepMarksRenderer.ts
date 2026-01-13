@@ -12,7 +12,7 @@ export const StepMarksRenderer = {
     stepMarkPlane: null as Mesh | null,
 
     initialize (scene: Scene) {
-        this.maxMarks = Settings.isDetalLevelHigh() ? 500 : 250
+        this.maxMarks = Settings.isDetalLevelHigh() ? 500 : 150
         this.stepMarkPlane = Builder.createHorizontalPlane(scene, null, 1, 0)
         this.stepMarkPlane.material = Materials.stepMarksMaterial
         this.loadFromLocalStorage()

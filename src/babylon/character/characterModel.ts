@@ -54,9 +54,9 @@ export class CharacterModel implements EquipBearer {
         this.node.position.copyFrom((this.parent.pos))
     }
 
-    static async create(data: Character): Promise<CharacterModel> {
+    static async create(data: Character, init: boolean): Promise<CharacterModel> {
         const model = new CharacterModel(data);
-        await model.initAsync();
+        if (init) await model.initAsync();
         return model;
     }
 
@@ -290,9 +290,11 @@ export class CharacterModel implements EquipBearer {
             this.resolveModelRotation(timeRate)
         }
 
-        this.rotationQuaternion = new Quaternion()
-        this.worldMatrix = this.model!.getWorldMatrix();
-        this.worldMatrix.decompose(new Vector3(), this.rotationQuaternion, new Vector3());
+        if (this.model) {
+            this.rotationQuaternion = new Quaternion()
+            this.worldMatrix = this.model!.getWorldMatrix();
+            this.worldMatrix.decompose(new Vector3(), this.rotationQuaternion, new Vector3());
+        }
 
         this.equipSet.forEach(item => {
             item.onFrame()
@@ -310,13 +312,19 @@ export class CharacterModel implements EquipBearer {
 
         this.node.markAsDirty("position")
         this.node.computeWorldMatrix(true);
-        this.model!.computeWorldMatrix(true);
+
+        if (this.model) {
+            this.model.computeWorldMatrix(true);
+        }
     }
 
     /**
      * Rotate model fluently to the look angle
      */
     resolveModelRotation(timeRate: number) {
+        if (!this.model) {
+            return
+        }
         const model = this.model!
         const lookAngle = this.parent.getLookAngle()
         if (lookAngle == null) return
@@ -361,12 +369,27 @@ export class CharacterModel implements EquipBearer {
     async addToView() {
         if (!this.initialized) await this.initAsync()
         this.model!.setEnabled(true)
+        this.equipSet.forEach(item => {
+            EquipManager.addEquippedItem(item)
+            if (item.hasSwordParticles) {
+                item.createSwordParticles(this.rhandNode)
+            }
+        })
     }
 
     removeFromView() {
         if (this.initialized) {
             this.model!.setEnabled(false)
         }
-        // TODO: UNASSIGN ALL EQUIPMENTS
+        this.equipSet.forEach(item => {
+            EquipManager.removeEquippedItem(item)
+        })
+    }
+
+    removeFromScene() {
+        this.removeFromView()
+        this.model?.dispose()
+        this.node.dispose()
+        this.disposeWeaponTrail()
     }
 }

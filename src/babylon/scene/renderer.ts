@@ -28,6 +28,7 @@ import { Lights } from '@/babylon/scene/lights'
 import { FightSplatsRenderer } from '@/babylon/world/fightSplatsRenderer'
 import { OnScreenMessageManager } from '@/gui/onScreenMessageManager'
 import { CharacterManager } from '@/babylon/character/characterManager'
+import { Utils } from '@/utils/utils'
 
 /**
  * Main Renderer
@@ -111,6 +112,10 @@ export const Renderer = {
         const actualTime = new Date().getTime()
         const timeRate = this.engine!.getDeltaTime() / 1000
         this.fps = Number.parseInt(this.engine!.getFps()!.toFixed());
+
+        if (timeRate > 0.04 && this.fps > 80) {
+            //console.log(timeRate)
+        }
 
         if (this.camera == null) {
             this.createCamera()

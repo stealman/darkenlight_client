@@ -23,21 +23,23 @@ export const CharacterManager = {
             char.logicYpos = char.pos.y
         } else {
             const newChar = new Character(data)
-            await newChar.createModel()
-
-            // TODO - nevytvaret model pokud neni inside view?
+            await newChar.createModel(false)
             newChar.insideView = this.isCharInViewport(newChar)
 
             // If char is in view, initialize model immediately
             if (newChar.insideView) {
+                await newChar.model!.initAsync();
             }
-
             this.characters.set(data.id, newChar)
         }
+    },
 
-        // Character actual movement
-        if (data.mv?.length === 3) {
-
+    removeCharacter(id: number) {
+        if (this.characters.has(id)) {
+            const char = this.characters.get(id)!
+            char.model?.removeFromScene()
+            this.visibleCharacters.delete(id)
+            this.characters.delete(id)
         }
     },
 
@@ -101,14 +103,17 @@ export const CharacterManager = {
 
     updateVisibleChars() {
         this.visibleCharacters.clear()
-        this.characters.forEach((monster, id) => {
-            if (this.isCharInViewport(monster)) {
-                this.visibleCharacters.add(id)
+        this.characters.forEach((char, id) => {
+            if (this.isCharInViewport(char)) {
+                const distanceToPlayer = char.getDistanceFromMyPlayer()
+                if (distanceToPlayer <= MyPlayer.visibilityRadius) {
+                    this.visibleCharacters.add(id)
+                }
             }
         })
     },
 
     isCharInViewport(char: Character) {
-        return ViewportManager.isPointInVisibleMatrix(Math.floor(char.pos.x), Math.floor(char.pos.z), 0)
+        return ViewportManager.isPointInVisibleMatrix(Math.floor(char.pos.x), Math.floor(char.pos.z), 2)
     },
 }

@@ -13,6 +13,8 @@ import { AutoAttackBreak } from '@/network/messages'
  * Controlling object for the player's character
  */
 export const MyPlayer = {
+    visibilityRadius: 32 as number,
+
     myChar: null as Character,
     myModel: null as CharacterModel | null,
     myCharRef: ref(null as Character | null),
@@ -23,7 +25,7 @@ export const MyPlayer = {
 
     async initialize(charData: any) {
         this.myChar = new Character(charData)
-        await this.myChar.createModel()
+        await this.myChar.createModel(true)
         this.myModel = this.myChar.model as CharacterModel
 
         this.myChar.pos.y = Utils.calculateYPos(this.myChar.pos.x, this.myChar.pos.z, this.myChar.getBoxSize())

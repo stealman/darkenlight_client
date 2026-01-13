@@ -28,7 +28,10 @@ export class EquipItem {
     localPosition: Vector3 = Vector3.Zero()
     boneRotationQuaternion: Quaternion = Quaternion.Identity()
     scaleMatrix: Matrix = Matrix.Identity()
+
     weaponTrail: TrailMesh | null = null
+    hasSwordParticles: boolean = false
+    particleSystem: GPUParticleSystem | null = null
 
     private parentRotMatrix = new Matrix()
     private tmpOffset = new Vector3()
@@ -109,7 +112,7 @@ export class EquipItem {
         emitter.position = new Vector3(0, 2.8, 0)
 
         const ps = new GPUParticleSystem("charWeaponParticles", {
-            capacity: 500
+            capacity: 350
         }, Renderer.scene);
 
         ps.particleTexture = new Texture('images/gfx/flare-rect.png', Renderer.scene)
@@ -124,10 +127,10 @@ export class EquipItem {
         ps.addSizeGradient(0, 0.075)
         ps.addSizeGradient(1, 0.04)
 
-        ps.minLifeTime = 0.4
-        ps.maxLifeTime = 0.6
+        ps.minLifeTime = 0.5
+        ps.maxLifeTime = 0.75
 
-        ps.emitRate = 300
+        ps.emitRate = 200
         ps.blendMode = ParticleSystem.BLENDMODE_ONEONE
 
         ps.direction1 = BabylonUtils.getSymVector(-2)
@@ -143,6 +146,8 @@ export class EquipItem {
         ps.addColorGradient(1, new Color4(0.1, 0.05, 0.01, 0.00))
         ps.emitter = emitter
         ps.start()
+        this.particleSystem = ps
+        this.hasSwordParticles = true
     }
 }
 
@@ -159,10 +164,12 @@ export class EquipItemType {
     instanceBuffer: Float32Array = new Float32Array(0)
     uvBuffer: Float32Array = new Float32Array(0)
     cbData: EquipCbItem
+    _thinReady: boolean = false
 
     constructor(data: EquipCbItem) {
         this.id = data.id
         this.cbData = data
+        this.ensureThinBuffers(this)
     }
 
     /**
@@ -201,6 +208,17 @@ export class EquipItemType {
         Lights.addShadowCaster(this.mesh)
     }
 
+    ensureThinBuffers(type: EquipItemType) {
+        if (!type.mesh) return
+        if (type._thinReady) return
+
+        type.mesh.thinInstanceSetBuffer("matrix", type.instanceBuffer, 16, false) // dynamic
+        type.mesh.thinInstanceRegisterAttribute("uvc", 2)
+        type.mesh.thinInstanceSetBuffer("uvc", type.uvBuffer, 2, false) // dynamic
+
+        type._thinReady = true
+    }
+
     /**
      * Update the count of thin instances for this item type
      * When count is zero, the mesh is disabled to save performance
@@ -210,16 +228,19 @@ export class EquipItemType {
         this.instanceBuffer = new Float32Array(16 * count)
         this.uvBuffer = new Float32Array(2 * count)
 
-        if (this.mesh == null) {
-            return
-        }
+        if (!this.mesh) return
 
         if (count === 0) {
             this.mesh.setEnabled(false)
-        } else if (!this.mesh.isEnabled()) {
-            this.mesh.alwaysSelectAsActiveMesh = true
-            this.mesh.setEnabled(true)
+            return
         }
+
+        this.mesh.alwaysSelectAsActiveMesh = true
+        this.mesh.setEnabled(true)
+
+        // důležité: buffer se změnil => znovu setnout
+        this._thinReady = false
+        this.ensureThinBuffers(this)
     }
 }
 
@@ -231,6 +252,10 @@ export class EquipItemType {
 export const EquipManager = {
     itemTypes: new Map<number, EquipItemType>(),
     equippedItems: new Map<EquipItemType, Set<EquipItem>>(),
+
+    _tmpPos: new Matrix(),
+    _tmpRot: new Matrix(),
+    _tmpWorld: new Matrix(),
 
     async initialize(scene: Scene) {
         await WeaponsCbManager.initMelee(this.itemTypes, scene)
@@ -249,29 +274,41 @@ export const EquipManager = {
         if (item.weaponTrail) {
             item.weaponTrail.setEnabled(false)
         }
+        if (item.particleSystem) {
+            item.particleSystem.stop()
+            item.particleSystem.dispose()
+        }
         this.equippedItems.get(item.type)?.delete(item)
         item.type.updateCount(this.equippedItems.get(item.type)!.size)
     },
 
     onFrame() {
-        // For each item type, if at least one item is equipped, update the instance buffer
         this.equippedItems.forEach((items, type) => {
-            if (type.count > 0) {
-                let i = 0;
+            if (type.count <= 0) return
+            if (!type.mesh) return
 
-                // Every item has its position and rotation set in its onFrame() method
-                items.forEach((item) => {
-                    const posMatrix = Matrix.Translation(item.position.x, item.position.y, item.position.z);
-                    const scaleMatrix = item.scaleMatrix;
-                    scaleMatrix.multiply(Matrix.FromQuaternionToRef(item.quaternion, new Matrix()).multiply(posMatrix)).copyToArray(type.instanceBuffer, i * 16);
+            type.ensureThinBuffers(type)
 
-                    type.uvBuffer[i * 2] = item.matVector.x
-                    type.uvBuffer[i * 2 + 1] = item.matVector.y
-                    i++;
-                })
-                type.mesh!.thinInstanceSetBuffer("matrix", type.instanceBuffer);
-                type.mesh!.thinInstanceSetBuffer("uvc", type.uvBuffer, 2)
-            }
+            let i = 0
+            items.forEach(item => {
+                Matrix.TranslationToRef(item.position.x, item.position.y, item.position.z, this._tmpPos)
+                Matrix.FromQuaternionToRef(item.quaternion, this._tmpRot)
+
+                this._tmpRot.multiplyToRef(this._tmpPos, this._tmpWorld)
+                item.scaleMatrix.multiplyToRef(this._tmpWorld, this._tmpWorld)
+
+                this._tmpWorld.copyToArray(type.instanceBuffer, i * 16)
+
+                type.uvBuffer[i * 2] = item.matVector.x
+                type.uvBuffer[i * 2 + 1] = item.matVector.y
+
+                i++
+            })
+
+            // důležitý když máš buffery větší než aktuální počet
+            type.mesh.thinInstanceCount = i
+            type.mesh.thinInstanceBufferUpdated("matrix")
+            type.mesh.thinInstanceBufferUpdated("uvc")
         })
     }
 }
