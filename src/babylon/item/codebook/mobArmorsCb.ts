@@ -1,11 +1,13 @@
-import { BASE_EQUIP_MATERIAL_PATH, CharWearableItemModel, PLATE_METAL_BASIC } from '@/babylon/item/charEquipManager'
 import { Materials } from '@/babylon/materials'
 import { Scene, TransformNode, Vector3 } from '@babylonjs/core'
 import { BabylonUtils } from '@/babylon/utils'
-import { MobEquipItemType } from '@/babylon/item/mobEquipManager'
+import { MobEquipItemType} from '@/babylon/item/mobEquipManager'
 import { MobEquipItemData } from '@/babylon/item/codebook/mobEquipItemData'
 import { PBRCustomMaterial } from '@babylonjs/materials'
 import { Renderer } from '@/babylon/scene/renderer'
+
+export const BASE_EQUIP_MATERIAL_PATH = "/models/equip/"
+export const PLATE_METAL_BASIC = 'plate-metal-basic'
 
 export const MobArmorsCbManager = {
     BASE_ARMORS_PATH: 'armors/',
@@ -18,8 +20,12 @@ export const MobArmorsCbManager = {
         this.materialSets.set(PLATE_METAL_BASIC, this.getMaterial("plate-metal-basic", PLATE_METAL_BASIC, 4, 4, false))
 
         map.set(CbArmorTypes.PLATE_ARMOR_MALE.id, await this.getItem(CbArmorTypes.PLATE_ARMOR_MALE))
+
         map.set(CbArmorTypes.HELM_MALE.id, await this.getItem(CbArmorTypes.HELM_MALE))
+        map.set(CbArmorTypes.HELM_MALE_CLOSED.id, await this.getItem(CbArmorTypes.HELM_MALE_CLOSED))
+
         map.set(CbArmorTypes.PAULDRON_MALE.id, await this.getItem(CbArmorTypes.PAULDRON_MALE))
+
         map.set(CbArmorTypes.LEG_MALE.id, await this.getItem(CbArmorTypes.LEG_MALE))
     },
 
@@ -47,13 +53,12 @@ export const CbArmorTypes = {
     HELM_MALE: new MobEquipItemData(200, "200_male-helmet", "male-helmet", PLATE_METAL_BASIC, new Vector3(0, 0.47, 0), BabylonUtils.getSymVector(0.44),
         4, 4, false, null),
 
+    HELM_MALE_CLOSED: new MobEquipItemData(210, "210_male-helmet-closed", "male-helmet_closed", PLATE_METAL_BASIC, new Vector3(0, 0.42, 0), BabylonUtils.getSymVector(0.44),
+        4, 4, false, null),
+
     PAULDRON_MALE: new MobEquipItemData(300, "300_male-pauldron", "male-pauldron-plate", PLATE_METAL_BASIC, new Vector3(0.06, -0.13, 0.02), new Vector3(0.48, 0.48, 0.58),
         4, 4, false, null),
 
     LEG_MALE: new MobEquipItemData(400, "400_male-leg-plate", "male-leg-plate", PLATE_METAL_BASIC, new Vector3(-0.01, -0.1, 0.01), new Vector3(0.26, 0.26, 0.23),
         4, 4, false, null),
 }
-
-
-
-//new CharWearableItemModel("male-plate-legs", 60, this.BASE_ARMORS_PATH + "male-leg-plate.babylon", new Vector3(0.26, 0.26, 0.23), new Vector3(-0.01, -0.1, 0.01))

@@ -1,9 +1,9 @@
 import {
-    Bone, Matrix,
-    Mesh,
+    Bone, Color4, GPUParticleSystem, Matrix,
+    Mesh, ParticleSystem,
     Quaternion,
     Scene,
-    SceneLoader, TrailMesh, TransformNode, Vector2, Vector3,
+    SceneLoader, Texture, TrailMesh, TransformNode, Vector2, Vector3, Vector4,
 } from '@babylonjs/core'
 import { PBRCustomMaterial } from '@babylonjs/materials'
 import { MobWeaponsCbManager } from '@/babylon/item/codebook/mobWeaponsCb'
@@ -11,6 +11,8 @@ import { MobArmorsCbManager } from '@/babylon/item/codebook/mobArmorsCb'
 import { MobEquipItemData } from '@/babylon/item/codebook/mobEquipItemData'
 import { Renderer } from '@/babylon/scene/renderer'
 import { Materials } from '@/babylon/materials'
+import { Lights } from '@/babylon/scene/lights'
+import { BabylonUtils } from '@/babylon/utils'
 
 export class MobEquipItem {
     parent: EquipBearer | null = null
@@ -27,7 +29,6 @@ export class MobEquipItem {
     boneRotationQuaternion: Quaternion = Quaternion.Identity()
     localScale: Vector3 = Vector3.One()
     scaleMatrix: Matrix = Matrix.Identity()
-
     weaponTrail: TrailMesh | null = null
 
     constructor(type: MobEquipItemType, matIndex: number, parent: EquipBearer, bone: Bone, scale: Vector3 | null, rotation: Vector3 | null, position: Vector3 | null, addWeaponTrail: boolean = false) {
@@ -66,13 +67,14 @@ export class MobEquipItem {
         }
     }
 
-    createWeaponTrail(boneNode: Bone): TrailMesh {
-        const tip = new TransformNode('swordTipMob' + this.parent?.getOwnerId(), Renderer.scene)
-        tip.attachToBone(boneNode, this.parent!.node)
+    createWeaponTrail(bone: Bone): TrailMesh {
+        const tip = new TransformNode('weaponTip' + this.parent?.getOwnerId(), Renderer.scene)
+        tip.attachToBone(bone, this.parent!.getMasterNode())
 
         // Position the tip at the weapon tip position from the codebook data and scale it according to the weapon scale
         const p = this.type.cbData.weaponTipPosition!
         const s = this.parent?.getWeaponScale() ?? Vector3.One()
+
         tip.position.set(
             p.x * s.x,
             p.y * s.y,
@@ -82,6 +84,48 @@ export class MobEquipItem {
         trail.material = Materials.weaponTrailMaterial
         trail.setEnabled(false)
         return trail
+    }
+
+    createSwordParticles(handNode: TransformNode) {
+        const emitter = new TransformNode('swordSmearEmitter', Renderer.scene)
+        emitter.parent = handNode
+        emitter.position = new Vector3(0, 2.8, 0)
+
+        const ps = new GPUParticleSystem("charWeaponParticles", {
+            capacity: 500
+        }, Renderer.scene);
+
+        ps.particleTexture = new Texture('images/gfx/flare-rect.png', Renderer.scene)
+
+        ps.createBoxEmitter(
+            Vector3.Zero(),
+            Vector3.Zero(),
+            new Vector3(-0.02, -1, -0.15),
+            new Vector3(0.02, 1, 0.15)
+        )
+
+        ps.addSizeGradient(0, 0.075)
+        ps.addSizeGradient(1, 0.04)
+
+        ps.minLifeTime = 0.4
+        ps.maxLifeTime = 0.6
+
+        ps.emitRate = 300
+        ps.blendMode = ParticleSystem.BLENDMODE_ONEONE
+
+        ps.direction1 = BabylonUtils.getSymVector(-2)
+        ps.direction2 = BabylonUtils.getSymVector(2)
+        ps.minEmitPower = 0.2
+        ps.maxEmitPower = 0.5
+        ps.updateSpeed = 0.02
+
+        // Gravity upwards
+        ps.gravity = new Vector3(0, 2, 0)
+        ps.addColorGradient(0, new Color4(0.8, 0.3, 0.1, 0.5))
+        ps.addColorGradient(0.8, new Color4(0.1, 0.05, 0.01, 0.2))
+        ps.addColorGradient(1, new Color4(0.1, 0.05, 0.01, 0.00))
+        ps.emitter = emitter
+        ps.start()
     }
 }
 
@@ -132,6 +176,7 @@ export class MobEquipItemType {
         this.mesh.setEnabled(false)
         this.mesh.alwaysSelectAsActiveMesh = true
         this.mesh.parent = parentNode
+        Lights.addShadowCaster(this.mesh)
     }
 
     /**
@@ -210,11 +255,24 @@ export const MobEquipManager = {
 }
 
 export interface EquipBearer {
-    node: TransformNode
     worldMatrix: Matrix
     rotationQuaternion: Quaternion
 
     getOwnerId(): number
     getWeaponTipPosition(): Vector3 | null
     getWeaponScale(): Vector3
+    getMasterNode()
 }
+
+const BasicPlateMetalMaterials = [
+    new Vector4(0.01, 0.76, 0.24, 0.99), // Iron
+    new Vector4(0.26, 0.76, 0.49, 0.99), // Astracyte
+    new Vector4(0.51, 0.76, 0.74, 0.99), // Agapyte
+    new Vector4(0.76, 0.76, 0.99, 0.99), // Gold
+    new Vector4(0.01, 0.51, 0.24, 0.74), // Redstone
+    new Vector4(0.26, 0.51, 0.49, 0.74), // Darkstone
+    new Vector4(0.51, 0.51, 0.74, 0.74), // Amethyst
+    new Vector4(0.76, 0.51, 0.99, 0.74), // Mythril
+    new Vector4(0.01, 0.26, 0.24, 0.49), // Rust iron
+    new Vector4(0.26, 0.26, 0.49, 0.49), // Shadow iron
+]

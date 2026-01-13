@@ -1,4 +1,5 @@
 import {
+    AbstractMesh,
     AnimationGroup, Bone, Matrix,
     Mesh, ParticleSystem, Quaternion,
     Skeleton, Texture, TransformNode, Vector3,
@@ -265,6 +266,10 @@ export class MonsterModel implements EquipBearer {
 
     getWeaponScale(): Vector3 | undefined {
         return this.parent.mobType.weapon?.scale
+    }
+
+    getMasterNode(): Mesh | AbstractMesh | undefined {
+        return this.node
     }
 
     createDyingParticleEffect() {

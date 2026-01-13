@@ -10,6 +10,7 @@ export const MobWeaponsCbManager = {
     async initMelee(map: Map<number, MobEquipItemType>, scene: Scene) {
         this.itemSourceParent = new TransformNode("mobWeaponSources", scene)
         map.set(MobWeaponsCb.LONGSWORD.id, await this.getItem(MobWeaponsCb.LONGSWORD))
+        map.set(MobWeaponsCb.BROADSWORD.id, await this.getItem(MobWeaponsCb.BROADSWORD))
     },
 
     async getItem(data: MobEquipItemData) {
@@ -20,7 +21,9 @@ export const MobWeaponsCbManager = {
 }
 
 export const MobWeaponsCb = {
-   LONGSWORD: new MobEquipItemData(1, "sword_steel", "longsword_steel","",
-       Vector3.Zero(), new Vector3(1.5, 1, 1) , 0, 0, false,
-       new Vector3(0, 10.5, 0)),
+    LONGSWORD: new MobEquipItemData(1, "sword_steel", "longsword_steel","", Vector3.Zero(), new Vector3(0.32, 0.22, 0.22),
+       0, 0, false, new Vector3(0, 2.4, 0)),
+
+    BROADSWORD: new MobEquipItemData(2, "broadsword_steel", "broadsword_steel","", Vector3.Zero(), new Vector3(0.32, 0.22, 0.22),
+        0, 0, false, new Vector3(0, 2, 0)),
 }

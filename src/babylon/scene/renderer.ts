@@ -16,7 +16,6 @@ import { MiniMap } from '@/utils/minimap'
 import { Materials } from '@/babylon/materials'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { ViewportManager } from '@/utils/viewport'
-import { CharEquipManager } from '@/babylon/item/charEquipManager'
 import { MonsterManager } from '@/babylon/monsters/monsterManager'
 import { Connector } from '@/network/connector'
 import { MobEquipManager } from '@/babylon/item/mobEquipManager'
@@ -67,7 +66,6 @@ export const Renderer = {
         AudioManager.initialize(this.scene)
         MiniMap.initialize()
         CharacterManager.initialize()
-        await CharEquipManager.initialize(this.scene)
         await MobEquipManager.initialize(this.scene)
         await MonsterManager.initialize()
 
@@ -191,10 +189,6 @@ export const Renderer = {
         this.scene.fogColor = new Color3(0.2, 0.22, 0.24)
 
         this.setCullingFrequency(this.scene, 30)
-        this.scene.onAfterAnimationsObservable.add(() => {
-            if (this.frame > 1) CharEquipManager.onFrame()
-        })
-
         this.scene.environmentTexture = CubeTexture.CreateFromPrefilteredData(
             "environment_specular.env",
             this.scene

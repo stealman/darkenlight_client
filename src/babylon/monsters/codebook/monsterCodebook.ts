@@ -150,11 +150,11 @@ export const MonsterTypes = {
         WeaponSoundTypes.BONE, BodySoundTypes.HARD, null, MonsterSoundTypes.SKELETON, FightSplatTypes.BONE),
 
     SKELETON_FIGHTER: new MonsterType( 2, MonsterGroups.SKELETON, 1, 'Skeleton Fighter', 0.6, 1.8,  3.2,
-        new MonsterEquipData([1], 0.15, new Vector3(Math.PI / 2, Math.PI / 2, 0), null,0),null, null,
+        new MonsterEquipData([1], 0.8, new Vector3(Math.PI / 2, Math.PI / 2, 0), null,0),null, null,
         WeaponSoundTypes.SWORD, BodySoundTypes.HARD, WeaponSoundTypes.SWORD, MonsterSoundTypes.SKELETON, FightSplatTypes.BONE),
 
     SKELETON_WARRIOR: new MonsterType( 3, MonsterGroups.SKELETON, 1, 'Skeleton Warrior', 0.6, 1.8,  3.2,
-        new MonsterEquipData([1], 0.15, new Vector3(Math.PI / 2, Math.PI / 2, 0), null, 0),
+        new MonsterEquipData([1], 0.8, new Vector3(Math.PI / 2, Math.PI / 2, 0), null, 0),
         new MonsterEquipData([200], 0.94, VectorY90, null, 8),
         new MonsterEquipData([100], new Vector3(0.8, 0.7, 0.65),  VectorY90, null, 8),
         WeaponSoundTypes.SWORD, BodySoundTypes.HARD, WeaponSoundTypes.SWORD, MonsterSoundTypes.SKELETON, FightSplatTypes.BONE),
@@ -163,11 +163,11 @@ export const MonsterTypes = {
         WeaponSoundTypes.BONE, BodySoundTypes.HARD, null, MonsterSoundTypes.SKELETON, FightSplatTypes.DARK_BONE),
 
     WITHER_CHAMPION: new MonsterType( 11, MonsterGroups.WITHER, 2, 'Wither Champion', 0.6, 1.8,3.2,
-        new MonsterEquipData([1], 0.15, new Vector3(Math.PI / 2, Math.PI / 2, 0), null, 0),null, null,
+        new MonsterEquipData([1], 0.8, new Vector3(Math.PI / 2, Math.PI / 2, 0), null, 0),null, null,
         WeaponSoundTypes.SWORD, BodySoundTypes.HARD, WeaponSoundTypes.SWORD, MonsterSoundTypes.SKELETON, FightSplatTypes.DARK_BONE),
 
     WITHER_KNIGHT: new MonsterType( 12, MonsterGroups.WITHER, 2, 'Wither Knight', 0.6, 1.8,  3.2,
-        new MonsterEquipData([1], 0.2, new Vector3(Math.PI / 2, Math.PI / 2, 0), null, 0),
+        new MonsterEquipData([1], 0.9, new Vector3(Math.PI / 2, Math.PI / 2, 0), null, 0),
         new MonsterEquipData([200], 0.94, VectorY90, null,9),
         new MonsterEquipData([100], new Vector3(0.8, 0.7, 0.65), VectorY90, null, 9),
         WeaponSoundTypes.SWORD, BodySoundTypes.HARD, WeaponSoundTypes.SWORD, MonsterSoundTypes.SKELETON, FightSplatTypes.DARK_BONE),

@@ -1,12 +1,11 @@
 import {
     AbstractMesh,
     AnimationGroup, Matrix, Mesh, Quaternion,
-    SceneLoader, Skeleton, Sound, TrailMesh, TransformNode,
+    SceneLoader, Skeleton, Sound, TransformNode,
     Vector3,
 } from '@babylonjs/core'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { Materials } from '@/babylon/materials'
-import { CharEquipManager } from '@/babylon/item/charEquipManager'
 import { AnimTransition } from '@/babylon/animations/animation'
 import { Lights } from '@/babylon/scene/lights'
 import Character from '@/babylon/character/character'
@@ -14,6 +13,7 @@ import { Renderer } from '@/babylon/scene/renderer'
 import { Utils } from '@/utils/utils'
 import { MyPlayer } from '@/data/myPlayer'
 import { EquipBearer, MobEquipItem, MobEquipManager } from '@/babylon/item/mobEquipManager'
+import { BabylonUtils } from '@/babylon/utils'
 
 export class CharacterModel implements EquipBearer {
     parent: Character
@@ -26,13 +26,6 @@ export class CharacterModel implements EquipBearer {
     rotationQuaternion: Quaternion
 
     skeleton: Skeleton | undefined
-    headNode: TransformNode = new TransformNode("headNode")
-    torsoNode: TransformNode = new TransformNode("torsoNode")
-    larmNode: TransformNode = new TransformNode("larmNode")
-    rarmNode: TransformNode = new TransformNode("rarmNode")
-    llegNode: TransformNode = new TransformNode("llegNode")
-    rlegNode: TransformNode = new TransformNode("rlegNode")
-
     lhandNode: TransformNode = new TransformNode("lhandNode")
     rhandNode: TransformNode = new TransformNode("rhandNode")
 
@@ -49,9 +42,9 @@ export class CharacterModel implements EquipBearer {
 
     actualAnim: AnimationGroup | undefined
     animTransition: AnimTransition | null = null
-    weaponMesh: Mesh | null = null
-    weaponMeshTrail: TrailMesh | null = null
+
     equipSet: Set<MobEquipItem> = new Set()
+    weaponEquipItem: MobEquipItem | null = null
 
     actualStepSound: Sound | null = null
     footStepSounds: Map<string, Sound> = new Map()
@@ -63,7 +56,6 @@ export class CharacterModel implements EquipBearer {
 
     static async create(data: Character): Promise<CharacterModel> {
         const model = new CharacterModel(data);
-        console.log("Creating character model for", data)
         await model.initAsync();
         return model;
     }
@@ -136,12 +128,6 @@ export class CharacterModel implements EquipBearer {
 
             this.skeleton = result.skeletons[0];
 
-            this.torsoNode.attachToBone(this.skeleton.bones.find(b => b.id === "Bone.001")!, this.model) // Torso node 001
-            this.headNode.attachToBone(this.skeleton.bones.find(b => b.id === "Bone.002")!, this.model) // Head node 002
-            this.larmNode.attachToBone(this.skeleton.bones.find(b => b.id === "Bone.010")!, this.model) // Larm 010
-            this.rarmNode.attachToBone(this.skeleton.bones.find(b => b.id === "Bone.003")!, this.model) // Rarm 003
-            this.llegNode.attachToBone(this.skeleton.bones.find(b => b.id === "Bone.008")!, this.model) // Lleg 008
-            this.rlegNode.attachToBone(this.skeleton.bones.find(b => b.id === "Bone.006")!, this.model) // Rleg 006
             this.lhandNode.attachToBone(this.skeleton.bones.find(b => b.id === "Bone.012")!, this.model) // Lhand 012
             this.rhandNode.attachToBone(this.skeleton.bones.find(b => b.id === "Bone.009")!, this.model) // Rhand 009
         }).catch((error) => {
@@ -149,13 +135,13 @@ export class CharacterModel implements EquipBearer {
         });
 
         this.assignArmor(100, Utils.rollDice(3))
-        this.assignHelmet(200, Utils.rollDice(3))
+        this.assignHelmet(210, Utils.rollDice(3))
         this.assignLeftPauldron(300, 0)
         this.assignRightPauldron(300, 0)
         this.assignRightLeg(400, 0)
         this.assignLeftLeg(400, 0)
 
-        await this.assignWeapon(Utils.rollDice(1))
+        this.assignWeapon(1, 0)
         this.initialized = true
     }
 
@@ -183,13 +169,15 @@ export class CharacterModel implements EquipBearer {
         this.addEquippedItem(new MobEquipItem(MobEquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.006")!, null, null, null))
     }
 
+    assignWeapon(type: number, matIndex: number) {
+        this.weaponEquipItem = new MobEquipItem(MobEquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.009")!, null, new Vector3(Math.PI / 2, Math.PI / 2, 0), null, true)
+        this.weaponEquipItem.createSwordParticles(this.rhandNode)
+        this.addEquippedItem(this.weaponEquipItem)
+    }
+
     addEquippedItem(item: MobEquipItem) {
         this.equipSet.add(item)
         MobEquipManager.addEquippedItem(item)
-    }
-
-    async assignWeapon(type: number) {
-        await CharEquipManager.assignWeapon(this, this.rhandNode, type, this.parent === MyPlayer.myChar);
     }
 
     startWalkAnimation() {
@@ -352,12 +340,24 @@ export class CharacterModel implements EquipBearer {
         this.parent.modelRotation = model.rotation.y
     }
 
+    setWeaponTrailEnabled(enabled: boolean) {
+        this.weaponEquipItem?.weaponTrail?.setEnabled(enabled)
+    }
+
+    disposeWeaponTrail() {
+        this.weaponEquipItem?.weaponTrail?.dispose()
+    }
+
     getOwnerId(): number {
         return this.parent.id
     }
 
     getWeaponScale(): Vector3 | undefined {
-        return Vector3.One()
+        return BabylonUtils.getSymVector(1.5)
+    }
+
+    getMasterNode(): Mesh | AbstractMesh | undefined {
+        return this.model
     }
 
     async addToView() {

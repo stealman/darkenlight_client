@@ -127,11 +127,11 @@ class Character implements Attackable {
         const angle = Utils.getAngleBetweenPoints(this.pos, target.pos)
         this.setLookAngle(angle - Math.PI / 4)
         this.model?.doAttackAnimation()
-        this.model?.weaponMeshTrail!.setEnabled(true)
+        this.model?.setWeaponTrailEnabled(true)
     }
 
     finishAutoAttack(data: any) {
-        this.model?.weaponMeshTrail!.setEnabled(false)
+        this.model?.setWeaponTrailEnabled(false)
         AudioManager.playWeaponSwing(this.weaponSoundType)
 
         const target = Utils.getAttackTargetByTypeAndId(data.tp, data.tgt)

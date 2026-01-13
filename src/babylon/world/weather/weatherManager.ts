@@ -18,13 +18,12 @@ export const WeatherManager = {
     },
 
     update() {
-        /**
         if (!this.actualWeather && !Settings.isDetalLevelLow()) {
             this.actualWeather = new SnowEffect(Renderer.scene)
             this.actualWeather.start()
         }
 
-        this.actualWeather?.update()*/
+        this.actualWeather?.update()
     },
 }
 
