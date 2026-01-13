@@ -6,7 +6,7 @@ import { Materials, PlaneEnum1, TerrainEnum1 } from '@/babylon/materials'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { Settings } from '@/settings/settings'
 import { ViewportManager } from '@/utils/viewport'
-import { MyPlayer } from '@/babylon/character/myPlayer'
+import { MyPlayer } from '@/data/myPlayer'
 
 export const TerrainManager = {
     terrainBlock1: null as Mesh | null,

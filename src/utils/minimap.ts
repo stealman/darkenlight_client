@@ -1,5 +1,5 @@
 import { WorldDataManager } from '@/data/worldDataManager'
-import { MyPlayer } from '@/babylon/character/myPlayer'
+import { MyPlayer } from '@/data/myPlayer'
 
 export const MiniMap = {
     offScreenCanvas: null as HTMLCanvasElement | null,

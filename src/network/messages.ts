@@ -1,5 +1,5 @@
 import { Utils } from '@/utils/utils'
-import { MyPlayer } from '@/babylon/character/myPlayer'
+import { MyPlayer } from '@/data/myPlayer'
 
 export interface Message {
     t: number
@@ -35,7 +35,7 @@ export class MyCharMoveMsg implements Message {
     constructor() {
         let angle = MyPlayer.myChar.getMoveAngle()
         if (angle != null) {
-            angle = Utils.roundToTwoDecimals(angle += Math.PI / 4)
+            angle = Utils.roundToTwoDecimals(angle)
         }
 
         this.d = [Utils.roundToTwoDecimals(MyPlayer.myChar.pos.x), Utils.roundToTwoDecimals(MyPlayer.myChar.pos.z), angle, MyPlayer.myChar.getActualSpeed()]

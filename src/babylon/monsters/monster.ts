@@ -9,7 +9,7 @@ import { Attackable } from '@/GameManager'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { StepMarksRenderer } from '@/babylon/world/stepMarksRenderer'
 import { SplatType } from '@/babylon/world/fightSplatsRenderer'
-import { MyPlayer } from '@/babylon/character/myPlayer'
+import { MyPlayer } from '@/data/myPlayer'
 
 export class Monster implements Attackable {
     id: number

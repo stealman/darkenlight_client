@@ -1,5 +1,5 @@
 import { Attackable } from '@/GameManager'
-import { Scene, Vector3 } from '@babylonjs/core'
+import { Vector3 } from '@babylonjs/core'
 import {
     AudioManager,
     BodySoundTypes,
@@ -13,20 +13,20 @@ import { ViewportManager } from '@/utils/viewport'
 import { FightSplatTypes, SplatType } from '@/babylon/world/fightSplatsRenderer'
 import { CharacterModel } from '@/babylon/character/characterModel'
 import { Utils } from '@/utils/utils'
-import { TargetingManager } from '@/gui/targettingManager'
 import { Connector } from '@/network/connector'
-import { AutoAttackBreak, MyCharMoveMsg } from '@/network/messages'
-import { MyPlayer } from '@/babylon/character/myPlayer'
+import { MyCharMoveMsg } from '@/network/messages'
+import { MyPlayer } from '@/data/myPlayer'
 
 class Character implements Attackable {
     model: CharacterModel | null = null
+    insideView: boolean = true
 
     id: number = 1
     hp: number
     name: string = "Player"
     className: string = "Warrior"
-    walkSpeed: number = 2.2
-    runSpeed: number = 3.5
+    walkSpeed: number = 2
+    runSpeed: number = 3.2
     boxSize: number = 0.8
     private actualSpeed: number = 0
 
@@ -37,9 +37,7 @@ class Character implements Attackable {
     modelRotation: number = 0
     private moveAngle: number | null = null
     private lookAngle: number | null = null
-    targetBlock: Vector3 | null = null
 
-    rotationSpeed: number = 15
     yMoveSpeed: number = 15
     attackAnimationTime: number = 1000 // 1000 is base attack time
 
@@ -50,85 +48,45 @@ class Character implements Attackable {
     lastStepMarkTime: number = 0
     stepMarkSide: 'L' | 'R' = 'R'
 
-    autoAttackTarget: Attackable | null = null
     autoAttackEnd: number = 0
 
     constructor(data: any) {
+        this.id = data.id
         this.hp = data.hp
-        this.logicYpos = 0
         this.pos = new Vector3(data.x, 0, data.z)
         this.name = data.name
         this.className = data.cls
+
+        this.pos.y = Utils.calculateYPos(this.pos.x, this.pos.z, this.getBoxSize())
+        this.logicYpos = this.pos.y
     }
 
-    async createModel(scene: Scene) {
-        this.model = await CharacterModel.create(this, scene)
+    async createModel() {
+        this.model = await CharacterModel.create(this)
     }
 
-    reset() {
-        this.model = null
-        this.autoAttackTarget = null
-        this.autoAttackEnd = 0
-    }
-
-    onFrame(timeRate: number, actualTime: number) {
+    onFrame(timeRate: number, actualTime: number, myChar: boolean) {
         // Auto attack in progress
         if (this.autoAttackEnd > actualTime) {
             this.resolveStepMark(actualTime, true)
-
-            // Cancel auto attack immediately if moving away from target
-            if (TargetingManager.selectedTarget && this.getMoveAngle() != null) {
-                const myPos = this.pos
-                const targetPos = TargetingManager.selectedTarget.pos
-                const moveAngle = this.getMoveAngle()!
-                const toTarget = targetPos.subtract(myPos).normalize()
-                const moveDir = new Vector3(Math.cos(moveAngle), 0, -Math.sin(moveAngle)).normalize()
-                const dot = Vector3.Dot(moveDir, toTarget)
-                if (dot < -0.5) {
-                    this.autoAttackEnd = 0
-                    this.model?.weaponMesh.trailMesh!.setEnabled(false)
-                    Connector.sendMessage(new AutoAttackBreak())
-                }
-            }
-        }
-
-        if (this.autoAttackEnd > actualTime) {
             this.model?.onFrame(timeRate)
             return
         }
 
-        if (this.targetBlock != null) {
-            const targetBlock = this.targetBlock
-            const dx = Math.abs(targetBlock.x - this.pos.x)
-            const dz = Math.abs(targetBlock.z - this.pos.z)
-
-            if (dx < 0.1 && dz < 0.1) {
-                this.targetBlock = null
-                this.setMoveAngleAndSpeed(0, 0)
-            }
-        }
-
         if (this.getMoveAngle() != null) {
-            this.setLookAngle(this.getMoveAngle())
+            this.setLookAngle(this.getMoveAngle() - (myChar ? Math.PI / 4 : Math.PI / 2))
             const speed = this.getActualSpeed()
-            const angle = Utils.roundToTwoDecimals(this.getMoveAngle()! + Math.PI / 4)
-            let tgtPos = new Vector3(this.pos.x + Math.cos(angle) * speed * timeRate, 0, this.pos.z -Math.sin(angle) * speed * timeRate)
+            const angle = Utils.roundToTwoDecimals(this.getMoveAngle()! - (myChar ? 0 : Math.PI / 4))
+            const tgtPos = new Vector3(this.pos.x + Math.cos(angle) * speed * timeRate, 0, this.pos.z -Math.sin(angle) * speed * timeRate)
 
-            // Check if player can move to the target position, if not try to find an alternate position
-            if (Utils.isMovementCollision(this.getBoxSize(), new Vector3(this.pos.x, 0, this.pos.z), tgtPos)) {
-                const alternateMovementPos = Utils.getAlternateMovementPos(this.getBoxSize(), angle, this.pos.x, this.pos.z, tgtPos.x, tgtPos.z, speed, timeRate)
-                if (alternateMovementPos != null) {
-                    tgtPos = alternateMovementPos
-                } else {
-                    tgtPos = new Vector3(this.pos.x, 0, this.pos.z)
-                }
-                Connector.sendMoveMessage(new MyCharMoveMsg())
+            // ONLY FOR MY CHAR
+            if (myChar && Utils.isMovementCollision(this.getBoxSize(), new Vector3(this.pos.x, 0, this.pos.z), tgtPos)) {
+                this.checkMyCharAlternateMovementPos(tgtPos, angle, speed, timeRate)
             }
 
-            // Check world boundaries
-            if (tgtPos.x < 1 || tgtPos.z < 1 || tgtPos.x > WorldDataManager.worldDataMap.get(MyPlayer.worldId)!.worldSize - 2 || tgtPos.z > WorldDataManager.worldDataMap.get(MyPlayer.worldId)!.worldSize - 2) {
-                tgtPos = new Vector3(this.pos.x, 0, this.pos.z)
-                this.setMoveAngleAndSpeed(0, 0)
+            // ONLY FOR MY CHAR - Check world boundaries
+            if (myChar && (tgtPos.x < 1 || tgtPos.z < 1 || tgtPos.x > WorldDataManager.worldDataMap.get(MyPlayer.worldId)!.worldSize - 2 || tgtPos.z > WorldDataManager.worldDataMap.get(MyPlayer.worldId)!.worldSize - 2)) {
+                this.stopMove()
             } else {
                 this.pos.x = tgtPos.x
                 this.pos.z = tgtPos.z
@@ -144,31 +102,47 @@ class Character implements Attackable {
         this.model?.onFrame(timeRate)
     }
 
-    doAutoAttack(data: any) {
-        this.autoAttackTarget = Utils.getAttackTargetByTypeAndId(data.tp, data.tgt)
-        if (!this.autoAttackTarget) {
+    /**
+     * ONLY FOR MY CHAR - Check if an alternate movement position is available when the direct path is blocked
+     */
+    checkMyCharAlternateMovementPos(tgtPos: Vector3, angle: number, speed: number, timeRate: number) {
+        const alternateMovementPos = Utils.getAlternateMovementPos(this.getBoxSize(), angle, this.pos.x, this.pos.z, tgtPos.x, tgtPos.z, speed, timeRate)
+        if (alternateMovementPos != null) {
+            tgtPos.copyFrom(alternateMovementPos)
+        } else {
+            tgtPos.x = this.pos.x
+            tgtPos.z = this.pos.z
+        }
+        Connector.sendMoveMessage(new MyCharMoveMsg())
+    }
+
+    startAutoAttack(data: any) {
+        const target = Utils.getAttackTargetByTypeAndId(data.tp, data.tgt)
+        if (!target) {
             return
         }
         this.attackAnimationTime = data.dur
         this.autoAttackEnd = Date.now() + this.attackAnimationTime
 
-        const angle = Utils.getAngleBetweenPoints(this.pos, this.autoAttackTarget.pos)
+        const angle = Utils.getAngleBetweenPoints(this.pos, target.pos)
         this.setLookAngle(angle - Math.PI / 4)
         this.model?.doAttackAnimation()
-        this.model?.weaponMesh.trailMesh!.setEnabled(true)
+        this.model?.weaponMeshTrail!.setEnabled(true)
     }
 
-    autoAttackFinished(data: any) {
-        this.model?.weaponMesh.trailMesh!.setEnabled(false)
+    finishAutoAttack(data: any) {
+        this.model?.weaponMeshTrail!.setEnabled(false)
         AudioManager.playWeaponSwing(this.weaponSoundType)
-        if (!this.autoAttackTarget) {
+
+        const target = Utils.getAttackTargetByTypeAndId(data.tp, data.tgt)
+        if (!target) {
             return
         }
 
         if (data.res.hit === 'h') {
-            AudioManager.playWeaponHit(this.weaponSoundType, this.autoAttackTarget.getBodySoundType())
-        } else if (data.res.hit === 'b' && this.autoAttackTarget.getParrySoundType()) {
-            AudioManager.playWeaponBlocked(this.autoAttackTarget.getParrySoundType()!)
+            AudioManager.playWeaponHit(this.weaponSoundType, target.getBodySoundType())
+        } else if (data.res.hit === 'b' && target.getParrySoundType()) {
+            AudioManager.playWeaponBlocked(target.getParrySoundType()!)
         }
     }
 
@@ -184,29 +158,25 @@ class Character implements Attackable {
         }
     }
 
-    setMoveTypeAngle(movementType: string, angle: number) {
+    setVisible(visible: boolean) {
+        if (visible && !this.insideView) {
+            this.model!.addToView()
+        } else if (!visible && this.insideView) {
+            this.model!.removeFromView()
+        }
+        this.insideView = visible
+    }
+
+    startMove(movementType: string, angle: number) {
         this.movementType = movementType
         this.setMoveAngleAndSpeed(angle, this.movementType === 'RUN' ? this.runSpeed : this.walkSpeed)
     }
 
-    setTargetPoint(point: Vector3 | null, resetAngleSpeedIfNull: boolean = true) {
-        if (point == null) {
-            this.targetBlock = null
-            if (resetAngleSpeedIfNull) {
-                this.setMoveAngleAndSpeed(0, 0)
-            }
-        } else {
-            // if distance > 3 then movementType is run, otherwise walk
-            const distance = Vector3.Distance(point, new Vector3(this.pos.x, 0, this.pos.z))
-            this.movementType = distance > 4 ? 'RUN' : 'WALK'
-
-            const angle = Math.atan2(-(point.z - this.pos.z), point.x - this.pos.x)
-            this.setMoveAngleAndSpeed(angle - Math.PI / 4, this.movementType === 'RUN' ? this.runSpeed : this.walkSpeed)
-            this.targetBlock = point
-        }
+    stopMove() {
+        this.setMoveAngleAndSpeed(null, 0)
     }
 
-    setMoveAngleAndSpeed(angle: number | null, speed: number) {
+    private setMoveAngleAndSpeed(angle: number | null, speed: number) {
         this.setMoveAngle(angle ? Utils.roundToTwoDecimals(angle): null)
         this.setActualSpeed(Utils.roundToOneDecimal(speed))
         Connector.sendMoveMessage(new MyCharMoveMsg())
@@ -218,6 +188,9 @@ class Character implements Attackable {
 
     setMoveAngle(angle: number | null) {
         this.moveAngle = angle
+        if (angle !== null) {
+            this.moveAngle += Math.PI / 4
+        }
         this.setLookAngle(angle)
     }
 
@@ -239,6 +212,9 @@ class Character implements Attackable {
 
     setActualSpeed(speed: number) {
         this.actualSpeed = speed
+        if (this !== MyPlayer.myChar) {
+            this.movementType = speed > this.walkSpeed ? 'RUN' : 'WALK'
+        }
     }
 
     getPositionOnScreen() {

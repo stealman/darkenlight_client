@@ -206,20 +206,22 @@ export const CharEquipManager = {
         this.armorBasicMetalManager!.assignItem(node, modelId, BasicPlateMetalMaterials[materialId], scale)
     },
 
-    async assignWeapon(owner: CharacterModel, node: TransformNode, weaponTypelId: number) {
+    async assignWeapon(owner: CharacterModel, node: TransformNode, weaponTypelId: number, createParticles: boolean) {
         if (!this.weaponSourceMap.has(weaponTypelId)) {
             await this.loadWeaponModel(weaponTypelId)
         }
         let weapon = this.weaponSourceMap.get(weaponTypelId)!
         if (weapon.parent) {
-            console.log("Cloning weapon mesh")
+            const clonedMaterial = weapon.material!.clone("weaponMatClone")
             weapon = weapon.clone("weaponClone") as Mesh
+            weapon.material = clonedMaterial
         }
         weapon.parent = node
         weapon.setEnabled(true)
-        weapon.trailMesh = this.createWeaponTrail(node)
-        this.createSwordParticles(node)
+
         owner.weaponMesh = weapon
+        owner.weaponMeshTrail = this.createWeaponTrail(node)
+        if (createParticles) this.createSwordParticles(node)
     },
 
     createWeaponTrail(boneNode: TransformNode): TrailMesh {
@@ -227,12 +229,7 @@ export const CharEquipManager = {
         tip.parent = boneNode
         tip.position = new Vector3(0, 3.5, 0)
         const trail = new TrailMesh('swordTrail', tip, Renderer.scene, 0.5, 60, true)
-
-        const mat = new StandardMaterial('swordTrailMat', Renderer.scene)
-        mat.disableLighting = true
-        mat.emissiveColor = new Color3(1, 1, 1)
-        mat.alpha = 0.25
-        trail.material = mat
+        trail.material = Materials.weaponTrailMaterial
 
         trail.setEnabled(false)
         return trail
@@ -300,7 +297,6 @@ export const CharEquipManager = {
         mat.directIntensity = 1.5
         mat.environmentIntensity = 1
         mat.backFaceCulling = false;
-        Lights.addShadowCaster(mesh)
         this.weaponSourceMap.set(weaponTypelId, mesh)
     },
 

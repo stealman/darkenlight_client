@@ -8,7 +8,7 @@ import { SplatType } from '@/babylon/world/fightSplatsRenderer'
 import { OnScreenMessageManager } from '@/gui/onScreenMessageManager'
 import { Settings } from '@/settings/settings'
 import { AudioManager } from '@/babylon/audio/audioManager'
-import { MyPlayer } from '@/babylon/character/myPlayer'
+import { MyPlayer } from '@/data/myPlayer'
 import Character from '@/babylon/character/character'
 
 export const TargetingManager = {
@@ -117,6 +117,7 @@ export const TargetingManager = {
             this.resolvePickRay(ray, true)
         } else if (target != null) {
             this.setSelectedTarget(target)
+            AudioManager.playGuiButtonClick()
         }
     },
 

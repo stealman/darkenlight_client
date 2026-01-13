@@ -6,9 +6,10 @@ import { MiniMap } from '@/utils/minimap'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { StaticsManager } from '@/babylon/world/staticsManager'
 import { GMSpawns } from '@/gm/GmSpawns'
-import { MyPlayer } from '@/babylon/character/myPlayer'
+import { MyPlayer } from '@/data/myPlayer'
 import { FightSplatsRenderer } from '@/babylon/world/fightSplatsRenderer'
 import { GameManager } from '@/GameManager'
+import { CharacterManager } from '@/babylon/character/characterManager'
 
 export const MessageProcessor = {
 
@@ -65,18 +66,12 @@ export const MessageProcessor = {
         MonsterManager.monsterMove(data[0], { x: data[1], z: data[2] }, { x: data[3], z: data[4] }, data[5])
     },
 
-    addCharacter(data) {
-        console.log('Addded character: ', data)
+    async addCharacter(data) {
+        await CharacterManager.addCharacter(data)
     },
 
     charMove(data) {
-        const dist = Math.sqrt( (MyPlayer.myChar.pos.x - data[1]) * (MyPlayer.myChar.pos.x - data[1]) + (MyPlayer.myChar.pos.z - data[2]) * (MyPlayer.myChar.pos.z - data[2]) )
-        if (data[0] === MyPlayer.myChar.id && dist >= 1) {
-            MyPlayer.myChar.pos.x = data[1]
-            MyPlayer.myChar.pos.z = data[2]
-            MyPlayer.myChar.setMoveAngle(data[3])
-            MyPlayer.myChar.setActualSpeed(data[4])
-        }
+        CharacterManager.processCharMove(data)
     },
 
     charMoveDesynced(data) {
@@ -150,11 +145,11 @@ export const MessageProcessor = {
     },
 
     processCharacterAttack(data) {
-        MyPlayer.doAutoAttack(data)
+        CharacterManager.processStartAutoAttack(data)
     },
 
     processCharacterAttackFinished(data) {
-        MyPlayer.autoAttackFinished(data)
+        CharacterManager.processFinishAutoAttack(data)
     },
 
     processMonsterAttack(data) {

@@ -2,11 +2,10 @@ import { Renderer } from '@/babylon/scene/renderer'
 import { ViewportManager } from '@/utils/viewport'
 import { OverlayManager } from '@/gui/overlayManager'
 import { Targetable, TargetingManager } from '@/gui/targettingManager'
-import { MyPlayer } from '@/babylon/character/myPlayer'
+import { MyPlayer } from '@/data/myPlayer'
 import { Settings } from '@/settings/settings'
 import { Connector } from '@/network/connector'
 import { LogoutMsg } from '@/network/messages'
-import Character from '@/babylon/character/character'
 
 export const GameManager = {
     started: false as boolean,
@@ -28,8 +27,7 @@ export const GameManager = {
     },
 
     async startGame(charData) {
-        await MyPlayer.initialize(new Character(charData), Renderer.scene)
-
+        await MyPlayer.initialize(charData)
         Renderer.gameStarted()
         this.onResize()
         this.started = true

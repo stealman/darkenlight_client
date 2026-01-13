@@ -3,11 +3,11 @@ import { Builder } from '@/babylon/builder'
 import { Materials } from '@/babylon/materials'
 import { Targetable } from '@/gui/targettingManager'
 import { Settings } from '@/settings/settings'
-import { MyPlayer } from '@/babylon/character/myPlayer'
+import { MyPlayer } from '@/data/myPlayer'
 
 export const StepMarksRenderer = {
     myStepMarks: new Array<StepMark>(),
-    mobStepMarks: new Array<StepMark>(),
+    otherStepMarks: new Array<StepMark>(),
     maxMarks: 250,
     stepMarkPlane: null as Mesh | null,
 
@@ -25,7 +25,7 @@ export const StepMarksRenderer = {
         if (object === MyPlayer.myChar) {
             tgtArray = this.myStepMarks
         } else {
-            tgtArray = this.mobStepMarks
+            tgtArray = this.otherStepMarks
             ttl = 60000
         }
 
@@ -44,7 +44,7 @@ export const StepMarksRenderer = {
 
     update(timeRate: number, time: number) {
         this.myStepMarks = this.myStepMarks.filter(mark => (time < mark.deadTime))
-        this.mobStepMarks = this.mobStepMarks.filter(mark => (time < mark.deadTime))
+        this.otherStepMarks = this.otherStepMarks.filter(mark => (time < mark.deadTime))
         this.renderStepMarks(time)
     },
 
@@ -52,8 +52,8 @@ export const StepMarksRenderer = {
         if (!this.stepMarkPlane) {
             return
         }
-        const buffer = new Float32Array((this.myStepMarks.length + this.mobStepMarks.length) * 16)
-        const uvBuffer = new Float32Array((this.myStepMarks.length + this.mobStepMarks.length) * 2)
+        const buffer = new Float32Array((this.myStepMarks.length + this.otherStepMarks.length) * 16)
+        const uvBuffer = new Float32Array((this.myStepMarks.length + this.otherStepMarks.length) * 2)
         const size = 0.4
         let i = 0
         for (const mark of this.myStepMarks) {
@@ -67,7 +67,7 @@ export const StepMarksRenderer = {
             i++
         }
 
-        for (const mark of this.mobStepMarks) {
+        for (const mark of this.otherStepMarks) {
             const posMatrix = Matrix.Translation(mark.pos.x, mark.pos.y, mark.pos.z)
             const scaleMatrix = Matrix.Scaling(size, 1, size);
             scaleMatrix.multiply(Matrix.FromQuaternionToRef(Quaternion.FromEulerAngles(0, mark.rot, 0), new Matrix()).multiply(posMatrix)).copyToArray(buffer, i * 16);
@@ -92,13 +92,13 @@ export const StepMarksRenderer = {
         }))
         localStorage.setItem('myStepMarks', JSON.stringify(stepMarksData))
 
-        const mobStepMarksData = this.mobStepMarks.map(mark => ({
+        const otherStepMarksData = this.otherStepMarks.map(mark => ({
             pos: { x: mark.pos.x, y: mark.pos.y, z: mark.pos.z },
             rot: mark.rot,
             creationTime: mark.creationTime,
             deadTime: mark.deadTime
         }))
-        localStorage.setItem('mobStepMarks', JSON.stringify(mobStepMarksData))
+        localStorage.setItem('otherStepMarks', JSON.stringify(otherStepMarksData))
     },
 
     loadFromLocalStorage() {
@@ -113,10 +113,10 @@ export const StepMarksRenderer = {
             ))
         }
 
-        const storedMobStepMarks = localStorage.getItem('mobStepMarks')
-        if (storedMobStepMarks) {
-            const parsedMarks = JSON.parse(storedMobStepMarks)
-            this.mobStepMarks = parsedMarks.map((markData: any) => new StepMark(
+        const storedOtherStepMarks = localStorage.getItem('otherStepMarks')
+        if (storedOtherStepMarks) {
+            const parsedMarks = JSON.parse(storedOtherStepMarks)
+            this.otherStepMarks = parsedMarks.map((markData: any) => new StepMark(
                 new Vector3(markData.pos.x, markData.pos.y, markData.pos.z),
                 markData.rot,
                 markData.creationTime,

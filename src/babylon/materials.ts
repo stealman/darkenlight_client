@@ -89,7 +89,7 @@ export const Materials = {
         mat.disableLighting = true
         mat.emissiveColor = new Color3(1, 1, 1)
         mat.alpha = 0.25
-        mat.freeze()
+        //mat.freeze()
         return mat
     },
 

@@ -4,7 +4,7 @@ import { GMLoadSpawns, GMSpawnAction } from '@/network/messages'
 import { InstancedMesh } from '@babylonjs/core'
 import { ViewportManager } from '@/utils/viewport'
 import { GMSceneManager } from '@/babylon/gm/GmSceneManager'
-import { MyPlayer } from '@/babylon/character/myPlayer'
+import { MyPlayer } from '@/data/myPlayer'
 
 export const GMSpawns = {
     actualWorldId: 0,

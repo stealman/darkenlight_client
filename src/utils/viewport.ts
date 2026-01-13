@@ -1,7 +1,7 @@
 import { Frustum, Matrix, Vector3 } from '@babylonjs/core'
 import { Renderer } from '@/babylon/scene/renderer'
 import { MiniMap } from '@/utils/minimap'
-import { MyPlayer } from '@/babylon/character/myPlayer'
+import { MyPlayer } from '@/data/myPlayer'
 
 export const ViewportManager = {
     viewPortInitialized: false,

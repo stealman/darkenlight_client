@@ -1,8 +1,7 @@
 import {
     AbstractMesh,
     AnimationGroup, Mesh,
-    Scene,
-    SceneLoader, Skeleton, Sound, TransformNode,
+    SceneLoader, Skeleton, Sound, TrailMesh, TransformNode,
     Vector3,
 } from '@babylonjs/core'
 import { AudioManager } from '@/babylon/audio/audioManager'
@@ -11,10 +10,14 @@ import { CharEquipManager } from '@/babylon/item/charEquipManager'
 import { AnimTransition } from '@/babylon/animations/animation'
 import { Lights } from '@/babylon/scene/lights'
 import Character from '@/babylon/character/character'
+import { Renderer } from '@/babylon/scene/renderer'
+import { Utils } from '@/utils/utils'
+import { MyPlayer } from '@/data/myPlayer'
 
 export class CharacterModel {
     parent: Character
     node: TransformNode = new TransformNode("characterModelNode")
+    initialized: boolean = false
 
     model: AbstractMesh | undefined
     modelYAngleOffset: number = Math.PI * 1 / 4
@@ -43,27 +46,29 @@ export class CharacterModel {
     actualAnim: AnimationGroup | undefined
     animTransition: AnimTransition | null = null
     weaponMesh: Mesh | null = null
+    weaponMeshTrail: TrailMesh | null = null
 
     actualStepSound: Sound | null = null
     footStepSounds: Map<string, Sound> = new Map()
 
     constructor(parent: Character) {
         this.parent = parent
-        this.node.position = this.parent.pos
+        this.node.position.copyFrom((this.parent.pos))
     }
 
-    static async create(data: Character, scene: Scene): Promise<CharacterModel> {
-        const p = new CharacterModel(data);
-        await p.initAsync(scene);
-        return p;
+    static async create(data: Character): Promise<CharacterModel> {
+        const model = new CharacterModel(data);
+        console.log("Creating character model for", data)
+        await model.initAsync();
+        return model;
     }
 
-    async initAsync(scene: Scene) {
+    async initAsync() {
         await SceneLoader.ImportMeshAsync(
             "",
             "/models/steve/",
             "steve2.gltf",
-            scene
+            Renderer.scene
         ).then((result) => {
             this.model = result.meshes[0]
             this.model.parent = this.node
@@ -71,7 +76,7 @@ export class CharacterModel {
             this.model.rotation = new Vector3(0, 0, 0)
 
             // Apply material
-            const material = Materials.getPBRMaterial(scene, "steveMaterial", "/models/steve/steve.jpg", false, false,  {
+            const material = Materials.getPBRMaterial(Renderer.scene, "steveMaterial", "/models/steve/steve.jpg", false, false,  {
                 metallic: 0,
                 roughness: 1,
                 directIntensity: 1,
@@ -138,13 +143,14 @@ export class CharacterModel {
             console.error("Error loading model:", error)
         });
 
-        this.assignArmor(10, 3)
-        this.assignHelmet(20, 3)
+        this.assignArmor(10, Utils.rollDice(3))
+        this.assignHelmet(20, Utils.rollDice(3))
         this.assignRightPauldron(40, 0)
         this.assignLeftPauldron(50, 0)
         this.assignRightLeg(60, 0)
         this.assignLeftLeg(60, 0)
-        await this.assignWeapon(1)
+        await this.assignWeapon(Utils.rollDice(1))
+        this.initialized = true
     }
 
     assignHelmet(type: number, materialId: number) {
@@ -172,7 +178,7 @@ export class CharacterModel {
     }
 
     async assignWeapon(type: number) {
-        await CharEquipManager.assignWeapon(this, this.rhandNode, type);
+        await CharEquipManager.assignWeapon(this, this.rhandNode, type, this.parent === MyPlayer.myChar);
     }
 
     startWalkAnimation() {
@@ -280,7 +286,7 @@ export class CharacterModel {
         }
 
         this.checkActiveStepSound()
-        if (this.parent.getMoveAngle() != null) {
+        if (this.parent !== MyPlayer.myChar || this.parent.getMoveAngle() != null || Math.abs(this.parent.pos.y - this.parent.logicYpos) > 0.1) {
             this.moveModel(timeRate)
         }
         if (this.parent.getLookAngle() != null) {
@@ -292,7 +298,10 @@ export class CharacterModel {
      * Approximate model Y position to the player Y position
      */
     moveModel(timeRate: number) {
-        this.parent.pos.y += (this.parent.logicYpos - this.parent.pos.y) * this.parent.yMoveSpeed * timeRate
+        const approximationSpeed = this.parent == MyPlayer.myChar ? 25 : 8
+        this.node.position.x += (this.parent.pos.x - this.node.position.x) * approximationSpeed * timeRate
+        this.node.position.z += (this.parent.pos.z - this.node.position.z) * approximationSpeed * timeRate
+        this.node.position.y += (this.parent.logicYpos - this.node.position.y) * this.parent.yMoveSpeed * timeRate
 
         this.node.markAsDirty("position")
         this.node.computeWorldMatrix(true);
@@ -307,8 +316,7 @@ export class CharacterModel {
         const lookAngle = this.parent.getLookAngle()
         if (lookAngle == null) return
 
-        const rotationSpeed = this.parent.rotationSpeed * timeRate
-
+        const rotationSpeed = (this.parent == MyPlayer.myChar ? 15 : 8) * timeRate
         let current = model.rotation.y - this.modelYAngleOffset
 
         const delta = Math.atan2(
@@ -321,8 +329,19 @@ export class CharacterModel {
         } else {
             current += Math.sign(delta) * rotationSpeed
         }
-
         model.rotation.y = current + this.modelYAngleOffset
         this.parent.modelRotation = model.rotation.y
+    }
+
+    async addToView() {
+        if (!this.initialized) await this.initAsync()
+        this.model!.setEnabled(true)
+    }
+
+    removeFromView() {
+        if (this.initialized) {
+            this.model!.setEnabled(false)
+        }
+        // TODO: UNASSIGN ALL EQUIPMENTS
     }
 }

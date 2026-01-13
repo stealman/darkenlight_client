@@ -101,7 +101,7 @@ import {
 } from '@/vue/icons/icons'
 import { Settings } from '@/settings/settings'
 import { TargetingManager } from '@/gui/targettingManager'
-import { MyPlayer } from '@/babylon/character/myPlayer'
+import { MyPlayer } from '@/data/myPlayer'
 
 const canvas = ref<HTMLCanvasElement | null>(null)
 const miniMapCanvas = ref<HTMLCanvasElement | null>(null)

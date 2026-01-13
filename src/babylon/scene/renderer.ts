@@ -8,7 +8,7 @@ import {
 } from '@babylonjs/core'
 import '@babylonjs/inspector'
 import { Controller } from '@/controlls/controller'
-import {MyPlayer} from "@/babylon/character/myPlayer"
+import {MyPlayer} from "@/data/myPlayer"
 import screenFull from 'screenfull'
 import {Settings} from "@/settings/settings";
 import {WorldRenderer} from "@/babylon/world/worldRenderer";
@@ -28,6 +28,7 @@ import { StepMarksRenderer } from '@/babylon/world/stepMarksRenderer'
 import { Lights } from '@/babylon/scene/lights'
 import { FightSplatsRenderer } from '@/babylon/world/fightSplatsRenderer'
 import { OnScreenMessageManager } from '@/gui/onScreenMessageManager'
+import { CharacterManager } from '@/babylon/character/characterManager'
 
 /**
  * Main Renderer
@@ -65,9 +66,10 @@ export const Renderer = {
         Lights.initialize(this.scene)
         AudioManager.initialize(this.scene)
         MiniMap.initialize()
+        CharacterManager.initialize()
         await CharEquipManager.initialize(this.scene)
         await MobEquipManager.initialize(this.scene)
-        await MonsterManager.initialize(this.scene)
+        await MonsterManager.initialize()
 
         Controller.initializeController(this.scene)
         Materials.initialize(this.scene)
@@ -79,17 +81,15 @@ export const Renderer = {
         await TargetingManager.initialize()
 
         // Debug layer
-        /**
-        if (Settings.debug) {
+        if (true) {
             this.scene.debugLayer.show({
                 embedMode: true
             })
-        }*/
+        }
     },
 
     gameStarted() {
         Lights.sunLight.parent = MyPlayer.myModel!.node
-
         this.engine!.runRenderLoop(() => {
             this.onFrame(this.scene)
             this.scene.render()
@@ -128,6 +128,7 @@ export const Renderer = {
 
             MyPlayer.onFrame(timeRate, actualTime)
             WorldRenderer.checkRenderWorld()
+            CharacterManager.onFrame(timeRate, actualTime, this.frame)
             MonsterManager.onFrame(timeRate, actualTime, this.frame)
 
             MobEquipManager.onFrame()

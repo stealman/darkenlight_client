@@ -142,22 +142,22 @@ export const MonsterGroups = {
 }
 
 export const MonsterTypes = {
-    SKELETON: new MonsterType( 1, MonsterGroups.SKELETON, 1,'Skeleton', 0.6, 1.8, 4,null,null,  null,
+    SKELETON: new MonsterType( 1, MonsterGroups.SKELETON, 1,'Skeleton', 0.6, 1.8, 3.2,null,null,  null,
         WeaponSoundTypes.BONE, BodySoundTypes.HARD, null, MonsterSoundTypes.SKELETON, FightSplatTypes.BONE),
 
-    SKELETON_FIGHTER: new MonsterType( 2, MonsterGroups.SKELETON, 1, 'Skeleton Fighter', 0.6, 1.8,  4, new MonsterEquipData([1], 0.15, 0),null, null,
+    SKELETON_FIGHTER: new MonsterType( 2, MonsterGroups.SKELETON, 1, 'Skeleton Fighter', 0.6, 1.8,  3.2, new MonsterEquipData([1], 0.15, 0),null, null,
         WeaponSoundTypes.SWORD, BodySoundTypes.HARD, WeaponSoundTypes.SWORD, MonsterSoundTypes.SKELETON, FightSplatTypes.BONE),
 
-    SKELETON_WARRIOR: new MonsterType( 3, MonsterGroups.SKELETON, 1, 'Skeleton Warrior', 0.6, 1.8,  4, new MonsterEquipData([1], 0.15, 0), new MonsterEquipData([1850], undefined, 8), new MonsterEquipData([1100], undefined, 8),
+    SKELETON_WARRIOR: new MonsterType( 3, MonsterGroups.SKELETON, 1, 'Skeleton Warrior', 0.6, 1.8,  3.2, new MonsterEquipData([1], 0.15, 0), new MonsterEquipData([1850], undefined, 8), new MonsterEquipData([1100], undefined, 8),
         WeaponSoundTypes.SWORD, BodySoundTypes.HARD, WeaponSoundTypes.SWORD, MonsterSoundTypes.SKELETON, FightSplatTypes.BONE),
 
-    WITHER: new MonsterType( 10, MonsterGroups.WITHER, 2,'Wither', 0.6, 1.8, 4, null,null,  null,
+    WITHER: new MonsterType( 10, MonsterGroups.WITHER, 2,'Wither', 0.6, 1.8, 3.2, null,null,  null,
         WeaponSoundTypes.BONE, BodySoundTypes.HARD, null, MonsterSoundTypes.SKELETON, FightSplatTypes.DARK_BONE),
 
-    WITHER_CHAMPION: new MonsterType( 11, MonsterGroups.WITHER, 2, 'Wither Champion', 0.6, 1.8,4, new MonsterEquipData([1], 0.15, 0),null, null,
+    WITHER_CHAMPION: new MonsterType( 11, MonsterGroups.WITHER, 2, 'Wither Champion', 0.6, 1.8,3.2, new MonsterEquipData([1], 0.15, 0),null, null,
         WeaponSoundTypes.SWORD, BodySoundTypes.HARD, WeaponSoundTypes.SWORD, MonsterSoundTypes.SKELETON, FightSplatTypes.DARK_BONE),
 
-    WITHER_KNIGHT: new MonsterType( 12, MonsterGroups.WITHER, 2, 'Wither Knight', 0.6, 1.8,  4, new MonsterEquipData([1], 0.2, 0), new MonsterEquipData([1850], undefined, 9), new MonsterEquipData([1100], undefined, 9),
+    WITHER_KNIGHT: new MonsterType( 12, MonsterGroups.WITHER, 2, 'Wither Knight', 0.6, 1.8,  3.2, new MonsterEquipData([1], 0.2, 0), new MonsterEquipData([1850], undefined, 9), new MonsterEquipData([1100], undefined, 9),
         WeaponSoundTypes.SWORD, BodySoundTypes.HARD, WeaponSoundTypes.SWORD, MonsterSoundTypes.SKELETON, FightSplatTypes.DARK_BONE),
 
     HOUSE_CAT : new MonsterType( 1001, MonsterGroups.CAT,  4,'House Cat', 0.6, 1, 6, null,null,  null,

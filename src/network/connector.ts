@@ -7,7 +7,7 @@ export const Connector = {
     queuedMessages: [] as Message[],
     lastSecondLimit: 10,
 
-    moveMessageTimeout: 200,
+    moveMessageTimeout: 50,
     lastMoveMessage: null as Message | null,
     lastSentMoveMessage: null as Message | null,
     lastMoveMessageTime: 0,

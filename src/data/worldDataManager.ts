@@ -5,7 +5,7 @@ import { TerrainManager } from '@/babylon/world/terrainManager'
 import { TreeManager } from '@/babylon/world/treeManager'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { StaticsManager } from '@/babylon/world/staticsManager'
-import { MyPlayer } from '@/babylon/character/myPlayer'
+import { MyPlayer } from '@/data/myPlayer'
 
 export const WorldDataManager = {
     MAP_CHUNK_SIZE: 128 as number,

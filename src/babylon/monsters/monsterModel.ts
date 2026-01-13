@@ -53,7 +53,6 @@ export class MonsterModel {
     fadeOutStarted: boolean = false
 
     constructor(monsterType: MonsterType, parent: Monster) {
-        console.log('MonsterModel constructor')
         this.parent = parent
         this.type = monsterType
         this.activeAnims = new Set<MeshAnimation>()

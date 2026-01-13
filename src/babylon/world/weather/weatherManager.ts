@@ -7,7 +7,7 @@ import {
     Texture,
     Vector3,
 } from '@babylonjs/core'
-import { MyPlayer } from '@/babylon/character/myPlayer'
+import { MyPlayer } from '@/data/myPlayer'
 import { Renderer } from '@/babylon/scene/renderer'
 import { Settings } from '@/settings/settings'
 export const WeatherManager = {

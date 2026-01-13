@@ -1,5 +1,5 @@
 import { Scene, PointerEventTypes, Vector3, PointerInfo} from '@babylonjs/core'
-import {MyPlayer} from "@/babylon/character/myPlayer";
+import {MyPlayer} from "@/data/myPlayer";
 import { Settings } from '@/settings/settings'
 import { ViewportManager } from '@/utils/viewport'
 import { GMSceneManager } from '@/babylon/gm/GmSceneManager'
@@ -62,7 +62,7 @@ export const Controller = {
 
                 // RIGHT MOUSE BUTTON UP
                 if (pointerInfo.type === PointerEventTypes.POINTERUP && pointerInfo.event.button === 2) {
-                    MyPlayer.setTargetPoint(null)
+                    MyPlayer.stopMove()
                     this.rightMousePressedTime = 0
                 }
 
@@ -105,20 +105,11 @@ export const Controller = {
         const distance = Math.sqrt(dx * dx + dy * dy)
 
         const angleRadians = Math.atan2(dy, dx)
-        MyPlayer.setTargetPoint(null, false)
-        MyPlayer.setMoveTypeAngle(distance > 150 ? 'RUN' : 'WALK', angleRadians)
+        MyPlayer.startMove(distance > 150 ? 'RUN' : 'WALK', angleRadians)
     },
 
     resolveRightDrag(pointerInfo: PointerInfo) {
         this.resolveRightPresssed(pointerInfo)
-    },
-
-    resolveRightUp(pointerInfo, scene) {
-        const { clientX, clientY } = pointerInfo.event
-        const pickResult = scene.pick(clientX, clientY)
-        if (pickResult && pickResult.hit && pickResult.pickedPoint) {
-            MyPlayer.setTargetPoint(new Vector3(pickResult.pickedPoint.x, 0, pickResult.pickedPoint.z))
-        }
     },
 
     resolvePointerMove(pointerInfo, scene) {
@@ -141,7 +132,7 @@ export const Controller = {
 
     processJoystick(dx: number, dy: number) {
         if (dx === 0 && dy === 0) {
-            MyPlayer.setTargetPoint(null)
+            MyPlayer.stopMove()
             return
         }
 
@@ -156,13 +147,12 @@ export const Controller = {
 
         // If delta is too small, do not move
         if (distance < 10) {
-            MyPlayer.setTargetPoint(null)
+            MyPlayer.stopMove()
             return
         }
 
         const angleRadians = Math.atan2(-deltaY, deltaX)
-        MyPlayer.setTargetPoint(null, false)
-        MyPlayer.setMoveTypeAngle(distance > 100 ? 'RUN' : 'WALK', angleRadians)
+        MyPlayer.startMove(distance > 100 ? 'RUN' : 'WALK', angleRadians)
     },
 }
 

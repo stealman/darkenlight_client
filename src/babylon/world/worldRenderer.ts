@@ -17,7 +17,7 @@ import { Lights } from '@/babylon/scene/lights'
 import { ViewportManager } from '@/utils/viewport'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { TargetingManager } from '@/gui/targettingManager'
-import { MyPlayer } from '@/babylon/character/myPlayer'
+import { MyPlayer } from '@/data/myPlayer'
 
 export const WorldRenderer = {
     block1: null as SymmetricBlock | null,
