@@ -1,4 +1,4 @@
-import { BASE_EQUIP_MATERIAL_PATH, PLATE_METAL_BASIC } from '@/babylon/item/charEquipManager'
+import { BASE_EQUIP_MATERIAL_PATH, CharWearableItemModel, PLATE_METAL_BASIC } from '@/babylon/item/charEquipManager'
 import { Materials } from '@/babylon/materials'
 import { Scene, TransformNode, Vector3 } from '@babylonjs/core'
 import { BabylonUtils } from '@/babylon/utils'
@@ -10,14 +10,17 @@ import { Renderer } from '@/babylon/scene/renderer'
 export const MobArmorsCbManager = {
     BASE_ARMORS_PATH: 'armors/',
     itemSourceParent: null as TransformNode | null,
+
     materialSets: new Map() as Map<string, PBRCustomMaterial>,
 
     async initArmors(map: Map<number, MobEquipItemType>, scene: Scene) {
         this.itemSourceParent = new TransformNode("mobArmorSources", scene)
         this.materialSets.set(PLATE_METAL_BASIC, this.getMaterial("plate-metal-basic", PLATE_METAL_BASIC, 4, 4, false))
 
-        map.set(CbHelmets.PLATE_ARMOR_SKELETON.id, await this.getItem(CbHelmets.PLATE_ARMOR_SKELETON))
-        map.set(CbHelmets.HELM_SKELETON.id, await this.getItem(CbHelmets.HELM_SKELETON))
+        map.set(CbArmorTypes.PLATE_ARMOR_MALE.id, await this.getItem(CbArmorTypes.PLATE_ARMOR_MALE))
+        map.set(CbArmorTypes.HELM_MALE.id, await this.getItem(CbArmorTypes.HELM_MALE))
+        map.set(CbArmorTypes.PAULDRON_MALE.id, await this.getItem(CbArmorTypes.PAULDRON_MALE))
+        map.set(CbArmorTypes.LEG_MALE.id, await this.getItem(CbArmorTypes.LEG_MALE))
     },
 
     async getItem(data: MobEquipItemData): Promise<MobEquipItemType> {
@@ -37,9 +40,20 @@ export const MobArmorsCbManager = {
     }
 }
 
-export const CbHelmets = {
-    PLATE_ARMOR_SKELETON: new MobEquipItemData(1100, "1100_armor_skeleton", "male-armor-plate", PLATE_METAL_BASIC, new Vector3(0, 0.45, 0), new Vector3(0, Math.PI / 2, 0), new Vector3(0.36, 0.20, 0.3),
+export const CbArmorTypes = {
+    PLATE_ARMOR_MALE: new MobEquipItemData(100, "100_male-armor-plate", "male-armor-plate", PLATE_METAL_BASIC, new Vector3(-0.01, 0.65, 0.03), new Vector3(0.42, 0.42, 0.44),
         4, 4, false, null),
-    HELM_SKELETON: new MobEquipItemData(1850, "1850_helm_skeleton", "male-helmet", PLATE_METAL_BASIC, new Vector3(0, 0.45, 0), new Vector3(0, Math.PI / 2, 0), BabylonUtils.getSymVector(0.40),
+
+    HELM_MALE: new MobEquipItemData(200, "200_male-helmet", "male-helmet", PLATE_METAL_BASIC, new Vector3(0, 0.47, 0), BabylonUtils.getSymVector(0.44),
+        4, 4, false, null),
+
+    PAULDRON_MALE: new MobEquipItemData(300, "300_male-pauldron", "male-pauldron-plate", PLATE_METAL_BASIC, new Vector3(0.06, -0.13, 0.02), new Vector3(0.48, 0.48, 0.58),
+        4, 4, false, null),
+
+    LEG_MALE: new MobEquipItemData(400, "400_male-leg-plate", "male-leg-plate", PLATE_METAL_BASIC, new Vector3(-0.01, -0.1, 0.01), new Vector3(0.26, 0.26, 0.23),
         4, 4, false, null),
 }
+
+
+
+//new CharWearableItemModel("male-plate-legs", 60, this.BASE_ARMORS_PATH + "male-leg-plate.babylon", new Vector3(0.26, 0.26, 0.23), new Vector3(-0.01, -0.1, 0.01))

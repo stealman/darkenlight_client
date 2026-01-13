@@ -1,6 +1,6 @@
 import {
     AbstractMesh,
-    AnimationGroup, Mesh,
+    AnimationGroup, Matrix, Mesh, Quaternion,
     SceneLoader, Skeleton, Sound, TrailMesh, TransformNode,
     Vector3,
 } from '@babylonjs/core'
@@ -13,14 +13,18 @@ import Character from '@/babylon/character/character'
 import { Renderer } from '@/babylon/scene/renderer'
 import { Utils } from '@/utils/utils'
 import { MyPlayer } from '@/data/myPlayer'
+import { EquipBearer, MobEquipItem, MobEquipManager } from '@/babylon/item/mobEquipManager'
 
-export class CharacterModel {
+export class CharacterModel implements EquipBearer {
     parent: Character
     node: TransformNode = new TransformNode("characterModelNode")
     initialized: boolean = false
 
     model: AbstractMesh | undefined
     modelYAngleOffset: number = Math.PI * 1 / 4
+    worldMatrix: Matrix
+    rotationQuaternion: Quaternion
+
     skeleton: Skeleton | undefined
     headNode: TransformNode = new TransformNode("headNode")
     torsoNode: TransformNode = new TransformNode("torsoNode")
@@ -47,6 +51,7 @@ export class CharacterModel {
     animTransition: AnimTransition | null = null
     weaponMesh: Mesh | null = null
     weaponMeshTrail: TrailMesh | null = null
+    equipSet: Set<MobEquipItem> = new Set()
 
     actualStepSound: Sound | null = null
     footStepSounds: Map<string, Sound> = new Map()
@@ -143,38 +148,44 @@ export class CharacterModel {
             console.error("Error loading model:", error)
         });
 
-        this.assignArmor(10, Utils.rollDice(3))
-        this.assignHelmet(20, Utils.rollDice(3))
-        this.assignRightPauldron(40, 0)
-        this.assignLeftPauldron(50, 0)
-        this.assignRightLeg(60, 0)
-        this.assignLeftLeg(60, 0)
+        this.assignArmor(100, Utils.rollDice(3))
+        this.assignHelmet(200, Utils.rollDice(3))
+        this.assignLeftPauldron(300, 0)
+        this.assignRightPauldron(300, 0)
+        this.assignRightLeg(400, 0)
+        this.assignLeftLeg(400, 0)
+
         await this.assignWeapon(Utils.rollDice(1))
         this.initialized = true
     }
 
-    assignHelmet(type: number, materialId: number) {
-        CharEquipManager.assignHelmet(this.headNode, type, materialId);
+    assignArmor(type: number, matIndex: number) {
+        this.addEquippedItem(new MobEquipItem(MobEquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.001")!, null, null, null))
     }
 
-    assignArmor(type: number, materialId: number) {
-        CharEquipManager.assignArmor(this.torsoNode, type, materialId);
+    assignHelmet(type: number, matIndex: number) {
+        this.addEquippedItem(new MobEquipItem(MobEquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.002")!, null, null, null))
     }
 
-    assignLeftPauldron(type: number, materialId: number) {
-        CharEquipManager.assignPauldron(this.rarmNode, type, materialId);
+    assignLeftPauldron(type: number, matIndex: number) {
+        this.addEquippedItem(new MobEquipItem(MobEquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.010")!, null, new Vector3(0, - Math.PI / 2, 0), null))
     }
 
-    assignRightPauldron(type: number, materialId: number) {
-        CharEquipManager.assignPauldron(this.larmNode, type, materialId);
+    assignRightPauldron(type: number, matIndex: number) {
+        this.addEquippedItem(new MobEquipItem(MobEquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.003")!, null, new Vector3(0, Math.PI / 2, 0), new Vector3(0.02, 0, 0.02)))
     }
 
-    assignLeftLeg(type: number, materialId: number) {
-        CharEquipManager.assignLeg(this.llegNode, type, materialId);
+    assignLeftLeg(type: number, matIndex: number) {
+        this.addEquippedItem(new MobEquipItem(MobEquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.008")!, null, null, null))
     }
 
-    assignRightLeg(type: number, materialId: number) {
-        CharEquipManager.assignLeg(this.rlegNode, type, materialId);
+    assignRightLeg(type: number, matIndex: number) {
+        this.addEquippedItem(new MobEquipItem(MobEquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.006")!, null, null, null))
+    }
+
+    addEquippedItem(item: MobEquipItem) {
+        this.equipSet.add(item)
+        MobEquipManager.addEquippedItem(item)
     }
 
     async assignWeapon(type: number) {
@@ -292,6 +303,14 @@ export class CharacterModel {
         if (this.parent.getLookAngle() != null) {
             this.resolveModelRotation(timeRate)
         }
+
+        this.rotationQuaternion = new Quaternion()
+        this.worldMatrix = this.model!.getWorldMatrix();
+        this.worldMatrix.decompose(new Vector3(), this.rotationQuaternion, new Vector3());
+
+        this.equipSet.forEach(item => {
+            item.onFrame()
+        })
     }
 
     /**
@@ -331,6 +350,14 @@ export class CharacterModel {
         }
         model.rotation.y = current + this.modelYAngleOffset
         this.parent.modelRotation = model.rotation.y
+    }
+
+    getOwnerId(): number {
+        return this.parent.id
+    }
+
+    getWeaponScale(): Vector3 | undefined {
+        return Vector3.One()
     }
 
     async addToView() {

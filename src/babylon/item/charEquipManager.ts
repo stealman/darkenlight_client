@@ -1,12 +1,10 @@
 import {
-    Color3,
     Color4, GPUParticleSystem,
     Mesh, ParticleSystem, PBRMaterial,
-    Quaternion,
     Scene,
     SceneLoader,
     SolidParticle,
-    SolidParticleSystem, StandardMaterial, Texture, TrailMesh, TransformNode,
+    SolidParticleSystem, Texture, TrailMesh, TransformNode,
     Vector3, Vector4,
 } from '@babylonjs/core'
 import { Materials, PBRBasicAtts } from '@/babylon/materials'
@@ -16,6 +14,7 @@ import { CharWeaponsCbManager } from '@/babylon/item/codebook/charWeaponsCb'
 import { CharacterModel } from '@/babylon/character/characterModel'
 import { BabylonUtils } from '@/babylon/utils'
 import { Lights } from '@/babylon/scene/lights'
+import { MyPlayer } from '@/data/myPlayer'
 
 export const BASE_EQUIP_MATERIAL_PATH = "/models/equip/"
 export const PLATE_METAL_BASIC = 'plate-metal-basic'
@@ -66,10 +65,10 @@ class CharWearableItemManager {
         // Build mesh object
         this.spsMesh = this.sps.buildMesh()
         this.spsMesh.alwaysSelectAsActiveMesh = true
-        this.spsMesh.receiveShadows = true
+        //this.spsMesh.receiveShadows = true
         this.spsMesh.material = Materials.getPBRMaterial(scene, this.materialName + "charEquipMap", this.texturePath , false, true, this.matOptions)
         if (this.castShadows) {
-            Lights.addShadowCaster(this.spsMesh)
+            //Lights.addShadowCaster(this.spsMesh)
         }
 
         // Override function that will update particle position on setParticles() call
@@ -82,6 +81,7 @@ class CharWearableItemManager {
     }
 
     syncParticlePosition(p: SolidParticle): void {
+        /**
         if (p.obj != null) {
             const rotq = new Quaternion();
             p.obj.computeWorldMatrix(true);
@@ -90,7 +90,7 @@ class CharWearableItemManager {
             p.position.copyFrom(p.obj.getAbsolutePosition())
         } else if (p.isVisible) {
             p.isVisible = false;
-        }
+        }*/
     }
 
     assignItem(node: TransformNode, itemModelId: number, uvs: Vector4, scale: Vector3) {
@@ -143,7 +143,7 @@ class CharWearableItemManager {
     }
 
     onFrame() {
-        this.sps.setParticles();
+        //this.sps.setParticles();
     }
 }
 
@@ -219,9 +219,13 @@ export const CharEquipManager = {
         weapon.parent = node
         weapon.setEnabled(true)
 
+        if (owner.parent === MyPlayer.myChar) {
+            Lights.addShadowCaster(weapon)
+        }
+
         owner.weaponMesh = weapon
         owner.weaponMeshTrail = this.createWeaponTrail(node)
-        if (createParticles) this.createSwordParticles(node)
+        //if (createParticles) this.createSwordParticles(node)
     },
 
     createWeaponTrail(boneNode: TransformNode): TrailMesh {
@@ -243,6 +247,7 @@ export const CharEquipManager = {
         const ps = new GPUParticleSystem("charWeaponParticles", {
             capacity: 500
         }, Renderer.scene);
+
         ps.particleTexture = new Texture('images/gfx/flare-rect.png', Renderer.scene)
 
         ps.createBoxEmitter(

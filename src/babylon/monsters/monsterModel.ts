@@ -8,7 +8,7 @@ import { MonsterLoader } from '@/babylon/monsters/monsterLoader'
 import { MonsterCodebook, MonsterType } from '@/babylon/monsters/codebook/monsterCodebook'
 import { MeshAnimation } from '@/babylon/animations/animation'
 import { MonsterTemplate } from '@/babylon/monsters/codebook/monsterTemplates'
-import { MobEquipItem, MobEquipManager } from '@/babylon/item/mobEquipManager'
+import { EquipBearer, MobEquipItem, MobEquipManager } from '@/babylon/item/mobEquipManager'
 import { Utils } from '@/utils/utils'
 import { Renderer } from '@/babylon/scene/renderer'
 import { WorldDataManager } from '@/data/worldDataManager'
@@ -16,7 +16,7 @@ import { AudioManager } from '@/babylon/audio/audioManager'
 import { TerrainManager } from '@/babylon/world/terrainManager'
 import { Settings } from '@/settings/settings'
 
-export class MonsterModel {
+export class MonsterModel implements EquipBearer {
     parent: Monster
     type: MonsterType
     initialized: boolean = false
@@ -80,17 +80,17 @@ export class MonsterModel {
         this.node.position.z = this.parent.pos.z
     }
 
-    assignRhand(type: number, matIndex: number, scale = new Vector3(1, 1, 1)) {
-        this.weaponEquipItem = new MobEquipItem(MobEquipManager.itemTypes.get(type)!, matIndex, this, this.rhandBone, scale, true)
+    assignRhand(type: number, matIndex: number, scale = Vector3.One(), rotation: Vector3 | null, position: Vector3 | null) {
+        this.weaponEquipItem = new MobEquipItem(MobEquipManager.itemTypes.get(type)!, matIndex, this, this.rhandBone, scale, rotation, position, true)
         this.addEquippedItem(this.weaponEquipItem)
     }
 
-    assignChest(type: number, matIndex: number, scale = new Vector3(1, 1, 1)) {
-        this.addEquippedItem(new MobEquipItem(MobEquipManager.itemTypes.get(type)!, matIndex, this, this.chestBone, scale))
+    assignChest(type: number, matIndex: number, scale = Vector3.One(), rotation: Vector3 | null, position: Vector3 | null) {
+        this.addEquippedItem(new MobEquipItem(MobEquipManager.itemTypes.get(type)!, matIndex, this, this.chestBone, scale, rotation, position))
     }
 
-    assignHelmet(type: number, matIndex: number, scale = new Vector3(1, 1, 1)) {
-        this.addEquippedItem(new MobEquipItem(MobEquipManager.itemTypes.get(type)!, matIndex, this, this.headBone, scale))
+    assignHelmet(type: number, matIndex: number, scale = Vector3.One(), rotation: Vector3 | null, position: Vector3 | null) {
+        this.addEquippedItem(new MobEquipItem(MobEquipManager.itemTypes.get(type)!, matIndex, this, this.headBone, scale, rotation, position))
     }
 
     addEquippedItem(item: MobEquipItem) {
@@ -257,6 +257,14 @@ export class MonsterModel {
         const position = new Vector3()
         worldMatrix.decompose(undefined, undefined, position)
         return position
+    }
+
+    getOwnerId(): number {
+        return this.parent.id
+    }
+
+    getWeaponScale(): Vector3 | undefined {
+        return this.parent.mobType.weapon?.scale
     }
 
     createDyingParticleEffect() {

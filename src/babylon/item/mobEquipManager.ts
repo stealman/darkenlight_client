@@ -5,7 +5,6 @@ import {
     Scene,
     SceneLoader, TrailMesh, TransformNode, Vector2, Vector3,
 } from '@babylonjs/core'
-import { MonsterModel } from '@/babylon/monsters/monsterModel'
 import { PBRCustomMaterial } from '@babylonjs/materials'
 import { MobWeaponsCbManager } from '@/babylon/item/codebook/mobWeaponsCb'
 import { MobArmorsCbManager } from '@/babylon/item/codebook/mobArmorsCb'
@@ -14,16 +13,16 @@ import { Renderer } from '@/babylon/scene/renderer'
 import { Materials } from '@/babylon/materials'
 
 export class MobEquipItem {
-    parent: MonsterModel | null = null
+    parent: EquipBearer | null = null
     type: MobEquipItemType
     matVector: Vector2
 
     position: Vector3 = Vector3.Zero()
     quaternion: Quaternion = Quaternion.Identity()
     bone: Bone
-    activeBone: Bone
     scale: Vector3
-
+    itemRotation: Quaternion | null = null
+    itemPosition: Vector3 | null = null
     localPosition: Vector3 = Vector3.Zero()
     boneRotationQuaternion: Quaternion = Quaternion.Identity()
     localScale: Vector3 = Vector3.One()
@@ -31,12 +30,13 @@ export class MobEquipItem {
 
     weaponTrail: TrailMesh | null = null
 
-    constructor(type: MobEquipItemType, matIndex: number, parent: MonsterModel, bone: Bone, scale: Vector3 = Vector3.One(), addWeaponTrail: boolean = false) {
+    constructor(type: MobEquipItemType, matIndex: number, parent: EquipBearer, bone: Bone, scale: Vector3 | null, rotation: Vector3 | null, position: Vector3 | null, addWeaponTrail: boolean = false) {
         this.type = type
         this.parent = parent
         this.bone = bone
-        this.activeBone = this.bone
-        this.scale = scale
+        this.scale = scale ? scale : Vector3.One()
+        this.itemPosition = position ? position : Vector3.Zero()
+        this.itemRotation = rotation ? Quaternion.FromEulerVector(rotation) : null
         if (addWeaponTrail) {
             this.weaponTrail = this.createWeaponTrail(this.bone)
         }
@@ -48,20 +48,31 @@ export class MobEquipItem {
     }
 
     onFrame() {
-        this.activeBone.computeWorldMatrix(true);
-        this.activeBone.getFinalMatrix().decompose(this.localScale, this.boneRotationQuaternion, this.localPosition);
+        this.bone.computeWorldMatrix(true);
+        this.bone.getFinalMatrix().decompose(this.localScale, this.boneRotationQuaternion, this.localPosition)
 
-        this.quaternion = this.parent!.rotationQuaternion.multiply(this.boneRotationQuaternion);
-        this.position = Vector3.TransformCoordinates(this.localPosition, this.parent!.worldMatrix);
+        this.quaternion = this.parent!.rotationQuaternion.multiply(this.boneRotationQuaternion)
+
+        // Apply specific item rotation
+        if (this.itemRotation) {
+            this.quaternion = this.quaternion.multiply(this.itemRotation)
+        }
+        this.position = Vector3.TransformCoordinates(this.localPosition, this.parent!.worldMatrix)
+
+        // Apply specific item position offset
+        if (this.itemPosition) {
+            const offset = Vector3.TransformCoordinates(this.itemPosition, Matrix.FromQuaternionToRef(this.parent!.rotationQuaternion, new Matrix()))
+            this.position.addInPlace(offset)
+        }
     }
 
     createWeaponTrail(boneNode: Bone): TrailMesh {
-        const tip = new TransformNode('swordTipMob' + this.parent?.parent.id, Renderer.scene)
+        const tip = new TransformNode('swordTipMob' + this.parent?.getOwnerId(), Renderer.scene)
         tip.attachToBone(boneNode, this.parent!.node)
 
         // Position the tip at the weapon tip position from the codebook data and scale it according to the weapon scale
         const p = this.type.cbData.weaponTipPosition!
-        const s = this.parent?.parent.mobType.weapon?.scale ?? Vector3.One()
+        const s = this.parent?.getWeaponScale() ?? Vector3.One()
         tip.position.set(
             p.x * s.x,
             p.y * s.y,
@@ -135,6 +146,7 @@ export class MobEquipItemType {
         if (this.mesh == null) {
             return
         }
+
         if (count === 0) {
             this.mesh.setEnabled(false)
         } else if (!this.mesh.isEnabled()) {
@@ -197,4 +209,12 @@ export const MobEquipManager = {
     }
 }
 
+export interface EquipBearer {
+    node: TransformNode
+    worldMatrix: Matrix
+    rotationQuaternion: Quaternion
 
+    getOwnerId(): number
+    getWeaponTipPosition(): Vector3 | null
+    getWeaponScale(): Vector3
+}

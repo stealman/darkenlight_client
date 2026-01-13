@@ -1,5 +1,7 @@
 import { Matrix, Vector2, Vector3 } from '@babylonjs/core'
 
+export const VectorY90 = new Vector3(0, Math.PI / 2, 0)
+
 export const BabylonUtils = {
     createPositionBuffer(matrices: Matrix[]): Float32Array {
         const buffer = new Float32Array(matrices.length * 16)

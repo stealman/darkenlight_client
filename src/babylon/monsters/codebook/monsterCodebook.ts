@@ -1,8 +1,8 @@
 import { MonsterModel } from '@/babylon/monsters/monsterModel'
 import { MonsterBonesAnims } from '@/babylon/monsters/codebook/monsterBonesAnims'
-import { BabylonUtils } from '@/babylon/utils'
+import { BabylonUtils, VectorY90 } from '@/babylon/utils'
 import { Vector3 } from '@babylonjs/core'
-import { Utils } from '@/utils/utils'
+import { Utils} from '@/utils/utils'
 import { BodySoundTypes, MonsterSoundTypes, WeaponSoundTypes } from '@/babylon/audio/audioManager'
 import { FightSplatTypes, SplatType } from '@/babylon/world/fightSplatsRenderer'
 
@@ -28,15 +28,15 @@ export const MonsterCodebook = {
         const mobType = model.type
 
         if (mobType.weapon) {
-            model.assignRhand(1, mobType.weapon.mat, mobType.weapon.scale)
+            model.assignRhand(1, mobType.weapon.mat, mobType.weapon.scale, mobType.weapon.rotation, mobType.weapon.position)
        }
 
         if (mobType.armor) {
-            model.assignChest(mobType.armor.getRandomId(), mobType.armor.mat, mobType.armor.scale)
+            model.assignChest(mobType.armor.getRandomId(), mobType.armor.mat, mobType.armor.scale, mobType.armor.rotation, mobType.armor.position)
         }
 
         if (mobType.helmet) {
-            model.assignHelmet(mobType.helmet.getRandomId(), mobType.helmet.mat, mobType.helmet.scale)
+            model.assignHelmet(mobType.helmet.getRandomId(), mobType.helmet.mat, mobType.helmet.scale, mobType.helmet.rotation, mobType.helmet.position)
         }
     }
 }
@@ -81,12 +81,16 @@ export class MonsterType {
 
 export class MonsterEquipData {
     ids: Array<number>
-    scale: Vector3 | undefined
+    scale: Vector3
+    rotation: Vector3 | null
+    position: Vector3 | null
     mat: number
 
-    constructor(ids: Array<number>, scale: number | Vector3 | undefined, mat: number) {
+    constructor(ids: Array<number>, scale: number | Vector3 | null, rotation: Vector3 | null, position: Vector3 | null, mat: number) {
         this.ids = ids
-        this.scale = typeof scale === 'number' ? BabylonUtils.getSymVector(scale) : scale
+        this.scale = scale ? (typeof scale === 'number' ? BabylonUtils.getSymVector(scale) : scale) : Vector3.One()
+        this.position = position
+        this.rotation = rotation
         this.mat = mat
     }
 
@@ -145,19 +149,27 @@ export const MonsterTypes = {
     SKELETON: new MonsterType( 1, MonsterGroups.SKELETON, 1,'Skeleton', 0.6, 1.8, 3.2,null,null,  null,
         WeaponSoundTypes.BONE, BodySoundTypes.HARD, null, MonsterSoundTypes.SKELETON, FightSplatTypes.BONE),
 
-    SKELETON_FIGHTER: new MonsterType( 2, MonsterGroups.SKELETON, 1, 'Skeleton Fighter', 0.6, 1.8,  3.2, new MonsterEquipData([1], 0.15, 0),null, null,
+    SKELETON_FIGHTER: new MonsterType( 2, MonsterGroups.SKELETON, 1, 'Skeleton Fighter', 0.6, 1.8,  3.2,
+        new MonsterEquipData([1], 0.15, new Vector3(Math.PI / 2, Math.PI / 2, 0), null,0),null, null,
         WeaponSoundTypes.SWORD, BodySoundTypes.HARD, WeaponSoundTypes.SWORD, MonsterSoundTypes.SKELETON, FightSplatTypes.BONE),
 
-    SKELETON_WARRIOR: new MonsterType( 3, MonsterGroups.SKELETON, 1, 'Skeleton Warrior', 0.6, 1.8,  3.2, new MonsterEquipData([1], 0.15, 0), new MonsterEquipData([1850], undefined, 8), new MonsterEquipData([1100], undefined, 8),
+    SKELETON_WARRIOR: new MonsterType( 3, MonsterGroups.SKELETON, 1, 'Skeleton Warrior', 0.6, 1.8,  3.2,
+        new MonsterEquipData([1], 0.15, new Vector3(Math.PI / 2, Math.PI / 2, 0), null, 0),
+        new MonsterEquipData([200], 0.94, VectorY90, null, 8),
+        new MonsterEquipData([100], new Vector3(0.8, 0.7, 0.65),  VectorY90, null, 8),
         WeaponSoundTypes.SWORD, BodySoundTypes.HARD, WeaponSoundTypes.SWORD, MonsterSoundTypes.SKELETON, FightSplatTypes.BONE),
 
     WITHER: new MonsterType( 10, MonsterGroups.WITHER, 2,'Wither', 0.6, 1.8, 3.2, null,null,  null,
         WeaponSoundTypes.BONE, BodySoundTypes.HARD, null, MonsterSoundTypes.SKELETON, FightSplatTypes.DARK_BONE),
 
-    WITHER_CHAMPION: new MonsterType( 11, MonsterGroups.WITHER, 2, 'Wither Champion', 0.6, 1.8,3.2, new MonsterEquipData([1], 0.15, 0),null, null,
+    WITHER_CHAMPION: new MonsterType( 11, MonsterGroups.WITHER, 2, 'Wither Champion', 0.6, 1.8,3.2,
+        new MonsterEquipData([1], 0.15, new Vector3(Math.PI / 2, Math.PI / 2, 0), null, 0),null, null,
         WeaponSoundTypes.SWORD, BodySoundTypes.HARD, WeaponSoundTypes.SWORD, MonsterSoundTypes.SKELETON, FightSplatTypes.DARK_BONE),
 
-    WITHER_KNIGHT: new MonsterType( 12, MonsterGroups.WITHER, 2, 'Wither Knight', 0.6, 1.8,  3.2, new MonsterEquipData([1], 0.2, 0), new MonsterEquipData([1850], undefined, 9), new MonsterEquipData([1100], undefined, 9),
+    WITHER_KNIGHT: new MonsterType( 12, MonsterGroups.WITHER, 2, 'Wither Knight', 0.6, 1.8,  3.2,
+        new MonsterEquipData([1], 0.2, new Vector3(Math.PI / 2, Math.PI / 2, 0), null, 0),
+        new MonsterEquipData([200], 0.94, VectorY90, null,9),
+        new MonsterEquipData([100], new Vector3(0.8, 0.7, 0.65), VectorY90, null, 9),
         WeaponSoundTypes.SWORD, BodySoundTypes.HARD, WeaponSoundTypes.SWORD, MonsterSoundTypes.SKELETON, FightSplatTypes.DARK_BONE),
 
     HOUSE_CAT : new MonsterType( 1001, MonsterGroups.CAT,  4,'House Cat', 0.6, 1, 6, null,null,  null,
