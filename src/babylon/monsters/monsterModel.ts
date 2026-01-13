@@ -9,7 +9,7 @@ import { MonsterLoader } from '@/babylon/monsters/monsterLoader'
 import { MonsterCodebook, MonsterType } from '@/babylon/monsters/codebook/monsterCodebook'
 import { MeshAnimation } from '@/babylon/animations/animation'
 import { MonsterTemplate } from '@/babylon/monsters/codebook/monsterTemplates'
-import { EquipBearer, MobEquipItem, EquipManager } from '@/babylon/item/equipManager'
+import { EquipBearer, EquipItem, EquipManager } from '@/babylon/item/equipManager'
 import { Utils } from '@/utils/utils'
 import { Renderer } from '@/babylon/scene/renderer'
 import { WorldDataManager } from '@/data/worldDataManager'
@@ -41,8 +41,8 @@ export class MonsterModel implements EquipBearer {
     deadAnim: MeshAnimation | undefined
     activeAnims: Set<MeshAnimation>
 
-    weaponEquipItem: MobEquipItem | null = null
-    equipSet: Set<MobEquipItem> = new Set()
+    weaponEquipItem: EquipItem | null = null
+    equipSet: Set<EquipItem> = new Set()
 
     chestBone: Bone
     rhandBone: Bone
@@ -82,19 +82,19 @@ export class MonsterModel implements EquipBearer {
     }
 
     assignRhand(type: number, matIndex: number, scale = Vector3.One(), rotation: Vector3 | null, position: Vector3 | null) {
-        this.weaponEquipItem = new MobEquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.rhandBone, scale, rotation, position, true)
+        this.weaponEquipItem = new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.rhandBone, scale, rotation, position, true)
         this.addEquippedItem(this.weaponEquipItem)
     }
 
     assignChest(type: number, matIndex: number, scale = Vector3.One(), rotation: Vector3 | null, position: Vector3 | null) {
-        this.addEquippedItem(new MobEquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.chestBone, scale, rotation, position))
+        this.addEquippedItem(new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.chestBone, scale, rotation, position))
     }
 
     assignHelmet(type: number, matIndex: number, scale = Vector3.One(), rotation: Vector3 | null, position: Vector3 | null) {
-        this.addEquippedItem(new MobEquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.headBone, scale, rotation, position))
+        this.addEquippedItem(new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.headBone, scale, rotation, position))
     }
 
-    addEquippedItem(item: MobEquipItem) {
+    addEquippedItem(item: EquipItem) {
         this.equipSet.add(item)
         EquipManager.addEquippedItem(item)
     }

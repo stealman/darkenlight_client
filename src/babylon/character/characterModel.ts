@@ -12,7 +12,7 @@ import Character from '@/babylon/character/character'
 import { Renderer } from '@/babylon/scene/renderer'
 import { Utils } from '@/utils/utils'
 import { MyPlayer } from '@/data/myPlayer'
-import { EquipBearer, MobEquipItem, EquipManager } from '@/babylon/item/equipManager'
+import { EquipBearer, EquipItem, EquipManager } from '@/babylon/item/equipManager'
 import { BabylonUtils } from '@/babylon/utils'
 
 export class CharacterModel implements EquipBearer {
@@ -43,8 +43,8 @@ export class CharacterModel implements EquipBearer {
     actualAnim: AnimationGroup | undefined
     animTransition: AnimTransition | null = null
 
-    equipSet: Set<MobEquipItem> = new Set()
-    weaponEquipItem: MobEquipItem | null = null
+    equipSet: Set<EquipItem> = new Set()
+    weaponEquipItem: EquipItem | null = null
 
     actualStepSound: Sound | null = null
     footStepSounds: Map<string, Sound> = new Map()
@@ -125,17 +125,15 @@ export class CharacterModel implements EquipBearer {
 
                 this.idleAnim?.start(true, 0.5)
             }
-
             this.skeleton = result.skeletons[0];
-
             this.lhandNode.attachToBone(this.skeleton.bones.find(b => b.id === "Bone.012")!, this.model) // Lhand 012
             this.rhandNode.attachToBone(this.skeleton.bones.find(b => b.id === "Bone.009")!, this.model) // Rhand 009
         }).catch((error) => {
             console.error("Error loading model:", error)
         });
 
-        this.assignArmor(100, Utils.rollDice(3))
-        this.assignHelmet(210, Utils.rollDice(3))
+        this.assignArmor(100, Utils.rollDice(7))
+        this.assignHelmet(210, Utils.rollDice(7))
         this.assignLeftPauldron(300, 0)
         this.assignRightPauldron(300, 0)
         this.assignRightLeg(400, 0)
@@ -146,36 +144,36 @@ export class CharacterModel implements EquipBearer {
     }
 
     assignArmor(type: number, matIndex: number) {
-        this.addEquippedItem(new MobEquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.001")!, null, null, null))
+        this.addEquippedItem(new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.001")!, null, null, null))
     }
 
     assignHelmet(type: number, matIndex: number) {
-        this.addEquippedItem(new MobEquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.002")!, null, null, null))
+        this.addEquippedItem(new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.002")!, null, null, null))
     }
 
     assignLeftPauldron(type: number, matIndex: number) {
-        this.addEquippedItem(new MobEquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.010")!, null, new Vector3(0, - Math.PI / 2, 0), null))
+        this.addEquippedItem(new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.010")!, null, new Vector3(0, - Math.PI / 2, 0), null))
     }
 
     assignRightPauldron(type: number, matIndex: number) {
-        this.addEquippedItem(new MobEquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.003")!, null, new Vector3(0, Math.PI / 2, 0), new Vector3(0.02, 0, 0.02)))
+        this.addEquippedItem(new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.003")!, null, new Vector3(0, Math.PI / 2, 0), new Vector3(0.02, 0, 0.02)))
     }
 
     assignLeftLeg(type: number, matIndex: number) {
-        this.addEquippedItem(new MobEquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.008")!, null, null, null))
+        this.addEquippedItem(new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.008")!, null, null, null))
     }
 
     assignRightLeg(type: number, matIndex: number) {
-        this.addEquippedItem(new MobEquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.006")!, null, null, null))
+        this.addEquippedItem(new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.006")!, null, null, null))
     }
 
     assignWeapon(type: number, matIndex: number) {
-        this.weaponEquipItem = new MobEquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.009")!, null, new Vector3(Math.PI / 2, Math.PI / 2, 0), null, true)
+        this.weaponEquipItem = new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.009")!, null, new Vector3(Math.PI / 2, Math.PI / 2, 0), null, true)
         this.weaponEquipItem.createSwordParticles(this.rhandNode)
         this.addEquippedItem(this.weaponEquipItem)
     }
 
-    addEquippedItem(item: MobEquipItem) {
+    addEquippedItem(item: EquipItem) {
         this.equipSet.add(item)
         EquipManager.addEquippedItem(item)
     }

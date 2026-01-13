@@ -4,7 +4,7 @@ import {
     MeshBuilder,
     ParticleSystem,
     Scene,
-    Texture,
+    Texture, Vector2,
     Vector3,
 } from '@babylonjs/core'
 import { MyPlayer } from '@/data/myPlayer'
@@ -18,7 +18,7 @@ export const WeatherManager = {
     },
 
     update() {
-        if (!this.actualWeather && !Settings.isDetalLevelLow()) {
+        if (!this.actualWeather) {
             this.actualWeather = new SnowEffect(Renderer.scene)
             this.actualWeather.start()
         }
@@ -36,13 +36,26 @@ interface WeatherEffect {
 class SnowEffect implements WeatherEffect {
     constructor(scene: Scene) {
         console.log("Initializing snow effect")
+        let capacity = 10000
+        const particleSize = new Vector2(0.02, 0.03)
+        if (Settings.isDetailLevelMedium()) {
+            particleSize.x = 0.03
+            particleSize.y = 0.04
+            capacity = 6000
+        }
+        if (Settings.isDetalLevelLow()) {
+            particleSize.x = 0.05
+            particleSize.y = 0.06
+            capacity = 4000
+        }
+
         const snow = new GPUParticleSystem("snow", {
-            capacity: Settings.isDetalLevelHigh() ? 25000 : 12500
+            capacity: capacity
         }, scene);
 
         snow.particleTexture = new Texture("images/gfx/flare-rect.png", scene);
-        snow.minEmitBox = new Vector3(-20, 5, -20);
-        snow.maxEmitBox = new Vector3(20, 7, 20);
+        snow.minEmitBox = new Vector3(-14, 5, -14);
+        snow.maxEmitBox = new Vector3(16, 7, 16);
 
         const snowEmitter = MeshBuilder.CreateBox(
             "snowEmitter",
@@ -60,8 +73,8 @@ class SnowEffect implements WeatherEffect {
         snow.addColorGradient(1, new Color4(1, 1, 1, 0))
         snow.blendMode = ParticleSystem.BLENDMODE_ADD;
 
-        snow.minLifeTime = 2
-        snow.maxLifeTime = 2
+        snow.minLifeTime = 3
+        snow.maxLifeTime = 3
 
         // speed
         snow.minEmitPower = 0.8;

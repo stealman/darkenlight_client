@@ -3,20 +3,20 @@ import {
     Mesh, ParticleSystem,
     Quaternion,
     Scene,
-    SceneLoader, Texture, TrailMesh, TransformNode, Vector2, Vector3, Vector4,
+    SceneLoader, Texture, TrailMesh, TransformNode, Vector2, Vector3
 } from '@babylonjs/core'
 import { PBRCustomMaterial } from '@babylonjs/materials'
 import { WeaponsCbManager } from '@/babylon/item/codebook/weaponsCb'
 import { ArmorsCbManager } from '@/babylon/item/codebook/armorsCb'
-import { EquipItemData } from '@/babylon/item/codebook/equipItemData'
+import { EquipCbItem } from '@/babylon/item/codebook/equipCbItem'
 import { Renderer } from '@/babylon/scene/renderer'
 import { Materials } from '@/babylon/materials'
 import { Lights } from '@/babylon/scene/lights'
 import { BabylonUtils } from '@/babylon/utils'
 
-export class MobEquipItem {
-    parent: EquipBearer | null = null
-    type: MobEquipItemType
+export class EquipItem {
+    parent: EquipBearer
+    type: EquipItemType
     matVector: Vector2
 
     position: Vector3 = Vector3.Zero()
@@ -27,11 +27,13 @@ export class MobEquipItem {
     itemPosition: Vector3 | null = null
     localPosition: Vector3 = Vector3.Zero()
     boneRotationQuaternion: Quaternion = Quaternion.Identity()
-    localScale: Vector3 = Vector3.One()
     scaleMatrix: Matrix = Matrix.Identity()
     weaponTrail: TrailMesh | null = null
 
-    constructor(type: MobEquipItemType, matIndex: number, parent: EquipBearer, bone: Bone, scale: Vector3 | null, rotation: Vector3 | null, position: Vector3 | null, addWeaponTrail: boolean = false) {
+    private parentRotMatrix = new Matrix()
+    private tmpOffset = new Vector3()
+
+    constructor(type: EquipItemType, matIndex: number, parent: EquipBearer, bone: Bone, scale: Vector3 | null, rotation: Vector3 | null, position: Vector3 | null, addWeaponTrail: boolean = false) {
         this.type = type
         this.parent = parent
         this.bone = bone
@@ -41,29 +43,44 @@ export class MobEquipItem {
         if (addWeaponTrail) {
             this.weaponTrail = this.createWeaponTrail(this.bone)
         }
-
-        const matRow = (type.cbData.matsY * 2) - ((Math.floor(matIndex / type.cbData.matsX) * 2) + 1.5)
-        const matCol = ((matIndex % type.cbData.matsX) * 2) + 0.5
-        this.matVector = new Vector2(matCol, matRow)
-        this.scaleMatrix = Matrix.Scaling(this.scale.x, this.scale.y, this.scale.z);
+        this.matVector = this.getAtlasUvcOffsets(type.cbData.matCols, type.cbData.matRows, matIndex)
+        this.scaleMatrix = Matrix.Scaling(this.scale.x, this.scale.y, this.scale.z)
     }
 
-    onFrame() {
-        this.bone.computeWorldMatrix(true);
-        this.bone.getFinalMatrix().decompose(this.localScale, this.boneRotationQuaternion, this.localPosition)
+    getAtlasUvcOffsets = (matCols: number, matsRows: number, matIndex: number, pad = 0.01) => {
+        const tileX = matIndex % matCols
+        const tileY = Math.floor(matIndex / matCols)
 
-        this.quaternion = this.parent!.rotationQuaternion.multiply(this.boneRotationQuaternion)
+        const p = pad * 2
+        const matCol = (tileX * 2) + p
+        const matRow = (matsRows * 2) - (tileY * 2 + (2 - p))
+        return new Vector2(matCol, matRow)
+    }
+
+    /**
+     * Update world position and rotation from the bone each frame
+     */
+    onFrame() {
+        const m = this.bone.getFinalMatrix()
+        m.getTranslationToRef(this.localPosition)
+        Quaternion.FromRotationMatrixToRef(m, this.boneRotationQuaternion)
+
+        // parentRot * boneRot
+        this.quaternion = this.parent.rotationQuaternion.multiply(this.boneRotationQuaternion)
 
         // Apply specific item rotation
         if (this.itemRotation) {
             this.quaternion = this.quaternion.multiply(this.itemRotation)
         }
-        this.position = Vector3.TransformCoordinates(this.localPosition, this.parent!.worldMatrix)
 
-        // Apply specific item position offset
+        // bone position do worldu parenta
+        Vector3.TransformCoordinatesToRef(this.localPosition, this.parent.worldMatrix, this.position)
+
+        // Apply specific item position offset (bez new Matrix)
         if (this.itemPosition) {
-            const offset = Vector3.TransformCoordinates(this.itemPosition, Matrix.FromQuaternionToRef(this.parent!.rotationQuaternion, new Matrix()))
-            this.position.addInPlace(offset)
+            Matrix.FromQuaternionToRef(this.parent.rotationQuaternion, this.parentRotMatrix)
+            Vector3.TransformCoordinatesToRef(this.itemPosition, this.parentRotMatrix, this.tmpOffset)
+            this.position.addInPlace(this.tmpOffset)
         }
     }
 
@@ -131,10 +148,9 @@ export class MobEquipItem {
 
 /**
  * One mesh-type for each equipable item
- *
  * The mesh contains thin instances for each equipped item of this type
  */
-export class MobEquipItemType {
+export class EquipItemType {
     id: number
     name: string = ""
     mesh: Mesh | null = null
@@ -142,14 +158,17 @@ export class MobEquipItemType {
 
     instanceBuffer: Float32Array = new Float32Array(0)
     uvBuffer: Float32Array = new Float32Array(0)
-    cbData: EquipItemData
+    cbData: EquipCbItem
 
-    constructor(data: EquipItemData) {
+    constructor(data: EquipCbItem) {
         this.id = data.id
         this.cbData = data
     }
 
-    async initializeMesh(parentNode: TransformNode, scene: Scene, fileName: string, material: PBRCustomMaterial | null, position: Vector3 = Vector3.Zero(), rotation: Vector3 = Vector3.Zero(), scale: Vector3 = Vector3.One()) {
+    /**
+     * Armor uses .babylon files
+     */
+    async initializeMeshArmor(parentNode: TransformNode, scene: Scene, fileName: string, material: PBRCustomMaterial | null, position: Vector3 = Vector3.Zero(), rotation: Vector3 = Vector3.Zero(), scale: Vector3 = Vector3.One()) {
         const result = await SceneLoader.ImportMeshAsync("", "/models/equip/", fileName, scene);
         const source = result.meshes[0] as Mesh
 
@@ -166,6 +185,9 @@ export class MobEquipItemType {
         this.mesh.parent = parentNode
     }
 
+    /**
+     * Weapon uses .glb files
+     */
     async initializeMeshWeapon(parentNode: TransformNode, scene: Scene, fileName: string, material: PBRCustomMaterial | null, position: Vector3 = Vector3.Zero(), rotation: Vector3 = Vector3.Zero(), scale: Vector3 = Vector3.One()) {
         const result = await SceneLoader.ImportMeshAsync("", "/models/equip/", fileName, scene);
         const source = result.meshes[0].getChildMeshes()[0] as Mesh
@@ -207,15 +229,15 @@ export class MobEquipItemType {
  * On each frame, the instance buffer is updated with the position and rotation of each equipped item
  */
 export const EquipManager = {
-    itemTypes: new Map<number, MobEquipItemType>(),
-    equippedItems: new Map<MobEquipItemType, Set<MobEquipItem>>(),
+    itemTypes: new Map<number, EquipItemType>(),
+    equippedItems: new Map<EquipItemType, Set<EquipItem>>(),
 
     async initialize(scene: Scene) {
         await WeaponsCbManager.initMelee(this.itemTypes, scene)
         await ArmorsCbManager.initArmors(this.itemTypes, scene)
     },
 
-    addEquippedItem(item: MobEquipItem) {
+    addEquippedItem(item: EquipItem) {
         if (!this.equippedItems.has(item.type)) {
             this.equippedItems.set(item.type, new Set())
         }
@@ -223,7 +245,7 @@ export const EquipManager = {
         item.type.updateCount(this.equippedItems.get(item.type)!.size)
     },
 
-    removeEquippedItem(item: MobEquipItem) {
+    removeEquippedItem(item: EquipItem) {
         if (item.weaponTrail) {
             item.weaponTrail.setEnabled(false)
         }
@@ -263,16 +285,3 @@ export interface EquipBearer {
     getWeaponScale(): Vector3
     getMasterNode()
 }
-
-const BasicPlateMetalMaterials = [
-    new Vector4(0.01, 0.76, 0.24, 0.99), // Iron
-    new Vector4(0.26, 0.76, 0.49, 0.99), // Astracyte
-    new Vector4(0.51, 0.76, 0.74, 0.99), // Agapyte
-    new Vector4(0.76, 0.76, 0.99, 0.99), // Gold
-    new Vector4(0.01, 0.51, 0.24, 0.74), // Redstone
-    new Vector4(0.26, 0.51, 0.49, 0.74), // Darkstone
-    new Vector4(0.51, 0.51, 0.74, 0.74), // Amethyst
-    new Vector4(0.76, 0.51, 0.99, 0.74), // Mythril
-    new Vector4(0.01, 0.26, 0.24, 0.49), // Rust iron
-    new Vector4(0.26, 0.26, 0.49, 0.49), // Shadow iron
-]
