@@ -34,12 +34,13 @@ export const ArmorsCbManager = {
     },
 
     getMaterial(texture: string, name: string, matCols: number, matRows: number) {
-        return Materials.getPBRCustomMaterialFrom(Renderer.scene!, texture, BASE_EQUIP_MATERIAL_PATH + "armors/", texture + ".png", 1 / (matCols * 2), 1 / (matRows * 2), false, {
+        const mat = Materials.getPBRCustomMaterialFrom(Renderer.scene!, texture, BASE_EQUIP_MATERIAL_PATH + "armors/", texture + ".png", 1 / (matCols * 2), 1 / (matRows * 2), false, {
             metallic: 1.0,
             roughness: 0.75,
             directIntensity: 1.5,
             environmentIntensity: 1,
         })
+        return mat
     }
 }
 

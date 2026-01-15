@@ -76,6 +76,9 @@ export const Materials = {
 
     createBlockMat1(scene: Scene): PBRCustomMaterial {
         const material = this.getPBRCustomMaterial(scene, "sym_block_mats1", this.BASE_PATH, 'block_materials1.png', 1 / 16, 1 / 16, false)
+        material.bumpTexture = new Texture(this.BASE_PATH + 'block_materials1_norm.png', scene)
+        material.bumpTexture.uScale = 1 / 16
+        material.bumpTexture.vScale = 1 / 16
         return material
     },
 

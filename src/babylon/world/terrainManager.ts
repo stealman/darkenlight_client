@@ -55,8 +55,8 @@ export const TerrainManager = {
         const planeMatrices = []
         const planeUvData = []
 
-        for (let x = Math.max(0, myPos.x + ViewportManager.minX); x <= Math.min(blockMap.length, myPos.x + ViewportManager.maxX); x++) {
-            for (let z = Math.max(0, myPos.z + ViewportManager.minZ); z <= Math.min(blockMap.length, myPos.z + ViewportManager.maxZ); z++) {
+        for (let x = Math.max(0, myPos.x + ViewportManager.minX); x <= Math.min(blockMap.length -1, myPos.x + ViewportManager.maxX); x++) {
+            for (let z = Math.max(0, myPos.z + ViewportManager.minZ); z <= Math.min(blockMap.length - 1, myPos.z + ViewportManager.maxZ); z++) {
 
                 // Check if block is in visible matrix
                 if (!ViewportManager.isPointInVisibleMatrix(x, z, 2)) {

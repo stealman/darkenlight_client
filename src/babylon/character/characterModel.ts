@@ -302,10 +302,10 @@ export class CharacterModel implements EquipBearer {
     }
 
     /**
-     * Approximate model Y position to the player Y position
+     * Approximate model to the player position
      */
     moveModel(timeRate: number) {
-        const approximationSpeed = this.parent == MyPlayer.myChar ? 25 : 8
+        const approximationSpeed = this.parent == MyPlayer.myChar ? 12 : 8
         this.node.position.x += (this.parent.pos.x - this.node.position.x) * approximationSpeed * timeRate
         this.node.position.z += (this.parent.pos.z - this.node.position.z) * approximationSpeed * timeRate
         this.node.position.y += (this.parent.logicYpos - this.node.position.y) * this.parent.yMoveSpeed * timeRate

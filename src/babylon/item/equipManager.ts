@@ -301,7 +301,6 @@ export const EquipManager = {
 
                 type.uvBuffer[i * 2] = item.matVector.x
                 type.uvBuffer[i * 2 + 1] = item.matVector.y
-
                 i++
             })
 
@@ -316,7 +315,6 @@ export const EquipManager = {
 export interface EquipBearer {
     worldMatrix: Matrix
     rotationQuaternion: Quaternion
-
     getOwnerId(): number
     getWeaponTipPosition(): Vector3 | null
     getWeaponScale(): Vector3
