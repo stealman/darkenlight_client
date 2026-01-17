@@ -114,6 +114,6 @@ export const CharacterManager = {
     },
 
     isCharInViewport(char: Character) {
-        return ViewportManager.isPointInVisibleMatrix(Math.floor(char.pos.x), Math.floor(char.pos.z), 2)
+        return ViewportManager.isPointInVisibleMatrix(Math.floor(char.pos.x), Math.floor(char.pos.z), 1)
     },
 }

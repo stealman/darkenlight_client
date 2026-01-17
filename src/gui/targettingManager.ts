@@ -1,6 +1,5 @@
 import { MonsterManager } from '@/babylon/monsters/monsterManager'
 import { Ray, Vector3 } from '@babylonjs/core'
-import { Monster } from '@/babylon/monsters/monster'
 import { OverlayManager } from '@/gui/overlayManager'
 import { Connector } from '@/network/connector'
 import { SelectAutoAttackTarget } from '@/network/messages'
@@ -9,11 +8,12 @@ import { OnScreenMessageManager } from '@/gui/onScreenMessageManager'
 import { Settings } from '@/settings/settings'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { MyPlayer } from '@/data/myPlayer'
-import Character from '@/babylon/character/character'
+import { CharacterManager } from '@/babylon/character/characterManager'
 
 export const TargetingManager = {
     selectedTarget: null as Targetable | null,
-    targetSprite: null as HTMLCanvasElement,
+    targetSpriteEnemy: null as HTMLCanvasElement,
+    targetSpriteAlly: null as HTMLCanvasElement,
 
     targetCycleIndex: -1,
     lastCycleTime: 0 as number,
@@ -23,7 +23,7 @@ export const TargetingManager = {
     lastAutoTargetTime: 0 as number,
 
     async initialize() {
-        this.prepareTargetSprite()
+        this.prepareTargetSprites()
         this.selectedTarget = null
         this.autoTargetingEnabled = Settings.autoTarget
     },
@@ -91,7 +91,7 @@ export const TargetingManager = {
     },
 
     resolvePickRay(ray: Ray, useSphere: boolean = false) {
-        let target: Monster | Character | null = null
+        let target: Targetable | null = null
         MonsterManager.monsters.forEach((monster) => {
             if (MonsterManager.visibleMonsters.has(monster.id)) {
                 if (!monster.model?.mesh) return
@@ -113,6 +113,24 @@ export const TargetingManager = {
             }
         })
 
+        CharacterManager.characters.forEach((char) => {
+            if (char == MyPlayer.myChar || !char.model?.model) return
+
+            if (!useSphere) {
+                const bbox = char.model.model.getChildMeshes()[0].getBoundingInfo().boundingBox
+                const min = bbox.minimumWorld
+                const max = bbox.maximumWorld
+                if (ray.intersectsBoxMinMax(min, max)) {
+                    target = char
+                }
+            } else {
+                const sphere = char.model.model.getBoundingInfo().boundingSphere
+                if (ray.intersectsSphere({ center: sphere.centerWorld, radius: sphere.radiusWorld * 2 } as any)) {
+                    target = char
+                }
+            }
+        })
+
         if (!useSphere && (target == null || target === this.selectedTarget)) {
             this.resolvePickRay(ray, true)
         } else if (target != null) {
@@ -121,11 +139,12 @@ export const TargetingManager = {
         }
     },
 
-    setSelectedTarget(target: Targetable | null) {
+    setSelectedTarget(target: Targetable) {
         this.selectedTarget = target
         OverlayManager.targetSelected(target!)
+        target.nameDisplayTime = Date.now() + 1000
 
-        if (this.selectedTarget && MyPlayer.aaActive) {
+        if (this.selectedTarget.getRelationToMyPlayer() === 'ENEMY' && this.selectedTarget && MyPlayer.aaActive) {
             Connector.sendMessage(new SelectAutoAttackTarget(this.selectedTarget!.id, this.selectedTarget!.getObjectType()))
         }
     },
@@ -135,19 +154,31 @@ export const TargetingManager = {
         OverlayManager.unselectTarget()
     },
 
-    getTargetSprite(): HTMLCanvasElement | null {
-        return this.targetSprite
+    getTargetSpriteEnemy(): HTMLCanvasElement | null {
+        return this.targetSpriteEnemy
+    },
+
+    getTargetSpriteAlly(): HTMLCanvasElement | null {
+        return this.targetSpriteAlly
     },
 
     resetCycleIndex() {
         this.targetCycleIndex = -1
     },
 
-    prepareTargetSprite() {
-        if (this.targetSprite != null) {
-            this.targetSprite.remove()
+    prepareTargetSprites(): HTMLCanvasElement {
+        if (this.targetSpriteEnemy != null) {
+            this.targetSpriteEnemy.remove()
         }
+        this.targetSpriteEnemy = this.createTargetSprites( '#f08f56')
+        if (this.targetSpriteAlly != null) {
+            this.targetSpriteAlly.remove()
+        }
+        this.targetSpriteAlly = this.createTargetSprites( '#56baff')
+        return this.targetSpriteEnemy
+    },
 
+    createTargetSprites(color: string): HTMLCanvasElement {
         const sprite = document.createElement('canvas');
         const dpr = window.devicePixelRatio || 1;
         const size = 16 / dpr;
@@ -158,7 +189,7 @@ export const TargetingManager = {
         sprite.height = size * 2 + margin;
 
         const ctx = sprite.getContext('2d')!;
-        ctx.strokeStyle = '#FF2222';
+        ctx.strokeStyle = color;
         ctx.lineWidth = 3;
 
         ctx.beginPath();
@@ -173,13 +204,14 @@ export const TargetingManager = {
         ctx.lineTo(sprite.width - margin/2, sprite.height/2 + size);
         ctx.stroke();
 
-        this.targetSprite = sprite;
+        return sprite;
     },
 }
 
 export interface Targetable {
     pos: Vector3
     id: number
+    nameDisplayTime: number
     getPositionOnScreen(): { x: number, y: number } | null
     getBoxSize() : number
     getName() : string
@@ -187,4 +219,5 @@ export interface Targetable {
     getNameTextNodeScreenPosition()
     getObjectType(): string
     getSplatType(): SplatType
+    getRelationToMyPlayer(): 'ALLY' | 'ENEMY' | 'NEUTRAL'
 }

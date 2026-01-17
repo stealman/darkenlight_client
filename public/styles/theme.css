@@ -1,13 +1,23 @@
 :root {
-    --dialog-color: #1abcbc;
-    --dialog-color-dark: #056c6c;
-    --dialog-glow: #108095;
-    --dialog-bg: rgba(10, 20, 20, 0.85);
+    /* Text */
+    --ui-text: #e6dcc6;
+    --ui-text-muted: #b8ad93;
+    --ui-text-dark: #8e846d;
+    --ui-text-enemy: #f08f56;
+    --ui-text-ally: #56aaff;
 
-    --panel-color: #8abcfc;
-    --panel-color-dark: #458cbc;
-    --panel-glow: #1060a0;
-    --panel-bg: rgba(10, 20, 40, 0.85);
+    /* Dialogy */
+    --dialog-color: #b08f56;        /* bronz, méně žlutý */
+    --dialog-color-dark: #6b4a22;   /* tmavý bronz */
+    --dialog-glow: #444;         /* hnědý kovový glow */
+    --dialog-bg: rgba(20, 15, 10, 0.93); /* tmavé dřevo */
+
+    /* Panely */
+    --panel-color: #9e7f4a;         /* starý bronz */
+    --panel-color-dark: #3f2b16;    /* tmavé dřevo */
+    --panel-glow: #7a5a2a;
+    --panel-bg: rgba(17, 13, 9, 0.96);
+
 }
 
 .text-warning {
@@ -33,7 +43,7 @@
 /* dialog window */
 .dialog-window {
     background: var(--dialog-bg);
-    border-radius: 8px;
+    border-radius: 6px;
     padding: 10px;
     padding-top: 0;
     width: 600px;
@@ -42,8 +52,8 @@
     max-height: 75%;
     box-shadow: 0 0 20px var(--dialog-glow), 0 0 40px rgba(0,0,0,0.4);
     text-align: center;
-    color: #fff;
-    border: 1px solid var(--dialog-color);
+    color: var(--ui-text);
+    border: 1px solid var(--dialog-color-dark);
     animation: scaleIn 0.25s ease;
 }
 
@@ -158,6 +168,7 @@
     text-align: right;
     padding-right: 20px;
     width: 120px;
+    color: var(--ui-text);
 }
 
 .dialog-content input[type="text"],

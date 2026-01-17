@@ -20,15 +20,15 @@ export const MonsterManager = {
         await MonsterLoader.initialize()
     },
 
-    addMonster (id: number, type: number, position: { x: number, z: number }, hp: number, mv: number[] | undefined) {
+    addMonster (id: number, type: number, position: { x: number, z: number }, hpp: number, mv: number[] | undefined) {
         if (this.monsters.has(id)) {
             const mob = this.monsters.get(id)
             mob!.pos.x = position.x
             mob!.pos.z = position.z
-            mob!.hp = hp
+            mob!.hpPercent = hpp
         } else {
             const monsterType: MonsterType = MonsterCodebook.getMonsterTypeById(type)
-            const monster = new Monster(id, monsterType, position.x, position.z, hp)
+            const monster = new Monster(id, monsterType, position.x, position.z, hpp)
             const monsterModel = new MonsterModel(monsterType, monster)
             monster.model = monsterModel
 

@@ -18,6 +18,7 @@ export class Monster implements Attackable {
     targetPoint: Vector3 | null = null
 
     hp: number
+    hpPercent: number = 100
     killedTime: number = 0
     runSpeed: number = 0
     rotationSpeed: number = 8
@@ -33,10 +34,12 @@ export class Monster implements Attackable {
     autoAttackEnd: number = 0
     autoAttackSoundPlayed: boolean = false
 
-    constructor(id: number, mobType: MonsterType, xPos: number, zPos: number, hp: number) {
+    nameDisplayTime: number = 0
+
+    constructor(id: number, mobType: MonsterType, xPos: number, zPos: number, hpp: number) {
         this.id = id
         this.mobType = mobType
-        this.hp = hp
+        this.hpPercent = hpp
         this.pos = new Vector3(xPos, 0, zPos)
         this.logicYpos = Utils.calculateYPos(this.pos.x, this.pos.z, 0.4)
         this.pos.y = this.logicYpos
@@ -77,9 +80,10 @@ export class Monster implements Attackable {
         if (!target) {
             return
         }
-        if (data.res.hit === 'h') {
+        target.hpPercent = data.res.hpp
+        if (data.res.h === 'h') {
             AudioManager.playWeaponHit(this.getWeaponSoundType(), target.getBodySoundType())
-        } else if (data.res.hit === 'b' && target.getParrySoundType()) {
+        } else if (data.res.h === 'b' && target.getParrySoundType()) {
             AudioManager.playWeaponBlocked(target.getParrySoundType()!)
         }
     }
@@ -175,6 +179,10 @@ export class Monster implements Attackable {
 
     getObjectType(): string {
         return "M"
+    }
+
+    getRelationToMyPlayer(): 'ALLY' | 'ENEMY' | 'NEUTRAL' {
+        return 'ENEMY'
     }
 
     getWeaponSoundType(): string {

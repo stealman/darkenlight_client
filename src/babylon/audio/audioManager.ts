@@ -1,13 +1,19 @@
-import { Scene, Sound } from '@babylonjs/core'
+import { Engine, Scene, Sound } from '@babylonjs/core'
 import { Utils } from '@/utils/utils'
+import { Settings } from '@/settings/settings'
 
 export const AudioManager = {
+    globalVolume: 0.5,
+
     BASE_PATH: './sounds/',
     BASE_PATH_SFX: './sounds/sfx/',
+    BASE_PATH_AMBIENT: './sounds/ambient/',
     BASE_PATH_MONSTER: './sounds/monster/',
     BASE_PATH_GUI: './sounds/gui/',
+
     footStepSounds: new Map<string, Sound>(),
     deathRattleSounds: new Map<string, Sound>(),
+    ambientSounds: new Map<string, Sound>(),
 
     swordSwingSounds: [] as Sound[],
     swordHitHardSounds: [] as Sound[],
@@ -17,7 +23,11 @@ export const AudioManager = {
 
     guiButtonClickSound: null as Sound | null,
 
+    actualAmbientSound: null as Sound | null,
+
     initialize(scene: Scene) {
+        this.globalVolume = Settings.volume / 10;
+
         this.footStepSounds.set(FootStepTypes.SNOW, new Sound("footStepSnow", AudioManager.BASE_PATH_SFX + "steps-snow.ogg", scene, function() {
             AudioManager.footStepSounds.get(FootStepTypes.SNOW)!['loaded'] = true;
         }, {
@@ -33,6 +43,8 @@ export const AudioManager = {
             playbackRate: 1,
             loop: true,
         }))
+
+        // Battle sounds
         this.loadSoundArray(this.swordSwingSounds, ["swing1.ogg", "swing2.ogg", "swing3.ogg"], "swordSwingSound", scene, { volume: 1, playbackRate: 1 } );
         this.loadSoundArray(this.swordHitMetalSounds, ["hit-sword-metal1.ogg"], "swordHitMetalSound", scene, { volume: 0.5, playbackRate: 1 } );
         this.loadSoundArray(this.swordHitHardSounds, ["hit-sword-hard1.ogg", "hit-sword-hard2.ogg"], "swordHitHardSound", scene, { volume: 0.5, playbackRate: 1.1 } );
@@ -43,12 +55,31 @@ export const AudioManager = {
         this.loadDeathRattleSound(MonsterSoundTypes.SKELETON, "death-skeleton.ogg", scene, { volume: 1.2, playbackRate: 0.85 } );
         this.loadDeathRattleSound(MonsterSoundTypes.CAT, "death-cat.ogg", scene, { volume: 0.6, playbackRate: 1 } );
 
+        // Ambient sounds
+        this.loadAmbientSound("WINTER-FOREST", "winter-forest.ogg", scene, { volume: 1, playbackRate: 1, loop: true } );
+        this.actualAmbientSound = this.ambientSounds.get("WINTER-FOREST")!;
+
         this.guiButtonClickSound = new Sound("guiButtonClick", AudioManager.BASE_PATH_GUI + "button-click.ogg", scene, function() {
             AudioManager.guiButtonClickSound!['loaded'] = true;
         }, {
-            volume: 1.5,
+            volume: 1.25,
             playbackRate: 1,
         });
+
+        Engine.audioEngine?.setGlobalVolume(this.globalVolume)
+    },
+
+    processOneFrame() {
+        // If actual ambient sound is not playing, play it
+        if (this.actualAmbientSound && !this.actualAmbientSound.isPlaying) {
+            this.actualAmbientSound.play();
+        }
+    },
+
+    stopAmbientSound() {
+        if (this.actualAmbientSound && this.actualAmbientSound.isPlaying) {
+            this.actualAmbientSound.stop();
+        }
     },
 
     loadSoundArray(targetArray: [Sound], fileNames: string[], soundName: string, scene: Scene, options: { volume: number, playbackRate: number }): Sound[] {
@@ -65,6 +96,13 @@ export const AudioManager = {
             sound['loaded'] = true;
         }, options);
         this.deathRattleSounds.set(type, sound);
+    },
+
+    loadAmbientSound (type: string, fileName: string, scene: Scene, options: { volume: number, playbackRate: number, loop: boolean }) {
+        const sound = new Sound("ambientSound" + type, AudioManager.BASE_PATH_AMBIENT + fileName, scene, function() {
+            sound['loaded'] = true;
+        }, options);
+        this.ambientSounds.set(type, sound);
     },
 
     playWeaponSwing(type: string) {
@@ -122,7 +160,7 @@ export const AudioManager = {
         if (this.guiButtonClickSound && this.guiButtonClickSound['loaded']) {
             this.guiButtonClickSound.play();
         }
-    }
+    },
 }
 
 export const FootStepTypes = {

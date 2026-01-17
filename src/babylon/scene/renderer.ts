@@ -28,7 +28,7 @@ import { Lights } from '@/babylon/scene/lights'
 import { FightSplatsRenderer } from '@/babylon/world/fightSplatsRenderer'
 import { OnScreenMessageManager } from '@/gui/onScreenMessageManager'
 import { CharacterManager } from '@/babylon/character/characterManager'
-import { Utils } from '@/utils/utils'
+import { SelectedTargetPanel } from '@/gui/selectedTargetPanel'
 
 /**
  * Main Renderer
@@ -44,7 +44,6 @@ export const Renderer = {
     frame: 0 as number,
     animationSpeedRatio: 1 as number,
     pendingMatFreeze: false as boolean,
-
 
     async initialize(canvas: HTMLCanvasElement) {
         this.canvas = canvas
@@ -76,11 +75,12 @@ export const Renderer = {
         WeatherManager.initialize()
         StepMarksRenderer.initialize(this.scene)
         FightSplatsRenderer.initialize(this.scene)
+        SelectedTargetPanel.initialize()
         await OverlayManager.initialize()
         await TargetingManager.initialize()
 
         // Debug layer
-        if (true) {
+        if (false) {
             this.scene.debugLayer.show({
                 embedMode: true
             })
@@ -102,6 +102,7 @@ export const Renderer = {
         this.camera = null
         this.engine?.dispose()
         this.initialize(this.canvas!)
+        AudioManager.stopAmbientSound()
     },
 
     /**
@@ -136,10 +137,13 @@ export const Renderer = {
 
             EquipManager.onFrame()
             TargetingManager.onFrame(timeRate, actualTime)
-            OverlayManager.onFrame(timeRate, actualTime)
             OnScreenMessageManager.onFrame(actualTime)
-
             if (GMManager.gmPanelVisible) GMManager.onFrame(timeRate, actualTime)
+        }
+
+        if (this.frame % 2 === 0) {
+            OverlayManager.onFrame(timeRate, actualTime)
+            SelectedTargetPanel.onFrame(actualTime)
         }
 
         if (this.frame % 10 === 0) {
@@ -151,6 +155,7 @@ export const Renderer = {
         if (this.frame % 60 === 0) {
             MiniMap.updateMiniMap()
             WeatherManager.update()
+            AudioManager.processOneFrame()
         }
 
         if (this.frame % 600 === 0) {

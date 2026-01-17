@@ -79,6 +79,7 @@ export class MonsterModel implements EquipBearer {
 
         this.node.position.x = this.parent.pos.x
         this.node.position.z = this.parent.pos.z
+        this.parent.nameDisplayTime = Date.now() + 3000
     }
 
     assignRhand(type: number, matIndex: number, scale = Vector3.One(), rotation: Vector3 | null, position: Vector3 | null) {
@@ -221,11 +222,12 @@ export class MonsterModel implements EquipBearer {
 
     addToView() {
         if (!this.initialized) this.initializeModel()
-
         MonsterLoader.monsterTemplates.get(this.template.id)?.activateClone(this.template)
         this.equipSet.forEach(item => {
             EquipManager.addEquippedItem(item)
         })
+
+        this.parent.nameDisplayTime = Date.now() + 3000
     }
 
     removeFromView() {

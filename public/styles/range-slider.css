@@ -15,7 +15,7 @@
     width: 16px;
     height: 16px;
     border-radius: 50%;
-    background: #1abc9c;   /* tyrkysový jezdec */
+    background: var(--dialog-color);
     cursor: pointer;
 }
 

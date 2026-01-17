@@ -2,6 +2,9 @@ import { Targetable, TargetingManager } from '@/gui/targettingManager'
 import { Renderer } from '@/babylon/scene/renderer'
 import { Vector3 } from '@babylonjs/core'
 import { CanvasTextUtils } from '@/gui/canvasTextUtils'
+import { MonsterManager } from '@/babylon/monsters/monsterManager'
+import { ViewportManager } from '@/utils/viewport'
+import { CharacterManager } from '@/babylon/character/characterManager'
 
 export const OverlayManager = {
     overlayCanvas: null as HTMLCanvasElement,
@@ -28,16 +31,63 @@ export const OverlayManager = {
         this.overlayCtx!.clearRect(0, 0, this.overlayCanvas.width, this.overlayCanvas.height)
         TargetSelector.onFrame(timeRate, time, this.overlayCtx!)
         this.renderNames(time, Math.abs(this.letterSpacingFix) > 0)
+        this.renderDamagedBars()
     },
 
     renderNames(time: number, tightText: boolean) {
-        if (!TargetSelector.target || time > TargetSelector.selectedTime + 1000) return
-        const screenPos = TargetSelector.target.getNameTextNodeScreenPosition()
-        if (!screenPos) return
+        MonsterManager.monsters.forEach(monster => {
+            if (monster.nameDisplayTime > time) {
+                const pos = monster.getNameTextNodeScreenPosition()
+                if (pos) {
+                    this.renderName(pos, monster.mobType.name, tightText, monster.getRelationToMyPlayer())
+                }
+            }
+        })
 
+        CharacterManager.characters.forEach(char => {
+            if (char.nameDisplayTime > time) {
+                const pos = char.getNameTextNodeScreenPosition()
+                if (pos) {
+                    this.renderName(pos, char.name, tightText, char.getRelationToMyPlayer())
+                }
+            }
+        })
+    },
+
+    renderDamagedBars() {
+        MonsterManager.monsters.forEach(monster => {
+            if (!MonsterManager.visibleMonsters.has(monster.id)) {
+                return
+            }
+            if (monster.hpPercent < 100) {
+                const pos = monster.getNameTextNodeScreenPosition()
+                if (pos) {
+                    this.renderDamagedBar(pos, monster.hpPercent)
+                }
+            }
+        })
+    },
+
+    renderDamagedBar(pos: Vector3, percent: number) {
         const ctx = this.overlayCtx!
-        const name = TargetSelector.target.getName()
+        const barWidth = 50
+        const barHeight = 6
 
+        const x = pos.x - barWidth / 2
+        const y = pos.y -2
+
+        // Background
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)'
+        ctx.fillRect(x, y, barWidth, barHeight)
+
+        // Fill
+        const fillWidth = (barWidth - 2) * (percent / 100)
+        ctx.fillStyle = 'rgba(200, 32, 32, 0.65)'
+        ctx.fillRect(x + 1, y + 1, fillWidth, barHeight - 2)
+    },
+
+    renderName(pos: Vector3, name: string, tightText: boolean, relation: 'ALLY' | 'ENEMY' | 'NEUTRAL') {
+        const ctx = this.overlayCtx!
         ctx.font = `${this.fontSize}px "Roboto", Arial, sans-serif`
         ctx.fontKerning = 'normal'
         ctx.textBaseline = 'middle'
@@ -49,8 +99,10 @@ export const OverlayManager = {
         const textWidth = CanvasTextUtils.getTextWidth(ctx, name, tightText, spacingFix)
         const textHeight = this.fontSize
 
-        const x = screenPos.x
-        const y = screenPos.y - 3
+        ViewportManager.movePositionToScreen(pos, textWidth / 2, textHeight + 10)
+
+        const x = pos.x
+        const y = pos.y - 3
 
         // Background
         ctx.fillStyle = 'rgba(0, 0, 0, 0.35)'
@@ -61,7 +113,20 @@ export const OverlayManager = {
             textHeight + paddingY * 2
         )
         // Text
-        ctx.fillStyle = '#FF2222'
+        //ctx.fillStyle = '#f08f56'
+
+        switch (relation) {
+            case 'ALLY':
+                ctx.fillStyle = '#56aaff'
+                break
+            case 'ENEMY':
+                ctx.fillStyle = '#f08f56'
+                break
+            case 'NEUTRAL':
+                ctx.fillStyle = '#aaa'
+                break
+        }
+
         if (tightText) {
             CanvasTextUtils.drawText(ctx, name, x - textWidth / 2, y -3, true, spacingFix)
         } else {
@@ -98,7 +163,7 @@ const TargetSelector = {
             return
         }
         const screenPos = this.target.getPositionOnScreen()
-        const sprite = TargetingManager.getTargetSprite()
+        const sprite = this.target.getRelationToMyPlayer() === 'ENEMY' ? TargetingManager.getTargetSpriteEnemy() : TargetingManager.getTargetSpriteAlly()
         if (!sprite || !screenPos) {
             return
         }

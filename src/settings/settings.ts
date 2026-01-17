@@ -32,6 +32,7 @@ export const Settings = {
     mouseEnabled: false,
 
     brightness: 5,
+    volume: 5,
     targetMarkerOpacity: 1,
     displayGlow: true as boolean,
 
@@ -79,6 +80,7 @@ export const Settings = {
             joystickLeft: 120,
 
             brightness: 5,
+            volume: 5,
             displayGlow: !Settings.touchEnabled,
             targetMarkerOpacity: 1,
             hudSize: 1,

@@ -53,8 +53,10 @@ body {
     right: 0px;
     background-color: black;
     opacity: 0.65;
-    border-left: 2px ridge rosybrown;
-    border-bottom: 2px ridge rosybrown;
+    border: 1px solid rgba(128, 128, 128, 0.75);
+    border-radius: 0px 0px 6px 6px;
+    padding: 2px;
+    box-shadow: -3px 5px 3px rgba(0,0,0,0.15);
 }
 
 .top-bar {

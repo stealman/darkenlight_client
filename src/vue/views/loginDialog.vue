@@ -10,7 +10,7 @@
                     <tr>
                         <td class="item-label" style="width: 25%">Jméno</td>
                         <td  style="width: 25%">
-                            <input id="username" v-model="charName" type="text" @keydown="clearLoginAndPassword" />
+                            <input id="username" style='color: var(--ui-text);' v-model="charName" type="text" @keydown="clearLoginAndPassword" />
                         </td>
                     </tr>
                     </tbody>
@@ -26,7 +26,7 @@
                     <tr>
                         <td class="item-label" style="width: 25%">Login</td>
                         <td  style="width: 25%">
-                            <input v-model="login" type="text" @keydown="clearCharName" />
+                            <input style='color: var(--ui-text);' v-model="login" type="text" @keydown="clearCharName" />
                         </td>
                     </tr>
 
@@ -34,7 +34,7 @@
                         <td class="item-label" style="width: 25%">Heslo</td>
                         <td  style="width: 25%">
                             <div class="relative mt-2">
-                                <input type="password" v-model="password" />
+                                <input style='color: var(--ui-text);' type="password" v-model="password" />
                             </div>
                         </td>
                     </tr>

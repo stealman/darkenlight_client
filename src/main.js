@@ -11,6 +11,7 @@ import './../public/styles/theme.css';
 import './../public/styles/icons.css';
 import './../public/styles/range-slider.css';
 import './../public/styles/onscreen-messages.css';
+import './../public/styles/selected-target.css';
 
 import './../public/styles/gm.css';
 

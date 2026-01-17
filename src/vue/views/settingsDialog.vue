@@ -56,7 +56,7 @@
                 <!-- Grafika -->
                 <div v-if="activeTabId == 2" >
 
-                    Úroveň detailů grafiky.
+                    <label>Úroveň detailů grafiky.</label>
                     <div class="dialog-actions" style="margin-top: 20px;">
                         <button class="dialog-button" :class="storedSettings.detailLevel.name == 'HIGH' ? 'selected' : ''" @click="setDetailsLevel('HIGH')">Vysoká</button>
                         <button class="dialog-button" :class="storedSettings.detailLevel.name == 'MEDIUM' ? 'selected' : ''" @click="setDetailsLevel('MEDIUM')">Střední</button>

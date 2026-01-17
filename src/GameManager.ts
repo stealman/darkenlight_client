@@ -44,11 +44,13 @@ export const GameManager = {
         Renderer.engine!.resize();
         OverlayManager.onResize()
         ViewportManager.onResize()
-        TargetingManager.prepareTargetSprite()
+        TargetingManager.prepareTargetSprites()
     }
 }
 
 export interface Attackable extends Targetable {
+    hpPercent: number
+
     getWeaponSoundType(): string
     getBodySoundType(): string
     getParrySoundType(): string | null

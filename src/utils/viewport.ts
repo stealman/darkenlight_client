@@ -224,5 +224,29 @@ export const ViewportManager = {
         return Vector3.Project(
             pos, Matrix.Identity(), scene.getTransformMatrix(), camera.viewport.toGlobal(engine.getRenderWidth(), engine.getRenderHeight())
         )
+    },
+
+    /**
+     * If position is out of screen bounds, move it to nearest edge
+     * @param screenPos
+     */
+    movePositionToScreen(screenPos: Vector3, xPad: number, yPad: number) {
+        let x = screenPos.x
+        let y = screenPos.y
+
+        if (x < xPad) {
+            x = xPad
+        } else if (x > this.viewportWidth - xPad) {
+            x = this.viewportWidth - xPad
+        }
+
+        if (y < yPad) {
+            y = yPad
+        } else if (y > this.viewportHeight) {
+            y = this.viewportHeight
+        }
+
+        screenPos.x = x
+        screenPos.y = y
     }
 }

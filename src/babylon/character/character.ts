@@ -23,7 +23,9 @@ class Character implements Attackable {
 
     id: number = 1
     hp: number
+    hpPercent: number = 100
     name: string = "Player"
+    nameDisplayTime: number = 0
     className: string = "Warrior"
     walkSpeed: number = 2
     runSpeed: number = 3.2
@@ -138,10 +140,10 @@ class Character implements Attackable {
         if (!target) {
             return
         }
-
-        if (data.res.hit === 'h') {
+        target.hpPercent = data.res.hpp
+        if (data.res.h === 'h') {
             AudioManager.playWeaponHit(this.weaponSoundType, target.getBodySoundType())
-        } else if (data.res.hit === 'b' && target.getParrySoundType()) {
+        } else if (data.res.h === 'b' && target.getParrySoundType()) {
             AudioManager.playWeaponBlocked(target.getParrySoundType()!)
         }
     }
@@ -233,12 +235,19 @@ class Character implements Attackable {
         return 2
     }
 
-    getNameTextNodeScreenPosition() {
-        return ViewportManager.getPositionOnScreen(this.pos)
+    getNameTextNodeScreenPosition(): Vector3 | null {
+        if (!this.model) {
+            return null
+        }
+        return ViewportManager.getPositionOnScreen(this.model.getNameTextNodeWorldPosition())
     }
 
     getObjectType(): string {
         return "C"
+    }
+
+    getRelationToMyPlayer(): 'ALLY' | 'ENEMY' | 'NEUTRAL' {
+        return 'ALLY'
     }
 
     getWeaponSoundType(): string {

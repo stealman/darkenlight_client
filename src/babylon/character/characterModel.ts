@@ -18,6 +18,7 @@ import { BabylonUtils } from '@/babylon/utils'
 export class CharacterModel implements EquipBearer {
     parent: Character
     node: TransformNode = new TransformNode("characterModelNode")
+    nameTextNode: TransformNode
     initialized: boolean = false
 
     model: AbstractMesh | undefined
@@ -52,6 +53,7 @@ export class CharacterModel implements EquipBearer {
     constructor(parent: Character) {
         this.parent = parent
         this.node.position.copyFrom((this.parent.pos))
+        this.nameTextNode = new TransformNode("nameTextNode" + this.parent.id)
     }
 
     static async create(data: Character, init: boolean): Promise<CharacterModel> {
@@ -71,6 +73,10 @@ export class CharacterModel implements EquipBearer {
             this.model.parent = this.node
             this.model.scaling = new Vector3(0.25, 0.25, 0.25)
             this.model.rotation = new Vector3(0, 0, 0)
+
+            this.nameTextNode.parent = this.node
+            this.nameTextNode.position.y = this.parent.getModelHeight()
+            this.parent.nameDisplayTime = Date.now() + 3000
 
             // Apply material
             const material = Materials.getPBRMaterial(Renderer.scene, "steveMaterial", "/models/steve/steve.jpg", false, false,  {
@@ -358,6 +364,13 @@ export class CharacterModel implements EquipBearer {
         return this.parent.id
     }
 
+    getNameTextNodeWorldPosition(): Vector3 {
+        const worldMatrix = this.nameTextNode.getWorldMatrix()
+        const position = new Vector3()
+        worldMatrix.decompose(undefined, undefined, position)
+        return position
+    }
+
     getWeaponScale(): Vector3 | undefined {
         return BabylonUtils.getSymVector(1.5)
     }
@@ -375,6 +388,7 @@ export class CharacterModel implements EquipBearer {
                 item.createSwordParticles(this.rhandNode)
             }
         })
+        this.parent.nameDisplayTime = Date.now() + 3000
     }
 
     removeFromView() {

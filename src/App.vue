@@ -102,6 +102,7 @@ import {
 import { Settings } from '@/settings/settings'
 import { TargetingManager } from '@/gui/targettingManager'
 import { MyPlayer } from '@/data/myPlayer'
+import { AudioManager } from '@/babylon/audio/audioManager'
 
 const canvas = ref<HTMLCanvasElement | null>(null)
 const miniMapCanvas = ref<HTMLCanvasElement | null>(null)
@@ -173,6 +174,7 @@ const loginRequestSent = () => {
 }
 
 const showSettingsDialog = () => {
+    AudioManager.playGuiButtonClick()
     displaySettingsDialog.value = true;
 }
 
