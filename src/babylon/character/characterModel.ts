@@ -145,7 +145,7 @@ export class CharacterModel implements EquipBearer {
         this.assignRightLeg(400, 0)
         this.assignLeftLeg(400, 0)
 
-        this.assignWeapon(2, 1)
+        this.assignWeapon(3, 0)
         this.initialized = true
     }
 
@@ -174,7 +174,7 @@ export class CharacterModel implements EquipBearer {
     }
 
     assignWeapon(type: number, matIndex: number) {
-        this.weaponEquipItem = new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.009")!, null, null, null, true)
+        this.weaponEquipItem = new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.009")!, null, null, null)
         //this.weaponEquipItem.createSwordParticles(this.rhandNode)
         this.addEquippedItem(this.weaponEquipItem)
     }

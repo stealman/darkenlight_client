@@ -6,8 +6,8 @@ import {
     SceneLoader, Texture, TrailMesh, TransformNode, Vector2, Vector3
 } from '@babylonjs/core'
 import { PBRCustomMaterial } from '@babylonjs/materials'
-import { WeaponsCbManager } from '@/babylon/item/codebook/weaponsCb'
-import { ArmorsCbManager } from '@/babylon/item/codebook/armorsCb'
+import { WeaponsCbManager } from '@/babylon/item/codebook/weaponModelsCb'
+import { ArmorsCbManager } from '@/babylon/item/codebook/armorsModelsCb'
 import { EquipCbItem } from '@/babylon/item/codebook/equipCbItem'
 import { Renderer } from '@/babylon/scene/renderer'
 import { Materials } from '@/babylon/materials'
@@ -36,14 +36,14 @@ export class EquipItem {
     private parentRotMatrix = new Matrix()
     private tmpOffset = new Vector3()
 
-    constructor(type: EquipItemType, matIndex: number, parent: EquipBearer, bone: Bone, scale: Vector3 | null, rotation: Vector3 | null, position: Vector3 | null, addWeaponTrail: boolean = false) {
+    constructor(type: EquipItemType, matIndex: number, parent: EquipBearer, bone: Bone, scale: Vector3 | null, rotation: Vector3 | null, position: Vector3 | null) {
         this.type = type
         this.parent = parent
         this.bone = bone
         this.scale = scale ? scale : Vector3.One()
         this.itemPosition = position ? position : Vector3.Zero()
         this.itemRotation = rotation ? Quaternion.FromEulerVector(rotation) : null
-        if (addWeaponTrail) {
+        if (this.type.cbData.weaponTipPosition) {
             this.weaponTrail = this.createWeaponTrail(this.bone)
         }
         this.matVector = this.getAtlasUvcOffsets(type.cbData.matCols, type.cbData.matRows, matIndex)

@@ -22,14 +22,14 @@ export const ArmorsCbManager = {
         this.matMetal = this.getMaterial(ARMOR_MATERIAL_METALIC, matMetalSize)
 
         // Init all armor types
-        map.set(CbArmorTypes.PLATE_ARMOR_MALE.id, await this.getItem(CbArmorTypes.PLATE_ARMOR_MALE, this.matMetal))
+        map.set(ArmorModelsCb.PLATE_ARMOR_MALE.id, await this.getItem(ArmorModelsCb.PLATE_ARMOR_MALE, this.matMetal))
 
-        map.set(CbArmorTypes.HELM_MALE.id, await this.getItem(CbArmorTypes.HELM_MALE, this.matMetal))
-        map.set(CbArmorTypes.HELM_MALE_CLOSED.id, await this.getItem(CbArmorTypes.HELM_MALE_CLOSED, this.matMetal))
+        map.set(ArmorModelsCb.HELM_MALE.id, await this.getItem(ArmorModelsCb.HELM_MALE, this.matMetal))
+        map.set(ArmorModelsCb.HELM_MALE_CLOSED.id, await this.getItem(ArmorModelsCb.HELM_MALE_CLOSED, this.matMetal))
 
-        map.set(CbArmorTypes.PAULDRON_MALE.id, await this.getItem(CbArmorTypes.PAULDRON_MALE, this.matMetal))
+        map.set(ArmorModelsCb.PAULDRON_MALE.id, await this.getItem(ArmorModelsCb.PAULDRON_MALE, this.matMetal))
 
-        map.set(CbArmorTypes.LEG_MALE.id, await this.getItem(CbArmorTypes.LEG_MALE, this.matMetal))
+        map.set(ArmorModelsCb.LEG_MALE.id, await this.getItem(ArmorModelsCb.LEG_MALE, this.matMetal))
     },
 
     async getItem(data: EquipCbItem, material: PBRCustomMaterial): Promise<EquipItemType> {
@@ -49,7 +49,7 @@ export const ArmorsCbManager = {
     }
 }
 
-export const CbArmorTypes = {
+export const ArmorModelsCb = {
     PLATE_ARMOR_MALE: new EquipCbItem(100, "male-armor-plate", new Vector3(-0.01, 0.65, 0.03), new Vector3(0.42, 0.42, 0.44), null, matMetalSize),
 
     HELM_MALE: new EquipCbItem(200, "male-helmet", new Vector3(0, 0.47, 0), BabylonUtils.getSymVector(0.45), null, matMetalSize),

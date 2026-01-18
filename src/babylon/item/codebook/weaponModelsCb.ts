@@ -4,7 +4,7 @@ import { EquipCbItem } from '@/babylon/item/codebook/equipCbItem'
 import { Renderer } from '@/babylon/scene/renderer'
 import { PBRCustomMaterial } from '@babylonjs/materials'
 import { Materials } from '@/babylon/materials'
-import { BASE_EQUIP_MATERIAL_PATH } from '@/babylon/item/codebook/armorsCb'
+import { BASE_EQUIP_MATERIAL_PATH } from '@/babylon/item/codebook/armorsModelsCb'
 
 const matBowSize = new Vector2(4, 1)
 const matLongswordSize = new Vector2(4, 1)
@@ -26,9 +26,9 @@ export const WeaponsCbManager = {
         this.longSwordMaterial = this.getMaterial("longsword", matLongswordSize)
         this.broadSwordMaterial = this.getMaterial("broadsword", matBroadswordSize)
 
-        map.set(WeaponsCb.LONGSWORD.id, await this.getItem(WeaponsCb.LONGSWORD, this.longSwordMaterial))
-        map.set(WeaponsCb.BROADSWORD.id, await this.getItem(WeaponsCb.BROADSWORD, this.broadSwordMaterial))
-        map.set(WeaponsCb.BOW.id, await this.getItem(WeaponsCb.BOW, this.bowMaterial))
+        map.set(WeaponModelsCb.LONGSWORD.id, await this.getItem(WeaponModelsCb.LONGSWORD, this.longSwordMaterial))
+        map.set(WeaponModelsCb.BROADSWORD.id, await this.getItem(WeaponModelsCb.BROADSWORD, this.broadSwordMaterial))
+        map.set(WeaponModelsCb.BOW.id, await this.getItem(WeaponModelsCb.BOW, this.bowMaterial))
     },
 
     async getItem(data: EquipCbItem, material: PBRCustomMaterial | null = null): Promise<EquipItemType> {
@@ -37,22 +37,22 @@ export const WeaponsCbManager = {
         return item
     },
 
-    getMaterial(texture: string, matSize: Vector2) {
+    getMaterial(texture: string, matSize: Vector2, invertV: boolean = true) {
         const mat = Materials.getPBRCustomMaterialFrom(Renderer.scene!, texture, BASE_EQUIP_MATERIAL_PATH + "weapons/", texture + ".png", 1 / matSize.x, 1 / matSize.y, false, {
             metallic: 0.25,
             roughness: 1,
             directIntensity: 1.5,
             environmentIntensity: 1,
         })
-        mat.albedoTexture.vScale = - mat.albedoTexture.vScale
+        if (invertV) mat.albedoTexture.vScale = - mat.albedoTexture.vScale
         return mat
     },
 }
 
-export const WeaponsCb = {
+export const WeaponModelsCb = {
     LONGSWORD: new EquipCbItem(1, "longsword", Vector3.Zero(), new Vector3(0.2, 0.24, 0.4), new Vector3(0, 2.4, 0), matLongswordSize),
 
     BROADSWORD: new EquipCbItem(2, "broadsword", Vector3.Zero(), new Vector3(0.22, 0.24, 0.4), new Vector3(0, 2, 0), matBroadswordSize),
 
-    BOW: new EquipCbItem(3, "bow", new Vector3(-0.1, 0, 0), new Vector3(0.17, 0.24, 0.4), new Vector3(0, 2, 0), matBowSize),
+    BOW: new EquipCbItem(3, "bow", new Vector3(-0.1, 0, 0), new Vector3(0.17, 0.24, 0.4), null, matBowSize),
 }
