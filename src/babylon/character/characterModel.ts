@@ -145,7 +145,7 @@ export class CharacterModel implements EquipBearer {
         this.assignRightLeg(400, 0)
         this.assignLeftLeg(400, 0)
 
-        this.assignWeapon(3, 0)
+        this.assignWeapon(2, 1)
         this.initialized = true
     }
 

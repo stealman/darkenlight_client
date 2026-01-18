@@ -7,21 +7,27 @@ import { Materials } from '@/babylon/materials'
 import { BASE_EQUIP_MATERIAL_PATH } from '@/babylon/item/codebook/armorsCb'
 
 const matBowSize = new Vector2(4, 1)
+const matLongswordSize = new Vector2(4, 1)
+const matBroadswordSize = new Vector2(4, 1)
 
 export const WeaponsCbManager = {
     BASE_WEAPONS_PATH: 'weapons/',
     itemSourceParent: null as TransformNode | null,
 
     bowMaterial: null as PBRCustomMaterial | null,
+    longSwordMaterial: null as PBRCustomMaterial | null,
+    broadSwordMaterial: null as PBRCustomMaterial | null,
 
     async initMelee(map: Map<number, EquipItemType>, scene: Scene) {
         this.itemSourceParent = new TransformNode("mobWeaponSources", scene)
 
         // Load materials
         this.bowMaterial = this.getMaterial("bow", matBowSize)
+        this.longSwordMaterial = this.getMaterial("longsword", matLongswordSize)
+        this.broadSwordMaterial = this.getMaterial("broadsword", matBroadswordSize)
 
-        map.set(WeaponsCb.LONGSWORD.id, await this.getItem(WeaponsCb.LONGSWORD, null))
-        map.set(WeaponsCb.BROADSWORD.id, await this.getItem(WeaponsCb.BROADSWORD, null))
+        map.set(WeaponsCb.LONGSWORD.id, await this.getItem(WeaponsCb.LONGSWORD, this.longSwordMaterial))
+        map.set(WeaponsCb.BROADSWORD.id, await this.getItem(WeaponsCb.BROADSWORD, this.broadSwordMaterial))
         map.set(WeaponsCb.BOW.id, await this.getItem(WeaponsCb.BOW, this.bowMaterial))
     },
 
@@ -44,9 +50,9 @@ export const WeaponsCbManager = {
 }
 
 export const WeaponsCb = {
-    LONGSWORD: new EquipCbItem(1, "longsword_steel", Vector3.Zero(), new Vector3(0.32, 0.22, 0.22), new Vector3(0, 2.4, 0), null),
+    LONGSWORD: new EquipCbItem(1, "longsword", Vector3.Zero(), new Vector3(0.2, 0.24, 0.4), new Vector3(0, 2.4, 0), matLongswordSize),
 
-    BROADSWORD: new EquipCbItem(2, "broadsword_steel", Vector3.Zero(), new Vector3(0.32, 0.22, 0.22), new Vector3(0, 2, 0), null),
+    BROADSWORD: new EquipCbItem(2, "broadsword", Vector3.Zero(), new Vector3(0.22, 0.24, 0.4), new Vector3(0, 2, 0), matBroadswordSize),
 
     BOW: new EquipCbItem(3, "bow", new Vector3(-0.1, 0, 0), new Vector3(0.17, 0.24, 0.4), new Vector3(0, 2, 0), matBowSize),
 }

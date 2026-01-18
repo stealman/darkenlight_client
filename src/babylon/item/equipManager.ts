@@ -47,8 +47,6 @@ export class EquipItem {
             this.weaponTrail = this.createWeaponTrail(this.bone)
         }
         this.matVector = this.getAtlasUvcOffsets(type.cbData.matCols, type.cbData.matRows, matIndex)
-        console.log(this.matVector)
-
         this.scaleMatrix = Matrix.Scaling(this.scale.x, this.scale.y, this.scale.z)
     }
 
