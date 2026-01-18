@@ -47,16 +47,17 @@ export class EquipItem {
             this.weaponTrail = this.createWeaponTrail(this.bone)
         }
         this.matVector = this.getAtlasUvcOffsets(type.cbData.matCols, type.cbData.matRows, matIndex)
+        console.log(this.matVector)
+
         this.scaleMatrix = Matrix.Scaling(this.scale.x, this.scale.y, this.scale.z)
     }
 
-    getAtlasUvcOffsets = (matCols: number, matsRows: number, matIndex: number, pad = 0.01) => {
+    getAtlasUvcOffsets = (matCols: number, matsRows: number, matIndex: number, pad = 0) => {
         const tileX = matIndex % matCols
         const tileY = Math.floor(matIndex / matCols)
 
-        const p = pad * 2
-        const matCol = (tileX * 2) + p
-        const matRow = (matsRows * 2) - (tileY * 2 + (2 - p))
+        const matCol = (tileX) + pad
+        const matRow = (matsRows) - (tileY + (1 - pad))
         return new Vector2(matCol, matRow)
     }
 
@@ -201,7 +202,12 @@ export class EquipItemType {
         source.position = position
         source.rotation = rotation
         source.scaling = scale
+
         this.mesh = Mesh.MergeMeshes([source], true)!
+        if (material != null) {
+            this.mesh.material = material
+        }
+
         this.mesh.setEnabled(false)
         this.mesh.alwaysSelectAsActiveMesh = true
         this.mesh.parent = parentNode

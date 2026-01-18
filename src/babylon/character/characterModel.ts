@@ -138,14 +138,14 @@ export class CharacterModel implements EquipBearer {
             console.error("Error loading model:", error)
         });
 
-        this.assignArmor(100, Utils.rollDice(7))
-        this.assignHelmet(210, Utils.rollDice(7))
+        this.assignArmor(100, 3)
+        this.assignHelmet(210, 3)
         this.assignLeftPauldron(300, 0)
         this.assignRightPauldron(300, 0)
         this.assignRightLeg(400, 0)
         this.assignLeftLeg(400, 0)
 
-        this.assignWeapon(2, 0)
+        this.assignWeapon(3, 0)
         this.initialized = true
     }
 

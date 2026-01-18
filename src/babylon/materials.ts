@@ -123,10 +123,10 @@ export const Materials = {
 
     getPBRCustomMaterialFrom(scene: Scene, name: string, basePath: string, texturePath: string, uScale: number, vScale: number, hasAlpha: boolean, options: PBRBasicAtts): PBRCustomMaterial {
         const albedoTexture = new Texture(basePath + texturePath, scene)
-        if (uScale < 1) {
+        if (uScale != 1) {
             albedoTexture.uScale = uScale
         }
-        if (vScale < 1) {
+        if (vScale != 1) {
             albedoTexture.vScale = vScale
         }
         albedoTexture.gammaSpace = true;
@@ -149,7 +149,7 @@ export const Materials = {
         }
 
         mat.AddAttribute("uvc");
-        if (uScale < 1 || vScale < 1) {
+        if (uScale != 1 || vScale != 1) {
             mat.Vertex_Definitions(`attribute vec2 uvc;`)
             mat.Vertex_Before_PositionUpdated(`uvUpdated = uvUpdated + uvc;`)
             mat.Vertex_After_WorldPosComputed(`vAlbedoUV = uvUpdated;`)

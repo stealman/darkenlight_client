@@ -28,7 +28,7 @@ export const GameManager = {
 
     async startGame(charData) {
         await MyPlayer.initialize(charData)
-        Renderer.gameStarted()
+        await Renderer.gameStarted()
         this.onResize()
         this.started = true
     },

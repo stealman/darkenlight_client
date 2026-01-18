@@ -29,6 +29,7 @@ import { FightSplatsRenderer } from '@/babylon/world/fightSplatsRenderer'
 import { OnScreenMessageManager } from '@/gui/onScreenMessageManager'
 import { CharacterManager } from '@/babylon/character/characterManager'
 import { SelectedTargetPanel } from '@/gui/selectedTargetPanel'
+import { Tester } from '@/babylon/tester'
 
 /**
  * Main Renderer
@@ -87,8 +88,9 @@ export const Renderer = {
         }
     },
 
-    gameStarted() {
+    async gameStarted() {
         Lights.sunLight.parent = MyPlayer.myModel!.node
+        await Tester.runTest()
         this.engine!.runRenderLoop(() => {
             this.onFrame(this.scene)
             this.scene.render()
