@@ -41,7 +41,7 @@ class SnowEffect implements WeatherEffect {
         if (Settings.isDetailLevelMedium()) {
             particleSize.x = 0.03
             particleSize.y = 0.04
-            capacity = 6000
+            capacity = 7500
         }
         if (Settings.isDetalLevelLow()) {
             particleSize.x = 0.05

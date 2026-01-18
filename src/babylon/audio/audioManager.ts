@@ -13,7 +13,7 @@ export const AudioManager = {
 
     footStepSounds: new Map<string, Sound>(),
     deathRattleSounds: new Map<string, Sound>(),
-    ambientSounds: new Map<string, Sound>(),
+    ambientSounds: new Map<object, Sound>(),
 
     swordSwingSounds: [] as Sound[],
     swordHitHardSounds: [] as Sound[],
@@ -26,12 +26,12 @@ export const AudioManager = {
     actualAmbientSound: null as Sound | null,
 
     initialize(scene: Scene) {
-        this.globalVolume = Settings.volume / 10;
+        this.globalVolume = Settings.volume;
 
         this.footStepSounds.set(FootStepTypes.SNOW, new Sound("footStepSnow", AudioManager.BASE_PATH_SFX + "steps-snow.ogg", scene, function() {
             AudioManager.footStepSounds.get(FootStepTypes.SNOW)!['loaded'] = true;
         }, {
-            volume: 0.6,
+            volume: 0.5,
             playbackRate: 1,
             loop: true,
         }))
@@ -56,8 +56,8 @@ export const AudioManager = {
         this.loadDeathRattleSound(MonsterSoundTypes.CAT, "death-cat.ogg", scene, { volume: 0.6, playbackRate: 1 } );
 
         // Ambient sounds
-        this.loadAmbientSound("WINTER-FOREST", "winter-forest.ogg", scene, { volume: 1, playbackRate: 1, loop: true } );
-        this.actualAmbientSound = this.ambientSounds.get("WINTER-FOREST")!;
+        this.loadAmbientSound(AmbientSoundTypes.WINTER_FOREST, "winter-forest.ogg", scene, { volume: AmbientSoundTypes.WINTER_FOREST.defaultVolume, playbackRate: 1, loop: true } );
+        this.actualAmbientSound = this.ambientSounds.get(AmbientSoundTypes.WINTER_FOREST)!;
 
         this.guiButtonClickSound = new Sound("guiButtonClick", AudioManager.BASE_PATH_GUI + "button-click.ogg", scene, function() {
             AudioManager.guiButtonClickSound!['loaded'] = true;
@@ -67,6 +67,20 @@ export const AudioManager = {
         });
 
         Engine.audioEngine?.setGlobalVolume(this.globalVolume)
+    },
+
+    setGlobalVolume(volume: number) {
+        this.globalVolume = volume;
+        Engine.audioEngine?.setGlobalVolume(this.globalVolume);
+    },
+
+    setAmbientSoundVolume(volume: number) {
+        Object.keys(AmbientSoundTypes).forEach((key) => {
+            const ambientSound = this.ambientSounds.get(AmbientSoundTypes[key]);
+            if (ambientSound) {
+                ambientSound.setVolume(volume * AmbientSoundTypes[key].defaultVolume);
+            }
+        });
     },
 
     processOneFrame() {
@@ -98,7 +112,7 @@ export const AudioManager = {
         this.deathRattleSounds.set(type, sound);
     },
 
-    loadAmbientSound (type: string, fileName: string, scene: Scene, options: { volume: number, playbackRate: number, loop: boolean }) {
+    loadAmbientSound (type: object, fileName: string, scene: Scene, options: { volume: number, playbackRate: number, loop: boolean }) {
         const sound = new Sound("ambientSound" + type, AudioManager.BASE_PATH_AMBIENT + fileName, scene, function() {
             sound['loaded'] = true;
         }, options);
@@ -166,6 +180,10 @@ export const AudioManager = {
 export const FootStepTypes = {
     SNOW: 'SNOW',
     DIRT: 'DIRT',
+}
+
+export const AmbientSoundTypes = {
+    WINTER_FOREST: {name: 'WINTER-FOREST', defaultVolume: 1},
 }
 
 export const FootStepSpeeds = {

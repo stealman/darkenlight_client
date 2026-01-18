@@ -1,3 +1,5 @@
+import { AudioManager } from '@/babylon/audio/audioManager'
+
 class DetailLevel {
     level = 0
     name: string
@@ -32,7 +34,8 @@ export const Settings = {
     mouseEnabled: false,
 
     brightness: 5,
-    volume: 5,
+    volume: 0.5,
+    ambientVolume: 1,
     targetMarkerOpacity: 1,
     displayGlow: true as boolean,
 
@@ -68,6 +71,8 @@ export const Settings = {
         this.joystickBottom = parseInt(storedSettings.joystickBottom)
         this.joystickLeft = parseInt(storedSettings.joystickLeft)
         this.autoTarget = storedSettings.autoTarget
+        this.volume = parseFloat(storedSettings.volume)
+        this.ambientVolume = parseFloat(storedSettings.ambientVolume)
     },
 
     getDefaultSettings() {
@@ -80,7 +85,8 @@ export const Settings = {
             joystickLeft: 120,
 
             brightness: 5,
-            volume: 5,
+            volume: 0.5,
+            ambientVolume: 1,
             displayGlow: !Settings.touchEnabled,
             targetMarkerOpacity: 1,
             hudSize: 1,
@@ -138,6 +144,16 @@ export const Settings = {
 
     setTargetMarkerOpacity(value: number) {
         this.targetMarkerOpacity = value;
+    },
+
+    setVolume(value: number) {
+        this.volume = value;
+        AudioManager.setGlobalVolume(value);
+    },
+
+    setAmbientVolume(value: number) {
+        this.ambientVolume = value;
+        AudioManager.setAmbientSoundVolume(value);
     },
 
     setDisplayGlow(value: boolean) {

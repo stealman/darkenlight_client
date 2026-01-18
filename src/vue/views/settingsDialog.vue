@@ -93,6 +93,7 @@
                 <!-- GUI -->
                 <div v-if="activeTabId == 3" >
                     <div style="margin-top: 10px;">
+                        <!--
                         <table>
                             <tbody>
                             <tr>
@@ -107,7 +108,7 @@
                                 </td>
                             </tr>
                             </tbody>
-                        </table>
+                        </table>-->
                     </div>
                 </div>
 
@@ -115,6 +116,22 @@
                 <!-- Audio -->
                 <div v-if="activeTabId == 4" >
                     <div style="margin-top: 10px;">
+                        <div style="margin-top: 10px;">
+                            <table>
+                                <tbody>
+                                <tr>
+                                    <td class="item-label" style="width: 25%">Hlasitost</td>
+                                    <td  style="width: 25%">
+                                        <input class="range-slider" type="range" min="0" max="1" step="0.1" style="zoom: 1.5;" v-model="storedSettings.volume" @change="volumeChanged()" />
+                                    </td>
+                                    <td class="item-label" style="width: 25%">Ambient</td>
+                                    <td  style="width: 25%">
+                                        <input class="range-slider" type="range" min="0" max="2" step="0.1" style="zoom: 1.5;" v-model="storedSettings.ambientVolume" @change="ambientVolumeChanged()" />
+                                    </td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
 
                     </div>
                 </div>
@@ -187,6 +204,16 @@ const setDetailsLevel = (level) => {
 const brightnessChanged = () => {
     Renderer.brightnessChanged()
     Lights.brightnessChanged()
+    storeSettings()
+}
+
+const volumeChanged = () => {
+    Settings.setVolume(storedSettings.value.volume)
+    storeSettings()
+}
+
+const ambientVolumeChanged = () => {
+    Settings.setAmbientVolume(storedSettings.value.ambientVolume)
     storeSettings()
 }
 
