@@ -60,8 +60,6 @@ export const MonsterManager = {
                 mob.removeModel()
             }
 
-            this.visibleMonsters.delete(id)
-            this.monsters.delete(id)
             if (mob === TargetingManager.selectedTarget) {
                 TargetingManager.unselectTarget()
             }
@@ -121,10 +119,18 @@ export const MonsterManager = {
         }
 
         this.monsters.forEach(monster => {
+            if (monster.killedTime > 0) {
+                return
+            }
             monster.onFrame(timeRate, actualTime)
         })
 
         this.killedMonsters.forEach(monster => {
+            if (this.monsters.has(monster.id)) {
+                this.visibleMonsters.delete(monster.id)
+                this.monsters.delete(monster.id)
+            }
+
             monster.model.onFrame(timeRate, actualTime)
             if (actualTime - monster.killedTime > 4000) {
                 monster.removeModel()

@@ -10,10 +10,11 @@ import { AnimTransition } from '@/babylon/animations/animation'
 import { Lights } from '@/babylon/scene/lights'
 import Character from '@/babylon/character/character'
 import { Renderer } from '@/babylon/scene/renderer'
-import { Utils } from '@/utils/utils'
 import { MyPlayer } from '@/data/myPlayer'
 import { EquipBearer, EquipItem, EquipManager } from '@/babylon/item/equipManager'
 import { BabylonUtils } from '@/babylon/utils'
+import { EquipItemSlots, WeaponTypes } from '@/data/items/item'
+import { Utils } from '@/utils/utils'
 
 export class CharacterModel implements EquipBearer {
     parent: Character
@@ -23,6 +24,7 @@ export class CharacterModel implements EquipBearer {
 
     model: AbstractMesh | undefined
     modelYAngleOffset: number = Math.PI * 1 / 4
+    modelRotation: number = 0
     worldMatrix: Matrix
     rotationQuaternion: Quaternion
 
@@ -40,6 +42,8 @@ export class CharacterModel implements EquipBearer {
     leftSlashAnim: AnimationGroup | undefined
     rightSlashAnim: AnimationGroup | undefined
     highJabAnim: AnimationGroup | undefined
+
+    bowAimAnim: AnimationGroup | undefined
 
     actualAnim: AnimationGroup | undefined
     animTransition: AnimTransition | null = null
@@ -66,7 +70,7 @@ export class CharacterModel implements EquipBearer {
         await SceneLoader.ImportMeshAsync(
             "",
             "/models/steve/",
-            "steve2.gltf",
+            "steve.gltf",
             Renderer.scene
         ).then((result) => {
             this.model = result.meshes[0]
@@ -109,6 +113,8 @@ export class CharacterModel implements EquipBearer {
                     { name: "RightSlash", startFrame: 800, endFrame: 860},
                     { name: "HighJab", startFrame: 900, endFrame: 960},
                     { name: "Slash2", startFrame: 1000, endFrame: 1060},
+
+                    { name: "BowAim", startFrame: 1100, endFrame: 1175},
                 ];
 
                 const newAnimationGroups = animations.map(({ name, startFrame, endFrame }) => {
@@ -128,6 +134,7 @@ export class CharacterModel implements EquipBearer {
                 this.rightSlashAnim = newAnimationGroups[7]
                 this.highJabAnim = newAnimationGroups[8]
                 this.slashAnim2 = newAnimationGroups[9]
+                this.bowAimAnim = newAnimationGroups[10]
 
                 this.idleAnim?.start(true, 0.5)
             }
@@ -138,14 +145,33 @@ export class CharacterModel implements EquipBearer {
             console.error("Error loading model:", error)
         });
 
-        this.assignArmor(100, 3)
-        this.assignHelmet(210, 3)
-        this.assignLeftPauldron(300, 0)
-        this.assignRightPauldron(300, 0)
-        this.assignRightLeg(400, 0)
-        this.assignLeftLeg(400, 0)
+        if (this.parent.equipSet.get(EquipItemSlots.R_HAND)) {
+            const weapon = this.parent.equipSet.get(EquipItemSlots.R_HAND)!
+            this.assignWeapon(weapon.modelId, weapon.materialId - 1)
+        }
 
-        this.assignWeapon(3, 0)
+        if (this.parent.equipSet.get(EquipItemSlots.BODY)) {
+            const armor = this.parent.equipSet.get(EquipItemSlots.BODY)!
+            this.assignArmor(armor.modelId, armor.materialId - 1)
+        }
+
+        if (this.parent.equipSet.get(EquipItemSlots.HEAD)) {
+            const helmet = this.parent.equipSet.get(EquipItemSlots.HEAD)!
+            this.assignHelmet(helmet.modelId, helmet.materialId - 1)
+        }
+
+        if (this.parent.equipSet.get(EquipItemSlots.PAULDRONS)) {
+            const pauldrons = this.parent.equipSet.get(EquipItemSlots.PAULDRONS)!
+            this.assignLeftPauldron(pauldrons.modelId, pauldrons.materialId - 1)
+            this.assignRightPauldron(pauldrons.modelId, pauldrons.materialId - 1)
+        }
+
+        if (this.parent.equipSet.get(EquipItemSlots.LEGS)) {
+            const legs = this.parent.equipSet.get(EquipItemSlots.LEGS)!
+            this.assignLeftLeg(legs.modelId, legs.materialId - 1)
+            this.assignRightLeg(legs.modelId, legs.materialId - 1)
+        }
+
         this.initialized = true
     }
 
@@ -225,11 +251,39 @@ export class CharacterModel implements EquipBearer {
     }
 
     doAttackAnimation() {
-        // Random select attack animation
-        const desiredAnimation = [this.slashAnim, this.jabAnim, this.leftSlashAnim, this.rightSlashAnim, this.highJabAnim, this.slashAnim2][Math.floor(Math.random() * 6)]
-        if (this.actualAnim !== desiredAnimation) {
-            this.transitionToAnimation(desiredAnimation, 0.15, false, 1000 / this.parent.attackAnimationTime)
-            this.actualAnim = desiredAnimation
+        let baseAnimSpeed = 1000
+        const possibleAnims = []
+        if (this.parent.getWeapon() != null) {
+            switch (this.parent.getWeapon()!.slotInfo.weaponType) {
+                case WeaponTypes.SWORD: {
+                    possibleAnims.push(this.slashAnim2)
+                    possibleAnims.push(this.leftSlashAnim)
+                    possibleAnims.push(this.rightSlashAnim)
+                    possibleAnims.push(this.jabAnim)
+                    possibleAnims.push(this.highJabAnim)
+                    break
+                }
+                case WeaponTypes.BOW: {
+                    possibleAnims.push(this.bowAimAnim)
+                    baseAnimSpeed = 1150
+                    this.bowAimAnim!.onAnimationEndObservable.addOnce(() => {
+                        const a = this.bowAimAnim!
+                        a.start(true, 1, a.to, a.to)
+                        a.setWeightForAllAnimatables(1)
+                    })
+                    break
+                }
+                default: {
+                    possibleAnims.push(this.slashAnim)
+                    break
+                }
+            }
+        }
+
+        const anim = possibleAnims[Utils.rollDice(possibleAnims.length, true)]
+        if (this.actualAnim !== anim) {
+            this.transitionToAnimation(anim, 0.15, false, baseAnimSpeed / this.parent.attackAnimationTime)
+            this.actualAnim = anim
 
             this.stopAllStepSounds()
         }
@@ -349,7 +403,7 @@ export class CharacterModel implements EquipBearer {
             current += Math.sign(delta) * rotationSpeed
         }
         model.rotation.y = current + this.modelYAngleOffset
-        this.parent.modelRotation = model.rotation.y
+        this.modelRotation = model.rotation.y
     }
 
     setWeaponTrailEnabled(enabled: boolean) {

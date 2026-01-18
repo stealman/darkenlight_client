@@ -5,6 +5,7 @@ import { Renderer } from '@/babylon/scene/renderer'
 import { PBRCustomMaterial } from '@babylonjs/materials'
 import { Materials } from '@/babylon/materials'
 import { BASE_EQUIP_MATERIAL_PATH } from '@/babylon/item/codebook/armorsModelsCb'
+import { EquipSlotsCb } from '@/data/items/item'
 
 const matBowSize = new Vector2(4, 1)
 const matLongswordSize = new Vector2(4, 1)
@@ -50,9 +51,9 @@ export const WeaponsCbManager = {
 }
 
 export const WeaponModelsCb = {
-    LONGSWORD: new EquipCbItem(1, "longsword", Vector3.Zero(), new Vector3(0.2, 0.24, 0.4), new Vector3(0, 2.4, 0), matLongswordSize),
+    LONGSWORD: new EquipCbItem(EquipSlotsCb.LONGSWORD.modelId, "longsword", Vector3.Zero(), new Vector3(0.2, 0.24, 0.4), new Vector3(0, 2.4, 0), matLongswordSize),
 
-    BROADSWORD: new EquipCbItem(2, "broadsword", Vector3.Zero(), new Vector3(0.22, 0.24, 0.4), new Vector3(0, 2, 0), matBroadswordSize),
+    BROADSWORD: new EquipCbItem(EquipSlotsCb.BROADSWORD.modelId, "broadsword", Vector3.Zero(), new Vector3(0.22, 0.24, 0.4), new Vector3(0, 2, 0), matBroadswordSize),
 
-    BOW: new EquipCbItem(3, "bow", new Vector3(-0.1, 0, 0), new Vector3(0.17, 0.24, 0.4), null, matBowSize),
+    BOW: new EquipCbItem(EquipSlotsCb.BOW.modelId, "bow", new Vector3(-0.1, 0, 0), new Vector3(0.17, 0.24, 0.4), null, matBowSize),
 }

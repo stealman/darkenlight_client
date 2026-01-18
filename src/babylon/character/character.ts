@@ -16,6 +16,7 @@ import { Utils } from '@/utils/utils'
 import { Connector } from '@/network/connector'
 import { MyCharMoveMsg } from '@/network/messages'
 import { MyPlayer } from '@/data/myPlayer'
+import { EquipItemSlots, EquipSlotsCb, Item } from '@/data/items/item'
 
 class Character implements Attackable {
     model: CharacterModel | null = null
@@ -27,21 +28,23 @@ class Character implements Attackable {
     name: string = "Player"
     nameDisplayTime: number = 0
     className: string = "Warrior"
+
+    boxSize: number = 0.8 // TODO server shall send it
     walkSpeed: number = 2
     runSpeed: number = 3.2
-    boxSize: number = 0.8
-    private actualSpeed: number = 0
+    yMoveSpeed: number = 15 // Only for client purposes (jumping, falling)
 
     pos: Vector3
     logicYpos: number = 0
 
     movementType: string = 'WALK'
-    modelRotation: number = 0
+    private actualSpeed: number = 0
     private moveAngle: number | null = null
     private lookAngle: number | null = null
 
-    yMoveSpeed: number = 15
-    attackAnimationTime: number = 1000 // 1000 is base attack time
+    equipSet: Map<string, Item> = new Map<string, Item>()
+
+    attackAnimationTime: number = 1000 // Updated before each attack from server
 
     weaponSoundType: string = WeaponSoundTypes.SWORD
     bodySoundType: string = BodySoundTypes.HARD
@@ -51,6 +54,7 @@ class Character implements Attackable {
     stepMarkSide: 'L' | 'R' = 'R'
 
     autoAttackEnd: number = 0
+    arrowShotTime: number = 0
 
     constructor(data: any) {
         this.id = data.id
@@ -61,10 +65,30 @@ class Character implements Attackable {
 
         this.pos.y = Utils.calculateYPos(this.pos.x, this.pos.z, this.getBoxSize())
         this.logicYpos = this.pos.y
+        this.initializeEquip(data.equipSet)
     }
 
     async createModel(init: boolean) {
         this.model = await CharacterModel.create(this, init)
+    }
+
+    initializeEquip(equip: any) {
+        if (equip.weapon) {
+            //equip.weapon.mId = 10
+            this.equipSet.set(EquipSlotsCb.getById(equip.weapon.mId)!.slot, Item.fromData(equip.weapon))
+        }
+        if (equip.body) {
+            this.equipSet.set(EquipSlotsCb.getById(equip.body.mId)!.slot, Item.fromData(equip.body))
+        }
+        if (equip.head) {
+            this.equipSet.set(EquipSlotsCb.getById(equip.head.mId)!.slot, Item.fromData(equip.head))
+        }
+        if (equip.arms) {
+            this.equipSet.set(EquipSlotsCb.getById(equip.arms.mId)!.slot, Item.fromData(equip.arms))
+        }
+        if (equip.legs) {
+            this.equipSet.set(EquipSlotsCb.getById(equip.legs.mId)!.slot, Item.fromData(equip.legs))
+        }
     }
 
     onFrame(timeRate: number, actualTime: number, myChar: boolean) {
@@ -73,6 +97,11 @@ class Character implements Attackable {
             this.resolveStepMark(actualTime, true)
             this.model?.onFrame(timeRate)
             return
+        }
+
+        if (this.arrowShotTime > 0 && Date.now() >= this.arrowShotTime) {
+            AudioManager.playWeaponSwing(this.weaponSoundType)
+            this.arrowShotTime = 0
         }
 
         if (this.getMoveAngle() != null) {
@@ -123,7 +152,14 @@ class Character implements Attackable {
         if (!target) {
             return
         }
+
+        // Ranged weapon attack animation is shorter to account for arrow travel time
         this.attackAnimationTime = data.dur
+        if (this.isWeaponRanged()) {
+            this.attackAnimationTime = data.dur - 100
+            this.arrowShotTime = Date.now() + this.attackAnimationTime
+        }
+
         this.autoAttackEnd = Date.now() + this.attackAnimationTime
 
         const angle = Utils.getAngleBetweenPoints(this.pos, target.pos)
@@ -134,7 +170,9 @@ class Character implements Attackable {
 
     finishAutoAttack(data: any) {
         this.model?.setWeaponTrailEnabled(false)
-        AudioManager.playWeaponSwing(this.weaponSoundType)
+
+        // Swing sound for melee weapons - ranged weapons have it when arrow is fired
+        if (!this.isWeaponRanged()) AudioManager.playWeaponSwing(this.weaponSoundType)
 
         const target = Utils.getAttackTargetByTypeAndId(data.tp, data.tgt)
         if (!target) {
@@ -156,7 +194,7 @@ class Character implements Attackable {
         if (this.lastStepMarkTime < time - 250) {
             this.lastStepMarkTime = time
             this.stepMarkSide = this.stepMarkSide === 'L' ? 'R' : 'L'
-            StepMarksRenderer.addStepMark(this.stepMarkSide, this, this.logicYpos, this.modelRotation, time, inCombat)
+            StepMarksRenderer.addStepMark(this.stepMarkSide, this, this.logicYpos, this.model!.modelRotation, time, inCombat)
         }
     }
 
@@ -264,6 +302,18 @@ class Character implements Attackable {
 
     getSplatType(): SplatType {
         return FightSplatTypes.BLOOD
+    }
+
+    getWeapon(): Item | null {
+        return this.equipSet.get(EquipItemSlots.R_HAND) || null
+    }
+
+    isWeaponRanged(): boolean {
+        const weapon = this.getWeapon()
+        if (weapon && weapon.slotInfo.weaponType === 'BOW') {
+            return true
+        }
+        return false
     }
 
     getFootStepSoundType(): string {

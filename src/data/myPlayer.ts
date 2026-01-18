@@ -8,6 +8,7 @@ import { ref } from 'vue'
 import { TargetingManager } from '@/gui/targettingManager'
 import { Connector } from '@/network/connector'
 import { AutoAttackBreak } from '@/network/messages'
+import { WeaponTypes } from '@/data/items/item'
 
 /**
  * Controlling object for the player's character
@@ -39,10 +40,12 @@ export const MyPlayer = {
     },
 
     startAutoAttack(data: any) {
+        //console.log("Starting auto attack", data)
         this.myChar.startAutoAttack(data)
     },
 
     finishAutoAttack(data: any) {
+        //console.log("Finishing auto attack", data)
         this.myChar.finishAutoAttack(data)
     },
 
@@ -57,9 +60,10 @@ export const MyPlayer = {
                 const toTarget = targetPos.subtract(myPos).normalize()
                 const moveDir = new Vector3(Math.cos(moveAngle), 0, -Math.sin(moveAngle)).normalize()
                 const dot = Vector3.Dot(moveDir, toTarget)
-                if (dot < -0.5) {
+                if (dot < -0.5 || (this.myChar.isWeaponRanged())) {
                     this.myChar.autoAttackEnd = 0
                     this.myModel?.setWeaponTrailEnabled(false)
+                    this.myModel?.stopAnimation()
                     Connector.sendMessage(new AutoAttackBreak())
                 }
             }

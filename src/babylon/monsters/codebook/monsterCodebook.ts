@@ -5,6 +5,7 @@ import { Vector3 } from '@babylonjs/core'
 import { Utils} from '@/utils/utils'
 import { BodySoundTypes, MonsterSoundTypes, WeaponSoundTypes } from '@/babylon/audio/audioManager'
 import { FightSplatTypes, SplatType } from '@/babylon/world/fightSplatsRenderer'
+import { EquipSlotsCb } from '@/data/items/item'
 
 export const MonsterCodebook = {
 
@@ -28,7 +29,7 @@ export const MonsterCodebook = {
         const mobType = model.type
 
         if (mobType.weapon) {
-            model.assignRhand(1, mobType.weapon.mat, mobType.weapon.scale, mobType.weapon.rotation, mobType.weapon.position)
+            model.assignRhand(mobType.weapon.ids[0], mobType.weapon.mat, mobType.weapon.scale, mobType.weapon.rotation, mobType.weapon.position)
        }
 
         if (mobType.armor) {
@@ -150,26 +151,26 @@ export const MonsterTypes = {
         WeaponSoundTypes.BONE, BodySoundTypes.HARD, null, MonsterSoundTypes.SKELETON, FightSplatTypes.BONE),
 
     SKELETON_FIGHTER: new MonsterType( 2, MonsterGroups.SKELETON, 1, 'Skeleton Fighter', 0.6, 1.8,  3.2,
-        new MonsterEquipData([1], 0.8, null, null,0),null, null,
+        new MonsterEquipData([EquipSlotsCb.LONGSWORD.modelId], 0.8, null, null,0),null, null,
         WeaponSoundTypes.SWORD, BodySoundTypes.HARD, WeaponSoundTypes.SWORD, MonsterSoundTypes.SKELETON, FightSplatTypes.BONE),
 
     SKELETON_WARRIOR: new MonsterType( 3, MonsterGroups.SKELETON, 1, 'Skeleton Warrior', 0.6, 1.8,  3.2,
-        new MonsterEquipData([1], 0.8, null, null, 0),
-        new MonsterEquipData([200], 0.94, VectorY90, null, 8),
-        new MonsterEquipData([100], new Vector3(0.8, 0.7, 0.65),  VectorY90, null, 8),
+        new MonsterEquipData([EquipSlotsCb.LONGSWORD.modelId], 0.8, null, null, 0),
+        new MonsterEquipData([EquipSlotsCb.HELM.modelId], 0.94, VectorY90, null, 8),
+        new MonsterEquipData([EquipSlotsCb.ARMOR_PLATE.modelId], new Vector3(0.8, 0.7, 0.65),  VectorY90, null, 8),
         WeaponSoundTypes.SWORD, BodySoundTypes.HARD, WeaponSoundTypes.SWORD, MonsterSoundTypes.SKELETON, FightSplatTypes.BONE),
 
     WITHER: new MonsterType( 10, MonsterGroups.WITHER, 2,'Wither', 0.6, 1.8, 3.2, null,null,  null,
         WeaponSoundTypes.BONE, BodySoundTypes.HARD, null, MonsterSoundTypes.SKELETON, FightSplatTypes.DARK_BONE),
 
     WITHER_CHAMPION: new MonsterType( 11, MonsterGroups.WITHER, 2, 'Wither Champion', 0.6, 1.8,3.2,
-        new MonsterEquipData([1], 0.8, null, null, 0),null, null,
+        new MonsterEquipData([EquipSlotsCb.LONGSWORD.modelId], 0.8, null, null, 0),null, null,
         WeaponSoundTypes.SWORD, BodySoundTypes.HARD, WeaponSoundTypes.SWORD, MonsterSoundTypes.SKELETON, FightSplatTypes.DARK_BONE),
 
     WITHER_KNIGHT: new MonsterType( 12, MonsterGroups.WITHER, 2, 'Wither Knight', 0.6, 1.8,  3.2,
-        new MonsterEquipData([1], 0.9, null, null, 2),
-        new MonsterEquipData([200], 0.94, VectorY90, null,6),
-        new MonsterEquipData([100], new Vector3(0.8, 0.7, 0.65), VectorY90, null, 6),
+        new MonsterEquipData([EquipSlotsCb.LONGSWORD.modelId], 0.9, null, null, 2),
+        new MonsterEquipData([EquipSlotsCb.HELM.modelId], 0.94, VectorY90, null,6),
+        new MonsterEquipData([EquipSlotsCb.ARMOR_PLATE.modelId], new Vector3(0.8, 0.7, 0.65), VectorY90, null, 6),
         WeaponSoundTypes.SWORD, BodySoundTypes.HARD, WeaponSoundTypes.SWORD, MonsterSoundTypes.SKELETON, FightSplatTypes.DARK_BONE),
 
     HOUSE_CAT : new MonsterType( 1001, MonsterGroups.CAT,  4,'House Cat', 0.6, 1, 6, null,null,  null,

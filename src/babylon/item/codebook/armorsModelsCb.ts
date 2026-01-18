@@ -2,9 +2,10 @@ import { Materials } from '@/babylon/materials'
 import { Scene, TransformNode, Vector2, Vector3 } from '@babylonjs/core'
 import { BabylonUtils } from '@/babylon/utils'
 import { EquipItemType} from '@/babylon/item/equipManager'
-import { EquipCbItem } from '@/babylon/item/codebook/equipCbItem'
+import { EquipCbItem} from '@/babylon/item/codebook/equipCbItem'
 import { PBRCustomMaterial } from '@babylonjs/materials'
 import { Renderer } from '@/babylon/scene/renderer'
+import { EquipSlotsCb } from '@/data/items/item'
 
 export const BASE_EQUIP_MATERIAL_PATH = "/models/equip/"
 export const ARMOR_MATERIAL_METALIC = 'materials-metalic'
@@ -50,12 +51,12 @@ export const ArmorsCbManager = {
 }
 
 export const ArmorModelsCb = {
-    PLATE_ARMOR_MALE: new EquipCbItem(100, "male-armor-plate", new Vector3(-0.01, 0.65, 0.03), new Vector3(0.42, 0.42, 0.44), null, matMetalSize),
+    PLATE_ARMOR_MALE: new EquipCbItem(EquipSlotsCb.ARMOR_PLATE.modelId, "male-armor-plate", new Vector3(-0.01, 0.65, 0.03), new Vector3(0.42, 0.42, 0.44), null, matMetalSize),
 
-    HELM_MALE: new EquipCbItem(200, "male-helmet", new Vector3(0, 0.47, 0), BabylonUtils.getSymVector(0.45), null, matMetalSize),
-    HELM_MALE_CLOSED: new EquipCbItem(210, "male-helmet_closed", new Vector3(0, 0.42, 0), BabylonUtils.getSymVector(0.45), null, matMetalSize),
+    HELM_MALE: new EquipCbItem(EquipSlotsCb.HELM.modelId, "male-helmet", new Vector3(0, 0.47, 0), BabylonUtils.getSymVector(0.45), null, matMetalSize),
+    HELM_MALE_CLOSED: new EquipCbItem(EquipSlotsCb.HELM_CLOSED.modelId, "male-helmet_closed", new Vector3(0, 0.42, 0), BabylonUtils.getSymVector(0.45), null, matMetalSize),
 
-    PAULDRON_MALE: new EquipCbItem(300, "male-pauldron-plate", new Vector3(0.06, -0.13, 0.02), new Vector3(0.48, 0.48, 0.58), null, matMetalSize),
+    PAULDRON_MALE: new EquipCbItem(EquipSlotsCb.PAULDRONS_PLATE.modelId, "male-pauldron-plate", new Vector3(0.06, -0.15, 0.02), new Vector3(0.48, 0.48, 0.58), null, matMetalSize),
 
-    LEG_MALE: new EquipCbItem(400, "male-leg-plate", new Vector3(-0.01, -0.1, 0.01), new Vector3(0.26, 0.26, 0.23),null, matMetalSize),
+    LEG_MALE: new EquipCbItem(EquipSlotsCb.LEGS_PLATE.modelId, "male-leg-plate", new Vector3(-0.01, -0.1, 0.01), new Vector3(0.26, 0.26, 0.23),null, matMetalSize),
 }

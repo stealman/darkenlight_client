@@ -4,6 +4,7 @@ import { Settings } from '@/settings/settings'
 
 export const AudioManager = {
     globalVolume: 0.5,
+    ambientSoundVolume: 0.5,
 
     BASE_PATH: './sounds/',
     BASE_PATH_SFX: './sounds/sfx/',
@@ -27,6 +28,7 @@ export const AudioManager = {
 
     initialize(scene: Scene) {
         this.globalVolume = Settings.volume;
+        this.ambientSoundVolume = Settings.ambientVolume;
 
         this.footStepSounds.set(FootStepTypes.SNOW, new Sound("footStepSnow", AudioManager.BASE_PATH_SFX + "steps-snow.ogg", scene, function() {
             AudioManager.footStepSounds.get(FootStepTypes.SNOW)!['loaded'] = true;
@@ -67,6 +69,7 @@ export const AudioManager = {
         });
 
         Engine.audioEngine?.setGlobalVolume(this.globalVolume)
+        this.setAmbientSoundVolume(this.ambientSoundVolume)
     },
 
     setGlobalVolume(volume: number) {
