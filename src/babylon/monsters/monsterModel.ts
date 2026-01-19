@@ -101,8 +101,9 @@ export class MonsterModel implements EquipBearer {
     }
 
     onFrame(timeRate: number) {
-        this.resolveMovement(timeRate)
+        if (!this.isActive()) return
 
+        this.resolveMovement(timeRate)
         this.rotationQuaternion = new Quaternion()
         this.worldMatrix = this.mesh.getWorldMatrix();
         this.worldMatrix.decompose(new Vector3(), this.rotationQuaternion, new Vector3());
@@ -113,6 +114,8 @@ export class MonsterModel implements EquipBearer {
     }
 
     onAnimFrame() {
+        if (!this.isActive()) return
+
         if (this.activeAnims.size > 0) {
             this.skeleton.prepare()
             this.activeAnims.forEach(anim => {
@@ -199,6 +202,7 @@ export class MonsterModel implements EquipBearer {
     }
 
     doDie() {
+        if (!this.isActive()) return
         this.transitionToAnimation(this.deadAnim!, true, false, 2.5)
 
         this.isDying = true
@@ -208,6 +212,8 @@ export class MonsterModel implements EquipBearer {
     }
 
     transitionToAnimation(target: MeshAnimation, fadeIn: boolean = false, loop = false, speed = 1.0) {
+        if (!this.isActive()) return
+
         this.activeAnims.forEach(anim => {
             if (anim !== target) {
                 anim.fadeOut()
@@ -272,6 +278,10 @@ export class MonsterModel implements EquipBearer {
 
     getMasterNode(): Mesh | AbstractMesh | undefined {
         return this.node
+    }
+
+    isActive(): boolean {
+        return this.parent.insideView && this.initialized
     }
 
     createDyingParticleEffect() {

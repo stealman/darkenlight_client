@@ -29,8 +29,8 @@ export const ArrowsManager = {
         this.mesh.material = mat
     },
 
-    addArrow(attacker: Attackable, target: Attackable, flyStartTime: number, handNode: TransformNode): Arrow {
-        const arrow = new Arrow(attacker, target, flyStartTime, handNode)
+    addArrow(attacker: Attackable, target: Attackable, flyStartTime: number): Arrow {
+        const arrow = new Arrow(attacker, target, flyStartTime)
         this.arrows.push(arrow)
         return arrow
     },
@@ -71,18 +71,16 @@ export class Arrow {
     endPosFixed = Vector3.Zero()
     lastPos = Vector3.Zero()
 
-    constructor(attacker: Attackable, target: Attackable, flyStartTime: number, handNode: TransformNode) {
+    constructor(attacker: Attackable, target: Attackable, flyStartTime: number) {
         this.attacker = attacker
         this.target = target
         this.creationTime = Date.now()
         this.flyStartTime = flyStartTime
-        this.handNode = handNode
-        this.heightOffset.y = 0.75 + Math.random() * 0.5
+        this.heightOffset.y = (0.3 + Math.random() * 0.4) * target.getModelHeight()
 
         if (ArrowsManager.mesh) {
             this.meshClone = ArrowsManager.mesh.clone("arrowClone")
             this.meshClone!.isVisible = true
-            this.meshClone!.parent = this.handNode
             this.meshClone!.position = Vector3.Zero()
 
             this.trailTip = new TransformNode('arrowTrailTip', Renderer.scene)
@@ -94,6 +92,16 @@ export class Arrow {
         const dist = Vector3.Distance(this.attacker.pos, this.target.pos)
         this.arcHeight = Math.min(2, Math.max(0.2, dist / 12))
     }
+
+    assignHandNode(handNode: TransformNode, scale: number = 1) {
+        this.handNode = handNode
+
+        if (this.meshClone) {
+            this.meshClone.parent = this.handNode
+            this.meshClone.scaling.scaleInPlace(scale)
+        }
+    }
+
 
     startFlying() {
         if (!this.meshClone) return

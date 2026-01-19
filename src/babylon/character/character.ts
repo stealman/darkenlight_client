@@ -17,7 +17,7 @@ import { Connector } from '@/network/connector'
 import { MyCharMoveMsg } from '@/network/messages'
 import { MyPlayer } from '@/data/myPlayer'
 import { EquipItemSlots, EquipSlotsCb, Item } from '@/data/items/item'
-import { Arrow } from '@/babylon/world/arrowsManager'
+import { Arrow, ArrowsManager } from '@/babylon/world/arrowsManager'
 
 class Character implements Attackable {
     model: CharacterModel | null = null
@@ -101,15 +101,21 @@ class Character implements Attackable {
             this.resolveStepMark(actualTime, true)
             this.model?.onFrame(timeRate)
 
-            if (this.model && this.model.initialized && this.arrowCreateTime > 0 && Date.now() >= this.arrowCreateTime && this.autoAttackTarget) {
-                this.arrow = this.model!.putArrowToHand(this.autoAttackTarget, this.arrowShotTime)
+            if (this.arrowCreateTime > 0 && Date.now() >= this.arrowCreateTime && this.autoAttackTarget && (this.insideView || this.autoAttackTarget!.insideView)) {
+                this.arrow = ArrowsManager.addArrow(this, this.autoAttackTarget, this.arrowShotTime)
+                if (this.model && this.model.initialized && this.insideView) {
+                    this.arrow.assignHandNode(this.model.lhandNode)
+                } else {
+                    this.arrow.assignHandNode(this.model!.node, 0.25)
+                }
+
                 this.arrowCreateTime = 0
             }
             return
         }
 
         if (this.arrowShotTime > 0 && Date.now() >= this.arrowShotTime) {
-            AudioManager.playWeaponSwing(this.weaponSoundType)
+            if (this == MyPlayer.myChar || this.insideView) AudioManager.playWeaponSwing(this.weaponSoundType)
             this.arrowShotTime = 0
         }
 
@@ -361,6 +367,10 @@ class Character implements Attackable {
 
     getDistanceFromMyPlayer(): number {
         return Vector3.Distance(this.pos, MyPlayer.myChar.pos)
+    }
+
+    isMyChar(): boolean {
+        return this.id === MyPlayer.myChar.id
     }
 }
 

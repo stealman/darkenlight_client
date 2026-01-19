@@ -35,7 +35,7 @@ interface WeatherEffect {
 
 class SnowEffect implements WeatherEffect {
     constructor(scene: Scene) {
-        console.log("Initializing snow effect")
+        //console.log("Initializing snow effect")
         let capacity = 10000
         const particleSize = new Vector2(0.02, 0.03)
         if (Settings.isDetailLevelMedium()) {

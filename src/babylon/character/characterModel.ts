@@ -15,8 +15,6 @@ import { EquipBearer, EquipItem, EquipManager } from '@/babylon/item/equipManage
 import { BabylonUtils } from '@/babylon/utils'
 import { EquipItemSlots, WeaponTypes } from '@/data/items/item'
 import { Utils } from '@/utils/utils'
-import { Attackable } from '@/GameManager'
-import { Arrow, ArrowsManager } from '@/babylon/world/arrowsManager'
 
 export class CharacterModel implements EquipBearer {
     parent: Character
@@ -207,16 +205,13 @@ export class CharacterModel implements EquipBearer {
         this.addEquippedItem(this.weaponEquipItem)
     }
 
-    putArrowToHand(target: Attackable, shotTime: number): Arrow {
-        return ArrowsManager.addArrow(this.parent, target,shotTime, this.lhandNode)
-    }
-
     addEquippedItem(item: EquipItem) {
         this.equipSet.add(item)
         EquipManager.addEquippedItem(item)
     }
 
     startWalkAnimation() {
+        if (!this.parent.insideView) return
         if (this.actualAnim !== this.walkAnim) {
             this.transitionToAnimation(this.walkAnim, 0.15, true, 3)
             this.actualAnim = this.walkAnim
@@ -231,7 +226,9 @@ export class CharacterModel implements EquipBearer {
     }
 
     startRunAnimation() {
+        if (!this.parent.insideView) return
         if (this.actualAnim !== this.runAnim) {
+            console.log("Starting run animation " + this.runAnim)
             this.transitionToAnimation(this.runAnim, 0.15, true, 3)
             this.actualAnim = this.runAnim
 
@@ -245,6 +242,7 @@ export class CharacterModel implements EquipBearer {
     }
 
     checkActiveStepSound() {
+        if (!this.parent.insideView) return
         const supposedStepSound = this.getStepSound()
         if (this.actualStepSound?.isPlaying && this.actualStepSound !== supposedStepSound) {
             this.actualStepSound = supposedStepSound
@@ -257,6 +255,7 @@ export class CharacterModel implements EquipBearer {
     }
 
     doAttackAnimation() {
+        if (!this.parent.insideView) return
         let baseAnimSpeed = 1000
         const possibleAnims = []
         if (this.parent.getWeapon() != null) {
@@ -325,7 +324,8 @@ export class CharacterModel implements EquipBearer {
     }
 
     transitionToAnimation(targetAnim: AnimationGroup | undefined, duration: number, loop = false, speed = 1.0) {
-        if (!this.actualAnim || !targetAnim || this.actualAnim === targetAnim) return;
+        if (!this.parent.insideView) return
+        if (!targetAnim || this.actualAnim === targetAnim) return;
 
         // If there is already an ongoing transition
         if (this.animTransition) {
@@ -337,10 +337,12 @@ export class CharacterModel implements EquipBearer {
             }
         }
 
+        console.log("Transitioning animation to " + targetAnim.name)
         this.animTransition = new AnimTransition(duration, this.actualAnim, targetAnim, loop, speed)
     }
 
     onFrame(timeRate: number) {
+        if (!this.parent.insideView) return
         if (this.animTransition) {
             this.animTransition.onFrame(timeRate)
             if (this.animTransition.ended) {
@@ -440,8 +442,10 @@ export class CharacterModel implements EquipBearer {
     }
 
     async addToView() {
+        console.log("Adding character model to view:", this.parent.id)
         if (!this.initialized) await this.initAsync()
         this.model!.setEnabled(true)
+        console.log("Equipping items for character model:", this.parent.id)
         this.equipSet.forEach(item => {
             EquipManager.addEquippedItem(item)
             if (item.hasSwordParticles) {

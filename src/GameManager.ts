@@ -50,8 +50,10 @@ export const GameManager = {
 
 export interface Attackable extends Targetable {
     hpPercent: number
+    insideView: boolean
 
     getWeaponSoundType(): string
     getBodySoundType(): string
     getParrySoundType(): string | null
+
 }

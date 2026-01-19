@@ -83,7 +83,7 @@ export class MeshAnimation {
 
 export class AnimTransition {
     duration: number
-    fromAnimation: AnimationGroup
+    fromAnimation?: AnimationGroup
     toAnimation: AnimationGroup
     loop: boolean
     speed: number
@@ -92,7 +92,7 @@ export class AnimTransition {
     toWeight: number
     ended: boolean
 
-    constructor(duration: number, fromAnimation: AnimationGroup, toAnimation: AnimationGroup, loop = false, speed = 1.0) {
+    constructor(duration: number, fromAnimation: AnimationGroup | undefined, toAnimation: AnimationGroup, loop = false, speed = 1.0) {
         this.duration = duration
         this.fromAnimation = fromAnimation
         this.toAnimation = toAnimation
@@ -106,7 +106,7 @@ export class AnimTransition {
         // Start target animation but set its weight to 0 initially
         this.toAnimation.start(loop, speed, this.toAnimation['startFrame'], this.toAnimation['endFrame'])
         this.toAnimation.setWeightForAllAnimatables(0)
-        this.fromAnimation.setWeightForAllAnimatables(1)
+        this.fromAnimation?.setWeightForAllAnimatables(1)
     }
 
     onFrame(timeRate: number) {
@@ -115,17 +115,17 @@ export class AnimTransition {
         this.fromWeight = Math.max(0, this.fromWeight - weightChange)
         this.toWeight = Math.min(1, this.toWeight + weightChange)
 
-        this.fromAnimation.setWeightForAllAnimatables(this.fromWeight)
+        this.fromAnimation?.setWeightForAllAnimatables(this.fromWeight)
         this.toAnimation.setWeightForAllAnimatables(this.toWeight)
 
         if (this.fromWeight === 0 && this.toWeight === 1) {
-            this.fromAnimation.stop()
+            this.fromAnimation?.stop()
             this.ended = true
         }
     }
 
     forceEnd() {
-        this.fromAnimation.stop()
+        this.fromAnimation?.stop()
         this.toAnimation.setWeightForAllAnimatables(1)
     }
 }

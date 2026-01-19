@@ -47,19 +47,13 @@ export const MonsterManager = {
         }
     },
 
-    removeMonster (id: number, killerId: number) {
+    removeMonster (id: number, killerId: number | null) {
         if (this.monsters.has(id)) {
             const mob = this.monsters.get(id)
             if (!mob) {
                 return
             }
-
-            if (killerId != null && this.visibleMonsters.has(id)) {
-                this.monsterKilled(mob)
-            } else {
-                mob.removeModel()
-            }
-
+            this.monsterKilled(mob)
             if (mob === TargetingManager.selectedTarget) {
                 TargetingManager.unselectTarget()
             }
@@ -155,7 +149,7 @@ export const MonsterManager = {
         this.visibleMonsters.clear()
 
         this.monsters.forEach((monster, id) => {
-            if (this.isMonsterInViewport(monster)) {
+            if (monster.killedTime == 0 && this.isMonsterInViewport(monster)) {
                 const distanceToPlayer = monster.getDistanceFromMyPlayer()
                 if (distanceToPlayer <= MyPlayer.visibilityRadius) {
                     this.visibleMonsters.add(id)
