@@ -53,7 +53,9 @@ class Character implements Attackable {
     lastStepMarkTime: number = 0
     stepMarkSide: 'L' | 'R' = 'R'
 
+    autoAttackTarget: Attackable | null = null
     autoAttackEnd: number = 0
+    arrowCreateTime: number = 0
     arrowShotTime: number = 0
 
     constructor(data: any) {
@@ -96,6 +98,11 @@ class Character implements Attackable {
         if (this.autoAttackEnd > actualTime) {
             this.resolveStepMark(actualTime, true)
             this.model?.onFrame(timeRate)
+
+            if (this.arrowCreateTime > 0 && Date.now() >= this.arrowCreateTime && this.autoAttackTarget) {
+                this.model?.putArrowToHand(this.autoAttackTarget, this.arrowShotTime)
+                this.arrowCreateTime = 0
+            }
             return
         }
 
@@ -148,8 +155,8 @@ class Character implements Attackable {
     }
 
     startAutoAttack(data: any) {
-        const target = Utils.getAttackTargetByTypeAndId(data.tp, data.tgt)
-        if (!target) {
+        this.autoAttackTarget = Utils.getAttackTargetByTypeAndId(data.tp, data.tgt)
+        if (!this.autoAttackTarget) {
             return
         }
 
@@ -157,12 +164,13 @@ class Character implements Attackable {
         this.attackAnimationTime = data.dur
         if (this.isWeaponRanged()) {
             this.attackAnimationTime = data.dur - 100
+            this.arrowCreateTime = Date.now() + data.dur * 0.3
             this.arrowShotTime = Date.now() + this.attackAnimationTime
         }
 
         this.autoAttackEnd = Date.now() + this.attackAnimationTime
 
-        const angle = Utils.getAngleBetweenPoints(this.pos, target.pos)
+        const angle = Utils.getAngleBetweenPoints(this.pos, this.autoAttackTarget.pos)
         this.setLookAngle(angle - Math.PI / 4)
         this.model?.doAttackAnimation()
         this.model?.setWeaponTrailEnabled(true)
@@ -184,6 +192,7 @@ class Character implements Attackable {
         } else if (data.res.h === 'b' && target.getParrySoundType()) {
             AudioManager.playWeaponBlocked(target.getParrySoundType()!)
         }
+        this.autoAttackTarget = null
     }
 
     resolveStepMark(time: number, inCombat: boolean = false) {

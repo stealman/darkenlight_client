@@ -83,7 +83,7 @@ export class MonsterModel implements EquipBearer {
     }
 
     assignRhand(type: number, matIndex: number, scale = Vector3.One(), rotation: Vector3 | null, position: Vector3 | null) {
-        this.weaponEquipItem = new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.rhandBone, scale, rotation, position, true)
+        this.weaponEquipItem = new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.rhandBone, scale, rotation, position)
         this.addEquippedItem(this.weaponEquipItem)
     }
 

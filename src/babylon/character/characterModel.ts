@@ -15,6 +15,8 @@ import { EquipBearer, EquipItem, EquipManager } from '@/babylon/item/equipManage
 import { BabylonUtils } from '@/babylon/utils'
 import { EquipItemSlots, WeaponTypes } from '@/data/items/item'
 import { Utils } from '@/utils/utils'
+import { Attackable } from '@/GameManager'
+import { ArrowsManager } from '@/babylon/world/arrowsManager'
 
 export class CharacterModel implements EquipBearer {
     parent: Character
@@ -203,6 +205,10 @@ export class CharacterModel implements EquipBearer {
         this.weaponEquipItem = new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.009")!, null, null, null)
         //this.weaponEquipItem.createSwordParticles(this.rhandNode)
         this.addEquippedItem(this.weaponEquipItem)
+    }
+
+    putArrowToHand(target: Attackable, shotTime: number) {
+        ArrowsManager.addArrow(this.parent, target,shotTime, this.lhandNode)
     }
 
     addEquippedItem(item: EquipItem) {

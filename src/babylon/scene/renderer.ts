@@ -30,6 +30,7 @@ import { OnScreenMessageManager } from '@/gui/onScreenMessageManager'
 import { CharacterManager } from '@/babylon/character/characterManager'
 import { SelectedTargetPanel } from '@/gui/selectedTargetPanel'
 import { Tester } from '@/babylon/tester'
+import { ArrowsManager } from '@/babylon/world/arrowsManager'
 
 /**
  * Main Renderer
@@ -76,6 +77,7 @@ export const Renderer = {
         WeatherManager.initialize()
         StepMarksRenderer.initialize(this.scene)
         FightSplatsRenderer.initialize(this.scene)
+        ArrowsManager.initialize()
         SelectedTargetPanel.initialize()
         await OverlayManager.initialize()
         await TargetingManager.initialize()
@@ -138,6 +140,7 @@ export const Renderer = {
             MonsterManager.onFrame(timeRate, actualTime, this.frame)
 
             EquipManager.onFrame()
+            ArrowsManager.onFrame(timeRate, actualTime)
             TargetingManager.onFrame(timeRate, actualTime)
             OnScreenMessageManager.onFrame(actualTime)
             if (GMManager.gmPanelVisible) GMManager.onFrame(timeRate, actualTime)

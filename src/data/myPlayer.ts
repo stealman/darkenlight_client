@@ -62,6 +62,7 @@ export const MyPlayer = {
                 const dot = Vector3.Dot(moveDir, toTarget)
                 if (dot < -0.5 || (this.myChar.isWeaponRanged())) {
                     this.myChar.autoAttackEnd = 0
+                    this.myChar.autoAttackTarget = null
                     this.myModel?.setWeaponTrailEnabled(false)
                     this.myModel?.stopAnimation()
                     Connector.sendMessage(new AutoAttackBreak())
