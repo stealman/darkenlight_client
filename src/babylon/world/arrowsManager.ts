@@ -29,9 +29,10 @@ export const ArrowsManager = {
         this.mesh.material = mat
     },
 
-    addArrow(attacker: Attackable, target: Attackable, flyStartTime: number, handNode: TransformNode) {
+    addArrow(attacker: Attackable, target: Attackable, flyStartTime: number, handNode: TransformNode): Arrow {
         const arrow = new Arrow(attacker, target, flyStartTime, handNode)
         this.arrows.push(arrow)
+        return arrow
     },
 
     onFrame(timeRate: number, time: number) {
@@ -43,7 +44,7 @@ export const ArrowsManager = {
     },
 }
 
-class Arrow {
+export class Arrow {
     attacker: Attackable
     target: Attackable
     creationTime: number

@@ -17,6 +17,7 @@ import { Connector } from '@/network/connector'
 import { MyCharMoveMsg } from '@/network/messages'
 import { MyPlayer } from '@/data/myPlayer'
 import { EquipItemSlots, EquipSlotsCb, Item } from '@/data/items/item'
+import { Arrow } from '@/babylon/world/arrowsManager'
 
 class Character implements Attackable {
     model: CharacterModel | null = null
@@ -57,6 +58,7 @@ class Character implements Attackable {
     autoAttackEnd: number = 0
     arrowCreateTime: number = 0
     arrowShotTime: number = 0
+    arrow: Arrow | null = null
 
     constructor(data: any) {
         this.id = data.id
@@ -99,8 +101,8 @@ class Character implements Attackable {
             this.resolveStepMark(actualTime, true)
             this.model?.onFrame(timeRate)
 
-            if (this.arrowCreateTime > 0 && Date.now() >= this.arrowCreateTime && this.autoAttackTarget) {
-                this.model?.putArrowToHand(this.autoAttackTarget, this.arrowShotTime)
+            if (this.model && this.model.initialized && this.arrowCreateTime > 0 && Date.now() >= this.arrowCreateTime && this.autoAttackTarget) {
+                this.arrow = this.model!.putArrowToHand(this.autoAttackTarget, this.arrowShotTime)
                 this.arrowCreateTime = 0
             }
             return
@@ -163,7 +165,8 @@ class Character implements Attackable {
         // Ranged weapon attack animation is shorter to account for arrow travel time
         this.attackAnimationTime = data.dur
         if (this.isWeaponRanged()) {
-            this.attackAnimationTime = data.dur - 100
+            const dist = Vector3.Distance(this.pos, this.autoAttackTarget.pos)
+            this.attackAnimationTime = data.dur - (100 * dist / 5)
             this.arrowCreateTime = Date.now() + data.dur * 0.3
             this.arrowShotTime = Date.now() + this.attackAnimationTime
         }
@@ -174,6 +177,17 @@ class Character implements Attackable {
         this.setLookAngle(angle - Math.PI / 4)
         this.model?.doAttackAnimation()
         this.model?.setWeaponTrailEnabled(true)
+    }
+
+    breakAutoAttack() {
+        console.log("Auto attack broken")
+        this.autoAttackEnd = 0
+        this.autoAttackTarget = null
+        this.model?.setWeaponTrailEnabled(false)
+        this.model?.stopAnimation()
+        this.arrowCreateTime = 0
+        this.arrowShotTime = 0
+        this.arrow?.dispose()
     }
 
     finishAutoAttack(data: any) {
