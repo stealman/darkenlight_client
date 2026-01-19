@@ -17,13 +17,14 @@ export const ArrowsManager = {
     mesh: null as Mesh | null,
 
     initialize () {
-        this.mesh = MeshBuilder.CreateBox("box", { width: 0.12, height: 3, depth: 0.12 }, Renderer.scene)
+        this.mesh = MeshBuilder.CreateBox("box", { width: 0.1, height: 1.5, depth: 0.1 }, Renderer.scene)
         this.mesh.isVisible = false
         this.mesh.rotationQuaternion = Quaternion.Identity()
 
         const mat = new StandardMaterial("arrowMat", Renderer.scene)
         mat.diffuseColor = new Color3(0.4, 0.29, 0.13)
         mat.emissiveColor = new Color3(0.1, 0.1, 0.1)
+        mat.alpha = 0.5
 
         this.mesh.material = mat
     },
@@ -59,10 +60,15 @@ class Arrow {
     startPos = Vector3.Zero()
     currentPos = Vector3.Zero()
 
-    speed = 25 // units per second
-    hitDistance = 0.05 // distance to target to register hit
-    heightOffset = new Vector3(0, 0, 0)
+    speed = 22 // units per second
+    heightOffset = Vector3.Zero()
 
+    arcHeight = 1
+    flightTime = 0
+    flightDuration = 0
+    startPosFixed = Vector3.Zero()
+    endPosFixed = Vector3.Zero()
+    lastPos = Vector3.Zero()
 
     constructor(attacker: Attackable, target: Attackable, flyStartTime: number, handNode: TransformNode) {
         this.attacker = attacker
@@ -80,8 +86,12 @@ class Arrow {
 
             this.trailTip = new TransformNode('arrowTrailTip', Renderer.scene)
             this.trailTip.parent = this.meshClone
-            this.trailTip.position.y = -2
+            this.trailTip.position.y = -1
         }
+
+        // Arc height by distance
+        const dist = Vector3.Distance(this.attacker.pos, this.target.pos)
+        this.arcHeight = Math.min(2, Math.max(0.2, dist / 12))
     }
 
     startFlying() {
@@ -98,6 +108,18 @@ class Arrow {
         this.meshClone.setParent(null, true)
         this.currentPos.copyFrom(this.meshClone.position)
         this.startedFlying = true
+
+        const end = this.target?.pos.add(this.heightOffset)
+        if (end) {
+            this.startPosFixed = this.currentPos.clone()
+            this.endPosFixed = end.clone()
+
+            const dist = Vector3.Distance(this.startPosFixed, this.endPosFixed)
+            this.flightDuration = Math.max(0.001, dist / this.speed) // konstantní rychlost
+            this.flightTime = 0
+
+            this.lastPos.copyFrom(this.currentPos)
+        }
     }
 
     onFrame(time: number, timeRate: number) {
@@ -108,39 +130,37 @@ class Arrow {
         }
 
         if (this.startedFlying) {
-            const targetPos = this.target?.pos.add(this.heightOffset)
-            if (!targetPos) {
+            const endNow = this.target?.pos.add(this.heightOffset)
+            if (!endNow) {
                 this.dispose()
                 return
             }
 
-            const toTarget = targetPos.subtract(this.currentPos)
-            const dist = toTarget.length()
+            this.flightTime += timeRate
+            const t = Math.max(0, Math.min(1, this.flightTime / this.flightDuration))
 
-            // check for hit
-            if (dist <= this.hitDistance) {
-                this.dispose()
-                return
-            }
+            const basePos = Vector3.Lerp(this.startPosFixed, this.endPosFixed, t)
+            const arc = 4 * t * (1 - t) // max 1 při t=0.5
+            const newPos = basePos.add(Vector3.Up().scale(this.arcHeight * arc))
 
-            // constant velocity movement
-            const dt = timeRate
-            const maxStep = this.speed * dt
+            this.meshClone.position.copyFrom(newPos)
 
-            const dir = dist > 0.00001 ? toTarget.scale(1 / dist) : Vector3.Zero()
-            const step = Math.min(maxStep, dist)
-            this.currentPos.addInPlace(dir.scale(step))
-
-            this.meshClone.position.copyFrom(this.currentPos)
-
-            if (dir.lengthSquared() > 0.00001) {
+            const dir = newPos.subtract(this.lastPos)
+            if (dir.lengthSquared() > 0.0000001) {
+                dir.normalize()
                 const lookQ = Quaternion.FromLookDirectionLH(dir, Vector3.Up())
                 const fixQ = Quaternion.RotationAxis(Vector3.Right(), -Math.PI / 2)
                 this.meshClone.rotationQuaternion = lookQ.multiply(fixQ)
             }
+
+            this.currentPos.copyFrom(newPos)
+            this.lastPos.copyFrom(newPos)
+
+            if (t >= 1) {
+                this.dispose()
+            }
         }
 
-        // fallback: max lifetime 1s
         if (this.creationTime < time - 1000) {
             this.dispose()
         }
@@ -153,6 +173,7 @@ class Arrow {
         if (this.trail) {
             this.trail.dispose()
             this.trail = null
+            this.trailTip.dispose()
         }
 
         if (this.meshClone) {
