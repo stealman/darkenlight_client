@@ -4,7 +4,7 @@ import {
     SceneLoader, Skeleton, Sound, TransformNode,
     Vector3,
 } from '@babylonjs/core'
-import { AudioManager } from '@/babylon/audio/audioManager'
+import { AudioManager, FootStepSpeeds, FootStepTypes } from '@/babylon/audio/audioManager'
 import { Materials } from '@/babylon/materials'
 import { AnimTransition } from '@/babylon/animations/animation'
 import { Lights } from '@/babylon/scene/lights'
@@ -15,6 +15,7 @@ import { EquipBearer, EquipItem, EquipManager } from '@/babylon/item/equipManage
 import { BabylonUtils } from '@/babylon/utils'
 import { EquipItemSlots, WeaponTypes } from '@/data/items/item'
 import { Utils } from '@/utils/utils'
+import { AudioUtils } from '@/babylon/audio/audioUtils'
 
 export class CharacterModel implements EquipBearer {
     parent: Character
@@ -210,52 +211,53 @@ export class CharacterModel implements EquipBearer {
         EquipManager.addEquippedItem(item)
     }
 
+    onFrame(timeRate: number) {
+        this.checkActiveStepSound()
+
+        if (!this.isActive()) return
+        if (this.animTransition) {
+            this.animTransition.onFrame(timeRate)
+            if (this.animTransition.ended) {
+                this.animTransition = null
+            }
+        }
+
+        if (this.parent !== MyPlayer.myChar || this.parent.getMoveAngle() != null || Math.abs(this.parent.pos.y - this.parent.logicYpos) > 0.1) {
+            this.moveModel(timeRate)
+        }
+        if (this.parent.getLookAngle() != null) {
+            this.resolveModelRotation(timeRate)
+        }
+
+        if (this.model) {
+            this.rotationQuaternion = new Quaternion()
+            this.worldMatrix = this.model!.getWorldMatrix();
+            this.worldMatrix.decompose(new Vector3(), this.rotationQuaternion, new Vector3());
+        }
+
+        this.equipSet.forEach(item => {
+            item.onFrame()
+        })
+    }
+
     startWalkAnimation() {
-        if (!this.parent.insideView) return
+        if (!this.isActive()) return
         if (this.actualAnim !== this.walkAnim) {
             this.transitionToAnimation(this.walkAnim, 0.15, true, 3)
             this.actualAnim = this.walkAnim
-
-            this.actualStepSound = this.getStepSound()
-            this.actualStepSound.setPlaybackRate(this.parent.getStepSoundSpeed())
-            if (!this.actualStepSound.isPlaying) {
-                this.actualStepSound.play()
-            }
-            this.stopAllStepSounds(this.actualStepSound)
         }
     }
 
     startRunAnimation() {
-        if (!this.parent.insideView) return
+        if (!this.isActive()) return
         if (this.actualAnim !== this.runAnim) {
-            console.log("Starting run animation " + this.runAnim)
             this.transitionToAnimation(this.runAnim, 0.15, true, 3)
             this.actualAnim = this.runAnim
-
-            this.actualStepSound = this.getStepSound()
-            this.actualStepSound.setPlaybackRate(this.parent.getStepSoundSpeed())
-            if (!this.actualStepSound.isPlaying) {
-                this.actualStepSound.play()
-            }
-            this.stopAllStepSounds(this.actualStepSound)
-        }
-    }
-
-    checkActiveStepSound() {
-        if (!this.parent.insideView) return
-        const supposedStepSound = this.getStepSound()
-        if (this.actualStepSound?.isPlaying && this.actualStepSound !== supposedStepSound) {
-            this.actualStepSound = supposedStepSound
-            this.actualStepSound.setPlaybackRate(this.parent.getStepSoundSpeed())
-            if (!this.actualStepSound.isPlaying) {
-                this.actualStepSound.play()
-            }
-            this.stopAllStepSounds(this.actualStepSound)
         }
     }
 
     doAttackAnimation() {
-        if (!this.parent.insideView) return
+        if (!this.isActive()) return
         let baseAnimSpeed = 1000
         const possibleAnims = []
         if (this.parent.getWeapon() != null) {
@@ -289,8 +291,6 @@ export class CharacterModel implements EquipBearer {
         if (this.actualAnim !== anim) {
             this.transitionToAnimation(anim, 0.15, false, baseAnimSpeed / this.parent.attackAnimationTime)
             this.actualAnim = anim
-
-            this.stopAllStepSounds()
         }
     }
 
@@ -302,11 +302,31 @@ export class CharacterModel implements EquipBearer {
             this.transitionToAnimation(desiredAnimation, 0.25, true, animSpeed)
             this.actualAnim = desiredAnimation
         }
-
-        this.stopAllStepSounds()
     }
 
-    getStepSound(): Sound {
+    checkActiveStepSound() {
+        // No movement, stop all step sounds
+        if (!this.parent.getMoveAngle()) {
+            this.stopAllStepSounds()
+            this.actualStepSound = null
+            return
+        }
+
+        const supposedStepSound = this.getStepSoundByTerrain()
+        if (this.actualStepSound !== supposedStepSound) {
+            this.actualStepSound = supposedStepSound
+        }
+        const soundParams = this.getStepSoundParams()
+        this.actualStepSound.setPlaybackRate(soundParams.speed)
+        if (!this.actualStepSound.isPlaying) {
+            this.actualStepSound.play()
+        }
+
+        this.actualStepSound.setVolume(soundParams.volume)
+        this.stopAllStepSounds(this.actualStepSound)
+    }
+
+    getStepSoundByTerrain(): Sound {
         const stepSoundType = this.parent.getFootStepSoundType()
         if (!this.footStepSounds.has(stepSoundType)) {
             const sound = AudioManager.footStepSounds.get(stepSoundType)
@@ -323,8 +343,29 @@ export class CharacterModel implements EquipBearer {
         })
     }
 
+    getStepSoundParams(): {speed: number, volume: number} {
+        let speed = 1
+        let volume = 1
+        switch (this.parent.getFootStepSoundType()) {
+            case 'DIRT':
+                speed = this.parent.movementType === 'RUN' ? FootStepSpeeds.DIRT_RUN : FootStepSpeeds.DIRT_WALK
+                volume = AudioManager.footStepSounds.get(FootStepTypes.DIRT).defaultVolume
+                break
+            case 'SNOW':
+                speed = this.parent.movementType === 'RUN' ? FootStepSpeeds.SNOW_RUN : FootStepSpeeds.SNOW_WALK
+                volume = AudioManager.footStepSounds.get(FootStepTypes.SNOW).defaultVolume
+                break
+            default:
+                speed = this.parent.movementType === 'RUN' ? FootStepSpeeds.DIRT_RUN : FootStepSpeeds.DIRT_WALK
+                volume = AudioManager.footStepSounds.get(FootStepTypes.DIRT).defaultVolume
+                break
+        }
+        volume = Math.max(0, volume * AudioUtils.getVolumeRatioByDistance(this.parent.pos))
+        return { speed: speed, volume: volume }
+    }
+
     transitionToAnimation(targetAnim: AnimationGroup | undefined, duration: number, loop = false, speed = 1.0) {
-        if (!this.parent.insideView) return
+        if (!this.isActive()) return
         if (!targetAnim || this.actualAnim === targetAnim) return;
 
         // If there is already an ongoing transition
@@ -336,37 +377,7 @@ export class CharacterModel implements EquipBearer {
                 return
             }
         }
-
-        console.log("Transitioning animation to " + targetAnim.name)
         this.animTransition = new AnimTransition(duration, this.actualAnim, targetAnim, loop, speed)
-    }
-
-    onFrame(timeRate: number) {
-        if (!this.parent.insideView) return
-        if (this.animTransition) {
-            this.animTransition.onFrame(timeRate)
-            if (this.animTransition.ended) {
-                this.animTransition = null
-            }
-        }
-
-        this.checkActiveStepSound()
-        if (this.parent !== MyPlayer.myChar || this.parent.getMoveAngle() != null || Math.abs(this.parent.pos.y - this.parent.logicYpos) > 0.1) {
-            this.moveModel(timeRate)
-        }
-        if (this.parent.getLookAngle() != null) {
-            this.resolveModelRotation(timeRate)
-        }
-
-        if (this.model) {
-            this.rotationQuaternion = new Quaternion()
-            this.worldMatrix = this.model!.getWorldMatrix();
-            this.worldMatrix.decompose(new Vector3(), this.rotationQuaternion, new Vector3());
-        }
-
-        this.equipSet.forEach(item => {
-            item.onFrame()
-        })
     }
 
     /**
@@ -441,11 +452,13 @@ export class CharacterModel implements EquipBearer {
         return this.model
     }
 
+    isActive(): boolean {
+        return this.parent.insideView && this.initialized
+    }
+
     async addToView() {
-        console.log("Adding character model to view:", this.parent.id)
         if (!this.initialized) await this.initAsync()
         this.model!.setEnabled(true)
-        console.log("Equipping items for character model:", this.parent.id)
         this.equipSet.forEach(item => {
             EquipManager.addEquippedItem(item)
             if (item.hasSwordParticles) {

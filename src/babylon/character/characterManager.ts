@@ -13,7 +13,6 @@ export const CharacterManager = {
     },
 
     async addCharacter(data) {
-        console.log("Adding/updating character:", data)
         if (this.characters.has(data.id)) {
             const char = this.characters.get(data.id)!
             char!.pos.x = data.x

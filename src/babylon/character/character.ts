@@ -354,17 +354,6 @@ class Character implements Attackable {
         }
     }
 
-    getStepSoundSpeed(): number {
-        switch (this.getFootStepSoundType()) {
-            case 'DIRT':
-                return this.movementType === 'RUN' ? FootStepSpeeds.DIRT_RUN : FootStepSpeeds.DIRT_WALK
-            case 'SNOW':
-                return this.movementType === 'RUN' ? FootStepSpeeds.SNOW_RUN : FootStepSpeeds.SNOW_WALK
-            default:
-                return this.movementType === 'RUN' ? FootStepSpeeds.SNOW_RUN : FootStepSpeeds.SNOW_WALK
-        }
-    }
-
     getDistanceFromMyPlayer(): number {
         return Vector3.Distance(this.pos, MyPlayer.myChar.pos)
     }

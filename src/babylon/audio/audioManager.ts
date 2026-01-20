@@ -32,6 +32,7 @@ export const AudioManager = {
 
         this.footStepSounds.set(FootStepTypes.SNOW, new Sound("footStepSnow", AudioManager.BASE_PATH_SFX + "steps-snow.ogg", scene, function() {
             AudioManager.footStepSounds.get(FootStepTypes.SNOW)!['loaded'] = true;
+            AudioManager.footStepSounds.get(FootStepTypes.SNOW)!['defaultVolume'] = 0.5;
         }, {
             volume: 0.5,
             playbackRate: 1,
@@ -40,6 +41,7 @@ export const AudioManager = {
 
         this.footStepSounds.set(FootStepTypes.DIRT, new Sound("footStepDirt", AudioManager.BASE_PATH_SFX + "steps-dirt.ogg", scene, function() {
             AudioManager.footStepSounds.get(FootStepTypes.DIRT)!['loaded'] = true;
+            AudioManager.footStepSounds.get(FootStepTypes.DIRT)!['defaultVolume'] = 1.1;
         }, {
             volume: 1.1,
             playbackRate: 1,
