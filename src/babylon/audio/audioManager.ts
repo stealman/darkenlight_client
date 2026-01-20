@@ -1,6 +1,7 @@
-import { Engine, Scene, Sound } from '@babylonjs/core'
+import { Engine, Scene, Sound, Vector3 } from '@babylonjs/core'
 import { Utils } from '@/utils/utils'
 import { Settings } from '@/settings/settings'
+import { AudioUtils } from '@/babylon/audio/audioUtils'
 
 export const AudioManager = {
     globalVolume: 0.5,
@@ -32,7 +33,7 @@ export const AudioManager = {
 
         this.footStepSounds.set(FootStepTypes.SNOW, new Sound("footStepSnow", AudioManager.BASE_PATH_SFX + "steps-snow.ogg", scene, function() {
             AudioManager.footStepSounds.get(FootStepTypes.SNOW)!['loaded'] = true;
-            AudioManager.footStepSounds.get(FootStepTypes.SNOW)!['defaultVolume'] = 0.5;
+            AudioManager.footStepSounds.get(FootStepTypes.SNOW)!['defaultVolume'] = 0.45;
         }, {
             volume: 0.5,
             playbackRate: 1,
@@ -41,7 +42,7 @@ export const AudioManager = {
 
         this.footStepSounds.set(FootStepTypes.DIRT, new Sound("footStepDirt", AudioManager.BASE_PATH_SFX + "steps-dirt.ogg", scene, function() {
             AudioManager.footStepSounds.get(FootStepTypes.DIRT)!['loaded'] = true;
-            AudioManager.footStepSounds.get(FootStepTypes.DIRT)!['defaultVolume'] = 1.1;
+            AudioManager.footStepSounds.get(FootStepTypes.DIRT)!['defaultVolume'] = 0.8;
         }, {
             volume: 1.1,
             playbackRate: 1,
@@ -56,8 +57,8 @@ export const AudioManager = {
         this.loadSoundArray(this.boneHitSounds, ["hit-bone1.ogg"], "boneHitSound", scene, { volume: 0.5, playbackRate: 1 } );
 
         // Death rattles
-        this.loadDeathRattleSound(MonsterSoundTypes.SKELETON, "death-skeleton.ogg", scene, { volume: 1.2, playbackRate: 0.85 } );
-        this.loadDeathRattleSound(MonsterSoundTypes.CAT, "death-cat.ogg", scene, { volume: 0.6, playbackRate: 1 } );
+        this.loadDeathRattleSound(MonsterSoundTypes.SKELETON, "death-skeleton.ogg", scene, { volume: 0.7, playbackRate: 0.85 } );
+        this.loadDeathRattleSound(MonsterSoundTypes.CAT, "death-cat.ogg", scene, { volume: 0.3, playbackRate: 1 } );
 
         // Ambient sounds
         this.loadAmbientSound(AmbientSoundTypes.WINTER_FOREST, "winter-forest.ogg", scene, { volume: AmbientSoundTypes.WINTER_FOREST.defaultVolume, playbackRate: 1, loop: true } );
@@ -74,20 +75,6 @@ export const AudioManager = {
         this.setAmbientSoundVolume(this.ambientSoundVolume)
     },
 
-    setGlobalVolume(volume: number) {
-        this.globalVolume = volume;
-        Engine.audioEngine?.setGlobalVolume(this.globalVolume);
-    },
-
-    setAmbientSoundVolume(volume: number) {
-        Object.keys(AmbientSoundTypes).forEach((key) => {
-            const ambientSound = this.ambientSounds.get(AmbientSoundTypes[key]);
-            if (ambientSound) {
-                ambientSound.setVolume(volume * AmbientSoundTypes[key].defaultVolume);
-            }
-        });
-    },
-
     processOneFrame() {
         // If actual ambient sound is not playing, play it
         if (this.actualAmbientSound && !this.actualAmbientSound.isPlaying) {
@@ -95,16 +82,11 @@ export const AudioManager = {
         }
     },
 
-    stopAmbientSound() {
-        if (this.actualAmbientSound && this.actualAmbientSound.isPlaying) {
-            this.actualAmbientSound.stop();
-        }
-    },
-
     loadSoundArray(targetArray: [Sound], fileNames: string[], soundName: string, scene: Scene, options: { volume: number, playbackRate: number }): Sound[] {
         fileNames.forEach((file, index) => {
             const sound = new Sound(soundName + index, AudioManager.BASE_PATH_SFX + file, scene, function() {
                 sound['loaded'] = true;
+                sound['defaultVolume'] = options.volume;
             }, options);
             targetArray.push(sound);
         });
@@ -113,6 +95,7 @@ export const AudioManager = {
     loadDeathRattleSound (type: string, fileName: string, scene: Scene, options: { volume: number, playbackRate: number }) {
         const sound = new Sound("deathRattle" + type, AudioManager.BASE_PATH_MONSTER + fileName, scene, function() {
             sound['loaded'] = true;
+            sound['defaultVolume'] = options.volume;
         }, options);
         this.deathRattleSounds.set(type, sound);
     },
@@ -124,52 +107,60 @@ export const AudioManager = {
         this.ambientSounds.set(type, sound);
     },
 
-    playWeaponSwing(type: string) {
+    playWeaponSwing(type: string, position: Vector3) {
+        const volumeRatio = AudioUtils.getVolumeRatioByDistance(position)
         switch (type) {
             case WeaponSoundTypes.SWORD:
-                this.playRandomSound(this.swordSwingSounds)
+                this.playRandomSound(this.swordSwingSounds, volumeRatio)
                 break;
             case WeaponSoundTypes.BONE:
-                this.playRandomSound(this.swordSwingSounds)
+                this.playRandomSound(this.swordSwingSounds, volumeRatio)
                 break;
         }
     },
 
-    playWeaponHit(weaponType: string, targetType: string) {
+    playWeaponHit(weaponType: string, targetType: string, position: Vector3) {
+        const volumeRatio = AudioUtils.getVolumeRatioByDistance(position)
         switch (weaponType) {
             case WeaponSoundTypes.SWORD:
 
                 switch (targetType) {
                     case BodySoundTypes.HARD:
-                        this.playRandomSound(this.swordHitHardSounds)
-                        break;
+                        this.playRandomSound(this.swordHitHardSounds, volumeRatio)
+                        break
                     case BodySoundTypes.METAL:
-                        this.playRandomSound(this.swordHitMetalSounds)
-                        break;
+                        this.playRandomSound(this.swordHitMetalSounds, volumeRatio)
+                        break
                 }
+                break
             case WeaponSoundTypes.BONE:
-                this.playRandomSound(this.boneHitSounds)
+                this.playRandomSound(this.boneHitSounds, volumeRatio)
                 break
         }
     },
 
-    playWeaponBlocked(targetType: string) {
+    playWeaponBlocked(targetType: string, position: Vector3) {
+        const volumeRatio = AudioUtils.getVolumeRatioByDistance(position)
         switch (targetType) {
             case WeaponSoundTypes.SWORD:
-                this.playRandomSound(this.swordBlockSounds)
+                this.playRandomSound(this.swordBlockSounds, volumeRatio)
                 break;
         }
     },
 
-    playRandomSound(soundArray: Sound[]) {
+    playRandomSound(soundArray: Sound[], volumeRatio: number = 1) {
         const sound = soundArray[Utils.rollDice(soundArray.length, true)];
+        sound.setVolume(sound.defaultVolume * volumeRatio)
         if (sound['loaded']) {
             sound.play();
         }
     },
 
-    playDeathRattle(type: string) {
+    playDeathRattle(type: string, position: Vector3) {
         const sound = this.deathRattleSounds.get(type)!
+
+        const ratio = AudioUtils.getVolumeRatioByDistance(position)
+        sound.setVolume(sound.defaultVolume * ratio)
         if (sound['loaded']) {
             sound.play();
         }
@@ -180,6 +171,27 @@ export const AudioManager = {
             this.guiButtonClickSound.play();
         }
     },
+
+    setAmbientSoundVolume(volume: number) {
+        Object.keys(AmbientSoundTypes).forEach((key) => {
+            const ambientSound = this.ambientSounds.get(AmbientSoundTypes[key]);
+            if (ambientSound) {
+                ambientSound.setVolume(volume * AmbientSoundTypes[key].defaultVolume);
+            }
+        });
+    },
+
+    stopAmbientSound() {
+        if (this.actualAmbientSound && this.actualAmbientSound.isPlaying) {
+            this.actualAmbientSound.stop();
+        }
+    },
+
+    setGlobalVolume(volume: number) {
+        this.globalVolume = volume;
+        Engine.audioEngine?.setGlobalVolume(this.globalVolume);
+    },
+
 }
 
 export const FootStepTypes = {

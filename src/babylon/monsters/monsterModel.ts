@@ -16,6 +16,7 @@ import { WorldDataManager } from '@/data/worldDataManager'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { TerrainManager } from '@/babylon/world/terrainManager'
 import { Settings } from '@/settings/settings'
+import { AudioUtils } from '@/babylon/audio/audioUtils'
 
 export class MonsterModel implements EquipBearer {
     parent: Monster
@@ -189,7 +190,7 @@ export class MonsterModel implements EquipBearer {
         if (this.attackAnims.length === 0) {
             return
         }
-        this.transitionToAnimation(this.attackAnims[Utils.rollDice(this.attackAnims.length, true)], true, false, 1500 / dur)
+        this.transitionToAnimation(this.attackAnims[Utils.rollDice(this.attackAnims.length, true)], true, false, 1000 / dur)
         this.setWeaponTrailEnabled(true)
     }
 
@@ -208,7 +209,9 @@ export class MonsterModel implements EquipBearer {
         this.isDying = true
         this.disposeWeaponTrail()
         this.fadeOutTimer = new Date().getTime() + 525
-        AudioManager.playDeathRattle(this.parent.mobType.monsterSoundType)
+
+        AudioManager.playDeathRattle(this.parent.mobType.monsterSoundType, this.parent.pos)
+        console.log('Monster died:', this.parent.id)
     }
 
     transitionToAnimation(target: MeshAnimation, fadeIn: boolean = false, loop = false, speed = 1.0) {

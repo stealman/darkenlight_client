@@ -48,12 +48,10 @@ export const MonsterManager = {
     },
 
     removeMonster (id: number, killerId: number | null) {
+        console.log('Removing monster', id)
         if (this.monsters.has(id)) {
             const mob = this.monsters.get(id)
-            if (!mob) {
-                return
-            }
-            this.monsterKilled(mob)
+            this.monsterKilled(mob!)
             if (mob === TargetingManager.selectedTarget) {
                 TargetingManager.unselectTarget()
             }
@@ -99,6 +97,7 @@ export const MonsterManager = {
     },
 
     monsterKilled(mob: Monster) {
+        console.log('Monster killed:', mob.id)
         mob.killedTime = Date.now()
         mob.model.doDie()
         this.killedMonsters.add(mob)

@@ -115,7 +115,7 @@ class Character implements Attackable {
         }
 
         if (this.arrowShotTime > 0 && Date.now() >= this.arrowShotTime) {
-            if (this == MyPlayer.myChar || this.insideView) AudioManager.playWeaponSwing(this.weaponSoundType)
+            if (this == MyPlayer.myChar || this.insideView) AudioManager.playWeaponSwing(this.weaponSoundType, this.pos)
             this.arrowShotTime = 0
         }
 
@@ -200,7 +200,7 @@ class Character implements Attackable {
         this.model?.setWeaponTrailEnabled(false)
 
         // Swing sound for melee weapons - ranged weapons have it when arrow is fired
-        if (!this.isWeaponRanged()) AudioManager.playWeaponSwing(this.weaponSoundType)
+        if (!this.isWeaponRanged()) AudioManager.playWeaponSwing(this.weaponSoundType, this.pos)
 
         const target = Utils.getAttackTargetByTypeAndId(data.tp, data.tgt)
         if (!target) {
@@ -208,7 +208,7 @@ class Character implements Attackable {
         }
         target.hpPercent = data.res.hpp
         if (data.res.h === 'h') {
-            AudioManager.playWeaponHit(this.weaponSoundType, target.getBodySoundType())
+            AudioManager.playWeaponHit(this.weaponSoundType, target.getBodySoundType(), target.pos)
         } else if (data.res.h === 'b' && target.getParrySoundType()) {
             AudioManager.playWeaponBlocked(target.getParrySoundType()!)
         }

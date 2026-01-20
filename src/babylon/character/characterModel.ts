@@ -360,7 +360,7 @@ export class CharacterModel implements EquipBearer {
                 volume = AudioManager.footStepSounds.get(FootStepTypes.DIRT).defaultVolume
                 break
         }
-        volume = Math.max(0, volume * AudioUtils.getVolumeRatioByDistance(this.parent.pos))
+        volume = Math.max(0, volume * (this.parent.isMyChar() ? 1 : AudioUtils.getVolumeRatioByDistance(this.parent.pos)))
         return { speed: speed, volume: volume }
     }
 

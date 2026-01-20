@@ -73,7 +73,7 @@ export class Monster implements Attackable {
     }
 
     autoAttackFinished(data: any) {
-        AudioManager.playWeaponSwing(this.getWeaponSoundType())
+        AudioManager.playWeaponSwing(this.getWeaponSoundType(), this.pos)
         this.model.setWeaponTrailEnabled(false)
 
         const target = Utils.getAttackTargetByTypeAndId(data.tp, data.tgt)
@@ -82,7 +82,7 @@ export class Monster implements Attackable {
         }
         target.hpPercent = data.res.hpp
         if (data.res.h === 'h') {
-            AudioManager.playWeaponHit(this.getWeaponSoundType(), target.getBodySoundType())
+            AudioManager.playWeaponHit(this.getWeaponSoundType(), target.getBodySoundType(), target.pos)
         } else if (data.res.h === 'b' && target.getParrySoundType()) {
             AudioManager.playWeaponBlocked(target.getParrySoundType()!)
         }
