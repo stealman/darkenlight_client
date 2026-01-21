@@ -9,6 +9,7 @@ export const MonsterBonesAnims = {
         model.headBone = model.skeleton.bones.find(b => b.id === "Bone.001")!
         model.lhandBone = model.skeleton.bones.find(b => b.id === "Bone.005")!
         model.rhandBone = model.skeleton.bones.find(b => b.id === "Bone.008")!
+        model.lhandNode.attachToBone(model.lhandBone, model.mesh)
 
         const animations = [
             { name: "Idle", startFrame: 0, endFrame: 75 },

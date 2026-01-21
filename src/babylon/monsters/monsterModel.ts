@@ -16,7 +16,6 @@ import { WorldDataManager } from '@/data/worldDataManager'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { TerrainManager } from '@/babylon/world/terrainManager'
 import { Settings } from '@/settings/settings'
-import { AudioUtils } from '@/babylon/audio/audioUtils'
 
 export class MonsterModel implements EquipBearer {
     parent: Monster
@@ -34,6 +33,7 @@ export class MonsterModel implements EquipBearer {
     modelYAngleOffset: number = Math.PI * 1 / 4
 
     skeleton: Skeleton
+    lhandNode: TransformNode = new TransformNode("lhandNode")
     animation: AnimationGroup
 
     idleAnim: MeshAnimation | undefined
@@ -186,12 +186,29 @@ export class MonsterModel implements EquipBearer {
         this.modelRotation = this.node.rotation.y;
     }
 
+    /**
     doAttackMelee(dur: number) {
         if (this.attackAnims.length === 0) {
             return
         }
         this.transitionToAnimation(this.attackAnims[Utils.rollDice(this.attackAnims.length, true)], true, false, 1000 / dur)
         this.setWeaponTrailEnabled(true)
+    }*/
+
+    doAttackAnimation() {
+        if (!this.isActive()) return
+        const baseAnimSpeed = 1000
+
+        const possibleAnims = []
+        if (!this.parent.isWeaponRanged()) {
+            possibleAnims.push(this.attackAnims[0])
+            possibleAnims.push(this.attackAnims[1])
+        } else {
+            possibleAnims.push(this.attackAnims[0])
+        }
+
+        const anim = possibleAnims[Utils.rollDice(possibleAnims.length, true)]
+        this.transitionToAnimation(anim, true, false, baseAnimSpeed / this.parent.attackAnimationTime)
     }
 
     doWalk() {
@@ -211,7 +228,6 @@ export class MonsterModel implements EquipBearer {
         this.fadeOutTimer = new Date().getTime() + 525
 
         AudioManager.playDeathRattle(this.parent.mobType.monsterSoundType, this.parent.pos)
-        console.log('Monster died:', this.parent.id)
     }
 
     transitionToAnimation(target: MeshAnimation, fadeIn: boolean = false, loop = false, speed = 1.0) {

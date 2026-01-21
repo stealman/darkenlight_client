@@ -115,11 +115,16 @@ export const Renderer = {
     onFrame(scene: Scene) {
         this.frame++
         const actualTime = new Date().getTime()
-        const timeRate = this.engine!.getDeltaTime() / 1000
+        let timeRate = this.engine!.getDeltaTime() / 1000
         this.fps = Number.parseInt(this.engine!.getFps()!.toFixed());
 
         if (timeRate > 0.04 && this.fps > 80) {
             //console.log(timeRate)
+        }
+
+        if (timeRate > 0.1) {
+            console.log("Low frame rate detected: " + this.fps + " FPS, timeRate: " + timeRate)
+            timeRate = 0.1
         }
 
         if (this.camera == null) {

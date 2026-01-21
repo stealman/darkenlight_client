@@ -61,7 +61,7 @@ export class Arrow {
     startPos = Vector3.Zero()
     currentPos = Vector3.Zero()
 
-    speed = 22 // units per second
+    speed = 22// units per second
     heightOffset = Vector3.Zero()
 
     arcHeight = 1
@@ -77,6 +77,10 @@ export class Arrow {
         this.creationTime = Date.now()
         this.flyStartTime = flyStartTime
         this.heightOffset.y = (0.3 + Math.random() * 0.4) * target.getModelHeight()
+
+        if (target.getObjectType() === 'C') {
+            this.heightOffset.y -= 0.5
+        }
 
         if (ArrowsManager.mesh) {
             this.meshClone = ArrowsManager.mesh.clone("arrowClone")
@@ -101,7 +105,6 @@ export class Arrow {
             this.meshClone.scaling.scaleInPlace(scale)
         }
     }
-
 
     startFlying() {
         if (!this.meshClone) return
@@ -141,6 +144,7 @@ export class Arrow {
         if (this.startedFlying) {
             const endNow = this.target?.pos.add(this.heightOffset)
             if (!endNow) {
+                console.log("Arrow target missing, disposing arrow")
                 this.dispose()
                 return
             }
@@ -170,7 +174,7 @@ export class Arrow {
             }
         }
 
-        if (this.creationTime < time - 1000) {
+        if (this.creationTime < time - 1500) {
             this.dispose()
         }
     }

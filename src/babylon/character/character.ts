@@ -210,7 +210,7 @@ class Character implements Attackable {
         if (data.res.h === 'h') {
             AudioManager.playWeaponHit(this.weaponSoundType, target.getBodySoundType(), target.pos)
         } else if (data.res.h === 'b' && target.getParrySoundType()) {
-            AudioManager.playWeaponBlocked(target.getParrySoundType()!)
+            AudioManager.playWeaponBlocked(target.getParrySoundType()!, target.pos)
         }
         this.autoAttackTarget = null
     }

@@ -48,7 +48,6 @@ export const MonsterManager = {
     },
 
     removeMonster (id: number, killerId: number | null) {
-        console.log('Removing monster', id)
         if (this.monsters.has(id)) {
             const mob = this.monsters.get(id)
             this.monsterKilled(mob!)
@@ -97,14 +96,13 @@ export const MonsterManager = {
     },
 
     monsterKilled(mob: Monster) {
-        console.log('Monster killed:', mob.id)
         mob.killedTime = Date.now()
         mob.model.doDie()
         this.killedMonsters.add(mob)
     },
 
     onFrame(timeRate: number, actualTime: number, frame: number) {
-        if (frame % 10 === 0) {
+       if (frame % 10 === 0) {
             this.updateVisibleMonsters()
             this.monsters.forEach(monster => {
                 monster.setVisible(this.visibleMonsters.has(monster.id))
@@ -148,7 +146,7 @@ export const MonsterManager = {
         this.visibleMonsters.clear()
 
         this.monsters.forEach((monster, id) => {
-            if (monster.killedTime == 0 && this.isMonsterInViewport(monster)) {
+            if (this.isMonsterInViewport(monster)) {
                 const distanceToPlayer = monster.getDistanceFromMyPlayer()
                 if (distanceToPlayer <= MyPlayer.visibilityRadius) {
                     this.visibleMonsters.add(id)

@@ -1,15 +1,15 @@
 import { MonsterModel } from '@/babylon/monsters/monsterModel'
-import { MonsterType } from '@/babylon/monsters/codebook/monsterCodebook'
+import { MonsterAATypes, MonsterType } from '@/babylon/monsters/codebook/monsterCodebook'
 import { Utils } from '@/utils/utils'
 import { Vector3 } from '@babylonjs/core'
 import { ViewportManager } from '@/utils/viewport'
-import { Targetable } from '@/gui/targettingManager'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { Attackable } from '@/GameManager'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { StepMarksRenderer } from '@/babylon/world/stepMarksRenderer'
 import { SplatType } from '@/babylon/world/fightSplatsRenderer'
 import { MyPlayer } from '@/data/myPlayer'
+import { Arrow, ArrowsManager } from '@/babylon/world/arrowsManager'
 
 export class Monster implements Attackable {
     id: number
@@ -31,8 +31,14 @@ export class Monster implements Attackable {
     lastStepMarkTime: number = 0
     stepMarkSide: 'L' | 'R' = 'R'
 
+    autoAttackTarget: Attackable | null = null
+    attackAnimationTime: number = 1000 // Updated before each attack from server
     autoAttackEnd: number = 0
     autoAttackSoundPlayed: boolean = false
+
+    arrowCreateTime: number = 0
+    arrowShotTime: number = 0
+    arrow: Arrow | null = null
 
     nameDisplayTime: number = 0
 
@@ -47,7 +53,22 @@ export class Monster implements Attackable {
 
     onFrame(timeRate: number, actualTime: number) {
         if (this.autoAttackEnd > actualTime) {
+
+            if (this.arrowCreateTime > 0 && actualTime >= this.arrowCreateTime && this.autoAttackTarget && (this.insideView || this.autoAttackTarget!.insideView)) {
+                this.arrow = ArrowsManager.addArrow(this, this.autoAttackTarget, this.arrowShotTime)
+                if (this.model && this.model.initialized && this.insideView) {
+                    this.arrow.assignHandNode(this.model!.lhandNode, 0.25 / this.model.template.scale.y)
+                } else {
+                    this.arrow.assignHandNode(this.model!.lhandNode, 1)
+                }
+                this.arrowCreateTime = 0
+            }
         } else {
+            if (this.arrowShotTime > 0 && Date.now() >= this.arrowShotTime) {
+                if (this == MyPlayer.myChar || this.insideView) AudioManager.playWeaponSwing(this.getWeaponSoundType(), this.pos)
+                this.arrowShotTime = 0
+            }
+
             this.resolveMovement(timeRate, actualTime)
         }
 
@@ -58,18 +79,26 @@ export class Monster implements Attackable {
 
     onAnimFrame(timeRate: number) {
         if (this.insideView) {
-            this.model.onAnimFrame(timeRate)
+            this.model.onAnimFrame()
         }
     }
 
-    doAutoAttack(target: Targetable, dur: number) {
-        const actualTime = Date.now()
-        this.autoAttackEnd = actualTime + dur
-        this.autoAttackSoundPlayed = false
+    doAutoAttack(target: Attackable, dur: number) {
+        // Ranged weapon attack animation is shorter to account for arrow travel time
+        this.autoAttackTarget = target
+        this.attackAnimationTime = dur
+        if (this.isWeaponRanged()) {
+            const dist = Vector3.Distance(this.pos, target.pos)
+            this.attackAnimationTime = dur - (100 * dist / 5)
+            this.arrowCreateTime = Date.now() + dur * 0.3
+            this.arrowShotTime = Date.now() + this.attackAnimationTime
+        }
+        this.autoAttackEnd = Date.now() + this.attackAnimationTime
 
+        this.autoAttackSoundPlayed = false
         const angle = Utils.getAngleBetweenPoints(this.pos, target.pos)
         this.lookAngle = (angle - Math.PI / 4)
-        this.model.doAttackMelee(dur)
+        this.model.doAttackAnimation()
     }
 
     autoAttackFinished(data: any) {
@@ -84,7 +113,7 @@ export class Monster implements Attackable {
         if (data.res.h === 'h') {
             AudioManager.playWeaponHit(this.getWeaponSoundType(), target.getBodySoundType(), target.pos)
         } else if (data.res.h === 'b' && target.getParrySoundType()) {
-            AudioManager.playWeaponBlocked(target.getParrySoundType()!)
+            AudioManager.playWeaponBlocked(target.getParrySoundType()!, target.pos)
         }
     }
 
@@ -199,5 +228,9 @@ export class Monster implements Attackable {
 
     getSplatType(): SplatType {
         return this.mobType.splatType
+    }
+
+    isWeaponRanged(): boolean {
+        return this.mobType.aaType === MonsterAATypes.RANGED_ARROW
     }
 }
