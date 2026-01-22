@@ -59,7 +59,7 @@ export class Monster implements Attackable {
                 if (this.model && this.model.initialized && this.insideView) {
                     this.arrow.assignHandNode(this.model!.lhandNode, 0.25 / this.model.template.scale.y)
                 } else {
-                    this.arrow.assignHandNode(this.model!.lhandNode, 1)
+                    this.arrow.assignHandNode(this.model!.nameTextNode, 1)
                 }
                 this.arrowCreateTime = 0
             }

@@ -249,6 +249,7 @@ export const Renderer = {
     },
 
     actualizeDebug() {
+        console.log(MyPlayer.myChar.pos.y)
         const absoluteFPS = 1000 / this.instrumentation!.frameTimeCounter.lastSecAverage
         document.getElementById("fpsLabel")!.innerHTML = "FPS: " + this.fps + " | " + absoluteFPS.toFixed(0);
         document.getElementById("posLabel")!.innerHTML = "POS: " + MyPlayer.myChar.getPositionRounded().toString();

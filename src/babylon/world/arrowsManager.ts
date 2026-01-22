@@ -78,10 +78,6 @@ export class Arrow {
         this.flyStartTime = flyStartTime
         this.heightOffset.y = (0.3 + Math.random() * 0.4) * target.getModelHeight()
 
-        if (target.getObjectType() === 'C') {
-            this.heightOffset.y -= 0.5
-        }
-
         if (ArrowsManager.mesh) {
             this.meshClone = ArrowsManager.mesh.clone("arrowClone")
             this.meshClone!.isVisible = true
@@ -144,7 +140,6 @@ export class Arrow {
         if (this.startedFlying) {
             const endNow = this.target?.pos.add(this.heightOffset)
             if (!endNow) {
-                console.log("Arrow target missing, disposing arrow")
                 this.dispose()
                 return
             }

@@ -388,6 +388,7 @@ export class CharacterModel implements EquipBearer {
         this.node.position.x += (this.parent.pos.x - this.node.position.x) * approximationSpeed * timeRate
         this.node.position.z += (this.parent.pos.z - this.node.position.z) * approximationSpeed * timeRate
         this.node.position.y += (this.parent.logicYpos - this.node.position.y) * this.parent.yMoveSpeed * timeRate
+        this.parent.pos.y = this.node.position.y
 
         this.node.markAsDirty("position")
         this.node.computeWorldMatrix(true);

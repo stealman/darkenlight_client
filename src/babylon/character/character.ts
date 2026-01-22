@@ -3,7 +3,6 @@ import { Vector3 } from '@babylonjs/core'
 import {
     AudioManager,
     BodySoundTypes,
-    FootStepSpeeds,
     FootStepTypes,
     WeaponSoundTypes,
 } from '@/babylon/audio/audioManager'

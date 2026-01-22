@@ -39,6 +39,7 @@ export class MonsterModel implements EquipBearer {
     idleAnim: MeshAnimation | undefined
     walkAnim: MeshAnimation | undefined
     attackAnims: MeshAnimation[] = []
+    attackBowAnim: MeshAnimation | undefined
     deadAnim: MeshAnimation | undefined
     activeAnims: Set<MeshAnimation>
 
@@ -204,7 +205,7 @@ export class MonsterModel implements EquipBearer {
             possibleAnims.push(this.attackAnims[0])
             possibleAnims.push(this.attackAnims[1])
         } else {
-            possibleAnims.push(this.attackAnims[0])
+            possibleAnims.push(this.attackBowAnim)
         }
 
         const anim = possibleAnims[Utils.rollDice(possibleAnims.length, true)]
