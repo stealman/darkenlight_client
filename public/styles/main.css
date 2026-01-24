@@ -63,7 +63,7 @@ body {
 
 .top-bar {
     position: absolute;
-    top: 0;
+    top: 4vh;
     left: 0;
 
     display: flex;

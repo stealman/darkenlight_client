@@ -1,6 +1,4 @@
-import {
-    Scene, Vector3,
-} from '@babylonjs/core'
+import { Vector3 } from '@babylonjs/core'
 import { Utils } from '@/utils/utils'
 import Character from '@/babylon/character/character'
 import { CharacterModel } from '@/babylon/character/characterModel'
@@ -8,7 +6,7 @@ import { ref } from 'vue'
 import { TargetingManager } from '@/gui/targettingManager'
 import { Connector } from '@/network/connector'
 import { AutoAttackBreak } from '@/network/messages'
-import { WeaponTypes } from '@/data/items/item'
+import { MyStatusPanel } from '@/gui/myStatusPanel'
 
 /**
  * Controlling object for the player's character
@@ -33,6 +31,8 @@ export const MyPlayer = {
         this.myChar.pos.y = Utils.calculateYPos(this.myChar.pos.x, this.myChar.pos.z, this.myChar.getBoxSize())
         this.myChar.logicYpos = this.myChar.pos.y
         this.myCharRef.value = this.myChar
+
+        MyStatusPanel.setMyName(this.myChar.name)
     },
 
     reset() {

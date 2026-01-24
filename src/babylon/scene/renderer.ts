@@ -31,6 +31,7 @@ import { CharacterManager } from '@/babylon/character/characterManager'
 import { SelectedTargetPanel } from '@/gui/selectedTargetPanel'
 import { Tester } from '@/babylon/tester'
 import { ArrowsManager } from '@/babylon/world/arrowsManager'
+import { MyStatusPanel } from '@/gui/myStatusPanel'
 
 /**
  * Main Renderer
@@ -79,6 +80,7 @@ export const Renderer = {
         FightSplatsRenderer.initialize(this.scene)
         ArrowsManager.initialize()
         SelectedTargetPanel.initialize()
+        MyStatusPanel.initialize()
         await OverlayManager.initialize()
         await TargetingManager.initialize()
 
@@ -118,10 +120,6 @@ export const Renderer = {
         let timeRate = this.engine!.getDeltaTime() / 1000
         this.fps = Number.parseInt(this.engine!.getFps()!.toFixed());
 
-        if (timeRate > 0.04 && this.fps > 80) {
-            //console.log(timeRate)
-        }
-
         if (timeRate > 0.1) {
             console.log("Low frame rate detected: " + this.fps + " FPS, timeRate: " + timeRate)
             timeRate = 0.1
@@ -154,6 +152,7 @@ export const Renderer = {
         if (this.frame % 2 === 0) {
             OverlayManager.onFrame(timeRate, actualTime)
             SelectedTargetPanel.onFrame(actualTime)
+            MyStatusPanel.onFrame(actualTime)
         }
 
         if (this.frame % 10 === 0) {
@@ -249,7 +248,6 @@ export const Renderer = {
     },
 
     actualizeDebug() {
-        console.log(MyPlayer.myChar.pos.y)
         const absoluteFPS = 1000 / this.instrumentation!.frameTimeCounter.lastSecAverage
         document.getElementById("fpsLabel")!.innerHTML = "FPS: " + this.fps + " | " + absoluteFPS.toFixed(0);
         document.getElementById("posLabel")!.innerHTML = "POS: " + MyPlayer.myChar.getPositionRounded().toString();

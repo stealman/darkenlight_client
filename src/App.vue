@@ -8,7 +8,7 @@
         <div v-show="loginRequestSentFlag">
 
             <!-- Menu button-->
-            <div style="position: absolute; top: 50px; left: 10px;" @click="showSettingsDialog()" v-html="getHamburgerMenuSvg('icon-white', 'icon-settings')"></div>
+            <div style="position: absolute; top: 0vh; left: 25%;" @click="showSettingsDialog()" v-html="getHamburgerMenuSvg('icon-white', 'icon-settings')"></div>
 
             <TouchControllers v-if="!gameLoading" ref='touchControls' />
 

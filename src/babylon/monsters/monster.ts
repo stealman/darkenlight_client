@@ -109,7 +109,11 @@ export class Monster implements Attackable {
         if (!target) {
             return
         }
-        target.hpPercent = data.res.hpp
+        target.hpPercent = data.res.tgt.hpp
+        if (target === MyPlayer.myChar) {
+            MyPlayer.myChar.hp = data.res.tgt.hp
+        }
+
         if (data.res.h === 'h') {
             AudioManager.playWeaponHit(this.getWeaponSoundType(), target.getBodySoundType(), target.pos)
         } else if (data.res.h === 'b' && target.getParrySoundType()) {
@@ -176,6 +180,16 @@ export class Monster implements Attackable {
             this.model.removeFromView()
         }
         this.insideView = visible
+    }
+
+    killed() {
+        this.killedTime = Date.now()
+        this.arrowCreateTime = 0
+        this.arrowShotTime = 0
+        if (this.arrow && !this.arrow.startedFlying) {
+            this.arrow.dispose()
+            this.arrow = null
+        }
     }
 
     removeModel() {

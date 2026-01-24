@@ -40,6 +40,8 @@ export const MessageProcessor = {
                 case 21: this.processAddFightSplats(msg.d); break
                 case 22: this.processLoggedFromAnotherDevice(); break
                 case 23: this.removeCharacter(msg.d); break
+                case 24: this.processCharAutoAttackBroken(msg.d); break
+                case 25: this.processCharBasicData(msg.d); break
                 case 1003: this.processGMAllSpawns(msg.d); break
                 case 1004: this.processGMSpawnChange(msg.d); break
                 default:
@@ -169,10 +171,18 @@ export const MessageProcessor = {
         FightSplatsRenderer.consumeSplats(data)
     },
 
+    processCharAutoAttackBroken(data) {
+        CharacterManager.processAutoAttackBroken(data)
+    },
+
     processLoggedFromAnotherDevice() {
         console.log('Logged from another device')
         document.getElementById("dialog-error-content")!.innerText = 'Byli jste odhlášeni, protože jste se přihlásili z jiného zařízení.'
         document.getElementById("dialog-error")!.style.display = 'flex'
+    },
+
+    processCharBasicData(data) {
+        console.log('Basic char data received ', data)
     },
 
     processGMAllSpawns(data) {

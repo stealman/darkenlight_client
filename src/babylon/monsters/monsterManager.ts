@@ -96,7 +96,7 @@ export const MonsterManager = {
     },
 
     monsterKilled(mob: Monster) {
-        mob.killedTime = Date.now()
+        mob.killed()
         mob.model.doDie()
         this.killedMonsters.add(mob)
     },

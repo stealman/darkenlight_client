@@ -23,7 +23,8 @@ class Character implements Attackable {
     insideView: boolean = true
 
     id: number = 1
-    hp: number
+    hp: number = 100
+    maxHp: number = 100
     hpPercent: number = 100
     name: string = "Player"
     nameDisplayTime: number = 0
@@ -61,7 +62,16 @@ class Character implements Attackable {
 
     constructor(data: any) {
         this.id = data.id
-        this.hp = data.hp
+        if (data.hp) {
+            this.hp = data.hp
+        }
+        if (data.hpp) {
+            this.hpPercent = data.hpp
+        }
+        if (data.mhp) {
+            this.maxHp = data.mhp
+        }
+
         this.pos = new Vector3(data.x, 0, data.z)
         this.name = data.name
         this.className = data.cls
@@ -205,7 +215,10 @@ class Character implements Attackable {
         if (!target) {
             return
         }
-        target.hpPercent = data.res.hpp
+        target.hpPercent = data.res.tgt.hpp
+        if (target === MyPlayer.myChar) {
+            MyPlayer.myChar.hp = data.res.tgt.hp
+        }
         if (data.res.h === 'h') {
             AudioManager.playWeaponHit(this.weaponSoundType, target.getBodySoundType(), target.pos)
         } else if (data.res.h === 'b' && target.getParrySoundType()) {

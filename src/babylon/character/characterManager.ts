@@ -100,6 +100,16 @@ export const CharacterManager = {
         }
     },
 
+    processAutoAttackBroken(data) {
+        if (data === MyPlayer.myChar.id) {
+        } else {
+            const char = this.characters.get(data)
+            if (char) {
+                char.breakAutoAttack()
+            }
+        }
+    },
+
     updateVisibleChars() {
         this.visibleCharacters.clear()
         this.characters.forEach((char, id) => {
