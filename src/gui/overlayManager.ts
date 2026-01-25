@@ -5,6 +5,7 @@ import { CanvasTextUtils } from '@/gui/canvasTextUtils'
 import { MonsterManager } from '@/babylon/monsters/monsterManager'
 import { ViewportManager } from '@/utils/viewport'
 import { CharacterManager } from '@/babylon/character/characterManager'
+import { MyPlayer } from '@/data/myPlayer'
 
 export const OverlayManager = {
     overlayCanvas: null as HTMLCanvasElement,
@@ -32,6 +33,7 @@ export const OverlayManager = {
         TargetSelector.onFrame(timeRate, time, this.overlayCtx!)
         this.renderNames(time, Math.abs(this.letterSpacingFix) > 0)
         this.renderDamagedBars()
+        this.renderAttackTargetIndicator(time)
     },
 
     renderNames(time: number, tightText: boolean) {
@@ -62,13 +64,55 @@ export const OverlayManager = {
             if (monster.hpPercent < 100) {
                 const pos = monster.getNameTextNodeScreenPosition()
                 if (pos) {
-                    this.renderDamagedBar(pos, monster.hpPercent)
+                    this.renderDamagedBar(pos, monster.hpPercent, monster.getRelationToMyPlayer() === 'ENEMY')
                 }
             }
         })
+
+        CharacterManager.characters.forEach(char => {
+            if (!CharacterManager.visibleCharacters.has(char.id)) {
+                return
+            }
+            if (char.hpPercent < 100) {
+                const pos = char.getNameTextNodeScreenPosition()
+                if (pos) {
+                    this.renderDamagedBar(pos, char.hpPercent, char.getRelationToMyPlayer() === 'ENEMY')
+                }
+            }
+        })
+
+        if (MyPlayer.myChar.hpPercent < 99) {
+            const pos = MyPlayer.myChar.getNameTextNodeScreenPosition()
+            if (pos) {
+                this.renderDamagedBar(pos, MyPlayer.myChar.hpPercent, false)
+            }
+        }
     },
 
-    renderDamagedBar(pos: Vector3, percent: number) {
+    renderAttackTargetIndicator(actualTime) {
+        if (MyPlayer.myChar.autoAttackTarget && TargetingManager.selectedTarget !== MyPlayer.myChar.autoAttackTarget) {
+            const screenPos = MyPlayer.myChar.autoAttackTarget.getPositionOnScreen()
+            const sprite = TargetingManager.getTargetSpriteEnemyAttackTarget()
+            if (sprite && screenPos) {
+                const x = Math.round(screenPos.x)
+                const y = Math.round(screenPos.y)
+
+                const camWorldMatrix = Renderer.camera!.getWorldMatrix()
+                const cameraPos = Vector3.TransformCoordinates(Vector3.Zero(), camWorldMatrix)
+                const distanceFromCam = cameraPos.subtract(MyPlayer.myChar.autoAttackTarget.pos).length()
+                //const scale = (20 / distanceFromCam)
+
+                const scale = (20 / distanceFromCam) * ((Math.sin((actualTime) / 250) * 0.2) + 1)
+
+                const w = sprite.width * scale
+                const h = sprite.height * scale
+
+                this.overlayCtx!.drawImage(sprite, x - w/2, y - h/2, w, h)
+            }
+        }
+    },
+
+    renderDamagedBar(pos: Vector3, percent: number, enemy: boolean) {
         const ctx = this.overlayCtx!
         const barWidth = 50
         const barHeight = 6
@@ -82,7 +126,7 @@ export const OverlayManager = {
 
         // Fill
         const fillWidth = (barWidth - 2) * (percent / 100)
-        ctx.fillStyle = 'rgba(200, 32, 32, 0.65)'
+        ctx.fillStyle = enemy ? 'rgba(200, 32, 32, 0.65)' : 'rgba(25, 175, 175, 0.65)'
         ctx.fillRect(x + 1, y + 1, fillWidth, barHeight - 2)
     },
 
@@ -113,8 +157,6 @@ export const OverlayManager = {
             textHeight + paddingY * 2
         )
         // Text
-        //ctx.fillStyle = '#f08f56'
-
         switch (relation) {
             case 'ALLY':
                 ctx.fillStyle = '#56aaff'
@@ -163,7 +205,16 @@ const TargetSelector = {
             return
         }
         const screenPos = this.target.getPositionOnScreen()
-        const sprite = this.target.getRelationToMyPlayer() === 'ENEMY' ? TargetingManager.getTargetSpriteEnemy() : TargetingManager.getTargetSpriteAlly()
+        let sprite = null
+        if (this.target.getRelationToMyPlayer() === 'ENEMY') {
+            if (MyPlayer.myChar.autoAttackTarget && MyPlayer.myChar.autoAttackTarget === this.target) {
+                sprite = TargetingManager.getTargetSpriteEnemyAttackTarget()
+            } else {
+                sprite = TargetingManager.getTargetSpriteEnemy()
+            }
+        } else {
+            sprite = TargetingManager.getTargetSpriteAlly()
+        }
         if (!sprite || !screenPos) {
             return
         }

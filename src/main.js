@@ -13,6 +13,8 @@ import './../public/styles/range-slider.css';
 import './../public/styles/onscreen-messages.css';
 import './../public/styles/selected-target.css';
 import './../public/styles/mystatus.css';
+import './../public/styles/action-buttons.css';
+
 
 import './../public/styles/gm.css';
 

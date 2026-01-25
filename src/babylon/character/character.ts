@@ -17,6 +17,8 @@ import { MyCharMoveMsg } from '@/network/messages'
 import { MyPlayer } from '@/data/myPlayer'
 import { EquipItemSlots, EquipSlotsCb, Item } from '@/data/items/item'
 import { Arrow, ArrowsManager } from '@/babylon/world/arrowsManager'
+import { AttackableBasicTO, AutoAttackMessage, AutoAttackResultMessage } from '@/network/messageIfs'
+import { TargetingManager } from '@/gui/targettingManager'
 
 class Character implements Attackable {
     model: CharacterModel | null = null
@@ -62,14 +64,15 @@ class Character implements Attackable {
 
     constructor(data: any) {
         this.id = data.id
-        if (data.hp) {
-            this.hp = data.hp
-        }
         if (data.hpp) {
             this.hpPercent = data.hpp
         }
+        if (data.hp) {
+            this.hp = data.hp
+        }
         if (data.mhp) {
             this.maxHp = data.mhp
+            this.hpPercent = (this.hp / this.maxHp) * 100
         }
 
         this.pos = new Vector3(data.x, 0, data.z)
@@ -171,10 +174,14 @@ class Character implements Attackable {
         Connector.sendMoveMessage(new MyCharMoveMsg())
     }
 
-    startAutoAttack(data: any) {
+    startAutoAttack(data: AutoAttackMessage) {
         this.autoAttackTarget = Utils.getAttackTargetByTypeAndId(data.tp, data.tgt)
         if (!this.autoAttackTarget) {
             return
+        }
+
+        if (TargetingManager.selectedTarget === null) {
+            TargetingManager.setSelectedTarget(this.autoAttackTarget)
         }
 
         // Ranged weapon attack animation is shorter to account for arrow travel time
@@ -195,9 +202,7 @@ class Character implements Attackable {
     }
 
     breakAutoAttack() {
-        console.log("Auto attack broken")
         this.autoAttackEnd = 0
-        this.autoAttackTarget = null
         this.model?.setWeaponTrailEnabled(false)
         this.model?.stopAnimation()
         this.arrowCreateTime = 0
@@ -205,7 +210,7 @@ class Character implements Attackable {
         this.arrow?.dispose()
     }
 
-    finishAutoAttack(data: any) {
+    finishAutoAttack(data: AutoAttackResultMessage) {
         this.model?.setWeaponTrailEnabled(false)
 
         // Swing sound for melee weapons - ranged weapons have it when arrow is fired
@@ -217,14 +222,13 @@ class Character implements Attackable {
         }
         target.hpPercent = data.res.tgt.hpp
         if (target === MyPlayer.myChar) {
-            MyPlayer.myChar.hp = data.res.tgt.hp
+            MyPlayer.setMyCharHpMp(data.res.tgt.hp)
         }
         if (data.res.h === 'h') {
             AudioManager.playWeaponHit(this.weaponSoundType, target.getBodySoundType(), target.pos)
         } else if (data.res.h === 'b' && target.getParrySoundType()) {
             AudioManager.playWeaponBlocked(target.getParrySoundType()!, target.pos)
         }
-        this.autoAttackTarget = null
     }
 
     resolveStepMark(time: number, inCombat: boolean = false) {
@@ -236,6 +240,16 @@ class Character implements Attackable {
             this.lastStepMarkTime = time
             this.stepMarkSide = this.stepMarkSide === 'L' ? 'R' : 'L'
             StepMarksRenderer.addStepMark(this.stepMarkSide, this, this.logicYpos, this.model!.modelRotation, time, inCombat)
+        }
+    }
+
+    basicDataChange(data: AttackableBasicTO) {
+        this.hpPercent = data.hpp
+        if (data.hp) {
+            this.hp = data.hp
+        }
+        if (data.mhp) {
+            this.maxHp = data.mhp
         }
     }
 

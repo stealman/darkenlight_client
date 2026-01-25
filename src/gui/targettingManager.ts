@@ -9,10 +9,12 @@ import { Settings } from '@/settings/settings'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { MyPlayer } from '@/data/myPlayer'
 import { CharacterManager } from '@/babylon/character/characterManager'
+import { ActionButtonActions, ActionButtonsManager } from '@/gui/actionButtonsManager'
 
 export const TargetingManager = {
     selectedTarget: null as Targetable | null,
     targetSpriteEnemy: null as HTMLCanvasElement,
+    targetSpriteEnemyAttackTarget: null as HTMLCanvasElement,
     targetSpriteAlly: null as HTMLCanvasElement,
 
     targetCycleIndex: -1,
@@ -144,7 +146,13 @@ export const TargetingManager = {
         OverlayManager.targetSelected(target!)
         target.nameDisplayTime = Date.now() + 1000
 
-        if (this.selectedTarget.getRelationToMyPlayer() === 'ENEMY' && this.selectedTarget && MyPlayer.aaActive) {
+        this.checkAutoAttackOnSelectedTarget()
+    },
+
+    checkAutoAttackOnSelectedTarget(overrideToggle: boolean = false) {
+        if (this.selectedTarget && this.selectedTarget.getRelationToMyPlayer() === 'ENEMY' && (overrideToggle || ActionButtonsManager.isButtonToggled(ActionButtonActions.AUTO_ATTACK))) {
+            ActionButtonsManager.activated(ActionButtonActions.AUTO_ATTACK)
+            MyPlayer.myChar.autoAttackTarget = this.selectedTarget
             Connector.sendMessage(new SelectAutoAttackTarget(this.selectedTarget!.id, this.selectedTarget!.getObjectType()))
         }
     },
@@ -162,6 +170,10 @@ export const TargetingManager = {
         return this.targetSpriteAlly
     },
 
+    getTargetSpriteEnemyAttackTarget(): HTMLCanvasElement | null {
+        return this.targetSpriteEnemyAttackTarget
+    },
+
     resetCycleIndex() {
         this.targetCycleIndex = -1
     },
@@ -175,7 +187,10 @@ export const TargetingManager = {
             this.targetSpriteAlly.remove()
         }
         this.targetSpriteAlly = this.createTargetSprites( '#56baff')
-        return this.targetSpriteEnemy
+        if (this.targetSpriteEnemyAttackTarget != null) {
+            this.targetSpriteEnemyAttackTarget.remove()
+        }
+        this.targetSpriteEnemyAttackTarget = this.createTargetSprites( '#ff4444')
     },
 
     createTargetSprites(color: string): HTMLCanvasElement {

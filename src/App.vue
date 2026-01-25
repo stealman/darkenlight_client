@@ -7,8 +7,10 @@
         <!-- Display game GUI only after login request is sent -->
         <div v-show="loginRequestSentFlag">
 
-            <!-- Menu button-->
-            <div style="position: absolute; top: 0vh; left: 25%;" @click="showSettingsDialog()" v-html="getHamburgerMenuSvg('icon-white', 'icon-settings')"></div>
+            <div id="system-buttons">
+                <div @click="showSettingsDialog()" v-html="getHamburgerMenuSvg('icon-white', 'icon-settings')"></div>
+                <div @click="showDebug()" v-html="getInspectSvg('icon-white', 'icon-inspect')"></div>
+            </div>
 
             <TouchControllers v-if="!gameLoading" ref='touchControls' />
 
@@ -16,16 +18,39 @@
             <label id="btn-target-lock" style="display: none; opacity: 0.65; position: absolute; width: 64px; height: 64px;" v-html="getTargetLockSvg('icon-blue', 'icon-target-lock')"
                    @pointerdown="TargetingManager.onPointerDown()" @pointerup="TargetingManager.onPointerUp()" ></label>
 
-            <!-- Top GUI panel -->
-            <div class="top-bar">
-              <div style="display:flex; gap:15px; align-items:center;">
-                  <div id="fpsLabel" style="font-size:12px; color:#aaa;">FPS:</div>
-                  <div id="posLabel" style="font-size:12px; color:#aaa;">POS:</div>
+            <!-- Debug panel -->
+            <div id="debug-panel">
+              <div style="display:flex; gap:5px; align-items:center;">
+                  <div id="fpsLabel" style="font-size:10px; color:#aaa;">FPS:</div>
+                  <div id="posLabel" style="font-size:10px; color:#aaa;">POS:</div>
               </div>
 
-              <div style="display:flex; gap:15px; align-items:center;">
-                  <button v-if="myCharRef?.className ==='GM'" style="font-size:18px; color:#aaa;" @click="toggleGmPanel()">GM Panel</button>
+              <div v-if="myCharRef?.className ==='GM'" style="display:flex; gap:15px; align-items:center;">
+                  <button  style="font-size:18px; color:#aaa;" @click="toggleGmPanel()">GM Panel</button>
               </div>
+            </div>
+
+            <!-- Action buttons -->
+            <div id="action-buttons-desktop" style='display: none;' >
+                <div class="action-button a1"></div>
+                <div class="action-button a2"></div>
+                <div class="action-button a3"></div>
+                <div class="action-button a4"></div>
+                <div class="action-button a5"></div>
+                <div class="action-button a6"></div>
+                <div class="action-button a7"></div>
+                <div class="action-button a8"></div>
+            </div>
+
+            <div id="action-buttons-touch" style='display: none;'>
+                <div class="action-button a1"></div>
+                <div class="action-button a2"></div>
+                <div class="action-button a3"></div>
+                <div class="action-button a4"></div>
+                <div class="action-button a5"></div>
+                <div class="action-button a6"></div>
+                <div class="action-button a7"></div>
+                <div class="action-button a8"></div>
             </div>
 
             <GmPanel id='gmPanel' v-if="gmPanelVisible" />
@@ -193,6 +218,10 @@ const deviceTypeChanged = () => {
 
 const toggleGmPanel = () => {
     GMManager.toggleGmPanel()
+}
+
+const showDebug = () => {
+    Renderer.toggleDebug();
 }
 
 const reloadPage = () => {

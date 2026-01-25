@@ -32,6 +32,8 @@ import { SelectedTargetPanel } from '@/gui/selectedTargetPanel'
 import { Tester } from '@/babylon/tester'
 import { ArrowsManager } from '@/babylon/world/arrowsManager'
 import { MyStatusPanel } from '@/gui/myStatusPanel'
+import { Inspector } from '@babylonjs/inspector'
+import { ActionButtonsManager } from '@/gui/actionButtonsManager'
 
 /**
  * Main Renderer
@@ -47,6 +49,8 @@ export const Renderer = {
     frame: 0 as number,
     animationSpeedRatio: 1 as number,
     pendingMatFreeze: false as boolean,
+
+    inspectorDisplayed: false,
 
     async initialize(canvas: HTMLCanvasElement) {
         this.canvas = canvas
@@ -81,15 +85,9 @@ export const Renderer = {
         ArrowsManager.initialize()
         SelectedTargetPanel.initialize()
         MyStatusPanel.initialize()
+        ActionButtonsManager.initialize()
         await OverlayManager.initialize()
         await TargetingManager.initialize()
-
-        // Debug layer
-        if (false) {
-            this.scene.debugLayer.show({
-                embedMode: true
-            })
-        }
     },
 
     async gameStarted() {
@@ -153,6 +151,7 @@ export const Renderer = {
             OverlayManager.onFrame(timeRate, actualTime)
             SelectedTargetPanel.onFrame(actualTime)
             MyStatusPanel.onFrame(actualTime)
+            ActionButtonsManager.onFrame(actualTime)
         }
 
         if (this.frame % 10 === 0) {
@@ -245,6 +244,18 @@ export const Renderer = {
         this.camera = new FreeCamera('camera1', cameraPosition, this.scene)
         this.camera.setTarget(new Vector3(0, cameraViewY, 0))
         this.camera.parent = MyPlayer.myModel!.node
+    },
+
+    toggleDebug() {
+        if (!this.inspectorDisplayed) {
+            Inspector.Show(this.scene, {})
+            document.getElementById("debug-panel")!.style.display = "none"
+            this.inspectorDisplayed = true
+        } else {
+            Inspector.Hide()
+            document.getElementById("debug-panel")!.style.display = "flex"
+            this.inspectorDisplayed = false
+        }
     },
 
     actualizeDebug() {

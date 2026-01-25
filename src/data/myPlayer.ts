@@ -5,8 +5,11 @@ import { CharacterModel } from '@/babylon/character/characterModel'
 import { ref } from 'vue'
 import { TargetingManager } from '@/gui/targettingManager'
 import { Connector } from '@/network/connector'
-import { AutoAttackBreak } from '@/network/messages'
+import { AutoAttackBreak, StopAction } from '@/network/messages'
 import { MyStatusPanel } from '@/gui/myStatusPanel'
+import { AutoAttackMessage, AutoAttackResultMessage } from '@/network/messageIfs'
+import { AudioManager } from '@/babylon/audio/audioManager'
+import { ActionButtonActions, ActionButtonsManager } from '@/gui/actionButtonsManager'
 
 /**
  * Controlling object for the player's character
@@ -20,7 +23,8 @@ export const MyPlayer = {
 
     worldId: 0 as number,
     worldName: "" as string,
-    aaActive: true as boolean,
+
+    aaActionActive: false as boolean,
 
     async initialize(charData: any) {
         this.myChar = new Character(charData)
@@ -40,13 +44,12 @@ export const MyPlayer = {
         this.myChar.autoAttackEnd = 0
     },
 
-    startAutoAttack(data: any) {
-        //console.log("Starting auto attack", data)
+    startAutoAttack(data: AutoAttackMessage) {
         this.myChar.startAutoAttack(data)
+        ActionButtonsManager.activated(ActionButtonActions.AUTO_ATTACK)
     },
 
-    finishAutoAttack(data: any) {
-        //console.log("Finishing auto attack", data)
+    finishAutoAttack(data: AutoAttackResultMessage) {
         this.myChar.finishAutoAttack(data)
     },
 
@@ -84,4 +87,28 @@ export const MyPlayer = {
     stopMove() {
         this.myChar.stopMove()
     },
+
+    onClickEscape() {
+        AudioManager.playGuiButtonClick()
+
+        // Stop AA
+        MyPlayer.myChar.autoAttackTarget = null
+        ActionButtonsManager.deactivated(ActionButtonActions.AUTO_ATTACK)
+        Connector.sendMessage(new StopAction())
+    },
+
+    basicDataChange(data) {
+        this.setMyCharHpMp(data.hp)
+        this.myChar.basicDataChange(data)
+    },
+
+    setMyCharHpMp(hp: number) {
+        const percentBeforeChange = (this.myChar.hp / this.myChar.maxHp) * 100
+        this.myChar.hp = hp
+        this.myChar.hpPercent = (hp / this.myChar.maxHp) * 100
+
+        if (percentBeforeChange > 25 && this.myChar.hpPercent <= 25) {
+            AudioManager.playLowHealthWarning()
+        }
+    }
 }

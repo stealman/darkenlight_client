@@ -6,6 +6,7 @@ import { MyPlayer } from '@/data/myPlayer'
 import { Settings } from '@/settings/settings'
 import { Connector } from '@/network/connector'
 import { LogoutMsg } from '@/network/messages'
+import { ActionButtonsManager } from '@/gui/actionButtonsManager'
 
 export const GameManager = {
     started: false as boolean,
@@ -44,6 +45,7 @@ export const GameManager = {
         Renderer.engine!.resize();
         OverlayManager.onResize()
         ViewportManager.onResize()
+        ActionButtonsManager.renderActionButtons()
         TargetingManager.prepareTargetSprites()
     }
 }

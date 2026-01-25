@@ -25,8 +25,9 @@ const updateFromSettings = () => {
         joystickManager = null
     }
 
-    if (Settings.getDeviceType() === "DESKTOP") {
+    if (!Settings.isPhoneOrTablet()) {
         joystickZone.style.display = "none"
+        document.getElementById("btn-target-lock").style.display = "none"
         return;
     }
 

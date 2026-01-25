@@ -10,6 +10,7 @@ import { StepMarksRenderer } from '@/babylon/world/stepMarksRenderer'
 import { SplatType } from '@/babylon/world/fightSplatsRenderer'
 import { MyPlayer } from '@/data/myPlayer'
 import { Arrow, ArrowsManager } from '@/babylon/world/arrowsManager'
+import { AttackableBasicTO, AutoAttackResultMessage } from '@/network/messageIfs'
 
 export class Monster implements Attackable {
     id: number
@@ -101,7 +102,7 @@ export class Monster implements Attackable {
         this.model.doAttackAnimation()
     }
 
-    autoAttackFinished(data: any) {
+    autoAttackFinished(data: AutoAttackResultMessage) {
         AudioManager.playWeaponSwing(this.getWeaponSoundType(), this.pos)
         this.model.setWeaponTrailEnabled(false)
 
@@ -111,7 +112,7 @@ export class Monster implements Attackable {
         }
         target.hpPercent = data.res.tgt.hpp
         if (target === MyPlayer.myChar) {
-            MyPlayer.myChar.hp = data.res.tgt.hp
+            MyPlayer.setMyCharHpMp(data.res.tgt.hp)
         }
 
         if (data.res.h === 'h') {
@@ -160,6 +161,10 @@ export class Monster implements Attackable {
             this.stepMarkSide = this.stepMarkSide === 'L' ? 'R' : 'L'
             StepMarksRenderer.addStepMark(this.stepMarkSide, this, this.logicYpos, this.model.modelRotation, time, inCombat)
         }
+    }
+
+    basicDataChange(data: AttackableBasicTO) {
+        this.hpPercent = data.hpp
     }
 
     setTargetPoint(point: Vector3) {

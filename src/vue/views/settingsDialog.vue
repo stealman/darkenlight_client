@@ -148,6 +148,7 @@ import { onMounted, ref, watch } from 'vue'
 import { Settings } from '@/settings/settings'
 import { Renderer } from '@/babylon/scene/renderer'
 import { Lights } from '@/babylon/scene/lights'
+import { ActionButtonsManager } from '@/gui/actionButtonsManager'
 
 const storedSettings = ref(Settings)
 const emit = defineEmits(['close', 'closeWithRestartPrompt', 'deviceTypeSelected', 'touchColtrolsChanged', 'logout'])
@@ -192,6 +193,7 @@ const setDeviceType = (deviceType) => {
     }
 
     storeSettings()
+    ActionButtonsManager.renderActionButtons()
     emit('deviceTypeSelected');
 }
 

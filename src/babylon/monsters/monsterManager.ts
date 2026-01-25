@@ -7,6 +7,8 @@ import { ViewportManager } from '@/utils/viewport'
 import { TargetingManager } from '@/gui/targettingManager'
 import { MyPlayer } from '@/data/myPlayer'
 import { CharacterManager } from '@/babylon/character/characterManager'
+import { AttackableBasicTO, AutoAttackMessage, AutoAttackResultMessage } from '@/network/messageIfs'
+import { ActionButtonActions, ActionButtonsManager } from '@/gui/actionButtonsManager'
 
 export const MonsterManager = {
     monsters: new Map as Map<number, Monster>,
@@ -54,6 +56,10 @@ export const MonsterManager = {
             if (mob === TargetingManager.selectedTarget) {
                 TargetingManager.unselectTarget()
             }
+            if (mob === MyPlayer.myChar.autoAttackTarget) {
+                MyPlayer.myChar.autoAttackTarget = null
+                ActionButtonsManager.deactivated(ActionButtonActions.AUTO_ATTACK)
+            }
         }
     },
 
@@ -67,7 +73,7 @@ export const MonsterManager = {
         }
     },
 
-    autoAttack(data: { id: number, tgt: number, tp: string, dur: number }) {
+    autoAttack(data: AutoAttackMessage) {
         const mob = this.monsters.get(data.id)
         if (data.tp === 'C') {
             const targetChar = MyPlayer.myChar.id === data.tgt ? MyPlayer.myChar : CharacterManager.characters.get(data.tgt)
@@ -78,12 +84,20 @@ export const MonsterManager = {
         }
     },
 
-    autoAttackFinished(data: any) {
+    autoAttackFinished(data: AutoAttackResultMessage) {
         const monster = this.monsters.get(data.id)
         if (!monster) {
             return
         }
         monster.autoAttackFinished(data)
+    },
+
+    basicDataChange(data: AttackableBasicTO) {
+        const monster = this.monsters.get(data.id)
+        if (!monster) {
+            return
+        }
+        monster.basicDataChange(data)
     },
 
     monsterMoveStop(id: number, position: { x: number, z: number }) {

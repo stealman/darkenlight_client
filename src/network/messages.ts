@@ -62,6 +62,12 @@ export class LogoutMsg implements Message {
     constructor() {}
 }
 
+export class StopAction implements Message {
+    t: number = 9
+    d: any
+    constructor() {}
+}
+
 export class GMSaveMapDataMsg implements Message {
     t: number = 1000
     d: any

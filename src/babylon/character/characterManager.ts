@@ -2,6 +2,7 @@ import { MyPlayer } from '@/data/myPlayer'
 import Character from '@/babylon/character/character'
 import { ViewportManager } from '@/utils/viewport'
 import { Utils } from '@/utils/utils'
+import { AttackableBasicTO, AutoAttackMessage, AutoAttackResultMessage } from '@/network/messageIfs'
 
 export const CharacterManager = {
     characters: new Map<number, Character>(),
@@ -55,7 +56,7 @@ export const CharacterManager = {
         })
     },
 
-    processCharMove(data) {
+    charMove(data) {
         const id = data[0]
         if (id === MyPlayer.myChar.id) {
             const dist = Math.sqrt( (MyPlayer.myChar.pos.x - data[1]) * (MyPlayer.myChar.pos.x - data[1]) + (MyPlayer.myChar.pos.z - data[2]) * (MyPlayer.myChar.pos.z - data[2]) )
@@ -78,7 +79,7 @@ export const CharacterManager = {
         }
     },
 
-    processStartAutoAttack(data) {
+    startAutoAttack(data: AutoAttackMessage) {
         if (data.id === MyPlayer.myChar.id) {
             MyPlayer.startAutoAttack(data)
         } else {
@@ -89,7 +90,7 @@ export const CharacterManager = {
         }
     },
 
-    processFinishAutoAttack(data) {
+    finishAutoAttack(data: AutoAttackResultMessage) {
         if (data.id === MyPlayer.myChar.id) {
             MyPlayer.finishAutoAttack(data)
         } else {
@@ -100,12 +101,23 @@ export const CharacterManager = {
         }
     },
 
-    processAutoAttackBroken(data) {
+    autoAttackBroken(data) {
         if (data === MyPlayer.myChar.id) {
         } else {
             const char = this.characters.get(data)
             if (char) {
                 char.breakAutoAttack()
+            }
+        }
+    },
+
+    basicDataChange(data: AttackableBasicTO) {
+        if (data.id === MyPlayer.myChar.id) {
+            MyPlayer.basicDataChange(data)
+        } else {
+            const char = this.characters.get(data.id)
+            if (char) {
+               char.basicDataChange(data)
             }
         }
     },

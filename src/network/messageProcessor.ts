@@ -10,6 +10,7 @@ import { MyPlayer } from '@/data/myPlayer'
 import { FightSplatsRenderer } from '@/babylon/world/fightSplatsRenderer'
 import { GameManager } from '@/GameManager'
 import { CharacterManager } from '@/babylon/character/characterManager'
+import { AttackableBasicTO, AutoAttackMessage, AutoAttackResultMessage, MonsterMoveMessage } from '@/network/messageIfs'
 
 export const MessageProcessor = {
 
@@ -42,6 +43,7 @@ export const MessageProcessor = {
                 case 23: this.removeCharacter(msg.d); break
                 case 24: this.processCharAutoAttackBroken(msg.d); break
                 case 25: this.processCharBasicData(msg.d); break
+                case 26: this.processMonsterBasicData(msg.d); break
                 case 1003: this.processGMAllSpawns(msg.d); break
                 case 1004: this.processGMSpawnChange(msg.d); break
                 default:
@@ -78,7 +80,7 @@ export const MessageProcessor = {
     },
 
     charMove(data) {
-        CharacterManager.processCharMove(data)
+        CharacterManager.charMove(data)
     },
 
     charMoveDesynced(data) {
@@ -151,19 +153,19 @@ export const MessageProcessor = {
         WorldDataManager.consumeMapUpdate(data.worldId, data.changes)
     },
 
-    processCharacterAttack(data) {
-        CharacterManager.processStartAutoAttack(data)
+    processCharacterAttack(data: AutoAttackMessage) {
+        CharacterManager.startAutoAttack(data)
     },
 
-    processCharacterAttackFinished(data) {
-        CharacterManager.processFinishAutoAttack(data)
+    processCharacterAttackFinished(data: AutoAttackResultMessage) {
+        CharacterManager.finishAutoAttack(data)
     },
 
-    processMonsterAttack(data) {
+    processMonsterAttack(data: AutoAttackMessage) {
         MonsterManager.autoAttack(data)
     },
 
-    processMonsterAttackFinished(data) {
+    processMonsterAttackFinished(data: AutoAttackResultMessage) {
         MonsterManager.autoAttackFinished(data)
     },
 
@@ -172,7 +174,7 @@ export const MessageProcessor = {
     },
 
     processCharAutoAttackBroken(data) {
-        CharacterManager.processAutoAttackBroken(data)
+        CharacterManager.autoAttackBroken(data)
     },
 
     processLoggedFromAnotherDevice() {
@@ -181,8 +183,12 @@ export const MessageProcessor = {
         document.getElementById("dialog-error")!.style.display = 'flex'
     },
 
-    processCharBasicData(data) {
-        console.log('Basic char data received ', data)
+    processCharBasicData(data: AttackableBasicTO) {
+        CharacterManager.basicDataChange(data)
+    },
+
+    processMonsterBasicData(data: AttackableBasicTO) {
+        MonsterManager.basicDataChange(data)
     },
 
     processGMAllSpawns(data) {

@@ -24,6 +24,10 @@ export const AudioManager = {
     swordBlockSounds: [] as Sound[],
 
     guiButtonClickSound: null as Sound | null,
+    guiButtonToggleOnSound: null as Sound | null,
+    guiButtonToggleOffSound: null as Sound | null,
+
+    lowHealthWarningSound: null as Sound | null,
 
     actualAmbientSound: null as Sound | null,
 
@@ -68,6 +72,27 @@ export const AudioManager = {
             AudioManager.guiButtonClickSound!['loaded'] = true;
         }, {
             volume: 1.25,
+            playbackRate: 1,
+        });
+
+        this.guiButtonToggleOnSound = new Sound("guiButtonToggleOn", AudioManager.BASE_PATH_GUI + "button-toggle-on.ogg", scene, function() {
+            AudioManager.guiButtonToggleOnSound!['loaded'] = true;
+        }, {
+            volume: 0.35,
+            playbackRate: 1.25,
+        });
+
+        this.guiButtonToggleOffSound = new Sound("guiButtonToggleOff", AudioManager.BASE_PATH_GUI + "button-toggle-off.ogg", scene, function() {
+            AudioManager.guiButtonToggleOffSound!['loaded'] = true;
+        }, {
+            volume: 0.35,
+            playbackRate: 1.25,
+        });
+
+        this.lowHealthWarningSound = new Sound("lowHealthWarning", AudioManager.BASE_PATH_SFX + "low-health-warning.ogg", scene, function() {
+            AudioManager.lowHealthWarningSound!['loaded'] = true;
+        }, {
+            volume: 1,
             playbackRate: 1,
         });
 
@@ -169,6 +194,19 @@ export const AudioManager = {
     playGuiButtonClick() {
         if (this.guiButtonClickSound && this.guiButtonClickSound['loaded']) {
             this.guiButtonClickSound.play();
+        }
+    },
+
+    playGuiButtonToggle(on: boolean) {
+        const sound = on ? this.guiButtonToggleOnSound : this.guiButtonToggleOffSound;
+        if (sound && sound['loaded']) {
+            sound.play();
+        }
+    },
+
+    playLowHealthWarning() {
+        if (this.lowHealthWarningSound && this.lowHealthWarningSound['loaded']) {
+            this.lowHealthWarningSound.play();
         }
     },
 

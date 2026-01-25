@@ -6,6 +6,7 @@ import { GMSceneManager } from '@/babylon/gm/GmSceneManager'
 import { GMManager } from '@/gm/GM'
 import { TargetingManager } from '@/gui/targettingManager'
 import { AudioManager } from '@/babylon/audio/audioManager'
+import { ActionButtonsManager } from '@/gui/actionButtonsManager'
 
 export const Controller = {
     leftPressedTime: 0,
@@ -84,11 +85,31 @@ export const Controller = {
             e.preventDefault()
             TargetingManager.cycleThroughClosestTargets()
         }
+
+        // F1 to F8
+        if (e.keyCode >= 112 && e.keyCode <= 119) {
+            e.preventDefault()
+            if (e.repeat) return
+
+            const index = e.keyCode - 111
+            ActionButtonsManager.externalPressActionButton(index)
+        }
+
+        // ESCAPE
+        if (e.keyCode == 27) {
+            MyPlayer.onClickEscape()
+        }
     },
 
     processKeyup(e) {
         // Shift
         if (e.keyCode == 16) {GMManager.shiftPressed(false)}
+
+        // F1 to F8
+        if (e.keyCode >= 112 && e.keyCode <= 119) {
+            const index = e.keyCode - 111
+            ActionButtonsManager.externalReleaseActionButton(index)
+        }
     },
 
     resolveLeftPressed(pointerInfo, scene) {
