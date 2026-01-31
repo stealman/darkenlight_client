@@ -1,4 +1,5 @@
 import { AudioManager } from '@/babylon/audio/audioManager'
+import { ActionButtonsManager } from '@/gui/actionButtonsManager'
 
 class DetailLevel {
     level = 0
@@ -45,6 +46,7 @@ export const Settings = {
     joystickLeft: 120 as number,
 
     autoTarget: false as boolean,
+    actionButtonSize: 64 as number,
 
     initialize(storedSettings) {
         this.deviceType = storedSettings.deviceType
@@ -73,6 +75,10 @@ export const Settings = {
         this.autoTarget = storedSettings.autoTarget
         this.volume = parseFloat(storedSettings.volume)
         this.ambientVolume = parseFloat(storedSettings.ambientVolume)
+
+        if (storedSettings.actionButtonSize) {
+            this.actionButtonSize = parseInt(storedSettings.actionButtonSize)
+        }
     },
 
     getDefaultSettings() {
@@ -92,6 +98,7 @@ export const Settings = {
             hudSize: 1,
 
             autoTarget: false,
+            actionButtonSize: Settings.touchEnabled ? 40 : 64,
         }
     },
 
@@ -112,6 +119,10 @@ export const Settings = {
                 this.detailLevel = DetailLevels.HIGH
                 break
         }
+    },
+
+    deviceTypeChanged() {
+        ActionButtonsManager.buttonSizeChanged(this.actionButtonSize)
     },
 
     isShadowsEnabled(): boolean {

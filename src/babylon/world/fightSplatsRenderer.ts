@@ -8,13 +8,14 @@ import { Settings } from '@/settings/settings'
 export const FightSplatsRenderer = {
     splats: new Array<Splat>(),
     visibleSplats: new Array<Splat>(),
-    maxSplats: Settings.isDetalLevelHigh() ? 1000 : 150,
+    maxSplats: 1000,
     ttl: 900000,
     splatPlane: null as Mesh | null,
 
     initialize (scene: Scene) {
         this.splatPlane = Builder.createHorizontalPlane(scene, null, 1, 0)
         this.splatPlane.material = Materials.fightSplatsMaterial
+        this.maxSplats = Settings.isDetalLevelHigh() ? 1000 : 250
     },
 
     consumeSplats(data: [{ lp: number, x: number, z: number, tp: number, s: number }]) {

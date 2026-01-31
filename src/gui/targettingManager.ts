@@ -35,6 +35,7 @@ export const TargetingManager = {
 
         if (this.pointerDownTime > -1 && Date.now() - this.pointerDownTime > 1000) {
             this.autoTargetingEnabled = !this.autoTargetingEnabled
+            AudioManager.playGuiButtonToggle(this.autoTargetingEnabled)
             this.pointerDownTime = -1
             Settings.autoTarget = this.autoTargetingEnabled
             Settings.storeSettings()
@@ -151,7 +152,7 @@ export const TargetingManager = {
 
     checkAutoAttackOnSelectedTarget(overrideToggle: boolean = false) {
         if (this.selectedTarget && this.selectedTarget.getRelationToMyPlayer() === 'ENEMY' && (overrideToggle || ActionButtonsManager.isButtonToggled(ActionButtonActions.AUTO_ATTACK))) {
-            ActionButtonsManager.activated(ActionButtonActions.AUTO_ATTACK)
+            MyPlayer.autoAttackActivated()
             MyPlayer.myChar.autoAttackTarget = this.selectedTarget
             Connector.sendMessage(new SelectAutoAttackTarget(this.selectedTarget!.id, this.selectedTarget!.getObjectType()))
         }

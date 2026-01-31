@@ -187,15 +187,6 @@ export class MonsterModel implements EquipBearer {
         this.modelRotation = this.node.rotation.y;
     }
 
-    /**
-    doAttackMelee(dur: number) {
-        if (this.attackAnims.length === 0) {
-            return
-        }
-        this.transitionToAnimation(this.attackAnims[Utils.rollDice(this.attackAnims.length, true)], true, false, 1000 / dur)
-        this.setWeaponTrailEnabled(true)
-    }*/
-
     doAttackAnimation() {
         if (!this.isActive()) return
         const baseAnimSpeed = 1000
@@ -210,6 +201,7 @@ export class MonsterModel implements EquipBearer {
 
         const anim = possibleAnims[Utils.rollDice(possibleAnims.length, true)]
         this.transitionToAnimation(anim, true, false, baseAnimSpeed / this.parent.attackAnimationTime)
+        this.setWeaponTrailEnabled(true)
     }
 
     doWalk() {

@@ -58,7 +58,7 @@ export const MonsterManager = {
             }
             if (mob === MyPlayer.myChar.autoAttackTarget) {
                 MyPlayer.myChar.autoAttackTarget = null
-                ActionButtonsManager.deactivated(ActionButtonActions.AUTO_ATTACK)
+                MyPlayer.autoAttackDeactivated()
             }
         }
     },

@@ -24,7 +24,10 @@ export const MyPlayer = {
     worldId: 0 as number,
     worldName: "" as string,
 
-    aaActionActive: false as boolean,
+    heartBeatSoundTime: 0 as number,
+
+    actionAutoAttackActive: false,
+    actionHealingActive: false,
 
     async initialize(charData: any) {
         this.myChar = new Character(charData)
@@ -46,7 +49,7 @@ export const MyPlayer = {
 
     startAutoAttack(data: AutoAttackMessage) {
         this.myChar.startAutoAttack(data)
-        ActionButtonsManager.activated(ActionButtonActions.AUTO_ATTACK)
+        this.autoAttackActivated()
     },
 
     finishAutoAttack(data: AutoAttackResultMessage) {
@@ -73,6 +76,9 @@ export const MyPlayer = {
 
         // Resolve common character onFrame logic
         this.myChar.onFrame(timeRate, actualTime, true)
+
+        // Resolve heartbeat sound
+        this.resolveLowHealthStatus(actualTime)
     },
 
     startMove(movementType: string, angle: number) {
@@ -90,11 +96,7 @@ export const MyPlayer = {
 
     onClickEscape() {
         AudioManager.playGuiButtonClick()
-
-        // Stop AA
-        MyPlayer.myChar.autoAttackTarget = null
-        ActionButtonsManager.deactivated(ActionButtonActions.AUTO_ATTACK)
-        Connector.sendMessage(new StopAction())
+        this.stopActions()
     },
 
     basicDataChange(data) {
@@ -107,8 +109,66 @@ export const MyPlayer = {
         this.myChar.hp = hp
         this.myChar.hpPercent = (hp / this.myChar.maxHp) * 100
 
-        if (percentBeforeChange > 25 && this.myChar.hpPercent <= 25) {
-            AudioManager.playLowHealthWarning()
+        let vibrated = false
+        if (this.myChar.hpPercent <= 25) {
+            if (percentBeforeChange > 25) {
+                AudioManager.playLowHealthWarning()
+                this.heartBeatSoundTime = new Date().getTime()
+
+                if (navigator.vibrate) {
+                    navigator.vibrate(500)
+                    vibrated = true
+                }
+            } else if (this.myChar.hpPercent < percentBeforeChange) {
+                this.heartBeatSoundTime = new Date().getTime()
+            }
         }
+
+        if (this.myChar.hpPercent < percentBeforeChange - 5) {
+            if (!vibrated && navigator.vibrate) {
+                navigator.vibrate(100)
+            }
+        }
+    },
+
+    resolveLowHealthStatus(actualTime) {
+        if (this.heartBeatSoundTime > 0 && (actualTime - this.heartBeatSoundTime) < 20000) {
+            if (!AudioManager.heartBeatSound?.isPlaying) {
+                AudioManager.playHeartBeat()
+                AudioManager.setHeartBeatVolume(1)
+            }
+            const timeSinceLowHp = actualTime - this.heartBeatSoundTime
+            const volume = 1 - (timeSinceLowHp / 20000)
+            AudioManager.setHeartBeatVolume(volume)
+        } else {
+            AudioManager.stopHeartBeat()
+        }
+    },
+
+    resolveStopButtonVisibility() {
+        if (this.actionAutoAttackActive) {
+            ActionButtonsManager.showStopButton()
+        } else {
+            ActionButtonsManager.hideStopButton()
+        }
+    },
+
+    autoAttackActivated() {
+        this.actionAutoAttackActive = true
+        ActionButtonsManager.activated(ActionButtonActions.AUTO_ATTACK)
+        this.resolveStopButtonVisibility()
+    },
+
+    autoAttackDeactivated() {
+        this.actionAutoAttackActive = false
+        ActionButtonsManager.deactivated(ActionButtonActions.AUTO_ATTACK)
+        this.resolveStopButtonVisibility()
+    },
+
+    stopActions() {
+        MyPlayer.myChar.autoAttackTarget = null
+        this.autoAttackDeactivated()
+
+        Connector.sendMessage(new StopAction())
     }
 }

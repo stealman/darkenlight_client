@@ -30,10 +30,45 @@ export const OverlayManager = {
 
     onFrame(timeRate: number, time: number) {
         this.overlayCtx!.clearRect(0, 0, this.overlayCanvas.width, this.overlayCanvas.height)
+
+        if (MyPlayer.myChar.hpPercent < 25) {
+            this.setBloodyInnerGlow(MyPlayer.myChar.hpPercent, time)
+        }
+
         TargetSelector.onFrame(timeRate, time, this.overlayCtx!)
         this.renderNames(time, Math.abs(this.letterSpacingFix) > 0)
         this.renderDamagedBars()
         this.renderAttackTargetIndicator(time)
+
+    },
+
+    setBloodyInnerGlow(hpPercent: number, time: number) {
+        const ctx = this.overlayCanvas.getContext('2d')
+        if (!ctx) return
+
+        const w = this.overlayCanvas.width / window.devicePixelRatio
+        const h = this.overlayCanvas.height / window.devicePixelRatio
+
+        if (hpPercent >= 25) return
+
+        const intensity = (25 - hpPercent) / 25
+        const pulse = (Math.sin(time / 250) + 1) / 2
+        const alpha = intensity * (0.5 + pulse * 0.5)
+
+        // Vignette gradient (střed průhledný, okraje červené)
+        const cx = w * 0.5
+        const cy = h * 0.5
+
+        const innerR = Math.min(w, h) * 0.40
+        const outerR = Math.min(w, h) * 0.80
+
+        const g = ctx.createRadialGradient(cx, cy, innerR, cx, cy, outerR)
+        g.addColorStop(0.00, `rgba(255, 0, 0, 0)`)
+        g.addColorStop(0.65, `rgba(255, 0, 0, ${0.2 * alpha})`)
+        g.addColorStop(1.00, `rgba(255, 0, 0, ${0.5 * alpha})`)
+
+        ctx.fillStyle = g
+        ctx.fillRect(0, 0, w, h)
     },
 
     renderNames(time: number, tightText: boolean) {

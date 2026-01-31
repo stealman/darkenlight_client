@@ -2,6 +2,7 @@ import { Settings } from '@/settings/settings'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { TargetingManager } from '@/gui/targettingManager'
 import { OnScreenMessageManager } from '@/gui/onScreenMessageManager'
+import { MyPlayer } from '@/data/myPlayer'
 
 class ActionButtonActionBinding {
     name: string
@@ -31,6 +32,7 @@ class ActionButton {
     htmlEl: HTMLElement | null = null
     actionBinding: ActionButtonActionBinding | null = null
     active: boolean = false
+    size: number = 64
 
     pointerDownTime: number = 0
 
@@ -39,8 +41,11 @@ class ActionButton {
         this.htmlEl = document.createElement("div")
         this.htmlEl.id = "act-btn-" + index
         this.htmlEl.className = "action-button"
+        this.htmlEl.style.backgroundImage = `url('images/icons/buttons/btn_background2.png')`
+
         this.htmlEl.onpointerdown = (e) => { e.preventDefault(); this.pointerDown() }
         this.htmlEl.onpointerup = (e) => { e.preventDefault(); this.pointerUp() }
+        this.setSize(this.size)
     }
 
     onFrame(time: number) {
@@ -84,12 +89,25 @@ class ActionButton {
 
     clearBinding() {
         this.actionBinding = null
-        this.htmlEl!.style.backgroundImage = ""
+        this.htmlEl!.innerHTML = ""
         this.htmlEl!.classList.remove("toggled")
     }
 
     setImage(imageSrc: string) {
-        this.htmlEl!.style.backgroundImage = `url('images/icons/buttons/${imageSrc}.gif')`
+        let img = this.htmlEl!.querySelector('img') as HTMLImageElement
+
+        if (!img) {
+            img = document.createElement('img')
+            img.className = 'action-icon'
+            img.draggable = false
+            this.htmlEl!.appendChild(img)
+        }
+
+        if (imageSrc == ActionButtonActions.AUTO_ATTACK.image && MyPlayer.myChar?.isWeaponRanged()) {
+            imageSrc = "btn_attack_ranged"
+        }
+
+        img.src = `images/icons/buttons/${imageSrc}.png`
     }
 
     activated() {
@@ -101,18 +119,29 @@ class ActionButton {
         this.active = false
         this.htmlEl!.classList.remove("active")
     }
+
+    setSize(size: number) {
+        this.size = size
+        this.htmlEl!.style.width = `${size}px`
+        this.htmlEl!.style.height = `${size}px`
+    }
 }
 
 export const ActionButtonsManager = {
     actionBindingKey: "DARKENLIGHT_ACTION_BUTTONS_BINDINGS",
     desktopPanel: null as HTMLElement,
-    touchPanel: null as HTMLElement,
+    touchPanel1: null as HTMLElement,
+    touchPanel2: null as HTMLElement,
     bindings: new Map<number, ActionButtonActionBinding>(),
     actionButtons: new Map<number, ActionButton>(),
 
+    stopButton: null as HTMLElement,
+
     initialize() {
         this.desktopPanel = document.getElementById("action-buttons-desktop") as HTMLElement
-        this.touchPanel = document.getElementById("action-buttons-touch") as HTMLElement
+        this.touchPanel1 = document.getElementById("action-buttons-touch-1") as HTMLElement
+        this.touchPanel2 = document.getElementById("action-buttons-touch-2") as HTMLElement
+        this.stopButton = document.getElementById("action-button-stop") as HTMLElement
 
         // Create 8 empty action buttons and store to map
         for (let i = 1; i <= 8; i++) {
@@ -128,6 +157,11 @@ export const ActionButtonsManager = {
             this.bindings = new Map<number, ActionButtonActionBinding>(storedBindings)
         }
         this.renderActionButtons()
+
+        // Stop button event
+        this.stopButton.onpointerdown = (e) => { e.preventDefault(); AudioManager.playGuiButtonClick(); MyPlayer.stopActions() }
+        document.getElementById("action-button-stop-inner").style.backgroundImage = `url('images/icons/buttons/btn_background2.png')`
+
     },
 
     onFrame(time) {
@@ -152,16 +186,20 @@ export const ActionButtonsManager = {
 
     renderActionButtons() {
         this.desktopPanel.innerHTML = ""
-        this.touchPanel.innerHTML = ""
+        this.touchPanel1.innerHTML = ""
+        this.touchPanel2.innerHTML = ""
 
-        const activePanel = Settings.isPhoneOrTablet() ? this.touchPanel : this.desktopPanel
         if (Settings.isPhoneOrTablet()) {
             this.desktopPanel.style.setProperty("display", "none")
+            this.touchPanel1.style.setProperty("display", "flex")
+            this.touchPanel2.style.setProperty("display", "flex")
+            this.stopButton.style.setProperty("right", "198px")
+            this.stopButton.style.setProperty("border-top", "none")
         } else {
-            this.touchPanel.style.setProperty("display", "none")
+            this.touchPanel1.style.setProperty("display", "none")
+            this.touchPanel2.style.setProperty("display", "none")
+            this.desktopPanel.style.setProperty("display", "flex")
         }
-
-        activePanel.style.setProperty("display", "flex")
         this.actionButtons.forEach((btn) => {
             const binding = this.bindings.get(parseInt(btn.index))
             if (binding) {
@@ -169,8 +207,20 @@ export const ActionButtonsManager = {
             } else {
                btn.clearBinding()
             }
+
+            let activePanel = this.desktopPanel
+            if (Settings.isPhoneOrTablet()) {
+                if (parseInt(btn.index) <= 4) {
+                    activePanel = this.touchPanel1
+                } else {
+                    activePanel = this.touchPanel2
+                }
+            }
             activePanel.appendChild(btn.htmlEl!)
+           // btn.setSize(size)
         })
+
+        this.buttonSizeChanged(Settings.actionButtonSize)
     },
 
     onclickActionButton(index: number) {
@@ -194,6 +244,16 @@ export const ActionButtonsManager = {
                 OnScreenMessageManager.addMessage(`Auto-Útok: ${toggled ? 'Zapnuto' : 'Vypnuto'}`)
                 break
         }
+    },
+
+    showStopButton() {
+        this.activated(ActionButtonActions.AUTO_ATTACK)
+        this.stopButton.style.setProperty("display", "block")
+    },
+
+    hideStopButton() {
+        this.deactivated(ActionButtonActions.AUTO_ATTACK)
+        this.stopButton.style.setProperty("display", "none")
     },
 
     activated(action: ActionButtonAction) {
@@ -228,6 +288,21 @@ export const ActionButtonsManager = {
     storeBindings() {
         localStorage.setItem(this.actionBindingKey, JSON.stringify(Array.from(this.bindings.entries())))
     },
+
+    buttonSizeChanged(newSize: number) {
+        this.actionButtons.forEach((btn) => {
+            btn.setSize(newSize)
+        })
+
+        this.stopButton.style.setProperty("width", newSize + "px")
+        this.stopButton.style.setProperty("height", newSize + "px")
+        this.touchPanel2.style.setProperty("bottom", (newSize + 8) + "px")
+        if (Settings.isPhoneOrTablet()) {
+            this.stopButton.style.setProperty("right", ((8 + newSize) * 4 + 6) + "px")
+        } else {
+            this.stopButton.style.setProperty("right", (newSize + 8) + "px")
+        }
+    }
 }
 
 export const ActionButtonActions = {

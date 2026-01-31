@@ -30,27 +30,23 @@
               </div>
             </div>
 
-            <!-- Action buttons -->
-            <div id="action-buttons-desktop" style='display: none;' >
-                <div class="action-button a1"></div>
-                <div class="action-button a2"></div>
-                <div class="action-button a3"></div>
-                <div class="action-button a4"></div>
-                <div class="action-button a5"></div>
-                <div class="action-button a6"></div>
-                <div class="action-button a7"></div>
-                <div class="action-button a8"></div>
+            <!-- STOP action buttons pro desktop -->
+            <div id="action-button-stop" class='action-button' >
+                <div id="action-button-stop-inner">
+                    <img class='action-icon' src='/images/icons/buttons/btn_stop.png' />
+                </div>
             </div>
 
-            <div id="action-buttons-touch" style='display: none;'>
-                <div class="action-button a1"></div>
-                <div class="action-button a2"></div>
-                <div class="action-button a3"></div>
-                <div class="action-button a4"></div>
-                <div class="action-button a5"></div>
-                <div class="action-button a6"></div>
-                <div class="action-button a7"></div>
-                <div class="action-button a8"></div>
+            <!-- Action buttons -->
+            <div id="action-buttons-desktop" style='display: none;' >
+
+            </div>
+
+            <div id="action-buttons-touch-1" style='display: none;'>
+
+            </div>
+            <div id="action-buttons-touch-2" style='display: none;'>
+
             </div>
 
             <GmPanel id='gmPanel' v-if="gmPanelVisible" />
@@ -213,6 +209,7 @@ const touchControlsChanged = () => {
 }
 
 const deviceTypeChanged = () => {
+    Settings.deviceTypeChanged()
     touchControls.value.updateFromSettings()
 }
 

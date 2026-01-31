@@ -183,13 +183,16 @@ const setDeviceType = (deviceType) => {
         storedSettings.value.joystickLeft = 120
         storedSettings.value.joystickSize = 100
         storedSettings.value.hudSize = 1.2
+        storedSettings.value.actionButtonSize = 40
     } else if (deviceType == 'TABLET') {
         storedSettings.value.joystickBottom = 300
         storedSettings.value.joystickLeft = 120
         storedSettings.value.joystickSize = 150
         storedSettings.value.hudSize = 1
+        storedSettings.value.actionButtonSize = 64
     } else {
         storedSettings.value.hudSize = 1
+        storedSettings.value.actionButtonSize = 64
     }
 
     storeSettings()

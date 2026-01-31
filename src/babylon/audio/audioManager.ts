@@ -28,6 +28,7 @@ export const AudioManager = {
     guiButtonToggleOffSound: null as Sound | null,
 
     lowHealthWarningSound: null as Sound | null,
+    heartBeatSound: null as Sound | null,
 
     actualAmbientSound: null as Sound | null,
 
@@ -37,9 +38,9 @@ export const AudioManager = {
 
         this.footStepSounds.set(FootStepTypes.SNOW, new Sound("footStepSnow", AudioManager.BASE_PATH_SFX + "steps-snow.ogg", scene, function() {
             AudioManager.footStepSounds.get(FootStepTypes.SNOW)!['loaded'] = true;
-            AudioManager.footStepSounds.get(FootStepTypes.SNOW)!['defaultVolume'] = 0.45;
+            AudioManager.footStepSounds.get(FootStepTypes.SNOW)!['defaultVolume'] = 0.4;
         }, {
-            volume: 0.5,
+            volume: 0.4,
             playbackRate: 1,
             loop: true,
         }))
@@ -94,6 +95,14 @@ export const AudioManager = {
         }, {
             volume: 1,
             playbackRate: 1,
+        });
+
+        this.heartBeatSound = new Sound("heartBeat", AudioManager.BASE_PATH_SFX + "heartbeat.ogg", scene, function() {
+            AudioManager.heartBeatSound!['loaded'] = true;
+        }, {
+            volume: 1,
+            playbackRate: 1.1,
+            loop: true,
         });
 
         Engine.audioEngine?.setGlobalVolume(this.globalVolume)
@@ -210,6 +219,18 @@ export const AudioManager = {
         }
     },
 
+    playHeartBeat() {
+        if (this.heartBeatSound && this.heartBeatSound['loaded'] && !this.heartBeatSound.isPlaying) {
+            this.heartBeatSound.play();
+        }
+    },
+
+    setHeartBeatVolume(volume: number) {
+        if (this.heartBeatSound) {
+            this.heartBeatSound.setVolume(volume);
+        }
+    },
+
     setAmbientSoundVolume(volume: number) {
         Object.keys(AmbientSoundTypes).forEach((key) => {
             const ambientSound = this.ambientSounds.get(AmbientSoundTypes[key]);
@@ -222,6 +243,12 @@ export const AudioManager = {
     stopAmbientSound() {
         if (this.actualAmbientSound && this.actualAmbientSound.isPlaying) {
             this.actualAmbientSound.stop();
+        }
+    },
+
+    stopHeartBeat() {
+        if (this.heartBeatSound && this.heartBeatSound.isPlaying) {
+            this.heartBeatSound.stop();
         }
     },
 
