@@ -47,6 +47,9 @@ export const Settings = {
 
     autoTarget: false as boolean,
     actionButtonSize: 64 as number,
+    actionButtonsLayout: '1COLUMN' as string,
+    actionButtonsYOffset: 0 as number,
+    actionButtonCount: 6 as number,
 
     initialize(storedSettings) {
         this.deviceType = storedSettings.deviceType
@@ -79,6 +82,18 @@ export const Settings = {
         if (storedSettings.actionButtonSize) {
             this.actionButtonSize = parseInt(storedSettings.actionButtonSize)
         }
+        if (storedSettings.actionButtonsLayout) {
+            this.actionButtonsLayout = storedSettings.actionButtonsLayout
+        }
+        if (storedSettings.actionButtonsYOffset) {
+            this.actionButtonsYOffset = parseInt(storedSettings.actionButtonsYOffset)
+        }
+        if (storedSettings.actionButtonCount) {
+            this.actionButtonCount = parseInt(storedSettings.actionButtonCount)
+        }
+
+        AudioManager.setGlobalVolume(this.volume)
+        AudioManager.setAmbientSoundVolume(this.ambientVolume)
     },
 
     getDefaultSettings() {
@@ -99,6 +114,9 @@ export const Settings = {
 
             autoTarget: false,
             actionButtonSize: Settings.touchEnabled ? 40 : 64,
+            actionButtonsLayout: '1COLUMN',
+            actionButtonsYOffset: 0,
+            actionButtonCount: 6,
         }
     },
 

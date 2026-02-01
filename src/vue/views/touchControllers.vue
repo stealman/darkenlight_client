@@ -63,6 +63,9 @@ const setButtonsPosition = (storedSettings) => {
     document.getElementById("btn-target-lock").style.left = (Settings.joystickLeft + Settings.joystickSize - 20) + "px"
     document.getElementById("btn-target-lock").style.bottom = (Settings.joystickBottom + Settings.joystickSize - 20) + "px"
     document.getElementById("btn-target-lock").style.display = "block"
+
+    document.getElementById("btn-action-stop").style.left = (Settings.joystickLeft + Settings.joystickSize - 70) + "px"
+    document.getElementById("btn-action-stop").style.bottom = (Settings.joystickBottom + Settings.joystickSize -10) + "px"
 }
 
 defineExpose({

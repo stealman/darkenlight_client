@@ -129,22 +129,20 @@ class ActionButton {
 
 export const ActionButtonsManager = {
     actionBindingKey: "DARKENLIGHT_ACTION_BUTTONS_BINDINGS",
-    desktopPanel: null as HTMLElement,
-    touchPanel1: null as HTMLElement,
-    touchPanel2: null as HTMLElement,
+    buttonsPanel1: null as HTMLElement,
+    buttonsPanel2: null as HTMLElement,
     bindings: new Map<number, ActionButtonActionBinding>(),
     actionButtons: new Map<number, ActionButton>(),
 
     stopButton: null as HTMLElement,
 
     initialize() {
-        this.desktopPanel = document.getElementById("action-buttons-desktop") as HTMLElement
-        this.touchPanel1 = document.getElementById("action-buttons-touch-1") as HTMLElement
-        this.touchPanel2 = document.getElementById("action-buttons-touch-2") as HTMLElement
-        this.stopButton = document.getElementById("action-button-stop") as HTMLElement
+        this.buttonsPanel1 = document.getElementById("action-buttons-1") as HTMLElement
+        this.buttonsPanel2 = document.getElementById("action-buttons-2") as HTMLElement
+        this.stopButton = document.getElementById("btn-action-stop") as HTMLElement
 
-        // Create 8 empty action buttons and store to map
-        for (let i = 1; i <= 8; i++) {
+        // Create 10 empty action buttons and store to map
+        for (let i = 1; i <= 10; i++) {
             this.actionButtons.set(i, new ActionButton(i.toString()))
         }
 
@@ -157,11 +155,6 @@ export const ActionButtonsManager = {
             this.bindings = new Map<number, ActionButtonActionBinding>(storedBindings)
         }
         this.renderActionButtons()
-
-        // Stop button event
-        this.stopButton.onpointerdown = (e) => { e.preventDefault(); AudioManager.playGuiButtonClick(); MyPlayer.stopActions() }
-        document.getElementById("action-button-stop-inner").style.backgroundImage = `url('images/icons/buttons/btn_background2.png')`
-
     },
 
     onFrame(time) {
@@ -185,22 +178,30 @@ export const ActionButtonsManager = {
     },
 
     renderActionButtons() {
-        this.desktopPanel.innerHTML = ""
-        this.touchPanel1.innerHTML = ""
-        this.touchPanel2.innerHTML = ""
+        this.buttonsPanel1.innerHTML = ""
+        this.buttonsPanel2.innerHTML = ""
 
-        if (Settings.isPhoneOrTablet()) {
-            this.desktopPanel.style.setProperty("display", "none")
-            this.touchPanel1.style.setProperty("display", "flex")
-            this.touchPanel2.style.setProperty("display", "flex")
-            this.stopButton.style.setProperty("right", "198px")
-            this.stopButton.style.setProperty("border-top", "none")
+        if (Settings.actionButtonsLayout == '1COLUMN') {
+            this.buttonsPanel2.style.setProperty("display", "none")
         } else {
-            this.touchPanel1.style.setProperty("display", "none")
-            this.touchPanel2.style.setProperty("display", "none")
-            this.desktopPanel.style.setProperty("display", "flex")
+            this.buttonsPanel2.style.setProperty("display", "flex")
         }
+
+        if (Settings.actionButtonsLayout == '2COLUMN') {
+            this.buttonsPanel2.style.setProperty("flex-direction", "column")
+        }
+
+        if (Settings.actionButtonsLayout == 'CORNER') {
+            this.buttonsPanel2.style.setProperty("flex-direction", "row")
+        }
+
         this.actionButtons.forEach((btn) => {
+            if (btn.index > Settings.actionButtonCount) {
+                btn.htmlEl!.style.setProperty("display", "none")
+            } else {
+                btn.htmlEl!.style.removeProperty("display")
+            }
+
             const binding = this.bindings.get(parseInt(btn.index))
             if (binding) {
                btn.setBinding(binding)
@@ -208,16 +209,11 @@ export const ActionButtonsManager = {
                btn.clearBinding()
             }
 
-            let activePanel = this.desktopPanel
-            if (Settings.isPhoneOrTablet()) {
-                if (parseInt(btn.index) <= 4) {
-                    activePanel = this.touchPanel1
-                } else {
-                    activePanel = this.touchPanel2
-                }
+            let actualPanel = this.buttonsPanel1
+            if ((Settings.actionButtonsLayout == 'CORNER' || Settings.actionButtonsLayout == '2COLUMN') && parseInt(btn.index) > Settings.actionButtonCount / 2) {
+                actualPanel = this.buttonsPanel2
             }
-            activePanel.appendChild(btn.htmlEl!)
-           // btn.setSize(size)
+            actualPanel.appendChild(btn.htmlEl!)
         })
 
         this.buttonSizeChanged(Settings.actionButtonSize)
@@ -246,13 +242,16 @@ export const ActionButtonsManager = {
         }
     },
 
+    /**
+     * Show button is for now disabled
+     */
     showStopButton() {
-        this.activated(ActionButtonActions.AUTO_ATTACK)
-        this.stopButton.style.setProperty("display", "block")
+        if (Settings.isPhoneOrTablet()) {
+            //this.stopButton.style.setProperty("display", "block")
+        }
     },
 
     hideStopButton() {
-        this.deactivated(ActionButtonActions.AUTO_ATTACK)
         this.stopButton.style.setProperty("display", "none")
     },
 
@@ -273,6 +272,10 @@ export const ActionButtonsManager = {
     },
 
     clickOnAutoAttackButton() {
+        if (MyPlayer.actionAutoAttackActive) {
+            MyPlayer.stopActions()
+            return
+        }
         TargetingManager.checkAutoAttackOnSelectedTarget(true)
     },
 
@@ -294,13 +297,20 @@ export const ActionButtonsManager = {
             btn.setSize(newSize)
         })
 
-        this.stopButton.style.setProperty("width", newSize + "px")
-        this.stopButton.style.setProperty("height", newSize + "px")
-        this.touchPanel2.style.setProperty("bottom", (newSize + 8) + "px")
-        if (Settings.isPhoneOrTablet()) {
-            this.stopButton.style.setProperty("right", ((8 + newSize) * 4 + 6) + "px")
-        } else {
-            this.stopButton.style.setProperty("right", (newSize + 8) + "px")
+        if (Settings.actionButtonsLayout == '1COLUMN') {
+            this.buttonsPanel1.style.setProperty("bottom",  Settings.actionButtonsYOffset + "px")
+        }
+
+        if (Settings.actionButtonsLayout == '2COLUMN') {
+            this.buttonsPanel1.style.setProperty("bottom", Settings.actionButtonsYOffset + "px")
+            this.buttonsPanel2.style.setProperty("bottom", Settings.actionButtonsYOffset + "px")
+            this.buttonsPanel2.style.setProperty("right", (newSize + 8) + "px")
+        }
+
+        if (Settings.actionButtonsLayout == 'CORNER') {
+            this.buttonsPanel1.style.setProperty("bottom", (Settings.actionButtonsYOffset + newSize + 8) + "px")
+            this.buttonsPanel2.style.setProperty("bottom", Settings.actionButtonsYOffset + "px")
+            this.buttonsPanel2.style.setProperty("right", "0px")
         }
     }
 }

@@ -14,9 +14,15 @@
 
             <TouchControllers v-if="!gameLoading" ref='touchControls' />
 
-            <!-- Target Lock  -->
-            <label id="btn-target-lock" style="display: none; opacity: 0.65; position: absolute; width: 64px; height: 64px;" v-html="getTargetLockSvg('icon-blue', 'icon-target-lock')"
+            <!-- Target Lock Enemy -->
+            <label id="btn-target-lock" style="display: none; opacity: 0.65; position: absolute; width: 64px; height: 64px;"
+                   v-html="getTargetLockSvg('icon-red', 'icon-target-lock')"
                    @pointerdown="TargetingManager.onPointerDown()" @pointerup="TargetingManager.onPointerUp()" ></label>
+
+            <!-- Action Stop -->
+            <label id="btn-action-stop" style="display: none; opacity: 0.65; position: absolute; width: 64px; height: 64px;"
+                   v-html="getStopActionSvg('icon-blue', 'icon-stop-action')"
+                   @pointerdown="AudioManager.playGuiButtonClick(); MyPlayer.stopActions()" ></label>
 
             <!-- Debug panel -->
             <div id="debug-panel">
@@ -38,14 +44,10 @@
             </div>
 
             <!-- Action buttons -->
-            <div id="action-buttons-desktop" style='display: none;' >
+            <div id="action-buttons-1">
 
             </div>
-
-            <div id="action-buttons-touch-1" style='display: none;'>
-
-            </div>
-            <div id="action-buttons-touch-2" style='display: none;'>
+            <div id="action-buttons-2" style='display: none;'>
 
             </div>
 
@@ -117,7 +119,7 @@ import { Controller } from '@/controlls/controller'
 import {
     getFullScreenSvg,
     getHamburgerMenuSvg,
-    getInspectSvg,
+    getInspectSvg, getStopActionSvg,
     getTargetLockSvg,
 } from '@/vue/icons/icons'
 import { Settings } from '@/settings/settings'

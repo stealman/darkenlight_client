@@ -77,14 +77,6 @@
                                         <input class="range-slider" type="range" min="0.1" max="1" step="0.1" style="zoom: 1.5;" v-model="storedSettings.targetMarkerOpacity" @change="targetMarkerOpacityChanged()" />
                                     </td>
                                 </tr>
-
-                                <!--
-                                <tr>
-                                    <td class="item-label" style="width: 25%">Zobrazit zář</td>
-                                    <td  style="width: 25%">
-                                        <Checkbox name="displayGlow" input-id="displayGlow" v-model="storedSettings.displayGlow" binary @change="displayGlowChanged()" />
-                                    </td>
-                                </tr>-->
                             </tbody>
                         </table>
                     </div>
@@ -92,23 +84,38 @@
 
                 <!-- GUI -->
                 <div v-if="activeTabId == 3" >
-                    <div style="margin-top: 10px;">
-                        <!--
-                        <table>
-                            <tbody>
-                            <tr>
-                                <td class="item-label" style="width: 25%">Velikost HUD</td>
-                                <td  style="width: 25%">
-                                    <input class="range-slider" type="range" min="0.5" max="3" step="0.1" style="zoom: 1.5;" v-model="storedSettings.hudSize" @change="hudSizeChanged()" />
-                                </td>
+                    <div style="max-height: 65vh; overflow-y: auto; overflow-x: hidden;">
 
-                                <td class="item-label" style="width: 25%"></td>
-                                <td  style="width: 25%">
+                        Akční tlačítka
+                        <div class="dialog-actions" style="margin-top: 20px;">
+                            <button class="dialog-button" :class="storedSettings.actionButtonsLayout == '1COLUMN' ? 'selected' : ''" @click="setActionButtonsLayout('1COLUMN')">1 Sloupec</button>
+                            <button class="dialog-button" :class="storedSettings.actionButtonsLayout == '2COLUMN' ? 'selected' : ''" @click="setActionButtonsLayout('2COLUMN')">2 Sloupce</button>
+                            <button class="dialog-button" :class="storedSettings.actionButtonsLayout == 'CORNER' ? 'selected' : ''" @click="setActionButtonsLayout('CORNER')">Roh</button>
+                        </div>
 
-                                </td>
-                            </tr>
-                            </tbody>
-                        </table>-->
+                        <div style="margin-top: 10px;">
+                            <table>
+                                <tbody>
+                                    <tr>
+                                        <td class="item-label" style="width: 25%">Velikost tlačítek</td>
+                                        <td  style="width: 25%">
+                                            <input class="range-slider" type="range" min="32" max="64" step="2" style="zoom: 1.5;" v-model="storedSettings.actionButtonSize" @change="actionButtonsChanged()" />
+                                        </td>
+
+                                        <td class="item-label" style="width: 25%">Odsazení zdola</td>
+                                        <td  style="width: 25%">
+                                            <input class="range-slider" type="range" min="0" max="256" step="16" style="zoom: 1.5;" v-model="storedSettings.actionButtonsYOffset" @change="actionButtonsChanged()" />
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="item-label" style="width: 25%; padding-top: 1rem;">Počet tlačítek</td>
+                                        <td  style="width: 25%; padding-top: 1rem;">
+                                            <input class="range-slider" type="range" min="4" max="10" step="2" style="zoom: 1.5;" v-model="storedSettings.actionButtonCount" @change="actionButtonsChanged()" />
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
@@ -184,20 +191,29 @@ const setDeviceType = (deviceType) => {
         storedSettings.value.joystickSize = 100
         storedSettings.value.hudSize = 1.2
         storedSettings.value.actionButtonSize = 40
+        storedSettings.value.actionButtonsLayout = 'CORNER'
     } else if (deviceType == 'TABLET') {
         storedSettings.value.joystickBottom = 300
         storedSettings.value.joystickLeft = 120
         storedSettings.value.joystickSize = 150
         storedSettings.value.hudSize = 1
         storedSettings.value.actionButtonSize = 64
+        storedSettings.value.actionButtonsLayout = '2COLUMN'
     } else {
         storedSettings.value.hudSize = 1
         storedSettings.value.actionButtonSize = 64
+        storedSettings.value.actionButtonsLayout = '1COLUMN'
     }
 
     storeSettings()
     ActionButtonsManager.renderActionButtons()
     emit('deviceTypeSelected');
+}
+
+const setActionButtonsLayout = (layout) => {
+    storedSettings.value.actionButtonsLayout = layout
+    storeSettings()
+    ActionButtonsManager.renderActionButtons()
 }
 
 const setDetailsLevel = (level) => {
@@ -253,8 +269,11 @@ const touchControlsChanged = () => {
     emit('touchColtrolsChanged');
 }
 
-const hudSizeChanged = () => {
-    Settings.setHudSize(storedSettings.value.hudSize)
+const actionButtonsChanged = () => {
+    storedSettings.value.actionButtonSize = parseInt(storedSettings.value.actionButtonSize)
+    storedSettings.value.actionButtonsYOffset = parseInt(storedSettings.value.actionButtonsYOffset)
+    storedSettings.value.actionButtonCount = parseInt(storedSettings.value.actionButtonCount)
+    ActionButtonsManager.renderActionButtons()
     storeSettings()
 }
 

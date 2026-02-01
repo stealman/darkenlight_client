@@ -1,30 +1,4 @@
-div#action-buttons-desktop {
-    display: flex;
-    gap: 5px;
-    flex-direction: column;
-    justify-content: center;
-    position: absolute;
-    right: 0px;
-    bottom: 0px;
-    padding: 4px;
-    background-color: rgba(0, 0, 0, 0.65);
-    box-shadow: -3px -5px 5px rgba(0,0,0,0.15);
-}
-
-div#action-buttons-touch-1 {
-    display: flex;
-    gap: 10px;
-    flex-direction: row;
-    justify-content: center;
-    position: absolute;
-    right: 0px;
-    bottom: 0px;
-    padding: 4px;
-    background-color: rgba(0, 0, 0, 0.65);
-    box-shadow: -3px -5px 5px rgba(0,0,0,0.15);
-}
-
-div#action-buttons-touch-2 {
+div#action-buttons-1 {
     display: flex;
     gap: 10px;
     flex-direction: column;
@@ -37,7 +11,25 @@ div#action-buttons-touch-2 {
     box-shadow: 0px -5px 5px rgba(0,0,0,0.15);
 }
 
+div#action-buttons-2 {
+    display: flex;
+    gap: 10px;
+    flex-direction: row;
+    justify-content: center;
+    position: absolute;
+    right: 0px;
+    bottom: 0px;
+    padding: 4px;
+    background-color: rgba(0, 0, 0, 0.65);
+    box-shadow: -3px -5px 5px rgba(0,0,0,0.15);
+}
+
 div.action-button {
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+
     align-items: center;
     justify-content: center;
     cursor: pointer;
