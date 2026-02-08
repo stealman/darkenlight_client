@@ -41,7 +41,7 @@ class ActionButton {
         this.htmlEl = document.createElement("div")
         this.htmlEl.id = "act-btn-" + index
         this.htmlEl.className = "action-button"
-        this.htmlEl.style.backgroundImage = `url('images/icons/buttons/btn_background2.png')`
+        this.htmlEl.style.backgroundImage = `url('images/icons/buttons/btn_background.png')`
 
         this.htmlEl.onpointerdown = (e) => { e.preventDefault(); this.pointerDown() }
         this.htmlEl.onpointerup = (e) => { e.preventDefault(); this.pointerUp() }

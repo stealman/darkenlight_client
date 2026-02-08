@@ -7,8 +7,8 @@ div#action-buttons-1 {
     right: 0px;
     bottom: 48px;
     padding: 4px;
-    background-color: rgba(0, 0, 0, 0.65);
-    box-shadow: 0px -5px 5px rgba(0,0,0,0.15);
+    background-color: rgba(20, 15, 10, 0.65);
+    box-shadow: -3px -5px 5px rgba(20,15,10,0.15);
 }
 
 div#action-buttons-2 {
@@ -20,8 +20,8 @@ div#action-buttons-2 {
     right: 0px;
     bottom: 0px;
     padding: 4px;
-    background-color: rgba(0, 0, 0, 0.65);
-    box-shadow: -3px -5px 5px rgba(0,0,0,0.15);
+    background-color: rgba(20, 15, 10, 0.65);
+    box-shadow: -3px -5px 5px rgba(20,15,10,0.15);
 }
 
 div.action-button {
@@ -33,7 +33,6 @@ div.action-button {
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    border: 0px solid rgba(128, 128, 128, 0.75);
 
     background-size: contain;
     background-repeat: no-repeat;
@@ -79,23 +78,6 @@ div.action-button.active {
             inset 0 0 6px rgba(230, 60, 60, 1),
             0 0 6px rgba(230, 60, 60, 0.35);
     animation: activePulse 1.6s ease-in-out infinite;
-}
-
-div#action-button-stop {
-    padding: 4px;
-    display: none;
-
-    background: rgba(0, 0, 0, 0.65);
-    box-shadow: -3px -5px 5px rgba(0,0,0,0.15);
-    position: absolute;
-    right: 72px;
-    bottom: 0px;
-}
-
-div#action-button-stop-inner {
-    height: 100%;
-    background-repeat: no-repeat;
-    background-position: center calc(50% - 1px);
 }
 
 @keyframes toggledPulse {

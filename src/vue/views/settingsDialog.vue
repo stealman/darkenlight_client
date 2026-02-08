@@ -104,7 +104,7 @@
 
                                         <td class="item-label" style="width: 25%">Odsazení zdola</td>
                                         <td  style="width: 25%">
-                                            <input class="range-slider" type="range" min="0" max="256" step="16" style="zoom: 1.5;" v-model="storedSettings.actionButtonsYOffset" @change="actionButtonsChanged()" />
+                                            <input class="range-slider" type="range" min="0" max="512" step="16" style="zoom: 1.5;" v-model="storedSettings.actionButtonsYOffset" @change="actionButtonsChanged()" />
                                         </td>
                                     </tr>
                                     <tr>
