@@ -26,3 +26,21 @@ export interface AutoAttackResultMessage {
     res: AutoAttackResult
 }
 
+export interface  HealingMessage {
+    id: number
+    tgt: number
+    tp: string
+    dur: number
+}
+
+export interface  HealingResultMessage {
+    id: number
+    tgt: number
+    tp: string
+    res: HealingResult
+}
+
+export interface HealingResult {
+    hp: number
+    tgt: AttackableBasicTO
+}

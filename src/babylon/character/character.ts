@@ -17,8 +17,15 @@ import { MyCharMoveMsg } from '@/network/messages'
 import { MyPlayer } from '@/data/myPlayer'
 import { EquipItemSlots, EquipSlotsCb, Item } from '@/data/items/item'
 import { Arrow, ArrowsManager } from '@/babylon/world/arrowsManager'
-import { AttackableBasicTO, AutoAttackMessage, AutoAttackResultMessage } from '@/network/messageIfs'
+import {
+    AttackableBasicTO,
+    AutoAttackMessage,
+    AutoAttackResultMessage,
+    HealingMessage,
+    HealingResultMessage,
+} from '@/network/messageIfs'
 import { TargetingManager } from '@/gui/targettingManager'
+import { ActionButtonActions, ActionButtonsManager } from '@/gui/actionButtonsManager'
 
 class Character implements Attackable {
     model: CharacterModel | null = null
@@ -61,6 +68,8 @@ class Character implements Attackable {
     arrowCreateTime: number = 0
     arrowShotTime: number = 0
     arrow: Arrow | null = null
+
+    healingActive: boolean = false
 
     constructor(data: any) {
         this.id = data.id
@@ -175,6 +184,12 @@ class Character implements Attackable {
     }
 
     startAutoAttack(data: AutoAttackMessage) {
+        if (this.healingActive) {
+            this.healingActive = false
+            if (this === MyPlayer.myChar) {
+                ActionButtonsManager.deactivated(ActionButtonActions.HEALING)
+            }
+        }
         this.autoAttackTarget = Utils.getAttackTargetByTypeAndId(data.tp, data.tgt)
         if (!this.autoAttackTarget) {
             return
@@ -229,6 +244,14 @@ class Character implements Attackable {
         } else if (data.res.h === 'b' && target.getParrySoundType()) {
             AudioManager.playWeaponBlocked(target.getParrySoundType()!, target.pos)
         }
+    }
+
+    startHealing(data: HealingMessage) {
+        this.healingActive = true
+    }
+
+    finishHealing(result: HealingResultMessage | null) {
+        this.healingActive = false
     }
 
     resolveStepMark(time: number, inCombat: boolean = false) {

@@ -38,6 +38,7 @@ export const OverlayManager = {
         TargetSelector.onFrame(timeRate, time, this.overlayCtx!)
         this.renderNames(time, Math.abs(this.letterSpacingFix) > 0)
         this.renderDamagedBars()
+        this.renderHealingMarkers(time)
         this.renderAttackTargetIndicator(time)
 
     },
@@ -122,6 +123,17 @@ export const OverlayManager = {
                 this.renderDamagedBar(pos, MyPlayer.myChar.hpPercent, false)
             }
         }
+
+
+    },
+
+    renderHealingMarkers(time) {
+        if (MyPlayer.myChar.healingActive) {
+            const pos = MyPlayer.myChar.getNameTextNodeScreenPosition()
+            if (pos) {
+                this.renderHealingSelfMarker(pos, time)
+            }
+        }
     },
 
     renderAttackTargetIndicator(actualTime) {
@@ -163,6 +175,30 @@ export const OverlayManager = {
         const fillWidth = (barWidth - 2) * (percent / 100)
         ctx.fillStyle = enemy ? 'rgba(200, 32, 32, 0.65)' : 'rgba(25, 175, 175, 0.65)'
         ctx.fillRect(x + 1, y + 1, fillWidth, barHeight - 2)
+    },
+
+    renderHealingSelfMarker(pos: Vector3, time: number) {
+        const ctx = this.overlayCtx!
+        const x = pos.x + 40
+
+        const size = 15
+        const thickness = 5
+        const alpha = 0.2 + (Math.sin(time / 200) + 1) / 2 * 0.65
+
+        const drawCross = (crossSize: number, crossThickness: number) => {
+            ctx.beginPath()
+            ctx.rect(x - crossThickness / 2, pos.y - crossSize / 2, crossThickness, crossSize)
+            ctx.rect(x - crossSize / 2, pos.y - crossThickness / 2, crossSize, crossThickness)
+            ctx.fill()
+        }
+
+        // 1px outline via slightly larger black cross behind the red one.
+        ctx.fillStyle = `rgba(0, 0, 0, ${alpha})`
+        drawCross(size + 2, thickness + 2)
+
+        // Fill - pulsating red cross (single fill operation, no center overdraw).
+        ctx.fillStyle = `rgba(225, 32, 32, ${alpha})`
+        drawCross(size, thickness)
     },
 
     renderName(pos: Vector3, name: string, tightText: boolean, relation: 'ALLY' | 'ENEMY' | 'NEUTRAL') {

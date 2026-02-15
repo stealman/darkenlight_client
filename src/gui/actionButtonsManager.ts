@@ -149,6 +149,7 @@ export const ActionButtonsManager = {
         // Init default bindings if not present in localStorage
         if (!localStorage.getItem(this.actionBindingKey)) {
             this.bindings.set(1, new ActionButtonActionBinding(ActionButtonActions.AUTO_ATTACK.name, {}))
+            this.bindings.set(2, new ActionButtonActionBinding(ActionButtonActions.HEALING.name, {}))
             localStorage.setItem(this.actionBindingKey, JSON.stringify(Array.from(this.bindings.entries())))
         } else {
             const storedBindings = JSON.parse(localStorage.getItem(this.actionBindingKey)!)
@@ -228,6 +229,9 @@ export const ActionButtonsManager = {
                 case ActionButtonActions.AUTO_ATTACK.name:
                     this.clickOnAutoAttackButton()
                     break
+                case ActionButtonActions.HEALING.name:
+                    this.clickOnHealingButton()
+                    break
             }
         }
     },
@@ -277,6 +281,14 @@ export const ActionButtonsManager = {
             return
         }
         TargetingManager.checkAutoAttackOnSelectedTarget(true)
+    },
+
+    clickOnHealingButton() {
+        if (MyPlayer.actionHealingActive) {
+            MyPlayer.stopActions()
+            return
+        }
+        MyPlayer.startHealingAction()
     },
 
     isButtonToggled(action: ActionButtonAction): boolean {

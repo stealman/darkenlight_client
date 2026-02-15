@@ -68,6 +68,13 @@ export class StopAction implements Message {
     constructor() {}
 }
 
+export class HealingSelfAction implements Message {
+    t: number = 10
+    d: any
+    constructor() {
+    }
+}
+
 export class GMSaveMapDataMsg implements Message {
     t: number = 1000
     d: any
@@ -109,3 +116,4 @@ export class GMSpawnAction implements Message {
         this.d = { action: action, data: data }
     }
 }
+

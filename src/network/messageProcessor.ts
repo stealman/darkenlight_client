@@ -10,7 +10,13 @@ import { MyPlayer } from '@/data/myPlayer'
 import { FightSplatsRenderer } from '@/babylon/world/fightSplatsRenderer'
 import { GameManager } from '@/GameManager'
 import { CharacterManager } from '@/babylon/character/characterManager'
-import { AttackableBasicTO, AutoAttackMessage, AutoAttackResultMessage, MonsterMoveMessage } from '@/network/messageIfs'
+import {
+    AttackableBasicTO,
+    AutoAttackMessage,
+    AutoAttackResultMessage,
+    HealingMessage,
+    MonsterMoveMessage,
+} from '@/network/messageIfs'
 
 export const MessageProcessor = {
 
@@ -44,6 +50,7 @@ export const MessageProcessor = {
                 case 24: this.processCharAutoAttackBroken(msg.d); break
                 case 25: this.processCharBasicData(msg.d); break
                 case 26: this.processMonsterBasicData(msg.d); break
+                case 27: this.processCharacterHealing(msg.d); break
                 case 1003: this.processGMAllSpawns(msg.d); break
                 case 1004: this.processGMSpawnChange(msg.d); break
                 default:
@@ -189,6 +196,10 @@ export const MessageProcessor = {
 
     processMonsterBasicData(data: AttackableBasicTO) {
         MonsterManager.basicDataChange(data)
+    },
+
+    processCharacterHealing(data: HealingMessage) {
+        CharacterManager.startHealing(data)
     },
 
     processGMAllSpawns(data) {

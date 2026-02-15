@@ -5,9 +5,9 @@ import { CharacterModel } from '@/babylon/character/characterModel'
 import { ref } from 'vue'
 import { TargetingManager } from '@/gui/targettingManager'
 import { Connector } from '@/network/connector'
-import { AutoAttackBreak, StopAction } from '@/network/messages'
+import { AutoAttackBreak, HealingSelfAction, StopAction } from '@/network/messages'
 import { MyStatusPanel } from '@/gui/myStatusPanel'
-import { AutoAttackMessage, AutoAttackResultMessage } from '@/network/messageIfs'
+import { AutoAttackMessage, AutoAttackResultMessage, HealingMessage } from '@/network/messageIfs'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { ActionButtonActions, ActionButtonsManager } from '@/gui/actionButtonsManager'
 
@@ -56,6 +56,11 @@ export const MyPlayer = {
         this.myChar.finishAutoAttack(data)
     },
 
+    startHealing(data: HealingMessage) {
+        this.myChar.startHealing(data)
+        this.healingActivated()
+    },
+
     onFrame(timeRate: number, actualTime: number) {
 
         // Cancel auto attack immediately if moving away from target
@@ -92,6 +97,10 @@ export const MyPlayer = {
 
     stopMove() {
         this.myChar.stopMove()
+    },
+
+    startHealingAction() {
+        Connector.sendMessage(new HealingSelfAction())
     },
 
     onClickEscape() {
@@ -146,7 +155,7 @@ export const MyPlayer = {
     },
 
     resolveStopButtonVisibility() {
-        if (this.actionAutoAttackActive) {
+        if (this.actionAutoAttackActive || this.actionHealingActive) {
             ActionButtonsManager.showStopButton()
         } else {
             ActionButtonsManager.hideStopButton()
@@ -163,11 +172,29 @@ export const MyPlayer = {
         this.actionAutoAttackActive = false
         ActionButtonsManager.deactivated(ActionButtonActions.AUTO_ATTACK)
         this.resolveStopButtonVisibility()
+        MyPlayer.myChar.autoAttackTarget = null
+    },
+
+    healingActivated() {
+        this.actionHealingActive = true
+        ActionButtonsManager.activated(ActionButtonActions.HEALING)
+        this.resolveStopButtonVisibility()
+
+        if (MyPlayer.actionAutoAttackActive) {
+            MyPlayer.autoAttackDeactivated()
+        }
+    },
+
+    healingDeactivated() {
+        this.actionHealingActive = false
+        this.myChar.finishHealing(null)
+        ActionButtonsManager.deactivated(ActionButtonActions.HEALING)
     },
 
     stopActions() {
         MyPlayer.myChar.autoAttackTarget = null
         this.autoAttackDeactivated()
+        this.healingDeactivated()
 
         Connector.sendMessage(new StopAction())
     }

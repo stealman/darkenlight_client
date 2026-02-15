@@ -2,7 +2,7 @@ import { MyPlayer } from '@/data/myPlayer'
 import Character from '@/babylon/character/character'
 import { ViewportManager } from '@/utils/viewport'
 import { Utils } from '@/utils/utils'
-import { AttackableBasicTO, AutoAttackMessage, AutoAttackResultMessage } from '@/network/messageIfs'
+import { AttackableBasicTO, AutoAttackMessage, AutoAttackResultMessage, HealingMessage } from '@/network/messageIfs'
 
 export const CharacterManager = {
     characters: new Map<number, Character>(),
@@ -107,6 +107,17 @@ export const CharacterManager = {
             const char = this.characters.get(data)
             if (char) {
                 char.breakAutoAttack()
+            }
+        }
+    },
+
+    startHealing(data: HealingMessage) {
+        if (data.id === MyPlayer.myChar.id) {
+            MyPlayer.startHealing(data)
+        } else {
+            const char = this.characters.get(data.id)
+            if (char) {
+                char.startHealing(data)
             }
         }
     },
