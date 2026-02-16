@@ -25,7 +25,7 @@ import {
     HealingResultMessage,
 } from '@/network/messageIfs'
 import { TargetingManager } from '@/gui/targettingManager'
-import { ActionButtonActions, ActionButtonsManager } from '@/gui/actionButtonsManager'
+import { CharacterManager } from '@/babylon/character/characterManager'
 
 class Character implements Attackable {
     model: CharacterModel | null = null
@@ -70,6 +70,7 @@ class Character implements Attackable {
     arrow: Arrow | null = null
 
     healingActive: boolean = false
+    healingEndTime: number = 0
 
     constructor(data: any) {
         this.id = data.id
@@ -184,12 +185,6 @@ class Character implements Attackable {
     }
 
     startAutoAttack(data: AutoAttackMessage) {
-        if (this.healingActive) {
-            this.healingActive = false
-            if (this === MyPlayer.myChar) {
-                ActionButtonsManager.deactivated(ActionButtonActions.HEALING)
-            }
-        }
         this.autoAttackTarget = Utils.getAttackTargetByTypeAndId(data.tp, data.tgt)
         if (!this.autoAttackTarget) {
             return
@@ -248,10 +243,12 @@ class Character implements Attackable {
 
     startHealing(data: HealingMessage) {
         this.healingActive = true
+        this.healingEndTime = Date.now() + data.dur
     }
 
-    finishHealing(result: HealingResultMessage | null) {
-        this.healingActive = false
+    finishHealing(result: HealingResultMessage) {
+        console.log(result.res.hp)
+        CharacterManager.basicDataChange(result.res.dt)
     }
 
     resolveStepMark(time: number, inCombat: boolean = false) {

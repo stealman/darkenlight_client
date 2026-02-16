@@ -15,7 +15,7 @@ class ActionButtonActionBinding {
     }
 }
 
-class ActionButtonAction {
+export class CharacterAction {
     name: string
     image: string
     toggleable: boolean
@@ -49,7 +49,7 @@ class ActionButton {
     }
 
     onFrame(time: number) {
-        if (this.actionBinding && ActionButtonActions.getActionByName(this.actionBinding.name).toggleable && this.pointerDownTime > 0 && (time - this.pointerDownTime) > 750) {
+        if (this.actionBinding && CharacterActions.getActionByName(this.actionBinding.name).toggleable && this.pointerDownTime > 0 && (time - this.pointerDownTime) > 750) {
             this.pointerDownTime = 0
             this.onToggle()
         }
@@ -77,7 +77,7 @@ class ActionButton {
 
     setBinding(binding: ActionButtonActionBinding) {
         this.actionBinding = binding
-        const action: ActionButtonAction = ActionButtonActions.getActionByName(binding.name)!
+        const action: CharacterAction = CharacterActions.getActionByName(binding.name)!
         this.setImage(action.image)
 
         if (action.toggleable && binding.toggled) {
@@ -103,7 +103,7 @@ class ActionButton {
             this.htmlEl!.appendChild(img)
         }
 
-        if (imageSrc == ActionButtonActions.AUTO_ATTACK.image && MyPlayer.myChar?.isWeaponRanged()) {
+        if (imageSrc == CharacterActions.AUTO_ATTACK.image && MyPlayer.myChar?.isWeaponRanged()) {
             imageSrc = "btn_attack_ranged"
         }
 
@@ -148,8 +148,8 @@ export const ActionButtonsManager = {
 
         // Init default bindings if not present in localStorage
         if (!localStorage.getItem(this.actionBindingKey)) {
-            this.bindings.set(1, new ActionButtonActionBinding(ActionButtonActions.AUTO_ATTACK.name, {}))
-            this.bindings.set(2, new ActionButtonActionBinding(ActionButtonActions.HEALING.name, {}))
+            this.bindings.set(1, new ActionButtonActionBinding(CharacterActions.AUTO_ATTACK.name, {}))
+            this.bindings.set(2, new ActionButtonActionBinding(CharacterActions.SELF_HEAL.name, {}))
             localStorage.setItem(this.actionBindingKey, JSON.stringify(Array.from(this.bindings.entries())))
         } else {
             const storedBindings = JSON.parse(localStorage.getItem(this.actionBindingKey)!)
@@ -226,29 +226,27 @@ export const ActionButtonsManager = {
             AudioManager.playGuiButtonClick()
 
             switch (actionButton.actionBinding.name) {
-                case ActionButtonActions.AUTO_ATTACK.name:
+                case CharacterActions.AUTO_ATTACK.name:
                     this.clickOnAutoAttackButton()
                     break
-                case ActionButtonActions.HEALING.name:
+                case CharacterActions.SELF_HEAL.name:
                     this.clickOnHealingButton()
                     break
             }
         }
     },
 
-    toggleStateChange(actionName: string, toggled: boolean) {
-        this.storeBindings()
-
-        switch (actionName) {
-            case ActionButtonActions.AUTO_ATTACK.name:
-                OnScreenMessageManager.addMessage(`Auto-Útok: ${toggled ? 'Zapnuto' : 'Vypnuto'}`)
-                break
-        }
+    setActiveAction(action: CharacterAction | null) {
+        this.actionButtons.forEach((btn) => {
+            if (btn.actionBinding && btn.actionBinding.name === action?.name) {
+                btn.activated()
+            } else {
+                btn.deactivated()
+            }
+        })
     },
 
-    /**
-     * Show button is for now disabled
-     */
+    /** Show button is for now disabled */
     showStopButton() {
         if (Settings.isPhoneOrTablet()) {
             //this.stopButton.style.setProperty("display", "block")
@@ -259,24 +257,8 @@ export const ActionButtonsManager = {
         this.stopButton.style.setProperty("display", "none")
     },
 
-    activated(action: ActionButtonAction) {
-        this.actionButtons.forEach((btn) => {
-            if (btn.actionBinding && btn.actionBinding.name === action.name) {
-                btn.activated()
-            }
-        })
-    },
-
-    deactivated(action: ActionButtonAction) {
-        this.actionButtons.forEach((btn) => {
-            if (btn.actionBinding && btn.actionBinding.name === action.name) {
-                btn.deactivated()
-            }
-        })
-    },
-
     clickOnAutoAttackButton() {
-        if (MyPlayer.actionAutoAttackActive) {
+        if (MyPlayer.activeAction && MyPlayer.activeAction.name === CharacterActions.AUTO_ATTACK.name) {
             MyPlayer.stopActions()
             return
         }
@@ -284,14 +266,24 @@ export const ActionButtonsManager = {
     },
 
     clickOnHealingButton() {
-        if (MyPlayer.actionHealingActive) {
+        if (MyPlayer.activeAction && MyPlayer.activeAction.name === CharacterActions.SELF_HEAL.name) {
             MyPlayer.stopActions()
             return
         }
         MyPlayer.startHealingAction()
     },
 
-    isButtonToggled(action: ActionButtonAction): boolean {
+    toggleStateChange(actionName: string, toggled: boolean) {
+        this.storeBindings()
+
+        switch (actionName) {
+            case CharacterActions.AUTO_ATTACK.name:
+                OnScreenMessageManager.addMessage(`Auto-Útok: ${toggled ? 'Zapnuto' : 'Vypnuto'}`)
+                break
+        }
+    },
+
+    isButtonToggled(action: CharacterAction): boolean {
         for (const btn of this.actionButtons.values()) {
             if (btn.actionBinding && btn.actionBinding.name === action.name) {
                 return btn.actionBinding.toggled
@@ -327,11 +319,11 @@ export const ActionButtonsManager = {
     }
 }
 
-export const ActionButtonActions = {
-    AUTO_ATTACK: new ActionButtonAction("AUTO_ATTACK", "btn_attack", true),
-    HEALING: new ActionButtonAction("HEALING", "btn_heal", false),
+export const CharacterActions = {
+    AUTO_ATTACK: new CharacterAction("AUTO_ATTACK", "btn_attack", true),
+    SELF_HEAL: new CharacterAction("SELF_HEAL", "btn_heal", false),
 
-    getActionByName(name: string): ActionButtonAction {
+    getActionByName(name: string): CharacterAction {
         for (const key in this) {
             if (this[key as keyof typeof this].name === name) {
                 return this[key as keyof typeof this]

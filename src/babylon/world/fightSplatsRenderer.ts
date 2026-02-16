@@ -21,7 +21,7 @@ export const FightSplatsRenderer = {
     consumeSplats(data: [{ lp: number, x: number, z: number, tp: number, s: number }]) {
         for (const dt of data) {
             const block = WorldDataManager.getBlockOnPosition(new Vector3(dt.x, 0, dt.z))
-            const pos = new Vector3(dt.x, block?.totalHeight + 0.01, dt.z)
+            const pos = new Vector3(dt.x, block?.totalHeight + 0.011, dt.z)
 
             const splat = new Splat(FightSplatTypes.getSplatById(dt.tp), pos, dt.lp, dt.s)
             this.splats.push(splat)

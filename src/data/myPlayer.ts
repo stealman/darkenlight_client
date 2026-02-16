@@ -7,9 +7,10 @@ import { TargetingManager } from '@/gui/targettingManager'
 import { Connector } from '@/network/connector'
 import { AutoAttackBreak, HealingSelfAction, StopAction } from '@/network/messages'
 import { MyStatusPanel } from '@/gui/myStatusPanel'
-import { AutoAttackMessage, AutoAttackResultMessage, HealingMessage } from '@/network/messageIfs'
+import { AutoAttackMessage, AutoAttackResultMessage, HealingMessage, HealingResultMessage } from '@/network/messageIfs'
 import { AudioManager } from '@/babylon/audio/audioManager'
-import { ActionButtonActions, ActionButtonsManager } from '@/gui/actionButtonsManager'
+import { ActionButtonsManager, CharacterAction, CharacterActions } from '@/gui/actionButtonsManager'
+import { CharacterManager } from '@/babylon/character/characterManager'
 
 /**
  * Controlling object for the player's character
@@ -26,8 +27,7 @@ export const MyPlayer = {
 
     heartBeatSoundTime: 0 as number,
 
-    actionAutoAttackActive: false,
-    actionHealingActive: false,
+    activeAction: null as CharacterAction | null,
 
     async initialize(charData: any) {
         this.myChar = new Character(charData)
@@ -45,20 +45,6 @@ export const MyPlayer = {
     reset() {
         this.myChar.model = null
         this.myChar.autoAttackEnd = 0
-    },
-
-    startAutoAttack(data: AutoAttackMessage) {
-        this.myChar.startAutoAttack(data)
-        this.autoAttackActivated()
-    },
-
-    finishAutoAttack(data: AutoAttackResultMessage) {
-        this.myChar.finishAutoAttack(data)
-    },
-
-    startHealing(data: HealingMessage) {
-        this.myChar.startHealing(data)
-        this.healingActivated()
     },
 
     onFrame(timeRate: number, actualTime: number) {
@@ -99,8 +85,35 @@ export const MyPlayer = {
         this.myChar.stopMove()
     },
 
+    setAction(type: string | null) {
+        if (type != null) {
+            this.activeAction = CharacterActions.getActionByName(type)
+        } else {
+            this.activeAction = null
+        }
+
+        ActionButtonsManager.setActiveAction(this.activeAction)
+        this.resolveStopButtonVisibility()
+    },
+
+    startAutoAttack(data: AutoAttackMessage) {
+        this.myChar.startAutoAttack(data)
+    },
+
+    finishAutoAttack(data: AutoAttackResultMessage) {
+        this.myChar.finishAutoAttack(data)
+    },
+
     startHealingAction() {
         Connector.sendMessage(new HealingSelfAction())
+    },
+
+    startHealing(data: HealingMessage) {
+        this.myChar.startHealing(data)
+    },
+
+    finishHealing(result: HealingResultMessage) {
+        this.myChar.finishHealing(result)
     },
 
     onClickEscape() {
@@ -155,47 +168,15 @@ export const MyPlayer = {
     },
 
     resolveStopButtonVisibility() {
-        if (this.actionAutoAttackActive || this.actionHealingActive) {
+        if (this.activeAction != null) {
             ActionButtonsManager.showStopButton()
         } else {
             ActionButtonsManager.hideStopButton()
         }
     },
 
-    autoAttackActivated() {
-        this.actionAutoAttackActive = true
-        ActionButtonsManager.activated(ActionButtonActions.AUTO_ATTACK)
-        this.resolveStopButtonVisibility()
-    },
-
-    autoAttackDeactivated() {
-        this.actionAutoAttackActive = false
-        ActionButtonsManager.deactivated(ActionButtonActions.AUTO_ATTACK)
-        this.resolveStopButtonVisibility()
-        MyPlayer.myChar.autoAttackTarget = null
-    },
-
-    healingActivated() {
-        this.actionHealingActive = true
-        ActionButtonsManager.activated(ActionButtonActions.HEALING)
-        this.resolveStopButtonVisibility()
-
-        if (MyPlayer.actionAutoAttackActive) {
-            MyPlayer.autoAttackDeactivated()
-        }
-    },
-
-    healingDeactivated() {
-        this.actionHealingActive = false
-        this.myChar.finishHealing(null)
-        ActionButtonsManager.deactivated(ActionButtonActions.HEALING)
-    },
-
     stopActions() {
         MyPlayer.myChar.autoAttackTarget = null
-        this.autoAttackDeactivated()
-        this.healingDeactivated()
-
         Connector.sendMessage(new StopAction())
     }
 }

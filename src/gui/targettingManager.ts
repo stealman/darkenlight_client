@@ -9,7 +9,7 @@ import { Settings } from '@/settings/settings'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { MyPlayer } from '@/data/myPlayer'
 import { CharacterManager } from '@/babylon/character/characterManager'
-import { ActionButtonActions, ActionButtonsManager } from '@/gui/actionButtonsManager'
+import { ActionButtonsManager, CharacterActions } from '@/gui/actionButtonsManager'
 
 export const TargetingManager = {
     selectedTarget: null as Targetable | null,
@@ -151,8 +151,7 @@ export const TargetingManager = {
     },
 
     checkAutoAttackOnSelectedTarget(overrideToggle: boolean = false) {
-        if (this.selectedTarget && this.selectedTarget.getRelationToMyPlayer() === 'ENEMY' && (overrideToggle || ActionButtonsManager.isButtonToggled(ActionButtonActions.AUTO_ATTACK))) {
-            MyPlayer.autoAttackActivated()
+        if (this.selectedTarget && this.selectedTarget.getRelationToMyPlayer() === 'ENEMY' && (overrideToggle || ActionButtonsManager.isButtonToggled(CharacterActions.AUTO_ATTACK))) {
             MyPlayer.myChar.autoAttackTarget = this.selectedTarget
             Connector.sendMessage(new SelectAutoAttackTarget(this.selectedTarget!.id, this.selectedTarget!.getObjectType()))
         }

@@ -14,9 +14,10 @@ import {
     AttackableBasicTO,
     AutoAttackMessage,
     AutoAttackResultMessage,
-    HealingMessage,
+    HealingMessage, HealingResultMessage,
     MonsterMoveMessage,
 } from '@/network/messageIfs'
+import { CharacterActions } from '@/gui/actionButtonsManager'
 
 export const MessageProcessor = {
 
@@ -51,6 +52,8 @@ export const MessageProcessor = {
                 case 25: this.processCharBasicData(msg.d); break
                 case 26: this.processMonsterBasicData(msg.d); break
                 case 27: this.processCharacterHealing(msg.d); break
+                case 28: this.processCharacterActionChange(msg.d); break
+                case 29: this.processCharacterHealingFinished(msg.d); break
                 case 1003: this.processGMAllSpawns(msg.d); break
                 case 1004: this.processGMSpawnChange(msg.d); break
                 default:
@@ -200,6 +203,14 @@ export const MessageProcessor = {
 
     processCharacterHealing(data: HealingMessage) {
         CharacterManager.startHealing(data)
+    },
+
+    processCharacterActionChange(data) {
+        MyPlayer.setAction(data.type)
+    },
+
+    processCharacterHealingFinished(data: HealingResultMessage) {
+        CharacterManager.finishHealing(data)
     },
 
     processGMAllSpawns(data) {

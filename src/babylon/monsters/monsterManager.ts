@@ -8,7 +8,6 @@ import { TargetingManager } from '@/gui/targettingManager'
 import { MyPlayer } from '@/data/myPlayer'
 import { CharacterManager } from '@/babylon/character/characterManager'
 import { AttackableBasicTO, AutoAttackMessage, AutoAttackResultMessage } from '@/network/messageIfs'
-import { ActionButtonActions, ActionButtonsManager } from '@/gui/actionButtonsManager'
 
 export const MonsterManager = {
     monsters: new Map as Map<number, Monster>,
@@ -58,7 +57,6 @@ export const MonsterManager = {
             }
             if (mob === MyPlayer.myChar.autoAttackTarget) {
                 MyPlayer.myChar.autoAttackTarget = null
-                MyPlayer.autoAttackDeactivated()
             }
         }
     },

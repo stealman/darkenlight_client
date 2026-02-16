@@ -38,7 +38,7 @@ export const StepMarksRenderer = {
         const dx = Math.cos(rot + Math.PI / 2) * straddle
         const dz = -Math.sin(rot + Math.PI / 2) * straddle
 
-        const footPos = new Vector3( - randomize + object.pos.x + dx + (Math.random() * randomize * 2), yPos + 0.11, -randomize + object.pos.z + dz + (Math.random() * randomize * 2))
+        const footPos = new Vector3( - randomize + object.pos.x + dx + (Math.random() * randomize * 2), yPos + 0.01, -randomize + object.pos.z + dz + (Math.random() * randomize * 2))
         tgtArray.push(new StepMark(footPos, (-randomize + (Math.random() * randomize * 2)) + rot + Math.PI / 2, time, ttl))
     },
 

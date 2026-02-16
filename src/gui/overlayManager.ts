@@ -6,6 +6,7 @@ import { MonsterManager } from '@/babylon/monsters/monsterManager'
 import { ViewportManager } from '@/utils/viewport'
 import { CharacterManager } from '@/babylon/character/characterManager'
 import { MyPlayer } from '@/data/myPlayer'
+import { CharacterAction, CharacterActions } from '@/gui/actionButtonsManager'
 
 export const OverlayManager = {
     overlayCanvas: null as HTMLCanvasElement,
@@ -128,7 +129,19 @@ export const OverlayManager = {
     },
 
     renderHealingMarkers(time) {
-        if (MyPlayer.myChar.healingActive) {
+        CharacterManager.characters.forEach(char => {
+            if (!CharacterManager.visibleCharacters.has(char.id)) {
+                return
+            }
+            if (char.healingActive && char.healingEndTime + 500 > time) {
+                const pos = char.getNameTextNodeScreenPosition()
+                if (pos) {
+                    this.renderHealingSelfMarker(pos, time)
+                }
+            }
+        })
+
+        if (MyPlayer.myChar.healingActive && MyPlayer.activeAction === CharacterActions.SELF_HEAL && MyPlayer.myChar.healingEndTime + 500 > time) {
             const pos = MyPlayer.myChar.getNameTextNodeScreenPosition()
             if (pos) {
                 this.renderHealingSelfMarker(pos, time)
@@ -278,7 +291,7 @@ const TargetSelector = {
         const screenPos = this.target.getPositionOnScreen()
         let sprite = null
         if (this.target.getRelationToMyPlayer() === 'ENEMY') {
-            if (MyPlayer.myChar.autoAttackTarget && MyPlayer.myChar.autoAttackTarget === this.target) {
+            if (MyPlayer.activeAction === CharacterActions.AUTO_ATTACK && MyPlayer.myChar.autoAttackTarget && MyPlayer.myChar.autoAttackTarget === this.target) {
                 sprite = TargetingManager.getTargetSpriteEnemyAttackTarget()
             } else {
                 sprite = TargetingManager.getTargetSpriteEnemy()

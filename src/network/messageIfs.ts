@@ -42,5 +42,5 @@ export interface  HealingResultMessage {
 
 export interface HealingResult {
     hp: number
-    tgt: AttackableBasicTO
+    dt: AttackableBasicTO
 }
