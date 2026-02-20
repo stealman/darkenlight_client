@@ -46,10 +46,6 @@
 - Practical result observed by author is consistent with code shape: client should scale well on mobile hardware.
 
 ## High-Impact Perf Risks To Revisit
-- `src/babylon/scene/renderer.ts` currently calls `scene.render()` twice per render-loop tick:
-  - inside `runRenderLoop` callback
-  - and again inside `Renderer.onFrame(...)`
-  - This is a likely major GPU/CPU cost multiplier.
 - `src/utils/viewport.ts` `calculateViewport(...)` does many temporary allocations and repeated linear searches:
   - many `new Vector3(...)` in nested loops
   - `visibleTiles.find(...)` inside loops

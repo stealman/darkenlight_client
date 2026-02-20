@@ -332,9 +332,6 @@ export const OverlayManager = {
         ctx.fontKerning = 'normal'
         ctx.textBaseline = 'middle'
 
-        const dpr = window.devicePixelRatio || 1
-        const paddingX = 8 / dpr
-        const paddingY = 4 / dpr
         const spacingFix = this.letterSpacingFix
         const textWidth = CanvasTextUtils.getTextWidth(ctx, name, tightText, spacingFix)
         const textHeight = this.fontSize
@@ -343,16 +340,8 @@ export const OverlayManager = {
 
         const x = pos.x
         const y = pos.y - 3
+        const textY = y - 3
 
-        // Background
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.35)'
-        ctx.fillRect(
-            x - textWidth / 2 - paddingX,
-            -5 + y - textHeight / 2 - paddingY,
-            textWidth + paddingX * 2,
-            textHeight + paddingY * 2
-        )
-        // Text
         switch (relation) {
             case 'ALLY':
                 ctx.fillStyle = '#56aaff'
@@ -364,12 +353,22 @@ export const OverlayManager = {
                 ctx.fillStyle = '#aaa'
                 break
         }
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.85)'
+        ctx.lineWidth = 3
 
         if (tightText) {
-            CanvasTextUtils.drawText(ctx, name, x - textWidth / 2, y -3, true, spacingFix)
+            const textStartX = x - textWidth / 2
+            ctx.textAlign = 'left'
+            let cursorX = textStartX
+            for (const ch of name) {
+                ctx.strokeText(ch, cursorX, textY)
+                cursorX += ctx.measureText(ch).width + spacingFix
+            }
+            CanvasTextUtils.drawText(ctx, name, textStartX, textY, true, spacingFix)
         } else {
             ctx.textAlign = 'center'
-            ctx.fillText(name, x, y -3)
+            ctx.strokeText(name, x, textY)
+            ctx.fillText(name, x, textY)
         }
     },
 

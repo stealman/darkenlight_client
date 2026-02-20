@@ -29,7 +29,7 @@ export const CanvasTextUtils = {
         ctx.save()
         ctx.font = font
 
-        const test = 'MMMMMMMMMM'
+        const test = 'MMMMMMMM'
 
         const realWidth = this.getActualTextWidth(ctx, test)
 
@@ -46,7 +46,7 @@ export const CanvasTextUtils = {
         // desktop / OK renderer
         if (perChar < 0.3) return 0
 
-        return Math.max(-2.5, Math.min(0, (1.2 - perChar) * 1.8))
+        return Math.max(-2.5, Math.min(0, (1.6 - perChar) * 3))
     },
 
     getActualTextWidth(ctx: CanvasRenderingContext2D, text: string) {
