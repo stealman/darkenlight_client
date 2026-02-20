@@ -329,6 +329,7 @@ export class MonsterModel implements EquipBearer {
         ps.blendMode = ParticleSystem.BLENDMODE_STANDARD
         ps.emitRate = 0
         ps.manualEmitCount = particleCount
+        ps.updateSpeed = 0.02
 
         ps.disposeOnStop = true
         ps.start()

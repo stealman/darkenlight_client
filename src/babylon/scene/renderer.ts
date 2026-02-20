@@ -95,7 +95,6 @@ export const Renderer = {
         await Tester.runTest()
         this.engine!.runRenderLoop(() => {
             this.onFrame(this.scene)
-            this.scene.render()
         })
     },
 

@@ -6,13 +6,93 @@ import { MonsterManager } from '@/babylon/monsters/monsterManager'
 import { ViewportManager } from '@/utils/viewport'
 import { CharacterManager } from '@/babylon/character/characterManager'
 import { MyPlayer } from '@/data/myPlayer'
-import { CharacterAction, CharacterActions } from '@/gui/actionButtonsManager'
+import { CharacterActions } from '@/gui/actionButtonsManager'
+import { Monster } from '@/babylon/monsters/monster'
+
+class DamageNumber {
+    monster: Monster
+    text: string
+    color: string
+    expiresAt: number
+    static ttl: number = 1500
+
+    constructor(monster: Monster, text: string, color: string, expiresAt: number) {
+        this.monster = monster
+        this.text = text
+        this.color = color
+        this.expiresAt = expiresAt + DamageNumber.ttl
+    }
+
+    static fromHit(monster: Monster, damage: number, hitType: string = 'h', time: number = Date.now()): DamageNumber | null {
+        if (hitType === 'm') {
+            return new DamageNumber(monster, 'Miss', '#c7c7c7', time)
+        }
+        if (hitType === 'b') {
+            return new DamageNumber(monster, 'Block', '#c7c7c7', time)
+        }
+        if (damage <= 0) {
+            return null
+        }
+
+        return new DamageNumber(monster, `-${Math.floor(damage)}`, '#f08f56', time)
+    }
+
+    render(ctx: CanvasRenderingContext2D) {
+        if (!MonsterManager.monsters.has(this.monster.id) && !MonsterManager.killedMonsters.has(this.monster)) {
+            return
+        }
+
+        const pos = this.monster.getNameTextNodeScreenPosition()
+        if (!pos) {
+            return
+        }
+
+        const now = Date.now()
+        const tightText = Math.abs(OverlayManager.letterSpacingFix) > 0
+        const spacingFix = OverlayManager.letterSpacingFix
+        const textWidth = CanvasTextUtils.getTextWidth(ctx, this.text, tightText, spacingFix)
+        const remaining = Math.max(0, Math.min(DamageNumber.ttl, this.expiresAt - now))
+        const progress = 1 - (remaining / DamageNumber.ttl)
+        const alpha = progress <= 0.35 ? 1 : Math.max(0, 1 - ((progress - 0.35) / 0.5))
+        const riseProgress = 1 - Math.pow(2, -6 * progress)
+        const relX = this.monster.pos.x - MyPlayer.myChar.pos.x
+        const relZ = this.monster.pos.z - MyPlayer.myChar.pos.z
+        const isoRelX = (relX - relZ) / Math.SQRT2
+        const relDist = Math.sqrt((relX * relX) + (relZ * relZ))
+        const angleFactor = relDist > 0 ? Math.abs(isoRelX) / relDist : 0
+        const driftDir = isoRelX >= 0 ? 1 : -1
+        const x = pos.x + (driftDir * angleFactor * riseProgress * 30) / window.devicePixelRatio
+        const y = pos.y - (0 + (riseProgress * 30)) / window.devicePixelRatio
+        const textStartX = x - textWidth / 2
+
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)'
+        ctx.lineWidth = 3
+        ctx.fillStyle = this.color
+        ctx.globalAlpha = alpha
+
+        if (tightText) {
+            ctx.textAlign = 'left'
+            let cursorX = textStartX
+            for (const ch of this.text) {
+                ctx.strokeText(ch, cursorX, y)
+                cursorX += ctx.measureText(ch).width + spacingFix
+            }
+            CanvasTextUtils.drawText(ctx, this.text, textStartX, y, true, spacingFix)
+        } else {
+            ctx.textAlign = 'center'
+            ctx.strokeText(this.text, x, y)
+            ctx.fillText(this.text, x, y)
+        }
+        ctx.globalAlpha = 1
+    }
+}
 
 export const OverlayManager = {
     overlayCanvas: null as HTMLCanvasElement,
     overlayCtx: null as CanvasRenderingContext2D | null,
     letterSpacingFix: 0 as number,
     fontSize: 14 as number,
+    damageNumbers: [] as DamageNumber[],
 
     async initialize() {
         this.overlayCanvas = document.getElementById("overlayCanvas") as HTMLCanvasElement
@@ -38,6 +118,7 @@ export const OverlayManager = {
 
         TargetSelector.onFrame(timeRate, time, this.overlayCtx!)
         this.renderNames(time, Math.abs(this.letterSpacingFix) > 0)
+        this.renderDamageNumbers(time)
         this.renderDamagedBars()
         this.renderHealingMarkers(time)
         this.renderAttackTargetIndicator(time)
@@ -91,6 +172,37 @@ export const OverlayManager = {
                 }
             }
         })
+    },
+
+    addMonsterDamageNumber(monsterId: number, damage: number, hitType: string = 'h', time: number = Date.now()) {
+        const monster = MonsterManager.monsters.get(monsterId)
+        if (!monster) {
+            return
+        }
+        const damageNumber = DamageNumber.fromHit(monster, damage, hitType, time)
+        if (!damageNumber) {
+            return
+        }
+        this.damageNumbers.push(damageNumber)
+    },
+
+    renderDamageNumbers(time: number) {
+        this.damageNumbers = this.damageNumbers.filter(item => item.expiresAt > time)
+        if (this.damageNumbers.length === 0) {
+            return
+        }
+
+        const ctx = this.overlayCtx!
+        ctx.save()
+        ctx.font = `${this.fontSize}px "Roboto", Arial, sans-serif`
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+
+        this.damageNumbers.forEach(item => {
+            item.render(ctx)
+        })
+
+        ctx.restore()
     },
 
     renderDamagedBars() {

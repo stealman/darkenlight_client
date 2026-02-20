@@ -87,6 +87,7 @@ class SnowEffect implements WeatherEffect {
         snow.direction2.set(wind.x + 0.4, -1, wind.z + 0.4)
 
         snow.emitRate = 1000;
+        snow.updateSpeed = 0.02
 
         snow.renderingGroupId = 2;
         snow.start();

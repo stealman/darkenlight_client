@@ -10,7 +10,6 @@ import { MyStatusPanel } from '@/gui/myStatusPanel'
 import { AutoAttackMessage, AutoAttackResultMessage, HealingMessage, HealingResultMessage } from '@/network/messageIfs'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { ActionButtonsManager, CharacterAction, CharacterActions } from '@/gui/actionButtonsManager'
-import { CharacterManager } from '@/babylon/character/characterManager'
 
 /**
  * Controlling object for the player's character

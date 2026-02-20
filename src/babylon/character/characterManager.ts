@@ -9,6 +9,7 @@ import {
     HealingMessage,
     HealingResultMessage,
 } from '@/network/messageIfs'
+import { OverlayManager } from '@/gui/overlayManager'
 
 export const CharacterManager = {
     characters: new Map<number, Character>(),
@@ -99,12 +100,16 @@ export const CharacterManager = {
     finishAutoAttack(data: AutoAttackResultMessage) {
         if (data.id === MyPlayer.myChar.id) {
             MyPlayer.finishAutoAttack(data)
+            if (data.tp === 'M') {
+                OverlayManager.addMonsterDamageNumber(data.tgt, data.res.d, data.res.h)
+            }
         } else {
             const char = this.characters.get(data.id)
             if (char) {
                 char.finishAutoAttack(data)
             }
         }
+
     },
 
     autoAttackBroken(data) {

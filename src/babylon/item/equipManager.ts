@@ -136,7 +136,7 @@ export class EquipItem {
         ps.direction2 = BabylonUtils.getSymVector(2)
         ps.minEmitPower = 0.2
         ps.maxEmitPower = 0.5
-        ps.updateSpeed = 0.02
+        ps.updateSpeed = 0.04
 
         // Gravity upwards
         ps.gravity = new Vector3(0, 2, 0)
