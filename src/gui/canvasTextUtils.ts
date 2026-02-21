@@ -29,24 +29,21 @@ export const CanvasTextUtils = {
         ctx.save()
         ctx.font = font
 
-        const test = 'MMMMMMMM'
-
-        const realWidth = this.getActualTextWidth(ctx, test)
-
-        let realSum = 0
-        for (const ch of test) {
-            realSum += this.getActualTextWidth(ctx, ch)
-        }
+        const testStringWidth = this.getActualTextWidth(ctx, 'MMMMMMMM')
+        const oneCharWidth = this.getActualTextWidth(ctx, 'M')
 
         ctx.restore()
 
-        const diff = realWidth - realSum
-        const perChar = diff / (test.length - 1)
+        const diff = testStringWidth - (oneCharWidth * 8)
+        const perCharDiff = (diff / 8) * window.devicePixelRatio
 
-        // desktop / OK renderer
-        if (perChar < 0.3) return 0
-
-        return Math.max(-2.5, Math.min(0, (1.6 - perChar) * 3))
+        // If perChar is between 15 and 25% of one character width, it is ok and return 0, otherwise return letter spacing fix to make it 20%
+        if (perCharDiff < 0.15 * oneCharWidth || perCharDiff > 0.25 * oneCharWidth) {
+            const fix = (0.2 * oneCharWidth) - perCharDiff
+            return fix
+        } else {
+            return 0
+        }
     },
 
     getActualTextWidth(ctx: CanvasRenderingContext2D, text: string) {

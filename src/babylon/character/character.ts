@@ -247,7 +247,6 @@ class Character implements Attackable {
     }
 
     finishHealing(result: HealingResultMessage) {
-        console.log(result.res.hp)
         CharacterManager.basicDataChange(result.res.dt)
     }
 

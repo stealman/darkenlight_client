@@ -143,11 +143,17 @@ export const Renderer = {
             ArrowsManager.onFrame(timeRate, actualTime)
             TargetingManager.onFrame(timeRate, actualTime)
             OnScreenMessageManager.onFrame(actualTime)
+            if (!Settings.isDetalLevelLow()) {
+                OverlayManager.onFrame(timeRate, actualTime)
+            }
             if (GMManager.gmPanelVisible) GMManager.onFrame(timeRate, actualTime)
         }
 
         if (this.frame % 2 === 0) {
-            OverlayManager.onFrame(timeRate, actualTime)
+            if (Settings.isDetalLevelLow()) {
+                OverlayManager.onFrame(timeRate, actualTime)
+            }
+
             SelectedTargetPanel.onFrame(actualTime)
             MyStatusPanel.onFrame(actualTime)
             ActionButtonsManager.onFrame(actualTime)

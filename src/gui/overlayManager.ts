@@ -8,44 +8,79 @@ import { CharacterManager } from '@/babylon/character/characterManager'
 import { MyPlayer } from '@/data/myPlayer'
 import { CharacterActions } from '@/gui/actionButtonsManager'
 import { Monster } from '@/babylon/monsters/monster'
+import Character from '@/babylon/character/character'
 
 class DamageNumber {
-    monster: Monster
+    monster: Monster | null = null
+    character: Character | null = null
     text: string
     color: string
     expiresAt: number
     static ttl: number = 1500
 
-    constructor(monster: Monster, text: string, color: string, expiresAt: number) {
+    constructor(monster: Monster | null, character: Character | null, text: string, color: string, expiresAt: number) {
         this.monster = monster
+        this.character = character
         this.text = text
         this.color = color
         this.expiresAt = expiresAt + DamageNumber.ttl
     }
 
-    static fromHit(monster: Monster, damage: number, hitType: string = 'h', time: number = Date.now()): DamageNumber | null {
+    static fromHitMonster(monster: Monster, damage: number, hitType: string = 'h', time: number = Date.now()): DamageNumber | null {
         if (hitType === 'm') {
-            return new DamageNumber(monster, 'Miss', '#c7c7c7', time)
+            return new DamageNumber(monster, null,'Miss', '#c7c7c7', time)
         }
         if (hitType === 'b') {
-            return new DamageNumber(monster, 'Block', '#c7c7c7', time)
+            return new DamageNumber(monster, null, 'Block', '#c7c7c7', time)
         }
         if (damage <= 0) {
             return null
         }
+        return new DamageNumber(monster, null, `-${Math.floor(damage)}`, '#f08f56', time)
+    }
 
-        return new DamageNumber(monster, `-${Math.floor(damage)}`, '#f08f56', time)
+    static fromHitCharacter(char: Character, damage: number, hitType: string = 'h', time: number = Date.now()): DamageNumber | null {
+        if (hitType === 'm') {
+            return new DamageNumber(null, char,'Miss', '#c7c7c7', time)
+        }
+        if (hitType === 'b') {
+            return new DamageNumber(null, char, 'Block', '#c7c7c7', time)
+        }
+        if (damage <= 0) {
+            return null
+        }
+        return new DamageNumber(null, char, `-${Math.floor(damage)}`, '#f08f56', time)
+    }
+
+    static fromHitMyChar(damage: number, hitType: string = 'h', time: number = Date.now()): DamageNumber | null {
+        if (hitType === 'm') {
+            return new DamageNumber(null, MyPlayer.myChar,'Miss', '#c7c7c7', time)
+        }
+        if (hitType === 'b') {
+            return new DamageNumber(null, MyPlayer.myChar, 'Block', '#c7c7c7', time)
+        }
+        if (damage < 0) {
+            // Healing is sent as negative damage, but we want to display it as positive number with plus sign.
+            return new DamageNumber(null, MyPlayer.myChar, `+${Math.floor(-damage)}`, '#20ffff', time)
+        } else if (damage > 0) {
+            return new DamageNumber(null, MyPlayer.myChar, `-${Math.floor(damage)}`, '#ff2020', time)
+        }
     }
 
     render(ctx: CanvasRenderingContext2D) {
-        if (!MonsterManager.monsters.has(this.monster.id) && !MonsterManager.killedMonsters.has(this.monster)) {
+        if (this.monster && !MonsterManager.monsters.has(this.monster.id) && !MonsterManager.killedMonsters.has(this.monster)) {
             return
         }
 
-        const pos = this.monster.getNameTextNodeScreenPosition()
+        const pos = this.monster ? this.monster.getNameTextNodeScreenPosition() : this.character ? this.character.getNameTextNodeScreenPosition() : null
         if (!pos) {
             return
         }
+
+        const tgtXpos = this.monster ? this.monster.pos.x : this.character ? this.character.pos.x : 0
+        const tgtZpos = this.monster ? this.monster.pos.z : this.character ? this.character.pos.z : 0
+        const relX = tgtXpos - MyPlayer.myChar.pos.x
+        const relZ = tgtZpos - MyPlayer.myChar.pos.z
 
         const now = Date.now()
         const tightText = Math.abs(OverlayManager.letterSpacingFix) > 0
@@ -55,8 +90,6 @@ class DamageNumber {
         const progress = 1 - (remaining / DamageNumber.ttl)
         const alpha = progress <= 0.35 ? 1 : Math.max(0, 1 - ((progress - 0.35) / 0.5))
         const riseProgress = 1 - Math.pow(2, -6 * progress)
-        const relX = this.monster.pos.x - MyPlayer.myChar.pos.x
-        const relZ = this.monster.pos.z - MyPlayer.myChar.pos.z
         const isoRelX = (relX - relZ) / Math.SQRT2
         const relDist = Math.sqrt((relX * relX) + (relZ * relZ))
         const angleFactor = relDist > 0 ? Math.abs(isoRelX) / relDist : 0
@@ -98,6 +131,7 @@ export const OverlayManager = {
         this.overlayCanvas = document.getElementById("overlayCanvas") as HTMLCanvasElement
         this.overlayCtx = this.overlayCanvas.getContext("2d")
         this.overlayCtx!.lineWidth = 1
+        this.fontSize = window.devicePixelRatio > 1 ? 14 : 18
         TargetSelector.unselectTarget()
     },
 
@@ -179,7 +213,27 @@ export const OverlayManager = {
         if (!monster) {
             return
         }
-        const damageNumber = DamageNumber.fromHit(monster, damage, hitType, time)
+        const damageNumber = DamageNumber.fromHitMonster(monster, damage, hitType, time)
+        if (!damageNumber) {
+            return
+        }
+        this.damageNumbers.push(damageNumber)
+    },
+
+    addCharacterDamageNumber(charId: number, damage: number, hitType: string = 'h', time: number = Date.now()) {
+        const char = CharacterManager.characters.get(charId)
+        if (!char) {
+            return
+        }
+        const damageNumber = DamageNumber.fromHitCharacter(char, damage, hitType, time)
+        if (!damageNumber) {
+            return
+        }
+        this.damageNumbers.push(damageNumber)
+    },
+
+    addMyCharDamageNumber(damage: number, hitType: string = 'h', time: number = Date.now()) {
+        const damageNumber = DamageNumber.fromHitMyChar(damage, hitType, time)
         if (!damageNumber) {
             return
         }
@@ -236,8 +290,6 @@ export const OverlayManager = {
                 this.renderDamagedBar(pos, MyPlayer.myChar.hpPercent, false)
             }
         }
-
-
     },
 
     renderHealingMarkers(time) {

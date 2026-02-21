@@ -8,6 +8,7 @@ import { TargetingManager } from '@/gui/targettingManager'
 import { MyPlayer } from '@/data/myPlayer'
 import { CharacterManager } from '@/babylon/character/characterManager'
 import { AttackableBasicTO, AutoAttackMessage, AutoAttackResultMessage } from '@/network/messageIfs'
+import { OverlayManager } from '@/gui/overlayManager'
 
 export const MonsterManager = {
     monsters: new Map as Map<number, Monster>,
@@ -88,6 +89,9 @@ export const MonsterManager = {
             return
         }
         monster.autoAttackFinished(data)
+        if (data.tp === 'C' && data.tgt === MyPlayer.myChar.id) {
+            OverlayManager.addMyCharDamageNumber(data.res.d, data.res.h)
+        }
     },
 
     basicDataChange(data: AttackableBasicTO) {

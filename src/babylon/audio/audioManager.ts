@@ -57,9 +57,9 @@ export const AudioManager = {
         // Battle sounds
         this.loadSoundArray(this.swordSwingSounds, ["swing1.ogg", "swing2.ogg", "swing3.ogg"], "swordSwingSound", scene, { volume: 1, playbackRate: 1 } );
         this.loadSoundArray(this.swordHitMetalSounds, ["hit-sword-metal1.ogg"], "swordHitMetalSound", scene, { volume: 0.5, playbackRate: 1 } );
-        this.loadSoundArray(this.swordHitHardSounds, ["hit-sword-hard1.ogg", "hit-sword-hard2.ogg"], "swordHitHardSound", scene, { volume: 0.5, playbackRate: 1.1 } );
+        this.loadSoundArray(this.swordHitHardSounds, ["hit-sword-hard1.ogg", "hit-sword-hard2.ogg"], "swordHitHardSound", scene, { volume: 0.6, playbackRate: 1.1 } );
         this.loadSoundArray(this.swordBlockSounds, ["block-sword1.ogg", "block-sword2.ogg"], "swordBlockSound", scene, { volume: 0.5, playbackRate: 0.9 } );
-        this.loadSoundArray(this.boneHitSounds, ["hit-bone1.ogg"], "boneHitSound", scene, { volume: 0.5, playbackRate: 1 } );
+        this.loadSoundArray(this.boneHitSounds, ["hit-bone1.ogg"], "boneHitSound", scene, { volume: 0.6, playbackRate: 1 } );
 
         // Death rattles
         this.loadDeathRattleSound(MonsterSoundTypes.SKELETON, "death-skeleton.ogg", scene, { volume: 0.7, playbackRate: 0.85 } );

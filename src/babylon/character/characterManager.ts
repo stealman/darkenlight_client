@@ -103,6 +103,9 @@ export const CharacterManager = {
             if (data.tp === 'M') {
                 OverlayManager.addMonsterDamageNumber(data.tgt, data.res.d, data.res.h)
             }
+            if (data.tp === 'C') {
+                OverlayManager.addCharacterDamageNumber(data.tgt, data.res.d, data.res.h)
+            }
         } else {
             const char = this.characters.get(data.id)
             if (char) {
@@ -136,6 +139,7 @@ export const CharacterManager = {
     finishHealing(data: HealingResultMessage) {
         if (data.id === MyPlayer.myChar.id) {
             MyPlayer.finishHealing(data)
+            OverlayManager.addMyCharDamageNumber(-data.res.hp, 'h')
         } else {
             const char = this.characters.get(data.id)
             if (char) {
