@@ -3,6 +3,7 @@ import { AudioManager } from '@/babylon/audio/audioManager'
 import { TargetingManager } from '@/gui/targettingManager'
 import { OnScreenMessageManager } from '@/gui/onScreenMessageManager'
 import { MyPlayer } from '@/data/myPlayer'
+import { GuiButtonsManager } from '@/gui/guiButtonsManager'
 
 class ActionButtonActionBinding {
     name: string
@@ -237,7 +238,6 @@ export const ActionButtonsManager = {
     },
 
     setActiveAction(action: CharacterAction | null) {
-        console.log('Active action: ' + (action ? action.name : 'none'))
         this.actionButtons.forEach((btn) => {
             if (btn.actionBinding && btn.actionBinding.name === action?.name) {
                 btn.activated()
@@ -319,6 +319,8 @@ export const ActionButtonsManager = {
             this.buttonsPanel2.style.setProperty("bottom", Settings.actionButtonsYOffset + "px")
             this.buttonsPanel2.style.setProperty("right", "0px")
         }
+
+        GuiButtonsManager.setSize(newSize)
     }
 }
 

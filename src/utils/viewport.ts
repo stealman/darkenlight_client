@@ -2,6 +2,7 @@ import { Frustum, Matrix, Vector3 } from '@babylonjs/core'
 import { Renderer } from '@/babylon/scene/renderer'
 import { MiniMap } from '@/utils/minimap'
 import { MyPlayer } from '@/data/myPlayer'
+import { GuiButtonManager, GuiButtonsManager } from '@/gui/guiButtonsManager'
 
 export const ViewportManager = {
     viewPortInitialized: false,
@@ -31,8 +32,9 @@ export const ViewportManager = {
     },
 
     onResize() {
-        const minDisplaySize = Math.min(window.innerHeight, window.innerWidth) / 6
-        MiniMap.updateCanvasSize(minDisplaySize)
+        const miniMapSize= Math.min(150, Math.min(window.innerHeight, window.innerWidth) / 5)
+        MiniMap.updateCanvasSize(miniMapSize)
+        GuiButtonsManager.updatePositions(miniMapSize)
         this.viewPortInitialized = false
 
         this.viewportWidth = window.innerWidth

@@ -31,10 +31,10 @@ class DamageNumber {
 
     static fromHitMonster(attacker: Attackable, monster: Monster, damage: number, hitType: string = 'h', time: number = Date.now()): DamageNumber | null {
         if (hitType === 'm') {
-            return new DamageNumber(attacker, monster, null,'Miss', '#c7c7c7', time)
+            return new DamageNumber(attacker, monster, null,'Vedle', '#c7c7c7', time)
         }
         if (hitType === 'b') {
-            return new DamageNumber(attacker, monster, null, 'Block', '#c7c7c7', time)
+            return new DamageNumber(attacker, monster, null, 'Blok', '#c7c7c7', time)
         }
         if (damage <= 0) {
             return null
@@ -44,10 +44,10 @@ class DamageNumber {
 
     static fromHitCharacter(attacker: Attackable, char: Character, damage: number, hitType: string = 'h', time: number = Date.now()): DamageNumber | null {
         if (hitType === 'm') {
-            return new DamageNumber(attacker, null, char,'Miss', '#c7c7c7', time)
+            return new DamageNumber(attacker, null, char,'Vedle', '#c7c7c7', time)
         }
         if (hitType === 'b') {
-            return new DamageNumber(attacker, null, char, 'Block', '#c7c7c7', time)
+            return new DamageNumber(attacker, null, char, 'Blok', '#c7c7c7', time)
         }
         if (damage <= 0) {
             // Healing is sent as negative damage, but we want to display it as positive number with plus sign.
@@ -59,10 +59,10 @@ class DamageNumber {
 
     static fromHitMyChar(attacker: Attackable, damage: number, hitType: string = 'h', time: number = Date.now()): DamageNumber | null {
         if (hitType === 'm') {
-            return new DamageNumber(attacker, null, MyPlayer.myChar,'Miss', '#c7c7c7', time)
+            return new DamageNumber(attacker, null, MyPlayer.myChar,'Vedle', '#c7c7c7', time)
         }
         if (hitType === 'b') {
-            return new DamageNumber(attacker, null, MyPlayer.myChar, 'Block', '#c7c7c7', time)
+            return new DamageNumber(attacker, null, MyPlayer.myChar, 'Blok', '#c7c7c7', time)
         }
         if (damage < 0) {
             // Healing is sent as negative damage, but we want to display it as positive number with plus sign.

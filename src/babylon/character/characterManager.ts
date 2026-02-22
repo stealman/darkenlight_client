@@ -10,6 +10,7 @@ import {
     HealingResultMessage,
 } from '@/network/messageIfs'
 import { OverlayManager } from '@/gui/overlayManager'
+import { TargetingManager } from '@/gui/targettingManager'
 
 export const CharacterManager = {
     characters: new Map<number, Character>(),
@@ -47,6 +48,10 @@ export const CharacterManager = {
             char.model?.removeFromScene()
             this.visibleCharacters.delete(id)
             this.characters.delete(id)
+
+            if (TargetingManager.selectedTarget?.id === id) {
+                TargetingManager.unselectTarget()
+            }
         }
     },
 

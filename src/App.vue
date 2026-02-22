@@ -12,6 +12,13 @@
                 <div @click="showDebug()" v-html="getInspectSvg('icon-white', 'icon-inspect')"></div>
             </div>
 
+            <div id="gui-buttons">
+                <div class="gui-action-button" id="btn-backpack">
+                    <img class="action-icon" src="/images/icons/buttons/btn_backpack.png" />
+                    <img class="action-icon-hover" src="/images/icons/buttons/btn_backpack_hover.png" />
+                </div>
+            </div>
+
             <TouchControllers v-if="!gameLoading" ref='touchControls' />
 
             <!-- Target Lock Enemy -->

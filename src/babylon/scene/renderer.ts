@@ -34,6 +34,7 @@ import { ArrowsManager } from '@/babylon/world/arrowsManager'
 import { MyStatusPanel } from '@/gui/myStatusPanel'
 import { Inspector } from '@babylonjs/inspector'
 import { ActionButtonsManager } from '@/gui/actionButtonsManager'
+import { GuiButtonManager, GuiButtonsManager } from '@/gui/guiButtonsManager'
 
 /**
  * Main Renderer
@@ -86,6 +87,7 @@ export const Renderer = {
         SelectedTargetPanel.initialize()
         MyStatusPanel.initialize()
         ActionButtonsManager.initialize()
+        GuiButtonsManager.initialize()
         await OverlayManager.initialize()
         await TargetingManager.initialize()
     },

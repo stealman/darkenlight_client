@@ -1,0 +1,47 @@
+div.gui-action-button {
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+
+    position: relative;
+    overflow: hidden;
+}
+
+div.gui-action-button img.action-icon {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    pointer-events: none;
+    opacity: 0.85;
+}
+
+div.gui-action-button img.action-icon-hover {
+    opacity: 0;
+    transition: opacity 0.2s;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+div.gui-action-button:hover img.action-icon-hover {
+    opacity: 0.75;
+}
+
+div#btn-backpack {
+    position: absolute;
+    top: 0px;
+    right: 0px;
+}
+
+
