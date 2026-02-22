@@ -235,4 +235,5 @@ export interface Targetable {
     getObjectType(): string
     getSplatType(): SplatType
     getRelationToMyPlayer(): 'ALLY' | 'ENEMY' | 'NEUTRAL'
+    getDistanceFromMyPlayer(): number
 }

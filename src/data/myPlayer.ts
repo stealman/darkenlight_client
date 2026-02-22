@@ -5,11 +5,18 @@ import { CharacterModel } from '@/babylon/character/characterModel'
 import { ref } from 'vue'
 import { TargetingManager } from '@/gui/targettingManager'
 import { Connector } from '@/network/connector'
-import { AutoAttackBreak, HealingSelfAction, StopAction } from '@/network/messages'
+import {
+    AutoAttackBreak,
+    HealingCharacterAction,
+    HealingSelfAction,
+    HealingTargetAction,
+    StopAction,
+} from '@/network/messages'
 import { MyStatusPanel } from '@/gui/myStatusPanel'
 import { AutoAttackMessage, AutoAttackResultMessage, HealingMessage, HealingResultMessage } from '@/network/messageIfs'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { ActionButtonsManager, CharacterAction, CharacterActions } from '@/gui/actionButtonsManager'
+import { Attackable } from '@/GameManager'
 
 /**
  * Controlling object for the player's character
@@ -104,6 +111,14 @@ export const MyPlayer = {
     },
 
     startHealingAction() {
+        if (TargetingManager.selectedTarget && TargetingManager.selectedTarget.getObjectType() == 'C') {
+            const tgt = TargetingManager.selectedTarget as Attackable
+
+            if (tgt.hpPercent <= 99) {
+                Connector.sendMessage(new HealingTargetAction(TargetingManager.selectedTarget.id, tgt.getObjectType()))
+                return
+            }
+        }
         Connector.sendMessage(new HealingSelfAction())
     },
 
@@ -113,11 +128,12 @@ export const MyPlayer = {
 
     finishHealing(result: HealingResultMessage) {
         this.myChar.finishHealing(result)
+        AudioManager.playBackpackHandle()
     },
 
     onClickEscape() {
         AudioManager.playGuiButtonClick()
-        this.stopActions()
+        this.stopActions(true)
     },
 
     basicDataChange(data) {
@@ -153,13 +169,13 @@ export const MyPlayer = {
     },
 
     resolveLowHealthStatus(actualTime) {
-        if (this.heartBeatSoundTime > 0 && (actualTime - this.heartBeatSoundTime) < 20000) {
+        if (this.heartBeatSoundTime > 0 && (actualTime - this.heartBeatSoundTime) < 15000) {
             if (!AudioManager.heartBeatSound?.isPlaying) {
                 AudioManager.playHeartBeat()
-                AudioManager.setHeartBeatVolume(1)
+                AudioManager.setHeartBeatVolume(0.75)
             }
             const timeSinceLowHp = actualTime - this.heartBeatSoundTime
-            const volume = 1 - (timeSinceLowHp / 20000)
+            const volume = 0.75 - (timeSinceLowHp / 15000)
             AudioManager.setHeartBeatVolume(volume)
         } else {
             AudioManager.stopHeartBeat()
@@ -174,8 +190,12 @@ export const MyPlayer = {
         }
     },
 
-    stopActions() {
+    stopActions(resetTarget: boolean = false) {
         MyPlayer.myChar.autoAttackTarget = null
         Connector.sendMessage(new StopAction())
+
+        if (resetTarget) {
+            TargetingManager.unselectTarget()
+        }
     }
 }

@@ -149,7 +149,7 @@ export const ActionButtonsManager = {
         // Init default bindings if not present in localStorage
         if (!localStorage.getItem(this.actionBindingKey)) {
             this.bindings.set(1, new ActionButtonActionBinding(CharacterActions.AUTO_ATTACK.name, {}))
-            this.bindings.set(2, new ActionButtonActionBinding(CharacterActions.SELF_HEAL.name, {}))
+            this.bindings.set(2, new ActionButtonActionBinding(CharacterActions.HEAL.name, {}))
             localStorage.setItem(this.actionBindingKey, JSON.stringify(Array.from(this.bindings.entries())))
         } else {
             const storedBindings = JSON.parse(localStorage.getItem(this.actionBindingKey)!)
@@ -229,7 +229,7 @@ export const ActionButtonsManager = {
                 case CharacterActions.AUTO_ATTACK.name:
                     this.clickOnAutoAttackButton()
                     break
-                case CharacterActions.SELF_HEAL.name:
+                case CharacterActions.HEAL.name:
                     this.clickOnHealingButton()
                     break
             }
@@ -237,6 +237,7 @@ export const ActionButtonsManager = {
     },
 
     setActiveAction(action: CharacterAction | null) {
+        console.log('Active action: ' + (action ? action.name : 'none'))
         this.actionButtons.forEach((btn) => {
             if (btn.actionBinding && btn.actionBinding.name === action?.name) {
                 btn.activated()
@@ -258,7 +259,9 @@ export const ActionButtonsManager = {
     },
 
     clickOnAutoAttackButton() {
-        if (MyPlayer.activeAction && MyPlayer.activeAction.name === CharacterActions.AUTO_ATTACK.name) {
+        if (MyPlayer.activeAction &&
+            MyPlayer.activeAction.name === CharacterActions.AUTO_ATTACK.name &&
+            MyPlayer.myChar.autoAttackTarget && MyPlayer.myChar.autoAttackTarget === TargetingManager.selectedTarget) {
             MyPlayer.stopActions()
             return
         }
@@ -266,7 +269,7 @@ export const ActionButtonsManager = {
     },
 
     clickOnHealingButton() {
-        if (MyPlayer.activeAction && MyPlayer.activeAction.name === CharacterActions.SELF_HEAL.name) {
+        if (MyPlayer.activeAction && MyPlayer.activeAction.name === CharacterActions.HEAL.name) {
             MyPlayer.stopActions()
             return
         }
@@ -321,7 +324,7 @@ export const ActionButtonsManager = {
 
 export const CharacterActions = {
     AUTO_ATTACK: new CharacterAction("AUTO_ATTACK", "btn_attack", true),
-    SELF_HEAL: new CharacterAction("SELF_HEAL", "btn_heal", false),
+    HEAL: new CharacterAction("HEAL", "btn_heal", false),
 
     getActionByName(name: string): CharacterAction {
         for (const key in this) {

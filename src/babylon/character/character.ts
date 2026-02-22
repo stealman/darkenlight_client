@@ -70,6 +70,7 @@ class Character implements Attackable {
     arrow: Arrow | null = null
 
     healingActive: boolean = false
+    healSelf: boolean = false
     healingEndTime: number = 0
 
     constructor(data: any) {
@@ -244,6 +245,7 @@ class Character implements Attackable {
     startHealing(data: HealingMessage) {
         this.healingActive = true
         this.healingEndTime = Date.now() + data.dur
+        this.healSelf = data.tgt === this.id && data.tp === 'C'
     }
 
     finishHealing(result: HealingResultMessage) {

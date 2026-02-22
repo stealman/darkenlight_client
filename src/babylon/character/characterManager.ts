@@ -139,11 +139,19 @@ export const CharacterManager = {
     finishHealing(data: HealingResultMessage) {
         if (data.id === MyPlayer.myChar.id) {
             MyPlayer.finishHealing(data)
-            OverlayManager.addMyCharDamageNumber(-data.res.hp, 'h')
         } else {
             const char = this.characters.get(data.id)
             if (char) {
                 char.finishHealing(data)
+            }
+        }
+
+        if (data.tgt === MyPlayer.myChar.id) {
+            OverlayManager.addMyCharDamageNumber(MyPlayer.myChar, -data.res.hp, 'h')
+        } else {
+            // If I am healing someone else, show heal numbers above their head
+            if (data.id === MyPlayer.myChar.id && data.tp === 'C') {
+                OverlayManager.addCharacterDamageNumber(data.tgt, -data.res.hp, 'h')
             }
         }
     },

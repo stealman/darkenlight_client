@@ -9,78 +9,83 @@ import { MyPlayer } from '@/data/myPlayer'
 import { CharacterActions } from '@/gui/actionButtonsManager'
 import { Monster } from '@/babylon/monsters/monster'
 import Character from '@/babylon/character/character'
+import { Attackable } from '@/GameManager'
 
 class DamageNumber {
-    monster: Monster | null = null
-    character: Character | null = null
+    attacker: Attackable
+    tgtMonster: Monster | null = null
+    tgtCharacter: Character | null = null
     text: string
     color: string
     expiresAt: number
     static ttl: number = 1500
 
-    constructor(monster: Monster | null, character: Character | null, text: string, color: string, expiresAt: number) {
-        this.monster = monster
-        this.character = character
+    constructor(attacker: Attackable, monster: Monster | null, character: Character | null, text: string, color: string, expiresAt: number) {
+        this.tgtMonster = monster
+        this.tgtCharacter = character
+        this.attacker = attacker
         this.text = text
         this.color = color
         this.expiresAt = expiresAt + DamageNumber.ttl
     }
 
-    static fromHitMonster(monster: Monster, damage: number, hitType: string = 'h', time: number = Date.now()): DamageNumber | null {
+    static fromHitMonster(attacker: Attackable, monster: Monster, damage: number, hitType: string = 'h', time: number = Date.now()): DamageNumber | null {
         if (hitType === 'm') {
-            return new DamageNumber(monster, null,'Miss', '#c7c7c7', time)
+            return new DamageNumber(attacker, monster, null,'Miss', '#c7c7c7', time)
         }
         if (hitType === 'b') {
-            return new DamageNumber(monster, null, 'Block', '#c7c7c7', time)
+            return new DamageNumber(attacker, monster, null, 'Block', '#c7c7c7', time)
         }
         if (damage <= 0) {
             return null
         }
-        return new DamageNumber(monster, null, `-${Math.floor(damage)}`, '#f08f56', time)
+        return new DamageNumber(attacker, monster, null, `-${Math.floor(damage)}`, '#f08f56', time)
     }
 
-    static fromHitCharacter(char: Character, damage: number, hitType: string = 'h', time: number = Date.now()): DamageNumber | null {
+    static fromHitCharacter(attacker: Attackable, char: Character, damage: number, hitType: string = 'h', time: number = Date.now()): DamageNumber | null {
         if (hitType === 'm') {
-            return new DamageNumber(null, char,'Miss', '#c7c7c7', time)
+            return new DamageNumber(attacker, null, char,'Miss', '#c7c7c7', time)
         }
         if (hitType === 'b') {
-            return new DamageNumber(null, char, 'Block', '#c7c7c7', time)
+            return new DamageNumber(attacker, null, char, 'Block', '#c7c7c7', time)
         }
         if (damage <= 0) {
-            return null
+            // Healing is sent as negative damage, but we want to display it as positive number with plus sign.
+            return new DamageNumber(attacker, null, char, `+${Math.floor(-damage)}`, '#20ff20', time)
+        } else if (damage > 0) {
+            return new DamageNumber(attacker, null, char, `-${Math.floor(damage)}`, '#f08f56', time)
         }
-        return new DamageNumber(null, char, `-${Math.floor(damage)}`, '#f08f56', time)
     }
 
-    static fromHitMyChar(damage: number, hitType: string = 'h', time: number = Date.now()): DamageNumber | null {
+    static fromHitMyChar(attacker: Attackable, damage: number, hitType: string = 'h', time: number = Date.now()): DamageNumber | null {
         if (hitType === 'm') {
-            return new DamageNumber(null, MyPlayer.myChar,'Miss', '#c7c7c7', time)
+            return new DamageNumber(attacker, null, MyPlayer.myChar,'Miss', '#c7c7c7', time)
         }
         if (hitType === 'b') {
-            return new DamageNumber(null, MyPlayer.myChar, 'Block', '#c7c7c7', time)
+            return new DamageNumber(attacker, null, MyPlayer.myChar, 'Block', '#c7c7c7', time)
         }
         if (damage < 0) {
             // Healing is sent as negative damage, but we want to display it as positive number with plus sign.
-            return new DamageNumber(null, MyPlayer.myChar, `+${Math.floor(-damage)}`, '#20ffff', time)
+            return new DamageNumber(attacker, null, MyPlayer.myChar, `+${Math.floor(-damage)}`, '#20ff20', time)
         } else if (damage > 0) {
-            return new DamageNumber(null, MyPlayer.myChar, `-${Math.floor(damage)}`, '#ff2020', time)
+            return new DamageNumber(attacker, null, MyPlayer.myChar, `-${Math.floor(damage)}`, '#ff2020', time)
         }
     }
 
     render(ctx: CanvasRenderingContext2D) {
-        if (this.monster && !MonsterManager.monsters.has(this.monster.id) && !MonsterManager.killedMonsters.has(this.monster)) {
+        if (this.tgtMonster && !MonsterManager.monsters.has(this.tgtMonster.id) && !MonsterManager.killedMonsters.has(this.tgtMonster)) {
             return
         }
 
-        const pos = this.monster ? this.monster.getNameTextNodeScreenPosition() : this.character ? this.character.getNameTextNodeScreenPosition() : null
+        const pos = this.tgtMonster ? this.tgtMonster.getNameTextNodeScreenPosition() : this.tgtCharacter ? this.tgtCharacter.getNameTextNodeScreenPosition() : null
         if (!pos) {
             return
         }
 
-        const tgtXpos = this.monster ? this.monster.pos.x : this.character ? this.character.pos.x : 0
-        const tgtZpos = this.monster ? this.monster.pos.z : this.character ? this.character.pos.z : 0
-        const relX = tgtXpos - MyPlayer.myChar.pos.x
-        const relZ = tgtZpos - MyPlayer.myChar.pos.z
+        const tgtXpos = this.tgtMonster ? this.tgtMonster.pos.x : this.tgtCharacter ? this.tgtCharacter.pos.x : 0
+        const tgtZpos = this.tgtMonster ? this.tgtMonster.pos.z : this.tgtCharacter ? this.tgtCharacter.pos.z : 0
+        const relX = tgtXpos - this.attacker.pos.x
+        const relZ = tgtZpos - this.attacker.pos.z
 
         const now = Date.now()
         const tightText = Math.abs(OverlayManager.letterSpacingFix) > 0
@@ -213,7 +218,7 @@ export const OverlayManager = {
         if (!monster) {
             return
         }
-        const damageNumber = DamageNumber.fromHitMonster(monster, damage, hitType, time)
+        const damageNumber = DamageNumber.fromHitMonster(MyPlayer.myChar, monster, damage, hitType, time)
         if (!damageNumber) {
             return
         }
@@ -225,15 +230,15 @@ export const OverlayManager = {
         if (!char) {
             return
         }
-        const damageNumber = DamageNumber.fromHitCharacter(char, damage, hitType, time)
+        const damageNumber = DamageNumber.fromHitCharacter(MyPlayer.myChar, char, damage, hitType, time)
         if (!damageNumber) {
             return
         }
         this.damageNumbers.push(damageNumber)
     },
 
-    addMyCharDamageNumber(damage: number, hitType: string = 'h', time: number = Date.now()) {
-        const damageNumber = DamageNumber.fromHitMyChar(damage, hitType, time)
+    addMyCharDamageNumber(attacker: Attackable, damage: number, hitType: string = 'h', time: number = Date.now()) {
+        const damageNumber = DamageNumber.fromHitMyChar(attacker, damage, hitType, time)
         if (!damageNumber) {
             return
         }
@@ -300,15 +305,15 @@ export const OverlayManager = {
             if (char.healingActive && char.healingEndTime + 500 > time) {
                 const pos = char.getNameTextNodeScreenPosition()
                 if (pos) {
-                    this.renderHealingSelfMarker(pos, time)
+                    this.renderHealingMarker(pos, time, char.healSelf)
                 }
             }
         })
 
-        if (MyPlayer.myChar.healingActive && MyPlayer.activeAction === CharacterActions.SELF_HEAL && MyPlayer.myChar.healingEndTime + 500 > time) {
+        if (MyPlayer.myChar.healingActive && MyPlayer.activeAction === CharacterActions.HEAL && MyPlayer.myChar.healingEndTime + 500 > time) {
             const pos = MyPlayer.myChar.getNameTextNodeScreenPosition()
             if (pos) {
-                this.renderHealingSelfMarker(pos, time)
+                this.renderHealingMarker(pos, time, MyPlayer.myChar.healSelf)
             }
         }
     },
@@ -354,7 +359,7 @@ export const OverlayManager = {
         ctx.fillRect(x + 1, y + 1, fillWidth, barHeight - 2)
     },
 
-    renderHealingSelfMarker(pos: Vector3, time: number) {
+    renderHealingMarker(pos: Vector3, time: number, healSelf: boolean) {
         const ctx = this.overlayCtx!
         const x = pos.x + 40
 
@@ -374,7 +379,7 @@ export const OverlayManager = {
         drawCross(size + 2, thickness + 2)
 
         // Fill - pulsating red cross (single fill operation, no center overdraw).
-        ctx.fillStyle = `rgba(225, 32, 32, ${alpha})`
+        ctx.fillStyle = healSelf ? `rgba(225, 32, 32, ${alpha})` : `rgba(25, 255, 25, ${alpha})`
         drawCross(size, thickness)
     },
 

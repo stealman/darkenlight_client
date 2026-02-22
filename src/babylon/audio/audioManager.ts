@@ -30,6 +30,8 @@ export const AudioManager = {
     lowHealthWarningSound: null as Sound | null,
     heartBeatSound: null as Sound | null,
 
+    backpackHandleSound: null as Sound | null,
+
     actualAmbientSound: null as Sound | null,
 
     initialize(scene: Scene) {
@@ -100,9 +102,16 @@ export const AudioManager = {
         this.heartBeatSound = new Sound("heartBeat", AudioManager.BASE_PATH_SFX + "heartbeat.ogg", scene, function() {
             AudioManager.heartBeatSound!['loaded'] = true;
         }, {
-            volume: 1,
+            volume: 0.7,
             playbackRate: 1.1,
             loop: true,
+        });
+
+        this.backpackHandleSound = new Sound("backpackHandle", AudioManager.BASE_PATH_SFX + "backpack-handle.ogg", scene, function() {
+            AudioManager.backpackHandleSound!['loaded'] = true;
+        }, {
+            volume: 1.25,
+            playbackRate: 1,
         });
 
         Engine.audioEngine?.setGlobalVolume(this.globalVolume)
@@ -222,6 +231,12 @@ export const AudioManager = {
     playHeartBeat() {
         if (this.heartBeatSound && this.heartBeatSound['loaded'] && !this.heartBeatSound.isPlaying) {
             this.heartBeatSound.play();
+        }
+    },
+
+    playBackpackHandle() {
+        if (this.backpackHandleSound && this.backpackHandleSound['loaded']) {
+            this.backpackHandleSound.play();
         }
     },
 

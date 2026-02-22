@@ -75,6 +75,14 @@ export class HealingSelfAction implements Message {
     }
 }
 
+export class HealingTargetAction implements Message {
+    t: number = 11
+    d: any
+    constructor(tgtId: number, tgtType: string) {
+        this.d = { id: tgtId, tp: tgtType }
+    }
+}
+
 export class GMSaveMapDataMsg implements Message {
     t: number = 1000
     d: any
