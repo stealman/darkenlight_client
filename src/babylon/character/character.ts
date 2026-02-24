@@ -53,6 +53,7 @@ class Character implements Attackable {
     private lookAngle: number | null = null
 
     equipSet: Map<string, Item> = new Map<string, Item>()
+    inventory: Item[] = []
 
     attackAnimationTime: number = 1000 // Updated before each attack from server
 
@@ -93,6 +94,7 @@ class Character implements Attackable {
         this.pos.y = Utils.calculateYPos(this.pos.x, this.pos.z, this.getBoxSize())
         this.logicYpos = this.pos.y
         this.initializeEquip(data.equipSet)
+        //this.initializeInventory(data.inventory)
     }
 
     async createModel(init: boolean) {
@@ -115,6 +117,10 @@ class Character implements Attackable {
         if (equip.legs) {
             this.equipSet.set(EquipSlotModelsCb.getById(equip.legs.mId)!.slot, Item.fromData(equip.legs))
         }
+    }
+
+    initializeInventory(inventory: any[]) {
+        this.inventory = inventory.map(itemData => Item.fromData(itemData))
     }
 
     onFrame(timeRate: number, actualTime: number, myChar: boolean) {

@@ -146,34 +146,37 @@ export class CharacterModel implements EquipBearer {
             console.error("Error loading model:", error)
         });
 
-        if (this.parent.equipSet.get(EquipItemSlots.R_HAND)) {
+        this.assignEquippedItems()
+        this.initialized = true
+    }
+
+    assignEquippedItems() {
+        if (this.parent.equipSet.get(EquipItemSlots.R_HAND) && !this.equipSet.get("WEAPON")) {
             const weapon = this.parent.equipSet.get(EquipItemSlots.R_HAND)!
             this.assignWeapon(weapon.modelId, weapon.materialId - 1)
         }
 
-        if (this.parent.equipSet.get(EquipItemSlots.BODY)) {
+        if (this.parent.equipSet.get(EquipItemSlots.BODY) && !this.equipSet.get("BODY")) {
             const armor = this.parent.equipSet.get(EquipItemSlots.BODY)!
             this.assignArmor(armor.modelId, armor.materialId - 1)
         }
 
-        if (this.parent.equipSet.get(EquipItemSlots.HEAD)) {
+        if (this.parent.equipSet.get(EquipItemSlots.HEAD) && !this.equipSet.get("HEAD")) {
             const helmet = this.parent.equipSet.get(EquipItemSlots.HEAD)!
             this.assignHelmet(helmet.modelId, helmet.materialId - 1)
         }
 
-        if (this.parent.equipSet.get(EquipItemSlots.PAULDRONS)) {
+        if (this.parent.equipSet.get(EquipItemSlots.PAULDRONS) && !this.equipSet.get("LEFT_PAULDRON") && !this.equipSet.get("RIGHT_PAULDRON")) {
             const pauldrons = this.parent.equipSet.get(EquipItemSlots.PAULDRONS)!
             this.assignLeftPauldron(pauldrons.modelId, pauldrons.materialId - 1)
             this.assignRightPauldron(pauldrons.modelId, pauldrons.materialId - 1)
         }
 
-        if (this.parent.equipSet.get(EquipItemSlots.LEGS)) {
+        if (this.parent.equipSet.get(EquipItemSlots.LEGS) && !this.equipSet.get("LEFT_LEG") && !this.equipSet.get("RIGHT_LEG")) {
             const legs = this.parent.equipSet.get(EquipItemSlots.LEGS)!
             this.assignLeftLeg(legs.modelId, legs.materialId - 1)
             this.assignRightLeg(legs.modelId, legs.materialId - 1)
         }
-
-        this.initialized = true
     }
 
     assignArmor(type: number, matIndex: number) {
@@ -181,6 +184,7 @@ export class CharacterModel implements EquipBearer {
     }
 
     assignHelmet(type: number, matIndex: number) {
+        console.log("Assigning helmet with type: " + type + " and matIndex: " + matIndex)
         this.addEquippedItem("HEAD", new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.002")!, null, null, null))
     }
 

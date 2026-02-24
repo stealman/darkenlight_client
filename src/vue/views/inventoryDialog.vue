@@ -46,7 +46,18 @@
                         </div>
 
                         <div class="inventory-panel">
-                            <div class="inventory-placeholder">INVENTORY</div>
+                            <div class="inventory-grid-wrapper">
+                                <div class="inventory-grid">
+                                    <div
+                                        v-for="slotIndex in INVENTORY_SLOT_COUNT"
+                                        :key="slotIndex"
+                                        class="inventory-item-slot"
+                                        @pointerdown.prevent="handleInventorySlotPointerDown(slotIndex - 1, $event)"
+                                    >
+                                        <img v-if="inventorySlotImages[slotIndex - 1]" :src="inventorySlotImages[slotIndex - 1]" alt="Inventory item" class="inventory-item-image" />
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -68,6 +79,7 @@ import {
 import { InventoryManager } from '@/data/InventoryManager'
 
 const emit = defineEmits(['close'])
+const INVENTORY_SLOT_COUNT = 24
 const equipSlotImages = ref({
     HEAD: null,
     NECKLACE: null,
@@ -79,12 +91,10 @@ const equipSlotImages = ref({
     R_RING: null,
     LEGS: null,
 })
+const inventorySlotImages = ref(Array(INVENTORY_SLOT_COUNT).fill(null))
 
 const EMPTY_ITEM_IMAGE = '/images/icons/buttons/btn_backpack.png'
 const DOUBLE_CLICK_MS = 250
-let lastPointerDownTime = 0
-let lastPointerDownSlot = null
-let singleClickTimer = null
 
 const resolveSlotImage = (slot) => {
     const item = MyPlayer.myChar?.equipSet?.get(slot)
@@ -106,6 +116,16 @@ const refreshEquipSlotImages = () => {
     equipSlotImages.value.LEGS = resolveSlotImage('LEGS')
 }
 
+const refreshInventorySlotImages = () => {
+    const nextSlotImages = Array(INVENTORY_SLOT_COUNT).fill(null)
+    for (let i = 0; i < INVENTORY_SLOT_COUNT; i++) {
+        if (InventoryManager.inventory[i]) {
+            nextSlotImages[i] = EMPTY_ITEM_IMAGE
+        }
+    }
+    inventorySlotImages.value = nextSlotImages
+}
+
 const onclick = (slot) => {
     console.log('Display item details for slot:', slot)
 }
@@ -113,48 +133,88 @@ const onclick = (slot) => {
 const onDoubleClick = (slot) => {
     InventoryManager.unequipSlot(slot)
     refreshEquipSlotImages()
+    refreshInventorySlotImages()
 }
 
-const handleSlotPointerDown = (slot) => {
-    const now = Date.now()
-    const isDoubleClick = lastPointerDownSlot === slot && (now - lastPointerDownTime) <= DOUBLE_CLICK_MS
+const onInventoryClick = (index) => {
+    console.log('Display inventory item details for index:', index)
+}
 
-    if (isDoubleClick) {
-        if (singleClickTimer) {
-            clearTimeout(singleClickTimer)
-            singleClickTimer = null
-        }
-        lastPointerDownSlot = null
-        lastPointerDownTime = 0
-        onDoubleClick(slot)
+const onInventoryDoubleClick = (index) => {
+    const item = InventoryManager.inventory[index]
+    if (!item) {
         return
     }
-
-    lastPointerDownSlot = slot
-    lastPointerDownTime = now
-
-    if (singleClickTimer) {
-        clearTimeout(singleClickTimer)
-    }
-    singleClickTimer = setTimeout(() => {
-        onclick(slot)
-        singleClickTimer = null
-    }, DOUBLE_CLICK_MS)
+    InventoryManager.equipItem(item)
+    refreshEquipSlotImages()
+    refreshInventorySlotImages()
 }
+
+const pointerClickHandlers = []
+
+const createPointerDoubleClickHandler = (singleClick, doubleClick, interval) => {
+    let lastTime = 0
+    let lastKey = null
+    let singleTimer = null
+
+    const handler = (key, event) => {
+        if (event) {
+            event.preventDefault()
+        }
+
+        const now = Date.now()
+        const isDoubleClick = lastKey === key && (now - lastTime) <= interval
+
+        if (isDoubleClick) {
+            if (singleTimer) {
+                clearTimeout(singleTimer)
+                singleTimer = null
+            }
+            lastKey = null
+            lastTime = 0
+            doubleClick(key)
+            return
+        }
+
+        lastKey = key
+        lastTime = now
+
+        if (singleTimer) {
+            clearTimeout(singleTimer)
+        }
+        singleTimer = setTimeout(() => {
+            singleClick(key)
+            singleTimer = null
+        }, interval)
+    }
+
+    handler.dispose = () => {
+        if (singleTimer) {
+            clearTimeout(singleTimer)
+            singleTimer = null
+        }
+    }
+
+    pointerClickHandlers.push(handler)
+    return handler
+}
+
+const handleSlotPointerDown = createPointerDoubleClickHandler(onclick, onDoubleClick, DOUBLE_CLICK_MS)
+const handleInventorySlotPointerDown = createPointerDoubleClickHandler(onInventoryClick, onInventoryDoubleClick, DOUBLE_CLICK_MS)
 
 onMounted(() => {
 
 })
 
 onUnmounted(() => {
-    if (singleClickTimer) {
-        clearTimeout(singleClickTimer)
-        singleClickTimer = null
+    for (const handler of pointerClickHandlers) {
+        handler.dispose()
     }
 })
 
 const openDialog = () => {
     refreshEquipSlotImages()
+    refreshInventorySlotImages()
 }
 
 const closeDialog = () => {
@@ -168,133 +228,5 @@ defineExpose({
 </script>
 
 <style scoped>
-.inventory-dialog-window {
-    width: min(960px, 85vw, calc(85vh * 1.6));
-    max-width: 85vw;
-    max-height: 85vh;
-}
 
-.dialog-content {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.inventory-content-shell {
-    width: 100%;
-    aspect-ratio: 16 / 10;
-    max-height: min(600px, 85vh);
-    overflow: auto;
-}
-
-.inventory-layout {
-    display: flex;
-    width: 100%;
-    height: 100%;
-}
-
-.equipment-panel {
-    width: 25%;
-    height: 100%;
-    border-right: 1px solid rgba(176, 143, 86, 0.35);
-    padding: 2%;
-    box-sizing: border-box;
-}
-
-.equipment-layout {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    --equip-slot-size: 40%;
-}
-
-.equip-slot {
-    position: absolute;
-    width: var(--equip-slot-size);
-    aspect-ratio: 1 / 1;
-    border: 1px solid rgba(176, 143, 86, 0.9);
-    background: rgba(15, 11, 8, 0.45);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.7rem;
-    color: var(--ui-text-muted);
-    box-sizing: border-box;
-    user-select: none;
-}
-
-.equip-item-image {
-    position: absolute;
-    width: 80%;
-    height: 80%;
-    object-fit: cover;
-    z-index: 2;
-    pointer-events: none;
-}
-
-.slot-helmet {
-    left: 5%;
-    top: 1%;
-}
-
-.slot-necklace {
-    right: 5%;
-    top: 1%;
-}
-
-.slot-arms-armor {
-    left: 50%;
-    top: 18%;
-    transform: translateX(-50%);
-}
-
-.slot-body {
-    left: 50%;
-    top: 35%;
-    transform: translateX(-50%);
-}
-
-.slot-left-hand {
-    left: 5%;
-    top: 52%;
-}
-
-.slot-right-hand {
-    right: 5%;
-    top: 52%;
-}
-
-.slot-left-ring {
-    left: 5%;
-    top: 69%;
-}
-
-.slot-right-ring {
-    right: 5%;
-    top: 69%;
-}
-
-.slot-legs {
-    left: 50%;
-    top: 86%;
-    transform: translateX(-50%);
-}
-
-.inventory-panel {
-    width: 75%;
-    height: 100%;
-    padding: 2%;
-    box-sizing: border-box;
-}
-
-.inventory-placeholder {
-    width: 100%;
-    height: 100%;
-    border: 1px dashed rgba(176, 143, 86, 0.45);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--ui-text-muted);
-    font-size: 0.75rem;
-}
 </style>

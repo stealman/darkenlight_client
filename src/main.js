@@ -15,6 +15,7 @@ import './../public/styles/selected-target.css';
 import './../public/styles/mystatus.css';
 import './../public/styles/action-buttons.css';
 import './../public/styles/gui-buttons.css';
+import './../public/styles/inventory.css';
 
 
 import './../public/styles/gm.css';
