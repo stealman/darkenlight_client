@@ -5,7 +5,7 @@ import { Vector3 } from '@babylonjs/core'
 import { Utils} from '@/utils/utils'
 import { BodySoundTypes, MonsterSoundTypes, WeaponSoundTypes } from '@/babylon/audio/audioManager'
 import { FightSplatTypes, SplatType } from '@/babylon/world/fightSplatsRenderer'
-import { EquipSlotsCb } from '@/data/items/item'
+import { EquipSlotModelsCb } from '@/data/items/item'
 
 export const MonsterCodebook = {
 
@@ -166,19 +166,19 @@ export const MonsterTypes = {
         WeaponSoundTypes.BONE, BodySoundTypes.HARD, null, MonsterSoundTypes.SKELETON, FightSplatTypes.BONE, null),
 
     SKELETON_FIGHTER: new MonsterType( 2, MonsterGroups.SKELETON_MELEE, 1, 'Skeleton Fighter', 0.6, 1.8,  3.2,
-        new MonsterEquipData([EquipSlotsCb.LONGSWORD.modelId], 0.8, null, null,0),null, null,
+        new MonsterEquipData([EquipSlotModelsCb.LONGSWORD.modelId], 0.8, null, null,0),null, null,
         WeaponSoundTypes.SWORD, BodySoundTypes.HARD, WeaponSoundTypes.SWORD, MonsterSoundTypes.SKELETON, FightSplatTypes.BONE, null),
 
     SKELETON_WARRIOR: new MonsterType( 3, MonsterGroups.SKELETON_MELEE, 1, 'Skeleton Warrior', 0.6, 1.8,  3.2,
-        new MonsterEquipData([EquipSlotsCb.LONGSWORD.modelId], 0.8, null, null, 0),
-        new MonsterEquipData([EquipSlotsCb.HELM.modelId], 0.94, VectorY90, null, 8),
-        new MonsterEquipData([EquipSlotsCb.ARMOR_PLATE.modelId], new Vector3(0.8, 0.7, 0.65),  VectorY90, null, 8),
+        new MonsterEquipData([EquipSlotModelsCb.LONGSWORD.modelId], 0.8, null, null, 0),
+        new MonsterEquipData([EquipSlotModelsCb.HELM.modelId], 0.94, VectorY90, null, 8),
+        new MonsterEquipData([EquipSlotModelsCb.ARMOR_PLATE.modelId], new Vector3(0.8, 0.7, 0.65),  VectorY90, null, 8),
         WeaponSoundTypes.SWORD, BodySoundTypes.HARD, WeaponSoundTypes.SWORD, MonsterSoundTypes.SKELETON, FightSplatTypes.BONE, null),
 
     // SKELETON RANGED
 
     SKELETON_ARCHER: new MonsterType( 20, MonsterGroups.SKELETON_RANGED, 1, 'Skeleton Archer', 0.6, 1.8,  3.2,
-        new MonsterEquipData([EquipSlotsCb.BOW.modelId], 0.8, new Vector3(Math.PI, 0, Math.PI), null, 0), null, null,
+        new MonsterEquipData([EquipSlotModelsCb.BOW.modelId], 0.8, new Vector3(Math.PI, 0, Math.PI), null, 0), null, null,
         WeaponSoundTypes.SWORD, BodySoundTypes.HARD, WeaponSoundTypes.SWORD, MonsterSoundTypes.SKELETON, FightSplatTypes.BONE, MonsterAATypes.RANGED_ARROW),
 
     // WITHER MELEE
@@ -187,13 +187,13 @@ export const MonsterTypes = {
         WeaponSoundTypes.BONE, BodySoundTypes.HARD, null, MonsterSoundTypes.SKELETON, FightSplatTypes.DARK_BONE, null),
 
     WITHER_CHAMPION: new MonsterType( 201, MonsterGroups.WITHER_MELEE, 2, 'Wither Champion', 0.6, 1.8,3.2,
-        new MonsterEquipData([EquipSlotsCb.LONGSWORD.modelId], 0.8, null, null, 0),null, null,
+        new MonsterEquipData([EquipSlotModelsCb.LONGSWORD.modelId], 0.8, null, null, 0),null, null,
         WeaponSoundTypes.SWORD, BodySoundTypes.HARD, WeaponSoundTypes.SWORD, MonsterSoundTypes.SKELETON, FightSplatTypes.DARK_BONE, null),
 
     WITHER_KNIGHT: new MonsterType( 202, MonsterGroups.WITHER_MELEE, 2, 'Wither Knight', 0.6, 1.8,  3.2,
-        new MonsterEquipData([EquipSlotsCb.LONGSWORD.modelId], 0.9, null, null, 2),
-        new MonsterEquipData([EquipSlotsCb.HELM.modelId], 0.94, VectorY90, null,6),
-        new MonsterEquipData([EquipSlotsCb.ARMOR_PLATE.modelId], new Vector3(0.8, 0.7, 0.65), VectorY90, null, 6),
+        new MonsterEquipData([EquipSlotModelsCb.LONGSWORD.modelId], 0.9, null, null, 2),
+        new MonsterEquipData([EquipSlotModelsCb.HELM.modelId], 0.94, VectorY90, null,6),
+        new MonsterEquipData([EquipSlotModelsCb.ARMOR_PLATE.modelId], new Vector3(0.8, 0.7, 0.65), VectorY90, null, 6),
         WeaponSoundTypes.SWORD, BodySoundTypes.HARD, WeaponSoundTypes.SWORD, MonsterSoundTypes.SKELETON, FightSplatTypes.DARK_BONE, null),
 
     // WITHER RANGED

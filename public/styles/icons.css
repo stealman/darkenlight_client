@@ -30,6 +30,18 @@
     fill: #fff;
 }
 
+.icon-equipset {
+    fill: #aaa;
+    opacity: 0.25;
+}
+
+.icon-equipset-slot {
+    width: 80%;
+    height: 80%;
+    display: block;
+    margin: 10%;
+}
+
 /* Jednotlive ikony */
 #icon-fullscreen {
     width: 28px;
@@ -57,11 +69,6 @@
 }
 
 #icon-stop-action {
-    height: 40px;
-    width: 40px;
-}
-
-#icon-backpack {
     height: 40px;
     width: 40px;
 }

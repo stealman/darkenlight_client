@@ -7,7 +7,6 @@ import { TargetingManager } from '@/gui/targettingManager'
 import { Connector } from '@/network/connector'
 import {
     AutoAttackBreak,
-    HealingCharacterAction,
     HealingSelfAction,
     HealingTargetAction,
     StopAction,

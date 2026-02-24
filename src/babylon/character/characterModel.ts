@@ -49,7 +49,7 @@ export class CharacterModel implements EquipBearer {
     actualAnim: AnimationGroup | undefined
     animTransition: AnimTransition | null = null
 
-    equipSet: Set<EquipItem> = new Set()
+    equipSet: Map<string, EquipItem> = new Map()
     weaponEquipItem: EquipItem | null = null
 
     actualStepSound: Sound | null = null
@@ -177,38 +177,86 @@ export class CharacterModel implements EquipBearer {
     }
 
     assignArmor(type: number, matIndex: number) {
-        this.addEquippedItem(new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.001")!, null, null, null))
+        this.addEquippedItem("BODY", new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.001")!, null, null, null))
     }
 
     assignHelmet(type: number, matIndex: number) {
-        this.addEquippedItem(new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.002")!, null, null, null))
+        this.addEquippedItem("HEAD", new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.002")!, null, null, null))
     }
 
     assignLeftPauldron(type: number, matIndex: number) {
-        this.addEquippedItem(new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.010")!, null, new Vector3(0, - Math.PI / 2, 0), null))
+        this.addEquippedItem("LEFT_PAULDRON", new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.010")!, null, new Vector3(0, - Math.PI / 2, 0), null))
     }
 
     assignRightPauldron(type: number, matIndex: number) {
-        this.addEquippedItem(new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.003")!, null, new Vector3(0, Math.PI / 2, 0), new Vector3(0.02, 0, 0.02)))
+        this.addEquippedItem("RIGHT_PAULDRON", new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.003")!, null, new Vector3(0, Math.PI / 2, 0), new Vector3(0.02, 0, 0.02)))
     }
 
     assignLeftLeg(type: number, matIndex: number) {
-        this.addEquippedItem(new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.008")!, null, null, null))
+        this.addEquippedItem("LEFT_LEG", new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.008")!, null, null, null))
     }
 
     assignRightLeg(type: number, matIndex: number) {
-        this.addEquippedItem(new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.006")!, null, null, null))
+        this.addEquippedItem("RIGHT_LEG", new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.006")!, null, null, null))
     }
 
     assignWeapon(type: number, matIndex: number) {
         this.weaponEquipItem = new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.009")!, null, null, null)
         //this.weaponEquipItem.createSwordParticles(this.rhandNode)
-        this.addEquippedItem(this.weaponEquipItem)
+        this.addEquippedItem("WEAPON", this.weaponEquipItem)
     }
 
-    addEquippedItem(item: EquipItem) {
-        this.equipSet.add(item)
+    addEquippedItem(slot: string, item: EquipItem) {
+        this.equipSet.set(slot, item)
         EquipManager.addEquippedItem(item)
+    }
+
+    removeEquippedItem(slot: string) {
+        const removeModelSlot = (modelSlot: string) => {
+            const item = this.equipSet.get(modelSlot)
+            if (!item) {
+                return
+            }
+            EquipManager.removeEquippedItem(item)
+            this.equipSet.delete(modelSlot)
+        }
+
+        switch (slot) {
+            case "HEAD": {
+                removeModelSlot("HEAD")
+                break
+            }
+            case "BODY": {
+                removeModelSlot("BODY")
+                break
+            }
+            case "R_HAND": {
+                this.setWeaponTrailEnabled(false)
+                this.disposeWeaponTrail()
+                this.weaponEquipItem = null
+                removeModelSlot("WEAPON")
+                break
+            }
+            case "L_HAND": {
+                removeModelSlot("L_HAND")
+                break
+            }
+            case "PAULDRONS": {
+                removeModelSlot("LEFT_PAULDRON")
+                removeModelSlot("RIGHT_PAULDRON")
+                break
+            }
+            case "LEGS": {
+                removeModelSlot("LEFT_LEG")
+                removeModelSlot("RIGHT_LEG")
+                break
+            }
+            case "NECKLACE":
+            case "L_RING":
+            case "R_RING": {
+                break
+            }
+        }
     }
 
     onFrame(timeRate: number) {

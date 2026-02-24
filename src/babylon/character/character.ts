@@ -15,7 +15,7 @@ import { Utils } from '@/utils/utils'
 import { Connector } from '@/network/connector'
 import { MyCharMoveMsg } from '@/network/messages'
 import { MyPlayer } from '@/data/myPlayer'
-import { EquipItemSlots, EquipSlotsCb, Item } from '@/data/items/item'
+import { EquipItemSlots, EquipSlotModelsCb, Item } from '@/data/items/item'
 import { Arrow, ArrowsManager } from '@/babylon/world/arrowsManager'
 import {
     AttackableBasicTO,
@@ -101,20 +101,19 @@ class Character implements Attackable {
 
     initializeEquip(equip: any) {
         if (equip.weapon) {
-            //equip.weapon.mId = 10
-            this.equipSet.set(EquipSlotsCb.getById(equip.weapon.mId)!.slot, Item.fromData(equip.weapon))
+            this.equipSet.set(EquipSlotModelsCb.getById(equip.weapon.mId)!.slot, Item.fromData(equip.weapon))
         }
         if (equip.body) {
-            this.equipSet.set(EquipSlotsCb.getById(equip.body.mId)!.slot, Item.fromData(equip.body))
+            this.equipSet.set(EquipSlotModelsCb.getById(equip.body.mId)!.slot, Item.fromData(equip.body))
         }
         if (equip.head) {
-            this.equipSet.set(EquipSlotsCb.getById(equip.head.mId)!.slot, Item.fromData(equip.head))
+            this.equipSet.set(EquipSlotModelsCb.getById(equip.head.mId)!.slot, Item.fromData(equip.head))
         }
         if (equip.arms) {
-            this.equipSet.set(EquipSlotsCb.getById(equip.arms.mId)!.slot, Item.fromData(equip.arms))
+            this.equipSet.set(EquipSlotModelsCb.getById(equip.arms.mId)!.slot, Item.fromData(equip.arms))
         }
         if (equip.legs) {
-            this.equipSet.set(EquipSlotsCb.getById(equip.legs.mId)!.slot, Item.fromData(equip.legs))
+            this.equipSet.set(EquipSlotModelsCb.getById(equip.legs.mId)!.slot, Item.fromData(equip.legs))
         }
     }
 

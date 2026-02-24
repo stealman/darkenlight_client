@@ -13,7 +13,7 @@
             </div>
 
             <div id="gui-buttons">
-                <div class="gui-action-button" id="btn-backpack">
+                <div class="gui-action-button" id="btn-backpack" @click="showInventoryDialog()">
                     <img class="action-icon" src="/images/icons/buttons/btn_backpack.png" />
                     <img class="action-icon-hover" src="/images/icons/buttons/btn_backpack_hover.png" />
                 </div>
@@ -79,6 +79,8 @@
                     @logout="logout"
                     @device-type-selected="deviceTypeChanged"/>
 
+    <InventoryDialog ref="inventoryDialog" v-show="displayInventoryDialog" @close="displayInventoryDialog = false" />
+
     <!-- Restart prompt pokud v nastaveni doslo ke zmenam ktere to vyzadauji -->
     <div class="dialog-backdrop" v-if="displayRestartPrompt" @click.self="displayRestartPrompt = false">
         <div class="dialog-window adaptive">
@@ -121,10 +123,10 @@ import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { Connector } from '@/network/connector'
 import LoginDialog from '@/vue/views/loginDialog.vue'
 import SettingsDialog from '@/vue/views/settingsDialog.vue'
+import InventoryDialog from '@/vue/views/inventoryDialog.vue'
 import OnScreenMessages from '@/vue/views/onScreenMessages.vue'
 import { Controller } from '@/controlls/controller'
 import {
-    getFullScreenSvg,
     getHamburgerMenuSvg,
     getInspectSvg, getStopActionSvg,
     getTargetLockSvg,
@@ -146,9 +148,12 @@ const loginRequestSentFlag = ref(false);
 const displaySettingsDialog = ref(false);
 const displayRestartPrompt = ref(false);
 
+const displayInventoryDialog = ref(false);
+
 const touchControls = ref();
 const settingsDialog = ref();
 const loginDialog = ref();
+const inventoryDialog = ref();
 
 onMounted(async () => {
     window.onerror = function (errorMsg, url, lineNumber) {
@@ -206,6 +211,14 @@ const loginRequestSent = () => {
 const showSettingsDialog = () => {
     AudioManager.playGuiButtonClick()
     displaySettingsDialog.value = true;
+}
+
+const showInventoryDialog = () => {
+    AudioManager.playGuiButtonClick()
+    displayInventoryDialog.value = true;
+    nextTick(() => {
+        inventoryDialog.value?.openDialog()
+    })
 }
 
 const closeSettingsWithRestartPrompt = () => {
