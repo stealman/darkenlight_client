@@ -36,6 +36,7 @@ export const MyPlayer = {
 
     async initialize(charData: any) {
         this.myChar = new Character(charData)
+        this.myChar.initializeInventory(charData.inventory.items)
         this.myChar.insideView = true
         await this.myChar.createModel(true)
         this.myModel = this.myChar.model as CharacterModel

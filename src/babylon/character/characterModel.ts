@@ -179,6 +179,13 @@ export class CharacterModel implements EquipBearer {
         }
     }
 
+    clearAllEquippedItems() {
+        this.equipSet.forEach((item) => {
+            EquipManager.removeEquippedItem(item)
+        })
+        this.equipSet.clear()
+    }
+
     assignArmor(type: number, matIndex: number) {
         this.addEquippedItem("BODY", new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.001")!, null, null, null))
     }

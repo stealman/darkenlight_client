@@ -203,10 +203,11 @@ const handleSlotPointerDown = createPointerDoubleClickHandler(onclick, onDoubleC
 const handleInventorySlotPointerDown = createPointerDoubleClickHandler(onInventoryClick, onInventoryDoubleClick, DOUBLE_CLICK_MS)
 
 onMounted(() => {
-
+    window.addEventListener('keydown', onDialogKeyDown)
 })
 
 onUnmounted(() => {
+    window.removeEventListener('keydown', onDialogKeyDown)
     for (const handler of pointerClickHandlers) {
         handler.dispose()
     }
@@ -219,6 +220,12 @@ const openDialog = () => {
 
 const closeDialog = () => {
     emit('close');
+}
+
+const onDialogKeyDown = (event) => {
+    if (event.key === 'Escape') {
+        closeDialog()
+    }
 }
 
 defineExpose({

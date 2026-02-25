@@ -55,6 +55,7 @@ export const MessageProcessor = {
                 case 27: this.processCharacterHealing(msg.d); break
                 case 28: this.processCharacterActionChange(msg.d); break
                 case 29: this.processCharacterHealingFinished(msg.d); break
+                case 30: this.processCharacterEquipSetChange(msg.d); break
                 case 1003: this.processGMAllSpawns(msg.d); break
                 case 1004: this.processGMSpawnChange(msg.d); break
                 default:
@@ -212,6 +213,10 @@ export const MessageProcessor = {
 
     processCharacterHealingFinished(data: HealingResultMessage) {
         CharacterManager.finishHealing(data)
+    },
+
+    processCharacterEquipSetChange(data) {
+        CharacterManager.equipSetChange(data)
     },
 
     processGMAllSpawns(data) {

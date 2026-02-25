@@ -83,6 +83,23 @@ export class HealingTargetAction implements Message {
     }
 }
 
+export class UnequipItemMsg implements Message {
+    t: number = 12
+    d: any
+    constructor(id: number) {
+        this.d = { id: id }
+    }
+}
+
+export class EquipItemMsg implements Message {
+    t: number = 13
+    d: any
+
+    constructor(slot: string, id: number) {
+        this.d = { slot: slot, id: id }
+    }
+}
+
 export class GMSaveMapDataMsg implements Message {
     t: number = 1000
     d: any

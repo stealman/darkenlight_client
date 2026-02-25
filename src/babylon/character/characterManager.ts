@@ -172,6 +172,17 @@ export const CharacterManager = {
         }
     },
 
+    equipSetChange(data) {
+        if (data.id === MyPlayer.myChar.id) {
+            // Nothing to do, handled locally in InventoryManager when equipping/unequipping items
+        } else {
+            const char = this.characters.get(data.id)
+            if (char) {
+               char.changeEquipSet(data.equipSet)
+            }
+        }
+    },
+
     updateVisibleChars() {
         this.visibleCharacters.clear()
         this.characters.forEach((char, id) => {

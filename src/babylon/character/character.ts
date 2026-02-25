@@ -26,6 +26,7 @@ import {
 } from '@/network/messageIfs'
 import { TargetingManager } from '@/gui/targettingManager'
 import { CharacterManager } from '@/babylon/character/characterManager'
+import { InventoryManager } from '@/data/InventoryManager'
 
 class Character implements Attackable {
     model: CharacterModel | null = null
@@ -53,7 +54,6 @@ class Character implements Attackable {
     private lookAngle: number | null = null
 
     equipSet: Map<string, Item> = new Map<string, Item>()
-    inventory: Item[] = []
 
     attackAnimationTime: number = 1000 // Updated before each attack from server
 
@@ -93,8 +93,8 @@ class Character implements Attackable {
 
         this.pos.y = Utils.calculateYPos(this.pos.x, this.pos.z, this.getBoxSize())
         this.logicYpos = this.pos.y
+
         this.initializeEquip(data.equipSet)
-        //this.initializeInventory(data.inventory)
     }
 
     async createModel(init: boolean) {
@@ -119,8 +119,19 @@ class Character implements Attackable {
         }
     }
 
-    initializeInventory(inventory: any[]) {
-        this.inventory = inventory.map(itemData => Item.fromData(itemData))
+    changeEquipSet(equipSet: any) {
+        console.log('Changing equip set')
+        this.equipSet.clear()
+        this.initializeEquip(equipSet)
+        if (this.model && this.model.initialized) {
+            console.log('Updating model equip')
+            this.model.clearAllEquippedItems()
+            this.model.assignEquippedItems()
+        }
+    }
+
+    initializeInventory(items: any[]) {
+        InventoryManager.inventory = items.map(itemData => Item.fromData(itemData))
     }
 
     onFrame(timeRate: number, actualTime: number, myChar: boolean) {
