@@ -1,3 +1,9 @@
+.inventory-dialog-backdrop {
+    backdrop-filter: blur(1px);
+    -webkit-backdrop-filter: blur(1px);
+    background: rgba(7, 5, 3, 0.34);
+}
+
 .inventory-dialog-window {
     width: min(960px, 85vw, calc(85vh * 1.6));
     max-width: 85vw;
@@ -155,4 +161,23 @@
     -webkit-user-select: none;
     -webkit-user-drag: none;
     pointer-events: none;
+}
+
+.inventory-item-overlay {
+    position: fixed;
+    z-index: 1000;
+    min-width: 120px;
+    max-width: 260px;
+    padding: 8px 10px;
+    border: 1px solid rgba(176, 143, 86, 0.9);
+    background: rgba(15, 11, 8, 0.94);
+    color: #f2e7cf;
+    font-size: 0.85rem;
+    line-height: 1.2;
+    box-sizing: border-box;
+    pointer-events: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.68), 0 4px 10px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(0, 0, 0, 0.45);
 }

@@ -55,14 +55,16 @@ export class Item {
     modelId: number
     materialId: number | null = null
     name: string | null = null
+    imgUrl: string | null = null
     slotInfo: EquipSlotModel
 
-    constructor(id: number, itemId: number, modelId: number, matId: number, name: string | null) {
+    constructor(id: number, itemId: number, modelId: number, matId: number, name: string | null, imgUrl: string) {
         this.id = id
         this.itemType = itemId
         this.modelId = modelId
         this.materialId = matId
         this.name = name
+        this.imgUrl = imgUrl
         this.slotInfo = EquipSlotModelsCb.getById(modelId)!
 
         if (!this.slotInfo) {
@@ -71,6 +73,6 @@ export class Item {
     }
 
     static fromData(data: any): Item {
-        return new Item(data.id, data.tp, data.mId, data.matId, data.name || null)
+        return new Item(data.id, data.tp, data.mId, data.matId, data.name || null, data.img)
     }
 }

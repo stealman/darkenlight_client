@@ -31,6 +31,7 @@ export const AudioManager = {
     heartBeatSound: null as Sound | null,
 
     backpackHandleSound: null as Sound | null,
+    backpackHandle2Sound: null as Sound | null,
 
     actualAmbientSound: null as Sound | null,
 
@@ -111,6 +112,13 @@ export const AudioManager = {
             AudioManager.backpackHandleSound!['loaded'] = true;
         }, {
             volume: 1.25,
+            playbackRate: 1,
+        });
+
+        this.backpackHandle2Sound = new Sound("backpackHandle2", AudioManager.BASE_PATH_SFX + "backpack-handle2.ogg", scene, function() {
+            AudioManager.backpackHandle2Sound!['loaded'] = true;
+        }, {
+            volume: 0.45,
             playbackRate: 1,
         });
 
@@ -237,6 +245,12 @@ export const AudioManager = {
     playBackpackHandle() {
         if (this.backpackHandleSound && this.backpackHandleSound['loaded']) {
             this.backpackHandleSound.play();
+        }
+    },
+
+    playBackpackHandle2() {
+        if (this.backpackHandle2Sound && this.backpackHandle2Sound['loaded']) {
+            this.backpackHandle2Sound.play();
         }
     },
 

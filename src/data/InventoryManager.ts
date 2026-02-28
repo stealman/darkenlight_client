@@ -2,6 +2,7 @@ import { MyPlayer } from '@/data/myPlayer'
 import { Item } from '@/data/items/item'
 import { Connector } from '@/network/connector'
 import { EquipItemMsg, UnequipItemMsg } from '@/network/messages'
+import { AudioManager } from '@/babylon/audio/audioManager'
 
 export const InventoryManager = {
     inventory: [] as Item[],
@@ -16,6 +17,7 @@ export const InventoryManager = {
         this.inventory = this.inventory.filter(i => i !== item)
 
         Connector.sendMessage(new EquipItemMsg(item.slotInfo.slot, item.id))
+        AudioManager.playBackpackHandle2()
     },
 
     unequipSlot(slot: string) {
@@ -25,6 +27,7 @@ export const InventoryManager = {
 
         this.addItemToInventory(item!)
         Connector.sendMessage(new UnequipItemMsg(item!.id))
+        AudioManager.playBackpackHandle2()
     }
 }
 

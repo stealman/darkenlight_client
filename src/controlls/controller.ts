@@ -76,6 +76,13 @@ export const Controller = {
     },
 
     processKeydown(e) {
+        // I - open inventory
+        if ((e.key && e.key.toLowerCase() === 'i') || e.code === 'KeyI') {
+            if (e.repeat) return
+            window.dispatchEvent(new CustomEvent('ui:open-inventory'))
+            return
+        }
+
         // Shift
         if (e.keyCode == 16) {GMManager.shiftPressed(true)}
 

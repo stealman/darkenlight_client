@@ -164,6 +164,7 @@ onMounted(async () => {
     if (wrapper) wrapper.style.height = window.innerHeight + "px";
 
     window.addEventListener("resize", resizeEventHandler)
+    window.addEventListener("ui:open-inventory", onOpenInventoryHotkey)
     document.addEventListener("keydown", (e) => Controller.processKeydown(e));
     document.addEventListener("keyup", (e) => Controller.processKeyup(e));
     await nextTick()
@@ -197,6 +198,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
     window.removeEventListener("resize", resizeEventHandler);
+    window.removeEventListener("ui:open-inventory", onOpenInventoryHotkey)
 });
 
 const loginRequestSent = () => {
@@ -219,6 +221,19 @@ const showInventoryDialog = () => {
     nextTick(() => {
         inventoryDialog.value?.openDialog()
     })
+}
+
+const onOpenInventoryHotkey = () => {
+    if (!loginRequestSentFlag.value) {
+        return
+    }
+
+    if (displayInventoryDialog.value) {
+        AudioManager.playGuiButtonClick()
+        displayInventoryDialog.value = false
+        return
+    }
+    showInventoryDialog()
 }
 
 const closeSettingsWithRestartPrompt = () => {

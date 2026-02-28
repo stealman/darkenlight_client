@@ -120,11 +120,9 @@ class Character implements Attackable {
     }
 
     changeEquipSet(equipSet: any) {
-        console.log('Changing equip set')
         this.equipSet.clear()
         this.initializeEquip(equipSet)
         if (this.model && this.model.initialized) {
-            console.log('Updating model equip')
             this.model.clearAllEquippedItems()
             this.model.assignEquippedItems()
         }
