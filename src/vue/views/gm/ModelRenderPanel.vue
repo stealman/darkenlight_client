@@ -34,6 +34,22 @@
                             </option>
                         </select>
                     </label>
+                    <label class="model-render-control">
+                        <span>Metallic: {{ materialMetallic.toFixed(2) }}</span>
+                        <input v-model.number="materialMetallic" type="range" min="0" max="1" step="0.01" @input="applyPreviewMaterialSettings">
+                    </label>
+                    <label class="model-render-control">
+                        <span>Roughness: {{ materialRoughness.toFixed(2) }}</span>
+                        <input v-model.number="materialRoughness" type="range" min="0" max="1" step="0.01" @input="applyPreviewMaterialSettings">
+                    </label>
+                    <label class="model-render-control">
+                        <span>Direct Intensity: {{ materialDirectIntensity.toFixed(2) }}</span>
+                        <input v-model.number="materialDirectIntensity" type="range" min="0" max="3" step="0.01" @input="applyPreviewMaterialSettings">
+                    </label>
+                    <label class="model-render-control">
+                        <span>Environment Intensity: {{ materialEnvironmentIntensity.toFixed(2) }}</span>
+                        <input v-model.number="materialEnvironmentIntensity" type="range" min="0" max="3" step="0.01" @input="applyPreviewMaterialSettings">
+                    </label>
                 </div>
                 <div class="model-render-right-panel">
                     <canvas ref="renderCanvasRef" class="model-render-canvas"></canvas>
@@ -65,8 +81,8 @@
                             </label>
                         </div>
                         <div class="model-render-actions">
-                            <button class="dialog-button model-render-action-button" @click="downloadCanvasPng">Stahnout PNG</button>
-                            <button class="dialog-button model-render-action-button" @click="centerPreviewMesh">Vycentrovat</button>
+                            <button class="dialog-button model-render-action-button" @click="downloadCanvasPng">Save PNG</button>
+                            <button class="dialog-button model-render-action-button" @click="centerPreviewMesh">Center</button>
                         </div>
                     </div>
                 </div>
@@ -82,6 +98,7 @@ import { WeaponModelsCb } from '@/babylon/item/codebook/weaponModelsCb'
 import { ARMOR_MATERIAL_METALIC, ArmorModelsCb, BASE_EQUIP_MATERIAL_PATH } from '@/babylon/item/codebook/armorsModelsCb'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { Settings } from '@/settings/settings'
+import { canvasToPngBlobWithTransparentColor } from '@/utils/pngUtils'
 
 const MODEL_RENDER_SETTINGS_LS_KEY = 'model-render-settings'
 
@@ -101,6 +118,10 @@ const previewCategory = ref('WEAPON')
 const selectedModelKey = ref(WEAPON_OPTIONS[0]?.key ?? '')
 const currentModelOptions = computed(() => (previewCategory.value === 'WEAPON' ? WEAPON_OPTIONS : ARMOR_OPTIONS))
 const previewMatIndex = ref(0)
+const materialMetallic = ref(0.75)
+const materialRoughness = ref(1)
+const materialDirectIntensity = ref(1.5)
+const materialEnvironmentIntensity = ref(1)
 const selectedPreviewItem = computed(() => {
     const options = previewCategory.value === 'WEAPON' ? WEAPON_OPTIONS : ARMOR_OPTIONS
     return options.find((option) => option.key === selectedModelKey.value)?.item ?? null
@@ -121,6 +142,7 @@ let engine = null
 let scene = null
 let camera = null
 let previewMesh = null
+let previewMaterial = null
 let previewBaseRotation = null
 let previewBaseScaling = null
 let previewLoadId = 0
@@ -166,6 +188,10 @@ const loadSettingsForCurrentSelection = () => {
         scaleXMultiplier.value = 1
         scaleYMultiplier.value = 1
         scaleZMultiplier.value = 1
+        materialMetallic.value = 0.75
+        materialRoughness.value = 1
+        materialDirectIntensity.value = 1.5
+        materialEnvironmentIntensity.value = 1
         return
     }
 
@@ -175,6 +201,10 @@ const loadSettingsForCurrentSelection = () => {
     scaleXMultiplier.value = clamp(Number(settings.scaleXMultiplier ?? 1), 0, 3)
     scaleYMultiplier.value = clamp(Number(settings.scaleYMultiplier ?? 1), 0, 3)
     scaleZMultiplier.value = clamp(Number(settings.scaleZMultiplier ?? 1), 0, 3)
+    materialMetallic.value = clamp(Number(settings.materialMetallic ?? 0.75), 0, 1)
+    materialRoughness.value = clamp(Number(settings.materialRoughness ?? 1), 0, 1)
+    materialDirectIntensity.value = clamp(Number(settings.materialDirectIntensity ?? 1.5), 0, 3)
+    materialEnvironmentIntensity.value = clamp(Number(settings.materialEnvironmentIntensity ?? 1), 0, 3)
 }
 
 const persistSettingsForCurrentSelection = () => {
@@ -186,6 +216,10 @@ const persistSettingsForCurrentSelection = () => {
         scaleXMultiplier: scaleXMultiplier.value,
         scaleYMultiplier: scaleYMultiplier.value,
         scaleZMultiplier: scaleZMultiplier.value,
+        materialMetallic: materialMetallic.value,
+        materialRoughness: materialRoughness.value,
+        materialDirectIntensity: materialDirectIntensity.value,
+        materialEnvironmentIntensity: materialEnvironmentIntensity.value,
     }
     localStorage.setItem(MODEL_RENDER_SETTINGS_LS_KEY, JSON.stringify(settingsMap))
 }
@@ -201,6 +235,7 @@ const disposeScene = () => {
     }
     camera = null
     previewMesh = null
+    previewMaterial = null
     previewBaseRotation = null
     previewBaseScaling = null
 }
@@ -290,6 +325,27 @@ const applyCurrentMaterialIndex = () => {
     applyAtlasIndexToMesh(previewMesh, previewItem.matCols, previewItem.matRows, safeIndex)
 }
 
+const applyPreviewMaterialSettings = () => {
+    const safeMetallic = clamp(materialMetallic.value ?? 0.75, 0, 1)
+    const safeRoughness = clamp(materialRoughness.value ?? 1, 0, 1)
+    const safeDirectIntensity = clamp(materialDirectIntensity.value ?? 1.5, 0, 3)
+    const safeEnvironmentIntensity = clamp(materialEnvironmentIntensity.value ?? 1, 0, 3)
+
+    materialMetallic.value = safeMetallic
+    materialRoughness.value = safeRoughness
+    materialDirectIntensity.value = safeDirectIntensity
+    materialEnvironmentIntensity.value = safeEnvironmentIntensity
+
+    if (!previewMaterial) {
+        return
+    }
+
+    previewMaterial.metallic = safeMetallic
+    previewMaterial.roughness = safeRoughness
+    previewMaterial.directIntensity = safeDirectIntensity
+    previewMaterial.environmentIntensity = safeEnvironmentIntensity
+}
+
 const loadPreview = async () => {
     if (!scene) {
         return
@@ -305,6 +361,7 @@ const loadPreview = async () => {
         previewMesh.dispose()
         previewMesh = null
     }
+    previewMaterial = null
 
     const isWeapon = previewCategory.value === 'WEAPON'
     const modelPath = isWeapon ? `weapons/${previewItem.model}.glb` : `armors/${previewItem.model}.babylon`
@@ -332,7 +389,7 @@ const loadPreview = async () => {
     previewBaseScaling = merged.scaling.clone()
     loadSettingsForCurrentSelection()
 
-    const material = Materials.getPBRCustomMaterialFrom(
+    previewMaterial = Materials.getPBRCustomMaterialFrom(
         scene,
         `modelRenderMaterial-${previewCategory.value}-${previewItem.model}`,
         `${BASE_EQUIP_MATERIAL_PATH}${isWeapon ? 'weapons/' : 'armors/'}`,
@@ -341,18 +398,19 @@ const loadPreview = async () => {
         1 / previewItem.matRows,
         false,
         {
-            metallic: 0.75,
-            roughness: 1,
-            directIntensity: 1.5,
-            environmentIntensity: 1,
+            metallic: materialMetallic.value,
+            roughness: materialRoughness.value,
+            directIntensity: materialDirectIntensity.value,
+            environmentIntensity: materialEnvironmentIntensity.value,
         }
     )
 
     if (isWeapon) {
-        material.albedoTexture.vScale = -material.albedoTexture.vScale
+        previewMaterial.albedoTexture.vScale = -previewMaterial.albedoTexture.vScale
     }
-    material.unfreeze()
-    merged.material = material
+    previewMaterial.unfreeze()
+    merged.material = previewMaterial
+    applyPreviewMaterialSettings()
 
     applyCurrentMaterialIndex()
     applyPreviewAdjustments()
@@ -368,7 +426,7 @@ const initScene = async () => {
 
     engine = new Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true })
     scene = new Scene(engine)
-    scene.clearColor = new Color4(0.05, 0.05, 0.08, 1)
+    scene.clearColor = new Color4(0, 0, 0, 1)
     scene.imageProcessingConfiguration.exposure = 1.2
     scene.environmentTexture = CubeTexture.CreateFromPrefilteredData('environment_specular.env', scene)
     scene.environmentIntensity = 0.3
@@ -433,7 +491,7 @@ const downloadCanvasPng = () => {
     persistSettingsForCurrentSelection()
     const suffix = imageVariant.value === 'DROP' ? '_drop' : ''
     const filename = `${previewItem.model}${suffix}.png`
-    canvas.toBlob((blob) => {
+    canvasToPngBlobWithTransparentColor(canvas).then((blob) => {
         if (!blob) {
             return
         }
@@ -443,7 +501,7 @@ const downloadCanvasPng = () => {
         link.download = filename
         link.click()
         URL.revokeObjectURL(url)
-    }, 'image/png')
+    })
 }
 
 const centerPreviewMesh = () => {
@@ -474,6 +532,7 @@ watch(selectedModelKey, async () => {
 watch(imageVariant, () => {
     loadSettingsForCurrentSelection()
     applyPreviewAdjustments()
+    applyPreviewMaterialSettings()
     if (!camera || !previewMesh) {
         return
     }
@@ -489,6 +548,10 @@ watch(currentMaterialSlots, () => {
 
 watch(previewMatIndex, () => {
     applyCurrentMaterialIndex()
+})
+
+watch([materialMetallic, materialRoughness, materialDirectIntensity, materialEnvironmentIntensity], () => {
+    applyPreviewMaterialSettings()
 })
 
 onMounted(() => {

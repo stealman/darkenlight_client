@@ -27,7 +27,7 @@ export const WeaponTypes = {
 export const EquipSlotModelsCb = {
     LONGSWORD: new EquipSlotModel(10, EquipItemSlots.R_HAND, WeaponTypes.SWORD),
     BROADSWORD: new EquipSlotModel(20, EquipItemSlots.R_HAND, WeaponTypes.SWORD ),
-    BOW: new EquipSlotModel(500, EquipItemSlots.R_HAND, WeaponTypes.BOW),
+    HUNTERBOW: new EquipSlotModel(510, EquipItemSlots.R_HAND, WeaponTypes.BOW),
 
     ARMOR_PLATE: new EquipSlotModel(1000, EquipItemSlots.BODY, null),
 

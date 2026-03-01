@@ -178,7 +178,7 @@ export const MonsterTypes = {
     // SKELETON RANGED
 
     SKELETON_ARCHER: new MonsterType( 20, MonsterGroups.SKELETON_RANGED, 1, 'Skeleton Archer', 0.6, 1.8,  3.2,
-        new MonsterEquipData([EquipSlotModelsCb.BOW.modelId], 0.8, new Vector3(Math.PI, 0, Math.PI), null, 0), null, null,
+        new MonsterEquipData([EquipSlotModelsCb.HUNTERBOW.modelId], 0.8, new Vector3(Math.PI, 0, Math.PI), null, 0), null, null,
         WeaponSoundTypes.SWORD, BodySoundTypes.HARD, WeaponSoundTypes.SWORD, MonsterSoundTypes.SKELETON, FightSplatTypes.BONE, MonsterAATypes.RANGED_ARROW),
 
     // WITHER MELEE

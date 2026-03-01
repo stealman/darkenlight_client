@@ -23,13 +23,13 @@ export const WeaponsCbManager = {
         this.itemSourceParent = new TransformNode("mobWeaponSources", scene)
 
         // Load materials
-        this.bowMaterial = this.getMaterial("bow", matBowSize)
+        this.bowMaterial = this.getMaterial("hunterbow", matBowSize)
         this.longSwordMaterial = this.getMaterial("longsword", matLongswordSize)
         this.broadSwordMaterial = this.getMaterial("broadsword", matBroadswordSize)
 
         map.set(WeaponModelsCb.LONGSWORD.id, await this.getItem(WeaponModelsCb.LONGSWORD, this.longSwordMaterial))
         map.set(WeaponModelsCb.BROADSWORD.id, await this.getItem(WeaponModelsCb.BROADSWORD, this.broadSwordMaterial))
-        map.set(WeaponModelsCb.BOW.id, await this.getItem(WeaponModelsCb.BOW, this.bowMaterial))
+        map.set(WeaponModelsCb.HUNTERBOW.id, await this.getItem(WeaponModelsCb.HUNTERBOW, this.bowMaterial))
     },
 
     async getItem(data: EquipCbItem, material: PBRCustomMaterial | null = null): Promise<EquipItemType> {
@@ -55,5 +55,5 @@ export const WeaponModelsCb = {
 
     BROADSWORD: new EquipCbItem(EquipSlotModelsCb.BROADSWORD.modelId, "broadsword", Vector3.Zero(), new Vector3(0.22, 0.24, 0.4), new Vector3(0, 2, 0), matBroadswordSize),
 
-    BOW: new EquipCbItem(EquipSlotModelsCb.BOW.modelId, "bow", new Vector3(-0.1, 0, 0), new Vector3(0.17, 0.24, 0.4), null, matBowSize),
+    HUNTERBOW: new EquipCbItem(EquipSlotModelsCb.HUNTERBOW.modelId, "hunterbow", new Vector3(-0.1, 0, 0), new Vector3(0.17, 0.24, 0.4), null, matBowSize),
 }

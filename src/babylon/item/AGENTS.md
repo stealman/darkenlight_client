@@ -18,7 +18,7 @@
 ## Codebooks
 - `codebook/weaponModelsCb.ts`
   - defines weapon models/materials and file paths (`/models/equip/weapons/*.glb`)
-  - `WeaponModelsCb.BOW` is modelId `500`
+  - `WeaponModelsCb.BOW` is modelId `510`
 - `codebook/armorsModelsCb.ts`
   - defines armor models/materials (`/models/equip/armors/*.babylon`)
 - `codebook/equipCbItem.ts`
