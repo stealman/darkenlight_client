@@ -3,9 +3,72 @@
         <div class="dialog-window adaptive model-render-dialog-window">
             <div class="dialog-header">Model Render</div>
             <div class="dialog-content model-render-dialog-content">
-                <canvas ref="renderCanvasRef" class="model-render-canvas"></canvas>
-                <div class="model-render-controls-placeholder">
-                    <button class="dialog-button" @click="downloadCanvasPng">Stahnout PNG</button>
+                <div class="model-render-left-panel">
+                    <label class="model-render-control">
+                        <span>Image Variant</span>
+                        <select v-model="imageVariant">
+                            <option value="INVENTORY">INVENTORY</option>
+                            <option value="DROP">DROP</option>
+                        </select>
+                    </label>
+                    <label class="model-render-control">
+                        <span>Type</span>
+                        <select v-model="previewCategory">
+                            <option value="WEAPON">WEAPON</option>
+                            <option value="ARMOR">ARMOR</option>
+                        </select>
+                    </label>
+                    <label class="model-render-control">
+                        <span>Model</span>
+                        <select v-model="selectedModelKey">
+                            <option v-for="option in currentModelOptions" :key="option.key" :value="option.key">
+                                {{ option.label }}
+                            </option>
+                        </select>
+                    </label>
+                    <label class="model-render-control">
+                        <span>Material Index</span>
+                        <select v-model.number="previewMatIndex">
+                            <option v-for="index in materialIndexOptions" :key="index" :value="index">
+                                {{ index }}
+                            </option>
+                        </select>
+                    </label>
+                </div>
+                <div class="model-render-right-panel">
+                    <canvas ref="renderCanvasRef" class="model-render-canvas"></canvas>
+                    <div class="model-render-controls">
+                        <div class="model-render-controls-grid">
+                            <label class="model-render-control">
+                                <span>Rot X: {{ rotationXDeg }}</span>
+                                <input v-model.number="rotationXDeg" type="range" min="-180" max="180" step="1" @input="applyPreviewAdjustments">
+                            </label>
+                            <label class="model-render-control">
+                                <span>Rot Y: {{ rotationYDeg }}</span>
+                                <input v-model.number="rotationYDeg" type="range" min="-180" max="180" step="1" @input="applyPreviewAdjustments">
+                            </label>
+                            <label class="model-render-control">
+                                <span>Rot Z: {{ rotationZDeg }}</span>
+                                <input v-model.number="rotationZDeg" type="range" min="-180" max="180" step="1" @input="applyPreviewAdjustments">
+                            </label>
+                            <label class="model-render-control">
+                                <span>Scale X: {{ scaleXMultiplier.toFixed(2) }}</span>
+                                <input v-model.number="scaleXMultiplier" type="range" min="0" max="3" step="0.01" @input="applyPreviewAdjustments">
+                            </label>
+                            <label class="model-render-control">
+                                <span>Scale Y: {{ scaleYMultiplier.toFixed(2) }}</span>
+                                <input v-model.number="scaleYMultiplier" type="range" min="0" max="3" step="0.01" @input="applyPreviewAdjustments">
+                            </label>
+                            <label class="model-render-control">
+                                <span>Scale Z: {{ scaleZMultiplier.toFixed(2) }}</span>
+                                <input v-model.number="scaleZMultiplier" type="range" min="0" max="3" step="0.01" @input="applyPreviewAdjustments">
+                            </label>
+                        </div>
+                        <div class="model-render-actions">
+                            <button class="dialog-button model-render-action-button" @click="downloadCanvasPng">Stahnout PNG</button>
+                            <button class="dialog-button model-render-action-button" @click="centerPreviewMesh">Vycentrovat</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -13,17 +76,119 @@
 </template>
 
 <script setup>
-import { ArcRotateCamera, Color4, Engine, HemisphericLight, Mesh, Scene, SceneLoader, Vector2, Vector3 } from '@babylonjs/core'
+import { ArcRotateCamera, Color3, Color4, CubeTexture, DirectionalLight, Engine, Mesh, Scene, SceneLoader, Vector2, Vector3 } from '@babylonjs/core'
 import { Materials } from '@/babylon/materials'
 import { WeaponModelsCb } from '@/babylon/item/codebook/weaponModelsCb'
-import { nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { ARMOR_MATERIAL_METALIC, ArmorModelsCb, BASE_EQUIP_MATERIAL_PATH } from '@/babylon/item/codebook/armorsModelsCb'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { Settings } from '@/settings/settings'
+
+const MODEL_RENDER_SETTINGS_LS_KEY = 'model-render-settings'
+
+const WEAPON_OPTIONS = Object.entries(WeaponModelsCb).map(([key, item]) => ({ key, item, label: `${key} (${item.model})` }))
+const ARMOR_OPTIONS = Object.entries(ArmorModelsCb).map(([key, item]) => ({ key, item, label: `${key} (${item.model})` }))
 
 const dialogVisible = ref(false)
 const renderCanvasRef = ref(null)
+const imageVariant = ref('INVENTORY')
+const rotationXDeg = ref(0)
+const rotationYDeg = ref(0)
+const rotationZDeg = ref(0)
+const scaleXMultiplier = ref(1)
+const scaleYMultiplier = ref(1)
+const scaleZMultiplier = ref(1)
+const previewCategory = ref('WEAPON')
+const selectedModelKey = ref(WEAPON_OPTIONS[0]?.key ?? '')
+const currentModelOptions = computed(() => (previewCategory.value === 'WEAPON' ? WEAPON_OPTIONS : ARMOR_OPTIONS))
+const previewMatIndex = ref(0)
+const selectedPreviewItem = computed(() => {
+    const options = previewCategory.value === 'WEAPON' ? WEAPON_OPTIONS : ARMOR_OPTIONS
+    return options.find((option) => option.key === selectedModelKey.value)?.item ?? null
+})
+const currentMaterialSlots = computed(() => {
+    const item = selectedPreviewItem.value
+    if (!item) {
+        return 0
+    }
+    return item.matCols * item.matRows
+})
+const materialIndexOptions = computed(() => {
+    const maxIndex = Math.max(currentMaterialSlots.value, 0)
+    return Array.from({ length: maxIndex + 1 }, (_, i) => i)
+})
 
 let engine = null
 let scene = null
 let camera = null
+let previewMesh = null
+let previewBaseRotation = null
+let previewBaseScaling = null
+let previewLoadId = 0
+
+const CAMERA_PRESETS = {
+    INVENTORY: {
+        alpha: -Math.PI / 4,
+        beta: Math.PI / 2.8,
+    },
+    DROP: {
+        alpha: (-3 * Math.PI) / 4,
+        beta: 0.88,
+    },
+}
+
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
+
+const getCurrentSettingsKey = () => `${previewCategory.value}_${selectedModelKey.value}_${imageVariant.value}`
+
+const getStoredSettingsMap = () => {
+    try {
+        const raw = localStorage.getItem(MODEL_RENDER_SETTINGS_LS_KEY)
+        if (!raw) {
+            return {}
+        }
+        const parsed = JSON.parse(raw)
+        if (!parsed || typeof parsed !== 'object') {
+            return {}
+        }
+        return parsed
+    } catch {
+        return {}
+    }
+}
+
+const loadSettingsForCurrentSelection = () => {
+    const settingsMap = getStoredSettingsMap()
+    const settings = settingsMap[getCurrentSettingsKey()]
+    if (!settings || typeof settings !== 'object') {
+        rotationXDeg.value = 0
+        rotationYDeg.value = 0
+        rotationZDeg.value = 0
+        scaleXMultiplier.value = 1
+        scaleYMultiplier.value = 1
+        scaleZMultiplier.value = 1
+        return
+    }
+
+    rotationXDeg.value = clamp(Number(settings.rotationXDeg ?? 0), -180, 180)
+    rotationYDeg.value = clamp(Number(settings.rotationYDeg ?? 0), -180, 180)
+    rotationZDeg.value = clamp(Number(settings.rotationZDeg ?? 0), -180, 180)
+    scaleXMultiplier.value = clamp(Number(settings.scaleXMultiplier ?? 1), 0, 3)
+    scaleYMultiplier.value = clamp(Number(settings.scaleYMultiplier ?? 1), 0, 3)
+    scaleZMultiplier.value = clamp(Number(settings.scaleZMultiplier ?? 1), 0, 3)
+}
+
+const persistSettingsForCurrentSelection = () => {
+    const settingsMap = getStoredSettingsMap()
+    settingsMap[getCurrentSettingsKey()] = {
+        rotationXDeg: rotationXDeg.value,
+        rotationYDeg: rotationYDeg.value,
+        rotationZDeg: rotationZDeg.value,
+        scaleXMultiplier: scaleXMultiplier.value,
+        scaleYMultiplier: scaleYMultiplier.value,
+        scaleZMultiplier: scaleZMultiplier.value,
+    }
+    localStorage.setItem(MODEL_RENDER_SETTINGS_LS_KEY, JSON.stringify(settingsMap))
+}
 
 const disposeScene = () => {
     if (scene) {
@@ -35,6 +200,9 @@ const disposeScene = () => {
         engine = null
     }
     camera = null
+    previewMesh = null
+    previewBaseRotation = null
+    previewBaseScaling = null
 }
 
 const getAtlasUvcOffsets = (matCols, matsRows, matIndex, pad = 0) => {
@@ -73,54 +241,121 @@ const frameMesh = (mesh) => {
 
     camera.target = center
     camera.radius = Math.max(maxExtent * 3.0, 0.8)
-    camera.alpha = -Math.PI / 4
-    camera.beta = Math.PI / 2.8
+    const preset = CAMERA_PRESETS[imageVariant.value]
+    camera.alpha = preset.alpha
+    camera.beta = preset.beta
 }
 
-const loadBowPreview = async () => {
+const degToRad = (deg) => (deg * Math.PI) / 180
+
+const applyPreviewAdjustments = () => {
+    if (!previewMesh || !previewBaseRotation || !previewBaseScaling) {
+        return
+    }
+
+    const safeScaleX = Math.max(scaleXMultiplier.value ?? 1, 0)
+    const safeScaleY = Math.max(scaleYMultiplier.value ?? 1, 0)
+    const safeScaleZ = Math.max(scaleZMultiplier.value ?? 1, 0)
+    scaleXMultiplier.value = safeScaleX
+    scaleYMultiplier.value = safeScaleY
+    scaleZMultiplier.value = safeScaleZ
+
+    previewMesh.rotation.set(
+        previewBaseRotation.x + degToRad(rotationXDeg.value || 0),
+        previewBaseRotation.y + degToRad(rotationYDeg.value || 0),
+        previewBaseRotation.z + degToRad(rotationZDeg.value || 0)
+    )
+    previewMesh.scaling.set(
+        previewBaseScaling.x * safeScaleX,
+        previewBaseScaling.y * safeScaleY,
+        previewBaseScaling.z * safeScaleZ
+    )
+    previewMesh.computeWorldMatrix(true)
+}
+
+const getSelectedPreviewItem = () => {
+    return selectedPreviewItem.value
+}
+
+const applyCurrentMaterialIndex = () => {
+    const previewItem = getSelectedPreviewItem()
+    if (!previewMesh || !previewItem) {
+        return
+    }
+    const maxIndex = Math.max(previewItem.matCols * previewItem.matRows, 0)
+    const safeIndex = clamp(previewMatIndex.value, 0, maxIndex)
+    if (safeIndex !== previewMatIndex.value) {
+        previewMatIndex.value = safeIndex
+    }
+    applyAtlasIndexToMesh(previewMesh, previewItem.matCols, previewItem.matRows, safeIndex)
+}
+
+const loadPreview = async () => {
     if (!scene) {
         return
     }
 
-    const bowData = WeaponModelsCb.BOW
-    const importResult = await SceneLoader.ImportMeshAsync('', '/models/equip/', `weapons/${bowData.model}.glb`, scene)
-    const sourceMesh = importResult.meshes.find((m) => m instanceof Mesh && m.getTotalVertices() > 0)
-    if (!sourceMesh) {
+    const previewItem = getSelectedPreviewItem()
+    if (!previewItem) {
         return
     }
 
-    const merged = Mesh.MergeMeshes([sourceMesh], true, true)
+    const loadId = ++previewLoadId
+    if (previewMesh) {
+        previewMesh.dispose()
+        previewMesh = null
+    }
+
+    const isWeapon = previewCategory.value === 'WEAPON'
+    const modelPath = isWeapon ? `weapons/${previewItem.model}.glb` : `armors/${previewItem.model}.babylon`
+    const importResult = await SceneLoader.ImportMeshAsync('', '/models/equip/', modelPath, scene)
+    const sourceMeshes = importResult.meshes.filter((m) => m instanceof Mesh && m.getTotalVertices() > 0)
+    if (sourceMeshes.length === 0) {
+        return
+    }
+
+    const merged = Mesh.MergeMeshes(sourceMeshes, true, true)
     if (!merged) {
         return
     }
+    if (loadId !== previewLoadId) {
+        merged.dispose()
+        return
+    }
 
-    merged.position.copyFrom(bowData.pos ?? Vector3.Zero())
+    merged.position.copyFrom(previewItem.pos ?? Vector3.Zero())
     merged.rotationQuaternion = null
-    merged.rotation.copyFrom(bowData.rot ?? Vector3.Zero())
-    merged.scaling.copyFrom(bowData.scale)
+    merged.rotation.copyFrom(previewItem.rot ?? Vector3.Zero())
+    merged.scaling.copyFrom(previewItem.scale)
+    previewMesh = merged
+    previewBaseRotation = merged.rotation.clone()
+    previewBaseScaling = merged.scaling.clone()
+    loadSettingsForCurrentSelection()
 
     const material = Materials.getPBRCustomMaterialFrom(
         scene,
-        'modelRenderBowMaterial',
-        '/models/equip/weapons/',
-        'bow.png',
-        1 / bowData.matCols,
-        1 / bowData.matRows,
+        `modelRenderMaterial-${previewCategory.value}-${previewItem.model}`,
+        `${BASE_EQUIP_MATERIAL_PATH}${isWeapon ? 'weapons/' : 'armors/'}`,
+        isWeapon ? `${previewItem.model}.png` : `${ARMOR_MATERIAL_METALIC}.png`,
+        1 / previewItem.matCols,
+        1 / previewItem.matRows,
         false,
         {
-            metallic: 0.25,
+            metallic: 0.75,
             roughness: 1,
             directIntensity: 1.5,
             environmentIntensity: 1,
         }
     )
 
-    material.albedoTexture.vScale = -material.albedoTexture.vScale
+    if (isWeapon) {
+        material.albedoTexture.vScale = -material.albedoTexture.vScale
+    }
     material.unfreeze()
     merged.material = material
 
-    // Same atlas indexing logic as equip rendering; default to first material tile.
-    applyAtlasIndexToMesh(merged, bowDtata.matCols, bowData.matRows, 0)
+    applyCurrentMaterialIndex()
+    applyPreviewAdjustments()
     merged.computeWorldMatrix(true)
     frameMesh(merged)
 }
@@ -134,14 +369,19 @@ const initScene = async () => {
     engine = new Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true })
     scene = new Scene(engine)
     scene.clearColor = new Color4(0.05, 0.05, 0.08, 1)
+    scene.imageProcessingConfiguration.exposure = 1.2
+    scene.environmentTexture = CubeTexture.CreateFromPrefilteredData('environment_specular.env', scene)
+    scene.environmentIntensity = 0.3
 
     camera = new ArcRotateCamera('modelRenderCamera', -Math.PI / 4, Math.PI / 3, 4, Vector3.Zero(), scene)
-    camera.attachControl(canvas, true)
+    camera.detachControl()
 
-    const light = new HemisphericLight('modelRenderLight', new Vector3(0, 1, 0), scene)
-    light.intensity = 1.1
+    const light = new DirectionalLight('modelRenderSunLight', new Vector3(-0.75, -0.75, 0.3), scene)
+    light.position = new Vector3(30, 30, 30)
+    light.diffuse = new Color3(1, 0.91, 0.88)
+    light.intensity = 1.5
 
-    await loadBowPreview()
+    await loadPreview()
 
     engine.runRenderLoop(() => {
         scene?.render()
@@ -186,7 +426,13 @@ const downloadCanvasPng = () => {
         return
     }
 
-    const filename = `model-render-${Date.now()}.png`
+    const previewItem = getSelectedPreviewItem()
+    if (!previewItem) {
+        return
+    }
+    persistSettingsForCurrentSelection()
+    const suffix = imageVariant.value === 'DROP' ? '_drop' : ''
+    const filename = `${previewItem.model}${suffix}.png`
     canvas.toBlob((blob) => {
         if (!blob) {
             return
@@ -199,6 +445,51 @@ const downloadCanvasPng = () => {
         URL.revokeObjectURL(url)
     }, 'image/png')
 }
+
+const centerPreviewMesh = () => {
+    if (!previewMesh) {
+        return
+    }
+    frameMesh(previewMesh)
+}
+
+watch(previewCategory, async () => {
+    const firstOption = currentModelOptions.value[0]
+    const nextKey = firstOption?.key ?? ''
+    const keyChanged = selectedModelKey.value !== nextKey
+    selectedModelKey.value = nextKey
+    if (keyChanged || !dialogVisible.value || !scene) {
+        return
+    }
+    await loadPreview()
+})
+
+watch(selectedModelKey, async () => {
+    if (!dialogVisible.value || !scene) {
+        return
+    }
+    await loadPreview()
+})
+
+watch(imageVariant, () => {
+    loadSettingsForCurrentSelection()
+    applyPreviewAdjustments()
+    if (!camera || !previewMesh) {
+        return
+    }
+    frameMesh(previewMesh)
+})
+
+watch(currentMaterialSlots, () => {
+    const safeIndex = clamp(previewMatIndex.value, 0, Math.max(currentMaterialSlots.value, 0))
+    if (safeIndex !== previewMatIndex.value) {
+        previewMatIndex.value = safeIndex
+    }
+})
+
+watch(previewMatIndex, () => {
+    applyCurrentMaterialIndex()
+})
 
 onMounted(() => {
     window.addEventListener('keydown', onDialogKeyDown)
@@ -218,16 +509,37 @@ defineExpose({
 
 <style scoped>
 .model-render-dialog-window {
-    width: 336px;
-    max-width: min(336px, 94vw);
+    width: 672px;
+    max-width: min(672px, 94vw);
 }
 
 .model-render-dialog-content {
     display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    flex-wrap: nowrap;
+    gap: 8px;
+    padding: 8px;
+}
+
+.model-render-left-panel {
+    width: 200px;
+    max-width: 100%;
+    border: 1px dashed rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.03);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px;
+}
+
+.model-render-right-panel {
+    width: 440px;
+    max-width: 100%;
+    display: flex;
     flex-direction: column;
     align-items: center;
     gap: 8px;
-    padding: 8px;
 }
 
 .model-render-canvas {
@@ -238,14 +550,45 @@ defineExpose({
     background: #0d0d12;
 }
 
-.model-render-controls-placeholder {
-    width: 300px;
-    min-height: 42px;
+.model-render-controls {
+    width: 100%;
+    max-width: 100%;
     border: 1px dashed rgba(255, 255, 255, 0.2);
     background: rgba(255, 255, 255, 0.03);
     display: flex;
-    align-items: center;
-    justify-content: center;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px;
+}
+
+.model-render-controls-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+}
+
+.model-render-control {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    font-size: 11px;
+}
+
+.model-render-control input {
+    width: 100%;
+}
+
+.model-render-control select {
+    width: 100%;
+}
+
+.model-render-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.model-render-action-button {
+    width: 100%;
 }
 </style>
-
