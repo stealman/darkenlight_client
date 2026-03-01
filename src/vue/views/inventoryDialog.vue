@@ -239,14 +239,13 @@ const onDropItemClick = () => {
     if (index === null) {
         return
     }
-    console.log(`[Inventory] Drop item clicked (dummy): index=${index}, name="${itemName}"`)
-
     const item = InventoryManager.inventory[index]
     if (!item) {
         return
     }
     InventoryManager.dropItem(item)
     hideItemInfoOverlay()
+    refreshInventorySlotImages()
 }
 
 const onInventoryDoubleClick = (index) => {

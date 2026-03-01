@@ -35,6 +35,7 @@ import { MyStatusPanel } from '@/gui/myStatusPanel'
 import { Inspector } from '@babylonjs/inspector'
 import { ActionButtonsManager } from '@/gui/actionButtonsManager'
 import { GuiButtonManager, GuiButtonsManager } from '@/gui/guiButtonsManager'
+import { GroundItemsManager } from '@/babylon/world/groundItemsManager'
 
 /**
  * Main Renderer
@@ -83,6 +84,7 @@ export const Renderer = {
         WeatherManager.initialize()
         StepMarksRenderer.initialize(this.scene)
         FightSplatsRenderer.initialize(this.scene)
+        GroundItemsManager.initialize(this.scene)
         ArrowsManager.initialize()
         SelectedTargetPanel.initialize()
         MyStatusPanel.initialize()
@@ -165,6 +167,7 @@ export const Renderer = {
             this.actualizeDebug()
             StepMarksRenderer.update(timeRate, actualTime)
             FightSplatsRenderer.update(timeRate, actualTime)
+            GroundItemsManager.update(timeRate, actualTime)
         }
 
         if (this.frame % 60 === 0) {

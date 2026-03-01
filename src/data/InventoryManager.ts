@@ -3,6 +3,7 @@ import { Item } from '@/data/items/item'
 import { Connector } from '@/network/connector'
 import { EquipItemMsg, UnequipItemMsg } from '@/network/messages'
 import { AudioManager } from '@/babylon/audio/audioManager'
+import { GroundItemsManager } from '@/babylon/world/groundItemsManager'
 
 export const InventoryManager = {
     inventory: [] as Item[],
@@ -33,5 +34,7 @@ export const InventoryManager = {
     dropItem(item: Item) {
         console.log("Dropping item", item)
         AudioManager.playBackpackHandle2()
+        GroundItemsManager.addItems([{ item, x: MyPlayer.myChar.pos.x, z: MyPlayer.myChar.pos.z }])
+        this.inventory = this.inventory.filter(i => i !== item)
     }
 }
