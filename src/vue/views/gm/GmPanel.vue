@@ -9,6 +9,7 @@
             <button :disabled="actualTab === GMTabs.BIOME_EDIT" @click="selectTab(GMTabs.BIOME_EDIT)">Biome</button>
             <button :disabled="actualTab === GMTabs.WALLS_AND_FENCES_EDIT" @click="selectTab(GMTabs.WALLS_AND_FENCES_EDIT)">Walls & Fences</button>
             <button :disabled="actualTab === GMTabs.SPAWNS_EDIT" @click="selectTab(GMTabs.SPAWNS_EDIT)">Spawns</button>
+            <button @click="openModelRenderDialog">Model Render</button>
         </div>
 
         <!-- Overview -->
@@ -35,23 +36,31 @@
             <SpawnPanel />
         </div>
 
+        <ModelRenderPanel ref="modelRenderPanel" />
+
     </div>
 </template>
 
 <script setup>
 
 import { GMManager, GmTabs as GMTabs } from '@/gm/GM'
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
 import BiomePanel from '@/vue/views/gm/BiomePanel.vue'
 import TerrainPanel from '@/vue/views/gm/TerrainPanel.vue'
 import WallsFencesPanel from '@/vue/views/gm/WallsFencesPanel.vue'
 import SpawnPanel from '@/vue/views/gm/SpawnPanel.vue'
+import ModelRenderPanel from '@/vue/views/gm/ModelRenderPanel.vue'
 
 const actualTab = ref(GMTabs.OVERVIEW)
+const modelRenderPanel = ref(null)
 
 const selectTab = (tab) => {
     actualTab.value = tab
     GMManager.openTab(tab)
+}
+
+const openModelRenderDialog = () => {
+    modelRenderPanel.value?.openDialog()
 }
 </script>
 
