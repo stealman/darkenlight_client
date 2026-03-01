@@ -1,4 +1,4 @@
-import { Matrix, Mesh, Quaternion, Scene, Vector2, Vector3 } from '@babylonjs/core'
+import { Color4, Matrix, Mesh, Quaternion, Scene, Sprite, SpriteManager, Vector2, Vector3 } from '@babylonjs/core'
 import { ViewportManager } from '@/utils/viewport'
 import { Item } from '@/data/items/item'
 import { Utils } from '@/utils/utils'
@@ -15,13 +15,33 @@ export const GroundItemsManager = {
     _tmpRot: new Matrix(),
     _tmpWorld: new Matrix(),
     _tmpQuat: Quaternion.Identity(),
+    _tmpVisibleItemIds: new Set<number>(),
+
+    spriteManager: null as SpriteManager | null,
+    fxParticles: new Array<GroundItemFxParticle>(),
+    lastFxUpdateTime: 0,
 
     ITEM_BOX_SIZE: 0.2,
-    ITEM_Y_OFFSET: 0.02,
+    ITEM_Y_OFFSET: 0.1,
+    ITEM_ROTATION_X: -Math.PI / 2,
+
+    FX_POOL_LIMIT: 250,
+    FX_TARGET_PER_ITEM: 8,
+    FX_LIFE_MIN: 0.75,
+    FX_LIFE_MAX: 1.5,
+    FX_SPAWN_XZ_RANGE: 0.4,
+    FX_SPAWN_Y_MIN: 0,
+    FX_SPAWN_Y_MAX: 0.5,
+    FX_FADE_IN_RATIO: 0.2,
+    FX_FADE_OUT_RATIO: 0.35,
+    FX_PARTICLE_SIZE: 0.4,
+    yellow_fx: new Color4(0.8, 0.6, 0.3, 1),
 
     initialize(scene: Scene) {
         this.scene = scene
         this.itemTypes.clear()
+        this.fxParticles = []
+        this.lastFxUpdateTime = 0
 
         EquipManager.itemTypes.forEach((equipType, modelId) => {
             if (!equipType.mesh) {
@@ -43,14 +63,21 @@ export const GroundItemsManager = {
             groundMesh.setEnabled(false)
             groundMesh.alwaysSelectAsActiveMesh = true
             groundMesh.isPickable = false
+            groundMesh.receiveShadows = true
             groundMesh.thinInstanceCount = 0
 
             this.itemTypes.set(modelId, new GroundItemType(modelId, equipType.cbData, groundMesh))
         })
+
+        this.initializeItemFx(scene)
     },
 
     addItems(data: Array<{ item: Item, x: number, z: number }>) {
         for (const dt of data) {
+
+            dt.x += (Math.random() - 0.5)
+            dt.z += (Math.random() - 0.5)
+
             const y = Utils.calculateYPos(dt.x, dt.z, this.ITEM_BOX_SIZE) + this.ITEM_Y_OFFSET
             const item = new GroundItem(dt.item, new Vector3(dt.x, y, dt.z))
             this.items.push(item)
@@ -61,9 +88,10 @@ export const GroundItemsManager = {
 
     },
 
-    update(_timeRate: number, time: number) {
+    onFrame(_timeRate: number, time: number) {
         this.updateVisibleItems()
         this.renderItems(time)
+        this.updateItemFx(time)
     },
 
     updateVisibleItems() {
@@ -101,7 +129,7 @@ export const GroundItemsManager = {
             let i = 0
             for (const item of typeItems) {
                 Matrix.TranslationToRef(item.pos.x, item.pos.y, item.pos.z, this._tmpPos)
-                Quaternion.FromEulerAnglesToRef(0, item.rotationY, 0, this._tmpQuat)
+                Quaternion.FromEulerAnglesToRef(this.ITEM_ROTATION_X, item.rotationY, 0, this._tmpQuat)
                 Matrix.FromQuaternionToRef(this._tmpQuat, this._tmpRot)
                 this._tmpRot.multiplyToRef(this._tmpPos, this._tmpWorld)
 
@@ -116,6 +144,132 @@ export const GroundItemsManager = {
             type.mesh.thinInstanceBufferUpdated('uvc')
             type.mesh.thinInstanceRefreshBoundingInfo()
         })
+    },
+
+    initializeItemFx(scene: Scene) {
+        this.spriteManager = new SpriteManager(
+            'ground-item-fx-sprites',
+            'images/gfx/flare-star.png',
+            this.FX_POOL_LIMIT,
+            36,
+            scene
+        )
+        this.spriteManager.blendMode = 1
+
+        for (let i = 0; i < this.FX_POOL_LIMIT; i++) {
+            const sprite = new Sprite(`ground-item-fx-${i}`, this.spriteManager)
+            sprite.isVisible = false
+            sprite.size = this.FX_PARTICLE_SIZE
+            sprite.color = new Color4(this.yellow_fx.r, this.yellow_fx.g, this.yellow_fx.b, this.yellow_fx.a)
+            this.fxParticles.push(new GroundItemFxParticle(sprite))
+        }
+    },
+
+    updateItemFx(time: number) {
+        if (!this.spriteManager || this.fxParticles.length === 0) {
+            return
+        }
+
+        if (this.lastFxUpdateTime === 0) {
+            this.lastFxUpdateTime = time
+            return
+        }
+
+        const dt = Math.min((time - this.lastFxUpdateTime) / 1000, 0.2)
+        this.lastFxUpdateTime = time
+
+        this._tmpVisibleItemIds.clear()
+        for (const item of this.visibleItems) {
+            this._tmpVisibleItemIds.add(item.item.id)
+        }
+
+        const activePerItem = new Map<number, number>()
+        for (const particle of this.fxParticles) {
+            if (!particle.active) {
+                continue
+            }
+
+            if (!this._tmpVisibleItemIds.has(particle.ownerItemId)) {
+                particle.life = 0
+                continue
+            }
+
+            activePerItem.set(particle.ownerItemId, (activePerItem.get(particle.ownerItemId) || 0) + 1)
+        }
+
+        const visibleCount = this.visibleItems.length
+        const targetPerItem = visibleCount > 0
+            ? Math.max(1, Math.min(this.FX_TARGET_PER_ITEM, Math.floor(this.FX_POOL_LIMIT / visibleCount)))
+            : 0
+
+        if (targetPerItem > 0) {
+            for (const item of this.visibleItems) {
+                const itemId = item.item.id
+                let toSpawn = targetPerItem - (activePerItem.get(itemId) || 0)
+                while (toSpawn > 0) {
+                    if (!this.spawnFxParticle(item)) {
+                        break
+                    }
+                    toSpawn--
+                }
+            }
+        }
+
+        for (const particle of this.fxParticles) {
+            if (!particle.active) {
+                continue
+            }
+
+            particle.life -= dt
+            if (particle.life <= 0) {
+                particle.deactivate()
+                continue
+            }
+
+            const lifeRatio = particle.life / particle.maxLife
+            const ageRatio = 1 - lifeRatio
+
+            const fadeIn = this.FX_FADE_IN_RATIO > 0
+                ? Math.min(1, ageRatio / this.FX_FADE_IN_RATIO)
+                : 1
+            const fadeOut = this.FX_FADE_OUT_RATIO > 0
+                ? Math.min(1, lifeRatio / this.FX_FADE_OUT_RATIO)
+                : 1
+            const alphaFactor = Math.min(fadeIn, fadeOut)
+
+            particle.sprite.color.a = this.yellow_fx.a * alphaFactor
+        }
+    },
+
+    spawnFxParticle(item: GroundItem): boolean {
+        for (const particle of this.fxParticles) {
+            if (particle.active) {
+                continue
+            }
+
+            const xOffset = (Math.random() * 2 - 1) * this.FX_SPAWN_XZ_RANGE
+            const zOffset = (Math.random() * 2 - 1) * this.FX_SPAWN_XZ_RANGE
+            const yOffset = this.FX_SPAWN_Y_MIN + Math.random() * (this.FX_SPAWN_Y_MAX - this.FX_SPAWN_Y_MIN)
+
+            particle.active = true
+            particle.ownerItemId = item.item.id
+            particle.maxLife = this.FX_LIFE_MIN + Math.random() * (this.FX_LIFE_MAX - this.FX_LIFE_MIN)
+            particle.life = particle.maxLife
+
+            particle.position.set(
+                item.pos.x + xOffset,
+                item.pos.y + yOffset,
+                item.pos.z + zOffset
+            )
+
+            particle.sprite.position.copyFrom(particle.position)
+            particle.sprite.isVisible = true
+            particle.sprite.color.set(this.yellow_fx.r, this.yellow_fx.g, this.yellow_fx.b, 0)
+            particle.sprite.size = this.FX_PARTICLE_SIZE
+            particle.sprite.angle = Math.random() * Math.PI * 2
+            return true
+        }
+        return false
     },
 }
 
@@ -132,7 +286,7 @@ class GroundItem {
         const type = GroundItemsManager.itemTypes.get(item.modelId)
         const matIndex = Math.max((item.materialId || 1) - 1, 0)
         this.matVector = this.getAtlasUvcOffsets(type?.cbData.matCols || 1, type?.cbData.matRows || 1, matIndex)
-        this.rotationY = (item.id % 8) * (Math.PI / 8)
+        this.rotationY = Math.random() * Math.PI * 2
     }
 
     getAtlasUvcOffsets(matCols: number, matRows: number, matIndex: number, pad = 0) {
@@ -191,5 +345,26 @@ class GroundItemType {
         this.mesh.alwaysSelectAsActiveMesh = true
         this._thinReady = false
         this.ensureThinBuffers(this)
+    }
+}
+
+class GroundItemFxParticle {
+    sprite: Sprite
+    active: boolean = false
+    ownerItemId: number = -1
+    position: Vector3 = Vector3.Zero()
+    life: number = 0
+    maxLife: number = 0
+
+    constructor(sprite: Sprite) {
+        this.sprite = sprite
+    }
+
+    deactivate() {
+        this.active = false
+        this.ownerItemId = -1
+        this.life = 0
+        this.maxLife = 0
+        this.sprite.isVisible = false
     }
 }

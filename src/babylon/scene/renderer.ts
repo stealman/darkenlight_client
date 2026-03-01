@@ -142,6 +142,7 @@ export const Renderer = {
             WorldRenderer.checkRenderWorld()
             CharacterManager.onFrame(timeRate, actualTime, this.frame)
             MonsterManager.onFrame(timeRate, actualTime, this.frame)
+            GroundItemsManager.onFrame(timeRate, actualTime)
 
             EquipManager.onFrame()
             ArrowsManager.onFrame(timeRate, actualTime)
@@ -167,7 +168,6 @@ export const Renderer = {
             this.actualizeDebug()
             StepMarksRenderer.update(timeRate, actualTime)
             FightSplatsRenderer.update(timeRate, actualTime)
-            GroundItemsManager.update(timeRate, actualTime)
         }
 
         if (this.frame % 60 === 0) {
