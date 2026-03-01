@@ -147,12 +147,20 @@ const showItemInfoOverlay = (item, pointer) => {
     })
 }
 
+const resolveItemImage = (item) => {
+    if (!item?.imgUrl) {
+        return EMPTY_ITEM_IMAGE
+    }
+
+    return item.imgUrl.startsWith('/') ? item.imgUrl : `/${item.imgUrl}`
+}
+
 const resolveSlotImage = (slot) => {
     const item = MyPlayer.myChar?.equipSet?.get(slot)
     if (!item) {
         return null
     }
-    return EMPTY_ITEM_IMAGE
+    return resolveItemImage(item)
 }
 
 const refreshEquipSlotImages = () => {
@@ -170,8 +178,9 @@ const refreshEquipSlotImages = () => {
 const refreshInventorySlotImages = () => {
     const nextSlotImages = Array(INVENTORY_SLOT_COUNT).fill(null)
     for (let i = 0; i < INVENTORY_SLOT_COUNT; i++) {
-        if (InventoryManager.inventory[i]) {
-            nextSlotImages[i] = EMPTY_ITEM_IMAGE
+        const item = InventoryManager.inventory[i]
+        if (item) {
+            nextSlotImages[i] = resolveItemImage(item)
         }
     }
     inventorySlotImages.value = nextSlotImages

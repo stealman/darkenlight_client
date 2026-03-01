@@ -30,4 +30,3 @@ export const InventoryManager = {
         AudioManager.playBackpackHandle2()
     }
 }
-

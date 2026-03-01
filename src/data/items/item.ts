@@ -64,9 +64,8 @@ export class Item {
         this.modelId = modelId
         this.materialId = matId
         this.name = name
-        this.imgUrl = imgUrl
+        this.imgUrl = "images/items/" + imgUrl
         this.slotInfo = EquipSlotModelsCb.getById(modelId)!
-
         if (!this.slotInfo) {
             throw new Error(`EquipSlotInfo not found for modelId: ${modelId}`)
         }
