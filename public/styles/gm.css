@@ -31,7 +31,7 @@ div.gm-action-selection button:disabled {
     height: 64px;
     background-repeat: no-repeat;
     border: 1px solid #444;
-    cursor: pointer;
+    cursor: url('/images/cursor-pointer.png'), pointer;
 }
 
 .terrain-tile.selected {
@@ -46,7 +46,7 @@ div.gm-action-selection button:disabled {
     display: inline;
     align-items: center;
     margin: 4px 4px;
-    cursor: pointer;
+    cursor: url('/images/cursor-pointer.png'), pointer;
 }
 
 .tree-item.selected {
@@ -71,4 +71,5 @@ table.gmSpawnTable select:disabled {
     background-color: #fff;
     color: black;
 }
+
 

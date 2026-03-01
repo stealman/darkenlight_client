@@ -32,7 +32,7 @@ div.action-button {
 
     align-items: center;
     justify-content: center;
-    cursor: pointer;
+    cursor: url('/images/cursor-pointer.png'), pointer;
 
     background-size: contain;
     background-repeat: no-repeat;
@@ -115,3 +115,4 @@ div.action-button.active {
                 0 0 6px rgba(230, 60, 60, 0.35);
     }
 }
+

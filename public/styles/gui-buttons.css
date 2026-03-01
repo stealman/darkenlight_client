@@ -6,7 +6,7 @@ div.gui-action-button {
 
     align-items: center;
     justify-content: center;
-    cursor: pointer;
+    cursor: url('/images/cursor-pointer.png'), pointer;
 
     background-size: contain;
     background-repeat: no-repeat;
@@ -43,5 +43,6 @@ div#btn-backpack {
     top: 0px;
     right: 0px;
 }
+
 
 

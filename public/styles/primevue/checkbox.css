@@ -2,7 +2,7 @@
 .p-checkbox {
     display: inline-flex;
     align-items: center;
-    cursor: pointer;
+    cursor: url('/images/cursor-pointer.png'), pointer;
     user-select: none;
 }
 
@@ -52,3 +52,4 @@
     border-color: var(--dialog-color-dark);
     box-shadow: 0 0 6px var(--dialog-glow);
 }
+

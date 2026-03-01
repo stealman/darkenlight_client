@@ -89,7 +89,7 @@
     border-radius: 4px;
     padding: 10px 20px;
     font-size: 0.8rem;
-    cursor: pointer;
+    cursor: url('/images/cursor-pointer.png'), pointer;
     box-shadow: 0 0 10px var(--dialog-glow);
     transition: all 0.2s ease;
     opacity: 0.8;
@@ -113,7 +113,7 @@
     margin: 0 2px;
     border-radius: 0px 0px 6px 6px;
     background: var(--dialog-color);
-    cursor: pointer;
+    cursor: url('/images/cursor-pointer.png'), pointer;
     transition: background 0.2s ease;
     font-size: 1rem;
 }
@@ -195,7 +195,7 @@
     border-radius: 4px;
     padding: 10px 20px;
     font-size: 0.8rem;
-    cursor: pointer;
+    cursor: url('/images/cursor-pointer.png'), pointer;
     box-shadow: 0 0 10px var(--panel-glow);
     transition: all 0.2s ease;
     opacity: 0.8;
@@ -236,3 +236,4 @@
         border-color: var(--dialog-color);
     }
 }
+

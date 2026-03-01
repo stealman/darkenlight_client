@@ -67,9 +67,23 @@
             v-if="itemInfoOverlay.visible"
             ref="itemInfoOverlayRef"
             class="inventory-item-overlay"
-            :style="{ left: `${itemInfoOverlay.x}px`, top: `${itemInfoOverlay.y}px` }"
+            :style="{
+                left: `${itemInfoOverlay.x}px`,
+                top: `${itemInfoOverlay.y}px`,
+                '--inventory-action-btn-size': `${inventoryActionButtonSize}px`,
+            }"
         >
-            {{ itemInfoOverlay.name }}
+            <div class="inventory-item-overlay-name">{{ itemInfoOverlay.name }}</div>
+            <button
+                v-if="itemInfoOverlay.showDropButton"
+                class="action-button inventory-action-button inventory-drop-button"
+                type="button"
+                :style="{ backgroundImage: `url('/images/icons/buttons/btn_background.png')` }"
+                @pointerdown.prevent.stop
+                @click.stop="onDropItemClick"
+            >
+                <img class="action-icon" src="/images/icons/buttons/btn_drop.png" alt="Drop item" />
+            </button>
         </div>
     </div>
 </template>
@@ -85,6 +99,7 @@ import {
     getEquipSetNecklaceSvg, getEquipSetRingSvg,
 } from '@/vue/icons/icons'
 import { InventoryManager } from '@/data/InventoryManager'
+import { Settings } from '@/settings/settings'
 
 const emit = defineEmits(['close'])
 const INVENTORY_SLOT_COUNT = 24
@@ -104,31 +119,46 @@ const inventorySlotImages = ref(Array(INVENTORY_SLOT_COUNT).fill(null))
 const EMPTY_ITEM_IMAGE = '/images/icons/buttons/btn_backpack.png'
 const DOUBLE_CLICK_MS = 250
 const OVERLAY_PADDING = 4
+const OVERLAY_CURSOR_OFFSET_X = 2
 
 const dialogWindowRef = ref(null)
 const itemInfoOverlayRef = ref(null)
+const inventoryActionButtonSize = ref(Settings.actionButtonSize)
 
 const itemInfoOverlay = ref({
     visible: false,
     x: 0,
     y: 0,
     name: '',
+    showDropButton: false,
+    inventoryIndex: null,
 })
 
 const hideItemInfoOverlay = () => {
     itemInfoOverlay.value.visible = false
+    itemInfoOverlay.value.showDropButton = false
+    itemInfoOverlay.value.inventoryIndex = null
 }
 
-const showItemInfoOverlay = (item, pointer) => {
+const refreshInventoryActionButtonSize = () => {
+    inventoryActionButtonSize.value = Settings.actionButtonSize
+}
+
+const showItemInfoOverlay = (item, pointer, options = {}) => {
     if (!item) {
         hideItemInfoOverlay()
         return
     }
 
+    const showDropButton = options.showDropButton === true
+    const inventoryIndex = Number.isInteger(options.inventoryIndex) ? options.inventoryIndex : null
+
     itemInfoOverlay.value.visible = true
-    itemInfoOverlay.value.x = pointer.clientX
+    itemInfoOverlay.value.x = pointer.clientX + OVERLAY_CURSOR_OFFSET_X
     itemInfoOverlay.value.y = pointer.clientY
     itemInfoOverlay.value.name = item.name || 'Unknown item'
+    itemInfoOverlay.value.showDropButton = showDropButton
+    itemInfoOverlay.value.inventoryIndex = inventoryIndex
 
     nextTick(() => {
         const dialogRect = dialogWindowRef.value?.getBoundingClientRect?.()
@@ -188,7 +218,7 @@ const refreshInventorySlotImages = () => {
 
 const onclick = (slot, pointer) => {
     const item = MyPlayer.myChar?.equipSet?.get(slot)
-    showItemInfoOverlay(item, pointer)
+    showItemInfoOverlay(item, pointer, { showDropButton: false })
 }
 
 const onDoubleClick = (slot) => {
@@ -200,7 +230,23 @@ const onDoubleClick = (slot) => {
 
 const onInventoryClick = (index, pointer) => {
     const item = InventoryManager.inventory[index]
-    showItemInfoOverlay(item, pointer)
+    showItemInfoOverlay(item, pointer, { showDropButton: true, inventoryIndex: index })
+}
+
+const onDropItemClick = () => {
+    const index = itemInfoOverlay.value.inventoryIndex
+    const itemName = itemInfoOverlay.value.name
+    if (index === null) {
+        return
+    }
+    console.log(`[Inventory] Drop item clicked (dummy): index=${index}, name="${itemName}"`)
+
+    const item = InventoryManager.inventory[index]
+    if (!item) {
+        return
+    }
+    InventoryManager.dropItem(item)
+    hideItemInfoOverlay()
 }
 
 const onInventoryDoubleClick = (index) => {
@@ -283,6 +329,7 @@ onUnmounted(() => {
 
 const openDialog = () => {
     hideItemInfoOverlay()
+    refreshInventoryActionButtonSize()
     refreshEquipSlotImages()
     refreshInventorySlotImages()
 }

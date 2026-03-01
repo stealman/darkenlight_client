@@ -57,6 +57,7 @@
     color: var(--ui-text-muted);
     box-sizing: border-box;
     user-select: none;
+    cursor: url('/images/cursor-pointer.png'), pointer;
 }
 
 .equip-item-image {
@@ -151,6 +152,7 @@
     user-select: none;
     -webkit-user-select: none;
     -webkit-touch-callout: none;
+    cursor: url('/images/cursor-pointer.png'), pointer;
 }
 
 .inventory-item-image {
@@ -175,9 +177,61 @@
     font-size: 0.85rem;
     line-height: 1.2;
     box-sizing: border-box;
-    pointer-events: none;
-    white-space: nowrap;
+    pointer-events: auto;
     overflow: hidden;
     text-overflow: ellipsis;
     box-shadow: 0 14px 28px rgba(0, 0, 0, 0.68), 0 4px 10px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(0, 0, 0, 0.45);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
+
+.inventory-item-overlay-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.inventory-action-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--inventory-action-btn-size, 64px);
+    height: var(--inventory-action-btn-size, 64px);
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    cursor: url('/images/cursor-pointer.png'), pointer;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    position: relative;
+    overflow: hidden;
+    appearance: none;
+    -webkit-appearance: none;
+    background-color: transparent;
+    border: none;
+    padding: 0;
+}
+
+.inventory-action-button img.action-icon {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    pointer-events: none;
+}
+
+.inventory-action-button::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.25);
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.inventory-action-button:hover::after {
+    opacity: 1;
+}
+

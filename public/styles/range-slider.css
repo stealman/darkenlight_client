@@ -16,7 +16,7 @@
     height: 16px;
     border-radius: 50%;
     background: var(--dialog-color);
-    cursor: pointer;
+    cursor: url('/images/cursor-pointer.png'), pointer;
 }
 
 /* Firefox */
@@ -25,7 +25,7 @@
     height: 16px;
     border-radius: 50%;
     background: #1abc9c;
-    cursor: pointer;
+    cursor: url('/images/cursor-pointer.png'), pointer;
 }
 
 /* Firefox track */
@@ -34,3 +34,4 @@
     height: 6px;
     border-radius: 4px;
 }
+

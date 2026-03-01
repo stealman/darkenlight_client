@@ -1,13 +1,13 @@
 .icon-white {
     fill: #bbb;
     transition: all 0.2s ease;
-    cursor: pointer;
+    cursor: url('/images/cursor-pointer.png'), pointer;
 }
 
 .icon-blue {
     fill: #00f;
     transition: all 0.2s ease;
-    cursor: pointer;
+    cursor: url('/images/cursor-pointer.png'), pointer;
     opacity: 0.75
 }
 
@@ -15,14 +15,14 @@
 .icon-red {
     fill: #f00;
     transition: all 0.2s ease;
-    cursor: pointer;
+    cursor: url('/images/cursor-pointer.png'), pointer;
     opacity: 0.75
 }
 
 .icon-cyan {
     fill: var(--dialog-color);
     transition: all 0.2s ease;
-    cursor: pointer;
+    cursor: url('/images/cursor-pointer.png'), pointer;
     opacity: 0.75
 }
 
@@ -72,3 +72,4 @@
     height: 40px;
     width: 40px;
 }
+

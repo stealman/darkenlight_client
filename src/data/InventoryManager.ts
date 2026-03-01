@@ -28,5 +28,10 @@ export const InventoryManager = {
         this.addItemToInventory(item!)
         Connector.sendMessage(new UnequipItemMsg(item!.id))
         AudioManager.playBackpackHandle2()
+    },
+
+    dropItem(item: Item) {
+        console.log("Dropping item", item)
+        AudioManager.playBackpackHandle2()
     }
 }
