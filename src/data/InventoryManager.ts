@@ -32,7 +32,6 @@ export const InventoryManager = {
     },
 
     dropItem(item: Item) {
-        console.log("Dropping item", item)
         AudioManager.playBackpackHandle2()
         GroundItemsManager.addItems([{ item, x: MyPlayer.myChar.pos.x, z: MyPlayer.myChar.pos.z }])
         this.inventory = this.inventory.filter(i => i !== item)

@@ -4,7 +4,7 @@ import {
     Vector3,
     FreeCamera,
     Color3, Color4, SceneInstrumentation,
-    CubeTexture, DracoCompression, Material,
+    CubeTexture, DracoCompression, Material, GlowLayer,
 } from '@babylonjs/core'
 import '@babylonjs/inspector'
 import { Controller } from '@/controlls/controller'
@@ -34,7 +34,7 @@ import { ArrowsManager } from '@/babylon/world/arrowsManager'
 import { MyStatusPanel } from '@/gui/myStatusPanel'
 import { Inspector } from '@babylonjs/inspector'
 import { ActionButtonsManager } from '@/gui/actionButtonsManager'
-import { GuiButtonManager, GuiButtonsManager } from '@/gui/guiButtonsManager'
+import { GuiButtonsManager } from '@/gui/guiButtonsManager'
 import { GroundItemsManager } from '@/babylon/world/groundItemsManager'
 
 /**
@@ -53,6 +53,7 @@ export const Renderer = {
     pendingMatFreeze: false as boolean,
 
     inspectorDisplayed: false,
+    glowLayer: null as GlowLayer | null,
 
     async initialize(canvas: HTMLCanvasElement) {
         this.canvas = canvas
@@ -66,6 +67,15 @@ export const Renderer = {
                 fallbackUrl: `${window.location.origin}/models/draco/draco_decoder_gltf.js`,
             }
         };
+
+        /**
+        if (Settings.displayGlow) {
+            this.glowLayer = new GlowLayer("glow", this.scene, {
+                mainTextureFixedSize: 1024,
+                blurKernelSize: 75
+            });
+            this.glowLayer.intensity = 5
+        }*/
 
         // Initialize game objects and managers
         this.instrumentation = new SceneInstrumentation(this.scene);

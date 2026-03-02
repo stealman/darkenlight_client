@@ -4,6 +4,7 @@ import { Item } from '@/data/items/item'
 import { Utils } from '@/utils/utils'
 import { EquipManager } from '@/babylon/item/equipManager'
 import { EquipCbItem } from '@/babylon/item/codebook/equipCbItem'
+import { MyPlayer } from '@/data/myPlayer'
 
 export const GroundItemsManager = {
     scene: null as Scene | null,
@@ -11,31 +12,33 @@ export const GroundItemsManager = {
     items: new Array<GroundItem>(),
     visibleItems: new Array<GroundItem>(),
 
-    _tmpPos: new Matrix(),
-    _tmpRot: new Matrix(),
-    _tmpWorld: new Matrix(),
-    _tmpQuat: Quaternion.Identity(),
-    _tmpVisibleItemIds: new Set<number>(),
+    tmpPos: new Matrix(),
+    tmpRot: new Matrix(),
+    tmpWorld: new Matrix(),
+    tmpQuat: Quaternion.Identity(),
+    tmpVisibleItemIds: new Set<number>(),
 
     spriteManager: null as SpriteManager | null,
     fxParticles: new Array<GroundItemFxParticle>(),
     lastFxUpdateTime: 0,
 
     ITEM_BOX_SIZE: 0.2,
-    ITEM_Y_OFFSET: 0.1,
+    ITEM_Y_OFFSET: 0.15,
     ITEM_ROTATION_X: -Math.PI / 2,
 
     FX_POOL_LIMIT: 250,
-    FX_TARGET_PER_ITEM: 8,
+    FX_TARGET_PER_ITEM: 5,
     FX_LIFE_MIN: 0.75,
     FX_LIFE_MAX: 1.5,
     FX_SPAWN_XZ_RANGE: 0.4,
-    FX_SPAWN_Y_MIN: 0,
-    FX_SPAWN_Y_MAX: 0.5,
+    FX_SPAWN_Y_MIN: 0.2,
+    FX_SPAWN_Y_MAX: 0.6,
     FX_FADE_IN_RATIO: 0.2,
-    FX_FADE_OUT_RATIO: 0.35,
+    FX_FADE_OUT_RATIO: 0.2,
     FX_PARTICLE_SIZE: 0.4,
     yellow_fx: new Color4(0.8, 0.6, 0.3, 1),
+    PROXIMITY_RANGE_XZ: 1,
+    nearbyItem: null as GroundItem | null,
 
     initialize(scene: Scene) {
         this.scene = scene
@@ -75,8 +78,8 @@ export const GroundItemsManager = {
     addItems(data: Array<{ item: Item, x: number, z: number }>) {
         for (const dt of data) {
 
-            dt.x += (Math.random() - 0.5)
-            dt.z += (Math.random() - 0.5)
+            dt.x += (2 * Math.random() - 1)
+            dt.z += (2 * Math.random() - 1)
 
             const y = Utils.calculateYPos(dt.x, dt.z, this.ITEM_BOX_SIZE) + this.ITEM_Y_OFFSET
             const item = new GroundItem(dt.item, new Vector3(dt.x, y, dt.z))
@@ -88,8 +91,12 @@ export const GroundItemsManager = {
 
     },
 
-    onFrame(_timeRate: number, time: number) {
+    onFrame(timeRate: number, time: number) {
         this.updateVisibleItems()
+        this.detectNearestItemProximity()
+        for (const item of this.items) {
+            item.onFrame(timeRate, time)
+        }
         this.renderItems(time)
         this.updateItemFx(time)
     },
@@ -103,7 +110,8 @@ export const GroundItemsManager = {
         }
     },
 
-    renderItems(_time: number) {
+    renderItems(time: number) {
+        void time
         const itemsByType = new Map<GroundItemType, Array<GroundItem>>()
 
         for (const item of this.visibleItems) {
@@ -128,12 +136,13 @@ export const GroundItemsManager = {
             type.ensureThinBuffers(type)
             let i = 0
             for (const item of typeItems) {
-                Matrix.TranslationToRef(item.pos.x, item.pos.y, item.pos.z, this._tmpPos)
-                Quaternion.FromEulerAnglesToRef(this.ITEM_ROTATION_X, item.rotationY, 0, this._tmpQuat)
-                Matrix.FromQuaternionToRef(this._tmpQuat, this._tmpRot)
-                this._tmpRot.multiplyToRef(this._tmpPos, this._tmpWorld)
+                const itemY = item.pos.y + item.yOffset
+                Matrix.TranslationToRef(item.pos.x, itemY, item.pos.z, this.tmpPos)
+                Quaternion.FromEulerAnglesToRef(this.ITEM_ROTATION_X, item.rotationY, 0, this.tmpQuat)
+                Matrix.FromQuaternionToRef(this.tmpQuat, this.tmpRot)
+                this.tmpRot.multiplyToRef(this.tmpPos, this.tmpWorld)
 
-                this._tmpWorld.copyToArray(type.instanceBuffer, i * 16)
+                this.tmpWorld.copyToArray(type.instanceBuffer, i * 16)
                 type.uvBuffer[i * 2] = item.matVector.x
                 type.uvBuffer[i * 2 + 1] = item.matVector.y
                 i++
@@ -178,9 +187,9 @@ export const GroundItemsManager = {
         const dt = Math.min((time - this.lastFxUpdateTime) / 1000, 0.2)
         this.lastFxUpdateTime = time
 
-        this._tmpVisibleItemIds.clear()
+        this.tmpVisibleItemIds.clear()
         for (const item of this.visibleItems) {
-            this._tmpVisibleItemIds.add(item.item.id)
+            this.tmpVisibleItemIds.add(item.item.id)
         }
 
         const activePerItem = new Map<number, number>()
@@ -189,7 +198,7 @@ export const GroundItemsManager = {
                 continue
             }
 
-            if (!this._tmpVisibleItemIds.has(particle.ownerItemId)) {
+            if (!this.tmpVisibleItemIds.has(particle.ownerItemId)) {
                 particle.life = 0
                 continue
             }
@@ -198,9 +207,7 @@ export const GroundItemsManager = {
         }
 
         const visibleCount = this.visibleItems.length
-        const targetPerItem = visibleCount > 0
-            ? Math.max(1, Math.min(this.FX_TARGET_PER_ITEM, Math.floor(this.FX_POOL_LIMIT / visibleCount)))
-            : 0
+        const targetPerItem = visibleCount > 0 ? Math.max(1, Math.min(this.FX_TARGET_PER_ITEM, Math.floor(this.FX_POOL_LIMIT / visibleCount))) : 0
 
         if (targetPerItem > 0) {
             for (const item of this.visibleItems) {
@@ -229,12 +236,8 @@ export const GroundItemsManager = {
             const lifeRatio = particle.life / particle.maxLife
             const ageRatio = 1 - lifeRatio
 
-            const fadeIn = this.FX_FADE_IN_RATIO > 0
-                ? Math.min(1, ageRatio / this.FX_FADE_IN_RATIO)
-                : 1
-            const fadeOut = this.FX_FADE_OUT_RATIO > 0
-                ? Math.min(1, lifeRatio / this.FX_FADE_OUT_RATIO)
-                : 1
+            const fadeIn = this.FX_FADE_IN_RATIO > 0 ? Math.min(1, ageRatio / this.FX_FADE_IN_RATIO) : 1
+            const fadeOut = this.FX_FADE_OUT_RATIO > 0 ? Math.min(1, lifeRatio / this.FX_FADE_OUT_RATIO) : 1
             const alphaFactor = Math.min(fadeIn, fadeOut)
 
             particle.sprite.color.a = this.yellow_fx.a * alphaFactor
@@ -271,13 +274,64 @@ export const GroundItemsManager = {
         }
         return false
     },
+
+    detectNearestItemProximity() {
+        const myPos = MyPlayer.myChar?.pos
+        if (!myPos || this.items.length === 0) {
+            this.setNearbyItem(null)
+            return
+        }
+
+        let nearest: GroundItem | null = null
+        let nearestDistSq = Number.POSITIVE_INFINITY
+
+        for (const item of this.items) {
+            const dx = item.pos.x - myPos.x
+            const dz = item.pos.z - myPos.z
+            const distSq = (dx * dx) + (dz * dz)
+            if (distSq < nearestDistSq) {
+                nearestDistSq = distSq
+                nearest = item
+            }
+        }
+
+        if (!nearest || nearestDistSq >= this.PROXIMITY_RANGE_XZ * this.PROXIMITY_RANGE_XZ) {
+            this.setNearbyItem(null)
+            return
+        }
+
+        this.setNearbyItem(nearest)
+    },
+
+    setNearbyItem(item: GroundItem | null) {
+        if (this.nearbyItem === item) {
+            return
+        }
+
+        if (this.nearbyItem) {
+            this.nearbyItem.bounce = false
+        }
+
+        this.nearbyItem = item
+        if (this.nearbyItem) {
+            this.nearbyItem.bounce = true
+        }
+    },
 }
 
 class GroundItem {
+    static readonly BOUNCE_HEIGHT = 0.175
+    static readonly BOUNCE_SPEED = 0.008
+    static readonly RETURN_TO_GROUND_SPEED = 0.8
+
     item: Item
     pos: Vector3
     matVector: Vector2
     rotationY: number = 0
+    bounce: boolean = false
+    yOffset: number = 0
+    private wasBouncing: boolean = false
+    private bounceStartTime: number = 0
 
     constructor(item: Item, pos: Vector3) {
         this.item = item
@@ -297,6 +351,29 @@ class GroundItem {
         const matRow = matRows - (tileY + (1 - pad))
         return new Vector2(matCol, matRow)
     }
+
+    onFrame(timeRate: number, time: number) {
+        if (this.bounce) {
+            if (!this.wasBouncing) {
+                this.wasBouncing = true
+                this.bounceStartTime = time
+                this.yOffset = 0
+            }
+
+            const elapsed = time - this.bounceStartTime
+            this.yOffset = ((Math.sin((elapsed * GroundItem.BOUNCE_SPEED) - (Math.PI / 2)) + 1) * 0.5) * GroundItem.BOUNCE_HEIGHT
+            return
+        }
+
+        this.wasBouncing = false
+
+        if (this.yOffset <= 0) {
+            this.yOffset = 0
+            return
+        }
+
+        this.yOffset = Math.max(0, this.yOffset - (GroundItem.RETURN_TO_GROUND_SPEED * timeRate))
+    }
 }
 
 class GroundItemType {
@@ -307,7 +384,7 @@ class GroundItemType {
     instanceBuffer: Float32Array = new Float32Array(0)
     uvBuffer: Float32Array = new Float32Array(0)
     cbData: EquipCbItem
-    _thinReady: boolean = false
+    thinReady: boolean = false
 
     constructor(id: number, cbData: EquipCbItem, mesh: Mesh) {
         this.id = id
@@ -317,12 +394,12 @@ class GroundItemType {
 
     ensureThinBuffers(type: GroundItemType) {
         if (!type.mesh) return
-        if (type._thinReady) return
+        if (type.thinReady) return
 
         type.mesh.thinInstanceSetBuffer('matrix', type.instanceBuffer, 16, false)
         type.mesh.thinInstanceRegisterAttribute('uvc', 2)
         type.mesh.thinInstanceSetBuffer('uvc', type.uvBuffer, 2, false)
-        type._thinReady = true
+        type.thinReady = true
     }
 
     updateCount(count: number) {
@@ -343,7 +420,7 @@ class GroundItemType {
 
         this.mesh.setEnabled(true)
         this.mesh.alwaysSelectAsActiveMesh = true
-        this._thinReady = false
+        this.thinReady = false
         this.ensureThinBuffers(this)
     }
 }
