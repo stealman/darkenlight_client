@@ -10,6 +10,7 @@
             <button :disabled="actualTab === GMTabs.WALLS_AND_FENCES_EDIT" @click="selectTab(GMTabs.WALLS_AND_FENCES_EDIT)">Walls & Fences</button>
             <button :disabled="actualTab === GMTabs.SPAWNS_EDIT" @click="selectTab(GMTabs.SPAWNS_EDIT)">Spawns</button>
             <button @click="openModelRenderDialog">Model Render</button>
+            <button @click="forceSaveData">Force Save Data</button>
         </div>
 
         <!-- Overview -->
@@ -61,6 +62,10 @@ const selectTab = (tab) => {
 
 const openModelRenderDialog = () => {
     modelRenderPanel.value?.openDialog()
+}
+
+const forceSaveData = () => {
+    GMManager.forceSaveData()
 }
 </script>
 

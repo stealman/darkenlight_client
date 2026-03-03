@@ -160,3 +160,10 @@ export class GMSpawnAction implements Message {
     }
 }
 
+export class GMForceSaveDataMsg implements Message {
+    t: number = 1005
+    d: any
+
+    constructor() {}
+}
+

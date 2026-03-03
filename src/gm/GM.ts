@@ -1,5 +1,5 @@
 import { Connector } from '@/network/connector'
-import { GMSaveMapDataMsg, GMStaticObjectChange, GMTerrainChange } from '@/network/messages'
+import { GMForceSaveDataMsg, GMSaveMapDataMsg, GMStaticObjectChange, GMTerrainChange } from '@/network/messages'
 import { GMSceneManager } from '@/babylon/gm/GmSceneManager'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { ref } from 'vue'
@@ -7,6 +7,7 @@ import { Vector3 } from '@babylonjs/core'
 import { Utils } from '@/utils/utils'
 import { GMSpawns } from '@/gm/GmSpawns'
 import { Renderer } from '@/babylon/scene/renderer'
+import { OnScreenMessageManager } from '@/gui/onScreenMessageManager'
 
 /**
  * Main GM tabs
@@ -290,6 +291,11 @@ export const GMManager = {
 
     saveMapData() {
         Connector.sendMessage(new GMSaveMapDataMsg())
+    },
+
+    forceSaveData() {
+        Connector.sendMessage(new GMForceSaveDataMsg())
+        OnScreenMessageManager.addMessage("Hra uložena")
     }
 }
 

@@ -74,6 +74,7 @@
             }"
         >
             <div class="inventory-item-overlay-name">{{ itemInfoOverlay.name }}</div>
+            <div class="inventory-item-overlay-id">ID: {{ itemInfoOverlay.id }}</div>
             <button
                 v-if="itemInfoOverlay.showDropButton"
                 class="action-button inventory-action-button inventory-drop-button"
@@ -99,6 +100,7 @@ import {
     getEquipSetNecklaceSvg, getEquipSetRingSvg,
 } from '@/vue/icons/icons'
 import { InventoryManager } from '@/data/InventoryManager'
+import { WeaponTypes } from '@/data/items/item'
 import { Settings } from '@/settings/settings'
 
 const emit = defineEmits(['close'])
@@ -130,12 +132,14 @@ const itemInfoOverlay = ref({
     x: 0,
     y: 0,
     name: '',
+    id: null,
     showDropButton: false,
     inventoryIndex: null,
 })
 
 const hideItemInfoOverlay = () => {
     itemInfoOverlay.value.visible = false
+    itemInfoOverlay.value.id = null
     itemInfoOverlay.value.showDropButton = false
     itemInfoOverlay.value.inventoryIndex = null
 }
@@ -157,6 +161,7 @@ const showItemInfoOverlay = (item, pointer, options = {}) => {
     itemInfoOverlay.value.x = pointer.clientX + OVERLAY_CURSOR_OFFSET_X
     itemInfoOverlay.value.y = pointer.clientY
     itemInfoOverlay.value.name = item.name || 'Unknown item'
+    itemInfoOverlay.value.id = item.id ?? null
     itemInfoOverlay.value.showDropButton = showDropButton
     itemInfoOverlay.value.inventoryIndex = inventoryIndex
 
@@ -193,13 +198,27 @@ const resolveSlotImage = (slot) => {
     return resolveItemImage(item)
 }
 
+const resolveEffectiveEquipSlot = (slot) => {
+    if (slot !== 'L_HAND') {
+        return slot
+    }
+    const rightHandItem = MyPlayer.myChar?.equipSet?.get('R_HAND')
+    if (rightHandItem?.slotInfo?.weaponType === WeaponTypes.BOW) {
+        return 'R_HAND'
+    }
+    return slot
+}
+
 const refreshEquipSlotImages = () => {
     equipSlotImages.value.HEAD = resolveSlotImage('HEAD')
     equipSlotImages.value.NECKLACE = resolveSlotImage('NECKLACE')
     equipSlotImages.value.PAULDRONS = resolveSlotImage('PAULDRONS')
     equipSlotImages.value.BODY = resolveSlotImage('BODY')
-    equipSlotImages.value.L_HAND = resolveSlotImage('L_HAND')
-    equipSlotImages.value.R_HAND = resolveSlotImage('R_HAND')
+    const rightHandItem = MyPlayer.myChar?.equipSet?.get('R_HAND')
+    const rightHandImage = resolveSlotImage('R_HAND')
+    const isBowInRightHand = rightHandItem?.slotInfo?.weaponType === WeaponTypes.BOW
+    equipSlotImages.value.R_HAND = rightHandImage
+    equipSlotImages.value.L_HAND = isBowInRightHand ? rightHandImage : resolveSlotImage('L_HAND')
     equipSlotImages.value.L_RING = resolveSlotImage('L_RING')
     equipSlotImages.value.R_RING = resolveSlotImage('R_RING')
     equipSlotImages.value.LEGS = resolveSlotImage('LEGS')
@@ -217,13 +236,15 @@ const refreshInventorySlotImages = () => {
 }
 
 const onclick = (slot, pointer) => {
-    const item = MyPlayer.myChar?.equipSet?.get(slot)
+    const effectiveSlot = resolveEffectiveEquipSlot(slot)
+    const item = MyPlayer.myChar?.equipSet?.get(effectiveSlot)
     showItemInfoOverlay(item, pointer, { showDropButton: false })
 }
 
 const onDoubleClick = (slot) => {
+    const effectiveSlot = resolveEffectiveEquipSlot(slot)
     hideItemInfoOverlay()
-    InventoryManager.unequipSlot(slot)
+    InventoryManager.unequipSlot(effectiveSlot)
     refreshEquipSlotImages()
     refreshInventorySlotImages()
 }

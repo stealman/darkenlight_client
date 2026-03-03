@@ -28,6 +28,12 @@ export const InventoryManager = {
     },
 
     equipItem(item: Item) {
+        // If slot is occupied, unequip current item first
+        const currentlyEquipped = MyPlayer.myChar.equipSet.get(item.slotInfo.slot)
+        if (currentlyEquipped) {
+            this.unequipSlot(item.slotInfo.slot, true)
+        }
+
         MyPlayer.myChar.equipSet.set(item.slotInfo.slot, item)
         MyPlayer.myChar.model!.assignEquippedItems()
         this.inventory = this.inventory.filter(i => i !== item)
@@ -37,15 +43,18 @@ export const InventoryManager = {
         ActionButtonsManager.charEquipChanged()
     },
 
-    unequipSlot(slot: string) {
+    unequipSlot(slot: string, fromEquipAction: boolean = false) {
         const item = MyPlayer.myChar.equipSet.get(slot)
         MyPlayer.myChar.equipSet.delete(slot)
         MyPlayer.myChar.model?.removeEquippedItem(slot)
 
         this.addItemToInventory(item!)
         Connector.sendMessage(new UnequipItemMsg(item!.id))
-        AudioManager.playBackpackHandle2()
-        ActionButtonsManager.charEquipChanged()
+
+        if (!fromEquipAction) {
+            AudioManager.playBackpackHandle2()
+            ActionButtonsManager.charEquipChanged()
+        }
     },
 
     dropItem(item: Item) {
