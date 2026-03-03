@@ -63,29 +63,19 @@
                 </div>
             </div>
         </div>
-        <div
+
+        <!-- Item info overlay -->
+        <item-info-overlay
             v-if="itemInfoOverlay.visible"
             ref="itemInfoOverlayRef"
-            class="inventory-item-overlay"
-            :style="{
-                left: `${itemInfoOverlay.x}px`,
-                top: `${itemInfoOverlay.y}px`,
-                '--inventory-action-btn-size': `${inventoryActionButtonSize}px`,
-            }"
-        >
-            <div class="inventory-item-overlay-name">{{ itemInfoOverlay.name }}</div>
-            <div class="inventory-item-overlay-id">ID: {{ itemInfoOverlay.id }}</div>
-            <button
-                v-if="itemInfoOverlay.showDropButton"
-                class="action-button inventory-action-button inventory-drop-button"
-                type="button"
-                :style="{ backgroundImage: `url('/images/icons/buttons/btn_background.png')` }"
-                @pointerdown.prevent.stop
-                @click.stop="onDropItemClick"
-            >
-                <img class="action-icon" src="/images/icons/buttons/btn_drop.png" alt="Drop item" />
-            </button>
-        </div>
+            :item-info="itemInfoOverlay"
+            context="INVENTORY"
+            :x="itemInfoOverlay.x"
+            :y="itemInfoOverlay.y"
+            :action-button-size="inventoryActionButtonSize"
+            @close="hideItemInfoOverlay"
+            @drop-item="onDropItemClick"
+        />
     </div>
 </template>
 
@@ -102,6 +92,7 @@ import {
 import { InventoryManager } from '@/data/InventoryManager'
 import { WeaponTypes } from '@/data/items/item'
 import { Settings } from '@/settings/settings'
+import ItemInfoOverlay from '@/vue/views/itemInfoOverlay.vue'
 
 const emit = defineEmits(['close'])
 const INVENTORY_SLOT_COUNT = 24
@@ -133,8 +124,13 @@ const itemInfoOverlay = ref({
     y: 0,
     name: '',
     id: null,
+    quality: null,
+    durability: null,
+    durabilityMax: null,
     showDropButton: false,
     inventoryIndex: null,
+    sourceType: null,
+    sourceKey: null,
 })
 
 const hideItemInfoOverlay = () => {
@@ -142,6 +138,8 @@ const hideItemInfoOverlay = () => {
     itemInfoOverlay.value.id = null
     itemInfoOverlay.value.showDropButton = false
     itemInfoOverlay.value.inventoryIndex = null
+    itemInfoOverlay.value.sourceType = null
+    itemInfoOverlay.value.sourceKey = null
 }
 
 const refreshInventoryActionButtonSize = () => {
@@ -156,14 +154,22 @@ const showItemInfoOverlay = (item, pointer, options = {}) => {
 
     const showDropButton = options.showDropButton === true
     const inventoryIndex = Number.isInteger(options.inventoryIndex) ? options.inventoryIndex : null
+    const sourceType = options.sourceType ?? null
+    const sourceKey = options.sourceKey ?? null
 
     itemInfoOverlay.value.visible = true
     itemInfoOverlay.value.x = pointer.clientX + OVERLAY_CURSOR_OFFSET_X
     itemInfoOverlay.value.y = pointer.clientY
     itemInfoOverlay.value.name = item.name || 'Unknown item'
     itemInfoOverlay.value.id = item.id ?? null
+
+    itemInfoOverlay.value.quality = item.atts.qual ?? null
+    itemInfoOverlay.value.durability = item.atts.dur ?? null
+    itemInfoOverlay.value.durabilityMax = item.atts.durM ?? null
     itemInfoOverlay.value.showDropButton = showDropButton
     itemInfoOverlay.value.inventoryIndex = inventoryIndex
+    itemInfoOverlay.value.sourceType = sourceType
+    itemInfoOverlay.value.sourceKey = sourceKey
 
     nextTick(() => {
         const dialogRect = dialogWindowRef.value?.getBoundingClientRect?.()
@@ -180,6 +186,14 @@ const showItemInfoOverlay = (item, pointer, options = {}) => {
         itemInfoOverlay.value.x = Math.max(minX, Math.min(itemInfoOverlay.value.x, maxX))
         itemInfoOverlay.value.y = Math.max(minY, Math.min(itemInfoOverlay.value.y, maxY))
     })
+}
+
+const shouldToggleItemInfoOverlayOff = (sourceType, sourceKey) => {
+    if (!itemInfoOverlay.value.visible) {
+        return false
+    }
+    return itemInfoOverlay.value.sourceType === sourceType
+        && itemInfoOverlay.value.sourceKey === sourceKey
 }
 
 const resolveItemImage = (item) => {
@@ -238,7 +252,11 @@ const refreshInventorySlotImages = () => {
 const onclick = (slot, pointer) => {
     const effectiveSlot = resolveEffectiveEquipSlot(slot)
     const item = MyPlayer.myChar?.equipSet?.get(effectiveSlot)
-    showItemInfoOverlay(item, pointer, { showDropButton: false })
+    if (shouldToggleItemInfoOverlayOff('equip', effectiveSlot)) {
+        hideItemInfoOverlay()
+        return
+    }
+    showItemInfoOverlay(item, pointer, { showDropButton: false, sourceType: 'equip', sourceKey: effectiveSlot })
 }
 
 const onDoubleClick = (slot) => {
@@ -251,7 +269,11 @@ const onDoubleClick = (slot) => {
 
 const onInventoryClick = (index, pointer) => {
     const item = InventoryManager.inventory[index]
-    showItemInfoOverlay(item, pointer, { showDropButton: true, inventoryIndex: index })
+    if (shouldToggleItemInfoOverlayOff('inventory', index)) {
+        hideItemInfoOverlay()
+        return
+    }
+    showItemInfoOverlay(item, pointer, { showDropButton: true, inventoryIndex: index, sourceType: 'inventory', sourceKey: index })
 }
 
 const onDropItemClick = () => {

@@ -60,7 +60,9 @@ export class Item {
     imgUrl: string | null = null
     slotInfo: EquipSlotModel
 
-    constructor(id: number, itemId: number, modelId: number, matId: number, name: string | null, imgUrl: string) {
+    atts: Map<string, number | string> = new Map()
+
+    constructor(id: number, itemId: number, modelId: number, matId: number, name: string | null, imgUrl: string, atts: Map<string, number | string>) {
         this.id = id
         this.itemType = itemId
         this.modelId = modelId
@@ -68,12 +70,13 @@ export class Item {
         this.name = name
         this.imgUrl = "images/items/" + imgUrl
         this.slotInfo = EquipSlotModelsCb.getById(modelId)!
+        this.atts = atts
         if (!this.slotInfo) {
             throw new Error(`EquipSlotInfo not found for modelId: ${modelId}`)
         }
     }
 
     static fromData(data: ItemTO): Item {
-        return new Item(data.id, data.tp, data.mId, data.matId, data.name || null, data.img)
+        return new Item(data.id, data.tp, data.mId, data.matId, data.name || null, data.img, data.atts)
     }
 }

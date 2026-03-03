@@ -52,6 +52,7 @@ export interface ItemTO {
     matId: number
     name: string
     img: string
+    atts: Map<string, number | string>
 }
 
 export interface GroundItemTO {
