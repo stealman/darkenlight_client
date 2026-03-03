@@ -172,6 +172,7 @@ export const Renderer = {
             SelectedTargetPanel.onFrame(actualTime)
             MyStatusPanel.onFrame(actualTime)
             ActionButtonsManager.onFrame(actualTime)
+            GuiButtonsManager.onFrame()
         }
 
         if (this.frame % 10 === 0) {

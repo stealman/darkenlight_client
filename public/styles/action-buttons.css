@@ -24,6 +24,18 @@ div#action-buttons-2 {
     box-shadow: -3px -5px 5px rgba(20,15,10,0.15);
 }
 
+div#opportunity-action-buttons {
+    display: flex;
+    gap: 10px;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: absolute;
+    right: 72px;
+    bottom: 48px;
+    padding: 4px;
+}
+
 div.action-button {
     touch-action: none;
     user-select: none;

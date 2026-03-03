@@ -7,6 +7,7 @@ import { GMManager } from '@/gm/GM'
 import { TargetingManager } from '@/gui/targettingManager'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { ActionButtonsManager } from '@/gui/actionButtonsManager'
+import { InventoryManager } from '@/data/InventoryManager'
 
 export const Controller = {
     leftPressedTime: 0,
@@ -80,6 +81,14 @@ export const Controller = {
         if ((e.key && e.key.toLowerCase() === 'i') || e.code === 'KeyI') {
             if (e.repeat) return
             window.dispatchEvent(new CustomEvent('ui:open-inventory'))
+            return
+        }
+
+        // Space - pickup nearby item
+        if (e.code === 'Space' || e.keyCode === 32) {
+            e.preventDefault()
+            if (e.repeat) return
+            InventoryManager.pickItem()
             return
         }
 

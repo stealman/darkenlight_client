@@ -57,6 +57,9 @@
             <div id="action-buttons-2" style='display: none;'>
 
             </div>
+            <div id="opportunity-action-buttons">
+
+            </div>
 
             <GmPanel id='gmPanel' v-if="gmPanelVisible" />
 

@@ -100,6 +100,24 @@ export class EquipItemMsg implements Message {
     }
 }
 
+export class DropItemMsg implements Message {
+    t: number = 14
+    d: any
+
+    constructor(id: number) {
+        this.d = { id: id }
+    }
+}
+
+export class PickItemMsg implements Message {
+    t: number = 15
+    d: any
+
+    constructor(id: number) {
+        this.d = { id: id }
+    }
+}
+
 export class GMSaveMapDataMsg implements Message {
     t: number = 1000
     d: any

@@ -16,6 +16,7 @@ import {
     AutoAttackResultMessage,
     HealingMessage, HealingResultMessage,
 } from '@/network/messageIfs'
+import { GroundItemsManager } from '@/babylon/world/groundItemsManager'
 
 export const MessageProcessor = {
 
@@ -53,6 +54,8 @@ export const MessageProcessor = {
                 case 28: this.processCharacterActionChange(msg.d); break
                 case 29: this.processCharacterHealingFinished(msg.d); break
                 case 30: this.processCharacterEquipSetChange(msg.d); break
+                case 31: this.processAddGroundItem(msg.d); break
+                case 32: this.processRemoveGroundItem(msg.d); break
                 case 1003: this.processGMAllSpawns(msg.d); break
                 case 1004: this.processGMSpawnChange(msg.d); break
                 default:
@@ -214,6 +217,14 @@ export const MessageProcessor = {
 
     processCharacterEquipSetChange(data) {
         CharacterManager.equipSetChange(data)
+    },
+
+    processAddGroundItem(data) {
+        GroundItemsManager.addItems(data)
+    },
+
+    processRemoveGroundItem(data) {
+        GroundItemsManager.removeItems(data)
     },
 
     processGMAllSpawns(data) {

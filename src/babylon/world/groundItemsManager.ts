@@ -5,6 +5,7 @@ import { Utils } from '@/utils/utils'
 import { EquipManager } from '@/babylon/item/equipManager'
 import { EquipCbItem } from '@/babylon/item/codebook/equipCbItem'
 import { MyPlayer } from '@/data/myPlayer'
+import { GroundItemTO } from '@/network/messageIfs'
 
 export const GroundItemsManager = {
     scene: null as Scene | null,
@@ -33,8 +34,8 @@ export const GroundItemsManager = {
     FX_SPAWN_XZ_RANGE: 0.4,
     FX_SPAWN_Y_MIN: 0.2,
     FX_SPAWN_Y_MAX: 0.6,
-    FX_FADE_IN_RATIO: 0.2,
-    FX_FADE_OUT_RATIO: 0.2,
+    FX_FADE_IN_RATIO: 0.5,
+    FX_FADE_OUT_RATIO: 0.5,
     FX_PARTICLE_SIZE: 0.4,
     yellow_fx: new Color4(0.8, 0.6, 0.3, 1),
     PROXIMITY_RANGE_XZ: 1,
@@ -75,20 +76,22 @@ export const GroundItemsManager = {
         this.initializeItemFx(scene)
     },
 
-    addItems(data: Array<{ item: Item, x: number, z: number }>) {
-        for (const dt of data) {
+    addItems(data: GroundItemTO[]) {
+        for (const gitem of data) {
 
-            dt.x += (2 * Math.random() - 1)
-            dt.z += (2 * Math.random() - 1)
-
-            const y = Utils.calculateYPos(dt.x, dt.z, this.ITEM_BOX_SIZE) + this.ITEM_Y_OFFSET
-            const item = new GroundItem(dt.item, new Vector3(dt.x, y, dt.z))
+            const y = Utils.calculateYPos(gitem.pos.x, gitem.pos.z, this.ITEM_BOX_SIZE) + this.ITEM_Y_OFFSET
+            const item = new GroundItem(Item.fromData(gitem.item), new Vector3(gitem.pos.x, y, gitem.pos.z))
             this.items.push(item)
         }
     },
 
-    removeItems(data: unknown[]) {
-
+    removeItems(data: number[]) {
+        for (const id of data) {
+            const index = this.items.findIndex(i => i.item.id === id)
+            if (index !== -1) {
+                this.items.splice(index, 1)
+            }
+        }
     },
 
     onFrame(timeRate: number, time: number) {
@@ -283,19 +286,17 @@ export const GroundItemsManager = {
         }
 
         let nearest: GroundItem | null = null
-        let nearestDistSq = Number.POSITIVE_INFINITY
+        let nearestDist = 9999
 
         for (const item of this.items) {
-            const dx = item.pos.x - myPos.x
-            const dz = item.pos.z - myPos.z
-            const distSq = (dx * dx) + (dz * dz)
-            if (distSq < nearestDistSq) {
-                nearestDistSq = distSq
+            const dist = Vector3.Distance(myPos, item.pos)
+            if (dist <= 1 && dist < nearestDist) {
+                nearestDist = dist
                 nearest = item
             }
         }
 
-        if (!nearest || nearestDistSq >= this.PROXIMITY_RANGE_XZ * this.PROXIMITY_RANGE_XZ) {
+        if (!nearest) {
             this.setNearbyItem(null)
             return
         }
