@@ -10,6 +10,7 @@ import { CharacterActions } from '@/gui/actionButtonsManager'
 import { Monster } from '@/babylon/monsters/monster'
 import Character from '@/babylon/character/character'
 import { Attackable } from '@/GameManager'
+import { GroundItemsManager } from '@/babylon/world/groundItemsManager'
 
 class DamageNumber {
     attacker: Attackable
@@ -211,6 +212,15 @@ export const OverlayManager = {
                 }
             }
         })
+
+        const nearestItem = GroundItemsManager.nearbyItem
+        if (nearestItem && nearestItem.nameDisplayTime > time) {
+            const pos = nearestItem.getNameTextNodeScreenPosition()
+            const itemName = nearestItem.item.name
+            if (pos && itemName) {
+                this.renderName(pos, itemName, tightText, 'NEUTRAL')
+            }
+        }
     },
 
     addMonsterDamageNumber(monsterId: number, damage: number, hitType: string = 'h', time: number = Date.now()) {

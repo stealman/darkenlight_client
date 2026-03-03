@@ -1,3 +1,5 @@
+import { ItemTO } from '@/network/messageIfs'
+
 export class EquipSlotModel {
     modelId: number = 0
     slot: string
@@ -71,7 +73,7 @@ export class Item {
         }
     }
 
-    static fromData(data: any): Item {
+    static fromData(data: ItemTO): Item {
         return new Item(data.id, data.tp, data.mId, data.matId, data.name || null, data.img)
     }
 }

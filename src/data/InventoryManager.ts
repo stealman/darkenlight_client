@@ -4,12 +4,27 @@ import { Connector } from '@/network/connector'
 import { DropItemMsg, EquipItemMsg, PickItemMsg, UnequipItemMsg } from '@/network/messages'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { GroundItemsManager } from '@/babylon/world/groundItemsManager'
+import { ItemTO } from '@/network/messageIfs'
+import { ActionButtonsManager } from '@/gui/actionButtonsManager'
 
 export const InventoryManager = {
     inventory: [] as Item[],
 
     addItemToInventory(item: Item) {
         this.inventory.push(item)
+    },
+
+    addItemsToInventory(items: ItemTO[]) {
+        AudioManager.playBackpackHandle2()
+        for (const item of items) {
+            this.addItemToInventory(Item.fromData(item))
+        }
+    },
+
+    removeItemsFromInventory(items: number[]) {
+        for (const id of items) {
+            this.inventory = this.inventory.filter(i => i.id !== id)
+        }
     },
 
     equipItem(item: Item) {
@@ -19,6 +34,7 @@ export const InventoryManager = {
 
         Connector.sendMessage(new EquipItemMsg(item.slotInfo.slot, item.id))
         AudioManager.playBackpackHandle2()
+        ActionButtonsManager.charEquipChanged()
     },
 
     unequipSlot(slot: string) {
@@ -29,6 +45,7 @@ export const InventoryManager = {
         this.addItemToInventory(item!)
         Connector.sendMessage(new UnequipItemMsg(item!.id))
         AudioManager.playBackpackHandle2()
+        ActionButtonsManager.charEquipChanged()
     },
 
     dropItem(item: Item) {

@@ -17,6 +17,7 @@ import {
     HealingMessage, HealingResultMessage,
 } from '@/network/messageIfs'
 import { GroundItemsManager } from '@/babylon/world/groundItemsManager'
+import { InventoryManager } from '@/data/InventoryManager'
 
 export const MessageProcessor = {
 
@@ -56,6 +57,8 @@ export const MessageProcessor = {
                 case 30: this.processCharacterEquipSetChange(msg.d); break
                 case 31: this.processAddGroundItem(msg.d); break
                 case 32: this.processRemoveGroundItem(msg.d); break
+                case 33: this.processAddItemsToInventory(msg.d); break
+                case 34: this.processRemoveItemsFromInventory(msg.d); break
                 case 1003: this.processGMAllSpawns(msg.d); break
                 case 1004: this.processGMSpawnChange(msg.d); break
                 default:
@@ -225,6 +228,14 @@ export const MessageProcessor = {
 
     processRemoveGroundItem(data) {
         GroundItemsManager.removeItems(data)
+    },
+
+    processAddItemsToInventory(data) {
+        InventoryManager.addItemsToInventory(data)
+    },
+
+    processRemoveItemsFromInventory(data) {
+        InventoryManager.removeItemsFromInventory(data)
     },
 
     processGMAllSpawns(data) {

@@ -331,6 +331,14 @@ export const ActionButtonsManager = {
         }
 
         GuiButtonsManager.setSize(newSize)
+    },
+
+    charEquipChanged() {
+        this.actionButtons.forEach((btn) => {
+            if (btn.actionBinding && btn.actionBinding.name === CharacterActions.AUTO_ATTACK.name) {
+                btn.setImage(CharacterActions.AUTO_ATTACK.image)
+            }
+        })
     }
 }
 

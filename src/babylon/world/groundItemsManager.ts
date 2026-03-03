@@ -96,7 +96,7 @@ export const GroundItemsManager = {
 
     onFrame(timeRate: number, time: number) {
         this.updateVisibleItems()
-        this.detectNearestItemProximity()
+        this.detectNearestItemProximity(time)
         for (const item of this.items) {
             item.onFrame(timeRate, time)
         }
@@ -278,10 +278,10 @@ export const GroundItemsManager = {
         return false
     },
 
-    detectNearestItemProximity() {
+    detectNearestItemProximity(time: number) {
         const myPos = MyPlayer.myChar?.pos
         if (!myPos || this.items.length === 0) {
-            this.setNearbyItem(null)
+            this.setNearbyItem(null, time)
             return
         }
 
@@ -297,25 +297,27 @@ export const GroundItemsManager = {
         }
 
         if (!nearest) {
-            this.setNearbyItem(null)
+            this.setNearbyItem(null, time)
             return
         }
 
-        this.setNearbyItem(nearest)
+        this.setNearbyItem(nearest, time)
     },
 
-    setNearbyItem(item: GroundItem | null) {
+    setNearbyItem(item: GroundItem | null, time: number = Date.now()) {
         if (this.nearbyItem === item) {
             return
         }
 
         if (this.nearbyItem) {
             this.nearbyItem.bounce = false
+            this.nearbyItem.nameDisplayTime = 0
         }
 
         this.nearbyItem = item
         if (this.nearbyItem) {
             this.nearbyItem.bounce = true
+            this.nearbyItem.nameDisplayTime = time + 2000
         }
     },
 }
@@ -331,6 +333,7 @@ class GroundItem {
     rotationY: number = 0
     bounce: boolean = false
     yOffset: number = 0
+    nameDisplayTime: number = 0
     private wasBouncing: boolean = false
     private bounceStartTime: number = 0
 
@@ -351,6 +354,14 @@ class GroundItem {
         const matCol = tileX + pad
         const matRow = matRows - (tileY + (1 - pad))
         return new Vector2(matCol, matRow)
+    }
+
+    getNameTextNodeWorldPosition(): Vector3 {
+        return new Vector3(this.pos.x, this.pos.y + 0.5 + this.yOffset, this.pos.z)
+    }
+
+    getNameTextNodeScreenPosition(): Vector3 | null {
+        return ViewportManager.getPositionOnScreen(this.getNameTextNodeWorldPosition())
     }
 
     onFrame(timeRate: number, time: number) {

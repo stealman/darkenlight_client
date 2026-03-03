@@ -45,7 +45,16 @@ export interface HealingResult {
     dt: AttackableBasicTO
 }
 
+export interface ItemTO {
+    id: number
+    tp: number
+    mId: number
+    matId: number
+    name: string
+    img: string
+}
+
 export interface GroundItemTO {
-    item: { id: number, tp: number, mId: number, matId: number, name: string, img: string }
+    item: ItemTO
     pos: { x: number, z: number }
 }
