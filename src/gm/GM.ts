@@ -1,5 +1,5 @@
 import { Connector } from '@/network/connector'
-import { GMForceSaveDataMsg, GMSaveMapDataMsg, GMStaticObjectChange, GMTerrainChange } from '@/network/messages'
+import { GMCreateItemMsg, GMForceSaveDataMsg, GMSaveMapDataMsg, GMStaticObjectChange, GMTerrainChange } from '@/network/messages'
 import { GMSceneManager } from '@/babylon/gm/GmSceneManager'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { ref } from 'vue'
@@ -296,6 +296,10 @@ export const GMManager = {
     forceSaveData() {
         Connector.sendMessage(new GMForceSaveDataMsg())
         OnScreenMessageManager.addMessage("Hra uložena")
+    },
+
+    createItem(type: string, codebookId: number, quantity: number | null, quality: number | null) {
+        Connector.sendMessage(new GMCreateItemMsg(type, codebookId, quantity, quality))
     }
 }
 

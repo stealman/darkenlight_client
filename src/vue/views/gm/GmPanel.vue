@@ -10,6 +10,7 @@
             <button :disabled="actualTab === GMTabs.WALLS_AND_FENCES_EDIT" @click="selectTab(GMTabs.WALLS_AND_FENCES_EDIT)">Walls & Fences</button>
             <button :disabled="actualTab === GMTabs.SPAWNS_EDIT" @click="selectTab(GMTabs.SPAWNS_EDIT)">Spawns</button>
             <button @click="openModelRenderDialog">Model Render</button>
+            <button @click="openItemCreationDialog">Item Creation</button>
             <button @click="forceSaveData">Force Save Data</button>
         </div>
 
@@ -38,6 +39,7 @@
         </div>
 
         <ModelRenderPanel ref="modelRenderPanel" />
+        <ItemCreationPanel ref="itemCreationPanel" />
 
     </div>
 </template>
@@ -51,9 +53,11 @@ import TerrainPanel from '@/vue/views/gm/TerrainPanel.vue'
 import WallsFencesPanel from '@/vue/views/gm/WallsFencesPanel.vue'
 import SpawnPanel from '@/vue/views/gm/SpawnPanel.vue'
 import ModelRenderPanel from '@/vue/views/gm/ModelRenderPanel.vue'
+import ItemCreationPanel from '@/vue/views/gm/ItemCreationPanel.vue'
 
 const actualTab = ref(GMTabs.OVERVIEW)
 const modelRenderPanel = ref(null)
+const itemCreationPanel = ref(null)
 
 const selectTab = (tab) => {
     actualTab.value = tab
@@ -62,6 +66,10 @@ const selectTab = (tab) => {
 
 const openModelRenderDialog = () => {
     modelRenderPanel.value?.openDialog()
+}
+
+const openItemCreationDialog = () => {
+    itemCreationPanel.value?.openDialog()
 }
 
 const forceSaveData = () => {

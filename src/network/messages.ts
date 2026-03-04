@@ -167,3 +167,21 @@ export class GMForceSaveDataMsg implements Message {
     constructor() {}
 }
 
+export class GMCreateItemMsg implements Message {
+    t: number = 1006
+    d: any
+
+    constructor(type: string, codebookId: number, quantity: number | null, quality: number | null) {
+        this.d = {
+            tp: type,
+            codebookId: codebookId
+        }
+
+        if (type === 'RESOURCE') {
+            this.d.quantity = quantity
+        } else {
+            this.d.quality = quality
+        }
+    }
+}
+
