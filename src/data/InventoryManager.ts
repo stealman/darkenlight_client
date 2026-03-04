@@ -27,6 +27,27 @@ export const InventoryManager = {
         }
     },
 
+    changeItemsInInventory(items: ItemTO[]) {
+        for (const changedItem of items) {
+            let existingItem = this.inventory.find(item => item.id === changedItem.id)
+
+            if (!existingItem) {
+                for (const equippedItem of MyPlayer.myChar.equipSet.values()) {
+                    if (equippedItem.id === changedItem.id) {
+                        existingItem = equippedItem
+                        break
+                    }
+                }
+            }
+
+            if (!existingItem) {
+                console.warn(`Inventory/equip item not found for change update: ${changedItem.id}`)
+                continue
+            }
+            Object.assign(existingItem, Item.fromData(changedItem))
+        }
+    },
+
     equipItem(item: Item) {
         // If slot is occupied, unequip current item first
         const currentlyEquipped = MyPlayer.myChar.equipSet.get(item.slotInfo.slot)

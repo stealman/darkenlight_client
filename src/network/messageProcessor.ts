@@ -62,6 +62,7 @@ export const MessageProcessor = {
                 case 33: this.processAddItemsToInventory(msg.d); break
                 case 34: this.processRemoveItemsFromInventory(msg.d); break
                 case 35: this.processEmeraldsChange(msg.d); break
+                case 36: this.processChangeItemsInInventory(msg.d); break
                 case 1003: this.processGMAllSpawns(msg.d); break
                 case 1004: this.processGMSpawnChange(msg.d); break
                 default:
@@ -239,6 +240,10 @@ export const MessageProcessor = {
 
     processRemoveItemsFromInventory(data) {
         InventoryManager.removeItemsFromInventory(data)
+    },
+
+    processChangeItemsInInventory(data) {
+        InventoryManager.changeItemsInInventory(data)
     },
 
     processEmeraldsChange(data: EmeraldsChangeMessage) {
