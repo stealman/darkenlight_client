@@ -36,6 +36,7 @@ import { Inspector } from '@babylonjs/inspector'
 import { ActionButtonsManager } from '@/gui/actionButtonsManager'
 import { GuiButtonsManager } from '@/gui/guiButtonsManager'
 import { GroundItemsManager } from '@/babylon/world/groundItemsManager'
+import { EmeraldsManager } from '@/gui/emeraldsManager'
 
 /**
  * Main Renderer
@@ -98,8 +99,10 @@ export const Renderer = {
         ArrowsManager.initialize()
         SelectedTargetPanel.initialize()
         MyStatusPanel.initialize()
+        EmeraldsManager.initialize()
         ActionButtonsManager.initialize()
         GuiButtonsManager.initialize()
+
         await OverlayManager.initialize()
         await TargetingManager.initialize()
     },
@@ -173,6 +176,7 @@ export const Renderer = {
             MyStatusPanel.onFrame(actualTime)
             ActionButtonsManager.onFrame(actualTime)
             GuiButtonsManager.onFrame()
+            EmeraldsManager.onFrame(actualTime)
         }
 
         if (this.frame % 10 === 0) {

@@ -12,6 +12,11 @@
                 <div @click="showDebug()" v-html="getInspectSvg('icon-white', 'icon-inspect')"></div>
             </div>
 
+            <div id="emeralds-info">
+                <span id="emeralds-info-count" style="font-size: 2.25vh; color: #0f0;">0</span>
+                <img id="emeralds-info-icon" src="/images/icons/emerald.png" style="width: 16px; height: 16px; margin-right: 4px;" />
+            </div>
+
             <div id="gui-buttons">
                 <div class="gui-action-button" id="btn-backpack" @click="showInventoryDialog()">
                     <img class="action-icon" src="/images/icons/buttons/btn_backpack.png" />

@@ -9,8 +9,8 @@
     >
         <div class="inventory-item-overlay-name">{{ itemInfo.name }}</div>
         <div class="inventory-item-overlay-id">ID: {{ itemInfo.id }}</div>
-        <div class="inventory-item-overlay-qual">Quality: {{ itemInfo.quality }}</div>
-        <div class="inventory-item-overlay-dur">Durability: {{ itemInfo.durability }} / {{ itemInfo.durabilityMax }}</div>
+        <div class="inventory-item-overlay-qual">Kvalita: {{ itemInfo.quality }}</div>
+        <div class="inventory-item-overlay-dur">Stav: {{ itemInfo.durability }} / {{ itemInfo.durabilityMax }}</div>
 
         <button v-if="shouldShowDropButton" class="action-button inventory-action-button inventory-drop-button" type="button"
             :style="{ backgroundImage: `url('/images/icons/buttons/btn_background.png')` }"
@@ -27,7 +27,7 @@ import { Item } from '@/data/items/item'
 
 const props = defineProps({
     itemInfo: {
-        type: Item,
+        type: Object,
         required: true,
     },
     context: {

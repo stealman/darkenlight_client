@@ -14,10 +14,12 @@ import {
     AttackableBasicTO,
     AutoAttackMessage,
     AutoAttackResultMessage,
+    EmeraldsChangeMessage,
     HealingMessage, HealingResultMessage,
 } from '@/network/messageIfs'
 import { GroundItemsManager } from '@/babylon/world/groundItemsManager'
 import { InventoryManager } from '@/data/InventoryManager'
+import { EmeraldsManager } from '@/gui/emeraldsManager'
 
 export const MessageProcessor = {
 
@@ -59,6 +61,7 @@ export const MessageProcessor = {
                 case 32: this.processRemoveGroundItem(msg.d); break
                 case 33: this.processAddItemsToInventory(msg.d); break
                 case 34: this.processRemoveItemsFromInventory(msg.d); break
+                case 35: this.processEmeraldsChange(msg.d); break
                 case 1003: this.processGMAllSpawns(msg.d); break
                 case 1004: this.processGMSpawnChange(msg.d); break
                 default:
@@ -236,6 +239,10 @@ export const MessageProcessor = {
 
     processRemoveItemsFromInventory(data) {
         InventoryManager.removeItemsFromInventory(data)
+    },
+
+    processEmeraldsChange(data: EmeraldsChangeMessage) {
+        EmeraldsManager.setMyEmeralds(data.em, false, data.ch, data.mobId)
     },
 
     processGMAllSpawns(data) {

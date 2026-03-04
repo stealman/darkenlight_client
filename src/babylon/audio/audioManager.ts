@@ -26,6 +26,7 @@ export const AudioManager = {
     guiButtonClickSound: null as Sound | null,
     guiButtonToggleOnSound: null as Sound | null,
     guiButtonToggleOffSound: null as Sound | null,
+    guiTickSound: null as Sound | null,
 
     lowHealthWarningSound: null as Sound | null,
     heartBeatSound: null as Sound | null,
@@ -90,6 +91,13 @@ export const AudioManager = {
             AudioManager.guiButtonToggleOffSound!['loaded'] = true;
         }, {
             volume: 0.35,
+            playbackRate: 1.25,
+        });
+
+        this.guiTickSound = new Sound("guiTick", AudioManager.BASE_PATH_GUI + "tick.ogg", scene, function() {
+            AudioManager.guiTickSound!['loaded'] = true;
+        }, {
+            volume: 0.5,
             playbackRate: 1.25,
         });
 
@@ -227,6 +235,12 @@ export const AudioManager = {
         const sound = on ? this.guiButtonToggleOnSound : this.guiButtonToggleOffSound;
         if (sound && sound['loaded']) {
             sound.play();
+        }
+    },
+
+    playGuiTick() {
+        if (this.guiTickSound && this.guiTickSound['loaded']) {
+            this.guiTickSound.play();
         }
     },
 

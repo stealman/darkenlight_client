@@ -62,6 +62,17 @@ body {
     box-shadow: -3px 5px 3px rgba(0,0,0,0.15);
 }
 
+div#emeralds-info {
+    position: absolute;
+    top: 4vh;
+    right: 0px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 6px;
+    width: max-content;
+}
+
 #debug-panel {
     position: absolute;
     top: 4vh;

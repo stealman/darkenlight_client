@@ -59,3 +59,9 @@ export interface GroundItemTO {
     item: ItemTO
     pos: { x: number, z: number }
 }
+
+export interface EmeraldsChangeMessage {
+    em: number
+    ch: number
+    mobId: number
+}

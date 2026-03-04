@@ -16,6 +16,7 @@ import { AutoAttackMessage, AutoAttackResultMessage, HealingMessage, HealingResu
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { ActionButtonsManager, CharacterAction, CharacterActions } from '@/gui/actionButtonsManager'
 import { Attackable } from '@/GameManager'
+import { EmeraldsManager } from '@/gui/emeraldsManager'
 
 /**
  * Controlling object for the player's character
@@ -35,6 +36,7 @@ export const MyPlayer = {
     activeAction: null as CharacterAction | null,
 
     async initialize(charData: any) {
+        console.log("Initializing MyPlayer with charData:", charData)
         this.myChar = new Character(charData)
         this.myChar.initializeInventory(charData.inventory.items)
         this.myChar.insideView = true
@@ -46,6 +48,7 @@ export const MyPlayer = {
         this.myCharRef.value = this.myChar
 
         MyStatusPanel.setMyName(this.myChar.name)
+        EmeraldsManager.setMyEmeralds(charData.emeralds, true, charData.emeralds, null)
     },
 
     reset() {

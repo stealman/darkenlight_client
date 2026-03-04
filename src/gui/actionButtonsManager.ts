@@ -4,6 +4,7 @@ import { TargetingManager } from '@/gui/targettingManager'
 import { OnScreenMessageManager } from '@/gui/onScreenMessageManager'
 import { MyPlayer } from '@/data/myPlayer'
 import { GuiButtonsManager } from '@/gui/guiButtonsManager'
+import { EmeraldsManager } from '@/gui/emeraldsManager'
 
 class ActionButtonActionBinding {
     name: string
@@ -331,6 +332,7 @@ export const ActionButtonsManager = {
         }
 
         GuiButtonsManager.setSize(newSize)
+        EmeraldsManager.setSize(newSize)
     },
 
     charEquipChanged() {
