@@ -299,7 +299,15 @@ export const OverlayManager = {
             const pos = nearestItem.getNameTextNodeScreenPosition()
             const itemName = nearestItem.item.name
             if (pos && itemName) {
-                this.renderName(pos, itemName, tightText, 'NEUTRAL')
+                let displayName = itemName
+                if (nearestItem.item.isStackable()) {
+                    const qtyRaw = (nearestItem.item.atts as any)?.qty
+                    const qty = Number(qtyRaw)
+                    if (!Number.isNaN(qty) && qty > 0) {
+                        displayName = `${qty}x ${itemName}`
+                    }
+                }
+                this.renderName(pos, displayName, tightText, 'NEUTRAL')
             }
         }
     },

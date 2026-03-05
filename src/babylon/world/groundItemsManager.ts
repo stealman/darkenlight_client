@@ -19,10 +19,12 @@ import { EquipManager } from '@/babylon/item/equipManager'
 import { EquipCbItem } from '@/babylon/item/codebook/equipCbItem'
 import { MyPlayer } from '@/data/myPlayer'
 import { GroundItemTO } from '@/network/messageIfs'
+import { Lights } from '@/babylon/scene/lights'
 
 export const GroundItemsManager = {
     scene: null as Scene | null,
     itemTypes: new Map<number, GroundItemType>(),
+    flatItemTypes: new Map<string, GroundFlatItemType>(),
     items: new Array<GroundItem>(),
     visibleItems: new Array<GroundItem>(),
 
@@ -39,7 +41,9 @@ export const GroundItemsManager = {
     ITEM_BOX_SIZE: 0.2,
     ITEM_Y_OFFSET: 0.15,
     ITEM_ROTATION_X: -Math.PI / 2,
-    ITEM_FLAT_SIZE: 0.45,
+    ITEM_FLAT_SIZE: 0.65,
+    ITEM_FLAT_ROTATION_X: Math.PI * 4 / 3,
+    ITEM_FLAT_Y_LIFT: 0.1,
 
     FX_POOL_LIMIT: 250,
     FX_TARGET_PER_ITEM: 5,
@@ -57,7 +61,9 @@ export const GroundItemsManager = {
 
     initialize(scene: Scene) {
         this.scene = scene
+        this.flatItemTypes.forEach(type => type.dispose())
         this.itemTypes.clear()
+        this.flatItemTypes.clear()
         this.fxParticles = []
         this.lastFxUpdateTime = 0
 
@@ -95,9 +101,6 @@ export const GroundItemsManager = {
 
             const y = Utils.calculateYPos(gitem.pos.x, gitem.pos.z, this.ITEM_BOX_SIZE) + this.ITEM_Y_OFFSET
             const item = new GroundItem(Item.fromData(gitem.item), new Vector3(gitem.pos.x, y, gitem.pos.z))
-            if (!item.item.is3DModel()) {
-                this.initializeFlatMeshItem(item)
-            }
             this.items.push(item)
         }
     },
@@ -106,7 +109,6 @@ export const GroundItemsManager = {
         for (const id of data) {
             const index = this.items.findIndex(i => i.item.id === id)
             if (index !== -1) {
-                this.items[index].dispose()
                 this.items.splice(index, 1)
             }
         }
@@ -134,15 +136,19 @@ export const GroundItemsManager = {
     renderItems(time: number) {
         void time
         const itemsByType = new Map<GroundItemType, Array<GroundItem>>()
-
-        for (const item of this.items) {
-            item.setFlatMeshVisibility(false)
-        }
+        const flatItemsByType = new Map<GroundFlatItemType, Array<GroundItem>>()
 
         for (const item of this.visibleItems) {
             if (!item.item.is3DModel()) {
-                item.updateFlatMeshTransform(this.ITEM_ROTATION_X)
-                item.setFlatMeshVisibility(true)
+                const flatType = this.getOrCreateFlatType(item)
+                if (!flatType) {
+                    continue
+                }
+
+                if (!flatItemsByType.has(flatType)) {
+                    flatItemsByType.set(flatType, [])
+                }
+                flatItemsByType.get(flatType)!.push(item)
                 continue
             }
 
@@ -184,25 +190,70 @@ export const GroundItemsManager = {
             type.mesh.thinInstanceBufferUpdated('uvc')
             type.mesh.thinInstanceRefreshBoundingInfo()
         })
+
+        this.flatItemTypes.forEach((type) => {
+            const typeItems = flatItemsByType.get(type) || []
+            type.updateCount(typeItems.length)
+            if (!type.mesh || typeItems.length === 0) {
+                return
+            }
+
+            type.ensureThinBuffers(type)
+            let i = 0
+            for (const item of typeItems) {
+                const itemY = item.pos.y + item.yOffset + this.ITEM_FLAT_Y_LIFT
+                Matrix.TranslationToRef(item.pos.x, itemY, item.pos.z, this.tmpPos)
+                Quaternion.FromEulerAnglesToRef(this.ITEM_FLAT_ROTATION_X, item.rotationY, 0, this.tmpQuat)
+                Matrix.FromQuaternionToRef(this.tmpQuat, this.tmpRot)
+                this.tmpRot.multiplyToRef(this.tmpPos, this.tmpWorld)
+                this.tmpWorld.copyToArray(type.instanceBuffer, i * 16)
+                i++
+            }
+
+            type.mesh.thinInstanceCount = i
+            type.mesh.thinInstanceBufferUpdated('matrix')
+            type.mesh.thinInstanceRefreshBoundingInfo()
+        })
     },
 
-    initializeFlatMeshItem(item: GroundItem) {
+    getOrCreateFlatType(item: GroundItem): GroundFlatItemType | null {
         if (!this.scene) {
-            return
+            return null
         }
-
-        const mesh = MeshBuilder.CreatePlane(`ground-item-flat-${item.item.id}`, {
-            size: this.ITEM_FLAT_SIZE,
-            sideOrientation: Mesh.DOUBLESIDE,
-        }, this.scene)
+        const scene = this.scene
 
         const texturePath = item.item.imgUrl || ''
-        const texture = new Texture(texturePath, this.scene)
+        const existingType = this.flatItemTypes.get(texturePath)
+        if (existingType) {
+            return existingType
+        }
+
+        const mesh = MeshBuilder.CreatePlane(`ground-item-flat-${this.flatItemTypes.size}`, {
+            size: this.ITEM_FLAT_SIZE,
+            sideOrientation: Mesh.DOUBLESIDE,
+        }, scene)
+        const material = this.createFlatItemMaterial(`ground-item-flat-mat-${this.flatItemTypes.size}`, texturePath)
+
+        mesh.material = material
+        mesh.isPickable = false
+        mesh.receiveShadows = true
+        mesh.alwaysSelectAsActiveMesh = true
+        mesh.thinInstanceCount = 0
+        mesh.setEnabled(false)
+
+        const type = new GroundFlatItemType(texturePath, mesh, material)
+        this.flatItemTypes.set(texturePath, type)
+        return type
+    },
+
+    createFlatItemMaterial(name: string, texturePath: string): PBRMaterial {
+        const scene = this.scene!
+        const texture = new Texture(texturePath, scene)
         texture.hasAlpha = true
         texture.getAlphaFromRGB = false
         texture.updateSamplingMode(Texture.NEAREST_NEAREST)
 
-        const material = new PBRMaterial(`ground-item-flat-mat-${item.item.id}`, this.scene)
+        const material = new PBRMaterial(name, scene)
         material.albedoTexture = texture
         material.metallic = 0
         material.roughness = 1
@@ -214,15 +265,7 @@ export const GroundItemsManager = {
         material.backFaceCulling = false
         material.twoSidedLighting = true
         material.usePhysicalLightFalloff = false
-
-        mesh.material = material
-        mesh.isPickable = false
-        mesh.receiveShadows = false
-        mesh.alwaysSelectAsActiveMesh = true
-        mesh.setEnabled(false)
-
-        item.flatMesh = mesh
-        item.flatMeshMaterial = material
+        return material
     },
 
     initializeItemFx(scene: Scene) {
@@ -401,8 +444,6 @@ class GroundItem {
     bounce: boolean = false
     yOffset: number = 0
     nameDisplayTime: number = 0
-    flatMesh: Mesh | null = null
-    flatMeshMaterial: PBRMaterial | null = null
     private wasBouncing: boolean = false
     private bounceStartTime: number = 0
 
@@ -413,7 +454,7 @@ class GroundItem {
         const type = GroundItemsManager.itemTypes.get(item.modelId)
         const matIndex = Math.max((item.materialId || 1) - 1, 0)
         this.matVector = this.getAtlasUvcOffsets(type?.cbData.matCols || 1, type?.cbData.matRows || 1, matIndex)
-        this.rotationY = Math.random() * Math.PI * 2
+        this.rotationY = item.is3DModel() ? Math.random() * Math.PI * 2 : 0
     }
 
     getAtlasUvcOffsets(matCols: number, matRows: number, matIndex: number, pad = 0) {
@@ -454,31 +495,6 @@ class GroundItem {
         }
 
         this.yOffset = Math.max(0, this.yOffset - (GroundItem.RETURN_TO_GROUND_SPEED * timeRate))
-    }
-
-    updateFlatMeshTransform(rotationX: number) {
-        if (!this.flatMesh) {
-            return
-        }
-        this.flatMesh.position.set(this.pos.x, this.pos.y + this.yOffset, this.pos.z)
-        this.flatMesh.rotation.set(rotationX, this.rotationY, 0)
-    }
-
-    setFlatMeshVisibility(visible: boolean) {
-        if (!this.flatMesh) {
-            return
-        }
-        if (this.flatMesh.isEnabled() === visible) {
-            return
-        }
-        this.flatMesh.setEnabled(visible)
-    }
-
-    dispose() {
-        this.flatMeshMaterial?.dispose()
-        this.flatMesh?.dispose()
-        this.flatMeshMaterial = null
-        this.flatMesh = null
     }
 }
 
@@ -528,6 +544,56 @@ class GroundItemType {
         this.mesh.alwaysSelectAsActiveMesh = true
         this.thinReady = false
         this.ensureThinBuffers(this)
+    }
+}
+
+class GroundFlatItemType {
+    id: string
+    mesh: Mesh | null = null
+    material: PBRMaterial | null = null
+    count: number = -1
+    instanceBuffer: Float32Array = new Float32Array(0)
+    thinReady: boolean = false
+
+    constructor(id: string, mesh: Mesh, material: PBRMaterial) {
+        this.id = id
+        this.mesh = mesh
+        this.material = material
+    }
+
+    ensureThinBuffers(type: GroundFlatItemType) {
+        if (!type.mesh) return
+        if (type.thinReady) return
+        type.mesh.thinInstanceSetBuffer('matrix', type.instanceBuffer, 16, false)
+        type.thinReady = true
+    }
+
+    updateCount(count: number) {
+        if (count === this.count) {
+            return
+        }
+
+        this.count = count
+        this.instanceBuffer = new Float32Array(16 * count)
+
+        if (!this.mesh) return
+        if (count === 0) {
+            this.mesh.setEnabled(false)
+            this.mesh.thinInstanceCount = 0
+            return
+        }
+
+        this.mesh.setEnabled(true)
+        this.mesh.alwaysSelectAsActiveMesh = true
+        this.thinReady = false
+        this.ensureThinBuffers(this)
+    }
+
+    dispose() {
+        this.material?.dispose()
+        this.mesh?.dispose()
+        this.material = null
+        this.mesh = null
     }
 }
 
