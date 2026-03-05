@@ -42,7 +42,7 @@ export const GroundItemsManager = {
     ITEM_Y_OFFSET: 0.15,
     ITEM_ROTATION_X: -Math.PI / 2,
     ITEM_FLAT_SIZE: 0.65,
-    ITEM_FLAT_ROTATION_X: Math.PI * 4 / 3,
+    ITEM_FLAT_ROTATION_X: Math.PI * 1 / 6,
     ITEM_FLAT_Y_LIFT: 0.1,
 
     FX_POOL_LIMIT: 250,
@@ -257,8 +257,8 @@ export const GroundItemsManager = {
         material.albedoTexture = texture
         material.metallic = 0
         material.roughness = 1
-        material.directIntensity = 0.75
-        material.environmentIntensity = 1
+        material.directIntensity = 1.5
+        material.environmentIntensity = 1.5
         material.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHABLEND
         material.useAlphaFromAlbedoTexture = true
         material.forceAlphaTest = false
@@ -287,6 +287,14 @@ export const GroundItemsManager = {
         }
     },
 
+    getItemFxConfig(item: Item): GroundItemFxConfig {
+        void item
+        return {
+            count: item.isEquippable() ? 4 : 2,
+            color: this.yellow_fx,
+        }
+    },
+
     updateItemFx(time: number) {
         if (!this.spriteManager || this.fxParticles.length === 0) {
             return
@@ -301,8 +309,12 @@ export const GroundItemsManager = {
         this.lastFxUpdateTime = time
 
         this.tmpVisibleItemIds.clear()
+        const visibleItemsById = new Map<number, GroundItem>()
+        const fxConfigByItemId = new Map<number, GroundItemFxConfig>()
         for (const item of this.visibleItems) {
             this.tmpVisibleItemIds.add(item.item.id)
+            visibleItemsById.set(item.item.id, item)
+            fxConfigByItemId.set(item.item.id, this.getItemFxConfig(item.item))
         }
 
         const activePerItem = new Map<number, number>()
@@ -316,18 +328,38 @@ export const GroundItemsManager = {
                 continue
             }
 
+            const fxConfig = fxConfigByItemId.get(particle.ownerItemId)
+            if (!fxConfig) {
+                particle.life = 0
+                continue
+            }
+
+            particle.baseColor.set(fxConfig.color.r, fxConfig.color.g, fxConfig.color.b, fxConfig.color.a)
             activePerItem.set(particle.ownerItemId, (activePerItem.get(particle.ownerItemId) || 0) + 1)
         }
 
-        const visibleCount = this.visibleItems.length
-        const targetPerItem = visibleCount > 0 ? Math.max(1, Math.min(this.FX_TARGET_PER_ITEM, Math.floor(this.FX_POOL_LIMIT / visibleCount))) : 0
+        let requestedParticles = 0
+        for (const fxConfig of fxConfigByItemId.values()) {
+            requestedParticles += Math.max(0, Math.floor(fxConfig.count))
+        }
+        const poolRatio = requestedParticles > 0 ? Math.min(1, this.FX_POOL_LIMIT / requestedParticles) : 0
 
-        if (targetPerItem > 0) {
-            for (const item of this.visibleItems) {
-                const itemId = item.item.id
+        if (poolRatio > 0) {
+            for (const [itemId, item] of visibleItemsById.entries()) {
+                const fxConfig = fxConfigByItemId.get(itemId)
+                if (!fxConfig) {
+                    continue
+                }
+
+                const requestedCount = Math.max(0, Math.floor(fxConfig.count))
+                let targetPerItem = Math.floor(requestedCount * poolRatio)
+                if (requestedCount > 0 && targetPerItem === 0) {
+                    targetPerItem = 1
+                }
+
                 let toSpawn = targetPerItem - (activePerItem.get(itemId) || 0)
                 while (toSpawn > 0) {
-                    if (!this.spawnFxParticle(item)) {
+                    if (!this.spawnFxParticle(item, fxConfig.color)) {
                         break
                     }
                     toSpawn--
@@ -353,11 +385,11 @@ export const GroundItemsManager = {
             const fadeOut = this.FX_FADE_OUT_RATIO > 0 ? Math.min(1, lifeRatio / this.FX_FADE_OUT_RATIO) : 1
             const alphaFactor = Math.min(fadeIn, fadeOut)
 
-            particle.sprite.color.a = this.yellow_fx.a * alphaFactor
+            particle.sprite.color.a = particle.baseColor.a * alphaFactor
         }
     },
 
-    spawnFxParticle(item: GroundItem): boolean {
+    spawnFxParticle(item: GroundItem, color: Color4): boolean {
         for (const particle of this.fxParticles) {
             if (particle.active) {
                 continue
@@ -371,6 +403,7 @@ export const GroundItemsManager = {
             particle.ownerItemId = item.item.id
             particle.maxLife = this.FX_LIFE_MIN + Math.random() * (this.FX_LIFE_MAX - this.FX_LIFE_MIN)
             particle.life = particle.maxLife
+            particle.baseColor.set(color.r, color.g, color.b, color.a)
 
             particle.position.set(
                 item.pos.x + xOffset,
@@ -380,7 +413,7 @@ export const GroundItemsManager = {
 
             particle.sprite.position.copyFrom(particle.position)
             particle.sprite.isVisible = true
-            particle.sprite.color.set(this.yellow_fx.r, this.yellow_fx.g, this.yellow_fx.b, 0)
+            particle.sprite.color.set(particle.baseColor.r, particle.baseColor.g, particle.baseColor.b, 0)
             particle.sprite.size = this.FX_PARTICLE_SIZE
             particle.sprite.angle = Math.random() * Math.PI * 2
             return true
@@ -454,7 +487,7 @@ class GroundItem {
         const type = GroundItemsManager.itemTypes.get(item.modelId)
         const matIndex = Math.max((item.materialId || 1) - 1, 0)
         this.matVector = this.getAtlasUvcOffsets(type?.cbData.matCols || 1, type?.cbData.matRows || 1, matIndex)
-        this.rotationY = item.is3DModel() ? Math.random() * Math.PI * 2 : 0
+        this.rotationY = item.is3DModel() ? Math.random() * Math.PI * 2 : Math.PI / 4
     }
 
     getAtlasUvcOffsets(matCols: number, matRows: number, matIndex: number, pad = 0) {
@@ -604,6 +637,7 @@ class GroundItemFxParticle {
     position: Vector3 = Vector3.Zero()
     life: number = 0
     maxLife: number = 0
+    baseColor: Color4 = new Color4(0.8, 0.6, 0.3, 1)
 
     constructor(sprite: Sprite) {
         this.sprite = sprite
@@ -616,4 +650,9 @@ class GroundItemFxParticle {
         this.maxLife = 0
         this.sprite.isVisible = false
     }
+}
+
+type GroundItemFxConfig = {
+    count: number
+    color: Color4
 }

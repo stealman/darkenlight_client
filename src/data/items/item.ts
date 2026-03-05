@@ -70,7 +70,7 @@ export class Item {
         this.modelId = modelId
         this.materialId = matId
         this.name = name
-        this.imgUrl = "images/items/" + imgUrl
+        this.imgUrl = "images/items/" + imgUrl + ".png"
         this.slotInfo = EquipSlotModelsCb.getById(modelId)!
         this.atts = atts
         if (!this.slotInfo && (cbType === 'W' || cbType === 'A' || cbType === 'J')) {
