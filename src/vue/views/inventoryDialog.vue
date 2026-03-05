@@ -127,6 +127,7 @@ const itemInfoOverlay = ref({
     quality: null,
     durability: null,
     durabilityMax: null,
+    quantity: null,
     showDropButton: false,
     inventoryIndex: null,
     sourceType: null,
@@ -166,6 +167,7 @@ const showItemInfoOverlay = (item, pointer, options = {}) => {
     itemInfoOverlay.value.quality = item.atts.qual ?? null
     itemInfoOverlay.value.durability = item.atts.dur ?? null
     itemInfoOverlay.value.durabilityMax = item.atts.durM ?? null
+    itemInfoOverlay.value.quantity = item.atts.qty ?? null
     itemInfoOverlay.value.showDropButton = showDropButton
     itemInfoOverlay.value.inventoryIndex = inventoryIndex
     itemInfoOverlay.value.sourceType = sourceType
@@ -293,11 +295,7 @@ const onDropItemClick = () => {
 
 const onInventoryDoubleClick = (index) => {
     hideItemInfoOverlay()
-    const item = InventoryManager.inventory[index]
-    if (!item) {
-        return
-    }
-    InventoryManager.equipItem(item)
+    InventoryManager.handleInventoryDoubleClick(index)
     refreshEquipSlotImages()
     refreshInventorySlotImages()
 }

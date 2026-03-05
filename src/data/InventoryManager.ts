@@ -48,7 +48,27 @@ export const InventoryManager = {
         }
     },
 
+    handleInventoryDoubleClick(index: number) {
+        const item = this.inventory[index]
+        if (!item) {
+            return
+        }
+
+        if (item.isEquippable()) {
+            this.equipItem(item)
+            return
+        }
+
+        if (item.isConsumable()) {
+            this.useConsumableItem(item)
+        }
+    },
+
     equipItem(item: Item) {
+        if (!item.isEquippable()) {
+            return
+        }
+
         // If slot is occupied, unequip current item first
         const currentlyEquipped = MyPlayer.myChar.equipSet.get(item.slotInfo.slot)
         if (currentlyEquipped) {
@@ -66,16 +86,24 @@ export const InventoryManager = {
 
     unequipSlot(slot: string, fromEquipAction: boolean = false) {
         const item = MyPlayer.myChar.equipSet.get(slot)
+        if (!item) {
+            return
+        }
+
         MyPlayer.myChar.equipSet.delete(slot)
         MyPlayer.myChar.model?.removeEquippedItem(slot)
 
-        this.addItemToInventory(item!)
-        Connector.sendMessage(new UnequipItemMsg(item!.id))
+        this.addItemToInventory(item)
+        Connector.sendMessage(new UnequipItemMsg(item.id))
 
         if (!fromEquipAction) {
             AudioManager.playBackpackHandle2()
             ActionButtonsManager.charEquipChanged()
         }
+    },
+
+    useConsumableItem(item: Item) {
+        console.log(`Consumable use not implemented yet for item ${item.id}`)
     },
 
     dropItem(item: Item) {

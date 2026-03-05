@@ -1,4 +1,17 @@
-import { Color4, Matrix, Mesh, Quaternion, Scene, Sprite, SpriteManager, Vector2, Vector3 } from '@babylonjs/core'
+import {
+    Color4,
+    Matrix,
+    Mesh,
+    MeshBuilder,
+    PBRMaterial,
+    Quaternion,
+    Scene,
+    Sprite,
+    SpriteManager,
+    Texture,
+    Vector2,
+    Vector3
+} from '@babylonjs/core'
 import { ViewportManager } from '@/utils/viewport'
 import { Item } from '@/data/items/item'
 import { Utils } from '@/utils/utils'
@@ -26,6 +39,7 @@ export const GroundItemsManager = {
     ITEM_BOX_SIZE: 0.2,
     ITEM_Y_OFFSET: 0.15,
     ITEM_ROTATION_X: -Math.PI / 2,
+    ITEM_FLAT_SIZE: 0.45,
 
     FX_POOL_LIMIT: 250,
     FX_TARGET_PER_ITEM: 5,
@@ -81,6 +95,9 @@ export const GroundItemsManager = {
 
             const y = Utils.calculateYPos(gitem.pos.x, gitem.pos.z, this.ITEM_BOX_SIZE) + this.ITEM_Y_OFFSET
             const item = new GroundItem(Item.fromData(gitem.item), new Vector3(gitem.pos.x, y, gitem.pos.z))
+            if (!item.item.is3DModel()) {
+                this.initializeFlatMeshItem(item)
+            }
             this.items.push(item)
         }
     },
@@ -89,6 +106,7 @@ export const GroundItemsManager = {
         for (const id of data) {
             const index = this.items.findIndex(i => i.item.id === id)
             if (index !== -1) {
+                this.items[index].dispose()
                 this.items.splice(index, 1)
             }
         }
@@ -117,7 +135,17 @@ export const GroundItemsManager = {
         void time
         const itemsByType = new Map<GroundItemType, Array<GroundItem>>()
 
+        for (const item of this.items) {
+            item.setFlatMeshVisibility(false)
+        }
+
         for (const item of this.visibleItems) {
+            if (!item.item.is3DModel()) {
+                item.updateFlatMeshTransform(this.ITEM_ROTATION_X)
+                item.setFlatMeshVisibility(true)
+                continue
+            }
+
             const type = this.itemTypes.get(item.item.modelId)
             if (!type) {
                 continue
@@ -156,6 +184,45 @@ export const GroundItemsManager = {
             type.mesh.thinInstanceBufferUpdated('uvc')
             type.mesh.thinInstanceRefreshBoundingInfo()
         })
+    },
+
+    initializeFlatMeshItem(item: GroundItem) {
+        if (!this.scene) {
+            return
+        }
+
+        const mesh = MeshBuilder.CreatePlane(`ground-item-flat-${item.item.id}`, {
+            size: this.ITEM_FLAT_SIZE,
+            sideOrientation: Mesh.DOUBLESIDE,
+        }, this.scene)
+
+        const texturePath = item.item.imgUrl || ''
+        const texture = new Texture(texturePath, this.scene)
+        texture.hasAlpha = true
+        texture.getAlphaFromRGB = false
+        texture.updateSamplingMode(Texture.NEAREST_NEAREST)
+
+        const material = new PBRMaterial(`ground-item-flat-mat-${item.item.id}`, this.scene)
+        material.albedoTexture = texture
+        material.metallic = 0
+        material.roughness = 1
+        material.directIntensity = 0.75
+        material.environmentIntensity = 1
+        material.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHABLEND
+        material.useAlphaFromAlbedoTexture = true
+        material.forceAlphaTest = false
+        material.backFaceCulling = false
+        material.twoSidedLighting = true
+        material.usePhysicalLightFalloff = false
+
+        mesh.material = material
+        mesh.isPickable = false
+        mesh.receiveShadows = false
+        mesh.alwaysSelectAsActiveMesh = true
+        mesh.setEnabled(false)
+
+        item.flatMesh = mesh
+        item.flatMeshMaterial = material
     },
 
     initializeItemFx(scene: Scene) {
@@ -334,6 +401,8 @@ class GroundItem {
     bounce: boolean = false
     yOffset: number = 0
     nameDisplayTime: number = 0
+    flatMesh: Mesh | null = null
+    flatMeshMaterial: PBRMaterial | null = null
     private wasBouncing: boolean = false
     private bounceStartTime: number = 0
 
@@ -385,6 +454,31 @@ class GroundItem {
         }
 
         this.yOffset = Math.max(0, this.yOffset - (GroundItem.RETURN_TO_GROUND_SPEED * timeRate))
+    }
+
+    updateFlatMeshTransform(rotationX: number) {
+        if (!this.flatMesh) {
+            return
+        }
+        this.flatMesh.position.set(this.pos.x, this.pos.y + this.yOffset, this.pos.z)
+        this.flatMesh.rotation.set(rotationX, this.rotationY, 0)
+    }
+
+    setFlatMeshVisibility(visible: boolean) {
+        if (!this.flatMesh) {
+            return
+        }
+        if (this.flatMesh.isEnabled() === visible) {
+            return
+        }
+        this.flatMesh.setEnabled(visible)
+    }
+
+    dispose() {
+        this.flatMeshMaterial?.dispose()
+        this.flatMesh?.dispose()
+        this.flatMeshMaterial = null
+        this.flatMesh = null
     }
 }
 

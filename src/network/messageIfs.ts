@@ -47,7 +47,8 @@ export interface HealingResult {
 
 export interface ItemTO {
     id: number
-    tp: number
+    tp: string // Codebool type W/A/J/T/R - weapon/armor/jewel/trinket/resource
+    cb: number // Codebook id
     mId: number
     matId: number
     name: string

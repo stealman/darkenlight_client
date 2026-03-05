@@ -53,7 +53,8 @@ export const EquipSlotModelsCb = {
 
 export class Item {
     id: number
-    itemType: number
+    cbId: number
+    cbType: string
     modelId: number
     materialId: number | null = null
     name: string | null = null
@@ -62,21 +63,38 @@ export class Item {
 
     atts: Map<string, number | string> = new Map()
 
-    constructor(id: number, itemId: number, modelId: number, matId: number, name: string | null, imgUrl: string, atts: Map<string, number | string>) {
+    constructor(id: number, cbId: number, cbType: string, modelId: number, matId: number, name: string | null, imgUrl: string, atts: Map<string, number | string>) {
         this.id = id
-        this.itemType = itemId
+        this.cbType = cbType
+        this.cbId = cbId
         this.modelId = modelId
         this.materialId = matId
         this.name = name
         this.imgUrl = "images/items/" + imgUrl
         this.slotInfo = EquipSlotModelsCb.getById(modelId)!
         this.atts = atts
-        if (!this.slotInfo) {
+        if (!this.slotInfo && (cbType === 'W' || cbType === 'A' || cbType === 'J')) {
             throw new Error(`EquipSlotInfo not found for modelId: ${modelId}`)
         }
     }
 
     static fromData(data: ItemTO): Item {
-        return new Item(data.id, data.tp, data.mId, data.matId, data.name || null, data.img, data.atts)
+        return new Item(data.id, data.cb, data.tp, data.mId, data.matId, data.name || null, data.img, data.atts)
+    }
+
+    is3DModel(): boolean {
+        return this.modelId > 0
+    }
+
+    isEquippable(): boolean {
+        return this.slotInfo !== null
+    }
+
+    isStackable(): boolean {
+        return this.cbType === 'R'
+    }
+
+    isConsumable(): boolean {
+        return false
     }
 }

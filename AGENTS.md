@@ -27,6 +27,7 @@
 - Keep frame-time logic lightweight (`onFrame` paths must stay cheap).
 - Prefer explicit early returns for invalid/missing targets.
 - Keep new behavior localized and easy to tweak (duration, colors, offsets).
+- Keep Vue components thin: minimal UI logic only; delegate gameplay/domain decision logic to TypeScript managers/services when it does not add unnecessary code.
 
 ## Collaboration Preferences
 - Implement directly, then iterate quickly based on visual/gameplay feedback.
