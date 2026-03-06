@@ -1,7 +1,7 @@
 import { MyPlayer } from '@/data/myPlayer'
 import { Item } from '@/data/items/item'
 import { Connector } from '@/network/connector'
-import { DropItemMsg, EquipItemMsg, PickItemMsg, UnequipItemMsg } from '@/network/messages'
+import { DropItemMsg, EquipItemMsg, MergeItemMsg, PickItemMsg, SplitItemMsg, UnequipItemMsg } from '@/network/messages'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { GroundItemsManager } from '@/babylon/world/groundItemsManager'
 import { ItemTO } from '@/network/messageIfs'
@@ -9,6 +9,95 @@ import { ActionButtonsManager } from '@/gui/actionButtonsManager'
 
 export const InventoryManager = {
     inventory: [] as Item[],
+    itemTypeSortOrder: ['W', 'A', 'J', 'T', 'R'],
+
+    getItemTypeSortRank(cbType: string | null | undefined): number {
+        if (!cbType) {
+            return Number.MAX_SAFE_INTEGER
+        }
+
+        const normalizedType = String(cbType).toUpperCase()
+        const cbTypeAliasMap = {
+            WEAPON: 'W',
+            ARMOR: 'A',
+            JEWEL: 'J',
+            TRINKET: 'T',
+            RESOURCE: 'R',
+        }
+
+        const normalizedShortType = (cbTypeAliasMap as any)[normalizedType] ?? normalizedType
+        const rank = this.itemTypeSortOrder.indexOf(normalizedShortType)
+        return rank >= 0 ? rank : Number.MAX_SAFE_INTEGER
+    },
+
+    sortInventory() {
+        this.inventory.sort((a, b) => {
+            const typeRankDiff = this.getItemTypeSortRank(a.cbType) - this.getItemTypeSortRank(b.cbType)
+            if (typeRankDiff !== 0) {
+                return typeRankDiff
+            }
+
+            const cbIdA = Number(a.cbId)
+            const cbIdB = Number(b.cbId)
+            if (cbIdA !== cbIdB) {
+                return cbIdA - cbIdB
+            }
+
+            // For resources of the same type/codebook, keep bigger stacks first.
+            const resourceTypeRank = this.getItemTypeSortRank('R')
+            const isResourcePair =
+                this.getItemTypeSortRank(a.cbType) === resourceTypeRank
+                && this.getItemTypeSortRank(b.cbType) === resourceTypeRank
+            if (isResourcePair) {
+                const qtyDiff = this.getItemQuantity(b) - this.getItemQuantity(a)
+                if (qtyDiff !== 0) {
+                    return qtyDiff
+                }
+            }
+
+            return a.id - b.id
+        })
+    },
+
+    getItemQuantity(item: Item): number {
+        const qtyFromObject = Number((item.atts as any)?.qty)
+        if (Number.isFinite(qtyFromObject)) {
+            return qtyFromObject
+        }
+
+        const qtyFromMap = Number(item.atts?.get?.('qty'))
+        if (Number.isFinite(qtyFromMap)) {
+            return qtyFromMap
+        }
+
+        return 0
+    },
+
+    getResourceItemsByType(cbId: number): Item[] {
+        return this.inventory.filter(item => item.cbType === 'R' && item.cbId === cbId)
+    },
+
+    getTotalResourceItemCountByType(cbId: number): number {
+        let totalCount = 0
+        for (const item of this.getResourceItemsByType(cbId)) {
+            totalCount += this.getItemQuantity(item)
+        }
+        return totalCount
+    },
+
+    canMergeResourceItem(item: Item | null | undefined): boolean {
+        if (!item || item.cbType !== 'R') {
+            return false
+        }
+
+        const resourceItems = this.getResourceItemsByType(item.cbId)
+        if (resourceItems.length < 2) {
+            return false
+        }
+
+        const nonFullStacks = resourceItems.filter(resourceItem => this.getItemQuantity(resourceItem) < 999)
+        return nonFullStacks.length >= 2
+    },
 
     addItemToInventory(item: Item) {
         this.inventory.push(item)
@@ -19,15 +108,19 @@ export const InventoryManager = {
         for (const item of items) {
             this.addItemToInventory(Item.fromData(item))
         }
+        this.sortInventory()
     },
 
     removeItemsFromInventory(items: number[]) {
         for (const id of items) {
             this.inventory = this.inventory.filter(i => i.id !== id)
         }
+        this.sortInventory()
     },
 
     changeItemsInInventory(items: ItemTO[]) {
+        let quantityIncreased = false
+
         for (const changedItem of items) {
             let existingItem = this.inventory.find(item => item.id === changedItem.id)
 
@@ -44,8 +137,21 @@ export const InventoryManager = {
                 console.warn(`Inventory/equip item not found for change update: ${changedItem.id}`)
                 continue
             }
-            Object.assign(existingItem, Item.fromData(changedItem))
+
+            const nextItem = Item.fromData(changedItem)
+            const previousQuantity = this.getItemQuantity(existingItem)
+            const nextQuantity = this.getItemQuantity(nextItem)
+            if (Number.isFinite(previousQuantity) && Number.isFinite(nextQuantity) && nextQuantity > previousQuantity) {
+                quantityIncreased = true
+            }
+
+            Object.assign(existingItem, nextItem)
         }
+
+        if (quantityIncreased) {
+            AudioManager.playBackpackHandle2()
+        }
+        this.sortInventory()
     },
 
     handleInventoryDoubleClick(index: number) {
@@ -78,6 +184,7 @@ export const InventoryManager = {
         MyPlayer.myChar.equipSet.set(item.slotInfo.slot, item)
         MyPlayer.myChar.model!.assignEquippedItems()
         this.inventory = this.inventory.filter(i => i !== item)
+        this.sortInventory()
 
         Connector.sendMessage(new EquipItemMsg(item.slotInfo.slot, item.id))
         AudioManager.playBackpackHandle2()
@@ -94,6 +201,7 @@ export const InventoryManager = {
         MyPlayer.myChar.model?.removeEquippedItem(slot)
 
         this.addItemToInventory(item)
+        this.sortInventory()
         Connector.sendMessage(new UnequipItemMsg(item.id))
 
         if (!fromEquipAction) {
@@ -110,10 +218,15 @@ export const InventoryManager = {
         AudioManager.playBackpackHandle2()
         Connector.sendMessage(new DropItemMsg(item.id))
         this.inventory = this.inventory.filter(i => i !== item)
+        this.sortInventory()
     },
 
     splitInventoryItem(itemId: number, splitCount: number) {
-        console.log(`Split item not implemented yet for item ${itemId}, splitCount ${splitCount}`)
+        Connector.sendMessage(new SplitItemMsg(itemId, splitCount))
+    },
+
+    mergeInventoryItem(itemId: number) {
+        Connector.sendMessage(new MergeItemMsg(itemId))
     },
 
     pickItem() {

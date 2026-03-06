@@ -118,6 +118,24 @@ export class PickItemMsg implements Message {
     }
 }
 
+export class SplitItemMsg implements Message {
+    t: number = 16
+    d: any
+
+    constructor(id: number, splitCount: number) {
+        this.d = { id: id, splitCount: splitCount }
+    }
+}
+
+export class MergeItemMsg implements Message {
+    t: number = 17
+    d: any
+
+    constructor(id: number) {
+        this.d = { id: id }
+    }
+}
+
 export class GMSaveMapDataMsg implements Message {
     t: number = 1000
     d: any

@@ -76,6 +76,7 @@
             @close="hideItemInfoOverlay"
             @drop-item="onDropItemClick"
             @split-item="onSplitItemClick"
+            @merge-item="onMergeItemClick"
             @content-resized="onItemInfoOverlayContentResized"
         />
     </div>
@@ -131,6 +132,7 @@ const itemInfoOverlay = ref({
     durabilityMax: null,
     quantity: null,
     showDropButton: false,
+    showMergeButton: false,
     inventoryIndex: null,
     sourceType: null,
     sourceKey: null,
@@ -140,6 +142,7 @@ const hideItemInfoOverlay = () => {
     itemInfoOverlay.value.visible = false
     itemInfoOverlay.value.id = null
     itemInfoOverlay.value.showDropButton = false
+    itemInfoOverlay.value.showMergeButton = false
     itemInfoOverlay.value.inventoryIndex = null
     itemInfoOverlay.value.sourceType = null
     itemInfoOverlay.value.sourceKey = null
@@ -156,6 +159,7 @@ const showItemInfoOverlay = (item, pointer, options = {}) => {
     }
 
     const showDropButton = options.showDropButton === true
+    const showMergeButton = options.showMergeButton === true
     const inventoryIndex = Number.isInteger(options.inventoryIndex) ? options.inventoryIndex : null
     const sourceType = options.sourceType ?? null
     const sourceKey = options.sourceKey ?? null
@@ -171,6 +175,7 @@ const showItemInfoOverlay = (item, pointer, options = {}) => {
     itemInfoOverlay.value.durabilityMax = item.atts.durM ?? null
     itemInfoOverlay.value.quantity = item.atts.qty ?? null
     itemInfoOverlay.value.showDropButton = showDropButton
+    itemInfoOverlay.value.showMergeButton = showMergeButton
     itemInfoOverlay.value.inventoryIndex = inventoryIndex
     itemInfoOverlay.value.sourceType = sourceType
     itemInfoOverlay.value.sourceKey = sourceKey
@@ -256,6 +261,8 @@ const refreshEquipSlotImages = () => {
 }
 
 const refreshInventorySlotImages = () => {
+    InventoryManager.sortInventory()
+
     const nextSlotImages = Array(INVENTORY_SLOT_COUNT).fill(null)
     for (let i = 0; i < INVENTORY_SLOT_COUNT; i++) {
         const item = InventoryManager.inventory[i]
@@ -264,6 +271,85 @@ const refreshInventorySlotImages = () => {
         }
     }
     inventorySlotImages.value = nextSlotImages
+}
+
+const getLiveItemInfoForOverlay = () => {
+    const overlayItemId = Number(itemInfoOverlay.value.id)
+    if (!Number.isFinite(overlayItemId)) {
+        return null
+    }
+
+    const inventoryIndex = InventoryManager.inventory.findIndex(item => item?.id === overlayItemId)
+    if (inventoryIndex >= 0) {
+        return {
+            item: InventoryManager.inventory[inventoryIndex],
+            sourceType: 'inventory',
+            sourceKey: inventoryIndex,
+            inventoryIndex,
+            showDropButton: true,
+            showMergeButton: InventoryManager.canMergeResourceItem(InventoryManager.inventory[inventoryIndex]),
+        }
+    }
+
+    for (const [slotKey, equippedItem] of MyPlayer.myChar?.equipSet?.entries?.() ?? []) {
+        if (equippedItem?.id === overlayItemId) {
+            return {
+                item: equippedItem,
+                sourceType: 'equip',
+                sourceKey: slotKey,
+                inventoryIndex: null,
+                showDropButton: false,
+                showMergeButton: false,
+            }
+        }
+    }
+
+    return null
+}
+
+const refreshItemInfoOverlayFromLiveData = (changedItemIds = null) => {
+    if (!itemInfoOverlay.value.visible) {
+        return
+    }
+
+    const overlayItemId = Number(itemInfoOverlay.value.id)
+    if (!Number.isFinite(overlayItemId)) {
+        hideItemInfoOverlay()
+        return
+    }
+
+    if (Array.isArray(changedItemIds) && changedItemIds.length > 0 && !changedItemIds.includes(overlayItemId)) {
+        return
+    }
+
+    const liveItemInfo = getLiveItemInfoForOverlay()
+    if (!liveItemInfo?.item) {
+        hideItemInfoOverlay()
+        return
+    }
+
+    const item = liveItemInfo.item
+    itemInfoOverlay.value.name = item.name || 'Unknown item'
+    itemInfoOverlay.value.id = item.id ?? null
+    itemInfoOverlay.value.quality = item.atts?.qual ?? null
+    itemInfoOverlay.value.durability = item.atts?.dur ?? null
+    itemInfoOverlay.value.durabilityMax = item.atts?.durM ?? null
+    itemInfoOverlay.value.quantity = item.atts?.qty ?? null
+    itemInfoOverlay.value.showDropButton = liveItemInfo.showDropButton
+    itemInfoOverlay.value.showMergeButton = liveItemInfo.showMergeButton
+    itemInfoOverlay.value.inventoryIndex = liveItemInfo.inventoryIndex
+    itemInfoOverlay.value.sourceType = liveItemInfo.sourceType
+    itemInfoOverlay.value.sourceKey = liveItemInfo.sourceKey
+
+    nextTick(() => {
+        clampItemInfoOverlayPosition()
+    })
+}
+
+const refreshDialogFromInventoryUpdate = (update = {}) => {
+    refreshEquipSlotImages()
+    refreshInventorySlotImages()
+    refreshItemInfoOverlayFromLiveData(update.changedItemIds)
 }
 
 const onclick = (slot, pointer) => {
@@ -290,7 +376,13 @@ const onInventoryClick = (index, pointer) => {
         hideItemInfoOverlay()
         return
     }
-    showItemInfoOverlay(item, pointer, { showDropButton: true, inventoryIndex: index, sourceType: 'inventory', sourceKey: index })
+    showItemInfoOverlay(item, pointer, {
+        showDropButton: true,
+        showMergeButton: InventoryManager.canMergeResourceItem(item),
+        inventoryIndex: index,
+        sourceType: 'inventory',
+        sourceKey: index
+    })
 }
 
 const onDropItemClick = () => {
@@ -314,6 +406,14 @@ const onSplitItemClick = (payload) => {
         return
     }
     InventoryManager.splitInventoryItem(itemId, splitCount)
+}
+
+const onMergeItemClick = (payload) => {
+    const itemId = Number(payload?.itemId ?? itemInfoOverlay.value.id)
+    if (!Number.isFinite(itemId)) {
+        return
+    }
+    InventoryManager.mergeInventoryItem(itemId)
 }
 
 const onInventoryDoubleClick = (index) => {
@@ -409,7 +509,8 @@ const onDialogKeyDown = (event) => {
 }
 
 defineExpose({
-    openDialog
+    openDialog,
+    refreshDialogFromInventoryUpdate
 })
 
 </script>

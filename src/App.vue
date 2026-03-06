@@ -173,6 +173,7 @@ onMounted(async () => {
 
     window.addEventListener("resize", resizeEventHandler)
     window.addEventListener("ui:open-inventory", onOpenInventoryHotkey)
+    window.addEventListener("ui:inventory-updated", onInventoryUpdated as EventListener)
     document.addEventListener("keydown", (e) => Controller.processKeydown(e));
     document.addEventListener("keyup", (e) => Controller.processKeyup(e));
     await nextTick()
@@ -207,6 +208,7 @@ onMounted(async () => {
 onUnmounted(() => {
     window.removeEventListener("resize", resizeEventHandler);
     window.removeEventListener("ui:open-inventory", onOpenInventoryHotkey)
+    window.removeEventListener("ui:inventory-updated", onInventoryUpdated as EventListener)
 });
 
 const loginRequestSent = () => {
@@ -242,6 +244,15 @@ const onOpenInventoryHotkey = () => {
         return
     }
     showInventoryDialog()
+}
+
+const onInventoryUpdated = (event: Event) => {
+    if (!displayInventoryDialog.value) {
+        return
+    }
+
+    const detail = (event as CustomEvent<{ reason?: string, changedItemIds?: number[] }>).detail
+    inventoryDialog.value?.refreshDialogFromInventoryUpdate?.(detail)
 }
 
 const closeSettingsWithRestartPrompt = () => {

@@ -5,6 +5,7 @@ import { OnScreenMessageManager } from '@/gui/onScreenMessageManager'
 import { MyPlayer } from '@/data/myPlayer'
 import { GuiButtonsManager } from '@/gui/guiButtonsManager'
 import { EmeraldsManager } from '@/gui/emeraldsManager'
+import { InventoryManager } from '@/data/InventoryManager'
 
 class ActionButtonActionBinding {
     name: string
@@ -272,6 +273,10 @@ export const ActionButtonsManager = {
     },
 
     clickOnHealingButton() {
+        if (InventoryManager.getTotalResourceItemCountByType(1) <= 0) {
+            OnScreenMessageManager.addMessage("Nemáš žádné obvazy")
+            return
+        }
         if (MyPlayer.activeAction && MyPlayer.activeAction.name === CharacterActions.HEAL.name) {
             MyPlayer.stopActions()
             return

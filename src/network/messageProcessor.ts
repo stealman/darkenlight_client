@@ -236,14 +236,19 @@ export const MessageProcessor = {
 
     processAddItemsToInventory(data) {
         InventoryManager.addItemsToInventory(data)
+        const changedItemIds = Array.isArray(data) ? data.map((item: any) => item?.id) : []
+        this.emitInventoryUpdated('add', changedItemIds)
     },
 
     processRemoveItemsFromInventory(data) {
         InventoryManager.removeItemsFromInventory(data)
+        this.emitInventoryUpdated('remove', data)
     },
 
     processChangeItemsInInventory(data) {
         InventoryManager.changeItemsInInventory(data)
+        const changedItemIds = Array.isArray(data) ? data.map((item: any) => item?.id) : []
+        this.emitInventoryUpdated('change', changedItemIds)
     },
 
     processEmeraldsChange(data: EmeraldsChangeMessage) {
@@ -256,5 +261,15 @@ export const MessageProcessor = {
 
     processGMSpawnChange(data) {
         GMSpawns.spawnChange(data.worldId, data.spawn, data.deleted)
+    },
+
+    emitInventoryUpdated(reason: string, changedItemIds: number[] = []) {
+        if (typeof window === 'undefined') {
+            return
+        }
+
+        window.dispatchEvent(new CustomEvent('ui:inventory-updated', {
+            detail: { reason, changedItemIds }
+        }))
     }
 }

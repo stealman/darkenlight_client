@@ -32,6 +32,13 @@
                 <img class="action-icon" src="/images/icons/buttons/btn_split.png" alt="Split item" />
             </button>
 
+            <button v-if="shouldShowMergeButton" class="action-button inventory-action-button inventory-merge-button" type="button"
+                :style="{ backgroundImage: `url('/images/icons/buttons/btn_background.png')` }"
+                @pointerdown.prevent.stop
+                @click.stop="onMergeItemClick">
+                <img class="action-icon" src="/images/icons/buttons/btn_stack.png" alt="Merge item" />
+            </button>
+
             <button v-if="showSplitControls" class="action-button inventory-action-button inventory-text-action-button" type="button"
                 :style="{ backgroundImage: `url('/images/icons/buttons/btn_background.png')` }"
                 @pointerdown.prevent.stop
@@ -96,11 +103,12 @@ const props = defineProps({
     },
 })
 
-const emit = defineEmits(['close', 'drop-item', 'split-item', 'content-resized'])
+const emit = defineEmits(['close', 'drop-item', 'split-item', 'merge-item', 'content-resized'])
 const overlayRootRef = ref(null)
+const showSplitControls = ref(false)
 
 const shouldShowDropButton = computed(() => {
-    return props.context === 'INVENTORY' && props.itemInfo.showDropButton === true
+    return props.context === 'INVENTORY' && props.itemInfo.showDropButton === true && !showSplitControls.value
 })
 
 const displayItemName = computed(() => {
@@ -123,8 +131,20 @@ const splitMaxQuantity = computed(() => {
     return quantity - 1
 })
 
+const canSplitItem = computed(() => {
+    return props.context === 'INVENTORY'
+        && props.itemInfo.showDropButton === true
+        && splitMaxQuantity.value > 1
+})
+
 const shouldShowSplitButton = computed(() => {
-    return shouldShowDropButton.value && splitMaxQuantity.value > 1
+    return canSplitItem.value && !showSplitControls.value
+})
+
+const shouldShowMergeButton = computed(() => {
+    return props.context === 'INVENTORY'
+        && props.itemInfo.showMergeButton === true
+        && !showSplitControls.value
 })
 
 const splitStep = computed(() => {
@@ -142,7 +162,6 @@ const splitMinQuantity = computed(() => {
     return splitStep.value
 })
 
-const showSplitControls = ref(false)
 const splitQuantity = ref(splitMinQuantity.value)
 const lastSplitSliderTickAt = ref(0)
 
@@ -169,6 +188,16 @@ const onSplitItemClick = () => {
     }
 }
 
+const onMergeItemClick = () => {
+    const itemId = Number(props.itemInfo.id)
+    if (!Number.isFinite(itemId)) {
+        return
+    }
+    AudioManager.playGuiButtonClick()
+    emit('merge-item', { itemId })
+    emit('close')
+}
+
 const onSplitConfirmClick = () => {
     const itemId = Number(props.itemInfo.id)
     if (!Number.isFinite(itemId)) {
@@ -177,6 +206,7 @@ const onSplitConfirmClick = () => {
     AudioManager.playGuiButtonClick()
     emit('split-item', { itemId, splitCount: splitQuantity.value })
     resetSplitControls()
+    emit('close')
 }
 
 const onSplitCancelClick = () => {
@@ -213,8 +243,8 @@ watch(
     }
 )
 
-watch(shouldShowSplitButton, (visible) => {
-    if (!visible) {
+watch(canSplitItem, (canSplit) => {
+    if (!canSplit) {
         resetSplitControls()
     }
 })
