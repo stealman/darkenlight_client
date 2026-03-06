@@ -169,7 +169,6 @@
     position: fixed;
     z-index: 1000;
     min-width: 120px;
-    max-width: 260px;
     padding: 8px 10px;
     border: 1px solid rgba(176, 143, 86, 0.9);
     background: rgba(15, 11, 8, 0.94);
@@ -235,3 +234,39 @@
     opacity: 1;
 }
 
+.inventory-item-overlay-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+.inventory-item-overlay-split-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.inventory-item-overlay-split-panel {
+    margin-top: 4px;
+}
+
+.inventory-item-overlay-split-slider {
+    width: 110px;
+}
+
+.inventory-item-overlay-split-value {
+    min-width: 18px;
+    text-align: center;
+}
+
+.inventory-item-overlay-split-current {
+    margin-top: 4px;
+    text-align: center;
+}
+
+.inventory-text-action-button {
+    color: #fff;
+    font-size: 12px;
+    line-height: 1;
+}

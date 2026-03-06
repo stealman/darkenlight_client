@@ -304,7 +304,7 @@ export const OverlayManager = {
                     const qtyRaw = (nearestItem.item.atts as any)?.qty
                     const qty = Number(qtyRaw)
                     if (!Number.isNaN(qty) && qty > 0) {
-                        displayName = `${qty}x ${itemName}`
+                        displayName = `${qty}x  ${itemName}`
                     }
                 }
                 this.renderName(pos, displayName, tightText, 'NEUTRAL')

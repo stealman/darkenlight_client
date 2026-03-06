@@ -7,31 +7,71 @@
          }"
          @click="onOverlayClick"
     >
-        <div class="inventory-item-overlay-name">{{ itemInfo.name }}</div>
-        <div class="inventory-item-overlay-id">ID: {{ itemInfo.id }}</div>
+        <div class="inventory-item-overlay-name">
+            <span>{{ displayItemName }}</span>
+            <span v-if="displayItemQuantity" class="inventory-item-overlay-name-quantity">({{ displayItemQuantity }})</span>
+        </div>
 
         <template v-if="itemInfo.quality">
             <div class="inventory-item-overlay-qual">Kvalita: {{ itemInfo.quality }}</div>
             <div class="inventory-item-overlay-dur">Stav: {{ itemInfo.durability }} / {{ itemInfo.durabilityMax }}</div>
         </template>
 
-        <template v-if="itemInfo.quantity">
-            <div class="inventory-item-overlay-quantity">Množství: {{ itemInfo.quantity }}</div>
-        </template>
+        <div class="inventory-item-overlay-interactive inventory-item-overlay-actions">
+            <button v-if="shouldShowDropButton" class="action-button inventory-action-button inventory-drop-button" type="button"
+                :style="{ backgroundImage: `url('/images/icons/buttons/btn_background.png')` }"
+                @pointerdown.prevent.stop
+                @click.stop="onDropItemClick">
+                <img class="action-icon" src="/images/icons/buttons/btn_drop.png" alt="Drop item" />
+            </button>
 
+            <button v-if="shouldShowSplitButton" class="action-button inventory-action-button inventory-split-button" type="button"
+                :style="{ backgroundImage: `url('/images/icons/buttons/btn_background.png')` }"
+                @pointerdown.prevent.stop
+                @click.stop="onSplitItemClick">
+                <img class="action-icon" src="/images/icons/buttons/btn_split.png" alt="Split item" />
+            </button>
 
-        <button v-if="shouldShowDropButton" class="action-button inventory-action-button inventory-drop-button" type="button"
-            :style="{ backgroundImage: `url('/images/icons/buttons/btn_background.png')` }"
-            @pointerdown.prevent.stop
-            @click.stop="onDropItemClick">
-            <img class="action-icon" src="/images/icons/buttons/btn_drop.png" alt="Drop item" />
-        </button>
+            <button v-if="showSplitControls" class="action-button inventory-action-button inventory-text-action-button" type="button"
+                :style="{ backgroundImage: `url('/images/icons/buttons/btn_background.png')` }"
+                @pointerdown.prevent.stop
+                @click.stop="onSplitConfirmClick">
+                <img class="action-icon" src="/images/icons/buttons/btn_ok.png" alt="Split item" />
+            </button>
+
+            <button v-if="showSplitControls" class="action-button inventory-action-button inventory-text-action-button" type="button"
+                :style="{ backgroundImage: `url('/images/icons/buttons/btn_background.png')` }"
+                @pointerdown.prevent.stop
+                @click.stop="onSplitCancelClick">
+                <img class="action-icon" src="/images/icons/buttons/btn_stop.png" alt="Split item" />
+            </button>
+        </div>
+
+        <div v-if="showSplitControls" class="inventory-item-overlay-interactive inventory-item-overlay-split-panel">
+            <div class="inventory-item-overlay-split-controls">
+                <span class="inventory-item-overlay-split-value">{{ splitMinQuantity }}</span>
+                <input
+                    v-model.number="splitQuantity"
+                    class="range-slider inventory-item-overlay-split-slider"
+                    type="range"
+                    :min="splitMinQuantity"
+                    :max="splitMaxQuantity"
+                    :step="splitStep"
+                    style="zoom: 1.5;"
+                    @pointerdown.stop
+                    @click.stop
+                    @input="onSplitSliderInput"
+                />
+                <span class="inventory-item-overlay-split-value">{{ splitMaxQuantity }}</span>
+            </div>
+            <div class="inventory-item-overlay-split-current">{{ splitQuantity }}</div>
+        </div>
     </div>
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
-import { Item } from '@/data/items/item'
+import { computed, nextTick, ref, watch } from 'vue'
+import { AudioManager } from '@/babylon/audio/audioManager'
 
 const props = defineProps({
     itemInfo: {
@@ -56,18 +96,109 @@ const props = defineProps({
     },
 })
 
-const emit = defineEmits(['close', 'drop-item'])
+const emit = defineEmits(['close', 'drop-item', 'split-item', 'content-resized'])
 const overlayRootRef = ref(null)
 
 const shouldShowDropButton = computed(() => {
     return props.context === 'INVENTORY' && props.itemInfo.showDropButton === true
 })
 
+const displayItemName = computed(() => {
+    return props.itemInfo?.name ?? 'Unknown item'
+})
+
+const displayItemQuantity = computed(() => {
+    const quantity = Number(props.itemInfo?.quantity)
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+        return null
+    }
+    return quantity
+})
+
+const splitMaxQuantity = computed(() => {
+    const quantity = Number(props.itemInfo.quantity)
+    if (!Number.isFinite(quantity) || quantity <= 1) {
+        return 1
+    }
+    return quantity - 1
+})
+
+const shouldShowSplitButton = computed(() => {
+    return shouldShowDropButton.value && splitMaxQuantity.value > 1
+})
+
+const splitStep = computed(() => {
+    const quantity = Number(props.itemInfo.quantity)
+    if (!Number.isFinite(quantity) || quantity <= 100) {
+        return 1
+    }
+    if (quantity <= 1000) {
+        return 5
+    }
+    return 25
+})
+
+const splitMinQuantity = computed(() => {
+    return splitStep.value
+})
+
+const showSplitControls = ref(false)
+const splitQuantity = ref(splitMinQuantity.value)
+const lastSplitSliderTickAt = ref(0)
+
+const resetSplitControls = () => {
+    showSplitControls.value = false
+    splitQuantity.value = splitMinQuantity.value
+}
+
 const onDropItemClick = () => {
     emit('drop-item')
 }
 
+const onSplitItemClick = () => {
+    if (!shouldShowSplitButton.value) {
+        return
+    }
+    AudioManager.playGuiButtonClick()
+    showSplitControls.value = !showSplitControls.value
+    if (splitQuantity.value < splitMinQuantity.value) {
+        splitQuantity.value = splitMinQuantity.value
+    }
+    if (splitQuantity.value > splitMaxQuantity.value) {
+        splitQuantity.value = splitMaxQuantity.value
+    }
+}
+
+const onSplitConfirmClick = () => {
+    const itemId = Number(props.itemInfo.id)
+    if (!Number.isFinite(itemId)) {
+        return
+    }
+    AudioManager.playGuiButtonClick()
+    emit('split-item', { itemId, splitCount: splitQuantity.value })
+    resetSplitControls()
+}
+
+const onSplitCancelClick = () => {
+    AudioManager.playGuiButtonClick()
+    resetSplitControls()
+    emit('close')
+}
+
+const onSplitSliderInput = () => {
+    const now = Date.now()
+    if ((now - lastSplitSliderTickAt.value) < 100) {
+        return
+    }
+    lastSplitSliderTickAt.value = now
+    AudioManager.playGuiTick()
+}
+
 const onOverlayClick = (event) => {
+    const clickedInteractiveElement = event?.target?.closest?.('.inventory-item-overlay-interactive')
+    if (clickedInteractiveElement) {
+        return
+    }
     const clickedButton = event?.target?.closest?.('button')
     if (clickedButton) {
         return
@@ -75,11 +206,39 @@ const onOverlayClick = (event) => {
     emit('close')
 }
 
+watch(
+    () => [props.itemInfo.id, props.itemInfo.quantity],
+    () => {
+        resetSplitControls()
+    }
+)
+
+watch(shouldShowSplitButton, (visible) => {
+    if (!visible) {
+        resetSplitControls()
+    }
+})
+
+watch(showSplitControls, () => {
+    nextTick(() => {
+        emit('content-resized')
+    })
+})
+
 defineExpose({
     getBoundingClientRect: () => overlayRootRef.value?.getBoundingClientRect?.(),
 })
 </script>
 
 <style scoped>
+.inventory-item-overlay-name {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+}
+
+.inventory-item-overlay-name-quantity {
+    color: #9b9b9b;
+}
 
 </style>

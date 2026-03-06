@@ -97,7 +97,7 @@ export const AudioManager = {
         this.guiTickSound = new Sound("guiTick", AudioManager.BASE_PATH_GUI + "tick.ogg", scene, function() {
             AudioManager.guiTickSound!['loaded'] = true;
         }, {
-            volume: 0.5,
+            volume: 0.3,
             playbackRate: 1.25,
         });
 

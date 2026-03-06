@@ -75,6 +75,8 @@
             :action-button-size="inventoryActionButtonSize"
             @close="hideItemInfoOverlay"
             @drop-item="onDropItemClick"
+            @split-item="onSplitItemClick"
+            @content-resized="onItemInfoOverlayContentResized"
         />
     </div>
 </template>
@@ -174,19 +176,32 @@ const showItemInfoOverlay = (item, pointer, options = {}) => {
     itemInfoOverlay.value.sourceKey = sourceKey
 
     nextTick(() => {
-        const dialogRect = dialogWindowRef.value?.getBoundingClientRect?.()
-        const overlayRect = itemInfoOverlayRef.value?.getBoundingClientRect?.()
-        if (!dialogRect || !overlayRect) {
-            return
-        }
+        clampItemInfoOverlayPosition()
+    })
+}
 
-        const minX = dialogRect.left + OVERLAY_PADDING
-        const minY = dialogRect.top + OVERLAY_PADDING
-        const maxX = dialogRect.right - overlayRect.width - OVERLAY_PADDING
-        const maxY = dialogRect.bottom - overlayRect.height - OVERLAY_PADDING
+const clampItemInfoOverlayPosition = () => {
+    const dialogRect = dialogWindowRef.value?.getBoundingClientRect?.()
+    const overlayRect = itemInfoOverlayRef.value?.getBoundingClientRect?.()
+    if (!dialogRect || !overlayRect) {
+        return
+    }
 
-        itemInfoOverlay.value.x = Math.max(minX, Math.min(itemInfoOverlay.value.x, maxX))
-        itemInfoOverlay.value.y = Math.max(minY, Math.min(itemInfoOverlay.value.y, maxY))
+    const minX = dialogRect.left + OVERLAY_PADDING
+    const minY = dialogRect.top + OVERLAY_PADDING
+    const maxX = dialogRect.right - overlayRect.width - OVERLAY_PADDING
+    const maxY = dialogRect.bottom - overlayRect.height - OVERLAY_PADDING
+
+    itemInfoOverlay.value.x = Math.max(minX, Math.min(itemInfoOverlay.value.x, maxX))
+    itemInfoOverlay.value.y = Math.max(minY, Math.min(itemInfoOverlay.value.y, maxY))
+}
+
+const onItemInfoOverlayContentResized = () => {
+    if (!itemInfoOverlay.value.visible) {
+        return
+    }
+    nextTick(() => {
+        clampItemInfoOverlayPosition()
     })
 }
 
@@ -280,7 +295,6 @@ const onInventoryClick = (index, pointer) => {
 
 const onDropItemClick = () => {
     const index = itemInfoOverlay.value.inventoryIndex
-    const itemName = itemInfoOverlay.value.name
     if (index === null) {
         return
     }
@@ -291,6 +305,15 @@ const onDropItemClick = () => {
     InventoryManager.dropItem(item)
     hideItemInfoOverlay()
     refreshInventorySlotImages()
+}
+
+const onSplitItemClick = (payload) => {
+    const itemId = Number(payload?.itemId)
+    const splitCount = Number(payload?.splitCount)
+    if (!Number.isFinite(itemId) || !Number.isFinite(splitCount) || splitCount < 1) {
+        return
+    }
+    InventoryManager.splitInventoryItem(itemId, splitCount)
 }
 
 const onInventoryDoubleClick = (index) => {

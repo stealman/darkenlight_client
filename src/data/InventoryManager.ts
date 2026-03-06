@@ -112,6 +112,10 @@ export const InventoryManager = {
         this.inventory = this.inventory.filter(i => i !== item)
     },
 
+    splitInventoryItem(itemId: number, splitCount: number) {
+        console.log(`Split item not implemented yet for item ${itemId}, splitCount ${splitCount}`)
+    },
+
     pickItem() {
         const item = GroundItemsManager.nearbyItem
         if (!item) return
