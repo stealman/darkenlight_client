@@ -10,6 +10,10 @@ export class EquipSlotModel {
         this.slot = slot
         this.weaponType = weaponType
     }
+
+    isTwoHanded(): boolean {
+        return this.weaponType === WeaponTypes.BOW || this.weaponType === WeaponTypes.GREAT_AXE
+    }
 }
 
 export const EquipItemSlots = {
@@ -23,12 +27,17 @@ export const EquipItemSlots = {
 
 export const WeaponTypes = {
     SWORD: "SWORD",
+    AXE: "AXE",
+    GREAT_AXE: "GREAT_AXE",
     BOW: "BOW",
 }
 
 export const EquipSlotModelsCb = {
     LONGSWORD: new EquipSlotModel(10, EquipItemSlots.R_HAND, WeaponTypes.SWORD),
-    BROADSWORD: new EquipSlotModel(20, EquipItemSlots.R_HAND, WeaponTypes.SWORD ),
+    BROADSWORD: new EquipSlotModel(20, EquipItemSlots.R_HAND, WeaponTypes.SWORD),
+
+    PICKAXE: new EquipSlotModel(150, EquipItemSlots.R_HAND, WeaponTypes.GREAT_AXE),
+
     HUNTERBOW: new EquipSlotModel(510, EquipItemSlots.R_HAND, WeaponTypes.BOW),
 
     ARMOR_PLATE: new EquipSlotModel(1000, EquipItemSlots.BODY, null),

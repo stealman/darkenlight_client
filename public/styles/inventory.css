@@ -270,3 +270,13 @@
     font-size: 12px;
     line-height: 1;
 }
+
+.inventory-item-overlay-name {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+}
+
+.inventory-item-overlay-name-quantity {
+    color: #9b9b9b;
+}

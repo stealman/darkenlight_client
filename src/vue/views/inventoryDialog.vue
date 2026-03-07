@@ -239,7 +239,7 @@ const resolveEffectiveEquipSlot = (slot) => {
         return slot
     }
     const rightHandItem = MyPlayer.myChar?.equipSet?.get('R_HAND')
-    if (rightHandItem?.slotInfo?.weaponType === WeaponTypes.BOW) {
+    if (rightHandItem?.slotInfo?.isTwoHanded()) {
         return 'R_HAND'
     }
     return slot
@@ -252,9 +252,9 @@ const refreshEquipSlotImages = () => {
     equipSlotImages.value.BODY = resolveSlotImage('BODY')
     const rightHandItem = MyPlayer.myChar?.equipSet?.get('R_HAND')
     const rightHandImage = resolveSlotImage('R_HAND')
-    const isBowInRightHand = rightHandItem?.slotInfo?.weaponType === WeaponTypes.BOW
+    const isTwoHandedWeaponEquipped = rightHandItem?.slotInfo?.isTwoHanded()
     equipSlotImages.value.R_HAND = rightHandImage
-    equipSlotImages.value.L_HAND = isBowInRightHand ? rightHandImage : resolveSlotImage('L_HAND')
+    equipSlotImages.value.L_HAND = isTwoHandedWeaponEquipped ? rightHandImage : resolveSlotImage('L_HAND')
     equipSlotImages.value.L_RING = resolveSlotImage('L_RING')
     equipSlotImages.value.R_RING = resolveSlotImage('R_RING')
     equipSlotImages.value.LEGS = resolveSlotImage('LEGS')

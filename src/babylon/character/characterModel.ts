@@ -93,6 +93,7 @@ export class CharacterModel implements EquipBearer {
             this.model.getChildMeshes().forEach((mesh) => {
                 mesh.material = material
                 Lights.addShadowCaster(mesh)
+                mesh.receiveShadows = true
             });
 
             // Process animations
@@ -322,11 +323,18 @@ export class CharacterModel implements EquipBearer {
         if (this.parent.getWeapon() != null) {
             switch (this.parent.getWeapon()!.slotInfo.weaponType) {
                 case WeaponTypes.SWORD: {
+                    possibleAnims.push(this.slashAnim)
                     possibleAnims.push(this.slashAnim2)
                     possibleAnims.push(this.leftSlashAnim)
                     possibleAnims.push(this.rightSlashAnim)
                     possibleAnims.push(this.jabAnim)
                     possibleAnims.push(this.highJabAnim)
+                    break
+                }
+                case WeaponTypes.GREAT_AXE: {
+                    possibleAnims.push(this.slashAnim)
+                    possibleAnims.push(this.slashAnim2)
+                    possibleAnims.push(this.leftSlashAnim)
                     break
                 }
                 case WeaponTypes.BOW: {

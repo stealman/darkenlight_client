@@ -261,14 +261,6 @@ defineExpose({
 </script>
 
 <style scoped>
-.inventory-item-overlay-name {
-    display: flex;
-    align-items: baseline;
-    gap: 6px;
-}
 
-.inventory-item-overlay-name-quantity {
-    color: #9b9b9b;
-}
 
 </style>

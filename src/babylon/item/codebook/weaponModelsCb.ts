@@ -10,6 +10,7 @@ import { EquipSlotModelsCb } from '@/data/items/item'
 const matBowSize = new Vector2(4, 1)
 const matLongswordSize = new Vector2(4, 1)
 const matBroadswordSize = new Vector2(4, 1)
+const matPickaxeSize = new Vector2(4, 1)
 
 export const WeaponsCbManager = {
     BASE_WEAPONS_PATH: 'weapons/',
@@ -18,6 +19,7 @@ export const WeaponsCbManager = {
     bowMaterial: null as PBRCustomMaterial | null,
     longSwordMaterial: null as PBRCustomMaterial | null,
     broadSwordMaterial: null as PBRCustomMaterial | null,
+    pickAxeMaterial: null as PBRCustomMaterial | null,
 
     async initMelee(map: Map<number, EquipItemType>, scene: Scene) {
         this.itemSourceParent = new TransformNode("mobWeaponSources", scene)
@@ -26,10 +28,12 @@ export const WeaponsCbManager = {
         this.bowMaterial = this.getMaterial("hunterbow", matBowSize)
         this.longSwordMaterial = this.getMaterial("longsword", matLongswordSize)
         this.broadSwordMaterial = this.getMaterial("broadsword", matBroadswordSize)
+        this.pickAxeMaterial = this.getMaterial("pickaxe", matPickaxeSize)
 
         map.set(WeaponModelsCb.LONGSWORD.id, await this.getItem(WeaponModelsCb.LONGSWORD, this.longSwordMaterial))
         map.set(WeaponModelsCb.BROADSWORD.id, await this.getItem(WeaponModelsCb.BROADSWORD, this.broadSwordMaterial))
         map.set(WeaponModelsCb.HUNTERBOW.id, await this.getItem(WeaponModelsCb.HUNTERBOW, this.bowMaterial))
+        map.set(WeaponModelsCb.PICKAXE.id, await this.getItem(WeaponModelsCb.PICKAXE, this.pickAxeMaterial))
     },
 
     async getItem(data: EquipCbItem, material: PBRCustomMaterial | null = null): Promise<EquipItemType> {
@@ -54,6 +58,8 @@ export const WeaponModelsCb = {
     LONGSWORD: new EquipCbItem(EquipSlotModelsCb.LONGSWORD.modelId, "longsword", Vector3.Zero(), new Vector3(0.2, 0.24, 0.4), new Vector3(0, 2.4, 0), matLongswordSize),
 
     BROADSWORD: new EquipCbItem(EquipSlotModelsCb.BROADSWORD.modelId, "broadsword", Vector3.Zero(), new Vector3(0.22, 0.24, 0.4), new Vector3(0, 2, 0), matBroadswordSize),
+
+    PICKAXE: new EquipCbItem(EquipSlotModelsCb.PICKAXE.modelId, "pickaxe", Vector3.Zero(), new Vector3(0.22, 0.24, 0.4), new Vector3(0, 2, 0), matPickaxeSize),
 
     HUNTERBOW: new EquipCbItem(EquipSlotModelsCb.HUNTERBOW.modelId, "hunterbow", new Vector3(-0.1, 0, 0), new Vector3(0.17, 0.24, 0.4), null, matBowSize),
 }

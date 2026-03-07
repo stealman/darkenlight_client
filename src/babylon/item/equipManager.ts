@@ -189,6 +189,7 @@ export class EquipItemType {
         this.mesh.setEnabled(false)
         this.mesh.alwaysSelectAsActiveMesh = true
         this.mesh.parent = parentNode
+        this.mesh.receiveShadows = true
     }
 
     /**
@@ -209,6 +210,7 @@ export class EquipItemType {
         this.mesh.setEnabled(false)
         this.mesh.alwaysSelectAsActiveMesh = true
         this.mesh.parent = parentNode
+        this.mesh.receiveShadows = true
         Lights.addShadowCaster(this.mesh)
     }
 
