@@ -44,6 +44,8 @@ export class CharacterModel implements EquipBearer {
     rightSlashAnim: AnimationGroup | undefined
     highJabAnim: AnimationGroup | undefined
 
+    greatAxeAttackAnim: AnimationGroup | undefined
+
     bowAimAnim: AnimationGroup | undefined
 
     actualAnim: AnimationGroup | undefined
@@ -117,6 +119,8 @@ export class CharacterModel implements EquipBearer {
                     { name: "Slash2", startFrame: 1000, endFrame: 1060},
 
                     { name: "BowAim", startFrame: 1100, endFrame: 1175},
+
+                    { name: "GreatAxeAttack", startFrame: 1200, endFrame: 1260},
                 ];
 
                 const newAnimationGroups = animations.map(({ name, startFrame, endFrame }) => {
@@ -137,6 +141,7 @@ export class CharacterModel implements EquipBearer {
                 this.highJabAnim = newAnimationGroups[8]
                 this.slashAnim2 = newAnimationGroups[9]
                 this.bowAimAnim = newAnimationGroups[10]
+                this.greatAxeAttackAnim = newAnimationGroups[11]
 
                 this.idleAnim?.start(true, 0.5)
             }
@@ -332,9 +337,11 @@ export class CharacterModel implements EquipBearer {
                     break
                 }
                 case WeaponTypes.GREAT_AXE: {
-                    possibleAnims.push(this.slashAnim)
-                    possibleAnims.push(this.slashAnim2)
-                    possibleAnims.push(this.leftSlashAnim)
+                    possibleAnims.push(this.greatAxeAttackAnim)
+                    break
+                }
+                case WeaponTypes.PICKAXE: {
+                    possibleAnims.push(this.greatAxeAttackAnim)
                     break
                 }
                 case WeaponTypes.BOW: {

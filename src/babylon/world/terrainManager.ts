@@ -119,12 +119,12 @@ export const TerrainManager = {
             ps.color1 = new Color4(0.9, 0.85, 0.9, 1)
             ps.color2 = new Color4(0.8, 0.85, 0.9, 1)
             ps.colorDead = new Color4(0.6, 0.6, 0.7, 0.3)
-        } else if (block.type) {
+        } else if (block.type === 3) {
             // ROCK
             ps.color1 = new Color4(0.35, 0.32, 0.35, 1)
             ps.color2 = new Color4(0.3, 0.33, 0.38, 1)
             ps.colorDead = new Color4(0.2, 0.2, 0.2, 0.3)
-        } else if (block.type) {
+        } else if (block.type === 4) {
             // MUDDY DIRT
             ps.color1 = new Color4(0.45, 0.35, 0.25, 1)
             ps.color2 = new Color4(0.35, 0.25, 0.15, 1)

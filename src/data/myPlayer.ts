@@ -17,6 +17,7 @@ import { AudioManager } from '@/babylon/audio/audioManager'
 import { ActionButtonsManager, CharacterAction, CharacterActions } from '@/gui/actionButtonsManager'
 import { Attackable } from '@/GameManager'
 import { EmeraldsManager } from '@/gui/emeraldsManager'
+import { InventoryManager } from '@/data/InventoryManager'
 
 /**
  * Controlling object for the player's character
@@ -200,5 +201,14 @@ export const MyPlayer = {
         if (resetTarget) {
             TargetingManager.unselectTarget()
         }
+    },
+
+    hasWaponTypeInHandOrInventory(weaponType: string): boolean {
+        const equippedWeapon = this.myChar?.getWeapon()
+        if (equippedWeapon?.slotInfo?.weaponType === weaponType) {
+            return true
+        }
+
+        return InventoryManager.inventory.some(item => item?.slotInfo?.weaponType === weaponType)
     }
 }

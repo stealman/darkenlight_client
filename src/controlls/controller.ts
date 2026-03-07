@@ -7,7 +7,7 @@ import { GMManager } from '@/gm/GM'
 import { TargetingManager } from '@/gui/targettingManager'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { ActionButtonsManager } from '@/gui/actionButtonsManager'
-import { InventoryManager } from '@/data/InventoryManager'
+import { GuiButtonsManager } from '@/gui/guiButtonsManager'
 
 export const Controller = {
     leftPressedTime: 0,
@@ -84,11 +84,11 @@ export const Controller = {
             return
         }
 
-        // Space - pickup nearby item
+        // Space - click first available opportunity action
         if (e.code === 'Space' || e.keyCode === 32) {
             e.preventDefault()
             if (e.repeat) return
-            InventoryManager.pickItem()
+            GuiButtonsManager.clickFirstAvailableOpportunityButton()
             return
         }
 

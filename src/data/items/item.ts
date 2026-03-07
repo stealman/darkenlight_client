@@ -12,7 +12,7 @@ export class EquipSlotModel {
     }
 
     isTwoHanded(): boolean {
-        return this.weaponType === WeaponTypes.BOW || this.weaponType === WeaponTypes.GREAT_AXE
+        return this.weaponType === WeaponTypes.BOW || this.weaponType === WeaponTypes.GREAT_AXE || this.weaponType === WeaponTypes.PICKAXE
     }
 }
 
@@ -29,6 +29,7 @@ export const WeaponTypes = {
     SWORD: "SWORD",
     AXE: "AXE",
     GREAT_AXE: "GREAT_AXE",
+    PICKAXE: "PICKAXE",
     BOW: "BOW",
 }
 
@@ -36,7 +37,7 @@ export const EquipSlotModelsCb = {
     LONGSWORD: new EquipSlotModel(10, EquipItemSlots.R_HAND, WeaponTypes.SWORD),
     BROADSWORD: new EquipSlotModel(20, EquipItemSlots.R_HAND, WeaponTypes.SWORD),
 
-    PICKAXE: new EquipSlotModel(150, EquipItemSlots.R_HAND, WeaponTypes.GREAT_AXE),
+    PICKAXE: new EquipSlotModel(150, EquipItemSlots.R_HAND, WeaponTypes.PICKAXE),
 
     HUNTERBOW: new EquipSlotModel(510, EquipItemSlots.R_HAND, WeaponTypes.BOW),
 

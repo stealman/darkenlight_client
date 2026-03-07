@@ -1,6 +1,9 @@
 import { GroundItemsManager } from '@/babylon/world/groundItemsManager'
 import { InventoryManager } from '@/data/InventoryManager'
 import { AudioManager } from '@/babylon/audio/audioManager'
+import { MyPlayer } from '@/data/myPlayer'
+import { WorldDataManager } from '@/data/worldDataManager'
+import { WeaponTypes } from '@/data/items/item'
 
 class GuiOpportunityButtonAction {
     name: string
@@ -47,6 +50,7 @@ class GuiOpportunityButton {
 
 export const GuiOpportunityActions = {
     PICKUP_ITEM: new GuiOpportunityButtonAction("PICKUP_ITEM", "btn_pick", "btn_pick_hover"),
+    MINING: new GuiOpportunityButtonAction("MINING", "btn_pickaxe", "btn_pickaxe_hover"),
 }
 
 export const GuiButtonsManager = {
@@ -68,6 +72,10 @@ export const GuiButtonsManager = {
         this.opportunityButtons.set(
             GuiOpportunityActions.PICKUP_ITEM.name,
             new GuiOpportunityButton(GuiOpportunityActions.PICKUP_ITEM)
+        )
+        this.opportunityButtons.set(
+            GuiOpportunityActions.MINING.name,
+            new GuiOpportunityButton(GuiOpportunityActions.MINING)
         )
     },
 
@@ -95,7 +103,16 @@ export const GuiButtonsManager = {
     },
 
     onFrame() {
+        // Show pickup button if there's an item nearby
         this.opportunityButtons.get(GuiOpportunityActions.PICKUP_ITEM.name)!.setVisible(GroundItemsManager.nearbyItem !== null)
+
+        // Show mining button if there's a mineable block on the player's position and the player has a pickaxe available
+        const blockOnPosition = MyPlayer.myChar
+            ? WorldDataManager.getBlockOnPosition(MyPlayer.myChar.pos)
+            : null
+        this.opportunityButtons.get(GuiOpportunityActions.MINING.name)!.setVisible(
+            blockOnPosition?.type === 3 && MyPlayer.hasWaponTypeInHandOrInventory(WeaponTypes.PICKAXE)
+        )
     },
 
     onclickOpportunityButton(actionName: string) {
@@ -104,11 +121,28 @@ export const GuiButtonsManager = {
             case GuiOpportunityActions.PICKUP_ITEM.name:
                 this.clickOnPickupItemButton()
                 break
+            case GuiOpportunityActions.MINING.name:
+                this.clickOnMiningButton()
+                break
         }
+    },
+
+    clickFirstAvailableOpportunityButton() {
+        for (const button of this.opportunityButtons.values()) {
+            if (!button.visible) {
+                continue
+            }
+            this.onclickOpportunityButton(button.action.name)
+            return true
+        }
+        return false
     },
 
     clickOnPickupItemButton() {
         InventoryManager.pickItem()
+    },
+
+    clickOnMiningButton() {
     },
 
     setSize(size: number) {
