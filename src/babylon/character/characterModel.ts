@@ -48,6 +48,8 @@ export class CharacterModel implements EquipBearer {
 
     bowAimAnim: AnimationGroup | undefined
 
+    oreMiningAnim: AnimationGroup | undefined
+
     actualAnim: AnimationGroup | undefined
     animTransition: AnimTransition | null = null
 
@@ -121,6 +123,8 @@ export class CharacterModel implements EquipBearer {
                     { name: "BowAim", startFrame: 1100, endFrame: 1175},
 
                     { name: "GreatAxeAttack", startFrame: 1200, endFrame: 1260},
+
+                    { name: "OreMining", startFrame: 1300, endFrame: 1360},
                 ];
 
                 const newAnimationGroups = animations.map(({ name, startFrame, endFrame }) => {
@@ -142,6 +146,7 @@ export class CharacterModel implements EquipBearer {
                 this.slashAnim2 = newAnimationGroups[9]
                 this.bowAimAnim = newAnimationGroups[10]
                 this.greatAxeAttackAnim = newAnimationGroups[11]
+                this.oreMiningAnim = newAnimationGroups[12]
 
                 this.idleAnim?.start(true, 0.5)
             }
@@ -368,14 +373,14 @@ export class CharacterModel implements EquipBearer {
         }
     }
 
-    doGreatAxeAttackAnimation() {
+    doOreMiningAnimation() {
         if (!this.isActive()) return
-        if (!this.greatAxeAttackAnim) return
+        if (!this.oreMiningAnim) return
 
         const speed = 1000 / this.parent.attackAnimationTime
-        if (this.actualAnim !== this.greatAxeAttackAnim) {
-            this.transitionToAnimation(this.greatAxeAttackAnim, 0.15, false, speed)
-            this.actualAnim = this.greatAxeAttackAnim
+        if (this.actualAnim !== this.oreMiningAnim) {
+            this.transitionToAnimation(this.oreMiningAnim, 0.15, false, speed)
+            this.actualAnim = this.oreMiningAnim
         }
     }
 

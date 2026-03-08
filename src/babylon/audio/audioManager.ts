@@ -36,6 +36,8 @@ export const AudioManager = {
 
     actualAmbientSound: null as Sound | null,
 
+    miningSounds: [] as Sound[],
+
     initialize(scene: Scene) {
         this.globalVolume = Settings.volume;
         this.ambientSoundVolume = Settings.ambientVolume;
@@ -72,6 +74,9 @@ export const AudioManager = {
         // Ambient sounds
         this.loadAmbientSound(AmbientSoundTypes.WINTER_FOREST, "winter-forest.ogg", scene, { volume: AmbientSoundTypes.WINTER_FOREST.defaultVolume, playbackRate: 1, loop: true } );
         this.actualAmbientSound = this.ambientSounds.get(AmbientSoundTypes.WINTER_FOREST)!;
+
+        // Mining sounds
+        this.loadSoundArray(this.miningSounds, ["mining1.ogg", "mining2.ogg", "mining3.ogg", "mining4.ogg"], "miningSound", scene, { volume: 1, playbackRate: 1 } );
 
         this.guiButtonClickSound = new Sound("guiButtonClick", AudioManager.BASE_PATH_GUI + "button-click.ogg", scene, function() {
             AudioManager.guiButtonClickSound!['loaded'] = true;
@@ -205,6 +210,11 @@ export const AudioManager = {
                 this.playRandomSound(this.swordBlockSounds, volumeRatio)
                 break;
         }
+    },
+
+    playMiningSound(position: Vector3) {
+        const volumeRatio = AudioUtils.getVolumeRatioByDistance(position)
+        this.playRandomSound(this.miningSounds, volumeRatio)
     },
 
     playRandomSound(soundArray: Sound[], volumeRatio: number = 1) {

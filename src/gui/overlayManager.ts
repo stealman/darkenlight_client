@@ -11,6 +11,7 @@ import { Monster } from '@/babylon/monsters/monster'
 import Character from '@/babylon/character/character'
 import { Attackable } from '@/GameManager'
 import { GroundItemsManager } from '@/babylon/world/groundItemsManager'
+import { Item } from '@/data/items/item'
 
 class DamageNumber {
     attacker: Attackable
@@ -202,6 +203,86 @@ class EmeraldGainNumber {
     }
 }
 
+class ItemGainNumber {
+    tgtCharacter: Character
+    text: string
+    iconUrl: string | null
+    expiresAt: number
+    static ttl: number = 2000
+
+    constructor(character: Character, text: string, iconUrl: string | null, startTime: number) {
+        this.tgtCharacter = character
+        this.text = text
+        this.iconUrl = iconUrl
+        this.expiresAt = startTime + ItemGainNumber.ttl
+    }
+
+    static fromCharacter(character: Character, quantity: number, item: Item, time: number = Date.now()): ItemGainNumber | null {
+        if (quantity <= 0) {
+            return null
+        }
+        const itemWithImageUrl = item as Item & { imageUrl?: string | null }
+        const itemIconUrl = itemWithImageUrl.imageUrl || item.imgUrl || null
+        return new ItemGainNumber(character, `${Math.floor(quantity)}`, itemIconUrl, time)
+    }
+
+    render(ctx: CanvasRenderingContext2D) {
+        if (this.tgtCharacter !== MyPlayer.myChar && !CharacterManager.characters.has(this.tgtCharacter.id)) {
+            return
+        }
+
+        const pos = this.tgtCharacter.getNameTextNodeScreenPosition()
+        if (!pos) {
+            return
+        }
+
+        const now = Date.now()
+        const tightText = Math.abs(OverlayManager.letterSpacingFix) > 0
+        const spacingFix = OverlayManager.letterSpacingFix
+        const textWidth = CanvasTextUtils.getTextWidth(ctx, this.text, tightText, spacingFix)
+        const remaining = Math.max(0, Math.min(ItemGainNumber.ttl, this.expiresAt - now))
+        const progress = 1 - (remaining / ItemGainNumber.ttl)
+        const alpha = progress <= 0.35 ? 1 : Math.max(0, 1 - ((progress - 0.35) / 0.5))
+        const riseProgress = 1 - Math.pow(2, -6 * progress)
+
+        const x = pos.x
+        const y = pos.y - (22 + (riseProgress * 34)) / window.devicePixelRatio
+        const icon = OverlayManager.getItemGainIcon(this.iconUrl)
+        const hasIcon = !!icon && icon.complete && icon.naturalWidth > 0
+        const iconSize = OverlayManager.fontSize + 12
+        const iconGap = 4
+        const totalWidth = textWidth + (hasIcon ? iconSize + iconGap : 0)
+        const blockStartX = x - totalWidth / 2
+        const textStartX = blockStartX + (hasIcon ? iconSize + iconGap : 0)
+
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.85)'
+        ctx.lineWidth = 3
+        ctx.fillStyle = '#f0f0f0'
+        ctx.globalAlpha = alpha
+
+        if (hasIcon) {
+            ctx.drawImage(icon, blockStartX, -2 + y - iconSize / 2, iconSize, iconSize)
+        }
+
+        if (tightText) {
+            ctx.textAlign = 'left'
+            let cursorX = textStartX
+            for (const ch of this.text) {
+                ctx.strokeText(ch, cursorX, y)
+                cursorX += ctx.measureText(ch).width + spacingFix
+            }
+            CanvasTextUtils.drawText(ctx, this.text, textStartX, y, true, spacingFix)
+        } else {
+            ctx.textAlign = 'center'
+            const textCenterX = textStartX + textWidth / 2
+            ctx.strokeText(this.text, textCenterX, y)
+            ctx.fillText(this.text, textCenterX, y)
+        }
+
+        ctx.globalAlpha = 1
+    }
+}
+
 export const OverlayManager = {
     overlayCanvas: null as HTMLCanvasElement,
     overlayCtx: null as CanvasRenderingContext2D | null,
@@ -209,7 +290,9 @@ export const OverlayManager = {
     fontSize: 14 as number,
     damageNumbers: [] as DamageNumber[],
     emeraldGainNumbers: [] as EmeraldGainNumber[],
+    itemGainNumbers: [] as ItemGainNumber[],
     emeraldGainIcon: null as HTMLImageElement | null,
+    itemGainIcons: new Map<string, HTMLImageElement>(),
 
     async initialize() {
         this.overlayCanvas = document.getElementById("overlayCanvas") as HTMLCanvasElement
@@ -240,6 +323,7 @@ export const OverlayManager = {
         this.renderNames(time, Math.abs(this.letterSpacingFix) > 0)
         this.renderDamageNumbers(time)
         this.renderEmeraldGainNumbers(time)
+        this.renderItemGainNumbers(time)
         this.renderDamagedBars()
         this.renderHealingMarkers(time)
         this.renderAttackTargetIndicator(time)
@@ -356,6 +440,14 @@ export const OverlayManager = {
         this.emeraldGainNumbers.push(emeraldNumber)
     },
 
+    addCharacterItemGainNumber(char: Character, quantity: number, item: Item, time: number = Date.now()) {
+        const itemGainNumber = ItemGainNumber.fromCharacter(char, quantity, item, time)
+        if (!itemGainNumber) {
+            return
+        }
+        this.itemGainNumbers.push(itemGainNumber)
+    },
+
     renderDamageNumbers(time: number) {
         this.damageNumbers = this.damageNumbers.filter(item => item.expiresAt > time)
         if (this.damageNumbers.length === 0) {
@@ -392,6 +484,44 @@ export const OverlayManager = {
         })
 
         ctx.restore()
+    },
+
+    renderItemGainNumbers(time: number) {
+        this.itemGainNumbers = this.itemGainNumbers.filter(item => item.expiresAt > time)
+        if (this.itemGainNumbers.length === 0) {
+            return
+        }
+
+        const ctx = this.overlayCtx!
+        ctx.save()
+        ctx.font = `${this.fontSize + 6}px "Roboto", Arial, sans-serif`
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+
+        this.itemGainNumbers.forEach(item => {
+            item.render(ctx)
+        })
+
+        ctx.restore()
+    },
+
+    getItemGainIcon(iconUrl: string | null): HTMLImageElement | null {
+        if (!iconUrl) {
+            return null
+        }
+
+        let normalizedUrl = iconUrl
+        if (!normalizedUrl.startsWith('/') && !normalizedUrl.startsWith('http://') && !normalizedUrl.startsWith('https://')) {
+            normalizedUrl = `/${normalizedUrl}`
+        }
+
+        let icon = this.itemGainIcons.get(normalizedUrl)
+        if (!icon) {
+            icon = new Image()
+            icon.src = normalizedUrl
+            this.itemGainIcons.set(normalizedUrl, icon)
+        }
+        return icon
     },
 
     renderDamagedBars() {

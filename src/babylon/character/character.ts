@@ -29,6 +29,7 @@ import {
 import { TargetingManager } from '@/gui/targettingManager'
 import { CharacterManager } from '@/babylon/character/characterManager'
 import { InventoryManager } from '@/data/InventoryManager'
+import { OverlayManager } from '@/gui/overlayManager'
 
 class Character implements Attackable {
     model: CharacterModel | null = null
@@ -260,13 +261,27 @@ class Character implements Attackable {
 
     startGathering(data: CharacterGatheringMessage) {
         this.attackAnimationTime = data.dur
-        this.model?.doGreatAxeAttackAnimation()
+
+        const angle = Utils.getAngleBetweenPoints(this.pos, new Vector3(data.x, this.pos.y, data.z))
+        this.setLookAngle(angle - Math.PI / 4)
+
+        this.model?.doOreMiningAnimation()
         this.model?.setWeaponTrailEnabled(true)
         this.autoAttackEnd = Date.now() + this.attackAnimationTime
     }
 
     finishGathering(data: CharacterGatheringResultMessage | null) {
         this.model?.setWeaponTrailEnabled(false)
+        if (data) {
+            AudioManager.playMiningSound(this.pos)
+
+            if (this === MyPlayer.myChar && data.g > 0) {
+                const items = InventoryManager.getResourceItemsByType(data.g)
+                if (items.length > 0) {
+                    OverlayManager.addCharacterItemGainNumber(this, data.q, items[0])
+                }
+            }
+        }
     }
 
     startHealing(data: HealingMessage) {

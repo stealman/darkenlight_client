@@ -77,12 +77,10 @@ export const Connector = {
 
         if (this.queuedMessages.length > 0 && this.sentMessages.length < this.lastSecondLimit) {
             // Process up to 10 - sentMessages.length messages
-            let i = 0
-            while (i < this.queuedMessages.length && this.sentMessages.length < this.lastSecondLimit) {
-                this.doSend(this.queuedMessages[i], time)
-                this.queuedMessages[i]['sentTime'] = time
-                this.sentMessages.push(this.queuedMessages[i])
-                i++
+            while (this.queuedMessages.length > 0 && this.sentMessages.length < this.lastSecondLimit) {
+                const queuedMessage = this.queuedMessages.shift()!
+                this.doSend(queuedMessage, time)
+                this.sentMessages.push(queuedMessage)
             }
         }
 

@@ -44,11 +44,15 @@ export interface CharacterGatheringMessage {
     id: number
     gt: string
     dur: number
+    x: number
+    z: number
 }
 
 export interface CharacterGatheringResultMessage {
     id: number
     gt: string
+    g: number // gained ID
+    q: number // gained quantity
 }
 
 export interface HealingResult {
