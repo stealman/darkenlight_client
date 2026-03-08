@@ -21,6 +21,8 @@ import {
     AttackableBasicTO,
     AutoAttackMessage,
     AutoAttackResultMessage,
+    CharacterGatheringMessage,
+    CharacterGatheringResultMessage,
     HealingMessage,
     HealingResultMessage,
 } from '@/network/messageIfs'
@@ -254,6 +256,17 @@ class Character implements Attackable {
         } else if (data.res.h === 'b' && target.getParrySoundType()) {
             AudioManager.playWeaponBlocked(target.getParrySoundType()!, target.pos)
         }
+    }
+
+    startGathering(data: CharacterGatheringMessage) {
+        this.attackAnimationTime = data.dur
+        this.model?.doGreatAxeAttackAnimation()
+        this.model?.setWeaponTrailEnabled(true)
+        this.autoAttackEnd = Date.now() + this.attackAnimationTime
+    }
+
+    finishGathering(data: CharacterGatheringResultMessage | null) {
+        this.model?.setWeaponTrailEnabled(false)
     }
 
     startHealing(data: HealingMessage) {

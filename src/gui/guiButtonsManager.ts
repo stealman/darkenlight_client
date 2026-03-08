@@ -4,6 +4,9 @@ import { AudioManager } from '@/babylon/audio/audioManager'
 import { MyPlayer } from '@/data/myPlayer'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { WeaponTypes } from '@/data/items/item'
+import { Connector } from '@/network/connector'
+import { GatheringActionMsg, GatheringActionTypes } from '@/network/messages'
+import { CharacterAction, CharacterActions } from '@/gui/actionButtonsManager'
 
 class GuiOpportunityButtonAction {
     name: string
@@ -143,6 +146,30 @@ export const GuiButtonsManager = {
     },
 
     clickOnMiningButton() {
+        const hasPickaxeInHand = MyPlayer.myChar.getWeapon()?.slotInfo?.weaponType === WeaponTypes.PICKAXE
+        if (!hasPickaxeInHand) {
+            const firstPickaxeInInventory = InventoryManager.inventory.find(
+                item => item?.slotInfo?.weaponType === WeaponTypes.PICKAXE
+            )
+            if (!firstPickaxeInInventory) {
+                return
+            }
+
+            InventoryManager.equipItem(firstPickaxeInInventory)
+        }
+
+        Connector.sendMessage(new GatheringActionMsg(CharacterActions.MINING.name))
+    },
+
+    setActiveAction(action: CharacterAction | null) {
+        const miningButton = this.opportunityButtons.get(GuiOpportunityActions.MINING.name)
+
+        if (action?.name === GuiOpportunityActions.MINING.name) {
+            miningButton.htmlEl.classList.add("active")
+            return
+        }
+
+        miningButton.htmlEl.classList.remove("active")
     },
 
     setSize(size: number) {
@@ -156,3 +183,4 @@ export const GuiButtonsManager = {
         this.opportunityButtons.forEach((button) => button.setSize(size))
     }
 }
+

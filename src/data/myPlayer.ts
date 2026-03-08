@@ -18,6 +18,7 @@ import { ActionButtonsManager, CharacterAction, CharacterActions } from '@/gui/a
 import { Attackable } from '@/GameManager'
 import { EmeraldsManager } from '@/gui/emeraldsManager'
 import { InventoryManager } from '@/data/InventoryManager'
+import { GuiButtonsManager } from '@/gui/guiButtonsManager'
 
 /**
  * Controlling object for the player's character
@@ -75,6 +76,13 @@ export const MyPlayer = {
             }
         }
 
+        // Moving during mining action break the action immediately
+        if (MyPlayer.activeAction?.name === CharacterActions.MINING.name && this.myChar.getMoveAngle() != null) {
+            this.myChar.breakAutoAttack() // Mining action uses auto attack system, so we can reuse the same break message
+            Connector.sendMessage(new AutoAttackBreak())
+            this.myChar.finishGathering(null)
+        }
+
         // Resolve common character onFrame logic
         this.myChar.onFrame(timeRate, actualTime, true)
 
@@ -103,6 +111,7 @@ export const MyPlayer = {
         }
 
         ActionButtonsManager.setActiveAction(this.activeAction)
+        GuiButtonsManager.setActiveAction(this.activeAction)
         this.resolveStopButtonVisibility()
     },
 

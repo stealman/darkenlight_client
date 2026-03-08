@@ -40,6 +40,17 @@ export interface  HealingResultMessage {
     res: HealingResult
 }
 
+export interface CharacterGatheringMessage {
+    id: number
+    gt: string
+    dur: number
+}
+
+export interface CharacterGatheringResultMessage {
+    id: number
+    gt: string
+}
+
 export interface HealingResult {
     hp: number
     dt: AttackableBasicTO

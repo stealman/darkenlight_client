@@ -6,6 +6,8 @@ import {
     AttackableBasicTO,
     AutoAttackMessage,
     AutoAttackResultMessage,
+    CharacterGatheringMessage,
+    CharacterGatheringResultMessage,
     HealingMessage,
     HealingResultMessage,
 } from '@/network/messageIfs'
@@ -118,6 +120,28 @@ export const CharacterManager = {
             }
         }
 
+    },
+
+    startGathering(data: CharacterGatheringMessage) {
+        if (data.id === MyPlayer.myChar.id) {
+            MyPlayer.myChar.startGathering(data)
+        } else {
+            const char = this.characters.get(data.id)
+            if (char) {
+                char.startGathering(data)
+            }
+        }
+    },
+
+    finishGathering(data: CharacterGatheringResultMessage) {
+        if (data.id === MyPlayer.myChar.id) {
+            MyPlayer.myChar.finishGathering(data)
+        } else {
+            const char = this.characters.get(data.id)
+            if (char) {
+                char.finishGathering(data)
+            }
+        }
     },
 
     autoAttackBroken(data) {

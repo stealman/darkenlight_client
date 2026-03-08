@@ -368,6 +368,17 @@ export class CharacterModel implements EquipBearer {
         }
     }
 
+    doGreatAxeAttackAnimation() {
+        if (!this.isActive()) return
+        if (!this.greatAxeAttackAnim) return
+
+        const speed = 1000 / this.parent.attackAnimationTime
+        if (this.actualAnim !== this.greatAxeAttackAnim) {
+            this.transitionToAnimation(this.greatAxeAttackAnim, 0.15, false, speed)
+            this.actualAnim = this.greatAxeAttackAnim
+        }
+    }
+
     stopAnimation() {
         const desiredAnimation = this.combatIdleAnim
         const animSpeed = 0.75

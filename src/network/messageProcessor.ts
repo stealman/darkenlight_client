@@ -14,6 +14,8 @@ import {
     AttackableBasicTO,
     AutoAttackMessage,
     AutoAttackResultMessage,
+    CharacterGatheringMessage,
+    CharacterGatheringResultMessage,
     EmeraldsChangeMessage,
     HealingMessage, HealingResultMessage,
 } from '@/network/messageIfs'
@@ -63,6 +65,8 @@ export const MessageProcessor = {
                 case 34: this.processRemoveItemsFromInventory(msg.d); break
                 case 35: this.processEmeraldsChange(msg.d); break
                 case 36: this.processChangeItemsInInventory(msg.d); break
+                case 37: this.processCharacterGathering(msg.d); break
+                case 38: this.processCharacterGatheringFinished(msg.d); break
                 case 1003: this.processGMAllSpawns(msg.d); break
                 case 1004: this.processGMSpawnChange(msg.d); break
                 default:
@@ -253,6 +257,14 @@ export const MessageProcessor = {
 
     processEmeraldsChange(data: EmeraldsChangeMessage) {
         EmeraldsManager.setMyEmeralds(data.em, false, data.ch, data.mobId)
+    },
+
+    processCharacterGathering(data: CharacterGatheringMessage) {
+        CharacterManager.startGathering(data)
+    },
+
+    processCharacterGatheringFinished(data: CharacterGatheringResultMessage) {
+        CharacterManager.finishGathering(data)
     },
 
     processGMAllSpawns(data) {

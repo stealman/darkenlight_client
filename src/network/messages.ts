@@ -136,6 +136,15 @@ export class MergeItemMsg implements Message {
     }
 }
 
+export class GatheringActionMsg implements Message {
+    t: number = 18
+    d: any
+
+    constructor(actionType: string) {
+        this.d = { tp: actionType }
+    }
+}
+
 export class GMSaveMapDataMsg implements Message {
     t: number = 1000
     d: any

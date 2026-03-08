@@ -352,6 +352,7 @@ export const ActionButtonsManager = {
 export const CharacterActions = {
     AUTO_ATTACK: new CharacterAction("AUTO_ATTACK", "btn_attack", true),
     HEAL: new CharacterAction("HEAL", "btn_heal", false),
+    MINING : new CharacterAction("MINING", "btn_pickaxe", false),
 
     getActionByName(name: string): CharacterAction {
         for (const key in this) {
