@@ -212,6 +212,18 @@ export class MapBlock {
         }
     }
 
+    getMinableValue(): string | null {
+        if (this.minableCoal) {
+            return 'C'
+        }
+
+        if (this.minableOre) {
+            return `M${this.minableOre}`
+        }
+
+        return null
+    }
+
     equals(other: MapBlock) {
         return this.height === other.height && this.type === other.type && this.snowed === other.snowed
     }

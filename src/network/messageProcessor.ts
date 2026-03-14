@@ -118,7 +118,6 @@ export const MessageProcessor = {
     },
 
     processWorldData(data) {
-        console.log('World data received')
         MyPlayer.worldId = data.id
         MyPlayer.worldName = data.name
         if (data.mapChunk) {

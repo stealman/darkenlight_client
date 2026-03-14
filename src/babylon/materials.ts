@@ -40,6 +40,11 @@ export const Materials = {
 
     createTerrainMaterial1(scene: Scene): PBRCustomMaterial {
         const material = this.getPBRCustomMaterial(scene, "terrain_mats1", this.BASE_PATH, 'terrain_materials1.png', 1 / 8, 1 / 8, false)
+        material.emissiveTexture = new Texture(this.BASE_PATH + 'terrain_materials1_emissive.png', scene)
+        material.emissiveTexture.uScale = 1 / 8
+        material.emissiveTexture.vScale = 1 / 8
+        material.emissiveColor = new Color3(1, 1, 1)
+
         return material
     },
 
@@ -276,13 +281,8 @@ export const PlaneEnum1 = {
     PLANE_SNOW_ROCK: new MaterialEnum(103, new Vector2(4.5, 6.5)),
     PLANE_SNOW_MUDDY_DIRT: new MaterialEnum(104, new Vector2(4.5, 6.5)),
 
-    PLANE_ORE_ROCK: new MaterialEnum(1003, new Vector2(6.5, 4.5)),
-
     getPlaneForBlock(block: MapBlock): Vector2 {
         let type = block.type;
-        if (block.minableOre) {
-            type += 1000;
-        }
         if (block.snowed) {
             type += 100;
         }

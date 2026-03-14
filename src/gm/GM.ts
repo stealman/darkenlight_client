@@ -32,6 +32,8 @@ export const GMManager = {
     affectedSize: ref(1),
     shiftKeyPressed: ref(false),
     selectedTerrain: ref (0),
+    terrainEditMode: ref('terrain'),
+    selectedMinable: ref('M1'),
     selectedTree: ref (0),
     selectedShrub: ref (0),
 
@@ -59,6 +61,7 @@ export const GMManager = {
             const halfSize = Math.floor(this.affectedSize.value / 2)
             const lowestHeight = this.getLowestAffectedBlockHeight(markerPos, this.affectedSize.value)
             const highestHeight = this.getHighestAffectedBlockHeight(markerPos, this.affectedSize.value)
+            const sanitizedMinable = this.getSanitizedMinableValue()
 
             for (let offsetX = -halfSize; offsetX <= halfSize; offsetX++) {
                 for (let offsetZ = -halfSize; offsetZ <= halfSize; offsetZ++) {
@@ -66,9 +69,11 @@ export const GMManager = {
                     let height = block.height
                     let type = block.type
                     let snowed = block.snowed
+                    let minable = block.getMinableValue()
 
-                    // Elevation change
-                    if (this.selectedTerrain.value === 0) {
+                    if (this.terrainEditMode.value === 'minable') {
+                        minable = sanitizedMinable
+                    } else if (this.selectedTerrain.value === 0) {
 
                         // For elevation UP, only elevate blocks with lowest height
                         if (!this.shiftKeyPressed.value) {
@@ -97,7 +102,8 @@ export const GMManager = {
                         z: markerPos.z + offsetZ,
                         height: height,
                         type: type,
-                        snowed: snowed
+                        snowed: snowed,
+                        minable: minable
                     })
                 }
             }
@@ -182,6 +188,24 @@ export const GMManager = {
         GMSceneManager.setHoverBlockMarkerSize(size)
     },
 
+    getSanitizedMinableValue(): string | null {
+        const value = (this.selectedMinable.value ?? '').trim().toUpperCase()
+
+        if (value === '') {
+            return null
+        }
+
+        if (value === 'C') {
+            return value
+        }
+
+        if (/^M([1-9]|10)$/.test(value)) {
+            return value.substring(1)
+        }
+
+        return null
+    },
+
     openTab(tab: string) {
         // Close current tab
         switch (this.tab) {
@@ -230,6 +254,7 @@ export const GMManager = {
         this.consumeLeftClickEvents = true
         this.consumeMiddleClickEvents = true
         this.selectedTerrain.value = 0
+        this.terrainEditMode.value = 'terrain'
         GMSceneManager.hoverBlockMarker?.setEnabled(true)
     },
 
