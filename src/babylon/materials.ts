@@ -251,8 +251,13 @@ export const TerrainEnum1 = {
     TERRAIN_SNOW_ROCK: new MaterialEnum(103, new Vector2(6.5, 4.5)),
     TERRAIN_SNOW_MUDDY_DIRT: new MaterialEnum(104, new Vector2(4.5, 6.5)),
 
+    TERRAIN_ORE_ROCK: new MaterialEnum(1003, new Vector2(6.5, 2.5)),
+
     getTerrainForBlock(block: MapBlock, ignoreSnow: boolean = false): Vector2 {
         let type = block.type;
+        if (block.minableOre) {
+            type += 1000;
+        }
         if (block.snowed && !ignoreSnow) {
             type += 100;
         }
@@ -271,8 +276,13 @@ export const PlaneEnum1 = {
     PLANE_SNOW_ROCK: new MaterialEnum(103, new Vector2(4.5, 6.5)),
     PLANE_SNOW_MUDDY_DIRT: new MaterialEnum(104, new Vector2(4.5, 6.5)),
 
+    PLANE_ORE_ROCK: new MaterialEnum(1003, new Vector2(6.5, 4.5)),
+
     getPlaneForBlock(block: MapBlock): Vector2 {
         let type = block.type;
+        if (block.minableOre) {
+            type += 1000;
+        }
         if (block.snowed) {
             type += 100;
         }

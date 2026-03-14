@@ -109,12 +109,13 @@ export const GuiButtonsManager = {
         // Show pickup button if there's an item nearby
         this.opportunityButtons.get(GuiOpportunityActions.PICKUP_ITEM.name)!.setVisible(GroundItemsManager.nearbyItem !== null)
 
-        // Show mining button if there's a mineable block on the player's position and the player has a pickaxe available
-        const blockOnPosition = MyPlayer.myChar
-            ? WorldDataManager.getBlockOnPosition(MyPlayer.myChar.pos)
-            : null
+        // Show mining button if any covered block is mineable and the player has a pickaxe available
+        const coveredBlocks = MyPlayer.myChar
+            ? WorldDataManager.getCoveredBlocks(MyPlayer.myChar.pos, MyPlayer.myChar.getBoxSize())
+            : []
+        const hasMineableCoveredBlock = coveredBlocks.some(block => block.minableCoal || block.minableOre)
         this.opportunityButtons.get(GuiOpportunityActions.MINING.name)!.setVisible(
-            blockOnPosition?.type === 3 && MyPlayer.hasWaponTypeInHandOrInventory(WeaponTypes.PICKAXE)
+            hasMineableCoveredBlock && MyPlayer.hasWaponTypeInHandOrInventory(WeaponTypes.PICKAXE)
         )
     },
 
@@ -183,4 +184,3 @@ export const GuiButtonsManager = {
         this.opportunityButtons.forEach((button) => button.setSize(size))
     }
 }
-

@@ -48,6 +48,7 @@ export const WorldDataManager = {
     },
 
     consumeMapChunk(mapChunk) {
+        console.log(mapChunk)
         if (!this.worldDataMap.has(MyPlayer.worldId)) {
             this.worldDataMap.set(MyPlayer.worldId, new WorldData(1024))
         }
@@ -74,6 +75,34 @@ export const WorldDataManager = {
     getBlockOnPosition(pos: Vector3): MapBlock | null {
         const map = WorldDataManager.getBlockMap()
         return map[Math.floor(pos.x)][Math.floor(pos.z)]
+    },
+
+    getCoveredBlocks(pos: Vector3, boxSize: number, blockSize = 1): MapBlock[] {
+        const worldData = this.worldDataMap.get(MyPlayer.worldId)
+        if (!worldData) {
+            return []
+        }
+
+        const threshold = blockSize - (boxSize / 2)
+        const coveredBlocks: MapBlock[] = []
+
+        for (let x = Math.floor(pos.x) - 2; x <= Math.ceil(pos.x) + 2; x++) {
+            if (x < 0 || x >= worldData.worldSize) {
+                continue
+            }
+
+            for (let z = Math.floor(pos.z) - 2; z <= Math.ceil(pos.z) + 2; z++) {
+                if (z < 0 || z >= worldData.worldSize) {
+                    continue
+                }
+
+                if (Math.abs(x - pos.x) < threshold && Math.abs(z - pos.z) < threshold) {
+                    coveredBlocks.push(worldData.blockMap[x][z])
+                }
+            }
+        }
+
+        return coveredBlocks
     }
 }
 
@@ -106,8 +135,8 @@ export class WorldData {
                 if (data[3] === "S") {
                     mapBlock.snowed = true
                 }
-
                 mapBlock.presetHeightOffset()
+                mapBlock.setMinable(data[4])
             }
         }
         this.loadedChunkCoords.push(new Vector3(mapChunk.x, 0, mapChunk.z))
@@ -134,6 +163,7 @@ export class WorldData {
                 block.snowed = false
             }
             block.presetHeightOffset()
+            block.setMinable(data[4])
         }
 
         TerrainManager.renderTerrain()
@@ -150,6 +180,8 @@ export class MapBlock {
     heightOffset: number
     totalHeight: number
     snowed: boolean = false
+    minableCoal: boolean
+    minableOre: number | null
 
     constructor(height: number, type: number) {
         this.height = height
@@ -167,6 +199,17 @@ export class MapBlock {
             return  0.1
         }
         return 0
+    }
+
+    setMinable(minable: undefined | string | null) {
+        if (minable) {
+            console.log("Minable block with data: " + minable)
+            this.minableCoal = minable === 'C'
+            this.minableOre = minable.startsWith('M') ? parseInt(minable.substring(1)) : null
+        } else {
+            this.minableCoal = false
+            this.minableOre = null
+        }
     }
 
     equals(other: MapBlock) {
