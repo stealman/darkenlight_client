@@ -151,10 +151,14 @@ class ActionButton {
 
         if (safePercent >= 100) {
             this.cooldownOverlayEl!.style.display = 'none'
+            this.htmlEl!.classList.remove('cooldown-active')
             return
         }
 
         this.cooldownOverlayEl!.style.display = 'block'
+        if (!this.active) {
+            this.htmlEl!.classList.add('cooldown-active')
+        }
     }
 
     resolveImagePath(imageSrc: string) {
@@ -176,6 +180,9 @@ class ActionButton {
     deactivated() {
         this.active = false
         this.htmlEl!.classList.remove('active')
+        if (this.cooldownOverlayEl?.style.display === 'block') {
+            this.htmlEl!.classList.add('cooldown-active')
+        }
     }
 
     setSize(size: number) {

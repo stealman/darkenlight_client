@@ -69,7 +69,7 @@ div.action-button .action-button-cooldown-overlay {
     --cooldown-progress: 0;
     background:
         conic-gradient(
-            from -90deg,
+            from 0deg,
             transparent 0deg,
             transparent calc(var(--cooldown-progress) * 3.6deg),
             rgba(0, 0, 0, 0.5) calc(var(--cooldown-progress) * 3.6deg),
@@ -106,7 +106,8 @@ div.action-button.toggled {
     animation: toggledPulse 1.6s ease-in-out infinite;
 }
 
-div.action-button.active {
+div.action-button.active,
+div.action-button.cooldown-active {
     border-color: rgba(230, 60, 60, 0.8);
     filter: brightness(1.1);
     box-shadow:

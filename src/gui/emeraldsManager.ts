@@ -15,6 +15,10 @@ export const EmeraldsManager = {
 
     lastActializationTime: 0 as number,
 
+    formatEmeraldAmount(amount: number) {
+        return amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
+    },
+
     initialize() {
         this.emeraldsInfoPanel = document.getElementById("emeralds-info") as HTMLDivElement
         this.emeraldsInfoIcon = document.getElementById("emeralds-info-icon") as HTMLImageElement
@@ -32,7 +36,7 @@ export const EmeraldsManager = {
         this.updateIconPulse(time, difference)
         if (difference === 0) {
             this.animationStartDifference = 0
-            this.emeraldsInfoCount.innerText = `${this.displayedEmeralds}`
+            this.emeraldsInfoCount.innerText = this.formatEmeraldAmount(this.displayedEmeralds)
             return
         }
 
@@ -57,7 +61,7 @@ export const EmeraldsManager = {
         }
 
         AudioManager.playGuiTick()
-        this.emeraldsInfoCount.innerText = `${this.displayedEmeralds}`
+        this.emeraldsInfoCount.innerText = this.formatEmeraldAmount(this.displayedEmeralds)
         this.lastActializationTime = time
     },
 
@@ -102,7 +106,7 @@ export const EmeraldsManager = {
         this.myEmeralds = amount
         if (immediate) {
             this.displayedEmeralds = amount
-            this.emeraldsInfoCount.innerText = `${this.displayedEmeralds}`
+            this.emeraldsInfoCount.innerText = this.formatEmeraldAmount(this.displayedEmeralds)
         }
     }
 }
