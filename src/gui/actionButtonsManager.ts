@@ -26,6 +26,7 @@ class ActionButton {
     actionBinding: ActionButtonActionBinding | null = null
     active: boolean = false
     size: number = 64
+    cooldownOverlayEl: HTMLDivElement | null = null
 
     pointerDownTime: number = 0
 
@@ -35,6 +36,10 @@ class ActionButton {
         this.htmlEl.id = "act-btn-" + index
         this.htmlEl.className = "action-button"
         this.htmlEl.style.backgroundImage = `url('images/icons/buttons/btn_background.png')`
+
+        this.cooldownOverlayEl = document.createElement("div")
+        this.cooldownOverlayEl.className = "action-button-cooldown-overlay"
+        this.htmlEl.appendChild(this.cooldownOverlayEl)
 
         this.htmlEl.onpointerdown = (e) => { e.preventDefault(); this.pointerDown() }
         this.htmlEl.onpointerup = (e) => { e.preventDefault(); this.pointerUp() }
@@ -46,6 +51,8 @@ class ActionButton {
             this.pointerDownTime = 0
             this.onToggle()
         }
+
+        this.updateCooldownState(time)
     }
 
     pointerDown() {
@@ -86,6 +93,8 @@ class ActionButton {
         this.htmlEl!.innerHTML = ""
         this.htmlEl!.classList.remove("toggled")
         this.htmlEl!.classList.remove("unavailable")
+        this.htmlEl!.appendChild(this.cooldownOverlayEl!)
+        this.setCooldownPercent(100)
     }
 
     setImage(imageSrc: string) {
@@ -118,6 +127,35 @@ class ActionButton {
             default:
                 this.htmlEl!.classList.remove("unavailable")
         }
+    }
+
+    updateCooldownState(actualTime: number) {
+        if (!this.actionBinding) {
+            this.setCooldownPercent(100)
+            return
+        }
+
+        const action = CharacterActions.getActionByName(this.actionBinding.name)
+        if (!action) {
+            this.setCooldownPercent(100)
+            return
+        }
+
+        this.setCooldownPercent(MyPlayer.getActionCooldownPercent(action, actualTime))
+    }
+
+    setCooldownPercent(percent: number) {
+        const safePercent = Math.max(0, Math.min(100, percent))
+        const overlayHeight = 100 - safePercent
+
+        if (overlayHeight <= 0) {
+            this.cooldownOverlayEl!.style.height = "0%"
+            this.cooldownOverlayEl!.style.display = "none"
+            return
+        }
+
+        this.cooldownOverlayEl!.style.display = "block"
+        this.cooldownOverlayEl!.style.height = `${overlayHeight}%`
     }
 
     resolveImagePath(imageSrc: string) {
@@ -289,7 +327,7 @@ export const ActionButtonsManager = {
     },
 
     clickOnHealingButton() {
-        if (InventoryManager.getTotalResourceItemCountByType(1) <= 0) OnScreenMessageManager.addMessage("Nemáš žádné obvazy"); return
+        if (InventoryManager.getTotalResourceItemCountByType(1) <= 0) { OnScreenMessageManager.addMessage("Nemáš žádné obvazy"); return }
         if (MyPlayer.activeAction && MyPlayer.activeAction.name === CharacterActions.HEAL.name) {
             MyPlayer.stopActions()
             return
@@ -298,12 +336,12 @@ export const ActionButtonsManager = {
     },
 
     clickOnHealingPotionButton() {
-        if (!ActionButtonsManager.hasHealingPotionAvailable()) OnScreenMessageManager.addMessage("Nemáš žádné lektvary zdraví"); return
+        if (!ActionButtonsManager.hasHealingPotionAvailable()) { OnScreenMessageManager.addMessage("Nemáš žádné lektvary zdraví"); return }
         ConsumableHelper.clickOnConsumeHealingPotion()
     },
 
     clickOnManaPotionButton() {
-        if (!ActionButtonsManager.hasManaPotionAvailable()) OnScreenMessageManager.addMessage("Nemáš žádné lektvary many"); return
+        if (!ActionButtonsManager.hasManaPotionAvailable()) { OnScreenMessageManager.addMessage("Nemáš žádné lektvary many"); return }
         ConsumableHelper.clickOnConsumeManaPotion()
     },
 

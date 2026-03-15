@@ -38,6 +38,9 @@ export const MyPlayer = {
 
     activeAction: null as CharacterAction | null,
 
+    lastPotionUseTime: 0 as number,
+    nextPotionUseTime: 0 as number,
+
     async initialize(charData: any) {
         console.log("Initializing MyPlayer with charData:", charData)
         this.myChar = new Character(charData)
@@ -56,6 +59,7 @@ export const MyPlayer = {
 
     reset() {
         this.myChar.model = null
+        this.myChar.autoAttackStart = 0
         this.myChar.autoAttackEnd = 0
     },
 
@@ -215,5 +219,37 @@ export const MyPlayer = {
         }
 
         return InventoryManager.inventory.some(item => item?.slotInfo?.weaponType === weaponType)
-    }
+    },
+
+    getActionCooldownPercent(action: CharacterAction, actualTime: number): number {
+        if (!action) return 100
+
+        switch (action.name) {
+            case CharacterActions.AUTO_ATTACK.name: {
+                return this.getCooldownPercent(actualTime, this.myChar.autoAttackStart, this.myChar.autoAttackCooldownEnd)
+            }
+            case CharacterActions.HEAL.name: {
+                return this.getCooldownPercent(actualTime, this.myChar.healingStartTime, this.myChar.healingEndTime)
+            }
+            case CharacterActions.HEALING_POTION.name:
+            case CharacterActions.MANA_POTION.name: {
+                return this.getCooldownPercent(actualTime, this.lastPotionUseTime, this.nextPotionUseTime)
+            }
+        }
+        return 100
+    },
+
+    getCooldownPercent(actualTime: number, cooldownStartTime: number, cooldownEndTime: number): number {
+        if (cooldownEndTime <= actualTime) {
+            return 100
+        }
+
+        const totalCooldown = cooldownEndTime - cooldownStartTime
+        if (cooldownStartTime <= 0 || totalCooldown <= 0) {
+            return 100
+        }
+
+        const elapsedCooldown = actualTime - cooldownStartTime
+        return Math.max(0, Math.min(100, (elapsedCooldown / totalCooldown) * 100))
+    },
 }

@@ -39,6 +39,8 @@ export const AudioManager = {
     miningSounds: [] as Sound[],
     lumberJackingSounds: [] as Sound[],
 
+    potionUseSound: null as Sound | null,
+
     initialize(scene: Scene) {
         this.globalVolume = Settings.volume;
         this.ambientSoundVolume = Settings.ambientVolume;
@@ -81,6 +83,14 @@ export const AudioManager = {
 
         // Lumberjacking sounds
         this.loadSoundArray(this.lumberJackingSounds, ["lumber1.ogg", "lumber2.ogg", "lumber3.ogg", "lumber4.ogg"], "lumberJackingSound", scene, { volume: 1, playbackRate: 1 } );
+
+        this.potionUseSound = new Sound("potionUse", AudioManager.BASE_PATH_SFX + "use-potion.ogg", scene, function() {
+            AudioManager.potionUseSound!['loaded'] = true;
+            AudioManager.potionUseSound!['defaultVolume'] = 1;
+        }, {
+            volume: 1,
+            playbackRate: 1,
+        });
 
         this.guiButtonClickSound = new Sound("guiButtonClick", AudioManager.BASE_PATH_GUI + "button-click.ogg", scene, function() {
             AudioManager.guiButtonClickSound!['loaded'] = true;
@@ -224,6 +234,14 @@ export const AudioManager = {
     playLumberJackingSound(position: Vector3) {
         const volumeRatio = AudioUtils.getVolumeRatioByDistance(position)
         this.playRandomSound(this.lumberJackingSounds, volumeRatio)
+    },
+
+    playPotionSound(position: Vector3) {
+        const volumeRatio = AudioUtils.getVolumeRatioByDistance(position)
+        this.potionUseSound!.setVolume(this.potionUseSound!.defaultVolume * volumeRatio)
+        if (this.potionUseSound!['loaded']) {
+            this.potionUseSound!.play();
+        }
     },
 
     playRandomSound(soundArray: Sound[], volumeRatio: number = 1) {

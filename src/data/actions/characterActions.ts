@@ -32,7 +32,7 @@ export const CharacterActions = {
     HEALING_POTION: new CharacterAction("HEALING_POTION", "btn_heal_potion", false,
         "Lektvar Zdraví",
         "Použiješ Lektvar Zdraví pokud je v inventáři a jsi zraněn. Použije se vždy nejsilnější dostupný lektvar."),
-    
+
     MANA_POTION: new CharacterAction("MANA_POTION", "btn_mana_potion", false,
         "Lektvar Many",
         "Použiješ Lektvar Many pokud je v inventáři a nemáš plnou manu. Použije se vždy nejsilnější dostupný lektvar."),

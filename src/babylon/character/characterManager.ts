@@ -9,7 +9,7 @@ import {
     CharacterGatheringMessage,
     CharacterGatheringResultMessage,
     HealingMessage,
-    HealingResultMessage,
+    HealingResultMessage, PotionUsedMessage,
 } from '@/network/messageIfs'
 import { OverlayManager } from '@/gui/overlayManager'
 import { TargetingManager } from '@/gui/targettingManager'
@@ -203,6 +203,19 @@ export const CharacterManager = {
             const char = this.characters.get(data.id)
             if (char) {
                char.changeEquipSet(data.equipSet)
+            }
+        }
+    },
+
+    potionUsed(data: PotionUsedMessage) {
+        if (data.id === MyPlayer.myChar.id) {
+            MyPlayer.myChar.potionUsed()
+            MyPlayer.lastPotionUseTime = new Date().getTime()
+            MyPlayer.nextPotionUseTime = new Date().getTime() + data.cd
+        } else {
+            const char = this.characters.get(data.id)
+            if (char) {
+               char.potionUsed()
             }
         }
     },

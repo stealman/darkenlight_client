@@ -10,6 +10,7 @@ export interface  AutoAttackMessage {
     tgt: number
     tp: string
     dur: number
+    cd: number
 }
 
 export interface AutoAttackResult {
@@ -80,4 +81,10 @@ export interface EmeraldsChangeMessage {
     em: number
     ch: number
     mobId: number
+}
+
+export interface PotionUsedMessage {
+    tp: string
+    id: number
+    cd: number
 }

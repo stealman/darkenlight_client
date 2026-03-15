@@ -1,6 +1,9 @@
 import { Item } from '@/data/items/item'
 import { InventoryManager } from '@/data/InventoryManager'
 import { MyPlayer } from '@/data/myPlayer'
+import { Connector } from '@/network/connector'
+import { ConsumeItemMsg } from '@/network/messages'
+import { OnScreenMessageManager } from '@/gui/onScreenMessageManager'
 
 export const ConsumableHelper = {
 
@@ -35,16 +38,22 @@ export const ConsumableHelper = {
     },
 
     clickOnConsumeItem(cbId: number) {
-        console.log(`Clicked on consume item with cbId: ${cbId}`)
-
         // IF clicked on healig potion
         if (this.getHealingPotionIds().includes(cbId) && MyPlayer.myChar.hpPercent < 100) {
-            console.log(`Using healing potion with cbId: ${cbId}`)
-            //Connector.sendMessage(new UseConsumableItemMsg(cbId))
-            //AudioManager.playHealingPotion()
+            if (MyPlayer.nextPotionUseTime > new Date().getTime()) {
+                const remainingSeconds = Math.ceil((MyPlayer.nextPotionUseTime - new Date().getTime()) / 1000)
+                OnScreenMessageManager.addMessage("Další lektvar až za " + remainingSeconds + " vteřin")
+                return
+            }
+            Connector.sendMessage(new ConsumeItemMsg(cbId))
         }
         if (this.getManaPotionIds().includes(cbId) && MyPlayer.myChar.mpPercent < 100) {
-            console.log(`Using mana potion with cbId: ${cbId}`)
+            if (MyPlayer.nextPotionUseTime > new Date().getTime()) {
+                const remainingSeconds = Math.ceil((MyPlayer.nextPotionUseTime - new Date().getTime()) / 1000)
+                OnScreenMessageManager.addMessage("Další lektvar až za " + remainingSeconds + " vteřin")
+                return
+            }
+            Connector.sendMessage(new ConsumeItemMsg(cbId))
         }
     }
 }

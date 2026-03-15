@@ -24,7 +24,7 @@ import {
     CharacterGatheringMessage,
     CharacterGatheringResultMessage,
     HealingMessage,
-    HealingResultMessage,
+    HealingResultMessage, PotionUsedMessage,
 } from '@/network/messageIfs'
 import { TargetingManager } from '@/gui/targettingManager'
 import { CharacterManager } from '@/babylon/character/characterManager'
@@ -69,13 +69,16 @@ class Character implements Attackable {
     stepMarkSide: 'L' | 'R' = 'R'
 
     autoAttackTarget: Attackable | null = null
+    autoAttackStart: number = 0
     autoAttackEnd: number = 0
+    autoAttackCooldownEnd: number = 0
     arrowCreateTime: number = 0
     arrowShotTime: number = 0
     arrow: Arrow | null = null
 
     healingActive: boolean = false
     healSelf: boolean = false
+    healingStartTime: number = 0
     healingEndTime: number = 0
 
     constructor(data: any) {
@@ -222,7 +225,9 @@ class Character implements Attackable {
             this.arrowShotTime = Date.now() + this.attackAnimationTime
         }
 
-        this.autoAttackEnd = Date.now() + this.attackAnimationTime
+        this.autoAttackStart = Date.now()
+        this.autoAttackEnd = this.autoAttackStart + this.attackAnimationTime
+        this.autoAttackCooldownEnd = this.autoAttackStart + data.cd
 
         const angle = Utils.getAngleBetweenPoints(this.pos, this.autoAttackTarget.pos)
         this.setLookAngle(angle - Math.PI / 4)
@@ -231,7 +236,9 @@ class Character implements Attackable {
     }
 
     breakAutoAttack() {
+        this.autoAttackStart = 0
         this.autoAttackEnd = 0
+        this.autoAttackCooldownEnd = 0
         this.model?.setWeaponTrailEnabled(false)
         this.model?.stopAnimation()
         this.arrowCreateTime = 0
@@ -297,12 +304,17 @@ class Character implements Attackable {
 
     startHealing(data: HealingMessage) {
         this.healingActive = true
+        this.healingStartTime = Date.now()
         this.healingEndTime = Date.now() + data.dur
         this.healSelf = data.tgt === this.id && data.tp === 'C'
     }
 
     finishHealing(result: HealingResultMessage) {
         CharacterManager.basicDataChange(result.res.dt)
+    }
+
+    potionUsed() {
+        AudioManager.playPotionSound(this.pos)
     }
 
     resolveStepMark(time: number, inCombat: boolean = false) {

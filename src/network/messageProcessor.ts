@@ -17,7 +17,7 @@ import {
     CharacterGatheringMessage,
     CharacterGatheringResultMessage,
     EmeraldsChangeMessage,
-    HealingMessage, HealingResultMessage,
+    HealingMessage, HealingResultMessage, PotionUsedMessage,
 } from '@/network/messageIfs'
 import { GroundItemsManager } from '@/babylon/world/groundItemsManager'
 import { InventoryManager } from '@/data/InventoryManager'
@@ -67,6 +67,7 @@ export const MessageProcessor = {
                 case 36: this.processChangeItemsInInventory(msg.d); break
                 case 37: this.processCharacterGathering(msg.d); break
                 case 38: this.processCharacterGatheringFinished(msg.d); break
+                case 39: this.processPotionUsed(msg.d); break
                 case 1003: this.processGMAllSpawns(msg.d); break
                 case 1004: this.processGMSpawnChange(msg.d); break
                 default:
@@ -264,6 +265,12 @@ export const MessageProcessor = {
 
     processCharacterGatheringFinished(data: CharacterGatheringResultMessage) {
         CharacterManager.finishGathering(data)
+    },
+
+    processPotionUsed(data: PotionUsedMessage) {
+        if (data.tp === 'C') {
+            CharacterManager.potionUsed(data)
+        }
     },
 
     processGMAllSpawns(data) {

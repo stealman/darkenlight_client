@@ -48,7 +48,6 @@ export const WorldDataManager = {
     },
 
     consumeMapChunk(mapChunk) {
-        console.log(mapChunk)
         if (!this.worldDataMap.has(MyPlayer.worldId)) {
             this.worldDataMap.set(MyPlayer.worldId, new WorldData(1024))
         }
@@ -203,7 +202,6 @@ export class MapBlock {
 
     setMinable(minable: undefined | string | null) {
         if (minable) {
-            console.log("Minable block with data: " + minable)
             this.minableCoal = minable === 'C'
             this.minableOre = minable.startsWith('M') ? parseInt(minable.substring(1)) : null
         } else {
