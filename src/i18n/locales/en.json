@@ -1,0 +1,99 @@
+{
+  "common": {
+    "language": "Language",
+    "czech": "Czech",
+    "english": "English",
+    "close": "Close",
+    "restart": "Restart",
+    "later": "Later",
+    "loading": "Loading ..."
+  },
+  "app": {
+    "gmPanel": "GM Panel",
+    "restartGame": "Restart game",
+    "restartPrompt": "A game restart is required to apply the new settings.",
+    "errorTitle": "An error occurred",
+    "errorRestartQuestion": "Do you want to restart the game?"
+  },
+  "login": {
+    "guestTitle": "Login as guest",
+    "accountTitle": "Login with account",
+    "name": "Name",
+    "login": "Login",
+    "password": "Password",
+    "rememberMe": "Remember login",
+    "autoLogin": "Login automatically",
+    "submit": "Login",
+    "missingCredentials": "Enter login credentials or a guest character name"
+  },
+  "settings": {
+    "tabs": {
+      "controls": "Controls",
+      "graphics": "Graphics",
+      "gui": "GUI",
+      "audio": "Audio",
+      "account": "Account"
+    },
+    "deviceDescription": "Device you are playing on.",
+    "deviceDesktop": "PC",
+    "deviceTablet": "Tablet",
+    "devicePhone": "Phone",
+    "joystickSettings": "Joystick settings",
+    "graphicsLevel": "Graphics detail level.",
+    "graphicsHigh": "High",
+    "graphicsMedium": "Medium",
+    "graphicsLow": "Low",
+    "brightness": "Brightness",
+    "targetMarkerBrightness": "Target marker brightness",
+    "actionButtons": "Action buttons",
+    "layoutOneColumn": "1 column",
+    "layoutTwoColumns": "2 columns",
+    "layoutCorner": "Corner",
+    "buttonSize": "Button size",
+    "buttonsOffsetBottom": "Bottom offset",
+    "buttonCount": "Button count",
+    "volume": "Volume",
+    "ambient": "Ambient",
+    "graphicsRestartWarning": "Graphics setting changes take effect after restarting the game",
+    "logout": "Logout"
+  },
+  "character": {
+    "tabs": {
+      "character": "Character",
+      "actions": "Actions",
+      "skills": "Skills",
+      "chat": "Chat"
+    }
+  },
+  "actions": {
+    "noneTitle": "Unassigned",
+    "noneDescription": "No action will be assigned to this button.",
+    "autoAttackName": "Auto-attack",
+    "autoAttackDescription": "Your character automatically attacks the selected target while it is in range.",
+    "healName": "Heal",
+    "healDescription": "Use a bandage to heal yourself. If you are not injured and another character is selected, the bandage is used on them.",
+    "healingPotionName": "Health potion",
+    "healingPotionDescription": "Use a health potion from inventory when injured. The strongest available potion is always used.",
+    "manaPotionName": "Mana potion",
+    "manaPotionDescription": "Use a mana potion from inventory when mana is not full. The strongest available potion is always used."
+  },
+  "inventory": {
+    "unknownItem": "Unknown item",
+    "quality": "Quality",
+    "durability": "Durability",
+    "dropItem": "Drop item",
+    "splitItem": "Split item",
+    "mergeItem": "Merge item",
+    "confirmSplit": "Confirm split",
+    "cancelSplit": "Cancel split"
+  },
+  "messages": {
+    "noBandages": "You have no bandages",
+    "noHealthPotions": "You have no health potions",
+    "noManaPotions": "You have no mana potions",
+    "autoAttack": "Auto-attack: {state}",
+    "autoTarget": "Auto-targeting {state}",
+    "enabled": "Enabled",
+    "disabled": "Disabled"
+  }
+}

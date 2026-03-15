@@ -1,5 +1,14 @@
 import { ItemTO } from '@/network/messageIfs'
 import { ConsumableHelper } from '@/data/items/consumableHelper'
+import { t } from '@/i18n'
+
+const itemTypeLocalizationSections: Record<string, string> = {
+    W: 'weapons',
+    A: 'armors',
+    J: 'jewels',
+    T: 'trinkets',
+    R: 'resources',
+}
 
 export class Item {
     id: number
@@ -7,7 +16,7 @@ export class Item {
     cbType: string
     modelId: number
     materialId: number | null = null
-    name: string | null = null
+    nameKey: string | null = null
     imgUrl: string | null = null
     slotInfo: EquipSlotModel
 
@@ -19,13 +28,30 @@ export class Item {
         this.cbId = cbId
         this.modelId = modelId
         this.materialId = matId
-        this.name = name
+        this.nameKey = name
         this.imgUrl = "images/items/" + imgUrl + ".png"
         this.slotInfo = EquipSlotModelsCb.getById(modelId)!
         this.atts = atts
         if (!this.slotInfo && (cbType === 'W' || cbType === 'A' || cbType === 'J')) {
             throw new Error(`EquipSlotInfo not found for modelId: ${modelId}`)
         }
+    }
+
+    get name(): string | null {
+        if (!this.nameKey) {
+            return null
+        }
+
+        const section = itemTypeLocalizationSections[this.cbType]
+        const fullLocalizationKey = section ? `items.${section}.${this.nameKey}` : this.nameKey
+        const localizedName = t(fullLocalizationKey)
+
+        if (localizedName !== fullLocalizationKey) {
+            return localizedName
+        }
+
+        const directLocalizedName = t(this.nameKey)
+        return directLocalizedName === this.nameKey ? this.nameKey : directLocalizedName
     }
 
     static fromData(data: ItemTO): Item {

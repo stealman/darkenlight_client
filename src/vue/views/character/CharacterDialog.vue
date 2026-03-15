@@ -25,22 +25,24 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import CharacterOverviewTab from '@/vue/views/character/CharacterOverviewTab.vue'
 import CharacterActionsTab from '@/vue/views/character/CharacterActionsTab.vue'
 import CharacterSkillsTab from '@/vue/views/character/CharacterSkillsTab.vue'
 import CharacterChatTab from '@/vue/views/character/CharacterChatTab.vue'
+import { useI18n } from '@/i18n'
 
 const emit = defineEmits(['close'])
+const { t } = useI18n()
 
-const tabs = [
-    { id: 'character', name: 'Postava' },
-    { id: 'actions', name: 'Akce' },
-    { id: 'skills', name: 'Dovednosti' },
-    { id: 'chat', name: 'Chat' },
-]
+const tabs = computed(() => [
+    { id: 'character', name: t('character.tabs.character') },
+    { id: 'actions', name: t('character.tabs.actions') },
+    { id: 'skills', name: t('character.tabs.skills') },
+    { id: 'chat', name: t('character.tabs.chat') },
+])
 
-const activeTabId = ref(tabs[0].id)
+const activeTabId = ref('character')
 const characterActionsTabRef = ref()
 
 const openDialog = () => {

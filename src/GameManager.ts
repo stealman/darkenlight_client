@@ -7,6 +7,7 @@ import { Settings } from '@/settings/settings'
 import { Connector } from '@/network/connector'
 import { LogoutMsg } from '@/network/messages'
 import { ActionButtonsManager } from '@/gui/actionButtonsManager'
+import { setLocale } from '@/i18n'
 
 export const GameManager = {
     started: false as boolean,
@@ -22,6 +23,7 @@ export const GameManager = {
             storedSettings = JSON.parse(storedSettingsString)
         }
         Settings.initialize(storedSettings)
+        setLocale(Settings.language)
 
         // Initialize Renderer and load assets
         await Renderer.initialize(canvas)

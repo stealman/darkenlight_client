@@ -1,0 +1,49 @@
+{
+  "items": {
+    "weapons": {
+      "steel-broadsword": "Steel Broadsword",
+      "steel-longsword": "Steel Longsword",
+      "pickaxe": "Pickaxe",
+      "diamond-pickaxe": "Diamond Pickaxe",
+      "great-axe": "Great Axe",
+      "diamond-great-axe": "Diamond Great Axe",
+      "hunter-bow": "Hunter's Bow"
+    },
+
+
+
+
+    "armors": {
+      "steel-plate-greaves": "Steel Plate Greaves",
+      "steel-plate-pauldrons": "Steel Plate Pauldrons",
+      "steel-helmet": "Steel Helmet",
+      "steel-plate-armor": "Steel Plate Armor",
+      "steel-shield": "Steel Shield"
+    },
+
+
+
+
+    "jewels": {},
+
+
+
+
+    "trinkets": {},
+
+
+
+
+    "resources": {
+      "bandages": "Bandages",
+      "ore-iron": "Iron Ore",
+      "log-wooden": "Wood",
+      "small-healing-potion": "Small Healing Potion",
+      "healing-potion": "Healing Potion",
+      "great-healing-potion": "Great Healing Potion",
+      "small-mana-potion": "Small Mana Potion",
+      "mana-potion": "Mana Potion",
+      "great-mana-potion": "Great Mana Potion"
+    }
+  }
+}

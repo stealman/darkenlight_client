@@ -13,8 +13,8 @@
         </div>
 
         <template v-if="itemInfo.quality">
-            <div class="inventory-item-overlay-qual">Kvalita: {{ itemInfo.quality }}</div>
-            <div class="inventory-item-overlay-dur">Stav: {{ itemInfo.durability }} / {{ itemInfo.durabilityMax }}</div>
+            <div class="inventory-item-overlay-qual">{{ t('inventory.quality') }}: {{ itemInfo.quality }}</div>
+            <div class="inventory-item-overlay-dur">{{ t('inventory.durability') }}: {{ itemInfo.durability }} / {{ itemInfo.durabilityMax }}</div>
         </template>
 
         <div class="inventory-item-overlay-interactive inventory-item-overlay-actions">
@@ -22,35 +22,35 @@
                 :style="{ backgroundImage: `url('/images/icons/buttons/btn_background.png')` }"
                 @pointerdown.prevent.stop
                 @click.stop="onDropItemClick">
-                <img class="action-icon" src="/images/icons/buttons/btn_drop.png" alt="Drop item" />
+                <img class="action-icon" src="/images/icons/buttons/btn_drop.png" :alt="t('inventory.dropItem')" />
             </button>
 
             <button v-if="shouldShowSplitButton" class="action-button inventory-action-button inventory-split-button" type="button"
                 :style="{ backgroundImage: `url('/images/icons/buttons/btn_background.png')` }"
                 @pointerdown.prevent.stop
                 @click.stop="onSplitItemClick">
-                <img class="action-icon" src="/images/icons/buttons/btn_split.png" alt="Split item" />
+                <img class="action-icon" src="/images/icons/buttons/btn_split.png" :alt="t('inventory.splitItem')" />
             </button>
 
             <button v-if="shouldShowMergeButton" class="action-button inventory-action-button inventory-merge-button" type="button"
                 :style="{ backgroundImage: `url('/images/icons/buttons/btn_background.png')` }"
                 @pointerdown.prevent.stop
                 @click.stop="onMergeItemClick">
-                <img class="action-icon" src="/images/icons/buttons/btn_stack.png" alt="Merge item" />
+                <img class="action-icon" src="/images/icons/buttons/btn_stack.png" :alt="t('inventory.mergeItem')" />
             </button>
 
             <button v-if="showSplitControls" class="action-button inventory-action-button inventory-text-action-button" type="button"
                 :style="{ backgroundImage: `url('/images/icons/buttons/btn_background.png')` }"
                 @pointerdown.prevent.stop
                 @click.stop="onSplitConfirmClick">
-                <img class="action-icon" src="/images/icons/buttons/btn_ok.png" alt="Split item" />
+                <img class="action-icon" src="/images/icons/buttons/btn_ok.png" :alt="t('inventory.confirmSplit')" />
             </button>
 
             <button v-if="showSplitControls" class="action-button inventory-action-button inventory-text-action-button" type="button"
                 :style="{ backgroundImage: `url('/images/icons/buttons/btn_background.png')` }"
                 @pointerdown.prevent.stop
                 @click.stop="onSplitCancelClick">
-                <img class="action-icon" src="/images/icons/buttons/btn_stop.png" alt="Split item" />
+                <img class="action-icon" src="/images/icons/buttons/btn_stop.png" :alt="t('inventory.cancelSplit')" />
             </button>
         </div>
 
@@ -79,6 +79,7 @@
 <script setup>
 import { computed, nextTick, ref, watch } from 'vue'
 import { AudioManager } from '@/babylon/audio/audioManager'
+import { useI18n } from '@/i18n'
 
 const props = defineProps({
     itemInfo: {
@@ -106,13 +107,14 @@ const props = defineProps({
 const emit = defineEmits(['close', 'drop-item', 'split-item', 'merge-item', 'content-resized'])
 const overlayRootRef = ref(null)
 const showSplitControls = ref(false)
+const { t } = useI18n()
 
 const shouldShowDropButton = computed(() => {
     return props.context === 'INVENTORY' && props.itemInfo.showDropButton === true && !showSplitControls.value
 })
 
 const displayItemName = computed(() => {
-    return props.itemInfo?.name ?? 'Unknown item'
+    return props.itemInfo?.name ?? t('inventory.unknownItem')
 })
 
 const displayItemQuantity = computed(() => {

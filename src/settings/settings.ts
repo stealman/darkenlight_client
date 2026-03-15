@@ -25,6 +25,7 @@ const DetailLevels= {
 
 export const Settings = {
     deviceType: null as string,
+    language: 'cs' as string,
     detailLevel: DetailLevels.MEDIUM,
     detailLevelName: 'MEDIUM',
 
@@ -53,6 +54,7 @@ export const Settings = {
 
     initialize(storedSettings) {
         this.deviceType = storedSettings.deviceType
+        this.language = storedSettings.language || 'cs'
         switch (storedSettings.detailLevelName) {
             case 'LOW':
                 this.detailLevel = DetailLevels.LOW;
@@ -100,6 +102,7 @@ export const Settings = {
         return {
             deviceType: Settings.touchEnabled ? 'PHONE' : 'DESKTOP',
             detailLevelName: Settings.touchEnabled ? 'MEDIUM' : 'HIGH',
+            language: 'cs',
 
             joystickSize: 100,
             joystickBottom: 50,

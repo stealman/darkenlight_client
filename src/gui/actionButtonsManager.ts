@@ -8,6 +8,7 @@ import { EmeraldsManager } from '@/gui/emeraldsManager'
 import { InventoryManager } from '@/data/InventoryManager'
 import { ConsumableHelper } from '@/data/items/consumableHelper'
 import { CharacterAction, CharacterActions } from '@/data/actions/characterActions'
+import { t } from '@/i18n'
 
 class ActionButtonActionBinding {
     name: string
@@ -32,13 +33,13 @@ class ActionButton {
 
     constructor(index: string) {
         this.index = index
-        this.htmlEl = document.createElement("div")
-        this.htmlEl.id = "act-btn-" + index
-        this.htmlEl.className = "action-button"
+        this.htmlEl = document.createElement('div')
+        this.htmlEl.id = 'act-btn-' + index
+        this.htmlEl.className = 'action-button'
         this.htmlEl.style.backgroundImage = `url('images/icons/buttons/btn_background.png')`
 
-        this.cooldownOverlayEl = document.createElement("div")
-        this.cooldownOverlayEl.className = "action-button-cooldown-overlay"
+        this.cooldownOverlayEl = document.createElement('div')
+        this.cooldownOverlayEl.className = 'action-button-cooldown-overlay'
         this.htmlEl.appendChild(this.cooldownOverlayEl)
 
         this.htmlEl.onpointerdown = (e) => { e.preventDefault(); this.pointerDown() }
@@ -67,9 +68,9 @@ class ActionButton {
     onToggle() {
         this.actionBinding!.toggled = !this.actionBinding!.toggled
         if (this.actionBinding?.toggled) {
-            this.htmlEl!.classList.add("toggled")
+            this.htmlEl!.classList.add('toggled')
         } else {
-            this.htmlEl!.classList.remove("toggled")
+            this.htmlEl!.classList.remove('toggled')
         }
         ActionButtonsManager.toggleStateChange(this.actionBinding!.name, this.actionBinding!.toggled)
         AudioManager.playGuiButtonToggle(this.actionBinding!.toggled)
@@ -82,17 +83,17 @@ class ActionButton {
         this.setItemsAvailabilityState()
 
         if (action.toggleable && binding.toggled) {
-            this.htmlEl!.classList.add("toggled")
+            this.htmlEl!.classList.add('toggled')
         } else {
-            this.htmlEl!.classList.remove("toggled")
+            this.htmlEl!.classList.remove('toggled')
         }
     }
 
     clearBinding() {
         this.actionBinding = null
-        this.htmlEl!.innerHTML = ""
-        this.htmlEl!.classList.remove("toggled")
-        this.htmlEl!.classList.remove("unavailable")
+        this.htmlEl!.innerHTML = ''
+        this.htmlEl!.classList.remove('toggled')
+        this.htmlEl!.classList.remove('unavailable')
         this.htmlEl!.appendChild(this.cooldownOverlayEl!)
         this.setCooldownPercent(100)
     }
@@ -110,22 +111,22 @@ class ActionButton {
 
     setItemsAvailabilityState() {
         if (!this.actionBinding) {
-            this.htmlEl!.classList.remove("unavailable")
+            this.htmlEl!.classList.remove('unavailable')
             return
         }
 
         switch (this.actionBinding.name) {
             case CharacterActions.HEAL.name:
-                this.htmlEl!.classList.toggle("unavailable", !ActionButtonsManager.hasBandageAvailable())
+                this.htmlEl!.classList.toggle('unavailable', !ActionButtonsManager.hasBandageAvailable())
                 return
             case CharacterActions.HEALING_POTION.name:
-                this.htmlEl!.classList.toggle("unavailable", !ActionButtonsManager.hasHealingPotionAvailable())
+                this.htmlEl!.classList.toggle('unavailable', !ActionButtonsManager.hasHealingPotionAvailable())
                 return
             case CharacterActions.MANA_POTION.name:
-                this.htmlEl!.classList.toggle("unavailable", !ActionButtonsManager.hasManaPotionAvailable())
+                this.htmlEl!.classList.toggle('unavailable', !ActionButtonsManager.hasManaPotionAvailable())
                 return
             default:
-                this.htmlEl!.classList.remove("unavailable")
+                this.htmlEl!.classList.remove('unavailable')
         }
     }
 
@@ -149,21 +150,21 @@ class ActionButton {
         const overlayHeight = 100 - safePercent
 
         if (overlayHeight <= 0) {
-            this.cooldownOverlayEl!.style.height = "0%"
-            this.cooldownOverlayEl!.style.display = "none"
+            this.cooldownOverlayEl!.style.height = '0%'
+            this.cooldownOverlayEl!.style.display = 'none'
             return
         }
 
-        this.cooldownOverlayEl!.style.display = "block"
+        this.cooldownOverlayEl!.style.display = 'block'
         this.cooldownOverlayEl!.style.height = `${overlayHeight}%`
     }
 
     resolveImagePath(imageSrc: string) {
         if (imageSrc == CharacterActions.AUTO_ATTACK.image && MyPlayer.myChar?.isWeaponRanged()) {
-            imageSrc = "btn_attack_ranged"
+            imageSrc = 'btn_attack_ranged'
         }
         if (imageSrc == CharacterActions.AUTO_ATTACK.image && MyPlayer.myChar?.isWeaponAxe()) {
-            imageSrc = "btn_attack_axe"
+            imageSrc = 'btn_attack_axe'
         }
 
         return `/images/icons/buttons/${imageSrc}.png`
@@ -171,12 +172,12 @@ class ActionButton {
 
     activated() {
         this.active = true
-        this.htmlEl!.classList.add("active")
+        this.htmlEl!.classList.add('active')
     }
 
     deactivated() {
         this.active = false
-        this.htmlEl!.classList.remove("active")
+        this.htmlEl!.classList.remove('active')
     }
 
     setSize(size: number) {
@@ -187,7 +188,7 @@ class ActionButton {
 }
 
 export const ActionButtonsManager = {
-    actionBindingKey: "DARKENLIGHT_ACTION_BUTTONS_BINDINGS",
+    actionBindingKey: 'DARKENLIGHT_ACTION_BUTTONS_BINDINGS',
     // weaponSetupKey: "DARKENLIGHT_WEAPON_SETUP",
 
     buttonsPanel1: null as HTMLElement,
@@ -199,17 +200,15 @@ export const ActionButtonsManager = {
     stopButton: null as HTMLElement,
 
     initialize() {
-        this.buttonsPanel1 = document.getElementById("action-buttons-1") as HTMLElement
-        this.buttonsPanel2 = document.getElementById("action-buttons-2") as HTMLElement
-        this.opportunityButtonsPanel = document.getElementById("opportunity-action-buttons") as HTMLElement
-        this.stopButton = document.getElementById("btn-action-stop") as HTMLElement
+        this.buttonsPanel1 = document.getElementById('action-buttons-1') as HTMLElement
+        this.buttonsPanel2 = document.getElementById('action-buttons-2') as HTMLElement
+        this.opportunityButtonsPanel = document.getElementById('opportunity-action-buttons') as HTMLElement
+        this.stopButton = document.getElementById('btn-action-stop') as HTMLElement
 
-        // Create 10 empty action buttons and store to map
         for (let i = 1; i <= 10; i++) {
             this.actionButtons.set(i, new ActionButton(i.toString()))
         }
 
-        // Init default bindings if not present in localStorage
         if (!localStorage.getItem(this.actionBindingKey)) {
             this.bindings.set(1, new ActionButtonActionBinding(CharacterActions.AUTO_ATTACK.name, {}))
             this.bindings.set(2, new ActionButtonActionBinding(CharacterActions.HEAL.name, {}))
@@ -221,7 +220,7 @@ export const ActionButtonsManager = {
         this.renderActionButtons()
     },
 
-    onFrame(time) {
+    onFrame(time: number) {
         this.actionButtons.forEach((btn) => {
             btn.onFrame(time)
         })
@@ -242,28 +241,28 @@ export const ActionButtonsManager = {
     },
 
     renderActionButtons() {
-        this.buttonsPanel1.innerHTML = ""
-        this.buttonsPanel2.innerHTML = ""
+        this.buttonsPanel1.innerHTML = ''
+        this.buttonsPanel2.innerHTML = ''
 
         if (Settings.actionButtonsLayout == '1COLUMN') {
-            this.buttonsPanel2.style.setProperty("display", "none")
+            this.buttonsPanel2.style.setProperty('display', 'none')
         } else {
-            this.buttonsPanel2.style.setProperty("display", "flex")
+            this.buttonsPanel2.style.setProperty('display', 'flex')
         }
 
         if (Settings.actionButtonsLayout == '2COLUMN') {
-            this.buttonsPanel2.style.setProperty("flex-direction", "column")
+            this.buttonsPanel2.style.setProperty('flex-direction', 'column')
         }
 
         if (Settings.actionButtonsLayout == 'CORNER') {
-            this.buttonsPanel2.style.setProperty("flex-direction", "row")
+            this.buttonsPanel2.style.setProperty('flex-direction', 'row')
         }
 
         this.actionButtons.forEach((btn) => {
-            if (btn.index > Settings.actionButtonCount) {
-                btn.htmlEl!.style.setProperty("display", "none")
+            if (parseInt(btn.index) > Settings.actionButtonCount) {
+                btn.htmlEl!.style.setProperty('display', 'none')
             } else {
-                btn.htmlEl!.style.removeProperty("display")
+                btn.htmlEl!.style.removeProperty('display')
             }
 
             const binding = this.bindings.get(parseInt(btn.index))
@@ -327,7 +326,7 @@ export const ActionButtonsManager = {
     },
 
     clickOnHealingButton() {
-        if (InventoryManager.getTotalResourceItemCountByType(1) <= 0) { OnScreenMessageManager.addMessage("Nemáš žádné obvazy"); return }
+        if (InventoryManager.getTotalResourceItemCountByType(1) <= 0) { OnScreenMessageManager.addMessage(t('messages.noBandages')); return }
         if (MyPlayer.activeAction && MyPlayer.activeAction.name === CharacterActions.HEAL.name) {
             MyPlayer.stopActions()
             return
@@ -336,12 +335,12 @@ export const ActionButtonsManager = {
     },
 
     clickOnHealingPotionButton() {
-        if (!ActionButtonsManager.hasHealingPotionAvailable()) { OnScreenMessageManager.addMessage("Nemáš žádné lektvary zdraví"); return }
+        if (!ActionButtonsManager.hasHealingPotionAvailable()) { OnScreenMessageManager.addMessage(t('messages.noHealthPotions')); return }
         ConsumableHelper.clickOnConsumeHealingPotion()
     },
 
     clickOnManaPotionButton() {
-        if (!ActionButtonsManager.hasManaPotionAvailable()) { OnScreenMessageManager.addMessage("Nemáš žádné lektvary many"); return }
+        if (!ActionButtonsManager.hasManaPotionAvailable()) { OnScreenMessageManager.addMessage(t('messages.noManaPotions')); return }
         ConsumableHelper.clickOnConsumeManaPotion()
     },
 
@@ -349,7 +348,9 @@ export const ActionButtonsManager = {
         this.storeBindings()
         switch (actionName) {
             case CharacterActions.AUTO_ATTACK.name:
-                OnScreenMessageManager.addMessage(`Auto-Útok: ${toggled ? 'Zapnuto' : 'Vypnuto'}`)
+                OnScreenMessageManager.addMessage(t('messages.autoAttack', {
+                    state: toggled ? t('messages.enabled') : t('messages.disabled')
+                }))
                 break
         }
     },
@@ -425,25 +426,25 @@ export const ActionButtonsManager = {
         })
 
         if (Settings.actionButtonsLayout == '1COLUMN') {
-            this.buttonsPanel1.style.setProperty("bottom",  Settings.actionButtonsYOffset + "px")
-            this.opportunityButtonsPanel.style.setProperty("bottom", Settings.actionButtonsYOffset + "px")
-            this.opportunityButtonsPanel.style.setProperty("right", (newSize + panelGap) + "px")
+            this.buttonsPanel1.style.setProperty('bottom', Settings.actionButtonsYOffset + 'px')
+            this.opportunityButtonsPanel.style.setProperty('bottom', Settings.actionButtonsYOffset + 'px')
+            this.opportunityButtonsPanel.style.setProperty('right', (newSize + panelGap) + 'px')
         }
 
         if (Settings.actionButtonsLayout == '2COLUMN') {
-            this.buttonsPanel1.style.setProperty("bottom", Settings.actionButtonsYOffset + "px")
-            this.buttonsPanel2.style.setProperty("bottom", Settings.actionButtonsYOffset + "px")
-            this.buttonsPanel2.style.setProperty("right", (newSize + panelGap) + "px")
-            this.opportunityButtonsPanel.style.setProperty("bottom", Settings.actionButtonsYOffset + "px")
-            this.opportunityButtonsPanel.style.setProperty("right", ((newSize + panelGap) * 2) + "px")
+            this.buttonsPanel1.style.setProperty('bottom', Settings.actionButtonsYOffset + 'px')
+            this.buttonsPanel2.style.setProperty('bottom', Settings.actionButtonsYOffset + 'px')
+            this.buttonsPanel2.style.setProperty('right', (newSize + panelGap) + 'px')
+            this.opportunityButtonsPanel.style.setProperty('bottom', Settings.actionButtonsYOffset + 'px')
+            this.opportunityButtonsPanel.style.setProperty('right', ((newSize + panelGap) * 2) + 'px')
         }
 
         if (Settings.actionButtonsLayout == 'CORNER') {
-            this.buttonsPanel1.style.setProperty("bottom", (Settings.actionButtonsYOffset + newSize + panelGap) + "px")
-            this.buttonsPanel2.style.setProperty("bottom", Settings.actionButtonsYOffset + "px")
-            this.buttonsPanel2.style.setProperty("right", "0px")
-            this.opportunityButtonsPanel.style.setProperty("bottom", (Settings.actionButtonsYOffset + newSize + panelGap) + "px")
-            this.opportunityButtonsPanel.style.setProperty("right", (newSize + panelGap) + "px")
+            this.buttonsPanel1.style.setProperty('bottom', (Settings.actionButtonsYOffset + newSize + panelGap) + 'px')
+            this.buttonsPanel2.style.setProperty('bottom', Settings.actionButtonsYOffset + 'px')
+            this.buttonsPanel2.style.setProperty('right', '0px')
+            this.opportunityButtonsPanel.style.setProperty('bottom', (Settings.actionButtonsYOffset + newSize + panelGap) + 'px')
+            this.opportunityButtonsPanel.style.setProperty('right', (newSize + panelGap) + 'px')
         }
 
         GuiButtonsManager.setSize(newSize)

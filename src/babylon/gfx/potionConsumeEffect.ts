@@ -76,7 +76,7 @@ export class PotionConsumeEffect implements CharacterEffect {
         particleSystem.maxEmitPower = 1.5
         particleSystem.gravity = new Vector3(0, 2, 0)
 
-        particleSystem.emitRate = 200
+        particleSystem.emitRate = 300
         particleSystem.updateSpeed = 0.02
         particleSystem.blendMode = ParticleSystem.BLENDMODE_ONEONE
         particleSystem.start()

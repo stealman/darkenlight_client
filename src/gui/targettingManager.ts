@@ -11,6 +11,7 @@ import { MyPlayer } from '@/data/myPlayer'
 import { CharacterManager } from '@/babylon/character/characterManager'
 import { ActionButtonsManager } from '@/gui/actionButtonsManager'
 import { CharacterActions } from '@/data/actions/characterActions'
+import { t } from '@/i18n'
 
 export const TargetingManager = {
     selectedTarget: null as Targetable | null,
@@ -40,13 +41,12 @@ export const TargetingManager = {
             this.pointerDownTime = -1
             Settings.autoTarget = this.autoTargetingEnabled
             Settings.storeSettings()
-            OnScreenMessageManager.addMessage(`Auto-Zaměření ${this.autoTargetingEnabled ? 'Zapnuto' : 'Vypnuto'}`)
+            OnScreenMessageManager.addMessage(t('messages.autoTarget', {
+                state: this.autoTargetingEnabled ? t('messages.enabled') : t('messages.disabled')
+            }))
         }
 
-        // Auto-targeting every second if enabled and no target selected
         if (this.autoTargetingEnabled && this.lastAutoTargetTime + 1000 < actualTime) {
-
-            // If target is more than 15 tiles away, clear target
             if (this.selectedTarget) {
                 if (Vector3.Distance(MyPlayer.myChar.pos, this.selectedTarget.pos) > 15) {
                     this.unselectTarget()
@@ -63,16 +63,13 @@ export const TargetingManager = {
     cycleThroughClosestTargets() {
         const sortedMobs = MonsterManager.getVisibleMonstersSortedByDistance()
 
-        // Cycle through first 6 closest targets
         const maxTargetsToCycle = 6
         const targetsToConsider = sortedMobs.slice(0, maxTargetsToCycle)
         if (targetsToConsider.length === 0) return
 
-
         this.targetCycleIndex = (this.targetCycleIndex + 1) % targetsToConsider.length
         let target = targetsToConsider[this.targetCycleIndex]
 
-        // If target is the selected target, skip to next
         if (target === this.selectedTarget) {
             this.targetCycleIndex = (this.targetCycleIndex + 1) % targetsToConsider.length
             target = targetsToConsider[this.targetCycleIndex]
@@ -183,44 +180,46 @@ export const TargetingManager = {
         if (this.targetSpriteEnemy != null) {
             this.targetSpriteEnemy.remove()
         }
-        this.targetSpriteEnemy = this.createTargetSprites( '#f08f56')
+        this.targetSpriteEnemy = this.createTargetSprites('#f08f56')
         if (this.targetSpriteAlly != null) {
             this.targetSpriteAlly.remove()
         }
-        this.targetSpriteAlly = this.createTargetSprites( '#56baff')
+        this.targetSpriteAlly = this.createTargetSprites('#56baff')
         if (this.targetSpriteEnemyAttackTarget != null) {
             this.targetSpriteEnemyAttackTarget.remove()
         }
-        this.targetSpriteEnemyAttackTarget = this.createTargetSprites( '#ff4444')
+        this.targetSpriteEnemyAttackTarget = this.createTargetSprites('#ff4444')
+
+        return this.targetSpriteEnemyAttackTarget
     },
 
     createTargetSprites(color: string): HTMLCanvasElement {
-        const sprite = document.createElement('canvas');
-        const dpr = window.devicePixelRatio || 1;
-        const size = 16 / dpr;
-        const gap = 40/ dpr;
-        const margin = 12/ dpr;
+        const sprite = document.createElement('canvas')
+        const dpr = window.devicePixelRatio || 1
+        const size = 16 / dpr
+        const gap = 40 / dpr
+        const margin = 12 / dpr
 
-        sprite.width = gap + size + margin;
-        sprite.height = size * 2 + margin;
+        sprite.width = gap + size + margin
+        sprite.height = size * 2 + margin
 
-        const ctx = sprite.getContext('2d')!;
-        ctx.strokeStyle = color;
-        ctx.lineWidth = 3;
+        const ctx = sprite.getContext('2d')!
+        ctx.strokeStyle = color
+        ctx.lineWidth = 3
 
-        ctx.beginPath();
-        ctx.moveTo(margin/2, sprite.height/2 - size);
-        ctx.lineTo(margin/2 - size, sprite.height/2);
-        ctx.lineTo(margin/2, sprite.height/2 + size);
-        ctx.stroke();
+        ctx.beginPath()
+        ctx.moveTo(margin / 2, sprite.height / 2 - size)
+        ctx.lineTo(margin / 2 - size, sprite.height / 2)
+        ctx.lineTo(margin / 2, sprite.height / 2 + size)
+        ctx.stroke()
 
-        ctx.beginPath();
-        ctx.moveTo(sprite.width - margin/2, sprite.height/2 - size);
-        ctx.lineTo(sprite.width - margin/2 + size, sprite.height/2);
-        ctx.lineTo(sprite.width - margin/2, sprite.height/2 + size);
-        ctx.stroke();
+        ctx.beginPath()
+        ctx.moveTo(sprite.width - margin / 2, sprite.height / 2 - size)
+        ctx.lineTo(sprite.width - margin / 2 + size, sprite.height / 2)
+        ctx.lineTo(sprite.width - margin / 2, sprite.height / 2 + size)
+        ctx.stroke()
 
-        return sprite;
+        return sprite
     },
 }
 
@@ -229,10 +228,10 @@ export interface Targetable {
     id: number
     nameDisplayTime: number
     getPositionOnScreen(): { x: number, y: number } | null
-    getBoxSize() : number
-    getName() : string
-    getModelHeight() : number
-    getNameTextNodeScreenPosition()
+    getBoxSize(): number
+    getName(): string
+    getModelHeight(): number
+    getNameTextNodeScreenPosition(): { x: number, y: number } | null
     getObjectType(): string
     getSplatType(): SplatType
     getRelationToMyPlayer(): 'ALLY' | 'ENEMY' | 'NEUTRAL'

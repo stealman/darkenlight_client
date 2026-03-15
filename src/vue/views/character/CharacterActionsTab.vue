@@ -39,12 +39,12 @@
                         >
                             <img
                                 src="/images/icons/buttons/btn_stop.png"
-                                alt="Nevybráno"
+                                :alt="t('actions.noneTitle')"
                                 class="action-option-icon"
                             />
                             <div class="action-option-text">
-                                <strong>Nevybráno</strong>
-                                <span>Na tomto tlačítku nebude přiřazena žádná akce.</span>
+                                <strong>{{ t('actions.noneTitle') }}</strong>
+                                <span>{{ t('actions.noneDescription') }}</span>
                             </div>
                         </button>
                     </div>
@@ -81,11 +81,13 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { ActionButtonsManager } from '@/gui/actionButtonsManager'
+import { useI18n } from '@/i18n'
 
 const actionButtonIndexes = Array.from({ length: 10 }, (_, index) => index + 1)
 const selectedSlotIndex = ref<number | null>(null)
 const availableActions = computed(() => ActionButtonsManager.getAvailableActionsForBindings())
 const actionSelectionContentRef = ref<HTMLElement | null>(null)
+const { t } = useI18n()
 
 const getBindingIcon = (index: number) => {
     return ActionButtonsManager.getBindingIconForIndex(index)

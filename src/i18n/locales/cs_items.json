@@ -1,0 +1,49 @@
+{
+    "items": {
+        "weapons": {
+            "steel-broadsword": "Ocelový Široký Meč",
+            "steel-longsword": "Ocelový Dlouhý Meč",
+            "pickaxe": "Krumpáč",
+            "diamond-pickaxe": "Diamantový Krumpáč",
+            "great-axe": "Velká Sekera",
+            "diamond-great-axe": "Diamantová Velká Sekera",
+            "hunter-bow": "Lovecký Luk"
+        },
+
+
+
+
+        "armors": {
+            "steel-plate-greaves": "Ocelové Plátové Kalhoty",
+            "steel-plate-pauldrons": "Ocelové Plátové Nárameníky",
+            "steel-helmet": "Ocelová Přilba",
+            "steel-plate-armor": "Ocelová Plátová Zbroj",
+            "steel-shield": "Ocelový Štít"
+        },
+
+
+
+
+        "jewels": {},
+
+
+      
+
+        "trinkets": {},
+
+
+
+
+        "resources": {
+            "bandages": "Obvazy",
+            "ore-iron": "Železná ruda",
+            "log-wooden": "Dřevo",
+            "small-healing-potion": "Malý Lektvar Zdraví",
+            "healing-potion": "Lektvar Zdraví",
+            "great-healing-potion": "Velký Lektvar Zdraví",
+            "small-mana-potion": "Malý Lektvar Many",
+            "mana-potion": "Lektvar Many",
+            "great-mana-potion": "Velký Lektvar Many"
+        }
+    }
+}

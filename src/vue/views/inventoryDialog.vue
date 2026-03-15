@@ -96,6 +96,7 @@ import { InventoryManager } from '@/data/InventoryManager'
 import { WeaponTypes } from '@/data/items/item'
 import { Settings } from '@/settings/settings'
 import ItemInfoOverlay from '@/vue/views/itemInfoOverlay.vue'
+import { t } from '@/i18n'
 
 const emit = defineEmits(['close'])
 const INVENTORY_SLOT_COUNT = 24
@@ -167,7 +168,7 @@ const showItemInfoOverlay = (item, pointer, options = {}) => {
     itemInfoOverlay.value.visible = true
     itemInfoOverlay.value.x = pointer.clientX + OVERLAY_CURSOR_OFFSET_X
     itemInfoOverlay.value.y = pointer.clientY
-    itemInfoOverlay.value.name = item.name || 'Unknown item'
+    itemInfoOverlay.value.name = item.name || t('inventory.unknownItem')
     itemInfoOverlay.value.id = item.id ?? null
 
     itemInfoOverlay.value.quality = item.atts.qual ?? null
@@ -329,7 +330,7 @@ const refreshItemInfoOverlayFromLiveData = (changedItemIds = null) => {
     }
 
     const item = liveItemInfo.item
-    itemInfoOverlay.value.name = item.name || 'Unknown item'
+    itemInfoOverlay.value.name = item.name || t('inventory.unknownItem')
     itemInfoOverlay.value.id = item.id ?? null
     itemInfoOverlay.value.quality = item.atts?.qual ?? null
     itemInfoOverlay.value.durability = item.atts?.dur ?? null

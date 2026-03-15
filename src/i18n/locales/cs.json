@@ -1,0 +1,99 @@
+{
+  "common": {
+    "language": "Jazyk",
+    "czech": "Čeština",
+    "english": "Angličtina",
+    "close": "Zavřít",
+    "restart": "Restartovat",
+    "later": "Později",
+    "loading": "Nahrávání ..."
+  },
+  "app": {
+    "gmPanel": "GM Panel",
+    "restartGame": "Restart hry",
+    "restartPrompt": "Pro aplikaci nových nastavení je potřeba restartovat hru.",
+    "errorTitle": "Došlo k chybě",
+    "errorRestartQuestion": "Chcete hru restartovat ?"
+  },
+  "login": {
+    "guestTitle": "Přihlásit jako host",
+    "accountTitle": "Přihlásit účtem",
+    "name": "Jméno",
+    "login": "Login",
+    "password": "Heslo",
+    "rememberMe": "Zapamatovat přihlášení",
+    "autoLogin": "Automaticky přihlásit",
+    "submit": "Přihlásit",
+    "missingCredentials": "Zadejte přihlašovací jméno a heslo, nebo jméno postavy hosta"
+  },
+  "settings": {
+    "tabs": {
+      "controls": "Ovládání",
+      "graphics": "Grafika",
+      "gui": "GUI",
+      "audio": "Zvuk",
+      "account": "Účet"
+    },
+    "deviceDescription": "Zařízení, na kterém hraješ.",
+    "deviceDesktop": "PC",
+    "deviceTablet": "Tablet",
+    "devicePhone": "Mobil",
+    "joystickSettings": "Nastavení joysticku",
+    "graphicsLevel": "Úroveň detailů grafiky.",
+    "graphicsHigh": "Vysoká",
+    "graphicsMedium": "Střední",
+    "graphicsLow": "Nízká",
+    "brightness": "Jas",
+    "targetMarkerBrightness": "Jas označníku",
+    "actionButtons": "Akční tlačítka",
+    "layoutOneColumn": "1 sloupec",
+    "layoutTwoColumns": "2 sloupce",
+    "layoutCorner": "Roh",
+    "buttonSize": "Velikost tlačítek",
+    "buttonsOffsetBottom": "Odsazení zdola",
+    "buttonCount": "Počet tlačítek",
+    "volume": "Hlasitost",
+    "ambient": "Ambient",
+    "graphicsRestartWarning": "Změny v nastavení grafiky se projeví až po restartu hry",
+    "logout": "Odhlásit"
+  },
+  "character": {
+    "tabs": {
+      "character": "Postava",
+      "actions": "Akce",
+      "skills": "Dovednosti",
+      "chat": "Chat"
+    }
+  },
+  "actions": {
+    "noneTitle": "Nevybráno",
+    "noneDescription": "Na tomto tlačítku nebude přiřazena žádná akce.",
+    "autoAttackName": "Auto-útok",
+    "autoAttackDescription": "Postava automaticky útočí na vybraný cíl, dokud je v dosahu.",
+    "healName": "Léčba",
+    "healDescription": "Použiješ obvaz ke svému vyléčení. Pokud nejsi zraněn a je vybrána jiná postava, použiješ obvaz na ni.",
+    "healingPotionName": "Lektvar zdraví",
+    "healingPotionDescription": "Použiješ Lektvar zdraví pokud je v inventáři a jsi zraněn. Použije se vždy nejsilnější dostupný lektvar.",
+    "manaPotionName": "Lektvar many",
+    "manaPotionDescription": "Použiješ Lektvar many pokud je v inventáři a nemáš plnou manu. Použije se vždy nejsilnější dostupný lektvar."
+  },
+  "inventory": {
+    "unknownItem": "Neznámý předmět",
+    "quality": "Kvalita",
+    "durability": "Stav",
+    "dropItem": "Zahodit předmět",
+    "splitItem": "Rozdělit předmět",
+    "mergeItem": "Sloučit předmět",
+    "confirmSplit": "Potvrdit rozdělení",
+    "cancelSplit": "Zrušit rozdělení"
+  },
+  "messages": {
+    "noBandages": "Nemáš žádné obvazy",
+    "noHealthPotions": "Nemáš žádné lektvary zdraví",
+    "noManaPotions": "Nemáš žádné lektvary many",
+    "autoAttack": "Auto-útok: {state}",
+    "autoTarget": "Auto-zaměření {state}",
+    "enabled": "Zapnuto",
+    "disabled": "Vypnuto"
+  }
+}
