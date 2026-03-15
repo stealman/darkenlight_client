@@ -1,11 +1,12 @@
 import { GroundItemsManager } from '@/babylon/world/groundItemsManager'
+import { TreeManager } from '@/babylon/world/treeManager'
 import { InventoryManager } from '@/data/InventoryManager'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { MyPlayer } from '@/data/myPlayer'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { WeaponTypes } from '@/data/items/item'
 import { Connector } from '@/network/connector'
-import { GatheringActionMsg, GatheringActionTypes } from '@/network/messages'
+import { GatheringActionMsg } from '@/network/messages'
 import { CharacterAction, CharacterActions } from '@/gui/actionButtonsManager'
 
 class GuiOpportunityButtonAction {
@@ -54,6 +55,7 @@ class GuiOpportunityButton {
 export const GuiOpportunityActions = {
     PICKUP_ITEM: new GuiOpportunityButtonAction("PICKUP_ITEM", "btn_pick", "btn_pick_hover"),
     MINING: new GuiOpportunityButtonAction("MINING", "btn_pickaxe", "btn_pickaxe_hover"),
+    LUMBERJACKING: new GuiOpportunityButtonAction("LUMBERJACKING", "btn_lumber", "btn_lumber_hover"),
 }
 
 export const GuiButtonsManager = {
@@ -79,6 +81,10 @@ export const GuiButtonsManager = {
         this.opportunityButtons.set(
             GuiOpportunityActions.MINING.name,
             new GuiOpportunityButton(GuiOpportunityActions.MINING)
+        )
+        this.opportunityButtons.set(
+            GuiOpportunityActions.LUMBERJACKING.name,
+            new GuiOpportunityButton(GuiOpportunityActions.LUMBERJACKING)
         )
     },
 
@@ -117,6 +123,10 @@ export const GuiButtonsManager = {
         this.opportunityButtons.get(GuiOpportunityActions.MINING.name)!.setVisible(
             hasMineableCoveredBlock && MyPlayer.hasWaponTypeInHandOrInventory(WeaponTypes.PICKAXE)
         )
+
+        this.opportunityButtons.get(GuiOpportunityActions.LUMBERJACKING.name)!.setVisible(
+            TreeManager.isAnyTreeInDistance(MyPlayer.myChar.pos, 1.5) && MyPlayer.hasWaponTypeInHandOrInventory(WeaponTypes.GREAT_AXE)
+        )
     },
 
     onclickOpportunityButton(actionName: string) {
@@ -127,6 +137,9 @@ export const GuiButtonsManager = {
                 break
             case GuiOpportunityActions.MINING.name:
                 this.clickOnMiningButton()
+                break
+            case GuiOpportunityActions.LUMBERJACKING.name:
+                this.clickOnLumberjackingButton()
                 break
         }
     },
@@ -162,15 +175,40 @@ export const GuiButtonsManager = {
         Connector.sendMessage(new GatheringActionMsg(CharacterActions.MINING.name))
     },
 
+    clickOnLumberjackingButton() {
+        const hasGreatAxeInHand = MyPlayer.myChar.getWeapon()?.slotInfo?.weaponType === WeaponTypes.GREAT_AXE
+        if (!hasGreatAxeInHand) {
+            const firstGreatAxeInInventory = InventoryManager.inventory.find(
+                item => item?.slotInfo?.weaponType === WeaponTypes.GREAT_AXE
+            )
+            if (!firstGreatAxeInInventory) {
+                return
+            }
+
+            InventoryManager.equipItem(firstGreatAxeInInventory)
+        }
+
+        Connector.sendMessage(new GatheringActionMsg(CharacterActions.LUMBERJACKING.name))
+    },
+
     setActiveAction(action: CharacterAction | null) {
         const miningButton = this.opportunityButtons.get(GuiOpportunityActions.MINING.name)
+        const lumberjackingButton = this.opportunityButtons.get(GuiOpportunityActions.LUMBERJACKING.name)
 
         if (action?.name === GuiOpportunityActions.MINING.name) {
             miningButton.htmlEl.classList.add("active")
+            lumberjackingButton.htmlEl.classList.remove("active")
             return
         }
 
         miningButton.htmlEl.classList.remove("active")
+
+        if (action?.name === GuiOpportunityActions.LUMBERJACKING.name) {
+            lumberjackingButton.htmlEl.classList.add("active")
+            return
+        }
+
+        lumberjackingButton.htmlEl.classList.remove("active")
     },
 
     setSize(size: number) {

@@ -5,7 +5,6 @@ import { WorldDataManager } from '@/data/worldDataManager'
 import { ViewportManager } from '@/utils/viewport'
 import { PrefabOak } from '@/babylon/world/prefabs/treeOak'
 import { PrefabFir } from '@/babylon/world/prefabs/treeFir'
-import { Renderer } from '@/babylon/scene/renderer'
 import { Lights } from '@/babylon/scene/lights'
 
 export const TreeManager = {
@@ -138,6 +137,15 @@ export const TreeManager = {
             }
         }
         return null
+    },
+
+    isAnyTreeInDistance(pos: Vector3, maxDistance: number): boolean {
+        for (const tree of this.visibleTrees) {
+            if (Vector3.Distance(tree.position, pos) <= maxDistance) {
+                return true
+            }
+        }
+        return false
     }
 }
 

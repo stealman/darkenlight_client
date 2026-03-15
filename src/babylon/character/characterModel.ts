@@ -384,6 +384,18 @@ export class CharacterModel implements EquipBearer {
         }
     }
 
+    doLumberJackingAnimation() {
+        // For now, lumberjacking uses the same animation as ore mining
+        if (!this.isActive()) return
+        if (!this.oreMiningAnim) return
+
+        const speed = 1000 / this.parent.attackAnimationTime
+        if (this.actualAnim !== this.oreMiningAnim) {
+            this.transitionToAnimation(this.oreMiningAnim, 0.15, false, speed)
+            this.actualAnim = this.oreMiningAnim
+        }
+    }
+
     stopAnimation() {
         const desiredAnimation = this.combatIdleAnim
         const animSpeed = 0.75

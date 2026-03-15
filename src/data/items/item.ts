@@ -38,6 +38,7 @@ export const EquipSlotModelsCb = {
     BROADSWORD: new EquipSlotModel(20, EquipItemSlots.R_HAND, WeaponTypes.SWORD),
 
     PICKAXE: new EquipSlotModel(150, EquipItemSlots.R_HAND, WeaponTypes.PICKAXE),
+    GREATAXE: new EquipSlotModel(155, EquipItemSlots.R_HAND, WeaponTypes.GREAT_AXE),
 
     HUNTERBOW: new EquipSlotModel(510, EquipItemSlots.R_HAND, WeaponTypes.BOW),
 

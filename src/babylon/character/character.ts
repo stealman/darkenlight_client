@@ -15,7 +15,7 @@ import { Utils } from '@/utils/utils'
 import { Connector } from '@/network/connector'
 import { MyCharMoveMsg } from '@/network/messages'
 import { MyPlayer } from '@/data/myPlayer'
-import { EquipItemSlots, EquipSlotModelsCb, Item } from '@/data/items/item'
+import { EquipItemSlots, EquipSlotModelsCb, Item, WeaponTypes } from '@/data/items/item'
 import { Arrow, ArrowsManager } from '@/babylon/world/arrowsManager'
 import {
     AttackableBasicTO,
@@ -265,7 +265,12 @@ class Character implements Attackable {
         const angle = Utils.getAngleBetweenPoints(this.pos, new Vector3(data.x, this.pos.y, data.z))
         this.setLookAngle(angle - Math.PI / 4)
 
-        this.model?.doOreMiningAnimation()
+        if (data.gt === 'M') {
+            this.model?.doOreMiningAnimation()
+        }
+        if (data.gt === 'L') {
+            this.model?.doLumberJackingAnimation()
+        }
         this.model?.setWeaponTrailEnabled(true)
         this.autoAttackEnd = Date.now() + this.attackAnimationTime
     }
@@ -273,7 +278,12 @@ class Character implements Attackable {
     finishGathering(data: CharacterGatheringResultMessage | null) {
         this.model?.setWeaponTrailEnabled(false)
         if (data) {
-            AudioManager.playMiningSound(this.pos)
+            if (data.gt === 'M') {
+                AudioManager.playMiningSound(this.pos)
+            }
+            if (data.gt === 'L') {
+                AudioManager.playLumberJackingSound(this.pos)
+            }
 
             if (this === MyPlayer.myChar && data.g > 0) {
                 const items = InventoryManager.getResourceItemsByType(data.g)
@@ -428,7 +438,15 @@ class Character implements Attackable {
 
     isWeaponRanged(): boolean {
         const weapon = this.getWeapon()
-        if (weapon && weapon.slotInfo.weaponType === 'BOW') {
+        if (weapon && weapon.slotInfo.weaponType === WeaponTypes.BOW) {
+            return true
+        }
+        return false
+    }
+
+    isWeaponAxe(): boolean {
+        const weapon = this.getWeapon()
+        if (weapon && (weapon.slotInfo.weaponType === WeaponTypes.AXE || weapon.slotInfo.weaponType === WeaponTypes.PICKAXE || weapon.slotInfo.weaponType === WeaponTypes.GREAT_AXE)) {
             return true
         }
         return false

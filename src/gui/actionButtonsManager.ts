@@ -109,6 +109,10 @@ class ActionButton {
         if (imageSrc == CharacterActions.AUTO_ATTACK.image && MyPlayer.myChar?.isWeaponRanged()) {
             imageSrc = "btn_attack_ranged"
         }
+        if (imageSrc == CharacterActions.AUTO_ATTACK.image && MyPlayer.myChar?.isWeaponAxe()) {
+            imageSrc = "btn_attack_axe"
+        }
+
 
         img.src = `images/icons/buttons/${imageSrc}.png`
     }
@@ -350,9 +354,10 @@ export const ActionButtonsManager = {
 }
 
 export const CharacterActions = {
-    AUTO_ATTACK: new CharacterAction("AUTO_ATTACK", "btn_attack", true),
+    AUTO_ATTACK: new CharacterAction("AUTO_ATTACK", "btn_attack_sword", true),
     HEAL: new CharacterAction("HEAL", "btn_heal", false),
     MINING : new CharacterAction("MINING", "btn_pickaxe", false),
+    LUMBERJACKING : new CharacterAction("LUMBERJACKING", "btn_lumber", false),
 
     getActionByName(name: string): CharacterAction {
         for (const key in this) {
