@@ -68,13 +68,13 @@
   "actions": {
     "noneTitle": "Unassigned",
     "noneDescription": "No action will be assigned to this button.",
-    "autoAttackName": "Auto-attack",
+    "autoAttackName": "Auto-Attack",
     "autoAttackDescription": "Your character automatically attacks the selected target while it is in range.",
     "healName": "Heal",
     "healDescription": "Use a bandage to heal yourself. If you are not injured and another character is selected, the bandage is used on them.",
-    "healingPotionName": "Health potion",
+    "healingPotionName": "Health Potion",
     "healingPotionDescription": "Use a health potion from inventory when injured. The strongest available potion is always used.",
-    "manaPotionName": "Mana potion",
+    "manaPotionName": "Mana Potion",
     "manaPotionDescription": "Use a mana potion from inventory when mana is not full. The strongest available potion is always used."
   },
   "inventory": {

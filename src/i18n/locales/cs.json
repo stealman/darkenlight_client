@@ -68,13 +68,13 @@
   "actions": {
     "noneTitle": "Nevybráno",
     "noneDescription": "Na tomto tlačítku nebude přiřazena žádná akce.",
-    "autoAttackName": "Auto-útok",
+    "autoAttackName": "Auto-Útok",
     "autoAttackDescription": "Postava automaticky útočí na vybraný cíl, dokud je v dosahu.",
     "healName": "Léčba",
     "healDescription": "Použiješ obvaz ke svému vyléčení. Pokud nejsi zraněn a je vybrána jiná postava, použiješ obvaz na ni.",
-    "healingPotionName": "Lektvar zdraví",
+    "healingPotionName": "Lektvar Zdraví",
     "healingPotionDescription": "Použiješ Lektvar zdraví pokud je v inventáři a jsi zraněn. Použije se vždy nejsilnější dostupný lektvar.",
-    "manaPotionName": "Lektvar many",
+    "manaPotionName": "Lektvar Many",
     "manaPotionDescription": "Použiješ Lektvar many pokud je v inventáři a nemáš plnou manu. Použije se vždy nejsilnější dostupný lektvar."
   },
   "inventory": {

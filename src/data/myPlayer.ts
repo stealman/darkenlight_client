@@ -12,7 +12,13 @@ import {
     StopAction,
 } from '@/network/messages'
 import { MyStatusPanel } from '@/gui/myStatusPanel'
-import { AutoAttackMessage, AutoAttackResultMessage, HealingMessage, HealingResultMessage } from '@/network/messageIfs'
+import {
+    AutoAttackMessage,
+    AutoAttackResultMessage,
+    HealingMessage,
+    HealingResultMessage,
+    PotionUsedMessage,
+} from '@/network/messageIfs'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { ActionButtonsManager } from '@/gui/actionButtonsManager'
 import { Attackable } from '@/GameManager'
@@ -20,6 +26,7 @@ import { EmeraldsManager } from '@/gui/emeraldsManager'
 import { InventoryManager } from '@/data/InventoryManager'
 import { GuiButtonsManager } from '@/gui/guiButtonsManager'
 import { CharacterAction, CharacterActions } from '@/data/actions/characterActions'
+import { OverlayManager } from '@/gui/overlayManager'
 
 /**
  * Controlling object for the player's character
@@ -150,6 +157,15 @@ export const MyPlayer = {
     finishHealing(result: HealingResultMessage) {
         this.myChar.finishHealing(result)
         AudioManager.playBackpackHandle()
+    },
+
+    potionUsed(data: PotionUsedMessage) {
+        this.myChar.potionUsed()
+        this.lastPotionUseTime = new Date().getTime()
+        this.nextPotionUseTime = new Date().getTime() + data.cd
+        if (data.add === 'HP') {
+            OverlayManager.addMyCharDamageNumber(MyPlayer.myChar, -data.val, 'h')
+        }
     },
 
     onClickEscape() {

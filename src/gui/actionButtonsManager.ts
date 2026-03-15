@@ -147,16 +147,14 @@ class ActionButton {
 
     setCooldownPercent(percent: number) {
         const safePercent = Math.max(0, Math.min(100, percent))
-        const overlayHeight = 100 - safePercent
+        this.cooldownOverlayEl!.style.setProperty('--cooldown-progress', safePercent.toString())
 
-        if (overlayHeight <= 0) {
-            this.cooldownOverlayEl!.style.height = '0%'
+        if (safePercent >= 100) {
             this.cooldownOverlayEl!.style.display = 'none'
             return
         }
 
         this.cooldownOverlayEl!.style.display = 'block'
-        this.cooldownOverlayEl!.style.height = `${overlayHeight}%`
     }
 
     resolveImagePath(imageSrc: string) {
