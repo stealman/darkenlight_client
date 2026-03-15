@@ -22,11 +22,13 @@ export class CharacterAction {
     name: string
     image: string
     toggleable: boolean
+    description: string
 
-    constructor(name: string, image: string, toggleable: boolean) {
+    constructor(name: string, image: string, toggleable: boolean, description: string) {
         this.name = name
         this.image = image
         this.toggleable = toggleable
+        this.description = description
     }
 }
 
@@ -106,6 +108,10 @@ class ActionButton {
             this.htmlEl!.appendChild(img)
         }
 
+        img.src = this.resolveImagePath(imageSrc)
+    }
+
+    resolveImagePath(imageSrc: string) {
         if (imageSrc == CharacterActions.AUTO_ATTACK.image && MyPlayer.myChar?.isWeaponRanged()) {
             imageSrc = "btn_attack_ranged"
         }
@@ -113,8 +119,7 @@ class ActionButton {
             imageSrc = "btn_attack_axe"
         }
 
-
-        img.src = `images/icons/buttons/${imageSrc}.png`
+        return `/images/icons/buttons/${imageSrc}.png`
     }
 
     activated() {
@@ -319,20 +324,57 @@ export const ActionButtonsManager = {
             return null
         }
 
-        let imageSrc = CharacterActions.getActionByName(binding.name)?.image
+        const imageSrc = CharacterActions.getActionByName(binding.name)?.image
         if (!imageSrc) {
             return null
         }
 
-        if (imageSrc == CharacterActions.AUTO_ATTACK.image && MyPlayer.myChar?.isWeaponRanged()) {
-            imageSrc = "btn_attack_ranged"
+        const actionButton = this.actionButtons.get(index)
+        if (actionButton) {
+            return actionButton.resolveImagePath(imageSrc)
         }
 
-        if (imageSrc == CharacterActions.AUTO_ATTACK.image && MyPlayer.myChar?.isWeaponAxe()) {
-            imageSrc = "btn_attack_axe"
+        return null
+    },
+
+    getBindingDescriptionForIndex(index: number): string {
+        const binding = this.bindings.get(index)
+        if (!binding) {
+            return ''
         }
 
-        return `/images/icons/buttons/${imageSrc}.png`
+        return CharacterActions.getActionByName(binding.name)?.description ?? ''
+    },
+
+    getBindingActionNameForIndex(index: number): string | null {
+        return this.bindings.get(index)?.name ?? null
+    },
+
+    getAvailableActionsForBindings(): CharacterAction[] {
+        return [
+            CharacterActions.AUTO_ATTACK,
+            CharacterActions.HEAL,
+            CharacterActions.HEALING_POTION,
+        ]
+    },
+
+    setBindingForIndex(index: number, actionName: string) {
+        const action = CharacterActions.getActionByName(actionName)
+        if (!action) {
+            return
+        }
+
+        this.bindings.set(index, new ActionButtonActionBinding(action.name, {}))
+        this.storeBindings()
+        this.renderActionButtons()
+        this.setActiveAction(MyPlayer.activeAction)
+    },
+
+    clearBindingForIndex(index: number) {
+        this.bindings.delete(index)
+        this.storeBindings()
+        this.renderActionButtons()
+        this.setActiveAction(MyPlayer.activeAction)
     },
 
     buttonSizeChanged(newSize: number) {
@@ -378,10 +420,11 @@ export const ActionButtonsManager = {
 }
 
 export const CharacterActions = {
-    AUTO_ATTACK: new CharacterAction("AUTO_ATTACK", "btn_attack_sword", true),
-    HEAL: new CharacterAction("HEAL", "btn_heal", false),
-    MINING : new CharacterAction("MINING", "btn_pickaxe", false),
-    LUMBERJACKING : new CharacterAction("LUMBERJACKING", "btn_lumber", false),
+    AUTO_ATTACK: new CharacterAction("AUTO_ATTACK", "btn_attack_sword", true, "Auto Útok: Postava automaticky útočí na vybraný cíl, dokud je v dosahu."),
+    HEAL: new CharacterAction("HEAL", "btn_heal", false, "Léčba: Použiješ obvaz ke svému vyléčení. Pokud nejsi zraněn a je vybrána jiná postava, použiješ obvaz na ni."),
+    HEALING_POTION: new CharacterAction("HEALING_POTION", "btn_heal_potion", false, "Lektvar Zdraví: Použiješ Lektvar Zdraví pokud je k v inventáři a jsi zraněn. Použije se vždy nejsilnější dostupný lektvar."),
+    MINING : new CharacterAction("MINING", "btn_pickaxe", false, ""),
+    LUMBERJACKING : new CharacterAction("LUMBERJACKING", "btn_lumber", false, ""),
 
     getActionByName(name: string): CharacterAction {
         for (const key in this) {

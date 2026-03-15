@@ -109,11 +109,11 @@ export const GuiButtonsManager = {
     },
 
     updatePositions(miniMapSize: number) {
-        this.btnBackpack.style.right = `${miniMapSize + 5}px`
-        this.btnBackpack.style.top = `5px`
-
         this.btnCharacter.style.right = `${miniMapSize + 5}px`
-        this.btnCharacter.style.top = `${this.btnBackpack.offsetTop + this.btnBackpack.offsetHeight + 5}px`
+        this.btnCharacter.style.top = `5px`
+
+        this.btnBackpack.style.right = `${miniMapSize + 5}px`
+        this.btnBackpack.style.top = `${this.btnBackpack.offsetTop + this.btnBackpack.offsetHeight + 5}px`
     },
 
     onFrame() {

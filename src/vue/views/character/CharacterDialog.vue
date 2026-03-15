@@ -15,6 +15,7 @@
             <div class="dialog-content">
                 <div class="inventory-content-shell character-content-shell">
                     <CharacterOverviewTab v-if="activeTabId === 'character'" />
+                    <CharacterActionsTab v-else-if="activeTabId === 'actions'" ref="characterActionsTabRef" />
                     <CharacterSkillsTab v-else-if="activeTabId === 'skills'" />
                     <CharacterChatTab v-else-if="activeTabId === 'chat'" />
                 </div>
@@ -26,6 +27,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'
 import CharacterOverviewTab from '@/vue/views/character/CharacterOverviewTab.vue'
+import CharacterActionsTab from '@/vue/views/character/CharacterActionsTab.vue'
 import CharacterSkillsTab from '@/vue/views/character/CharacterSkillsTab.vue'
 import CharacterChatTab from '@/vue/views/character/CharacterChatTab.vue'
 
@@ -33,13 +35,16 @@ const emit = defineEmits(['close'])
 
 const tabs = [
     { id: 'character', name: 'Postava' },
+    { id: 'actions', name: 'Akce' },
     { id: 'skills', name: 'Dovednosti' },
     { id: 'chat', name: 'Chat' },
 ]
 
 const activeTabId = ref(tabs[0].id)
+const characterActionsTabRef = ref()
 
 const openDialog = () => {
+    characterActionsTabRef.value?.closeActionSelectionDialog?.()
 }
 
 const closeDialog = () => {
@@ -70,13 +75,14 @@ defineExpose({
     display: flex;
     align-items: center;
     justify-content: center;
+    overflow: visible;
 }
 
 .character-content-shell {
     width: 100%;
     aspect-ratio: 16 / 10;
     max-height: min(calc(600px - 48px), calc(85vh - 48px));
-    overflow-y: auto;
+    overflow: visible;
     padding: 8px 4px 4px;
     box-sizing: border-box;
 }
