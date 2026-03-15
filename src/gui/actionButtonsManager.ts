@@ -136,6 +136,8 @@ class ActionButton {
 
 export const ActionButtonsManager = {
     actionBindingKey: "DARKENLIGHT_ACTION_BUTTONS_BINDINGS",
+    // weaponSetupKey: "DARKENLIGHT_WEAPON_SETUP",
+
     buttonsPanel1: null as HTMLElement,
     buttonsPanel2: null as HTMLElement,
     opportunityButtonsPanel: null as HTMLElement,
@@ -309,6 +311,28 @@ export const ActionButtonsManager = {
 
     storeBindings() {
         localStorage.setItem(this.actionBindingKey, JSON.stringify(Array.from(this.bindings.entries())))
+    },
+
+    getBindingIconForIndex(index: number): string | null {
+        const binding = this.bindings.get(index)
+        if (!binding) {
+            return null
+        }
+
+        let imageSrc = CharacterActions.getActionByName(binding.name)?.image
+        if (!imageSrc) {
+            return null
+        }
+
+        if (imageSrc == CharacterActions.AUTO_ATTACK.image && MyPlayer.myChar?.isWeaponRanged()) {
+            imageSrc = "btn_attack_ranged"
+        }
+
+        if (imageSrc == CharacterActions.AUTO_ATTACK.image && MyPlayer.myChar?.isWeaponAxe()) {
+            imageSrc = "btn_attack_axe"
+        }
+
+        return `/images/icons/buttons/${imageSrc}.png`
     },
 
     buttonSizeChanged(newSize: number) {

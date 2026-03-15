@@ -121,7 +121,7 @@ export const Settings = {
     },
 
     storeSettings() {
-        localStorage.setItem("STORED_SETTINGS", JSON.stringify(this))
+        localStorage.setItem("DARKENLIGHT_STORED_SETTINGS", JSON.stringify(this))
     },
 
     setDetailLevel(level: string) {

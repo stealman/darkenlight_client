@@ -84,6 +84,13 @@ export const Controller = {
             return
         }
 
+        // C - open character dialog
+        if ((e.key && e.key.toLowerCase() === 'c') || e.code === 'KeyC') {
+            if (e.repeat) return
+            window.dispatchEvent(new CustomEvent('ui:open-character'))
+            return
+        }
+
         // Space - click first available opportunity action
         if (e.code === 'Space' || e.keyCode === 32) {
             e.preventDefault()

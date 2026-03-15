@@ -14,10 +14,10 @@ export const GameManager = {
     async prepareGame(canvas: HTMLCanvasElement) {
         // Load or initialize settings
         let storedSettings = null
-        const storedSettingsString = localStorage.getItem("STORED_SETTINGS")
+        const storedSettingsString = localStorage.getItem("DARKENLIGHT_STORED_SETTINGS")
         if (!storedSettingsString) {
             storedSettings = Settings.getDefaultSettings()
-            localStorage.setItem("STORED_SETTINGS", JSON.stringify(storedSettings))
+            localStorage.setItem("DARKENLIGHT_STORED_SETTINGS", JSON.stringify(storedSettings))
         } else {
             storedSettings = JSON.parse(storedSettingsString)
         }

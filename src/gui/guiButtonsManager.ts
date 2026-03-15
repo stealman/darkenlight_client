@@ -61,11 +61,13 @@ export const GuiOpportunityActions = {
 export const GuiButtonsManager = {
     size: 32 as number,
     btnBackpack: null as HTMLDivElement,
+    btnCharacter: null as HTMLDivElement,
     opportunityButtonsPanel: null as HTMLElement,
     opportunityButtons: new Map<string, GuiOpportunityButton>(),
 
     initialize() {
         this.btnBackpack = document.getElementById("btn-backpack") as HTMLDivElement
+        this.btnCharacter = document.getElementById("btn-character") as HTMLDivElement
         this.opportunityButtonsPanel = document.getElementById("opportunity-action-buttons") as HTMLElement
         this.createOpportunityButtons()
         this.renderOpportunityButtons()
@@ -109,6 +111,9 @@ export const GuiButtonsManager = {
     updatePositions(miniMapSize: number) {
         this.btnBackpack.style.right = `${miniMapSize + 5}px`
         this.btnBackpack.style.top = `5px`
+
+        this.btnCharacter.style.right = `${miniMapSize + 5}px`
+        this.btnCharacter.style.top = `${this.btnBackpack.offsetTop + this.btnBackpack.offsetHeight + 5}px`
     },
 
     onFrame() {
@@ -217,6 +222,11 @@ export const GuiButtonsManager = {
         if (this.btnBackpack != null) {
             this.btnBackpack.style.width = `${size}px`
             this.btnBackpack.style.height = `${size}px`
+        }
+
+        if (this.btnCharacter != null) {
+            this.btnCharacter.style.width = `${size}px`
+            this.btnCharacter.style.height = `${size}px`
         }
 
         this.opportunityButtons.forEach((button) => button.setSize(size))

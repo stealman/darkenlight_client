@@ -78,7 +78,7 @@ const charName = ref('')
 const emit = defineEmits(['login'])
 
 onMounted(() => {
-    const loginForm = localStorage.getItem("LOGIN_FORM")
+    const loginForm = localStorage.getItem("DARKENLIGHT_LOGIN_FORM")
     if (loginForm) {
         const form = JSON.parse(loginForm)
         login.value = form.login
@@ -99,9 +99,9 @@ const doLogin = () => {
     }
 
     if (form.rememberMe) {
-        localStorage.setItem("LOGIN_FORM", JSON.stringify(form));
+        localStorage.setItem("DARKENLIGHT_LOGIN_FORM", JSON.stringify(form));
     } else {
-        localStorage.removeItem("LOGIN_FORM");
+        localStorage.removeItem("DARKENLIGHT_LOGIN_FORM");
     }
 
     if (form.login && form.password) {

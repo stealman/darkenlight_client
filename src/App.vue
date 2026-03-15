@@ -22,6 +22,10 @@
                     <img class="action-icon" src="/images/icons/buttons/btn_backpack.png" />
                     <img class="action-icon-hover" src="/images/icons/buttons/btn_backpack_hover.png" />
                 </div>
+                <div class="gui-action-button" id="btn-character" @click="showCharacterDialog()">
+                    <img class="action-icon" src="/images/icons/buttons/btn_char.png" />
+                    <img class="action-icon-hover" src="/images/icons/buttons/btn_char_hover.png" />
+                </div>
             </div>
 
             <TouchControllers v-if="!gameLoading" ref='touchControls' />
@@ -88,6 +92,7 @@
                     @device-type-selected="deviceTypeChanged"/>
 
     <InventoryDialog ref="inventoryDialog" v-show="displayInventoryDialog" @close="displayInventoryDialog = false" />
+    <CharacterDialog ref="characterDialog" v-show="displayCharacterDialog" @close="displayCharacterDialog = false" />
 
     <!-- Restart prompt pokud v nastaveni doslo ke zmenam ktere to vyzadauji -->
     <div class="dialog-backdrop" v-if="displayRestartPrompt" @click.self="displayRestartPrompt = false">
@@ -132,6 +137,7 @@ import { Connector } from '@/network/connector'
 import LoginDialog from '@/vue/views/loginDialog.vue'
 import SettingsDialog from '@/vue/views/settingsDialog.vue'
 import InventoryDialog from '@/vue/views/inventoryDialog.vue'
+import CharacterDialog from '@/vue/views/character/CharacterDialog.vue'
 import OnScreenMessages from '@/vue/views/onScreenMessages.vue'
 import { Controller } from '@/controlls/controller'
 import {
@@ -157,11 +163,13 @@ const displaySettingsDialog = ref(false);
 const displayRestartPrompt = ref(false);
 
 const displayInventoryDialog = ref(false);
+const displayCharacterDialog = ref(false);
 
 const touchControls = ref();
 const settingsDialog = ref();
 const loginDialog = ref();
 const inventoryDialog = ref();
+const characterDialog = ref();
 
 onMounted(async () => {
     window.onerror = function (errorMsg, url, lineNumber) {
@@ -173,6 +181,7 @@ onMounted(async () => {
 
     window.addEventListener("resize", resizeEventHandler)
     window.addEventListener("ui:open-inventory", onOpenInventoryHotkey)
+    window.addEventListener("ui:open-character", onOpenCharacterHotkey)
     window.addEventListener("ui:inventory-updated", onInventoryUpdated as EventListener)
     document.addEventListener("keydown", (e) => Controller.processKeydown(e));
     document.addEventListener("keyup", (e) => Controller.processKeyup(e));
@@ -188,7 +197,7 @@ onMounted(async () => {
         displayLoginDialog.value = true
 
         // Auto login
-        const loginForm = localStorage.getItem("LOGIN_FORM");
+        const loginForm = localStorage.getItem("DARKENLIGHT_LOGIN_FORM");
         if (loginForm) {
             const form = JSON.parse(loginForm);
             if (form.autoLogin) {
@@ -208,6 +217,7 @@ onMounted(async () => {
 onUnmounted(() => {
     window.removeEventListener("resize", resizeEventHandler);
     window.removeEventListener("ui:open-inventory", onOpenInventoryHotkey)
+    window.removeEventListener("ui:open-character", onOpenCharacterHotkey)
     window.removeEventListener("ui:inventory-updated", onInventoryUpdated as EventListener)
 });
 
@@ -231,6 +241,27 @@ const showInventoryDialog = () => {
     nextTick(() => {
         inventoryDialog.value?.openDialog()
     })
+}
+
+const showCharacterDialog = () => {
+    AudioManager.playGuiButtonClick()
+    displayCharacterDialog.value = true;
+    nextTick(() => {
+        characterDialog.value?.openDialog()
+    })
+}
+
+const onOpenCharacterHotkey = () => {
+    if (!loginRequestSentFlag.value) {
+        return
+    }
+
+    if (displayCharacterDialog.value) {
+        AudioManager.playGuiButtonClick()
+        displayCharacterDialog.value = false
+        return
+    }
+    showCharacterDialog()
 }
 
 const onOpenInventoryHotkey = () => {
