@@ -37,6 +37,7 @@ import { ActionButtonsManager } from '@/gui/actionButtonsManager'
 import { GuiButtonsManager } from '@/gui/guiButtonsManager'
 import { GroundItemsManager } from '@/babylon/world/groundItemsManager'
 import { EmeraldsManager } from '@/gui/emeraldsManager'
+import { GfxManager } from '@/babylon/gfx/gfxManager'
 
 /**
  * Main Renderer
@@ -88,6 +89,7 @@ export const Renderer = {
         CharacterManager.initialize()
         await EquipManager.initialize(this.scene)
         await MonsterManager.initialize()
+        GfxManager.initialize(this.scene)
 
         Controller.initializeController(this.scene)
         Materials.initialize(this.scene)
@@ -117,6 +119,7 @@ export const Renderer = {
 
     gameStopped() {
         this.engine!.stopRenderLoop()
+        GfxManager.clear()
         this.scene.dispose()
         this.camera?.dispose()
         this.camera = null
@@ -158,6 +161,7 @@ export const Renderer = {
             GroundItemsManager.onFrame(timeRate, actualTime)
 
             EquipManager.onFrame()
+            GfxManager.onFrame(actualTime)
             ArrowsManager.onFrame(timeRate, actualTime)
             TargetingManager.onFrame(timeRate, actualTime)
             OnScreenMessageManager.onFrame(actualTime)

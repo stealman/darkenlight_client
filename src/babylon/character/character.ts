@@ -1,5 +1,5 @@
 import { Attackable } from '@/GameManager'
-import { Vector3 } from '@babylonjs/core'
+import { TransformNode, Vector3 } from '@babylonjs/core'
 import {
     AudioManager,
     BodySoundTypes,
@@ -30,8 +30,11 @@ import { TargetingManager } from '@/gui/targettingManager'
 import { CharacterManager } from '@/babylon/character/characterManager'
 import { InventoryManager } from '@/data/InventoryManager'
 import { OverlayManager } from '@/gui/overlayManager'
+import { EffectTarget } from '@/babylon/gfx/characterEffect'
+import { GfxManager } from '@/babylon/gfx/gfxManager'
+import { PotionConsumeEffect } from '@/babylon/gfx/potionConsumeEffect'
 
-class Character implements Attackable {
+class Character implements Attackable, EffectTarget {
     model: CharacterModel | null = null
     insideView: boolean = true
 
@@ -315,6 +318,7 @@ class Character implements Attackable {
 
     potionUsed() {
         AudioManager.playPotionSound(this.pos)
+        GfxManager.addEffect(new PotionConsumeEffect(this))
     }
 
     resolveStepMark(time: number, inCombat: boolean = false) {
@@ -480,6 +484,18 @@ class Character implements Attackable {
 
     isMyChar(): boolean {
         return this.id === MyPlayer.myChar.id
+    }
+
+    getEffectAnchorNode(): TransformNode | null {
+        if (!this.model?.initialized) {
+            return null
+        }
+
+        return this.model.node
+    }
+
+    isEffectVisible(): boolean {
+        return this.insideView && !!this.model?.initialized
     }
 }
 
