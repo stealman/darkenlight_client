@@ -7,7 +7,7 @@ import { WorldDataManager } from '@/data/worldDataManager'
 import { WeaponTypes } from '@/data/items/item'
 import { Connector } from '@/network/connector'
 import { GatheringActionMsg } from '@/network/messages'
-import { CharacterAction, CharacterActions } from '@/gui/actionButtonsManager'
+import { CharacterAction, CharacterActions } from '@/data/actions/characterActions'
 
 class GuiOpportunityButtonAction {
     name: string
@@ -113,7 +113,7 @@ export const GuiButtonsManager = {
         this.btnCharacter.style.top = `5px`
 
         this.btnBackpack.style.right = `${miniMapSize + 5}px`
-        this.btnBackpack.style.top = `${this.btnBackpack.offsetTop + this.btnBackpack.offsetHeight + 5}px`
+        this.btnBackpack.style.top = `${this.btnCharacter.offsetTop + this.btnCharacter.offsetHeight + 5}px`
     },
 
     onFrame() {

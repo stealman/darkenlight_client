@@ -6,6 +6,8 @@ import { MyPlayer } from '@/data/myPlayer'
 import { GuiButtonsManager } from '@/gui/guiButtonsManager'
 import { EmeraldsManager } from '@/gui/emeraldsManager'
 import { InventoryManager } from '@/data/InventoryManager'
+import { ConsumableHelper } from '@/data/items/consumableHelper'
+import { CharacterAction, CharacterActions } from '@/data/actions/characterActions'
 
 class ActionButtonActionBinding {
     name: string
@@ -15,20 +17,6 @@ class ActionButtonActionBinding {
     constructor(name: string, data: object) {
         this.name = name
         this.data = data
-    }
-}
-
-export class CharacterAction {
-    name: string
-    image: string
-    toggleable: boolean
-    description: string
-
-    constructor(name: string, image: string, toggleable: boolean, description: string) {
-        this.name = name
-        this.image = image
-        this.toggleable = toggleable
-        this.description = description
     }
 }
 
@@ -84,6 +72,7 @@ class ActionButton {
         this.actionBinding = binding
         const action: CharacterAction = CharacterActions.getActionByName(binding.name)!
         this.setImage(action.image)
+        this.setItemsAvailabilityState()
 
         if (action.toggleable && binding.toggled) {
             this.htmlEl!.classList.add("toggled")
@@ -96,19 +85,39 @@ class ActionButton {
         this.actionBinding = null
         this.htmlEl!.innerHTML = ""
         this.htmlEl!.classList.remove("toggled")
+        this.htmlEl!.classList.remove("unavailable")
     }
 
     setImage(imageSrc: string) {
         let img = this.htmlEl!.querySelector('img') as HTMLImageElement
-
         if (!img) {
             img = document.createElement('img')
             img.className = 'action-icon'
             img.draggable = false
             this.htmlEl!.appendChild(img)
         }
-
         img.src = this.resolveImagePath(imageSrc)
+    }
+
+    setItemsAvailabilityState() {
+        if (!this.actionBinding) {
+            this.htmlEl!.classList.remove("unavailable")
+            return
+        }
+
+        switch (this.actionBinding.name) {
+            case CharacterActions.HEAL.name:
+                this.htmlEl!.classList.toggle("unavailable", !ActionButtonsManager.hasBandageAvailable())
+                return
+            case CharacterActions.HEALING_POTION.name:
+                this.htmlEl!.classList.toggle("unavailable", !ActionButtonsManager.hasHealingPotionAvailable())
+                return
+            case CharacterActions.MANA_POTION.name:
+                this.htmlEl!.classList.toggle("unavailable", !ActionButtonsManager.hasManaPotionAvailable())
+                return
+            default:
+                this.htmlEl!.classList.remove("unavailable")
+        }
     }
 
     resolveImagePath(imageSrc: string) {
@@ -234,6 +243,7 @@ export const ActionButtonsManager = {
         })
 
         this.buttonSizeChanged(Settings.actionButtonSize)
+        this.refreshItemsAvailability()
     },
 
     onclickActionButton(index: number) {
@@ -247,6 +257,12 @@ export const ActionButtonsManager = {
                     break
                 case CharacterActions.HEAL.name:
                     this.clickOnHealingButton()
+                    break
+                case CharacterActions.HEALING_POTION.name:
+                    this.clickOnHealingPotionButton()
+                    break
+                case CharacterActions.MANA_POTION.name:
+                    this.clickOnManaPotionButton()
                     break
             }
         }
@@ -262,17 +278,6 @@ export const ActionButtonsManager = {
         })
     },
 
-    /** Show button is for now disabled */
-    showStopButton() {
-        if (Settings.isPhoneOrTablet()) {
-            //this.stopButton.style.setProperty("display", "block")
-        }
-    },
-
-    hideStopButton() {
-        this.stopButton.style.setProperty("display", "none")
-    },
-
     clickOnAutoAttackButton() {
         if (MyPlayer.activeAction &&
             MyPlayer.activeAction.name === CharacterActions.AUTO_ATTACK.name &&
@@ -284,10 +289,7 @@ export const ActionButtonsManager = {
     },
 
     clickOnHealingButton() {
-        if (InventoryManager.getTotalResourceItemCountByType(1) <= 0) {
-            OnScreenMessageManager.addMessage("Nemáš žádné obvazy")
-            return
-        }
+        if (InventoryManager.getTotalResourceItemCountByType(1) <= 0) OnScreenMessageManager.addMessage("Nemáš žádné obvazy"); return
         if (MyPlayer.activeAction && MyPlayer.activeAction.name === CharacterActions.HEAL.name) {
             MyPlayer.stopActions()
             return
@@ -295,9 +297,18 @@ export const ActionButtonsManager = {
         MyPlayer.startHealingAction()
     },
 
+    clickOnHealingPotionButton() {
+        if (!ActionButtonsManager.hasHealingPotionAvailable()) OnScreenMessageManager.addMessage("Nemáš žádné lektvary zdraví"); return
+        ConsumableHelper.clickOnConsumeHealingPotion()
+    },
+
+    clickOnManaPotionButton() {
+        if (!ActionButtonsManager.hasManaPotionAvailable()) OnScreenMessageManager.addMessage("Nemáš žádné lektvary many"); return
+        ConsumableHelper.clickOnConsumeManaPotion()
+    },
+
     toggleStateChange(actionName: string, toggled: boolean) {
         this.storeBindings()
-
         switch (actionName) {
             case CharacterActions.AUTO_ATTACK.name:
                 OnScreenMessageManager.addMessage(`Auto-Útok: ${toggled ? 'Zapnuto' : 'Vypnuto'}`)
@@ -320,28 +331,20 @@ export const ActionButtonsManager = {
 
     getBindingIconForIndex(index: number): string | null {
         const binding = this.bindings.get(index)
-        if (!binding) {
-            return null
-        }
+        if (!binding) return null
 
         const imageSrc = CharacterActions.getActionByName(binding.name)?.image
-        if (!imageSrc) {
-            return null
-        }
+        if (!imageSrc) return null
 
         const actionButton = this.actionButtons.get(index)
-        if (actionButton) {
-            return actionButton.resolveImagePath(imageSrc)
-        }
+        if (actionButton) return actionButton.resolveImagePath(imageSrc)
 
         return null
     },
 
     getBindingDescriptionForIndex(index: number): string {
         const binding = this.bindings.get(index)
-        if (!binding) {
-            return ''
-        }
+        if (!binding) return ''
 
         return CharacterActions.getActionByName(binding.name)?.description ?? ''
     },
@@ -355,14 +358,13 @@ export const ActionButtonsManager = {
             CharacterActions.AUTO_ATTACK,
             CharacterActions.HEAL,
             CharacterActions.HEALING_POTION,
+            CharacterActions.MANA_POTION,
         ]
     },
 
     setBindingForIndex(index: number, actionName: string) {
         const action = CharacterActions.getActionByName(actionName)
-        if (!action) {
-            return
-        }
+        if (!action) return
 
         this.bindings.set(index, new ActionButtonActionBinding(action.name, {}))
         this.storeBindings()
@@ -410,27 +412,29 @@ export const ActionButtonsManager = {
         EmeraldsManager.setSize(newSize)
     },
 
+    refreshItemsAvailability() {
+        this.actionButtons.forEach((btn) => {
+            btn.setItemsAvailabilityState()
+        })
+    },
+
+    hasBandageAvailable(): boolean {
+        return InventoryManager.getTotalResourceItemCountByType(1) > 0
+    },
+
+    hasHealingPotionAvailable(): boolean {
+        return ConsumableHelper.getHealingPotionIds().some(cbId => InventoryManager.getTotalResourceItemCountByType(cbId) > 0)
+    },
+
+    hasManaPotionAvailable(): boolean {
+        return ConsumableHelper.getManaPotionIds().some(cbId => InventoryManager.getTotalResourceItemCountByType(cbId) > 0)
+    },
+
     charEquipChanged() {
         this.actionButtons.forEach((btn) => {
             if (btn.actionBinding && btn.actionBinding.name === CharacterActions.AUTO_ATTACK.name) {
                 btn.setImage(CharacterActions.AUTO_ATTACK.image)
             }
         })
-    }
-}
-
-export const CharacterActions = {
-    AUTO_ATTACK: new CharacterAction("AUTO_ATTACK", "btn_attack_sword", true, "Auto Útok: Postava automaticky útočí na vybraný cíl, dokud je v dosahu."),
-    HEAL: new CharacterAction("HEAL", "btn_heal", false, "Léčba: Použiješ obvaz ke svému vyléčení. Pokud nejsi zraněn a je vybrána jiná postava, použiješ obvaz na ni."),
-    HEALING_POTION: new CharacterAction("HEALING_POTION", "btn_heal_potion", false, "Lektvar Zdraví: Použiješ Lektvar Zdraví pokud je k v inventáři a jsi zraněn. Použije se vždy nejsilnější dostupný lektvar."),
-    MINING : new CharacterAction("MINING", "btn_pickaxe", false, ""),
-    LUMBERJACKING : new CharacterAction("LUMBERJACKING", "btn_lumber", false, ""),
-
-    getActionByName(name: string): CharacterAction {
-        for (const key in this) {
-            if (this[key as keyof typeof this].name === name) {
-                return this[key as keyof typeof this]
-            }
-        }
     }
 }

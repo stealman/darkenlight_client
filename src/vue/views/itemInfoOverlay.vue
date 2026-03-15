@@ -134,7 +134,7 @@ const splitMaxQuantity = computed(() => {
 const canSplitItem = computed(() => {
     return props.context === 'INVENTORY'
         && props.itemInfo.showDropButton === true
-        && splitMaxQuantity.value > 1
+        && splitMaxQuantity.value >= 1
 })
 
 const shouldShowSplitButton = computed(() => {

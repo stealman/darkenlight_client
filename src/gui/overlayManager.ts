@@ -6,12 +6,12 @@ import { MonsterManager } from '@/babylon/monsters/monsterManager'
 import { ViewportManager } from '@/utils/viewport'
 import { CharacterManager } from '@/babylon/character/characterManager'
 import { MyPlayer } from '@/data/myPlayer'
-import { CharacterActions } from '@/gui/actionButtonsManager'
 import { Monster } from '@/babylon/monsters/monster'
 import Character from '@/babylon/character/character'
 import { Attackable } from '@/GameManager'
 import { GroundItemsManager } from '@/babylon/world/groundItemsManager'
 import { Item } from '@/data/items/item'
+import { CharacterActions } from '@/data/actions/characterActions'
 
 class DamageNumber {
     attacker: Attackable

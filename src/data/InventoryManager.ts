@@ -6,6 +6,7 @@ import { AudioManager } from '@/babylon/audio/audioManager'
 import { GroundItemsManager } from '@/babylon/world/groundItemsManager'
 import { ItemTO } from '@/network/messageIfs'
 import { ActionButtonsManager } from '@/gui/actionButtonsManager'
+import { ConsumableHelper } from '@/data/items/consumableHelper'
 
 export const InventoryManager = {
     inventory: [] as Item[],
@@ -109,6 +110,7 @@ export const InventoryManager = {
             this.addItemToInventory(Item.fromData(item))
         }
         this.sortInventory()
+        ActionButtonsManager.refreshItemsAvailability()
     },
 
     removeItemsFromInventory(items: number[]) {
@@ -116,6 +118,7 @@ export const InventoryManager = {
             this.inventory = this.inventory.filter(i => i.id !== id)
         }
         this.sortInventory()
+        ActionButtonsManager.refreshItemsAvailability()
     },
 
     changeItemsInInventory(items: ItemTO[]) {
@@ -152,6 +155,7 @@ export const InventoryManager = {
             AudioManager.playBackpackHandle2()
         }
         this.sortInventory()
+        ActionButtonsManager.refreshItemsAvailability()
     },
 
     handleInventoryDoubleClick(index: number) {
@@ -185,6 +189,7 @@ export const InventoryManager = {
         MyPlayer.myChar.model!.assignEquippedItems()
         this.inventory = this.inventory.filter(i => i !== item)
         this.sortInventory()
+        ActionButtonsManager.refreshItemsAvailability()
 
         Connector.sendMessage(new EquipItemMsg(item.slotInfo.slot, item.id))
         AudioManager.playBackpackHandle2()
@@ -202,6 +207,7 @@ export const InventoryManager = {
 
         this.addItemToInventory(item)
         this.sortInventory()
+        ActionButtonsManager.refreshItemsAvailability()
         Connector.sendMessage(new UnequipItemMsg(item.id))
 
         if (!fromEquipAction) {
@@ -211,7 +217,7 @@ export const InventoryManager = {
     },
 
     useConsumableItem(item: Item) {
-        console.log(`Consumable use not implemented yet for item ${item.id}`)
+        ConsumableHelper.clickOnConsumeItem(item.cbId)
     },
 
     dropItem(item: Item) {
@@ -219,6 +225,7 @@ export const InventoryManager = {
         Connector.sendMessage(new DropItemMsg(item.id))
         this.inventory = this.inventory.filter(i => i !== item)
         this.sortInventory()
+        ActionButtonsManager.refreshItemsAvailability()
     },
 
     splitInventoryItem(itemId: number, splitCount: number) {

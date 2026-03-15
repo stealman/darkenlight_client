@@ -39,6 +39,7 @@ class Character implements Attackable {
     hp: number = 100
     maxHp: number = 100
     hpPercent: number = 100
+    mpPercent: number = 100
     name: string = "Player"
     nameDisplayTime: number = 0
     className: string = "Warrior"

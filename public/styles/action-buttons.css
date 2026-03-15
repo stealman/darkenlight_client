@@ -61,6 +61,10 @@ div.action-button img.action-icon {
     pointer-events: none;
 }
 
+div.action-button.unavailable img.action-icon {
+    filter: grayscale(1) brightness(0.75);
+}
+
 div.action-button::after {
     content: '';
     position: absolute;

@@ -245,20 +245,20 @@ defineExpose({
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(15, 11, 8, 0.45);
-    border: 1px solid rgba(176, 143, 86, 0.9);
+    background: var(--dialog-surface-muted);
+    border: 1px solid var(--dialog-color);
     box-sizing: border-box;
     padding: 0;
     cursor: url('/images/cursor-pointer.png'), pointer;
 }
 
 .action-slot-icon-shell:hover {
-    border-color: rgba(214, 184, 110, 0.95);
+    border-color: var(--dialog-border-hover);
 }
 
 .action-slot-icon-shell.selected {
-    border-color: rgba(214, 184, 110, 0.95);
-    background: rgba(64, 47, 18, 0.55);
+    border-color: var(--dialog-border-hover);
+    background: var(--dialog-surface-selected);
 }
 
 .action-slot-icon {
@@ -329,8 +329,8 @@ defineExpose({
     width: 100%;
     min-height: 60px;
     padding: 10px;
-    border: 1px solid rgba(176, 143, 86, 0.9);
-    background: rgba(15, 11, 8, 0.45);
+    border: 1px solid var(--dialog-color);
+    background: var(--dialog-surface-muted);
     color: var(--ui-text);
     text-align: left;
     cursor: url('/images/cursor-pointer.png'), pointer;
@@ -339,8 +339,8 @@ defineExpose({
 }
 
 .action-option.selected {
-    border-color: rgba(214, 184, 110, 0.95);
-    background: rgba(64, 47, 18, 0.55);
+    border-color: var(--dialog-border-hover);
+    background: var(--dialog-surface-selected);
 }
 
 .action-option-icon {

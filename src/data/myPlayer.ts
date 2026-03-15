@@ -14,11 +14,12 @@ import {
 import { MyStatusPanel } from '@/gui/myStatusPanel'
 import { AutoAttackMessage, AutoAttackResultMessage, HealingMessage, HealingResultMessage } from '@/network/messageIfs'
 import { AudioManager } from '@/babylon/audio/audioManager'
-import { ActionButtonsManager, CharacterAction, CharacterActions } from '@/gui/actionButtonsManager'
+import { ActionButtonsManager } from '@/gui/actionButtonsManager'
 import { Attackable } from '@/GameManager'
 import { EmeraldsManager } from '@/gui/emeraldsManager'
 import { InventoryManager } from '@/data/InventoryManager'
 import { GuiButtonsManager } from '@/gui/guiButtonsManager'
+import { CharacterAction, CharacterActions } from '@/data/actions/characterActions'
 
 /**
  * Controlling object for the player's character
@@ -116,7 +117,6 @@ export const MyPlayer = {
 
         ActionButtonsManager.setActiveAction(this.activeAction)
         GuiButtonsManager.setActiveAction(this.activeAction)
-        this.resolveStopButtonVisibility()
     },
 
     startAutoAttack(data: AutoAttackMessage) {
@@ -196,14 +196,6 @@ export const MyPlayer = {
             AudioManager.setHeartBeatVolume(volume)
         } else {
             AudioManager.stopHeartBeat()
-        }
-    },
-
-    resolveStopButtonVisibility() {
-        if (this.activeAction != null) {
-            ActionButtonsManager.showStopButton()
-        } else {
-            ActionButtonsManager.hideStopButton()
         }
     },
 

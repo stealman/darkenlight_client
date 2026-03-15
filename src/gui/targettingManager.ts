@@ -9,7 +9,8 @@ import { Settings } from '@/settings/settings'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { MyPlayer } from '@/data/myPlayer'
 import { CharacterManager } from '@/babylon/character/characterManager'
-import { ActionButtonsManager, CharacterActions } from '@/gui/actionButtonsManager'
+import { ActionButtonsManager } from '@/gui/actionButtonsManager'
+import { CharacterActions } from '@/data/actions/characterActions'
 
 export const TargetingManager = {
     selectedTarget: null as Targetable | null,
