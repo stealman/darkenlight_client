@@ -67,8 +67,8 @@
                                 class="action-option-icon"
                             />
                             <div class="action-option-text">
-                                <strong>{{ action.description.split(':')[0] }}</strong>
-                                <span>{{ action.description.split(':')[1] }}</span>
+                                <strong>{{ action.nameLoc }}</strong>
+                                <span>{{ action.descLoc }}</span>
                             </div>
                         </button>
                     </div>
