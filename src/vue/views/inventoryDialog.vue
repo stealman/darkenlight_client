@@ -18,9 +18,31 @@
                                     <div v-if="!equipSlotImages.PAULDRONS" v-html="getEquipSetArmsSvg('icon-equipset icon-equipset-slot', 'icon-arms')"></div>
                                     <img v-if="equipSlotImages.PAULDRONS" :src="equipSlotImages.PAULDRONS" alt="PAULDRONS item" class="equip-item-image" />
                                 </div>
+                                <div
+                                    :class="['equip-slot', 'equip-slot-weapon-setup', 'slot-weapon-setup-primary', { pressed: weaponSetupPressed.primary }]"
+                                    @mouseenter="setWeaponSetupHover('primary', true)"
+                                    @mouseleave="setWeaponSetupHover('primary', false)"
+                                    @pointerdown.prevent="onWeaponSetupPointerDown('primary', $event)"
+                                    @pointerup.prevent="onWeaponSetupPointerUp('primary', $event)"
+                                    @pointercancel.prevent="cancelWeaponSetupPointer('primary')"
+                                    @pointerleave.prevent="cancelWeaponSetupPointer('primary')"
+                                >
+                                    <img :src="getWeaponSetupImage('primary')" alt="Primary weapon setup" class="equip-item-image weapon-setup-image" />
+                                </div>
                                 <div class="equip-slot slot-body" @pointerdown="handleSlotPointerDown('BODY', $event)">
                                     <div v-if="!equipSlotImages.BODY" v-html="getEquipSetArmorSvg('icon-equipset icon-equipset-slot', 'icon-armor')"></div>
                                     <img v-if="equipSlotImages.BODY" :src="equipSlotImages.BODY" alt="BODY item" class="equip-item-image" />
+                                </div>
+                                <div
+                                    :class="['equip-slot', 'equip-slot-weapon-setup', 'slot-weapon-setup-secondary', { pressed: weaponSetupPressed.secondary }]"
+                                    @mouseenter="setWeaponSetupHover('secondary', true)"
+                                    @mouseleave="setWeaponSetupHover('secondary', false)"
+                                    @pointerdown.prevent="onWeaponSetupPointerDown('secondary', $event)"
+                                    @pointerup.prevent="onWeaponSetupPointerUp('secondary', $event)"
+                                    @pointercancel.prevent="cancelWeaponSetupPointer('secondary')"
+                                    @pointerleave.prevent="cancelWeaponSetupPointer('secondary')"
+                                >
+                                    <img :src="getWeaponSetupImage('secondary')" alt="Secondary weapon setup" class="equip-item-image weapon-setup-image" />
                                 </div>
                                 <div class="equip-slot slot-left-hand" @pointerdown="handleSlotPointerDown('L_HAND', $event)">
                                     <div v-if="!equipSlotImages.L_HAND" v-html="getEquipSetHandSvg('icon-equipset icon-equipset-slot', 'icon-hand-left')"></div>
@@ -82,7 +104,7 @@
     </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 
 import { nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { MyPlayer } from '@/data/myPlayer'
@@ -97,6 +119,9 @@ import { WeaponTypes } from '@/data/items/item'
 import { Settings } from '@/settings/settings'
 import ItemInfoOverlay from '@/vue/views/itemInfoOverlay.vue'
 import { t } from '@/i18n'
+import { ActionButtonsManager } from '@/gui/actionButtonsManager'
+import { AudioManager } from '@/babylon/audio/audioManager'
+import { OnScreenMessageManager } from '@/gui/onScreenMessageManager'
 
 const emit = defineEmits(['close'])
 const INVENTORY_SLOT_COUNT = 24
@@ -115,12 +140,25 @@ const inventorySlotImages = ref(Array(INVENTORY_SLOT_COUNT).fill(null))
 
 const EMPTY_ITEM_IMAGE = '/images/icons/buttons/btn_backpack.png'
 const DOUBLE_CLICK_MS = 250
+const WEAPON_SETUP_HOLD_MS = 500
 const OVERLAY_PADDING = 4
 const OVERLAY_CURSOR_OFFSET_X = 2
 
 const dialogWindowRef = ref(null)
 const itemInfoOverlayRef = ref(null)
 const inventoryActionButtonSize = ref(Settings.actionButtonSize)
+const weaponSetupHover = ref({
+    primary: false,
+    secondary: false,
+})
+const weaponSetupPressed = ref({
+    primary: false,
+    secondary: false,
+})
+const weaponSetupPointerState = {
+    primary: { holdTimer: null as ReturnType<typeof setTimeout> | null, held: false, pointerId: null as number | null },
+    secondary: { holdTimer: null as ReturnType<typeof setTimeout> | null, held: false, pointerId: null as number | null },
+}
 
 const itemInfoOverlay = ref({
     visible: false,
@@ -424,6 +462,76 @@ const onInventoryDoubleClick = (index) => {
     refreshInventorySlotImages()
 }
 
+const storeWeaponSetup = (setupType) => {
+    ActionButtonsManager.updateWeaponSetup(setupType)
+    AudioManager.playGuiButtonToggle(true)
+    OnScreenMessageManager.addMessage(t('messages.weaponSet-' + setupType))
+}
+
+const equipWeaponSetup = (setupType) => {
+    AudioManager.playGuiButtonClick()
+    ActionButtonsManager.equipStoredWeaponSetup(setupType)
+}
+
+const getWeaponSetupImage = (setupType) => {
+    const isActive = weaponSetupHover.value[setupType] || weaponSetupPressed.value[setupType]
+    if (setupType === 'primary') {
+        return isActive ? '/images/icons/buttons/btn_romanian1_hover.png' : '/images/icons/buttons/btn_romanian1.png'
+    }
+
+    return isActive ? '/images/icons/buttons/btn_romanian2_hover.png' : '/images/icons/buttons/btn_romanian2.png'
+}
+
+const setWeaponSetupHover = (setupType, isHovered) => {
+    weaponSetupHover.value[setupType] = isHovered
+}
+
+const clearWeaponSetupHoldTimer = (setupType) => {
+    const state = weaponSetupPointerState[setupType]
+    if (state.holdTimer) {
+        clearTimeout(state.holdTimer)
+        state.holdTimer = null
+    }
+}
+
+const onWeaponSetupPointerDown = (setupType, event) => {
+    const state = weaponSetupPointerState[setupType]
+    clearWeaponSetupHoldTimer(setupType)
+    state.held = false
+    state.pointerId = event?.pointerId ?? null
+    weaponSetupPressed.value[setupType] = true
+    state.holdTimer = setTimeout(() => {
+        state.holdTimer = null
+        state.held = true
+        storeWeaponSetup(setupType)
+    }, WEAPON_SETUP_HOLD_MS)
+}
+
+const onWeaponSetupPointerUp = (setupType, event) => {
+    const state = weaponSetupPointerState[setupType]
+    if (state.pointerId !== null && event?.pointerId !== state.pointerId) {
+        return
+    }
+
+    const wasHeld = state.held
+    clearWeaponSetupHoldTimer(setupType)
+    state.held = false
+    state.pointerId = null
+    weaponSetupPressed.value[setupType] = false
+
+    if (!wasHeld) {
+        equipWeaponSetup(setupType)
+    }
+}
+
+const cancelWeaponSetupPointer = (setupType) => {
+    const state = weaponSetupPointerState[setupType]
+    clearWeaponSetupHoldTimer(setupType)
+    state.held = false
+    state.pointerId = null
+    weaponSetupPressed.value[setupType] = false
+}
+
 const pointerClickHandlers = []
 
 const createPointerDoubleClickHandler = (singleClick, doubleClick, interval) => {
@@ -489,6 +597,8 @@ onUnmounted(() => {
     for (const handler of pointerClickHandlers) {
         handler.dispose()
     }
+    cancelWeaponSetupPointer('primary')
+    cancelWeaponSetupPointer('secondary')
 })
 
 const openDialog = () => {
@@ -517,5 +627,21 @@ defineExpose({
 </script>
 
 <style scoped>
+.equip-slot-weapon-setup {
+    width: calc(var(--slot-size-factor) * 65%);
+}
 
+.weapon-setup-image {
+    transition: none;
+}
+
+.slot-weapon-setup-primary {
+    left: -3%;
+    top: 37.5%;
+}
+
+.slot-weapon-setup-secondary {
+    right: -3%;
+    top: 37.5%;
+}
 </style>

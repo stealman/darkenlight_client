@@ -75,7 +75,9 @@
     "healingPotionName": "Lektvar Zdraví",
     "healingPotionDescription": "Použiješ Lektvar zdraví pokud je v inventáři a jsi zraněn. Použije se vždy nejsilnější dostupný lektvar.",
     "manaPotionName": "Lektvar Many",
-    "manaPotionDescription": "Použiješ Lektvar many pokud je v inventáři a nemáš plnou manu. Použije se vždy nejsilnější dostupný lektvar."
+    "manaPotionDescription": "Použiješ Lektvar many pokud je v inventáři a nemáš plnou manu. Použije se vždy nejsilnější dostupný lektvar.",
+    "equipStoredWeaponsName": "Uložená zbraň",
+    "equipStoredWeaponsDescription": "Přepíná mezi primární a sekundární uloženou zbraní. Pokud je v ruce zcela jiná zbraň, nasadí se primární."
   },
   "inventory": {
     "unknownItem": "Neznámý předmět",
@@ -94,6 +96,8 @@
     "autoAttack": "Auto-útok: {state}",
     "autoTarget": "Auto-zaměření {state}",
     "enabled": "Zapnuto",
-    "disabled": "Vypnuto"
+    "disabled": "Vypnuto",
+    "weaponSet-primary": "Primární zbraň uložena",
+    "weaponSet-secondary": "Sekundární zbraň uložena"
   }
 }

@@ -21,6 +21,16 @@ class ActionButtonActionBinding {
     }
 }
 
+type WeaponSetup = {
+    rhand: number | null
+    lhand: number | null
+}
+
+type StoredWeaponSetups = {
+    primary: WeaponSetup
+    secondary: WeaponSetup
+}
+
 class ActionButton {
     index: string
     htmlEl: HTMLElement | null = null
@@ -194,7 +204,7 @@ class ActionButton {
 
 export const ActionButtonsManager = {
     actionBindingKey: 'DARKENLIGHT_ACTION_BUTTONS_BINDINGS',
-    // weaponSetupKey: "DARKENLIGHT_WEAPON_SETUP",
+    weaponSetupKey: "DARKENLIGHT_WEAPON_SETUP",
 
     buttonsPanel1: null as HTMLElement,
     buttonsPanel2: null as HTMLElement,
@@ -306,6 +316,9 @@ export const ActionButtonsManager = {
                 case CharacterActions.MANA_POTION.name:
                     this.clickOnManaPotionButton()
                     break
+                case CharacterActions.EQUIP_STORED_WEAPONS.name:
+                    this.clickOnEquipStoredWeaponsButton()
+                    break
             }
         }
     },
@@ -349,6 +362,24 @@ export const ActionButtonsManager = {
         ConsumableHelper.clickOnConsumeManaPotion()
     },
 
+    clickOnEquipStoredWeaponsButton() {
+        if (!localStorage.getItem(this.weaponSetupKey)) {
+            return
+        }
+
+        const storedSetups = this.getStoredWeaponSetups()
+        InventoryManager.equipStoredWeaponSetups(storedSetups)
+    },
+
+    equipStoredWeaponSetup(setupType: 'primary' | 'secondary') {
+        if (!localStorage.getItem(this.weaponSetupKey)) {
+            return
+        }
+
+        const storedSetups = this.getStoredWeaponSetups()
+        InventoryManager.equipWeaponSetup(storedSetups[setupType])
+    },
+
     toggleStateChange(actionName: string, toggled: boolean) {
         this.storeBindings()
         switch (actionName) {
@@ -371,6 +402,45 @@ export const ActionButtonsManager = {
 
     storeBindings() {
         localStorage.setItem(this.actionBindingKey, JSON.stringify(Array.from(this.bindings.entries())))
+    },
+
+    getStoredWeaponSetups(): StoredWeaponSetups {
+        const defaultValue: StoredWeaponSetups = {
+            primary: { rhand: null, lhand: null },
+            secondary: { rhand: null, lhand: null },
+        }
+
+        const storedValue = localStorage.getItem(this.weaponSetupKey)
+        if (!storedValue) {
+            return defaultValue
+        }
+
+        try {
+            const parsed = JSON.parse(storedValue)
+            return {
+                primary: {
+                    rhand: Number.isInteger(parsed?.primary?.rhand) ? parsed.primary.rhand : null,
+                    lhand: Number.isInteger(parsed?.primary?.lhand) ? parsed.primary.lhand : null,
+                },
+                secondary: {
+                    rhand: Number.isInteger(parsed?.secondary?.rhand) ? parsed.secondary.rhand : null,
+                    lhand: Number.isInteger(parsed?.secondary?.lhand) ? parsed.secondary.lhand : null,
+                },
+            }
+        } catch {
+            return defaultValue
+        }
+    },
+
+    updateWeaponSetup(setupType: 'primary' | 'secondary') {
+        const storedSetups = this.getStoredWeaponSetups()
+        storedSetups[setupType] = {
+            rhand: MyPlayer.myChar?.equipSet?.get('R_HAND')?.id ?? null,
+            lhand: MyPlayer.myChar?.equipSet?.get('L_HAND')?.id ?? null,
+        }
+        localStorage.setItem(this.weaponSetupKey, JSON.stringify(storedSetups))
+
+        // {"primary":{"rhand":9,"lhand":null},"secondary":{"rhand":36,"lhand":null}}
     },
 
     getBindingIconForIndex(index: number): string | null {
@@ -403,6 +473,7 @@ export const ActionButtonsManager = {
             CharacterActions.HEAL,
             CharacterActions.HEALING_POTION,
             CharacterActions.MANA_POTION,
+            CharacterActions.EQUIP_STORED_WEAPONS,
         ]
     },
 

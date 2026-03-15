@@ -1,5 +1,5 @@
 div#onscreen-messages-panel {
-    position: absolute;
+    position: fixed;
     top: 45vh;
     right: 35vw;
     width: 30vw;
@@ -7,6 +7,7 @@ div#onscreen-messages-panel {
     justify-content: space-between;
 
     pointer-events: none;
+    z-index: 2100;
 }
 
 div#onscreen-messages-panel div.onscreen-message {

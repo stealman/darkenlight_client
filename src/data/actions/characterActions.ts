@@ -50,6 +50,10 @@ export const CharacterActions = {
     MINING: new CharacterAction('MINING', 'btn_pickaxe', false, '', ''),
     LUMBERJACKING: new CharacterAction('LUMBERJACKING', 'btn_lumber', false, '', ''),
 
+    EQUIP_STORED_WEAPONS: new CharacterAction('EQUIP_STORED_WEAPONS', 'btn_romanian1_2', false,
+        'actions.equipStoredWeaponsName',
+        'actions.equipStoredWeaponsDescription'),
+
     getActionByName(name: string): CharacterAction | undefined {
         const actions = [
             this.AUTO_ATTACK,
@@ -58,6 +62,7 @@ export const CharacterActions = {
             this.MANA_POTION,
             this.MINING,
             this.LUMBERJACKING,
+            this.EQUIP_STORED_WEAPONS,
         ]
 
         return actions.find((action) => action.name === name)

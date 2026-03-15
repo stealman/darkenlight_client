@@ -8,9 +8,29 @@ import { ItemTO } from '@/network/messageIfs'
 import { ActionButtonsManager } from '@/gui/actionButtonsManager'
 import { ConsumableHelper } from '@/data/items/consumableHelper'
 
+type WeaponSetup = {
+    rhand: number | null
+    lhand: number | null
+}
+
+type StoredWeaponSetups = {
+    primary: WeaponSetup
+    secondary: WeaponSetup
+}
+
 export const InventoryManager = {
     inventory: [] as Item[],
     itemTypeSortOrder: ['W', 'A', 'J', 'T', 'R'],
+
+    emitInventoryUpdated(reason: string, changedItemIds: number[] = []) {
+        if (typeof window === 'undefined') {
+            return
+        }
+
+        window.dispatchEvent(new CustomEvent('ui:inventory-updated', {
+            detail: { reason, changedItemIds }
+        }))
+    },
 
     getItemTypeSortRank(cbType: string | null | undefined): number {
         if (!cbType) {
@@ -194,6 +214,60 @@ export const InventoryManager = {
         Connector.sendMessage(new EquipItemMsg(item.slotInfo.slot, item.id))
         AudioManager.playBackpackHandle2()
         ActionButtonsManager.charEquipChanged()
+        this.emitInventoryUpdated('equip-local', [item.id])
+    },
+
+    equipWeaponSetup(targetSetup: WeaponSetup) {
+        const targetHasAnyItem = targetSetup.rhand !== null || targetSetup.lhand !== null
+        if (!targetHasAnyItem) {
+            return
+        }
+
+        const currentSetup: WeaponSetup = {
+            rhand: MyPlayer.myChar?.equipSet?.get('R_HAND')?.id ?? null,
+            lhand: MyPlayer.myChar?.equipSet?.get('L_HAND')?.id ?? null,
+        }
+
+        if (currentSetup.lhand !== targetSetup.lhand && currentSetup.lhand !== null) {
+            this.unequipSlot('L_HAND', true)
+        }
+
+        if (currentSetup.rhand !== targetSetup.rhand && currentSetup.rhand !== null) {
+            this.unequipSlot('R_HAND', true)
+        }
+
+        if (targetSetup.rhand !== null) {
+            const targetRightHandItem = this.inventory.find(item => item.id === targetSetup.rhand)
+            if (targetRightHandItem) {
+                this.equipItem(targetRightHandItem)
+            }
+        }
+
+        if (targetSetup.lhand !== null) {
+            const targetLeftHandItem = this.inventory.find(item => item.id === targetSetup.lhand)
+            if (targetLeftHandItem) {
+                this.equipItem(targetLeftHandItem)
+            }
+        }
+    },
+
+    /**
+     * Equips the primary or secondary weapon setup based on the currently equipped items.
+     * If the currently equipped items match the primary setup, it will switch to the secondary setup, and vice versa.
+     * If the target setup has no items, it will do nothing.
+     */
+    equipStoredWeaponSetups(storedSetups: StoredWeaponSetups) {
+        const currentSetup: WeaponSetup = {
+            rhand: MyPlayer.myChar?.equipSet?.get('R_HAND')?.id ?? null,
+            lhand: MyPlayer.myChar?.equipSet?.get('L_HAND')?.id ?? null,
+        }
+
+        const currentMatchesPrimary =
+            currentSetup.rhand === storedSetups.primary.rhand
+            && currentSetup.lhand === storedSetups.primary.lhand
+
+        const targetSetup = currentMatchesPrimary ? storedSetups.secondary : storedSetups.primary
+        this.equipWeaponSetup(targetSetup)
     },
 
     unequipSlot(slot: string, fromEquipAction: boolean = false) {
@@ -214,6 +288,8 @@ export const InventoryManager = {
             AudioManager.playBackpackHandle2()
             ActionButtonsManager.charEquipChanged()
         }
+
+        this.emitInventoryUpdated('unequip-local', [item.id])
     },
 
     useConsumableItem(item: Item) {
