@@ -1,4 +1,5 @@
 import {
+    Color3,
     Color4,
     Matrix,
     Mesh,
@@ -254,6 +255,8 @@ export const GroundItemsManager = {
 
         const material = new PBRMaterial(name, scene)
         material.albedoTexture = texture
+        material.emissiveTexture = texture
+        material.emissiveColor = new Color3(0.25, 0.25, 0.25)
         material.metallic = 0
         material.roughness = 1
         material.directIntensity = 1.5

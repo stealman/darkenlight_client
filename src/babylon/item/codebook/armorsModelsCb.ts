@@ -51,12 +51,12 @@ export const ArmorsCbManager = {
 }
 
 export const ArmorModelsCb = {
-    PLATE_ARMOR_MALE: new EquipCbItem(EquipSlotModelsCb.ARMOR_PLATE.modelId, "male-armor-plate", new Vector3(-0.01, 0.65, 0.03), new Vector3(0.42, 0.42, 0.44), null, matMetalSize),
+    PLATE_ARMOR_MALE: new EquipCbItem(EquipSlotModelsCb.ARMOR_PLATE.modelId, "male-armor-plate2", new Vector3(-0.01, 0.62, 0.02), new Vector3(0.4, 0.4, 0.37), null, matMetalSize),
 
-    HELM_MALE: new EquipCbItem(EquipSlotModelsCb.HELM.modelId, "male-helmet", new Vector3(0, 0.47, 0), BabylonUtils.getSymVector(0.45), null, matMetalSize),
+    HELM_MALE: new EquipCbItem(EquipSlotModelsCb.HELM.modelId, "male-helmet", new Vector3(0, 0.4, 0), BabylonUtils.getSymVector(0.39), null, matMetalSize),
     HELM_MALE_CLOSED: new EquipCbItem(EquipSlotModelsCb.HELM_CLOSED.modelId, "male-helmet_closed", new Vector3(0, 0.42, 0), BabylonUtils.getSymVector(0.45), null, matMetalSize),
 
-    PAULDRON_MALE: new EquipCbItem(EquipSlotModelsCb.PAULDRONS_PLATE.modelId, "male-pauldron-plate", new Vector3(0.06, -0.15, 0.02), new Vector3(0.48, 0.48, 0.58), null, matMetalSize),
+    PAULDRON_MALE: new EquipCbItem(EquipSlotModelsCb.PAULDRONS_PLATE.modelId, "male-pauldron-plate", new Vector3(0.06, -0.15, 0), new Vector3(0.5, 0.5, 0.5), null, matMetalSize),
 
-    LEG_MALE: new EquipCbItem(EquipSlotModelsCb.LEGS_PLATE.modelId, "male-leg-plate", new Vector3(-0.01, -0.1, 0.01), new Vector3(0.26, 0.26, 0.23),null, matMetalSize),
+    LEG_MALE: new EquipCbItem(EquipSlotModelsCb.LEGS_PLATE.modelId, "male-leg-plate", new Vector3(-0.01, -0.1, 0.015), new Vector3(0.25, 0.26, 0.20),null, matMetalSize),
 }

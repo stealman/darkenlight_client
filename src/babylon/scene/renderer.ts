@@ -263,10 +263,10 @@ export const Renderer = {
             cameraPosition = new Vector3(-10, 12, -10)
         }
         let cameraViewY = -2
-        if (Settings.closeView) {
-            cameraPosition.x = -6
-            cameraPosition.y = 6
-            cameraPosition.z = -6
+        if (Settings.closeView || false) {
+            cameraPosition.x = -5
+            cameraPosition.y = 5
+            cameraPosition.z = -5
             cameraViewY = 0
         }
 

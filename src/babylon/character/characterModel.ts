@@ -75,7 +75,7 @@ export class CharacterModel implements EquipBearer {
         await SceneLoader.ImportMeshAsync(
             "",
             "/models/steve/",
-            "steve.gltf",
+            "human_male.gltf",
             Renderer.scene
         ).then((result) => {
             this.model = result.meshes[0]
@@ -88,7 +88,7 @@ export class CharacterModel implements EquipBearer {
             this.parent.nameDisplayTime = Date.now() + 3000
 
             // Apply material
-            const material = Materials.getPBRMaterial(Renderer.scene, "steveMaterial", "/models/steve/steve.jpg", false, false,  {
+            const material = Materials.getPBRMaterial(Renderer.scene, "steveMaterial", "/models/steve/steve2.png", false, false,  {
                 metallic: 0,
                 roughness: 1,
                 directIntensity: 1,
