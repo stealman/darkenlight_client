@@ -4,6 +4,7 @@ import { MyPlayer } from '@/data/myPlayer'
 import { Connector } from '@/network/connector'
 import { ConsumeItemMsg } from '@/network/messages'
 import { OnScreenMessageManager } from '@/gui/onScreenMessageManager'
+import { t } from '@/i18n'
 
 export const ConsumableHelper = {
 
@@ -38,21 +39,19 @@ export const ConsumableHelper = {
     },
 
     clickOnConsumeItem(cbId: number) {
-        // IF clicked on healig potion
+        const nextPotionUseTime = MyPlayer.nextPotionUseTime
+        const now = Date.now()
+        if (nextPotionUseTime > now) {
+            const remainingSeconds = Math.ceil((nextPotionUseTime - now) / 1000)
+            OnScreenMessageManager.addMessage(t('messages.nextPotionIn', { seconds: remainingSeconds }))
+            return
+        }
+
         if (this.getHealingPotionIds().includes(cbId) && MyPlayer.myChar.hpPercent < 100) {
-            if (MyPlayer.nextPotionUseTime > new Date().getTime()) {
-                const remainingSeconds = Math.ceil((MyPlayer.nextPotionUseTime - new Date().getTime()) / 1000)
-                OnScreenMessageManager.addMessage("Další lektvar až za " + remainingSeconds + " vteřin")
-                return
-            }
             Connector.sendMessage(new ConsumeItemMsg(cbId))
         }
+
         if (this.getManaPotionIds().includes(cbId) && MyPlayer.myChar.mpPercent < 100) {
-            if (MyPlayer.nextPotionUseTime > new Date().getTime()) {
-                const remainingSeconds = Math.ceil((MyPlayer.nextPotionUseTime - new Date().getTime()) / 1000)
-                OnScreenMessageManager.addMessage("Další lektvar až za " + remainingSeconds + " vteřin")
-                return
-            }
             Connector.sendMessage(new ConsumeItemMsg(cbId))
         }
     }

@@ -97,6 +97,7 @@
     "autoTarget": "Auto-targeting {state}",
     "enabled": "Enabled",
     "disabled": "Disabled",
+    "nextPotionIn": "Next potion in {seconds} seconds",
     "weaponSet-primary": "Primary weapon saved",
     "weaponSet-secondary": "Secondary weapon saved"
   }

@@ -22,35 +22,35 @@
                 :style="{ backgroundImage: `url('/images/icons/buttons/btn_background.png')` }"
                 @pointerdown.prevent.stop
                 @click.stop="onDropItemClick">
-                <img class="action-icon" src="/images/icons/buttons/btn_drop.png" :alt="t('inventory.dropItem')" />
+                <img class="action-icon" src='/images/icons/buttons/btn_drop.png' :alt="t('inventory.dropItem')" />
             </button>
 
             <button v-if="shouldShowSplitButton" class="action-button inventory-action-button inventory-split-button" type="button"
                 :style="{ backgroundImage: `url('/images/icons/buttons/btn_background.png')` }"
                 @pointerdown.prevent.stop
                 @click.stop="onSplitItemClick">
-                <img class="action-icon" src="/images/icons/buttons/btn_split.png" :alt="t('inventory.splitItem')" />
+                <img class="action-icon" src='/images/icons/buttons/btn_split.png' :alt="t('inventory.splitItem')" />
             </button>
 
             <button v-if="shouldShowMergeButton" class="action-button inventory-action-button inventory-merge-button" type="button"
                 :style="{ backgroundImage: `url('/images/icons/buttons/btn_background.png')` }"
                 @pointerdown.prevent.stop
                 @click.stop="onMergeItemClick">
-                <img class="action-icon" src="/images/icons/buttons/btn_stack.png" :alt="t('inventory.mergeItem')" />
+                <img class="action-icon" src='/images/icons/buttons/btn_stack.png' :alt="t('inventory.mergeItem')" />
             </button>
 
             <button v-if="showSplitControls" class="action-button inventory-action-button inventory-text-action-button" type="button"
                 :style="{ backgroundImage: `url('/images/icons/buttons/btn_background.png')` }"
                 @pointerdown.prevent.stop
                 @click.stop="onSplitConfirmClick">
-                <img class="action-icon" src="/images/icons/buttons/btn_ok.png" :alt="t('inventory.confirmSplit')" />
+                <img class="action-icon" src='/images/icons/buttons/btn_ok.png' :alt="t('inventory.confirmSplit')" />
             </button>
 
             <button v-if="showSplitControls" class="action-button inventory-action-button inventory-text-action-button" type="button"
                 :style="{ backgroundImage: `url('/images/icons/buttons/btn_background.png')` }"
                 @pointerdown.prevent.stop
                 @click.stop="onSplitCancelClick">
-                <img class="action-icon" src="/images/icons/buttons/btn_stop.png" :alt="t('inventory.cancelSplit')" />
+                <img class="action-icon" src='/images/icons/buttons/btn_stop.png' :alt="t('inventory.cancelSplit')" />
             </button>
         </div>
 

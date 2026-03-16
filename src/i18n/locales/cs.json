@@ -97,6 +97,7 @@
     "autoTarget": "Auto-zaměření {state}",
     "enabled": "Zapnuto",
     "disabled": "Vypnuto",
+    "nextPotionIn": "Další lektvar až za {seconds} vteřin",
     "weaponSet-primary": "Primární zbraň uložena",
     "weaponSet-secondary": "Sekundární zbraň uložena"
   }

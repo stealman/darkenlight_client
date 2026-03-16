@@ -4,173 +4,23 @@
             <div class="dialog-content">
                 <div class="inventory-content-shell">
                     <div class="inventory-layout">
-                        <div class="equipment-panel">
-                            <div class="equipment-layout">
-                                <div class="equip-slot slot-helmet" @pointerdown="handleSlotPointerDown('HEAD', $event)">
-                                    <div v-if="!equipSlotImages.HEAD" v-html="getEquipSetHelmetSvg('icon-equipset icon-equipset-slot', 'icon-helmet')"></div>
-                                    <template v-if="equipSlotImages.HEAD">
-                                        <img :src="equipSlotImages.HEAD" alt="HEAD item" class="equip-item-image" />
-                                        <img
-                                            v-for="marker in getWeaponSetupMarkersForEquipSlot('HEAD')"
-                                            :key="`HEAD-${marker}`"
-                                            :src="getWeaponSetupMarkerImage(marker)"
-                                            :alt="`${marker} weapon setup marker`"
-                                            :class="['weapon-setup-marker', `weapon-setup-marker-${marker}`]"
-                                        />
-                                    </template>
-                                </div>
-                                <div class="equip-slot slot-necklace" @pointerdown="handleSlotPointerDown('NECKLACE', $event)">
-                                    <div v-if="!equipSlotImages.NECKLACE" v-html="getEquipSetNecklaceSvg('icon-equipset icon-equipset-slot', 'icon-necklace')"></div>
-                                    <template v-if="equipSlotImages.NECKLACE">
-                                        <img :src="equipSlotImages.NECKLACE" alt="NECKLACE item" class="equip-item-image" />
-                                        <img
-                                            v-for="marker in getWeaponSetupMarkersForEquipSlot('NECKLACE')"
-                                            :key="`NECKLACE-${marker}`"
-                                            :src="getWeaponSetupMarkerImage(marker)"
-                                            :alt="`${marker} weapon setup marker`"
-                                            :class="['weapon-setup-marker', `weapon-setup-marker-${marker}`]"
-                                        />
-                                    </template>
-                                </div>
-                                <div class="equip-slot slot-arms-armor" @pointerdown="handleSlotPointerDown('PAULDRONS', $event)">
-                                    <div v-if="!equipSlotImages.PAULDRONS" v-html="getEquipSetArmsSvg('icon-equipset icon-equipset-slot', 'icon-arms')"></div>
-                                    <template v-if="equipSlotImages.PAULDRONS">
-                                        <img :src="equipSlotImages.PAULDRONS" alt="PAULDRONS item" class="equip-item-image" />
-                                        <img
-                                            v-for="marker in getWeaponSetupMarkersForEquipSlot('PAULDRONS')"
-                                            :key="`PAULDRONS-${marker}`"
-                                            :src="getWeaponSetupMarkerImage(marker)"
-                                            :alt="`${marker} weapon setup marker`"
-                                            :class="['weapon-setup-marker', `weapon-setup-marker-${marker}`]"
-                                        />
-                                    </template>
-                                </div>
-                                <div
-                                    :class="['equip-slot', 'equip-slot-weapon-setup', 'slot-weapon-setup-primary', { pressed: weaponSetupPressed.primary }]"
-                                    @mouseenter="setWeaponSetupHover('primary', true)"
-                                    @mouseleave="setWeaponSetupHover('primary', false)"
-                                    @pointerdown.prevent="onWeaponSetupPointerDown('primary', $event)"
-                                    @pointerup.prevent="onWeaponSetupPointerUp('primary', $event)"
-                                    @pointercancel.prevent="cancelWeaponSetupPointer('primary')"
-                                    @pointerleave.prevent="cancelWeaponSetupPointer('primary')"
-                                >
-                                    <img :src="getWeaponSetupImage('primary')" alt="Primary weapon setup" class="equip-item-image weapon-setup-image" />
-                                </div>
-                                <div class="equip-slot slot-body" @pointerdown="handleSlotPointerDown('BODY', $event)">
-                                    <div v-if="!equipSlotImages.BODY" v-html="getEquipSetArmorSvg('icon-equipset icon-equipset-slot', 'icon-armor')"></div>
-                                    <template v-if="equipSlotImages.BODY">
-                                        <img :src="equipSlotImages.BODY" alt="BODY item" class="equip-item-image" />
-                                        <img
-                                            v-for="marker in getWeaponSetupMarkersForEquipSlot('BODY')"
-                                            :key="`BODY-${marker}`"
-                                            :src="getWeaponSetupMarkerImage(marker)"
-                                            :alt="`${marker} weapon setup marker`"
-                                            :class="['weapon-setup-marker', `weapon-setup-marker-${marker}`]"
-                                        />
-                                    </template>
-                                </div>
-                                <div
-                                    :class="['equip-slot', 'equip-slot-weapon-setup', 'slot-weapon-setup-secondary', { pressed: weaponSetupPressed.secondary }]"
-                                    @mouseenter="setWeaponSetupHover('secondary', true)"
-                                    @mouseleave="setWeaponSetupHover('secondary', false)"
-                                    @pointerdown.prevent="onWeaponSetupPointerDown('secondary', $event)"
-                                    @pointerup.prevent="onWeaponSetupPointerUp('secondary', $event)"
-                                    @pointercancel.prevent="cancelWeaponSetupPointer('secondary')"
-                                    @pointerleave.prevent="cancelWeaponSetupPointer('secondary')"
-                                >
-                                    <img :src="getWeaponSetupImage('secondary')" alt="Secondary weapon setup" class="equip-item-image weapon-setup-image" />
-                                </div>
-                                <div class="equip-slot slot-left-hand" @pointerdown="handleSlotPointerDown('L_HAND', $event)">
-                                    <div v-if="!equipSlotImages.L_HAND" v-html="getEquipSetHandSvg('icon-equipset icon-equipset-slot', 'icon-hand-left')"></div>
-                                    <template v-if="equipSlotImages.L_HAND">
-                                        <img :src="equipSlotImages.L_HAND" alt="L_HAND item" class="equip-item-image" />
-                                        <img
-                                            v-for="marker in getWeaponSetupMarkersForEquipSlot('L_HAND')"
-                                            :key="`L_HAND-${marker}`"
-                                            :src="getWeaponSetupMarkerImage(marker)"
-                                            :alt="`${marker} weapon setup marker`"
-                                            :class="['weapon-setup-marker', `weapon-setup-marker-${marker}`]"
-                                        />
-                                    </template>
-                                </div>
-                                <div class="equip-slot slot-right-hand" @pointerdown="handleSlotPointerDown('R_HAND', $event)">
-                                    <div v-if="!equipSlotImages.R_HAND" v-html="getEquipSetHandSvg('icon-equipset icon-equipset-slot', 'icon-hand-right')"></div>
-                                    <template v-if="equipSlotImages.R_HAND">
-                                        <img :src="equipSlotImages.R_HAND" alt="R_HAND item" class="equip-item-image" />
-                                        <img
-                                            v-for="marker in getWeaponSetupMarkersForEquipSlot('R_HAND')"
-                                            :key="`R_HAND-${marker}`"
-                                            :src="getWeaponSetupMarkerImage(marker)"
-                                            :alt="`${marker} weapon setup marker`"
-                                            :class="['weapon-setup-marker', `weapon-setup-marker-${marker}`]"
-                                        />
-                                    </template>
-                                </div>
-                                <div class="equip-slot slot-left-ring" @pointerdown="handleSlotPointerDown('L_RING', $event)">
-                                    <div v-if="!equipSlotImages.L_RING" v-html="getEquipSetRingSvg('icon-equipset icon-equipset-slot', 'icon-ring-left')"></div>
-                                    <template v-if="equipSlotImages.L_RING">
-                                        <img :src="equipSlotImages.L_RING" alt="L_RING item" class="equip-item-image" />
-                                        <img
-                                            v-for="marker in getWeaponSetupMarkersForEquipSlot('L_RING')"
-                                            :key="`L_RING-${marker}`"
-                                            :src="getWeaponSetupMarkerImage(marker)"
-                                            :alt="`${marker} weapon setup marker`"
-                                            :class="['weapon-setup-marker', `weapon-setup-marker-${marker}`]"
-                                        />
-                                    </template>
-                                </div>
-                                <div class="equip-slot slot-right-ring" @pointerdown="handleSlotPointerDown('R_RING', $event)">
-                                    <div v-if="!equipSlotImages.R_RING" v-html="getEquipSetRingSvg('icon-equipset icon-equipset-slot', 'icon-ring-right')"></div>
-                                    <template v-if="equipSlotImages.R_RING">
-                                        <img :src="equipSlotImages.R_RING" alt="R_RING item" class="equip-item-image" />
-                                        <img
-                                            v-for="marker in getWeaponSetupMarkersForEquipSlot('R_RING')"
-                                            :key="`R_RING-${marker}`"
-                                            :src="getWeaponSetupMarkerImage(marker)"
-                                            :alt="`${marker} weapon setup marker`"
-                                            :class="['weapon-setup-marker', `weapon-setup-marker-${marker}`]"
-                                        />
-                                    </template>
-                                </div>
-                                <div class="equip-slot slot-legs" @pointerdown="handleSlotPointerDown('LEGS', $event)">
-                                    <div v-if="!equipSlotImages.LEGS" v-html="getEquipSetLegsSvg('icon-equipset icon-equipset-slot', 'icon-legs')"></div>
-                                    <template v-if="equipSlotImages.LEGS">
-                                        <img :src="equipSlotImages.LEGS" alt="LEGS item" class="equip-item-image" />
-                                        <img
-                                            v-for="marker in getWeaponSetupMarkersForEquipSlot('LEGS')"
-                                            :key="`LEGS-${marker}`"
-                                            :src="getWeaponSetupMarkerImage(marker)"
-                                            :alt="`${marker} weapon setup marker`"
-                                            :class="['weapon-setup-marker', `weapon-setup-marker-${marker}`]"
-                                        />
-                                    </template>
-                                </div>
-                            </div>
-                        </div>
+                        <EquipSet
+                            :equip-slots="equipSlots"
+                            :weapon-setup-images="weaponSetupImages"
+                            :weapon-setup-pressed="weaponSetupPressed"
+                            @slot-pointerdown="handleSlotPointerDown"
+                            @weapon-setup-hover="setWeaponSetupHover"
+                            @weapon-setup-pointerdown="onWeaponSetupPointerDown"
+                            @weapon-setup-pointerup="onWeaponSetupPointerUp"
+                            @weapon-setup-pointercancel="cancelWeaponSetupPointer"
+                        />
 
-                        <div class="inventory-panel">
-                            <div class="inventory-grid-wrapper">
-                                <div class="inventory-grid">
-                                    <div
-                                        v-for="slotIndex in INVENTORY_SLOT_COUNT"
-                                        :key="slotIndex"
-                                        class="inventory-item-slot"
-                                        @pointerdown.prevent="handleInventorySlotPointerDown(slotIndex - 1, $event)"
-                                    >
-                                        <template v-if="inventorySlotImages[slotIndex - 1]">
-                                            <img :src="inventorySlotImages[slotIndex - 1]" alt="Inventory item" class="inventory-item-image" />
-                                            <img
-                                                v-for="marker in getWeaponSetupMarkersForInventorySlot(slotIndex - 1)"
-                                                :key="`inventory-${slotIndex - 1}-${marker}`"
-                                                :src="getWeaponSetupMarkerImage(marker)"
-                                                :alt="`${marker} weapon setup marker`"
-                                                :class="['weapon-setup-marker', `weapon-setup-marker-${marker}`]"
-                                            />
-                                        </template>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        <Backpack
+                            :slot-count="INVENTORY_SLOT_COUNT"
+                            :slot-images="inventorySlotImages"
+                            :get-markers="getWeaponSetupMarkersForInventorySlot"
+                            @slot-pointerdown="handleInventorySlotPointerDown"
+                        />
                     </div>
                 </div>
             </div>
@@ -198,6 +48,8 @@
 
 import { nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { MyPlayer } from '@/data/myPlayer'
+import EquipSet from '@/vue/views/inventory/equipSet.vue'
+import Backpack from '@/vue/views/inventory/backpack.vue'
 import {
     getEquipSetArmorSvg,
     getEquipSetArmsSvg, getEquipSetHandSvg,
@@ -205,12 +57,21 @@ import {
     getEquipSetNecklaceSvg, getEquipSetRingSvg,
 } from '@/vue/icons/icons'
 import { InventoryManager } from '@/data/InventoryManager'
-import { WeaponTypes } from '@/data/items/item'
 import { Settings } from '@/settings/settings'
-import ItemInfoOverlay from '@/vue/views/itemInfoOverlay.vue'
+import ItemInfoOverlay from '@/vue/views/inventory/itemInfoOverlay.vue'
 import { t } from '@/i18n'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { OnScreenMessageManager } from '@/gui/onScreenMessageManager'
+
+type WeaponSetupType = 'primary' | 'secondary'
+type WeaponSetupMarker = WeaponSetupType
+type EquipSlotView = {
+    key: string
+    className: string
+    image: string | null
+    emptyHtml: string
+    markers: WeaponSetupMarker[]
+}
 
 const emit = defineEmits(['close'])
 const INVENTORY_SLOT_COUNT = 24
@@ -237,6 +98,7 @@ const dialogWindowRef = ref(null)
 const itemInfoOverlayRef = ref(null)
 const inventoryActionButtonSize = ref(Settings.actionButtonSize)
 const storedWeaponSetups = ref(InventoryManager.getStoredWeaponSetups())
+const equipSlots = ref<EquipSlotView[]>([])
 const weaponSetupHover = ref({
     primary: false,
     secondary: false,
@@ -391,6 +253,7 @@ const refreshEquipSlotImages = () => {
     equipSlotImages.value.L_RING = resolveSlotImage('L_RING')
     equipSlotImages.value.R_RING = resolveSlotImage('R_RING')
     equipSlotImages.value.LEGS = resolveSlotImage('LEGS')
+    equipSlots.value = buildEquipSlots()
 }
 
 const refreshInventorySlotImages = () => {
@@ -486,12 +349,12 @@ const refreshDialogFromInventoryUpdate = (update = {}) => {
     refreshItemInfoOverlayFromLiveData(update.changedItemIds)
 }
 
-const getWeaponSetupMarkersForItem = (itemId) => {
+const getWeaponSetupMarkersForItem = (itemId): WeaponSetupMarker[] => {
     if (!Number.isFinite(Number(itemId))) {
         return []
     }
 
-    const markers: Array<'primary' | 'secondary'> = []
+    const markers: WeaponSetupMarker[] = []
     const numericItemId = Number(itemId)
     const { primary, secondary } = storedWeaponSetups.value
 
@@ -517,10 +380,79 @@ const getWeaponSetupMarkersForInventorySlot = (index) => {
     return getWeaponSetupMarkersForItem(item?.id)
 }
 
-const getWeaponSetupMarkerImage = (setupType) => {
-    return setupType === 'primary'
-        ? '/images/icons/buttons/btn_romanian1.png'
-        : '/images/icons/buttons/btn_romanian2.png'
+const buildEquipSlots = (): EquipSlotView[] => ([
+    {
+        key: 'HEAD',
+        className: 'slot-helmet',
+        image: equipSlotImages.value.HEAD,
+        emptyHtml: getEquipSetHelmetSvg('icon-equipset icon-equipset-slot', 'icon-helmet'),
+        markers: getWeaponSetupMarkersForEquipSlot('HEAD'),
+    },
+    {
+        key: 'NECKLACE',
+        className: 'slot-necklace',
+        image: equipSlotImages.value.NECKLACE,
+        emptyHtml: getEquipSetNecklaceSvg('icon-equipset icon-equipset-slot', 'icon-necklace'),
+        markers: getWeaponSetupMarkersForEquipSlot('NECKLACE'),
+    },
+    {
+        key: 'PAULDRONS',
+        className: 'slot-arms-armor',
+        image: equipSlotImages.value.PAULDRONS,
+        emptyHtml: getEquipSetArmsSvg('icon-equipset icon-equipset-slot', 'icon-arms'),
+        markers: getWeaponSetupMarkersForEquipSlot('PAULDRONS'),
+    },
+    {
+        key: 'BODY',
+        className: 'slot-body',
+        image: equipSlotImages.value.BODY,
+        emptyHtml: getEquipSetArmorSvg('icon-equipset icon-equipset-slot', 'icon-armor'),
+        markers: getWeaponSetupMarkersForEquipSlot('BODY'),
+    },
+    {
+        key: 'L_HAND',
+        className: 'slot-left-hand',
+        image: equipSlotImages.value.L_HAND,
+        emptyHtml: getEquipSetHandSvg('icon-equipset icon-equipset-slot', 'icon-hand-left'),
+        markers: getWeaponSetupMarkersForEquipSlot('L_HAND'),
+    },
+    {
+        key: 'R_HAND',
+        className: 'slot-right-hand',
+        image: equipSlotImages.value.R_HAND,
+        emptyHtml: getEquipSetHandSvg('icon-equipset icon-equipset-slot', 'icon-hand-right'),
+        markers: getWeaponSetupMarkersForEquipSlot('R_HAND'),
+    },
+    {
+        key: 'L_RING',
+        className: 'slot-left-ring',
+        image: equipSlotImages.value.L_RING,
+        emptyHtml: getEquipSetRingSvg('icon-equipset icon-equipset-slot', 'icon-ring-left'),
+        markers: getWeaponSetupMarkersForEquipSlot('L_RING'),
+    },
+    {
+        key: 'R_RING',
+        className: 'slot-right-ring',
+        image: equipSlotImages.value.R_RING,
+        emptyHtml: getEquipSetRingSvg('icon-equipset icon-equipset-slot', 'icon-ring-right'),
+        markers: getWeaponSetupMarkersForEquipSlot('R_RING'),
+    },
+    {
+        key: 'LEGS',
+        className: 'slot-legs',
+        image: equipSlotImages.value.LEGS,
+        emptyHtml: getEquipSetLegsSvg('icon-equipset icon-equipset-slot', 'icon-legs'),
+        markers: getWeaponSetupMarkersForEquipSlot('LEGS'),
+    },
+])
+
+const weaponSetupImages = {
+    get primary() {
+        return getWeaponSetupImage('primary')
+    },
+    get secondary() {
+        return getWeaponSetupImage('secondary')
+    },
 }
 
 const onclick = (slot, pointer) => {
@@ -761,41 +693,4 @@ defineExpose({
 </script>
 
 <style scoped>
-.inventory-item-slot {
-    position: relative;
-}
-
-.equip-slot-weapon-setup {
-    width: calc(var(--slot-size-factor) * 65%);
-}
-
-.weapon-setup-image {
-    transition: none;
-}
-
-.weapon-setup-marker {
-    position: absolute;
-    top: 3px;
-    left: 3px;
-    width: 18px;
-    height: 18px;
-    object-fit: contain;
-    pointer-events: none;
-    z-index: 2;
-}
-
-.weapon-setup-marker-secondary {
-    left: 3px;
-    transform: translateX(-3px);
-}
-
-.slot-weapon-setup-primary {
-    left: -3%;
-    top: 37.5%;
-}
-
-.slot-weapon-setup-secondary {
-    right: -3%;
-    top: 37.5%;
-}
 </style>

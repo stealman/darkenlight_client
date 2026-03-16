@@ -19,7 +19,6 @@ import { EquipManager } from '@/babylon/item/equipManager'
 import { EquipCbItem } from '@/babylon/item/codebook/equipCbItem'
 import { MyPlayer } from '@/data/myPlayer'
 import { GroundItemTO } from '@/network/messageIfs'
-import { Lights } from '@/babylon/scene/lights'
 
 export const GroundItemsManager = {
     scene: null as Scene | null,
