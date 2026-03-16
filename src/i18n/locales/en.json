@@ -76,7 +76,7 @@
     "healingPotionDescription": "Use a health potion from inventory when injured. The strongest available potion is always used.",
     "manaPotionName": "Mana Potion",
     "manaPotionDescription": "Use a mana potion from inventory when mana is not full. The strongest available potion is always used.",
-    "equipStoredWeaponsName": "Stored weapon",
+    "equipStoredWeaponsName": "Stored Weapon",
     "equipStoredWeaponsDescription": "Switch between primary and secondary stored weapon. If you are holding a completely different weapon, the primary one will be equipped."
   },
   "inventory": {
