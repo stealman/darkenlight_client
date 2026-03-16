@@ -329,6 +329,11 @@ export const ActionButtonsManager = {
             MyPlayer.stopActions()
             return
         }
+
+        if (!InventoryManager.hasStoredWeaponSetupEquipped()) {
+            InventoryManager.equipStoredWeaponSetup('primary')
+        }
+
         TargetingManager.checkAutoAttackOnSelectedTarget(true)
     },
 

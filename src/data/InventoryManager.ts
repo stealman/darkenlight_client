@@ -18,6 +18,12 @@ type StoredWeaponSetups = {
     secondary: WeaponSetup
 }
 
+const EMPTY_WEAPON_SETUP: WeaponSetup = { rhand: null, lhand: null }
+const createEmptyStoredWeaponSetups = (): StoredWeaponSetups => ({
+    primary: { ...EMPTY_WEAPON_SETUP },
+    secondary: { ...EMPTY_WEAPON_SETUP },
+})
+
 export const InventoryManager = {
     weaponSetupKey: "DARKENLIGHT_WEAPON_SETUP",
     inventory: [] as Item[],
@@ -266,111 +272,106 @@ export const InventoryManager = {
         Connector.sendMessage(new PickItemMsg(item.item.id))
     },
 
-    equipWeaponSetup(targetSetup: WeaponSetup) {
-        const targetHasAnyItem = targetSetup.rhand !== null || targetSetup.lhand !== null
-        if (!targetHasAnyItem) {
-            return
-        }
-
-        const currentSetup: WeaponSetup = {
+    getCurrentWeaponSetup(): WeaponSetup {
+        return {
             rhand: MyPlayer.myChar?.equipSet?.get('R_HAND')?.id ?? null,
             lhand: MyPlayer.myChar?.equipSet?.get('L_HAND')?.id ?? null,
         }
+    },
 
-        if (currentSetup.lhand !== targetSetup.lhand && currentSetup.lhand !== null) {
-            this.unequipSlot('L_HAND', true)
+    hasAnyWeaponSetupItem(setup: WeaponSetup) {
+        return setup.rhand !== null || setup.lhand !== null
+    },
+
+    isSameWeaponSetup(a: WeaponSetup, b: WeaponSetup) {
+        return a.rhand === b.rhand && a.lhand === b.lhand
+    },
+
+    normalizeWeaponSetup(value: any): WeaponSetup {
+        return {
+            rhand: Number.isInteger(value?.rhand) ? value.rhand : null,
+            lhand: Number.isInteger(value?.lhand) ? value.lhand : null,
+        }
+    },
+
+    equipWeaponSetup(targetSetup: WeaponSetup) {
+        if (!this.hasAnyWeaponSetupItem(targetSetup)) {
+            return
         }
 
-        if (currentSetup.rhand !== targetSetup.rhand && currentSetup.rhand !== null) {
-            this.unequipSlot('R_HAND', true)
-        }
+        const currentSetup = this.getCurrentWeaponSetup()
 
-        if (targetSetup.rhand !== null) {
-            const targetRightHandItem = this.inventory.find(item => item.id === targetSetup.rhand)
-            if (targetRightHandItem) {
-                this.equipItem(targetRightHandItem)
+        for (const [slotKey, currentItemId, targetItemId] of [
+            ['L_HAND', currentSetup.lhand, targetSetup.lhand],
+            ['R_HAND', currentSetup.rhand, targetSetup.rhand],
+        ] as const) {
+            if (currentItemId !== null && currentItemId !== targetItemId) {
+                this.unequipSlot(slotKey, true)
             }
         }
 
-        if (targetSetup.lhand !== null) {
-            const targetLeftHandItem = this.inventory.find(item => item.id === targetSetup.lhand)
-            if (targetLeftHandItem) {
-                this.equipItem(targetLeftHandItem)
+        for (const itemId of [targetSetup.rhand, targetSetup.lhand]) {
+            if (itemId === null) {
+                continue
+            }
+
+            const item = this.inventory.find(inventoryItem => inventoryItem.id === itemId)
+            if (item) {
+                this.equipItem(item)
             }
         }
     },
 
     clickOnEquipStoredWeaponsButton() {
-        if (!localStorage.getItem(this.weaponSetupKey)) {
-            return
-        }
-
-        const storedSetups = this.getStoredWeaponSetups()
-        this.equipStoredWeaponSetups(storedSetups)
+        this.equipStoredWeaponSetups(this.getStoredWeaponSetups())
     },
 
     /**
      * Equips the primary or secondary weapon setup based on the currently equipped items.
-     * If the currently equipped items match the primary setup, it will switch to the secondary setup, and vice versa.
+    * If the currently equipped items match the primary setup, it will switch to the secondary setup, and vice versa.
      * If the target setup has no items, it will do nothing.
      */
     equipStoredWeaponSetups(storedSetups: StoredWeaponSetups) {
-        const currentSetup: WeaponSetup = {
-            rhand: MyPlayer.myChar?.equipSet?.get('R_HAND')?.id ?? null,
-            lhand: MyPlayer.myChar?.equipSet?.get('L_HAND')?.id ?? null,
-        }
-
-        const currentMatchesPrimary =
-            currentSetup.rhand === storedSetups.primary.rhand
-            && currentSetup.lhand === storedSetups.primary.lhand
-
-        const targetSetup = currentMatchesPrimary ? storedSetups.secondary : storedSetups.primary
-        this.equipWeaponSetup(targetSetup)
+        const currentSetup = this.getCurrentWeaponSetup()
+        this.equipWeaponSetup(
+            this.isSameWeaponSetup(currentSetup, storedSetups.primary)
+                ? storedSetups.secondary
+                : storedSetups.primary
+        )
     },
 
     equipStoredWeaponSetup(setupType: 'primary' | 'secondary') {
-        if (!localStorage.getItem(this.weaponSetupKey)) {
-            return
-        }
+        this.equipWeaponSetup(this.getStoredWeaponSetups()[setupType])
+    },
 
+    hasStoredWeaponSetupEquipped() {
         const storedSetups = this.getStoredWeaponSetups()
-        this.equipWeaponSetup(storedSetups[setupType])
+        const currentSetup = this.getCurrentWeaponSetup()
+
+        return this.isSameWeaponSetup(currentSetup, storedSetups.primary)
+            || this.isSameWeaponSetup(currentSetup, storedSetups.secondary)
     },
 
     getStoredWeaponSetups(): StoredWeaponSetups {
-        const defaultValue: StoredWeaponSetups = {
-            primary: { rhand: null, lhand: null },
-            secondary: { rhand: null, lhand: null },
-        }
-
         const storedValue = localStorage.getItem(this.weaponSetupKey)
         if (!storedValue) {
-            return defaultValue
+            return createEmptyStoredWeaponSetups()
         }
 
         try {
             const parsed = JSON.parse(storedValue)
             return {
-                primary: {
-                    rhand: Number.isInteger(parsed?.primary?.rhand) ? parsed.primary.rhand : null,
-                    lhand: Number.isInteger(parsed?.primary?.lhand) ? parsed.primary.lhand : null,
-                },
-                secondary: {
-                    rhand: Number.isInteger(parsed?.secondary?.rhand) ? parsed.secondary.rhand : null,
-                    lhand: Number.isInteger(parsed?.secondary?.lhand) ? parsed.secondary.lhand : null,
-                },
+                primary: this.normalizeWeaponSetup(parsed?.primary),
+                secondary: this.normalizeWeaponSetup(parsed?.secondary),
             }
         } catch {
-            return defaultValue
+            return createEmptyStoredWeaponSetups()
         }
     },
 
     updateWeaponSetup(setupType: 'primary' | 'secondary') {
         const storedSetups = this.getStoredWeaponSetups()
-        storedSetups[setupType] = {
-            rhand: MyPlayer.myChar?.equipSet?.get('R_HAND')?.id ?? null,
-            lhand: MyPlayer.myChar?.equipSet?.get('L_HAND')?.id ?? null,
-        }
+        storedSetups[setupType] = this.getCurrentWeaponSetup()
         localStorage.setItem(this.weaponSetupKey, JSON.stringify(storedSetups))
     },
 }
