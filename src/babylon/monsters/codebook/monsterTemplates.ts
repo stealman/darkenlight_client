@@ -12,6 +12,7 @@ export class MonsterTemplate {
     id: number
     meshName: string
     textureName: string
+    emissiveTextureName: string | null
     scale: Vector3
     clonesAct: Array<MonsterTemplate> = []
     clonesInact: Array<MonsterTemplate> = []
@@ -27,10 +28,11 @@ export class MonsterTemplate {
     animation: AnimationGroup
     monster: Monster | null = null
 
-    constructor(id: number, meshName: string, textureName: string, scale: Vector3 | number) {
+    constructor(id: number, meshName: string, textureName: string, scale: Vector3 | number, emissiveTextureName: string | null) {
         this.id = id
         this.meshName = MonsterTemplate.withExtension(meshName, MonsterTemplate.MODEL_EXTENSION)
         this.textureName = MonsterTemplate.withExtension(textureName, MonsterTemplate.TEXTURE_EXTENSION)
+        this.emissiveTextureName = emissiveTextureName ? MonsterTemplate.withExtension(emissiveTextureName, MonsterTemplate.TEXTURE_EXTENSION) : null
         this.scale = typeof scale === 'number' ? BabylonUtils.getSymVector(scale) : scale
     }
 
@@ -125,10 +127,10 @@ export class MonsterTemplate {
 }
 
 export const MonsterTemplates = {
-    CAT : new MonsterTemplate(1001, "cat", "cat", 0.85),
-    SKELETON: new MonsterTemplate(1,  "skeleton", "skeleton",  0.35),
-    WITHER: new MonsterTemplate(21,  "skeleton", "wither",  0.35),
-    ZOMBIE_ROTTEN: new MonsterTemplate(11,  "human_male", "zombie_rotten",  0.25),
-    ZOMBIE: new MonsterTemplate(12,  "human_male", "zombie",  0.25),
-    ZOMBIE_MUTANT: new MonsterTemplate(13,  "human_male", "zombie_mutant",  0.275),
+    CAT : new MonsterTemplate(1001, "cat", "cat", 0.85, null),
+    SKELETON: new MonsterTemplate(1,  "skeleton", "skeleton",  0.35, null),
+    WITHER: new MonsterTemplate(21,  "skeleton", "wither",  0.35, null),
+    ZOMBIE_ROTTEN: new MonsterTemplate(11,  "human_male", "zombie_rotten",  new Vector3(0.225, 0.25, 0.225), null),
+    ZOMBIE: new MonsterTemplate(12,  "human_male", "zombie",  0.25, null),
+    ZOMBIE_MUTANT: new MonsterTemplate(13,  "human_male", "zombie_mutant",  0.275, "zombie_mutant_em"),
 }

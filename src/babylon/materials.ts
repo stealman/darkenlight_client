@@ -101,13 +101,19 @@ export const Materials = {
         return mat
     },
 
-    getPBRMaterial(scene: Scene, name: string, pathToAlbedo: string, hasAlpha: boolean = false, invertY: boolean, options: PBRBasicAtts): PBRMaterial {
+    getPBRMaterial(scene: Scene, name: string, pathToAlbedo: string, hasAlpha: boolean = false, invertY: boolean, options: PBRBasicAtts, pathToEmissive: string | null = null): PBRMaterial {
         const albedoTexture = new Texture(pathToAlbedo, scene, {invertY: invertY})
         albedoTexture.hasAlpha = hasAlpha
         albedoTexture.gammaSpace = true;
 
         const mat = new PBRMaterial(name, scene)
         mat.albedoTexture = albedoTexture
+        if (pathToEmissive) {
+            const emissiveTexture = new Texture(pathToEmissive, scene, {invertY: invertY})
+            emissiveTexture.gammaSpace = true
+            mat.emissiveTexture = emissiveTexture
+            mat.emissiveColor = new Color3(1, 1, 1)
+        }
         mat.metallic = options.metallic
         mat.roughness = options.roughness
         mat.directIntensity = options.directIntensity

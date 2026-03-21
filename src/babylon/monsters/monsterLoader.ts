@@ -34,7 +34,7 @@ export const MonsterLoader = {
             roughness: 1,
             directIntensity: 1,
             environmentIntensity: 1,
-        })
+        }, mobType.emissiveTextureName ? "/models/monsters/" + mobType.emissiveTextureName : null)
 
         mobType.setAssetContainer(assetContainer)
         mobType.setMaterial(material)
