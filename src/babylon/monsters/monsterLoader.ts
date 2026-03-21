@@ -1,6 +1,5 @@
-import { Mesh, SceneLoader, Vector3 } from '@babylonjs/core'
+import { AssetContainer, Mesh, SceneLoader } from '@babylonjs/core'
 import { Materials } from '@/babylon/materials'
-import { Settings } from '@/settings/settings'
 import { MonsterType } from '@/babylon/monsters/codebook/monsterCodebook'
 import { MonsterTemplate, MonsterTemplates } from '@/babylon/monsters/codebook/monsterTemplates'
 import { Renderer } from '@/babylon/scene/renderer'
@@ -8,9 +7,12 @@ import { Renderer } from '@/babylon/scene/renderer'
 export const MonsterLoader = {
     monstersMeshes: [] as Mesh[],
     monsterTemplates: new Map<number, MonsterTemplate>(),
+    modelContainers: new Map<string, AssetContainer>(),
 
     async initialize () {
         this.monstersMeshes = []
+        this.monsterTemplates.clear()
+        this.modelContainers.clear()
         for (const key in MonsterTemplates) {
             console.log("Loading monster mesh: " + key)
             await this.loadMonsterMesh(MonsterTemplates[key])
@@ -18,16 +20,14 @@ export const MonsterLoader = {
     },
 
     async loadMonsterMesh (mobType: MonsterTemplate) {
-        // Load asset container (used for cloning)
-        const result = await SceneLoader.LoadAssetContainerAsync(
-            "",
-            "/models/monsters/" + mobType.meshName, Renderer.scene
-        )
-
-        const model = result.meshes[0];
-        model.scaling = mobType.scale;
-        model.rotation = Vector3.Zero()
-        model.alwaysSelectAsActiveMesh = true
+        let assetContainer = this.modelContainers.get(mobType.meshName)
+        if (!assetContainer) {
+            assetContainer = await SceneLoader.LoadAssetContainerAsync(
+                "",
+                "/models/monsters/" + mobType.meshName, Renderer.scene
+            )
+            this.modelContainers.set(mobType.meshName, assetContainer)
+        }
 
         const material = Materials.getPBRMaterial(Renderer.scene, mobType.getMaterialName(), "/models/monsters/" + mobType.textureName, true, false, {
             metallic: 0,
@@ -35,16 +35,9 @@ export const MonsterLoader = {
             directIntensity: 1,
             environmentIntensity: 1,
         })
-        model.getChildMeshes().forEach(mesh => {
-            mesh.material = material;
-            mesh.alwaysSelectAsActiveMesh = true
-            if (Settings.isShadowsEnabled) {
-                 mesh.receiveShadows = true;
-            }
-        });
 
-        // Set asset container to monsterTemplate
-        mobType.setAssetContainer(result)
+        mobType.setAssetContainer(assetContainer)
+        mobType.setMaterial(material)
         this.monsterTemplates.set(mobType.id, mobType)
     },
 

@@ -73,6 +73,7 @@ export const AudioManager = {
         // Death rattles
         this.loadDeathRattleSound(MonsterSoundTypes.SKELETON, "death-skeleton.ogg", scene, { volume: 0.7, playbackRate: 0.85 } );
         this.loadDeathRattleSound(MonsterSoundTypes.CAT, "death-cat.ogg", scene, { volume: 0.3, playbackRate: 1 } );
+        this.loadDeathRattleSound(MonsterSoundTypes.ZOMBIE, "death-zombie.ogg", scene, { volume: 1, playbackRate: 1 } );
 
         // Ambient sounds
         this.loadAmbientSound(AmbientSoundTypes.WINTER_FOREST, "winter-forest.ogg", scene, { volume: AmbientSoundTypes.WINTER_FOREST.defaultVolume, playbackRate: 1, loop: true } );
@@ -368,5 +369,6 @@ export const BodySoundTypes = {
 
 export const MonsterSoundTypes = {
     SKELETON: 'SKELETON',
+    ZOMBIE: 'ZOMBIE',
     CAT: 'CAT',
 }

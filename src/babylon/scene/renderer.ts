@@ -245,7 +245,7 @@ export const Renderer = {
 
     brightnessChanged() {
         Materials.unFreezeAll()
-        this.scene.environmentIntensity = 0.2 + Settings.brightness * 0.02
+        this.scene.environmentIntensity = 0.25 + Settings.brightness * 0.025
 
         this.scene.markAllMaterialsAsDirty(Material.MiscDirtyFlag)
         if (!this.pendingMatFreeze) {

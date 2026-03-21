@@ -43,7 +43,13 @@ export const Lights = {
         }
     },
 
+    removeShadowCaster(mesh: Mesh | AbstractMesh) {
+        if (Settings.isShadowsEnabled()) {
+            Lights.shadow.removeShadowCaster(mesh)
+        }
+    },
+
     brightnessChanged() {
-        this.sunLight.intensity = 0.4 + Settings.brightness * 0.04
+        this.sunLight.intensity = 0.5 + Settings.brightness * 0.05
     }
 }

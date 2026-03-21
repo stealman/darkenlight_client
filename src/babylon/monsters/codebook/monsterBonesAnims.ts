@@ -38,7 +38,7 @@ export const MonsterBonesAnims = {
             { name: "Walk", startFrame: 76, endFrame: 225 },
             { name: "Attack", startFrame: 500, endFrame: 575 },
             { name: "AttackSlash", startFrame: 1000, endFrame: 1075 },
-            { name: "Dead", startFrame: 1300, endFrame: 1360 },
+            { name: "Dead", startFrame: 1400, endFrame: 1475 },
         ]
 
         const groups = animations.map(({ name, startFrame, endFrame }) => {
