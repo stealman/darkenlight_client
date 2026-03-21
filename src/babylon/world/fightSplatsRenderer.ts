@@ -137,7 +137,7 @@ class Splat {
 
 export const FightSplatTypes = {
     BLOOD: new SplatType(1, 0),
-    GREEN_BLOOD: new SplatType(2, 1),
+    GREEN_BLOOD: new SplatType(2, 3),
     FLESH: new SplatType(3, 2),
     ICHOR: new SplatType(4, 3),
     BONE: new SplatType(5, 1),

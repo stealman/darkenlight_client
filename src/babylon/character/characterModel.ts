@@ -88,7 +88,7 @@ export class CharacterModel implements EquipBearer {
             this.parent.nameDisplayTime = Date.now() + 3000
 
             // Apply material
-            const material = Materials.getPBRMaterial(Renderer.scene, "steveMaterial", "/models/steve/steve2.png", false, false,  {
+            const material = Materials.getPBRMaterial(Renderer.scene, "steveMaterial", "/models/steve/human_male2.png", false, false,  {
                 metallic: 0,
                 roughness: 1,
                 directIntensity: 1,

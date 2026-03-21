@@ -32,6 +32,25 @@ export const MonsterBonesAnims = {
         MonsterCodebook.initEquip(model)
     },
 
+    initZombie(model: MonsterModel) {
+        const animations = [
+            { name: "Idle", startFrame: 0, endFrame: 75 },
+            { name: "Walk", startFrame: 76, endFrame: 225 },
+            { name: "Attack", startFrame: 500, endFrame: 575 },
+            { name: "AttackSlash", startFrame: 1000, endFrame: 1075 },
+            { name: "Dead", startFrame: 1300, endFrame: 1360 },
+        ]
+
+        const groups = animations.map(({ name, startFrame, endFrame }) => {
+            return new MeshAnimation(model.animation.clone(name + Math.random(), undefined, true), startFrame, endFrame)
+        });
+
+        model.idleAnim = groups[0]
+        model.walkAnim = groups[1]
+        model.attackAnims = [groups[2], groups[3]]
+        model.deadAnim = groups[4]
+    },
+
     initCat(model: MonsterModel) {
         const animations = [
             { name: "Idle", startFrame: 0, endFrame: 75 },

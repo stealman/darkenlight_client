@@ -245,10 +245,6 @@ export class Monster implements Attackable {
         return this.mobType.parrySoundType
     }
 
-    getSplatType(): SplatType {
-        return this.mobType.splatType
-    }
-
     isWeaponRanged(): boolean {
         return this.mobType.aaType === MonsterAATypes.RANGED_ARROW
     }

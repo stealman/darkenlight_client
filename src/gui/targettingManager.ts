@@ -233,7 +233,6 @@ export interface Targetable {
     getModelHeight(): number
     getNameTextNodeScreenPosition(): { x: number, y: number } | null
     getObjectType(): string
-    getSplatType(): SplatType
     getRelationToMyPlayer(): 'ALLY' | 'ENEMY' | 'NEUTRAL'
     getDistanceFromMyPlayer(): number
 }

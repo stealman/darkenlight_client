@@ -96,5 +96,5 @@ export const MonsterTemplates = {
     CAT : new MonsterTemplate(4, "cat.gltf", "cat.png", 0.85),
     SKELETON: new MonsterTemplate(1,  "skeleton.gltf", "skeleton.png",  0.35),
     WITHER: new MonsterTemplate(2,  "skeleton.gltf", "wither.png",  0.35),
-    // ZOMBIE: new MonsterTemplate(3, "zombie.gltf", "zombie.png", 4, new Vector3(0.25, 0.25, 0.25))
+    ZOMBIE: new MonsterTemplate(3,  "human_male.gltf", "zombie.png",  0.25),
 }

@@ -445,10 +445,6 @@ class Character implements Attackable, EffectTarget {
         return this.parrySoundType
     }
 
-    getSplatType(): SplatType {
-        return FightSplatTypes.BLOOD
-    }
-
     getWeapon(): Item | null {
         return this.equipSet.get(EquipItemSlots.R_HAND) || null
     }

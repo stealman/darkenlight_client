@@ -58,5 +58,5 @@ export const ArmorModelsCb = {
 
     PAULDRON_MALE: new EquipCbItem(EquipSlotModelsCb.PAULDRONS_PLATE.modelId, "male-pauldron-plate", new Vector3(0.06, -0.15, 0), new Vector3(0.5, 0.5, 0.5), null, matMetalSize),
 
-    LEG_MALE: new EquipCbItem(EquipSlotModelsCb.LEGS_PLATE.modelId, "male-leg-plate", new Vector3(-0.01, -0.1, 0.015), new Vector3(0.25, 0.26, 0.20),null, matMetalSize),
+    LEG_MALE: new EquipCbItem(EquipSlotModelsCb.LEGS_PLATE.modelId, "male-leg-plate", new Vector3(-0.005, -0.1, 0.015), new Vector3(0.23, 0.24, 0.20),null, matMetalSize),
 }
