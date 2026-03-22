@@ -1,5 +1,5 @@
 import { MapBlock, WorldDataManager } from '@/data/worldDataManager'
-import { Color4, Matrix, Mesh, ParticleSystem, Scene } from '@babylonjs/core'
+import { Color4, Matrix, Mesh, ParticleSystem, Scene, Vector2 } from '@babylonjs/core'
 import { BabylonUtils } from '@/babylon/utils'
 import { Builder } from '@/babylon/builder'
 import { Materials, PlaneEnum1, TerrainEnum1 } from '@/babylon/materials'
@@ -7,6 +7,11 @@ import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { Settings } from '@/settings/settings'
 import { ViewportManager } from '@/utils/viewport'
 import { MyPlayer } from '@/data/myPlayer'
+
+export const DIRT_BLOCK_TYPE = 1
+export const WATER_BLOCK_TYPE = 50
+export const SEA_WATER_LEVEL = 4.75
+const WATER_BOTTOM_BLOCK = new MapBlock(0, DIRT_BLOCK_TYPE)
 
 export const TerrainManager = {
     terrainBlock1: null as Mesh | null,
@@ -38,11 +43,32 @@ export const TerrainManager = {
         this.waterPlane.isPickable = false
         this.waterPlane.alwaysSelectAsActiveMesh = true
 
-        for (let i = 1.25; i <= 4.75; i += 0.25) {
+        for (let i = 1.25; i <= SEA_WATER_LEVEL; i += 0.25) {
             this.waterPlane.createInstance('plane' + i).position.y = i
         }
 
         this.hoverBlockMarker = Builder.createHorizontalPlane(scene, null,1, 0)
+    },
+
+    addWaterTerrainLayer(
+        x: number,
+        z: number,
+        blockHeight: number,
+        planeHeightOffset: number,
+        block: MapBlock,
+        terrainMatrices1: Matrix[],
+        terrainUvData1: Vector2[],
+        planeMatrices: Matrix[],
+        planeUvData: Vector2[],
+    ) {
+        const bottomY = block.deepWater ? blockHeight - 1 : blockHeight - 0.5
+        terrainMatrices1.push(Matrix.Translation(x, bottomY, z))
+        terrainUvData1.push(TerrainEnum1.getTerrainForBlock(WATER_BOTTOM_BLOCK))
+
+        if (block.deepWater) {
+            planeMatrices.push(Matrix.Translation(x, blockHeight - 0.5 + planeHeightOffset, z))
+            planeUvData.push(PlaneEnum1.PLANE_WATER.uv)
+        }
     },
 
     renderTerrain() {
@@ -68,6 +94,20 @@ export const TerrainManager = {
 
                 if (block.type > 0) {
                     if (planeBlockMap[x][z]) {
+                        if (block.type === WATER_BLOCK_TYPE) {
+                            this.addWaterTerrainLayer(
+                                x,
+                                z,
+                                block.height,
+                                heightOffset,
+                                block,
+                                terrainMatrices1,
+                                terrainUvData1,
+                                planeMatrices,
+                                planeUvData
+                            )
+                        }
+
                         const matrix = Matrix.Translation( x, block.height + heightOffset, z);
                         planeMatrices.push(matrix)
                         planeUvData.push(PlaneEnum1.getPlaneForBlock(planeBlockMap[x][z]))
@@ -93,6 +133,7 @@ export const TerrainManager = {
 
                         const scaleMatrix = Matrix.Scaling(1, 1 + heightOffset, 1);
                         const matrix = scaleMatrix.multiply(Matrix.Translation( x, block.height + heightOffset * 0.5, z));
+
                         terrainMatrices1.push(matrix)
                         terrainUvData1.push(TerrainEnum1.getTerrainForBlock(block))
 
@@ -112,6 +153,10 @@ export const TerrainManager = {
         this.terrainBlock1!.thinInstanceSetBuffer("uvc", BabylonUtils.createUvBuffer(terrainUvData1), 2)
         this.terrainPlane!.thinInstanceSetBuffer("matrix", BabylonUtils.createPositionBuffer(planeMatrices), 16)
         this.terrainPlane!.thinInstanceSetBuffer("uvc", BabylonUtils.createUvBuffer(planeUvData), 2)
+
+        // Set enabled based on if there are instances to show
+        this.terrainBlock1!.setEnabled(terrainMatrices1.length > 0)
+        this.terrainPlane!.setEnabled(planeMatrices.length > 0)
     },
 
     setParticleSplashColorByTerrainType(ps: ParticleSystem, block: MapBlock) {
@@ -130,7 +175,7 @@ export const TerrainManager = {
             ps.color2 = new Color4(0.35, 0.25, 0.15, 1)
             ps.colorDead = new Color4(0.2, 0.2, 0.2, 0.3)
         } else {
-            // DEFAULT DIRT
+            // DEFAULT DIRT OR GRASS
             ps.color1 = new Color4(0.6, 0.5, 0.4, 1)
             ps.color2 = new Color4(0.5, 0.4, 0.3, 1)
             ps.colorDead = new Color4(0.3, 0.3, 0.3, 0.3)

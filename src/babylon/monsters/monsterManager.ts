@@ -9,6 +9,7 @@ import { MyPlayer } from '@/data/myPlayer'
 import { CharacterManager } from '@/babylon/character/characterManager'
 import { AttackableBasicTO, AutoAttackMessage, AutoAttackResultMessage } from '@/network/messageIfs'
 import { OverlayManager } from '@/gui/overlayManager'
+import { Utils } from '@/utils/utils'
 
 export const MonsterManager = {
     monsters: new Map as Map<number, Monster>,
@@ -27,6 +28,8 @@ export const MonsterManager = {
             const mob = this.monsters.get(id)
             mob!.pos.x = position.x
             mob!.pos.z = position.z
+            mob!.logicYpos = Utils.calculateWalkYPos(mob!.pos.x, mob!.pos.z, mob!.getBoxSize())
+            mob!.pos.y = mob!.logicYpos
             mob!.hpPercent = hpp
         } else {
             const monsterType: MonsterType = MonsterCodebook.getMonsterTypeById(type)
@@ -68,6 +71,7 @@ export const MonsterManager = {
             mob!.runSpeed = speed
             mob!.pos.x = position.x
             mob!.pos.z = position.z
+            mob!.logicYpos = Utils.calculateWalkYPos(mob!.pos.x, mob!.pos.z, mob!.getBoxSize())
             mob!.setTargetPoint(new Vector3(target.x, 0, target.z))
         }
     },
@@ -107,6 +111,8 @@ export const MonsterManager = {
             const mob = this.monsters.get(id)
             mob!.pos.x = position.x
             mob!.pos.z = position.z
+            mob!.logicYpos = Utils.calculateWalkYPos(mob!.pos.x, mob!.pos.z, mob!.getBoxSize())
+            mob!.pos.y = mob!.logicYpos
             mob!.resetTargetPoint()
         }
     },

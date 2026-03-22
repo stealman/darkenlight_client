@@ -134,10 +134,10 @@ export class WorldData {
                 if (data[3] === "S") {
                     mapBlock.snowed = true
                 }
-                mapBlock.presetHeightOffset()
                 mapBlock.setMinable(data[4])
             }
         }
+        this.computeBlockDataInArea(mapChunk.x - 1, mapChunk.z - 1, mapChunk.x + mapChunk.blockMap.length, mapChunk.z + mapChunk.blockMap[0].length)
         this.loadedChunkCoords.push(new Vector3(mapChunk.x, 0, mapChunk.z))
     }
 
@@ -161,11 +161,27 @@ export class WorldData {
             } else {
                 block.snowed = false
             }
-            block.presetHeightOffset()
             block.setMinable(data[4])
         }
 
+        for (const change of changes) {
+            this.computeBlockDataInArea(change.x - 1, change.z - 1, change.x + 1, change.z + 1)
+        }
+
         TerrainManager.renderTerrain()
+    }
+
+    computeBlockDataInArea(fromX: number, fromZ: number, toX: number, toZ: number) {
+        const startX = Math.max(0, fromX)
+        const startZ = Math.max(0, fromZ)
+        const endX = Math.min(this.worldSize - 1, toX)
+        const endZ = Math.min(this.worldSize - 1, toZ)
+
+        for (let x = startX; x <= endX; x++) {
+            for (let z = startZ; z <= endZ; z++) {
+                this.blockMap[x][z].computeData(x, z, this.blockMap, this.planeBlockMap)
+            }
+        }
     }
 
     hasChunkAt(x: number, z: number): boolean {
@@ -178,6 +194,9 @@ export class MapBlock {
     type: number
     heightOffset: number
     totalHeight: number
+    walkHeight: number
+    shallowWater: boolean = false
+    deepWater: boolean = false
     snowed: boolean = false
     minableCoal: boolean
     minableOre: number | null
@@ -188,16 +207,68 @@ export class MapBlock {
 
     }
 
-    presetHeightOffset() {
+    computeData(x: number, z: number, blockMap: MapBlock[][], planeBlockMap: (MapBlock | boolean)[][]) {
+        this.shallowWater = false
+        this.deepWater = false
+
+        const planeBlock = planeBlockMap[x][z]
+        if (this.type === 50 && planeBlock && planeBlock !== false) {
+            this.deepWater = this.isSurroundedByWater(x, z, blockMap, planeBlockMap)
+            this.shallowWater = !this.deepWater
+        }
+
         this.heightOffset = this.getRenderedHeightOffset()
         this.totalHeight = this.height + this.heightOffset
+        this.walkHeight = this.getWalkHeight()
+    }
+
+    isSurroundedByWater(x: number, z: number, blockMap: MapBlock[][], planeBlockMap: (MapBlock | boolean)[][]) {
+        for (let offsetX = -1; offsetX <= 1; offsetX++) {
+            for (let offsetZ = -1; offsetZ <= 1; offsetZ++) {
+                if (offsetX === 0 && offsetZ === 0) {
+                    continue
+                }
+
+                const neighborX = x + offsetX
+                const neighborZ = z + offsetZ
+                if (neighborX < 0 || neighborZ < 0 || neighborX >= blockMap.length || neighborZ >= blockMap[neighborX].length) {
+                    return false
+                }
+
+                const neighborBlock = blockMap[neighborX][neighborZ]
+                const neighborPlaneBlock = planeBlockMap[neighborX][neighborZ]
+                if (neighborBlock.type !== 50 || !neighborPlaneBlock || neighborPlaneBlock === false || neighborPlaneBlock.type !== 50) {
+                    return false
+                }
+            }
+        }
+
+        return true
     }
 
     getRenderedHeightOffset() {
-        if (this.type === 2 || this.snowed) {
+        if (this.snowed) {
             return  0.1
         }
+
+        // Grass blocks are rendered slightly higher
+        if (this.type == 2) {
+            return  0.1
+        }
+
+        // Water blocks are rendered slightly lower
+        if (this.type === 50) {
+            return -0.1
+        }
         return 0
+    }
+
+    getWalkHeight() {
+        if (this.shallowWater) {
+            return this.height - 0.5
+        }
+
+        return this.totalHeight
     }
 
     setMinable(minable: undefined | string | null) {

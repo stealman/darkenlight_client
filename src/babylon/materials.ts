@@ -30,6 +30,7 @@ export const Materials = {
     initialize(scene: Scene) {
         this.terrainMaterial = this.createTerrainMaterial1(scene)
         this.planeMaterial = this.createPlaneMaterial(scene)
+
         this.blockMat1 = this.createBlockMat1(scene)
         this.blockMatAlpha1 = this.createBlockMatAlpha1(scene)
         this.waterMaterial = this.createWaterMaterial(scene)
@@ -50,6 +51,13 @@ export const Materials = {
 
     createPlaneMaterial(scene: Scene): PBRCustomMaterial {
         const material = this.getPBRCustomMaterial(scene, "plane_mats", this.BASE_PATH, 'plane_materials1.png', 1 / 8, 1 / 8, false)
+        material.albedoTexture.hasAlpha = true
+        material.albedoTexture.getAlphaFromRGB = false
+        material.albedoTexture.updateSamplingMode(Texture.NEAREST_NEAREST)
+        material.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHABLEND
+        material.useAlphaFromAlbedoTexture = true
+        material.alpha = 1
+        material.forceAlphaTest = false
         return material
     },
 
@@ -281,6 +289,8 @@ export const PlaneEnum1 = {
     PLANE_GRASS: new MaterialEnum(2, new Vector2(0.5, 6.5)),
     PLANE_ROCK: new MaterialEnum(3, new Vector2(6.5, 6.5)),
     PLANE_MUDDY_DIRT: new MaterialEnum(4, new Vector2(0.5, 4.5)),
+
+    PLANE_WATER: new MaterialEnum(50, new Vector2(2.5, 4.5)),
 
     PLANE_SNOW_DIRT: new MaterialEnum(101, new Vector2(4.5, 6.5)),
     PLANE_SNOW_GRASS: new MaterialEnum(102, new Vector2(4.5, 6.5)),

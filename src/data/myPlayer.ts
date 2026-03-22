@@ -56,7 +56,7 @@ export const MyPlayer = {
         await this.myChar.createModel(true)
         this.myModel = this.myChar.model as CharacterModel
 
-        this.myChar.pos.y = Utils.calculateYPos(this.myChar.pos.x, this.myChar.pos.z, this.myChar.getBoxSize())
+        this.myChar.pos.y = Utils.calculateWalkYPos(this.myChar.pos.x, this.myChar.pos.z, this.myChar.getBoxSize())
         this.myChar.logicYpos = this.myChar.pos.y
         this.myCharRef.value = this.myChar
 

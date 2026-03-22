@@ -29,7 +29,7 @@ export const CharacterManager = {
             char!.pos.x = data.x
             char!.pos.z = data.z
             char!.hp = data.hp
-            char.pos.y = Utils.calculateYPos(char.pos.x, char.pos.z, char.getBoxSize())
+            char.pos.y = Utils.calculateWalkYPos(char.pos.x, char.pos.z, char.getBoxSize())
             char.logicYpos = char.pos.y
         } else {
             const newChar = new Character(data)
@@ -85,7 +85,7 @@ export const CharacterManager = {
             if (char) {
                 char.pos.x = data[1]
                 char.pos.z = data[2]
-                char.pos.y = Utils.calculateYPos(char.pos.x, char.pos.z, char.getBoxSize())
+                char.pos.y = Utils.calculateWalkYPos(char.pos.x, char.pos.z, char.getBoxSize())
                 char.logicYpos = char.pos.y
                 char.setMoveAngle(data[3])
                 char.setActualSpeed(data[4])

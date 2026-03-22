@@ -34,6 +34,20 @@ export const Utils = {
         return highest
     },
 
+    calculateWalkYPos(x: number, z: number, boxSize: number): number {
+        const map = WorldDataManager.getBlockMap()
+        const coveredBlocks = Utils.getCoveredBlocks(x, z, boxSize)
+
+        let highest = 0
+        coveredBlocks.forEach(block => {
+            if (map[block.x][block.z].walkHeight > highest) {
+                highest = map[block.x][block.z].walkHeight
+            }
+        })
+
+        return highest
+    },
+
     getCoveredBlocks(xPos: number, zPos: number, characterWidth: number, blockSize = 1) {
         const threshold = blockSize - (characterWidth / 2);
 
@@ -54,9 +68,15 @@ export const Utils = {
     isMovementCollision(charSize: number, charPos: Vector3, targetPos: Vector3): {x: number, z: number} | null {
 
         //  Check terrain height difference
-        const actualY = Utils.calculateYPos(charPos.x, charPos.z, charSize)
-        const targetY = Utils.calculateYPos(targetPos.x, targetPos.z, charSize)
+        const actualY = Utils.calculateWalkYPos(charPos.x, charPos.z, charSize)
+        const targetY = Utils.calculateWalkYPos(targetPos.x, targetPos.z, charSize)
         if (Math.abs(targetY - actualY) >= 1.8) {
+            return {x: targetPos.x, z: targetPos.z}
+        }
+
+        // Shallow water is walkable, only deep water blocks movement
+        const coveredTargetBlocks = WorldDataManager.getCoveredBlocks(targetPos, charSize)
+        if (coveredTargetBlocks.some(block => block.deepWater)) {
             return {x: targetPos.x, z: targetPos.z}
         }
 

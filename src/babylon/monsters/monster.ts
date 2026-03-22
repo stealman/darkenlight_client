@@ -48,7 +48,7 @@ export class Monster implements Attackable {
         this.mobType = mobType
         this.hpPercent = hpp
         this.pos = new Vector3(xPos, 0, zPos)
-        this.logicYpos = Utils.calculateYPos(this.pos.x, this.pos.z, 0.4)
+        this.logicYpos = Utils.calculateWalkYPos(this.pos.x, this.pos.z, 0.4)
         this.pos.y = this.logicYpos
     }
 
@@ -148,7 +148,7 @@ export class Monster implements Attackable {
             if (this.model.initialized) this.model.doIdle()
         }
 
-        this.logicYpos = Utils.calculateYPos(this.pos.x, this.pos.z, 0.4)
+        this.logicYpos = Utils.calculateWalkYPos(this.pos.x, this.pos.z, 0.4)
     }
 
     resolveStepMark(time: number, inCombat: boolean = false) {

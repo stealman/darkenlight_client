@@ -88,7 +88,8 @@ const terrains = [
     { id: 2, x: 0.5, y: 0.5 },
     { id: 1,  x: 2.5, y: 0.5 },
     { id: 3, x: 6.5, y: 0.5 },
-    { id: 4, x: 0.5, y: 2.5 }
+    { id: 4, x: 0.5, y: 2.5 },
+    { id: 50, x: 2.5, y: 2.5 }
 ]
 const snow = { id: 100, x: 4.5, y: 0.5 }
 const unsnow = { id: 101, x: 4.5, y: 0.5 }

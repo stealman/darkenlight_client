@@ -7,15 +7,14 @@ import { ViewportManager } from '@/utils/viewport'
 import { MyPlayer } from '@/data/myPlayer'
 
 export const FoliageManager = {
-    AVG_TILES_PER_FOLIAGE: 15,
     FOLIAGE_TYPE_COUNT: 1,
     ATLAS_COLUMNS: 8,
     ATLAS_ROWS: 8,
     GENERATE_ON_TERRAINS: [
-        { terrain: TerrainEnum1.TERRAIN_GRASS, rowIndex: 0 },
-        { terrain: TerrainEnum1.TERRAIN_MUDDY_DIRT, rowIndex: 1 },
-        { terrain: TerrainEnum1.TERRAIN_SNOW_GRASS, rowIndex: 2 },
-        { terrain: TerrainEnum1.TERRAIN_SNOW_MUDDY_DIRT, rowIndex: 2 },
+        { terrain: TerrainEnum1.TERRAIN_GRASS, rowIndex: 0, avgTilesPerFoliage: 4 },
+        { terrain: TerrainEnum1.TERRAIN_MUDDY_DIRT, rowIndex: 1, avgTilesPerFoliage: 10 },
+        { terrain: TerrainEnum1.TERRAIN_SNOW_GRASS, rowIndex: 2, avgTilesPerFoliage: 12 },
+        { terrain: TerrainEnum1.TERRAIN_SNOW_MUDDY_DIRT, rowIndex: 2, avgTilesPerFoliage: 12 },
     ],
     foliageMesh: null as Mesh | null,
     foliageMaterial: null as PBRCustomMaterial | null,
@@ -72,7 +71,7 @@ export const FoliageManager = {
 
                 const block = blockMap[x][z]
                 const terrainConfig = this.getTerrainConfig(block)
-                if (block.type <= 0 || !terrainConfig || !this.shouldSpawnAt(x, z)) {
+                if (block.type <= 0 || !terrainConfig || !this.shouldSpawnAt(x, z, terrainConfig.avgTilesPerFoliage!)) {
                     continue
                 }
 
@@ -98,11 +97,11 @@ export const FoliageManager = {
         }
     },
 
-    shouldSpawnAt(x: number, z: number): boolean {
-        return this.hashTile(x, z, 0) % this.AVG_TILES_PER_FOLIAGE === 0
+    shouldSpawnAt(x: number, z: number, avgTilesPerFoliage: number): boolean {
+        return this.hashTile(x, z, 0) % Math.max(1, avgTilesPerFoliage) === 0
     },
 
-    getTerrainConfig(block: MapBlock): { terrain: { index: number }, rowIndex: number } | null {
+    getTerrainConfig(block: MapBlock): { terrain: { index: number }, rowIndex: number, avgTilesPerFoliage?: number } | null {
         const terrainIndex = this.getTerrainIndex(block)
         return this.GENERATE_ON_TERRAINS.find(config => config.terrain.index === terrainIndex) ?? null
     },
@@ -125,7 +124,7 @@ export const FoliageManager = {
     getAtlasOffset(x: number, z: number, rowIndex: number): Vector2 {
         const columnIndex = this.hashTile(x, z, 2) % this.ATLAS_COLUMNS
         const atlasRowIndex = (this.ATLAS_ROWS - 1) - rowIndex
-        return new Vector2(0, atlasRowIndex)
+        return new Vector2(columnIndex, atlasRowIndex)
     },
 
     getRotation(x: number, z: number, foliageType: number): number {

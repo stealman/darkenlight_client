@@ -7,7 +7,7 @@ import { Settings } from '@/settings/settings'
 export class MonsterTemplate {
     static readonly MODEL_EXTENSION = '.gltf'
     static readonly TEXTURE_EXTENSION = '.png'
-    static readonly MAX_REUSABLE_CLONES = 1
+    static readonly MAX_REUSABLE_CLONES = 3
 
     id: number
     meshName: string

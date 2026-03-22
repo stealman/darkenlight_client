@@ -101,7 +101,7 @@ class Character implements Attackable, EffectTarget {
         this.name = data.name
         this.className = data.cls
 
-        this.pos.y = Utils.calculateYPos(this.pos.x, this.pos.z, this.getBoxSize())
+        this.pos.y = Utils.calculateWalkYPos(this.pos.x, this.pos.z, this.getBoxSize())
         this.logicYpos = this.pos.y
 
         this.initializeEquip(data.equipSet)
@@ -183,7 +183,7 @@ class Character implements Attackable, EffectTarget {
             } else {
                 this.pos.x = tgtPos.x
                 this.pos.z = tgtPos.z
-                this.logicYpos = Utils.calculateYPos(this.pos.x, this.pos.z, this.getBoxSize())
+                this.logicYpos = Utils.calculateWalkYPos(this.pos.x, this.pos.z, this.getBoxSize())
             }
 
             if (this.movementType === 'RUN') { this.model?.startRunAnimation() }

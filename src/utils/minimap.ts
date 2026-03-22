@@ -65,6 +65,8 @@ export const MiniMap = {
                             offScreenContext.fillStyle = this.grassColorMap[height]
                         } else if (type === 3) {
                             offScreenContext.fillStyle = rockColor
+                        } else if (type === 50) {
+                            offScreenContext.fillStyle = waterColor
                         }
                     }
                 }
