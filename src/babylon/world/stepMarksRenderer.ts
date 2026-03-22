@@ -4,6 +4,7 @@ import { Materials } from '@/babylon/materials'
 import { Targetable } from '@/gui/targettingManager'
 import { Settings } from '@/settings/settings'
 import { MyPlayer } from '@/data/myPlayer'
+import { WorldDataManager } from '@/data/worldDataManager'
 
 export const StepMarksRenderer = {
     myStepMarks: new Array<StepMark>(),
@@ -20,6 +21,11 @@ export const StepMarksRenderer = {
     },
 
     addStepMark(side: string, object: Targetable, yPos: number, rot: number, time: number, inCombat: boolean = false) {
+        const block = WorldDataManager.getBlockOnPosition(object.pos)
+        if (!block || block.shallowWater || block.deepWater) {
+            return
+        }
+
         let tgtArray = null
         let ttl = 300000
         if (object === MyPlayer.myChar) {

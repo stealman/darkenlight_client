@@ -99,7 +99,7 @@ export const GroundItemsManager = {
     addItems(data: GroundItemTO[]) {
         for (const gitem of data) {
 
-            const y = Utils.calculateYPos(gitem.pos.x, gitem.pos.z, this.ITEM_BOX_SIZE) + this.ITEM_Y_OFFSET
+            const y = Utils.calculateWalkYPos(gitem.pos.x, gitem.pos.z, this.ITEM_BOX_SIZE) + this.ITEM_Y_OFFSET
             const item = new GroundItem(Item.fromData(gitem.item), new Vector3(gitem.pos.x, y, gitem.pos.z))
             this.items.push(item)
         }

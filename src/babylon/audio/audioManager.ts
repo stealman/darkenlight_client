@@ -63,6 +63,15 @@ export const AudioManager = {
             loop: true,
         }))
 
+        this.footStepSounds.set(FootStepTypes.WATER, new Sound("footStepWater", AudioManager.BASE_PATH_SFX + "steps-water.ogg", scene, function() {
+            AudioManager.footStepSounds.get(FootStepTypes.WATER)!['loaded'] = true;
+            AudioManager.footStepSounds.get(FootStepTypes.WATER)!['defaultVolume'] = 0.3;
+        }, {
+            volume: 0.3,
+            playbackRate: 1,
+            loop: true,
+        }))
+
         // Battle sounds
         this.loadSoundArray(this.swordSwingSounds, ["swing1.ogg", "swing2.ogg", "swing3.ogg"], "swordSwingSound", scene, { volume: 1, playbackRate: 1 } );
         this.loadSoundArray(this.swordHitMetalSounds, ["hit-sword-metal1.ogg"], "swordHitMetalSound", scene, { volume: 0.5, playbackRate: 1 } );
@@ -343,6 +352,7 @@ export const AudioManager = {
 export const FootStepTypes = {
     SNOW: 'SNOW',
     DIRT: 'DIRT',
+    WATER: 'WATER',
 }
 
 export const AmbientSoundTypes = {
@@ -354,6 +364,8 @@ export const FootStepSpeeds = {
     SNOW_RUN: 1.12,
     DIRT_WALK: 0.7,
     DIRT_RUN: 0.78,
+    WATER_WALK: 0.75,
+    WATER_RUN: 0.85,
 }
 
 export const WeaponSoundTypes = {

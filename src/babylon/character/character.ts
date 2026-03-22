@@ -33,6 +33,7 @@ import { OverlayManager } from '@/gui/overlayManager'
 import { EffectTarget } from '@/babylon/gfx/characterEffect'
 import { GfxManager } from '@/babylon/gfx/gfxManager'
 import { PotionConsumeEffect } from '@/babylon/gfx/potionConsumeEffect'
+import { WATER_BLOCK_TYPE } from '@/babylon/world/terrainManager'
 
 class Character implements Attackable, EffectTarget {
     model: CharacterModel | null = null
@@ -469,6 +470,8 @@ class Character implements Attackable, EffectTarget {
         const block = WorldDataManager.getBlockOnPosition(this.pos)!
         if (block.snowed) {
             return FootStepTypes.SNOW
+        } else if (block.type === WATER_BLOCK_TYPE) {
+            return FootStepTypes.WATER
         } else {
             return FootStepTypes.DIRT
         }

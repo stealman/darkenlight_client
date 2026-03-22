@@ -456,6 +456,10 @@ export class CharacterModel implements EquipBearer {
                 speed = this.parent.movementType === 'RUN' ? FootStepSpeeds.SNOW_RUN : FootStepSpeeds.SNOW_WALK
                 volume = AudioManager.footStepSounds.get(FootStepTypes.SNOW).defaultVolume
                 break
+            case 'WATER':
+                speed = this.parent.movementType === 'RUN' ? FootStepSpeeds.WATER_RUN : FootStepSpeeds.WATER_WALK
+                volume = AudioManager.footStepSounds.get(FootStepTypes.WATER).defaultVolume
+                break
             default:
                 speed = this.parent.movementType === 'RUN' ? FootStepSpeeds.DIRT_RUN : FootStepSpeeds.DIRT_WALK
                 volume = AudioManager.footStepSounds.get(FootStepTypes.DIRT).defaultVolume
