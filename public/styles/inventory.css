@@ -126,21 +126,23 @@
 
 .inventory-grid-wrapper {
     width: 100%;
-    height: 100%;
+    height: auto;
+    max-height: 100%;
+    aspect-ratio: 6 / 4;
     overflow-y: auto;
     overflow-x: hidden;
 }
 
 .inventory-grid {
     width: 100%;
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     align-content: flex-start;
     gap: 1.75%;
 }
 
 .inventory-item-slot {
-    width: calc(var(--slot-size-factor) * 33.3333%);
+    width: 100%;
     aspect-ratio: 1 / 1;
     border: 1px solid rgba(176, 143, 86, 0.9);
     background: rgba(15, 11, 8, 0.45);
@@ -153,6 +155,7 @@
     -webkit-user-select: none;
     -webkit-touch-callout: none;
     cursor: url('/images/cursor-pointer.png'), pointer;
+    margin-bottom: 0;
 }
 
 .inventory-item-image {

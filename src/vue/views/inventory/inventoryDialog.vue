@@ -16,7 +16,7 @@
                         />
 
                         <Backpack
-                            :slot-count="INVENTORY_SLOT_COUNT"
+                            :slot-count="inventorySlotCount"
                             :slot-images="inventorySlotImages"
                             :get-markers="getWeaponSetupMarkersForInventorySlot"
                             @slot-pointerdown="handleInventorySlotPointerDown"
@@ -46,7 +46,7 @@
 
 <script setup lang="ts">
 
-import { nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { MyPlayer } from '@/data/myPlayer'
 import EquipSet from '@/vue/views/inventory/equipSet.vue'
 import Backpack from '@/vue/views/inventory/backpack.vue'
@@ -74,7 +74,7 @@ type EquipSlotView = {
 }
 
 const emit = defineEmits(['close'])
-const INVENTORY_SLOT_COUNT = 24
+const MIN_INVENTORY_SLOT_COUNT = 24
 const equipSlotImages = ref({
     HEAD: null,
     NECKLACE: null,
@@ -86,7 +86,8 @@ const equipSlotImages = ref({
     R_RING: null,
     LEGS: null,
 })
-const inventorySlotImages = ref(Array(INVENTORY_SLOT_COUNT).fill(null))
+const inventorySlotImages = ref(Array(MIN_INVENTORY_SLOT_COUNT).fill(null))
+const inventorySlotCount = computed(() => Math.max(MIN_INVENTORY_SLOT_COUNT, inventorySlotImages.value.length, InventoryManager.inventory.length))
 
 const EMPTY_ITEM_IMAGE = '/images/icons/buttons/btn_backpack.png'
 const DOUBLE_CLICK_MS = 250
@@ -259,8 +260,8 @@ const refreshEquipSlotImages = () => {
 const refreshInventorySlotImages = () => {
     InventoryManager.sortInventory()
 
-    const nextSlotImages = Array(INVENTORY_SLOT_COUNT).fill(null)
-    for (let i = 0; i < INVENTORY_SLOT_COUNT; i++) {
+    const nextSlotImages = Array(Math.max(MIN_INVENTORY_SLOT_COUNT, InventoryManager.inventory.length)).fill(null)
+    for (let i = 0; i < nextSlotImages.length; i++) {
         const item = InventoryManager.inventory[i]
         if (item) {
             nextSlotImages[i] = resolveItemImage(item)

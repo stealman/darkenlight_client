@@ -7,7 +7,7 @@ import { Settings } from '@/settings/settings'
 export class MonsterTemplate {
     static readonly MODEL_EXTENSION = '.gltf'
     static readonly TEXTURE_EXTENSION = '.png'
-    static readonly MAX_REUSABLE_CLONES = 3
+    static readonly MAX_REUSABLE_CLONES = 1
 
     id: number
     meshName: string
@@ -117,7 +117,7 @@ export class MonsterTemplate {
             disposableClone.animation.stop()
             disposableClone.animation.dispose()
             disposableClone.skeleton.dispose()
-            disposableClone.node.dispose(false, true)
+            disposableClone.node.dispose(false, false)
         }
     }
 
