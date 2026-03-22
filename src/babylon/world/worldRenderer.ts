@@ -11,6 +11,7 @@ import { BabylonUtils } from '@/babylon/utils'
 import { TerrainManager } from '@/babylon/world/terrainManager'
 import { PBRCustomMaterial } from '@babylonjs/materials'
 import { StaticsManager } from '@/babylon/world/staticsManager'
+import { FoliageManager } from '@/babylon/world/foliageManager'
 import { GMSpawns } from '@/gm/GmSpawns'
 import { GMManager, GmTabs } from '@/gm/GM'
 import { Lights } from '@/babylon/scene/lights'
@@ -41,6 +42,7 @@ export const WorldRenderer = {
         TerrainManager.initialize(scene)
         TreeManager.initialize(scene)
         StaticsManager.initialize(scene)
+        FoliageManager.initialize(scene, this.worldParentNode)
 
         Lights.addShadowCaster(TerrainManager.terrainBlock1!)
         Lights.addShadowCaster(TerrainManager.terrainPlane!)
@@ -77,6 +79,9 @@ export const WorldRenderer = {
 
         // Render statics
         StaticsManager.renderObjects()
+
+        // Render decorative foliage
+        FoliageManager.renderFoliage()
 
         if (GMManager.gmPanelVisible && GMManager.tab === GmTabs.SPAWNS_EDIT) {
             GMSpawns.renderSpawnMarkers()
