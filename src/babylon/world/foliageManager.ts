@@ -7,7 +7,7 @@ import { ViewportManager } from '@/utils/viewport'
 import { MyPlayer } from '@/data/myPlayer'
 
 export const FoliageManager = {
-    AVG_TILES_PER_FOLIAGE: 20,
+    AVG_TILES_PER_FOLIAGE: 15,
     FOLIAGE_TYPE_COUNT: 1,
     ATLAS_COLUMNS: 8,
     ATLAS_ROWS: 8,
@@ -44,7 +44,7 @@ export const FoliageManager = {
         this.foliageMaterial.metallic = 0
         this.foliageMaterial.roughness = 1
         this.foliageMaterial.directIntensity = 0.5
-        this.foliageMaterial.environmentIntensity = 2
+        this.foliageMaterial.environmentIntensity = 1.5
         this.foliageMaterial.usePhysicalLightFalloff = false
         this.foliageMaterial.AddAttribute('uvc')
         this.foliageMaterial.Vertex_Definitions('attribute vec2 uvc;')
@@ -81,7 +81,7 @@ export const FoliageManager = {
                 const offset = this.getOffset(x, z, foliageType)
                 const rotation = this.getRotation(x, z, foliageType)
                 const baseHeight = block.totalHeight - (block.snowed ? 0.1 : 0)
-                const position = Matrix.Translation(x + offset.x, baseHeight + scale.y * 0.5, z + offset.z)
+                const position = Matrix.Translation(x + offset.x, baseHeight, z + offset.z)
                 const rotationMatrix = Matrix.RotationY(rotation)
                 const scaleMatrix = Matrix.Scaling(scale.x, scale.y, scale.z)
 
@@ -133,8 +133,8 @@ export const FoliageManager = {
     },
 
     getScale(x: number, z: number, foliageType: number): Vector3 {
-        const scaleX = 0.3 + (this.hashTile(x, z, 200 + foliageType) % 20) / 100
-        const scaleY = 0.3 + (this.hashTile(x, z, 300 + foliageType) % 20) / 100
+        const scaleX = 0.5 + (this.hashTile(x, z, 200 + foliageType) % 20) / 100
+        const scaleY = 0.5 + (this.hashTile(x, z, 300 + foliageType) % 20) / 100
         return new Vector3(scaleX, scaleY, scaleX)
     },
 
@@ -153,14 +153,15 @@ export const FoliageManager = {
     },
 
     createFoliageMesh(scene: Scene, parent: TransformNode | null): Mesh {
-        const planeA = MeshBuilder.CreatePlane('foliagePlaneA', { width: 1, height: 1 }, scene)
-        planeA.position.y = 0.5
+        const planes: Mesh[] = []
+        for (let i = 0; i < 3; i++) {
+            const plane = MeshBuilder.CreatePlane(`foliagePlane${i}`, { width: 1, height: 1 }, scene)
+            plane.position.y = 0.5
+            plane.rotation.y = i * (Math.PI / 3)
+            planes.push(plane)
+        }
 
-        const planeB = MeshBuilder.CreatePlane('foliagePlaneB', { width: 1, height: 1 }, scene)
-        planeB.position.y = 0.5
-        planeB.rotation.y = Math.PI / 2
-
-        const mesh = Mesh.MergeMeshes([planeA, planeB], true) as Mesh
+        const mesh = Mesh.MergeMeshes(planes, true) as Mesh
         mesh.parent = parent
         mesh.alwaysSelectAsActiveMesh = true
         mesh.doNotSyncBoundingInfo = true
