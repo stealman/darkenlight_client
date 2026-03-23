@@ -233,4 +233,25 @@ export const CharacterManager = {
     isCharInViewport(char: Character) {
         return ViewportManager.isPointInVisibleMatrix(Math.floor(char.pos.x), Math.floor(char.pos.z), 1)
     },
+
+    isPointInCharacter(x: number, z: number, size: number, ignoredId?: number): Character | null {
+        const halfSize = size / 2
+        const myCharId = MyPlayer.myChar?.id
+
+        if (myCharId !== ignoredId && Math.abs(MyPlayer.myChar.pos.x - x) < size && Math.abs(MyPlayer.myChar.pos.z - z) < halfSize + MyPlayer.myChar.getBoxSize() / 2) {
+            return MyPlayer.myChar
+        }
+
+        for (const character of this.characters.values()) {
+            if (character.id === ignoredId) {
+                continue
+            }
+
+            if (Math.abs(character.pos.x - x) < size && Math.abs(character.pos.z - z) < halfSize + character.getBoxSize() / 2) {
+                return character
+            }
+        }
+
+        return null
+    },
 }

@@ -10,6 +10,12 @@
                 >
                     <template v-if="slotImages[slotIndex - 1]">
                         <img :src="slotImages[slotIndex - 1]" alt="Inventory item" class="inventory-item-image" />
+                        <span
+                            v-if="getStackCount(slotIndex - 1) !== null"
+                            class="stack-count-label"
+                        >
+                            {{ getStackCount(slotIndex - 1) }}
+                        </span>
                         <img
                             v-for="marker in getMarkers(slotIndex - 1)"
                             :key="`inventory-${slotIndex - 1}-${marker}`"
@@ -31,6 +37,7 @@ defineProps<{
     slotCount: number
     slotImages: Array<string | null>
     getMarkers: (index: number) => WeaponMarker[]
+    getStackCount: (index: number) => number | null
 }>()
 
 const emit = defineEmits(['slot-pointerdown'])
@@ -61,5 +68,22 @@ const getWeaponSetupMarkerImage = (setupType: WeaponMarker) => {
 .weapon-setup-marker-secondary {
     left: 3px;
     transform: translateX(-3px);
+}
+
+.stack-count-label {
+    position: absolute;
+    top: 2px;
+    left: 4px;
+    font-size: 10px;
+    line-height: 1;
+    font-weight: 700;
+    color: #f4ead2;
+    text-shadow:
+        -1px 0 0 #000,
+        1px 0 0 #000,
+        0 -1px 0 #000,
+        0 1px 0 #000;
+    pointer-events: none;
+    z-index: 2;
 }
 </style>

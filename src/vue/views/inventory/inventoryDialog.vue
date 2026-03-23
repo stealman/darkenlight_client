@@ -19,6 +19,7 @@
                             :slot-count="inventorySlotCount"
                             :slot-images="inventorySlotImages"
                             :get-markers="getWeaponSetupMarkersForInventorySlot"
+                            :get-stack-count="getStackCountForInventorySlot"
                             @slot-pointerdown="handleInventorySlotPointerDown"
                         />
                     </div>
@@ -379,6 +380,20 @@ const getWeaponSetupMarkersForEquipSlot = (slot) => {
 const getWeaponSetupMarkersForInventorySlot = (index) => {
     const item = InventoryManager.inventory[index]
     return getWeaponSetupMarkersForItem(item?.id)
+}
+
+const getStackCountForInventorySlot = (index) => {
+    const item = InventoryManager.inventory[index]
+    if (!item?.isStackable?.()) {
+        return null
+    }
+
+    const quantity = Number(item.atts?.qty)
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+        return null
+    }
+
+    return quantity
 }
 
 const buildEquipSlots = (): EquipSlotView[] => ([

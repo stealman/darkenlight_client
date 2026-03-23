@@ -11,7 +11,7 @@ export const FoliageManager = {
     ATLAS_COLUMNS: 8,
     ATLAS_ROWS: 8,
     GENERATE_ON_TERRAINS: [
-        { terrain: TerrainEnum1.TERRAIN_GRASS, rowIndex: 0, avgTilesPerFoliage: 4 },
+        { terrain: TerrainEnum1.TERRAIN_GRASS, rowIndex: 0, avgTilesPerFoliage: 2 },
         { terrain: TerrainEnum1.TERRAIN_MUDDY_DIRT, rowIndex: 1, avgTilesPerFoliage: 10 },
         { terrain: TerrainEnum1.TERRAIN_SNOW_GRASS, rowIndex: 2, avgTilesPerFoliage: 12 },
         { terrain: TerrainEnum1.TERRAIN_SNOW_MUDDY_DIRT, rowIndex: 2, avgTilesPerFoliage: 12 },
@@ -79,7 +79,7 @@ export const FoliageManager = {
                 const scale = this.getScale(x, z, foliageType)
                 const offset = this.getOffset(x, z, foliageType)
                 const rotation = this.getRotation(x, z, foliageType)
-                const baseHeight = block.totalHeight - (block.snowed ? 0.1 : 0)
+                const baseHeight = block.totalHeight - (block.snowed ? 0 : 0)
                 const position = Matrix.Translation(x + offset.x, baseHeight, z + offset.z)
                 const rotationMatrix = Matrix.RotationY(rotation)
                 const scaleMatrix = Matrix.Scaling(scale.x, scale.y, scale.z)

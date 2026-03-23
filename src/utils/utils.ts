@@ -106,6 +106,17 @@ export const Utils = {
                 return {x: monsterInWay.pos.x, z: monsterInWay.pos.z}
             }
         }
+
+        const characterInWay = CharacterManager.isPointInCharacter(targetPos.x, targetPos.z, charSize, MyPlayer.myChar?.id)
+        if (characterInWay) {
+            // Check if targetPos is further away from character than charPos
+            const tgtDist = Vector3.Distance(new Vector3(characterInWay.pos.x, 0, characterInWay.pos.z), new Vector3(targetPos.x, 0, targetPos.z))
+            const origDist = Vector3.Distance(new Vector3(characterInWay.pos.x, 0, characterInWay.pos.z), new Vector3(charPos.x, 0, charPos.z))
+
+            if (tgtDist < origDist) {
+                return {x: characterInWay.pos.x, z: characterInWay.pos.z}
+            }
+        }
         return null
     },
 

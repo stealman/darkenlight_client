@@ -43,7 +43,7 @@ export const TerrainManager = {
         this.waterPlane.isPickable = false
         this.waterPlane.alwaysSelectAsActiveMesh = true
 
-        for (let i = 1.25; i <= SEA_WATER_LEVEL; i += 0.25) {
+        for (let i = 1.25; i <= 4.75; i += 0.25) {
             this.waterPlane.createInstance('plane' + i).position.y = i
         }
 
@@ -51,16 +51,7 @@ export const TerrainManager = {
     },
 
     addWaterTerrainLayer(
-        x: number,
-        z: number,
-        blockHeight: number,
-        planeHeightOffset: number,
-        block: MapBlock,
-        terrainMatrices1: Matrix[],
-        terrainUvData1: Vector2[],
-        planeMatrices: Matrix[],
-        planeUvData: Vector2[],
-    ) {
+        x: number, z: number, blockHeight: number, planeHeightOffset: number, block: MapBlock, terrainMatrices1: Matrix[], terrainUvData1: Vector2[], planeMatrices: Matrix[], planeUvData: Vector2[]) {
         const bottomY = block.deepWater ? blockHeight - 1 : blockHeight - 0.5
         terrainMatrices1.push(Matrix.Translation(x, bottomY, z))
         terrainUvData1.push(TerrainEnum1.getTerrainForBlock(WATER_BOTTOM_BLOCK))
@@ -95,17 +86,7 @@ export const TerrainManager = {
                 if (block.type > 0) {
                     if (planeBlockMap[x][z]) {
                         if (block.type === WATER_BLOCK_TYPE) {
-                            this.addWaterTerrainLayer(
-                                x,
-                                z,
-                                block.height,
-                                heightOffset,
-                                block,
-                                terrainMatrices1,
-                                terrainUvData1,
-                                planeMatrices,
-                                planeUvData
-                            )
+                            this.addWaterTerrainLayer(x, z, block.height, heightOffset, block, terrainMatrices1, terrainUvData1, planeMatrices, planeUvData)
                         }
 
                         const matrix = Matrix.Translation( x, block.height + heightOffset, z);
@@ -174,6 +155,11 @@ export const TerrainManager = {
             ps.color1 = new Color4(0.45, 0.35, 0.25, 1)
             ps.color2 = new Color4(0.35, 0.25, 0.15, 1)
             ps.colorDead = new Color4(0.2, 0.2, 0.2, 0.3)
+        } else if (block.type === 50) {
+            // WATER
+            ps.color1 = new Color4(0.2, 0.7, 1, 1)
+            ps.color2 = new Color4(0.1, 0.6, 0.8, 1)
+            ps.colorDead = new Color4(0.1, 0.2, 0.4, 0.3)
         } else {
             // DEFAULT DIRT OR GRASS
             ps.color1 = new Color4(0.6, 0.5, 0.4, 1)
