@@ -179,7 +179,7 @@ export class WorldData {
 
         for (let x = startX; x <= endX; x++) {
             for (let z = startZ; z <= endZ; z++) {
-                this.blockMap[x][z].computeData(x, z, this.blockMap, this.planeBlockMap)
+                this.blockMap[x][z].computeData()
             }
         }
     }
@@ -204,46 +204,19 @@ export class MapBlock {
     constructor(height: number, type: number) {
         this.height = height
         this.type = type
-
+        if (type === 50) {
+            this.shallowWater = true
+        }
+        if (type === 51) {
+            this.type = 50
+            this.deepWater = true
+        }
     }
 
-    computeData(x: number, z: number, blockMap: MapBlock[][], planeBlockMap: (MapBlock | boolean)[][]) {
-        this.shallowWater = false
-        this.deepWater = false
-
-        const planeBlock = planeBlockMap[x][z]
-        if (this.type === 50 && planeBlock && planeBlock !== false) {
-            this.deepWater = this.isSurroundedByWater(x, z, blockMap, planeBlockMap)
-            this.shallowWater = !this.deepWater
-        }
-
+    computeData() {
         this.heightOffset = this.getRenderedHeightOffset()
         this.totalHeight = this.height + this.heightOffset
         this.walkHeight = this.getWalkHeight()
-    }
-
-    isSurroundedByWater(x: number, z: number, blockMap: MapBlock[][], planeBlockMap: (MapBlock | boolean)[][]) {
-        for (let offsetX = -1; offsetX <= 1; offsetX++) {
-            for (let offsetZ = -1; offsetZ <= 1; offsetZ++) {
-                if (offsetX === 0 && offsetZ === 0) {
-                    continue
-                }
-
-                const neighborX = x + offsetX
-                const neighborZ = z + offsetZ
-                if (neighborX < 0 || neighborZ < 0 || neighborX >= blockMap.length || neighborZ >= blockMap[neighborX].length) {
-                    return false
-                }
-
-                const neighborBlock = blockMap[neighborX][neighborZ]
-                const neighborPlaneBlock = planeBlockMap[neighborX][neighborZ]
-                if (neighborBlock.type !== 50 || !neighborPlaneBlock || neighborPlaneBlock === false || neighborPlaneBlock.type !== 50) {
-                    return false
-                }
-            }
-        }
-
-        return true
     }
 
     getRenderedHeightOffset() {
@@ -264,7 +237,7 @@ export class MapBlock {
     }
 
     getWalkHeight() {
-        if (this.shallowWater) {
+        if (this.shallowWater || this.deepWater) {
             return this.height - 0.5
         }
 
