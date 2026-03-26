@@ -3,11 +3,14 @@ import { Prefab, WorldRenderer } from '@/babylon/world/worldRenderer'
 import { MaterialAlphaEnum1, MaterialEnum1 } from '@/babylon/materials'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { ViewportManager } from '@/utils/viewport'
-import { StaticObjectInfo, StaticObjectsCodebook } from '@/babylon/world/staticsCodebook'
+import { StaticObjectInfo, StaticObjectsCodebook } from '@/babylon/world/statics/staticsCodebook'
 import { PrefabShrub2x2 } from '@/babylon/world/prefabs/shrub2x2'
 import { PrefabShrub1x1_tall } from '@/babylon/world/prefabs/shrub1x1-tall'
 import { PrefabShrub1x1_small } from '@/babylon/world/prefabs/shrub1x1-small'
 import { Lights } from '@/babylon/scene/lights'
+
+const FULL_CIRCLE = Math.PI * 2
+const FIREPLACE_STONE_COUNT = 8
 
 export const StaticsManager = {
     prefabs: {
@@ -62,6 +65,9 @@ export const StaticsManager = {
 
             case 221: this.allStatics.push(new Wall3(obj.tp, pos, rotation, MaterialEnum1.BRICK_GRAY.uv)); break
             case 222: this.allStatics.push(new Wall3(obj.tp, pos, rotation, MaterialEnum1.BRICK_RED.uv)); break
+
+            case 241: this.allStatics.push(new FireplaceSmall(obj.tp, pos, rotation, MaterialEnum1.BRICK_GRAY.uv)); break
+            case 242: this.allStatics.push(new FireplaceLarge(obj.tp, pos, rotation, MaterialEnum1.BRICK_GRAY.uv)); break
             default:
                 break
         }
@@ -91,22 +97,18 @@ export const StaticsManager = {
     },
 
     renderObjects() {
-        // Prefabs clear the matrices
         Object.values(this.prefabs).forEach(prefab => {
             prefab?.clearMatrices()
         })
-
 
         this.updateVisibleObjects()
         for (const element of this.visibleStatics) {
             element.render()
         }
 
-        // Prefabs update thin instance buffers
         Object.values(this.prefabs).forEach(prefab => {
             prefab!.setThinInstanceBuffers()
 
-            // Enable/disable mesh based on thin instance count
             if (prefab!.mesh.thinInstanceCount && prefab!.mesh.thinInstanceCount > 0) {
                 prefab!.mesh.setEnabled(true)
             } else {
@@ -209,6 +211,7 @@ export class Wall2 extends BaseStaticObject {
     constructor(type: number, position: Vector3, rotation: number, material: Vector2) {
         super(type, position, rotation, material, null)
     }
+
     render() {
         for (let i = 1; i <= 2; i++) {
             WorldRenderer.block1!.matrices.push(Matrix.Translation(this.renderPosition.x, this.renderPosition.y + i, this.renderPosition.z))
@@ -221,11 +224,49 @@ export class Wall3 extends BaseStaticObject {
     constructor(type: number, position: Vector3, rotation: number, material: Vector2) {
         super(type, position, rotation, material, null)
     }
+
     render() {
         for (let i = 1; i <= 3; i++) {
             WorldRenderer.block1!.matrices.push(Matrix.Translation(this.renderPosition.x, this.renderPosition.y + i, this.renderPosition.z))
             WorldRenderer.block1!.uvData.push(this.material)
         }
+    }
+}
+
+abstract class BaseFireplace extends BaseStaticObject {
+    stoneScale: number
+    radius: number
+
+    protected constructor(type: number, position: Vector3, rotation: number, material: Vector2, stoneScale: number, radius: number) {
+        super(type, position, rotation, material, null)
+        this.stoneScale = stoneScale
+        this.radius = radius
+    }
+
+    render() {
+        const scaleMatrix = Matrix.Scaling(this.stoneScale, this.stoneScale, this.stoneScale)
+
+        for (let i = 0; i < FIREPLACE_STONE_COUNT; i++) {
+            const angle = this.rotation + ((i / FIREPLACE_STONE_COUNT) * FULL_CIRCLE)
+            const x = this.renderPosition.x + (Math.cos(angle) * this.radius)
+            const z = this.renderPosition.z + (Math.sin(angle) * this.radius)
+            const positionMatrix = Matrix.Translation(x, this.renderPosition.y + this.stoneScale + 0.5, z)
+
+            WorldRenderer.block1!.matrices.push(scaleMatrix.multiply(positionMatrix))
+            WorldRenderer.block1!.uvData.push(this.material)
+        }
+    }
+}
+
+export class FireplaceSmall extends BaseFireplace {
+    constructor(type: number, position: Vector3, rotation: number, material: Vector2) {
+        super(type, position, rotation, material, 0.125, 0.3)
+    }
+}
+
+export class FireplaceLarge extends BaseFireplace {
+    constructor(type: number, position: Vector3, rotation: number, material: Vector2) {
+        super(type, position, rotation, material, 0.125, 0.72)
     }
 }
 
@@ -264,4 +305,3 @@ export class Shrub1x1_small extends BaseStaticObject {
         this.prefab!.uvData.push(this.material)
     }
 }
-

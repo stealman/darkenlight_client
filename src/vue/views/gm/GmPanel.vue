@@ -8,6 +8,7 @@
             <button :disabled="actualTab === GMTabs.TERRAIN_EDIT" @click="selectTab(GMTabs.TERRAIN_EDIT)">Terrain Edit</button>
             <button :disabled="actualTab === GMTabs.BIOME_EDIT" @click="selectTab(GMTabs.BIOME_EDIT)">Biome</button>
             <button :disabled="actualTab === GMTabs.WALLS_AND_FENCES_EDIT" @click="selectTab(GMTabs.WALLS_AND_FENCES_EDIT)">Walls & Fences</button>
+            <button :disabled="actualTab === GMTabs.STATICS_EDIT" @click="selectTab(GMTabs.STATICS_EDIT)">Statics</button>
             <button :disabled="actualTab === GMTabs.SPAWNS_EDIT" @click="selectTab(GMTabs.SPAWNS_EDIT)">Spawns</button>
             <button @click="openModelRenderDialog">Model Render</button>
             <button @click="openItemCreationDialog">Item Creation</button>
@@ -33,6 +34,10 @@
             <WallsFencesPanel />
         </div>
 
+        <div v-if="actualTab === GMTabs.STATICS_EDIT">
+            <StaticsPanel />
+        </div>
+
         <!-- Spawns -->
         <div v-if="actualTab === GMTabs.SPAWNS_EDIT">
             <SpawnPanel />
@@ -51,6 +56,7 @@ import { ref } from 'vue'
 import BiomePanel from '@/vue/views/gm/BiomePanel.vue'
 import TerrainPanel from '@/vue/views/gm/TerrainPanel.vue'
 import WallsFencesPanel from '@/vue/views/gm/WallsFencesPanel.vue'
+import StaticsPanel from '@/vue/views/gm/StaticsPanel.vue'
 import SpawnPanel from '@/vue/views/gm/SpawnPanel.vue'
 import ModelRenderPanel from '@/vue/views/gm/ModelRenderPanel.vue'
 import ItemCreationPanel from '@/vue/views/gm/ItemCreationPanel.vue'

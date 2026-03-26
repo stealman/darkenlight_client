@@ -35,4 +35,7 @@ export const StaticObjectsCodebook: Map<number, StaticObjectInfo> = new Map([
 
     [221, new StaticObjectInfo(221, 'Wall3_GRAY', true, 1, 0)],
     [222, new StaticObjectInfo(222, 'Wall3_RED', true, 1, 0)],
+
+    [241, new StaticObjectInfo(241, 'FireplaceSmall', false, 1, 0)],
+    [242, new StaticObjectInfo(242, 'FireplaceLarge', false, 2, 0)],
 ])

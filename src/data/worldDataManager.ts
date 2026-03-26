@@ -4,7 +4,7 @@ import { Vector3 } from '@babylonjs/core'
 import { TerrainManager } from '@/babylon/world/terrainManager'
 import { TreeManager } from '@/babylon/world/treeManager'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
-import { StaticsManager } from '@/babylon/world/staticsManager'
+import { StaticsManager } from '@/babylon/world/statics/staticsManager'
 import { MyPlayer } from '@/data/myPlayer'
 
 export const WorldDataManager = {

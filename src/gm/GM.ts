@@ -20,6 +20,7 @@ export const GmTabs = {
     TERRAIN_EDIT: 'terrain_edit',
     BIOME_EDIT: 'biome_edit',
     WALLS_AND_FENCES_EDIT: 'walls_and_fences_edit',
+    STATICS_EDIT: 'statics_edit',
     SPAWNS_EDIT: 'spawns_edit'
 }
 
@@ -38,6 +39,7 @@ export const GMManager = {
     selectedShrub: ref (0),
 
     selectedWallFence: ref (0),
+    selectedStatic: ref (0),
 
     tab: GmTabs.OVERVIEW,
 
@@ -136,6 +138,17 @@ export const GMManager = {
             }
         }
 
+        if (this.tab === GmTabs.STATICS_EDIT) {
+            const markerPos = new Vector3(GMSceneManager.hoverBlockMarker!.position.x, 0, GMSceneManager.hoverBlockMarker!.position.z)
+            if (this.selectedStatic.value > 0) {
+                const staticData = { x: markerPos.x, z: markerPos.z, type: this.selectedStatic.value }
+                Connector.sendMessage(new GMStaticObjectChange("ADD_OBJECT", [staticData] ) )
+
+            } else if (this.selectedStatic.value === -1) {
+                Connector.sendMessage(new GMStaticObjectChange("REMOVE_ON_TILE", [ { x: markerPos.x, z: markerPos.z } ] ) )
+            }
+        }
+
         if (this.tab === GmTabs.SPAWNS_EDIT) {
             const markerPos = new Vector3(GMSceneManager.hoverBlockMarker!.position.x, 0, GMSceneManager.hoverBlockMarker!.position.z)
             GMSpawns.onClick(markerPos.x, markerPos.z)
@@ -218,6 +231,9 @@ export const GMManager = {
             case GmTabs.WALLS_AND_FENCES_EDIT:
                 this.closeTabWallsAndFencesEdit()
                 break
+            case GmTabs.STATICS_EDIT:
+                this.closeTabStaticsEdit()
+                break
             case GmTabs.SPAWNS_EDIT:
                 this.closeTabSpawnsEdit()
                 break
@@ -237,6 +253,9 @@ export const GMManager = {
                 break
             case GmTabs.WALLS_AND_FENCES_EDIT:
                 this.openTabWallsAndFencesEdit()
+                break
+            case GmTabs.STATICS_EDIT:
+                this.openTabStaticsEdit()
                 break
             case GmTabs.SPAWNS_EDIT:
                 this.openTabSpawnsEdit()
@@ -288,6 +307,15 @@ export const GMManager = {
         GMSpawns.renderSpawnMarkers()
     },
 
+    openTabStaticsEdit() {
+        this.tab = GmTabs.STATICS_EDIT
+        this.consumePointerMoveEvents = true
+        this.consumeLeftClickEvents = true
+        this.selectedStatic.value = 0
+        GMSceneManager.setHoverBlockMarkerSize(1)
+        GMSceneManager.hoverBlockMarker?.setEnabled(true)
+    },
+
     closeTabTerrainEdit() {
         this.consumePointerMoveEvents = false
         this.consumeLeftClickEvents = false
@@ -302,6 +330,12 @@ export const GMManager = {
     },
 
     closeTabWallsAndFencesEdit() {
+        this.consumePointerMoveEvents = false
+        this.consumeLeftClickEvents = false
+        GMSceneManager.hoverBlockMarker?.setEnabled(false)
+    },
+
+    closeTabStaticsEdit() {
         this.consumePointerMoveEvents = false
         this.consumeLeftClickEvents = false
         GMSceneManager.hoverBlockMarker?.setEnabled(false)
