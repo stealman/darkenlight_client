@@ -1,16 +1,16 @@
-import { Matrix, Scene, Vector2, Vector3 } from '@babylonjs/core'
-import { Prefab, WorldRenderer } from '@/babylon/world/worldRenderer'
+import { Scene, Vector3 } from '@babylonjs/core'
+import { Prefab } from '@/babylon/world/worldRenderer'
 import { MaterialAlphaEnum1, MaterialEnum1 } from '@/babylon/materials'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { ViewportManager } from '@/utils/viewport'
-import { StaticObjectInfo, StaticObjectsCodebook } from '@/babylon/world/statics/staticsCodebook'
 import { PrefabShrub2x2 } from '@/babylon/world/prefabs/shrub2x2'
 import { PrefabShrub1x1_tall } from '@/babylon/world/prefabs/shrub1x1-tall'
 import { PrefabShrub1x1_small } from '@/babylon/world/prefabs/shrub1x1-small'
 import { Lights } from '@/babylon/scene/lights'
-
-const FULL_CIRCLE = Math.PI * 2
-const FIREPLACE_STONE_COUNT = 8
+import { StaticObject } from '@/babylon/world/statics/objects/baseStaticObject'
+import { FireplaceLarge, FireplaceSmall } from '@/babylon/world/statics/objects/fireplace'
+import { Shrub1x1_small, Shrub1x1_tall, Shrub2x2 } from '@/babylon/world/statics/objects/shrubs'
+import { Wall2, Wall3 } from '@/babylon/world/statics/objects/walls'
 
 export const StaticsManager = {
     prefabs: {
@@ -45,20 +45,20 @@ export const StaticsManager = {
         const rotation = Math.floor(Math.random() * 4) * Math.PI / 2
 
         switch (obj.tp) {
-            case 101: this.allStatics.push(new Shrub2x2(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_LIGHT.uv)); break
-            case 102: this.allStatics.push(new Shrub2x2(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_DARK.uv)); break
-            case 103: this.allStatics.push(new Shrub2x2(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_AUTUMN.uv)); break
-            case 104: this.allStatics.push(new Shrub2x2(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_NORTH.uv)); break
+            case 101: this.allStatics.push(new Shrub2x2(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_LIGHT.uv, this.prefabs.shrub2x2!)); break
+            case 102: this.allStatics.push(new Shrub2x2(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_DARK.uv, this.prefabs.shrub2x2!)); break
+            case 103: this.allStatics.push(new Shrub2x2(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_AUTUMN.uv, this.prefabs.shrub2x2!)); break
+            case 104: this.allStatics.push(new Shrub2x2(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_NORTH.uv, this.prefabs.shrub2x2!)); break
 
-            case 121: this.allStatics.push(new Shrub1x1_tall(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_LIGHT.uv)); break
-            case 122: this.allStatics.push(new Shrub1x1_tall(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_DARK.uv)); break
-            case 123: this.allStatics.push(new Shrub1x1_tall(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_AUTUMN.uv)); break
-            case 124: this.allStatics.push(new Shrub1x1_tall(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_NORTH.uv)); break
+            case 121: this.allStatics.push(new Shrub1x1_tall(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_LIGHT.uv, this.prefabs.shrub1x1_tall!)); break
+            case 122: this.allStatics.push(new Shrub1x1_tall(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_DARK.uv, this.prefabs.shrub1x1_tall!)); break
+            case 123: this.allStatics.push(new Shrub1x1_tall(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_AUTUMN.uv, this.prefabs.shrub1x1_tall!)); break
+            case 124: this.allStatics.push(new Shrub1x1_tall(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_NORTH.uv, this.prefabs.shrub1x1_tall!)); break
 
-            case 141: this.allStatics.push(new Shrub1x1_small(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_LIGHT.uv)); break
-            case 142: this.allStatics.push(new Shrub1x1_small(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_DARK.uv)); break
-            case 143: this.allStatics.push(new Shrub1x1_small(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_AUTUMN.uv)); break
-            case 144: this.allStatics.push(new Shrub1x1_small(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_NORTH.uv)); break
+            case 141: this.allStatics.push(new Shrub1x1_small(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_LIGHT.uv, this.prefabs.shrub1x1_small!)); break
+            case 142: this.allStatics.push(new Shrub1x1_small(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_DARK.uv, this.prefabs.shrub1x1_small!)); break
+            case 143: this.allStatics.push(new Shrub1x1_small(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_AUTUMN.uv, this.prefabs.shrub1x1_small!)); break
+            case 144: this.allStatics.push(new Shrub1x1_small(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_NORTH.uv, this.prefabs.shrub1x1_small!)); break
 
             case 201: this.allStatics.push(new Wall2(obj.tp, pos, rotation, MaterialEnum1.BRICK_GRAY.uv)); break
             case 202: this.allStatics.push(new Wall2(obj.tp, pos, rotation, MaterialEnum1.BRICK_RED.uv)); break
@@ -66,8 +66,8 @@ export const StaticsManager = {
             case 221: this.allStatics.push(new Wall3(obj.tp, pos, rotation, MaterialEnum1.BRICK_GRAY.uv)); break
             case 222: this.allStatics.push(new Wall3(obj.tp, pos, rotation, MaterialEnum1.BRICK_RED.uv)); break
 
-            case 241: this.allStatics.push(new FireplaceSmall(obj.tp, pos, rotation, MaterialEnum1.BRICK_GRAY.uv)); break
-            case 242: this.allStatics.push(new FireplaceLarge(obj.tp, pos, rotation, MaterialEnum1.BRICK_GRAY.uv)); break
+            case 241: this.allStatics.push(new FireplaceSmall(obj.tp, pos, rotation, MaterialEnum1.WOOD_1.uv)); break
+            case 242: this.allStatics.push(new FireplaceLarge(obj.tp, pos, rotation, MaterialEnum1.WOOD_1.uv)); break
             default:
                 break
         }
@@ -135,173 +135,5 @@ export const StaticsManager = {
             }
         }
         return null
-    }
-}
-
-interface StaticObject {
-    type: number
-    position: Vector3
-    renderPosition: Vector3
-
-    render(): void
-    getSize(): number
-    isBlocking(): boolean
-    isObjectInCollision(tgtX: number, tgtZ: number, size: number): boolean
-    getCollisionTolerance(): number
-}
-
-export abstract class BaseStaticObject implements StaticObject {
-    type: number
-    position: Vector3
-    renderPosition: Vector3
-    rotation: number
-    material: Vector2
-    prefab: Prefab | null
-    objectInfo: StaticObjectInfo
-    status: any
-
-    protected constructor(type: number, position: Vector3, rotation: number, material: Vector2, prefab: Prefab | null) {
-        this.type = type
-        this.position = position
-        this.rotation = rotation
-        this.material = material
-        this.prefab = prefab
-        this.objectInfo = StaticObjectsCodebook.get(type)!
-        this.renderPosition = new Vector3(position.x - 0.5 + this.getSize() / 2, position.y, position.z - 0.5 + this.getSize() / 2)
-    }
-
-    getSize(): number {
-        return this.objectInfo.size
-    }
-
-    isBlocking(): boolean {
-        return this.objectInfo.blocking
-    }
-
-    getCollisionTolerance(): number {
-        return this.objectInfo.collisionTolerance
-    }
-
-    isObjectInCollision(tgtX: number, tgtZ: number, size: number): boolean {
-        if (!this.isBlocking()) {
-            return false
-        }
-
-        const moverHalf = size / 2
-
-        const moverMinX = tgtX - moverHalf
-        const moverMaxX = tgtX + moverHalf
-        const moverMinZ = tgtZ - moverHalf
-        const moverMaxZ = tgtZ + moverHalf
-
-        const tol = this.getCollisionTolerance()
-
-        const objMinX = this.position.x + tol - 0.5
-        const objMaxX = this.position.x + this.getSize() - (tol + 0.5)
-        const objMinZ = this.position.z + tol - 0.5
-        const objMaxZ = this.position.z + this.getSize() - (tol + 0.5)
-
-        return (moverMinX < objMaxX && moverMaxX > objMinX && moverMinZ < objMaxZ && moverMaxZ > objMinZ)
-    }
-
-    abstract render(): void
-}
-
-export class Wall2 extends BaseStaticObject {
-    constructor(type: number, position: Vector3, rotation: number, material: Vector2) {
-        super(type, position, rotation, material, null)
-    }
-
-    render() {
-        for (let i = 1; i <= 2; i++) {
-            WorldRenderer.block1!.matrices.push(Matrix.Translation(this.renderPosition.x, this.renderPosition.y + i, this.renderPosition.z))
-            WorldRenderer.block1!.uvData.push(this.material)
-        }
-    }
-}
-
-export class Wall3 extends BaseStaticObject {
-    constructor(type: number, position: Vector3, rotation: number, material: Vector2) {
-        super(type, position, rotation, material, null)
-    }
-
-    render() {
-        for (let i = 1; i <= 3; i++) {
-            WorldRenderer.block1!.matrices.push(Matrix.Translation(this.renderPosition.x, this.renderPosition.y + i, this.renderPosition.z))
-            WorldRenderer.block1!.uvData.push(this.material)
-        }
-    }
-}
-
-abstract class BaseFireplace extends BaseStaticObject {
-    stoneScale: number
-    radius: number
-
-    protected constructor(type: number, position: Vector3, rotation: number, material: Vector2, stoneScale: number, radius: number) {
-        super(type, position, rotation, material, null)
-        this.stoneScale = stoneScale
-        this.radius = radius
-    }
-
-    render() {
-        const scaleMatrix = Matrix.Scaling(this.stoneScale, this.stoneScale, this.stoneScale)
-
-        for (let i = 0; i < FIREPLACE_STONE_COUNT; i++) {
-            const angle = this.rotation + ((i / FIREPLACE_STONE_COUNT) * FULL_CIRCLE)
-            const x = this.renderPosition.x + (Math.cos(angle) * this.radius)
-            const z = this.renderPosition.z + (Math.sin(angle) * this.radius)
-            const positionMatrix = Matrix.Translation(x, this.renderPosition.y + this.stoneScale + 0.5, z)
-
-            WorldRenderer.block1!.matrices.push(scaleMatrix.multiply(positionMatrix))
-            WorldRenderer.block1!.uvData.push(this.material)
-        }
-    }
-}
-
-export class FireplaceSmall extends BaseFireplace {
-    constructor(type: number, position: Vector3, rotation: number, material: Vector2) {
-        super(type, position, rotation, material, 0.125, 0.3)
-    }
-}
-
-export class FireplaceLarge extends BaseFireplace {
-    constructor(type: number, position: Vector3, rotation: number, material: Vector2) {
-        super(type, position, rotation, material, 0.125, 0.72)
-    }
-}
-
-export class Shrub2x2 extends BaseStaticObject {
-    constructor(type: number, position: Vector3, rotation: number, material: Vector2) {
-        super(type, position, rotation, material, StaticsManager.prefabs.shrub2x2!)
-    }
-
-    render() {
-        const matrix = Matrix.Translation(this.renderPosition.x, this.renderPosition.y + 0.3, this.renderPosition.z)
-        this.prefab!.matrices.push(Matrix.RotationY(this.rotation).multiply(matrix))
-        this.prefab!.uvData.push(this.material)
-    }
-}
-
-export class Shrub1x1_tall extends BaseStaticObject {
-    constructor(type: number, position: Vector3, rotation: number, material: Vector2) {
-        super(type, position, rotation, material, StaticsManager.prefabs.shrub1x1_tall!)
-    }
-
-    render() {
-        const matrix = Matrix.Translation(this.renderPosition.x, this.renderPosition.y + 0.3, this.renderPosition.z)
-        this.prefab!.matrices.push(Matrix.RotationY(this.rotation).multiply(matrix))
-        this.prefab!.uvData.push(this.material)
-    }
-}
-
-export class Shrub1x1_small extends BaseStaticObject {
-    constructor(type: number, position: Vector3, rotation: number, material: Vector2) {
-        super(type, position, rotation, material, StaticsManager.prefabs.shrub1x1_small!)
-    }
-
-    render() {
-        const matrix = Matrix.Translation(this.renderPosition.x, this.renderPosition.y + 0.3, this.renderPosition.z)
-        this.prefab!.matrices.push(Matrix.RotationY(this.rotation).multiply(matrix))
-        this.prefab!.uvData.push(this.material)
     }
 }

@@ -92,6 +92,12 @@ export const Materials = {
         material.bumpTexture = new Texture(this.BASE_PATH + 'block_materials1_norm.png', scene)
         material.bumpTexture.uScale = 1 / 16
         material.bumpTexture.vScale = 1 / 16
+
+        material.emissiveTexture = new Texture(this.BASE_PATH + 'block_materials1_emissive.png', scene)
+        material.emissiveTexture.uScale = 1 / 16
+        material.emissiveTexture.vScale = 1 / 16
+        material.emissiveColor = new Color3(1, 1, 1)
+
         return material
     },
 
@@ -251,8 +257,10 @@ export const MaterialAlphaEnum1 = {
 export const MaterialEnum1 = {
     BRICK_RED: new MaterialEnum(1, new Vector2(0.5, 14.5)),
     BRICK_GRAY: new MaterialEnum(2, new Vector2(2.5, 14.5)),
+    BRICK_BLACK: new MaterialEnum(3, new Vector2(4.5, 14.5)),
     WOOD_1: new MaterialEnum(9, new Vector2(0.5, 12.5)),
     WOOD_2: new MaterialEnum(10, new Vector2(2.5, 12.5)),
+    EMBERS: new MaterialEnum(17, new Vector2(0.5, 10.5)),
 
     getMaterialByIndex(index: number): Vector2 {
         return Object.values(MaterialEnum1).find(item => item.index === index)?.uv;
