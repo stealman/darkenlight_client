@@ -17,7 +17,8 @@ abstract class BaseFireplace extends BaseStaticObject {
     logCenterShift: number
     logTilt: number
     logVariation: number
-    particles: ParticleSystem | null
+    fireParticles: ParticleSystem | null
+    smokeParticles: ParticleSystem | null
     particleEmitter: TransformNode | null
 
     protected constructor(type: number, position: Vector3, rotation: number, material: Vector2, fireplaceScale: number, logLength: number, logInnerOffset: number, logTilt: number) {
@@ -31,7 +32,8 @@ abstract class BaseFireplace extends BaseStaticObject {
         this.logCenterShift = 0.08 * fireplaceScale
         this.logTilt = logTilt
         this.logVariation = 0.1
-        this.particles = null
+        this.fireParticles = null
+        this.smokeParticles = null
         this.particleEmitter = null
     }
 
@@ -54,41 +56,75 @@ abstract class BaseFireplace extends BaseStaticObject {
         this.particleEmitter.position.set(this.renderPosition.x, this.renderPosition.y + (0.12 * this.fireplaceScaleReduced), this.renderPosition.z)
     }
 
-    private createFireParticles() {
-        if (this.particles != null || Renderer.scene == null) {
+    private createParticles() {
+        if ((this.fireParticles != null && this.smokeParticles != null) || Renderer.scene == null) {
             return
         }
 
-        this.particleEmitter = new TransformNode(`fireplaceEmitter_${this.position.x}_${this.position.z}`, Renderer.scene)
-        this.particleEmitter.parent = WorldRenderer.worldParentNode
-        this.updateParticleEmitterPosition()
+        if (this.particleEmitter == null) {
+            this.particleEmitter = new TransformNode(`fireplaceEmitter_${this.position.x}_${this.position.z}`, Renderer.scene)
+            this.particleEmitter.parent = WorldRenderer.worldParentNode
+            this.updateParticleEmitterPosition()
+        }
 
-        const ps = new ParticleSystem(`fireplaceParticles_${this.position.x}_${this.position.z}`, Math.round(150 * this.fireplaceScale), Renderer.scene)
-        ps.particleTexture = new Texture('images/gfx/flare-rect.png', Renderer.scene)
-        ps.emitter = this.particleEmitter
-        ps.minEmitBox = new Vector3(-0.12 * this.fireplaceScale, 0, -0.12 * this.fireplaceScale)
-        ps.maxEmitBox = new Vector3(0.12 * this.fireplaceScale, 0.03 * this.fireplaceScale, 0.12 * this.fireplaceScale)
-        ps.minLifeTime = 0.5
-        ps.maxLifeTime = 0.75
-        ps.emitRate = 150 * this.fireplaceScale
-        ps.blendMode = ParticleSystem.BLENDMODE_ONEONE
-        ps.direction1 = new Vector3(-0.12 * this.fireplaceScale, 0.9 * this.fireplaceScale, -0.12 * this.fireplaceScale)
-        ps.direction2 = new Vector3(0.12 * this.fireplaceScale, 1.4 * this.fireplaceScale, 0.12 * this.fireplaceScale)
-        ps.minEmitPower = 0.5 * this.fireplaceScaleReduced
-        ps.maxEmitPower = 0.75 * this.fireplaceScaleReduced
-        ps.minSize = 0.05 * this.fireplaceScaleReduced
-        ps.maxSize = 0.075 * this.fireplaceScaleReduced
-        ps.gravity = new Vector3(0, 0.6 * this.fireplaceScaleReduced, 0)
-        ps.addColorGradient(0, new Color4(1, 0.4, 0.1, 1))
-        ps.addColorGradient(0.8, new Color4(0.1, 0.05, 0.01, 0.2))
-        ps.addColorGradient(1, new Color4(0.1, 0.05, 0.01, 0.0))
-        ps.start()
+        if (this.fireParticles == null) {
+            const fireParticles = new ParticleSystem(`fireplaceParticles_${this.position.x}_${this.position.z}`, Math.round(150 * this.fireplaceScale), Renderer.scene)
+            fireParticles.particleTexture = new Texture('images/gfx/flare.png', Renderer.scene)
+            fireParticles.emitter = this.particleEmitter
+            fireParticles.minEmitBox = new Vector3(-0.12 * this.fireplaceScale, 0, -0.12 * this.fireplaceScale)
+            fireParticles.maxEmitBox = new Vector3(0.12 * this.fireplaceScale, 0.03 * this.fireplaceScale, 0.12 * this.fireplaceScale)
+            fireParticles.minLifeTime = 0.5
+            fireParticles.maxLifeTime = 0.75
+            fireParticles.emitRate = 150 * this.fireplaceScale
+            fireParticles.blendMode = ParticleSystem.BLENDMODE_ONEONE
+            fireParticles.direction1 = new Vector3(-0.12 * this.fireplaceScale, 0.9 * this.fireplaceScale, -0.12 * this.fireplaceScale)
+            fireParticles.direction2 = new Vector3(0.12 * this.fireplaceScale, 1.4 * this.fireplaceScale, 0.12 * this.fireplaceScale)
+            fireParticles.minEmitPower = 0.5 * this.fireplaceScaleReduced
+            fireParticles.maxEmitPower = 0.75 * this.fireplaceScaleReduced
+            fireParticles.minSize = 0.15 * this.fireplaceScaleReduced
+            fireParticles.maxSize = 0.2 * this.fireplaceScaleReduced
+            fireParticles.gravity = new Vector3(0, 0.6 * this.fireplaceScaleReduced, 0)
+            fireParticles.addColorGradient(0, new Color4(1, 0.8, 0.6, 1))
+            fireParticles.addColorGradient(0.4, new Color4(1, 0.4, 0.1, 1))
+            fireParticles.addColorGradient(0.8, new Color4(0.1, 0.05, 0.01, 0.2))
+            fireParticles.addColorGradient(1, new Color4(0.1, 0.05, 0.01, 0.0))
+            fireParticles.start()
 
-        this.particles = ps
+            this.fireParticles = fireParticles
+        }
+
+        if (this.smokeParticles == null) {
+            const smokeParticles = new ParticleSystem(`fireplaceSmoke_${this.position.x}_${this.position.z}`, Math.round(80 * this.fireplaceScale), Renderer.scene)
+            smokeParticles.particleTexture = new Texture('images/gfx/dust.png', Renderer.scene)
+            smokeParticles.emitter = this.particleEmitter
+            smokeParticles.minEmitBox = new Vector3(-0.15 * this.fireplaceScale, 0.02 * this.fireplaceScale * 8, -0.15 * this.fireplaceScale)
+            smokeParticles.maxEmitBox = new Vector3(0.15 * this.fireplaceScale, 0.08 * this.fireplaceScale * 8, 0.15 * this.fireplaceScale)
+            smokeParticles.minLifeTime = 3.5
+            smokeParticles.maxLifeTime = 5
+            smokeParticles.emitRate = 26 * this.fireplaceScale
+            smokeParticles.blendMode = ParticleSystem.BLENDMODE_STANDARD
+            smokeParticles.direction1 = new Vector3(-1 * this.fireplaceScale, 0.45 * this.fireplaceScaleReduced, -1 * this.fireplaceScale)
+            smokeParticles.direction2 = new Vector3(1 * this.fireplaceScale, 0.7 * this.fireplaceScaleReduced, 1 * this.fireplaceScale)
+            smokeParticles.minEmitPower = 0.15 * this.fireplaceScaleReduced
+            smokeParticles.maxEmitPower = 0.3 * this.fireplaceScaleReduced
+            smokeParticles.minSize = 0.75 * this.fireplaceScaleReduced
+            smokeParticles.maxSize = 1 * this.fireplaceScaleReduced
+            smokeParticles.minAngularSpeed = -0.3
+            smokeParticles.maxAngularSpeed = 0.3
+            smokeParticles.gravity = new Vector3(0, 0.22 * this.fireplaceScaleReduced, 0)
+            smokeParticles.updateSpeed = 0.01
+            smokeParticles.addColorGradient(0, new Color4(0.6, 0.6, 0.6, 0))
+            smokeParticles.addColorGradient(0.3, new Color4(0.7, 0.7, 0.7, 0.03))
+            smokeParticles.addColorGradient(0.7, new Color4(0.65, 0.65, 0.65, 0.015))
+            smokeParticles.addColorGradient(1, new Color4(0.5, 0.5, 0.5, 0))
+            smokeParticles.start()
+
+            this.smokeParticles = smokeParticles
+        }
     }
 
     onVisible() {
-        this.createFireParticles()
+        this.createParticles()
         this.updateParticleEmitterPosition()
     }
 
@@ -97,9 +133,11 @@ abstract class BaseFireplace extends BaseStaticObject {
     }
 
     dispose() {
-        this.particles?.dispose()
+        this.fireParticles?.dispose()
+        this.smokeParticles?.dispose()
         this.particleEmitter?.dispose()
-        this.particles = null
+        this.fireParticles = null
+        this.smokeParticles = null
         this.particleEmitter = null
     }
 
@@ -120,7 +158,7 @@ abstract class BaseFireplace extends BaseStaticObject {
             const emberHeightOffset = ((this.getLogNoise(i, 21) * 2) - 1) * (0.01 * this.fireplaceScale)
             const currentEmberHeight = emberHeight + emberHeightOffset
             const emberScaleMatrix = Matrix.Scaling(emberSize, currentEmberHeight, emberSize)
-            const emberStoneScaleMatrix = Matrix.Scaling(emberSize * 1.5, 0.03 * this.fireplaceScale, emberSize * 1.5)
+            const emberStoneScaleMatrix = Matrix.Scaling(emberSize * 1.5, 0.03, emberSize * 1.5)
             const emberPositionMatrix = Matrix.Translation(emberX, emberY + emberHeightOffset, emberZ)
 
             WorldRenderer.block1!.matrices.push(emberStoneScaleMatrix.multiply(emberRotation).multiply(emberPositionMatrix))

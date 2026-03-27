@@ -18,6 +18,7 @@ export const Materials = {
 
     terrainMaterial: null as PBRCustomMaterial | null,
     planeMaterial: null as PBRCustomMaterial | null,
+    planeWaterMaterial: null as PBRCustomMaterial | null,
     stepMarksMaterial: null as PBRCustomMaterial | null,
     fightSplatsMaterial: null as PBRCustomMaterial | null,
 
@@ -30,6 +31,7 @@ export const Materials = {
     initialize(scene: Scene) {
         this.terrainMaterial = this.createTerrainMaterial1(scene)
         this.planeMaterial = this.createPlaneMaterial(scene)
+        this.planeWaterMaterial = this.createPlaneWaterMaterial(scene)
 
         this.blockMat1 = this.createBlockMat1(scene)
         this.blockMatAlpha1 = this.createBlockMatAlpha1(scene)
@@ -50,10 +52,17 @@ export const Materials = {
     },
 
     createPlaneMaterial(scene: Scene): PBRCustomMaterial {
-        const material = this.getPBRCustomMaterial(scene, "plane_mats", this.BASE_PATH, 'plane_materials1.png', 1 / 8, 1 / 8, false)
-        material.albedoTexture.hasAlpha = true
-        material.albedoTexture.getAlphaFromRGB = false
-        material.albedoTexture.updateSamplingMode(Texture.NEAREST_NEAREST)
+        const material = this.getPBRCustomMaterial(scene, "plane_mats", this.BASE_PATH, 'plane_materials1.png', 1 / 8, 1 / 8, true)
+        material.alphaCutOff = 0.01
+        return material
+    },
+
+    createPlaneWaterMaterial(scene: Scene): PBRCustomMaterial {
+        const material = this.getPBRCustomMaterial(scene, "plane_mats_water", this.BASE_PATH, 'plane_materials1.png', 1 / 8, 1 / 8, false)
+        const texture = material.albedoTexture as Texture
+        texture.hasAlpha = true
+        texture.getAlphaFromRGB = false
+        texture.updateSamplingMode(Texture.NEAREST_NEAREST)
         material.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHABLEND
         material.useAlphaFromAlbedoTexture = true
         material.alpha = 1
@@ -210,6 +219,7 @@ export const Materials = {
     unFreezeAll() {
         this.terrainMaterial?.unfreeze()
         this.planeMaterial?.unfreeze()
+        this.planeWaterMaterial?.unfreeze()
         this.blockMat1?.unfreeze()
         this.blockMatAlpha1?.unfreeze()
         this.waterMaterial?.unfreeze()
@@ -221,6 +231,7 @@ export const Materials = {
     freezeAll() {
         this.terrainMaterial?.freeze()
         this.planeMaterial?.freeze()
+        this.planeWaterMaterial?.freeze()
         this.blockMat1?.freeze()
         this.blockMatAlpha1?.freeze()
         this.waterMaterial?.freeze()

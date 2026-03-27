@@ -46,6 +46,7 @@ export const WorldRenderer = {
 
         Lights.addShadowCaster(TerrainManager.terrainBlock1!)
         Lights.addShadowCaster(TerrainManager.terrainPlane!)
+        Lights.addShadowCaster(TerrainManager.terrainWaterPlane!)
         Lights.addShadowCaster(this.block1.mesh)
         Lights.addShadowCaster(this.blockWithAlpha1.mesh)
         TreeManager.addAllShadowCasters()
