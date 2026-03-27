@@ -90,6 +90,7 @@ export const StaticsManager = {
     removeObjectAt(x: number, z: number) {
         for (let i = 0; i < this.allStatics.length; i++) {
             if (this.allStatics[i].position.x === x && this.allStatics[i].position.z === z) {
+                this.allStatics[i].dispose()
                 this.allStatics.splice(i, 1)
                 break
             }
@@ -118,13 +119,21 @@ export const StaticsManager = {
     },
 
     updateVisibleObjects() {
-        this.visibleStatics = []
+        const previousVisible = new Set(this.visibleStatics)
+        const nextVisible: StaticObject[] = []
 
         for (const obj of this.allStatics) {
             if (ViewportManager.isPointInVisibleMatrix(Math.floor(obj.position.x), Math.floor(obj.position.z), 2)) {
-                this.visibleStatics.push(obj)
+                nextVisible.push(obj)
+                if (!previousVisible.has(obj)) {
+                    obj.onVisible()
+                }
+            } else if (previousVisible.has(obj)) {
+                obj.onHidden()
             }
         }
+
+        this.visibleStatics = nextVisible
         return this.visibleStatics
     },
 

@@ -8,6 +8,9 @@ export interface StaticObject {
     renderPosition: Vector3
 
     render(): void
+    onVisible(): void
+    onHidden(): void
+    dispose(): void
     getSize(): number
     isBlocking(): boolean
     isObjectInCollision(tgtX: number, tgtZ: number, size: number): boolean
@@ -66,6 +69,15 @@ export abstract class BaseStaticObject implements StaticObject {
         const objMaxZ = this.position.z + this.getSize() - (tol + 0.5)
 
         return (moverMinX < objMaxX && moverMaxX > objMinX && moverMinZ < objMaxZ && moverMaxZ > objMinZ)
+    }
+
+    onVisible() {
+    }
+
+    onHidden() {
+    }
+
+    dispose() {
     }
 
     abstract render(): void
