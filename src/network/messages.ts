@@ -154,6 +154,15 @@ export class ConsumeItemMsg implements Message {
     }
 }
 
+export class CreateCampMsg implements Message {
+    t: number = 20
+    d: any
+
+    constructor(cbId: number) {
+        this.d = { cbId: cbId }
+    }
+}
+
 export class GMSaveMapDataMsg implements Message {
     t: number = 1000
     d: any

@@ -39,6 +39,13 @@
                 <img class="action-icon" src='/images/icons/buttons/btn_stack.png' :alt="t('inventory.mergeItem')" />
             </button>
 
+            <button v-if="shouldShowCampButton" class="action-button inventory-action-button inventory-camp-button" type="button"
+                :style="{ backgroundImage: `url('/images/icons/buttons/btn_background.png')` }"
+                @pointerdown.prevent.stop
+                @click.stop="onCreateCampClick">
+                <img class="action-icon" src='/images/icons/buttons/btn_camp.png' alt="Create camp" />
+            </button>
+
             <button v-if="showSplitControls" class="action-button inventory-action-button inventory-text-action-button" type="button"
                 :style="{ backgroundImage: `url('/images/icons/buttons/btn_background.png')` }"
                 @pointerdown.prevent.stop
@@ -104,7 +111,7 @@ const props = defineProps({
     },
 })
 
-const emit = defineEmits(['close', 'drop-item', 'split-item', 'merge-item', 'content-resized'])
+const emit = defineEmits(['close', 'drop-item', 'split-item', 'merge-item', 'create-camp', 'content-resized'])
 const overlayRootRef = ref(null)
 const showSplitControls = ref(false)
 const { t } = useI18n()
@@ -146,6 +153,12 @@ const shouldShowSplitButton = computed(() => {
 const shouldShowMergeButton = computed(() => {
     return props.context === 'INVENTORY'
         && props.itemInfo.showMergeButton === true
+        && !showSplitControls.value
+})
+
+const shouldShowCampButton = computed(() => {
+    return props.context === 'INVENTORY'
+        && props.itemInfo.showCampButton === true
         && !showSplitControls.value
 })
 
@@ -208,6 +221,12 @@ const onSplitConfirmClick = () => {
     AudioManager.playGuiButtonClick()
     emit('split-item', { itemId, splitCount: splitQuantity.value })
     resetSplitControls()
+    emit('close')
+}
+
+const onCreateCampClick = () => {
+    AudioManager.playGuiButtonClick()
+    emit('create-camp')
     emit('close')
 }
 

@@ -40,6 +40,7 @@
             @drop-item="onDropItemClick"
             @split-item="onSplitItemClick"
             @merge-item="onMergeItemClick"
+            @create-camp="onCreateCampClick"
             @content-resized="onItemInfoOverlayContentResized"
         />
     </div>
@@ -63,6 +64,7 @@ import ItemInfoOverlay from '@/vue/views/inventory/itemInfoOverlay.vue'
 import { t } from '@/i18n'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { OnScreenMessageManager } from '@/gui/onScreenMessageManager'
+import { ConsumableHelper } from '@/data/items/consumableHelper'
 
 type WeaponSetupType = 'primary' | 'secondary'
 type WeaponSetupMarker = WeaponSetupType
@@ -120,12 +122,14 @@ const itemInfoOverlay = ref({
     y: 0,
     name: '',
     id: null,
+    cbId: null,
     quality: null,
     durability: null,
     durabilityMax: null,
     quantity: null,
     showDropButton: false,
     showMergeButton: false,
+    showCampButton: false,
     inventoryIndex: null,
     sourceType: null,
     sourceKey: null,
@@ -134,8 +138,10 @@ const itemInfoOverlay = ref({
 const hideItemInfoOverlay = () => {
     itemInfoOverlay.value.visible = false
     itemInfoOverlay.value.id = null
+    itemInfoOverlay.value.cbId = null
     itemInfoOverlay.value.showDropButton = false
     itemInfoOverlay.value.showMergeButton = false
+    itemInfoOverlay.value.showCampButton = false
     itemInfoOverlay.value.inventoryIndex = null
     itemInfoOverlay.value.sourceType = null
     itemInfoOverlay.value.sourceKey = null
@@ -166,6 +172,7 @@ const showItemInfoOverlay = (item, pointer, options = {}) => {
     itemInfoOverlay.value.y = pointer.clientY
     itemInfoOverlay.value.name = item.name || t('inventory.unknownItem')
     itemInfoOverlay.value.id = item.id ?? null
+    itemInfoOverlay.value.cbId = item.cbId ?? null
 
     itemInfoOverlay.value.quality = item.atts.qual ?? null
     itemInfoOverlay.value.durability = item.atts.dur ?? null
@@ -173,6 +180,7 @@ const showItemInfoOverlay = (item, pointer, options = {}) => {
     itemInfoOverlay.value.quantity = item.atts.qty ?? null
     itemInfoOverlay.value.showDropButton = showDropButton
     itemInfoOverlay.value.showMergeButton = showMergeButton
+    itemInfoOverlay.value.showCampButton = sourceType === 'inventory' && ConsumableHelper.isItemCampWood(item)
     itemInfoOverlay.value.inventoryIndex = inventoryIndex
     itemInfoOverlay.value.sourceType = sourceType
     itemInfoOverlay.value.sourceKey = sourceKey
@@ -329,12 +337,14 @@ const refreshItemInfoOverlayFromLiveData = (changedItemIds = null) => {
     const item = liveItemInfo.item
     itemInfoOverlay.value.name = item.name || t('inventory.unknownItem')
     itemInfoOverlay.value.id = item.id ?? null
+    itemInfoOverlay.value.cbId = item.cbId ?? null
     itemInfoOverlay.value.quality = item.atts?.qual ?? null
     itemInfoOverlay.value.durability = item.atts?.dur ?? null
     itemInfoOverlay.value.durabilityMax = item.atts?.durM ?? null
     itemInfoOverlay.value.quantity = item.atts?.qty ?? null
     itemInfoOverlay.value.showDropButton = liveItemInfo.showDropButton
     itemInfoOverlay.value.showMergeButton = liveItemInfo.showMergeButton
+    itemInfoOverlay.value.showCampButton = liveItemInfo.sourceType === 'inventory' && ConsumableHelper.isItemCampWood(item)
     itemInfoOverlay.value.inventoryIndex = liveItemInfo.inventoryIndex
     itemInfoOverlay.value.sourceType = liveItemInfo.sourceType
     itemInfoOverlay.value.sourceKey = liveItemInfo.sourceKey
@@ -533,6 +543,16 @@ const onMergeItemClick = (payload) => {
         return
     }
     InventoryManager.mergeInventoryItem(itemId)
+}
+
+const onCreateCampClick = () => {
+    const cbId = Number(itemInfoOverlay.value.cbId)
+    if (!Number.isFinite(cbId)) {
+        return
+    }
+
+    ConsumableHelper.clickOnCreateCamp(cbId)
+    hideItemInfoOverlay()
 }
 
 const onInventoryDoubleClick = (index) => {
