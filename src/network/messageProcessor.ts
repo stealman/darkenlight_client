@@ -13,7 +13,7 @@ import { CharacterManager } from '@/babylon/character/characterManager'
 import {
     AttackableBasicTO,
     AutoAttackMessage,
-    AutoAttackResultMessage,
+    AutoAttackResultMessage, CharacterCampingMessage,
     CharacterGatheringMessage,
     CharacterGatheringResultMessage,
     EmeraldsChangeMessage,
@@ -68,6 +68,7 @@ export const MessageProcessor = {
                 case 37: this.processCharacterGathering(msg.d); break
                 case 38: this.processCharacterGatheringFinished(msg.d); break
                 case 39: this.processPotionUsed(msg.d); break
+                case 40: this.processCharacterCamping(msg.d); break
                 case 1003: this.processGMAllSpawns(msg.d); break
                 case 1004: this.processGMSpawnChange(msg.d); break
                 default:
@@ -271,6 +272,10 @@ export const MessageProcessor = {
         if (data.tp === 'C') {
             CharacterManager.potionUsed(data)
         }
+    },
+
+    processCharacterCamping(data: CharacterCampingMessage) {
+        CharacterManager.startCamping(data)
     },
 
     processGMAllSpawns(data) {

@@ -8,20 +8,24 @@ import { t } from '@/i18n'
 
 export const ConsumableHelper = {
 
+    healingPotionIds: [1001, 1002, 1003],
+    manaPotionIds: [1011, 1012, 1013],
+    woodIds: Array.from({ length: 20 }, (_, index) => 201 + index),
+
     isItemConsumable(item: Item): boolean {
         return this.getHealingPotionIds().includes(item.cbId) || this.getManaPotionIds().includes(item.cbId)
     },
 
     getHealingPotionIds(): number[] {
-        return [1001, 1002, 1003]
+        return this.healingPotionIds
     },
 
     getManaPotionIds(): number[] {
-        return [1011, 1012, 1013]
+        return this.manaPotionIds
     },
 
     getCampWoodIds(): number[] {
-        return Array.from({ length: 20 }, (_, index) => 201 + index)
+        return this.woodIds
     },
 
     isItemCampWood(item: Item): boolean {

@@ -32,6 +32,31 @@ export class CharacterAction {
     }
 }
 
+export class CharacterTimedAction {
+    type: string
+    characterId: number
+    startedAt: number
+    endsAt: number
+    x: number
+    z: number
+
+    constructor(type: string, characterId: number, dur: number, x: number, z: number) {
+        this.type = type
+        this.characterId = characterId
+        this.startedAt = Date.now()
+        this.endsAt = this.startedAt + dur
+        this.x = x
+        this.z = z
+    }
+
+    tryFinish(actualTime: number): boolean {
+        if (actualTime < this.endsAt) {
+            return false
+        }
+        return true
+    }
+}
+
 export const CharacterActions = {
     AUTO_ATTACK: new CharacterAction('AUTO_ATTACK', 'btn_attack_sword', true, 'actions.autoAttackName',
         'actions.autoAttackDescription'),
@@ -54,6 +79,8 @@ export const CharacterActions = {
         'actions.equipStoredWeaponsName',
         'actions.equipStoredWeaponsDescription'),
 
+    CAMPING: new CharacterAction('CAMPING', 'btn_campfire', true, 'actions.campingName', 'actions.campingDescription'),
+
     getActionByName(name: string): CharacterAction | undefined {
         const actions = [
             this.AUTO_ATTACK,
@@ -63,6 +90,7 @@ export const CharacterActions = {
             this.MINING,
             this.LUMBERJACKING,
             this.EQUIP_STORED_WEAPONS,
+            this.CAMPING,
         ]
 
         return actions.find((action) => action.name === name)

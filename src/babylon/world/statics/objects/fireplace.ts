@@ -101,7 +101,7 @@ abstract class BaseFireplace extends BaseStaticObject {
             smokeParticles.maxEmitBox = new Vector3(0.15 * this.fireplaceScale, 0.08 * this.fireplaceScale * 8, 0.15 * this.fireplaceScale)
             smokeParticles.minLifeTime = 3.5
             smokeParticles.maxLifeTime = 5
-            smokeParticles.emitRate = 26 * this.fireplaceScale
+            smokeParticles.emitRate = 20 * this.fireplaceScale
             smokeParticles.blendMode = ParticleSystem.BLENDMODE_STANDARD
             smokeParticles.direction1 = new Vector3(-1 * this.fireplaceScale, 0.45 * this.fireplaceScaleReduced, -1 * this.fireplaceScale)
             smokeParticles.direction2 = new Vector3(1 * this.fireplaceScale, 0.7 * this.fireplaceScaleReduced, 1 * this.fireplaceScale)
@@ -114,7 +114,7 @@ abstract class BaseFireplace extends BaseStaticObject {
             smokeParticles.gravity = new Vector3(0, 0.22 * this.fireplaceScaleReduced, 0)
             smokeParticles.updateSpeed = 0.01
             smokeParticles.addColorGradient(0, new Color4(0.6, 0.6, 0.6, 0))
-            smokeParticles.addColorGradient(0.3, new Color4(0.7, 0.7, 0.7, 0.03))
+            smokeParticles.addColorGradient(0.3, new Color4(0.7, 0.7, 0.7, 0.05))
             smokeParticles.addColorGradient(0.7, new Color4(0.65, 0.65, 0.65, 0.015))
             smokeParticles.addColorGradient(1, new Color4(0.5, 0.5, 0.5, 0))
             smokeParticles.start()

@@ -90,3 +90,10 @@ export interface PotionUsedMessage {
     add: number // att that was added - HP or MP
     val: number // value of the added att
 }
+
+export interface CharacterCampingMessage {
+    id: number
+    dur: number
+    x: number
+    z: number
+}

@@ -21,6 +21,7 @@ import {
     AttackableBasicTO,
     AutoAttackMessage,
     AutoAttackResultMessage,
+    CharacterCampingMessage,
     CharacterGatheringMessage,
     CharacterGatheringResultMessage,
     HealingMessage,
@@ -34,6 +35,7 @@ import { EffectTarget } from '@/babylon/gfx/characterEffect'
 import { GfxManager } from '@/babylon/gfx/gfxManager'
 import { PotionConsumeEffect } from '@/babylon/gfx/potionConsumeEffect'
 import { WATER_BLOCK_TYPE } from '@/babylon/world/terrainManager'
+import { CharacterTimedAction } from '@/data/actions/characterActions'
 
 class Character implements Attackable, EffectTarget {
     model: CharacterModel | null = null
@@ -84,6 +86,8 @@ class Character implements Attackable, EffectTarget {
     healSelf: boolean = false
     healingStartTime: number = 0
     healingEndTime: number = 0
+
+    activeTimedAction: CharacterTimedAction | null = null
 
     constructor(data: any) {
         this.id = data.id
@@ -144,6 +148,8 @@ class Character implements Attackable, EffectTarget {
     }
 
     onFrame(timeRate: number, actualTime: number, myChar: boolean) {
+        this.resolveTimedAction(actualTime)
+
         // Auto attack in progress
         if (this.autoAttackEnd > actualTime) {
             this.resolveStepMark(actualTime, true)
@@ -311,6 +317,33 @@ class Character implements Attackable, EffectTarget {
         this.healingStartTime = Date.now()
         this.healingEndTime = Date.now() + data.dur
         this.healSelf = data.tgt === this.id && data.tp === 'C'
+    }
+
+    startTimedAction(type: string, data: CharacterTimedActionData) {
+        this.clearTimedAction()
+
+        const angle = Utils.getAngleBetweenPoints(this.pos, new Vector3(data.x, this.pos.y, data.z))
+        this.setLookAngle(angle - Math.PI / 4)
+
+        this.activeTimedAction = new CharacterTimedAction(type, this.id, data.dur, data.x, data.z)
+    }
+
+    startCamping(data: CharacterCampingMessage) {
+        this.startTimedAction('CAMPING', data)
+    }
+
+    clearTimedAction() {
+        this.activeTimedAction = null
+    }
+
+    resolveTimedAction(actualTime: number) {
+        if (!this.activeTimedAction) {
+            return
+        }
+
+        if (this.activeTimedAction.tryFinish(actualTime)) {
+            this.activeTimedAction = null
+        }
     }
 
     finishHealing(result: HealingResultMessage) {
@@ -499,3 +532,9 @@ class Character implements Attackable, EffectTarget {
 }
 
 export default Character
+
+interface CharacterTimedActionData {
+    dur: number
+    x: number
+    z: number
+}

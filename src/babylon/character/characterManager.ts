@@ -5,7 +5,7 @@ import { Utils } from '@/utils/utils'
 import {
     AttackableBasicTO,
     AutoAttackMessage,
-    AutoAttackResultMessage,
+    AutoAttackResultMessage, CharacterCampingMessage,
     CharacterGatheringMessage,
     CharacterGatheringResultMessage,
     HealingMessage,
@@ -47,6 +47,7 @@ export const CharacterManager = {
     removeCharacter(id: number) {
         if (this.characters.has(id)) {
             const char = this.characters.get(id)!
+            char.clearTimedAction()
             char.model?.removeFromScene()
             this.visibleCharacters.delete(id)
             this.characters.delete(id)
@@ -181,6 +182,17 @@ export const CharacterManager = {
             // If I am healing someone else, show heal numbers above their head
             if (data.id === MyPlayer.myChar.id && data.tp === 'C') {
                 OverlayManager.addCharacterDamageNumber(data.tgt, -data.res.hp, 'h')
+            }
+        }
+    },
+
+    startCamping(data: CharacterCampingMessage) {
+        if (data.id === MyPlayer.myChar.id) {
+            MyPlayer.myChar.startCamping(data)
+        } else {
+            const char = this.characters.get(data.id)
+            if (char) {
+                char.startCamping(data)
             }
         }
     },
