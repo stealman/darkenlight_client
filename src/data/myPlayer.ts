@@ -99,6 +99,14 @@ export const MyPlayer = {
             this.myChar.finishGathering(null)
         }
 
+        if (
+            MyPlayer.activeAction?.name === CharacterActions.CAMPING.name &&
+            this.myChar.getMoveAngle() != null
+        ) {
+            Connector.sendMessage(new StopAction())
+            this.myChar.clearTimedAction()
+        }
+
         // Resolve common character onFrame logic
         this.myChar.onFrame(timeRate, actualTime, true)
 

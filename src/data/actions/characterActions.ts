@@ -93,7 +93,7 @@ export const CharacterActions = {
         'actions.equipStoredWeaponsName',
         'actions.equipStoredWeaponsDescription'),
 
-    CAMPING: new CharacterAction('CAMPING', 'btn_campfire', true, 'actions.campingName', 'actions.campingDescription'),
+    CAMPING: new CharacterAction('CAMPING', 'btn_camp', true, 'actions.campingName', 'actions.campingDescription'),
 
     getActionByName(name: string): CharacterAction | undefined {
         const actions = [

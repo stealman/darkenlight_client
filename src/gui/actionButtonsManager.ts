@@ -125,6 +125,9 @@ class ActionButton {
             case CharacterActions.MANA_POTION.name:
                 this.htmlEl!.classList.toggle('unavailable', !ActionButtonsManager.hasManaPotionAvailable())
                 return
+            case CharacterActions.CAMPING.name:
+                this.htmlEl!.classList.toggle('unavailable', !ActionButtonsManager.hasCampWoodAvailable())
+                return
             default:
                 this.htmlEl!.classList.remove('unavailable')
         }
@@ -308,6 +311,9 @@ export const ActionButtonsManager = {
                 case CharacterActions.EQUIP_STORED_WEAPONS.name:
                     this.clickOnEquipStoredWeaponsButton()
                     break
+                case CharacterActions.CAMPING.name:
+                    this.clickOnCampingButton()
+                    break
             }
         }
     },
@@ -359,6 +365,24 @@ export const ActionButtonsManager = {
 
     clickOnEquipStoredWeaponsButton() {
         InventoryManager.clickOnEquipStoredWeaponsButton()
+    },
+
+    clickOnCampingButton() {
+        if (MyPlayer.activeAction && MyPlayer.activeAction.name === CharacterActions.CAMPING.name) {
+            MyPlayer.myChar.clearTimedAction()
+            MyPlayer.stopActions()
+            return
+        }
+
+        const campWoodId = [...ConsumableHelper.getCampWoodIds()]
+            .sort((a, b) => a - b)
+            .find(cbId => InventoryManager.getTotalResourceItemCountByType(cbId) > 0)
+
+        if (!campWoodId) {
+            return
+        }
+
+        ConsumableHelper.clickOnCreateCamp(campWoodId)
     },
 
     toggleStateChange(actionName: string, toggled: boolean) {
@@ -416,6 +440,7 @@ export const ActionButtonsManager = {
             CharacterActions.HEALING_POTION,
             CharacterActions.MANA_POTION,
             CharacterActions.EQUIP_STORED_WEAPONS,
+            CharacterActions.CAMPING,
         ]
     },
 
@@ -485,6 +510,10 @@ export const ActionButtonsManager = {
 
     hasManaPotionAvailable(): boolean {
         return ConsumableHelper.getManaPotionIds().some(cbId => InventoryManager.getTotalResourceItemCountByType(cbId) > 0)
+    },
+
+    hasCampWoodAvailable(): boolean {
+        return ConsumableHelper.getCampWoodIds().some(cbId => InventoryManager.getTotalResourceItemCountByType(cbId) > 0)
     },
 
     charEquipChanged() {
