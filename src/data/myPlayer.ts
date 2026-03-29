@@ -49,7 +49,7 @@ export const MyPlayer = {
 
     lastPotionUseTime: 0 as number,
     nextPotionUseTime: 0 as number,
-    isNearFireplace: false as boolean,
+    nearFireplace: null as { x: number, z: number } | null,
 
     async initialize(charData: any) {
         console.log("Initializing MyPlayer with charData:", charData)
@@ -118,18 +118,18 @@ export const MyPlayer = {
         this.resolveLowHealthStatus(actualTime)
 
         // Check if near fireplace
-        this.isNearFireplace = this.checkIsNearFireplace(coveredBlockCoords)
+        this.nearFireplace = this.checkIsNearFireplace(coveredBlockCoords)
     },
 
-    checkIsNearFireplace(coveredBlockCoords: { x: number, z: number }[]): boolean {
+    checkIsNearFireplace(coveredBlockCoords: { x: number, z: number }[]): { x: number, z: number } | null {
         if (coveredBlockCoords.length === 0) {
-            return false
+            return null
         }
 
-        return coveredBlockCoords.some(block => {
-            return StaticsManager.allStatics.some(obj => {
+        for (const block of coveredBlockCoords) {
+            for (const obj of StaticsManager.allStatics) {
                 if (obj.type !== 241 && obj.type !== 242) {
-                    return false
+                    continue
                 }
 
                 const fireX = Math.floor(obj.position.x)
@@ -138,10 +138,15 @@ export const MyPlayer = {
                 const fireMaxX = fireX + fireSize - 1
                 const fireMaxZ = fireZ + fireSize - 1
 
-                return block.x >= fireX - 1 && block.x <= fireMaxX + 1
+                const isNearFireplace = block.x >= fireX - 1 && block.x <= fireMaxX + 1
                     && block.z >= fireZ - 1 && block.z <= fireMaxZ + 1
-            })
-        })
+                if (isNearFireplace) {
+                    return { x: fireX, z: fireZ }
+                }
+            }
+        }
+
+        return null
     },
 
     startMove(movementType: string, angle: number) {

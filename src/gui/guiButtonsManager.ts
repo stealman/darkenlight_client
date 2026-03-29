@@ -6,7 +6,7 @@ import { MyPlayer } from '@/data/myPlayer'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { WeaponTypes } from '@/data/items/item'
 import { Connector } from '@/network/connector'
-import { GatheringActionMsg } from '@/network/messages'
+import { GatheringActionMsg, RestingActionMsg } from '@/network/messages'
 import { CharacterAction, CharacterActions } from '@/data/actions/characterActions'
 
 class GuiOpportunityButtonAction {
@@ -128,8 +128,8 @@ export const GuiButtonsManager = {
             TreeManager.isAnyTreeInDistance(MyPlayer.myChar.pos, 1.5) && MyPlayer.hasWaponTypeInHandOrInventory(WeaponTypes.GREAT_AXE)
         )
 
-        this.opportunityButtons.get(GuiOpportunityActions.RESTING.name)!.setVisible(MyPlayer.isNearFireplace)
-        this.opportunityButtons.get(GuiOpportunityActions.COOKING.name)!.setVisible(MyPlayer.isNearFireplace)
+        this.opportunityButtons.get(GuiOpportunityActions.RESTING.name)!.setVisible(MyPlayer.nearFireplace !== null)
+        this.opportunityButtons.get(GuiOpportunityActions.COOKING.name)!.setVisible(MyPlayer.nearFireplace !== null)
     },
 
     onclickOpportunityButton(actionName: string) {
@@ -201,8 +201,11 @@ export const GuiButtonsManager = {
     },
 
     clickOnRestingButton() {
-        console.log("Resting action triggered")
-        //Connector.sendMessage(new GatheringActionMsg(CharacterActions.RESTING.name))
+        if (MyPlayer.nearFireplace == null) {
+            return
+        }
+
+        Connector.sendMessage(new RestingActionMsg(MyPlayer.nearFireplace.x, MyPlayer.nearFireplace.z))
     },
 
     clickOnCookingButton() {
