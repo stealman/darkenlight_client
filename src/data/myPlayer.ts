@@ -210,11 +210,11 @@ export const MyPlayer = {
     },
 
     basicDataChange(data) {
-        this.setMyCharHpMpSt(data.hp)
+        this.setMyCharHp(data.hp)
         this.myChar.basicDataChange(data)
     },
 
-    setMyCharHpMpSt(hp: number) {
+    setMyCharHp(hp: number) {
         const percentBeforeChange = (this.myChar.hp / this.myChar.maxHp) * 100
         this.myChar.hp = hp
 

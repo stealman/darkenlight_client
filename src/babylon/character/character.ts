@@ -58,8 +58,8 @@ class Character implements Attackable, EffectTarget {
     className: string = "Warrior"
 
     boxSize: number = 0.8 // TODO server shall send it
-    walkSpeed: number = 2
-    runSpeed: number = 3.2
+    walkSpeed: number = 2 // TODO server shall send it
+    runSpeed: number = 3.2 // TODO server shall send it
     yMoveSpeed: number = 15 // Only for client purposes (jumping, falling)
 
     pos: Vector3
@@ -98,28 +98,28 @@ class Character implements Attackable, EffectTarget {
 
     constructor(data: any) {
         this.id = data.id
-        if (data.hpp) {
+        if (data.hpp != null) {
             this.hpPercent = data.hpp
         }
-        if (data.hp) {
+        if (data.hp != null) {
             this.hp = data.hp
         }
-        if (data.mhp) {
+        if (data.mhp != null) {
             this.maxHp = data.mhp
             this.hpPercent = (this.hp / this.maxHp) * 100
         }
 
-        if (data.mp) {
+        if (data.mp != null) {
             this.mp = data.mp
         }
-        if (data.mmp) {
+        if (data.mmp != null) {
             this.maxMp = data.mmp
             this.mpPercent = (this.mp / this.maxMp) * 100
         }
-        if (data.st) {
+        if (data.st != null) {
             this.st = data.st
         }
-        if (data.mst) {
+        if (data.mst != null) {
             this.maxSt = data.mst
             this.stPercent = (this.st / this.maxSt) * 100
         }
@@ -396,25 +396,24 @@ class Character implements Attackable, EffectTarget {
 
     basicDataChange(data: AttackableBasicTO) {
         this.hpPercent = data.hpp
-        if (data.hp) {
+        if (data.hp != null) {
             this.hp = data.hp
         }
-        if (data.mhp) {
+        if (data.mhp != null) {
             this.maxHp = data.mhp
         }
-        if (data.mp) {
+        if (data.mp != null) {
             this.mp = data.mp
         }
-        if (data.mmp) {
+        if (data.mmp != null) {
             this.maxMp = data.mmp
         }
-        if (data.st) {
+        if (data.st != null) {
             this.st = data.st
         }
-        if (data.mst) {
+        if (data.mst != null) {
             this.maxSt = data.mst
         }
-        console.log(`Character ${this.id} basic data change: hp ${this.hp}/${this.maxHp}, mp ${this.mp}/${this.maxMp}, st ${this.st}/${this.maxSt}`)
     }
 
     setVisible(visible: boolean) {

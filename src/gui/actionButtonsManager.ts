@@ -345,7 +345,7 @@ export const ActionButtonsManager = {
     },
 
     clickOnHealingButton() {
-        if (InventoryManager.getTotalResourceItemCountByType(1) <= 0) { OnScreenMessageManager.addMessage(t('messages.noBandages')); return }
+        if (InventoryManager.getTotalResourceItemCountByType(1) <= 0) { OnScreenMessageManager.addMessage(t('messages.noBandages'), OnScreenMessageSeverities.ERROR); return }
         if (MyPlayer.activeAction && MyPlayer.activeAction.name === CharacterActions.HEAL.name) {
             MyPlayer.stopActions()
             return

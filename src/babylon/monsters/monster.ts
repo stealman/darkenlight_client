@@ -112,7 +112,7 @@ export class Monster implements Attackable {
         }
         target.hpPercent = data.res.tgt.hpp
         if (target === MyPlayer.myChar) {
-            MyPlayer.setMyCharHpMp(data.res.tgt.hp)
+            MyPlayer.setMyCharHp(data.res.tgt.hp)
         }
 
         if (data.res.h === 'h') {

@@ -3,23 +3,46 @@ div#myStatusPanel {
     top: 0px;
     left: 0px;
     width: 25%;
-    height: 3vh;
+    height: 5vh;
     pointer-events: none;
     display: none;
-    align-items: center;
-    justify-content: center;
+    align-items: stretch;
+    justify-content: flex-start;
+    flex-direction: column;
     background-color: rgba(0, 0, 0, 0.25);
     border: 1px solid rgba(128, 128, 128, 0.75);
-    border-radius: 0px 0px 6px 6px;
+    border-radius: 0 0 4px 0;
     border-top: none;
-    font-size: 2.25vh;
     text-align: center;
     z-index: 1000;
     display: flex;
     overflow: hidden;
 }
 
+#myStatusPanel .statusRow {
+    position: relative;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-sizing: border-box;
+}
+
+#myStatusPanel .statusRowMain {
+    flex: 2 1 0;
+    min-height: 0;
+}
+
+#myStatusPanel .statusRowSecondary {
+    flex: 1 1 0;
+    gap: 0vh;
+    padding: 0 0 0 0;
+    justify-content: flex-start;
+    margin-top: -1px;
+}
+
 #myStatusPanel .myName {
+    font-size: 2vh;
     position: relative;
     z-index: 2;
     line-height: 1;
@@ -71,3 +94,63 @@ div#myStatusPanel {
 }
 
 #myStatusPanel .hpBlocks{ height: 100%; }
+
+#myStatusPanel .secondaryBar {
+    position: relative;
+    width: calc(50% - 0.06vh);
+    height: 100%;
+    overflow: hidden;
+    border: 1px solid rgba(32, 32, 32, 0.5);
+    border-radius: 0;
+    box-sizing: border-box;
+}
+
+#myStatusPanel .secondaryBar.fullWidth {
+    width: 100%;
+}
+
+#myStatusPanel .secondaryBlocks {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    grid-auto-flow: column;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 0;
+    box-sizing: border-box;
+}
+
+#myStatusPanel .secondaryBar.halfSegments .secondaryBlocks {
+    grid-template-columns: repeat(5, 1fr);
+}
+
+#myStatusPanel .secondaryBlock {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+    border-left: 1px solid rgba(32, 32, 32, 0.4);
+}
+
+#myStatusPanel .secondaryBlock:first-child {
+    border-left: none;
+}
+
+#myStatusPanel .secondaryBar.halfSegments .secondaryBlock:nth-child(n + 6) {
+    display: none;
+}
+
+#myStatusPanel .secondaryBlockFill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 0%;
+}
+
+#myStatusPanel .staminaBar .secondaryBlockFill {
+    background: rgba(200, 125, 50, 0.75);
+}
+
+#myStatusPanel .manaBar .secondaryBlockFill {
+    background: rgba(75, 125, 235, 0.92);
+}
