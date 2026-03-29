@@ -93,20 +93,13 @@ export const MyPlayer = {
         }
 
         // Moving during gathering actions breaks the action immediately
-        if (
-            (MyPlayer.activeAction?.name === CharacterActions.MINING.name ||
-            MyPlayer.activeAction?.name === CharacterActions.LUMBERJACKING.name) &&
-            this.myChar.getMoveAngle() != null
-        ) {
+        if ((MyPlayer.activeAction?.name === CharacterActions.MINING.name || MyPlayer.activeAction?.name === CharacterActions.LUMBERJACKING.name) && this.myChar.getMoveAngle() != null) {
             this.myChar.breakAutoAttack() // Mining action uses auto attack system, so we can reuse the same break message
             Connector.sendMessage(new AutoAttackBreak())
             this.myChar.finishGathering(null)
         }
 
-        if (
-            MyPlayer.activeAction?.name === CharacterActions.CAMPING.name &&
-            this.myChar.getMoveAngle() != null
-        ) {
+        if (MyPlayer.activeAction?.name === CharacterActions.CAMPING.name && this.myChar.getMoveAngle() != null) {
             Connector.sendMessage(new StopAction())
             this.myChar.clearTimedAction()
         }

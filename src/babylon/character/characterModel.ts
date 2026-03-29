@@ -291,7 +291,11 @@ export class CharacterModel implements EquipBearer {
             }
         }
 
-        if (this.parent !== MyPlayer.myChar || this.parent.getMoveAngle() != null || Math.abs(this.parent.pos.y - this.parent.logicYpos) > 0.1) {
+        const hasPositionDrift =
+            Math.abs(this.parent.pos.x - this.node.position.x) > 0.001 ||
+            Math.abs(this.parent.pos.z - this.node.position.z) > 0.001
+
+        if (this.parent !== MyPlayer.myChar || this.parent.getMoveAngle() != null || hasPositionDrift || Math.abs(this.parent.pos.y - this.parent.logicYpos) > 0.1) {
             this.moveModel(timeRate)
         }
         if (this.parent.getLookAngle() != null) {
@@ -407,7 +411,7 @@ export class CharacterModel implements EquipBearer {
 
     checkActiveStepSound() {
         // No movement, stop all step sounds
-        if (!this.parent.getMoveAngle()) {
+        if (this.parent.getMoveAngle() == null) {
             this.stopAllStepSounds()
             this.actualStepSound = null
             return

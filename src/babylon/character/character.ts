@@ -393,11 +393,18 @@ class Character implements Attackable, EffectTarget {
     }
 
     stopMove() {
+        if (this === MyPlayer.myChar && this.model?.initialized) {
+            this.pos.x = this.model.node.position.x
+            this.pos.z = this.model.node.position.z
+            this.logicYpos = Utils.calculateWalkYPos(this.pos.x, this.pos.z, this.getBoxSize())
+            this.pos.y = this.model.node.position.y
+        }
+
         this.setMoveAngleAndSpeed(null, 0)
     }
 
     private setMoveAngleAndSpeed(angle: number | null, speed: number) {
-        this.setMoveAngle(angle ? Utils.roundToTwoDecimals(angle): null)
+        this.setMoveAngle(angle != null ? Utils.roundToTwoDecimals(angle) : null)
         this.setActualSpeed(Utils.roundToOneDecimal(speed))
         Connector.sendMoveMessage(new MyCharMoveMsg())
     }
