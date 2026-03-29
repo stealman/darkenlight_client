@@ -53,7 +53,7 @@ export const MyPlayer = {
 
     async initialize(charData: any) {
         console.log("Initializing MyPlayer with charData:", charData)
-        this.myChar = new Character(charData)
+        this.myChar = new Character(charData, true)
         this.myChar.initializeInventory(charData.inventory.items)
         this.myChar.insideView = true
         await this.myChar.createModel(true)
@@ -145,7 +145,7 @@ export const MyPlayer = {
     startMove(movementType: string, angle: number) {
         // only move if angle differs from current by at least 0.1 rad
         const currentAngle = this.myChar.getMoveAngle()
-        if (movementType === this.myChar.movementType && currentAngle != null && Math.abs(currentAngle - angle) < 0.1) {
+        if (movementType === this.myChar.getMoveType() && currentAngle != null && Math.abs(currentAngle - angle) < 0.1) {
             return
         }
         this.myChar.startMove(movementType, angle)

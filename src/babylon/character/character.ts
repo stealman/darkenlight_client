@@ -9,7 +9,6 @@ import {
 import { WorldDataManager } from '@/data/worldDataManager'
 import { StepMarksRenderer } from '@/babylon/world/stepMarksRenderer'
 import { ViewportManager } from '@/utils/viewport'
-import { FightSplatTypes, SplatType } from '@/babylon/world/fightSplatsRenderer'
 import { CharacterModel } from '@/babylon/character/characterModel'
 import { Utils } from '@/utils/utils'
 import { Connector } from '@/network/connector'
@@ -26,7 +25,7 @@ import {
     CharacterGatheringResultMessage,
     CharacterRestingMessage,
     HealingMessage,
-    HealingResultMessage, PotionUsedMessage,
+    HealingResultMessage,
 } from '@/network/messageIfs'
 import { TargetingManager } from '@/gui/targettingManager'
 import { CharacterManager } from '@/babylon/character/characterManager'
@@ -57,15 +56,15 @@ class Character implements Attackable, EffectTarget {
     nameDisplayTime: number = 0
     className: string = "Warrior"
 
-    boxSize: number = 0.8 // TODO server shall send it
-    walkSpeed: number = 2 // TODO server shall send it
-    runSpeed: number = 3.2 // TODO server shall send it
+    boxSize: number = 0.8
+    walkSpeed: number = 1
+    runSpeed: number = 1
     yMoveSpeed: number = 15 // Only for client purposes (jumping, falling)
 
     pos: Vector3
     logicYpos: number = 0
 
-    movementType: string = 'WALK'
+    private movementType: string = 'N' // N - None, W - Walk, R - Run
     private actualSpeed: number = 0
     private moveAngle: number | null = null
     private lookAngle: number | null = null
@@ -96,37 +95,31 @@ class Character implements Attackable, EffectTarget {
 
     activeTimedAction: CharacterTimedAction | null = null
 
-    constructor(data: any) {
+    constructor(data: any, myChar: boolean = false) {
         this.id = data.id
         if (data.hpp != null) {
             this.hpPercent = data.hpp
         }
-        if (data.hp != null) {
+        if (myChar) {
             this.hp = data.hp
-        }
-        if (data.mhp != null) {
+            this.mp = data.mp
+            this.st = data.st
             this.maxHp = data.mhp
             this.hpPercent = (this.hp / this.maxHp) * 100
-        }
-
-        if (data.mp != null) {
-            this.mp = data.mp
-        }
-        if (data.mmp != null) {
             this.maxMp = data.mmp
             this.mpPercent = (this.mp / this.maxMp) * 100
-        }
-        if (data.st != null) {
-            this.st = data.st
-        }
-        if (data.mst != null) {
             this.maxSt = data.mst
             this.stPercent = (this.st / this.maxSt) * 100
+
+            this.walkSpeed = data.spd1
+            this.runSpeed = data.spd2
         }
 
         this.pos = new Vector3(data.x, 0, data.z)
         this.name = data.name
         this.className = data.cls
+        this.boxSize = data.bsz
+        console.log(`Character ${this.name} box size: ${this.boxSize}`)
 
         this.pos.y = Utils.calculateWalkYPos(this.pos.x, this.pos.z, this.getBoxSize())
         this.logicYpos = this.pos.y
@@ -215,8 +208,8 @@ class Character implements Attackable, EffectTarget {
                 this.logicYpos = Utils.calculateWalkYPos(this.pos.x, this.pos.z, this.getBoxSize())
             }
 
-            if (this.movementType === 'RUN') { this.model?.startRunAnimation() }
-            if (this.movementType === 'WALK') { this.model?.startWalkAnimation() }
+            if (this.movementType === 'R') { this.model?.startRunAnimation() }
+            if (this.movementType === 'W') { this.model?.startWalkAnimation() }
             this.resolveStepMark(actualTime, false)
         } else {
             this.model?.stopAnimation()
@@ -290,7 +283,7 @@ class Character implements Attackable, EffectTarget {
         }
         target.hpPercent = data.res.tgt.hpp
         if (target === MyPlayer.myChar) {
-            MyPlayer.setMyCharHpMp(data.res.tgt.hp)
+            MyPlayer.setMyCharHp(data.res.tgt.hp)
         }
         if (data.res.h === 'h') {
             AudioManager.playWeaponHit(this.weaponSoundType, target.getBodySoundType(), target.pos)
@@ -427,7 +420,7 @@ class Character implements Attackable, EffectTarget {
 
     startMove(movementType: string, angle: number) {
         this.movementType = movementType
-        this.setMoveAngleAndSpeed(angle, this.movementType === 'RUN' ? this.runSpeed : this.walkSpeed)
+        this.setMoveAngleAndSpeed(angle, this.movementType === 'R' ? this.runSpeed : this.walkSpeed)
     }
 
     stopMove() {
@@ -443,7 +436,7 @@ class Character implements Attackable, EffectTarget {
 
     private setMoveAngleAndSpeed(angle: number | null, speed: number) {
         this.setMoveAngle(angle != null ? Utils.roundToTwoDecimals(angle) : null)
-        this.setActualSpeed(Utils.roundToOneDecimal(speed))
+        this.setActualSpeed(speed)
         Connector.sendMoveMessage(new MyCharMoveMsg())
     }
 
@@ -463,6 +456,14 @@ class Character implements Attackable, EffectTarget {
         return this.moveAngle
     }
 
+    setMoveType(movementType: string) {
+        this.movementType = movementType
+    }
+
+    getMoveType() {
+        return this.movementType
+    }
+
     setLookAngle(angle: number | null) {
         this.lookAngle = angle
     }
@@ -477,9 +478,6 @@ class Character implements Attackable, EffectTarget {
 
     setActualSpeed(speed: number) {
         this.actualSpeed = speed
-        if (this !== MyPlayer.myChar) {
-            this.movementType = speed > this.walkSpeed ? 'RUN' : 'WALK'
-        }
     }
 
     getPositionOnScreen() {

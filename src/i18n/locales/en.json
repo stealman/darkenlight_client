@@ -106,8 +106,9 @@
     "nextPotionIn": "Next potion in {seconds} seconds",
     "weaponSet-primary": "Primary weapon saved",
     "weaponSet-secondary": "Secondary weapon saved",
-    "notEnoughStamina": "You don't have enough stamina",
+    "notEnoughStamina": "You are too tired",
     "notEnoughMana": "You don't have enough mana",
-    "notEnoughHealth": "You don't have enough health"
+    "notEnoughHealth": "You don't have enough health",
+    "fullyRested": "You are fully rested"
   }
 }

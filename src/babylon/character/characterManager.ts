@@ -91,6 +91,7 @@ export const CharacterManager = {
                 char.logicYpos = char.pos.y
                 char.setMoveAngle(data[3])
                 char.setActualSpeed(data[4])
+                char.setMoveType(data[5])
             }
         }
     },

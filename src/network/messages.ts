@@ -37,8 +37,7 @@ export class MyCharMoveMsg implements Message {
         if (angle != null) {
             angle = Utils.roundToTwoDecimals(angle)
         }
-
-        this.d = [Utils.roundToTwoDecimals(MyPlayer.myChar.pos.x), Utils.roundToTwoDecimals(MyPlayer.myChar.pos.z), angle, MyPlayer.myChar.getActualSpeed()]
+        this.d = [Utils.roundToTwoDecimals(MyPlayer.myChar.pos.x), Utils.roundToTwoDecimals(MyPlayer.myChar.pos.z), angle, MyPlayer.myChar.movementType]
     }
 }
 

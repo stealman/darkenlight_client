@@ -149,7 +149,7 @@ export const Controller = {
         const distance = Math.sqrt(dx * dx + dy * dy)
 
         const angleRadians = Math.atan2(dy, dx)
-        MyPlayer.startMove(distance > 150 ? 'RUN' : 'WALK', angleRadians)
+        MyPlayer.startMove(distance > 150 ? 'R' : 'W', angleRadians)
     },
 
     resolveRightDrag(pointerInfo: PointerInfo) {
@@ -196,7 +196,7 @@ export const Controller = {
         }
 
         const angleRadians = Math.atan2(-deltaY, deltaX)
-        MyPlayer.startMove(distance > 100 ? 'RUN' : 'WALK', angleRadians)
+        MyPlayer.startMove(distance > 100 ? 'R' : 'W', angleRadians)
     },
 }
 
