@@ -97,3 +97,8 @@ export interface CharacterCampingMessage {
     x: number
     z: number
 }
+
+export interface TextMessage {
+    txt: string
+    sev: string
+}

@@ -1,30 +1,58 @@
+import { AudioManager } from '@/babylon/audio/audioManager'
+
+export const OnScreenMessageSeverities = {
+    INFO: 'INFO',
+    ERROR: 'ERROR',
+    SUCCESS: 'SUCCESS',
+}
+
+type OnScreenMessageSeverity = typeof OnScreenMessageSeverities[keyof typeof OnScreenMessageSeverities]
+
+type OnScreenMessage = {
+    text: string
+    severity: OnScreenMessageSeverity
+    expiresAt: number
+    element: HTMLDivElement
+}
+
 export const OnScreenMessageManager = {
-    messages: [] as HTMLDivElement[],
+    MESSAGE_DURATION: 2000 as number,
+    messages: [] as OnScreenMessage[],
 
     initialize() {
 
     },
 
-    addMessage(text: string) {
+    addMessage(text: string, severity: OnScreenMessageSeverity = 'INFO') {
         console.log("OnScreenMessageManager addMessage:", text)
         const msgPanel = document.getElementById("onscreen-messages-panel")
+        if (!msgPanel) {
+            return
+        }
 
-        // add mssage div to msgPanel
         const msgDiv = document.createElement("div")
-        msgDiv.className = "noselect onscreen-message gray"
-        msgDiv.innerText += text
+        msgDiv.className = `noselect onscreen-message ${severity.toLowerCase()}`
+        msgDiv.innerText = text
 
-        msgPanel?.insertBefore(msgDiv, msgPanel.firstChild)
-        msgDiv.createdAt = Date.now()
-        this.messages.push(msgDiv)
+        msgPanel.insertBefore(msgDiv, msgPanel.firstChild)
+
+        this.messages.push({
+            text,
+            severity,
+            expiresAt: Date.now() + this.MESSAGE_DURATION,
+            element: msgDiv,
+        })
+
+        if (severity === 'ERROR') {
+            AudioManager.playGuiFail()
+        }
     },
 
     onFrame(time: number) {
-        // Remove messages older than 2 seconds
         for (let i = this.messages.length - 1; i >= 0; i--) {
             const msg = this.messages[i]
-            if (time - msg.createdAt > 2000) {
-                msg.remove()
+            if (time >= msg.expiresAt) {
+                msg.element.remove()
                 this.messages.splice(i, 1)
             }
         }

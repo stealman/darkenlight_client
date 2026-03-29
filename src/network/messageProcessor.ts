@@ -17,11 +17,13 @@ import {
     CharacterGatheringMessage,
     CharacterGatheringResultMessage,
     EmeraldsChangeMessage,
-    HealingMessage, HealingResultMessage, PotionUsedMessage,
+    HealingMessage, HealingResultMessage, PotionUsedMessage, TextMessage,
 } from '@/network/messageIfs'
 import { GroundItemsManager } from '@/babylon/world/groundItemsManager'
 import { InventoryManager } from '@/data/InventoryManager'
 import { EmeraldsManager } from '@/gui/emeraldsManager'
+import { OnScreenMessageManager } from '@/gui/onScreenMessageManager'
+import { t } from '@/i18n'
 
 export const MessageProcessor = {
 
@@ -69,6 +71,7 @@ export const MessageProcessor = {
                 case 38: this.processCharacterGatheringFinished(msg.d); break
                 case 39: this.processPotionUsed(msg.d); break
                 case 40: this.processCharacterCamping(msg.d); break
+                case 41: this.processTextMessage(msg.d); break
                 case 42: this.processCharacterStopAction(msg.d); break
                 case 1003: this.processGMAllSpawns(msg.d); break
                 case 1004: this.processGMSpawnChange(msg.d); break
@@ -267,6 +270,10 @@ export const MessageProcessor = {
 
     processCharacterGatheringFinished(data: CharacterGatheringResultMessage) {
         CharacterManager.finishGathering(data)
+    },
+
+    processTextMessage(data: TextMessage) {
+        OnScreenMessageManager.addMessage(t(data.txt), data.sev)
     },
 
     processPotionUsed(data: PotionUsedMessage) {

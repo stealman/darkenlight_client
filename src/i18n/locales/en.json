@@ -79,7 +79,7 @@
     "equipStoredWeaponsName": "Stored Weapon",
     "equipStoredWeaponsDescription": "Switch between primary and secondary stored weapon. If you are holding a completely different weapon, the primary one will be equipped.",
     "campingName": "Camping",
-    "campingDescription": "TODO"
+    "campingDescription": "Try to light a fire if it's possible in this place and you have some wood in inventory. You can rest and cook food on the fire."
   },
   "inventory": {
     "unknownItem": "Unknown item",
@@ -95,6 +95,8 @@
     "noBandages": "You have no bandages",
     "noHealthPotions": "You have no health potions",
     "noManaPotions": "You have no mana potions",
+    "noCampWood": "No camp wood",
+    "noCampableBlockAround": "You can't camp here",
     "autoAttack": "Auto-attack: {state}",
     "autoTarget": "Auto-targeting {state}",
     "enabled": "Enabled",

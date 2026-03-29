@@ -15,7 +15,7 @@ div#onscreen-messages-panel div.onscreen-message {
     font-size: 18px;
     text-align: center;
     animation: fadeOut 0.5s ease-in-out forwards;
-    animation-delay: 1s;
+    animation-delay: 1.5s;
     opacity: 1;
 
     background-color: rgba(0, 0, 0, 0.5);
@@ -23,12 +23,16 @@ div#onscreen-messages-panel div.onscreen-message {
     padding: 5px;
 }
 
-div#onscreen-messages-panel div.onscreen-message.cyan {
-    color: rgba(128, 192, 192, 0.85);
+div#onscreen-messages-panel div.onscreen-message.info {
+    color: rgba(200, 200, 200, 0.85);
 }
 
-div#onscreen-messages-panel div.onscreen-message.gray {
-    color: rgba(200, 200, 200, 0.85);
+div#onscreen-messages-panel div.onscreen-message.success {
+    color: rgba(118, 210, 210, 0.92);
+}
+
+div#onscreen-messages-panel div.onscreen-message.error {
+    color: rgba(220, 135, 135, 0.92);
 }
 
 @keyframes fadeOut {

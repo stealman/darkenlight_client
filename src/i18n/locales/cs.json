@@ -79,7 +79,7 @@
     "equipStoredWeaponsName": "Uložená Zbraň",
     "equipStoredWeaponsDescription": "Přepíná mezi primární a sekundární uloženou zbraní. Pokud je v ruce zcela jiná zbraň, nasadí se primární.",
     "campingName": "Kempování",
-    "campingDescription": "TODO"
+    "campingDescription": "Pokusíš se rozdělat oheň, pokud to na tomto místě jde a máš v inventáři nějaké dřevo. U ohně je možné odpočívat a uvařit jídlo."
   },
   "inventory": {
     "unknownItem": "Neznámý předmět",
@@ -95,6 +95,8 @@
     "noBandages": "Nemáš žádné obvazy",
     "noHealthPotions": "Nemáš žádné lektvary zdraví",
     "noManaPotions": "Nemáš žádné lektvary many",
+    "noCampWood": "Nemáš žádné dřevo na kempování",
+    "noCampableBlockAround": "Na tomto místě nemůžeš kempovat",
     "autoAttack": "Auto-útok: {state}",
     "autoTarget": "Auto-zaměření {state}",
     "enabled": "Zapnuto",

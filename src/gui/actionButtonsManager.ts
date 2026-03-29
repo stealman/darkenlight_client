@@ -1,7 +1,7 @@
 import { Settings } from '@/settings/settings'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { TargetingManager } from '@/gui/targettingManager'
-import { OnScreenMessageManager } from '@/gui/onScreenMessageManager'
+import { OnScreenMessageManager, OnScreenMessageSeverities } from '@/gui/onScreenMessageManager'
 import { MyPlayer } from '@/data/myPlayer'
 import { GuiButtonsManager } from '@/gui/guiButtonsManager'
 import { EmeraldsManager } from '@/gui/emeraldsManager'
@@ -354,12 +354,12 @@ export const ActionButtonsManager = {
     },
 
     clickOnHealingPotionButton() {
-        if (!ActionButtonsManager.hasHealingPotionAvailable()) { OnScreenMessageManager.addMessage(t('messages.noHealthPotions')); return }
+        if (!ActionButtonsManager.hasHealingPotionAvailable()) { OnScreenMessageManager.addMessage(t('messages.noHealthPotions'), OnScreenMessageSeverities.ERROR); return }
         ConsumableHelper.clickOnConsumeHealingPotion()
     },
 
     clickOnManaPotionButton() {
-        if (!ActionButtonsManager.hasManaPotionAvailable()) { OnScreenMessageManager.addMessage(t('messages.noManaPotions')); return }
+        if (!ActionButtonsManager.hasManaPotionAvailable()) { OnScreenMessageManager.addMessage(t('messages.noManaPotions'), OnScreenMessageSeverities.ERROR); return }
         ConsumableHelper.clickOnConsumeManaPotion()
     },
 
@@ -379,6 +379,7 @@ export const ActionButtonsManager = {
             .find(cbId => InventoryManager.getTotalResourceItemCountByType(cbId) > 0)
 
         if (!campWoodId) {
+            OnScreenMessageManager.addMessage(t('messages.noCampWood'), OnScreenMessageSeverities.ERROR)
             return
         }
 

@@ -28,6 +28,7 @@ export const AudioManager = {
     guiButtonToggleOnSound: null as Sound | null,
     guiButtonToggleOffSound: null as Sound | null,
     guiTickSound: null as Sound | null,
+    guiFailSound: null as Sound | null,
 
     lowHealthWarningSound: null as Sound | null,
     heartBeatSound: null as Sound | null,
@@ -141,6 +142,13 @@ export const AudioManager = {
         }, {
             volume: 0.3,
             playbackRate: 1.25,
+        });
+
+        this.guiFailSound = new Sound("guiFail", AudioManager.BASE_PATH_GUI + "fail.ogg", scene, function() {
+            AudioManager.guiFailSound!['loaded'] = true;
+        }, {
+            volume: 0.75,
+            playbackRate: 1,
         });
 
         this.lowHealthWarningSound = new Sound("lowHealthWarning", AudioManager.BASE_PATH_SFX + "low-health-warning.ogg", scene, function() {
@@ -338,6 +346,12 @@ export const AudioManager = {
     playGuiTick() {
         if (this.guiTickSound && this.guiTickSound['loaded']) {
             this.guiTickSound.play();
+        }
+    },
+
+    playGuiFail() {
+        if (this.guiFailSound && this.guiFailSound['loaded']) {
+            this.guiFailSound.play();
         }
     },
 
