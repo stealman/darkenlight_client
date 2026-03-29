@@ -55,6 +55,20 @@ export class CharacterTimedAction {
         }
         return true
     }
+
+    getProgressPercent(actualTime: number): number {
+        const totalDuration = this.endsAt - this.startedAt
+        if (totalDuration <= 0) {
+            return 100
+        }
+
+        const elapsed = actualTime - this.startedAt
+        return Math.max(0, Math.min(100, (elapsed / totalDuration) * 100))
+    }
+
+    getDisplayName(): string {
+        return CharacterActions.getActionByName(this.type)?.nameLoc || this.type
+    }
 }
 
 export const CharacterActions = {

@@ -370,13 +370,22 @@ export const OverlayManager = {
         })
 
         CharacterManager.characters.forEach(char => {
-            if (char.nameDisplayTime > time) {
-                const pos = char.getNameTextNodeScreenPosition()
-                if (pos) {
-                    this.renderName(pos, char.name, tightText, char.getRelationToMyPlayer())
-                }
+            if (char.nameDisplayTime <= time && !char.activeTimedAction) {
+                return
+            }
+
+            const pos = char.getNameTextNodeScreenPosition()
+            if (pos) {
+                this.renderCharacterLabel(pos, char, time, tightText)
             }
         })
+
+        if (MyPlayer.myChar.nameDisplayTime > time || MyPlayer.myChar.activeTimedAction) {
+            const pos = MyPlayer.myChar.getNameTextNodeScreenPosition()
+            if (pos) {
+                this.renderCharacterLabel(pos, MyPlayer.myChar, time, tightText)
+            }
+        }
 
         const nearestItem = GroundItemsManager.nearbyItem
         if (nearestItem && nearestItem.nameDisplayTime > time) {
@@ -643,21 +652,61 @@ export const OverlayManager = {
         drawCross(size, thickness)
     },
 
-    renderName(pos: Vector3, name: string, tightText: boolean, relation: 'ALLY' | 'ENEMY' | 'NEUTRAL') {
+    renderCharacterLabel(pos: Vector3, char: Character, time: number, tightText: boolean) {
+        const name = char.nameDisplayTime > time ? char.name : ''
+        const actionName = char.activeTimedAction?.getDisplayName() || ''
+
+        if (!name && !actionName) {
+            return
+        }
+
         const ctx = this.overlayCtx!
-        ctx.font = `${this.fontSize}px "Roboto", Arial, sans-serif`
+        const basePos = new Vector3(pos.x, pos.y, pos.z)
+        const nameFontSize = this.fontSize
+        const actionFontSize = Math.max(12, this.fontSize - 2)
+        const spacingFix = this.letterSpacingFix
+        const nameWidth = name ? CanvasTextUtils.getTextWidth(ctx, name, tightText, spacingFix) : 0
+        const actionWidth = actionName ? CanvasTextUtils.getTextWidth(ctx, actionName, tightText, spacingFix) : 0
+        const maxWidth = Math.max(nameWidth, actionWidth)
+        const textLines = (name ? 1 : 0) + (actionName ? 1 : 0)
+        const blockHeight = textLines === 2 ? nameFontSize + actionFontSize + 10 : Math.max(nameFontSize, actionFontSize) + 6
+        const progressBarHeight = char === MyPlayer.myChar && char.activeTimedAction ? 8 : 0
+        const totalHeight = blockHeight + progressBarHeight + (progressBarHeight > 0 ? 4 : 0)
+
+        ViewportManager.movePositionToScreen(basePos, maxWidth / 2, totalHeight + 10)
+
+        let currentTextY = basePos.y - totalHeight + nameFontSize / 2
+        if (char === MyPlayer.myChar && char.activeTimedAction) {
+            this.renderTimedActionProgressBar(basePos.x, currentTextY - 12, char.activeTimedAction.getProgressPercent(time))
+            currentTextY += 12
+        }
+
+        if (name) {
+            this.renderOutlinedText(basePos.x, currentTextY, name, tightText, char.getRelationToMyPlayer(), nameFontSize)
+            currentTextY += actionName ? (nameFontSize / 2 + actionFontSize / 2 + 6) : 0
+        }
+
+        if (actionName) {
+            this.renderOutlinedText(basePos.x, currentTextY, actionName, tightText, 'NEUTRAL', actionFontSize)
+        }
+    },
+
+    renderName(pos: Vector3, name: string, tightText: boolean, relation: 'ALLY' | 'ENEMY' | 'NEUTRAL') {
+        this.renderOutlinedText(pos.x, pos.y - 6, name, tightText, relation, this.fontSize, pos)
+    },
+
+    renderOutlinedText(x: number, y: number, text: string, tightText: boolean, relation: 'ALLY' | 'ENEMY' | 'NEUTRAL', fontSize: number, pos?: Vector3) {
+        const ctx = this.overlayCtx!
+        ctx.font = `${fontSize}px "Roboto", Arial, sans-serif`
         ctx.fontKerning = 'normal'
         ctx.textBaseline = 'middle'
 
         const spacingFix = this.letterSpacingFix
-        const textWidth = CanvasTextUtils.getTextWidth(ctx, name, tightText, spacingFix)
-        const textHeight = this.fontSize
+        const textWidth = CanvasTextUtils.getTextWidth(ctx, text, tightText, spacingFix)
 
-        ViewportManager.movePositionToScreen(pos, textWidth / 2, textHeight + 10)
-
-        const x = pos.x
-        const y = pos.y - 3
-        const textY = y - 3
+        if (pos) {
+            ViewportManager.movePositionToScreen(pos, textWidth / 2, fontSize + 10)
+        }
 
         switch (relation) {
             case 'ALLY':
@@ -677,16 +726,29 @@ export const OverlayManager = {
             const textStartX = x - textWidth / 2
             ctx.textAlign = 'left'
             let cursorX = textStartX
-            for (const ch of name) {
-                ctx.strokeText(ch, cursorX, textY)
+            for (const ch of text) {
+                ctx.strokeText(ch, cursorX, y)
                 cursorX += ctx.measureText(ch).width + spacingFix
             }
-            CanvasTextUtils.drawText(ctx, name, textStartX, textY, true, spacingFix)
+            CanvasTextUtils.drawText(ctx, text, textStartX, y, true, spacingFix)
         } else {
             ctx.textAlign = 'center'
-            ctx.strokeText(name, x, textY)
-            ctx.fillText(name, x, textY)
+            ctx.strokeText(text, x, y)
+            ctx.fillText(text, x, y)
         }
+    },
+
+    renderTimedActionProgressBar(centerX: number, y: number, percent: number) {
+        const ctx = this.overlayCtx!
+        const barWidth = 50
+        const barHeight = 6
+        const x = centerX - barWidth / 2
+
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)'
+        ctx.fillRect(x, y, barWidth, barHeight)
+
+        ctx.fillStyle = 'rgba(240, 210, 90, 0.85)'
+        ctx.fillRect(x + 1, y + 1, (barWidth - 2) * (percent / 100), barHeight - 2)
     },
 
     onResize() {

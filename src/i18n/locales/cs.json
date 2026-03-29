@@ -77,7 +77,9 @@
     "manaPotionName": "Lektvar Many",
     "manaPotionDescription": "Použiješ Lektvar many pokud je v inventáři a nemáš plnou manu. Použije se vždy nejsilnější dostupný lektvar.",
     "equipStoredWeaponsName": "Uložená Zbraň",
-    "equipStoredWeaponsDescription": "Přepíná mezi primární a sekundární uloženou zbraní. Pokud je v ruce zcela jiná zbraň, nasadí se primární."
+    "equipStoredWeaponsDescription": "Přepíná mezi primární a sekundární uloženou zbraní. Pokud je v ruce zcela jiná zbraň, nasadí se primární.",
+    "campingName": "Kempování",
+    "campingDescription": "TODO"
   },
   "inventory": {
     "unknownItem": "Neznámý předmět",
