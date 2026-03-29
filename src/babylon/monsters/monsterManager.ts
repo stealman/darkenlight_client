@@ -8,7 +8,7 @@ import { TargetingManager } from '@/gui/targettingManager'
 import { MyPlayer } from '@/data/myPlayer'
 import { CharacterManager } from '@/babylon/character/characterManager'
 import { AttackableBasicTO, AutoAttackMessage, AutoAttackResultMessage } from '@/network/messageIfs'
-import { OverlayManager } from '@/gui/overlayManager'
+import { OverlayManager } from '@/gui/overlay/overlayManager'
 import { Utils } from '@/utils/utils'
 
 export const MonsterManager = {

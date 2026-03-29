@@ -69,6 +69,7 @@ export const MessageProcessor = {
                 case 38: this.processCharacterGatheringFinished(msg.d); break
                 case 39: this.processPotionUsed(msg.d); break
                 case 40: this.processCharacterCamping(msg.d); break
+                case 42: this.processCharacterStopAction(msg.d); break
                 case 1003: this.processGMAllSpawns(msg.d); break
                 case 1004: this.processGMSpawnChange(msg.d); break
                 default:
@@ -276,6 +277,10 @@ export const MessageProcessor = {
 
     processCharacterCamping(data: CharacterCampingMessage) {
         CharacterManager.startCamping(data)
+    },
+
+    processCharacterStopAction(data) {
+        CharacterManager.stopAction(data.id)
     },
 
     processGMAllSpawns(data) {

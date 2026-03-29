@@ -1,6 +1,6 @@
 import { MiniMap } from '@/utils/minimap'
 import { AudioManager } from '@/babylon/audio/audioManager'
-import { OverlayManager } from '@/gui/overlayManager'
+import { OverlayManager } from '@/gui/overlay/overlayManager'
 
 export const EmeraldsManager = {
     size: 32 as number,

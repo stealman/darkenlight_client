@@ -26,7 +26,7 @@ import { EmeraldsManager } from '@/gui/emeraldsManager'
 import { InventoryManager } from '@/data/InventoryManager'
 import { GuiButtonsManager } from '@/gui/guiButtonsManager'
 import { CharacterAction, CharacterActions } from '@/data/actions/characterActions'
-import { OverlayManager } from '@/gui/overlayManager'
+import { OverlayManager } from '@/gui/overlay/overlayManager'
 
 /**
  * Controlling object for the player's character

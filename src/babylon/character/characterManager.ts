@@ -11,7 +11,7 @@ import {
     HealingMessage,
     HealingResultMessage, PotionUsedMessage,
 } from '@/network/messageIfs'
-import { OverlayManager } from '@/gui/overlayManager'
+import { OverlayManager } from '@/gui/overlay/overlayManager'
 import { TargetingManager } from '@/gui/targettingManager'
 
 export const CharacterManager = {
@@ -193,6 +193,17 @@ export const CharacterManager = {
             const char = this.characters.get(data.id)
             if (char) {
                 char.startCamping(data)
+            }
+        }
+    },
+
+    stopAction(id) {
+        if (id === MyPlayer.myChar.id) {
+            MyPlayer.myChar.clearTimedAction()
+        } else {
+            const char = this.characters.get(id)
+            if (char) {
+                char.clearTimedAction()
             }
         }
     },

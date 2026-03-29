@@ -1,6 +1,6 @@
 import { Renderer } from '@/babylon/scene/renderer'
 import { ViewportManager } from '@/utils/viewport'
-import { OverlayManager } from '@/gui/overlayManager'
+import { OverlayManager } from '@/gui/overlay/overlayManager'
 import { Targetable, TargetingManager } from '@/gui/targettingManager'
 import { MyPlayer } from '@/data/myPlayer'
 import { Settings } from '@/settings/settings'

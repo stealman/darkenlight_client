@@ -1,6 +1,6 @@
 import { MonsterManager } from '@/babylon/monsters/monsterManager'
 import { Ray, Vector3 } from '@babylonjs/core'
-import { OverlayManager } from '@/gui/overlayManager'
+import { OverlayManager } from '@/gui/overlay/overlayManager'
 import { Connector } from '@/network/connector'
 import { SelectAutoAttackTarget } from '@/network/messages'
 import { SplatType } from '@/babylon/world/fightSplatsRenderer'
