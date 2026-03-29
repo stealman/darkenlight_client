@@ -16,6 +16,7 @@ export const AudioManager = {
     footStepSounds: new Map<string, Sound>(),
     deathRattleSounds: new Map<string, Sound>(),
     ambientSounds: new Map<object, Sound>(),
+    staticObjectSounds: new Map<string, Sound>(),
 
     swordSwingSounds: [] as Sound[],
     swordHitHardSounds: [] as Sound[],
@@ -39,6 +40,7 @@ export const AudioManager = {
     miningSounds: [] as Sound[],
     lumberJackingSounds: [] as Sound[],
 
+    campingSound: null as Sound | null,
     potionUseSound: null as Sound | null,
 
     initialize(scene: Scene) {
@@ -88,6 +90,9 @@ export const AudioManager = {
         this.loadAmbientSound(AmbientSoundTypes.WINTER_FOREST, "winter-forest.ogg", scene, { volume: AmbientSoundTypes.WINTER_FOREST.defaultVolume, playbackRate: 1, loop: true } );
         this.actualAmbientSound = this.ambientSounds.get(AmbientSoundTypes.WINTER_FOREST)!;
 
+        // Static object sounds
+        this.loadStaticObjectSound("CAMPFIRE", "campfire.ogg", scene, { volume: 1.5, playbackRate: 1, loop: true } );
+
         // Mining sounds
         this.loadSoundArray(this.miningSounds, ["mining1.ogg", "mining2.ogg", "mining3.ogg", "mining4.ogg"], "miningSound", scene, { volume: 1, playbackRate: 1 } );
 
@@ -99,6 +104,14 @@ export const AudioManager = {
             AudioManager.potionUseSound!['defaultVolume'] = 1;
         }, {
             volume: 1,
+            playbackRate: 1,
+        });
+
+        this.campingSound = new Sound("camping", AudioManager.BASE_PATH_SFX + "camping.ogg", scene, function() {
+            AudioManager.campingSound!['loaded'] = true;
+            AudioManager.campingSound!['defaultVolume'] = 1.25;
+        }, {
+            volume: 1.25,
             playbackRate: 1,
         });
 
@@ -195,6 +208,14 @@ export const AudioManager = {
         this.ambientSounds.set(type, sound);
     },
 
+    loadStaticObjectSound (type: string, fileName: string, scene: Scene, options: { volume: number, playbackRate: number, loop?: boolean }) {
+        const sound = new Sound("staticObjectSound" + type, AudioManager.BASE_PATH_SFX + fileName, scene, function() {
+            sound['loaded'] = true;
+            sound['defaultVolume'] = options.volume;
+        }, options);
+        this.staticObjectSounds.set(type, sound);
+    },
+
     playWeaponSwing(type: string, position: Vector3) {
         const volumeRatio = AudioUtils.getVolumeRatioByDistance(position)
         switch (type) {
@@ -252,6 +273,35 @@ export const AudioManager = {
         if (this.potionUseSound!['loaded']) {
             this.potionUseSound!.play();
         }
+    },
+
+    playCampingSound(position: Vector3) {
+        const volumeRatio = AudioUtils.getVolumeRatioByDistance(position)
+        this.campingSound!.setVolume(this.campingSound!.defaultVolume * volumeRatio)
+        if (this.campingSound!['loaded']) {
+            this.campingSound!.play();
+        }
+    },
+
+    playStaticObjectSound(soundKey: string, volumeRatio: number) {
+        const sound = this.staticObjectSounds.get(soundKey)
+        if (!sound) {
+            return
+        }
+
+        sound.setVolume((sound.defaultVolume || 1) * volumeRatio)
+        if (sound['loaded'] && !sound.isPlaying) {
+            sound.play()
+        }
+    },
+
+    stopPlayingStaticObjectSound(soundKey: string) {
+        const sound = this.staticObjectSounds.get(soundKey)
+        if (!sound || !sound.isPlaying) {
+            return
+        }
+
+        sound.stop()
     },
 
     playRandomSound(soundArray: Sound[], volumeRatio: number = 1) {

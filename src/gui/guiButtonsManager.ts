@@ -56,6 +56,8 @@ export const GuiOpportunityActions = {
     PICKUP_ITEM: new GuiOpportunityButtonAction("PICKUP_ITEM", "btn_pick", "btn_pick_hover"),
     MINING: new GuiOpportunityButtonAction("MINING", "btn_pickaxe", "btn_pickaxe_hover"),
     LUMBERJACKING: new GuiOpportunityButtonAction("LUMBERJACKING", "btn_lumber", "btn_lumber_hover"),
+    RESTING: new GuiOpportunityButtonAction("RESTING", "btn_rest", "btn_rest_hover"),
+    COOKING: new GuiOpportunityButtonAction("COOKING", "btn_cooking", "btn_cooking_hover"),
 }
 
 export const GuiButtonsManager = {
@@ -76,18 +78,12 @@ export const GuiButtonsManager = {
 
     createOpportunityButtons() {
         this.opportunityButtons.clear()
-        this.opportunityButtons.set(
-            GuiOpportunityActions.PICKUP_ITEM.name,
-            new GuiOpportunityButton(GuiOpportunityActions.PICKUP_ITEM)
-        )
-        this.opportunityButtons.set(
-            GuiOpportunityActions.MINING.name,
-            new GuiOpportunityButton(GuiOpportunityActions.MINING)
-        )
-        this.opportunityButtons.set(
-            GuiOpportunityActions.LUMBERJACKING.name,
-            new GuiOpportunityButton(GuiOpportunityActions.LUMBERJACKING)
-        )
+        this.opportunityButtons.set(GuiOpportunityActions.PICKUP_ITEM.name, new GuiOpportunityButton(GuiOpportunityActions.PICKUP_ITEM))
+        this.opportunityButtons.set(GuiOpportunityActions.RESTING.name, new GuiOpportunityButton(GuiOpportunityActions.RESTING))
+
+        this.opportunityButtons.set(GuiOpportunityActions.MINING.name, new GuiOpportunityButton(GuiOpportunityActions.MINING))
+        this.opportunityButtons.set(GuiOpportunityActions.LUMBERJACKING.name, new GuiOpportunityButton(GuiOpportunityActions.LUMBERJACKING))
+        this.opportunityButtons.set(GuiOpportunityActions.COOKING.name, new GuiOpportunityButton(GuiOpportunityActions.COOKING))
     },
 
     renderOpportunityButtons() {
@@ -120,10 +116,9 @@ export const GuiButtonsManager = {
         // Show pickup button if there's an item nearby
         this.opportunityButtons.get(GuiOpportunityActions.PICKUP_ITEM.name)!.setVisible(GroundItemsManager.nearbyItem !== null)
 
+        const coveredBlocks = MyPlayer.myChar ? WorldDataManager.getCoveredBlocks(MyPlayer.myChar.pos, MyPlayer.myChar.getBoxSize()) : []
+
         // Show mining button if any covered block is mineable and the player has a pickaxe available
-        const coveredBlocks = MyPlayer.myChar
-            ? WorldDataManager.getCoveredBlocks(MyPlayer.myChar.pos, MyPlayer.myChar.getBoxSize())
-            : []
         const hasMineableCoveredBlock = coveredBlocks.some(block => block.minableCoal || block.minableOre)
         this.opportunityButtons.get(GuiOpportunityActions.MINING.name)!.setVisible(
             hasMineableCoveredBlock && MyPlayer.hasWaponTypeInHandOrInventory(WeaponTypes.PICKAXE)
@@ -132,6 +127,9 @@ export const GuiButtonsManager = {
         this.opportunityButtons.get(GuiOpportunityActions.LUMBERJACKING.name)!.setVisible(
             TreeManager.isAnyTreeInDistance(MyPlayer.myChar.pos, 1.5) && MyPlayer.hasWaponTypeInHandOrInventory(WeaponTypes.GREAT_AXE)
         )
+
+        this.opportunityButtons.get(GuiOpportunityActions.RESTING.name)!.setVisible(MyPlayer.isNearFireplace)
+        this.opportunityButtons.get(GuiOpportunityActions.COOKING.name)!.setVisible(MyPlayer.isNearFireplace)
     },
 
     onclickOpportunityButton(actionName: string) {
@@ -145,6 +143,12 @@ export const GuiButtonsManager = {
                 break
             case GuiOpportunityActions.LUMBERJACKING.name:
                 this.clickOnLumberjackingButton()
+                break
+            case GuiOpportunityActions.RESTING.name:
+                this.clickOnRestingButton()
+                break
+            case GuiOpportunityActions.COOKING.name:
+                this.clickOnCookingButton()
                 break
         }
     },
@@ -194,6 +198,16 @@ export const GuiButtonsManager = {
         }
 
         Connector.sendMessage(new GatheringActionMsg(CharacterActions.LUMBERJACKING.name))
+    },
+
+    clickOnRestingButton() {
+        console.log("Resting action triggered")
+        //Connector.sendMessage(new GatheringActionMsg(CharacterActions.RESTING.name))
+    },
+
+    clickOnCookingButton() {
+        console.log("Cooking action triggered")
+        //Connector.sendMessage(new GatheringActionMsg(CharacterActions.COOKING.name))
     },
 
     setActiveAction(action: CharacterAction | null) {

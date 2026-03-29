@@ -27,6 +27,8 @@ import { InventoryManager } from '@/data/InventoryManager'
 import { GuiButtonsManager } from '@/gui/guiButtonsManager'
 import { CharacterAction, CharacterActions } from '@/data/actions/characterActions'
 import { OverlayManager } from '@/gui/overlay/overlayManager'
+import { StaticsManager } from '@/babylon/world/statics/staticsManager'
+import { StaticObjectsCodebook } from '@/babylon/world/statics/staticsCodebook'
 
 /**
  * Controlling object for the player's character
@@ -47,6 +49,7 @@ export const MyPlayer = {
 
     lastPotionUseTime: 0 as number,
     nextPotionUseTime: 0 as number,
+    isNearFireplace: false as boolean,
 
     async initialize(charData: any) {
         console.log("Initializing MyPlayer with charData:", charData)
@@ -71,6 +74,7 @@ export const MyPlayer = {
     },
 
     onFrame(timeRate: number, actualTime: number) {
+        const coveredBlockCoords = Utils.getCoveredBlocks(this.myChar.pos.x, this.myChar.pos.z, this.myChar.getBoxSize())
 
         // Cancel auto attack immediately if moving away from target
         if (this.myChar.autoAttackEnd > actualTime) {
@@ -112,6 +116,32 @@ export const MyPlayer = {
 
         // Resolve heartbeat sound
         this.resolveLowHealthStatus(actualTime)
+
+        // Check if near fireplace
+        this.isNearFireplace = this.checkIsNearFireplace(coveredBlockCoords)
+    },
+
+    checkIsNearFireplace(coveredBlockCoords: { x: number, z: number }[]): boolean {
+        if (coveredBlockCoords.length === 0) {
+            return false
+        }
+
+        return coveredBlockCoords.some(block => {
+            return StaticsManager.allStatics.some(obj => {
+                if (obj.type !== 241 && obj.type !== 242) {
+                    return false
+                }
+
+                const fireX = Math.floor(obj.position.x)
+                const fireZ = Math.floor(obj.position.z)
+                const fireSize = StaticObjectsCodebook.get(obj.type)?.size || 1
+                const fireMaxX = fireX + fireSize - 1
+                const fireMaxZ = fireZ + fireSize - 1
+
+                return block.x >= fireX - 1 && block.x <= fireMaxX + 1
+                    && block.z >= fireZ - 1 && block.z <= fireMaxZ + 1
+            })
+        })
     },
 
     startMove(movementType: string, angle: number) {

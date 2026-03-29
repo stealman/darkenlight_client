@@ -418,7 +418,8 @@ export const OverlayManager = {
         }
 
         if (actionName) {
-            this.renderOutlinedText(basePos.x, currentTextY, actionName, tightText, 'NEUTRAL', actionFontSize)
+            const actionTextAlpha = 0.5 + ((Math.sin(time / 220) + 1) / 2) * 0.5
+            this.renderOutlinedText(basePos.x, currentTextY, '* ' + actionName + ' *', tightText, 'NEUTRAL', actionFontSize, undefined, actionTextAlpha)
         }
     },
 
@@ -426,7 +427,7 @@ export const OverlayManager = {
         this.renderOutlinedText(pos.x, pos.y - 6, name, tightText, relation, this.fontSize, pos)
     },
 
-    renderOutlinedText(x: number, y: number, text: string, tightText: boolean, relation: 'ALLY' | 'ENEMY' | 'NEUTRAL', fontSize: number, pos?: Vector3) {
+    renderOutlinedText(x: number, y: number, text: string, tightText: boolean, relation: 'ALLY' | 'ENEMY' | 'NEUTRAL', fontSize: number, pos?: Vector3, textAlpha: number = 1) {
         const ctx = this.overlayCtx!
         ctx.font = `${fontSize}px "Roboto", Arial, sans-serif`
         ctx.fontKerning = 'normal'
@@ -457,15 +458,21 @@ export const OverlayManager = {
             const textStartX = x - textWidth / 2
             ctx.textAlign = 'left'
             let cursorX = textStartX
+            ctx.save()
+            ctx.globalAlpha = textAlpha
             for (const ch of text) {
                 ctx.strokeText(ch, cursorX, y)
                 cursorX += ctx.measureText(ch).width + spacingFix
             }
             CanvasTextUtils.drawText(ctx, text, textStartX, y, true, spacingFix)
+            ctx.restore()
         } else {
             ctx.textAlign = 'center'
+            ctx.save()
+            ctx.globalAlpha = textAlpha
             ctx.strokeText(text, x, y)
             ctx.fillText(text, x, y)
+            ctx.restore()
         }
     },
 

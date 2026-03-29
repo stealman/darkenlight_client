@@ -1,68 +1,78 @@
 # Darkenlight Client - Agent Notes
 
 ## Project Context
-- This is a hobby MMORPG game client.
-- Tech stack includes TypeScript, Vue, and Babylon.js.
-- UI uses an overlay canvas above the 3D scene for markers/text.
+- Hobby MMORPG client.
+- Main stack: TypeScript, Vue, Babylon.js.
+- UI combines Vue panels with a canvas-based in-game overlay rendered above the 3D scene.
 
-## Rendering Principles
-- Character and monster names are rendered in `src/gui/overlayManager.ts` in `renderNames`.
-- Name/world to screen projection uses `getNameTextNodeScreenPosition()`.
-- Overlay draw flow is handled in `OverlayManager.onFrame(...)`.
-- Keep overlay features simple first; do not add animations unless explicitly requested.
+## Working Style
+- Prefer small, focused changes inside existing manager/module boundaries.
+- Reuse existing managers before introducing new abstraction layers.
+- Keep hot-path frame logic cheap, especially anything called from render/update loops.
+- Prefer explicit early returns for invalid state or missing targets.
+- Keep Vue components thin when gameplay logic can live in TypeScript managers/services.
+- For feature work, implement directly, then iterate from in-game behavior.
 
-## Combat Overlay Rules (Current)
-- Monster hit feedback is rendered in the overlay as temporary floating text.
-- Data source: auto-attack result (`AutoAttackResultMessage.res`).
-- Show feedback for monster targets only (`tp === 'M'`) in `CharacterManager.finishAutoAttack(...)`.
-- Mapping:
-  - `h` -> show numeric damage.
-  - `m` -> show `MISS`.
-  - `b` -> show `BLOCK`.
-- Lifetime: about 1 second, then remove from render list.
+## Project Map
 
-## Code Style Preferences (Observed)
-- Prefer small, focused changes integrated into existing manager structure.
-- Reuse existing manager modules (`OverlayManager`, `CharacterManager`, `MonsterManager`).
-- Keep frame-time logic lightweight (`onFrame` paths must stay cheap).
-- Prefer explicit early returns for invalid/missing targets.
-- Keep new behavior localized and easy to tweak (duration, colors, offsets).
-- Keep Vue components thin: minimal UI logic only; delegate gameplay/domain decision logic to TypeScript managers/services when it does not add unnecessary code.
+### Root Entry Points
+- `src/main.js`: Vue/bootstrap entry.
+- `src/App.vue`: top-level app shell.
+- `src/GameManager.ts`: high-level game startup and cross-system orchestration.
 
-## Collaboration Preferences
-- Implement directly, then iterate quickly based on visual/gameplay feedback.
-- Start with functional behavior first, polish later.
-- Avoid introducing unrelated refactors during feature work.
+### Rendering And World
+- `src/babylon/`: Babylon scene, world rendering, models, animation, audio, characters, monsters, items.
+- `src/babylon/scene/renderer.ts`: central renderer entry point.
+- `src/babylon/character/`: character state, visuals, equipment, animation-related logic.
+- `src/babylon/monsters/`: monster state and visuals.
+- `src/babylon/world/`: terrain, map objects, ground items, world presentation.
 
-## Notes
-- Full `npm run type-check` currently reports many pre-existing project-wide errors.
-- For small features, validate by targeted runtime behavior in-game.
+### GUI And Overlay
+- `src/gui/`: in-world UI systems that are not regular Vue panels.
+- `src/gui/overlay/overlayManager.ts`: overlay draw flow for names, action labels, damage numbers, markers, target indicators.
+- `src/gui/overlay/targetSelector.ts`: target selection visuals/behavior in overlay.
+- Overlay labels use world-to-screen projection from entity helpers like `getNameTextNodeScreenPosition()`.
 
-## Babylon Performance Snapshot (2026-02-19)
-- Overall architecture is strong for FPS:
-  - Heavy usage of thin instances for terrain/statics/trees/equipment.
-  - Visibility culling is integrated through `ViewportManager`.
-  - Main loop work is intentionally split across frame intervals (`%2`, `%10`, `%60`, `%600`).
-  - Models out of viewport are deactivated and equipment instances are detached.
-- Practical result observed by author is consistent with code shape: client should scale well on mobile hardware.
+### Game Data And Rules
+- `src/data/`: gameplay data, player state, actions, items.
+- `src/data/actions/`: action definitions and player/character action metadata.
+- `src/data/items/`: item definitions and item helpers.
+- `src/gm/`: GM/debug/admin-style helpers.
 
-## High-Impact Perf Risks To Revisit
-- `src/utils/viewport.ts` `calculateViewport(...)` does many temporary allocations and repeated linear searches:
-  - many `new Vector3(...)` in nested loops
-  - `visibleTiles.find(...)` inside loops
-  - `Frustum.GetPlanes(...)` computed per-point via `isPointInView(...)`
-- Step marks and fight splats rebuild fresh thin-instance buffers every update (`%10` frames):
-  - frequent `new Float32Array(...)`
-  - frequent temporary matrices/quaternions during per-mark transform composition
-- Character/monster model frame logic allocates temporary math objects in hot paths:
-  - recurring `new Quaternion()` and `new Vector3()` in per-frame update sections
-  - candidates for cached `ToRef` patterns.
+### Networking
+- `src/network/connector.ts`: connection transport setup.
+- `src/network/messageProcessor.ts`: incoming message dispatch/handling entry.
+- `src/network/messages.ts` and `src/network/messageIfs.ts`: message structures/contracts.
 
-## Optimization Direction (No Gameplay Change)
-- Prefer object reuse in hot paths (`Vector3/Quaternion/Matrix` scratch vars).
-- Prefer reusable typed arrays with capacity growth strategy over re-allocating every update.
-- For viewport:
-  - cache frustum planes per viewport calculation,
-  - avoid per-tile `find` on `visibleTiles`,
-  - consider set/hash indexing for O(1) neighbor dedup.
-- Keep existing thin-instance strategy; it is a core strength of this client.
+### Vue UI
+- `src/vue/views/`: screen/panel level Vue views.
+- `src/vue/pinia/`: Pinia stores.
+- `src/vue/icons/`: UI icon components/assets.
+
+### Shared Utilities
+- `src/utils/viewport.ts`: visibility/viewport calculations; treat as performance-sensitive.
+- `src/utils/minimap.ts`: minimap helpers.
+- `src/utils/`: rendering/data utility helpers shared across systems.
+- `src/controlls/`: input/control handling.
+- `src/settings/`: client settings/config behavior.
+- `src/i18n/`: localization resources/helpers.
+
+## Overlay Notes
+- Character and monster names are rendered in `src/gui/overlay/overlayManager.ts`, mainly in `renderNames(...)`.
+- Timed action labels for characters are rendered there as part of the same label flow.
+- Keep overlay features simple unless the task explicitly asks for animation or extra visual polish.
+
+## Performance Notes
+- Thin instances and viewport-based visibility are important architectural patterns here; preserve them.
+- Be careful with allocations in per-frame code, especially in overlay, viewport, character, and monster update paths.
+- Prefer object reuse and localized tweaks over broad refactors when optimizing.
+
+## Validation Notes
+- Full `npm run type-check` is not a reliable small-change signal because there are existing project-wide errors.
+- For small gameplay/UI tweaks, prefer targeted verification and focused inspection of affected paths.
+
+## Maintaining Agent Notes
+- This file should stay short and structural.
+- Update it when recurring project knowledge would help future work, not for one-off implementation details.
+- Prefer documenting important entry points, ownership boundaries, and performance-sensitive areas over exhaustive file lists.
+- If a subdirectory becomes large or confusing, add a local `AGENTS.md` there instead of overloading this root file.

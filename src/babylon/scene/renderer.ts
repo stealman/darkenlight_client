@@ -38,6 +38,7 @@ import { GuiButtonsManager } from '@/gui/guiButtonsManager'
 import { GroundItemsManager } from '@/babylon/world/groundItemsManager'
 import { EmeraldsManager } from '@/gui/emeraldsManager'
 import { GfxManager } from '@/babylon/gfx/gfxManager'
+import { StaticsManager } from '@/babylon/world/statics/staticsManager'
 
 /**
  * Main Renderer
@@ -187,6 +188,7 @@ export const Renderer = {
             this.actualizeDebug()
             StepMarksRenderer.update(timeRate, actualTime)
             FightSplatsRenderer.update(timeRate, actualTime)
+            StaticsManager.resolveSounds()
         }
 
         if (this.frame % 60 === 0) {

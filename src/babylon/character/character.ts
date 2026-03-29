@@ -330,6 +330,7 @@ class Character implements Attackable, EffectTarget {
 
     startCamping(data: CharacterCampingMessage) {
         this.startTimedAction('CAMPING', data)
+        AudioManager.playCampingSound(this.pos)
     }
 
     clearTimedAction() {

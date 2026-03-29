@@ -11,6 +11,9 @@ import { StaticObject } from '@/babylon/world/statics/objects/baseStaticObject'
 import { FireplaceLarge, FireplaceSmall } from '@/babylon/world/statics/objects/fireplace'
 import { Shrub1x1_small, Shrub1x1_tall, Shrub2x2 } from '@/babylon/world/statics/objects/shrubs'
 import { Wall2, Wall3 } from '@/babylon/world/statics/objects/walls'
+import { StaticObjectsCodebook } from '@/babylon/world/statics/staticsCodebook'
+import { MyPlayer } from '@/data/myPlayer'
+import { AudioManager } from '@/babylon/audio/audioManager'
 
 export const StaticsManager = {
     prefabs: {
@@ -135,6 +138,54 @@ export const StaticsManager = {
 
         this.visibleStatics = nextVisible
         return this.visibleStatics
+    },
+
+    resolveSounds() {
+        if (!MyPlayer.myChar) {
+            return
+        }
+
+        const soundVolumes = new Map<string, number>()
+
+        for (const obj of this.allStatics) {
+            const staticInfo = StaticObjectsCodebook.get(obj.type)
+            if (!staticInfo || !staticInfo.soundKey || staticInfo.soundDistance <= 0) {
+                continue
+            }
+
+            const distance = this.getDistanceToStaticFootprint(MyPlayer.myChar.pos, obj.position, staticInfo.size)
+            if (distance >= staticInfo.soundDistance) {
+                continue
+            }
+
+            const volumeRatio = 1 - ((distance - 1) / staticInfo.soundDistance)
+            const currentVolume = soundVolumes.get(staticInfo.soundKey) || 0
+            if (volumeRatio > currentVolume) {
+                soundVolumes.set(staticInfo.soundKey, volumeRatio)
+            }
+        }
+
+        for (const soundKey of AudioManager.staticObjectSounds.keys()) {
+            const volumeRatio = soundVolumes.get(soundKey) || 0
+            if (volumeRatio > 0) {
+                AudioManager.playStaticObjectSound(soundKey, volumeRatio)
+            } else {
+                AudioManager.stopPlayingStaticObjectSound(soundKey)
+            }
+        }
+    },
+
+    getDistanceToStaticFootprint(playerPos: Vector3, objPos: Vector3, size: number): number {
+        const minX = objPos.x
+        const minZ = objPos.z
+        const maxX = objPos.x + size - 1
+        const maxZ = objPos.z + size - 1
+
+        const nearestX = Math.max(minX, Math.min(playerPos.x, maxX))
+        const nearestZ = Math.max(minZ, Math.min(playerPos.z, maxZ))
+        const dx = playerPos.x - nearestX
+        const dz = playerPos.z - nearestZ
+        return Math.sqrt(dx * dx + dz * dz)
     },
 
     getPointInStatic(x: number, z: number, size: number): { x: number, z: number } | null {
