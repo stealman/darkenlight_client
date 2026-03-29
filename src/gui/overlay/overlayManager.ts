@@ -401,13 +401,14 @@ export const OverlayManager = {
         const maxWidth = Math.max(nameWidth, actionWidth)
         const textLines = (name ? 1 : 0) + (actionName ? 1 : 0)
         const blockHeight = textLines === 2 ? nameFontSize + actionFontSize + 10 : Math.max(nameFontSize, actionFontSize) + 6
-        const progressBarHeight = char === MyPlayer.myChar && char.activeTimedAction ? 8 : 0
+        const showProgressBar = char === MyPlayer.myChar && !!char.activeTimedAction?.hasTimer()
+        const progressBarHeight = showProgressBar ? 8 : 0
         const totalHeight = blockHeight + progressBarHeight + (progressBarHeight > 0 ? 4 : 0)
 
         ViewportManager.movePositionToScreen(basePos, maxWidth / 2, totalHeight + 10)
 
         let currentTextY = basePos.y - totalHeight + nameFontSize / 2
-        if (char === MyPlayer.myChar && char.activeTimedAction) {
+        if (showProgressBar && char.activeTimedAction) {
             this.renderTimedActionProgressBar(basePos.x, currentTextY - 12, char.activeTimedAction.getProgressPercent(time))
             currentTextY += 12
         }

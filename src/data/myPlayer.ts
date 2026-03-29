@@ -210,14 +210,13 @@ export const MyPlayer = {
     },
 
     basicDataChange(data) {
-        this.setMyCharHpMp(data.hp)
+        this.setMyCharHpMpSt(data.hp)
         this.myChar.basicDataChange(data)
     },
 
-    setMyCharHpMp(hp: number) {
+    setMyCharHpMpSt(hp: number) {
         const percentBeforeChange = (this.myChar.hp / this.myChar.maxHp) * 100
         this.myChar.hp = hp
-        this.myChar.hpPercent = (hp / this.myChar.maxHp) * 100
 
         let vibrated = false
         if (this.myChar.hpPercent <= 25) {

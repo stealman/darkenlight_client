@@ -79,7 +79,9 @@
     "equipStoredWeaponsName": "Uložená Zbraň",
     "equipStoredWeaponsDescription": "Přepíná mezi primární a sekundární uloženou zbraní. Pokud je v ruce zcela jiná zbraň, nasadí se primární.",
     "campingName": "Kempování",
-    "campingDescription": "Pokusíš se rozdělat oheň, pokud to na tomto místě jde a máš v inventáři nějaké dřevo. U ohně je možné odpočívat a uvařit jídlo."
+    "campingDescription": "Pokusíš se rozdělat oheň, pokud to na tomto místě jde a máš v inventáři nějaké dřevo. U ohně je možné odpočívat a uvařit jídlo.",
+    "restingName": "Odpočinek",
+    "restingDescription": "Postava odpočívá u ohně."
   },
   "inventory": {
     "unknownItem": "Neznámý předmět",
@@ -103,6 +105,9 @@
     "disabled": "Vypnuto",
     "nextPotionIn": "Další lektvar až za {seconds} vteřin",
     "weaponSet-primary": "Primární zbraň uložena",
-    "weaponSet-secondary": "Sekundární zbraň uložena"
+    "weaponSet-secondary": "Sekundární zbraň uložena",
+    "notEnoughStamina": "Nemáš dostatek staminy",
+    "notEnoughMana": "Nemáš dostatek many",
+    "notEnoughHealth": "Nemáš dostatek zdraví"
   }
 }

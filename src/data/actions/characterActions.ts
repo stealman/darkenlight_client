@@ -36,27 +36,39 @@ export class CharacterTimedAction {
     type: string
     characterId: number
     startedAt: number
-    endsAt: number
+    endsAt: number | null
     x: number
     z: number
 
-    constructor(type: string, characterId: number, dur: number, x: number, z: number) {
+    constructor(type: string, characterId: number, dur: number | null, x: number, z: number) {
         this.type = type
         this.characterId = characterId
         this.startedAt = Date.now()
-        this.endsAt = this.startedAt + dur
+        this.endsAt = dur != null ? this.startedAt + dur : null
         this.x = x
         this.z = z
     }
 
     tryFinish(actualTime: number): boolean {
+        if (this.endsAt == null) {
+            return false
+        }
+
         if (actualTime < this.endsAt) {
             return false
         }
         return true
     }
 
+    hasTimer(): boolean {
+        return this.endsAt != null
+    }
+
     getProgressPercent(actualTime: number): number {
+        if (this.endsAt == null) {
+            return 0
+        }
+
         const totalDuration = this.endsAt - this.startedAt
         if (totalDuration <= 0) {
             return 100
@@ -94,6 +106,7 @@ export const CharacterActions = {
         'actions.equipStoredWeaponsDescription'),
 
     CAMPING: new CharacterAction('CAMPING', 'btn_camp', true, 'actions.campingName', 'actions.campingDescription'),
+    RESTING: new CharacterAction('RESTING', 'btn_rest', true, 'actions.restingName', 'actions.restingDescription'),
 
     getActionByName(name: string): CharacterAction | undefined {
         const actions = [
@@ -105,6 +118,7 @@ export const CharacterActions = {
             this.LUMBERJACKING,
             this.EQUIP_STORED_WEAPONS,
             this.CAMPING,
+            this.RESTING,
         ]
 
         return actions.find((action) => action.name === name)

@@ -92,7 +92,7 @@ export const AudioManager = {
         this.actualAmbientSound = this.ambientSounds.get(AmbientSoundTypes.WINTER_FOREST)!;
 
         // Static object sounds
-        this.loadStaticObjectSound("CAMPFIRE", "campfire.ogg", scene, { volume: 1.5, playbackRate: 1, loop: true } );
+        this.loadStaticObjectSound("CAMPFIRE", "campfire.ogg", scene, { volume: 1.75, playbackRate: 1, loop: true } );
 
         // Mining sounds
         this.loadSoundArray(this.miningSounds, ["mining1.ogg", "mining2.ogg", "mining3.ogg", "mining4.ogg"], "miningSound", scene, { volume: 1, playbackRate: 1 } );

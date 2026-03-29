@@ -15,7 +15,7 @@ import {
     AutoAttackMessage,
     AutoAttackResultMessage, CharacterCampingMessage,
     CharacterGatheringMessage,
-    CharacterGatheringResultMessage,
+    CharacterGatheringResultMessage, CharacterRestingMessage,
     EmeraldsChangeMessage,
     HealingMessage, HealingResultMessage, PotionUsedMessage, TextMessage,
 } from '@/network/messageIfs'
@@ -73,6 +73,7 @@ export const MessageProcessor = {
                 case 40: this.processCharacterCamping(msg.d); break
                 case 41: this.processTextMessage(msg.d); break
                 case 42: this.processCharacterStopAction(msg.d); break
+                case 43: this.processCharacterResting(msg.d); break
                 case 1003: this.processGMAllSpawns(msg.d); break
                 case 1004: this.processGMSpawnChange(msg.d); break
                 default:
@@ -288,6 +289,10 @@ export const MessageProcessor = {
 
     processCharacterStopAction(data) {
         CharacterManager.stopAction(data.id)
+    },
+
+    processCharacterResting(data: CharacterRestingMessage) {
+        CharacterManager.startResting(data)
     },
 
     processGMAllSpawns(data) {

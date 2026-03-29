@@ -79,7 +79,9 @@
     "equipStoredWeaponsName": "Stored Weapon",
     "equipStoredWeaponsDescription": "Switch between primary and secondary stored weapon. If you are holding a completely different weapon, the primary one will be equipped.",
     "campingName": "Camping",
-    "campingDescription": "Try to light a fire if it's possible in this place and you have some wood in inventory. You can rest and cook food on the fire."
+    "campingDescription": "Try to light a fire if it's possible in this place and you have some wood in inventory. You can rest and cook food on the fire.",
+    "restingName": "Resting",
+    "restingDescription": "The character rests by the fire."
   },
   "inventory": {
     "unknownItem": "Unknown item",
@@ -103,6 +105,9 @@
     "disabled": "Disabled",
     "nextPotionIn": "Next potion in {seconds} seconds",
     "weaponSet-primary": "Primary weapon saved",
-    "weaponSet-secondary": "Secondary weapon saved"
+    "weaponSet-secondary": "Secondary weapon saved",
+    "notEnoughStamina": "You don't have enough stamina",
+    "notEnoughMana": "You don't have enough mana",
+    "notEnoughHealth": "You don't have enough health"
   }
 }

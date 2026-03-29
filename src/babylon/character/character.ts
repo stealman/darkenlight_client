@@ -24,6 +24,7 @@ import {
     CharacterCampingMessage,
     CharacterGatheringMessage,
     CharacterGatheringResultMessage,
+    CharacterRestingMessage,
     HealingMessage,
     HealingResultMessage, PotionUsedMessage,
 } from '@/network/messageIfs'
@@ -45,7 +46,13 @@ class Character implements Attackable, EffectTarget {
     hp: number = 100
     maxHp: number = 100
     hpPercent: number = 100
+    mp: number = 100
+    maxMp: number = 100
     mpPercent: number = 100
+    st: number = 100
+    maxSt: number = 100
+    stPercent: number = 100
+
     name: string = "Player"
     nameDisplayTime: number = 0
     className: string = "Warrior"
@@ -100,6 +107,21 @@ class Character implements Attackable, EffectTarget {
         if (data.mhp) {
             this.maxHp = data.mhp
             this.hpPercent = (this.hp / this.maxHp) * 100
+        }
+
+        if (data.mp) {
+            this.mp = data.mp
+        }
+        if (data.mmp) {
+            this.maxMp = data.mmp
+            this.mpPercent = (this.mp / this.maxMp) * 100
+        }
+        if (data.st) {
+            this.st = data.st
+        }
+        if (data.mst) {
+            this.maxSt = data.mst
+            this.stPercent = (this.st / this.maxSt) * 100
         }
 
         this.pos = new Vector3(data.x, 0, data.z)
@@ -325,12 +347,16 @@ class Character implements Attackable, EffectTarget {
         const angle = Utils.getAngleBetweenPoints(this.pos, new Vector3(data.x, this.pos.y, data.z))
         this.setLookAngle(angle - Math.PI / 4)
 
-        this.activeTimedAction = new CharacterTimedAction(type, this.id, data.dur, data.x, data.z)
+        this.activeTimedAction = new CharacterTimedAction(type, this.id, data.dur ?? null, data.x, data.z)
     }
 
     startCamping(data: CharacterCampingMessage) {
         this.startTimedAction('CAMPING', data)
         AudioManager.playCampingSound(this.pos)
+    }
+
+    startResting(data: CharacterRestingMessage) {
+        this.startTimedAction('RESTING', data)
     }
 
     clearTimedAction() {
@@ -376,6 +402,19 @@ class Character implements Attackable, EffectTarget {
         if (data.mhp) {
             this.maxHp = data.mhp
         }
+        if (data.mp) {
+            this.mp = data.mp
+        }
+        if (data.mmp) {
+            this.maxMp = data.mmp
+        }
+        if (data.st) {
+            this.st = data.st
+        }
+        if (data.mst) {
+            this.maxSt = data.mst
+        }
+        console.log(`Character ${this.id} basic data change: hp ${this.hp}/${this.maxHp}, mp ${this.mp}/${this.maxMp}, st ${this.st}/${this.maxSt}`)
     }
 
     setVisible(visible: boolean) {
@@ -542,7 +581,7 @@ class Character implements Attackable, EffectTarget {
 export default Character
 
 interface CharacterTimedActionData {
-    dur: number
+    dur?: number
     x: number
     z: number
 }

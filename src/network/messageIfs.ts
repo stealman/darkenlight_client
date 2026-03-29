@@ -3,6 +3,12 @@ export interface AttackableBasicTO {
     hp: number
     mhp: number
     hpp: number
+    mp?: number
+    mmp?: number
+    mpp?: number
+    st?: number
+    mst?: number
+    stp?: number
 }
 
 export interface  AutoAttackMessage {
@@ -94,6 +100,12 @@ export interface PotionUsedMessage {
 export interface CharacterCampingMessage {
     id: number
     dur: number
+    x: number
+    z: number
+}
+
+export interface CharacterRestingMessage {
+    id: number
     x: number
     z: number
 }

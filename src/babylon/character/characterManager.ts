@@ -8,6 +8,7 @@ import {
     AutoAttackResultMessage, CharacterCampingMessage,
     CharacterGatheringMessage,
     CharacterGatheringResultMessage,
+    CharacterRestingMessage,
     HealingMessage,
     HealingResultMessage, PotionUsedMessage,
 } from '@/network/messageIfs'
@@ -193,6 +194,17 @@ export const CharacterManager = {
             const char = this.characters.get(data.id)
             if (char) {
                 char.startCamping(data)
+            }
+        }
+    },
+
+    startResting(data: CharacterRestingMessage) {
+        if (data.id === MyPlayer.myChar.id) {
+            MyPlayer.myChar.startResting(data)
+        } else {
+            const char = this.characters.get(data.id)
+            if (char) {
+                char.startResting(data)
             }
         }
     },

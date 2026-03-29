@@ -24,7 +24,6 @@ export const OnScreenMessageManager = {
     },
 
     addMessage(text: string, severity: OnScreenMessageSeverity = 'INFO') {
-        console.log("OnScreenMessageManager addMessage:", text)
         const msgPanel = document.getElementById("onscreen-messages-panel")
         if (!msgPanel) {
             return
