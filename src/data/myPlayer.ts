@@ -13,6 +13,7 @@ import {
 } from '@/network/messages'
 import { MyStatusPanel } from '@/gui/myStatusPanel'
 import {
+    AffectGroupData,
     AutoAttackMessage,
     AutoAttackResultMessage,
     HealingMessage,
@@ -51,6 +52,8 @@ export const MyPlayer = {
     nextPotionUseTime: 0 as number,
     nearFireplace: null as { x: number, z: number } | null,
 
+    affectGroups: [] as AffectGroupData[],
+
     async initialize(charData: any) {
         console.log("Initializing MyPlayer with charData:", charData)
         this.myChar = new Character(charData, true)
@@ -64,6 +67,7 @@ export const MyPlayer = {
         this.myCharRef.value = this.myChar
 
         MyStatusPanel.setMyName(this.myChar.name)
+        MyStatusPanel.refreshAffectGroups()
         EmeraldsManager.setMyEmeralds(charData.emeralds, true, charData.emeralds, null)
     },
 
@@ -270,6 +274,21 @@ export const MyPlayer = {
         }
 
         return InventoryManager.inventory.some(item => item?.slotInfo?.weaponType === weaponType)
+    },
+
+    affectGroupChange(affectGroup: AffectGroupData) {
+        const existingGroupIndex = this.affectGroups.findIndex(group => group.id === affectGroup.id)
+        if (existingGroupIndex !== -1) {
+            if (affectGroup.af.length === 0) {
+                this.affectGroups.splice(existingGroupIndex, 1)
+            } else {
+                this.affectGroups[existingGroupIndex] = affectGroup
+            }
+        } else if (affectGroup.af.length > 0) {
+            this.affectGroups.push(affectGroup)
+        }
+
+        MyStatusPanel.refreshAffectGroups()
     },
 
     getActionCooldownPercent(action: CharacterAction, actualTime: number): number {

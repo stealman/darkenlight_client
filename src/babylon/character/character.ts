@@ -208,8 +208,8 @@ class Character implements Attackable, EffectTarget {
                 this.logicYpos = Utils.calculateWalkYPos(this.pos.x, this.pos.z, this.getBoxSize())
             }
 
-            if (this.movementType === 'R') { this.model?.startRunAnimation() }
-            if (this.movementType === 'W') { this.model?.startWalkAnimation() }
+            if (this.movementType === 'R') { this.model?.startRunAnimation(this.getActualSpeed() / 3.2) }
+            if (this.movementType === 'W') { this.model?.startWalkAnimation(this.getActualSpeed() / 2) }
             this.resolveStepMark(actualTime, false)
         } else {
             this.model?.stopAnimation()

@@ -114,3 +114,9 @@ export interface TextMessage {
     txt: string
     sev: string
 }
+
+export interface AffectGroupData {
+    id: number
+    p: number
+    af: number[][] // [typeId, duration, power][]
+}

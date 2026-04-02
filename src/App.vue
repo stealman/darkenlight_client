@@ -28,20 +28,9 @@
 
             <TouchControllers v-if="!gameLoading" ref="touchControls" />
 
-            <label
-                id="btn-target-lock"
-                style="display: none; opacity: 0.65; position: absolute; width: 64px; height: 64px;"
-                v-html="getTargetLockSvg('icon-red', 'icon-target-lock')"
-                @pointerdown="TargetingManager.onPointerDown()"
-                @pointerup="TargetingManager.onPointerUp()"
-            ></label>
+            <label id="btn-target-lock" style="display: none; opacity: 0.65; position: absolute; width: 64px; height: 64px;" v-html="getTargetLockSvg('icon-red', 'icon-target-lock')" @pointerdown="TargetingManager.onPointerDown()" @pointerup="TargetingManager.onPointerUp()"></label>
 
-            <label
-                id="btn-action-stop"
-                style="display: none; opacity: 0.65; position: absolute; width: 64px; height: 64px;"
-                v-html="getStopActionSvg('icon-blue', 'icon-stop-action')"
-                @pointerdown="AudioManager.playGuiButtonClick(); MyPlayer.stopActions()"
-            ></label>
+            <label id="btn-action-stop" style="display: none; opacity: 0.65; position: absolute; width: 64px; height: 64px;" v-html="getStopActionSvg('icon-blue', 'icon-stop-action')" @pointerdown="AudioManager.playGuiButtonClick(); MyPlayer.stopActions()"></label>
 
             <div id="debug-panel">
                 <div style="display:flex; gap:5px; align-items:center;">

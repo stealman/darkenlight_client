@@ -11,6 +11,7 @@ import { FightSplatsRenderer } from '@/babylon/world/fightSplatsRenderer'
 import { GameManager } from '@/GameManager'
 import { CharacterManager } from '@/babylon/character/characterManager'
 import {
+    AffectGroupData,
     AttackableBasicTO,
     AutoAttackMessage,
     AutoAttackResultMessage, CharacterCampingMessage,
@@ -74,6 +75,7 @@ export const MessageProcessor = {
                 case 41: this.processTextMessage(msg.d); break
                 case 42: this.processCharacterStopAction(msg.d); break
                 case 43: this.processCharacterResting(msg.d); break
+                case 44: this.processCharacterAffectGroupChange(msg.d); break
                 case 1003: this.processGMAllSpawns(msg.d); break
                 case 1004: this.processGMSpawnChange(msg.d); break
                 default:
@@ -293,6 +295,10 @@ export const MessageProcessor = {
 
     processCharacterResting(data: CharacterRestingMessage) {
         CharacterManager.startResting(data)
+    },
+
+    processCharacterAffectGroupChange(data: AffectGroupData) {
+        MyPlayer.affectGroupChange(data)
     },
 
     processGMAllSpawns(data) {

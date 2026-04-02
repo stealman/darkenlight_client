@@ -313,18 +313,18 @@ export class CharacterModel implements EquipBearer {
         })
     }
 
-    startWalkAnimation() {
+    startWalkAnimation(speedRatio: number) {
         if (!this.isActive()) return
         if (this.actualAnim !== this.walkAnim) {
-            this.transitionToAnimation(this.walkAnim, 0.15, true, 3)
+            this.transitionToAnimation(this.walkAnim, 0.15, true, 3 * speedRatio)
             this.actualAnim = this.walkAnim
         }
     }
 
-    startRunAnimation() {
+    startRunAnimation(speedRatio: number) {
         if (!this.isActive()) return
         if (this.actualAnim !== this.runAnim) {
-            this.transitionToAnimation(this.runAnim, 0.15, true, 3)
+            this.transitionToAnimation(this.runAnim, 0.15, true, 3 * speedRatio)
             this.actualAnim = this.runAnim
         }
     }
@@ -451,6 +451,8 @@ export class CharacterModel implements EquipBearer {
     getStepSoundParams(): {speed: number, volume: number} {
         let speed = 1
         let volume = 1
+        const stepSpeedRatio = this.parent.getMoveType() === 'R' ? this.parent.getActualSpeed() / 3.2 : this.parent.getActualSpeed() / 2
+
         switch (this.parent.getFootStepSoundType()) {
             case 'DIRT':
                 speed = this.parent.getMoveType() === 'R' ? FootStepSpeeds.DIRT_RUN : FootStepSpeeds.DIRT_WALK
@@ -470,7 +472,7 @@ export class CharacterModel implements EquipBearer {
                 break
         }
         volume = Math.max(0, volume * (this.parent.isMyChar() ? 1 : AudioUtils.getVolumeRatioByDistance(this.parent.pos)))
-        return { speed: speed, volume: volume }
+        return { speed: speed * stepSpeedRatio, volume: volume * stepSpeedRatio }
     }
 
     transitionToAnimation(targetAnim: AnimationGroup | undefined, duration: number, loop = false, speed = 1.0) {

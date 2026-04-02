@@ -1,7 +1,9 @@
 import { MyPlayer } from '@/data/myPlayer'
+import { AffectGroupData } from '@/network/messageIfs'
 
 export const MyStatusPanel = {
     panel: null as HTMLDivElement | null,
+    bodyEl: null as HTMLDivElement | null,
     nameEl: null as HTMLSpanElement | null,
     hpBlockEls: [] as HTMLDivElement[],
     hpFillEls: [] as HTMLDivElement[],
@@ -11,6 +13,8 @@ export const MyStatusPanel = {
     mpBarEl: null as HTMLDivElement | null,
     mpBlockEls: [] as HTMLDivElement[],
     mpFillEls: [] as HTMLDivElement[],
+    affectsRowEl: null as HTMLDivElement | null,
+    affectsIconsEl: null as HTMLDivElement | null,
 
     initialize() {
         if (this.panel) {
@@ -20,6 +24,9 @@ export const MyStatusPanel = {
 
         this.panel = document.createElement('div')
         this.panel.id = 'myStatusPanel'
+
+        this.bodyEl = document.createElement('div')
+        this.bodyEl.className = 'myStatusPanelBody'
 
         const hpBlocks = document.createElement('div')
         hpBlocks.className = 'hpBlocks'
@@ -103,15 +110,69 @@ export const MyStatusPanel = {
         secondaryRow.appendChild(stBar)
         secondaryRow.appendChild(this.mpBarEl)
 
-        this.panel.appendChild(hpRow)
-        this.panel.appendChild(secondaryRow)
+        this.affectsRowEl = document.createElement('div')
+        this.affectsRowEl.className = 'statusRowAffects'
+
+        this.affectsIconsEl = document.createElement('div')
+        this.affectsIconsEl.className = 'affectsIcons'
+
+        this.affectsRowEl.appendChild(this.affectsIconsEl)
+
+        this.bodyEl.appendChild(hpRow)
+        this.bodyEl.appendChild(secondaryRow)
+        this.panel.appendChild(this.bodyEl)
+        this.panel.appendChild(this.affectsRowEl)
         document.body.appendChild(this.panel)
+        this.refreshAffectGroups()
     },
 
     setMyName(name: string) {
         if (this.nameEl) {
             this.nameEl.textContent = name
         }
+    },
+
+    refreshAffectGroups() {
+        if (!this.affectsRowEl || !this.affectsIconsEl) {
+            return
+        }
+
+        this.affectsIconsEl.innerHTML = ''
+
+        const affectGroups = Array.isArray(MyPlayer.affectGroups) ? MyPlayer.affectGroups as AffectGroupData[] : []
+        this.affectsRowEl.style.display = affectGroups.length > 0 ? 'flex' : 'none'
+
+        for (const affectGroup of affectGroups) {
+            const iconEl = document.createElement('div')
+            iconEl.className = 'affectIcon'
+            iconEl.title = this.getAffectGroupTitle(affectGroup)
+            iconEl.dataset.affectId = affectGroup.id.toString()
+
+            const textEl = document.createElement('span')
+            textEl.className = 'affectIconText'
+            textEl.textContent = affectGroup.id.toString()
+
+            iconEl.appendChild(textEl)
+
+            if (affectGroup.af.length > 1) {
+                const countEl = document.createElement('span')
+                countEl.className = 'affectIconCount'
+                countEl.textContent = affectGroup.af.length.toString()
+                iconEl.appendChild(countEl)
+            }
+
+            this.affectsIconsEl.appendChild(iconEl)
+        }
+    },
+
+    getAffectGroupTitle(affectGroup: AffectGroupData) {
+        const effectDetails = affectGroup.af
+            .map(effect => `type ${effect[0]}, duration ${effect[1]}, power ${effect[2]}`)
+            .join(' | ')
+
+        return effectDetails
+            ? `Affect group ${affectGroup.id}: ${effectDetails}`
+            : `Affect group ${affectGroup.id}`
     },
 
     onFrame(actualTime: number) {

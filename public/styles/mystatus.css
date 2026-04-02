@@ -3,9 +3,19 @@ div#myStatusPanel {
     top: 0px;
     left: 0px;
     width: 25%;
-    height: 5vh;
     pointer-events: none;
-    display: none;
+    align-items: stretch;
+    justify-content: flex-start;
+    flex-direction: column;
+    text-align: center;
+    z-index: 1000;
+    display: flex;
+}
+
+#myStatusPanel .myStatusPanelBody {
+    width: 100%;
+    min-height: 5.1vh;
+    display: flex;
     align-items: stretch;
     justify-content: flex-start;
     flex-direction: column;
@@ -13,9 +23,6 @@ div#myStatusPanel {
     border: 1px solid rgba(128, 128, 128, 0.75);
     border-radius: 0 0 4px 0;
     border-top: none;
-    text-align: center;
-    z-index: 1000;
-    display: flex;
     overflow: hidden;
 }
 
@@ -39,6 +46,17 @@ div#myStatusPanel {
     padding: 0 0 0 0;
     justify-content: flex-start;
     margin-top: -1px;
+}
+
+#myStatusPanel .statusRowAffects {
+    width: 100%;
+    min-height: 1.8vh;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 0.2vh 0.15vh 0 0.15vh;
+    box-sizing: border-box;
+    overflow: hidden;
 }
 
 #myStatusPanel .myName {
@@ -153,4 +171,51 @@ div#myStatusPanel {
 
 #myStatusPanel .manaBar .secondaryBlockFill {
     background: rgba(75, 125, 235, 0.92);
+}
+
+#myStatusPanel .affectsIcons {
+    display: flex;
+    align-items: center;
+    gap: 0.35vh;
+    overflow: hidden;
+}
+
+#myStatusPanel .affectIcon {
+    position: relative;
+    width: 1.55vh;
+    height: 1.55vh;
+    min-width: 1.55vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255, 220, 140, 0.6);
+    border-radius: 0.25vh;
+    background: linear-gradient(135deg, rgba(255, 206, 102, 0.75), rgba(173, 88, 21, 0.8));
+    box-shadow: inset 0 0 0.35vh rgba(0, 0, 0, 0.35);
+    color: rgba(25, 16, 4, 0.95);
+    font-weight: bold;
+}
+
+#myStatusPanel .affectIconText {
+    display: block;
+    max-width: 100%;
+    font-size: 0.82vh;
+    line-height: 1;
+}
+
+#myStatusPanel .affectIconCount {
+    position: absolute;
+    right: -0.25vh;
+    bottom: -0.25vh;
+    min-width: 0.9vh;
+    height: 0.9vh;
+    padding: 0 0.12vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: rgba(25, 25, 25, 0.92);
+    color: rgba(255, 230, 180, 0.98);
+    font-size: 0.6vh;
+    line-height: 1;
 }

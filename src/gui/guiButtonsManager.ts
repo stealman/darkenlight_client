@@ -205,6 +205,10 @@ export const GuiButtonsManager = {
             return
         }
 
+        if (MyPlayer.activeAction?.name === CharacterActions.RESTING.name) {
+            MyPlayer.stopActions()
+            return
+        }
         Connector.sendMessage(new RestingActionMsg(MyPlayer.nearFireplace.x, MyPlayer.nearFireplace.z))
     },
 
@@ -216,10 +220,12 @@ export const GuiButtonsManager = {
     setActiveAction(action: CharacterAction | null) {
         const miningButton = this.opportunityButtons.get(GuiOpportunityActions.MINING.name)
         const lumberjackingButton = this.opportunityButtons.get(GuiOpportunityActions.LUMBERJACKING.name)
+        const restingButton = this.opportunityButtons.get(GuiOpportunityActions.RESTING.name)
 
         if (action?.name === GuiOpportunityActions.MINING.name) {
             miningButton.htmlEl.classList.add("active")
             lumberjackingButton.htmlEl.classList.remove("active")
+            restingButton.htmlEl.classList.remove("active")
             return
         }
 
@@ -227,10 +233,18 @@ export const GuiButtonsManager = {
 
         if (action?.name === GuiOpportunityActions.LUMBERJACKING.name) {
             lumberjackingButton.htmlEl.classList.add("active")
+            restingButton.htmlEl.classList.remove("active")
             return
         }
 
         lumberjackingButton.htmlEl.classList.remove("active")
+
+        if (action?.name === GuiOpportunityActions.RESTING.name) {
+            restingButton.htmlEl.classList.add("active")
+            return
+        }
+
+        restingButton.htmlEl.classList.remove("active")
     },
 
     setSize(size: number) {
