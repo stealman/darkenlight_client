@@ -118,5 +118,10 @@ export interface TextMessage {
 export interface AffectGroupData {
     id: number
     p: number
-    af: number[][] // [typeId, duration, power][]
+    af: AffectData[]
+    lastUpdatedAt?: number
+}
+
+export interface AffectData {
+    data: number[] // [typeId, duration, power]
 }

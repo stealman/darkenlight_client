@@ -1,7 +1,8 @@
 import { MyPlayer } from '@/data/myPlayer'
-import { AffectGroupData } from '@/network/messageIfs'
+import { ClientAffectGroup } from '@/data/affects'
 
 export const MyStatusPanel = {
+    affectIconSizePx: 0 as number,
     panel: null as HTMLDivElement | null,
     bodyEl: null as HTMLDivElement | null,
     nameEl: null as HTMLSpanElement | null,
@@ -13,8 +14,11 @@ export const MyStatusPanel = {
     mpBarEl: null as HTMLDivElement | null,
     mpBlockEls: [] as HTMLDivElement[],
     mpFillEls: [] as HTMLDivElement[],
+
+    // Affects
     affectsRowEl: null as HTMLDivElement | null,
     affectsIconsEl: null as HTMLDivElement | null,
+    affectIconEls: new Map<number, HTMLDivElement>(),
 
     initialize() {
         if (this.panel) {
@@ -115,6 +119,7 @@ export const MyStatusPanel = {
 
         this.affectsIconsEl = document.createElement('div')
         this.affectsIconsEl.className = 'affectsIcons'
+        this.affectIconEls.clear()
 
         this.affectsRowEl.appendChild(this.affectsIconsEl)
 
@@ -123,7 +128,32 @@ export const MyStatusPanel = {
         this.panel.appendChild(this.bodyEl)
         this.panel.appendChild(this.affectsRowEl)
         document.body.appendChild(this.panel)
+        this.onResize()
         this.refreshAffectGroups()
+    },
+
+    onResize() {
+        if (!this.panel) {
+            return
+        }
+
+        const dpr = window.devicePixelRatio || 1
+        const shortestSide = Math.min(window.innerWidth, window.innerHeight)
+        const isLandscape = window.innerWidth > window.innerHeight
+        const touchFactor = window.matchMedia('(pointer: coarse)').matches ? 1.15 : 1
+        const landscapeBoost = isLandscape ? 1.2 : 1
+        const dprBoost = Math.min(1.35, Math.max(1, dpr * 0.9))
+        const iconSizePx = Math.round(Math.max(20, Math.min(39, shortestSide * 0.045 * touchFactor * landscapeBoost * dprBoost * 0.75)))
+        const countSizePx = Math.max(12, Math.round(iconSizePx * 0.37))
+        const countOffsetPx = Math.max(3, Math.round(iconSizePx * 0.1))
+
+        this.affectIconSizePx = iconSizePx
+        this.panel.style.setProperty('--affect-icon-size', `${iconSizePx}px`)
+        this.panel.style.setProperty('--affect-icon-count-size', `${countSizePx}px`)
+        this.panel.style.setProperty('--affect-icon-count-offset', `${countOffsetPx}px`)
+        this.panel.style.setProperty('--affect-icon-count-font-size', `${Math.max(10, Math.round(countSizePx * 0.62))}px`)
+        this.panel.style.setProperty('--affect-icon-gap', `${Math.max(4, Math.round(iconSizePx * 0.11))}px`)
+        this.panel.style.setProperty('--affect-icon-adverse-gap', `${iconSizePx}px`)
     },
 
     setMyName(name: string) {
@@ -137,44 +167,80 @@ export const MyStatusPanel = {
             return
         }
 
-        this.affectsIconsEl.innerHTML = ''
+        const affectGroups = Array.isArray(MyPlayer.affectGroups) ? MyPlayer.affectGroups as ClientAffectGroup[] : []
+        const sortedAffectGroups = [...affectGroups]
+            .sort((a, b) => Number(a.isAdverse()) - Number(b.isAdverse()))
 
-        const affectGroups = Array.isArray(MyPlayer.affectGroups) ? MyPlayer.affectGroups as AffectGroupData[] : []
-        this.affectsRowEl.style.display = affectGroups.length > 0 ? 'flex' : 'none'
+        this.affectsRowEl.style.display = sortedAffectGroups.length > 0 ? 'flex' : 'none'
+        const affectGroupIds = new Set(sortedAffectGroups.map((affectGroup) => affectGroup.id))
 
-        for (const affectGroup of affectGroups) {
-            const iconEl = document.createElement('div')
-            iconEl.className = 'affectIcon'
-            iconEl.title = this.getAffectGroupTitle(affectGroup)
-            iconEl.dataset.affectId = affectGroup.id.toString()
-
-            const textEl = document.createElement('span')
-            textEl.className = 'affectIconText'
-            textEl.textContent = affectGroup.id.toString()
-
-            iconEl.appendChild(textEl)
-
-            if (affectGroup.af.length > 1) {
-                const countEl = document.createElement('span')
-                countEl.className = 'affectIconCount'
-                countEl.textContent = affectGroup.af.length.toString()
-                iconEl.appendChild(countEl)
+        for (const [affectId, iconEl] of this.affectIconEls) {
+            if (affectGroupIds.has(affectId)) {
+                continue
             }
 
+            iconEl.remove()
+            this.affectIconEls.delete(affectId)
+        }
+
+        const firstAdverseAffectId = sortedAffectGroups.find((affectGroup) => affectGroup.isAdverse())?.id ?? null
+
+        for (const affectGroup of sortedAffectGroups) {
+            let iconEl = this.affectIconEls.get(affectGroup.id)
+            if (!iconEl) {
+                iconEl = this.createAffectIconEl(affectGroup)
+                this.affectIconEls.set(affectGroup.id, iconEl)
+            } else {
+                this.updateAffectIconEl(iconEl, affectGroup, affectGroup.id === firstAdverseAffectId)
+            }
+
+            if (!iconEl.isConnected) {
+                this.updateAffectIconEl(iconEl, affectGroup, affectGroup.id === firstAdverseAffectId)
+            }
             this.affectsIconsEl.appendChild(iconEl)
         }
     },
 
-    getAffectGroupTitle(affectGroup: AffectGroupData) {
-        const effectDetails = affectGroup.af
-            .map(effect => `type ${effect[0]}, duration ${effect[1]}, power ${effect[2]}`)
-            .join(' | ')
+    createAffectIconEl(affectGroup: ClientAffectGroup) {
+        const iconEl = document.createElement('div')
+        iconEl.className = 'affectIcon'
 
-        return effectDetails
-            ? `Affect group ${affectGroup.id}: ${effectDetails}`
-            : `Affect group ${affectGroup.id}`
+        const imageEl = document.createElement('img')
+        imageEl.className = 'affectIconImage'
+        imageEl.alt = ''
+        iconEl.appendChild(imageEl)
+
+        this.updateAffectIconEl(iconEl, affectGroup, false)
+
+        return iconEl
     },
 
+    updateAffectIconEl(iconEl: HTMLDivElement, affectGroup: ClientAffectGroup, isFirstAdverse: boolean) {
+        iconEl.title = affectGroup.getTitle()
+        iconEl.dataset.affectId = affectGroup.id.toString()
+        iconEl.classList.toggle('adverse', affectGroup.isAdverse())
+        iconEl.classList.toggle('positive', !affectGroup.isAdverse())
+        iconEl.classList.toggle('firstAdverse', isFirstAdverse)
+
+        const imageEl = iconEl.querySelector('.affectIconImage') as HTMLImageElement | null
+        if (imageEl) {
+            imageEl.src = affectGroup.getImageUrl()
+            imageEl.style.display = affectGroup.getImageUrl() ? 'block' : 'none'
+        }
+
+        let countEl = iconEl.querySelector('.affectIconCount') as HTMLSpanElement | null
+        if (affectGroup.af.length > 1) {
+            if (!countEl) {
+                countEl = document.createElement('span')
+                countEl.className = 'affectIconCount'
+                iconEl.appendChild(countEl)
+            }
+            countEl.textContent = affectGroup.af.length.toString()
+            return
+        }
+
+        countEl?.remove()
+    },
     onFrame(actualTime: number) {
         if (!this.panel || !this.nameEl || !MyPlayer.myChar || !this.stBarEl || !this.mpBarEl) return
 
@@ -226,4 +292,3 @@ export const MyStatusPanel = {
         this.mpBarEl.classList.toggle('halfSegments', hasMana)
     }
 }
-

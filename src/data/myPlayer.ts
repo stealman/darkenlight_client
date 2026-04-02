@@ -30,6 +30,7 @@ import { CharacterAction, CharacterActions } from '@/data/actions/characterActio
 import { OverlayManager } from '@/gui/overlay/overlayManager'
 import { StaticsManager } from '@/babylon/world/statics/staticsManager'
 import { StaticObjectsCodebook } from '@/babylon/world/statics/staticsCodebook'
+import { ClientAffectGroup } from '@/data/affects'
 
 /**
  * Controlling object for the player's character
@@ -52,7 +53,7 @@ export const MyPlayer = {
     nextPotionUseTime: 0 as number,
     nearFireplace: null as { x: number, z: number } | null,
 
-    affectGroups: [] as AffectGroupData[],
+    affectGroups: [] as ClientAffectGroup[],
 
     async initialize(charData: any) {
         console.log("Initializing MyPlayer with charData:", charData)
@@ -277,15 +278,17 @@ export const MyPlayer = {
     },
 
     affectGroupChange(affectGroup: AffectGroupData) {
-        const existingGroupIndex = this.affectGroups.findIndex(group => group.id === affectGroup.id)
+        const clientAffectGroup = ClientAffectGroup.fromServerData(affectGroup)
+
+        const existingGroupIndex = this.affectGroups.findIndex(group => group.id === clientAffectGroup.id)
         if (existingGroupIndex !== -1) {
-            if (affectGroup.af.length === 0) {
+            if (clientAffectGroup.af.length === 0) {
                 this.affectGroups.splice(existingGroupIndex, 1)
             } else {
-                this.affectGroups[existingGroupIndex] = affectGroup
+                this.affectGroups[existingGroupIndex] = clientAffectGroup
             }
-        } else if (affectGroup.af.length > 0) {
-            this.affectGroups.push(affectGroup)
+        } else if (clientAffectGroup.af.length > 0) {
+            this.affectGroups.push(clientAffectGroup)
         }
 
         MyStatusPanel.refreshAffectGroups()

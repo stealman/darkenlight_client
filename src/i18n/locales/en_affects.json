@@ -1,0 +1,6 @@
+{
+  "affects": {
+    "resting.name": "Resting",
+    "resting.description": "Increases health, mana and fatigue regeneration"
+  }
+}

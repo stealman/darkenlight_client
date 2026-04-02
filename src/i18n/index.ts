@@ -2,9 +2,11 @@ import { computed, ref } from 'vue'
 import cs from '@/i18n/locales/cs.json'
 import csItems from '@/i18n/locales/cs_items.json'
 import csSkills from '@/i18n/locales/cs_skills.json'
+import csAffects from '@/i18n/locales/cs_affects.json'
 import en from '@/i18n/locales/en.json'
 import enItems from '@/i18n/locales/en_items.json'
 import enSkills from '@/i18n/locales/en_skills.json'
+import enAffects from '@/i18n/locales/en_affects.json'
 
 export const supportedLocales = ['cs', 'en'] as const
 export type SupportedLocale = typeof supportedLocales[number]
@@ -27,8 +29,8 @@ const mergeLocaleMessages = (...sources: any[]) => {
 }
 
 const messages = {
-    cs: mergeLocaleMessages(cs, csItems, csSkills),
-    en: mergeLocaleMessages(en, enItems, enSkills),
+    cs: mergeLocaleMessages(cs, csItems, csSkills, csAffects),
+    en: mergeLocaleMessages(en, enItems, enSkills, enAffects),
 } as const
 
 const currentLocale = ref<SupportedLocale>('cs')

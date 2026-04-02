@@ -8,6 +8,7 @@ import { Connector } from '@/network/connector'
 import { LogoutMsg } from '@/network/messages'
 import { ActionButtonsManager } from '@/gui/actionButtonsManager'
 import { setLocale } from '@/i18n'
+import { MyStatusPanel } from '@/gui/myStatusPanel'
 
 export const GameManager = {
     started: false as boolean,
@@ -48,6 +49,7 @@ export const GameManager = {
         OverlayManager.onResize()
         ViewportManager.onResize()
         ActionButtonsManager.renderActionButtons()
+        MyStatusPanel.onResize()
         TargetingManager.prepareTargetSprites()
     }
 }
