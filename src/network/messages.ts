@@ -171,6 +171,15 @@ export class RestingActionMsg implements Message {
     }
 }
 
+export class FireArrowsActionMsg implements Message {
+    t: number = 22
+    d: any
+
+    constructor(x: number, z: number) {
+        this.d = { x: x, z: z }
+    }
+}
+
 export class GMSaveMapDataMsg implements Message {
     t: number = 1000
     d: any

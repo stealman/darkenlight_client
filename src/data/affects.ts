@@ -103,5 +103,6 @@ export const AffectGroups = {
     1: new AffectGroupDefinition(1, 'affectGroup1', 'icon1.png'),
     2: new AffectGroupDefinition(2, 'affectGroup2', 'icon2.png'),
     3: new AffectGroupDefinition(3, 'resting', 'buttons/btn_rest'),
+    4: new AffectGroupDefinition(4, 'flameArrows', 'affects/flame_arrow'),
     // Add more affect groups as needed
 }

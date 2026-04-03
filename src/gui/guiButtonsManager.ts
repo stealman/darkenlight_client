@@ -6,7 +6,7 @@ import { MyPlayer } from '@/data/myPlayer'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { WeaponTypes } from '@/data/items/item'
 import { Connector } from '@/network/connector'
-import { GatheringActionMsg, RestingActionMsg } from '@/network/messages'
+import { FireArrowsActionMsg, GatheringActionMsg, RestingActionMsg } from '@/network/messages'
 import { CharacterAction, CharacterActions } from '@/data/actions/characterActions'
 
 class GuiOpportunityButtonAction {
@@ -62,6 +62,8 @@ export const GuiOpportunityActions = {
 
 export const GuiButtonsManager = {
     size: 32 as number,
+    fireArrowsMessageCooldown: 5000 as number,
+    lastFireArrowsMessageTime: 0 as number,
     btnBackpack: null as HTMLDivElement,
     btnCharacter: null as HTMLDivElement,
     opportunityButtonsPanel: null as HTMLElement,
@@ -130,6 +132,8 @@ export const GuiButtonsManager = {
 
         this.opportunityButtons.get(GuiOpportunityActions.RESTING.name)!.setVisible(MyPlayer.nearFireplace !== null)
         this.opportunityButtons.get(GuiOpportunityActions.COOKING.name)!.setVisible(MyPlayer.nearFireplace !== null)
+
+        this.trySendFireArrowsAction()
     },
 
     onclickOpportunityButton(actionName: string) {
@@ -215,6 +219,17 @@ export const GuiButtonsManager = {
     clickOnCookingButton() {
         console.log("Cooking action triggered")
         //Connector.sendMessage(new GatheringActionMsg(CharacterActions.COOKING.name))
+    },
+
+    trySendFireArrowsAction() {
+        const nearbyFireplace = MyPlayer.nearFireplace
+        const time = Date.now()
+        if (nearbyFireplace == null || MyPlayer.myChar.getWeapon()?.slotInfo?.weaponType !== WeaponTypes.BOW || time < this.lastFireArrowsMessageTime + this.fireArrowsMessageCooldown) {
+            return
+        }
+
+        Connector.sendMessage(new FireArrowsActionMsg(nearbyFireplace.x, nearbyFireplace.z))
+        this.lastFireArrowsMessageTime = time
     },
 
     setActiveAction(action: CharacterAction | null) {
