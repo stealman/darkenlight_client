@@ -17,6 +17,7 @@ export interface  AutoAttackMessage {
     tp: string
     dur: number
     cd: number
+    ef: string // GFX
 }
 
 export interface AutoAttackResult {

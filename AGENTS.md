@@ -12,6 +12,7 @@
 - Prefer explicit early returns for invalid state or missing targets.
 - Keep Vue components thin when gameplay logic can live in TypeScript managers/services.
 - For feature work, implement directly, then iterate from in-game behavior.
+- For trivial string formats already defined by the server, prefer direct parsing inline over defensive helper abstractions.
 
 ## Project Map
 

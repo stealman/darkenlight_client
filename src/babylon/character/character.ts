@@ -80,6 +80,7 @@ class Character implements Attackable, EffectTarget {
     lastStepMarkTime: number = 0
     stepMarkSide: 'L' | 'R' = 'R'
 
+    autoAttackMessage: AutoAttackMessage | null = null
     autoAttackTarget: Attackable | null = null
     autoAttackStart: number = 0
     autoAttackEnd: number = 0
@@ -171,7 +172,7 @@ class Character implements Attackable, EffectTarget {
             this.model?.onFrame(timeRate)
 
             if (this.arrowCreateTime > 0 && Date.now() >= this.arrowCreateTime && this.autoAttackTarget && (this.insideView || this.autoAttackTarget!.insideView)) {
-                this.arrow = ArrowsManager.addArrow(this, this.autoAttackTarget, this.arrowShotTime)
+                this.arrow = ArrowsManager.addArrow(this, this.autoAttackTarget, this.arrowShotTime, this.autoAttackMessage?.ef)
                 if (this.model && this.model.initialized && this.insideView) {
                     this.arrow.assignHandNode(this.model.lhandNode)
                 } else {
@@ -232,6 +233,7 @@ class Character implements Attackable, EffectTarget {
     }
 
     startAutoAttack(data: AutoAttackMessage) {
+        this.autoAttackMessage = data
         this.autoAttackTarget = Utils.getAttackTargetByTypeAndId(data.tp, data.tgt)
         if (!this.autoAttackTarget) {
             return

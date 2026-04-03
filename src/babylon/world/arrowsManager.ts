@@ -1,8 +1,11 @@
 import {
+    Color4,
     Mesh,
     MeshBuilder,
+    ParticleSystem,
     StandardMaterial,
     Color3,
+    Texture,
     Vector3,
     TransformNode,
     Quaternion,
@@ -11,6 +14,181 @@ import {
 import { Renderer } from '@/babylon/scene/renderer'
 import { Attackable } from '@/GameManager'
 import { Materials } from '@/babylon/materials'
+import { Settings } from '@/settings/settings'
+
+type ParticleGradient = {
+    step: number,
+    color: Color4,
+}
+
+type ArrowParticleConfig = {
+    name: string,
+    capacity: number,
+    texturePath: string,
+    blendMode: number,
+    minEmitBox: Vector3,
+    maxEmitBox: Vector3,
+    minLifeTime: number,
+    maxLifeTime: number,
+    emitRate: number,
+    direction1: Vector3,
+    direction2: Vector3,
+    minEmitPower: number,
+    maxEmitPower: number,
+    minSize: number,
+    maxSize: number,
+    gravity: Vector3,
+    updateSpeed: number,
+    gradients: ParticleGradient[],
+    minAngularSpeed?: number,
+    maxAngularSpeed?: number,
+}
+
+type ArrowEffectConfig = {
+    main: ArrowParticleConfig,
+    smoke?: ArrowParticleConfig,
+}
+
+function scaleArrowParticleConfig(config: ArrowParticleConfig, powerMultiplier: number): ArrowParticleConfig {
+    return {
+        ...config,
+        emitRate: config.emitRate * powerMultiplier,
+        minSize: config.minSize * powerMultiplier,
+        maxSize: config.maxSize * powerMultiplier,
+    }
+}
+
+function createArrowEffectConfig(baseConfig: ArrowEffectConfig, power: number): ArrowEffectConfig {
+    const powerMultiplier = 1 + (power * 0.1)
+
+    return {
+        main: scaleArrowParticleConfig(baseConfig.main, powerMultiplier),
+        smoke: baseConfig.smoke ? scaleArrowParticleConfig(baseConfig.smoke, powerMultiplier) : undefined,
+    }
+}
+
+const defaultFireArrowEffect: ArrowEffectConfig = {
+    main: {
+        name: 'arrowFire',
+        capacity: 100,
+        texturePath: 'images/gfx/flare.png',
+        blendMode: ParticleSystem.BLENDMODE_ONEONE,
+        minEmitBox: new Vector3(-0.025, -0.25, -0.025),
+        maxEmitBox: new Vector3(0.025, 0.25, 0.025),
+        minLifeTime: 0.05,
+        maxLifeTime: 0.1,
+        emitRate: 500,
+        direction1: new Vector3(-0.03, 0.9, -0.03),
+        direction2: new Vector3(0.03, 1.3, 0.03),
+        minEmitPower: 0.2,
+        maxEmitPower: 0.35,
+        minSize: 0.15,
+        maxSize: 0.2,
+        gravity: new Vector3(0, 0.8, 0),
+        updateSpeed: 0.012,
+        gradients: [
+            { step: 0, color: new Color4(1, 0.85, 0.55, 0.9) },
+            { step: 0.4, color: new Color4(1, 0.45, 0.1, 0.75) },
+            { step: 0.85, color: new Color4(0.15, 0.05, 0.01, 0.15) },
+            { step: 1, color: new Color4(0.15, 0.05, 0.01, 0) },
+        ],
+    },
+    smoke: {
+        name: 'arrowSmoke',
+        capacity: 60,
+        texturePath: 'images/gfx/dust.png',
+        blendMode: ParticleSystem.BLENDMODE_STANDARD,
+        minEmitBox: new Vector3(-0.03, -0.12, -0.03),
+        maxEmitBox: new Vector3(0.03, 0.12, 0.03),
+        minLifeTime: 2,
+        maxLifeTime: 3,
+        emitRate: 55,
+        direction1: new Vector3(-0.35, -0.08, -0.35),
+        direction2: new Vector3(0.35, 0.28, 0.35),
+        minEmitPower: 2,
+        maxEmitPower: 3,
+        minSize: 0.6,
+        maxSize: 0.8,
+        gravity: new Vector3(0, 0.04, 0),
+        updateSpeed: 0.01,
+        minAngularSpeed: -0.3,
+        maxAngularSpeed: 0.3,
+        gradients: [
+            { step: 0, color: new Color4(0.55, 0.55, 0.55, 0) },
+            { step: 0.1, color: new Color4(0.68, 0.68, 0.68, 0.18) },
+            { step: 0.65, color: new Color4(0.62, 0.62, 0.62, 0.12) },
+            { step: 1, color: new Color4(0.5, 0.5, 0.5, 0) },
+        ],
+    },
+}
+
+const defaultFrostArrowEffect: ArrowEffectConfig = {
+    main: {
+        name: 'arrowFrost',
+        capacity: 100,
+        texturePath: 'images/gfx/flare.png',
+        blendMode: ParticleSystem.BLENDMODE_ONEONE,
+        minEmitBox: new Vector3(-0.025, -0.22, -0.025),
+        maxEmitBox: new Vector3(0.025, 0.22, 0.025),
+        minLifeTime: 0.06,
+        maxLifeTime: 0.12,
+        emitRate: 420,
+        direction1: new Vector3(-0.025, 0.75, -0.025),
+        direction2: new Vector3(0.025, 1.1, 0.025),
+        minEmitPower: 0.16,
+        maxEmitPower: 0.3,
+        minSize: 0.15,
+        maxSize: 0.2,
+        gravity: new Vector3(0, 0.45, 0),
+        updateSpeed: 0.012,
+        gradients: [
+            { step: 0, color: new Color4(0.75, 1, 1, 0.95) },
+            { step: 0.35, color: new Color4(0.3, 0.95, 1, 0.8) },
+            { step: 0.75, color: new Color4(0.08, 0.45, 0.7, 0.2) },
+            { step: 1, color: new Color4(0.05, 0.18, 0.28, 0) },
+        ],
+    },
+    smoke: {
+        name: 'arrowFrostSmoke',
+        capacity: 60,
+        texturePath: 'images/gfx/dust.png',
+        blendMode: ParticleSystem.BLENDMODE_STANDARD,
+        minEmitBox: new Vector3(-0.03, -0.12, -0.03),
+        maxEmitBox: new Vector3(0.03, 0.12, 0.03),
+        minLifeTime: 2,
+        maxLifeTime: 3,
+        emitRate: 45,
+        direction1: new Vector3(-0.3, -0.06, -0.3),
+        direction2: new Vector3(0.3, 0.24, 0.3),
+        minEmitPower: 0.4,
+        maxEmitPower: 0.5,
+        minSize: 0.55,
+        maxSize: 0.75,
+        gravity: new Vector3(0, 0.03, 0),
+        updateSpeed: 0.02,
+        minAngularSpeed: -0.25,
+        maxAngularSpeed: 0.25,
+        gradients: [
+            { step: 0, color: new Color4(0.7, 0.82, 0.9, 0) },
+            { step: 0.12, color: new Color4(0.78, 0.9, 1, 0.16) },
+            { step: 0.65, color: new Color4(0.62, 0.74, 0.86, 0.1) },
+            { step: 1, color: new Color4(0.52, 0.62, 0.72, 0) },
+        ],
+    },
+}
+
+function resolveArrowEffectConfig(effect: string): ArrowEffectConfig | null {
+    if (!effect) {
+        return null
+    }
+
+    const pwr = parseInt(effect.split(':')[1]) || 1
+    if (effect.startsWith('FRA')) {
+        return createArrowEffectConfig(defaultFrostArrowEffect, pwr)
+    }
+
+    return createArrowEffectConfig(defaultFireArrowEffect, pwr)
+}
 
 export const ArrowsManager = {
     arrows: new Array<Arrow>(),
@@ -29,8 +207,8 @@ export const ArrowsManager = {
         this.mesh.material = mat
     },
 
-    addArrow(attacker: Attackable, target: Attackable, flyStartTime: number): Arrow {
-        const arrow = new Arrow(attacker, target, flyStartTime)
+    addArrow(attacker: Attackable, target: Attackable, flyStartTime: number, effect: string): Arrow {
+        const arrow = new Arrow(attacker, target, flyStartTime, effect)
         this.arrows.push(arrow)
         return arrow
     },
@@ -45,6 +223,8 @@ export const ArrowsManager = {
 }
 
 export class Arrow {
+    static readonly FIRE_EFFECT_LEAD_TIME_MS = 100
+
     attacker: Attackable
     target: Attackable
     creationTime: number
@@ -53,8 +233,14 @@ export class Arrow {
 
     meshClone: Mesh | null = null
     trail: TrailMesh | null = null
-    trailTip: TransformNode
+    trailTip: TransformNode | null = null
+    effectTip: TransformNode | null = null
+    fireParticles: ParticleSystem | null = null
+    smokeParticles: ParticleSystem | null = null
+    fireEffectStarted = false
+    pendingEffectSystems = 0
     disposed = false
+    effectConfig: ArrowEffectConfig | null = null
 
     // flight state
     startedFlying = false
@@ -70,12 +256,15 @@ export class Arrow {
     startPosFixed = Vector3.Zero()
     endPosFixed = Vector3.Zero()
     lastPos = Vector3.Zero()
+    hasEffect = false
 
-    constructor(attacker: Attackable, target: Attackable, flyStartTime: number) {
+    constructor(attacker: Attackable, target: Attackable, flyStartTime: number, effect: string) {
         this.attacker = attacker
         this.target = target
         this.creationTime = Date.now()
         this.flyStartTime = flyStartTime
+        this.effectConfig = resolveArrowEffectConfig(effect)
+        this.hasEffect = this.effectConfig != null
         this.heightOffset.y = (0.3 + Math.random() * 0.4) * target.getModelHeight()
 
         if (ArrowsManager.mesh) {
@@ -86,6 +275,10 @@ export class Arrow {
             this.trailTip = new TransformNode('arrowTrailTip', Renderer.scene)
             this.trailTip.parent = this.meshClone
             this.trailTip.position.y = -1
+
+            if (this.hasEffect) {
+                this.createArrowEffect()
+            }
         }
 
         // Arc height by distance
@@ -105,8 +298,11 @@ export class Arrow {
     startFlying() {
         if (!this.meshClone) return
 
+        if (!this.trailTip) return
+
         this.trail = new TrailMesh('arrowTrail', this.trailTip, Renderer.scene, 0.35, 75, true)
         this.trail.material = Materials.weaponTrailMaterial
+        this.startArrowEffect()
 
         // fix start position while still parented to hand
         this.startPos = this.meshClone.getAbsolutePosition().clone()
@@ -132,6 +328,10 @@ export class Arrow {
 
     onFrame(time: number, timeRate: number) {
         if (!this.meshClone || this.disposed) return
+
+        if (!this.startedFlying && time >= this.flyStartTime - Arrow.FIRE_EFFECT_LEAD_TIME_MS) {
+            this.startArrowEffect()
+        }
 
         if (!this.startedFlying && time >= this.flyStartTime) {
             this.startFlying()
@@ -178,15 +378,113 @@ export class Arrow {
         if (this.disposed) return
         this.disposed = true
 
+        this.releaseArrowEffect()
+
         if (this.trail) {
             this.trail.dispose()
             this.trail = null
+        }
+
+        if (this.trailTip) {
             this.trailTip.dispose()
+            this.trailTip = null
         }
 
         if (this.meshClone) {
             this.meshClone.dispose()
             this.meshClone = null
         }
+    }
+
+    private createArrowEffect() {
+        if (!this.meshClone || !Renderer.scene || !this.effectConfig || this.fireParticles || this.smokeParticles) return
+
+        this.effectTip = new TransformNode('arrowEffectTip', Renderer.scene)
+        this.effectTip.parent = this.meshClone
+        this.effectTip.position.y = 0.7
+
+        this.fireParticles = this.createParticleSystem(this.effectConfig.main)
+
+        if (this.effectConfig.smoke && Settings.isDetalLevelHigh()) {
+            this.smokeParticles = this.createParticleSystem(this.effectConfig.smoke)
+        }
+    }
+
+    private startArrowEffect() {
+        if (this.fireEffectStarted) return
+
+        this.fireParticles?.start()
+        this.smokeParticles?.start()
+        this.fireEffectStarted = true
+    }
+
+    private releaseArrowEffect() {
+        const detachedEffectTip = this.effectTip
+        if (detachedEffectTip) {
+            detachedEffectTip.setParent(null, true)
+            if (this.fireParticles) {
+                this.fireParticles.emitter = detachedEffectTip
+            }
+            if (this.smokeParticles) {
+                this.smokeParticles.emitter = detachedEffectTip
+            }
+            this.effectTip = null
+        }
+
+        this.pendingEffectSystems = 0
+
+        const releaseParticles = (particleSystem: ParticleSystem | null) => {
+            if (!particleSystem) return
+
+            this.pendingEffectSystems += 1
+            particleSystem.disposeOnStop = true
+            particleSystem.onDisposeObservable.addOnce(() => {
+                this.pendingEffectSystems -= 1
+                if (this.pendingEffectSystems <= 0 && detachedEffectTip && !detachedEffectTip.isDisposed()) {
+                    detachedEffectTip.dispose()
+                }
+            })
+            particleSystem.stop()
+        }
+
+        releaseParticles(this.fireParticles)
+        releaseParticles(this.smokeParticles)
+
+        this.fireParticles = null
+        this.smokeParticles = null
+        this.fireEffectStarted = false
+    }
+
+    private createParticleSystem(config: ArrowParticleConfig): ParticleSystem {
+        const particleSystem = new ParticleSystem(`${config.name}_${this.creationTime}`, config.capacity, Renderer.scene)
+        particleSystem.particleTexture = new Texture(config.texturePath, Renderer.scene)
+        particleSystem.emitter = this.effectTip
+        particleSystem.minEmitBox = config.minEmitBox
+        particleSystem.maxEmitBox = config.maxEmitBox
+        particleSystem.minLifeTime = config.minLifeTime
+        particleSystem.maxLifeTime = config.maxLifeTime
+        particleSystem.emitRate = config.emitRate
+        particleSystem.blendMode = config.blendMode
+        particleSystem.direction1 = config.direction1
+        particleSystem.direction2 = config.direction2
+        particleSystem.minEmitPower = config.minEmitPower
+        particleSystem.maxEmitPower = config.maxEmitPower
+        particleSystem.minSize = config.minSize
+        particleSystem.maxSize = config.maxSize
+        particleSystem.gravity = config.gravity
+        particleSystem.updateSpeed = config.updateSpeed
+
+        if (config.minAngularSpeed != null) {
+            particleSystem.minAngularSpeed = config.minAngularSpeed
+        }
+        if (config.maxAngularSpeed != null) {
+            particleSystem.maxAngularSpeed = config.maxAngularSpeed
+        }
+
+        for (const gradient of config.gradients) {
+            particleSystem.addColorGradient(gradient.step, gradient.color)
+        }
+
+        return particleSystem
     }
 }
