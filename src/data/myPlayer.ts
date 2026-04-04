@@ -67,6 +67,15 @@ export const MyPlayer = {
         this.myChar.logicYpos = this.myChar.pos.y
         this.myCharRef.value = this.myChar
 
+        if (charData.aff) {
+            charData.aff.forEach((group: AffectGroupData) => {
+                this.affectGroupChange(group)
+            })
+        }
+        if (charData.act) {
+            this.setAction(charData.act)
+        }
+
         MyStatusPanel.setMyName(this.myChar.name)
         MyStatusPanel.refreshAffectGroups()
         EmeraldsManager.setMyEmeralds(charData.emeralds, true, charData.emeralds, null)

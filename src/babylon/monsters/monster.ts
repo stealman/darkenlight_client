@@ -199,6 +199,15 @@ export class Monster implements Attackable, EffectTarget {
         }
     }
 
+    consumePubliclyVisibleAffects(affects: [{tp: number, p: number}]) {
+        this.publiclyVisibleAffects.clear()
+        affects.forEach(aff => {
+            if (aff.p > 0) {
+                this.publiclyVisibleAffects.set(aff.tp, new PubliclyVisibleAffect(aff.tp, aff.p))
+            }
+        })
+    }
+
     removeModel() {
         this.model.removeFromScene()
     }

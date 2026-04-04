@@ -17,12 +17,6 @@ export class BurningEffect extends AnchoredEffect implements CharacterEffect, Mo
             return
         }
 
-        if (!shouldUseSmoke && this.smokeParticles) {
-            this.smokeParticles.stop()
-            this.smokeParticles.dispose()
-            this.smokeParticles = null
-        }
-
         const emitter = this.getOrCreateEmitter(`burningEmitter_${this.target.id}`)
         if (!emitter) {
             return
@@ -30,8 +24,8 @@ export class BurningEffect extends AnchoredEffect implements CharacterEffect, Mo
 
         const boxSize = Math.max(0.4, this.target.getBoxSize())
         const halfBox = boxSize * 0.4
-        const fireHeight = this.target.getModelHeight() * 0.5
-        const smokeHeight = this.target.getModelHeight() * 0.75
+        const fireHeight = 0.5
+        const smokeHeight = 1
         const fireCapacity = Math.max(100, Math.round(160 * boxSize))
         const smokeCapacity = Math.max(40, Math.round(70 * boxSize))
 
@@ -58,7 +52,7 @@ export class BurningEffect extends AnchoredEffect implements CharacterEffect, Mo
             fireParticles.maxEmitPower = 0.6
             fireParticles.minSize = 0.15
             fireParticles.maxSize = 0.2
-            fireParticles.gravity = new Vector3(0, 0.75, 0)
+            fireParticles.gravity = new Vector3(0, 0.5, 0)
             fireParticles.updateSpeed = 0.02
             fireParticles.addColorGradient(0, new Color4(1, 0.85, 0.55, 0.95))
             fireParticles.addColorGradient(0.45, new Color4(1, 0.4, 0.1, 0.8))

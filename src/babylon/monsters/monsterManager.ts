@@ -29,7 +29,7 @@ export const MonsterManager = {
         await MonsterLoader.initialize()
     },
 
-    addMonster (id: number, type: number, position: { x: number, z: number }, hpp: number, mv: number[] | undefined) {
+    addMonster (id: number, type: number, position: { x: number, z: number }, hpp: number, mv: number[] | undefined, ef: [{tp: number, p: number}] | undefined) {
         if (this.monsters.has(id)) {
             const mob = this.monsters.get(id)
             mob!.pos.x = position.x
@@ -37,6 +37,7 @@ export const MonsterManager = {
             mob!.logicYpos = Utils.calculateWalkYPos(mob!.pos.x, mob!.pos.z, mob!.getBoxSize())
             mob!.pos.y = mob!.logicYpos
             mob!.hpPercent = hpp
+            if (ef) mob!.consumePubliclyVisibleAffects(ef)
         } else {
             const monsterType: MonsterType = MonsterCodebook.getMonsterTypeById(type)
             const monster = new Monster(id, monsterType, position.x, position.z, hpp)
@@ -50,6 +51,7 @@ export const MonsterManager = {
                 monsterModel.initializeModel()
             }
 
+            if (ef) monster.consumePubliclyVisibleAffects(ef)
             this.monsters.set(id, monster)
         }
 

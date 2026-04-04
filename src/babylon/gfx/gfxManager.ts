@@ -82,7 +82,8 @@ export const GfxManager = {
         const activeKeys = new Set<string>()
 
         const myChar = MyPlayer.myChar
-        if (myChar?.publiclyVisibleAffects.has(this.BURNING_AFFECT_ID)) {
+        const myCharBurning = MyPlayer.affectGroups.some(group => group.id === this.BURNING_AFFECT_ID)
+        if (myChar && myCharBurning) {
             const key = this.getAffectKey(myChar.id, this.BURNING_AFFECT_ID)
             activeKeys.add(key)
 
@@ -97,7 +98,7 @@ export const GfxManager = {
         }
 
         CharacterManager.characters.forEach(character => {
-            if (!character.publiclyVisibleAffects.has(this.BURNING_AFFECT_ID)) {
+            if (!character.publiclyVisibleAffects.has(this.BURNING_AFFECT_ID) || !character.isEffectVisible()) {
                 return
             }
 
@@ -114,14 +115,14 @@ export const GfxManager = {
             effect.onUpdate(actualTime)
         })
 
-        this.cleanupInactiveCharacterAffects(activeKeys)
+        this.cleanupInactiveCharacterAffects(activeKeys, actualTime)
     },
 
     syncMonsterAffects(actualTime: number) {
         const activeKeys = new Set<string>()
 
         MonsterManager.monsters.forEach(monster => {
-            if (monster.killedTime > 0 || !monster.publiclyVisibleAffects.has(this.BURNING_AFFECT_ID)) {
+            if (monster.killedTime > 0 || !monster.publiclyVisibleAffects.has(this.BURNING_AFFECT_ID) || !monster.isEffectVisible()) {
                 return
             }
 
@@ -138,26 +139,32 @@ export const GfxManager = {
             effect.onUpdate(actualTime)
         })
 
-        this.cleanupInactiveMonsterAffects(activeKeys)
+        this.cleanupInactiveMonsterAffects(activeKeys, actualTime)
     },
 
-    cleanupInactiveCharacterAffects(activeKeys: Set<string>) {
+    cleanupInactiveCharacterAffects(activeKeys: Set<string>, actualTime: number) {
         this.activeCharacterAffects.forEach((effect, key) => {
             if (activeKeys.has(key)) {
                 return
             }
 
+            if (!effect.target.isEffectVisible()) {
+                effect.onUpdate(actualTime)
+            }
             effect.onEnd()
             this.activeCharacterAffects.delete(key)
         })
     },
 
-    cleanupInactiveMonsterAffects(activeKeys: Set<string>) {
+    cleanupInactiveMonsterAffects(activeKeys: Set<string>, actualTime: number) {
         this.activeMonsterAffects.forEach((effect, key) => {
             if (activeKeys.has(key)) {
                 return
             }
 
+            if (!effect.target.isEffectVisible()) {
+                effect.onUpdate(actualTime)
+            }
             effect.onEnd()
             this.activeMonsterAffects.delete(key)
         })

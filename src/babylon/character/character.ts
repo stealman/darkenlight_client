@@ -35,7 +35,7 @@ import { EffectTarget } from '@/babylon/gfx/characterEffect'
 import { GfxManager } from '@/babylon/gfx/gfxManager'
 import { PotionConsumeEffect } from '@/babylon/gfx/potionConsumeEffect'
 import { WATER_BLOCK_TYPE } from '@/babylon/world/terrainManager'
-import { CharacterTimedAction } from '@/data/actions/characterActions'
+import { CharacterActions, CharacterTimedAction } from '@/data/actions/characterActions'
 import { PubliclyVisibleAffect } from '@/data/affects'
 
 class Character implements Attackable, EffectTarget {
@@ -346,12 +346,12 @@ class Character implements Attackable, EffectTarget {
     }
 
     startCamping(data: CharacterCampingMessage) {
-        this.startTimedAction('CAMPING', data)
+        this.startTimedAction(CharacterActions.CAMPING.name, data)
         AudioManager.playCampingSound(this.pos)
     }
 
     startResting(data: CharacterRestingMessage) {
-        this.startTimedAction('RESTING', data)
+        this.startTimedAction(CharacterActions.RESTING.name, data)
     }
 
     clearTimedAction() {
@@ -440,6 +440,15 @@ class Character implements Attackable, EffectTarget {
         this.setMoveAngle(angle != null ? Utils.roundToTwoDecimals(angle) : null)
         this.setActualSpeed(speed)
         Connector.sendMoveMessage(new MyCharMoveMsg())
+    }
+
+    consumePubliclyVisibleAffects(affects: [{tp: number, p: number}]) {
+        this.publiclyVisibleAffects.clear()
+        affects.forEach(aff => {
+            if (aff.p > 0) {
+                this.publiclyVisibleAffects.set(aff.tp, new PubliclyVisibleAffect(aff.tp, aff.p))
+            }
+        })
     }
 
     getPositionRounded(): Vector3 {

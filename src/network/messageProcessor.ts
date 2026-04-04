@@ -31,7 +31,6 @@ export const MessageProcessor = {
     async processResponse(response) {
         for (const element of response) {
             const msg = element
-            //console.log(msg.t + ":" + msg.d)
             switch (msg.t) {
                 case 2: await this.loginResponse(msg.d); break
                 case 3: this.addMonster(msg.d); break
@@ -97,7 +96,7 @@ export const MessageProcessor = {
     },
 
     addMonster(data) {
-        MonsterManager.addMonster(data.id, data.tp, { x: data.x, z: data.z }, data.hpp, data.mv)
+        MonsterManager.addMonster(data.id, data.tp, { x: data.x, z: data.z }, data.hpp, data.mv, data.paf)
     },
 
     monsterMove(data) {

@@ -33,8 +33,12 @@ export const CharacterManager = {
             char!.hp = data.hp
             char.pos.y = Utils.calculateWalkYPos(char.pos.x, char.pos.z, char.getBoxSize())
             char.logicYpos = char.pos.y
+
+            if (data.paf) char.consumePubliclyVisibleAffects(data.paf)
         } else {
             const newChar = new Character(data)
+            this.characters.set(data.id, newChar)
+
             await newChar.createModel(false)
             newChar.insideView = this.isCharInViewport(newChar)
 
@@ -42,7 +46,8 @@ export const CharacterManager = {
             if (newChar.insideView) {
                 await newChar.model!.initAsync();
             }
-            this.characters.set(data.id, newChar)
+
+            if (data.paf) newChar.consumePubliclyVisibleAffects(data.paf)
         }
     },
 
@@ -205,6 +210,7 @@ export const CharacterManager = {
             MyPlayer.myChar.startResting(data)
         } else {
             const char = this.characters.get(data.id)
+            console.log('start resting', char)
             if (char) {
                 char.startResting(data)
             }
