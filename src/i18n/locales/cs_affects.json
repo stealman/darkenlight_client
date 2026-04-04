@@ -3,6 +3,8 @@
     "restingName": "Odpočinek",
     "restingDescription": "Zvyšuje regeneraci zdraví, many a únavy",
     "flameArrowsName": "Zápalné šípy",
-    "flameArrowsDescription": "Při zásahu mohou zapálit cíl"
+    "flameArrowsDescription": "Při zásahu mohou zapálit cíl",
+    "burningName": "Plameny",
+    "burningDescription": "Způsobuje poškození ohněm v průběhu času"
   }
 }

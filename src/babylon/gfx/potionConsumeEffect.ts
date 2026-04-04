@@ -1,65 +1,41 @@
-import { Color4, ParticleSystem, Texture, TransformNode, Vector3 } from '@babylonjs/core'
-import { CharacterEffect, EffectTarget } from '@/babylon/gfx/characterEffect'
+import { Color4, ParticleSystem, Texture, Vector3 } from '@babylonjs/core'
+import { AnchoredEffect, CharacterEffect, EffectTarget } from '@/babylon/gfx/characterEffect'
 import { Renderer } from '@/babylon/scene/renderer'
 
-export class PotionConsumeEffect implements CharacterEffect {
-    target: EffectTarget
-    positionOffset: Vector3
-
+export class PotionConsumeEffect extends AnchoredEffect implements CharacterEffect {
     private startTime: number = 0
     private readonly durationMs: number = 1500
     private readonly emitDurationMs: number = 300
-    private emitter: TransformNode | null = null
     private particleSystem: ParticleSystem | null = null
+    private readonly effectId: string
 
     constructor(target: EffectTarget, positionOffset: Vector3 | null = null) {
-        this.target = target
-        this.positionOffset = positionOffset ?? new Vector3(0, 0, 0)
+        super(target, positionOffset)
+        this.effectId = `${target.id}_${Date.now()}`
     }
 
     onStart(actualTime: number): void {
         this.startTime = actualTime
-        this.ensureParticleSystem()
-    }
-
-    onUpdate(actualTime: number): void {
-        this.ensureParticleSystem()
-
-        if (this.particleSystem && actualTime - this.startTime >= this.emitDurationMs) {
-            this.particleSystem.emitRate = 0
-        }
-    }
-
-    onEnd(): void {
-        this.particleSystem?.stop()
-        this.particleSystem?.dispose()
-        this.particleSystem = null
-
-        this.emitter?.dispose()
-        this.emitter = null
+        super.onStart(actualTime)
     }
 
     isFinished(actualTime: number): boolean {
         return this.startTime > 0 && actualTime - this.startTime >= this.durationMs
     }
 
-    private ensureParticleSystem() {
+    protected ensureEffect(actualTime: number): void {
         if (this.particleSystem || !this.target.isEffectVisible() || !Renderer.scene) {
             return
         }
 
-        const anchorNode = this.target.getEffectAnchorNode()
-        if (!anchorNode) {
+        const emitter = this.getOrCreateEmitter(`potionConsumeEmitter_${this.effectId}`)
+        if (!emitter) {
             return
         }
 
-        this.emitter = new TransformNode(`potionConsumeEmitter_${Date.now()}`, Renderer.scene)
-        this.emitter.parent = anchorNode
-        this.emitter.position.copyFrom(this.positionOffset)
-
-        const particleSystem = new ParticleSystem(`potionConsume_${Date.now()}`, 200, Renderer.scene)
+        const particleSystem = new ParticleSystem(`potionConsume_${this.effectId}`, 200, Renderer.scene)
         particleSystem.particleTexture = new Texture('images/gfx/flare-rect.png', Renderer.scene)
-        particleSystem.emitter = this.emitter
+        particleSystem.emitter = emitter
 
         particleSystem.createDirectedCylinderEmitter(0.6, 0.05, 0.9, new Vector3(0, 2, 0), new Vector3(0, 2, 0))
 
@@ -82,5 +58,25 @@ export class PotionConsumeEffect implements CharacterEffect {
         particleSystem.start()
 
         this.particleSystem = particleSystem
+    }
+
+    protected afterEffectUpdate(actualTime: number): void {
+        if (this.particleSystem && actualTime - this.startTime >= this.emitDurationMs) {
+            this.particleSystem.emitRate = 0
+        }
+    }
+
+    protected stopParticleSystems(): void {
+        this.particleSystem?.stop()
+    }
+
+    protected disposeParticleSystems(): void {
+        this.particleSystem?.stop()
+        this.particleSystem?.dispose()
+        this.particleSystem = null
+    }
+
+    protected getParticleFadeOutMs(): number {
+        return 800
     }
 }

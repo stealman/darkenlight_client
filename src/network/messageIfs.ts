@@ -126,3 +126,10 @@ export interface AffectGroupData {
 export interface AffectData {
     data: number[] // [typeId, duration, power]
 }
+
+export interface PubliclyVisibleAffectData {
+    id: number
+    tgt: number
+    tp: string // C - character, M - monster
+    p: number
+}

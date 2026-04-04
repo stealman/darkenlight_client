@@ -36,6 +36,7 @@ import { GfxManager } from '@/babylon/gfx/gfxManager'
 import { PotionConsumeEffect } from '@/babylon/gfx/potionConsumeEffect'
 import { WATER_BLOCK_TYPE } from '@/babylon/world/terrainManager'
 import { CharacterTimedAction } from '@/data/actions/characterActions'
+import { PubliclyVisibleAffect } from '@/data/affects'
 
 class Character implements Attackable, EffectTarget {
     model: CharacterModel | null = null
@@ -95,6 +96,7 @@ class Character implements Attackable, EffectTarget {
     healingEndTime: number = 0
 
     activeTimedAction: CharacterTimedAction | null = null
+    publiclyVisibleAffects: Map<number, PubliclyVisibleAffect> = new Map<number, PubliclyVisibleAffect>()
 
     constructor(data: any, myChar: boolean = false) {
         this.id = data.id
@@ -120,8 +122,6 @@ class Character implements Attackable, EffectTarget {
         this.name = data.name
         this.className = data.cls
         this.boxSize = data.bsz
-        console.log(`Character ${this.name} box size: ${this.boxSize}`)
-
         this.pos.y = Utils.calculateWalkYPos(this.pos.x, this.pos.z, this.getBoxSize())
         this.logicYpos = this.pos.y
 

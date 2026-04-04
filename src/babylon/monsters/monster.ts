@@ -1,18 +1,19 @@
 import { MonsterModel } from '@/babylon/monsters/monsterModel'
 import { MonsterAATypes, MonsterType } from '@/babylon/monsters/codebook/monsterCodebook'
 import { Utils } from '@/utils/utils'
-import { Vector3 } from '@babylonjs/core'
+import { TransformNode, Vector3 } from '@babylonjs/core'
 import { ViewportManager } from '@/utils/viewport'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { Attackable } from '@/GameManager'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { StepMarksRenderer } from '@/babylon/world/stepMarksRenderer'
-import { SplatType } from '@/babylon/world/fightSplatsRenderer'
 import { MyPlayer } from '@/data/myPlayer'
 import { Arrow, ArrowsManager } from '@/babylon/world/arrowsManager'
 import { AttackableBasicTO, AutoAttackResultMessage } from '@/network/messageIfs'
+import { PubliclyVisibleAffect } from '@/data/affects'
+import { EffectTarget } from '@/babylon/gfx/characterEffect'
 
-export class Monster implements Attackable {
+export class Monster implements Attackable, EffectTarget {
     id: number
     mobType: MonsterType
     model: MonsterModel
@@ -42,6 +43,7 @@ export class Monster implements Attackable {
     arrow: Arrow | null = null
 
     nameDisplayTime: number = 0
+    publiclyVisibleAffects: Map<number, PubliclyVisibleAffect> = new Map<number, PubliclyVisibleAffect>()
 
     constructor(id: number, mobType: MonsterType, xPos: number, zPos: number, hpp: number) {
         this.id = id
@@ -56,7 +58,7 @@ export class Monster implements Attackable {
         if (this.autoAttackEnd > actualTime) {
 
             if (this.arrowCreateTime > 0 && actualTime >= this.arrowCreateTime && this.autoAttackTarget && (this.insideView || this.autoAttackTarget!.insideView)) {
-                this.arrow = ArrowsManager.addArrow(this, this.autoAttackTarget, this.arrowShotTime)
+                this.arrow = ArrowsManager.addArrow(this, this.autoAttackTarget, this.arrowShotTime, '')
                 if (this.model && this.model.initialized && this.insideView) {
                     this.arrow.assignHandNode(this.model!.lhandNode, 0.25 / this.model.template.scale.y)
                 } else {
@@ -78,7 +80,7 @@ export class Monster implements Attackable {
         }
     }
 
-    onAnimFrame(timeRate: number) {
+    onAnimFrame() {
         if (this.insideView) {
             this.model.onAnimFrame()
         }
@@ -247,5 +249,17 @@ export class Monster implements Attackable {
 
     isWeaponRanged(): boolean {
         return this.mobType.aaType === MonsterAATypes.RANGED_ARROW
+    }
+
+    getEffectAnchorNode(): TransformNode | null {
+        if (!this.model?.initialized) {
+            return null
+        }
+
+        return this.model.node
+    }
+
+    isEffectVisible(): boolean {
+        return this.insideView && !!this.model?.initialized && !this.killedTime
     }
 }

@@ -18,7 +18,7 @@ import {
     CharacterGatheringMessage,
     CharacterGatheringResultMessage, CharacterRestingMessage,
     EmeraldsChangeMessage,
-    HealingMessage, HealingResultMessage, PotionUsedMessage, TextMessage,
+    HealingMessage, HealingResultMessage, PotionUsedMessage, PubliclyVisibleAffectData, TextMessage,
 } from '@/network/messageIfs'
 import { GroundItemsManager } from '@/babylon/world/groundItemsManager'
 import { InventoryManager } from '@/data/InventoryManager'
@@ -76,6 +76,7 @@ export const MessageProcessor = {
                 case 42: this.processCharacterStopAction(msg.d); break
                 case 43: this.processCharacterResting(msg.d); break
                 case 44: this.processCharacterAffectGroupChange(msg.d); break
+                case 45: this.processPubliclyVisibleAffectChange(msg.d); break
                 case 1003: this.processGMAllSpawns(msg.d); break
                 case 1004: this.processGMSpawnChange(msg.d); break
                 default:
@@ -299,6 +300,14 @@ export const MessageProcessor = {
 
     processCharacterAffectGroupChange(data: AffectGroupData) {
         MyPlayer.affectGroupChange(data)
+    },
+
+    processPubliclyVisibleAffectChange(data: PubliclyVisibleAffectData) {
+        if (data.tp === 'C') {
+            CharacterManager.publiclyVisibleAffectChange(data)
+        } else if (data.tp === 'M') {
+            MonsterManager.publiclyVisibleAffectChange(data)
+        }
     },
 
     processGMAllSpawns(data) {

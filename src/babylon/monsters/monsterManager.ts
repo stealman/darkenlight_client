@@ -7,9 +7,15 @@ import { ViewportManager } from '@/utils/viewport'
 import { TargetingManager } from '@/gui/targettingManager'
 import { MyPlayer } from '@/data/myPlayer'
 import { CharacterManager } from '@/babylon/character/characterManager'
-import { AttackableBasicTO, AutoAttackMessage, AutoAttackResultMessage } from '@/network/messageIfs'
+import {
+    AttackableBasicTO,
+    AutoAttackMessage,
+    AutoAttackResultMessage,
+    PubliclyVisibleAffectData,
+} from '@/network/messageIfs'
 import { OverlayManager } from '@/gui/overlay/overlayManager'
 import { Utils } from '@/utils/utils'
+import { PubliclyVisibleAffect } from '@/data/affects'
 
 export const MonsterManager = {
     monsters: new Map as Map<number, Monster>,
@@ -121,6 +127,18 @@ export const MonsterManager = {
         mob.killed()
         mob.model.doDie()
         this.killedMonsters.add(mob)
+    },
+
+    publiclyVisibleAffectChange(data: PubliclyVisibleAffectData) {
+        const monster = this.monsters.get(data.tgt)
+        if (!monster) {
+            return
+        }
+        if (data.p > 0) {
+            monster.publiclyVisibleAffects.set(data.id, new PubliclyVisibleAffect(data.id, data.p))
+        } else {
+            monster.publiclyVisibleAffects.delete(data.id)
+        }
     },
 
     onFrame(timeRate: number, actualTime: number, frame: number) {

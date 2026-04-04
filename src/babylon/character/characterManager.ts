@@ -10,10 +10,11 @@ import {
     CharacterGatheringResultMessage,
     CharacterRestingMessage,
     HealingMessage,
-    HealingResultMessage, PotionUsedMessage,
+    HealingResultMessage, PotionUsedMessage, PubliclyVisibleAffectData,
 } from '@/network/messageIfs'
 import { OverlayManager } from '@/gui/overlay/overlayManager'
 import { TargetingManager } from '@/gui/targettingManager'
+import { PubliclyVisibleAffect } from '@/data/affects'
 
 export const CharacterManager = {
     characters: new Map<number, Character>(),
@@ -251,6 +252,18 @@ export const CharacterManager = {
             if (char) {
                char.potionUsed()
             }
+        }
+    },
+
+    publiclyVisibleAffectChange(data: PubliclyVisibleAffectData) {
+        const char = data.tgt === MyPlayer.myChar?.id ? MyPlayer.myChar : this.characters.get(data.tgt)
+        if (!char) {
+            return
+        }
+        if (data.p > 0) {
+            char.publiclyVisibleAffects.set(data.id, new PubliclyVisibleAffect(data.id, data.p))
+        } else {
+            char.publiclyVisibleAffects.delete(data.id)
         }
     },
 
