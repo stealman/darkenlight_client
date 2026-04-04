@@ -18,6 +18,7 @@ import {
     CharacterGatheringMessage,
     CharacterGatheringResultMessage, CharacterRestingMessage,
     EmeraldsChangeMessage,
+    EffectDamageMessage,
     HealingMessage, HealingResultMessage, PotionUsedMessage, PubliclyVisibleAffectData, TextMessage,
 } from '@/network/messageIfs'
 import { GroundItemsManager } from '@/babylon/world/groundItemsManager'
@@ -76,6 +77,7 @@ export const MessageProcessor = {
                 case 43: this.processCharacterResting(msg.d); break
                 case 44: this.processCharacterAffectGroupChange(msg.d); break
                 case 45: this.processPubliclyVisibleAffectChange(msg.d); break
+                case 46: this.processEffectDamage(msg.d); break
                 case 1003: this.processGMAllSpawns(msg.d); break
                 case 1004: this.processGMSpawnChange(msg.d); break
                 default:
@@ -307,6 +309,16 @@ export const MessageProcessor = {
         } else if (data.tp === 'M') {
             MonsterManager.publiclyVisibleAffectChange(data)
         }
+    },
+
+    processEffectDamage(data: EffectDamageMessage[]) {
+        data.forEach(item => {
+            if (item.tp === 'C') {
+                CharacterManager.processEffectDamage(item)
+            } else if (item.tp === 'M') {
+                MonsterManager.processEffectDamage(item)
+            }
+        })
     },
 
     processGMAllSpawns(data) {

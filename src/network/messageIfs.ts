@@ -133,3 +133,10 @@ export interface PubliclyVisibleAffectData {
     tp: string // C - character, M - monster
     p: number
 }
+
+export interface EffectDamageMessage {
+    tp: string // C - character, M - monster
+    id: number
+    d: number
+    ef: string
+}

@@ -31,7 +31,10 @@ export class DamageNumber {
         if (hitType === 'b') {
             return new DamageNumber(attacker, monster, null, 'Blok', '#c7c7c7', time)
         }
-        if (damage <= 0) {
+        if (damage < 0) {
+            return new DamageNumber(attacker, monster, null, `+${Math.floor(-damage)}`, '#20ff20', time)
+        }
+        if (damage === 0) {
             return null
         }
         return new DamageNumber(attacker, monster, null, `-${Math.floor(damage)}`, '#f08f56', time)

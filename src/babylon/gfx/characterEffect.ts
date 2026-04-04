@@ -53,7 +53,7 @@ export abstract class AnchoredEffect implements CharacterEffect, MonsterEffect {
 
         this.ensureEffect(actualTime)
         this.syncEmitterScale()
-        this.afterEffectUpdate()
+        this.afterEffectUpdate(actualTime)
     }
 
     onEnd(): void {
@@ -68,7 +68,7 @@ export abstract class AnchoredEffect implements CharacterEffect, MonsterEffect {
 
     protected abstract disposeParticleSystems(): void
 
-    protected afterEffectUpdate(): void {
+    protected afterEffectUpdate(_actualTime?: number): void {
     }
 
     protected getParticleFadeOutMs(): number {
@@ -78,7 +78,7 @@ export abstract class AnchoredEffect implements CharacterEffect, MonsterEffect {
     protected createBottomAnchoredDirectedCylinderEmitter(particleSystem: ParticleSystem, radius: number, height: number, direction1: Vector3, direction2: Vector3) {
         const emitterType = particleSystem.createDirectedCylinderEmitter(radius, height, 0, direction1, direction2)
         emitterType.startPositionFunction = (worldMatrix, positionToUpdate, _particle, isLocal) => {
-            const yPos = Math.random() * height
+            const yPos = 0.1 + Math.random() * height
             const angle = Math.random() * 2 * Math.PI
             const xPos = radius * Math.cos(angle)
             const zPos = radius * Math.sin(angle)

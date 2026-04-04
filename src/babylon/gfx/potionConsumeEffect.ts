@@ -3,9 +3,10 @@ import { AnchoredEffect, CharacterEffect, EffectTarget } from '@/babylon/gfx/cha
 import { Renderer } from '@/babylon/scene/renderer'
 
 export class PotionConsumeEffect extends AnchoredEffect implements CharacterEffect {
+    private readonly emitDurationMs: number = 500
+    private readonly maxParticleLifetimeMs: number = 600
     private startTime: number = 0
-    private readonly durationMs: number = 1500
-    private readonly emitDurationMs: number = 300
+    private readonly durationMs: number = this.emitDurationMs + this.maxParticleLifetimeMs
     private particleSystem: ParticleSystem | null = null
     private readonly effectId: string
 
@@ -34,7 +35,7 @@ export class PotionConsumeEffect extends AnchoredEffect implements CharacterEffe
         }
 
         const particleSystem = new ParticleSystem(`potionConsume_${this.effectId}`, 200, Renderer.scene)
-        particleSystem.particleTexture = new Texture('images/gfx/flare-rect.png', Renderer.scene)
+        particleSystem.particleTexture = new Texture('images/gfx/flare.png', Renderer.scene)
         particleSystem.emitter = emitter
 
         particleSystem.createDirectedCylinderEmitter(0.6, 0.05, 0.9, new Vector3(0, 2, 0), new Vector3(0, 2, 0))
@@ -43,10 +44,10 @@ export class PotionConsumeEffect extends AnchoredEffect implements CharacterEffe
         particleSystem.addColorGradient(0.5, new Color4(0.2, 0.3, 1, 0.45))
         particleSystem.addColorGradient(1, new Color4(0.1, 0.1, 0.2, 0))
 
-        particleSystem.minSize = 0.075
-        particleSystem.maxSize = 0.1
-        particleSystem.minLifeTime = 0.05
-        particleSystem.maxLifeTime = 0.75
+        particleSystem.minSize = 0.15
+        particleSystem.maxSize = 0.2
+        particleSystem.minLifeTime = this.maxParticleLifetimeMs / 1500
+        particleSystem.maxLifeTime = this.maxParticleLifetimeMs / 1000
 
         particleSystem.minEmitPower = 1
         particleSystem.maxEmitPower = 1.5
@@ -77,6 +78,6 @@ export class PotionConsumeEffect extends AnchoredEffect implements CharacterEffe
     }
 
     protected getParticleFadeOutMs(): number {
-        return 800
+        return this.maxParticleLifetimeMs
     }
 }

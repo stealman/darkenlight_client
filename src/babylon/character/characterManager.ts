@@ -6,6 +6,7 @@ import {
     AttackableBasicTO,
     AutoAttackMessage,
     AutoAttackResultMessage, CharacterCampingMessage,
+    EffectDamageMessage,
     CharacterGatheringMessage,
     CharacterGatheringResultMessage,
     CharacterRestingMessage,
@@ -271,6 +272,23 @@ export const CharacterManager = {
         } else {
             char.publiclyVisibleAffects.delete(data.id)
         }
+    },
+
+    processEffectDamage(data: EffectDamageMessage) {
+        if (data.d === 0) {
+            return
+        }
+
+        if (data.id === MyPlayer.myChar.id) {
+            OverlayManager.addMyCharDamageNumber(MyPlayer.myChar, data.d, 'h')
+            return
+        }
+
+        if (!this.characters.has(data.id)) {
+            return
+        }
+
+        OverlayManager.addCharacterDamageNumber(data.id, data.d, 'h')
     },
 
     updateVisibleChars() {

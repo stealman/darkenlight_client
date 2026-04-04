@@ -11,6 +11,7 @@ import {
     AttackableBasicTO,
     AutoAttackMessage,
     AutoAttackResultMessage,
+    EffectDamageMessage,
     PubliclyVisibleAffectData,
 } from '@/network/messageIfs'
 import { OverlayManager } from '@/gui/overlay/overlayManager'
@@ -141,6 +142,14 @@ export const MonsterManager = {
         } else {
             monster.publiclyVisibleAffects.delete(data.id)
         }
+    },
+
+    processEffectDamage(data: EffectDamageMessage) {
+        if (data.d === 0 || !this.monsters.has(data.id)) {
+            return
+        }
+
+        OverlayManager.addMonsterDamageNumber(data.id, data.d, 'h')
     },
 
     onFrame(timeRate: number, actualTime: number, frame: number) {
