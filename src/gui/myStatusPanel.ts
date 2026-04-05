@@ -1,7 +1,9 @@
 import { MyPlayer } from '@/data/myPlayer'
 import { ClientAffectGroup } from '@/data/affects'
+import { TooltipOverlayContent, TooltipOverlayManager } from '@/gui/tooltipOverlayManager'
 
 export const MyStatusPanel = {
+    tooltipRefreshIntervalMs: 250 as number,
     affectIconSizePx: 0 as number,
     panel: null as HTMLDivElement | null,
     bodyEl: null as HTMLDivElement | null,
@@ -19,6 +21,8 @@ export const MyStatusPanel = {
     affectsRowEl: null as HTMLDivElement | null,
     affectsIconsEl: null as HTMLDivElement | null,
     affectIconEls: new Map<number, HTMLDivElement>(),
+    hoveredAffectGroupId: null as number | null,
+    lastTooltipRefreshBucket: null as number | null,
 
     initialize() {
         if (this.panel) {
@@ -128,6 +132,8 @@ export const MyStatusPanel = {
         this.panel.appendChild(this.bodyEl)
         this.panel.appendChild(this.affectsRowEl)
         document.body.appendChild(this.panel)
+        this.lastTooltipRefreshBucket = null
+        TooltipOverlayManager.initialize()
         this.onResize()
         this.refreshAffectGroups()
     },
@@ -181,6 +187,11 @@ export const MyStatusPanel = {
 
             iconEl.remove()
             this.affectIconEls.delete(affectId)
+
+            if (this.hoveredAffectGroupId === affectId) {
+                this.hoveredAffectGroupId = null
+                TooltipOverlayManager.hide()
+            }
         }
 
         const firstAdverseAffectId = sortedAffectGroups.find((affectGroup) => affectGroup.isAdverse())?.id ?? null
@@ -204,6 +215,10 @@ export const MyStatusPanel = {
     createAffectIconEl(affectGroup: ClientAffectGroup) {
         const iconEl = document.createElement('div')
         iconEl.className = 'affectIcon'
+        iconEl.onmouseenter = (event) => this.onAffectIconMouseEnter(affectGroup.id, event)
+        iconEl.onmousemove = (event) => this.onAffectIconMouseMove(affectGroup.id, event)
+        iconEl.onmouseleave = () => this.onAffectIconMouseLeave(affectGroup.id)
+        iconEl.onclick = (event) => this.onAffectIconClick(affectGroup.id, event)
 
         const imageEl = document.createElement('img')
         imageEl.className = 'affectIconImage'
@@ -216,7 +231,6 @@ export const MyStatusPanel = {
     },
 
     updateAffectIconEl(iconEl: HTMLDivElement, affectGroup: ClientAffectGroup, isFirstAdverse: boolean) {
-        iconEl.title = affectGroup.getTitle()
         iconEl.dataset.affectId = affectGroup.id.toString()
         iconEl.classList.toggle('adverse', affectGroup.isAdverse())
         iconEl.classList.toggle('positive', !affectGroup.isAdverse())
@@ -240,6 +254,90 @@ export const MyStatusPanel = {
         }
 
         countEl?.remove()
+    },
+    getAffectGroupById(affectGroupId: number) {
+        return MyPlayer.affectGroups.find((affectGroup) => affectGroup.id === affectGroupId) ?? null
+    },
+    buildAffectTooltipContent(affectGroup: ClientAffectGroup, actualTime: number = Date.now()): TooltipOverlayContent {
+        return {
+            title: affectGroup.getLocalizedName(),
+            titleMeta: `(${affectGroup.p})`,
+            topRightText: affectGroup.shouldDisplayDuration()
+                ? affectGroup.getFormattedRemainingDuration(actualTime)
+                : null,
+            description: affectGroup.getLocalizedDescription(),
+            variant: affectGroup.isAdverse() ? 'adverse' : 'positive',
+            rows: [],
+        }
+    },
+    onAffectIconMouseEnter(affectGroupId: number, event: MouseEvent) {
+        if (TooltipOverlayManager.pinned) {
+            return
+        }
+
+        const affectGroup = this.getAffectGroupById(affectGroupId)
+        if (!affectGroup) {
+            return
+        }
+
+        this.hoveredAffectGroupId = affectGroupId
+        TooltipOverlayManager.show(
+            this.buildAffectTooltipContent(affectGroup),
+            event.clientX,
+            event.clientY,
+            {
+                ownerKey: affectGroupId.toString(),
+                triggerEl: event.currentTarget as HTMLDivElement | null,
+            }
+        )
+        this.lastTooltipRefreshBucket = Math.floor(Date.now() / this.tooltipRefreshIntervalMs)
+    },
+    onAffectIconMouseMove(affectGroupId: number, event: MouseEvent) {
+        if (TooltipOverlayManager.pinned || this.hoveredAffectGroupId !== affectGroupId || !TooltipOverlayManager.visible) {
+            return
+        }
+
+        TooltipOverlayManager.positionAt(event.clientX, event.clientY)
+    },
+    onAffectIconMouseLeave(affectGroupId: number) {
+        if (TooltipOverlayManager.isPinnedFor(affectGroupId.toString())) {
+            return
+        }
+
+        if (this.hoveredAffectGroupId === affectGroupId) {
+            this.hoveredAffectGroupId = null
+        }
+
+        if (!TooltipOverlayManager.pinned) {
+            TooltipOverlayManager.hide()
+        }
+    },
+    onAffectIconClick(affectGroupId: number, event: MouseEvent) {
+        const affectGroup = this.getAffectGroupById(affectGroupId)
+        if (!affectGroup) {
+            return
+        }
+
+        const ownerKey = affectGroupId.toString()
+        if (TooltipOverlayManager.isPinnedFor(ownerKey)) {
+            this.hoveredAffectGroupId = null
+            TooltipOverlayManager.hide()
+            this.lastTooltipRefreshBucket = null
+            return
+        }
+
+        this.hoveredAffectGroupId = affectGroupId
+        TooltipOverlayManager.show(
+            this.buildAffectTooltipContent(affectGroup),
+            event.clientX,
+            event.clientY,
+            {
+                pinned: true,
+                ownerKey,
+                triggerEl: event.currentTarget as HTMLDivElement | null,
+            }
+        )
+        this.lastTooltipRefreshBucket = Math.floor(Date.now() / this.tooltipRefreshIntervalMs)
     },
     onFrame(actualTime: number) {
         if (!this.panel || !this.nameEl || !MyPlayer.myChar || !this.stBarEl || !this.mpBarEl) return
@@ -297,5 +395,30 @@ export const MyStatusPanel = {
         this.stBarEl.classList.toggle('fullWidth', !hasMana)
         this.stBarEl.classList.toggle('halfSegments', hasMana)
         this.mpBarEl.classList.toggle('halfSegments', hasMana)
+
+        const tooltipAffectId = Number(TooltipOverlayManager.ownerKey)
+        if (TooltipOverlayManager.visible && Number.isFinite(tooltipAffectId)) {
+            const affectGroup = this.getAffectGroupById(tooltipAffectId)
+            if (!affectGroup) {
+                TooltipOverlayManager.hide()
+                this.lastTooltipRefreshSecond = null
+                return
+            }
+
+            if (!affectGroup.shouldDisplayDuration()) {
+                return
+            }
+
+            const currentRefreshBucket = Math.floor(actualTime / this.tooltipRefreshIntervalMs)
+            if (this.lastTooltipRefreshBucket === currentRefreshBucket) {
+                return
+            }
+
+            TooltipOverlayManager.refresh(this.buildAffectTooltipContent(affectGroup, actualTime))
+            this.lastTooltipRefreshBucket = currentRefreshBucket
+            return
+        }
+
+        this.lastTooltipRefreshBucket = null
     }
 }

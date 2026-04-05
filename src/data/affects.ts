@@ -6,12 +6,14 @@ export class AffectGroupDefinition {
     nameKey: string
     icon: string
     adverse: boolean = false
+    displayDuration: boolean = true
 
-    constructor(id: number, nameKey: string, icon: string, adverse: boolean = false) {
+    constructor(id: number, nameKey: string, icon: string, adverse: boolean, displayDuration: boolean = true) {
         this.id = id
         this.nameKey = nameKey
         this.icon = icon
         this.adverse = adverse
+        this.displayDuration = displayDuration
     }
 
     getNameLocalized() {
@@ -55,12 +57,27 @@ export class ClientAffectGroup {
         return this.getDefinition()?.getNameLocalized() ?? `Affect group ${this.id}`
     }
 
+    getLocalizedDescription() {
+        const definition = this.getDefinition()
+        if (!definition) {
+            return ''
+        }
+
+        const description = definition.getDescriptionLocalized()
+        const fallbackKey = `affects.${definition.nameKey}Description`
+        return description === fallbackKey ? '' : description
+    }
+
     getImageUrl() {
         return this.getDefinition()?.getImageUrl() ?? ''
     }
 
     isAdverse() {
         return this.getDefinition()?.adverse ?? false
+    }
+
+    shouldDisplayDuration() {
+        return this.getDefinition()?.displayDuration === true
     }
 
     getMinDurationSeconds() {
@@ -81,21 +98,21 @@ export class ClientAffectGroup {
         return Math.max(0, minDuration - elapsedSeconds)
     }
 
-    getTitle(actualTime: number = Date.now()) {
-        const details: string[] = []
+    getFormattedRemainingDuration(actualTime: number = Date.now()) {
         const remainingDuration = this.getRemainingDurationSeconds(actualTime)
-
-        if (remainingDuration != null) {
-            details.push(`duration ${remainingDuration}`)
+        if (remainingDuration == null) {
+            return '-'
         }
 
-        if (typeof this.p === 'number') {
-            details.push(`power ${this.p}`)
+        const hours = Math.floor(remainingDuration / 3600)
+        const minutes = Math.floor((remainingDuration % 3600) / 60)
+        const seconds = remainingDuration % 60
+
+        if (hours > 0) {
+            return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
         }
 
-        return details.length > 0
-            ? `${this.getLocalizedName()}: ${details.join(', ')}`
-            : this.getLocalizedName()
+        return `${minutes}:${seconds.toString().padStart(2, '0')}`
     }
 }
 
@@ -110,10 +127,10 @@ export class PubliclyVisibleAffect {
 }
 
 export const AffectGroups = {
-    1: new AffectGroupDefinition(1, 'tired', 'affects/tired', true),
-    2: new AffectGroupDefinition(2, 'affectGroup2', 'icon2.png'),
-    3: new AffectGroupDefinition(3, 'resting', 'buttons/btn_rest'),
-    4: new AffectGroupDefinition(4, 'flameArrows', 'affects/flame_arrow'),
+    1: new AffectGroupDefinition(1, 'tired', 'affects/tired', true, false),
+    2: new AffectGroupDefinition(2, 'affectGroup2', 'icon2.png', false),
+    3: new AffectGroupDefinition(3, 'resting', 'buttons/btn_rest', false, false),
+    4: new AffectGroupDefinition(4, 'flameArrows', 'affects/flame_arrow', false),
     5: new AffectGroupDefinition(5, 'slow', 'affects/slow', true),
     6: new AffectGroupDefinition(6, 'burning', 'buttons/btn_burning_flames', true),
 }
