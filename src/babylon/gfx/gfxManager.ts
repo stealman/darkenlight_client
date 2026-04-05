@@ -1,17 +1,20 @@
 import { Scene } from '@babylonjs/core'
-import { CharacterEffect, MonsterEffect } from '@/babylon/gfx/characterEffect'
+import { CharacterEffect, EffectTarget, MonsterEffect } from '@/babylon/gfx/characterEffect'
 import { CharacterManager } from '@/babylon/character/characterManager'
 import { MonsterManager } from '@/babylon/monsters/monsterManager'
 import { BurningEffect } from '@/babylon/gfx/burningEffect'
+import { SlowEffect } from '@/babylon/gfx/slowEffect'
 import { MyPlayer } from '@/data/myPlayer'
 
 export const GfxManager = {
     BURNING_AFFECT_ID: 6,
+    SLOWING_AFFECT_ID: 5,
+
     scene: null as Scene | null,
     activeCharacterEffects: [] as CharacterEffect[],
     activeMonsterEffects: [] as MonsterEffect[],
-    activeCharacterAffects: new Map<string, BurningEffect>(),
-    activeMonsterAffects: new Map<string, BurningEffect>(),
+    activeCharacterAffects: new Map<string, CharacterEffect>(),
+    activeMonsterAffects: new Map<string, MonsterEffect>(),
 
     initialize(scene: Scene) {
         this.clear()
@@ -82,37 +85,14 @@ export const GfxManager = {
         const activeKeys = new Set<string>()
 
         const myChar = MyPlayer.myChar
-        const myCharBurning = MyPlayer.affectGroups.some(group => group.id === this.BURNING_AFFECT_ID)
-        if (myChar && myCharBurning) {
-            const key = this.getAffectKey(myChar.id, this.BURNING_AFFECT_ID)
-            activeKeys.add(key)
-
-            let effect = this.activeCharacterAffects.get(key)
-            if (!effect) {
-                effect = new BurningEffect(myChar)
-                this.activeCharacterAffects.set(key, effect)
-                effect.onStart(actualTime)
-            }
-
-            effect.onUpdate(actualTime)
+        if (myChar) {
+            this.syncCharacterAffect(myChar, this.BURNING_AFFECT_ID, MyPlayer.affectGroups.some(group => group.id === this.BURNING_AFFECT_ID), activeKeys, actualTime)
+            this.syncCharacterAffect(myChar, this.SLOWING_AFFECT_ID, MyPlayer.affectGroups.some(group => group.id === this.SLOWING_AFFECT_ID), activeKeys, actualTime)
         }
 
         CharacterManager.characters.forEach(character => {
-            if (!character.publiclyVisibleAffects.has(this.BURNING_AFFECT_ID) || !character.isEffectVisible()) {
-                return
-            }
-
-            const key = this.getAffectKey(character.id, this.BURNING_AFFECT_ID)
-            activeKeys.add(key)
-
-            let effect = this.activeCharacterAffects.get(key)
-            if (!effect) {
-                effect = new BurningEffect(character)
-                this.activeCharacterAffects.set(key, effect)
-                effect.onStart(actualTime)
-            }
-
-            effect.onUpdate(actualTime)
+            this.syncCharacterAffect(character, this.BURNING_AFFECT_ID, character.publiclyVisibleAffects.has(this.BURNING_AFFECT_ID), activeKeys, actualTime)
+            this.syncCharacterAffect(character, this.SLOWING_AFFECT_ID, character.publiclyVisibleAffects.has(this.SLOWING_AFFECT_ID), activeKeys, actualTime)
         })
 
         this.cleanupInactiveCharacterAffects(activeKeys, actualTime)
@@ -122,24 +102,55 @@ export const GfxManager = {
         const activeKeys = new Set<string>()
 
         MonsterManager.monsters.forEach(monster => {
-            if (monster.killedTime > 0 || !monster.publiclyVisibleAffects.has(this.BURNING_AFFECT_ID) || !monster.isEffectVisible()) {
-                return
-            }
-
-            const key = this.getAffectKey(monster.id, this.BURNING_AFFECT_ID)
-            activeKeys.add(key)
-
-            let effect = this.activeMonsterAffects.get(key)
-            if (!effect) {
-                effect = new BurningEffect(monster)
-                this.activeMonsterAffects.set(key, effect)
-                effect.onStart(actualTime)
-            }
-
-            effect.onUpdate(actualTime)
+            this.syncMonsterAffect(monster, this.BURNING_AFFECT_ID, monster.publiclyVisibleAffects.has(this.BURNING_AFFECT_ID), activeKeys, actualTime)
+            this.syncMonsterAffect(monster, this.SLOWING_AFFECT_ID, monster.publiclyVisibleAffects.has(this.SLOWING_AFFECT_ID), activeKeys, actualTime)
         })
 
         this.cleanupInactiveMonsterAffects(activeKeys, actualTime)
+    },
+
+    syncCharacterAffect(target: EffectTarget, affectId: number, isActive: boolean, activeKeys: Set<string>, actualTime: number) {
+        if (!isActive || !target.isEffectVisible()) {
+            return
+        }
+
+        const key = this.getAffectKey(target.id, affectId)
+        activeKeys.add(key)
+
+        let effect = this.activeCharacterAffects.get(key)
+        if (!effect) {
+            effect = this.createCharacterAffectEffect(target, affectId)
+            if (!effect) {
+                return
+            }
+
+            this.activeCharacterAffects.set(key, effect)
+            effect.onStart(actualTime)
+        }
+
+        effect.onUpdate(actualTime)
+    },
+
+    syncMonsterAffect(target: EffectTarget & { killedTime: number }, affectId: number, isActive: boolean, activeKeys: Set<string>, actualTime: number) {
+        if (target.killedTime > 0 || !isActive || !target.isEffectVisible()) {
+            return
+        }
+
+        const key = this.getAffectKey(target.id, affectId)
+        activeKeys.add(key)
+
+        let effect = this.activeMonsterAffects.get(key)
+        if (!effect) {
+            effect = this.createMonsterAffectEffect(target, affectId)
+            if (!effect) {
+                return
+            }
+
+            this.activeMonsterAffects.set(key, effect)
+            effect.onStart(actualTime)
+        }
+
+        effect.onUpdate(actualTime)
     },
 
     cleanupInactiveCharacterAffects(activeKeys: Set<string>, actualTime: number) {
@@ -172,5 +183,27 @@ export const GfxManager = {
 
     getAffectKey(targetId: number, affectId: number) {
         return `${targetId}_${affectId}`
+    },
+
+    createCharacterAffectEffect(target: EffectTarget, affectId: number): CharacterEffect | null {
+        switch (affectId) {
+        case this.BURNING_AFFECT_ID:
+            return new BurningEffect(target)
+        case this.SLOWING_AFFECT_ID:
+            return new SlowEffect(target)
+        default:
+            return null
+        }
+    },
+
+    createMonsterAffectEffect(target: EffectTarget, affectId: number): MonsterEffect | null {
+        switch (affectId) {
+        case this.BURNING_AFFECT_ID:
+            return new BurningEffect(target)
+        case this.SLOWING_AFFECT_ID:
+            return new SlowEffect(target)
+        default:
+            return null
+        }
     },
 }
