@@ -11,6 +11,12 @@ export interface AttackableBasicTO {
     stp?: number
 }
 
+export interface AttackableCombatTO {
+    id: number
+    spd1?: number
+    spd2?: number
+}
+
 export interface  AutoAttackMessage {
     id: number
     tgt: number

@@ -206,7 +206,7 @@ div#myStatusPanel {
 }
 
 #myStatusPanel .affectIcon.adverse {
-    background: linear-gradient(135deg, rgba(150, 90, 90, 0.58), rgba(115, 44, 44, 0.68));
+    background: linear-gradient(135deg, rgba(200, 130, 130, 0.3), rgba(145, 64, 64, 0.4));
     border: 1px solid rgba(135, 40, 40, 0.75);
     box-shadow:
         inset 0 0 0.35vh rgba(45, 0, 0, 0.45),

@@ -13,6 +13,7 @@ import { CharacterManager } from '@/babylon/character/characterManager'
 import {
     AffectGroupData,
     AttackableBasicTO,
+    AttackableCombatTO,
     AutoAttackMessage,
     AutoAttackResultMessage, CharacterCampingMessage,
     CharacterGatheringMessage,
@@ -78,6 +79,7 @@ export const MessageProcessor = {
                 case 44: this.processCharacterAffectGroupChange(msg.d); break
                 case 45: this.processPubliclyVisibleAffectChange(msg.d); break
                 case 46: this.processEffectDamage(msg.d); break
+                case 47: this.processCharCombatData(msg.d); break
                 case 1003: this.processGMAllSpawns(msg.d); break
                 case 1004: this.processGMSpawnChange(msg.d); break
                 default:
@@ -218,6 +220,12 @@ export const MessageProcessor = {
 
     processCharBasicData(data: AttackableBasicTO) {
         CharacterManager.basicDataChange(data)
+    },
+
+    processCharCombatData(data: AttackableCombatTO) {
+        if (data.id === MyPlayer.myChar.id) {
+            MyPlayer.combatDataChange(data)
+        }
     },
 
     processMonsterBasicData(data: AttackableBasicTO) {

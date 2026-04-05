@@ -7,6 +7,8 @@
     "burningName": "Flames",
     "burningDescription": "Causes fire damage over time",
     "tiredName": "Tired",
-    "tiredDescription": "A tired character cannot run"
+    "tiredDescription": "A tired character cannot run",
+    "slowName": "Slow",
+    "slowDescription": "Reduced movement speed"
   }
 }

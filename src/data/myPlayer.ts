@@ -14,6 +14,7 @@ import {
 import { MyStatusPanel } from '@/gui/myStatusPanel'
 import {
     AffectGroupData,
+    AttackableCombatTO,
     AutoAttackMessage,
     AutoAttackResultMessage,
     HealingMessage,
@@ -231,6 +232,24 @@ export const MyPlayer = {
     basicDataChange(data) {
         this.setMyCharHp(data.hp)
         this.myChar.basicDataChange(data)
+    },
+
+    combatDataChange(data: AttackableCombatTO) {
+        // Speed change 
+        if (data.spd1 != null && data.spd2 != null) {
+            this.myChar.walkSpeed = data.spd1
+            this.myChar.runSpeed = data.spd2
+
+            if (this.myChar.getMoveAngle() == null) {
+                return
+            }
+
+            if (this.myChar.getMoveType() === 'W') {
+                this.myChar.setActualSpeed(this.myChar.walkSpeed)
+            } else if (this.myChar.getMoveType() === 'R') {
+                this.myChar.setActualSpeed(this.myChar.runSpeed)
+            }
+        }
     },
 
     setMyCharHp(hp: number) {

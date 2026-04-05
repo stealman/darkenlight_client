@@ -7,6 +7,8 @@
     "burningName": "Plameny",
     "burningDescription": "Způsobuje poškození ohněm v průběhu času",
     "tiredName": "Unavený",
-    "tiredDescription": "Unavená postava nemůže běžet"
+    "tiredDescription": "Unavená postava nemůže běžet",
+    "slowName": "Zpomalení",
+    "slowDescription": "Snížená rychlost pohybu"
   }
 }
