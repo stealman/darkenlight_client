@@ -5,6 +5,8 @@
     "flameArrowsName": "Flame Arrows",
     "flameArrowsDescription": "On hit, may set the target on fire",
     "burningName": "Flames",
-    "burningDescription": "Causes fire damage over time"
+    "burningDescription": "Causes fire damage over time",
+    "tiredName": "Tired",
+    "tiredDescription": "A tired character cannot run"
   }
 }

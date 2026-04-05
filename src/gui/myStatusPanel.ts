@@ -264,13 +264,20 @@ export const MyStatusPanel = {
             const fillEl = this.stFillEls[i]
             if (i >= secondarySegmentCount) {
                 fillEl.style.width = '0%'
+                fillEl.style.filter = ''
+                fillEl.style.boxShadow = ''
                 continue
             }
 
             const start = i * secondarySegmentSize
             const within = stPercent - start
             const fillPct = Math.max(0, Math.min(secondarySegmentSize, within)) / secondarySegmentSize * 100
+            const thresholdOverlap = Math.max(0, Math.min(20, start + secondarySegmentSize) - start)
+            const isThresholdSegment = thresholdOverlap > 0
+            const endsAtThreshold = Math.abs((start + secondarySegmentSize) - 20) < 0.001
             fillEl.style.width = `${fillPct}%`
+            fillEl.style.filter = isThresholdSegment ? 'saturate(1.15) brightness(0.7) hue-rotate(-18deg)' : ''
+            fillEl.style.boxShadow = endsAtThreshold ? 'inset -1px 0 0 rgba(255, 210, 160, 0.55)' : ''
         }
 
         for (let i = 0; i < 10; i++) {

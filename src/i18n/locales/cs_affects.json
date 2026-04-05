@@ -5,6 +5,8 @@
     "flameArrowsName": "Zápalné šípy",
     "flameArrowsDescription": "Při zásahu mohou zapálit cíl",
     "burningName": "Plameny",
-    "burningDescription": "Způsobuje poškození ohněm v průběhu času"
+    "burningDescription": "Způsobuje poškození ohněm v průběhu času",
+    "tiredName": "Unavený",
+    "tiredDescription": "Unavená postava nemůže běžet"
   }
 }
