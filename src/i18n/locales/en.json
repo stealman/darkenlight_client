@@ -6,7 +6,12 @@
     "close": "Close",
     "restart": "Restart",
     "later": "Later",
-    "loading": "Loading ..."
+    "loading": "Loading ...",
+    "miss": "Miss",
+    "blocked": "Block",
+    "health": "Health",
+    "mana": "Mana",
+    "stamina": "Stamina"
   },
   "app": {
     "gmPanel": "GM Panel",

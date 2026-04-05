@@ -5,6 +5,7 @@ import { MyPlayer } from '@/data/myPlayer'
 import { MonsterManager } from '@/babylon/monsters/monsterManager'
 import { CanvasTextUtils } from '@/gui/canvasTextUtils'
 import { OverlayManager } from '@/gui/overlay/overlayManager'
+import { t } from '@/i18n'
 
 export class DamageNumber {
     attacker: Attackable
@@ -26,10 +27,10 @@ export class DamageNumber {
 
     static fromHitMonster(attacker: Attackable, monster: Monster, damage: number, hitType: string = 'h', time: number = Date.now()): DamageNumber | null {
         if (hitType === 'm') {
-            return new DamageNumber(attacker, monster, null,'Vedle', '#c7c7c7', time)
+            return new DamageNumber(attacker, monster, null, t('common.miss'), '#c7c7c7', time)
         }
         if (hitType === 'b') {
-            return new DamageNumber(attacker, monster, null, 'Blok', '#c7c7c7', time)
+            return new DamageNumber(attacker, monster, null, t('common.blocked'), '#c7c7c7', time)
         }
         if (damage < 0) {
             return new DamageNumber(attacker, monster, null, `+${Math.floor(-damage)}`, '#20ff20', time)
@@ -42,10 +43,10 @@ export class DamageNumber {
 
     static fromHitCharacter(attacker: Attackable, char: Character, damage: number, hitType: string = 'h', time: number = Date.now()): DamageNumber | null {
         if (hitType === 'm') {
-            return new DamageNumber(attacker, null, char,'Vedle', '#c7c7c7', time)
+            return new DamageNumber(attacker, null, char,t('common.miss'), '#c7c7c7', time)
         }
         if (hitType === 'b') {
-            return new DamageNumber(attacker, null, char, 'Blok', '#c7c7c7', time)
+            return new DamageNumber(attacker, null, char, t('common.blocked'), '#c7c7c7', time)
         }
         if (damage <= 0) {
             // Healing is sent as negative damage, but we want to display it as positive number with plus sign.
@@ -57,10 +58,10 @@ export class DamageNumber {
 
     static fromHitMyChar(attacker: Attackable, damage: number, hitType: string = 'h', time: number = Date.now()): DamageNumber | null {
         if (hitType === 'm') {
-            return new DamageNumber(attacker, null, MyPlayer.myChar,'Vedle', '#c7c7c7', time)
+            return new DamageNumber(attacker, null, MyPlayer.myChar,t('common.miss'), '#c7c7c7', time)
         }
         if (hitType === 'b') {
-            return new DamageNumber(attacker, null, MyPlayer.myChar, 'Blok', '#c7c7c7', time)
+            return new DamageNumber(attacker, null, MyPlayer.myChar, t('common.blocked'), '#c7c7c7', time)
         }
         if (damage < 0) {
             // Healing is sent as negative damage, but we want to display it as positive number with plus sign.

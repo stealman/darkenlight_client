@@ -6,7 +6,12 @@
     "close": "Zavřít",
     "restart": "Restartovat",
     "later": "Později",
-    "loading": "Nahrávání ..."
+    "loading": "Nahrávání ...",
+    "miss": "Vedle",
+    "blocked": "Blok",
+    "health": "Zdraví",
+    "mana": "Mana",
+    "stamina": "Únava"
   },
   "app": {
     "gmPanel": "GM Panel",

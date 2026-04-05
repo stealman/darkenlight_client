@@ -1,8 +1,10 @@
 import { MyPlayer } from '@/data/myPlayer'
 import { ClientAffectGroup } from '@/data/affects'
 import { TooltipOverlayContent, TooltipOverlayManager } from '@/gui/tooltipOverlayManager'
+import { t } from '@/i18n'
 
 export const MyStatusPanel = {
+    myStatusTooltipOwnerKey: 'my-status-panel' as string,
     tooltipRefreshIntervalMs: 250 as number,
     affectIconSizePx: 0 as number,
     panel: null as HTMLDivElement | null,
@@ -35,6 +37,10 @@ export const MyStatusPanel = {
 
         this.bodyEl = document.createElement('div')
         this.bodyEl.className = 'myStatusPanelBody'
+        this.bodyEl.onmouseenter = (event) => this.onMyStatusMouseEnter(event)
+        this.bodyEl.onmousemove = (event) => this.onMyStatusMouseMove(event)
+        this.bodyEl.onmouseleave = () => this.onMyStatusMouseLeave()
+        this.bodyEl.onclick = (event) => this.onMyStatusClick(event)
 
         const hpBlocks = document.createElement('div')
         hpBlocks.className = 'hpBlocks'
@@ -270,6 +276,77 @@ export const MyStatusPanel = {
             rows: [],
         }
     },
+    buildMyStatusTooltipContent(): TooltipOverlayContent {
+        const myChar = MyPlayer.myChar
+        const rows = [
+            {
+                label: t('common.health'),
+                value: `${Math.max(0, myChar?.hp ?? 0)} / ${Math.max(0, myChar?.maxHp ?? 0)}`,
+            },
+            {
+                label: t('common.stamina'),
+                value: `${Math.max(0, myChar?.st ?? 0)} / ${Math.max(0, myChar?.maxSt ?? 0)}`,
+            },
+        ]
+
+        if ((myChar?.maxMp ?? 0) > 0) {
+            rows.splice(1, 0, {
+                label: t('common.mana'),
+                value: `${Math.max(0, myChar?.mp ?? 0)} / ${Math.max(0, myChar?.maxMp ?? 0)}`,
+            })
+        }
+
+        return {
+            title: myChar?.name ?? '',
+            titleMeta: myChar?.className ? `(${myChar.className})` : null,
+            rows,
+        }
+    },
+    markTooltipRefreshNow() {
+        this.lastTooltipRefreshBucket = Math.floor(Date.now() / this.tooltipRefreshIntervalMs)
+    },
+    onMyStatusMouseEnter(event: MouseEvent) {
+        if (!MyPlayer.myChar || TooltipOverlayManager.pinned) {
+            return
+        }
+
+        TooltipOverlayManager.showFromEvent({
+            ownerKey: this.myStatusTooltipOwnerKey,
+            event,
+            content: this.buildMyStatusTooltipContent(),
+        })
+        this.markTooltipRefreshNow()
+    },
+    onMyStatusMouseMove(event: MouseEvent) {
+        TooltipOverlayManager.moveFromEvent(this.myStatusTooltipOwnerKey, event)
+    },
+    onMyStatusMouseLeave() {
+        if (TooltipOverlayManager.isPinnedFor(this.myStatusTooltipOwnerKey)) {
+            return
+        }
+
+        if (TooltipOverlayManager.isVisibleFor(this.myStatusTooltipOwnerKey)) {
+            TooltipOverlayManager.hideOwnerIfNotPinned(this.myStatusTooltipOwnerKey)
+            this.lastTooltipRefreshBucket = null
+        }
+    },
+    onMyStatusClick(event: MouseEvent) {
+        if (!MyPlayer.myChar) {
+            return
+        }
+
+        const didShow = TooltipOverlayManager.togglePinnedFromEvent({
+            ownerKey: this.myStatusTooltipOwnerKey,
+            event,
+            content: this.buildMyStatusTooltipContent(),
+        })
+        if (!didShow) {
+            this.lastTooltipRefreshBucket = null
+            return
+        }
+
+        this.markTooltipRefreshNow()
+    },
     onAffectIconMouseEnter(affectGroupId: number, event: MouseEvent) {
         if (TooltipOverlayManager.pinned) {
             return
@@ -281,23 +358,19 @@ export const MyStatusPanel = {
         }
 
         this.hoveredAffectGroupId = affectGroupId
-        TooltipOverlayManager.show(
-            this.buildAffectTooltipContent(affectGroup),
-            event.clientX,
-            event.clientY,
-            {
-                ownerKey: affectGroupId.toString(),
-                triggerEl: event.currentTarget as HTMLDivElement | null,
-            }
-        )
-        this.lastTooltipRefreshBucket = Math.floor(Date.now() / this.tooltipRefreshIntervalMs)
+        TooltipOverlayManager.showFromEvent({
+            ownerKey: affectGroupId.toString(),
+            event,
+            content: this.buildAffectTooltipContent(affectGroup),
+        })
+        this.markTooltipRefreshNow()
     },
     onAffectIconMouseMove(affectGroupId: number, event: MouseEvent) {
-        if (TooltipOverlayManager.pinned || this.hoveredAffectGroupId !== affectGroupId || !TooltipOverlayManager.visible) {
+        if (this.hoveredAffectGroupId !== affectGroupId) {
             return
         }
 
-        TooltipOverlayManager.positionAt(event.clientX, event.clientY)
+        TooltipOverlayManager.moveFromEvent(affectGroupId.toString(), event)
     },
     onAffectIconMouseLeave(affectGroupId: number) {
         if (TooltipOverlayManager.isPinnedFor(affectGroupId.toString())) {
@@ -308,8 +381,9 @@ export const MyStatusPanel = {
             this.hoveredAffectGroupId = null
         }
 
-        if (!TooltipOverlayManager.pinned) {
-            TooltipOverlayManager.hide()
+        if (TooltipOverlayManager.isVisibleFor(affectGroupId.toString())) {
+            TooltipOverlayManager.hideOwnerIfNotPinned(affectGroupId.toString())
+            this.lastTooltipRefreshBucket = null
         }
     },
     onAffectIconClick(affectGroupId: number, event: MouseEvent) {
@@ -319,25 +393,19 @@ export const MyStatusPanel = {
         }
 
         const ownerKey = affectGroupId.toString()
-        if (TooltipOverlayManager.isPinnedFor(ownerKey)) {
+        const didShow = TooltipOverlayManager.togglePinnedFromEvent({
+            ownerKey,
+            event,
+            content: this.buildAffectTooltipContent(affectGroup),
+        })
+        if (!didShow) {
             this.hoveredAffectGroupId = null
-            TooltipOverlayManager.hide()
             this.lastTooltipRefreshBucket = null
             return
         }
 
         this.hoveredAffectGroupId = affectGroupId
-        TooltipOverlayManager.show(
-            this.buildAffectTooltipContent(affectGroup),
-            event.clientX,
-            event.clientY,
-            {
-                pinned: true,
-                ownerKey,
-                triggerEl: event.currentTarget as HTMLDivElement | null,
-            }
-        )
-        this.lastTooltipRefreshBucket = Math.floor(Date.now() / this.tooltipRefreshIntervalMs)
+        this.markTooltipRefreshNow()
     },
     onFrame(actualTime: number) {
         if (!this.panel || !this.nameEl || !MyPlayer.myChar || !this.stBarEl || !this.mpBarEl) return
@@ -396,12 +464,23 @@ export const MyStatusPanel = {
         this.stBarEl.classList.toggle('halfSegments', hasMana)
         this.mpBarEl.classList.toggle('halfSegments', hasMana)
 
+        if (TooltipOverlayManager.visible && TooltipOverlayManager.ownerKey === this.myStatusTooltipOwnerKey) {
+            const currentRefreshBucket = Math.floor(actualTime / this.tooltipRefreshIntervalMs)
+            if (this.lastTooltipRefreshBucket === currentRefreshBucket) {
+                return
+            }
+
+            TooltipOverlayManager.refresh(this.buildMyStatusTooltipContent())
+            this.lastTooltipRefreshBucket = currentRefreshBucket
+            return
+        }
+
         const tooltipAffectId = Number(TooltipOverlayManager.ownerKey)
         if (TooltipOverlayManager.visible && Number.isFinite(tooltipAffectId)) {
             const affectGroup = this.getAffectGroupById(tooltipAffectId)
             if (!affectGroup) {
                 TooltipOverlayManager.hide()
-                this.lastTooltipRefreshSecond = null
+                this.lastTooltipRefreshBucket = null
                 return
             }
 

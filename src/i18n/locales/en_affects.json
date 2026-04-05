@@ -1,7 +1,7 @@
 {
   "affects": {
-    "resting.name": "Resting",
-    "resting.description": "Increases health, mana and fatigue regeneration",
+    "restingName": "Resting",
+    "restingDescription": "Increases health, mana and stamina regeneration",
     "flameArrowsName": "Flame Arrows",
     "flameArrowsDescription": "On hit, may set the target on fire",
     "burningName": "Flames",

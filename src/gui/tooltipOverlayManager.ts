@@ -18,6 +18,13 @@ type ShowTooltipOptions = {
     triggerEl?: HTMLElement | null
 }
 
+type EventTooltipOptions = {
+    ownerKey: string
+    event: MouseEvent
+    content: TooltipOverlayContent
+    pinned?: boolean
+}
+
 const TOOLTIP_OFFSET_X = 18
 const TOOLTIP_OFFSET_Y = 18
 const TOOLTIP_VIEWPORT_PADDING = 8
@@ -161,6 +168,60 @@ export const TooltipOverlayManager = {
 
     isPinnedFor(ownerKey: string) {
         return this.visible && this.pinned && this.ownerKey === ownerKey
+    },
+
+    isVisibleFor(ownerKey: string) {
+        return this.visible && this.ownerKey === ownerKey
+    },
+
+    showFromEvent(options: EventTooltipOptions) {
+        this.show(
+            options.content,
+            options.event.clientX,
+            options.event.clientY,
+            {
+                pinned: options.pinned === true,
+                ownerKey: options.ownerKey,
+                triggerEl: options.event.currentTarget as HTMLElement | null,
+            }
+        )
+    },
+
+    moveFromEvent(ownerKey: string, event: MouseEvent) {
+        if (!this.isVisibleFor(ownerKey) || this.pinned) {
+            return
+        }
+
+        this.positionAt(event.clientX, event.clientY)
+    },
+
+    hideOwner(ownerKey: string) {
+        if (!this.isVisibleFor(ownerKey)) {
+            return
+        }
+
+        this.hide()
+    },
+
+    hideOwnerIfNotPinned(ownerKey: string) {
+        if (!this.isVisibleFor(ownerKey) || this.isPinnedFor(ownerKey)) {
+            return
+        }
+
+        this.hide()
+    },
+
+    togglePinnedFromEvent(options: EventTooltipOptions) {
+        if (this.isPinnedFor(options.ownerKey)) {
+            this.hide()
+            return false
+        }
+
+        this.showFromEvent({
+            ...options,
+            pinned: true,
+        })
+        return true
     },
 
     renderContent(content: TooltipOverlayContent) {

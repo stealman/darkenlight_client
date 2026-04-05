@@ -1,10 +1,15 @@
 import { TargetingManager } from '@/gui/targettingManager'
+import { TooltipOverlayContent, TooltipOverlayManager } from '@/gui/tooltipOverlayManager'
+import { t } from '@/i18n'
 
 export const SelectedTargetPanel = {
+    tooltipOwnerKey: 'selected-target-panel' as string,
+    tooltipRefreshIntervalMs: 250 as number,
     panel: null as HTMLDivElement | null,
     nameEl: null as HTMLSpanElement | null,
     hpBlockEls: [] as HTMLDivElement[],
     hpFillEls: [] as HTMLDivElement[],
+    lastTooltipRefreshBucket: null as number | null,
 
     initialize() {
         if (this.panel) {
@@ -14,6 +19,10 @@ export const SelectedTargetPanel = {
 
         this.panel = document.createElement('div')
         this.panel.id = 'selectedTargetPanel'
+        this.panel.onmouseenter = (event) => this.onPanelMouseEnter(event)
+        this.panel.onmousemove = (event) => this.onPanelMouseMove(event)
+        this.panel.onmouseleave = () => this.onPanelMouseLeave()
+        this.panel.onclick = (event) => this.onPanelClick(event)
 
         const hpBlocks = document.createElement('div')
         hpBlocks.className = 'hpBlocks'
@@ -42,12 +51,91 @@ export const SelectedTargetPanel = {
         document.body.appendChild(this.panel)
     },
 
+    buildTooltipContent(): TooltipOverlayContent | null {
+        const target = TargetingManager.selectedTarget
+        if (!target) {
+            return null
+        }
+
+        const titleMeta = target.getObjectType() === 'C' && 'className' in target
+            ? `(${target.className})`
+            : null
+
+        return {
+            title: target.getName(),
+            titleMeta,
+            rows: [
+                {
+                    label: t('common.health'),
+                    value: `${Math.max(0, Math.round(target.hpPercent ?? 0))}%`,
+                },
+            ],
+            variant: target.getRelationToMyPlayer() === 'ALLY' ? 'positive' : 'adverse',
+        }
+    },
+
+    markTooltipRefreshNow() {
+        this.lastTooltipRefreshBucket = Math.floor(Date.now() / this.tooltipRefreshIntervalMs)
+    },
+
+    onPanelMouseEnter(event: MouseEvent) {
+        if (!TargetingManager.selectedTarget || TooltipOverlayManager.pinned) {
+            return
+        }
+
+        const content = this.buildTooltipContent()
+        if (!content) {
+            return
+        }
+
+        TooltipOverlayManager.showFromEvent({
+            ownerKey: this.tooltipOwnerKey,
+            event,
+            content,
+        })
+        this.markTooltipRefreshNow()
+    },
+
+    onPanelMouseMove(event: MouseEvent) {
+        TooltipOverlayManager.moveFromEvent(this.tooltipOwnerKey, event)
+    },
+
+    onPanelMouseLeave() {
+        if (TooltipOverlayManager.isVisibleFor(this.tooltipOwnerKey)) {
+            TooltipOverlayManager.hideOwnerIfNotPinned(this.tooltipOwnerKey)
+            this.lastTooltipRefreshBucket = null
+        }
+    },
+
+    onPanelClick(event: MouseEvent) {
+        const content = this.buildTooltipContent()
+        if (!content) {
+            return
+        }
+
+        const didShow = TooltipOverlayManager.togglePinnedFromEvent({
+            ownerKey: this.tooltipOwnerKey,
+            event,
+            content,
+        })
+        if (!didShow) {
+            this.lastTooltipRefreshBucket = null
+            return
+        }
+
+        this.markTooltipRefreshNow()
+    },
+
     onFrame(actualTime: number) {
         if (!this.panel || !this.nameEl) return
 
         const target = TargetingManager.selectedTarget
         if (!target) {
             this.panel.style.display = 'none'
+            if (TooltipOverlayManager.isVisibleFor(this.tooltipOwnerKey)) {
+                TooltipOverlayManager.hideOwner(this.tooltipOwnerKey)
+            }
+            this.lastTooltipRefreshBucket = null
             return
         }
 
@@ -74,6 +162,23 @@ export const SelectedTargetPanel = {
 
             const fillEl = this.hpFillEls[i]
             fillEl.style.width = `${fillPct}%`
+        }
+
+        if (TooltipOverlayManager.isVisibleFor(this.tooltipOwnerKey)) {
+            const currentRefreshBucket = Math.floor(actualTime / this.tooltipRefreshIntervalMs)
+            if (this.lastTooltipRefreshBucket === currentRefreshBucket) {
+                return
+            }
+
+            const content = this.buildTooltipContent()
+            if (!content) {
+                TooltipOverlayManager.hideOwner(this.tooltipOwnerKey)
+                this.lastTooltipRefreshBucket = null
+                return
+            }
+
+            TooltipOverlayManager.refresh(content)
+            this.lastTooltipRefreshBucket = currentRefreshBucket
         }
     }
 }
