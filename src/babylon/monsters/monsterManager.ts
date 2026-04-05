@@ -145,10 +145,9 @@ export const MonsterManager = {
     },
 
     processEffectDamage(data: EffectDamageMessage) {
-        if (data.d === 0 || !this.monsters.has(data.id)) {
+        if (data.d === 0 || !this.monsters.has(data.id) || (!data.ids.includes(MyPlayer.myChar.id) && data.id != TargetingManager.selectedTarget?.id) ) {
             return
         }
-
         OverlayManager.addMonsterDamageNumber(data.id, data.d, 'h')
     },
 

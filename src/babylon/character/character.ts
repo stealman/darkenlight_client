@@ -425,6 +425,21 @@ class Character implements Attackable, EffectTarget {
         this.setMoveAngleAndSpeed(angle, this.movementType === 'R' ? this.runSpeed : this.walkSpeed)
     }
 
+    forceMoveType(movementType: string) {
+        if (this.movementType === movementType) {
+            return
+        }
+
+        this.movementType = movementType
+        if (this.getMoveAngle() == null) {
+            Connector.sendMoveMessage(new MyCharMoveMsg())
+            return
+        }
+
+        this.setActualSpeed(this.movementType === 'R' ? this.runSpeed : this.walkSpeed)
+        Connector.sendMoveMessage(new MyCharMoveMsg())
+    }
+
     stopMove() {
         if (this === MyPlayer.myChar && this.model?.initialized) {
             this.pos.x = this.model.node.position.x

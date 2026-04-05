@@ -206,7 +206,7 @@ div#myStatusPanel {
 }
 
 #myStatusPanel .affectIcon.adverse {
-    background: linear-gradient(135deg, rgba(150, 70, 70, 0.78), rgba(95, 24, 24, 0.88));
+    background: linear-gradient(135deg, rgba(150, 90, 90, 0.58), rgba(115, 44, 44, 0.68));
     border: 1px solid rgba(135, 40, 40, 0.75);
     box-shadow:
         inset 0 0 0.35vh rgba(45, 0, 0, 0.45),
@@ -214,7 +214,7 @@ div#myStatusPanel {
 }
 
 #myStatusPanel .affectIcon.firstAdverse {
-    margin-left: var(--affect-icon-adverse-gap, 32px);
+    margin-left: var(--affect-icon-adverse-gap, 16px);
 }
 
 #myStatusPanel .affectIconImage {

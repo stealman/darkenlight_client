@@ -138,5 +138,6 @@ export interface EffectDamageMessage {
     tp: string // C - character, M - monster
     id: number
     d: number
-    ef: string
+    ef: number[]
+    ids: number[] // IDS of authors of the effect, used for displaying correct names in damage numbers
 }

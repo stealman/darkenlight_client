@@ -153,7 +153,7 @@ export const MyStatusPanel = {
         this.panel.style.setProperty('--affect-icon-count-offset', `${countOffsetPx}px`)
         this.panel.style.setProperty('--affect-icon-count-font-size', `${Math.max(10, Math.round(countSizePx * 0.62))}px`)
         this.panel.style.setProperty('--affect-icon-gap', `${Math.max(4, Math.round(iconSizePx * 0.11))}px`)
-        this.panel.style.setProperty('--affect-icon-adverse-gap', `${iconSizePx}px`)
+        this.panel.style.setProperty('--affect-icon-adverse-gap', `${iconSizePx / 2}px`)
     },
 
     setMyName(name: string) {

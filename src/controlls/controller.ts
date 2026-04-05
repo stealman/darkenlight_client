@@ -15,6 +15,8 @@ export const Controller = {
 
     lastDragMove: { x: 0, y: 0 },
     lastPointerMove: { x: 0, y: 0 },
+    lastRightPointerPosition: null as { x: number, y: number } | null,
+    lastJoystickVector: { dx: 0, dy: 0 },
 
     initializeController(scene: Scene) {
         scene.onPointerObservable.add((pointerInfo) => {
@@ -66,6 +68,7 @@ export const Controller = {
                 if (pointerInfo.type === PointerEventTypes.POINTERUP && pointerInfo.event.button === 2) {
                     MyPlayer.stopMove()
                     this.rightMousePressedTime = 0
+                    this.lastRightPointerPosition = null
                 }
 
                 // MOUSE MOVE
@@ -143,9 +146,15 @@ export const Controller = {
     },
 
     resolveRightPresssed(pointerInfo) {
+        this.resolveRightMovement(pointerInfo.event.clientX, pointerInfo.event.clientY)
+    },
+
+    resolveRightMovement(clientX: number, clientY: number) {
+        this.lastRightPointerPosition = { x: clientX, y: clientY }
+
         const myCharPosition = ViewportManager.getScreenPosition(MyPlayer.myModel!.model)
-        const dx = pointerInfo.event.clientX - myCharPosition.x
-        const dy = pointerInfo.event.clientY - myCharPosition.y
+        const dx = clientX - myCharPosition.x
+        const dy = clientY - myCharPosition.y
         const distance = Math.sqrt(dx * dx + dy * dy)
 
         const angleRadians = Math.atan2(dy, dx)
@@ -175,6 +184,8 @@ export const Controller = {
     },
 
     processJoystick(dx: number, dy: number) {
+        this.lastJoystickVector = { dx, dy }
+
         if (dx === 0 && dy === 0) {
             MyPlayer.stopMove()
             return
@@ -197,6 +208,17 @@ export const Controller = {
 
         const angleRadians = Math.atan2(-deltaY, deltaX)
         MyPlayer.startMove(distance > 100 ? 'R' : 'W', angleRadians)
+    },
+
+    refreshMovementFromHeldInput() {
+        if (this.rightMousePressedTime > 0 && this.lastRightPointerPosition) {
+            this.resolveRightMovement(this.lastRightPointerPosition.x, this.lastRightPointerPosition.y)
+            return
+        }
+
+        if (this.lastJoystickVector.dx !== 0 || this.lastJoystickVector.dy !== 0) {
+            this.processJoystick(this.lastJoystickVector.dx, this.lastJoystickVector.dy)
+        }
     },
 }
 

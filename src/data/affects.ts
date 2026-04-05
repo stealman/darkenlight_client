@@ -110,9 +110,9 @@ export class PubliclyVisibleAffect {
 }
 
 export const AffectGroups = {
-    1: new AffectGroupDefinition(1, 'affectGroup1', 'icon1.png'),
+    1: new AffectGroupDefinition(1, 'tired', 'affects/tired', true),
     2: new AffectGroupDefinition(2, 'affectGroup2', 'icon2.png'),
     3: new AffectGroupDefinition(3, 'resting', 'buttons/btn_rest'),
     4: new AffectGroupDefinition(4, 'flameArrows', 'affects/flame_arrow'),
-    6: new AffectGroupDefinition(6, 'burning', 'buttons/btn_camp'),
+    6: new AffectGroupDefinition(6, 'burning', 'buttons/btn_burning_flames', true),
 }

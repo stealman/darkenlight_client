@@ -311,14 +311,12 @@ export const MessageProcessor = {
         }
     },
 
-    processEffectDamage(data: EffectDamageMessage[]) {
-        data.forEach(item => {
-            if (item.tp === 'C') {
-                CharacterManager.processEffectDamage(item)
-            } else if (item.tp === 'M') {
-                MonsterManager.processEffectDamage(item)
-            }
-        })
+    processEffectDamage(data: EffectDamageMessage) {
+        if (data.tp === 'C') {
+            CharacterManager.processEffectDamage(data)
+        } else if (data.tp === 'M') {
+            MonsterManager.processEffectDamage(data)
+        }
     },
 
     processGMAllSpawns(data) {

@@ -31,11 +31,14 @@ import { OverlayManager } from '@/gui/overlay/overlayManager'
 import { StaticsManager } from '@/babylon/world/statics/staticsManager'
 import { StaticObjectsCodebook } from '@/babylon/world/statics/staticsCodebook'
 import { ClientAffectGroup } from '@/data/affects'
+import { Controller } from '@/controlls/controller'
 
 /**
  * Controlling object for the player's character
  */
 export const MyPlayer = {
+    TIRED_AFFECT_ID: 1 as number,
+
     visibilityRadius: 32 as number,
 
     myChar: null as Character,
@@ -157,6 +160,8 @@ export const MyPlayer = {
     },
 
     startMove(movementType: string, angle: number) {
+        movementType = this.getAllowedMovementType(movementType)
+
         // only move if angle differs from current by at least 0.1 rad
         const currentAngle = this.myChar.getMoveAngle()
         if (movementType === this.myChar.getMoveType() && currentAngle != null && Math.abs(currentAngle - angle) < 0.1) {
@@ -287,6 +292,7 @@ export const MyPlayer = {
     },
 
     affectGroupChange(affectGroup: AffectGroupData) {
+        const wasTired = this.isTired()
         const clientAffectGroup = ClientAffectGroup.fromServerData(affectGroup)
 
         const existingGroupIndex = this.affectGroups.findIndex(group => group.id === clientAffectGroup.id)
@@ -300,7 +306,35 @@ export const MyPlayer = {
             this.affectGroups.push(clientAffectGroup)
         }
 
+        this.enforceWalkIfTired()
+        if (wasTired && !this.isTired()) {
+            Controller.refreshMovementFromHeldInput()
+        }
         MyStatusPanel.refreshAffectGroups()
+    },
+
+    hasAffectGroup(affectGroupId: number) {
+        return this.affectGroups.some(group => group.id === affectGroupId)
+    },
+
+    isTired() {
+        return this.hasAffectGroup(this.TIRED_AFFECT_ID)
+    },
+
+    getAllowedMovementType(movementType: string) {
+        if (movementType === 'R' && this.isTired()) {
+            return 'W'
+        }
+
+        return movementType
+    },
+
+    enforceWalkIfTired() {
+        if (!this.myChar || !this.isTired() || this.myChar.getMoveType() !== 'R') {
+            return
+        }
+
+        this.myChar.forceMoveType('W')
     },
 
     getActionCooldownPercent(action: CharacterAction, actualTime: number): number {

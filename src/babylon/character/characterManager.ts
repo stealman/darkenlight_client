@@ -275,7 +275,7 @@ export const CharacterManager = {
     },
 
     processEffectDamage(data: EffectDamageMessage) {
-        if (data.d === 0) {
+        if (data.d === 0 || (data.id !== MyPlayer.myChar.id && (!data.ids.includes(MyPlayer.myChar.id) || !this.characters.has(data.id)) && (data.id != TargetingManager.selectedTarget?.id) ) ) {
             return
         }
 
@@ -283,11 +283,6 @@ export const CharacterManager = {
             OverlayManager.addMyCharDamageNumber(MyPlayer.myChar, data.d, 'h')
             return
         }
-
-        if (!this.characters.has(data.id)) {
-            return
-        }
-
         OverlayManager.addCharacterDamageNumber(data.id, data.d, 'h')
     },
 
