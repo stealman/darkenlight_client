@@ -21,12 +21,14 @@ import {
     EmeraldsChangeMessage,
     EffectDamageMessage,
     HealingMessage, HealingResultMessage, PotionUsedMessage, PubliclyVisibleAffectData, TextMessage,
+    CraftingInitMenuData,
 } from '@/network/messageIfs'
 import { GroundItemsManager } from '@/babylon/world/groundItemsManager'
 import { InventoryManager } from '@/data/InventoryManager'
 import { EmeraldsManager } from '@/gui/emeraldsManager'
 import { OnScreenMessageManager } from '@/gui/onScreenMessageManager'
 import { t } from '@/i18n'
+import { CraftingManager } from '@/data/crafting/craftingManager'
 
 export const MessageProcessor = {
 
@@ -80,6 +82,7 @@ export const MessageProcessor = {
                 case 45: this.processPubliclyVisibleAffectChange(msg.d); break
                 case 46: this.processEffectDamage(msg.d); break
                 case 47: this.processCharCombatData(msg.d); break
+                case 48: this.processCraftingMenu(msg.d); break
                 case 1003: this.processGMAllSpawns(msg.d); break
                 case 1004: this.processGMSpawnChange(msg.d); break
                 default:
@@ -226,6 +229,10 @@ export const MessageProcessor = {
         if (data.id === MyPlayer.myChar.id) {
             MyPlayer.combatDataChange(data)
         }
+    },
+
+    processCraftingMenu(data: CraftingInitMenuData) {
+        CraftingManager.processCraftingMenu(data)
     },
 
     processMonsterBasicData(data: AttackableBasicTO) {

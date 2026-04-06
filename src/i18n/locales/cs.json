@@ -98,6 +98,18 @@
     "confirmSplit": "Potvrdit rozdělení",
     "cancelSplit": "Zrušit rozdělení"
   },
+  "crafting": {
+    "title": "Výroba",
+    "noRecipes": "Není k dispozici žádný recept",
+    "noResources": "Nemáš suroviny",
+    "craftable": "Můžeš vyrobit",
+    "types": {
+      "cooking": "Vaření",
+      "blacksmithy": "Kovářství",
+      "bowcrafting": "Lukařství",
+      "jewelry": "Šperkařství"
+    }
+  },
   "messages": {
     "noBandages": "Nemáš žádné obvazy",
     "noHealthPotions": "Nemáš žádné lektvary zdraví",

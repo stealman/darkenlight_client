@@ -6,7 +6,7 @@ import { MyPlayer } from '@/data/myPlayer'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { WeaponTypes } from '@/data/items/item'
 import { Connector } from '@/network/connector'
-import { FireArrowsActionMsg, GatheringActionMsg, RestingActionMsg } from '@/network/messages'
+import { FireArrowsActionMsg, GatheringActionMsg, RequestCookingMsg, RestingActionMsg } from '@/network/messages'
 import { CharacterAction, CharacterActions } from '@/data/actions/characterActions'
 
 class GuiOpportunityButtonAction {
@@ -217,8 +217,9 @@ export const GuiButtonsManager = {
     },
 
     clickOnCookingButton() {
-        console.log("Cooking action triggered")
-        //Connector.sendMessage(new GatheringActionMsg(CharacterActions.COOKING.name))
+        if (MyPlayer.nearFireplace) {
+            Connector.sendMessage(new RequestCookingMsg(MyPlayer.nearFireplace.x, MyPlayer.nearFireplace.z))
+        }
     },
 
     trySendFireArrowsAction() {

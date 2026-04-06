@@ -36,8 +36,15 @@
 
     "resources": {
       "bandages": "Bandages",
+
       "ore-iron": "Iron Ore",
+
       "log-wooden": "Wood",
+
+      "meat-common": "Meat",
+
+      "steak": "Steak",
+
       "small-healing-potion": "Small Healing Potion",
       "healing-potion": "Healing Potion",
       "great-healing-potion": "Great Healing Potion",

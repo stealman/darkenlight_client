@@ -1,3 +1,5 @@
+import { CraftingTypes } from '@/data/crafting/craftingManager'
+
 export interface AttackableBasicTO {
     id: number
     hp: number
@@ -146,4 +148,18 @@ export interface EffectDamageMessage {
     d: number
     ef: number[]
     ids: number[] // IDS of authors of the effect, used for displaying correct names in damage numbers
+}
+
+export interface CraftingRecipe {
+    diff: number
+    ing: { res: ItemTO, qty: number }[]
+    item: ItemTO
+    skill: string
+}
+
+export interface CraftingInitMenuData {
+    recipes: CraftingRecipe[]
+    type: string
+    x: number
+    z: number
 }

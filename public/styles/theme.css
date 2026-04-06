@@ -68,8 +68,8 @@
 
 /* header */
 .dialog-header {
-    font-size: 1.2rem;
-    margin-bottom: 15px;
+    font-size: 1.1rem;
+    margin-bottom: 1vh;
     text-shadow: 0 0 5px var(--dialog-color);
 }
 

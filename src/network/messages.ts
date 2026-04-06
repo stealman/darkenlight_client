@@ -180,6 +180,15 @@ export class FireArrowsActionMsg implements Message {
     }
 }
 
+export class RequestCookingMsg implements Message {
+    t: number = 23
+    d: any
+
+    constructor(x: number, z: number) {
+        this.d = { x: x, z: z }
+    }
+}
+
 export class GMSaveMapDataMsg implements Message {
     t: number = 1000
     d: any

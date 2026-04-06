@@ -98,6 +98,18 @@
     "confirmSplit": "Confirm split",
     "cancelSplit": "Cancel split"
   },
+  "crafting": {
+    "title": "Crafting",
+    "noRecipes": "No recipes available",
+    "noResources": "Missing resources",
+    "craftable": "You can craft",
+    "types": {
+      "cooking": "Cooking",
+      "blacksmithy": "Blacksmithy",
+      "bowcrafting": "Bowcrafting",
+      "jewelry": "Jewelry"
+    }
+  },
   "messages": {
     "noBandages": "You have no bandages",
     "noHealthPotions": "You have no health potions",

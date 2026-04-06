@@ -36,8 +36,15 @@
 
         "resources": {
             "bandages": "Obvazy",
+
             "ore-iron": "Železná Ruda",
+
             "log-wooden": "Dřevo",
+
+            "meat-common": "Maso",
+
+            "steak": "Steak",
+
             "small-healing-potion": "Malý Lektvar Zdraví",
             "healing-potion": "Lektvar Zdraví",
             "great-healing-potion": "Velký Lektvar Zdraví",

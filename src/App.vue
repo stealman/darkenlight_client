@@ -79,6 +79,7 @@
 
     <InventoryDialog ref="inventoryDialog" v-show="displayInventoryDialog" @close="displayInventoryDialog = false" />
     <CharacterDialog ref="characterDialog" v-show="displayCharacterDialog" @close="displayCharacterDialog = false" />
+    <CraftingDialog ref="craftingDialog" v-show="displayCraftingDialog" @close="displayCraftingDialog = false" />
 
     <div class="dialog-backdrop" v-if="displayRestartPrompt" @click.self="displayRestartPrompt = false">
         <div class="dialog-window adaptive">
@@ -121,6 +122,7 @@ import LoginDialog from '@/vue/views/loginDialog.vue'
 import SettingsDialog from '@/vue/views/settingsDialog.vue'
 import InventoryDialog from '@/vue/views/inventory/inventoryDialog.vue'
 import CharacterDialog from '@/vue/views/character/CharacterDialog.vue'
+import CraftingDialog from '@/vue/views/crafting/craftingDialog.vue'
 import OnScreenMessages from '@/vue/views/onScreenMessages.vue'
 import { Controller } from '@/controlls/controller'
 import {
@@ -149,12 +151,14 @@ const displayRestartPrompt = ref(false)
 
 const displayInventoryDialog = ref(false)
 const displayCharacterDialog = ref(false)
+const displayCraftingDialog = ref(false)
 
 const touchControls = ref()
 const settingsDialog = ref()
 const loginDialog = ref()
 const inventoryDialog = ref()
 const characterDialog = ref()
+const craftingDialog = ref()
 const { t } = useI18n()
 
 onMounted(async () => {
@@ -168,6 +172,7 @@ onMounted(async () => {
     window.addEventListener('resize', resizeEventHandler)
     window.addEventListener('ui:open-inventory', onOpenInventoryHotkey)
     window.addEventListener('ui:open-character', onOpenCharacterHotkey)
+    window.addEventListener('ui:open-crafting', onOpenCraftingMenu as EventListener)
     window.addEventListener('ui:inventory-updated', onInventoryUpdated as EventListener)
     document.addEventListener('keydown', (e) => Controller.processKeydown(e))
     document.addEventListener('keyup', (e) => Controller.processKeyup(e))
@@ -203,6 +208,7 @@ onUnmounted(() => {
     window.removeEventListener('resize', resizeEventHandler)
     window.removeEventListener('ui:open-inventory', onOpenInventoryHotkey)
     window.removeEventListener('ui:open-character', onOpenCharacterHotkey)
+    window.removeEventListener('ui:open-crafting', onOpenCraftingMenu as EventListener)
     window.removeEventListener('ui:inventory-updated', onInventoryUpdated as EventListener)
 })
 
@@ -269,6 +275,22 @@ const onInventoryUpdated = (event: Event) => {
 
     const detail = (event as CustomEvent<{ reason?: string, changedItemIds?: number[] }>).detail
     inventoryDialog.value?.refreshDialogFromInventoryUpdate?.(detail)
+}
+
+const onOpenCraftingMenu = (event: Event) => {
+    if (!loginRequestSentFlag.value) {
+        return
+    }
+
+    const detail = (event as CustomEvent).detail
+    if (!detail) {
+        return
+    }
+
+    displayCraftingDialog.value = true
+    nextTick(() => {
+        craftingDialog.value?.openDialog?.(detail)
+    })
 }
 
 const closeSettingsWithRestartPrompt = () => {
