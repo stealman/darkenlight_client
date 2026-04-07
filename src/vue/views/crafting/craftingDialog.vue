@@ -462,65 +462,23 @@ defineExpose({
 </script>
 
 <style scoped>
-.crafting-dialog-window {
-    min-height: auto;
-}
+.crafting-dialog-window { min-height: auto; }
+.crafting-dialog-content { display: flex; align-items: center; justify-content: center; padding: 0; }
+.crafting-content-shell { display: flex; flex-direction: column; width: 100%; max-height: min(600px, 85vh); overflow: hidden; box-sizing: border-box; padding: 8px; gap: 10px; }
+.crafting-recipes-section { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; padding-right: 4px; scrollbar-width: thin; scrollbar-color: var(--dialog-color) #111; }
+.crafting-recipes-section::-webkit-scrollbar { width: 8px; }
+.crafting-recipes-section::-webkit-scrollbar-track,
+.crafting-recipes-section::-webkit-scrollbar-thumb { border-radius: 4px; }
+.crafting-recipes-section::-webkit-scrollbar-track { background: var(--dialog-color-dark); }
+.crafting-recipes-section::-webkit-scrollbar-thumb { background: var(--dialog-color); }
+.crafting-empty-state { padding: 28px 12px; text-align: center; color: rgba(235, 230, 214, 0.78); }
+.crafting-recipe-list { display: flex; flex-direction: column; gap: 10px; }
 
-.crafting-dialog-content {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
-}
-
-.crafting-content-shell {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    max-height: min(600px, 85vh);
-    overflow: hidden;
-    box-sizing: border-box;
-    padding: 8px;
-    gap: 10px;
-}
-
-.crafting-recipes-section {
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding-right: 4px;
-}
-
-.crafting-recipes-section::-webkit-scrollbar {
-    width: 8px;
-}
-
-.crafting-recipes-section::-webkit-scrollbar-track {
-    background: var(--dialog-color-dark);
-    border-radius: 4px;
-}
-
-.crafting-recipes-section::-webkit-scrollbar-thumb {
-    background: var(--dialog-color);
-    border-radius: 4px;
-}
-
-.crafting-recipes-section {
-    scrollbar-width: thin;
-    scrollbar-color: var(--dialog-color) #111;
-}
-
-.crafting-empty-state {
-    padding: 28px 12px;
-    text-align: center;
-    color: rgba(235, 230, 214, 0.78);
-}
-
-.crafting-recipe-list {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+.crafting-recipe-row,
+.crafting-selection-row {
+    border: 1px solid rgba(213, 192, 153, 0.18);
+    border-radius: 0;
+    background: rgba(29, 24, 19, 0.92);
 }
 
 .crafting-recipe-row {
@@ -530,19 +488,45 @@ defineExpose({
     row-gap: 8px;
     align-items: center;
     padding: 5px 8px;
-    border: 1px solid rgba(213, 192, 153, 0.18);
-    border-radius: 0;
-    background: rgba(29, 24, 19, 0.92);
     cursor: url('/images/cursor-pointer.png'), pointer;
 }
 
-.crafting-recipe-row-selected {
-    border-color: rgba(239, 219, 174, 0.72);
-    background: rgba(58, 44, 22, 0.92);
+.crafting-recipe-row-selected { border-color: rgba(239, 219, 174, 0.72); background: rgba(58, 44, 22, 0.92); }
+.crafting-result-summary,
+.crafting-selection-summary,
+.crafting-ingredients,
+.crafting-ingredient-chip,
+.crafting-selection-controls,
+.crafting-selection-slider-row { min-width: 0; }
+
+.crafting-result-name,
+.crafting-selection-title {
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.25;
+    color: #f3e2bc;
+    text-align: left;
+    word-break: break-word;
 }
 
+.crafting-result-note,
+.crafting-selection-note {
+    font-size: 13px;
+    line-height: 1.15;
+    text-align: left;
+    color: rgba(191, 191, 191, 0.9);
+}
+
+.crafting-result-note { margin-top: 2px; }
+.crafting-selection-note { margin-top: 2px; white-space: nowrap; }
+.crafting-result-name-disabled,
+.crafting-selection-note-muted,
+.crafting-selection-current-disabled { color: rgba(175, 175, 175, 0.86); }
+.crafting-result-note-missing,
+.crafting-ingredient-name-missing,
+.crafting-ingredient-owned-missing { color: #d26a6a; }
+
 .crafting-result-icon-button {
-    flex: 0 0 auto;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -555,222 +539,39 @@ defineExpose({
     cursor: url('/images/cursor-pointer.png'), pointer;
 }
 
-.crafting-result-icon-button:hover {
-    border-color: rgba(239, 219, 174, 0.7);
-    background: rgba(255, 255, 255, 0.05);
-}
+.crafting-result-icon-button:hover { border-color: rgba(239, 219, 174, 0.7); background: rgba(255, 255, 255, 0.05); }
+.crafting-result-icon { width: 36px; height: 36px; object-fit: contain; pointer-events: none; }
+.crafting-ingredients { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.crafting-ingredient-chip { display: inline-flex; align-items: center; gap: 7px; color: rgba(243, 233, 209, 0.88); }
+.crafting-ingredient-icon { width: 22px; height: 22px; object-fit: contain; flex: 0 0 auto; }
+.crafting-ingredient-name { font-size: 13px; line-height: 1.15; }
+.crafting-ingredient-qty,
+.crafting-selection-boundary,
+.crafting-selection-current { font-weight: 700; color: #f3e2bc; text-align: center; }
+.crafting-ingredient-qty,
+.crafting-ingredient-owned,
+.crafting-selection-boundary { font-size: 12px; }
+.crafting-ingredient-owned { color: rgba(191, 191, 191, 0.9); }
+.crafting-selection-boundary { min-width: 12px; }
+.crafting-selection-current { min-width: 32px; font-size: 14px; }
 
-.crafting-result-icon {
-    width: 36px;
-    height: 36px;
-    object-fit: contain;
-    pointer-events: none;
-}
-
-.crafting-result-name {
-    min-width: 0;
-    font-size: 16px;
-    font-weight: 700;
-    color: #f3e2bc;
-    line-height: 1.25;
-    word-break: break-word;
-    text-align: left;
-}
-
-.crafting-result-summary {
-    min-width: 0;
-}
-
-.crafting-result-name-disabled {
-    color: rgba(175, 175, 175, 0.86);
-}
-
-.crafting-result-note {
-    margin-top: 2px;
-    font-size: 13px;
-    line-height: 1.15;
-    text-align: left;
-    color: rgba(191, 191, 191, 0.9);
-}
-
-.crafting-result-note-missing {
-    color: #d26a6a;
-}
-
-.crafting-ingredients {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    align-items: center;
-    min-width: 0;
-}
-
-.crafting-ingredient-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    min-width: 0;
-    padding: 0;
-    color: rgba(243, 233, 209, 0.88);
-}
-
-.crafting-ingredient-icon {
-    width: 22px;
-    height: 22px;
-    object-fit: contain;
-    flex: 0 0 auto;
-}
-
-.crafting-ingredient-name {
-    font-size: 13px;
-    line-height: 1.15;
-}
-
-.crafting-ingredient-name-missing {
-    color: #d26a6a;
-}
-
-.crafting-ingredient-qty {
-    font-size: 12px;
-    font-weight: 700;
-    color: #d4b574;
-}
-
-.crafting-ingredient-owned {
-    font-size: 12px;
-    color: rgba(191, 191, 191, 0.9);
-}
-
-.crafting-ingredient-owned-missing {
-    color: #d26a6a;
-}
-
-.crafting-selection-row {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    flex-wrap: nowrap;
-    padding: 10px 12px;
-    border: 1px solid rgba(213, 192, 153, 0.18);
-    border-radius: 0;
-    background: rgba(29, 24, 19, 0.92);
-    flex: 0 0 auto;
-}
-
-.crafting-selection-row-empty {
-    opacity: 0.8;
-}
-
-.crafting-selection-summary {
-    flex: 1 1 0;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-self: stretch;
-}
-
-.crafting-selection-title {
-    font-size: 16px;
-    font-weight: 700;
-    line-height: 1.25;
-    color: #f3e2bc;
-    word-break: break-word;
-    text-align: left;
-}
-
-.crafting-selection-note {
-    margin-top: 2px;
-    font-size: 13px;
-    line-height: 1.15;
-    text-align: left;
-    color: rgba(191, 191, 191, 0.9);
-    white-space: nowrap;
-}
-
-.crafting-selection-note-muted {
-    color: rgba(175, 175, 175, 0.86);
-    margin-top: 0;
-}
-
-.crafting-selection-row-empty .crafting-selection-title {
-    display: none;
-}
-
-.crafting-selection-controls {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    min-width: 0;
-    flex: 0 1 auto;
-}
-
-.crafting-selection-slider-panel {
-    flex: 0 1 188px;
-    min-width: 0;
-}
-
-.crafting-selection-slider-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    min-width: 0;
-}
-
-.crafting-selection-slider {
-    flex: 1 1 auto;
-}
-
-.crafting-selection-action-button {
-    flex: 0 0 auto;
-}
-
-.crafting-selection-boundary {
-    min-width: 12px;
-    font-size: 12px;
-    font-weight: 700;
-    color: #f3e2bc;
-    text-align: center;
-}
-
-.crafting-selection-current {
-    min-width: 32px;
-    font-size: 14px;
-    font-weight: 700;
-    color: #f3e2bc;
-    text-align: center;
-}
-
-.crafting-selection-current-disabled {
-    color: rgba(175, 175, 175, 0.86);
-}
+.crafting-selection-row { display: flex; align-items: center; gap: 16px; flex-wrap: nowrap; padding: 10px 12px; flex: 0 0 auto; }
+.crafting-selection-row-empty { opacity: 0.8; }
+.crafting-selection-row-empty .crafting-selection-title { display: none; }
+.crafting-selection-summary { flex: 1 1 0; display: flex; flex-direction: column; justify-content: center; align-self: stretch; }
+.crafting-selection-note-muted { margin-top: 0; }
+.crafting-selection-controls { display: flex; align-items: center; gap: 10px; flex: 0 1 auto; }
+.crafting-selection-slider-panel { flex: 0 1 188px; min-width: 0; }
+.crafting-selection-slider-row,
+.crafting-selection-action-button { flex: 0 0 auto; }
+.crafting-selection-slider-row { display: flex; align-items: center; gap: 10px; }
+.crafting-selection-slider { flex: 1 1 auto; }
 
 @media (max-width: 700px) {
-    .crafting-dialog-content {
-        padding: 0;
-    }
-
-    .crafting-content-shell {
-        padding: 6px;
-    }
-
-    .crafting-recipe-row {
-        grid-template-columns: 46px 130px minmax(0, 1fr);
-        column-gap: 14px;
-        row-gap: 8px;
-        padding: 5px 7px;
-    }
-
-    .crafting-selection-row {
-        gap: 8px;
-    }
-
-    .crafting-result-name {
-        font-size: 15px;
-    }
-
-    .crafting-selection-title {
-        font-size: 15px;
-    }
+    .crafting-content-shell { padding: 6px; }
+    .crafting-recipe-row { grid-template-columns: 46px 130px minmax(0, 1fr); column-gap: 14px; padding: 5px 7px; }
+    .crafting-selection-row { gap: 8px; }
+    .crafting-result-name,
+    .crafting-selection-title { font-size: 15px; }
 }
 </style>

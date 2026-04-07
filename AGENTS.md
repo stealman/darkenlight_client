@@ -14,6 +14,7 @@
 - For feature work, implement directly, then iterate from in-game behavior.
 - For trivial string formats already defined by the server, prefer direct parsing inline over defensive helper abstractions.
 - When server/message contracts are ambiguous, do not speculate; ask a clarifying question first.
+- When editing UI styles, watch for bloated local CSS blocks; if a stylesheet looks unusually repetitive or oversized for the feature, call it out proactively and ask before doing a cleanup/refactor pass.
 
 ## Project Map
 
