@@ -9,64 +9,65 @@
                         </div>
 
                         <div v-else class="crafting-recipe-list">
-                            <div
-                                v-for="(recipe, index) in recipes"
-                                :key="getRecipeKey(recipe, index)"
-                                class="crafting-recipe-row"
-                                :class="{ 'crafting-recipe-row-selected': selectedRecipeIndex === index }"
-                                @click="selectRecipe(index)"
-                            >
-                                <button
-                                    class="crafting-result-icon-button"
-                                    type="button"
-                                    @pointerdown.stop
-                                    @click.stop="onResultIconClick(recipe.item, index, $event)"
+                            <template v-for="(recipe, index) in recipes" :key="getRecipeKey(recipe, index)">
+                                <div
+                                    class="crafting-recipe-row"
+                                    :class="{ 'crafting-recipe-row-selected': selectedRecipeIndex === index }"
+                                    @click="selectRecipe(index)"
                                 >
-                                    <img class="crafting-result-icon" :src="resolveItemImage(recipe.item)" :alt="resolveItemName(recipe.item)" />
-                                </button>
-
-                                <div class="crafting-result-summary">
-                                    <div
-                                        class="crafting-result-name"
-                                        :class="{ 'crafting-result-name-disabled': getRecipeCraftableQty(recipe) <= 0 }"
+                                    <button
+                                        class="crafting-result-icon-button"
+                                        type="button"
+                                        @pointerdown.stop
+                                        @click.stop="onResultIconClick(recipe.item, index, $event)"
                                     >
-                                        {{ resolveItemName(recipe.item) }}
+                                        <img class="crafting-result-icon" :src="resolveItemImage(recipe.item)" :alt="resolveItemName(recipe.item)" />
+                                    </button>
+
+                                    <div class="crafting-result-summary">
+                                        <div
+                                            class="crafting-result-name"
+                                            :class="{ 'crafting-result-name-disabled': getRecipeCraftableQty(recipe) <= 0 }"
+                                        >
+                                            {{ resolveItemName(recipe.item) }}
+                                        </div>
+                                        <div v-if="getRecipeCraftableQty(recipe) > 0" class="crafting-result-note">
+                                            {{ t('crafting.craftable') }}: {{ getRecipeCraftableQty(recipe) }}
+                                        </div>
+                                        <div v-else class="crafting-result-note crafting-result-note-missing">
+                                            {{ t('crafting.noResources') }}
+                                        </div>
                                     </div>
-                                    <div v-if="getRecipeCraftableQty(recipe) > 0" class="crafting-result-note">
-                                        {{ t('crafting.craftable') }}: {{ getRecipeCraftableQty(recipe) }}
-                                    </div>
-                                    <div v-else class="crafting-result-note crafting-result-note-missing">
-                                        {{ t('crafting.noResources') }}
+
+                                    <div class="crafting-ingredients">
+                                        <div
+                                            v-for="(ingredient, ingredientIndex) in recipe.ing"
+                                            :key="getIngredientKey(ingredient, ingredientIndex)"
+                                            class="crafting-ingredient-chip"
+                                        >
+                                            <img
+                                                class="crafting-ingredient-icon"
+                                                :src="resolveItemImage(ingredient.res)"
+                                                :alt="resolveItemName(ingredient.res)"
+                                            />
+                                            <span
+                                                class="crafting-ingredient-name"
+                                                :class="{ 'crafting-ingredient-name-missing': Number(ingredient.inventoryQty ?? 0) < Number(ingredient.qty ?? 0) }"
+                                            >
+                                                {{ resolveItemName(ingredient.res) }}
+                                            </span>
+                                            <span class="crafting-ingredient-qty">x{{ ingredient.qty }}</span>
+                                            <span
+                                                class="crafting-ingredient-owned"
+                                                :class="{ 'crafting-ingredient-owned-missing': Number(ingredient.inventoryQty ?? 0) < Number(ingredient.qty ?? 0) }"
+                                            >
+                                                ({{ ingredient.inventoryQty }})
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
-
-                                <div class="crafting-ingredients">
-                                    <div
-                                        v-for="(ingredient, ingredientIndex) in recipe.ing"
-                                        :key="getIngredientKey(ingredient, ingredientIndex)"
-                                        class="crafting-ingredient-chip"
-                                    >
-                                        <img
-                                            class="crafting-ingredient-icon"
-                                            :src="resolveItemImage(ingredient.res)"
-                                            :alt="resolveItemName(ingredient.res)"
-                                        />
-                                        <span
-                                            class="crafting-ingredient-name"
-                                            :class="{ 'crafting-ingredient-name-missing': Number(ingredient.inventoryQty ?? 0) < Number(ingredient.qty ?? 0) }"
-                                        >
-                                            {{ resolveItemName(ingredient.res) }}
-                                        </span>
-                                        <span class="crafting-ingredient-qty">x{{ ingredient.qty }}</span>
-                                        <span
-                                            class="crafting-ingredient-owned"
-                                            :class="{ 'crafting-ingredient-owned-missing': Number(ingredient.inventoryQty ?? 0) < Number(ingredient.qty ?? 0) }"
-                                        >
-                                            ({{ ingredient.inventoryQty }})
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
+                                <div v-if="index < recipes.length - 1" class="crafting-recipe-divider" />
+                            </template>
                         </div>
                     </div>
 
@@ -472,9 +473,8 @@ defineExpose({
 .crafting-recipes-section::-webkit-scrollbar-track { background: var(--dialog-color-dark); }
 .crafting-recipes-section::-webkit-scrollbar-thumb { background: var(--dialog-color); }
 .crafting-empty-state { padding: 28px 12px; text-align: center; color: rgba(235, 230, 214, 0.78); }
-.crafting-recipe-list { display: flex; flex-direction: column; gap: 10px; }
+.crafting-recipe-list { display: flex; flex-direction: column; }
 
-.crafting-recipe-row,
 .crafting-selection-row {
     border: 1px solid rgba(213, 192, 153, 0.18);
     border-radius: 0;
@@ -487,11 +487,13 @@ defineExpose({
     column-gap: 16px;
     row-gap: 8px;
     align-items: center;
-    padding: 5px 8px;
+    padding: 1.5vh 0;
     cursor: url('/images/cursor-pointer.png'), pointer;
 }
 
-.crafting-recipe-row-selected { border-color: rgba(239, 219, 174, 0.72); background: rgba(58, 44, 22, 0.92); }
+.crafting-recipe-divider { height: 1px; background: rgba(213, 192, 153, 0.18); }
+
+.crafting-recipe-row-selected { background: rgba(58, 44, 22, 0.45); }
 .crafting-result-summary,
 .crafting-selection-summary,
 .crafting-ingredients,
@@ -532,6 +534,7 @@ defineExpose({
     justify-content: center;
     width: 46px;
     height: 46px;
+    margin-left: 2px;
     padding: 0;
     border: 1px solid rgba(213, 192, 153, 0.3);
     border-radius: 0;
@@ -566,12 +569,4 @@ defineExpose({
 .crafting-selection-action-button { flex: 0 0 auto; }
 .crafting-selection-slider-row { display: flex; align-items: center; gap: 10px; }
 .crafting-selection-slider { flex: 1 1 auto; }
-
-@media (max-width: 700px) {
-    .crafting-content-shell { padding: 6px; }
-    .crafting-recipe-row { grid-template-columns: 46px 130px minmax(0, 1fr); column-gap: 14px; padding: 5px 7px; }
-    .crafting-selection-row { gap: 8px; }
-    .crafting-result-name,
-    .crafting-selection-title { font-size: 15px; }
-}
 </style>

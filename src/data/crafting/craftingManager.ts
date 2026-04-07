@@ -20,7 +20,6 @@ export const CraftingManager = {
     },
 
     processCraftingMenu(data: CraftingInitMenuData) {
-
         // Enrich the crafting menu data with the quantity of possible crafts based on the player's inventory
         for (const recipe of data.recipes as Array<typeof data.recipes[number] & { craftableQty?: number }>) {
             let craftableQty = Number.MAX_SAFE_INTEGER
