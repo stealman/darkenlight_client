@@ -15,6 +15,9 @@
     --dialog-surface-muted: rgba(15, 11, 8, 0.45);
     --dialog-surface-selected: rgba(64, 47, 18, 0.55);
     --dialog-border-hover: rgba(214, 184, 110, 0.95);
+    --dialog-border-subtle: rgba(213, 192, 153, 0.18);
+    --dialog-text-strong: #f3e2bc;
+    --dialog-danger: #d26a6a;
 
     /* Panely */
     --panel-color: #9e7f4a;         /* starý bronz */
