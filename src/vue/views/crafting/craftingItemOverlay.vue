@@ -10,15 +10,6 @@
     >
         <div class="crafting-item-overlay-name">
             <span>{{ displayName }}</span>
-            <span v-if="displayQuantity" class="crafting-item-overlay-name-quantity">({{ displayQuantity }})</span>
-        </div>
-
-        <div v-if="displayQuality" class="crafting-item-overlay-line">
-            {{ t('inventory.quality') }}: {{ displayQuality }}
-        </div>
-
-        <div v-if="displayDurabilityCurrent !== null || displayDurabilityMax !== null" class="crafting-item-overlay-line">
-            {{ t('inventory.durability') }}: {{ displayDurabilityCurrent ?? '-' }} / {{ displayDurabilityMax ?? '-' }}
         </div>
     </div>
 </template>
@@ -47,22 +38,6 @@ const overlayRootRef = ref<HTMLElement | null>(null)
 const { t } = useI18n()
 
 const displayName = computed(() => props.itemInfo?.name ?? t('inventory.unknownItem'))
-const displayQuantity = computed(() => {
-    const quantity = Number(props.itemInfo?.quantity)
-    return Number.isFinite(quantity) && quantity > 0 ? quantity : null
-})
-const displayQuality = computed(() => {
-    const quality = Number(props.itemInfo?.quality)
-    return Number.isFinite(quality) && quality > 0 ? quality : null
-})
-const displayDurabilityCurrent = computed(() => {
-    const durability = Number(props.itemInfo?.durability)
-    return Number.isFinite(durability) ? durability : null
-})
-const displayDurabilityMax = computed(() => {
-    const durabilityMax = Number(props.itemInfo?.durabilityMax)
-    return Number.isFinite(durabilityMax) ? durabilityMax : null
-})
 
 defineExpose({
     getBoundingClientRect: () => overlayRootRef.value?.getBoundingClientRect?.(),
@@ -88,18 +63,5 @@ defineExpose({
     font-size: 15px;
     font-weight: 700;
     line-height: 1.25;
-}
-
-.crafting-item-overlay-name-quantity {
-    margin-left: 6px;
-    font-weight: 400;
-    color: rgba(241, 227, 194, 0.8);
-}
-
-.crafting-item-overlay-line {
-    margin-top: 6px;
-    font-size: 13px;
-    line-height: 1.2;
-    color: rgba(241, 227, 194, 0.86);
 }
 </style>

@@ -101,6 +101,7 @@
   "crafting": {
     "title": "Výroba",
     "noRecipes": "Není k dispozici žádný recept",
+    "selectRecipe": "Vyber recept",
     "noResources": "Nemáš suroviny",
     "craftable": "Můžeš vyrobit",
     "types": {

@@ -101,6 +101,7 @@
   "crafting": {
     "title": "Crafting",
     "noRecipes": "No recipes available",
+    "selectRecipe": "Select a recipe",
     "noResources": "Missing resources",
     "craftable": "You can craft",
     "types": {

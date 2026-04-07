@@ -1,5 +1,5 @@
 import { InventoryManager } from '@/data/InventoryManager'
-import { CraftingInitMenuData } from '@/network/messageIfs'
+import { CraftingInitMenuData, CraftingRecipe } from '@/network/messageIfs'
 
 export const CraftingTypes = {
     COOKING: "COOKING",
@@ -13,6 +13,11 @@ export const CraftingManager = {
     initialize() {},
 
     onFrame() {},
+
+    submitCraftRequest(recipe: CraftingRecipe, quantity: number) {
+        void recipe
+        void quantity
+    },
 
     processCraftingMenu(data: CraftingInitMenuData) {
 

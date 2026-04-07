@@ -261,11 +261,13 @@
 .inventory-item-overlay-split-value {
     min-width: 18px;
     text-align: center;
+    color: #f3e2bc;
 }
 
 .inventory-item-overlay-split-current {
     margin-top: 4px;
     text-align: center;
+    color: #f3e2bc;
 }
 
 .inventory-text-action-button {

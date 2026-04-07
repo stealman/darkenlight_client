@@ -135,7 +135,7 @@ const displayItemQuantity = computed(() => {
 const splitMaxQuantity = computed(() => {
     const quantity = Number(props.itemInfo.quantity)
     if (!Number.isFinite(quantity) || quantity <= 1) {
-        return 1
+        return 0
     }
     return quantity - 1
 })
