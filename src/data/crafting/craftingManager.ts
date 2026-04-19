@@ -1,5 +1,7 @@
 import { InventoryManager } from '@/data/InventoryManager'
 import { CraftingInitMenuData, CraftingRecipe } from '@/network/messageIfs'
+import { Connector } from '@/network/connector'
+import { SubmitCraftRequestMsg } from '@/network/messages'
 
 export const CraftingTypes = {
     COOKING: "COOKING",
@@ -9,17 +11,39 @@ export const CraftingTypes = {
 }
 
 export const CraftingManager = {
+    activeCraftingContext: null as Pick<CraftingInitMenuData, 'type' | 'x' | 'z'> | null,
 
     initialize() {},
 
     onFrame() {},
 
     submitCraftRequest(recipe: CraftingRecipe, quantity: number) {
-        void recipe
-        void quantity
+        if (!this.activeCraftingContext || !recipe?.item) {
+            return
+        }
+
+        const normalizedQuantity = Math.floor(Number(quantity))
+        if (!Number.isFinite(normalizedQuantity) || normalizedQuantity < 1) {
+            return
+        }
+
+        Connector.sendMessage(new SubmitCraftRequestMsg(
+            recipe.item.tp,
+            recipe.item.cb,
+            normalizedQuantity,
+            this.activeCraftingContext.x,
+            this.activeCraftingContext.z,
+            this.activeCraftingContext.type,
+        ))
     },
 
     processCraftingMenu(data: CraftingInitMenuData) {
+        this.activeCraftingContext = {
+            type: data.type,
+            x: data.x,
+            z: data.z,
+        }
+
         // Enrich the crafting menu data with the quantity of possible crafts based on the player's inventory
         for (const recipe of data.recipes as Array<typeof data.recipes[number] & { craftableQty?: number }>) {
             let craftableQty = Number.MAX_SAFE_INTEGER

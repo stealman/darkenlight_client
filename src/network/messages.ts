@@ -189,6 +189,22 @@ export class RequestCookingMsg implements Message {
     }
 }
 
+export class SubmitCraftRequestMsg implements Message {
+    t: number = 24
+    d: any
+
+    constructor(itemType: string, codebookId: number, quantity: number, x: number, z: number, craftingType: string) {
+        this.d = {
+            tp: itemType,
+            cb: codebookId,
+            qty: quantity,
+            x: x,
+            z: z,
+            type: craftingType,
+        }
+    }
+}
+
 export class GMSaveMapDataMsg implements Message {
     t: number = 1000
     d: any
