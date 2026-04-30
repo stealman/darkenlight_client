@@ -43,6 +43,7 @@ export const AudioManager = {
 
     campingSound: null as Sound | null,
     potionUseSound: null as Sound | null,
+    eatSound: null as Sound | null,
 
     initialize(scene: Scene) {
         this.globalVolume = Settings.volume;
@@ -105,6 +106,14 @@ export const AudioManager = {
             AudioManager.potionUseSound!['defaultVolume'] = 1;
         }, {
             volume: 1,
+            playbackRate: 1,
+        });
+
+        this.eatSound = new Sound("eat", AudioManager.BASE_PATH_SFX + "eat.ogg", scene, function() {
+            AudioManager.eatSound!['loaded'] = true;
+            AudioManager.eatSound!['defaultVolume'] = 1;
+        }, {
+            volume: 0.75,
             playbackRate: 1,
         });
 
@@ -288,6 +297,16 @@ export const AudioManager = {
         this.campingSound!.setVolume(this.campingSound!.defaultVolume * volumeRatio)
         if (this.campingSound!['loaded']) {
             this.campingSound!.play();
+        }
+    },
+
+    playSoundByName(soundName: string) {
+        switch (soundName) {
+            case 'eat':
+                if (this.eatSound && this.eatSound['loaded']) {
+                    this.eatSound.play()
+                }
+                break
         }
     },
 

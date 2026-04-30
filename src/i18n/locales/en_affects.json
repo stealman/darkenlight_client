@@ -9,6 +9,8 @@
     "tiredName": "Tired",
     "tiredDescription": "A tired character cannot run",
     "slowName": "Slow",
-    "slowDescription": "Reduced movement speed"
+    "slowDescription": "Reduced movement speed",
+    "mealName": "Meal",
+    "mealDescription": "Increases health regeneration and reduces stamina and mana consumption"
   }
 }

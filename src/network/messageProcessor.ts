@@ -16,11 +16,12 @@ import {
     AttackableCombatTO,
     AutoAttackMessage,
     AutoAttackResultMessage, CharacterCampingMessage,
+    CharacterCraftingMessage,
     CharacterGatheringMessage,
     CharacterGatheringResultMessage, CharacterRestingMessage,
     EmeraldsChangeMessage,
     EffectDamageMessage,
-    HealingMessage, HealingResultMessage, PotionUsedMessage, PubliclyVisibleAffectData, TextMessage,
+    HealingMessage, HealingResultMessage, PlaySoundMessage, PotionUsedMessage, PubliclyVisibleAffectData, TextMessage,
     CraftingInitMenuData,
 } from '@/network/messageIfs'
 import { GroundItemsManager } from '@/babylon/world/groundItemsManager'
@@ -29,6 +30,7 @@ import { EmeraldsManager } from '@/gui/emeraldsManager'
 import { OnScreenMessageManager } from '@/gui/onScreenMessageManager'
 import { t } from '@/i18n'
 import { CraftingManager } from '@/data/crafting/craftingManager'
+import { AudioManager } from '@/babylon/audio/audioManager'
 
 export const MessageProcessor = {
 
@@ -83,6 +85,8 @@ export const MessageProcessor = {
                 case 46: this.processEffectDamage(msg.d); break
                 case 47: this.processCharCombatData(msg.d); break
                 case 48: this.processCraftingMenu(msg.d); break
+                case 49: this.processCharacterCrafting(msg.d); break
+                case 50: this.processPlaySound(msg.d); break
                 case 1003: this.processGMAllSpawns(msg.d); break
                 case 1004: this.processGMSpawnChange(msg.d); break
                 default:
@@ -296,6 +300,14 @@ export const MessageProcessor = {
         OnScreenMessageManager.addMessage(t(data.txt), data.sev)
     },
 
+    processPlaySound(data: PlaySoundMessage) {
+        if (data.id !== MyPlayer.myChar.id) {
+            return
+        }
+
+        AudioManager.playSoundByName(data.sound)
+    },
+
     processPotionUsed(data: PotionUsedMessage) {
         if (data.tp === 'C') {
             CharacterManager.potionUsed(data)
@@ -304,6 +316,10 @@ export const MessageProcessor = {
 
     processCharacterCamping(data: CharacterCampingMessage) {
         CharacterManager.startCamping(data)
+    },
+
+    processCharacterCrafting(data: CharacterCraftingMessage) {
+        CharacterManager.startCrafting(data)
     },
 
     processCharacterStopAction(data) {

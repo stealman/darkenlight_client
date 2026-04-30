@@ -21,6 +21,7 @@ import {
     AutoAttackMessage,
     AutoAttackResultMessage,
     CharacterCampingMessage,
+    CharacterCraftingMessage,
     CharacterGatheringMessage,
     CharacterGatheringResultMessage,
     CharacterRestingMessage,
@@ -339,10 +340,12 @@ class Character implements Attackable, EffectTarget {
     startTimedAction(type: string, data: CharacterTimedActionData) {
         this.clearTimedAction()
 
-        const angle = Utils.getAngleBetweenPoints(this.pos, new Vector3(data.x, this.pos.y, data.z))
-        this.setLookAngle(angle - Math.PI / 4)
+        if (data.x != null && data.z != null) {
+            const angle = Utils.getAngleBetweenPoints(this.pos, new Vector3(data.x, this.pos.y, data.z))
+            this.setLookAngle(angle - Math.PI / 4)
+        }
 
-        this.activeTimedAction = new CharacterTimedAction(type, this.id, data.dur ?? null, data.x, data.z)
+        this.activeTimedAction = new CharacterTimedAction(type, this.id, data.dur ?? null, data.x ?? null, data.z ?? null, data.type ?? null)
     }
 
     startCamping(data: CharacterCampingMessage) {
@@ -352,6 +355,10 @@ class Character implements Attackable, EffectTarget {
 
     startResting(data: CharacterRestingMessage) {
         this.startTimedAction(CharacterActions.RESTING.name, data)
+    }
+
+    startCrafting(data: CharacterCraftingMessage) {
+        this.startTimedAction(CharacterActions.CRAFTING.name, data)
     }
 
     clearTimedAction() {
@@ -605,6 +612,7 @@ export default Character
 
 interface CharacterTimedActionData {
     dur?: number
-    x: number
-    z: number
+    x?: number
+    z?: number
+    type?: string
 }

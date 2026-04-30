@@ -11,9 +11,10 @@ export const ConsumableHelper = {
     healingPotionIds: [1001, 1002, 1003],
     manaPotionIds: [1011, 1012, 1013],
     woodIds: Array.from({ length: 20 }, (_, index) => 201 + index),
+    foodIds: [351],
 
     isItemConsumable(item: Item): boolean {
-        return this.getHealingPotionIds().includes(item.cbId) || this.getManaPotionIds().includes(item.cbId)
+        return this.getHealingPotionIds().includes(item.cbId) || this.getManaPotionIds().includes(item.cbId) || this.getFoodIds().includes(item.cbId)
     },
 
     getHealingPotionIds(): number[] {
@@ -26,6 +27,10 @@ export const ConsumableHelper = {
 
     getCampWoodIds(): number[] {
         return this.woodIds
+    },
+
+    getFoodIds(): number[] {
+        return this.foodIds
     },
 
     isItemCampWood(item: Item): boolean {
@@ -70,6 +75,10 @@ export const ConsumableHelper = {
         }
 
         if (this.getManaPotionIds().includes(cbId) && MyPlayer.myChar.mpPercent < 100) {
+            Connector.sendMessage(new ConsumeItemMsg(cbId))
+        }
+
+        if (this.getFoodIds().includes(cbId)) {
             Connector.sendMessage(new ConsumeItemMsg(cbId))
         }
     },

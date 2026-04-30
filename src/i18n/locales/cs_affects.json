@@ -9,6 +9,8 @@
     "tiredName": "Unavený",
     "tiredDescription": "Unavená postava nemůže běžet",
     "slowName": "Zpomalení",
-    "slowDescription": "Snížená rychlost pohybu"
+    "slowDescription": "Snížená rychlost pohybu",
+    "mealName": "Jídlo",
+    "mealDescription": "Zvyšuje regeneraci zdraví a snižuje únavu a spotřebu many"
   }
 }

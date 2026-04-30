@@ -100,6 +100,11 @@
   },
   "crafting": {
     "title": "Výroba",
+    "COOKING": "Vaření",
+    "BLACKSMITHY": "Výroba",
+    "BOWCRAFTING": "Výroba",
+    "JEWELRY": "Výroba",
+    "JEWELERY": "Výroba",
     "noRecipes": "Není k dispozici žádný recept",
     "selectRecipe": "Vyber recept",
     "noResources": "Nemáš suroviny",

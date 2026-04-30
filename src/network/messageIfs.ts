@@ -113,6 +113,12 @@ export interface CharacterCampingMessage {
     z: number
 }
 
+export interface CharacterCraftingMessage {
+    id: number
+    dur: number
+    type: string
+}
+
 export interface CharacterRestingMessage {
     id: number
     x: number
@@ -122,6 +128,11 @@ export interface CharacterRestingMessage {
 export interface TextMessage {
     txt: string
     sev: string
+}
+
+export interface PlaySoundMessage {
+    id: number
+    sound: string
 }
 
 export interface AffectGroupData {

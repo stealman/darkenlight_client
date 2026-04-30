@@ -6,6 +6,7 @@ import {
     AttackableBasicTO,
     AutoAttackMessage,
     AutoAttackResultMessage, CharacterCampingMessage,
+    CharacterCraftingMessage,
     EffectDamageMessage,
     CharacterGatheringMessage,
     CharacterGatheringResultMessage,
@@ -202,6 +203,17 @@ export const CharacterManager = {
             const char = this.characters.get(data.id)
             if (char) {
                 char.startCamping(data)
+            }
+        }
+    },
+
+    startCrafting(data: CharacterCraftingMessage) {
+        if (data.id === MyPlayer.myChar.id) {
+            MyPlayer.myChar.startCrafting(data)
+        } else {
+            const char = this.characters.get(data.id)
+            if (char) {
+                char.startCrafting(data)
             }
         }
     },

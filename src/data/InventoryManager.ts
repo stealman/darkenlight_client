@@ -196,6 +196,11 @@ export const InventoryManager = {
             return
         }
 
+        if (item.cbType === 'R') {
+            this.useConsumableItem(item)
+            return
+        }
+
         if (item.isConsumable()) {
             this.useConsumableItem(item)
         }

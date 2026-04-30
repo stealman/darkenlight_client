@@ -34,14 +34,16 @@ export class CharacterAction {
 
 export class CharacterTimedAction {
     type: string
+    craftingType: string | null
     characterId: number
     startedAt: number
     endsAt: number | null
-    x: number
-    z: number
+    x: number | null
+    z: number | null
 
-    constructor(type: string, characterId: number, dur: number | null, x: number, z: number) {
+    constructor(type: string, characterId: number, dur: number | null, x: number | null, z: number | null, craftingType: string | null = null) {
         this.type = type
+        this.craftingType = craftingType
         this.characterId = characterId
         this.startedAt = Date.now()
         this.endsAt = dur != null ? this.startedAt + dur : null
@@ -79,6 +81,12 @@ export class CharacterTimedAction {
     }
 
     getDisplayName(): string {
+        if (this.type === CharacterActions.CRAFTING.name && this.craftingType) {
+            const key = `crafting.${this.craftingType}`
+            const displayName = t(key)
+            return displayName !== key ? displayName : CharacterActions.CRAFTING.nameLoc
+        }
+
         return CharacterActions.getActionByName(this.type)?.nameLoc || this.type
     }
 }
@@ -107,6 +115,7 @@ export const CharacterActions = {
 
     CAMPING: new CharacterAction('CAMPING', 'btn_camp', true, 'actions.campingName', 'actions.campingDescription'),
     RESTING: new CharacterAction('RESTING', 'btn_rest', true, 'actions.restingName', 'actions.restingDescription'),
+    CRAFTING: new CharacterAction('CRAFTING', '', false, 'crafting.title', ''),
 
     getActionByName(name: string): CharacterAction | undefined {
         const actions = [
@@ -119,6 +128,7 @@ export const CharacterActions = {
             this.EQUIP_STORED_WEAPONS,
             this.CAMPING,
             this.RESTING,
+            this.CRAFTING,
         ]
 
         return actions.find((action) => action.name === name)
