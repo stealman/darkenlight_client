@@ -183,11 +183,11 @@ export const MonsterTypes = {
         WeaponSoundTypes.SWORD, BodySoundTypes.HARD, WeaponSoundTypes.SWORD, MonsterSoundTypes.SKELETON, MonsterAATypes.RANGED_ARROW),
 
     // ZOMBIE
-    ZOMBIE_ROTTEN : new MonsterType( 50, MonsterGroups.ZOMBIE, 11,'Rotten Zombie', 0.6, 1.8, 2.2, null,null,  null,
+    ZOMBIE_ROTTEN : new MonsterType( 50, MonsterGroups.ZOMBIE, 11,'Rotten Zombie', 0.6, 1.8, 1.8, null,null,  null,
         WeaponSoundTypes.BONE, BodySoundTypes.HARD, null, MonsterSoundTypes.ZOMBIE, null),
-    ZOMBIE : new MonsterType( 51, MonsterGroups.ZOMBIE, 12,'Zombie', 0.6, 1.8, 2.3, null,null,  null,
+    ZOMBIE : new MonsterType( 51, MonsterGroups.ZOMBIE, 12,'Zombie', 0.6, 1.8, 1.9, null,null,  null,
         WeaponSoundTypes.BONE, BodySoundTypes.HARD, null, MonsterSoundTypes.ZOMBIE, null),
-    ZOMBIE_MUTANT : new MonsterType( 52, MonsterGroups.ZOMBIE, 13,'Zombie Mutant', 0.7, 2, 2.4, null,null,  null,
+    ZOMBIE_MUTANT : new MonsterType( 52, MonsterGroups.ZOMBIE, 13,'Zombie Mutant', 0.7, 2, 2, null,null,  null,
         WeaponSoundTypes.BONE, BodySoundTypes.HARD, null, MonsterSoundTypes.ZOMBIE, null),
 
     // WITHER MELEE

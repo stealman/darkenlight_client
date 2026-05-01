@@ -58,7 +58,7 @@ import {
     getEquipSetHelmetSvg, getEquipSetLegsSvg,
     getEquipSetNecklaceSvg, getEquipSetRingSvg,
 } from '@/vue/icons/icons'
-import { InventoryManager } from '@/data/InventoryManager'
+import { InventoryManager } from '@/data/inventoryManager'
 import { Settings } from '@/settings/settings'
 import ItemInfoOverlay from '@/vue/views/inventory/itemInfoOverlay.vue'
 import { t } from '@/i18n'

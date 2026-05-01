@@ -9,6 +9,7 @@
 - Prefer small, focused changes inside existing manager/module boundaries.
 - Reuse existing managers before introducing new abstraction layers.
 - Keep hot-path frame logic cheap, especially anything called from render/update loops.
+- In this local PowerShell environment, `rg` is not available; do not try it. Use `Get-ChildItem` with `Select-String` for repository searches.
 - Prefer explicit early returns for invalid state or missing targets.
 - Keep Vue components thin when gameplay logic can live in TypeScript managers/services.
 - For feature work, implement directly, then iterate from in-game behavior.
@@ -47,6 +48,8 @@
 - `src/network/connector.ts`: connection transport setup.
 - `src/network/messageProcessor.ts`: incoming message dispatch/handling entry.
 - `src/network/messages.ts` and `src/network/messageIfs.ts`: message structures/contracts.
+- Server lives at `C:\mmorpg\Darkenlight\server\darkenlight_server`; network contract changes usually need matching edits on both client and server.
+- When adding/changing server messages, check server `src/network/messages.ts` plus client `src/network/messageIfs.ts` and `src/network/messageProcessor.ts`.
 
 ### Vue UI
 - `src/vue/views/`: screen/panel level Vue views.
@@ -73,6 +76,8 @@
 
 ## Validation Notes
 - Full `npm run type-check` is not a reliable small-change signal because there are existing project-wide errors.
+- Do not run full client type-check for routine changes; the client intentionally has tolerated typing imprecision.
+- Follow the current client style and existing level of type precision instead of broad type cleanup.
 - For small gameplay/UI tweaks, prefer targeted verification and focused inspection of affected paths.
 
 ## Maintaining Agent Notes

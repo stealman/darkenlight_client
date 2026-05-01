@@ -1,6 +1,6 @@
 import { GroundItemsManager } from '@/babylon/world/groundItemsManager'
 import { TreeManager } from '@/babylon/world/treeManager'
-import { InventoryManager } from '@/data/InventoryManager'
+import { InventoryManager } from '@/data/inventoryManager'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { MyPlayer } from '@/data/myPlayer'
 import { WorldDataManager } from '@/data/worldDataManager'

@@ -298,7 +298,7 @@ export const MyStatusPanel = {
 
         return {
             title: myChar?.name ?? '',
-            titleMeta: myChar?.className ? `(${myChar.className})` : null,
+            titleMeta: myChar?.gameClass?.name ? `(${myChar.gameClass.name})` : null,
             rows,
         }
     },

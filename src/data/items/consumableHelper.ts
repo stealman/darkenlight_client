@@ -1,5 +1,5 @@
 import { Item } from '@/data/items/item'
-import { InventoryManager } from '@/data/InventoryManager'
+import { InventoryManager } from '@/data/inventoryManager'
 import { MyPlayer } from '@/data/myPlayer'
 import { Connector } from '@/network/connector'
 import { ConsumeItemMsg, CreateCampMsg } from '@/network/messages'

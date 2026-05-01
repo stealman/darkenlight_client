@@ -30,7 +30,7 @@ import {
 } from '@/network/messageIfs'
 import { TargetingManager } from '@/gui/targettingManager'
 import { CharacterManager } from '@/babylon/character/characterManager'
-import { InventoryManager } from '@/data/InventoryManager'
+import { InventoryManager } from '@/data/inventoryManager'
 import { OverlayManager } from '@/gui/overlay/overlayManager'
 import { EffectTarget } from '@/babylon/gfx/characterEffect'
 import { GfxManager } from '@/babylon/gfx/gfxManager'
@@ -38,6 +38,7 @@ import { PotionConsumeEffect } from '@/babylon/gfx/potionConsumeEffect'
 import { WATER_BLOCK_TYPE } from '@/babylon/world/terrainManager'
 import { CharacterActions, CharacterTimedAction } from '@/data/actions/characterActions'
 import { PubliclyVisibleAffect } from '@/data/affects'
+import { GameClass, GameClasses } from '@/data/gameClass'
 
 class Character implements Attackable, EffectTarget {
     model: CharacterModel | null = null
@@ -56,7 +57,8 @@ class Character implements Attackable, EffectTarget {
 
     name: string = "Player"
     nameDisplayTime: number = 0
-    className: string = "Warrior"
+    gameClass: GameClass = GameClasses.FIGHTER
+    className: string = GameClasses.FIGHTER.key
 
     boxSize: number = 0.8
     walkSpeed: number = 1
@@ -121,7 +123,9 @@ class Character implements Attackable, EffectTarget {
 
         this.pos = new Vector3(data.x, 0, data.z)
         this.name = data.name
-        this.className = data.cls
+        const gameClassKey = data.gameClass?.key ?? data.cls
+        this.gameClass = GameClasses.getByKey(gameClassKey) || GameClasses.FIGHTER
+        this.className = this.gameClass.key
         this.boxSize = data.bsz
         this.pos.y = Utils.calculateWalkYPos(this.pos.x, this.pos.z, this.getBoxSize())
         this.logicYpos = this.pos.y

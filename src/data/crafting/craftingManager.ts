@@ -1,4 +1,4 @@
-import { InventoryManager } from '@/data/InventoryManager'
+import { InventoryManager } from '@/data/inventoryManager'
 import { CraftingInitMenuData, CraftingRecipe } from '@/network/messageIfs'
 import { Connector } from '@/network/connector'
 import { SubmitCraftRequestMsg } from '@/network/messages'

@@ -5,7 +5,7 @@ import { OnScreenMessageManager, OnScreenMessageSeverities } from '@/gui/onScree
 import { MyPlayer } from '@/data/myPlayer'
 import { GuiButtonsManager } from '@/gui/guiButtonsManager'
 import { EmeraldsManager } from '@/gui/emeraldsManager'
-import { InventoryManager } from '@/data/InventoryManager'
+import { InventoryManager } from '@/data/inventoryManager'
 import { ConsumableHelper } from '@/data/items/consumableHelper'
 import { CharacterAction, CharacterActions } from '@/data/actions/characterActions'
 import { t } from '@/i18n'

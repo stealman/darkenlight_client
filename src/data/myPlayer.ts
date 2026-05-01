@@ -25,7 +25,7 @@ import { AudioManager } from '@/babylon/audio/audioManager'
 import { ActionButtonsManager } from '@/gui/actionButtonsManager'
 import { Attackable } from '@/GameManager'
 import { EmeraldsManager } from '@/gui/emeraldsManager'
-import { InventoryManager } from '@/data/InventoryManager'
+import { InventoryManager } from '@/data/inventoryManager'
 import { GuiButtonsManager } from '@/gui/guiButtonsManager'
 import { CharacterAction, CharacterActions } from '@/data/actions/characterActions'
 import { OverlayManager } from '@/gui/overlay/overlayManager'
@@ -235,7 +235,7 @@ export const MyPlayer = {
     },
 
     combatDataChange(data: AttackableCombatTO) {
-        // Speed change 
+        // Speed change
         if (data.spd1 != null && data.spd2 != null) {
             this.myChar.walkSpeed = data.spd1
             this.myChar.runSpeed = data.spd2

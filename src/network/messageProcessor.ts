@@ -25,7 +25,7 @@ import {
     CraftingInitMenuData,
 } from '@/network/messageIfs'
 import { GroundItemsManager } from '@/babylon/world/groundItemsManager'
-import { InventoryManager } from '@/data/InventoryManager'
+import { InventoryManager } from '@/data/inventoryManager'
 import { EmeraldsManager } from '@/gui/emeraldsManager'
 import { OnScreenMessageManager } from '@/gui/onScreenMessageManager'
 import { t } from '@/i18n'
