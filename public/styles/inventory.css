@@ -48,8 +48,11 @@
     position: absolute;
     width: calc(var(--slot-size-factor) * 100%);
     aspect-ratio: 1 / 1;
-    border: 1px solid rgba(176, 143, 86, 0.9);
-    background: rgba(15, 11, 8, 0.45);
+    border: none;
+    padding: 2px;
+    background-image: url('/images/gui/bck_stone1.png');
+    background-repeat: repeat;
+    background-attachment: fixed;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -58,6 +61,20 @@
     box-sizing: border-box;
     user-select: none;
     cursor: url('/images/cursor-pointer.png'), pointer;
+}
+
+.equip-slot::before {
+    content: '';
+    position: absolute;
+    inset: 2px;
+    background: var(--dialog-bg-darker);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.equip-slot > div {
+    position: relative;
+    z-index: 1;
 }
 
 .equip-item-image {
@@ -142,10 +159,14 @@
 }
 
 .inventory-item-slot {
+    position: relative;
     width: 100%;
     aspect-ratio: 1 / 1;
-    border: 1px solid rgba(176, 143, 86, 0.9);
-    background: rgba(15, 11, 8, 0.45);
+    border: none;
+    padding: 1px;
+    background-image: url('/images/gui/bck_stone1.png');
+    background-repeat: repeat;
+    background-attachment: fixed;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -156,6 +177,20 @@
     -webkit-touch-callout: none;
     cursor: url('/images/cursor-pointer.png'), pointer;
     margin-bottom: 0;
+}
+
+.inventory-item-slot::before {
+    content: '';
+    position: absolute;
+    inset: 1px;
+    background: var(--dialog-bg-darker);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.inventory-item-slot > * {
+    position: relative;
+    z-index: 1;
 }
 
 .inventory-item-image {
@@ -173,7 +208,7 @@
     z-index: 1000;
     min-width: 120px;
     padding: 8px 10px;
-    border: 1px solid rgba(176, 143, 86, 0.9);
+    border: 1px solid rgb(var(--ui-dark));
     background: rgba(15, 11, 8, 0.94);
     color: #f2e7cf;
     font-size: 0.85rem;

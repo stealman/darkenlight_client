@@ -6,7 +6,8 @@
     --ui-darkest: 40, 38, 32;
 
     --ui-danger: 210, 106, 106;
-    --dialog-bg: rgba(12, 10, 10, 0.83); /* Background for dialog to make texture only slightly visible */
+    --dialog-bg: rgba(12, 10, 10, 0.85); /* Background for dialog to make texture only slightly visible */
+    --dialog-bg-darker: rgba(12, 10, 10, 0.9); /* Darker background for dialog when selected or hovered */
 }
 
 .text-warning {
