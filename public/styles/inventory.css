@@ -54,7 +54,7 @@
     align-items: center;
     justify-content: center;
     font-size: 0.7rem;
-    color: var(--ui-text-muted);
+    color: rgb(var(--ui-base));
     box-sizing: border-box;
     user-select: none;
     cursor: url('/images/cursor-pointer.png'), pointer;
@@ -261,13 +261,13 @@
 .inventory-item-overlay-split-value {
     min-width: 18px;
     text-align: center;
-    color: var(--dialog-text-strong);
+    color: rgb(var(--ui-base));
 }
 
 .inventory-item-overlay-split-current {
     margin-top: 4px;
     text-align: center;
-    color: var(--dialog-text-strong);
+    color: rgb(var(--ui-base));
 }
 
 .inventory-text-action-button {

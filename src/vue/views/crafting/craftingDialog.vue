@@ -87,7 +87,7 @@
                                 {{ selectedRecipe ? resolveItemName(selectedRecipe.item) : '' }}
                             </div>
                             <div v-if="selectedRecipe" class="crafting-selection-note">
-                                
+
                             </div>
                             <div v-else class="crafting-selection-note crafting-selection-note-muted">
                                 {{ recipes.length > 0 ? t('crafting.selectRecipe') : t('crafting.noRecipes') }}
@@ -459,17 +459,12 @@ defineExpose({
 .crafting-dialog-window { min-height: auto; }
 .crafting-dialog-content { display: flex; align-items: center; justify-content: center; padding: 0; }
 .crafting-content-shell { display: flex; flex-direction: column; width: 100%; max-height: min(600px, 85vh); overflow: hidden; box-sizing: border-box; padding: 8px; gap: 10px; }
-.crafting-recipes-section { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; padding-right: 4px; scrollbar-width: thin; scrollbar-color: var(--dialog-color) #111; }
-.crafting-recipes-section::-webkit-scrollbar { width: 8px; }
-.crafting-recipes-section::-webkit-scrollbar-track,
-.crafting-recipes-section::-webkit-scrollbar-thumb { border-radius: 4px; }
-.crafting-recipes-section::-webkit-scrollbar-track { background: var(--dialog-color-dark); }
-.crafting-recipes-section::-webkit-scrollbar-thumb { background: var(--dialog-color); }
-.crafting-empty-state { padding: 28px 12px; text-align: center; color: var(--ui-text-muted); }
+.crafting-recipes-section { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; padding-right: 4px; }
+.crafting-empty-state { padding: 28px 12px; text-align: center; color: rgb(var(--ui-dark)); }
 .crafting-recipe-list { display: flex; flex-direction: column; }
 
 .crafting-selection-row {
-    border: 1px solid var(--dialog-border-subtle);
+    border: 1px solid rgb(var(--ui-base));
     border-radius: 0;
     background: var(--dialog-bg);
 }
@@ -484,9 +479,9 @@ defineExpose({
     cursor: url('/images/cursor-pointer.png'), pointer;
 }
 
-.crafting-recipe-divider { height: 1px; background: var(--dialog-border-subtle); }
+.crafting-recipe-divider { height: 1px; background: rgb(var(--ui-base)); }
 
-.crafting-recipe-row-selected { background: var(--dialog-surface-selected); }
+.crafting-recipe-row-selected { background: rgb(var(--ui-darker)); }
 .crafting-result-summary,
 .crafting-selection-summary,
 .crafting-ingredients,
@@ -499,7 +494,7 @@ defineExpose({
     font-size: 16px;
     font-weight: 700;
     line-height: 1.25;
-    color: var(--dialog-text-strong);
+    color: rgb(var(--ui-base));
     text-align: left;
     word-break: break-word;
 }
@@ -509,17 +504,17 @@ defineExpose({
     font-size: 13px;
     line-height: 1.15;
     text-align: left;
-    color: var(--ui-text-muted);
+    color: rgb(var(--ui-dark));
 }
 
 .crafting-result-note { margin-top: 2px; }
 .crafting-selection-note { margin-top: 2px; white-space: nowrap; }
 .crafting-result-name-disabled,
 .crafting-selection-note-muted,
-.crafting-selection-current-disabled { color: var(--ui-text-dark); }
+.crafting-selection-current-disabled { color: rgb(var(--ui-darkest)); }
 .crafting-result-note-missing,
 .crafting-ingredient-name-missing,
-.crafting-ingredient-owned-missing { color: var(--dialog-danger); }
+.crafting-ingredient-owned-missing { color: rgb(var(--ui-danger)); }
 
 .crafting-result-icon-button {
     display: inline-flex;
@@ -529,25 +524,25 @@ defineExpose({
     height: 46px;
     margin-left: 2px;
     padding: 0;
-    border: 1px solid var(--dialog-color);
+    border: 1px solid rgb(var(--ui-base));
     border-radius: 0;
-    background: var(--dialog-surface-muted);
+    background: var(--dialog-bg);
     cursor: url('/images/cursor-pointer.png'), pointer;
 }
 
-.crafting-result-icon-button:hover { border-color: var(--dialog-border-hover); background: rgba(255, 255, 255, 0.05); }
+.crafting-result-icon-button:hover { border-color: rgb(var(--ui-dark)); background: rgba(255, 255, 255, 0.05); }
 .crafting-result-icon { width: 36px; height: 36px; object-fit: contain; pointer-events: none; }
 .crafting-ingredients { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.crafting-ingredient-chip { display: inline-flex; align-items: center; gap: 7px; color: var(--ui-text); }
+.crafting-ingredient-chip { display: inline-flex; align-items: center; gap: 7px; color: rgb(var(--ui-base)); }
 .crafting-ingredient-icon { width: 22px; height: 22px; object-fit: contain; flex: 0 0 auto; }
 .crafting-ingredient-name { font-size: 13px; line-height: 1.15; }
 .crafting-ingredient-qty,
 .crafting-selection-boundary,
-.crafting-selection-current { font-weight: 700; color: var(--dialog-text-strong); text-align: center; }
+.crafting-selection-current { font-weight: 700; color: rgb(var(--ui-base)); text-align: center; }
 .crafting-ingredient-qty,
 .crafting-ingredient-owned,
 .crafting-selection-boundary { font-size: 12px; }
-.crafting-ingredient-owned { color: var(--ui-text-muted); }
+.crafting-ingredient-owned { color: rgb(var(--ui-dark)); }
 .crafting-selection-boundary { min-width: 12px; }
 .crafting-selection-current { min-width: 32px; font-size: 14px; }
 

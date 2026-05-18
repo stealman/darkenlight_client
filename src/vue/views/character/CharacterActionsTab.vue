@@ -214,7 +214,7 @@ defineExpose({
     width: 100%;
     height: 100%;
     min-height: 0;
-    padding: 8px;
+    padding-left: 5px;
     box-sizing: border-box;
 }
 
@@ -234,7 +234,7 @@ defineExpose({
 
 .action-slot-label {
     width: 26px;
-    color: var(--ui-text);
+    color: rgb(var(--ui-base));
     font-size: 0.85rem;
     text-align: right;
     flex: 0 0 26px;
@@ -247,20 +247,16 @@ defineExpose({
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--dialog-surface-muted);
-    border: 1px solid var(--dialog-color);
+    background: var(--dialog-bg);
+    border: 1px solid rgb(var(--ui-dark));
     box-sizing: border-box;
     padding: 0;
     cursor: url('/images/cursor-pointer.png'), pointer;
 }
 
-.action-slot-icon-shell:hover {
-    border-color: var(--dialog-border-hover);
-}
-
-.action-slot-icon-shell.selected {
-    border-color: var(--dialog-border-hover);
-    background: var(--dialog-surface-selected);
+.action-slot-icon-shell:hover, .action-slot-icon-shell.selected {
+    border-color: rgb(var(--ui-darker));
+    background: rgba(var(--ui-darker), 0.75);
 }
 
 .action-slot-icon {
@@ -271,7 +267,7 @@ defineExpose({
 }
 
 .action-slot-description {
-    color: var(--ui-text);
+    color: rgb(var(--ui-base));
     font-size: 0.8rem;
     line-height: 1.25;
     text-align: left;
@@ -316,7 +312,7 @@ defineExpose({
 
 .action-option-row {
     display: block;
-    width: 100%;
+    width: 98%;
     margin-bottom: 8px;
 }
 
@@ -331,9 +327,9 @@ defineExpose({
     width: 100%;
     min-height: 60px;
     padding: 10px;
-    border: 1px solid var(--dialog-color);
-    background: var(--dialog-surface-muted);
-    color: var(--ui-text);
+    border: 1px solid rgb(var(--ui-dark));
+    background: var(--dialog-bg);
+    color: rgb(var(--ui-base));
     text-align: left;
     cursor: url('/images/cursor-pointer.png'), pointer;
     box-sizing: border-box;
@@ -341,8 +337,8 @@ defineExpose({
 }
 
 .action-option.selected {
-    border-color: var(--dialog-border-hover);
-    background: var(--dialog-surface-selected);
+    border-color: rgb(var(--ui-dark));
+    background: rgba(var(--ui-darkest), 0.75);
 }
 
 .action-option-icon {

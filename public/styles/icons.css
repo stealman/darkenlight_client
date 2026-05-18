@@ -19,13 +19,6 @@
     opacity: 0.75
 }
 
-.icon-cyan {
-    fill: var(--dialog-color);
-    transition: all 0.2s ease;
-    cursor: url('/images/cursor-pointer.png'), pointer;
-    opacity: 0.75
-}
-
 .icon-white:hover {
     fill: #fff;
 }

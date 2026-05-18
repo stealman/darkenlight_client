@@ -51,11 +51,11 @@ div#selectedTargetPanel.ally {
 }
 
 #selectedTargetPanel.enemy .targetName {
-    color: var(--ui-text-enemy);
+    color: rgb(var(--ui-danger));
 }
 
 #selectedTargetPanel.ally .targetName {
-    color: var(--ui-text-ally);
+    color: rgb(var(--ui-base));
 }
 
 #selectedTargetPanel .hpBlock{

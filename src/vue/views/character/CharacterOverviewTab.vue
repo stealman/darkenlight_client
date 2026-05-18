@@ -56,7 +56,7 @@ const combatStats = computed(() => [
 .character-tab-panel {
     width: 100%;
     min-height: 100%;
-    color: var(--ui-text);
+    color: rgb(var(--ui-base));
 }
 
 .character-overview-header {
@@ -65,13 +65,12 @@ const combatStats = computed(() => [
     flex-direction: column;
     align-items: center;
     gap: 6px;
-    padding: 8px 10px 10px;
+    padding: 4px 8px 8px;
     box-sizing: border-box;
 }
 
 .character-overview-name {
     max-width: 100%;
-    color: var(--ui-text-strong);
     font-size: clamp(15px, 2.1vh, 19px);
     font-weight: 700;
     line-height: 1.15;
@@ -104,7 +103,7 @@ const combatStats = computed(() => [
     align-items: baseline;
     justify-content: center;
     gap: 4px;
-    color: var(--ui-text-muted);
+    color: rgb(var(--ui-base));
     font-size: clamp(10px, 1.45vh, 13px);
     line-height: 1.2;
     white-space: nowrap;
@@ -122,7 +121,6 @@ const combatStats = computed(() => [
 
 .character-overview-stat-value {
     flex: 0 0 auto;
-    color: var(--ui-text-strong);
     font-weight: 700;
 }
 </style>

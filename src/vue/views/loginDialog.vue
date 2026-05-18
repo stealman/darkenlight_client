@@ -12,7 +12,7 @@
             <tr>
                 <td class="item-label" style="width: 25%">{{ t('login.name') }}</td>
                 <td style="width: 25%">
-                    <input id="username" style="color: var(--ui-text);" v-model="charName" type="text" @keydown="clearLoginAndPassword" />
+                    <input id="username" style="color: rgb(var(--ui-base));" v-model="charName" type="text" @keydown="clearLoginAndPassword" />
                 </td>
             </tr>
             </tbody>
@@ -27,7 +27,7 @@
                 <tr>
                     <td class="item-label" style="width: 25%">{{ t('login.login') }}</td>
                     <td style="width: 25%">
-                        <input style="color: var(--ui-text);" v-model="login" type="text" @keydown="clearCharName" />
+                        <input style="color: rgb(var(--ui-base));" v-model="login" type="text" @keydown="clearCharName" />
                     </td>
                 </tr>
 
@@ -35,7 +35,7 @@
                     <td class="item-label" style="width: 25%">{{ t('login.password') }}</td>
                     <td style="width: 25%">
                         <div class="relative mt-2">
-                            <input style="color: var(--ui-text);" type="password" v-model="password" />
+                            <input style="color: rgb(var(--ui-base));" type="password" v-model="password" />
                         </div>
                     </td>
                 </tr>
@@ -57,7 +57,7 @@
             </table>
         </div>
 
-        <div class="dialog-actions" style="margin-top: 20px;">
+        <div class="dialog-actions" style="margin-top: 16px; padding-bottom: 4px;">
             <button class="dialog-button" @click="doLogin()">{{ t('login.submit') }}</button>
         </div>
     </GameDialog>

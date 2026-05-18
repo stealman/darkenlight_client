@@ -1,34 +1,16 @@
 :root {
-    /* Text */
-    --ui-text: #ccc;
-    --ui-text-dark: #222;
-    --ui-text-muted: #b8ad93;
-    --ui-text-enemy: #f08f56;
-    --ui-text-ally: #56aaff;
+    /* Basic colors */
+    --ui-base: 233, 218, 190;
+    --ui-dark: 132, 123, 104;
+    --ui-darker: 94, 87, 72;
+    --ui-darkest: 40, 38, 32;
 
-    /* Dialogy */
-    --dialog-color: #b08f56;        /* bronz, méně žlutý */
-    --dialog-color-dark: #6b4a22;   /* tmavý bronz */
-    --dialog-glow: #444;         /* hnědý kovový glow */
-    --dialog-bg: rgba(12, 10, 10, 0.85);
-
-    --dialog-surface-muted: rgba(15, 11, 8, 0.45);
-    --dialog-surface-selected: rgba(64, 47, 18, 0.55);
-    --dialog-border-hover: rgba(214, 184, 110, 0.95);
-    --dialog-border-subtle: rgba(213, 192, 153, 0.18);
-    --dialog-text-strong: #f3e2bc;
-    --dialog-danger: #d26a6a;
-
-    /* Panely */
-    --panel-color: #9e7f4a;         /* starý bronz */
-    --panel-color-dark: #3f2b16;    /* tmavé dřevo */
-    --panel-glow: #7a5a2a;
-    --panel-bg: rgba(17, 13, 9, 0.96);
-
+    --ui-danger: 210, 106, 106;
+    --dialog-bg: rgba(12, 10, 10, 0.83); /* Background for dialog to make texture only slightly visible */
 }
 
 .text-warning {
-    color: #f39c12;
+    color: rgb(var(--ui-danger));
 }
 
 /* backdrop */
@@ -51,15 +33,15 @@
     background-image: url('/images/gui/bck_stone1.png');
     background-repeat: repeat;
     background-attachment: fixed;
-    border-radius: 2px;
+    border-radius: 0;
     padding: 5px;
     width: 600px;
     min-height: 300px;
     max-width: 90%;
     max-height: 75%;
-    box-shadow: 0 0 20px var(--dialog-glow), 0 0 40px rgba(0,0,0,0.4);
+    box-shadow: 0 0 20px rgb(var(--ui-darkest)), 0 0 40px rgba(0,0,0,0.4);
     text-align: center;
-    color: var(--ui-text);
+    color: rgb(var(--ui-base));
     border-bottom: 2px ridge  rgba(0, 0, 0, 0.4);
     border-right: 2px ridge  rgba(0, 0, 0, 0.4);
     animation: fadeIn 0.2s ease;
@@ -70,7 +52,7 @@
     box-sizing: border-box;
     padding-top: 0;
     background: var(--dialog-bg);
-    border-radius: 2px;
+    border-radius: 0;
     border: none;
 }
 
@@ -84,15 +66,15 @@
     font-size: 1.1rem;
     margin: 0 0 1vh;
     padding: 3px;
-    background-color: var(--dialog-color-dark);
+    background-color: rgb(var(--ui-dark));
     background-image: linear-gradient(rgba(0, 0, 0, 0.28), rgba(0, 0, 0, 0.28)), url('/images/gui/bck_stone1.png');
     background-repeat: repeat;
     background-attachment: fixed;
-    text-shadow: 0 0 3px var(--ui-text);
+    text-shadow: 0 0 3px rgb(var(--ui-base));
     font-weight: bold;
     text-transform: uppercase;
     line-height: 1;
-    color: var(--ui-text-dark);
+    color: rgb(var(--ui-darkest));
     border-bottom: 2px solid rgba(0, 0, 0, 0.3);
 }
 
@@ -110,11 +92,11 @@
 }
 
 .dialog-button {
-    background-color: var(--dialog-color-dark);
+    background-color: rgb(var(--ui-dark));
     background-image: url('/images/gui/bck_stone1.png');
     background-repeat: repeat;
     background-attachment: fixed;
-    color: var(--ui-text-dark);
+    color: rgb(var(--ui-darkest));
     border: 2px solid transparent;
     border-bottom: 2px solid rgba(0, 0, 0, 0.4);
     border-right: 2px solid rgba(0, 0, 0, 0.4);
@@ -123,7 +105,7 @@
     font-size: 0.95rem;
     font-weight: bold;
     text-transform: uppercase;
-    text-shadow: 0 0 3px var(--ui-text);
+    text-shadow: 0 0 3px rgb(var(--ui-base));
     cursor: url('/images/cursor-pointer.png'), pointer;
     box-shadow: none;
     transition: filter 0.2s ease, box-shadow 0.2s ease;
@@ -131,14 +113,14 @@
 }
 
 .dialog-button.selected {
-    cursor: default;
+    cursor: url('/images/cursor.png'), auto;
     background-image: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url('/images/gui/bck_stone1.png');
     background-attachment: fixed;
     border: 2px solid transparent;
     border-top: 2px solid rgba(0, 0, 0, 0.1);
     border-left: 2px solid rgba(0, 0, 0, 0.1);
-    color: var(--ui-text);
-    text-shadow: 0 0 3px var(--ui-text-dark);
+    color: rgb(var(--ui-base));
+    text-shadow: 0 0 3px rgb(var(--ui-darkest));
 }
 
 .dialog-button:hover {
@@ -147,8 +129,8 @@
     border: 2px solid transparent;
     border-top: 2px solid rgba(0, 0, 0, 0.1);
     border-left: 2px solid rgba(0, 0, 0, 0.1);
-    color: var(--ui-text);
-    text-shadow: 0 0 3px var(--ui-text-dark);
+    color: rgb(var(--ui-base));
+    text-shadow: 0 0 3px rgb(var(--ui-darkest));
 }
 
 .dialog-header div.tab-item {
@@ -156,7 +138,7 @@
     padding: 5px 10px;
     margin: 0 2px;
     border-radius: 0;
-    background-color: var(--dialog-color-dark);
+    background-color: rgb(var(--ui-dark));
     background-image: url('/images/gui/bck_stone1.png');
     background-repeat: repeat;
     background-attachment: fixed;
@@ -166,7 +148,11 @@
     cursor: url('/images/cursor-pointer.png'), pointer;
     transition: filter 0.2s ease, box-shadow 0.2s ease;
     font-size: 0.9rem;
-    color: var(--ui-text-dark);
+    color: rgb(var(--ui-darkest));
+}
+
+.dialog-header div.tab-item:not(.active) * {
+    cursor: url('/images/cursor-pointer.png'), pointer;
 }
 
 .dialog-header div.tab-item.active {
@@ -175,31 +161,66 @@
     border: 2px solid transparent;
     border-top: 2px solid rgba(0, 0, 0, 0.1);
     border-left: 2px solid rgba(0, 0, 0, 0.1);
-    color: var(--ui-text);
-    text-shadow: 0 0 3px var(--ui-text-dark);
+    color: rgb(var(--ui-base));
+    text-shadow: 0 0 3px rgb(var(--ui-darkest));
+    cursor: url('/images/cursor.png'), auto;
 }
 
-.dialog-content::-webkit-scrollbar {
+.dialog-header div.tab-item.active * {
+    cursor: url('/images/cursor.png'), auto;
+}
+
+.dialog-content,
+.inventory-content-shell,
+.inventory-grid-wrapper,
+.action-slots-list,
+.action-selection-dialog-content,
+.crafting-recipes-section {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(var(--ui-dark)) rgb(var(--ui-darkest));
+}
+
+.dialog-content::-webkit-scrollbar,
+.inventory-content-shell::-webkit-scrollbar,
+.inventory-grid-wrapper::-webkit-scrollbar,
+.action-slots-list::-webkit-scrollbar,
+.action-selection-dialog-content::-webkit-scrollbar,
+.crafting-recipes-section::-webkit-scrollbar {
     width: 8px;
 }
 
-.dialog-content::-webkit-scrollbar-track {
-    background: var(--dialog-color-dark);
-    border-radius: 4px;
+.dialog-content::-webkit-scrollbar-track,
+.inventory-content-shell::-webkit-scrollbar-track,
+.inventory-grid-wrapper::-webkit-scrollbar-track,
+.action-slots-list::-webkit-scrollbar-track,
+.action-selection-dialog-content::-webkit-scrollbar-track,
+.crafting-recipes-section::-webkit-scrollbar-track {
+    background: rgb(var(--ui-darkest));
+    border-radius: 0;
 }
 
-.dialog-content::-webkit-scrollbar-thumb {
-    background: var(--dialog-color);
-    border-radius: 4px;
+.dialog-content::-webkit-scrollbar-thumb,
+.inventory-content-shell::-webkit-scrollbar-thumb,
+.inventory-grid-wrapper::-webkit-scrollbar-thumb,
+.action-slots-list::-webkit-scrollbar-thumb,
+.action-selection-dialog-content::-webkit-scrollbar-thumb,
+.crafting-recipes-section::-webkit-scrollbar-thumb {
+    background-color: rgb(var(--ui-dark));
+    background-image: none;
+    background-repeat: repeat;
+    background-attachment: fixed;
+    border-radius: 0;
+    border: 1px solid rgb(var(--ui-darkest));
 }
 
-.dialog-content::-webkit-scrollbar-thumb:hover {
-    background: #09f;
-}
-
-.dialog-content {
-    scrollbar-width: thin;
-    scrollbar-color: var(--dialog-color) #111;
+.dialog-content::-webkit-scrollbar-thumb:hover,
+.inventory-content-shell::-webkit-scrollbar-thumb:hover,
+.inventory-grid-wrapper::-webkit-scrollbar-thumb:hover,
+.action-slots-list::-webkit-scrollbar-thumb:hover,
+.action-selection-dialog-content::-webkit-scrollbar-thumb:hover,
+.crafting-recipes-section::-webkit-scrollbar-thumb:hover {
+    background-color: rgb(var(--ui-darker));
+    background-image: none;
 }
 
 .dialog-content table {
@@ -224,12 +245,12 @@
     text-align: right;
     padding-right: 20px;
     width: 120px;
-    color: var(--ui-text);
+    color: rgb(var(--ui-base));
 }
 
 .dialog-content input[type="text"],
 .dialog-content input[type="password"] {
-    border: 1px solid var(--dialog-color-dark);
+    border: 1px solid rgb(var(--ui-dark));
     background: none;
     height: 1.5rem;
     color: white;
@@ -239,35 +260,9 @@
 .dialog-content input[type="text"]:focus,
 .dialog-content input[type="password"]:focus {
     outline: none;
-    border: 1px solid var(--dialog-color);
-    box-shadow: 0 0 10px var(--dialog-glow);
+    border: 1px solid rgb(var(--ui-base));
+    box-shadow: 0 0 10px rgb(var(--ui-darker));
     animation: borderPulse 1.2s infinite;
-}
-
-.panel-button {
-    background: var(--panel-color-dark);
-    color: white;
-    border: 2px solid var(--panel-color);
-    border-radius: 4px;
-    padding: 10px 20px;
-    font-size: 0.8rem;
-    cursor: url('/images/cursor-pointer.png'), pointer;
-    box-shadow: 0 0 10px var(--panel-glow);
-    transition: all 0.2s ease;
-    opacity: 0.8;
-}
-
-.panel-button.selected {
-    cursor: default;
-    background: var(--panel-color-dark);
-    border: 2px solid var(--panel-color);
-    animation: borderPulse 1.2s infinite;
-}
-
-.panel-button:hover {
-    background: var(--panel-color);
-    box-shadow: 0 0 40px var(--panel-glow);
-    opacity: 1;
 }
 
 /* animations */
@@ -283,13 +278,13 @@
 
 @keyframes borderPulse {
     0% {
-        border-color: var(--dialog-color);
+        border-color: rgb(var(--ui-base));
     }
     50% {
-        border-color: var(--dialog-color-dark);
+        border-color: rgb(var(--ui-dark));
     }
     100% {
-        border-color: var(--dialog-color);
+        border-color: rgb(var(--ui-base));
     }
 }
 
