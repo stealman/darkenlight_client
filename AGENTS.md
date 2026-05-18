@@ -79,6 +79,7 @@
 - Do not run full client type-check for routine changes; the client intentionally has tolerated typing imprecision.
 - Follow the current client style and existing level of type precision instead of broad type cleanup.
 - For small gameplay/UI tweaks, prefer targeted verification and focused inspection of affected paths.
+- Do not run `npm run build` just to verify CSS-only style changes; it does not provide useful signal for visual tweaks.
 
 ## Maintaining Agent Notes
 - This file should stay short and structural.

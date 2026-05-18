@@ -8,11 +8,13 @@
             ref="windowRef"
             :class="windowClass"
         >
-            <div v-if="$slots.header" class="dialog-header">
-                <slot name="header" />
-            </div>
-            <div :class="contentClass">
-                <slot />
+            <div class="dialog-surface">
+                <div v-if="$slots.header" class="dialog-header">
+                    <slot name="header" />
+                </div>
+                <div :class="contentClass">
+                    <slot />
+                </div>
             </div>
         </div>
         <slot name="overlay" />

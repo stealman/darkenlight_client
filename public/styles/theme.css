@@ -1,8 +1,8 @@
 :root {
     /* Text */
-    --ui-text: #e6dcc6;
+    --ui-text: #ccc;
+    --ui-text-dark: #222;
     --ui-text-muted: #b8ad93;
-    --ui-text-dark: #8e846d;
     --ui-text-enemy: #f08f56;
     --ui-text-ally: #56aaff;
 
@@ -10,7 +10,7 @@
     --dialog-color: #b08f56;        /* bronz, méně žlutý */
     --dialog-color-dark: #6b4a22;   /* tmavý bronz */
     --dialog-glow: #444;         /* hnědý kovový glow */
-    --dialog-bg: rgba(20, 15, 10, 0.93); /* tmavé dřevo */
+    --dialog-bg: rgba(12, 10, 10, 0.85);
 
     --dialog-surface-muted: rgba(15, 11, 8, 0.45);
     --dialog-surface-selected: rgba(64, 47, 18, 0.55);
@@ -43,16 +43,16 @@
     align-items: center;
     justify-content: center;
     z-index: 2000;
-    /*backdrop-filter: blur(4px);*/
     animation: fadeIn 0.3s ease;
 }
 
 /* dialog window */
 .dialog-window {
-    background: var(--dialog-bg);
-    border-radius: 6px;
-    padding: 10px;
-    padding-top: 0;
+    background-image: url('/images/gui/bck_stone1.png');
+    background-repeat: repeat;
+    background-attachment: fixed;
+    border-radius: 2px;
+    padding: 5px;
     width: 600px;
     min-height: 300px;
     max-width: 90%;
@@ -60,8 +60,18 @@
     box-shadow: 0 0 20px var(--dialog-glow), 0 0 40px rgba(0,0,0,0.4);
     text-align: center;
     color: var(--ui-text);
-    border: 1px solid var(--dialog-color-dark);
-    animation: scaleIn 0.25s ease;
+    border-bottom: 2px ridge  rgba(0, 0, 0, 0.4);
+    border-right: 2px ridge  rgba(0, 0, 0, 0.4);
+    animation: fadeIn 0.2s ease;
+}
+
+.dialog-surface {
+    min-height: inherit;
+    box-sizing: border-box;
+    padding-top: 0;
+    background: var(--dialog-bg);
+    border-radius: 2px;
+    border: none;
 }
 
 .dialog-window.adaptive {
@@ -72,8 +82,18 @@
 /* header */
 .dialog-header {
     font-size: 1.1rem;
-    margin-bottom: 1vh;
-    text-shadow: 0 0 5px var(--dialog-color);
+    margin: 0 0 1vh;
+    padding: 3px;
+    background-color: var(--dialog-color-dark);
+    background-image: linear-gradient(rgba(0, 0, 0, 0.28), rgba(0, 0, 0, 0.28)), url('/images/gui/bck_stone1.png');
+    background-repeat: repeat;
+    background-attachment: fixed;
+    text-shadow: 0 0 3px var(--ui-text);
+    font-weight: bold;
+    text-transform: uppercase;
+    line-height: 1;
+    color: var(--ui-text-dark);
+    border-bottom: 2px solid rgba(0, 0, 0, 0.3);
 }
 
 /* content */
@@ -90,44 +110,73 @@
 }
 
 .dialog-button {
-    background: var(--dialog-color);
-    color: white;
-    border: 2px solid var(--dialog-color);
-    border-radius: 4px;
+    background-color: var(--dialog-color-dark);
+    background-image: url('/images/gui/bck_stone1.png');
+    background-repeat: repeat;
+    background-attachment: fixed;
+    color: var(--ui-text-dark);
+    border: 2px solid transparent;
+    border-bottom: 2px solid rgba(0, 0, 0, 0.4);
+    border-right: 2px solid rgba(0, 0, 0, 0.4);
+    border-radius: 2px;
     padding: 10px 20px;
-    font-size: 0.8rem;
+    font-size: 0.95rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    text-shadow: 0 0 3px var(--ui-text);
     cursor: url('/images/cursor-pointer.png'), pointer;
-    box-shadow: 0 0 10px var(--dialog-glow);
-    transition: all 0.2s ease;
-    opacity: 0.8;
+    box-shadow: none;
+    transition: filter 0.2s ease, box-shadow 0.2s ease;
+    opacity: 1;
 }
 
 .dialog-button.selected {
     cursor: default;
-    background: var(--dialog-color-dark);
-    border: 2px solid var(--dialog-color);
-    animation: borderPulse 1.2s infinite;
+    background-image: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url('/images/gui/bck_stone1.png');
+    background-attachment: fixed;
+    border: 2px solid transparent;
+    border-top: 2px solid rgba(0, 0, 0, 0.1);
+    border-left: 2px solid rgba(0, 0, 0, 0.1);
+    color: var(--ui-text);
+    text-shadow: 0 0 3px var(--ui-text-dark);
 }
 
 .dialog-button:hover {
-    box-shadow: 0 0 40px var(--dialog-glow);
-    opacity: 1;
+    background-image: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url('/images/gui/bck_stone1.png');
+    background-attachment: fixed;
+    border: 2px solid transparent;
+    border-top: 2px solid rgba(0, 0, 0, 0.1);
+    border-left: 2px solid rgba(0, 0, 0, 0.1);
+    color: var(--ui-text);
+    text-shadow: 0 0 3px var(--ui-text-dark);
 }
 
 .dialog-header div.tab-item {
     display: inline-block;
     padding: 5px 10px;
     margin: 0 2px;
-    border-radius: 0px 0px 6px 6px;
-    background: var(--dialog-color);
+    border-radius: 0;
+    background-color: var(--dialog-color-dark);
+    background-image: url('/images/gui/bck_stone1.png');
+    background-repeat: repeat;
+    background-attachment: fixed;
+    border: 2px solid transparent;
+    border-bottom: 2px solid rgba(0, 0, 0, 0.4);
+    border-right: 2px solid rgba(0, 0, 0, 0.4);
     cursor: url('/images/cursor-pointer.png'), pointer;
-    transition: background 0.2s ease;
-    font-size: 1rem;
+    transition: filter 0.2s ease, box-shadow 0.2s ease;
+    font-size: 0.9rem;
+    color: var(--ui-text-dark);
 }
 
 .dialog-header div.tab-item.active {
-    background: var(--dialog-color-dark);
-    box-shadow: 0 0 10px var(--dialog-glow);
+    background-image: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url('/images/gui/bck_stone1.png');
+    background-attachment: fixed;
+    border: 2px solid transparent;
+    border-top: 2px solid rgba(0, 0, 0, 0.1);
+    border-left: 2px solid rgba(0, 0, 0, 0.1);
+    color: var(--ui-text);
+    text-shadow: 0 0 3px var(--ui-text-dark);
 }
 
 .dialog-content::-webkit-scrollbar {
