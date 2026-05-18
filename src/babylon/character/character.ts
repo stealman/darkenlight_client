@@ -92,6 +92,7 @@ class Character implements Attackable, EffectTarget {
     arrowCreateTime: number = 0
     arrowShotTime: number = 0
     arrow: Arrow | null = null
+    lastCombatActivityTime: number = 0
 
     healingActive: boolean = false
     healSelf: boolean = false
@@ -237,11 +238,23 @@ class Character implements Attackable, EffectTarget {
         Connector.sendMoveMessage(new MyCharMoveMsg())
     }
 
+    markCombatActivity() {
+        this.lastCombatActivityTime = Date.now()
+    }
+
+    isRecentlyInCombat() {
+        return Date.now() - this.lastCombatActivityTime <= 10000
+    }
+
     startAutoAttack(data: AutoAttackMessage) {
         this.autoAttackMessage = data
         this.autoAttackTarget = Utils.getAttackTargetByTypeAndId(data.tp, data.tgt)
         if (!this.autoAttackTarget) {
             return
+        }
+        this.markCombatActivity()
+        if (this.autoAttackTarget instanceof Character) {
+            this.autoAttackTarget.markCombatActivity()
         }
 
         if (TargetingManager.selectedTarget === null) {
@@ -287,6 +300,9 @@ class Character implements Attackable, EffectTarget {
         const target = Utils.getAttackTargetByTypeAndId(data.tp, data.tgt)
         if (!target) {
             return
+        }
+        if (target instanceof Character) {
+            target.markCombatActivity()
         }
         target.hpPercent = data.res.tgt.hpp
         if (target === MyPlayer.myChar) {

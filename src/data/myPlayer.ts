@@ -33,6 +33,7 @@ import { StaticsManager } from '@/babylon/world/statics/staticsManager'
 import { StaticObjectsCodebook } from '@/babylon/world/statics/staticsCodebook'
 import { ClientAffectGroup } from '@/data/affects'
 import { Controller } from '@/controlls/controller'
+import { MyCombatData } from '@/data/myCombatData'
 
 /**
  * Controlling object for the player's character
@@ -235,6 +236,8 @@ export const MyPlayer = {
     },
 
     combatDataChange(data: AttackableCombatTO) {
+        MyCombatData.consumeData(data)
+
         // Speed change
         if (data.spd1 != null && data.spd2 != null) {
             this.myChar.walkSpeed = data.spd1

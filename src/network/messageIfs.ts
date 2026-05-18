@@ -1,4 +1,3 @@
-import { CraftingTypes } from '@/data/crafting/craftingManager'
 
 export interface AttackableBasicTO {
     id: number
@@ -17,6 +16,14 @@ export interface AttackableCombatTO {
     id: number
     spd1?: number
     spd2?: number
+
+    str?: number
+    agi?: number
+    int?: number
+    wis?: number
+
+    patk?: number
+    aaCd?: number
 }
 
 export interface  AutoAttackMessage {

@@ -149,6 +149,7 @@ export class CharacterModel implements EquipBearer {
                 this.oreMiningAnim = newAnimationGroups[12]
 
                 this.idleAnim?.start(true, 0.5)
+                this.actualAnim = this.idleAnim
             }
             this.skeleton = result.skeletons[0];
             this.lhandNode.attachToBone(this.skeleton.bones.find(b => b.id === "Bone.012")!, this.model) // Lhand 012
@@ -400,8 +401,8 @@ export class CharacterModel implements EquipBearer {
     }
 
     stopAnimation() {
-        const desiredAnimation = this.combatIdleAnim
-        const animSpeed = 0.75
+        const desiredAnimation = this.parent.isRecentlyInCombat() ? this.combatIdleAnim : this.idleAnim
+        const animSpeed = desiredAnimation === this.combatIdleAnim ? 0.75 : 0.5
 
         if (this.actualAnim !== desiredAnimation) {
             this.transitionToAnimation(desiredAnimation, 0.25, true, animSpeed)

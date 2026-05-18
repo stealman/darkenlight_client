@@ -68,7 +68,13 @@
       "actions": "Actions",
       "skills": "Skills",
       "chat": "Chat"
-    }
+    },
+    "strength": "Strength",
+    "agility": "Agility",
+    "intelligence": "Intelligence",
+    "wisdom": "Wisdom",
+    "physicalAttack": "Physical attack",
+    "physicalDefense": "Physical defense"
   },
   "actions": {
     "noneTitle": "Unassigned",

@@ -68,7 +68,13 @@
       "actions": "Akce",
       "skills": "Dovednosti",
       "chat": "Chat"
-    }
+    },
+    "strength": "Síla",
+    "agility": "Obratnost",
+    "intelligence": "Inteligence",
+    "wisdom": "Moudrost",
+    "physicalAttack": "Fyzický útok",
+    "physicalDefense": "Fyzická obrana"
   },
   "actions": {
     "noneTitle": "Nevybráno",
