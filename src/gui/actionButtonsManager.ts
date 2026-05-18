@@ -471,24 +471,24 @@ export const ActionButtonsManager = {
 
         if (Settings.actionButtonsLayout == '1COLUMN') {
             this.buttonsPanel1.style.setProperty('bottom', Settings.actionButtonsYOffset + 'px')
-            this.opportunityButtonsPanel.style.setProperty('bottom', Settings.actionButtonsYOffset + 'px')
-            this.opportunityButtonsPanel.style.setProperty('right', (newSize + panelGap) + 'px')
+            this.opportunityButtonsPanel.style.setProperty('bottom', (Settings.actionButtonsYOffset + 1) + 'px')
+            this.opportunityButtonsPanel.style.setProperty('right', (newSize + panelGap + 2) + 'px')
         }
 
         if (Settings.actionButtonsLayout == '2COLUMN') {
             this.buttonsPanel1.style.setProperty('bottom', Settings.actionButtonsYOffset + 'px')
             this.buttonsPanel2.style.setProperty('bottom', Settings.actionButtonsYOffset + 'px')
             this.buttonsPanel2.style.setProperty('right', (newSize + panelGap) + 'px')
-            this.opportunityButtonsPanel.style.setProperty('bottom', Settings.actionButtonsYOffset + 'px')
-            this.opportunityButtonsPanel.style.setProperty('right', ((newSize + panelGap) * 2) + 'px')
+            this.opportunityButtonsPanel.style.setProperty('bottom', (Settings.actionButtonsYOffset + 1) + 'px')
+            this.opportunityButtonsPanel.style.setProperty('right', (((newSize + panelGap) * 2) + 2) + 'px')
         }
 
         if (Settings.actionButtonsLayout == 'CORNER') {
             this.buttonsPanel1.style.setProperty('bottom', (Settings.actionButtonsYOffset + newSize + panelGap) + 'px')
             this.buttonsPanel2.style.setProperty('bottom', Settings.actionButtonsYOffset + 'px')
             this.buttonsPanel2.style.setProperty('right', '0px')
-            this.opportunityButtonsPanel.style.setProperty('bottom', (Settings.actionButtonsYOffset + newSize + panelGap) + 'px')
-            this.opportunityButtonsPanel.style.setProperty('right', (newSize + panelGap) + 'px')
+            this.opportunityButtonsPanel.style.setProperty('bottom', (Settings.actionButtonsYOffset + newSize + panelGap + 1) + 'px')
+            this.opportunityButtonsPanel.style.setProperty('right', (newSize + panelGap + 2) + 'px')
         }
 
         GuiButtonsManager.setSize(newSize)
