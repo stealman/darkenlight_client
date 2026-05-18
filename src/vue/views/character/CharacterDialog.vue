@@ -1,31 +1,34 @@
 <template>
-    <div id="character-dialog-backdrop" class="dialog-backdrop inventory-dialog-backdrop" @click.self="closeDialog">
-        <div class="dialog-window adaptive inventory-dialog-window character-dialog-window">
-            <div class="dialog-header">
-                <div
-                    v-for="tab in tabs"
-                    :key="tab.id"
-                    class="tab-item"
-                    :class="tab.id === activeTabId ? 'active' : ''"
-                    @click="activeTabId = tab.id"
-                >
-                    <label class="noselect">{{ tab.name }}</label>
-                </div>
+    <GameDialog
+        backdrop-id="character-dialog-backdrop"
+        backdrop-class="inventory-dialog-backdrop"
+        window-class="adaptive inventory-dialog-window character-dialog-window"
+        @close="closeDialog"
+    >
+        <template #header>
+            <div
+                v-for="tab in tabs"
+                :key="tab.id"
+                class="tab-item"
+                :class="tab.id === activeTabId ? 'active' : ''"
+                @click="activeTabId = tab.id"
+            >
+                <label class="noselect">{{ tab.name }}</label>
             </div>
-            <div class="dialog-content">
-                <div class="inventory-content-shell character-content-shell">
-                    <CharacterOverviewTab v-if="activeTabId === 'character'" />
-                    <CharacterActionsTab v-else-if="activeTabId === 'actions'" ref="characterActionsTabRef" />
-                    <CharacterSkillsTab v-else-if="activeTabId === 'skills'" />
-                    <CharacterChatTab v-else-if="activeTabId === 'chat'" />
-                </div>
-            </div>
+        </template>
+
+        <div class="inventory-content-shell character-content-shell">
+            <CharacterOverviewTab v-if="activeTabId === 'character'" />
+            <CharacterActionsTab v-else-if="activeTabId === 'actions'" ref="characterActionsTabRef" />
+            <CharacterSkillsTab v-else-if="activeTabId === 'skills'" />
+            <CharacterChatTab v-else-if="activeTabId === 'chat'" />
         </div>
-    </div>
+    </GameDialog>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, ref } from 'vue'
+import GameDialog from '@/vue/views/GameDialog.vue'
 import CharacterOverviewTab from '@/vue/views/character/CharacterOverviewTab.vue'
 import CharacterActionsTab from '@/vue/views/character/CharacterActionsTab.vue'
 import CharacterSkillsTab from '@/vue/views/character/CharacterSkillsTab.vue'
@@ -52,20 +55,6 @@ const openDialog = () => {
 const closeDialog = () => {
     emit('close')
 }
-
-const onDialogKeyDown = (event: KeyboardEvent) => {
-    if (event.key === 'Escape') {
-        closeDialog()
-    }
-}
-
-onMounted(() => {
-    window.addEventListener('keydown', onDialogKeyDown)
-})
-
-onUnmounted(() => {
-    window.removeEventListener('keydown', onDialogKeyDown)
-})
 
 defineExpose({
     openDialog

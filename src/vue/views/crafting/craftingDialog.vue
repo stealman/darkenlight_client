@@ -1,8 +1,14 @@
 <template>
-    <div class="dialog-backdrop inventory-dialog-backdrop" @click.self="onBackdropClick">
-        <div ref="dialogWindowRef" class="dialog-window adaptive inventory-dialog-window crafting-dialog-window">
-            <div class="dialog-content crafting-dialog-content">
-                <div class="inventory-content-shell crafting-content-shell">
+    <GameDialog
+        ref="dialogRef"
+        backdrop-class="inventory-dialog-backdrop"
+        window-class="adaptive inventory-dialog-window crafting-dialog-window"
+        content-class="crafting-dialog-content"
+        :close-on-backdrop="false"
+        @backdrop-click="onBackdropClick"
+        @close="closeDialog"
+    >
+        <div class="inventory-content-shell crafting-content-shell">
                     <div class="crafting-recipes-section">
                         <div v-if="recipes.length === 0" class="crafting-empty-state">
                             {{ t('crafting.noRecipes') }}
@@ -140,29 +146,30 @@
                             </button>
                         </div>
                     </div>
-                </div>
-            </div>
         </div>
 
-        <CraftingItemOverlay
-            v-if="itemInfoOverlay.visible"
-            ref="itemInfoOverlayRef"
-            :item-info="itemInfoOverlay"
-            :x="itemInfoOverlay.x"
-            :y="itemInfoOverlay.y"
-            @close="hideItemInfoOverlay"
-        />
-    </div>
+        <template #overlay>
+            <CraftingItemOverlay
+                v-if="itemInfoOverlay.visible"
+                ref="itemInfoOverlayRef"
+                :item-info="itemInfoOverlay"
+                :x="itemInfoOverlay.x"
+                :y="itemInfoOverlay.y"
+                @close="hideItemInfoOverlay"
+            />
+        </template>
+    </GameDialog>
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import type { CraftingInitMenuData, CraftingRecipe, ItemTO } from '@/network/messageIfs'
 import { t } from '@/i18n'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { CraftingManager } from '@/data/crafting/craftingManager'
 import { Settings } from '@/settings/settings'
 import CraftingItemOverlay from '@/vue/views/crafting/craftingItemOverlay.vue'
+import GameDialog from '@/vue/views/GameDialog.vue'
 
 const emit = defineEmits(['close'])
 
@@ -179,7 +186,7 @@ type CraftingRecipeWithCraftableQty = CraftingRecipe & {
     craftableQty?: number
 }
 
-const dialogWindowRef = ref<HTMLElement | null>(null)
+const dialogRef = ref(null)
 const itemInfoOverlayRef = ref<{ getBoundingClientRect?: () => DOMRect } | null>(null)
 const craftingMenuData = ref<CraftingInitMenuData | null>(null)
 const craftingActionButtonSize = ref(Settings.actionButtonSize)
@@ -309,7 +316,7 @@ const selectRecipe = (recipeIndex: number) => {
 }
 
 const clampItemInfoOverlayPosition = () => {
-    const dialogRect = dialogWindowRef.value?.getBoundingClientRect?.()
+    const dialogRect = dialogRef.value?.windowRef?.getBoundingClientRect?.()
     const overlayRect = itemInfoOverlayRef.value?.getBoundingClientRect?.()
     if (!dialogRect || !overlayRect) {
         return
@@ -422,20 +429,6 @@ const onBackdropClick = () => {
 
     closeDialog()
 }
-
-const onDialogKeyDown = (event: KeyboardEvent) => {
-    if (event.key === 'Escape') {
-        closeDialog()
-    }
-}
-
-onMounted(() => {
-    window.addEventListener('keydown', onDialogKeyDown)
-})
-
-onUnmounted(() => {
-    window.removeEventListener('keydown', onDialogKeyDown)
-})
 
 watch(selectedRecipeCraftableQty, (craftableQty) => {
     if (craftableQty <= 0) {

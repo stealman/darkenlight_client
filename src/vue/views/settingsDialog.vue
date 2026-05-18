@@ -1,12 +1,14 @@
 <template>
-    <div id="setting-dialog-backdrop" class="dialog-backdrop" @click.self="closeDialog">
-        <div class="dialog-window">
-            <div class="dialog-header">
-                <div v-for="tab in tabs" :key="tab.id" class="tab-item" :class="tab.id === activeTabId ? 'active' : ''" @click="activeTabId = tab.id">
-                    <label class="noselect">{{ tab.name }}</label>
-                </div>
+    <GameDialog
+        backdrop-id="setting-dialog-backdrop"
+        @close="closeDialog"
+    >
+        <template #header>
+            <div v-for="tab in tabs" :key="tab.id" class="tab-item" :class="tab.id === activeTabId ? 'active' : ''" @click="activeTabId = tab.id">
+                <label class="noselect">{{ tab.name }}</label>
             </div>
-            <div class="dialog-content">
+        </template>
+
                 <div v-if="activeTabId == 1">
                     <div style="max-height: 65vh; overflow-y: auto;">
                         <div>{{ t('settings.deviceDescription') }}</div>
@@ -146,13 +148,12 @@
                 </div>
 
                 <div v-if="graphicSettingsChanged" class="text-warning" style="margin-top: 20px;">{{ t('settings.graphicsRestartWarning') }}</div>
-            </div>
-        </div>
-    </div>
+    </GameDialog>
 </template>
 
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
+import GameDialog from '@/vue/views/GameDialog.vue'
 import { Settings } from '@/settings/settings'
 import { Renderer } from '@/babylon/scene/renderer'
 import { Lights } from '@/babylon/scene/lights'

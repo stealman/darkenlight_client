@@ -1,70 +1,71 @@
 <template>
-    <div class="dialog-backdrop">
-        <div class="dialog-window">
-            <div class="dialog-header">
-                {{ t('login.guestTitle') }}
-            </div>
-            <div class="dialog-content">
-                <table>
-                    <tbody>
-                    <tr>
-                        <td class="item-label" style="width: 25%">{{ t('login.name') }}</td>
-                        <td style="width: 25%">
-                            <input id="username" style="color: var(--ui-text);" v-model="charName" type="text" @keydown="clearLoginAndPassword" />
-                        </td>
-                    </tr>
-                    </tbody>
-                </table>
-            </div>
+    <GameDialog
+        :close-on-backdrop="false"
+        :close-on-escape="false"
+    >
+        <template #header>
+            {{ t('login.guestTitle') }}
+        </template>
 
-            <div class="dialog-header" style="margin-top: 2vh;">
-                {{ t('login.accountTitle') }}
-            </div>
-            <div class="dialog-content">
-                <table>
-                    <tbody>
-                    <tr>
-                        <td class="item-label" style="width: 25%">{{ t('login.login') }}</td>
-                        <td style="width: 25%">
-                            <input style="color: var(--ui-text);" v-model="login" type="text" @keydown="clearCharName" />
-                        </td>
-                    </tr>
+        <table>
+            <tbody>
+            <tr>
+                <td class="item-label" style="width: 25%">{{ t('login.name') }}</td>
+                <td style="width: 25%">
+                    <input id="username" style="color: var(--ui-text);" v-model="charName" type="text" @keydown="clearLoginAndPassword" />
+                </td>
+            </tr>
+            </tbody>
+        </table>
 
-                    <tr>
-                        <td class="item-label" style="width: 25%">{{ t('login.password') }}</td>
-                        <td style="width: 25%">
-                            <div class="relative mt-2">
-                                <input style="color: var(--ui-text);" type="password" v-model="password" />
-                            </div>
-                        </td>
-                    </tr>
-
-                    <tr>
-                        <td class="item-label" style="width: 25%">{{ t('login.rememberMe') }}</td>
-                        <td style="width: 25%">
-                            <Checkbox name="remember-me" input-id="rememberme" v-model="rememberMe" binary />
-                        </td>
-                    </tr>
-
-                    <tr v-if="rememberMe">
-                        <td class="item-label" style="width: 25%">{{ t('login.autoLogin') }}</td>
-                        <td style="width: 25%">
-                            <Checkbox name="remember-me" input-id="autologin" v-model="autoLogin" binary />
-                        </td>
-                    </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <div class="dialog-actions" style="margin-top: 20px;">
-                <button class="dialog-button" @click="doLogin()">{{ t('login.submit') }}</button>
-            </div>
+        <div class="dialog-header" style="margin-top: 2vh;">
+            {{ t('login.accountTitle') }}
         </div>
-    </div>
+        <div class="dialog-content">
+            <table>
+                <tbody>
+                <tr>
+                    <td class="item-label" style="width: 25%">{{ t('login.login') }}</td>
+                    <td style="width: 25%">
+                        <input style="color: var(--ui-text);" v-model="login" type="text" @keydown="clearCharName" />
+                    </td>
+                </tr>
+
+                <tr>
+                    <td class="item-label" style="width: 25%">{{ t('login.password') }}</td>
+                    <td style="width: 25%">
+                        <div class="relative mt-2">
+                            <input style="color: var(--ui-text);" type="password" v-model="password" />
+                        </div>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td class="item-label" style="width: 25%">{{ t('login.rememberMe') }}</td>
+                    <td style="width: 25%">
+                        <Checkbox name="remember-me" input-id="rememberme" v-model="rememberMe" binary />
+                    </td>
+                </tr>
+
+                <tr v-if="rememberMe">
+                    <td class="item-label" style="width: 25%">{{ t('login.autoLogin') }}</td>
+                    <td style="width: 25%">
+                        <Checkbox name="remember-me" input-id="autologin" v-model="autoLogin" binary />
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="dialog-actions" style="margin-top: 20px;">
+            <button class="dialog-button" @click="doLogin()">{{ t('login.submit') }}</button>
+        </div>
+    </GameDialog>
 </template>
 
 <script setup>
 import { onMounted, ref } from 'vue'
+import GameDialog from '@/vue/views/GameDialog.vue'
 import { Connector } from '@/network/connector'
 import { useI18n } from '@/i18n'
 

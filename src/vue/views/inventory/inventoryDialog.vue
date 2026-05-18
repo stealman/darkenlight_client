@@ -1,55 +1,59 @@
 <template>
-    <div id="setting-dialog-backdrop" class="dialog-backdrop inventory-dialog-backdrop" @click.self="closeDialog" >
-        <div ref="dialogWindowRef" class="dialog-window adaptive inventory-dialog-window">
-            <div class="dialog-content">
-                <div class="inventory-content-shell">
-                    <div class="inventory-layout">
-                        <EquipSet
-                            :equip-slots="equipSlots"
-                            :weapon-setup-images="weaponSetupImages"
-                            :weapon-setup-pressed="weaponSetupPressed"
-                            @slot-pointerdown="handleSlotPointerDown"
-                            @weapon-setup-hover="setWeaponSetupHover"
-                            @weapon-setup-pointerdown="onWeaponSetupPointerDown"
-                            @weapon-setup-pointerup="onWeaponSetupPointerUp"
-                            @weapon-setup-pointercancel="cancelWeaponSetupPointer"
-                        />
+    <GameDialog
+        ref="dialogRef"
+        backdrop-id="setting-dialog-backdrop"
+        backdrop-class="inventory-dialog-backdrop"
+        window-class="adaptive inventory-dialog-window"
+        @close="closeDialog"
+    >
+        <div class="inventory-content-shell">
+            <div class="inventory-layout">
+                <EquipSet
+                    :equip-slots="equipSlots"
+                    :weapon-setup-images="weaponSetupImages"
+                    :weapon-setup-pressed="weaponSetupPressed"
+                    @slot-pointerdown="handleSlotPointerDown"
+                    @weapon-setup-hover="setWeaponSetupHover"
+                    @weapon-setup-pointerdown="onWeaponSetupPointerDown"
+                    @weapon-setup-pointerup="onWeaponSetupPointerUp"
+                    @weapon-setup-pointercancel="cancelWeaponSetupPointer"
+                />
 
-                        <Backpack
-                            :slot-count="inventorySlotCount"
-                            :slot-images="inventorySlotImages"
-                            :get-markers="getWeaponSetupMarkersForInventorySlot"
-                            :get-stack-count="getStackCountForInventorySlot"
-                            @slot-pointerdown="handleInventorySlotPointerDown"
-                        />
-                    </div>
-                </div>
+                <Backpack
+                    :slot-count="inventorySlotCount"
+                    :slot-images="inventorySlotImages"
+                    :get-markers="getWeaponSetupMarkersForInventorySlot"
+                    :get-stack-count="getStackCountForInventorySlot"
+                    @slot-pointerdown="handleInventorySlotPointerDown"
+                />
             </div>
         </div>
 
-        <!-- Item info overlay -->
-        <item-info-overlay
-            v-if="itemInfoOverlay.visible"
-            ref="itemInfoOverlayRef"
-            :item-info="itemInfoOverlay"
-            context="INVENTORY"
-            :x="itemInfoOverlay.x"
-            :y="itemInfoOverlay.y"
-            :action-button-size="inventoryActionButtonSize"
-            @close="hideItemInfoOverlay"
-            @drop-item="onDropItemClick"
-            @split-item="onSplitItemClick"
-            @merge-item="onMergeItemClick"
-            @create-camp="onCreateCampClick"
-            @content-resized="onItemInfoOverlayContentResized"
-        />
-    </div>
+        <template #overlay>
+            <item-info-overlay
+                v-if="itemInfoOverlay.visible"
+                ref="itemInfoOverlayRef"
+                :item-info="itemInfoOverlay"
+                context="INVENTORY"
+                :x="itemInfoOverlay.x"
+                :y="itemInfoOverlay.y"
+                :action-button-size="inventoryActionButtonSize"
+                @close="hideItemInfoOverlay"
+                @drop-item="onDropItemClick"
+                @split-item="onSplitItemClick"
+                @merge-item="onMergeItemClick"
+                @create-camp="onCreateCampClick"
+                @content-resized="onItemInfoOverlayContentResized"
+            />
+        </template>
+    </GameDialog>
 </template>
 
 <script setup lang="ts">
 
-import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onUnmounted, ref } from 'vue'
 import { MyPlayer } from '@/data/myPlayer'
+import GameDialog from '@/vue/views/GameDialog.vue'
 import EquipSet from '@/vue/views/inventory/equipSet.vue'
 import Backpack from '@/vue/views/inventory/backpack.vue'
 import {
@@ -98,7 +102,7 @@ const WEAPON_SETUP_HOLD_MS = 500
 const OVERLAY_PADDING = 4
 const OVERLAY_CURSOR_OFFSET_X = 2
 
-const dialogWindowRef = ref(null)
+const dialogRef = ref(null)
 const itemInfoOverlayRef = ref(null)
 const inventoryActionButtonSize = ref(Settings.actionButtonSize)
 const storedWeaponSetups = ref(InventoryManager.getStoredWeaponSetups())
@@ -191,7 +195,7 @@ const showItemInfoOverlay = (item, pointer, options = {}) => {
 }
 
 const clampItemInfoOverlayPosition = () => {
-    const dialogRect = dialogWindowRef.value?.getBoundingClientRect?.()
+    const dialogRect = dialogRef.value?.windowRef?.getBoundingClientRect?.()
     const overlayRect = itemInfoOverlayRef.value?.getBoundingClientRect?.()
     if (!dialogRect || !overlayRect) {
         return
@@ -689,12 +693,7 @@ const createPointerDoubleClickHandler = (singleClick, doubleClick, interval) => 
 const handleSlotPointerDown = createPointerDoubleClickHandler(onclick, onDoubleClick, DOUBLE_CLICK_MS)
 const handleInventorySlotPointerDown = createPointerDoubleClickHandler(onInventoryClick, onInventoryDoubleClick, DOUBLE_CLICK_MS)
 
-onMounted(() => {
-    window.addEventListener('keydown', onDialogKeyDown)
-})
-
 onUnmounted(() => {
-    window.removeEventListener('keydown', onDialogKeyDown)
     for (const handler of pointerClickHandlers) {
         handler.dispose()
     }
@@ -713,12 +712,6 @@ const openDialog = () => {
 const closeDialog = () => {
     hideItemInfoOverlay()
     emit('close');
-}
-
-const onDialogKeyDown = (event) => {
-    if (event.key === 'Escape') {
-        closeDialog()
-    }
 }
 
 defineExpose({
