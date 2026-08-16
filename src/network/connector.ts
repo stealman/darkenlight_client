@@ -14,7 +14,7 @@ export const Connector = {
 
     initialize() {
         const socketUrl = import.meta.env.DEV
-            ? 'ws://192.168.0.227:3000'
+            ? import.meta.env.VITE_GAME_WS_URL || 'ws://localhost:3000'
             : `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/game/ws`
         this.socket = new WebSocket(socketUrl)
 
