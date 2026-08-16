@@ -13,7 +13,10 @@ export const Connector = {
     lastMoveMessageTime: 0,
 
     initialize() {
-        this.socket = new WebSocket('ws://192.168.0.227:3000')
+        const socketUrl = import.meta.env.DEV
+            ? 'ws://192.168.0.227:3000'
+            : `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/game/ws`
+        this.socket = new WebSocket(socketUrl)
 
         this.socket.onopen = () => {
             console.log('WS connection estabilished')
