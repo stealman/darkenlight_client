@@ -20,6 +20,16 @@
     "errorTitle": "An error occurred",
     "errorRestartQuestion": "Do you want to restart the game?"
   },
+  "pwa": {
+    "install": "Install game",
+    "installTitle": "Install Darkenlight",
+    "installBrowser": "Confirm the Darkenlight app installation in your browser.",
+    "installApple": "In Safari, open Share and choose Add to Home Screen.",
+    "close": "Close",
+    "updateTitle": "A new game version is ready",
+    "updateText": "The update will load after refreshing the page.",
+    "update": "Update"
+  },
   "login": {
     "guestTitle": "Login as guest",
     "accountTitle": "Login with account",

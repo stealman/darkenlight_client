@@ -20,6 +20,16 @@
     "errorTitle": "Došlo k chybě",
     "errorRestartQuestion": "Chcete hru restartovat ?"
   },
+  "pwa": {
+    "install": "Nainstalovat hru",
+    "installTitle": "Nainstalovat Darkenlight",
+    "installBrowser": "V prohlížeči potvrď instalaci aplikace Darkenlight.",
+    "installApple": "V Safari otevři Sdílet a zvol Přidat na plochu.",
+    "close": "Zavřít",
+    "updateTitle": "Je připravena nová verze hry",
+    "updateText": "Aktualizace se načte po obnovení stránky.",
+    "update": "Aktualizovat"
+  },
   "login": {
     "guestTitle": "Přihlásit jako host",
     "accountTitle": "Přihlásit účtem",

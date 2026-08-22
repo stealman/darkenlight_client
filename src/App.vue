@@ -107,6 +107,8 @@
             </div>
         </div>
     </div>
+
+    <PwaControls :visible="displayLoginDialog && !gameLoading" />
 </template>
 
 <script setup lang="ts">
@@ -124,6 +126,7 @@ import InventoryDialog from '@/vue/views/inventory/inventoryDialog.vue'
 import CharacterDialog from '@/vue/views/character/CharacterDialog.vue'
 import CraftingDialog from '@/vue/views/crafting/craftingDialog.vue'
 import OnScreenMessages from '@/vue/views/onScreenMessages.vue'
+import PwaControls from '@/vue/views/PwaControls.vue'
 import { Controller } from '@/controlls/controller'
 import {
     getHamburgerMenuSvg,
