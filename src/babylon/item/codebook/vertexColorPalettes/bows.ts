@@ -1,8 +1,9 @@
-import { VertexColorWeaponPalette } from './types'
+import { BOW_WEAPON_MATERIAL_NAMES, VertexColorWeaponPalette } from './types'
 
 /** Local vertex-colour palettes for bow models. */
 export const BowVertexColorPalettes: Record<string, VertexColorWeaponPalette> = {
     HUNTING_BOW: {
+        materialNames: BOW_WEAPON_MATERIAL_NAMES,
         slots: [
             {index: 0, source: [23, 23, 23], role: 'string dark'},
             {index: 1, source: [11, 8, 5], role: 'wood deepest shadow'},

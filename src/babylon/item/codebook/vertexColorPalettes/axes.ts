@@ -1,8 +1,9 @@
-import { VertexColorWeaponPalette } from './types'
+import { METAL_WEAPON_MATERIAL_NAMES, PICKAXE_MATERIAL_NAMES, VertexColorWeaponPalette } from './types'
 
 /** Local vertex-colour palettes for axe and pickaxe models. */
 export const AxeVertexColorPalettes: Record<string, VertexColorWeaponPalette> = {
     PICKAXE: {
+        materialNames: PICKAXE_MATERIAL_NAMES,
         slots: [
             {index: 0, source: [40, 23, 7], role: 'shaft mid'},
             {index: 1, source: [72, 80, 88], role: 'head dark'},
@@ -28,6 +29,7 @@ export const AxeVertexColorPalettes: Record<string, VertexColorWeaponPalette> = 
     },
 
     GREATAXE: {
+        materialNames: METAL_WEAPON_MATERIAL_NAMES,
         slots: [
             {index: 0, source: [40, 23, 7], role: 'shaft mid'},
             {index: 1, source: [48, 52, 51], role: 'head mid'},

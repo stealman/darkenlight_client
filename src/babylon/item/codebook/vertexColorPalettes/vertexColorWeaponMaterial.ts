@@ -12,6 +12,9 @@ function validatePalette(name: string, palette: VertexColorWeaponPalette) {
     if (palette.materialColors.length === 0) {
         throw new Error(`${name}: palette must contain at least one material colour row.`)
     }
+    if (palette.materialNames.length !== palette.materialColors.length) {
+        throw new Error(`${name}: material names must match the number of material colour rows.`)
+    }
 
     const expectedSlotCount = palette.slots.length
     palette.slots.forEach((slot, index) => {

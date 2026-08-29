@@ -27,10 +27,10 @@
                         </select>
                     </label>
                     <label class="model-render-control">
-                        <span>Material Index</span>
+                        <span>Material</span>
                         <select v-model.number="previewMatIndex">
-                            <option v-for="index in materialIndexOptions" :key="index" :value="index">
-                                {{ index }}
+                            <option v-for="option in materialIndexOptions" :key="option.index" :value="option.index">
+                                {{ option.label }}
                             </option>
                         </select>
                     </label>
@@ -48,7 +48,7 @@
                     </label>
                     <label class="model-render-control">
                         <span>Environment Intensity: {{ materialEnvironmentIntensity.toFixed(2) }}</span>
-                        <input v-model.number="materialEnvironmentIntensity" type="range" min="0" max="3" step="0.01" @input="applyPreviewMaterialSettings">
+                        <input v-model.number="materialEnvironmentIntensity" type="range" min="0" max="5" step="0.01" @input="applyPreviewMaterialSettings">
                     </label>
                 </div>
                 <div class="model-render-right-panel">
@@ -96,13 +96,18 @@ import { ArcRotateCamera, Color3, Color4, CubeTexture, DirectionalLight, Engine,
 import { Materials } from '@/babylon/materials'
 import { WeaponModelsCb } from '@/babylon/item/codebook/weaponModelsCb'
 import { ARMOR_MATERIAL_METALIC, ArmorModelsCb, BASE_EQUIP_MATERIAL_PATH } from '@/babylon/item/codebook/armorsModelsCb'
+import { VertexColorWeaponPalettesByModelKey } from '@/babylon/item/codebook/vertexColorPalettes'
+import { createVertexColorWeaponMaterial } from '@/babylon/item/codebook/vertexColorPalettes/vertexColorWeaponMaterial'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { Settings } from '@/settings/settings'
 import { canvasToPngBlobWithTransparentColor } from '@/utils/pngUtils'
 
 const MODEL_RENDER_SETTINGS_LS_KEY = 'model-render-settings'
 
-const WEAPON_OPTIONS = Object.entries(WeaponModelsCb).map(([key, item]) => ({ key, item, label: `${key} (${item.model})` }))
+const WEAPON_OPTIONS = Object.entries(VertexColorWeaponPalettesByModelKey).map(([key, weapon]) => {
+    const item = WeaponModelsCb[key]
+    return { key, item, ...weapon, label: `${key} (${item.model})` }
+})
 const ARMOR_OPTIONS = Object.entries(ArmorModelsCb).map(([key, item]) => ({ key, item, label: `${key} (${item.model})` }))
 
 const dialogVisible = ref(false)
@@ -122,20 +127,30 @@ const materialMetallic = ref(0.75)
 const materialRoughness = ref(1)
 const materialDirectIntensity = ref(1.5)
 const materialEnvironmentIntensity = ref(1)
-const selectedPreviewItem = computed(() => {
+const selectedPreviewOption = computed(() => {
     const options = previewCategory.value === 'WEAPON' ? WEAPON_OPTIONS : ARMOR_OPTIONS
-    return options.find((option) => option.key === selectedModelKey.value)?.item ?? null
+    return options.find((option) => option.key === selectedModelKey.value) ?? null
 })
+const selectedPreviewItem = computed(() => {
+    return selectedPreviewOption.value?.item ?? null
+})
+const selectedWeaponPalette = computed(() => previewCategory.value === 'WEAPON' ? selectedPreviewOption.value?.palette ?? null : null)
 const currentMaterialSlots = computed(() => {
     const item = selectedPreviewItem.value
     if (!item) {
         return 0
     }
+    if (selectedWeaponPalette.value) {
+        return selectedWeaponPalette.value.materialColors.length
+    }
     return item.matCols * item.matRows
 })
 const materialIndexOptions = computed(() => {
-    const maxIndex = Math.max(currentMaterialSlots.value, 0)
-    return Array.from({ length: maxIndex + 1 }, (_, i) => i)
+    const materialNames = selectedWeaponPalette.value?.materialNames
+    return Array.from({ length: currentMaterialSlots.value }, (_, index) => ({
+        index,
+        label: materialNames?.[index] ?? `Material ${index + 1}`,
+    }))
 })
 
 let engine = null
@@ -204,7 +219,7 @@ const loadSettingsForCurrentSelection = () => {
     materialMetallic.value = clamp(Number(settings.materialMetallic ?? 0.75), 0, 1)
     materialRoughness.value = clamp(Number(settings.materialRoughness ?? 1), 0, 1)
     materialDirectIntensity.value = clamp(Number(settings.materialDirectIntensity ?? 1.5), 0, 3)
-    materialEnvironmentIntensity.value = clamp(Number(settings.materialEnvironmentIntensity ?? 1), 0, 3)
+    materialEnvironmentIntensity.value = clamp(Number(settings.materialEnvironmentIntensity ?? 1), 0, 5)
 }
 
 const persistSettingsForCurrentSelection = () => {
@@ -317,19 +332,21 @@ const applyCurrentMaterialIndex = () => {
     if (!previewMesh || !previewItem) {
         return
     }
-    const maxIndex = Math.max(previewItem.matCols * previewItem.matRows, 0)
+    const materialSlots = currentMaterialSlots.value
+    const maxIndex = Math.max(materialSlots - 1, 0)
     const safeIndex = clamp(previewMatIndex.value, 0, maxIndex)
     if (safeIndex !== previewMatIndex.value) {
         previewMatIndex.value = safeIndex
     }
-    applyAtlasIndexToMesh(previewMesh, previewItem.matCols, previewItem.matRows, safeIndex)
+    const isWeapon = previewCategory.value === 'WEAPON'
+    applyAtlasIndexToMesh(previewMesh, isWeapon ? materialSlots : previewItem.matCols, isWeapon ? 1 : previewItem.matRows, safeIndex)
 }
 
 const applyPreviewMaterialSettings = () => {
     const safeMetallic = clamp(materialMetallic.value ?? 0.75, 0, 1)
     const safeRoughness = clamp(materialRoughness.value ?? 1, 0, 1)
     const safeDirectIntensity = clamp(materialDirectIntensity.value ?? 1.5, 0, 3)
-    const safeEnvironmentIntensity = clamp(materialEnvironmentIntensity.value ?? 1, 0, 3)
+    const safeEnvironmentIntensity = clamp(materialEnvironmentIntensity.value ?? 1, 0, 5)
 
     materialMetallic.value = safeMetallic
     materialRoughness.value = safeRoughness
@@ -364,6 +381,10 @@ const loadPreview = async () => {
     previewMaterial = null
 
     const isWeapon = previewCategory.value === 'WEAPON'
+    const weaponPalette = selectedWeaponPalette.value
+    if (isWeapon && !weaponPalette) {
+        return
+    }
     const modelPath = isWeapon ? `weapons/${previewItem.model}.glb` : `armors/${previewItem.model}.babylon`
     const importResult = await SceneLoader.ImportMeshAsync('', '/models/equip/', modelPath, scene)
     const sourceMeshes = importResult.meshes.filter((m) => m instanceof Mesh && m.getTotalVertices() > 0)
@@ -389,25 +410,23 @@ const loadPreview = async () => {
     previewBaseScaling = merged.scaling.clone()
     loadSettingsForCurrentSelection()
 
-    previewMaterial = Materials.getPBRCustomMaterialFrom(
-        scene,
-        `modelRenderMaterial-${previewCategory.value}-${previewItem.model}`,
-        `${BASE_EQUIP_MATERIAL_PATH}${isWeapon ? 'weapons/' : 'armors/'}`,
-        isWeapon ? `${previewItem.model}.png` : `${ARMOR_MATERIAL_METALIC}.png`,
-        1 / previewItem.matCols,
-        1 / previewItem.matRows,
-        false,
-        {
-            metallic: materialMetallic.value,
-            roughness: materialRoughness.value,
-            directIntensity: materialDirectIntensity.value,
-            environmentIntensity: materialEnvironmentIntensity.value,
-        }
-    )
-
-    if (isWeapon) {
-        previewMaterial.albedoTexture.vScale = -previewMaterial.albedoTexture.vScale
-    }
+    previewMaterial = isWeapon
+        ? createVertexColorWeaponMaterial(`modelRenderMaterial-${previewItem.model}`, scene, weaponPalette)
+        : Materials.getPBRCustomMaterialFrom(
+            scene,
+            `modelRenderMaterial-${previewCategory.value}-${previewItem.model}`,
+            `${BASE_EQUIP_MATERIAL_PATH}armors/`,
+            `${ARMOR_MATERIAL_METALIC}.png`,
+            1 / previewItem.matCols,
+            1 / previewItem.matRows,
+            false,
+            {
+                metallic: materialMetallic.value,
+                roughness: materialRoughness.value,
+                directIntensity: materialDirectIntensity.value,
+                environmentIntensity: materialEnvironmentIntensity.value,
+            }
+        )
     previewMaterial.unfreeze()
     merged.material = previewMaterial
     applyPreviewMaterialSettings()
@@ -489,8 +508,13 @@ const downloadCanvasPng = () => {
         return
     }
     persistSettingsForCurrentSelection()
+    const materialName = selectedWeaponPalette.value?.materialNames[previewMatIndex.value]?.toLowerCase()
+    const inventoryBaseName = selectedPreviewOption.value?.inventoryBaseName
+    const imageBaseName = materialName && inventoryBaseName
+        ? `${materialName}-${inventoryBaseName}`
+        : previewItem.model
     const suffix = imageVariant.value === 'DROP' ? '_drop' : ''
-    const filename = `${previewItem.model}${suffix}.png`
+    const filename = `${imageBaseName}${suffix}.png`
     canvasToPngBlobWithTransparentColor(canvas).then((blob) => {
         if (!blob) {
             return
@@ -540,7 +564,7 @@ watch(imageVariant, () => {
 })
 
 watch(currentMaterialSlots, () => {
-    const safeIndex = clamp(previewMatIndex.value, 0, Math.max(currentMaterialSlots.value, 0))
+    const safeIndex = clamp(previewMatIndex.value, 0, Math.max(currentMaterialSlots.value - 1, 0))
     if (safeIndex !== previewMatIndex.value) {
         previewMatIndex.value = safeIndex
     }

@@ -1,4 +1,4 @@
-import { VertexColorWeaponPalette } from './types'
+import { METAL_WEAPON_MATERIAL_NAMES, VertexColorWeaponPalette } from './types'
 
 /**
  * Local vertex-colour palettes for every sword model.
@@ -8,6 +8,7 @@ import { VertexColorWeaponPalette } from './types'
  */
 export const SwordVertexColorPalettes: Record<string, VertexColorWeaponPalette> = {
     LONGSWORD: {
+        materialNames: METAL_WEAPON_MATERIAL_NAMES,
         slots: [
             {index: 0, source: [127, 127, 127], role: 'blade dark'},
             {index: 1, source: [184, 184, 184], role: 'blade mid'},
@@ -33,6 +34,7 @@ export const SwordVertexColorPalettes: Record<string, VertexColorWeaponPalette> 
     },
 
     BROADSWORD: {
+        materialNames: METAL_WEAPON_MATERIAL_NAMES,
         slots: [
             {index: 0, source: [127, 127, 127], role: 'blade dark'},
             {index: 1, source: [184, 184, 184], role: 'blade mid'},
