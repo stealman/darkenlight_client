@@ -304,13 +304,13 @@ export const MyPlayer = {
         }
     },
 
-    hasWaponTypeInHandOrInventory(weaponType: string): boolean {
+    hasWeaponTagInHandOrInventory(tag: string): boolean {
         const equippedWeapon = this.myChar?.getWeapon()
-        if (equippedWeapon?.slotInfo?.weaponType === weaponType) {
+        if (equippedWeapon?.hasWeaponTag(tag)) {
             return true
         }
 
-        return InventoryManager.inventory.some(item => item?.slotInfo?.weaponType === weaponType)
+        return InventoryManager.inventory.some(item => item?.hasWeaponTag(tag))
     },
 
     affectGroupChange(affectGroup: AffectGroupData) {

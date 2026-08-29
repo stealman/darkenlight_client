@@ -92,6 +92,9 @@ export interface ItemTO {
     name: string
     img: string
     atts: Map<string, number | string>
+    wCat?: string
+    hReq?: number
+    tags?: string[]
 }
 
 export interface GroundItemTO {

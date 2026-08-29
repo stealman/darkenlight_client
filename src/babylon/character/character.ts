@@ -14,7 +14,7 @@ import { Utils } from '@/utils/utils'
 import { Connector } from '@/network/connector'
 import { MyCharMoveMsg } from '@/network/messages'
 import { MyPlayer } from '@/data/myPlayer'
-import { EquipItemSlots, EquipSlotModelsCb, Item, WeaponTypes } from '@/data/items/item'
+import { EquipItemSlots, EquipSlotModelsCb, Item, WeaponCategories, WeaponTypes } from '@/data/items/item'
 import { Arrow, ArrowsManager } from '@/babylon/world/arrowsManager'
 import {
     AttackableBasicTO,
@@ -582,7 +582,7 @@ class Character implements Attackable, EffectTarget {
 
     isWeaponRanged(): boolean {
         const weapon = this.getWeapon()
-        if (weapon && weapon.slotInfo.weaponType === WeaponTypes.BOW) {
+        if (weapon && weapon.weaponCategory === WeaponCategories.BOW) {
             return true
         }
         return false
@@ -590,7 +590,7 @@ class Character implements Attackable, EffectTarget {
 
     isWeaponAxe(): boolean {
         const weapon = this.getWeapon()
-        if (weapon && (weapon.slotInfo.weaponType === WeaponTypes.AXE || weapon.slotInfo.weaponType === WeaponTypes.PICKAXE || weapon.slotInfo.weaponType === WeaponTypes.GREAT_AXE)) {
+        if (weapon && (weapon.slotInfo.weaponType === WeaponTypes.AXE || weapon.slotInfo.weaponType === WeaponTypes.PICKAXE)) {
             return true
         }
         return false

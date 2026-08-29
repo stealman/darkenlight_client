@@ -19,10 +19,14 @@ export class Item {
     nameKey: string | null = null
     imgUrl: string | null = null
     slotInfo: EquipSlotModel
+    weaponCategory: string | null = null
+    handsRequired: number | null = null
+    weaponTags: string[] = []
 
     atts: Map<string, number | string> = new Map()
 
-    constructor(id: number, cbId: number, cbType: string, modelId: number, matId: number, name: string | null, imgUrl: string, atts: Map<string, number | string>) {
+    constructor(id: number, cbId: number, cbType: string, modelId: number, matId: number, name: string | null, imgUrl: string, atts: Map<string, number | string>,
+                weaponCategory: string | null = null, handsRequired: number | null = null, weaponTags: string[] = []) {
         this.id = id
         this.cbType = cbType
         this.cbId = cbId
@@ -32,6 +36,9 @@ export class Item {
         this.imgUrl = "images/items/" + imgUrl + ".png"
         this.slotInfo = EquipSlotModelsCb.getById(modelId)!
         this.atts = atts
+        this.weaponCategory = weaponCategory
+        this.handsRequired = handsRequired
+        this.weaponTags = weaponTags
         if (!this.slotInfo && (cbType === 'W' || cbType === 'A' || cbType === 'J')) {
             throw new Error(`EquipSlotInfo not found for modelId: ${modelId}`)
         }
@@ -55,7 +62,8 @@ export class Item {
     }
 
     static fromData(data: ItemTO): Item {
-        return new Item(data.id, data.cb, data.tp, data.mId, data.matId, data.name || null, data.img, data.atts)
+        return new Item(data.id, data.cb, data.tp, data.mId, data.matId, data.name || null, data.img, data.atts,
+            data.wCat || null, data.hReq || null, data.tags || [])
     }
 
     is3DModel(): boolean {
@@ -73,6 +81,14 @@ export class Item {
     isConsumable(): boolean {
         return ConsumableHelper.isItemConsumable(this)
     }
+
+    hasWeaponTag(tag: string): boolean {
+        return this.weaponCategory === tag || this.weaponTags.includes(tag)
+    }
+
+    isTwoHanded(): boolean {
+        return this.handsRequired === 2
+    }
 }
 
 export class EquipSlotModel {
@@ -86,9 +102,6 @@ export class EquipSlotModel {
         this.weaponType = weaponType
     }
 
-    isTwoHanded(): boolean {
-        return this.weaponType === WeaponTypes.BOW || this.weaponType === WeaponTypes.GREAT_AXE || this.weaponType === WeaponTypes.PICKAXE
-    }
 }
 
 export const EquipItemSlots = {
@@ -103,19 +116,46 @@ export const EquipItemSlots = {
 export const WeaponTypes = {
     SWORD: "SWORD",
     AXE: "AXE",
-    GREAT_AXE: "GREAT_AXE",
     PICKAXE: "PICKAXE",
     BOW: "BOW",
+}
+
+export const WeaponCategories = {
+    SWORD: "SWORD",
+    AXE: "AXE",
+    BOW: "BOW",
+}
+
+export const WeaponTags = {
+    MINING_TOOL: "MINING_TOOL",
+    WOODCUTTING_TOOL: "WOODCUTTING_TOOL",
 }
 
 export const EquipSlotModelsCb = {
     LONGSWORD: new EquipSlotModel(10, EquipItemSlots.R_HAND, WeaponTypes.SWORD),
     BROADSWORD: new EquipSlotModel(20, EquipItemSlots.R_HAND, WeaponTypes.SWORD),
+    GREATSWORD: new EquipSlotModel(30, EquipItemSlots.R_HAND, WeaponTypes.SWORD),
+
+    HAND_AXE: new EquipSlotModel(110, EquipItemSlots.R_HAND, WeaponTypes.SWORD),
+    BATTLE_AXE: new EquipSlotModel(120, EquipItemSlots.R_HAND, WeaponTypes.SWORD),
+    GREATAXE: new EquipSlotModel(155, EquipItemSlots.R_HAND, WeaponTypes.SWORD),
 
     PICKAXE: new EquipSlotModel(150, EquipItemSlots.R_HAND, WeaponTypes.PICKAXE),
-    GREATAXE: new EquipSlotModel(155, EquipItemSlots.R_HAND, WeaponTypes.GREAT_AXE),
+    LIGHT_MACE: new EquipSlotModel(210, EquipItemSlots.R_HAND, WeaponTypes.SWORD),
+    FLANGED_MACE: new EquipSlotModel(220, EquipItemSlots.R_HAND, WeaponTypes.SWORD),
+    WARHAMMER: new EquipSlotModel(230, EquipItemSlots.R_HAND, WeaponTypes.SWORD),
 
-    HUNTERBOW: new EquipSlotModel(510, EquipItemSlots.R_HAND, WeaponTypes.BOW),
+    HUNTING_SPEAR: new EquipSlotModel(310, EquipItemSlots.R_HAND, WeaponTypes.SWORD),
+    WAR_SPEAR: new EquipSlotModel(320, EquipItemSlots.R_HAND, WeaponTypes.SWORD),
+    HALBERD: new EquipSlotModel(330, EquipItemSlots.R_HAND, WeaponTypes.SWORD),
+
+    KNIFE: new EquipSlotModel(410, EquipItemSlots.R_HAND, WeaponTypes.SWORD),
+    STILETTO: new EquipSlotModel(420, EquipItemSlots.R_HAND, WeaponTypes.SWORD),
+    RONDEL: new EquipSlotModel(430, EquipItemSlots.R_HAND, WeaponTypes.SWORD),
+
+    HUNTINGBOW: new EquipSlotModel(510, EquipItemSlots.R_HAND, WeaponTypes.BOW),
+    RECURVE_BOW: new EquipSlotModel(520, EquipItemSlots.R_HAND, WeaponTypes.BOW),
+    LONGBOW: new EquipSlotModel(530, EquipItemSlots.R_HAND, WeaponTypes.BOW),
 
     ARMOR_PLATE: new EquipSlotModel(1000, EquipItemSlots.BODY, null),
 

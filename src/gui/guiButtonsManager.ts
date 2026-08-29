@@ -4,7 +4,7 @@ import { InventoryManager } from '@/data/inventoryManager'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { MyPlayer } from '@/data/myPlayer'
 import { WorldDataManager } from '@/data/worldDataManager'
-import { WeaponTypes } from '@/data/items/item'
+import { WeaponCategories, WeaponTags } from '@/data/items/item'
 import { Connector } from '@/network/connector'
 import { FireArrowsActionMsg, GatheringActionMsg, RequestCookingMsg, RestingActionMsg } from '@/network/messages'
 import { CharacterAction, CharacterActions } from '@/data/actions/characterActions'
@@ -120,14 +120,14 @@ export const GuiButtonsManager = {
 
         const coveredBlocks = MyPlayer.myChar ? WorldDataManager.getCoveredBlocks(MyPlayer.myChar.pos, MyPlayer.myChar.getBoxSize()) : []
 
-        // Show mining button if any covered block is mineable and the player has a pickaxe available
+        // Show mining button if any covered block is mineable and the player has a mining tool available
         const hasMineableCoveredBlock = coveredBlocks.some(block => block.minableCoal || block.minableOre)
         this.opportunityButtons.get(GuiOpportunityActions.MINING.name)!.setVisible(
-            hasMineableCoveredBlock && MyPlayer.hasWaponTypeInHandOrInventory(WeaponTypes.PICKAXE)
+            hasMineableCoveredBlock && MyPlayer.hasWeaponTagInHandOrInventory(WeaponTags.MINING_TOOL)
         )
 
         this.opportunityButtons.get(GuiOpportunityActions.LUMBERJACKING.name)!.setVisible(
-            TreeManager.isAnyTreeInDistance(MyPlayer.myChar.pos, 1.5) && MyPlayer.hasWaponTypeInHandOrInventory(WeaponTypes.GREAT_AXE)
+            TreeManager.isAnyTreeInDistance(MyPlayer.myChar.pos, 1.5) && MyPlayer.hasWeaponTagInHandOrInventory(WeaponTags.WOODCUTTING_TOOL)
         )
 
         this.opportunityButtons.get(GuiOpportunityActions.RESTING.name)!.setVisible(MyPlayer.nearFireplace !== null)
@@ -173,32 +173,32 @@ export const GuiButtonsManager = {
     },
 
     clickOnMiningButton() {
-        const hasPickaxeInHand = MyPlayer.myChar.getWeapon()?.slotInfo?.weaponType === WeaponTypes.PICKAXE
-        if (!hasPickaxeInHand) {
-            const firstPickaxeInInventory = InventoryManager.inventory.find(
-                item => item?.slotInfo?.weaponType === WeaponTypes.PICKAXE
+        const hasMiningToolInHand = MyPlayer.myChar.getWeapon()?.hasWeaponTag(WeaponTags.MINING_TOOL)
+        if (!hasMiningToolInHand) {
+            const firstMiningToolInInventory = InventoryManager.inventory.find(
+                item => item?.hasWeaponTag(WeaponTags.MINING_TOOL)
             )
-            if (!firstPickaxeInInventory) {
+            if (!firstMiningToolInInventory) {
                 return
             }
 
-            InventoryManager.equipItem(firstPickaxeInInventory)
+            InventoryManager.equipItem(firstMiningToolInInventory)
         }
 
         Connector.sendMessage(new GatheringActionMsg(CharacterActions.MINING.name))
     },
 
     clickOnLumberjackingButton() {
-        const hasGreatAxeInHand = MyPlayer.myChar.getWeapon()?.slotInfo?.weaponType === WeaponTypes.GREAT_AXE
-        if (!hasGreatAxeInHand) {
-            const firstGreatAxeInInventory = InventoryManager.inventory.find(
-                item => item?.slotInfo?.weaponType === WeaponTypes.GREAT_AXE
+        const hasWoodcuttingToolInHand = MyPlayer.myChar.getWeapon()?.hasWeaponTag(WeaponTags.WOODCUTTING_TOOL)
+        if (!hasWoodcuttingToolInHand) {
+            const firstWoodcuttingToolInInventory = InventoryManager.inventory.find(
+                item => item?.hasWeaponTag(WeaponTags.WOODCUTTING_TOOL)
             )
-            if (!firstGreatAxeInInventory) {
+            if (!firstWoodcuttingToolInInventory) {
                 return
             }
 
-            InventoryManager.equipItem(firstGreatAxeInInventory)
+            InventoryManager.equipItem(firstWoodcuttingToolInInventory)
         }
 
         Connector.sendMessage(new GatheringActionMsg(CharacterActions.LUMBERJACKING.name))
@@ -225,7 +225,7 @@ export const GuiButtonsManager = {
     trySendFireArrowsAction() {
         const nearbyFireplace = MyPlayer.nearFireplace
         const time = Date.now()
-        if (nearbyFireplace == null || MyPlayer.myChar.getWeapon()?.slotInfo?.weaponType !== WeaponTypes.BOW || time < this.lastFireArrowsMessageTime + this.fireArrowsMessageCooldown) {
+        if (nearbyFireplace == null || MyPlayer.myChar.getWeapon()?.weaponCategory !== WeaponCategories.BOW || time < this.lastFireArrowsMessageTime + this.fireArrowsMessageCooldown) {
             return
         }
 
