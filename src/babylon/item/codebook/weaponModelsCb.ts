@@ -6,10 +6,12 @@ import { PBRCustomMaterial } from '@babylonjs/materials'
 import { Materials } from '@/babylon/materials'
 import { BASE_EQUIP_MATERIAL_PATH } from '@/babylon/item/codebook/armorsModelsCb'
 import { EquipSlotModelsCb } from '@/data/items/item'
+import { SwordVertexColorPalettes } from './vertexColorPalettes/swords'
+import { createVertexColorWeaponMaterial } from './vertexColorPalettes/vertexColorWeaponMaterial'
 
 const matBowSize = new Vector2(4, 1)
 const matLongswordSize = new Vector2(4, 1)
-const matBroadswordSize = new Vector2(1, 1)
+const matBroadswordSize = new Vector2(5, 1)
 const matPickaxeSize = new Vector2(4, 1)
 const matGreatAxeSize = new Vector2(4, 1)
 const matFutureWeaponSize = new Vector2(5, 1)
@@ -30,7 +32,7 @@ export const WeaponsCbManager = {
         // Load materials
         this.bowMaterial = this.getMaterial("hunterbow", matBowSize)
         this.longSwordMaterial = this.getMaterial("longsword", matLongswordSize)
-        this.broadSwordMaterial = this.getMaterial("broadsword2", matBroadswordSize)
+        this.broadSwordMaterial = createVertexColorWeaponMaterial('broadswordVertexColor', scene, SwordVertexColorPalettes.BROADSWORD)
         this.pickAxeMaterial = this.getMaterial("pickaxe", matPickaxeSize)
         this.greatAxeMaterial = this.getMaterial("greataxe", matGreatAxeSize)
 
@@ -71,12 +73,13 @@ export const WeaponsCbManager = {
         if (invertV) mat.albedoTexture.vScale = - mat.albedoTexture.vScale
         return mat
     },
+
 }
 
 export const WeaponModelsCb = {
     LONGSWORD: new EquipCbItem(EquipSlotModelsCb.LONGSWORD.modelId, "longsword", Vector3.Zero(), new Vector3(0.2, 0.24, 0.4), new Vector3(0, 2.4, 0), matLongswordSize),
 
-    BROADSWORD: new EquipCbItem(EquipSlotModelsCb.BROADSWORD.modelId, "broadsword2", Vector3.Zero(), new Vector3(0.22, 0.24, 0.4), new Vector3(0, 2, 0), matBroadswordSize),
+    BROADSWORD: new EquipCbItem(EquipSlotModelsCb.BROADSWORD.modelId, "broadsword", Vector3.Zero(), new Vector3(0.22, 0.24, 0.4), new Vector3(0, 2, 0), matBroadswordSize),
 
     GREATSWORD: new EquipCbItem(EquipSlotModelsCb.GREATSWORD.modelId, "greatsword", Vector3.Zero(), new Vector3(0.22, 0.24, 0.4), new Vector3(0, 2.5, 0), matFutureWeaponSize),
 
