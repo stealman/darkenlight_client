@@ -10,9 +10,7 @@ export interface VertexColorSlot {
 }
 
 export interface VertexColorWeaponPalette {
-    /** Ordered material rows: materialId 1–5 maps to array index 0–4. */
+    /** Ordered material rows: materialId N maps to array index N - 1. */
     materialColors: readonly (readonly VertexRgb[])[]
     slots: readonly VertexColorSlot[]
 }
-
-export const WEAPON_MATERIAL_VARIANT_COUNT = 5

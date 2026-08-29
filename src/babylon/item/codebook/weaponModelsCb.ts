@@ -7,13 +7,15 @@ import { Materials } from '@/babylon/materials'
 import { BASE_EQUIP_MATERIAL_PATH } from '@/babylon/item/codebook/armorsModelsCb'
 import { EquipSlotModelsCb } from '@/data/items/item'
 import { SwordVertexColorPalettes } from './vertexColorPalettes/swords'
+import { BowVertexColorPalettes } from './vertexColorPalettes/bows'
+import { AxeVertexColorPalettes } from './vertexColorPalettes/axes'
 import { createVertexColorWeaponMaterial } from './vertexColorPalettes/vertexColorWeaponMaterial'
 
-const matBowSize = new Vector2(4, 1)
-const matLongswordSize = new Vector2(4, 1)
+const matBowSize = new Vector2(5, 1)
+const matLongswordSize = new Vector2(5, 1)
 const matBroadswordSize = new Vector2(5, 1)
-const matPickaxeSize = new Vector2(4, 1)
-const matGreatAxeSize = new Vector2(4, 1)
+const matPickaxeSize = new Vector2(6, 1)
+const matGreatAxeSize = new Vector2(5, 1)
 const matFutureWeaponSize = new Vector2(5, 1)
 
 export const WeaponsCbManager = {
@@ -30,11 +32,11 @@ export const WeaponsCbManager = {
         this.itemSourceParent = new TransformNode("mobWeaponSources", scene)
 
         // Load materials
-        this.bowMaterial = this.getMaterial("hunterbow", matBowSize)
-        this.longSwordMaterial = this.getMaterial("longsword", matLongswordSize)
+        this.bowMaterial = createVertexColorWeaponMaterial('huntingBowVertexColor', scene, BowVertexColorPalettes.HUNTING_BOW)
+        this.longSwordMaterial = createVertexColorWeaponMaterial('longswordVertexColor', scene, SwordVertexColorPalettes.LONGSWORD)
         this.broadSwordMaterial = createVertexColorWeaponMaterial('broadswordVertexColor', scene, SwordVertexColorPalettes.BROADSWORD)
-        this.pickAxeMaterial = this.getMaterial("pickaxe", matPickaxeSize)
-        this.greatAxeMaterial = this.getMaterial("greataxe", matGreatAxeSize)
+        this.pickAxeMaterial = createVertexColorWeaponMaterial('pickaxeVertexColor', scene, AxeVertexColorPalettes.PICKAXE)
+        this.greatAxeMaterial = createVertexColorWeaponMaterial('greatAxeVertexColor', scene, AxeVertexColorPalettes.GREATAXE)
 
         map.set(WeaponModelsCb.LONGSWORD.id, await this.getItem(WeaponModelsCb.LONGSWORD, this.longSwordMaterial))
         map.set(WeaponModelsCb.BROADSWORD.id, await this.getItem(WeaponModelsCb.BROADSWORD, this.broadSwordMaterial))

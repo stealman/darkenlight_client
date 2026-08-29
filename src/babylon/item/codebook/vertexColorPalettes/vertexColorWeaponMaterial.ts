@@ -1,6 +1,6 @@
 import { PBRCustomMaterial } from '@babylonjs/materials'
 import { Scene } from '@babylonjs/core'
-import { VertexColorWeaponPalette, VertexRgb, WEAPON_MATERIAL_VARIANT_COUNT } from './types'
+import { VertexColorWeaponPalette, VertexRgb } from './types'
 
 const SOURCE_COLOR_TOLERANCE = 0.003
 
@@ -9,8 +9,8 @@ function rgbToShader(color: VertexRgb): string {
 }
 
 function validatePalette(name: string, palette: VertexColorWeaponPalette) {
-    if (palette.materialColors.length !== WEAPON_MATERIAL_VARIANT_COUNT) {
-        throw new Error(`${name}: expected ${WEAPON_MATERIAL_VARIANT_COUNT} material colour rows.`)
+    if (palette.materialColors.length === 0) {
+        throw new Error(`${name}: palette must contain at least one material colour row.`)
     }
 
     const expectedSlotCount = palette.slots.length
