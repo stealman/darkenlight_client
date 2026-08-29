@@ -34,6 +34,7 @@ export const MyStatusPanel = {
 
         this.panel = document.createElement('div')
         this.panel.id = 'myStatusPanel'
+        this.panel.style.display = 'none'
 
         this.bodyEl = document.createElement('div')
         this.bodyEl.className = 'myStatusPanelBody'

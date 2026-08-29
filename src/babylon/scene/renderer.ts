@@ -112,6 +112,7 @@ export const Renderer = {
 
     async gameStarted() {
         Lights.sunLight.parent = MyPlayer.myModel!.node
+        MyStatusPanel.panel!.style.display = 'flex'
         await Tester.runTest()
         this.engine!.runRenderLoop(() => {
             this.onFrame(this.scene)

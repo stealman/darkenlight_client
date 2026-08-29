@@ -34,7 +34,7 @@ export const ConsumableHelper = {
     },
 
     isItemCampWood(item: Item): boolean {
-        return this.getCampWoodIds().includes(item.cbId)
+        return item.cbType === 'R' && this.getCampWoodIds().includes(item.cbId)
     },
 
     isItemPotion(cbId: number): boolean {
