@@ -94,7 +94,7 @@
 <script setup>
 import { ArcRotateCamera, Color3, Color4, CubeTexture, DirectionalLight, Engine, Mesh, Scene, SceneLoader, Vector2, Vector3 } from '@babylonjs/core'
 import { Materials } from '@/babylon/materials'
-import { WeaponModelsCb } from '@/babylon/item/codebook/weaponModelsCb'
+import { WEAPON_MODEL_CACHE_VERSION, WeaponModelsCb } from '@/babylon/item/codebook/weaponModelsCb'
 import { ARMOR_MATERIAL_METALIC, ArmorModelsCb, BASE_EQUIP_MATERIAL_PATH } from '@/babylon/item/codebook/armorsModelsCb'
 import { VertexColorWeaponPalettesByModelKey } from '@/babylon/item/codebook/vertexColorPalettes'
 import { createVertexColorWeaponMaterial } from '@/babylon/item/codebook/vertexColorPalettes/vertexColorWeaponMaterial'
@@ -385,7 +385,9 @@ const loadPreview = async () => {
     if (isWeapon && !weaponPalette) {
         return
     }
-    const modelPath = isWeapon ? `weapons/${previewItem.model}.glb` : `armors/${previewItem.model}.babylon`
+    const modelPath = isWeapon
+        ? `weapons/${previewItem.model}.glb?v=${WEAPON_MODEL_CACHE_VERSION}`
+        : `armors/${previewItem.model}.babylon`
     const importResult = await SceneLoader.ImportMeshAsync('', '/models/equip/', modelPath, scene)
     const sourceMeshes = importResult.meshes.filter((m) => m instanceof Mesh && m.getTotalVertices() > 0)
     if (sourceMeshes.length === 0) {

@@ -18,6 +18,10 @@ const matPickaxeSize = new Vector2(6, 1)
 const matGreatAxeSize = new Vector2(5, 1)
 const matFutureWeaponSize = new Vector2(5, 1)
 
+// Change this when a weapon GLB is replaced. The URL revision prevents an
+// installed PWA from combining a newly deployed shader with an old HTTP-cached model.
+export const WEAPON_MODEL_CACHE_VERSION = '20260830-vertex-colors'
+
 export const WeaponsCbManager = {
     BASE_WEAPONS_PATH: 'weapons/',
     itemSourceParent: null as TransformNode | null,
@@ -51,7 +55,7 @@ export const WeaponsCbManager = {
 
     async getItem(data: EquipCbItem, material: PBRCustomMaterial | null = null): Promise<EquipItemType> {
         const item = new EquipItemType(data)
-        await item.initializeMeshWeapon(this.itemSourceParent!, Renderer.scene, this.BASE_WEAPONS_PATH + data.model + ".glb", material, data.pos, data.rot, data.scale)
+        await item.initializeMeshWeapon(this.itemSourceParent!, Renderer.scene, `${this.BASE_WEAPONS_PATH}${data.model}.glb?v=${WEAPON_MODEL_CACHE_VERSION}`, material, data.pos, data.rot, data.scale)
         return item
     },
 
