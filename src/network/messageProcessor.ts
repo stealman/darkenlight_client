@@ -147,7 +147,7 @@ export const MessageProcessor = {
     },
 
     removeMonster(data) {
-        MonsterManager.removeMonster(data.id, data.killer)
+        MonsterManager.removeMonster(data.id, data.dead)
     },
 
     processWorldChunkData(data) {

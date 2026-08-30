@@ -61,10 +61,16 @@ export const MonsterManager = {
         }
     },
 
-    removeMonster (id: number, killerId: number | null) {
+    removeMonster (id: number, dead: boolean) {
         if (this.monsters.has(id)) {
             const mob = this.monsters.get(id)
-            this.monsterKilled(mob!)
+            if (dead) {
+                this.monsterKilled(mob!)
+            } else {
+                mob!.removeModel()
+                this.visibleMonsters.delete(id)
+                this.monsters.delete(id)
+            }
             if (mob === TargetingManager.selectedTarget) {
                 TargetingManager.unselectTarget()
             }
