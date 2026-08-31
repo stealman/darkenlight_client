@@ -31,6 +31,7 @@ import { OnScreenMessageManager } from '@/gui/onScreenMessageManager'
 import { t } from '@/i18n'
 import { CraftingManager } from '@/data/crafting/craftingManager'
 import { AudioManager } from '@/babylon/audio/audioManager'
+import { NpcManager } from '@/babylon/npc/npcManager'
 
 export const MessageProcessor = {
 
@@ -87,6 +88,8 @@ export const MessageProcessor = {
                 case 48: this.processCraftingMenu(msg.d); break
                 case 49: this.processCharacterCrafting(msg.d); break
                 case 50: this.processPlaySound(msg.d); break
+                case 51: await this.addNpc(msg.d); break
+                case 52: this.removeNpc(msg.d); break
                 case 1003: this.processGMAllSpawns(msg.d); break
                 case 1004: this.processGMSpawnChange(msg.d); break
                 default:
@@ -116,6 +119,14 @@ export const MessageProcessor = {
 
     async addCharacter(data) {
         await CharacterManager.addCharacter(data)
+    },
+
+    async addNpc(data) {
+        await NpcManager.addNpc(data)
+    },
+
+    removeNpc(data) {
+        NpcManager.removeNpc(data.id)
     },
 
     removeCharacter(data) {

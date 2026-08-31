@@ -1,5 +1,5 @@
 import { Connector } from '@/network/connector'
-import { GMCreateItemMsg, GMForceSaveDataMsg, GMSaveMapDataMsg, GMStaticObjectChange, GMTerrainChange } from '@/network/messages'
+import { GMCreateItemMsg, GMForceSaveDataMsg, GMNpcAction, GMSaveMapDataMsg, GMStaticObjectChange, GMTerrainChange } from '@/network/messages'
 import { GMSceneManager } from '@/babylon/gm/GmSceneManager'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { ref } from 'vue'
@@ -21,7 +21,8 @@ export const GmTabs = {
     BIOME_EDIT: 'biome_edit',
     WALLS_AND_FENCES_EDIT: 'walls_and_fences_edit',
     STATICS_EDIT: 'statics_edit',
-    SPAWNS_EDIT: 'spawns_edit'
+    SPAWNS_EDIT: 'spawns_edit',
+    NPCS_EDIT: 'npcs_edit'
 }
 
 export const GMManager = {
@@ -40,6 +41,8 @@ export const GMManager = {
 
     selectedWallFence: ref (0),
     selectedStatic: ref (0),
+    selectedNpcName: ref(''),
+    selectedNpcType: ref('common'),
 
     tab: GmTabs.OVERVIEW,
 
@@ -153,6 +156,20 @@ export const GMManager = {
             const markerPos = new Vector3(GMSceneManager.hoverBlockMarker!.position.x, 0, GMSceneManager.hoverBlockMarker!.position.z)
             GMSpawns.onClick(markerPos.x, markerPos.z)
         }
+
+        if (this.tab === GmTabs.NPCS_EDIT) {
+            const name = this.selectedNpcName.value.trim()
+            if (!name) {
+                return
+            }
+            const markerPos = new Vector3(GMSceneManager.hoverBlockMarker!.position.x, 0, GMSceneManager.hoverBlockMarker!.position.z)
+            Connector.sendMessage(new GMNpcAction('CREATE', {
+                x: markerPos.x,
+                z: markerPos.z,
+                name: name,
+                type: this.selectedNpcType.value
+            }))
+        }
     },
 
     getLowestAffectedBlockHeight(centerPos: Vector3, size: number): number {
@@ -237,6 +254,9 @@ export const GMManager = {
             case GmTabs.SPAWNS_EDIT:
                 this.closeTabSpawnsEdit()
                 break
+            case GmTabs.NPCS_EDIT:
+                this.closeTabNpcsEdit()
+                break
 
         }
 
@@ -259,6 +279,9 @@ export const GMManager = {
                 break
             case GmTabs.SPAWNS_EDIT:
                 this.openTabSpawnsEdit()
+                break
+            case GmTabs.NPCS_EDIT:
+                this.openTabNpcsEdit()
                 break
         }
     },
@@ -316,6 +339,14 @@ export const GMManager = {
         GMSceneManager.hoverBlockMarker?.setEnabled(true)
     },
 
+    openTabNpcsEdit() {
+        this.tab = GmTabs.NPCS_EDIT
+        this.consumePointerMoveEvents = true
+        this.consumeLeftClickEvents = true
+        GMSceneManager.setHoverBlockMarkerSize(1)
+        GMSceneManager.hoverBlockMarker?.setEnabled(true)
+    },
+
     closeTabTerrainEdit() {
         this.consumePointerMoveEvents = false
         this.consumeLeftClickEvents = false
@@ -346,6 +377,12 @@ export const GMManager = {
         this.consumeLeftClickEvents = false
         GMSceneManager.hoverBlockMarker?.setEnabled(false)
         GMSpawns.removeAllMarkers()
+    },
+
+    closeTabNpcsEdit() {
+        this.consumePointerMoveEvents = false
+        this.consumeLeftClickEvents = false
+        GMSceneManager.hoverBlockMarker?.setEnabled(false)
     },
 
     saveMapData() {

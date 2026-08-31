@@ -5,6 +5,7 @@ import { CanvasTextUtils } from '@/gui/canvasTextUtils'
 import { MonsterManager } from '@/babylon/monsters/monsterManager'
 import { ViewportManager } from '@/utils/viewport'
 import { CharacterManager } from '@/babylon/character/characterManager'
+import { NpcManager } from '@/babylon/npc/npcManager'
 import { MyPlayer } from '@/data/myPlayer'
 import Character from '@/babylon/character/character'
 import { Attackable } from '@/GameManager'
@@ -110,6 +111,13 @@ export const OverlayManager = {
             const pos = char.getNameTextNodeScreenPosition()
             if (pos) {
                 this.renderCharacterLabel(pos, char, time, tightText)
+            }
+        })
+
+        NpcManager.npcs.forEach(npc => {
+            const pos = npc.getNameTextNodeScreenPosition()
+            if (pos) {
+                this.renderName(pos, npc.name, tightText, npc.getRelationToMyPlayer())
             }
         })
 

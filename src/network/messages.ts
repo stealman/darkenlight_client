@@ -272,3 +272,12 @@ export class GMCreateItemMsg implements Message {
     }
 }
 
+export class GMNpcAction implements Message {
+    t: number = 1007
+    d: any
+
+    constructor(action: string, data: any) {
+        this.d = {action: action, data: data}
+    }
+}
+

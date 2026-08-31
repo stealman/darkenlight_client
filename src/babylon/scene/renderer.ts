@@ -17,6 +17,7 @@ import { Materials } from '@/babylon/materials'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { ViewportManager } from '@/utils/viewport'
 import { MonsterManager } from '@/babylon/monsters/monsterManager'
+import { NpcManager } from '@/babylon/npc/npcManager'
 import { Connector } from '@/network/connector'
 import { EquipManager } from '@/babylon/item/equipManager'
 import { WeatherManager } from '@/babylon/world/weather/weatherManager'
@@ -88,6 +89,7 @@ export const Renderer = {
         AudioManager.initialize(this.scene)
         MiniMap.initialize()
         CharacterManager.initialize()
+        NpcManager.initialize()
         await EquipManager.initialize(this.scene)
         await MonsterManager.initialize()
         GfxManager.initialize(this.scene)
@@ -159,6 +161,7 @@ export const Renderer = {
             MyPlayer.onFrame(timeRate, actualTime)
             WorldRenderer.checkRenderWorld()
             CharacterManager.onFrame(timeRate, actualTime, this.frame)
+            NpcManager.onFrame(timeRate, actualTime, this.frame)
             MonsterManager.onFrame(timeRate, actualTime, this.frame)
             GroundItemsManager.onFrame(timeRate, actualTime)
 

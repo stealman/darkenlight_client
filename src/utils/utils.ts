@@ -7,6 +7,7 @@ import { Monster } from '@/babylon/monsters/monster'
 import { Attackable } from '@/GameManager'
 import { MyPlayer } from '@/data/myPlayer'
 import { CharacterManager } from '@/babylon/character/characterManager'
+import { NpcManager } from '@/babylon/npc/npcManager'
 
 export const Utils = {
 
@@ -115,6 +116,16 @@ export const Utils = {
 
             if (tgtDist < origDist) {
                 return {x: characterInWay.pos.x, z: characterInWay.pos.z}
+            }
+        }
+
+        const npcInWay = NpcManager.isPointInNpc(targetPos.x, targetPos.z, charSize)
+        if (npcInWay) {
+            const tgtDist = Vector3.Distance(new Vector3(npcInWay.pos.x, 0, npcInWay.pos.z), new Vector3(targetPos.x, 0, targetPos.z))
+            const origDist = Vector3.Distance(new Vector3(npcInWay.pos.x, 0, npcInWay.pos.z), new Vector3(charPos.x, 0, charPos.z))
+
+            if (tgtDist < origDist) {
+                return {x: npcInWay.pos.x, z: npcInWay.pos.z}
             }
         }
         return null

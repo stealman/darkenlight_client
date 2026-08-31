@@ -10,6 +10,7 @@
             <button :disabled="actualTab === GMTabs.WALLS_AND_FENCES_EDIT" @click="selectTab(GMTabs.WALLS_AND_FENCES_EDIT)">Walls & Fences</button>
             <button :disabled="actualTab === GMTabs.STATICS_EDIT" @click="selectTab(GMTabs.STATICS_EDIT)">Statics</button>
             <button :disabled="actualTab === GMTabs.SPAWNS_EDIT" @click="selectTab(GMTabs.SPAWNS_EDIT)">Spawns</button>
+            <button :disabled="actualTab === GMTabs.NPCS_EDIT" @click="selectTab(GMTabs.NPCS_EDIT)">NPCs</button>
             <button @click="openModelRenderDialog">Model Render</button>
             <button @click="openItemCreationDialog">Item Creation</button>
             <button @click="forceSaveData">Force Save Data</button>
@@ -43,6 +44,10 @@
             <SpawnPanel />
         </div>
 
+        <div v-if="actualTab === GMTabs.NPCS_EDIT">
+            <NpcPanel />
+        </div>
+
         <ModelRenderPanel ref="modelRenderPanel" />
         <ItemCreationPanel ref="itemCreationPanel" />
 
@@ -58,6 +63,7 @@ import TerrainPanel from '@/vue/views/gm/TerrainPanel.vue'
 import WallsFencesPanel from '@/vue/views/gm/WallsFencesPanel.vue'
 import StaticsPanel from '@/vue/views/gm/StaticsPanel.vue'
 import SpawnPanel from '@/vue/views/gm/SpawnPanel.vue'
+import NpcPanel from '@/vue/views/gm/NpcPanel.vue'
 import ModelRenderPanel from '@/vue/views/gm/ModelRenderPanel.vue'
 import ItemCreationPanel from '@/vue/views/gm/ItemCreationPanel.vue'
 
