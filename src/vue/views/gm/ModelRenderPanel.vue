@@ -1,9 +1,10 @@
 <template>
     <div v-if="dialogVisible" class="dialog-backdrop" @click.self="closeDialog">
         <div class="dialog-window adaptive model-render-dialog-window">
-            <div class="dialog-header">Model Render</div>
-            <div class="dialog-content model-render-dialog-content">
-                <div class="model-render-left-panel">
+            <div class="dialog-surface">
+                <div class="dialog-header">Model Render</div>
+                <div class="dialog-content model-render-dialog-content">
+                    <div class="model-render-left-panel">
                     <label class="model-render-control">
                         <span>Image Variant</span>
                         <select v-model="imageVariant">
@@ -50,8 +51,8 @@
                         <span>Environment Intensity: {{ materialEnvironmentIntensity.toFixed(2) }}</span>
                         <input v-model.number="materialEnvironmentIntensity" type="range" min="0" max="5" step="0.01" @input="applyPreviewMaterialSettings">
                     </label>
-                </div>
-                <div class="model-render-right-panel">
+                    </div>
+                    <div class="model-render-right-panel">
                     <canvas ref="renderCanvasRef" class="model-render-canvas"></canvas>
                     <div class="model-render-controls">
                         <div class="model-render-controls-grid">
@@ -84,6 +85,7 @@
                             <button class="dialog-button model-render-action-button" @click="downloadCanvasPng">Save PNG</button>
                             <button class="dialog-button model-render-action-button" @click="centerPreviewMesh">Center</button>
                         </div>
+                    </div>
                     </div>
                 </div>
             </div>

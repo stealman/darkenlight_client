@@ -1,44 +1,55 @@
 <template>
-    <div v-if="dialogVisible" class="dialog-backdrop" @click.self="closeDialog">
-        <div class="dialog-window adaptive npc-details-dialog-window">
-            <div class="dialog-header">NPC details</div>
-            <div class="dialog-content npc-details-dialog-content">
-                <label class="npc-details-control">
-                    <span>Title</span>
-                    <select v-model="titleSelection">
-                        <option value="">No title</option>
-                        <option v-for="title in presetTitles" :key="title" :value="title">{{ title }}</option>
-                        <option value="__custom__">Custom title</option>
-                    </select>
-                </label>
+    <GameDialog v-if="dialogVisible" window-class="adaptive npc-details-dialog-window" @close="closeDialog">
+        <template #header>NPC details</template>
 
-                <label v-if="titleSelection === '__custom__'" class="npc-details-control">
-                    <span>Custom title</span>
-                    <input v-model="customTitle" type="text" maxlength="48" placeholder="NPC title" />
-                </label>
+        <div class="npc-details-dialog-content">
+            <label class="npc-details-control">
+                <span>Title</span>
+                <select v-model="titleSelection">
+                    <option value="">No title</option>
+                    <option v-for="title in presetTitles" :key="title" :value="title">{{ title }}</option>
+                    <option value="__custom__">Custom title</option>
+                </select>
+            </label>
 
-                <div class="dialog-actions">
-                    <button class="dialog-button" @click="saveDetails">Save</button>
-                    <button class="dialog-button" @click="closeDialog">Cancel</button>
-                </div>
+            <label v-if="titleSelection === '__custom__'" class="npc-details-control">
+                <span>Custom title</span>
+                <input v-model="customTitle" type="text" maxlength="48" placeholder="NPC title" />
+            </label>
+
+            <div class="dialog-actions">
+                <button class="dialog-button" @click="saveDetails">Save</button>
+                <button class="dialog-button" @click="closeDialog">Cancel</button>
             </div>
         </div>
-    </div>
+    </GameDialog>
 </template>
 
 <script setup>
-import { onMounted, onUnmounted, ref } from 'vue'
+import { ref } from 'vue'
 import { GMManager } from '@/gm/GM'
+import GameDialog from '@/vue/views/GameDialog.vue'
 
-const presetTitles = ['Blacksmith', 'Jeweler', 'Bowcraft', 'Shopkeeper', 'Banker', 'Healer']
+const presetTitles = ['Blacksmith', 'Jeweler', 'Bowcraft', 'Shopkeeper', 'Banker', 'Healer', 'Vendor', 'Skill Trainer', 'Common']
+const npcTypeTitles = {
+    banker: 'Banker',
+    vendor: 'Vendor',
+    healer: 'Healer',
+    skillTrainer: 'Skill Trainer',
+    common: 'Common',
+}
 const dialogVisible = ref(false)
 const titleSelection = ref('')
 const customTitle = ref('')
 
 const openDialog = () => {
-    const title = GMManager.selectedNpc.value?.title ?? ''
-    if (presetTitles.includes(title) || title === '') {
+    const npc = GMManager.selectedNpc.value
+    const title = npc?.title ?? ''
+    if (presetTitles.includes(title)) {
         titleSelection.value = title
+        customTitle.value = ''
+    } else if (title === '') {
+        titleSelection.value = npcTypeTitles[npc?.type] ?? ''
         customTitle.value = ''
     } else {
         titleSelection.value = '__custom__'
@@ -56,20 +67,6 @@ const saveDetails = () => {
     GMManager.setSelectedNpcTitle(title)
     closeDialog()
 }
-
-const onDialogKeyDown = (event) => {
-    if (dialogVisible.value && event.key === 'Escape') {
-        closeDialog()
-    }
-}
-
-onMounted(() => {
-    window.addEventListener('keydown', onDialogKeyDown)
-})
-
-onUnmounted(() => {
-    window.removeEventListener('keydown', onDialogKeyDown)
-})
 
 defineExpose({
     openDialog,
