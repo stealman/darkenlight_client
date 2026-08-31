@@ -148,6 +148,35 @@
     "notEnoughStamina": "You are too tired",
     "notEnoughMana": "You don't have enough mana",
     "notEnoughHealth": "You don't have enough health",
-    "fullyRested": "You are fully rested"
+    "fullyRested": "You are fully rested",
+    "npcUseOutOfRange": "You are too far away from this NPC",
+    "npcUseBlocked": "A wall blocks the way",
+    "npcPurchaseUnavailable": "This item is not available from this NPC",
+    "notEnoughEmeralds": "You do not have enough emeralds"
+  },
+  "vendor": {
+    "vendor": "Vendor",
+    "banker": "Banker",
+    "healer": "Healer",
+    "trainer": "Trainer",
+    "weapons": "Weapons",
+    "bows": "Bows",
+    "metalArmor": "Metal armor",
+    "leatherArmor": "Leather armor",
+    "jewels": "Jewels",
+    "resources": "Resources",
+    "trinkets": "Trinkets",
+    "buy": "Buy",
+    "emptyCategory": "Nothing is currently offered here.",
+    "featureNotAvailable": "This feature is not available yet.",
+    "noFeatures": "This NPC has no available services.",
+    "attack": "Attack",
+    "attackType": "Type",
+    "speed": "Speed",
+    "range": "Range",
+    "detailsSoon": "Item details will be added later.",
+    "damageSlash": "Slash",
+    "damagePierce": "Pierce",
+    "damageBlunt": "Blunt"
   }
 }

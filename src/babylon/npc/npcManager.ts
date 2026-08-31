@@ -73,7 +73,6 @@ export const NpcManager = {
         npc.title = data.title ?? ''
         npc.type = data.type
         npc.changeAppearance(data.bodyType, data.equipment)
-        npc.setFeatures(data.features)
         npc.wanderingRange = data.wr ?? 0
         if (data.mv?.length === 3) {
             this.npcMove([npc.id, data.x, data.z, data.mv[0], data.mv[1], data.mv[2]])

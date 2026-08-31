@@ -13,7 +13,6 @@ export class Npc extends Character {
     title: string
     bodyType: string
     equipment: NpcEquipment
-    features: any[]
     wanderingRange: number
 
     constructor(data: any) {
@@ -27,7 +26,6 @@ export class Npc extends Character {
         this.title = data.title ?? ''
         this.bodyType = data.bodyType ?? 'steve'
         this.equipment = {}
-        this.features = data.features ?? []
         this.wanderingRange = data.wr ?? 0
         this.changeAppearance(this.bodyType, data.equipment)
         this.nameDisplayTime = Number.MAX_SAFE_INTEGER
@@ -61,10 +59,6 @@ export class Npc extends Character {
             this.model.clearAllEquippedItems()
             this.model.assignEquippedItems()
         }
-    }
-
-    setFeatures(features: any[] | undefined) {
-        this.features = features ?? []
     }
 
     onFrame(timeRate: number, actualTime: number, myChar: boolean) {

@@ -10,6 +10,7 @@ import { FireArrowsActionMsg, GatheringActionMsg, RequestCookingMsg, RestingActi
 import { CharacterAction, CharacterActions } from '@/data/actions/characterActions'
 import { TargetingManager } from '@/gui/targettingManager'
 import { GMManager } from '@/gm/GM'
+import {NpcInteractionManager} from '@/data/npcInteractionManager'
 
 class GuiOpportunityButtonAction {
     name: string
@@ -66,6 +67,7 @@ export const GuiOpportunityActions = {
     LUMBERJACKING: new GuiOpportunityButtonAction("LUMBERJACKING", "btn_lumber", "btn_lumber_hover"),
     RESTING: new GuiOpportunityButtonAction("RESTING", "btn_rest", "btn_rest_hover"),
     COOKING: new GuiOpportunityButtonAction("COOKING", "btn_cooking", "btn_cooking_hover"),
+    NPC_USE: new GuiOpportunityButtonAction("NPC_USE", "", "", "USE"),
     NPC_EDIT: new GuiOpportunityButtonAction("NPC_EDIT", "", "", "NPC"),
 }
 
@@ -95,6 +97,7 @@ export const GuiButtonsManager = {
         this.opportunityButtons.set(GuiOpportunityActions.MINING.name, new GuiOpportunityButton(GuiOpportunityActions.MINING))
         this.opportunityButtons.set(GuiOpportunityActions.LUMBERJACKING.name, new GuiOpportunityButton(GuiOpportunityActions.LUMBERJACKING))
         this.opportunityButtons.set(GuiOpportunityActions.COOKING.name, new GuiOpportunityButton(GuiOpportunityActions.COOKING))
+        this.opportunityButtons.set(GuiOpportunityActions.NPC_USE.name, new GuiOpportunityButton(GuiOpportunityActions.NPC_USE))
         this.opportunityButtons.set(GuiOpportunityActions.NPC_EDIT.name, new GuiOpportunityButton(GuiOpportunityActions.NPC_EDIT))
     },
 
@@ -142,8 +145,12 @@ export const GuiButtonsManager = {
 
         this.opportunityButtons.get(GuiOpportunityActions.RESTING.name)!.setVisible(MyPlayer.nearFireplace !== null)
         this.opportunityButtons.get(GuiOpportunityActions.COOKING.name)!.setVisible(MyPlayer.nearFireplace !== null)
+        const selectedTarget = TargetingManager.selectedTarget
+        this.opportunityButtons.get(GuiOpportunityActions.NPC_USE.name)!.setVisible(
+            selectedTarget?.getObjectType() === 'N' && selectedTarget.getDistanceFromMyPlayer() <= 3
+        )
         this.opportunityButtons.get(GuiOpportunityActions.NPC_EDIT.name)!.setVisible(
-            MyPlayer.myChar?.className === 'GM' && TargetingManager.selectedTarget?.getObjectType() === 'N'
+            MyPlayer.myChar?.className === 'GM' && selectedTarget?.getObjectType() === 'N'
         )
 
         this.trySendFireArrowsAction()
@@ -166,6 +173,9 @@ export const GuiButtonsManager = {
                 break
             case GuiOpportunityActions.COOKING.name:
                 this.clickOnCookingButton()
+                break
+            case GuiOpportunityActions.NPC_USE.name:
+                this.clickOnNpcUseButton()
                 break
             case GuiOpportunityActions.NPC_EDIT.name:
                 this.clickOnNpcEditButton()
@@ -242,6 +252,13 @@ export const GuiButtonsManager = {
         const target = TargetingManager.selectedTarget
         if (MyPlayer.myChar?.className === 'GM' && target?.getObjectType() === 'N') {
             GMManager.openNpcDetails(target)
+        }
+    },
+
+    clickOnNpcUseButton() {
+        const target = TargetingManager.selectedTarget
+        if (target?.getObjectType() === 'N') {
+            NpcInteractionManager.useNpc(target.id)
         }
     },
 

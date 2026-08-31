@@ -184,3 +184,38 @@ export interface CraftingInitMenuData {
     x: number
     z: number
 }
+
+export interface NpcVendorCatalogItem {
+    tp: string
+    cb: number
+    name: string
+    img: string
+    price: number
+    atts?: Record<string, number | string>
+    wCat?: string
+    dmgTypes?: string[]
+    bundleSize?: number
+}
+
+export interface NpcUseFeatureData {
+    type: string
+    categories?: Record<string, NpcVendorCatalogItem[]>
+}
+
+export interface NpcUseData {
+    id: number
+    name: string
+    title: string
+    features: NpcUseFeatureData[]
+}
+
+export interface GMNpcDetailsData {
+    id: number
+    name: string
+    title: string
+    type: string
+    bodyType: string
+    equipment: Record<string, {modelId: number, materialId: number}>
+    features: any[]
+    wanderingRange: number
+}

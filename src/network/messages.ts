@@ -272,6 +272,24 @@ export class GMCreateItemMsg implements Message {
     }
 }
 
+export class NpcUseMsg implements Message {
+    t: number = 25
+    d: any
+
+    constructor(id: number) {
+        this.d = {id: id}
+    }
+}
+
+export class NpcPurchaseMsg implements Message {
+    t: number = 26
+    d: any
+
+    constructor(id: number, type: string, codebookId: number, quantity: number) {
+        this.d = {id: id, tp: type, cb: codebookId, qty: quantity}
+    }
+}
+
 export class GMNpcAction implements Message {
     t: number = 1007
     d: any

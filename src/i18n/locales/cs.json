@@ -149,5 +149,30 @@
     "notEnoughMana": "Nemáš dostatek many",
     "notEnoughHealth": "Nemáš dostatek zdraví",
     "fullyRested": "Jsi plně odpočatý"
+  },
+  "vendor": {
+    "vendor": "Obchodník",
+    "banker": "Bankéř",
+    "healer": "Léčitel",
+    "trainer": "Trenér",
+    "weapons": "Zbraně",
+    "bows": "Luky",
+    "metalArmor": "Kovové brnění",
+    "leatherArmor": "Kožené brnění",
+    "jewels": "Šperky",
+    "resources": "Suroviny",
+    "trinkets": "Talismany",
+    "buy": "Koupit",
+    "emptyCategory": "Tady zatím nic není.",
+    "featureNotAvailable": "Tato služba zatím není k dispozici.",
+    "noFeatures": "Toto NPC nemá žádné služby.",
+    "attack": "Útok",
+    "attackType": "Typ",
+    "speed": "Rychlost",
+    "range": "Dosah",
+    "detailsSoon": "Detaily předmětu budou doplněny později.",
+    "damageSlash": "Sečné",
+    "damagePierce": "Bodné",
+    "damageBlunt": "Drtivé"
   }
 }

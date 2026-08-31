@@ -438,18 +438,25 @@ export const GMManager = {
             id: npc.id,
             name: npc.name,
             title: npc.title,
+            type: npc.type,
             bodyType: npc.bodyType ?? 'steve',
             equipment: {...(npc.equipment ?? {})},
             features: (npc.features ?? []).map((feature: any) => ({
                 type: feature.type,
-                settings: {
-                    ...feature.settings,
+                settings: feature.type === 'vendor' ? {
                     itemCategories: [...(feature.settings?.itemCategories ?? [])],
                     weaponMaterials: [...(feature.settings?.weaponMaterials ?? [])],
                     bowMaterials: [...(feature.settings?.bowMaterials ?? [])],
-                }
+                    individualItems: {
+                        weapons: [...(feature.settings?.individualItems?.weapons ?? [])],
+                        bows: [...(feature.settings?.individualItems?.bows ?? [])],
+                        metalArmor: [...(feature.settings?.individualItems?.metalArmor ?? [])],
+                        leatherArmor: [...(feature.settings?.individualItems?.leatherArmor ?? [])],
+                        resources: [...(feature.settings?.individualItems?.resources ?? [])],
+                    },
+                } : {}
             })),
-            wanderingRange: npc.wanderingRange
+            wanderingRange: npc.wanderingRange ?? npc.wr ?? 0
         }
     },
 
@@ -457,9 +464,15 @@ export const GMManager = {
         if (npc) {
             this.selectNpcForEditing(npc)
         }
-        if (this.selectedNpc.value) {
-            this.npcDetailsDialogOpenRequested.value = true
+        const id = npc?.id ?? this.selectedNpc.value?.id
+        if (Number.isInteger(id)) {
+            Connector.sendMessage(new GMNpcAction('DETAILS', {id: id}))
         }
+    },
+
+    processNpcDetails(data: any) {
+        this.selectNpcForEditing(data)
+        this.npcDetailsDialogOpenRequested.value = true
     },
 
     cancelSelectedNpc() {

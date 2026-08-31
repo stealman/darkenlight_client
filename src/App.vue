@@ -81,6 +81,7 @@
     <InventoryDialog ref="inventoryDialog" v-show="displayInventoryDialog" @close="displayInventoryDialog = false" />
     <CharacterDialog ref="characterDialog" v-show="displayCharacterDialog" @close="displayCharacterDialog = false" />
     <CraftingDialog ref="craftingDialog" v-show="displayCraftingDialog" @close="displayCraftingDialog = false" />
+    <NpcUseDialog ref="npcUseDialog" v-show="displayNpcUseDialog" @close="displayNpcUseDialog = false" />
 
     <div class="dialog-backdrop" v-if="displayRestartPrompt" @click.self="displayRestartPrompt = false">
         <div class="dialog-window adaptive">
@@ -127,6 +128,7 @@ import SettingsDialog from '@/vue/views/settingsDialog.vue'
 import InventoryDialog from '@/vue/views/inventory/inventoryDialog.vue'
 import CharacterDialog from '@/vue/views/character/CharacterDialog.vue'
 import CraftingDialog from '@/vue/views/crafting/craftingDialog.vue'
+import NpcUseDialog from '@/vue/views/npc/NpcUseDialog.vue'
 import OnScreenMessages from '@/vue/views/onScreenMessages.vue'
 import PwaControls from '@/vue/views/PwaControls.vue'
 import { Controller } from '@/controlls/controller'
@@ -157,6 +159,7 @@ const displayRestartPrompt = ref(false)
 const displayInventoryDialog = ref(false)
 const displayCharacterDialog = ref(false)
 const displayCraftingDialog = ref(false)
+const displayNpcUseDialog = ref(false)
 
 const touchControls = ref()
 const settingsDialog = ref()
@@ -164,6 +167,7 @@ const loginDialog = ref()
 const inventoryDialog = ref()
 const characterDialog = ref()
 const craftingDialog = ref()
+const npcUseDialog = ref()
 const npcDetailsDialog = ref()
 const { t } = useI18n()
 
@@ -187,6 +191,7 @@ onMounted(async () => {
     window.addEventListener('ui:open-inventory', onOpenInventoryHotkey)
     window.addEventListener('ui:open-character', onOpenCharacterHotkey)
     window.addEventListener('ui:open-crafting', onOpenCraftingMenu as EventListener)
+    window.addEventListener('ui:open-npc-use', onOpenNpcUseMenu as EventListener)
     window.addEventListener('ui:inventory-updated', onInventoryUpdated as EventListener)
     document.addEventListener('keydown', (e) => Controller.processKeydown(e))
     document.addEventListener('keyup', (e) => Controller.processKeyup(e))
@@ -223,6 +228,7 @@ onUnmounted(() => {
     window.removeEventListener('ui:open-inventory', onOpenInventoryHotkey)
     window.removeEventListener('ui:open-character', onOpenCharacterHotkey)
     window.removeEventListener('ui:open-crafting', onOpenCraftingMenu as EventListener)
+    window.removeEventListener('ui:open-npc-use', onOpenNpcUseMenu as EventListener)
     window.removeEventListener('ui:inventory-updated', onInventoryUpdated as EventListener)
 })
 
@@ -304,6 +310,17 @@ const onOpenCraftingMenu = (event: Event) => {
     displayCraftingDialog.value = true
     nextTick(() => {
         craftingDialog.value?.openDialog?.(detail)
+    })
+}
+
+const onOpenNpcUseMenu = (event: Event) => {
+    const detail = (event as CustomEvent).detail
+    if (!detail) {
+        return
+    }
+    displayNpcUseDialog.value = true
+    nextTick(() => {
+        npcUseDialog.value?.openDialog?.(detail)
     })
 }
 
