@@ -90,6 +90,8 @@ export const MessageProcessor = {
                 case 50: this.processPlaySound(msg.d); break
                 case 51: await this.addNpc(msg.d); break
                 case 52: this.removeNpc(msg.d); break
+                case 53: this.npcMove(msg.d); break
+                case 54: this.npcMoveStop(msg.d); break
                 case 1003: this.processGMAllSpawns(msg.d); break
                 case 1004: this.processGMSpawnChange(msg.d); break
                 default:
@@ -127,6 +129,14 @@ export const MessageProcessor = {
 
     removeNpc(data) {
         NpcManager.removeNpc(data.id)
+    },
+
+    npcMove(data) {
+        NpcManager.npcMove(data)
+    },
+
+    npcMoveStop(data) {
+        NpcManager.npcMoveStop(data)
     },
 
     removeCharacter(data) {

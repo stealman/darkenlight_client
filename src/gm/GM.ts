@@ -8,6 +8,7 @@ import { Utils } from '@/utils/utils'
 import { GMSpawns } from '@/gm/GmSpawns'
 import { Renderer } from '@/babylon/scene/renderer'
 import { OnScreenMessageManager } from '@/gui/onScreenMessageManager'
+import { NpcManager } from '@/babylon/npc/npcManager'
 
 /**
  * Main GM tabs
@@ -43,6 +44,8 @@ export const GMManager = {
     selectedStatic: ref (0),
     selectedNpcName: ref(''),
     selectedNpcType: ref('common'),
+    selectedNpcWanderingRange: ref(0),
+    selectedNpc: ref<any | null>(null),
 
     tab: GmTabs.OVERVIEW,
 
@@ -158,16 +161,31 @@ export const GMManager = {
         }
 
         if (this.tab === GmTabs.NPCS_EDIT) {
+            const markerPos = new Vector3(GMSceneManager.hoverBlockMarker!.position.x, 0, GMSceneManager.hoverBlockMarker!.position.z)
+            const npc = NpcManager.getNpcOnTile(markerPos.x, markerPos.z)
+            if (npc) {
+                this.selectedNpc.value = {
+                    id: npc.id,
+                    name: npc.name,
+                    type: npc.type,
+                    wanderingRange: npc.wanderingRange
+                }
+                return
+            }
+            if (this.selectedNpc.value) {
+                this.selectedNpc.value = null
+                return
+            }
             const name = this.selectedNpcName.value.trim()
             if (!name) {
                 return
             }
-            const markerPos = new Vector3(GMSceneManager.hoverBlockMarker!.position.x, 0, GMSceneManager.hoverBlockMarker!.position.z)
             Connector.sendMessage(new GMNpcAction('CREATE', {
                 x: markerPos.x,
                 z: markerPos.z,
                 name: name,
-                type: this.selectedNpcType.value
+                type: this.selectedNpcType.value,
+                wanderingRange: this.selectedNpcWanderingRange.value
             }))
         }
     },
@@ -396,6 +414,22 @@ export const GMManager = {
 
     createItem(type: string, codebookId: number, quantity: number | null, quality: number | null) {
         Connector.sendMessage(new GMCreateItemMsg(type, codebookId, quantity, quality))
+    },
+
+    saveSelectedNpc() {
+        if (!this.selectedNpc.value) {
+            return
+        }
+        Connector.sendMessage(new GMNpcAction('UPDATE', this.selectedNpc.value))
+        this.selectedNpc.value = null
+    },
+
+    deleteSelectedNpc() {
+        if (!this.selectedNpc.value) {
+            return
+        }
+        Connector.sendMessage(new GMNpcAction('DELETE', {id: this.selectedNpc.value.id}))
+        this.selectedNpc.value = null
     }
 }
 
