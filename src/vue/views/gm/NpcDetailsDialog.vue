@@ -454,6 +454,12 @@ defineExpose({
     padding: 10px;
 }
 
+.npc-details-dialog-content .dialog-button {
+    padding: 5px 10px;
+    font-size: 0.9rem;
+    line-height: 1;
+}
+
 .npc-details-control {
     display: grid;
     grid-template-columns: 86px minmax(0, 1fr);

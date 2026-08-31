@@ -133,5 +133,22 @@ export const NpcManager = {
             }
         }
         return null
+    },
+
+    getClosestNpcInDistance(maxDistance: number): Npc | null {
+        if (!MyPlayer.myChar) {
+            return null
+        }
+
+        let closestNpc: Npc | null = null
+        let closestDistance = maxDistance
+        for (const npc of this.npcs.values()) {
+            const distance = npc.getDistanceFromMyPlayer()
+            if (distance <= closestDistance) {
+                closestNpc = npc
+                closestDistance = distance
+            }
+        }
+        return closestNpc
     }
 }

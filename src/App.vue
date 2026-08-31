@@ -160,6 +160,7 @@ const displayInventoryDialog = ref(false)
 const displayCharacterDialog = ref(false)
 const displayCraftingDialog = ref(false)
 const displayNpcUseDialog = ref(false)
+const autoLoginTemporarilyDisabled = true
 
 const touchControls = ref()
 const settingsDialog = ref()
@@ -209,7 +210,7 @@ onMounted(async () => {
         const loginForm = localStorage.getItem('DARKENLIGHT_LOGIN_FORM')
         if (loginForm) {
             const form = JSON.parse(loginForm)
-            if (form.autoLogin) {
+            if (form.autoLogin && !autoLoginTemporarilyDisabled) {
                 displayLoginDialog.value = false
                 Connector.sendLoginRequest(form.login, form.password)
                 loginRequestSent()

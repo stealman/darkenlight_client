@@ -1,6 +1,7 @@
 import { MiniMap } from '@/utils/minimap'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { OverlayManager } from '@/gui/overlay/overlayManager'
+import { ref } from 'vue'
 
 export const EmeraldsManager = {
     size: 32 as number,
@@ -10,6 +11,7 @@ export const EmeraldsManager = {
     emeraldsInfoCount: null as HTMLDivElement,
 
     myEmeralds: 0 as number,
+    emeralds: ref(0),
     displayedEmeralds: 0 as number,
     animationStartDifference: 0 as number,
 
@@ -104,6 +106,7 @@ export const EmeraldsManager = {
             this.animationStartDifference = Math.abs(amount - this.displayedEmeralds)
         }
         this.myEmeralds = amount
+        this.emeralds.value = amount
         if (immediate) {
             this.displayedEmeralds = amount
             this.emeraldsInfoCount.innerText = this.formatEmeraldAmount(this.displayedEmeralds)

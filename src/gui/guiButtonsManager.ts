@@ -11,6 +11,7 @@ import { CharacterAction, CharacterActions } from '@/data/actions/characterActio
 import { TargetingManager } from '@/gui/targettingManager'
 import { GMManager } from '@/gm/GM'
 import {NpcInteractionManager} from '@/data/npcInteractionManager'
+import {NpcManager} from '@/babylon/npc/npcManager'
 
 class GuiOpportunityButtonAction {
     name: string
@@ -146,8 +147,9 @@ export const GuiButtonsManager = {
         this.opportunityButtons.get(GuiOpportunityActions.RESTING.name)!.setVisible(MyPlayer.nearFireplace !== null)
         this.opportunityButtons.get(GuiOpportunityActions.COOKING.name)!.setVisible(MyPlayer.nearFireplace !== null)
         const selectedTarget = TargetingManager.selectedTarget
+        const closestNpc = NpcManager.getClosestNpcInDistance(3)
         this.opportunityButtons.get(GuiOpportunityActions.NPC_USE.name)!.setVisible(
-            selectedTarget?.getObjectType() === 'N' && selectedTarget.getDistanceFromMyPlayer() <= 3
+            closestNpc !== null
         )
         this.opportunityButtons.get(GuiOpportunityActions.NPC_EDIT.name)!.setVisible(
             MyPlayer.myChar?.className === 'GM' && selectedTarget?.getObjectType() === 'N'
@@ -256,9 +258,9 @@ export const GuiButtonsManager = {
     },
 
     clickOnNpcUseButton() {
-        const target = TargetingManager.selectedTarget
-        if (target?.getObjectType() === 'N') {
-            NpcInteractionManager.useNpc(target.id)
+        const closestNpc = NpcManager.getClosestNpcInDistance(3)
+        if (closestNpc) {
+            NpcInteractionManager.useNpc(closestNpc.id)
         }
     },
 
