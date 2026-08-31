@@ -115,6 +115,9 @@ export const OverlayManager = {
         })
 
         NpcManager.npcs.forEach(npc => {
+            if (!NpcManager.visibleNpcs.has(npc.id)) {
+                return
+            }
             const pos = npc.getNameTextNodeScreenPosition()
             if (pos) {
                 this.renderNpcLabel(pos, npc.name, npc.title, tightText)
