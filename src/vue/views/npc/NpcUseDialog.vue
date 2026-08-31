@@ -61,10 +61,10 @@
                             <img src="/images/icons/emerald.png" alt="Emerald" />
                         </span>
                         <div class="npc-vendor-buy-actions">
-                            <button class="dialog-button npc-vendor-buy-button" @click.stop="buyItem(item)">{{ item.tp === 'R' ? '×1' : t('vendor.buy') }}</button>
+                            <button class="dialog-button npc-vendor-buy-button" @click.stop="buyItem(item, 1, $event)">{{ item.tp === 'R' ? '×1' : t('vendor.buy') }}</button>
                             <template v-if="item.tp === 'R'">
-                                <button class="dialog-button npc-vendor-quick-buy-button" @click.stop="buyItem(item, 5)">×5</button>
-                                <button class="dialog-button npc-vendor-quick-buy-button" @click.stop="buyItem(item, 25)">×25</button>
+                                <button class="dialog-button npc-vendor-quick-buy-button" @click.stop="buyItem(item, 5, $event)">×5</button>
+                                <button class="dialog-button npc-vendor-quick-buy-button" @click.stop="buyItem(item, 25, $event)">×25</button>
                             </template>
                         </div>
                     </div>
@@ -77,6 +77,15 @@
         </div>
 
         <template #overlay>
+            <div
+                v-for="effect in purchaseEffects"
+                :key="effect.id"
+                class="npc-purchase-effect"
+                :class="{ 'npc-purchase-effect-error': effect.error }"
+                :style="{ left: `${effect.x}px`, top: `${effect.y}px` }"
+            >
+                {{ effect.text }}
+            </div>
             <div v-if="detailItem" class="npc-vendor-item-overlay" :style="detailOverlayStyle" @click="detailItem = null">
                 <div class="npc-vendor-overlay-name">{{ getItemName(detailItem) }}</div>
                 <div v-if="detailItem.tp === 'W'" class="npc-vendor-overlay-stats">
@@ -99,6 +108,7 @@ import type {NpcUseData, NpcUseFeatureData, NpcVendorCatalogItem} from '@/networ
 import {t} from '@/i18n'
 import {EmeraldsManager} from '@/gui/emeraldsManager'
 import {InventoryManager} from '@/data/inventoryManager'
+import {NpcManager} from '@/babylon/npc/npcManager'
 
 const emit = defineEmits(['close'])
 
@@ -107,6 +117,17 @@ const categoryLabels: Record<string, string> = {weapons: 'vendor.weapons', bows:
 const itemTypeLocalizationSections: Record<string, string> = {W: 'weapons', A: 'armors', J: 'jewels', T: 'trinkets', R: 'resources'}
 const damageTypeLabels: Record<string, string> = {PHYSICAL_SLASH: 'vendor.damageSlash', PHYSICAL_PIERCE: 'vendor.damagePierce', PHYSICAL_BLUNT: 'vendor.damageBlunt'}
 const IGNORE_BACKDROP_CLICK_AFTER_OPEN_MS = 350
+const NPC_PURCHASE_DISTANCE = 4
+const NPC_FEATURE_TAB_STORAGE_KEY = 'DARKENLIGHT_NPC_FEATURE_TAB'
+const NPC_VENDOR_CATEGORY_TAB_STORAGE_KEY = 'DARKENLIGHT_NPC_VENDOR_CATEGORY_TAB'
+
+type PurchaseEffect = {
+    id: number
+    text: string
+    x: number
+    y: number
+    error: boolean
+}
 
 const dialogVisible = ref(false)
 const npcData = ref<NpcUseData | null>(null)
@@ -116,6 +137,8 @@ const detailItem = ref<NpcVendorCatalogItem | null>(null)
 const detailOverlayPosition = ref({x: 0, y: 0})
 const resourceInventoryVersion = ref(0)
 const openedAt = ref(0)
+const purchaseEffects = ref<PurchaseEffect[]>([])
+let nextPurchaseEffectId = 0
 
 const features = computed(() => npcData.value?.features ?? [])
 const selectedFeature = computed<NpcUseFeatureData | null>(() => features.value[selectedFeatureIndex.value] ?? null)
@@ -142,19 +165,63 @@ const getOwnedResourceCount = (item: NpcVendorCatalogItem) => {
     return InventoryManager.getTotalResourceItemCountByType(item.cb)
 }
 
-const selectFeature = (index: number) => {
+const getPreferredVendorCategory = (feature: NpcUseFeatureData | undefined) => {
+    const categories = Object.entries(feature?.categories ?? {}).filter(([, items]) => items.length > 0)
+    const storedCategory = localStorage.getItem(NPC_VENDOR_CATEGORY_TAB_STORAGE_KEY)
+    return categories.some(([category]) => category === storedCategory)
+        ? storedCategory!
+        : categories[0]?.[0] ?? ''
+}
+
+const selectFeature = (index: number, remember: boolean = true) => {
+    const feature = features.value[index]
+    if (!feature) {
+        return
+    }
+
     selectedFeatureIndex.value = index
-    selectedCategory.value = Object.keys(features.value[index]?.categories ?? {})[0] ?? ''
+    selectedCategory.value = getPreferredVendorCategory(feature)
+    if (remember) {
+        localStorage.setItem(NPC_FEATURE_TAB_STORAGE_KEY, feature.type)
+    }
     detailItem.value = null
 }
 
 const selectCategory = (category: string) => {
     selectedCategory.value = category
+    localStorage.setItem(NPC_VENDOR_CATEGORY_TAB_STORAGE_KEY, category)
     detailItem.value = null
 }
 
-const buyItem = (item: NpcVendorCatalogItem, quantity: number = 1) => {
+const addPurchaseEffect = (text: string, event: MouseEvent, error: boolean = false) => {
+    const effectId = nextPurchaseEffectId++
+    purchaseEffects.value.push({
+        id: effectId,
+        text,
+        x: event.clientX,
+        y: event.clientY,
+        error,
+    })
+    window.setTimeout(() => {
+        purchaseEffects.value = purchaseEffects.value.filter((effect) => effect.id !== effectId)
+    }, 750)
+}
+
+const buyItem = (item: NpcVendorCatalogItem, quantity: number, event: MouseEvent) => {
     detailItem.value = null
+    const npc = npcData.value ? NpcManager.npcs.get(npcData.value.id) : null
+    if (!npc || npc.getDistanceFromMyPlayer() > NPC_PURCHASE_DISTANCE) {
+        addPurchaseEffect(t('messages.npcUseOutOfRange'), event, true)
+        return
+    }
+
+    const totalPrice = item.price * quantity
+    if (EmeraldsManager.myEmeralds < totalPrice) {
+        addPurchaseEffect(t('vendor.notEnoughEmeralds'), event, true)
+        return
+    }
+
+    addPurchaseEffect(`-${EmeraldsManager.formatEmeraldAmount(totalPrice)}`, event)
     if (npcData.value) {
         NpcInteractionManager.purchase(npcData.value.id, item, quantity)
     }
@@ -173,9 +240,9 @@ const showItemDetails = (item: NpcVendorCatalogItem, event: MouseEvent | Keyboar
 
 const openDialog = (data: NpcUseData) => {
     npcData.value = data
-    selectedFeatureIndex.value = 0
-    selectedCategory.value = Object.keys(data.features[0]?.categories ?? {})[0] ?? ''
-    detailItem.value = null
+    const storedFeature = localStorage.getItem(NPC_FEATURE_TAB_STORAGE_KEY)
+    const storedFeatureIndex = data.features.findIndex((feature) => feature.type === storedFeature)
+    selectFeature(storedFeatureIndex >= 0 ? storedFeatureIndex : 0, false)
     openedAt.value = Date.now()
     dialogVisible.value = true
 }
@@ -237,4 +304,12 @@ defineExpose({openDialog})
 .npc-vendor-overlay-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px 10px; margin-top: 9px; font-size: 12px; color: rgb(var(--ui-dark)); }
 .npc-vendor-overlay-stats strong { color: rgb(var(--ui-base)); }
 .npc-vendor-overlay-muted { margin-top: 8px; color: rgb(var(--ui-dark)); font-size: 12px; }
+.npc-purchase-effect { position: fixed; z-index: 2101; pointer-events: none; color: #ff6262; font-size: 21px; font-weight: 700; line-height: 1; text-shadow: 0 2px 3px #000; animation: npc-purchase-float 750ms ease-out forwards; }
+.npc-purchase-effect-error { color: #ff8a63; font-size: 14px; }
+@keyframes npc-purchase-float { from { transform: translate(-50%, -50%); opacity: 1; } to { transform: translate(-50%, calc(-50% - 42px)); opacity: 0; } }
+
+@media (min-height: 700px) {
+    .npc-vendor-item-row { grid-template-columns: 54px minmax(0, 1fr) max-content auto; min-height: 58px; padding-block: 5px; }
+    .npc-vendor-item-icon { width: 48px; height: 48px; }
+}
 </style>

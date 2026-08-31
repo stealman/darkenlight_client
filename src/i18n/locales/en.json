@@ -177,6 +177,7 @@
     "detailsSoon": "Item details will be added later.",
     "damageSlash": "Slash",
     "damagePierce": "Pierce",
-    "damageBlunt": "Blunt"
+    "damageBlunt": "Blunt",
+    "notEnoughEmeralds": "Not enough emeralds"
   }
 }

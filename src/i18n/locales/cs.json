@@ -148,7 +148,8 @@
     "notEnoughStamina": "Jsi příliš unavený",
     "notEnoughMana": "Nemáš dostatek many",
     "notEnoughHealth": "Nemáš dostatek zdraví",
-    "fullyRested": "Jsi plně odpočatý"
+    "fullyRested": "Jsi plně odpočatý",
+    "npcUseOutOfRange": "NPC je příliš daleko"
   },
   "vendor": {
     "vendor": "Obchodník",
@@ -173,6 +174,7 @@
     "detailsSoon": "Detaily předmětu budou doplněny později.",
     "damageSlash": "Sečné",
     "damagePierce": "Bodné",
-    "damageBlunt": "Drtivé"
+    "damageBlunt": "Drtivé",
+    "notEnoughEmeralds": "Nedostatek emeraldů"
   }
 }

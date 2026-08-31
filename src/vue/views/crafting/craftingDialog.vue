@@ -557,4 +557,11 @@ defineExpose({
 .crafting-selection-action-button { flex: 0 0 auto; }
 .crafting-selection-slider-row { display: flex; align-items: center; gap: 10px; }
 .crafting-selection-slider { flex: 1 1 auto; }
+
+@media (min-height: 700px) {
+    .crafting-recipe-row { grid-template-columns: 56px 170px minmax(0, 1fr); }
+    .crafting-result-icon-button { width: 56px; height: 56px; }
+    .crafting-result-icon { width: 44px; height: 44px; }
+    .crafting-ingredient-icon { width: 24px; height: 24px; }
+}
 </style>
