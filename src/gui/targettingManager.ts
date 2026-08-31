@@ -8,6 +8,7 @@ import { Settings } from '@/settings/settings'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { MyPlayer } from '@/data/myPlayer'
 import { CharacterManager } from '@/babylon/character/characterManager'
+import { NpcManager } from '@/babylon/npc/npcManager'
 import { ActionButtonsManager } from '@/gui/actionButtonsManager'
 import { CharacterActions } from '@/data/actions/characterActions'
 import { t } from '@/i18n'
@@ -127,6 +128,24 @@ export const TargetingManager = {
                 const sphere = char.model.model.getBoundingInfo().boundingSphere
                 if (ray.intersectsSphere({ center: sphere.centerWorld, radius: sphere.radiusWorld * 2 } as any)) {
                     target = char
+                }
+            }
+        })
+
+        NpcManager.npcs.forEach((npc) => {
+            if (!NpcManager.visibleNpcs.has(npc.id) || !npc.model?.model) return
+
+            if (!useSphere) {
+                const bbox = npc.model.model.getChildMeshes()[0].getBoundingInfo().boundingBox
+                const min = bbox.minimumWorld
+                const max = bbox.maximumWorld
+                if (ray.intersectsBoxMinMax(min, max)) {
+                    target = npc
+                }
+            } else {
+                const sphere = npc.model.model.getBoundingInfo().boundingSphere
+                if (ray.intersectsSphere({ center: sphere.centerWorld, radius: sphere.radiusWorld * 2 } as any)) {
+                    target = npc
                 }
             }
         })

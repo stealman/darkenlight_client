@@ -3,6 +3,7 @@ import { ViewportManager } from '@/utils/viewport'
 import { MyPlayer } from '@/data/myPlayer'
 import { Utils } from '@/utils/utils'
 import { Vector3 } from '@babylonjs/core'
+import { TargetingManager } from '@/gui/targettingManager'
 
 export const NpcManager = {
     npcs: new Map<number, Npc>(),
@@ -38,6 +39,9 @@ export const NpcManager = {
         npc.model?.removeFromScene()
         this.visibleNpcs.delete(id)
         this.npcs.delete(id)
+        if (npc === TargetingManager.selectedTarget) {
+            TargetingManager.unselectTarget()
+        }
     },
 
     npcMove(data: number[]) {
