@@ -9,6 +9,7 @@ import { GMSpawns } from '@/gm/GmSpawns'
 import { Renderer } from '@/babylon/scene/renderer'
 import { OnScreenMessageManager } from '@/gui/onScreenMessageManager'
 import { NpcManager } from '@/babylon/npc/npcManager'
+import { TargetingManager } from '@/gui/targettingManager'
 
 /**
  * Main GM tabs
@@ -164,12 +165,7 @@ export const GMManager = {
             const markerPos = new Vector3(GMSceneManager.hoverBlockMarker!.position.x, 0, GMSceneManager.hoverBlockMarker!.position.z)
             const npc = NpcManager.getNpcOnTile(markerPos.x, markerPos.z)
             if (npc) {
-                this.selectedNpc.value = {
-                    id: npc.id,
-                    name: npc.name,
-                    type: npc.type,
-                    wanderingRange: npc.wanderingRange
-                }
+                this.selectNpcForEditing(npc)
                 return
             }
             if (this.selectedNpc.value) {
@@ -363,6 +359,13 @@ export const GMManager = {
         this.consumeLeftClickEvents = true
         GMSceneManager.setHoverBlockMarkerSize(1)
         GMSceneManager.hoverBlockMarker?.setEnabled(true)
+        const selectedTarget = TargetingManager.selectedTarget
+        if (selectedTarget?.getObjectType() === 'N') {
+            const npc = NpcManager.npcs.get(selectedTarget.id)
+            if (npc) {
+                this.selectNpcForEditing(npc)
+            }
+        }
     },
 
     closeTabTerrainEdit() {
@@ -430,6 +433,22 @@ export const GMManager = {
         }
         Connector.sendMessage(new GMNpcAction('DELETE', {id: this.selectedNpc.value.id}))
         this.selectedNpc.value = null
+    },
+
+    selectNpcForEditing(npc: any) {
+        this.selectedNpc.value = {
+            id: npc.id,
+            name: npc.name,
+            type: npc.type,
+            wanderingRange: npc.wanderingRange
+        }
+    },
+
+    cancelSelectedNpc() {
+        this.selectedNpc.value = null
+        this.selectedNpcName.value = ''
+        this.selectedNpcType.value = 'common'
+        this.selectedNpcWanderingRange.value = 0
     }
 }
 

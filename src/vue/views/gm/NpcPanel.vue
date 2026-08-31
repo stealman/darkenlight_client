@@ -65,6 +65,6 @@ const deleteSelectedNpc = () => {
 }
 
 const cancelSelectedNpc = () => {
-    selectedNpc.value = null
+    GMManager.cancelSelectedNpc()
 }
 </script>
