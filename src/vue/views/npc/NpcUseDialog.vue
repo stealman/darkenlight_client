@@ -91,7 +91,7 @@
                 <div v-if="detailItem.tp === 'W'" class="npc-vendor-overlay-stats">
                     <span>{{ t('vendor.attack') }} <strong>{{ detailItem.atts?.patk }}</strong></span>
                     <span>{{ t('vendor.attackType') }} <strong>{{ formatDamageTypes(detailItem) }}</strong></span>
-                    <span>{{ t('vendor.speed') }} <strong>{{ detailItem.atts?.speed }}</strong></span>
+                    <span>{{ t('vendor.speed') }} <strong>{{ formatSpeed(detailItem.atts?.speed) }}</strong></span>
                     <span>{{ t('vendor.range') }} <strong>{{ detailItem.atts?.range }}</strong></span>
                 </div>
                 <div v-else class="npc-vendor-overlay-muted">{{ t('vendor.detailsSoon') }}</div>
@@ -159,6 +159,10 @@ const getItemName = (item: NpcVendorCatalogItem) => {
 }
 const getItemImage = (item: NpcVendorCatalogItem) => item.img ? `/images/items/${item.img}.png` : '/images/icons/buttons/btn_backpack.png'
 const formatDamageTypes = (item: NpcVendorCatalogItem) => (item.dmgTypes ?? []).map((type) => t(damageTypeLabels[type] ?? type)).join(' / ')
+const formatSpeed = (speed: number | string | undefined) => {
+    const milliseconds = Number(speed)
+    return Number.isFinite(milliseconds) ? `${(milliseconds / 1000).toFixed(2)}s` : '-'
+}
 const getTotalPrice = (item: NpcVendorCatalogItem) => item.price
 const getOwnedResourceCount = (item: NpcVendorCatalogItem) => {
     resourceInventoryVersion.value

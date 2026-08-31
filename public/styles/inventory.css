@@ -148,6 +148,7 @@
     aspect-ratio: 6 / 4;
     overflow-y: auto;
     overflow-x: hidden;
+    touch-action: pan-y;
 }
 
 .inventory-grid {
@@ -206,7 +207,7 @@
 .inventory-item-overlay {
     position: fixed;
     z-index: 1000;
-    min-width: 120px;
+    min-width: 180px;
     padding: 8px 10px;
     border: 1px solid rgb(var(--ui-dark));
     background: rgba(15, 11, 8, 0.94);
@@ -319,4 +320,25 @@
 
 .inventory-item-overlay-name-quantity {
     color: #9b9b9b;
+}
+
+.inventory-item-overlay-stats {
+    display: grid;
+    grid-template-columns: repeat(2, auto);
+    justify-content: start;
+    gap: 3px 14px;
+    color: rgb(var(--ui-dark));
+}
+
+.inventory-item-overlay-stats strong {
+    color: #f2e7cf;
+    font-weight: 600;
+}
+
+.inventory-item-overlay-dur-low {
+    color: #e5b454;
+}
+
+.inventory-item-overlay-dur-broken {
+    color: rgb(var(--ui-danger));
 }

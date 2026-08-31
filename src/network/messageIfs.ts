@@ -95,6 +95,7 @@ export interface ItemTO {
     wCat?: string
     hReq?: number
     tags?: string[]
+    dmgTypes?: string[]
 }
 
 export interface GroundItemTO {

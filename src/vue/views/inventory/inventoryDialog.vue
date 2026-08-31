@@ -25,6 +25,7 @@
                     :get-markers="getWeaponSetupMarkersForInventorySlot"
                     :get-stack-count="getStackCountForInventorySlot"
                     @slot-pointerdown="handleInventorySlotPointerDown"
+                    @scroll="handleInventoryScroll"
                 />
             </div>
         </div>
@@ -131,6 +132,10 @@ const itemInfoOverlay = ref({
     durability: null,
     durabilityMax: null,
     quantity: null,
+    weaponAttack: null,
+    weaponDamageTypes: [],
+    weaponSpeed: null,
+    weaponRange: null,
     showDropButton: false,
     showMergeButton: false,
     showCampButton: false,
@@ -182,6 +187,10 @@ const showItemInfoOverlay = (item, pointer, options = {}) => {
     itemInfoOverlay.value.durability = item.atts.dur ?? null
     itemInfoOverlay.value.durabilityMax = item.atts.durM ?? null
     itemInfoOverlay.value.quantity = item.atts.qty ?? null
+    itemInfoOverlay.value.weaponAttack = item.cbType === 'W' ? item.atts.patk ?? null : null
+    itemInfoOverlay.value.weaponDamageTypes = item.cbType === 'W' ? item.damageTypes ?? [] : []
+    itemInfoOverlay.value.weaponSpeed = item.cbType === 'W' ? item.atts.speed ?? null : null
+    itemInfoOverlay.value.weaponRange = item.cbType === 'W' ? item.atts.range ?? null : null
     itemInfoOverlay.value.showDropButton = showDropButton
     itemInfoOverlay.value.showMergeButton = showMergeButton
     itemInfoOverlay.value.showCampButton = sourceType === 'inventory' && ConsumableHelper.isItemCampWood(item)
@@ -680,10 +689,16 @@ const createPointerDoubleClickHandler = (singleClick, doubleClick, interval) => 
     }
 
     handler.dispose = () => {
+        handler.cancel()
+    }
+
+    handler.cancel = () => {
         if (singleTimer) {
             clearTimeout(singleTimer)
             singleTimer = null
         }
+        lastKey = null
+        lastTime = 0
     }
 
     pointerClickHandlers.push(handler)
@@ -692,6 +707,11 @@ const createPointerDoubleClickHandler = (singleClick, doubleClick, interval) => 
 
 const handleSlotPointerDown = createPointerDoubleClickHandler(onclick, onDoubleClick, DOUBLE_CLICK_MS)
 const handleInventorySlotPointerDown = createPointerDoubleClickHandler(onInventoryClick, onInventoryDoubleClick, DOUBLE_CLICK_MS)
+
+const handleInventoryScroll = () => {
+    handleInventorySlotPointerDown.cancel()
+    hideItemInfoOverlay()
+}
 
 onUnmounted(() => {
     for (const handler of pointerClickHandlers) {

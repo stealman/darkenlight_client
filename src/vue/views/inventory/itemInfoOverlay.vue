@@ -13,9 +13,15 @@
         </div>
 
         <template v-if="itemInfo.quality">
-            <div class="inventory-item-overlay-qual">{{ t('inventory.quality') }}: {{ itemInfo.quality }}</div>
-            <div class="inventory-item-overlay-dur">{{ t('inventory.durability') }}: {{ itemInfo.durability }} / {{ itemInfo.durabilityMax }}</div>
+            <div :class="['inventory-item-overlay-dur', durabilityStatusClass]">{{ t('inventory.durability') }}: {{ itemInfo.durability }} / {{ itemInfo.durabilityMax }}</div>
         </template>
+
+        <div v-if="itemInfo.weaponAttack !== null" class="inventory-item-overlay-stats">
+            <span>{{ t('vendor.attack') }} <strong>{{ itemInfo.weaponAttack }}</strong></span>
+            <span>{{ t('vendor.attackType') }} <strong>{{ formatDamageTypes(itemInfo.weaponDamageTypes) }}</strong></span>
+            <span>{{ t('vendor.speed') }} <strong>{{ formatSpeed(itemInfo.weaponSpeed) }}</strong></span>
+            <span>{{ t('vendor.range') }} <strong>{{ itemInfo.weaponRange }}</strong></span>
+        </div>
 
         <div class="inventory-item-overlay-interactive inventory-item-overlay-actions">
             <button v-if="shouldShowDropButton" class="action-button inventory-action-button inventory-drop-button" type="button"
@@ -115,6 +121,33 @@ const emit = defineEmits(['close', 'drop-item', 'split-item', 'merge-item', 'cre
 const overlayRootRef = ref(null)
 const showSplitControls = ref(false)
 const { t } = useI18n()
+const damageTypeLabels = {PHYSICAL_SLASH: 'vendor.damageSlash', PHYSICAL_PIERCE: 'vendor.damagePierce', PHYSICAL_BLUNT: 'vendor.damageBlunt'}
+
+const formatDamageTypes = (damageTypes) => {
+    const values = Array.isArray(damageTypes) ? damageTypes : []
+    return values.length ? values.map((type) => t(damageTypeLabels[type] ?? type)).join(' / ') : '-'
+}
+
+const formatSpeed = (speed) => {
+    const milliseconds = Number(speed)
+    return Number.isFinite(milliseconds) ? `${(milliseconds / 1000).toFixed(2)}s` : '-'
+}
+
+const durabilityStatusClass = computed(() => {
+    const value = props.itemInfo?.durability
+    if (value === null || value === undefined || value === '') {
+        return ''
+    }
+
+    const durability = Number(value)
+    if (!Number.isFinite(durability)) {
+        return ''
+    }
+    if (durability <= 0) {
+        return 'inventory-item-overlay-dur-broken'
+    }
+    return durability < 15 ? 'inventory-item-overlay-dur-low' : ''
+})
 
 const shouldShowDropButton = computed(() => {
     return props.context === 'INVENTORY' && props.itemInfo.showDropButton === true && !showSplitControls.value

@@ -1,15 +1,18 @@
 <template>
     <div class="inventory-panel">
-        <div class="inventory-grid-wrapper">
+        <div class="inventory-grid-wrapper" @scroll="emit('scroll')">
             <div class="inventory-grid">
                 <div
                     v-for="slotIndex in slotCount"
                     :key="slotIndex"
                     class="inventory-item-slot"
-                    @pointerdown.prevent="emit('slot-pointerdown', slotIndex - 1, $event)"
+                    @pointerdown="onSlotPointerDown(slotIndex - 1, $event)"
+                    @pointermove="onSlotPointerMove($event)"
+                    @pointerup="onSlotPointerUp(slotIndex - 1, $event)"
+                    @pointercancel="cancelSlotPointer"
                 >
                     <template v-if="slotImages[slotIndex - 1]">
-                        <img :src="slotImages[slotIndex - 1]" alt="Inventory item" class="inventory-item-image" />
+                        <img :src="slotImages[slotIndex - 1]" alt="Inventory item" class="inventory-item-image" draggable="false" />
                         <span
                             v-if="getStackCount(slotIndex - 1) !== null"
                             class="stack-count-label"
@@ -40,7 +43,63 @@ defineProps<{
     getStackCount: (index: number) => number | null
 }>()
 
-const emit = defineEmits(['slot-pointerdown'])
+const TAP_MOVE_TOLERANCE = 8
+
+const emit = defineEmits(['slot-pointerdown', 'scroll'])
+
+let activePointerId: number | null = null
+let activeSlotIndex: number | null = null
+let touchStartX = 0
+let touchStartY = 0
+let touchMoved = false
+
+const onSlotPointerDown = (slotIndex: number, event: PointerEvent) => {
+    if (event.pointerType !== 'touch') {
+        emit('slot-pointerdown', slotIndex, event)
+        return
+    }
+
+    activePointerId = event.pointerId
+    activeSlotIndex = slotIndex
+    touchStartX = event.clientX
+    touchStartY = event.clientY
+    touchMoved = false
+}
+
+const onSlotPointerMove = (event: PointerEvent) => {
+    if (event.pointerId !== activePointerId || touchMoved) {
+        return
+    }
+
+    const movedX = event.clientX - touchStartX
+    const movedY = event.clientY - touchStartY
+    if (Math.hypot(movedX, movedY) < TAP_MOVE_TOLERANCE) {
+        return
+    }
+
+    touchMoved = true
+    emit('scroll')
+}
+
+const onSlotPointerUp = (slotIndex: number, event: PointerEvent) => {
+    const isTap = event.pointerId === activePointerId
+        && activeSlotIndex === slotIndex
+        && !touchMoved
+
+    cancelSlotPointer()
+    if (!isTap) {
+        return
+    }
+
+    event.preventDefault()
+    emit('slot-pointerdown', slotIndex, event)
+}
+
+const cancelSlotPointer = () => {
+    activePointerId = null
+    activeSlotIndex = null
+    touchMoved = false
+}
 
 const getWeaponSetupMarkerImage = (setupType: WeaponMarker) => {
     return setupType === 'primary'

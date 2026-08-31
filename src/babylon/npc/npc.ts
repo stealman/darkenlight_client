@@ -71,6 +71,6 @@ export class Npc extends Character {
     }
 
     getRelationToMyPlayer(): 'ALLY' | 'ENEMY' | 'NEUTRAL' {
-        return 'NEUTRAL'
+        return 'ALLY'
     }
 }

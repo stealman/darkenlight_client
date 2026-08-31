@@ -22,11 +22,12 @@ export class Item {
     weaponCategory: string | null = null
     handsRequired: number | null = null
     weaponTags: string[] = []
+    damageTypes: string[] = []
 
     atts: Map<string, number | string> = new Map()
 
     constructor(id: number, cbId: number, cbType: string, modelId: number, matId: number, name: string | null, imgUrl: string, atts: Map<string, number | string>,
-                weaponCategory: string | null = null, handsRequired: number | null = null, weaponTags: string[] = []) {
+                weaponCategory: string | null = null, handsRequired: number | null = null, weaponTags: string[] = [], damageTypes: string[] = []) {
         this.id = id
         this.cbType = cbType
         this.cbId = cbId
@@ -39,6 +40,7 @@ export class Item {
         this.weaponCategory = weaponCategory
         this.handsRequired = handsRequired
         this.weaponTags = weaponTags
+        this.damageTypes = damageTypes
         if (!this.slotInfo && (cbType === 'W' || cbType === 'A' || cbType === 'J')) {
             throw new Error(`EquipSlotInfo not found for modelId: ${modelId}`)
         }
@@ -63,7 +65,7 @@ export class Item {
 
     static fromData(data: ItemTO): Item {
         return new Item(data.id, data.cb, data.tp, data.mId, data.matId, data.name || null, data.img, data.atts,
-            data.wCat || null, data.hReq || null, data.tags || [])
+            data.wCat || null, data.hReq || null, data.tags || [], data.dmgTypes || [])
     }
 
     is3DModel(): boolean {
