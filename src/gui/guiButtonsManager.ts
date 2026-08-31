@@ -8,16 +8,20 @@ import { WeaponCategories, WeaponTags } from '@/data/items/item'
 import { Connector } from '@/network/connector'
 import { FireArrowsActionMsg, GatheringActionMsg, RequestCookingMsg, RestingActionMsg } from '@/network/messages'
 import { CharacterAction, CharacterActions } from '@/data/actions/characterActions'
+import { TargetingManager } from '@/gui/targettingManager'
+import { GMManager } from '@/gm/GM'
 
 class GuiOpportunityButtonAction {
     name: string
     icon: string
     hoverIcon: string
+    label: string | null
 
-    constructor(name: string, icon: string, hoverIcon: string) {
+    constructor(name: string, icon: string, hoverIcon: string, label: string | null = null) {
         this.name = name
         this.icon = icon
         this.hoverIcon = hoverIcon
+        this.label = label
     }
 }
 
@@ -30,11 +34,15 @@ class GuiOpportunityButton {
         this.action = action
         this.htmlEl = document.createElement("div")
         this.htmlEl.id = `btn-opportunity-${action.name.toLowerCase()}`
-        this.htmlEl.className = "gui-action-button"
-        this.htmlEl.innerHTML = `
-            <img class="action-icon" src="/images/icons/buttons/${action.icon}.png" />
-            <img class="action-icon-hover" src="/images/icons/buttons/${action.hoverIcon}.png" />
-        `
+        this.htmlEl.className = action.label ? "gui-action-button gui-opportunity-text-button" : "gui-action-button"
+        if (action.label) {
+            this.htmlEl.textContent = action.label
+        } else {
+            this.htmlEl.innerHTML = `
+                <img class="action-icon" src="/images/icons/buttons/${action.icon}.png" />
+                <img class="action-icon-hover" src="/images/icons/buttons/${action.hoverIcon}.png" />
+            `
+        }
         this.htmlEl.style.display = "none"
     }
 
@@ -43,7 +51,7 @@ class GuiOpportunityButton {
             return
         }
         this.visible = visible
-        this.htmlEl.style.display = visible ? "block" : "none"
+        this.htmlEl.style.display = visible ? (this.action.label ? "flex" : "block") : "none"
     }
 
     setSize(size: number) {
@@ -58,6 +66,7 @@ export const GuiOpportunityActions = {
     LUMBERJACKING: new GuiOpportunityButtonAction("LUMBERJACKING", "btn_lumber", "btn_lumber_hover"),
     RESTING: new GuiOpportunityButtonAction("RESTING", "btn_rest", "btn_rest_hover"),
     COOKING: new GuiOpportunityButtonAction("COOKING", "btn_cooking", "btn_cooking_hover"),
+    NPC_EDIT: new GuiOpportunityButtonAction("NPC_EDIT", "", "", "NPC"),
 }
 
 export const GuiButtonsManager = {
@@ -86,6 +95,7 @@ export const GuiButtonsManager = {
         this.opportunityButtons.set(GuiOpportunityActions.MINING.name, new GuiOpportunityButton(GuiOpportunityActions.MINING))
         this.opportunityButtons.set(GuiOpportunityActions.LUMBERJACKING.name, new GuiOpportunityButton(GuiOpportunityActions.LUMBERJACKING))
         this.opportunityButtons.set(GuiOpportunityActions.COOKING.name, new GuiOpportunityButton(GuiOpportunityActions.COOKING))
+        this.opportunityButtons.set(GuiOpportunityActions.NPC_EDIT.name, new GuiOpportunityButton(GuiOpportunityActions.NPC_EDIT))
     },
 
     renderOpportunityButtons() {
@@ -132,6 +142,9 @@ export const GuiButtonsManager = {
 
         this.opportunityButtons.get(GuiOpportunityActions.RESTING.name)!.setVisible(MyPlayer.nearFireplace !== null)
         this.opportunityButtons.get(GuiOpportunityActions.COOKING.name)!.setVisible(MyPlayer.nearFireplace !== null)
+        this.opportunityButtons.get(GuiOpportunityActions.NPC_EDIT.name)!.setVisible(
+            MyPlayer.myChar?.className === 'GM' && TargetingManager.selectedTarget?.getObjectType() === 'N'
+        )
 
         this.trySendFireArrowsAction()
     },
@@ -153,6 +166,9 @@ export const GuiButtonsManager = {
                 break
             case GuiOpportunityActions.COOKING.name:
                 this.clickOnCookingButton()
+                break
+            case GuiOpportunityActions.NPC_EDIT.name:
+                this.clickOnNpcEditButton()
                 break
         }
     },
@@ -219,6 +235,13 @@ export const GuiButtonsManager = {
     clickOnCookingButton() {
         if (MyPlayer.nearFireplace) {
             Connector.sendMessage(new RequestCookingMsg(MyPlayer.nearFireplace.x, MyPlayer.nearFireplace.z))
+        }
+    },
+
+    clickOnNpcEditButton() {
+        const target = TargetingManager.selectedTarget
+        if (MyPlayer.myChar?.className === 'GM' && target?.getObjectType() === 'N') {
+            GMManager.openNpcDetails(target)
         }
     },
 

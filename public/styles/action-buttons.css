@@ -83,6 +83,12 @@ div#opportunity-action-buttons div.gui-action-button:hover {
     background-color: rgba(95, 95, 95, 0.65);
 }
 
+div#opportunity-action-buttons div.gui-opportunity-text-button {
+    color: rgb(var(--ui-base));
+    font-size: 11px;
+    font-weight: bold;
+}
+
 div.action-button {
     touch-action: none;
     user-select: none;

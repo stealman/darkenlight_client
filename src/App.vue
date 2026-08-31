@@ -54,6 +54,7 @@
             <div id="opportunity-action-buttons"></div>
 
             <GmPanel id="gmPanel" v-if="gmPanelVisible" />
+            <NpcDetailsDialog ref="npcDetailsDialog" />
 
             <OnScreenMessages />
         </div>
@@ -112,10 +113,11 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { Renderer } from './babylon/scene/renderer'
 import { GameManager } from '@/GameManager'
 import GmPanel from '@/vue/views/gm/GmPanel.vue'
+import NpcDetailsDialog from '@/vue/views/gm/NpcDetailsDialog.vue'
 import { GMManager } from '@/gm/GM'
 import TouchControllers from '@/vue/views/touchControllers.vue'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
@@ -162,7 +164,16 @@ const loginDialog = ref()
 const inventoryDialog = ref()
 const characterDialog = ref()
 const craftingDialog = ref()
+const npcDetailsDialog = ref()
 const { t } = useI18n()
+
+watch(GMManager.npcDetailsDialogOpenRequested, (openRequested) => {
+    if (!openRequested) {
+        return
+    }
+    GMManager.npcDetailsDialogOpenRequested.value = false
+    npcDetailsDialog.value?.openDialog()
+})
 
 onMounted(async () => {
     window.onerror = function (errorMsg, url, lineNumber) {

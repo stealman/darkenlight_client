@@ -44,9 +44,8 @@ export const GMManager = {
     selectedWallFence: ref (0),
     selectedStatic: ref (0),
     selectedNpcName: ref(''),
-    selectedNpcType: ref('common'),
-    selectedNpcWanderingRange: ref(0),
     selectedNpc: ref<any | null>(null),
+    npcDetailsDialogOpenRequested: ref(false),
 
     tab: GmTabs.OVERVIEW,
 
@@ -180,8 +179,7 @@ export const GMManager = {
                 x: markerPos.x,
                 z: markerPos.z,
                 name: name,
-                type: this.selectedNpcType.value,
-                wanderingRange: this.selectedNpcWanderingRange.value
+                wanderingRange: 0
             }))
         }
     },
@@ -440,21 +438,43 @@ export const GMManager = {
             id: npc.id,
             name: npc.name,
             title: npc.title,
-            type: npc.type,
+            bodyType: npc.bodyType ?? 'steve',
+            equipment: {...(npc.equipment ?? {})},
+            features: (npc.features ?? []).map((feature: any) => ({
+                type: feature.type,
+                settings: {
+                    ...feature.settings,
+                    itemCategories: [...(feature.settings?.itemCategories ?? [])],
+                    weaponMaterials: [...(feature.settings?.weaponMaterials ?? [])],
+                    bowMaterials: [...(feature.settings?.bowMaterials ?? [])],
+                }
+            })),
             wanderingRange: npc.wanderingRange
+        }
+    },
+
+    openNpcDetails(npc?: any) {
+        if (npc) {
+            this.selectNpcForEditing(npc)
+        }
+        if (this.selectedNpc.value) {
+            this.npcDetailsDialogOpenRequested.value = true
         }
     },
 
     cancelSelectedNpc() {
         this.selectedNpc.value = null
         this.selectedNpcName.value = ''
-        this.selectedNpcType.value = 'common'
-        this.selectedNpcWanderingRange.value = 0
     },
 
-    setSelectedNpcTitle(title: string) {
+    setSelectedNpcDetails(name: string, title: string, bodyType: string, equipment: any, features: any[], wanderingRange: number) {
         if (this.selectedNpc.value) {
+            this.selectedNpc.value.name = name
             this.selectedNpc.value.title = title
+            this.selectedNpc.value.bodyType = bodyType
+            this.selectedNpc.value.equipment = equipment
+            this.selectedNpc.value.features = features
+            this.selectedNpc.value.wanderingRange = wanderingRange
         }
     }
 }
