@@ -65,6 +65,7 @@ const closeDialog = () => {
 const saveDetails = () => {
     const title = titleSelection.value === '__custom__' ? customTitle.value.trim() : titleSelection.value
     GMManager.setSelectedNpcTitle(title)
+    GMManager.saveSelectedNpc()
     closeDialog()
 }
 
