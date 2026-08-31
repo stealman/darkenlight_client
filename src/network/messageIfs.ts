@@ -129,6 +129,12 @@ export interface CharacterCraftingMessage {
     type: string
 }
 
+export interface CharacterCraftingResultMessage {
+    id: number
+    g: number
+    q: number
+}
+
 export interface CharacterRestingMessage {
     id: number
     x: number

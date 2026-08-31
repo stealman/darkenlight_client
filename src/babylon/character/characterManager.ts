@@ -7,6 +7,7 @@ import {
     AutoAttackMessage,
     AutoAttackResultMessage, CharacterCampingMessage,
     CharacterCraftingMessage,
+    CharacterCraftingResultMessage,
     EffectDamageMessage,
     CharacterGatheringMessage,
     CharacterGatheringResultMessage,
@@ -216,6 +217,15 @@ export const CharacterManager = {
                 char.startCrafting(data)
             }
         }
+    },
+
+    finishCrafting(data: CharacterCraftingResultMessage) {
+        if (data.id === MyPlayer.myChar.id) {
+            MyPlayer.myChar.finishCrafting(data)
+            return
+        }
+
+        this.characters.get(data.id)?.finishCrafting(data)
     },
 
     startResting(data: CharacterRestingMessage) {

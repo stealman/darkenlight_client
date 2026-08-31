@@ -16,7 +16,7 @@ import {
     AttackableCombatTO,
     AutoAttackMessage,
     AutoAttackResultMessage, CharacterCampingMessage,
-    CharacterCraftingMessage,
+    CharacterCraftingMessage, CharacterCraftingResultMessage,
     CharacterGatheringMessage,
     CharacterGatheringResultMessage, CharacterRestingMessage,
     EmeraldsChangeMessage,
@@ -98,6 +98,7 @@ export const MessageProcessor = {
                 case 54: this.npcMoveStop(msg.d); break
                 case 55: this.processNpcUse(msg.d); break
                 case 56: this.processGMNpcDetails(msg.d); break
+                case 57: this.processCharacterCraftingFinished(msg.d); break
                 case 1003: this.processGMAllSpawns(msg.d); break
                 case 1004: this.processGMSpawnChange(msg.d); break
                 default:
@@ -355,6 +356,10 @@ export const MessageProcessor = {
 
     processCharacterCrafting(data: CharacterCraftingMessage) {
         CharacterManager.startCrafting(data)
+    },
+
+    processCharacterCraftingFinished(data: CharacterCraftingResultMessage) {
+        CharacterManager.finishCrafting(data)
     },
 
     processCharacterStopAction(data) {

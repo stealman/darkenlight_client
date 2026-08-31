@@ -22,6 +22,7 @@ import {
     AutoAttackResultMessage,
     CharacterCampingMessage,
     CharacterCraftingMessage,
+    CharacterCraftingResultMessage,
     CharacterGatheringMessage,
     CharacterGatheringResultMessage,
     CharacterRestingMessage,
@@ -379,6 +380,17 @@ class Character implements Attackable, EffectTarget {
 
     startCrafting(data: CharacterCraftingMessage) {
         this.startTimedAction(CharacterActions.CRAFTING.name, data)
+    }
+
+    finishCrafting(data: CharacterCraftingResultMessage) {
+        if (this !== MyPlayer.myChar || data.g <= 0 || data.q <= 0) {
+            return
+        }
+
+        const items = InventoryManager.getResourceItemsByType(data.g)
+        if (items.length > 0) {
+            OverlayManager.addCharacterItemGainNumber(this, data.q, items[0])
+        }
     }
 
     clearTimedAction() {
