@@ -15,6 +15,8 @@
                 <option value="skillTrainer">Skill Trainer</option>
             </select>
 
+            <button style="margin-top: 1vh;" @click="openNpcDetailsDialog">Detailed settings</button>
+
             <label style="display: block; margin-top: 1vh;">Wandering range</label>
             <input v-model.number="selectedNpc.wanderingRange" type="number" min="0" max="32" step="1" />
 
@@ -46,15 +48,19 @@
             <p style="color: lightblue; font-size: 0.8rem;">Choose a name, type and wandering range, then click a free tile to place the NPC. Click an existing NPC to edit it.</p>
         </template>
     </div>
+    <NpcDetailsDialog ref="npcDetailsDialog" />
 </template>
 
 <script setup>
+import { ref } from 'vue'
 import { GMManager } from '@/gm/GM'
+import NpcDetailsDialog from '@/vue/views/gm/NpcDetailsDialog.vue'
 
 const selectedNpcName = GMManager.selectedNpcName
 const selectedNpcType = GMManager.selectedNpcType
 const selectedNpcWanderingRange = GMManager.selectedNpcWanderingRange
 const selectedNpc = GMManager.selectedNpc
+const npcDetailsDialog = ref(null)
 
 const saveSelectedNpc = () => {
     GMManager.saveSelectedNpc()
@@ -66,5 +72,9 @@ const deleteSelectedNpc = () => {
 
 const cancelSelectedNpc = () => {
     GMManager.cancelSelectedNpc()
+}
+
+const openNpcDetailsDialog = () => {
+    npcDetailsDialog.value?.openDialog()
 }
 </script>

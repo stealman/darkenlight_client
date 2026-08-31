@@ -439,6 +439,7 @@ export const GMManager = {
         this.selectedNpc.value = {
             id: npc.id,
             name: npc.name,
+            title: npc.title,
             type: npc.type,
             wanderingRange: npc.wanderingRange
         }
@@ -449,6 +450,12 @@ export const GMManager = {
         this.selectedNpcName.value = ''
         this.selectedNpcType.value = 'common'
         this.selectedNpcWanderingRange.value = 0
+    },
+
+    setSelectedNpcTitle(title: string) {
+        if (this.selectedNpc.value) {
+            this.selectedNpc.value.title = title
+        }
     }
 }
 

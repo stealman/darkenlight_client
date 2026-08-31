@@ -70,6 +70,7 @@ export const NpcManager = {
     applyNpcData(npc: Npc, data: any) {
         this.setNpcPosition(npc, data.x, data.z)
         npc.name = data.name
+        npc.title = data.title ?? ''
         npc.type = data.type
         npc.wanderingRange = data.wr ?? 0
         if (data.mv?.length === 3) {

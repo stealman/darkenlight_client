@@ -2,6 +2,7 @@ import Character from '@/babylon/character/character'
 
 export class Npc extends Character {
     type: string
+    title: string
     wanderingRange: number
 
     constructor(data: any) {
@@ -12,6 +13,7 @@ export class Npc extends Character {
             equipSet: {}
         })
         this.type = data.type
+        this.title = data.title ?? ''
         this.wanderingRange = data.wr ?? 0
         this.nameDisplayTime = Number.MAX_SAFE_INTEGER
     }

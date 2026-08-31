@@ -117,7 +117,7 @@ export const OverlayManager = {
         NpcManager.npcs.forEach(npc => {
             const pos = npc.getNameTextNodeScreenPosition()
             if (pos) {
-                this.renderName(pos, npc.name, tightText, npc.getRelationToMyPlayer())
+                this.renderNpcLabel(pos, npc.name, npc.title, tightText)
             }
         })
 
@@ -436,7 +436,30 @@ export const OverlayManager = {
         this.renderOutlinedText(pos.x, pos.y - 6, name, tightText, relation, this.fontSize, pos)
     },
 
-    renderOutlinedText(x: number, y: number, text: string, tightText: boolean, relation: 'ALLY' | 'ENEMY' | 'NEUTRAL', fontSize: number, pos?: Vector3, textAlpha: number = 1) {
+    renderNpcLabel(pos: Vector3, name: string, title: string, tightText: boolean) {
+        if (!title) {
+            this.renderName(pos, name, tightText, 'NEUTRAL')
+            return
+        }
+
+        const ctx = this.overlayCtx!
+        const titleText = `[${title}]`
+        const titleFontSize = Math.max(12, this.fontSize - 2)
+        const spacingFix = this.letterSpacingFix
+        ctx.font = `${this.fontSize}px "Roboto", Arial, sans-serif`
+        const nameWidth = CanvasTextUtils.getTextWidth(ctx, name, tightText, spacingFix)
+        ctx.font = `${titleFontSize}px "Roboto", Arial, sans-serif`
+        const titleWidth = CanvasTextUtils.getTextWidth(ctx, titleText, tightText, spacingFix)
+        const totalHeight = this.fontSize + titleFontSize + 6
+
+        ViewportManager.movePositionToScreen(pos, Math.max(nameWidth, titleWidth) / 2, totalHeight + 10)
+
+        const nameY = pos.y - totalHeight + this.fontSize / 2
+        this.renderOutlinedText(pos.x, nameY, name, tightText, 'NEUTRAL', this.fontSize)
+        this.renderOutlinedText(pos.x, nameY + this.fontSize / 2 + titleFontSize / 2 + 6, titleText, tightText, 'NEUTRAL', titleFontSize, undefined, 1, '#e9dabe')
+    },
+
+    renderOutlinedText(x: number, y: number, text: string, tightText: boolean, relation: 'ALLY' | 'ENEMY' | 'NEUTRAL', fontSize: number, pos?: Vector3, textAlpha: number = 1, color: string | null = null) {
         const ctx = this.overlayCtx!
         ctx.font = `${fontSize}px "Roboto", Arial, sans-serif`
         ctx.fontKerning = 'normal'
@@ -449,16 +472,20 @@ export const OverlayManager = {
             ViewportManager.movePositionToScreen(pos, textWidth / 2, fontSize + 10)
         }
 
-        switch (relation) {
-            case 'ALLY':
-                ctx.fillStyle = '#56aaff'
-                break
-            case 'ENEMY':
-                ctx.fillStyle = '#f08f56'
-                break
-            case 'NEUTRAL':
-                ctx.fillStyle = '#aaa'
-                break
+        if (color) {
+            ctx.fillStyle = color
+        } else {
+            switch (relation) {
+                case 'ALLY':
+                    ctx.fillStyle = '#56aaff'
+                    break
+                case 'ENEMY':
+                    ctx.fillStyle = '#f08f56'
+                    break
+                case 'NEUTRAL':
+                    ctx.fillStyle = '#aaa'
+                    break
+            }
         }
         ctx.strokeStyle = 'rgba(0, 0, 0, 0.85)'
         ctx.lineWidth = 3
