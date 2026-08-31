@@ -80,6 +80,10 @@ export const Controller = {
     },
 
     processKeydown(e) {
+        if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement || e.target?.isContentEditable) {
+            return
+        }
+
         // I - open inventory
         if ((e.key && e.key.toLowerCase() === 'i') || e.code === 'KeyI') {
             if (e.repeat) return
