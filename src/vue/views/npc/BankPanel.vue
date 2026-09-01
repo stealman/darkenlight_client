@@ -251,4 +251,14 @@ onUnmounted(() => {
 .bank-column :deep(.equipment-panel) { width: 50%; height: auto; flex: 1 1 auto; min-height: 0; align-self: center; border-right: none; --slot-size-factor: 0.4; }
 .bank-panel :deep(.inventory-item-overlay) { text-align: left; }
 @media (max-width: 700px) { .bank-panel { gap: 6px; } }
+@media (max-height: 600px) and (min-aspect-ratio: 8 / 5) {
+    .bank-column :deep(.equipment-panel) { width: 100%; --slot-size-factor: 0.17; }
+    .bank-column :deep(.slot-helmet), .bank-column :deep(.slot-left-hand), .bank-column :deep(.slot-left-ring) { left: 8% !important; }
+    .bank-column :deep(.slot-necklace), .bank-column :deep(.slot-right-hand), .bank-column :deep(.slot-right-ring) { right: 8% !important; }
+    .bank-column :deep(.slot-arms-armor) { top: 13.5%; }
+    .bank-column :deep(.slot-body) { top: 34.5%; }
+    .bank-column :deep(.slot-left-hand), .bank-column :deep(.slot-right-hand) { top: 45.5%; }
+    .bank-column :deep(.slot-left-ring), .bank-column :deep(.slot-right-ring) { top: 66.5%; }
+    .bank-column :deep(.slot-legs) { top: 80%; }
+}
 </style>
