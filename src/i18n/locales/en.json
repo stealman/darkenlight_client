@@ -166,6 +166,9 @@
   "vendor": {
     "vendor": "Vendor",
     "banker": "Banker",
+    "inventory": "Inventory",
+    "equipment": "Equipment",
+    "bankLoading": "Opening bank...",
     "healer": "Healer",
     "trainer": "Trainer",
     "weapons": "Weapons",

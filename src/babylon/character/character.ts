@@ -155,6 +155,18 @@ class Character implements Attackable, EffectTarget {
         if (equip.legs) {
             this.equipSet.set(EquipSlotModelsCb.getById(equip.legs.mId)!.slot, Item.fromData(equip.legs))
         }
+        if (equip.necklace) {
+            this.equipSet.set('NECKLACE', Item.fromData(equip.necklace))
+        }
+        if (equip.ring1) {
+            this.equipSet.set('L_RING', Item.fromData(equip.ring1))
+        }
+        if (equip.ring2) {
+            this.equipSet.set('R_RING', Item.fromData(equip.ring2))
+        }
+        if (equip.trinket) {
+            this.equipSet.set('TRINKET', Item.fromData(equip.trinket))
+        }
     }
 
     changeEquipSet(equipSet: any) {
@@ -168,6 +180,7 @@ class Character implements Attackable, EffectTarget {
 
     initializeInventory(items: any[]) {
         InventoryManager.inventory = items.map(itemData => Item.fromData(itemData))
+        InventoryManager.sortInventory()
     }
 
     onFrame(timeRate: number, actualTime: number, myChar: boolean) {

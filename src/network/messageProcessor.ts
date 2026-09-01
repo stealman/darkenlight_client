@@ -25,6 +25,7 @@ import {
     CraftingInitMenuData,
     GMNpcDetailsData,
     NpcUseData,
+    BankStateData,
 } from '@/network/messageIfs'
 import { GroundItemsManager } from '@/babylon/world/groundItemsManager'
 import { InventoryManager } from '@/data/inventoryManager'
@@ -36,6 +37,7 @@ import { AudioManager } from '@/babylon/audio/audioManager'
 import { NpcManager } from '@/babylon/npc/npcManager'
 import {NpcInteractionManager} from '@/data/npcInteractionManager'
 import {GMManager} from '@/gm/GM'
+import {BankManager} from '@/data/bankManager'
 
 export const MessageProcessor = {
 
@@ -99,6 +101,7 @@ export const MessageProcessor = {
                 case 55: this.processNpcUse(msg.d); break
                 case 56: this.processGMNpcDetails(msg.d); break
                 case 57: this.processCharacterCraftingFinished(msg.d); break
+                case 58: this.processBankState(msg.d); break
                 case 1003: this.processGMAllSpawns(msg.d); break
                 case 1004: this.processGMSpawnChange(msg.d); break
                 default:
@@ -148,6 +151,10 @@ export const MessageProcessor = {
 
     processNpcUse(data: NpcUseData) {
         NpcInteractionManager.processNpcUse(data)
+    },
+
+    processBankState(data: BankStateData) {
+        BankManager.replaceState(data)
     },
 
     processGMNpcDetails(data: GMNpcDetailsData) {

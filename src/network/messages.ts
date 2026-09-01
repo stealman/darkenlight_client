@@ -290,6 +290,27 @@ export class NpcPurchaseMsg implements Message {
     }
 }
 
+export class BankOpenMsg implements Message {
+    t: number = 27
+    d: any
+
+    constructor(id: number) {
+        this.d = {id}
+    }
+}
+
+export class BankActionMsg implements Message {
+    t: number = 28
+    d: any
+
+    constructor(id: number, action: string, itemId: number, splitCount?: number) {
+        this.d = {id, action, itemId}
+        if (splitCount !== undefined) {
+            this.d.splitCount = splitCount
+        }
+    }
+}
+
 export class GMNpcAction implements Message {
     t: number = 1007
     d: any

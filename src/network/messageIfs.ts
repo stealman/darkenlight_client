@@ -101,6 +101,7 @@ export interface ItemTO {
     hReq?: number
     tags?: string[]
     dmgTypes?: string[]
+    slot?: string
 }
 
 export interface GroundItemTO {
@@ -219,6 +220,11 @@ export interface NpcUseData {
     name: string
     title: string
     features: NpcUseFeatureData[]
+}
+
+export interface BankStateData {
+    items: ItemTO[]
+    capacity: number
 }
 
 export interface GMNpcDetailsData {

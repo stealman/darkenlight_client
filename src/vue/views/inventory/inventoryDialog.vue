@@ -72,6 +72,8 @@ import { t } from '@/i18n'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { OnScreenMessageManager } from '@/gui/onScreenMessageManager'
 import { ConsumableHelper } from '@/data/items/consumableHelper'
+import {getItemDurabilityPercent, getItemDurabilityStatus, getItemImage, getItemTooltipData} from '@/vue/views/inventory/itemTooltip'
+import {createPointerDoubleClickHandler} from '@/vue/views/inventory/usePointerDoubleClick'
 
 type WeaponSetupType = 'primary' | 'secondary'
 type WeaponSetupMarker = WeaponSetupType
@@ -187,30 +189,7 @@ const showItemInfoOverlay = (item, pointer, options = {}) => {
     itemInfoOverlay.value.visible = true
     itemInfoOverlay.value.x = pointer.clientX + OVERLAY_CURSOR_OFFSET_X
     itemInfoOverlay.value.y = pointer.clientY
-    itemInfoOverlay.value.name = item.name || t('inventory.unknownItem')
-    itemInfoOverlay.value.id = item.id ?? null
-    itemInfoOverlay.value.cbId = item.cbId ?? null
-
-    itemInfoOverlay.value.quality = item.atts.qual ?? null
-    itemInfoOverlay.value.durability = item.atts.dur ?? null
-    itemInfoOverlay.value.durabilityMax = item.atts.durM ?? null
-    itemInfoOverlay.value.quantity = item.atts.qty ?? null
-    itemInfoOverlay.value.weaponAttack = item.cbType === 'W' ? item.atts.patk ?? null : null
-    itemInfoOverlay.value.weaponDamageTypes = item.cbType === 'W' ? item.damageTypes ?? [] : []
-    itemInfoOverlay.value.weaponSpeed = item.cbType === 'W' ? item.atts.speed ?? null : null
-    itemInfoOverlay.value.weaponRange = item.cbType === 'W' ? item.atts.range ?? null : null
-    itemInfoOverlay.value.weaponArmorPen = item.cbType === 'W' ? item.atts.armorPen ?? 0 : null
-    itemInfoOverlay.value.weaponDefense = item.cbType === 'W' ? item.atts.defense ?? 0 : null
-    itemInfoOverlay.value.armorStats = item.cbType === 'A' ? {
-        pdef: item.atts.pdef ?? 0,
-        defense: item.atts.defense ?? 0,
-        str: item.atts.str ?? 0,
-        agi: item.atts.agi ?? 0,
-        int: item.atts.int ?? 0,
-        wis: item.atts.wis ?? 0,
-        maxHp: item.atts.maxHp ?? 0,
-        arcaneInterference: item.atts.arcaneInterference ?? 0,
-    } : null
+    Object.assign(itemInfoOverlay.value, getItemTooltipData(item))
     itemInfoOverlay.value.showDropButton = showDropButton
     itemInfoOverlay.value.showMergeButton = showMergeButton
     itemInfoOverlay.value.showCampButton = sourceType === 'inventory' && ConsumableHelper.isItemCampWood(item)
@@ -256,13 +235,7 @@ const shouldToggleItemInfoOverlayOff = (sourceType, sourceKey) => {
         && itemInfoOverlay.value.sourceKey === sourceKey
 }
 
-const resolveItemImage = (item) => {
-    if (!item?.imgUrl) {
-        return EMPTY_ITEM_IMAGE
-    }
-
-    return item.imgUrl.startsWith('/') ? item.imgUrl : `/${item.imgUrl}`
-}
+const resolveItemImage = (item) => getItemImage(item)
 
 const resolveSlotImage = (slot) => {
     const item = MyPlayer.myChar?.equipSet?.get(slot)
@@ -368,13 +341,7 @@ const refreshItemInfoOverlayFromLiveData = (changedItemIds = null) => {
     }
 
     const item = liveItemInfo.item
-    itemInfoOverlay.value.name = item.name || t('inventory.unknownItem')
-    itemInfoOverlay.value.id = item.id ?? null
-    itemInfoOverlay.value.cbId = item.cbId ?? null
-    itemInfoOverlay.value.quality = item.atts?.qual ?? null
-    itemInfoOverlay.value.durability = item.atts?.dur ?? null
-    itemInfoOverlay.value.durabilityMax = item.atts?.durM ?? null
-    itemInfoOverlay.value.quantity = item.atts?.qty ?? null
+    Object.assign(itemInfoOverlay.value, getItemTooltipData(item))
     itemInfoOverlay.value.showDropButton = liveItemInfo.showDropButton
     itemInfoOverlay.value.showMergeButton = liveItemInfo.showMergeButton
     itemInfoOverlay.value.showCampButton = liveItemInfo.sourceType === 'inventory' && ConsumableHelper.isItemCampWood(item)
@@ -439,57 +406,20 @@ const getStackCountForInventorySlot = (index) => {
     return quantity
 }
 
-const getDurabilityStatus = (item): DurabilityStatus | null => {
-    if (!item || (item.cbType !== 'W' && item.cbType !== 'A')) {
-        return null
-    }
-
-    const durability = Number(item.atts?.dur)
-    const maxDurability = Number(item.atts?.durM)
-    if (!Number.isFinite(durability) || !Number.isFinite(maxDurability) || maxDurability <= 0 || durability >= maxDurability) {
-        return null
-    }
-
-    if (durability < 5) {
-        return 'critical'
-    }
-    if (durability < 15) {
-        return 'danger'
-    }
-    if (durability < 25) {
-        return 'warning'
-    }
-    return 'worn'
-}
-
 const getDurabilityStatusForEquipSlot = (slot): DurabilityStatus | null => {
-    return getDurabilityStatus(MyPlayer.myChar?.equipSet?.get(resolveEffectiveEquipSlot(slot)))
+    return getItemDurabilityStatus(MyPlayer.myChar?.equipSet?.get(resolveEffectiveEquipSlot(slot)))
 }
 
 const getDurabilityStatusForInventorySlot = (index): DurabilityStatus | null => {
-    return getDurabilityStatus(InventoryManager.inventory[index])
-}
-
-const getDurabilityPercent = (item): number | null => {
-    if (!item || (item.cbType !== 'W' && item.cbType !== 'A')) {
-        return null
-    }
-
-    const durability = Number(item.atts?.dur)
-    const maxDurability = Number(item.atts?.durM)
-    if (!Number.isFinite(durability) || !Number.isFinite(maxDurability) || maxDurability <= 0 || durability >= maxDurability) {
-        return null
-    }
-
-    return Math.max(4, Math.min(100, (durability / maxDurability) * 100))
+    return getItemDurabilityStatus(InventoryManager.inventory[index])
 }
 
 const getDurabilityPercentForEquipSlot = (slot): number | null => {
-    return getDurabilityPercent(MyPlayer.myChar?.equipSet?.get(resolveEffectiveEquipSlot(slot)))
+    return getItemDurabilityPercent(MyPlayer.myChar?.equipSet?.get(resolveEffectiveEquipSlot(slot)))
 }
 
 const getDurabilityPercentForInventorySlot = (index): number | null => {
-    return getDurabilityPercent(InventoryManager.inventory[index])
+    return getItemDurabilityPercent(InventoryManager.inventory[index])
 }
 
 const buildEquipSlots = (): EquipSlotView[] => ([
@@ -737,65 +667,6 @@ const cancelWeaponSetupPointer = (setupType) => {
     weaponSetupPressed.value[setupType] = false
 }
 
-const pointerClickHandlers = []
-
-const createPointerDoubleClickHandler = (singleClick, doubleClick, interval) => {
-    let lastTime = 0
-    let lastKey = null
-    let singleTimer = null
-
-    const handler = (key, event) => {
-        if (event) {
-            event.preventDefault()
-        }
-        const pointer = {
-            clientX: event?.clientX ?? 0,
-            clientY: event?.clientY ?? 0,
-        }
-
-        const now = Date.now()
-        const isDoubleClick = lastKey === key && (now - lastTime) <= interval
-
-        if (isDoubleClick) {
-            if (singleTimer) {
-                clearTimeout(singleTimer)
-                singleTimer = null
-            }
-            lastKey = null
-            lastTime = 0
-            doubleClick(key, pointer)
-            return
-        }
-
-        lastKey = key
-        lastTime = now
-
-        if (singleTimer) {
-            clearTimeout(singleTimer)
-        }
-        singleTimer = setTimeout(() => {
-            singleClick(key, pointer)
-            singleTimer = null
-        }, interval)
-    }
-
-    handler.dispose = () => {
-        handler.cancel()
-    }
-
-    handler.cancel = () => {
-        if (singleTimer) {
-            clearTimeout(singleTimer)
-            singleTimer = null
-        }
-        lastKey = null
-        lastTime = 0
-    }
-
-    pointerClickHandlers.push(handler)
-    return handler
-}
-
 const handleSlotPointerDown = createPointerDoubleClickHandler(onclick, onDoubleClick, DOUBLE_CLICK_MS)
 const handleInventorySlotPointerDown = createPointerDoubleClickHandler(onInventoryClick, onInventoryDoubleClick, DOUBLE_CLICK_MS)
 
@@ -805,9 +676,8 @@ const handleInventoryScroll = () => {
 }
 
 onUnmounted(() => {
-    for (const handler of pointerClickHandlers) {
-        handler.dispose()
-    }
+    handleSlotPointerDown.cancel()
+    handleInventorySlotPointerDown.cancel()
     cancelWeaponSetupPointer('primary')
     cancelWeaponSetupPointer('secondary')
 })

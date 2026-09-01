@@ -72,6 +72,11 @@
                 <div v-else class="npc-use-empty-state">{{ t('vendor.emptyCategory') }}</div>
             </template>
 
+            <template v-else-if="selectedFeature?.type === 'banker'">
+                <BankPanel v-if="npcData && !bankLoading" :npc-id="npcData.id" />
+                <div v-else class="npc-use-empty-state">{{ t('vendor.bankLoading') }}</div>
+            </template>
+
             <div v-else-if="selectedFeature" class="npc-use-empty-state">{{ t('vendor.featureNotAvailable') }}</div>
             <div v-else class="npc-use-empty-state">{{ t('vendor.noFeatures') }}</div>
         </div>
@@ -121,6 +126,8 @@ import {t} from '@/i18n'
 import {EmeraldsManager} from '@/gui/emeraldsManager'
 import {InventoryManager} from '@/data/inventoryManager'
 import {NpcManager} from '@/babylon/npc/npcManager'
+import {BankManager} from '@/data/bankManager'
+import BankPanel from '@/vue/views/npc/BankPanel.vue'
 
 const emit = defineEmits(['close'])
 
@@ -150,6 +157,7 @@ const detailOverlayPosition = ref({x: 0, y: 0})
 const resourceInventoryVersion = ref(0)
 const openedAt = ref(0)
 const purchaseEffects = ref<PurchaseEffect[]>([])
+const bankLoading = ref(false)
 let nextPurchaseEffectId = 0
 
 const features = computed(() => npcData.value?.features ?? [])
@@ -202,6 +210,11 @@ const selectFeature = (index: number, remember: boolean = true) => {
 
     selectedFeatureIndex.value = index
     selectedCategory.value = getPreferredVendorCategory(feature)
+    if (feature.type === 'banker' && npcData.value) {
+        BankManager.clear()
+        bankLoading.value = true
+        NpcInteractionManager.openBank(npcData.value.id)
+    }
     if (remember) {
         localStorage.setItem(NPC_FEATURE_TAB_STORAGE_KEY, feature.type)
     }
@@ -270,6 +283,8 @@ const openDialog = (data: NpcUseData) => {
 
 const closeDialog = () => {
     detailItem.value = null
+    bankLoading.value = false
+    BankManager.clear()
     dialogVisible.value = false
     emit('close')
 }
@@ -286,12 +301,18 @@ const refreshResourceInventoryCounts = () => {
     resourceInventoryVersion.value++
 }
 
+const onBankUpdated = () => {
+    bankLoading.value = false
+}
+
 onMounted(() => {
     window.addEventListener('ui:inventory-updated', refreshResourceInventoryCounts)
+    window.addEventListener('ui:bank-updated', onBankUpdated)
 })
 
 onUnmounted(() => {
     window.removeEventListener('ui:inventory-updated', refreshResourceInventoryCounts)
+    window.removeEventListener('ui:bank-updated', onBankUpdated)
 })
 
 defineExpose({openDialog})
@@ -307,6 +328,7 @@ defineExpose({openDialog})
 .npc-use-category-tabs { display: flex; flex-wrap: wrap; gap: 6px; flex: 0 0 auto; }
 .npc-use-tab { min-width: 82px; }
 .npc-use-tab, .npc-vendor-buy-button, .npc-vendor-quick-buy-button { padding: 5px 10px; font-size: 0.9rem; line-height: 1; }
+.npc-use-content-shell :deep(.bank-panel) { flex: 1 1 auto; min-height: 0; }
 .npc-vendor-item-list { display: flex; flex: 1 1 auto; min-height: 0; flex-direction: column; overflow-y: auto; border-top: 1px solid rgba(var(--ui-darker), 0.8); border-bottom: 1px solid rgba(var(--ui-darker), 0.8); }
 .npc-vendor-item-row { display: grid; grid-template-columns: 46px minmax(0, 1fr) max-content auto; align-items: center; gap: 12px; min-height: 46px; padding: 3px 8px; border-bottom: 1px solid rgba(var(--ui-darker), 0.65); color: rgb(var(--ui-base)); cursor: url('/images/cursor-pointer.png'), pointer; }
 .npc-vendor-item-row:hover { background: rgba(255, 255, 255, 0.06); }

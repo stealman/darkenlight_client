@@ -170,7 +170,7 @@ const durabilityStatusClass = computed(() => {
 })
 
 const shouldShowDropButton = computed(() => {
-    return props.context === 'INVENTORY' && props.itemInfo.showDropButton === true && !showSplitControls.value
+    return props.itemInfo.showDropButton === true && !showSplitControls.value
 })
 
 const displayItemName = computed(() => {
@@ -194,8 +194,7 @@ const splitMaxQuantity = computed(() => {
 })
 
 const canSplitItem = computed(() => {
-    return props.context === 'INVENTORY'
-        && props.itemInfo.showDropButton === true
+    return (props.itemInfo.showDropButton === true || props.itemInfo.showSplitButton === true)
         && splitMaxQuantity.value >= 1
 })
 
@@ -204,14 +203,12 @@ const shouldShowSplitButton = computed(() => {
 })
 
 const shouldShowMergeButton = computed(() => {
-    return props.context === 'INVENTORY'
-        && props.itemInfo.showMergeButton === true
+    return props.itemInfo.showMergeButton === true
         && !showSplitControls.value
 })
 
 const shouldShowCampButton = computed(() => {
-    return props.context === 'INVENTORY'
-        && props.itemInfo.showCampButton === true
+    return props.itemInfo.showCampButton === true
         && !showSplitControls.value
 })
 

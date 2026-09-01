@@ -1,7 +1,7 @@
 <template>
     <div class="inventory-panel">
         <div class="inventory-grid-wrapper" @scroll="emit('scroll')">
-            <div class="inventory-grid">
+            <div class="inventory-grid" :style="{'--inventory-grid-columns': columnCount}">
                 <div
                     v-for="slotIndex in slotCount"
                     :key="slotIndex"
@@ -46,6 +46,7 @@ type WeaponMarker = 'primary' | 'secondary'
 
 defineProps<{
     slotCount: number
+    columnCount?: number
     slotImages: Array<string | null>
     getMarkers: (index: number) => WeaponMarker[]
     getStackCount: (index: number) => number | null

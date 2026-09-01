@@ -18,6 +18,7 @@ import {
 import { OverlayManager } from '@/gui/overlay/overlayManager'
 import { TargetingManager } from '@/gui/targettingManager'
 import { PubliclyVisibleAffect } from '@/data/affects'
+import {InventoryManager} from '@/data/inventoryManager'
 
 export const CharacterManager = {
     characters: new Map<number, Character>(),
@@ -264,7 +265,8 @@ export const CharacterManager = {
 
     equipSetChange(data) {
         if (data.id === MyPlayer.myChar.id) {
-            // Nothing to do, handled locally in InventoryManager when equipping/unequipping items
+            MyPlayer.myChar.changeEquipSet(data.equipSet)
+            InventoryManager.emitInventoryUpdated('equip-server', [])
         } else {
             const char = this.characters.get(data.id)
             if (char) {

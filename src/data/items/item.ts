@@ -18,7 +18,7 @@ export class Item {
     materialId: number | null = null
     nameKey: string | null = null
     imgUrl: string | null = null
-    slotInfo: EquipSlotModel
+    slotInfo: EquipSlotModel | null
     weaponCategory: string | null = null
     handsRequired: number | null = null
     weaponTags: string[] = []
@@ -27,7 +27,7 @@ export class Item {
     atts: Map<string, number | string> = new Map()
 
     constructor(id: number, cbId: number, cbType: string, modelId: number, matId: number, name: string | null, imgUrl: string, atts: Map<string, number | string>,
-                weaponCategory: string | null = null, handsRequired: number | null = null, weaponTags: string[] = [], damageTypes: string[] = []) {
+                weaponCategory: string | null = null, handsRequired: number | null = null, weaponTags: string[] = [], damageTypes: string[] = [], slot: string | null = null) {
         this.id = id
         this.cbType = cbType
         this.cbId = cbId
@@ -35,13 +35,14 @@ export class Item {
         this.materialId = matId
         this.nameKey = name
         this.imgUrl = "images/items/" + imgUrl + ".png"
-        this.slotInfo = EquipSlotModelsCb.getById(modelId)!
+        const clientSlot = slot === 'ring' ? 'L_RING' : slot === 'necklace' ? 'NECKLACE' : slot === 'trinket' ? 'TRINKET' : slot
+        this.slotInfo = EquipSlotModelsCb.getById(modelId) || (clientSlot ? new EquipSlotModel(modelId, clientSlot, null) : null)
         this.atts = atts
         this.weaponCategory = weaponCategory
         this.handsRequired = handsRequired
         this.weaponTags = weaponTags
         this.damageTypes = damageTypes
-        if (!this.slotInfo && (cbType === 'W' || cbType === 'A' || cbType === 'J')) {
+        if (!this.slotInfo && (cbType === 'W' || cbType === 'A')) {
             throw new Error(`EquipSlotInfo not found for modelId: ${modelId}`)
         }
     }
@@ -65,7 +66,7 @@ export class Item {
 
     static fromData(data: ItemTO): Item {
         return new Item(data.id, data.cb, data.tp, data.mId, data.matId, data.name || null, data.img, data.atts,
-            data.wCat || null, data.hReq || null, data.tags || [], data.dmgTypes || [])
+            data.wCat || null, data.hReq || null, data.tags || [], data.dmgTypes || [], data.slot || null)
     }
 
     is3DModel(): boolean {

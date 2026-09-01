@@ -59,32 +59,34 @@ export const InventoryManager = {
     },
 
     sortInventory() {
-        this.inventory.sort((a, b) => {
-            const typeRankDiff = this.getItemTypeSortRank(a.cbType) - this.getItemTypeSortRank(b.cbType)
-            if (typeRankDiff !== 0) {
-                return typeRankDiff
-            }
+        this.inventory.sort((a, b) => this.compareItemsForDisplay(a, b))
+    },
 
-            const cbIdA = Number(a.cbId)
-            const cbIdB = Number(b.cbId)
-            if (cbIdA !== cbIdB) {
-                return cbIdA - cbIdB
-            }
+    compareItemsForDisplay(a: Item, b: Item): number {
+        const typeRankDiff = this.getItemTypeSortRank(a.cbType) - this.getItemTypeSortRank(b.cbType)
+        if (typeRankDiff !== 0) {
+            return typeRankDiff
+        }
 
-            // For resources of the same type/codebook, keep bigger stacks first.
-            const resourceTypeRank = this.getItemTypeSortRank('R')
-            const isResourcePair =
-                this.getItemTypeSortRank(a.cbType) === resourceTypeRank
-                && this.getItemTypeSortRank(b.cbType) === resourceTypeRank
-            if (isResourcePair) {
-                const qtyDiff = this.getItemQuantity(b) - this.getItemQuantity(a)
-                if (qtyDiff !== 0) {
-                    return qtyDiff
-                }
-            }
+        const cbIdA = Number(a.cbId)
+        const cbIdB = Number(b.cbId)
+        if (cbIdA !== cbIdB) {
+            return cbIdA - cbIdB
+        }
 
-            return a.id - b.id
-        })
+        // For resources of the same type/codebook, keep bigger stacks first.
+        const resourceTypeRank = this.getItemTypeSortRank('R')
+        const isResourcePair =
+            this.getItemTypeSortRank(a.cbType) === resourceTypeRank
+            && this.getItemTypeSortRank(b.cbType) === resourceTypeRank
+        if (isResourcePair) {
+            const qtyDiff = this.getItemQuantity(b) - this.getItemQuantity(a)
+            if (qtyDiff !== 0) {
+                return qtyDiff
+            }
+        }
+
+        return a.id - b.id
     },
 
     getItemQuantity(item: Item): number {

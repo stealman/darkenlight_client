@@ -70,6 +70,11 @@
     cursor: url('/images/cursor-pointer.png'), pointer;
 }
 
+.equipment-panel.equipment-panel-full {
+    width: 100%;
+    border-right: none;
+}
+
 .equip-slot::before {
     content: '';
     position: absolute;
@@ -207,7 +212,7 @@
 .inventory-grid {
     width: 100%;
     display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-columns: repeat(var(--inventory-grid-columns, 6), minmax(0, 1fr));
     align-content: flex-start;
     gap: 1.75%;
 }

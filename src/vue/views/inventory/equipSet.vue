@@ -1,5 +1,5 @@
 <template>
-    <div class="equipment-panel">
+    <div :class="['equipment-panel', { 'equipment-panel-full': fullWidth }]">
         <div class="equipment-layout">
             <div
                 v-for="slot in equipSlots"
@@ -26,6 +26,7 @@
             </div>
 
             <div
+                v-if="showWeaponSetups"
                 :class="['equip-slot', 'equip-slot-weapon-setup', 'slot-weapon-setup-primary', { pressed: weaponSetupPressed.primary }]"
                 @mouseenter="emit('weapon-setup-hover', 'primary', true)"
                 @mouseleave="emit('weapon-setup-hover', 'primary', false)"
@@ -38,6 +39,7 @@
             </div>
 
             <div
+                v-if="showWeaponSetups"
                 :class="['equip-slot', 'equip-slot-weapon-setup', 'slot-weapon-setup-secondary', { pressed: weaponSetupPressed.secondary }]"
                 @mouseenter="emit('weapon-setup-hover', 'secondary', true)"
                 @mouseleave="emit('weapon-setup-hover', 'secondary', false)"
@@ -66,11 +68,18 @@ type EquipSlotView = {
     durabilityPercent: number | null
 }
 
-defineProps<{
+withDefaults(defineProps<{
     equipSlots: EquipSlotView[]
-    weaponSetupImages: Record<WeaponSetupType, string>
-    weaponSetupPressed: Record<WeaponSetupType, boolean>
-}>()
+    weaponSetupImages?: Record<WeaponSetupType, string>
+    weaponSetupPressed?: Record<WeaponSetupType, boolean>
+    showWeaponSetups?: boolean
+    fullWidth?: boolean
+}>(), {
+    weaponSetupImages: () => ({primary: '', secondary: ''}),
+    weaponSetupPressed: () => ({primary: false, secondary: false}),
+    showWeaponSetups: true,
+    fullWidth: false,
+})
 
 const emit = defineEmits([
     'slot-pointerdown',

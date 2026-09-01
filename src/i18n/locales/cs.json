@@ -161,8 +161,11 @@
     "npcUseOutOfRange": "NPC je příliš daleko"
   },
   "vendor": {
-    "vendor": "Obchodník",
-    "banker": "Bankéř",
+    "vendor": "Obchod",
+    "banker": "Banka",
+    "inventory": "Inventář",
+    "equipment": "Výbava",
+    "bankLoading": "Otevírám banku...",
     "healer": "Léčitel",
     "trainer": "Trenér",
     "weapons": "Zbraně",
