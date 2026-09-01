@@ -19,6 +19,7 @@ import { OverlayManager } from '@/gui/overlay/overlayManager'
 import { TargetingManager } from '@/gui/targettingManager'
 import { PubliclyVisibleAffect } from '@/data/affects'
 import {InventoryManager} from '@/data/inventoryManager'
+import {ActionButtonsManager} from '@/gui/actionButtonsManager'
 
 export const CharacterManager = {
     characters: new Map<number, Character>(),
@@ -266,6 +267,7 @@ export const CharacterManager = {
     equipSetChange(data) {
         if (data.id === MyPlayer.myChar.id) {
             MyPlayer.myChar.changeEquipSet(data.equipSet)
+            ActionButtonsManager.charEquipChanged()
             InventoryManager.emitInventoryUpdated('equip-server', [])
         } else {
             const char = this.characters.get(data.id)

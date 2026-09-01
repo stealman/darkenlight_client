@@ -2,8 +2,8 @@
     <div class="bank-panel" @click.self="hideItemInfoOverlay">
         <div class="bank-column">
             <div class="bank-column-title">
-                <button class="dialog-button bank-mode-button" :class="{selected: leftMode === 'inventory'}" @click="leftMode = 'inventory'">{{ t('vendor.inventory') }}</button>
-                <button class="dialog-button bank-mode-button" :class="{selected: leftMode === 'equipment'}" @click="leftMode = 'equipment'">{{ t('vendor.equipment') }}</button>
+                <button class="dialog-button bank-mode-button" :class="{selected: leftMode === 'equipment'}" @click="setLeftMode('equipment')">{{ t('vendor.equipment') }}</button>
+                <button class="dialog-button bank-mode-button" :class="{selected: leftMode === 'inventory'}" @click="setLeftMode('inventory')">{{ t('vendor.inventory') }}</button>
             </div>
             <Backpack
                 v-if="leftMode === 'inventory'"
@@ -21,7 +21,6 @@
                 v-else
                 :equip-slots="equipSlots"
                 :show-weapon-setups="false"
-                :full-width="true"
                 @slot-pointerdown="onEquipPointerDown"
             />
         </div>
@@ -75,11 +74,19 @@ import {getEquipSetArmorSvg, getEquipSetArmsSvg, getEquipSetHandSvg, getEquipSet
 
 const props = defineProps<{npcId: number}>()
 const MIN_INVENTORY_SLOT_COUNT = 24
+const BANK_LEFT_MODE_STORAGE_KEY = 'DARKENLIGHT_BANK_LEFT_MODE'
 const actionButtonSize = ref(Settings.actionButtonSize)
 const itemInfoOverlayRef = ref()
 const itemInfoOverlay = ref<any>({visible: false})
 const version = ref(0)
-const leftMode = ref<'inventory' | 'equipment'>('inventory')
+const getStoredLeftMode = (): 'inventory' | 'equipment' => {
+    try {
+        return localStorage.getItem(BANK_LEFT_MODE_STORAGE_KEY) === 'equipment' ? 'equipment' : 'inventory'
+    } catch {
+        return 'inventory'
+    }
+}
+const leftMode = ref<'inventory' | 'equipment'>(getStoredLeftMode())
 
 const inventorySlotCount = computed(() => {
     version.value
@@ -124,6 +131,17 @@ const equipSlots = computed(() => {
 
 const hideItemInfoOverlay = () => {
     itemInfoOverlay.value.visible = false
+}
+
+const setLeftMode = (mode: 'inventory' | 'equipment') => {
+    if (leftMode.value === mode) return
+    leftMode.value = mode
+    hideItemInfoOverlay()
+    try {
+        localStorage.setItem(BANK_LEFT_MODE_STORAGE_KEY, mode)
+    } catch {
+        // Bank remains usable when browser storage is unavailable.
+    }
 }
 
 const showItemInfoOverlay = (item: any, pointer: {clientX: number, clientY: number}, source: 'inventory' | 'bank', index: number) => {
@@ -230,6 +248,7 @@ onUnmounted(() => {
 .bank-column :deep(.inventory-panel) { width: 100%; flex: 1 1 auto; min-height: 0; padding: 0; }
 .bank-column :deep(.inventory-grid-wrapper) { height: 100%; max-height: none; aspect-ratio: auto; }
 .bank-column :deep(.inventory-grid) { height: 100%; }
+.bank-column :deep(.equipment-panel) { width: 50%; height: auto; flex: 1 1 auto; min-height: 0; align-self: center; border-right: none; --slot-size-factor: 0.4; }
 .bank-panel :deep(.inventory-item-overlay) { text-align: left; }
 @media (max-width: 700px) { .bank-panel { gap: 6px; } }
 </style>
