@@ -159,8 +159,8 @@ const showItemInfoOverlay = (item: any, pointer: {clientX: number, clientY: numb
         y: pointer.clientY,
         source,
         index,
-        showDropButton: source === 'inventory',
-        showSplitButton: source === 'bank' && item.cbType === 'R',
+        showDropButton: false,
+        showSplitButton: item.cbType === 'R',
         showMergeButton: source === 'inventory'
             ? InventoryManager.canMergeResourceItem(item)
             : BankManager.canMergeResourceItem(item),
