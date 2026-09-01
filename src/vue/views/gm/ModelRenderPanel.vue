@@ -111,6 +111,21 @@ const WEAPON_OPTIONS = Object.entries(VertexColorWeaponPalettesByModelKey).map((
     return { key, item, ...weapon, label: `${key} (${item.model})` }
 })
 const ARMOR_OPTIONS = Object.entries(ArmorModelsCb).map(([key, item]) => ({ key, item, label: `${key} (${item.model})` }))
+const ARMOR_MATERIAL_OPTIONS = [
+    { index: 0, label: 'Steel' },
+    { index: 1, label: 'Astracyte' },
+    { index: 2, label: 'Agapyte' },
+    { index: 3, label: 'Gold' },
+    { index: 4, label: 'Blood Stone' },
+    { index: 5, label: 'Dark Stone' },
+    { index: 7, label: 'Mythril' },
+]
+const ARMOR_INVENTORY_BASE_NAMES = {
+    PLATE_ARMOR_MALE: 'plate-armor',
+    HELM_MALE: 'plate-helmet',
+    PAULDRON_MALE: 'plate-pauldrons',
+    LEG_MALE: 'plate-greaves',
+}
 
 const dialogVisible = ref(false)
 const renderCanvasRef = ref(null)
@@ -148,6 +163,9 @@ const currentMaterialSlots = computed(() => {
     return item.matCols * item.matRows
 })
 const materialIndexOptions = computed(() => {
+    if (previewCategory.value === 'ARMOR') {
+        return ARMOR_MATERIAL_OPTIONS
+    }
     const materialNames = selectedWeaponPalette.value?.materialNames
     return Array.from({ length: currentMaterialSlots.value }, (_, index) => ({
         index,
@@ -512,10 +530,13 @@ const downloadCanvasPng = () => {
         return
     }
     persistSettingsForCurrentSelection()
-    const materialName = selectedWeaponPalette.value?.materialNames[previewMatIndex.value]?.toLowerCase()
+    const materialName = selectedWeaponPalette.value?.materialNames[previewMatIndex.value]
+        ?? ARMOR_MATERIAL_OPTIONS.find((option) => option.index === previewMatIndex.value)?.label
+    const materialFileName = materialName?.toLowerCase().replaceAll(' ', '-')
     const inventoryBaseName = selectedPreviewOption.value?.inventoryBaseName
-    const imageBaseName = materialName && inventoryBaseName
-        ? `${materialName}-${inventoryBaseName}`
+    const armorInventoryBaseName = ARMOR_INVENTORY_BASE_NAMES[selectedPreviewOption.value?.key]
+    const imageBaseName = materialFileName && (inventoryBaseName || armorInventoryBaseName)
+        ? `${materialFileName}-${inventoryBaseName || armorInventoryBaseName}`
         : previewItem.model
     const suffix = imageVariant.value === 'DROP' ? '_drop' : ''
     const filename = `${imageBaseName}${suffix}.png`
@@ -540,6 +561,7 @@ const centerPreviewMesh = () => {
 }
 
 watch(previewCategory, async () => {
+    previewMatIndex.value = 0
     const firstOption = currentModelOptions.value[0]
     const nextKey = firstOption?.key ?? ''
     const keyChanged = selectedModelKey.value !== nextKey

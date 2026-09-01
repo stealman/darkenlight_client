@@ -62,7 +62,7 @@ defineExpose({
 </script>
 
 <style scoped>
-.character-dialog-window .dialog-content {
+:global(.inventory-dialog-window.character-dialog-window .dialog-content) {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -77,4 +77,5 @@ defineExpose({
     padding: 8px 4px 4px;
     box-sizing: border-box;
 }
+
 </style>

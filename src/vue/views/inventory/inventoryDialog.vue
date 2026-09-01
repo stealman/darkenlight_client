@@ -136,6 +136,8 @@ const itemInfoOverlay = ref({
     weaponDamageTypes: [],
     weaponSpeed: null,
     weaponRange: null,
+    weaponDefense: null,
+    armorStats: null,
     showDropButton: false,
     showMergeButton: false,
     showCampButton: false,
@@ -191,6 +193,17 @@ const showItemInfoOverlay = (item, pointer, options = {}) => {
     itemInfoOverlay.value.weaponDamageTypes = item.cbType === 'W' ? item.damageTypes ?? [] : []
     itemInfoOverlay.value.weaponSpeed = item.cbType === 'W' ? item.atts.speed ?? null : null
     itemInfoOverlay.value.weaponRange = item.cbType === 'W' ? item.atts.range ?? null : null
+    itemInfoOverlay.value.weaponDefense = item.cbType === 'W' ? item.atts.defense ?? 0 : null
+    itemInfoOverlay.value.armorStats = item.cbType === 'A' ? {
+        pdef: item.atts.pdef ?? 0,
+        defense: item.atts.defense ?? 0,
+        str: item.atts.str ?? 0,
+        agi: item.atts.agi ?? 0,
+        int: item.atts.int ?? 0,
+        wis: item.atts.wis ?? 0,
+        maxHp: item.atts.maxHp ?? 0,
+        arcaneInterference: item.atts.arcaneInterference ?? 0,
+    } : null
     itemInfoOverlay.value.showDropButton = showDropButton
     itemInfoOverlay.value.showMergeButton = showMergeButton
     itemInfoOverlay.value.showCampButton = sourceType === 'inventory' && ConsumableHelper.isItemCampWood(item)

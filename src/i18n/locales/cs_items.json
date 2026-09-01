@@ -113,11 +113,37 @@
 
 
         "armors": {
-            "steel-plate-greaves": "Ocelové Plátové Kalhoty",
-            "steel-plate-pauldrons": "Ocelové Plátové Nárameníky",
-            "steel-helmet": "Ocelová Přilba",
-            "steel-plate-armor": "Ocelová Plátová Zbroj",
-            "steel-shield": "Ocelový Štít"
+            "steel-plate-greaves": "Ocelové plátové holeně",
+            "gold-plate-greaves": "Zlaté plátové holeně",
+            "agapyte-plate-greaves": "Agapytové plátové holeně",
+            "astracyte-plate-greaves": "Astracytové plátové holeně",
+            "blood-stone-plate-greaves": "Plátové holeně z Krvavého kamene",
+            "dark-stone-plate-greaves": "Plátové holeně z Temného kamene",
+            "mythril-plate-greaves": "Mythrilové plátové holeně",
+
+            "steel-plate-pauldrons": "Ocelové plátové nárameníky",
+            "gold-plate-pauldrons": "Zlaté plátové nárameníky",
+            "agapyte-plate-pauldrons": "Agapytové plátové nárameníky",
+            "astracyte-plate-pauldrons": "Astracytové plátové nárameníky",
+            "blood-stone-plate-pauldrons": "Plátové nárameníky z Krvavého kamene",
+            "dark-stone-plate-pauldrons": "Plátové nárameníky z Temného kamene",
+            "mythril-plate-pauldrons": "Mythrilové plátové nárameníky",
+
+            "steel-plate-helmet": "Ocelová plátová přilba",
+            "gold-plate-helmet": "Zlatá plátová přilba",
+            "agapyte-plate-helmet": "Agapytová plátová přilba",
+            "astracyte-plate-helmet": "Astracytová plátová přilba",
+            "blood-stone-plate-helmet": "Plátová přilba z Krvavého kamene",
+            "dark-stone-plate-helmet": "Plátová přilba z Temného kamene",
+            "mythril-plate-helmet": "Mythrilová plátová přilba",
+
+            "steel-plate-armor": "Ocelová plátová zbroj",
+            "gold-plate-armor": "Zlatá plátová zbroj",
+            "agapyte-plate-armor": "Agapytová plátová zbroj",
+            "astracyte-plate-armor": "Astracytová plátová zbroj",
+            "blood-stone-plate-armor": "Plátová zbroj z Krvavého kamene",
+            "dark-stone-plate-armor": "Plátová zbroj z Temného kamene",
+            "mythril-plate-armor": "Mythrilová plátová zbroj"
         },
 
 

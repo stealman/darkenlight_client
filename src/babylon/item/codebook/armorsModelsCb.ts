@@ -10,6 +10,7 @@ import { EquipSlotModelsCb } from '@/data/items/item'
 export const BASE_EQUIP_MATERIAL_PATH = "/models/equip/"
 export const ARMOR_MATERIAL_METALIC = 'materials-metalic'
 
+// Armor materialId is a 1-based tile position in this atlas; EquipItem converts it to materialId - 1.
 const matMetalSize = new Vector2(16, 8)
 
 export const ArmorsCbManager = {

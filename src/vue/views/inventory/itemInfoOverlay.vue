@@ -21,6 +21,18 @@
             <span>{{ t('vendor.attackType') }} <strong>{{ formatDamageTypes(itemInfo.weaponDamageTypes) }}</strong></span>
             <span>{{ t('vendor.speed') }} <strong>{{ formatSpeed(itemInfo.weaponSpeed) }}</strong></span>
             <span>{{ t('vendor.range') }} <strong>{{ itemInfo.weaponRange }}</strong></span>
+            <span v-if="isNonZero(itemInfo.weaponDefense)">{{ t('inventory.defense') }} <strong>{{ formatModifier(itemInfo.weaponDefense) }}</strong></span>
+        </div>
+
+        <div v-if="itemInfo.armorStats" class="inventory-item-overlay-stats">
+            <span>{{ t('inventory.armor') }} <strong>{{ itemInfo.armorStats.pdef }}</strong></span>
+            <span>{{ t('inventory.magicInterference') }} <strong>{{ itemInfo.armorStats.arcaneInterference }}%</strong></span>
+            <span v-if="isNonZero(itemInfo.armorStats.defense)">{{ t('inventory.defense') }} <strong>{{ formatModifier(itemInfo.armorStats.defense) }}</strong></span>
+            <span v-if="isNonZero(itemInfo.armorStats.str)">{{ t('character.strength') }} <strong>{{ formatModifier(itemInfo.armorStats.str) }}</strong></span>
+            <span v-if="isNonZero(itemInfo.armorStats.agi)">{{ t('character.agility') }} <strong>{{ formatModifier(itemInfo.armorStats.agi) }}</strong></span>
+            <span v-if="isNonZero(itemInfo.armorStats.int)">{{ t('character.intelligence') }} <strong>{{ formatModifier(itemInfo.armorStats.int) }}</strong></span>
+            <span v-if="isNonZero(itemInfo.armorStats.wis)">{{ t('character.wisdom') }} <strong>{{ formatModifier(itemInfo.armorStats.wis) }}</strong></span>
+            <span v-if="isNonZero(itemInfo.armorStats.maxHp)">{{ t('inventory.maxHealth') }} <strong>{{ formatModifier(itemInfo.armorStats.maxHp) }}</strong></span>
         </div>
 
         <div class="inventory-item-overlay-interactive inventory-item-overlay-actions">
@@ -131,6 +143,13 @@ const formatDamageTypes = (damageTypes) => {
 const formatSpeed = (speed) => {
     const milliseconds = Number(speed)
     return Number.isFinite(milliseconds) ? `${(milliseconds / 1000).toFixed(2)}s` : '-'
+}
+
+const isNonZero = (value) => Number(value) !== 0
+
+const formatModifier = (value) => {
+    const number = Number(value)
+    return `${number > 0 ? '+' : ''}${number}`
 }
 
 const durabilityStatusClass = computed(() => {

@@ -149,32 +149,32 @@ export const OverlayManager = {
         }
     },
 
-    addMonsterDamageNumber(monsterId: number, damage: number, hitType: string = 'h', time: number = Date.now()) {
+    addMonsterDamageNumber(monsterId: number, damage: number, hitType: string = 'h', hitQuality: 'P' | 'N' | 'G' | null = null, time: number = Date.now()) {
         const monster = MonsterManager.monsters.get(monsterId)
         if (!monster) {
             return
         }
-        const damageNumber = DamageNumber.fromHitMonster(MyPlayer.myChar, monster, damage, hitType, time)
+        const damageNumber = DamageNumber.fromHitMonster(MyPlayer.myChar, monster, damage, hitType, hitQuality, time)
         if (!damageNumber) {
             return
         }
         this.damageNumbers.push(damageNumber)
     },
 
-    addCharacterDamageNumber(charId: number, damage: number, hitType: string = 'h', time: number = Date.now()) {
+    addCharacterDamageNumber(charId: number, damage: number, hitType: string = 'h', hitQuality: 'P' | 'N' | 'G' | null = null, time: number = Date.now()) {
         const char = CharacterManager.characters.get(charId)
         if (!char) {
             return
         }
-        const damageNumber = DamageNumber.fromHitCharacter(MyPlayer.myChar, char, damage, hitType, time)
+        const damageNumber = DamageNumber.fromHitCharacter(MyPlayer.myChar, char, damage, hitType, hitQuality, time)
         if (!damageNumber) {
             return
         }
         this.damageNumbers.push(damageNumber)
     },
 
-    addMyCharDamageNumber(attacker: Attackable, damage: number, hitType: string = 'h', time: number = Date.now()) {
-        const damageNumber = DamageNumber.fromHitMyChar(attacker, damage, hitType, time)
+    addMyCharDamageNumber(attacker: Attackable, damage: number, hitType: string = 'h', hitQuality: 'P' | 'N' | 'G' | null = null, time: number = Date.now()) {
+        const damageNumber = DamageNumber.fromHitMyChar(attacker, damage, hitType, hitQuality, time)
         if (!damageNumber) {
             return
         }

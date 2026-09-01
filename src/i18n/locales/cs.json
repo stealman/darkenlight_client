@@ -84,7 +84,10 @@
     "intelligence": "Inteligence",
     "wisdom": "Moudrost",
     "physicalAttack": "Fyzický útok",
-    "physicalDefense": "Fyzická obrana"
+    "physicalDefense": "Brnění",
+    "precision": "Přesnost",
+    "defense": "Obrana",
+    "interference": "Interference"
   },
   "actions": {
     "noneTitle": "Nevybráno",
@@ -108,6 +111,10 @@
     "unknownItem": "Neznámý předmět",
     "quality": "Kvalita",
     "durability": "Stav",
+    "armor": "Brnění",
+    "defense": "Obrana",
+    "maxHealth": "Maximum zdraví",
+    "magicInterference": "Interference",
     "dropItem": "Zahodit předmět",
     "splitItem": "Rozdělit předmět",
     "mergeItem": "Sloučit předmět",

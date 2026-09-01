@@ -93,6 +93,17 @@
                     <span>{{ t('vendor.attackType') }} <strong>{{ formatDamageTypes(detailItem) }}</strong></span>
                     <span>{{ t('vendor.speed') }} <strong>{{ formatSpeed(detailItem.atts?.speed) }}</strong></span>
                     <span>{{ t('vendor.range') }} <strong>{{ detailItem.atts?.range }}</strong></span>
+                    <span v-if="isNonZero(detailItem.atts?.defense)">{{ t('inventory.defense') }} <strong>{{ formatModifier(detailItem.atts?.defense) }}</strong></span>
+                </div>
+                <div v-else-if="detailItem.tp === 'A'" class="npc-vendor-overlay-stats">
+                    <span>{{ t('inventory.armor') }} <strong>{{ detailItem.atts?.pdef }}</strong></span>
+                    <span>{{ t('inventory.magicInterference') }} <strong>{{ detailItem.atts?.arcaneInterference }}%</strong></span>
+                    <span v-if="isNonZero(detailItem.atts?.defense)">{{ t('inventory.defense') }} <strong>{{ formatModifier(detailItem.atts?.defense) }}</strong></span>
+                    <span v-if="isNonZero(detailItem.atts?.str)">{{ t('character.strength') }} <strong>{{ formatModifier(detailItem.atts?.str) }}</strong></span>
+                    <span v-if="isNonZero(detailItem.atts?.agi)">{{ t('character.agility') }} <strong>{{ formatModifier(detailItem.atts?.agi) }}</strong></span>
+                    <span v-if="isNonZero(detailItem.atts?.int)">{{ t('character.intelligence') }} <strong>{{ formatModifier(detailItem.atts?.int) }}</strong></span>
+                    <span v-if="isNonZero(detailItem.atts?.wis)">{{ t('character.wisdom') }} <strong>{{ formatModifier(detailItem.atts?.wis) }}</strong></span>
+                    <span v-if="isNonZero(detailItem.atts?.maxHp)">{{ t('inventory.maxHealth') }} <strong>{{ formatModifier(detailItem.atts?.maxHp) }}</strong></span>
                 </div>
                 <div v-else class="npc-vendor-overlay-muted">{{ t('vendor.detailsSoon') }}</div>
             </div>
@@ -162,6 +173,11 @@ const formatDamageTypes = (item: NpcVendorCatalogItem) => (item.dmgTypes ?? []).
 const formatSpeed = (speed: number | string | undefined) => {
     const milliseconds = Number(speed)
     return Number.isFinite(milliseconds) ? `${(milliseconds / 1000).toFixed(2)}s` : '-'
+}
+const isNonZero = (value: number | string | undefined) => Number(value) !== 0
+const formatModifier = (value: number | string | undefined) => {
+    const number = Number(value)
+    return `${number > 0 ? '+' : ''}${number}`
 }
 const getTotalPrice = (item: NpcVendorCatalogItem) => item.price
 const getOwnedResourceCount = (item: NpcVendorCatalogItem) => {

@@ -148,6 +148,13 @@
 
                     <div v-if="feature.settings.itemCategories.includes('metalArmor')" class="npc-vendor-materials">
                         <strong>Metal armor</strong>
+                        <div class="npc-feature-checkboxes npc-feature-material-checkboxes">
+                            <label v-for="material in metalArmorMaterials" :key="material.value" class="npc-feature-checkbox" :class="{ 'npc-feature-checkbox-selected': feature.settings.armorMaterials.includes(material.value) }">
+                                <input v-model="feature.settings.armorMaterials" type="checkbox" :value="material.value" />
+                                <span>{{ material.label }}</span>
+                            </label>
+                        </div>
+
                         <div class="npc-vendor-individual-items">
                             <div class="npc-vendor-item-add">
                                 <select v-model="vendorItemSelections.metalArmor">
@@ -248,15 +255,28 @@ const bowFeatureMaterials = [
     { value: 'elven', label: 'Elven' },
     { value: 'ethereal', label: 'Ethereal' },
 ]
-const optionValue = (modelId, materialId) => `${modelId}:${materialId}`
-const armorOptions = (label, modelId, codebookId) => [
-    { label: 'None', value: '' },
-    { label, value: optionValue(modelId, 1), codebookId },
+const metalArmorMaterials = [
+    { value: 'steel', label: 'Steel', id: 1 },
+    { value: 'gold', label: 'Gold', id: 4 },
+    { value: 'agapyte', label: 'Agapyte', id: 3 },
+    { value: 'astracyte', label: 'Astracyte', id: 2 },
+    { value: 'blood-stone', label: 'Blood Stone', id: 5 },
+    { value: 'dark-stone', label: 'Dark Stone', id: 6 },
+    { value: 'mythril', label: 'Mythril', id: 8 },
 ]
-const headOptions = armorOptions('Steel helmet', EquipSlotModelsCb.HELM.modelId, 3)
-const armsOptions = armorOptions('Steel plate pauldrons', EquipSlotModelsCb.PAULDRONS_PLATE.modelId, 2)
-const legsOptions = armorOptions('Steel plate greaves', EquipSlotModelsCb.LEGS_PLATE.modelId, 1)
-const bodyOptions = armorOptions('Steel plate armor', EquipSlotModelsCb.ARMOR_PLATE.modelId, 6)
+const optionValue = (modelId, materialId) => `${modelId}:${materialId}`
+const armorOptions = (armorName, modelId, codebookIds) => [
+    { label: 'None', value: '' },
+    ...metalArmorMaterials.map((material, index) => ({
+        label: `${material.label} ${armorName}`,
+        value: optionValue(modelId, material.id),
+        codebookId: codebookIds[index],
+    })),
+]
+const headOptions = armorOptions('plate helmet', EquipSlotModelsCb.HELM.modelId, [3, 301, 302, 303, 304, 305, 306])
+const armsOptions = armorOptions('plate pauldrons', EquipSlotModelsCb.PAULDRONS_PLATE.modelId, [2, 201, 202, 203, 204, 205, 206])
+const legsOptions = armorOptions('plate greaves', EquipSlotModelsCb.LEGS_PLATE.modelId, [1, 101, 102, 103, 104, 105, 106])
+const bodyOptions = armorOptions('plate armor', EquipSlotModelsCb.ARMOR_PLATE.modelId, [6, 401, 402, 403, 404, 405, 406])
 const weaponNames = {
     LONGSWORD: 'Longsword', BROADSWORD: 'Broadsword', GREATSWORD: 'Greatsword',
     HAND_AXE: 'Hand axe', BATTLE_AXE: 'Battle axe', GREATAXE: 'Great axe', PICKAXE: 'Pickaxe',
@@ -338,7 +358,7 @@ const itemFromSelection = (selection) => {
 const createFeature = (type) => ({
     type,
     settings: type === 'vendor'
-        ? { itemCategories: [], weaponMaterials: [], bowMaterials: [], individualItems: {weapons: [], bows: [], metalArmor: [], leatherArmor: [], resources: []} }
+        ? { itemCategories: [], weaponMaterials: [], armorMaterials: [], bowMaterials: [], individualItems: {weapons: [], bows: [], metalArmor: [], leatherArmor: [], resources: []} }
         : {},
 })
 
@@ -399,6 +419,7 @@ const openDialog = () => {
             ? {
                 itemCategories: [...(feature.settings?.itemCategories ?? [])],
                 weaponMaterials: [...(feature.settings?.weaponMaterials ?? [])],
+                armorMaterials: [...(feature.settings?.armorMaterials ?? [])],
                 bowMaterials: [...(feature.settings?.bowMaterials ?? [])],
                 individualItems: {
                     weapons: [...(feature.settings?.individualItems?.weapons ?? [])],

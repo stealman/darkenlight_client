@@ -109,7 +109,7 @@ export const MonsterManager = {
         }
         monster.autoAttackFinished(data)
         if (data.tp === 'C' && data.tgt === MyPlayer.myChar.id) {
-            OverlayManager.addMyCharDamageNumber(monster, data.res.d, data.res.h)
+            OverlayManager.addMyCharDamageNumber(monster, data.res.d, data.res.h, data.res.q)
         }
     },
 

@@ -9,6 +9,10 @@ export const MyCombatData = reactive({
 
     patk: 0,
     aaCd: 0,
+    armor: 0,
+    precision: 0,
+    defense: 0,
+    arcaneInterference: 0,
 
     consumeData(data: AttackableCombatTO) {
         if (data.str != null) {
@@ -28,6 +32,18 @@ export const MyCombatData = reactive({
         }
         if (data.aaCd != null) {
             this.aaCd = data.aaCd
+        }
+        if (data.armor != null) {
+            this.armor = data.armor
+        }
+        if (data.precision != null) {
+            this.precision = data.precision
+        }
+        if (data.defense != null) {
+            this.defense = data.defense
+        }
+        if (data.arcaneInterference != null) {
+            this.arcaneInterference = data.arcaneInterference
         }
 
         console.log("Updated combat data:", data)

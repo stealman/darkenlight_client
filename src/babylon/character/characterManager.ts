@@ -120,10 +120,10 @@ export const CharacterManager = {
         if (data.id === MyPlayer.myChar.id) {
             MyPlayer.finishAutoAttack(data)
             if (data.tp === 'M') {
-                OverlayManager.addMonsterDamageNumber(data.tgt, data.res.d, data.res.h)
+                OverlayManager.addMonsterDamageNumber(data.tgt, data.res.d, data.res.h, data.res.q)
             }
             if (data.tp === 'C') {
-                OverlayManager.addCharacterDamageNumber(data.tgt, data.res.d, data.res.h)
+                OverlayManager.addCharacterDamageNumber(data.tgt, data.res.d, data.res.h, data.res.q)
             }
         } else {
             const char = this.characters.get(data.id)

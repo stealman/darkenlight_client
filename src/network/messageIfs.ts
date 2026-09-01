@@ -24,6 +24,10 @@ export interface AttackableCombatTO {
 
     patk?: number
     aaCd?: number
+    armor?: number
+    precision?: number
+    defense?: number
+    arcaneInterference?: number
 }
 
 export interface  AutoAttackMessage {
@@ -38,7 +42,7 @@ export interface  AutoAttackMessage {
 export interface AutoAttackResult {
     h: string
     d: number
-    c: boolean
+    q: 'P' | 'N' | 'G' | null
     tgt: AttackableBasicTO
 }
 

@@ -114,10 +114,36 @@
 
     "armors": {
       "steel-plate-greaves": "Steel Plate Greaves",
+      "gold-plate-greaves": "Gold Plate Greaves",
+      "agapyte-plate-greaves": "Agapyte Plate Greaves",
+      "astracyte-plate-greaves": "Astracyte Plate Greaves",
+      "blood-stone-plate-greaves": "Blood Stone Plate Greaves",
+      "dark-stone-plate-greaves": "Dark Stone Plate Greaves",
+      "mythril-plate-greaves": "Mythril Plate Greaves",
+
       "steel-plate-pauldrons": "Steel Plate Pauldrons",
-      "steel-helmet": "Steel Helmet",
+      "gold-plate-pauldrons": "Gold Plate Pauldrons",
+      "agapyte-plate-pauldrons": "Agapyte Plate Pauldrons",
+      "astracyte-plate-pauldrons": "Astracyte Plate Pauldrons",
+      "blood-stone-plate-pauldrons": "Blood Stone Plate Pauldrons",
+      "dark-stone-plate-pauldrons": "Dark Stone Plate Pauldrons",
+      "mythril-plate-pauldrons": "Mythril Plate Pauldrons",
+
+      "steel-plate-helmet": "Steel Plate Helmet",
+      "gold-plate-helmet": "Gold Plate Helmet",
+      "agapyte-plate-helmet": "Agapyte Plate Helmet",
+      "astracyte-plate-helmet": "Astracyte Plate Helmet",
+      "blood-stone-plate-helmet": "Blood Stone Plate Helmet",
+      "dark-stone-plate-helmet": "Dark Stone Plate Helmet",
+      "mythril-plate-helmet": "Mythril Plate Helmet",
+
       "steel-plate-armor": "Steel Plate Armor",
-      "steel-shield": "Steel Shield"
+      "gold-plate-armor": "Gold Plate Armor",
+      "agapyte-plate-armor": "Agapyte Plate Armor",
+      "astracyte-plate-armor": "Astracyte Plate Armor",
+      "blood-stone-plate-armor": "Blood Stone Plate Armor",
+      "dark-stone-plate-armor": "Dark Stone Plate Armor",
+      "mythril-plate-armor": "Mythril Plate Armor"
     },
 
 

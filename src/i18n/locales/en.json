@@ -84,7 +84,10 @@
     "intelligence": "Intelligence",
     "wisdom": "Wisdom",
     "physicalAttack": "Physical attack",
-    "physicalDefense": "Physical defense"
+    "physicalDefense": "Armor",
+    "precision": "Precision",
+    "defense": "Defense",
+    "interference": "Interference"
   },
   "actions": {
     "noneTitle": "Unassigned",
@@ -108,6 +111,10 @@
     "unknownItem": "Unknown item",
     "quality": "Quality",
     "durability": "Durability",
+    "armor": "Armor",
+    "defense": "Defense",
+    "maxHealth": "Max health",
+    "magicInterference": "Interference",
     "dropItem": "Drop item",
     "splitItem": "Split item",
     "mergeItem": "Merge item",

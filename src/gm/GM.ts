@@ -446,6 +446,7 @@ export const GMManager = {
                 settings: feature.type === 'vendor' ? {
                     itemCategories: [...(feature.settings?.itemCategories ?? [])],
                     weaponMaterials: [...(feature.settings?.weaponMaterials ?? [])],
+                    armorMaterials: [...(feature.settings?.armorMaterials ?? [])],
                     bowMaterials: [...(feature.settings?.bowMaterials ?? [])],
                     individualItems: {
                         weapons: [...(feature.settings?.individualItems?.weapons ?? [])],
