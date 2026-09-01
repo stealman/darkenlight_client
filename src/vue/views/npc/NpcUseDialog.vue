@@ -34,7 +34,7 @@
                         v-for="category in vendorCategories"
                         :key="category.key"
                         class="dialog-button npc-use-tab"
-                        :class="{ 'npc-use-tab-active': selectedCategory === category.key }"
+                        :class="{ selected: selectedCategory === category.key }"
                         @click="selectCategory(category.key)"
                     >
                         {{ getCategoryLabel(category.key) }}
@@ -307,7 +307,6 @@ defineExpose({openDialog})
 .npc-use-category-tabs { display: flex; flex-wrap: wrap; gap: 6px; flex: 0 0 auto; }
 .npc-use-tab { min-width: 82px; }
 .npc-use-tab, .npc-vendor-buy-button, .npc-vendor-quick-buy-button { padding: 5px 10px; font-size: 0.9rem; line-height: 1; }
-.npc-use-tab-active { color: rgb(var(--ui-base)); border-color: rgb(var(--ui-base)); background: rgba(255, 255, 255, 0.09); }
 .npc-vendor-item-list { display: flex; flex: 1 1 auto; min-height: 0; flex-direction: column; overflow-y: auto; border-top: 1px solid rgba(var(--ui-darker), 0.8); border-bottom: 1px solid rgba(var(--ui-darker), 0.8); }
 .npc-vendor-item-row { display: grid; grid-template-columns: 46px minmax(0, 1fr) max-content auto; align-items: center; gap: 12px; min-height: 46px; padding: 3px 8px; border-bottom: 1px solid rgba(var(--ui-darker), 0.65); color: rgb(var(--ui-base)); cursor: url('/images/cursor-pointer.png'), pointer; }
 .npc-vendor-item-row:hover { background: rgba(255, 255, 255, 0.06); }
