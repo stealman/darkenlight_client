@@ -79,6 +79,52 @@
     z-index: 0;
 }
 
+.equip-slot.item-durability--warning::before,
+.inventory-item-slot.item-durability--warning::before {
+    background: rgba(63, 52, 17, 0.86);
+}
+
+.equip-slot.item-durability--danger::before,
+.inventory-item-slot.item-durability--danger::before {
+    background: rgba(70, 39, 14, 0.86);
+}
+
+.equip-slot.item-durability--critical::before,
+.inventory-item-slot.item-durability--critical::before {
+    background: rgba(69, 27, 25, 0.86);
+}
+
+.item-durability-indicator {
+    position: absolute;
+    right: auto;
+    bottom: 1px;
+    left: 1px;
+    max-width: calc(100% - 2px);
+    height: 2px;
+    pointer-events: none;
+    z-index: 3;
+    background: rgba(150, 141, 120, 0.72);
+}
+
+.item-durability--warning .item-durability-indicator {
+    background: rgb(205, 174, 76);
+}
+
+.item-durability--danger .item-durability-indicator {
+    background: rgb(211, 125, 61);
+}
+
+.item-durability--critical .item-durability-indicator {
+    background: rgb(var(--ui-danger));
+}
+
+.equip-slot .item-durability-indicator {
+    right: auto;
+    bottom: 2px;
+    left: 2px;
+    max-width: calc(100% - 4px);
+}
+
 .equip-slot > div {
     position: relative;
     z-index: 1;
@@ -199,6 +245,11 @@
 .inventory-item-slot > * {
     position: relative;
     z-index: 1;
+}
+
+.inventory-item-slot > .item-durability-indicator {
+    position: absolute;
+    z-index: 3;
 }
 
 .inventory-item-image {

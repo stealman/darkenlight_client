@@ -21,6 +21,7 @@
             <span>{{ t('vendor.attackType') }} <strong>{{ formatDamageTypes(itemInfo.weaponDamageTypes) }}</strong></span>
             <span>{{ t('vendor.speed') }} <strong>{{ formatSpeed(itemInfo.weaponSpeed) }}</strong></span>
             <span>{{ t('vendor.range') }} <strong>{{ itemInfo.weaponRange }}</strong></span>
+            <span v-if="isNonZero(itemInfo.weaponArmorPen)">{{ t('inventory.armorPenetration') }} <strong>{{ itemInfo.weaponArmorPen }}</strong></span>
             <span v-if="isNonZero(itemInfo.weaponDefense)">{{ t('inventory.defense') }} <strong>{{ formatModifier(itemInfo.weaponDefense) }}</strong></span>
         </div>
 

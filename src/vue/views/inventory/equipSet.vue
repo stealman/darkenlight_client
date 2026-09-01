@@ -4,12 +4,17 @@
             <div
                 v-for="slot in equipSlots"
                 :key="slot.key"
-                :class="['equip-slot', slot.className]"
+                :class="['equip-slot', slot.className, slot.durabilityStatus ? `item-durability--${slot.durabilityStatus}` : null]"
                 @pointerdown="emit('slot-pointerdown', slot.key, $event)"
             >
                 <div v-if="!slot.image" v-html="slot.emptyHtml"></div>
                 <template v-if="slot.image">
                     <img :src="slot.image" :alt="`${slot.key} item`" class="equip-item-image" />
+                    <span
+                        v-if="slot.durabilityStatus"
+                        class="item-durability-indicator"
+                        :style="{ width: `${slot.durabilityPercent}%` }"
+                    ></span>
                     <img
                         v-for="marker in slot.markers"
                         :key="`${slot.key}-${marker}`"
@@ -57,6 +62,8 @@ type EquipSlotView = {
     image: string | null
     emptyHtml: string
     markers: WeaponMarker[]
+    durabilityStatus: string | null
+    durabilityPercent: number | null
 }
 
 defineProps<{

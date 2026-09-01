@@ -5,7 +5,10 @@
                 <div
                     v-for="slotIndex in slotCount"
                     :key="slotIndex"
-                    class="inventory-item-slot"
+                    :class="[
+                        'inventory-item-slot',
+                        getDurabilityStatus(slotIndex - 1) ? `item-durability--${getDurabilityStatus(slotIndex - 1)}` : null,
+                    ]"
                     @pointerdown="onSlotPointerDown(slotIndex - 1, $event)"
                     @pointermove="onSlotPointerMove($event)"
                     @pointerup="onSlotPointerUp(slotIndex - 1, $event)"
@@ -13,6 +16,11 @@
                 >
                     <template v-if="slotImages[slotIndex - 1]">
                         <img :src="slotImages[slotIndex - 1]" alt="Inventory item" class="inventory-item-image" draggable="false" />
+                        <span
+                            v-if="getDurabilityStatus(slotIndex - 1)"
+                            class="item-durability-indicator"
+                            :style="{ width: `${getDurabilityPercent(slotIndex - 1)}%` }"
+                        ></span>
                         <span
                             v-if="getStackCount(slotIndex - 1) !== null"
                             class="stack-count-label"
@@ -41,6 +49,8 @@ defineProps<{
     slotImages: Array<string | null>
     getMarkers: (index: number) => WeaponMarker[]
     getStackCount: (index: number) => number | null
+    getDurabilityStatus: (index: number) => string | null
+    getDurabilityPercent: (index: number) => number | null
 }>()
 
 const TAP_MOVE_TOLERANCE = 8

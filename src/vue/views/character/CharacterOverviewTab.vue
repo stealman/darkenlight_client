@@ -28,7 +28,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { MyPlayer } from '@/data/myPlayer'
 import { MyCombatData } from '@/data/myCombatData'
 import { useI18n } from '@/i18n'
@@ -36,6 +36,7 @@ import { useI18n } from '@/i18n'
 const { t } = useI18n()
 
 const myChar = MyPlayer.myCharRef
+const equipmentVersion = ref(0)
 
 const characterTitle = computed(() => {
     const name = myChar.value?.name ?? ''
@@ -52,11 +53,24 @@ const damageTypeLabels: Record<string, string> = {
 }
 
 const equippedWeaponDamageType = computed(() => {
+    equipmentVersion.value
     const damageTypes = myChar.value?.getWeapon()?.damageTypes ?? []
 
     return damageTypes.length
         ? damageTypes.map((type) => t(damageTypeLabels[type] ?? type)).join(' / ')
         : null
+})
+
+const refreshEquippedWeaponDamageType = () => {
+    equipmentVersion.value++
+}
+
+onMounted(() => {
+    window.addEventListener('ui:inventory-updated', refreshEquippedWeaponDamageType)
+})
+
+onUnmounted(() => {
+    window.removeEventListener('ui:inventory-updated', refreshEquippedWeaponDamageType)
 })
 
 const attributes = computed(() => [
@@ -72,6 +86,7 @@ const attributes = computed(() => [
             },
             { key: 'damageType', label: t('vendor.attackType'), value: equippedWeaponDamageType.value ?? '-' },
             { key: 'attackSpeed', label: t('vendor.speed'), value: `${autoAttackCooldownSeconds.value}s` },
+            { key: 'armorPenetration', label: t('character.armorPenetration'), value: MyCombatData.armorPen },
         ],
     },
     {

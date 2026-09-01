@@ -85,6 +85,7 @@
     "wisdom": "Moudrost",
     "physicalAttack": "Fyzický útok",
     "physicalDefense": "Brnění",
+    "armorPenetration": "Průraznost",
     "precision": "Přesnost",
     "defense": "Obrana",
     "interference": "Interference"
@@ -112,6 +113,7 @@
     "quality": "Kvalita",
     "durability": "Stav",
     "armor": "Brnění",
+    "armorPenetration": "Průraznost",
     "defense": "Obrana",
     "maxHealth": "Maximum zdraví",
     "magicInterference": "Interference",

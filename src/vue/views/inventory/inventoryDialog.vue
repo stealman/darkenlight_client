@@ -24,6 +24,8 @@
                     :slot-images="inventorySlotImages"
                     :get-markers="getWeaponSetupMarkersForInventorySlot"
                     :get-stack-count="getStackCountForInventorySlot"
+                    :get-durability-status="getDurabilityStatusForInventorySlot"
+                    :get-durability-percent="getDurabilityPercentForInventorySlot"
                     @slot-pointerdown="handleInventorySlotPointerDown"
                     @scroll="handleInventoryScroll"
                 />
@@ -73,12 +75,15 @@ import { ConsumableHelper } from '@/data/items/consumableHelper'
 
 type WeaponSetupType = 'primary' | 'secondary'
 type WeaponSetupMarker = WeaponSetupType
+type DurabilityStatus = 'worn' | 'warning' | 'danger' | 'critical'
 type EquipSlotView = {
     key: string
     className: string
     image: string | null
     emptyHtml: string
     markers: WeaponSetupMarker[]
+    durabilityStatus: DurabilityStatus | null
+    durabilityPercent: number | null
 }
 
 const emit = defineEmits(['close'])
@@ -136,6 +141,7 @@ const itemInfoOverlay = ref({
     weaponDamageTypes: [],
     weaponSpeed: null,
     weaponRange: null,
+    weaponArmorPen: null,
     weaponDefense: null,
     armorStats: null,
     showDropButton: false,
@@ -193,6 +199,7 @@ const showItemInfoOverlay = (item, pointer, options = {}) => {
     itemInfoOverlay.value.weaponDamageTypes = item.cbType === 'W' ? item.damageTypes ?? [] : []
     itemInfoOverlay.value.weaponSpeed = item.cbType === 'W' ? item.atts.speed ?? null : null
     itemInfoOverlay.value.weaponRange = item.cbType === 'W' ? item.atts.range ?? null : null
+    itemInfoOverlay.value.weaponArmorPen = item.cbType === 'W' ? item.atts.armorPen ?? 0 : null
     itemInfoOverlay.value.weaponDefense = item.cbType === 'W' ? item.atts.defense ?? 0 : null
     itemInfoOverlay.value.armorStats = item.cbType === 'A' ? {
         pdef: item.atts.pdef ?? 0,
@@ -432,6 +439,59 @@ const getStackCountForInventorySlot = (index) => {
     return quantity
 }
 
+const getDurabilityStatus = (item): DurabilityStatus | null => {
+    if (!item || (item.cbType !== 'W' && item.cbType !== 'A')) {
+        return null
+    }
+
+    const durability = Number(item.atts?.dur)
+    const maxDurability = Number(item.atts?.durM)
+    if (!Number.isFinite(durability) || !Number.isFinite(maxDurability) || maxDurability <= 0 || durability >= maxDurability) {
+        return null
+    }
+
+    if (durability < 5) {
+        return 'critical'
+    }
+    if (durability < 15) {
+        return 'danger'
+    }
+    if (durability < 25) {
+        return 'warning'
+    }
+    return 'worn'
+}
+
+const getDurabilityStatusForEquipSlot = (slot): DurabilityStatus | null => {
+    return getDurabilityStatus(MyPlayer.myChar?.equipSet?.get(resolveEffectiveEquipSlot(slot)))
+}
+
+const getDurabilityStatusForInventorySlot = (index): DurabilityStatus | null => {
+    return getDurabilityStatus(InventoryManager.inventory[index])
+}
+
+const getDurabilityPercent = (item): number | null => {
+    if (!item || (item.cbType !== 'W' && item.cbType !== 'A')) {
+        return null
+    }
+
+    const durability = Number(item.atts?.dur)
+    const maxDurability = Number(item.atts?.durM)
+    if (!Number.isFinite(durability) || !Number.isFinite(maxDurability) || maxDurability <= 0 || durability >= maxDurability) {
+        return null
+    }
+
+    return Math.max(4, Math.min(100, (durability / maxDurability) * 100))
+}
+
+const getDurabilityPercentForEquipSlot = (slot): number | null => {
+    return getDurabilityPercent(MyPlayer.myChar?.equipSet?.get(resolveEffectiveEquipSlot(slot)))
+}
+
+const getDurabilityPercentForInventorySlot = (index): number | null => {
+    return getDurabilityPercent(InventoryManager.inventory[index])
+}
+
 const buildEquipSlots = (): EquipSlotView[] => ([
     {
         key: 'HEAD',
@@ -439,6 +499,8 @@ const buildEquipSlots = (): EquipSlotView[] => ([
         image: equipSlotImages.value.HEAD,
         emptyHtml: getEquipSetHelmetSvg('icon-equipset icon-equipset-slot', 'icon-helmet'),
         markers: getWeaponSetupMarkersForEquipSlot('HEAD'),
+        durabilityStatus: getDurabilityStatusForEquipSlot('HEAD'),
+        durabilityPercent: getDurabilityPercentForEquipSlot('HEAD'),
     },
     {
         key: 'NECKLACE',
@@ -446,6 +508,8 @@ const buildEquipSlots = (): EquipSlotView[] => ([
         image: equipSlotImages.value.NECKLACE,
         emptyHtml: getEquipSetNecklaceSvg('icon-equipset icon-equipset-slot', 'icon-necklace'),
         markers: getWeaponSetupMarkersForEquipSlot('NECKLACE'),
+        durabilityStatus: getDurabilityStatusForEquipSlot('NECKLACE'),
+        durabilityPercent: getDurabilityPercentForEquipSlot('NECKLACE'),
     },
     {
         key: 'PAULDRONS',
@@ -453,6 +517,8 @@ const buildEquipSlots = (): EquipSlotView[] => ([
         image: equipSlotImages.value.PAULDRONS,
         emptyHtml: getEquipSetArmsSvg('icon-equipset icon-equipset-slot', 'icon-arms'),
         markers: getWeaponSetupMarkersForEquipSlot('PAULDRONS'),
+        durabilityStatus: getDurabilityStatusForEquipSlot('PAULDRONS'),
+        durabilityPercent: getDurabilityPercentForEquipSlot('PAULDRONS'),
     },
     {
         key: 'BODY',
@@ -460,6 +526,8 @@ const buildEquipSlots = (): EquipSlotView[] => ([
         image: equipSlotImages.value.BODY,
         emptyHtml: getEquipSetArmorSvg('icon-equipset icon-equipset-slot', 'icon-armor'),
         markers: getWeaponSetupMarkersForEquipSlot('BODY'),
+        durabilityStatus: getDurabilityStatusForEquipSlot('BODY'),
+        durabilityPercent: getDurabilityPercentForEquipSlot('BODY'),
     },
     {
         key: 'L_HAND',
@@ -467,6 +535,8 @@ const buildEquipSlots = (): EquipSlotView[] => ([
         image: equipSlotImages.value.L_HAND,
         emptyHtml: getEquipSetHandSvg('icon-equipset icon-equipset-slot', 'icon-hand-left'),
         markers: getWeaponSetupMarkersForEquipSlot('L_HAND'),
+        durabilityStatus: getDurabilityStatusForEquipSlot('L_HAND'),
+        durabilityPercent: getDurabilityPercentForEquipSlot('L_HAND'),
     },
     {
         key: 'R_HAND',
@@ -474,6 +544,8 @@ const buildEquipSlots = (): EquipSlotView[] => ([
         image: equipSlotImages.value.R_HAND,
         emptyHtml: getEquipSetHandSvg('icon-equipset icon-equipset-slot', 'icon-hand-right'),
         markers: getWeaponSetupMarkersForEquipSlot('R_HAND'),
+        durabilityStatus: getDurabilityStatusForEquipSlot('R_HAND'),
+        durabilityPercent: getDurabilityPercentForEquipSlot('R_HAND'),
     },
     {
         key: 'L_RING',
@@ -481,6 +553,8 @@ const buildEquipSlots = (): EquipSlotView[] => ([
         image: equipSlotImages.value.L_RING,
         emptyHtml: getEquipSetRingSvg('icon-equipset icon-equipset-slot', 'icon-ring-left'),
         markers: getWeaponSetupMarkersForEquipSlot('L_RING'),
+        durabilityStatus: getDurabilityStatusForEquipSlot('L_RING'),
+        durabilityPercent: getDurabilityPercentForEquipSlot('L_RING'),
     },
     {
         key: 'R_RING',
@@ -488,6 +562,8 @@ const buildEquipSlots = (): EquipSlotView[] => ([
         image: equipSlotImages.value.R_RING,
         emptyHtml: getEquipSetRingSvg('icon-equipset icon-equipset-slot', 'icon-ring-right'),
         markers: getWeaponSetupMarkersForEquipSlot('R_RING'),
+        durabilityStatus: getDurabilityStatusForEquipSlot('R_RING'),
+        durabilityPercent: getDurabilityPercentForEquipSlot('R_RING'),
     },
     {
         key: 'LEGS',
@@ -495,6 +571,8 @@ const buildEquipSlots = (): EquipSlotView[] => ([
         image: equipSlotImages.value.LEGS,
         emptyHtml: getEquipSetLegsSvg('icon-equipset icon-equipset-slot', 'icon-legs'),
         markers: getWeaponSetupMarkersForEquipSlot('LEGS'),
+        durabilityStatus: getDurabilityStatusForEquipSlot('LEGS'),
+        durabilityPercent: getDurabilityPercentForEquipSlot('LEGS'),
     },
 ])
 

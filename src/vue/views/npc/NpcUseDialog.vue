@@ -93,6 +93,7 @@
                     <span>{{ t('vendor.attackType') }} <strong>{{ formatDamageTypes(detailItem) }}</strong></span>
                     <span>{{ t('vendor.speed') }} <strong>{{ formatSpeed(detailItem.atts?.speed) }}</strong></span>
                     <span>{{ t('vendor.range') }} <strong>{{ detailItem.atts?.range }}</strong></span>
+                    <span v-if="isNonZero(detailItem.atts?.armorPen)">{{ t('inventory.armorPenetration') }} <strong>{{ detailItem.atts?.armorPen }}</strong></span>
                     <span v-if="isNonZero(detailItem.atts?.defense)">{{ t('inventory.defense') }} <strong>{{ formatModifier(detailItem.atts?.defense) }}</strong></span>
                 </div>
                 <div v-else-if="detailItem.tp === 'A'" class="npc-vendor-overlay-stats">

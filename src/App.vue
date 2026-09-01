@@ -98,13 +98,15 @@
 
     <div class="dialog-backdrop" id="dialog-error" style="display: none;">
         <div class="dialog-window adaptive">
-            <div class="dialog-header text-warning" style="margin-top: 20px;">{{ t('app.errorTitle') }}</div>
-            <div class="dialog-content" style="text-align: center;">
-                <div id="dialog-error-content"></div>
+            <div class="dialog-surface">
+                <div class="dialog-header text-warning">{{ t('app.errorTitle') }}</div>
+                <div class="dialog-content" style="text-align: center;">
+                    <div id="dialog-error-content"></div>
 
-                <div style="margin-top: 5vh;">{{ t('app.errorRestartQuestion') }}</div>
-                <div class="dialog-actions" style="margin-top: 20px;">
-                    <button class="dialog-button" @click="reloadPage">{{ t('common.restart') }}</button>
+                    <div style="margin-top: 5vh;">{{ t('app.errorRestartQuestion') }}</div>
+                    <div class="dialog-actions" style="margin-top: 20px;">
+                        <button class="dialog-button" @click="reloadPage">{{ t('common.restart') }}</button>
+                    </div>
                 </div>
             </div>
         </div>

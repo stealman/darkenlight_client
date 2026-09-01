@@ -85,6 +85,7 @@
     "wisdom": "Wisdom",
     "physicalAttack": "Physical attack",
     "physicalDefense": "Armor",
+    "armorPenetration": "Armor penetration",
     "precision": "Precision",
     "defense": "Defense",
     "interference": "Interference"
@@ -112,6 +113,7 @@
     "quality": "Quality",
     "durability": "Durability",
     "armor": "Armor",
+    "armorPenetration": "Armor penetration",
     "defense": "Defense",
     "maxHealth": "Max health",
     "magicInterference": "Interference",
