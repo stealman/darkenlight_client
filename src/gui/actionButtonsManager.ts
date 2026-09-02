@@ -58,6 +58,10 @@ class ActionButton {
 
     pointerDown() {
         this.pointerDownTime = Date.now()
+        if (ActionButtonsManager.captureActionButton(parseInt(this.index))) {
+            this.pointerDownTime = 0
+            return
+        }
         ActionButtonsManager.onclickActionButton(parseInt(this.index))
     }
 
@@ -79,7 +83,8 @@ class ActionButton {
     setBinding(binding: ActionButtonActionBinding) {
         this.actionBinding = binding
         const action: CharacterAction = CharacterActions.getActionByName(binding.name)!
-        this.setImage(action.image)
+        const consumableCbId = ActionButtonsManager.getBoundConsumableCbId(binding)
+        this.setImage(consumableCbId === null ? action.image : ActionButtonsManager.getConsumableItemImage(consumableCbId), consumableCbId !== null)
         this.setItemsAvailabilityState()
 
         if (action.toggleable && binding.toggled) {
@@ -98,7 +103,7 @@ class ActionButton {
         this.setCooldownPercent(100)
     }
 
-    setImage(imageSrc: string) {
+    setImage(imageSrc: string, directPath: boolean = false) {
         let img = this.htmlEl!.querySelector('img') as HTMLImageElement
         if (!img) {
             img = document.createElement('img')
@@ -106,7 +111,7 @@ class ActionButton {
             img.draggable = false
             this.htmlEl!.appendChild(img)
         }
-        img.src = this.resolveImagePath(imageSrc)
+        img.src = directPath ? imageSrc : this.resolveImagePath(imageSrc)
     }
 
     setItemsAvailabilityState() {
@@ -129,7 +134,15 @@ class ActionButton {
                 this.htmlEl!.classList.toggle('unavailable', !ActionButtonsManager.hasCampWoodAvailable())
                 return
             default:
-                this.htmlEl!.classList.remove('unavailable')
+                const consumableCbId = ActionButtonsManager.getBoundConsumableCbId(this.actionBinding)
+                this.htmlEl!.classList.toggle('unavailable', consumableCbId !== null && InventoryManager.getTotalResourceItemCountByType(consumableCbId) <= 0)
+        }
+    }
+
+    refreshConsumableImage() {
+        const consumableCbId = ActionButtonsManager.getBoundConsumableCbId(this.actionBinding)
+        if (consumableCbId !== null) {
+            this.setImage(ActionButtonsManager.getConsumableItemImage(consumableCbId), true)
         }
     }
 
@@ -205,6 +218,7 @@ export const ActionButtonsManager = {
     actionButtons: new Map<number, ActionButton>(),
 
     stopButton: null as HTMLElement,
+    actionButtonCaptureHandler: null as ((index: number) => void) | null,
 
     initialize() {
         this.buttonsPanel1 = document.getElementById('action-buttons-1') as HTMLElement
@@ -308,6 +322,9 @@ export const ActionButtonsManager = {
                 case CharacterActions.MANA_POTION.name:
                     this.clickOnManaPotionButton()
                     break
+                case CharacterActions.CONSUMABLE_ITEM.name:
+                    this.clickOnConsumableItemButton(this.getBoundConsumableCbId(actionButton.actionBinding))
+                    break
                 case CharacterActions.EQUIP_STORED_WEAPONS.name:
                     this.clickOnEquipStoredWeaponsButton()
                     break
@@ -363,6 +380,13 @@ export const ActionButtonsManager = {
         ConsumableHelper.clickOnConsumeManaPotion()
     },
 
+    clickOnConsumableItemButton(cbId: number | null) {
+        if (cbId === null || InventoryManager.getTotalResourceItemCountByType(cbId) <= 0) {
+            return
+        }
+        ConsumableHelper.clickOnConsumeItem(cbId)
+    },
+
     clickOnEquipStoredWeaponsButton() {
         InventoryManager.clickOnEquipStoredWeaponsButton()
     },
@@ -414,6 +438,9 @@ export const ActionButtonsManager = {
         const binding = this.bindings.get(index)
         if (!binding) return null
 
+        const consumableCbId = this.getBoundConsumableCbId(binding)
+        if (consumableCbId !== null) return this.getConsumableItemImage(consumableCbId)
+
         const imageSrc = CharacterActions.getActionByName(binding.name)?.image
         if (!imageSrc) return null
 
@@ -426,6 +453,11 @@ export const ActionButtonsManager = {
     getBindingDescriptionForIndex(index: number): string {
         const binding = this.bindings.get(index)
         if (!binding) return ''
+
+        const consumableCbId = this.getBoundConsumableCbId(binding)
+        if (consumableCbId !== null) {
+            return InventoryManager.inventory.find(item => item.cbId === consumableCbId)?.name ?? ''
+        }
 
         return CharacterActions.getActionByName(binding.name)?.description ?? ''
     },
@@ -453,6 +485,46 @@ export const ActionButtonsManager = {
         this.storeBindings()
         this.renderActionButtons()
         this.setActiveAction(MyPlayer.activeAction)
+        this.notifyBindingsChanged()
+    },
+
+    setConsumableBindingForIndex(index: number, cbId: number) {
+        this.bindings.forEach((binding, bindingIndex) => {
+            if (bindingIndex !== index && this.getBoundConsumableCbId(binding) === cbId) {
+                this.bindings.delete(bindingIndex)
+            }
+        })
+        this.bindings.set(index, new ActionButtonActionBinding(CharacterActions.CONSUMABLE_ITEM.name, {cbId}))
+        this.storeBindings()
+        this.renderActionButtons()
+        this.setActiveAction(MyPlayer.activeAction)
+        this.notifyBindingsChanged()
+    },
+
+    getBoundConsumableCbId(binding: ActionButtonActionBinding | null): number | null {
+        if (binding?.name !== CharacterActions.CONSUMABLE_ITEM.name) return null
+        const cbId = Number(((binding.data ?? {}) as {cbId?: number}).cbId)
+        return Number.isFinite(cbId) ? cbId : null
+    },
+
+    getConsumableItemImage(cbId: number): string {
+        const imageUrl = InventoryManager.inventory.find(item => item.cbId === cbId)?.imgUrl
+        if (!imageUrl) return '/images/icons/buttons/btn_heal_potion.png'
+        return imageUrl.startsWith('/') ? imageUrl : `/${imageUrl}`
+    },
+
+    startActionButtonCapture(handler: (index: number) => void) {
+        this.actionButtonCaptureHandler = handler
+    },
+
+    stopActionButtonCapture() {
+        this.actionButtonCaptureHandler = null
+    },
+
+    captureActionButton(index: number): boolean {
+        if (!this.actionButtonCaptureHandler) return false
+        this.actionButtonCaptureHandler(index)
+        return true
     },
 
     clearBindingForIndex(index: number) {
@@ -460,6 +532,11 @@ export const ActionButtonsManager = {
         this.storeBindings()
         this.renderActionButtons()
         this.setActiveAction(MyPlayer.activeAction)
+        this.notifyBindingsChanged()
+    },
+
+    notifyBindingsChanged() {
+        window.dispatchEvent(new Event('ui:action-bindings-updated'))
     },
 
     buttonSizeChanged(newSize: number) {
@@ -497,6 +574,7 @@ export const ActionButtonsManager = {
 
     refreshItemsAvailability() {
         this.actionButtons.forEach((btn) => {
+            btn.refreshConsumableImage()
             btn.setItemsAvailabilityState()
         })
     },

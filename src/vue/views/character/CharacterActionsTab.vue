@@ -85,15 +85,18 @@ import { useI18n } from '@/i18n'
 
 const actionButtonIndexes = Array.from({ length: 10 }, (_, index) => index + 1)
 const selectedSlotIndex = ref<number | null>(null)
+const bindingsRevision = ref(0)
 const availableActions = computed(() => ActionButtonsManager.getAvailableActionsForBindings())
 const actionSelectionContentRef = ref<HTMLElement | null>(null)
 const { t } = useI18n()
 
 const getBindingIcon = (index: number) => {
+    bindingsRevision.value
     return ActionButtonsManager.getBindingIconForIndex(index)
 }
 
 const getBindingDescription = (index: number) => {
+    bindingsRevision.value
     return ActionButtonsManager.getBindingDescriptionForIndex(index)
 }
 
@@ -115,7 +118,12 @@ const getBindingDescriptionParts = (index: number) => {
 }
 
 const getSelectedActionName = (index: number) => {
+    bindingsRevision.value
     return ActionButtonsManager.getBindingActionNameForIndex(index)
+}
+
+const refreshBindings = () => {
+    bindingsRevision.value++
 }
 
 const getActionImage = (imageName: string) => {
@@ -172,10 +180,12 @@ const onKeyDown = (event: KeyboardEvent) => {
 
 onMounted(() => {
     window.addEventListener('keydown', onKeyDown)
+    window.addEventListener('ui:action-bindings-updated', refreshBindings)
 })
 
 onUnmounted(() => {
     window.removeEventListener('keydown', onKeyDown)
+    window.removeEventListener('ui:action-bindings-updated', refreshBindings)
 })
 
 watch(selectedSlotIndex, async (index) => {

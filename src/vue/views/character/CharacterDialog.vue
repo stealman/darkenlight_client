@@ -62,7 +62,7 @@ defineExpose({
 </script>
 
 <style scoped>
-:global(.inventory-dialog-window.character-dialog-window .dialog-content) {
+:global(.inventory-dialog-window.character-dialog-window > .dialog-surface > .dialog-content) {
     display: flex;
     align-items: center;
     justify-content: center;

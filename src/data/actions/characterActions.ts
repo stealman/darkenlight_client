@@ -106,6 +106,8 @@ export const CharacterActions = {
         'actions.manaPotionName',
         'actions.manaPotionDescription'),
 
+    CONSUMABLE_ITEM: new CharacterAction('CONSUMABLE_ITEM', 'btn_heal_potion', false, '', ''),
+
     MINING: new CharacterAction('MINING', 'btn_pickaxe', false, '', ''),
     LUMBERJACKING: new CharacterAction('LUMBERJACKING', 'btn_lumber', false, '', ''),
 
@@ -123,6 +125,7 @@ export const CharacterActions = {
             this.HEAL,
             this.HEALING_POTION,
             this.MANA_POTION,
+            this.CONSUMABLE_ITEM,
             this.MINING,
             this.LUMBERJACKING,
             this.EQUIP_STORED_WEAPONS,

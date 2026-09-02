@@ -17,7 +17,7 @@
     }
 }
 
-.inventory-dialog-window .dialog-content {
+.inventory-dialog-window > .dialog-surface > .dialog-content {
     display: flex;
     align-items: center;
     justify-content: center;

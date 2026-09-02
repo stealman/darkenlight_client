@@ -116,8 +116,8 @@ export const Controller = {
             TargetingManager.cycleThroughClosestTargets()
         }
 
-        // F1 to F8
-        if (e.keyCode >= 112 && e.keyCode <= 119) {
+        // F1 to F10
+        if (e.keyCode >= 112 && e.keyCode <= 121) {
             e.preventDefault()
             if (e.repeat) return
 
@@ -135,8 +135,8 @@ export const Controller = {
         // Shift
         if (e.keyCode == 16) {GMManager.shiftPressed(false)}
 
-        // F1 to F8
-        if (e.keyCode >= 112 && e.keyCode <= 119) {
+        // F1 to F10
+        if (e.keyCode >= 112 && e.keyCode <= 121) {
             const index = e.keyCode - 111
             ActionButtonsManager.externalReleaseActionButton(index)
         }

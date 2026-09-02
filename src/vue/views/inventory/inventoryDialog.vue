@@ -1,4 +1,5 @@
 <template>
+<div class="inventory-dialog-root">
     <GameDialog
         ref="dialogRef"
         backdrop-id="setting-dialog-backdrop"
@@ -46,15 +47,28 @@
                 @split-item="onSplitItemClick"
                 @merge-item="onMergeItemClick"
                 @create-camp="onCreateCampClick"
+                @bind-consumable="onBindConsumableClick"
                 @content-resized="onItemInfoOverlayContentResized"
             />
         </template>
     </GameDialog>
+
+    <Teleport to="body">
+        <div v-if="bindingConsumableCbId !== null" class="consumable-bind-dialog-layer">
+            <div class="dialog-window adaptive consumable-bind-dialog">
+                <div class="dialog-surface">
+                    <div class="dialog-content">Stiskni požadované akční tlačítko nebo F1–F10.</div>
+                    <button class="dialog-button" type="button" @click="cancelConsumableBinding">Zrušit</button>
+                </div>
+            </div>
+        </div>
+    </Teleport>
+</div>
 </template>
 
 <script setup lang="ts">
 
-import { computed, nextTick, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { MyPlayer } from '@/data/myPlayer'
 import GameDialog from '@/vue/views/GameDialog.vue'
 import EquipSet from '@/vue/views/inventory/equipSet.vue'
@@ -74,6 +88,7 @@ import { OnScreenMessageManager } from '@/gui/onScreenMessageManager'
 import { ConsumableHelper } from '@/data/items/consumableHelper'
 import {getItemDurabilityPercent, getItemDurabilityStatus, getItemImage, getItemTooltipData} from '@/vue/views/inventory/itemTooltip'
 import {createPointerDoubleClickHandler} from '@/vue/views/inventory/usePointerDoubleClick'
+import { ActionButtonsManager } from '@/gui/actionButtonsManager'
 
 type WeaponSetupType = 'primary' | 'secondary'
 type WeaponSetupMarker = WeaponSetupType
@@ -113,6 +128,7 @@ const OVERLAY_CURSOR_OFFSET_X = 2
 const dialogRef = ref(null)
 const itemInfoOverlayRef = ref(null)
 const inventoryActionButtonSize = ref(Settings.actionButtonSize)
+const bindingConsumableCbId = ref<number | null>(null)
 const storedWeaponSetups = ref(InventoryManager.getStoredWeaponSetups())
 const equipSlots = ref<EquipSlotView[]>([])
 const weaponSetupHover = ref({
@@ -149,6 +165,7 @@ const itemInfoOverlay = ref({
     showDropButton: false,
     showMergeButton: false,
     showCampButton: false,
+    showBindButton: false,
     inventoryIndex: null,
     sourceType: null,
     sourceKey: null,
@@ -161,6 +178,7 @@ const hideItemInfoOverlay = () => {
     itemInfoOverlay.value.showDropButton = false
     itemInfoOverlay.value.showMergeButton = false
     itemInfoOverlay.value.showCampButton = false
+    itemInfoOverlay.value.showBindButton = false
     itemInfoOverlay.value.inventoryIndex = null
     itemInfoOverlay.value.sourceType = null
     itemInfoOverlay.value.sourceKey = null
@@ -193,6 +211,7 @@ const showItemInfoOverlay = (item, pointer, options = {}) => {
     itemInfoOverlay.value.showDropButton = showDropButton
     itemInfoOverlay.value.showMergeButton = showMergeButton
     itemInfoOverlay.value.showCampButton = sourceType === 'inventory' && ConsumableHelper.isItemCampWood(item)
+    itemInfoOverlay.value.showBindButton = sourceType === 'inventory' && ConsumableHelper.isItemConsumable(item)
     itemInfoOverlay.value.inventoryIndex = inventoryIndex
     itemInfoOverlay.value.sourceType = sourceType
     itemInfoOverlay.value.sourceKey = sourceKey
@@ -589,6 +608,53 @@ const onCreateCampClick = () => {
     hideItemInfoOverlay()
 }
 
+const onBindConsumableClick = () => {
+    const cbId = Number(itemInfoOverlay.value.cbId)
+    if (!Number.isFinite(cbId)) {
+        return
+    }
+
+    bindingConsumableCbId.value = cbId
+    ActionButtonsManager.startActionButtonCapture(completeConsumableBinding)
+    emit('close')
+}
+
+const completeConsumableBinding = (index) => {
+    if (bindingConsumableCbId.value === null || index < 1 || index > Settings.actionButtonCount) {
+        return
+    }
+
+    ActionButtonsManager.setConsumableBindingForIndex(index, bindingConsumableCbId.value)
+    cancelConsumableBinding()
+}
+
+const cancelConsumableBinding = () => {
+    bindingConsumableCbId.value = null
+    ActionButtonsManager.stopActionButtonCapture()
+}
+
+const onConsumableBindingKeyDown = (event) => {
+    if (bindingConsumableCbId.value === null) {
+        return
+    }
+
+    if (event.key === 'Escape') {
+        event.preventDefault()
+        event.stopImmediatePropagation()
+        cancelConsumableBinding()
+        return
+    }
+
+    const match = /^F(10|[1-9])$/.exec(event.key)
+    if (!match) {
+        return
+    }
+
+    event.preventDefault()
+    event.stopImmediatePropagation()
+    completeConsumableBinding(Number(match[1]))
+}
+
 const onInventoryDoubleClick = (index) => {
     hideItemInfoOverlay()
     InventoryManager.handleInventoryDoubleClick(index)
@@ -675,7 +741,13 @@ const handleInventoryScroll = () => {
     hideItemInfoOverlay()
 }
 
+onMounted(() => {
+    window.addEventListener('keydown', onConsumableBindingKeyDown, true)
+})
+
 onUnmounted(() => {
+    window.removeEventListener('keydown', onConsumableBindingKeyDown, true)
+    cancelConsumableBinding()
     handleSlotPointerDown.cancel()
     handleInventorySlotPointerDown.cancel()
     cancelWeaponSetupPointer('primary')
@@ -683,6 +755,7 @@ onUnmounted(() => {
 })
 
 const openDialog = () => {
+    cancelConsumableBinding()
     hideItemInfoOverlay()
     refreshInventoryActionButtonSize()
     refreshStoredWeaponSetups()
@@ -691,6 +764,7 @@ const openDialog = () => {
 }
 
 const closeDialog = () => {
+    cancelConsumableBinding()
     hideItemInfoOverlay()
     emit('close');
 }
@@ -703,4 +777,31 @@ defineExpose({
 </script>
 
 <style scoped>
+.consumable-bind-dialog-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 1100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.consumable-bind-dialog {
+    width: min(320px, calc(100vw - 32px));
+    height: auto;
+    min-height: auto;
+    padding: 2px;
+    border: 1px solid rgb(var(--ui-dark));
+    pointer-events: auto;
+}
+
+.consumable-bind-dialog .dialog-surface {
+    min-height: auto;
+    padding: 18px;
+}
+
+.consumable-bind-dialog .dialog-content {
+    margin-bottom: 14px;
+}
 </style>

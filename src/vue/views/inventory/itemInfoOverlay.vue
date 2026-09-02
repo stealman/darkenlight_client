@@ -65,6 +65,11 @@
                 <img class="action-icon" src='/images/icons/buttons/btn_camp.png' alt="Create camp" />
             </button>
 
+            <button v-if="shouldShowBindButton" class="action-button inventory-action-button inventory-text-action-button" type="button"
+                :style="{ backgroundImage: `url('/images/icons/buttons/btn_background.png')` }"
+                @pointerdown.prevent.stop
+                @click.stop="onBindConsumableClick">BIND</button>
+
             <button v-if="showSplitControls" class="action-button inventory-action-button inventory-text-action-button" type="button"
                 :style="{ backgroundImage: `url('/images/icons/buttons/btn_background.png')` }"
                 @pointerdown.prevent.stop
@@ -130,7 +135,7 @@ const props = defineProps({
     },
 })
 
-const emit = defineEmits(['close', 'drop-item', 'split-item', 'merge-item', 'create-camp', 'content-resized'])
+const emit = defineEmits(['close', 'drop-item', 'split-item', 'merge-item', 'create-camp', 'bind-consumable', 'content-resized'])
 const overlayRootRef = ref(null)
 const showSplitControls = ref(false)
 const { t } = useI18n()
@@ -212,6 +217,10 @@ const shouldShowCampButton = computed(() => {
         && !showSplitControls.value
 })
 
+const shouldShowBindButton = computed(() => {
+    return props.itemInfo.showBindButton === true && !showSplitControls.value
+})
+
 const splitStep = computed(() => {
     const quantity = Number(props.itemInfo.quantity)
     if (!Number.isFinite(quantity) || quantity <= 100) {
@@ -277,6 +286,12 @@ const onSplitConfirmClick = () => {
 const onCreateCampClick = () => {
     AudioManager.playGuiButtonClick()
     emit('create-camp')
+    emit('close')
+}
+
+const onBindConsumableClick = () => {
+    AudioManager.playGuiButtonClick()
+    emit('bind-consumable')
     emit('close')
 }
 
