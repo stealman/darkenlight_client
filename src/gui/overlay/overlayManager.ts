@@ -120,7 +120,7 @@ export const OverlayManager = {
             }
             const pos = npc.getNameTextNodeScreenPosition()
             if (pos) {
-                this.renderNpcLabel(pos, npc.name, npc.title, tightText)
+                this.renderNpcLabel(pos, npc.name, npc.getTitle(), tightText)
             }
         })
 

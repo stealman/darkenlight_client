@@ -62,6 +62,24 @@
     height: auto;
 }
 
+.death-dialog-backdrop .dialog-window {
+    border-bottom: none;
+}
+
+.death-dialog-content {
+    padding-bottom: 1vh;
+}
+
+.death-dialog-actions {
+    margin-top: 20px;
+    margin-bottom: 16px;
+}
+
+.death-dialog-countdown {
+    min-height: 18px;
+    margin-bottom: 0;
+}
+
 /* header */
 .dialog-header {
     font-size: 1.1rem;

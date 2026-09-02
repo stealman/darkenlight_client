@@ -11,6 +11,10 @@ export const NpcInteractionManager = {
         Connector.sendMessage(new NpcPurchaseMsg(npcId, item.tp, item.cb, quantity))
     },
 
+    purchaseHealerService(npcId: number) {
+        Connector.sendMessage(new NpcPurchaseMsg(npcId, 'H', 1, 1))
+    },
+
     openBank(npcId: number) {
         Connector.sendMessage(new BankOpenMsg(npcId))
     },

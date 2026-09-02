@@ -441,7 +441,8 @@ export const GMManager = {
         this.selectedNpc.value = {
             id: npc.id,
             name: npc.name,
-            title: npc.title,
+            titleCZ: npc.titleCZ ?? npc.title ?? '',
+            titleEN: npc.titleEN ?? npc.title ?? '',
             type: npc.type,
             bodyType: npc.bodyType ?? 'steve',
             equipment: {...(npc.equipment ?? {})},
@@ -485,10 +486,11 @@ export const GMManager = {
         this.selectedNpcName.value = ''
     },
 
-    setSelectedNpcDetails(name: string, title: string, bodyType: string, equipment: any, features: any[], wanderingRange: number) {
+    setSelectedNpcDetails(name: string, titleCZ: string, titleEN: string, bodyType: string, equipment: any, features: any[], wanderingRange: number) {
         if (this.selectedNpc.value) {
             this.selectedNpc.value.name = name
-            this.selectedNpc.value.title = title
+            this.selectedNpc.value.titleCZ = titleCZ
+            this.selectedNpc.value.titleEN = titleEN
             this.selectedNpc.value.bodyType = bodyType
             this.selectedNpc.value.equipment = equipment
             this.selectedNpc.value.features = features

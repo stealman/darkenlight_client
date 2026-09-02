@@ -17,25 +17,21 @@
 
             <div class="npc-details-row">
                 <label class="npc-details-control">
-                    <span>Title</span>
-                    <select v-model="titleSelection">
-                        <option value="">No title</option>
-                        <option v-for="title in presetTitles" :key="title" :value="title">{{ title }}</option>
-                        <option value="__custom__">Custom title</option>
-                    </select>
+                    <span>Title CZ</span>
+                    <input v-model="titleCZ" type="text" maxlength="48" placeholder="Český titul" />
                 </label>
 
                 <label class="npc-details-control">
-                    <span>Body type</span>
-                    <select v-model="bodyType">
-                        <option value="steve">Steve</option>
-                    </select>
+                    <span>Title EN</span>
+                    <input v-model="titleEN" type="text" maxlength="48" placeholder="English title" />
                 </label>
             </div>
 
-            <label v-if="titleSelection === '__custom__'" class="npc-details-control">
-                <span>Custom title</span>
-                <input v-model="customTitle" type="text" maxlength="48" placeholder="NPC title" />
+            <label class="npc-details-control">
+                <span>Body type</span>
+                <select v-model="bodyType">
+                    <option value="steve">Steve</option>
+                </select>
             </label>
 
             <div class="npc-details-equipment">
@@ -218,13 +214,6 @@ import { GMManager } from '@/gm/GM'
 import GameDialog from '@/vue/views/GameDialog.vue'
 import { EquipSlotModelsCb } from '@/data/items/item'
 
-const presetTitles = ['Blacksmith', 'Jeweler', 'Bowcraft', 'Shopkeeper', 'Banker', 'Healer', 'Vendor', 'Skill Trainer', 'Common']
-const npcTypeTitles = {
-    banker: 'Banker',
-    healer: 'Healer',
-    skillTrainer: 'Skill Trainer',
-    common: 'Common',
-}
 const featureTypes = [
     { value: 'vendor', label: 'Vendor' },
     { value: 'banker', label: 'Banker' },
@@ -333,8 +322,8 @@ const vendorIndividualItemOptions = {
 const dialogVisible = ref(false)
 const npcName = ref('')
 const wanderingRange = ref(0)
-const titleSelection = ref('')
-const customTitle = ref('')
+const titleCZ = ref('')
+const titleEN = ref('')
 const bodyType = ref('steve')
 const headSelection = ref('')
 const armsSelection = ref('')
@@ -394,17 +383,9 @@ const openDialog = () => {
     if (!npc) {
         return
     }
-    const title = npc?.title ?? ''
-    if (presetTitles.includes(title)) {
-        titleSelection.value = title
-        customTitle.value = ''
-    } else if (title === '') {
-        titleSelection.value = featureLabels[npc?.features?.[0]?.type] ?? npcTypeTitles[npc?.type] ?? ''
-        customTitle.value = ''
-    } else {
-        titleSelection.value = '__custom__'
-        customTitle.value = title
-    }
+    const legacyTitle = npc?.title ?? ''
+    titleCZ.value = npc?.titleCZ ?? legacyTitle
+    titleEN.value = npc?.titleEN ?? legacyTitle
     npcName.value = npc.name ?? ''
     wanderingRange.value = npc.wanderingRange ?? 0
     bodyType.value = npc?.bodyType ?? 'steve'
@@ -440,8 +421,7 @@ const closeDialog = () => {
 }
 
 const saveDetails = () => {
-    const title = titleSelection.value === '__custom__' ? customTitle.value.trim() : titleSelection.value
-    GMManager.setSelectedNpcDetails(npcName.value, title, bodyType.value, {
+    GMManager.setSelectedNpcDetails(npcName.value, titleCZ.value.trim(), titleEN.value.trim(), bodyType.value, {
         head: itemFromSelection(headSelection.value),
         arms: itemFromSelection(armsSelection.value),
         legs: itemFromSelection(legsSelection.value),

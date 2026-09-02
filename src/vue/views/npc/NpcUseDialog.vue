@@ -28,8 +28,8 @@
         </template>
 
         <div class="npc-use-content-shell" @click="detailItem = null">
-            <template v-if="selectedFeature?.type === 'vendor'">
-                <div v-if="vendorCategories.length" class="npc-use-category-tabs">
+            <template v-if="selectedFeature?.type === 'vendor' || selectedFeature?.type === 'healer'">
+                <div v-if="selectedFeature?.type === 'vendor' && vendorCategories.length" class="npc-use-category-tabs">
                     <button
                         v-for="category in vendorCategories"
                         :key="category.key"
@@ -41,7 +41,7 @@
                     </button>
                 </div>
 
-                <div v-if="selectedCategoryItems.length" class="npc-vendor-item-list">
+                <div v-if="selectedCategoryItems.length || selectedFeature?.services?.length" class="npc-vendor-item-list">
                     <div
                         v-for="item in selectedCategoryItems"
                         :key="`${item.tp}:${item.cb}`"
@@ -68,6 +68,20 @@
                             </template>
                         </div>
                     </div>
+                    <button
+                        v-for="service in (selectedFeature?.services ?? []).filter((service) => service.price > 0)"
+                        :key="service.id"
+                        class="npc-vendor-item-row npc-healer-service-row"
+                        :disabled="service.price < 1"
+                        @click.stop="buyHealerService(service, $event)"
+                    >
+                        <img class="npc-vendor-item-icon" :src="getServiceImage(service)" :alt="service.name" />
+                        <span class="npc-vendor-item-name">{{ service.name }}</span>
+                        <span class="npc-vendor-item-price">
+                            {{ service.price }}
+                            <img src="/images/icons/emerald.png" alt="Emerald" />
+                        </span>
+                    </button>
                 </div>
                 <div v-else class="npc-use-empty-state">{{ t('vendor.emptyCategory') }}</div>
             </template>
@@ -121,7 +135,7 @@
 import {computed, onMounted, onUnmounted, ref} from 'vue'
 import GameDialog from '@/vue/views/GameDialog.vue'
 import {NpcInteractionManager} from '@/data/npcInteractionManager'
-import type {NpcUseData, NpcUseFeatureData, NpcVendorCatalogItem} from '@/network/messageIfs'
+import type {NpcHealerService, NpcUseData, NpcUseFeatureData, NpcVendorCatalogItem} from '@/network/messageIfs'
 import {t} from '@/i18n'
 import {EmeraldsManager} from '@/gui/emeraldsManager'
 import {InventoryManager} from '@/data/inventoryManager'
@@ -178,6 +192,7 @@ const getItemName = (item: NpcVendorCatalogItem) => {
     return item.bundleSize && item.bundleSize > 1 ? `${item.bundleSize}× ${name}` : name
 }
 const getItemImage = (item: NpcVendorCatalogItem) => item.img ? `/images/items/${item.img}.png` : '/images/icons/buttons/btn_backpack.png'
+const getServiceImage = (service: NpcHealerService) => `/${service.img}.png`
 const formatDamageTypes = (item: NpcVendorCatalogItem) => (item.dmgTypes ?? []).map((type) => t(damageTypeLabels[type] ?? type)).join(' / ')
 const formatSpeed = (speed: number | string | undefined) => {
     const milliseconds = Number(speed)
@@ -261,6 +276,27 @@ const buyItem = (item: NpcVendorCatalogItem, quantity: number, event: MouseEvent
     }
 }
 
+const buyHealerService = (service: NpcHealerService, event: MouseEvent) => {
+    const npc = npcData.value ? NpcManager.npcs.get(npcData.value.id) : null
+    if (!npc || npc.getDistanceFromMyPlayer() > NPC_PURCHASE_DISTANCE) {
+        addPurchaseEffect(t('messages.npcUseOutOfRange'), event, true)
+        return
+    }
+    if (service.price < 1) {
+        return
+    }
+    if (EmeraldsManager.myEmeralds < service.price) {
+        addPurchaseEffect(t('vendor.notEnoughEmeralds'), event, true)
+        return
+    }
+
+    addPurchaseEffect(`-${EmeraldsManager.formatEmeraldAmount(service.price)}`, event)
+    if (npcData.value) {
+        NpcInteractionManager.purchaseHealerService(npcData.value.id)
+        service.price = 0
+    }
+}
+
 const showItemDetails = (item: NpcVendorCatalogItem, event: MouseEvent | KeyboardEvent) => {
     if (detailItem.value?.tp === item.tp && detailItem.value.cb === item.cb) {
         detailItem.value = null
@@ -332,6 +368,9 @@ defineExpose({openDialog})
 .npc-vendor-item-list { display: flex; flex: 1 1 auto; min-height: 0; flex-direction: column; overflow-y: auto; border-top: 1px solid rgba(var(--ui-darker), 0.8); border-bottom: 1px solid rgba(var(--ui-darker), 0.8); }
 .npc-vendor-item-row { display: grid; grid-template-columns: 46px minmax(0, 1fr) max-content auto; align-items: center; gap: 12px; min-height: 46px; padding: 3px 8px; border-bottom: 1px solid rgba(var(--ui-darker), 0.65); color: rgb(var(--ui-base)); cursor: url('/images/cursor-pointer.png'), pointer; }
 .npc-vendor-item-row:hover { background: rgba(255, 255, 255, 0.06); }
+.npc-healer-service-row { width: 100%; border: 0; border-bottom: 1px solid rgba(var(--ui-darker), 0.65); background: transparent; color: inherit; font: inherit; text-align: inherit; }
+.npc-healer-service-row:disabled { cursor: default; opacity: 0.55; }
+.npc-healer-service-row:disabled:hover { background: transparent; }
 .npc-vendor-item-icon { width: 40px; height: 40px; object-fit: contain; }
 .npc-vendor-item-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; text-align: left; font-size: 14px; font-weight: 700; }
 .npc-vendor-item-owned { color: rgb(var(--ui-dark)); font-weight: 400; white-space: nowrap; }

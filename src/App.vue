@@ -87,12 +87,12 @@
         <div class="dialog-window adaptive">
             <div class="dialog-surface">
                 <div class="dialog-header text-warning">{{ t('death.title') }}</div>
-                <div class="dialog-content" style="text-align: center;">
+                <div class="dialog-content death-dialog-content" style="text-align: center;">
                     <div>{{ t('death.description') }}</div>
-                    <div class="dialog-actions" style="margin-top: 20px;">
+                    <div class="dialog-actions death-dialog-actions">
                         <button class="dialog-button" :disabled="respawnDelayRemaining > 0" @click="MyPlayer.requestRespawn()">{{ t('death.respawn') }}</button>
                     </div>
-                    <div style="min-height: 18px; margin-bottom: 8px;">
+                    <div class="death-dialog-countdown">
                         {{ respawnDelayRemaining > 0
                             ? t('death.respawnLocked', { seconds: respawnDelayRemaining })
                             : t('death.autoRespawn', { seconds: autoRespawnRemaining }) }}

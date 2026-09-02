@@ -423,12 +423,12 @@ export class CharacterModel implements EquipBearer {
         this.deathSinkTarget = 0
         this.model!.position.y = 0
         this.deathAnim.stop()
-        this.deathAnim.start(false, 0.5, this.deathAnim.from, this.deathAnim.to)
+        this.deathAnim.start(false, 1, this.deathAnim.from, this.deathAnim.to)
         this.deathAnim.onAnimationEndObservable.addOnce(() => {
             if (this.parent.dead) {
                 this.deathAnim!.start(true, 1, this.deathAnim!.to, this.deathAnim!.to)
                 this.deathAnim!.setWeightForAllAnimatables(1)
-                this.deathSinkTarget = 0.2
+                this.deathSinkTarget = 0.1
             }
         })
         this.actualAnim = this.deathAnim

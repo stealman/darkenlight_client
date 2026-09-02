@@ -210,15 +210,24 @@ export interface NpcVendorCatalogItem {
     bundleSize?: number
 }
 
+export interface NpcHealerService {
+    id: string
+    name: string
+    img: string
+    price: number
+}
+
 export interface NpcUseFeatureData {
     type: string
     categories?: Record<string, NpcVendorCatalogItem[]>
+    services?: NpcHealerService[]
 }
 
 export interface NpcUseData {
     id: number
     name: string
-    title: string
+    titleCZ: string
+    titleEN: string
     features: NpcUseFeatureData[]
 }
 
@@ -230,7 +239,8 @@ export interface BankStateData {
 export interface GMNpcDetailsData {
     id: number
     name: string
-    title: string
+    titleCZ: string
+    titleEN: string
     type: string
     bodyType: string
     equipment: Record<string, {modelId: number, materialId: number}>

@@ -168,7 +168,8 @@
     "npcUseOutOfRange": "You are too far away from this NPC",
     "npcUseBlocked": "A wall blocks the way",
     "npcPurchaseUnavailable": "This item is not available from this NPC",
-    "notEnoughEmeralds": "You do not have enough emeralds"
+      "notEnoughEmeralds": "You do not have enough emeralds",
+      "itemBrokenCannotEquip": "You must repair this broken item first"
   },
   "vendor": {
     "vendor": "Vendor",

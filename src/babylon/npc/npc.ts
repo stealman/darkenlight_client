@@ -1,5 +1,6 @@
 import Character from '@/babylon/character/character'
 import { Item, EquipSlotModelsCb } from '@/data/items/item'
+import { getLocale } from '@/i18n'
 
 type NpcEquipmentItem = {
     modelId: number
@@ -10,7 +11,8 @@ type NpcEquipment = Partial<Record<'head' | 'arms' | 'legs' | 'body' | 'weapon',
 
 export class Npc extends Character {
     type: string
-    title: string
+    titleCZ: string
+    titleEN: string
     bodyType: string
     equipment: NpcEquipment
     wanderingRange: number
@@ -23,7 +25,9 @@ export class Npc extends Character {
             equipSet: {}
         })
         this.type = data.type
-        this.title = data.title ?? ''
+        const legacyTitle = data.title ?? ''
+        this.titleCZ = data.titleCZ ?? legacyTitle
+        this.titleEN = data.titleEN ?? legacyTitle
         this.bodyType = data.bodyType ?? 'steve'
         this.equipment = {}
         this.wanderingRange = data.wr ?? 0
@@ -68,6 +72,10 @@ export class Npc extends Character {
 
     getObjectType(): string {
         return 'N'
+    }
+
+    getTitle(): string {
+        return getLocale() === 'cs' ? this.titleCZ : this.titleEN
     }
 
     getRelationToMyPlayer(): 'ALLY' | 'ENEMY' | 'NEUTRAL' {

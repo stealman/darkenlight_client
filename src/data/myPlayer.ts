@@ -77,6 +77,9 @@ export const MyPlayer = {
         this.myCharRef.value = this.myChar
         this.isDead.value = this.myChar.dead
         if (this.isDead.value) {
+            const deathAt = Number.isFinite(charData.dat) ? charData.dat : Date.now()
+            this.respawnAvailableAt.value = deathAt + 20 * 1000
+            this.autoRespawnAt.value = deathAt + 15 * 60 * 1000
             this.myChar.die()
         }
 

@@ -70,7 +70,9 @@ export const NpcManager = {
     applyNpcData(npc: Npc, data: any) {
         this.setNpcPosition(npc, data.x, data.z)
         npc.name = data.name
-        npc.title = data.title ?? ''
+        const legacyTitle = data.title ?? ''
+        npc.titleCZ = data.titleCZ ?? legacyTitle
+        npc.titleEN = data.titleEN ?? legacyTitle
         npc.type = data.type
         npc.changeAppearance(data.bodyType, data.equipment)
         npc.wanderingRange = data.wr ?? 0

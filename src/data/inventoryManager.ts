@@ -7,6 +7,8 @@ import { GroundItemsManager } from '@/babylon/world/groundItemsManager'
 import { ItemTO } from '@/network/messageIfs'
 import { ActionButtonsManager } from '@/gui/actionButtonsManager'
 import { ConsumableHelper } from '@/data/items/consumableHelper'
+import {OnScreenMessageManager, OnScreenMessageSeverities} from '@/gui/onScreenMessageManager'
+import {t} from '@/i18n'
 
 type WeaponSetup = {
     rhand: number | null
@@ -216,6 +218,11 @@ export const InventoryManager = {
             return
         }
         if (!item.isEquippable()) {
+            return
+        }
+        const durability = Number((item.atts as any).get?.('dur') ?? (item.atts as any).dur)
+        if (durability === 0) {
+            OnScreenMessageManager.addMessage(t('messages.itemBrokenCannotEquip'), OnScreenMessageSeverities.ERROR)
             return
         }
 
