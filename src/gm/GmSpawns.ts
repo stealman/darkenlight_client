@@ -51,7 +51,7 @@ export const GMSpawns = {
                     spawnRange: 5,
                     aggroRange: 5,
                     wanderingMoveRange: 10,
-                    pursueRange: 15
+                    pursueRange: 30
                 })
                 this.selectedSpawn.value = newSpawn
             }
