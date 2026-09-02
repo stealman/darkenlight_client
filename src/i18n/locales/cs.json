@@ -22,10 +22,10 @@
   },
   "death": {
     "title": "Zemřel jsi",
-    "description": "Vrať se do světa na respawn pointu.",
-    "respawn": "Respawn",
-    "respawnLocked": "Respawn bude dostupný za {seconds} s.",
-    "autoRespawn": "Automatický respawn za {seconds} s."
+    "description": "Vrať se do světa u nejbližšího léčitele.",
+    "respawn": "Oživit",
+    "respawnLocked": "Oživení bude dostupné za {seconds} s.",
+    "autoRespawn": "Automatické oživení za {seconds} s."
   },
   "pwa": {
     "install": "Nainstalovat hru",
@@ -149,23 +149,25 @@
     }
   },
   "messages": {
-    "noBandages": "Nemáš žádné obvazy",
-    "noHealthPotions": "Nemáš žádné lektvary zdraví",
-    "noManaPotions": "Nemáš žádné lektvary many",
-    "noCampWood": "Nemáš žádné dřevo na kempování",
-    "noCampableBlockAround": "Na tomto místě nemůžeš kempovat",
-    "autoAttack": "Auto-útok: {state}",
-    "autoTarget": "Auto-zaměření {state}",
-    "enabled": "Zapnuto",
-    "disabled": "Vypnuto",
-    "nextPotionIn": "Další lektvar až za {seconds} vteřin",
-    "weaponSet-primary": "Primární zbraň uložena",
-    "weaponSet-secondary": "Sekundární zbraň uložena",
-    "notEnoughStamina": "Jsi příliš unavený",
-    "notEnoughMana": "Nemáš dostatek many",
-    "notEnoughHealth": "Nemáš dostatek zdraví",
-    "fullyRested": "Jsi plně odpočatý",
-    "npcUseOutOfRange": "NPC je příliš daleko"
+      "noBandages": "Nemáš žádné obvazy",
+      "noHealthPotions": "Nemáš žádné lektvary zdraví",
+      "noManaPotions": "Nemáš žádné lektvary many",
+      "noCampWood": "Nemáš žádné dřevo na kempování",
+      "noCampableBlockAround": "Na tomto místě nemůžeš kempovat",
+      "autoAttack": "Auto-útok: {state}",
+      "autoTarget": "Auto-zaměření {state}",
+      "enabled": "Zapnuto",
+      "disabled": "Vypnuto",
+      "nextPotionIn": "Další lektvar až za {seconds} vteřin",
+      "weaponSet-primary": "Primární zbraň uložena",
+      "weaponSet-secondary": "Sekundární zbraň uložena",
+      "notEnoughStamina": "Jsi příliš unavený",
+      "notEnoughMana": "Nemáš dostatek many",
+      "notEnoughHealth": "Nemáš dostatek zdraví",
+      "fullyRested": "Jsi plně odpočatý",
+      "npcUseOutOfRange": "NPC je příliš daleko",
+      "notEnoughEmeralds": "Nedostatek emeraldů",
+      "itemBrokenCannotEquip": "Poškozený předmět musíš nejdřív opravit"
   },
   "vendor": {
     "vendor": "Obchod",
