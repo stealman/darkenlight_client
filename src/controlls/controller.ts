@@ -20,6 +20,9 @@ export const Controller = {
 
     initializeController(scene: Scene) {
         scene.onPointerObservable.add((pointerInfo) => {
+            if (MyPlayer.isDead.value) {
+                return
+            }
 
             // Touch device
             if (Settings.touchEnabled) {
@@ -80,6 +83,9 @@ export const Controller = {
     },
 
     processKeydown(e) {
+        if (MyPlayer.isDead.value) {
+            return
+        }
         if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement || e.target?.isContentEditable) {
             return
         }
@@ -132,6 +138,9 @@ export const Controller = {
     },
 
     processKeyup(e) {
+        if (MyPlayer.isDead.value) {
+            return
+        }
         // Shift
         if (e.keyCode == 16) {GMManager.shiftPressed(false)}
 

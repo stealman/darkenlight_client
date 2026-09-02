@@ -771,7 +771,8 @@ const closeDialog = () => {
 
 defineExpose({
     openDialog,
-    refreshDialogFromInventoryUpdate
+    refreshDialogFromInventoryUpdate,
+    forceClose: closeDialog
 })
 
 </script>

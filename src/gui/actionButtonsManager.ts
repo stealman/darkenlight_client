@@ -57,6 +57,9 @@ class ActionButton {
     }
 
     pointerDown() {
+        if (MyPlayer.isDead.value) {
+            return
+        }
         this.pointerDownTime = Date.now()
         if (ActionButtonsManager.captureActionButton(parseInt(this.index))) {
             this.pointerDownTime = 0
@@ -305,6 +308,9 @@ export const ActionButtonsManager = {
     },
 
     onclickActionButton(index: number) {
+        if (MyPlayer.isDead.value) {
+            return
+        }
         const actionButton = this.actionButtons.get(index)
         if (actionButton && actionButton.actionBinding) {
             AudioManager.playGuiButtonClick()

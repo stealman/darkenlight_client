@@ -311,6 +311,11 @@ export class BankActionMsg implements Message {
     }
 }
 
+export class RespawnMsg implements Message {
+    t: number = 29
+    d: any = {}
+}
+
 export class GMNpcAction implements Message {
     t: number = 1007
     d: any

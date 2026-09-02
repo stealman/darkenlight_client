@@ -406,6 +406,18 @@ export class CharacterModel implements EquipBearer {
         }
     }
 
+    playDeathPlaceholder() {
+        if (!this.isActive() || !this.walkAnim) {
+            return
+        }
+        this.animTransition?.forceEnd()
+        this.animTransition = null
+        this.actualAnim?.stop()
+        this.walkAnim.stop()
+        this.walkAnim.start(false, 0.5, this.walkAnim.from, this.walkAnim.to)
+        this.actualAnim = this.walkAnim
+    }
+
     checkActiveStepSound() {
         // No movement, stop all step sounds
         if (this.parent.getMoveAngle() == null) {
@@ -506,6 +518,18 @@ export class CharacterModel implements EquipBearer {
         }
     }
 
+    snapToParentPosition() {
+        if (!this.isActive()) {
+            return
+        }
+        this.node.position.x = this.parent.pos.x
+        this.node.position.y = this.parent.logicYpos
+        this.node.position.z = this.parent.pos.z
+        this.node.markAsDirty("position")
+        this.node.computeWorldMatrix(true)
+        this.model?.computeWorldMatrix(true)
+    }
+
     /**
      * Rotate model fluently to the look angle
      */
@@ -567,6 +591,7 @@ export class CharacterModel implements EquipBearer {
 
     async addToView() {
         if (!this.initialized) await this.initAsync()
+        if (this.parent.dead) this.playDeathPlaceholder()
         this.model!.setEnabled(true)
         this.equipSet.forEach(item => {
             EquipManager.addEquippedItem(item)

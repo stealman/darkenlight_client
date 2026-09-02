@@ -49,6 +49,7 @@ class Character implements Attackable, EffectTarget {
     hp: number = 100
     maxHp: number = 100
     hpPercent: number = 100
+    dead: boolean = false
     mp: number = 100
     maxMp: number = 100
     mpPercent: number = 100
@@ -105,6 +106,7 @@ class Character implements Attackable, EffectTarget {
 
     constructor(data: any, myChar: boolean = false) {
         this.id = data.id
+        this.dead = data.dead === true || (myChar && data.hp <= 0)
         if (data.hpp != null) {
             this.hpPercent = data.hpp
         }
@@ -184,6 +186,10 @@ class Character implements Attackable, EffectTarget {
     }
 
     onFrame(timeRate: number, actualTime: number, myChar: boolean) {
+        if (this.dead) {
+            this.model?.onFrame(timeRate)
+            return
+        }
         this.resolveTimedAction(actualTime)
 
         // Auto attack in progress
@@ -408,6 +414,39 @@ class Character implements Attackable, EffectTarget {
 
     clearTimedAction() {
         this.activeTimedAction = null
+    }
+
+    die() {
+        if (this.dead) {
+            this.model?.playDeathPlaceholder()
+            return
+        }
+        this.dead = true
+        this.clearTimedAction()
+        this.autoAttackTarget = null
+        this.autoAttackMessage = null
+        this.autoAttackStart = 0
+        this.autoAttackEnd = 0
+        this.autoAttackCooldownEnd = 0
+        this.arrowCreateTime = 0
+        this.arrowShotTime = 0
+        this.setMoveAngle(null)
+        this.setActualSpeed(0)
+        this.movementType = 'N'
+        this.model?.playDeathPlaceholder()
+    }
+
+    revive() {
+        this.dead = false
+        this.model?.stopAnimation()
+    }
+
+    teleportTo(x: number, z: number) {
+        this.pos.x = x
+        this.pos.z = z
+        this.pos.y = Utils.calculateWalkYPos(x, z, this.getBoxSize())
+        this.logicYpos = this.pos.y
+        this.model?.snapToParentPosition()
     }
 
     resolveTimedAction(actualTime: number) {

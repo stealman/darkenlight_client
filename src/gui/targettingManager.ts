@@ -159,6 +159,9 @@ export const TargetingManager = {
     },
 
     setSelectedTarget(target: Targetable) {
+        if (MyPlayer.isDead.value) {
+            return
+        }
         this.selectedTarget = target
         OverlayManager.targetSelected(target!)
         target.nameDisplayTime = Date.now() + 1000
@@ -167,7 +170,8 @@ export const TargetingManager = {
     },
 
     checkAutoAttackOnSelectedTarget(overrideToggle: boolean = false) {
-        if (this.selectedTarget && this.selectedTarget.getRelationToMyPlayer() === 'ENEMY' && (overrideToggle || ActionButtonsManager.isButtonToggled(CharacterActions.AUTO_ATTACK))) {
+        const targetIsDeadCharacter = this.selectedTarget?.getObjectType() === 'C' && (this.selectedTarget as any).dead === true
+        if (!MyPlayer.isDead.value && !targetIsDeadCharacter && this.selectedTarget && this.selectedTarget.getRelationToMyPlayer() === 'ENEMY' && (overrideToggle || ActionButtonsManager.isButtonToggled(CharacterActions.AUTO_ATTACK))) {
             MyPlayer.myChar.autoAttackTarget = this.selectedTarget
             Connector.sendMessage(new SelectAutoAttackTarget(this.selectedTarget!.id, this.selectedTarget!.getObjectType()))
         }

@@ -38,6 +38,9 @@ export const CharacterManager = {
             char!.hp = data.hp
             char.pos.y = Utils.calculateWalkYPos(char.pos.x, char.pos.z, char.getBoxSize())
             char.logicYpos = char.pos.y
+            if (data.dead === true) {
+                char.die()
+            }
 
             if (data.paf) char.consumePubliclyVisibleAffects(data.paf)
         } else {
@@ -50,6 +53,9 @@ export const CharacterManager = {
             // If char is in view, initialize model immediately
             if (newChar.insideView) {
                 await newChar.model!.initAsync();
+            }
+            if (newChar.dead) {
+                newChar.die()
             }
 
             if (data.paf) newChar.consumePubliclyVisibleAffects(data.paf)
@@ -262,6 +268,30 @@ export const CharacterManager = {
                char.basicDataChange(data)
             }
         }
+    },
+
+    characterDied(id: number) {
+        if (id === MyPlayer.myChar.id) {
+            MyPlayer.die()
+            return
+        }
+        this.characters.get(id)?.die()
+    },
+
+    characterTeleported(data: {id: number, x: number, z: number}) {
+        if (data.id === MyPlayer.myChar.id) {
+            MyPlayer.myChar.teleportTo(data.x, data.z)
+            return
+        }
+        this.characters.get(data.id)?.teleportTo(data.x, data.z)
+    },
+
+    characterRespawned(id: number) {
+        if (id === MyPlayer.myChar.id) {
+            MyPlayer.respawn()
+            return
+        }
+        this.characters.get(id)?.revive()
     },
 
     equipSetChange(data) {

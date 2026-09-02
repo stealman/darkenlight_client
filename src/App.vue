@@ -83,6 +83,20 @@
     <CraftingDialog ref="craftingDialog" v-show="displayCraftingDialog" @close="displayCraftingDialog = false" />
     <NpcUseDialog ref="npcUseDialog" v-show="displayNpcUseDialog" @close="displayNpcUseDialog = false" />
 
+    <div class="dialog-backdrop death-dialog-backdrop" v-if="isDead">
+        <div class="dialog-window adaptive">
+            <div class="dialog-surface">
+                <div class="dialog-header text-warning">Zemřel/a jsi</div>
+                <div class="dialog-content" style="text-align: center;">
+                    <div>Vrať se do světa na respawn pointu.</div>
+                    <div class="dialog-actions" style="margin-top: 20px;">
+                        <button class="dialog-button" @click="MyPlayer.requestRespawn()">Respawn</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="dialog-backdrop" v-if="displayRestartPrompt" @click.self="displayRestartPrompt = false">
         <div class="dialog-window adaptive">
             <div class="dialog-header" style="margin-top: 20px;">{{ t('app.restartGame') }}</div>
@@ -150,6 +164,7 @@ const canvas = ref<HTMLCanvasElement | null>(null)
 const miniMapCanvas = ref<HTMLCanvasElement | null>(null)
 const gmPanelVisible = GMManager.gmPanelVisible
 const myCharRef = MyPlayer.myCharRef
+const isDead = MyPlayer.isDead
 
 const gameLoading = ref(true)
 const displayLoginDialog = ref(false)
@@ -180,6 +195,20 @@ watch(GMManager.npcDetailsDialogOpenRequested, (openRequested) => {
     }
     GMManager.npcDetailsDialogOpenRequested.value = false
     npcDetailsDialog.value?.openDialog()
+})
+
+watch(isDead, (dead) => {
+    if (!dead) {
+        return
+    }
+    displaySettingsDialog.value = false
+    displayRestartPrompt.value = false
+    displayInventoryDialog.value = false
+    displayCharacterDialog.value = false
+    displayCraftingDialog.value = false
+    displayNpcUseDialog.value = false
+    gmPanelVisible.value = false
+    inventoryDialog.value?.forceClose?.()
 })
 
 onMounted(async () => {
@@ -245,11 +274,17 @@ const loginRequestSent = () => {
 }
 
 const showSettingsDialog = () => {
+    if (isDead.value) {
+        return
+    }
     AudioManager.playGuiButtonClick()
     displaySettingsDialog.value = true
 }
 
 const showInventoryDialog = () => {
+    if (isDead.value) {
+        return
+    }
     AudioManager.playGuiButtonClick()
     displayInventoryDialog.value = true
     nextTick(() => {
@@ -258,6 +293,9 @@ const showInventoryDialog = () => {
 }
 
 const showCharacterDialog = () => {
+    if (isDead.value) {
+        return
+    }
     AudioManager.playGuiButtonClick()
     displayCharacterDialog.value = true
     nextTick(() => {
@@ -266,7 +304,7 @@ const showCharacterDialog = () => {
 }
 
 const onOpenCharacterHotkey = () => {
-    if (!loginRequestSentFlag.value) {
+    if (!loginRequestSentFlag.value || isDead.value) {
         return
     }
 
@@ -279,7 +317,7 @@ const onOpenCharacterHotkey = () => {
 }
 
 const onOpenInventoryHotkey = () => {
-    if (!loginRequestSentFlag.value) {
+    if (!loginRequestSentFlag.value || isDead.value) {
         return
     }
 
@@ -301,7 +339,7 @@ const onInventoryUpdated = (event: Event) => {
 }
 
 const onOpenCraftingMenu = (event: Event) => {
-    if (!loginRequestSentFlag.value) {
+    if (!loginRequestSentFlag.value || isDead.value) {
         return
     }
 
@@ -317,6 +355,9 @@ const onOpenCraftingMenu = (event: Event) => {
 }
 
 const onOpenNpcUseMenu = (event: Event) => {
+    if (isDead.value) {
+        return
+    }
     const detail = (event as CustomEvent).detail
     if (!detail) {
         return

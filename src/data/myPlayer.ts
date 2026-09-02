@@ -9,6 +9,7 @@ import {
     AutoAttackBreak,
     HealingSelfAction,
     HealingTargetAction,
+    RespawnMsg,
     StopAction,
 } from '@/network/messages'
 import { MyStatusPanel } from '@/gui/myStatusPanel'
@@ -46,6 +47,7 @@ export const MyPlayer = {
     myChar: null as Character,
     myModel: null as CharacterModel | null,
     myCharRef: ref(null as Character | null),
+    isDead: ref(false),
 
     worldId: 0 as number,
     worldName: "" as string,
@@ -71,6 +73,10 @@ export const MyPlayer = {
         this.myChar.pos.y = Utils.calculateWalkYPos(this.myChar.pos.x, this.myChar.pos.z, this.myChar.getBoxSize())
         this.myChar.logicYpos = this.myChar.pos.y
         this.myCharRef.value = this.myChar
+        this.isDead.value = this.myChar.dead
+        if (this.isDead.value) {
+            this.myChar.die()
+        }
 
         if (charData.aff) {
             charData.aff.forEach((group: AffectGroupData) => {
@@ -162,6 +168,9 @@ export const MyPlayer = {
     },
 
     startMove(movementType: string, angle: number) {
+        if (this.isDead.value) {
+            return
+        }
         movementType = this.getAllowedMovementType(movementType)
 
         // only move if angle differs from current by at least 0.1 rad
@@ -188,6 +197,9 @@ export const MyPlayer = {
     },
 
     startAutoAttack(data: AutoAttackMessage) {
+        if (this.isDead.value) {
+            return
+        }
         this.myChar.startAutoAttack(data)
     },
 
@@ -196,6 +208,9 @@ export const MyPlayer = {
     },
 
     startHealingAction() {
+        if (this.isDead.value) {
+            return
+        }
         if (TargetingManager.selectedTarget && TargetingManager.selectedTarget.getObjectType() == 'C') {
             const tgt = TargetingManager.selectedTarget as Attackable
 
@@ -226,6 +241,9 @@ export const MyPlayer = {
     },
 
     onClickEscape() {
+        if (this.isDead.value) {
+            return
+        }
         AudioManager.playGuiButtonClick()
         this.stopActions(true)
     },
@@ -233,6 +251,24 @@ export const MyPlayer = {
     basicDataChange(data) {
         this.setMyCharHp(data.hp)
         this.myChar.basicDataChange(data)
+    },
+
+    die() {
+        this.isDead.value = true
+        this.activeAction = null
+        this.myChar.die()
+        TargetingManager.unselectTarget()
+    },
+
+    requestRespawn() {
+        if (this.isDead.value) {
+            Connector.sendMessage(new RespawnMsg())
+        }
+    },
+
+    respawn() {
+        this.isDead.value = false
+        this.myChar.revive()
     },
 
     combatDataChange(data: AttackableCombatTO) {
@@ -296,6 +332,9 @@ export const MyPlayer = {
     },
 
     stopActions(resetTarget: boolean = false) {
+        if (this.isDead.value) {
+            return
+        }
         MyPlayer.myChar.autoAttackTarget = null
         Connector.sendMessage(new StopAction())
 

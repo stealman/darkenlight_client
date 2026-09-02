@@ -129,6 +129,10 @@ export const GuiButtonsManager = {
     },
 
     onFrame() {
+        if (MyPlayer.isDead.value) {
+            this.opportunityButtons.forEach((button) => button.setVisible(false))
+            return
+        }
         // Show pickup button if there's an item nearby
         this.opportunityButtons.get(GuiOpportunityActions.PICKUP_ITEM.name)!.setVisible(GroundItemsManager.nearbyItem !== null)
 
@@ -159,6 +163,9 @@ export const GuiButtonsManager = {
     },
 
     onclickOpportunityButton(actionName: string) {
+        if (MyPlayer.isDead.value) {
+            return
+        }
         AudioManager.playGuiButtonClick()
         switch (actionName) {
             case GuiOpportunityActions.PICKUP_ITEM.name:
@@ -186,6 +193,9 @@ export const GuiButtonsManager = {
     },
 
     clickFirstAvailableOpportunityButton() {
+        if (MyPlayer.isDead.value) {
+            return false
+        }
         for (const button of this.opportunityButtons.values()) {
             if (!button.visible) {
                 continue

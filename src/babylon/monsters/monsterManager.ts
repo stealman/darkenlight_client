@@ -121,7 +121,7 @@ export const MonsterManager = {
         monster.basicDataChange(data)
     },
 
-    monsterMoveStop(id: number, position: { x: number, z: number }) {
+    monsterMoveStop(id: number, position: { x: number, z: number }, teleported: boolean = false) {
         if (this.monsters.has(id)) {
             const mob = this.monsters.get(id)
             mob!.pos.x = position.x
@@ -129,6 +129,11 @@ export const MonsterManager = {
             mob!.logicYpos = Utils.calculateWalkYPos(mob!.pos.x, mob!.pos.z, mob!.getBoxSize())
             mob!.pos.y = mob!.logicYpos
             mob!.resetTargetPoint()
+            if (teleported && mob!.model.initialized) {
+                mob!.model.node.position.x = mob!.pos.x
+                mob!.model.node.position.y = mob!.pos.y
+                mob!.model.node.position.z = mob!.pos.z
+            }
         }
     },
 

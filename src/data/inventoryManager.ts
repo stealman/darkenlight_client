@@ -188,6 +188,9 @@ export const InventoryManager = {
     },
 
     handleInventoryDoubleClick(index: number) {
+        if (MyPlayer.isDead.value) {
+            return
+        }
         const item = this.inventory[index]
         if (!item) {
             return
@@ -209,6 +212,9 @@ export const InventoryManager = {
     },
 
     equipItem(item: Item) {
+        if (MyPlayer.isDead.value) {
+            return
+        }
         if (!item.isEquippable()) {
             return
         }
@@ -232,6 +238,9 @@ export const InventoryManager = {
     },
 
     unequipSlot(slot: string, fromEquipAction: boolean = false) {
+        if (MyPlayer.isDead.value) {
+            return
+        }
         const item = MyPlayer.myChar.equipSet.get(slot)
         if (!item) {
             return
@@ -254,10 +263,16 @@ export const InventoryManager = {
     },
 
     useConsumableItem(item: Item) {
+        if (MyPlayer.isDead.value) {
+            return
+        }
         ConsumableHelper.clickOnConsumeItem(item.cbId)
     },
 
     dropItem(item: Item) {
+        if (MyPlayer.isDead.value) {
+            return
+        }
         AudioManager.playBackpackHandle2()
         Connector.sendMessage(new DropItemMsg(item.id))
         this.inventory = this.inventory.filter(i => i !== item)
@@ -266,14 +281,23 @@ export const InventoryManager = {
     },
 
     splitInventoryItem(itemId: number, splitCount: number) {
+        if (MyPlayer.isDead.value) {
+            return
+        }
         Connector.sendMessage(new SplitItemMsg(itemId, splitCount))
     },
 
     mergeInventoryItem(itemId: number) {
+        if (MyPlayer.isDead.value) {
+            return
+        }
         Connector.sendMessage(new MergeItemMsg(itemId))
     },
 
     pickItem() {
+        if (MyPlayer.isDead.value) {
+            return
+        }
         const item = GroundItemsManager.nearbyItem
         if (!item) return
         Connector.sendMessage(new PickItemMsg(item.item.id))
@@ -302,6 +326,9 @@ export const InventoryManager = {
     },
 
     equipWeaponSetup(targetSetup: WeaponSetup) {
+        if (MyPlayer.isDead.value) {
+            return
+        }
         if (!this.hasAnyWeaponSetupItem(targetSetup)) {
             return
         }

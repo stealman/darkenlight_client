@@ -102,6 +102,9 @@ export const MessageProcessor = {
                 case 56: this.processGMNpcDetails(msg.d); break
                 case 57: this.processCharacterCraftingFinished(msg.d); break
                 case 58: this.processBankState(msg.d); break
+                case 59: this.processCharacterDeath(msg.d); break
+                case 60: this.processCharacterTeleport(msg.d); break
+                case 61: this.processCharacterRespawn(msg.d); break
                 case 1003: this.processGMAllSpawns(msg.d); break
                 case 1004: this.processGMSpawnChange(msg.d); break
                 default:
@@ -231,7 +234,7 @@ export const MessageProcessor = {
     },
 
     monsterMoveStop(data) {
-        MonsterManager.monsterMoveStop(data[0], { x: data[1], z: data[2] })
+        MonsterManager.monsterMoveStop(data[0], { x: data[1], z: data[2] }, data[3] === true)
     },
 
     processWorldChangedData(data) {
@@ -270,6 +273,18 @@ export const MessageProcessor = {
 
     processCharBasicData(data: AttackableBasicTO) {
         CharacterManager.basicDataChange(data)
+    },
+
+    processCharacterDeath(data) {
+        CharacterManager.characterDied(data.id)
+    },
+
+    processCharacterTeleport(data: {id: number, x: number, z: number}) {
+        CharacterManager.characterTeleported(data)
+    },
+
+    processCharacterRespawn(data: {id: number}) {
+        CharacterManager.characterRespawned(data.id)
     },
 
     processCharCombatData(data: AttackableCombatTO) {
