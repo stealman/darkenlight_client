@@ -1,11 +1,13 @@
 <template>
-    <div ref="overlayRootRef" class="inventory-item-overlay"
-         :style="{
-             left: `${x}px`,
-             top: `${y}px`,
-             '--inventory-action-btn-size': `${actionButtonSize}px`,
-         }"
-         @click="onOverlayClick"
+    <div
+        ref="overlayRootRef"
+        class="inventory-item-overlay"
+        :style="{
+            left: `${x}px`,
+            top: `${y}px`,
+            '--inventory-action-btn-size': `${actionButtonSize}px`,
+        }"
+        @click="onOverlayClick"
     >
         <div class="inventory-item-overlay-name">
             <span>{{ displayItemName }}</span>
@@ -17,71 +19,129 @@
         </template>
 
         <div v-if="itemInfo.weaponAttack !== null" class="inventory-item-overlay-stats">
-            <span>{{ t('vendor.attack') }} <strong>{{ itemInfo.weaponAttack }}</strong></span>
-            <span>{{ t('vendor.attackType') }} <strong>{{ formatDamageTypes(itemInfo.weaponDamageTypes) }}</strong></span>
-            <span>{{ t('vendor.speed') }} <strong>{{ formatSpeed(itemInfo.weaponSpeed) }}</strong></span>
-            <span>{{ t('vendor.range') }} <strong>{{ itemInfo.weaponRange }}</strong></span>
-            <span v-if="isNonZero(itemInfo.weaponArmorPen)">{{ t('inventory.armorPenetration') }} <strong>{{ itemInfo.weaponArmorPen }}</strong></span>
-            <span v-if="isNonZero(itemInfo.weaponDefense)">{{ t('inventory.defense') }} <strong>{{ formatModifier(itemInfo.weaponDefense) }}</strong></span>
+            <span
+                >{{ t('vendor.attack') }} <strong>{{ itemInfo.weaponAttack }}</strong></span
+            >
+            <span
+                >{{ t('vendor.attackType') }} <strong>{{ formatDamageTypes(itemInfo.weaponDamageTypes) }}</strong></span
+            >
+            <span
+                >{{ t('vendor.speed') }} <strong>{{ formatSpeed(itemInfo.weaponSpeed) }}</strong></span
+            >
+            <span
+                >{{ t('vendor.range') }} <strong>{{ itemInfo.weaponRange }}</strong></span
+            >
+            <span v-if="isNonZero(itemInfo.weaponArmorPen)"
+                >{{ t('inventory.armorPenetration') }} <strong>{{ itemInfo.weaponArmorPen }}</strong></span
+            >
+            <span v-if="isNonZero(itemInfo.weaponDefense)"
+                >{{ t('inventory.defense') }} <strong>{{ formatModifier(itemInfo.weaponDefense) }}</strong></span
+            >
         </div>
 
         <div v-if="itemInfo.armorStats" class="inventory-item-overlay-stats">
-            <span>{{ t('inventory.armor') }} <strong>{{ itemInfo.armorStats.pdef }}</strong></span>
-            <span>{{ t('inventory.magicInterference') }} <strong>{{ itemInfo.armorStats.arcaneInterference }}%</strong></span>
-            <span v-if="isNonZero(itemInfo.armorStats.defense)">{{ t('inventory.defense') }} <strong>{{ formatModifier(itemInfo.armorStats.defense) }}</strong></span>
-            <span v-if="isNonZero(itemInfo.armorStats.str)">{{ t('character.strength') }} <strong>{{ formatModifier(itemInfo.armorStats.str) }}</strong></span>
-            <span v-if="isNonZero(itemInfo.armorStats.agi)">{{ t('character.agility') }} <strong>{{ formatModifier(itemInfo.armorStats.agi) }}</strong></span>
-            <span v-if="isNonZero(itemInfo.armorStats.int)">{{ t('character.intelligence') }} <strong>{{ formatModifier(itemInfo.armorStats.int) }}</strong></span>
-            <span v-if="isNonZero(itemInfo.armorStats.wis)">{{ t('character.wisdom') }} <strong>{{ formatModifier(itemInfo.armorStats.wis) }}</strong></span>
-            <span v-if="isNonZero(itemInfo.armorStats.maxHp)">{{ t('inventory.maxHealth') }} <strong>{{ formatModifier(itemInfo.armorStats.maxHp) }}</strong></span>
+            <span
+                >{{ t('inventory.armor') }} <strong>{{ itemInfo.armorStats.pdef }}</strong></span
+            >
+            <span
+                >{{ t('inventory.magicInterference') }} <strong>{{ itemInfo.armorStats.arcaneInterference }}%</strong></span
+            >
+            <span v-if="isNonZero(itemInfo.armorStats.defense)"
+                >{{ t('inventory.defense') }} <strong>{{ formatModifier(itemInfo.armorStats.defense) }}</strong></span
+            >
+            <span v-if="isNonZero(itemInfo.armorStats.str)"
+                >{{ t('character.strength') }} <strong>{{ formatModifier(itemInfo.armorStats.str) }}</strong></span
+            >
+            <span v-if="isNonZero(itemInfo.armorStats.agi)"
+                >{{ t('character.agility') }} <strong>{{ formatModifier(itemInfo.armorStats.agi) }}</strong></span
+            >
+            <span v-if="isNonZero(itemInfo.armorStats.int)"
+                >{{ t('character.intelligence') }} <strong>{{ formatModifier(itemInfo.armorStats.int) }}</strong></span
+            >
+            <span v-if="isNonZero(itemInfo.armorStats.wis)"
+                >{{ t('character.wisdom') }} <strong>{{ formatModifier(itemInfo.armorStats.wis) }}</strong></span
+            >
+            <span v-if="isNonZero(itemInfo.armorStats.maxHp)"
+                >{{ t('inventory.maxHealth') }} <strong>{{ formatModifier(itemInfo.armorStats.maxHp) }}</strong></span
+            >
         </div>
 
         <div class="inventory-item-overlay-interactive inventory-item-overlay-actions">
-            <button v-if="shouldShowDropButton" class="action-button inventory-action-button inventory-drop-button" type="button"
+            <button
+                v-if="shouldShowDropButton"
+                class="action-button inventory-action-button inventory-drop-button"
+                type="button"
                 :style="{ backgroundImage: `url('/images/icons/buttons/btn_background.png')` }"
                 @pointerdown.prevent.stop
-                @click.stop="onDropItemClick">
-                <img class="action-icon" src='/images/icons/buttons/btn_drop.png' :alt="t('inventory.dropItem')" />
+                @click.stop="onDropItemClick"
+            >
+                <img class="action-icon" src="/images/icons/buttons/btn_drop.png" :alt="t('inventory.dropItem')" />
             </button>
 
-            <button v-if="shouldShowSplitButton" class="action-button inventory-action-button inventory-split-button" type="button"
+            <button
+                v-if="shouldShowSplitButton"
+                class="action-button inventory-action-button inventory-split-button"
+                type="button"
                 :style="{ backgroundImage: `url('/images/icons/buttons/btn_background.png')` }"
                 @pointerdown.prevent.stop
-                @click.stop="onSplitItemClick">
-                <img class="action-icon" src='/images/icons/buttons/btn_split.png' :alt="t('inventory.splitItem')" />
+                @click.stop="onSplitItemClick"
+            >
+                <img class="action-icon" src="/images/icons/buttons/btn_split.png" :alt="t('inventory.splitItem')" />
             </button>
 
-            <button v-if="shouldShowMergeButton" class="action-button inventory-action-button inventory-merge-button" type="button"
+            <button
+                v-if="shouldShowMergeButton"
+                class="action-button inventory-action-button inventory-merge-button"
+                type="button"
                 :style="{ backgroundImage: `url('/images/icons/buttons/btn_background.png')` }"
                 @pointerdown.prevent.stop
-                @click.stop="onMergeItemClick">
-                <img class="action-icon" src='/images/icons/buttons/btn_stack.png' :alt="t('inventory.mergeItem')" />
+                @click.stop="onMergeItemClick"
+            >
+                <img class="action-icon" src="/images/icons/buttons/btn_stack.png" :alt="t('inventory.mergeItem')" />
             </button>
 
-            <button v-if="shouldShowCampButton" class="action-button inventory-action-button inventory-camp-button" type="button"
+            <button
+                v-if="shouldShowCampButton"
+                class="action-button inventory-action-button inventory-camp-button"
+                type="button"
                 :style="{ backgroundImage: `url('/images/icons/buttons/btn_background.png')` }"
                 @pointerdown.prevent.stop
-                @click.stop="onCreateCampClick">
-                <img class="action-icon" src='/images/icons/buttons/btn_camp.png' alt="Create camp" />
+                @click.stop="onCreateCampClick"
+            >
+                <img class="action-icon" src="/images/icons/buttons/btn_camp.png" alt="Create camp" />
             </button>
 
-            <button v-if="shouldShowBindButton" class="action-button inventory-action-button inventory-text-action-button" type="button"
+            <button
+                v-if="shouldShowBindButton"
+                class="action-button inventory-action-button inventory-text-action-button"
+                type="button"
                 :style="{ backgroundImage: `url('/images/icons/buttons/btn_background.png')` }"
                 @pointerdown.prevent.stop
-                @click.stop="onBindConsumableClick">BIND</button>
-
-            <button v-if="showSplitControls" class="action-button inventory-action-button inventory-text-action-button" type="button"
-                :style="{ backgroundImage: `url('/images/icons/buttons/btn_background.png')` }"
-                @pointerdown.prevent.stop
-                @click.stop="onSplitConfirmClick">
-                <img class="action-icon" src='/images/icons/buttons/btn_ok.png' :alt="t('inventory.confirmSplit')" />
+                @click.stop="onBindConsumableClick"
+            >
+                <img class="action-icon" src="/images/icons/buttons/btn_keybind.png" />
             </button>
 
-            <button v-if="showSplitControls" class="action-button inventory-action-button inventory-text-action-button" type="button"
+            <button
+                v-if="showSplitControls"
+                class="action-button inventory-action-button inventory-text-action-button"
+                type="button"
                 :style="{ backgroundImage: `url('/images/icons/buttons/btn_background.png')` }"
                 @pointerdown.prevent.stop
-                @click.stop="onSplitCancelClick">
-                <img class="action-icon" src='/images/icons/buttons/btn_stop.png' :alt="t('inventory.cancelSplit')" />
+                @click.stop="onSplitConfirmClick"
+            >
+                <img class="action-icon" src="/images/icons/buttons/btn_ok.png" :alt="t('inventory.confirmSplit')" />
+            </button>
+
+            <button
+                v-if="showSplitControls"
+                class="action-button inventory-action-button inventory-text-action-button"
+                type="button"
+                :style="{ backgroundImage: `url('/images/icons/buttons/btn_background.png')` }"
+                @pointerdown.prevent.stop
+                @click.stop="onSplitCancelClick"
+            >
+                <img class="action-icon" src="/images/icons/buttons/btn_stop.png" :alt="t('inventory.cancelSplit')" />
             </button>
         </div>
 
@@ -95,7 +155,7 @@
                     :min="splitMinQuantity"
                     :max="splitMaxQuantity"
                     :step="splitStep"
-                    style="zoom: 1.5;"
+                    style="zoom: 1.5"
                     @pointerdown.stop
                     @click.stop
                     @input="onSplitSliderInput"
@@ -139,7 +199,7 @@ const emit = defineEmits(['close', 'drop-item', 'split-item', 'merge-item', 'cre
 const overlayRootRef = ref(null)
 const showSplitControls = ref(false)
 const { t } = useI18n()
-const damageTypeLabels = {PHYSICAL_SLASH: 'vendor.damageSlash', PHYSICAL_PIERCE: 'vendor.damagePierce', PHYSICAL_BLUNT: 'vendor.damageBlunt'}
+const damageTypeLabels = { PHYSICAL_SLASH: 'vendor.damageSlash', PHYSICAL_PIERCE: 'vendor.damagePierce', PHYSICAL_BLUNT: 'vendor.damageBlunt' }
 
 const formatDamageTypes = (damageTypes) => {
     const values = Array.isArray(damageTypes) ? damageTypes : []
@@ -199,8 +259,7 @@ const splitMaxQuantity = computed(() => {
 })
 
 const canSplitItem = computed(() => {
-    return (props.itemInfo.showDropButton === true || props.itemInfo.showSplitButton === true)
-        && splitMaxQuantity.value >= 1
+    return (props.itemInfo.showDropButton === true || props.itemInfo.showSplitButton === true) && splitMaxQuantity.value >= 1
 })
 
 const shouldShowSplitButton = computed(() => {
@@ -208,13 +267,11 @@ const shouldShowSplitButton = computed(() => {
 })
 
 const shouldShowMergeButton = computed(() => {
-    return props.itemInfo.showMergeButton === true
-        && !showSplitControls.value
+    return props.itemInfo.showMergeButton === true && !showSplitControls.value
 })
 
 const shouldShowCampButton = computed(() => {
-    return props.itemInfo.showCampButton === true
-        && !showSplitControls.value
+    return props.itemInfo.showCampButton === true && !showSplitControls.value
 })
 
 const shouldShowBindButton = computed(() => {
@@ -303,7 +360,7 @@ const onSplitCancelClick = () => {
 
 const onSplitSliderInput = () => {
     const now = Date.now()
-    if ((now - lastSplitSliderTickAt.value) < 100) {
+    if (now - lastSplitSliderTickAt.value < 100) {
         return
     }
     lastSplitSliderTickAt.value = now
@@ -326,7 +383,7 @@ watch(
     () => [props.itemInfo.id, props.itemInfo.quantity],
     () => {
         resetSplitControls()
-    }
+    },
 )
 
 watch(canSplitItem, (canSplit) => {
@@ -346,7 +403,4 @@ defineExpose({
 })
 </script>
 
-<style scoped>
-
-
-</style>
+<style scoped></style>
