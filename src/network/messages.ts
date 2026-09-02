@@ -325,3 +325,12 @@ export class GMNpcAction implements Message {
     }
 }
 
+export class GMTeleportMsg implements Message {
+    t: number = 1008
+    d: any
+
+    constructor(x: number, z: number) {
+        this.d = {x, z}
+    }
+}
+

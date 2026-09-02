@@ -20,6 +20,13 @@
     "errorTitle": "An error occurred",
     "errorRestartQuestion": "Do you want to restart the game?"
   },
+  "death": {
+    "title": "You died",
+    "description": "Return to the world at the respawn point.",
+    "respawn": "Respawn",
+    "respawnLocked": "Respawn will be available in {seconds} s.",
+    "autoRespawn": "Automatic respawn in {seconds} s."
+  },
   "pwa": {
     "install": "Install game",
     "installTitle": "Install Darkenlight",

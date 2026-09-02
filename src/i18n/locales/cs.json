@@ -20,6 +20,13 @@
     "errorTitle": "Došlo k chybě",
     "errorRestartQuestion": "Chcete hru restartovat ?"
   },
+  "death": {
+    "title": "Zemřel jsi",
+    "description": "Vrať se do světa na respawn pointu.",
+    "respawn": "Respawn",
+    "respawnLocked": "Respawn bude dostupný za {seconds} s.",
+    "autoRespawn": "Automatický respawn za {seconds} s."
+  },
   "pwa": {
     "install": "Nainstalovat hru",
     "installTitle": "Nainstalovat Darkenlight",

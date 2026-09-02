@@ -86,11 +86,16 @@
     <div class="dialog-backdrop death-dialog-backdrop" v-if="isDead">
         <div class="dialog-window adaptive">
             <div class="dialog-surface">
-                <div class="dialog-header text-warning">Zemřel/a jsi</div>
+                <div class="dialog-header text-warning">{{ t('death.title') }}</div>
                 <div class="dialog-content" style="text-align: center;">
-                    <div>Vrať se do světa na respawn pointu.</div>
+                    <div>{{ t('death.description') }}</div>
                     <div class="dialog-actions" style="margin-top: 20px;">
-                        <button class="dialog-button" @click="MyPlayer.requestRespawn()">Respawn</button>
+                        <button class="dialog-button" :disabled="respawnDelayRemaining > 0" @click="MyPlayer.requestRespawn()">{{ t('death.respawn') }}</button>
+                    </div>
+                    <div style="min-height: 18px; margin-bottom: 8px;">
+                        {{ respawnDelayRemaining > 0
+                            ? t('death.respawnLocked', { seconds: respawnDelayRemaining })
+                            : t('death.autoRespawn', { seconds: autoRespawnRemaining }) }}
                     </div>
                 </div>
             </div>
@@ -130,7 +135,7 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { Renderer } from './babylon/scene/renderer'
 import { GameManager } from '@/GameManager'
 import GmPanel from '@/vue/views/gm/GmPanel.vue'
@@ -165,6 +170,10 @@ const miniMapCanvas = ref<HTMLCanvasElement | null>(null)
 const gmPanelVisible = GMManager.gmPanelVisible
 const myCharRef = MyPlayer.myCharRef
 const isDead = MyPlayer.isDead
+const deathDialogTime = ref(Date.now())
+const respawnDelayRemaining = computed(() => Math.max(0, Math.ceil((MyPlayer.respawnAvailableAt.value - deathDialogTime.value) / 1000)))
+const autoRespawnRemaining = computed(() => Math.max(0, Math.ceil((MyPlayer.autoRespawnAt.value - deathDialogTime.value) / 1000)))
+let deathDialogTimer: number | null = null
 
 const gameLoading = ref(true)
 const displayLoginDialog = ref(false)
@@ -199,8 +208,14 @@ watch(GMManager.npcDetailsDialogOpenRequested, (openRequested) => {
 
 watch(isDead, (dead) => {
     if (!dead) {
+        if (deathDialogTimer !== null) {
+            window.clearInterval(deathDialogTimer)
+            deathDialogTimer = null
+        }
         return
     }
+    deathDialogTime.value = Date.now()
+    deathDialogTimer = window.setInterval(() => deathDialogTime.value = Date.now(), 250)
     displaySettingsDialog.value = false
     displayRestartPrompt.value = false
     displayInventoryDialog.value = false
@@ -256,6 +271,7 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
+    if (deathDialogTimer !== null) window.clearInterval(deathDialogTimer)
     window.removeEventListener('resize', resizeEventHandler)
     window.removeEventListener('ui:open-inventory', onOpenInventoryHotkey)
     window.removeEventListener('ui:open-character', onOpenCharacterHotkey)

@@ -418,7 +418,7 @@ class Character implements Attackable, EffectTarget {
 
     die() {
         if (this.dead) {
-            this.model?.playDeathPlaceholder()
+            this.model?.playDeathAnimation()
             return
         }
         this.dead = true
@@ -433,19 +433,20 @@ class Character implements Attackable, EffectTarget {
         this.setMoveAngle(null)
         this.setActualSpeed(0)
         this.movementType = 'N'
-        this.model?.playDeathPlaceholder()
+        this.model?.playDeathAnimation()
     }
 
     revive() {
         this.dead = false
+        this.model?.clearDeathPose()
         this.model?.stopAnimation()
     }
 
-    teleportTo(x: number, z: number) {
+    teleportTo(x: number, y: number, z: number) {
         this.pos.x = x
         this.pos.z = z
-        this.pos.y = Utils.calculateWalkYPos(x, z, this.getBoxSize())
-        this.logicYpos = this.pos.y
+        this.pos.y = y
+        this.logicYpos = y
         this.model?.snapToParentPosition()
     }
 

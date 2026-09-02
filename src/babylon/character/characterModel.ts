@@ -49,9 +49,12 @@ export class CharacterModel implements EquipBearer {
     bowAimAnim: AnimationGroup | undefined
 
     oreMiningAnim: AnimationGroup | undefined
+    deathAnim: AnimationGroup | undefined
 
     actualAnim: AnimationGroup | undefined
     animTransition: AnimTransition | null = null
+    deathSink: number = 0
+    deathSinkTarget: number = 0
 
     equipSet: Map<string, EquipItem> = new Map()
     weaponEquipItem: EquipItem | null = null
@@ -125,6 +128,7 @@ export class CharacterModel implements EquipBearer {
                     { name: "GreatAxeAttack", startFrame: 1200, endFrame: 1260},
 
                     { name: "OreMining", startFrame: 1300, endFrame: 1360},
+                    { name: "Death", startFrame: 1400, endFrame: 1460},
                 ];
 
                 const newAnimationGroups = animations.map(({ name, startFrame, endFrame }) => {
@@ -147,6 +151,7 @@ export class CharacterModel implements EquipBearer {
                 this.bowAimAnim = newAnimationGroups[10]
                 this.greatAxeAttackAnim = newAnimationGroups[11]
                 this.oreMiningAnim = newAnimationGroups[12]
+                this.deathAnim = newAnimationGroups[13]
 
                 this.idleAnim?.start(true, 0.5)
                 this.actualAnim = this.idleAnim
@@ -302,6 +307,7 @@ export class CharacterModel implements EquipBearer {
         if (this.parent.getLookAngle() != null) {
             this.resolveModelRotation(timeRate)
         }
+        this.resolveDeathSink(timeRate)
 
         if (this.model) {
             this.rotationQuaternion = new Quaternion()
@@ -406,16 +412,42 @@ export class CharacterModel implements EquipBearer {
         }
     }
 
-    playDeathPlaceholder() {
-        if (!this.isActive() || !this.walkAnim) {
+    playDeathAnimation() {
+        if (!this.isActive() || !this.deathAnim) {
             return
         }
         this.animTransition?.forceEnd()
         this.animTransition = null
         this.actualAnim?.stop()
-        this.walkAnim.stop()
-        this.walkAnim.start(false, 0.5, this.walkAnim.from, this.walkAnim.to)
-        this.actualAnim = this.walkAnim
+        this.deathSink = 0
+        this.deathSinkTarget = 0
+        this.model!.position.y = 0
+        this.deathAnim.stop()
+        this.deathAnim.start(false, 0.5, this.deathAnim.from, this.deathAnim.to)
+        this.deathAnim.onAnimationEndObservable.addOnce(() => {
+            if (this.parent.dead) {
+                this.deathAnim!.start(true, 1, this.deathAnim!.to, this.deathAnim!.to)
+                this.deathAnim!.setWeightForAllAnimatables(1)
+                this.deathSinkTarget = 0.2
+            }
+        })
+        this.actualAnim = this.deathAnim
+    }
+
+    clearDeathPose() {
+        this.deathSink = 0
+        this.deathSinkTarget = 0
+        if (this.model) {
+            this.model.position.y = 0
+        }
+    }
+
+    private resolveDeathSink(timeRate: number) {
+        if (!this.model || this.deathSink >= this.deathSinkTarget) {
+            return
+        }
+        this.deathSink = Math.min(this.deathSinkTarget, this.deathSink + timeRate * 0.4)
+        this.model.position.y = -this.deathSink
     }
 
     checkActiveStepSound() {
@@ -591,7 +623,7 @@ export class CharacterModel implements EquipBearer {
 
     async addToView() {
         if (!this.initialized) await this.initAsync()
-        if (this.parent.dead) this.playDeathPlaceholder()
+        if (this.parent.dead) this.playDeathAnimation()
         this.model!.setEnabled(true)
         this.equipSet.forEach(item => {
             EquipManager.addEquippedItem(item)

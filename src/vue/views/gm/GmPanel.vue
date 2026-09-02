@@ -18,6 +18,17 @@
 
         <!-- Overview -->
         <div v-if="actualTab === GMTabs.OVERVIEW">
+            <div style="display: flex; align-items: end; gap: 8px;">
+                <label>
+                    X
+                    <input v-model.number="teleportX" type="number" step="1" @keyup.enter="teleport" />
+                </label>
+                <label>
+                    Z
+                    <input v-model.number="teleportZ" type="number" step="1" @keyup.enter="teleport" />
+                </label>
+                <button @click="teleport">TELEPORT</button>
+            </div>
         </div>
 
         <!-- Terrain -->
@@ -70,6 +81,8 @@ import ItemCreationPanel from '@/vue/views/gm/ItemCreationPanel.vue'
 const actualTab = ref(GMTabs.OVERVIEW)
 const modelRenderPanel = ref(null)
 const itemCreationPanel = ref(null)
+const teleportX = ref(99)
+const teleportZ = ref(80)
 
 const selectTab = (tab) => {
     actualTab.value = tab
@@ -86,6 +99,12 @@ const openItemCreationDialog = () => {
 
 const forceSaveData = () => {
     GMManager.forceSaveData()
+}
+
+const teleport = () => {
+    if (Number.isFinite(teleportX.value) && Number.isFinite(teleportZ.value)) {
+        GMManager.teleport(teleportX.value, teleportZ.value)
+    }
 }
 </script>
 

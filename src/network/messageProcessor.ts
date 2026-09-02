@@ -279,7 +279,7 @@ export const MessageProcessor = {
         CharacterManager.characterDied(data.id)
     },
 
-    processCharacterTeleport(data: {id: number, x: number, z: number}) {
+    processCharacterTeleport(data: {id: number, x: number, y: number, z: number, fx: number, fy: number, fz: number, departure: boolean}) {
         CharacterManager.characterTeleported(data)
     },
 

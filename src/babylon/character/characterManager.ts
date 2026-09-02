@@ -20,6 +20,7 @@ import { TargetingManager } from '@/gui/targettingManager'
 import { PubliclyVisibleAffect } from '@/data/affects'
 import {InventoryManager} from '@/data/inventoryManager'
 import {ActionButtonsManager} from '@/gui/actionButtonsManager'
+import {TeleportEffect} from '@/babylon/gfx/teleportEffect'
 
 export const CharacterManager = {
     characters: new Map<number, Character>(),
@@ -278,12 +279,17 @@ export const CharacterManager = {
         this.characters.get(id)?.die()
     },
 
-    characterTeleported(data: {id: number, x: number, z: number}) {
-        if (data.id === MyPlayer.myChar.id) {
-            MyPlayer.myChar.teleportTo(data.x, data.z)
+    characterTeleported(data: {id: number, x: number, y: number, z: number, fx: number, fy: number, fz: number, departure: boolean}) {
+        if (data.departure) {
+            TeleportEffect.create(data.fx, data.fy, data.fz)
             return
         }
-        this.characters.get(data.id)?.teleportTo(data.x, data.z)
+        if (data.id === MyPlayer.myChar.id) {
+            MyPlayer.myChar.teleportTo(data.x, data.y, data.z)
+        } else {
+            this.characters.get(data.id)?.teleportTo(data.x, data.y, data.z)
+        }
+        TeleportEffect.create(data.x, data.y, data.z)
     },
 
     characterRespawned(id: number) {
@@ -362,12 +368,12 @@ export const CharacterManager = {
         const halfSize = size / 2
         const myCharId = MyPlayer.myChar?.id
 
-        if (myCharId !== ignoredId && Math.abs(MyPlayer.myChar.pos.x - x) < size && Math.abs(MyPlayer.myChar.pos.z - z) < halfSize + MyPlayer.myChar.getBoxSize() / 2) {
+        if (myCharId !== ignoredId && !MyPlayer.myChar.dead && Math.abs(MyPlayer.myChar.pos.x - x) < size && Math.abs(MyPlayer.myChar.pos.z - z) < halfSize + MyPlayer.myChar.getBoxSize() / 2) {
             return MyPlayer.myChar
         }
 
         for (const character of this.characters.values()) {
-            if (character.id === ignoredId) {
+            if (character.id === ignoredId || character.dead) {
                 continue
             }
 

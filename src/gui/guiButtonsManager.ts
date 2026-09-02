@@ -68,7 +68,7 @@ export const GuiOpportunityActions = {
     LUMBERJACKING: new GuiOpportunityButtonAction("LUMBERJACKING", "btn_lumber", "btn_lumber_hover"),
     RESTING: new GuiOpportunityButtonAction("RESTING", "btn_rest", "btn_rest_hover"),
     COOKING: new GuiOpportunityButtonAction("COOKING", "btn_cooking", "btn_cooking_hover"),
-    NPC_USE: new GuiOpportunityButtonAction("NPC_USE", "", "", "USE"),
+    NPC_USE: new GuiOpportunityButtonAction("NPC_USE", "btn_chat", "btn_chat"),
     NPC_EDIT: new GuiOpportunityButtonAction("NPC_EDIT", "", "", "NPC"),
 }
 
