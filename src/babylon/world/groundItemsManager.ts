@@ -18,6 +18,7 @@ import { Item } from '@/data/items/item'
 import { Utils } from '@/utils/utils'
 import { EquipManager } from '@/babylon/item/equipManager'
 import { EquipCbItem } from '@/babylon/item/codebook/equipCbItem'
+import { Lights } from '@/babylon/scene/lights'
 import { MyPlayer } from '@/data/myPlayer'
 import { GroundItemTO } from '@/network/messageIfs'
 
@@ -90,6 +91,7 @@ export const GroundItemsManager = {
             groundMesh.receiveShadows = true
             groundMesh.thinInstanceCount = 0
 
+            Lights.addShadowCaster(groundMesh)
             this.itemTypes.set(modelId, new GroundItemType(modelId, equipType.cbData, groundMesh))
         })
 
@@ -249,6 +251,7 @@ export const GroundItemsManager = {
         mesh.thinInstanceCount = 0
         mesh.setEnabled(false)
 
+        Lights.addShadowCaster(mesh)
         const type = new GroundFlatItemType(texturePath, mesh, material)
         this.flatItemTypes.set(texturePath, type)
         return type

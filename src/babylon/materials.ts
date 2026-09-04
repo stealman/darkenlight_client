@@ -273,7 +273,18 @@ export const TerrainEnum1 = {
         if (block.snowed && !ignoreSnow) {
             type += 100;
         }
-        return Object.values(TerrainEnum1).find(item => item.index === type)?.uv;
+
+        const terrain = Object.values(TerrainEnum1).find(item => item.index === type)
+        if (terrain?.uv) {
+            return terrain.uv
+        }
+
+        // Ore can be assigned to a non-rock tile by the GM editor, and a
+        // snowed ore tile has no dedicated atlas entry. Keep the terrain
+        // renderable by falling back to the block's ordinary/snow variant.
+        const baseType = block.type + (block.snowed && !ignoreSnow ? 100 : 0)
+        const fallback = Object.values(TerrainEnum1).find(item => item.index === baseType)
+        return fallback?.uv ?? TerrainEnum1.TERRAIN_DIRT.uv;
     }
 }
 

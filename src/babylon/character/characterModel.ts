@@ -97,6 +97,10 @@ export class CharacterModel implements EquipBearer {
                 directIntensity: 1,
                 environmentIntensity: 1,
             })
+            // Keep the player body lit consistently with monster bodies and
+            // equipped items under the close indoor light.
+            material.twoSidedLighting = true
+            material.usePhysicalLightFalloff = false
             this.model.getChildMeshes().forEach((mesh) => {
                 mesh.material = material
                 Lights.addShadowCaster(mesh)

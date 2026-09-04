@@ -114,6 +114,7 @@ export const Renderer = {
 
     async gameStarted() {
         Lights.sunLight.parent = MyPlayer.myModel!.node
+        Lights.attachPersonalLight(MyPlayer.myModel!.node)
         MyStatusPanel.panel!.style.display = 'flex'
         await Tester.runTest()
         this.engine!.runRenderLoop(() => {
@@ -252,8 +253,9 @@ export const Renderer = {
         }
         const defaultEnvironmentIntensity = 0.25 + Settings.brightness * 0.025
         this.scene.environmentIntensity = this.environmentType === 'indoor'
-            ? defaultEnvironmentIntensity / 3
+            ? defaultEnvironmentIntensity / 5
             : defaultEnvironmentIntensity
+        this.scene.fogEnabled = this.environmentType !== 'indoor'
 
         this.scene.markAllMaterialsAsDirty(Material.AllDirtyFlag)
     },
@@ -262,9 +264,10 @@ export const Renderer = {
         this.environmentType = environmentType === 'indoor' ? 'indoor' : 'outdoor'
         Lights.setIndoor(this.environmentType === 'indoor')
         this.brightnessChanged()
+        this.updateCameraForEnvironment()
     },
 
-    createCamera() {
+    getCameraSetup() {
         let cameraPosition = new Vector3(-12, 12, -12)
         if (Settings.touchEnabled) {
             cameraPosition = new Vector3(-10, 12, -10)
@@ -276,6 +279,38 @@ export const Renderer = {
             cameraPosition.z = -5
             cameraViewY = 0
         }
+
+        if (this.environmentType === 'indoor') {
+            const cameraDistance = cameraPosition.length()
+            cameraPosition.y += Settings.closeView ? 1 : 3
+
+            // Raising the camera must not move it farther from the player.
+            // Reduce the horizontal offset while preserving the original
+            // camera-to-player distance.
+            const horizontalDistance = Math.sqrt(Math.max(0, cameraDistance ** 2 - cameraPosition.y ** 2))
+            const currentHorizontalDistance = Math.sqrt(cameraPosition.x ** 2 + cameraPosition.z ** 2)
+            if (currentHorizontalDistance > 0) {
+                const horizontalScale = horizontalDistance / currentHorizontalDistance
+                cameraPosition.x *= horizontalScale
+                cameraPosition.z *= horizontalScale
+            }
+        }
+
+        return { cameraPosition, cameraViewY }
+    },
+
+    updateCameraForEnvironment() {
+        if (!this.camera) {
+            return
+        }
+
+        const { cameraPosition, cameraViewY } = this.getCameraSetup()
+        this.camera.position.copyFrom(cameraPosition)
+        this.camera.setTarget(new Vector3(0, cameraViewY, 0))
+    },
+
+    createCamera() {
+        const { cameraPosition, cameraViewY } = this.getCameraSetup()
 
         this.camera = new FreeCamera('camera1', cameraPosition, this.scene)
         this.camera.setTarget(new Vector3(0, cameraViewY, 0))

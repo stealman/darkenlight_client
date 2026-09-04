@@ -36,6 +36,15 @@ export const MonsterLoader = {
             environmentIntensity: 1,
         }, mobType.emissiveTextureName ? "/models/monsters/" + mobType.emissiveTextureName : null)
 
+        // Monster meshes share the regular PBR material, while equipment uses
+        // a two-sided lighting setup. Keep back-facing body polygons from
+        // becoming unnaturally black under the close, downward indoor light.
+        material.twoSidedLighting = true
+        // Match the equipment materials' range-based attenuation. Babylon's
+        // physical inverse-square falloff makes this short local light fade
+        // too aggressively on otherwise nearby monster bodies.
+        material.usePhysicalLightFalloff = false
+
         mobType.setAssetContainer(assetContainer)
         mobType.setMaterial(material)
         this.monsterTemplates.set(mobType.id, mobType)

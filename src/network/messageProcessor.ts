@@ -7,6 +7,7 @@ import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { Renderer } from '@/babylon/scene/renderer'
 import { StaticsManager } from '@/babylon/world/statics/staticsManager'
 import { TerrainManager } from '@/babylon/world/terrainManager'
+import { WeatherManager } from '@/babylon/world/weather/weatherManager'
 import { StepMarksRenderer } from '@/babylon/world/stepMarksRenderer'
 import { GMSpawns } from '@/gm/GmSpawns'
 import { MyPlayer } from '@/data/myPlayer'
@@ -189,9 +190,11 @@ export const MessageProcessor = {
 
     processWorldData(data) {
         const worldChanged = MyPlayer.worldId !== data.id
-        if (Renderer.environmentType !== (data.environmentType === 'indoor' ? 'indoor' : 'outdoor')) {
-            Renderer.setWorldEnvironmentType(data.environmentType)
+        const environmentType = data.environment?.type
+        if (Renderer.environmentType !== (environmentType === 'indoor' ? 'indoor' : 'outdoor')) {
+            Renderer.setWorldEnvironmentType(environmentType)
         }
+        WeatherManager.setEnabled(environmentType !== 'indoor')
         if (worldChanged) {
             this.clearWorldForTransition()
             WorldDataManager.replaceWorldData(data.id, data.size)

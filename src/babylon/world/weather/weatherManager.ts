@@ -12,12 +12,32 @@ import { Renderer } from '@/babylon/scene/renderer'
 import { Settings } from '@/settings/settings'
 export const WeatherManager = {
     actualWeather: null as WeatherEffect | null,
+    enabled: true,
 
     initialize () {
+        this.actualWeather?.stop()
+        this.actualWeather = null
+        this.enabled = Renderer.environmentType !== 'indoor'
+    },
 
+    setEnabled(enabled: boolean) {
+        if (this.enabled === enabled) {
+            return
+        }
+        this.enabled = enabled
+        if (this.actualWeather) {
+            if (enabled) {
+                this.actualWeather.start()
+            } else {
+                this.actualWeather.stop()
+            }
+        }
     },
 
     update() {
+        if (!this.enabled) {
+            return
+        }
         if (!this.actualWeather) {
             this.actualWeather = new SnowEffect(Renderer.scene)
             this.actualWeather.start()
@@ -34,6 +54,8 @@ interface WeatherEffect {
 }
 
 class SnowEffect implements WeatherEffect {
+    snow: GPUParticleSystem
+
     constructor(scene: Scene) {
         //console.log("Initializing snow effect")
         let capacity = 10000
@@ -90,14 +112,18 @@ class SnowEffect implements WeatherEffect {
         snow.updateSpeed = 0.02
 
         snow.renderingGroupId = 2;
+        this.snow = snow;
         snow.start();
     }
 
     start(): void {
-
+        if (!this.snow.isStarted() || this.snow.isStopped()) {
+            this.snow.start()
+        }
     }
     stop(): void {
-
+        this.snow.stop()
+        this.snow.reset()
     }
     update(): void {
 
