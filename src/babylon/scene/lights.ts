@@ -2,6 +2,7 @@ import {
     AbstractMesh,
     Color3,
     DirectionalLight,
+    Material,
     Mesh,
     Scene,
     ShadowGenerator,
@@ -12,6 +13,7 @@ import { Settings } from '@/settings/settings'
 export const Lights = {
     shadow: {} as ShadowGenerator,
     sunLight: {} as DirectionalLight,
+    indoor: false,
 
     // glowLayer: null as GlowLayer,
 
@@ -34,6 +36,7 @@ export const Lights = {
         //this.glowLayer.intensity = 0.3
         //this.glowLayer.blurKernelSize = 1
 
+        this.sunLight.setEnabled(!this.indoor)
         this.brightnessChanged()
     },
 
@@ -50,6 +53,13 @@ export const Lights = {
     },
 
     brightnessChanged() {
-        this.sunLight.intensity = 0.5 + Settings.brightness * 0.05
+        this.sunLight.intensity = this.indoor ? 0 : 0.5 + Settings.brightness * 0.05
+    },
+
+    setIndoor(indoor: boolean) {
+        this.indoor = indoor
+        this.sunLight.setEnabled?.(!indoor)
+        this.brightnessChanged()
+        this.sunLight.getScene?.().markAllMaterialsAsDirty(Material.LightDirtyFlag)
     }
 }

@@ -73,6 +73,5 @@ export function createVertexColorWeaponMaterial(name: string, scene: Scene, pale
     mat.directIntensity = 1.5
     mat.environmentIntensity = 1
     mat.usePhysicalLightFalloff = false
-    mat.freeze()
     return mat
 }

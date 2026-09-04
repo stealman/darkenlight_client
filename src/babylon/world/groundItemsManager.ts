@@ -114,6 +114,14 @@ export const GroundItemsManager = {
         }
     },
 
+    clearWorld() {
+        this.items = []
+        this.visibleItems = []
+        this.nearbyItem = null
+        this.fxParticles.forEach((particle) => particle.deactivate())
+        this.renderItems(Date.now())
+    },
+
     onFrame(timeRate: number, time: number) {
         this.updateVisibleItems()
         this.detectNearestItemProximity(time)

@@ -120,7 +120,6 @@ export const Materials = {
         mat.disableLighting = true
         mat.emissiveColor = new Color3(1, 1, 1)
         mat.alpha = 0.25
-        //mat.freeze()
         return mat
     },
 
@@ -189,7 +188,6 @@ export const Materials = {
             mat.Vertex_After_WorldPosComputed(`vAlbedoUV = uvUpdated;`)
         }
 
-        mat.freeze()
         return mat
     },
 
@@ -209,36 +207,12 @@ export const Materials = {
         mat.usePhysicalLightFalloff = false
         mat.alpha = 0.25
 
-        mat.freeze()
         return mat
     },
 
     onFrame(frame: number) {
     },
 
-    unFreezeAll() {
-        this.terrainMaterial?.unfreeze()
-        this.planeMaterial?.unfreeze()
-        this.planeWaterMaterial?.unfreeze()
-        this.blockMat1?.unfreeze()
-        this.blockMatAlpha1?.unfreeze()
-        this.waterMaterial?.unfreeze()
-        this.stepMarksMaterial?.unfreeze()
-        this.fightSplatsMaterial?.unfreeze()
-        this.weaponTrailMaterial?.unfreeze()
-    },
-
-    freezeAll() {
-        this.terrainMaterial?.freeze()
-        this.planeMaterial?.freeze()
-        this.planeWaterMaterial?.freeze()
-        this.blockMat1?.freeze()
-        this.blockMatAlpha1?.freeze()
-        this.waterMaterial?.freeze()
-        this.stepMarksMaterial?.freeze()
-        this.fightSplatsMaterial?.freeze()
-        this.weaponTrailMaterial?.freeze()
-    }
 }
 
 

@@ -44,6 +44,10 @@ export const NpcManager = {
         }
     },
 
+    clearWorld() {
+        Array.from(this.npcs.keys()).forEach((id) => this.removeNpc(id))
+    },
+
     npcMove(data: number[]) {
         const npc = this.npcs.get(data[0])
         if (!npc) {

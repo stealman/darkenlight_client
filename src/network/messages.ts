@@ -329,8 +329,13 @@ export class GMTeleportMsg implements Message {
     t: number = 1008
     d: any
 
-    constructor(x: number, z: number) {
-        this.d = {x, z}
+    constructor(worldId: number, x: number, z: number) {
+        this.d = {worldId, x, z}
     }
+}
+
+export class GMLoadWorldsMsg implements Message {
+    t: number = 1009
+    d: any = {}
 }
 

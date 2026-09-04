@@ -1,5 +1,5 @@
 import { Connector } from '@/network/connector'
-import { GMCreateItemMsg, GMForceSaveDataMsg, GMNpcAction, GMSaveMapDataMsg, GMStaticObjectChange, GMTeleportMsg, GMTerrainChange } from '@/network/messages'
+import { GMCreateItemMsg, GMForceSaveDataMsg, GMLoadWorldsMsg, GMNpcAction, GMSaveMapDataMsg, GMStaticObjectChange, GMTeleportMsg, GMTerrainChange } from '@/network/messages'
 import { GMSceneManager } from '@/babylon/gm/GmSceneManager'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { ref } from 'vue'
@@ -10,6 +10,7 @@ import { Renderer } from '@/babylon/scene/renderer'
 import { OnScreenMessageManager } from '@/gui/onScreenMessageManager'
 import { NpcManager } from '@/babylon/npc/npcManager'
 import { TargetingManager } from '@/gui/targettingManager'
+import { MyPlayer } from '@/data/myPlayer'
 
 /**
  * Main GM tabs
@@ -46,6 +47,8 @@ export const GMManager = {
     selectedNpcName: ref(''),
     selectedNpc: ref<any | null>(null),
     npcDetailsDialogOpenRequested: ref(false),
+    teleportWorlds: ref([] as Array<{id: number, name: string}>),
+    selectedTeleportWorld: ref(0),
 
     tab: GmTabs.OVERVIEW,
 
@@ -60,6 +63,9 @@ export const GMManager = {
         }
         GMSceneManager.initialize(Renderer.scene)
         this.gmPanelVisible.value = !this.gmPanelVisible.value
+        if (this.gmPanelVisible.value) {
+            this.loadTeleportWorlds()
+        }
     },
 
     onLeftClickEvent() {
@@ -413,8 +419,17 @@ export const GMManager = {
         OnScreenMessageManager.addMessage("Hra uložena")
     },
 
-    teleport(x: number, z: number) {
-        Connector.sendMessage(new GMTeleportMsg(x, z))
+    teleport(worldId: number, x: number, z: number) {
+        Connector.sendMessage(new GMTeleportMsg(worldId, x, z))
+    },
+
+    loadTeleportWorlds() {
+        Connector.sendMessage(new GMLoadWorldsMsg())
+    },
+
+    consumeTeleportWorlds(worlds: Array<{id: number, name: string}>) {
+        this.teleportWorlds.value = worlds
+        this.selectedTeleportWorld.value = MyPlayer.worldId
     },
 
     createItem(type: string, codebookId: number, quantity: number | null, quality: number | null) {

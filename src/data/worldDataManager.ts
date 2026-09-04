@@ -11,6 +11,10 @@ export const WorldDataManager = {
     MAP_CHUNK_SIZE: 128 as number,
     worldDataMap: new Map<number, WorldData>(),
 
+    replaceWorldData(worldId: number, size: number) {
+        this.worldDataMap.set(worldId, new WorldData(size))
+    },
+
     fetchWorldDataIfNeeded() {
         if (!this.worldDataMap.has(MyPlayer.worldId)) {
             this.worldDataMap.set(MyPlayer.worldId, new WorldData(1024))

@@ -42,6 +42,12 @@ export const FightSplatsRenderer = {
         }
     },
 
+    clearWorld() {
+        this.splats = []
+        this.visibleSplats = []
+        this.renderStepMarks(Date.now())
+    },
+
     update(timeRate: number, time: number) {
         this.splats = this.splats.filter(mark => (time < mark.deadTime))
         this.updateVisibleSplats()

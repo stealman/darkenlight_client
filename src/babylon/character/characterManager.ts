@@ -217,6 +217,10 @@ export const CharacterManager = {
         }
     },
 
+    clearWorld() {
+        Array.from(this.characters.keys()).forEach((id) => this.removeCharacter(id))
+    },
+
     startCrafting(data: CharacterCraftingMessage) {
         if (data.id === MyPlayer.myChar.id) {
             MyPlayer.myChar.startCrafting(data)

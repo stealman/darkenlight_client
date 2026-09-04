@@ -54,7 +54,7 @@ export const Renderer = {
     fps: 0 as number,
     frame: 0 as number,
     animationSpeedRatio: 1 as number,
-    pendingMatFreeze: false as boolean,
+    environmentType: 'outdoor' as 'outdoor' | 'indoor',
 
     inspectorDisplayed: false,
     glowLayer: null as GlowLayer | null,
@@ -212,8 +212,6 @@ export const Renderer = {
     },
 
     setCullingFrequency(scene: Scene, everyNFrames: number) {
-        scene.freezeActiveMeshes(true)
-
         // Unfreeze world matrix pro rodice vseho u ceho budeme delat instancedMeshe
         // ShotMgr.pulseLaserMesh.unfreezeWorldMatrix();
 
@@ -241,7 +239,6 @@ export const Renderer = {
         this.scene.fogEnd = 50
         this.scene.fogColor = new Color3(0.2, 0.22, 0.24)
 
-        this.setCullingFrequency(this.scene, 30)
         this.scene.environmentTexture = CubeTexture.CreateFromPrefilteredData(
             "environment_specular.env",
             this.scene
@@ -250,17 +247,21 @@ export const Renderer = {
     },
 
     brightnessChanged() {
-        Materials.unFreezeAll()
-        this.scene.environmentIntensity = 0.25 + Settings.brightness * 0.025
-
-        this.scene.markAllMaterialsAsDirty(Material.MiscDirtyFlag)
-        if (!this.pendingMatFreeze) {
-            this.pendingMatFreeze = true
-            this.scene.onAfterRenderObservable.addOnce(() => {
-                Materials.freezeAll()
-                this.pendingMatFreeze = false
-            })
+        if (!this.scene) {
+            return
         }
+        const defaultEnvironmentIntensity = 0.25 + Settings.brightness * 0.025
+        this.scene.environmentIntensity = this.environmentType === 'indoor'
+            ? defaultEnvironmentIntensity / 3
+            : defaultEnvironmentIntensity
+
+        this.scene.markAllMaterialsAsDirty(Material.AllDirtyFlag)
+    },
+
+    setWorldEnvironmentType(environmentType: string | null | undefined) {
+        this.environmentType = environmentType === 'indoor' ? 'indoor' : 'outdoor'
+        Lights.setIndoor(this.environmentType === 'indoor')
+        this.brightnessChanged()
     },
 
     createCamera() {

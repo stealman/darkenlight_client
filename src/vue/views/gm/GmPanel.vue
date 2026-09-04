@@ -20,6 +20,12 @@
         <div v-if="actualTab === GMTabs.OVERVIEW">
             <div style="display: flex; align-items: end; gap: 8px;">
                 <label>
+                    World
+                    <select v-model.number="teleportWorldId">
+                        <option v-for="world in teleportWorlds" :key="world.id" :value="world.id">{{ world.name }} ({{ world.id }})</option>
+                    </select>
+                </label>
+                <label>
                     X
                     <input v-model.number="teleportX" type="number" step="1" @keyup.enter="teleport" />
                 </label>
@@ -68,7 +74,7 @@
 <script setup>
 
 import { GMManager, GmTabs as GMTabs } from '@/gm/GM'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import BiomePanel from '@/vue/views/gm/BiomePanel.vue'
 import TerrainPanel from '@/vue/views/gm/TerrainPanel.vue'
 import WallsFencesPanel from '@/vue/views/gm/WallsFencesPanel.vue'
@@ -83,6 +89,11 @@ const modelRenderPanel = ref(null)
 const itemCreationPanel = ref(null)
 const teleportX = ref(99)
 const teleportZ = ref(80)
+const teleportWorlds = computed(() => GMManager.teleportWorlds.value)
+const teleportWorldId = computed({
+    get: () => GMManager.selectedTeleportWorld.value,
+    set: (worldId) => { GMManager.selectedTeleportWorld.value = worldId }
+})
 
 const selectTab = (tab) => {
     actualTab.value = tab
@@ -102,8 +113,8 @@ const forceSaveData = () => {
 }
 
 const teleport = () => {
-    if (Number.isFinite(teleportX.value) && Number.isFinite(teleportZ.value)) {
-        GMManager.teleport(teleportX.value, teleportZ.value)
+    if (Number.isFinite(teleportWorldId.value) && Number.isFinite(teleportX.value) && Number.isFinite(teleportZ.value)) {
+        GMManager.teleport(teleportWorldId.value, teleportX.value, teleportZ.value)
     }
 }
 </script>

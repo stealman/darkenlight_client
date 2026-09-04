@@ -1,5 +1,5 @@
 import { MapBlock, WorldDataManager } from '@/data/worldDataManager'
-import { Color4, Matrix, Mesh, ParticleSystem, Scene, Vector2 } from '@babylonjs/core'
+import { Color4, InstancedMesh, Matrix, Mesh, ParticleSystem, Scene, Vector2 } from '@babylonjs/core'
 import { BabylonUtils } from '@/babylon/utils'
 import { Builder } from '@/babylon/builder'
 import { Materials, PlaneEnum1, TerrainEnum1 } from '@/babylon/materials'
@@ -10,7 +10,6 @@ import { MyPlayer } from '@/data/myPlayer'
 
 export const DIRT_BLOCK_TYPE = 1
 export const WATER_BLOCK_TYPE = 50
-export const SEA_WATER_LEVEL = 4.75
 const WATER_BOTTOM_BLOCK = new MapBlock(0, DIRT_BLOCK_TYPE)
 
 export const TerrainManager = {
@@ -18,6 +17,8 @@ export const TerrainManager = {
     terrainPlane: null as Mesh | null,
     terrainWaterPlane: null as Mesh | null,
     waterPlane: null as Mesh | null,
+    waterPlaneLayers: [] as Array<{height: number, mesh: InstancedMesh}>,
+    seaWaterLevel: null as number | null,
 
     hoverBlockMarker: null as Mesh | null,
 
@@ -50,11 +51,28 @@ export const TerrainManager = {
         this.waterPlane.alwaysSelectAsActiveMesh = true
         this.waterPlane.renderingGroupId = 0
 
+        this.waterPlaneLayers = []
         for (let i = 1.25; i <= 4.75; i += 0.25) {
-            this.waterPlane.createInstance('plane' + i).position.y = i
+            const layer = this.waterPlane.createInstance('plane' + i)
+            layer.position.y = i
+            this.waterPlaneLayers.push({height: i, mesh: layer})
         }
+        this.applySeaWaterLevel()
 
         this.hoverBlockMarker = Builder.createHorizontalPlane(scene, null,1, 0)
+    },
+
+    setSeaWaterLevel(seaWaterLevel: number | null) {
+        this.seaWaterLevel = Number.isFinite(seaWaterLevel) ? seaWaterLevel : null
+        this.applySeaWaterLevel()
+    },
+
+    applySeaWaterLevel() {
+        const hasSea = this.seaWaterLevel !== null
+        this.waterPlane?.setEnabled(hasSea)
+        this.waterPlaneLayers.forEach((layer) => {
+            layer.mesh.setEnabled(hasSea && layer.height <= this.seaWaterLevel!)
+        })
     },
 
     addWaterTerrainLayer(

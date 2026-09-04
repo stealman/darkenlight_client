@@ -54,6 +54,14 @@ export const StepMarksRenderer = {
         this.renderStepMarks(time)
     },
 
+    clearWorld() {
+        this.myStepMarks = []
+        this.otherStepMarks = []
+        localStorage.removeItem('myStepMarks')
+        localStorage.removeItem('otherStepMarks')
+        this.renderStepMarks(Date.now())
+    },
+
     renderStepMarks(time: number) {
         if (!this.stepMarkPlane) {
             return

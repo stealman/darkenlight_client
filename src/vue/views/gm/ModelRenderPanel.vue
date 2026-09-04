@@ -449,7 +449,6 @@ const loadPreview = async () => {
                 environmentIntensity: materialEnvironmentIntensity.value,
             }
         )
-    previewMaterial.unfreeze()
     merged.material = previewMaterial
     applyPreviewMaterialSettings()
 

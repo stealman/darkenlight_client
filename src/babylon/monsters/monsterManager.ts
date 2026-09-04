@@ -137,6 +137,12 @@ export const MonsterManager = {
         }
     },
 
+    clearWorld() {
+        Array.from(this.monsters.keys()).forEach((id) => this.removeMonster(id, false))
+        this.killedMonsters.forEach((monster) => monster.removeModel())
+        this.killedMonsters.clear()
+    },
+
     monsterKilled(mob: Monster) {
         mob.killed()
         mob.model.doDie()

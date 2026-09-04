@@ -90,6 +90,12 @@ export const TreeManager = {
         }
     },
 
+    clearWorld() {
+        this.allTrees = []
+        this.visibleTrees = []
+        this.renderTrees()
+    },
+
     renderTrees() {
         // Prefabs clear the matrices
         Object.values(this.prefabs).forEach(prefab => {

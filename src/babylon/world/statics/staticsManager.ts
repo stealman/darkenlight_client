@@ -100,6 +100,13 @@ export const StaticsManager = {
         }
     },
 
+    clearWorld() {
+        this.allStatics.forEach((obj) => obj.dispose())
+        this.allStatics = []
+        this.visibleStatics = []
+        this.renderObjects()
+    },
+
     renderObjects() {
         Object.values(this.prefabs).forEach(prefab => {
             prefab?.clearMatrices()

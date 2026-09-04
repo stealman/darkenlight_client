@@ -4,7 +4,10 @@ import { TreeManager } from '@/babylon/world/treeManager'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { MiniMap } from '@/utils/minimap'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
+import { Renderer } from '@/babylon/scene/renderer'
 import { StaticsManager } from '@/babylon/world/statics/staticsManager'
+import { TerrainManager } from '@/babylon/world/terrainManager'
+import { StepMarksRenderer } from '@/babylon/world/stepMarksRenderer'
 import { GMSpawns } from '@/gm/GmSpawns'
 import { MyPlayer } from '@/data/myPlayer'
 import { FightSplatsRenderer } from '@/babylon/world/fightSplatsRenderer'
@@ -105,6 +108,7 @@ export const MessageProcessor = {
                 case 59: this.processCharacterDeath(msg.d); break
                 case 60: this.processCharacterTeleport(msg.d); break
                 case 61: this.processCharacterRespawn(msg.d); break
+                case 62: this.processGMWorlds(msg.d); break
                 case 1003: this.processGMAllSpawns(msg.d); break
                 case 1004: this.processGMSpawnChange(msg.d); break
                 default:
@@ -184,6 +188,15 @@ export const MessageProcessor = {
     },
 
     processWorldData(data) {
+        const worldChanged = MyPlayer.worldId !== data.id
+        if (Renderer.environmentType !== (data.environmentType === 'indoor' ? 'indoor' : 'outdoor')) {
+            Renderer.setWorldEnvironmentType(data.environmentType)
+        }
+        if (worldChanged) {
+            this.clearWorldForTransition()
+            WorldDataManager.replaceWorldData(data.id, data.size)
+            TerrainManager.setSeaWaterLevel(data.seaWaterLevel ?? null)
+        }
         MyPlayer.worldId = data.id
         MyPlayer.worldName = data.name
         if (data.mapChunk) {
@@ -281,6 +294,25 @@ export const MessageProcessor = {
 
     processCharacterTeleport(data: {id: number, x: number, y: number, z: number, fx: number, fy: number, fz: number, departure: boolean}) {
         CharacterManager.characterTeleported(data)
+    },
+
+    processGMWorlds(data: Array<{id: number, name: string}>) {
+        GMManager.consumeTeleportWorlds(data)
+    },
+
+    clearWorldForTransition() {
+        if (!MyPlayer.myChar) {
+            return
+        }
+        CharacterManager.clearWorld()
+        MonsterManager.clearWorld()
+        NpcManager.clearWorld()
+        TreeManager.clearWorld()
+        StaticsManager.clearWorld()
+        GroundItemsManager.clearWorld()
+        FightSplatsRenderer.clearWorld()
+        StepMarksRenderer.clearWorld()
+        GMSpawns.removeAllMarkers()
     },
 
     processCharacterRespawn(data: {id: number}) {
