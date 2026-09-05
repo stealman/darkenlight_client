@@ -11,6 +11,7 @@ import { StaticObject } from '@/babylon/world/statics/objects/baseStaticObject'
 import { FireplaceLarge, FireplaceSmall } from '@/babylon/world/statics/objects/fireplace'
 import { Shrub1x1_small, Shrub1x1_tall, Shrub2x2 } from '@/babylon/world/statics/objects/shrubs'
 import { Wall2, Wall3 } from '@/babylon/world/statics/objects/walls'
+import { WallTorch, WallTorchMetadata } from '@/babylon/world/statics/objects/wallTorch'
 import { StaticObjectsCodebook } from '@/babylon/world/statics/staticsCodebook'
 import { MyPlayer } from '@/data/myPlayer'
 import { AudioManager } from '@/babylon/audio/audioManager'
@@ -36,13 +37,13 @@ export const StaticsManager = {
         })
     },
 
-    consumeObjects(data: [ { tp: number, x: number, z: number } ]) {
+    consumeObjects(data: Array<{ tp: number, x: number, z: number, meta?: WallTorchMetadata }>) {
         data.forEach(obj => {
             this.addObject(obj)
         })
     },
 
-    addObject(obj: { tp: number, x: number, z: number }) {
+    addObject(obj: { tp: number, x: number, z: number, meta?: WallTorchMetadata }) {
         const y = WorldDataManager.getBlockMap()[obj.x][obj.z].totalHeight
         const pos = new Vector3(obj.x, y, obj.z)
         const rotation = Math.floor(Math.random() * 4) * Math.PI / 2
@@ -71,6 +72,7 @@ export const StaticsManager = {
 
             case 241: this.allStatics.push(new FireplaceSmall(obj.tp, pos, rotation, MaterialEnum1.WOOD_1.uv)); break
             case 242: this.allStatics.push(new FireplaceLarge(obj.tp, pos, rotation, MaterialEnum1.WOOD_1.uv)); break
+            case 261: this.allStatics.push(new WallTorch(obj.tp, pos, MaterialEnum1.WOOD_1.uv, obj.meta)); break
             default:
                 break
         }

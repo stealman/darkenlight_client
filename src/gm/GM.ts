@@ -29,6 +29,7 @@ export const GmTabs = {
 }
 
 export const VOID_TERRAIN_SELECTION = 102
+export const WALL_TORCH_STATIC_ID = 261
 
 export const GMManager = {
     gmPanelVisible: ref(false),
@@ -46,6 +47,8 @@ export const GMManager = {
 
     selectedWallFence: ref (0),
     selectedStatic: ref (0),
+    torchFacing: ref('-Z'),
+    torchMountHeight: ref(2),
     selectedNpcName: ref(''),
     selectedNpc: ref<any | null>(null),
     npcDetailsDialogOpenRequested: ref(false),
@@ -161,7 +164,17 @@ export const GMManager = {
         if (this.tab === GmTabs.STATICS_EDIT) {
             const markerPos = new Vector3(GMSceneManager.hoverBlockMarker!.position.x, 0, GMSceneManager.hoverBlockMarker!.position.z)
             if (this.selectedStatic.value > 0) {
-                const staticData = { x: markerPos.x, z: markerPos.z, type: this.selectedStatic.value }
+                const staticData: { x: number, z: number, type: number, meta?: { facing: string, mountHeight: number } } = {
+                    x: markerPos.x,
+                    z: markerPos.z,
+                    type: this.selectedStatic.value,
+                }
+                if (this.selectedStatic.value === WALL_TORCH_STATIC_ID) {
+                    staticData.meta = {
+                        facing: this.torchFacing.value,
+                        mountHeight: this.torchMountHeight.value,
+                    }
+                }
                 Connector.sendMessage(new GMStaticObjectChange("ADD_OBJECT", [staticData] ) )
 
             } else if (this.selectedStatic.value === -1) {

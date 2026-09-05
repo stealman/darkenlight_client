@@ -513,7 +513,7 @@ export const Lights = {
     brightnessChanged() {
         this.sunLight.intensity = this.indoor ? 0 : 0.5 + Settings.brightness * 0.05
         const brightness = Math.min(10, Math.max(1, Settings.brightness))
-        this.personalLight.intensity = 3 + ((brightness - 1) / 9)
+        this.personalLight.intensity = 2.5 + ((brightness - 1) / 9)
     },
 
     setIndoor(indoor: boolean) {

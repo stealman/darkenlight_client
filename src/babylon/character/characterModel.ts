@@ -1,5 +1,5 @@
 import {
-    AbstractMesh,
+    AbstractMesh, Color3,
     AnimationGroup, Matrix, Mesh, Quaternion,
     SceneLoader, Skeleton, Sound, TransformNode,
     Vector3,
@@ -101,6 +101,10 @@ export class CharacterModel implements EquipBearer {
             // equipped items under the close indoor light.
             material.twoSidedLighting = true
             material.usePhysicalLightFalloff = false
+            if (this.parent.isMyChar()) {
+                material.emissiveTexture = material.albedoTexture
+                material.emissiveColor = new Color3(0.15, 0.15, 0.15)
+            }
             this.model.getChildMeshes().forEach((mesh) => {
                 mesh.material = material
                 Lights.addShadowCaster(mesh)

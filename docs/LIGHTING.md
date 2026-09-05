@@ -58,12 +58,19 @@ The current implementation is:
 
 | Property | Value |
 | --- | --- |
-| Local offset | 2.75 world units above the player |
+| Main local offset | 2.75 world units above the player |
 | Direction / cone | Vertically downward / 96% of `PI` |
 | Range | 18 |
 | Intensity | 3.0–4.0, linearly following the player brightness setting (1–10) |
 | Colour | Warm `(1, 0.82, 0.58)` |
 | Shadow map | 1024 normal, 2048 high; only when shadows are enabled |
+
+The local Steve body material reuses its albedo texture as a low `(0.15, 0.15,
+0.15)` emissive map. It keeps the player readable in dark interiors without
+washing out the texture colours, creating another light, changing world shadows
+or affecting terrain, equipment, other
+characters, monsters or items. Its material variant is warmed with the local
+player at world entry.
 
 The personal shadow projection is limited to the same short range rather than
 using the camera frustum. It includes terrain, blocking/static world objects,
@@ -82,11 +89,34 @@ its location, but does not create, synchronize or persist a Babylon light.
 The client maps each lit static type to a `StaticLightProfile` containing its
 local offset, spot direction, warm colour, cone, range and target intensity.
 
-The first profiles are the small and large fireplaces. Wall torches will use
-the identical system, and the same profiles may later run outdoors at night.
+The first profiles are the small and large fireplaces and the wall torch. The
+same profiles may later run outdoors at night.
 They use a wide downward spotlight style, placed above the fire or flame to
 illuminate nearby floor and actors. They are unshadowed on low and medium;
 high detail experimentally gives every static slot a small shadow map.
+
+### Future wall-torch attachment metadata
+
+> **Status:** approved / implemented.
+
+A placed torch remains a normal one-tile static at its floor tile. Its optional
+instance metadata carries `mountHeight` (world units relative to that tile's
+floor height) and `facing` (`-X`, `+X`, `-Z`, or `+Z`), the outward normal of
+the wall to which it is attached. The client derives its final world position
+from the current floor height plus `mountHeight`, then offsets the torch and
+its light just beyond that face of its wall tile.
+
+The server persists and sends this optional metadata together with the static
+instance. The static-object codebook owns the schema for each type;
+future active or configurable static objects can add their own typed metadata
+without changing the common tile anchor. Existing statics without metadata keep
+their current behavior.
+
+The GM statics panel creates `Wall Torch` instances with a direction chooser
+and a numeric height field (`-10` to `10`); the default height is `2`. The temporary visual is
+a small rectangular `WOOD_1` block just beyond the selected wall face. Its
+light has the small-fireplace profile (warm colour, intensity `2.2`, range
+`10`); a dedicated torch model and particles can replace only this visual later.
 
 ### Spatial assignment
 
@@ -218,4 +248,6 @@ surfaces as well as equipment.
 | 2026-09-05 | Keep static-light shader topology fixed while moving. | Approved / implemented | Slots remain in each local mesh light list with zero intensity while unused; a fireplace updates uniforms only. This avoids first-use shader recompilation stalls on mobile. |
 | 2026-09-05 | Prepare a newly visible monster asynchronously instead of prewarming every world mob. | Approved / implemented | With `KHR_parallel_shader_compile`, the first skinned clone remains hidden until its material is ready, then may pop in. A tiny creation/upload cost remains acceptable; eager per-world mob warm-up is deferred. |
 | 2026-09-05 | Set final fixed-slot static-light quality budgets. | Approved / implemented | Low uses 4 unshadowed slots; medium uses 6 unshadowed slots; high uses 6 slots with six 1024px shadow maps. A layer mask prevents automatic mesh assignment. |
+| 2026-09-05 | Add configurable wall-torch static metadata. | Approved / implemented | Torch ID 261 stores its wall-facing normal and height relative to the floor, is editable in the GM statics panel, and uses the small-fireplace light profile. |
+| 2026-09-05 | Keep the local Steve model readable through emissive material. | Approved / implemented | Steve reuses his albedo as a `(0.15, 0.15, 0.15)` emissive map rather than using a separate moving fill light, so colours, world shadows and other objects stay unchanged. |
 | 2026-09-05 | Let the personal indoor spotlight follow player brightness. | Approved / implemented | Brightness 1–10 maps linearly to spotlight intensity 3.0–4.0. Static fireplace and torch profiles remain fixed. |

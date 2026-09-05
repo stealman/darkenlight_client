@@ -18,6 +18,31 @@
                 </option>
             </select>
         </div>
+
+        <div style="margin-top: 1vh">
+            <label class="tree-item" :class="{ selected: 'TORCH' === selectedObjectType }" @click="selectObjectType('TORCH')">Torch</label>
+            &nbsp;&nbsp;
+            <select v-if="selectedObjectType === 'TORCH'" @change="selectObject($event.target.value)">
+                <option v-for="obj in objects.filter(s => s.type === 'TORCH')" :key="obj.id" :value="obj.id" :selected="obj.id === selectedObject">
+                    {{ obj.name }}
+                </option>
+            </select>
+        </div>
+
+        <div v-if="selectedObjectType === 'TORCH'" style="margin-top: 1vh">
+            <label>Wall direction</label>
+            &nbsp;&nbsp;
+            <select v-model="torchFacing">
+                <option value="-X">-X</option>
+                <option value="+X">+X</option>
+                <option value="-Z">-Z</option>
+                <option value="+Z">+Z</option>
+            </select>
+            &nbsp;&nbsp;
+            <label>Height above floor</label>
+            &nbsp;&nbsp;
+            <input v-model.number="torchMountHeight" type="number" min="-10" max="10" step="0.1">
+        </div>
     </div>
 </template>
 
@@ -27,10 +52,13 @@ import { ref } from 'vue'
 
 const selectedObjectType = ref("")
 const selectedObject = GMManager.selectedStatic
+const torchFacing = GMManager.torchFacing
+const torchMountHeight = GMManager.torchMountHeight
 
 const objects = [
     { type: "FIREPLACE", name: "Fireplace Small", id: 241 },
     { type: "FIREPLACE", name: "Fireplace Large", id: 242 },
+    { type: "TORCH", name: "Wall Torch", id: 261 },
 ]
 
 const selectObjectType = (type) => {
