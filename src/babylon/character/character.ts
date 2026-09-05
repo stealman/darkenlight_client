@@ -36,10 +36,12 @@ import { OverlayManager } from '@/gui/overlay/overlayManager'
 import { EffectTarget } from '@/babylon/gfx/characterEffect'
 import { GfxManager } from '@/babylon/gfx/gfxManager'
 import { PotionConsumeEffect } from '@/babylon/gfx/potionConsumeEffect'
+import { HitSparkEffect } from '@/babylon/gfx/hitSparkEffect'
 import { WATER_BLOCK_TYPE } from '@/babylon/world/terrainManager'
 import { CharacterActions, CharacterTimedAction } from '@/data/actions/characterActions'
 import { PubliclyVisibleAffect } from '@/data/affects'
 import { GameClass, GameClasses } from '@/data/gameClass'
+import { Monster } from '@/babylon/monsters/monster'
 
 class Character implements Attackable, EffectTarget {
     model: CharacterModel | null = null
@@ -330,6 +332,9 @@ class Character implements Attackable, EffectTarget {
         }
         if (data.res.h === 'h') {
             AudioManager.playWeaponHit(this.weaponSoundType, target.getBodySoundType(), target.pos)
+            if (target instanceof Monster) {
+                GfxManager.addEffect(new HitSparkEffect(target, this.pos))
+            }
         } else if (data.res.h === 'b' && target.getParrySoundType()) {
             AudioManager.playWeaponBlocked(target.getParrySoundType()!, target.pos)
         }
@@ -688,7 +693,7 @@ class Character implements Attackable, EffectTarget {
         return this.model.node
     }
 
-    isEffectVisible(): boolean {
+    isEffectVisible(_includeDying: boolean = false): boolean {
         return this.insideView && !!this.model?.initialized
     }
 }

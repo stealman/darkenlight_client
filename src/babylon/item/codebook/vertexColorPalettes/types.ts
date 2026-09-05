@@ -14,6 +14,8 @@ export interface VertexColorWeaponPalette {
     materialColors: readonly (readonly VertexRgb[])[]
     materialNames: readonly string[]
     slots: readonly VertexColorSlot[]
+    /** Render both sides for models whose GLB contains visible reversed faces. */
+    twoSided?: boolean
 }
 
 export const METAL_WEAPON_MATERIAL_NAMES = ['Steel', 'Pyroxide', 'Geonite', 'Mythril', 'Chaotite']

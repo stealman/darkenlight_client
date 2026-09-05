@@ -13,7 +13,7 @@ import { Renderer } from '@/babylon/scene/renderer'
 import { MyPlayer } from '@/data/myPlayer'
 import { EquipBearer, EquipItem, EquipManager } from '@/babylon/item/equipManager'
 import { BabylonUtils } from '@/babylon/utils'
-import { EquipItemSlots, WeaponTypes } from '@/data/items/item'
+import { EquipItemSlots, WeaponCategories, WeaponTypes } from '@/data/items/item'
 import { Utils } from '@/utils/utils'
 import { AudioUtils } from '@/babylon/audio/audioUtils'
 
@@ -352,8 +352,11 @@ export class CharacterModel implements EquipBearer {
         if (!this.isActive()) return
         let baseAnimSpeed = 1000
         const possibleAnims = []
-        if (this.parent.getWeapon() != null) {
-            switch (this.parent.getWeapon()!.slotInfo.weaponType) {
+        const weapon = this.parent.getWeapon()
+        if (weapon != null) {
+            if (weapon.weaponCategory === WeaponCategories.AXE && weapon.isTwoHanded()) {
+                possibleAnims.push(this.greatAxeAttackAnim)
+            } else switch (weapon.slotInfo!.weaponType) {
                 case WeaponTypes.SWORD: {
                     possibleAnims.push(this.slashAnim)
                     possibleAnims.push(this.slashAnim2)
@@ -363,6 +366,14 @@ export class CharacterModel implements EquipBearer {
                     possibleAnims.push(this.highJabAnim)
                     break
                 }
+                case WeaponTypes.MACE: {
+                    possibleAnims.push(this.slashAnim)
+                    possibleAnims.push(this.slashAnim2)
+                    possibleAnims.push(this.leftSlashAnim)
+                    possibleAnims.push(this.rightSlashAnim)
+                    break
+                }
+                case WeaponTypes.AXE:
                 case WeaponTypes.PICKAXE: {
                     possibleAnims.push(this.greatAxeAttackAnim)
                     break

@@ -3,6 +3,7 @@ import { Scene } from '@babylonjs/core'
 import { VertexColorWeaponPalette, VertexRgb } from './types'
 
 const SOURCE_COLOR_TOLERANCE = 0.003
+const WEAPON_EMISSIVE_STRENGTH = 0.06
 
 function rgbToShader(color: VertexRgb): string {
     return `vec3(${color[0] / 255}, ${color[1] / 255}, ${color[2] / 255})`
@@ -68,10 +69,15 @@ export function createVertexColorWeaponMaterial(name: string, scene: Scene, pale
     `)
     mat.Fragment_Definitions('varying vec3 weaponPaletteColor;')
     mat.Fragment_Custom_Albedo('result = weaponPaletteColor;')
-    mat.metallic = 0.25
+    mat.Fragment_Before_FinalColorComposition(`finalEmissive += weaponPaletteColor * ${WEAPON_EMISSIVE_STRENGTH};`)
+    mat.metallic = 0.35
     mat.roughness = 1
     mat.directIntensity = 1.5
     mat.environmentIntensity = 1
     mat.usePhysicalLightFalloff = false
+    if (palette.twoSided) {
+        mat.backFaceCulling = false
+        mat.twoSidedLighting = true
+    }
     return mat
 }

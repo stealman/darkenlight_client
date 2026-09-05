@@ -268,7 +268,7 @@ export class Monster implements Attackable, EffectTarget {
         return this.model.node
     }
 
-    isEffectVisible(): boolean {
-        return this.insideView && !!this.model?.initialized && !this.killedTime
+    isEffectVisible(includeDying: boolean = false): boolean {
+        return this.insideView && !!this.model?.initialized && (includeDying || !this.killedTime)
     }
 }

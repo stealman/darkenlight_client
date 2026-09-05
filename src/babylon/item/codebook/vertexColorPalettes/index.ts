@@ -1,5 +1,6 @@
 import { AxeVertexColorPalettes } from './axes'
 import { BowVertexColorPalettes } from './bows'
+import { MaceVertexColorPalettes } from './maces'
 import { SwordVertexColorPalettes } from './swords'
 
 /** Weapon codebook keys that currently have a real vertex-colour runtime GLB. */
@@ -8,5 +9,6 @@ export const VertexColorWeaponPalettesByModelKey = {
     BROADSWORD: { palette: SwordVertexColorPalettes.BROADSWORD, inventoryBaseName: 'broadsword' },
     GREATAXE: { palette: AxeVertexColorPalettes.GREATAXE, inventoryBaseName: 'great-axe' },
     PICKAXE: { palette: AxeVertexColorPalettes.PICKAXE, inventoryBaseName: 'pickaxe' },
+    LIGHT_MACE: { palette: MaceVertexColorPalettes.LIGHT_MACE, inventoryBaseName: 'lightmace' },
     HUNTINGBOW: { palette: BowVertexColorPalettes.HUNTING_BOW, inventoryBaseName: 'hunting-bow' },
 }

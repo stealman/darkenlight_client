@@ -118,6 +118,7 @@ export const EquipItemSlots = {
 
 export const WeaponTypes = {
     SWORD: "SWORD",
+    MACE: "MACE",
     AXE: "AXE",
     PICKAXE: "PICKAXE",
     BOW: "BOW",
@@ -140,13 +141,13 @@ export const EquipSlotModelsCb = {
     GREATSWORD: new EquipSlotModel(30, EquipItemSlots.R_HAND, WeaponTypes.SWORD),
 
     HAND_AXE: new EquipSlotModel(110, EquipItemSlots.R_HAND, WeaponTypes.SWORD),
-    BATTLE_AXE: new EquipSlotModel(120, EquipItemSlots.R_HAND, WeaponTypes.SWORD),
+    BATTLE_AXE: new EquipSlotModel(120, EquipItemSlots.R_HAND, WeaponTypes.AXE),
     GREATAXE: new EquipSlotModel(155, EquipItemSlots.R_HAND, WeaponTypes.SWORD),
 
     PICKAXE: new EquipSlotModel(150, EquipItemSlots.R_HAND, WeaponTypes.PICKAXE),
-    LIGHT_MACE: new EquipSlotModel(210, EquipItemSlots.R_HAND, WeaponTypes.SWORD),
-    FLANGED_MACE: new EquipSlotModel(220, EquipItemSlots.R_HAND, WeaponTypes.SWORD),
-    WARHAMMER: new EquipSlotModel(230, EquipItemSlots.R_HAND, WeaponTypes.SWORD),
+    LIGHT_MACE: new EquipSlotModel(210, EquipItemSlots.R_HAND, WeaponTypes.MACE),
+    FLANGED_MACE: new EquipSlotModel(220, EquipItemSlots.R_HAND, WeaponTypes.MACE),
+    WARHAMMER: new EquipSlotModel(230, EquipItemSlots.R_HAND, WeaponTypes.MACE),
 
     HUNTING_SPEAR: new EquipSlotModel(310, EquipItemSlots.R_HAND, WeaponTypes.SWORD),
     WAR_SPEAR: new EquipSlotModel(320, EquipItemSlots.R_HAND, WeaponTypes.SWORD),

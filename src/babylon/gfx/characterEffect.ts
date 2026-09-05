@@ -8,7 +8,7 @@ export interface EffectTarget {
     getBoxSize(): number
     getModelHeight(): number
     getEffectAnchorNode(): TransformNode | null
-    isEffectVisible(): boolean
+    isEffectVisible(includeDying?: boolean): boolean
 }
 
 export interface CharacterEffect {

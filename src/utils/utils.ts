@@ -9,6 +9,10 @@ import { MyPlayer } from '@/data/myPlayer'
 import { CharacterManager } from '@/babylon/character/characterManager'
 import { NpcManager } from '@/babylon/npc/npcManager'
 
+// Keep local terrain collision slightly inside the server-valid movement area.
+// This absorbs the client/server movement tick offset when sliding along cliffs.
+const TERRAIN_COLLISION_MARGIN = 0.2
+
 export const Utils = {
 
     getAttackTargetByTypeAndId(type: string, id: number): Attackable | null {
@@ -35,9 +39,9 @@ export const Utils = {
         return highest
     },
 
-    calculateWalkYPos(x: number, z: number, boxSize: number): number {
+    calculateWalkYPos(x: number, z: number, boxSize: number, terrainMargin: number = 0): number {
         const map = WorldDataManager.getBlockMap()
-        const coveredBlocks = Utils.getCoveredBlocks(x, z, boxSize)
+        const coveredBlocks = Utils.getCoveredBlocks(x, z, boxSize, 1, terrainMargin)
 
         let highest = 0
         coveredBlocks.forEach(block => {
@@ -49,8 +53,8 @@ export const Utils = {
         return highest
     },
 
-    getCoveredBlocks(xPos: number, zPos: number, characterWidth: number, blockSize = 1) {
-        const threshold = blockSize - (characterWidth / 2);
+    getCoveredBlocks(xPos: number, zPos: number, characterWidth: number, blockSize = 1, terrainMargin = 0) {
+        const threshold = blockSize - (characterWidth / 2) + terrainMargin;
 
         const coveredBlocks = [];
         for (let x = Math.floor(xPos) -2; x <= Math.ceil(xPos) + 2; x++) {
@@ -70,7 +74,7 @@ export const Utils = {
 
         //  Check terrain height difference
         const actualY = Utils.calculateWalkYPos(charPos.x, charPos.z, charSize)
-        const targetY = Utils.calculateWalkYPos(targetPos.x, targetPos.z, charSize)
+        const targetY = Utils.calculateWalkYPos(targetPos.x, targetPos.z, charSize, TERRAIN_COLLISION_MARGIN)
         if (Math.abs(targetY - actualY) >= 1.8) {
             return {x: targetPos.x, z: targetPos.z}
         }

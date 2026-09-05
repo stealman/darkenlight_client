@@ -9,6 +9,7 @@ import { EquipSlotModelsCb } from '@/data/items/item'
 import { SwordVertexColorPalettes } from './vertexColorPalettes/swords'
 import { BowVertexColorPalettes } from './vertexColorPalettes/bows'
 import { AxeVertexColorPalettes } from './vertexColorPalettes/axes'
+import { MaceVertexColorPalettes } from './vertexColorPalettes/maces'
 import { createVertexColorWeaponMaterial } from './vertexColorPalettes/vertexColorWeaponMaterial'
 
 const matBowSize = new Vector2(5, 1)
@@ -31,6 +32,7 @@ export const WeaponsCbManager = {
     broadSwordMaterial: null as PBRCustomMaterial | null,
     pickAxeMaterial: null as PBRCustomMaterial | null,
     greatAxeMaterial: null as PBRCustomMaterial | null,
+    lightMaceMaterial: null as PBRCustomMaterial | null,
 
     async initMelee(map: Map<number, EquipItemType>, scene: Scene) {
         this.itemSourceParent = new TransformNode("mobWeaponSources", scene)
@@ -41,12 +43,14 @@ export const WeaponsCbManager = {
         this.broadSwordMaterial = createVertexColorWeaponMaterial('broadswordVertexColor', scene, SwordVertexColorPalettes.BROADSWORD)
         this.pickAxeMaterial = createVertexColorWeaponMaterial('pickaxeVertexColor', scene, AxeVertexColorPalettes.PICKAXE)
         this.greatAxeMaterial = createVertexColorWeaponMaterial('greatAxeVertexColor', scene, AxeVertexColorPalettes.GREATAXE)
+        this.lightMaceMaterial = createVertexColorWeaponMaterial('lightMaceVertexColor', scene, MaceVertexColorPalettes.LIGHT_MACE)
 
         map.set(WeaponModelsCb.LONGSWORD.id, await this.getItem(WeaponModelsCb.LONGSWORD, this.longSwordMaterial))
         map.set(WeaponModelsCb.BROADSWORD.id, await this.getItem(WeaponModelsCb.BROADSWORD, this.broadSwordMaterial))
         map.set(WeaponModelsCb.HUNTINGBOW.id, await this.getItem(WeaponModelsCb.HUNTINGBOW, this.bowMaterial))
         map.set(WeaponModelsCb.PICKAXE.id, await this.getItem(WeaponModelsCb.PICKAXE, this.pickAxeMaterial))
         map.set(WeaponModelsCb.GREATAXE.id, await this.getItem(WeaponModelsCb.GREATAXE, this.greatAxeMaterial))
+        map.set(WeaponModelsCb.LIGHT_MACE.id, await this.getItem(WeaponModelsCb.LIGHT_MACE, this.lightMaceMaterial))
 
         for (const data of FutureWeaponModels) {
             map.set(data.id, await this.getItemOrFallback(data))
@@ -87,46 +91,45 @@ export const WeaponModelsCb = {
 
     BROADSWORD: new EquipCbItem(EquipSlotModelsCb.BROADSWORD.modelId, "broadsword", Vector3.Zero(), new Vector3(0.22, 0.24, 0.4), new Vector3(0, 2, 0), matBroadswordSize),
 
-    GREATSWORD: new EquipCbItem(EquipSlotModelsCb.GREATSWORD.modelId, "greatsword", Vector3.Zero(), new Vector3(0.22, 0.24, 0.4), new Vector3(0, 2.5, 0), matFutureWeaponSize),
+    GREATSWORD: new EquipCbItem(EquipSlotModelsCb.GREATSWORD.modelId, "greatsword", Vector3.Zero(), new Vector3(0.24, 0.24, 0.24), new Vector3(0, 2.5, 0), matFutureWeaponSize),
 
-    HAND_AXE: new EquipCbItem(EquipSlotModelsCb.HAND_AXE.modelId, "handaxe", Vector3.Zero(), new Vector3(0.22, 0.24, 0.4), new Vector3(0, 2, 0), matFutureWeaponSize),
+    HAND_AXE: new EquipCbItem(EquipSlotModelsCb.HAND_AXE.modelId, "handaxe", Vector3.Zero(), new Vector3(0.24, 0.24, 0.24), new Vector3(0, 2, 0), matFutureWeaponSize),
 
-    BATTLE_AXE: new EquipCbItem(EquipSlotModelsCb.BATTLE_AXE.modelId, "battleaxe", Vector3.Zero(), new Vector3(0.22, 0.24, 0.4), new Vector3(0, 2.2, 0), matFutureWeaponSize),
+    BATTLE_AXE: new EquipCbItem(EquipSlotModelsCb.BATTLE_AXE.modelId, "battleaxe", Vector3.Zero(), new Vector3(0.24, 0.24, 0.24), new Vector3(0, 2.2, 0), matFutureWeaponSize),
 
     GREATAXE: new EquipCbItem(EquipSlotModelsCb.GREATAXE.modelId, "greataxe", Vector3.Zero(), new Vector3(0.22, 0.24, 0.4), new Vector3(0, 2.5, 0), matGreatAxeSize),
 
     PICKAXE: new EquipCbItem(EquipSlotModelsCb.PICKAXE.modelId, "pickaxe", Vector3.Zero(), new Vector3(0.22, 0.24, 0.4), new Vector3(0, 2.2, 0), matPickaxeSize),
 
-    LIGHT_MACE: new EquipCbItem(EquipSlotModelsCb.LIGHT_MACE.modelId, "lightmace", Vector3.Zero(), new Vector3(0.22, 0.24, 0.4), new Vector3(0, 2, 0), matFutureWeaponSize),
+    LIGHT_MACE: new EquipCbItem(EquipSlotModelsCb.LIGHT_MACE.modelId, "lightmace", Vector3.Zero(), new Vector3(0.24, 0.24, 0.24), new Vector3(0, 2, 0), matFutureWeaponSize),
 
-    FLANGED_MACE: new EquipCbItem(EquipSlotModelsCb.FLANGED_MACE.modelId, "flangedmace", Vector3.Zero(), new Vector3(0.22, 0.24, 0.4), new Vector3(0, 2.2, 0), matFutureWeaponSize),
+    FLANGED_MACE: new EquipCbItem(EquipSlotModelsCb.FLANGED_MACE.modelId, "flangedmace", Vector3.Zero(), new Vector3(0.24, 0.24, 0.24), new Vector3(0, 2.2, 0), matFutureWeaponSize),
 
-    WARHAMMER: new EquipCbItem(EquipSlotModelsCb.WARHAMMER.modelId, "warhammer", Vector3.Zero(), new Vector3(0.22, 0.24, 0.4), new Vector3(0, 2.5, 0), matFutureWeaponSize),
+    WARHAMMER: new EquipCbItem(EquipSlotModelsCb.WARHAMMER.modelId, "warhammer", Vector3.Zero(), new Vector3(0.24, 0.24, 0.24), new Vector3(0, 2.5, 0), matFutureWeaponSize),
 
-    HUNTING_SPEAR: new EquipCbItem(EquipSlotModelsCb.HUNTING_SPEAR.modelId, "huntingspear", Vector3.Zero(), new Vector3(0.22, 0.24, 0.4), new Vector3(0, 2.8, 0), matFutureWeaponSize),
+    HUNTING_SPEAR: new EquipCbItem(EquipSlotModelsCb.HUNTING_SPEAR.modelId, "huntingspear", Vector3.Zero(), new Vector3(0.24, 0.24, 0.24), new Vector3(0, 2.8, 0), matFutureWeaponSize),
 
-    WAR_SPEAR: new EquipCbItem(EquipSlotModelsCb.WAR_SPEAR.modelId, "warspear", Vector3.Zero(), new Vector3(0.22, 0.24, 0.4), new Vector3(0, 3.1, 0), matFutureWeaponSize),
+    WAR_SPEAR: new EquipCbItem(EquipSlotModelsCb.WAR_SPEAR.modelId, "warspear", Vector3.Zero(), new Vector3(0.24, 0.24, 0.24), new Vector3(0, 3.1, 0), matFutureWeaponSize),
 
-    HALBERD: new EquipCbItem(EquipSlotModelsCb.HALBERD.modelId, "halberd", Vector3.Zero(), new Vector3(0.22, 0.24, 0.4), new Vector3(0, 3, 0), matFutureWeaponSize),
+    HALBERD: new EquipCbItem(EquipSlotModelsCb.HALBERD.modelId, "halberd", Vector3.Zero(), new Vector3(0.24, 0.24, 0.24), new Vector3(0, 3, 0), matFutureWeaponSize),
 
-    KNIFE: new EquipCbItem(EquipSlotModelsCb.KNIFE.modelId, "knife", Vector3.Zero(), new Vector3(0.22, 0.24, 0.4), new Vector3(0, 1.6, 0), matFutureWeaponSize),
+    KNIFE: new EquipCbItem(EquipSlotModelsCb.KNIFE.modelId, "knife", Vector3.Zero(), new Vector3(0.24, 0.24, 0.24), new Vector3(0, 1.6, 0), matFutureWeaponSize),
 
-    STILETTO: new EquipCbItem(EquipSlotModelsCb.STILETTO.modelId, "stiletto", Vector3.Zero(), new Vector3(0.22, 0.24, 0.4), new Vector3(0, 1.8, 0), matFutureWeaponSize),
+    STILETTO: new EquipCbItem(EquipSlotModelsCb.STILETTO.modelId, "stiletto", Vector3.Zero(), new Vector3(0.24, 0.24, 0.24), new Vector3(0, 1.8, 0), matFutureWeaponSize),
 
-    RONDEL: new EquipCbItem(EquipSlotModelsCb.RONDEL.modelId, "rondel", Vector3.Zero(), new Vector3(0.22, 0.24, 0.4), new Vector3(0, 1.9, 0), matFutureWeaponSize),
+    RONDEL: new EquipCbItem(EquipSlotModelsCb.RONDEL.modelId, "rondel", Vector3.Zero(), new Vector3(0.24, 0.24, 0.24), new Vector3(0, 1.9, 0), matFutureWeaponSize),
 
     HUNTINGBOW: new EquipCbItem(EquipSlotModelsCb.HUNTINGBOW.modelId, "hunterbow", new Vector3(-0.1, 0, 0), new Vector3(0.17, 0.24, 0.4), null, matBowSize),
 
-    RECURVE_BOW: new EquipCbItem(EquipSlotModelsCb.RECURVE_BOW.modelId, "recurvebow", new Vector3(-0.1, 0, 0), new Vector3(0.17, 0.24, 0.4), null, matFutureWeaponSize),
+    RECURVE_BOW: new EquipCbItem(EquipSlotModelsCb.RECURVE_BOW.modelId, "recurvebow", new Vector3(-0.1, 0, 0), new Vector3(0.24, 0.24, 0.24), null, matFutureWeaponSize),
 
-    LONGBOW: new EquipCbItem(EquipSlotModelsCb.LONGBOW.modelId, "longbow", new Vector3(-0.1, 0, 0), new Vector3(0.17, 0.24, 0.4), null, matFutureWeaponSize),
+    LONGBOW: new EquipCbItem(EquipSlotModelsCb.LONGBOW.modelId, "longbow", new Vector3(-0.1, 0, 0), new Vector3(0.24, 0.24, 0.24), null, matFutureWeaponSize),
 }
 
 const FutureWeaponModels: EquipCbItem[] = [
     WeaponModelsCb.GREATSWORD,
     WeaponModelsCb.HAND_AXE,
     WeaponModelsCb.BATTLE_AXE,
-    WeaponModelsCb.LIGHT_MACE,
     WeaponModelsCb.FLANGED_MACE,
     WeaponModelsCb.WARHAMMER,
     WeaponModelsCb.HUNTING_SPEAR,
