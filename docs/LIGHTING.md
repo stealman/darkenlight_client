@@ -95,6 +95,17 @@ They use a wide downward spotlight style, placed above the fire or flame to
 illuminate nearby floor and actors. They are unshadowed on low and medium;
 high detail experimentally gives every static slot a small shadow map.
 
+Static-light profiles define their baseline intensity at 75% of the global
+brightness slider. The slider scales static-light intensity linearly from
+`0.25x` at its minimum to `1.25x` at its maximum; range, cone and slot budget
+remain unchanged.
+
+On high detail, fire-based profiles can additionally opt into a smooth,
+deterministic flicker. It varies intensity by at most roughly 9% and moves the
+source only a few centimetres, so the associated high-detail shadow maps move
+naturally without visible stepping or on/off flashing. Low and medium keep
+static lights stable; future non-fire light profiles leave `flicker` disabled.
+
 ### Future wall-torch attachment metadata
 
 > **Status:** approved / implemented.
@@ -248,6 +259,8 @@ surfaces as well as equipment.
 | 2026-09-05 | Keep static-light shader topology fixed while moving. | Approved / implemented | Slots remain in each local mesh light list with zero intensity while unused; a fireplace updates uniforms only. This avoids first-use shader recompilation stalls on mobile. |
 | 2026-09-05 | Prepare a newly visible monster asynchronously instead of prewarming every world mob. | Approved / implemented | With `KHR_parallel_shader_compile`, the first skinned clone remains hidden until its material is ready, then may pop in. A tiny creation/upload cost remains acceptable; eager per-world mob warm-up is deferred. |
 | 2026-09-05 | Set final fixed-slot static-light quality budgets. | Approved / implemented | Low uses 4 unshadowed slots; medium uses 6 unshadowed slots; high uses 6 slots with six 1024px shadow maps. A layer mask prevents automatic mesh assignment. |
+| 2026-09-05 | Let static lights follow global brightness. | Approved / implemented | Fireplace and torch baseline intensity maps to 75% slider brightness; the slider scales intensity from 0.25x to 1.25x without changing light range or budgets. |
+| 2026-09-05 | Add high-detail fire-light flicker. | Approved / implemented | Fireplaces and wall torches use per-source smooth intensity and position variation only on high detail; low and medium remain stable. |
 | 2026-09-05 | Add configurable wall-torch static metadata. | Approved / implemented | Torch ID 261 stores its wall-facing normal and height relative to the floor, is editable in the GM statics panel, and uses the small-fireplace light profile. |
 | 2026-09-05 | Keep the local Steve model readable through emissive material. | Approved / implemented | Steve reuses his albedo as a `(0.15, 0.15, 0.15)` emissive map rather than using a separate moving fill light, so colours, world shadows and other objects stay unchanged. |
 | 2026-09-05 | Let the personal indoor spotlight follow player brightness. | Approved / implemented | Brightness 1–10 maps linearly to spotlight intensity 3.0–4.0. Static fireplace and torch profiles remain fixed. |

@@ -255,7 +255,7 @@ export const Renderer = {
         }
         const defaultEnvironmentIntensity = 0.25 + Settings.brightness * 0.025
         this.scene.environmentIntensity = this.environmentType === 'indoor'
-            ? defaultEnvironmentIntensity / 6
+            ? defaultEnvironmentIntensity / 8
             : defaultEnvironmentIntensity
         this.scene.fogEnabled = this.environmentType !== 'indoor'
 

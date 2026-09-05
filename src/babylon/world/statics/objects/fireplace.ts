@@ -68,6 +68,7 @@ abstract class BaseFireplace extends BaseStaticObject {
             height: 2.25 * this.fireplaceScaleReduced,
             intensity: 2.2 * this.fireplaceScaleReduced,
             range: 7 + (3 * this.fireplaceScaleReduced),
+            flicker: true,
         })
     }
 

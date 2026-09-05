@@ -69,6 +69,7 @@ export class WallTorch extends BaseStaticObject {
             height: 0,
             intensity: 2.2,
             range: 10,
+            flicker: true,
         })
     }
 

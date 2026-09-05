@@ -19,6 +19,7 @@ export interface StaticLightProfile {
     height: number
     intensity: number
     range: number
+    flicker?: boolean
 }
 
 interface StaticLightSource {
@@ -26,6 +27,7 @@ interface StaticLightSource {
     position: Vector3
     profile: StaticLightProfile
     visible: boolean
+    flickerPhase: number
 }
 
 interface StaticLightSlot {
@@ -34,9 +36,11 @@ interface StaticLightSlot {
     source: StaticLightSource | null
     targetIntensity: number
     currentIntensity: number
+    flickerOffset: Vector3
 }
 
 const STATIC_LIGHT_FADE_SECONDS = 0.25
+const STATIC_LIGHT_MIN_BRIGHTNESS_FACTOR = 0.25
 const STATIC_LIGHT_LIMITS = [4, 6, 6]
 const ACTOR_STATIC_LIGHT_LIMIT = 4
 
@@ -55,6 +59,7 @@ export const Lights = {
     localPlayerLightWarmingMeshes: new Set<AbstractMesh>(),
     staticLightShadersWarmed: false,
     staticLightShadersWarming: false,
+    staticLightFlickerTime: 0,
     indoor: false,
 
     // glowLayer: null as GlowLayer,
@@ -70,6 +75,7 @@ export const Lights = {
         this.localPlayerLightWarmingMeshes.clear()
         this.staticLightShadersWarmed = false
         this.staticLightShadersWarming = false
+        this.staticLightFlickerTime = 0
         this.sunLight = new DirectionalLight("sunLight", new Vector3(-0.75, -0.75, 0.3), scene)
         this.sunLight.position = new Vector3(30, 30, 30);
         this.sunLight.diffuse = new Color3(1, 0.91, 0.78)
@@ -162,6 +168,7 @@ export const Lights = {
                 source: null,
                 targetIntensity: 0,
                 currentIntensity: 0,
+                flickerOffset: new Vector3(),
             })
         }
     },
@@ -174,6 +181,7 @@ export const Lights = {
                 position,
                 profile,
                 visible: true,
+                flickerPhase: this.getStaticLightFlickerPhase(id),
             }
             this.staticLights.set(id, source)
         } else {
@@ -202,6 +210,7 @@ export const Lights = {
     },
 
     onFrame(timeRate: number) {
+        this.staticLightFlickerTime += timeRate
         if (this.staticLights.size === 0 || this.staticLightShadersWarming) {
             return
         }
@@ -234,13 +243,22 @@ export const Lights = {
 
         this.staticLightSlots.forEach(slot => {
             const active = slot.source != null && activeSources.has(slot.source)
-            slot.targetIntensity = active ? slot.source!.profile.intensity : 0
+            const flickerIntensity = active && this.shouldFlicker(slot.source!)
+                ? this.getStaticLightFlickerIntensity(slot.source!)
+                : 1
+            slot.targetIntensity = active ? slot.source!.profile.intensity * this.getStaticLightBrightnessFactor() * flickerIntensity : 0
 
             if (slot.source != null) {
+                const flickerPosition = slot.flickerOffset
+                if (this.shouldFlicker(slot.source!)) {
+                    this.updateStaticLightFlickerPosition(slot.source!, flickerPosition)
+                } else {
+                    flickerPosition.set(0, 0, 0)
+                }
                 slot.light.position.set(
-                    slot.source.position.x,
-                    slot.source.position.y + slot.source.profile.height,
-                    slot.source.position.z,
+                    slot.source.position.x + flickerPosition.x,
+                    slot.source.position.y + slot.source.profile.height + flickerPosition.y,
+                    slot.source.position.z + flickerPosition.z,
                 )
                 slot.light.range = slot.source.profile.range
                 if (slot.shadow != null) {
@@ -449,6 +467,41 @@ export const Lights = {
         if (current < target) return Math.min(current + amount * target, target)
         if (current > target) return Math.max(current - amount, target)
         return current
+    },
+
+    getStaticLightBrightnessFactor(): number {
+        const brightness = Math.min(10, Math.max(1, Settings.brightness))
+        return STATIC_LIGHT_MIN_BRIGHTNESS_FACTOR + ((brightness - 1) / 9)
+    },
+
+    shouldFlicker(source: StaticLightSource): boolean {
+        return Settings.isDetalLevelHigh() && source.profile.flicker === true
+    },
+
+    getStaticLightFlickerPhase(id: string): number {
+        let hash = 0
+        for (let i = 0; i < id.length; i++) {
+            hash = ((hash * 31) + id.charCodeAt(i)) | 0
+        }
+        return Math.abs(hash) * 0.017
+    },
+
+    getStaticLightFlickerIntensity(source: StaticLightSource): number {
+        const time = this.staticLightFlickerTime
+        const phase = source.flickerPhase
+        return 1
+            + (Math.sin((time * 5.3) + phase) * 0.055)
+            + (Math.sin((time * 9.1) + (phase * 1.7)) * 0.035)
+    },
+
+    updateStaticLightFlickerPosition(source: StaticLightSource, position: Vector3) {
+        const time = this.staticLightFlickerTime
+        const phase = source.flickerPhase
+        position.set(
+            (Math.sin((time * 3.7) + phase) * 0.007) + (Math.sin((time * 6.1) + (phase * 1.4)) * 0.003),
+            Math.sin((time * 4.3) + (phase * 0.8)) * 0.004,
+            (Math.cos((time * 4.1) + phase) * 0.007) + (Math.cos((time * 6.7) + (phase * 1.6)) * 0.003),
+        )
     },
 
     async warmUpStaticLightShaders(meshes: Array<Mesh | AbstractMesh>) {
