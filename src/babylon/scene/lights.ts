@@ -37,7 +37,7 @@ export const Lights = {
         )
         this.personalLight.diffuse = new Color3(1, 0.82, 0.58)
         this.personalLight.specular = new Color3(1, 0.82, 0.58)
-        this.personalLight.intensity = 3
+        this.personalLight.intensity = 4
         this.personalLight.range = 18
 
         if (Settings.isShadowsEnabled()) {

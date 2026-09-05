@@ -191,6 +191,7 @@ export const MessageProcessor = {
     processWorldData(data) {
         const worldChanged = MyPlayer.worldId !== data.id
         const environmentType = data.environment?.type
+        MiniMap.setEnvironmentType(environmentType)
         if (Renderer.environmentType !== (environmentType === 'indoor' ? 'indoor' : 'outdoor')) {
             Renderer.setWorldEnvironmentType(environmentType)
         }

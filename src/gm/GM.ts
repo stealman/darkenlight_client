@@ -28,6 +28,8 @@ export const GmTabs = {
     NPCS_EDIT: 'npcs_edit'
 }
 
+export const VOID_TERRAIN_SELECTION = 102
+
 export const GMManager = {
     gmPanelVisible: ref(false),
     consumePointerMoveEvents: false,
@@ -76,6 +78,11 @@ export const GMManager = {
             const lowestHeight = this.getLowestAffectedBlockHeight(markerPos, this.affectedSize.value)
             const highestHeight = this.getHighestAffectedBlockHeight(markerPos, this.affectedSize.value)
             const sanitizedMinable = this.getSanitizedMinableValue()
+            const materializeGeneratedWall = this.terrainEditMode.value === 'terrain'
+                && this.selectedTerrain.value !== 0
+                && this.selectedTerrain.value !== 100
+                && this.selectedTerrain.value !== 101
+                && this.selectedTerrain.value !== VOID_TERRAIN_SELECTION
 
             for (let offsetX = -halfSize; offsetX <= halfSize; offsetX++) {
                 for (let offsetZ = -halfSize; offsetZ <= halfSize; offsetZ++) {
@@ -107,7 +114,7 @@ export const GMManager = {
                         } else if (this.selectedTerrain.value == 101) {
                             snowed = false
                         } else {
-                            type = this.selectedTerrain.value
+                            type = this.selectedTerrain.value === VOID_TERRAIN_SELECTION ? 0 : this.selectedTerrain.value
                         }
                     }
 
@@ -117,7 +124,8 @@ export const GMManager = {
                         height: height,
                         type: type,
                         snowed: snowed,
-                        minable: minable
+                        minable: minable,
+                        materializeGeneratedWall: materializeGeneratedWall
                     })
                 }
             }

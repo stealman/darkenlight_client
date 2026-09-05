@@ -191,6 +191,8 @@ export const Controller = {
         const pickResult = scene.pick(clientX, clientY)
         if (pickResult && pickResult.hit && pickResult.pickedPoint) {
             GMSceneManager.updateHoverBlockMarker(pickResult.pickedPoint.x, pickResult.pickedPoint.z)
+        } else if (pickResult?.ray) {
+            GMSceneManager.updateHoverBlockMarkerFromRay(pickResult.ray)
         }
 
         this.lastPointerMove = { x: clientX, y: clientY }

@@ -229,7 +229,7 @@ export const Renderer = {
 
     createScene(engine: Engine) {
         this.scene = new Scene(engine)
-        this.scene.clearColor = new Color4(0, 0, 0)
+        this.scene.clearColor = new Color4(0, 0, 0, 1)
         this.scene.imageProcessingConfiguration.exposure = 1.2
         this.scene.skipPointerMovePicking = true
         this.scene.autoClear = false
@@ -253,7 +253,7 @@ export const Renderer = {
         }
         const defaultEnvironmentIntensity = 0.25 + Settings.brightness * 0.025
         this.scene.environmentIntensity = this.environmentType === 'indoor'
-            ? defaultEnvironmentIntensity / 5
+            ? defaultEnvironmentIntensity / 6
             : defaultEnvironmentIntensity
         this.scene.fogEnabled = this.environmentType !== 'indoor'
 

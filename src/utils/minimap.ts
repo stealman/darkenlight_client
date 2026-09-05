@@ -11,6 +11,11 @@ export const MiniMap = {
     maxHeight: 32,
     grassColorMap: [] as string[],
     snowColorMap: [] as string[],
+    environmentType: 'outdoor' as 'outdoor' | 'indoor',
+
+    setEnvironmentType(environmentType?: string | null) {
+        this.environmentType = environmentType === 'indoor' ? 'indoor' : 'outdoor'
+    },
 
     initialize() {
         //const blockMap: MapBlock[][] = WorldDataManager.getBlockMap()
@@ -53,7 +58,9 @@ export const MiniMap = {
                 const type = parseInt(data[1])
                 const snowed  = data[3] === "S"
 
-                if (height < 5) {
+                if (this.environmentType === 'indoor' && type === 0) {
+                    offScreenContext.fillStyle = "#000000"
+                } else if (height < 5) {
                     offScreenContext.fillStyle = waterColor
                 } else {
                     offScreenContext.fillStyle = dirtColor

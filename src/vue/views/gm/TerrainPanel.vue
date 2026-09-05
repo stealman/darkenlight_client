@@ -37,6 +37,13 @@
             @click="selectTerrain(unsnow.id)">
             <span style="color: red; font-size: 2rem; position: relative; top: 0.75rem;">X</span>
         </div>
+        <div
+            class="terrain-tile void-tile"
+            :class="{ selected: terrainEditMode === 'terrain' && voidTerrain.id === selectedTerrain }"
+            :style="{ backgroundColor: '#000000' }"
+            title="Void"
+            @click="selectTerrain(voidTerrain.id)"
+        />
     </div>
 
     <div style="margin-top: 2vh; display: flex; align-items: center; gap: 0.75rem;">
@@ -71,7 +78,7 @@
 
 <script setup>
 
-import { GMManager } from '@/gm/GM'
+import { GMManager, VOID_TERRAIN_SELECTION } from '@/gm/GM'
 
 // Terrrain edit constants
 const TERRAIN_TILE_SIZE = 128
@@ -93,6 +100,7 @@ const terrains = [
 ]
 const snow = { id: 100, x: 4.5, y: 0.5 }
 const unsnow = { id: 101, x: 4.5, y: 0.5 }
+const voidTerrain = { id: VOID_TERRAIN_SELECTION }
 
 const getTerrainStyle = (t) => ({
     backgroundImage: 'url(/images/materials/plane_materials1.png)',
