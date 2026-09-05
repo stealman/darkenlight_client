@@ -32,7 +32,7 @@ export const StaticsManager = {
 
     addAllShadowCasters() {
         Object.values(this.prefabs).forEach(prefab => {
-            Lights.addShadowCaster(prefab!.mesh)
+            Lights.addShadowCaster(prefab!.mesh, true, true)
         })
     },
 
@@ -101,6 +101,7 @@ export const StaticsManager = {
     },
 
     clearWorld() {
+        Lights.clearStaticLights()
         this.allStatics.forEach((obj) => obj.dispose())
         this.allStatics = []
         this.visibleStatics = []

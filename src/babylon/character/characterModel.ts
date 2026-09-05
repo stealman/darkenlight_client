@@ -104,6 +104,10 @@ export class CharacterModel implements EquipBearer {
             this.model.getChildMeshes().forEach((mesh) => {
                 mesh.material = material
                 Lights.addShadowCaster(mesh)
+                Lights.registerActorLightMesh(mesh)
+                if (this.parent.isMyChar()) {
+                    void Lights.warmLocalPlayerLightMaterial(mesh)
+                }
                 mesh.receiveShadows = true
             });
 
@@ -649,6 +653,7 @@ export class CharacterModel implements EquipBearer {
 
     removeFromScene() {
         this.removeFromView()
+        this.model?.getChildMeshes().forEach(mesh => Lights.unregisterActorLightMesh(mesh))
         this.model?.dispose()
         this.node.dispose()
         this.disposeWeaponTrail()

@@ -96,6 +96,7 @@ export const Renderer = {
 
         Controller.initializeController(this.scene)
         Materials.initialize(this.scene)
+        Lights.configureStaticLightMaterials()
         WorldRenderer.initialize(this.scene)
         WeatherManager.initialize()
         StepMarksRenderer.initialize(this.scene)
@@ -161,6 +162,7 @@ export const Renderer = {
 
             MyPlayer.onFrame(timeRate, actualTime)
             WorldRenderer.checkRenderWorld()
+            Lights.onFrame(timeRate)
             CharacterManager.onFrame(timeRate, actualTime, this.frame)
             NpcManager.onFrame(timeRate, actualTime, this.frame)
             MonsterManager.onFrame(timeRate, actualTime, this.frame)

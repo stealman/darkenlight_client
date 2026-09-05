@@ -22,7 +22,7 @@ export const TreeManager = {
 
     addAllShadowCasters() {
         Object.values(this.prefabs).forEach(prefab => {
-            Lights.addShadowCaster(prefab!.mesh)
+            Lights.addShadowCaster(prefab!.mesh, true, true)
         })
     },
 

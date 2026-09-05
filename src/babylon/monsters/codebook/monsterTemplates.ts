@@ -78,12 +78,13 @@ export class MonsterTemplate {
 
         clone.skeleton = entries.skeletons[0]
         clone.mesh!.skeleton = entries.skeletons[0]
-        clone.mesh!.isPickable = true
+            clone.mesh!.isPickable = true
 
         clone.animation = entries.animationGroups[0]
 
         this.clonesAct.push(clone)
         Lights.addShadowCaster(clone.mesh)
+        Lights.registerActorLightMesh(clone.mesh)
         return clone
     }
 
@@ -114,6 +115,7 @@ export class MonsterTemplate {
         if (this.clonesToReuse.length > MonsterTemplate.MAX_REUSABLE_CLONES) {
             const disposableClone = this.clonesToReuse.shift()!
             Lights.removeShadowCaster(disposableClone.mesh)
+            Lights.unregisterActorLightMesh(disposableClone.mesh)
             disposableClone.animation.stop()
             disposableClone.animation.dispose()
             disposableClone.skeleton.dispose()

@@ -44,11 +44,11 @@ export const WorldRenderer = {
         StaticsManager.initialize(scene)
         FoliageManager.initialize(scene, this.worldParentNode)
 
-        Lights.addShadowCaster(TerrainManager.terrainBlock1!)
-        Lights.addShadowCaster(TerrainManager.terrainPlane!)
-        Lights.addShadowCaster(TerrainManager.terrainWaterPlane!)
-        Lights.addShadowCaster(this.block1.mesh)
-        Lights.addShadowCaster(this.blockWithAlpha1.mesh)
+        Lights.addShadowCaster(TerrainManager.terrainBlock1!, true, true)
+        Lights.addShadowCaster(TerrainManager.terrainPlane!, true, true)
+        Lights.addShadowCaster(TerrainManager.terrainWaterPlane!, true, true)
+        Lights.addShadowCaster(this.block1.mesh, true, true)
+        Lights.addShadowCaster(this.blockWithAlpha1.mesh, true, true)
         TreeManager.addAllShadowCasters()
         StaticsManager.addAllShadowCasters()
     },
@@ -93,6 +93,13 @@ export const WorldRenderer = {
 
         this.blockWithAlpha1!.setThinInstanceBuffers()
         this.blockWithAlpha1!.mesh.thinInstanceRefreshBoundingInfo(false);
+
+        void Lights.warmUpStaticLightShaders([
+            TerrainManager.terrainBlock1!,
+            TerrainManager.terrainPlane!,
+            this.block1!.mesh,
+            this.blockWithAlpha1!.mesh,
+        ])
     }
 }
 

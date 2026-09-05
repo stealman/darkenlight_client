@@ -1,11 +1,13 @@
-import { Color4, Matrix, ParticleSystem, Texture, TransformNode, Vector2, Vector3 } from '@babylonjs/core'
+import { Color3, Color4, Matrix, ParticleSystem, Texture, TransformNode, Vector2, Vector3 } from '@babylonjs/core'
 import { MaterialEnum1 } from '@/babylon/materials'
+import { Lights } from '@/babylon/scene/lights'
 import { Renderer } from '@/babylon/scene/renderer'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { BaseStaticObject } from '@/babylon/world/statics/objects/baseStaticObject'
 
 const FULL_CIRCLE = Math.PI * 2
 const FIREPLACE_LOG_COUNT = 7
+const FIREPLACE_LIGHT_COLOR = new Color3(1, 0.5, 0.18)
 
 abstract class BaseFireplace extends BaseStaticObject {
     fireplaceScale: number
@@ -54,6 +56,19 @@ abstract class BaseFireplace extends BaseStaticObject {
         }
 
         this.particleEmitter.position.set(this.renderPosition.x, this.renderPosition.y + (0.12 * this.fireplaceScaleReduced), this.renderPosition.z)
+    }
+
+    private getLightId(): string {
+        return `fireplace_${this.type}_${this.position.x}_${this.position.z}`
+    }
+
+    private registerLight() {
+        Lights.registerStaticLight(this.getLightId(), this.renderPosition, {
+            color: FIREPLACE_LIGHT_COLOR,
+            height: 2.25 * this.fireplaceScaleReduced,
+            intensity: 2.2 * this.fireplaceScaleReduced,
+            range: 7 + (3 * this.fireplaceScaleReduced),
+        })
     }
 
     private createParticles() {
@@ -126,6 +141,7 @@ abstract class BaseFireplace extends BaseStaticObject {
     onVisible() {
         this.createParticles()
         this.updateParticleEmitterPosition()
+        this.registerLight()
     }
 
     onHidden() {
@@ -133,6 +149,7 @@ abstract class BaseFireplace extends BaseStaticObject {
     }
 
     dispose() {
+        Lights.unregisterStaticLight(this.getLightId())
         this.fireParticles?.dispose()
         this.smokeParticles?.dispose()
         this.particleEmitter?.dispose()

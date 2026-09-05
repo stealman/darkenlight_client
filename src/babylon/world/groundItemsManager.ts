@@ -92,6 +92,7 @@ export const GroundItemsManager = {
             groundMesh.thinInstanceCount = 0
 
             Lights.addShadowCaster(groundMesh)
+            Lights.registerDynamicLightMesh(groundMesh, () => MyPlayer.myChar?.pos || null)
             this.itemTypes.set(modelId, new GroundItemType(modelId, equipType.cbData, groundMesh))
         })
 
@@ -252,6 +253,7 @@ export const GroundItemsManager = {
         mesh.setEnabled(false)
 
         Lights.addShadowCaster(mesh)
+        Lights.registerDynamicLightMesh(mesh, () => MyPlayer.myChar?.pos || null)
         const type = new GroundFlatItemType(texturePath, mesh, material)
         this.flatItemTypes.set(texturePath, type)
         return type
