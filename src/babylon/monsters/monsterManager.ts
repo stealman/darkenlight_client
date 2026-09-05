@@ -49,7 +49,7 @@ export const MonsterManager = {
 
             // If monster is in view, initialize model immediately
             if (monster.insideView) {
-                monsterModel.initializeModel()
+                monsterModel.addToView()
             }
 
             if (ef) monster.consumePubliclyVisibleAffects(ef)

@@ -30,13 +30,14 @@ interface StaticLightSource {
 
 interface StaticLightSlot {
     light: SpotLight
+    shadow: ShadowGenerator | null
     source: StaticLightSource | null
     targetIntensity: number
     currentIntensity: number
 }
 
 const STATIC_LIGHT_FADE_SECONDS = 0.25
-const STATIC_LIGHT_LIMITS = [0, 4, 6]
+const STATIC_LIGHT_LIMITS = [4, 6, 6]
 const ACTOR_STATIC_LIGHT_LIMIT = 4
 
 export const Lights = {
@@ -44,9 +45,12 @@ export const Lights = {
     sunLight: {} as DirectionalLight,
     personalLight: {} as SpotLight,
     personalShadow: {} as ShadowGenerator,
+    staticShadowGenerators: [] as ShadowGenerator[],
     staticLights: new Map<string, StaticLightSource>(),
     staticLightSlots: [] as StaticLightSlot[],
+    sharedLightMeshes: new Set<AbstractMesh>(),
     actorLightMeshes: new Set<AbstractMesh>(),
+    actorMaterialWarmups: new WeakMap<Material, Promise<void>>(),
     localPlayerLightWarmups: new WeakMap<Material, Promise<void>>(),
     localPlayerLightWarmingMeshes: new Set<AbstractMesh>(),
     staticLightShadersWarmed: false,
@@ -58,7 +62,10 @@ export const Lights = {
     initialize(scene: Scene) {
         this.staticLights.clear()
         this.staticLightSlots = []
+        this.staticShadowGenerators = []
+        this.sharedLightMeshes.clear()
         this.actorLightMeshes.clear()
+        this.actorMaterialWarmups = new WeakMap<Material, Promise<void>>()
         this.localPlayerLightWarmups = new WeakMap<Material, Promise<void>>()
         this.localPlayerLightWarmingMeshes.clear()
         this.staticLightShadersWarmed = false
@@ -109,6 +116,7 @@ export const Lights = {
 
     configureStaticLightMaterials() {
         const staticLightLimit = STATIC_LIGHT_LIMITS[Settings.detailLevel.level - 1]
+        const useStaticShadows = Settings.isDetalLevelHigh() && Settings.isShadowsEnabled()
         const maxLights = staticLightLimit + 1
         Materials.terrainMaterial!.maxSimultaneousLights = maxLights
         Materials.planeMaterial!.maxSimultaneousLights = maxLights
@@ -127,11 +135,30 @@ export const Lights = {
             light.intensity = 0
             light.range = 1
             light.renderPriority = 1
-            light.shadowEnabled = false
-            light.setEnabled(false)
+            // Shadow maps only render correctly for an enabled Babylon light.
+            // Exclude every ordinary scene mesh so enabling the fixed slot does
+            // not automatically attach it anywhere; shared/actor lists below
+            // remain the sole source of light assignment.
+            light.excludeWithLayerMask = 0xffffffff
+            light.shadowEnabled = useStaticShadows
+            light.setEnabled(true)
+
+            let shadow: ShadowGenerator | null = null
+            if (useStaticShadows) {
+                shadow = new ShadowGenerator(1024, light, false)
+                shadow.bias = 0.005
+                shadow.setDarkness(0)
+                shadow.usePoissonSampling = true
+                shadow.forceBackFacesOnly = true
+                shadow.frustumEdgeFalloff = 0.3
+                light.shadowMinZ = 0.05
+                light.shadowMaxZ = 12
+                this.staticShadowGenerators.push(shadow)
+            }
 
             this.staticLightSlots.push({
                 light,
+                shadow,
                 source: null,
                 targetIntensity: 0,
                 currentIntensity: 0,
@@ -170,8 +197,8 @@ export const Lights = {
             slot.currentIntensity = 0
             slot.targetIntensity = 0
             slot.light.intensity = 0
-            slot.light.setEnabled(false)
         })
+        this.updateSharedLightMeshes()
     },
 
     onFrame(timeRate: number) {
@@ -216,13 +243,15 @@ export const Lights = {
                     slot.source.position.z,
                 )
                 slot.light.range = slot.source.profile.range
+                if (slot.shadow != null) {
+                    slot.light.shadowMaxZ = slot.source.profile.range
+                }
             }
 
             slot.currentIntensity = this.moveTowards(slot.currentIntensity, slot.targetIntensity, timeRate / STATIC_LIGHT_FADE_SECONDS)
             slot.light.intensity = slot.currentIntensity
 
             if (slot.currentIntensity === 0 && slot.targetIntensity === 0) {
-                slot.light.setEnabled(false)
                 slot.source = null
             }
         })
@@ -233,18 +262,60 @@ export const Lights = {
             }
         })
 
+        this.updateSharedLightMeshes()
         this.updateActorLightMeshes()
 
     },
 
     registerDynamicLightMesh(mesh: AbstractMesh, _positionResolver?: () => Vector3 | null) {
+        this.registerSharedLightMesh(mesh)
+    },
+
+    unregisterDynamicLightMesh(mesh: AbstractMesh) {
+        this.unregisterSharedLightMesh(mesh)
+    },
+
+    registerSharedLightMesh(mesh: AbstractMesh) {
         const material = mesh.material as (Material & { maxSimultaneousLights?: number }) | null
         if (material != null && 'maxSimultaneousLights' in material) {
             material.maxSimultaneousLights = STATIC_LIGHT_LIMITS[Settings.detailLevel.level - 1] + 1
         }
+        this.sharedLightMeshes.add(mesh)
+        this.updateSharedLightMesh(mesh)
     },
 
-    unregisterDynamicLightMesh(_mesh: AbstractMesh) {},
+    unregisterSharedLightMesh(mesh: AbstractMesh) {
+        this.sharedLightMeshes.delete(mesh)
+    },
+
+    updateSharedLightMeshes() {
+        this.sharedLightMeshes.forEach(mesh => {
+            if (mesh.isDisposed()) {
+                this.sharedLightMeshes.delete(mesh)
+                return
+            }
+            this.updateSharedLightMesh(mesh)
+        })
+    },
+
+    updateSharedLightMesh(mesh: AbstractMesh) {
+        const baseLight = this.indoor ? this.personalLight : this.sunLight
+        // Keep the light topology fixed while the player is indoors. Adding or
+        // removing a light source dirties the material's light defines and can
+        // force an on-demand shader compile on mobile. Empty slots have zero
+        // intensity, so they are visually inert until a fireplace claims them.
+        const staticLights = this.indoor
+            ? this.staticLightSlots.map(slot => slot.light)
+            : []
+        const selectedLights = baseLight.isEnabled() ? [baseLight, ...staticLights] : staticLights
+        const currentLights = mesh.lightSources
+
+        if (currentLights.length === selectedLights.length && currentLights.every((light, index) => light === selectedLights[index])) {
+            return
+        }
+        mesh._lightSources = selectedLights
+        mesh._markSubMeshesAsLightDirty()
+    },
 
     registerActorLightMesh(mesh: AbstractMesh) {
         const material = mesh.material as (Material & { maxSimultaneousLights?: number }) | null
@@ -257,6 +328,29 @@ export const Lights = {
 
     unregisterActorLightMesh(mesh: AbstractMesh) {
         this.actorLightMeshes.delete(mesh)
+    },
+
+    supportsParallelShaderCompilation(): boolean {
+        return this.sunLight.getScene().getEngine().getCaps().parallelShaderCompile != null
+    },
+
+    warmActorMaterial(mesh: AbstractMesh): Promise<void> {
+        const material = mesh.material
+        if (material == null || !this.supportsParallelShaderCompilation()) {
+            return Promise.resolve()
+        }
+
+        const existingWarmup = this.actorMaterialWarmups.get(material)
+        if (existingWarmup != null) {
+            return existingWarmup
+        }
+
+        const warmup = material.forceCompilationAsync(mesh)
+            .catch(error => {
+                console.warn('Monster light shader warm-up failed', error)
+            })
+        this.actorMaterialWarmups.set(material, warmup)
+        return warmup
     },
 
     updateActorLightMeshes() {
@@ -277,13 +371,20 @@ export const Lights = {
         }
         const baseLight = this.indoor ? this.personalLight : this.sunLight
         const meshPosition = mesh.getAbsolutePosition()
-        const nearestStaticLights = this.staticLightSlots
+        const selectedStaticSlots = this.staticLightSlots
             .filter(slot => slot.source != null && slot.currentIntensity > 0)
-            .filter(slot => Vector3.DistanceSquared(slot.light.position, meshPosition) <= slot.light.range ** 2)
+            .filter(slot => Vector3.DistanceSquared(slot.light.position, meshPosition) <= Math.pow(slot.light.range, 2))
             .sort((a, b) => Vector3.DistanceSquared(a.light.position, meshPosition) - Vector3.DistanceSquared(b.light.position, meshPosition))
             .slice(0, ACTOR_STATIC_LIGHT_LIMIT)
-            .map(slot => slot.light)
-        const selectedLights = baseLight.isEnabled() ? [baseLight, ...nearestStaticLights] : nearestStaticLights
+        // Pad with inert slots. The list always has four static-light entries,
+        // so changing the nearest sources preserves the compiled shader shape.
+        const staticLights = this.indoor
+            ? [
+                ...selectedStaticSlots,
+                ...this.staticLightSlots.filter(slot => !selectedStaticSlots.includes(slot)),
+            ].slice(0, ACTOR_STATIC_LIGHT_LIMIT).map(slot => slot.light)
+            : []
+        const selectedLights = baseLight.isEnabled() ? [baseLight, ...staticLights] : staticLights
         const currentLights = mesh.lightSources
 
         if (currentLights.length === selectedLights.length && currentLights.every((light, index) => light === selectedLights[index])) {
@@ -316,11 +417,9 @@ export const Lights = {
         const originalLightSources = mesh.lightSources.slice()
         this.localPlayerLightWarmingMeshes.add(mesh)
         try {
-            for (let count = 0; count <= Math.min(ACTOR_STATIC_LIGHT_LIMIT, this.staticLightSlots.length); count++) {
-                mesh._lightSources = [this.personalLight, ...this.staticLightSlots.slice(0, count).map(slot => slot.light)]
-                mesh._markSubMeshesAsLightDirty()
-                await material.forceCompilationAsync(mesh)
-            }
+            mesh._lightSources = [this.personalLight, ...this.staticLightSlots.slice(0, ACTOR_STATIC_LIGHT_LIMIT).map(slot => slot.light)]
+            mesh._markSubMeshesAsLightDirty()
+            await material.forceCompilationAsync(mesh)
         } catch (error) {
             console.warn('Local player light shader warm-up failed', error)
         } finally {
@@ -339,9 +438,11 @@ export const Lights = {
         slot.targetIntensity = 0
         slot.light.position.set(source.position.x, source.position.y + source.profile.height, source.position.z)
         slot.light.range = source.profile.range
+        if (slot.shadow != null) {
+            slot.light.shadowMaxZ = source.profile.range
+        }
         slot.light.diffuse = source.profile.color
         slot.light.specular = source.profile.color
-        slot.light.setEnabled(true)
     },
 
     moveTowards(current: number, target: number, amount: number): number {
@@ -355,25 +456,27 @@ export const Lights = {
             return
         }
 
+        meshes.forEach(mesh => this.registerSharedLightMesh(mesh))
         this.staticLightShadersWarming = true
         try {
-            for (let count = 0; count <= this.staticLightSlots.length; count++) {
-                await this.warmUpStaticLightShaderVariant(meshes, this.staticLightSlots.slice(0, count))
-            }
+            await this.warmUpStaticLightShaderVariant(meshes, this.staticLightSlots)
 
-            this.staticLightSlots.forEach(slot => slot.light.setEnabled(false))
             this.staticLightShadersWarmed = true
         } catch (error) {
             console.warn('Static light shader warm-up failed', error)
         } finally {
-            this.staticLightSlots.forEach(slot => slot.light.setEnabled(false))
+            this.updateSharedLightMeshes()
             this.staticLightShadersWarming = false
         }
     },
 
     async warmUpStaticLightShaderVariant(meshes: Array<Mesh | AbstractMesh>, enabledSlots: StaticLightSlot[]) {
-        const enabled = new Set(enabledSlots)
-        this.staticLightSlots.forEach(slot => slot.light.setEnabled(enabled.has(slot)))
+        const baseLight = this.indoor ? this.personalLight : this.sunLight
+        const selectedLights = baseLight.isEnabled() ? [baseLight, ...enabledSlots.map(slot => slot.light)] : enabledSlots.map(slot => slot.light)
+        meshes.forEach(mesh => {
+            mesh._lightSources = selectedLights
+            mesh._markSubMeshesAsLightDirty()
+        })
         await Promise.all(meshes.map(mesh => mesh.material?.forceCompilationAsync(mesh, {useInstances: true})))
     },
 
@@ -383,26 +486,34 @@ export const Lights = {
         this.personalLight.direction = new Vector3(0, -1, 0)
     },
 
-    addShadowCaster(mesh: Mesh | AbstractMesh, castPersonalShadow: boolean = true, _castStaticShadow: boolean = false) {
+    addShadowCaster(mesh: Mesh | AbstractMesh, castPersonalShadow: boolean = true, castStaticShadow: boolean = false) {
         if (Settings.isShadowsEnabled()) {
             Lights.shadow.addShadowCaster(mesh)
             if (castPersonalShadow) {
                 Lights.personalShadow.addShadowCaster(mesh)
             }
+            if (castStaticShadow) {
+                Lights.staticShadowGenerators.forEach(shadow => shadow.addShadowCaster(mesh))
+            }
         }
     },
 
-    removeShadowCaster(mesh: Mesh | AbstractMesh, castPersonalShadow: boolean = true, _castStaticShadow: boolean = false) {
+    removeShadowCaster(mesh: Mesh | AbstractMesh, castPersonalShadow: boolean = true, castStaticShadow: boolean = false) {
         if (Settings.isShadowsEnabled()) {
             Lights.shadow.removeShadowCaster(mesh)
             if (castPersonalShadow) {
                 Lights.personalShadow.removeShadowCaster(mesh)
+            }
+            if (castStaticShadow) {
+                Lights.staticShadowGenerators.forEach(shadow => shadow.removeShadowCaster(mesh))
             }
         }
     },
 
     brightnessChanged() {
         this.sunLight.intensity = this.indoor ? 0 : 0.5 + Settings.brightness * 0.05
+        const brightness = Math.min(10, Math.max(1, Settings.brightness))
+        this.personalLight.intensity = 3 + ((brightness - 1) / 9)
     },
 
     setIndoor(indoor: boolean) {
@@ -411,5 +522,7 @@ export const Lights = {
         this.personalLight.setEnabled?.(indoor)
         this.brightnessChanged()
         this.sunLight.getScene?.().markAllMaterialsAsDirty(Material.LightDirtyFlag)
+        this.updateSharedLightMeshes()
+        this.updateActorLightMeshes()
     }
 }

@@ -16,11 +16,14 @@ import { WorldDataManager } from '@/data/worldDataManager'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { TerrainManager } from '@/babylon/world/terrainManager'
 import { Settings } from '@/settings/settings'
+import { Lights } from '@/babylon/scene/lights'
 
 export class MonsterModel implements EquipBearer {
     parent: Monster
     type: MonsterType
     initialized: boolean = false
+    viewRequested: boolean = false
+    preparingFirstView: boolean = false
     node: Mesh
     mesh: Mesh
     nameTextNode: TransformNode
@@ -239,7 +242,44 @@ export class MonsterModel implements EquipBearer {
     }
 
     addToView() {
-        if (!this.initialized) this.initializeModel()
+        this.viewRequested = true
+        const initializedNow = !this.initialized
+        if (initializedNow) {
+            this.initializeModel()
+
+            // On drivers exposing KHR_parallel_shader_compile, do not let the
+            // first skinned render stall the game. The clone stays hidden until
+            // the exact body-material/light variant is ready. It may pop in a
+            // little later, which is preferable to a frame hitch.
+            if (Lights.supportsParallelShaderCompilation()) {
+                this.preparingFirstView = true
+                this.node.setEnabled(false)
+                this.mesh.setEnabled(false)
+                this.equipSet.forEach(item => EquipManager.removeEquippedItem(item))
+
+                void Lights.warmActorMaterial(this.mesh).finally(() => {
+                    this.preparingFirstView = false
+                    if (this.viewRequested && !this.node.isDisposed()) {
+                        const template = MonsterLoader.monsterTemplates.get(this.template.id)
+                        if (template?.clonesInact.includes(this.template)) {
+                            template.activateClone(this.template)
+                        } else {
+                            this.node.setEnabled(true)
+                            this.mesh.setEnabled(true)
+                        }
+                        this.equipSet.forEach(item => EquipManager.addEquippedItem(item))
+                        this.parent.nameDisplayTime = Date.now() + 3000
+                    }
+                })
+                return
+            }
+            return
+        }
+
+        if (this.preparingFirstView) {
+            return
+        }
+
         MonsterLoader.monsterTemplates.get(this.template.id)?.activateClone(this.template)
         this.equipSet.forEach(item => {
             EquipManager.addEquippedItem(item)
@@ -249,6 +289,7 @@ export class MonsterModel implements EquipBearer {
     }
 
     removeFromView() {
+        this.viewRequested = false
         if (this.initialized) {
             this.animation.stop()
             MonsterLoader.monsterTemplates.get(this.template.id)?.deactivateClone(this.template)

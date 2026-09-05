@@ -190,6 +190,7 @@ export class EquipItemType {
         this.mesh.alwaysSelectAsActiveMesh = true
         this.mesh.parent = parentNode
         this.mesh.receiveShadows = true
+        Lights.registerDynamicLightMesh(this.mesh)
     }
 
     /**
@@ -212,6 +213,7 @@ export class EquipItemType {
         this.mesh.parent = parentNode
         this.mesh.receiveShadows = true
         Lights.addShadowCaster(this.mesh)
+        Lights.registerDynamicLightMesh(this.mesh)
     }
 
     ensureThinBuffers(type: EquipItemType) {
