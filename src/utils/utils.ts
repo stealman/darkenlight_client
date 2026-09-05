@@ -53,6 +53,24 @@ export const Utils = {
         return highest
     },
 
+    getTerrainCollisionMarginDepth(xPos: number, zPos: number, characterWidth: number, minWalkHeight: number): number {
+        const map = WorldDataManager.getBlockMap()
+        const threshold = 1 - (characterWidth / 2) + TERRAIN_COLLISION_MARGIN
+        let marginDepth = 0
+
+        for (let x = Math.floor(xPos) - 2; x <= Math.ceil(xPos) + 2; x++) {
+            for (let z = Math.floor(zPos) - 2; z <= Math.ceil(zPos) + 2; z++) {
+                const block = map[x]?.[z]
+                if (!block || block.walkHeight < minWalkHeight) continue
+
+                const depth = threshold - Math.max(Math.abs(x - xPos), Math.abs(z - zPos))
+                if (depth > marginDepth) marginDepth = depth
+            }
+        }
+
+        return marginDepth
+    },
+
     getCoveredBlocks(xPos: number, zPos: number, characterWidth: number, blockSize = 1, terrainMargin = 0) {
         const threshold = blockSize - (characterWidth / 2) + terrainMargin;
 
@@ -76,7 +94,14 @@ export const Utils = {
         const actualY = Utils.calculateWalkYPos(charPos.x, charPos.z, charSize)
         const targetY = Utils.calculateWalkYPos(targetPos.x, targetPos.z, charSize, TERRAIN_COLLISION_MARGIN)
         if (Math.abs(targetY - actualY) >= 1.8) {
-            return {x: targetPos.x, z: targetPos.z}
+            const actualMarginDepth = Utils.getTerrainCollisionMarginDepth(charPos.x, charPos.z, charSize, actualY + 1.8)
+            const targetMarginDepth = Utils.getTerrainCollisionMarginDepth(targetPos.x, targetPos.z, charSize, actualY + 1.8)
+
+            // A latency correction can leave the player inside the local safety margin.
+            // Keep blocking moves deeper into it, but let the player move back out.
+            if (targetMarginDepth >= actualMarginDepth) {
+                return {x: targetPos.x, z: targetPos.z}
+            }
         }
 
         // Shallow water is walkable, only deep water blocks movement
