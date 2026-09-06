@@ -73,7 +73,9 @@ export const WorldRenderer = {
         this.blockWithAlpha1!.clearMatrices()
 
         // Render terrain
-        TerrainManager.renderTerrain()
+        TerrainManager.renderTerrain((terrainMatrices, terrainUvData) => {
+            StaticsManager.renderTerrainBlocks(terrainMatrices, terrainUvData)
+        })
 
         // Render trees
         TreeManager.renderTrees()

@@ -1,7 +1,6 @@
 import { Connector } from '@/network/connector'
 import { FetchWorldDataMsg } from '@/network/messages'
 import { Vector3 } from '@babylonjs/core'
-import { TerrainManager } from '@/babylon/world/terrainManager'
 import { TreeManager } from '@/babylon/world/treeManager'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { StaticsManager } from '@/babylon/world/statics/staticsManager'
@@ -172,7 +171,7 @@ export class WorldData {
             this.computeBlockDataInArea(change.x - 1, change.z - 1, change.x + 1, change.z + 1)
         }
 
-        TerrainManager.renderTerrain()
+        WorldRenderer.renderWorld()
     }
 
     computeBlockDataInArea(fromX: number, fromZ: number, toX: number, toZ: number) {

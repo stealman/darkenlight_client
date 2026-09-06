@@ -1,4 +1,6 @@
 import { Matrix, Vector2, Vector3 } from '@babylonjs/core'
+import { TerrainEnum1 } from '@/babylon/materials'
+import { WorldDataManager } from '@/data/worldDataManager'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { BaseStaticObject } from '@/babylon/world/statics/objects/baseStaticObject'
 
@@ -47,33 +49,45 @@ export class StoneEntrance extends BaseStaticObject {
     }
 
     render() {
-        const runsAlongX = this.getSizeX() > this.getSizeZ()
-        const addBlock = (offset: number, height: number) => {
-            const x = this.position.x + (runsAlongX ? offset : 0)
-            const z = this.position.z + (runsAlongX ? 0 : offset)
-            WorldRenderer.block1!.matrices.push(Matrix.Translation(x, this.position.y + height, z))
-            WorldRenderer.block1!.uvData.push(this.material)
+    }
+
+    renderTerrain(terrainMatrices: Matrix[], terrainUvData: Vector2[]) {
+        const terrainBlock = WorldDataManager.getBlockMap()[Math.floor(this.position.x)]?.[Math.floor(this.position.z)]
+        if (!terrainBlock || terrainBlock.type <= 0) {
+            return
         }
 
-        for (const offset of [0, 3]) {
-            for (let height = 1; height <= 3; height++) {
-                addBlock(offset, height)
-            }
+        const runsAlongX = this.getSizeX() > this.getSizeZ()
+        const addBlock = (widthOffset: number, depthOffset: number, height: number) => {
+            const x = this.position.x + (runsAlongX ? widthOffset : depthOffset)
+            const z = this.position.z + (runsAlongX ? depthOffset : widthOffset)
+            terrainMatrices.push(Matrix.Translation(x, this.position.y + height, z))
+            terrainUvData.push(TerrainEnum1.getTerrainForBlock(terrainBlock))
         }
-        addBlock(1, 3)
-        addBlock(2, 3)
+
+        for (let depth = 0; depth < 2; depth++) {
+            for (const width of [0, 3]) {
+                for (let height = 1; height <= 3; height++) {
+                    addBlock(width, depth, height)
+                }
+            }
+            addBlock(1, depth, 3)
+            addBlock(2, depth, 3)
+        }
     }
 
     isObjectInCollision(tgtX: number, tgtZ: number, size: number): boolean {
         const moverHalf = size / 2
         const runsAlongX = this.getSizeX() > this.getSizeZ()
-        return [0, 3].some((offset) => {
-            const blockX = this.position.x + (runsAlongX ? offset : 0)
-            const blockZ = this.position.z + (runsAlongX ? 0 : offset)
-            return tgtX - moverHalf < blockX + 0.5
-                && tgtX + moverHalf > blockX - 0.5
-                && tgtZ - moverHalf < blockZ + 0.5
-                && tgtZ + moverHalf > blockZ - 0.5
+        return [0, 3].some((width) => {
+            return [0, 1].some((depth) => {
+                const blockX = this.position.x + (runsAlongX ? width : depth)
+                const blockZ = this.position.z + (runsAlongX ? depth : width)
+                return tgtX - moverHalf < blockX + 0.5
+                    && tgtX + moverHalf > blockX - 0.5
+                    && tgtZ - moverHalf < blockZ + 0.5
+                    && tgtZ + moverHalf > blockZ - 0.5
+            })
         })
     }
 }

@@ -461,6 +461,7 @@ class Character implements Attackable, EffectTarget {
         this.setActualSpeed(0)
         this.movementType = 'N'
         this.model?.stopAnimation()
+        this.model?.stopAllStepSounds()
     }
 
     resolveTimedAction(actualTime: number) {

@@ -8,6 +8,7 @@ export interface StaticObject {
     renderPosition: Vector3
 
     render(): void
+    renderTerrain?(terrainMatrices: Matrix[], terrainUvData: Vector2[]): void
     onVisible(): void
     onHidden(): void
     dispose(): void

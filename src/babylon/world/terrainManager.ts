@@ -90,7 +90,7 @@ export const TerrainManager = {
         }
     },
 
-    renderTerrain() {
+    renderTerrain(renderTerrainStatics?: (terrainMatrices: Matrix[], terrainUvData: Vector2[]) => void) {
         const myPos = MyPlayer.myChar.getPositionRounded()
         const blockMap = WorldDataManager.getBlockMap()
         const planeBlockMap = WorldDataManager.getPlaneBlockMap()
@@ -158,6 +158,8 @@ export const TerrainManager = {
                 }
             }
         }
+
+        renderTerrainStatics?.(terrainMatrices1, terrainUvData1)
 
         // Apply buffers for instances
         this.terrainBlock1!.thinInstanceSetBuffer("matrix", BabylonUtils.createPositionBuffer(terrainMatrices1), 16)

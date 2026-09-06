@@ -92,7 +92,11 @@ export const Utils = {
 
         //  Check terrain height difference
         const actualY = Utils.calculateWalkYPos(charPos.x, charPos.z, charSize)
+        const targetWalkY = Utils.calculateWalkYPos(targetPos.x, targetPos.z, charSize)
         const targetY = Utils.calculateWalkYPos(targetPos.x, targetPos.z, charSize, TERRAIN_COLLISION_MARGIN)
+        if (actualY - targetWalkY >= 1.8) {
+            return {x: targetPos.x, z: targetPos.z}
+        }
         if (Math.abs(targetY - actualY) >= 1.8) {
             const actualMarginDepth = Utils.getTerrainCollisionMarginDepth(charPos.x, charPos.z, charSize, actualY + 1.8)
             const targetMarginDepth = Utils.getTerrainCollisionMarginDepth(targetPos.x, targetPos.z, charSize, actualY + 1.8)

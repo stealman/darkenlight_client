@@ -1,4 +1,4 @@
-import { Scene, Vector3 } from '@babylonjs/core'
+import { Matrix, Scene, Vector2, Vector3 } from '@babylonjs/core'
 import { Prefab } from '@/babylon/world/worldRenderer'
 import { MaterialAlphaEnum1, MaterialEnum1 } from '@/babylon/materials'
 import { WorldDataManager } from '@/data/worldDataManager'
@@ -130,6 +130,13 @@ export const StaticsManager = {
                 prefab!.mesh.setEnabled(false)
             }
         })
+    },
+
+    renderTerrainBlocks(terrainMatrices: Matrix[], terrainUvData: Vector2[]) {
+        this.updateVisibleObjects()
+        for (const element of this.visibleStatics) {
+            element.renderTerrain?.(terrainMatrices, terrainUvData)
+        }
     },
 
     updateVisibleObjects() {

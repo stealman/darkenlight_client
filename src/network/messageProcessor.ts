@@ -192,6 +192,7 @@ export const MessageProcessor = {
         const worldChanged = MyPlayer.worldId !== data.id
         if (worldChanged) {
             MyPlayer.stopMovementForTeleport()
+            MyPlayer.setAction(null)
         }
         const environmentType = data.environment?.type
         MiniMap.setEnvironmentType(environmentType)
