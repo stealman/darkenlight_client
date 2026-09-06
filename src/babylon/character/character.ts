@@ -448,11 +448,19 @@ class Character implements Attackable, EffectTarget {
     }
 
     teleportTo(x: number, y: number, z: number) {
+        this.stopMovementLocally()
         this.pos.x = x
         this.pos.z = z
         this.pos.y = y
         this.logicYpos = y
         this.model?.snapToParentPosition()
+    }
+
+    stopMovementLocally() {
+        this.setMoveAngle(null)
+        this.setActualSpeed(0)
+        this.movementType = 'N'
+        this.model?.stopAnimation()
     }
 
     resolveTimedAction(actualTime: number) {

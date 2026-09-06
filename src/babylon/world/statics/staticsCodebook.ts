@@ -3,15 +3,19 @@ export class StaticObjectInfo {
     name: string
     blocking: boolean = false
     size: number = 1
+    sizeX: number = 1
+    sizeZ: number = 1
     collisionTolerance: number = 0
     soundDistance: number = 0
     soundKey: string | null = null
 
-    constructor(type: number, name: string, blocking: boolean, size: number, collisionTolerance: number, soundDistance: number, soundKey: string | null) {
+    constructor(type: number, name: string, blocking: boolean, size: number, collisionTolerance: number, soundDistance: number, soundKey: string | null, sizeZ: number = size) {
         this.type = type
         this.name = name
         this.blocking = blocking
         this.size = size
+        this.sizeX = size
+        this.sizeZ = sizeZ
         this.collisionTolerance = collisionTolerance
         this.soundDistance = soundDistance
         this.soundKey = soundKey
@@ -44,4 +48,5 @@ export const StaticObjectsCodebook: Map<number, StaticObjectInfo> = new Map([
     [242, new StaticObjectInfo(242, 'FireplaceLarge', true, 2, 0.3, 6, 'CAMPFIRE')],
 
     [261, new StaticObjectInfo(261, 'WallTorch', false, 1, 0, 0, null)],
+    [281, new StaticObjectInfo(281, 'StoneEntrance', true, 4, 0, 0, null, 1)],
 ])

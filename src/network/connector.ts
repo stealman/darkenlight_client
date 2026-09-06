@@ -59,6 +59,12 @@ export const Connector = {
         }
     },
 
+    cancelPendingMoveMessage() {
+        this.lastMoveMessage = null
+        this.lastSentMoveMessage = null
+        this.lastMoveMessageTime = new Date().getTime()
+    },
+
     sendMessage(msg: Message) {
         const time = new Date().getTime()
 

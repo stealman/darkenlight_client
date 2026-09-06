@@ -190,6 +190,9 @@ export const MessageProcessor = {
 
     processWorldData(data) {
         const worldChanged = MyPlayer.worldId !== data.id
+        if (worldChanged) {
+            MyPlayer.stopMovementForTeleport()
+        }
         const environmentType = data.environment?.type
         MiniMap.setEnvironmentType(environmentType)
         if (Renderer.environmentType !== (environmentType === 'indoor' ? 'indoor' : 'outdoor')) {

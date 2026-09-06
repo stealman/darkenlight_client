@@ -289,6 +289,7 @@ export const CharacterManager = {
             return
         }
         if (data.id === MyPlayer.myChar.id) {
+            MyPlayer.stopMovementForTeleport()
             MyPlayer.myChar.teleportTo(data.x, data.y, data.z)
         } else {
             this.characters.get(data.id)?.teleportTo(data.x, data.y, data.z)

@@ -34,11 +34,23 @@ export abstract class BaseStaticObject implements StaticObject {
         this.material = material
         this.prefab = prefab
         this.objectInfo = StaticObjectsCodebook.get(type)!
-        this.renderPosition = new Vector3(position.x - 0.5 + this.getSize() / 2, position.y, position.z - 0.5 + this.getSize() / 2)
+        this.renderPosition = new Vector3(position.x - 0.5 + this.getSizeX() / 2, position.y, position.z - 0.5 + this.getSizeZ() / 2)
     }
 
     getSize(): number {
-        return this.objectInfo.size
+        return Math.max(this.getSizeX(), this.getSizeZ())
+    }
+
+    getSizeX(): number {
+        return this.isRotatedFootprint() ? this.objectInfo.sizeZ : this.objectInfo.sizeX
+    }
+
+    getSizeZ(): number {
+        return this.isRotatedFootprint() ? this.objectInfo.sizeX : this.objectInfo.sizeZ
+    }
+
+    private isRotatedFootprint(): boolean {
+        return this.status?.facing === '-X' || this.status?.facing === '+X'
     }
 
     isBlocking(): boolean {
@@ -64,9 +76,9 @@ export abstract class BaseStaticObject implements StaticObject {
         const tol = this.getCollisionTolerance()
 
         const objMinX = this.position.x + tol - 0.5
-        const objMaxX = this.position.x + this.getSize() - (tol + 0.5)
+        const objMaxX = this.position.x + this.getSizeX() - (tol + 0.5)
         const objMinZ = this.position.z + tol - 0.5
-        const objMaxZ = this.position.z + this.getSize() - (tol + 0.5)
+        const objMaxZ = this.position.z + this.getSizeZ() - (tol + 0.5)
 
         return (moverMinX < objMaxX && moverMaxX > objMinX && moverMinZ < objMaxZ && moverMaxZ > objMinZ)
     }

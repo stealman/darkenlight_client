@@ -30,6 +30,7 @@ export const GmTabs = {
 
 export const VOID_TERRAIN_SELECTION = 102
 export const WALL_TORCH_STATIC_ID = 261
+export const STONE_ENTRANCE_STATIC_ID = 281
 
 export const GMManager = {
     gmPanelVisible: ref(false),
@@ -49,6 +50,10 @@ export const GMManager = {
     selectedStatic: ref (0),
     torchFacing: ref('-Z'),
     torchMountHeight: ref(2),
+    entranceFacing: ref('+Z'),
+    entranceDestinationWorld: ref(0),
+    entranceDestinationX: ref(99),
+    entranceDestinationZ: ref(80),
     selectedNpcName: ref(''),
     selectedNpc: ref<any | null>(null),
     npcDetailsDialogOpenRequested: ref(false),
@@ -164,7 +169,7 @@ export const GMManager = {
         if (this.tab === GmTabs.STATICS_EDIT) {
             const markerPos = new Vector3(GMSceneManager.hoverBlockMarker!.position.x, 0, GMSceneManager.hoverBlockMarker!.position.z)
             if (this.selectedStatic.value > 0) {
-                const staticData: { x: number, z: number, type: number, meta?: { facing: string, mountHeight: number } } = {
+                const staticData: { x: number, z: number, type: number, meta?: Record<string, number | string> } = {
                     x: markerPos.x,
                     z: markerPos.z,
                     type: this.selectedStatic.value,
@@ -173,6 +178,14 @@ export const GMManager = {
                     staticData.meta = {
                         facing: this.torchFacing.value,
                         mountHeight: this.torchMountHeight.value,
+                    }
+                }
+                if (this.selectedStatic.value === STONE_ENTRANCE_STATIC_ID) {
+                    staticData.meta = {
+                        facing: this.entranceFacing.value,
+                        destinationWorldId: this.entranceDestinationWorld.value,
+                        destinationX: this.entranceDestinationX.value,
+                        destinationZ: this.entranceDestinationZ.value,
                     }
                 }
                 Connector.sendMessage(new GMStaticObjectChange("ADD_OBJECT", [staticData] ) )
@@ -451,6 +464,7 @@ export const GMManager = {
     consumeTeleportWorlds(worlds: Array<{id: number, name: string}>) {
         this.teleportWorlds.value = worlds
         this.selectedTeleportWorld.value = MyPlayer.worldId
+        this.entranceDestinationWorld.value = MyPlayer.worldId
     },
 
     createItem(type: string, codebookId: number, quantity: number | null, quality: number | null) {

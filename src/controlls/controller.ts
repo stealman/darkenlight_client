@@ -17,6 +17,7 @@ export const Controller = {
     lastPointerMove: { x: 0, y: 0 },
     lastRightPointerPosition: null as { x: number, y: number } | null,
     lastJoystickVector: { dx: 0, dy: 0 },
+    movementInputCancelled: false,
 
     initializeController(scene: Scene) {
         scene.onPointerObservable.add((pointerInfo) => {
@@ -63,6 +64,7 @@ export const Controller = {
 
                 // RIGHT MOUSE BUTTON DOWN
                 if (pointerInfo.type === PointerEventTypes.POINTERDOWN && pointerInfo.event.button === 2) {
+                    this.movementInputCancelled = false
                     this.rightMousePressedTime = new Date().getTime()
                     this.resolveRightPresssed(pointerInfo)
                 }
@@ -72,10 +74,11 @@ export const Controller = {
                     MyPlayer.stopMove()
                     this.rightMousePressedTime = 0
                     this.lastRightPointerPosition = null
+                    this.movementInputCancelled = false
                 }
 
                 // MOUSE MOVE
-                if (pointerInfo.type === PointerEventTypes.POINTERMOVE && pointerInfo.event.buttons === 2) {
+                if (!this.movementInputCancelled && pointerInfo.type === PointerEventTypes.POINTERMOVE && pointerInfo.event.buttons === 2) {
                     this.resolveRightDrag(pointerInfo);
                 }
             }
@@ -203,6 +206,11 @@ export const Controller = {
 
         if (dx === 0 && dy === 0) {
             MyPlayer.stopMove()
+            this.movementInputCancelled = false
+            return
+        }
+
+        if (this.movementInputCancelled) {
             return
         }
 
@@ -226,6 +234,9 @@ export const Controller = {
     },
 
     refreshMovementFromHeldInput() {
+        if (this.movementInputCancelled) {
+            return
+        }
         if (this.rightMousePressedTime > 0 && this.lastRightPointerPosition) {
             this.resolveRightMovement(this.lastRightPointerPosition.x, this.lastRightPointerPosition.y)
             return
@@ -234,6 +245,13 @@ export const Controller = {
         if (this.lastJoystickVector.dx !== 0 || this.lastJoystickVector.dy !== 0) {
             this.processJoystick(this.lastJoystickVector.dx, this.lastJoystickVector.dy)
         }
+    },
+
+    cancelHeldMovement() {
+        this.rightMousePressedTime = 0
+        this.lastRightPointerPosition = null
+        this.lastJoystickVector = { dx: 0, dy: 0 }
+        this.movementInputCancelled = true
     },
 }
 

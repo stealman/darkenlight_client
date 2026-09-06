@@ -190,6 +190,12 @@ export const MyPlayer = {
         this.myChar.stopMove()
     },
 
+    stopMovementForTeleport() {
+        Controller.cancelHeldMovement()
+        Connector.cancelPendingMoveMessage()
+        this.myChar?.stopMovementLocally()
+    },
+
     setAction(type: string | null) {
         if (type != null) {
             this.activeAction = CharacterActions.getActionByName(type)

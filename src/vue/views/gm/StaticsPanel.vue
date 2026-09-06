@@ -20,6 +20,16 @@
         </div>
 
         <div style="margin-top: 1vh">
+            <label class="tree-item" :class="{ selected: 'ENTRANCE' === selectedObjectType }" @click="selectObjectType('ENTRANCE')">Entrance</label>
+            &nbsp;&nbsp;
+            <select v-if="selectedObjectType === 'ENTRANCE'" @change="selectObject($event.target.value)">
+                <option v-for="obj in objects.filter(s => s.type === 'ENTRANCE')" :key="obj.id" :value="obj.id" :selected="obj.id === selectedObject">
+                    {{ obj.name }}
+                </option>
+            </select>
+        </div>
+
+        <div style="margin-top: 1vh">
             <label class="tree-item" :class="{ selected: 'TORCH' === selectedObjectType }" @click="selectObjectType('TORCH')">Torch</label>
             &nbsp;&nbsp;
             <select v-if="selectedObjectType === 'TORCH'" @change="selectObject($event.target.value)">
@@ -43,22 +53,46 @@
             &nbsp;&nbsp;
             <input v-model.number="torchMountHeight" type="number" min="-10" max="10" step="0.1">
         </div>
+
+        <div v-if="selectedObjectType === 'ENTRANCE'" style="margin-top: 1vh; display: grid; gap: 6px">
+            <label>Wall direction
+                <select v-model="entranceFacing">
+                    <option value="-X">-X</option>
+                    <option value="+X">+X</option>
+                    <option value="-Z">-Z</option>
+                    <option value="+Z">+Z</option>
+                </select>
+            </label>
+            <label>Destination world
+                <select v-model.number="entranceDestinationWorld">
+                    <option v-for="world in teleportWorlds" :key="world.id" :value="world.id">{{ world.name }} ({{ world.id }})</option>
+                </select>
+            </label>
+            <label>Destination X <input v-model.number="entranceDestinationX" type="number" step="1"></label>
+            <label>Destination Z <input v-model.number="entranceDestinationZ" type="number" step="1"></label>
+        </div>
     </div>
 </template>
 
 <script setup>
 import { GMManager } from '@/gm/GM'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 
 const selectedObjectType = ref("")
 const selectedObject = GMManager.selectedStatic
 const torchFacing = GMManager.torchFacing
 const torchMountHeight = GMManager.torchMountHeight
+const entranceFacing = GMManager.entranceFacing
+const entranceDestinationWorld = GMManager.entranceDestinationWorld
+const entranceDestinationX = GMManager.entranceDestinationX
+const entranceDestinationZ = GMManager.entranceDestinationZ
+const teleportWorlds = computed(() => GMManager.teleportWorlds.value)
 
 const objects = [
     { type: "FIREPLACE", name: "Fireplace Small", id: 241 },
     { type: "FIREPLACE", name: "Fireplace Large", id: 242 },
     { type: "TORCH", name: "Wall Torch", id: 261 },
+    { type: "ENTRANCE", name: "Stone Entrance", id: 281 },
 ]
 
 const selectObjectType = (type) => {
