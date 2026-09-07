@@ -12,6 +12,8 @@
     "slowDescription": "Snížená rychlost pohybu",
     "damagedWeaponName": "Po\u0161kozen\u00e1 zbra\u0148",
     "damagedWeaponDescription": "Po\u0161kozen\u00ed zbran\u011b je sn\u00ed\u017eeno o tuto hodnotu",
+    "damagedArmorName": "Po\u0161kozen\u00e9 brn\u011bn\u00ed",
+    "damagedArmorDescription": "Hodnota po\u0161kozen\u00e9ho kusu brn\u011bn\u00ed je sn\u00ed\u017eena o tuto hodnotu",
     "mealName": "Jídlo",
     "mealDescription": "Zvyšuje regeneraci zdraví a snižuje únavu a spotřebu many"
   }
