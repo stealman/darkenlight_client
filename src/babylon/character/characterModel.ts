@@ -354,8 +354,15 @@ export class CharacterModel implements EquipBearer {
         const possibleAnims = []
         const weapon = this.parent.getWeapon()
         if (weapon != null) {
-            if (weapon.weaponCategory === WeaponCategories.AXE && weapon.isTwoHanded()) {
-                possibleAnims.push(this.greatAxeAttackAnim)
+            if (weapon.weaponCategory === WeaponCategories.AXE) {
+                if (weapon.isTwoHanded()) {
+                    possibleAnims.push(this.greatAxeAttackAnim)
+                } else {
+                    possibleAnims.push(this.slashAnim)
+                    possibleAnims.push(this.slashAnim2)
+                    possibleAnims.push(this.leftSlashAnim)
+                    possibleAnims.push(this.rightSlashAnim)
+                }
             } else switch (weapon.slotInfo!.weaponType) {
                 case WeaponTypes.SWORD: {
                     possibleAnims.push(this.slashAnim)

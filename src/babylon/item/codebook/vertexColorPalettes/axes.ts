@@ -2,6 +2,32 @@ import { METAL_WEAPON_MATERIAL_NAMES, PICKAXE_MATERIAL_NAMES, VertexColorWeaponP
 
 /** Local vertex-colour palettes for axe and pickaxe models. */
 export const AxeVertexColorPalettes: Record<string, VertexColorWeaponPalette> = {
+    HANDAXE: {
+        materialNames: METAL_WEAPON_MATERIAL_NAMES,
+        twoSided: true,
+        slots: [
+            {index: 0, source: [81, 34, 0], role: 'shaft mid'},
+            {index: 1, source: [63, 63, 63], role: 'blade mid'},
+            {index: 2, source: [34, 8, 0], role: 'shaft dark'},
+            {index: 3, source: [23, 23, 23], role: 'blade highlight'},
+            {index: 4, source: [15, 15, 15], role: 'blade dark'},
+        ],
+
+        // materialId: 1 steel, 2 pyroxide, 3 geonite, 4 mythril, 5 chaotite
+        materialColors: [
+            // steel
+            [[73, 42, 16], [93, 110, 116], [126, 71, 30], [219, 237, 242], [52, 62, 64]],
+            // pyroxide
+            [[63, 25, 10], [132, 25, 20], [116, 53, 20], [255, 170, 72], [69, 12, 12]],
+            // geonite
+            [[44, 59, 20], [24, 101, 68], [87, 113, 36], [146, 241, 166], [10, 51, 39]],
+            // mythril
+            [[93, 57, 13], [26, 111, 183], [193, 138, 31], [177, 247, 255], [8, 44, 105]],
+            // chaotite
+            [[69, 17, 78], [126, 29, 142], [154, 42, 126], [255, 138, 237], [54, 7, 65]],
+        ],
+    },
+
     PICKAXE: {
         materialNames: PICKAXE_MATERIAL_NAMES,
         slots: [
