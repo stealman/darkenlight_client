@@ -498,7 +498,7 @@ export const GMManager = {
             equipment: {...(npc.equipment ?? {})},
             features: (npc.features ?? []).map((feature: any) => ({
                 type: feature.type,
-                settings: feature.type === 'vendor' ? {
+                settings: feature.type === 'vendor' || feature.type === 'repairer' ? {
                     itemCategories: [...(feature.settings?.itemCategories ?? [])],
                     weaponMaterials: [...(feature.settings?.weaponMaterials ?? [])],
                     armorMaterials: [...(feature.settings?.armorMaterials ?? [])],

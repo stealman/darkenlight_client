@@ -1,5 +1,5 @@
 import {Connector} from '@/network/connector'
-import {BankActionMsg, BankOpenMsg, NpcPurchaseMsg, NpcUseMsg} from '@/network/messages'
+import {BankActionMsg, BankOpenMsg, NpcPurchaseMsg, NpcRepairMsg, NpcUseMsg} from '@/network/messages'
 import type {NpcUseData, NpcVendorCatalogItem} from '@/network/messageIfs'
 
 export const NpcInteractionManager = {
@@ -13,6 +13,10 @@ export const NpcInteractionManager = {
 
     purchaseHealerService(npcId: number) {
         Connector.sendMessage(new NpcPurchaseMsg(npcId, 'H', 1, 1))
+    },
+
+    repair(npcId: number, itemId: number) {
+        Connector.sendMessage(new NpcRepairMsg(npcId, itemId))
     },
 
     openBank(npcId: number) {

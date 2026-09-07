@@ -95,7 +95,7 @@ export const OverlayManager = {
 
     renderNames(time: number, tightText: boolean) {
         MonsterManager.monsters.forEach(monster => {
-            if (monster.nameDisplayTime > time) {
+            if (MonsterManager.visibleMonsters.has(monster.id) && monster.nameDisplayTime > time) {
                 const pos = monster.getNameTextNodeScreenPosition()
                 if (pos) {
                     this.renderName(pos, monster.mobType.name, tightText, monster.getRelationToMyPlayer())

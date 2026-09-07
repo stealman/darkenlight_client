@@ -311,6 +311,15 @@ export class BankActionMsg implements Message {
     }
 }
 
+export class NpcRepairMsg implements Message {
+    t: number = 30
+    d: any
+
+    constructor(id: number, itemId: number) {
+        this.d = {id, itemId}
+    }
+}
+
 export class RespawnMsg implements Message {
     t: number = 29
     d: any = {}

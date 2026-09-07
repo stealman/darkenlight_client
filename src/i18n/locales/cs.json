@@ -170,7 +170,8 @@
       "itemBrokenCannotEquip": "Poškozený předmět musíš nejdřív opravit"
   },
   "vendor": {
-    "vendor": "Obchod",
+      "vendor": "Obchod",
+      "repairer": "Oprava",
     "banker": "Banka",
     "inventory": "Inventář",
     "equipment": "Výbava",
@@ -184,7 +185,10 @@
     "jewels": "Šperky",
     "resources": "Suroviny",
     "trinkets": "Talismany",
-    "buy": "Koupit",
+      "buy": "Koupit",
+      "repair": "Opravit",
+      "durability": "Odolnost",
+      "noRepairableItems": "Nemáš poškozené předměty, které tento opravář umí opravit.",
     "emptyCategory": "Tady zatím nic není.",
     "featureNotAvailable": "Tato služba zatím není k dispozici.",
     "noFeatures": "Toto NPC nemá žádné služby.",

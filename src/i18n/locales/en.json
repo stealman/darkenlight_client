@@ -172,7 +172,8 @@
       "itemBrokenCannotEquip": "You must repair this broken item first"
   },
   "vendor": {
-    "vendor": "Vendor",
+      "vendor": "Vendor",
+      "repairer": "Repair",
     "banker": "Banker",
     "inventory": "Inventory",
     "equipment": "Equipment",
@@ -186,7 +187,10 @@
     "jewels": "Jewels",
     "resources": "Resources",
     "trinkets": "Trinkets",
-    "buy": "Buy",
+      "buy": "Buy",
+      "repair": "Repair",
+      "durability": "Durability",
+      "noRepairableItems": "You have no damaged items this repairer can repair.",
     "emptyCategory": "Nothing is currently offered here.",
     "featureNotAvailable": "This feature is not available yet.",
     "noFeatures": "This NPC has no available services.",

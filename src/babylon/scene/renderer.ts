@@ -161,6 +161,7 @@ export const Renderer = {
             this.animationSpeedRatio = timeRate * 60
 
             MyPlayer.onFrame(timeRate, actualTime)
+            Materials.onFrame(actualTime)
             WorldRenderer.checkRenderWorld()
             Lights.onFrame(timeRate)
             CharacterManager.onFrame(timeRate, actualTime, this.frame)

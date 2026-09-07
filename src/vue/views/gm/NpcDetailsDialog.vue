@@ -82,15 +82,16 @@
                 <button class="dialog-button" :disabled="!featureTypeToAdd" @click="addFeature">Add</button>
             </div>
 
+            <div class="npc-features-list">
             <div v-for="(feature, index) in features" :key="feature.type" class="npc-feature">
                 <div class="npc-feature-heading">
                     <span>{{ featureLabels[feature.type] }}</span>
                     <button class="dialog-button" @click="removeFeature(index)">Remove</button>
                 </div>
 
-                <template v-if="feature.type === 'vendor'">
+                <template v-if="feature.type === 'vendor' || feature.type === 'repairer'">
                     <div class="npc-feature-checkboxes">
-                        <label v-for="category in vendorCategories" :key="category.value" class="npc-feature-checkbox" :class="{ 'npc-feature-checkbox-selected': feature.settings.itemCategories.includes(category.value) }">
+                        <label v-for="category in getFeatureCategories(feature)" :key="category.value" class="npc-feature-checkbox" :class="{ 'npc-feature-checkbox-selected': feature.settings.itemCategories.includes(category.value) }">
                             <input v-model="feature.settings.itemCategories" type="checkbox" :value="category.value" />
                             <span>{{ category.label }}</span>
                         </label>
@@ -198,6 +199,7 @@
                     </div>
                 </template>
             </div>
+            </div>
 
             <div class="dialog-actions">
                 <button class="dialog-button" @click="saveDetails">Save</button>
@@ -216,6 +218,7 @@ import { EquipSlotModelsCb } from '@/data/items/item'
 
 const featureTypes = [
     { value: 'vendor', label: 'Vendor' },
+    { value: 'repairer', label: 'Repairer' },
     { value: 'banker', label: 'Banker' },
     { value: 'healer', label: 'Healer' },
     { value: 'trainer', label: 'Trainer' },
@@ -230,6 +233,7 @@ const vendorCategories = [
     { value: 'resources', label: 'Resources' },
     { value: 'trinkets', label: 'Trinkets' },
 ]
+const repairerCategories = vendorCategories.filter((category) => ['weapons', 'bows', 'metalArmor', 'leatherArmor'].includes(category.value))
 const metalWeaponMaterials = [
     { value: 'steel', label: 'Steel' },
     { value: 'pyroxide', label: 'Pyroxide' },
@@ -346,7 +350,7 @@ const itemFromSelection = (selection) => {
 
 const createFeature = (type) => ({
     type,
-    settings: type === 'vendor'
+    settings: type === 'vendor' || type === 'repairer'
         ? { itemCategories: [], weaponMaterials: [], armorMaterials: [], bowMaterials: [], individualItems: {weapons: [], bows: [], metalArmor: [], leatherArmor: [], resources: []} }
         : {},
 })
@@ -362,6 +366,8 @@ const addFeature = () => {
 const removeFeature = (index) => {
     features.value.splice(index, 1)
 }
+
+const getFeatureCategories = (feature) => feature.type === 'repairer' ? repairerCategories : vendorCategories
 
 const addVendorIndividualItem = (feature, category) => {
     const itemId = vendorItemSelections.value[category]
@@ -396,7 +402,7 @@ const openDialog = () => {
     weaponSelection.value = selectionFromItem(npc?.equipment?.weapon)
     features.value = (npc?.features ?? []).map((feature) => ({
         type: feature.type,
-        settings: feature.type === 'vendor'
+        settings: feature.type === 'vendor' || feature.type === 'repairer'
             ? {
                 itemCategories: [...(feature.settings?.itemCategories ?? [])],
                 weaponMaterials: [...(feature.settings?.weaponMaterials ?? [])],
@@ -451,8 +457,19 @@ defineExpose({
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
+    height: min(650px, calc(85vh - 48px));
     gap: 8px;
     padding: 10px;
+}
+
+.npc-features-list {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+    gap: 8px;
+    overflow-y: auto;
+    padding-right: 4px;
 }
 
 .npc-details-dialog-content .dialog-button {

@@ -91,6 +91,38 @@
                 <div v-else class="npc-use-empty-state">{{ t('vendor.bankLoading') }}</div>
             </template>
 
+            <template v-else-if="selectedFeature?.type === 'repairer'">
+                <div v-if="repairItems.equipment.length || repairItems.inventory.length" class="npc-vendor-item-list">
+                    <template v-if="repairItems.equipment.length">
+                        <div class="npc-repairer-section-title">{{ t('vendor.equipment') }}</div>
+                        <div v-for="repairItem in repairItems.equipment" :key="repairItem.item.id" class="npc-vendor-item-row npc-repairer-item-row">
+                            <img class="npc-vendor-item-icon" :src="getRepairItemImage(repairItem.item)" :alt="repairItem.item.name ?? ''" />
+                            <span class="npc-vendor-item-name">{{ repairItem.item.name }}</span>
+                            <span class="npc-repairer-durability">{{ t('vendor.durability') }} {{ getItemDurability(repairItem.item) }}/{{ getItemMaxDurability(repairItem.item) }}</span>
+                            <span class="npc-vendor-item-price">
+                                {{ repairItem.price }}
+                                <img src="/images/icons/emerald.png" alt="Emerald" />
+                            </span>
+                            <button class="dialog-button npc-vendor-buy-button" @click.stop="repairSelectedItem(repairItem, $event)">{{ t('vendor.repair') }}</button>
+                        </div>
+                    </template>
+                    <template v-if="repairItems.inventory.length">
+                        <div class="npc-repairer-section-title">{{ t('vendor.inventory') }}</div>
+                        <div v-for="repairItem in repairItems.inventory" :key="repairItem.item.id" class="npc-vendor-item-row npc-repairer-item-row">
+                        <img class="npc-vendor-item-icon" :src="getRepairItemImage(repairItem.item)" :alt="repairItem.item.name ?? ''" />
+                        <span class="npc-vendor-item-name">{{ repairItem.item.name }}</span>
+                        <span class="npc-repairer-durability">{{ t('vendor.durability') }} {{ getItemDurability(repairItem.item) }}/{{ getItemMaxDurability(repairItem.item) }}</span>
+                        <span class="npc-vendor-item-price">
+                            {{ repairItem.price }}
+                            <img src="/images/icons/emerald.png" alt="Emerald" />
+                        </span>
+                        <button class="dialog-button npc-vendor-buy-button" @click.stop="repairSelectedItem(repairItem, $event)">{{ t('vendor.repair') }}</button>
+                        </div>
+                    </template>
+                </div>
+                <div v-else class="npc-use-empty-state">{{ t('vendor.noRepairableItems') }}</div>
+            </template>
+
             <div v-else-if="selectedFeature" class="npc-use-empty-state">{{ t('vendor.featureNotAvailable') }}</div>
             <div v-else class="npc-use-empty-state">{{ t('vendor.noFeatures') }}</div>
         </div>
@@ -142,10 +174,12 @@ import {InventoryManager} from '@/data/inventoryManager'
 import {NpcManager} from '@/babylon/npc/npcManager'
 import {BankManager} from '@/data/bankManager'
 import BankPanel from '@/vue/views/npc/BankPanel.vue'
+import {MyPlayer} from '@/data/myPlayer'
+import type {Item} from '@/data/items/item'
 
 const emit = defineEmits(['close'])
 
-const featureLabels: Record<string, string> = {vendor: 'vendor.vendor', banker: 'vendor.banker', healer: 'vendor.healer', trainer: 'vendor.trainer'}
+const featureLabels: Record<string, string> = {vendor: 'vendor.vendor', repairer: 'vendor.repairer', banker: 'vendor.banker', healer: 'vendor.healer', trainer: 'vendor.trainer'}
 const categoryLabels: Record<string, string> = {weapons: 'vendor.weapons', bows: 'vendor.bows', metalArmor: 'vendor.metalArmor', leatherArmor: 'vendor.leatherArmor', jewels: 'vendor.jewels', resources: 'vendor.resources', trinkets: 'vendor.trinkets'}
 const itemTypeLocalizationSections: Record<string, string> = {W: 'weapons', A: 'armors', J: 'jewels', T: 'trinkets', R: 'resources'}
 const damageTypeLabels: Record<string, string> = {PHYSICAL_SLASH: 'vendor.damageSlash', PHYSICAL_PIERCE: 'vendor.damagePierce', PHYSICAL_BLUNT: 'vendor.damageBlunt'}
@@ -160,6 +194,11 @@ type PurchaseEffect = {
     x: number
     y: number
     error: boolean
+}
+
+type RepairItem = {
+    item: Item
+    price: number
 }
 
 const dialogVisible = ref(false)
@@ -179,6 +218,18 @@ const selectedFeature = computed<NpcUseFeatureData | null>(() => features.value[
 const vendorCategories = computed(() => Object.entries(selectedFeature.value?.categories ?? {}).map(([key, items]) => ({key, items})).filter((category) => category.items.length > 0))
 const selectedCategoryItems = computed(() => [...(selectedFeature.value?.categories?.[selectedCategory.value] ?? [])]
     .sort((first, second) => first.price - second.price || first.name.localeCompare(second.name)))
+const repairItems = computed(() => {
+    resourceInventoryVersion.value
+    const repairPrices = new Map((selectedFeature.value?.repairItems ?? []).map((repairItem) => [repairItem.id, repairItem.price]))
+    const getRepairItems = (items: Item[]): RepairItem[] => items
+        .map((item) => ({item, price: repairPrices.get(item.id)}))
+        .filter((repairItem): repairItem is RepairItem => repairItem.price !== undefined && getItemDurability(repairItem.item) < getItemMaxDurability(repairItem.item))
+        .sort((first, second) => first.price - second.price || (first.item.name ?? '').localeCompare(second.item.name ?? ''))
+    return {
+        equipment: getRepairItems(Array.from(MyPlayer.myChar?.equipSet?.values?.() ?? [])),
+        inventory: getRepairItems(InventoryManager.inventory),
+    }
+})
 const detailOverlayStyle = computed(() => ({left: `${detailOverlayPosition.value.x}px`, top: `${detailOverlayPosition.value.y}px`}))
 const formattedEmeralds = computed(() => EmeraldsManager.formatEmeraldAmount(EmeraldsManager.emeralds.value))
 
@@ -204,6 +255,13 @@ const formatModifier = (value: number | string | undefined) => {
     return `${number > 0 ? '+' : ''}${number}`
 }
 const getTotalPrice = (item: NpcVendorCatalogItem) => item.price
+const getItemAttribute = (item: Item, attribute: string) => {
+    const attributes = item.atts as unknown as Record<string, number | string> & {get?: (key: string) => number | string | undefined}
+    return Number(typeof attributes.get === 'function' ? attributes.get(attribute) : attributes[attribute])
+}
+const getItemDurability = (item: Item) => getItemAttribute(item, 'dur')
+const getItemMaxDurability = (item: Item) => getItemAttribute(item, 'durM')
+const getRepairItemImage = (item: Item) => item.imgUrl ? `/${item.imgUrl}` : '/images/icons/buttons/btn_backpack.png'
 const getOwnedResourceCount = (item: NpcVendorCatalogItem) => {
     resourceInventoryVersion.value
     return InventoryManager.getTotalResourceItemCountByType(item.cb)
@@ -297,6 +355,23 @@ const buyHealerService = (service: NpcHealerService, event: MouseEvent) => {
     }
 }
 
+const repairSelectedItem = (repairItem: RepairItem, event: MouseEvent) => {
+    const npc = npcData.value ? NpcManager.npcs.get(npcData.value.id) : null
+    if (!npc || npc.getDistanceFromMyPlayer() > NPC_PURCHASE_DISTANCE) {
+        addPurchaseEffect(t('messages.npcUseOutOfRange'), event, true)
+        return
+    }
+    if (EmeraldsManager.myEmeralds < repairItem.price) {
+        addPurchaseEffect(t('vendor.notEnoughEmeralds'), event, true)
+        return
+    }
+
+    addPurchaseEffect(`-${EmeraldsManager.formatEmeraldAmount(repairItem.price)}`, event)
+    if (npcData.value) {
+        NpcInteractionManager.repair(npcData.value.id, repairItem.item.id)
+    }
+}
+
 const showItemDetails = (item: NpcVendorCatalogItem, event: MouseEvent | KeyboardEvent) => {
     if (detailItem.value?.tp === item.tp && detailItem.value.cb === item.cb) {
         detailItem.value = null
@@ -367,6 +442,9 @@ defineExpose({openDialog})
 .npc-use-content-shell :deep(.bank-panel) { flex: 1 1 auto; min-height: 0; }
 .npc-vendor-item-list { display: flex; flex: 1 1 auto; min-height: 0; flex-direction: column; overflow-y: auto; border-top: 1px solid rgba(var(--ui-darker), 0.8); border-bottom: 1px solid rgba(var(--ui-darker), 0.8); }
 .npc-vendor-item-row { display: grid; grid-template-columns: 46px minmax(0, 1fr) max-content auto; align-items: center; gap: 12px; min-height: 46px; padding: 3px 8px; border-bottom: 1px solid rgba(var(--ui-darker), 0.65); color: rgb(var(--ui-base)); cursor: url('/images/cursor-pointer.png'), pointer; }
+.npc-repairer-item-row { grid-template-columns: 46px minmax(0, 1fr) max-content max-content auto; cursor: default; }
+.npc-repairer-durability { color: rgb(var(--ui-dark)); font-size: 12px; white-space: nowrap; }
+.npc-repairer-section-title { padding: 8px 8px 5px; border-bottom: 1px solid rgba(var(--ui-darker), 0.65); color: rgb(var(--ui-dark)); font-size: 12px; font-weight: 700; text-transform: uppercase; }
 .npc-vendor-item-row:hover { background: rgba(255, 255, 255, 0.06); }
 .npc-healer-service-row { width: 100%; border: 0; border-bottom: 1px solid rgba(var(--ui-darker), 0.65); background: transparent; color: inherit; font: inherit; text-align: inherit; }
 .npc-healer-service-row:disabled { cursor: default; opacity: 0.55; }
@@ -391,6 +469,7 @@ defineExpose({openDialog})
 
 @media (min-height: 700px) {
     .npc-vendor-item-row { grid-template-columns: 54px minmax(0, 1fr) max-content auto; min-height: 58px; padding-block: 5px; }
+    .npc-repairer-item-row { grid-template-columns: 54px minmax(0, 1fr) max-content max-content auto; }
     .npc-vendor-item-icon { width: 48px; height: 48px; }
 }
 </style>

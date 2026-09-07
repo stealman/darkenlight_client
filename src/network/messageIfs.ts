@@ -217,10 +217,16 @@ export interface NpcHealerService {
     price: number
 }
 
+export interface NpcRepairItem {
+    id: number
+    price: number
+}
+
 export interface NpcUseFeatureData {
     type: string
     categories?: Record<string, NpcVendorCatalogItem[]>
     services?: NpcHealerService[]
+    repairItems?: NpcRepairItem[]
 }
 
 export interface NpcUseData {

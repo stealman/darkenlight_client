@@ -26,6 +26,7 @@ export const Materials = {
     blockMat1: null as PBRCustomMaterial | null,
 
     waterMaterial: null as PBRMaterial | null,
+    entrancePortalMaterial: null as PBRMaterial | null,
     weaponTrailMaterial: null as StandardMaterial | null,
 
     initialize(scene: Scene) {
@@ -36,6 +37,7 @@ export const Materials = {
         this.blockMat1 = this.createBlockMat1(scene)
         this.blockMatAlpha1 = this.createBlockMatAlpha1(scene)
         this.waterMaterial = this.createWaterMaterial(scene)
+        this.entrancePortalMaterial = this.createEntrancePortalMaterial(scene)
         this.stepMarksMaterial = this.createStepMarksMaterial(scene)
         this.fightSplatsMaterial = this.createFightSplatsMaterial(scene)
         this.weaponTrailMaterial = this.createWeaponTrailMaterial(scene)
@@ -210,7 +212,22 @@ export const Materials = {
         return mat
     },
 
-    onFrame(frame: number) {
+    createEntrancePortalMaterial(scene: Scene): PBRMaterial {
+        const mat = this.createWaterMaterial(scene)
+        mat.name = 'stoneEntrancePortalMaterial'
+        mat.alpha = 0.42
+        mat.emissiveColor = new Color3(0.08, 0.02, 0.08)
+        return mat
+    },
+
+    onFrame(time: number) {
+        const mat = this.entrancePortalMaterial
+        if (!mat) {
+            return
+        }
+
+        const strength = 0.08 + ((Math.sin(time / 850) + 1) * 0.06)
+        mat.emissiveColor.set(strength, strength * 0.25, strength)
     },
 
 }

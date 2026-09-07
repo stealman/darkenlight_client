@@ -1,5 +1,5 @@
-import { Matrix, Vector2, Vector3 } from '@babylonjs/core'
-import { TerrainEnum1 } from '@/babylon/materials'
+import { Matrix, Mesh, MeshBuilder, Vector2, Vector3 } from '@babylonjs/core'
+import { Materials, TerrainEnum1 } from '@/babylon/materials'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { BaseStaticObject } from '@/babylon/world/statics/objects/baseStaticObject'
@@ -38,6 +38,7 @@ export interface StoneEntranceMetadata {
 
 export class StoneEntrance extends BaseStaticObject {
     private readonly facing: StoneEntranceFacing
+    private portalPlane: Mesh | null = null
 
     constructor(type: number, position: Vector3, material: Vector2, metadata?: StoneEntranceMetadata) {
         super(type, position, 0, material, null)
@@ -49,6 +50,48 @@ export class StoneEntrance extends BaseStaticObject {
     }
 
     render() {
+        this.updatePortalPlanePosition()
+    }
+
+    onVisible() {
+        if (this.portalPlane || !WorldRenderer.worldParentNode) {
+            return
+        }
+
+        this.portalPlane = MeshBuilder.CreatePlane(
+            `stoneEntrancePortal_${this.position.x}_${this.position.z}`,
+            { width: 2, height: 2, sideOrientation: Mesh.DOUBLESIDE },
+            WorldRenderer.worldParentNode.getScene(),
+        )
+        this.portalPlane.parent = WorldRenderer.worldParentNode
+        this.portalPlane.material = Materials.entrancePortalMaterial
+        this.portalPlane.isPickable = false
+        this.portalPlane.alwaysSelectAsActiveMesh = true
+        this.updatePortalPlanePosition()
+    }
+
+    onHidden() {
+        this.dispose()
+    }
+
+    dispose() {
+        this.portalPlane?.dispose()
+        this.portalPlane = null
+    }
+
+    private updatePortalPlanePosition() {
+        if (!this.portalPlane) {
+            return
+        }
+
+        const facingX = this.facing === '+X' ? 1 : this.facing === '-X' ? -1 : 0
+        const facingZ = this.facing === '+Z' ? 1 : this.facing === '-Z' ? -1 : 0
+        this.portalPlane.position.set(
+            this.renderPosition.x + facingX * 0.91,
+            this.renderPosition.y + 1,
+            this.renderPosition.z + facingZ * 0.91,
+        )
+        this.portalPlane.rotation.y = facingX === 0 ? 0 : Math.PI / 2
     }
 
     renderTerrain(terrainMatrices: Matrix[], terrainUvData: Vector2[]) {
