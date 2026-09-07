@@ -10,6 +10,8 @@
     "tiredDescription": "A tired character cannot run",
     "slowName": "Slow",
     "slowDescription": "Reduced movement speed",
+    "damagedWeaponName": "Damaged weapon",
+    "damagedWeaponDescription": "Weapon damage is reduced by this percentage",
     "mealName": "Meal",
     "mealDescription": "Increases health regeneration and reduces stamina and mana consumption"
   }

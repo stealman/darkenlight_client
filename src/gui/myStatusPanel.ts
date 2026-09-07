@@ -268,7 +268,7 @@ export const MyStatusPanel = {
     buildAffectTooltipContent(affectGroup: ClientAffectGroup, actualTime: number = Date.now()): TooltipOverlayContent {
         return {
             title: affectGroup.getLocalizedName(),
-            titleMeta: `(${affectGroup.p})`,
+            titleMeta: affectGroup.getPowerLabel(),
             topRightText: affectGroup.shouldDisplayDuration()
                 ? affectGroup.getFormattedRemainingDuration(actualTime)
                 : null,

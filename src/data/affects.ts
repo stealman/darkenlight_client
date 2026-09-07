@@ -72,6 +72,10 @@ export class ClientAffectGroup {
         return this.getDefinition()?.getImageUrl() ?? ''
     }
 
+    getPowerLabel() {
+        return this.getDefinition()?.nameKey === 'damagedWeapon' ? `(-${this.p}%)` : `(${this.p})`
+    }
+
     isAdverse() {
         return this.getDefinition()?.adverse ?? false
     }
@@ -134,4 +138,5 @@ export const AffectGroups = {
     4: new AffectGroupDefinition(4, 'flameArrows', 'affects/flame_arrow', false),
     5: new AffectGroupDefinition(5, 'slow', 'affects/slow', true),
     6: new AffectGroupDefinition(6, 'burning', 'buttons/btn_burning_flames', true),
+    7: new AffectGroupDefinition(7, 'damagedWeapon', 'affects/damaged_weapon', true, false),
 }
