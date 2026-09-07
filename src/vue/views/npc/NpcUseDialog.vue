@@ -123,6 +123,20 @@
                 <div v-else class="npc-use-empty-state">{{ t('vendor.noRepairableItems') }}</div>
             </template>
 
+            <template v-else-if="selectedFeature?.type === 'crafting'">
+                <div v-if="selectedFeature.craftingCategories?.length" class="npc-use-category-tabs">
+                    <button
+                        v-for="category in selectedFeature.craftingCategories"
+                        :key="category"
+                        class="dialog-button npc-use-tab"
+                        @click="openCrafting(category, $event)"
+                    >
+                        {{ getCategoryLabel(category) }}
+                    </button>
+                </div>
+                <div v-else class="npc-use-empty-state">{{ t('vendor.emptyCategory') }}</div>
+            </template>
+
             <div v-else-if="selectedFeature" class="npc-use-empty-state">{{ t('vendor.featureNotAvailable') }}</div>
             <div v-else class="npc-use-empty-state">{{ t('vendor.noFeatures') }}</div>
         </div>
@@ -179,7 +193,7 @@ import type {Item} from '@/data/items/item'
 
 const emit = defineEmits(['close'])
 
-const featureLabels: Record<string, string> = {vendor: 'vendor.vendor', repairer: 'vendor.repairer', banker: 'vendor.banker', healer: 'vendor.healer', trainer: 'vendor.trainer'}
+const featureLabels: Record<string, string> = {vendor: 'vendor.vendor', repairer: 'vendor.repairer', crafting: 'vendor.crafting', banker: 'vendor.banker', healer: 'vendor.healer', trainer: 'vendor.trainer'}
 const categoryLabels: Record<string, string> = {weapons: 'vendor.weapons', bows: 'vendor.bows', metalArmor: 'vendor.metalArmor', leatherArmor: 'vendor.leatherArmor', jewels: 'vendor.jewels', resources: 'vendor.resources', trinkets: 'vendor.trinkets'}
 const itemTypeLocalizationSections: Record<string, string> = {W: 'weapons', A: 'armors', J: 'jewels', T: 'trinkets', R: 'resources'}
 const damageTypeLabels: Record<string, string> = {PHYSICAL_SLASH: 'vendor.damageSlash', PHYSICAL_PIERCE: 'vendor.damagePierce', PHYSICAL_BLUNT: 'vendor.damageBlunt'}
@@ -370,6 +384,19 @@ const repairSelectedItem = (repairItem: RepairItem, event: MouseEvent) => {
     if (npcData.value) {
         NpcInteractionManager.repair(npcData.value.id, repairItem.item.id)
     }
+}
+
+const openCrafting = (category: string, event: MouseEvent) => {
+    const npc = npcData.value ? NpcManager.npcs.get(npcData.value.id) : null
+    if (!npc || npc.getDistanceFromMyPlayer() > NPC_PURCHASE_DISTANCE) {
+        addPurchaseEffect(t('messages.npcUseOutOfRange'), event, true)
+        return
+    }
+    if (!npcData.value) {
+        return
+    }
+    closeDialog()
+    NpcInteractionManager.openCrafting(npcData.value.id, category)
 }
 
 const showItemDetails = (item: NpcVendorCatalogItem, event: MouseEvent | KeyboardEvent) => {

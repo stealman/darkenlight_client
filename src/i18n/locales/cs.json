@@ -139,8 +139,9 @@
     "JEWELERY": "Výroba",
     "noRecipes": "Není k dispozici žádný recept",
     "selectRecipe": "Vyber recept",
-    "noResources": "Nemáš suroviny",
-    "craftable": "Můžeš vyrobit",
+      "noResources": "Nemáš suroviny",
+      "price": "Cena",
+      "craftable": "Můžeš vyrobit",
     "types": {
       "cooking": "Vaření",
       "blacksmithy": "Kovářství",
@@ -172,6 +173,7 @@
   "vendor": {
       "vendor": "Obchod",
       "repairer": "Oprava",
+      "crafting": "Výroba",
     "banker": "Banka",
     "inventory": "Inventář",
     "equipment": "Výbava",

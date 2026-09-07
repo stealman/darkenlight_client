@@ -193,7 +193,7 @@ export class SubmitCraftRequestMsg implements Message {
     t: number = 24
     d: any
 
-    constructor(itemType: string, codebookId: number, quantity: number, x: number, z: number, craftingType: string) {
+    constructor(itemType: string, codebookId: number, quantity: number, x: number, z: number, craftingType: string, npcId?: number) {
         this.d = {
             tp: itemType,
             cb: codebookId,
@@ -201,6 +201,9 @@ export class SubmitCraftRequestMsg implements Message {
             x: x,
             z: z,
             type: craftingType,
+        }
+        if (npcId !== undefined) {
+            this.d.npcId = npcId
         }
     }
 }
@@ -317,6 +320,15 @@ export class NpcRepairMsg implements Message {
 
     constructor(id: number, itemId: number) {
         this.d = {id, itemId}
+    }
+}
+
+export class NpcCraftingMenuMsg implements Message {
+    t: number = 31
+    d: any
+
+    constructor(id: number, category: string) {
+        this.d = {id, category}
     }
 }
 

@@ -139,8 +139,9 @@
     "JEWELERY": "Crafting",
     "noRecipes": "No recipes available",
     "selectRecipe": "Select a recipe",
-    "noResources": "Missing resources",
-    "craftable": "You can craft",
+      "noResources": "Missing resources",
+      "price": "Price",
+      "craftable": "You can craft",
     "types": {
       "cooking": "Cooking",
       "blacksmithy": "Blacksmithy",
@@ -174,6 +175,7 @@
   "vendor": {
       "vendor": "Vendor",
       "repairer": "Repair",
+      "crafting": "Crafting",
     "banker": "Banker",
     "inventory": "Inventory",
     "equipment": "Equipment",

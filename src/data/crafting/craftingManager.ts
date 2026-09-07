@@ -2,6 +2,7 @@ import { InventoryManager } from '@/data/inventoryManager'
 import { CraftingInitMenuData, CraftingRecipe } from '@/network/messageIfs'
 import { Connector } from '@/network/connector'
 import { SubmitCraftRequestMsg } from '@/network/messages'
+import {EmeraldsManager} from '@/gui/emeraldsManager'
 
 export const CraftingTypes = {
     COOKING: "COOKING",
@@ -11,7 +12,7 @@ export const CraftingTypes = {
 }
 
 export const CraftingManager = {
-    activeCraftingContext: null as Pick<CraftingInitMenuData, 'type' | 'x' | 'z'> | null,
+    activeCraftingContext: null as Pick<CraftingInitMenuData, 'type' | 'x' | 'z' | 'npcId'> | null,
 
     initialize() {},
 
@@ -34,6 +35,7 @@ export const CraftingManager = {
             this.activeCraftingContext.x,
             this.activeCraftingContext.z,
             this.activeCraftingContext.type,
+            this.activeCraftingContext.npcId,
         ))
     },
 
@@ -42,6 +44,7 @@ export const CraftingManager = {
             type: data.type,
             x: data.x,
             z: data.z,
+            npcId: data.npcId,
         }
 
         // Enrich the crafting menu data with the quantity of possible crafts based on the player's inventory
@@ -55,6 +58,11 @@ export const CraftingManager = {
                 if (Number.isFinite(requiredQty) && requiredQty > 0) {
                     craftableQty = Math.min(craftableQty, Math.floor(ingredient.inventoryQty / requiredQty))
                 }
+            }
+
+            const price = Number(recipe.price)
+            if (Number.isFinite(price) && price > 0) {
+                craftableQty = Math.min(craftableQty, Math.floor(EmeraldsManager.myEmeralds / price))
             }
 
             recipe.craftableQty = craftableQty === Number.MAX_SAFE_INTEGER ? 0 : Math.max(0, craftableQty)

@@ -510,7 +510,9 @@ export const GMManager = {
                         leatherArmor: [...(feature.settings?.individualItems?.leatherArmor ?? [])],
                         resources: [...(feature.settings?.individualItems?.resources ?? [])],
                     },
-                } : {}
+                } : feature.type === 'crafting'
+                    ? {itemCategories: [...(feature.settings?.itemCategories ?? [])]}
+                    : {}
             })),
             wanderingRange: npc.wanderingRange ?? npc.wr ?? 0
         }

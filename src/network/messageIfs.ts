@@ -189,6 +189,7 @@ export interface CraftingRecipe {
     ing: { res: ItemTO, qty: number }[]
     item: ItemTO
     skill: string
+    price: number
 }
 
 export interface CraftingInitMenuData {
@@ -196,6 +197,7 @@ export interface CraftingInitMenuData {
     type: string
     x: number
     z: number
+    npcId?: number
 }
 
 export interface NpcVendorCatalogItem {
@@ -227,6 +229,7 @@ export interface NpcUseFeatureData {
     categories?: Record<string, NpcVendorCatalogItem[]>
     services?: NpcHealerService[]
     repairItems?: NpcRepairItem[]
+    craftingCategories?: string[]
 }
 
 export interface NpcUseData {

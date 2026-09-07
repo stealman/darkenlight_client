@@ -198,6 +198,15 @@
                         </div>
                     </div>
                 </template>
+
+                <template v-else-if="feature.type === 'crafting'">
+                    <div class="npc-feature-checkboxes">
+                        <label v-for="category in craftingCategories" :key="category.value" class="npc-feature-checkbox" :class="{ 'npc-feature-checkbox-selected': feature.settings.itemCategories.includes(category.value) }">
+                            <input v-model="feature.settings.itemCategories" type="checkbox" :value="category.value" />
+                            <span>{{ category.label }}</span>
+                        </label>
+                    </div>
+                </template>
             </div>
             </div>
 
@@ -219,6 +228,7 @@ import { EquipSlotModelsCb } from '@/data/items/item'
 const featureTypes = [
     { value: 'vendor', label: 'Vendor' },
     { value: 'repairer', label: 'Repairer' },
+    { value: 'crafting', label: 'Crafting' },
     { value: 'banker', label: 'Banker' },
     { value: 'healer', label: 'Healer' },
     { value: 'trainer', label: 'Trainer' },
@@ -234,6 +244,7 @@ const vendorCategories = [
     { value: 'trinkets', label: 'Trinkets' },
 ]
 const repairerCategories = vendorCategories.filter((category) => ['weapons', 'bows', 'metalArmor', 'leatherArmor'].includes(category.value))
+const craftingCategories = vendorCategories.filter((category) => ['weapons', 'bows', 'metalArmor', 'leatherArmor', 'jewels'].includes(category.value))
 const metalWeaponMaterials = [
     { value: 'steel', label: 'Steel' },
     { value: 'pyroxide', label: 'Pyroxide' },
@@ -352,6 +363,8 @@ const createFeature = (type) => ({
     type,
     settings: type === 'vendor' || type === 'repairer'
         ? { itemCategories: [], weaponMaterials: [], armorMaterials: [], bowMaterials: [], individualItems: {weapons: [], bows: [], metalArmor: [], leatherArmor: [], resources: []} }
+        : type === 'crafting'
+            ? {itemCategories: []}
         : {},
 })
 
@@ -416,7 +429,9 @@ const openDialog = () => {
                     resources: [...(feature.settings?.individualItems?.resources ?? [])],
                 },
             }
-            : {},
+            : feature.type === 'crafting'
+                ? {itemCategories: [...(feature.settings?.itemCategories ?? [])]}
+                : {},
     }))
     featureTypeToAdd.value = ''
     dialogVisible.value = true

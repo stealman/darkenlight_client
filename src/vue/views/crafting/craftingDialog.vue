@@ -70,6 +70,11 @@
                                                 ({{ ingredient.inventoryQty }})
                                             </span>
                                         </div>
+                                        <div v-if="Number(recipe.price) > 0" class="crafting-ingredient-chip crafting-price-chip">
+                                            <span class="crafting-ingredient-name">{{ t('crafting.price') }}</span>
+                                            <span class="crafting-ingredient-qty">{{ recipe.price }}</span>
+                                            <img class="crafting-ingredient-icon" src="/images/icons/emerald.png" alt="Emerald" />
+                                        </div>
                                     </div>
                                 </div>
                             </template>
