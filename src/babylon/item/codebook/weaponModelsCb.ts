@@ -17,12 +17,14 @@ const matLongswordSize = new Vector2(5, 1)
 const matBroadswordSize = new Vector2(5, 1)
 const matPickaxeSize = new Vector2(6, 1)
 const matHandAxeSize = new Vector2(5, 1)
+const matBattleAxeSize = new Vector2(5, 1)
 const matGreatAxeSize = new Vector2(5, 1)
+const matLargeBattleAxeSize = new Vector2(5, 1)
 const matFutureWeaponSize = new Vector2(5, 1)
 
 // Change this when a weapon GLB is replaced. The URL revision prevents an
 // installed PWA from combining a newly deployed shader with an old HTTP-cached model.
-export const WEAPON_MODEL_CACHE_VERSION = '20260907-handaxe'
+export const WEAPON_MODEL_CACHE_VERSION = '20260908-battle-axe'
 
 export const WeaponsCbManager = {
     BASE_WEAPONS_PATH: 'weapons/',
@@ -33,7 +35,9 @@ export const WeaponsCbManager = {
     broadSwordMaterial: null as PBRCustomMaterial | null,
     pickAxeMaterial: null as PBRCustomMaterial | null,
     handAxeMaterial: null as PBRCustomMaterial | null,
+    battleAxeMaterial: null as PBRCustomMaterial | null,
     greatAxeMaterial: null as PBRCustomMaterial | null,
+    largeBattleAxeMaterial: null as PBRCustomMaterial | null,
     lightMaceMaterial: null as PBRCustomMaterial | null,
 
     async initMelee(map: Map<number, EquipItemType>, scene: Scene) {
@@ -45,7 +49,9 @@ export const WeaponsCbManager = {
         this.broadSwordMaterial = createVertexColorWeaponMaterial('broadswordVertexColor', scene, SwordVertexColorPalettes.BROADSWORD)
         this.pickAxeMaterial = createVertexColorWeaponMaterial('pickaxeVertexColor', scene, AxeVertexColorPalettes.PICKAXE)
         this.handAxeMaterial = createVertexColorWeaponMaterial('handAxeVertexColor', scene, AxeVertexColorPalettes.HANDAXE)
+        this.battleAxeMaterial = createVertexColorWeaponMaterial('battleAxeVertexColor', scene, AxeVertexColorPalettes.BATTLE_AXE)
         this.greatAxeMaterial = createVertexColorWeaponMaterial('greatAxeVertexColor', scene, AxeVertexColorPalettes.GREATAXE)
+        this.largeBattleAxeMaterial = createVertexColorWeaponMaterial('largeBattleAxeVertexColor', scene, AxeVertexColorPalettes.LARGE_BATTLE_AXE)
         this.lightMaceMaterial = createVertexColorWeaponMaterial('lightMaceVertexColor', scene, MaceVertexColorPalettes.LIGHT_MACE)
 
         map.set(WeaponModelsCb.LONGSWORD.id, await this.getItem(WeaponModelsCb.LONGSWORD, this.longSwordMaterial))
@@ -53,7 +59,9 @@ export const WeaponsCbManager = {
         map.set(WeaponModelsCb.HUNTINGBOW.id, await this.getItem(WeaponModelsCb.HUNTINGBOW, this.bowMaterial))
         map.set(WeaponModelsCb.PICKAXE.id, await this.getItem(WeaponModelsCb.PICKAXE, this.pickAxeMaterial))
         map.set(WeaponModelsCb.HAND_AXE.id, await this.getItem(WeaponModelsCb.HAND_AXE, this.handAxeMaterial))
+        map.set(WeaponModelsCb.BATTLE_AXE.id, await this.getItem(WeaponModelsCb.BATTLE_AXE, this.battleAxeMaterial))
         map.set(WeaponModelsCb.GREATAXE.id, await this.getItem(WeaponModelsCb.GREATAXE, this.greatAxeMaterial))
+        map.set(WeaponModelsCb.LARGE_BATTLE_AXE.id, await this.getItem(WeaponModelsCb.LARGE_BATTLE_AXE, this.largeBattleAxeMaterial))
         map.set(WeaponModelsCb.LIGHT_MACE.id, await this.getItem(WeaponModelsCb.LIGHT_MACE, this.lightMaceMaterial))
 
         for (const data of FutureWeaponModels) {
@@ -99,9 +107,11 @@ export const WeaponModelsCb = {
 
     HAND_AXE: new EquipCbItem(EquipSlotModelsCb.HAND_AXE.modelId, "handaxe", Vector3.Zero(), new Vector3(0.24, 0.24, 0.24), new Vector3(0, 2, 0), matHandAxeSize),
 
-    BATTLE_AXE: new EquipCbItem(EquipSlotModelsCb.BATTLE_AXE.modelId, "battleaxe", Vector3.Zero(), new Vector3(0.24, 0.24, 0.24), new Vector3(0, 2.2, 0), matFutureWeaponSize),
+    BATTLE_AXE: new EquipCbItem(EquipSlotModelsCb.BATTLE_AXE.modelId, "battleaxe", Vector3.Zero(), new Vector3(0.24, 0.24, 0.24), new Vector3(0, 2.2, 0), matBattleAxeSize),
 
     GREATAXE: new EquipCbItem(EquipSlotModelsCb.GREATAXE.modelId, "greataxe", Vector3.Zero(), new Vector3(0.22, 0.24, 0.4), new Vector3(0, 2.5, 0), matGreatAxeSize),
+
+    LARGE_BATTLE_AXE: new EquipCbItem(EquipSlotModelsCb.LARGE_BATTLE_AXE.modelId, "largebattlexe", Vector3.Zero(), new Vector3(0.22, 0.24, 0.24), new Vector3(0, 2.5, 0), matLargeBattleAxeSize),
 
     PICKAXE: new EquipCbItem(EquipSlotModelsCb.PICKAXE.modelId, "pickaxe", Vector3.Zero(), new Vector3(0.22, 0.24, 0.4), new Vector3(0, 2.2, 0), matPickaxeSize),
 
@@ -132,7 +142,6 @@ export const WeaponModelsCb = {
 
 const FutureWeaponModels: EquipCbItem[] = [
     WeaponModelsCb.GREATSWORD,
-    WeaponModelsCb.BATTLE_AXE,
     WeaponModelsCb.FLANGED_MACE,
     WeaponModelsCb.WARHAMMER,
     WeaponModelsCb.HUNTING_SPEAR,

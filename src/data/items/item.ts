@@ -143,6 +143,7 @@ export const EquipSlotModelsCb = {
     HAND_AXE: new EquipSlotModel(110, EquipItemSlots.R_HAND, WeaponTypes.SWORD),
     BATTLE_AXE: new EquipSlotModel(120, EquipItemSlots.R_HAND, WeaponTypes.AXE),
     GREATAXE: new EquipSlotModel(155, EquipItemSlots.R_HAND, WeaponTypes.SWORD),
+    LARGE_BATTLE_AXE: new EquipSlotModel(165, EquipItemSlots.R_HAND, WeaponTypes.AXE),
 
     PICKAXE: new EquipSlotModel(150, EquipItemSlots.R_HAND, WeaponTypes.PICKAXE),
     LIGHT_MACE: new EquipSlotModel(210, EquipItemSlots.R_HAND, WeaponTypes.MACE),

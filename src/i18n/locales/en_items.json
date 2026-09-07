@@ -33,6 +33,12 @@
       "chaotite-battle-axe": "Chaotite Battle Axe",
       "chaotite-great-axe": "Chaotite Great Axe",
 
+      "steel-large-battle-axe": "Steel Large Battle Axe",
+      "pyroxide-large-battle-axe": "Pyroxide Large Battle Axe",
+      "geonite-large-battle-axe": "Geonite Large Battle Axe",
+      "mythril-large-battle-axe": "Mythril Large Battle Axe",
+      "chaotite-large-battle-axe": "Chaotite Large Battle Axe",
+
       "steel-light-mace": "Steel Light Mace",
       "steel-flanged-mace": "Steel Flanged Mace",
       "steel-warhammer": "Steel Warhammer",
@@ -105,6 +111,7 @@
       "chaotite-pickaxe": "Chaotite Pickaxe",
       "pickaxe": "Pickaxe",
       "great-axe": "Great Axe",
+      "large-battle-axe": "Large Battle Axe",
       "diamond-great-axe": "Diamond Great Axe",
       "hunter-bow": "Hunter's Bow"
     },

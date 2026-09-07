@@ -28,6 +28,58 @@ export const AxeVertexColorPalettes: Record<string, VertexColorWeaponPalette> = 
         ],
     },
 
+    BATTLE_AXE: {
+        materialNames: METAL_WEAPON_MATERIAL_NAMES,
+        twoSided: true,
+        slots: [
+            {index: 0, source: [63, 63, 63], role: 'blade highlight'},
+            {index: 1, source: [15, 15, 15], role: 'head dark'},
+            {index: 2, source: [47, 47, 47], role: 'head mid'},
+            {index: 3, source: [81, 34, 0], role: 'shaft mid'},
+            {index: 4, source: [34, 8, 0], role: 'shaft dark'},
+        ],
+
+        // materialId: 1 steel, 2 pyroxide, 3 geonite, 4 mythril, 5 chaotite
+        materialColors: [
+            // steel
+            [[219, 237, 242], [52, 62, 64], [93, 110, 116], [73, 42, 16], [126, 71, 30]],
+            // pyroxide
+            [[255, 170, 72], [69, 12, 12], [132, 25, 20], [63, 25, 10], [116, 53, 20]],
+            // geonite
+            [[146, 241, 166], [10, 51, 39], [24, 101, 68], [44, 59, 20], [87, 113, 36]],
+            // mythril
+            [[177, 247, 255], [8, 44, 105], [26, 111, 183], [93, 57, 13], [193, 138, 31]],
+            // chaotite
+            [[255, 138, 237], [54, 7, 65], [126, 29, 142], [69, 17, 78], [154, 42, 126]],
+        ],
+    },
+
+    LARGE_BATTLE_AXE: {
+        materialNames: METAL_WEAPON_MATERIAL_NAMES,
+        twoSided: true,
+        slots: [
+            {index: 0, source: [34, 8, 0], role: 'shaft dark'},
+            {index: 1, source: [15, 15, 15], role: 'head dark'},
+            {index: 2, source: [63, 63, 63], role: 'blade highlight'},
+            {index: 3, source: [81, 34, 0], role: 'shaft mid'},
+            {index: 4, source: [47, 47, 47], role: 'head mid'},
+        ],
+
+        // materialId: 1 steel, 2 pyroxide, 3 geonite, 4 mythril, 5 chaotite
+        materialColors: [
+            // steel
+            [[126, 71, 30], [52, 62, 64], [219, 237, 242], [73, 42, 16], [93, 110, 116]],
+            // pyroxide
+            [[116, 53, 20], [69, 12, 12], [255, 170, 72], [63, 25, 10], [132, 25, 20]],
+            // geonite
+            [[87, 113, 36], [10, 51, 39], [146, 241, 166], [44, 59, 20], [24, 101, 68]],
+            // mythril
+            [[193, 138, 31], [8, 44, 105], [177, 247, 255], [93, 57, 13], [26, 111, 183]],
+            // chaotite
+            [[154, 42, 126], [54, 7, 65], [255, 138, 237], [69, 17, 78], [126, 29, 142]],
+        ],
+    },
+
     PICKAXE: {
         materialNames: PICKAXE_MATERIAL_NAMES,
         slots: [
