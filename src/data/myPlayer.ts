@@ -47,6 +47,7 @@ export const MyPlayer = {
     myChar: null as Character,
     myModel: null as CharacterModel | null,
     myCharRef: ref(null as Character | null),
+    resourceVersion: ref(0),
     isDead: ref(false),
     respawnAvailableAt: ref(0),
     autoRespawnAt: ref(0),
@@ -262,6 +263,7 @@ export const MyPlayer = {
     basicDataChange(data) {
         this.setMyCharHp(data.hp)
         this.myChar.basicDataChange(data)
+        this.resourceVersion.value++
     },
 
     die() {
@@ -309,6 +311,7 @@ export const MyPlayer = {
     setMyCharHp(hp: number) {
         const percentBeforeChange = (this.myChar.hp / this.myChar.maxHp) * 100
         this.myChar.hp = hp
+        this.resourceVersion.value++
 
         let vibrated = false
         if (this.myChar.hpPercent <= 25) {

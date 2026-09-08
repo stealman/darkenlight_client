@@ -1,8 +1,18 @@
 <template>
     <div class="character-tab-panel">
         <div class="character-overview-header">
-            <div class="character-overview-name">
-                {{ characterTitle }}
+            <div class="character-overview-title-row">
+                <div class="character-overview-resource character-overview-resource--health">
+                    <span class="character-overview-resource-label">HP</span>
+                    <span class="character-overview-resource-value">{{ healthValue }}</span>
+                </div>
+                <div class="character-overview-name">
+                    {{ characterTitle }}
+                </div>
+                <div class="character-overview-resource character-overview-resource--mana">
+                    <span class="character-overview-resource-label">MP</span>
+                    <span class="character-overview-resource-value">{{ manaValue }}</span>
+                </div>
             </div>
             <div class="character-overview-attributes">
                 <section
@@ -43,6 +53,20 @@ const characterTitle = computed(() => {
     const gameClassName = myChar.value?.gameClass?.name ?? ''
 
     return gameClassName ? `${name} (${gameClassName})` : name
+})
+
+const healthValue = computed(() => {
+    MyPlayer.resourceVersion.value
+    const character = myChar.value
+
+    return `${Math.round(Math.max(0, character?.hp ?? 0))} / ${Math.round(Math.max(0, character?.maxHp ?? 0))}`
+})
+
+const manaValue = computed(() => {
+    MyPlayer.resourceVersion.value
+    const character = myChar.value
+
+    return `${Math.round(Math.max(0, character?.mp ?? 0))} / ${Math.round(Math.max(0, character?.maxMp ?? 0))}`
 })
 
 const autoAttackCooldownSeconds = computed(() => (MyCombatData.aaCd / 1000).toFixed(2))
@@ -134,6 +158,7 @@ const attributes = computed(() => [
 }
 
 .character-overview-name {
+    grid-column: 2 / span 2;
     max-width: 100%;
     font-size: clamp(15px, 2.1vh, 19px);
     font-weight: 700;
@@ -142,6 +167,48 @@ const attributes = computed(() => [
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.character-overview-title-row {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    align-items: center;
+    gap: 7px;
+}
+
+.character-overview-resource {
+    min-width: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    font-size: clamp(11px, 1.55vh, 14px);
+    line-height: 1.15;
+    white-space: nowrap;
+}
+
+.character-overview-resource--health {
+    grid-column: 1;
+    --character-resource-color: 204, 123, 108;
+    justify-content: flex-start;
+}
+
+.character-overview-resource--mana {
+    grid-column: 4;
+    --character-resource-color: 108, 155, 193;
+    justify-content: flex-end;
+}
+
+.character-overview-resource-label {
+    color: rgb(var(--character-resource-color));
+    font-weight: 700;
+}
+
+.character-overview-resource-value {
+    overflow: hidden;
+    color: rgb(var(--character-resource-color));
+    font-weight: 700;
+    text-overflow: ellipsis;
 }
 
 .character-overview-attributes {
