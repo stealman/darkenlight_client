@@ -236,10 +236,12 @@ export const Materials = {
 class MaterialEnum {
     index: number
     uv: Vector2
+    uvScale: Vector2
 
-    constructor(index: number, uv: Vector2) {
+    constructor(index: number, uv: Vector2, uvScale: Vector2 = new Vector2(1, 1)) {
         this.index = index
         this.uv = uv
+        this.uvScale = uvScale
     }
 }
 
@@ -260,6 +262,8 @@ export const MaterialEnum1 = {
     BRICK_RED: new MaterialEnum(1, new Vector2(0.5, 14.5)),
     BRICK_GRAY: new MaterialEnum(2, new Vector2(2.5, 14.5)),
     BRICK_BLACK: new MaterialEnum(3, new Vector2(4.5, 14.5)),
+    ROCK1: new MaterialEnum(4, new Vector2(6.5, 14.5)),
+    ROCK1_SMALL: new MaterialEnum(5, new Vector2(6.5, 14.5), new Vector2(0.5, 0.5)),
     WOOD_1: new MaterialEnum(9, new Vector2(0.5, 12.5)),
     WOOD_2: new MaterialEnum(10, new Vector2(2.5, 12.5)),
     EMBERS: new MaterialEnum(17, new Vector2(0.5, 10.5)),

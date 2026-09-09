@@ -12,6 +12,7 @@ import { TerrainManager } from '@/babylon/world/terrainManager'
 import { PBRCustomMaterial } from '@babylonjs/materials'
 import { StaticsManager } from '@/babylon/world/statics/staticsManager'
 import { FoliageManager } from '@/babylon/world/foliageManager'
+import { RockDebrisManager } from '@/babylon/world/rockDebrisManager'
 import { GMSpawns } from '@/gm/GmSpawns'
 import { GMManager, GmTabs } from '@/gm/GM'
 import { Lights } from '@/babylon/scene/lights'
@@ -34,15 +35,18 @@ export const WorldRenderer = {
         // Global blocks
         this.block1 = new SymmetricBlock(Builder.createWrappedBlock(scene, this.worldParentNode), Materials.blockMat1!)
         this.block1.mesh.doNotSyncBoundingInfo = true
+        this.block1.mesh.receiveShadows = true
 
         this.blockWithAlpha1 = new SymmetricBlock(Builder.createBlock(scene, this.worldParentNode), Materials.blockMatAlpha1!)
         this.blockWithAlpha1.mesh.doNotSyncBoundingInfo = true
+        this.blockWithAlpha1.mesh.receiveShadows = true
 
         // Initialize managers
         TerrainManager.initialize(scene)
         TreeManager.initialize(scene)
         StaticsManager.initialize(scene)
         FoliageManager.initialize(scene, this.worldParentNode)
+        RockDebrisManager.initialize(scene, this.worldParentNode)
 
         Lights.addShadowCaster(TerrainManager.terrainBlock1!, true, true)
         Lights.addShadowCaster(TerrainManager.terrainPlane!, true, true)
@@ -86,6 +90,9 @@ export const WorldRenderer = {
         // Render decorative foliage
         FoliageManager.renderFoliage()
 
+        // Render decorative rock debris
+        RockDebrisManager.renderRockDebris(Lights.indoor)
+
         if (GMManager.gmPanelVisible && GMManager.tab === GmTabs.SPAWNS_EDIT) {
             GMSpawns.renderSpawnMarkers()
         }
@@ -101,6 +108,7 @@ export const WorldRenderer = {
             TerrainManager.terrainPlane!,
             this.block1!.mesh,
             this.blockWithAlpha1!.mesh,
+            RockDebrisManager.mesh!,
         ])
     }
 }

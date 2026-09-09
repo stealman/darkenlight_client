@@ -411,10 +411,7 @@ class Character implements Attackable, EffectTarget {
             return
         }
 
-        const items = InventoryManager.getResourceItemsByType(data.g)
-        if (items.length > 0) {
-            OverlayManager.addCharacterItemGainNumber(this, data.q, items[0])
-        }
+        OverlayManager.addCharacterItemGainNumber(this, data.q, Item.fromData(data.item))
     }
 
     clearTimedAction() {

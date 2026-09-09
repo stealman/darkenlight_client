@@ -140,6 +140,7 @@ export interface CharacterCraftingResultMessage {
     id: number
     g: number
     q: number
+    item: ItemTO
 }
 
 export interface CharacterRestingMessage {
