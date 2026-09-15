@@ -170,6 +170,17 @@
             "bandages": "Obvazy",
 
             "ore-iron": "Železná Ruda",
+            "ore-silver": "Stříbrná ruda",
+            "ore-gold": "Zlatá ruda",
+            "ore-agapyte": "Agapytová ruda",
+            "ore-astracyte": "Astracytová ruda",
+            "ore-pyroxide": "Pyroxidová ruda",
+            "ore-geonite": "Geonitová ruda",
+            "ore-bloodstone": "Bloodstone ruda",
+            "ore-darkstone": "Darkstone ruda",
+            "ore-mythril": "Mythrilová ruda",
+            "ore-adamantium": "Adamantiová ruda",
+            "ore-chaotite": "Chaotitová ruda",
 
             "log-wooden": "Dřevo",
 
