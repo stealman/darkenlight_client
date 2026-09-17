@@ -14,6 +14,9 @@ import { Materials } from '@/babylon/materials'
 import { Lights } from '@/babylon/scene/lights'
 import { BabylonUtils } from '@/babylon/utils'
 
+const WEAPON_TRAIL_START_DELAY = 150
+const WEAPON_TRAIL_FADE_DURATION = 180
+
 export class EquipItem {
     parent: EquipBearer
     type: EquipItemType
@@ -30,6 +33,9 @@ export class EquipItem {
     scaleMatrix: Matrix = Matrix.Identity()
 
     weaponTrail: TrailMesh | null = null
+    weaponTrailStartDelayEnd: number = 0
+    weaponTrailFadeInEnd: number = 0
+    weaponTrailFadeEnd: number = 0
     hasSwordParticles: boolean = false
     particleSystem: GPUParticleSystem | null = null
 
@@ -84,6 +90,8 @@ export class EquipItem {
             Vector3.TransformCoordinatesToRef(this.itemPosition, this.parentRotMatrix, this.tmpOffset)
             this.position.addInPlace(this.tmpOffset)
         }
+
+        this.updateWeaponTrailFade()
     }
 
     createWeaponTrail(bone: Bone): TrailMesh {
@@ -99,10 +107,103 @@ export class EquipItem {
             p.y * s.y,
             p.z * s.z
         )
-        const trail = new TrailMesh('swordTrail', tip, Renderer.scene, 0.3, 60, true)
+        const trail = new TrailMesh('swordTrail', tip, Renderer.scene, 0.3, 60, false)
         trail.material = Materials.weaponTrailMaterial
         trail.setEnabled(false)
         return trail
+    }
+
+    setWeaponTrailEnabled(enabled: boolean) {
+        if (enabled) {
+            this.startWeaponTrail()
+        } else {
+            this.fadeWeaponTrail()
+        }
+    }
+
+    stopWeaponTrailImmediately() {
+        const trail = this.weaponTrail
+        if (!trail) {
+            return
+        }
+
+        this.weaponTrailStartDelayEnd = 0
+        this.weaponTrailFadeInEnd = 0
+        this.weaponTrailFadeEnd = 0
+        trail.stop()
+        trail.setEnabled(false)
+        trail.visibility = 1
+        trail.reset()
+    }
+
+    private startWeaponTrail() {
+        const trail = this.weaponTrail
+        if (!trail) {
+            return
+        }
+
+        trail.reset()
+        this.weaponTrailStartDelayEnd = Date.now() + WEAPON_TRAIL_START_DELAY
+        this.weaponTrailFadeInEnd = 0
+        this.weaponTrailFadeEnd = 0
+        trail.visibility = 0
+        trail.setEnabled(true)
+        trail.start()
+    }
+
+    private fadeWeaponTrail() {
+        const trail = this.weaponTrail
+        if (!trail || !trail.isEnabled() || this.weaponTrailFadeEnd > 0) {
+            return
+        }
+
+        if (this.weaponTrailStartDelayEnd > 0 || this.weaponTrailFadeInEnd > 0) {
+            this.stopWeaponTrailImmediately()
+            return
+        }
+
+        trail.stop()
+        this.weaponTrailFadeEnd = Date.now() + WEAPON_TRAIL_FADE_DURATION
+    }
+
+    private updateWeaponTrailFade() {
+        const trail = this.weaponTrail
+        if (!trail) {
+            return
+        }
+
+        const now = Date.now()
+        if (this.weaponTrailStartDelayEnd > 0) {
+            if (now < this.weaponTrailStartDelayEnd) {
+                return
+            }
+            this.weaponTrailStartDelayEnd = 0
+            this.weaponTrailFadeInEnd = now + WEAPON_TRAIL_FADE_DURATION
+        }
+
+        if (this.weaponTrailFadeInEnd > 0) {
+            const remaining = this.weaponTrailFadeInEnd - now
+            if (remaining <= 0) {
+                this.weaponTrailFadeInEnd = 0
+                trail.visibility = 1
+            } else {
+                trail.visibility = 1 - remaining / WEAPON_TRAIL_FADE_DURATION
+            }
+            return
+        }
+
+        if (this.weaponTrailFadeEnd === 0) {
+            return
+        }
+
+        const remaining = this.weaponTrailFadeEnd - now
+        if (remaining <= 0) {
+            this.stopWeaponTrailImmediately()
+            return
+        }
+
+        trail.visibility = remaining / WEAPON_TRAIL_FADE_DURATION
+        trail.update()
     }
 
     createSwordParticles(handNode: TransformNode) {
@@ -279,9 +380,7 @@ export const EquipManager = {
     },
 
     removeEquippedItem(item: EquipItem) {
-        if (item.weaponTrail) {
-            item.weaponTrail.setEnabled(false)
-        }
+        item.stopWeaponTrailImmediately()
         if (item.particleSystem) {
             item.particleSystem.stop()
             item.particleSystem.dispose()

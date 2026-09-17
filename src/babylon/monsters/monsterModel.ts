@@ -307,7 +307,7 @@ export class MonsterModel implements EquipBearer {
     }
 
     setWeaponTrailEnabled(enabled: boolean) {
-        this.weaponEquipItem?.weaponTrail?.setEnabled(enabled)
+        this.weaponEquipItem?.setWeaponTrailEnabled(enabled)
     }
 
     disposeWeaponTrail() {
