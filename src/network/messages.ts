@@ -360,3 +360,8 @@ export class GMLoadWorldsMsg implements Message {
     d: any = {}
 }
 
+export class GMLoadItemCodebookMsg implements Message {
+    t: number = 1010
+    d: any = {}
+}
+

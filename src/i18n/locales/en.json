@@ -163,6 +163,7 @@
     "weaponSet-primary": "Primary weapon saved",
     "weaponSet-secondary": "Secondary weapon saved",
     "notEnoughStamina": "You are too tired",
+    "treeDepleted": "This tree has already been harvested",
     "notEnoughMana": "You don't have enough mana",
     "notEnoughHealth": "You don't have enough health",
     "fullyRested": "You are fully rested",

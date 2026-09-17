@@ -27,6 +27,7 @@ import {
     EffectDamageMessage,
     HealingMessage, HealingResultMessage, PlaySoundMessage, PotionUsedMessage, PubliclyVisibleAffectData, TextMessage,
     CraftingInitMenuData,
+    GMItemCodebookItem,
     GMNpcDetailsData,
     NpcUseData,
     BankStateData,
@@ -110,6 +111,7 @@ export const MessageProcessor = {
                 case 60: this.processCharacterTeleport(msg.d); break
                 case 61: this.processCharacterRespawn(msg.d); break
                 case 62: this.processGMWorlds(msg.d); break
+                case 63: this.processGMItemCodebook(msg.d); break
                 case 1003: this.processGMAllSpawns(msg.d); break
                 case 1004: this.processGMSpawnChange(msg.d); break
                 default:
@@ -306,6 +308,10 @@ export const MessageProcessor = {
 
     processGMWorlds(data: Array<{id: number, name: string}>) {
         GMManager.consumeTeleportWorlds(data)
+    },
+
+    processGMItemCodebook(data: GMItemCodebookItem[]) {
+        GMManager.consumeItemCodebook(data)
     },
 
     clearWorldForTransition() {

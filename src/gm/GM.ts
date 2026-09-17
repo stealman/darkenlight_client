@@ -1,5 +1,6 @@
 import { Connector } from '@/network/connector'
-import { GMCreateItemMsg, GMForceSaveDataMsg, GMLoadWorldsMsg, GMNpcAction, GMSaveMapDataMsg, GMStaticObjectChange, GMTeleportMsg, GMTerrainChange } from '@/network/messages'
+import { GMCreateItemMsg, GMForceSaveDataMsg, GMLoadItemCodebookMsg, GMLoadWorldsMsg, GMNpcAction, GMSaveMapDataMsg, GMStaticObjectChange, GMTeleportMsg, GMTerrainChange } from '@/network/messages'
+import { GMItemCodebookItem } from '@/network/messageIfs'
 import { GMSceneManager } from '@/babylon/gm/GmSceneManager'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { ref } from 'vue'
@@ -58,6 +59,7 @@ export const GMManager = {
     selectedNpc: ref<any | null>(null),
     npcDetailsDialogOpenRequested: ref(false),
     teleportWorlds: ref([] as Array<{id: number, name: string}>),
+    itemCodebook: ref([] as GMItemCodebookItem[]),
     selectedTeleportWorld: ref(0),
 
     tab: GmTabs.OVERVIEW,
@@ -465,6 +467,14 @@ export const GMManager = {
         this.teleportWorlds.value = worlds
         this.selectedTeleportWorld.value = MyPlayer.worldId
         this.entranceDestinationWorld.value = MyPlayer.worldId
+    },
+
+    loadItemCodebook() {
+        Connector.sendMessage(new GMLoadItemCodebookMsg())
+    },
+
+    consumeItemCodebook(items: GMItemCodebookItem[]) {
+        this.itemCodebook.value = items
     },
 
     createItem(type: string, codebookId: number, quantity: number | null, quality: number | null) {

@@ -15,8 +15,12 @@
                 </label>
 
                 <label class="item-creation-control">
-                    <span>Codebook Id</span>
-                    <input v-model.number="codebookId" type="number" min="0" @focus="selectInputContent" @click="selectInputContent">
+                    <span>Item</span>
+                    <select v-model.number="codebookId" :disabled="availableCodebookItems.length === 0">
+                        <option v-for="item in availableCodebookItems" :key="`${item.type}-${item.id}`" :value="item.id">
+                            {{ item.id }} — {{ getItemName(item) }}
+                        </option>
+                    </select>
                 </label>
 
                 <label v-if="isResource" class="item-creation-control">
@@ -31,26 +35,36 @@
                     </label>
                 </template>
 
-                <button class="dialog-button item-creation-create-button" @click="createItem">CREATE</button>
+                <button class="dialog-button item-creation-create-button" :disabled="availableCodebookItems.length === 0" @click="createItem">CREATE</button>
             </div>
         </div>
     </div>
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { GMManager } from '@/gm/GM'
+import { t } from '@/i18n'
 
 const dialogVisible = ref(false)
 const itemType = ref('WEAPON')
-const codebookId = ref(1)
+const codebookId = ref(0)
 const quantity = ref(1)
 const quality = ref(25)
 
 const isResource = computed(() => itemType.value === 'RESOURCE')
+const itemTypeLocalizationSections = {
+    WEAPON: 'weapons',
+    ARMOR: 'armors',
+    JEWEL: 'jewels',
+    TRINKET: 'trinkets',
+    RESOURCE: 'resources',
+}
+const availableCodebookItems = computed(() => GMManager.itemCodebook.value.filter((item) => item.type === itemType.value))
 
 const openDialog = () => {
     dialogVisible.value = true
+    GMManager.loadItemCodebook()
 }
 
 const closeDialog = () => {
@@ -65,17 +79,26 @@ const toSafeNumber = (value, fallback = 0) => {
     return Math.floor(parsed)
 }
 
-const selectInputContent = (event) => {
-    const target = event.target
-    if (!(target instanceof HTMLInputElement)) {
+const getItemName = (item) => {
+    const section = itemTypeLocalizationSections[item.type]
+    const localizationKey = section ? `items.${section}.${item.name}` : item.name
+    const localizedName = t(localizationKey)
+    return localizedName === localizationKey ? item.name : localizedName
+}
+
+watch(availableCodebookItems, (items) => {
+    if (!items.some((item) => item.id === codebookId.value)) {
+        codebookId.value = items[0]?.id ?? 0
+    }
+}, {immediate: true})
+
+const createItem = () => {
+    const selectedItem = availableCodebookItems.value.find((item) => item.id === codebookId.value)
+    if (!selectedItem) {
         return
     }
 
-    target.select()
-}
-
-const createItem = () => {
-    const safeCodebookId = Math.max(0, toSafeNumber(codebookId.value, 0))
+    const safeCodebookId = selectedItem.id
 
     if (isResource.value) {
         const safeQuantity = Math.max(1, toSafeNumber(quantity.value, 1))

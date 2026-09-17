@@ -257,3 +257,9 @@ export interface GMNpcDetailsData {
     features: any[]
     wanderingRange: number
 }
+
+export interface GMItemCodebookItem {
+    type: string
+    id: number
+    name: string
+}
