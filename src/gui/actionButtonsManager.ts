@@ -212,7 +212,7 @@ class ActionButton {
 }
 
 export const ActionButtonsManager = {
-    actionBindingKey: 'DARKENLIGHT_ACTION_BUTTONS_BINDINGS',
+    actionBindingKey: null as string | null,
 
     buttonsPanel1: null as HTMLElement,
     buttonsPanel2: null as HTMLElement,
@@ -233,15 +233,23 @@ export const ActionButtonsManager = {
             this.actionButtons.set(i, new ActionButton(i.toString()))
         }
 
+        this.renderActionButtons()
+    },
+
+    loadBindingsForCharacter(characterId: number) {
+        this.actionBindingKey = `DARKENLIGHT_CHARACTER_${characterId}_ACTION_BUTTONS_BINDINGS`
+        this.bindings.clear()
+
         if (!localStorage.getItem(this.actionBindingKey)) {
             this.bindings.set(1, new ActionButtonActionBinding(CharacterActions.AUTO_ATTACK.name, {}))
             this.bindings.set(2, new ActionButtonActionBinding(CharacterActions.HEAL.name, {}))
-            localStorage.setItem(this.actionBindingKey, JSON.stringify(Array.from(this.bindings.entries())))
+            this.storeBindings()
         } else {
             const storedBindings = JSON.parse(localStorage.getItem(this.actionBindingKey)!)
             this.bindings = new Map<number, ActionButtonActionBinding>(storedBindings)
         }
         this.renderActionButtons()
+        this.notifyBindingsChanged()
     },
 
     onFrame(time: number) {
@@ -437,6 +445,9 @@ export const ActionButtonsManager = {
     },
 
     storeBindings() {
+        if (!this.actionBindingKey) {
+            return
+        }
         localStorage.setItem(this.actionBindingKey, JSON.stringify(Array.from(this.bindings.entries())))
     },
 

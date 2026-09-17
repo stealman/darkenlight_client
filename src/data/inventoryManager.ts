@@ -27,7 +27,6 @@ const createEmptyStoredWeaponSetups = (): StoredWeaponSetups => ({
 })
 
 export const InventoryManager = {
-    weaponSetupKey: "DARKENLIGHT_WEAPON_SETUP",
     inventory: [] as Item[],
     itemTypeSortOrder: ['W', 'A', 'J', 'T', 'R'],
 
@@ -394,7 +393,12 @@ export const InventoryManager = {
     },
 
     getStoredWeaponSetups(): StoredWeaponSetups {
-        const storedValue = localStorage.getItem(this.weaponSetupKey)
+        const weaponSetupKey = this.getWeaponSetupKey()
+        if (!weaponSetupKey) {
+            return createEmptyStoredWeaponSetups()
+        }
+
+        const storedValue = localStorage.getItem(weaponSetupKey)
         if (!storedValue) {
             return createEmptyStoredWeaponSetups()
         }
@@ -410,9 +414,30 @@ export const InventoryManager = {
         }
     },
 
+    initializeWeaponSetupsForCharacter() {
+        const weaponSetupKey = this.getWeaponSetupKey()
+        if (!weaponSetupKey || localStorage.getItem(weaponSetupKey)) {
+            return
+        }
+        localStorage.setItem(weaponSetupKey, JSON.stringify(createEmptyStoredWeaponSetups()))
+    },
+
     updateWeaponSetup(setupType: 'primary' | 'secondary') {
+        const weaponSetupKey = this.getWeaponSetupKey()
+        if (!weaponSetupKey) {
+            return
+        }
+
         const storedSetups = this.getStoredWeaponSetups()
         storedSetups[setupType] = this.getCurrentWeaponSetup()
-        localStorage.setItem(this.weaponSetupKey, JSON.stringify(storedSetups))
+        localStorage.setItem(weaponSetupKey, JSON.stringify(storedSetups))
+    },
+
+    getWeaponSetupKey(): string | null {
+        const characterId = MyPlayer.myChar?.id
+        if (!Number.isInteger(characterId)) {
+            return null
+        }
+        return `DARKENLIGHT_CHARACTER_${characterId}_WEAPON_SETUP`
     },
 }

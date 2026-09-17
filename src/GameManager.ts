@@ -7,6 +7,7 @@ import { Settings } from '@/settings/settings'
 import { Connector } from '@/network/connector'
 import { LogoutMsg } from '@/network/messages'
 import { ActionButtonsManager } from '@/gui/actionButtonsManager'
+import { InventoryManager } from '@/data/inventoryManager'
 import { setLocale } from '@/i18n'
 import { MyStatusPanel } from '@/gui/myStatusPanel'
 
@@ -32,6 +33,8 @@ export const GameManager = {
 
     async startGame(charData) {
         await MyPlayer.initialize(charData)
+        InventoryManager.initializeWeaponSetupsForCharacter()
+        ActionButtonsManager.loadBindingsForCharacter(MyPlayer.myChar.id)
         await Renderer.gameStarted()
         this.onResize()
         this.started = true
