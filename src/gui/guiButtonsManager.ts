@@ -139,7 +139,7 @@ export const GuiButtonsManager = {
         const coveredBlocks = MyPlayer.myChar ? WorldDataManager.getCoveredBlocks(MyPlayer.myChar.pos, MyPlayer.myChar.getBoxSize()) : []
 
         // Show mining button if any covered block is mineable and the player has a mining tool available
-        const hasMineableCoveredBlock = coveredBlocks.some(block => block.minableCoal || block.minableOre)
+        const hasMineableCoveredBlock = coveredBlocks.some(block => block.minableCoal || block.minableOreAvailable)
         this.opportunityButtons.get(GuiOpportunityActions.MINING.name)!.setVisible(
             hasMineableCoveredBlock && MyPlayer.hasWeaponTagInHandOrInventory(WeaponTags.MINING_TOOL)
         )

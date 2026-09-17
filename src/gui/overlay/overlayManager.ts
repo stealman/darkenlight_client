@@ -16,6 +16,7 @@ import { TargetSelector } from '@/gui/overlay/targetSelector'
 import { DamageNumber } from '@/gui/overlay/damageNumber'
 import { EmeraldGainNumber } from '@/gui/overlay/emeraldGainNumber'
 import { ItemGainNumber } from '@/gui/overlay/itemGainNumber'
+import { GmOreTierOverlay } from '@/gui/gm/oreTierOverlay'
 
 export const OverlayManager = {
     overlayCanvas: null as HTMLCanvasElement,
@@ -61,6 +62,7 @@ export const OverlayManager = {
         this.renderDamagedBars()
         this.renderHealingMarkers(time)
         this.renderAttackTargetIndicator(time)
+        GmOreTierOverlay.onFrame(this.overlayCtx!)
 
     },
 

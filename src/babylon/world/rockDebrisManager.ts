@@ -42,7 +42,7 @@ export const RockDebrisManager = {
                 }
 
                 const block = blockMap[x][z]
-                if (block.type !== TerrainEnum1.TERRAIN_ROCK.index || block.snowed || block.minableOre || block.minableCoal || (indoor && this.isDungeonWall(blockMap, x, z, block)) || !this.shouldSpawnPile(x, z, indoor)) {
+                if (block.type !== TerrainEnum1.TERRAIN_ROCK.index || block.snowed || block.minableOreAvailable || block.minableCoal || (indoor && this.isDungeonWall(blockMap, x, z, block)) || !this.shouldSpawnPile(x, z, indoor)) {
                     continue
                 }
 

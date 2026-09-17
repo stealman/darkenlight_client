@@ -203,6 +203,7 @@ export class MapBlock {
     snowed: boolean = false
     minableCoal: boolean
     minableOre: number | null
+    minableOreAvailable: boolean = false
 
     constructor(height: number, type: number) {
         this.height = height
@@ -248,12 +249,15 @@ export class MapBlock {
     }
 
     setMinable(minable: undefined | string | null) {
+        this.minableCoal = minable === 'C'
+        this.minableOreAvailable = minable?.startsWith('M') === true
+        this.minableOre = null
+
         if (minable) {
-            this.minableCoal = minable === 'C'
-            this.minableOre = minable.startsWith('M') ? parseInt(minable.substring(1)) : null
-        } else {
-            this.minableCoal = false
-            this.minableOre = null
+            const oreTier = parseInt(minable.substring(1))
+            if (this.minableOreAvailable && Number.isInteger(oreTier)) {
+                this.minableOre = oreTier
+            }
         }
     }
 
@@ -262,8 +266,8 @@ export class MapBlock {
             return 'C'
         }
 
-        if (this.minableOre) {
-            return `M${this.minableOre}`
+        if (this.minableOreAvailable) {
+            return this.minableOre ? `M${this.minableOre}` : 'M'
         }
 
         return null

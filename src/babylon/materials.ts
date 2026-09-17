@@ -288,7 +288,7 @@ export const TerrainEnum1 = {
 
     getTerrainForBlock(block: MapBlock, ignoreSnow: boolean = false): Vector2 {
         let type = block.type;
-        if (block.minableOre) {
+        if (block.minableOreAvailable) {
             type += 1000;
         }
         if (block.snowed && !ignoreSnow) {
