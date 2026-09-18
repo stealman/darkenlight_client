@@ -31,6 +31,15 @@ export interface AttackableCombatTO {
     arcaneInterference?: number
 }
 
+export interface SkillSetTO {
+    swords: number
+    axes: number
+    maces: number
+    polearms: number
+    daggers: number
+    bows: number
+}
+
 export interface  AutoAttackMessage {
     id: number
     tgt: number

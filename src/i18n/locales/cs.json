@@ -190,7 +190,6 @@
     "trinkets": "Talismany",
       "buy": "Koupit",
       "repair": "Opravit",
-      "durability": "Odolnost",
       "noRepairableItems": "Nemáš poškozené předměty, které tento opravář umí opravit.",
     "emptyCategory": "Tady zatím nic není.",
     "featureNotAvailable": "Tato služba zatím není k dispozici.",

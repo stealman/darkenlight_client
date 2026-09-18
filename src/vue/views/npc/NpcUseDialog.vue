@@ -96,9 +96,11 @@
                     <template v-if="repairItems.equipment.length">
                         <div class="npc-repairer-section-title">{{ t('vendor.equipment') }}</div>
                         <div v-for="repairItem in repairItems.equipment" :key="repairItem.item.id" class="npc-vendor-item-row npc-repairer-item-row">
-                            <img class="npc-vendor-item-icon" :src="getRepairItemImage(repairItem.item)" :alt="repairItem.item.name ?? ''" />
+                            <div :class="['npc-repairer-item-icon', repairItem.durabilityStatus ? `item-durability--${repairItem.durabilityStatus}` : null]">
+                                <img class="npc-vendor-item-icon" :src="getRepairItemImage(repairItem.item)" :alt="repairItem.item.name ?? ''" />
+                            </div>
                             <span class="npc-vendor-item-name">{{ repairItem.item.name }}</span>
-                            <span class="npc-repairer-durability">{{ t('vendor.durability') }} {{ getItemDurability(repairItem.item) }}/{{ getItemMaxDurability(repairItem.item) }}</span>
+                            <span :class="['npc-repairer-durability', repairItem.durabilityStatus ? `item-durability--${repairItem.durabilityStatus}` : null]">{{ t('inventory.durability') }} {{ getItemDurability(repairItem.item) }}/{{ getItemMaxDurability(repairItem.item) }}</span>
                             <span class="npc-vendor-item-price">
                                 {{ repairItem.price }}
                                 <img src="/images/icons/emerald.png" alt="Emerald" />
@@ -109,9 +111,11 @@
                     <template v-if="repairItems.inventory.length">
                         <div class="npc-repairer-section-title">{{ t('vendor.inventory') }}</div>
                         <div v-for="repairItem in repairItems.inventory" :key="repairItem.item.id" class="npc-vendor-item-row npc-repairer-item-row">
-                        <img class="npc-vendor-item-icon" :src="getRepairItemImage(repairItem.item)" :alt="repairItem.item.name ?? ''" />
+                        <div :class="['npc-repairer-item-icon', repairItem.durabilityStatus ? `item-durability--${repairItem.durabilityStatus}` : null]">
+                            <img class="npc-vendor-item-icon" :src="getRepairItemImage(repairItem.item)" :alt="repairItem.item.name ?? ''" />
+                        </div>
                         <span class="npc-vendor-item-name">{{ repairItem.item.name }}</span>
-                        <span class="npc-repairer-durability">{{ t('vendor.durability') }} {{ getItemDurability(repairItem.item) }}/{{ getItemMaxDurability(repairItem.item) }}</span>
+                        <span :class="['npc-repairer-durability', repairItem.durabilityStatus ? `item-durability--${repairItem.durabilityStatus}` : null]">{{ t('inventory.durability') }} {{ getItemDurability(repairItem.item) }}/{{ getItemMaxDurability(repairItem.item) }}</span>
                         <span class="npc-vendor-item-price">
                             {{ repairItem.price }}
                             <img src="/images/icons/emerald.png" alt="Emerald" />
@@ -190,6 +194,7 @@ import {BankManager} from '@/data/bankManager'
 import BankPanel from '@/vue/views/npc/BankPanel.vue'
 import {MyPlayer} from '@/data/myPlayer'
 import type {Item} from '@/data/items/item'
+import {getItemDurabilityStatus, type ItemDurabilityStatus} from '@/vue/views/inventory/itemTooltip'
 
 const emit = defineEmits(['close'])
 
@@ -213,6 +218,7 @@ type PurchaseEffect = {
 type RepairItem = {
     item: Item
     price: number
+    durabilityStatus: ItemDurabilityStatus | null
 }
 
 const dialogVisible = ref(false)
@@ -236,7 +242,7 @@ const repairItems = computed(() => {
     resourceInventoryVersion.value
     const repairPrices = new Map((selectedFeature.value?.repairItems ?? []).map((repairItem) => [repairItem.id, repairItem.price]))
     const getRepairItems = (items: Item[]): RepairItem[] => items
-        .map((item) => ({item, price: repairPrices.get(item.id)}))
+        .map((item) => ({item, price: repairPrices.get(item.id), durabilityStatus: getItemDurabilityStatus(item)}))
         .filter((repairItem): repairItem is RepairItem => repairItem.price !== undefined && getItemDurability(repairItem.item) < getItemMaxDurability(repairItem.item))
         .sort((first, second) => first.price - second.price || (first.item.name ?? '').localeCompare(second.item.name ?? ''))
     return {
@@ -471,6 +477,16 @@ defineExpose({openDialog})
 .npc-vendor-item-row { display: grid; grid-template-columns: 46px minmax(0, 1fr) max-content auto; align-items: center; gap: 12px; min-height: 46px; padding: 3px 8px; border-bottom: 1px solid rgba(var(--ui-darker), 0.65); color: rgb(var(--ui-base)); cursor: url('/images/cursor-pointer.png'), pointer; }
 .npc-repairer-item-row { grid-template-columns: 46px minmax(0, 1fr) max-content max-content auto; cursor: default; }
 .npc-repairer-durability { color: rgb(var(--ui-dark)); font-size: 12px; white-space: nowrap; }
+.npc-repairer-durability.item-durability--worn { color: rgba(var(--ui-dark), 0.72); }
+.npc-repairer-durability.item-durability--warning { color: rgb(var(--ui-durability-warning)); }
+.npc-repairer-durability.item-durability--danger { color: rgb(var(--ui-durability-danger)); }
+.npc-repairer-durability.item-durability--critical { color: rgb(var(--ui-danger)); }
+.npc-repairer-item-icon { position: relative; width: 40px; height: 40px; }
+.npc-repairer-item-icon::before { content: ''; position: absolute; inset: 0; background: var(--dialog-bg-darker); pointer-events: none; z-index: 0; }
+.npc-repairer-item-icon.item-durability--warning::before { background: rgba(var(--ui-durability-warning-bg), 0.86); }
+.npc-repairer-item-icon.item-durability--danger::before { background: rgba(var(--ui-durability-danger-bg), 0.86); }
+.npc-repairer-item-icon.item-durability--critical::before { background: rgba(var(--ui-durability-critical-bg), 0.86); }
+.npc-repairer-item-icon .npc-vendor-item-icon { position: relative; z-index: 1; width: 100%; height: 100%; }
 .npc-repairer-section-title { padding: 8px 8px 5px; border-bottom: 1px solid rgba(var(--ui-darker), 0.65); color: rgb(var(--ui-dark)); font-size: 12px; font-weight: 700; text-transform: uppercase; }
 .npc-vendor-item-row:hover { background: rgba(255, 255, 255, 0.06); }
 .npc-healer-service-row { width: 100%; border: 0; border-bottom: 1px solid rgba(var(--ui-darker), 0.65); background: transparent; color: inherit; font: inherit; text-align: inherit; }
@@ -498,5 +514,6 @@ defineExpose({openDialog})
     .npc-vendor-item-row { grid-template-columns: 54px minmax(0, 1fr) max-content auto; min-height: 58px; padding-block: 5px; }
     .npc-repairer-item-row { grid-template-columns: 54px minmax(0, 1fr) max-content max-content auto; }
     .npc-vendor-item-icon { width: 48px; height: 48px; }
+    .npc-repairer-item-icon { width: 48px; height: 48px; }
 }
 </style>

@@ -86,17 +86,17 @@
 
 .equip-slot.item-durability--warning::before,
 .inventory-item-slot.item-durability--warning::before {
-    background: rgba(63, 52, 17, 0.86);
+    background: rgba(var(--ui-durability-warning-bg), 0.86);
 }
 
 .equip-slot.item-durability--danger::before,
 .inventory-item-slot.item-durability--danger::before {
-    background: rgba(70, 39, 14, 0.86);
+    background: rgba(var(--ui-durability-danger-bg), 0.86);
 }
 
 .equip-slot.item-durability--critical::before,
 .inventory-item-slot.item-durability--critical::before {
-    background: rgba(69, 27, 25, 0.86);
+    background: rgba(var(--ui-durability-critical-bg), 0.86);
 }
 
 .item-durability-indicator {
@@ -112,11 +112,11 @@
 }
 
 .item-durability--warning .item-durability-indicator {
-    background: rgb(205, 174, 76);
+    background: rgb(var(--ui-durability-warning));
 }
 
 .item-durability--danger .item-durability-indicator {
-    background: rgb(211, 125, 61);
+    background: rgb(var(--ui-durability-danger));
 }
 
 .item-durability--critical .item-durability-indicator {

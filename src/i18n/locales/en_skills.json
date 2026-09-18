@@ -1,3 +1,29 @@
 {
-  "skills": {}
+  "skills": {
+    "categories": {
+      "combat": "Combat"
+    },
+    "weapons": {
+      "swords": "Swords",
+      "axes": "Axes",
+      "maces": "Maces",
+      "polearms": "Polearms",
+      "daggers": "Daggers",
+      "bows": "Bows"
+    },
+    "ranks": {
+      "untrained": "Untrained",
+      "novice": "Novice",
+      "neophyte": "Neophyte",
+      "apprentice": "Apprentice",
+      "expert": "Expert",
+      "journeyman": "Journeyman",
+      "veteran": "Veteran",
+      "master": "Master",
+      "highMaster": "High Master",
+      "exemplar": "Exemplar",
+      "grandmaster": "Grandmaster",
+      "fallback": "Rank {rank}"
+    }
+  }
 }

@@ -192,7 +192,6 @@
     "trinkets": "Trinkets",
       "buy": "Buy",
       "repair": "Repair",
-      "durability": "Durability",
       "noRepairableItems": "You have no damaged items this repairer can repair.",
     "emptyCategory": "Nothing is currently offered here.",
     "featureNotAvailable": "This feature is not available yet.",

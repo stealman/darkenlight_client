@@ -1,3 +1,29 @@
 {
-  "skills": {}
+  "skills": {
+    "categories": {
+      "combat": "Bojové"
+    },
+    "weapons": {
+      "swords": "Meče",
+      "axes": "Sekery",
+      "maces": "Palcáty",
+      "polearms": "Tyčové zbraně",
+      "daggers": "Dýky",
+      "bows": "Luky"
+    },
+    "ranks": {
+      "untrained": "Neovládá",
+      "novice": "Nováček",
+      "neophyte": "Neofyt",
+      "apprentice": "Učeň",
+      "expert": "Expert",
+      "journeyman": "Tovaryš",
+      "veteran": "Veterán",
+      "master": "Mistr",
+      "highMaster": "Vyšší mistr",
+      "exemplar": "Výjimečný mistr",
+      "grandmaster": "Velmistr",
+      "fallback": "Rank {rank}"
+    }
+  }
 }
