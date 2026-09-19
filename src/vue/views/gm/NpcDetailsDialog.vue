@@ -286,7 +286,6 @@ const weaponNames = {
     HAND_AXE: 'Hand axe', BATTLE_AXE: 'Battle axe', GREATAXE: 'Great axe', PICKAXE: 'Pickaxe',
     LIGHT_MACE: 'Light mace', WARMACE: 'Warmace', WARHAMMER: 'Warhammer',
     HUNTING_SPEAR: 'Hunting spear', WAR_SPEAR: 'War spear', HALBERD: 'Halberd',
-    KNIFE: 'Knife', STILETTO: 'Stiletto', RONDEL: 'Rondel',
     HUNTINGBOW: 'Hunting bow', RECURVE_BOW: 'Recurve bow', LONGBOW: 'Longbow',
 }
 const metalMaterials = [[1, 'Steel'], [2, 'Pyroxide'], [3, 'Geonite'], [4, 'Mythril'], [5, 'Chaotite']]
@@ -297,7 +296,6 @@ const weaponCodebookBaseIds = {
     HAND_AXE: 200, BATTLE_AXE: 210, GREATAXE: 220,
     LIGHT_MACE: 300, WARMACE: 310, WARHAMMER: 320,
     HUNTING_SPEAR: 400, WAR_SPEAR: 410, HALBERD: 420,
-    KNIFE: 500, STILETTO: 510, RONDEL: 520,
     HUNTINGBOW: 600, RECURVE_BOW: 610, LONGBOW: 620,
 }
 const pickaxeCodebookIds = { 1: 3, 2: 5, 3: 6, 4: 7, 5: 8, 6: 4 }

@@ -8,6 +8,7 @@ import { SwordVertexColorPalettes } from './swords'
 export const VertexColorWeaponPalettesByModelKey = {
     LONGSWORD: { palette: SwordVertexColorPalettes.LONGSWORD, inventoryBaseName: 'longsword' },
     BROADSWORD: { palette: SwordVertexColorPalettes.BROADSWORD, inventoryBaseName: 'broadsword' },
+    GREATSWORD: { palette: SwordVertexColorPalettes.GREATSWORD, inventoryBaseName: 'greatsword' },
     HAND_AXE: { palette: AxeVertexColorPalettes.HANDAXE, inventoryBaseName: 'hand-axe' },
     BATTLE_AXE: { palette: AxeVertexColorPalettes.BATTLE_AXE, inventoryBaseName: 'battle-axe' },
     GREATAXE: { palette: AxeVertexColorPalettes.GREATAXE, inventoryBaseName: 'great-axe' },

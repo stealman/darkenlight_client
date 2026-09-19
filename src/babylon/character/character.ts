@@ -84,7 +84,6 @@ class Character implements Attackable, EffectTarget {
         axes: 0,
         maces: 0,
         polearms: 0,
-        daggers: 0,
         bows: 0,
     }
 
@@ -327,10 +326,12 @@ class Character implements Attackable, EffectTarget {
     }
 
     finishAutoAttack(data: AutoAttackResultMessage) {
-        this.model?.setWeaponTrailEnabled(false)
+        if (!data.sec) {
+            this.model?.setWeaponTrailEnabled(false)
 
-        // Swing sound for melee weapons - ranged weapons have it when arrow is fired
-        if (!this.isWeaponRanged()) AudioManager.playWeaponSwing(this.weaponSoundType, this.pos)
+            // Swing sound for melee weapons - ranged weapons have it when arrow is fired
+            if (!this.isWeaponRanged()) AudioManager.playWeaponSwing(this.weaponSoundType, this.pos)
+        }
 
         const target = Utils.getAttackTargetByTypeAndId(data.tp, data.tgt)
         if (!target) {

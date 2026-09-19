@@ -16,6 +16,7 @@ import { createVertexColorWeaponMaterial } from './vertexColorPalettes/vertexCol
 const matBowSize = new Vector2(5, 1)
 const matLongswordSize = new Vector2(5, 1)
 const matBroadswordSize = new Vector2(5, 1)
+const matGreatswordSize = new Vector2(5, 1)
 const matPickaxeSize = new Vector2(6, 1)
 const matHandAxeSize = new Vector2(5, 1)
 const matBattleAxeSize = new Vector2(5, 1)
@@ -25,7 +26,7 @@ const matFutureWeaponSize = new Vector2(5, 1)
 
 // Change this when a weapon GLB is replaced. The URL revision prevents an
 // installed PWA from combining a newly deployed shader with an old HTTP-cached model.
-export const WEAPON_MODEL_CACHE_VERSION = '20260919-warmace-hunting-spear'
+export const WEAPON_MODEL_CACHE_VERSION = '20260919-greatsword'
 
 export const WeaponsCbManager = {
     BASE_WEAPONS_PATH: 'weapons/',
@@ -34,6 +35,7 @@ export const WeaponsCbManager = {
     bowMaterial: null as PBRCustomMaterial | null,
     longSwordMaterial: null as PBRCustomMaterial | null,
     broadSwordMaterial: null as PBRCustomMaterial | null,
+    greatSwordMaterial: null as PBRCustomMaterial | null,
     pickAxeMaterial: null as PBRCustomMaterial | null,
     handAxeMaterial: null as PBRCustomMaterial | null,
     battleAxeMaterial: null as PBRCustomMaterial | null,
@@ -50,6 +52,7 @@ export const WeaponsCbManager = {
         this.bowMaterial = createVertexColorWeaponMaterial('huntingBowVertexColor', scene, BowVertexColorPalettes.HUNTING_BOW)
         this.longSwordMaterial = createVertexColorWeaponMaterial('longswordVertexColor', scene, SwordVertexColorPalettes.LONGSWORD)
         this.broadSwordMaterial = createVertexColorWeaponMaterial('broadswordVertexColor', scene, SwordVertexColorPalettes.BROADSWORD)
+        this.greatSwordMaterial = createVertexColorWeaponMaterial('greatswordVertexColor', scene, SwordVertexColorPalettes.GREATSWORD)
         this.pickAxeMaterial = createVertexColorWeaponMaterial('pickaxeVertexColor', scene, AxeVertexColorPalettes.PICKAXE)
         this.handAxeMaterial = createVertexColorWeaponMaterial('handAxeVertexColor', scene, AxeVertexColorPalettes.HANDAXE)
         this.battleAxeMaterial = createVertexColorWeaponMaterial('battleAxeVertexColor', scene, AxeVertexColorPalettes.BATTLE_AXE)
@@ -61,6 +64,7 @@ export const WeaponsCbManager = {
 
         map.set(WeaponModelsCb.LONGSWORD.id, await this.getItem(WeaponModelsCb.LONGSWORD, this.longSwordMaterial))
         map.set(WeaponModelsCb.BROADSWORD.id, await this.getItem(WeaponModelsCb.BROADSWORD, this.broadSwordMaterial))
+        map.set(WeaponModelsCb.GREATSWORD.id, await this.getItem(WeaponModelsCb.GREATSWORD, this.greatSwordMaterial))
         map.set(WeaponModelsCb.HUNTINGBOW.id, await this.getItem(WeaponModelsCb.HUNTINGBOW, this.bowMaterial))
         map.set(WeaponModelsCb.PICKAXE.id, await this.getItem(WeaponModelsCb.PICKAXE, this.pickAxeMaterial))
         map.set(WeaponModelsCb.HAND_AXE.id, await this.getItem(WeaponModelsCb.HAND_AXE, this.handAxeMaterial))
@@ -110,7 +114,7 @@ export const WeaponModelsCb = {
 
     BROADSWORD: new EquipCbItem(EquipSlotModelsCb.BROADSWORD.modelId, "broadsword", Vector3.Zero(), new Vector3(0.22, 0.24, 0.4), new Vector3(0, 2, 0), matBroadswordSize),
 
-    GREATSWORD: new EquipCbItem(EquipSlotModelsCb.GREATSWORD.modelId, "greatsword", Vector3.Zero(), new Vector3(0.24, 0.24, 0.24), new Vector3(0, 2.5, 0), matFutureWeaponSize),
+    GREATSWORD: new EquipCbItem(EquipSlotModelsCb.GREATSWORD.modelId, "greatsword", Vector3.Zero(), new Vector3(0.24, 0.3, 0.3), new Vector3(0, 2.5, 0), matGreatswordSize),
 
     HAND_AXE: new EquipCbItem(EquipSlotModelsCb.HAND_AXE.modelId, "handaxe", Vector3.Zero(), new Vector3(0.24, 0.24, 0.24), new Vector3(0, 2, 0), matHandAxeSize),
 
@@ -134,12 +138,6 @@ export const WeaponModelsCb = {
 
     HALBERD: new EquipCbItem(EquipSlotModelsCb.HALBERD.modelId, "halberd", Vector3.Zero(), new Vector3(0.24, 0.24, 0.24), new Vector3(0, 3, 0), matFutureWeaponSize),
 
-    KNIFE: new EquipCbItem(EquipSlotModelsCb.KNIFE.modelId, "knife", Vector3.Zero(), new Vector3(0.24, 0.24, 0.24), new Vector3(0, 1.6, 0), matFutureWeaponSize),
-
-    STILETTO: new EquipCbItem(EquipSlotModelsCb.STILETTO.modelId, "stiletto", Vector3.Zero(), new Vector3(0.24, 0.24, 0.24), new Vector3(0, 1.8, 0), matFutureWeaponSize),
-
-    RONDEL: new EquipCbItem(EquipSlotModelsCb.RONDEL.modelId, "rondel", Vector3.Zero(), new Vector3(0.24, 0.24, 0.24), new Vector3(0, 1.9, 0), matFutureWeaponSize),
-
     HUNTINGBOW: new EquipCbItem(EquipSlotModelsCb.HUNTINGBOW.modelId, "hunterbow", new Vector3(-0.1, 0, 0), new Vector3(0.17, 0.24, 0.4), null, matBowSize),
 
     RECURVE_BOW: new EquipCbItem(EquipSlotModelsCb.RECURVE_BOW.modelId, "recurvebow", new Vector3(-0.1, 0, 0), new Vector3(0.24, 0.24, 0.24), null, matFutureWeaponSize),
@@ -148,13 +146,9 @@ export const WeaponModelsCb = {
 }
 
 const FutureWeaponModels: EquipCbItem[] = [
-    WeaponModelsCb.GREATSWORD,
     WeaponModelsCb.WARHAMMER,
     WeaponModelsCb.WAR_SPEAR,
     WeaponModelsCb.HALBERD,
-    WeaponModelsCb.KNIFE,
-    WeaponModelsCb.STILETTO,
-    WeaponModelsCb.RONDEL,
     WeaponModelsCb.RECURVE_BOW,
     WeaponModelsCb.LONGBOW,
 ]

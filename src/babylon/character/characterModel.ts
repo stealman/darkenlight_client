@@ -387,7 +387,8 @@ export class CharacterModel implements EquipBearer {
                     break
                 }
                 case WeaponTypes.AXE:
-                case WeaponTypes.PICKAXE: {
+                case WeaponTypes.PICKAXE:
+                case WeaponTypes.TWO_HANDED_SWORD: {
                     possibleAnims.push(this.greatAxeAttackAnim)
                     break
                 }

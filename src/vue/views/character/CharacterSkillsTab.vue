@@ -26,7 +26,6 @@ const combatSkillDefinitions: Array<{ key: keyof SkillSetTO, translationKey: str
     { key: 'axes', translationKey: 'skills.weapons.axes' },
     { key: 'maces', translationKey: 'skills.weapons.maces' },
     { key: 'polearms', translationKey: 'skills.weapons.polearms' },
-    { key: 'daggers', translationKey: 'skills.weapons.daggers' },
     { key: 'bows', translationKey: 'skills.weapons.bows' },
 ]
 

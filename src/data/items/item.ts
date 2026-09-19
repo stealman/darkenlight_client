@@ -122,6 +122,7 @@ export const WeaponTypes = {
     AXE: "AXE",
     PICKAXE: "PICKAXE",
     POLEARM: "POLEARM",
+    TWO_HANDED_SWORD: "TWO_HANDED_SWORD",
     BOW: "BOW",
 }
 
@@ -139,7 +140,7 @@ export const WeaponTags = {
 export const EquipSlotModelsCb = {
     LONGSWORD: new EquipSlotModel(10, EquipItemSlots.R_HAND, WeaponTypes.SWORD),
     BROADSWORD: new EquipSlotModel(20, EquipItemSlots.R_HAND, WeaponTypes.SWORD),
-    GREATSWORD: new EquipSlotModel(30, EquipItemSlots.R_HAND, WeaponTypes.SWORD),
+    GREATSWORD: new EquipSlotModel(30, EquipItemSlots.R_HAND, WeaponTypes.TWO_HANDED_SWORD),
 
     HAND_AXE: new EquipSlotModel(110, EquipItemSlots.R_HAND, WeaponTypes.SWORD),
     BATTLE_AXE: new EquipSlotModel(120, EquipItemSlots.R_HAND, WeaponTypes.AXE),
@@ -154,10 +155,6 @@ export const EquipSlotModelsCb = {
     HUNTING_SPEAR: new EquipSlotModel(310, EquipItemSlots.R_HAND, WeaponTypes.POLEARM),
     WAR_SPEAR: new EquipSlotModel(320, EquipItemSlots.R_HAND, WeaponTypes.SWORD),
     HALBERD: new EquipSlotModel(330, EquipItemSlots.R_HAND, WeaponTypes.SWORD),
-
-    KNIFE: new EquipSlotModel(410, EquipItemSlots.R_HAND, WeaponTypes.SWORD),
-    STILETTO: new EquipSlotModel(420, EquipItemSlots.R_HAND, WeaponTypes.SWORD),
-    RONDEL: new EquipSlotModel(430, EquipItemSlots.R_HAND, WeaponTypes.SWORD),
 
     HUNTINGBOW: new EquipSlotModel(510, EquipItemSlots.R_HAND, WeaponTypes.BOW),
     RECURVE_BOW: new EquipSlotModel(520, EquipItemSlots.R_HAND, WeaponTypes.BOW),

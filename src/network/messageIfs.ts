@@ -36,7 +36,6 @@ export interface SkillSetTO {
     axes: number
     maces: number
     polearms: number
-    daggers: number
     bows: number
 }
 
@@ -60,6 +59,7 @@ export interface AutoAttackResultMessage {
     id: number
     tgt: number
     tp: string
+    sec?: boolean
     res: AutoAttackResult
 }
 
