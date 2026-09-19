@@ -380,6 +380,12 @@ export class CharacterModel implements EquipBearer {
                     possibleAnims.push(this.rightSlashAnim)
                     break
                 }
+                case WeaponTypes.POLEARM: {
+                    possibleAnims.push(this.jabAnim)
+                    possibleAnims.push(this.highJabAnim)
+                    possibleAnims.push(this.rightSlashAnim)
+                    break
+                }
                 case WeaponTypes.AXE:
                 case WeaponTypes.PICKAXE: {
                     possibleAnims.push(this.greatAxeAttackAnim)

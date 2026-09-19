@@ -10,6 +10,7 @@ import { SwordVertexColorPalettes } from './vertexColorPalettes/swords'
 import { BowVertexColorPalettes } from './vertexColorPalettes/bows'
 import { AxeVertexColorPalettes } from './vertexColorPalettes/axes'
 import { MaceVertexColorPalettes } from './vertexColorPalettes/maces'
+import { PolearmVertexColorPalettes } from './vertexColorPalettes/polearms'
 import { createVertexColorWeaponMaterial } from './vertexColorPalettes/vertexColorWeaponMaterial'
 
 const matBowSize = new Vector2(5, 1)
@@ -24,7 +25,7 @@ const matFutureWeaponSize = new Vector2(5, 1)
 
 // Change this when a weapon GLB is replaced. The URL revision prevents an
 // installed PWA from combining a newly deployed shader with an old HTTP-cached model.
-export const WEAPON_MODEL_CACHE_VERSION = '20260908-battle-axe'
+export const WEAPON_MODEL_CACHE_VERSION = '20260919-warmace-hunting-spear'
 
 export const WeaponsCbManager = {
     BASE_WEAPONS_PATH: 'weapons/',
@@ -39,6 +40,8 @@ export const WeaponsCbManager = {
     greatAxeMaterial: null as PBRCustomMaterial | null,
     largeBattleAxeMaterial: null as PBRCustomMaterial | null,
     lightMaceMaterial: null as PBRCustomMaterial | null,
+    warmaceMaterial: null as PBRCustomMaterial | null,
+    huntingSpearMaterial: null as PBRCustomMaterial | null,
 
     async initMelee(map: Map<number, EquipItemType>, scene: Scene) {
         this.itemSourceParent = new TransformNode("mobWeaponSources", scene)
@@ -53,6 +56,8 @@ export const WeaponsCbManager = {
         this.greatAxeMaterial = createVertexColorWeaponMaterial('greatAxeVertexColor', scene, AxeVertexColorPalettes.GREATAXE)
         this.largeBattleAxeMaterial = createVertexColorWeaponMaterial('largeBattleAxeVertexColor', scene, AxeVertexColorPalettes.LARGE_BATTLE_AXE)
         this.lightMaceMaterial = createVertexColorWeaponMaterial('lightMaceVertexColor', scene, MaceVertexColorPalettes.LIGHT_MACE)
+        this.warmaceMaterial = createVertexColorWeaponMaterial('warmaceVertexColor', scene, MaceVertexColorPalettes.WARMACE)
+        this.huntingSpearMaterial = createVertexColorWeaponMaterial('huntingSpearVertexColor', scene, PolearmVertexColorPalettes.HUNTING_SPEAR)
 
         map.set(WeaponModelsCb.LONGSWORD.id, await this.getItem(WeaponModelsCb.LONGSWORD, this.longSwordMaterial))
         map.set(WeaponModelsCb.BROADSWORD.id, await this.getItem(WeaponModelsCb.BROADSWORD, this.broadSwordMaterial))
@@ -63,6 +68,8 @@ export const WeaponsCbManager = {
         map.set(WeaponModelsCb.GREATAXE.id, await this.getItem(WeaponModelsCb.GREATAXE, this.greatAxeMaterial))
         map.set(WeaponModelsCb.LARGE_BATTLE_AXE.id, await this.getItem(WeaponModelsCb.LARGE_BATTLE_AXE, this.largeBattleAxeMaterial))
         map.set(WeaponModelsCb.LIGHT_MACE.id, await this.getItem(WeaponModelsCb.LIGHT_MACE, this.lightMaceMaterial))
+        map.set(WeaponModelsCb.WARMACE.id, await this.getItem(WeaponModelsCb.WARMACE, this.warmaceMaterial))
+        map.set(WeaponModelsCb.HUNTING_SPEAR.id, await this.getItem(WeaponModelsCb.HUNTING_SPEAR, this.huntingSpearMaterial))
 
         for (const data of FutureWeaponModels) {
             map.set(data.id, await this.getItemOrFallback(data))
@@ -117,7 +124,7 @@ export const WeaponModelsCb = {
 
     LIGHT_MACE: new EquipCbItem(EquipSlotModelsCb.LIGHT_MACE.modelId, "lightmace", Vector3.Zero(), new Vector3(0.24, 0.24, 0.24), new Vector3(0, 2, 0), matFutureWeaponSize),
 
-    FLANGED_MACE: new EquipCbItem(EquipSlotModelsCb.FLANGED_MACE.modelId, "flangedmace", Vector3.Zero(), new Vector3(0.24, 0.24, 0.24), new Vector3(0, 2.2, 0), matFutureWeaponSize),
+    WARMACE: new EquipCbItem(EquipSlotModelsCb.WARMACE.modelId, "warmace", Vector3.Zero(), new Vector3(0.24, 0.24, 0.24), new Vector3(0, 2.2, 0), matFutureWeaponSize),
 
     WARHAMMER: new EquipCbItem(EquipSlotModelsCb.WARHAMMER.modelId, "warhammer", Vector3.Zero(), new Vector3(0.24, 0.24, 0.24), new Vector3(0, 2.5, 0), matFutureWeaponSize),
 
@@ -142,9 +149,7 @@ export const WeaponModelsCb = {
 
 const FutureWeaponModels: EquipCbItem[] = [
     WeaponModelsCb.GREATSWORD,
-    WeaponModelsCb.FLANGED_MACE,
     WeaponModelsCb.WARHAMMER,
-    WeaponModelsCb.HUNTING_SPEAR,
     WeaponModelsCb.WAR_SPEAR,
     WeaponModelsCb.HALBERD,
     WeaponModelsCb.KNIFE,

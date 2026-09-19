@@ -121,6 +121,7 @@ export const WeaponTypes = {
     MACE: "MACE",
     AXE: "AXE",
     PICKAXE: "PICKAXE",
+    POLEARM: "POLEARM",
     BOW: "BOW",
 }
 
@@ -147,10 +148,10 @@ export const EquipSlotModelsCb = {
 
     PICKAXE: new EquipSlotModel(150, EquipItemSlots.R_HAND, WeaponTypes.PICKAXE),
     LIGHT_MACE: new EquipSlotModel(210, EquipItemSlots.R_HAND, WeaponTypes.MACE),
-    FLANGED_MACE: new EquipSlotModel(220, EquipItemSlots.R_HAND, WeaponTypes.MACE),
+    WARMACE: new EquipSlotModel(220, EquipItemSlots.R_HAND, WeaponTypes.MACE),
     WARHAMMER: new EquipSlotModel(230, EquipItemSlots.R_HAND, WeaponTypes.MACE),
 
-    HUNTING_SPEAR: new EquipSlotModel(310, EquipItemSlots.R_HAND, WeaponTypes.SWORD),
+    HUNTING_SPEAR: new EquipSlotModel(310, EquipItemSlots.R_HAND, WeaponTypes.POLEARM),
     WAR_SPEAR: new EquipSlotModel(320, EquipItemSlots.R_HAND, WeaponTypes.SWORD),
     HALBERD: new EquipSlotModel(330, EquipItemSlots.R_HAND, WeaponTypes.SWORD),
 
