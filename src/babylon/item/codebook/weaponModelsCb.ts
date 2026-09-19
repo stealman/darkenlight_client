@@ -114,7 +114,7 @@ export const WeaponModelsCb = {
 
     BROADSWORD: new EquipCbItem(EquipSlotModelsCb.BROADSWORD.modelId, "broadsword", Vector3.Zero(), new Vector3(0.22, 0.24, 0.4), new Vector3(0, 2, 0), matBroadswordSize),
 
-    GREATSWORD: new EquipCbItem(EquipSlotModelsCb.GREATSWORD.modelId, "greatsword", Vector3.Zero(), new Vector3(0.24, 0.3, 0.3), new Vector3(0, 2.5, 0), matGreatswordSize),
+    GREATSWORD: new EquipCbItem(EquipSlotModelsCb.GREATSWORD.modelId, "greatsword", Vector3.Zero(), new Vector3(0.24, 0.3, 0.3), new Vector3(0, 3.2, 0), matGreatswordSize),
 
     HAND_AXE: new EquipCbItem(EquipSlotModelsCb.HAND_AXE.modelId, "handaxe", Vector3.Zero(), new Vector3(0.24, 0.24, 0.24), new Vector3(0, 2, 0), matHandAxeSize),
 
