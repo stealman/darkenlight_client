@@ -17,5 +17,6 @@ export const VertexColorWeaponPalettesByModelKey = {
     LIGHT_MACE: { palette: MaceVertexColorPalettes.LIGHT_MACE, inventoryBaseName: 'lightmace' },
     WARMACE: { palette: MaceVertexColorPalettes.WARMACE, inventoryBaseName: 'warmace' },
     HUNTING_SPEAR: { palette: PolearmVertexColorPalettes.HUNTING_SPEAR, inventoryBaseName: 'hunting-spear' },
+    HALBERD: { palette: PolearmVertexColorPalettes.HALBERD, inventoryBaseName: 'halberd' },
     HUNTINGBOW: { palette: BowVertexColorPalettes.HUNTING_BOW, inventoryBaseName: 'hunting-bow' },
 }

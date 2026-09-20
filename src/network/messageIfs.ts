@@ -128,7 +128,7 @@ export interface PotionUsedMessage {
     tp: string
     id: number
     cd: number
-    add: number // att that was added - HP or MP
+    add: string // attribute that was added - HP, MP or ST
     val: number // value of the added att
 }
 

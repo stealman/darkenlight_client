@@ -26,7 +26,7 @@ const matFutureWeaponSize = new Vector2(5, 1)
 
 // Change this when a weapon GLB is replaced. The URL revision prevents an
 // installed PWA from combining a newly deployed shader with an old HTTP-cached model.
-export const WEAPON_MODEL_CACHE_VERSION = '20260919-greatsword'
+export const WEAPON_MODEL_CACHE_VERSION = '20260920-halberd'
 
 export const WeaponsCbManager = {
     BASE_WEAPONS_PATH: 'weapons/',
@@ -44,6 +44,7 @@ export const WeaponsCbManager = {
     lightMaceMaterial: null as PBRCustomMaterial | null,
     warmaceMaterial: null as PBRCustomMaterial | null,
     huntingSpearMaterial: null as PBRCustomMaterial | null,
+    halberdMaterial: null as PBRCustomMaterial | null,
 
     async initMelee(map: Map<number, EquipItemType>, scene: Scene) {
         this.itemSourceParent = new TransformNode("mobWeaponSources", scene)
@@ -61,6 +62,7 @@ export const WeaponsCbManager = {
         this.lightMaceMaterial = createVertexColorWeaponMaterial('lightMaceVertexColor', scene, MaceVertexColorPalettes.LIGHT_MACE)
         this.warmaceMaterial = createVertexColorWeaponMaterial('warmaceVertexColor', scene, MaceVertexColorPalettes.WARMACE)
         this.huntingSpearMaterial = createVertexColorWeaponMaterial('huntingSpearVertexColor', scene, PolearmVertexColorPalettes.HUNTING_SPEAR)
+        this.halberdMaterial = createVertexColorWeaponMaterial('halberdVertexColor', scene, PolearmVertexColorPalettes.HALBERD)
 
         map.set(WeaponModelsCb.LONGSWORD.id, await this.getItem(WeaponModelsCb.LONGSWORD, this.longSwordMaterial))
         map.set(WeaponModelsCb.BROADSWORD.id, await this.getItem(WeaponModelsCb.BROADSWORD, this.broadSwordMaterial))
@@ -74,6 +76,7 @@ export const WeaponsCbManager = {
         map.set(WeaponModelsCb.LIGHT_MACE.id, await this.getItem(WeaponModelsCb.LIGHT_MACE, this.lightMaceMaterial))
         map.set(WeaponModelsCb.WARMACE.id, await this.getItem(WeaponModelsCb.WARMACE, this.warmaceMaterial))
         map.set(WeaponModelsCb.HUNTING_SPEAR.id, await this.getItem(WeaponModelsCb.HUNTING_SPEAR, this.huntingSpearMaterial))
+        map.set(WeaponModelsCb.HALBERD.id, await this.getItem(WeaponModelsCb.HALBERD, this.halberdMaterial))
 
         for (const data of FutureWeaponModels) {
             map.set(data.id, await this.getItemOrFallback(data))
@@ -136,7 +139,7 @@ export const WeaponModelsCb = {
 
     WAR_SPEAR: new EquipCbItem(EquipSlotModelsCb.WAR_SPEAR.modelId, "warspear", Vector3.Zero(), new Vector3(0.24, 0.24, 0.24), new Vector3(0, 3.1, 0), matFutureWeaponSize),
 
-    HALBERD: new EquipCbItem(EquipSlotModelsCb.HALBERD.modelId, "halberd", Vector3.Zero(), new Vector3(0.24, 0.24, 0.24), new Vector3(0, 3, 0), matFutureWeaponSize),
+    HALBERD: new EquipCbItem(EquipSlotModelsCb.HALBERD.modelId, "halberd", Vector3.Zero(), new Vector3(0.24, 0.3, 0.24), new Vector3(0, 3, 0), matFutureWeaponSize),
 
     HUNTINGBOW: new EquipCbItem(EquipSlotModelsCb.HUNTINGBOW.modelId, "hunterbow", new Vector3(-0.1, 0, 0), new Vector3(0.17, 0.24, 0.4), null, matBowSize),
 
@@ -148,7 +151,6 @@ export const WeaponModelsCb = {
 const FutureWeaponModels: EquipCbItem[] = [
     WeaponModelsCb.WARHAMMER,
     WeaponModelsCb.WAR_SPEAR,
-    WeaponModelsCb.HALBERD,
     WeaponModelsCb.RECURVE_BOW,
     WeaponModelsCb.LONGBOW,
 ]

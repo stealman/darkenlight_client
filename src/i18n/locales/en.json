@@ -13,6 +13,11 @@
     "mana": "Mana",
     "stamina": "Stamina"
   },
+  "items": {
+    "resources": {
+      "stamina-potion": "Stamina Potion"
+    }
+  },
   "app": {
     "gmPanel": "GM Panel",
     "restartGame": "Restart game",
@@ -108,6 +113,8 @@
     "healingPotionDescription": "Use a health potion from inventory when injured. The strongest available potion is always used.",
     "manaPotionName": "Mana Potion",
     "manaPotionDescription": "Use a mana potion from inventory when mana is not full. The strongest available potion is always used.",
+    "staminaPotionName": "Stamina Potion",
+    "staminaPotionDescription": "Use a stamina potion from inventory when stamina is not full. The strongest available potion is always used.",
     "equipStoredWeaponsName": "Stored Weapon",
     "equipStoredWeaponsDescription": "Switch between primary and secondary stored weapon. If you are holding a completely different weapon, the primary one will be equipped.",
     "campingName": "Camping",
@@ -153,6 +160,7 @@
     "noBandages": "You have no bandages",
     "noHealthPotions": "You have no health potions",
     "noManaPotions": "You have no mana potions",
+    "noStaminaPotions": "You have no stamina potions",
     "noCampWood": "No camp wood",
     "noCampableBlockAround": "You can't camp here",
     "autoAttack": "Auto-attack: {state}",

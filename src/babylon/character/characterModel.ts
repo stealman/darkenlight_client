@@ -46,6 +46,7 @@ export class CharacterModel implements EquipBearer {
 
     greatAxeAttackAnim: AnimationGroup | undefined
     twoHandedSwordAttackAnim: AnimationGroup | undefined
+    twoHandedSwordAttackAnim2: AnimationGroup | undefined
 
     bowAimAnim: AnimationGroup | undefined
 
@@ -139,6 +140,7 @@ export class CharacterModel implements EquipBearer {
                         { name: 'OreMining', startFrame: 1300, endFrame: 1360 },
                         { name: 'Death', startFrame: 1400, endFrame: 1460 },
                         { name: 'TwoHandedSwordAttack', startFrame: 1500, endFrame: 1560 },
+                        { name: 'TwoHandedSwordAttack2', startFrame: 1600, endFrame: 1660 },
                     ]
 
                     const newAnimationGroups = animations.map(({ name, startFrame, endFrame }) => {
@@ -163,6 +165,7 @@ export class CharacterModel implements EquipBearer {
                     this.oreMiningAnim = newAnimationGroups[12]
                     this.deathAnim = newAnimationGroups[13]
                     this.twoHandedSwordAttackAnim = newAnimationGroups[14]
+                    this.twoHandedSwordAttackAnim2 = newAnimationGroups[15]
 
                     this.idleAnim?.start(true, 0.5)
                     this.actualAnim = this.idleAnim
@@ -358,17 +361,17 @@ export class CharacterModel implements EquipBearer {
         const possibleAnims = []
         const weapon = this.parent.getWeapon()
         if (weapon != null) {
-            if (weapon.weaponCategory === WeaponCategories.AXE) {
-                if (weapon.isTwoHanded()) {
-                    possibleAnims.push(this.greatAxeAttackAnim)
-                } else {
-                    possibleAnims.push(this.slashAnim)
-                    possibleAnims.push(this.slashAnim2)
-                    possibleAnims.push(this.leftSlashAnim)
-                    possibleAnims.push(this.rightSlashAnim)
-                }
-            } else
-                switch (weapon.slotInfo!.weaponType) {
+            const weaponType = weapon.slotInfo?.weaponType
+            const usesHeavyTwoHandedAnimations = weaponType === WeaponTypes.TWO_HANDED_SWORD
+                || weaponType === WeaponTypes.TWO_HANDED_POLEARM
+                || (weapon.weaponCategory === WeaponCategories.AXE && weapon.isTwoHanded() && weaponType !== WeaponTypes.PICKAXE)
+
+            if (usesHeavyTwoHandedAnimations) {
+                possibleAnims.push(this.greatAxeAttackAnim)
+                possibleAnims.push(this.twoHandedSwordAttackAnim)
+                possibleAnims.push(this.twoHandedSwordAttackAnim2)
+            } else {
+                switch (weaponType) {
                     case WeaponTypes.SWORD: {
                         possibleAnims.push(this.slashAnim)
                         possibleAnims.push(this.slashAnim2)
@@ -391,11 +394,15 @@ export class CharacterModel implements EquipBearer {
                         possibleAnims.push(this.rightSlashAnim)
                         break
                     }
-                    case WeaponTypes.AXE:
-                    case WeaponTypes.PICKAXE:
-                    case WeaponTypes.TWO_HANDED_SWORD: {
+                    case WeaponTypes.AXE: {
+                        possibleAnims.push(this.slashAnim)
+                        possibleAnims.push(this.slashAnim2)
+                        possibleAnims.push(this.leftSlashAnim)
+                        possibleAnims.push(this.rightSlashAnim)
+                        break
+                    }
+                    case WeaponTypes.PICKAXE: {
                         possibleAnims.push(this.greatAxeAttackAnim)
-                        possibleAnims.push(this.twoHandedSwordAttackAnim)
                         break
                     }
                     case WeaponTypes.BOW: {
@@ -413,6 +420,7 @@ export class CharacterModel implements EquipBearer {
                         break
                     }
                 }
+            }
         }
 
         const anim = possibleAnims[Utils.rollDice(possibleAnims.length, true)]

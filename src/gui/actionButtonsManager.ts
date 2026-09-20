@@ -133,6 +133,9 @@ class ActionButton {
             case CharacterActions.MANA_POTION.name:
                 this.htmlEl!.classList.toggle('unavailable', !ActionButtonsManager.hasManaPotionAvailable())
                 return
+            case CharacterActions.STAMINA_POTION.name:
+                this.htmlEl!.classList.toggle('unavailable', !ActionButtonsManager.hasStaminaPotionAvailable())
+                return
             case CharacterActions.CAMPING.name:
                 this.htmlEl!.classList.toggle('unavailable', !ActionButtonsManager.hasCampWoodAvailable())
                 return
@@ -158,6 +161,12 @@ class ActionButton {
         const action = CharacterActions.getActionByName(this.actionBinding.name)
         if (!action) {
             this.setCooldownPercent(100)
+            return
+        }
+
+        const consumableCbId = ActionButtonsManager.getBoundConsumableCbId(this.actionBinding)
+        if (consumableCbId !== null && ConsumableHelper.isItemPotion(consumableCbId)) {
+            this.setCooldownPercent(MyPlayer.getCooldownPercent(actualTime, MyPlayer.lastPotionUseTime, MyPlayer.nextPotionUseTime))
             return
         }
 
@@ -336,6 +345,9 @@ export const ActionButtonsManager = {
                 case CharacterActions.MANA_POTION.name:
                     this.clickOnManaPotionButton()
                     break
+                case CharacterActions.STAMINA_POTION.name:
+                    this.clickOnStaminaPotionButton()
+                    break
                 case CharacterActions.CONSUMABLE_ITEM.name:
                     this.clickOnConsumableItemButton(this.getBoundConsumableCbId(actionButton.actionBinding))
                     break
@@ -392,6 +404,11 @@ export const ActionButtonsManager = {
     clickOnManaPotionButton() {
         if (!ActionButtonsManager.hasManaPotionAvailable()) { OnScreenMessageManager.addMessage(t('messages.noManaPotions'), OnScreenMessageSeverities.ERROR); return }
         ConsumableHelper.clickOnConsumeManaPotion()
+    },
+
+    clickOnStaminaPotionButton() {
+        if (!ActionButtonsManager.hasStaminaPotionAvailable()) { OnScreenMessageManager.addMessage(t('messages.noStaminaPotions'), OnScreenMessageSeverities.ERROR); return }
+        ConsumableHelper.clickOnConsumeStaminaPotion()
     },
 
     clickOnConsumableItemButton(cbId: number | null) {
@@ -473,7 +490,17 @@ export const ActionButtonsManager = {
 
         const consumableCbId = this.getBoundConsumableCbId(binding)
         if (consumableCbId !== null) {
-            return InventoryManager.inventory.find(item => item.cbId === consumableCbId)?.name ?? ''
+            const itemName = InventoryManager.inventory.find(item => item.cbId === consumableCbId)?.name ?? ''
+            if (ConsumableHelper.getHealingPotionIds().includes(consumableCbId)) {
+                return `${itemName}: ${CharacterActions.HEALING_POTION.descLoc}`
+            }
+            if (ConsumableHelper.getManaPotionIds().includes(consumableCbId)) {
+                return `${itemName}: ${CharacterActions.MANA_POTION.descLoc}`
+            }
+            if (ConsumableHelper.getStaminaPotionIds().includes(consumableCbId)) {
+                return `${itemName}: ${CharacterActions.STAMINA_POTION.descLoc}`
+            }
+            return itemName
         }
 
         return CharacterActions.getActionByName(binding.name)?.description ?? ''
@@ -489,6 +516,7 @@ export const ActionButtonsManager = {
             CharacterActions.HEAL,
             CharacterActions.HEALING_POTION,
             CharacterActions.MANA_POTION,
+            CharacterActions.STAMINA_POTION,
             CharacterActions.EQUIP_STORED_WEAPONS,
             CharacterActions.CAMPING,
         ]
@@ -606,6 +634,10 @@ export const ActionButtonsManager = {
 
     hasManaPotionAvailable(): boolean {
         return ConsumableHelper.getManaPotionIds().some(cbId => InventoryManager.getTotalResourceItemCountByType(cbId) > 0)
+    },
+
+    hasStaminaPotionAvailable(): boolean {
+        return ConsumableHelper.getStaminaPotionIds().some(cbId => InventoryManager.getTotalResourceItemCountByType(cbId) > 0)
     },
 
     hasCampWoodAvailable(): boolean {

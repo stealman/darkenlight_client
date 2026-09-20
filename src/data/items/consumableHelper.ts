@@ -10,11 +10,12 @@ export const ConsumableHelper = {
 
     healingPotionIds: [1001, 1002, 1003],
     manaPotionIds: [1011, 1012, 1013],
+    staminaPotionIds: [1021],
     woodIds: Array.from({ length: 20 }, (_, index) => 201 + index),
     foodIds: [351],
 
     isItemConsumable(item: Item): boolean {
-        return this.getHealingPotionIds().includes(item.cbId) || this.getManaPotionIds().includes(item.cbId) || this.getFoodIds().includes(item.cbId)
+        return this.getHealingPotionIds().includes(item.cbId) || this.getManaPotionIds().includes(item.cbId) || this.getStaminaPotionIds().includes(item.cbId) || this.getFoodIds().includes(item.cbId)
     },
 
     getHealingPotionIds(): number[] {
@@ -23,6 +24,10 @@ export const ConsumableHelper = {
 
     getManaPotionIds(): number[] {
         return this.manaPotionIds
+    },
+
+    getStaminaPotionIds(): number[] {
+        return this.staminaPotionIds
     },
 
     getCampWoodIds(): number[] {
@@ -38,7 +43,7 @@ export const ConsumableHelper = {
     },
 
     isItemPotion(cbId: number): boolean {
-        return this.getHealingPotionIds().includes(cbId) || this.getManaPotionIds().includes(cbId)
+        return this.getHealingPotionIds().includes(cbId) || this.getManaPotionIds().includes(cbId) || this.getStaminaPotionIds().includes(cbId)
     },
 
     clickOnConsumeHealingPotion() {
@@ -52,6 +57,15 @@ export const ConsumableHelper = {
 
     clickOnConsumeManaPotion() {
         const highestId = [...this.getManaPotionIds()]
+            .sort((a, b) => b - a)
+            .find(cbId => InventoryManager.getTotalResourceItemCountByType(cbId) > 0)
+
+        if (!highestId) return
+        this.clickOnConsumeItem(highestId)
+    },
+
+    clickOnConsumeStaminaPotion() {
+        const highestId = [...this.getStaminaPotionIds()]
             .sort((a, b) => b - a)
             .find(cbId => InventoryManager.getTotalResourceItemCountByType(cbId) > 0)
 
@@ -75,6 +89,10 @@ export const ConsumableHelper = {
         }
 
         if (this.getManaPotionIds().includes(cbId) && MyPlayer.myChar.mpPercent < 100) {
+            Connector.sendMessage(new ConsumeItemMsg(cbId))
+        }
+
+        if (this.getStaminaPotionIds().includes(cbId) && MyPlayer.myChar.st < MyPlayer.myChar.maxSt) {
             Connector.sendMessage(new ConsumeItemMsg(cbId))
         }
 

@@ -427,7 +427,8 @@ export const MyPlayer = {
                 return this.getCooldownPercent(actualTime, this.myChar.healingStartTime, this.myChar.healingEndTime)
             }
             case CharacterActions.HEALING_POTION.name:
-            case CharacterActions.MANA_POTION.name: {
+            case CharacterActions.MANA_POTION.name:
+            case CharacterActions.STAMINA_POTION.name: {
                 return this.getCooldownPercent(actualTime, this.lastPotionUseTime, this.nextPotionUseTime)
             }
         }

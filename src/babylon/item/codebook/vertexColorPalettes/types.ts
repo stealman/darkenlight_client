@@ -7,6 +7,8 @@ export interface VertexColorSlot {
     source: VertexRgb
     /** Human-readable only; it is not used by the shader. */
     role: string
+    /** Apply the shared PBR metal treatment to this part of the model. */
+    isMetal?: boolean
 }
 
 export interface VertexColorWeaponPalette {
@@ -14,6 +16,11 @@ export interface VertexColorWeaponPalette {
     materialColors: readonly (readonly VertexRgb[])[]
     materialNames: readonly string[]
     slots: readonly VertexColorSlot[]
+    /**
+     * Zero-based material rows whose marked slots are metal. By default every
+     * row uses the metal treatment; Pickaxe excludes its diamond row.
+     */
+    metallicMaterialIndexes?: readonly number[]
     /** Render both sides for models whose GLB contains visible reversed faces. */
     twoSided?: boolean
 }

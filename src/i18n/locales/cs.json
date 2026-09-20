@@ -13,6 +13,11 @@
     "mana": "Mana",
     "stamina": "Únava"
   },
+  "items": {
+    "resources": {
+      "stamina-potion": "Lektvar Staminy"
+    }
+  },
   "app": {
     "gmPanel": "GM Panel",
     "restartGame": "Restart hry",
@@ -108,6 +113,8 @@
     "healingPotionDescription": "Použiješ Lektvar zdraví pokud je v inventáři a jsi zraněn. Použije se vždy nejsilnější dostupný lektvar.",
     "manaPotionName": "Lektvar Many",
     "manaPotionDescription": "Použiješ Lektvar many pokud je v inventáři a nemáš plnou manu. Použije se vždy nejsilnější dostupný lektvar.",
+    "staminaPotionName": "Lektvar Staminy",
+    "staminaPotionDescription": "Použiješ Lektvar staminy pokud je v inventáři a nemáš plnou staminu. Použije se vždy nejsilnější dostupný lektvar.",
     "equipStoredWeaponsName": "Uložená Zbraň",
     "equipStoredWeaponsDescription": "Přepíná mezi primární a sekundární uloženou zbraní. Pokud je v ruce zcela jiná zbraň, nasadí se primární.",
     "campingName": "Kempování",
@@ -153,6 +160,7 @@
       "noBandages": "Nemáš žádné obvazy",
       "noHealthPotions": "Nemáš žádné lektvary zdraví",
       "noManaPotions": "Nemáš žádné lektvary many",
+      "noStaminaPotions": "Nemáš žádné lektvary staminy",
       "noCampWood": "Nemáš žádné dřevo na kempování",
       "noCampableBlockAround": "Na tomto místě nemůžeš kempovat",
       "autoAttack": "Auto-útok: {state}",
