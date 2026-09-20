@@ -21,6 +21,13 @@ export interface VertexColorWeaponPalette {
      * row uses the metal treatment; Pickaxe excludes its diamond row.
      */
     metallicMaterialIndexes?: readonly number[]
+    /**
+     * Material rows whose metal slots receive additional emissive light.
+     * Omit to use the shared Pyroxide row, or pass an empty array to opt out.
+     */
+    emissiveMetalMaterialIndexes?: readonly number[]
+    /** Additional emissive light strength for the marked metal material rows. */
+    emissiveMetalStrength?: number
     /** Render both sides for models whose GLB contains visible reversed faces. */
     twoSided?: boolean
 }
