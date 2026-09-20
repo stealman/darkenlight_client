@@ -19,19 +19,19 @@ import { AudioUtils } from '@/babylon/audio/audioUtils'
 
 export class CharacterModel implements EquipBearer {
     parent: Character
-    node: TransformNode = new TransformNode("characterModelNode")
+    node: TransformNode = new TransformNode('characterModelNode')
     nameTextNode: TransformNode
     initialized: boolean = false
 
     model: AbstractMesh | undefined
-    modelYAngleOffset: number = Math.PI * 1 / 4
+    modelYAngleOffset: number = (Math.PI * 1) / 4
     modelRotation: number = 0
     worldMatrix: Matrix
     rotationQuaternion: Quaternion
 
     skeleton: Skeleton | undefined
-    lhandNode: TransformNode = new TransformNode("lhandNode")
-    rhandNode: TransformNode = new TransformNode("rhandNode")
+    lhandNode: TransformNode = new TransformNode('lhandNode')
+    rhandNode: TransformNode = new TransformNode('rhandNode')
 
     walkAnim: AnimationGroup | undefined
     runAnim: AnimationGroup | undefined
@@ -45,6 +45,7 @@ export class CharacterModel implements EquipBearer {
     highJabAnim: AnimationGroup | undefined
 
     greatAxeAttackAnim: AnimationGroup | undefined
+    twoHandedSwordAttackAnim: AnimationGroup | undefined
 
     bowAimAnim: AnimationGroup | undefined
 
@@ -64,144 +65,143 @@ export class CharacterModel implements EquipBearer {
 
     constructor(parent: Character) {
         this.parent = parent
-        this.node.position.copyFrom((this.parent.pos))
-        this.nameTextNode = new TransformNode("nameTextNode" + this.parent.id)
+        this.node.position.copyFrom(this.parent.pos)
+        this.nameTextNode = new TransformNode('nameTextNode' + this.parent.id)
     }
 
     static async create(data: Character, init: boolean): Promise<CharacterModel> {
-        const model = new CharacterModel(data);
-        if (init) await model.initAsync();
-        return model;
+        const model = new CharacterModel(data)
+        if (init) await model.initAsync()
+        return model
     }
 
     async initAsync() {
-        await SceneLoader.ImportMeshAsync(
-            "",
-            "/models/steve/",
-            "human_male.gltf",
-            Renderer.scene
-        ).then((result) => {
-            this.model = result.meshes[0]
-            this.model.parent = this.node
-            this.model.scaling = new Vector3(0.25, 0.25, 0.25)
-            this.model.rotation = new Vector3(0, 0, 0)
+        await SceneLoader.ImportMeshAsync('', '/models/steve/', 'human_male.gltf', Renderer.scene)
+            .then((result) => {
+                this.model = result.meshes[0]
+                this.model.parent = this.node
+                this.model.scaling = new Vector3(0.25, 0.25, 0.25)
+                this.model.rotation = new Vector3(0, 0, 0)
 
-            this.nameTextNode.parent = this.node
-            this.nameTextNode.position.y = this.parent.getModelHeight()
-            this.parent.nameDisplayTime = Date.now() + 3000
+                this.nameTextNode.parent = this.node
+                this.nameTextNode.position.y = this.parent.getModelHeight()
+                this.parent.nameDisplayTime = Date.now() + 3000
 
-            // Apply material
-            const material = Materials.getPBRMaterial(Renderer.scene, "steveMaterial", "/models/steve/human_male2.png", false, false,  {
-                metallic: 0,
-                roughness: 1,
-                directIntensity: 1,
-                environmentIntensity: 1,
-            })
-            // Keep the player body lit consistently with monster bodies and
-            // equipped items under the close indoor light.
-            material.twoSidedLighting = true
-            material.usePhysicalLightFalloff = false
-            if (this.parent.isMyChar()) {
-                material.emissiveTexture = material.albedoTexture
-                material.emissiveColor = new Color3(0.15, 0.15, 0.15)
-            }
-            this.model.getChildMeshes().forEach((mesh) => {
-                mesh.material = material
-                Lights.addShadowCaster(mesh)
-                Lights.registerActorLightMesh(mesh)
+                // Apply material
+                const material = Materials.getPBRMaterial(Renderer.scene, 'steveMaterial', '/models/steve/human_male2.png', false, false, {
+                    metallic: 0,
+                    roughness: 1,
+                    directIntensity: 1,
+                    environmentIntensity: 1,
+                })
+                // Keep the player body lit consistently with monster bodies and
+                // equipped items under the close indoor light.
+                material.twoSidedLighting = true
+                material.usePhysicalLightFalloff = false
                 if (this.parent.isMyChar()) {
-                    void Lights.warmLocalPlayerLightMaterial(mesh)
+                    material.emissiveTexture = material.albedoTexture
+                    material.emissiveColor = new Color3(0.15, 0.15, 0.15)
                 }
-                mesh.receiveShadows = true
-            });
+                this.model.getChildMeshes().forEach((mesh) => {
+                    mesh.material = material
+                    Lights.addShadowCaster(mesh)
+                    Lights.registerActorLightMesh(mesh)
+                    if (this.parent.isMyChar()) {
+                        void Lights.warmLocalPlayerLightMaterial(mesh)
+                    }
+                    mesh.receiveShadows = true
+                })
 
-            // Process animations
-            if (result.animationGroups.length > 0) {
-                const animationGroup = result.animationGroups[0]; // Assuming there is one animation group
-                animationGroup.stop()
+                // Process animations
+                if (result.animationGroups.length > 0) {
+                    const animationGroup = result.animationGroups[0] // Assuming there is one animation group
+                    animationGroup.stop()
 
-                // Define frame ranges for each animation
-                const animations = [
-                    { name: "Idle", startFrame: 0, endFrame: 75 },
-                    { name: "Walk", startFrame: 76, endFrame: 225 },
-                    { name: "Run", startFrame: 226, endFrame: 375 },
-                    { name: "CombatIdle", startFrame: 400, endFrame: 475 },
+                    // Define frame ranges for each animation
+                    const animations = [
+                        { name: 'Idle', startFrame: 0, endFrame: 75 },
+                        { name: 'Walk', startFrame: 76, endFrame: 225 },
+                        { name: 'Run', startFrame: 226, endFrame: 375 },
+                        { name: 'CombatIdle', startFrame: 400, endFrame: 475 },
 
-                    // Attack animations are cut off last 15 frames to join smoothly with the next animation
-                    { name: "Slash", startFrame: 500, endFrame: 560},
-                    { name: "Jab", startFrame: 600, endFrame: 660},
-                    { name: "LeftSlash", startFrame: 700, endFrame: 760},
-                    { name: "RightSlash", startFrame: 800, endFrame: 860},
-                    { name: "HighJab", startFrame: 900, endFrame: 960},
-                    { name: "Slash2", startFrame: 1000, endFrame: 1060},
+                        // Attack animations are cut off last 15 frames to join smoothly with the next animation
+                        { name: 'Slash', startFrame: 500, endFrame: 560 },
+                        { name: 'Jab', startFrame: 600, endFrame: 660 },
+                        { name: 'LeftSlash', startFrame: 700, endFrame: 760 },
+                        { name: 'RightSlash', startFrame: 800, endFrame: 860 },
+                        { name: 'HighJab', startFrame: 900, endFrame: 960 },
+                        { name: 'Slash2', startFrame: 1000, endFrame: 1060 },
 
-                    { name: "BowAim", startFrame: 1100, endFrame: 1175},
+                        { name: 'BowAim', startFrame: 1100, endFrame: 1175 },
 
-                    { name: "GreatAxeAttack", startFrame: 1200, endFrame: 1260},
+                        { name: 'GreatAxeAttack', startFrame: 1200, endFrame: 1260 },
 
-                    { name: "OreMining", startFrame: 1300, endFrame: 1360},
-                    { name: "Death", startFrame: 1400, endFrame: 1460},
-                ];
+                        { name: 'OreMining', startFrame: 1300, endFrame: 1360 },
+                        { name: 'Death', startFrame: 1400, endFrame: 1460 },
+                        { name: 'TwoHandedSwordAttack', startFrame: 1500, endFrame: 1560 },
+                    ]
 
-                const newAnimationGroups = animations.map(({ name, startFrame, endFrame }) => {
-                    const newGroup = animationGroup.clone(name);
-                    newGroup.from = startFrame;
-                    newGroup.to = endFrame;
-                    return newGroup;
-                });
+                    const newAnimationGroups = animations.map(({ name, startFrame, endFrame }) => {
+                        const newGroup = animationGroup.clone(name)
+                        newGroup.from = startFrame
+                        newGroup.to = endFrame
+                        return newGroup
+                    })
 
-                this.idleAnim = newAnimationGroups[0]
-                this.walkAnim = newAnimationGroups[1]
-                this.runAnim = newAnimationGroups[2]
-                this.combatIdleAnim = newAnimationGroups[3]
-                this.slashAnim = newAnimationGroups[4]
-                this.jabAnim = newAnimationGroups[5]
-                this.leftSlashAnim = newAnimationGroups[6]
-                this.rightSlashAnim = newAnimationGroups[7]
-                this.highJabAnim = newAnimationGroups[8]
-                this.slashAnim2 = newAnimationGroups[9]
-                this.bowAimAnim = newAnimationGroups[10]
-                this.greatAxeAttackAnim = newAnimationGroups[11]
-                this.oreMiningAnim = newAnimationGroups[12]
-                this.deathAnim = newAnimationGroups[13]
+                    this.idleAnim = newAnimationGroups[0]
+                    this.walkAnim = newAnimationGroups[1]
+                    this.runAnim = newAnimationGroups[2]
+                    this.combatIdleAnim = newAnimationGroups[3]
+                    this.slashAnim = newAnimationGroups[4]
+                    this.jabAnim = newAnimationGroups[5]
+                    this.leftSlashAnim = newAnimationGroups[6]
+                    this.rightSlashAnim = newAnimationGroups[7]
+                    this.highJabAnim = newAnimationGroups[8]
+                    this.slashAnim2 = newAnimationGroups[9]
+                    this.bowAimAnim = newAnimationGroups[10]
+                    this.greatAxeAttackAnim = newAnimationGroups[11]
+                    this.oreMiningAnim = newAnimationGroups[12]
+                    this.deathAnim = newAnimationGroups[13]
+                    this.twoHandedSwordAttackAnim = newAnimationGroups[14]
 
-                this.idleAnim?.start(true, 0.5)
-                this.actualAnim = this.idleAnim
-            }
-            this.skeleton = result.skeletons[0];
-            this.lhandNode.attachToBone(this.skeleton.bones.find(b => b.id === "Bone.012")!, this.model) // Lhand 012
-            this.rhandNode.attachToBone(this.skeleton.bones.find(b => b.id === "Bone.009")!, this.model) // Rhand 009
-        }).catch((error) => {
-            console.error("Error loading model:", error)
-        });
+                    this.idleAnim?.start(true, 0.5)
+                    this.actualAnim = this.idleAnim
+                }
+                this.skeleton = result.skeletons[0]
+                this.lhandNode.attachToBone(this.skeleton.bones.find((b) => b.id === 'Bone.012')!, this.model) // Lhand 012
+                this.rhandNode.attachToBone(this.skeleton.bones.find((b) => b.id === 'Bone.009')!, this.model) // Rhand 009
+            })
+            .catch((error) => {
+                console.error('Error loading model:', error)
+            })
 
         this.assignEquippedItems()
         this.initialized = true
     }
 
     assignEquippedItems() {
-        if (this.parent.equipSet.get(EquipItemSlots.R_HAND) && !this.equipSet.get("WEAPON")) {
+        if (this.parent.equipSet.get(EquipItemSlots.R_HAND) && !this.equipSet.get('WEAPON')) {
             const weapon = this.parent.equipSet.get(EquipItemSlots.R_HAND)!
             this.assignWeapon(weapon.modelId, weapon.materialId - 1)
         }
 
-        if (this.parent.equipSet.get(EquipItemSlots.BODY) && !this.equipSet.get("BODY")) {
+        if (this.parent.equipSet.get(EquipItemSlots.BODY) && !this.equipSet.get('BODY')) {
             const armor = this.parent.equipSet.get(EquipItemSlots.BODY)!
             this.assignArmor(armor.modelId, armor.materialId - 1)
         }
 
-        if (this.parent.equipSet.get(EquipItemSlots.HEAD) && !this.equipSet.get("HEAD")) {
+        if (this.parent.equipSet.get(EquipItemSlots.HEAD) && !this.equipSet.get('HEAD')) {
             const helmet = this.parent.equipSet.get(EquipItemSlots.HEAD)!
             this.assignHelmet(helmet.modelId, helmet.materialId - 1)
         }
 
-        if (this.parent.equipSet.get(EquipItemSlots.PAULDRONS) && !this.equipSet.get("LEFT_PAULDRON") && !this.equipSet.get("RIGHT_PAULDRON")) {
+        if (this.parent.equipSet.get(EquipItemSlots.PAULDRONS) && !this.equipSet.get('LEFT_PAULDRON') && !this.equipSet.get('RIGHT_PAULDRON')) {
             const pauldrons = this.parent.equipSet.get(EquipItemSlots.PAULDRONS)!
             this.assignLeftPauldron(pauldrons.modelId, pauldrons.materialId - 1)
             this.assignRightPauldron(pauldrons.modelId, pauldrons.materialId - 1)
         }
 
-        if (this.parent.equipSet.get(EquipItemSlots.LEGS) && !this.equipSet.get("LEFT_LEG") && !this.equipSet.get("RIGHT_LEG")) {
+        if (this.parent.equipSet.get(EquipItemSlots.LEGS) && !this.equipSet.get('LEFT_LEG') && !this.equipSet.get('RIGHT_LEG')) {
             const legs = this.parent.equipSet.get(EquipItemSlots.LEGS)!
             this.assignLeftLeg(legs.modelId, legs.materialId - 1)
             this.assignRightLeg(legs.modelId, legs.materialId - 1)
@@ -216,33 +216,39 @@ export class CharacterModel implements EquipBearer {
     }
 
     assignArmor(type: number, matIndex: number) {
-        this.addEquippedItem("BODY", new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.001")!, null, null, null))
+        this.addEquippedItem('BODY', new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find((b) => b.id === 'Bone.001')!, null, null, null))
     }
 
     assignHelmet(type: number, matIndex: number) {
-        this.addEquippedItem("HEAD", new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.002")!, null, null, null))
+        this.addEquippedItem('HEAD', new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find((b) => b.id === 'Bone.002')!, null, null, null))
     }
 
     assignLeftPauldron(type: number, matIndex: number) {
-        this.addEquippedItem("LEFT_PAULDRON", new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.010")!, null, new Vector3(0, - Math.PI / 2, 0), null))
+        this.addEquippedItem(
+            'LEFT_PAULDRON',
+            new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find((b) => b.id === 'Bone.010')!, null, new Vector3(0, -Math.PI / 2, 0), null),
+        )
     }
 
     assignRightPauldron(type: number, matIndex: number) {
-        this.addEquippedItem("RIGHT_PAULDRON", new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.003")!, null, new Vector3(0, Math.PI / 2, 0), new Vector3(0.02, 0, 0.02)))
+        this.addEquippedItem(
+            'RIGHT_PAULDRON',
+            new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find((b) => b.id === 'Bone.003')!, null, new Vector3(0, Math.PI / 2, 0), new Vector3(0.02, 0, 0.02)),
+        )
     }
 
     assignLeftLeg(type: number, matIndex: number) {
-        this.addEquippedItem("LEFT_LEG", new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.008")!, null, null, null))
+        this.addEquippedItem('LEFT_LEG', new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find((b) => b.id === 'Bone.008')!, null, null, null))
     }
 
     assignRightLeg(type: number, matIndex: number) {
-        this.addEquippedItem("RIGHT_LEG", new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.006")!, null, null, null))
+        this.addEquippedItem('RIGHT_LEG', new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find((b) => b.id === 'Bone.006')!, null, null, null))
     }
 
     assignWeapon(type: number, matIndex: number) {
-        this.weaponEquipItem = new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find(b => b.id === "Bone.009")!, null, null, null)
+        this.weaponEquipItem = new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find((b) => b.id === 'Bone.009')!, null, null, null)
         //this.weaponEquipItem.createSwordParticles(this.rhandNode)
-        this.addEquippedItem("WEAPON", this.weaponEquipItem)
+        this.addEquippedItem('WEAPON', this.weaponEquipItem)
     }
 
     addEquippedItem(slot: string, item: EquipItem) {
@@ -261,38 +267,38 @@ export class CharacterModel implements EquipBearer {
         }
 
         switch (slot) {
-            case "HEAD": {
-                removeModelSlot("HEAD")
+            case 'HEAD': {
+                removeModelSlot('HEAD')
                 break
             }
-            case "BODY": {
-                removeModelSlot("BODY")
+            case 'BODY': {
+                removeModelSlot('BODY')
                 break
             }
-            case "R_HAND": {
+            case 'R_HAND': {
                 this.setWeaponTrailEnabled(false)
                 this.disposeWeaponTrail()
                 this.weaponEquipItem = null
-                removeModelSlot("WEAPON")
+                removeModelSlot('WEAPON')
                 break
             }
-            case "L_HAND": {
-                removeModelSlot("L_HAND")
+            case 'L_HAND': {
+                removeModelSlot('L_HAND')
                 break
             }
-            case "PAULDRONS": {
-                removeModelSlot("LEFT_PAULDRON")
-                removeModelSlot("RIGHT_PAULDRON")
+            case 'PAULDRONS': {
+                removeModelSlot('LEFT_PAULDRON')
+                removeModelSlot('RIGHT_PAULDRON')
                 break
             }
-            case "LEGS": {
-                removeModelSlot("LEFT_LEG")
-                removeModelSlot("RIGHT_LEG")
+            case 'LEGS': {
+                removeModelSlot('LEFT_LEG')
+                removeModelSlot('RIGHT_LEG')
                 break
             }
-            case "NECKLACE":
-            case "L_RING":
-            case "R_RING": {
+            case 'NECKLACE':
+            case 'L_RING':
+            case 'R_RING': {
                 break
             }
         }
@@ -309,9 +315,7 @@ export class CharacterModel implements EquipBearer {
             }
         }
 
-        const hasPositionDrift =
-            Math.abs(this.parent.pos.x - this.node.position.x) > 0.001 ||
-            Math.abs(this.parent.pos.z - this.node.position.z) > 0.001
+        const hasPositionDrift = Math.abs(this.parent.pos.x - this.node.position.x) > 0.001 || Math.abs(this.parent.pos.z - this.node.position.z) > 0.001
 
         if (this.parent !== MyPlayer.myChar || this.parent.getMoveAngle() != null || hasPositionDrift || Math.abs(this.parent.pos.y - this.parent.logicYpos) > 0.1) {
             this.moveModel(timeRate)
@@ -323,11 +327,11 @@ export class CharacterModel implements EquipBearer {
 
         if (this.model) {
             this.rotationQuaternion = new Quaternion()
-            this.worldMatrix = this.model!.getWorldMatrix();
-            this.worldMatrix.decompose(new Vector3(), this.rotationQuaternion, new Vector3());
+            this.worldMatrix = this.model!.getWorldMatrix()
+            this.worldMatrix.decompose(new Vector3(), this.rotationQuaternion, new Vector3())
         }
 
-        this.equipSet.forEach(item => {
+        this.equipSet.forEach((item) => {
             item.onFrame()
         })
     }
@@ -363,50 +367,52 @@ export class CharacterModel implements EquipBearer {
                     possibleAnims.push(this.leftSlashAnim)
                     possibleAnims.push(this.rightSlashAnim)
                 }
-            } else switch (weapon.slotInfo!.weaponType) {
-                case WeaponTypes.SWORD: {
-                    possibleAnims.push(this.slashAnim)
-                    possibleAnims.push(this.slashAnim2)
-                    possibleAnims.push(this.leftSlashAnim)
-                    possibleAnims.push(this.rightSlashAnim)
-                    possibleAnims.push(this.jabAnim)
-                    possibleAnims.push(this.highJabAnim)
-                    break
+            } else
+                switch (weapon.slotInfo!.weaponType) {
+                    case WeaponTypes.SWORD: {
+                        possibleAnims.push(this.slashAnim)
+                        possibleAnims.push(this.slashAnim2)
+                        possibleAnims.push(this.leftSlashAnim)
+                        possibleAnims.push(this.rightSlashAnim)
+                        possibleAnims.push(this.jabAnim)
+                        possibleAnims.push(this.highJabAnim)
+                        break
+                    }
+                    case WeaponTypes.MACE: {
+                        possibleAnims.push(this.slashAnim)
+                        possibleAnims.push(this.slashAnim2)
+                        possibleAnims.push(this.leftSlashAnim)
+                        possibleAnims.push(this.rightSlashAnim)
+                        break
+                    }
+                    case WeaponTypes.POLEARM: {
+                        possibleAnims.push(this.jabAnim)
+                        possibleAnims.push(this.highJabAnim)
+                        possibleAnims.push(this.rightSlashAnim)
+                        break
+                    }
+                    case WeaponTypes.AXE:
+                    case WeaponTypes.PICKAXE:
+                    case WeaponTypes.TWO_HANDED_SWORD: {
+                        possibleAnims.push(this.greatAxeAttackAnim)
+                        possibleAnims.push(this.twoHandedSwordAttackAnim)
+                        break
+                    }
+                    case WeaponTypes.BOW: {
+                        possibleAnims.push(this.bowAimAnim)
+                        baseAnimSpeed = 1150
+                        this.bowAimAnim!.onAnimationEndObservable.addOnce(() => {
+                            const a = this.bowAimAnim!
+                            a.start(true, 1, a.to, a.to)
+                            a.setWeightForAllAnimatables(1)
+                        })
+                        break
+                    }
+                    default: {
+                        possibleAnims.push(this.slashAnim)
+                        break
+                    }
                 }
-                case WeaponTypes.MACE: {
-                    possibleAnims.push(this.slashAnim)
-                    possibleAnims.push(this.slashAnim2)
-                    possibleAnims.push(this.leftSlashAnim)
-                    possibleAnims.push(this.rightSlashAnim)
-                    break
-                }
-                case WeaponTypes.POLEARM: {
-                    possibleAnims.push(this.jabAnim)
-                    possibleAnims.push(this.highJabAnim)
-                    possibleAnims.push(this.rightSlashAnim)
-                    break
-                }
-                case WeaponTypes.AXE:
-                case WeaponTypes.PICKAXE:
-                case WeaponTypes.TWO_HANDED_SWORD: {
-                    possibleAnims.push(this.greatAxeAttackAnim)
-                    break
-                }
-                case WeaponTypes.BOW: {
-                    possibleAnims.push(this.bowAimAnim)
-                    baseAnimSpeed = 1150
-                    this.bowAimAnim!.onAnimationEndObservable.addOnce(() => {
-                        const a = this.bowAimAnim!
-                        a.start(true, 1, a.to, a.to)
-                        a.setWeightForAllAnimatables(1)
-                    })
-                    break
-                }
-                default: {
-                    possibleAnims.push(this.slashAnim)
-                    break
-                }
-            }
         }
 
         const anim = possibleAnims[Utils.rollDice(possibleAnims.length, true)]
@@ -519,14 +525,14 @@ export class CharacterModel implements EquipBearer {
     }
 
     stopAllStepSounds(except: Sound | null = null) {
-        this.footStepSounds.forEach(sound => {
+        this.footStepSounds.forEach((sound) => {
             if (sound != except && sound.isPlaying) {
                 sound.stop()
             }
         })
     }
 
-    getStepSoundParams(): {speed: number, volume: number} {
+    getStepSoundParams(): { speed: number; volume: number } {
         let speed = 1
         let volume = 1
         const stepSpeedRatio = this.parent.getMoveType() === 'R' ? this.parent.getActualSpeed() / 3.2 : this.parent.getActualSpeed() / 2
@@ -555,7 +561,7 @@ export class CharacterModel implements EquipBearer {
 
     transitionToAnimation(targetAnim: AnimationGroup | undefined, duration: number, loop = false, speed = 1.0) {
         if (!this.isActive()) return
-        if (!targetAnim || this.actualAnim === targetAnim) return;
+        if (!targetAnim || this.actualAnim === targetAnim) return
 
         // If there is already an ongoing transition
         if (this.animTransition) {
@@ -579,11 +585,11 @@ export class CharacterModel implements EquipBearer {
         this.node.position.y += (this.parent.logicYpos - this.node.position.y) * this.parent.yMoveSpeed * timeRate
         this.parent.pos.y = this.node.position.y
 
-        this.node.markAsDirty("position")
-        this.node.computeWorldMatrix(true);
+        this.node.markAsDirty('position')
+        this.node.computeWorldMatrix(true)
 
         if (this.model) {
-            this.model.computeWorldMatrix(true);
+            this.model.computeWorldMatrix(true)
         }
     }
 
@@ -594,7 +600,7 @@ export class CharacterModel implements EquipBearer {
         this.node.position.x = this.parent.pos.x
         this.node.position.y = this.parent.logicYpos
         this.node.position.z = this.parent.pos.z
-        this.node.markAsDirty("position")
+        this.node.markAsDirty('position')
         this.node.computeWorldMatrix(true)
         this.model?.computeWorldMatrix(true)
     }
@@ -613,10 +619,7 @@ export class CharacterModel implements EquipBearer {
         const rotationSpeed = (this.parent == MyPlayer.myChar ? 15 : 8) * timeRate
         let current = model.rotation.y - this.modelYAngleOffset
 
-        const delta = Math.atan2(
-            Math.sin(lookAngle - current),
-            Math.cos(lookAngle - current)
-        )
+        const delta = Math.atan2(Math.sin(lookAngle - current), Math.cos(lookAngle - current))
 
         if (Math.abs(delta) <= rotationSpeed) {
             current += delta
@@ -662,7 +665,7 @@ export class CharacterModel implements EquipBearer {
         if (!this.initialized) await this.initAsync()
         if (this.parent.dead) this.playDeathAnimation()
         this.model!.setEnabled(true)
-        this.equipSet.forEach(item => {
+        this.equipSet.forEach((item) => {
             EquipManager.addEquippedItem(item)
             if (item.hasSwordParticles) {
                 item.createSwordParticles(this.rhandNode)
@@ -675,7 +678,7 @@ export class CharacterModel implements EquipBearer {
         if (this.initialized) {
             this.model!.setEnabled(false)
         }
-        this.equipSet.forEach(item => {
+        this.equipSet.forEach((item) => {
             EquipManager.removeEquippedItem(item)
         })
     }
@@ -683,7 +686,7 @@ export class CharacterModel implements EquipBearer {
     removeFromScene() {
         this.stopAllStepSounds()
         this.removeFromView()
-        this.model?.getChildMeshes().forEach(mesh => Lights.unregisterActorLightMesh(mesh))
+        this.model?.getChildMeshes().forEach((mesh) => Lights.unregisterActorLightMesh(mesh))
         this.model?.dispose()
         this.node.dispose()
         this.disposeWeaponTrail()
