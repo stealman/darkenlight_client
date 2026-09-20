@@ -364,6 +364,7 @@ export class CharacterModel implements EquipBearer {
             const weaponType = weapon.slotInfo?.weaponType
             const usesHeavyTwoHandedAnimations = weaponType === WeaponTypes.TWO_HANDED_SWORD
                 || weaponType === WeaponTypes.TWO_HANDED_POLEARM
+                || weaponType === WeaponTypes.TWO_HANDED_MACE
                 || (weapon.weaponCategory === WeaponCategories.AXE && weapon.isTwoHanded() && weaponType !== WeaponTypes.PICKAXE)
 
             if (usesHeavyTwoHandedAnimations) {
