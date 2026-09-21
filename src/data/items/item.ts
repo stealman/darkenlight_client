@@ -155,7 +155,7 @@ export const EquipSlotModelsCb = {
     WARHAMMER: new EquipSlotModel(230, EquipItemSlots.R_HAND, WeaponTypes.TWO_HANDED_MACE),
 
     HUNTING_SPEAR: new EquipSlotModel(310, EquipItemSlots.R_HAND, WeaponTypes.POLEARM),
-    WAR_SPEAR: new EquipSlotModel(320, EquipItemSlots.R_HAND, WeaponTypes.SWORD),
+    WAR_SPEAR: new EquipSlotModel(320, EquipItemSlots.R_HAND, WeaponTypes.TWO_HANDED_POLEARM),
     HALBERD: new EquipSlotModel(330, EquipItemSlots.R_HAND, WeaponTypes.TWO_HANDED_POLEARM),
 
     HUNTINGBOW: new EquipSlotModel(510, EquipItemSlots.R_HAND, WeaponTypes.BOW),

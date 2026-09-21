@@ -27,7 +27,7 @@ const matFutureWeaponSize = new Vector2(5, 1)
 
 // Change this when a weapon GLB is replaced. The URL revision prevents an
 // installed PWA from combining a newly deployed shader with an old HTTP-cached model.
-export const WEAPON_MODEL_CACHE_VERSION = '20260921-warhammer'
+export const WEAPON_MODEL_CACHE_VERSION = '20260922-warspear'
 
 export const WeaponsCbManager = {
     BASE_WEAPONS_PATH: 'weapons/',
@@ -46,6 +46,7 @@ export const WeaponsCbManager = {
     warmaceMaterial: null as PBRCustomMaterial | null,
     warhammerMaterial: null as PBRCustomMaterial | null,
     huntingSpearMaterial: null as PBRCustomMaterial | null,
+    warSpearMaterial: null as PBRCustomMaterial | null,
     halberdMaterial: null as PBRCustomMaterial | null,
 
     async initMelee(map: Map<number, EquipItemType>, scene: Scene) {
@@ -65,6 +66,7 @@ export const WeaponsCbManager = {
         this.warmaceMaterial = createVertexColorWeaponMaterial('warmaceVertexColor', scene, MaceVertexColorPalettes.WARMACE)
         this.warhammerMaterial = createVertexColorWeaponMaterial('warhammerVertexColor', scene, MaceVertexColorPalettes.WARHAMMER)
         this.huntingSpearMaterial = createVertexColorWeaponMaterial('huntingSpearVertexColor', scene, PolearmVertexColorPalettes.HUNTING_SPEAR)
+        this.warSpearMaterial = createVertexColorWeaponMaterial('warSpearVertexColor', scene, PolearmVertexColorPalettes.WAR_SPEAR)
         this.halberdMaterial = createVertexColorWeaponMaterial('halberdVertexColor', scene, PolearmVertexColorPalettes.HALBERD)
 
         map.set(WeaponModelsCb.LONGSWORD.id, await this.getItem(WeaponModelsCb.LONGSWORD, this.longSwordMaterial))
@@ -80,6 +82,7 @@ export const WeaponsCbManager = {
         map.set(WeaponModelsCb.WARMACE.id, await this.getItem(WeaponModelsCb.WARMACE, this.warmaceMaterial))
         map.set(WeaponModelsCb.WARHAMMER.id, await this.getItem(WeaponModelsCb.WARHAMMER, this.warhammerMaterial))
         map.set(WeaponModelsCb.HUNTING_SPEAR.id, await this.getItem(WeaponModelsCb.HUNTING_SPEAR, this.huntingSpearMaterial))
+        map.set(WeaponModelsCb.WAR_SPEAR.id, await this.getItem(WeaponModelsCb.WAR_SPEAR, this.warSpearMaterial))
         map.set(WeaponModelsCb.HALBERD.id, await this.getItem(WeaponModelsCb.HALBERD, this.halberdMaterial))
 
         for (const data of FutureWeaponModels) {
@@ -153,7 +156,6 @@ export const WeaponModelsCb = {
 }
 
 const FutureWeaponModels: EquipCbItem[] = [
-    WeaponModelsCb.WAR_SPEAR,
     WeaponModelsCb.RECURVE_BOW,
     WeaponModelsCb.LONGBOW,
 ]
