@@ -78,7 +78,9 @@ export class CharacterModel implements EquipBearer {
     }
 
     async initAsync() {
-        await SceneLoader.ImportMeshAsync('', '/models/steve/', 'human_male.gltf', Renderer.scene)
+        // The versioned URL bypasses the legacy immutable browser cache once.
+        // Subsequent loads revalidate through the no-cache response header.
+        await SceneLoader.ImportMeshAsync('', '/models/steve/', 'human_male.gltf?v=20260922', Renderer.scene)
             .then((result) => {
                 this.model = result.meshes[0]
                 this.model.parent = this.node

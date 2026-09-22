@@ -9,7 +9,7 @@ The regular browser/PWA build remains supported alongside it.
 ## Project layout
 
 - `src-tauri/tauri.conf.json` - Tauri build settings, main-window defaults,
-  CSP, icon list and NSIS installer target.
+  dark native title bar, CSP, icon list and NSIS installer target.
 - `src-tauri/src/lib.rs` - native Rust integration: local configuration,
   window-size restore/persistence and native fullscreen commands.
 - `src/network/connector.ts` - asks the Tauri backend for the server URL when
