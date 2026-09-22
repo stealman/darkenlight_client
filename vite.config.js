@@ -3,11 +3,14 @@ import vue from '@vitejs/plugin-vue'
 import { VitePWA } from 'vite-plugin-pwa'
 import path from 'path'
 
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+    const isTauriBuild = mode === 'tauri'
+
+    return {
     base: '/',
     plugins: [
         vue(),
-        VitePWA({
+        !isTauriBuild && VitePWA({
             strategies: 'injectManifest',
             srcDir: 'src',
             filename: 'sw.js',
@@ -40,14 +43,22 @@ export default defineConfig({
                 maximumFileSizeToCacheInBytes: 12 * 1024 * 1024,
             },
         }),
-    ],
+    ].filter(Boolean),
     server: {
         host: true,
         historyApiFallback: true,
-    },
-    resolve: {
-        alias: {
-            '@': path.resolve(__dirname, './src'), // '@' now maps to 'src'
+        watch: {
+            // Tauri writes generated Rust files while running; they are not frontend sources.
+            ignored: ['**/src-tauri/**'],
         },
     },
-})
+    resolve: {
+        alias: [
+            {
+                find: '@/pwa/register',
+                replacement: path.resolve(__dirname, isTauriBuild ? './src/pwa/registerDesktop.ts' : './src/pwa/register.ts'),
+            },
+            { find: '@', replacement: path.resolve(__dirname, './src') },
+        ],
+    },
+}})

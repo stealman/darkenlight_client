@@ -2,7 +2,7 @@
 // FULLSCREEN SVG
 export function getFullScreenSvg(className: string, id: string) {
     return `
-<svg class="${className} noselect" id="${id}" preserveAspectRatio="none" version="1.1" id="fullScreenBtn"  viewBox="0 0 512 512">
+<svg class="${className} noselect" id="${id}" preserveAspectRatio="none" version="1.1" viewBox="0 0 512 512">
             <g>
                 <g>
                     <path d="M0,0v512h512V0H0z M477.867,477.867H34.133V34.133h443.733V477.867z"/>

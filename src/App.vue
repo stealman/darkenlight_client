@@ -8,6 +8,7 @@
             <div id="system-buttons">
                 <div @click="showSettingsDialog()" v-html="getHamburgerMenuSvg('icon-white', 'icon-settings')"></div>
                 <div @click="showDebug()" v-html="getInspectSvg('icon-white', 'icon-inspect')"></div>
+                <div @click="toggleFullscreen" v-html="getFullScreenSvg('icon-white', 'icon-fullscreen')"></div>
             </div>
 
             <div id="emeralds-info">
@@ -155,6 +156,7 @@ import PwaControls from '@/vue/views/PwaControls.vue'
 import { Controller } from '@/controlls/controller'
 import {
     getHamburgerMenuSvg,
+    getFullScreenSvg,
     getInspectSvg,
     getStopActionSvg,
     getTargetLockSvg,
@@ -240,13 +242,13 @@ onMounted(async () => {
     window.addEventListener('ui:open-crafting', onOpenCraftingMenu as EventListener)
     window.addEventListener('ui:open-npc-use', onOpenNpcUseMenu as EventListener)
     window.addEventListener('ui:inventory-updated', onInventoryUpdated as EventListener)
-    document.addEventListener('keydown', (e) => Controller.processKeydown(e))
-    document.addEventListener('keyup', (e) => Controller.processKeyup(e))
+    document.addEventListener('keydown', onKeyDown)
+    document.addEventListener('keyup', onKeyUp)
     await nextTick()
 
     if (document.getElementById('renderCanvas')) {
         console.log('INIT GAME', Date.now())
-        Connector.initialize()
+        await Connector.initialize()
         await GameManager.prepareGame(document.getElementById('renderCanvas') as HTMLCanvasElement)
         console.log('GAME INITIALIZED', Date.now())
 
@@ -278,7 +280,22 @@ onUnmounted(() => {
     window.removeEventListener('ui:open-crafting', onOpenCraftingMenu as EventListener)
     window.removeEventListener('ui:open-npc-use', onOpenNpcUseMenu as EventListener)
     window.removeEventListener('ui:inventory-updated', onInventoryUpdated as EventListener)
+    document.removeEventListener('keydown', onKeyDown)
+    document.removeEventListener('keyup', onKeyUp)
 })
+
+const onKeyDown = (event: KeyboardEvent) => {
+    if (event.key === 'F11' || (event.altKey && event.key === 'Enter')) {
+        event.preventDefault()
+        void Renderer.toggleFullscreen()
+        return
+    }
+    Controller.processKeydown(event)
+}
+
+const onKeyUp = (event: KeyboardEvent) => {
+    Controller.processKeyup(event)
+}
 
 const loginRequestSent = () => {
     loginRequestSentFlag.value = true
@@ -406,6 +423,10 @@ const showDebug = () => {
     Renderer.toggleDebug()
 }
 
+const toggleFullscreen = () => {
+    void Renderer.toggleFullscreen().catch((error) => console.error('Cannot toggle fullscreen:', error))
+}
+
 const reloadPage = () => {
     window.location.reload()
 }
@@ -416,9 +437,7 @@ const logout = () => {
 }
 
 const requestFullscreen = () => {
-    Renderer.requestFullscreen()
-    const btn = document.getElementById('fullScreenBtn')
-    if (btn) btn.style.display = 'none'
+    void Renderer.requestFullscreen().catch((error) => console.error('Cannot enter fullscreen:', error))
 }
 
 function resizeEventHandler() {

@@ -6,6 +6,7 @@
     "@babylonjs/gui-editor": "^7.31.2",
     "@babylonjs/materials": "^7.31.2",
     "@babylonjs/serializers": "^7.31.2",
+    "@tauri-apps/api": "2.11.1",
     "@vueuse/core": "^10.6.1",
     "axios": "^1.5.0",
     "babylonjs": "^7.31.2",
@@ -29,6 +30,7 @@
     "@babylonjs/gui": "^7.31.2",
     "@babylonjs/inspector": "^7.31.2",
     "@babylonjs/loaders": "^7.31.2",
+    "@tauri-apps/cli": "2.11.5",
     "@typescript-eslint/eslint-plugin": "^8.11.0",
     "@typescript-eslint/parser": "^8.11.0",
     "@vitejs/plugin-vue": "^5.1.4",
@@ -61,7 +63,11 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:tauri": "vite build --mode tauri",
     "serve": "vite preview",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build",
     "type-check": "tsc --noEmit",
     "format": "prettier --write ."
   },

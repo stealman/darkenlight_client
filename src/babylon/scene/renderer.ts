@@ -40,6 +40,11 @@ import { GroundItemsManager } from '@/babylon/world/groundItemsManager'
 import { EmeraldsManager } from '@/gui/emeraldsManager'
 import { GfxManager } from '@/babylon/gfx/gfxManager'
 import { StaticsManager } from '@/babylon/world/statics/staticsManager'
+import { invoke } from '@tauri-apps/api/core'
+
+function isTauriDesktop(): boolean {
+    return '__TAURI_INTERNALS__' in window
+}
 
 /**
  * Main Renderer
@@ -338,9 +343,33 @@ export const Renderer = {
         document.getElementById("posLabel")!.innerHTML = "POS: " + MyPlayer.myChar.getPositionRounded().toString();
     },
 
-    requestFullscreen() {
+    async requestFullscreen() {
+        if (isTauriDesktop()) {
+            await invoke('set_fullscreen', { fullscreen: true })
+            return
+        }
         if (screenFull.request) {
             screenFull.request()
         }
-    }
+    },
+
+    async toggleFullscreen() {
+        if (isTauriDesktop()) {
+            await invoke('toggle_fullscreen')
+            return
+        }
+        if (screenFull.toggle) {
+            screenFull.toggle()
+        }
+    },
+
+    async exitFullscreen() {
+        if (isTauriDesktop()) {
+            await invoke('set_fullscreen', { fullscreen: false })
+            return
+        }
+        if (screenFull.isFullscreen && screenFull.exit) {
+            screenFull.exit()
+        }
+    },
 }

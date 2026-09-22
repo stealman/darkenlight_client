@@ -1,5 +1,10 @@
 import { LoginMsg, Message } from '@/network/messages'
 import { MessageProcessor } from '@/network/messageProcessor'
+import { invoke } from '@tauri-apps/api/core'
+
+function isTauriDesktop(): boolean {
+    return '__TAURI_INTERNALS__' in window
+}
 
 export const Connector = {
     socket: null as WebSocket,
@@ -12,10 +17,13 @@ export const Connector = {
     lastSentMoveMessage: null as Message | null,
     lastMoveMessageTime: 0,
 
-    initialize() {
-        const socketUrl = import.meta.env.DEV
-            ? import.meta.env.VITE_GAME_WS_URL || `ws://${window.location.hostname}:3000`
-            : `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ws`
+    async initialize() {
+        const socketUrl = isTauriDesktop()
+            ? await invoke<string>('load_server_url')
+            : import.meta.env.VITE_GAME_WS_URL
+                || (import.meta.env.DEV
+                    ? `ws://${window.location.hostname}:3000`
+                    : `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ws`)
         this.socket = new WebSocket(socketUrl)
 
         this.socket.onopen = () => {

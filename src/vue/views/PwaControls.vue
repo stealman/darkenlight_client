@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { useRegisterSW } from 'virtual:pwa-register/vue'
+import { useRegisterSW } from '@/pwa/register'
 import { useI18n } from '@/i18n'
 
 interface BeforeInstallPromptEvent extends Event {
