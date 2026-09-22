@@ -13,7 +13,7 @@ import { Renderer } from '@/babylon/scene/renderer'
 import { MyPlayer } from '@/data/myPlayer'
 import { EquipBearer, EquipItem, EquipManager } from '@/babylon/item/equipManager'
 import { BabylonUtils } from '@/babylon/utils'
-import { EquipItemSlots, WeaponCategories, WeaponTypes } from '@/data/items/item'
+import { EquipItemSlots, EquipSlotModelsCb, WeaponCategories, WeaponTypes } from '@/data/items/item'
 import { Utils } from '@/utils/utils'
 import { AudioUtils } from '@/babylon/audio/audioUtils'
 
@@ -47,6 +47,7 @@ export class CharacterModel implements EquipBearer {
     greatAxeAttackAnim: AnimationGroup | undefined
     twoHandedSwordAttackAnim: AnimationGroup | undefined
     twoHandedSwordAttackAnim2: AnimationGroup | undefined
+    twoHandedSpearAttackAnim: AnimationGroup | undefined
 
     bowAimAnim: AnimationGroup | undefined
 
@@ -141,6 +142,7 @@ export class CharacterModel implements EquipBearer {
                         { name: 'Death', startFrame: 1400, endFrame: 1460 },
                         { name: 'TwoHandedSwordAttack', startFrame: 1500, endFrame: 1560 },
                         { name: 'TwoHandedSwordAttack2', startFrame: 1600, endFrame: 1660 },
+                        { name: 'TwoHandedSpearAttack', startFrame: 1700, endFrame: 1760 },
                     ]
 
                     const newAnimationGroups = animations.map(({ name, startFrame, endFrame }) => {
@@ -166,6 +168,7 @@ export class CharacterModel implements EquipBearer {
                     this.deathAnim = newAnimationGroups[13]
                     this.twoHandedSwordAttackAnim = newAnimationGroups[14]
                     this.twoHandedSwordAttackAnim2 = newAnimationGroups[15]
+                    this.twoHandedSpearAttackAnim = newAnimationGroups[16]
 
                     this.idleAnim?.start(true, 0.5)
                     this.actualAnim = this.idleAnim
@@ -362,12 +365,15 @@ export class CharacterModel implements EquipBearer {
         const weapon = this.parent.getWeapon()
         if (weapon != null) {
             const weaponType = weapon.slotInfo?.weaponType
-            const usesHeavyTwoHandedAnimations = weaponType === WeaponTypes.TWO_HANDED_SWORD
-                || weaponType === WeaponTypes.TWO_HANDED_POLEARM
-                || weaponType === WeaponTypes.TWO_HANDED_MACE
-                || (weapon.weaponCategory === WeaponCategories.AXE && weapon.isTwoHanded() && weaponType !== WeaponTypes.PICKAXE)
+            const usesHeavyTwoHandedAnimations =
+                weaponType === WeaponTypes.TWO_HANDED_SWORD ||
+                weaponType === WeaponTypes.TWO_HANDED_POLEARM ||
+                weaponType === WeaponTypes.TWO_HANDED_MACE ||
+                (weapon.weaponCategory === WeaponCategories.AXE && weapon.isTwoHanded() && weaponType !== WeaponTypes.PICKAXE)
 
-            if (usesHeavyTwoHandedAnimations) {
+            if (weapon.modelId === EquipSlotModelsCb.WAR_SPEAR.modelId) {
+                possibleAnims.push(this.twoHandedSpearAttackAnim)
+            } else if (usesHeavyTwoHandedAnimations) {
                 possibleAnims.push(this.greatAxeAttackAnim)
                 possibleAnims.push(this.twoHandedSwordAttackAnim)
                 possibleAnims.push(this.twoHandedSwordAttackAnim2)
