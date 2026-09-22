@@ -7,8 +7,6 @@
         <div v-show="loginRequestSentFlag">
             <div id="system-buttons">
                 <div @click="showSettingsDialog()" v-html="getHamburgerMenuSvg('icon-white', 'icon-settings')"></div>
-                <div @click="showDebug()" v-html="getInspectSvg('icon-white', 'icon-inspect')"></div>
-                <div @click="toggleFullscreen" v-html="getFullScreenSvg('icon-white', 'icon-fullscreen')"></div>
             </div>
 
             <div id="emeralds-info">
@@ -77,6 +75,8 @@
         @touch-coltrols-changed="touchControlsChanged"
         @logout="logout"
         @device-type-selected="deviceTypeChanged"
+        @toggle-debug="showDebug"
+        @toggle-fullscreen="toggleFullscreen"
     />
 
     <InventoryDialog ref="inventoryDialog" v-show="displayInventoryDialog" @close="displayInventoryDialog = false" />
@@ -156,8 +156,6 @@ import PwaControls from '@/vue/views/PwaControls.vue'
 import { Controller } from '@/controlls/controller'
 import {
     getHamburgerMenuSvg,
-    getFullScreenSvg,
-    getInspectSvg,
     getStopActionSvg,
     getTargetLockSvg,
 } from '@/vue/icons/icons'

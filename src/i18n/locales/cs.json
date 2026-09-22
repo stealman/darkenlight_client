@@ -11,11 +11,11 @@
     "blocked": "Blok",
     "health": "Zdraví",
     "mana": "Mana",
-    "stamina": "Únava"
+    "stamina": "Výdrž"
   },
   "items": {
     "resources": {
-      "stamina-potion": "Lektvar Staminy"
+      "stamina-potion": "Lektvar Výdrže"
     }
   },
   "app": {
@@ -77,6 +77,7 @@
     "layoutTwoColumns": "2 sloupce",
     "layoutCorner": "Roh",
     "buttonSize": "Velikost tlačítek",
+    "miniMapSize": "Minimapa",
     "buttonsOffsetBottom": "Odsazení zdola",
     "buttonCount": "Počet tlačítek",
     "volume": "Hlasitost",
@@ -113,8 +114,8 @@
     "healingPotionDescription": "Použiješ Lektvar zdraví pokud je v inventáři a jsi zraněn. Použije se vždy nejsilnější dostupný lektvar.",
     "manaPotionName": "Lektvar Many",
     "manaPotionDescription": "Použiješ Lektvar many pokud je v inventáři a nemáš plnou manu. Použije se vždy nejsilnější dostupný lektvar.",
-    "staminaPotionName": "Lektvar Staminy",
-    "staminaPotionDescription": "Použiješ Lektvar staminy pokud je v inventáři a nemáš plnou staminu. Použije se vždy nejsilnější dostupný lektvar.",
+    "staminaPotionName": "Lektvar Výdrže",
+    "staminaPotionDescription": "Použiješ Lektvar výdrže, pokud je v inventáři a nemáš plnou výdrž. Použije se vždy nejsilnější dostupný lektvar.",
     "equipStoredWeaponsName": "Uložená Zbraň",
     "equipStoredWeaponsDescription": "Přepíná mezi primární a sekundární uloženou zbraní. Pokud je v ruce zcela jiná zbraň, nasadí se primární.",
     "campingName": "Kempování",
@@ -160,7 +161,7 @@
       "noBandages": "Nemáš žádné obvazy",
       "noHealthPotions": "Nemáš žádné lektvary zdraví",
       "noManaPotions": "Nemáš žádné lektvary many",
-      "noStaminaPotions": "Nemáš žádné lektvary staminy",
+      "noStaminaPotions": "Nemáš žádné lektvary výdrže",
       "noCampWood": "Nemáš žádné dřevo na kempování",
       "noCampableBlockAround": "Na tomto místě nemůžeš kempovat",
       "autoAttack": "Auto-útok: {state}",
@@ -170,7 +171,7 @@
       "nextPotionIn": "Další lektvar až za {seconds} vteřin",
       "weaponSet-primary": "Primární zbraň uložena",
       "weaponSet-secondary": "Sekundární zbraň uložena",
-      "notEnoughStamina": "Jsi příliš unavený",
+      "notEnoughStamina": "Nemáš dostatek výdrže",
       "treeDepleted": "Tento strom je již vytěžený",
       "notEnoughMana": "Nemáš dostatek many",
       "notEnoughHealth": "Nemáš dostatek zdraví",

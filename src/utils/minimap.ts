@@ -4,6 +4,7 @@ import { MyPlayer } from '@/data/myPlayer'
 export const MiniMap = {
     offScreenCanvas: null as HTMLCanvasElement | null,
     canvasSize: 100,
+    viewSize: 100,
     mapWidth: 0,
     mapHeight: 0,
 
@@ -93,8 +94,9 @@ export const MiniMap = {
         canvas.width = this.canvasSize
         canvas.height = this.canvasSize
 
-        // Calculate the size needed to fully cover the canvas after rotation (diagonal length)
-        const extendedSize = Math.ceil(Math.sqrt(2) * this.canvasSize)
+        // Keep the viewed map area independent from the canvas size.
+        const extendedViewSize = Math.ceil(Math.sqrt(2) * this.viewSize)
+        const extendedCanvasSize = Math.ceil(Math.sqrt(2) * this.canvasSize)
         context.save()
 
         // Rotate canvas by 135 degrees
@@ -102,27 +104,28 @@ export const MiniMap = {
         context.rotate(-(Math.PI * 3 / 4))  // Rotate by 135 degrees
 
         // Calculate topleft position of viewport based on player position
-        const startX = Math.max(playerX - Math.floor(extendedSize / 2))
-        const startY = Math.max(playerY - Math.floor(extendedSize / 2))
+        const startX = Math.max(playerX - Math.floor(extendedViewSize / 2))
+        const startY = Math.max(playerY - Math.floor(extendedViewSize / 2))
 
         // Draw the larger image on the canvas
         context.drawImage(
             this.offScreenCanvas,
-            startX, startY, extendedSize, extendedSize,  // Source x, y, width, height
-            -extendedSize / 2, -extendedSize / 2, extendedSize, extendedSize  // Destination x, y, width, height
+            startX, startY, extendedViewSize, extendedViewSize,  // Source x, y, width, height
+            -extendedCanvasSize / 2, -extendedCanvasSize / 2, extendedCanvasSize, extendedCanvasSize  // Destination x, y, width, height
         )
 
         // Player position
         context.fillStyle = "red"
         context.beginPath()
-        context.arc(0, 0, 2, 0, Math.PI * 2)  // Centered on the canvas
+        context.arc(0, 0, 2 * this.canvasSize / this.viewSize, 0, Math.PI * 2)  // Centered on the canvas
         context.fill()
 
         // context.restore()
     },
 
-    updateCanvasSize(size) {
+    updateCanvasSize(size, viewSize = size) {
         this.canvasSize = size
+        this.viewSize = viewSize
         document.getElementById("miniMapCanvas").style.width = size + "px"
         document.getElementById("miniMapCanvas").style.height = size + "px"
 

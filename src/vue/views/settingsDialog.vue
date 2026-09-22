@@ -4,6 +4,10 @@
         @close="closeDialog"
     >
         <template #header>
+            <div class="settings-header-actions">
+                <div class="settings-header-action" @click.stop="emit('toggle-debug')" v-html="getInspectSvg('icon-white', 'icon-inspect')"></div>
+                <div class="settings-header-action" @click.stop="emit('toggle-fullscreen')" v-html="getFullScreenSvg('icon-white', 'icon-fullscreen')"></div>
+            </div>
             <div v-for="tab in tabs" :key="tab.id" class="tab-item" :class="tab.id === activeTabId ? 'active' : ''" @click="activeTabId = tab.id">
                 <label class="noselect">{{ tab.name }}</label>
             </div>
@@ -95,12 +99,17 @@
                                         <input class="range-slider" type="range" min="32" max="64" step="2" style="zoom: 1.5;" v-model="storedSettings.actionButtonSize" @change="actionButtonsChanged()" />
                                     </td>
 
-                                    <td class="item-label" style="width: 25%">{{ t('settings.buttonsOffsetBottom') }}</td>
+                                    <td class="item-label" style="width: 25%">{{ t('settings.miniMapSize') }}</td>
                                     <td style="width: 25%">
-                                        <input class="range-slider" type="range" min="0" max="512" step="16" style="zoom: 1.5;" v-model="storedSettings.actionButtonsYOffset" @change="actionButtonsChanged()" />
+                                        <input class="range-slider" type="range" min="25" max="100" step="5" style="zoom: 1.5;" v-model="storedSettings.miniMapSize" @change="miniMapSizeChanged()" />
                                     </td>
                                 </tr>
                                 <tr>
+                                    <td class="item-label" style="width: 25%; padding-top: 1rem;">{{ t('settings.buttonsOffsetBottom') }}</td>
+                                    <td style="width: 25%; padding-top: 1rem;">
+                                        <input class="range-slider" type="range" min="0" max="512" step="16" style="zoom: 1.5;" v-model="storedSettings.actionButtonsYOffset" @change="actionButtonsChanged()" />
+                                    </td>
+
                                     <td class="item-label" style="width: 25%; padding-top: 1rem;">{{ t('settings.buttonCount') }}</td>
                                     <td style="width: 25%; padding-top: 1rem;">
                                         <input class="range-slider" type="range" min="4" max="10" step="2" style="zoom: 1.5;" v-model="storedSettings.actionButtonCount" @change="actionButtonsChanged()" />
@@ -158,10 +167,12 @@ import { Settings } from '@/settings/settings'
 import { Renderer } from '@/babylon/scene/renderer'
 import { Lights } from '@/babylon/scene/lights'
 import { ActionButtonsManager } from '@/gui/actionButtonsManager'
+import { ViewportManager } from '@/utils/viewport'
+import { getFullScreenSvg, getInspectSvg } from '@/vue/icons/icons'
 import { setLocale, useI18n } from '@/i18n'
 
 const storedSettings = ref(Settings)
-const emit = defineEmits(['close', 'closeWithRestartPrompt', 'deviceTypeSelected', 'touchColtrolsChanged', 'logout'])
+const emit = defineEmits(['close', 'closeWithRestartPrompt', 'deviceTypeSelected', 'touchColtrolsChanged', 'logout', 'toggle-debug', 'toggle-fullscreen'])
 const { t } = useI18n()
 
 const tabs = computed(() => [
@@ -279,6 +290,12 @@ const actionButtonsChanged = () => {
     storeSettings()
 }
 
+const miniMapSizeChanged = () => {
+    storedSettings.value.miniMapSize = parseInt(storedSettings.value.miniMapSize)
+    ViewportManager.onResize()
+    storeSettings()
+}
+
 const storeSettings = () => {
     Settings.storeSettings()
 }
@@ -309,4 +326,32 @@ watch(activeTabId, (newVal) => {
 </script>
 
 <style>
+#setting-dialog-backdrop .dialog-header {
+    position: relative;
+}
+
+.settings-header-actions {
+    position: absolute;
+    top: 50%;
+    left: 8px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transform: translateY(-50%);
+}
+
+.settings-header-action {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: url('/images/cursor-pointer.png'), pointer;
+}
+
+.settings-header-action .icon-white {
+    fill: rgb(var(--ui-darkest));
+}
+
+.settings-header-action .icon-white:hover {
+    fill: rgb(var(--ui-base));
+}
 </style>

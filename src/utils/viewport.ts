@@ -4,6 +4,7 @@ import { MiniMap } from '@/utils/minimap'
 import { MyPlayer } from '@/data/myPlayer'
 import { GuiButtonManager, GuiButtonsManager } from '@/gui/guiButtonsManager'
 import { EmeraldsManager } from '@/gui/emeraldsManager'
+import { Settings } from '@/settings/settings'
 
 export const ViewportManager = {
     viewPortInitialized: false,
@@ -33,8 +34,9 @@ export const ViewportManager = {
     },
 
     onResize() {
-        const miniMapSize= Math.min(150, Math.min(window.innerHeight, window.innerWidth) / 5)
-        MiniMap.updateCanvasSize(miniMapSize)
+        const baseMiniMapSize = Math.min(150, Math.min(window.innerHeight, window.innerWidth) / 5)
+        const miniMapSize = Math.round(baseMiniMapSize * Settings.miniMapSize / 50)
+        MiniMap.updateCanvasSize(miniMapSize, baseMiniMapSize)
         GuiButtonsManager.updatePositions(miniMapSize)
         EmeraldsManager.updatePositions(miniMapSize)
         this.viewPortInitialized = false

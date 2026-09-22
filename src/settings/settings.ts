@@ -48,6 +48,7 @@ export const Settings = {
 
     autoTarget: false as boolean,
     actionButtonSize: 64 as number,
+    miniMapSize: 50 as number,
     actionButtonsLayout: '1COLUMN' as string,
     actionButtonsYOffset: 0 as number,
     actionButtonCount: 6 as number,
@@ -84,6 +85,9 @@ export const Settings = {
         if (storedSettings.actionButtonSize) {
             this.actionButtonSize = parseInt(storedSettings.actionButtonSize)
         }
+        if (storedSettings.miniMapSize != null) {
+            this.miniMapSize = parseInt(storedSettings.miniMapSize)
+        }
         if (storedSettings.actionButtonsLayout) {
             this.actionButtonsLayout = storedSettings.actionButtonsLayout
         }
@@ -117,6 +121,7 @@ export const Settings = {
 
             autoTarget: false,
             actionButtonSize: Settings.touchEnabled ? 40 : 64,
+            miniMapSize: 50,
             actionButtonsLayout: '1COLUMN',
             actionButtonsYOffset: 0,
             actionButtonCount: 6,
