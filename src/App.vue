@@ -7,6 +7,7 @@
         <div v-show="loginRequestSentFlag">
             <div id="system-buttons">
                 <div @click="showSettingsDialog()" v-html="getHamburgerMenuSvg('icon-white', 'icon-settings')"></div>
+                <button v-if="myCharRef?.className === 'GM'" class="gm-panel-button" @click="toggleGmPanel()">{{ t('app.gmPanel') }}</button>
             </div>
 
             <div id="emeralds-info">
@@ -30,17 +31,6 @@
             <label id="btn-target-lock" style="display: none; opacity: 0.65; position: absolute; width: 64px; height: 64px;" v-html="getTargetLockSvg('icon-red', 'icon-target-lock')" @pointerdown="TargetingManager.onPointerDown()" @pointerup="TargetingManager.onPointerUp()"></label>
 
             <label id="btn-action-stop" style="display: none; opacity: 0.65; position: absolute; width: 64px; height: 64px;" v-html="getStopActionSvg('icon-blue', 'icon-stop-action')" @pointerdown="AudioManager.playGuiButtonClick(); MyPlayer.stopActions()"></label>
-
-            <div id="debug-panel">
-                <div style="display:flex; gap:5px; align-items:center;">
-                    <div id="fpsLabel" style="font-size:10px; color:#aaa;">FPS:</div>
-                    <div id="posLabel" style="font-size:10px; color:#aaa;">POS:</div>
-                </div>
-
-                <div v-if="myCharRef?.className === 'GM'" style="display:flex; gap:15px; align-items:center;">
-                    <button style="font-size:18px; color:#aaa;" @click="toggleGmPanel()">{{ t('app.gmPanel') }}</button>
-                </div>
-            </div>
 
             <div id="action-button-stop" class="action-button">
                 <div id="action-button-stop-inner">

@@ -11,7 +11,8 @@
     "blocked": "Block",
     "health": "Health",
     "mana": "Mana",
-    "stamina": "Stamina"
+    "stamina": "Stamina",
+    "position": "Position"
   },
   "items": {
     "resources": {

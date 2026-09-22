@@ -328,19 +328,19 @@ export const Renderer = {
     toggleDebug() {
         if (!this.inspectorDisplayed) {
             Inspector.Show(this.scene, {})
-            document.getElementById("debug-panel")!.style.display = "none"
             this.inspectorDisplayed = true
         } else {
             Inspector.Hide()
-            document.getElementById("debug-panel")!.style.display = "flex"
             this.inspectorDisplayed = false
         }
     },
 
     actualizeDebug() {
         const absoluteFPS = 1000 / this.instrumentation!.frameTimeCounter.lastSecAverage
-        document.getElementById("fpsLabel")!.innerHTML = "FPS: " + this.fps + " | " + absoluteFPS.toFixed(0);
-        document.getElementById("posLabel")!.innerHTML = "POS: " + MyPlayer.myChar.getPositionRounded().toString();
+        MiniMap.setDebugInfo(
+            `${this.fps} | ${absoluteFPS.toFixed(0)}`,
+            MyPlayer.myChar?.getPositionRounded().toString() ?? '-'
+        )
     },
 
     async requestFullscreen() {

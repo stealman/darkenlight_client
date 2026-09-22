@@ -1,12 +1,17 @@
 import { WorldDataManager } from '@/data/worldDataManager'
 import { MyPlayer } from '@/data/myPlayer'
+import { TooltipOverlayContent, TooltipOverlayManager } from '@/gui/tooltipOverlayManager'
+import { t } from '@/i18n'
 
 export const MiniMap = {
+    tooltipOwnerKey: 'mini-map' as string,
     offScreenCanvas: null as HTMLCanvasElement | null,
     canvasSize: 100,
     viewSize: 100,
     mapWidth: 0,
     mapHeight: 0,
+    fpsInfo: '-' as string,
+    positionInfo: '-' as string,
 
     minHeight: 6,
     maxHeight: 32,
@@ -28,6 +33,8 @@ export const MiniMap = {
         this.offScreenCanvas.width = this.mapWidth
         this.offScreenCanvas.height = this.mapHeight
 
+        this.initializeTooltip()
+
         for (let height = this.minHeight; height <= this.maxHeight; height++) {
             const brightness = (height - this.minHeight) / (this.maxHeight - this.minHeight)
             const greenValue = Math.round(102 + brightness * (255 - 102))
@@ -37,6 +44,57 @@ export const MiniMap = {
             const snowValue = Math.round(128 + brightness * (255 - 128))
             this.snowColorMap[height] = `#${snowValue.toString(16).padStart(2, '0')}${snowValue.toString(16).padStart(2, '0')}${snowValue.toString(16).padStart(2, '0')}`
         }
+    },
+
+    initializeTooltip() {
+        const canvas = document.getElementById('miniMapCanvas') as HTMLCanvasElement | null
+        if (!canvas) {
+            return
+        }
+
+        canvas.onmouseenter = (event) => this.onMouseEnter(event)
+        canvas.onmousemove = (event) => this.onMouseMove(event)
+        canvas.onmouseleave = () => this.onMouseLeave()
+        TooltipOverlayManager.initialize()
+    },
+
+    buildTooltipContent(): TooltipOverlayContent {
+        return {
+            title: MyPlayer.worldName || t('settings.miniMapSize'),
+            rows: [
+                { label: 'FPS', value: this.fpsInfo },
+                { label: t('common.position'), value: this.positionInfo },
+            ],
+        }
+    },
+
+    setDebugInfo(fpsInfo: string, positionInfo: string) {
+        this.fpsInfo = fpsInfo
+        this.positionInfo = positionInfo
+
+        if (TooltipOverlayManager.isVisibleFor(this.tooltipOwnerKey)) {
+            TooltipOverlayManager.refresh(this.buildTooltipContent())
+        }
+    },
+
+    onMouseEnter(event: MouseEvent) {
+        if (TooltipOverlayManager.pinned) {
+            return
+        }
+
+        TooltipOverlayManager.showFromEvent({
+            ownerKey: this.tooltipOwnerKey,
+            event,
+            content: this.buildTooltipContent(),
+        })
+    },
+
+    onMouseMove(event: MouseEvent) {
+        TooltipOverlayManager.moveFromEvent(this.tooltipOwnerKey, event)
+    },
+
+    onMouseLeave() {
+        TooltipOverlayManager.hideOwnerIfNotPinned(this.tooltipOwnerKey)
     },
 
     redrawMiniMap(mapChunk) {

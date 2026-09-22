@@ -466,7 +466,7 @@ defineExpose({openDialog})
 .npc-use-dialog-window .dialog-content { display: block; }
 .npc-use-header { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .npc-use-feature-tabs { display: flex; min-width: 0; overflow-x: auto; }
-.npc-use-emeralds { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 4px; margin-left: auto; padding: 0 6px; color: #7ef58e; font-size: 14px; text-shadow: 0 0 3px #000; white-space: nowrap; }
+.npc-use-emeralds { display: inline-flex; flex: 0 0 auto; align-self: stretch; align-items: center; gap: 4px; margin-left: auto; padding: 0 6px; background: rgba(0, 0, 0, 0.25); color: #7ef58e; font-size: 14px; text-shadow: 0 0 3px #000; white-space: nowrap; }
 .npc-use-emeralds img { width: 18px; height: 18px; object-fit: contain; }
 .npc-use-content-shell { display: flex; flex-direction: column; width: 100%; height: min(600px, calc(85vh - 48px)); box-sizing: border-box; padding: 10px; gap: 10px; overflow: hidden; }
 .npc-use-category-tabs { display: flex; flex-wrap: wrap; gap: 6px; flex: 0 0 auto; }

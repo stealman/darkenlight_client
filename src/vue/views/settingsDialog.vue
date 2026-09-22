@@ -330,6 +330,15 @@ watch(activeTabId, (newVal) => {
     position: relative;
 }
 
+#setting-dialog-backdrop .dialog-window {
+    width: 620px;
+}
+
+#setting-dialog-backdrop .dialog-content {
+    box-sizing: border-box;
+    padding-right: 10px;
+}
+
 .settings-header-actions {
     position: absolute;
     top: 50%;
