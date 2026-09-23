@@ -1,124 +1,332 @@
 import {
     Scene,
-    StandardMaterial,
     Color3,
-    Texture, Vector2,
+    Texture, Vector2, PBRMaterial, StandardMaterial,
 } from '@babylonjs/core'
-import { CustomMaterial } from '@babylonjs/materials'
+import { PBRCustomMaterial } from '@babylonjs/materials'
+import { MapBlock } from '@/data/worldDataManager'
+
+export interface PBRBasicAtts {
+    metallic: number
+    roughness: number
+    directIntensity: number
+    environmentIntensity: number
+}
 
 export const Materials = {
-    BASE_PATH: './assets/materials/',
+    BASE_PATH: './images/materials/',
 
-    sceneEmissiveColor: new Color3(0.35, 0.35, 0.35),
+    terrainMaterial: null as PBRCustomMaterial | null,
+    planeMaterial: null as PBRCustomMaterial | null,
+    planeWaterMaterial: null as PBRCustomMaterial | null,
+    stepMarksMaterial: null as PBRCustomMaterial | null,
+    fightSplatsMaterial: null as PBRCustomMaterial | null,
 
-    terrainMaterial: null as CustomMaterial,
-    planeMaterial: null as StandardMaterial,
-    symetricBlockMaterial1: null as CustomMaterial,
-    waterMaterial: null as StandardMaterial,
+    blockMatAlpha1: null as PBRCustomMaterial | null,
+    blockMat1: null as PBRCustomMaterial | null,
+
+    waterMaterial: null as PBRMaterial | null,
+    entrancePortalMaterial: null as PBRMaterial | null,
+    weaponTrailMaterial: null as StandardMaterial | null,
 
     initialize(scene: Scene) {
         this.terrainMaterial = this.createTerrainMaterial1(scene)
         this.planeMaterial = this.createPlaneMaterial(scene)
-        this.symetricBlockMaterial1 = this.createSymBlockMaterial1(scene)
+        this.planeWaterMaterial = this.createPlaneWaterMaterial(scene)
+
+        this.blockMat1 = this.createBlockMat1(scene)
+        this.blockMatAlpha1 = this.createBlockMatAlpha1(scene)
         this.waterMaterial = this.createWaterMaterial(scene)
+        this.entrancePortalMaterial = this.createEntrancePortalMaterial(scene)
+        this.stepMarksMaterial = this.createStepMarksMaterial(scene)
+        this.fightSplatsMaterial = this.createFightSplatsMaterial(scene)
+        this.weaponTrailMaterial = this.createWeaponTrailMaterial(scene)
     },
 
-    getBasicMaterial(scene: Scene, name: string, pathToDiffuse: string, invertY: boolean = true): StandardMaterial {
-        const mat = new StandardMaterial(name, scene)
-        mat.specularColor = Color3.Black()
-        mat.emissiveColor = this.sceneEmissiveColor
+    createTerrainMaterial1(scene: Scene): PBRCustomMaterial {
+        const material = this.getPBRCustomMaterial(scene, "terrain_mats1", this.BASE_PATH, 'terrain_materials1.png', 1 / 8, 1 / 8, false)
+        material.emissiveTexture = new Texture(this.BASE_PATH + 'terrain_materials1_emissive.png', scene)
+        material.emissiveTexture.uScale = 1 / 8
+        material.emissiveTexture.vScale = 1 / 8
+        material.emissiveColor = new Color3(1, 1, 1)
 
-        const diffuseTexture = new Texture(pathToDiffuse, scene, {invertY: invertY})
-        mat.diffuseTexture = diffuseTexture
+        return material
+    },
+
+    createPlaneMaterial(scene: Scene): PBRCustomMaterial {
+        const material = this.getPBRCustomMaterial(scene, "plane_mats", this.BASE_PATH, 'plane_materials1.png', 1 / 8, 1 / 8, true)
+        material.alphaCutOff = 0.01
+        return material
+    },
+
+    createPlaneWaterMaterial(scene: Scene): PBRCustomMaterial {
+        const material = this.getPBRCustomMaterial(scene, "plane_mats_water", this.BASE_PATH, 'plane_materials1.png', 1 / 8, 1 / 8, false)
+        const texture = material.albedoTexture as Texture
+        texture.hasAlpha = true
+        texture.getAlphaFromRGB = false
+        texture.updateSamplingMode(Texture.NEAREST_NEAREST)
+        material.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHABLEND
+        material.useAlphaFromAlbedoTexture = true
+        material.alpha = 1
+        material.forceAlphaTest = false
+        return material
+    },
+
+    createStepMarksMaterial(scene: Scene): PBRCustomMaterial {
+        const mat = this.getPBRCustomMaterial(scene, "step_marks_mats", this.BASE_PATH, 'stepmarks.png', 1 / 2, 1 / 2, false)
+        const texture = mat.albedoTexture as Texture
+        texture.hasAlpha = true
+        texture.getAlphaFromRGB = false
+        texture.updateSamplingMode(Texture.NEAREST_NEAREST)
+        mat.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHABLEND
+        mat.useAlphaFromAlbedoTexture = true
+        mat.alpha = 0.4
+        mat.forceAlphaTest = false
         return mat
     },
 
-    createTerrainMaterial1(scene: Scene): CustomMaterial {
-        return this.getCustomMaterial(scene, 'terrain_materials_1.png', 1 / 4, 1 / 4, false)
-    },
-
-    createPlaneMaterial(scene: Scene): StandardMaterial {
-        return this.getCustomMaterial(scene, 'plane_materials.png', 1 / 8, 1 / 8, false)
-    },
-
-    createSymBlockMaterial1(scene: Scene): CustomMaterial {
-        return this.getCustomMaterial(scene, 'symetric_materials_1.png', 1 / 8, 1 / 8, true)
-    },
-
-    getCustomMaterial(scene: Scene, textturePath: string, uScale: number, vScale: number, hasAlpha: boolean): CustomMaterial {
-        const diffuseTexture = new Texture(this.BASE_PATH + textturePath, scene)
-        diffuseTexture.hasAlpha = hasAlpha
-        diffuseTexture.uScale = uScale
-        diffuseTexture.vScale = vScale
-
-        const mat = new CustomMaterial("", scene)
-        mat.diffuseTexture = diffuseTexture
-        mat.specularColor = Color3.Black()
-        mat.emissiveColor = this.sceneEmissiveColor
-
-        mat.AddAttribute("uvc")
-        mat.Vertex_Definitions(`attribute vec2 uvc;`);
-        mat.Vertex_Before_PositionUpdated(`uvUpdated += uvc;`)
-
-        mat.freeze()
+    createFightSplatsMaterial(scene: Scene): PBRCustomMaterial {
+        const mat = this.getPBRCustomMaterial(scene, "fight_splats_mats", this.BASE_PATH, 'fight-splats.png', 1 / 16, 1 / 16, false)
+        const texture = mat.albedoTexture as Texture
+        texture.hasAlpha = true
+        texture.getAlphaFromRGB = false
+        texture.updateSamplingMode(Texture.NEAREST_NEAREST)
+        mat.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHABLEND
+        mat.useAlphaFromAlbedoTexture = true
+        mat.alpha = 0.75
+        mat.forceAlphaTest = false
         return mat
     },
 
-    createWaterMaterial(scene: Scene): StandardMaterial {
-        const mat = new StandardMaterial('waterMaterial', scene)
-        mat.specularColor = new Color3(0, 0, 0)
+    createBlockMat1(scene: Scene): PBRCustomMaterial {
+        const material = this.getPBRCustomMaterial(scene, "sym_block_mats1", this.BASE_PATH, 'block_materials1.png', 1 / 16, 1 / 16, false)
+        material.bumpTexture = new Texture(this.BASE_PATH + 'block_materials1_norm.png', scene)
+        material.bumpTexture.uScale = 1 / 16
+        material.bumpTexture.vScale = 1 / 16
 
-        const texture = new Texture(this.BASE_PATH + 'water.png', scene)
-        texture.uScale = 64
-        texture.vScale = 64
+        material.emissiveTexture = new Texture(this.BASE_PATH + 'block_materials1_emissive.png', scene)
+        material.emissiveTexture.uScale = 1 / 16
+        material.emissiveTexture.vScale = 1 / 16
+        material.emissiveColor = new Color3(1, 1, 1)
 
-        mat.diffuseTexture = texture
-        mat.alpha = 0.2;
-        mat.ambientColor = new Color3(1, 1, 1.0);
+        return material
+    },
+
+    createBlockMatAlpha1(scene: Scene): PBRCustomMaterial {
+        const material = this.getPBRCustomMaterial(scene, "sym_block_mats_alpha1", this.BASE_PATH, 'block_materials_alpha1.png', 1 / 8, 1 / 8, true)
+        return material
+    },
+
+    createWeaponTrailMaterial(scene: Scene): StandardMaterial {
+        const mat = new StandardMaterial('swordTrailMat', scene)
+        mat.disableLighting = true
+        mat.emissiveColor = new Color3(1, 1, 1)
+        mat.alpha = 0.25
         return mat
     },
+
+    getPBRMaterial(scene: Scene, name: string, pathToAlbedo: string, hasAlpha: boolean = false, invertY: boolean, options: PBRBasicAtts, pathToEmissive: string | null = null): PBRMaterial {
+        const albedoTexture = new Texture(pathToAlbedo, scene, {invertY: invertY})
+        albedoTexture.hasAlpha = hasAlpha
+        albedoTexture.gammaSpace = true;
+
+        const mat = new PBRMaterial(name, scene)
+        mat.albedoTexture = albedoTexture
+        if (pathToEmissive) {
+            const emissiveTexture = new Texture(pathToEmissive, scene, {invertY: invertY})
+            emissiveTexture.gammaSpace = true
+            mat.emissiveTexture = emissiveTexture
+            mat.emissiveColor = new Color3(1, 1, 1)
+        }
+        mat.metallic = options.metallic
+        mat.roughness = options.roughness
+        mat.directIntensity = options.directIntensity
+        mat.environmentIntensity = options.environmentIntensity
+
+        return mat
+    },
+
+    getPBRCustomMaterial(scene: Scene, name: string, basePath: string, texturePath: string, uScale: number, vScale: number, hasAlpha: boolean): PBRCustomMaterial {
+        return this.getPBRCustomMaterialFrom(scene, name, basePath, texturePath, uScale, vScale, hasAlpha, {
+            metallic: 0.0,
+            roughness: 1.0,
+            directIntensity: 0.75,
+            environmentIntensity: 1,
+            }
+        )
+    },
+
+    getPBRCustomMaterialFrom(scene: Scene, name: string, basePath: string, texturePath: string, uScale: number, vScale: number, hasAlpha: boolean, options: PBRBasicAtts): PBRCustomMaterial {
+        const albedoTexture = new Texture(basePath + texturePath, scene)
+        if (uScale != 1) {
+            albedoTexture.uScale = uScale
+        }
+        if (vScale != 1) {
+            albedoTexture.vScale = vScale
+        }
+        albedoTexture.gammaSpace = true;
+
+        const mat = new PBRCustomMaterial(name, scene)
+        mat.albedoTexture = albedoTexture
+        mat.metallic = options.metallic
+        mat.roughness = options.roughness
+        mat.backFaceCulling = true;
+        mat.twoSidedLighting = true;
+        mat.directIntensity = options.directIntensity
+        mat.environmentIntensity = options.environmentIntensity
+        mat.usePhysicalLightFalloff = false;
+        if (hasAlpha) {
+            albedoTexture.updateSamplingMode(Texture.NEAREST_NEAREST)
+            mat.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHATEST
+            mat.useAlphaFromAlbedoTexture = true
+            mat.alphaCutOff = 0.5;
+            mat.forceAlphaTest = true
+        }
+
+        mat.AddAttribute("uvc");
+        if (uScale != 1 || vScale != 1) {
+            mat.Vertex_Definitions(`attribute vec2 uvc;`)
+            mat.Vertex_Before_PositionUpdated(`uvUpdated = uvUpdated + uvc;`)
+            mat.Vertex_After_WorldPosComputed(`vAlbedoUV = uvUpdated;`)
+        }
+
+        return mat
+    },
+
+    createWaterMaterial(scene: Scene): PBRMaterial {
+        const albedoTexture = new Texture(this.BASE_PATH + 'water.png', scene)
+        albedoTexture.uScale = 64
+        albedoTexture.vScale = 64
+        albedoTexture.gammaSpace = true;
+
+        const mat = new PBRMaterial("waterMaterial", scene)
+        mat.albedoTexture = albedoTexture
+        mat.metallic = 0.6
+        mat.roughness = 0.4
+        mat.backFaceCulling = false;
+        mat.directIntensity = 1
+        mat.environmentIntensity = 0.5
+        mat.usePhysicalLightFalloff = false
+        mat.alpha = 0.25
+
+        return mat
+    },
+
+    createEntrancePortalMaterial(scene: Scene): PBRMaterial {
+        const mat = this.createWaterMaterial(scene)
+        mat.name = 'stoneEntrancePortalMaterial'
+        mat.alpha = 0.42
+        mat.emissiveColor = new Color3(0.08, 0.02, 0.08)
+        return mat
+    },
+
+    onFrame(time: number) {
+        const mat = this.entrancePortalMaterial
+        if (!mat) {
+            return
+        }
+
+        const strength = 0.08 + ((Math.sin(time / 850) + 1) * 0.06)
+        mat.emissiveColor.set(strength, strength * 0.25, strength)
+    },
+
 }
+
 
 class MaterialEnum {
     index: number
     uv: Vector2
+    uvScale: Vector2
 
-    constructor(index: number, uv: Vector2) {
+    constructor(index: number, uv: Vector2, uvScale: Vector2 = new Vector2(1, 1)) {
         this.index = index
         this.uv = uv
+        this.uvScale = uvScale
+    }
+}
+
+export const MaterialAlphaEnum1 = {
+    TREE_LEAF_LIGHT: new MaterialEnum(1, new Vector2(0.5, 6.5)),
+    TREE_LEAF_DARK: new MaterialEnum(2, new Vector2(2.5, 6.5)),
+    TREE_LEAF_AUTUMN: new MaterialEnum(3, new Vector2(4.5, 6.5)),
+    TREE_LEAF_NORTH: new MaterialEnum(4, new Vector2(6.5, 6.5)),
+    TREE_LEAF_5: new MaterialEnum(5, new Vector2(0.5, 4.5)),
+    TREE_LEAF_6: new MaterialEnum(6, new Vector2(2.5, 4.5)),
+
+    getMaterialByIndex(index: number): Vector2 {
+        return Object.values(MaterialAlphaEnum1).find(item => item.index === index)?.uv;
     }
 }
 
 export const MaterialEnum1 = {
-    TREE_LEAF_1: new MaterialEnum(1, new Vector2(0.5, 6.5)),
-    TREE_LEAF_2: new MaterialEnum(2, new Vector2(2.5, 6.5)),
-    TREE_LEAF_3: new MaterialEnum(3, new Vector2(4.5, 6.5)),
-    TREE_LEAF_4: new MaterialEnum(4, new Vector2(6.5, 6.5)),
-    WOOD_1: new MaterialEnum(5, new Vector2(0.5, 4.5)),
+    BRICK_RED: new MaterialEnum(1, new Vector2(0.5, 14.5)),
+    BRICK_GRAY: new MaterialEnum(2, new Vector2(2.5, 14.5)),
+    BRICK_BLACK: new MaterialEnum(3, new Vector2(4.5, 14.5)),
+    ROCK1: new MaterialEnum(4, new Vector2(6.5, 14.5)),
+    ROCK1_SMALL: new MaterialEnum(5, new Vector2(6.5, 14.5), new Vector2(0.5, 0.5)),
+    WOOD_1: new MaterialEnum(9, new Vector2(0.5, 12.5)),
+    WOOD_2: new MaterialEnum(10, new Vector2(2.5, 12.5)),
+    EMBERS: new MaterialEnum(17, new Vector2(0.5, 10.5)),
 
     getMaterialByIndex(index: number): Vector2 {
-        for (const key in MaterialEnum1) {
-            if (MaterialEnum1[key].index === index) {
-                return MaterialEnum1[key].uv
-            }
-        }
+        return Object.values(MaterialEnum1).find(item => item.index === index)?.uv;
     }
 }
 
 export const TerrainEnum1 = {
-    TERRAIN_DIRT: new MaterialEnum(1, new Vector2(2.5, 2.5)),
-    TERRAIN_GRASS: new MaterialEnum(2, new Vector2(0.5, 2.5)),
+    TERRAIN_DIRT: new MaterialEnum(1, new Vector2(2.5, 6.5)),
+    TERRAIN_GRASS: new MaterialEnum(2, new Vector2(0.5, 6.5)),
+    TERRAIN_ROCK: new MaterialEnum(3, new Vector2(6.5, 6.5)),
+    TERRAIN_MUDDY_DIRT: new MaterialEnum(4, new Vector2(0.5, 4.5)),
 
-    getTerrainByIndex(index: number): Vector2 {
-        return Object.values(TerrainEnum1).find(item => item.index === index)?.uv;
+    TERRAIN_SNOW_DIRT: new MaterialEnum(101, new Vector2(4.5, 6.5)),
+    TERRAIN_SNOW_GRASS: new MaterialEnum(102, new Vector2(4.5, 6.5)),
+    TERRAIN_SNOW_ROCK: new MaterialEnum(103, new Vector2(6.5, 4.5)),
+    TERRAIN_SNOW_MUDDY_DIRT: new MaterialEnum(104, new Vector2(4.5, 6.5)),
+
+    TERRAIN_ORE_ROCK: new MaterialEnum(1003, new Vector2(6.5, 2.5)),
+
+    getTerrainForBlock(block: MapBlock, ignoreSnow: boolean = false): Vector2 {
+        let type = block.type;
+        if (block.minableOreAvailable) {
+            type += 1000;
+        }
+        if (block.snowed && !ignoreSnow) {
+            type += 100;
+        }
+
+        const terrain = Object.values(TerrainEnum1).find(item => item.index === type)
+        if (terrain?.uv) {
+            return terrain.uv
+        }
+
+        // Ore can be assigned to a non-rock tile by the GM editor, and a
+        // snowed ore tile has no dedicated atlas entry. Keep the terrain
+        // renderable by falling back to the block's ordinary/snow variant.
+        const baseType = block.type + (block.snowed && !ignoreSnow ? 100 : 0)
+        const fallback = Object.values(TerrainEnum1).find(item => item.index === baseType)
+        return fallback?.uv ?? TerrainEnum1.TERRAIN_DIRT.uv;
     }
 }
 
 export const PlaneEnum1 = {
     PLANE_DIRT: new MaterialEnum(1, new Vector2(2.5, 6.5)),
     PLANE_GRASS: new MaterialEnum(2, new Vector2(0.5, 6.5)),
+    PLANE_ROCK: new MaterialEnum(3, new Vector2(6.5, 6.5)),
+    PLANE_MUDDY_DIRT: new MaterialEnum(4, new Vector2(0.5, 4.5)),
 
-    getPlaneByIndex(index: number): Vector2 {
-        return Object.values(PlaneEnum1).find(item => item.index === index)?.uv;
+    PLANE_WATER: new MaterialEnum(50, new Vector2(2.5, 4.5)),
+
+    PLANE_SNOW_DIRT: new MaterialEnum(101, new Vector2(4.5, 6.5)),
+    PLANE_SNOW_GRASS: new MaterialEnum(102, new Vector2(4.5, 6.5)),
+    PLANE_SNOW_ROCK: new MaterialEnum(103, new Vector2(4.5, 6.5)),
+    PLANE_SNOW_MUDDY_DIRT: new MaterialEnum(104, new Vector2(4.5, 6.5)),
+
+    getPlaneForBlock(block: MapBlock): Vector2 {
+        let type = block.type;
+        if (block.snowed) {
+            type += 100;
+        }
+        return Object.values(PlaneEnum1).find(item => item.index === type)?.uv;
     }
 }

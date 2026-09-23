@@ -1,0 +1,75 @@
+#gmPanel {
+    position: absolute;
+    top: 50px;
+    padding: 5px;
+    left: 0;
+    z-index: 10;
+    width: 240px;
+    background-color: rgba(0, 0, 0, 0.2);
+}
+
+div.gm-action-selection button {
+    display: block;
+    width: 100%;
+    margin: 4px 0;
+
+}
+
+div.gm-action-selection button:disabled {
+    color: lightgray;
+    background-color: darkslategray;
+}
+
+.terrain-picker {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, 64px);
+    gap: 6px;
+}
+
+.terrain-tile {
+    width: 64px;
+    height: 64px;
+    background-repeat: no-repeat;
+    border: 1px solid #444;
+    cursor: url('/images/cursor-pointer.png'), pointer;
+}
+
+.terrain-tile.selected {
+    outline: 2px solid #4caf50;
+}
+
+.tree-picker {
+    width: 100%;
+}
+
+.tree-item {
+    display: inline;
+    align-items: center;
+    margin: 4px 4px;
+    cursor: url('/images/cursor-pointer.png'), pointer;
+}
+
+.tree-item.selected {
+    outline: 2px solid #4caf50;
+}
+
+table.gmSpawnTable input {
+    width: 50px;
+    margin-left: 10px;
+}
+
+table.gmSpawnTable input:disabled {
+    background-color: #f8f8f8;
+    color: black;
+}
+
+table.gmSpawnTable select {
+
+}
+
+table.gmSpawnTable select:disabled {
+    background-color: #fff;
+    color: black;
+}
+
+

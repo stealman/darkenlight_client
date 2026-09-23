@@ -2,37 +2,70 @@ import {
     Matrix,
     Mesh,
     Scene,
-    ShadowGenerator,
-    TransformNode, Vector2, Vector3
+    TransformNode, Vector2, Vector3,
 } from '@babylonjs/core'
-import {MyPlayer} from "@/babylon/character/myPlayer";
-import {Settings} from "@/settings/settings";
 import { Builder } from '@/babylon/builder'
 import { Materials } from '@/babylon/materials'
 import { TreeManager } from '@/babylon/world/treeManager'
 import { BabylonUtils } from '@/babylon/utils'
 import { TerrainManager } from '@/babylon/world/terrainManager'
+import { PBRCustomMaterial } from '@babylonjs/materials'
+import { StaticsManager } from '@/babylon/world/statics/staticsManager'
+import { FoliageManager } from '@/babylon/world/foliageManager'
+import { RockDebrisManager } from '@/babylon/world/rockDebrisManager'
+import { GMSpawns } from '@/gm/GmSpawns'
+import { GMManager, GmTabs } from '@/gm/GM'
+import { Lights } from '@/babylon/scene/lights'
+import { ViewportManager } from '@/utils/viewport'
+import { WorldDataManager } from '@/data/worldDataManager'
+import { TargetingManager } from '@/gui/targettingManager'
+import { MyPlayer } from '@/data/myPlayer'
 
 export const WorldRenderer = {
-    symetricBlock1: null as SymetricBlock,
-    worldParentNode: null as TransformNode,
+    block1: null as SymmetricBlock | null,
+    blockWithAlpha1: null as SymmetricBlock | null,
+    worldParentNode: null as TransformNode | null,
 
-    initialize(scene: Scene, shadow: ShadowGenerator) {
+    lastPos: null as Vector3 | null,
+
+    initialize(scene: Scene) {
+        this.lastPos = null
         this.worldParentNode = new TransformNode("worldNode", scene)
 
         // Global blocks
-        this.symetricBlock1 = new SymetricBlock(Builder.createBlock(scene, this.worldParentNode), Materials.symetricBlockMaterial1)
-        this.symetricBlock1.mesh.doNotSyncBoundingInfo = true
+        this.block1 = new SymmetricBlock(Builder.createWrappedBlock(scene, this.worldParentNode), Materials.blockMat1!)
+        this.block1.mesh.doNotSyncBoundingInfo = true
+        this.block1.mesh.receiveShadows = true
+
+        this.blockWithAlpha1 = new SymmetricBlock(Builder.createBlock(scene, this.worldParentNode), Materials.blockMatAlpha1!)
+        this.blockWithAlpha1.mesh.doNotSyncBoundingInfo = true
+        this.blockWithAlpha1.mesh.receiveShadows = true
 
         // Initialize managers
         TerrainManager.initialize(scene)
         TreeManager.initialize(scene)
+        StaticsManager.initialize(scene)
+        FoliageManager.initialize(scene, this.worldParentNode)
+        RockDebrisManager.initialize(scene, this.worldParentNode)
 
-        if (Settings.shadows) {
-            shadow.addShadowCaster(TerrainManager.terrainBlock1)
-            shadow.addShadowCaster(TerrainManager.terrainPlane)
-            shadow.addShadowCaster(this.symetricBlock1.mesh)
-            shadow.addShadowCaster(TreeManager.prefabs.tree1.mesh)
+        Lights.addShadowCaster(TerrainManager.terrainBlock1!, true, true)
+        Lights.addShadowCaster(TerrainManager.terrainPlane!, true, true)
+        Lights.addShadowCaster(TerrainManager.terrainWaterPlane!, true, true)
+        Lights.addShadowCaster(this.block1.mesh, true, true)
+        Lights.addShadowCaster(this.blockWithAlpha1.mesh, true, true)
+        TreeManager.addAllShadowCasters()
+        StaticsManager.addAllShadowCasters()
+    },
+
+    checkRenderWorld() {
+        const pos = MyPlayer.myChar.getPositionRounded()
+        if (this.lastPos == null || pos.x !== this.lastPos.x || pos.z !== this.lastPos.z) {
+            if (ViewportManager.viewPortInitialized) {
+                WorldDataManager.fetchWorldDataIfNeeded()
+                WorldRenderer.renderWorld()
+                TargetingManager.resetCycleIndex()
+                this.lastPos = pos
+            }
         }
     },
 
@@ -40,20 +73,43 @@ export const WorldRenderer = {
      * Renders the world around the player
      */
     renderWorld() {
-        this.symetricBlock1.clearMatrices()
+        this.block1!.clearMatrices()
+        this.blockWithAlpha1!.clearMatrices()
 
         // Render terrain
-        TerrainManager.renderTerrain()
+        TerrainManager.renderTerrain((terrainMatrices, terrainUvData) => {
+            StaticsManager.renderTerrainBlocks(terrainMatrices, terrainUvData)
+        })
 
         // Render trees
         TreeManager.renderTrees()
 
-        this.symetricBlock1.setThinInstanceBuffers()
-        this.symetricBlock1.mesh.thinInstanceRefreshBoundingInfo(false);
-    },
+        // Render statics
+        StaticsManager.renderObjects()
 
-    updateWorldParentNode() {
-        this.worldParentNode!.position = new Vector3(-MyPlayer.playerData.getOffset().x, -MyPlayer.playerData.modelYpos, -MyPlayer.playerData.getOffset().z)
+        // Render decorative foliage
+        FoliageManager.renderFoliage()
+
+        // Render decorative rock debris
+        RockDebrisManager.renderRockDebris(Lights.indoor)
+
+        if (GMManager.gmPanelVisible && GMManager.tab === GmTabs.SPAWNS_EDIT) {
+            GMSpawns.renderSpawnMarkers()
+        }
+
+        this.block1!.setThinInstanceBuffers()
+        this.block1!.mesh.thinInstanceRefreshBoundingInfo(false);
+
+        this.blockWithAlpha1!.setThinInstanceBuffers()
+        this.blockWithAlpha1!.mesh.thinInstanceRefreshBoundingInfo(false);
+
+        void Lights.warmUpStaticLightShaders([
+            TerrainManager.terrainBlock1!,
+            TerrainManager.terrainPlane!,
+            this.block1!.mesh,
+            this.blockWithAlpha1!.mesh,
+            RockDebrisManager.mesh!,
+        ])
     }
 }
 
@@ -78,12 +134,12 @@ export class Prefab {
     }
 }
 
-class SymetricBlock {
+class SymmetricBlock {
     mesh: Mesh
     matrices: Matrix[] = []
     uvData: Vector2[] = []
 
-    constructor(mesh, material) {
+    constructor(mesh: Mesh, material: PBRCustomMaterial) {
         this.mesh = mesh
         this.mesh.material = material
     }

@@ -1,0 +1,564 @@
+import { Connector } from '@/network/connector'
+import { GMCreateItemMsg, GMForceSaveDataMsg, GMLoadItemCodebookMsg, GMLoadWorldsMsg, GMNpcAction, GMSaveMapDataMsg, GMStaticObjectChange, GMTeleportMsg, GMTerrainChange } from '@/network/messages'
+import { GMItemCodebookItem } from '@/network/messageIfs'
+import { GMSceneManager } from '@/babylon/gm/GmSceneManager'
+import { WorldDataManager } from '@/data/worldDataManager'
+import { ref } from 'vue'
+import { Vector3 } from '@babylonjs/core'
+import { Utils } from '@/utils/utils'
+import { GMSpawns } from '@/gm/GmSpawns'
+import { Renderer } from '@/babylon/scene/renderer'
+import { OnScreenMessageManager } from '@/gui/onScreenMessageManager'
+import { NpcManager } from '@/babylon/npc/npcManager'
+import { TargetingManager } from '@/gui/targettingManager'
+import { MyPlayer } from '@/data/myPlayer'
+
+/**
+ * Main GM tabs
+ *
+ * OVERVIEW
+ * TERRAIN_EDIT
+ */
+export const GmTabs = {
+    OVERVIEW: 'overview',
+    TERRAIN_EDIT: 'terrain_edit',
+    BIOME_EDIT: 'biome_edit',
+    WALLS_AND_FENCES_EDIT: 'walls_and_fences_edit',
+    STATICS_EDIT: 'statics_edit',
+    SPAWNS_EDIT: 'spawns_edit',
+    NPCS_EDIT: 'npcs_edit'
+}
+
+export const VOID_TERRAIN_SELECTION = 102
+export const WALL_TORCH_STATIC_ID = 261
+export const STONE_ENTRANCE_STATIC_ID = 281
+
+export const GMManager = {
+    gmPanelVisible: ref(false),
+    consumePointerMoveEvents: false,
+    consumeLeftClickEvents: false,
+    consumeMiddleClickEvents: false,
+
+    affectedSize: ref(1),
+    shiftKeyPressed: ref(false),
+    selectedTerrain: ref (0),
+    terrainEditMode: ref('terrain'),
+    selectedMinable: ref('M1'),
+    selectedTree: ref (0),
+    selectedShrub: ref (0),
+
+    selectedWallFence: ref (0),
+    selectedStatic: ref (0),
+    torchFacing: ref('-Z'),
+    torchMountHeight: ref(2),
+    entranceFacing: ref('+Z'),
+    entranceDestinationWorld: ref(0),
+    entranceDestinationX: ref(99),
+    entranceDestinationZ: ref(80),
+    selectedNpcName: ref(''),
+    selectedNpc: ref<any | null>(null),
+    npcDetailsDialogOpenRequested: ref(false),
+    teleportWorlds: ref([] as Array<{id: number, name: string}>),
+    itemCodebook: ref([] as GMItemCodebookItem[]),
+    selectedTeleportWorld: ref(0),
+
+    tab: GmTabs.OVERVIEW,
+
+    toggleGmPanel() {
+        if (this.gmPanelVisible.value) {
+            this.consumePointerMoveEvents = false
+            this.consumeLeftClickEvents = false
+            this.consumeMiddleClickEvents = false
+            GMSceneManager.hoverBlockMarker?.setEnabled(false)
+            GMSceneManager.spawnMarker?.setEnabled(false)
+            GMSpawns.removeAllMarkers()
+        }
+        GMSceneManager.initialize(Renderer.scene)
+        this.gmPanelVisible.value = !this.gmPanelVisible.value
+        if (this.gmPanelVisible.value) {
+            this.loadTeleportWorlds()
+        }
+    },
+
+    onLeftClickEvent() {
+        if (this.tab === GmTabs.TERRAIN_EDIT) {
+            const data = []
+            const markerPos = new Vector3(GMSceneManager.hoverBlockMarker!.position.x, 0, GMSceneManager.hoverBlockMarker!.position.z)
+            const halfSize = Math.floor(this.affectedSize.value / 2)
+            const lowestHeight = this.getLowestAffectedBlockHeight(markerPos, this.affectedSize.value)
+            const highestHeight = this.getHighestAffectedBlockHeight(markerPos, this.affectedSize.value)
+            const sanitizedMinable = this.getSanitizedMinableValue()
+            const materializeGeneratedWall = this.terrainEditMode.value === 'terrain'
+                && this.selectedTerrain.value !== 0
+                && this.selectedTerrain.value !== 100
+                && this.selectedTerrain.value !== 101
+                && this.selectedTerrain.value !== VOID_TERRAIN_SELECTION
+
+            for (let offsetX = -halfSize; offsetX <= halfSize; offsetX++) {
+                for (let offsetZ = -halfSize; offsetZ <= halfSize; offsetZ++) {
+                    const block = WorldDataManager.getBlockMap()[markerPos.x + offsetX][markerPos.z + offsetZ]
+                    let height = block.height
+                    let type = block.type
+                    let snowed = block.snowed
+                    let minable = block.getMinableValue()
+
+                    if (this.terrainEditMode.value === 'minable') {
+                        minable = sanitizedMinable
+                    } else if (this.selectedTerrain.value === 0) {
+
+                        // For elevation UP, only elevate blocks with lowest height
+                        if (!this.shiftKeyPressed.value) {
+                            if (block.height === lowestHeight) {
+                                height += 1
+                            }
+                        } else {
+                            // For elevation DOWN, only lower blocks with highest height
+                            if (block.height === highestHeight) {
+                                height -= 1
+                            }
+                        }
+                    } else {
+                        // Terrain type change
+                        if (this.selectedTerrain.value == 100) {
+                            snowed = true
+                        } else if (this.selectedTerrain.value == 101) {
+                            snowed = false
+                        } else {
+                            type = this.selectedTerrain.value === VOID_TERRAIN_SELECTION ? 0 : this.selectedTerrain.value
+                        }
+                    }
+
+                    data.push({
+                        x: markerPos.x + offsetX,
+                        z: markerPos.z + offsetZ,
+                        height: height,
+                        type: type,
+                        snowed: snowed,
+                        minable: minable,
+                        materializeGeneratedWall: materializeGeneratedWall
+                    })
+                }
+            }
+            Connector.sendMessage(new GMTerrainChange(data))
+        }
+
+        if (this.tab === GmTabs.BIOME_EDIT) {
+            const markerPos = new Vector3(GMSceneManager.hoverBlockMarker!.position.x, 0, GMSceneManager.hoverBlockMarker!.position.z)
+            if (this.selectedTree.value > 0) {
+                const treeData = { x: markerPos.x, z: markerPos.z, size: Utils.roundToOneDecimal(1.1 + Math.random() * 0.6) , type: this.selectedTree.value }
+                Connector.sendMessage(new GMStaticObjectChange("ADD_TREE", [treeData] ) )
+
+            } else if (this.selectedShrub.value > 0) {
+                const shrubData = { x: markerPos.x, z: markerPos.z, type: this.selectedShrub.value }
+                Connector.sendMessage(new GMStaticObjectChange("ADD_OBJECT", [shrubData] ) )
+
+            } else if (this.selectedTree.value === -1 && this.selectedShrub.value === -1) {
+                Connector.sendMessage(new GMStaticObjectChange("REMOVE_ON_TILE", [ { x: markerPos.x, z: markerPos.z } ] ) )
+            }
+        }
+
+        if (this.tab === GmTabs.WALLS_AND_FENCES_EDIT) {
+            const markerPos = new Vector3(GMSceneManager.hoverBlockMarker!.position.x, 0, GMSceneManager.hoverBlockMarker!.position.z)
+            if (this.selectedWallFence.value > 0) {
+                const wallFenceData = { x: markerPos.x, z: markerPos.z, type: this.selectedWallFence.value }
+                Connector.sendMessage(new GMStaticObjectChange("ADD_OBJECT", [wallFenceData] ) )
+
+            } else if (this.selectedWallFence.value === -1) {
+                Connector.sendMessage(new GMStaticObjectChange("REMOVE_ON_TILE", [ { x: markerPos.x, z: markerPos.z } ] ) )
+            }
+        }
+
+        if (this.tab === GmTabs.STATICS_EDIT) {
+            const markerPos = new Vector3(GMSceneManager.hoverBlockMarker!.position.x, 0, GMSceneManager.hoverBlockMarker!.position.z)
+            if (this.selectedStatic.value > 0) {
+                const staticData: { x: number, z: number, type: number, meta?: Record<string, number | string> } = {
+                    x: markerPos.x,
+                    z: markerPos.z,
+                    type: this.selectedStatic.value,
+                }
+                if (this.selectedStatic.value === WALL_TORCH_STATIC_ID) {
+                    staticData.meta = {
+                        facing: this.torchFacing.value,
+                        mountHeight: this.torchMountHeight.value,
+                    }
+                }
+                if (this.selectedStatic.value === STONE_ENTRANCE_STATIC_ID) {
+                    staticData.meta = {
+                        facing: this.entranceFacing.value,
+                        destinationWorldId: this.entranceDestinationWorld.value,
+                        destinationX: this.entranceDestinationX.value,
+                        destinationZ: this.entranceDestinationZ.value,
+                    }
+                }
+                Connector.sendMessage(new GMStaticObjectChange("ADD_OBJECT", [staticData] ) )
+
+            } else if (this.selectedStatic.value === -1) {
+                Connector.sendMessage(new GMStaticObjectChange("REMOVE_ON_TILE", [ { x: markerPos.x, z: markerPos.z } ] ) )
+            }
+        }
+
+        if (this.tab === GmTabs.SPAWNS_EDIT) {
+            const markerPos = new Vector3(GMSceneManager.hoverBlockMarker!.position.x, 0, GMSceneManager.hoverBlockMarker!.position.z)
+            GMSpawns.onClick(markerPos.x, markerPos.z)
+        }
+
+        if (this.tab === GmTabs.NPCS_EDIT) {
+            const markerPos = new Vector3(GMSceneManager.hoverBlockMarker!.position.x, 0, GMSceneManager.hoverBlockMarker!.position.z)
+            const npc = NpcManager.getNpcOnTile(markerPos.x, markerPos.z)
+            if (npc) {
+                this.selectNpcForEditing(npc)
+                return
+            }
+            if (this.selectedNpc.value) {
+                this.selectedNpc.value = null
+                return
+            }
+            const name = this.selectedNpcName.value.trim()
+            if (!name) {
+                return
+            }
+            Connector.sendMessage(new GMNpcAction('CREATE', {
+                x: markerPos.x,
+                z: markerPos.z,
+                name: name,
+                wanderingRange: 0
+            }))
+        }
+    },
+
+    getLowestAffectedBlockHeight(centerPos: Vector3, size: number): number {
+        let lowestHeight = Number.MAX_SAFE_INTEGER
+        const halfSize = Math.floor(size / 2)
+        for (let offsetX = -halfSize; offsetX <= halfSize; offsetX++) {
+            for (let offsetZ = -halfSize; offsetZ <= halfSize; offsetZ++) {
+                const block = WorldDataManager.getBlockMap()[centerPos.x + offsetX][centerPos.z + offsetZ]
+                if (block.height < lowestHeight) {
+                    lowestHeight = block.height
+                }
+            }
+        }
+        return lowestHeight
+    },
+
+    getHighestAffectedBlockHeight(centerPos: Vector3, size: number): number {
+        let highestHeight = Number.MIN_SAFE_INTEGER
+        const halfSize = Math.floor(size / 2)
+        for (let offsetX = -halfSize; offsetX <= halfSize; offsetX++) {
+            for (let offsetZ = -halfSize; offsetZ <= halfSize; offsetZ++) {
+                const block = WorldDataManager.getBlockMap()[centerPos.x + offsetX][centerPos.z + offsetZ]
+                if (block.height > highestHeight) {
+                    highestHeight = block.height
+                }
+            }
+        }
+        return highestHeight
+    },
+
+    onFrame(timeRate: number, actualTime: number) {
+        if (this.tab === GmTabs.SPAWNS_EDIT) {
+            GMSpawns.onFrame(timeRate, actualTime)
+        }
+    },
+
+    onMiddleClickEvent() {
+    },
+
+    shiftPressed(pressed: boolean) {
+        this.shiftKeyPressed.value = pressed
+    },
+
+    affectedSizeChanged(size: number) {
+        this.affectedSize.value = size
+        GMSceneManager.setHoverBlockMarkerSize(size)
+    },
+
+    getSanitizedMinableValue(): string | null {
+        const value = (this.selectedMinable.value ?? '').trim().toUpperCase()
+
+        if (value === '') {
+            return null
+        }
+
+        if (value === 'C') {
+            return value
+        }
+
+        if (/^M([1-9]|10)$/.test(value)) {
+            return value.substring(1)
+        }
+
+        return null
+    },
+
+    openTab(tab: string) {
+        // Close current tab
+        switch (this.tab) {
+            case GmTabs.TERRAIN_EDIT:
+                this.closeTabTerrainEdit()
+                break
+            case GmTabs.BIOME_EDIT:
+                this.closeTabBiomeEdit()
+                break
+            case GmTabs.WALLS_AND_FENCES_EDIT:
+                this.closeTabWallsAndFencesEdit()
+                break
+            case GmTabs.STATICS_EDIT:
+                this.closeTabStaticsEdit()
+                break
+            case GmTabs.SPAWNS_EDIT:
+                this.closeTabSpawnsEdit()
+                break
+            case GmTabs.NPCS_EDIT:
+                this.closeTabNpcsEdit()
+                break
+
+        }
+
+        // Open new tab
+        switch (tab) {
+            case GmTabs.OVERVIEW:
+                this.openTabOverview()
+                break
+            case GmTabs.TERRAIN_EDIT:
+                this.openTabTerrainEdit()
+                break
+            case GmTabs.BIOME_EDIT:
+                this.openTabBiomeEdit()
+                break
+            case GmTabs.WALLS_AND_FENCES_EDIT:
+                this.openTabWallsAndFencesEdit()
+                break
+            case GmTabs.STATICS_EDIT:
+                this.openTabStaticsEdit()
+                break
+            case GmTabs.SPAWNS_EDIT:
+                this.openTabSpawnsEdit()
+                break
+            case GmTabs.NPCS_EDIT:
+                this.openTabNpcsEdit()
+                break
+        }
+    },
+
+    openTabOverview() {
+        this.tab = GmTabs.OVERVIEW
+    },
+
+    openTabTerrainEdit() {
+        this.tab = GmTabs.TERRAIN_EDIT
+        this.consumePointerMoveEvents = true
+        this.consumeLeftClickEvents = true
+        this.consumeMiddleClickEvents = true
+        this.selectedTerrain.value = 0
+        this.terrainEditMode.value = 'terrain'
+        GMSceneManager.hoverBlockMarker?.setEnabled(true)
+    },
+
+    openTabBiomeEdit() {
+        this.tab = GmTabs.BIOME_EDIT
+        this.consumePointerMoveEvents = true
+        this.consumeLeftClickEvents = true
+        this.selectedTree.value = 0
+        this.selectedShrub.value = 0
+        GMSceneManager.setHoverBlockMarkerSize(1)
+        GMSceneManager.hoverBlockMarker?.setEnabled(true)
+    },
+
+    openTabWallsAndFencesEdit() {
+        this.tab = GmTabs.WALLS_AND_FENCES_EDIT
+        this.consumePointerMoveEvents = true
+        this.consumeLeftClickEvents = true
+        this.selectedWallFence.value = 0
+        GMSceneManager.setHoverBlockMarkerSize(1)
+        GMSceneManager.hoverBlockMarker?.setEnabled(true)
+    },
+
+    openTabSpawnsEdit() {
+        this.tab = GmTabs.SPAWNS_EDIT
+        this.consumePointerMoveEvents = true
+        this.consumeLeftClickEvents = true
+        // Load all spawns
+        GMSpawns.checkAndLoadSpawns()
+        GMSceneManager.setHoverBlockMarkerSize(1)
+        GMSceneManager.hoverBlockMarker?.setEnabled(true)
+        GMSpawns.renderSpawnMarkers()
+    },
+
+    openTabStaticsEdit() {
+        this.tab = GmTabs.STATICS_EDIT
+        this.consumePointerMoveEvents = true
+        this.consumeLeftClickEvents = true
+        this.selectedStatic.value = 0
+        GMSceneManager.setHoverBlockMarkerSize(1)
+        GMSceneManager.hoverBlockMarker?.setEnabled(true)
+    },
+
+    openTabNpcsEdit() {
+        this.tab = GmTabs.NPCS_EDIT
+        this.consumePointerMoveEvents = true
+        this.consumeLeftClickEvents = true
+        GMSceneManager.setHoverBlockMarkerSize(1)
+        GMSceneManager.hoverBlockMarker?.setEnabled(true)
+        const selectedTarget = TargetingManager.selectedTarget
+        if (selectedTarget?.getObjectType() === 'N') {
+            const npc = NpcManager.npcs.get(selectedTarget.id)
+            if (npc) {
+                this.selectNpcForEditing(npc)
+            }
+        }
+    },
+
+    closeTabTerrainEdit() {
+        this.consumePointerMoveEvents = false
+        this.consumeLeftClickEvents = false
+        this.consumeMiddleClickEvents = false
+        GMSceneManager.hoverBlockMarker?.setEnabled(false)
+    },
+
+    closeTabBiomeEdit() {
+        this.consumePointerMoveEvents = false
+        this.consumeLeftClickEvents = false
+        GMSceneManager.hoverBlockMarker?.setEnabled(false)
+    },
+
+    closeTabWallsAndFencesEdit() {
+        this.consumePointerMoveEvents = false
+        this.consumeLeftClickEvents = false
+        GMSceneManager.hoverBlockMarker?.setEnabled(false)
+    },
+
+    closeTabStaticsEdit() {
+        this.consumePointerMoveEvents = false
+        this.consumeLeftClickEvents = false
+        GMSceneManager.hoverBlockMarker?.setEnabled(false)
+    },
+
+    closeTabSpawnsEdit() {
+        this.consumePointerMoveEvents = false
+        this.consumeLeftClickEvents = false
+        GMSceneManager.hoverBlockMarker?.setEnabled(false)
+        GMSpawns.removeAllMarkers()
+    },
+
+    closeTabNpcsEdit() {
+        this.consumePointerMoveEvents = false
+        this.consumeLeftClickEvents = false
+        GMSceneManager.hoverBlockMarker?.setEnabled(false)
+    },
+
+    saveMapData() {
+        Connector.sendMessage(new GMSaveMapDataMsg())
+    },
+
+    forceSaveData() {
+        Connector.sendMessage(new GMForceSaveDataMsg())
+        OnScreenMessageManager.addMessage("Hra uložena")
+    },
+
+    teleport(worldId: number, x: number, z: number) {
+        Connector.sendMessage(new GMTeleportMsg(worldId, x, z))
+    },
+
+    loadTeleportWorlds() {
+        Connector.sendMessage(new GMLoadWorldsMsg())
+    },
+
+    consumeTeleportWorlds(worlds: Array<{id: number, name: string}>) {
+        this.teleportWorlds.value = worlds
+        this.selectedTeleportWorld.value = MyPlayer.worldId
+        this.entranceDestinationWorld.value = MyPlayer.worldId
+    },
+
+    loadItemCodebook() {
+        Connector.sendMessage(new GMLoadItemCodebookMsg())
+    },
+
+    consumeItemCodebook(items: GMItemCodebookItem[]) {
+        this.itemCodebook.value = items
+    },
+
+    createItem(type: string, codebookId: number, quantity: number | null, quality: number | null) {
+        Connector.sendMessage(new GMCreateItemMsg(type, codebookId, quantity, quality))
+    },
+
+    saveSelectedNpc() {
+        if (!this.selectedNpc.value) {
+            return
+        }
+        Connector.sendMessage(new GMNpcAction('UPDATE', this.selectedNpc.value))
+        this.selectedNpc.value = null
+    },
+
+    deleteSelectedNpc() {
+        if (!this.selectedNpc.value) {
+            return
+        }
+        Connector.sendMessage(new GMNpcAction('DELETE', {id: this.selectedNpc.value.id}))
+        this.selectedNpc.value = null
+    },
+
+    selectNpcForEditing(npc: any) {
+        this.selectedNpc.value = {
+            id: npc.id,
+            name: npc.name,
+            titleCZ: npc.titleCZ ?? npc.title ?? '',
+            titleEN: npc.titleEN ?? npc.title ?? '',
+            type: npc.type,
+            bodyType: npc.bodyType ?? 'steve',
+            equipment: {...(npc.equipment ?? {})},
+            features: (npc.features ?? []).map((feature: any) => ({
+                type: feature.type,
+                settings: feature.type === 'vendor' || feature.type === 'repairer' ? {
+                    itemCategories: [...(feature.settings?.itemCategories ?? [])],
+                    weaponMaterials: [...(feature.settings?.weaponMaterials ?? [])],
+                    armorMaterials: [...(feature.settings?.armorMaterials ?? [])],
+                    bowMaterials: [...(feature.settings?.bowMaterials ?? [])],
+                    individualItems: {
+                        weapons: [...(feature.settings?.individualItems?.weapons ?? [])],
+                        bows: [...(feature.settings?.individualItems?.bows ?? [])],
+                        metalArmor: [...(feature.settings?.individualItems?.metalArmor ?? [])],
+                        leatherArmor: [...(feature.settings?.individualItems?.leatherArmor ?? [])],
+                        resources: [...(feature.settings?.individualItems?.resources ?? [])],
+                    },
+                } : feature.type === 'crafting'
+                    ? {itemCategories: [...(feature.settings?.itemCategories ?? [])]}
+                    : {}
+            })),
+            wanderingRange: npc.wanderingRange ?? npc.wr ?? 0
+        }
+    },
+
+    openNpcDetails(npc?: any) {
+        if (npc) {
+            this.selectNpcForEditing(npc)
+        }
+        const id = npc?.id ?? this.selectedNpc.value?.id
+        if (Number.isInteger(id)) {
+            Connector.sendMessage(new GMNpcAction('DETAILS', {id: id}))
+        }
+    },
+
+    processNpcDetails(data: any) {
+        this.selectNpcForEditing(data)
+        this.npcDetailsDialogOpenRequested.value = true
+    },
+
+    cancelSelectedNpc() {
+        this.selectedNpc.value = null
+        this.selectedNpcName.value = ''
+    },
+
+    setSelectedNpcDetails(name: string, titleCZ: string, titleEN: string, bodyType: string, equipment: any, features: any[], wanderingRange: number) {
+        if (this.selectedNpc.value) {
+            this.selectedNpc.value.name = name
+            this.selectedNpc.value.titleCZ = titleCZ
+            this.selectedNpc.value.titleEN = titleEN
+            this.selectedNpc.value.bodyType = bodyType
+            this.selectedNpc.value.equipment = equipment
+            this.selectedNpc.value.features = features
+            this.selectedNpc.value.wanderingRange = wanderingRange
+        }
+    }
+}
+
+

@@ -1,18 +1,28 @@
-import { MyPlayer } from '@/babylon/character/myPlayer'
-import { WorldData } from '@/babylon/world/worldData'
-import { Matrix, Mesh } from '@babylonjs/core'
+import { MapBlock, WorldDataManager } from '@/data/worldDataManager'
+import { Color4, InstancedMesh, Matrix, Mesh, ParticleSystem, Scene, Vector2 } from '@babylonjs/core'
 import { BabylonUtils } from '@/babylon/utils'
 import { Builder } from '@/babylon/builder'
 import { Materials, PlaneEnum1, TerrainEnum1 } from '@/babylon/materials'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { Settings } from '@/settings/settings'
 import { ViewportManager } from '@/utils/viewport'
+import { MyPlayer } from '@/data/myPlayer'
+
+export const DIRT_BLOCK_TYPE = 1
+export const WATER_BLOCK_TYPE = 50
+const WATER_BOTTOM_BLOCK = new MapBlock(0, DIRT_BLOCK_TYPE)
 
 export const TerrainManager = {
-    terrainBlock1: null as Mesh,
-    terrainPlane: null as Mesh,
+    terrainBlock1: null as Mesh | null,
+    terrainPlane: null as Mesh | null,
+    terrainWaterPlane: null as Mesh | null,
+    waterPlane: null as Mesh | null,
+    waterPlaneLayers: [] as Array<{height: number, mesh: InstancedMesh}>,
+    seaWaterLevel: null as number | null,
 
-    initialize (scene) {
+    hoverBlockMarker: null as Mesh | null,
+
+    initialize (scene: Scene) {
 
         // Terrain and plane blocks
         this.terrainBlock1 = Builder.createBlockWithFaces(scene, WorldRenderer.worldParentNode!)
@@ -23,64 +33,173 @@ export const TerrainManager = {
         this.terrainPlane = Builder.createHorizontalPlane(scene, WorldRenderer.worldParentNode!, 1, 0)
         this.terrainPlane.material = Materials.planeMaterial
 
-        if (Settings.shadows) {
+        this.terrainWaterPlane = Builder.createHorizontalPlane(scene, WorldRenderer.worldParentNode!, 1, 0)
+        this.terrainWaterPlane.material = Materials.planeWaterMaterial
+        this.terrainWaterPlane.renderingGroupId = 0
+
+        if (Settings.isShadowsEnabled) {
             this.terrainBlock1.receiveShadows = true
             this.terrainPlane.receiveShadows = true
+            this.terrainWaterPlane.receiveShadows = true
         }
 
         // Water planes
-        const plane = Builder.createHorizontalPlane(scene, WorldRenderer.worldParentNode,256, 0)
-        plane.material = Materials.waterMaterial
-        plane.position.y = 1
-        plane.isPickable = false
+        this.waterPlane = Builder.createHorizontalPlane(scene, WorldRenderer.worldParentNode,2048, 0)
+        this.waterPlane.material = Materials.waterMaterial
+        this.waterPlane.position.y = 1
+        this.waterPlane.isPickable = false
+        this.waterPlane.alwaysSelectAsActiveMesh = true
+        this.waterPlane.renderingGroupId = 0
 
+        this.waterPlaneLayers = []
         for (let i = 1.25; i <= 4.75; i += 0.25) {
-            plane.createInstance('plane' + i).position.y = i
+            const layer = this.waterPlane.createInstance('plane' + i)
+            layer.position.y = i
+            this.waterPlaneLayers.push({height: i, mesh: layer})
+        }
+        this.applySeaWaterLevel()
+
+        this.hoverBlockMarker = Builder.createHorizontalPlane(scene, null,1, 0)
+    },
+
+    setSeaWaterLevel(seaWaterLevel: number | null) {
+        this.seaWaterLevel = Number.isFinite(seaWaterLevel) ? seaWaterLevel : null
+        this.applySeaWaterLevel()
+    },
+
+    applySeaWaterLevel() {
+        const hasSea = this.seaWaterLevel !== null
+        this.waterPlane?.setEnabled(hasSea)
+        this.waterPlaneLayers.forEach((layer) => {
+            layer.mesh.setEnabled(hasSea && layer.height <= this.seaWaterLevel!)
+        })
+    },
+
+    addWaterTerrainLayer(
+        x: number, z: number, blockHeight: number, planeHeightOffset: number, block: MapBlock, terrainMatrices1: Matrix[], terrainUvData1: Vector2[], waterPlaneMatrices: Matrix[], waterPlaneUvData: Vector2[]) {
+        const bottomY = block.deepWater ? blockHeight - 1 : blockHeight - 0.5
+        terrainMatrices1.push(Matrix.Translation(x, bottomY, z))
+        terrainUvData1.push(TerrainEnum1.getTerrainForBlock(WATER_BOTTOM_BLOCK))
+
+        waterPlaneMatrices.push(Matrix.Translation(x, blockHeight + planeHeightOffset, z))
+        waterPlaneUvData.push(PlaneEnum1.PLANE_WATER.uv)
+
+        if (block.deepWater) {
+            waterPlaneMatrices.push(Matrix.Translation(x, blockHeight - 0.5 + planeHeightOffset, z))
+            waterPlaneUvData.push(PlaneEnum1.PLANE_WATER.uv)
         }
     },
 
-    renderTerrain() {
-        const myPos = MyPlayer.playerData.getPositionRounded()
-        const map = WorldData.getBlockMap()
-        const planeBlockMap = WorldData.getPlaneBlockMap()
+    renderTerrain(renderTerrainStatics?: (terrainMatrices: Matrix[], terrainUvData: Vector2[]) => void) {
+        const myPos = MyPlayer.myChar.getPositionRounded()
+        const blockMap = WorldDataManager.getBlockMap()
+        const planeBlockMap = WorldDataManager.getPlaneBlockMap()
 
         const terrainMatrices1 = []
         const terrainUvData1 = []
         const planeMatrices = []
         const planeUvData = []
+        const waterPlaneMatrices = []
+        const waterPlaneUvData = []
 
-        let count = 0
-        for (let x = Math.max(0, myPos.x + ViewportManager.minX); x <= Math.min(map.length, myPos.x + ViewportManager.maxX); x++) {
-            for (let z = Math.max(0, myPos.z + ViewportManager.minZ); z <= Math.min(map.length, myPos.z + ViewportManager.maxZ); z++) {
+        for (let x = Math.max(0, myPos.x + ViewportManager.minX); x <= Math.min(blockMap.length -1, myPos.x + ViewportManager.maxX); x++) {
+            for (let z = Math.max(0, myPos.z + ViewportManager.minZ); z <= Math.min(blockMap.length - 1, myPos.z + ViewportManager.maxZ); z++) {
 
                 // Check if block is in visible matrix
-                if (!ViewportManager.isPointInVisibleMatrix(x - myPos.x, z - myPos.z, 2)) {
+                if (!ViewportManager.isPointInVisibleMatrix(x, z, 2)) {
                     continue
                 }
 
-                const block = map[x][z]
-                const matrix = Matrix.Translation( x - myPos.x, block.height, z - myPos.z);
+                const block = blockMap[x][z]
+                const heightOffset = block.heightOffset
 
                 if (block.type > 0) {
                     if (planeBlockMap[x][z]) {
-                        planeMatrices.push(matrix)
-                        planeUvData.push(PlaneEnum1.getPlaneByIndex(planeBlockMap[x][z].type))
+                        if (block.type === WATER_BLOCK_TYPE) {
+                            this.addWaterTerrainLayer(x, z, block.height, heightOffset, block, terrainMatrices1, terrainUvData1, waterPlaneMatrices, waterPlaneUvData)
+                        } else {
+                            const matrix = Matrix.Translation(x, block.height + heightOffset, z)
+                            planeMatrices.push(matrix)
+                            planeUvData.push(PlaneEnum1.getPlaneForBlock(planeBlockMap[x][z]))
+                        }
                     } else {
+
+                        // Find lowest height for surrounding blocks to avoid gaps
+                        let minHeight = block.height
+                        for (let offsetX = -1; offsetX <= 1; offsetX++) {
+                            for (let offsetZ = -1; offsetZ <= 1; offsetZ++) {
+                                if (offsetX === 0 && offsetZ === 0) {
+                                    continue
+                                }
+                                const neighborX = x + offsetX
+                                const neighborZ = z + offsetZ
+                                if (neighborX >= 0 && neighborX < blockMap.length && neighborZ >= 0 && neighborZ < blockMap.length) {
+                                    const neighborBlock = blockMap[neighborX][neighborZ]
+                                    if (neighborBlock.type > 0 && neighborBlock.height < minHeight) {
+                                        minHeight = neighborBlock.height
+                                    }
+                                }
+                            }
+                        }
+
+                        const scaleMatrix = Matrix.Scaling(1, 1 + heightOffset, 1);
+                        const matrix = scaleMatrix.multiply(Matrix.Translation( x, block.height + heightOffset * 0.5, z));
+
                         terrainMatrices1.push(matrix)
-                        terrainUvData1.push(TerrainEnum1.getTerrainByIndex(block.type))
+                        terrainUvData1.push(TerrainEnum1.getTerrainForBlock(block))
+
+                        // If minheight is lower than current block height - 1, then fill the gap with blocks
+                        for (let fillHeight = minHeight + 1; fillHeight < block.height; fillHeight++) {
+                            const fillMatrix = Matrix.Translation(x, fillHeight + heightOffset, z);
+                            terrainMatrices1.push(fillMatrix)
+                            terrainUvData1.push(TerrainEnum1.getTerrainForBlock(block, true))
+                        }
                     }
                 }
-
-                count++
             }
         }
 
-        console.log('Visible blocks ' + count)
+        renderTerrainStatics?.(terrainMatrices1, terrainUvData1)
 
         // Apply buffers for instances
-        this.terrainBlock1.thinInstanceSetBuffer("matrix", BabylonUtils.createPositionBuffer(terrainMatrices1), 16)
-        this.terrainBlock1.thinInstanceSetBuffer("uvc", BabylonUtils.createUvBuffer(terrainUvData1), 2)
-        this.terrainPlane.thinInstanceSetBuffer("matrix", BabylonUtils.createPositionBuffer(planeMatrices), 16)
-        this.terrainPlane.thinInstanceSetBuffer("uvc", BabylonUtils.createUvBuffer(planeUvData), 2)
+        this.terrainBlock1!.thinInstanceSetBuffer("matrix", BabylonUtils.createPositionBuffer(terrainMatrices1), 16)
+        this.terrainBlock1!.thinInstanceSetBuffer("uvc", BabylonUtils.createUvBuffer(terrainUvData1), 2)
+        this.terrainPlane!.thinInstanceSetBuffer("matrix", BabylonUtils.createPositionBuffer(planeMatrices), 16)
+        this.terrainPlane!.thinInstanceSetBuffer("uvc", BabylonUtils.createUvBuffer(planeUvData), 2)
+        this.terrainWaterPlane!.thinInstanceSetBuffer("matrix", BabylonUtils.createPositionBuffer(waterPlaneMatrices), 16)
+        this.terrainWaterPlane!.thinInstanceSetBuffer("uvc", BabylonUtils.createUvBuffer(waterPlaneUvData), 2)
+
+        // Set enabled based on if there are instances to show
+        this.terrainBlock1!.setEnabled(terrainMatrices1.length > 0)
+        this.terrainPlane!.setEnabled(planeMatrices.length > 0)
+        this.terrainWaterPlane!.setEnabled(waterPlaneMatrices.length > 0)
+    },
+
+    setParticleSplashColorByTerrainType(ps: ParticleSystem, block: MapBlock) {
+        if (block.snowed) {
+            ps.color1 = new Color4(0.9, 0.85, 0.9, 1)
+            ps.color2 = new Color4(0.8, 0.85, 0.9, 1)
+            ps.colorDead = new Color4(0.6, 0.6, 0.7, 0.3)
+        } else if (block.type === 3) {
+            // ROCK
+            ps.color1 = new Color4(0.35, 0.32, 0.35, 1)
+            ps.color2 = new Color4(0.3, 0.33, 0.38, 1)
+            ps.colorDead = new Color4(0.2, 0.2, 0.2, 0.3)
+        } else if (block.type === 4) {
+            // MUDDY DIRT
+            ps.color1 = new Color4(0.45, 0.35, 0.25, 1)
+            ps.color2 = new Color4(0.35, 0.25, 0.15, 1)
+            ps.colorDead = new Color4(0.2, 0.2, 0.2, 0.3)
+        } else if (block.type === 50) {
+            // WATER
+            ps.color1 = new Color4(0.2, 0.7, 1, 1)
+            ps.color2 = new Color4(0.1, 0.6, 0.8, 1)
+            ps.colorDead = new Color4(0.1, 0.2, 0.4, 0.3)
+        } else {
+            // DEFAULT DIRT OR GRASS
+            ps.color1 = new Color4(0.6, 0.5, 0.4, 1)
+            ps.color2 = new Color4(0.5, 0.4, 0.3, 1)
+            ps.colorDead = new Color4(0.3, 0.3, 0.3, 0.3)
+        }
     }
 }

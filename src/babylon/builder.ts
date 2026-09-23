@@ -56,6 +56,19 @@ export const Builder = {
         return cube;
     },
 
+    createWrappedBlock(
+        scene: Scene,
+        parent: TransformNode | null,
+        size = 1
+    ) {
+        const cube = MeshBuilder.CreateBox('block', { width: size, height: size, depth: size, wrap: true }, scene)
+        cube.parent = parent
+        cube.position.y = -0.5
+        cube.convertToUnIndexedMesh()
+        cube.alwaysSelectAsActiveMesh = true
+        return cube
+    },
+
     createBlock(scene: Scene, parent: TransformNode | null, size = 1) {
         const cube = MeshBuilder.CreateBox("block", { width: size, depth: size, height: size }, scene);
         cube.parent = parent
@@ -72,6 +85,17 @@ export const Builder = {
         const mesh = Mesh.MergeMeshes([plane], true) as Mesh
         mesh.parent = parent
         mesh.thinInstanceEnablePicking = true
+        mesh.alwaysSelectAsActiveMesh = true
+        return mesh
+    },
+
+    createSpawnMarker(scene: Scene): Mesh {
+        const plane = MeshBuilder.CreatePlane('hPlane', {width: 0.5, height: 0.5}, scene)
+        plane.rotation.x = Math.PI / 2
+
+        const box = MeshBuilder.CreateBox('spawnBox', {width: 0.2, depth: 0.2, height: 0.5}, scene)
+        box.position.y = 0.25
+        const mesh = Mesh.MergeMeshes([plane, box], true) as Mesh
         mesh.alwaysSelectAsActiveMesh = true
         return mesh
     }

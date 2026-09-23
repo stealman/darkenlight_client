@@ -1,79 +1,258 @@
-import { Scene, PointerEventTypes, Vector3, PointerInfo } from '@babylonjs/core'
-import {MyPlayer} from "@/babylon/character/myPlayer";
+import { Scene, PointerEventTypes, Vector3, PointerInfo} from '@babylonjs/core'
+import {MyPlayer} from "@/data/myPlayer";
 import { Settings } from '@/settings/settings'
 import { ViewportManager } from '@/utils/viewport'
+import { GMSceneManager } from '@/babylon/gm/GmSceneManager'
+import { GMManager } from '@/gm/GM'
+import { TargetingManager } from '@/gui/targettingManager'
+import { AudioManager } from '@/babylon/audio/audioManager'
+import { ActionButtonsManager } from '@/gui/actionButtonsManager'
+import { GuiButtonsManager } from '@/gui/guiButtonsManager'
 
 export const Controller = {
     leftPressedTime: 0,
     rightMousePressedTime: 0,
 
+    lastDragMove: { x: 0, y: 0 },
+    lastPointerMove: { x: 0, y: 0 },
+    lastRightPointerPosition: null as { x: number, y: number } | null,
+    lastJoystickVector: { dx: 0, dy: 0 },
+    movementInputCancelled: false,
+
     initializeController(scene: Scene) {
         scene.onPointerObservable.add((pointerInfo) => {
+            if (MyPlayer.isDead.value) {
+                return
+            }
 
             // Touch device
             if (Settings.touchEnabled) {
                 if (pointerInfo.type === PointerEventTypes.POINTERDOWN) {
                     this.leftPressedTime = new Date().getTime()
-                    this.pointerPressed(pointerInfo)
+                    this.resolveLeftPressed(pointerInfo, scene)
                 }
                 if (pointerInfo.type === PointerEventTypes.POINTERUP) {
-                    if (new Date().getTime() - this.leftPressedTime < 250) {
-                        this.resolveClick(pointerInfo, scene)
-                    } else {
-                        MyPlayer.setTargetPoint(null)
-                    }
-                    this.leftPressedTime = 0
+
                 }
             } else {
+                // NO BUTTONS PRESSED
+                if (GMManager.consumePointerMoveEvents && pointerInfo.event.buttons === 0) {
+                    if (pointerInfo.type === PointerEventTypes.POINTERMOVE) {
+                        this.resolvePointerMove(pointerInfo, scene)
+                    }
+                }
+
+                // LEFT MOUSE PRESSED
+                if (pointerInfo.event.buttons === 1) {
+                    if (pointerInfo.type === PointerEventTypes.POINTERDOWN) {
+                        if (GMManager.consumeLeftClickEvents) {
+                            GMManager.onLeftClickEvent()
+                        } else {
+                            this.resolveLeftPressed(pointerInfo, scene)
+                        }
+                    }
+                }
+
+                // MIDDLE MOUSE BUTTON PRESSED
+                if (pointerInfo.event.buttons === 4) {
+                    if (pointerInfo.type === PointerEventTypes.POINTERDOWN) {
+                        if (GMManager.consumeMiddleClickEvents) {
+                            GMManager.onMiddleClickEvent()
+                        }
+                    }
+                }
+
                 // RIGHT MOUSE BUTTON DOWN
                 if (pointerInfo.type === PointerEventTypes.POINTERDOWN && pointerInfo.event.button === 2) {
+                    this.movementInputCancelled = false
                     this.rightMousePressedTime = new Date().getTime()
-                    this.pointerPressed(pointerInfo)
+                    this.resolveRightPresssed(pointerInfo)
                 }
 
                 // RIGHT MOUSE BUTTON UP
                 if (pointerInfo.type === PointerEventTypes.POINTERUP && pointerInfo.event.button === 2) {
-
-                    // Mouse right click
-                    if (new Date().getTime() - this.rightMousePressedTime < 250) {
-                        this.resolveClick(pointerInfo, scene)
-                    } else {
-                        MyPlayer.setTargetPoint(null)
-                    }
-
+                    MyPlayer.stopMove()
                     this.rightMousePressedTime = 0
+                    this.lastRightPointerPosition = null
+                    this.movementInputCancelled = false
                 }
 
                 // MOUSE MOVE
-                if (pointerInfo.type === PointerEventTypes.POINTERMOVE && pointerInfo.event.buttons === 2) {
+                if (!this.movementInputCancelled && pointerInfo.type === PointerEventTypes.POINTERMOVE && pointerInfo.event.buttons === 2) {
                     this.resolveRightDrag(pointerInfo);
                 }
             }
         })
     },
 
-    resolveRightDrag(pointerInfo: PointerInfo) {
-        this.pointerPressed(pointerInfo)
-    },
+    processKeydown(e) {
+        if (MyPlayer.isDead.value) {
+            return
+        }
+        if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement || e.target?.isContentEditable) {
+            return
+        }
 
-    resolveClick(pointerInfo, scene) {
-        const { clientX, clientY } = pointerInfo.event
-        const pickResult = scene.pick(clientX, clientY)
-        if (pickResult && pickResult.hit && pickResult.pickedPoint) {
-            MyPlayer.setTargetPoint(new Vector3(pickResult.pickedPoint.x, 0, pickResult.pickedPoint.z))
+        // I - open inventory
+        if ((e.key && e.key.toLowerCase() === 'i') || e.code === 'KeyI') {
+            if (e.repeat) return
+            window.dispatchEvent(new CustomEvent('ui:open-inventory'))
+            return
+        }
+
+        // C - open character dialog
+        if ((e.key && e.key.toLowerCase() === 'c') || e.code === 'KeyC') {
+            if (e.repeat) return
+            window.dispatchEvent(new CustomEvent('ui:open-character'))
+            return
+        }
+
+        // Space - click first available opportunity action
+        if (e.code === 'Space' || e.keyCode === 32) {
+            e.preventDefault()
+            if (e.repeat) return
+            GuiButtonsManager.clickFirstAvailableOpportunityButton()
+            return
+        }
+
+        // Shift
+        if (e.keyCode == 16) {GMManager.shiftPressed(true)}
+
+        // TAB
+        if (e.keyCode == 9) {
+            AudioManager.playGuiButtonClick()
+            e.preventDefault()
+            TargetingManager.cycleThroughClosestTargets()
+        }
+
+        // F1 to F10
+        if (e.keyCode >= 112 && e.keyCode <= 121) {
+            e.preventDefault()
+            if (e.repeat) return
+
+            const index = e.keyCode - 111
+            ActionButtonsManager.externalPressActionButton(index)
+        }
+
+        // ESCAPE
+        if (e.keyCode == 27) {
+            MyPlayer.onClickEscape()
         }
     },
 
-    pointerPressed(pointerInfo) {
-        const myCharPosition = ViewportManager.getScreenPosition(MyPlayer.charModel!.model)
-        const dx = pointerInfo.event.clientX - myCharPosition.x
-        const dy = pointerInfo.event.clientY - myCharPosition.y
+    processKeyup(e) {
+        if (MyPlayer.isDead.value) {
+            return
+        }
+        // Shift
+        if (e.keyCode == 16) {GMManager.shiftPressed(false)}
+
+        // F1 to F10
+        if (e.keyCode >= 112 && e.keyCode <= 121) {
+            const index = e.keyCode - 111
+            ActionButtonsManager.externalReleaseActionButton(index)
+        }
+    },
+
+    resolveLeftPressed(pointerInfo, scene) {
+        const { clientX, clientY } = pointerInfo.event
+        const pick = scene.pick(clientX, clientY)
+        if (!pick?.ray) return
+        TargetingManager.resolvePickRay(pick.ray)
+    },
+
+    resolveRightPresssed(pointerInfo) {
+        this.resolveRightMovement(pointerInfo.event.clientX, pointerInfo.event.clientY)
+    },
+
+    resolveRightMovement(clientX: number, clientY: number) {
+        this.lastRightPointerPosition = { x: clientX, y: clientY }
+
+        const myCharPosition = ViewportManager.getScreenPosition(MyPlayer.myModel!.model)
+        const dx = clientX - myCharPosition.x
+        const dy = clientY - myCharPosition.y
         const distance = Math.sqrt(dx * dx + dy * dy)
 
         const angleRadians = Math.atan2(dy, dx)
-        MyPlayer.setTargetPoint(null)
-        MyPlayer.setMoveTypeAngle(distance > 150 ? 'RUN' : 'WALK', angleRadians)
-    }
+        MyPlayer.startMove(distance > 150 ? 'R' : 'W', angleRadians)
+    },
+
+    resolveRightDrag(pointerInfo: PointerInfo) {
+        this.resolveRightPresssed(pointerInfo)
+    },
+
+    resolvePointerMove(pointerInfo, scene) {
+        const { clientX, clientY } = pointerInfo.event
+
+        // if distance from last pointer move is less than 10px, ignore
+        const dx = clientX - this.lastPointerMove.x
+        const dy = clientY - this.lastPointerMove.y
+        if (Math.sqrt(dx * dx + dy * dy) < 10) {
+            return
+        }
+
+        const pickResult = scene.pick(clientX, clientY)
+        if (pickResult && pickResult.hit && pickResult.pickedPoint) {
+            GMSceneManager.updateHoverBlockMarker(pickResult.pickedPoint.x, pickResult.pickedPoint.z)
+        } else if (pickResult?.ray) {
+            GMSceneManager.updateHoverBlockMarkerFromRay(pickResult.ray)
+        }
+
+        this.lastPointerMove = { x: clientX, y: clientY }
+    },
+
+    processJoystick(dx: number, dy: number) {
+        this.lastJoystickVector = { dx, dy }
+
+        if (dx === 0 && dy === 0) {
+            MyPlayer.stopMove()
+            this.movementInputCancelled = false
+            return
+        }
+
+        if (this.movementInputCancelled) {
+            return
+        }
+
+        // Translate joystick input to screen position
+        const screenX = ViewportManager.viewportWidth / 2 + dx * (ViewportManager.viewportWidth / 2)
+        const screenY = ViewportManager.viewportHeight / 2 + dy * (ViewportManager.viewportHeight / 2)
+
+        const myCharPosition = ViewportManager.getScreenPosition(MyPlayer.myModel!.model)
+        const deltaX = screenX - myCharPosition.x
+        const deltaY = screenY - myCharPosition.y
+        const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
+
+        // If delta is too small, do not move
+        if (distance < 10) {
+            MyPlayer.stopMove()
+            return
+        }
+
+        const angleRadians = Math.atan2(-deltaY, deltaX)
+        MyPlayer.startMove(distance > 100 ? 'R' : 'W', angleRadians)
+    },
+
+    refreshMovementFromHeldInput() {
+        if (this.movementInputCancelled) {
+            return
+        }
+        if (this.rightMousePressedTime > 0 && this.lastRightPointerPosition) {
+            this.resolveRightMovement(this.lastRightPointerPosition.x, this.lastRightPointerPosition.y)
+            return
+        }
+
+        if (this.lastJoystickVector.dx !== 0 || this.lastJoystickVector.dy !== 0) {
+            this.processJoystick(this.lastJoystickVector.dx, this.lastJoystickVector.dy)
+        }
+    },
+
+    cancelHeldMovement() {
+        this.rightMousePressedTime = 0
+        this.lastRightPointerPosition = null
+        this.lastJoystickVector = { dx: 0, dy: 0 }
+        this.movementInputCancelled = true
+    },
 }
 
 

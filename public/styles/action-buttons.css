@@ -1,0 +1,207 @@
+div#action-buttons-1 {
+    --action-buttons-panel-border: 3px;
+    --action-buttons-panel-inner-padding: 4px;
+    display: flex;
+    gap: 10px;
+    flex-direction: column;
+    justify-content: center;
+    position: absolute;
+    right: 0px;
+    bottom: 48px;
+    padding: calc(var(--action-buttons-panel-border) + var(--action-buttons-panel-inner-padding));
+    background: transparent;
+    box-shadow: -3px -5px 5px rgba(20,15,10,0.15);
+}
+
+div#action-buttons-2 {
+    --action-buttons-panel-border: 3px;
+    --action-buttons-panel-inner-padding: 4px;
+    display: flex;
+    gap: 10px;
+    flex-direction: row;
+    justify-content: center;
+    position: absolute;
+    right: 0px;
+    bottom: 0px;
+    padding: calc(var(--action-buttons-panel-border) + var(--action-buttons-panel-inner-padding));
+    background: transparent;
+    box-shadow: -3px -5px 5px rgba(20,15,10,0.15);
+}
+
+div#action-buttons-1::before,
+div#action-buttons-2::before,
+div#action-buttons-1::after,
+div#action-buttons-2::after {
+    content: '';
+    position: absolute;
+    pointer-events: none;
+}
+
+div#action-buttons-1::before,
+div#action-buttons-2::before {
+    inset: 0;
+    background-image: url('/images/gui/bck_stone1.png');
+    background-repeat: repeat;
+    background-attachment: fixed;
+    opacity: 0.75;
+    z-index: 0;
+}
+
+div#action-buttons-1::after,
+div#action-buttons-2::after {
+    inset: var(--action-buttons-panel-border) 0 0 var(--action-buttons-panel-border);
+    background: rgba(var(--ui-darker), 0.5);
+    opacity: 0.75;
+    z-index: 1;
+}
+
+div#action-buttons-1 > .action-button,
+div#action-buttons-2 > .action-button {
+    z-index: 2;
+}
+
+div#opportunity-action-buttons {
+    display: flex;
+    gap: 8px;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: absolute;
+    right: 72px;
+    bottom: 48px;
+    padding: 4px;
+}
+
+div#opportunity-action-buttons div.gui-action-button {
+    background-color: rgba(115, 115, 115, 0.5);
+    border: 1px solid rgb(var(--ui-darker));
+    border-radius: 4px;
+    transition: background-color 0.15s ease;
+}
+
+div#opportunity-action-buttons div.gui-action-button:hover {
+    background-color: rgba(95, 95, 95, 0.65);
+}
+
+div#opportunity-action-buttons div.gui-opportunity-text-button {
+    color: rgb(var(--ui-base));
+    font-size: 11px;
+    font-weight: bold;
+}
+
+div.action-button {
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+
+    align-items: center;
+    justify-content: center;
+    cursor: url('/images/cursor-pointer.png'), pointer;
+
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+
+    position: relative;
+    overflow: hidden;
+}
+
+div.action-button img.action-icon {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    pointer-events: none;
+}
+
+div.action-button .action-button-cooldown-overlay {
+    position: absolute;
+    inset: 0;
+    --cooldown-progress: 0;
+    background:
+        conic-gradient(
+            from 0deg,
+            transparent 0deg,
+            transparent calc(var(--cooldown-progress) * 3.6deg),
+            rgba(0, 0, 0, 0.5) calc(var(--cooldown-progress) * 3.6deg),
+            rgba(0, 0, 0, 0.5) 360deg
+        );
+    pointer-events: none;
+    z-index: 2;
+}
+
+div.action-button.unavailable img.action-icon {
+    filter: grayscale(1) brightness(0.75);
+}
+
+div.action-button::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.25);
+    opacity: 0;
+    transition: opacity 0.2s;
+    z-index: 3;
+}
+
+div.action-button:hover::after {
+    opacity: 1;
+}
+
+div.action-button.toggled {
+    border-color: rgba(230, 220, 160, 0.8);
+    filter: brightness(1.1);
+    box-shadow:
+            inset 0 0 6px rgba(230, 220, 160, 1),
+            0 0 6px rgba(230, 220, 198, 0.35);
+    animation: toggledPulse 1.6s ease-in-out infinite;
+}
+
+div.action-button.active,
+div.action-button.cooldown-active {
+    border-color: rgba(230, 60, 60, 0.8);
+    filter: brightness(1.1);
+    box-shadow:
+            inset 0 0 6px rgba(230, 60, 60, 1),
+            0 0 6px rgba(230, 60, 60, 0.35);
+    animation: activePulse 1.6s ease-in-out infinite;
+}
+
+@keyframes toggledPulse {
+    0% {
+        box-shadow:
+                inset 0 0 6px rgba(230, 220, 160, 0.4),
+                0 0 6px rgba(230, 220, 160, 0.35);
+    }
+    50% {
+        box-shadow:
+                inset 0 0 12px rgba(230, 220, 160, 1),
+                0 0 16px rgba(230, 220, 160, 0.6);
+    }
+    100% {
+        box-shadow:
+                inset 0 0 6px rgba(230, 220, 160, 0.4),
+                0 0 6px rgba(230, 220, 160, 0.35);
+    }
+}
+
+@keyframes activePulse {
+    0% {
+        box-shadow:
+                inset 0 0 6px rgba(230, 60, 60, 0.4),
+                0 0 6px rgba(230, 60, 60, 0.35);
+    }
+    50% {
+        box-shadow:
+                inset 0 0 12px rgba(230, 60, 60, 1),
+                0 0 16px rgba(230, 60, 60, 0.6);
+    }
+    100% {
+        box-shadow:
+                inset 0 0 6px rgba(230, 60, 60, 0.4),
+                0 0 6px rgba(230, 60, 60, 0.35);
+    }
+}
+

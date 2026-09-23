@@ -1,0 +1,188 @@
+{
+    "items": {
+        "weapons": {
+            "steel-broadsword": "Ocelový Široký Meč",
+            "steel-longsword": "Ocelový Dlouhý Meč",
+            "steel-greatsword": "Ocelový Velký Meč",
+            "pyroxide-longsword": "Pyroxidový Dlouhý Meč",
+            "pyroxide-broadsword": "Pyroxidový Široký Meč",
+            "pyroxide-greatsword": "Pyroxidový Velký Meč",
+            "geonite-longsword": "Geonitový Dlouhý Meč",
+            "geonite-broadsword": "Geonitový Široký Meč",
+            "geonite-greatsword": "Geonitový Velký Meč",
+            "mythril-longsword": "Mythrilový Dlouhý Meč",
+            "mythril-broadsword": "Mythrilový Široký Meč",
+            "mythril-greatsword": "Mythrilový Velký Meč",
+            "chaotite-longsword": "Chaotitový Dlouhý Meč",
+            "chaotite-broadsword": "Chaotitový Široký Meč",
+            "chaotite-greatsword": "Chaotitový Velký Meč",
+
+            "steel-hand-axe": "Ocelová Sekera",
+            "steel-battle-axe": "Ocelová Bitevní Sekera",
+            "steel-great-axe": "Ocelová Velká Sekera",
+            "pyroxide-hand-axe": "Pyroxidová Sekera",
+            "pyroxide-battle-axe": "Pyroxidová Bitevní Sekera",
+            "pyroxide-great-axe": "Pyroxidová Velká Sekera",
+            "geonite-hand-axe": "Geonitová Sekera",
+            "geonite-battle-axe": "Geonitová Bitevní Sekera",
+            "geonite-great-axe": "Geonitová Velká Sekera",
+            "mythril-hand-axe": "Mythrilová Sekera",
+            "mythril-battle-axe": "Mythrilová Bitevní Sekera",
+            "mythril-great-axe": "Mythrilová Velká Sekera",
+            "chaotite-hand-axe": "Chaotitová Sekera",
+            "chaotite-battle-axe": "Chaotitová Bitevní Sekera",
+            "chaotite-great-axe": "Chaotitová Velká Sekera",
+
+            "steel-large-battle-axe": "Ocelov\u00e1 Velk\u00e1 Bitevn\u00ed Sekera",
+            "pyroxide-large-battle-axe": "Pyroxidov\u00e1 Velk\u00e1 Bitevn\u00ed Sekera",
+            "geonite-large-battle-axe": "Geonitov\u00e1 Velk\u00e1 Bitevn\u00ed Sekera",
+            "mythril-large-battle-axe": "Mythrilov\u00e1 Velk\u00e1 Bitevn\u00ed Sekera",
+            "chaotite-large-battle-axe": "Chaotitov\u00e1 Velk\u00e1 Bitevn\u00ed Sekera",
+
+            "steel-light-mace": "Ocelový Lehký Palcát",
+            "steel-warmace": "Ocelový Válečný Palcát",
+            "steel-warhammer": "Ocelové Válečné Kladivo",
+            "pyroxide-light-mace": "Pyroxidový Lehký Palcát",
+            "pyroxide-warmace": "Pyroxidový Válečný Palcát",
+            "pyroxide-warhammer": "Pyroxidové Válečné Kladivo",
+            "geonite-light-mace": "Geonitový Lehký Palcát",
+            "geonite-warmace": "Geonitový Válečný Palcát",
+            "geonite-warhammer": "Geonitové Válečné Kladivo",
+            "mythril-light-mace": "Mythrilový Lehký Palcát",
+            "mythril-warmace": "Mythrilový Válečný Palcát",
+            "mythril-warhammer": "Mythrilové Válečné Kladivo",
+            "chaotite-light-mace": "Chaotitový Lehký Palcát",
+            "chaotite-warmace": "Chaotitový Válečný Palcát",
+            "chaotite-warhammer": "Chaotitové Válečné Kladivo",
+
+            "steel-hunting-spear": "Ocelové Lovecké Kopí",
+            "steel-war-spear": "Ocelové Válečné Kopí",
+            "steel-halberd": "Ocelová Halapartna",
+            "pyroxide-hunting-spear": "Pyroxidové Lovecké Kopí",
+            "pyroxide-war-spear": "Pyroxidové Válečné Kopí",
+            "pyroxide-halberd": "Pyroxidová Halapartna",
+            "geonite-hunting-spear": "Geonitové Lovecké Kopí",
+            "geonite-war-spear": "Geonitové Válečné Kopí",
+            "geonite-halberd": "Geonitová Halapartna",
+            "mythril-hunting-spear": "Mythrilové Lovecké Kopí",
+            "mythril-war-spear": "Mythrilové Válečné Kopí",
+            "mythril-halberd": "Mythrilová Halapartna",
+            "chaotite-hunting-spear": "Chaotitové Lovecké Kopí",
+            "chaotite-war-spear": "Chaotitové Válečné Kopí",
+            "chaotite-halberd": "Chaotitová Halapartna",
+
+            "wooden-hunting-bow": "Dřevěný Lovecký Luk",
+            "wooden-recurve-bow": "Dřevěný Reflexní Luk",
+            "wooden-longbow": "Dřevěný Dlouhý Luk",
+            "cherrywood-hunting-bow": "Třešňový Lovecký Luk",
+            "cherrywood-recurve-bow": "Třešňový Reflexní Luk",
+            "cherrywood-longbow": "Třešňový Dlouhý Luk",
+            "mahogany-hunting-bow": "Mahagonový Lovecký Luk",
+            "mahogany-recurve-bow": "Mahagonový Reflexní Luk",
+            "mahogany-longbow": "Mahagonový Dlouhý Luk",
+            "elven-hunting-bow": "Elfský Lovecký Luk",
+            "elven-recurve-bow": "Elfský Reflexní Luk",
+            "elven-longbow": "Elfský Dlouhý Luk",
+            "ethereal-hunting-bow": "Éterický Lovecký Luk",
+            "ethereal-recurve-bow": "Éterický Reflexní Luk",
+            "ethereal-longbow": "Éterický Dlouhý Luk",
+
+            "steel-pickaxe": "Ocelový Krumpáč",
+            "diamond-pickaxe": "Diamantový Krumpáč",
+            "pyroxide-pickaxe": "Pyroxidový Krumpáč",
+            "geonite-pickaxe": "Geonitový Krumpáč",
+            "mythril-pickaxe": "Mythrilový Krumpáč",
+            "chaotite-pickaxe": "Chaotitový Krumpáč",
+            "pickaxe": "Krumpáč",
+            "great-axe": "Velká Sekera",
+            "large-battle-axe": "Velk\u00e1 Bitevn\u00ed Sekera",
+            "diamond-great-axe": "Diamantová Velká Sekera",
+            "hunter-bow": "Lovecký Luk"
+        },
+
+
+
+
+        "armors": {
+            "steel-plate-greaves": "Ocelové plátové holeně",
+            "gold-plate-greaves": "Zlaté plátové holeně",
+            "agapyte-plate-greaves": "Agapytové plátové holeně",
+            "astracyte-plate-greaves": "Astracytové plátové holeně",
+            "blood-stone-plate-greaves": "Plátové holeně z Krvavého kamene",
+            "dark-stone-plate-greaves": "Plátové holeně z Temného kamene",
+            "mythril-plate-greaves": "Mythrilové plátové holeně",
+
+            "steel-plate-pauldrons": "Ocelové plátové nárameníky",
+            "gold-plate-pauldrons": "Zlaté plátové nárameníky",
+            "agapyte-plate-pauldrons": "Agapytové plátové nárameníky",
+            "astracyte-plate-pauldrons": "Astracytové plátové nárameníky",
+            "blood-stone-plate-pauldrons": "Plátové nárameníky z Krvavého kamene",
+            "dark-stone-plate-pauldrons": "Plátové nárameníky z Temného kamene",
+            "mythril-plate-pauldrons": "Mythrilové plátové nárameníky",
+
+            "steel-plate-helmet": "Ocelová plátová přilba",
+            "gold-plate-helmet": "Zlatá plátová přilba",
+            "agapyte-plate-helmet": "Agapytová plátová přilba",
+            "astracyte-plate-helmet": "Astracytová plátová přilba",
+            "blood-stone-plate-helmet": "Plátová přilba z Krvavého kamene",
+            "dark-stone-plate-helmet": "Plátová přilba z Temného kamene",
+            "mythril-plate-helmet": "Mythrilová plátová přilba",
+
+            "steel-plate-armor": "Ocelová plátová zbroj",
+            "gold-plate-armor": "Zlatá plátová zbroj",
+            "agapyte-plate-armor": "Agapytová plátová zbroj",
+            "astracyte-plate-armor": "Astracytová plátová zbroj",
+            "blood-stone-plate-armor": "Plátová zbroj z Krvavého kamene",
+            "dark-stone-plate-armor": "Plátová zbroj z Temného kamene",
+            "mythril-plate-armor": "Mythrilová plátová zbroj"
+        },
+
+
+
+
+        "jewels": {},
+
+
+
+
+        "trinkets": {},
+
+
+
+
+        "resources": {
+            "bandages": "Obvazy",
+
+            "ore-iron": "Železná Ruda",
+            "ore-silver": "Stříbrná Ruda",
+            "ore-gold": "Zlatá Ruda",
+            "ore-agapyte": "Agapytová Ruda",
+            "ore-astracyte": "Astracytová Ruda",
+            "ore-pyroxide": "Pyroxidová Ruda",
+            "ore-geonite": "Geonitová Ruda",
+            "ore-bloodstone": "Bloodstone Ruda",
+            "ore-darkstone": "Darkstone Ruda",
+            "ore-mythril": "Mythrilová Ruda",
+            "ore-adamantium": "Adamantiová Ruda",
+            "ore-chaotite": "Chaotitová Ruda",
+
+            "log-wooden": "Dřevo",
+            "log-cherrywood": "Třešňové Dřevo",
+            "log-mahagon": "Mahagonové Dřevo",
+            "log-ebony": "Ebenové Dřevo",
+            "log-elven": "Elfské Dřevo",
+            "log-ethereal": "Éterické Dřevo",
+
+            "meat-common": "Maso",
+
+            "steak": "Steak",
+
+            "small-healing-potion": "Malý Lektvar Zdraví",
+            "healing-potion": "Lektvar Zdraví",
+            "great-healing-potion": "Velký Lektvar Zdraví",
+            "small-mana-potion": "Malý Lektvar Many",
+            "mana-potion": "Lektvar Many",
+            "great-mana-potion": "Velký Lektvar Many"
+        }
+    }
+}

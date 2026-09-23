@@ -1,0 +1,83 @@
+div.gui-action-button {
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+
+    align-items: center;
+    justify-content: center;
+    cursor: url('/images/cursor-pointer.png'), pointer;
+
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+
+    position: relative;
+    overflow: hidden;
+}
+
+div.gui-action-button img.action-icon {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    pointer-events: none;
+    opacity: 0.85;
+}
+
+div.gui-action-button img.action-icon-hover {
+    display: block;
+    opacity: 0;
+    transition: opacity 0.2s;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+div.gui-action-button:hover img.action-icon-hover {
+    opacity: 0.75;
+}
+
+div#btn-backpack {
+    position: absolute;
+    top: 0px;
+    right: 0px;
+}
+
+div#btn-character {
+    position: absolute;
+    top: 64px;
+    right: 0px;
+}
+
+
+
+
+div.gui-action-button.active {
+    border-color: rgba(230, 60, 60, 0.8);
+    filter: brightness(1.1);
+    box-shadow:
+            inset 0 0 6px rgba(230, 60, 60, 1),
+            0 0 6px rgba(230, 60, 60, 0.35);
+    animation: activePulse 1.6s ease-in-out infinite;
+}
+
+@keyframes activePulse {
+    0% {
+        box-shadow:
+                inset 0 0 6px rgba(230, 60, 60, 0.4),
+                0 0 6px rgba(230, 60, 60, 0.35);
+    }
+    50% {
+        box-shadow:
+                inset 0 0 12px rgba(230, 60, 60, 1),
+                0 0 16px rgba(230, 60, 60, 0.6);
+    }
+    100% {
+        box-shadow:
+                inset 0 0 6px rgba(230, 60, 60, 0.4),
+                0 0 6px rgba(230, 60, 60, 0.35);
+    }
+}

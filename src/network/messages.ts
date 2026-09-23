@@ -1,0 +1,367 @@
+import { Utils } from '@/utils/utils'
+import { MyPlayer } from '@/data/myPlayer'
+
+export interface Message {
+    t: number
+    d: any
+}
+
+export class LoginMsg {
+    t: number = 1
+    login: string
+    password: string
+    guestName: string | null
+
+    constructor(login: string, password: string, guestName: string | null) {
+        this.login = login
+        this.password = password
+        this.guestName = guestName
+    }
+}
+
+export class FetchWorldDataMsg implements Message {
+    t: number = 2
+    d: any
+
+    constructor(worldId: number, x: number, z: number) {
+        this.d = { worldId: worldId , x: x, z: z}
+    }
+}
+
+export class MyCharMoveMsg implements Message {
+    t: number = 5
+    d: any
+
+    constructor() {
+        let angle = MyPlayer.myChar.getMoveAngle()
+        if (angle != null) {
+            angle = Utils.roundToTwoDecimals(angle)
+        }
+        this.d = [Utils.roundToTwoDecimals(MyPlayer.myChar.pos.x), Utils.roundToTwoDecimals(MyPlayer.myChar.pos.z), angle, MyPlayer.myChar.movementType]
+    }
+}
+
+export class SelectAutoAttackTarget implements Message {
+    t: number = 6
+    d: any
+    constructor(id: number, targetType: string) {
+        this.d = { id: id, tp: targetType }
+    }
+}
+
+export class AutoAttackBreak implements Message {
+    t: number = 7
+    d: any
+    constructor() {}
+}
+
+export class LogoutMsg implements Message {
+    t: number = 8
+    d: any
+    constructor() {}
+}
+
+export class StopAction implements Message {
+    t: number = 9
+    d: any
+    constructor() {}
+}
+
+export class HealingSelfAction implements Message {
+    t: number = 10
+    d: any
+    constructor() {
+    }
+}
+
+export class HealingTargetAction implements Message {
+    t: number = 11
+    d: any
+    constructor(tgtId: number, tgtType: string) {
+        this.d = { id: tgtId, tp: tgtType }
+    }
+}
+
+export class UnequipItemMsg implements Message {
+    t: number = 12
+    d: any
+    constructor(id: number) {
+        this.d = { id: id }
+    }
+}
+
+export class EquipItemMsg implements Message {
+    t: number = 13
+    d: any
+
+    constructor(slot: string, id: number) {
+        this.d = { slot: slot, id: id }
+    }
+}
+
+export class DropItemMsg implements Message {
+    t: number = 14
+    d: any
+
+    constructor(id: number) {
+        this.d = { id: id }
+    }
+}
+
+export class PickItemMsg implements Message {
+    t: number = 15
+    d: any
+
+    constructor(id: number) {
+        this.d = { id: id }
+    }
+}
+
+export class SplitItemMsg implements Message {
+    t: number = 16
+    d: any
+
+    constructor(id: number, splitCount: number) {
+        this.d = { id: id, splitCount: splitCount }
+    }
+}
+
+export class MergeItemMsg implements Message {
+    t: number = 17
+    d: any
+
+    constructor(id: number) {
+        this.d = { id: id }
+    }
+}
+
+export class GatheringActionMsg implements Message {
+    t: number = 18
+    d: any
+
+    constructor(actionType: string) {
+        this.d = { tp: actionType }
+    }
+}
+
+export class ConsumeItemMsg implements Message {
+    t: number = 19
+    d: any
+
+    constructor(cbId: number) {
+        this.d = { cbId: cbId }
+    }
+}
+
+export class CreateCampMsg implements Message {
+    t: number = 20
+    d: any
+
+    constructor(cbId: number) {
+        this.d = { cbId: cbId }
+    }
+}
+
+export class RestingActionMsg implements Message {
+    t: number = 21
+    d: any
+
+    constructor(x: number, z: number) {
+        this.d = { x: x, z: z }
+    }
+}
+
+export class FireArrowsActionMsg implements Message {
+    t: number = 22
+    d: any
+
+    constructor(x: number, z: number) {
+        this.d = { x: x, z: z }
+    }
+}
+
+export class RequestCookingMsg implements Message {
+    t: number = 23
+    d: any
+
+    constructor(x: number, z: number) {
+        this.d = { x: x, z: z }
+    }
+}
+
+export class SubmitCraftRequestMsg implements Message {
+    t: number = 24
+    d: any
+
+    constructor(itemType: string, codebookId: number, quantity: number, x: number, z: number, craftingType: string, npcId?: number) {
+        this.d = {
+            tp: itemType,
+            cb: codebookId,
+            qty: quantity,
+            x: x,
+            z: z,
+            type: craftingType,
+        }
+        if (npcId !== undefined) {
+            this.d.npcId = npcId
+        }
+    }
+}
+
+export class GMSaveMapDataMsg implements Message {
+    t: number = 1000
+    d: any
+    constructor() {}
+}
+
+export class GMTerrainChange implements Message {
+    t: number = 1001
+    d: any
+
+    constructor(data: [{ x: number, z: number, height: number }]) {
+        this.d = { changeType: "terrain", data: data }
+    }
+}
+
+export class GMStaticObjectChange implements Message {
+    t: number = 1002
+    d: any
+
+    constructor(changeType: string, data) {
+        this.d = { changeType: changeType, data: data }
+    }
+}
+
+export class GMLoadSpawns implements Message {
+    t: number = 1003
+    d: any
+
+    constructor() {
+        this.d = { }
+    }
+}
+
+export class GMSpawnAction implements Message {
+    t: number = 1004
+    d: any
+
+    constructor(action: string, data: any) {
+        this.d = { action: action, data: data }
+    }
+}
+
+export class GMForceSaveDataMsg implements Message {
+    t: number = 1005
+    d: any
+
+    constructor() {}
+}
+
+export class GMCreateItemMsg implements Message {
+    t: number = 1006
+    d: any
+
+    constructor(type: string, codebookId: number, quantity: number | null, quality: number | null) {
+        this.d = {
+            tp: type,
+            codebookId: codebookId
+        }
+
+        if (type === 'RESOURCE') {
+            this.d.quantity = quantity
+        } else {
+            this.d.quality = quality
+        }
+    }
+}
+
+export class NpcUseMsg implements Message {
+    t: number = 25
+    d: any
+
+    constructor(id: number) {
+        this.d = {id: id}
+    }
+}
+
+export class NpcPurchaseMsg implements Message {
+    t: number = 26
+    d: any
+
+    constructor(id: number, type: string, codebookId: number, quantity: number) {
+        this.d = {id: id, tp: type, cb: codebookId, qty: quantity}
+    }
+}
+
+export class BankOpenMsg implements Message {
+    t: number = 27
+    d: any
+
+    constructor(id: number) {
+        this.d = {id}
+    }
+}
+
+export class BankActionMsg implements Message {
+    t: number = 28
+    d: any
+
+    constructor(id: number, action: string, itemId: number, splitCount?: number) {
+        this.d = {id, action, itemId}
+        if (splitCount !== undefined) {
+            this.d.splitCount = splitCount
+        }
+    }
+}
+
+export class NpcRepairMsg implements Message {
+    t: number = 30
+    d: any
+
+    constructor(id: number, itemId: number) {
+        this.d = {id, itemId}
+    }
+}
+
+export class NpcCraftingMenuMsg implements Message {
+    t: number = 31
+    d: any
+
+    constructor(id: number, category: string) {
+        this.d = {id, category}
+    }
+}
+
+export class RespawnMsg implements Message {
+    t: number = 29
+    d: any = {}
+}
+
+export class GMNpcAction implements Message {
+    t: number = 1007
+    d: any
+
+    constructor(action: string, data: any) {
+        this.d = {action: action, data: data}
+    }
+}
+
+export class GMTeleportMsg implements Message {
+    t: number = 1008
+    d: any
+
+    constructor(worldId: number, x: number, z: number) {
+        this.d = {worldId, x, z}
+    }
+}
+
+export class GMLoadWorldsMsg implements Message {
+    t: number = 1009
+    d: any = {}
+}
+
+export class GMLoadItemCodebookMsg implements Message {
+    t: number = 1010
+    d: any = {}
+}
+

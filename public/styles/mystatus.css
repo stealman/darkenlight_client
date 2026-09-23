@@ -1,0 +1,268 @@
+div#myStatusPanel {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    width: 25%;
+    pointer-events: none;
+    align-items: stretch;
+    justify-content: flex-start;
+    flex-direction: column;
+    text-align: center;
+    z-index: 1000;
+    display: flex;
+}
+
+#myStatusPanel .myStatusPanelBody {
+    width: 100%;
+    min-height: 5.1vh;
+    display: flex;
+    align-items: stretch;
+    justify-content: flex-start;
+    flex-direction: column;
+    background-color: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(128, 128, 128, 0.75);
+    border-radius: 0 0 4px 0;
+    border-top: none;
+    overflow: hidden;
+    pointer-events: auto;
+}
+
+#myStatusPanel .statusRow {
+    position: relative;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-sizing: border-box;
+}
+
+#myStatusPanel .statusRowMain {
+    flex: 2 1 0;
+    min-height: 0;
+}
+
+#myStatusPanel .statusRowSecondary {
+    flex: 1 1 0;
+    gap: 0vh;
+    padding: 0 0 0 0;
+    justify-content: flex-start;
+    margin-top: -1px;
+}
+
+#myStatusPanel .statusRowAffects {
+    width: 100%;
+    min-height: 1.8vh;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 0.2vh 0.15vh 0 0.15vh;
+    box-sizing: border-box;
+    overflow: hidden;
+    pointer-events: auto;
+}
+
+#myStatusPanel .myName {
+    font-size: 2vh;
+    position: relative;
+    z-index: 2;
+    line-height: 1;
+    text-shadow:
+        1px 0 0 rgba(0, 0, 0, 0.9),
+        -1px 0 0 rgba(0, 0, 0, 0.9),
+        0 1px 0 rgba(0, 0, 0, 0.9),
+        0 -1px 0 rgba(0, 0, 0, 0.9);
+    color: rgba(214, 219, 224, 0.96);
+}
+
+#myStatusPanel .hpBlocks{
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+
+    display: grid;
+    grid-auto-flow: column;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 0px;
+    padding: 0.2vh 0.1vh;
+    align-items: center;
+    box-sizing: border-box;
+}
+
+#myStatusPanel .hpBlock{
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+    background: rgba(25, 25, 25, 0);
+    position: relative;
+    overflow: hidden;
+    border-left: 1px solid rgba(32, 32, 32, 0.4);
+}
+
+#myStatusPanel .hpFill{
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 0%;
+    background: linear-gradient(
+        180deg,
+        rgba(36, 196, 196, 0.56) 0%,
+        rgba(12, 96, 96, 0.62) 100%
+    );
+}
+
+#myStatusPanel .hpBlock:first-child{
+    border-left: none;
+}
+
+#myStatusPanel .hpBlock.filled{
+    background: rgba(175, 25, 25, 0.5);
+    border-color: rgba(32, 32, 32, 0.5);
+}
+
+#myStatusPanel .hpBlocks{ height: 100%; }
+
+#myStatusPanel .secondaryBar {
+    position: relative;
+    width: calc(50% - 0.06vh);
+    height: 100%;
+    overflow: hidden;
+    border: 1px solid rgba(32, 32, 32, 0.5);
+    border-radius: 0;
+    box-sizing: border-box;
+}
+
+#myStatusPanel .secondaryBar.fullWidth {
+    width: 100%;
+}
+
+#myStatusPanel .secondaryBlocks {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    grid-auto-flow: column;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 0;
+    box-sizing: border-box;
+}
+
+#myStatusPanel .secondaryBar.halfSegments .secondaryBlocks {
+    grid-template-columns: repeat(5, 1fr);
+}
+
+#myStatusPanel .secondaryBlock {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+    border-left: 1px solid rgba(32, 32, 32, 0.4);
+}
+
+#myStatusPanel .secondaryBlock:first-child {
+    border-left: none;
+}
+
+#myStatusPanel .secondaryBar.halfSegments .secondaryBlock:nth-child(n + 6) {
+    display: none;
+}
+
+#myStatusPanel .secondaryBlockFill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 0%;
+}
+
+#myStatusPanel .staminaBar .secondaryBlockFill {
+    background: linear-gradient(
+        180deg,
+        rgba(224, 144, 60, 0.8) 0%,
+        rgba(122, 64, 18, 0.88) 100%
+    );
+}
+
+#myStatusPanel .manaBar .secondaryBlockFill {
+    background: linear-gradient(
+        180deg,
+        rgba(96, 150, 255, 0.82) 0%,
+        rgba(28, 64, 154, 0.88) 100%
+    );
+}
+
+#myStatusPanel .affectsIcons {
+    display: flex;
+    align-items: center;
+    gap: var(--affect-icon-gap, 6px);
+    overflow: hidden;
+    pointer-events: auto;
+}
+
+#myStatusPanel .affectIcon {
+    position: relative;
+    width: var(--affect-icon-size, 32px);
+    height: var(--affect-icon-size, 32px);
+    min-width: var(--affect-icon-size, 32px);
+    flex: 0 0 var(--affect-icon-size, 32px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    overflow: hidden;
+    border-radius: 4px;
+    box-shadow: inset 0 0 0.35vh rgba(0, 0, 0, 0.35);
+    color: rgba(25, 16, 4, 0.95);
+    font-weight: bold;
+    pointer-events: auto;
+}
+
+#myStatusPanel .affectIcon.positive {
+    background-color: rgba(115, 115, 115, 0.5);
+    border: 1px solid rgba(60, 60, 60, 0.3);
+}
+
+#myStatusPanel .affectIcon.adverse {
+    background: linear-gradient(135deg, rgba(200, 130, 130, 0.3), rgba(145, 64, 64, 0.4));
+    border: 1px solid rgba(135, 40, 40, 0.75);
+    box-shadow:
+        inset 0 0 0.35vh rgba(45, 0, 0, 0.45),
+        0 0 0.35vh rgba(120, 30, 30, 0.18);
+}
+
+#myStatusPanel .affectIcon.firstAdverse {
+    margin-left: var(--affect-icon-adverse-gap, 16px);
+}
+
+#myStatusPanel .affectIconImage {
+    display: block;
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+#myStatusPanel .affectIconText {
+    display: block;
+    max-width: 100%;
+    font-size: 0.82vh;
+    line-height: 1;
+}
+
+#myStatusPanel .affectIconCount {
+    position: absolute;
+    right: calc(var(--affect-icon-count-offset, 3px) * -1);
+    bottom: calc(var(--affect-icon-count-offset, 3px) * -1);
+    min-width: var(--affect-icon-count-size, 12px);
+    height: var(--affect-icon-count-size, 12px);
+    padding: 0 calc(var(--affect-icon-count-size, 12px) * 0.14);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: rgba(25, 25, 25, 0.92);
+    color: rgba(255, 230, 180, 0.98);
+    font-size: var(--affect-icon-count-font-size, 10px);
+    line-height: 1;
+}

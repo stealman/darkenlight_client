@@ -1,0 +1,504 @@
+import { MyPlayer } from '@/data/myPlayer'
+import { ClientAffectGroup } from '@/data/affects'
+import { TooltipOverlayContent, TooltipOverlayManager } from '@/gui/tooltipOverlayManager'
+import { t } from '@/i18n'
+
+export const MyStatusPanel = {
+    myStatusTooltipOwnerKey: 'my-status-panel' as string,
+    tooltipRefreshIntervalMs: 250 as number,
+    affectIconSizePx: 0 as number,
+    panel: null as HTMLDivElement | null,
+    bodyEl: null as HTMLDivElement | null,
+    nameEl: null as HTMLSpanElement | null,
+    hpBlockEls: [] as HTMLDivElement[],
+    hpFillEls: [] as HTMLDivElement[],
+    stBarEl: null as HTMLDivElement | null,
+    stBlockEls: [] as HTMLDivElement[],
+    stFillEls: [] as HTMLDivElement[],
+    mpBarEl: null as HTMLDivElement | null,
+    mpBlockEls: [] as HTMLDivElement[],
+    mpFillEls: [] as HTMLDivElement[],
+
+    // Affects
+    affectsRowEl: null as HTMLDivElement | null,
+    affectsIconsEl: null as HTMLDivElement | null,
+    affectIconEls: new Map<number, HTMLDivElement>(),
+    hoveredAffectGroupId: null as number | null,
+    lastTooltipRefreshBucket: null as number | null,
+
+    initialize() {
+        if (this.panel) {
+            this.panel.remove()
+            this.panel = null
+        }
+
+        this.panel = document.createElement('div')
+        this.panel.id = 'myStatusPanel'
+        this.panel.style.display = 'none'
+
+        this.bodyEl = document.createElement('div')
+        this.bodyEl.className = 'myStatusPanelBody'
+        this.bodyEl.onmouseenter = (event) => this.onMyStatusMouseEnter(event)
+        this.bodyEl.onmousemove = (event) => this.onMyStatusMouseMove(event)
+        this.bodyEl.onmouseleave = () => this.onMyStatusMouseLeave()
+        this.bodyEl.onclick = (event) => this.onMyStatusClick(event)
+
+        const hpBlocks = document.createElement('div')
+        hpBlocks.className = 'hpBlocks'
+
+        this.hpBlockEls = []
+        this.hpFillEls = []
+
+        for (let i = 0; i < 10; i++) {
+            const b = document.createElement('div')
+            b.className = 'hpBlock'
+
+            const fill = document.createElement('div')
+            fill.className = 'hpFill'
+            b.appendChild(fill)
+
+            hpBlocks.appendChild(b)
+            this.hpBlockEls.push(b)
+            this.hpFillEls.push(fill)
+        }
+
+        this.nameEl = document.createElement('span')
+        this.nameEl.className = 'myName'
+
+        const hpRow = document.createElement('div')
+        hpRow.className = 'statusRow statusRowMain'
+        hpRow.appendChild(hpBlocks)
+        hpRow.appendChild(this.nameEl)
+
+        const secondaryRow = document.createElement('div')
+        secondaryRow.className = 'statusRow statusRowSecondary'
+
+        const stBar = document.createElement('div')
+        stBar.className = 'secondaryBar staminaBar'
+        this.stBarEl = stBar
+
+        const stBlocks = document.createElement('div')
+        stBlocks.className = 'secondaryBlocks'
+
+        this.stBlockEls = []
+        this.stFillEls = []
+
+        for (let i = 0; i < 10; i++) {
+            const b = document.createElement('div')
+            b.className = 'secondaryBlock'
+
+            const fill = document.createElement('div')
+            fill.className = 'secondaryBlockFill'
+            b.appendChild(fill)
+
+            stBlocks.appendChild(b)
+            this.stBlockEls.push(b)
+            this.stFillEls.push(fill)
+        }
+
+        stBar.appendChild(stBlocks)
+
+        this.mpBarEl = document.createElement('div')
+        this.mpBarEl.className = 'secondaryBar manaBar'
+
+        const mpBlocks = document.createElement('div')
+        mpBlocks.className = 'secondaryBlocks'
+
+        this.mpBlockEls = []
+        this.mpFillEls = []
+
+        for (let i = 0; i < 10; i++) {
+            const b = document.createElement('div')
+            b.className = 'secondaryBlock'
+
+            const fill = document.createElement('div')
+            fill.className = 'secondaryBlockFill'
+            b.appendChild(fill)
+
+            mpBlocks.appendChild(b)
+            this.mpBlockEls.push(b)
+            this.mpFillEls.push(fill)
+        }
+
+        this.mpBarEl.appendChild(mpBlocks)
+
+        secondaryRow.appendChild(stBar)
+        secondaryRow.appendChild(this.mpBarEl)
+
+        this.affectsRowEl = document.createElement('div')
+        this.affectsRowEl.className = 'statusRowAffects'
+
+        this.affectsIconsEl = document.createElement('div')
+        this.affectsIconsEl.className = 'affectsIcons'
+        this.affectIconEls.clear()
+
+        this.affectsRowEl.appendChild(this.affectsIconsEl)
+
+        this.bodyEl.appendChild(hpRow)
+        this.bodyEl.appendChild(secondaryRow)
+        this.panel.appendChild(this.bodyEl)
+        this.panel.appendChild(this.affectsRowEl)
+        document.body.appendChild(this.panel)
+        this.lastTooltipRefreshBucket = null
+        TooltipOverlayManager.initialize()
+        this.onResize()
+        this.refreshAffectGroups()
+    },
+
+    onResize() {
+        if (!this.panel) {
+            return
+        }
+
+        const dpr = window.devicePixelRatio || 1
+        const shortestSide = Math.min(window.innerWidth, window.innerHeight)
+        const isLandscape = window.innerWidth > window.innerHeight
+        const touchFactor = window.matchMedia('(pointer: coarse)').matches ? 1.15 : 1
+        const landscapeBoost = isLandscape ? 1.2 : 1
+        const dprBoost = Math.min(1.35, Math.max(1, dpr * 0.9))
+        const iconSizePx = Math.round(Math.max(20, Math.min(39, shortestSide * 0.045 * touchFactor * landscapeBoost * dprBoost * 0.75)))
+        const countSizePx = Math.max(12, Math.round(iconSizePx * 0.37))
+        const countOffsetPx = Math.max(3, Math.round(iconSizePx * 0.1))
+
+        this.affectIconSizePx = iconSizePx
+        this.panel.style.setProperty('--affect-icon-size', `${iconSizePx}px`)
+        this.panel.style.setProperty('--affect-icon-count-size', `${countSizePx}px`)
+        this.panel.style.setProperty('--affect-icon-count-offset', `${countOffsetPx}px`)
+        this.panel.style.setProperty('--affect-icon-count-font-size', `${Math.max(10, Math.round(countSizePx * 0.62))}px`)
+        this.panel.style.setProperty('--affect-icon-gap', `${Math.max(4, Math.round(iconSizePx * 0.11))}px`)
+        this.panel.style.setProperty('--affect-icon-adverse-gap', `${iconSizePx / 2}px`)
+    },
+
+    setMyName(name: string) {
+        if (this.nameEl) {
+            this.nameEl.textContent = name
+        }
+    },
+
+    refreshAffectGroups() {
+        if (!this.affectsRowEl || !this.affectsIconsEl) {
+            return
+        }
+
+        const affectGroups = Array.isArray(MyPlayer.affectGroups) ? MyPlayer.affectGroups as ClientAffectGroup[] : []
+        const sortedAffectGroups = [...affectGroups]
+            .sort((a, b) => Number(a.isAdverse()) - Number(b.isAdverse()))
+
+        this.affectsRowEl.style.display = sortedAffectGroups.length > 0 ? 'flex' : 'none'
+        const affectGroupIds = new Set(sortedAffectGroups.map((affectGroup) => affectGroup.id))
+
+        for (const [affectId, iconEl] of this.affectIconEls) {
+            if (affectGroupIds.has(affectId)) {
+                continue
+            }
+
+            iconEl.remove()
+            this.affectIconEls.delete(affectId)
+
+            if (this.hoveredAffectGroupId === affectId) {
+                this.hoveredAffectGroupId = null
+                TooltipOverlayManager.hide()
+            }
+        }
+
+        const firstAdverseAffectId = sortedAffectGroups.find((affectGroup) => affectGroup.isAdverse())?.id ?? null
+
+        for (const affectGroup of sortedAffectGroups) {
+            let iconEl = this.affectIconEls.get(affectGroup.id)
+            if (!iconEl) {
+                iconEl = this.createAffectIconEl(affectGroup)
+                this.affectIconEls.set(affectGroup.id, iconEl)
+            } else {
+                this.updateAffectIconEl(iconEl, affectGroup, affectGroup.id === firstAdverseAffectId)
+            }
+
+            if (!iconEl.isConnected) {
+                this.updateAffectIconEl(iconEl, affectGroup, affectGroup.id === firstAdverseAffectId)
+            }
+            this.affectsIconsEl.appendChild(iconEl)
+        }
+    },
+
+    createAffectIconEl(affectGroup: ClientAffectGroup) {
+        const iconEl = document.createElement('div')
+        iconEl.className = 'affectIcon'
+        iconEl.onmouseenter = (event) => this.onAffectIconMouseEnter(affectGroup.id, event)
+        iconEl.onmousemove = (event) => this.onAffectIconMouseMove(affectGroup.id, event)
+        iconEl.onmouseleave = () => this.onAffectIconMouseLeave(affectGroup.id)
+        iconEl.onclick = (event) => this.onAffectIconClick(affectGroup.id, event)
+
+        const imageEl = document.createElement('img')
+        imageEl.className = 'affectIconImage'
+        imageEl.alt = ''
+        iconEl.appendChild(imageEl)
+
+        this.updateAffectIconEl(iconEl, affectGroup, false)
+
+        return iconEl
+    },
+
+    updateAffectIconEl(iconEl: HTMLDivElement, affectGroup: ClientAffectGroup, isFirstAdverse: boolean) {
+        iconEl.dataset.affectId = affectGroup.id.toString()
+        iconEl.classList.toggle('adverse', affectGroup.isAdverse())
+        iconEl.classList.toggle('positive', !affectGroup.isAdverse())
+        iconEl.classList.toggle('firstAdverse', isFirstAdverse)
+
+        const imageEl = iconEl.querySelector('.affectIconImage') as HTMLImageElement | null
+        if (imageEl) {
+            imageEl.src = affectGroup.getImageUrl()
+            imageEl.style.display = affectGroup.getImageUrl() ? 'block' : 'none'
+        }
+
+        let countEl = iconEl.querySelector('.affectIconCount') as HTMLSpanElement | null
+        if (affectGroup.af.length > 1) {
+            if (!countEl) {
+                countEl = document.createElement('span')
+                countEl.className = 'affectIconCount'
+                iconEl.appendChild(countEl)
+            }
+            countEl.textContent = affectGroup.af.length.toString()
+            return
+        }
+
+        countEl?.remove()
+    },
+    getAffectGroupById(affectGroupId: number) {
+        return MyPlayer.affectGroups.find((affectGroup) => affectGroup.id === affectGroupId) ?? null
+    },
+    buildAffectTooltipContent(affectGroup: ClientAffectGroup, actualTime: number = Date.now()): TooltipOverlayContent {
+        return {
+            title: affectGroup.getLocalizedName(),
+            titleMeta: affectGroup.getPowerLabel(),
+            topRightText: affectGroup.shouldDisplayDuration()
+                ? affectGroup.getFormattedRemainingDuration(actualTime)
+                : null,
+            description: affectGroup.getLocalizedDescription(),
+            variant: affectGroup.isAdverse() ? 'adverse' : 'positive',
+            rows: [],
+        }
+    },
+    buildMyStatusTooltipContent(): TooltipOverlayContent {
+        const myChar = MyPlayer.myChar
+        const rows = [
+            {
+                label: t('common.health'),
+                value: `${Math.max(0, myChar?.hp ?? 0)} / ${Math.max(0, myChar?.maxHp ?? 0)}`,
+            },
+            {
+                label: t('common.stamina'),
+                value: `${Math.max(0, myChar?.st ?? 0)} / ${Math.max(0, myChar?.maxSt ?? 0)}`,
+            },
+        ]
+
+        if ((myChar?.maxMp ?? 0) > 0) {
+            rows.splice(1, 0, {
+                label: t('common.mana'),
+                value: `${Math.max(0, myChar?.mp ?? 0)} / ${Math.max(0, myChar?.maxMp ?? 0)}`,
+            })
+        }
+
+        return {
+            title: myChar?.name ?? '',
+            titleMeta: myChar?.gameClass?.name ? `(${myChar.gameClass.name})` : null,
+            rows,
+        }
+    },
+    markTooltipRefreshNow() {
+        this.lastTooltipRefreshBucket = Math.floor(Date.now() / this.tooltipRefreshIntervalMs)
+    },
+    onMyStatusMouseEnter(event: MouseEvent) {
+        if (!MyPlayer.myChar || TooltipOverlayManager.pinned) {
+            return
+        }
+
+        TooltipOverlayManager.showFromEvent({
+            ownerKey: this.myStatusTooltipOwnerKey,
+            event,
+            content: this.buildMyStatusTooltipContent(),
+        })
+        this.markTooltipRefreshNow()
+    },
+    onMyStatusMouseMove(event: MouseEvent) {
+        TooltipOverlayManager.moveFromEvent(this.myStatusTooltipOwnerKey, event)
+    },
+    onMyStatusMouseLeave() {
+        if (TooltipOverlayManager.isPinnedFor(this.myStatusTooltipOwnerKey)) {
+            return
+        }
+
+        if (TooltipOverlayManager.isVisibleFor(this.myStatusTooltipOwnerKey)) {
+            TooltipOverlayManager.hideOwnerIfNotPinned(this.myStatusTooltipOwnerKey)
+            this.lastTooltipRefreshBucket = null
+        }
+    },
+    onMyStatusClick(event: MouseEvent) {
+        if (!MyPlayer.myChar) {
+            return
+        }
+
+        const didShow = TooltipOverlayManager.togglePinnedFromEvent({
+            ownerKey: this.myStatusTooltipOwnerKey,
+            event,
+            content: this.buildMyStatusTooltipContent(),
+        })
+        if (!didShow) {
+            this.lastTooltipRefreshBucket = null
+            return
+        }
+
+        this.markTooltipRefreshNow()
+    },
+    onAffectIconMouseEnter(affectGroupId: number, event: MouseEvent) {
+        if (TooltipOverlayManager.pinned) {
+            return
+        }
+
+        const affectGroup = this.getAffectGroupById(affectGroupId)
+        if (!affectGroup) {
+            return
+        }
+
+        this.hoveredAffectGroupId = affectGroupId
+        TooltipOverlayManager.showFromEvent({
+            ownerKey: affectGroupId.toString(),
+            event,
+            content: this.buildAffectTooltipContent(affectGroup),
+        })
+        this.markTooltipRefreshNow()
+    },
+    onAffectIconMouseMove(affectGroupId: number, event: MouseEvent) {
+        if (this.hoveredAffectGroupId !== affectGroupId) {
+            return
+        }
+
+        TooltipOverlayManager.moveFromEvent(affectGroupId.toString(), event)
+    },
+    onAffectIconMouseLeave(affectGroupId: number) {
+        if (TooltipOverlayManager.isPinnedFor(affectGroupId.toString())) {
+            return
+        }
+
+        if (this.hoveredAffectGroupId === affectGroupId) {
+            this.hoveredAffectGroupId = null
+        }
+
+        if (TooltipOverlayManager.isVisibleFor(affectGroupId.toString())) {
+            TooltipOverlayManager.hideOwnerIfNotPinned(affectGroupId.toString())
+            this.lastTooltipRefreshBucket = null
+        }
+    },
+    onAffectIconClick(affectGroupId: number, event: MouseEvent) {
+        const affectGroup = this.getAffectGroupById(affectGroupId)
+        if (!affectGroup) {
+            return
+        }
+
+        const ownerKey = affectGroupId.toString()
+        const didShow = TooltipOverlayManager.togglePinnedFromEvent({
+            ownerKey,
+            event,
+            content: this.buildAffectTooltipContent(affectGroup),
+        })
+        if (!didShow) {
+            this.hoveredAffectGroupId = null
+            this.lastTooltipRefreshBucket = null
+            return
+        }
+
+        this.hoveredAffectGroupId = affectGroupId
+        this.markTooltipRefreshNow()
+    },
+    onFrame(actualTime: number) {
+        if (!this.panel || !this.nameEl || !MyPlayer.myChar || !this.stBarEl || !this.mpBarEl) return
+
+        const hpPercent = MyPlayer.myChar.maxHp > 0 ? Math.max(0, Math.min(100, MyPlayer.myChar.hp / MyPlayer.myChar.maxHp * 100)) : 0
+        const stPercent = MyPlayer.myChar.maxSt > 0 ? Math.max(0, Math.min(100, MyPlayer.myChar.st / MyPlayer.myChar.maxSt * 100)) : 0
+        const mpPercent = MyPlayer.myChar.maxMp > 0 ? Math.max(0, Math.min(100, MyPlayer.myChar.mp / MyPlayer.myChar.maxMp * 100)) : 0
+        const hasMana = MyPlayer.myChar.maxMp > 0
+        const secondarySegmentCount = hasMana ? 5 : 10
+        const secondarySegmentSize = 100 / secondarySegmentCount
+
+        for (let i = 0; i < 10; i++) {
+            const start = i * 10
+            const within = hpPercent - start
+            const fillPct = Math.max(0, Math.min(10, within)) * 10 // 0..100
+
+            const fillEl = this.hpFillEls[i]
+            fillEl.style.width = `${fillPct}%`
+        }
+
+        for (let i = 0; i < 10; i++) {
+            const fillEl = this.stFillEls[i]
+            if (i >= secondarySegmentCount) {
+                fillEl.style.width = '0%'
+                fillEl.style.filter = ''
+                fillEl.style.boxShadow = ''
+                continue
+            }
+
+            const start = i * secondarySegmentSize
+            const within = stPercent - start
+            const fillPct = Math.max(0, Math.min(secondarySegmentSize, within)) / secondarySegmentSize * 100
+            const thresholdOverlap = Math.max(0, Math.min(20, start + secondarySegmentSize) - start)
+            const isThresholdSegment = thresholdOverlap > 0
+            const endsAtThreshold = Math.abs((start + secondarySegmentSize) - 20) < 0.001
+            fillEl.style.width = `${fillPct}%`
+            fillEl.style.filter = isThresholdSegment ? 'saturate(1.15) brightness(0.7) hue-rotate(-18deg)' : ''
+            fillEl.style.boxShadow = endsAtThreshold ? 'inset -1px 0 0 rgba(255, 210, 160, 0.55)' : ''
+        }
+
+        for (let i = 0; i < 10; i++) {
+            const fillEl = this.mpFillEls[i]
+            if (i >= secondarySegmentCount) {
+                fillEl.style.width = '0%'
+                continue
+            }
+
+            const start = i * secondarySegmentSize
+            const within = mpPercent - start
+            const fillPct = Math.max(0, Math.min(secondarySegmentSize, within)) / secondarySegmentSize * 100
+            fillEl.style.width = `${fillPct}%`
+        }
+
+        this.mpBarEl.style.display = hasMana ? 'block' : 'none'
+        this.stBarEl.classList.toggle('fullWidth', !hasMana)
+        this.stBarEl.classList.toggle('halfSegments', hasMana)
+        this.mpBarEl.classList.toggle('halfSegments', hasMana)
+
+        if (TooltipOverlayManager.visible && TooltipOverlayManager.ownerKey === this.myStatusTooltipOwnerKey) {
+            const currentRefreshBucket = Math.floor(actualTime / this.tooltipRefreshIntervalMs)
+            if (this.lastTooltipRefreshBucket === currentRefreshBucket) {
+                return
+            }
+
+            TooltipOverlayManager.refresh(this.buildMyStatusTooltipContent())
+            this.lastTooltipRefreshBucket = currentRefreshBucket
+            return
+        }
+
+        const tooltipAffectId = Number(TooltipOverlayManager.ownerKey)
+        if (TooltipOverlayManager.visible && Number.isFinite(tooltipAffectId)) {
+            const affectGroup = this.getAffectGroupById(tooltipAffectId)
+            if (!affectGroup) {
+                TooltipOverlayManager.hide()
+                this.lastTooltipRefreshBucket = null
+                return
+            }
+
+            if (!affectGroup.shouldDisplayDuration()) {
+                return
+            }
+
+            const currentRefreshBucket = Math.floor(actualTime / this.tooltipRefreshIntervalMs)
+            if (this.lastTooltipRefreshBucket === currentRefreshBucket) {
+                return
+            }
+
+            TooltipOverlayManager.refresh(this.buildAffectTooltipContent(affectGroup, actualTime))
+            this.lastTooltipRefreshBucket = currentRefreshBucket
+            return
+        }
+
+        this.lastTooltipRefreshBucket = null
+    }
+}

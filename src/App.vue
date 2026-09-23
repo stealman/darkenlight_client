@@ -1,87 +1,439 @@
 <template>
-  <div id="app">
-      <canvas ref="canvas" class="renderer">
+    <div id="app">
+        <canvas id="renderCanvas" ref="canvas" class="renderer noselect"></canvas>
+        <canvas v-show="loginRequestSentFlag" ref="miniMapCanvas" id="miniMapCanvas" class="noselect"></canvas>
+        <canvas id="overlayCanvas" class="noselect"></canvas>
 
-      </canvas>
-      <canvas ref="miniMapCanvas" id='miniMapCanvas' ></canvas>
+        <div v-show="loginRequestSentFlag">
+            <div id="system-buttons">
+                <div @click="showSettingsDialog()" v-html="getHamburgerMenuSvg('icon-white', 'icon-settings')"></div>
+                <button v-if="myCharRef?.className === 'GM'" class="gm-panel-button" @click="toggleGmPanel()">{{ t('app.gmPanel') }}</button>
+            </div>
 
-      <span id="fpsLabel" style="z-index: 100; font-size: 20px; color: #aaa; position: absolute; left: 10px; top: 10px;">FPS: </span>
-      <span id="posLabel" style="z-index: 100; font-size: 20px; color: #aaa; position: absolute; left: 10px; top: 30px;">POS: </span>
-      <button id="fullScreenBtn" style="cursor: pointer; text-decoration: underline; font-size: 18px; color: #aaa; position: absolute; left: 10px; top: 160px;" @click="this.requestFullscreen()">Fullscreen</button>
-  </div>
+            <div id="emeralds-info">
+                <span id="emeralds-info-count" style="font-size: 2.25vh; color: #0f0;">0</span>
+                <img id="emeralds-info-icon" src="/images/icons/emerald.png" style="width: 16px; height: 16px; margin-right: 4px;" />
+            </div>
+
+            <div id="gui-buttons">
+                <div class="gui-action-button" id="btn-backpack" @click="showInventoryDialog()">
+                    <img class="action-icon" src="/images/icons/buttons/btn_backpack.png" />
+                    <img class="action-icon-hover" src="/images/icons/buttons/btn_backpack_hover.png" />
+                </div>
+                <div class="gui-action-button" id="btn-character" @click="showCharacterDialog()">
+                    <img class="action-icon" src="/images/icons/buttons/btn_char.png" />
+                    <img class="action-icon-hover" src="/images/icons/buttons/btn_char_hover.png" />
+                </div>
+            </div>
+
+            <TouchControllers v-if="!gameLoading" ref="touchControls" />
+
+            <label id="btn-target-lock" style="display: none; opacity: 0.65; position: absolute; width: 64px; height: 64px;" v-html="getTargetLockSvg('icon-red', 'icon-target-lock')" @pointerdown="TargetingManager.onPointerDown()" @pointerup="TargetingManager.onPointerUp()"></label>
+
+            <label id="btn-action-stop" style="display: none; opacity: 0.65; position: absolute; width: 64px; height: 64px;" v-html="getStopActionSvg('icon-blue', 'icon-stop-action')" @pointerdown="AudioManager.playGuiButtonClick(); MyPlayer.stopActions()"></label>
+
+            <div id="action-button-stop" class="action-button">
+                <div id="action-button-stop-inner">
+                    <img class="action-icon" src="/images/icons/buttons/btn_stop.png" />
+                </div>
+            </div>
+
+            <div id="action-buttons-1"></div>
+            <div id="action-buttons-2" style="display: none;"></div>
+            <div id="opportunity-action-buttons"></div>
+
+            <GmPanel id="gmPanel" v-if="gmPanelVisible" />
+            <NpcDetailsDialog ref="npcDetailsDialog" />
+
+            <OnScreenMessages />
+        </div>
+    </div>
+
+    <div class="dialog-backdrop" style="background-color: #000;" v-if="gameLoading">
+        <div class="dialog-window adaptive">
+            <div class="dialog-header" style="margin-top: 20px;">{{ t('common.loading') }}</div>
+        </div>
+    </div>
+
+    <LoginDialog ref="loginDialog" v-if="displayLoginDialog" @login="loginRequestSent" />
+
+    <SettingsDialog
+        ref="settingsDialog"
+        v-show="displaySettingsDialog"
+        @close="displaySettingsDialog = false"
+        @close-with-restart-prompt="closeSettingsWithRestartPrompt"
+        @touch-coltrols-changed="touchControlsChanged"
+        @logout="logout"
+        @device-type-selected="deviceTypeChanged"
+        @toggle-debug="showDebug"
+        @toggle-fullscreen="toggleFullscreen"
+    />
+
+    <InventoryDialog ref="inventoryDialog" v-show="displayInventoryDialog" @close="displayInventoryDialog = false" />
+    <CharacterDialog ref="characterDialog" v-show="displayCharacterDialog" @close="displayCharacterDialog = false" />
+    <CraftingDialog ref="craftingDialog" v-show="displayCraftingDialog" @close="displayCraftingDialog = false" />
+    <NpcUseDialog ref="npcUseDialog" v-show="displayNpcUseDialog" @close="displayNpcUseDialog = false" />
+
+    <div class="dialog-backdrop death-dialog-backdrop" v-if="isDead">
+        <div class="dialog-window adaptive">
+            <div class="dialog-surface">
+                <div class="dialog-header text-warning">{{ t('death.title') }}</div>
+                <div class="dialog-content death-dialog-content" style="text-align: center;">
+                    <div>{{ t('death.description') }}</div>
+                    <div class="dialog-actions death-dialog-actions">
+                        <button class="dialog-button" :disabled="respawnDelayRemaining > 0" @click="MyPlayer.requestRespawn()">{{ t('death.respawn') }}</button>
+                    </div>
+                    <div class="death-dialog-countdown">
+                        {{ respawnDelayRemaining > 0
+                            ? t('death.respawnLocked', { seconds: respawnDelayRemaining })
+                            : t('death.autoRespawn', { seconds: autoRespawnRemaining }) }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="dialog-backdrop" v-if="displayRestartPrompt" @click.self="displayRestartPrompt = false">
+        <div class="dialog-window adaptive">
+            <div class="dialog-header" style="margin-top: 20px;">{{ t('app.restartGame') }}</div>
+            <div class="dialog-content" style="text-align: center;">
+                {{ t('app.restartPrompt') }}
+                <div class="dialog-actions" style="margin-top: 20px;">
+                    <button class="dialog-button" @click="reloadPage">{{ t('common.restart') }}</button>
+                    <button class="dialog-button" @click="displayRestartPrompt = false">{{ t('common.later') }}</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="dialog-backdrop" id="dialog-error" style="display: none;">
+        <div class="dialog-window adaptive">
+            <div class="dialog-surface">
+                <div class="dialog-header text-warning">{{ t('app.errorTitle') }}</div>
+                <div class="dialog-content" style="text-align: center;">
+                    <div id="dialog-error-content"></div>
+
+                    <div style="margin-top: 5vh;">{{ t('app.errorRestartQuestion') }}</div>
+                    <div class="dialog-actions" style="margin-top: 20px;">
+                        <button class="dialog-button" @click="reloadPage">{{ t('common.restart') }}</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <PwaControls :visible="displayLoginDialog && !gameLoading" />
 </template>
 
-<script lang="ts">
-import { ref, onMounted } from 'vue'
-import { Renderer } from './babylon/renderer'
-import {loadBMPData} from "./utils/bmpLoader";
-import {WorldData} from "@/babylon/world/worldData";
+<script setup lang="ts">
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { Renderer } from './babylon/scene/renderer'
+import { GameManager } from '@/GameManager'
+import GmPanel from '@/vue/views/gm/GmPanel.vue'
+import NpcDetailsDialog from '@/vue/views/gm/NpcDetailsDialog.vue'
+import { GMManager } from '@/gm/GM'
+import TouchControllers from '@/vue/views/touchControllers.vue'
+import { WorldRenderer } from '@/babylon/world/worldRenderer'
+import { Connector } from '@/network/connector'
+import LoginDialog from '@/vue/views/loginDialog.vue'
+import SettingsDialog from '@/vue/views/settingsDialog.vue'
+import InventoryDialog from '@/vue/views/inventory/inventoryDialog.vue'
+import CharacterDialog from '@/vue/views/character/CharacterDialog.vue'
+import CraftingDialog from '@/vue/views/crafting/craftingDialog.vue'
+import NpcUseDialog from '@/vue/views/npc/NpcUseDialog.vue'
+import OnScreenMessages from '@/vue/views/onScreenMessages.vue'
+import PwaControls from '@/vue/views/PwaControls.vue'
+import { Controller } from '@/controlls/controller'
+import {
+    getHamburgerMenuSvg,
+    getStopActionSvg,
+    getTargetLockSvg,
+} from '@/vue/icons/icons'
 import { Settings } from '@/settings/settings'
-import { ViewportManager } from '@/utils/viewport'
+import { TargetingManager } from '@/gui/targettingManager'
+import { MyPlayer } from '@/data/myPlayer'
+import { AudioManager } from '@/babylon/audio/audioManager'
+import { useI18n } from '@/i18n'
 
-export default {
-  name: 'App',
+const canvas = ref<HTMLCanvasElement | null>(null)
+const miniMapCanvas = ref<HTMLCanvasElement | null>(null)
+const gmPanelVisible = GMManager.gmPanelVisible
+const myCharRef = MyPlayer.myCharRef
+const isDead = MyPlayer.isDead
+const deathDialogTime = ref(Date.now())
+const respawnDelayRemaining = computed(() => Math.max(0, Math.ceil((MyPlayer.respawnAvailableAt.value - deathDialogTime.value) / 1000)))
+const autoRespawnRemaining = computed(() => Math.max(0, Math.ceil((MyPlayer.autoRespawnAt.value - deathDialogTime.value) / 1000)))
+let deathDialogTimer: number | null = null
 
-  setup() {
-    const canvas = ref<HTMLCanvasElement | null>(null)
-    const miniMapCanvas = ref<HTMLCanvasElement | null>(null)
+const gameLoading = ref(true)
+const displayLoginDialog = ref(false)
+const loginRequestSentFlag = ref(false)
 
-    onMounted(async () => {
-        if (canvas.value) {
-            Settings.touchEnabled = ( 'ontouchstart' in window ) || ( navigator.maxTouchPoints > 0 ) || ( navigator.msMaxTouchPoints > 0 )
-            //Settings.shadows = !Settings.touchEnabled
-            Settings.debug = !Settings.touchEnabled
-            //Settings.closeView = true
-            //Settings.shadows = false
+const displaySettingsDialog = ref(false)
+const displayRestartPrompt = ref(false)
 
-            console.log(Settings.shadows)
+const displayInventoryDialog = ref(false)
+const displayCharacterDialog = ref(false)
+const displayCraftingDialog = ref(false)
+const displayNpcUseDialog = ref(false)
+const autoLoginTemporarilyDisabled = true
 
-            await loadWorldData()
-            Renderer.initialize(canvas.value)
-            ViewportManager.onResize()
+const touchControls = ref()
+const settingsDialog = ref()
+const loginDialog = ref()
+const inventoryDialog = ref()
+const characterDialog = ref()
+const craftingDialog = ref()
+const npcUseDialog = ref()
+const npcDetailsDialog = ref()
+const { t } = useI18n()
+
+watch(GMManager.npcDetailsDialogOpenRequested, (openRequested) => {
+    if (!openRequested) {
+        return
+    }
+    GMManager.npcDetailsDialogOpenRequested.value = false
+    npcDetailsDialog.value?.openDialog()
+})
+
+watch(isDead, (dead) => {
+    if (!dead) {
+        if (deathDialogTimer !== null) {
+            window.clearInterval(deathDialogTimer)
+            deathDialogTimer = null
         }
-    });
-
-    return {
-      canvas
+        return
     }
-  },
+    deathDialogTime.value = Date.now()
+    deathDialogTimer = window.setInterval(() => deathDialogTime.value = Date.now(), 250)
+    displaySettingsDialog.value = false
+    displayRestartPrompt.value = false
+    displayInventoryDialog.value = false
+    displayCharacterDialog.value = false
+    displayCraftingDialog.value = false
+    displayNpcUseDialog.value = false
+    gmPanelVisible.value = false
+    inventoryDialog.value?.forceClose?.()
+})
 
-  methods: {
-    requestFullscreen() {
-      Renderer.requestFullscreen()
-      document.getElementById("fullScreenBtn").style.display = "none"
+onMounted(async () => {
+    window.onerror = function (errorMsg, url, lineNumber) {
+        console.log(`Error: ${errorMsg} Script: ${url} Line: ${lineNumber}`)
     }
-  }
+
+    const wrapper = document.getElementById('appWrapper')
+    if (wrapper) wrapper.style.height = window.innerHeight + 'px'
+
+    window.addEventListener('resize', resizeEventHandler)
+    window.addEventListener('ui:open-inventory', onOpenInventoryHotkey)
+    window.addEventListener('ui:open-character', onOpenCharacterHotkey)
+    window.addEventListener('ui:open-crafting', onOpenCraftingMenu as EventListener)
+    window.addEventListener('ui:open-npc-use', onOpenNpcUseMenu as EventListener)
+    window.addEventListener('ui:inventory-updated', onInventoryUpdated as EventListener)
+    document.addEventListener('keydown', onKeyDown)
+    document.addEventListener('keyup', onKeyUp)
+    await nextTick()
+
+    if (document.getElementById('renderCanvas')) {
+        console.log('INIT GAME', Date.now())
+        await Connector.initialize()
+        await GameManager.prepareGame(document.getElementById('renderCanvas') as HTMLCanvasElement)
+        console.log('GAME INITIALIZED', Date.now())
+
+        gameLoading.value = false
+        displayLoginDialog.value = true
+
+        const loginForm = localStorage.getItem('DARKENLIGHT_LOGIN_FORM')
+        if (loginForm) {
+            const form = JSON.parse(loginForm)
+            if (form.autoLogin && !autoLoginTemporarilyDisabled) {
+                displayLoginDialog.value = false
+                Connector.sendLoginRequest(form.login, form.password)
+                loginRequestSent()
+                return
+            } else {
+                displayLoginDialog.value = true
+            }
+        } else {
+            displayLoginDialog.value = true
+        }
+    }
+})
+
+onUnmounted(() => {
+    if (deathDialogTimer !== null) window.clearInterval(deathDialogTimer)
+    window.removeEventListener('resize', resizeEventHandler)
+    window.removeEventListener('ui:open-inventory', onOpenInventoryHotkey)
+    window.removeEventListener('ui:open-character', onOpenCharacterHotkey)
+    window.removeEventListener('ui:open-crafting', onOpenCraftingMenu as EventListener)
+    window.removeEventListener('ui:open-npc-use', onOpenNpcUseMenu as EventListener)
+    window.removeEventListener('ui:inventory-updated', onInventoryUpdated as EventListener)
+    document.removeEventListener('keydown', onKeyDown)
+    document.removeEventListener('keyup', onKeyUp)
+})
+
+const onKeyDown = (event: KeyboardEvent) => {
+    if (event.key === 'F11' || (event.altKey && event.key === 'Enter')) {
+        event.preventDefault()
+        void Renderer.toggleFullscreen()
+        return
+    }
+    Controller.processKeydown(event)
 }
 
-async function loadWorldData() {
-  const mapData = await loadBMPData('./assets/map4.png') as number[][]
-  WorldData.setWorldMap(mapData)
+const onKeyUp = (event: KeyboardEvent) => {
+    Controller.processKeyup(event)
+}
+
+const loginRequestSent = () => {
+    loginRequestSentFlag.value = true
+    if (Settings.deviceType !== 'DESKTOP') {
+        requestFullscreen()
+    }
+    document.oncontextmenu = () => false
+    displayLoginDialog.value = false
+}
+
+const showSettingsDialog = () => {
+    if (isDead.value) {
+        return
+    }
+    AudioManager.playGuiButtonClick()
+    displaySettingsDialog.value = true
+}
+
+const showInventoryDialog = () => {
+    if (isDead.value) {
+        return
+    }
+    AudioManager.playGuiButtonClick()
+    displayInventoryDialog.value = true
+    nextTick(() => {
+        inventoryDialog.value?.openDialog()
+    })
+}
+
+const showCharacterDialog = () => {
+    if (isDead.value) {
+        return
+    }
+    AudioManager.playGuiButtonClick()
+    displayCharacterDialog.value = true
+    nextTick(() => {
+        characterDialog.value?.openDialog()
+    })
+}
+
+const onOpenCharacterHotkey = () => {
+    if (!loginRequestSentFlag.value || isDead.value) {
+        return
+    }
+
+    if (displayCharacterDialog.value) {
+        AudioManager.playGuiButtonClick()
+        displayCharacterDialog.value = false
+        return
+    }
+    showCharacterDialog()
+}
+
+const onOpenInventoryHotkey = () => {
+    if (!loginRequestSentFlag.value || isDead.value) {
+        return
+    }
+
+    if (displayInventoryDialog.value) {
+        AudioManager.playGuiButtonClick()
+        displayInventoryDialog.value = false
+        return
+    }
+    showInventoryDialog()
+}
+
+const onInventoryUpdated = (event: Event) => {
+    if (!displayInventoryDialog.value) {
+        return
+    }
+
+    const detail = (event as CustomEvent<{ reason?: string, changedItemIds?: number[] }>).detail
+    inventoryDialog.value?.refreshDialogFromInventoryUpdate?.(detail)
+}
+
+const onOpenCraftingMenu = (event: Event) => {
+    if (!loginRequestSentFlag.value || isDead.value) {
+        return
+    }
+
+    const detail = (event as CustomEvent).detail
+    if (!detail) {
+        return
+    }
+
+    displayCraftingDialog.value = true
+    nextTick(() => {
+        craftingDialog.value?.openDialog?.(detail)
+    })
+}
+
+const onOpenNpcUseMenu = (event: Event) => {
+    if (isDead.value) {
+        return
+    }
+    const detail = (event as CustomEvent).detail
+    if (!detail) {
+        return
+    }
+    displayNpcUseDialog.value = true
+    nextTick(() => {
+        npcUseDialog.value?.openDialog?.(detail)
+    })
+}
+
+const closeSettingsWithRestartPrompt = () => {
+    displaySettingsDialog.value = false
+    displayRestartPrompt.value = true
+}
+
+const touchControlsChanged = () => {
+    touchControls.value.updateFromSettings()
+}
+
+const deviceTypeChanged = () => {
+    Settings.deviceTypeChanged()
+    touchControls.value.updateFromSettings()
+}
+
+const toggleGmPanel = () => {
+    GMManager.toggleGmPanel()
+}
+
+const showDebug = () => {
+    Renderer.toggleDebug()
+}
+
+const toggleFullscreen = () => {
+    void Renderer.toggleFullscreen().catch((error) => console.error('Cannot toggle fullscreen:', error))
+}
+
+const reloadPage = () => {
+    window.location.reload()
+}
+
+const logout = () => {
+    displayLoginDialog.value = true
+    GameManager.stopGame()
+}
+
+const requestFullscreen = () => {
+    void Renderer.requestFullscreen().catch((error) => console.error('Cannot enter fullscreen:', error))
+}
+
+function resizeEventHandler() {
+    const wrapper = document.getElementById('appWrapper')
+    if (wrapper) wrapper.style.height = window.innerHeight + 'px'
+    if (Renderer.engine && GameManager.started) {
+        GameManager.onResize()
+        WorldRenderer.lastPos = null
+    }
 }
 </script>
-
-<style scoped>
-#app {
-  height: 100vh;
-  overflow: hidden;
-}
-
-.renderer {
-  width: 100%;
-  height: 100%;
-  position: relative;
-}
-
-#miniMapCanvas {
-    width: 100px;
-    height: 100px;
-    position: absolute;
-    top: 0px;
-    right: 0px;
-    background-color: green;
-    opacity: 0.65;
-    border-left: 2px ridge rosybrown;
-    border-bottom: 2px ridge rosybrown;
-}
-</style>
