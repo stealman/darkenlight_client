@@ -32,8 +32,29 @@
       "toRank": "na úroveň",
       "remainingTime": "zbývající čas:",
       "learnNovice": "Tuto dovednost zatím neovládáš",
+      "insufficientExperience": "Nedostatek zkušenosti",
       "highestLevelFor": "Nejvyšší možná úroveň pro",
       "maximum": "Maximum"
+    },
+    "details": {
+      "currentRank": "Aktuální rank",
+      "classMaximumRank": "Maximální rank povolání"
+    },
+    "bonuses": {
+      "skillBonus": "Bonus dovednosti",
+      "expertBonus": "Expert bonus",
+      "masterBonus": "Mistrovský bonus",
+      "grandmasterBonus": "Velmistrovský bonus",
+      "unknown": "Neznámý",
+      "weaponAttackOfType": "útok zbraní typu",
+      "weaponAttackPerRank": "(5% za úroveň)",
+      "weaponTypes": {
+        "swords": "Meč",
+        "axes": "Sekera",
+        "maces": "Palcát",
+        "polearms": "Tyčová zbraň",
+        "bows": "Luk"
+      }
     }
   }
 }

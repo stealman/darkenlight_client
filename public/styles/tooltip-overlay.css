@@ -56,6 +56,10 @@
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.65);
 }
 
+.ui-tooltip-title--character-name {
+    font-weight: 400;
+}
+
 .ui-tooltip-title-meta {
     font-size: 0.92rem;
     font-weight: 700;
@@ -63,6 +67,18 @@
     color: #f0ddb8;
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.65);
     white-space: nowrap;
+}
+
+.ui-tooltip-title-meta--fighter {
+    color: rgb(204, 123, 108);
+}
+
+.ui-tooltip-title-meta--adept {
+    color: rgb(164, 132, 193);
+}
+
+.ui-tooltip-title-meta--gm {
+    color: rgb(var(--ui-base));
 }
 
 .ui-tooltip-top-right {

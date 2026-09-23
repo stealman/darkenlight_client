@@ -6,6 +6,8 @@ export type TooltipOverlayRow = {
 export type TooltipOverlayContent = {
     title: string
     titleMeta?: string | null
+    titleClassName?: string | null
+    titleMetaClassName?: string | null
     topRightText?: string | null
     description?: string | null
     rows?: TooltipOverlayRow[]
@@ -232,8 +234,10 @@ export const TooltipOverlayManager = {
         this.rootEl.classList.toggle('variant-positive', content.variant === 'positive')
         this.rootEl.classList.toggle('variant-adverse', content.variant === 'adverse')
 
+        this.titleEl.className = `ui-tooltip-title${content.titleClassName ? ` ${content.titleClassName}` : ''}`
         this.titleEl.textContent = content.title ?? ''
         if (this.titleMetaEl) {
+            this.titleMetaEl.className = `ui-tooltip-title-meta${content.titleMetaClassName ? ` ${content.titleMetaClassName}` : ''}`
             this.titleMetaEl.textContent = content.titleMeta ?? ''
             this.titleMetaEl.style.display = content.titleMeta ? 'inline' : 'none'
         }

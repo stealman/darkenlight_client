@@ -32,8 +32,29 @@
       "toRank": "to",
       "remainingTime": "remaining time:",
       "learnNovice": "You do not know this skill yet",
+      "insufficientExperience": "Insufficient experience",
       "highestLevelFor": "Highest possible level for",
       "maximum": "Maximum"
+    },
+    "details": {
+      "currentRank": "Current rank",
+      "classMaximumRank": "Class maximum rank"
+    },
+    "bonuses": {
+      "skillBonus": "Skill bonus",
+      "expertBonus": "Expert bonus",
+      "masterBonus": "Master bonus",
+      "grandmasterBonus": "Grandmaster bonus",
+      "unknown": "Unknown",
+      "weaponAttackOfType": "weapon attack of type",
+      "weaponAttackPerRank": "(5% per rank)",
+      "weaponTypes": {
+        "swords": "Sword",
+        "axes": "Axe",
+        "maces": "Mace",
+        "polearms": "Polearm",
+        "bows": "Bow"
+      }
     }
   }
 }

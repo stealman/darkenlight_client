@@ -10,7 +10,10 @@
                 v-for="tab in tabs"
                 :key="tab.id"
                 class="tab-item"
-                :class="tab.id === activeTabId ? 'active' : ''"
+                :class="{
+                    active: tab.id === activeTabId,
+                    'tab-item--training-available': tab.id === 'skills' && hasAvailableSkillTraining,
+                }"
                 @click="selectTab(tab.id)"
             >
                 <label class="noselect">{{ tab.name }}</label>
@@ -35,9 +38,12 @@ import CharacterSkillsTab from '@/vue/views/character/CharacterSkillsTab.vue'
 import CharacterChatTab from '@/vue/views/character/CharacterChatTab.vue'
 import { useI18n } from '@/i18n'
 import { AudioManager } from '@/babylon/audio/audioManager'
+import { MyPlayer } from '@/data/myPlayer'
+import type { PhysicalWeaponSkillKey } from '@/network/messageIfs'
 
 const emit = defineEmits(['close'])
 const { t } = useI18n()
+const myChar = MyPlayer.myCharRef
 
 const tabs = computed(() => [
     { id: 'character', name: t('character.tabs.character') },
@@ -48,6 +54,27 @@ const tabs = computed(() => [
 
 const activeTabId = ref('character')
 const characterActionsTabRef = ref()
+
+const hasAvailableSkillTraining = computed(() => {
+    const skillSet = myChar.value?.skillSet
+    const skillCaps = myChar.value?.skillCaps
+
+    if (!skillSet || !skillCaps || skillSet.activeTrainingSkill) {
+        return false
+    }
+
+    return Object.keys(skillCaps).some((key) => {
+        const skill = skillSet[key as PhysicalWeaponSkillKey]
+
+        if (!skill || skill.nextExperienceRequired == null || skill.nextTrainingRequired == null) {
+            return false
+        }
+
+        const timeTrainingIsComplete = skill.trainingPoints >= skill.nextTrainingRequired
+        const practicalExperienceIsMissing = skill.experience < skill.nextExperienceRequired
+        return !timeTrainingIsComplete || !practicalExperienceIsMissing
+    })
+})
 
 const selectTab = (tabId: string) => {
     if (activeTabId.value === tabId) {
@@ -86,6 +113,28 @@ defineExpose({
     overflow: visible;
     padding: 0 4px 4px;
     box-sizing: border-box;
+}
+
+.tab-item--training-available label {
+    animation: character-skill-training-available-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes character-skill-training-available-pulse {
+    0%, 100% {
+        color: inherit;
+        text-shadow: inherit;
+    }
+
+    50% {
+        color: rgb(151, 71, 66);
+        text-shadow: 0 0 4px rgba(151, 71, 66, 0.45);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tab-item--training-available label {
+        animation: none;
+    }
 }
 
 </style>

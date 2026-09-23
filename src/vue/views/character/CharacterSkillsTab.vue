@@ -18,11 +18,24 @@
                     :key="skill.key"
                     class="skill-row"
                     :class="{
-                        'skill-row--untrained': !skill.progress,
-                        'skill-row--capped': skill.progress && skill.nextExperienceRequired == null,
+                        'skill-row--expanded': expandedSkillKey === skill.key,
                         'skill-row--active-training': skill.activeTraining,
                     }"
                 >
+                    <div
+                        class="skill-row-summary"
+                        :class="{
+                            'skill-row--untrained': !skill.progress,
+                            'skill-row--capped': skill.progress && skill.nextExperienceRequired == null,
+                        }"
+                        role="button"
+                        tabindex="0"
+                        :aria-expanded="expandedSkillKey === skill.key"
+                        :aria-controls="skillDetailsId(skill.key)"
+                        @click="toggleSkillDetails(skill.key)"
+                        @keydown.enter="toggleSkillDetails(skill.key)"
+                        @keydown.space.prevent="toggleSkillDetails(skill.key)"
+                    >
                     <span class="skill-name">{{ skill.name }}</span>
                     <template v-if="skill.nextExperienceRequired != null">
                         <span class="skill-progress-rank skill-progress-rank--current">{{ getSkillRankName(skill.rank) }}</span>
@@ -39,11 +52,15 @@
                             </div>
                         </div>
                         <span class="skill-progress-rank skill-progress-rank--next">{{ getSkillRankName(skill.rank + 1) }}</span>
+                        <span v-if="skill.needsExperience" class="skill-experience-shortage">
+                            {{ insufficientExperienceLabel }}
+                        </span>
                         <button
-                            v-if="!skill.activeTraining"
+                            v-else-if="!skill.activeTraining"
                             type="button"
                             class="skill-training-button dialog-button"
-                            @click="startTraining(skill.key)"
+                            @click.stop="startTraining(skill.key)"
+                            @keydown.stop
                         >
                             {{ t('skills.progress.train') }}
                         </button>
@@ -67,6 +84,57 @@
                             {{ t('skills.progress.learnNovice') }}
                         </span>
                     </template>
+                    </div>
+                    <div
+                        class="skill-details-wrapper"
+                        :class="{ 'skill-details-wrapper--expanded': expandedSkillKey === skill.key }"
+                        :aria-hidden="expandedSkillKey !== skill.key"
+                    >
+                        <div class="skill-details-clip">
+                            <div :id="skillDetailsId(skill.key)" class="skill-details">
+                                <div class="skill-detail-rank">
+                                    <span class="skill-detail-label">{{ t('skills.details.currentRank') }}</span>
+                                    <strong class="skill-detail-value">{{ getSkillRankName(skill.rank) }}</strong>
+                                </div>
+                                <div class="skill-detail-rank">
+                                    <span class="skill-detail-label">{{ t('skills.details.classMaximumRank') }}</span>
+                                    <strong class="skill-detail-value">{{ getSkillRankName(skill.cap) }}</strong>
+                                </div>
+                                <div class="skill-bonus-list">
+                                    <div class="skill-bonus-row">
+                                        <span
+                                            class="skill-bonus-label"
+                                            :class="{ 'skill-bonus-label--active': skill.skillBonusUnlocked }"
+                                        >{{ t('skills.bonuses.skillBonus') }}</span>
+                                        <span class="skill-bonus-value">
+                                            <strong class="skill-bonus-value-emphasis">{{ skill.skillBonus.percentage }}</strong><span>{{ t('skills.bonuses.weaponAttackOfType') }}</span><strong class="skill-bonus-value-emphasis">{{ skill.skillBonus.weaponType }}</strong><span>{{ t('skills.bonuses.weaponAttackPerRank') }}</span>
+                                        </span>
+                                    </div>
+                                    <div class="skill-bonus-row">
+                                        <span
+                                            class="skill-bonus-label skill-bonus-label--unknown"
+                                            :class="{ 'skill-bonus-label--active': skill.expertBonusUnlocked }"
+                                        >{{ t('skills.bonuses.expertBonus') }}</span>
+                                        <strong class="skill-bonus-value skill-bonus-value--unknown">{{ unknownBonusLabel }}</strong>
+                                    </div>
+                                    <div class="skill-bonus-row">
+                                        <span
+                                            class="skill-bonus-label skill-bonus-label--unknown"
+                                            :class="{ 'skill-bonus-label--active': skill.masterBonusUnlocked }"
+                                        >{{ t('skills.bonuses.masterBonus') }}</span>
+                                        <strong class="skill-bonus-value skill-bonus-value--unknown">{{ unknownBonusLabel }}</strong>
+                                    </div>
+                                    <div class="skill-bonus-row">
+                                        <span
+                                            class="skill-bonus-label skill-bonus-label--unknown"
+                                            :class="{ 'skill-bonus-label--active': skill.grandmasterBonusUnlocked }"
+                                        >{{ t('skills.bonuses.grandmasterBonus') }}</span>
+                                        <strong class="skill-bonus-value skill-bonus-value--unknown">{{ unknownBonusLabel }}</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -74,7 +142,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { MyPlayer } from '@/data/myPlayer'
 import { useI18n } from '@/i18n'
 import type { PhysicalWeaponSkillKey } from '@/network/messageIfs'
@@ -82,8 +150,9 @@ import { Connector } from '@/network/connector'
 import { StartSkillTrainingMsg } from '@/network/messages'
 import { AudioManager } from '@/babylon/audio/audioManager'
 
-const { t } = useI18n()
+const { locale, t } = useI18n()
 const myChar = MyPlayer.myCharRef
+const expandedSkillKey = ref<PhysicalWeaponSkillKey | null>(null)
 
 const combatSkillDefinitions: Array<{ key: PhysicalWeaponSkillKey, translationKey: string }> = [
     { key: 'swords', translationKey: 'skills.weapons.swords' },
@@ -107,34 +176,77 @@ const skillRankTranslationKeys: Partial<Record<number, string>> = {
     10: 'skills.ranks.grandmaster',
 }
 
+const weaponSkillBonusTypeTranslationKeys: Record<PhysicalWeaponSkillKey, string> = {
+    swords: 'skills.bonuses.weaponTypes.swords',
+    axes: 'skills.bonuses.weaponTypes.axes',
+    maces: 'skills.bonuses.weaponTypes.maces',
+    polearms: 'skills.bonuses.weaponTypes.polearms',
+    bows: 'skills.bonuses.weaponTypes.bows',
+}
+
+const getSkillBonusValue = (skill: PhysicalWeaponSkillKey, rank: number) => ({
+    percentage: `+${rank * 5}%`,
+    weaponType: t(weaponSkillBonusTypeTranslationKeys[skill]),
+})
+
 const combatSkills = computed(() => {
     const skillSet = myChar.value?.skillSet
     const skillCaps = myChar.value?.skillCaps ?? {}
 
-    return combatSkillDefinitions.filter((skill) => skillCaps[skill.key] != null).map((skill) => ({
-        ...skill,
-        progress: skillSet?.[skill.key],
-        key: skill.key,
-        name: t(skill.translationKey),
-        rank: skillSet?.[skill.key]?.rank ?? 0,
-        nextExperienceRequired: skillSet?.[skill.key]?.nextExperienceRequired,
-        nextTrainingRequired: skillSet?.[skill.key]?.nextTrainingRequired,
-        cap: skillCaps[skill.key] ?? 0,
-        activeTraining: skillSet?.activeTrainingSkill === skill.key,
-        experiencePercent: skillSet?.[skill.key]?.nextExperienceRequired
-            ? Math.min(100, skillSet[skill.key]!.experience / skillSet[skill.key]!.nextExperienceRequired! * 100)
-            : 0,
-        trainingPercent: skillSet?.[skill.key]?.nextTrainingRequired
-            ? Math.min(100, skillSet[skill.key]!.trainingPoints / skillSet[skill.key]!.nextTrainingRequired! * 100)
-            : 0,
-        trainingRemainingSeconds: skillSet?.[skill.key]?.nextTrainingRequired
-            ? Math.max(0, Math.ceil((skillSet[skill.key]!.nextTrainingRequired! - skillSet[skill.key]!.trainingPoints) /
-                (skillSet.trainingPointsPerSecond ?? 1)))
-            : 0,
-    }))
+    return combatSkillDefinitions.filter((skill) => skillCaps[skill.key] != null).map((skill) => {
+        const progress = skillSet?.[skill.key]
+        const rank = progress?.rank ?? 0
+
+        return {
+            ...skill,
+            progress,
+            key: skill.key,
+            name: t(skill.translationKey),
+            rank,
+            skillBonus: getSkillBonusValue(skill.key, rank),
+            skillBonusUnlocked: rank >= 1,
+            expertBonusUnlocked: rank >= 4,
+            masterBonusUnlocked: rank >= 7,
+            grandmasterBonusUnlocked: rank >= 10,
+            nextExperienceRequired: progress?.nextExperienceRequired,
+            nextTrainingRequired: progress?.nextTrainingRequired,
+            cap: skillCaps[skill.key] ?? 0,
+            activeTraining: skillSet?.activeTrainingSkill === skill.key,
+            needsExperience: progress?.nextTrainingRequired != null &&
+                progress?.nextExperienceRequired != null &&
+                progress.trainingPoints >= progress.nextTrainingRequired &&
+                progress.experience < progress.nextExperienceRequired,
+            experiencePercent: progress?.nextExperienceRequired
+                ? Math.min(100, progress.experience / progress.nextExperienceRequired * 100)
+                : 0,
+            trainingPercent: progress?.nextTrainingRequired
+                ? Math.min(100, progress.trainingPoints / progress.nextTrainingRequired * 100)
+                : 0,
+            trainingRemainingSeconds: progress?.nextTrainingRequired
+                ? Math.max(0, Math.ceil((progress.nextTrainingRequired - progress.trainingPoints) /
+                    (skillSet.trainingPointsPerSecond ?? 1)))
+                : 0,
+        }
+    })
 })
 
 const activeTrainingSkill = computed(() => combatSkills.value.find((skill) => skill.activeTraining))
+const skillDetailsId = (skill: PhysicalWeaponSkillKey) => `skill-details-${skill}`
+const toggleSkillDetails = (skill: PhysicalWeaponSkillKey) => {
+    expandedSkillKey.value = expandedSkillKey.value === skill ? null : skill
+}
+
+const insufficientExperienceLabel = computed(() => {
+    const translationKey = 'skills.progress.insufficientExperience'
+    const translatedLabel = t(translationKey)
+
+    if (translatedLabel !== translationKey) {
+        return translatedLabel
+    }
+
+    return locale.value === 'en' ? 'Insufficient experience' : 'Nedostatek zkušenosti'
+})
+const unknownBonusLabel = computed(() => t('skills.bonuses.unknown'))
 const gameClassKey = computed(() => myChar.value?.gameClass?.key.toLowerCase() ?? '')
 const gameClassName = computed(() => {
     const gameClass = myChar.value?.gameClass
@@ -219,33 +331,59 @@ const formatTrainingTime = (seconds: number) => {
 }
 
 .skill-row {
+    border-bottom: 1px solid rgba(var(--ui-darker), 0.45);
+    transition: box-shadow 220ms ease;
+}
+
+.skill-row-summary {
     display: grid;
-    grid-template-columns: minmax(0, 22%) minmax(0, 112px) minmax(72px, min(150px, 20%)) minmax(0, 112px) max-content;
+    grid-template-columns: minmax(0, 22%) minmax(0, 112px) minmax(72px, min(150px, 20%)) minmax(0, 112px) max-content minmax(0, 1fr);
     align-items: center;
     column-gap: 8px;
     min-height: 35px;
     padding: 5px 9px;
-    border-bottom: 1px solid rgba(var(--ui-darker), 0.45);
     box-sizing: border-box;
+    cursor: url('/images/cursor-pointer.png'), pointer;
 }
 
 .skill-row:last-child {
     border-bottom: 0;
 }
 
+.skill-row--expanded {
+    --skill-row-expanded-left-accent: rgba(108, 155, 193, 0.78);
+    box-shadow:
+        inset 3px 0 0 var(--skill-row-expanded-left-accent),
+        inset 0 0 0 1px rgba(108, 155, 193, 0.24),
+        inset 0 0 14px rgba(108, 155, 193, 0.16);
+}
+
+.skill-row--expanded .skill-name {
+    color: rgb(108, 155, 193);
+}
+
 .skill-row--untrained {
     opacity: 0.55;
 }
 
+.skill-row--untrained .skill-name {
+    font-weight: 400;
+}
+
 .skill-row--active-training {
     animation: skill-training-glow 2.2s ease-in-out infinite;
-    box-shadow: inset 0 0 0 1px rgba(108, 155, 193, 0.42), inset 0 0 20px rgba(108, 155, 193, 0.35);
+    box-shadow:
+        inset 3px 0 0 var(--skill-row-expanded-left-accent, transparent),
+        inset 0 0 0 1px rgba(108, 155, 193, 0.42),
+        inset 0 0 20px rgba(108, 155, 193, 0.35);
 }
 
 .skill-name {
     flex: 0 1 22%;
+    justify-self: start;
     min-width: 0;
     overflow: hidden;
+    text-align: left;
     text-overflow: ellipsis;
     font-weight: 700;
     white-space: nowrap;
@@ -335,6 +473,16 @@ const formatTrainingTime = (seconds: number) => {
     color: rgb(108, 155, 193);
 }
 
+.skill-experience-shortage {
+    grid-column: 5 / -1;
+    color: rgb(var(--ui-danger));
+    font-size: 0.85em;
+    font-weight: 700;
+    line-height: 1.1;
+    text-align: right;
+    white-space: normal;
+}
+
 .skill-progress-rank--maximum {
     color: rgb(108, 155, 193);
 }
@@ -346,6 +494,7 @@ const formatTrainingTime = (seconds: number) => {
     color: rgba(var(--ui-base), 0.8);
     font-weight: 400;
     text-overflow: ellipsis;
+    text-align: right;
     white-space: nowrap;
 }
 
@@ -389,9 +538,114 @@ const formatTrainingTime = (seconds: number) => {
     font-size: 1em;
 }
 
+.skill-details-wrapper {
+    display: grid;
+    grid-template-rows: 0fr;
+    overflow: hidden;
+    transition: grid-template-rows 280ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.skill-details-wrapper--expanded {
+    grid-template-rows: 1fr;
+}
+
+.skill-details-clip {
+    min-height: 0;
+    overflow: hidden;
+}
+
+.skill-details {
+    display: grid;
+    grid-template-columns: 180px minmax(0, 1fr);
+    column-gap: 24px;
+    row-gap: 4px;
+    margin: 7px 9px 1px;
+    min-height: 0;
+    opacity: 0;
+    padding: 0 0 4px;
+    transform: translateY(-4px);
+    transition: opacity 150ms ease, transform 280ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.skill-details-wrapper--expanded .skill-details {
+    opacity: 1;
+    transform: translateY(0);
+    transition-delay: 70ms, 0s;
+}
+
+.skill-detail-rank {
+    display: flex;
+    align-items: baseline;
+    gap: 0.4em;
+}
+
+.skill-detail-label {
+    color: rgba(var(--ui-base), 0.68);
+}
+
+.skill-detail-value {
+    color: rgb(var(--ui-base));
+    font-weight: 700;
+}
+
+.skill-bonus-list {
+    display: contents;
+}
+
+.skill-bonus-row {
+    display: contents;
+}
+
+.skill-bonus-row:first-child .skill-bonus-label,
+.skill-bonus-row:first-child .skill-bonus-value {
+    margin-top: 4px;
+}
+
+.skill-bonus-label {
+    grid-column: 1;
+    color: rgba(var(--ui-base), 0.68);
+    text-align: left;
+}
+
+.skill-bonus-label--active,
+.skill-bonus-value-emphasis {
+    color: rgb(148, 194, 152);
+}
+
+.skill-bonus-value {
+    grid-column: 2;
+    color: rgb(var(--ui-base));
+    font-weight: 400;
+    text-align: left;
+}
+
+.skill-bonus-value-emphasis {
+    display: inline-block;
+    margin-inline: 0.3em;
+    font-weight: 700;
+}
+
+.skill-bonus-value-emphasis:first-child {
+    margin-left: 0;
+}
+
+.skill-bonus-value--unknown {
+    color: rgba(var(--ui-base), 0.65);
+    font-size: 1em;
+    font-weight: 400;
+}
+
+.skill-bonus-label--unknown,
+.skill-bonus-value--unknown {
+    opacity: 0.55;
+}
+
 @keyframes skill-training-glow {
     50% {
-        box-shadow: inset 0 0 0 1px rgba(108, 155, 193, 0.68), inset 0 0 28px rgba(108, 155, 193, 0.56);
+        box-shadow:
+            inset 3px 0 0 var(--skill-row-expanded-left-accent, transparent),
+            inset 0 0 0 1px rgba(108, 155, 193, 0.68),
+            inset 0 0 28px rgba(108, 155, 193, 0.56);
     }
 }
 
@@ -400,8 +654,8 @@ const formatTrainingTime = (seconds: number) => {
         font-size: 0.88em;
     }
 
-    .skill-row {
-        grid-template-columns: minmax(0, 20%) minmax(0, 1fr) minmax(64px, 20%) minmax(0, 1fr) 76px;
+    .skill-row-summary {
+        grid-template-columns: minmax(0, 20%) minmax(0, 1fr) minmax(64px, 20%) minmax(0, 1fr) 76px minmax(0, 1fr);
         column-gap: 4px;
     }
 
@@ -418,8 +672,8 @@ const formatTrainingTime = (seconds: number) => {
 }
 
 @media (max-width: 460px) {
-    .skill-row {
-        grid-template-columns: minmax(0, 20%) minmax(0, 1fr) minmax(56px, 20%) minmax(0, 1fr) 76px;
+    .skill-row-summary {
+        grid-template-columns: minmax(0, 20%) minmax(0, 1fr) minmax(56px, 20%) minmax(0, 1fr) 76px minmax(0, 1fr);
         column-gap: 4px;
         padding-right: 7px;
         padding-left: 7px;
@@ -440,6 +694,20 @@ const formatTrainingTime = (seconds: number) => {
 
     .skill-training-time {
         font-size: 0.72em;
+    }
+
+    .skill-details {
+        grid-template-columns: minmax(140px, 44%) minmax(0, 1fr);
+        column-gap: 12px;
+        row-gap: 4px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .skill-row,
+    .skill-details-wrapper,
+    .skill-details {
+        transition: none;
     }
 }
 </style>

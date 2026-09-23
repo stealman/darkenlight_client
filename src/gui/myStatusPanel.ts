@@ -279,6 +279,10 @@ export const MyStatusPanel = {
     },
     buildMyStatusTooltipContent(): TooltipOverlayContent {
         const myChar = MyPlayer.myChar
+        const gameClass = myChar?.gameClass
+        const gameClassKey = gameClass?.key.toLowerCase() ?? ''
+        const classLocalizationKey = gameClassKey ? `classes.${gameClassKey}` : ''
+        const localizedClassName = classLocalizationKey ? t(classLocalizationKey) : ''
         const rows = [
             {
                 label: t('common.health'),
@@ -299,7 +303,11 @@ export const MyStatusPanel = {
 
         return {
             title: myChar?.name ?? '',
-            titleMeta: myChar?.gameClass?.name ? `(${myChar.gameClass.name})` : null,
+            titleMeta: gameClass ? (localizedClassName === classLocalizationKey ? gameClass.name : localizedClassName) : null,
+            titleClassName: 'ui-tooltip-title--character-name',
+            titleMetaClassName: gameClassKey
+                ? `ui-tooltip-title-meta--character-class ui-tooltip-title-meta--${gameClassKey}`
+                : null,
             rows,
         }
     },
