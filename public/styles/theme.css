@@ -204,6 +204,7 @@
 .inventory-content-shell,
 .inventory-grid-wrapper,
 .action-slots-list,
+.character-skills-tab,
 .action-selection-dialog-content,
 .crafting-recipes-section {
     scrollbar-width: thin;
@@ -214,6 +215,7 @@
 .inventory-content-shell::-webkit-scrollbar,
 .inventory-grid-wrapper::-webkit-scrollbar,
 .action-slots-list::-webkit-scrollbar,
+.character-skills-tab::-webkit-scrollbar,
 .action-selection-dialog-content::-webkit-scrollbar,
 .crafting-recipes-section::-webkit-scrollbar {
     width: 8px;
@@ -223,6 +225,7 @@
 .inventory-content-shell::-webkit-scrollbar-track,
 .inventory-grid-wrapper::-webkit-scrollbar-track,
 .action-slots-list::-webkit-scrollbar-track,
+.character-skills-tab::-webkit-scrollbar-track,
 .action-selection-dialog-content::-webkit-scrollbar-track,
 .crafting-recipes-section::-webkit-scrollbar-track {
     background: rgb(var(--ui-darkest));
@@ -233,6 +236,7 @@
 .inventory-content-shell::-webkit-scrollbar-thumb,
 .inventory-grid-wrapper::-webkit-scrollbar-thumb,
 .action-slots-list::-webkit-scrollbar-thumb,
+.character-skills-tab::-webkit-scrollbar-thumb,
 .action-selection-dialog-content::-webkit-scrollbar-thumb,
 .crafting-recipes-section::-webkit-scrollbar-thumb {
     background-color: rgb(var(--ui-dark));
@@ -247,6 +251,7 @@
 .inventory-content-shell::-webkit-scrollbar-thumb:hover,
 .inventory-grid-wrapper::-webkit-scrollbar-thumb:hover,
 .action-slots-list::-webkit-scrollbar-thumb:hover,
+.character-skills-tab::-webkit-scrollbar-thumb:hover,
 .action-selection-dialog-content::-webkit-scrollbar-thumb:hover,
 .crafting-recipes-section::-webkit-scrollbar-thumb:hover {
     background-color: rgb(var(--ui-darker));

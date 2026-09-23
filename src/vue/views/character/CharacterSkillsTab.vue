@@ -290,6 +290,10 @@ const formatTrainingTime = (seconds: number) => {
 }
 
 .character-skills-tab {
+    height: 100%;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
     padding: 4px 8px 8px;
     box-sizing: border-box;
     color: rgb(var(--ui-base));
