@@ -104,6 +104,11 @@
     "defense": "Obrana",
     "interference": "Interference"
   },
+  "classes": {
+    "gm": "GM",
+    "fighter": "Bojovník",
+    "adept": "Učenec"
+  },
   "actions": {
     "noneTitle": "Nevybráno",
     "noneDescription": "Na tomto tlačítku nebude přiřazena žádná akce.",

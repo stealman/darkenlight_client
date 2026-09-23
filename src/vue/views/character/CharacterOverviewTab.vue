@@ -7,7 +7,13 @@
                     <span class="character-overview-resource-value">{{ healthValue }}</span>
                 </div>
                 <div class="character-overview-name">
-                    {{ characterTitle }}
+                    <span>{{ characterName }}</span>
+                    <span
+                        v-if="gameClassName"
+                        :class="['character-overview-class-name', `character-overview-class-name--${gameClassKey}`]"
+                    >
+                        {{ gameClassName }}
+                    </span>
                 </div>
                 <div class="character-overview-resource character-overview-resource--mana">
                     <span class="character-overview-resource-label">MP</span>
@@ -48,11 +54,18 @@ const { t } = useI18n()
 const myChar = MyPlayer.myCharRef
 const equipmentVersion = ref(0)
 
-const characterTitle = computed(() => {
-    const name = myChar.value?.name ?? ''
-    const gameClassName = myChar.value?.gameClass?.name ?? ''
+const characterName = computed(() => myChar.value?.name ?? '')
+const gameClassKey = computed(() => myChar.value?.gameClass?.key.toLowerCase() ?? '')
 
-    return gameClassName ? `${name} (${gameClassName})` : name
+const gameClassName = computed(() => {
+    const gameClass = myChar.value?.gameClass
+    if (!gameClass) {
+        return ''
+    }
+
+    const localizationKey = `classes.${gameClass.key.toLowerCase()}`
+    const localizedName = t(localizationKey)
+    return localizedName === localizationKey ? gameClass.name : localizedName
 })
 
 const healthValue = computed(() => {
@@ -167,6 +180,27 @@ const attributes = computed(() => [
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.character-overview-name > span:first-child {
+    font-weight: 400;
+}
+
+.character-overview-class-name {
+    margin-left: 0.4em;
+    font-weight: 700;
+}
+
+.character-overview-class-name--fighter {
+    color: rgb(204, 123, 108);
+}
+
+.character-overview-class-name--adept {
+    color: rgb(164, 132, 193);
+}
+
+.character-overview-class-name--gm {
+    color: rgb(var(--ui-base));
 }
 
 .character-overview-title-row {

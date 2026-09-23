@@ -84,7 +84,7 @@ defineExpose({
     aspect-ratio: 16 / 10;
     max-height: min(calc(650px - 48px), calc(85vh - 48px));
     overflow: visible;
-    padding: 8px 4px 4px;
+    padding: 0 4px 4px;
     box-sizing: border-box;
 }
 

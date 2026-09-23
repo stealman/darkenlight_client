@@ -32,6 +32,7 @@
       "toRank": "to",
       "remainingTime": "remaining time:",
       "learnNovice": "You do not know this skill yet",
+      "highestLevelFor": "Highest possible level for",
       "maximum": "Maximum"
     }
   }

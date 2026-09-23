@@ -51,9 +51,20 @@
                             {{ formatTrainingTime(skill.trainingRemainingSeconds) }}
                         </span>
                     </template>
+                    <template v-else-if="skill.progress">
+                        <span class="skill-progress-rank skill-progress-rank--current skill-progress-rank--maximum">
+                            {{ getSkillRankName(skill.rank) }}
+                        </span>
+                        <span class="skill-maximum-state">
+                            {{ t('skills.progress.highestLevelFor') }}
+                            <span :class="['skill-maximum-state-class', `skill-maximum-state-class--${gameClassKey}`]">
+                                {{ gameClassName }}
+                            </span>
+                        </span>
+                    </template>
                     <template v-else>
                         <span class="skill-progress-state">
-                            {{ skill.progress ? t('skills.progress.maximum') : t('skills.progress.learnNovice') }}
+                            {{ t('skills.progress.learnNovice') }}
                         </span>
                     </template>
                 </div>
@@ -124,6 +135,17 @@ const combatSkills = computed(() => {
 })
 
 const activeTrainingSkill = computed(() => combatSkills.value.find((skill) => skill.activeTraining))
+const gameClassKey = computed(() => myChar.value?.gameClass?.key.toLowerCase() ?? '')
+const gameClassName = computed(() => {
+    const gameClass = myChar.value?.gameClass
+    if (!gameClass) {
+        return ''
+    }
+
+    const localizationKey = `classes.${gameClass.key.toLowerCase()}`
+    const localizedName = t(localizationKey)
+    return localizedName === localizationKey ? gameClass.name : localizedName
+})
 
 const getSkillRankName = (rank: number) => {
     const translationKey = skillRankTranslationKeys[rank]
@@ -171,7 +193,7 @@ const formatTrainingTime = (seconds: number) => {
 }
 
 .active-training-summary-accent {
-    margin: 0 0.25em;
+    margin: 0 0.5em;
     color: rgb(108, 155, 193);
     font-weight: 700;
     font-variant-numeric: tabular-nums;
@@ -313,6 +335,37 @@ const formatTrainingTime = (seconds: number) => {
     color: rgb(108, 155, 193);
 }
 
+.skill-progress-rank--maximum {
+    color: rgb(108, 155, 193);
+}
+
+.skill-maximum-state {
+    grid-column: 3 / -1;
+    min-width: 0;
+    overflow: hidden;
+    color: rgba(var(--ui-base), 0.8);
+    font-weight: 400;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.skill-maximum-state-class {
+    margin-left: 0.25em;
+    font-weight: 700;
+}
+
+.skill-maximum-state-class--fighter {
+    color: rgb(204, 123, 108);
+}
+
+.skill-maximum-state-class--adept {
+    color: rgb(164, 132, 193);
+}
+
+.skill-maximum-state-class--gm {
+    color: rgb(var(--ui-base));
+}
+
 .skill-training-button {
     padding: 2px 7px;
     border-radius: 0;
@@ -329,10 +382,6 @@ const formatTrainingTime = (seconds: number) => {
     font-size: 1em;
     font-weight: inherit;
     font-variant-numeric: tabular-nums;
-}
-
-.skill-row--capped .skill-progress-state {
-    color: rgba(var(--ui-base), 0.8);
 }
 
 .skill-row--untrained .skill-progress-state {

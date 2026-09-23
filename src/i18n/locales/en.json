@@ -104,6 +104,11 @@
     "defense": "Defense",
     "interference": "Interference"
   },
+  "classes": {
+    "gm": "GM",
+    "fighter": "Fighter",
+    "adept": "Adept"
+  },
   "actions": {
     "noneTitle": "Unassigned",
     "noneDescription": "No action will be assigned to this button.",
