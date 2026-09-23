@@ -2,7 +2,7 @@
 <div class="inventory-dialog-root">
     <GameDialog
         ref="dialogRef"
-        backdrop-id="setting-dialog-backdrop"
+        backdrop-id="inventory-dialog-backdrop"
         backdrop-class="inventory-dialog-backdrop"
         window-class="adaptive inventory-dialog-window"
         @close="closeDialog"

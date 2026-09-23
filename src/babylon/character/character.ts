@@ -28,6 +28,7 @@ import {
     CharacterRestingMessage,
     HealingMessage,
     HealingResultMessage,
+    SkillCapsTO,
     SkillSetTO,
 } from '@/network/messageIfs'
 import { TargetingManager } from '@/gui/targettingManager'
@@ -79,13 +80,8 @@ class Character implements Attackable, EffectTarget {
     private lookAngle: number | null = null
 
     equipSet: Map<string, Item> = new Map<string, Item>()
-    skillSet: SkillSetTO = {
-        swords: 0,
-        axes: 0,
-        maces: 0,
-        polearms: 0,
-        bows: 0,
-    }
+    skillSet: SkillSetTO = {}
+    skillCaps: SkillCapsTO = {}
 
     attackAnimationTime: number = 1000 // Updated before each attack from server
 
@@ -146,6 +142,7 @@ class Character implements Attackable, EffectTarget {
 
         if (myChar && data.skillSet) {
             this.skillSet = data.skillSet
+            this.skillCaps = data.skillCaps || {}
         }
 
         this.initializeEquip(data.equipSet)

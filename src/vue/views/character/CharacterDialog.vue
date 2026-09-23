@@ -11,7 +11,7 @@
                 :key="tab.id"
                 class="tab-item"
                 :class="tab.id === activeTabId ? 'active' : ''"
-                @click="activeTabId = tab.id"
+                @click="selectTab(tab.id)"
             >
                 <label class="noselect">{{ tab.name }}</label>
             </div>
@@ -34,6 +34,7 @@ import CharacterActionsTab from '@/vue/views/character/CharacterActionsTab.vue'
 import CharacterSkillsTab from '@/vue/views/character/CharacterSkillsTab.vue'
 import CharacterChatTab from '@/vue/views/character/CharacterChatTab.vue'
 import { useI18n } from '@/i18n'
+import { AudioManager } from '@/babylon/audio/audioManager'
 
 const emit = defineEmits(['close'])
 const { t } = useI18n()
@@ -47,6 +48,15 @@ const tabs = computed(() => [
 
 const activeTabId = ref('character')
 const characterActionsTabRef = ref()
+
+const selectTab = (tabId: string) => {
+    if (activeTabId.value === tabId) {
+        return
+    }
+
+    AudioManager.playGuiButtonClick()
+    activeTabId.value = tabId
+}
 
 const openDialog = () => {
     characterActionsTabRef.value?.closeActionSelectionDialog?.()

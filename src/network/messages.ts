@@ -275,6 +275,15 @@ export class GMCreateItemMsg implements Message {
     }
 }
 
+export class StartSkillTrainingMsg implements Message {
+    t: number = 32
+    d: { skill: string }
+
+    constructor(skill: string) {
+        this.d = { skill }
+    }
+}
+
 export class NpcUseMsg implements Message {
     t: number = 25
     d: any

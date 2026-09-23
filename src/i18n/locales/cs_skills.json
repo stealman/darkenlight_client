@@ -1,7 +1,7 @@
 {
   "skills": {
     "categories": {
-      "combat": "Bojové"
+      "combat": "Zbraně"
     },
     "weapons": {
       "swords": "Meče",
@@ -13,7 +13,7 @@
     "ranks": {
       "untrained": "Neovládá",
       "novice": "Nováček",
-      "neophyte": "Neofyt",
+      "neophyte": "Začátečník",
       "apprentice": "Učeň",
       "expert": "Expert",
       "journeyman": "Tovaryš",
@@ -23,6 +23,16 @@
       "exemplar": "Výjimečný mistr",
       "grandmaster": "Velmistr",
       "fallback": "Rank {rank}"
+    },
+    "progress": {
+      "experience": "Zkušenost",
+      "training": "Trénink",
+      "train": "Trénovat",
+      "currentTraining": "Nyní trénuješ",
+      "toRank": "na úroveň",
+      "remainingTime": "zbývající čas:",
+      "learnNovice": "Tuto dovednost zatím neovládáš",
+      "maximum": "Maximum"
     }
   }
 }

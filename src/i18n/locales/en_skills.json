@@ -1,7 +1,7 @@
 {
   "skills": {
     "categories": {
-      "combat": "Combat"
+      "combat": "Weapons"
     },
     "weapons": {
       "swords": "Swords",
@@ -23,6 +23,16 @@
       "exemplar": "Exemplar",
       "grandmaster": "Grandmaster",
       "fallback": "Rank {rank}"
+    },
+    "progress": {
+      "experience": "Experience",
+      "training": "Training",
+      "train": "Train",
+      "currentTraining": "You are training",
+      "toRank": "to",
+      "remainingTime": "remaining time:",
+      "learnNovice": "You do not know this skill yet",
+      "maximum": "Maximum"
     }
   }
 }

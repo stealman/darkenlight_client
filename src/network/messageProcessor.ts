@@ -30,7 +30,7 @@ import {
     GMItemCodebookItem,
     GMNpcDetailsData,
     NpcUseData,
-    BankStateData,
+    BankStateData, SkillSetTO,
 } from '@/network/messageIfs'
 import { GroundItemsManager } from '@/babylon/world/groundItemsManager'
 import { InventoryManager } from '@/data/inventoryManager'
@@ -112,6 +112,7 @@ export const MessageProcessor = {
                 case 61: this.processCharacterRespawn(msg.d); break
                 case 62: this.processGMWorlds(msg.d); break
                 case 63: this.processGMItemCodebook(msg.d); break
+                case 64: this.processCharacterSkillSetChange(msg.d); break
                 case 1003: this.processGMAllSpawns(msg.d); break
                 case 1004: this.processGMSpawnChange(msg.d); break
                 default:
@@ -424,6 +425,12 @@ export const MessageProcessor = {
 
     processCharacterCrafting(data: CharacterCraftingMessage) {
         CharacterManager.startCrafting(data)
+    },
+
+    processCharacterSkillSetChange(data: SkillSetTO) {
+        if (MyPlayer.myCharRef.value) {
+            MyPlayer.myCharRef.value.skillSet = data
+        }
     },
 
     processCharacterCraftingFinished(data: CharacterCraftingResultMessage) {

@@ -31,13 +31,22 @@ export interface AttackableCombatTO {
     arcaneInterference?: number
 }
 
-export interface SkillSetTO {
-    swords: number
-    axes: number
-    maces: number
-    polearms: number
-    bows: number
+export type PhysicalWeaponSkillKey = 'swords' | 'axes' | 'maces' | 'polearms' | 'bows'
+
+export interface SkillProgressTO {
+    rank: number
+    experience: number
+    trainingPoints: number
+    nextExperienceRequired?: number
+    nextTrainingRequired?: number
 }
+
+export type SkillSetTO = Partial<Record<PhysicalWeaponSkillKey, SkillProgressTO>> & {
+    activeTrainingSkill?: PhysicalWeaponSkillKey
+    trainingPointsPerSecond?: number
+}
+
+export type SkillCapsTO = Partial<Record<PhysicalWeaponSkillKey, number>>
 
 export interface  AutoAttackMessage {
     id: number
