@@ -92,7 +92,7 @@ export const WeaponsCbManager = {
 
     async getItem(data: EquipCbItem, material: PBRCustomMaterial | null = null): Promise<EquipItemType> {
         const item = new EquipItemType(data)
-        await item.initializeMeshWeapon(this.itemSourceParent!, Renderer.scene, `${this.BASE_WEAPONS_PATH}${data.model}.glb?v=${WEAPON_MODEL_CACHE_VERSION}`, material, data.pos, data.rot, data.scale)
+        await item.initializeMeshGlb(this.itemSourceParent!, Renderer.scene, `${this.BASE_WEAPONS_PATH}${data.model}.glb?v=${WEAPON_MODEL_CACHE_VERSION}`, material, data.pos, data.rot, data.scale)
         return item
     },
 

@@ -17,6 +17,14 @@ export interface VertexColorWeaponPalette {
     materialNames: readonly string[]
     slots: readonly VertexColorSlot[]
     /**
+     * Colour space of materialColors. Existing weapon palettes are authored as
+     * linear shader values; armour palettes sampled from a gamma-space texture
+     * use sRGB and are converted before PBR lighting.
+     */
+    materialColorSpace?: 'linear' | 'srgb'
+    /** Constant self-illumination. Weapon palettes use the shared subtle glow; armour normally uses none. */
+    baseEmissiveStrength?: number
+    /**
      * Zero-based material rows whose marked slots are metal. By default every
      * row uses the metal treatment; Pickaxe excludes its diamond row.
      */

@@ -66,7 +66,7 @@ export class EquipItem {
     }
 
     /**
-     * Update world position and rotation from the bone each frame
+    * Update world position and rotation from the bone each frame
      */
     onFrame() {
         const m = this.bone.getFinalMatrix()
@@ -297,7 +297,7 @@ export class EquipItemType {
     /**
      * Weapon uses .glb files
      */
-    async initializeMeshWeapon(parentNode: TransformNode, scene: Scene, fileName: string, material: PBRCustomMaterial | null, position: Vector3 = Vector3.Zero(), rotation: Vector3 = Vector3.Zero(), scale: Vector3 = Vector3.One()) {
+    async initializeMeshGlb(parentNode: TransformNode, scene: Scene, fileName: string, material: PBRCustomMaterial | null, position: Vector3 = Vector3.Zero(), rotation: Vector3 = Vector3.Zero(), scale: Vector3 = Vector3.One(), castPersonalShadow = true) {
         const result = await SceneLoader.ImportMeshAsync("", "/models/equip/", fileName, scene);
         const source = result.meshes[0].getChildMeshes()[0] as Mesh
         source.position = position
@@ -313,7 +313,7 @@ export class EquipItemType {
         this.mesh.alwaysSelectAsActiveMesh = true
         this.mesh.parent = parentNode
         this.mesh.receiveShadows = true
-        Lights.addShadowCaster(this.mesh)
+        Lights.addShadowCaster(this.mesh, castPersonalShadow)
         Lights.registerDynamicLightMesh(this.mesh)
     }
 

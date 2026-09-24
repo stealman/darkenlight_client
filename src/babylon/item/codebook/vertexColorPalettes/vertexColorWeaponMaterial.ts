@@ -13,6 +13,16 @@ function rgbToShader(color: VertexRgb): string {
     return `vec3(${color[0] / 255}, ${color[1] / 255}, ${color[2] / 255})`
 }
 
+function rgbSrgbToLinearShader(color: VertexRgb): string {
+    const srgbToLinear = (component: number) => {
+        const normalized = component / 255
+        return normalized <= 0.04045
+            ? normalized / 12.92
+            : Math.pow((normalized + 0.055) / 1.055, 2.4)
+    }
+    return `vec3(${srgbToLinear(color[0])}, ${srgbToLinear(color[1])}, ${srgbToLinear(color[2])})`
+}
+
 function validatePalette(name: string, palette: VertexColorWeaponPalette) {
     if (palette.materialColors.length === 0) {
         throw new Error(`${name}: palette must contain at least one material colour row.`)
@@ -45,6 +55,9 @@ function validatePalette(name: string, palette: VertexColorWeaponPalette) {
     if (palette.emissiveMetalStrength != null && (palette.emissiveMetalStrength < 0 || palette.emissiveMetalStrength > 1)) {
         throw new Error(`${name}: emissive metal strength must be between 0 and 1.`)
     }
+    if (palette.baseEmissiveStrength != null && (palette.baseEmissiveStrength < 0 || palette.baseEmissiveStrength > 1)) {
+        throw new Error(`${name}: base emissive strength must be between 0 and 1.`)
+    }
 }
 
 function createSourceIndexCode(palette: VertexColorWeaponPalette): string {
@@ -55,9 +68,10 @@ function createSourceIndexCode(palette: VertexColorWeaponPalette): string {
 }
 
 function createMaterialColorCode(palette: VertexColorWeaponPalette): string {
+    const toShaderColor = palette.materialColorSpace === 'srgb' ? rgbSrgbToLinearShader : rgbToShader
     return palette.materialColors.map((colors, materialIndex) => colors.map((color, paletteIndex) => `
         if (materialIndex == ${materialIndex} && sourcePaletteIndex == ${paletteIndex}) {
-            weaponPaletteColor = ${rgbToShader(color)};
+            weaponPaletteColor = ${toShaderColor(color)};
         }`).join('\n')).join('\n')
 }
 
@@ -91,17 +105,28 @@ function createEmissiveMetalCode(palette: VertexColorWeaponPalette): string {
         }`).join('\n')
 }
 
-/**
- * Creates a texture-free PBR material for one vertex-colour weapon model.
- * `uvc.x` is the existing thin-instance material index: materialId - 1.
- */
-export function createVertexColorWeaponMaterial(name: string, scene: Scene, palette: VertexColorWeaponPalette): PBRCustomMaterial {
-    validatePalette(name, palette)
+type VertexColorMaterialOptions = {
+    /** The supplied material already declares and supplies the thin-instance uvc attribute. */
+    hasUvcAttribute?: boolean
+}
 
-    const mat = new PBRCustomMaterial(name, scene)
+/**
+ * Applies a vertex-colour palette to an existing PBR custom material.
+ * This lets armour preserve the exact atlas material setup while replacing
+ * only its final albedo colour.
+ */
+export function applyVertexColorPaletteToMaterial(mat: PBRCustomMaterial, palette: VertexColorWeaponPalette, options: VertexColorMaterialOptions = {}) {
+    validatePalette(mat.name, palette)
+    const baseEmissiveStrength = palette.baseEmissiveStrength ?? WEAPON_EMISSIVE_STRENGTH
+    const baseEmissiveStrengthShader = baseEmissiveStrength.toFixed(6)
+
     mat.useVertexColors = true
-    mat.AddAttribute('uvc')
+    if (!options.hasUvcAttribute) {
+        mat.AddAttribute('uvc')
+    }
     mat.Vertex_Definitions(`
+        // PBRCustomMaterial replaces (rather than appends) this shader slot,
+        // so declare uvc even when the armor material registered it earlier.
         attribute vec2 uvc;
         varying vec3 weaponPaletteColor;
         varying float weaponMetalMask;
@@ -113,7 +138,7 @@ export function createVertexColorWeaponMaterial(name: string, scene: Scene, pale
         int materialIndex = int(floor(uvc.x + 0.5));
         weaponPaletteColor = sourceColor;
         weaponMetalMask = 0.0;
-        weaponEmissiveStrength = ${WEAPON_EMISSIVE_STRENGTH};
+        weaponEmissiveStrength = ${baseEmissiveStrengthShader};
         ${createSourceIndexCode(palette)}
         ${createMaterialColorCode(palette)}
         ${createMaterialSurfaceCode(palette)}
@@ -131,6 +156,19 @@ export function createVertexColorWeaponMaterial(name: string, scene: Scene, pale
         metallicRoughness.g = mix(1.0, metallicRoughness.g, weaponMetalMask);
     `)
     mat.Fragment_Before_FinalColorComposition('finalEmissive += weaponPaletteColor * weaponEmissiveStrength;')
+    if (palette.twoSided) {
+        mat.backFaceCulling = false
+        mat.twoSidedLighting = false
+    }
+}
+
+/**
+ * Creates a texture-free PBR material for one vertex-colour weapon model.
+ * `uvc.x` is the existing thin-instance material index: materialId - 1.
+ */
+export function createVertexColorWeaponMaterial(name: string, scene: Scene, palette: VertexColorWeaponPalette): PBRCustomMaterial {
+    const mat = new PBRCustomMaterial(name, scene)
+    applyVertexColorPaletteToMaterial(mat, palette)
     mat.metallic = METAL_WEAPON_METALLIC
     mat.roughness = METAL_WEAPON_ROUGHNESS
     mat.directIntensity = 1.5
@@ -138,7 +176,7 @@ export function createVertexColorWeaponMaterial(name: string, scene: Scene, pale
     mat.usePhysicalLightFalloff = false
     if (palette.twoSided) {
         mat.backFaceCulling = false
-        mat.twoSidedLighting = true
+        mat.twoSidedLighting = false
     }
     return mat
 }
