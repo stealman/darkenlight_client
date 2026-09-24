@@ -251,6 +251,7 @@ export interface NpcUseFeatureData {
     services?: NpcHealerService[]
     repairItems?: NpcRepairItem[]
     craftingCategories?: string[]
+    skillLearningPrice?: number
 }
 
 export interface NpcUseData {

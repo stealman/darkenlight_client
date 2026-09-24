@@ -143,6 +143,36 @@
                 <div v-else class="npc-use-empty-state">{{ t('vendor.noRepairableItems') }}</div>
             </template>
 
+            <template v-else-if="selectedFeature?.type === 'trainer'">
+                <div class="npc-use-category-tabs">
+                    <button
+                        v-for="tab in trainerTabs"
+                        :key="tab"
+                        class="dialog-button npc-use-tab"
+                        :class="{ selected: selectedTrainerTab === tab }"
+                        @click="selectedTrainerTab = tab"
+                    >
+                        {{ t(`vendor.${tab}`) }}
+                    </button>
+                </div>
+                <div
+                    v-if="selectedTrainerTab === 'newSkills'"
+                    class="npc-trainer-skill-list"
+                    :class="{ 'npc-trainer-skill-list--empty': trainerNewSkills.length === 0 }"
+                >
+                    <div v-for="skill in trainerNewSkills" :key="skill.key" class="npc-trainer-skill-row">
+                        <span class="npc-trainer-skill-name">{{ t(skill.translationKey) }}</span>
+                        <span class="npc-trainer-skill-description">{{ t(skill.descriptionTranslationKey) }}</span>
+                        <span class="npc-vendor-item-price">
+                            {{ trainerSkillLearningPrice }}
+                            <img src="/images/icons/emerald.png" alt="Emerald" />
+                        </span>
+                        <button class="dialog-button npc-vendor-buy-button" @click.stop="learnSkill(skill.key, $event)">{{ t('vendor.learnSkill') }}</button>
+                    </div>
+                    <div v-if="trainerNewSkills.length === 0" class="npc-use-empty-state">{{ t('vendor.noNewSkills') }}</div>
+                </div>
+            </template>
+
             <template v-else-if="selectedFeature?.type === 'crafting'">
                 <div v-if="selectedFeature.craftingCategories?.length" class="npc-use-category-tabs">
                     <button
@@ -215,7 +245,7 @@
 import {computed, nextTick, onMounted, onUnmounted, ref} from 'vue'
 import GameDialog from '@/vue/views/GameDialog.vue'
 import {NpcInteractionManager} from '@/data/npcInteractionManager'
-import type {NpcHealerService, NpcUseData, NpcUseFeatureData, NpcVendorCatalogItem} from '@/network/messageIfs'
+import type {NpcHealerService, NpcUseData, NpcUseFeatureData, NpcVendorCatalogItem, PhysicalWeaponSkillKey} from '@/network/messageIfs'
 import {t} from '@/i18n'
 import {EmeraldsManager} from '@/gui/emeraldsManager'
 import {InventoryManager} from '@/data/inventoryManager'
@@ -224,6 +254,7 @@ import {BankManager} from '@/data/bankManager'
 import BankPanel from '@/vue/views/npc/BankPanel.vue'
 import {MyPlayer} from '@/data/myPlayer'
 import type {Item} from '@/data/items/item'
+import { PhysicalWeaponSkillDefinitions } from '@/data/skills/physicalWeaponSkills'
 import ItemInfoOverlay from '@/vue/views/inventory/itemInfoOverlay.vue'
 import {getItemDurabilityStatus, getItemTooltipData, getWeaponCategoryLabel, type ItemDurabilityStatus} from '@/vue/views/inventory/itemTooltip'
 
@@ -252,10 +283,15 @@ type RepairItem = {
     durabilityStatus: ItemDurabilityStatus | null
 }
 
+type TrainerTab = 'training' | 'newSkills' | 'promotion'
+
+const trainerTabs: TrainerTab[] = ['training', 'newSkills', 'promotion']
+
 const dialogVisible = ref(false)
 const npcData = ref<NpcUseData | null>(null)
 const selectedFeatureIndex = ref(0)
 const selectedCategory = ref('')
+const selectedTrainerTab = ref<TrainerTab>('training')
 const detailItem = ref<NpcVendorCatalogItem | null>(null)
 const detailOverlayPosition = ref({x: 0, y: 0})
 const repairItemInfoOverlayRef = ref<{ getBoundingClientRect?: () => DOMRect } | null>(null)
@@ -301,6 +337,13 @@ const repairItems = computed(() => {
         inventory: getRepairItems(InventoryManager.inventory),
     }
 })
+const trainerNewSkills = computed(() => {
+    const skillSet = MyPlayer.myCharRef.value?.skillSet ?? {}
+    const skillCaps = MyPlayer.myCharRef.value?.skillCaps ?? {}
+
+    return PhysicalWeaponSkillDefinitions.filter((skill) => (skillCaps[skill.key] ?? 0) >= 1 && !skillSet[skill.key])
+})
+const trainerSkillLearningPrice = computed(() => selectedFeature.value?.skillLearningPrice ?? 0)
 const detailOverlayStyle = computed(() => ({left: `${detailOverlayPosition.value.x}px`, top: `${detailOverlayPosition.value.y}px`}))
 const detailWeaponCategoryLabel = computed(() => detailItem.value?.tp === 'W' ? getWeaponCategoryLabel(detailItem.value.wCat) : null)
 const detailWeaponDurability = computed(() => {
@@ -364,6 +407,9 @@ const selectFeature = (index: number, remember: boolean = true) => {
         BankManager.clear()
         bankLoading.value = true
         NpcInteractionManager.openBank(npcData.value.id)
+    }
+    if (feature.type === 'trainer') {
+        selectedTrainerTab.value = 'training'
     }
     if (remember) {
         localStorage.setItem(NPC_FEATURE_TAB_STORAGE_KEY, feature.type)
@@ -488,6 +534,23 @@ const repairSelectedItem = (repairItem: RepairItem, event: MouseEvent) => {
     }
 }
 
+const learnSkill = (skill: PhysicalWeaponSkillKey, event: MouseEvent) => {
+    const npc = npcData.value ? NpcManager.npcs.get(npcData.value.id) : null
+    if (!npc || npc.getDistanceFromMyPlayer() > NPC_PURCHASE_DISTANCE) {
+        addPurchaseEffect(t('messages.npcUseOutOfRange'), event, true)
+        return
+    }
+
+    const price = trainerSkillLearningPrice.value
+    if (EmeraldsManager.myEmeralds < price) {
+        addPurchaseEffect(t('vendor.notEnoughEmeralds'), event, true)
+        return
+    }
+
+    addPurchaseEffect(`-${EmeraldsManager.formatEmeraldAmount(price)}`, event)
+    NpcInteractionManager.learnSkill(npcData.value!.id, skill)
+}
+
 const openCrafting = (category: string, event: MouseEvent) => {
     const npc = npcData.value ? NpcManager.npcs.get(npcData.value.id) : null
     if (!npc || npc.getDistanceFromMyPlayer() > NPC_PURCHASE_DISTANCE) {
@@ -568,6 +631,11 @@ defineExpose({openDialog})
 .npc-use-category-tabs { display: flex; flex-wrap: wrap; gap: 6px; flex: 0 0 auto; }
 .npc-use-tab { min-width: 82px; }
 .npc-use-tab, .npc-vendor-buy-button, .npc-vendor-quick-buy-button { padding: 5px 10px; font-size: 0.9rem; line-height: 1; }
+.npc-trainer-skill-list { display: flex; flex: 1 1 auto; min-height: 0; flex-direction: column; overflow-y: auto; border-top: 1px solid rgba(var(--ui-darker), 0.8); border-bottom: 1px solid rgba(var(--ui-darker), 0.8); }
+.npc-trainer-skill-list--empty { border-top: 0; border-bottom: 0; }
+.npc-trainer-skill-row { display: grid; grid-template-columns: minmax(120px, 0.65fr) minmax(0, 1fr) max-content auto; align-items: center; gap: 12px; min-height: 46px; padding: 3px 8px; border-bottom: 1px solid rgba(var(--ui-darker), 0.65); }
+.npc-trainer-skill-name { justify-self: start; color: rgb(var(--ui-base)); font-weight: 700; text-align: left; }
+.npc-trainer-skill-description { min-width: 0; color: rgb(var(--ui-dark)); font-size: 12px; line-height: 1.2; text-align: left; }
 .npc-use-content-shell :deep(.bank-panel) { flex: 1 1 auto; min-height: 0; }
 .npc-vendor-item-list { display: flex; flex: 1 1 auto; min-height: 0; flex-direction: column; overflow-y: auto; border-top: 1px solid rgba(var(--ui-darker), 0.8); border-bottom: 1px solid rgba(var(--ui-darker), 0.8); }
 .npc-vendor-item-row { display: grid; grid-template-columns: 46px minmax(0, 1fr) max-content auto; align-items: center; gap: 12px; min-height: 46px; padding: 3px 8px; border-bottom: 1px solid rgba(var(--ui-darker), 0.65); color: rgb(var(--ui-base)); cursor: url('/images/cursor-pointer.png'), pointer; }
@@ -580,7 +648,7 @@ defineExpose({openDialog})
 .npc-repairer-item-icon { position: relative; width: 40px; height: 40px; }
 .npc-repairer-item-icon .npc-vendor-item-icon { width: 100%; height: 100%; }
 .npc-repairer-section-title { padding: 8px 8px 5px; border-bottom: 1px solid rgba(var(--ui-darker), 0.65); color: rgb(var(--ui-dark)); font-size: 12px; font-weight: 700; text-transform: uppercase; }
-.npc-vendor-item-row:hover { background: rgba(255, 255, 255, 0.06); }
+.npc-vendor-item-row:hover, .npc-trainer-skill-row:hover { background: rgba(255, 255, 255, 0.06); }
 .npc-healer-service-row { width: 100%; border: 0; border-bottom: 1px solid rgba(var(--ui-darker), 0.65); background: transparent; color: inherit; font: inherit; text-align: inherit; }
 .npc-healer-service-row:disabled { cursor: default; opacity: 0.55; }
 .npc-healer-service-row:disabled:hover { background: transparent; }

@@ -1,6 +1,6 @@
 import {Connector} from '@/network/connector'
-import {BankActionMsg, BankOpenMsg, NpcCraftingMenuMsg, NpcPurchaseMsg, NpcRepairMsg, NpcUseMsg} from '@/network/messages'
-import type {NpcUseData, NpcVendorCatalogItem} from '@/network/messageIfs'
+import {BankActionMsg, BankOpenMsg, NpcCraftingMenuMsg, NpcLearnSkillMsg, NpcPurchaseMsg, NpcRepairMsg, NpcUseMsg} from '@/network/messages'
+import type {NpcUseData, NpcVendorCatalogItem, PhysicalWeaponSkillKey} from '@/network/messageIfs'
 
 export const NpcInteractionManager = {
     useNpc(id: number) {
@@ -17,6 +17,10 @@ export const NpcInteractionManager = {
 
     repair(npcId: number, itemId: number) {
         Connector.sendMessage(new NpcRepairMsg(npcId, itemId))
+    },
+
+    learnSkill(npcId: number, skill: PhysicalWeaponSkillKey) {
+        Connector.sendMessage(new NpcLearnSkillMsg(npcId, skill))
     },
 
     openCrafting(npcId: number, category: string) {

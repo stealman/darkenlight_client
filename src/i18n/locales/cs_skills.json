@@ -10,6 +10,13 @@
       "polearms": "Tyčové zbraně",
       "bows": "Luky"
     },
+    "descriptions": {
+      "swords": "Umožňuje nosit a účinně používat Meče v boji",
+      "axes": "Umožňuje nosit a účinně používat Sekery v boji",
+      "maces": "Umožňuje nosit a účinně používat Palcáty v boji",
+      "polearms": "Umožňuje nosit a účinně používat Tyčové zbraně v boji",
+      "bows": "Umožňuje nosit a účinně používat Luky v boji"
+    },
     "ranks": {
       "untrained": "Neovládá",
       "novice": "Nováček",

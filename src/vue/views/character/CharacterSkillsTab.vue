@@ -41,12 +41,12 @@
                         <span class="skill-progress-rank skill-progress-rank--current">{{ getSkillRankName(skill.rank) }}</span>
                         <div class="skill-progress-stack">
                             <div class="skill-progress-row">
-                                <span class="skill-progress-track" :title="t('skills.progress.experience')">
+                                <span class="skill-progress-track">
                                     <span class="skill-progress-fill skill-progress-fill--experience" :style="{ width: `${skill.experiencePercent}%` }"></span>
                                 </span>
                             </div>
                             <div class="skill-progress-row">
-                                <span class="skill-progress-track" :title="t('skills.progress.training')">
+                                <span class="skill-progress-track">
                                     <span class="skill-progress-fill skill-progress-fill--training" :style="{ width: `${skill.trainingPercent}%` }"></span>
                                 </span>
                             </div>
@@ -132,6 +132,7 @@
                                         <strong class="skill-bonus-value skill-bonus-value--unknown">{{ unknownBonusLabel }}</strong>
                                     </div>
                                 </div>
+                                <p class="skill-description">{{ t(skill.descriptionTranslationKey) }}</p>
                             </div>
                         </div>
                     </div>
@@ -146,6 +147,7 @@ import { computed, ref } from 'vue'
 import { MyPlayer } from '@/data/myPlayer'
 import { useI18n } from '@/i18n'
 import type { PhysicalWeaponSkillKey } from '@/network/messageIfs'
+import { PhysicalWeaponSkillDefinitions } from '@/data/skills/physicalWeaponSkills'
 import { Connector } from '@/network/connector'
 import { StartSkillTrainingMsg } from '@/network/messages'
 import { AudioManager } from '@/babylon/audio/audioManager'
@@ -153,14 +155,6 @@ import { AudioManager } from '@/babylon/audio/audioManager'
 const { locale, t } = useI18n()
 const myChar = MyPlayer.myCharRef
 const expandedSkillKey = ref<PhysicalWeaponSkillKey | null>(null)
-
-const combatSkillDefinitions: Array<{ key: PhysicalWeaponSkillKey, translationKey: string }> = [
-    { key: 'swords', translationKey: 'skills.weapons.swords' },
-    { key: 'axes', translationKey: 'skills.weapons.axes' },
-    { key: 'maces', translationKey: 'skills.weapons.maces' },
-    { key: 'polearms', translationKey: 'skills.weapons.polearms' },
-    { key: 'bows', translationKey: 'skills.weapons.bows' },
-]
 
 const skillRankTranslationKeys: Partial<Record<number, string>> = {
     0: 'skills.ranks.untrained',
@@ -195,7 +189,7 @@ const combatSkills = computed(() => {
     const skillSet = myChar.value?.skillSet
     const skillCaps = myChar.value?.skillCaps ?? {}
 
-    return combatSkillDefinitions.filter((skill) => skillCaps[skill.key] != null).map((skill) => {
+    return PhysicalWeaponSkillDefinitions.filter((skill) => skillCaps[skill.key] != null).map((skill) => {
         const progress = skillSet?.[skill.key]
         const rank = progress?.rank ?? 0
 
@@ -645,6 +639,16 @@ const formatTrainingTime = (seconds: number) => {
 .skill-bonus-label--unknown,
 .skill-bonus-value--unknown {
     opacity: 0.55;
+}
+
+.skill-description {
+    grid-column: 1 / -1;
+    margin: 6px 0 0;
+    color: rgba(var(--ui-base), 0.68);
+    font-style: italic;
+    font-weight: 400;
+    line-height: 1.3;
+    text-align: left;
 }
 
 @keyframes skill-training-glow {

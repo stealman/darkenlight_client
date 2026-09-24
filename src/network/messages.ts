@@ -284,6 +284,15 @@ export class StartSkillTrainingMsg implements Message {
     }
 }
 
+export class NpcLearnSkillMsg implements Message {
+    t: number = 33
+    d: { id: number, skill: string }
+
+    constructor(id: number, skill: string) {
+        this.d = { id, skill }
+    }
+}
+
 export class NpcUseMsg implements Message {
     t: number = 25
     d: any

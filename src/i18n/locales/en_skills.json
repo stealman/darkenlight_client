@@ -10,6 +10,13 @@
       "polearms": "Polearms",
       "bows": "Bows"
     },
+    "descriptions": {
+      "swords": "Allows you to equip and effectively use Swords in combat",
+      "axes": "Allows you to equip and effectively use Axes in combat",
+      "maces": "Allows you to equip and effectively use Maces in combat",
+      "polearms": "Allows you to equip and effectively use Polearms in combat",
+      "bows": "Allows you to equip and effectively use Bows in combat"
+    },
     "ranks": {
       "untrained": "Untrained",
       "novice": "Novice",
