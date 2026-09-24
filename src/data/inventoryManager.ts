@@ -10,6 +10,7 @@ import { ConsumableHelper } from '@/data/items/consumableHelper'
 import {OnScreenMessageManager, OnScreenMessageSeverities} from '@/gui/onScreenMessageManager'
 import {t} from '@/i18n'
 import {WeaponSkillRequirements} from '@/data/items/weaponSkillRequirements'
+import {ArmorSkillRequirements} from '@/data/items/armorSkillRequirements'
 
 type WeaponSetup = {
     rhand: number | null
@@ -228,6 +229,11 @@ export const InventoryManager = {
         const missingWeaponSkill = WeaponSkillRequirements.getMissingSkill(item, MyPlayer.myChar.skillSet)
         if (missingWeaponSkill) {
             OnScreenMessageManager.addMessage(t(`messages.weaponSkillRequired.${missingWeaponSkill}`), OnScreenMessageSeverities.ERROR)
+            return
+        }
+        const missingArmorSkill = ArmorSkillRequirements.getMissingSkill(item, MyPlayer.myChar.skillSet)
+        if (missingArmorSkill) {
+            OnScreenMessageManager.addMessage(t(`messages.armorSkillRequired.${missingArmorSkill}`), OnScreenMessageSeverities.ERROR)
             return
         }
 

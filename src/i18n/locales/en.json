@@ -107,7 +107,33 @@
   "classes": {
     "gm": "GM",
     "fighter": "Fighter",
-    "adept": "Adept"
+    "adept": "Adept",
+    "warrior": "Warrior",
+    "knight": "Knight",
+    "ranger": "Ranger"
+  },
+  "classProgression": {
+    "conditionsMet": "Requirements met",
+    "conditionsNotMet": "Requirements not met",
+    "met": "Met",
+    "notMet": "Not met",
+    "promote": "Promote",
+    "noPromotions": "No promotion is currently defined for your class.",
+    "descriptions": {
+      "warrior": "The offensive Fighter branch.",
+      "knight": "The defensive Fighter branch.",
+      "ranger": "A ranged combatant focused on bows and polearms."
+    },
+    "requirements": {
+      "threeWeaponSkillsApprentice": "At least 3 weapon skills at Apprentice",
+      "twoWeaponSkillsApprentice": "At least 2 weapon skills at Apprentice",
+      "oneArmorSkillApprentice": "At least 1 armor skill at Apprentice",
+      "shieldsApprentice": "Shields at Apprentice",
+      "bowsApprentice": "Bows at Apprentice",
+      "polearmsApprentice": "Polearms at Apprentice",
+      "chainArmorApprentice": "Chain Armor at Apprentice",
+      "campingApprentice": "Camping at Apprentice"
+    }
   },
   "actions": {
     "noneTitle": "Unassigned",
@@ -193,6 +219,12 @@
         "maces": "This weapon requires the Maces skill",
         "polearms": "This weapon requires the Polearms skill",
         "bows": "This weapon requires the Bows skill"
+      },
+      "armorSkillRequired": {
+        "leatherArmor": "This armor requires the Leather Armor skill",
+        "chainArmor": "This armor requires the Chain Armor skill",
+        "plateArmor": "This armor requires the Plate Armor skill",
+        "shields": "This shield requires the Shields skill"
       }
   },
   "vendor": {

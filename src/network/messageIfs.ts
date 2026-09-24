@@ -32,6 +32,9 @@ export interface AttackableCombatTO {
 }
 
 export type PhysicalWeaponSkillKey = 'swords' | 'axes' | 'maces' | 'polearms' | 'bows'
+export type ArmorSkillKey = 'leatherArmor' | 'chainArmor' | 'plateArmor' | 'shields'
+export type UtilitySkillKey = 'camping' | 'healing'
+export type SkillKey = PhysicalWeaponSkillKey | ArmorSkillKey | UtilitySkillKey
 
 export interface SkillProgressTO {
     rank: number
@@ -41,14 +44,16 @@ export interface SkillProgressTO {
     nextTrainingRequired?: number
     weaponAttackBonusPercent?: number
     weaponAttackBonusPercentPerRank?: number
+    armorBonusPercent?: number
+    armorBonusPercentPerRank?: number
 }
 
-export type SkillSetTO = Partial<Record<PhysicalWeaponSkillKey, SkillProgressTO>> & {
-    activeTrainingSkill?: PhysicalWeaponSkillKey
+export type SkillSetTO = Partial<Record<SkillKey, SkillProgressTO>> & {
+    activeTrainingSkill?: SkillKey
     trainingPointsPerSecond?: number
 }
 
-export type SkillCapsTO = Partial<Record<PhysicalWeaponSkillKey, number>>
+export type SkillCapsTO = Partial<Record<SkillKey, number>>
 
 export interface  AutoAttackMessage {
     id: number
@@ -118,6 +123,7 @@ export interface ItemTO {
     img: string
     atts: Map<string, number | string>
     wCat?: string
+    aCat?: string
     hReq?: number
     tags?: string[]
     dmgTypes?: string[]
@@ -229,6 +235,7 @@ export interface NpcVendorCatalogItem {
     price: number
     atts?: Record<string, number | string>
     wCat?: string
+    aCat?: string
     dmgTypes?: string[]
     bundleSize?: number
 }
@@ -245,6 +252,18 @@ export interface NpcRepairItem {
     price: number
 }
 
+export interface ClassPromotionRequirementData {
+    labelKey: string
+    met: boolean
+}
+
+export interface ClassPromotionOptionData {
+    targetClass: string
+    descriptionKey: string
+    requirements: ClassPromotionRequirementData[]
+    eligible: boolean
+}
+
 export interface NpcUseFeatureData {
     type: string
     categories?: Record<string, NpcVendorCatalogItem[]>
@@ -252,6 +271,7 @@ export interface NpcUseFeatureData {
     repairItems?: NpcRepairItem[]
     craftingCategories?: string[]
     skillLearningPrice?: number
+    promotions?: ClassPromotionOptionData[]
 }
 
 export interface NpcUseData {

@@ -10,11 +10,11 @@
                 {{ formatTrainingTime(activeTrainingSkill.trainingRemainingSeconds) }}
             </span>
         </div>
-        <section v-if="combatSkills.length" class="skill-category">
-            <h3 class="skill-category-title">{{ t('skills.categories.combat') }}</h3>
+        <section v-for="category in visibleSkillCategories" :key="category.key" class="skill-category">
+            <h3 class="skill-category-title">{{ t(`skills.categories.${category.key}`) }}</h3>
             <div class="skill-list">
                 <div
-                    v-for="skill in combatSkills"
+                    v-for="skill in category.skills"
                     :key="skill.key"
                     class="skill-row"
                     :class="{
@@ -104,11 +104,15 @@
                                     <div class="skill-bonus-row">
                                         <span
                                             class="skill-bonus-label"
-                                            :class="{ 'skill-bonus-label--active': skill.skillBonusUnlocked }"
+                                            :class="{
+                                                'skill-bonus-label--active': skill.skillBonusUnlocked,
+                                                'skill-bonus-label--unknown': !skill.skillBonus,
+                                            }"
                                         >{{ t('skills.bonuses.skillBonus') }}</span>
-                                        <span class="skill-bonus-value">
-                                            <strong class="skill-bonus-value-emphasis">{{ skill.skillBonus.percentage }}</strong><span>{{ t('skills.bonuses.weaponAttackOfType') }}</span><strong class="skill-bonus-value-emphasis">{{ skill.skillBonus.weaponType }}</strong><span>{{ t('skills.bonuses.weaponAttackPerRank', { percent: skill.skillBonus.perRank }) }}</span>
+                                        <span v-if="skill.skillBonus" class="skill-bonus-value">
+                                            <strong class="skill-bonus-value-emphasis">{{ skill.skillBonus.percentage }}</strong><span>{{ t(skill.skillBonus.effectTranslationKey) }}</span><strong class="skill-bonus-value-emphasis">{{ skill.skillBonus.target }}</strong><span>{{ t('skills.bonuses.bonusPerRank', { percent: skill.skillBonus.perRank }) }}</span>
                                         </span>
+                                        <strong v-else class="skill-bonus-value skill-bonus-value--unknown">{{ unknownBonusLabel }}</strong>
                                     </div>
                                     <div class="skill-bonus-row">
                                         <span
@@ -146,15 +150,16 @@
 import { computed, ref } from 'vue'
 import { MyPlayer } from '@/data/myPlayer'
 import { useI18n } from '@/i18n'
-import type { PhysicalWeaponSkillKey } from '@/network/messageIfs'
-import { PhysicalWeaponSkillDefinitions } from '@/data/skills/physicalWeaponSkills'
+import type {SkillKey, SkillProgressTO} from '@/network/messageIfs'
+import {SkillDefinitions} from '@/data/skills/skillDefinitions'
+import type {SkillCategoryKey, SkillDefinition} from '@/data/skills/skillDefinitions'
 import { Connector } from '@/network/connector'
 import { StartSkillTrainingMsg } from '@/network/messages'
 import { AudioManager } from '@/babylon/audio/audioManager'
 
 const { locale, t } = useI18n()
 const myChar = MyPlayer.myCharRef
-const expandedSkillKey = ref<PhysicalWeaponSkillKey | null>(null)
+const expandedSkillKey = ref<SkillKey | null>(null)
 
 const skillRankTranslationKeys: Partial<Record<number, string>> = {
     0: 'skills.ranks.untrained',
@@ -170,26 +175,27 @@ const skillRankTranslationKeys: Partial<Record<number, string>> = {
     10: 'skills.ranks.grandmaster',
 }
 
-const weaponSkillBonusTypeTranslationKeys: Record<PhysicalWeaponSkillKey, string> = {
-    swords: 'skills.bonuses.weaponTypes.swords',
-    axes: 'skills.bonuses.weaponTypes.axes',
-    maces: 'skills.bonuses.weaponTypes.maces',
-    polearms: 'skills.bonuses.weaponTypes.polearms',
-    bows: 'skills.bonuses.weaponTypes.bows',
+const getSkillBonusValue = (skill: SkillDefinition, rank: number, progress?: SkillProgressTO) => {
+    if (!skill.bonusKind || !skill.bonusTargetTranslationKey) {
+        return null
+    }
+
+    const armorBonus = skill.bonusKind === 'armor'
+    const bonusPercent = armorBonus ? progress?.armorBonusPercent : progress?.weaponAttackBonusPercent
+    const bonusPercentPerRank = armorBonus ? progress?.armorBonusPercentPerRank : progress?.weaponAttackBonusPercentPerRank
+    return {
+        percentage: `+${bonusPercent ?? rank * 5}%`,
+        perRank: bonusPercentPerRank ?? 5,
+        target: t(skill.bonusTargetTranslationKey),
+        effectTranslationKey: armorBonus ? 'skills.bonuses.armorOfType' : 'skills.bonuses.weaponAttackOfType',
+    }
 }
 
-const getSkillBonusValue = (skill: PhysicalWeaponSkillKey, rank: number,
-                            bonusPercent: number = rank * 5, bonusPercentPerRank: number = 5) => ({
-    percentage: `+${bonusPercent}%`,
-    perRank: bonusPercentPerRank,
-    weaponType: t(weaponSkillBonusTypeTranslationKeys[skill]),
-})
-
-const combatSkills = computed(() => {
+const skills = computed(() => {
     const skillSet = myChar.value?.skillSet
     const skillCaps = myChar.value?.skillCaps ?? {}
 
-    return PhysicalWeaponSkillDefinitions.filter((skill) => skillCaps[skill.key] != null).map((skill) => {
+    return SkillDefinitions.filter((skill) => skillCaps[skill.key] != null).map((skill) => {
         const progress = skillSet?.[skill.key]
         const rank = progress?.rank ?? 0
 
@@ -199,9 +205,8 @@ const combatSkills = computed(() => {
             key: skill.key,
             name: t(skill.translationKey),
             rank,
-            skillBonus: getSkillBonusValue(skill.key, rank, progress?.weaponAttackBonusPercent,
-                progress?.weaponAttackBonusPercentPerRank),
-            skillBonusUnlocked: rank >= 1,
+            skillBonus: getSkillBonusValue(skill, rank, progress),
+            skillBonusUnlocked: !!skill.bonusKind && rank >= 1,
             expertBonusUnlocked: rank >= 4,
             masterBonusUnlocked: rank >= 7,
             grandmasterBonusUnlocked: rank >= 10,
@@ -227,9 +232,13 @@ const combatSkills = computed(() => {
     })
 })
 
-const activeTrainingSkill = computed(() => combatSkills.value.find((skill) => skill.activeTraining))
-const skillDetailsId = (skill: PhysicalWeaponSkillKey) => `skill-details-${skill}`
-const toggleSkillDetails = (skill: PhysicalWeaponSkillKey) => {
+const skillCategoryOrder: SkillCategoryKey[] = ['weapons', 'armor', 'utility']
+const visibleSkillCategories = computed(() => skillCategoryOrder
+    .map((key) => ({key, skills: skills.value.filter((skill) => skill.category === key)}))
+    .filter((category) => category.skills.length > 0))
+const activeTrainingSkill = computed(() => skills.value.find((skill) => skill.activeTraining))
+const skillDetailsId = (skill: SkillKey) => `skill-details-${skill}`
+const toggleSkillDetails = (skill: SkillKey) => {
     expandedSkillKey.value = expandedSkillKey.value === skill ? null : skill
 }
 
@@ -261,7 +270,7 @@ const getSkillRankName = (rank: number) => {
     return translationKey ? t(translationKey) : t('skills.ranks.fallback', { rank })
 }
 
-const startTraining = (skill: PhysicalWeaponSkillKey) => {
+const startTraining = (skill: SkillKey) => {
     AudioManager.playGuiButtonClick()
     Connector.sendMessage(new StartSkillTrainingMsg(skill))
 }
@@ -314,6 +323,10 @@ const formatTrainingTime = (seconds: number) => {
 
 .skill-category {
     min-width: 0;
+}
+
+.skill-category + .skill-category {
+    margin-top: 10px;
 }
 
 .skill-category-title {

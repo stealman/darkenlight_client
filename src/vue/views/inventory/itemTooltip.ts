@@ -7,8 +7,10 @@ type ItemTooltipSource = Item | ItemTO
 const getAttribute = (item: ItemTooltipSource, key: string) => (item.atts as any)?.[key] ?? item.atts?.get?.(key) ?? null
 const getItemType = (item: ItemTooltipSource) => (item as Item).cbType ?? (item as ItemTO).tp
 const getWeaponCategory = (item: ItemTooltipSource) => (item as Item).weaponCategory ?? (item as ItemTO).wCat ?? null
+const getArmorCategory = (item: ItemTooltipSource) => (item as Item).armorCategory ?? (item as ItemTO).aCat ?? null
 const getWeaponDamageTypes = (item: ItemTooltipSource) => (item as Item).damageTypes ?? (item as ItemTO).dmgTypes ?? []
 const weaponCategoryLabels: Record<string, string> = {SWORD: 'skills.weapons.swords', AXE: 'skills.weapons.axes', MACE: 'skills.weapons.maces', POLEARM: 'skills.weapons.polearms', BOW: 'skills.weapons.bows'}
+const armorCategoryLabels: Record<string, string> = {PLATE: 'skills.armor.plateArmor', CHAIN: 'skills.armor.chainArmor', LEATHER: 'skills.armor.leatherArmor', SHIELD: 'skills.armor.shields'}
 
 export type ItemDurabilityStatus = 'worn' | 'warning' | 'danger' | 'critical'
 
@@ -18,6 +20,14 @@ export const getWeaponCategoryLabel = (category: string | null | undefined): str
     }
 
     return t(weaponCategoryLabels[category] ?? category)
+}
+
+export const getArmorCategoryLabel = (category: string | null | undefined): string | null => {
+    if (!category) {
+        return null
+    }
+
+    return t(armorCategoryLabels[category] ?? category)
 }
 
 export const getItemTooltipData = (item: ItemTooltipSource) => {
@@ -32,6 +42,7 @@ export const getItemTooltipData = (item: ItemTooltipSource) => {
     durabilityMax: getAttribute(item, 'durM'),
     quantity: getAttribute(item, 'qty'),
     weaponCategory: itemType === 'W' ? getWeaponCategory(item) : null,
+    armorCategory: itemType === 'A' ? getArmorCategory(item) : null,
     weaponAttack: itemType === 'W' ? getAttribute(item, 'patk') : null,
     weaponDamageTypes: itemType === 'W' ? getWeaponDamageTypes(item) : [],
     weaponSpeed: itemType === 'W' ? getAttribute(item, 'speed') : null,

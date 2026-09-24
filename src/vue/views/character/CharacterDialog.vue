@@ -39,7 +39,7 @@ import CharacterChatTab from '@/vue/views/character/CharacterChatTab.vue'
 import { useI18n } from '@/i18n'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { MyPlayer } from '@/data/myPlayer'
-import type { PhysicalWeaponSkillKey } from '@/network/messageIfs'
+import type {SkillKey} from '@/network/messageIfs'
 
 const emit = defineEmits(['close'])
 const { t } = useI18n()
@@ -64,7 +64,7 @@ const hasAvailableSkillTraining = computed(() => {
     }
 
     return Object.keys(skillCaps).some((key) => {
-        const skill = skillSet[key as PhysicalWeaponSkillKey]
+        const skill = skillSet[key as SkillKey]
 
         if (!skill || skill.nextExperienceRequired == null || skill.nextTrainingRequired == null) {
             return false

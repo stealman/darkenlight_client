@@ -107,7 +107,33 @@
   "classes": {
     "gm": "GM",
     "fighter": "Fighter",
-    "adept": "Adept"
+    "adept": "Adept",
+    "warrior": "Warrior",
+    "knight": "Knight",
+    "ranger": "Ranger"
+  },
+  "classProgression": {
+    "conditionsMet": "Podmínky splněny",
+    "conditionsNotMet": "Podmínky nesplněny",
+    "met": "Splněno",
+    "notMet": "Nesplněno",
+    "promote": "Povýšit",
+    "noPromotions": "Pro současné povolání zatím není definované žádné povýšení.",
+    "descriptions": {
+      "warrior": "Ofenzivní větev Fightera.",
+      "knight": "Defenzivní větev Fightera.",
+      "ranger": "Bojovník na dálku zaměřený na luky a tyčové zbraně."
+    },
+    "requirements": {
+      "threeWeaponSkillsApprentice": "Alespoň 3 zbraňové dovednosti na úrovni Učeň",
+      "twoWeaponSkillsApprentice": "Alespoň 2 zbraňové dovednosti na úrovni Učeň",
+      "oneArmorSkillApprentice": "Alespoň 1 dovednost brnění na úrovni Učeň",
+      "shieldsApprentice": "Štíty na úrovni Učeň",
+      "bowsApprentice": "Luky na úrovni Učeň",
+      "polearmsApprentice": "Tyčové zbraně na úrovni Učeň",
+      "chainArmorApprentice": "Kroužkové brnění na úrovni Učeň",
+      "campingApprentice": "Táboření na úrovni Učeň"
+    }
   },
   "actions": {
     "noneTitle": "Nevybráno",
@@ -191,6 +217,12 @@
         "maces": "Tato zbraň vyžaduje dovednost Palcáty",
         "polearms": "Tato zbraň vyžaduje dovednost Tyčové zbraně",
         "bows": "Tato zbraň vyžaduje dovednost Luky"
+      },
+      "armorSkillRequired": {
+        "leatherArmor": "Toto brnění vyžaduje dovednost Kožené brnění",
+        "chainArmor": "Toto brnění vyžaduje dovednost Kroužkové brnění",
+        "plateArmor": "Toto brnění vyžaduje dovednost Plátové brnění",
+        "shields": "Tento štít vyžaduje dovednost Štíty"
       }
   },
   "vendor": {

@@ -1,7 +1,9 @@
 {
   "skills": {
     "categories": {
-      "combat": "Zbraně"
+      "weapons": "Zbraně",
+      "armor": "Brnění",
+      "utility": "Užitkové"
     },
     "weapons": {
       "swords": "Meče",
@@ -10,12 +12,28 @@
       "polearms": "Tyčové zbraně",
       "bows": "Luky"
     },
+    "armor": {
+      "leatherArmor": "Kožené brnění",
+      "chainArmor": "Kroužkové brnění",
+      "plateArmor": "Plátové brnění",
+      "shields": "Štíty"
+    },
+    "utility": {
+      "camping": "Táboření",
+      "healing": "Léčba"
+    },
     "descriptions": {
       "swords": "Umožňuje nosit a účinně používat Meče v boji",
       "axes": "Umožňuje nosit a účinně používat Sekery v boji",
       "maces": "Umožňuje nosit a účinně používat Palcáty v boji",
       "polearms": "Umožňuje nosit a účinně používat Tyčové zbraně v boji",
-      "bows": "Umožňuje nosit a účinně používat Luky v boji"
+      "bows": "Umožňuje nosit a účinně používat Luky v boji",
+      "leatherArmor": "Umožňuje nosit a účinně používat Kožené brnění",
+      "chainArmor": "Umožňuje nosit a účinně používat Kroužkové brnění",
+      "plateArmor": "Umožňuje nosit a účinně používat Plátové brnění",
+      "shields": "Umožňuje nosit a účinně používat Štíty",
+      "camping": "Dovednost pro činnosti spojené s tábořením",
+      "healing": "Dovednost pro činnosti spojené s léčbou"
     },
     "ranks": {
       "untrained": "Neovládá",
@@ -54,7 +72,8 @@
       "grandmasterBonus": "Velmistrovský bonus",
       "unknown": "Neznámý",
       "weaponAttackOfType": "útok zbraní typu",
-      "weaponAttackPerRank": "({percent}% za úroveň)",
+      "armorOfType": "brnění typu",
+      "bonusPerRank": "({percent}% za úroveň)",
       "weaponTypes": {
         "swords": "Meč",
         "axes": "Sekera",

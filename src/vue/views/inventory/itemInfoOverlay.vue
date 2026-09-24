@@ -2,7 +2,7 @@
     <div
         ref="overlayRootRef"
         class="inventory-item-overlay"
-        :class="{ 'inventory-item-overlay--equipment': weaponCategoryLabel || itemInfo.armorStats }"
+        :class="{ 'inventory-item-overlay--equipment': equipmentCategoryLabel || itemInfo.armorStats }"
         :style="{
             left: `${x}px`,
             top: `${y}px`,
@@ -15,9 +15,9 @@
             <span v-if="displayItemQuantity" class="inventory-item-overlay-name-quantity">({{ displayItemQuantity }})</span>
         </div>
 
-        <div v-if="itemInfo.quality || weaponCategoryLabel" class="inventory-item-overlay-status-row">
+        <div v-if="itemInfo.quality || equipmentCategoryLabel" class="inventory-item-overlay-status-row">
             <div v-if="itemInfo.quality" :class="['inventory-item-overlay-dur', durabilityStatusClass]">{{ t('inventory.durability') }}: <strong>{{ itemInfo.durabilityDisplay ?? `${itemInfo.durability} / ${itemInfo.durabilityMax}` }}</strong></div>
-            <span v-if="weaponCategoryLabel" class="inventory-item-overlay-weapon-category">{{ weaponCategoryLabel }}</span>
+            <span v-if="equipmentCategoryLabel" class="inventory-item-overlay-weapon-category">{{ equipmentCategoryLabel }}</span>
         </div>
 
         <div v-if="itemInfo.weaponAttack !== null" class="inventory-item-overlay-stats">
@@ -173,7 +173,7 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { useI18n } from '@/i18n'
-import { getWeaponCategoryLabel } from '@/vue/views/inventory/itemTooltip'
+import {getArmorCategoryLabel, getWeaponCategoryLabel} from '@/vue/views/inventory/itemTooltip'
 
 const props = defineProps({
     itemInfo: {
@@ -256,6 +256,10 @@ const displayItemQuantity = computed(() => {
 const weaponCategoryLabel = computed(() => {
     return getWeaponCategoryLabel(props.itemInfo?.weaponCategory)
 })
+const armorCategoryLabel = computed(() => {
+    return getArmorCategoryLabel(props.itemInfo?.armorCategory)
+})
+const equipmentCategoryLabel = computed(() => weaponCategoryLabel.value || armorCategoryLabel.value)
 
 const splitMaxQuantity = computed(() => {
     const quantity = Number(props.itemInfo.quantity)

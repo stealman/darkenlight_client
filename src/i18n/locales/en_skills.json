@@ -1,7 +1,9 @@
 {
   "skills": {
     "categories": {
-      "combat": "Weapons"
+      "weapons": "Weapons",
+      "armor": "Armor",
+      "utility": "Utility"
     },
     "weapons": {
       "swords": "Swords",
@@ -10,12 +12,28 @@
       "polearms": "Polearms",
       "bows": "Bows"
     },
+    "armor": {
+      "leatherArmor": "Leather Armor",
+      "chainArmor": "Chain Armor",
+      "plateArmor": "Plate Armor",
+      "shields": "Shields"
+    },
+    "utility": {
+      "camping": "Camping",
+      "healing": "Healing"
+    },
     "descriptions": {
       "swords": "Allows you to equip and effectively use Swords in combat",
       "axes": "Allows you to equip and effectively use Axes in combat",
       "maces": "Allows you to equip and effectively use Maces in combat",
       "polearms": "Allows you to equip and effectively use Polearms in combat",
-      "bows": "Allows you to equip and effectively use Bows in combat"
+      "bows": "Allows you to equip and effectively use Bows in combat",
+      "leatherArmor": "Allows you to equip and effectively use Leather Armor",
+      "chainArmor": "Allows you to equip and effectively use Chain Armor",
+      "plateArmor": "Allows you to equip and effectively use Plate Armor",
+      "shields": "Allows you to equip and effectively use Shields",
+      "camping": "A skill for activities related to camping",
+      "healing": "A skill for activities related to healing"
     },
     "ranks": {
       "untrained": "Untrained",
@@ -54,7 +72,8 @@
       "grandmasterBonus": "Grandmaster bonus",
       "unknown": "Unknown",
       "weaponAttackOfType": "weapon attack of type",
-      "weaponAttackPerRank": "({percent}% per rank)",
+      "armorOfType": "armor of type",
+      "bonusPerRank": "({percent}% per rank)",
       "weaponTypes": {
         "swords": "Sword",
         "axes": "Axe",

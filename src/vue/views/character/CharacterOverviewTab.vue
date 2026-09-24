@@ -131,7 +131,7 @@ const attributes = computed(() => [
         label: t('character.agility'),
         value: MyCombatData.agi,
         stats: [
-            { key: 'physicalDefense', label: t('character.physicalDefense'), value: MyCombatData.armor },
+            { key: 'physicalDefense', label: t('character.physicalDefense'), value: Math.round(MyCombatData.armor) },
             { key: 'precision', label: t('character.precision'), value: MyCombatData.precision },
             { key: 'defense', label: t('character.defense'), value: MyCombatData.defense },
         ],
