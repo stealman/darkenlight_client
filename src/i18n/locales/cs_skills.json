@@ -32,8 +32,8 @@
       "chainArmor": "Umožňuje nosit a účinně používat Kroužkové brnění",
       "plateArmor": "Umožňuje nosit a účinně používat Plátové brnění",
       "shields": "Umožňuje nosit a účinně používat Štíty",
-      "camping": "Dovednost pro činnosti spojené s tábořením",
-      "healing": "Dovednost pro činnosti spojené s léčbou"
+      "camping": "Umožní rozdělat tábor pro odpočinek a regeneraci",
+      "healing": "Umožňuje léčit zranění pomocí obvazů"
     },
     "ranks": {
       "untrained": "Neovládá",
@@ -73,6 +73,9 @@
       "unknown": "Neznámý",
       "weaponAttackOfType": "útok zbraní typu",
       "armorOfType": "brnění typu",
+      "fasterCampSetup": "rychlejší rozdělání tábora",
+      "healedHealth": "vyléčených životů",
+      "healedHealthPerRank": "({amount} za úroveň)",
       "bonusPerRank": "({percent}% za úroveň)",
       "weaponTypes": {
         "swords": "Meč",

@@ -46,6 +46,12 @@ export interface SkillProgressTO {
     weaponAttackBonusPercentPerRank?: number
     armorBonusPercent?: number
     armorBonusPercentPerRank?: number
+      actionSpeedBonusPercent?: number
+      actionSpeedBonusPercentPerRank?: number
+      bandageHealingAmountMinimum?: number
+      bandageHealingAmountMaximum?: number
+      bandageHealingAmountMinimumPerRank?: number
+      bandageHealingAmountMaximumPerRank?: number
 }
 
 export type SkillSetTO = Partial<Record<SkillKey, SkillProgressTO>> & {

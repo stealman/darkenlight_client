@@ -192,11 +192,11 @@ const attributes = computed(() => [
 }
 
 .character-overview-class-name--fighter {
-    color: rgb(204, 123, 108);
+    color: rgb(var(--ui-accent-red));
 }
 
 .character-overview-class-name--adept {
-    color: rgb(164, 132, 193);
+    color: rgb(var(--ui-accent-purple));
 }
 
 .character-overview-class-name--gm {
@@ -223,13 +223,13 @@ const attributes = computed(() => [
 
 .character-overview-resource--health {
     grid-column: 1;
-    --character-resource-color: 204, 123, 108;
+    --character-resource-color: var(--ui-accent-red);
     justify-content: flex-start;
 }
 
 .character-overview-resource--mana {
     grid-column: 4;
-    --character-resource-color: 108, 155, 193;
+    --character-resource-color: var(--ui-accent-blue);
     justify-content: flex-end;
 }
 
@@ -264,19 +264,19 @@ const attributes = computed(() => [
 }
 
 .character-overview-attribute--str {
-    --character-attribute-accent: 204, 123, 108;
+    --character-attribute-accent: var(--ui-accent-red);
 }
 
 .character-overview-attribute--agi {
-    --character-attribute-accent: 119, 171, 125;
+    --character-attribute-accent: var(--ui-attribute-agility);
 }
 
 .character-overview-attribute--int {
-    --character-attribute-accent: 164, 132, 193;
+    --character-attribute-accent: var(--ui-accent-purple);
 }
 
 .character-overview-attribute--wis {
-    --character-attribute-accent: 108, 155, 193;
+    --character-attribute-accent: var(--ui-accent-blue);
 }
 
 .character-overview-attribute-base {

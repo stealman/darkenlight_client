@@ -126,8 +126,8 @@ defineExpose({
     }
 
     50% {
-        color: rgb(151, 71, 66);
-        text-shadow: 0 0 4px rgba(151, 71, 66, 0.45);
+        color: rgb(var(--ui-attention));
+        text-shadow: 0 0 4px rgba(var(--ui-attention), 0.45);
     }
 }
 

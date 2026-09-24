@@ -17,6 +17,7 @@
 - When server/message contracts are ambiguous, do not speculate; ask a clarifying question first.
 - When editing UI styles, watch for bloated local CSS blocks; if a stylesheet looks unusually repetitive or oversized for the feature, call it out proactively and ask before doing a cleanup/refactor pass.
 - When touching GUI colors/theme tokens, aggressively reuse existing variables first; only add a new theme variable if it represents a clearly reusable semantic color, and avoid creating many near-duplicate color tokens for one local feature.
+- Shared GUI colors must be defined in `public/styles/theme.css` under semantic names. Before adding a literal color, search for an existing token; a color reused by more than one component must not remain a component-local RGB value. Reserve local transparency for intentional visual effects such as shadows, glows and overlays.
 
 ## Project Map
 

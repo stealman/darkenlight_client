@@ -5,6 +5,17 @@
     --ui-darker: 125, 116, 100;
     --ui-darkest: 40, 38, 32;
 
+    /* Semantic accents */
+    --ui-accent-red: 204, 123, 108;
+    --ui-accent-blue: 108, 155, 193;
+    --ui-accent-purple: 164, 132, 193;
+    --ui-success: 148, 194, 152;
+    --ui-attribute-agility: 119, 171, 125;
+    --ui-attention: 151, 71, 66;
+    --ui-progress-experience-dark: 87, 135, 94;
+    --ui-progress-training-light: 139, 183, 218;
+    --ui-progress-training-dark: 75, 122, 163;
+
     --ui-danger: 210, 106, 106;
     --ui-durability-warning: 205, 174, 76;
     --ui-durability-danger: 211, 125, 61;

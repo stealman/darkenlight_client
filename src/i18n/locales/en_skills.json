@@ -32,8 +32,8 @@
       "chainArmor": "Allows you to equip and effectively use Chain Armor",
       "plateArmor": "Allows you to equip and effectively use Plate Armor",
       "shields": "Allows you to equip and effectively use Shields",
-      "camping": "A skill for activities related to camping",
-      "healing": "A skill for activities related to healing"
+      "camping": "Allows you to set up a camp for rest and regeneration",
+      "healing": "Allows you to heal injuries using bandages"
     },
     "ranks": {
       "untrained": "Untrained",
@@ -73,6 +73,9 @@
       "unknown": "Unknown",
       "weaponAttackOfType": "weapon attack of type",
       "armorOfType": "armor of type",
+      "fasterCampSetup": "faster camp setup",
+      "healedHealth": "health restored",
+      "healedHealthPerRank": "({amount} per rank)",
       "bonusPerRank": "({percent}% per rank)",
       "weaponTypes": {
         "swords": "Sword",

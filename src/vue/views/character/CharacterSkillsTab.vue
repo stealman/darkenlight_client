@@ -110,7 +110,7 @@
                                             }"
                                         >{{ t('skills.bonuses.skillBonus') }}</span>
                                         <span v-if="skill.skillBonus" class="skill-bonus-value">
-                                            <strong class="skill-bonus-value-emphasis">{{ skill.skillBonus.percentage }}</strong><span>{{ t(skill.skillBonus.effectTranslationKey) }}</span><strong class="skill-bonus-value-emphasis">{{ skill.skillBonus.target }}</strong><span>{{ t('skills.bonuses.bonusPerRank', { percent: skill.skillBonus.perRank }) }}</span>
+                                            <strong class="skill-bonus-value-emphasis">{{ skill.skillBonus.percentage }}</strong><span>{{ t(skill.skillBonus.effectTranslationKey) }}</span><strong v-if="skill.skillBonus.target" class="skill-bonus-value-emphasis">{{ skill.skillBonus.target }}</strong><span>{{ t(skill.skillBonus.perRankTranslationKey, { percent: skill.skillBonus.perRank, amount: skill.skillBonus.perRank }) }}</span>
                                         </span>
                                         <strong v-else class="skill-bonus-value skill-bonus-value--unknown">{{ unknownBonusLabel }}</strong>
                                     </div>
@@ -176,18 +176,35 @@ const skillRankTranslationKeys: Partial<Record<number, string>> = {
 }
 
 const getSkillBonusValue = (skill: SkillDefinition, rank: number, progress?: SkillProgressTO) => {
-    if (!skill.bonusKind || !skill.bonusTargetTranslationKey) {
+    if (!skill.bonusKind) {
         return null
     }
 
     const armorBonus = skill.bonusKind === 'armor'
-    const bonusPercent = armorBonus ? progress?.armorBonusPercent : progress?.weaponAttackBonusPercent
-    const bonusPercentPerRank = armorBonus ? progress?.armorBonusPercentPerRank : progress?.weaponAttackBonusPercentPerRank
+    const campingSetupSpeedBonus = skill.bonusKind === 'campingSetupSpeed'
+    const bandageHealingBonus = skill.bonusKind === 'bandageHealing'
+    const bonusPercent = campingSetupSpeedBonus
+        ? progress?.actionSpeedBonusPercent
+        : armorBonus ? progress?.armorBonusPercent : progress?.weaponAttackBonusPercent
+    const bonusPercentPerRank = campingSetupSpeedBonus
+        ? progress?.actionSpeedBonusPercentPerRank
+        : armorBonus ? progress?.armorBonusPercentPerRank : progress?.weaponAttackBonusPercentPerRank
     return {
-        percentage: `+${bonusPercent ?? rank * 5}%`,
-        perRank: bonusPercentPerRank ?? 5,
-        target: t(skill.bonusTargetTranslationKey),
-        effectTranslationKey: armorBonus ? 'skills.bonuses.armorOfType' : 'skills.bonuses.weaponAttackOfType',
+        percentage: bandageHealingBonus
+            ? `${progress?.bandageHealingAmountMinimum ?? rank}–${progress?.bandageHealingAmountMaximum ?? rank * 2}`
+            : `+${bonusPercent ?? rank * (campingSetupSpeedBonus ? 10 : 5)}%`,
+        perRank: bandageHealingBonus
+            ? `${progress?.bandageHealingAmountMinimumPerRank ?? 1}–${progress?.bandageHealingAmountMaximumPerRank ?? 2}`
+            : bonusPercentPerRank ?? (campingSetupSpeedBonus ? 10 : 5),
+        target: skill.bonusTargetTranslationKey ? t(skill.bonusTargetTranslationKey) : undefined,
+        effectTranslationKey: bandageHealingBonus
+            ? 'skills.bonuses.healedHealth'
+            : campingSetupSpeedBonus
+            ? 'skills.bonuses.fasterCampSetup'
+            : armorBonus ? 'skills.bonuses.armorOfType' : 'skills.bonuses.weaponAttackOfType',
+        perRankTranslationKey: bandageHealingBonus
+            ? 'skills.bonuses.healedHealthPerRank'
+            : 'skills.bonuses.bonusPerRank',
     }
 }
 
@@ -316,7 +333,7 @@ const formatTrainingTime = (seconds: number) => {
 
 .active-training-summary-accent {
     margin: 0 0.5em;
-    color: rgb(108, 155, 193);
+    color: rgb(var(--ui-accent-blue));
     font-weight: 700;
     font-variant-numeric: tabular-nums;
 }
@@ -365,15 +382,15 @@ const formatTrainingTime = (seconds: number) => {
 }
 
 .skill-row--expanded {
-    --skill-row-expanded-left-accent: rgba(108, 155, 193, 0.78);
+    --skill-row-expanded-left-accent: rgba(var(--ui-accent-blue), 0.78);
     box-shadow:
         inset 3px 0 0 var(--skill-row-expanded-left-accent),
-        inset 0 0 0 1px rgba(108, 155, 193, 0.24),
-        inset 0 0 14px rgba(108, 155, 193, 0.16);
+        inset 0 0 0 1px rgba(var(--ui-accent-blue), 0.24),
+        inset 0 0 14px rgba(var(--ui-accent-blue), 0.16);
 }
 
 .skill-row--expanded .skill-name {
-    color: rgb(108, 155, 193);
+    color: rgb(var(--ui-accent-blue));
 }
 
 .skill-row--untrained .skill-name,
@@ -389,8 +406,8 @@ const formatTrainingTime = (seconds: number) => {
     animation: skill-training-glow 2.2s ease-in-out infinite;
     box-shadow:
         inset 3px 0 0 var(--skill-row-expanded-left-accent, transparent),
-        inset 0 0 0 1px rgba(108, 155, 193, 0.42),
-        inset 0 0 20px rgba(108, 155, 193, 0.35);
+        inset 0 0 0 1px rgba(var(--ui-accent-blue), 0.42),
+        inset 0 0 20px rgba(var(--ui-accent-blue), 0.35);
 }
 
 .skill-name {
@@ -440,12 +457,12 @@ const formatTrainingTime = (seconds: number) => {
 }
 
 .skill-progress-fill--experience {
-    background: linear-gradient(to bottom, rgb(148, 194, 152), rgb(87, 135, 94));
+    background: linear-gradient(to bottom, rgb(var(--ui-success)), rgb(var(--ui-progress-experience-dark)));
 }
 
 .skill-progress-fill--training {
     width: 0;
-    background: linear-gradient(to bottom, rgb(139, 183, 218), rgb(75, 122, 163));
+    background: linear-gradient(to bottom, rgb(var(--ui-progress-training-light)), rgb(var(--ui-progress-training-dark)));
 }
 
 .skill-progress-state {
@@ -485,7 +502,7 @@ const formatTrainingTime = (seconds: number) => {
 }
 
 .skill-row--active-training .skill-progress-rank--next {
-    color: rgb(108, 155, 193);
+    color: rgb(var(--ui-accent-blue));
 }
 
 .skill-experience-shortage {
@@ -499,7 +516,7 @@ const formatTrainingTime = (seconds: number) => {
 }
 
 .skill-progress-rank--maximum {
-    color: rgb(108, 155, 193);
+    color: rgb(var(--ui-accent-blue));
 }
 
 .skill-maximum-state {
@@ -519,11 +536,11 @@ const formatTrainingTime = (seconds: number) => {
 }
 
 .skill-maximum-state-class--fighter {
-    color: rgb(204, 123, 108);
+    color: rgb(var(--ui-accent-red));
 }
 
 .skill-maximum-state-class--adept {
-    color: rgb(164, 132, 193);
+    color: rgb(var(--ui-accent-purple));
 }
 
 .skill-maximum-state-class--gm {
@@ -542,7 +559,7 @@ const formatTrainingTime = (seconds: number) => {
 
 .skill-training-time {
     margin-left: 4px;
-    color: rgb(108, 155, 193);
+    color: rgb(var(--ui-accent-blue));
     font-size: 1em;
     font-weight: inherit;
     font-variant-numeric: tabular-nums;
@@ -624,7 +641,7 @@ const formatTrainingTime = (seconds: number) => {
 
 .skill-bonus-label--active,
 .skill-bonus-value-emphasis {
-    color: rgb(148, 194, 152);
+    color: rgb(var(--ui-success));
 }
 
 .skill-bonus-value {
@@ -668,9 +685,9 @@ const formatTrainingTime = (seconds: number) => {
 @keyframes skill-training-glow {
     50% {
         box-shadow:
-            inset 3px 0 0 var(--skill-row-expanded-left-accent, transparent),
-            inset 0 0 0 1px rgba(108, 155, 193, 0.68),
-            inset 0 0 28px rgba(108, 155, 193, 0.56);
+        inset 3px 0 0 var(--skill-row-expanded-left-accent, transparent),
+        inset 0 0 0 1px rgba(var(--ui-accent-blue), 0.68),
+        inset 0 0 28px rgba(var(--ui-accent-blue), 0.56);
     }
 }
 

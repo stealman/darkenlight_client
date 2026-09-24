@@ -412,9 +412,9 @@
     align-items: center;
     margin-left: auto;
     padding: 0 7px;
-    border: 2px solid rgb(108, 155, 193);
+    border: 2px solid rgb(var(--ui-accent-blue));
     border-radius: 999px;
-    color: rgb(108, 155, 193);
+    color: rgb(var(--ui-accent-blue));
     font-size: 0.84em;
     font-weight: 700;
     line-height: 1;

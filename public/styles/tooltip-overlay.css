@@ -70,11 +70,11 @@
 }
 
 .ui-tooltip-title-meta--fighter {
-    color: rgb(204, 123, 108);
+    color: rgb(var(--ui-accent-red));
 }
 
 .ui-tooltip-title-meta--adept {
-    color: rgb(164, 132, 193);
+    color: rgb(var(--ui-accent-purple));
 }
 
 .ui-tooltip-title-meta--gm {

@@ -705,7 +705,7 @@ defineExpose({openDialog})
 .npc-trainer-promotion-header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .npc-trainer-promotion-header h3 { margin: 0; color: rgb(var(--ui-base)); font-size: 1rem; }
 .npc-trainer-promotion-state { flex: 0 0 auto; font-size: 12px; font-weight: 700; }
-.npc-trainer-promotion-state--met, .npc-trainer-requirement--met { color: rgb(148, 194, 152); }
+.npc-trainer-promotion-state--met, .npc-trainer-requirement--met { color: rgb(var(--ui-success)); }
 .npc-trainer-promotion-state--unmet, .npc-trainer-requirement--unmet { color: rgb(var(--ui-danger)); }
 .npc-trainer-promotion-description { margin: 5px 0 7px; color: rgb(var(--ui-dark)); font-size: 12px; line-height: 1.25; text-align: left; }
 .npc-trainer-promotion-requirements { display: flex; flex-direction: column; }
