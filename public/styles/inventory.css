@@ -287,6 +287,11 @@
     gap: 8px;
 }
 
+.inventory-item-overlay--equipment {
+    min-width: 270px;
+    max-width: calc(100vw - 24px);
+}
+
 .inventory-item-overlay-name {
     white-space: nowrap;
     overflow: hidden;
@@ -381,19 +386,59 @@
     gap: 6px;
 }
 
+.inventory-item-overlay-name-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .inventory-item-overlay-name-quantity {
     color: #9b9b9b;
 }
 
+.inventory-item-overlay-status-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.inventory-item-overlay-weapon-category {
+    align-self: center;
+    flex: 0 0 auto;
+    display: inline-flex;
+    height: 20px;
+    box-sizing: border-box;
+    align-items: center;
+    margin-left: auto;
+    padding: 0 7px;
+    border: 2px solid rgb(108, 155, 193);
+    border-radius: 999px;
+    color: rgb(108, 155, 193);
+    font-size: 0.84em;
+    font-weight: 700;
+    line-height: 1;
+}
+
 .inventory-item-overlay-stats {
     display: grid;
-    grid-template-columns: repeat(2, auto);
-    justify-content: start;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 3px 14px;
     color: rgb(var(--ui-dark));
 }
 
+.inventory-item-overlay-stats > span {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+}
+
 .inventory-item-overlay-stats strong {
+    color: #f2e7cf;
+    font-weight: 600;
+}
+
+.inventory-item-overlay-dur strong {
     color: #f2e7cf;
     font-weight: 600;
 }

@@ -155,6 +155,7 @@ const itemInfoOverlay = ref({
     durability: null,
     durabilityMax: null,
     quantity: null,
+    weaponCategory: null,
     weaponAttack: null,
     weaponDamageTypes: [],
     weaponSpeed: null,

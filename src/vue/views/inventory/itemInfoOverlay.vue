@@ -2,6 +2,7 @@
     <div
         ref="overlayRootRef"
         class="inventory-item-overlay"
+        :class="{ 'inventory-item-overlay--equipment': weaponCategoryLabel || itemInfo.armorStats }"
         :style="{
             left: `${x}px`,
             top: `${y}px`,
@@ -10,13 +11,14 @@
         @click="onOverlayClick"
     >
         <div class="inventory-item-overlay-name">
-            <span>{{ displayItemName }}</span>
+            <span class="inventory-item-overlay-name-text">{{ displayItemName }}</span>
             <span v-if="displayItemQuantity" class="inventory-item-overlay-name-quantity">({{ displayItemQuantity }})</span>
         </div>
 
-        <template v-if="itemInfo.quality">
-            <div :class="['inventory-item-overlay-dur', durabilityStatusClass]">{{ t('inventory.durability') }}: {{ itemInfo.durability }} / {{ itemInfo.durabilityMax }}</div>
-        </template>
+        <div v-if="itemInfo.quality || weaponCategoryLabel" class="inventory-item-overlay-status-row">
+            <div v-if="itemInfo.quality" :class="['inventory-item-overlay-dur', durabilityStatusClass]">{{ t('inventory.durability') }}: <strong>{{ itemInfo.durabilityDisplay ?? `${itemInfo.durability} / ${itemInfo.durabilityMax}` }}</strong></div>
+            <span v-if="weaponCategoryLabel" class="inventory-item-overlay-weapon-category">{{ weaponCategoryLabel }}</span>
+        </div>
 
         <div v-if="itemInfo.weaponAttack !== null" class="inventory-item-overlay-stats">
             <span
@@ -66,7 +68,7 @@
             >
         </div>
 
-        <div class="inventory-item-overlay-interactive inventory-item-overlay-actions">
+        <div v-if="hasVisibleActions" class="inventory-item-overlay-interactive inventory-item-overlay-actions">
             <button
                 v-if="shouldShowDropButton"
                 class="action-button inventory-action-button inventory-drop-button"
@@ -171,6 +173,7 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { useI18n } from '@/i18n'
+import { getWeaponCategoryLabel } from '@/vue/views/inventory/itemTooltip'
 
 const props = defineProps({
     itemInfo: {
@@ -250,6 +253,10 @@ const displayItemQuantity = computed(() => {
     return quantity
 })
 
+const weaponCategoryLabel = computed(() => {
+    return getWeaponCategoryLabel(props.itemInfo?.weaponCategory)
+})
+
 const splitMaxQuantity = computed(() => {
     const quantity = Number(props.itemInfo.quantity)
     if (!Number.isFinite(quantity) || quantity <= 1) {
@@ -276,6 +283,15 @@ const shouldShowCampButton = computed(() => {
 
 const shouldShowBindButton = computed(() => {
     return props.itemInfo.showBindButton === true && !showSplitControls.value
+})
+
+const hasVisibleActions = computed(() => {
+    return shouldShowDropButton.value
+        || shouldShowSplitButton.value
+        || shouldShowMergeButton.value
+        || shouldShowCampButton.value
+        || shouldShowBindButton.value
+        || showSplitControls.value
 })
 
 const splitStep = computed(() => {
@@ -368,12 +384,8 @@ const onSplitSliderInput = () => {
 }
 
 const onOverlayClick = (event) => {
-    const clickedInteractiveElement = event?.target?.closest?.('.inventory-item-overlay-interactive')
-    if (clickedInteractiveElement) {
-        return
-    }
-    const clickedButton = event?.target?.closest?.('button')
-    if (clickedButton) {
+    const clickedControl = event?.target?.closest?.('button, input, select, textarea, a, [role="button"]')
+    if (clickedControl) {
         return
     }
     emit('close')

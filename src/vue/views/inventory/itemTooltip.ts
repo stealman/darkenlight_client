@@ -1,25 +1,44 @@
 import type {Item} from '@/data/items/item'
+import type {ItemTO} from '@/network/messageIfs'
 import {t} from '@/i18n'
 
-const getAttribute = (item: Item, key: string) => (item.atts as any)?.[key] ?? item.atts?.get?.(key) ?? null
+type ItemTooltipSource = Item | ItemTO
+
+const getAttribute = (item: ItemTooltipSource, key: string) => (item.atts as any)?.[key] ?? item.atts?.get?.(key) ?? null
+const getItemType = (item: ItemTooltipSource) => (item as Item).cbType ?? (item as ItemTO).tp
+const getWeaponCategory = (item: ItemTooltipSource) => (item as Item).weaponCategory ?? (item as ItemTO).wCat ?? null
+const getWeaponDamageTypes = (item: ItemTooltipSource) => (item as Item).damageTypes ?? (item as ItemTO).dmgTypes ?? []
+const weaponCategoryLabels: Record<string, string> = {SWORD: 'skills.weapons.swords', AXE: 'skills.weapons.axes', MACE: 'skills.weapons.maces', POLEARM: 'skills.weapons.polearms', BOW: 'skills.weapons.bows'}
 
 export type ItemDurabilityStatus = 'worn' | 'warning' | 'danger' | 'critical'
 
-export const getItemTooltipData = (item: Item) => ({
+export const getWeaponCategoryLabel = (category: string | null | undefined): string | null => {
+    if (!category) {
+        return null
+    }
+
+    return t(weaponCategoryLabels[category] ?? category)
+}
+
+export const getItemTooltipData = (item: ItemTooltipSource) => {
+    const itemType = getItemType(item)
+
+    return {
     name: item.name || t('inventory.unknownItem'),
     id: item.id ?? null,
-    cbId: item.cbId ?? null,
+    cbId: (item as Item).cbId ?? item.cb ?? null,
     quality: getAttribute(item, 'qual'),
     durability: getAttribute(item, 'dur'),
     durabilityMax: getAttribute(item, 'durM'),
     quantity: getAttribute(item, 'qty'),
-    weaponAttack: item.cbType === 'W' ? getAttribute(item, 'patk') : null,
-    weaponDamageTypes: item.cbType === 'W' ? item.damageTypes ?? [] : [],
-    weaponSpeed: item.cbType === 'W' ? getAttribute(item, 'speed') : null,
-    weaponRange: item.cbType === 'W' ? getAttribute(item, 'range') : null,
-    weaponArmorPen: item.cbType === 'W' ? getAttribute(item, 'armorPen') ?? 0 : null,
-    weaponDefense: item.cbType === 'W' ? getAttribute(item, 'defense') ?? 0 : null,
-    armorStats: item.cbType === 'A' ? {
+    weaponCategory: itemType === 'W' ? getWeaponCategory(item) : null,
+    weaponAttack: itemType === 'W' ? getAttribute(item, 'patk') : null,
+    weaponDamageTypes: itemType === 'W' ? getWeaponDamageTypes(item) : [],
+    weaponSpeed: itemType === 'W' ? getAttribute(item, 'speed') : null,
+    weaponRange: itemType === 'W' ? getAttribute(item, 'range') : null,
+    weaponArmorPen: itemType === 'W' ? getAttribute(item, 'armorPen') ?? 0 : null,
+    weaponDefense: itemType === 'W' ? getAttribute(item, 'defense') ?? 0 : null,
+    armorStats: itemType === 'A' ? {
         pdef: getAttribute(item, 'pdef') ?? 0,
         defense: getAttribute(item, 'defense') ?? 0,
         str: getAttribute(item, 'str') ?? 0,
@@ -29,7 +48,8 @@ export const getItemTooltipData = (item: Item) => ({
         maxHp: getAttribute(item, 'maxHp') ?? 0,
         arcaneInterference: getAttribute(item, 'arcaneInterference') ?? 0,
     } : null,
-})
+    }
+}
 
 export const getItemImage = (item: Item | null | undefined) => {
     if (!item?.imgUrl) {

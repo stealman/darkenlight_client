@@ -27,7 +27,7 @@
             </div>
         </template>
 
-        <div class="npc-use-content-shell" @click="detailItem = null">
+        <div class="npc-use-content-shell" @click="hideItemOverlays">
             <template v-if="selectedFeature?.type === 'vendor' || selectedFeature?.type === 'healer'">
                 <div v-if="selectedFeature?.type === 'vendor' && vendorCategories.length" class="npc-use-category-tabs">
                     <button
@@ -95,7 +95,15 @@
                 <div v-if="repairItems.equipment.length || repairItems.inventory.length" class="npc-vendor-item-list">
                     <template v-if="repairItems.equipment.length">
                         <div class="npc-repairer-section-title">{{ t('vendor.equipment') }}</div>
-                        <div v-for="repairItem in repairItems.equipment" :key="repairItem.item.id" class="npc-vendor-item-row npc-repairer-item-row">
+                        <div
+                            v-for="repairItem in repairItems.equipment"
+                            :key="repairItem.item.id"
+                            class="npc-vendor-item-row npc-repairer-item-row"
+                            role="button"
+                            tabindex="0"
+                            @click.stop="showRepairItemDetails(repairItem.item, $event)"
+                            @keydown.enter="showRepairItemDetails(repairItem.item, $event)"
+                        >
                             <div :class="['npc-repairer-item-icon', repairItem.durabilityStatus ? `item-durability--${repairItem.durabilityStatus}` : null]">
                                 <img class="npc-vendor-item-icon" :src="getRepairItemImage(repairItem.item)" :alt="repairItem.item.name ?? ''" />
                             </div>
@@ -110,7 +118,15 @@
                     </template>
                     <template v-if="repairItems.inventory.length">
                         <div class="npc-repairer-section-title">{{ t('vendor.inventory') }}</div>
-                        <div v-for="repairItem in repairItems.inventory" :key="repairItem.item.id" class="npc-vendor-item-row npc-repairer-item-row">
+                        <div
+                            v-for="repairItem in repairItems.inventory"
+                            :key="repairItem.item.id"
+                            class="npc-vendor-item-row npc-repairer-item-row"
+                            role="button"
+                            tabindex="0"
+                            @click.stop="showRepairItemDetails(repairItem.item, $event)"
+                            @keydown.enter="showRepairItemDetails(repairItem.item, $event)"
+                        >
                         <div :class="['npc-repairer-item-icon', repairItem.durabilityStatus ? `item-durability--${repairItem.durabilityStatus}` : null]">
                             <img class="npc-vendor-item-icon" :src="getRepairItemImage(repairItem.item)" :alt="repairItem.item.name ?? ''" />
                         </div>
@@ -157,6 +173,10 @@
             </div>
             <div v-if="detailItem" class="npc-vendor-item-overlay" :style="detailOverlayStyle" @click="detailItem = null">
                 <div class="npc-vendor-overlay-name">{{ getItemName(detailItem) }}</div>
+                <div v-if="detailWeaponDurability || detailWeaponCategoryLabel" class="npc-vendor-overlay-category-row">
+                    <span v-if="detailWeaponDurability" class="npc-vendor-overlay-durability">{{ t('inventory.durability') }}: <strong>{{ detailWeaponDurability }}</strong></span>
+                    <span v-if="detailWeaponCategoryLabel" class="inventory-item-overlay-weapon-category">{{ detailWeaponCategoryLabel }}</span>
+                </div>
                 <div v-if="detailItem.tp === 'W'" class="npc-vendor-overlay-stats">
                     <span>{{ t('vendor.attack') }} <strong>{{ detailItem.atts?.patk }}</strong></span>
                     <span>{{ t('vendor.attackType') }} <strong>{{ formatDamageTypes(detailItem) }}</strong></span>
@@ -177,12 +197,22 @@
                 </div>
                 <div v-else class="npc-vendor-overlay-muted">{{ t('vendor.detailsSoon') }}</div>
             </div>
+            <ItemInfoOverlay
+                v-if="repairItemInfoOverlay.visible"
+                ref="repairItemInfoOverlayRef"
+                :item-info="repairItemInfoOverlay"
+                context="REPAIR"
+                :x="repairItemInfoOverlay.x"
+                :y="repairItemInfoOverlay.y"
+                :action-button-size="0"
+                @close="hideRepairItemInfoOverlay"
+            />
         </template>
     </GameDialog>
 </template>
 
 <script setup lang="ts">
-import {computed, onMounted, onUnmounted, ref} from 'vue'
+import {computed, nextTick, onMounted, onUnmounted, ref} from 'vue'
 import GameDialog from '@/vue/views/GameDialog.vue'
 import {NpcInteractionManager} from '@/data/npcInteractionManager'
 import type {NpcHealerService, NpcUseData, NpcUseFeatureData, NpcVendorCatalogItem} from '@/network/messageIfs'
@@ -194,7 +224,8 @@ import {BankManager} from '@/data/bankManager'
 import BankPanel from '@/vue/views/npc/BankPanel.vue'
 import {MyPlayer} from '@/data/myPlayer'
 import type {Item} from '@/data/items/item'
-import {getItemDurabilityStatus, type ItemDurabilityStatus} from '@/vue/views/inventory/itemTooltip'
+import ItemInfoOverlay from '@/vue/views/inventory/itemInfoOverlay.vue'
+import {getItemDurabilityStatus, getItemTooltipData, getWeaponCategoryLabel, type ItemDurabilityStatus} from '@/vue/views/inventory/itemTooltip'
 
 const emit = defineEmits(['close'])
 
@@ -227,6 +258,26 @@ const selectedFeatureIndex = ref(0)
 const selectedCategory = ref('')
 const detailItem = ref<NpcVendorCatalogItem | null>(null)
 const detailOverlayPosition = ref({x: 0, y: 0})
+const repairItemInfoOverlayRef = ref<{ getBoundingClientRect?: () => DOMRect } | null>(null)
+const repairItemInfoOverlay = ref({
+    visible: false,
+    sourceItemId: null as number | null,
+    x: 0,
+    y: 0,
+    name: '',
+    quality: null,
+    durability: null,
+    durabilityMax: null,
+    quantity: null,
+    weaponCategory: null,
+    weaponAttack: null,
+    weaponDamageTypes: [],
+    weaponSpeed: null,
+    weaponRange: null,
+    weaponArmorPen: null,
+    weaponDefense: null,
+    armorStats: null,
+})
 const resourceInventoryVersion = ref(0)
 const openedAt = ref(0)
 const purchaseEffects = ref<PurchaseEffect[]>([])
@@ -251,6 +302,12 @@ const repairItems = computed(() => {
     }
 })
 const detailOverlayStyle = computed(() => ({left: `${detailOverlayPosition.value.x}px`, top: `${detailOverlayPosition.value.y}px`}))
+const detailWeaponCategoryLabel = computed(() => detailItem.value?.tp === 'W' ? getWeaponCategoryLabel(detailItem.value.wCat) : null)
+const detailWeaponDurability = computed(() => {
+    const durability = Number(detailItem.value?.atts?.dur)
+    const maxDurability = Number(detailItem.value?.atts?.durM)
+    return Number.isFinite(durability) && Number.isFinite(maxDurability) ? `${durability} / ${maxDurability}` : null
+})
 const formattedEmeralds = computed(() => EmeraldsManager.formatEmeraldAmount(EmeraldsManager.emeralds.value))
 
 const getFeatureLabel = (type: string) => t(featureLabels[type] ?? type)
@@ -311,13 +368,51 @@ const selectFeature = (index: number, remember: boolean = true) => {
     if (remember) {
         localStorage.setItem(NPC_FEATURE_TAB_STORAGE_KEY, feature.type)
     }
-    detailItem.value = null
+    hideItemOverlays()
 }
 
 const selectCategory = (category: string) => {
     selectedCategory.value = category
     localStorage.setItem(NPC_VENDOR_CATEGORY_TAB_STORAGE_KEY, category)
+    hideItemOverlays()
+}
+
+const hideRepairItemInfoOverlay = () => {
+    repairItemInfoOverlay.value.visible = false
+    repairItemInfoOverlay.value.sourceItemId = null
+}
+
+const hideItemOverlays = () => {
     detailItem.value = null
+    hideRepairItemInfoOverlay()
+}
+
+const clampRepairItemInfoOverlayPosition = () => {
+    const overlayRect = repairItemInfoOverlayRef.value?.getBoundingClientRect?.()
+    if (!overlayRect) {
+        return
+    }
+
+    repairItemInfoOverlay.value.x = Math.max(8, Math.min(repairItemInfoOverlay.value.x, window.innerWidth - overlayRect.width - 8))
+    repairItemInfoOverlay.value.y = Math.max(8, Math.min(repairItemInfoOverlay.value.y, window.innerHeight - overlayRect.height - 8))
+}
+
+const showRepairItemDetails = (item: Item, event: MouseEvent | KeyboardEvent) => {
+    if (repairItemInfoOverlay.value.visible && repairItemInfoOverlay.value.sourceItemId === item.id) {
+        hideRepairItemInfoOverlay()
+        return
+    }
+
+    detailItem.value = null
+    Object.assign(repairItemInfoOverlay.value, getItemTooltipData(item))
+    repairItemInfoOverlay.value.visible = true
+    repairItemInfoOverlay.value.sourceItemId = item.id
+    repairItemInfoOverlay.value.x = event instanceof MouseEvent ? event.clientX + 8 : Math.max(12, window.innerWidth / 2 - 135)
+    repairItemInfoOverlay.value.y = event instanceof MouseEvent ? event.clientY : Math.max(12, window.innerHeight / 2 - 80)
+
+    nextTick(() => {
+        clampRepairItemInfoOverlayPosition()
+    })
 }
 
 const addPurchaseEffect = (text: string, event: MouseEvent, error: boolean = false) => {
@@ -376,6 +471,7 @@ const buyHealerService = (service: NpcHealerService, event: MouseEvent) => {
 }
 
 const repairSelectedItem = (repairItem: RepairItem, event: MouseEvent) => {
+    hideRepairItemInfoOverlay()
     const npc = npcData.value ? NpcManager.npcs.get(npcData.value.id) : null
     if (!npc || npc.getDistanceFromMyPlayer() > NPC_PURCHASE_DISTANCE) {
         addPurchaseEffect(t('messages.npcUseOutOfRange'), event, true)
@@ -426,7 +522,7 @@ const openDialog = (data: NpcUseData) => {
 }
 
 const closeDialog = () => {
-    detailItem.value = null
+    hideItemOverlays()
     bankLoading.value = false
     BankManager.clear()
     dialogVisible.value = false
@@ -475,18 +571,14 @@ defineExpose({openDialog})
 .npc-use-content-shell :deep(.bank-panel) { flex: 1 1 auto; min-height: 0; }
 .npc-vendor-item-list { display: flex; flex: 1 1 auto; min-height: 0; flex-direction: column; overflow-y: auto; border-top: 1px solid rgba(var(--ui-darker), 0.8); border-bottom: 1px solid rgba(var(--ui-darker), 0.8); }
 .npc-vendor-item-row { display: grid; grid-template-columns: 46px minmax(0, 1fr) max-content auto; align-items: center; gap: 12px; min-height: 46px; padding: 3px 8px; border-bottom: 1px solid rgba(var(--ui-darker), 0.65); color: rgb(var(--ui-base)); cursor: url('/images/cursor-pointer.png'), pointer; }
-.npc-repairer-item-row { grid-template-columns: 46px minmax(0, 1fr) max-content max-content auto; cursor: default; }
+.npc-repairer-item-row { grid-template-columns: 46px minmax(0, 1fr) max-content max-content auto; }
 .npc-repairer-durability { color: rgb(var(--ui-dark)); font-size: 12px; white-space: nowrap; }
 .npc-repairer-durability.item-durability--worn { color: rgba(var(--ui-dark), 0.72); }
 .npc-repairer-durability.item-durability--warning { color: rgb(var(--ui-durability-warning)); }
 .npc-repairer-durability.item-durability--danger { color: rgb(var(--ui-durability-danger)); }
 .npc-repairer-durability.item-durability--critical { color: rgb(var(--ui-danger)); }
 .npc-repairer-item-icon { position: relative; width: 40px; height: 40px; }
-.npc-repairer-item-icon::before { content: ''; position: absolute; inset: 0; background: var(--dialog-bg-darker); pointer-events: none; z-index: 0; }
-.npc-repairer-item-icon.item-durability--warning::before { background: rgba(var(--ui-durability-warning-bg), 0.86); }
-.npc-repairer-item-icon.item-durability--danger::before { background: rgba(var(--ui-durability-danger-bg), 0.86); }
-.npc-repairer-item-icon.item-durability--critical::before { background: rgba(var(--ui-durability-critical-bg), 0.86); }
-.npc-repairer-item-icon .npc-vendor-item-icon { position: relative; z-index: 1; width: 100%; height: 100%; }
+.npc-repairer-item-icon .npc-vendor-item-icon { width: 100%; height: 100%; }
 .npc-repairer-section-title { padding: 8px 8px 5px; border-bottom: 1px solid rgba(var(--ui-darker), 0.65); color: rgb(var(--ui-dark)); font-size: 12px; font-weight: 700; text-transform: uppercase; }
 .npc-vendor-item-row:hover { background: rgba(255, 255, 255, 0.06); }
 .npc-healer-service-row { width: 100%; border: 0; border-bottom: 1px solid rgba(var(--ui-darker), 0.65); background: transparent; color: inherit; font: inherit; text-align: inherit; }
@@ -503,7 +595,11 @@ defineExpose({openDialog})
 .npc-use-empty-state { display: flex; flex: 1 1 auto; align-items: center; justify-content: center; color: rgb(var(--ui-dark)); font-size: 14px; }
 .npc-vendor-item-overlay { position: fixed; z-index: 2100; width: 270px; box-sizing: border-box; padding: 10px; border: 1px solid rgb(var(--ui-dark)); background: rgba(15, 11, 8, 0.96); color: rgb(var(--ui-base)); text-align: left; box-shadow: 0 10px 22px rgba(0, 0, 0, 0.65); }
 .npc-vendor-overlay-name { font-size: 14px; font-weight: 700; }
-.npc-vendor-overlay-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px 10px; margin-top: 9px; font-size: 12px; color: rgb(var(--ui-dark)); }
+.npc-vendor-overlay-category-row { display: flex; justify-content: flex-end; margin-top: 6px; }
+.npc-vendor-overlay-durability { color: rgb(var(--ui-dark)); font-size: 12px; }
+.npc-vendor-overlay-durability strong { color: rgb(var(--ui-base)); }
+.npc-vendor-overlay-stats { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: 5px 10px; margin-top: 9px; font-size: 12px; color: rgb(var(--ui-dark)); }
+.npc-vendor-overlay-stats > span { display: flex; justify-content: space-between; gap: 8px; }
 .npc-vendor-overlay-stats strong { color: rgb(var(--ui-base)); }
 .npc-vendor-overlay-muted { margin-top: 8px; color: rgb(var(--ui-dark)); font-size: 12px; }
 .npc-purchase-effect { position: fixed; z-index: 2101; pointer-events: none; color: #ff6262; font-size: 21px; font-weight: 700; line-height: 1; text-shadow: 0 2px 3px #000; animation: npc-purchase-float 750ms ease-out forwards; }

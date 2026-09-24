@@ -154,11 +154,21 @@
 
         <template #overlay>
             <CraftingItemOverlay
-                v-if="itemInfoOverlay.visible"
+                v-if="itemInfoOverlay.visible && !itemInfoOverlay.isEquipment"
                 ref="itemInfoOverlayRef"
                 :item-info="itemInfoOverlay"
                 :x="itemInfoOverlay.x"
                 :y="itemInfoOverlay.y"
+                @close="hideItemInfoOverlay"
+            />
+            <ItemInfoOverlay
+                v-else-if="itemInfoOverlay.visible"
+                ref="itemInfoOverlayRef"
+                :item-info="itemInfoOverlay"
+                context="CRAFTING"
+                :x="itemInfoOverlay.x"
+                :y="itemInfoOverlay.y"
+                :action-button-size="craftingActionButtonSize"
                 @close="hideItemInfoOverlay"
             />
         </template>
@@ -173,6 +183,8 @@ import { AudioManager } from '@/babylon/audio/audioManager'
 import { CraftingManager } from '@/data/crafting/craftingManager'
 import { Settings } from '@/settings/settings'
 import CraftingItemOverlay from '@/vue/views/crafting/craftingItemOverlay.vue'
+import ItemInfoOverlay from '@/vue/views/inventory/itemInfoOverlay.vue'
+import { getItemTooltipData } from '@/vue/views/inventory/itemTooltip'
 import GameDialog from '@/vue/views/GameDialog.vue'
 
 const emit = defineEmits(['close'])
@@ -209,6 +221,9 @@ const itemInfoOverlay = ref({
     durability: null as number | null,
     durabilityMax: null as number | null,
     quantity: null as number | null,
+    weaponCategory: null as string | null,
+    durabilityDisplay: null as string | null,
+    isEquipment: false,
 })
 
 const recipes = computed(() => craftingMenuData.value?.recipes ?? [])
@@ -236,6 +251,9 @@ const hideItemInfoOverlay = () => {
     itemInfoOverlay.value.durability = null
     itemInfoOverlay.value.durabilityMax = null
     itemInfoOverlay.value.quantity = null
+    itemInfoOverlay.value.weaponCategory = null
+    itemInfoOverlay.value.durabilityDisplay = null
+    itemInfoOverlay.value.isEquipment = false
 }
 
 const refreshCraftingActionButtonSize = () => {
@@ -340,17 +358,15 @@ const showItemInfoOverlay = (item: ItemTO, sourceKey: string, pointer: PointerEv
     itemInfoOverlay.value.sourceKey = sourceKey
     itemInfoOverlay.value.x = pointer.clientX + OVERLAY_CURSOR_OFFSET_X
     itemInfoOverlay.value.y = pointer.clientY
-    itemInfoOverlay.value.name = resolveItemName(item)
-
-    const quality = Number(getItemAttribute(item, 'qual'))
-    const durability = Number(getItemAttribute(item, 'dur'))
-    const durabilityMax = Number(getItemAttribute(item, 'durM'))
-    const quantity = Number(getItemAttribute(item, 'qty'))
-
-    itemInfoOverlay.value.quality = Number.isFinite(quality) ? quality : null
-    itemInfoOverlay.value.durability = Number.isFinite(durability) ? durability : null
-    itemInfoOverlay.value.durabilityMax = Number.isFinite(durabilityMax) ? durabilityMax : null
-    itemInfoOverlay.value.quantity = Number.isFinite(quantity) ? quantity : null
+    const isEquipment = item.tp === 'W' || item.tp === 'A'
+    Object.assign(itemInfoOverlay.value, getItemTooltipData(item), {
+        name: resolveItemName(item),
+        quality: isEquipment ? 1 : null,
+        durability: null,
+        durabilityMax: null,
+        durabilityDisplay: isEquipment ? 'N/A' : null,
+        isEquipment,
+    })
 
     nextTick(() => {
         clampItemInfoOverlayPosition()

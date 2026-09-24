@@ -77,7 +77,7 @@ const MIN_INVENTORY_SLOT_COUNT = 24
 const BANK_LEFT_MODE_STORAGE_KEY = 'DARKENLIGHT_BANK_LEFT_MODE'
 const actionButtonSize = ref(Settings.actionButtonSize)
 const itemInfoOverlayRef = ref()
-const itemInfoOverlay = ref<any>({visible: false})
+const itemInfoOverlay = ref<any>({visible: false, weaponCategory: null})
 const version = ref(0)
 const getStoredLeftMode = (): 'inventory' | 'equipment' => {
     try {
