@@ -170,7 +170,6 @@ export const EquipSlotModelsCb = {
     ARMOR_PLATE: new EquipSlotModel(1000, EquipItemSlots.BODY, null),
 
     HELM: new EquipSlotModel(1100, EquipItemSlots.HEAD, null),
-    HELM_CLOSED: new EquipSlotModel(1110, EquipItemSlots.HEAD, null),
 
     PAULDRONS_PLATE: new EquipSlotModel(1200, EquipItemSlots.PAULDRONS, null),
 

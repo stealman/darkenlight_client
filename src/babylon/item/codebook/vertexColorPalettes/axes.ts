@@ -1,4 +1,4 @@
-import { METAL_WEAPON_MATERIAL_NAMES, PICKAXE_MATERIAL_NAMES, VertexColorWeaponPalette } from './types'
+import { METAL_WEAPON_MATERIAL_NAMES, PICKAXE_MATERIAL_NAMES, VertexColorWeaponPalette, WEAPON_STEEL_COLOR_STEPS } from './types'
 
 /** Local vertex-colour palettes for axe and pickaxe models. */
 export const AxeVertexColorPalettes: Record<string, VertexColorWeaponPalette> = {
@@ -16,7 +16,7 @@ export const AxeVertexColorPalettes: Record<string, VertexColorWeaponPalette> = 
         // materialId: 1 steel, 2 pyroxide, 3 geonite, 4 mythril, 5 chaotite
         materialColors: [
             // steel
-            [[73, 42, 16], [93, 110, 116], [126, 71, 30], [219, 237, 242], [52, 62, 64]],
+            [[73, 42, 16], WEAPON_STEEL_COLOR_STEPS.mid, [126, 71, 30], WEAPON_STEEL_COLOR_STEPS.light, WEAPON_STEEL_COLOR_STEPS.dark],
             // pyroxide
             [[78, 39, 18], [132, 25, 20], [133, 67, 32], [255, 170, 72], [69, 12, 12]],
             // geonite
@@ -42,7 +42,7 @@ export const AxeVertexColorPalettes: Record<string, VertexColorWeaponPalette> = 
         // materialId: 1 steel, 2 pyroxide, 3 geonite, 4 mythril, 5 chaotite
         materialColors: [
             // steel
-            [[219, 237, 242], [52, 62, 64], [93, 110, 116], [73, 42, 16], [126, 71, 30]],
+            [WEAPON_STEEL_COLOR_STEPS.light, WEAPON_STEEL_COLOR_STEPS.dark, WEAPON_STEEL_COLOR_STEPS.mid, [73, 42, 16], [126, 71, 30]],
             // pyroxide
             [[255, 170, 72], [69, 12, 12], [132, 25, 20], [78, 39, 18], [133, 67, 32]],
             // geonite
@@ -68,7 +68,7 @@ export const AxeVertexColorPalettes: Record<string, VertexColorWeaponPalette> = 
         // materialId: 1 steel, 2 pyroxide, 3 geonite, 4 mythril, 5 chaotite
         materialColors: [
             // steel
-            [[126, 71, 30], [52, 62, 64], [219, 237, 242], [73, 42, 16], [93, 110, 116]],
+            [[126, 71, 30], WEAPON_STEEL_COLOR_STEPS.dark, WEAPON_STEEL_COLOR_STEPS.light, [73, 42, 16], WEAPON_STEEL_COLOR_STEPS.mid],
             // pyroxide
             [[133, 67, 32], [69, 12, 12], [255, 170, 72], [78, 39, 18], [132, 25, 20]],
             // geonite
@@ -94,7 +94,7 @@ export const AxeVertexColorPalettes: Record<string, VertexColorWeaponPalette> = 
         // materialId: 1 steel, 2 pyroxide, 3 geonite, 4 mythril, 5 chaotite, 6 diamond
         materialColors: [
             // steel
-            [[73, 42, 16], [52, 62, 64], [126, 71, 30], [219, 237, 242]],
+            [[73, 42, 16], WEAPON_STEEL_COLOR_STEPS.dark, [126, 71, 30], WEAPON_STEEL_COLOR_STEPS.light],
             // pyroxide
             [[78, 39, 18], [69, 12, 12], [133, 67, 32], [255, 170, 72]],
             // geonite
@@ -122,7 +122,7 @@ export const AxeVertexColorPalettes: Record<string, VertexColorWeaponPalette> = 
         // materialId: 1 steel, 2 pyroxide, 3 geonite, 4 mythril, 5 chaotite
         materialColors: [
             // steel
-            [[73, 42, 16], [93, 110, 116], [126, 71, 30], [93, 110, 116], [219, 237, 242], [52, 62, 64]],
+            [[73, 42, 16], WEAPON_STEEL_COLOR_STEPS.mid, [126, 71, 30], WEAPON_STEEL_COLOR_STEPS.mid, WEAPON_STEEL_COLOR_STEPS.light, WEAPON_STEEL_COLOR_STEPS.dark],
             // pyroxide
             [[78, 39, 18], [132, 25, 20], [133, 67, 32], [132, 25, 20], [255, 170, 72], [69, 12, 12]],
             // geonite

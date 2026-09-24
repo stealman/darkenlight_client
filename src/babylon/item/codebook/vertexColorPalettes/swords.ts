@@ -1,4 +1,4 @@
-import { METAL_WEAPON_MATERIAL_NAMES, VertexColorWeaponPalette } from './types'
+import { METAL_WEAPON_MATERIAL_NAMES, VertexColorWeaponPalette, WEAPON_STEEL_COLOR_STEPS } from './types'
 
 /**
  * Local vertex-colour palettes for every sword model.
@@ -21,7 +21,7 @@ export const SwordVertexColorPalettes: Record<string, VertexColorWeaponPalette> 
         // materialId: 1 steel, 2 pyroxide, 3 geonite, 4 mythril, 5 chaotite
         materialColors: [
             // steel
-            [[52, 62, 64], [93, 110, 116], [219, 237, 242], [42, 18, 12], [91, 43, 25], [145, 76, 43]],
+            [WEAPON_STEEL_COLOR_STEPS.dark, WEAPON_STEEL_COLOR_STEPS.mid, WEAPON_STEEL_COLOR_STEPS.light, [42, 18, 12], [91, 43, 25], [145, 76, 43]],
             // pyroxide
             [[69, 12, 12], [132, 25, 20], [255, 170, 72], [46, 17, 13], [98, 40, 27], [154, 72, 46]],
             // geonite
@@ -47,7 +47,7 @@ export const SwordVertexColorPalettes: Record<string, VertexColorWeaponPalette> 
         // materialId: 1 steel, 2 pyroxide, 3 geonite, 4 mythril, 5 chaotite
         materialColors: [
             // steel
-            [[52, 62, 64], [93, 110, 116], [219, 237, 242], [42, 18, 12], [91, 43, 25], [145, 76, 43]],
+            [WEAPON_STEEL_COLOR_STEPS.dark, WEAPON_STEEL_COLOR_STEPS.mid, WEAPON_STEEL_COLOR_STEPS.light, [42, 18, 12], [91, 43, 25], [145, 76, 43]],
             // pyroxide
             [[69, 12, 12], [132, 25, 20], [255, 170, 72], [46, 17, 13], [98, 40, 27], [154, 72, 46]],
             // geonite
@@ -75,7 +75,7 @@ export const SwordVertexColorPalettes: Record<string, VertexColorWeaponPalette> 
         // material remains independent so later art changes stay local.
         materialColors: [
             // steel
-            [[52, 62, 64], [93, 110, 116], [219, 237, 242], [42, 18, 12], [91, 43, 25], [145, 76, 43]],
+            [WEAPON_STEEL_COLOR_STEPS.dark, WEAPON_STEEL_COLOR_STEPS.mid, WEAPON_STEEL_COLOR_STEPS.light, [42, 18, 12], [91, 43, 25], [145, 76, 43]],
             // pyroxide
             [[69, 12, 12], [132, 25, 20], [255, 170, 72], [46, 17, 13], [98, 40, 27], [154, 72, 46]],
             // geonite

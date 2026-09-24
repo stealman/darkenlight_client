@@ -272,31 +272,7 @@ export class EquipItemType {
         this.ensureThinBuffers(this)
     }
 
-    /**
-     * Armor uses .babylon files
-     */
-    async initializeMeshArmor(parentNode: TransformNode, scene: Scene, fileName: string, material: PBRCustomMaterial | null, position: Vector3 = Vector3.Zero(), rotation: Vector3 = Vector3.Zero(), scale: Vector3 = Vector3.One()) {
-        const result = await SceneLoader.ImportMeshAsync("", "/models/equip/", fileName, scene);
-        const source = result.meshes[0] as Mesh
-
-        source.position = position
-        source.rotation = rotation
-        source.scaling = scale
-
-        this.mesh = Mesh.MergeMeshes([source], true)!
-        if (material != null) {
-            this.mesh.material = material
-        }
-        this.mesh.setEnabled(false)
-        this.mesh.alwaysSelectAsActiveMesh = true
-        this.mesh.parent = parentNode
-        this.mesh.receiveShadows = true
-        Lights.registerDynamicLightMesh(this.mesh)
-    }
-
-    /**
-     * Weapon uses .glb files
-     */
+    /** Loads a GLB source mesh for weapons and vertex-colour armour. */
     async initializeMeshGlb(parentNode: TransformNode, scene: Scene, fileName: string, material: PBRCustomMaterial | null, position: Vector3 = Vector3.Zero(), rotation: Vector3 = Vector3.Zero(), scale: Vector3 = Vector3.One(), castPersonalShadow = true) {
         const result = await SceneLoader.ImportMeshAsync("", "/models/equip/", fileName, scene);
         const source = result.meshes[0].getChildMeshes()[0] as Mesh

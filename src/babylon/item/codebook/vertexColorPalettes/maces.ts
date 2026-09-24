@@ -1,4 +1,4 @@
-import { METAL_WEAPON_MATERIAL_NAMES, VertexColorWeaponPalette } from './types'
+import { METAL_WEAPON_MATERIAL_NAMES, VertexColorWeaponPalette, WEAPON_STEEL_COLOR_STEPS } from './types'
 
 /** Local vertex-colour palettes for mace and hammer models. */
 export const MaceVertexColorPalettes: Record<string, VertexColorWeaponPalette> = {
@@ -16,7 +16,7 @@ export const MaceVertexColorPalettes: Record<string, VertexColorWeaponPalette> =
 
         // materialId: 1 steel, 2 pyroxide, 3 geonite, 4 mythril, 5 chaotite
         materialColors: [
-            [[52, 62, 64], [93, 110, 116], [219, 237, 242], [42, 18, 12], [91, 43, 25], [145, 76, 43]],
+            [WEAPON_STEEL_COLOR_STEPS.dark, WEAPON_STEEL_COLOR_STEPS.mid, WEAPON_STEEL_COLOR_STEPS.light, [42, 18, 12], [91, 43, 25], [145, 76, 43]],
             [[69, 12, 12], [132, 25, 20], [255, 170, 72], [46, 17, 13], [98, 40, 27], [154, 72, 46]],
             [[10, 51, 39], [24, 101, 68], [146, 241, 166], [39, 21, 13], [83, 49, 27], [133, 84, 46]],
             [[8, 44, 105], [26, 111, 183], [177, 247, 255], [79, 49, 8], [175, 127, 24], [255, 221, 92]],
@@ -36,7 +36,7 @@ export const MaceVertexColorPalettes: Record<string, VertexColorWeaponPalette> =
 
         // materialId: 1 steel, 2 pyroxide, 3 geonite, 4 mythril, 5 chaotite
         materialColors: [
-            [[93, 110, 116], [52, 62, 64], [219, 237, 242], [42, 18, 12], [91, 43, 25]],
+            [WEAPON_STEEL_COLOR_STEPS.mid, WEAPON_STEEL_COLOR_STEPS.dark, WEAPON_STEEL_COLOR_STEPS.light, [42, 18, 12], [91, 43, 25]],
             [[132, 25, 20], [69, 12, 12], [255, 170, 72], [46, 17, 13], [98, 40, 27]],
             [[24, 101, 68], [10, 51, 39], [146, 241, 166], [39, 21, 13], [83, 49, 27]],
             [[26, 111, 183], [8, 44, 105], [177, 247, 255], [79, 49, 8], [175, 127, 24]],
@@ -60,7 +60,7 @@ export const MaceVertexColorPalettes: Record<string, VertexColorWeaponPalette> =
         // Warhammer model can evolve independently.
         // materialId: 1 steel, 2 pyroxide, 3 geonite, 4 mythril, 5 chaotite
         materialColors: [
-            [[93, 110, 116], [52, 62, 64], [219, 237, 242], [42, 18, 12], [91, 43, 25]],
+            [WEAPON_STEEL_COLOR_STEPS.mid, WEAPON_STEEL_COLOR_STEPS.dark, WEAPON_STEEL_COLOR_STEPS.light, [42, 18, 12], [91, 43, 25]],
             [[132, 25, 20], [69, 12, 12], [255, 170, 72], [46, 17, 13], [98, 40, 27]],
             [[24, 101, 68], [10, 51, 39], [146, 241, 166], [39, 21, 13], [83, 49, 27]],
             [[26, 111, 183], [8, 44, 105], [177, 247, 255], [79, 49, 8], [175, 127, 24]],

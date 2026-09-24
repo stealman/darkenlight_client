@@ -95,10 +95,10 @@
 
 <script setup>
 import { ArcRotateCamera, Color3, Color4, CubeTexture, DirectionalLight, Engine, Mesh, Scene, SceneLoader, Vector2, Vector3 } from '@babylonjs/core'
-import { Materials } from '@/babylon/materials'
 import { WEAPON_MODEL_CACHE_VERSION, WeaponModelsCb } from '@/babylon/item/codebook/weaponModelsCb'
-import { ARMOR_MATERIAL_METALIC, ArmorModelsCb, BASE_EQUIP_MATERIAL_PATH } from '@/babylon/item/codebook/armorsModelsCb'
+import { ARMOR_MODEL_CACHE_VERSION, ArmorModelsCb, ArmorVertexColorGlbNames } from '@/babylon/item/codebook/armorsModelsCb'
 import { VertexColorWeaponPalettesByModelKey } from '@/babylon/item/codebook/vertexColorPalettes'
+import { MetalArmorVertexColorPalette } from '@/babylon/item/codebook/vertexColorPalettes/armor'
 import { createVertexColorWeaponMaterial } from '@/babylon/item/codebook/vertexColorPalettes/vertexColorWeaponMaterial'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { Settings } from '@/settings/settings'
@@ -111,20 +111,13 @@ const WEAPON_OPTIONS = Object.entries(VertexColorWeaponPalettesByModelKey).map((
     return { key, item, ...weapon, label: `${key} (${item.model})` }
 })
 const ARMOR_OPTIONS = Object.entries(ArmorModelsCb).map(([key, item]) => ({ key, item, label: `${key} (${item.model})` }))
-const ARMOR_MATERIAL_OPTIONS = [
-    { index: 0, label: 'Steel' },
-    { index: 1, label: 'Astracyte' },
-    { index: 2, label: 'Agapyte' },
-    { index: 3, label: 'Gold' },
-    { index: 4, label: 'Blood Stone' },
-    { index: 5, label: 'Dark Stone' },
-    { index: 7, label: 'Mythril' },
-]
+const ARMOR_MATERIAL_OPTIONS = MetalArmorVertexColorPalette.materialNames.map((label, index) => ({ index, label }))
 const ARMOR_INVENTORY_BASE_NAMES = {
     PLATE_ARMOR_MALE: 'plate-armor',
     HELM_MALE: 'plate-helmet',
     PAULDRON_MALE: 'plate-pauldrons',
     LEG_MALE: 'plate-greaves',
+    SHIELD: 'shield',
 }
 
 const dialogVisible = ref(false)
@@ -160,7 +153,7 @@ const currentMaterialSlots = computed(() => {
     if (selectedWeaponPalette.value) {
         return selectedWeaponPalette.value.materialColors.length
     }
-    return item.matCols * item.matRows
+    return MetalArmorVertexColorPalette.materialColors.length
 })
 const materialIndexOptions = computed(() => {
     if (previewCategory.value === 'ARMOR') {
@@ -407,7 +400,7 @@ const loadPreview = async () => {
     }
     const modelPath = isWeapon
         ? `weapons/${previewItem.model}.glb?v=${WEAPON_MODEL_CACHE_VERSION}`
-        : `armors/${previewItem.model}.babylon`
+        : `armors/${ArmorVertexColorGlbNames[previewItem.id] ?? previewItem.model}.glb?v=${ARMOR_MODEL_CACHE_VERSION}`
     const importResult = await SceneLoader.ImportMeshAsync('', '/models/equip/', modelPath, scene)
     const sourceMeshes = importResult.meshes.filter((m) => m instanceof Mesh && m.getTotalVertices() > 0)
     if (sourceMeshes.length === 0) {
@@ -432,23 +425,14 @@ const loadPreview = async () => {
     previewBaseScaling = merged.scaling.clone()
     loadSettingsForCurrentSelection()
 
-    previewMaterial = isWeapon
-        ? createVertexColorWeaponMaterial(`modelRenderMaterial-${previewItem.model}`, scene, weaponPalette)
-        : Materials.getPBRCustomMaterialFrom(
-            scene,
-            `modelRenderMaterial-${previewCategory.value}-${previewItem.model}`,
-            `${BASE_EQUIP_MATERIAL_PATH}armors/`,
-            `${ARMOR_MATERIAL_METALIC}.png`,
-            1 / previewItem.matCols,
-            1 / previewItem.matRows,
-            false,
-            {
-                metallic: materialMetallic.value,
-                roughness: materialRoughness.value,
-                directIntensity: materialDirectIntensity.value,
-                environmentIntensity: materialEnvironmentIntensity.value,
-            }
-        )
+    previewMaterial = createVertexColorWeaponMaterial(
+        `modelRenderMaterial-${previewCategory.value}-${previewItem.model}`,
+        scene,
+        isWeapon ? weaponPalette : MetalArmorVertexColorPalette,
+    )
+    if (!isWeapon) {
+        previewMaterial.twoSidedLighting = false
+    }
     merged.material = previewMaterial
     applyPreviewMaterialSettings()
 

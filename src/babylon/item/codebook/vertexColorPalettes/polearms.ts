@@ -1,4 +1,4 @@
-import { METAL_WEAPON_MATERIAL_NAMES, VertexColorWeaponPalette } from './types'
+import { METAL_WEAPON_MATERIAL_NAMES, VertexColorWeaponPalette, WEAPON_STEEL_COLOR_STEPS } from './types'
 
 /** Local vertex-colour palettes for spear and halberd models. */
 const SPEAR_VERTEX_COLOR_PALETTE: VertexColorWeaponPalette = {
@@ -13,7 +13,7 @@ const SPEAR_VERTEX_COLOR_PALETTE: VertexColorWeaponPalette = {
 
     // materialId: 1 steel, 2 pyroxide, 3 geonite, 4 mythril, 5 chaotite
     materialColors: [
-        [[73, 42, 16], [126, 71, 30], [219, 237, 242], [52, 62, 64], [93, 110, 116]],
+        [[73, 42, 16], [126, 71, 30], WEAPON_STEEL_COLOR_STEPS.light, WEAPON_STEEL_COLOR_STEPS.dark, WEAPON_STEEL_COLOR_STEPS.mid],
         [[78, 39, 18], [133, 67, 32], [255, 170, 72], [69, 12, 12], [132, 25, 20]],
         [[68, 47, 19], [119, 79, 33], [146, 241, 166], [10, 51, 39], [24, 101, 68]],
         [[93, 57, 13], [193, 138, 31], [177, 247, 255], [8, 44, 105], [26, 111, 183]],
@@ -39,7 +39,7 @@ export const PolearmVertexColorPalettes: Record<string, VertexColorWeaponPalette
 
         // materialId: 1 steel, 2 pyroxide, 3 geonite, 4 mythril, 5 chaotite
         materialColors: [
-            [[73, 42, 16], [126, 71, 30], [219, 237, 242], [52, 62, 64], [93, 110, 116]],
+            [[73, 42, 16], [126, 71, 30], WEAPON_STEEL_COLOR_STEPS.light, WEAPON_STEEL_COLOR_STEPS.dark, WEAPON_STEEL_COLOR_STEPS.mid],
             [[78, 39, 18], [133, 67, 32], [255, 170, 72], [69, 12, 12], [132, 25, 20]],
             [[68, 47, 19], [119, 79, 33], [146, 241, 166], [10, 51, 39], [24, 101, 68]],
             [[93, 57, 13], [193, 138, 31], [177, 247, 255], [8, 44, 105], [26, 111, 183]],

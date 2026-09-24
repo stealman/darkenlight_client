@@ -1,4 +1,3 @@
-import { Materials } from '@/babylon/materials'
 import { Scene, TransformNode, Vector2, Vector3 } from '@babylonjs/core'
 import { BabylonUtils } from '@/babylon/utils'
 import { EquipItemType} from '@/babylon/item/equipManager'
@@ -7,93 +6,74 @@ import { PBRCustomMaterial } from '@babylonjs/materials'
 import { Renderer } from '@/babylon/scene/renderer'
 import { EquipSlotModelsCb } from '@/data/items/item'
 import { createVertexColorWeaponMaterial } from '@/babylon/item/codebook/vertexColorPalettes/vertexColorWeaponMaterial'
-import { ShieldVertexColorPalette } from '@/babylon/item/codebook/vertexColorPalettes/armor'
+import { MetalArmorVertexColorPalette } from '@/babylon/item/codebook/vertexColorPalettes/armor'
 
 export const BASE_EQUIP_MATERIAL_PATH = "/models/equip/"
-export const ARMOR_MATERIAL_METALIC = 'materials-metalic'
 
 // Armor materialId is a 1-based tile position in this atlas; EquipItem converts it to materialId - 1.
 const matMetalSize = new Vector2(16, 8)
 
-// Change when shield.glb is replaced to avoid mixing a cached model with its palette.
-export const ARMOR_MODEL_CACHE_VERSION = '20260924-shield-vertex'
+// Change when a vertex-colour armour GLB is replaced to avoid mixing it with its palette.
+export const ARMOR_MODEL_CACHE_VERSION = '20260925-armor-vertex-legs'
 
 export const ArmorsCbManager = {
-    matMetal: null as PBRCustomMaterial,
-    shieldVertexColorMaterial: null as PBRCustomMaterial,
+    metalArmorVertexColorMaterial: null as PBRCustomMaterial,
     itemSourceParent: null as TransformNode | null,
 
     async initArmors(map: Map<number, EquipItemType>, scene: Scene) {
         this.itemSourceParent = new TransformNode("mobArmorSources", scene)
 
         // Load materials
-        this.matMetal = this.getMaterial(ARMOR_MATERIAL_METALIC, matMetalSize)
-        this.shieldVertexColorMaterial = createVertexColorWeaponMaterial('shieldVertexColor', scene, ShieldVertexColorPalette)
-        this.shieldVertexColorMaterial.metallic = 0.7
+        this.metalArmorVertexColorMaterial = createVertexColorWeaponMaterial('metalArmorVertexColor', scene, MetalArmorVertexColorPalette)
         // Keep back-face rendering for the voxel mesh, but do not flip its
         // normals from gl_FrontFacing. The left-hand bone uses a mirrored
         // transform, which otherwise makes the PBR two-sided branch light the
         // visible shield face as though it faced away from the player light.
-        this.shieldVertexColorMaterial.twoSidedLighting = false
+        this.metalArmorVertexColorMaterial.twoSidedLighting = false
         // Init all armor types
-        map.set(ArmorModelsCb.PLATE_ARMOR_MALE.id, await this.getItem(ArmorModelsCb.PLATE_ARMOR_MALE, this.matMetal))
+        map.set(ArmorModelsCb.PLATE_ARMOR_MALE.id, await this.getVertexColorItem(ArmorModelsCb.PLATE_ARMOR_MALE, this.metalArmorVertexColorMaterial))
 
-        map.set(ArmorModelsCb.HELM_MALE.id, await this.getItem(ArmorModelsCb.HELM_MALE, this.matMetal))
-        map.set(ArmorModelsCb.HELM_MALE_CLOSED.id, await this.getItem(ArmorModelsCb.HELM_MALE_CLOSED, this.matMetal))
-        map.set(ArmorModelsCb.SHIELD.id, await this.getShieldItem())
+        map.set(ArmorModelsCb.HELM_MALE.id, await this.getVertexColorItem(ArmorModelsCb.HELM_MALE, this.metalArmorVertexColorMaterial))
+        map.set(ArmorModelsCb.SHIELD.id, await this.getVertexColorItem(ArmorModelsCb.SHIELD, this.metalArmorVertexColorMaterial))
 
-        map.set(ArmorModelsCb.PAULDRON_MALE.id, await this.getItem(ArmorModelsCb.PAULDRON_MALE, this.matMetal))
+        map.set(ArmorModelsCb.PAULDRON_MALE.id, await this.getVertexColorItem(ArmorModelsCb.PAULDRON_MALE, this.metalArmorVertexColorMaterial))
 
-        map.set(ArmorModelsCb.LEG_MALE.id, await this.getItem(ArmorModelsCb.LEG_MALE, this.matMetal))
+        map.set(ArmorModelsCb.LEG_MALE.id, await this.getVertexColorItem(ArmorModelsCb.LEG_MALE, this.metalArmorVertexColorMaterial))
     },
 
-    async getItem(data: EquipCbItem, material: PBRCustomMaterial): Promise<EquipItemType> {
+    async getVertexColorItem(data: EquipCbItem, material: PBRCustomMaterial): Promise<EquipItemType> {
         const item = new EquipItemType(data)
-        await item.initializeMeshArmor(this.itemSourceParent!, Renderer.scene!, "armors/" + data.model + ".babylon", material, data.pos, data.rot, data.scale)
+        const glbModelName = ArmorVertexColorGlbNames[data.id] ?? data.model
+        await item.initializeMeshGlb(
+            this.itemSourceParent!,
+            Renderer.scene!,
+            `armors/${glbModelName}.glb?v=${ARMOR_MODEL_CACHE_VERSION}`,
+            material,
+            data.pos,
+            data.rot,
+            data.scale,
+            false,
+        )
         return item
-    },
-
-    async getShieldItem(): Promise<EquipItemType> {
-        const item = new EquipItemType(ArmorModelsCb.SHIELD)
-        try {
-            await item.initializeMeshGlb(
-                this.itemSourceParent!,
-                Renderer.scene!,
-                `armors/${ArmorModelsCb.SHIELD.model}.glb?v=${ARMOR_MODEL_CACHE_VERSION}`,
-                this.shieldVertexColorMaterial,
-                ArmorModelsCb.SHIELD.pos,
-                ArmorModelsCb.SHIELD.rot,
-                ArmorModelsCb.SHIELD.scale,
-                // Older armour meshes do not cast into the personal light.
-                // Avoid a broad shield self-shadowing under that close light.
-                false,
-            )
-            return item
-        } catch (error) {
-            console.info('Shield GLB is unavailable; using the current Babylon fallback.', error)
-            return this.getItem(ArmorModelsCb.SHIELD, this.matMetal)
-        }
-    },
-
-    getMaterial(texture: string, matSize: Vector2) {
-        const mat = Materials.getPBRCustomMaterialFrom(Renderer.scene!, texture, BASE_EQUIP_MATERIAL_PATH + "armors/", texture + ".png", 1 / (matSize.x), 1 / (matSize.y), false, {
-            metallic: 1.0,
-            roughness: 0.75,
-            directIntensity: 1.5,
-            environmentIntensity: 1,
-        })
-        return mat
     }
 }
 
 export const ArmorModelsCb = {
-    PLATE_ARMOR_MALE: new EquipCbItem(EquipSlotModelsCb.ARMOR_PLATE.modelId, 'male-armor-plate2', new Vector3(-0.01, 0.62, 0.02), new Vector3(0.4, 0.4, 0.37), null, matMetalSize),
+    PLATE_ARMOR_MALE: new EquipCbItem(EquipSlotModelsCb.ARMOR_PLATE.modelId, 'male-armor-plate2', new Vector3(0, 0.39, 0.025), new Vector3(0.23, 0.22, 0.21), null, matMetalSize),
 
-    HELM_MALE: new EquipCbItem(EquipSlotModelsCb.HELM.modelId, 'male-helmet', new Vector3(0, 0.4, 0), BabylonUtils.getSymVector(0.39), null, matMetalSize),
-    HELM_MALE_CLOSED: new EquipCbItem(EquipSlotModelsCb.HELM_CLOSED.modelId, 'male-helmet_closed', new Vector3(0, 0.42, 0), BabylonUtils.getSymVector(0.45), null, matMetalSize),
-    SHIELD: new EquipCbItem(EquipSlotModelsCb.SHIELD.modelId, 'shield', new Vector3(0.15, 0, 0.2), new Vector3(0.23, 0.23, 0.23), null, matMetalSize),
+    HELM_MALE: new EquipCbItem(EquipSlotModelsCb.HELM.modelId, 'male-helmet', new Vector3(0, 0.25, 0.01), BabylonUtils.getSymVector(0.215), null, matMetalSize),
+    SHIELD: new EquipCbItem(EquipSlotModelsCb.SHIELD.modelId, 'shield', new Vector3(0.15, 0, 0.15), new Vector3(0.24, 0.24, 0.2), null, matMetalSize),
 
-    PAULDRON_MALE: new EquipCbItem(EquipSlotModelsCb.PAULDRONS_PLATE.modelId, 'male-pauldron-plate', new Vector3(0.06, -0.15, 0), new Vector3(0.5, 0.5, 0.5), null, matMetalSize),
+    PAULDRON_MALE: new EquipCbItem(EquipSlotModelsCb.PAULDRONS_PLATE.modelId, 'male-pauldron-plate', new Vector3(-0.06, 0, 0), new Vector3(0.26, 0.32, 0.32), null, matMetalSize),
 
-    LEG_MALE: new EquipCbItem(EquipSlotModelsCb.LEGS_PLATE.modelId, 'male-leg-plate', new Vector3(-0.005, -0.1, 0.015), new Vector3(0.23, 0.24, 0.2), null, matMetalSize),
+    LEG_MALE: new EquipCbItem(EquipSlotModelsCb.LEGS_PLATE.modelId, 'male-leg-plate', new Vector3(0.02, 0.2, 0.015), new Vector3(0.23, 0.24, 0.2), null, matMetalSize),
+}
+
+/** Runtime GLB names when they differ from the legacy model codebook name. */
+export const ArmorVertexColorGlbNames: Record<number, string> = {
+    [ArmorModelsCb.PLATE_ARMOR_MALE.id]: 'male-armor-plate',
+    [ArmorModelsCb.HELM_MALE.id]: 'male-helmet',
+    [ArmorModelsCb.PAULDRON_MALE.id]: 'male-pauldron-plate',
+    [ArmorModelsCb.LEG_MALE.id]: 'male-leg-plate',
+    [ArmorModelsCb.SHIELD.id]: 'shield',
 }
