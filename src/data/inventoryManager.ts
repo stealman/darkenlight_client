@@ -1,5 +1,5 @@
 import { MyPlayer } from '@/data/myPlayer'
-import { Item } from '@/data/items/item'
+import { EquipItemSlots, Item } from '@/data/items/item'
 import { Connector } from '@/network/connector'
 import { DropItemMsg, EquipItemMsg, MergeItemMsg, PickItemMsg, SplitItemMsg, UnequipItemMsg } from '@/network/messages'
 import { AudioManager } from '@/babylon/audio/audioManager'
@@ -235,6 +235,14 @@ export const InventoryManager = {
         if (missingArmorSkill) {
             OnScreenMessageManager.addMessage(t(`messages.armorSkillRequired.${missingArmorSkill}`), OnScreenMessageSeverities.ERROR)
             return
+        }
+
+        const equippedWeapon = MyPlayer.myChar.equipSet.get(EquipItemSlots.R_HAND)
+        if (item.slotInfo.slot === EquipItemSlots.L_HAND && equippedWeapon?.isTwoHanded()) {
+            this.unequipSlot(EquipItemSlots.R_HAND, true)
+        }
+        if (item.isTwoHanded() && MyPlayer.myChar.equipSet.get(EquipItemSlots.L_HAND)) {
+            this.unequipSlot(EquipItemSlots.L_HAND, true)
         }
 
         // If slot is occupied, unequip current item first

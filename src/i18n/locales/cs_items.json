@@ -134,7 +134,15 @@
             "astracyte-plate-armor": "Astracytová plátová zbroj",
             "blood-stone-plate-armor": "Plátová zbroj z Krvavého kamene",
             "dark-stone-plate-armor": "Plátová zbroj z Temného kamene",
-            "mythril-plate-armor": "Mythrilová plátová zbroj"
+            "mythril-plate-armor": "Mythrilová plátová zbroj",
+
+            "steel-shield": "Ocelový štít",
+            "gold-shield": "Zlatý štít",
+            "agapyte-shield": "Agapytový štít",
+            "astracyte-shield": "Astracytový štít",
+            "blood-stone-shield": "Štít z Krvavého kamene",
+            "dark-stone-shield": "Štít z Temného kamene",
+            "mythril-shield": "Mythrilový štít"
         },
 
 

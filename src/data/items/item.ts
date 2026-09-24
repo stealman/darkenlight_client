@@ -36,7 +36,7 @@ export class Item {
         this.modelId = modelId
         this.materialId = matId
         this.nameKey = name
-        this.imgUrl = "images/items/" + imgUrl + ".png"
+        this.imgUrl = imgUrl ? "images/items/" + imgUrl + ".png" : null
         const clientSlot = slot === 'ring' ? 'L_RING' : slot === 'necklace' ? 'NECKLACE' : slot === 'trinket' ? 'TRINKET' : slot
         this.slotInfo = EquipSlotModelsCb.getById(modelId) || (clientSlot ? new EquipSlotModel(modelId, clientSlot, null) : null)
         this.atts = atts
@@ -175,6 +175,8 @@ export const EquipSlotModelsCb = {
     PAULDRONS_PLATE: new EquipSlotModel(1200, EquipItemSlots.PAULDRONS, null),
 
     LEGS_PLATE: new EquipSlotModel(1300, EquipItemSlots.LEGS, null),
+
+    SHIELD: new EquipSlotModel(1400, EquipItemSlots.L_HAND, null),
 
     getById(id: number): EquipSlotModel | null {
         for (const key in this) {

@@ -156,6 +156,9 @@ class Character implements Attackable, EffectTarget {
         if (equip.weapon) {
             this.equipSet.set(EquipSlotModelsCb.getById(equip.weapon.mId)!.slot, Item.fromData(equip.weapon))
         }
+        if (equip.shield) {
+            this.equipSet.set(EquipSlotModelsCb.getById(equip.shield.mId)!.slot, Item.fromData(equip.shield))
+        }
         if (equip.body) {
             this.equipSet.set(EquipSlotModelsCb.getById(equip.body.mId)!.slot, Item.fromData(equip.body))
         }

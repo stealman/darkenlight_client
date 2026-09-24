@@ -193,6 +193,11 @@ export class CharacterModel implements EquipBearer {
             this.assignWeapon(weapon.modelId, weapon.materialId - 1)
         }
 
+        if (this.parent.equipSet.get(EquipItemSlots.L_HAND) && !this.equipSet.get('SHIELD')) {
+            const shield = this.parent.equipSet.get(EquipItemSlots.L_HAND)!
+            this.assignShield(shield.modelId, shield.materialId - 1)
+        }
+
         if (this.parent.equipSet.get(EquipItemSlots.BODY) && !this.equipSet.get('BODY')) {
             const armor = this.parent.equipSet.get(EquipItemSlots.BODY)!
             this.assignArmor(armor.modelId, armor.materialId - 1)
@@ -259,6 +264,10 @@ export class CharacterModel implements EquipBearer {
         this.addEquippedItem('WEAPON', this.weaponEquipItem)
     }
 
+    assignShield(type: number, matIndex: number) {
+        this.addEquippedItem('SHIELD', new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find((b) => b.id === 'Bone.012')!, null, null, null))
+    }
+
     addEquippedItem(slot: string, item: EquipItem) {
         this.equipSet.set(slot, item)
         EquipManager.addEquippedItem(item)
@@ -291,7 +300,7 @@ export class CharacterModel implements EquipBearer {
                 break
             }
             case 'L_HAND': {
-                removeModelSlot('L_HAND')
+                removeModelSlot('SHIELD')
                 break
             }
             case 'PAULDRONS': {

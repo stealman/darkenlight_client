@@ -134,7 +134,15 @@
       "astracyte-plate-armor": "Astracyte Plate Armor",
       "blood-stone-plate-armor": "Blood Stone Plate Armor",
       "dark-stone-plate-armor": "Dark Stone Plate Armor",
-      "mythril-plate-armor": "Mythril Plate Armor"
+      "mythril-plate-armor": "Mythril Plate Armor",
+
+      "steel-shield": "Steel Shield",
+      "gold-shield": "Gold Shield",
+      "agapyte-shield": "Agapyte Shield",
+      "astracyte-shield": "Astracyte Shield",
+      "blood-stone-shield": "Blood Stone Shield",
+      "dark-stone-shield": "Dark Stone Shield",
+      "mythril-shield": "Mythril Shield"
     },
 
 
