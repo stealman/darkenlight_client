@@ -14,7 +14,7 @@ export const BASE_EQUIP_MATERIAL_PATH = "/models/equip/"
 const matMetalSize = new Vector2(16, 8)
 
 // Change when a vertex-colour armour GLB is replaced to avoid mixing it with its palette.
-export const ARMOR_MODEL_CACHE_VERSION = '20260925-armor-vertex-legs'
+export const ARMOR_MODEL_CACHE_VERSION = '20260925-armor-draco'
 
 export const ArmorsCbManager = {
     metalArmorVertexColorMaterial: null as PBRCustomMaterial,
@@ -62,7 +62,7 @@ export const ArmorModelsCb = {
     PLATE_ARMOR_MALE: new EquipCbItem(EquipSlotModelsCb.ARMOR_PLATE.modelId, 'male-armor-plate2', new Vector3(0, 0.39, 0.025), new Vector3(0.23, 0.22, 0.21), null, matMetalSize),
 
     HELM_MALE: new EquipCbItem(EquipSlotModelsCb.HELM.modelId, 'male-helmet', new Vector3(0, 0.25, 0.01), BabylonUtils.getSymVector(0.215), null, matMetalSize),
-    SHIELD: new EquipCbItem(EquipSlotModelsCb.SHIELD.modelId, 'shield', new Vector3(0.15, 0, 0.15), new Vector3(0.24, 0.24, 0.2), null, matMetalSize),
+    SHIELD: new EquipCbItem(EquipSlotModelsCb.SHIELD.modelId, 'shield', new Vector3(0.15, 0, 0.15), new Vector3(0.22, 0.22, 0.2), null, matMetalSize),
 
     PAULDRON_MALE: new EquipCbItem(EquipSlotModelsCb.PAULDRONS_PLATE.modelId, 'male-pauldron-plate', new Vector3(-0.06, 0, 0), new Vector3(0.26, 0.32, 0.32), null, matMetalSize),
 
