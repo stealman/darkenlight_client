@@ -376,8 +376,9 @@ const formatTrainingTime = (seconds: number) => {
     color: rgb(108, 155, 193);
 }
 
-.skill-row--untrained {
-    opacity: 0.55;
+.skill-row--untrained .skill-name,
+.skill-row--untrained .skill-progress-state {
+    color: rgb(var(--ui-darker));
 }
 
 .skill-row--untrained .skill-name {
@@ -419,7 +420,7 @@ const formatTrainingTime = (seconds: number) => {
 }
 
 .skill-progress-state {
-    color: rgba(var(--ui-base), 0.65);
+    color: rgb(var(--ui-dark));
     font-size: 0.78em;
     white-space: nowrap;
 }
@@ -429,8 +430,8 @@ const formatTrainingTime = (seconds: number) => {
     min-width: 24px;
     height: 6px;
     overflow: hidden;
-    border: 1px solid rgba(var(--ui-darker), 0.75);
-    background: rgba(var(--ui-darker), 0.55);
+    border: 1px solid rgba(var(--ui-darkest), 0.5);
+    background: rgb(var(--ui-darkest));
 }
 
 .skill-progress-fill {
@@ -505,7 +506,7 @@ const formatTrainingTime = (seconds: number) => {
     grid-column: 3 / -1;
     min-width: 0;
     overflow: hidden;
-    color: rgba(var(--ui-base), 0.8);
+    color: rgb(var(--ui-dark));
     font-weight: 400;
     text-overflow: ellipsis;
     text-align: right;
@@ -594,7 +595,7 @@ const formatTrainingTime = (seconds: number) => {
 }
 
 .skill-detail-label {
-    color: rgba(var(--ui-base), 0.68);
+    color: rgb(var(--ui-dark));
 }
 
 .skill-detail-value {
@@ -617,7 +618,7 @@ const formatTrainingTime = (seconds: number) => {
 
 .skill-bonus-label {
     grid-column: 1;
-    color: rgba(var(--ui-base), 0.68);
+    color: rgb(var(--ui-dark));
     text-align: left;
 }
 
@@ -644,20 +645,20 @@ const formatTrainingTime = (seconds: number) => {
 }
 
 .skill-bonus-value--unknown {
-    color: rgba(var(--ui-base), 0.65);
+    color: rgb(var(--ui-dark));
     font-size: 1em;
     font-weight: 400;
 }
 
-.skill-bonus-label--unknown,
+.skill-bonus-label--unknown:not(.skill-bonus-label--active),
 .skill-bonus-value--unknown {
-    opacity: 0.55;
+    color: rgb(var(--ui-darker));
 }
 
 .skill-description {
     grid-column: 1 / -1;
     margin: 6px 0 0;
-    color: rgba(var(--ui-base), 0.68);
+    color: rgb(var(--ui-dark));
     font-style: italic;
     font-weight: 400;
     line-height: 1.3;

@@ -21,7 +21,7 @@
                     />
                 </button>
                 <div class="action-slot-description">
-                    <strong v-if="getBindingDescriptionParts(slotIndex).title">{{ getBindingDescriptionParts(slotIndex).title }}</strong>{{ getBindingDescriptionParts(slotIndex).rest }}
+                    <strong v-if="getBindingDescriptionParts(slotIndex).title">{{ getBindingDescriptionParts(slotIndex).title }}</strong><span>{{ getBindingDescriptionParts(slotIndex).rest }}</span>
                 </div>
             </div>
         </div>
@@ -283,6 +283,10 @@ defineExpose({
     text-align: left;
 }
 
+.action-slot-description span {
+    color: rgb(var(--ui-dark));
+}
+
 .action-selection-dialog-layer {
     position: absolute;
     inset: -42px 0 0 0;
@@ -366,6 +370,7 @@ defineExpose({
 }
 
 .action-option-text span {
+    color: rgb(var(--ui-dark));
     font-size: 0.78rem;
     line-height: 1.25;
     white-space: normal;

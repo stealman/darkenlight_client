@@ -150,6 +150,7 @@
                         :key="tab"
                         class="dialog-button npc-use-tab"
                         :class="{ selected: selectedTrainerTab === tab }"
+                        :disabled="tab === 'newSkills' && trainerNewSkills.length === 0"
                         @click="selectedTrainerTab = tab"
                     >
                         {{ t(`vendor.${tab}`) }}
@@ -280,7 +281,7 @@
 </template>
 
 <script setup lang="ts">
-import {computed, nextTick, onMounted, onUnmounted, ref} from 'vue'
+import {computed, nextTick, onMounted, onUnmounted, ref, watch} from 'vue'
 import GameDialog from '@/vue/views/GameDialog.vue'
 import {NpcInteractionManager} from '@/data/npcInteractionManager'
 import type {NpcHealerService, NpcUseData, NpcUseFeatureData, NpcVendorCatalogItem, SkillKey} from '@/network/messageIfs'
@@ -389,6 +390,13 @@ const trainerNewSkillCategories = computed(() => trainerSkillCategoryOrder
     .filter((category) => category.skills.length > 0))
 const trainerSkillLearningPrice = computed(() => selectedFeature.value?.skillLearningPrice ?? 0)
 const trainerPromotions = computed(() => selectedFeature.value?.promotions ?? [])
+
+watch(trainerNewSkills, (skills) => {
+    if (skills.length === 0 && selectedTrainerTab.value === 'newSkills') {
+        selectedTrainerTab.value = 'training'
+    }
+})
+
 const detailOverlayStyle = computed(() => ({left: `${detailOverlayPosition.value.x}px`, top: `${detailOverlayPosition.value.y}px`}))
 const detailWeaponCategoryLabel = computed(() => detailItem.value?.tp === 'W' ? getWeaponCategoryLabel(detailItem.value.wCat) : null)
 const detailArmorCategoryLabel = computed(() => detailItem.value?.tp === 'A' ? getArmorCategoryLabel(detailItem.value.aCat) : null)
