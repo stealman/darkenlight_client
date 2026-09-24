@@ -186,7 +186,14 @@
     "npcUseBlocked": "A wall blocks the way",
     "npcPurchaseUnavailable": "This item is not available from this NPC",
       "notEnoughEmeralds": "You do not have enough emeralds",
-      "itemBrokenCannotEquip": "You must repair this broken item first"
+      "itemBrokenCannotEquip": "You must repair this broken item first",
+      "weaponSkillRequired": {
+        "swords": "This weapon requires the Swords skill",
+        "axes": "This weapon requires the Axes skill",
+        "maces": "This weapon requires the Maces skill",
+        "polearms": "This weapon requires the Polearms skill",
+        "bows": "This weapon requires the Bows skill"
+      }
   },
   "vendor": {
       "vendor": "Vendor",

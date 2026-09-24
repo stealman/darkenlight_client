@@ -135,7 +135,9 @@ export const WeaponCategories = {
 }
 
 export const WeaponTags = {
+    PICKAXE: "PICKAXE",
     MINING_TOOL: "MINING_TOOL",
+    GREAT_AXE: "GREAT_AXE",
     WOODCUTTING_TOOL: "WOODCUTTING_TOOL",
 }
 

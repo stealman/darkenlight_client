@@ -107,7 +107,7 @@
                                             :class="{ 'skill-bonus-label--active': skill.skillBonusUnlocked }"
                                         >{{ t('skills.bonuses.skillBonus') }}</span>
                                         <span class="skill-bonus-value">
-                                            <strong class="skill-bonus-value-emphasis">{{ skill.skillBonus.percentage }}</strong><span>{{ t('skills.bonuses.weaponAttackOfType') }}</span><strong class="skill-bonus-value-emphasis">{{ skill.skillBonus.weaponType }}</strong><span>{{ t('skills.bonuses.weaponAttackPerRank') }}</span>
+                                            <strong class="skill-bonus-value-emphasis">{{ skill.skillBonus.percentage }}</strong><span>{{ t('skills.bonuses.weaponAttackOfType') }}</span><strong class="skill-bonus-value-emphasis">{{ skill.skillBonus.weaponType }}</strong><span>{{ t('skills.bonuses.weaponAttackPerRank', { percent: skill.skillBonus.perRank }) }}</span>
                                         </span>
                                     </div>
                                     <div class="skill-bonus-row">
@@ -184,8 +184,10 @@ const weaponSkillBonusTypeTranslationKeys: Record<PhysicalWeaponSkillKey, string
     bows: 'skills.bonuses.weaponTypes.bows',
 }
 
-const getSkillBonusValue = (skill: PhysicalWeaponSkillKey, rank: number) => ({
-    percentage: `+${rank * 5}%`,
+const getSkillBonusValue = (skill: PhysicalWeaponSkillKey, rank: number,
+                            bonusPercent: number = rank * 5, bonusPercentPerRank: number = 5) => ({
+    percentage: `+${bonusPercent}%`,
+    perRank: bonusPercentPerRank,
     weaponType: t(weaponSkillBonusTypeTranslationKeys[skill]),
 })
 
@@ -203,7 +205,8 @@ const combatSkills = computed(() => {
             key: skill.key,
             name: t(skill.translationKey),
             rank,
-            skillBonus: getSkillBonusValue(skill.key, rank),
+            skillBonus: getSkillBonusValue(skill.key, rank, progress?.weaponAttackBonusPercent,
+                progress?.weaponAttackBonusPercentPerRank),
             skillBonusUnlocked: rank >= 1,
             expertBonusUnlocked: rank >= 4,
             masterBonusUnlocked: rank >= 7,

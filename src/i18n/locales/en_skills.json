@@ -47,7 +47,7 @@
       "grandmasterBonus": "Grandmaster bonus",
       "unknown": "Unknown",
       "weaponAttackOfType": "weapon attack of type",
-      "weaponAttackPerRank": "(5% per rank)",
+      "weaponAttackPerRank": "({percent}% per rank)",
       "weaponTypes": {
         "swords": "Sword",
         "axes": "Axe",

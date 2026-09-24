@@ -39,6 +39,8 @@ export interface SkillProgressTO {
     trainingPoints: number
     nextExperienceRequired?: number
     nextTrainingRequired?: number
+    weaponAttackBonusPercent?: number
+    weaponAttackBonusPercentPerRank?: number
 }
 
 export type SkillSetTO = Partial<Record<PhysicalWeaponSkillKey, SkillProgressTO>> & {

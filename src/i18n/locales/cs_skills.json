@@ -47,7 +47,7 @@
       "grandmasterBonus": "Velmistrovský bonus",
       "unknown": "Neznámý",
       "weaponAttackOfType": "útok zbraní typu",
-      "weaponAttackPerRank": "(5% za úroveň)",
+      "weaponAttackPerRank": "({percent}% za úroveň)",
       "weaponTypes": {
         "swords": "Meč",
         "axes": "Sekera",

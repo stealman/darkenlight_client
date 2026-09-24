@@ -184,7 +184,14 @@
       "fullyRested": "Jsi plně odpočatý",
       "npcUseOutOfRange": "NPC je příliš daleko",
       "notEnoughEmeralds": "Nedostatek emeraldů",
-      "itemBrokenCannotEquip": "Poškozený předmět musíš nejdřív opravit"
+      "itemBrokenCannotEquip": "Poškozený předmět musíš nejdřív opravit",
+      "weaponSkillRequired": {
+        "swords": "Tato zbraň vyžaduje dovednost Meče",
+        "axes": "Tato zbraň vyžaduje dovednost Sekery",
+        "maces": "Tato zbraň vyžaduje dovednost Palcáty",
+        "polearms": "Tato zbraň vyžaduje dovednost Tyčové zbraně",
+        "bows": "Tato zbraň vyžaduje dovednost Luky"
+      }
   },
   "vendor": {
       "vendor": "Obchod",

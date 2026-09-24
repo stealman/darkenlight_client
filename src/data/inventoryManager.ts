@@ -9,6 +9,7 @@ import { ActionButtonsManager } from '@/gui/actionButtonsManager'
 import { ConsumableHelper } from '@/data/items/consumableHelper'
 import {OnScreenMessageManager, OnScreenMessageSeverities} from '@/gui/onScreenMessageManager'
 import {t} from '@/i18n'
+import {WeaponSkillRequirements} from '@/data/items/weaponSkillRequirements'
 
 type WeaponSetup = {
     rhand: number | null
@@ -222,6 +223,11 @@ export const InventoryManager = {
         const durability = Number((item.atts as any).get?.('dur') ?? (item.atts as any).dur)
         if (durability === 0) {
             OnScreenMessageManager.addMessage(t('messages.itemBrokenCannotEquip'), OnScreenMessageSeverities.ERROR)
+            return
+        }
+        const missingWeaponSkill = WeaponSkillRequirements.getMissingSkill(item, MyPlayer.myChar.skillSet)
+        if (missingWeaponSkill) {
+            OnScreenMessageManager.addMessage(t(`messages.weaponSkillRequired.${missingWeaponSkill}`), OnScreenMessageSeverities.ERROR)
             return
         }
 
