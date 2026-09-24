@@ -119,7 +119,7 @@ const attributes = computed(() => [
             {
                 key: 'physicalAttack',
                 label: t('vendor.attack'),
-                value: MyCombatData.patk,
+                value: Math.round(MyCombatData.patk),
             },
             { key: 'damageType', label: t('vendor.attackType'), value: equippedWeaponDamageType.value ?? '-' },
             { key: 'attackSpeed', label: t('vendor.speed'), value: `${autoAttackCooldownSeconds.value}s` },

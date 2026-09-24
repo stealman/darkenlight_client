@@ -348,7 +348,7 @@ const formatTrainingTime = (seconds: number) => {
     align-items: center;
     column-gap: 8px;
     min-height: 35px;
-    padding: 5px 9px;
+    padding: 5px 9px 5px 11px;
     box-sizing: border-box;
     cursor: url('/images/cursor-pointer.png'), pointer;
 }
@@ -566,7 +566,7 @@ const formatTrainingTime = (seconds: number) => {
     grid-template-columns: 180px minmax(0, 1fr);
     column-gap: 24px;
     row-gap: 4px;
-    margin: 7px 9px 1px;
+    margin: 7px 9px 1px 11px;
     min-height: 0;
     opacity: 0;
     padding: 0 0 4px;
@@ -683,7 +683,7 @@ const formatTrainingTime = (seconds: number) => {
         grid-template-columns: minmax(0, 20%) minmax(0, 1fr) minmax(56px, 20%) minmax(0, 1fr) 76px minmax(0, 1fr);
         column-gap: 4px;
         padding-right: 7px;
-        padding-left: 7px;
+        padding-left: 9px;
     }
 
     .skill-name {

@@ -106,8 +106,8 @@
   },
   "classes": {
     "gm": "GM",
-    "fighter": "Bojovník",
-    "adept": "Učenec"
+    "fighter": "Fighter",
+    "adept": "Adept"
   },
   "actions": {
     "noneTitle": "Nevybráno",
