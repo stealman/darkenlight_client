@@ -112,8 +112,7 @@ export class DamageNumber {
         const driftDir = isoRelX >= 0 ? 1 : -1
         const x = pos.x + (driftDir * angleFactor * riseProgress * 30) / window.devicePixelRatio
         const y = pos.y - (0 + riseProgress * 30) / window.devicePixelRatio
-        const age = Math.max(0, now - this.createdAt)
-        const popScale = age < 98 ? 1 + 0.5 * (age / 98) : age < 225 ? 1.5 - 0.5 * ((age - 98) / 127) : 1
+        const popScale = OverlayManager.getOverlayPopScale(this.createdAt, now)
 
         ctx.save()
         ctx.translate(x, y)

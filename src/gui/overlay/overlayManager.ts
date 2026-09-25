@@ -57,6 +57,17 @@ export const OverlayManager = {
         TargetSelector.unselectTarget()
     },
 
+    getOverlayPopScale(createdAt: number, time: number) {
+        const age = Math.max(0, time - createdAt)
+        if (age < 98) {
+            return 1 + 0.5 * (age / 98)
+        }
+        if (age < 225) {
+            return 1.5 - 0.5 * ((age - 98) / 127)
+        }
+        return 1
+    },
+
     onFrame(timeRate: number, time: number) {
         this.overlayCtx!.clearRect(0, 0, this.overlayCanvas.width, this.overlayCanvas.height)
 

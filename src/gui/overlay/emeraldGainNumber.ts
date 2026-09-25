@@ -6,12 +6,14 @@ import { CanvasTextUtils } from '@/gui/canvasTextUtils'
 export class EmeraldGainNumber {
     tgtMonster: Monster
     text: string
+    createdAt: number
     expiresAt: number
     static ttl: number = 2000
 
     constructor(monster: Monster, text: string, startTime: number) {
         this.tgtMonster = monster
         this.text = text
+        this.createdAt = startTime
         this.expiresAt = startTime + EmeraldGainNumber.ttl
     }
 
@@ -37,44 +39,48 @@ export class EmeraldGainNumber {
         const spacingFix = OverlayManager.letterSpacingFix
         const textWidth = CanvasTextUtils.getTextWidth(ctx, this.text, tightText, spacingFix)
         const remaining = Math.max(0, Math.min(EmeraldGainNumber.ttl, this.expiresAt - now))
-        const progress = 1 - (remaining / EmeraldGainNumber.ttl)
-        const alpha = progress <= 0.35 ? 1 : Math.max(0, 1 - ((progress - 0.35) / 0.5))
+        const progress = 1 - remaining / EmeraldGainNumber.ttl
+        const alpha = progress <= 0.35 ? 1 : Math.max(0, 1 - (progress - 0.35) / 0.5)
         const riseProgress = 1 - Math.pow(2, -6 * progress)
 
         const x = pos.x
-        const y = pos.y - (22 + (riseProgress * 34)) / window.devicePixelRatio
+        const y = pos.y - (22 + riseProgress * 34) / window.devicePixelRatio
         const icon = OverlayManager.emeraldGainIcon
         const hasIcon = !!icon && icon.complete && icon.naturalWidth > 0
         const iconSize = OverlayManager.fontSize + 12
         const iconGap = 4
         const totalWidth = textWidth + (hasIcon ? iconSize + iconGap : 0)
-        const blockStartX = x - totalWidth / 2
+        const blockStartX = -totalWidth / 2
         const textStartX = blockStartX + (hasIcon ? iconSize + iconGap : 0)
+        const popScale = OverlayManager.getOverlayPopScale(this.createdAt, now)
 
+        ctx.save()
+        ctx.translate(x, y)
+        ctx.scale(popScale, popScale)
         ctx.strokeStyle = 'rgba(0, 0, 0, 0.85)'
         ctx.lineWidth = 3
         ctx.fillStyle = '#20ff20'
         ctx.globalAlpha = alpha
 
         if (hasIcon) {
-            ctx.drawImage(icon, blockStartX, -2 + y - iconSize / 2, iconSize, iconSize)
+            ctx.drawImage(icon, blockStartX, -2 - iconSize / 2, iconSize, iconSize)
         }
 
         if (tightText) {
             ctx.textAlign = 'left'
             let cursorX = textStartX
             for (const ch of this.text) {
-                ctx.strokeText(ch, cursorX, y)
+                ctx.strokeText(ch, cursorX, 0)
                 cursorX += ctx.measureText(ch).width + spacingFix
             }
-            CanvasTextUtils.drawText(ctx, this.text, textStartX, y, true, spacingFix)
+            CanvasTextUtils.drawText(ctx, this.text, textStartX, 0, true, spacingFix)
         } else {
             ctx.textAlign = 'center'
             const textCenterX = textStartX + textWidth / 2
-            ctx.strokeText(this.text, textCenterX, y)
-            ctx.fillText(this.text, textCenterX, y)
+            ctx.strokeText(this.text, textCenterX, 0)
+            ctx.fillText(this.text, textCenterX, 0)
         }
 
-        ctx.globalAlpha = 1
+        ctx.restore()
     }
 }
