@@ -41,9 +41,11 @@ export const TargetingManager = {
             this.pointerDownTime = -1
             Settings.autoTarget = this.autoTargetingEnabled
             Settings.storeSettings()
-            OnScreenMessageManager.addMessage(t('messages.autoTarget', {
-                state: this.autoTargetingEnabled ? t('messages.enabled') : t('messages.disabled')
-            }))
+            OnScreenMessageManager.addMessage(
+                t('messages.autoTarget', {
+                    state: this.autoTargetingEnabled ? t('messages.enabled') : t('messages.disabled'),
+                }),
+            )
         }
 
         if (this.autoTargetingEnabled && this.lastAutoTargetTime + 1000 < actualTime) {
@@ -171,7 +173,13 @@ export const TargetingManager = {
 
     checkAutoAttackOnSelectedTarget(overrideToggle: boolean = false) {
         const targetIsDeadCharacter = this.selectedTarget?.getObjectType() === 'C' && (this.selectedTarget as any).dead === true
-        if (!MyPlayer.isDead.value && !targetIsDeadCharacter && this.selectedTarget && this.selectedTarget.getRelationToMyPlayer() === 'ENEMY' && (overrideToggle || ActionButtonsManager.isButtonToggled(CharacterActions.AUTO_ATTACK))) {
+        if (
+            !MyPlayer.isDead.value &&
+            !targetIsDeadCharacter &&
+            this.selectedTarget &&
+            this.selectedTarget.getRelationToMyPlayer() === 'ENEMY' &&
+            (overrideToggle || ActionButtonsManager.isButtonToggled(CharacterActions.AUTO_ATTACK))
+        ) {
             MyPlayer.myChar.autoAttackTarget = this.selectedTarget
             Connector.sendMessage(new SelectAutoAttackTarget(this.selectedTarget!.id, this.selectedTarget!.getObjectType()))
         }
@@ -221,25 +229,57 @@ export const TargetingManager = {
         const size = 16 / dpr
         const gap = 40 / dpr
         const margin = 12 / dpr
+        const visibleLineLength = margin / 2
 
         sprite.width = gap + size + margin
         sprite.height = size * 2 + margin
 
         const ctx = sprite.getContext('2d')!
+        const rgb = [Number.parseInt(color.slice(1, 3), 16), Number.parseInt(color.slice(3, 5), 16), Number.parseInt(color.slice(5, 7), 16)]
+        const centerX = sprite.width / 2
+        const centerY = sprite.height / 2
+        const segments = [
+            [margin / 2, centerY - size, 0, centerY - size + visibleLineLength],
+            [0, centerY + size - visibleLineLength, margin / 2, centerY + size],
+            [sprite.width - margin / 2, centerY - size, sprite.width, centerY - size + visibleLineLength],
+            [sprite.width, centerY + size - visibleLineLength, sprite.width - margin / 2, centerY + size],
+        ]
+
+        const drawTriangle = ([startX, startY, endX, endY]: number[]) => {
+            const baseCenterX = (startX + endX) / 2
+            const baseCenterY = (startY + endY) / 2
+            const segmentLength = Math.hypot(endX - startX, endY - startY)
+            const triangleHeight = segmentLength * 2
+            const directionX = centerX - baseCenterX
+            const directionY = centerY - baseCenterY
+            const directionLength = Math.hypot(directionX, directionY)
+            const apexX = baseCenterX + (directionX / directionLength) * triangleHeight
+            const apexY = baseCenterY + (directionY / directionLength) * triangleHeight
+            const gradient = ctx.createLinearGradient(baseCenterX, baseCenterY, apexX, apexY)
+
+            gradient.addColorStop(0, `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.65)`)
+            gradient.addColorStop(0.58, `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.2)`)
+            gradient.addColorStop(1, `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0)`)
+
+            ctx.fillStyle = gradient
+            ctx.beginPath()
+            ctx.moveTo(startX, startY)
+            ctx.lineTo(endX, endY)
+            ctx.lineTo(apexX, apexY)
+            ctx.closePath()
+            ctx.fill()
+        }
+
+        segments.forEach(drawTriangle)
+
         ctx.strokeStyle = color
         ctx.lineWidth = 3
-
-        ctx.beginPath()
-        ctx.moveTo(margin / 2, sprite.height / 2 - size)
-        ctx.lineTo(margin / 2 - size, sprite.height / 2)
-        ctx.lineTo(margin / 2, sprite.height / 2 + size)
-        ctx.stroke()
-
-        ctx.beginPath()
-        ctx.moveTo(sprite.width - margin / 2, sprite.height / 2 - size)
-        ctx.lineTo(sprite.width - margin / 2 + size, sprite.height / 2)
-        ctx.lineTo(sprite.width - margin / 2, sprite.height / 2 + size)
-        ctx.stroke()
+        segments.forEach(([startX, startY, endX, endY]) => {
+            ctx.beginPath()
+            ctx.moveTo(startX, startY)
+            ctx.lineTo(endX, endY)
+            ctx.stroke()
+        })
 
         return sprite
     },
@@ -249,11 +289,11 @@ export interface Targetable {
     pos: Vector3
     id: number
     nameDisplayTime: number
-    getPositionOnScreen(): { x: number, y: number } | null
+    getPositionOnScreen(): { x: number; y: number } | null
     getBoxSize(): number
     getName(): string
     getModelHeight(): number
-    getNameTextNodeScreenPosition(): { x: number, y: number } | null
+    getNameTextNodeScreenPosition(): { x: number; y: number } | null
     getObjectType(): string
     getRelationToMyPlayer(): 'ALLY' | 'ENEMY' | 'NEUTRAL'
     getDistanceFromMyPlayer(): number

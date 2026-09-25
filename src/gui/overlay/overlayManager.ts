@@ -30,8 +30,8 @@ export const OverlayManager = {
     itemGainIcons: new Map<string, HTMLImageElement>(),
 
     async initialize() {
-        this.overlayCanvas = document.getElementById("overlayCanvas") as HTMLCanvasElement
-        this.overlayCtx = this.overlayCanvas.getContext("2d")
+        this.overlayCanvas = document.getElementById('overlayCanvas') as HTMLCanvasElement
+        this.overlayCtx = this.overlayCanvas.getContext('2d')
         this.overlayCtx!.lineWidth = 1
         this.fontSize = window.devicePixelRatio > 1 ? 14 : 18
         this.emeraldGainIcon = new Image()
@@ -63,7 +63,6 @@ export const OverlayManager = {
         this.renderHealingMarkers(time)
         this.renderAttackTargetIndicator(time)
         GmOreTierOverlay.onFrame(this.overlayCtx!)
-
     },
 
     setBloodyInnerGlow(hpPercent: number, time: number) {
@@ -83,20 +82,20 @@ export const OverlayManager = {
         const cx = w * 0.5
         const cy = h * 0.5
 
-        const innerR = Math.min(w, h) * 0.40
-        const outerR = Math.min(w, h) * 0.80
+        const innerR = Math.min(w, h) * 0.4
+        const outerR = Math.min(w, h) * 0.8
 
         const g = ctx.createRadialGradient(cx, cy, innerR, cx, cy, outerR)
-        g.addColorStop(0.00, `rgba(255, 0, 0, 0)`)
+        g.addColorStop(0.0, `rgba(255, 0, 0, 0)`)
         g.addColorStop(0.65, `rgba(255, 0, 0, ${0.2 * alpha})`)
-        g.addColorStop(1.00, `rgba(255, 0, 0, ${0.5 * alpha})`)
+        g.addColorStop(1.0, `rgba(255, 0, 0, ${0.5 * alpha})`)
 
         ctx.fillStyle = g
         ctx.fillRect(0, 0, w, h)
     },
 
     renderNames(time: number, tightText: boolean) {
-        MonsterManager.monsters.forEach(monster => {
+        MonsterManager.monsters.forEach((monster) => {
             if (MonsterManager.visibleMonsters.has(monster.id) && monster.nameDisplayTime > time) {
                 const pos = monster.getNameTextNodeScreenPosition()
                 if (pos) {
@@ -105,7 +104,7 @@ export const OverlayManager = {
             }
         })
 
-        CharacterManager.characters.forEach(char => {
+        CharacterManager.characters.forEach((char) => {
             if (char.nameDisplayTime <= time && !char.activeTimedAction) {
                 return
             }
@@ -116,7 +115,7 @@ export const OverlayManager = {
             }
         })
 
-        NpcManager.npcs.forEach(npc => {
+        NpcManager.npcs.forEach((npc) => {
             if (!NpcManager.visibleNpcs.has(npc.id)) {
                 return
             }
@@ -204,7 +203,7 @@ export const OverlayManager = {
     },
 
     renderDamageNumbers(time: number) {
-        this.damageNumbers = this.damageNumbers.filter(item => item.expiresAt > time)
+        this.damageNumbers = this.damageNumbers.filter((item) => item.expiresAt > time)
         if (this.damageNumbers.length === 0) {
             return
         }
@@ -215,7 +214,7 @@ export const OverlayManager = {
         ctx.textAlign = 'center'
         ctx.textBaseline = 'middle'
 
-        this.damageNumbers.forEach(item => {
+        this.damageNumbers.forEach((item) => {
             item.render(ctx)
         })
 
@@ -223,7 +222,7 @@ export const OverlayManager = {
     },
 
     renderEmeraldGainNumbers(time: number) {
-        this.emeraldGainNumbers = this.emeraldGainNumbers.filter(item => item.expiresAt > time)
+        this.emeraldGainNumbers = this.emeraldGainNumbers.filter((item) => item.expiresAt > time)
         if (this.emeraldGainNumbers.length === 0) {
             return
         }
@@ -234,7 +233,7 @@ export const OverlayManager = {
         ctx.textAlign = 'center'
         ctx.textBaseline = 'middle'
 
-        this.emeraldGainNumbers.forEach(item => {
+        this.emeraldGainNumbers.forEach((item) => {
             item.render(ctx)
         })
 
@@ -242,7 +241,7 @@ export const OverlayManager = {
     },
 
     renderItemGainNumbers(time: number) {
-        this.itemGainNumbers = this.itemGainNumbers.filter(item => item.expiresAt > time)
+        this.itemGainNumbers = this.itemGainNumbers.filter((item) => item.expiresAt > time)
         if (this.itemGainNumbers.length === 0) {
             return
         }
@@ -253,7 +252,7 @@ export const OverlayManager = {
         ctx.textAlign = 'center'
         ctx.textBaseline = 'middle'
 
-        this.itemGainNumbers.forEach(item => {
+        this.itemGainNumbers.forEach((item) => {
             item.render(ctx)
         })
 
@@ -280,7 +279,7 @@ export const OverlayManager = {
     },
 
     renderDamagedBars() {
-        MonsterManager.monsters.forEach(monster => {
+        MonsterManager.monsters.forEach((monster) => {
             if (!MonsterManager.visibleMonsters.has(monster.id)) {
                 return
             }
@@ -292,7 +291,7 @@ export const OverlayManager = {
             }
         })
 
-        CharacterManager.characters.forEach(char => {
+        CharacterManager.characters.forEach((char) => {
             if (!CharacterManager.visibleCharacters.has(char.id)) {
                 return
             }
@@ -313,7 +312,7 @@ export const OverlayManager = {
     },
 
     renderHealingMarkers(time) {
-        CharacterManager.characters.forEach(char => {
+        CharacterManager.characters.forEach((char) => {
             if (!CharacterManager.visibleCharacters.has(char.id)) {
                 return
             }
@@ -344,12 +343,12 @@ export const OverlayManager = {
                 const camWorldMatrix = Renderer.camera!.getWorldMatrix()
                 const cameraPos = Vector3.TransformCoordinates(Vector3.Zero(), camWorldMatrix)
                 const distanceFromCam = cameraPos.subtract(MyPlayer.myChar.autoAttackTarget.pos).length()
-                const scale = (20 / distanceFromCam) * ((Math.sin((actualTime) / 250) * 0.2) + 1)
+                const scale = (20 / distanceFromCam) * (Math.sin(actualTime / 250) * 0.2 + 1)
 
                 const w = sprite.width * scale
                 const h = sprite.height * scale
 
-                this.overlayCtx!.drawImage(sprite, x - w/2, y - h/2, w, h)
+                this.overlayCtx!.drawImage(sprite, x - w / 2, y - h / 2, w, h)
             }
         }
     },
@@ -360,7 +359,7 @@ export const OverlayManager = {
         const barHeight = 6
 
         const x = pos.x - barWidth / 2
-        const y = pos.y -2
+        const y = pos.y - 2
 
         // Background
         ctx.fillStyle = 'rgba(0, 0, 0, 0.5)'
@@ -368,7 +367,18 @@ export const OverlayManager = {
 
         // Fill
         const fillWidth = (barWidth - 2) * (percent / 100)
-        ctx.fillStyle = enemy ? 'rgba(200, 32, 32, 0.65)' : 'rgba(25, 175, 175, 0.65)'
+        if (fillWidth <= 0) {
+            return
+        }
+        const fillGradient = ctx.createLinearGradient(x + 1, y, x + 1 + fillWidth, y)
+        if (enemy) {
+            fillGradient.addColorStop(0, 'rgba(112, 20, 20, 0.7)')
+            fillGradient.addColorStop(1, 'rgba(230, 58, 52, 0.82)')
+        } else {
+            fillGradient.addColorStop(0, 'rgba(12, 92, 92, 0.7)')
+            fillGradient.addColorStop(1, 'rgba(48, 214, 204, 0.82)')
+        }
+        ctx.fillStyle = fillGradient
         ctx.fillRect(x + 1, y + 1, fillWidth, barHeight - 2)
     },
 
@@ -378,7 +388,7 @@ export const OverlayManager = {
 
         const size = 15
         const thickness = 5
-        const alpha = 0.2 + (Math.sin(time / 200) + 1) / 2 * 0.65
+        const alpha = 0.2 + ((Math.sin(time / 200) + 1) / 2) * 0.65
 
         const drawCross = (crossSize: number, crossThickness: number) => {
             ctx.beginPath()
@@ -428,7 +438,7 @@ export const OverlayManager = {
 
         if (name) {
             this.renderOutlinedText(basePos.x, currentTextY, name, tightText, char.getRelationToMyPlayer(), nameFontSize)
-            currentTextY += actionName ? (nameFontSize / 2 + actionFontSize / 2 + 6) : 0
+            currentTextY += actionName ? nameFontSize / 2 + actionFontSize / 2 + 6 : 0
         }
 
         if (actionName) {
@@ -464,7 +474,17 @@ export const OverlayManager = {
         this.renderOutlinedText(pos.x, nameY + this.fontSize / 2 + titleFontSize / 2 + 6, titleText, tightText, 'NEUTRAL', titleFontSize, undefined, 1, '#e9dabe')
     },
 
-    renderOutlinedText(x: number, y: number, text: string, tightText: boolean, relation: 'ALLY' | 'ENEMY' | 'NEUTRAL', fontSize: number, pos?: Vector3, textAlpha: number = 1, color: string | null = null) {
+    renderOutlinedText(
+        x: number,
+        y: number,
+        text: string,
+        tightText: boolean,
+        relation: 'ALLY' | 'ENEMY' | 'NEUTRAL',
+        fontSize: number,
+        pos?: Vector3,
+        textAlpha: number = 1,
+        color: string | null = null,
+    ) {
         const ctx = this.overlayCtx!
         ctx.font = `${fontSize}px "Roboto", Arial, sans-serif`
         ctx.fontKerning = 'normal'
