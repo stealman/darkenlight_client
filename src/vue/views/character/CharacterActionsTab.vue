@@ -5,6 +5,7 @@
                 v-for="slotIndex in actionButtonIndexes"
                 :key="slotIndex"
                 class="action-slot-row"
+                :class="{ 'action-slot-row--empty': getSelectedActionName(slotIndex) === null }"
             >
                 <div class="action-slot-label">F{{ slotIndex }}</div>
                 <button
@@ -244,7 +245,11 @@ defineExpose({
 
 .action-slot-label {
     width: 26px;
-    color: rgb(var(--ui-base));
+    background: linear-gradient(to top, rgb(var(--ui-dark)), rgb(var(--ui-base)));
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
     font-size: 0.85rem;
     text-align: right;
     flex: 0 0 26px;
@@ -264,9 +269,18 @@ defineExpose({
     cursor: url('/images/cursor-pointer.png'), pointer;
 }
 
-.action-slot-icon-shell:hover, .action-slot-icon-shell.selected {
+.action-slot-icon-shell:hover {
+    border-color: rgb(var(--ui-darker));
+    background: rgba(var(--ui-darker), 0.2);
+}
+
+.action-slot-icon-shell.selected {
     border-color: rgb(var(--ui-darker));
     background: rgba(var(--ui-darker), 0.75);
+}
+
+.action-slot-row--empty .action-slot-icon-shell:not(.selected):not(:hover) {
+    border-color: rgba(var(--ui-dark), 0.45);
 }
 
 .action-slot-icon {
@@ -283,7 +297,26 @@ defineExpose({
     text-align: left;
 }
 
+.action-slot-description strong {
+    display: inline-block;
+    background: linear-gradient(to top, rgb(var(--ui-dark)), rgb(var(--ui-base)));
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+}
+
 .action-slot-description span {
+    color: rgb(var(--ui-dark));
+}
+
+.action-slot-row--empty .action-slot-label {
+    background: none;
+    color: rgb(var(--ui-dark));
+    -webkit-text-fill-color: rgb(var(--ui-dark));
+}
+
+.action-slot-row--empty .action-slot-description {
     color: rgb(var(--ui-dark));
 }
 
@@ -367,6 +400,15 @@ defineExpose({
     flex-direction: column;
     gap: 4px;
     min-width: 0;
+}
+
+.action-option-text strong {
+    width: fit-content;
+    background: linear-gradient(to top, rgb(var(--ui-dark)), rgb(var(--ui-base)));
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
 }
 
 .action-option-text span {

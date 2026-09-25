@@ -183,24 +183,36 @@ const attributes = computed(() => [
 }
 
 .character-overview-name > span:first-child {
+    display: inline-block;
+    background: linear-gradient(to top, rgb(var(--ui-dark)), rgb(var(--ui-base)));
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
     font-weight: 400;
 }
 
 .character-overview-class-name {
     margin-left: 0.4em;
+    display: inline-block;
+    background: linear-gradient(to top, rgba(var(--character-class-color), 0.55), rgb(var(--character-class-color)));
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
     font-weight: 700;
 }
 
 .character-overview-class-name--fighter {
-    color: rgb(var(--ui-accent-red));
+    --character-class-color: var(--ui-accent-red);
 }
 
 .character-overview-class-name--adept {
-    color: rgb(var(--ui-accent-purple));
+    --character-class-color: var(--ui-accent-purple);
 }
 
 .character-overview-class-name--gm {
-    color: rgb(var(--ui-base));
+    --character-class-color: var(--ui-base);
 }
 
 .character-overview-title-row {
@@ -234,13 +246,21 @@ const attributes = computed(() => [
 }
 
 .character-overview-resource-label {
-    color: rgb(var(--character-resource-color));
+    background: linear-gradient(to top, rgba(var(--character-resource-color), 0.55), rgb(var(--character-resource-color)));
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
     font-weight: 700;
 }
 
 .character-overview-resource-value {
     overflow: hidden;
-    color: rgb(var(--character-resource-color));
+    background: linear-gradient(to top, rgba(var(--character-resource-color), 0.55), rgb(var(--character-resource-color)));
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
     font-weight: 700;
     text-overflow: ellipsis;
 }
@@ -294,6 +314,7 @@ const attributes = computed(() => [
 }
 
 .character-overview-attribute-label {
+    color: rgb(var(--character-attribute-accent));
     overflow: hidden;
     font-size: clamp(10px, 1.45vh, 13px);
     line-height: 1.15;
@@ -303,7 +324,11 @@ const attributes = computed(() => [
 }
 
 .character-overview-attribute-value {
-    color: rgb(var(--character-attribute-accent));
+    background: linear-gradient(to top, rgba(var(--character-attribute-accent), 0.55), rgb(var(--character-attribute-accent)));
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
     font-size: clamp(19px, 3vh, 28px);
     font-weight: 700;
     line-height: 1;
@@ -340,7 +365,11 @@ const attributes = computed(() => [
 
 .character-overview-derived-value {
     flex: 0 0 auto;
-    color: rgb(var(--ui-base));
+    background: linear-gradient(to top, rgb(var(--ui-dark)), rgb(var(--ui-base)));
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
     font-weight: 700;
     white-space: nowrap;
 }

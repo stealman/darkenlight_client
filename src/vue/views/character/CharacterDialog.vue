@@ -115,6 +115,16 @@ defineExpose({
     box-sizing: border-box;
 }
 
+.tab-item.active label {
+    display: inline-block;
+    background: linear-gradient(to top, rgb(var(--ui-dark)), rgb(var(--ui-base)));
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+    text-shadow: none;
+}
+
 .tab-item--training-available label {
     animation: character-skill-training-available-pulse 1.8s ease-in-out infinite;
 }

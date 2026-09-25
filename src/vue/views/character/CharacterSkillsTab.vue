@@ -11,7 +11,7 @@
             </span>
         </div>
         <section v-for="category in visibleSkillCategories" :key="category.key" class="skill-category">
-            <h3 class="skill-category-title">{{ t(`skills.categories.${category.key}`) }}</h3>
+            <h3 class="skill-category-title"><span>{{ t(`skills.categories.${category.key}`) }}</span></h3>
             <div class="skill-list">
                 <div
                     v-for="skill in category.skills"
@@ -350,10 +350,19 @@ const formatTrainingTime = (seconds: number) => {
 .skill-category-title {
     margin: 0 0 5px;
     padding: 0 2px;
-    color: rgb(var(--ui-base));
+    text-align: center;
     font-size: clamp(13px, 1.8vh, 16px);
     font-weight: 700;
     line-height: 1.15;
+}
+
+.skill-category-title span {
+    display: inline-block;
+    background: linear-gradient(to top, rgb(var(--ui-dark)), rgb(var(--ui-base)));
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
 }
 
 .skill-list {
@@ -404,7 +413,8 @@ const formatTrainingTime = (seconds: number) => {
 }
 
 .skill-row--active-training {
-    animation: skill-training-glow 2.2s ease-in-out infinite;
+    --skill-training-pulse-duration: 2.2s;
+    animation: skill-training-glow var(--skill-training-pulse-duration) ease-in-out infinite;
     box-shadow:
         inset 3px 0 0 var(--skill-row-expanded-left-accent, transparent),
         inset 0 0 0 1px rgba(var(--ui-accent-blue), 0.42),
@@ -420,6 +430,24 @@ const formatTrainingTime = (seconds: number) => {
     text-overflow: ellipsis;
     font-weight: 700;
     white-space: nowrap;
+}
+
+.skill-row-summary:not(.skill-row--untrained) .skill-name {
+    background: linear-gradient(to top, rgb(var(--ui-dark)), rgb(var(--ui-base)));
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+}
+
+.skill-row--expanded .skill-name {
+    background-image: linear-gradient(to top, rgb(var(--ui-accent-blue)), rgb(var(--ui-base)));
+}
+
+.skill-row--active-training .skill-row-summary:not(.skill-row--untrained) .skill-name {
+    background: none;
+    color: rgb(var(--ui-accent-blue));
+    -webkit-text-fill-color: rgb(var(--ui-accent-blue));
 }
 
 .skill-progress-stack {
@@ -458,12 +486,21 @@ const formatTrainingTime = (seconds: number) => {
 }
 
 .skill-progress-fill--experience {
-    background: linear-gradient(to bottom, rgb(var(--ui-success)), rgb(var(--ui-progress-experience-dark)));
+    background: linear-gradient(to right, rgb(var(--ui-progress-experience-dark)), rgb(var(--ui-success)));
 }
 
 .skill-progress-fill--training {
     width: 0;
-    background: linear-gradient(to bottom, rgb(var(--ui-progress-training-light)), rgb(var(--ui-progress-training-dark)));
+    background: linear-gradient(to right, rgb(var(--ui-progress-training-dark)), rgb(var(--ui-progress-training-light)));
+}
+
+.skill-row--active-training .skill-progress-row:last-child .skill-progress-track {
+    border-color: rgba(var(--ui-accent-blue), 0.8);
+    animation: skill-training-progress-glow var(--skill-training-pulse-duration) ease-in-out infinite;
+}
+
+.skill-row--active-training .skill-progress-fill--training {
+    animation: skill-training-progress-pulse var(--skill-training-pulse-duration) ease-in-out infinite;
 }
 
 .skill-progress-state {
@@ -689,6 +726,18 @@ const formatTrainingTime = (seconds: number) => {
         inset 3px 0 0 var(--skill-row-expanded-left-accent, transparent),
         inset 0 0 0 1px rgba(var(--ui-accent-blue), 0.68),
         inset 0 0 28px rgba(var(--ui-accent-blue), 0.56);
+    }
+}
+
+@keyframes skill-training-progress-glow {
+    50% {
+        box-shadow: 0 0 7px rgba(var(--ui-accent-blue), 0.8), inset 0 0 4px rgba(var(--ui-accent-blue), 0.55);
+    }
+}
+
+@keyframes skill-training-progress-pulse {
+    50% {
+        filter: brightness(1.35);
     }
 }
 
