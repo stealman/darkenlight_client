@@ -16,7 +16,7 @@
                 }"
                 @click="selectTab(tab.id)"
             >
-                <label class="noselect">{{ tab.name }}</label>
+                <label :class="['noselect', { 'ui-text-gradient': tab.id === activeTabId }]">{{ tab.name }}</label>
             </div>
         </template>
 
@@ -115,13 +115,7 @@ defineExpose({
     box-sizing: border-box;
 }
 
-.tab-item.active label {
-    display: inline-block;
-    background: linear-gradient(to top, rgb(var(--ui-dark)), rgb(var(--ui-base)));
-    background-clip: text;
-    -webkit-background-clip: text;
-    color: transparent;
-    -webkit-text-fill-color: transparent;
+.tab-item.active .ui-text-gradient {
     text-shadow: none;
 }
 

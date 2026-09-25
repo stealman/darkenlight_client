@@ -7,7 +7,7 @@
                 class="action-slot-row"
                 :class="{ 'action-slot-row--empty': getSelectedActionName(slotIndex) === null }"
             >
-                <div class="action-slot-label">F{{ slotIndex }}</div>
+                <div class="action-slot-label ui-text-gradient">F{{ slotIndex }}</div>
                 <button
                     type="button"
                     class="action-slot-icon-shell"
@@ -22,7 +22,7 @@
                     />
                 </button>
                 <div class="action-slot-description">
-                    <strong v-if="getBindingDescriptionParts(slotIndex).title">{{ getBindingDescriptionParts(slotIndex).title }}</strong><span>{{ getBindingDescriptionParts(slotIndex).rest }}</span>
+                    <strong v-if="getBindingDescriptionParts(slotIndex).title" class="ui-text-gradient">{{ getBindingDescriptionParts(slotIndex).title }}</strong><span>{{ getBindingDescriptionParts(slotIndex).rest }}</span>
                 </div>
             </div>
         </div>
@@ -44,7 +44,7 @@
                                 class="action-option-icon"
                             />
                             <div class="action-option-text">
-                                <strong>{{ t('actions.noneTitle') }}</strong>
+                                <strong class="ui-text-gradient">{{ t('actions.noneTitle') }}</strong>
                                 <span>{{ t('actions.noneDescription') }}</span>
                             </div>
                         </button>
@@ -68,7 +68,7 @@
                                 class="action-option-icon"
                             />
                             <div class="action-option-text">
-                                <strong>{{ action.nameLoc }}</strong>
+                                <strong class="ui-text-gradient">{{ action.nameLoc }}</strong>
                                 <span>{{ action.descLoc }}</span>
                             </div>
                         </button>
@@ -245,11 +245,6 @@ defineExpose({
 
 .action-slot-label {
     width: 26px;
-    background: linear-gradient(to top, rgb(var(--ui-dark)), rgb(var(--ui-base)));
-    background-clip: text;
-    -webkit-background-clip: text;
-    color: transparent;
-    -webkit-text-fill-color: transparent;
     font-size: 0.85rem;
     text-align: right;
     flex: 0 0 26px;
@@ -295,15 +290,6 @@ defineExpose({
     font-size: 0.8rem;
     line-height: 1.25;
     text-align: left;
-}
-
-.action-slot-description strong {
-    display: inline-block;
-    background: linear-gradient(to top, rgb(var(--ui-dark)), rgb(var(--ui-base)));
-    background-clip: text;
-    -webkit-background-clip: text;
-    color: transparent;
-    -webkit-text-fill-color: transparent;
 }
 
 .action-slot-description span {
@@ -404,11 +390,6 @@ defineExpose({
 
 .action-option-text strong {
     width: fit-content;
-    background: linear-gradient(to top, rgb(var(--ui-dark)), rgb(var(--ui-base)));
-    background-clip: text;
-    -webkit-background-clip: text;
-    color: transparent;
-    -webkit-text-fill-color: transparent;
 }
 
 .action-option-text span {

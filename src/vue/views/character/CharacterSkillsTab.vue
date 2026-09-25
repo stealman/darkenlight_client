@@ -11,7 +11,7 @@
             </span>
         </div>
         <section v-for="category in visibleSkillCategories" :key="category.key" class="skill-category">
-            <h3 class="skill-category-title"><span>{{ t(`skills.categories.${category.key}`) }}</span></h3>
+            <h3 class="skill-category-title"><span class="ui-text-gradient">{{ t(`skills.categories.${category.key}`) }}</span></h3>
             <div class="skill-list">
                 <div
                     v-for="skill in category.skills"
@@ -36,18 +36,18 @@
                         @keydown.enter="toggleSkillDetails(skill.key)"
                         @keydown.space.prevent="toggleSkillDetails(skill.key)"
                     >
-                    <span class="skill-name">{{ skill.name }}</span>
+                    <span :class="['skill-name', { 'ui-text-gradient': skill.progress }]">{{ skill.name }}</span>
                     <template v-if="skill.nextExperienceRequired != null">
                         <span class="skill-progress-rank skill-progress-rank--current">{{ getSkillRankName(skill.rank) }}</span>
                         <div class="skill-progress-stack">
                             <div class="skill-progress-row">
                                 <span class="skill-progress-track">
-                                    <span class="skill-progress-fill skill-progress-fill--experience" :style="{ width: `${skill.experiencePercent}%` }"></span>
+                                    <span class="skill-progress-fill skill-progress-fill--experience ui-progress-fill-gradient" :style="{ width: `${skill.experiencePercent}%` }"></span>
                                 </span>
                             </div>
                             <div class="skill-progress-row">
                                 <span class="skill-progress-track">
-                                    <span class="skill-progress-fill skill-progress-fill--training" :style="{ width: `${skill.trainingPercent}%` }"></span>
+                                    <span class="skill-progress-fill skill-progress-fill--training ui-progress-fill-gradient" :style="{ width: `${skill.trainingPercent}%` }"></span>
                                 </span>
                             </div>
                         </div>
@@ -356,15 +356,6 @@ const formatTrainingTime = (seconds: number) => {
     line-height: 1.15;
 }
 
-.skill-category-title span {
-    display: inline-block;
-    background: linear-gradient(to top, rgb(var(--ui-dark)), rgb(var(--ui-base)));
-    background-clip: text;
-    -webkit-background-clip: text;
-    color: transparent;
-    -webkit-text-fill-color: transparent;
-}
-
 .skill-list {
     overflow: hidden;
     border: 1px solid rgba(var(--ui-darker), 0.7);
@@ -432,16 +423,8 @@ const formatTrainingTime = (seconds: number) => {
     white-space: nowrap;
 }
 
-.skill-row-summary:not(.skill-row--untrained) .skill-name {
-    background: linear-gradient(to top, rgb(var(--ui-dark)), rgb(var(--ui-base)));
-    background-clip: text;
-    -webkit-background-clip: text;
-    color: transparent;
-    -webkit-text-fill-color: transparent;
-}
-
 .skill-row--expanded .skill-name {
-    background-image: linear-gradient(to top, rgb(var(--ui-accent-blue)), rgb(var(--ui-base)));
+    --ui-text-gradient-bottom: rgb(var(--ui-accent-blue));
 }
 
 .skill-row--active-training .skill-row-summary:not(.skill-row--untrained) .skill-name {
@@ -486,12 +469,14 @@ const formatTrainingTime = (seconds: number) => {
 }
 
 .skill-progress-fill--experience {
-    background: linear-gradient(to right, rgb(var(--ui-progress-experience-dark)), rgb(var(--ui-success)));
+    --ui-progress-gradient-left: var(--ui-progress-experience-dark);
+    --ui-progress-gradient-right: var(--ui-success);
 }
 
 .skill-progress-fill--training {
     width: 0;
-    background: linear-gradient(to right, rgb(var(--ui-progress-training-dark)), rgb(var(--ui-progress-training-light)));
+    --ui-progress-gradient-left: var(--ui-progress-training-dark);
+    --ui-progress-gradient-right: var(--ui-progress-training-light);
 }
 
 .skill-row--active-training .skill-progress-row:last-child .skill-progress-track {

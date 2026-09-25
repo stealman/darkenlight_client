@@ -16,6 +16,11 @@
     --ui-progress-training-light: 139, 183, 218;
     --ui-progress-training-dark: 75, 122, 163;
 
+    /* Shared text-gradient tuning */
+    --ui-text-gradient-base-bottom: rgb(var(--ui-dark));
+    --ui-text-gradient-base-top: rgb(var(--ui-base));
+    --ui-text-gradient-accent-bottom-opacity: 0.55;
+
     --ui-danger: 210, 106, 106;
     --ui-durability-warning: 205, 174, 76;
     --ui-durability-danger: 211, 125, 61;
@@ -28,6 +33,26 @@
 
 .text-warning {
     color: rgb(var(--ui-danger));
+}
+
+.ui-text-gradient {
+    --ui-text-gradient-bottom: var(--ui-text-gradient-base-bottom);
+    --ui-text-gradient-top: var(--ui-text-gradient-base-top);
+    display: inline-block;
+    background: linear-gradient(to top, var(--ui-text-gradient-bottom), var(--ui-text-gradient-top));
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+}
+
+.ui-text-gradient--accent {
+    --ui-text-gradient-bottom: rgba(var(--ui-text-gradient-accent), var(--ui-text-gradient-accent-bottom-opacity));
+    --ui-text-gradient-top: rgb(var(--ui-text-gradient-accent));
+}
+
+.ui-progress-fill-gradient {
+    background: linear-gradient(to right, rgb(var(--ui-progress-gradient-left)), rgb(var(--ui-progress-gradient-right)));
 }
 
 /* backdrop */

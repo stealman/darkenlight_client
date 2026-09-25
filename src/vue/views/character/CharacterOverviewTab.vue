@@ -3,21 +3,21 @@
         <div class="character-overview-header">
             <div class="character-overview-title-row">
                 <div class="character-overview-resource character-overview-resource--health">
-                    <span class="character-overview-resource-label">HP</span>
-                    <span class="character-overview-resource-value">{{ healthValue }}</span>
+                    <span class="character-overview-resource-label ui-text-gradient ui-text-gradient--accent">HP</span>
+                    <span class="character-overview-resource-value ui-text-gradient ui-text-gradient--accent">{{ healthValue }}</span>
                 </div>
                 <div class="character-overview-name">
-                    <span>{{ characterName }}</span>
+                    <span class="ui-text-gradient">{{ characterName }}</span>
                     <span
                         v-if="gameClassName"
-                        :class="['character-overview-class-name', `character-overview-class-name--${gameClassKey}`]"
+                        :class="['character-overview-class-name', 'ui-text-gradient', 'ui-text-gradient--accent', `character-overview-class-name--${gameClassKey}`]"
                     >
                         {{ gameClassName }}
                     </span>
                 </div>
                 <div class="character-overview-resource character-overview-resource--mana">
-                    <span class="character-overview-resource-label">MP</span>
-                    <span class="character-overview-resource-value">{{ manaValue }}</span>
+                    <span class="character-overview-resource-label ui-text-gradient ui-text-gradient--accent">MP</span>
+                    <span class="character-overview-resource-value ui-text-gradient ui-text-gradient--accent">{{ manaValue }}</span>
                 </div>
             </div>
             <div class="character-overview-attributes">
@@ -28,12 +28,12 @@
                 >
                     <div class="character-overview-attribute-base">
                         <span class="character-overview-attribute-label">{{ attribute.label }}</span>
-                        <span class="character-overview-attribute-value">{{ attribute.value }}</span>
+                        <span class="character-overview-attribute-value ui-text-gradient ui-text-gradient--accent">{{ attribute.value }}</span>
                     </div>
                     <div v-if="attribute.stats.length" class="character-overview-derived-stats">
                         <div v-for="stat in attribute.stats" :key="stat.key" class="character-overview-derived-stat">
                             <span class="character-overview-derived-label">{{ stat.label }}</span>
-                            <span class="character-overview-derived-value">{{ stat.value }}</span>
+                            <span class="character-overview-derived-value ui-text-gradient">{{ stat.value }}</span>
                         </div>
                     </div>
                     <div v-else class="character-overview-derived-placeholder"></div>
@@ -183,23 +183,12 @@ const attributes = computed(() => [
 }
 
 .character-overview-name > span:first-child {
-    display: inline-block;
-    background: linear-gradient(to top, rgb(var(--ui-dark)), rgb(var(--ui-base)));
-    background-clip: text;
-    -webkit-background-clip: text;
-    color: transparent;
-    -webkit-text-fill-color: transparent;
     font-weight: 400;
 }
 
 .character-overview-class-name {
+    --ui-text-gradient-accent: var(--character-class-color);
     margin-left: 0.4em;
-    display: inline-block;
-    background: linear-gradient(to top, rgba(var(--character-class-color), 0.55), rgb(var(--character-class-color)));
-    background-clip: text;
-    -webkit-background-clip: text;
-    color: transparent;
-    -webkit-text-fill-color: transparent;
     font-weight: 700;
 }
 
@@ -246,21 +235,13 @@ const attributes = computed(() => [
 }
 
 .character-overview-resource-label {
-    background: linear-gradient(to top, rgba(var(--character-resource-color), 0.55), rgb(var(--character-resource-color)));
-    background-clip: text;
-    -webkit-background-clip: text;
-    color: transparent;
-    -webkit-text-fill-color: transparent;
+    --ui-text-gradient-accent: var(--character-resource-color);
     font-weight: 700;
 }
 
 .character-overview-resource-value {
     overflow: hidden;
-    background: linear-gradient(to top, rgba(var(--character-resource-color), 0.55), rgb(var(--character-resource-color)));
-    background-clip: text;
-    -webkit-background-clip: text;
-    color: transparent;
-    -webkit-text-fill-color: transparent;
+    --ui-text-gradient-accent: var(--character-resource-color);
     font-weight: 700;
     text-overflow: ellipsis;
 }
@@ -324,11 +305,7 @@ const attributes = computed(() => [
 }
 
 .character-overview-attribute-value {
-    background: linear-gradient(to top, rgba(var(--character-attribute-accent), 0.55), rgb(var(--character-attribute-accent)));
-    background-clip: text;
-    -webkit-background-clip: text;
-    color: transparent;
-    -webkit-text-fill-color: transparent;
+    --ui-text-gradient-accent: var(--character-attribute-accent);
     font-size: clamp(19px, 3vh, 28px);
     font-weight: 700;
     line-height: 1;
@@ -365,11 +342,6 @@ const attributes = computed(() => [
 
 .character-overview-derived-value {
     flex: 0 0 auto;
-    background: linear-gradient(to top, rgb(var(--ui-dark)), rgb(var(--ui-base)));
-    background-clip: text;
-    -webkit-background-clip: text;
-    color: transparent;
-    -webkit-text-fill-color: transparent;
     font-weight: 700;
     white-space: nowrap;
 }
