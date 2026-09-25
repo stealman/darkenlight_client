@@ -49,6 +49,15 @@ export class SelectAutoAttackTarget implements Message {
     }
 }
 
+export class CombatApproachRequest implements Message {
+    t: number = 65
+    d: any
+
+    constructor(id: number, targetType: string) {
+        this.d = { id: id, tp: targetType }
+    }
+}
+
 export class AutoAttackBreak implements Message {
     t: number = 7
     d: any

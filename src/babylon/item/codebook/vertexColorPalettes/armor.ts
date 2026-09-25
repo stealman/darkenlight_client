@@ -50,7 +50,7 @@ export const MetalArmorVertexColorPalette: VertexColorWeaponPalette = {
  * metal variants.
  */
 const SHIELD_DETAIL_SECONDARY_COLORS: readonly VertexRgb[] = [
-    [100, 100, 100], // Steel: warm leather
+    [100, 100, 100], // Steel: dark steel
     [225, 139, 35], // Astracyte: amber
     [145, 63, 181], // Agapyte: purple
     [143, 42, 54], // Gold: crimson

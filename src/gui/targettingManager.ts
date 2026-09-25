@@ -2,7 +2,7 @@ import { MonsterManager } from '@/babylon/monsters/monsterManager'
 import { Ray, Vector3 } from '@babylonjs/core'
 import { OverlayManager } from '@/gui/overlay/overlayManager'
 import { Connector } from '@/network/connector'
-import { SelectAutoAttackTarget } from '@/network/messages'
+import { CombatApproachRequest, SelectAutoAttackTarget } from '@/network/messages'
 import { OnScreenMessageManager } from '@/gui/onScreenMessageManager'
 import { Settings } from '@/settings/settings'
 import { AudioManager } from '@/babylon/audio/audioManager'
@@ -171,7 +171,7 @@ export const TargetingManager = {
         this.checkAutoAttackOnSelectedTarget()
     },
 
-    checkAutoAttackOnSelectedTarget(overrideToggle: boolean = false) {
+    checkAutoAttackOnSelectedTarget(overrideToggle: boolean = false, requestCombatApproach: boolean = false) {
         const targetIsDeadCharacter = this.selectedTarget?.getObjectType() === 'C' && (this.selectedTarget as any).dead === true
         if (
             !MyPlayer.isDead.value &&
@@ -182,7 +182,27 @@ export const TargetingManager = {
         ) {
             MyPlayer.myChar.autoAttackTarget = this.selectedTarget
             Connector.sendMessage(new SelectAutoAttackTarget(this.selectedTarget!.id, this.selectedTarget!.getObjectType()))
+            if (requestCombatApproach) {
+                this.requestCombatApproach()
+            }
         }
+    },
+
+    requestCombatApproach() {
+        const target = this.selectedTarget
+        const myChar = MyPlayer.myChar
+        const weapon = myChar?.getWeapon()
+        const weaponRange = Number((weapon?.atts as any)?.range ?? weapon?.atts?.get?.('range'))
+        if (!target || !weapon || myChar.isWeaponRanged() || myChar.getMoveAngle() !== null || !Number.isFinite(weaponRange)) {
+            return
+        }
+
+        const distanceOutsideRange = Vector3.Distance(myChar.pos, target.pos) - weaponRange
+        if (distanceOutsideRange <= 0 || distanceOutsideRange >= 0.5) {
+            return
+        }
+
+        Connector.sendMessage(new CombatApproachRequest(target.id, target.getObjectType()))
     },
 
     unselectTarget() {

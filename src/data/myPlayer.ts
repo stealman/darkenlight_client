@@ -18,6 +18,7 @@ import {
     AttackableCombatTO,
     AutoAttackMessage,
     AutoAttackResultMessage,
+    CombatApproachMessage,
     HealingMessage,
     HealingResultMessage,
     PotionUsedMessage,
@@ -177,6 +178,7 @@ export const MyPlayer = {
         if (this.isDead.value) {
             return
         }
+        this.myChar.cancelCombatApproach()
         movementType = this.getAllowedMovementType(movementType)
 
         // only move if angle differs from current by at least 0.1 rad
@@ -188,6 +190,7 @@ export const MyPlayer = {
     },
 
     stopMove() {
+        this.myChar.cancelCombatApproach()
         this.myChar.stopMove()
     },
 
@@ -213,6 +216,13 @@ export const MyPlayer = {
             return
         }
         this.myChar.startAutoAttack(data)
+    },
+
+    startCombatApproach(data: CombatApproachMessage) {
+        if (this.isDead.value) {
+            return
+        }
+        this.myChar.startCombatApproach(data)
     },
 
     finishAutoAttack(data: AutoAttackResultMessage) {
@@ -354,6 +364,7 @@ export const MyPlayer = {
             return
         }
         MyPlayer.myChar.autoAttackTarget = null
+        MyPlayer.myChar.cancelCombatApproach()
         Connector.sendMessage(new StopAction())
 
         if (resetTarget) {

@@ -94,11 +94,17 @@ export const CharacterManager = {
         const id = data[0]
         if (id === MyPlayer.myChar.id) {
             const dist = Math.sqrt( (MyPlayer.myChar.pos.x - data[1]) * (MyPlayer.myChar.pos.x - data[1]) + (MyPlayer.myChar.pos.z - data[2]) * (MyPlayer.myChar.pos.z - data[2]) )
-            if (dist > 1) {
+            const serverStopped = data[3] === null || data[4] <= 0
+            if (dist > 1 || serverStopped) {
                 MyPlayer.myChar.pos.x = data[1]
                 MyPlayer.myChar.pos.z = data[2]
-                MyPlayer.myChar.setMoveAngle(data[3])
-                MyPlayer.myChar.setActualSpeed(data[4])
+                if (serverStopped) {
+                    MyPlayer.myChar.stopMovementLocally()
+                } else {
+                    MyPlayer.myChar.setMoveAngle(data[3])
+                    MyPlayer.myChar.setActualSpeed(data[4])
+                    MyPlayer.myChar.setMoveType(data[5])
+                }
             }
         } else {
             const char = this.characters.get(id)

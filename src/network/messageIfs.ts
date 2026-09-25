@@ -86,6 +86,13 @@ export interface AutoAttackResultMessage {
     res: AutoAttackResult
 }
 
+export interface CombatApproachMessage {
+    x: number
+    z: number
+    a: number
+    d: number
+}
+
 export interface  HealingMessage {
     id: number
     tgt: number

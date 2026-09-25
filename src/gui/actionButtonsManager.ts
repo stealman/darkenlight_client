@@ -384,7 +384,7 @@ export const ActionButtonsManager = {
             InventoryManager.equipStoredWeaponSetup('primary')
         }*/
 
-        TargetingManager.checkAutoAttackOnSelectedTarget(true)
+        TargetingManager.checkAutoAttackOnSelectedTarget(true, true)
     },
 
     clickOnHealingButton() {

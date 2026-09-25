@@ -20,6 +20,7 @@ import {
     AttackableCombatTO,
     AutoAttackMessage,
     AutoAttackResultMessage, CharacterCampingMessage,
+    CombatApproachMessage,
     CharacterCraftingMessage, CharacterCraftingResultMessage,
     CharacterGatheringMessage,
     CharacterGatheringResultMessage, CharacterRestingMessage,
@@ -108,6 +109,7 @@ export const MessageProcessor = {
                 case 57: this.processCharacterCraftingFinished(msg.d); break
                 case 58: this.processBankState(msg.d); break
                 case 59: this.processCharacterDeath(msg.d); break
+                case 66: this.processCharacterCombatApproach(msg.d); break
                 case 60: this.processCharacterTeleport(msg.d); break
                 case 61: this.processCharacterRespawn(msg.d); break
                 case 62: this.processGMWorlds(msg.d); break
@@ -267,6 +269,10 @@ export const MessageProcessor = {
 
     processCharacterAttack(data: AutoAttackMessage) {
         CharacterManager.startAutoAttack(data)
+    },
+
+    processCharacterCombatApproach(data: CombatApproachMessage) {
+        MyPlayer.startCombatApproach(data)
     },
 
     processCharacterAttackFinished(data: AutoAttackResultMessage) {

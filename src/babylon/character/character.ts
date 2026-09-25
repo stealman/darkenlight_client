@@ -21,6 +21,7 @@ import {
     AutoAttackMessage,
     AutoAttackResultMessage,
     CharacterCampingMessage,
+    CombatApproachMessage,
     CharacterCraftingMessage,
     CharacterCraftingResultMessage,
     CharacterGatheringMessage,
@@ -78,6 +79,7 @@ class Character implements Attackable, EffectTarget {
     private actualSpeed: number = 0
     private moveAngle: number | null = null
     private lookAngle: number | null = null
+    private combatApproachTarget: Vector3 | null = null
 
     equipSet: Map<string, Item> = new Map<string, Item>()
     skillSet: SkillSetTO = {}
@@ -234,19 +236,41 @@ class Character implements Attackable, EffectTarget {
             const speed = this.getActualSpeed()
             const angle = Utils.roundToTwoDecimals(this.getMoveAngle()! - (myChar ? 0 : Math.PI / 4))
             const tgtPos = new Vector3(this.pos.x + Math.cos(angle) * speed * timeRate, 0, this.pos.z -Math.sin(angle) * speed * timeRate)
+            const combatApproaching = myChar && this.combatApproachTarget !== null
+            const reachedCombatApproachTarget = combatApproaching && Math.hypot(
+                this.pos.x - this.combatApproachTarget!.x,
+                this.pos.z - this.combatApproachTarget!.z,
+            ) <= speed * timeRate
+            if (reachedCombatApproachTarget) {
+                tgtPos.x = this.combatApproachTarget!.x
+                tgtPos.z = this.combatApproachTarget!.z
+            }
 
             // ONLY FOR MY CHAR
             if (myChar && Utils.isMovementCollision(this.getBoxSize(), new Vector3(this.pos.x, 0, this.pos.z), tgtPos)) {
+                if (combatApproaching) {
+                    this.cancelCombatApproach()
+                    this.model?.onFrame(timeRate)
+                    return
+                }
                 this.checkMyCharAlternateMovementPos(tgtPos, angle, speed, timeRate)
             }
 
             // ONLY FOR MY CHAR - Check world boundaries
             if (myChar && (tgtPos.x < 1 || tgtPos.z < 1 || tgtPos.x > WorldDataManager.worldDataMap.get(MyPlayer.worldId)!.worldSize - 2 || tgtPos.z > WorldDataManager.worldDataMap.get(MyPlayer.worldId)!.worldSize - 2)) {
-                this.stopMove()
+                if (combatApproaching) {
+                    this.cancelCombatApproach()
+                } else {
+                    this.stopMove()
+                }
             } else {
                 this.pos.x = tgtPos.x
                 this.pos.z = tgtPos.z
                 this.logicYpos = Utils.calculateWalkYPos(this.pos.x, this.pos.z, this.getBoxSize())
+            }
+
+            if (reachedCombatApproachTarget) {
+                this.cancelCombatApproach()
             }
 
             if (this.movementType === 'R') { this.model?.startRunAnimation(this.getActualSpeed() / 3.2) }
@@ -446,6 +470,7 @@ class Character implements Attackable, EffectTarget {
         this.autoAttackCooldownEnd = 0
         this.arrowCreateTime = 0
         this.arrowShotTime = 0
+        this.combatApproachTarget = null
         this.setMoveAngle(null)
         this.setActualSpeed(0)
         this.movementType = 'N'
@@ -468,6 +493,7 @@ class Character implements Attackable, EffectTarget {
     }
 
     stopMovementLocally() {
+        this.combatApproachTarget = null
         this.setMoveAngle(null)
         this.setActualSpeed(0)
         this.movementType = 'N'
@@ -540,6 +566,34 @@ class Character implements Attackable, EffectTarget {
     startMove(movementType: string, angle: number) {
         this.movementType = movementType
         this.setMoveAngleAndSpeed(angle, this.movementType === 'R' ? this.runSpeed : this.walkSpeed)
+    }
+
+    startCombatApproach(data: CombatApproachMessage) {
+        this.pos.x = data.x
+        this.pos.z = data.z
+        this.logicYpos = Utils.calculateWalkYPos(this.pos.x, this.pos.z, this.getBoxSize())
+        this.combatApproachTarget = new Vector3(
+            data.x + Math.cos(data.a) * data.d,
+            0,
+            data.z - Math.sin(data.a) * data.d,
+        )
+        this.movementType = 'W'
+        this.setMoveAngle(data.a)
+        this.setActualSpeed(this.walkSpeed)
+    }
+
+    cancelCombatApproach(): boolean {
+        if (!this.combatApproachTarget) {
+            return false
+        }
+
+        this.combatApproachTarget = null
+        this.setMoveAngle(null)
+        this.setActualSpeed(0)
+        this.movementType = 'N'
+        this.model?.stopAnimation()
+        this.model?.stopAllStepSounds()
+        return true
     }
 
     forceMoveType(movementType: string) {
