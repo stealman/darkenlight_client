@@ -1,6 +1,12 @@
 export const CanvasTextUtils = {
     getDarkenedColor(color: string, factor: number = 0.72) {
-        const hex = color.startsWith('#') ? color.slice(1) : color
+        let hex = color.startsWith('#') ? color.slice(1) : color
+        if (/^[0-9a-f]{3}$/i.test(hex)) {
+            hex = hex
+                .split('')
+                .map((part) => part + part)
+                .join('')
+        }
         if (!/^[0-9a-f]{6}$/i.test(hex)) {
             return color
         }

@@ -120,7 +120,7 @@ export const OverlayManager = {
             if (MonsterManager.visibleMonsters.has(monster.id) && monster.nameDisplayTime > time) {
                 const pos = monster.getNameTextNodeScreenPosition()
                 if (pos) {
-                    this.renderName(pos, monster.mobType.name, tightText, monster.getRelationToMyPlayer())
+                    this.renderName(pos, monster.mobType.name, tightText, monster.getRelationToMyPlayer(), true)
                 }
             }
         })
@@ -166,7 +166,7 @@ export const OverlayManager = {
                         displayName = `${qty}x  ${itemName}`
                     }
                 }
-                this.renderName(pos, displayName, tightText, 'NEUTRAL')
+                this.renderName(pos, displayName, tightText, 'NEUTRAL', true)
             }
         }
     },
@@ -519,7 +519,7 @@ export const OverlayManager = {
         }
 
         if (name) {
-            this.renderOutlinedText(basePos.x, currentTextY, name, tightText, char.getRelationToMyPlayer(), nameFontSize)
+            this.renderOutlinedText(basePos.x, currentTextY, name, tightText, char.getRelationToMyPlayer(), nameFontSize, undefined, 1, null, true)
             currentTextY += actionName ? nameFontSize / 2 + actionFontSize / 2 + 6 : 0
         }
 
@@ -529,13 +529,13 @@ export const OverlayManager = {
         }
     },
 
-    renderName(pos: Vector3, name: string, tightText: boolean, relation: 'ALLY' | 'ENEMY' | 'NEUTRAL') {
-        this.renderOutlinedText(pos.x, pos.y - 6, name, tightText, relation, this.fontSize, pos)
+    renderName(pos: Vector3, name: string, tightText: boolean, relation: 'ALLY' | 'ENEMY' | 'NEUTRAL', useGradient: boolean = false) {
+        this.renderOutlinedText(pos.x, pos.y - 6, name, tightText, relation, this.fontSize, pos, 1, null, useGradient)
     },
 
     renderNpcLabel(pos: Vector3, name: string, title: string, tightText: boolean) {
         if (!title) {
-            this.renderName(pos, name, tightText, 'NEUTRAL')
+            this.renderName(pos, name, tightText, 'NEUTRAL', true)
             return
         }
 
@@ -552,8 +552,8 @@ export const OverlayManager = {
         ViewportManager.movePositionToScreen(pos, Math.max(nameWidth, titleWidth) / 2, totalHeight + 10)
 
         const nameY = pos.y - totalHeight + this.fontSize / 2
-        this.renderOutlinedText(pos.x, nameY, name, tightText, 'NEUTRAL', this.fontSize)
-        this.renderOutlinedText(pos.x, nameY + this.fontSize / 2 + titleFontSize / 2 + 6, titleText, tightText, 'NEUTRAL', titleFontSize, undefined, 1, '#e9dabe')
+        this.renderOutlinedText(pos.x, nameY, name, tightText, 'NEUTRAL', this.fontSize, undefined, 1, null, true)
+        this.renderOutlinedText(pos.x, nameY + this.fontSize / 2 + titleFontSize / 2 + 6, titleText, tightText, 'NEUTRAL', titleFontSize, undefined, 1, '#e9dabe', true)
     },
 
     renderOutlinedText(
@@ -566,6 +566,7 @@ export const OverlayManager = {
         pos?: Vector3,
         textAlpha: number = 1,
         color: string | null = null,
+        useGradient: boolean = false,
     ) {
         const ctx = this.overlayCtx!
         ctx.font = `${fontSize}px "Roboto", Arial, sans-serif`
@@ -579,20 +580,29 @@ export const OverlayManager = {
             ViewportManager.movePositionToScreen(pos, textWidth / 2, fontSize + 10)
         }
 
+        let fillColor = color || '#aaa'
         if (color) {
-            ctx.fillStyle = color
+            fillColor = color
         } else {
             switch (relation) {
                 case 'ALLY':
-                    ctx.fillStyle = '#56aaff'
+                    fillColor = '#56aaff'
                     break
                 case 'ENEMY':
-                    ctx.fillStyle = '#f08f56'
+                    fillColor = '#f08f56'
                     break
                 case 'NEUTRAL':
-                    ctx.fillStyle = '#aaa'
+                    fillColor = '#aaa'
                     break
             }
+        }
+        if (useGradient) {
+            const fillGradient = ctx.createLinearGradient(x, y - fontSize * 0.75, x, y + fontSize * 0.25)
+            fillGradient.addColorStop(0, fillColor)
+            fillGradient.addColorStop(1, CanvasTextUtils.getDarkenedColor(fillColor, 0.86))
+            ctx.fillStyle = fillGradient
+        } else {
+            ctx.fillStyle = fillColor
         }
         ctx.strokeStyle = 'rgba(0, 0, 0, 0.85)'
         ctx.lineWidth = 3

@@ -11,7 +11,7 @@
             </div>
 
             <div id="emeralds-info">
-                <span id="emeralds-info-count" style="font-size: 2.25vh; color: #0f0;">0</span>
+                <span id="emeralds-info-count">0</span>
                 <img id="emeralds-info-icon" src="/images/icons/emerald.png" style="width: 16px; height: 16px; margin-right: 4px;" />
             </div>
 
