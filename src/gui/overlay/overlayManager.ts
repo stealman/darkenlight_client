@@ -18,6 +18,12 @@ import { EmeraldGainNumber } from '@/gui/overlay/emeraldGainNumber'
 import { ItemGainNumber } from '@/gui/overlay/itemGainNumber'
 import { GmOreTierOverlay } from '@/gui/gm/oreTierOverlay'
 
+interface AnimatedHpBar {
+    displayedPercent: number
+    lastUpdatedAt: number
+    lastSeenAt: number
+}
+
 export const OverlayManager = {
     overlayCanvas: null as HTMLCanvasElement,
     overlayCtx: null as CanvasRenderingContext2D | null,
@@ -28,6 +34,8 @@ export const OverlayManager = {
     itemGainNumbers: [] as ItemGainNumber[],
     emeraldGainIcon: null as HTMLImageElement | null,
     itemGainIcons: new Map<string, HTMLImageElement>(),
+    animatedHpBars: new Map<string, AnimatedHpBar>(),
+    lastHpBarCleanupAt: 0 as number,
 
     async initialize() {
         this.overlayCanvas = document.getElementById('overlayCanvas') as HTMLCanvasElement
@@ -36,6 +44,8 @@ export const OverlayManager = {
         this.fontSize = window.devicePixelRatio > 1 ? 14 : 18
         this.emeraldGainIcon = new Image()
         this.emeraldGainIcon.src = '/images/icons/emerald.png'
+        this.animatedHpBars.clear()
+        this.lastHpBarCleanupAt = 0
         TargetSelector.unselectTarget()
     },
 
@@ -59,7 +69,7 @@ export const OverlayManager = {
         this.renderDamageNumbers(time)
         this.renderEmeraldGainNumbers(time)
         this.renderItemGainNumbers(time)
-        this.renderDamagedBars()
+        this.renderDamagedBars(time)
         this.renderHealingMarkers(time)
         this.renderAttackTargetIndicator(time)
         GmOreTierOverlay.onFrame(this.overlayCtx!)
@@ -278,15 +288,16 @@ export const OverlayManager = {
         return icon
     },
 
-    renderDamagedBars() {
+    renderDamagedBars(time: number) {
         MonsterManager.monsters.forEach((monster) => {
             if (!MonsterManager.visibleMonsters.has(monster.id)) {
                 return
             }
-            if (monster.hpPercent < 100) {
+            const displayedPercent = this.getAnimatedHpPercent(`M:${monster.id}`, monster.hpPercent, time)
+            if (monster.hpPercent < 100 || displayedPercent < 99.95) {
                 const pos = monster.getNameTextNodeScreenPosition()
                 if (pos) {
-                    this.renderDamagedBar(pos, monster.hpPercent, monster.getRelationToMyPlayer() === 'ENEMY')
+                    this.renderDamagedBar(pos, displayedPercent, monster.getRelationToMyPlayer() === 'ENEMY')
                 }
             }
         })
@@ -295,20 +306,60 @@ export const OverlayManager = {
             if (!CharacterManager.visibleCharacters.has(char.id)) {
                 return
             }
-            if (char.hpPercent < 100) {
+            const displayedPercent = this.getAnimatedHpPercent(`C:${char.id}`, char.hpPercent, time)
+            if (char.hpPercent < 100 || displayedPercent < 99.95) {
                 const pos = char.getNameTextNodeScreenPosition()
                 if (pos) {
-                    this.renderDamagedBar(pos, char.hpPercent, char.getRelationToMyPlayer() === 'ENEMY')
+                    this.renderDamagedBar(pos, displayedPercent, char.getRelationToMyPlayer() === 'ENEMY')
                 }
             }
         })
 
-        if (MyPlayer.myChar.hpPercent < 99) {
+        const displayedMyHpPercent = this.getAnimatedHpPercent('P:me', MyPlayer.myChar.hpPercent, time)
+        if (MyPlayer.myChar.hpPercent < 99 || displayedMyHpPercent < 99.95) {
             const pos = MyPlayer.myChar.getNameTextNodeScreenPosition()
             if (pos) {
-                this.renderDamagedBar(pos, MyPlayer.myChar.hpPercent, false)
+                this.renderDamagedBar(pos, displayedMyHpPercent, false)
             }
         }
+
+        this.cleanupAnimatedHpBars(time)
+    },
+
+    getAnimatedHpPercent(key: string, hpPercent: number, time: number) {
+        const targetPercent = Math.max(0, Math.min(100, hpPercent))
+        let state = this.animatedHpBars.get(key)
+        if (!state) {
+            state = {
+                displayedPercent: targetPercent < 100 ? 100 : targetPercent,
+                lastUpdatedAt: time,
+                lastSeenAt: time,
+            }
+            this.animatedHpBars.set(key, state)
+            return state.displayedPercent
+        }
+
+        const elapsed = Math.max(0, Math.min(100, time - state.lastUpdatedAt))
+        const progress = 1 - Math.exp(-elapsed / 65)
+        const nextPercent = state.displayedPercent + (targetPercent - state.displayedPercent) * progress
+
+        state.displayedPercent = Math.abs(targetPercent - nextPercent) < 0.05 ? targetPercent : nextPercent
+        state.lastUpdatedAt = time
+        state.lastSeenAt = time
+        return state.displayedPercent
+    },
+
+    cleanupAnimatedHpBars(time: number) {
+        if (time - this.lastHpBarCleanupAt < 10000) {
+            return
+        }
+
+        this.animatedHpBars.forEach((state, key) => {
+            if (state.lastSeenAt + 15000 < time) {
+                this.animatedHpBars.delete(key)
+            }
+        })
+        this.lastHpBarCleanupAt = time
     },
 
     renderHealingMarkers(time) {

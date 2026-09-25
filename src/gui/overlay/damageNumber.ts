@@ -13,16 +13,18 @@ export class DamageNumber {
     tgtCharacter: Character | null = null
     text: string
     color: string
+    createdAt: number
     expiresAt: number
     static ttl: number = 1500
 
-    constructor(attacker: Attackable, monster: Monster | null, character: Character | null, text: string, color: string, expiresAt: number) {
+    constructor(attacker: Attackable, monster: Monster | null, character: Character | null, text: string, color: string, createdAt: number) {
         this.tgtMonster = monster
         this.tgtCharacter = character
         this.attacker = attacker
         this.text = text
         this.color = color
-        this.expiresAt = expiresAt + DamageNumber.ttl
+        this.createdAt = createdAt
+        this.expiresAt = createdAt + DamageNumber.ttl
     }
 
     static fromHitMonster(attacker: Attackable, monster: Monster, damage: number, hitType: string = 'h', hitQuality: 'P' | 'N' | 'G' | null = null, time: number = Date.now()): DamageNumber | null {
@@ -43,7 +45,7 @@ export class DamageNumber {
 
     static fromHitCharacter(attacker: Attackable, char: Character, damage: number, hitType: string = 'h', hitQuality: 'P' | 'N' | 'G' | null = null, time: number = Date.now()): DamageNumber | null {
         if (hitType === 'm') {
-            return new DamageNumber(attacker, null, char,t('common.miss'), '#c7c7c7', time)
+            return new DamageNumber(attacker, null, char, t('common.miss'), '#c7c7c7', time)
         }
         if (hitType === 'b') {
             return new DamageNumber(attacker, null, char, t('common.blocked'), '#c7c7c7', time)
@@ -58,7 +60,7 @@ export class DamageNumber {
 
     static fromHitMyChar(attacker: Attackable, damage: number, hitType: string = 'h', hitQuality: 'P' | 'N' | 'G' | null = null, time: number = Date.now()): DamageNumber | null {
         if (hitType === 'm') {
-            return new DamageNumber(attacker, null, MyPlayer.myChar,t('common.miss'), '#c7c7c7', time)
+            return new DamageNumber(attacker, null, MyPlayer.myChar, t('common.miss'), '#c7c7c7', time)
         }
         if (hitType === 'b') {
             return new DamageNumber(attacker, null, MyPlayer.myChar, t('common.blocked'), '#c7c7c7', time)
@@ -101,17 +103,21 @@ export class DamageNumber {
         const spacingFix = OverlayManager.letterSpacingFix
         const textWidth = CanvasTextUtils.getTextWidth(ctx, this.text, tightText, spacingFix)
         const remaining = Math.max(0, Math.min(DamageNumber.ttl, this.expiresAt - now))
-        const progress = 1 - (remaining / DamageNumber.ttl)
-        const alpha = progress <= 0.35 ? 1 : Math.max(0, 1 - ((progress - 0.35) / 0.5))
+        const progress = 1 - remaining / DamageNumber.ttl
+        const alpha = progress <= 0.35 ? 1 : Math.max(0, 1 - (progress - 0.35) / 0.5)
         const riseProgress = 1 - Math.pow(2, -6 * progress)
         const isoRelX = (relX - relZ) / Math.SQRT2
-        const relDist = Math.sqrt((relX * relX) + (relZ * relZ))
+        const relDist = Math.sqrt(relX * relX + relZ * relZ)
         const angleFactor = relDist > 0 ? Math.abs(isoRelX) / relDist : 0
         const driftDir = isoRelX >= 0 ? 1 : -1
         const x = pos.x + (driftDir * angleFactor * riseProgress * 30) / window.devicePixelRatio
-        const y = pos.y - (0 + (riseProgress * 30)) / window.devicePixelRatio
-        const textStartX = x - textWidth / 2
+        const y = pos.y - (0 + riseProgress * 30) / window.devicePixelRatio
+        const age = Math.max(0, now - this.createdAt)
+        const popScale = age < 98 ? 1 + 0.5 * (age / 98) : age < 225 ? 1.5 - 0.5 * ((age - 98) / 127) : 1
 
+        ctx.save()
+        ctx.translate(x, y)
+        ctx.scale(popScale, popScale)
         ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)'
         ctx.lineWidth = 3
         ctx.fillStyle = this.color
@@ -119,17 +125,17 @@ export class DamageNumber {
 
         if (tightText) {
             ctx.textAlign = 'left'
-            let cursorX = textStartX
+            let cursorX = -textWidth / 2
             for (const ch of this.text) {
-                ctx.strokeText(ch, cursorX, y)
+                ctx.strokeText(ch, cursorX, 0)
                 cursorX += ctx.measureText(ch).width + spacingFix
             }
-            CanvasTextUtils.drawText(ctx, this.text, textStartX, y, true, spacingFix)
+            CanvasTextUtils.drawText(ctx, this.text, -textWidth / 2, 0, true, spacingFix)
         } else {
             ctx.textAlign = 'center'
-            ctx.strokeText(this.text, x, y)
-            ctx.fillText(this.text, x, y)
+            ctx.strokeText(this.text, 0, 0)
+            ctx.fillText(this.text, 0, 0)
         }
-        ctx.globalAlpha = 1
+        ctx.restore()
     }
 }
