@@ -1,5 +1,14 @@
-
 export const CanvasTextUtils = {
+    getDarkenedColor(color: string, factor: number = 0.72) {
+        const hex = color.startsWith('#') ? color.slice(1) : color
+        if (!/^[0-9a-f]{6}$/i.test(hex)) {
+            return color
+        }
+
+        const darken = (offset: number) => Math.round(Number.parseInt(hex.slice(offset, offset + 2), 16) * factor)
+        return `rgb(${darken(0)}, ${darken(2)}, ${darken(4)})`
+    },
+
     drawText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, tight: boolean, spacingFix = -1) {
         if (!tight) {
             ctx.fillText(text, x, y)
@@ -34,12 +43,12 @@ export const CanvasTextUtils = {
 
         ctx.restore()
 
-        const diff = testStringWidth - (oneCharWidth * 8)
+        const diff = testStringWidth - oneCharWidth * 8
         const perCharDiff = (diff / 8) * window.devicePixelRatio
 
         // If perChar is between 15 and 25% of one character width, it is ok and return 0, otherwise return letter spacing fix to make it 20%
         if (perCharDiff < 0.15 * oneCharWidth || perCharDiff > 0.25 * oneCharWidth) {
-            const fix = (0.2 * oneCharWidth) - perCharDiff
+            const fix = 0.2 * oneCharWidth - perCharDiff
             return fix
         } else {
             return 0
@@ -80,5 +89,5 @@ export const CanvasTextUtils = {
         }
 
         return maxX > minX ? maxX - minX : 0
-    }
+    },
 }

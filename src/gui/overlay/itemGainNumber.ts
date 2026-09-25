@@ -9,6 +9,7 @@ export class ItemGainNumber {
     tgtCharacter: Character
     text: string
     iconUrl: string | null
+    bottomColor: string
     createdAt: number
     expiresAt: number
     static ttl: number = 2000
@@ -17,6 +18,7 @@ export class ItemGainNumber {
         this.tgtCharacter = character
         this.text = text
         this.iconUrl = iconUrl
+        this.bottomColor = CanvasTextUtils.getDarkenedColor('#f0f0f0')
         this.createdAt = startTime
         this.expiresAt = startTime + ItemGainNumber.ttl
     }
@@ -65,7 +67,10 @@ export class ItemGainNumber {
         ctx.scale(popScale, popScale)
         ctx.strokeStyle = 'rgba(0, 0, 0, 0.85)'
         ctx.lineWidth = 3
-        ctx.fillStyle = '#f0f0f0'
+        const fillGradient = ctx.createLinearGradient(0, -OverlayManager.fontSize * 0.75, 0, OverlayManager.fontSize * 0.25)
+        fillGradient.addColorStop(0, '#f0f0f0')
+        fillGradient.addColorStop(1, this.bottomColor)
+        ctx.fillStyle = fillGradient
         ctx.globalAlpha = alpha
 
         if (hasIcon) {

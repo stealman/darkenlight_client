@@ -450,7 +450,20 @@ export const OverlayManager = {
 
         const size = 15
         const thickness = 5
-        const alpha = 0.2 + ((Math.sin(time / 200) + 1) / 2) * 0.65
+        const pulse = (Math.sin(time / 200) + 1) / 2
+        const alpha = 0.2 + pulse * 0.65
+        const glowColor = healSelf ? '255, 68, 54' : '78, 255, 82'
+        const fillGradient = ctx.createLinearGradient(x - size / 2, pos.y - size / 2, x + size / 2, pos.y + size / 2)
+
+        if (healSelf) {
+            fillGradient.addColorStop(0, `rgba(255, 196, 178, ${alpha})`)
+            fillGradient.addColorStop(0.45, `rgba(239, 57, 45, ${alpha})`)
+            fillGradient.addColorStop(1, `rgba(142, 14, 19, ${alpha})`)
+        } else {
+            fillGradient.addColorStop(0, `rgba(219, 255, 202, ${alpha})`)
+            fillGradient.addColorStop(0.45, `rgba(64, 238, 79, ${alpha})`)
+            fillGradient.addColorStop(1, `rgba(12, 125, 36, ${alpha})`)
+        }
 
         const drawCross = (crossSize: number, crossThickness: number) => {
             ctx.beginPath()
@@ -459,12 +472,19 @@ export const OverlayManager = {
             ctx.fill()
         }
 
-        // 1px outline via slightly larger black cross behind the red one.
-        ctx.fillStyle = `rgba(0, 0, 0, ${alpha})`
+        // A softly pulsing halo gives healing a presence without obscuring the scene.
+        ctx.save()
+        ctx.fillStyle = `rgba(${glowColor}, ${alpha * (0.25 + pulse * 0.4)})`
+        ctx.shadowColor = `rgba(${glowColor}, ${alpha * 0.95})`
+        ctx.shadowBlur = 9 + pulse * 10
+        drawCross(size + 3, thickness + 3)
+        ctx.restore()
+
+        // Dark outline keeps the glow readable over bright terrain.
+        ctx.fillStyle = `rgba(0, 0, 0, ${alpha * 0.9})`
         drawCross(size + 2, thickness + 2)
 
-        // Fill - pulsating red cross (single fill operation, no center overdraw).
-        ctx.fillStyle = healSelf ? `rgba(225, 32, 32, ${alpha})` : `rgba(25, 255, 25, ${alpha})`
+        ctx.fillStyle = fillGradient
         drawCross(size, thickness)
     },
 

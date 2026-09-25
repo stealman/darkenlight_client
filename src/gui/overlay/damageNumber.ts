@@ -13,6 +13,7 @@ export class DamageNumber {
     tgtCharacter: Character | null = null
     text: string
     color: string
+    bottomColor: string
     createdAt: number
     expiresAt: number
     static ttl: number = 1500
@@ -23,6 +24,7 @@ export class DamageNumber {
         this.attacker = attacker
         this.text = text
         this.color = color
+        this.bottomColor = CanvasTextUtils.getDarkenedColor(color)
         this.createdAt = createdAt
         this.expiresAt = createdAt + DamageNumber.ttl
     }
@@ -119,7 +121,10 @@ export class DamageNumber {
         ctx.scale(popScale, popScale)
         ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)'
         ctx.lineWidth = 3
-        ctx.fillStyle = this.color
+        const fillGradient = ctx.createLinearGradient(0, -OverlayManager.fontSize * 0.75, 0, OverlayManager.fontSize * 0.25)
+        fillGradient.addColorStop(0, this.color)
+        fillGradient.addColorStop(1, this.bottomColor)
+        ctx.fillStyle = fillGradient
         ctx.globalAlpha = alpha
 
         if (tightText) {
