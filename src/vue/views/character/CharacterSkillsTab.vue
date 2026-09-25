@@ -235,8 +235,9 @@ const skills = computed(() => {
                 progress?.nextExperienceRequired != null &&
                 progress.trainingPoints >= progress.nextTrainingRequired &&
                 progress.experience < progress.nextExperienceRequired,
-            experiencePercent: progress?.nextExperienceRequired
-                ? Math.min(100, progress.experience / progress.nextExperienceRequired * 100)
+            experiencePercent: progress?.nextExperienceRequired != null
+                ? Math.min(100, Math.max(0, (progress.experience - (progress.currentExperienceRequired ?? 0)) /
+                    (progress.nextExperienceRequired - (progress.currentExperienceRequired ?? 0)) * 100))
                 : 0,
             trainingPercent: progress?.nextTrainingRequired
                 ? Math.min(100, progress.trainingPoints / progress.nextTrainingRequired * 100)

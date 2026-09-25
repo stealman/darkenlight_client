@@ -1,4 +1,4 @@
-import { STEEL_ARMOR_RAMP_SRGB, VertexColorWeaponPalette } from './types'
+import { STEEL_ARMOR_RAMP_SRGB, VertexColorWeaponPalette, VertexRgb } from './types'
 
 /**
  * Source colours used in the vertex-colour shield and helmet GLBs. They label
@@ -41,4 +41,39 @@ export const MetalArmorVertexColorPalette: VertexColorWeaponPalette = {
         [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]], // Reserved materialId 10
         [[70, 50, 25], [90, 61, 29], [112, 74, 34], [130, 86, 38], [148, 100, 44], [168, 118, 52], [182, 132, 60]], // Rust materialId 11
     ],
+}
+
+/**
+ * The detailed shield uses the normal grey metal ramp plus a red vertex-colour
+ * marker for its secondary material. The marker does not describe a final
+ * colour; it is replaced per armour material so one shield mesh works for all
+ * metal variants.
+ */
+const SHIELD_DETAIL_SECONDARY_COLORS: readonly VertexRgb[] = [
+    [100, 100, 100], // Steel: warm leather
+    [225, 139, 35], // Astracyte: amber
+    [145, 63, 181], // Agapyte: purple
+    [143, 42, 54], // Gold: crimson
+    [50, 121, 157], // Blood Stone: blue
+    [205, 122, 35], // Dark Stone: ochre
+    [0, 0, 0], // Reserved materialId 7
+    [210, 154, 40], // Mythril: gold
+    [37, 139, 139], // Adamantium: teal
+    [0, 0, 0], // Reserved materialId 10
+    [47, 125, 151], // Rust: blue
+]
+
+export const ShieldDetailVertexColorPalette: VertexColorWeaponPalette = {
+    ...MetalArmorVertexColorPalette,
+    slots: [
+        ...MetalArmorVertexColorPalette.slots,
+        // The red swatch exported by Blender is stored in the linear glTF
+        // colour attribute. It deliberately stays non-metallic so it reads as
+        // a separate material (leather, enamel, cloth, and so on).
+        {index: 7, source: [161, 1, 18], role: 'secondary material marker'},
+    ],
+    materialColors: MetalArmorVertexColorPalette.materialColors.map((colors, materialIndex) => [
+        ...colors,
+        SHIELD_DETAIL_SECONDARY_COLORS[materialIndex],
+    ]),
 }

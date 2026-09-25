@@ -6,7 +6,7 @@ import { PBRCustomMaterial } from '@babylonjs/materials'
 import { Renderer } from '@/babylon/scene/renderer'
 import { EquipSlotModelsCb } from '@/data/items/item'
 import { createVertexColorWeaponMaterial } from '@/babylon/item/codebook/vertexColorPalettes/vertexColorWeaponMaterial'
-import { MetalArmorVertexColorPalette } from '@/babylon/item/codebook/vertexColorPalettes/armor'
+import { MetalArmorVertexColorPalette, ShieldDetailVertexColorPalette } from '@/babylon/item/codebook/vertexColorPalettes/armor'
 
 export const BASE_EQUIP_MATERIAL_PATH = "/models/equip/"
 
@@ -14,10 +14,11 @@ export const BASE_EQUIP_MATERIAL_PATH = "/models/equip/"
 const matMetalSize = new Vector2(16, 8)
 
 // Change when a vertex-colour armour GLB is replaced to avoid mixing it with its palette.
-export const ARMOR_MODEL_CACHE_VERSION = '20260925-armor-draco'
+export const ARMOR_MODEL_CACHE_VERSION = '20260925-armor-details-renamed'
 
 export const ArmorsCbManager = {
     metalArmorVertexColorMaterial: null as PBRCustomMaterial,
+    detailArmorVertexColorMaterial: null as PBRCustomMaterial,
     itemSourceParent: null as TransformNode | null,
 
     async initArmors(map: Map<number, EquipItemType>, scene: Scene) {
@@ -30,15 +31,17 @@ export const ArmorsCbManager = {
         // transform, which otherwise makes the PBR two-sided branch light the
         // visible shield face as though it faced away from the player light.
         this.metalArmorVertexColorMaterial.twoSidedLighting = false
+        this.detailArmorVertexColorMaterial = createVertexColorWeaponMaterial('detailArmorVertexColor', scene, ShieldDetailVertexColorPalette)
+        this.detailArmorVertexColorMaterial.twoSidedLighting = false
         // Init all armor types
-        map.set(ArmorModelsCb.PLATE_ARMOR_MALE.id, await this.getVertexColorItem(ArmorModelsCb.PLATE_ARMOR_MALE, this.metalArmorVertexColorMaterial))
+        map.set(ArmorModelsCb.PLATE_ARMOR_MALE.id, await this.getVertexColorItem(ArmorModelsCb.PLATE_ARMOR_MALE, this.detailArmorVertexColorMaterial))
 
         map.set(ArmorModelsCb.HELM_MALE.id, await this.getVertexColorItem(ArmorModelsCb.HELM_MALE, this.metalArmorVertexColorMaterial))
-        map.set(ArmorModelsCb.SHIELD.id, await this.getVertexColorItem(ArmorModelsCb.SHIELD, this.metalArmorVertexColorMaterial))
+        map.set(ArmorModelsCb.SHIELD.id, await this.getVertexColorItem(ArmorModelsCb.SHIELD, this.detailArmorVertexColorMaterial))
 
-        map.set(ArmorModelsCb.PAULDRON_MALE.id, await this.getVertexColorItem(ArmorModelsCb.PAULDRON_MALE, this.metalArmorVertexColorMaterial))
+        map.set(ArmorModelsCb.PAULDRON_MALE.id, await this.getVertexColorItem(ArmorModelsCb.PAULDRON_MALE, this.detailArmorVertexColorMaterial))
 
-        map.set(ArmorModelsCb.LEG_MALE.id, await this.getVertexColorItem(ArmorModelsCb.LEG_MALE, this.metalArmorVertexColorMaterial))
+        map.set(ArmorModelsCb.LEG_MALE.id, await this.getVertexColorItem(ArmorModelsCb.LEG_MALE, this.detailArmorVertexColorMaterial))
     },
 
     async getVertexColorItem(data: EquipCbItem, material: PBRCustomMaterial): Promise<EquipItemType> {

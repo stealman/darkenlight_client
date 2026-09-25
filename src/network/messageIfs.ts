@@ -40,6 +40,7 @@ export interface SkillProgressTO {
     rank: number
     experience: number
     trainingPoints: number
+    currentExperienceRequired?: number
     nextExperienceRequired?: number
     nextTrainingRequired?: number
     weaponAttackBonusPercent?: number
