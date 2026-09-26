@@ -9,7 +9,7 @@
         @click="emit('close')"
     >
         <div class="crafting-item-overlay-name">
-            <span>{{ displayName }}</span>
+            <span class="ui-text-gradient">{{ displayName }}</span>
         </div>
     </div>
 </template>

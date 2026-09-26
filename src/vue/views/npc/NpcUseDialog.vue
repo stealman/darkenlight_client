@@ -263,28 +263,28 @@
                 {{ effect.text }}
             </div>
             <div v-if="detailItem" class="npc-vendor-item-overlay" :style="detailOverlayStyle" @click="detailItem = null">
-                <div class="npc-vendor-overlay-name">{{ getItemName(detailItem) }}</div>
+                <div class="npc-vendor-overlay-name"><span class="ui-text-gradient">{{ getItemName(detailItem) }}</span></div>
                 <div v-if="detailWeaponDurability || detailEquipmentCategoryLabel" class="npc-vendor-overlay-category-row">
-                    <span v-if="detailWeaponDurability" class="npc-vendor-overlay-durability">{{ t('inventory.durability') }}: <strong>{{ detailWeaponDurability }}</strong></span>
+                    <span v-if="detailWeaponDurability" :class="['npc-vendor-overlay-durability', detailWeaponDurabilityStatus ? `item-durability--${detailWeaponDurabilityStatus}` : null]">{{ t('inventory.durability') }}: <strong>{{ detailWeaponDurability }}</strong></span>
                     <span v-if="detailEquipmentCategoryLabel" class="inventory-item-overlay-weapon-category">{{ detailEquipmentCategoryLabel }}</span>
                 </div>
                 <div v-if="detailItem.tp === 'W'" class="npc-vendor-overlay-stats">
-                    <span>{{ t('vendor.attack') }} <strong>{{ detailItem.atts?.patk }}</strong></span>
-                    <span>{{ t('vendor.attackType') }} <strong>{{ formatDamageTypes(detailItem) }}</strong></span>
-                    <span>{{ t('vendor.speed') }} <strong>{{ formatSpeed(detailItem.atts?.speed) }}</strong></span>
-                    <span>{{ t('vendor.range') }} <strong>{{ detailItem.atts?.range }}</strong></span>
-                    <span v-if="isNonZero(detailItem.atts?.armorPen)">{{ t('inventory.armorPenetration') }} <strong>{{ detailItem.atts?.armorPen }}</strong></span>
-                    <span v-if="isNonZero(detailItem.atts?.defense)">{{ t('inventory.defense') }} <strong>{{ formatModifier(detailItem.atts?.defense) }}</strong></span>
+                    <span>{{ t('vendor.attack') }} <strong class="ui-text-gradient">{{ detailItem.atts?.patk }}</strong></span>
+                    <span>{{ t('vendor.attackType') }} <strong class="ui-text-gradient">{{ formatDamageTypes(detailItem) }}</strong></span>
+                    <span>{{ t('vendor.speed') }} <strong class="ui-text-gradient">{{ formatSpeed(detailItem.atts?.speed) }}</strong></span>
+                    <span>{{ t('vendor.range') }} <strong class="ui-text-gradient">{{ detailItem.atts?.range }}</strong></span>
+                    <span v-if="isNonZero(detailItem.atts?.armorPen)">{{ t('inventory.armorPenetration') }} <strong class="ui-text-gradient">{{ detailItem.atts?.armorPen }}</strong></span>
+                    <span v-if="isNonZero(detailItem.atts?.defense)">{{ t('inventory.defense') }} <strong class="ui-text-gradient">{{ formatModifier(detailItem.atts?.defense) }}</strong></span>
                 </div>
                 <div v-else-if="detailItem.tp === 'A'" class="npc-vendor-overlay-stats">
-                    <span>{{ t('inventory.armor') }} <strong>{{ detailItem.atts?.pdef }}</strong></span>
-                    <span>{{ t('inventory.magicInterference') }} <strong>{{ detailItem.atts?.arcaneInterference }}%</strong></span>
-                    <span v-if="isNonZero(detailItem.atts?.defense)">{{ t('inventory.defense') }} <strong>{{ formatModifier(detailItem.atts?.defense) }}</strong></span>
-                    <span v-if="isNonZero(detailItem.atts?.str)">{{ t('character.strength') }} <strong>{{ formatModifier(detailItem.atts?.str) }}</strong></span>
-                    <span v-if="isNonZero(detailItem.atts?.agi)">{{ t('character.agility') }} <strong>{{ formatModifier(detailItem.atts?.agi) }}</strong></span>
-                    <span v-if="isNonZero(detailItem.atts?.int)">{{ t('character.intelligence') }} <strong>{{ formatModifier(detailItem.atts?.int) }}</strong></span>
-                    <span v-if="isNonZero(detailItem.atts?.wis)">{{ t('character.wisdom') }} <strong>{{ formatModifier(detailItem.atts?.wis) }}</strong></span>
-                    <span v-if="isNonZero(detailItem.atts?.maxHp)">{{ t('inventory.maxHealth') }} <strong>{{ formatModifier(detailItem.atts?.maxHp) }}</strong></span>
+                    <span>{{ t('inventory.armor') }} <strong class="ui-text-gradient">{{ detailItem.atts?.pdef }}</strong></span>
+                    <span>{{ t('inventory.magicInterference') }} <strong class="ui-text-gradient">{{ detailItem.atts?.arcaneInterference }}%</strong></span>
+                    <span v-if="isNonZero(detailItem.atts?.defense)">{{ t('inventory.defense') }} <strong class="ui-text-gradient">{{ formatModifier(detailItem.atts?.defense) }}</strong></span>
+                    <span v-if="isNonZero(detailItem.atts?.str)">{{ t('character.strength') }} <strong class="ui-text-gradient">{{ formatModifier(detailItem.atts?.str) }}</strong></span>
+                    <span v-if="isNonZero(detailItem.atts?.agi)">{{ t('character.agility') }} <strong class="ui-text-gradient">{{ formatModifier(detailItem.atts?.agi) }}</strong></span>
+                    <span v-if="isNonZero(detailItem.atts?.int)">{{ t('character.intelligence') }} <strong class="ui-text-gradient">{{ formatModifier(detailItem.atts?.int) }}</strong></span>
+                    <span v-if="isNonZero(detailItem.atts?.wis)">{{ t('character.wisdom') }} <strong class="ui-text-gradient">{{ formatModifier(detailItem.atts?.wis) }}</strong></span>
+                    <span v-if="isNonZero(detailItem.atts?.maxHp)">{{ t('inventory.maxHealth') }} <strong class="ui-text-gradient">{{ formatModifier(detailItem.atts?.maxHp) }}</strong></span>
                 </div>
                 <div v-else class="npc-vendor-overlay-muted">{{ t('vendor.detailsSoon') }}</div>
             </div>
@@ -427,6 +427,17 @@ const detailWeaponDurability = computed(() => {
     const durability = Number(detailItem.value?.atts?.dur)
     const maxDurability = Number(detailItem.value?.atts?.durM)
     return Number.isFinite(durability) && Number.isFinite(maxDurability) ? `${durability} / ${maxDurability}` : null
+})
+const detailWeaponDurabilityStatus = computed<ItemDurabilityStatus | null>(() => {
+    const durability = Number(detailItem.value?.atts?.dur)
+    const maxDurability = Number(detailItem.value?.atts?.durM)
+    if (!Number.isFinite(durability) || !Number.isFinite(maxDurability)) {
+        return null
+    }
+    if (durability < 5) return 'critical'
+    if (durability < 15) return 'danger'
+    if (durability < 25) return 'warning'
+    return 'worn'
 })
 const formattedEmeralds = computed(() => EmeraldsManager.formatEmeraldAmount(EmeraldsManager.emeralds.value))
 
@@ -793,10 +804,14 @@ defineExpose({openDialog})
 .npc-vendor-quick-buy-button { min-width: 42px; }
 .npc-use-empty-state { display: flex; flex: 1 1 auto; align-items: center; justify-content: center; color: rgb(var(--ui-dark)); font-size: 14px; }
 .npc-vendor-item-overlay { position: fixed; z-index: 2100; width: 270px; box-sizing: border-box; padding: 10px; border: 1px solid rgb(var(--ui-dark)); background: rgba(15, 11, 8, 0.96); color: rgb(var(--ui-base)); text-align: left; box-shadow: 0 10px 22px rgba(0, 0, 0, 0.65); }
-.npc-vendor-overlay-name { font-size: 14px; font-weight: 700; }
+.npc-vendor-overlay-name { font-size: 12px; font-weight: 700; }
 .npc-vendor-overlay-category-row { display: flex; justify-content: flex-end; margin-top: 6px; }
 .npc-vendor-overlay-durability { color: rgb(var(--ui-dark)); font-size: 12px; }
-.npc-vendor-overlay-durability strong { color: rgb(var(--ui-base)); }
+.npc-vendor-overlay-durability strong { color: inherit; }
+.npc-vendor-overlay-durability.item-durability--worn { color: rgb(var(--ui-attribute-agility)); }
+.npc-vendor-overlay-durability.item-durability--warning { color: rgb(var(--ui-durability-warning)); }
+.npc-vendor-overlay-durability.item-durability--danger { color: rgb(var(--ui-durability-danger)); }
+.npc-vendor-overlay-durability.item-durability--critical { color: rgb(var(--ui-danger)); }
 .npc-vendor-overlay-stats { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: 5px 10px; margin-top: 9px; font-size: 12px; color: rgb(var(--ui-dark)); }
 .npc-vendor-overlay-stats > span { display: flex; justify-content: space-between; gap: 8px; }
 .npc-vendor-overlay-stats strong { color: rgb(var(--ui-base)); }

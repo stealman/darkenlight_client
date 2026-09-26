@@ -11,7 +11,7 @@
         @click="onOverlayClick"
     >
         <div class="inventory-item-overlay-name">
-            <span class="inventory-item-overlay-name-text">{{ displayItemName }}</span>
+            <span class="inventory-item-overlay-name-text ui-text-gradient">{{ displayItemName }}</span>
             <span v-if="displayItemQuantity" class="inventory-item-overlay-name-quantity">({{ displayItemQuantity }})</span>
         </div>
 
@@ -22,49 +22,49 @@
 
         <div v-if="itemInfo.weaponAttack !== null" class="inventory-item-overlay-stats">
             <span
-                >{{ t('vendor.attack') }} <strong>{{ itemInfo.weaponAttack }}</strong></span
+                >{{ t('vendor.attack') }} <strong class="ui-text-gradient">{{ itemInfo.weaponAttack }}</strong></span
             >
             <span
-                >{{ t('vendor.attackType') }} <strong>{{ formatDamageTypes(itemInfo.weaponDamageTypes) }}</strong></span
+                >{{ t('vendor.attackType') }} <strong class="ui-text-gradient">{{ formatDamageTypes(itemInfo.weaponDamageTypes) }}</strong></span
             >
             <span
-                >{{ t('vendor.speed') }} <strong>{{ formatSpeed(itemInfo.weaponSpeed) }}</strong></span
+                >{{ t('vendor.speed') }} <strong class="ui-text-gradient">{{ formatSpeed(itemInfo.weaponSpeed) }}</strong></span
             >
             <span
-                >{{ t('vendor.range') }} <strong>{{ itemInfo.weaponRange }}</strong></span
+                >{{ t('vendor.range') }} <strong class="ui-text-gradient">{{ itemInfo.weaponRange }}</strong></span
             >
             <span v-if="isNonZero(itemInfo.weaponArmorPen)"
-                >{{ t('inventory.armorPenetration') }} <strong>{{ itemInfo.weaponArmorPen }}</strong></span
+                >{{ t('inventory.armorPenetration') }} <strong class="ui-text-gradient">{{ itemInfo.weaponArmorPen }}</strong></span
             >
             <span v-if="isNonZero(itemInfo.weaponDefense)"
-                >{{ t('inventory.defense') }} <strong>{{ formatModifier(itemInfo.weaponDefense) }}</strong></span
+                >{{ t('inventory.defense') }} <strong class="ui-text-gradient">{{ formatModifier(itemInfo.weaponDefense) }}</strong></span
             >
         </div>
 
         <div v-if="itemInfo.armorStats" class="inventory-item-overlay-stats">
             <span
-                >{{ t('inventory.armor') }} <strong>{{ itemInfo.armorStats.pdef }}</strong></span
+                >{{ t('inventory.armor') }} <strong class="ui-text-gradient">{{ itemInfo.armorStats.pdef }}</strong></span
             >
             <span
-                >{{ t('inventory.magicInterference') }} <strong>{{ itemInfo.armorStats.arcaneInterference }}%</strong></span
+                >{{ t('inventory.magicInterference') }} <strong class="ui-text-gradient">{{ itemInfo.armorStats.arcaneInterference }}%</strong></span
             >
             <span v-if="isNonZero(itemInfo.armorStats.defense)"
-                >{{ t('inventory.defense') }} <strong>{{ formatModifier(itemInfo.armorStats.defense) }}</strong></span
+                >{{ t('inventory.defense') }} <strong class="ui-text-gradient">{{ formatModifier(itemInfo.armorStats.defense) }}</strong></span
             >
             <span v-if="isNonZero(itemInfo.armorStats.str)"
-                >{{ t('character.strength') }} <strong>{{ formatModifier(itemInfo.armorStats.str) }}</strong></span
+                >{{ t('character.strength') }} <strong class="ui-text-gradient">{{ formatModifier(itemInfo.armorStats.str) }}</strong></span
             >
             <span v-if="isNonZero(itemInfo.armorStats.agi)"
-                >{{ t('character.agility') }} <strong>{{ formatModifier(itemInfo.armorStats.agi) }}</strong></span
+                >{{ t('character.agility') }} <strong class="ui-text-gradient">{{ formatModifier(itemInfo.armorStats.agi) }}</strong></span
             >
             <span v-if="isNonZero(itemInfo.armorStats.int)"
-                >{{ t('character.intelligence') }} <strong>{{ formatModifier(itemInfo.armorStats.int) }}</strong></span
+                >{{ t('character.intelligence') }} <strong class="ui-text-gradient">{{ formatModifier(itemInfo.armorStats.int) }}</strong></span
             >
             <span v-if="isNonZero(itemInfo.armorStats.wis)"
-                >{{ t('character.wisdom') }} <strong>{{ formatModifier(itemInfo.armorStats.wis) }}</strong></span
+                >{{ t('character.wisdom') }} <strong class="ui-text-gradient">{{ formatModifier(itemInfo.armorStats.wis) }}</strong></span
             >
             <span v-if="isNonZero(itemInfo.armorStats.maxHp)"
-                >{{ t('inventory.maxHealth') }} <strong>{{ formatModifier(itemInfo.armorStats.maxHp) }}</strong></span
+                >{{ t('inventory.maxHealth') }} <strong class="ui-text-gradient">{{ formatModifier(itemInfo.armorStats.maxHp) }}</strong></span
             >
         </div>
 
@@ -224,17 +224,17 @@ const formatModifier = (value) => {
 const durabilityStatusClass = computed(() => {
     const value = props.itemInfo?.durability
     if (value === null || value === undefined || value === '') {
-        return ''
+        return props.itemInfo?.durabilityDisplay ? 'item-durability--worn' : ''
     }
 
     const durability = Number(value)
     if (!Number.isFinite(durability)) {
         return ''
     }
-    if (durability <= 0) {
-        return 'inventory-item-overlay-dur-broken'
-    }
-    return durability < 15 ? 'inventory-item-overlay-dur-low' : ''
+    if (durability < 5) return 'item-durability--critical'
+    if (durability < 15) return 'item-durability--danger'
+    if (durability < 25) return 'item-durability--warning'
+    return 'item-durability--worn'
 })
 
 const shouldShowDropButton = computed(() => {

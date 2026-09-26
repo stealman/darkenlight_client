@@ -391,6 +391,7 @@
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
+    font-weight: 600;
 }
 
 .inventory-item-overlay-name-quantity {
@@ -438,15 +439,27 @@
     font-weight: 600;
 }
 
+.inventory-item-overlay-dur {
+    color: rgb(var(--ui-dark));
+}
+
 .inventory-item-overlay-dur strong {
-    color: #f2e7cf;
+    color: inherit;
     font-weight: 600;
 }
 
-.inventory-item-overlay-dur-low {
-    color: #e5b454;
+.inventory-item-overlay-dur.item-durability--worn {
+    color: rgb(var(--ui-attribute-agility));
 }
 
-.inventory-item-overlay-dur-broken {
+.inventory-item-overlay-dur.item-durability--warning {
+    color: rgb(var(--ui-durability-warning));
+}
+
+.inventory-item-overlay-dur.item-durability--danger {
+    color: rgb(var(--ui-durability-danger));
+}
+
+.inventory-item-overlay-dur.item-durability--critical {
     color: rgb(var(--ui-danger));
 }
