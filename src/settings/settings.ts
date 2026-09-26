@@ -45,6 +45,9 @@ export const Settings = {
     joystickSize: 100 as number,
     joystickBottom: 50 as number,
     joystickLeft: 120 as number,
+    targetLockSize: 64 as number,
+    targetLockBottom: 130 as number,
+    targetLockLeft: 200 as number,
 
     autoTarget: false as boolean,
     actionButtonSize: 64 as number,
@@ -54,7 +57,8 @@ export const Settings = {
     actionButtonCount: 6 as number,
 
     initialize(storedSettings) {
-        this.deviceType = storedSettings.deviceType
+        const detectedTouchDevice = typeof navigator !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0)
+        this.deviceType = ['DESKTOP', 'TABLET', 'PHONE'].includes(storedSettings.deviceType) ? storedSettings.deviceType : detectedTouchDevice ? 'PHONE' : 'DESKTOP'
         this.language = storedSettings.language || 'cs'
         switch (storedSettings.detailLevelName) {
             case 'LOW':
@@ -78,6 +82,17 @@ export const Settings = {
         this.joystickSize = parseInt(storedSettings.joystickSize)
         this.joystickBottom = parseInt(storedSettings.joystickBottom)
         this.joystickLeft = parseInt(storedSettings.joystickLeft)
+        const storedTargetLockSize = parseInt(storedSettings.targetLockSize)
+        const storedTargetLockBottom = parseInt(storedSettings.targetLockBottom)
+        const storedTargetLockLeft = parseInt(storedSettings.targetLockLeft)
+        const targetLockDefaultPosition = this.getDefaultTargetLockPosition(this.deviceType === 'PHONE' ? 30 : this.deviceType === 'TABLET' ? 40 : 0, this.deviceType === 'PHONE' ? 64 : this.deviceType === 'TABLET' ? 250 : 0)
+        const hasPreviousTargetLockDefault = storedTargetLockSize === 64 && (
+            (storedTargetLockLeft === 200 && storedTargetLockBottom === 130) ||
+            (storedTargetLockLeft === 250 && storedTargetLockBottom === 430)
+        )
+        this.targetLockSize = Number.isFinite(storedTargetLockSize) ? storedTargetLockSize : 64
+        this.targetLockBottom = Number.isFinite(storedTargetLockBottom) && !hasPreviousTargetLockDefault ? storedTargetLockBottom : targetLockDefaultPosition.bottom
+        this.targetLockLeft = Number.isFinite(storedTargetLockLeft) && !hasPreviousTargetLockDefault ? storedTargetLockLeft : targetLockDefaultPosition.left
         this.autoTarget = storedSettings.autoTarget
         this.volume = parseFloat(storedSettings.volume)
         this.ambientVolume = parseFloat(storedSettings.ambientVolume)
@@ -103,14 +118,18 @@ export const Settings = {
     },
 
     getDefaultSettings() {
+        const targetLockDefaultPosition = Settings.getDefaultTargetLockPosition(Settings.touchEnabled ? 30 : 0, Settings.touchEnabled ? 64 : 0)
         return {
             deviceType: Settings.touchEnabled ? 'PHONE' : 'DESKTOP',
             detailLevelName: Settings.touchEnabled ? 'MEDIUM' : 'HIGH',
             language: 'cs',
 
             joystickSize: 100,
-            joystickBottom: 50,
-            joystickLeft: 120,
+            joystickBottom: Settings.touchEnabled ? 100 : 50,
+            joystickLeft: Settings.touchEnabled ? 30 : 120,
+            targetLockSize: 64,
+            targetLockBottom: targetLockDefaultPosition.bottom,
+            targetLockLeft: targetLockDefaultPosition.left,
 
             brightness: 5,
             volume: 0.5,
@@ -130,6 +149,26 @@ export const Settings = {
 
     storeSettings() {
         localStorage.setItem("DARKENLIGHT_STORED_SETTINGS", JSON.stringify(this))
+    },
+
+    getDefaultTargetLockPosition(extraRightOffset = 0, verticalOffset = 0) {
+        const targetLockSize = 64
+        const viewportWidth = typeof window === 'undefined' ? 360 : window.innerWidth
+        const viewportHeight = typeof window === 'undefined' ? 640 : window.innerHeight
+        const miniMap = typeof document === 'undefined' ? null : document.getElementById('miniMapCanvas')
+
+        if (miniMap) {
+            const miniMapBounds = miniMap.getBoundingClientRect()
+            return {
+                left: Math.round(miniMapBounds.left + (miniMapBounds.width - targetLockSize) / 2 - extraRightOffset),
+                bottom: Math.max(0, Math.round(viewportHeight - miniMapBounds.bottom - 14 - targetLockSize - verticalOffset)),
+            }
+        }
+
+        return {
+            left: Math.max(0, viewportWidth - targetLockSize - 20 - extraRightOffset),
+            bottom: Math.max(0, viewportHeight - 114 - targetLockSize - verticalOffset),
+        }
     },
 
     setDetailLevel(level: string) {

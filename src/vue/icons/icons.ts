@@ -36,6 +36,15 @@ export function getFullScreenSvg(className: string, id: string) {
 `
 }
 
+// RESTORE DEFAULTS SVG
+export function getRestoreDefaultsSvg(className: string, id: string) {
+    return `
+<svg class="${className} noselect" id="${id}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+    <path d="M12 4a8 8 0 1 0 7.75 10h-2.1A6 6 0 1 1 12 6c1.51 0 2.9.56 3.96 1.49L13 10.45h7V3.5l-2.62 2.62A9.91 9.91 0 0 0 12 4Z"/>
+</svg>
+`
+}
+
 // HAMBURGER MENU SVG
 export function getHamburgerMenuSvg(className: string, id: string) {
     return `

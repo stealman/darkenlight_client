@@ -7,6 +7,7 @@
         <div v-show="loginRequestSentFlag">
             <div id="system-buttons">
                 <div @click="showSettingsDialog()" v-html="getHamburgerMenuSvg('icon-white', 'icon-settings')"></div>
+                <div v-if="myCharRef?.className === 'GM'" @click="showDebug" v-html="getInspectSvg('icon-white', 'icon-inspect')"></div>
                 <button v-if="myCharRef?.className === 'GM'" class="gm-panel-button" @click="toggleGmPanel()">{{ t('app.gmPanel') }}</button>
             </div>
 
@@ -26,9 +27,9 @@
                 </div>
             </div>
 
-            <TouchControllers v-if="!gameLoading" ref="touchControls" />
+            <TouchControllers v-if="!gameLoading" ref="touchControls" :settings-active="targetLockSettingsActive" />
 
-            <label id="btn-target-lock" style="display: none; opacity: 0.65; position: absolute; width: 64px; height: 64px;" v-html="getTargetLockSvg('icon-red', 'icon-target-lock')" @pointerdown="TargetingManager.onPointerDown()" @pointerup="TargetingManager.onPointerUp()"></label>
+            <label id="btn-target-lock" :class="{ 'target-lock--settings-active': targetLockSettingsActive }" style="display: none; opacity: 0.65; position: absolute; width: 64px; height: 64px;" v-html="getTargetLockSvg('icon-red', 'icon-target-lock')" @pointerdown="TargetingManager.onPointerDown()" @pointerup="TargetingManager.onPointerUp()"></label>
 
             <label id="btn-action-stop" style="display: none; opacity: 0.65; position: absolute; width: 64px; height: 64px;" v-html="getStopActionSvg('icon-blue', 'icon-stop-action')" @pointerdown="AudioManager.playGuiButtonClick(); MyPlayer.stopActions()"></label>
 
@@ -60,13 +61,14 @@
     <SettingsDialog
         ref="settingsDialog"
         v-show="displaySettingsDialog"
+        :visible="displaySettingsDialog"
         @close="displaySettingsDialog = false"
         @close-with-restart-prompt="closeSettingsWithRestartPrompt"
         @touch-coltrols-changed="touchControlsChanged"
         @logout="logout"
         @device-type-selected="deviceTypeChanged"
-        @toggle-debug="showDebug"
         @toggle-fullscreen="toggleFullscreen"
+        @target-lock-settings-active="targetLockSettingsActive = $event"
     />
 
     <InventoryDialog ref="inventoryDialog" v-show="displayInventoryDialog" @close="displayInventoryDialog = false" />
@@ -146,6 +148,7 @@ import PwaControls from '@/vue/views/PwaControls.vue'
 import { Controller } from '@/controlls/controller'
 import {
     getHamburgerMenuSvg,
+    getInspectSvg,
     getStopActionSvg,
     getTargetLockSvg,
 } from '@/vue/icons/icons'
@@ -170,6 +173,7 @@ const displayLoginDialog = ref(false)
 const loginRequestSentFlag = ref(false)
 
 const displaySettingsDialog = ref(false)
+const targetLockSettingsActive = ref(false)
 const displayRestartPrompt = ref(false)
 
 const displayInventoryDialog = ref(false)

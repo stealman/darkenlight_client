@@ -41,6 +41,11 @@
     height: 24px;
 }
 
+#icon-restore-defaults {
+    width: 26px;
+    height: 24px;
+}
+
 #icon-settings {
     height: 32px;
     width: 32px;
@@ -53,8 +58,12 @@
 }
 
 #icon-target-lock {
-    height: 64px;
-    width: 64px;
+    height: 100%;
+    width: 100%;
+}
+
+#btn-target-lock.target-lock--settings-active {
+    z-index: 2200;
 }
 
 #icon-target-select {

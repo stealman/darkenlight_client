@@ -1,6 +1,6 @@
 <template>
     <div id="touchControllsLayer">
-        <div id="joystick-zone" style="position:absolute;left:20px;bottom:20px;width:150px;height:150px;"></div>
+        <div id="joystick-zone" :class="{ 'touch-controls--settings-active': settingsActive }" style="position:absolute;left:20px;bottom:20px;width:150px;height:150px;"></div>
     </div>
 </template>
 
@@ -10,6 +10,10 @@ import { onMounted, ref } from 'vue'
 import { Controller } from '@/controlls/controller'
 import nipplejs from 'nipplejs'
 import { Settings } from '@/settings/settings'
+
+defineProps({
+    settingsActive: Boolean,
+})
 
 let joystickManager = null;
 
@@ -59,10 +63,13 @@ const updateFromSettings = () => {
     setButtonsPosition()
 }
 
-const setButtonsPosition = (storedSettings) => {
-    document.getElementById("btn-target-lock").style.left = (Settings.joystickLeft + Settings.joystickSize - 20) + "px"
-    document.getElementById("btn-target-lock").style.bottom = (Settings.joystickBottom + Settings.joystickSize - 20) + "px"
-    document.getElementById("btn-target-lock").style.display = "block"
+const setButtonsPosition = () => {
+    const targetLockButton = document.getElementById("btn-target-lock")
+    targetLockButton.style.left = Settings.targetLockLeft + "px"
+    targetLockButton.style.bottom = Settings.targetLockBottom + "px"
+    targetLockButton.style.width = Settings.targetLockSize + "px"
+    targetLockButton.style.height = Settings.targetLockSize + "px"
+    targetLockButton.style.display = "block"
 
     document.getElementById("btn-action-stop").style.left = (Settings.joystickLeft + Settings.joystickSize - 70) + "px"
     document.getElementById("btn-action-stop").style.bottom = (Settings.joystickBottom + Settings.joystickSize -10) + "px"
@@ -86,5 +93,9 @@ defineExpose({
 
 #touchControllsLayer > * {
     pointer-events: auto;
+}
+
+#joystick-zone.touch-controls--settings-active {
+    z-index: 2200;
 }
 </style>
