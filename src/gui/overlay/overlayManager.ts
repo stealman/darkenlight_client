@@ -345,7 +345,8 @@ export const OverlayManager = {
     },
 
     getAnimatedHpPercent(key: string, hpPercent: number, time: number) {
-        const targetPercent = Number.isFinite(hpPercent) ? Math.max(0, Math.min(100, hpPercent)) : 100
+        const numericHpPercent = Number(hpPercent)
+        const targetPercent = Number.isFinite(numericHpPercent) ? Math.max(0, Math.min(100, numericHpPercent)) : 100
         let state = this.animatedHpBars.get(key)
         if (!state) {
             state = {

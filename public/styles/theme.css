@@ -174,6 +174,66 @@
     text-align: center;
 }
 
+.loading-dialog-content {
+    min-width: 240px;
+    display: grid;
+    gap: 9px;
+    padding: 14px 18px 18px;
+}
+
+.loading-dialog-phase {
+    color: rgb(var(--ui-base));
+    font-size: 0.94rem;
+}
+
+.loading-progress-track {
+    height: 9px;
+    overflow: hidden;
+    border: 1px solid rgba(var(--ui-durability-warning), 0.42);
+    background: rgba(var(--ui-darkest), 0.9);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.7);
+}
+
+.loading-progress-fill {
+    height: 100%;
+    background: linear-gradient(to right, rgb(var(--ui-durability-warning-bg)), rgba(var(--ui-durability-warning), 0.8));
+    box-shadow: 0 0 7px rgba(var(--ui-durability-warning), 0.38);
+    transition: width 180ms ease-out;
+}
+
+.loading-progress-value {
+    color: rgb(var(--ui-dark));
+    font-size: 0.76rem;
+}
+
+.game-session-canvas {
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 300ms ease-out, visibility 0s linear 300ms;
+}
+
+.game-session-canvas--visible {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 300ms ease-out;
+}
+
+#miniMapCanvas.game-session-canvas {
+    opacity: 0;
+}
+
+#miniMapCanvas.game-session-canvas--visible {
+    opacity: 0.75;
+}
+
+.game-dialog-fade-enter-active {
+    transition: opacity 220ms ease-out;
+}
+
+.game-dialog-fade-enter-from {
+    opacity: 0;
+}
+
 /* buttons */
 .dialog-actions {
     display: flex;

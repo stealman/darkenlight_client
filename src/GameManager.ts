@@ -12,10 +12,15 @@ import { setLocale } from '@/i18n'
 import { MyStatusPanel } from '@/gui/myStatusPanel'
 import { WorldDataManager } from '@/data/worldDataManager'
 
+function reportLoadingProgress(progress: number, phaseKey: string) {
+    window.dispatchEvent(new CustomEvent('game:loading-progress', { detail: { progress, phaseKey } }))
+}
+
 export const GameManager = {
     started: false as boolean,
 
     async prepareGame(canvas: HTMLCanvasElement) {
+        reportLoadingProgress(5, 'app.loadingPreparing')
         // Load or initialize settings
         let storedSettings = null
         const storedSettingsString = localStorage.getItem("DARKENLIGHT_STORED_SETTINGS")
@@ -29,14 +34,19 @@ export const GameManager = {
         setLocale(Settings.language)
 
         // Initialize Renderer and load assets
+        reportLoadingProgress(15, 'app.loadingPreparingRenderer')
         await Renderer.initialize(canvas)
+        reportLoadingProgress(100, 'app.loadingReady')
     },
 
     async startGame(charData) {
+        reportLoadingProgress(35, 'app.loadingCharacter')
         await MyPlayer.initialize(charData)
+        reportLoadingProgress(70, 'app.loadingWorld')
         InventoryManager.initializeWeaponSetupsForCharacter()
         ActionButtonsManager.loadBindingsForCharacter(MyPlayer.myChar.id)
         this.onResize()
+        reportLoadingProgress(90, 'app.loadingStarting')
         await Renderer.gameStarted()
         this.started = true
     },

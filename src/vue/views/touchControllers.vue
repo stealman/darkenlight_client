@@ -6,7 +6,7 @@
 
 <script setup>
 
-import { onMounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import { Controller } from '@/controlls/controller'
 import nipplejs from 'nipplejs'
 import { Settings } from '@/settings/settings'
@@ -19,6 +19,11 @@ let joystickManager = null;
 
 onMounted(() => {
     updateFromSettings()
+})
+
+onUnmounted(() => {
+    joystickManager?.destroy()
+    joystickManager = null
 })
 
 const updateFromSettings = () => {

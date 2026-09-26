@@ -1,8 +1,8 @@
 <template>
     <div id="app">
-        <canvas id="renderCanvas" ref="canvas" class="renderer noselect" :style="{ visibility: gameSessionActive ? 'visible' : 'hidden' }"></canvas>
-        <canvas v-show="gameSessionActive" ref="miniMapCanvas" id="miniMapCanvas" class="noselect"></canvas>
-        <canvas id="overlayCanvas" class="noselect" :style="{ visibility: gameSessionActive ? 'visible' : 'hidden' }"></canvas>
+        <canvas id="renderCanvas" ref="canvas" class="renderer noselect game-session-canvas" :class="{ 'game-session-canvas--visible': gameSessionActive }"></canvas>
+        <canvas ref="miniMapCanvas" id="miniMapCanvas" class="noselect game-session-canvas" :class="{ 'game-session-canvas--visible': gameSessionActive }"></canvas>
+        <canvas id="overlayCanvas" class="noselect game-session-canvas" :class="{ 'game-session-canvas--visible': gameSessionActive }"></canvas>
 
         <div v-show="gameSessionActive">
             <div id="system-buttons">
@@ -27,7 +27,7 @@
                 </div>
             </div>
 
-            <TouchControllers v-if="!gameLoading" ref="touchControls" :settings-active="targetLockSettingsActive" />
+            <TouchControllers v-if="gameSessionActive && touchControlsReady" ref="touchControls" :settings-active="targetLockSettingsActive" />
 
             <label id="btn-target-lock" :class="{ 'target-lock--settings-active': targetLockSettingsActive }" style="display: none; opacity: 0.65; position: absolute; width: 64px; height: 64px;" v-html="getTargetLockSvg('icon-red', 'icon-target-lock')" @pointerdown="TargetingManager.onPointerDown()" @pointerup="TargetingManager.onPointerUp()"></label>
 
@@ -50,15 +50,26 @@
         </div>
     </div>
 
-    <div class="dialog-backdrop" style="background-color: #000;" v-if="gameLoading">
-        <div class="dialog-window adaptive">
-            <div class="dialog-surface">
-                <div class="dialog-header">{{ t('common.loading') }}</div>
+    <Transition name="game-dialog-fade">
+        <div class="dialog-backdrop" style="background-color: #000;" v-if="gameLoading">
+            <div class="dialog-window adaptive">
+                <div class="dialog-surface">
+                    <div class="dialog-header">{{ t('common.loading') }}</div>
+                    <div class="dialog-content dialog-content--modal loading-dialog-content">
+                        <div class="loading-dialog-phase">{{ t(loadingPhaseKey) }}</div>
+                        <div class="loading-progress-track" role="progressbar" :aria-valuenow="loadingProgress" aria-valuemin="0" aria-valuemax="100">
+                            <div class="loading-progress-fill" :style="{ width: `${loadingProgress}%` }"></div>
+                        </div>
+                        <div class="loading-progress-value">{{ loadingProgress }} %</div>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
+    </Transition>
 
-    <LoginDialog ref="loginDialog" v-if="displayLoginDialog" @login="loginRequestSent" />
+    <Transition name="game-dialog-fade">
+        <LoginDialog ref="loginDialog" v-if="displayLoginDialog" @login="loginRequestSent" />
+    </Transition>
 
     <SettingsDialog
         ref="settingsDialog"
@@ -171,11 +182,16 @@ const deathDialogTime = ref(Date.now())
 const respawnDelayRemaining = computed(() => Math.max(0, Math.ceil((MyPlayer.respawnAvailableAt.value - deathDialogTime.value) / 1000)))
 const autoRespawnRemaining = computed(() => Math.max(0, Math.ceil((MyPlayer.autoRespawnAt.value - deathDialogTime.value) / 1000)))
 let deathDialogTimer: number | null = null
+let touchControlsLayoutTimeout: number | null = null
+let touchControlsActivationTimeout: number | null = null
 
 const gameLoading = ref(true)
 const displayLoginDialog = ref(false)
 const loginRequestSentFlag = ref(false)
 const gameSessionActive = ref(false)
+const touchControlsReady = ref(false)
+const loadingPhaseKey = ref('app.loadingPreparing')
+const loadingProgress = ref(5)
 
 const displaySettingsDialog = ref(false)
 const targetLockSettingsActive = ref(false)
@@ -209,10 +225,25 @@ const closeGameplayDialogs = () => {
     inventoryDialog.value?.forceClose?.()
 }
 
-const onGameStarted = () => {
+const onGameStarted = async () => {
+    loadingProgress.value = 100
+    await nextTick()
+    await new Promise<void>((resolve) => window.setTimeout(resolve, 450))
     gameLoading.value = false
+    await nextTick()
+    await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()))
     gameSessionActive.value = true
     loginRequestSentFlag.value = true
+    await nextTick()
+    GameManager.onResize()
+    WorldRenderer.lastPos = null
+    if (touchControlsActivationTimeout !== null) {
+        window.clearTimeout(touchControlsActivationTimeout)
+    }
+    touchControlsActivationTimeout = window.setTimeout(() => {
+        touchControlsActivationTimeout = null
+        touchControlsReady.value = true
+    }, 500)
 }
 
 const onLoginFailed = () => {
@@ -224,6 +255,49 @@ const onLoginFailed = () => {
 
 const onSessionEnded = () => {
     void logout(false)
+}
+
+const onLoadingProgress = (event: Event) => {
+    const detail = (event as CustomEvent<{ progress: number, phaseKey: string }>).detail
+    if (!detail || !Number.isFinite(detail.progress)) {
+        return
+    }
+    loadingProgress.value = Math.max(0, Math.min(100, Math.round(detail.progress)))
+    loadingPhaseKey.value = detail.phaseKey
+}
+
+const scheduleTouchControlsLayout = () => {
+    if (!Settings.isPhoneOrTablet()) {
+        return
+    }
+
+    if (touchControlsLayoutTimeout !== null) {
+        window.clearTimeout(touchControlsLayoutTimeout)
+    }
+
+    touchControlsLayoutTimeout = window.setTimeout(() => {
+        touchControlsLayoutTimeout = null
+        syncAppViewportSize()
+        if (GameManager.started) {
+            GameManager.onResize()
+            WorldRenderer.lastPos = null
+        }
+        touchControls.value?.updateFromSettings?.()
+    }, 180)
+}
+
+const syncAppViewportSize = () => {
+    const viewport = window.visualViewport
+    const viewportWidth = Math.round(viewport?.width || window.innerWidth)
+    const viewportHeight = Math.round(viewport?.height || window.innerHeight)
+    const wrapper = document.getElementById('appWrapper')
+    const app = document.getElementById('app')
+
+    if (wrapper) wrapper.style.height = viewportHeight + 'px'
+    if (app) {
+        app.style.width = viewportWidth + 'px'
+        app.style.height = viewportHeight + 'px'
+    }
 }
 
 watch(GMManager.npcDetailsDialogOpenRequested, (openRequested) => {
@@ -259,10 +333,12 @@ onMounted(async () => {
         console.log(`Error: ${errorMsg} Script: ${url} Line: ${lineNumber}`)
     }
 
-    const wrapper = document.getElementById('appWrapper')
-    if (wrapper) wrapper.style.height = window.innerHeight + 'px'
+    syncAppViewportSize()
 
     window.addEventListener('resize', resizeEventHandler)
+    window.addEventListener('orientationchange', scheduleTouchControlsLayout)
+    document.addEventListener('fullscreenchange', scheduleTouchControlsLayout)
+    window.visualViewport?.addEventListener('resize', scheduleTouchControlsLayout)
     window.addEventListener('ui:open-inventory', onOpenInventoryHotkey)
     window.addEventListener('ui:open-character', onOpenCharacterHotkey)
     window.addEventListener('ui:open-crafting', onOpenCraftingMenu as EventListener)
@@ -271,6 +347,7 @@ onMounted(async () => {
     window.addEventListener('game:started', onGameStarted)
     window.addEventListener('game:login-failed', onLoginFailed)
     window.addEventListener('game:session-ended', onSessionEnded)
+    window.addEventListener('game:loading-progress', onLoadingProgress)
     document.addEventListener('keydown', onKeyDown)
     document.addEventListener('keyup', onKeyUp)
     await nextTick()
@@ -281,6 +358,8 @@ onMounted(async () => {
         await GameManager.prepareGame(document.getElementById('renderCanvas') as HTMLCanvasElement)
         console.log('GAME INITIALIZED', Date.now())
 
+        await nextTick()
+        await new Promise<void>((resolve) => window.setTimeout(resolve, 180))
         gameLoading.value = false
         displayLoginDialog.value = true
 
@@ -303,7 +382,12 @@ onMounted(async () => {
 
 onUnmounted(() => {
     if (deathDialogTimer !== null) window.clearInterval(deathDialogTimer)
+    if (touchControlsLayoutTimeout !== null) window.clearTimeout(touchControlsLayoutTimeout)
+    if (touchControlsActivationTimeout !== null) window.clearTimeout(touchControlsActivationTimeout)
     window.removeEventListener('resize', resizeEventHandler)
+    window.removeEventListener('orientationchange', scheduleTouchControlsLayout)
+    document.removeEventListener('fullscreenchange', scheduleTouchControlsLayout)
+    window.visualViewport?.removeEventListener('resize', scheduleTouchControlsLayout)
     window.removeEventListener('ui:open-inventory', onOpenInventoryHotkey)
     window.removeEventListener('ui:open-character', onOpenCharacterHotkey)
     window.removeEventListener('ui:open-crafting', onOpenCraftingMenu as EventListener)
@@ -312,6 +396,7 @@ onUnmounted(() => {
     window.removeEventListener('game:started', onGameStarted)
     window.removeEventListener('game:login-failed', onLoginFailed)
     window.removeEventListener('game:session-ended', onSessionEnded)
+    window.removeEventListener('game:loading-progress', onLoadingProgress)
     document.removeEventListener('keydown', onKeyDown)
     document.removeEventListener('keyup', onKeyUp)
 })
@@ -330,6 +415,8 @@ const onKeyUp = (event: KeyboardEvent) => {
 }
 
 const loginRequestSent = () => {
+    loadingPhaseKey.value = 'app.loadingConnecting'
+    loadingProgress.value = 20
     gameLoading.value = true
     if (Settings.deviceType !== 'DESKTOP') {
         requestFullscreen()
@@ -465,9 +552,17 @@ const reloadPage = () => {
 
 const logout = async (notifyServer: boolean = true) => {
     closeGameplayDialogs()
+    if (touchControlsActivationTimeout !== null) {
+        window.clearTimeout(touchControlsActivationTimeout)
+        touchControlsActivationTimeout = null
+    }
+    touchControlsReady.value = false
     gameSessionActive.value = false
     loginRequestSentFlag.value = false
     displayLoginDialog.value = false
+    await new Promise<void>((resolve) => window.setTimeout(resolve, 300))
+    loadingPhaseKey.value = 'app.loadingDisconnecting'
+    loadingProgress.value = 15
     gameLoading.value = true
     await GameManager.stopGame(notifyServer)
     gameLoading.value = false
@@ -475,15 +570,17 @@ const logout = async (notifyServer: boolean = true) => {
 }
 
 const requestFullscreen = () => {
-    void Renderer.requestFullscreen().catch((error) => console.error('Cannot enter fullscreen:', error))
+    void Renderer.requestFullscreen()
+        .then(scheduleTouchControlsLayout)
+        .catch((error) => console.error('Cannot enter fullscreen:', error))
 }
 
 function resizeEventHandler() {
-    const wrapper = document.getElementById('appWrapper')
-    if (wrapper) wrapper.style.height = window.innerHeight + 'px'
+    syncAppViewportSize()
     if (Renderer.engine && GameManager.started) {
         GameManager.onResize()
         WorldRenderer.lastPos = null
     }
+    scheduleTouchControlsLayout()
 }
 </script>

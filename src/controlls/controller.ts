@@ -210,9 +210,9 @@ export const Controller = {
             return
         }
 
-        if (this.movementInputCancelled) {
-            return
-        }
+        // A fresh joystick movement is explicit player input, so it must always
+        // re-enable movement after a teleport/login cancelled the previous input.
+        this.movementInputCancelled = false
 
         // Translate joystick input to screen position
         const screenX = ViewportManager.viewportWidth / 2 + dx * (ViewportManager.viewportWidth / 2)

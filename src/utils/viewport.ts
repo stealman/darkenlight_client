@@ -41,8 +41,9 @@ export const ViewportManager = {
         EmeraldsManager.updatePositions(miniMapSize)
         this.viewPortInitialized = false
 
-        this.viewportWidth = window.innerWidth
-        this.viewportHeight = window.innerHeight
+        const canvasBounds = Renderer.canvas?.getBoundingClientRect()
+        this.viewportWidth = canvasBounds?.width || window.innerWidth
+        this.viewportHeight = canvasBounds?.height || window.innerHeight
     },
 
     isPointInVisibleMatrix(x, z, tolerance = 0) {

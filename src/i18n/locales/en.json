@@ -24,7 +24,15 @@
     "restartGame": "Restart game",
     "restartPrompt": "A game restart is required to apply the new settings.",
     "errorTitle": "An error occurred",
-    "errorRestartQuestion": "Do you want to restart the game?"
+    "errorRestartQuestion": "Do you want to restart the game?",
+    "loadingPreparing": "Preparing client",
+    "loadingPreparingRenderer": "Loading game client",
+    "loadingReady": "Ready",
+    "loadingConnecting": "Connecting to world",
+    "loadingCharacter": "Loading character",
+    "loadingWorld": "Preparing world",
+    "loadingStarting": "Starting game",
+    "loadingDisconnecting": "Disconnecting"
   },
   "death": {
     "title": "You died",

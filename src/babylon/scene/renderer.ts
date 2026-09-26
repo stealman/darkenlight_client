@@ -351,7 +351,7 @@ export const Renderer = {
             return
         }
         if (screenFull.request) {
-            screenFull.request()
+            await screenFull.request()
         }
     },
 
@@ -361,7 +361,7 @@ export const Renderer = {
             return
         }
         if (screenFull.toggle) {
-            screenFull.toggle()
+            await screenFull.toggle()
         }
     },
 

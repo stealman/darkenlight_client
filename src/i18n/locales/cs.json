@@ -24,7 +24,15 @@
     "restartGame": "Restart hry",
     "restartPrompt": "Pro aplikaci nových nastavení je potřeba restartovat hru.",
     "errorTitle": "Došlo k chybě",
-    "errorRestartQuestion": "Chcete hru restartovat ?"
+    "errorRestartQuestion": "Chcete hru restartovat ?",
+    "loadingPreparing": "Příprava klienta",
+    "loadingPreparingRenderer": "Načítání herního klienta",
+    "loadingReady": "Připraveno",
+    "loadingConnecting": "Připojování ke světu",
+    "loadingCharacter": "Načítání postavy",
+    "loadingWorld": "Příprava světa",
+    "loadingStarting": "Spouštění hry",
+    "loadingDisconnecting": "Odpojování"
   },
   "death": {
     "title": "Zemřel jsi",
