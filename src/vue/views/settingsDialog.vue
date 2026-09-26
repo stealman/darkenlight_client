@@ -543,7 +543,7 @@ watch(
     display: flex;
     align-items: center;
     justify-content: center;
-    cursor: url('/images/cursor-pointer.png'), pointer;
+    cursor: url('/images/cursor-pointer.png') 0 10, pointer;
 }
 
 .settings-header-action .icon-white {

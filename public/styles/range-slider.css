@@ -26,7 +26,7 @@
     background-image: url('/images/gui/bck_stone1.png');
     background-repeat: repeat;
     background-attachment: fixed;
-    cursor: url('/images/cursor-pointer.png'), pointer;
+    cursor: url('/images/cursor-pointer.png') 0 10, pointer;
 }
 
 .range-slider::-webkit-slider-thumb:hover {
@@ -48,7 +48,7 @@
     background-image: url('/images/gui/bck_stone1.png');
     background-repeat: repeat;
     background-attachment: fixed;
-    cursor: url('/images/cursor-pointer.png'), pointer;
+    cursor: url('/images/cursor-pointer.png') 0 10, pointer;
 }
 
 .range-slider::-moz-range-thumb:hover {

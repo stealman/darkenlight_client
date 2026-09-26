@@ -2,11 +2,11 @@
 .p-checkbox {
     display: inline-flex;
     align-items: center;
-    cursor: url('/images/cursor-pointer.png'), pointer;
+    cursor: url('/images/cursor-pointer.png') 0 10, pointer;
     user-select: none;
 }
 
-/* Skrytí defaultního input */
+/* SkrytÄ‚Â­ defaultnÄ‚Â­ho input */
 .p-checkbox input[type="checkbox"] {
     position: absolute;
     opacity: 0;
@@ -14,7 +14,7 @@
     height: 0;
 }
 
-/* Vlastní vizuální box */
+/* VlastnÄ‚Â­ vizuÄ‚Ë‡lnÄ‚Â­ box */
 .p-checkbox-box {
     width: 20px;
     height: 20px;

@@ -64,11 +64,11 @@
                         </span>
                         <div class="npc-vendor-buy-actions" @mouseover="previewVendorPriceFromButton(item, $event)" @mouseleave="clearVendorPricePreview(item)">
                             <button class="dialog-button npc-vendor-buy-button npc-vendor-purchase-button" @mouseenter="previewVendorPrice(item, 1)" @mouseleave="clearVendorPricePreview(item)" @click.stop="buyItem(item, 1, $event)">
-                                <span class="ui-text-gradient--button-state">{{ item.tp === 'R' ? '×1' : t('vendor.buy') }}</span>
+                                <span class="ui-text-gradient--button-state">{{ item.tp === 'R' ? 'Ä‚â€”1' : t('vendor.buy') }}</span>
                             </button>
                             <template v-if="item.tp === 'R'">
-                                <button class="dialog-button npc-vendor-quick-buy-button" @click.stop="buyItem(item, 5, $event)"><span class="ui-text-gradient--button-state">×5</span></button>
-                                <button class="dialog-button npc-vendor-quick-buy-button" @click.stop="buyItem(item, 25, $event)"><span class="ui-text-gradient--button-state">×25</span></button>
+                                <button class="dialog-button npc-vendor-quick-buy-button" @click.stop="buyItem(item, 5, $event)"><span class="ui-text-gradient--button-state">Ä‚â€”5</span></button>
+                                <button class="dialog-button npc-vendor-quick-buy-button" @click.stop="buyItem(item, 25, $event)"><span class="ui-text-gradient--button-state">Ä‚â€”25</span></button>
                             </template>
                         </div>
                     </div>
@@ -370,7 +370,7 @@ const getItemName = (item: NpcVendorCatalogItem) => {
     const key = section ? `items.${section}.${item.name}` : item.name
     const localized = t(key)
     const name = localized === key ? item.name : localized
-    return item.bundleSize && item.bundleSize > 1 ? `${item.bundleSize}× ${name}` : name
+    return item.bundleSize && item.bundleSize > 1 ? `${item.bundleSize}Ä‚â€” ${name}` : name
 }
 const getItemImage = (item: NpcVendorCatalogItem) => item.img ? `/images/items/${item.img}.png` : '/images/icons/buttons/btn_backpack.png'
 const getServiceImage = (service: NpcHealerService) => `/${service.img}.png`
@@ -671,7 +671,7 @@ defineExpose({openDialog})
 .npc-use-tab, .npc-vendor-buy-button, .npc-vendor-quick-buy-button { padding: 5px 10px; font-size: 0.9rem; line-height: 1; }
 .npc-use-content-shell :deep(.bank-panel) { flex: 1 1 auto; min-height: 0; }
 .npc-vendor-item-list { display: flex; flex: 1 1 auto; min-height: 0; flex-direction: column; overflow-y: auto; border-top: 1px solid rgba(var(--ui-darker), 0.8); border-bottom: 1px solid rgba(var(--ui-darker), 0.8); }
-.npc-vendor-item-row { display: grid; grid-template-columns: 46px minmax(0, 1fr) max-content auto; align-items: center; gap: 12px; min-height: 46px; padding: 3px 8px; border-bottom: 1px solid rgba(var(--ui-darker), 0.65); color: rgb(var(--ui-base)); cursor: url('/images/cursor-pointer.png'), pointer; }
+.npc-vendor-item-row { display: grid; grid-template-columns: 46px minmax(0, 1fr) max-content auto; align-items: center; gap: 12px; min-height: 46px; padding: 3px 8px; border-bottom: 1px solid rgba(var(--ui-darker), 0.65); color: rgb(var(--ui-base)); cursor: url('/images/cursor-pointer.png') 0 10, pointer; }
 .npc-vendor-catalog-list { border-top: 0; border-bottom: 0; }
 .npc-vendor-catalog-list .npc-vendor-item-row:last-child { border-bottom: 0; }
 .npc-repairer-item-row { grid-template-columns: 46px minmax(0, 1fr) 128px 80px auto; }

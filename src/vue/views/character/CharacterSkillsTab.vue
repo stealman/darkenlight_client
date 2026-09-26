@@ -39,7 +39,13 @@
                     <span :class="['skill-name', { 'ui-text-gradient': skill.progress }]">{{ skill.name }}</span>
                     <template v-if="skill.nextExperienceRequired != null">
                         <span class="skill-progress-rank skill-progress-rank--current">{{ getSkillRankName(skill.rank) }}</span>
-                        <div class="skill-progress-stack">
+                        <div
+                            class="skill-progress-stack"
+                            @mouseenter="showSkillProgressTooltip(skill, $event)"
+                            @mousemove="moveSkillProgressTooltip(skill.key, $event)"
+                            @mouseleave="hideSkillProgressTooltip(skill.key)"
+                            @click.stop="toggleSkillProgressTooltip(skill, $event)"
+                        >
                             <div class="skill-progress-row">
                                 <span class="skill-progress-track">
                                     <span class="skill-progress-fill skill-progress-fill--experience ui-progress-fill-gradient" :style="{ width: `${skill.experiencePercent}%` }"></span>
@@ -156,6 +162,7 @@ import type {SkillCategoryKey, SkillDefinition} from '@/data/skills/skillDefinit
 import { Connector } from '@/network/connector'
 import { StartSkillTrainingMsg } from '@/network/messages'
 import { AudioManager } from '@/babylon/audio/audioManager'
+import { TooltipOverlayManager } from '@/gui/tooltipOverlayManager'
 
 const { locale, t } = useI18n()
 const myChar = MyPlayer.myCharRef
@@ -191,10 +198,10 @@ const getSkillBonusValue = (skill: SkillDefinition, rank: number, progress?: Ski
         : armorBonus ? progress?.armorBonusPercentPerRank : progress?.weaponAttackBonusPercentPerRank
     return {
         percentage: bandageHealingBonus
-            ? `${progress?.bandageHealingAmountMinimum ?? rank}–${progress?.bandageHealingAmountMaximum ?? rank * 2}`
+            ? `${progress?.bandageHealingAmountMinimum ?? rank}Ă˘â‚¬â€ś${progress?.bandageHealingAmountMaximum ?? rank * 2}`
             : `+${bonusPercent ?? rank * (campingSetupSpeedBonus ? 10 : 5)}%`,
         perRank: bandageHealingBonus
-            ? `${progress?.bandageHealingAmountMinimumPerRank ?? 1}–${progress?.bandageHealingAmountMaximumPerRank ?? 2}`
+            ? `${progress?.bandageHealingAmountMinimumPerRank ?? 1}Ă˘â‚¬â€ś${progress?.bandageHealingAmountMaximumPerRank ?? 2}`
             : bonusPercentPerRank ?? (campingSetupSpeedBonus ? 10 : 5),
         target: skill.bonusTargetTranslationKey ? t(skill.bonusTargetTranslationKey) : undefined,
         effectTranslationKey: bandageHealingBonus
@@ -229,6 +236,7 @@ const skills = computed(() => {
             grandmasterBonusUnlocked: rank >= 10,
             nextExperienceRequired: progress?.nextExperienceRequired,
             nextTrainingRequired: progress?.nextTrainingRequired,
+            experience: progress?.experience ?? 0,
             cap: skillCaps[skill.key] ?? 0,
             activeTraining: skillSet?.activeTrainingSkill === skill.key,
             needsExperience: progress?.nextTrainingRequired != null &&
@@ -268,7 +276,7 @@ const insufficientExperienceLabel = computed(() => {
         return translatedLabel
     }
 
-    return locale.value === 'en' ? 'Insufficient experience' : 'Nedostatek zkušenosti'
+    return locale.value === 'en' ? 'Insufficient experience' : 'Nedostatek zkuÄąË‡enosti'
 })
 const unknownBonusLabel = computed(() => t('skills.bonuses.unknown'))
 const gameClassKey = computed(() => myChar.value?.gameClass?.key.toLowerCase() ?? '')
@@ -286,6 +294,76 @@ const gameClassName = computed(() => {
 const getSkillRankName = (rank: number) => {
     const translationKey = skillRankTranslationKeys[rank]
     return translationKey ? t(translationKey) : t('skills.ranks.fallback', { rank })
+}
+
+const getSkillProgressTooltipOwnerKey = (skill: SkillKey) => `skill-progress-${skill}`
+
+const formatSkillExperience = (experience: number) => {
+    const roundedExperience = Math.round(Math.max(0, experience))
+    if (roundedExperience > 9_999) {
+        return `${(Math.floor(roundedExperience / 100) / 10).toFixed(1)}k`
+    }
+
+    return roundedExperience.toLocaleString(locale.value === 'cs' ? 'cs-CZ' : 'en-US')
+}
+
+const buildSkillProgressTooltip = (skill: {
+    key: SkillKey
+    name: string
+    rank: number
+    activeTraining: boolean
+    experience: number
+    nextExperienceRequired?: number
+    trainingRemainingSeconds: number
+}) => ({
+    title: skill.name,
+    titleMeta: getSkillRankName(skill.rank),
+    titleClassName: 'ui-text-gradient',
+    titleMetaClassName: 'ui-tooltip-title-meta--skill-rank',
+    rows: [
+        {
+            label: t('skills.progress.experience'),
+            separator: '',
+            value: `${formatSkillExperience(skill.experience)} / ${formatSkillExperience(skill.nextExperienceRequired ?? 0)}`,
+            className: 'ui-tooltip-row--experience',
+        },
+        {
+            label: t('skills.progress.training'),
+            separator: '',
+            value: skill.activeTraining
+                ? `${formatTrainingTime(skill.trainingRemainingSeconds)} ${t('skills.progress.currentTraining')}`
+                : formatTrainingTime(skill.trainingRemainingSeconds),
+            className: 'ui-tooltip-row--training',
+        },
+    ],
+})
+
+const showSkillProgressTooltip = (skill: Parameters<typeof buildSkillProgressTooltip>[0], event: MouseEvent) => {
+    if (TooltipOverlayManager.pinned) {
+        return
+    }
+
+    TooltipOverlayManager.showFromEvent({
+        ownerKey: getSkillProgressTooltipOwnerKey(skill.key),
+        event,
+        content: buildSkillProgressTooltip(skill),
+    })
+}
+
+const moveSkillProgressTooltip = (skill: SkillKey, event: MouseEvent) => {
+    TooltipOverlayManager.moveFromEvent(getSkillProgressTooltipOwnerKey(skill), event)
+}
+
+const hideSkillProgressTooltip = (skill: SkillKey) => {
+    TooltipOverlayManager.hideOwnerIfNotPinned(getSkillProgressTooltipOwnerKey(skill))
+}
+
+const toggleSkillProgressTooltip = (skill: Parameters<typeof buildSkillProgressTooltip>[0], event: MouseEvent) => {
+    TooltipOverlayManager.togglePinnedFromEvent({
+        ownerKey: getSkillProgressTooltipOwnerKey(skill.key),
+        event,
+        content: buildSkillProgressTooltip(skill),
+    })
 }
 
 const startTraining = (skill: SkillKey) => {
@@ -375,7 +453,7 @@ const formatTrainingTime = (seconds: number) => {
     min-height: 35px;
     padding: 5px 9px 5px 11px;
     box-sizing: border-box;
-    cursor: url('/images/cursor-pointer.png'), pointer;
+    cursor: url('/images/cursor-pointer.png') 0 10, pointer;
 }
 
 .skill-row:last-child {

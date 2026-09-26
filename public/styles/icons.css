@@ -1,13 +1,13 @@
 .icon-white {
     fill: #bbb;
     transition: all 0.2s ease;
-    cursor: url('/images/cursor-pointer.png'), pointer;
+    cursor: url('/images/cursor-pointer.png') 0 10, pointer;
 }
 
 .icon-blue {
     fill: #00f;
     transition: all 0.2s ease;
-    cursor: url('/images/cursor-pointer.png'), pointer;
+    cursor: url('/images/cursor-pointer.png') 0 10, pointer;
     opacity: 0.75
 }
 
@@ -15,7 +15,7 @@
 .icon-red {
     fill: #f00;
     transition: all 0.2s ease;
-    cursor: url('/images/cursor-pointer.png'), pointer;
+    cursor: url('/images/cursor-pointer.png') 0 10, pointer;
     opacity: 0.75
 }
 

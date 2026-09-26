@@ -250,7 +250,7 @@ const clearLoginAndPassword = () => {
 .login-checkbox-field,
 .login-checkbox-field .p-checkbox,
 .login-checkbox-field .p-checkbox-input {
-    cursor: url('/images/cursor-pointer.png'), pointer !important;
+    cursor: url('/images/cursor-pointer.png') 0 10, pointer !important;
 }
 
 .login-dialog-content .login-field input {

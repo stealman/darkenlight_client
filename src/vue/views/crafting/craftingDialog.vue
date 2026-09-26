@@ -545,7 +545,7 @@ defineExpose({
     padding: 3px 8px;
     border-bottom: 1px solid rgba(var(--ui-darker), 0.65);
     color: rgb(var(--ui-base));
-    cursor: url('/images/cursor-pointer.png'), pointer;
+    cursor: url('/images/cursor-pointer.png') 0 10, pointer;
 }
 
 .crafting-recipe-row:hover { background: rgba(255, 255, 255, 0.06); }
@@ -598,7 +598,7 @@ defineExpose({
     border: none;
     border-radius: 0;
     background: transparent;
-    cursor: url('/images/cursor-pointer.png'), pointer;
+    cursor: url('/images/cursor-pointer.png') 0 10, pointer;
 }
 
 .crafting-result-icon-button:hover { background: transparent; }

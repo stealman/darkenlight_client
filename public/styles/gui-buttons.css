@@ -6,7 +6,7 @@ div.gui-action-button {
 
     align-items: center;
     justify-content: center;
-    cursor: url('/images/cursor-pointer.png'), pointer;
+    cursor: url('/images/cursor-pointer.png') 0 10, pointer;
 
     background-size: contain;
     background-repeat: no-repeat;

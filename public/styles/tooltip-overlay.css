@@ -2,7 +2,7 @@
     position: fixed;
     left: 0;
     top: 0;
-    z-index: 1600;
+    z-index: 2400;
     min-width: 180px;
     max-width: min(320px, calc(100vw - 16px));
     padding: 10px 12px;
@@ -60,6 +60,19 @@
     font-weight: 400;
 }
 
+.ui-tooltip-title.ui-text-gradient,
+.ui-tooltip-title-meta.ui-text-gradient {
+    --ui-text-gradient-bottom: var(--ui-text-gradient-base-bottom);
+    --ui-text-gradient-top: var(--ui-text-gradient-base-top);
+    display: inline-block;
+    background: linear-gradient(to top, var(--ui-text-gradient-bottom), var(--ui-text-gradient-top));
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+    text-shadow: none;
+}
+
 .ui-tooltip-title-meta {
     font-size: 0.92rem;
     font-weight: 700;
@@ -67,6 +80,12 @@
     color: #f0ddb8;
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.65);
     white-space: nowrap;
+}
+
+.ui-tooltip-title-meta--skill-rank {
+    color: rgb(var(--ui-dark));
+    font-weight: 400;
+    text-shadow: none;
 }
 
 .ui-tooltip-title-meta--fighter {
@@ -129,4 +148,14 @@
 .ui-tooltip-row-value {
     color: #f6ebd4;
     text-align: right;
+}
+
+.ui-tooltip-row--experience .ui-tooltip-row-label,
+.ui-tooltip-row--experience .ui-tooltip-row-value {
+    color: rgb(var(--ui-success));
+}
+
+.ui-tooltip-row--training .ui-tooltip-row-label,
+.ui-tooltip-row--training .ui-tooltip-row-value {
+    color: rgb(var(--ui-accent-blue));
 }

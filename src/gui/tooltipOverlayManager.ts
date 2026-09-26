@@ -1,6 +1,8 @@
 export type TooltipOverlayRow = {
     label?: string
     value: string
+    separator?: string
+    className?: string | null
 }
 
 export type TooltipOverlayContent = {
@@ -257,12 +259,12 @@ export const TooltipOverlayManager = {
 
         for (const row of rows) {
             const rowEl = document.createElement('div')
-            rowEl.className = 'ui-tooltip-row'
+            rowEl.className = `ui-tooltip-row${row.className ? ` ${row.className}` : ''}`
 
             if (row.label) {
                 const labelEl = document.createElement('span')
                 labelEl.className = 'ui-tooltip-row-label'
-                labelEl.textContent = `${row.label}:`
+                labelEl.textContent = `${row.label}${row.separator ?? ':'}`
                 rowEl.appendChild(labelEl)
             }
 

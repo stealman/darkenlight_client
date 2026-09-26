@@ -261,7 +261,7 @@ defineExpose({
     border: 1px solid rgb(var(--ui-dark));
     box-sizing: border-box;
     padding: 0;
-    cursor: url('/images/cursor-pointer.png'), pointer;
+    cursor: url('/images/cursor-pointer.png') 0 10, pointer;
 }
 
 .action-slot-icon-shell:hover {
@@ -364,7 +364,7 @@ defineExpose({
     background: var(--dialog-bg);
     color: rgb(var(--ui-base));
     text-align: left;
-    cursor: url('/images/cursor-pointer.png'), pointer;
+    cursor: url('/images/cursor-pointer.png') 0 10, pointer;
     box-sizing: border-box;
     margin: 0;
 }

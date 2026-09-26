@@ -256,14 +256,14 @@
     font-weight: bold;
     text-transform: uppercase;
     text-shadow: 0 0 3px rgb(var(--ui-base));
-    cursor: url('/images/cursor-pointer.png'), pointer;
+    cursor: url('/images/cursor-pointer.png') 0 10, pointer;
     box-shadow: none;
     transition: filter 0.2s ease, box-shadow 0.2s ease;
     opacity: 1;
 }
 
 .dialog-button.selected {
-    cursor: url('/images/cursor.png'), auto;
+    cursor: url('/images/cursor.png') 4 4, auto;
     background-image: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url('/images/gui/bck_stone1.png');
     background-attachment: fixed;
     border: 2px solid transparent;
@@ -301,14 +301,14 @@
     border: 2px solid transparent;
     border-bottom: 2px solid rgba(0, 0, 0, 0.4);
     border-right: 2px solid rgba(0, 0, 0, 0.4);
-    cursor: url('/images/cursor-pointer.png'), pointer;
+    cursor: url('/images/cursor-pointer.png') 0 10, pointer;
     transition: filter 0.2s ease, box-shadow 0.2s ease;
     font-size: 0.9rem;
     color: rgb(var(--ui-darkest));
 }
 
 .dialog-header div.tab-item:not(.active) * {
-    cursor: url('/images/cursor-pointer.png'), pointer;
+    cursor: url('/images/cursor-pointer.png') 0 10, pointer;
 }
 
 .dialog-header div.tab-item.active {
@@ -319,11 +319,11 @@
     border-left: 2px solid rgba(0, 0, 0, 0.1);
     color: rgb(var(--ui-base));
     text-shadow: 0 0 3px rgb(var(--ui-darkest));
-    cursor: url('/images/cursor.png'), auto;
+    cursor: url('/images/cursor.png') 4 4, auto;
 }
 
 .dialog-header div.tab-item.active * {
-    cursor: url('/images/cursor.png'), auto;
+    cursor: url('/images/cursor.png') 4 4, auto;
 }
 
 .dialog-content,
