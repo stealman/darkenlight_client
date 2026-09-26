@@ -9,13 +9,13 @@
       "swords": "Meče",
       "axes": "Sekery",
       "maces": "Palcáty",
-      "polearms": "Tyčové zbraně",
+      "polearms": "Tyčové Zbraně",
       "bows": "Luky"
     },
     "armor": {
-      "leatherArmor": "Kožené brnění",
-      "chainArmor": "Kroužkové brnění",
-      "plateArmor": "Plátové brnění",
+      "leatherArmor": "Kožené Brnění",
+      "chainArmor": "Kroužkové Brnění",
+      "plateArmor": "Plátové Brnění",
       "shields": "Štíty"
     },
     "utility": {

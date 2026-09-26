@@ -93,7 +93,7 @@ export const ArmorModelsCb = {
 
     CHAIN_COIF_MALE: new EquipCbItem(EquipSlotModelsCb.CHAIN_COIF.modelId, 'male-coif', new Vector3(0, 0.25, -0.02), BabylonUtils.getSymVector(0.2), null, matMetalSize),
 
-    CHAIN_PAULDRONS_MALE: new EquipCbItem(EquipSlotModelsCb.CHAIN_PAULDRONS.modelId, 'male-pauldron-chain', new Vector3(-0.06, 0, 0), new Vector3(0.26, 0.32, 0.32), null, matMetalSize),
+    CHAIN_PAULDRONS_MALE: new EquipCbItem(EquipSlotModelsCb.CHAIN_PAULDRONS.modelId, 'male-pauldron-chain', new Vector3(-0.06, 0, 0), new Vector3(0.26, 0.32, 0.36), null, matMetalSize),
 
     CHAIN_GREAVES_MALE: new EquipCbItem(EquipSlotModelsCb.CHAIN_GREAVES.modelId, 'male-leg-chain', new Vector3(0.02, 0.2, 0.015), new Vector3(0.23, 0.24, 0.2), null, matMetalSize),
 }

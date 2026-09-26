@@ -252,6 +252,16 @@ export const ActionButtonsManager = {
         if (!localStorage.getItem(this.actionBindingKey)) {
             this.bindings.set(1, new ActionButtonActionBinding(CharacterActions.AUTO_ATTACK.name, {}))
             this.bindings.set(2, new ActionButtonActionBinding(CharacterActions.HEAL.name, {}))
+            this.bindings.set(3, new ActionButtonActionBinding(CharacterActions.HEALING_POTION.name, {}))
+            this.bindings.set(4, new ActionButtonActionBinding(CharacterActions.EQUIP_STORED_WEAPONS.name, {}))
+            this.bindings.set(5, new ActionButtonActionBinding(
+                MyPlayer.myChar?.gameClass?.key === 'MYSTIC'
+                    ? CharacterActions.MANA_POTION.name
+                    : CharacterActions.STAMINA_POTION.name,
+                {},
+            ))
+            this.bindings.set(6, new ActionButtonActionBinding(CharacterActions.CONSUMABLE_ITEM.name, {cbId: 351}))
+            this.bindings.set(7, new ActionButtonActionBinding(CharacterActions.CAMPING.name, {}))
             this.storeBindings()
         } else {
             const storedBindings = JSON.parse(localStorage.getItem(this.actionBindingKey)!)

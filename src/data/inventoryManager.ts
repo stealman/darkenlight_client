@@ -439,7 +439,22 @@ export const InventoryManager = {
         if (!weaponSetupKey || localStorage.getItem(weaponSetupKey)) {
             return
         }
-        localStorage.setItem(weaponSetupKey, JSON.stringify(createEmptyStoredWeaponSetups()))
+
+        const equippedStarterSword = MyPlayer.myChar?.equipSet?.get(EquipItemSlots.R_HAND)
+        const starterGreatAxe = this.inventory.find(item => item.cbType === 'W' && item.cbId === 220)
+        const hasStarterFighterWeapons = MyPlayer.myChar?.gameClass?.key === 'FIGHTER'
+            && equippedStarterSword?.cbType === 'W'
+            && equippedStarterSword.cbId === 100
+            && starterGreatAxe
+
+        const initialSetups = hasStarterFighterWeapons
+            ? {
+                primary: {rhand: equippedStarterSword.id, lhand: null},
+                secondary: {rhand: starterGreatAxe.id, lhand: null},
+            }
+            : createEmptyStoredWeaponSetups()
+
+        localStorage.setItem(weaponSetupKey, JSON.stringify(initialSetups))
     },
 
     updateWeaponSetup(setupType: 'primary' | 'secondary') {
