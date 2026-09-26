@@ -35,7 +35,7 @@
                                             class="crafting-result-name"
                                             :class="{ 'crafting-result-name-disabled': getRecipeCraftableQty(recipe) <= 0 }"
                                         >
-                                            {{ resolveItemName(recipe.item) }}
+                                            <span :class="{ 'ui-text-gradient': getRecipeCraftableQty(recipe) > 0 }">{{ resolveItemName(recipe.item) }}</span>
                                         </div>
                                         <div v-if="getRecipeCraftableQty(recipe) > 0" class="crafting-result-note">
                                             {{ t('crafting.craftable') }}: {{ getRecipeCraftableQty(recipe) }}
@@ -45,9 +45,9 @@
                                         </div>
                                     </div>
 
-                                    <div class="crafting-ingredients">
-                                        <div
-                                            v-for="(ingredient, ingredientIndex) in recipe.ing"
+                                        <div class="crafting-ingredients">
+                                            <div
+                                                v-for="(ingredient, ingredientIndex) in recipe.ing"
                                             :key="getIngredientKey(ingredient, ingredientIndex)"
                                             class="crafting-ingredient-chip"
                                         >
@@ -70,11 +70,10 @@
                                                 ({{ ingredient.inventoryQty }})
                                             </span>
                                         </div>
-                                        <div v-if="Number(recipe.price) > 0" class="crafting-ingredient-chip crafting-price-chip">
-                                            <span class="crafting-ingredient-name">{{ t('crafting.price') }}</span>
-                                            <span class="crafting-ingredient-qty">{{ recipe.price }}</span>
-                                            <img class="crafting-ingredient-icon" src="/images/icons/emerald.png" alt="Emerald" />
-                                        </div>
+                                    </div>
+                                    <div v-if="Number(recipe.price) > 0" class="crafting-ingredient-chip crafting-price-chip">
+                                        <span class="crafting-price-value ui-emerald-text-gradient">{{ recipe.price }}</span>
+                                        <img class="crafting-price-icon" src="/images/icons/emerald.png" alt="Emerald" />
                                     </div>
                                 </div>
                             </template>
@@ -88,7 +87,7 @@
                     >
                         <div class="crafting-selection-summary">
                             <div class="crafting-selection-title">
-                                {{ selectedRecipe ? resolveItemName(selectedRecipe.item) : '' }}
+                                <span :class="{ 'ui-text-gradient': selectedRecipe }">{{ selectedRecipe ? resolveItemName(selectedRecipe.item) : '' }}</span>
                             </div>
                             <div v-if="selectedRecipe" class="crafting-selection-note">
 
@@ -117,7 +116,7 @@
                                         />
                                         <span class="crafting-selection-boundary">{{ selectedRecipeCraftableQty }}</span>
                                     </div>
-                                    <div class="crafting-selection-current">{{ selectedRecipeQuantity }}</div>
+                                    <div class="crafting-selection-current"><span class="ui-text-gradient">{{ selectedRecipeQuantity }}</span></div>
                                 </div>
                                 <button
                                     class="action-button inventory-action-button crafting-selection-action-button"
@@ -481,7 +480,7 @@ defineExpose({
 .crafting-content-shell { display: flex; flex-direction: column; width: 100%; max-height: min(600px, 85vh); overflow: hidden; box-sizing: border-box; padding: 8px; gap: 10px; }
 .crafting-recipes-section { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; }
 .crafting-empty-state { padding: 28px 12px; text-align: center; color: rgb(var(--ui-dark)); }
-.crafting-recipe-list { display: flex; flex-direction: column; border-top: 1px solid rgba(var(--ui-darker), 0.8); border-bottom: 1px solid rgba(var(--ui-darker), 0.8); }
+.crafting-recipe-list { display: flex; flex-direction: column; }
 
 .crafting-selection-row {
     border: 1px solid rgba(var(--ui-darker), 0.65);
@@ -491,7 +490,7 @@ defineExpose({
 
 .crafting-recipe-row {
     display: grid;
-    grid-template-columns: 46px minmax(140px, 1fr) minmax(0, 1.6fr);
+    grid-template-columns: 46px minmax(140px, 1fr) minmax(0, 1.6fr) max-content;
     gap: 12px;
     align-items: center;
     min-height: 46px;
@@ -503,6 +502,7 @@ defineExpose({
 
 .crafting-recipe-row:hover { background: rgba(255, 255, 255, 0.06); }
 .crafting-recipe-row-selected { background: rgba(255, 255, 255, 0.09); }
+.crafting-recipe-row:last-child { border-bottom: 0; }
 .crafting-result-summary,
 .crafting-selection-summary,
 .crafting-ingredients,
@@ -555,9 +555,12 @@ defineExpose({
 
 .crafting-result-icon-button:hover { background: transparent; }
 .crafting-result-icon { width: 40px; height: 40px; object-fit: contain; pointer-events: none; }
-.crafting-ingredients { display: flex; flex-wrap: wrap; gap: 5px 10px; align-items: center; }
+.crafting-ingredients { display: flex; flex-wrap: wrap; gap: 5px 10px; align-items: center; justify-content: center; }
 .crafting-ingredient-chip { display: inline-flex; align-items: center; gap: 5px; color: rgb(var(--ui-base)); }
 .crafting-ingredient-icon { width: 22px; height: 22px; object-fit: contain; flex: 0 0 auto; }
+.crafting-price-chip { justify-self: end; gap: 4px; }
+.crafting-price-value { font-size: 15px; }
+.crafting-price-icon { width: 19px; height: 19px; object-fit: contain; flex: 0 0 auto; }
 .crafting-ingredient-name { font-size: 13px; line-height: 1.15; }
 .crafting-ingredient-qty,
 .crafting-selection-boundary,
@@ -567,13 +570,13 @@ defineExpose({
 .crafting-selection-boundary { font-size: 12px; }
 .crafting-ingredient-owned { color: rgb(var(--ui-dark)); }
 .crafting-selection-boundary { min-width: 12px; }
-.crafting-selection-current { min-width: 32px; font-size: 14px; }
+.crafting-selection-current { min-width: 32px; font-size: 16px; line-height: 1.25; }
 
 .crafting-selection-row { display: flex; align-items: center; gap: 16px; flex-wrap: nowrap; padding: 10px 12px; flex: 0 0 auto; }
 .crafting-selection-row-empty { opacity: 0.8; }
 .crafting-selection-row-empty .crafting-selection-title { display: none; }
 .crafting-selection-summary { flex: 1 1 0; display: flex; flex-direction: column; justify-content: center; align-self: stretch; }
-.crafting-selection-note-muted { margin-top: 0; }
+.crafting-selection-note-muted { margin-top: 0; color: rgb(var(--ui-dark)); font-size: 16px; line-height: 1.25; }
 .crafting-selection-controls { display: flex; align-items: center; gap: 10px; flex: 0 1 auto; }
 .crafting-selection-slider-panel { flex: 0 1 188px; min-width: 0; }
 .crafting-selection-slider-row,
@@ -582,7 +585,7 @@ defineExpose({
 .crafting-selection-slider { flex: 1 1 auto; }
 
 @media (min-height: 700px) {
-    .crafting-recipe-row { grid-template-columns: 54px minmax(160px, 1fr) minmax(0, 1.6fr); min-height: 58px; padding-block: 5px; }
+    .crafting-recipe-row { grid-template-columns: 54px minmax(160px, 1fr) minmax(0, 1.6fr) max-content; min-height: 58px; padding-block: 5px; }
     .crafting-result-icon-button { width: 48px; height: 48px; }
     .crafting-result-icon { width: 48px; height: 48px; }
     .crafting-ingredient-icon { width: 24px; height: 24px; }

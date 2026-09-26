@@ -22,7 +22,7 @@
                 </div>
                 <div class="npc-use-emeralds">
                     <img src="/images/icons/emerald.png" alt="Emerald" />
-                    <span>{{ formattedEmeralds }}</span>
+                    <span class="ui-emerald-text-gradient">{{ formattedEmeralds }}</span>
                 </div>
             </div>
         </template>
@@ -43,7 +43,7 @@
                     </button>
                 </div>
 
-                <div v-if="selectedCategoryItems.length || selectedFeature?.services?.length" class="npc-vendor-item-list">
+                <div v-if="selectedCategoryItems.length || selectedFeature?.services?.length" :class="['npc-vendor-item-list', { 'npc-healer-service-list': selectedFeature?.type === 'healer' }]">
                     <div
                         v-for="item in selectedCategoryItems"
                         :key="`${item.tp}:${item.cb}`"
@@ -716,6 +716,7 @@ defineExpose({openDialog})
 .npc-use-header { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .npc-use-feature-tabs { display: flex; min-width: 0; overflow-x: auto; }
 .npc-use-emeralds { display: inline-flex; flex: 0 0 auto; align-self: stretch; align-items: center; gap: 4px; margin-left: auto; padding: 0 6px; background: rgba(0, 0, 0, 0.25); color: #7ef58e; font-size: 14px; text-shadow: 0 0 3px #000; white-space: nowrap; }
+.npc-use-emeralds .ui-emerald-text-gradient { text-shadow: none; }
 .npc-use-emeralds img { width: 18px; height: 18px; object-fit: contain; }
 .npc-use-content-shell { display: flex; flex-direction: column; width: 100%; height: min(600px, calc(85vh - 48px)); box-sizing: border-box; padding: 10px; gap: 10px; overflow: hidden; }
 .npc-use-category-tabs { display: flex; flex-wrap: wrap; gap: 6px; flex: 0 0 auto; }
@@ -778,6 +779,8 @@ defineExpose({openDialog})
 .npc-repairer-section-title:not(:first-child) { margin-top: 16px; }
 .npc-vendor-item-row:hover, .npc-trainer-skill-row:hover { background: rgba(255, 255, 255, 0.06); }
 .npc-healer-service-row { width: 100%; border: 0; border-bottom: 1px solid rgba(var(--ui-darker), 0.65); background: transparent; color: inherit; font: inherit; text-align: inherit; }
+.npc-healer-service-list { border-bottom: 0; }
+.npc-healer-service-list .npc-healer-service-row:last-child { border-bottom: 0; }
 .npc-healer-service-row:disabled { cursor: default; opacity: 0.55; }
 .npc-healer-service-row:disabled:hover { background: transparent; }
 .npc-vendor-item-icon { width: 40px; height: 40px; object-fit: contain; }
