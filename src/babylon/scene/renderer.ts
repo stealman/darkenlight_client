@@ -308,6 +308,8 @@ export const Renderer = {
             }
         }
 
+        cameraPosition.scaleInPlace(Settings.cameraDistance / 100)
+
         return { cameraPosition, cameraViewY }
     },
 

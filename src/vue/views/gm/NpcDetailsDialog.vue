@@ -269,18 +269,29 @@ const metalArmorMaterials = [
     { value: 'mythril', label: 'Mythril', id: 8 },
 ]
 const optionValue = (modelId, materialId) => `${modelId}:${materialId}`
-const armorOptions = (armorName, modelId, codebookIds) => [
-    { label: 'None', value: '' },
-    ...metalArmorMaterials.map((material, index) => ({
+const armorOptions = (armorName, modelId, codebookIds) =>
+    metalArmorMaterials.map((material, index) => ({
         label: `${material.label} ${armorName}`,
         value: optionValue(modelId, material.id),
         codebookId: codebookIds[index],
-    })),
-]
-const headOptions = armorOptions('plate helmet', EquipSlotModelsCb.HELM.modelId, [3, 301, 302, 303, 304, 305, 306])
-const armsOptions = armorOptions('plate pauldrons', EquipSlotModelsCb.PAULDRONS_PLATE.modelId, [2, 201, 202, 203, 204, 205, 206])
-const legsOptions = armorOptions('plate greaves', EquipSlotModelsCb.LEGS_PLATE.modelId, [1, 101, 102, 103, 104, 105, 106])
-const bodyOptions = armorOptions('plate armor', EquipSlotModelsCb.ARMOR_PLATE.modelId, [6, 401, 402, 403, 404, 405, 406])
+    }))
+const armorSlotOptions = (...options) => [{ label: 'None', value: '' }, ...options.flat()]
+const headOptions = armorSlotOptions(
+    armorOptions('plate helmet', EquipSlotModelsCb.HELM.modelId, [3, 301, 302, 303, 304, 305, 306]),
+    armorOptions('chain coif', EquipSlotModelsCb.CHAIN_COIF.modelId, [10, 801, 802, 803, 804, 805, 806]),
+)
+const armsOptions = armorSlotOptions(
+    armorOptions('plate pauldrons', EquipSlotModelsCb.PAULDRONS_PLATE.modelId, [2, 201, 202, 203, 204, 205, 206]),
+    armorOptions('chain pauldrons', EquipSlotModelsCb.CHAIN_PAULDRONS.modelId, [9, 701, 702, 703, 704, 705, 706]),
+)
+const legsOptions = armorSlotOptions(
+    armorOptions('plate greaves', EquipSlotModelsCb.LEGS_PLATE.modelId, [1, 101, 102, 103, 104, 105, 106]),
+    armorOptions('chain greaves', EquipSlotModelsCb.CHAIN_GREAVES.modelId, [8, 601, 602, 603, 604, 605, 606]),
+)
+const bodyOptions = armorSlotOptions(
+    armorOptions('plate armor', EquipSlotModelsCb.ARMOR_PLATE.modelId, [6, 401, 402, 403, 404, 405, 406]),
+    armorOptions('chain mail', EquipSlotModelsCb.CHAIN_MAIL.modelId, [11, 901, 902, 903, 904, 905, 906]),
+)
 const weaponNames = {
     LONGSWORD: 'Longsword', BROADSWORD: 'Broadsword', GREATSWORD: 'Greatsword',
     HAND_AXE: 'Hand axe', BATTLE_AXE: 'Battle axe', GREATAXE: 'Great axe', PICKAXE: 'Pickaxe',

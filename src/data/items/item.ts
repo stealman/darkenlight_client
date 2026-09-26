@@ -177,6 +177,14 @@ export const EquipSlotModelsCb = {
 
     SHIELD: new EquipSlotModel(1400, EquipItemSlots.L_HAND, null),
 
+    CHAIN_MAIL: new EquipSlotModel(2000, EquipItemSlots.BODY, null),
+
+    CHAIN_COIF: new EquipSlotModel(2100, EquipItemSlots.HEAD, null),
+
+    CHAIN_PAULDRONS: new EquipSlotModel(2200, EquipItemSlots.PAULDRONS, null),
+
+    CHAIN_GREAVES: new EquipSlotModel(2300, EquipItemSlots.LEGS, null),
+
     getById(id: number): EquipSlotModel | null {
         for (const key in this) {
             const slotInfo = (this as any)[key]

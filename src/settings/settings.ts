@@ -36,6 +36,7 @@ export const Settings = {
     mouseEnabled: false,
 
     brightness: 5,
+    cameraDistance: 100 as number,
     volume: 0.5,
     ambientVolume: 1,
     targetMarkerOpacity: 1,
@@ -76,6 +77,8 @@ export const Settings = {
         this.detailLevelName = storedSettings.detailLevelName
 
         this.brightness = parseInt(storedSettings.brightness)
+        const storedCameraDistance = parseFloat(storedSettings.cameraDistance)
+        this.cameraDistance = Number.isFinite(storedCameraDistance) ? Math.min(100, Math.max(80, storedCameraDistance)) : 100
         this.targetMarkerOpacity = Number.isFinite(parseFloat(storedSettings.targetMarkerOpacity)) ? parseFloat(storedSettings.targetMarkerOpacity) : 1
         this.displayGlow = storedSettings.displayGlow
         this.hudSize = parseFloat(storedSettings.hudSize)
@@ -132,6 +135,7 @@ export const Settings = {
             targetLockLeft: targetLockDefaultPosition.left,
 
             brightness: 5,
+            cameraDistance: 100,
             volume: 0.5,
             ambientVolume: 1,
             displayGlow: !Settings.touchEnabled,
@@ -234,6 +238,11 @@ export const Settings = {
 
     setDisplayGlow(value: boolean) {
         this.displayGlow = value;
+    },
+
+    setCameraDistance(value: number) {
+        const cameraDistance = Number(value)
+        this.cameraDistance = Number.isFinite(cameraDistance) ? Math.min(100, Math.max(80, cameraDistance)) : 100
     },
 
     setHudSize(value: number) {

@@ -123,6 +123,21 @@
                                     />
                                 </td>
                             </tr>
+                            <tr>
+                                <td class="item-label" style="width: 25%">{{ t('settings.cameraDistance') }}</td>
+                                <td style="width: 25%">
+                                    <input
+                                        class="range-slider"
+                                        type="range"
+                                        min="80"
+                                        max="100"
+                                        step="1"
+                                        style="zoom: 1.5"
+                                        v-model.number="storedSettings.cameraDistance"
+                                        @input="cameraDistanceChanged()"
+                                    />
+                                </td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -330,6 +345,7 @@ const setDeviceType = (deviceType) => {
     )
 
     if (deviceType == 'PHONE') {
+        Settings.setCameraDistance(85)
         storedSettings.value.joystickBottom = 100
         storedSettings.value.joystickLeft = 30
         storedSettings.value.joystickSize = 100
@@ -358,6 +374,7 @@ const setDeviceType = (deviceType) => {
     }
 
     storeSettings()
+    Renderer.updateCameraForEnvironment()
     ActionButtonsManager.renderActionButtons()
     emit('deviceTypeSelected')
 }
@@ -377,6 +394,12 @@ const setDetailsLevel = (level) => {
 const brightnessChanged = () => {
     Renderer.brightnessChanged()
     Lights.brightnessChanged()
+    storeSettings()
+}
+
+const cameraDistanceChanged = () => {
+    Settings.setCameraDistance(storedSettings.value.cameraDistance)
+    Renderer.updateCameraForEnvironment()
     storeSettings()
 }
 
@@ -457,6 +480,7 @@ const restoreDefaultSettings = () => {
     setLocale(defaultSettings.language)
     Renderer.brightnessChanged()
     Lights.brightnessChanged()
+    Renderer.updateCameraForEnvironment()
     ViewportManager.onResize()
     Settings.deviceTypeChanged()
     ActionButtonsManager.renderActionButtons()

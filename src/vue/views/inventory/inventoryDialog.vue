@@ -126,6 +126,7 @@ const DOUBLE_CLICK_MS = 250
 const WEAPON_SETUP_HOLD_MS = 500
 const OVERLAY_PADDING = 4
 const OVERLAY_CURSOR_OFFSET_X = 2
+const OVERLAY_CURSOR_OFFSET_Y = 5
 
 const dialogRef = ref(null)
 const itemInfoOverlayRef = ref(null)
@@ -223,7 +224,7 @@ const showItemInfoOverlay = (item, pointer, options = {}) => {
 
     itemInfoOverlay.value.visible = true
     itemInfoOverlay.value.x = pointer.clientX + OVERLAY_CURSOR_OFFSET_X
-    itemInfoOverlay.value.y = pointer.clientY
+    itemInfoOverlay.value.y = pointer.clientY + OVERLAY_CURSOR_OFFSET_Y
     Object.assign(itemInfoOverlay.value, getItemTooltipData(item))
     itemInfoOverlay.value.showDropButton = showDropButton
     itemInfoOverlay.value.showMergeButton = showMergeButton

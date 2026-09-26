@@ -88,6 +88,7 @@ const props = defineProps<{npcId: number}>()
 const MIN_INVENTORY_SLOT_COUNT = 24
 const BANK_LEFT_MODE_STORAGE_KEY = 'DARKENLIGHT_BANK_LEFT_MODE'
 const OVERLAY_PADDING = 4
+const OVERLAY_CURSOR_OFFSET_Y = 5
 const actionButtonSize = ref(Settings.actionButtonSize)
 const bankPanelRef = ref<HTMLElement | null>(null)
 const itemInfoOverlayRef = ref()
@@ -205,7 +206,7 @@ const showItemInfoOverlay = (item: any, pointer: {clientX: number, clientY: numb
     Object.assign(itemInfoOverlay.value, getItemTooltipData(item), {
         visible: true,
         x: pointer.clientX + 4,
-        y: pointer.clientY,
+        y: pointer.clientY + OVERLAY_CURSOR_OFFSET_Y,
         source,
         index,
         slotKey,

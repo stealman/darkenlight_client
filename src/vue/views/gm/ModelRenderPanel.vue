@@ -96,9 +96,9 @@
 <script setup>
 import { ArcRotateCamera, Color3, Color4, CubeTexture, DirectionalLight, Engine, Mesh, Scene, SceneLoader, Vector2, Vector3 } from '@babylonjs/core'
 import { WEAPON_MODEL_CACHE_VERSION, WeaponModelsCb } from '@/babylon/item/codebook/weaponModelsCb'
-import { ARMOR_MODEL_CACHE_VERSION, ArmorModelsCb, ArmorVertexColorGlbNames } from '@/babylon/item/codebook/armorsModelsCb'
+import { ARMOR_MODEL_CACHE_VERSION, ArmorModelsCb, ArmorModelsWithDetailPalette, ArmorVertexColorFallbackGlbNames, ArmorVertexColorGlbNames } from '@/babylon/item/codebook/armorsModelsCb'
 import { VertexColorWeaponPalettesByModelKey } from '@/babylon/item/codebook/vertexColorPalettes'
-import { MetalArmorVertexColorPalette } from '@/babylon/item/codebook/vertexColorPalettes/armor'
+import { MetalArmorVertexColorPalette, ShieldDetailVertexColorPalette } from '@/babylon/item/codebook/vertexColorPalettes/armor'
 import { createVertexColorWeaponMaterial } from '@/babylon/item/codebook/vertexColorPalettes/vertexColorWeaponMaterial'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { Settings } from '@/settings/settings'
@@ -118,6 +118,10 @@ const ARMOR_INVENTORY_BASE_NAMES = {
     PAULDRON_MALE: 'plate-pauldrons',
     LEG_MALE: 'plate-greaves',
     SHIELD: 'shield',
+    CHAIN_MAIL_MALE: 'chain-mail',
+    CHAIN_COIF_MALE: 'chain-coif',
+    CHAIN_PAULDRONS_MALE: 'chain-pauldrons',
+    CHAIN_GREAVES_MALE: 'chain-greaves',
 }
 
 const dialogVisible = ref(false)
@@ -145,6 +149,9 @@ const selectedPreviewItem = computed(() => {
     return selectedPreviewOption.value?.item ?? null
 })
 const selectedWeaponPalette = computed(() => previewCategory.value === 'WEAPON' ? selectedPreviewOption.value?.palette ?? null : null)
+const selectedArmorPalette = computed(() => ArmorModelsWithDetailPalette.has(selectedPreviewItem.value?.id ?? -1)
+    ? ShieldDetailVertexColorPalette
+    : MetalArmorVertexColorPalette)
 const currentMaterialSlots = computed(() => {
     const item = selectedPreviewItem.value
     if (!item) {
@@ -153,7 +160,7 @@ const currentMaterialSlots = computed(() => {
     if (selectedWeaponPalette.value) {
         return selectedWeaponPalette.value.materialColors.length
     }
-    return MetalArmorVertexColorPalette.materialColors.length
+    return selectedArmorPalette.value.materialColors.length
 })
 const materialIndexOptions = computed(() => {
     if (previewCategory.value === 'ARMOR') {
@@ -401,7 +408,16 @@ const loadPreview = async () => {
     const modelPath = isWeapon
         ? `weapons/${previewItem.model}.glb?v=${WEAPON_MODEL_CACHE_VERSION}`
         : `armors/${ArmorVertexColorGlbNames[previewItem.id] ?? previewItem.model}.glb?v=${ARMOR_MODEL_CACHE_VERSION}`
-    const importResult = await SceneLoader.ImportMeshAsync('', '/models/equip/', modelPath, scene)
+    let importResult
+    try {
+        importResult = await SceneLoader.ImportMeshAsync('', '/models/equip/', modelPath, scene)
+    } catch (error) {
+        const fallbackGlbName = isWeapon ? undefined : ArmorVertexColorFallbackGlbNames[previewItem.id]
+        if (!fallbackGlbName) {
+            throw error
+        }
+        importResult = await SceneLoader.ImportMeshAsync('', '/models/equip/', `armors/${fallbackGlbName}.glb?v=${ARMOR_MODEL_CACHE_VERSION}`, scene)
+    }
     const sourceMeshes = importResult.meshes.filter((m) => m instanceof Mesh && m.getTotalVertices() > 0)
     if (sourceMeshes.length === 0) {
         return
@@ -428,7 +444,7 @@ const loadPreview = async () => {
     previewMaterial = createVertexColorWeaponMaterial(
         `modelRenderMaterial-${previewCategory.value}-${previewItem.model}`,
         scene,
-        isWeapon ? weaponPalette : MetalArmorVertexColorPalette,
+        isWeapon ? weaponPalette : selectedArmorPalette.value,
     )
     if (!isWeapon) {
         previewMaterial.twoSidedLighting = false

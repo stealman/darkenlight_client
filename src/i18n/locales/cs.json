@@ -105,6 +105,7 @@
     "graphicsMedium": "Střední",
     "graphicsLow": "Nízká",
     "brightness": "Jas",
+    "cameraDistance": "Vzdálenost kamery",
     "targetMarkerBrightness": "Jas označníku",
     "restoreDefaultsTitle": "Obnovit výchozí nastavení",
     "restoreDefaultsDescription": "Vrátí se nastavení ovládání, grafiky, rozhraní a zvuku. Přihlášení ani přiřazení akcí se nezmění.",
