@@ -83,6 +83,22 @@ The version in that filename comes from `src-tauri/tauri.conf.json`; change it
 there when publishing a new release. `src-tauri/target/` is build output and
 is not committed.
 
+### PowerShell execution-policy note
+
+On machines where PowerShell blocks `yarn.ps1` because script execution is
+disabled, use Yarn's Windows command shim instead. It runs the identical
+project scripts and does not require changing the system execution policy:
+
+```powershell
+yarn.cmd install
+yarn.cmd tauri:build
+```
+
+The production build can take longer than a minute because it builds both the
+frontend and the Rust application. In automation with a short command timeout,
+keep the process running and capture its output; a successful build ends with
+`Finished 1 bundle at:` followed by the NSIS installer path.
+
 For desktop development with hot reload, use:
 
 ```powershell
