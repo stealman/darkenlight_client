@@ -1,4 +1,4 @@
-import { AccountCharacterCreateMsg, AccountCharacterNameCheckMsg, GuestCharacterCreateMsg, GuestCharacterNameCheckMsg, LoginMsg, Message, PlayerRegistrationMsg } from '@/network/messages'
+import { AccountCharacterClaimMsg, AccountCharacterCreateMsg, AccountCharacterNameCheckMsg, GuestCharacterCreateMsg, GuestCharacterNameCheckMsg, LoginMsg, Message, PlayerRegistrationMsg } from '@/network/messages'
 import { MessageProcessor } from '@/network/messageProcessor'
 import { invoke } from '@tauri-apps/api/core'
 
@@ -73,6 +73,10 @@ export const Connector = {
 
     createAccountCharacter(name: string, classKey: 'FIGHTER' | 'MYSTIC') {
         this.socket.send(JSON.stringify(new AccountCharacterCreateMsg(name, classKey)))
+    },
+
+    claimGuestCharacter(name: string) {
+        this.socket.send(JSON.stringify(new AccountCharacterClaimMsg(name)))
     },
 
     sendMoveMessage(msg: Message) {

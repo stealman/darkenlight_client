@@ -68,7 +68,7 @@
     </Transition>
 
     <Transition name="game-dialog-fade">
-        <LoginDialog ref="loginDialog" v-if="displayLoginDialog" @guest-login-check="guestLoginCheckRequested" />
+        <LoginDialog ref="loginDialog" v-if="displayLoginDialog" @login-requested="loginRequestStarted" />
     </Transition>
 
     <Transition name="game-dialog-fade">
@@ -85,7 +85,10 @@
             v-if="displayAccountCharacterNameDialog"
             :error="accountCharacterNameError"
             :initial-name="pendingGuestCharacterName"
+            :claim-class-name="accountCharacterNameClaimClass"
             @submit="checkAccountCharacterName"
+            @claim="claimGuestCharacter"
+            @cancel-claim="cancelGuestCharacterClaim"
             @input="accountCharacterNameError = ''"
             @back="returnToLoginFromAccountCharacterName"
         />
@@ -214,6 +217,7 @@ const displayGuestCharacterCreationDialog = ref(false)
 const displayAccountCharacterNameDialog = ref(false)
 const pendingGuestCharacterName = ref('')
 const accountCharacterNameError = ref('')
+const accountCharacterNameClaimClass = ref<string | null>(null)
 const creatingAccountCharacter = ref(false)
 const displayErrorDialog = ref(false)
 const errorDialogMessage = ref('')
@@ -260,6 +264,7 @@ const onGameStarted = async () => {
     displayLoginDialog.value = false
     displayGuestCharacterCreationDialog.value = false
     displayAccountCharacterNameDialog.value = false
+    accountCharacterNameClaimClass.value = null
     loadingProgress.value = 100
     await nextTick()
     await new Promise<void>((resolve) => window.setTimeout(resolve, 450))
@@ -286,6 +291,7 @@ const onLoginFailed = () => {
     loginRequestSentFlag.value = false
     displayGuestCharacterCreationDialog.value = false
     displayAccountCharacterNameDialog.value = false
+    accountCharacterNameClaimClass.value = null
     creatingAccountCharacter.value = false
     displayLoginDialog.value = true
 }
@@ -313,7 +319,7 @@ const closeErrorDialog = () => {
     errorDialogCanRestart.value = false
 }
 
-const guestLoginCheckRequested = () => {
+const loginRequestStarted = () => {
     loadingPhaseKey.value = 'app.loadingConnecting'
     loadingProgress.value = 20
     gameLoading.value = true
@@ -344,16 +350,31 @@ const onAccountCharacterSetupRequired = () => {
     displayAccountCharacterNameDialog.value = true
     pendingGuestCharacterName.value = ''
     accountCharacterNameError.value = ''
+    accountCharacterNameClaimClass.value = null
     creatingAccountCharacter.value = true
 }
 
 const checkAccountCharacterName = (name: string) => {
     accountCharacterNameError.value = ''
+    accountCharacterNameClaimClass.value = null
     Connector.checkAccountCharacterName(name)
 }
 
+const claimGuestCharacter = (name: string) => {
+    if (!name) {
+        return
+    }
+    Connector.claimGuestCharacter(name)
+    loginRequestSent()
+}
+
+const cancelGuestCharacterClaim = () => {
+    accountCharacterNameClaimClass.value = null
+    accountCharacterNameError.value = ''
+}
+
 const onAccountCharacterNameCheck = (event: Event) => {
-    const detail = (event as CustomEvent<{name?: string, exists?: boolean, message?: string}>).detail
+    const detail = (event as CustomEvent<{name?: string, exists?: boolean, message?: string, claimable?: boolean, className?: string}>).detail
     if (!detail?.name || typeof detail.exists !== 'boolean') {
         return
     }
@@ -362,7 +383,18 @@ const onAccountCharacterNameCheck = (event: Event) => {
         gameLoading.value = false
         displayGuestCharacterCreationDialog.value = false
         displayAccountCharacterNameDialog.value = true
+        accountCharacterNameClaimClass.value = null
         accountCharacterNameError.value = detail.message
+        return
+    }
+
+    if (detail.claimable) {
+        gameLoading.value = false
+        displayGuestCharacterCreationDialog.value = false
+        displayAccountCharacterNameDialog.value = true
+        pendingGuestCharacterName.value = detail.name
+        accountCharacterNameError.value = ''
+        accountCharacterNameClaimClass.value = detail.className || ''
         return
     }
 
@@ -370,12 +402,14 @@ const onAccountCharacterNameCheck = (event: Event) => {
         gameLoading.value = false
         displayGuestCharacterCreationDialog.value = false
         displayAccountCharacterNameDialog.value = true
+        accountCharacterNameClaimClass.value = null
         accountCharacterNameError.value = t('login.accountCharacterNameTaken')
         return
     }
 
     pendingGuestCharacterName.value = detail.name
     accountCharacterNameError.value = ''
+    accountCharacterNameClaimClass.value = null
     displayAccountCharacterNameDialog.value = false
     displayGuestCharacterCreationDialog.value = true
 }
@@ -404,6 +438,7 @@ const returnToLoginFromGuestCharacterCreation = () => {
 const returnToLoginFromAccountCharacterName = () => {
     displayAccountCharacterNameDialog.value = false
     accountCharacterNameError.value = ''
+    accountCharacterNameClaimClass.value = null
     pendingGuestCharacterName.value = ''
     creatingAccountCharacter.value = false
     displayLoginDialog.value = true
@@ -597,6 +632,7 @@ const loginRequestSent = () => {
     displayLoginDialog.value = false
     displayGuestCharacterCreationDialog.value = false
     displayAccountCharacterNameDialog.value = false
+    accountCharacterNameClaimClass.value = null
 }
 
 const showSettingsDialog = () => {
@@ -736,6 +772,7 @@ const logout = async (notifyServer: boolean = true) => {
     displayLoginDialog.value = false
     displayGuestCharacterCreationDialog.value = false
     displayAccountCharacterNameDialog.value = false
+    accountCharacterNameClaimClass.value = null
     creatingAccountCharacter.value = false
     await new Promise<void>((resolve) => window.setTimeout(resolve, 300))
     loadingPhaseKey.value = 'app.loadingDisconnecting'

@@ -10,20 +10,31 @@
             <span class="account-character-name-dialog-title ui-text-gradient">{{ t('login.accountCharacterNameTitle') }}</span>
         </template>
 
-        <section class="account-character-name-section">
+        <section v-if="!claimClassName" class="account-character-name-section">
             <div class="account-character-name-description">{{ t('login.accountCharacterNameDescription') }}</div>
             <label class="login-field" for="account-character-name">
                 <span :class="{ 'login-field-label--ready': nameReady }">{{ t('login.name') }}</span>
                 <input id="account-character-name" v-model="name" type="text" autocomplete="off" @input="clearError" @keyup.enter="submit" />
             </label>
+            <div class="account-character-name-guest-hint">{{ t('login.accountCharacterNameGuestHint') }}</div>
             <div v-if="error" class="account-character-name-error">{{ error }}</div>
         </section>
 
+        <section v-else class="account-character-claim-section">
+            <div>{{ t('login.accountCharacterNameClaimExists') }}</div>
+            <div class="account-character-claim-name ui-text-gradient ui-text-gradient--accent">{{ initialName }}</div>
+            <div class="account-character-claim-class">{{ t('login.accountCharacterNameClaimClass') }}: {{ claimClassName }}</div>
+            <div class="account-character-claim-description">{{ t('login.accountCharacterNameClaimDescription') }}</div>
+        </section>
+
         <div class="dialog-actions account-character-name-actions">
-            <button class="dialog-button" :disabled="!nameReady" @click="submit">
+            <button v-if="claimClassName" class="dialog-button" @click="claim">
+                <span class="ui-text-gradient--button-state">{{ t('login.accountCharacterNameClaimConfirm') }}</span>
+            </button>
+            <button v-else class="dialog-button" :disabled="!nameReady" @click="submit">
                 <span class="ui-text-gradient--button-state">{{ t('login.accountCharacterNameContinue') }}</span>
             </button>
-            <button class="dialog-button" @click="goBack">
+            <button class="dialog-button" @click="claimClassName ? cancelClaim() : goBack()">
                 <span class="ui-text-gradient--button-state">{{ t('login.guestCreationBack') }}</span>
             </button>
         </div>
@@ -37,9 +48,11 @@ import { useI18n } from '@/i18n'
 import { Settings } from '@/settings/settings'
 import { AudioManager } from '@/babylon/audio/audioManager'
 
-const props = defineProps<{error: string, initialName: string}>()
+const props = defineProps<{error: string, initialName: string, claimClassName: string | null}>()
 const emit = defineEmits<{
     submit: [name: string]
+    claim: [name: string]
+    cancelClaim: []
     back: []
     input: []
 }>()
@@ -56,6 +69,16 @@ const submit = () => {
     }
     AudioManager.playGuiButtonClick()
     emit('submit', name.value.trim())
+}
+
+const claim = () => {
+    AudioManager.playGuiButtonClick()
+    emit('claim', props.initialName)
+}
+
+const cancelClaim = () => {
+    AudioManager.playGuiButtonClick()
+    emit('cancelClaim')
 }
 
 const goBack = () => {
@@ -104,6 +127,41 @@ const goBack = () => {
     color: rgb(var(--ui-accent-red));
     font-size: 0.9rem;
     text-align: center;
+}
+
+.account-character-name-guest-hint {
+    margin: 12px auto 0;
+    color: rgb(var(--ui-dark));
+    font-size: 0.86rem;
+    font-style: italic;
+    line-height: 1.35;
+    text-align: center;
+}
+
+.account-character-claim-section {
+    margin: 28px auto 0;
+    color: rgb(var(--ui-base));
+    line-height: 1.4;
+    text-align: center;
+}
+
+.account-character-claim-name {
+    --ui-text-gradient-accent: var(--ui-attribute-agility);
+    margin: 6px 0;
+    font-size: 1.4rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.account-character-claim-class {
+    color: rgb(var(--ui-base));
+}
+
+.account-character-claim-description {
+    margin-top: 18px;
+    color: rgb(var(--ui-dark));
+    font-size: 0.9rem;
+    font-style: italic;
 }
 
 .account-character-name-actions {

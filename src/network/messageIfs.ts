@@ -46,6 +46,8 @@ export interface AccountCharacterNameCheckData {
     name: string
     exists: boolean
     message?: string
+    claimable?: boolean
+    className?: string
 }
 
 export type PhysicalWeaponSkillKey = 'swords' | 'axes' | 'maces' | 'polearms' | 'bows'

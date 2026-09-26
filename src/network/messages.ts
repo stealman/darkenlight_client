@@ -73,6 +73,15 @@ export class AccountCharacterCreateMsg implements Message {
     }
 }
 
+export class AccountCharacterClaimMsg implements Message {
+    t: number = 39
+    d: {name: string}
+
+    constructor(name: string) {
+        this.d = {name}
+    }
+}
+
 export class MyCharMoveMsg implements Message {
     t: number = 5
     d: any

@@ -114,7 +114,7 @@ const registrationPasswordReady = computed(() => registrationPassword.value.leng
 const registrationPasswordsMatch = computed(() => registrationPasswordConfirmation.value.length > 0 && registrationPassword.value === registrationPasswordConfirmation.value)
 const canRegister = computed(() => registrationEmailReady.value && registrationPasswordReady.value && registrationPasswordsMatch.value && !registrationSubmitting.value)
 
-const emit = defineEmits(['guest-login-check'])
+const emit = defineEmits(['login-requested'])
 const { t } = useI18n()
 
 onMounted(() => {
@@ -153,9 +153,10 @@ const doLogin = () => {
 
     if (accountLoginReady.value && accountPasswordReady.value) {
         Connector.sendLoginRequest(form.login, form.password)
+        emit('login-requested')
     } else if (guestLoginReady.value) {
         Connector.checkGuestCharacterName(form.charName)
-        emit('guest-login-check')
+        emit('login-requested')
     } else {
         alert(t('login.missingCredentials'))
     }
