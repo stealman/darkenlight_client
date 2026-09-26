@@ -82,8 +82,8 @@
                             </label>
                         </div>
                         <div class="model-render-actions">
-                            <button class="dialog-button model-render-action-button" @click="downloadCanvasPng">Save PNG</button>
-                            <button class="dialog-button model-render-action-button" @click="centerPreviewMesh">Center</button>
+                            <button class="dialog-button model-render-action-button" @click="downloadCanvasPng"><span class="ui-text-gradient--button-state">Save PNG</span></button>
+                            <button class="dialog-button model-render-action-button" @click="centerPreviewMesh"><span class="ui-text-gradient--button-state">Center</span></button>
                         </div>
                     </div>
                     </div>

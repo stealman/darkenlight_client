@@ -52,7 +52,9 @@
 
     <div class="dialog-backdrop" style="background-color: #000;" v-if="gameLoading">
         <div class="dialog-window adaptive">
-            <div class="dialog-header" style="margin-top: 20px;">{{ t('common.loading') }}</div>
+            <div class="dialog-surface">
+                <div class="dialog-header">{{ t('common.loading') }}</div>
+            </div>
         </div>
     </div>
 
@@ -83,7 +85,7 @@
                 <div class="dialog-content death-dialog-content" style="text-align: center;">
                     <div>{{ t('death.description') }}</div>
                     <div class="dialog-actions death-dialog-actions">
-                        <button class="dialog-button" :disabled="respawnDelayRemaining > 0" @click="MyPlayer.requestRespawn()">{{ t('death.respawn') }}</button>
+                        <button class="dialog-button" :disabled="respawnDelayRemaining > 0" @click="MyPlayer.requestRespawn()"><span class="ui-text-gradient--button-state">{{ t('death.respawn') }}</span></button>
                     </div>
                     <div class="death-dialog-countdown">
                         {{ respawnDelayRemaining > 0
@@ -97,12 +99,14 @@
 
     <div class="dialog-backdrop" v-if="displayRestartPrompt" @click.self="displayRestartPrompt = false">
         <div class="dialog-window adaptive">
-            <div class="dialog-header" style="margin-top: 20px;">{{ t('app.restartGame') }}</div>
-            <div class="dialog-content" style="text-align: center;">
-                {{ t('app.restartPrompt') }}
-                <div class="dialog-actions" style="margin-top: 20px;">
-                    <button class="dialog-button" @click="reloadPage">{{ t('common.restart') }}</button>
-                    <button class="dialog-button" @click="displayRestartPrompt = false">{{ t('common.later') }}</button>
+            <div class="dialog-surface">
+                <div class="dialog-header">{{ t('app.restartGame') }}</div>
+                <div class="dialog-content dialog-content--modal">
+                    {{ t('app.restartPrompt') }}
+                    <div class="dialog-actions" style="margin-top: 20px;">
+                        <button class="dialog-button" @click="reloadPage"><span class="ui-text-gradient--button-state">{{ t('common.restart') }}</span></button>
+                        <button class="dialog-button" @click="displayRestartPrompt = false"><span class="ui-text-gradient--button-state">{{ t('common.later') }}</span></button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -117,7 +121,7 @@
 
                     <div style="margin-top: 5vh;">{{ t('app.errorRestartQuestion') }}</div>
                     <div class="dialog-actions" style="margin-top: 20px;">
-                        <button class="dialog-button" @click="reloadPage">{{ t('common.restart') }}</button>
+                        <button class="dialog-button" @click="reloadPage"><span class="ui-text-gradient--button-state">{{ t('common.restart') }}</span></button>
                     </div>
                 </div>
             </div>

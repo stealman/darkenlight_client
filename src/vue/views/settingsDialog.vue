@@ -247,16 +247,18 @@
 
         <div v-if="resetConfirmationVisible" class="dialog-backdrop settings-reset-confirm-backdrop" @click.self="resetConfirmationVisible = false">
             <div class="dialog-window adaptive">
-                <div class="dialog-header">{{ t('settings.restoreDefaultsTitle') }}</div>
-                <div class="dialog-content settings-reset-confirm-content">
-                    {{ t('settings.restoreDefaultsDescription') }}
-                    <div class="dialog-actions" style="margin-top: 20px">
-                        <button class="dialog-button" @click="restoreDefaultSettings">
-                            <span class="ui-text-gradient--button-state">{{ t('settings.restoreDefaultsConfirm') }}</span>
-                        </button>
-                        <button class="dialog-button" @click="resetConfirmationVisible = false">
-                            <span class="ui-text-gradient--button-state">{{ t('settings.restoreDefaultsCancel') }}</span>
-                        </button>
+                <div class="dialog-surface">
+                    <div class="dialog-header">{{ t('settings.restoreDefaultsTitle') }}</div>
+                    <div class="dialog-content dialog-content--modal settings-reset-confirm-content">
+                        {{ t('settings.restoreDefaultsDescription') }}
+                        <div class="dialog-actions" style="margin-top: 20px">
+                            <button class="dialog-button" @click="restoreDefaultSettings">
+                                <span class="ui-text-gradient--button-state">{{ t('settings.restoreDefaultsConfirm') }}</span>
+                            </button>
+                            <button class="dialog-button" @click="resetConfirmationVisible = false">
+                                <span class="ui-text-gradient--button-state">{{ t('settings.restoreDefaultsCancel') }}</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -559,6 +561,7 @@ watch(
 
 .settings-reset-confirm-content {
     max-width: 440px;
+    margin: 0 auto;
     text-align: center;
 }
 </style>

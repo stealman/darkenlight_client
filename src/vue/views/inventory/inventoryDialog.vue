@@ -60,7 +60,7 @@
             <div class="dialog-window adaptive consumable-bind-dialog">
                 <div class="dialog-surface">
                     <div class="dialog-content">Stiskni požadované akční tlačítko nebo F1–F10.</div>
-                    <button class="dialog-button" type="button" @click="cancelConsumableBinding">Zrušit</button>
+                    <button class="dialog-button" type="button" @click="cancelConsumableBinding"><span class="ui-text-gradient--button-state">Zrušit</span></button>
                 </div>
             </div>
         </div>

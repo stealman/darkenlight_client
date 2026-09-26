@@ -35,7 +35,7 @@
                     </label>
                 </template>
 
-                <button class="dialog-button item-creation-create-button" :disabled="availableCodebookItems.length === 0" @click="createItem">CREATE</button>
+                <button class="dialog-button item-creation-create-button" :disabled="availableCodebookItems.length === 0" @click="createItem"><span class="ui-text-gradient--button-state">CREATE</span></button>
             </div>
         </div>
     </div>

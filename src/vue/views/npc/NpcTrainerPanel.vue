@@ -25,7 +25,7 @@
                             <img src="/images/icons/emerald.png" alt="Emerald" />
                         </span>
                         <button class="dialog-button npc-trainer-action-button" @click.stop="emit('learn-skill', skill.key, $event)">
-                            {{ t('vendor.learnSkill') }}
+                            <span class="ui-text-gradient--button-state">{{ t('vendor.learnSkill') }}</span>
                         </button>
                     </div>
                 </div>

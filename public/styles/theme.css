@@ -168,6 +168,12 @@
     line-height: 1.5;
 }
 
+.dialog-content--modal {
+    box-sizing: border-box;
+    padding: 12px 18px 18px;
+    text-align: center;
+}
+
 /* buttons */
 .dialog-actions {
     display: flex;
@@ -208,7 +214,7 @@
 }
 
 .dialog-button:not(:disabled):hover {
-    background-image: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url('/images/gui/bck_stone1.png');
+    background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('/images/gui/bck_stone1.png');
     background-attachment: fixed;
     border: 2px solid transparent;
     border-top: 2px solid rgba(0, 0, 0, 0.1);

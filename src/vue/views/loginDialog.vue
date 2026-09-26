@@ -58,7 +58,7 @@
         </div>
 
         <div class="dialog-actions" style="margin-top: 16px; padding-bottom: 4px;">
-            <button class="dialog-button" @click="doLogin()">{{ t('login.submit') }}</button>
+            <button class="dialog-button" @click="doLogin()"><span class="ui-text-gradient--button-state">{{ t('login.submit') }}</span></button>
         </div>
     </GameDialog>
 </template>

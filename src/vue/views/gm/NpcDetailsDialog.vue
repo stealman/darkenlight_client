@@ -79,14 +79,14 @@
                     <option value="">Add feature</option>
                     <option v-for="featureType in availableFeatureTypes" :key="featureType.value" :value="featureType.value">{{ featureType.label }}</option>
                 </select>
-                <button class="dialog-button" :disabled="!featureTypeToAdd" @click="addFeature">Add</button>
+                <button class="dialog-button" :disabled="!featureTypeToAdd" @click="addFeature"><span class="ui-text-gradient--button-state">Add</span></button>
             </div>
 
             <div class="npc-features-list">
             <div v-for="(feature, index) in features" :key="feature.type" class="npc-feature">
                 <div class="npc-feature-heading">
                     <span>{{ featureLabels[feature.type] }}</span>
-                    <button class="dialog-button" @click="removeFeature(index)">Remove</button>
+                    <button class="dialog-button" @click="removeFeature(index)"><span class="ui-text-gradient--button-state">Remove</span></button>
                 </div>
 
                 <template v-if="feature.type === 'vendor' || feature.type === 'repairer'">
@@ -112,7 +112,7 @@
                                     <option :value="null">Add individual weapon</option>
                                     <option v-for="option in vendorIndividualItemOptions.weapons" :key="option.codebookId" :value="option.codebookId">{{ option.label }}</option>
                                 </select>
-                                <button class="dialog-button" :disabled="vendorItemSelections.weapons === null" @click="addVendorIndividualItem(feature, 'weapons')">Add</button>
+                                <button class="dialog-button" :disabled="vendorItemSelections.weapons === null" @click="addVendorIndividualItem(feature, 'weapons')"><span class="ui-text-gradient--button-state">Add</span></button>
                             </div>
                             <div v-if="feature.settings.individualItems.weapons.length" class="npc-vendor-item-list">
                                 <button v-for="itemId in feature.settings.individualItems.weapons" :key="itemId" class="npc-vendor-item-chip" @click="removeVendorIndividualItem(feature, 'weapons', itemId)">{{ getVendorIndividualItemLabel('weapons', itemId) }} ×</button>
@@ -135,7 +135,7 @@
                                     <option :value="null">Add individual bow</option>
                                     <option v-for="option in vendorIndividualItemOptions.bows" :key="option.codebookId" :value="option.codebookId">{{ option.label }}</option>
                                 </select>
-                                <button class="dialog-button" :disabled="vendorItemSelections.bows === null" @click="addVendorIndividualItem(feature, 'bows')">Add</button>
+                                <button class="dialog-button" :disabled="vendorItemSelections.bows === null" @click="addVendorIndividualItem(feature, 'bows')"><span class="ui-text-gradient--button-state">Add</span></button>
                             </div>
                             <div v-if="feature.settings.individualItems.bows.length" class="npc-vendor-item-list">
                                 <button v-for="itemId in feature.settings.individualItems.bows" :key="itemId" class="npc-vendor-item-chip" @click="removeVendorIndividualItem(feature, 'bows', itemId)">{{ getVendorIndividualItemLabel('bows', itemId) }} ×</button>
@@ -158,7 +158,7 @@
                                     <option :value="null">Add individual metal armor</option>
                                     <option v-for="option in vendorIndividualItemOptions.metalArmor" :key="option.codebookId" :value="option.codebookId">{{ option.label }}</option>
                                 </select>
-                                <button class="dialog-button" :disabled="vendorItemSelections.metalArmor === null" @click="addVendorIndividualItem(feature, 'metalArmor')">Add</button>
+                                <button class="dialog-button" :disabled="vendorItemSelections.metalArmor === null" @click="addVendorIndividualItem(feature, 'metalArmor')"><span class="ui-text-gradient--button-state">Add</span></button>
                             </div>
                             <div v-if="feature.settings.individualItems.metalArmor.length" class="npc-vendor-item-list">
                                 <button v-for="itemId in feature.settings.individualItems.metalArmor" :key="itemId" class="npc-vendor-item-chip" @click="removeVendorIndividualItem(feature, 'metalArmor', itemId)">{{ getVendorIndividualItemLabel('metalArmor', itemId) }} ×</button>
@@ -174,7 +174,7 @@
                                     <option :value="null">No leather armor available</option>
                                     <option v-for="option in vendorIndividualItemOptions.leatherArmor" :key="option.codebookId" :value="option.codebookId">{{ option.label }}</option>
                                 </select>
-                                <button class="dialog-button" :disabled="vendorItemSelections.leatherArmor === null" @click="addVendorIndividualItem(feature, 'leatherArmor')">Add</button>
+                                <button class="dialog-button" :disabled="vendorItemSelections.leatherArmor === null" @click="addVendorIndividualItem(feature, 'leatherArmor')"><span class="ui-text-gradient--button-state">Add</span></button>
                             </div>
                             <div v-if="feature.settings.individualItems.leatherArmor.length" class="npc-vendor-item-list">
                                 <button v-for="itemId in feature.settings.individualItems.leatherArmor" :key="itemId" class="npc-vendor-item-chip" @click="removeVendorIndividualItem(feature, 'leatherArmor', itemId)">{{ getVendorIndividualItemLabel('leatherArmor', itemId) }} ×</button>
@@ -190,7 +190,7 @@
                                     <option :value="null">Add individual resource</option>
                                     <option v-for="option in vendorIndividualItemOptions.resources" :key="option.codebookId" :value="option.codebookId">{{ option.label }}</option>
                                 </select>
-                                <button class="dialog-button" :disabled="vendorItemSelections.resources === null" @click="addVendorIndividualItem(feature, 'resources')">Add</button>
+                                <button class="dialog-button" :disabled="vendorItemSelections.resources === null" @click="addVendorIndividualItem(feature, 'resources')"><span class="ui-text-gradient--button-state">Add</span></button>
                             </div>
                             <div v-if="feature.settings.individualItems.resources.length" class="npc-vendor-item-list">
                                 <button v-for="itemId in feature.settings.individualItems.resources" :key="itemId" class="npc-vendor-item-chip" @click="removeVendorIndividualItem(feature, 'resources', itemId)">{{ getVendorIndividualItemLabel('resources', itemId) }} ×</button>
@@ -211,9 +211,9 @@
             </div>
 
             <div class="dialog-actions">
-                <button class="dialog-button" @click="saveDetails">Save</button>
-                <button class="dialog-button npc-delete-button" @click="deleteDetails">Delete</button>
-                <button class="dialog-button" @click="closeDialog">Cancel</button>
+                <button class="dialog-button" @click="saveDetails"><span class="ui-text-gradient--button-state">Save</span></button>
+                <button class="dialog-button npc-delete-button" @click="deleteDetails"><span class="ui-text-gradient--button-state">Delete</span></button>
+                <button class="dialog-button" @click="closeDialog"><span class="ui-text-gradient--button-state">Cancel</span></button>
             </div>
         </div>
     </GameDialog>
