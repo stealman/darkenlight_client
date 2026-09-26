@@ -8,6 +8,7 @@
                     :class="[
                         'inventory-item-slot',
                         getDurabilityStatus(slotIndex - 1) ? `item-durability--${getDurabilityStatus(slotIndex - 1)}` : null,
+                        { 'inventory-item-slot--tooltip-active': tooltipActiveSlotIndex === slotIndex - 1 },
                     ]"
                     @pointerdown="onSlotPointerDown(slotIndex - 1, $event)"
                     @pointermove="onSlotPointerMove($event)"
@@ -52,6 +53,7 @@ defineProps<{
     getStackCount: (index: number) => number | null
     getDurabilityStatus: (index: number) => string | null
     getDurabilityPercent: (index: number) => number | null
+    tooltipActiveSlotIndex?: number | null
 }>()
 
 const TAP_MOVE_TOLERANCE = 8

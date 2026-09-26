@@ -4,7 +4,7 @@
             <div
                 v-for="slot in equipSlots"
                 :key="slot.key"
-                :class="['equip-slot', slot.className, slot.durabilityStatus ? `item-durability--${slot.durabilityStatus}` : null]"
+                :class="['equip-slot', slot.className, slot.durabilityStatus ? `item-durability--${slot.durabilityStatus}` : null, { 'equip-slot--tooltip-active': activeSlotKey === slot.key }]"
                 @pointerdown="emit('slot-pointerdown', slot.key, $event)"
             >
                 <div v-if="!slot.image" v-html="slot.emptyHtml"></div>
@@ -74,11 +74,13 @@ withDefaults(defineProps<{
     weaponSetupPressed?: Record<WeaponSetupType, boolean>
     showWeaponSetups?: boolean
     fullWidth?: boolean
+    activeSlotKey?: string | null
 }>(), {
     weaponSetupImages: () => ({primary: '', secondary: ''}),
     weaponSetupPressed: () => ({primary: false, secondary: false}),
     showWeaponSetups: true,
     fullWidth: false,
+    activeSlotKey: null,
 })
 
 const emit = defineEmits([

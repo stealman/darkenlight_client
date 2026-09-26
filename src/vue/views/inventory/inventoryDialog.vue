@@ -11,6 +11,7 @@
             <div class="inventory-layout">
                 <EquipSet
                     :equip-slots="equipSlots"
+                    :active-slot-key="activeEquipTooltipSlot"
                     :weapon-setup-images="weaponSetupImages"
                     :weapon-setup-pressed="weaponSetupPressed"
                     @slot-pointerdown="handleSlotPointerDown"
@@ -22,6 +23,7 @@
 
                 <Backpack
                     :slot-count="inventorySlotCount"
+                    :tooltip-active-slot-index="activeInventoryTooltipIndex"
                     :slot-images="inventorySlotImages"
                     :get-markers="getWeaponSetupMarkersForInventorySlot"
                     :get-stack-count="getStackCountForInventorySlot"
@@ -170,6 +172,20 @@ const itemInfoOverlay = ref({
     inventoryIndex: null,
     sourceType: null,
     sourceKey: null,
+})
+
+const activeInventoryTooltipIndex = computed(() => {
+    const sourceKey = itemInfoOverlay.value.sourceKey
+    return itemInfoOverlay.value.visible && itemInfoOverlay.value.sourceType === 'inventory' && Number.isInteger(sourceKey)
+        ? sourceKey
+        : null
+})
+
+const activeEquipTooltipSlot = computed(() => {
+    const sourceKey = itemInfoOverlay.value.sourceKey
+    return itemInfoOverlay.value.visible && itemInfoOverlay.value.sourceType === 'equip' && typeof sourceKey === 'string'
+        ? sourceKey
+        : null
 })
 
 const hideItemInfoOverlay = () => {

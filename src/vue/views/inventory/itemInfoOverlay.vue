@@ -2,7 +2,9 @@
     <div
         ref="overlayRootRef"
         class="inventory-item-overlay"
-        :class="{ 'inventory-item-overlay--equipment': equipmentCategoryLabel || itemInfo.armorStats }"
+        :class="{
+            'inventory-item-overlay--equipment': equipmentCategoryLabel || itemInfo.armorStats,
+        }"
         :style="{
             left: `${x}px`,
             top: `${y}px`,

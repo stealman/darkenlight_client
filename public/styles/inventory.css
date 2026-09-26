@@ -257,6 +257,45 @@
     z-index: 3;
 }
 
+.inventory-item-slot--tooltip-active::after,
+.equip-slot--tooltip-active::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 2px solid rgba(var(--ui-base), 0.95);
+    box-shadow: inset 0 0 5px rgba(var(--ui-base), 0.45), 0 0 5px rgba(var(--ui-base), 0.5);
+    pointer-events: none;
+    z-index: 4;
+    animation: inventory-tooltip-slot-pulse 1.2s ease-in-out infinite;
+}
+
+.inventory-item-slot--tooltip-active .inventory-item-image,
+.equip-slot--tooltip-active .equip-item-image {
+    animation: inventory-tooltip-item-image-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes inventory-tooltip-slot-pulse {
+    0%, 100% {
+        opacity: 0.4;
+        box-shadow: inset 0 0 3px rgba(var(--ui-base), 0.25), 0 0 2px rgba(var(--ui-base), 0.3);
+    }
+
+    50% {
+        opacity: 1;
+        box-shadow: inset 0 0 7px rgba(var(--ui-base), 0.65), 0 0 10px rgba(var(--ui-base), 0.85);
+    }
+}
+
+@keyframes inventory-tooltip-item-image-pulse {
+    0%, 100% {
+        filter: brightness(1) saturate(1);
+    }
+
+    50% {
+        filter: brightness(1.3) saturate(1.06);
+    }
+}
+
 .inventory-item-image {
     width: 80%;
     height: 80%;
@@ -395,7 +434,7 @@
 }
 
 .inventory-item-overlay-name-quantity {
-    color: #9b9b9b;
+    color: rgb(var(--ui-dark));
 }
 
 .inventory-item-overlay-status-row {

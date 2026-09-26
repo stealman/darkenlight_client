@@ -53,7 +53,7 @@
                         @click.stop="showItemDetails(item, $event)"
                         @keydown.enter="showItemDetails(item, $event)"
                         >
-                        <img class="npc-vendor-item-icon" :src="getItemImage(item)" :alt="getItemName(item)" />
+                        <img :class="['npc-vendor-item-icon', { 'npc-vendor-item-icon--tooltip-active': detailItem?.tp === item.tp && detailItem?.cb === item.cb }]" :src="getItemImage(item)" :alt="getItemName(item)" />
                         <span class="npc-vendor-item-name">
                             <span class="ui-text-gradient">{{ getItemName(item) }}</span>
                             <span v-if="item.tp === 'R'" class="npc-vendor-item-owned">({{ getOwnedResourceCount(item) }})</span>
@@ -67,8 +67,8 @@
                                 <span class="ui-text-gradient--button-state">{{ item.tp === 'R' ? '×1' : t('vendor.buy') }}</span>
                             </button>
                             <template v-if="item.tp === 'R'">
-                                <button class="dialog-button npc-vendor-quick-buy-button" @click.stop="buyItem(item, 5, $event)">×5</button>
-                                <button class="dialog-button npc-vendor-quick-buy-button" @click.stop="buyItem(item, 25, $event)">×25</button>
+                                <button class="dialog-button npc-vendor-quick-buy-button" @click.stop="buyItem(item, 5, $event)"><span class="ui-text-gradient--button-state">×5</span></button>
+                                <button class="dialog-button npc-vendor-quick-buy-button" @click.stop="buyItem(item, 25, $event)"><span class="ui-text-gradient--button-state">×25</span></button>
                             </template>
                         </div>
                     </div>
@@ -109,7 +109,7 @@
                             @keydown.enter="showRepairItemDetails(repairItem.item, $event)"
                         >
                             <div :class="['npc-repairer-item-icon', repairItem.durabilityStatus ? `item-durability--${repairItem.durabilityStatus}` : null]">
-                                <img class="npc-vendor-item-icon" :src="getRepairItemImage(repairItem.item)" :alt="repairItem.item.name ?? ''" />
+                                <img :class="['npc-vendor-item-icon', { 'npc-vendor-item-icon--tooltip-active': repairItemInfoOverlay.visible && repairItemInfoOverlay.sourceItemId === repairItem.item.id }]" :src="getRepairItemImage(repairItem.item)" :alt="repairItem.item.name ?? ''" />
                             </div>
                             <span class="npc-vendor-item-name"><span class="ui-text-gradient">{{ repairItem.item.name }}</span></span>
                             <span :class="['npc-repairer-durability', repairItem.durabilityStatus ? `item-durability--${repairItem.durabilityStatus}` : null]">
@@ -139,7 +139,7 @@
                             @keydown.enter="showRepairItemDetails(repairItem.item, $event)"
                         >
                         <div :class="['npc-repairer-item-icon', repairItem.durabilityStatus ? `item-durability--${repairItem.durabilityStatus}` : null]">
-                            <img class="npc-vendor-item-icon" :src="getRepairItemImage(repairItem.item)" :alt="repairItem.item.name ?? ''" />
+                            <img :class="['npc-vendor-item-icon', { 'npc-vendor-item-icon--tooltip-active': repairItemInfoOverlay.visible && repairItemInfoOverlay.sourceItemId === repairItem.item.id }]" :src="getRepairItemImage(repairItem.item)" :alt="repairItem.item.name ?? ''" />
                         </div>
                         <span class="npc-vendor-item-name"><span class="ui-text-gradient">{{ repairItem.item.name }}</span></span>
                         <span :class="['npc-repairer-durability', repairItem.durabilityStatus ? `item-durability--${repairItem.durabilityStatus}` : null]">
@@ -797,13 +797,21 @@ defineExpose({openDialog})
 .npc-healer-service-row:disabled { cursor: default; opacity: 0.55; }
 .npc-healer-service-row:disabled:hover { background: transparent; }
 .npc-vendor-item-icon { width: 40px; height: 40px; object-fit: contain; }
+.npc-vendor-item-icon--tooltip-active { animation: inventory-tooltip-item-image-pulse 1.2s ease-in-out infinite; }
 .npc-vendor-item-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; text-align: left; font-size: 14px; font-weight: 700; }
 .npc-vendor-item-owned { margin-left: 4px; color: rgb(var(--ui-dark)); font-weight: 400; white-space: nowrap; }
 .npc-vendor-item-price { display: inline-flex; align-items: center; gap: 4px; color: #7ef58e; white-space: nowrap; font-size: 15px; }
 .npc-vendor-item-price img { width: 19px; height: 19px; object-fit: contain; }
+.npc-vendor-catalog-list .npc-vendor-item-row:hover .npc-vendor-item-price { transform-origin: center; animation: npc-vendor-price-pulse 1.2s ease-in-out infinite; }
 .npc-vendor-buy-actions { display: flex; justify-content: flex-end; gap: 5px; }
 .npc-vendor-buy-button, .npc-vendor-quick-buy-button { min-width: 0; white-space: nowrap; }
 .npc-vendor-quick-buy-button { min-width: 42px; }
+
+@keyframes npc-vendor-price-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.25); }
+}
+
 .npc-use-empty-state { display: flex; flex: 1 1 auto; align-items: center; justify-content: center; color: rgb(var(--ui-dark)); font-size: 14px; }
 .npc-vendor-item-overlay { position: fixed; z-index: 2100; width: 270px; box-sizing: border-box; padding: 10px; border: 1px solid rgb(var(--ui-dark)); background: rgba(15, 11, 8, 0.96); color: rgb(var(--ui-base)); text-align: left; box-shadow: 0 10px 22px rgba(0, 0, 0, 0.65); }
 .npc-vendor-overlay-name { font-size: 12px; font-weight: 700; }

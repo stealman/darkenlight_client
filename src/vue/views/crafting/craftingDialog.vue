@@ -27,7 +27,11 @@
                                         @pointerdown.stop
                                         @click.stop="onResultIconClick(recipe.item, index, $event)"
                                     >
-                                        <img class="crafting-result-icon" :src="resolveItemImage(recipe.item)" :alt="resolveItemName(recipe.item)" />
+                                        <img
+                                            :class="['crafting-result-icon', { 'crafting-result-icon--selected': selectedRecipeIndex === index }]"
+                                            :src="resolveItemImage(recipe.item)"
+                                            :alt="resolveItemName(recipe.item)"
+                                        />
                                     </button>
 
                                     <div class="crafting-result-summary">
@@ -58,21 +62,38 @@
                                             />
                                             <span
                                                 class="crafting-ingredient-name"
-                                                :class="{ 'crafting-ingredient-name-missing': Number(ingredient.inventoryQty ?? 0) < Number(ingredient.qty ?? 0) }"
+                                                :class="{
+                                                    'crafting-ingredient-name-missing': isIngredientQuantityMissing(ingredient, index),
+                                                    'ui-text-gradient': !isIngredientQuantityMissing(ingredient, index),
+                                                }"
                                             >
                                                 {{ resolveItemName(ingredient.res) }}
                                             </span>
-                                            <span class="crafting-ingredient-qty">x{{ ingredient.qty }}</span>
+                                            <span
+                                                :class="[
+                                                    'crafting-ingredient-qty',
+                                                    'ui-text-gradient',
+                                                    {
+                                                        'crafting-ingredient-qty--selected': selectedRecipeIndex === index,
+                                                        'ui-text-gradient--accent': selectedRecipeIndex === index,
+                                                    },
+                                                ]"
+                                            >
+                                                {{ getDisplayedIngredientQuantity(ingredient, index) }}
+                                            </span>
                                             <span
                                                 class="crafting-ingredient-owned"
-                                                :class="{ 'crafting-ingredient-owned-missing': Number(ingredient.inventoryQty ?? 0) < Number(ingredient.qty ?? 0) }"
+                                                :class="{ 'crafting-ingredient-owned-missing': isIngredientQuantityMissing(ingredient, index) }"
                                             >
                                                 ({{ ingredient.inventoryQty }})
                                             </span>
                                         </div>
                                     </div>
-                                    <div v-if="Number(recipe.price) > 0" class="crafting-ingredient-chip crafting-price-chip">
-                                        <span class="crafting-price-value ui-emerald-text-gradient">{{ recipe.price }}</span>
+                                    <div
+                                        v-if="Number(recipe.price) > 0"
+                                        :class="['crafting-ingredient-chip', 'crafting-price-chip', { 'crafting-price-chip--selected': selectedRecipeIndex === index }]"
+                                    >
+                                        <span class="crafting-price-value ui-emerald-text-gradient">{{ getDisplayedRecipePrice(recipe, index) }}</span>
                                         <img class="crafting-price-icon" src="/images/icons/emerald.png" alt="Emerald" />
                                     </div>
                                 </div>
@@ -306,6 +327,29 @@ const getRecipeCraftableQty = (recipe: CraftingRecipeWithCraftableQty) => {
     return Number.isFinite(craftableQty) && craftableQty >= 0 ? craftableQty : 0
 }
 
+const getDisplayedRecipePrice = (recipe: CraftingRecipe, recipeIndex: number) => {
+    const price = Number(recipe.price)
+    if (!Number.isFinite(price)) {
+        return recipe.price
+    }
+
+    const quantity = selectedRecipeIndex.value === recipeIndex ? selectedRecipeQuantity.value : 1
+    return price * quantity
+}
+
+const getDisplayedIngredientQuantity = (ingredient: CraftingIngredientWithInventoryQty, recipeIndex: number) => {
+    const quantity = Number(ingredient.qty)
+    if (!Number.isFinite(quantity)) {
+        return ingredient.qty
+    }
+
+    const multiplier = selectedRecipeIndex.value === recipeIndex ? selectedRecipeQuantity.value : 1
+    return quantity * multiplier
+}
+
+const isIngredientQuantityMissing = (ingredient: CraftingIngredientWithInventoryQty, recipeIndex: number) =>
+    Number(ingredient.inventoryQty ?? 0) < Number(getDisplayedIngredientQuantity(ingredient, recipeIndex))
+
 const getQuantityStep = (quantity: number) => {
     if (!Number.isFinite(quantity) || quantity <= 100) {
         return 1
@@ -331,6 +375,10 @@ const selectedRecipeMinQuantity = computed(() => 1)
 const selectRecipe = (recipeIndex: number) => {
     if (!recipes.value[recipeIndex]) {
         return
+    }
+
+    if (selectedRecipeIndex.value !== recipeIndex) {
+        hideItemInfoOverlay()
     }
 
     selectedRecipeIndex.value = recipeIndex
@@ -555,17 +603,24 @@ defineExpose({
 
 .crafting-result-icon-button:hover { background: transparent; }
 .crafting-result-icon { width: 40px; height: 40px; object-fit: contain; pointer-events: none; }
+.crafting-result-icon--selected { animation: inventory-tooltip-item-image-pulse 1.2s ease-in-out infinite; }
 .crafting-ingredients { display: flex; flex-wrap: wrap; gap: 5px 10px; align-items: center; justify-content: center; }
 .crafting-ingredient-chip { display: inline-flex; align-items: center; gap: 5px; color: rgb(var(--ui-base)); }
 .crafting-ingredient-icon { width: 22px; height: 22px; object-fit: contain; flex: 0 0 auto; }
 .crafting-price-chip { justify-self: end; gap: 4px; }
+.crafting-price-chip--selected { transform-origin: center; animation: crafting-selected-price-pulse 1.2s ease-in-out infinite; }
 .crafting-price-value { font-size: 15px; }
 .crafting-price-icon { width: 19px; height: 19px; object-fit: contain; flex: 0 0 auto; }
 .crafting-ingredient-name { font-size: 13px; line-height: 1.15; }
-.crafting-ingredient-qty,
+.crafting-ingredient-qty { font-size: 15px; font-weight: 700; text-align: center; }
+.crafting-ingredient-qty--selected { --ui-text-gradient-accent: var(--ui-accent-red); transform-origin: center; animation: crafting-selected-price-pulse 1.2s ease-in-out infinite; }
 .crafting-selection-boundary,
 .crafting-selection-current { font-weight: 700; color: rgb(var(--ui-base)); text-align: center; }
-.crafting-ingredient-qty,
+
+@keyframes crafting-selected-price-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.25); }
+}
 .crafting-ingredient-owned,
 .crafting-selection-boundary { font-size: 12px; }
 .crafting-ingredient-owned { color: rgb(var(--ui-dark)); }

@@ -1,5 +1,5 @@
 <template>
-    <div class="bank-panel" @click.self="hideItemInfoOverlay">
+    <div ref="bankPanelRef" class="bank-panel" @click.self="hideItemInfoOverlay">
         <div class="bank-column">
             <div class="bank-column-title">
                 <button class="dialog-button bank-mode-button" :class="{selected: leftMode === 'equipment'}" @click="setLeftMode('equipment')">
@@ -12,6 +12,7 @@
             <Backpack
                 v-if="leftMode === 'inventory'"
                 :slot-count="inventorySlotCount"
+                :tooltip-active-slot-index="activeInventoryTooltipIndex"
                 :column-count="4"
                 :slot-images="inventorySlotImages"
                 :get-markers="emptyMarkers"
@@ -24,6 +25,7 @@
             <EquipSet
                 v-else
                 :equip-slots="equipSlots"
+                :active-slot-key="activeEquipTooltipSlot"
                 :show-weapon-setups="false"
                 @slot-pointerdown="onEquipPointerDown"
             />
@@ -36,6 +38,7 @@
             <Backpack
                 class="bank-storage-inventory"
                 :slot-count="BankManager.capacity"
+                :tooltip-active-slot-index="activeBankTooltipIndex"
                 :column-count="4"
                 :slot-images="bankSlotImages"
                 :get-markers="emptyMarkers"
@@ -60,12 +63,13 @@
             @split-item="splitItem"
             @merge-item="mergeItem"
             @create-camp="createCamp"
+            @content-resized="onItemInfoOverlayContentResized"
         />
     </div>
 </template>
 
 <script setup lang="ts">
-import {computed, onMounted, onUnmounted, ref} from 'vue'
+import {computed, nextTick, onMounted, onUnmounted, ref} from 'vue'
 import Backpack from '@/vue/views/inventory/backpack.vue'
 import ItemInfoOverlay from '@/vue/views/inventory/itemInfoOverlay.vue'
 import {BankManager} from '@/data/bankManager'
@@ -83,10 +87,21 @@ import {getEquipSetArmorSvg, getEquipSetArmsSvg, getEquipSetHandSvg, getEquipSet
 const props = defineProps<{npcId: number}>()
 const MIN_INVENTORY_SLOT_COUNT = 24
 const BANK_LEFT_MODE_STORAGE_KEY = 'DARKENLIGHT_BANK_LEFT_MODE'
+const OVERLAY_PADDING = 4
 const actionButtonSize = ref(Settings.actionButtonSize)
+const bankPanelRef = ref<HTMLElement | null>(null)
 const itemInfoOverlayRef = ref()
 const itemInfoOverlay = ref<any>({visible: false, weaponCategory: null})
 const version = ref(0)
+const activeInventoryTooltipIndex = computed(() => itemInfoOverlay.value.visible && itemInfoOverlay.value.source === 'inventory' && Number.isInteger(itemInfoOverlay.value.index)
+    ? itemInfoOverlay.value.index
+    : null)
+const activeBankTooltipIndex = computed(() => itemInfoOverlay.value.visible && itemInfoOverlay.value.source === 'bank' && Number.isInteger(itemInfoOverlay.value.index)
+    ? itemInfoOverlay.value.index
+    : null)
+const activeEquipTooltipSlot = computed(() => itemInfoOverlay.value.visible && itemInfoOverlay.value.source === 'equip' && typeof itemInfoOverlay.value.slotKey === 'string'
+    ? itemInfoOverlay.value.slotKey
+    : null)
 const getStoredLeftMode = (): 'inventory' | 'equipment' => {
     try {
         return localStorage.getItem(BANK_LEFT_MODE_STORAGE_KEY) === 'equipment' ? 'equipment' : 'inventory'
@@ -141,6 +156,32 @@ const hideItemInfoOverlay = () => {
     itemInfoOverlay.value.visible = false
 }
 
+const clampItemInfoOverlayPosition = () => {
+    const bankPanelRect = bankPanelRef.value?.getBoundingClientRect()
+    const overlayRect = itemInfoOverlayRef.value?.getBoundingClientRect?.()
+    if (!bankPanelRect || !overlayRect) {
+        return
+    }
+
+    const minX = bankPanelRect.left + OVERLAY_PADDING
+    const minY = bankPanelRect.top + OVERLAY_PADDING
+    const maxX = bankPanelRect.right - overlayRect.width - OVERLAY_PADDING
+    const maxY = bankPanelRect.bottom - overlayRect.height - OVERLAY_PADDING
+
+    itemInfoOverlay.value.x = Math.max(minX, Math.min(itemInfoOverlay.value.x, maxX))
+    itemInfoOverlay.value.y = Math.max(minY, Math.min(itemInfoOverlay.value.y, maxY))
+}
+
+const onItemInfoOverlayContentResized = () => {
+    if (!itemInfoOverlay.value.visible) {
+        return
+    }
+
+    nextTick(() => {
+        clampItemInfoOverlayPosition()
+    })
+}
+
 const setLeftMode = (mode: 'inventory' | 'equipment') => {
     if (leftMode.value === mode) return
     leftMode.value = mode
@@ -152,7 +193,7 @@ const setLeftMode = (mode: 'inventory' | 'equipment') => {
     }
 }
 
-const showItemInfoOverlay = (item: any, pointer: {clientX: number, clientY: number}, source: 'inventory' | 'bank', index: number) => {
+const showItemInfoOverlay = (item: any, pointer: {clientX: number, clientY: number}, source: 'inventory' | 'bank' | 'equip', index: number, slotKey: string | null = null) => {
     if (!item) {
         hideItemInfoOverlay()
         return
@@ -167,12 +208,17 @@ const showItemInfoOverlay = (item: any, pointer: {clientX: number, clientY: numb
         y: pointer.clientY,
         source,
         index,
+        slotKey,
         showDropButton: false,
         showSplitButton: item.cbType === 'R',
         showMergeButton: source === 'inventory'
             ? InventoryManager.canMergeResourceItem(item)
-            : BankManager.canMergeResourceItem(item),
+            : source === 'bank' && BankManager.canMergeResourceItem(item),
         showCampButton: source === 'inventory' && ConsumableHelper.isItemCampWood(item),
+    })
+
+    nextTick(() => {
+        clampItemInfoOverlayPosition()
     })
 }
 
@@ -190,7 +236,7 @@ const onBankDoubleClick = (index: number) => {
 }
 const onInventoryPointerDown = createPointerDoubleClickHandler(onInventoryClick, onInventoryDoubleClick)
 const onBankPointerDown = createPointerDoubleClickHandler(onBankClick, onBankDoubleClick)
-const onEquipClick = (slot: string, pointer: {clientX: number, clientY: number}) => showItemInfoOverlay(MyPlayer.myChar?.equipSet?.get(slot), pointer, 'equip' as any, -1)
+const onEquipClick = (slot: string, pointer: {clientX: number, clientY: number}) => showItemInfoOverlay(MyPlayer.myChar?.equipSet?.get(slot), pointer, 'equip', -1, slot)
 const onEquipDoubleClick = (slot: string) => {
     const item = MyPlayer.myChar?.equipSet?.get(slot)
     if (item) NpcInteractionManager.bankAction(props.npcId, 'UNEQUIP_TO_BANK', item.id)
