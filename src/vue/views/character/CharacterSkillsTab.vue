@@ -640,7 +640,7 @@ const formatTrainingTime = (seconds: number) => {
     color: rgb(var(--ui-accent-red));
 }
 
-.skill-maximum-state-class--adept {
+.skill-maximum-state-class--mystic {
     color: rgb(var(--ui-accent-purple));
 }
 

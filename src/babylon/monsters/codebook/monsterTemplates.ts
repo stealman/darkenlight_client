@@ -41,6 +41,11 @@ export class MonsterTemplate {
     }
 
     setAssetContainer (assetContainer: AssetContainer) {
+        // Clones belong to the previous Babylon scene after logout. Never
+        // reuse them when the renderer has created a fresh scene on login.
+        this.clonesAct = []
+        this.clonesInact = []
+        this.clonesToReuse = []
         this.assetContainer = assetContainer
         this.assetContainer.animationGroups[0].pause()
     }

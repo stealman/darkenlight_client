@@ -668,8 +668,12 @@ export const OverlayManager = {
         ctx.fillStyle = 'rgba(0, 0, 0, 0.5)'
         ctx.fillRect(x, y, barWidth, barHeight)
 
-        ctx.fillStyle = 'rgba(240, 210, 90, 0.85)'
-        ctx.fillRect(x + 1, y + 1, (barWidth - 2) * (percent / 100), barHeight - 2)
+        const fillWidth = (barWidth - 2) * (percent / 100)
+        const fillGradient = ctx.createLinearGradient(x + 1, y, x + 1 + fillWidth, y)
+        fillGradient.addColorStop(0, 'rgba(145, 107, 28, 0.82)')
+        fillGradient.addColorStop(1, 'rgba(240, 210, 90, 0.85)')
+        ctx.fillStyle = fillGradient
+        ctx.fillRect(x + 1, y + 1, fillWidth, barHeight - 2)
     },
 
     onResize() {

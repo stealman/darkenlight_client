@@ -300,10 +300,16 @@ export class MonsterModel implements EquipBearer {
     }
 
     removeFromScene() {
-        this.removeFromView()
-        if (this.initialized) {
-            MonsterLoader.monsterTemplates.get(this.template.id)?.freeClone(this.template)
+        this.viewRequested = false
+        this.parent.insideView = false
+        if (!this.initialized) {
+            return
         }
+
+        this.removeFromView()
+        MonsterLoader.monsterTemplates.get(this.template.id)?.freeClone(this.template)
+        this.activeAnims.clear()
+        this.initialized = false
     }
 
     setWeaponTrailEnabled(enabled: boolean) {

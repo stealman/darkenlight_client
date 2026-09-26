@@ -15,10 +15,10 @@
 
         <div v-if="selectedTab === 'newSkills'" class="npc-trainer-skill-list">
             <section v-for="category in trainerNewSkillCategories" :key="category.key" class="npc-trainer-skill-category">
-                <h3 class="npc-trainer-skill-category-title">{{ t(`skills.categories.${category.key}`) }}</h3>
+                <h3 class="npc-trainer-skill-category-title"><span class="ui-text-gradient">{{ t(`skills.categories.${category.key}`) }}</span></h3>
                 <div class="npc-trainer-skill-category-list">
                     <div v-for="skill in category.skills" :key="skill.key" class="npc-trainer-skill-row">
-                        <span class="npc-trainer-skill-name">{{ t(skill.translationKey) }}</span>
+                        <span class="npc-trainer-skill-name"><span class="ui-text-gradient">{{ t(skill.translationKey) }}</span></span>
                         <span class="npc-trainer-skill-description">{{ t(skill.descriptionTranslationKey) }}</span>
                         <span class="npc-trainer-skill-price">
                             <span class="ui-emerald-text-gradient">{{ trainerSkillLearningPrice }}</span>
@@ -176,6 +176,7 @@ const getPromotionRequirementSkillName = (requirement: ClassPromotionRequirement
 .npc-trainer-skill-name { justify-self: start; color: rgb(var(--ui-base)); font-weight: 700; text-align: left; }
 .npc-trainer-skill-description { min-width: 0; color: rgb(var(--ui-dark)); font-size: 12px; line-height: 1.2; text-align: left; }
 .npc-trainer-skill-row:hover { background: rgba(255, 255, 255, 0.06); }
+.npc-trainer-skill-row:hover .npc-trainer-skill-price { transform-origin: center; animation: npc-trainer-price-pulse 1.2s ease-in-out infinite; }
 .npc-trainer-skill-price { display: inline-flex; align-items: center; gap: 4px; color: #7ef58e; white-space: nowrap; font-size: 15px; }
 .npc-trainer-skill-price img { width: 19px; height: 19px; object-fit: contain; }
 .npc-trainer-action-button { padding: 5px 10px; font-size: 0.9rem; line-height: 1; white-space: nowrap; }
@@ -203,5 +204,10 @@ const getPromotionRequirementSkillName = (requirement: ClassPromotionRequirement
         border-color: rgba(var(--ui-accent-blue), 0.68);
         box-shadow: inset 0 0 0 1px rgba(var(--ui-accent-blue), 0.68), inset 0 0 28px rgba(var(--ui-accent-blue), 0.56);
     }
+}
+
+@keyframes npc-trainer-price-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.25); }
 }
 </style>

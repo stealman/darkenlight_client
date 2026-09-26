@@ -64,11 +64,11 @@
                         </span>
                         <div class="npc-vendor-buy-actions" @mouseover="previewVendorPriceFromButton(item, $event)" @mouseleave="clearVendorPricePreview(item)">
                             <button class="dialog-button npc-vendor-buy-button npc-vendor-purchase-button" @mouseenter="previewVendorPrice(item, 1)" @mouseleave="clearVendorPricePreview(item)" @click.stop="buyItem(item, 1, $event)">
-                                <span class="ui-text-gradient--button-state">{{ item.tp === 'R' ? 'Ä‚â€”1' : t('vendor.buy') }}</span>
+                                <span class="ui-text-gradient--button-state">{{ item.tp === 'R' ? '×1' : t('vendor.buy') }}</span>
                             </button>
                             <template v-if="item.tp === 'R'">
-                                <button class="dialog-button npc-vendor-quick-buy-button" @click.stop="buyItem(item, 5, $event)"><span class="ui-text-gradient--button-state">Ä‚â€”5</span></button>
-                                <button class="dialog-button npc-vendor-quick-buy-button" @click.stop="buyItem(item, 25, $event)"><span class="ui-text-gradient--button-state">Ä‚â€”25</span></button>
+                                <button class="dialog-button npc-vendor-quick-buy-button" @click.stop="buyItem(item, 5, $event)"><span class="ui-text-gradient--button-state">×5</span></button>
+                                <button class="dialog-button npc-vendor-quick-buy-button" @click.stop="buyItem(item, 25, $event)"><span class="ui-text-gradient--button-state">×25</span></button>
                             </template>
                         </div>
                     </div>
@@ -370,7 +370,7 @@ const getItemName = (item: NpcVendorCatalogItem) => {
     const key = section ? `items.${section}.${item.name}` : item.name
     const localized = t(key)
     const name = localized === key ? item.name : localized
-    return item.bundleSize && item.bundleSize > 1 ? `${item.bundleSize}Ä‚â€” ${name}` : name
+    return item.bundleSize && item.bundleSize > 1 ? `${item.bundleSize}× ${name}` : name
 }
 const getItemImage = (item: NpcVendorCatalogItem) => item.img ? `/images/items/${item.img}.png` : '/images/icons/buttons/btn_backpack.png'
 const getServiceImage = (service: NpcHealerService) => `/${service.img}.png`

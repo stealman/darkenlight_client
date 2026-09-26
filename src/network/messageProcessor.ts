@@ -30,6 +30,8 @@ import {
     CraftingInitMenuData,
     GMItemCodebookItem,
     GMNpcDetailsData,
+    GuestCharacterNameCheckData,
+    PlayerRegistrationData,
     NpcUseData,
     BankStateData, SkillSetTO,
 } from '@/network/messageIfs'
@@ -115,6 +117,8 @@ export const MessageProcessor = {
                 case 62: this.processGMWorlds(msg.d); break
                 case 63: this.processGMItemCodebook(msg.d); break
                 case 64: this.processCharacterSkillSetChange(msg.d); break
+                case 67: this.processGuestCharacterNameCheck(msg.d); break
+                case 68: this.processPlayerRegistration(msg.d); break
                 case 1003: this.processGMAllSpawns(msg.d); break
                 case 1004: this.processGMSpawnChange(msg.d); break
                 default:
@@ -126,8 +130,7 @@ export const MessageProcessor = {
 
     async loginResponse(data) {
         if (data.message) {
-            document.getElementById("dialog-error-content")!.innerText = data.message
-            document.getElementById("dialog-error")!.style.display = 'flex'
+            window.dispatchEvent(new CustomEvent('game:login-error', {detail: {message: data.message}}))
             window.dispatchEvent(new Event('game:login-failed'))
         } else if (data.char) {
             await GameManager.startGame(data.char)
@@ -146,6 +149,14 @@ export const MessageProcessor = {
 
     async addCharacter(data) {
         await CharacterManager.addCharacter(data)
+    },
+
+    processPlayerRegistration(data: PlayerRegistrationData) {
+        window.dispatchEvent(new CustomEvent('game:player-registration', {detail: data}))
+    },
+
+    processGuestCharacterNameCheck(data: GuestCharacterNameCheckData) {
+        window.dispatchEvent(new CustomEvent('game:guest-character-name-check', {detail: data}))
     },
 
     async addNpc(data) {
@@ -299,8 +310,7 @@ export const MessageProcessor = {
 
     processLoggedFromAnotherDevice() {
         console.log('Logged from another device')
-        document.getElementById("dialog-error-content")!.innerText = 'Byli jste odhlášeni, protože jste se přihlásili z jiného zařízení.'
-        document.getElementById("dialog-error")!.style.display = 'flex'
+        window.dispatchEvent(new CustomEvent('game:application-error', {detail: {message: 'Byli jste odhlášeni, protože jste se přihlásili z jiného zařízení.'}}))
         window.dispatchEvent(new Event('game:session-ended'))
     },
 

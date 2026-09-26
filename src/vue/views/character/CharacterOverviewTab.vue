@@ -196,7 +196,7 @@ const attributes = computed(() => [
     --character-class-color: var(--ui-accent-red);
 }
 
-.character-overview-class-name--adept {
+.character-overview-class-name--mystic {
     --character-class-color: var(--ui-accent-purple);
 }
 

@@ -28,6 +28,33 @@ export class FetchWorldDataMsg implements Message {
     }
 }
 
+export class GuestCharacterNameCheckMsg implements Message {
+    t: number = 34
+    d: {name: string}
+
+    constructor(name: string) {
+        this.d = {name}
+    }
+}
+
+export class GuestCharacterCreateMsg implements Message {
+    t: number = 35
+    d: {name: string, classKey: 'FIGHTER' | 'MYSTIC'}
+
+    constructor(name: string, classKey: 'FIGHTER' | 'MYSTIC') {
+        this.d = {name, classKey}
+    }
+}
+
+export class PlayerRegistrationMsg implements Message {
+    t: number = 36
+    d: {email: string, password: string}
+
+    constructor(email: string, password: string) {
+        this.d = {email, password}
+    }
+}
+
 export class MyCharMoveMsg implements Message {
     t: number = 5
     d: any

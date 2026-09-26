@@ -1,5 +1,6 @@
 <template>
     <GameDialog
+        ref="gameDialog"
         backdrop-class="inventory-dialog-backdrop"
         :window-class="['login-dialog-window', { 'login-dialog-window--mobile': useMobileLoginLayout }]"
         content-class="login-dialog-content"
@@ -10,6 +11,7 @@
             <span class="login-dialog-title ui-text-gradient">Darkenlight</span>
         </template>
 
+        <template v-if="dialogMode === 'login'">
         <section class="login-guest-section">
             <div class="login-section-copy">
                 <div class="login-section-title"><span class="ui-text-gradient">{{ t('login.guestTitle') }}</span></div>
@@ -27,7 +29,7 @@
             <div class="login-section-title"><span class="ui-text-gradient">{{ t('login.accountTitle') }}</span></div>
             <div class="login-account-form">
                 <label class="login-field" for="account-login">
-                    <span :class="{ 'login-field-label--ready': accountLoginReady }">{{ t('login.login') }}</span>
+                    <span :class="{ 'login-field-label--ready': accountLoginReady }">{{ t('login.accountLogin') }}</span>
                     <input id="account-login" v-model="login" type="text" @keydown="clearCharName" />
                 </label>
                 <label class="login-field" for="account-password">
@@ -46,30 +48,73 @@
         </section>
 
         <div class="dialog-actions login-dialog-actions">
-            <button class="dialog-button" :disabled="!canSubmit" @click="doLogin()"><span class="ui-text-gradient--button-state">{{ t('login.submit') }}</span></button>
+            <button class="dialog-button" :disabled="!canSubmit" @click="AudioManager.playGuiButtonClick(); doLogin()"><span class="ui-text-gradient--button-state">{{ t('login.submit') }}</span></button>
+            <button v-if="!charName.trim()" class="dialog-button" @click="AudioManager.playGuiButtonClick(); openRegistration()"><span class="ui-text-gradient--button-state">{{ t('login.register') }}</span></button>
         </div>
+        </template>
+
+        <template v-else>
+            <section class="login-registration-section">
+                <div class="login-section-title"><span class="ui-text-gradient">{{ t('login.registrationTitle') }}</span></div>
+                <div class="login-section-description login-registration-description">{{ t('login.registrationDescription') }}</div>
+                <div class="login-account-form">
+                    <label class="login-field" for="registration-email">
+                        <span :class="{ 'login-field-label--ready': registrationEmailReady }">{{ t('login.email') }}</span>
+                        <input id="registration-email" v-model="registrationEmail" type="email" autocomplete="email" />
+                    </label>
+                    <label class="login-field" for="registration-password">
+                        <span :class="{ 'login-field-label--ready': registrationPasswordReady }">{{ t('login.password') }}</span>
+                        <input id="registration-password" v-model="registrationPassword" type="password" autocomplete="new-password" />
+                    </label>
+                    <label class="login-field" for="registration-password-confirmation">
+                        <span :class="{ 'login-field-label--ready': registrationPasswordsMatch }">{{ t('login.confirmPassword') }}</span>
+                        <input id="registration-password-confirmation" v-model="registrationPasswordConfirmation" type="password" autocomplete="new-password" />
+                    </label>
+                </div>
+                <div v-if="registrationMessage" :class="['login-registration-message', { 'login-registration-message--success': registrationSucceeded }]">
+                    {{ registrationMessage }}
+                </div>
+            </section>
+            <div class="dialog-actions login-dialog-actions">
+                <button v-if="!registrationSucceeded" class="dialog-button" :disabled="!canRegister" @click="AudioManager.playGuiButtonClick(); doRegister()"><span class="ui-text-gradient--button-state">{{ t('login.confirmRegistration') }}</span></button>
+                <button class="dialog-button" @click="AudioManager.playGuiButtonClick(); returnToLogin()"><span class="ui-text-gradient--button-state">{{ t('login.guestCreationBack') }}</span></button>
+            </div>
+        </template>
     </GameDialog>
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import GameDialog from '@/vue/views/GameDialog.vue'
 import { Connector } from '@/network/connector'
 import { Settings } from '@/settings/settings'
 import { useI18n } from '@/i18n'
+import { AudioManager } from '@/babylon/audio/audioManager'
 
 let rememberMe = ref(false)
 let autoLogin = ref(false)
 const login = ref('')
 const password = ref('')
 const charName = ref('')
+const dialogMode = ref('login')
+const registrationEmail = ref('')
+const registrationPassword = ref('')
+const registrationPasswordConfirmation = ref('')
+const registrationMessage = ref('')
+const registrationSucceeded = ref(false)
+const registrationSubmitting = ref(false)
+const gameDialog = ref(null)
 const useMobileLoginLayout = Settings.isPhoneOrTablet()
 const guestLoginReady = computed(() => charName.value.trim().length >= 3)
 const accountLoginReady = computed(() => login.value.trim().length >= 3)
 const accountPasswordReady = computed(() => password.value.length >= 3)
 const canSubmit = computed(() => guestLoginReady.value || (accountLoginReady.value && accountPasswordReady.value))
+const registrationEmailReady = computed(() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(registrationEmail.value.trim()))
+const registrationPasswordReady = computed(() => registrationPassword.value.length >= 3)
+const registrationPasswordsMatch = computed(() => registrationPasswordConfirmation.value.length > 0 && registrationPassword.value === registrationPasswordConfirmation.value)
+const canRegister = computed(() => registrationEmailReady.value && registrationPasswordReady.value && registrationPasswordsMatch.value && !registrationSubmitting.value)
 
-const emit = defineEmits(['login'])
+const emit = defineEmits(['guest-login-check'])
 const { t } = useI18n()
 
 onMounted(() => {
@@ -82,6 +127,13 @@ onMounted(() => {
         rememberMe.value = form.rememberMe
         autoLogin.value = form.autoLogin
     }
+
+    window.addEventListener('game:player-registration', onPlayerRegistration)
+    window.requestAnimationFrame(setSharedDialogHeight)
+})
+
+onUnmounted(() => {
+    window.removeEventListener('game:player-registration', onPlayerRegistration)
 })
 
 const doLogin = () => {
@@ -101,10 +153,9 @@ const doLogin = () => {
 
     if (accountLoginReady.value && accountPasswordReady.value) {
         Connector.sendLoginRequest(form.login, form.password)
-        emit('login')
     } else if (guestLoginReady.value) {
-        Connector.sendLoginRequest(undefined, undefined, form.charName)
-        emit('login')
+        Connector.checkGuestCharacterName(form.charName)
+        emit('guest-login-check')
     } else {
         alert(t('login.missingCredentials'))
     }
@@ -118,6 +169,58 @@ const clearLoginAndPassword = () => {
     login.value = ''
     password.value = ''
 }
+
+const setSharedDialogHeight = () => {
+    if (useMobileLoginLayout) {
+        return
+    }
+
+    const dialogSurface = gameDialog.value?.windowRef?.querySelector('.dialog-surface')
+    if (dialogSurface) {
+        document.documentElement.style.setProperty('--login-dialog-desktop-height', `${Math.ceil(dialogSurface.getBoundingClientRect().height)}px`)
+    }
+}
+
+const openRegistration = () => {
+    const dialogSurface = gameDialog.value?.windowRef?.querySelector('.dialog-surface')
+    if (!useMobileLoginLayout && dialogSurface) {
+        dialogSurface.style.minHeight = `${Math.ceil(dialogSurface.getBoundingClientRect().height)}px`
+    }
+    registrationEmail.value = login.value.trim()
+    dialogMode.value = 'register'
+    registrationMessage.value = ''
+    registrationSucceeded.value = false
+}
+
+const returnToLogin = () => {
+    const dialogSurface = gameDialog.value?.windowRef?.querySelector('.dialog-surface')
+    if (dialogSurface) {
+        dialogSurface.style.minHeight = ''
+    }
+    dialogMode.value = 'login'
+    registrationMessage.value = ''
+    registrationSucceeded.value = false
+}
+
+const doRegister = () => {
+    if (!canRegister.value) {
+        return
+    }
+
+    registrationSubmitting.value = true
+    registrationMessage.value = ''
+    Connector.registerPlayer(registrationEmail.value.trim(), registrationPassword.value)
+}
+
+const onPlayerRegistration = (event) => {
+    const detail = event.detail
+    registrationSubmitting.value = false
+    registrationSucceeded.value = detail?.success === true
+    registrationMessage.value = registrationSucceeded.value && detail.email
+        ? t('login.registrationEmailSent', {email: detail.email})
+        : detail?.message || t('login.registrationFailed')
+}
+
 </script>
 
 <style>
@@ -152,7 +255,7 @@ const clearLoginAndPassword = () => {
 
 .login-dialog-window:not(.login-dialog-window--mobile) > .dialog-surface {
     height: auto;
-    min-height: 0;
+    min-height: var(--login-dialog-desktop-height, 0px);
 }
 
 .login-dialog-window > .dialog-surface > .login-dialog-content {
@@ -211,9 +314,11 @@ const clearLoginAndPassword = () => {
 }
 
 .login-guest-description {
-    margin: 5px 0 0;
+    margin: 5px 0 0 130px;
     color: rgb(var(--ui-dark));
-    text-align: center;
+    font-style: italic;
+    text-align: left;
+    white-space: nowrap;
 }
 
 .login-field,
@@ -270,6 +375,7 @@ const clearLoginAndPassword = () => {
 }
 
 .login-dialog-content .login-field input[type="text"],
+.login-dialog-content .login-field input[type="email"],
 .login-dialog-content .login-field input[type="password"] {
     color: rgb(var(--ui-attribute-agility)) !important;
     -webkit-text-fill-color: rgb(var(--ui-attribute-agility));
@@ -297,6 +403,33 @@ const clearLoginAndPassword = () => {
     gap: 8px;
 }
 
+.login-registration-section {
+    max-width: 420px;
+    margin: 20px auto 0;
+    text-align: left;
+}
+
+.login-registration-section .login-section-title {
+    text-align: center;
+}
+
+.login-registration-description {
+    margin: 8px 0 16px;
+    text-align: center;
+}
+
+.login-registration-message {
+    margin: 16px auto 0;
+    color: rgb(var(--ui-accent-red));
+    font-size: 0.9rem;
+    line-height: 1.4;
+    text-align: center;
+}
+
+.login-registration-message--success {
+    color: rgb(var(--ui-attribute-agility));
+}
+
 .login-dialog-actions {
     margin-top: 12px;
     padding-bottom: 4px;
@@ -312,6 +445,10 @@ const clearLoginAndPassword = () => {
         width: calc(100% - 115px);
         margin-left: 115px;
         grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .login-guest-description {
+        margin-left: 115px;
     }
 
 }

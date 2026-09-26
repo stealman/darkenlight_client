@@ -31,6 +31,17 @@ export interface AttackableCombatTO {
     arcaneInterference?: number
 }
 
+export interface GuestCharacterNameCheckData {
+    name: string
+    exists: boolean
+}
+
+export interface PlayerRegistrationData {
+    success: boolean
+    email: string | null
+    message: string | null
+}
+
 export type PhysicalWeaponSkillKey = 'swords' | 'axes' | 'maces' | 'polearms' | 'bows'
 export type ArmorSkillKey = 'leatherArmor' | 'chainArmor' | 'plateArmor' | 'shields'
 export type UtilitySkillKey = 'camping' | 'healing'

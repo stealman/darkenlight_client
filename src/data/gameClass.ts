@@ -11,7 +11,7 @@ export class GameClass {
 export const GameClasses = {
     GM: new GameClass('GM'),
     FIGHTER: new GameClass('Fighter'),
-    ADEPT: new GameClass('Adept'),
+    MYSTIC: new GameClass('Mystic'),
 
     getByKey(key: string): GameClass | null {
         const value = this[key as keyof typeof GameClasses]

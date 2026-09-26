@@ -68,7 +68,16 @@
     </Transition>
 
     <Transition name="game-dialog-fade">
-        <LoginDialog ref="loginDialog" v-if="displayLoginDialog" @login="loginRequestSent" />
+        <LoginDialog ref="loginDialog" v-if="displayLoginDialog" @guest-login-check="guestLoginCheckRequested" />
+    </Transition>
+
+    <Transition name="game-dialog-fade">
+        <GuestCharacterCreationDialog
+            v-if="displayGuestCharacterCreationDialog"
+            :name="pendingGuestCharacterName"
+            @create="createGuestCharacter"
+            @back="returnToLoginFromGuestCharacterCreation"
+        />
     </Transition>
 
     <SettingsDialog
@@ -123,16 +132,17 @@
         </div>
     </div>
 
-    <div class="dialog-backdrop" id="dialog-error" style="display: none;">
+    <div v-if="displayErrorDialog" class="dialog-backdrop inventory-dialog-backdrop">
         <div class="dialog-window adaptive">
             <div class="dialog-surface">
                 <div class="dialog-header text-warning">{{ t('app.errorTitle') }}</div>
-                <div class="dialog-content" style="text-align: center;">
-                    <div id="dialog-error-content"></div>
+                <div class="dialog-content dialog-content--modal" style="text-align: center;">
+                    <div>{{ errorDialogMessage }}</div>
 
-                    <div style="margin-top: 5vh;">{{ t('app.errorRestartQuestion') }}</div>
+                    <div v-if="errorDialogCanRestart" style="margin-top: 5vh;">{{ t('app.errorRestartQuestion') }}</div>
                     <div class="dialog-actions" style="margin-top: 20px;">
-                        <button class="dialog-button" @click="reloadPage"><span class="ui-text-gradient--button-state">{{ t('common.restart') }}</span></button>
+                        <button v-if="errorDialogCanRestart" class="dialog-button" @click="reloadPage"><span class="ui-text-gradient--button-state">{{ t('common.restart') }}</span></button>
+                        <button class="dialog-button" @click="closeErrorDialog"><span class="ui-text-gradient--button-state">{{ t('common.close') }}</span></button>
                     </div>
                 </div>
             </div>
@@ -153,6 +163,7 @@ import TouchControllers from '@/vue/views/touchControllers.vue'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { Connector } from '@/network/connector'
 import LoginDialog from '@/vue/views/loginDialog.vue'
+import GuestCharacterCreationDialog from '@/vue/views/guestCharacterCreationDialog.vue'
 import SettingsDialog from '@/vue/views/settingsDialog.vue'
 import InventoryDialog from '@/vue/views/inventory/inventoryDialog.vue'
 import CharacterDialog from '@/vue/views/character/CharacterDialog.vue'
@@ -187,6 +198,11 @@ let touchControlsActivationTimeout: number | null = null
 
 const gameLoading = ref(true)
 const displayLoginDialog = ref(false)
+const displayGuestCharacterCreationDialog = ref(false)
+const pendingGuestCharacterName = ref('')
+const displayErrorDialog = ref(false)
+const errorDialogMessage = ref('')
+const errorDialogCanRestart = ref(false)
 const loginRequestSentFlag = ref(false)
 const gameSessionActive = ref(false)
 const touchControlsReady = ref(false)
@@ -226,6 +242,8 @@ const closeGameplayDialogs = () => {
 }
 
 const onGameStarted = async () => {
+    displayLoginDialog.value = false
+    displayGuestCharacterCreationDialog.value = false
     loadingProgress.value = 100
     await nextTick()
     await new Promise<void>((resolve) => window.setTimeout(resolve, 450))
@@ -250,6 +268,67 @@ const onLoginFailed = () => {
     gameLoading.value = false
     gameSessionActive.value = false
     loginRequestSentFlag.value = false
+    displayGuestCharacterCreationDialog.value = false
+    displayLoginDialog.value = true
+}
+
+const onLoginError = (event: Event) => {
+    const message = (event as CustomEvent<{message?: string}>).detail?.message
+    showErrorDialog(message || t('login.missingCredentials'))
+}
+
+const onApplicationError = (event: Event) => {
+    const message = (event as CustomEvent<{message?: string}>).detail?.message
+    showErrorDialog(message || t('app.errorTitle'), true)
+}
+
+const showErrorDialog = (message: string, canRestart: boolean = false) => {
+    errorDialogMessage.value = message
+    errorDialogCanRestart.value = canRestart
+    displayErrorDialog.value = true
+}
+
+const closeErrorDialog = () => {
+    AudioManager.playGuiButtonClick()
+    displayErrorDialog.value = false
+    errorDialogMessage.value = ''
+    errorDialogCanRestart.value = false
+}
+
+const guestLoginCheckRequested = () => {
+    loadingPhaseKey.value = 'app.loadingConnecting'
+    loadingProgress.value = 20
+    gameLoading.value = true
+    displayLoginDialog.value = false
+}
+
+const onGuestCharacterNameCheck = (event: Event) => {
+    const detail = (event as CustomEvent<{name?: string, exists?: boolean}>).detail
+    if (!detail?.name || typeof detail.exists !== 'boolean') {
+        return
+    }
+
+    if (detail.exists) {
+        Connector.sendLoginRequest(undefined, undefined, detail.name)
+        loginRequestSent()
+        return
+    }
+
+    pendingGuestCharacterName.value = detail.name
+    gameLoading.value = false
+    displayGuestCharacterCreationDialog.value = true
+}
+
+const createGuestCharacter = (classKey: 'FIGHTER' | 'MYSTIC') => {
+    if (!pendingGuestCharacterName.value) {
+        return
+    }
+    Connector.createGuestCharacter(pendingGuestCharacterName.value, classKey)
+    loginRequestSent()
+}
+
+const returnToLoginFromGuestCharacterCreation = () => {
+    displayGuestCharacterCreationDialog.value = false
     displayLoginDialog.value = true
 }
 
@@ -350,8 +429,11 @@ onMounted(async () => {
     window.addEventListener('ui:open-crafting', onOpenCraftingMenu as EventListener)
     window.addEventListener('ui:open-npc-use', onOpenNpcUseMenu as EventListener)
     window.addEventListener('ui:inventory-updated', onInventoryUpdated as EventListener)
-    window.addEventListener('game:started', onGameStarted)
-    window.addEventListener('game:login-failed', onLoginFailed)
+      window.addEventListener('game:started', onGameStarted)
+      window.addEventListener('game:login-error', onLoginError as EventListener)
+      window.addEventListener('game:application-error', onApplicationError as EventListener)
+      window.addEventListener('game:login-failed', onLoginFailed)
+    window.addEventListener('game:guest-character-name-check', onGuestCharacterNameCheck as EventListener)
     window.addEventListener('game:session-ended', onSessionEnded)
     window.addEventListener('game:loading-progress', onLoadingProgress)
     document.addEventListener('keydown', onKeyDown)
@@ -399,8 +481,11 @@ onUnmounted(() => {
     window.removeEventListener('ui:open-crafting', onOpenCraftingMenu as EventListener)
     window.removeEventListener('ui:open-npc-use', onOpenNpcUseMenu as EventListener)
     window.removeEventListener('ui:inventory-updated', onInventoryUpdated as EventListener)
-    window.removeEventListener('game:started', onGameStarted)
-    window.removeEventListener('game:login-failed', onLoginFailed)
+      window.removeEventListener('game:started', onGameStarted)
+      window.removeEventListener('game:login-error', onLoginError as EventListener)
+      window.removeEventListener('game:application-error', onApplicationError as EventListener)
+      window.removeEventListener('game:login-failed', onLoginFailed)
+    window.removeEventListener('game:guest-character-name-check', onGuestCharacterNameCheck as EventListener)
     window.removeEventListener('game:session-ended', onSessionEnded)
     window.removeEventListener('game:loading-progress', onLoadingProgress)
     document.removeEventListener('keydown', onKeyDown)
@@ -429,6 +514,7 @@ const loginRequestSent = () => {
     }
     document.oncontextmenu = () => false
     displayLoginDialog.value = false
+    displayGuestCharacterCreationDialog.value = false
 }
 
 const showSettingsDialog = () => {
@@ -566,6 +652,7 @@ const logout = async (notifyServer: boolean = true) => {
     gameSessionActive.value = false
     loginRequestSentFlag.value = false
     displayLoginDialog.value = false
+    displayGuestCharacterCreationDialog.value = false
     await new Promise<void>((resolve) => window.setTimeout(resolve, 300))
     loadingPhaseKey.value = 'app.loadingDisconnecting'
     loadingProgress.value = 15

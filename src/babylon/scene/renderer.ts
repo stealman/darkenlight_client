@@ -132,6 +132,7 @@ export const Renderer = {
 
     async gameStopped() {
         this.engine!.stopRenderLoop()
+        MonsterManager.clearWorld()
         GfxManager.clear()
         this.scene.dispose()
         this.camera?.dispose()
@@ -273,6 +274,7 @@ export const Renderer = {
     setWorldEnvironmentType(environmentType: string | null | undefined) {
         this.environmentType = environmentType === 'indoor' ? 'indoor' : 'outdoor'
         Lights.setIndoor(this.environmentType === 'indoor')
+        AudioManager.setAmbientSoundForEnvironment(this.environmentType)
         this.brightnessChanged()
         this.updateCameraForEnvironment()
     },

@@ -90,6 +90,7 @@ export const AudioManager = {
 
         // Ambient sounds
         this.loadAmbientSound(AmbientSoundTypes.WINTER_FOREST, "winter-forest.ogg", scene, { volume: AmbientSoundTypes.WINTER_FOREST.defaultVolume, playbackRate: 1, loop: true } );
+        this.loadAmbientSound(AmbientSoundTypes.DUNGEON, "dungeon-ambient-1.mp3", scene, { volume: AmbientSoundTypes.DUNGEON.defaultVolume, playbackRate: 1, loop: true } );
         this.actualAmbientSound = this.ambientSounds.get(AmbientSoundTypes.WINTER_FOREST)!;
 
         // Static object sounds
@@ -413,6 +414,21 @@ export const AudioManager = {
         });
     },
 
+    setAmbientSoundForEnvironment(environmentType: 'outdoor' | 'indoor') {
+        const ambientType = environmentType === 'indoor'
+            ? AmbientSoundTypes.DUNGEON
+            : AmbientSoundTypes.WINTER_FOREST
+        const ambientSound = this.ambientSounds.get(ambientType)
+
+        if (!ambientSound || ambientSound === this.actualAmbientSound) {
+            return
+        }
+
+        this.stopAmbientSound()
+        this.actualAmbientSound = ambientSound
+        this.actualAmbientSound.play()
+    },
+
     stopAmbientSound() {
         if (this.actualAmbientSound && this.actualAmbientSound.isPlaying) {
             this.actualAmbientSound.stop();
@@ -440,6 +456,7 @@ export const FootStepTypes = {
 
 export const AmbientSoundTypes = {
     WINTER_FOREST: {name: 'WINTER-FOREST', defaultVolume: 1},
+    DUNGEON: {name: 'DUNGEON', defaultVolume: 0.5},
 }
 
 export const FootStepSpeeds = {

@@ -1,4 +1,4 @@
-import { LoginMsg, Message } from '@/network/messages'
+import { GuestCharacterCreateMsg, GuestCharacterNameCheckMsg, LoginMsg, Message, PlayerRegistrationMsg } from '@/network/messages'
 import { MessageProcessor } from '@/network/messageProcessor'
 import { invoke } from '@tauri-apps/api/core'
 
@@ -40,8 +40,7 @@ export const Connector = {
 
         this.socket.onclose = () => {
             console.log('Spojení uzavřeno')
-            document.getElementById("dialog-error-content")!.innerText = 'Připojení k serveru bylo ukončeno.'
-            document.getElementById("dialog-error")!.style.display = 'flex'
+            window.dispatchEvent(new CustomEvent('game:application-error', {detail: {message: 'Připojení k serveru bylo ukončeno.'}}))
         }
     },
 
@@ -54,6 +53,18 @@ export const Connector = {
     sendLoginRequest(username: string, password: string, guestName: string | null) {
         const loginMsg = new LoginMsg(username, password, guestName)
         this.socket.send(JSON.stringify(loginMsg))
+    },
+
+    checkGuestCharacterName(name: string) {
+        this.socket.send(JSON.stringify(new GuestCharacterNameCheckMsg(name)))
+    },
+
+    createGuestCharacter(name: string, classKey: 'FIGHTER' | 'MYSTIC') {
+        this.socket.send(JSON.stringify(new GuestCharacterCreateMsg(name, classKey)))
+    },
+
+    registerPlayer(email: string, password: string) {
+        this.socket.send(JSON.stringify(new PlayerRegistrationMsg(email, password)))
     },
 
     sendMoveMessage(msg: Message) {
