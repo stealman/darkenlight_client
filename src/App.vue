@@ -80,6 +80,17 @@
         />
     </Transition>
 
+    <Transition name="game-dialog-fade">
+        <AccountCharacterNameDialog
+            v-if="displayAccountCharacterNameDialog"
+            :error="accountCharacterNameError"
+            :initial-name="pendingGuestCharacterName"
+            @submit="checkAccountCharacterName"
+            @input="accountCharacterNameError = ''"
+            @back="returnToLoginFromAccountCharacterName"
+        />
+    </Transition>
+
     <SettingsDialog
         ref="settingsDialog"
         v-show="displaySettingsDialog"
@@ -164,6 +175,7 @@ import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { Connector } from '@/network/connector'
 import LoginDialog from '@/vue/views/loginDialog.vue'
 import GuestCharacterCreationDialog from '@/vue/views/guestCharacterCreationDialog.vue'
+import AccountCharacterNameDialog from '@/vue/views/accountCharacterNameDialog.vue'
 import SettingsDialog from '@/vue/views/settingsDialog.vue'
 import InventoryDialog from '@/vue/views/inventory/inventoryDialog.vue'
 import CharacterDialog from '@/vue/views/character/CharacterDialog.vue'
@@ -199,7 +211,10 @@ let touchControlsActivationTimeout: number | null = null
 const gameLoading = ref(true)
 const displayLoginDialog = ref(false)
 const displayGuestCharacterCreationDialog = ref(false)
+const displayAccountCharacterNameDialog = ref(false)
 const pendingGuestCharacterName = ref('')
+const accountCharacterNameError = ref('')
+const creatingAccountCharacter = ref(false)
 const displayErrorDialog = ref(false)
 const errorDialogMessage = ref('')
 const errorDialogCanRestart = ref(false)
@@ -244,6 +259,7 @@ const closeGameplayDialogs = () => {
 const onGameStarted = async () => {
     displayLoginDialog.value = false
     displayGuestCharacterCreationDialog.value = false
+    displayAccountCharacterNameDialog.value = false
     loadingProgress.value = 100
     await nextTick()
     await new Promise<void>((resolve) => window.setTimeout(resolve, 450))
@@ -269,6 +285,8 @@ const onLoginFailed = () => {
     gameSessionActive.value = false
     loginRequestSentFlag.value = false
     displayGuestCharacterCreationDialog.value = false
+    displayAccountCharacterNameDialog.value = false
+    creatingAccountCharacter.value = false
     displayLoginDialog.value = true
 }
 
@@ -319,16 +337,75 @@ const onGuestCharacterNameCheck = (event: Event) => {
     displayGuestCharacterCreationDialog.value = true
 }
 
+const onAccountCharacterSetupRequired = () => {
+    gameLoading.value = false
+    displayLoginDialog.value = false
+    displayGuestCharacterCreationDialog.value = false
+    displayAccountCharacterNameDialog.value = true
+    pendingGuestCharacterName.value = ''
+    accountCharacterNameError.value = ''
+    creatingAccountCharacter.value = true
+}
+
+const checkAccountCharacterName = (name: string) => {
+    accountCharacterNameError.value = ''
+    Connector.checkAccountCharacterName(name)
+}
+
+const onAccountCharacterNameCheck = (event: Event) => {
+    const detail = (event as CustomEvent<{name?: string, exists?: boolean, message?: string}>).detail
+    if (!detail?.name || typeof detail.exists !== 'boolean') {
+        return
+    }
+
+    if (detail.message) {
+        gameLoading.value = false
+        displayGuestCharacterCreationDialog.value = false
+        displayAccountCharacterNameDialog.value = true
+        accountCharacterNameError.value = detail.message
+        return
+    }
+
+    if (detail.exists) {
+        gameLoading.value = false
+        displayGuestCharacterCreationDialog.value = false
+        displayAccountCharacterNameDialog.value = true
+        accountCharacterNameError.value = t('login.accountCharacterNameTaken')
+        return
+    }
+
+    pendingGuestCharacterName.value = detail.name
+    accountCharacterNameError.value = ''
+    displayAccountCharacterNameDialog.value = false
+    displayGuestCharacterCreationDialog.value = true
+}
+
 const createGuestCharacter = (classKey: 'FIGHTER' | 'MYSTIC') => {
     if (!pendingGuestCharacterName.value) {
         return
     }
-    Connector.createGuestCharacter(pendingGuestCharacterName.value, classKey)
+    if (creatingAccountCharacter.value) {
+        Connector.createAccountCharacter(pendingGuestCharacterName.value, classKey)
+    } else {
+        Connector.createGuestCharacter(pendingGuestCharacterName.value, classKey)
+    }
     loginRequestSent()
 }
 
 const returnToLoginFromGuestCharacterCreation = () => {
     displayGuestCharacterCreationDialog.value = false
+    if (creatingAccountCharacter.value) {
+        displayAccountCharacterNameDialog.value = true
+        return
+    }
+    displayLoginDialog.value = true
+}
+
+const returnToLoginFromAccountCharacterName = () => {
+    displayAccountCharacterNameDialog.value = false
+    accountCharacterNameError.value = ''
+    pendingGuestCharacterName.value = ''
+    creatingAccountCharacter.value = false
     displayLoginDialog.value = true
 }
 
@@ -432,8 +509,10 @@ onMounted(async () => {
       window.addEventListener('game:started', onGameStarted)
       window.addEventListener('game:login-error', onLoginError as EventListener)
       window.addEventListener('game:application-error', onApplicationError as EventListener)
-      window.addEventListener('game:login-failed', onLoginFailed)
+    window.addEventListener('game:login-failed', onLoginFailed)
     window.addEventListener('game:guest-character-name-check', onGuestCharacterNameCheck as EventListener)
+    window.addEventListener('game:account-character-setup-required', onAccountCharacterSetupRequired)
+    window.addEventListener('game:account-character-name-check', onAccountCharacterNameCheck as EventListener)
     window.addEventListener('game:session-ended', onSessionEnded)
     window.addEventListener('game:loading-progress', onLoadingProgress)
     document.addEventListener('keydown', onKeyDown)
@@ -484,8 +563,10 @@ onUnmounted(() => {
       window.removeEventListener('game:started', onGameStarted)
       window.removeEventListener('game:login-error', onLoginError as EventListener)
       window.removeEventListener('game:application-error', onApplicationError as EventListener)
-      window.removeEventListener('game:login-failed', onLoginFailed)
+    window.removeEventListener('game:login-failed', onLoginFailed)
     window.removeEventListener('game:guest-character-name-check', onGuestCharacterNameCheck as EventListener)
+    window.removeEventListener('game:account-character-setup-required', onAccountCharacterSetupRequired)
+    window.removeEventListener('game:account-character-name-check', onAccountCharacterNameCheck as EventListener)
     window.removeEventListener('game:session-ended', onSessionEnded)
     window.removeEventListener('game:loading-progress', onLoadingProgress)
     document.removeEventListener('keydown', onKeyDown)
@@ -515,6 +596,7 @@ const loginRequestSent = () => {
     document.oncontextmenu = () => false
     displayLoginDialog.value = false
     displayGuestCharacterCreationDialog.value = false
+    displayAccountCharacterNameDialog.value = false
 }
 
 const showSettingsDialog = () => {
@@ -653,6 +735,8 @@ const logout = async (notifyServer: boolean = true) => {
     loginRequestSentFlag.value = false
     displayLoginDialog.value = false
     displayGuestCharacterCreationDialog.value = false
+    displayAccountCharacterNameDialog.value = false
+    creatingAccountCharacter.value = false
     await new Promise<void>((resolve) => window.setTimeout(resolve, 300))
     loadingPhaseKey.value = 'app.loadingDisconnecting'
     loadingProgress.value = 15

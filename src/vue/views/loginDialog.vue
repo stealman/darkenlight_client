@@ -197,6 +197,9 @@ const returnToLogin = () => {
     if (dialogSurface) {
         dialogSurface.style.minHeight = ''
     }
+    if (registrationSucceeded.value) {
+        login.value = registrationEmail.value.trim()
+    }
     dialogMode.value = 'login'
     registrationMessage.value = ''
     registrationSucceeded.value = false
@@ -216,8 +219,8 @@ const onPlayerRegistration = (event) => {
     const detail = event.detail
     registrationSubmitting.value = false
     registrationSucceeded.value = detail?.success === true
-    registrationMessage.value = registrationSucceeded.value && detail.email
-        ? t('login.registrationEmailSent', {email: detail.email})
+    registrationMessage.value = registrationSucceeded.value
+        ? t('login.registrationComplete')
         : detail?.message || t('login.registrationFailed')
 }
 

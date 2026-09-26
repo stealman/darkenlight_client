@@ -42,6 +42,12 @@ export interface PlayerRegistrationData {
     message: string | null
 }
 
+export interface AccountCharacterNameCheckData {
+    name: string
+    exists: boolean
+    message?: string
+}
+
 export type PhysicalWeaponSkillKey = 'swords' | 'axes' | 'maces' | 'polearms' | 'bows'
 export type ArmorSkillKey = 'leatherArmor' | 'chainArmor' | 'plateArmor' | 'shields'
 export type UtilitySkillKey = 'camping' | 'healing'

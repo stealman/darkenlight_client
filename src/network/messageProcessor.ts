@@ -31,6 +31,7 @@ import {
     GMItemCodebookItem,
     GMNpcDetailsData,
     GuestCharacterNameCheckData,
+    AccountCharacterNameCheckData,
     PlayerRegistrationData,
     NpcUseData,
     BankStateData, SkillSetTO,
@@ -119,6 +120,8 @@ export const MessageProcessor = {
                 case 64: this.processCharacterSkillSetChange(msg.d); break
                 case 67: this.processGuestCharacterNameCheck(msg.d); break
                 case 68: this.processPlayerRegistration(msg.d); break
+                case 69: this.processAccountCharacterSetupRequired(); break
+                case 70: this.processAccountCharacterNameCheck(msg.d); break
                 case 1003: this.processGMAllSpawns(msg.d); break
                 case 1004: this.processGMSpawnChange(msg.d); break
                 default:
@@ -153,6 +156,14 @@ export const MessageProcessor = {
 
     processPlayerRegistration(data: PlayerRegistrationData) {
         window.dispatchEvent(new CustomEvent('game:player-registration', {detail: data}))
+    },
+
+    processAccountCharacterSetupRequired() {
+        window.dispatchEvent(new Event('game:account-character-setup-required'))
+    },
+
+    processAccountCharacterNameCheck(data: AccountCharacterNameCheckData) {
+        window.dispatchEvent(new CustomEvent('game:account-character-name-check', {detail: data}))
     },
 
     processGuestCharacterNameCheck(data: GuestCharacterNameCheckData) {

@@ -55,6 +55,24 @@ export class PlayerRegistrationMsg implements Message {
     }
 }
 
+export class AccountCharacterNameCheckMsg implements Message {
+    t: number = 37
+    d: {name: string}
+
+    constructor(name: string) {
+        this.d = {name}
+    }
+}
+
+export class AccountCharacterCreateMsg implements Message {
+    t: number = 38
+    d: {name: string, classKey: 'FIGHTER' | 'MYSTIC'}
+
+    constructor(name: string, classKey: 'FIGHTER' | 'MYSTIC') {
+        this.d = {name, classKey}
+    }
+}
+
 export class MyCharMoveMsg implements Message {
     t: number = 5
     d: any
