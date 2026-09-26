@@ -197,9 +197,14 @@
                     <div v-if="trainerNewSkills.length === 0" class="npc-use-empty-state">{{ t('vendor.noNewSkills') }}</div>
                 </div>
                 <div v-else-if="selectedTrainerTab === 'promotion'" class="npc-trainer-promotion-list">
-                    <article v-for="promotion in trainerPromotions" :key="promotion.targetClass" class="npc-trainer-promotion-card">
+                    <p class="npc-trainer-promotion-intro">{{ t('classProgression.intro') }}</p>
+                    <article
+                        v-for="promotion in trainerPromotions"
+                        :key="promotion.targetClass"
+                        :class="['npc-trainer-promotion-card', { 'npc-trainer-promotion-card--eligible': promotion.eligible }]"
+                    >
                         <div class="npc-trainer-promotion-header">
-                            <h3>{{ getClassName(promotion.targetClass) }}</h3>
+                            <h3><span class="ui-text-gradient">{{ getClassName(promotion.targetClass) }}</span></h3>
                             <span
                                 class="npc-trainer-promotion-state"
                                 :class="promotion.eligible ? 'npc-trainer-promotion-state--met' : 'npc-trainer-promotion-state--unmet'"
@@ -214,15 +219,30 @@
                                 :key="requirement.labelKey"
                                 class="npc-trainer-promotion-requirement"
                             >
-                                <span>{{ t(requirement.labelKey) }}</span>
-                                <strong :class="requirement.met ? 'npc-trainer-requirement--met' : 'npc-trainer-requirement--unmet'">
-                                    {{ t(requirement.met ? 'classProgression.met' : 'classProgression.notMet') }}
-                                </strong>
+                                <span
+                                    v-if="requirement.type === 'skillCount' && requirement.skillGroup && requirement.count != null && requirement.minimumRank != null"
+                                    class="ui-text-gradient"
+                                >
+                                    {{ t('classProgression.phrases.atLeast') }}
+                                    <strong :class="['npc-trainer-promotion-requirement-accent', requirement.met ? 'npc-trainer-promotion-requirement-accent--met' : 'npc-trainer-promotion-requirement-accent--unmet']">{{ requirement.count }}</strong>&nbsp;
+                                    <strong :class="['npc-trainer-promotion-requirement-accent', requirement.met ? 'npc-trainer-promotion-requirement-accent--met' : 'npc-trainer-promotion-requirement-accent--unmet']">{{ t(`classProgression.skillGroups.${requirement.skillGroup}`) }}</strong>
+                                    {{ t('classProgression.phrases.atRank') }}
+                                    <strong :class="['npc-trainer-promotion-requirement-accent', requirement.met ? 'npc-trainer-promotion-requirement-accent--met' : 'npc-trainer-promotion-requirement-accent--unmet']">{{ getSkillRankName(requirement.minimumRank) }}</strong>
+                                </span>
+                                <span
+                                    v-else-if="requirement.type === 'skill' && requirement.skill && requirement.minimumRank != null"
+                                    class="ui-text-gradient"
+                                >
+                                    <strong :class="['npc-trainer-promotion-requirement-accent', requirement.met ? 'npc-trainer-promotion-requirement-accent--met' : 'npc-trainer-promotion-requirement-accent--unmet']">{{ getPromotionRequirementSkillName(requirement) }}</strong>
+                                    {{ t('classProgression.phrases.atRank') }}
+                                    <strong :class="['npc-trainer-promotion-requirement-accent', requirement.met ? 'npc-trainer-promotion-requirement-accent--met' : 'npc-trainer-promotion-requirement-accent--unmet']">{{ getSkillRankName(requirement.minimumRank) }}</strong>
+                                </span>
+                                <span v-else class="ui-text-gradient">{{ t(requirement.labelKey) }}</span>
                             </div>
                         </div>
                         <div v-if="promotion.eligible" class="npc-trainer-promotion-actions">
-                            <button type="button" class="dialog-button npc-vendor-buy-button" @click.stop>
-                                {{ t('classProgression.promote') }}
+                            <button type="button" class="dialog-button npc-vendor-buy-button npc-vendor-purchase-button" @click.stop>
+                                <span class="ui-text-gradient--button-state">{{ t('classProgression.promote') }}</span>
                             </button>
                         </div>
                     </article>
@@ -306,7 +326,7 @@
 import {computed, nextTick, onMounted, onUnmounted, ref, watch} from 'vue'
 import GameDialog from '@/vue/views/GameDialog.vue'
 import {NpcInteractionManager} from '@/data/npcInteractionManager'
-import type {NpcHealerService, NpcUseData, NpcUseFeatureData, NpcVendorCatalogItem, SkillKey} from '@/network/messageIfs'
+import type {ClassPromotionRequirementData, NpcHealerService, NpcUseData, NpcUseFeatureData, NpcVendorCatalogItem, SkillKey} from '@/network/messageIfs'
 import {t} from '@/i18n'
 import {EmeraldsManager} from '@/gui/emeraldsManager'
 import {InventoryManager} from '@/data/inventoryManager'
@@ -326,6 +346,19 @@ const featureLabels: Record<string, string> = {vendor: 'vendor.vendor', repairer
 const categoryLabels: Record<string, string> = {weapons: 'vendor.weapons', bows: 'vendor.bows', metalArmor: 'vendor.metalArmor', leatherArmor: 'vendor.leatherArmor', jewels: 'vendor.jewels', resources: 'vendor.resources', trinkets: 'vendor.trinkets'}
 const itemTypeLocalizationSections: Record<string, string> = {W: 'weapons', A: 'armors', J: 'jewels', T: 'trinkets', R: 'resources'}
 const damageTypeLabels: Record<string, string> = {PHYSICAL_SLASH: 'vendor.damageSlash', PHYSICAL_PIERCE: 'vendor.damagePierce', PHYSICAL_BLUNT: 'vendor.damageBlunt'}
+const skillRankTranslationKeys: Partial<Record<number, string>> = {
+    0: 'skills.ranks.untrained',
+    1: 'skills.ranks.novice',
+    2: 'skills.ranks.neophyte',
+    3: 'skills.ranks.apprentice',
+    4: 'skills.ranks.expert',
+    5: 'skills.ranks.journeyman',
+    6: 'skills.ranks.veteran',
+    7: 'skills.ranks.master',
+    8: 'skills.ranks.highMaster',
+    9: 'skills.ranks.exemplar',
+    10: 'skills.ranks.grandmaster',
+}
 const IGNORE_BACKDROP_CLICK_AFTER_OPEN_MS = 350
 const NPC_PURCHASE_DISTANCE = 4
 const NPC_FEATURE_TAB_STORAGE_KEY = 'DARKENLIGHT_NPC_FEATURE_TAB'
@@ -447,6 +480,14 @@ const getClassName = (classKey: string) => {
     const localizationKey = `classes.${classKey.toLowerCase()}`
     const localizedName = t(localizationKey)
     return localizedName === localizationKey ? classKey : localizedName
+}
+const getSkillRankName = (rank: number) => {
+    const translationKey = skillRankTranslationKeys[rank]
+    return translationKey ? t(translationKey) : t('skills.ranks.fallback', {rank})
+}
+const getPromotionRequirementSkillName = (requirement: ClassPromotionRequirementData) => {
+    const definition = SkillDefinitions.find((skill) => skill.key === requirement.skill)
+    return definition ? t(definition.translationKey) : t(requirement.labelKey)
 }
 const getItemName = (item: NpcVendorCatalogItem) => {
     const section = itemTypeLocalizationSections[item.tp]
@@ -750,17 +791,33 @@ defineExpose({openDialog})
 .npc-trainer-skill-name { justify-self: start; color: rgb(var(--ui-base)); font-weight: 700; text-align: left; }
 .npc-trainer-skill-description { min-width: 0; color: rgb(var(--ui-dark)); font-size: 12px; line-height: 1.2; text-align: left; }
 .npc-trainer-promotion-list { display: flex; flex: 1 1 auto; min-height: 0; flex-direction: column; gap: 8px; overflow-y: auto; }
+.npc-trainer-promotion-intro { margin: 0 2px 3px; color: rgb(var(--ui-dark)); font-size: 13px; line-height: 1.35; text-align: left; }
 .npc-trainer-promotion-card { padding: 9px 10px; border: 1px solid rgba(var(--ui-darker), 0.75); background: rgba(var(--ui-darker), 0.18); }
+.npc-trainer-promotion-card--eligible {
+    animation: npc-trainer-promotion-glow 2.2s ease-in-out infinite;
+    border-color: rgba(var(--ui-accent-blue), 0.42);
+    box-shadow: inset 0 0 0 1px rgba(var(--ui-accent-blue), 0.42), inset 0 0 20px rgba(var(--ui-accent-blue), 0.35);
+}
 .npc-trainer-promotion-header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .npc-trainer-promotion-header h3 { margin: 0; color: rgb(var(--ui-base)); font-size: 1rem; }
 .npc-trainer-promotion-state { flex: 0 0 auto; font-size: 12px; font-weight: 700; }
-.npc-trainer-promotion-state--met, .npc-trainer-requirement--met { color: rgb(var(--ui-success)); }
-.npc-trainer-promotion-state--unmet, .npc-trainer-requirement--unmet { color: rgb(var(--ui-danger)); }
+.npc-trainer-promotion-state--met { color: rgb(var(--ui-success)); }
+.npc-trainer-promotion-state--unmet { color: rgb(var(--ui-danger)); }
 .npc-trainer-promotion-description { margin: 5px 0 7px; color: rgb(var(--ui-dark)); font-size: 12px; line-height: 1.25; text-align: left; }
 .npc-trainer-promotion-requirements { display: flex; flex-direction: column; }
-.npc-trainer-promotion-requirement { display: grid; grid-template-columns: minmax(0, 1fr) max-content; gap: 12px; padding: 4px 0; border-top: 1px solid rgba(var(--ui-darker), 0.45); color: rgba(var(--ui-base), 0.82); font-size: 12px; text-align: left; }
-.npc-trainer-promotion-requirement strong { font-weight: 700; white-space: nowrap; }
+.npc-trainer-promotion-requirement { padding: 4px 0; border-top: 1px solid rgba(var(--ui-darker), 0.45); color: rgba(var(--ui-base), 0.82); font-size: 12px; text-align: left; }
+.npc-trainer-promotion-requirement .npc-trainer-promotion-requirement-accent { font-weight: 400; }
+.npc-trainer-promotion-requirement-accent--met { color: rgb(var(--ui-success)); -webkit-text-fill-color: rgb(var(--ui-success)); }
+.npc-trainer-promotion-requirement-accent--unmet { color: rgb(var(--ui-danger)); -webkit-text-fill-color: rgb(var(--ui-danger)); }
 .npc-trainer-promotion-actions { display: flex; justify-content: flex-end; margin-top: 7px; }
+
+@keyframes npc-trainer-promotion-glow {
+    50% {
+        border-color: rgba(var(--ui-accent-blue), 0.68);
+        box-shadow: inset 0 0 0 1px rgba(var(--ui-accent-blue), 0.68), inset 0 0 28px rgba(var(--ui-accent-blue), 0.56);
+    }
+}
+
 .npc-use-content-shell :deep(.bank-panel) { flex: 1 1 auto; min-height: 0; }
 .npc-vendor-item-list { display: flex; flex: 1 1 auto; min-height: 0; flex-direction: column; overflow-y: auto; border-top: 1px solid rgba(var(--ui-darker), 0.8); border-bottom: 1px solid rgba(var(--ui-darker), 0.8); }
 .npc-vendor-item-row { display: grid; grid-template-columns: 46px minmax(0, 1fr) max-content auto; align-items: center; gap: 12px; min-height: 46px; padding: 3px 8px; border-bottom: 1px solid rgba(var(--ui-darker), 0.65); color: rgb(var(--ui-base)); cursor: url('/images/cursor-pointer.png'), pointer; }

@@ -115,14 +115,23 @@
   "classProgression": {
     "conditionsMet": "Podmínky splněny",
     "conditionsNotMet": "Podmínky nesplněny",
+    "intro": "Po splnění všech podmínek si můžeš zvolit jednu z následujících cest povýšení. Každá rozvíjí tvé povolání jiným směrem a pomůže utvářet další kapitoly tvého dobrodružství.",
     "met": "Splněno",
     "notMet": "Nesplněno",
     "promote": "Povýšit",
     "noPromotions": "Pro současné povolání zatím není definované žádné povýšení.",
     "descriptions": {
-      "warrior": "Ofenzivní větev Fightera.",
-      "knight": "Defenzivní větev Fightera.",
+      "warrior": "Útočná větev Fightera pro boj v první linii. Zaměřuje se na sílu, zbraně a rychlé porážení protivníků.",
+      "knight": "Obranná větev Fightera pro boj v první linii. Spoléhá na štít, odolnost a ochranu spojenců.",
       "ranger": "Bojovník na dálku zaměřený na luky a tyčové zbraně."
+    },
+    "phrases": {
+      "atLeast": "Alespoň",
+      "atRank": "na úrovni"
+    },
+    "skillGroups": {
+      "weapons": "zbraňové dovednosti",
+      "armor": "dovednost brnění"
     },
     "requirements": {
       "threeWeaponSkillsApprentice": "Alespoň 3 zbraňové dovednosti na úrovni Učeň",

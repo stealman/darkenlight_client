@@ -269,6 +269,11 @@ export interface NpcRepairItem {
 export interface ClassPromotionRequirementData {
     labelKey: string
     met: boolean
+    type?: 'skill' | 'skillCount'
+    minimumRank?: number
+    count?: number
+    skill?: SkillKey
+    skillGroup?: 'weapons' | 'armor'
 }
 
 export interface ClassPromotionOptionData {

@@ -115,14 +115,23 @@
   "classProgression": {
     "conditionsMet": "Requirements met",
     "conditionsNotMet": "Requirements not met",
+    "intro": "Once you meet every requirement, you can choose one of the following promotion paths. Each develops your class in a different direction and helps shape the next chapters of your adventure.",
     "met": "Met",
     "notMet": "Not met",
     "promote": "Promote",
     "noPromotions": "No promotion is currently defined for your class.",
     "descriptions": {
-      "warrior": "The offensive Fighter branch.",
-      "knight": "The defensive Fighter branch.",
+      "warrior": "The offensive Fighter branch for front-line combat. It focuses on strength, weapons, and bringing enemies down quickly.",
+      "knight": "The defensive Fighter branch for front-line combat. It relies on shields, resilience, and protecting allies.",
       "ranger": "A ranged combatant focused on bows and polearms."
+    },
+    "phrases": {
+      "atLeast": "At least",
+      "atRank": "at"
+    },
+    "skillGroups": {
+      "weapons": "weapon skills",
+      "armor": "armor skill"
     },
     "requirements": {
       "threeWeaponSkillsApprentice": "At least 3 weapon skills at Apprentice",
