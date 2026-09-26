@@ -255,6 +255,7 @@ export const TargetingManager = {
         sprite.height = size * 2 + margin
 
         const ctx = sprite.getContext('2d')!
+        const markerOpacity = Math.max(0, Number.isFinite(Settings.targetMarkerOpacity) ? Settings.targetMarkerOpacity : 1)
         const rgb = [Number.parseInt(color.slice(1, 3), 16), Number.parseInt(color.slice(3, 5), 16), Number.parseInt(color.slice(5, 7), 16)]
         const centerX = sprite.width / 2
         const centerY = sprite.height / 2
@@ -277,8 +278,8 @@ export const TargetingManager = {
             const apexY = baseCenterY + (directionY / directionLength) * triangleHeight
             const gradient = ctx.createLinearGradient(baseCenterX, baseCenterY, apexX, apexY)
 
-            gradient.addColorStop(0, `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.65)`)
-            gradient.addColorStop(0.58, `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.2)`)
+            gradient.addColorStop(0, `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${Math.min(0.65 * markerOpacity, 1)})`)
+            gradient.addColorStop(0.58, `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${Math.min(0.2 * markerOpacity, 1)})`)
             gradient.addColorStop(1, `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0)`)
 
             ctx.fillStyle = gradient

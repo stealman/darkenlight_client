@@ -17,23 +17,23 @@
                     <div style="max-height: 65vh; overflow-y: auto;">
                         <div>{{ t('settings.deviceDescription') }}</div>
                         <div class="dialog-actions" style="margin-top: 20px;">
-                            <button class="dialog-button" :class="storedSettings.deviceType == 'DESKTOP' ? 'selected' : ''" @click="setDeviceType('DESKTOP')">{{ t('settings.deviceDesktop') }}</button>
-                            <button class="dialog-button" :class="storedSettings.deviceType == 'TABLET' ? 'selected' : ''" @click="setDeviceType('TABLET')">{{ t('settings.deviceTablet') }}</button>
-                            <button class="dialog-button" :class="storedSettings.deviceType == 'PHONE' ? 'selected' : ''" @click="setDeviceType('PHONE')">{{ t('settings.devicePhone') }}</button>
+                            <button class="dialog-button" :class="storedSettings.deviceType == 'DESKTOP' ? 'selected' : ''" @click="setDeviceType('DESKTOP')"><span class="ui-text-gradient--button-state">{{ t('settings.deviceDesktop') }}</span></button>
+                            <button class="dialog-button" :class="storedSettings.deviceType == 'TABLET' ? 'selected' : ''" @click="setDeviceType('TABLET')"><span class="ui-text-gradient--button-state">{{ t('settings.deviceTablet') }}</span></button>
+                            <button class="dialog-button" :class="storedSettings.deviceType == 'PHONE' ? 'selected' : ''" @click="setDeviceType('PHONE')"><span class="ui-text-gradient--button-state">{{ t('settings.devicePhone') }}</span></button>
                         </div>
 
                         <div v-if="storedSettings.deviceType == 'TABLET' || storedSettings.deviceType == 'PHONE'" style="margin-top: 20px;">
                             <table>
                                 <tbody>
                                 <tr>
-                                    <td align="center" style="width: 50%">{{ t('settings.joystickSettings') }}</td>
+                                    <td class="settings-joystick-label" align="center" style="width: 50%">{{ t('settings.joystickSettings') }}</td>
                                 </tr>
 
                                 <tr>
                                     <td align="center">
                                         <div>
-                                            <button class="dialog-button" @click="joystickSizeChanged(10)">+</button>
-                                            <button class="dialog-button" @click="joystickSizeChanged(-10)">-</button>
+                                            <button class="dialog-button" @click="joystickSizeChanged(10)"><span class="ui-text-gradient--button-state">+</span></button>
+                                            <button class="dialog-button" @click="joystickSizeChanged(-10)"><span class="ui-text-gradient--button-state">-</span></button>
                                         </div>
                                     </td>
                                 </tr>
@@ -41,10 +41,10 @@
                                 <tr>
                                     <td align="center">
                                         <div>
-                                            <button class="dialog-button" @click="joystickLeftChanged(-10)">&larr;</button>
-                                            <button class="dialog-button" @click="joystickBottomChanged(10)">&uarr;</button>
-                                            <button class="dialog-button" @click="joystickBottomChanged(-10)">&darr;</button>
-                                            <button class="dialog-button" @click="joystickLeftChanged(10)">&rarr;</button>
+                                            <button class="dialog-button" @click="joystickLeftChanged(-10)"><span class="ui-text-gradient--button-state">&larr;</span></button>
+                                            <button class="dialog-button" @click="joystickBottomChanged(10)"><span class="ui-text-gradient--button-state">&uarr;</span></button>
+                                            <button class="dialog-button" @click="joystickBottomChanged(-10)"><span class="ui-text-gradient--button-state">&darr;</span></button>
+                                            <button class="dialog-button" @click="joystickLeftChanged(10)"><span class="ui-text-gradient--button-state">&rarr;</span></button>
                                         </div>
                                     </td>
                                 </tr>
@@ -57,9 +57,9 @@
                 <div v-if="activeTabId == 2">
                     <label>{{ t('settings.graphicsLevel') }}</label>
                     <div class="dialog-actions" style="margin-top: 20px;">
-                        <button class="dialog-button" :class="storedSettings.detailLevel.name == 'HIGH' ? 'selected' : ''" @click="setDetailsLevel('HIGH')">{{ t('settings.graphicsHigh') }}</button>
-                        <button class="dialog-button" :class="storedSettings.detailLevel.name == 'MEDIUM' ? 'selected' : ''" @click="setDetailsLevel('MEDIUM')">{{ t('settings.graphicsMedium') }}</button>
-                        <button class="dialog-button" :class="storedSettings.detailLevel.name == 'LOW' ? 'selected' : ''" @click="setDetailsLevel('LOW')">{{ t('settings.graphicsLow') }}</button>
+                        <button class="dialog-button" :class="storedSettings.detailLevel.name == 'HIGH' ? 'selected' : ''" @click="setDetailsLevel('HIGH')"><span class="ui-text-gradient--button-state">{{ t('settings.graphicsHigh') }}</span></button>
+                        <button class="dialog-button" :class="storedSettings.detailLevel.name == 'MEDIUM' ? 'selected' : ''" @click="setDetailsLevel('MEDIUM')"><span class="ui-text-gradient--button-state">{{ t('settings.graphicsMedium') }}</span></button>
+                        <button class="dialog-button" :class="storedSettings.detailLevel.name == 'LOW' ? 'selected' : ''" @click="setDetailsLevel('LOW')"><span class="ui-text-gradient--button-state">{{ t('settings.graphicsLow') }}</span></button>
                     </div>
 
                     <div style="margin-top: 10px;">
@@ -73,7 +73,7 @@
 
                                 <td class="item-label" style="width: 25%">{{ t('settings.targetMarkerBrightness') }}</td>
                                 <td style="width: 25%">
-                                    <input class="range-slider" type="range" min="0.1" max="1" step="0.1" style="zoom: 1.5;" v-model="storedSettings.targetMarkerOpacity" @change="targetMarkerOpacityChanged()" />
+                                    <input class="range-slider" type="range" min="0.2" max="1.8" step="0.1" style="zoom: 1.5;" v-model="storedSettings.targetMarkerOpacity" @change="targetMarkerOpacityChanged()" />
                                 </td>
                             </tr>
                             </tbody>
@@ -85,9 +85,9 @@
                     <div style="max-height: 65vh; overflow-y: auto; overflow-x: hidden;">
                         {{ t('settings.actionButtons') }}
                         <div class="dialog-actions" style="margin-top: 20px;">
-                            <button class="dialog-button" :class="storedSettings.actionButtonsLayout == '1COLUMN' ? 'selected' : ''" @click="setActionButtonsLayout('1COLUMN')">{{ t('settings.layoutOneColumn') }}</button>
-                            <button class="dialog-button" :class="storedSettings.actionButtonsLayout == '2COLUMN' ? 'selected' : ''" @click="setActionButtonsLayout('2COLUMN')">{{ t('settings.layoutTwoColumns') }}</button>
-                            <button class="dialog-button" :class="storedSettings.actionButtonsLayout == 'CORNER' ? 'selected' : ''" @click="setActionButtonsLayout('CORNER')">{{ t('settings.layoutCorner') }}</button>
+                            <button class="dialog-button" :class="storedSettings.actionButtonsLayout == '1COLUMN' ? 'selected' : ''" @click="setActionButtonsLayout('1COLUMN')"><span class="ui-text-gradient--button-state">{{ t('settings.layoutOneColumn') }}</span></button>
+                            <button class="dialog-button" :class="storedSettings.actionButtonsLayout == '2COLUMN' ? 'selected' : ''" @click="setActionButtonsLayout('2COLUMN')"><span class="ui-text-gradient--button-state">{{ t('settings.layoutTwoColumns') }}</span></button>
+                            <button class="dialog-button" :class="storedSettings.actionButtonsLayout == 'CORNER' ? 'selected' : ''" @click="setActionButtonsLayout('CORNER')"><span class="ui-text-gradient--button-state">{{ t('settings.layoutCorner') }}</span></button>
                         </div>
 
                         <div style="margin-top: 10px;">
@@ -146,12 +146,12 @@
                     <div style="max-height: 65vh; overflow-y: auto;">
                         <div>{{ t('common.language') }}</div>
                         <div class="dialog-actions" style="margin-top: 20px;">
-                            <button class="dialog-button" :class="storedSettings.language == 'cs' ? 'selected' : ''" @click="setLanguage('cs')">{{ t('common.czech') }}</button>
-                            <button class="dialog-button" :class="storedSettings.language == 'en' ? 'selected' : ''" @click="setLanguage('en')">{{ t('common.english') }}</button>
+                            <button class="dialog-button" :class="storedSettings.language == 'cs' ? 'selected' : ''" @click="setLanguage('cs')"><span class="ui-text-gradient--button-state">{{ t('common.czech') }}</span></button>
+                            <button class="dialog-button" :class="storedSettings.language == 'en' ? 'selected' : ''" @click="setLanguage('en')"><span class="ui-text-gradient--button-state">{{ t('common.english') }}</span></button>
                         </div>
 
                         <div class="dialog-actions" style="margin-top: 24px;">
-                            <button class="dialog-button" @click="logoutFromAccount()">{{ t('settings.logout') }}</button>
+                            <button class="dialog-button" @click="logoutFromAccount()"><span class="ui-text-gradient--button-state">{{ t('settings.logout') }}</span></button>
                         </div>
                     </div>
                 </div>
@@ -167,6 +167,7 @@ import { Settings } from '@/settings/settings'
 import { Renderer } from '@/babylon/scene/renderer'
 import { Lights } from '@/babylon/scene/lights'
 import { ActionButtonsManager } from '@/gui/actionButtonsManager'
+import { TargetingManager } from '@/gui/targettingManager'
 import { ViewportManager } from '@/utils/viewport'
 import { getFullScreenSvg, getInspectSvg } from '@/vue/icons/icons'
 import { setLocale, useI18n } from '@/i18n'
@@ -258,7 +259,8 @@ const ambientVolumeChanged = () => {
 }
 
 const targetMarkerOpacityChanged = () => {
-    Settings.setTargetMarkerOpacity(storedSettings.value.targetMarkerOpacity)
+    Settings.setTargetMarkerOpacity(Number(storedSettings.value.targetMarkerOpacity))
+    TargetingManager.prepareTargetSprites()
     storeSettings()
 }
 
@@ -337,6 +339,14 @@ watch(activeTabId, (newVal) => {
 #setting-dialog-backdrop .dialog-content {
     box-sizing: border-box;
     padding-right: 10px;
+}
+
+#setting-dialog-backdrop .dialog-content .dialog-button:not(:disabled):hover {
+    background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('/images/gui/bck_stone1.png');
+}
+
+.settings-joystick-label {
+    color: rgb(var(--ui-base));
 }
 
 .settings-header-actions {

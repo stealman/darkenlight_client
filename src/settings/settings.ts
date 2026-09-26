@@ -72,7 +72,7 @@ export const Settings = {
         this.detailLevelName = storedSettings.detailLevelName
 
         this.brightness = parseInt(storedSettings.brightness)
-        this.targetMarkerOpacity = parseFloat(storedSettings.targetMarkerOpacity)
+        this.targetMarkerOpacity = Number.isFinite(parseFloat(storedSettings.targetMarkerOpacity)) ? parseFloat(storedSettings.targetMarkerOpacity) : 1
         this.displayGlow = storedSettings.displayGlow
         this.hudSize = parseFloat(storedSettings.hudSize)
         this.joystickSize = parseInt(storedSettings.joystickSize)

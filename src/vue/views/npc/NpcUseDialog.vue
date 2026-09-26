@@ -62,8 +62,8 @@
                             <span class="ui-emerald-text-gradient">{{ getTotalPrice(item) }}</span>
                             <img src="/images/icons/emerald.png" alt="Emerald" />
                         </span>
-                        <div class="npc-vendor-buy-actions">
-                            <button class="dialog-button npc-vendor-buy-button npc-vendor-purchase-button" @click.stop="buyItem(item, 1, $event)">
+                        <div class="npc-vendor-buy-actions" @mouseover="previewVendorPriceFromButton(item, $event)" @mouseleave="clearVendorPricePreview(item)">
+                            <button class="dialog-button npc-vendor-buy-button npc-vendor-purchase-button" @mouseenter="previewVendorPrice(item, 1)" @mouseleave="clearVendorPricePreview(item)" @click.stop="buyItem(item, 1, $event)">
                                 <span class="ui-text-gradient--button-state">{{ item.tp === 'R' ? '×1' : t('vendor.buy') }}</span>
                             </button>
                             <template v-if="item.tp === 'R'">
@@ -281,6 +281,12 @@ type RepairItem = {
     durabilityStatus: ItemDurabilityStatus | null
 }
 
+type VendorPricePreview = {
+    itemType: string
+    codebookId: number
+    quantity: number
+}
+
 type TrainerTab = 'training' | 'newSkills' | 'promotion'
 
 const dialogVisible = ref(false)
@@ -288,6 +294,7 @@ const npcData = ref<NpcUseData | null>(null)
 const selectedFeatureIndex = ref(0)
 const selectedCategory = ref('')
 const selectedTrainerTab = ref<TrainerTab>('training')
+const vendorPricePreview = ref<VendorPricePreview | null>(null)
 const detailItem = ref<NpcVendorCatalogItem | null>(null)
 const detailOverlayPosition = ref({x: 0, y: 0})
 const repairItemInfoOverlayRef = ref<{ getBoundingClientRect?: () => DOMRect } | null>(null)
@@ -377,7 +384,19 @@ const formatModifier = (value: number | string | undefined) => {
     const number = Number(value)
     return `${number > 0 ? '+' : ''}${number}`
 }
-const getTotalPrice = (item: NpcVendorCatalogItem) => item.price
+const getTotalPrice = (item: NpcVendorCatalogItem) => item.price * (vendorPricePreview.value?.itemType === item.tp && vendorPricePreview.value.codebookId === item.cb ? vendorPricePreview.value.quantity : 1)
+const previewVendorPrice = (item: NpcVendorCatalogItem, quantity: number) => {
+    vendorPricePreview.value = {itemType: item.tp, codebookId: item.cb, quantity}
+}
+const previewVendorPriceFromButton = (item: NpcVendorCatalogItem, event: MouseEvent) => {
+    const label = (event.target as HTMLElement).closest('button')?.textContent?.trim() ?? ''
+    previewVendorPrice(item, label.endsWith('25') ? 25 : label.endsWith('5') ? 5 : 1)
+}
+const clearVendorPricePreview = (item: NpcVendorCatalogItem) => {
+    if (vendorPricePreview.value?.itemType === item.tp && vendorPricePreview.value.codebookId === item.cb) {
+        vendorPricePreview.value = null
+    }
+}
 const getItemAttribute = (item: Item, attribute: string) => {
     const attributes = item.atts as unknown as Record<string, number | string> & {get?: (key: string) => number | string | undefined}
     return Number(typeof attributes.get === 'function' ? attributes.get(attribute) : attributes[attribute])
@@ -691,7 +710,8 @@ defineExpose({openDialog})
 .npc-vendor-item-owned { margin-left: 4px; color: rgb(var(--ui-dark)); font-weight: 400; white-space: nowrap; }
 .npc-vendor-item-price { display: inline-flex; align-items: center; gap: 4px; color: #7ef58e; white-space: nowrap; font-size: 15px; }
 .npc-vendor-item-price img { width: 19px; height: 19px; object-fit: contain; }
-.npc-vendor-catalog-list .npc-vendor-item-row:hover .npc-vendor-item-price { transform-origin: center; animation: npc-vendor-price-pulse 1.2s ease-in-out infinite; }
+.npc-vendor-catalog-list .npc-vendor-item-row:hover .npc-vendor-item-price,
+.npc-healer-service-list .npc-vendor-item-row:hover .npc-vendor-item-price { transform-origin: center; animation: npc-vendor-price-pulse 1.2s ease-in-out infinite; }
 .npc-vendor-buy-actions { display: flex; justify-content: flex-end; gap: 5px; }
 .npc-vendor-buy-button, .npc-vendor-quick-buy-button { min-width: 0; white-space: nowrap; }
 .npc-vendor-quick-buy-button { min-width: 42px; }
