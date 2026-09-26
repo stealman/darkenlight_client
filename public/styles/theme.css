@@ -35,9 +35,15 @@
     color: rgb(var(--ui-danger));
 }
 
-.ui-text-gradient {
+.ui-text-gradient,
+.ui-text-gradient--button-state {
     --ui-text-gradient-bottom: var(--ui-text-gradient-base-bottom);
     --ui-text-gradient-top: var(--ui-text-gradient-base-top);
+}
+
+.ui-text-gradient,
+.dialog-button.selected .ui-text-gradient--button-state,
+.dialog-button:not(:disabled):hover .ui-text-gradient--button-state {
     display: inline-block;
     background: linear-gradient(to top, var(--ui-text-gradient-bottom), var(--ui-text-gradient-top));
     background-clip: text;
@@ -46,9 +52,27 @@
     -webkit-text-fill-color: transparent;
 }
 
+.dialog-button.selected .ui-text-gradient--button-state,
+.dialog-button:not(:disabled):hover .ui-text-gradient--button-state {
+    text-shadow: none;
+}
+
 .ui-text-gradient--accent {
     --ui-text-gradient-bottom: rgba(var(--ui-text-gradient-accent), var(--ui-text-gradient-accent-bottom-opacity));
     --ui-text-gradient-top: rgb(var(--ui-text-gradient-accent));
+}
+
+.ui-text-gradient--no-shadow {
+    text-shadow: none;
+}
+
+.ui-emerald-text-gradient {
+    display: inline-block;
+    background: linear-gradient(to bottom, #75ff7c, #00bf32);
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
 }
 
 .ui-progress-fill-gradient {
@@ -222,7 +246,7 @@
 }
 
 .dialog-header div.tab-item.active {
-    background-image: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url('/images/gui/bck_stone1.png');
+    background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('/images/gui/bck_stone1.png');
     background-attachment: fixed;
     border: 2px solid transparent;
     border-top: 2px solid rgba(0, 0, 0, 0.1);

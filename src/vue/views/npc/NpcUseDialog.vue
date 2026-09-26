@@ -17,7 +17,7 @@
                         :class="{ active: selectedFeatureIndex === index }"
                         @click="selectFeature(index)"
                     >
-                        <label class="noselect">{{ getFeatureLabel(feature.type) }}</label>
+                        <label :class="['noselect', { 'ui-text-gradient': selectedFeatureIndex === index, 'ui-text-gradient--no-shadow': selectedFeatureIndex === index }]">{{ getFeatureLabel(feature.type) }}</label>
                     </div>
                 </div>
                 <div class="npc-use-emeralds">
@@ -37,7 +37,9 @@
                         :class="{ selected: selectedCategory === category.key }"
                         @click="selectCategory(category.key)"
                     >
-                        {{ getCategoryLabel(category.key) }}
+                        <span class="ui-text-gradient--button-state">
+                            {{ getCategoryLabel(category.key) }}
+                        </span>
                     </button>
                 </div>
 
@@ -50,18 +52,20 @@
                         tabindex="0"
                         @click.stop="showItemDetails(item, $event)"
                         @keydown.enter="showItemDetails(item, $event)"
-                    >
+                        >
                         <img class="npc-vendor-item-icon" :src="getItemImage(item)" :alt="getItemName(item)" />
                         <span class="npc-vendor-item-name">
-                            {{ getItemName(item) }}
+                            <span class="ui-text-gradient">{{ getItemName(item) }}</span>
                             <span v-if="item.tp === 'R'" class="npc-vendor-item-owned">({{ getOwnedResourceCount(item) }})</span>
                         </span>
                         <span class="npc-vendor-item-price">
-                            {{ getTotalPrice(item) }}
+                            <span class="ui-emerald-text-gradient">{{ getTotalPrice(item) }}</span>
                             <img src="/images/icons/emerald.png" alt="Emerald" />
                         </span>
                         <div class="npc-vendor-buy-actions">
-                            <button class="dialog-button npc-vendor-buy-button" @click.stop="buyItem(item, 1, $event)">{{ item.tp === 'R' ? '×1' : t('vendor.buy') }}</button>
+                            <button class="dialog-button npc-vendor-buy-button npc-vendor-purchase-button" @click.stop="buyItem(item, 1, $event)">
+                                <span class="ui-text-gradient--button-state">{{ item.tp === 'R' ? '×1' : t('vendor.buy') }}</span>
+                            </button>
                             <template v-if="item.tp === 'R'">
                                 <button class="dialog-button npc-vendor-quick-buy-button" @click.stop="buyItem(item, 5, $event)">×5</button>
                                 <button class="dialog-button npc-vendor-quick-buy-button" @click.stop="buyItem(item, 25, $event)">×25</button>
@@ -78,7 +82,7 @@
                         <img class="npc-vendor-item-icon" :src="getServiceImage(service)" :alt="service.name" />
                         <span class="npc-vendor-item-name">{{ service.name }}</span>
                         <span class="npc-vendor-item-price">
-                            {{ service.price }}
+                            <span class="ui-emerald-text-gradient">{{ service.price }}</span>
                             <img src="/images/icons/emerald.png" alt="Emerald" />
                         </span>
                     </button>
@@ -92,9 +96,9 @@
             </template>
 
             <template v-else-if="selectedFeature?.type === 'repairer'">
-                <div v-if="repairItems.equipment.length || repairItems.inventory.length" class="npc-vendor-item-list">
+                <div v-if="repairItems.equipment.length || repairItems.inventory.length" class="npc-vendor-item-list npc-repairer-item-list">
                     <template v-if="repairItems.equipment.length">
-                        <div class="npc-repairer-section-title">{{ t('vendor.equipment') }}</div>
+                        <h3 class="npc-repairer-section-title"><span class="ui-text-gradient">{{ t('vendor.equipment') }}</span></h3>
                         <div
                             v-for="repairItem in repairItems.equipment"
                             :key="repairItem.item.id"
@@ -107,17 +111,24 @@
                             <div :class="['npc-repairer-item-icon', repairItem.durabilityStatus ? `item-durability--${repairItem.durabilityStatus}` : null]">
                                 <img class="npc-vendor-item-icon" :src="getRepairItemImage(repairItem.item)" :alt="repairItem.item.name ?? ''" />
                             </div>
-                            <span class="npc-vendor-item-name">{{ repairItem.item.name }}</span>
-                            <span :class="['npc-repairer-durability', repairItem.durabilityStatus ? `item-durability--${repairItem.durabilityStatus}` : null]">{{ t('inventory.durability') }} {{ getItemDurability(repairItem.item) }}/{{ getItemMaxDurability(repairItem.item) }}</span>
+                            <span class="npc-vendor-item-name"><span class="ui-text-gradient">{{ repairItem.item.name }}</span></span>
+                            <span :class="['npc-repairer-durability', repairItem.durabilityStatus ? `item-durability--${repairItem.durabilityStatus}` : null]">
+                                <span class="npc-repairer-durability-value">{{ getItemDurability(repairItem.item) }} / {{ getItemMaxDurability(repairItem.item) }}</span>
+                                <span class="npc-repairer-durability-track">
+                                    <span :class="['npc-repairer-durability-fill', 'ui-progress-fill-gradient', repairItem.durabilityStatus ? `item-durability--${repairItem.durabilityStatus}` : null]" :style="{ width: `${getRepairDurabilityPercent(repairItem.item)}%` }"></span>
+                                </span>
+                            </span>
                             <span class="npc-vendor-item-price">
-                                {{ repairItem.price }}
+                                <span class="ui-emerald-text-gradient">{{ repairItem.price }}</span>
                                 <img src="/images/icons/emerald.png" alt="Emerald" />
                             </span>
-                            <button class="dialog-button npc-vendor-buy-button" @click.stop="repairSelectedItem(repairItem, $event)">{{ t('vendor.repair') }}</button>
+                            <button class="dialog-button npc-vendor-buy-button npc-vendor-purchase-button" @click.stop="repairSelectedItem(repairItem, $event)">
+                                <span class="ui-text-gradient--button-state">{{ t('vendor.repair') }}</span>
+                            </button>
                         </div>
                     </template>
                     <template v-if="repairItems.inventory.length">
-                        <div class="npc-repairer-section-title">{{ t('vendor.inventory') }}</div>
+                        <h3 class="npc-repairer-section-title"><span class="ui-text-gradient">{{ t('vendor.inventory') }}</span></h3>
                         <div
                             v-for="repairItem in repairItems.inventory"
                             :key="repairItem.item.id"
@@ -130,13 +141,20 @@
                         <div :class="['npc-repairer-item-icon', repairItem.durabilityStatus ? `item-durability--${repairItem.durabilityStatus}` : null]">
                             <img class="npc-vendor-item-icon" :src="getRepairItemImage(repairItem.item)" :alt="repairItem.item.name ?? ''" />
                         </div>
-                        <span class="npc-vendor-item-name">{{ repairItem.item.name }}</span>
-                        <span :class="['npc-repairer-durability', repairItem.durabilityStatus ? `item-durability--${repairItem.durabilityStatus}` : null]">{{ t('inventory.durability') }} {{ getItemDurability(repairItem.item) }}/{{ getItemMaxDurability(repairItem.item) }}</span>
+                        <span class="npc-vendor-item-name"><span class="ui-text-gradient">{{ repairItem.item.name }}</span></span>
+                        <span :class="['npc-repairer-durability', repairItem.durabilityStatus ? `item-durability--${repairItem.durabilityStatus}` : null]">
+                            <span class="npc-repairer-durability-value">{{ getItemDurability(repairItem.item) }} / {{ getItemMaxDurability(repairItem.item) }}</span>
+                            <span class="npc-repairer-durability-track">
+                                <span :class="['npc-repairer-durability-fill', 'ui-progress-fill-gradient', repairItem.durabilityStatus ? `item-durability--${repairItem.durabilityStatus}` : null]" :style="{ width: `${getRepairDurabilityPercent(repairItem.item)}%` }"></span>
+                            </span>
+                        </span>
                         <span class="npc-vendor-item-price">
-                            {{ repairItem.price }}
+                            <span class="ui-emerald-text-gradient">{{ repairItem.price }}</span>
                             <img src="/images/icons/emerald.png" alt="Emerald" />
                         </span>
-                        <button class="dialog-button npc-vendor-buy-button" @click.stop="repairSelectedItem(repairItem, $event)">{{ t('vendor.repair') }}</button>
+                        <button class="dialog-button npc-vendor-buy-button npc-vendor-purchase-button" @click.stop="repairSelectedItem(repairItem, $event)">
+                            <span class="ui-text-gradient--button-state">{{ t('vendor.repair') }}</span>
+                        </button>
                         </div>
                     </template>
                 </div>
@@ -153,7 +171,9 @@
                         :disabled="tab === 'newSkills' && trainerNewSkills.length === 0"
                         @click="selectedTrainerTab = tab"
                     >
-                        {{ t(`vendor.${tab}`) }}
+                        <span class="ui-text-gradient--button-state">
+                            {{ t(`vendor.${tab}`) }}
+                        </span>
                     </button>
                 </div>
                 <div
@@ -167,7 +187,7 @@
                                 <span class="npc-trainer-skill-name">{{ t(skill.translationKey) }}</span>
                                 <span class="npc-trainer-skill-description">{{ t(skill.descriptionTranslationKey) }}</span>
                                 <span class="npc-vendor-item-price">
-                                    {{ trainerSkillLearningPrice }}
+                                    <span class="ui-emerald-text-gradient">{{ trainerSkillLearningPrice }}</span>
                                     <img src="/images/icons/emerald.png" alt="Emerald" />
                                 </span>
                                 <button class="dialog-button npc-vendor-buy-button" @click.stop="learnSkill(skill.key, $event)">{{ t('vendor.learnSkill') }}</button>
@@ -220,7 +240,9 @@
                         class="dialog-button npc-use-tab"
                         @click="openCrafting(category, $event)"
                     >
-                        {{ getCategoryLabel(category) }}
+                        <span class="ui-text-gradient--button-state">
+                            {{ getCategoryLabel(category) }}
+                        </span>
                     </button>
                 </div>
                 <div v-else class="npc-use-empty-state">{{ t('vendor.emptyCategory') }}</div>
@@ -441,6 +463,14 @@ const getItemAttribute = (item: Item, attribute: string) => {
 }
 const getItemDurability = (item: Item) => getItemAttribute(item, 'dur')
 const getItemMaxDurability = (item: Item) => getItemAttribute(item, 'durM')
+const getRepairDurabilityPercent = (item: Item) => {
+    const durability = getItemDurability(item)
+    const maxDurability = getItemMaxDurability(item)
+    if (!Number.isFinite(durability) || !Number.isFinite(maxDurability) || maxDurability <= 0) {
+        return 0
+    }
+    return Math.max(0, Math.min(100, (durability / maxDurability) * 100))
+}
 const getRepairItemImage = (item: Item) => item.imgUrl ? `/${item.imgUrl}` : '/images/icons/buttons/btn_backpack.png'
 const getOwnedResourceCount = (item: NpcVendorCatalogItem) => {
     resourceInventoryVersion.value
@@ -690,6 +720,13 @@ defineExpose({openDialog})
 .npc-use-content-shell { display: flex; flex-direction: column; width: 100%; height: min(600px, calc(85vh - 48px)); box-sizing: border-box; padding: 10px; gap: 10px; overflow: hidden; }
 .npc-use-category-tabs { display: flex; flex-wrap: wrap; gap: 6px; flex: 0 0 auto; }
 .npc-use-tab { min-width: 82px; }
+.npc-use-tab.selected,
+.npc-use-tab:not(:disabled):hover {
+    background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('/images/gui/bck_stone1.png');
+}
+.npc-vendor-purchase-button:not(:disabled):hover {
+    background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('/images/gui/bck_stone1.png');
+}
 .npc-use-tab, .npc-vendor-buy-button, .npc-vendor-quick-buy-button { padding: 5px 10px; font-size: 0.9rem; line-height: 1; }
 .npc-trainer-skill-list { display: flex; flex: 1 1 auto; min-height: 0; flex-direction: column; overflow-y: auto; }
 .npc-trainer-skill-category { margin-top: 4px; }
@@ -715,15 +752,30 @@ defineExpose({openDialog})
 .npc-use-content-shell :deep(.bank-panel) { flex: 1 1 auto; min-height: 0; }
 .npc-vendor-item-list { display: flex; flex: 1 1 auto; min-height: 0; flex-direction: column; overflow-y: auto; border-top: 1px solid rgba(var(--ui-darker), 0.8); border-bottom: 1px solid rgba(var(--ui-darker), 0.8); }
 .npc-vendor-item-row { display: grid; grid-template-columns: 46px minmax(0, 1fr) max-content auto; align-items: center; gap: 12px; min-height: 46px; padding: 3px 8px; border-bottom: 1px solid rgba(var(--ui-darker), 0.65); color: rgb(var(--ui-base)); cursor: url('/images/cursor-pointer.png'), pointer; }
-.npc-repairer-item-row { grid-template-columns: 46px minmax(0, 1fr) max-content max-content auto; }
-.npc-repairer-durability { color: rgb(var(--ui-dark)); font-size: 12px; white-space: nowrap; }
-.npc-repairer-durability.item-durability--worn { color: rgba(var(--ui-dark), 0.72); }
+.npc-repairer-item-row { grid-template-columns: 46px minmax(0, 1fr) 128px 80px auto; }
+.npc-repairer-durability { display: flex; flex-direction: column; align-items: stretch; justify-self: end; width: 128px; row-gap: 2px; color: rgb(var(--ui-dark)); font-size: 13px; white-space: nowrap; }
+.npc-repairer-durability-value { text-align: center; }
+.npc-repairer-durability-track { align-self: center; width: 75%; height: 6px; overflow: hidden; border: 1px solid rgba(var(--ui-darkest), 0.5); background: rgb(var(--ui-darkest)); }
+.npc-repairer-durability-fill { display: block; height: 100%; --ui-progress-gradient-left: var(--ui-dark); --ui-progress-gradient-right: var(--ui-darkest); }
+.npc-repairer-durability-fill.item-durability--worn { --ui-progress-gradient-left: var(--ui-progress-experience-dark); --ui-progress-gradient-right: var(--ui-success); }
+.npc-repairer-durability-fill.item-durability--warning { --ui-progress-gradient-left: var(--ui-durability-warning-bg); --ui-progress-gradient-right: var(--ui-durability-warning); }
+.npc-repairer-durability-fill.item-durability--danger { --ui-progress-gradient-left: var(--ui-durability-danger-bg); --ui-progress-gradient-right: var(--ui-durability-danger); }
+.npc-repairer-durability-fill.item-durability--critical { --ui-progress-gradient-left: var(--ui-durability-critical-bg); --ui-progress-gradient-right: var(--ui-danger); }
+.npc-repairer-item-row .npc-vendor-item-price { justify-self: end; }
+.npc-repairer-durability.item-durability--worn { color: rgb(var(--ui-attribute-agility)); }
 .npc-repairer-durability.item-durability--warning { color: rgb(var(--ui-durability-warning)); }
 .npc-repairer-durability.item-durability--danger { color: rgb(var(--ui-durability-danger)); }
 .npc-repairer-durability.item-durability--critical { color: rgb(var(--ui-danger)); }
 .npc-repairer-item-icon { position: relative; width: 40px; height: 40px; }
-.npc-repairer-item-icon .npc-vendor-item-icon { width: 100%; height: 100%; }
-.npc-repairer-section-title { padding: 8px 8px 5px; border-bottom: 1px solid rgba(var(--ui-darker), 0.65); color: rgb(var(--ui-dark)); font-size: 12px; font-weight: 700; text-transform: uppercase; }
+.npc-repairer-item-icon:is(.item-durability--warning, .item-durability--danger, .item-durability--critical) { display: flex; align-items: center; justify-content: center; background-image: url('/images/gui/bck_stone1.png'); background-repeat: repeat; background-attachment: fixed; }
+.npc-repairer-item-icon::before { content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 0; }
+.npc-repairer-item-icon.item-durability--warning::before { background: rgba(var(--ui-durability-warning-bg), 0.86); }
+.npc-repairer-item-icon.item-durability--danger::before { background: rgba(var(--ui-durability-danger-bg), 0.86); }
+.npc-repairer-item-icon.item-durability--critical::before { background: rgba(var(--ui-durability-critical-bg), 0.86); }
+.npc-repairer-item-icon .npc-vendor-item-icon { position: relative; z-index: 1; width: 100%; height: 100%; }
+.npc-repairer-item-list { border-top: 0; }
+.npc-repairer-section-title { margin: 0 0 5px; padding: 0 2px; color: rgb(var(--ui-base)); font-size: clamp(14px, 2vh, 17px); font-weight: 700; line-height: 1.15; text-align: center; text-transform: none; }
+.npc-repairer-section-title:not(:first-child) { margin-top: 16px; }
 .npc-vendor-item-row:hover, .npc-trainer-skill-row:hover { background: rgba(255, 255, 255, 0.06); }
 .npc-healer-service-row { width: 100%; border: 0; border-bottom: 1px solid rgba(var(--ui-darker), 0.65); background: transparent; color: inherit; font: inherit; text-align: inherit; }
 .npc-healer-service-row:disabled { cursor: default; opacity: 0.55; }
@@ -731,8 +783,8 @@ defineExpose({openDialog})
 .npc-vendor-item-icon { width: 40px; height: 40px; object-fit: contain; }
 .npc-vendor-item-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; text-align: left; font-size: 14px; font-weight: 700; }
 .npc-vendor-item-owned { color: rgb(var(--ui-dark)); font-weight: 400; white-space: nowrap; }
-.npc-vendor-item-price { display: inline-flex; align-items: center; gap: 4px; color: #7ef58e; white-space: nowrap; font-size: 13px; }
-.npc-vendor-item-price img { width: 15px; height: 15px; object-fit: contain; }
+.npc-vendor-item-price { display: inline-flex; align-items: center; gap: 4px; color: #7ef58e; white-space: nowrap; font-size: 15px; }
+.npc-vendor-item-price img { width: 19px; height: 19px; object-fit: contain; }
 .npc-vendor-buy-actions { display: flex; justify-content: flex-end; gap: 5px; }
 .npc-vendor-buy-button, .npc-vendor-quick-buy-button { min-width: 0; white-space: nowrap; }
 .npc-vendor-quick-buy-button { min-width: 42px; }
@@ -752,7 +804,7 @@ defineExpose({openDialog})
 
 @media (min-height: 700px) {
     .npc-vendor-item-row { grid-template-columns: 54px minmax(0, 1fr) max-content auto; min-height: 58px; padding-block: 5px; }
-    .npc-repairer-item-row { grid-template-columns: 54px minmax(0, 1fr) max-content max-content auto; }
+    .npc-repairer-item-row { grid-template-columns: 54px minmax(0, 1fr) 128px 80px auto; }
     .npc-vendor-item-icon { width: 48px; height: 48px; }
     .npc-repairer-item-icon { width: 48px; height: 48px; }
 }

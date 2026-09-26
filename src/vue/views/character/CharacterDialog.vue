@@ -16,7 +16,7 @@
                 }"
                 @click="selectTab(tab.id)"
             >
-                <label :class="['noselect', { 'ui-text-gradient': tab.id === activeTabId }]">{{ tab.name }}</label>
+                <label :class="['noselect', { 'ui-text-gradient': tab.id === activeTabId, 'ui-text-gradient--no-shadow': tab.id === activeTabId }]">{{ tab.name }}</label>
             </div>
         </template>
 
@@ -113,10 +113,6 @@ defineExpose({
     overflow: visible;
     padding: 0 4px 4px;
     box-sizing: border-box;
-}
-
-.tab-item.active .ui-text-gradient {
-    text-shadow: none;
 }
 
 .tab-item--training-available label {

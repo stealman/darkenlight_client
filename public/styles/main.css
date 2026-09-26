@@ -77,11 +77,6 @@ div#emeralds-info {
 
 #emeralds-info-count {
     font-size: 2.25vh;
-    background: linear-gradient(to bottom, #75ff7c, #00bf32);
-    background-clip: text;
-    -webkit-background-clip: text;
-    color: transparent;
-    -webkit-text-fill-color: transparent;
 }
 
 #system-buttons {

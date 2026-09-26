@@ -2,8 +2,12 @@
     <div class="bank-panel" @click.self="hideItemInfoOverlay">
         <div class="bank-column">
             <div class="bank-column-title">
-                <button class="dialog-button bank-mode-button" :class="{selected: leftMode === 'equipment'}" @click="setLeftMode('equipment')">{{ t('vendor.equipment') }}</button>
-                <button class="dialog-button bank-mode-button" :class="{selected: leftMode === 'inventory'}" @click="setLeftMode('inventory')">{{ t('vendor.inventory') }}</button>
+                <button class="dialog-button bank-mode-button" :class="{selected: leftMode === 'equipment'}" @click="setLeftMode('equipment')">
+                    <span class="ui-text-gradient--button-state">{{ t('vendor.equipment') }}</span>
+                </button>
+                <button class="dialog-button bank-mode-button" :class="{selected: leftMode === 'inventory'}" @click="setLeftMode('inventory')">
+                    <span class="ui-text-gradient--button-state">{{ t('vendor.inventory') }}</span>
+                </button>
             </div>
             <Backpack
                 v-if="leftMode === 'inventory'"
@@ -25,8 +29,12 @@
             />
         </div>
         <div class="bank-column">
-            <div class="bank-column-title">{{ t('vendor.banker') }} <span>{{ BankManager.items.length }}/{{ BankManager.capacity }}</span></div>
+            <div class="bank-column-title bank-storage-title">
+                <h3 class="bank-storage-title-label"><span class="ui-text-gradient">{{ t('vendor.banker') }}</span></h3>
+                <span class="bank-storage-capacity">{{ BankManager.items.length }}/{{ BankManager.capacity }}</span>
+            </div>
             <Backpack
+                class="bank-storage-inventory"
                 :slot-count="BankManager.capacity"
                 :column-count="4"
                 :slot-images="bankSlotImages"
@@ -243,8 +251,16 @@ onUnmounted(() => {
 .bank-panel { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; width: 100%; height: 100%; min-height: 0; }
 .bank-column { display: flex; min-width: 0; min-height: 0; flex-direction: column; }
 .bank-column-title { display: flex; justify-content: space-between; margin: 0 2px 6px; color: rgb(var(--ui-base)); font-size: 13px; font-weight: 700; text-transform: uppercase; }
-.bank-column-title span { color: rgb(var(--ui-dark)); }
-.bank-mode-button { min-width: 0; flex: 1 1 50%; padding: 4px 2px; font-size: 11px; }
+.bank-column-title > span { color: rgb(var(--ui-dark)); }
+.bank-storage-title { display: grid; grid-template-columns: 1fr auto 1fr; align-items: start; margin: 0 2px; }
+.bank-storage-title-label { grid-column: 2; margin: 0 0 5px; padding: 0 2px; color: rgb(var(--ui-base)); font-size: clamp(14px, 2vh, 17px); font-weight: 700; line-height: 1.15; text-align: center; text-transform: none; }
+.bank-storage-capacity { grid-column: 3; justify-self: end; }
+.bank-storage-inventory { margin-top: 10px; }
+.bank-mode-button { min-width: 0; flex: 1 1 50%; padding: 5px 10px; font-size: 0.9rem; line-height: 1; }
+.bank-mode-button.selected,
+.bank-mode-button:not(:disabled):hover {
+    background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('/images/gui/bck_stone1.png');
+}
 .bank-column :deep(.inventory-panel) { width: 100%; flex: 1 1 auto; min-height: 0; padding: 0; }
 .bank-column :deep(.inventory-grid-wrapper) { height: 100%; max-height: none; aspect-ratio: auto; }
 .bank-column :deep(.inventory-grid) { height: 100%; }
