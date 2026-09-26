@@ -43,7 +43,7 @@
                     </button>
                 </div>
 
-                <div v-if="selectedCategoryItems.length || selectedFeature?.services?.length" :class="['npc-vendor-item-list', { 'npc-healer-service-list': selectedFeature?.type === 'healer' }]">
+                <div v-if="selectedCategoryItems.length || selectedFeature?.services?.length" :class="['npc-vendor-item-list', { 'npc-vendor-catalog-list': selectedFeature?.type === 'vendor', 'npc-healer-service-list': selectedFeature?.type === 'healer' }]">
                     <div
                         v-for="item in selectedCategoryItems"
                         :key="`${item.tp}:${item.cb}`"
@@ -764,6 +764,8 @@ defineExpose({openDialog})
 .npc-use-content-shell :deep(.bank-panel) { flex: 1 1 auto; min-height: 0; }
 .npc-vendor-item-list { display: flex; flex: 1 1 auto; min-height: 0; flex-direction: column; overflow-y: auto; border-top: 1px solid rgba(var(--ui-darker), 0.8); border-bottom: 1px solid rgba(var(--ui-darker), 0.8); }
 .npc-vendor-item-row { display: grid; grid-template-columns: 46px minmax(0, 1fr) max-content auto; align-items: center; gap: 12px; min-height: 46px; padding: 3px 8px; border-bottom: 1px solid rgba(var(--ui-darker), 0.65); color: rgb(var(--ui-base)); cursor: url('/images/cursor-pointer.png'), pointer; }
+.npc-vendor-catalog-list { border-top: 0; border-bottom: 0; }
+.npc-vendor-catalog-list .npc-vendor-item-row:last-child { border-bottom: 0; }
 .npc-repairer-item-row { grid-template-columns: 46px minmax(0, 1fr) 128px 80px auto; }
 .npc-repairer-durability { display: flex; flex-direction: column; align-items: stretch; justify-self: end; width: 128px; row-gap: 2px; color: rgb(var(--ui-dark)); font-size: 13px; white-space: nowrap; }
 .npc-repairer-durability-value { text-align: center; }
@@ -796,7 +798,7 @@ defineExpose({openDialog})
 .npc-healer-service-row:disabled:hover { background: transparent; }
 .npc-vendor-item-icon { width: 40px; height: 40px; object-fit: contain; }
 .npc-vendor-item-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; text-align: left; font-size: 14px; font-weight: 700; }
-.npc-vendor-item-owned { color: rgb(var(--ui-dark)); font-weight: 400; white-space: nowrap; }
+.npc-vendor-item-owned { margin-left: 4px; color: rgb(var(--ui-dark)); font-weight: 400; white-space: nowrap; }
 .npc-vendor-item-price { display: inline-flex; align-items: center; gap: 4px; color: #7ef58e; white-space: nowrap; font-size: 15px; }
 .npc-vendor-item-price img { width: 19px; height: 19px; object-fit: contain; }
 .npc-vendor-buy-actions { display: flex; justify-content: flex-end; gap: 5px; }
