@@ -44,6 +44,13 @@ export const OverlayManager = {
         this.fontSize = window.devicePixelRatio > 1 ? 14 : 18
         this.emeraldGainIcon = new Image()
         this.emeraldGainIcon.src = '/images/icons/emerald.png'
+        this.reset()
+    },
+
+    reset() {
+        this.damageNumbers = []
+        this.emeraldGainNumbers = []
+        this.itemGainNumbers = []
         this.animatedHpBars.clear()
         this.lastHpBarCleanupAt = 0
         TargetSelector.unselectTarget()
@@ -338,7 +345,7 @@ export const OverlayManager = {
     },
 
     getAnimatedHpPercent(key: string, hpPercent: number, time: number) {
-        const targetPercent = Math.max(0, Math.min(100, hpPercent))
+        const targetPercent = Number.isFinite(hpPercent) ? Math.max(0, Math.min(100, hpPercent)) : 100
         let state = this.animatedHpBars.get(key)
         if (!state) {
             state = {
@@ -416,6 +423,10 @@ export const OverlayManager = {
     },
 
     renderDamagedBar(pos: Vector3, percent: number, enemy: boolean) {
+        if (!Number.isFinite(pos.x) || !Number.isFinite(pos.y) || !Number.isFinite(percent)) {
+            return
+        }
+
         const ctx = this.overlayCtx!
         const barWidth = 50
         const barHeight = 6
@@ -445,6 +456,10 @@ export const OverlayManager = {
     },
 
     renderHealingMarker(pos: Vector3, time: number, healSelf: boolean) {
+        if (!Number.isFinite(pos.x) || !Number.isFinite(pos.y) || !Number.isFinite(time)) {
+            return
+        }
+
         const ctx = this.overlayCtx!
         const x = pos.x + 40
 
@@ -489,6 +504,10 @@ export const OverlayManager = {
     },
 
     renderCharacterLabel(pos: Vector3, char: Character, time: number, tightText: boolean) {
+        if (!Number.isFinite(pos.x) || !Number.isFinite(pos.y)) {
+            return
+        }
+
         const name = char.nameDisplayTime > time ? char.name : ''
         const actionName = char.activeTimedAction?.getDisplayName() || ''
 
@@ -530,10 +549,16 @@ export const OverlayManager = {
     },
 
     renderName(pos: Vector3, name: string, tightText: boolean, relation: 'ALLY' | 'ENEMY' | 'NEUTRAL', useGradient: boolean = false) {
+        if (!Number.isFinite(pos.x) || !Number.isFinite(pos.y)) {
+            return
+        }
         this.renderOutlinedText(pos.x, pos.y - 6, name, tightText, relation, this.fontSize, pos, 1, null, useGradient)
     },
 
     renderNpcLabel(pos: Vector3, name: string, title: string, tightText: boolean) {
+        if (!Number.isFinite(pos.x) || !Number.isFinite(pos.y)) {
+            return
+        }
         if (!title) {
             this.renderName(pos, name, tightText, 'NEUTRAL', true)
             return
@@ -568,6 +593,10 @@ export const OverlayManager = {
         color: string | null = null,
         useGradient: boolean = false,
     ) {
+        if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(fontSize) || !Number.isFinite(textAlpha)) {
+            return
+        }
+
         const ctx = this.overlayCtx!
         ctx.font = `${fontSize}px "Roboto", Arial, sans-serif`
         ctx.fontKerning = 'normal'

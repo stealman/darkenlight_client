@@ -103,6 +103,18 @@ export const MyPlayer = {
         this.myChar.model = null
         this.myChar.autoAttackStart = 0
         this.myChar.autoAttackEnd = 0
+        this.myChar.autoAttackTarget = null
+        this.myModel = null
+        this.activeAction = null
+        this.affectGroups = []
+        this.nearFireplace = null
+        this.lastPotionUseTime = 0
+        this.nextPotionUseTime = 0
+        this.isDead.value = false
+        this.respawnAvailableAt.value = 0
+        this.autoRespawnAt.value = 0
+        this.worldId = -1
+        this.worldName = ''
     },
 
     onFrame(timeRate: number, actualTime: number) {

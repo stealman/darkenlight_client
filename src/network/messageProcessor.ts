@@ -128,8 +128,10 @@ export const MessageProcessor = {
         if (data.message) {
             document.getElementById("dialog-error-content")!.innerText = data.message
             document.getElementById("dialog-error")!.style.display = 'flex'
+            window.dispatchEvent(new Event('game:login-failed'))
         } else if (data.char) {
             await GameManager.startGame(data.char)
+            window.dispatchEvent(new Event('game:started'))
             console.log('Game started')
         }
     },
@@ -299,6 +301,7 @@ export const MessageProcessor = {
         console.log('Logged from another device')
         document.getElementById("dialog-error-content")!.innerText = 'Byli jste odhlášeni, protože jste se přihlásili z jiného zařízení.'
         document.getElementById("dialog-error")!.style.display = 'flex'
+        window.dispatchEvent(new Event('game:session-ended'))
     },
 
     processCharBasicData(data: AttackableBasicTO) {

@@ -20,7 +20,12 @@ export const OnScreenMessageManager = {
     messages: [] as OnScreenMessage[],
 
     initialize() {
+        this.clear()
+    },
 
+    clear() {
+        this.messages.forEach((message) => message.element.remove())
+        this.messages = []
     },
 
     addMessage(text: string, severity: OnScreenMessageSeverity = 'INFO') {

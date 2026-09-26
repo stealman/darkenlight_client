@@ -66,6 +66,7 @@ export const Renderer = {
 
     async initialize(canvas: HTMLCanvasElement) {
         this.canvas = canvas
+        this.frame = 0
         this.engine = new Engine(canvas, Settings.detailLevel.antialias)
         this.engine.setHardwareScalingLevel(1)
         this.createScene(this.engine)
@@ -109,6 +110,7 @@ export const Renderer = {
         GroundItemsManager.initialize(this.scene)
         ArrowsManager.initialize()
         SelectedTargetPanel.initialize()
+        OnScreenMessageManager.initialize()
         MyStatusPanel.initialize()
         EmeraldsManager.initialize()
         ActionButtonsManager.initialize()
@@ -128,15 +130,15 @@ export const Renderer = {
         })
     },
 
-    gameStopped() {
+    async gameStopped() {
         this.engine!.stopRenderLoop()
         GfxManager.clear()
         this.scene.dispose()
         this.camera?.dispose()
         this.camera = null
         this.engine?.dispose()
-        this.initialize(this.canvas!)
         AudioManager.stopAmbientSound()
+        await this.initialize(this.canvas!)
     },
 
     /**

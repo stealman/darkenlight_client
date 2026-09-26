@@ -10,6 +10,7 @@ import { ActionButtonsManager } from '@/gui/actionButtonsManager'
 import { InventoryManager } from '@/data/inventoryManager'
 import { setLocale } from '@/i18n'
 import { MyStatusPanel } from '@/gui/myStatusPanel'
+import { WorldDataManager } from '@/data/worldDataManager'
 
 export const GameManager = {
     started: false as boolean,
@@ -35,16 +36,20 @@ export const GameManager = {
         await MyPlayer.initialize(charData)
         InventoryManager.initializeWeaponSetupsForCharacter()
         ActionButtonsManager.loadBindingsForCharacter(MyPlayer.myChar.id)
-        await Renderer.gameStarted()
         this.onResize()
+        await Renderer.gameStarted()
         this.started = true
     },
 
-    async stopGame() {
-        Connector.sendMessage(new LogoutMsg())
+    async stopGame(notifyServer: boolean = true) {
+        Connector.resetSession()
+        if (notifyServer) {
+            Connector.sendMessage(new LogoutMsg())
+        }
         MyPlayer.reset()
-        Renderer.gameStopped()
+        WorldDataManager.reset()
         this.started = false
+        await Renderer.gameStopped()
     },
 
     onResize() {

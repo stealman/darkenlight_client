@@ -1,10 +1,10 @@
 <template>
     <div id="app">
-        <canvas id="renderCanvas" ref="canvas" class="renderer noselect"></canvas>
-        <canvas v-show="loginRequestSentFlag" ref="miniMapCanvas" id="miniMapCanvas" class="noselect"></canvas>
-        <canvas id="overlayCanvas" class="noselect"></canvas>
+        <canvas id="renderCanvas" ref="canvas" class="renderer noselect" :style="{ visibility: gameSessionActive ? 'visible' : 'hidden' }"></canvas>
+        <canvas v-show="gameSessionActive" ref="miniMapCanvas" id="miniMapCanvas" class="noselect"></canvas>
+        <canvas id="overlayCanvas" class="noselect" :style="{ visibility: gameSessionActive ? 'visible' : 'hidden' }"></canvas>
 
-        <div v-show="loginRequestSentFlag">
+        <div v-show="gameSessionActive">
             <div id="system-buttons">
                 <div @click="showSettingsDialog()" v-html="getHamburgerMenuSvg('icon-white', 'icon-settings')"></div>
                 <div v-if="myCharRef?.className === 'GM'" @click="showDebug" v-html="getInspectSvg('icon-white', 'icon-inspect')"></div>
@@ -175,6 +175,7 @@ let deathDialogTimer: number | null = null
 const gameLoading = ref(true)
 const displayLoginDialog = ref(false)
 const loginRequestSentFlag = ref(false)
+const gameSessionActive = ref(false)
 
 const displaySettingsDialog = ref(false)
 const targetLockSettingsActive = ref(false)
@@ -195,6 +196,35 @@ const craftingDialog = ref()
 const npcUseDialog = ref()
 const npcDetailsDialog = ref()
 const { t } = useI18n()
+
+const closeGameplayDialogs = () => {
+    targetLockSettingsActive.value = false
+    displaySettingsDialog.value = false
+    displayRestartPrompt.value = false
+    displayInventoryDialog.value = false
+    displayCharacterDialog.value = false
+    displayCraftingDialog.value = false
+    displayNpcUseDialog.value = false
+    gmPanelVisible.value = false
+    inventoryDialog.value?.forceClose?.()
+}
+
+const onGameStarted = () => {
+    gameLoading.value = false
+    gameSessionActive.value = true
+    loginRequestSentFlag.value = true
+}
+
+const onLoginFailed = () => {
+    gameLoading.value = false
+    gameSessionActive.value = false
+    loginRequestSentFlag.value = false
+    displayLoginDialog.value = true
+}
+
+const onSessionEnded = () => {
+    void logout(false)
+}
 
 watch(GMManager.npcDetailsDialogOpenRequested, (openRequested) => {
     if (!openRequested) {
@@ -238,6 +268,9 @@ onMounted(async () => {
     window.addEventListener('ui:open-crafting', onOpenCraftingMenu as EventListener)
     window.addEventListener('ui:open-npc-use', onOpenNpcUseMenu as EventListener)
     window.addEventListener('ui:inventory-updated', onInventoryUpdated as EventListener)
+    window.addEventListener('game:started', onGameStarted)
+    window.addEventListener('game:login-failed', onLoginFailed)
+    window.addEventListener('game:session-ended', onSessionEnded)
     document.addEventListener('keydown', onKeyDown)
     document.addEventListener('keyup', onKeyUp)
     await nextTick()
@@ -276,6 +309,9 @@ onUnmounted(() => {
     window.removeEventListener('ui:open-crafting', onOpenCraftingMenu as EventListener)
     window.removeEventListener('ui:open-npc-use', onOpenNpcUseMenu as EventListener)
     window.removeEventListener('ui:inventory-updated', onInventoryUpdated as EventListener)
+    window.removeEventListener('game:started', onGameStarted)
+    window.removeEventListener('game:login-failed', onLoginFailed)
+    window.removeEventListener('game:session-ended', onSessionEnded)
     document.removeEventListener('keydown', onKeyDown)
     document.removeEventListener('keyup', onKeyUp)
 })
@@ -294,7 +330,7 @@ const onKeyUp = (event: KeyboardEvent) => {
 }
 
 const loginRequestSent = () => {
-    loginRequestSentFlag.value = true
+    gameLoading.value = true
     if (Settings.deviceType !== 'DESKTOP') {
         requestFullscreen()
     }
@@ -427,9 +463,15 @@ const reloadPage = () => {
     window.location.reload()
 }
 
-const logout = () => {
+const logout = async (notifyServer: boolean = true) => {
+    closeGameplayDialogs()
+    gameSessionActive.value = false
+    loginRequestSentFlag.value = false
+    displayLoginDialog.value = false
+    gameLoading.value = true
+    await GameManager.stopGame(notifyServer)
+    gameLoading.value = false
     displayLoginDialog.value = true
-    GameManager.stopGame()
 }
 
 const requestFullscreen = () => {

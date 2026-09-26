@@ -10,6 +10,10 @@ export const WorldDataManager = {
     MAP_CHUNK_SIZE: 128 as number,
     worldDataMap: new Map<number, WorldData>(),
 
+    reset() {
+        this.worldDataMap.clear()
+    },
+
     replaceWorldData(worldId: number, size: number) {
         this.worldDataMap.set(worldId, new WorldData(size))
     },

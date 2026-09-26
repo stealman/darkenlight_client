@@ -73,6 +73,12 @@ export const Connector = {
         this.lastMoveMessageTime = new Date().getTime()
     },
 
+    resetSession() {
+        this.queuedMessages = []
+        this.sentMessages = []
+        this.cancelPendingMoveMessage()
+    },
+
     sendMessage(msg: Message) {
         const time = new Date().getTime()
 
