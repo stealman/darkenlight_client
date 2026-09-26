@@ -53,6 +53,7 @@
   },
   "login": {
     "guestTitle": "Login as guest",
+    "guestDescription": "For a quick game, simply choose a character name.",
     "accountTitle": "Login with account",
     "name": "Name",
     "login": "Login",

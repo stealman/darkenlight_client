@@ -53,6 +53,7 @@
   },
   "login": {
     "guestTitle": "Přihlásit jako host",
+    "guestDescription": "Pro rychlou hru stačí zvolit jméno postavy.",
     "accountTitle": "Přihlásit účtem",
     "name": "Jméno",
     "login": "Login",

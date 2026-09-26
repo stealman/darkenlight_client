@@ -290,8 +290,14 @@ const syncAppViewportSize = () => {
     const viewport = window.visualViewport
     const viewportWidth = Math.round(viewport?.width || window.innerWidth)
     const viewportHeight = Math.round(viewport?.height || window.innerHeight)
+    const viewportTop = Math.round(viewport?.offsetTop || 0)
     const wrapper = document.getElementById('appWrapper')
     const app = document.getElementById('app')
+
+    document.documentElement.style.setProperty('--app-viewport-height', `${viewportHeight}px`)
+    document.documentElement.style.setProperty('--app-viewport-top', `${viewportTop}px`)
+    document.documentElement.style.setProperty('--login-viewport-top-inset', `${Math.round(viewportHeight * 0.01)}px`)
+    document.documentElement.style.setProperty('--login-viewport-bottom-inset', `${Math.round(viewportHeight * 0.04)}px`)
 
     if (wrapper) wrapper.style.height = viewportHeight + 'px'
     if (app) {
