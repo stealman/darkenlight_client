@@ -72,14 +72,16 @@ div#opportunity-action-buttons {
     padding: 4px;
 }
 
-div#opportunity-action-buttons div.gui-action-button {
+div#opportunity-action-buttons div.gui-action-button,
+div#gui-buttons div.gui-action-button {
     background-color: rgba(115, 115, 115, 0.5);
     border: 1px solid rgb(var(--ui-darker));
     border-radius: 4px;
     transition: background-color 0.15s ease;
 }
 
-div#opportunity-action-buttons div.gui-action-button:hover {
+div#opportunity-action-buttons div.gui-action-button:hover,
+div#gui-buttons div.gui-action-button:hover {
     background-color: rgba(95, 95, 95, 0.65);
 }
 

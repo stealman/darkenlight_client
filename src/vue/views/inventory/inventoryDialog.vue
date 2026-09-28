@@ -15,7 +15,6 @@
                     :weapon-setup-images="weaponSetupImages"
                     :weapon-setup-pressed="weaponSetupPressed"
                     @slot-pointerdown="handleSlotPointerDown"
-                    @weapon-setup-hover="setWeaponSetupHover"
                     @weapon-setup-pointerdown="onWeaponSetupPointerDown"
                     @weapon-setup-pointerup="onWeaponSetupPointerUp"
                     @weapon-setup-pointercancel="cancelWeaponSetupPointer"
@@ -134,10 +133,6 @@ const inventoryActionButtonSize = ref(Settings.actionButtonSize)
 const bindingConsumableCbId = ref<number | null>(null)
 const storedWeaponSetups = ref(InventoryManager.getStoredWeaponSetups())
 const equipSlots = ref<EquipSlotView[]>([])
-const weaponSetupHover = ref({
-    primary: false,
-    secondary: false,
-})
 const weaponSetupPressed = ref({
     primary: false,
     secondary: false,
@@ -693,16 +688,11 @@ const equipWeaponSetup = (setupType) => {
 }
 
 const getWeaponSetupImage = (setupType) => {
-    const isActive = weaponSetupHover.value[setupType] || weaponSetupPressed.value[setupType]
     if (setupType === 'primary') {
-        return isActive ? '/images/icons/buttons/btn_romanian1_hover.png' : '/images/icons/buttons/btn_romanian1.png'
+        return '/images/icons/buttons/btn_romanian1.png'
     }
 
-    return isActive ? '/images/icons/buttons/btn_romanian2_hover.png' : '/images/icons/buttons/btn_romanian2.png'
-}
-
-const setWeaponSetupHover = (setupType, isHovered) => {
-    weaponSetupHover.value[setupType] = isHovered
+    return '/images/icons/buttons/btn_romanian2.png'
 }
 
 const clearWeaponSetupHoldTimer = (setupType) => {

@@ -19,11 +19,9 @@
             <div id="gui-buttons">
                 <div class="gui-action-button" id="btn-backpack" @click="showInventoryDialog()">
                     <img class="action-icon" src="/images/icons/buttons/btn_backpack.png" />
-                    <img class="action-icon-hover" src="/images/icons/buttons/btn_backpack_hover.png" />
                 </div>
                 <div class="gui-action-button" id="btn-character" @click="showCharacterDialog()">
                     <img class="action-icon" src="/images/icons/buttons/btn_char.png" />
-                    <img class="action-icon-hover" src="/images/icons/buttons/btn_char_hover.png" />
                 </div>
             </div>
 

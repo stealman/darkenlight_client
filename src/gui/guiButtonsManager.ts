@@ -16,13 +16,11 @@ import {NpcManager} from '@/babylon/npc/npcManager'
 class GuiOpportunityButtonAction {
     name: string
     icon: string
-    hoverIcon: string
     label: string | null
 
-    constructor(name: string, icon: string, hoverIcon: string, label: string | null = null) {
+    constructor(name: string, icon: string, label: string | null = null) {
         this.name = name
         this.icon = icon
-        this.hoverIcon = hoverIcon
         this.label = label
     }
 }
@@ -42,7 +40,6 @@ class GuiOpportunityButton {
         } else {
             this.htmlEl.innerHTML = `
                 <img class="action-icon" src="/images/icons/buttons/${action.icon}.png" />
-                <img class="action-icon-hover" src="/images/icons/buttons/${action.hoverIcon}.png" />
             `
         }
         this.htmlEl.style.display = "none"
@@ -63,13 +60,13 @@ class GuiOpportunityButton {
 }
 
 export const GuiOpportunityActions = {
-    PICKUP_ITEM: new GuiOpportunityButtonAction("PICKUP_ITEM", "btn_pick", "btn_pick_hover"),
-    MINING: new GuiOpportunityButtonAction("MINING", "btn_pickaxe", "btn_pickaxe_hover"),
-    LUMBERJACKING: new GuiOpportunityButtonAction("LUMBERJACKING", "btn_lumber", "btn_lumber_hover"),
-    RESTING: new GuiOpportunityButtonAction("RESTING", "btn_rest", "btn_rest_hover"),
-    COOKING: new GuiOpportunityButtonAction("COOKING", "btn_cooking", "btn_cooking_hover"),
-    NPC_USE: new GuiOpportunityButtonAction("NPC_USE", "btn_chat", "btn_chat"),
-    NPC_EDIT: new GuiOpportunityButtonAction("NPC_EDIT", "", "", "NPC"),
+    PICKUP_ITEM: new GuiOpportunityButtonAction("PICKUP_ITEM", "btn_pick"),
+    MINING: new GuiOpportunityButtonAction("MINING", "btn_pickaxe"),
+    LUMBERJACKING: new GuiOpportunityButtonAction("LUMBERJACKING", "btn_lumber"),
+    RESTING: new GuiOpportunityButtonAction("RESTING", "btn_rest"),
+    COOKING: new GuiOpportunityButtonAction("COOKING", "btn_cooking"),
+    NPC_USE: new GuiOpportunityButtonAction("NPC_USE", "btn_chat"),
+    NPC_EDIT: new GuiOpportunityButtonAction("NPC_EDIT", "", "NPC"),
 }
 
 export const GuiButtonsManager = {

@@ -28,8 +28,6 @@
             <div
                 v-if="showWeaponSetups"
                 :class="['equip-slot', 'equip-slot-weapon-setup', 'slot-weapon-setup-primary', { pressed: weaponSetupPressed.primary }]"
-                @mouseenter="emit('weapon-setup-hover', 'primary', true)"
-                @mouseleave="emit('weapon-setup-hover', 'primary', false)"
                 @pointerdown.prevent="emit('weapon-setup-pointerdown', 'primary', $event)"
                 @pointerup.prevent="emit('weapon-setup-pointerup', 'primary', $event)"
                 @pointercancel.prevent="emit('weapon-setup-pointercancel', 'primary')"
@@ -41,8 +39,6 @@
             <div
                 v-if="showWeaponSetups"
                 :class="['equip-slot', 'equip-slot-weapon-setup', 'slot-weapon-setup-secondary', { pressed: weaponSetupPressed.secondary }]"
-                @mouseenter="emit('weapon-setup-hover', 'secondary', true)"
-                @mouseleave="emit('weapon-setup-hover', 'secondary', false)"
                 @pointerdown.prevent="emit('weapon-setup-pointerdown', 'secondary', $event)"
                 @pointerup.prevent="emit('weapon-setup-pointerup', 'secondary', $event)"
                 @pointercancel.prevent="emit('weapon-setup-pointercancel', 'secondary')"
@@ -85,7 +81,6 @@ withDefaults(defineProps<{
 
 const emit = defineEmits([
     'slot-pointerdown',
-    'weapon-setup-hover',
     'weapon-setup-pointerdown',
     'weapon-setup-pointerup',
     'weapon-setup-pointercancel',
@@ -104,7 +99,12 @@ const getWeaponSetupMarkerImage = (setupType: WeaponMarker) => {
 }
 
 .weapon-setup-image {
-    transition: none;
+    transition: filter 0.2s ease;
+}
+
+.equip-slot-weapon-setup:hover .weapon-setup-image,
+.equip-slot-weapon-setup.pressed .weapon-setup-image {
+    filter: brightness(0.75);
 }
 
 .weapon-setup-marker {

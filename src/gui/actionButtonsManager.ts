@@ -18,6 +18,7 @@ const powerStrikeIconSuffixByWeaponCategory: Partial<Record<string, string>> = {
     [WeaponCategories.AXE]: 'axe',
     [WeaponCategories.POLEARM]: 'spear',
     [WeaponCategories.MACE]: 'mace',
+    [WeaponCategories.BOW]: 'bow',
 }
 
 const autoAttackIconByWeaponCategory: Partial<Record<string, string>> = {
