@@ -10,7 +10,8 @@
       "axes": "Sekery",
       "maces": "Palcáty",
       "polearms": "Tyčové Zbraně",
-      "bows": "Luky"
+      "bows": "Luky",
+      "powerStrike": "Silný úder"
     },
     "armor": {
       "leatherArmor": "Kožené Brnění",
@@ -28,6 +29,7 @@
       "maces": "Umožňuje nosit a účinně používat Palcáty v boji",
       "polearms": "Umožňuje nosit a účinně používat Tyčové zbraně v boji",
       "bows": "Umožňuje nosit a účinně používat Luky v boji",
+      "powerStrike": "Umožňuje otevřít boj normálním zásahem za 150 % poškození před auto-útokem",
       "leatherArmor": "Umožňuje nosit a účinně používat Kožené brnění",
       "chainArmor": "Umožňuje nosit a účinně používat Kroužkové brnění",
       "plateArmor": "Umožňuje nosit a účinně používat Plátové brnění",

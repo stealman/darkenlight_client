@@ -95,6 +95,9 @@ export const CharacterActions = {
     AUTO_ATTACK: new CharacterAction('AUTO_ATTACK', 'btn_attack_sword', true, 'actions.autoAttackName',
         'actions.autoAttackDescription'),
 
+    POWER_STRIKE: new CharacterAction('POWER_STRIKE', 'btn_backpack', false, 'actions.powerStrikeName',
+        'actions.powerStrikeDescription'),
+
     HEAL: new CharacterAction('HEAL', 'btn_heal', false, 'actions.healName',
         'actions.healDescription'),
 
@@ -126,6 +129,7 @@ export const CharacterActions = {
     getActionByName(name: string): CharacterAction | undefined {
         const actions = [
             this.AUTO_ATTACK,
+            this.POWER_STRIKE,
             this.HEAL,
             this.HEALING_POTION,
             this.MANA_POTION,

@@ -10,7 +10,8 @@
       "axes": "Axes",
       "maces": "Maces",
       "polearms": "Polearms",
-      "bows": "Bows"
+      "bows": "Bows",
+      "powerStrike": "Power Strike"
     },
     "armor": {
       "leatherArmor": "Leather Armor",
@@ -28,6 +29,7 @@
       "maces": "Allows you to equip and effectively use Maces in combat",
       "polearms": "Allows you to equip and effectively use Polearms in combat",
       "bows": "Allows you to equip and effectively use Bows in combat",
+      "powerStrike": "Allows you to open combat with a 150% normal hit before auto-attacking",
       "leatherArmor": "Allows you to equip and effectively use Leather Armor",
       "chainArmor": "Allows you to equip and effectively use Chain Armor",
       "plateArmor": "Allows you to equip and effectively use Plate Armor",

@@ -48,6 +48,7 @@ import {NpcInteractionManager} from '@/data/npcInteractionManager'
 import {GMManager} from '@/gm/GM'
 import {BankManager} from '@/data/bankManager'
 import { TargetingManager } from '@/gui/targettingManager'
+import { ActionButtonsManager } from '@/gui/actionButtonsManager'
 
 export const MessageProcessor = {
 
@@ -462,6 +463,7 @@ export const MessageProcessor = {
     processCharacterSkillSetChange(data: SkillSetTO) {
         if (MyPlayer.myCharRef.value) {
             MyPlayer.myCharRef.value.skillSet = data
+            ActionButtonsManager.notifyBindingsChanged()
         }
     },
 

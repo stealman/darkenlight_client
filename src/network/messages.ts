@@ -338,6 +338,16 @@ export class GMCreateItemMsg implements Message {
     }
 }
 
+export class PowerStrike implements Message {
+    t: number = 71
+
+    d: { id: number, tp: string }
+
+    constructor(id: number, targetType: string) {
+        this.d = { id, tp: targetType }
+    }
+}
+
 export class StartSkillTrainingMsg implements Message {
     t: number = 32
     d: { skill: string }

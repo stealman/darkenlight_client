@@ -9,6 +9,8 @@ import { InventoryManager } from '@/data/inventoryManager'
 import { ConsumableHelper } from '@/data/items/consumableHelper'
 import { CharacterAction, CharacterActions } from '@/data/actions/characterActions'
 import { t } from '@/i18n'
+import { Connector } from '@/network/connector'
+import { PowerStrike } from '@/network/messages'
 
 class ActionButtonActionBinding {
     name: string
@@ -138,6 +140,9 @@ class ActionButton {
                 return
             case CharacterActions.CAMPING.name:
                 this.htmlEl!.classList.toggle('unavailable', !ActionButtonsManager.hasCampWoodAvailable())
+                return
+            case CharacterActions.POWER_STRIKE.name:
+                this.htmlEl!.classList.toggle('unavailable', !MyPlayer.myChar?.getWeapon() || MyPlayer.myChar.isWeaponRanged())
                 return
             default:
                 const consumableCbId = ActionButtonsManager.getBoundConsumableCbId(this.actionBinding)
@@ -346,6 +351,9 @@ export const ActionButtonsManager = {
                 case CharacterActions.AUTO_ATTACK.name:
                     this.clickOnAutoAttackButton()
                     break
+                case CharacterActions.POWER_STRIKE.name:
+                    this.clickOnPowerStrikeButton()
+                    break
                 case CharacterActions.HEAL.name:
                     this.clickOnHealingButton()
                     break
@@ -373,7 +381,8 @@ export const ActionButtonsManager = {
 
     setActiveAction(action: CharacterAction | null) {
         this.actionButtons.forEach((btn) => {
-            if (btn.actionBinding && btn.actionBinding.name === action?.name) {
+            if (btn.actionBinding && (btn.actionBinding.name === action?.name ||
+                (action?.name === CharacterActions.AUTO_ATTACK.name && MyPlayer.powerStrikeQueued && btn.actionBinding.name === CharacterActions.POWER_STRIKE.name))) {
                 btn.activated()
             } else {
                 btn.deactivated()
@@ -382,6 +391,10 @@ export const ActionButtonsManager = {
     },
 
     clickOnAutoAttackButton() {
+        if (!TargetingManager.selectedTarget) {
+            OnScreenMessageManager.addMessage(t('messages.autoAttackRequiresTarget'), OnScreenMessageSeverities.ERROR)
+            return
+        }
         if (MyPlayer.activeAction &&
             MyPlayer.activeAction.name === CharacterActions.AUTO_ATTACK.name &&
             MyPlayer.myChar.autoAttackTarget && MyPlayer.myChar.autoAttackTarget === TargetingManager.selectedTarget) {
@@ -395,6 +408,31 @@ export const ActionButtonsManager = {
         }*/
 
         TargetingManager.checkAutoAttackOnSelectedTarget(true, true)
+    },
+
+    clickOnPowerStrikeButton() {
+        if (!MyPlayer.myChar.getWeapon() || MyPlayer.myChar.isWeaponRanged()) {
+            OnScreenMessageManager.addMessage(t('messages.powerStrikeRequiresMeleeWeapon'), OnScreenMessageSeverities.ERROR)
+            return
+        }
+        if (MyPlayer.powerStrikeCooldownEnd > Date.now()) {
+            const remainingSeconds = Math.ceil((MyPlayer.powerStrikeCooldownEnd - Date.now()) / 1000)
+            OnScreenMessageManager.addMessage(t('messages.powerStrikeOnCooldown', { seconds: remainingSeconds }), OnScreenMessageSeverities.ERROR)
+            return
+        }
+        const target = TargetingManager.selectedTarget
+        if (!target || target.getRelationToMyPlayer() !== 'ENEMY') {
+            OnScreenMessageManager.addMessage(t('messages.powerStrikeRequiresTarget'), OnScreenMessageSeverities.ERROR)
+            return
+        }
+
+        // Power Strike opens (or continues) auto attack. Predict that state locally so
+        // the attacked target receives the same red marker without waiting for the
+        // server's CharacterAction message.
+        MyPlayer.myChar.autoAttackTarget = target
+        MyPlayer.powerStrikeQueued = true
+        MyPlayer.setAction(CharacterActions.AUTO_ATTACK.name)
+        Connector.sendMessage(new PowerStrike(target.id, target.getObjectType()))
     },
 
     clickOnHealingButton() {
@@ -521,7 +559,7 @@ export const ActionButtonsManager = {
     },
 
     getAvailableActionsForBindings(): CharacterAction[] {
-        return [
+        const actions = [
             CharacterActions.AUTO_ATTACK,
             CharacterActions.HEAL,
             CharacterActions.HEALING_POTION,
@@ -530,6 +568,10 @@ export const ActionButtonsManager = {
             CharacterActions.EQUIP_STORED_WEAPONS,
             CharacterActions.CAMPING,
         ]
+        if (MyPlayer.myChar?.skillSet?.powerStrike?.rank > 0) {
+            actions.splice(1, 0, CharacterActions.POWER_STRIKE)
+        }
+        return actions
     },
 
     setBindingForIndex(index: number, actionName: string) {
@@ -659,6 +701,7 @@ export const ActionButtonsManager = {
             if (btn.actionBinding && btn.actionBinding.name === CharacterActions.AUTO_ATTACK.name) {
                 btn.setImage(CharacterActions.AUTO_ATTACK.image)
             }
+            btn.setItemsAvailabilityState()
         })
     }
 }

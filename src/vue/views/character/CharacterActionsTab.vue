@@ -87,7 +87,10 @@ import { useI18n } from '@/i18n'
 const actionButtonIndexes = Array.from({ length: 10 }, (_, index) => index + 1)
 const selectedSlotIndex = ref<number | null>(null)
 const bindingsRevision = ref(0)
-const availableActions = computed(() => ActionButtonsManager.getAvailableActionsForBindings())
+const availableActions = computed(() => {
+    bindingsRevision.value
+    return ActionButtonsManager.getAvailableActionsForBindings()
+})
 const actionSelectionContentRef = ref<HTMLElement | null>(null)
 const { t } = useI18n()
 

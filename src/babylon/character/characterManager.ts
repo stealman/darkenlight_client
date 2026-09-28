@@ -173,6 +173,7 @@ export const CharacterManager = {
 
     autoAttackBroken(data) {
         if (data === MyPlayer.myChar.id) {
+            MyPlayer.myChar.breakAutoAttack()
         } else {
             const char = this.characters.get(data)
             if (char) {

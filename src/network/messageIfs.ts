@@ -53,7 +53,8 @@ export interface AccountCharacterNameCheckData {
 export type PhysicalWeaponSkillKey = 'swords' | 'axes' | 'maces' | 'polearms' | 'bows'
 export type ArmorSkillKey = 'leatherArmor' | 'chainArmor' | 'plateArmor' | 'shields'
 export type UtilitySkillKey = 'camping' | 'healing'
-export type SkillKey = PhysicalWeaponSkillKey | ArmorSkillKey | UtilitySkillKey
+export type CombatSkillKey = 'powerStrike'
+export type SkillKey = PhysicalWeaponSkillKey | ArmorSkillKey | UtilitySkillKey | CombatSkillKey
 
 export interface SkillProgressTO {
     rank: number
@@ -90,6 +91,8 @@ export interface  AutoAttackMessage {
     dur: number
     cd: number
     ef: string // GFX
+    ps: boolean
+    pcd: number
 }
 
 export interface AutoAttackResult {

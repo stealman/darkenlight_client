@@ -62,6 +62,9 @@ export const MyPlayer = {
 
     lastPotionUseTime: 0 as number,
     nextPotionUseTime: 0 as number,
+    powerStrikeCooldownStart: 0 as number,
+    powerStrikeCooldownEnd: 0 as number,
+    powerStrikeQueued: false as boolean,
     nearFireplace: null as { x: number, z: number } | null,
 
     affectGroups: [] as ClientAffectGroup[],
@@ -110,6 +113,9 @@ export const MyPlayer = {
         this.nearFireplace = null
         this.lastPotionUseTime = 0
         this.nextPotionUseTime = 0
+        this.powerStrikeCooldownStart = 0
+        this.powerStrikeCooldownEnd = 0
+        this.powerStrikeQueued = false
         this.isDead.value = false
         this.respawnAvailableAt.value = 0
         this.autoRespawnAt.value = 0
@@ -139,6 +145,7 @@ export const MyPlayer = {
         // Moving during gathering actions breaks the action immediately
         if ((MyPlayer.activeAction?.name === CharacterActions.MINING.name || MyPlayer.activeAction?.name === CharacterActions.LUMBERJACKING.name) && this.myChar.getMoveAngle() != null) {
             this.myChar.breakAutoAttack() // Mining action uses auto attack system, so we can reuse the same break message
+            this.clearPowerStrikeQueued()
             Connector.sendMessage(new AutoAttackBreak())
             this.myChar.finishGathering(null)
         }
@@ -213,6 +220,9 @@ export const MyPlayer = {
     },
 
     setAction(type: string | null) {
+        if (type !== CharacterActions.AUTO_ATTACK.name) {
+            this.powerStrikeQueued = false
+        }
         if (type != null) {
             this.activeAction = CharacterActions.getActionByName(type)
         } else {
@@ -227,7 +237,24 @@ export const MyPlayer = {
         if (this.isDead.value) {
             return
         }
+        if (data.ps) {
+            this.startPowerStrikeCooldown(data.pcd)
+            this.clearPowerStrikeQueued()
+        }
         this.myChar.startAutoAttack(data)
+    },
+
+    startPowerStrikeCooldown(cooldown: number) {
+        this.powerStrikeCooldownStart = Date.now()
+        this.powerStrikeCooldownEnd = this.powerStrikeCooldownStart + cooldown
+    },
+
+    clearPowerStrikeQueued() {
+        if (!this.powerStrikeQueued) {
+            return
+        }
+        this.powerStrikeQueued = false
+        ActionButtonsManager.setActiveAction(this.activeAction)
     },
 
     startCombatApproach(data: CombatApproachMessage) {
@@ -376,6 +403,7 @@ export const MyPlayer = {
             return
         }
         MyPlayer.myChar.autoAttackTarget = null
+        this.clearPowerStrikeQueued()
         MyPlayer.myChar.cancelCombatApproach()
         Connector.sendMessage(new StopAction())
 
@@ -453,6 +481,9 @@ export const MyPlayer = {
             case CharacterActions.MANA_POTION.name:
             case CharacterActions.STAMINA_POTION.name: {
                 return this.getCooldownPercent(actualTime, this.lastPotionUseTime, this.nextPotionUseTime)
+            }
+            case CharacterActions.POWER_STRIKE.name: {
+                return this.getCooldownPercent(actualTime, this.powerStrikeCooldownStart, this.powerStrikeCooldownEnd)
             }
         }
         return 100
