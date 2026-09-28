@@ -2,6 +2,12 @@
   "affects": {
     "restingName": "Odpočinek",
     "restingDescription": "Zvyšuje regeneraci zdraví, many a únavy",
+    "healthRegeneration": "Regenerace zdraví",
+    "manaRegeneration": "Regenerace many",
+    "staminaRegeneration": "Regenerace výdrže",
+    "autoAttackStaminaCost": "Spotřeba výdrže",
+    "restingRegenerationValue": "+{total} %",
+    "mealStaminaCostValue": "-{total} %",
     "flameArrowsName": "Zápalné šípy",
     "flameArrowsDescription": "Při zásahu mohou zapálit cíl",
     "burningName": "Plameny",
@@ -15,6 +21,6 @@
     "damagedArmorName": "Po\u0161kozen\u00e9 brn\u011bn\u00ed",
     "damagedArmorDescription": "Hodnota po\u0161kozen\u00e9ho kusu brn\u011bn\u00ed je sn\u00ed\u017eena o tuto hodnotu",
     "mealName": "Jídlo",
-    "mealDescription": "Zvyšuje regeneraci zdraví a snižuje únavu a spotřebu many"
+    "mealDescription": "Dobré jídlo poskytuje následující bonusy"
   }
 }

@@ -37,7 +37,7 @@ export class DamageNumber {
             return new DamageNumber(attacker, monster, null, t('common.blocked'), '#c7c7c7', time)
         }
         if (damage < 0) {
-            return new DamageNumber(attacker, monster, null, `+${Math.floor(-damage)}`, '#20ff20', time)
+            return new DamageNumber(attacker, monster, null, `+${this.getHealingDisplayAmount(damage)}`, '#20ff20', time)
         }
         if (damage === 0) {
             return null
@@ -54,7 +54,7 @@ export class DamageNumber {
         }
         if (damage <= 0) {
             // Healing is sent as negative damage, but we want to display it as positive number with plus sign.
-            return new DamageNumber(attacker, null, char, `+${Math.floor(-damage)}`, '#20ff20', time)
+            return new DamageNumber(attacker, null, char, `+${this.getHealingDisplayAmount(damage)}`, '#20ff20', time)
         } else if (damage > 0) {
             return new DamageNumber(attacker, null, char, `-${Math.floor(damage)}`, this.getDamageColor(hitQuality, '#f08f56'), time)
         }
@@ -69,7 +69,7 @@ export class DamageNumber {
         }
         if (damage < 0) {
             // Healing is sent as negative damage, but we want to display it as positive number with plus sign.
-            return new DamageNumber(attacker, null, MyPlayer.myChar, `+${Math.floor(-damage)}`, '#20ff20', time)
+            return new DamageNumber(attacker, null, MyPlayer.myChar, `+${this.getHealingDisplayAmount(damage)}`, '#20ff20', time)
         } else if (damage > 0) {
             return new DamageNumber(attacker, null, MyPlayer.myChar, `-${Math.floor(damage)}`, this.getDamageColor(hitQuality, '#ff2020'), time)
         }
@@ -83,6 +83,11 @@ export class DamageNumber {
             return '#a9a9a9'
         }
         return defaultColor
+    }
+
+    private static getHealingDisplayAmount(damage: number): number {
+        const healedAmount = -damage
+        return healedAmount > 0 ? Math.max(1, Math.floor(healedAmount)) : 0
     }
 
     render(ctx: CanvasRenderingContext2D) {

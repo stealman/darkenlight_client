@@ -7,7 +7,7 @@ export type SkillDefinition = {
     category: SkillCategoryKey
     translationKey: string
     descriptionTranslationKey: string
-    bonusKind?: 'weaponAttack' | 'armor' | 'campingSetupSpeed' | 'bandageHealing'
+    bonusKind?: 'weaponAttack' | 'armor' | 'campingRestingRegen' | 'bandageHealing'
     bonusTargetTranslationKey?: string
 }
 
@@ -27,7 +27,7 @@ export const ArmorSkillDefinitions: SkillDefinition[] = [
 ]
 
 export const UtilitySkillDefinitions: SkillDefinition[] = [
-    {key: 'camping', category: 'utility', translationKey: 'skills.utility.camping', descriptionTranslationKey: 'skills.descriptions.camping', bonusKind: 'campingSetupSpeed'},
+    {key: 'camping', category: 'utility', translationKey: 'skills.utility.camping', descriptionTranslationKey: 'skills.descriptions.camping', bonusKind: 'campingRestingRegen'},
     {key: 'healing', category: 'utility', translationKey: 'skills.utility.healing', descriptionTranslationKey: 'skills.descriptions.healing', bonusKind: 'bandageHealing'},
 ]
 

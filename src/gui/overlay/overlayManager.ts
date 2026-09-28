@@ -545,7 +545,7 @@ export const OverlayManager = {
 
         if (actionName) {
             const actionTextAlpha = 0.5 + ((Math.sin(time / 220) + 1) / 2) * 0.5
-            this.renderOutlinedText(basePos.x, currentTextY, '* ' + actionName + ' *', tightText, 'NEUTRAL', actionFontSize, undefined, actionTextAlpha)
+            this.renderOutlinedText(basePos.x, currentTextY, '* ' + actionName + ' *', tightText, 'NEUTRAL', actionFontSize, undefined, actionTextAlpha, null, true)
         }
     },
 

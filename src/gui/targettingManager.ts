@@ -205,6 +205,15 @@ export const TargetingManager = {
         Connector.sendMessage(new CombatApproachRequest(target.id, target.getObjectType()))
     },
 
+    requestCombatApproachOnMonsterAttack(monsterId: number, targetId: number, targetType: string) {
+        const target = this.selectedTarget
+        if (targetType !== 'C' || targetId !== MyPlayer.myChar.id || target?.getObjectType() !== 'M' || target.id !== monsterId || MyPlayer.myChar.autoAttackTarget !== target) {
+            return
+        }
+
+        this.requestCombatApproach()
+    },
+
     unselectTarget() {
         this.selectedTarget = null
         OverlayManager.unselectTarget()

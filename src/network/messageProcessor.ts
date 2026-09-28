@@ -47,6 +47,7 @@ import { NpcManager } from '@/babylon/npc/npcManager'
 import {NpcInteractionManager} from '@/data/npcInteractionManager'
 import {GMManager} from '@/gm/GM'
 import {BankManager} from '@/data/bankManager'
+import { TargetingManager } from '@/gui/targettingManager'
 
 export const MessageProcessor = {
 
@@ -305,6 +306,7 @@ export const MessageProcessor = {
 
     processMonsterAttack(data: AutoAttackMessage) {
         MonsterManager.autoAttack(data)
+        TargetingManager.requestCombatApproachOnMonsterAttack(data.id, data.tgt, data.tp)
     },
 
     processMonsterAttackFinished(data: AutoAttackResultMessage) {

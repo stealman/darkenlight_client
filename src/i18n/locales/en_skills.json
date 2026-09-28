@@ -32,7 +32,7 @@
       "chainArmor": "Allows you to equip and effectively use Chain Armor",
       "plateArmor": "Allows you to equip and effectively use Plate Armor",
       "shields": "Allows you to equip and effectively use Shields",
-      "camping": "Allows you to set up a camp for rest and regeneration",
+      "camping": "Allows you to set up a camp for rest and increases regeneration while resting at a campfire by 25% per rank",
       "healing": "Allows you to heal injuries using bandages"
     },
     "ranks": {
@@ -73,7 +73,7 @@
       "unknown": "Unknown",
       "weaponAttackOfType": "weapon attack of type",
       "armorOfType": "armor of type",
-      "fasterCampSetup": "faster camp setup",
+      "restingRegenAtCampfire": "campfire resting regeneration bonus",
       "healedHealth": "health restored",
       "healedHealthPerRank": "({amount} per rank)",
       "bonusPerRank": "({percent}% per rank)",

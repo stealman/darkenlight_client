@@ -266,6 +266,44 @@ export const MyStatusPanel = {
         return MyPlayer.affectGroups.find((affectGroup) => affectGroup.id === affectGroupId) ?? null
     },
     buildAffectTooltipContent(affectGroup: ClientAffectGroup, actualTime: number = Date.now()): TooltipOverlayContent {
+        const rows = []
+        if (affectGroup.id === 3) {
+            const restingPower = affectGroup.af.find((affect) => affect.data[0] === 3)?.data[2] ?? affectGroup.p
+            const restingRegenerationBonuses = [
+                {labelKey: 'affects.healthRegeneration', basePercent: 100},
+                {labelKey: 'affects.manaRegeneration', basePercent: 500},
+                {labelKey: 'affects.staminaRegeneration', basePercent: 200},
+            ]
+
+            for (const bonus of restingRegenerationBonuses) {
+                rows.push({
+                    label: t(bonus.labelKey),
+                    value: t('affects.restingRegenerationValue', {
+                        total: Math.round(bonus.basePercent * restingPower),
+                    }),
+                    separator: '',
+                })
+            }
+        }
+
+        if (affectGroup.id === 2) {
+            const mealPower = affectGroup.af.find((affect) => affect.data[0] === 2)?.data[2] ?? affectGroup.p
+            const mealBonuses = [
+                {labelKey: 'affects.healthRegeneration', valueKey: 'affects.restingRegenerationValue', percentPerPower: 50},
+                {labelKey: 'affects.autoAttackStaminaCost', valueKey: 'affects.mealStaminaCostValue', percentPerPower: 5},
+            ]
+
+            for (const bonus of mealBonuses) {
+                rows.push({
+                    label: t(bonus.labelKey),
+                    value: t(bonus.valueKey, {
+                        total: Math.round(bonus.percentPerPower * mealPower),
+                    }),
+                    separator: '',
+                })
+            }
+        }
+
         return {
             title: affectGroup.getLocalizedName(),
             titleMeta: affectGroup.getPowerLabel(),
@@ -274,7 +312,7 @@ export const MyStatusPanel = {
                 : null,
             description: affectGroup.getLocalizedDescription(),
             variant: affectGroup.isAdverse() ? 'adverse' : 'positive',
-            rows: [],
+            rows,
         }
     },
     buildMyStatusTooltipContent(): TooltipOverlayContent {
