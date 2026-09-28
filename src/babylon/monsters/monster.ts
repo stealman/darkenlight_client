@@ -118,7 +118,7 @@ export class Monster implements Attackable, EffectTarget {
         }
 
         if (data.res.h === 'h') {
-            AudioManager.playWeaponHit(this.getWeaponSoundType(), target.getBodySoundType(), target.pos)
+            AudioManager.playWeaponHit(this.getWeaponSoundType(), target.getBodySoundType(), target.pos, data.res.q === 'P')
         } else if (data.res.h === 'b' && target.getParrySoundType()) {
             AudioManager.playWeaponBlocked(target.getParrySoundType()!, target.pos)
         }

@@ -36,6 +36,9 @@ export class EquipItem {
     weaponTrailStartDelayEnd: number = 0
     weaponTrailFadeInEnd: number = 0
     weaponTrailFadeEnd: number = 0
+    weaponTrailTip: TransformNode | null = null
+    powerStrikeTrailParticles: ParticleSystem | null = null
+    powerStrikeTrailActive: boolean = false
     hasSwordParticles: boolean = false
     particleSystem: GPUParticleSystem | null = null
 
@@ -97,6 +100,7 @@ export class EquipItem {
     createWeaponTrail(bone: Bone): TrailMesh {
         const tip = new TransformNode('weaponTip' + this.parent?.getOwnerId(), Renderer.scene)
         tip.attachToBone(bone, this.parent!.getMasterNode())
+        this.weaponTrailTip = tip
 
         // Position the tip at the weapon tip position from the codebook data and scale it according to the weapon scale
         const p = this.type.cbData.weaponTipPosition!
@@ -113,9 +117,9 @@ export class EquipItem {
         return trail
     }
 
-    setWeaponTrailEnabled(enabled: boolean) {
+    setWeaponTrailEnabled(enabled: boolean, powerStrike: boolean = false) {
         if (enabled) {
-            this.startWeaponTrail()
+            this.startWeaponTrail(powerStrike)
         } else {
             this.fadeWeaponTrail()
         }
@@ -123,6 +127,7 @@ export class EquipItem {
 
     stopWeaponTrailImmediately() {
         const trail = this.weaponTrail
+        this.stopPowerStrikeTrailParticles()
         if (!trail) {
             return
         }
@@ -136,13 +141,16 @@ export class EquipItem {
         trail.reset()
     }
 
-    private startWeaponTrail() {
+    private startWeaponTrail(powerStrike: boolean) {
         const trail = this.weaponTrail
         if (!trail) {
             return
         }
 
+        this.stopPowerStrikeTrailParticles()
+        this.powerStrikeTrailActive = powerStrike
         trail.reset()
+        trail.material = powerStrike ? Materials.powerStrikeWeaponTrailMaterial : Materials.weaponTrailMaterial
         this.weaponTrailStartDelayEnd = Date.now() + WEAPON_TRAIL_START_DELAY
         this.weaponTrailFadeInEnd = 0
         this.weaponTrailFadeEnd = 0
@@ -153,6 +161,7 @@ export class EquipItem {
 
     private fadeWeaponTrail() {
         const trail = this.weaponTrail
+        this.stopPowerStrikeTrailParticles()
         if (!trail || !trail.isEnabled() || this.weaponTrailFadeEnd > 0) {
             return
         }
@@ -179,6 +188,9 @@ export class EquipItem {
             }
             this.weaponTrailStartDelayEnd = 0
             this.weaponTrailFadeInEnd = now + WEAPON_TRAIL_FADE_DURATION
+            if (this.powerStrikeTrailActive) {
+                this.startPowerStrikeTrailParticles()
+            }
         }
 
         if (this.weaponTrailFadeInEnd > 0) {
@@ -204,6 +216,51 @@ export class EquipItem {
 
         trail.visibility = remaining / WEAPON_TRAIL_FADE_DURATION
         trail.update()
+    }
+
+    private startPowerStrikeTrailParticles() {
+        if (!this.weaponTrailTip || !Renderer.scene) {
+            return
+        }
+
+        if (!this.powerStrikeTrailParticles) {
+            const particles = new ParticleSystem(`powerStrikeTrailParticles_${this.parent.getOwnerId()}`, 96, Renderer.scene)
+            particles.particleTexture = new Texture('images/gfx/dust.png', Renderer.scene)
+            particles.emitter = this.weaponTrailTip
+            particles.minEmitBox = Vector3.Zero()
+            particles.maxEmitBox = Vector3.Zero()
+            particles.direction1 = new Vector3(-1, -1, -1)
+            particles.direction2 = new Vector3(1, 1, 1)
+            particles.minEmitPower = 0.15
+            particles.maxEmitPower = 0.3
+            particles.minLifeTime = 0.45
+            particles.maxLifeTime = 0.75
+            particles.emitRate = 120
+            particles.minSize = 0.2
+            particles.maxSize = 0.32
+            particles.minAngularSpeed = 0
+            particles.maxAngularSpeed = 0
+            particles.gravity = Vector3.Zero()
+            particles.updateSpeed = 0.01
+            particles.blendMode = ParticleSystem.BLENDMODE_STANDARD
+            particles.addColorGradient(0, new Color4(0.72, 0.72, 0.72, 0.48))
+            particles.addColorGradient(0.55, new Color4(0.55, 0.55, 0.55, 0.32))
+            particles.addColorGradient(1, new Color4(0.35, 0.35, 0.35, 0))
+            this.powerStrikeTrailParticles = particles
+        }
+
+        this.powerStrikeTrailParticles.start()
+    }
+
+    private stopPowerStrikeTrailParticles() {
+        this.powerStrikeTrailActive = false
+        this.powerStrikeTrailParticles?.stop()
+    }
+
+    disposePowerStrikeTrailParticles() {
+        this.stopPowerStrikeTrailParticles()
+        this.powerStrikeTrailParticles?.dispose()
+        this.powerStrikeTrailParticles = null
     }
 
     createSwordParticles(handNode: TransformNode) {
@@ -357,6 +414,7 @@ export const EquipManager = {
 
     removeEquippedItem(item: EquipItem) {
         item.stopWeaponTrailImmediately()
+        item.disposePowerStrikeTrailParticles()
         if (item.particleSystem) {
             item.particleSystem.stop()
             item.particleSystem.dispose()

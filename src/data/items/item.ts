@@ -134,6 +134,8 @@ export const WeaponTypes = {
 export const WeaponCategories = {
     SWORD: "SWORD",
     AXE: "AXE",
+    MACE: "MACE",
+    POLEARM: "POLEARM",
     BOW: "BOW",
 }
 

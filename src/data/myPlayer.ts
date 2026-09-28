@@ -329,6 +329,9 @@ export const MyPlayer = {
     },
 
     die() {
+        if (!this.isDead.value) {
+            AudioManager.playDeath()
+        }
         this.isDead.value = true
         this.respawnAvailableAt.value = Date.now() + 20 * 1000
         this.autoRespawnAt.value = Date.now() + 15 * 60 * 1000
@@ -344,6 +347,9 @@ export const MyPlayer = {
     },
 
     respawn() {
+        if (this.isDead.value) {
+            AudioManager.playRevive()
+        }
         this.isDead.value = false
         this.respawnAvailableAt.value = 0
         this.autoRespawnAt.value = 0

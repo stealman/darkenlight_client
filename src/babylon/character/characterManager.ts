@@ -21,6 +21,7 @@ import { PubliclyVisibleAffect } from '@/data/affects'
 import {InventoryManager} from '@/data/inventoryManager'
 import {ActionButtonsManager} from '@/gui/actionButtonsManager'
 import {TeleportEffect} from '@/babylon/gfx/teleportEffect'
+import {AudioManager} from '@/babylon/audio/audioManager'
 
 export const CharacterManager = {
     characters: new Map<number, Character>(),
@@ -325,6 +326,9 @@ export const CharacterManager = {
             MyPlayer.myChar.autoAttackTarget = null
             MyPlayer.setAction(null)
             MyPlayer.myChar.teleportTo(data.x, data.y, data.z)
+            if (!MyPlayer.isDead.value) {
+                AudioManager.playTeleport()
+            }
         } else {
             const char = this.characters.get(data.id)
             char?.teleportTo(data.x, data.y, data.z)

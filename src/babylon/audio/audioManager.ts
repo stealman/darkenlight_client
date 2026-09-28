@@ -32,6 +32,9 @@ export const AudioManager = {
 
     lowHealthWarningSound: null as Sound | null,
     heartBeatSound: null as Sound | null,
+    deathSound: null as Sound | null,
+    teleportSound: null as Sound | null,
+    reviveSound: null as Sound | null,
 
     backpackHandleSound: null as Sound | null,
     backpackHandle2Sound: null as Sound | null,
@@ -176,6 +179,27 @@ export const AudioManager = {
             loop: true,
         });
 
+        this.deathSound = new Sound("death", AudioManager.BASE_PATH_SFX + "death.ogg", scene, function() {
+            AudioManager.deathSound!['loaded'] = true;
+        }, {
+            volume: 1,
+            playbackRate: 1,
+        });
+
+        this.teleportSound = new Sound("teleport", AudioManager.BASE_PATH_SFX + "teleport.ogg", scene, function() {
+            AudioManager.teleportSound!['loaded'] = true;
+        }, {
+            volume: 1,
+            playbackRate: 1,
+        });
+
+        this.reviveSound = new Sound("revive", AudioManager.BASE_PATH_SFX + "revive.ogg", scene, function() {
+            AudioManager.reviveSound!['loaded'] = true;
+        }, {
+            volume: 1,
+            playbackRate: 1,
+        });
+
         this.backpackHandleSound = new Sound("backpackHandle", AudioManager.BASE_PATH_SFX + "backpack-handle.ogg", scene, function() {
             AudioManager.backpackHandleSound!['loaded'] = true;
         }, {
@@ -206,6 +230,7 @@ export const AudioManager = {
             const sound = new Sound(soundName + index, AudioManager.BASE_PATH_SFX + file, scene, function() {
                 sound['loaded'] = true;
                 sound['defaultVolume'] = options.volume;
+                sound['defaultPlaybackRate'] = options.playbackRate;
             }, options);
             targetArray.push(sound);
         });
@@ -246,22 +271,24 @@ export const AudioManager = {
         }
     },
 
-    playWeaponHit(weaponType: string, targetType: string, position: Vector3) {
+    playWeaponHit(weaponType: string, targetType: string, position: Vector3, emphasized: boolean = false) {
         const volumeRatio = AudioUtils.getVolumeRatioByDistance(position)
+        const playbackRateMultiplier = emphasized ? 0.8 : 1
+        const volumeMultiplier = emphasized ? 1.2 : 1
         switch (weaponType) {
             case WeaponSoundTypes.SWORD:
 
                 switch (targetType) {
                     case BodySoundTypes.HARD:
-                        this.playRandomSound(this.swordHitHardSounds, volumeRatio)
+                        this.playRandomSound(this.swordHitHardSounds, volumeRatio, playbackRateMultiplier, volumeMultiplier)
                         break
                     case BodySoundTypes.METAL:
-                        this.playRandomSound(this.swordHitMetalSounds, volumeRatio)
+                        this.playRandomSound(this.swordHitMetalSounds, volumeRatio, playbackRateMultiplier, volumeMultiplier)
                         break
                 }
                 break
             case WeaponSoundTypes.BONE:
-                this.playRandomSound(this.boneHitSounds, volumeRatio)
+                this.playRandomSound(this.boneHitSounds, volumeRatio, playbackRateMultiplier, volumeMultiplier)
                 break
         }
     },
@@ -332,9 +359,10 @@ export const AudioManager = {
         sound.stop()
     },
 
-    playRandomSound(soundArray: Sound[], volumeRatio: number = 1) {
+    playRandomSound(soundArray: Sound[], volumeRatio: number = 1, playbackRateMultiplier: number = 1, volumeMultiplier: number = 1) {
         const sound = soundArray[Utils.rollDice(soundArray.length, true)];
-        sound.setVolume(sound.defaultVolume * volumeRatio)
+        sound.setVolume(Math.min(2, sound.defaultVolume * volumeRatio * volumeMultiplier))
+        sound.setPlaybackRate((sound['defaultPlaybackRate'] ?? 1) * playbackRateMultiplier)
         if (sound['loaded']) {
             sound.play();
         }
@@ -384,6 +412,24 @@ export const AudioManager = {
     playHeartBeat() {
         if (this.heartBeatSound && this.heartBeatSound['loaded'] && !this.heartBeatSound.isPlaying) {
             this.heartBeatSound.play();
+        }
+    },
+
+    playDeath() {
+        if (this.deathSound && this.deathSound['loaded']) {
+            this.deathSound.play();
+        }
+    },
+
+    playTeleport() {
+        if (this.teleportSound && this.teleportSound['loaded']) {
+            this.teleportSound.play();
+        }
+    },
+
+    playRevive() {
+        if (this.reviveSound && this.reviveSound['loaded']) {
+            this.reviveSound.play();
         }
     },
 

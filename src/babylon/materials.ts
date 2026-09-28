@@ -28,6 +28,7 @@ export const Materials = {
     waterMaterial: null as PBRMaterial | null,
     entrancePortalMaterial: null as PBRMaterial | null,
     weaponTrailMaterial: null as StandardMaterial | null,
+    powerStrikeWeaponTrailMaterial: null as StandardMaterial | null,
 
     initialize(scene: Scene) {
         this.terrainMaterial = this.createTerrainMaterial1(scene)
@@ -41,6 +42,7 @@ export const Materials = {
         this.stepMarksMaterial = this.createStepMarksMaterial(scene)
         this.fightSplatsMaterial = this.createFightSplatsMaterial(scene)
         this.weaponTrailMaterial = this.createWeaponTrailMaterial(scene)
+        this.powerStrikeWeaponTrailMaterial = this.createPowerStrikeWeaponTrailMaterial(scene)
     },
 
     createTerrainMaterial1(scene: Scene): PBRCustomMaterial {
@@ -122,6 +124,14 @@ export const Materials = {
         mat.disableLighting = true
         mat.emissiveColor = new Color3(1, 1, 1)
         mat.alpha = 0.25
+        return mat
+    },
+
+    createPowerStrikeWeaponTrailMaterial(scene: Scene): StandardMaterial {
+        const mat = new StandardMaterial('powerStrikeWeaponTrailMat', scene)
+        mat.disableLighting = true
+        mat.emissiveColor = new Color3(1, 1, 1)
+        mat.alpha = 0.5
         return mat
     },
 

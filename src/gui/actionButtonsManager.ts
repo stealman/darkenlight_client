@@ -11,6 +11,21 @@ import { CharacterAction, CharacterActions } from '@/data/actions/characterActio
 import { t } from '@/i18n'
 import { Connector } from '@/network/connector'
 import { PowerStrike } from '@/network/messages'
+import { WeaponCategories } from '@/data/items/item'
+
+const powerStrikeIconSuffixByWeaponCategory: Partial<Record<string, string>> = {
+    [WeaponCategories.SWORD]: 'sword',
+    [WeaponCategories.AXE]: 'axe',
+    [WeaponCategories.POLEARM]: 'spear',
+    [WeaponCategories.MACE]: 'mace',
+}
+
+const autoAttackIconByWeaponCategory: Partial<Record<string, string>> = {
+    [WeaponCategories.AXE]: 'btn_attack_axe',
+    [WeaponCategories.POLEARM]: 'btn_attack_spear',
+    [WeaponCategories.MACE]: 'btn_attack_mace',
+    [WeaponCategories.BOW]: 'btn_attack_ranged',
+}
 
 class ActionButtonActionBinding {
     name: string
@@ -195,11 +210,19 @@ class ActionButton {
     }
 
     resolveImagePath(imageSrc: string) {
-        if (imageSrc == CharacterActions.AUTO_ATTACK.image && MyPlayer.myChar?.isWeaponRanged()) {
-            imageSrc = 'btn_attack_ranged'
+        if (imageSrc == CharacterActions.AUTO_ATTACK.image) {
+            const categoryIcon = autoAttackIconByWeaponCategory[MyPlayer.myChar?.getWeapon()?.weaponCategory ?? '']
+            if (categoryIcon) {
+                imageSrc = categoryIcon
+            } else if (MyPlayer.myChar?.isWeaponAxe()) {
+                imageSrc = 'btn_attack_axe'
+            }
         }
-        if (imageSrc == CharacterActions.AUTO_ATTACK.image && MyPlayer.myChar?.isWeaponAxe()) {
-            imageSrc = 'btn_attack_axe'
+        if (imageSrc == CharacterActions.POWER_STRIKE.image) {
+            const suffix = powerStrikeIconSuffixByWeaponCategory[MyPlayer.myChar?.getWeapon()?.weaponCategory ?? '']
+            if (suffix) {
+                imageSrc = `btn_power_strike_${suffix}`
+            }
         }
 
         return `/images/icons/buttons/${imageSrc}.png`
@@ -710,8 +733,11 @@ export const ActionButtonsManager = {
 
     charEquipChanged() {
         this.actionButtons.forEach((btn) => {
-            if (btn.actionBinding && btn.actionBinding.name === CharacterActions.AUTO_ATTACK.name) {
+            if (btn.actionBinding?.name === CharacterActions.AUTO_ATTACK.name) {
                 btn.setImage(CharacterActions.AUTO_ATTACK.image)
+            }
+            if (btn.actionBinding?.name === CharacterActions.POWER_STRIKE.name) {
+                btn.setImage(CharacterActions.POWER_STRIKE.image)
             }
             btn.setItemsAvailabilityState()
         })

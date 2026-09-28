@@ -39,7 +39,7 @@ import { OverlayManager } from '@/gui/overlay/overlayManager'
 import { EffectTarget } from '@/babylon/gfx/characterEffect'
 import { GfxManager } from '@/babylon/gfx/gfxManager'
 import { PotionConsumeEffect } from '@/babylon/gfx/potionConsumeEffect'
-import { HitSparkEffect } from '@/babylon/gfx/hitSparkEffect'
+import { HitSparkEffect, PowerStrikeSparkFountainEffect } from '@/babylon/gfx/hitSparkEffect'
 import { WATER_BLOCK_TYPE } from '@/babylon/world/terrainManager'
 import { CharacterActions, CharacterTimedAction } from '@/data/actions/characterActions'
 import { PubliclyVisibleAffect } from '@/data/affects'
@@ -335,7 +335,7 @@ class Character implements Attackable, EffectTarget {
         const angle = Utils.getAngleBetweenPoints(this.pos, this.autoAttackTarget.pos)
         this.setLookAngle(angle - Math.PI / 4)
         this.model?.doAttackAnimation()
-        this.model?.setWeaponTrailEnabled(true)
+        this.model?.setWeaponTrailEnabled(true, data.ps === true)
     }
 
     breakAutoAttack() {
@@ -369,9 +369,13 @@ class Character implements Attackable, EffectTarget {
             MyPlayer.setMyCharHp(data.res.tgt.hp)
         }
         if (data.res.h === 'h') {
-            AudioManager.playWeaponHit(this.weaponSoundType, target.getBodySoundType(), target.pos)
+            const emphasizedHitSound = data.res.q === 'P' || this.autoAttackMessage?.ps === true
+            AudioManager.playWeaponHit(this.weaponSoundType, target.getBodySoundType(), target.pos, emphasizedHitSound)
             if (target instanceof Monster) {
                 GfxManager.addEffect(new HitSparkEffect(target, this.pos))
+                if (this.autoAttackMessage?.ps === true) {
+                    GfxManager.addEffect(new PowerStrikeSparkFountainEffect(target))
+                }
             }
         } else if (data.res.h === 'b' && target.getParrySoundType()) {
             AudioManager.playWeaponBlocked(target.getParrySoundType()!, target.pos)
@@ -457,6 +461,7 @@ class Character implements Attackable, EffectTarget {
     }
 
     die() {
+        this.model?.stopWeaponTrailImmediately()
         if (this.dead) {
             this.model?.playDeathAnimation()
             return
@@ -478,12 +483,14 @@ class Character implements Attackable, EffectTarget {
     }
 
     revive() {
+        this.model?.stopWeaponTrailImmediately()
         this.dead = false
         this.model?.clearDeathPose()
         this.model?.stopAnimation()
     }
 
     teleportTo(x: number, y: number, z: number) {
+        this.model?.stopWeaponTrailImmediately()
         this.stopMovementLocally()
         this.pos.x = x
         this.pos.z = z
@@ -734,10 +741,7 @@ class Character implements Attackable, EffectTarget {
 
     isWeaponAxe(): boolean {
         const weapon = this.getWeapon()
-        if (weapon && (weapon.slotInfo.weaponType === WeaponTypes.AXE || weapon.slotInfo.weaponType === WeaponTypes.PICKAXE)) {
-            return true
-        }
-        return false
+        return weapon?.weaponCategory === WeaponCategories.AXE || weapon?.slotInfo?.weaponType === WeaponTypes.PICKAXE
     }
 
     getFootStepSoundType(): string {

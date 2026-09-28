@@ -656,8 +656,12 @@ export class CharacterModel implements EquipBearer {
         this.modelRotation = model.rotation.y
     }
 
-    setWeaponTrailEnabled(enabled: boolean) {
-        this.weaponEquipItem?.setWeaponTrailEnabled(enabled)
+    setWeaponTrailEnabled(enabled: boolean, powerStrike: boolean = false) {
+        this.weaponEquipItem?.setWeaponTrailEnabled(enabled, powerStrike)
+    }
+
+    stopWeaponTrailImmediately() {
+        this.weaponEquipItem?.stopWeaponTrailImmediately()
     }
 
     disposeWeaponTrail() {

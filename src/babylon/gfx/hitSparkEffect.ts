@@ -81,3 +81,76 @@ export class HitSparkEffect implements CharacterEffect, MonsterEffect {
         return this.startTime > 0 && actualTime - this.startTime >= 450
     }
 }
+
+export class PowerStrikeSparkFountainEffect implements CharacterEffect, MonsterEffect {
+    target: EffectTarget
+    positionOffset: Vector3 = Vector3.Zero()
+
+    private startTime: number = 0
+    private particleSystem: ParticleSystem | null = null
+    private emitter: TransformNode | null = null
+
+    constructor(target: EffectTarget) {
+        this.target = target
+    }
+
+    onStart(actualTime: number): void {
+        this.startTime = actualTime
+        if (!this.target.isEffectVisible(true) || !Renderer.scene) {
+            return
+        }
+
+        const emitter = new TransformNode(`powerStrikeSparkFountainEmitter_${this.target.id}_${actualTime}`, Renderer.scene)
+        emitter.position.copyFrom(this.target.pos)
+        emitter.position.y += this.target.getModelHeight() * 0.45
+
+        const particles = new ParticleSystem(`powerStrikeSparkFountain_${this.target.id}_${actualTime}`, 32, Renderer.scene)
+        particles.particleTexture = new Texture('images/gfx/flare-star.png', Renderer.scene)
+        particles.emitter = emitter
+        particles.minEmitBox = new Vector3(-0.08, -0.08, -0.08)
+        particles.maxEmitBox = new Vector3(0.08, 0.08, 0.08)
+        particles.direction1 = new Vector3(-0.55, 1, -0.55)
+        particles.direction2 = new Vector3(0.55, 1.35, 0.55)
+        particles.minEmitPower = 2.8
+        particles.maxEmitPower = 4.2
+        particles.minLifeTime = 0.75
+        particles.maxLifeTime = 1.15
+        particles.minSize = 0.075
+        particles.maxSize = 0.16
+        particles.gravity = new Vector3(0, -8, 0)
+        particles.updateSpeed = 0.02
+        particles.blendMode = ParticleSystem.BLENDMODE_ONEONE
+        particles.addColorGradient(0, new Color4(1, 1, 0.78, 1))
+        particles.addColorGradient(0.45, new Color4(1, 0.58, 0.12, 0.8))
+        particles.addColorGradient(0.8, new Color4(0.9, 0.2, 0.03, 0.45))
+        particles.addColorGradient(1, new Color4(0.25, 0.02, 0.01, 0))
+        particles.manualEmitCount = 28
+        particles.disposeOnStop = true
+        particles.onDisposeObservable.addOnce(() => {
+            emitter.dispose()
+            if (this.particleSystem === particles) {
+                this.particleSystem = null
+                this.emitter = null
+            }
+        })
+        particles.start()
+
+        this.emitter = emitter
+        this.particleSystem = particles
+    }
+
+    onUpdate(): void {
+    }
+
+    onEnd(): void {
+        this.particleSystem?.stop()
+        if (!this.particleSystem) {
+            this.emitter?.dispose()
+            this.emitter = null
+        }
+    }
+
+    isFinished(actualTime: number): boolean {
+        return this.startTime > 0 && actualTime - this.startTime >= 1250
+    }
+}
