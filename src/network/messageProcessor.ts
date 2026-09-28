@@ -50,6 +50,7 @@ import {GMManager} from '@/gm/GM'
 import {BankManager} from '@/data/bankManager'
 import { TargetingManager } from '@/gui/targettingManager'
 import { ActionButtonsManager } from '@/gui/actionButtonsManager'
+import { CharacterActions } from '@/data/actions/characterActions'
 
 export const MessageProcessor = {
 
@@ -225,7 +226,9 @@ export const MessageProcessor = {
         const worldChanged = MyPlayer.worldId !== data.id
         if (worldChanged) {
             MyPlayer.stopMovementForTeleport()
-            MyPlayer.setAction(null)
+            if (MyPlayer.activeAction?.name !== CharacterActions.HEAL.name) {
+                MyPlayer.setAction(null)
+            }
         }
         const environmentType = data.environment?.type
         MiniMap.setEnvironmentType(environmentType)

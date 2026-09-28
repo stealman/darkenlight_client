@@ -16,7 +16,9 @@
   },
   "items": {
     "resources": {
-      "stamina-potion": "Lektvar Výdrže"
+      "small-stamina-potion": "Malý Lektvar Výdrže",
+      "stamina-potion": "Lektvar Výdrže",
+      "great-stamina-potion": "Velký Lektvar Výdrže"
     }
   },
   "app": {

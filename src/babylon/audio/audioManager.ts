@@ -259,22 +259,23 @@ export const AudioManager = {
         this.staticObjectSounds.set(type, sound);
     },
 
-    playWeaponSwing(type: string, position: Vector3) {
+    playWeaponSwing(type: string, position: Vector3, emphasized: boolean = false) {
         const volumeRatio = AudioUtils.getVolumeRatioByDistance(position)
+        const volumeMultiplier = emphasized ? 1.4 : 1
         switch (type) {
             case WeaponSoundTypes.SWORD:
-                this.playRandomSound(this.swordSwingSounds, volumeRatio)
+                this.playRandomSound(this.swordSwingSounds, volumeRatio, 1, volumeMultiplier)
                 break;
             case WeaponSoundTypes.BONE:
-                this.playRandomSound(this.swordSwingSounds, volumeRatio)
+                this.playRandomSound(this.swordSwingSounds, volumeRatio, 1, volumeMultiplier)
                 break;
         }
     },
 
     playWeaponHit(weaponType: string, targetType: string, position: Vector3, emphasized: boolean = false) {
         const volumeRatio = AudioUtils.getVolumeRatioByDistance(position)
-        const playbackRateMultiplier = emphasized ? 0.8 : 1
-        const volumeMultiplier = emphasized ? 1.2 : 1
+        const playbackRateMultiplier = emphasized ? 0.6 : 1
+        const volumeMultiplier = emphasized ? 1.6 : 1
         switch (weaponType) {
             case WeaponSoundTypes.SWORD:
 
@@ -360,12 +361,23 @@ export const AudioManager = {
     },
 
     playRandomSound(soundArray: Sound[], volumeRatio: number = 1, playbackRateMultiplier: number = 1, volumeMultiplier: number = 1) {
-        const sound = soundArray[Utils.rollDice(soundArray.length, true)];
-        sound.setVolume(Math.min(2, sound.defaultVolume * volumeRatio * volumeMultiplier))
-        sound.setPlaybackRate((sound['defaultPlaybackRate'] ?? 1) * playbackRateMultiplier)
-        if (sound['loaded']) {
-            sound.play();
+        const sourceSound = soundArray[Utils.rollDice(soundArray.length, true)]
+        if (!sourceSound['loaded']) {
+            return
         }
+
+        const modifiedPlayback = playbackRateMultiplier !== 1 || volumeMultiplier !== 1
+        const sound = modifiedPlayback ? sourceSound.clone() : sourceSound
+        if (!sound) {
+            return
+        }
+
+        sound.setVolume(Math.min(2, sourceSound.defaultVolume * volumeRatio * volumeMultiplier))
+        sound.setPlaybackRate((sourceSound['defaultPlaybackRate'] ?? 1) * playbackRateMultiplier)
+        if (modifiedPlayback) {
+            sound.onEndedObservable.addOnce(() => sound.dispose())
+        }
+        sound.play()
     },
 
     playDeathRattle(type: string, position: Vector3) {

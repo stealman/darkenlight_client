@@ -24,6 +24,7 @@ export const StaticsManager = {
     },
     allStatics : [] as StaticObject[],
     visibleStatics : [] as StaticObject[],
+    dungeonEntrances: new Set<StaticObject>(),
 
     initialize(scene: Scene) {
         this.prefabs.shrub2x2 = PrefabShrub2x2.getPrefab(scene)
@@ -73,7 +74,12 @@ export const StaticsManager = {
             case 241: this.allStatics.push(new FireplaceSmall(obj.tp, pos, rotation, MaterialEnum1.WOOD_1.uv)); break
             case 242: this.allStatics.push(new FireplaceLarge(obj.tp, pos, rotation, MaterialEnum1.WOOD_1.uv)); break
             case 261: this.allStatics.push(new WallTorch(obj.tp, pos, MaterialEnum1.WOOD_1.uv, obj.meta as WallTorchMetadata)); break
-            case 281: this.allStatics.push(new StoneEntrance(obj.tp, pos, MaterialEnum1.BRICK_GRAY.uv, obj.meta as StoneEntranceMetadata)); break
+            case 281: {
+                const entrance = new StoneEntrance(obj.tp, pos, MaterialEnum1.BRICK_GRAY.uv, obj.meta as StoneEntranceMetadata)
+                this.allStatics.push(entrance)
+                this.dungeonEntrances.add(entrance)
+                break
+            }
             default:
                 break
         }
@@ -96,7 +102,9 @@ export const StaticsManager = {
     removeObjectAt(x: number, z: number) {
         for (let i = 0; i < this.allStatics.length; i++) {
             if (this.allStatics[i].position.x === x && this.allStatics[i].position.z === z) {
-                this.allStatics[i].dispose()
+                const obj = this.allStatics[i]
+                this.dungeonEntrances.delete(obj)
+                obj.dispose()
                 this.allStatics.splice(i, 1)
                 break
             }
@@ -108,6 +116,7 @@ export const StaticsManager = {
         this.allStatics.forEach((obj) => obj.dispose())
         this.allStatics = []
         this.visibleStatics = []
+        this.dungeonEntrances.clear()
         this.renderObjects()
     },
 

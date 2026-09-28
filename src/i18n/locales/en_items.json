@@ -222,7 +222,10 @@
       "great-healing-potion": "Great Healing Potion",
       "small-mana-potion": "Small Mana Potion",
       "mana-potion": "Mana Potion",
-      "great-mana-potion": "Great Mana Potion"
+      "great-mana-potion": "Great Mana Potion",
+      "small-stamina-potion": "Small Stamina Potion",
+      "stamina-potion": "Stamina Potion",
+      "great-stamina-potion": "Great Stamina Potion"
     }
   }
 }

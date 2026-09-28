@@ -322,7 +322,9 @@ const resourceOptions = [
     { codebookId: 1011, label: 'Small mana potion' },
     { codebookId: 1012, label: 'Mana potion' },
     { codebookId: 1013, label: 'Great mana potion' },
-    { codebookId: 1021, label: 'Stamina potion' },
+    { codebookId: 1021, label: 'Small stamina potion' },
+    { codebookId: 1022, label: 'Stamina potion' },
+    { codebookId: 1023, label: 'Great stamina potion' },
 ]
 const weaponOptions = [
     { label: 'None', value: '' },

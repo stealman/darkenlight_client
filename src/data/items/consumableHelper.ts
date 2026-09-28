@@ -10,7 +10,7 @@ export const ConsumableHelper = {
 
     healingPotionIds: [1001, 1002, 1003],
     manaPotionIds: [1011, 1012, 1013],
-    staminaPotionIds: [1021],
+    staminaPotionIds: [1021, 1022, 1023],
     woodIds: Array.from({ length: 20 }, (_, index) => 201 + index),
     foodIds: [351],
 

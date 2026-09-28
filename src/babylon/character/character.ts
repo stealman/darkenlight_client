@@ -354,7 +354,7 @@ class Character implements Attackable, EffectTarget {
             this.model?.setWeaponTrailEnabled(false)
 
             // Swing sound for melee weapons - ranged weapons have it when arrow is fired
-            if (!this.isWeaponRanged()) AudioManager.playWeaponSwing(this.weaponSoundType, this.pos)
+            if (!this.isWeaponRanged()) AudioManager.playWeaponSwing(this.weaponSoundType, this.pos, this.autoAttackMessage?.ps === true)
         }
 
         const target = Utils.getAttackTargetByTypeAndId(data.tp, data.tgt)
@@ -369,11 +369,11 @@ class Character implements Attackable, EffectTarget {
             MyPlayer.setMyCharHp(data.res.tgt.hp)
         }
         if (data.res.h === 'h') {
-            const emphasizedHitSound = data.res.q === 'P' || this.autoAttackMessage?.ps === true
-            AudioManager.playWeaponHit(this.weaponSoundType, target.getBodySoundType(), target.pos, emphasizedHitSound)
+            const powerStrike = this.autoAttackMessage?.ps === true
+            AudioManager.playWeaponHit(this.weaponSoundType, target.getBodySoundType(), target.pos, powerStrike)
             if (target instanceof Monster) {
                 GfxManager.addEffect(new HitSparkEffect(target, this.pos))
-                if (this.autoAttackMessage?.ps === true) {
+                if (powerStrike) {
                     GfxManager.addEffect(new PowerStrikeSparkFountainEffect(target))
                 }
             }

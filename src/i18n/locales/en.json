@@ -16,7 +16,9 @@
   },
   "items": {
     "resources": {
-      "stamina-potion": "Stamina Potion"
+      "small-stamina-potion": "Small Stamina Potion",
+      "stamina-potion": "Stamina Potion",
+      "great-stamina-potion": "Great Stamina Potion"
     }
   },
   "app": {

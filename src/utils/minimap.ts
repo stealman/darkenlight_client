@@ -2,6 +2,7 @@ import { WorldDataManager } from '@/data/worldDataManager'
 import { MyPlayer } from '@/data/myPlayer'
 import { TooltipOverlayContent, TooltipOverlayManager } from '@/gui/tooltipOverlayManager'
 import { t } from '@/i18n'
+import { StaticsManager } from '@/babylon/world/statics/staticsManager'
 
 export const MiniMap = {
     tooltipOwnerKey: 'mini-map' as string,
@@ -18,6 +19,7 @@ export const MiniMap = {
     grassColorMap: [] as string[],
     snowColorMap: [] as string[],
     environmentType: 'outdoor' as 'outdoor' | 'indoor',
+    dungeonEntranceColor: '#a484c1' as string,
 
     setEnvironmentType(environmentType?: string | null) {
         this.environmentType = environmentType === 'indoor' ? 'indoor' : 'outdoor'
@@ -32,6 +34,11 @@ export const MiniMap = {
         this.offScreenCanvas = document.createElement("canvas")
         this.offScreenCanvas.width = this.mapWidth
         this.offScreenCanvas.height = this.mapHeight
+
+        const accentPurple = getComputedStyle(document.documentElement).getPropertyValue('--ui-accent-purple').trim()
+        if (accentPurple) {
+            this.dungeonEntranceColor = `rgb(${accentPurple})`
+        }
 
         this.initializeTooltip()
 
@@ -159,7 +166,8 @@ export const MiniMap = {
 
         // Rotate canvas by 135 degrees
         context.translate(this.canvasSize / 2, this.canvasSize / 2)
-        context.rotate(-(Math.PI * 3 / 4))  // Rotate by 135 degrees
+        const mapRotation = -(Math.PI * 3 / 4)
+        context.rotate(mapRotation)  // Rotate by 135 degrees
 
         // Calculate topleft position of viewport based on player position
         const startX = Math.max(playerX - Math.floor(extendedViewSize / 2))
@@ -172,13 +180,46 @@ export const MiniMap = {
             -extendedCanvasSize / 2, -extendedCanvasSize / 2, extendedCanvasSize, extendedCanvasSize  // Destination x, y, width, height
         )
 
+        context.restore()
+        this.drawDungeonEntrances(context, playerX, playerY, mapRotation)
+
         // Player position
         context.fillStyle = "red"
         context.beginPath()
-        context.arc(0, 0, 2 * this.canvasSize / this.viewSize, 0, Math.PI * 2)  // Centered on the canvas
+        context.arc(this.canvasSize / 2, this.canvasSize / 2, 2 * this.canvasSize / this.viewSize, 0, Math.PI * 2)
         context.fill()
+    },
 
-        // context.restore()
+    drawDungeonEntrances(context: CanvasRenderingContext2D, playerX: number, playerY: number, mapRotation: number) {
+        const mapScale = this.canvasSize / this.viewSize
+        const markerSize = Math.max(6, Math.round(9 * mapScale))
+        const borderSize = 2
+        const halfMarkerSize = markerSize / 2
+        const rotationCos = Math.cos(mapRotation)
+        const rotationSin = Math.sin(mapRotation)
+
+        for (const obj of StaticsManager.dungeonEntrances) {
+            const mapX = (obj.renderPosition.z - playerX) * mapScale
+            const mapY = (obj.renderPosition.x - playerY) * mapScale
+            const screenX = this.canvasSize / 2 + mapX * rotationCos - mapY * rotationSin
+            const screenY = this.canvasSize / 2 + mapX * rotationSin + mapY * rotationCos
+
+            if (screenX < -halfMarkerSize || screenX > this.canvasSize + halfMarkerSize
+                || screenY < -halfMarkerSize || screenY > this.canvasSize + halfMarkerSize) {
+                continue
+            }
+
+            const left = Math.round(screenX - halfMarkerSize)
+            const top = Math.round(screenY - halfMarkerSize)
+
+            context.fillStyle = this.dungeonEntranceColor
+            context.fillRect(left, top, markerSize, markerSize)
+
+            context.fillStyle = '#000000'
+            context.fillRect(left, top, markerSize, borderSize)
+            context.fillRect(left, top, borderSize, markerSize)
+            context.fillRect(left + markerSize - borderSize, top, borderSize, markerSize)
+        }
     },
 
     updateCanvasSize(size, viewSize = size) {

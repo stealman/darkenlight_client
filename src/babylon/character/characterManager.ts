@@ -22,6 +22,7 @@ import {InventoryManager} from '@/data/inventoryManager'
 import {ActionButtonsManager} from '@/gui/actionButtonsManager'
 import {TeleportEffect} from '@/babylon/gfx/teleportEffect'
 import {AudioManager} from '@/babylon/audio/audioManager'
+import {CharacterActions} from '@/data/actions/characterActions'
 
 export const CharacterManager = {
     characters: new Map<number, Character>(),
@@ -324,7 +325,9 @@ export const CharacterManager = {
             MyPlayer.stopMovementForTeleport()
             MyPlayer.myChar.breakAutoAttack()
             MyPlayer.myChar.autoAttackTarget = null
-            MyPlayer.setAction(null)
+            if (MyPlayer.activeAction?.name !== CharacterActions.HEAL.name) {
+                MyPlayer.setAction(null)
+            }
             MyPlayer.myChar.teleportTo(data.x, data.y, data.z)
             if (!MyPlayer.isDead.value) {
                 AudioManager.playTeleport()

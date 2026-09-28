@@ -222,7 +222,10 @@
             "great-healing-potion": "Velký Lektvar Zdraví",
             "small-mana-potion": "Malý Lektvar Many",
             "mana-potion": "Lektvar Many",
-            "great-mana-potion": "Velký Lektvar Many"
+            "great-mana-potion": "Velký Lektvar Many",
+            "small-stamina-potion": "Malý Lektvar Výdrže",
+            "stamina-potion": "Lektvar Výdrže",
+            "great-stamina-potion": "Velký Lektvar Výdrže"
         }
     }
 }
