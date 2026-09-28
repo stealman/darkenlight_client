@@ -188,7 +188,7 @@
     "autoAttackName": "Auto-Attack",
     "autoAttackDescription": "Your character automatically attacks the selected target while it is in range.",
     "powerStrikeName": "Power Strike",
-    "powerStrikeDescription": "With a melee weapon, open combat with a 150% normal hit, then continue auto-attacking the target.",
+    "powerStrikeDescription": "A fast, powerful weapon strike – {bonus}% bonus attack.",
     "healName": "Heal",
     "healDescription": "Use a bandage to heal yourself. If you are not injured and another character is selected, the bandage is used on them.",
     "healingPotionName": "Health Potion",

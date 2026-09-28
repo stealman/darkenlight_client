@@ -7,7 +7,7 @@ export type SkillDefinition = {
     category: SkillCategoryKey
     translationKey: string
     descriptionTranslationKey: string
-    bonusKind?: 'weaponAttack' | 'armor' | 'campingRestingRegen' | 'bandageHealing'
+    bonusKind?: 'weaponAttack' | 'powerStrikeDamage' | 'armor' | 'campingRestingRegen' | 'bandageHealing'
     bonusTargetTranslationKey?: string
 }
 
@@ -17,7 +17,7 @@ export const PhysicalWeaponSkillDefinitions: SkillDefinition[] = [
     {key: 'maces', category: 'weapons', translationKey: 'skills.weapons.maces', descriptionTranslationKey: 'skills.descriptions.maces', bonusKind: 'weaponAttack', bonusTargetTranslationKey: 'skills.bonuses.weaponTypes.maces'},
     {key: 'polearms', category: 'weapons', translationKey: 'skills.weapons.polearms', descriptionTranslationKey: 'skills.descriptions.polearms', bonusKind: 'weaponAttack', bonusTargetTranslationKey: 'skills.bonuses.weaponTypes.polearms'},
     {key: 'bows', category: 'weapons', translationKey: 'skills.weapons.bows', descriptionTranslationKey: 'skills.descriptions.bows', bonusKind: 'weaponAttack', bonusTargetTranslationKey: 'skills.bonuses.weaponTypes.bows'},
-    {key: 'powerStrike', category: 'weapons', translationKey: 'skills.weapons.powerStrike', descriptionTranslationKey: 'skills.descriptions.powerStrike'},
+    {key: 'powerStrike', category: 'weapons', translationKey: 'skills.weapons.powerStrike', descriptionTranslationKey: 'skills.descriptions.powerStrike', bonusKind: 'powerStrikeDamage'},
 ]
 
 export const ArmorSkillDefinitions: SkillDefinition[] = [

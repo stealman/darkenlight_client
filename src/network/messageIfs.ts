@@ -65,6 +65,8 @@ export interface SkillProgressTO {
     nextTrainingRequired?: number
     weaponAttackBonusPercent?: number
     weaponAttackBonusPercentPerRank?: number
+    powerStrikeDamageBonusPercent?: number
+    powerStrikeDamageBonusPercentPerRank?: number
     armorBonusPercent?: number
     armorBonusPercentPerRank?: number
     actionSpeedBonusPercent?: number
@@ -90,9 +92,13 @@ export interface  AutoAttackMessage {
     tp: string
     dur: number
     cd: number
-    ef: string // GFX
-    ps: boolean
-    pcd: number
+    ef?: string | null // GFX
+    ps?: boolean
+    pcd?: number
+}
+
+export interface PowerStrikeQueueStateMessage {
+    q: boolean
 }
 
 export interface AutoAttackResult {

@@ -75,7 +75,9 @@ export const MonsterManager = {
                 TargetingManager.unselectTarget()
             }
             if (mob === MyPlayer.myChar.autoAttackTarget) {
+                MyPlayer.myChar.breakAutoAttack()
                 MyPlayer.myChar.autoAttackTarget = null
+                MyPlayer.setAction(null)
             }
         }
     },

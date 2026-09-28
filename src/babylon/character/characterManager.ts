@@ -66,6 +66,7 @@ export const CharacterManager = {
     removeCharacter(id: number) {
         if (this.characters.has(id)) {
             const char = this.characters.get(id)!
+            const wasAutoAttackTarget = MyPlayer.myChar.autoAttackTarget === char
             char.clearTimedAction()
             char.model?.removeFromScene()
             this.visibleCharacters.delete(id)
@@ -73,6 +74,11 @@ export const CharacterManager = {
 
             if (TargetingManager.selectedTarget?.id === id) {
                 TargetingManager.unselectTarget()
+            }
+            if (wasAutoAttackTarget) {
+                MyPlayer.myChar.breakAutoAttack()
+                MyPlayer.myChar.autoAttackTarget = null
+                MyPlayer.setAction(null)
             }
         }
     },
@@ -287,19 +293,46 @@ export const CharacterManager = {
             MyPlayer.die()
             return
         }
-        this.characters.get(id)?.die()
+        const char = this.characters.get(id)
+        char?.die()
+        if (char && MyPlayer.myChar.autoAttackTarget === char) {
+            MyPlayer.myChar.breakAutoAttack()
+            MyPlayer.myChar.autoAttackTarget = null
+            MyPlayer.setAction(null)
+        }
     },
 
     characterTeleported(data: {id: number, x: number, y: number, z: number, fx: number, fy: number, fz: number, departure: boolean}) {
         if (data.departure) {
+            if (data.id === MyPlayer.myChar.id) {
+                MyPlayer.myChar.breakAutoAttack()
+                MyPlayer.myChar.autoAttackTarget = null
+                MyPlayer.setAction(null)
+            } else {
+                const char = this.characters.get(data.id)
+                if (char && MyPlayer.myChar.autoAttackTarget === char) {
+                    MyPlayer.myChar.breakAutoAttack()
+                    MyPlayer.myChar.autoAttackTarget = null
+                    MyPlayer.setAction(null)
+                }
+            }
             TeleportEffect.create(data.fx, data.fy, data.fz)
             return
         }
         if (data.id === MyPlayer.myChar.id) {
             MyPlayer.stopMovementForTeleport()
+            MyPlayer.myChar.breakAutoAttack()
+            MyPlayer.myChar.autoAttackTarget = null
+            MyPlayer.setAction(null)
             MyPlayer.myChar.teleportTo(data.x, data.y, data.z)
         } else {
-            this.characters.get(data.id)?.teleportTo(data.x, data.y, data.z)
+            const char = this.characters.get(data.id)
+            char?.teleportTo(data.x, data.y, data.z)
+            if (char && MyPlayer.myChar.autoAttackTarget === char) {
+                MyPlayer.myChar.breakAutoAttack()
+                MyPlayer.myChar.autoAttackTarget = null
+                MyPlayer.setAction(null)
+            }
         }
         TeleportEffect.create(data.x, data.y, data.z)
     },

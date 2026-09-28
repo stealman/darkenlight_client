@@ -64,12 +64,12 @@
                         >
                             <img
                                 :src="getActionImage(action.image)"
-                                :alt="action.description"
+                                :alt="action.nameLoc"
                                 class="action-option-icon"
                             />
                             <div class="action-option-text">
                                 <strong class="ui-text-gradient">{{ action.nameLoc }}</strong>
-                                <span>{{ action.descLoc }}</span>
+                                <span>{{ getActionDescription(action.name) }}</span>
                             </div>
                         </button>
                     </div>
@@ -103,6 +103,8 @@ const getBindingDescription = (index: number) => {
     bindingsRevision.value
     return ActionButtonsManager.getBindingDescriptionForIndex(index)
 }
+
+const getActionDescription = (actionName: string) => ActionButtonsManager.getActionDescription(actionName)
 
 const getBindingDescriptionParts = (index: number) => {
     const description = getBindingDescription(index)

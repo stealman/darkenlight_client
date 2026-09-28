@@ -551,7 +551,19 @@ export const ActionButtonsManager = {
             return itemName
         }
 
-        return CharacterActions.getActionByName(binding.name)?.description ?? ''
+        const action = CharacterActions.getActionByName(binding.name)
+        return action ? `${action.nameLoc}: ${this.getActionDescription(action.name)}` : ''
+    },
+
+    getActionDescription(actionName: string): string {
+        const action = CharacterActions.getActionByName(actionName)
+        if (!action) return ''
+        if (actionName !== CharacterActions.POWER_STRIKE.name) return action.descLoc
+
+        const progress = MyPlayer.myChar?.skillSet?.powerStrike
+        const bonus = progress?.powerStrikeDamageBonusPercent ??
+            (progress?.rank ?? 0) * (progress?.powerStrikeDamageBonusPercentPerRank ?? 15)
+        return t(action.descKey, {bonus})
     },
 
     getBindingActionNameForIndex(index: number): string | null {

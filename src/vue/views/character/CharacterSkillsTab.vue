@@ -188,26 +188,30 @@ const getSkillBonusValue = (skill: SkillDefinition, rank: number, progress?: Ski
     }
 
     const armorBonus = skill.bonusKind === 'armor'
+    const powerStrikeDamageBonus = skill.bonusKind === 'powerStrikeDamage'
     const campingRestingRegenBonus = skill.bonusKind === 'campingRestingRegen'
     const bandageHealingBonus = skill.bonusKind === 'bandageHealing'
     const bonusPercent = campingRestingRegenBonus
         ? progress?.restingRegenBonusPercent
+        : powerStrikeDamageBonus ? progress?.powerStrikeDamageBonusPercent
         : armorBonus ? progress?.armorBonusPercent : progress?.weaponAttackBonusPercent
     const bonusPercentPerRank = campingRestingRegenBonus
         ? progress?.restingRegenBonusPercentPerRank
+        : powerStrikeDamageBonus ? progress?.powerStrikeDamageBonusPercentPerRank
         : armorBonus ? progress?.armorBonusPercentPerRank : progress?.weaponAttackBonusPercentPerRank
     return {
         percentage: bandageHealingBonus
             ? `${progress?.bandageHealingAmountMinimum ?? rank}Ă˘â‚¬â€ś${progress?.bandageHealingAmountMaximum ?? rank * 2}`
-            : `+${bonusPercent ?? rank * (campingRestingRegenBonus ? 25 : 5)}%`,
+            : `+${bonusPercent ?? rank * (campingRestingRegenBonus ? 25 : powerStrikeDamageBonus ? 15 : 5)}%`,
         perRank: bandageHealingBonus
             ? `${progress?.bandageHealingAmountMinimumPerRank ?? 1}Ă˘â‚¬â€ś${progress?.bandageHealingAmountMaximumPerRank ?? 2}`
-            : bonusPercentPerRank ?? (campingRestingRegenBonus ? 25 : 5),
+            : bonusPercentPerRank ?? (campingRestingRegenBonus ? 25 : powerStrikeDamageBonus ? 15 : 5),
         target: skill.bonusTargetTranslationKey ? t(skill.bonusTargetTranslationKey) : undefined,
         effectTranslationKey: bandageHealingBonus
             ? 'skills.bonuses.healedHealth'
             : campingRestingRegenBonus
             ? 'skills.bonuses.restingRegenAtCampfire'
+            : powerStrikeDamageBonus ? 'skills.bonuses.powerStrikeDamage'
             : armorBonus ? 'skills.bonuses.armorOfType' : 'skills.bonuses.weaponAttackOfType',
         perRankTranslationKey: bandageHealingBonus
             ? 'skills.bonuses.healedHealthPerRank'

@@ -188,7 +188,7 @@
     "autoAttackName": "Auto-Útok",
     "autoAttackDescription": "Postava automaticky útočí na vybraný cíl, dokud je v dosahu.",
     "powerStrikeName": "Silný úder",
-    "powerStrikeDescription": "Se zbraní pro boj zblízka otevře boj normálním zásahem za 150 % poškození a pak pokračuje auto-útokem na cíl.",
+    "powerStrikeDescription": "Rychlý silný úder zbraní – bonusový útok {bonus} %.",
     "healName": "Léčba",
     "healDescription": "Použiješ obvaz ke svému vyléčení. Pokud nejsi zraněn a je vybrána jiná postava, použiješ obvaz na ni.",
     "healingPotionName": "Lektvar Zdraví",

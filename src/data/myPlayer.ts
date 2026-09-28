@@ -96,6 +96,12 @@ export const MyPlayer = {
         if (charData.act) {
             this.setAction(charData.act)
         }
+        if (charData.psq === true) {
+            this.setPowerStrikeQueued(true)
+        }
+        if (Number.isFinite(charData.psCd) && charData.psCd > 0) {
+            this.startPowerStrikeCooldown(charData.psCd)
+        }
 
         MyStatusPanel.setMyName(this.myChar.name)
         MyStatusPanel.refreshAffectGroups()
@@ -238,23 +244,30 @@ export const MyPlayer = {
             return
         }
         if (data.ps) {
-            this.startPowerStrikeCooldown(data.pcd)
+            this.startPowerStrikeCooldown(data.pcd ?? 0)
             this.clearPowerStrikeQueued()
         }
         this.myChar.startAutoAttack(data)
     },
 
     startPowerStrikeCooldown(cooldown: number) {
+        if (!Number.isFinite(cooldown) || cooldown <= 0) {
+            return
+        }
         this.powerStrikeCooldownStart = Date.now()
         this.powerStrikeCooldownEnd = this.powerStrikeCooldownStart + cooldown
     },
 
-    clearPowerStrikeQueued() {
-        if (!this.powerStrikeQueued) {
+    setPowerStrikeQueued(queued: boolean) {
+        if (this.powerStrikeQueued === queued) {
             return
         }
-        this.powerStrikeQueued = false
+        this.powerStrikeQueued = queued
         ActionButtonsManager.setActiveAction(this.activeAction)
+    },
+
+    clearPowerStrikeQueued() {
+        this.setPowerStrikeQueued(false)
     },
 
     startCombatApproach(data: CombatApproachMessage) {
@@ -319,7 +332,7 @@ export const MyPlayer = {
         this.isDead.value = true
         this.respawnAvailableAt.value = Date.now() + 20 * 1000
         this.autoRespawnAt.value = Date.now() + 15 * 60 * 1000
-        this.activeAction = null
+        this.setAction(null)
         this.myChar.die()
         TargetingManager.unselectTarget()
     },
