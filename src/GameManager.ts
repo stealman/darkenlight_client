@@ -14,7 +14,7 @@ import { WorldDataManager } from '@/data/worldDataManager'
 import { UiIconManager } from '@/gui/uiIconManager'
 
 const PIXELATED_UI_IMAGE_SIZE = 1.2 // 64 px -> 46 px after rounding.
-const PIXELATED_UI_IMAGE_SATURATION = 0.75 // 0 = grayscale, 1 = original saturation.
+const PIXELATED_UI_IMAGE_SATURATION = 0.7 // 0 = grayscale, 1 = original saturation.
 const UI_IMAGE_PROGRESS_START = 5
 const UI_IMAGE_PROGRESS_END = 30
 

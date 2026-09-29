@@ -27,7 +27,7 @@ const matFutureWeaponSize = new Vector2(5, 1)
 
 // Change this when a weapon GLB is replaced. The URL revision prevents an
 // installed PWA from combining a newly deployed shader with an old HTTP-cached model.
-export const WEAPON_MODEL_CACHE_VERSION = '20260922-warspear'
+export const WEAPON_MODEL_CACHE_VERSION = '20260929-broadsword-v2'
 
 export const WeaponsCbManager = {
     BASE_WEAPONS_PATH: 'weapons/',
@@ -122,7 +122,7 @@ export const WeaponsCbManager = {
 export const WeaponModelsCb = {
     LONGSWORD: new EquipCbItem(EquipSlotModelsCb.LONGSWORD.modelId, 'longsword', Vector3.Zero(), new Vector3(0.2, 0.24, 0.4), new Vector3(0, 2.4, 0), matLongswordSize),
 
-    BROADSWORD: new EquipCbItem(EquipSlotModelsCb.BROADSWORD.modelId, 'broadsword', Vector3.Zero(), new Vector3(0.22, 0.24, 0.4), new Vector3(0, 2, 0), matBroadswordSize),
+    BROADSWORD: new EquipCbItem(EquipSlotModelsCb.BROADSWORD.modelId, 'broadsword', Vector3.Zero(), new Vector3(0.22, 0.24, 0.25), new Vector3(0, 2, 0), matBroadswordSize),
 
     GREATSWORD: new EquipCbItem(EquipSlotModelsCb.GREATSWORD.modelId, 'greatsword', Vector3.Zero(), new Vector3(0.24, 0.3, 0.3), new Vector3(0, 3.2, 0), matGreatswordSize),
 
@@ -130,11 +130,11 @@ export const WeaponModelsCb = {
 
     BATTLE_AXE: new EquipCbItem(EquipSlotModelsCb.BATTLE_AXE.modelId, 'battleaxe', Vector3.Zero(), new Vector3(0.24, 0.24, 0.24), new Vector3(0, 2.2, 0), matBattleAxeSize),
 
-    GREATAXE: new EquipCbItem(EquipSlotModelsCb.GREATAXE.modelId, 'greataxe', Vector3.Zero(), new Vector3(0.22, 0.24, 0.4), new Vector3(0, 2.5, 0), matGreatAxeSize),
+    GREATAXE: new EquipCbItem(EquipSlotModelsCb.GREATAXE.modelId, 'greataxe', Vector3.Zero(), new Vector3(0.22, 0.24, 0.18), new Vector3(0, 2.5, 0), matGreatAxeSize),
 
     LARGE_BATTLE_AXE: new EquipCbItem(EquipSlotModelsCb.LARGE_BATTLE_AXE.modelId, 'largebattlexe', Vector3.Zero(), new Vector3(0.22, 0.24, 0.24), new Vector3(0, 2.5, 0), matLargeBattleAxeSize),
 
-    PICKAXE: new EquipCbItem(EquipSlotModelsCb.PICKAXE.modelId, 'pickaxe', Vector3.Zero(), new Vector3(0.22, 0.24, 0.4), new Vector3(0, 2.2, 0), matPickaxeSize),
+    PICKAXE: new EquipCbItem(EquipSlotModelsCb.PICKAXE.modelId, 'pickaxe', Vector3.Zero(), new Vector3(0.22, 0.22, 0.18), new Vector3(0, 2.2, 0), matPickaxeSize),
 
     LIGHT_MACE: new EquipCbItem(EquipSlotModelsCb.LIGHT_MACE.modelId, 'lightmace', Vector3.Zero(), new Vector3(0.24, 0.24, 0.24), new Vector3(0, 2, 0), matFutureWeaponSize),
 

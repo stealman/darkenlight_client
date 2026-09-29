@@ -83,54 +83,55 @@ export const AxeVertexColorPalettes: Record<string, VertexColorWeaponPalette> = 
     PICKAXE: {
         materialNames: PICKAXE_MATERIAL_NAMES,
         metallicMaterialIndexes: [0, 1, 2, 3, 4],
+        twoSided: true,
         slots: [
-            {index: 0, source: [40, 23, 7], role: 'shaft mid'},
-            {index: 1, source: [72, 80, 88], role: 'head dark', isMetal: true},
-            {index: 2, source: [60, 27, 8], role: 'shaft highlight'},
-            {index: 3, source: [130, 134, 125], role: 'head highlight', isMetal: true},
+            {index: 0, source: [15, 15, 15], role: 'head dark', isMetal: true},
+            {index: 1, source: [47, 47, 47], role: 'head mid', isMetal: true},
+            {index: 2, source: [63, 63, 63], role: 'head highlight', isMetal: true},
+            {index: 3, source: [40, 23, 7], role: 'shaft mid'},
+            {index: 4, source: [60, 27, 8], role: 'shaft highlight'},
         ],
 
-        // This GLB has only dark and highlight metal slots; use the shared endpoints.
         // materialId: 1 steel, 2 pyroxide, 3 geonite, 4 mythril, 5 chaotite, 6 diamond
         materialColors: [
             // steel
-            [[73, 42, 16], WEAPON_STEEL_COLOR_STEPS.dark, [126, 71, 30], WEAPON_STEEL_COLOR_STEPS.light],
+            [WEAPON_STEEL_COLOR_STEPS.dark, WEAPON_STEEL_COLOR_STEPS.mid, WEAPON_STEEL_COLOR_STEPS.light, [73, 42, 16], [126, 71, 30]],
             // pyroxide
-            [[78, 39, 18], WEAPON_METAL_COLOR_STEPS.pyroxide.dark, [133, 67, 32], WEAPON_METAL_COLOR_STEPS.pyroxide.light],
+            [WEAPON_METAL_COLOR_STEPS.pyroxide.dark, WEAPON_METAL_COLOR_STEPS.pyroxide.mid, WEAPON_METAL_COLOR_STEPS.pyroxide.light, [78, 39, 18], [133, 67, 32]],
             // geonite
-            [[68, 47, 19], WEAPON_METAL_COLOR_STEPS.geonite.dark, [119, 79, 33], WEAPON_METAL_COLOR_STEPS.geonite.light],
+            [WEAPON_METAL_COLOR_STEPS.geonite.dark, WEAPON_METAL_COLOR_STEPS.geonite.mid, WEAPON_METAL_COLOR_STEPS.geonite.light, [68, 47, 19], [119, 79, 33]],
             // mythril
-            [[93, 57, 13], WEAPON_METAL_COLOR_STEPS.mythril.dark, [193, 138, 31], WEAPON_METAL_COLOR_STEPS.mythril.light],
+            [WEAPON_METAL_COLOR_STEPS.mythril.dark, WEAPON_METAL_COLOR_STEPS.mythril.mid, WEAPON_METAL_COLOR_STEPS.mythril.light, [93, 57, 13], [193, 138, 31]],
             // chaotite
-            [[69, 17, 78], WEAPON_METAL_COLOR_STEPS.chaotite.dark, [154, 42, 126], WEAPON_METAL_COLOR_STEPS.chaotite.light],
+            [WEAPON_METAL_COLOR_STEPS.chaotite.dark, WEAPON_METAL_COLOR_STEPS.chaotite.mid, WEAPON_METAL_COLOR_STEPS.chaotite.light, [69, 17, 78], [154, 42, 126]],
             // diamond
-            [[101, 60, 17], [45, 131, 232], [181, 113, 33], [176, 244, 255]],
+            [[45, 131, 232], [111, 188, 244], [176, 244, 255], [101, 60, 17], [181, 113, 33]],
         ],
     },
 
     GREATAXE: {
         materialNames: METAL_WEAPON_MATERIAL_NAMES,
+        twoSided: true,
         slots: [
-            {index: 0, source: [40, 23, 7], role: 'shaft mid'},
-            {index: 1, source: [48, 52, 51], role: 'head mid', isMetal: true},
-            {index: 2, source: [60, 27, 8], role: 'shaft highlight'},
-            {index: 3, source: [127, 127, 127], role: 'blade mid', isMetal: true},
-            {index: 4, source: [184, 184, 184], role: 'blade highlight', isMetal: true},
-            {index: 5, source: [33, 35, 33], role: 'head dark', isMetal: true},
+            {index: 0, source: [15, 15, 15], role: 'head dark', isMetal: true},
+            {index: 1, source: [47, 47, 47], role: 'head mid', isMetal: true},
+            {index: 2, source: [63, 63, 63], role: 'blade highlight', isMetal: true},
+            {index: 3, source: [40, 23, 7], role: 'shaft mid'},
+            {index: 4, source: [60, 27, 8], role: 'shaft highlight'},
         ],
 
         // materialId: 1 steel, 2 pyroxide, 3 geonite, 4 mythril, 5 chaotite
         materialColors: [
             // steel
-            [[73, 42, 16], WEAPON_STEEL_COLOR_STEPS.mid, [126, 71, 30], WEAPON_STEEL_COLOR_STEPS.mid, WEAPON_STEEL_COLOR_STEPS.light, WEAPON_STEEL_COLOR_STEPS.dark],
+            [WEAPON_STEEL_COLOR_STEPS.dark, WEAPON_STEEL_COLOR_STEPS.mid, WEAPON_STEEL_COLOR_STEPS.light, [73, 42, 16], [126, 71, 30]],
             // pyroxide
-            [[78, 39, 18], WEAPON_METAL_COLOR_STEPS.pyroxide.mid, [133, 67, 32], WEAPON_METAL_COLOR_STEPS.pyroxide.mid, WEAPON_METAL_COLOR_STEPS.pyroxide.light, WEAPON_METAL_COLOR_STEPS.pyroxide.dark],
+            [WEAPON_METAL_COLOR_STEPS.pyroxide.dark, WEAPON_METAL_COLOR_STEPS.pyroxide.mid, WEAPON_METAL_COLOR_STEPS.pyroxide.light, [78, 39, 18], [133, 67, 32]],
             // geonite
-            [[68, 47, 19], WEAPON_METAL_COLOR_STEPS.geonite.mid, [119, 79, 33], WEAPON_METAL_COLOR_STEPS.geonite.mid, WEAPON_METAL_COLOR_STEPS.geonite.light, WEAPON_METAL_COLOR_STEPS.geonite.dark],
+            [WEAPON_METAL_COLOR_STEPS.geonite.dark, WEAPON_METAL_COLOR_STEPS.geonite.mid, WEAPON_METAL_COLOR_STEPS.geonite.light, [68, 47, 19], [119, 79, 33]],
             // mythril
-            [[93, 57, 13], WEAPON_METAL_COLOR_STEPS.mythril.mid, [193, 138, 31], WEAPON_METAL_COLOR_STEPS.mythril.mid, WEAPON_METAL_COLOR_STEPS.mythril.light, WEAPON_METAL_COLOR_STEPS.mythril.dark],
+            [WEAPON_METAL_COLOR_STEPS.mythril.dark, WEAPON_METAL_COLOR_STEPS.mythril.mid, WEAPON_METAL_COLOR_STEPS.mythril.light, [93, 57, 13], [193, 138, 31]],
             // chaotite
-            [[69, 17, 78], WEAPON_METAL_COLOR_STEPS.chaotite.mid, [154, 42, 126], WEAPON_METAL_COLOR_STEPS.chaotite.mid, WEAPON_METAL_COLOR_STEPS.chaotite.light, WEAPON_METAL_COLOR_STEPS.chaotite.dark],
+            [WEAPON_METAL_COLOR_STEPS.chaotite.dark, WEAPON_METAL_COLOR_STEPS.chaotite.mid, WEAPON_METAL_COLOR_STEPS.chaotite.light, [69, 17, 78], [154, 42, 126]],
         ],
     },
 }

@@ -9,10 +9,11 @@ import { METAL_WEAPON_MATERIAL_NAMES, VertexColorWeaponPalette, WEAPON_METAL_COL
 export const SwordVertexColorPalettes: Record<string, VertexColorWeaponPalette> = {
     LONGSWORD: {
         materialNames: METAL_WEAPON_MATERIAL_NAMES,
+        twoSided: true,
         slots: [
-            {index: 0, source: [127, 127, 127], role: 'blade dark', isMetal: true},
-            {index: 1, source: [184, 184, 184], role: 'blade mid', isMetal: true},
-            {index: 2, source: [218, 218, 218], role: 'blade highlight', isMetal: true},
+            {index: 0, source: [15, 15, 15], role: 'blade dark', isMetal: true},
+            {index: 1, source: [47, 47, 47], role: 'blade mid', isMetal: true},
+            {index: 2, source: [63, 63, 63], role: 'blade highlight', isMetal: true},
             {index: 3, source: [34, 0, 0], role: 'grip dark'},
             {index: 4, source: [63, 0, 0], role: 'grip mid'},
             {index: 5, source: [103, 0, 0], role: 'grip highlight'},
@@ -35,10 +36,11 @@ export const SwordVertexColorPalettes: Record<string, VertexColorWeaponPalette> 
 
     BROADSWORD: {
         materialNames: METAL_WEAPON_MATERIAL_NAMES,
+        twoSided: true,
         slots: [
-            {index: 0, source: [127, 127, 127], role: 'blade dark', isMetal: true},
-            {index: 1, source: [184, 184, 184], role: 'blade mid', isMetal: true},
-            {index: 2, source: [218, 218, 218], role: 'blade highlight', isMetal: true},
+            {index: 0, source: [15, 15, 15], role: 'blade dark', isMetal: true},
+            {index: 1, source: [47, 47, 47], role: 'blade mid', isMetal: true},
+            {index: 2, source: [63, 63, 63], role: 'blade highlight', isMetal: true},
             {index: 3, source: [34, 0, 0], role: 'grip dark'},
             {index: 4, source: [63, 0, 0], role: 'grip mid'},
             {index: 5, source: [103, 0, 0], role: 'grip highlight'},
@@ -63,9 +65,9 @@ export const SwordVertexColorPalettes: Record<string, VertexColorWeaponPalette> 
         materialNames: METAL_WEAPON_MATERIAL_NAMES,
         twoSided: true,
         slots: [
-            {index: 0, source: [127, 127, 127], role: 'blade dark', isMetal: true},
-            {index: 1, source: [184, 184, 184], role: 'blade mid', isMetal: true},
-            {index: 2, source: [218, 218, 218], role: 'blade highlight', isMetal: true},
+            {index: 0, source: [15, 15, 15], role: 'blade dark', isMetal: true},
+            {index: 1, source: [47, 47, 47], role: 'blade mid', isMetal: true},
+            {index: 2, source: [63, 63, 63], role: 'blade highlight', isMetal: true},
             {index: 3, source: [34, 0, 0], role: 'grip dark'},
             {index: 4, source: [63, 0, 0], role: 'grip mid'},
             {index: 5, source: [103, 0, 0], role: 'grip highlight'},
