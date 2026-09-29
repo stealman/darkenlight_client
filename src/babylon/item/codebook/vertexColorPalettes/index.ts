@@ -21,4 +21,6 @@ export const VertexColorWeaponPalettesByModelKey = {
     WAR_SPEAR: { palette: PolearmVertexColorPalettes.WAR_SPEAR, inventoryBaseName: 'war-spear' },
     HALBERD: { palette: PolearmVertexColorPalettes.HALBERD, inventoryBaseName: 'halberd' },
     HUNTINGBOW: { palette: BowVertexColorPalettes.HUNTING_BOW, inventoryBaseName: 'hunting-bow' },
+    RECURVE_BOW: { palette: BowVertexColorPalettes.RECURVE_BOW, inventoryBaseName: 'recurve-bow' },
+    BATTLEBOW: { palette: BowVertexColorPalettes.BATTLE_BOW, inventoryBaseName: 'battle-bow' },
 }

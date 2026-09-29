@@ -167,7 +167,7 @@ export const EquipSlotModelsCb = {
 
     HUNTINGBOW: new EquipSlotModel(510, EquipItemSlots.R_HAND, WeaponTypes.BOW),
     RECURVE_BOW: new EquipSlotModel(520, EquipItemSlots.R_HAND, WeaponTypes.BOW),
-    LONGBOW: new EquipSlotModel(530, EquipItemSlots.R_HAND, WeaponTypes.BOW),
+    BATTLEBOW: new EquipSlotModel(530, EquipItemSlots.R_HAND, WeaponTypes.BOW),
 
     ARMOR_PLATE: new EquipSlotModel(1000, EquipItemSlots.BODY, null),
 
