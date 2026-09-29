@@ -1,13 +1,35 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { VitePWA } from 'vite-plugin-pwa'
+import fs from 'node:fs'
 import path from 'path'
+
+function collectPngPaths(directory, publicPath) {
+    return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+        const entryPath = path.join(directory, entry.name)
+        const entryPublicPath = `${publicPath}/${entry.name}`
+
+        if (entry.isDirectory()) {
+            return collectPngPaths(entryPath, entryPublicPath)
+        }
+        return entry.isFile() && path.extname(entry.name).toLowerCase() === '.png'
+            ? [entryPublicPath]
+            : []
+    })
+}
 
 export default defineConfig(({ mode }) => {
     const isTauriBuild = mode === 'tauri'
+    const pixelatedImagePaths = [
+        ...collectPngPaths(path.resolve(__dirname, 'public/images/icons'), '/images/icons'),
+        ...collectPngPaths(path.resolve(__dirname, 'public/images/items/resources'), '/images/items/resources'),
+    ]
 
     return {
     base: '/',
+    define: {
+        __PIXELATED_IMAGE_PATHS__: JSON.stringify(pixelatedImagePaths),
+    },
     plugins: [
         vue(),
         !isTauriBuild && VitePWA({

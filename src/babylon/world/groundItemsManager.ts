@@ -21,6 +21,7 @@ import { EquipCbItem } from '@/babylon/item/codebook/equipCbItem'
 import { Lights } from '@/babylon/scene/lights'
 import { MyPlayer } from '@/data/myPlayer'
 import { GroundItemTO } from '@/network/messageIfs'
+import { UiIconManager } from '@/gui/uiIconManager'
 
 export const GroundItemsManager = {
     scene: null as Scene | null,
@@ -59,9 +60,13 @@ export const GroundItemsManager = {
     yellow_fx: new Color4(0.8, 0.6, 0.3, 1),
     PROXIMITY_RANGE_XZ: 1,
     nearbyItem: null as GroundItem | null,
+    iconStyleUnsubscribe: null as (() => void) | null,
 
     initialize(scene: Scene) {
         this.scene = scene
+        if (!this.iconStyleUnsubscribe) {
+            this.iconStyleUnsubscribe = UiIconManager.onStyleChanged(() => this.refreshFlatItemTextures())
+        }
         this.flatItemTypes.forEach(type => type.dispose())
         this.itemTypes.clear()
         this.flatItemTypes.clear()
@@ -261,10 +266,7 @@ export const GroundItemsManager = {
 
     createFlatItemMaterial(name: string, texturePath: string): PBRMaterial {
         const scene = this.scene!
-        const texture = new Texture(texturePath, scene)
-        texture.hasAlpha = true
-        texture.getAlphaFromRGB = false
-        texture.updateSamplingMode(Texture.NEAREST_NEAREST)
+        const texture = this.createFlatItemTexture(texturePath)
 
         const material = new PBRMaterial(name, scene)
         material.albedoTexture = texture
@@ -281,6 +283,28 @@ export const GroundItemsManager = {
         material.twoSidedLighting = true
         material.usePhysicalLightFalloff = false
         return material
+    },
+
+    createFlatItemTexture(texturePath: string): Texture {
+        const texture = new Texture(UiIconManager.getUrl(texturePath), this.scene!)
+        texture.hasAlpha = true
+        texture.getAlphaFromRGB = false
+        texture.updateSamplingMode(Texture.NEAREST_NEAREST)
+        return texture
+    },
+
+    refreshFlatItemTextures() {
+        this.flatItemTypes.forEach((type) => {
+            if (!type.material) {
+                return
+            }
+
+            const previousTexture = type.material.albedoTexture
+            const texture = this.createFlatItemTexture(type.id)
+            type.material.albedoTexture = texture
+            type.material.emissiveTexture = texture
+            texture.onLoadObservable.addOnce(() => previousTexture?.dispose())
+        })
     },
 
     initializeItemFx(scene: Scene) {

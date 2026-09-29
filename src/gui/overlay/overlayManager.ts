@@ -17,6 +17,7 @@ import { DamageNumber } from '@/gui/overlay/damageNumber'
 import { EmeraldGainNumber } from '@/gui/overlay/emeraldGainNumber'
 import { ItemGainNumber } from '@/gui/overlay/itemGainNumber'
 import { GmOreTierOverlay } from '@/gui/gm/oreTierOverlay'
+import { UiIconManager } from '@/gui/uiIconManager'
 
 interface AnimatedHpBar {
     displayedPercent: number
@@ -34,6 +35,7 @@ export const OverlayManager = {
     itemGainNumbers: [] as ItemGainNumber[],
     emeraldGainIcon: null as HTMLImageElement | null,
     itemGainIcons: new Map<string, HTMLImageElement>(),
+    iconStyleUnsubscribe: null as (() => void) | null,
     animatedHpBars: new Map<string, AnimatedHpBar>(),
     lastHpBarCleanupAt: 0 as number,
 
@@ -43,8 +45,20 @@ export const OverlayManager = {
         this.overlayCtx!.lineWidth = 1
         this.fontSize = window.devicePixelRatio > 1 ? 14 : 18
         this.emeraldGainIcon = new Image()
-        this.emeraldGainIcon.src = '/images/icons/emerald.png'
+        this.refreshIconSources()
+        if (!this.iconStyleUnsubscribe) {
+            this.iconStyleUnsubscribe = UiIconManager.onStyleChanged(() => this.refreshIconSources())
+        }
         this.reset()
+    },
+
+    refreshIconSources() {
+        if (this.emeraldGainIcon) {
+            this.emeraldGainIcon.src = UiIconManager.getUrl('/images/icons/emerald.png')
+        }
+        this.itemGainIcons.forEach((icon, source) => {
+            icon.src = UiIconManager.getUrl(source)
+        })
     },
 
     reset() {
@@ -300,7 +314,7 @@ export const OverlayManager = {
         let icon = this.itemGainIcons.get(normalizedUrl)
         if (!icon) {
             icon = new Image()
-            icon.src = normalizedUrl
+            icon.src = UiIconManager.getUrl(normalizedUrl)
             this.itemGainIcons.set(normalizedUrl, icon)
         }
         return icon

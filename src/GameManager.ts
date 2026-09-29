@@ -11,6 +11,10 @@ import { InventoryManager } from '@/data/inventoryManager'
 import { setLocale } from '@/i18n'
 import { MyStatusPanel } from '@/gui/myStatusPanel'
 import { WorldDataManager } from '@/data/worldDataManager'
+import { UiIconManager } from '@/gui/uiIconManager'
+
+const PIXELATED_UI_IMAGE_SIZE = 1.4 // 64 px -> 46 px after rounding.
+const PIXELATED_UI_IMAGE_SATURATION = 0.75 // 0 = grayscale, 1 = original saturation.
 
 function reportLoadingProgress(progress: number, phaseKey: string) {
     window.dispatchEvent(new CustomEvent('game:loading-progress', { detail: { progress, phaseKey } }))
@@ -32,6 +36,13 @@ export const GameManager = {
         }
         Settings.initialize(storedSettings)
         setLocale(Settings.language)
+
+        // Previous stronger variant: PIXELATED_UI_IMAGE_SIZE = 2
+        await UiIconManager.initialize(
+            !Settings.smoothIcons,
+            PIXELATED_UI_IMAGE_SIZE,
+            PIXELATED_UI_IMAGE_SATURATION,
+        )
 
         // Initialize Renderer and load assets
         reportLoadingProgress(15, 'app.loadingPreparingRenderer')
