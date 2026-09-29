@@ -348,6 +348,16 @@ export class PowerStrike implements Message {
     }
 }
 
+export class PreciseShot implements Message {
+    t: number = 73
+
+    d: { id: number, tp: string }
+
+    constructor(id: number, targetType: string) {
+        this.d = { id, tp: targetType }
+    }
+}
+
 export class StartSkillTrainingMsg implements Message {
     t: number = 32
     d: { skill: string }

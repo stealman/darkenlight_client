@@ -98,6 +98,9 @@ export const CharacterActions = {
     POWER_STRIKE: new CharacterAction('POWER_STRIKE', 'btn_backpack', false, 'actions.powerStrikeName',
         'actions.powerStrikeDescription'),
 
+    PRECISE_SHOT: new CharacterAction('PRECISE_SHOT', 'btn_precise_shot', false, 'actions.preciseShotName',
+        'actions.preciseShotDescription'),
+
     HEAL: new CharacterAction('HEAL', 'btn_heal', false, 'actions.healName',
         'actions.healDescription'),
 
@@ -130,6 +133,7 @@ export const CharacterActions = {
         const actions = [
             this.AUTO_ATTACK,
             this.POWER_STRIKE,
+            this.PRECISE_SHOT,
             this.HEAL,
             this.HEALING_POTION,
             this.MANA_POTION,

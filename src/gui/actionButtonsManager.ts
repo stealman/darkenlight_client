@@ -10,15 +10,15 @@ import { ConsumableHelper } from '@/data/items/consumableHelper'
 import { CharacterAction, CharacterActions } from '@/data/actions/characterActions'
 import { t } from '@/i18n'
 import { Connector } from '@/network/connector'
-import { PowerStrike } from '@/network/messages'
+import { PowerStrike, PreciseShot } from '@/network/messages'
 import { WeaponCategories } from '@/data/items/item'
+import type { Attackable } from '@/GameManager'
 
 const powerStrikeIconSuffixByWeaponCategory: Partial<Record<string, string>> = {
     [WeaponCategories.SWORD]: 'sword',
     [WeaponCategories.AXE]: 'axe',
     [WeaponCategories.POLEARM]: 'spear',
     [WeaponCategories.MACE]: 'mace',
-    [WeaponCategories.BOW]: 'bow',
 }
 
 const autoAttackIconByWeaponCategory: Partial<Record<string, string>> = {
@@ -159,6 +159,9 @@ class ActionButton {
                 return
             case CharacterActions.POWER_STRIKE.name:
                 this.htmlEl!.classList.toggle('unavailable', !MyPlayer.myChar?.getWeapon() || MyPlayer.myChar.isWeaponRanged())
+                return
+            case CharacterActions.PRECISE_SHOT.name:
+                this.htmlEl!.classList.toggle('unavailable', !MyPlayer.myChar?.isWeaponRanged())
                 return
             default:
                 const consumableCbId = ActionButtonsManager.getBoundConsumableCbId(this.actionBinding)
@@ -378,6 +381,9 @@ export const ActionButtonsManager = {
                 case CharacterActions.POWER_STRIKE.name:
                     this.clickOnPowerStrikeButton()
                     break
+                case CharacterActions.PRECISE_SHOT.name:
+                    this.clickOnPreciseShotButton()
+                    break
                 case CharacterActions.HEAL.name:
                     this.clickOnHealingButton()
                     break
@@ -406,7 +412,8 @@ export const ActionButtonsManager = {
     setActiveAction(action: CharacterAction | null) {
         this.actionButtons.forEach((btn) => {
             if (btn.actionBinding && (btn.actionBinding.name === action?.name ||
-                (action?.name === CharacterActions.AUTO_ATTACK.name && MyPlayer.powerStrikeQueued && btn.actionBinding.name === CharacterActions.POWER_STRIKE.name))) {
+                (action?.name === CharacterActions.AUTO_ATTACK.name && MyPlayer.powerStrikeQueued && btn.actionBinding.name === CharacterActions.POWER_STRIKE.name) ||
+                (action?.name === CharacterActions.AUTO_ATTACK.name && MyPlayer.preciseShotQueued && btn.actionBinding.name === CharacterActions.PRECISE_SHOT.name))) {
                 btn.activated()
             } else {
                 btn.deactivated()
@@ -453,10 +460,32 @@ export const ActionButtonsManager = {
         // Power Strike opens (or continues) auto attack. Predict that state locally so
         // the attacked target receives the same red marker without waiting for the
         // server's CharacterAction message.
-        MyPlayer.myChar.autoAttackTarget = target
+        MyPlayer.myChar.autoAttackTarget = target as Attackable
         MyPlayer.powerStrikeQueued = true
         MyPlayer.setAction(CharacterActions.AUTO_ATTACK.name)
         Connector.sendMessage(new PowerStrike(target.id, target.getObjectType()))
+    },
+
+    clickOnPreciseShotButton() {
+        if (!MyPlayer.myChar.getWeapon() || !MyPlayer.myChar.isWeaponRanged()) {
+            OnScreenMessageManager.addMessage(t('messages.preciseShotRequiresBow'), OnScreenMessageSeverities.ERROR)
+            return
+        }
+        if (MyPlayer.preciseShotCooldownEnd > Date.now()) {
+            const remainingSeconds = Math.ceil((MyPlayer.preciseShotCooldownEnd - Date.now()) / 1000)
+            OnScreenMessageManager.addMessage(t('messages.preciseShotOnCooldown', { seconds: remainingSeconds }), OnScreenMessageSeverities.ERROR)
+            return
+        }
+        const target = TargetingManager.selectedTarget
+        if (!target || target.getRelationToMyPlayer() !== 'ENEMY') {
+            OnScreenMessageManager.addMessage(t('messages.preciseShotRequiresTarget'), OnScreenMessageSeverities.ERROR)
+            return
+        }
+
+        MyPlayer.myChar.autoAttackTarget = target as Attackable
+        MyPlayer.preciseShotQueued = true
+        MyPlayer.setAction(CharacterActions.AUTO_ATTACK.name)
+        Connector.sendMessage(new PreciseShot(target.id, target.getObjectType()))
     },
 
     clickOnHealingButton() {
@@ -582,11 +611,13 @@ export const ActionButtonsManager = {
     getActionDescription(actionName: string): string {
         const action = CharacterActions.getActionByName(actionName)
         if (!action) return ''
-        if (actionName !== CharacterActions.POWER_STRIKE.name) return action.descLoc
+        if (actionName !== CharacterActions.POWER_STRIKE.name && actionName !== CharacterActions.PRECISE_SHOT.name) return action.descLoc
 
-        const progress = MyPlayer.myChar?.skillSet?.powerStrike
-        const bonus = progress?.powerStrikeDamageBonusPercent ??
-            (progress?.rank ?? 0) * (progress?.powerStrikeDamageBonusPercentPerRank ?? 15)
+        const preciseShot = actionName === CharacterActions.PRECISE_SHOT.name
+        const progress = preciseShot ? MyPlayer.myChar?.skillSet?.preciseShot : MyPlayer.myChar?.skillSet?.powerStrike
+        const bonus = preciseShot
+            ? progress?.preciseShotDamageBonusPercent ?? (progress?.rank ?? 0) * (progress?.preciseShotDamageBonusPercentPerRank ?? 7.5)
+            : progress?.powerStrikeDamageBonusPercent ?? (progress?.rank ?? 0) * (progress?.powerStrikeDamageBonusPercentPerRank ?? 15)
         return t(action.descKey, {bonus})
     },
 
@@ -604,8 +635,12 @@ export const ActionButtonsManager = {
             CharacterActions.EQUIP_STORED_WEAPONS,
             CharacterActions.CAMPING,
         ]
-        if (MyPlayer.myChar?.skillSet?.powerStrike?.rank > 0) {
+        const hasPowerStrike = (MyPlayer.myChar?.skillSet?.powerStrike?.rank ?? 0) > 0
+        if (hasPowerStrike) {
             actions.splice(1, 0, CharacterActions.POWER_STRIKE)
+        }
+        if ((MyPlayer.myChar?.skillSet?.preciseShot?.rank ?? 0) > 0) {
+            actions.splice(hasPowerStrike ? 2 : 1, 0, CharacterActions.PRECISE_SHOT)
         }
         return actions
     },
@@ -739,6 +774,9 @@ export const ActionButtonsManager = {
             }
             if (btn.actionBinding?.name === CharacterActions.POWER_STRIKE.name) {
                 btn.setImage(CharacterActions.POWER_STRIKE.image)
+            }
+            if (btn.actionBinding?.name === CharacterActions.PRECISE_SHOT.name) {
+                btn.setImage(CharacterActions.PRECISE_SHOT.image)
             }
             btn.setItemsAvailabilityState()
         })

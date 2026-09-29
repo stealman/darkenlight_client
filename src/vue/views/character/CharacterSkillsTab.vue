@@ -189,29 +189,33 @@ const getSkillBonusValue = (skill: SkillDefinition, rank: number, progress?: Ski
 
     const armorBonus = skill.bonusKind === 'armor'
     const powerStrikeDamageBonus = skill.bonusKind === 'powerStrikeDamage'
+    const preciseShotDamageBonus = skill.bonusKind === 'preciseShotDamage'
     const campingRestingRegenBonus = skill.bonusKind === 'campingRestingRegen'
     const bandageHealingBonus = skill.bonusKind === 'bandageHealing'
     const bonusPercent = campingRestingRegenBonus
         ? progress?.restingRegenBonusPercent
         : powerStrikeDamageBonus ? progress?.powerStrikeDamageBonusPercent
+        : preciseShotDamageBonus ? progress?.preciseShotDamageBonusPercent
         : armorBonus ? progress?.armorBonusPercent : progress?.weaponAttackBonusPercent
     const bonusPercentPerRank = campingRestingRegenBonus
         ? progress?.restingRegenBonusPercentPerRank
         : powerStrikeDamageBonus ? progress?.powerStrikeDamageBonusPercentPerRank
+        : preciseShotDamageBonus ? progress?.preciseShotDamageBonusPercentPerRank
         : armorBonus ? progress?.armorBonusPercentPerRank : progress?.weaponAttackBonusPercentPerRank
     return {
         percentage: bandageHealingBonus
             ? `${progress?.bandageHealingAmountMinimum ?? rank}–${progress?.bandageHealingAmountMaximum ?? rank * 2}`
-            : `+${bonusPercent ?? rank * (campingRestingRegenBonus ? 25 : powerStrikeDamageBonus ? 15 : 5)}%`,
+            : `+${bonusPercent ?? rank * (campingRestingRegenBonus ? 25 : powerStrikeDamageBonus ? 15 : preciseShotDamageBonus ? 7.5 : 5)}%`,
         perRank: bandageHealingBonus
             ? `${progress?.bandageHealingAmountMinimumPerRank ?? 1}–${progress?.bandageHealingAmountMaximumPerRank ?? 2}`
-            : bonusPercentPerRank ?? (campingRestingRegenBonus ? 25 : powerStrikeDamageBonus ? 15 : 5),
+            : bonusPercentPerRank ?? (campingRestingRegenBonus ? 25 : powerStrikeDamageBonus ? 15 : preciseShotDamageBonus ? 7.5 : 5),
         target: skill.bonusTargetTranslationKey ? t(skill.bonusTargetTranslationKey) : undefined,
         effectTranslationKey: bandageHealingBonus
             ? 'skills.bonuses.healedHealth'
             : campingRestingRegenBonus
             ? 'skills.bonuses.restingRegenAtCampfire'
             : powerStrikeDamageBonus ? 'skills.bonuses.powerStrikeDamage'
+            : preciseShotDamageBonus ? 'skills.bonuses.preciseShotDamage'
             : armorBonus ? 'skills.bonuses.armorOfType' : 'skills.bonuses.weaponAttackOfType',
         perRankTranslationKey: bandageHealingBonus
             ? 'skills.bonuses.healedHealthPerRank'

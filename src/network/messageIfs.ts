@@ -53,7 +53,7 @@ export interface AccountCharacterNameCheckData {
 export type PhysicalWeaponSkillKey = 'swords' | 'axes' | 'maces' | 'polearms' | 'bows'
 export type ArmorSkillKey = 'leatherArmor' | 'chainArmor' | 'plateArmor' | 'shields'
 export type UtilitySkillKey = 'camping' | 'healing'
-export type CombatSkillKey = 'powerStrike'
+export type CombatSkillKey = 'powerStrike' | 'preciseShot'
 export type SkillKey = PhysicalWeaponSkillKey | ArmorSkillKey | UtilitySkillKey | CombatSkillKey
 
 export interface SkillProgressTO {
@@ -67,6 +67,8 @@ export interface SkillProgressTO {
     weaponAttackBonusPercentPerRank?: number
     powerStrikeDamageBonusPercent?: number
     powerStrikeDamageBonusPercentPerRank?: number
+    preciseShotDamageBonusPercent?: number
+    preciseShotDamageBonusPercentPerRank?: number
     armorBonusPercent?: number
     armorBonusPercentPerRank?: number
     actionSpeedBonusPercent?: number
@@ -95,9 +97,15 @@ export interface  AutoAttackMessage {
     ef?: string | null // GFX
     ps?: boolean
     pcd?: number
+    prs?: boolean
+    prscd?: number
 }
 
 export interface PowerStrikeQueueStateMessage {
+    q: boolean
+}
+
+export interface PreciseShotQueueStateMessage {
     q: boolean
 }
 

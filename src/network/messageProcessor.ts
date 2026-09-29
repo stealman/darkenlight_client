@@ -36,6 +36,7 @@ import {
     NpcUseData,
     BankStateData, SkillSetTO,
     PowerStrikeQueueStateMessage,
+    PreciseShotQueueStateMessage,
 } from '@/network/messageIfs'
 import { GroundItemsManager } from '@/babylon/world/groundItemsManager'
 import { InventoryManager } from '@/data/inventoryManager'
@@ -127,6 +128,7 @@ export const MessageProcessor = {
                 case 69: this.processAccountCharacterSetupRequired(); break
                 case 70: this.processAccountCharacterNameCheck(msg.d); break
                 case 72: this.processPowerStrikeQueueState(msg.d); break
+                case 74: this.processPreciseShotQueueState(msg.d); break
                 case 1003: this.processGMAllSpawns(msg.d); break
                 case 1004: this.processGMSpawnChange(msg.d); break
                 default:
@@ -396,6 +398,10 @@ export const MessageProcessor = {
 
     processPowerStrikeQueueState(data: PowerStrikeQueueStateMessage) {
         MyPlayer.setPowerStrikeQueued(data.q === true)
+    },
+
+    processPreciseShotQueueState(data: PreciseShotQueueStateMessage) {
+        MyPlayer.setPreciseShotQueued(data.q === true)
     },
 
     processCharacterHealingFinished(data: HealingResultMessage) {

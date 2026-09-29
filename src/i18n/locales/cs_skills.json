@@ -11,7 +11,8 @@
       "maces": "Palcáty",
       "polearms": "Tyčové Zbraně",
       "bows": "Luky",
-      "powerStrike": "Silný úder"
+      "powerStrike": "Silný úder",
+      "preciseShot": "Přesný výstřel"
     },
     "armor": {
       "leatherArmor": "Kožené Brnění",
@@ -30,6 +31,7 @@
       "polearms": "Umožňuje nosit a účinně používat Tyčové zbraně v boji",
       "bows": "Umožňuje nosit a účinně používat Luky v boji",
       "powerStrike": "Rychlý silný úder zbraní, jehož bonusový útok roste o 15 % za každou úroveň dovednosti",
+      "preciseShot": "Rychlý výstřel z luku, který vždy zasáhne jako perfektní zásah a jehož bonusový útok roste o 7,5 % za každou úroveň dovednosti",
       "leatherArmor": "Umožňuje nosit a účinně používat Kožené brnění",
       "chainArmor": "Umožňuje nosit a účinně používat Kroužkové brnění",
       "plateArmor": "Umožňuje nosit a účinně používat Plátové brnění",
@@ -75,6 +77,7 @@
       "unknown": "Neznámý",
       "weaponAttackOfType": "útok zbraní typu",
       "powerStrikeDamage": "bonusový útok Silného úderu",
+      "preciseShotDamage": "bonusový útok Přesného výstřelu",
       "armorOfType": "brnění typu",
       "restingRegenAtCampfire": "bonus k regeneraci při odpočinku u ohně",
       "healedHealth": "vyléčených životů",

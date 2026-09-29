@@ -65,6 +65,9 @@ export const MyPlayer = {
     powerStrikeCooldownStart: 0 as number,
     powerStrikeCooldownEnd: 0 as number,
     powerStrikeQueued: false as boolean,
+    preciseShotCooldownStart: 0 as number,
+    preciseShotCooldownEnd: 0 as number,
+    preciseShotQueued: false as boolean,
     nearFireplace: null as { x: number, z: number } | null,
 
     affectGroups: [] as ClientAffectGroup[],
@@ -102,6 +105,12 @@ export const MyPlayer = {
         if (Number.isFinite(charData.psCd) && charData.psCd > 0) {
             this.startPowerStrikeCooldown(charData.psCd)
         }
+        if (charData.prsq === true) {
+            this.setPreciseShotQueued(true)
+        }
+        if (Number.isFinite(charData.prsCd) && charData.prsCd > 0) {
+            this.startPreciseShotCooldown(charData.prsCd)
+        }
 
         MyStatusPanel.setMyName(this.myChar.name)
         MyStatusPanel.refreshAffectGroups()
@@ -122,6 +131,9 @@ export const MyPlayer = {
         this.powerStrikeCooldownStart = 0
         this.powerStrikeCooldownEnd = 0
         this.powerStrikeQueued = false
+        this.preciseShotCooldownStart = 0
+        this.preciseShotCooldownEnd = 0
+        this.preciseShotQueued = false
         this.isDead.value = false
         this.respawnAvailableAt.value = 0
         this.autoRespawnAt.value = 0
@@ -152,6 +164,7 @@ export const MyPlayer = {
         if ((MyPlayer.activeAction?.name === CharacterActions.MINING.name || MyPlayer.activeAction?.name === CharacterActions.LUMBERJACKING.name) && this.myChar.getMoveAngle() != null) {
             this.myChar.breakAutoAttack() // Mining action uses auto attack system, so we can reuse the same break message
             this.clearPowerStrikeQueued()
+            this.clearPreciseShotQueued()
             Connector.sendMessage(new AutoAttackBreak())
             this.myChar.finishGathering(null)
         }
@@ -228,6 +241,7 @@ export const MyPlayer = {
     setAction(type: string | null) {
         if (type !== CharacterActions.AUTO_ATTACK.name) {
             this.powerStrikeQueued = false
+            this.preciseShotQueued = false
         }
         if (type != null) {
             this.activeAction = CharacterActions.getActionByName(type)
@@ -246,6 +260,10 @@ export const MyPlayer = {
         if (data.ps) {
             this.startPowerStrikeCooldown(data.pcd ?? 0)
             this.clearPowerStrikeQueued()
+        }
+        if (data.prs) {
+            this.startPreciseShotCooldown(data.prscd ?? 0)
+            this.clearPreciseShotQueued()
         }
         this.myChar.startAutoAttack(data)
     },
@@ -268,6 +286,26 @@ export const MyPlayer = {
 
     clearPowerStrikeQueued() {
         this.setPowerStrikeQueued(false)
+    },
+
+    startPreciseShotCooldown(cooldown: number) {
+        if (!Number.isFinite(cooldown) || cooldown <= 0) {
+            return
+        }
+        this.preciseShotCooldownStart = Date.now()
+        this.preciseShotCooldownEnd = this.preciseShotCooldownStart + cooldown
+    },
+
+    setPreciseShotQueued(queued: boolean) {
+        if (this.preciseShotQueued === queued) {
+            return
+        }
+        this.preciseShotQueued = queued
+        ActionButtonsManager.setActiveAction(this.activeAction)
+    },
+
+    clearPreciseShotQueued() {
+        this.setPreciseShotQueued(false)
     },
 
     startCombatApproach(data: CombatApproachMessage) {
@@ -423,6 +461,7 @@ export const MyPlayer = {
         }
         MyPlayer.myChar.autoAttackTarget = null
         this.clearPowerStrikeQueued()
+        this.clearPreciseShotQueued()
         MyPlayer.myChar.cancelCombatApproach()
         Connector.sendMessage(new StopAction())
 
@@ -503,6 +542,9 @@ export const MyPlayer = {
             }
             case CharacterActions.POWER_STRIKE.name: {
                 return this.getCooldownPercent(actualTime, this.powerStrikeCooldownStart, this.powerStrikeCooldownEnd)
+            }
+            case CharacterActions.PRECISE_SHOT.name: {
+                return this.getCooldownPercent(actualTime, this.preciseShotCooldownStart, this.preciseShotCooldownEnd)
             }
         }
         return 100
