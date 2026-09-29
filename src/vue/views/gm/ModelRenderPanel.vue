@@ -112,6 +112,7 @@ const WEAPON_OPTIONS = Object.entries(VertexColorWeaponPalettesByModelKey).map((
 })
 const ARMOR_OPTIONS = Object.entries(ArmorModelsCb).map(([key, item]) => ({ key, item, label: `${key} (${item.model})` }))
 const ARMOR_MATERIAL_OPTIONS = MetalArmorVertexColorPalette.materialNames.map((label, index) => ({ index, label }))
+const CHAIN_ARMOR_PREVIEW_HIDDEN_COLORS = [[14, 9, 3]]
 const ARMOR_INVENTORY_BASE_NAMES = {
     PLATE_ARMOR_MALE: 'plate-armor',
     HELM_MALE: 'plate-helmet',
@@ -445,6 +446,11 @@ const loadPreview = async () => {
         `modelRenderMaterial-${previewCategory.value}-${previewItem.model}`,
         scene,
         isWeapon ? weaponPalette : selectedArmorPalette.value,
+        {
+            discardSourceColors: !isWeapon && selectedModelKey.value.startsWith('CHAIN_')
+                ? CHAIN_ARMOR_PREVIEW_HIDDEN_COLORS
+                : undefined,
+        },
     )
     if (!isWeapon) {
         previewMaterial.twoSidedLighting = false

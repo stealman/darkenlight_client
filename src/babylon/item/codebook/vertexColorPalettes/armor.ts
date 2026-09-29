@@ -43,37 +43,37 @@ export const MetalArmorVertexColorPalette: VertexColorWeaponPalette = {
     ],
 }
 
+const ARMOR_DETAIL_SHADE_FACTOR = 0.68
+
+function getDarkArmorDetailColor(materialColors: readonly VertexRgb[]): VertexRgb {
+    const [red, green, blue] = materialColors[0]
+    return [
+        Math.round(red * ARMOR_DETAIL_SHADE_FACTOR),
+        Math.round(green * ARMOR_DETAIL_SHADE_FACTOR),
+        Math.round(blue * ARMOR_DETAIL_SHADE_FACTOR),
+    ]
+}
+
 /**
- * The detailed shield uses the normal grey metal ramp plus a red vertex-colour
- * marker for its secondary material. The marker does not describe a final
- * colour; it is replaced per armour material so one shield mesh works for all
- * metal variants.
+ * Detailed armour models use a red vertex-colour marker for their secondary
+ * region. Replace it with a distinctly darker shade of that armour's metal,
+ * preserving the material hue instead of introducing a contrasting colour.
+ * The factor keeps Steel at its established [100, 100, 100] detail colour.
  */
-const SHIELD_DETAIL_SECONDARY_COLORS: readonly VertexRgb[] = [
-    [100, 100, 100], // Steel: dark steel
-    [225, 139, 35], // Astracyte: amber
-    [145, 63, 181], // Agapyte: purple
-    [143, 42, 54], // Gold: crimson
-    [50, 121, 157], // Blood Stone: blue
-    [205, 122, 35], // Dark Stone: ochre
-    [0, 0, 0], // Reserved materialId 7
-    [210, 154, 40], // Mythril: gold
-    [37, 139, 139], // Adamantium: teal
-    [0, 0, 0], // Reserved materialId 10
-    [47, 125, 151], // Rust: blue
-]
+const ARMOR_DETAIL_SECONDARY_COLORS: readonly VertexRgb[] = MetalArmorVertexColorPalette.materialColors
+    .map(getDarkArmorDetailColor)
 
 export const ShieldDetailVertexColorPalette: VertexColorWeaponPalette = {
     ...MetalArmorVertexColorPalette,
     slots: [
         ...MetalArmorVertexColorPalette.slots,
         // The red swatch exported by Blender is stored in the linear glTF
-        // colour attribute. It deliberately stays non-metallic so it reads as
-        // a separate material (leather, enamel, cloth, and so on).
+        // colour attribute. It stays non-metallic so the darker same-hue area
+        // remains visually distinct from the surrounding armour metal.
         {index: 7, source: [161, 1, 18], role: 'secondary material marker'},
     ],
     materialColors: MetalArmorVertexColorPalette.materialColors.map((colors, materialIndex) => [
         ...colors,
-        SHIELD_DETAIL_SECONDARY_COLORS[materialIndex],
+        ARMOR_DETAIL_SECONDARY_COLORS[materialIndex],
     ]),
 }
