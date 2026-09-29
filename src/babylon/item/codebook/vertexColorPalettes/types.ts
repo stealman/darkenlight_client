@@ -13,6 +13,17 @@ export const STEEL_ARMOR_RAMP_SRGB: readonly VertexRgb[] = [
     [197, 197, 197],
 ]
 
+/** Shared Mythril source ramp used by armour and converted for weapon shaders. */
+export const MYTHRIL_ARMOR_RAMP_SRGB: readonly VertexRgb[] = [
+    [29, 82, 181],
+    [34, 96, 209],
+    [38, 109, 236],
+    [39, 112, 244],
+    [42, 125, 255],
+    [67, 138, 254],
+    [83, 157, 255],
+]
+
 function srgbToLinearByte(value: number): number {
     const normalized = value / 255
     const linear = normalized <= 0.04045
@@ -34,6 +45,18 @@ export const WEAPON_STEEL_COLOR_STEPS = {
     dark: srgbToLinearRgb(STEEL_ARMOR_RAMP_SRGB[0]),
     mid: srgbToLinearRgb(STEEL_ARMOR_RAMP_SRGB[3]),
     light: srgbToLinearRgb(STEEL_ARMOR_RAMP_SRGB[5]),
+} as const
+
+/** Shared non-steel weapon metal ramps in linear shader colour space. */
+export const WEAPON_METAL_COLOR_STEPS = {
+    pyroxide: {dark: [69, 12, 12], mid: [112, 21, 17], light: [217, 145, 61]},
+    geonite: {dark: [10, 51, 39], mid: [20, 86, 58], light: [124, 205, 141]},
+    mythril: {
+        dark: srgbToLinearRgb(MYTHRIL_ARMOR_RAMP_SRGB[0]),
+        mid: srgbToLinearRgb(MYTHRIL_ARMOR_RAMP_SRGB[4]),
+        light: srgbToLinearRgb(MYTHRIL_ARMOR_RAMP_SRGB[6]),
+    },
+    chaotite: {dark: [54, 7, 65], mid: [107, 25, 121], light: [217, 117, 201]},
 } as const
 
 export interface VertexColorSlot {

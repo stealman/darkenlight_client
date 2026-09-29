@@ -1,4 +1,4 @@
-import { STEEL_ARMOR_RAMP_SRGB, VertexColorWeaponPalette, VertexRgb } from './types'
+import { MYTHRIL_ARMOR_RAMP_SRGB, STEEL_ARMOR_RAMP_SRGB, VertexColorWeaponPalette, VertexRgb } from './types'
 
 /**
  * Source colours used in the vertex-colour shield and helmet GLBs. They label
@@ -36,7 +36,7 @@ export const MetalArmorVertexColorPalette: VertexColorWeaponPalette = {
         [[120, 63, 59], [140, 73, 68], [157, 82, 76], [162, 85, 79], [167, 87, 81], [187, 106, 98], [193, 111, 103]], // Blood Stone
         [[40, 40, 40], [47, 47, 47], [52, 52, 52], [54, 54, 54], [55, 55, 55], [63, 63, 63], [66, 66, 66]], // Dark Stone
         [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]], // Reserved materialId 7
-        [[22, 79, 183], [26, 92, 212], [29, 104, 239], [30, 107, 247], [31, 110, 254], [57, 132, 255], [67, 140, 255]], // Mythril materialId 8
+        [...MYTHRIL_ARMOR_RAMP_SRGB], // Mythril materialId 8
         [[120, 10, 10], [155, 16, 15], [195, 22, 20], [210, 26, 24], [225, 30, 27], [240, 45, 38], [250, 62, 49]], // Adamantium materialId 9
         [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]], // Reserved materialId 10
         [[70, 50, 25], [90, 61, 29], [112, 74, 34], [130, 86, 38], [148, 100, 44], [168, 118, 52], [182, 132, 60]], // Rust materialId 11

@@ -82,7 +82,7 @@
                             </label>
                         </div>
                         <div class="model-render-actions">
-                            <button class="dialog-button model-render-action-button" @click="downloadCanvasPng"><span class="ui-text-gradient--button-state">Save PNG</span></button>
+                            <button class="dialog-button model-render-action-button" :disabled="savingMaterials" @click="downloadCanvasPng"><span class="ui-text-gradient--button-state">{{ savingMaterials ? 'Saving...' : 'Save PNG' }}</span></button>
                             <button class="dialog-button model-render-action-button" @click="centerPreviewMesh"><span class="ui-text-gradient--button-state">Center</span></button>
                         </div>
                     </div>
@@ -105,6 +105,8 @@ import { Settings } from '@/settings/settings'
 import { canvasToPngBlobWithTransparentColor } from '@/utils/pngUtils'
 
 const MODEL_RENDER_SETTINGS_LS_KEY = 'model-render-settings'
+const ALL_MATERIAL_INDEX = -1
+const ALL_MATERIAL_OPTION = { index: ALL_MATERIAL_INDEX, label: 'ALL' }
 
 const WEAPON_OPTIONS = Object.entries(VertexColorWeaponPalettesByModelKey).map(([key, weapon]) => {
     const item = WeaponModelsCb[key]
@@ -138,6 +140,7 @@ const previewCategory = ref('WEAPON')
 const selectedModelKey = ref(WEAPON_OPTIONS[0]?.key ?? '')
 const currentModelOptions = computed(() => (previewCategory.value === 'WEAPON' ? WEAPON_OPTIONS : ARMOR_OPTIONS))
 const previewMatIndex = ref(0)
+const savingMaterials = ref(false)
 const materialMetallic = ref(0.75)
 const materialRoughness = ref(1)
 const materialDirectIntensity = ref(1.5)
@@ -165,13 +168,14 @@ const currentMaterialSlots = computed(() => {
 })
 const materialIndexOptions = computed(() => {
     if (previewCategory.value === 'ARMOR') {
-        return ARMOR_MATERIAL_OPTIONS
+        return [ALL_MATERIAL_OPTION, ...ARMOR_MATERIAL_OPTIONS]
     }
     const materialNames = selectedWeaponPalette.value?.materialNames
-    return Array.from({ length: currentMaterialSlots.value }, (_, index) => ({
+    const options = Array.from({ length: currentMaterialSlots.value }, (_, index) => ({
         index,
         label: materialNames?.[index] ?? `Material ${index + 1}`,
     }))
+    return [ALL_MATERIAL_OPTION, ...options]
 })
 
 let engine = null
@@ -348,19 +352,24 @@ const getSelectedPreviewItem = () => {
     return selectedPreviewItem.value
 }
 
-const applyCurrentMaterialIndex = () => {
+const applyMaterialIndexToPreview = (materialIndex) => {
     const previewItem = getSelectedPreviewItem()
     if (!previewMesh || !previewItem) {
         return
     }
     const materialSlots = currentMaterialSlots.value
     const maxIndex = Math.max(materialSlots - 1, 0)
-    const safeIndex = clamp(previewMatIndex.value, 0, maxIndex)
-    if (safeIndex !== previewMatIndex.value) {
+    const safeIndex = clamp(materialIndex, 0, maxIndex)
+    if (previewMatIndex.value !== ALL_MATERIAL_INDEX && safeIndex !== previewMatIndex.value) {
         previewMatIndex.value = safeIndex
     }
     const isWeapon = previewCategory.value === 'WEAPON'
     applyAtlasIndexToMesh(previewMesh, isWeapon ? materialSlots : previewItem.matCols, isWeapon ? 1 : previewItem.matRows, safeIndex)
+}
+
+const applyCurrentMaterialIndex = () => {
+    const materialIndex = previewMatIndex.value === ALL_MATERIAL_INDEX ? 0 : previewMatIndex.value
+    applyMaterialIndexToPreview(materialIndex)
 }
 
 const applyPreviewMaterialSettings = () => {
@@ -524,9 +533,32 @@ const onWindowResize = () => {
     engine.resize()
 }
 
-const downloadCanvasPng = () => {
+const getMaterialName = (materialIndex) => {
+    return selectedWeaponPalette.value?.materialNames[materialIndex]
+        ?? ARMOR_MATERIAL_OPTIONS.find((option) => option.index === materialIndex)?.label
+}
+
+const getExportMaterialIndexes = () => {
+    if (previewMatIndex.value !== ALL_MATERIAL_INDEX) {
+        return [previewMatIndex.value]
+    }
+
+    return Array.from({ length: currentMaterialSlots.value }, (_, index) => index)
+        .filter((index) => getMaterialName(index) !== 'Reserved')
+}
+
+const downloadBlob = (blob, filename) => {
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    link.click()
+    URL.revokeObjectURL(url)
+}
+
+const downloadCanvasPng = async () => {
     const canvas = renderCanvasRef.value
-    if (!canvas) {
+    if (!canvas || savingMaterials.value) {
         return
     }
 
@@ -535,27 +567,35 @@ const downloadCanvasPng = () => {
         return
     }
     persistSettingsForCurrentSelection()
-    const materialName = selectedWeaponPalette.value?.materialNames[previewMatIndex.value]
-        ?? ARMOR_MATERIAL_OPTIONS.find((option) => option.index === previewMatIndex.value)?.label
-    const materialFileName = materialName?.toLowerCase().replaceAll(' ', '-')
     const inventoryBaseName = selectedPreviewOption.value?.inventoryBaseName
     const armorInventoryBaseName = ARMOR_INVENTORY_BASE_NAMES[selectedPreviewOption.value?.key]
-    const imageBaseName = materialFileName && (inventoryBaseName || armorInventoryBaseName)
-        ? `${materialFileName}-${inventoryBaseName || armorInventoryBaseName}`
-        : previewItem.model
     const suffix = imageVariant.value === 'DROP' ? '_drop' : ''
-    const filename = `${imageBaseName}${suffix}.png`
-    canvasToPngBlobWithTransparentColor(canvas).then((blob) => {
-        if (!blob) {
-            return
+    const exportMaterialIndexes = getExportMaterialIndexes()
+    const restoredMaterialIndex = previewMatIndex.value === ALL_MATERIAL_INDEX ? 0 : previewMatIndex.value
+
+    savingMaterials.value = true
+    try {
+        for (const materialIndex of exportMaterialIndexes) {
+            applyMaterialIndexToPreview(materialIndex)
+            scene?.render()
+
+            const blob = await canvasToPngBlobWithTransparentColor(canvas)
+            if (!blob) {
+                continue
+            }
+
+            const materialName = getMaterialName(materialIndex)
+            const materialFileName = materialName?.toLowerCase().replaceAll(' ', '-')
+            const imageBaseName = materialFileName && (inventoryBaseName || armorInventoryBaseName)
+                ? `${materialFileName}-${inventoryBaseName || armorInventoryBaseName}`
+                : previewItem.model
+            downloadBlob(blob, `${imageBaseName}${suffix}.png`)
         }
-        const url = URL.createObjectURL(blob)
-        const link = document.createElement('a')
-        link.href = url
-        link.download = filename
-        link.click()
-        URL.revokeObjectURL(url)
-    })
+    } finally {
+        applyMaterialIndexToPreview(restoredMaterialIndex)
+        scene?.render()
+        savingMaterials.value = false
+    }
 }
 
 const centerPreviewMesh = () => {
@@ -595,6 +635,9 @@ watch(imageVariant, () => {
 })
 
 watch(currentMaterialSlots, () => {
+    if (previewMatIndex.value === ALL_MATERIAL_INDEX) {
+        return
+    }
     const safeIndex = clamp(previewMatIndex.value, 0, Math.max(currentMaterialSlots.value - 1, 0))
     if (safeIndex !== previewMatIndex.value) {
         previewMatIndex.value = safeIndex

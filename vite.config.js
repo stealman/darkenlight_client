@@ -20,9 +20,14 @@ function collectPngPaths(directory, publicPath) {
 
 export default defineConfig(({ mode }) => {
     const isTauriBuild = mode === 'tauri'
+    const steelArmorImagePaths = collectPngPaths(
+        path.resolve(__dirname, 'public/images/items/armor'),
+        '/images/items/armor',
+    ).filter((imagePath) => path.posix.basename(imagePath).startsWith('steel-'))
     const pixelatedImagePaths = [
         ...collectPngPaths(path.resolve(__dirname, 'public/images/icons'), '/images/icons'),
         ...collectPngPaths(path.resolve(__dirname, 'public/images/items/resources'), '/images/items/resources'),
+        ...steelArmorImagePaths,
     ]
 
     return {

@@ -1,4 +1,4 @@
-import { METAL_WEAPON_MATERIAL_NAMES, VertexColorWeaponPalette, WEAPON_STEEL_COLOR_STEPS } from './types'
+import { METAL_WEAPON_MATERIAL_NAMES, VertexColorWeaponPalette, WEAPON_METAL_COLOR_STEPS, WEAPON_STEEL_COLOR_STEPS } from './types'
 
 /** Local vertex-colour palettes for mace and hammer models. */
 export const MaceVertexColorPalettes: Record<string, VertexColorWeaponPalette> = {
@@ -17,10 +17,10 @@ export const MaceVertexColorPalettes: Record<string, VertexColorWeaponPalette> =
         // materialId: 1 steel, 2 pyroxide, 3 geonite, 4 mythril, 5 chaotite
         materialColors: [
             [WEAPON_STEEL_COLOR_STEPS.dark, WEAPON_STEEL_COLOR_STEPS.mid, WEAPON_STEEL_COLOR_STEPS.light, [42, 18, 12], [91, 43, 25], [145, 76, 43]],
-            [[69, 12, 12], [132, 25, 20], [255, 170, 72], [46, 17, 13], [98, 40, 27], [154, 72, 46]],
-            [[10, 51, 39], [24, 101, 68], [146, 241, 166], [39, 21, 13], [83, 49, 27], [133, 84, 46]],
-            [[8, 44, 105], [26, 111, 183], [177, 247, 255], [79, 49, 8], [175, 127, 24], [255, 221, 92]],
-            [[54, 7, 65], [126, 29, 142], [255, 138, 237], [39, 5, 52], [100, 14, 109], [201, 36, 174]],
+            [WEAPON_METAL_COLOR_STEPS.pyroxide.dark, WEAPON_METAL_COLOR_STEPS.pyroxide.mid, WEAPON_METAL_COLOR_STEPS.pyroxide.light, [46, 17, 13], [98, 40, 27], [154, 72, 46]],
+            [WEAPON_METAL_COLOR_STEPS.geonite.dark, WEAPON_METAL_COLOR_STEPS.geonite.mid, WEAPON_METAL_COLOR_STEPS.geonite.light, [39, 21, 13], [83, 49, 27], [133, 84, 46]],
+            [WEAPON_METAL_COLOR_STEPS.mythril.dark, WEAPON_METAL_COLOR_STEPS.mythril.mid, WEAPON_METAL_COLOR_STEPS.mythril.light, [79, 49, 8], [175, 127, 24], [255, 221, 92]],
+            [WEAPON_METAL_COLOR_STEPS.chaotite.dark, WEAPON_METAL_COLOR_STEPS.chaotite.mid, WEAPON_METAL_COLOR_STEPS.chaotite.light, [39, 5, 52], [100, 14, 109], [201, 36, 174]],
         ],
     },
 
@@ -37,10 +37,10 @@ export const MaceVertexColorPalettes: Record<string, VertexColorWeaponPalette> =
         // materialId: 1 steel, 2 pyroxide, 3 geonite, 4 mythril, 5 chaotite
         materialColors: [
             [WEAPON_STEEL_COLOR_STEPS.mid, WEAPON_STEEL_COLOR_STEPS.dark, WEAPON_STEEL_COLOR_STEPS.light, [42, 18, 12], [91, 43, 25]],
-            [[132, 25, 20], [69, 12, 12], [255, 170, 72], [46, 17, 13], [98, 40, 27]],
-            [[24, 101, 68], [10, 51, 39], [146, 241, 166], [39, 21, 13], [83, 49, 27]],
-            [[26, 111, 183], [8, 44, 105], [177, 247, 255], [79, 49, 8], [175, 127, 24]],
-            [[126, 29, 142], [54, 7, 65], [255, 138, 237], [39, 5, 52], [100, 14, 109]],
+            [WEAPON_METAL_COLOR_STEPS.pyroxide.mid, WEAPON_METAL_COLOR_STEPS.pyroxide.dark, WEAPON_METAL_COLOR_STEPS.pyroxide.light, [46, 17, 13], [98, 40, 27]],
+            [WEAPON_METAL_COLOR_STEPS.geonite.mid, WEAPON_METAL_COLOR_STEPS.geonite.dark, WEAPON_METAL_COLOR_STEPS.geonite.light, [39, 21, 13], [83, 49, 27]],
+            [WEAPON_METAL_COLOR_STEPS.mythril.mid, WEAPON_METAL_COLOR_STEPS.mythril.dark, WEAPON_METAL_COLOR_STEPS.mythril.light, [79, 49, 8], [175, 127, 24]],
+            [WEAPON_METAL_COLOR_STEPS.chaotite.mid, WEAPON_METAL_COLOR_STEPS.chaotite.dark, WEAPON_METAL_COLOR_STEPS.chaotite.light, [39, 5, 52], [100, 14, 109]],
         ],
         twoSided: true,
     },
@@ -61,10 +61,10 @@ export const MaceVertexColorPalettes: Record<string, VertexColorWeaponPalette> =
         // materialId: 1 steel, 2 pyroxide, 3 geonite, 4 mythril, 5 chaotite
         materialColors: [
             [WEAPON_STEEL_COLOR_STEPS.mid, WEAPON_STEEL_COLOR_STEPS.dark, WEAPON_STEEL_COLOR_STEPS.light, [42, 18, 12], [91, 43, 25]],
-            [[132, 25, 20], [69, 12, 12], [255, 170, 72], [46, 17, 13], [98, 40, 27]],
-            [[24, 101, 68], [10, 51, 39], [146, 241, 166], [39, 21, 13], [83, 49, 27]],
-            [[26, 111, 183], [8, 44, 105], [177, 247, 255], [79, 49, 8], [175, 127, 24]],
-            [[126, 29, 142], [54, 7, 65], [255, 138, 237], [39, 5, 52], [100, 14, 109]],
+            [WEAPON_METAL_COLOR_STEPS.pyroxide.mid, WEAPON_METAL_COLOR_STEPS.pyroxide.dark, WEAPON_METAL_COLOR_STEPS.pyroxide.light, [46, 17, 13], [98, 40, 27]],
+            [WEAPON_METAL_COLOR_STEPS.geonite.mid, WEAPON_METAL_COLOR_STEPS.geonite.dark, WEAPON_METAL_COLOR_STEPS.geonite.light, [39, 21, 13], [83, 49, 27]],
+            [WEAPON_METAL_COLOR_STEPS.mythril.mid, WEAPON_METAL_COLOR_STEPS.mythril.dark, WEAPON_METAL_COLOR_STEPS.mythril.light, [79, 49, 8], [175, 127, 24]],
+            [WEAPON_METAL_COLOR_STEPS.chaotite.mid, WEAPON_METAL_COLOR_STEPS.chaotite.dark, WEAPON_METAL_COLOR_STEPS.chaotite.light, [39, 5, 52], [100, 14, 109]],
         ],
     },
 }

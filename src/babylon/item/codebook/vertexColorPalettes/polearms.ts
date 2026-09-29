@@ -1,4 +1,4 @@
-import { METAL_WEAPON_MATERIAL_NAMES, VertexColorWeaponPalette, WEAPON_STEEL_COLOR_STEPS } from './types'
+import { METAL_WEAPON_MATERIAL_NAMES, VertexColorWeaponPalette, WEAPON_METAL_COLOR_STEPS, WEAPON_STEEL_COLOR_STEPS } from './types'
 
 /** Local vertex-colour palettes for spear and halberd models. */
 const SPEAR_VERTEX_COLOR_PALETTE: VertexColorWeaponPalette = {
@@ -14,10 +14,10 @@ const SPEAR_VERTEX_COLOR_PALETTE: VertexColorWeaponPalette = {
     // materialId: 1 steel, 2 pyroxide, 3 geonite, 4 mythril, 5 chaotite
     materialColors: [
         [[73, 42, 16], [126, 71, 30], WEAPON_STEEL_COLOR_STEPS.light, WEAPON_STEEL_COLOR_STEPS.dark, WEAPON_STEEL_COLOR_STEPS.mid],
-        [[78, 39, 18], [133, 67, 32], [255, 170, 72], [69, 12, 12], [132, 25, 20]],
-        [[68, 47, 19], [119, 79, 33], [146, 241, 166], [10, 51, 39], [24, 101, 68]],
-        [[93, 57, 13], [193, 138, 31], [177, 247, 255], [8, 44, 105], [26, 111, 183]],
-        [[69, 17, 78], [154, 42, 126], [255, 138, 237], [54, 7, 65], [126, 29, 142]],
+        [[78, 39, 18], [133, 67, 32], WEAPON_METAL_COLOR_STEPS.pyroxide.light, WEAPON_METAL_COLOR_STEPS.pyroxide.dark, WEAPON_METAL_COLOR_STEPS.pyroxide.mid],
+        [[68, 47, 19], [119, 79, 33], WEAPON_METAL_COLOR_STEPS.geonite.light, WEAPON_METAL_COLOR_STEPS.geonite.dark, WEAPON_METAL_COLOR_STEPS.geonite.mid],
+        [[93, 57, 13], [193, 138, 31], WEAPON_METAL_COLOR_STEPS.mythril.light, WEAPON_METAL_COLOR_STEPS.mythril.dark, WEAPON_METAL_COLOR_STEPS.mythril.mid],
+        [[69, 17, 78], [154, 42, 126], WEAPON_METAL_COLOR_STEPS.chaotite.light, WEAPON_METAL_COLOR_STEPS.chaotite.dark, WEAPON_METAL_COLOR_STEPS.chaotite.mid],
     ],
     twoSided: true,
 }
@@ -40,10 +40,10 @@ export const PolearmVertexColorPalettes: Record<string, VertexColorWeaponPalette
         // materialId: 1 steel, 2 pyroxide, 3 geonite, 4 mythril, 5 chaotite
         materialColors: [
             [[73, 42, 16], [126, 71, 30], WEAPON_STEEL_COLOR_STEPS.light, WEAPON_STEEL_COLOR_STEPS.dark, WEAPON_STEEL_COLOR_STEPS.mid],
-            [[78, 39, 18], [133, 67, 32], [255, 170, 72], [69, 12, 12], [132, 25, 20]],
-            [[68, 47, 19], [119, 79, 33], [146, 241, 166], [10, 51, 39], [24, 101, 68]],
-            [[93, 57, 13], [193, 138, 31], [177, 247, 255], [8, 44, 105], [26, 111, 183]],
-            [[69, 17, 78], [154, 42, 126], [255, 138, 237], [54, 7, 65], [126, 29, 142]],
+            [[78, 39, 18], [133, 67, 32], WEAPON_METAL_COLOR_STEPS.pyroxide.light, WEAPON_METAL_COLOR_STEPS.pyroxide.dark, WEAPON_METAL_COLOR_STEPS.pyroxide.mid],
+            [[68, 47, 19], [119, 79, 33], WEAPON_METAL_COLOR_STEPS.geonite.light, WEAPON_METAL_COLOR_STEPS.geonite.dark, WEAPON_METAL_COLOR_STEPS.geonite.mid],
+            [[93, 57, 13], [193, 138, 31], WEAPON_METAL_COLOR_STEPS.mythril.light, WEAPON_METAL_COLOR_STEPS.mythril.dark, WEAPON_METAL_COLOR_STEPS.mythril.mid],
+            [[69, 17, 78], [154, 42, 126], WEAPON_METAL_COLOR_STEPS.chaotite.light, WEAPON_METAL_COLOR_STEPS.chaotite.dark, WEAPON_METAL_COLOR_STEPS.chaotite.mid],
         ],
         twoSided: true,
     },

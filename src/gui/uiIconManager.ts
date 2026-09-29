@@ -1,8 +1,20 @@
+import { MetalArmorVertexColorPalette } from '@/babylon/item/codebook/vertexColorPalettes/armor'
+import type { VertexRgb } from '@/babylon/item/codebook/vertexColorPalettes/types'
+
 const PIXELATED_PATH_PREFIXES = [
     '/images/icons/',
     '/images/items/resources/',
+    '/images/items/armor/',
 ]
+const ARMOR_IMAGE_PATH_PREFIX = '/images/items/armor/'
+const STEEL_ARMOR_IMAGE_PATH_PREFIX = `${ARMOR_IMAGE_PATH_PREFIX}steel-`
 const IMAGE_URL_PATTERN = /url\(\s*(['"]?)(.*?)\1\s*\)/g
+
+type ProcessedPngUrls = {
+    pixelatedUrl: string
+    smoothUrl: string
+}
+type LinearRgb = readonly [number, number, number]
 
 export const UiIconManager = {
     pixelatedUrls: new Map<string, string>(),
@@ -26,11 +38,15 @@ export const UiIconManager = {
 
         const results = await Promise.allSettled(
             __PIXELATED_IMAGE_PATHS__.map(async (imagePath) => {
-                const { pixelatedUrl, smoothUrl } = await this.createProcessedPngUrls(imagePath, pixelSize, saturation)
-                this.pixelatedUrls.set(imagePath, pixelatedUrl)
-                this.smoothUrls.set(imagePath, smoothUrl)
-                this.sourcePathsByProcessedUrl.set(pixelatedUrl, imagePath)
-                this.sourcePathsByProcessedUrl.set(smoothUrl, imagePath)
+                if (imagePath.startsWith(STEEL_ARMOR_IMAGE_PATH_PREFIX)) {
+                    const materialUrls = await this.createArmorMaterialPngUrls(imagePath, pixelSize)
+                    materialUrls.forEach(({ imagePath: materialImagePath, urls }) => {
+                        this.storeProcessedPngUrls(materialImagePath, urls)
+                    })
+                    return
+                }
+
+                this.storeProcessedPngUrls(imagePath, await this.createProcessedPngUrls(imagePath, pixelSize, saturation))
             }),
         )
 
@@ -63,12 +79,19 @@ export const UiIconManager = {
         this.styleChangeListeners.forEach((listener) => listener())
     },
 
+    storeProcessedPngUrls(imagePath: string, { pixelatedUrl, smoothUrl }: ProcessedPngUrls) {
+        this.pixelatedUrls.set(imagePath, pixelatedUrl)
+        this.smoothUrls.set(imagePath, smoothUrl)
+        this.sourcePathsByProcessedUrl.set(pixelatedUrl, imagePath)
+        this.sourcePathsByProcessedUrl.set(smoothUrl, imagePath)
+    },
+
     onStyleChanged(listener: () => void): () => void {
         this.styleChangeListeners.add(listener)
         return () => this.styleChangeListeners.delete(listener)
     },
 
-    async createProcessedPngUrls(iconPath: string, pixelSize: number, saturation: number): Promise<{ pixelatedUrl: string, smoothUrl: string }> {
+    async createProcessedPngUrls(iconPath: string, pixelSize: number, saturation: number): Promise<ProcessedPngUrls> {
         const response = await fetch(iconPath, { cache: 'force-cache' })
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`)
@@ -79,40 +102,137 @@ export const UiIconManager = {
 
         try {
             const image = await this.loadImage(sourceObjectUrl)
-            const canvas = document.createElement('canvas')
-            canvas.width = image.naturalWidth
-            canvas.height = image.naturalHeight
-
-            const context = canvas.getContext('2d', { willReadFrequently: true })
-            if (!context) {
-                throw new Error('2D canvas context is unavailable')
-            }
-
-            context.clearRect(0, 0, canvas.width, canvas.height)
-            context.drawImage(image, 0, 0)
-
-            if (saturation !== 1) {
-                const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
-                this.adjustSaturationRgba(imageData.data, saturation)
-                context.putImageData(imageData, 0, 0)
-            }
-            const smoothUrl = await this.createPngUrl(canvas)
-
-            if (Number.isInteger(pixelSize)) {
-                const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
-                this.pixelateRgba(imageData.data, canvas.width, canvas.height, pixelSize)
-                context.putImageData(imageData, 0, 0)
-            } else {
-                this.pixelateCanvasByScale(canvas, context, pixelSize)
-            }
-
-            return {
-                pixelatedUrl: await this.createPngUrl(canvas),
-                smoothUrl,
-            }
+            return await this.createProcessedPngUrlsFromImage(image, pixelSize, saturation)
         } finally {
             URL.revokeObjectURL(sourceObjectUrl)
         }
+    },
+
+    async createArmorMaterialPngUrls(steelImagePath: string, pixelSize: number) {
+        const response = await fetch(steelImagePath, { cache: 'force-cache' })
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`)
+        }
+
+        const sourceBlob = await response.blob()
+        const sourceObjectUrl = URL.createObjectURL(sourceBlob)
+
+        try {
+            const image = await this.loadImage(sourceObjectUrl)
+            const armorImageSuffix = steelImagePath.slice(STEEL_ARMOR_IMAGE_PATH_PREFIX.length)
+            const steelColors = MetalArmorVertexColorPalette.materialColors[0]
+            const materialUrls = await Promise.all(MetalArmorVertexColorPalette.materialNames.map(async (materialName, materialIndex) => {
+                if (materialName === 'Reserved') {
+                    return null
+                }
+
+                const materialFileName = materialName.toLowerCase().replaceAll(' ', '-')
+                const imagePath = `${ARMOR_IMAGE_PATH_PREFIX}${materialFileName}-${armorImageSuffix}`
+                const materialColors = MetalArmorVertexColorPalette.materialColors[materialIndex]
+                const urls = await this.createProcessedPngUrlsFromImage(
+                    image,
+                    pixelSize,
+                    1,
+                    materialIndex === 0 ? undefined : { source: steelColors, target: materialColors },
+                )
+                return { imagePath, urls }
+            }))
+
+            return materialUrls.filter((entry): entry is { imagePath: string, urls: ProcessedPngUrls } => entry !== null)
+        } finally {
+            URL.revokeObjectURL(sourceObjectUrl)
+        }
+    },
+
+    async createProcessedPngUrlsFromImage(
+        image: HTMLImageElement,
+        pixelSize: number,
+        saturation: number,
+        colorRemap?: { source: readonly VertexRgb[], target: readonly VertexRgb[] },
+    ): Promise<ProcessedPngUrls> {
+        const canvas = document.createElement('canvas')
+        canvas.width = image.naturalWidth
+        canvas.height = image.naturalHeight
+
+        const context = canvas.getContext('2d', { willReadFrequently: true })
+        if (!context) {
+            throw new Error('2D canvas context is unavailable')
+        }
+
+        context.clearRect(0, 0, canvas.width, canvas.height)
+        context.drawImage(image, 0, 0)
+
+        if (colorRemap || saturation !== 1) {
+            const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
+            if (colorRemap) {
+                this.remapArmorMaterialRgba(imageData.data, colorRemap.source, colorRemap.target)
+            }
+            if (saturation !== 1) {
+                this.adjustSaturationRgba(imageData.data, saturation)
+            }
+            context.putImageData(imageData, 0, 0)
+        }
+        const smoothUrl = await this.createPngUrl(canvas)
+
+        if (Number.isInteger(pixelSize)) {
+            const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
+            this.pixelateRgba(imageData.data, canvas.width, canvas.height, pixelSize)
+            context.putImageData(imageData, 0, 0)
+        } else {
+            this.pixelateCanvasByScale(canvas, context, pixelSize)
+        }
+
+        return {
+            pixelatedUrl: await this.createPngUrl(canvas),
+            smoothUrl,
+        }
+    },
+
+    remapArmorMaterialRgba(data: Uint8ClampedArray, sourceColors: readonly VertexRgb[], targetColors: readonly VertexRgb[]) {
+        const sourceReference = this.getLinearPaletteAverage(sourceColors)
+        const targetReference = this.getLinearPaletteAverage(targetColors)
+        const redScale = targetReference[0] / sourceReference[0]
+        const greenScale = targetReference[1] / sourceReference[1]
+        const blueScale = targetReference[2] / sourceReference[2]
+
+        for (let index = 0; index < data.length; index += 4) {
+            if (data[index + 3] === 0) {
+                continue
+            }
+
+            data[index] = this.linearToSrgbByte(this.srgbByteToLinear(data[index]) * redScale)
+            data[index + 1] = this.linearToSrgbByte(this.srgbByteToLinear(data[index + 1]) * greenScale)
+            data[index + 2] = this.linearToSrgbByte(this.srgbByteToLinear(data[index + 2]) * blueScale)
+        }
+    },
+
+    getLinearPaletteAverage(colors: readonly VertexRgb[]): LinearRgb {
+        const total = colors.reduce((sum, color) => {
+            sum[0] += this.srgbByteToLinear(color[0])
+            sum[1] += this.srgbByteToLinear(color[1])
+            sum[2] += this.srgbByteToLinear(color[2])
+            return sum
+        }, [0, 0, 0])
+        return [
+            total[0] / colors.length,
+            total[1] / colors.length,
+            total[2] / colors.length,
+        ]
+    },
+
+    srgbByteToLinear(value: number): number {
+        const normalized = value / 255
+        return normalized <= 0.04045
+            ? normalized / 12.92
+            : Math.pow((normalized + 0.055) / 1.055, 2.4)
+    },
+
+    linearToSrgbByte(value: number): number {
+        const clamped = Math.min(1, Math.max(0, value))
+        const srgb = clamped <= 0.0031308
+            ? clamped * 12.92
+            : 1.055 * Math.pow(clamped, 1 / 2.4) - 0.055
+        return Math.round(srgb * 255)
     },
 
     async createPngUrl(canvas: HTMLCanvasElement): Promise<string> {
