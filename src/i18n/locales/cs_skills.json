@@ -78,6 +78,8 @@
       "weaponAttackOfType": "útok zbraní typu",
       "powerStrikeDamage": "bonusový útok Silného úderu",
       "preciseShotDamage": "bonusový útok Přesného výstřelu",
+      "alwaysPerfectHitEmphasis": "Perfektní",
+      "alwaysPerfectHitSuffix": "zásah",
       "armorOfType": "brnění typu",
       "restingRegenAtCampfire": "bonus k regeneraci při odpočinku u ohně",
       "healedHealth": "vyléčených životů",

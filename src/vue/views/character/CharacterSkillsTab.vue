@@ -107,6 +107,15 @@
                                     <strong class="skill-detail-value">{{ getSkillRankName(skill.cap) }}</strong>
                                 </div>
                                 <div class="skill-bonus-list">
+                                    <div v-if="skill.key === 'preciseShot'" class="skill-bonus-row">
+                                        <span
+                                            class="skill-bonus-label"
+                                            :class="{ 'skill-bonus-label--active': skill.skillBonusUnlocked }"
+                                        >{{ t('skills.bonuses.skillBonus') }}</span>
+                                        <span class="skill-bonus-value">
+                                            <strong class="skill-bonus-value-emphasis">{{ t('skills.bonuses.alwaysPerfectHitEmphasis') }}</strong><span>{{ t('skills.bonuses.alwaysPerfectHitSuffix') }}</span>
+                                        </span>
+                                    </div>
                                     <div class="skill-bonus-row">
                                         <span
                                             class="skill-bonus-label"
@@ -114,7 +123,7 @@
                                                 'skill-bonus-label--active': skill.skillBonusUnlocked,
                                                 'skill-bonus-label--unknown': !skill.skillBonus,
                                             }"
-                                        >{{ t('skills.bonuses.skillBonus') }}</span>
+                                        >{{ skill.key === 'preciseShot' ? '' : t('skills.bonuses.skillBonus') }}</span>
                                         <span v-if="skill.skillBonus" class="skill-bonus-value">
                                             <strong class="skill-bonus-value-emphasis">{{ skill.skillBonus.percentage }}</strong><span>{{ t(skill.skillBonus.effectTranslationKey) }}</span><strong v-if="skill.skillBonus.target" class="skill-bonus-value-emphasis">{{ skill.skillBonus.target }}</strong><span>{{ t(skill.skillBonus.perRankTranslationKey, { percent: skill.skillBonus.perRank, amount: skill.skillBonus.perRank }) }}</span>
                                         </span>

@@ -78,6 +78,8 @@
       "weaponAttackOfType": "weapon attack of type",
       "powerStrikeDamage": "Power Strike bonus attack",
       "preciseShotDamage": "Precise Shot bonus attack",
+      "alwaysPerfectHitEmphasis": "Perfect",
+      "alwaysPerfectHitSuffix": "hit",
       "armorOfType": "armor of type",
       "restingRegenAtCampfire": "campfire resting regeneration bonus",
       "healedHealth": "health restored",
