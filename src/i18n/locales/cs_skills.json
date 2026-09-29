@@ -78,7 +78,7 @@
       "armorOfType": "brnění typu",
       "restingRegenAtCampfire": "bonus k regeneraci při odpočinku u ohně",
       "healedHealth": "vyléčených životů",
-      "healedHealthPerRank": "({amount} za úroveň)",
+      "healedHealthPerRank": " ({amount} za úroveň)",
       "bonusPerRank": " ({percent}% za úroveň)",
       "weaponTypes": {
         "swords": "Meč",

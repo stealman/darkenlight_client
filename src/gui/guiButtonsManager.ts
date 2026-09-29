@@ -13,6 +13,9 @@ import { GMManager } from '@/gm/GM'
 import {NpcInteractionManager} from '@/data/npcInteractionManager'
 import {NpcManager} from '@/babylon/npc/npcManager'
 
+const HUD_BUTTON_GAP = 5
+const HUD_MINIMAP_LEFT_FRAME_SIZE = 3
+
 class GuiOpportunityButtonAction {
     name: string
     icon: string
@@ -118,11 +121,14 @@ export const GuiButtonsManager = {
     },
 
     updatePositions(miniMapSize: number) {
-        this.btnCharacter.style.right = `${miniMapSize + 5}px`
+        const buttonStep = this.size + HUD_BUTTON_GAP
+        const miniMapRightOffset = miniMapSize + HUD_MINIMAP_LEFT_FRAME_SIZE + HUD_BUTTON_GAP
+
+        this.btnCharacter.style.right = `${miniMapRightOffset}px`
         this.btnCharacter.style.top = `5px`
 
-        this.btnBackpack.style.right = `${miniMapSize + 5}px`
-        this.btnBackpack.style.top = `${this.btnCharacter.offsetTop + this.btnCharacter.offsetHeight + 5}px`
+        this.btnBackpack.style.right = `${miniMapRightOffset + buttonStep}px`
+        this.btnBackpack.style.top = `5px`
     },
 
     onFrame() {

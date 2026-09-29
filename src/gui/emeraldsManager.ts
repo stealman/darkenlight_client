@@ -3,6 +3,9 @@ import { AudioManager } from '@/babylon/audio/audioManager'
 import { OverlayManager } from '@/gui/overlay/overlayManager'
 import { ref } from 'vue'
 
+const HUD_BUTTON_GAP = 5
+const HUD_MINIMAP_LEFT_FRAME_SIZE = 3
+
 export const EmeraldsManager = {
     size: 32 as number,
     iconBaseSize: 24 as number,
@@ -29,7 +32,9 @@ export const EmeraldsManager = {
     },
 
     updatePositions(miniMapSize: number) {
-        this.emeraldsInfoPanel.style.right = `${miniMapSize + this.size + (15 / window.devicePixelRatio)}px`
+        const buttonStep = this.size + HUD_BUTTON_GAP
+        const miniMapRightOffset = miniMapSize + HUD_MINIMAP_LEFT_FRAME_SIZE + HUD_BUTTON_GAP
+        this.emeraldsInfoPanel.style.right = `${miniMapRightOffset + (buttonStep * 2)}px`
         this.emeraldsInfoPanel.style.top = `5px`
     },
 

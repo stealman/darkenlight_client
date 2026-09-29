@@ -201,10 +201,10 @@ const getSkillBonusValue = (skill: SkillDefinition, rank: number, progress?: Ski
         : armorBonus ? progress?.armorBonusPercentPerRank : progress?.weaponAttackBonusPercentPerRank
     return {
         percentage: bandageHealingBonus
-            ? `${progress?.bandageHealingAmountMinimum ?? rank}Ă˘â‚¬â€ś${progress?.bandageHealingAmountMaximum ?? rank * 2}`
+            ? `${progress?.bandageHealingAmountMinimum ?? rank}–${progress?.bandageHealingAmountMaximum ?? rank * 2}`
             : `+${bonusPercent ?? rank * (campingRestingRegenBonus ? 25 : powerStrikeDamageBonus ? 15 : 5)}%`,
         perRank: bandageHealingBonus
-            ? `${progress?.bandageHealingAmountMinimumPerRank ?? 1}Ă˘â‚¬â€ś${progress?.bandageHealingAmountMaximumPerRank ?? 2}`
+            ? `${progress?.bandageHealingAmountMinimumPerRank ?? 1}–${progress?.bandageHealingAmountMaximumPerRank ?? 2}`
             : bonusPercentPerRank ?? (campingRestingRegenBonus ? 25 : powerStrikeDamageBonus ? 15 : 5),
         target: skill.bonusTargetTranslationKey ? t(skill.bonusTargetTranslationKey) : undefined,
         effectTranslationKey: bandageHealingBonus

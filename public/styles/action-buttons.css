@@ -1,8 +1,8 @@
 div#action-buttons-1 {
-    --action-buttons-panel-border: 3px;
-    --action-buttons-panel-inner-padding: 4px;
+    --action-buttons-panel-border: 2px;
+    --action-buttons-panel-inner-padding: 3px;
     display: flex;
-    gap: 10px;
+    gap: 5px;
     flex-direction: column;
     justify-content: center;
     position: absolute;
@@ -14,10 +14,10 @@ div#action-buttons-1 {
 }
 
 div#action-buttons-2 {
-    --action-buttons-panel-border: 3px;
-    --action-buttons-panel-inner-padding: 4px;
+    --action-buttons-panel-border: 2px;
+    --action-buttons-panel-inner-padding: 3px;
     display: flex;
-    gap: 10px;
+    gap: 5px;
     flex-direction: row;
     justify-content: center;
     position: absolute;
@@ -62,18 +62,19 @@ div#action-buttons-2 > .action-button {
 
 div#opportunity-action-buttons {
     display: flex;
-    gap: 8px;
+    gap: 5px;
     flex-direction: column;
     justify-content: center;
     align-items: center;
     position: absolute;
-    right: 72px;
+    right: 74px;
     bottom: 48px;
     padding: 4px;
 }
 
 div#opportunity-action-buttons div.gui-action-button,
 div#gui-buttons div.gui-action-button {
+    box-sizing: border-box;
     background-color: rgba(115, 115, 115, 0.5);
     border: 1px solid rgb(var(--ui-darker));
     border-radius: 4px;
