@@ -15,6 +15,8 @@ import { UiIconManager } from '@/gui/uiIconManager'
 
 const PIXELATED_UI_IMAGE_SIZE = 1.4 // 64 px -> 46 px after rounding.
 const PIXELATED_UI_IMAGE_SATURATION = 0.75 // 0 = grayscale, 1 = original saturation.
+const UI_IMAGE_PROGRESS_START = 5
+const UI_IMAGE_PROGRESS_END = 30
 
 function reportLoadingProgress(progress: number, phaseKey: string) {
     window.dispatchEvent(new CustomEvent('game:loading-progress', { detail: { progress, phaseKey } }))
@@ -42,10 +44,17 @@ export const GameManager = {
             !Settings.smoothIcons,
             PIXELATED_UI_IMAGE_SIZE,
             PIXELATED_UI_IMAGE_SATURATION,
+            (completed, total) => {
+                const ratio = total > 0 ? completed / total : 1
+                const progress = Math.floor(
+                    UI_IMAGE_PROGRESS_START + ratio * (UI_IMAGE_PROGRESS_END - UI_IMAGE_PROGRESS_START),
+                )
+                reportLoadingProgress(progress, 'app.loadingPreparing')
+            },
         )
 
         // Initialize Renderer and load assets
-        reportLoadingProgress(15, 'app.loadingPreparingRenderer')
+        reportLoadingProgress(35, 'app.loadingPreparingRenderer')
         await Renderer.initialize(canvas)
         reportLoadingProgress(100, 'app.loadingReady')
     },

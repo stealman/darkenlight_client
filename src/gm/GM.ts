@@ -522,6 +522,8 @@ export const GMManager = {
                     },
                 } : feature.type === 'crafting'
                     ? {itemCategories: [...(feature.settings?.itemCategories ?? [])]}
+                    : feature.type === 'healer'
+                        ? {potionTiers: [...(feature.settings?.potionTiers ?? ['small', 'normal', 'great'])]}
                     : {}
             })),
             wanderingRange: npc.wanderingRange ?? npc.wr ?? 0

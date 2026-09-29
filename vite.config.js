@@ -4,36 +4,45 @@ import { VitePWA } from 'vite-plugin-pwa'
 import fs from 'node:fs'
 import path from 'path'
 
-function collectPngPaths(directory, publicPath) {
+function collectPngEntries(directory, publicPath) {
     return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
         const entryPath = path.join(directory, entry.name)
         const entryPublicPath = `${publicPath}/${entry.name}`
 
         if (entry.isDirectory()) {
-            return collectPngPaths(entryPath, entryPublicPath)
+            return collectPngEntries(entryPath, entryPublicPath)
         }
-        return entry.isFile() && path.extname(entry.name).toLowerCase() === '.png'
-            ? [entryPublicPath]
-            : []
+        if (!entry.isFile() || path.extname(entry.name).toLowerCase() !== '.png') {
+            return []
+        }
+
+        const stats = fs.statSync(entryPath)
+        return [{
+            imagePath: entryPublicPath,
+            version: `${stats.size}-${Math.trunc(stats.mtimeMs)}`,
+        }]
     })
 }
 
 export default defineConfig(({ mode }) => {
     const isTauriBuild = mode === 'tauri'
-    const steelArmorImagePaths = collectPngPaths(
+    const steelArmorImageEntries = collectPngEntries(
         path.resolve(__dirname, 'public/images/items/armor'),
         '/images/items/armor',
-    ).filter((imagePath) => path.posix.basename(imagePath).startsWith('steel-'))
-    const pixelatedImagePaths = [
-        ...collectPngPaths(path.resolve(__dirname, 'public/images/icons'), '/images/icons'),
-        ...collectPngPaths(path.resolve(__dirname, 'public/images/items/resources'), '/images/items/resources'),
-        ...steelArmorImagePaths,
+    ).filter(({ imagePath }) => path.posix.basename(imagePath).startsWith('steel-'))
+    const pixelatedImageEntries = [
+        ...collectPngEntries(path.resolve(__dirname, 'public/images/icons'), '/images/icons'),
+        ...collectPngEntries(path.resolve(__dirname, 'public/images/items/resources'), '/images/items/resources'),
+        ...steelArmorImageEntries,
     ]
+    const pixelatedImagePaths = pixelatedImageEntries.map(({ imagePath }) => imagePath)
+    const pixelatedImageVersions = Object.fromEntries(pixelatedImageEntries.map(({ imagePath, version }) => [imagePath, version]))
 
     return {
     base: '/',
     define: {
         __PIXELATED_IMAGE_PATHS__: JSON.stringify(pixelatedImagePaths),
+        __PIXELATED_IMAGE_VERSIONS__: JSON.stringify(pixelatedImageVersions),
     },
     plugins: [
         vue(),

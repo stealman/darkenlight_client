@@ -9,10 +9,21 @@ const PIXELATED_PATH_PREFIXES = [
 const ARMOR_IMAGE_PATH_PREFIX = '/images/items/armor/'
 const STEEL_ARMOR_IMAGE_PATH_PREFIX = `${ARMOR_IMAGE_PATH_PREFIX}steel-`
 const IMAGE_URL_PATTERN = /url\(\s*(['"]?)(.*?)\1\s*\)/g
+const PROCESSED_PNG_CACHE_VERSION = 1
+const PROCESSED_PNG_DATABASE_NAME = 'darkenlight-ui-image-cache'
+const PROCESSED_PNG_STORE_NAME = 'processedPngs'
 
 type ProcessedPngUrls = {
     pixelatedUrl: string
     smoothUrl: string
+}
+type ProcessedPngBlobs = {
+    pixelatedBlob: Blob
+    smoothBlob: Blob
+}
+type CachedProcessedPng = ProcessedPngBlobs & {
+    imagePath: string
+    signature: string
 }
 type LinearRgb = readonly [number, number, number]
 
@@ -23,8 +34,14 @@ export const UiIconManager = {
     styleChangeListeners: new Set<() => void>(),
     pixelatedEnabled: false,
     domObserver: null as MutationObserver | null,
+    cacheDatabasePromise: null as Promise<IDBDatabase | null> | null,
 
-    async initialize(pixelated: boolean, pixelSize: number = 2, saturation: number = 1) {
+    async initialize(
+        pixelated: boolean,
+        pixelSize: number = 2,
+        saturation: number = 1,
+        onProgress?: (completed: number, total: number) => void,
+    ) {
         this.stopDomObserver()
         this.revokeProcessedUrls()
         this.pixelatedEnabled = pixelated
@@ -36,17 +53,40 @@ export const UiIconManager = {
             throw new Error(`UI image saturation must be zero or greater, received ${saturation}`)
         }
 
+        const armorMaterialCount = MetalArmorVertexColorPalette.materialNames
+            .filter((materialName) => materialName !== 'Reserved').length
+        const workUnits = __PIXELATED_IMAGE_PATHS__.map((imagePath) => {
+            return imagePath.startsWith(STEEL_ARMOR_IMAGE_PATH_PREFIX) ? armorMaterialCount : 1
+        })
+        const totalWorkUnits = workUnits.reduce((total, count) => total + count, 0)
+        let completedWorkUnits = 0
+        onProgress?.(completedWorkUnits, totalWorkUnits)
+
         const results = await Promise.allSettled(
-            __PIXELATED_IMAGE_PATHS__.map(async (imagePath) => {
-                if (imagePath.startsWith(STEEL_ARMOR_IMAGE_PATH_PREFIX)) {
-                    const materialUrls = await this.createArmorMaterialPngUrls(imagePath, pixelSize)
-                    materialUrls.forEach(({ imagePath: materialImagePath, urls }) => {
-                        this.storeProcessedPngUrls(materialImagePath, urls)
-                    })
-                    return
+            __PIXELATED_IMAGE_PATHS__.map(async (imagePath, imageIndex) => {
+                let completedImageWorkUnits = 0
+                const reportImageProgress = () => {
+                    completedImageWorkUnits++
+                    completedWorkUnits++
+                    onProgress?.(completedWorkUnits, totalWorkUnits)
                 }
 
-                this.storeProcessedPngUrls(imagePath, await this.createProcessedPngUrls(imagePath, pixelSize, saturation))
+                try {
+                    if (imagePath.startsWith(STEEL_ARMOR_IMAGE_PATH_PREFIX)) {
+                        const materialUrls = await this.createArmorMaterialPngUrls(imagePath, pixelSize, reportImageProgress)
+                        materialUrls.forEach(({ imagePath: materialImagePath, urls }) => {
+                            this.storeProcessedPngUrls(materialImagePath, urls)
+                        })
+                        return
+                    }
+
+                    this.storeProcessedPngUrls(imagePath, await this.createProcessedPngUrls(imagePath, pixelSize, saturation))
+                    reportImageProgress()
+                } finally {
+                    while (completedImageWorkUnits < workUnits[imageIndex]) {
+                        reportImageProgress()
+                    }
+                }
             }),
         )
 
@@ -92,6 +132,12 @@ export const UiIconManager = {
     },
 
     async createProcessedPngUrls(iconPath: string, pixelSize: number, saturation: number): Promise<ProcessedPngUrls> {
+        const signature = this.getProcessedPngSignature(iconPath, pixelSize, saturation)
+        const cachedBlobs = await this.getCachedProcessedPng(iconPath, signature)
+        if (cachedBlobs) {
+            return this.createProcessedPngUrlsFromBlobs(cachedBlobs)
+        }
+
         const response = await fetch(iconPath, { cache: 'force-cache' })
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`)
@@ -102,13 +148,42 @@ export const UiIconManager = {
 
         try {
             const image = await this.loadImage(sourceObjectUrl)
-            return await this.createProcessedPngUrlsFromImage(image, pixelSize, saturation)
+            const blobs = await this.createProcessedPngBlobsFromImage(image, pixelSize, saturation)
+            await this.cacheProcessedPng(iconPath, signature, blobs)
+            return this.createProcessedPngUrlsFromBlobs(blobs)
         } finally {
             URL.revokeObjectURL(sourceObjectUrl)
         }
     },
 
-    async createArmorMaterialPngUrls(steelImagePath: string, pixelSize: number) {
+    async createArmorMaterialPngUrls(steelImagePath: string, pixelSize: number, onMaterialProcessed?: () => void) {
+        const armorImageSuffix = steelImagePath.slice(STEEL_ARMOR_IMAGE_PATH_PREFIX.length)
+        const steelColors = MetalArmorVertexColorPalette.materialColors[0]
+        const materialRequests = MetalArmorVertexColorPalette.materialNames.flatMap((materialName, materialIndex) => {
+            if (materialName === 'Reserved') {
+                return []
+            }
+
+            const materialFileName = materialName.toLowerCase().replaceAll(' ', '-')
+            const imagePath = `${ARMOR_IMAGE_PATH_PREFIX}${materialFileName}-${armorImageSuffix}`
+            const materialColors = MetalArmorVertexColorPalette.materialColors[materialIndex]
+            const signature = this.getArmorProcessedPngSignature(steelImagePath, pixelSize, steelColors, materialColors)
+            return [{ imagePath, materialIndex, materialColors, signature }]
+        })
+        const cachedMaterialBlobs = await Promise.all(materialRequests.map(({ imagePath, signature }) => {
+            return this.getCachedProcessedPng(imagePath, signature)
+        }))
+        if (cachedMaterialBlobs.every((blobs) => blobs !== null)) {
+            return materialRequests.map(({ imagePath }, index) => {
+                const result = {
+                    imagePath,
+                    urls: this.createProcessedPngUrlsFromBlobs(cachedMaterialBlobs[index]!),
+                }
+                onMaterialProcessed?.()
+                return result
+            })
+        }
+
         const response = await fetch(steelImagePath, { cache: 'force-cache' })
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`)
@@ -119,37 +194,37 @@ export const UiIconManager = {
 
         try {
             const image = await this.loadImage(sourceObjectUrl)
-            const armorImageSuffix = steelImagePath.slice(STEEL_ARMOR_IMAGE_PATH_PREFIX.length)
-            const steelColors = MetalArmorVertexColorPalette.materialColors[0]
-            const materialUrls = await Promise.all(MetalArmorVertexColorPalette.materialNames.map(async (materialName, materialIndex) => {
-                if (materialName === 'Reserved') {
-                    return null
+            const materialUrls: Array<{ imagePath: string, urls: ProcessedPngUrls }> = []
+            for (let index = 0; index < materialRequests.length; index++) {
+                const request = materialRequests[index]
+                let blobs = cachedMaterialBlobs[index]
+                if (!blobs) {
+                    blobs = await this.createProcessedPngBlobsFromImage(
+                        image,
+                        pixelSize,
+                        1,
+                        request.materialIndex === 0 ? undefined : { source: steelColors, target: request.materialColors },
+                    )
+                    await this.cacheProcessedPng(request.imagePath, request.signature, blobs)
                 }
-
-                const materialFileName = materialName.toLowerCase().replaceAll(' ', '-')
-                const imagePath = `${ARMOR_IMAGE_PATH_PREFIX}${materialFileName}-${armorImageSuffix}`
-                const materialColors = MetalArmorVertexColorPalette.materialColors[materialIndex]
-                const urls = await this.createProcessedPngUrlsFromImage(
-                    image,
-                    pixelSize,
-                    1,
-                    materialIndex === 0 ? undefined : { source: steelColors, target: materialColors },
-                )
-                return { imagePath, urls }
-            }))
-
-            return materialUrls.filter((entry): entry is { imagePath: string, urls: ProcessedPngUrls } => entry !== null)
+                materialUrls.push({
+                    imagePath: request.imagePath,
+                    urls: this.createProcessedPngUrlsFromBlobs(blobs),
+                })
+                onMaterialProcessed?.()
+            }
+            return materialUrls
         } finally {
             URL.revokeObjectURL(sourceObjectUrl)
         }
     },
 
-    async createProcessedPngUrlsFromImage(
+    async createProcessedPngBlobsFromImage(
         image: HTMLImageElement,
         pixelSize: number,
         saturation: number,
         colorRemap?: { source: readonly VertexRgb[], target: readonly VertexRgb[] },
-    ): Promise<ProcessedPngUrls> {
+    ): Promise<ProcessedPngBlobs> {
         const canvas = document.createElement('canvas')
         canvas.width = image.naturalWidth
         canvas.height = image.naturalHeight
@@ -172,7 +247,7 @@ export const UiIconManager = {
             }
             context.putImageData(imageData, 0, 0)
         }
-        const smoothUrl = await this.createPngUrl(canvas)
+        const smoothBlob = await this.createPngBlob(canvas)
 
         if (Number.isInteger(pixelSize)) {
             const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
@@ -183,8 +258,15 @@ export const UiIconManager = {
         }
 
         return {
-            pixelatedUrl: await this.createPngUrl(canvas),
-            smoothUrl,
+            pixelatedBlob: await this.createPngBlob(canvas),
+            smoothBlob,
+        }
+    },
+
+    createProcessedPngUrlsFromBlobs({ pixelatedBlob, smoothBlob }: ProcessedPngBlobs): ProcessedPngUrls {
+        return {
+            pixelatedUrl: URL.createObjectURL(pixelatedBlob),
+            smoothUrl: URL.createObjectURL(smoothBlob),
         }
     },
 
@@ -235,8 +317,98 @@ export const UiIconManager = {
         return Math.round(srgb * 255)
     },
 
-    async createPngUrl(canvas: HTMLCanvasElement): Promise<string> {
-        const blob = await new Promise<Blob>((resolve, reject) => {
+    getProcessedPngSignature(imagePath: string, pixelSize: number, saturation: number): string {
+        return [
+            PROCESSED_PNG_CACHE_VERSION,
+            __PIXELATED_IMAGE_VERSIONS__[imagePath] ?? 'unknown-source',
+            pixelSize,
+            saturation,
+        ].join('|')
+    },
+
+    getArmorProcessedPngSignature(
+        steelImagePath: string,
+        pixelSize: number,
+        steelColors: readonly VertexRgb[],
+        materialColors: readonly VertexRgb[],
+    ): string {
+        return [
+            PROCESSED_PNG_CACHE_VERSION,
+            __PIXELATED_IMAGE_VERSIONS__[steelImagePath] ?? 'unknown-source',
+            pixelSize,
+            JSON.stringify(steelColors),
+            JSON.stringify(materialColors),
+        ].join('|')
+    },
+
+    getProcessedPngCacheDatabase(): Promise<IDBDatabase | null> {
+        if (this.cacheDatabasePromise) {
+            return this.cacheDatabasePromise
+        }
+        if (!('indexedDB' in window)) {
+            this.cacheDatabasePromise = Promise.resolve(null)
+            return this.cacheDatabasePromise
+        }
+
+        this.cacheDatabasePromise = new Promise((resolve) => {
+            const request = indexedDB.open(PROCESSED_PNG_DATABASE_NAME, 1)
+            request.onupgradeneeded = () => {
+                const database = request.result
+                if (!database.objectStoreNames.contains(PROCESSED_PNG_STORE_NAME)) {
+                    database.createObjectStore(PROCESSED_PNG_STORE_NAME, { keyPath: 'imagePath' })
+                }
+            }
+            request.onsuccess = () => resolve(request.result)
+            request.onerror = () => {
+                console.warn('Persistent UI image cache is unavailable', request.error)
+                resolve(null)
+            }
+        })
+        return this.cacheDatabasePromise
+    },
+
+    async getCachedProcessedPng(imagePath: string, signature: string): Promise<ProcessedPngBlobs | null> {
+        const database = await this.getProcessedPngCacheDatabase()
+        if (!database) {
+            return null
+        }
+
+        return new Promise((resolve) => {
+            const request = database.transaction(PROCESSED_PNG_STORE_NAME, 'readonly')
+                .objectStore(PROCESSED_PNG_STORE_NAME)
+                .get(imagePath)
+            request.onsuccess = () => {
+                const cached = request.result as CachedProcessedPng | undefined
+                if (!cached || cached.signature !== signature) {
+                    resolve(null)
+                    return
+                }
+                resolve({
+                    pixelatedBlob: cached.pixelatedBlob,
+                    smoothBlob: cached.smoothBlob,
+                })
+            }
+            request.onerror = () => resolve(null)
+        })
+    },
+
+    async cacheProcessedPng(imagePath: string, signature: string, blobs: ProcessedPngBlobs): Promise<void> {
+        const database = await this.getProcessedPngCacheDatabase()
+        if (!database) {
+            return
+        }
+
+        await new Promise<void>((resolve) => {
+            const transaction = database.transaction(PROCESSED_PNG_STORE_NAME, 'readwrite')
+            transaction.objectStore(PROCESSED_PNG_STORE_NAME).put({ imagePath, signature, ...blobs })
+            transaction.oncomplete = () => resolve()
+            transaction.onerror = () => resolve()
+            transaction.onabort = () => resolve()
+        })
+    },
+
+    async createPngBlob(canvas: HTMLCanvasElement): Promise<Blob> {
+        return new Promise<Blob>((resolve, reject) => {
             canvas.toBlob((result) => {
                 if (result) {
                     resolve(result)
@@ -245,7 +417,6 @@ export const UiIconManager = {
                 }
             }, 'image/png')
         })
-        return URL.createObjectURL(blob)
     },
 
     pixelateRgba(data: Uint8ClampedArray, width: number, height: number, pixelSize: number) {

@@ -44,6 +44,20 @@
                 </div>
 
                 <div v-if="selectedCategoryItems.length || selectedFeature?.services?.length" :class="['npc-vendor-item-list', { 'npc-vendor-catalog-list': selectedFeature?.type === 'vendor', 'npc-healer-service-list': selectedFeature?.type === 'healer' }]">
+                    <button
+                        v-for="service in (selectedFeature?.services ?? [])"
+                        :key="service.id"
+                        class="npc-vendor-item-row npc-healer-service-row"
+                        :disabled="service.price < 1"
+                        @click.stop="buyHealerService(service, $event)"
+                    >
+                        <img class="npc-vendor-item-icon" :src="getServiceImage(service)" :alt="service.name" />
+                        <span class="npc-vendor-item-name">{{ service.name }}</span>
+                        <span class="npc-vendor-item-price">
+                            <span class="ui-emerald-text-gradient">{{ service.price }}</span>
+                            <img src="/images/icons/emerald.png" alt="Emerald" />
+                        </span>
+                    </button>
                     <div
                         v-for="item in selectedCategoryItems"
                         :key="`${item.tp}:${item.cb}`"
@@ -72,20 +86,6 @@
                             </template>
                         </div>
                     </div>
-                    <button
-                        v-for="service in (selectedFeature?.services ?? []).filter((service) => service.price > 0)"
-                        :key="service.id"
-                        class="npc-vendor-item-row npc-healer-service-row"
-                        :disabled="service.price < 1"
-                        @click.stop="buyHealerService(service, $event)"
-                    >
-                        <img class="npc-vendor-item-icon" :src="getServiceImage(service)" :alt="service.name" />
-                        <span class="npc-vendor-item-name">{{ service.name }}</span>
-                        <span class="npc-vendor-item-price">
-                            <span class="ui-emerald-text-gradient">{{ service.price }}</span>
-                            <img src="/images/icons/emerald.png" alt="Emerald" />
-                        </span>
-                    </button>
                 </div>
                 <div v-else class="npc-use-empty-state">{{ t('vendor.emptyCategory') }}</div>
             </template>

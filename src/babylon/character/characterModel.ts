@@ -442,10 +442,22 @@ export class CharacterModel implements EquipBearer {
         }
 
         const anim = possibleAnims[Utils.rollDice(possibleAnims.length, true)]
-        if (this.actualAnim !== anim) {
-            this.transitionToAnimation(anim, 0.15, false, baseAnimSpeed / this.parent.attackAnimationTime)
-            this.actualAnim = anim
+        if (!anim) return
+
+        const speed = baseAnimSpeed / this.parent.attackAnimationTime
+        if (this.actualAnim === anim) {
+            // Consecutive attacks may legitimately use the same clip (notably Power Strike -> AA).
+            // Restart it explicitly; the generic transition guard deliberately ignores the same clip.
+            this.animTransition?.forceEnd()
+            this.animTransition = null
+            anim.stop()
+            anim.start(false, speed, anim.from, anim.to)
+            anim.setWeightForAllAnimatables(1)
+            return
         }
+
+        this.transitionToAnimation(anim, 0.15, false, speed)
+        this.actualAnim = anim
     }
 
     doOreMiningAnimation() {

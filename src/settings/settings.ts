@@ -142,7 +142,7 @@ export const Settings = {
             volume: 0.5,
             ambientVolume: 1,
             displayGlow: !Settings.touchEnabled,
-            smoothIcons: false,
+            smoothIcons: !Settings.touchEnabled,
             targetMarkerOpacity: 1,
             hudSize: 1,
 

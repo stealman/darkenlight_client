@@ -207,6 +207,15 @@
                         </label>
                     </div>
                 </template>
+
+                <template v-else-if="feature.type === 'healer'">
+                    <div class="npc-feature-checkboxes">
+                        <label v-for="tier in healerPotionTiers" :key="tier.value" class="npc-feature-checkbox" :class="{ 'npc-feature-checkbox-selected': feature.settings.potionTiers.includes(tier.value) }">
+                            <input v-model="feature.settings.potionTiers" type="checkbox" :value="tier.value" />
+                            <span>{{ tier.label }}</span>
+                        </label>
+                    </div>
+                </template>
             </div>
             </div>
 
@@ -245,6 +254,11 @@ const vendorCategories = [
 ]
 const repairerCategories = vendorCategories.filter((category) => ['weapons', 'bows', 'metalArmor', 'leatherArmor'].includes(category.value))
 const craftingCategories = vendorCategories.filter((category) => ['weapons', 'bows', 'metalArmor', 'leatherArmor', 'jewels'].includes(category.value))
+const healerPotionTiers = [
+    {value: 'small', label: 'Small potions'},
+    {value: 'normal', label: 'Normal potions'},
+    {value: 'great', label: 'Great potions'},
+]
 const metalWeaponMaterials = [
     { value: 'steel', label: 'Steel' },
     { value: 'pyroxide', label: 'Pyroxide' },
@@ -377,6 +391,8 @@ const createFeature = (type) => ({
         ? { itemCategories: [], weaponMaterials: [], armorMaterials: [], bowMaterials: [], individualItems: {weapons: [], bows: [], metalArmor: [], leatherArmor: [], resources: []} }
         : type === 'crafting'
             ? {itemCategories: []}
+        : type === 'healer'
+            ? {potionTiers: healerPotionTiers.map((tier) => tier.value)}
         : {},
 })
 
@@ -443,6 +459,8 @@ const openDialog = () => {
             }
             : feature.type === 'crafting'
                 ? {itemCategories: [...(feature.settings?.itemCategories ?? [])]}
+                : feature.type === 'healer'
+                    ? {potionTiers: [...(feature.settings?.potionTiers ?? healerPotionTiers.map((tier) => tier.value))]}
                 : {},
     }))
     featureTypeToAdd.value = ''

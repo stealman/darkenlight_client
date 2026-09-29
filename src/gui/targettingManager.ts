@@ -198,7 +198,7 @@ export const TargetingManager = {
         }
 
         const distanceOutsideRange = Vector3.Distance(myChar.pos, target.pos) - weaponRange
-        if (distanceOutsideRange <= 0 || distanceOutsideRange >= 0.5) {
+        if (distanceOutsideRange <= 0 || distanceOutsideRange >= 0.75) {
             return
         }
 
