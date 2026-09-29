@@ -2,6 +2,7 @@ import { BOW_WEAPON_MATERIAL_NAMES, VertexColorWeaponPalette } from './types'
 
 const BOW_VERTEX_COLOR_PALETTE: VertexColorWeaponPalette = {
     materialNames: BOW_WEAPON_MATERIAL_NAMES,
+    materialColorSpace: 'srgb',
     slots: [
         {index: 0, source: [23, 23, 23], role: 'string dark'},
         {index: 1, source: [11, 8, 5], role: 'wood deepest shadow'},
@@ -12,18 +13,21 @@ const BOW_VERTEX_COLOR_PALETTE: VertexColorWeaponPalette = {
         {index: 6, source: [63, 63, 63], role: 'string highlight'},
     ],
 
-    // materialId: 1 wooden, 2 cherrywood, 3 mahogany, 4 elven, 5 ethereal
+    // Sampled from the six inventory log icons. Ebony is materialId 6 so the
+    // existing elven and ethereal material IDs remain stable.
     materialColors: [
-        // wooden: exact colours exported by the artist
-        [[58, 52, 45], [33, 22, 12], [52, 31, 12], [74, 46, 19], [100, 92, 83], [126, 75, 33], [147, 138, 126]],
+        // wooden
+        [[145, 112, 72], [62, 50, 34], [88, 68, 44], [120, 94, 60], [198, 170, 112], [154, 124, 80], [214, 194, 144]],
         // cherrywood
-        [[32, 18, 14], [35, 7, 5], [63, 14, 8], [126, 35, 21], [70, 38, 28], [213, 79, 44], [109, 64, 43]],
+        [[156, 72, 36], [48, 12, 12], [84, 24, 24], [120, 48, 24], [204, 132, 72], [180, 84, 48], [216, 168, 96]],
         // mahogany
-        [[28, 13, 10], [24, 5, 3], [45, 9, 5], [91, 24, 14], [58, 27, 18], [158, 55, 27], [92, 51, 31]],
+        [[150, 130, 48], [48, 48, 16], [88, 76, 28], [126, 108, 34], [220, 190, 82], [184, 158, 56], [222, 210, 98]],
         // elven
-        [[22, 45, 37], [8, 31, 21], [13, 57, 34], [32, 119, 70], [49, 91, 70], [104, 206, 115], [83, 143, 106]],
+        [[96, 108, 48], [36, 36, 24], [72, 72, 36], [108, 120, 48], [168, 192, 84], [120, 132, 48], [168, 216, 120]],
         // ethereal
-        [[36, 15, 61], [22, 6, 45], [39, 10, 76], [102, 35, 164], [82, 43, 128], [202, 101, 255], [140, 96, 209]],
+        [[108, 108, 108], [60, 60, 60], [84, 84, 84], [120, 120, 120], [180, 180, 180], [156, 156, 156], [216, 216, 216]],
+        // ebony (materialId 6)
+        [[96, 48, 12], [24, 0, 0], [48, 12, 0], [72, 24, 0], [144, 96, 36], [120, 60, 12], [156, 132, 60]],
     ],
 }
 

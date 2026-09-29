@@ -13,7 +13,7 @@ import { MaceVertexColorPalettes } from './vertexColorPalettes/maces'
 import { PolearmVertexColorPalettes } from './vertexColorPalettes/polearms'
 import { createVertexColorWeaponMaterial } from './vertexColorPalettes/vertexColorWeaponMaterial'
 
-const matBowSize = new Vector2(5, 1)
+const matBowSize = new Vector2(6, 1)
 const matLongswordSize = new Vector2(5, 1)
 const matBroadswordSize = new Vector2(5, 1)
 const matGreatswordSize = new Vector2(5, 1)

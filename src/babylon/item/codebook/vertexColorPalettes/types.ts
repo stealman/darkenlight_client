@@ -100,5 +100,6 @@ export interface VertexColorWeaponPalette {
 }
 
 export const METAL_WEAPON_MATERIAL_NAMES = ['Steel', 'Pyroxide', 'Geonite', 'Mythril', 'Chaotite']
-export const BOW_WEAPON_MATERIAL_NAMES = ['Wooden', 'Cherrywood', 'Mahogany', 'Elven', 'Ethereal']
+// Ebony is appended as materialId 6 to preserve existing bow material IDs 1-5.
+export const BOW_WEAPON_MATERIAL_NAMES = ['Wooden', 'Cherrywood', 'Mahogany', 'Elven', 'Ethereal', 'Ebony']
 export const PICKAXE_MATERIAL_NAMES = [...METAL_WEAPON_MATERIAL_NAMES, 'Diamond']

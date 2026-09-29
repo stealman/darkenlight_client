@@ -270,6 +270,7 @@ const bowFeatureMaterials = [
     { value: 'wooden', label: 'Wooden' },
     { value: 'cherrywood', label: 'Cherrywood' },
     { value: 'mahogany', label: 'Mahogany' },
+    { value: 'ebony', label: 'Ebony' },
     { value: 'elven', label: 'Elven' },
     { value: 'ethereal', label: 'Ethereal' },
 ]
@@ -314,7 +315,7 @@ const weaponNames = {
     HUNTINGBOW: 'Hunting bow', RECURVE_BOW: 'Recurve bow', BATTLEBOW: 'Battle bow',
 }
 const metalMaterials = [[1, 'Steel'], [2, 'Pyroxide'], [3, 'Geonite'], [4, 'Mythril'], [5, 'Chaotite']]
-const bowMaterials = [[1, 'Wooden'], [2, 'Cherrywood'], [3, 'Mahogany'], [4, 'Elven'], [5, 'Ethereal']]
+const bowMaterials = [[1, 'Wooden'], [2, 'Cherrywood'], [3, 'Mahogany'], [6, 'Ebony'], [4, 'Elven'], [5, 'Ethereal']]
 const pickaxeMaterials = [[1, 'Steel'], [6, 'Diamond'], [2, 'Pyroxide'], [3, 'Geonite'], [4, 'Mythril'], [5, 'Chaotite']]
 const weaponCodebookBaseIds = {
     LONGSWORD: 100, BROADSWORD: 110, GREATSWORD: 120,
