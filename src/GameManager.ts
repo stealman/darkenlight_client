@@ -66,8 +66,12 @@ export const GameManager = {
         InventoryManager.initializeWeaponSetupsForCharacter()
         ActionButtonsManager.loadBindingsForCharacter(MyPlayer.myChar.id)
         this.onResize()
-        reportLoadingProgress(90, 'app.loadingStarting')
-        await Renderer.gameStarted()
+        reportLoadingProgress(80, 'app.loadingLighting')
+        await Renderer.gameStarted((completed, total) => {
+            const ratio = total > 0 ? completed / total : 1
+            reportLoadingProgress(80 + Math.floor(ratio * 18), 'app.loadingLighting')
+        })
+        reportLoadingProgress(99, 'app.loadingStarting')
         this.started = true
     },
 

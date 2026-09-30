@@ -728,7 +728,10 @@ export class CharacterModel implements EquipBearer {
     removeFromScene() {
         this.stopAllStepSounds()
         this.removeFromView()
-        this.model?.getChildMeshes().forEach((mesh) => Lights.unregisterActorLightMesh(mesh))
+        this.model?.getChildMeshes().forEach((mesh) => {
+            Lights.unregisterActorLightMesh(mesh)
+            Lights.removeShadowCaster(mesh)
+        })
         this.model?.dispose()
         this.node.dispose()
         this.disposeWeaponTrail()

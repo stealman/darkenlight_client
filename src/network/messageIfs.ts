@@ -31,6 +31,22 @@ export interface AttackableCombatTO {
     arcaneInterference?: number
 }
 
+export interface DayNightCycleSync {
+    phase: number
+    cycleDurationMs: number
+}
+
+export interface WorldMapDataMessage {
+    id: number
+    name: string
+    size: number
+    mapId: number
+    seaWaterLevel?: number | null
+    environment?: {type: 'outdoor' | 'indoor', category?: string}
+    dayNightCycle?: DayNightCycleSync
+    mapChunk?: any
+}
+
 export interface GuestCharacterNameCheckData {
     name: string
     exists: boolean

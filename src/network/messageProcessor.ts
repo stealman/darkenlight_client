@@ -5,6 +5,7 @@ import { WorldDataManager } from '@/data/worldDataManager'
 import { MiniMap } from '@/utils/minimap'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { Renderer } from '@/babylon/scene/renderer'
+import { Lights } from '@/babylon/scene/lights'
 import { StaticsManager } from '@/babylon/world/statics/staticsManager'
 import { TerrainManager } from '@/babylon/world/terrainManager'
 import { WeatherManager } from '@/babylon/world/weather/weatherManager'
@@ -37,6 +38,7 @@ import {
     BankStateData, SkillSetTO,
     PowerStrikeQueueStateMessage,
     PreciseShotQueueStateMessage,
+    WorldMapDataMessage,
 } from '@/network/messageIfs'
 import { GroundItemsManager } from '@/babylon/world/groundItemsManager'
 import { InventoryManager } from '@/data/inventoryManager'
@@ -224,7 +226,7 @@ export const MessageProcessor = {
         }
     },
 
-    processWorldData(data) {
+    processWorldData(data: WorldMapDataMessage) {
         const worldChanged = MyPlayer.worldId !== data.id
         if (worldChanged) {
             MyPlayer.stopMovementForTeleport()
@@ -233,13 +235,20 @@ export const MessageProcessor = {
             }
         }
         const environmentType = data.environment?.type
+        if (worldChanged) {
+            // Dispose the previous world's entities while they still use their
+            // original environment. Otherwise they are dirtied for the new
+            // light layout immediately before disposal, which can leave stale
+            // mobile WebGL/shadow resources behind.
+            this.clearWorldForTransition()
+        }
         MiniMap.setEnvironmentType(environmentType)
         if (Renderer.environmentType !== (environmentType === 'indoor' ? 'indoor' : 'outdoor')) {
             Renderer.setWorldEnvironmentType(environmentType)
         }
+        Lights.synchronizeDayNightCycle(data.dayNightCycle)
         WeatherManager.setEnabled(environmentType !== 'indoor')
         if (worldChanged) {
-            this.clearWorldForTransition()
             WorldDataManager.replaceWorldData(data.id, data.size)
             TerrainManager.setSeaWaterLevel(data.seaWaterLevel ?? null)
         }
@@ -368,6 +377,7 @@ export const MessageProcessor = {
         FightSplatsRenderer.clearWorld()
         StepMarksRenderer.clearWorld()
         GMSpawns.removeAllMarkers()
+        Lights.pruneDisposedMeshReferences()
     },
 
     processCharacterRespawn(data: {id: number}) {

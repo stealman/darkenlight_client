@@ -103,13 +103,14 @@ export const WorldRenderer = {
         this.blockWithAlpha1!.setThinInstanceBuffers()
         this.blockWithAlpha1!.mesh.thinInstanceRefreshBoundingInfo(false);
 
-        void Lights.warmUpStaticLightShaders([
-            TerrainManager.terrainBlock1!,
-            TerrainManager.terrainPlane!,
-            this.block1!.mesh,
-            this.blockWithAlpha1!.mesh,
-            RockDebrisManager.mesh!,
-        ])
+        // Static light slots are excluded from ordinary scene meshes and are
+        // attached explicitly. Keep this registration separate from shader
+        // warm-up so fireplaces and torches continue to illuminate terrain.
+        Lights.registerSharedLightMesh(TerrainManager.terrainBlock1!)
+        Lights.registerSharedLightMesh(TerrainManager.terrainPlane!)
+        Lights.registerSharedLightMesh(this.block1!.mesh)
+        Lights.registerSharedLightMesh(this.blockWithAlpha1!.mesh)
+        Lights.registerSharedLightMesh(RockDebrisManager.mesh!)
     }
 }
 

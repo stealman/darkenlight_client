@@ -141,7 +141,7 @@ export const Materials = {
         const mat = new StandardMaterial('preciseShotArrowTrailMat', scene)
         mat.disableLighting = true
         mat.emissiveColor = new Color3(1, 1, 1)
-        mat.alpha = 0.65
+        mat.alpha = 0.35
         return mat
     },
 

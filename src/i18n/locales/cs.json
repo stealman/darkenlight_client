@@ -14,6 +14,12 @@
     "stamina": "Výdrž",
     "position": "Pozice"
   },
+  "dayNight": {
+    "sunrise": "Sv\u00edt\u00e1n\u00ed",
+    "day": "Den",
+    "sunset": "Soumrak",
+    "night": "Noc"
+  },
   "items": {
     "resources": {
       "small-stamina-potion": "Malý Lektvar Výdrže",
@@ -33,6 +39,7 @@
     "loadingConnecting": "Připojování ke světu",
     "loadingCharacter": "Načítání postavy",
     "loadingWorld": "Příprava světa",
+    "loadingLighting": "Příprava osvětlení",
     "loadingStarting": "Spouštění hry",
     "loadingDisconnecting": "Odpojování"
   },

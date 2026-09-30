@@ -14,6 +14,12 @@
     "stamina": "Stamina",
     "position": "Position"
   },
+  "dayNight": {
+    "sunrise": "Sunrise",
+    "day": "Day",
+    "sunset": "Dusk",
+    "night": "Night"
+  },
   "items": {
     "resources": {
       "small-stamina-potion": "Small Stamina Potion",
@@ -33,6 +39,7 @@
     "loadingConnecting": "Connecting to world",
     "loadingCharacter": "Loading character",
     "loadingWorld": "Preparing world",
+    "loadingLighting": "Preparing lighting",
     "loadingStarting": "Starting game",
     "loadingDisconnecting": "Disconnecting"
   },

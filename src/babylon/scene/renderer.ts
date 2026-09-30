@@ -25,7 +25,7 @@ import { GMManager} from '@/gm/GM'
 import { OverlayManager } from '@/gui/overlay/overlayManager'
 import { TargetingManager } from '@/gui/targettingManager'
 import { StepMarksRenderer } from '@/babylon/world/stepMarksRenderer'
-import { Lights } from '@/babylon/scene/lights'
+import { FOG_ENABLED, Lights } from '@/babylon/scene/lights'
 import { FightSplatsRenderer } from '@/babylon/world/fightSplatsRenderer'
 import { OnScreenMessageManager } from '@/gui/onScreenMessageManager'
 import { CharacterManager } from '@/babylon/character/characterManager'
@@ -120,11 +120,25 @@ export const Renderer = {
         await TargetingManager.initialize()
     },
 
-    async gameStarted() {
+    async gameStarted(onWarmupProgress?: (completed: number, total: number) => void) {
         Lights.sunLight.parent = MyPlayer.myModel!.node
         Lights.attachPersonalLight(MyPlayer.myModel!.node)
         MyStatusPanel.panel!.style.display = 'flex'
         await Tester.runTest()
+
+        // Build the first visible world while the loading overlay is still up.
+        // One hidden render compiles the fixed outdoor light layout before the
+        // live render loop starts.
+        if (this.camera == null) {
+            this.createCamera()
+        }
+        if (!ViewportManager.viewPortInitialized) {
+            ViewportManager.calculateViewport(this.camera)
+        }
+        WorldRenderer.renderWorld()
+
+        await Lights.warmUpDayNightCycle(onWarmupProgress)
+
         this.engine!.runRenderLoop(() => {
             this.onFrame(this.scene)
         })
@@ -250,6 +264,7 @@ export const Renderer = {
         this.scene.fogStart = 20
         this.scene.fogEnd = 50
         this.scene.fogColor = new Color3(0.2, 0.22, 0.24)
+        this.scene.fogEnabled = FOG_ENABLED
 
         this.scene.environmentTexture = CubeTexture.CreateFromPrefilteredData(
             "environment_specular.env",
@@ -266,16 +281,16 @@ export const Renderer = {
         this.scene.environmentIntensity = this.environmentType === 'indoor'
             ? defaultEnvironmentIntensity / 8
             : defaultEnvironmentIntensity
-        this.scene.fogEnabled = this.environmentType !== 'indoor'
+        this.scene.fogEnabled = FOG_ENABLED && this.environmentType !== 'indoor'
 
         this.scene.markAllMaterialsAsDirty(Material.AllDirtyFlag)
     },
 
     setWorldEnvironmentType(environmentType: string | null | undefined) {
         this.environmentType = environmentType === 'indoor' ? 'indoor' : 'outdoor'
-        Lights.setIndoor(this.environmentType === 'indoor')
         AudioManager.setAmbientSoundForEnvironment(this.environmentType)
         this.brightnessChanged()
+        Lights.setIndoor(this.environmentType === 'indoor')
         this.updateCameraForEnvironment()
     },
 

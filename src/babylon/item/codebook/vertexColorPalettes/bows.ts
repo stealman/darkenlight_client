@@ -3,6 +3,7 @@ import { BOW_WEAPON_MATERIAL_NAMES, VertexColorWeaponPalette } from './types'
 const BOW_VERTEX_COLOR_PALETTE: VertexColorWeaponPalette = {
     materialNames: BOW_WEAPON_MATERIAL_NAMES,
     materialColorSpace: 'srgb',
+    twoSided: true,
     slots: [
         {index: 0, source: [23, 23, 23], role: 'string dark'},
         {index: 1, source: [11, 8, 5], role: 'wood deepest shadow'},

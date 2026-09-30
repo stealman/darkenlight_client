@@ -225,6 +225,7 @@ export const ArrowsManager = {
 export class Arrow {
     static readonly FIRE_EFFECT_LEAD_TIME_MS = 100
     static readonly PRECISE_SHOT_SPEED_MULTIPLIER = 1.25
+    static readonly PRECISE_SHOT_ARC_HEIGHT_MULTIPLIER = 0.5
 
     attacker: Attackable
     target: Attackable
@@ -356,7 +357,8 @@ export class Arrow {
 
             const basePos = Vector3.Lerp(this.startPosFixed, this.endPosFixed, t)
             const arc = 4 * t * (1 - t) // max 1 při t=0.5
-            const newPos = this.preciseShot ? basePos : basePos.add(Vector3.Up().scale(this.arcHeight * arc))
+            const arcHeightMultiplier = this.preciseShot ? Arrow.PRECISE_SHOT_ARC_HEIGHT_MULTIPLIER : 1
+            const newPos = basePos.add(Vector3.Up().scale(this.arcHeight * arc * arcHeightMultiplier))
 
             this.meshClone.position.copyFrom(newPos)
 
