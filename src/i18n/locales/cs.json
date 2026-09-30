@@ -193,7 +193,7 @@
     "powerStrikeName": "Silný úder",
     "powerStrikeDescription": "Rychlý silný úder zbraní – bonusový útok {bonus} %.",
     "preciseShotName": "Přesný výstřel",
-    "preciseShotDescription": "Rychlý výstřel, který vždy zasáhne jako perfektní zásah – bonusový útok {bonus} %.",
+    "preciseShotDescription": "Výstřel, který vždy zasáhne jako perfektní zásah – bonusový útok {bonus} %.",
     "healName": "Léčba",
     "healDescription": "Použiješ obvaz ke svému vyléčení. Pokud nejsi zraněn a je vybrána jiná postava, použiješ obvaz na ni.",
     "healingPotionName": "Lektvar Zdraví",

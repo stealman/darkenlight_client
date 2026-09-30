@@ -193,7 +193,7 @@
     "powerStrikeName": "Power Strike",
     "powerStrikeDescription": "A fast, powerful weapon strike – {bonus}% bonus attack.",
     "preciseShotName": "Precise Shot",
-    "preciseShotDescription": "A fast shot that always lands as a perfect hit – {bonus}% bonus attack.",
+    "preciseShotDescription": "A shot that always lands as a perfect hit – {bonus}% bonus attack.",
     "healName": "Heal",
     "healDescription": "Use a bandage to heal yourself. If you are not injured and another character is selected, the bandage is used on them.",
     "healingPotionName": "Health Potion",

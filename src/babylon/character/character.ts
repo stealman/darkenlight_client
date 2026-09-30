@@ -214,7 +214,8 @@ class Character implements Attackable, EffectTarget {
             this.model?.onFrame(timeRate)
 
             if (this.arrowCreateTime > 0 && Date.now() >= this.arrowCreateTime && this.autoAttackTarget && (this.insideView || this.autoAttackTarget!.insideView)) {
-                this.arrow = ArrowsManager.addArrow(this, this.autoAttackTarget, this.arrowShotTime, this.autoAttackMessage?.ef)
+                this.arrow = ArrowsManager.addArrow(this, this.autoAttackTarget, this.arrowShotTime,
+                    this.autoAttackMessage?.ef, this.autoAttackMessage?.prs === true)
                 if (this.model && this.model.initialized && this.insideView) {
                     this.arrow.assignHandNode(this.model.lhandNode)
                 } else {
@@ -227,7 +228,9 @@ class Character implements Attackable, EffectTarget {
         }
 
         if (this.arrowShotTime > 0 && Date.now() >= this.arrowShotTime) {
-            if (this == MyPlayer.myChar || this.insideView) AudioManager.playWeaponSwing(this.weaponSoundType, this.pos)
+            if (this == MyPlayer.myChar || this.insideView) {
+                AudioManager.playWeaponSwing(this.weaponSoundType, this.pos, this.autoAttackMessage?.prs === true)
+            }
             this.arrowShotTime = 0
         }
 
@@ -370,10 +373,11 @@ class Character implements Attackable, EffectTarget {
         }
         if (data.res.h === 'h') {
             const powerStrike = this.autoAttackMessage?.ps === true
-            AudioManager.playWeaponHit(this.weaponSoundType, target.getBodySoundType(), target.pos, powerStrike)
+            const preciseShot = this.autoAttackMessage?.prs === true
+            AudioManager.playWeaponHit(this.weaponSoundType, target.getBodySoundType(), target.pos, powerStrike || preciseShot)
             if (target instanceof Monster) {
                 GfxManager.addEffect(new HitSparkEffect(target, this.pos))
-                if (powerStrike) {
+                if (powerStrike || preciseShot) {
                     GfxManager.addEffect(new PowerStrikeSparkFountainEffect(target))
                 }
             }

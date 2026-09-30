@@ -29,6 +29,7 @@ export const Materials = {
     entrancePortalMaterial: null as PBRMaterial | null,
     weaponTrailMaterial: null as StandardMaterial | null,
     powerStrikeWeaponTrailMaterial: null as StandardMaterial | null,
+    preciseShotArrowTrailMaterial: null as StandardMaterial | null,
 
     initialize(scene: Scene) {
         this.terrainMaterial = this.createTerrainMaterial1(scene)
@@ -43,6 +44,7 @@ export const Materials = {
         this.fightSplatsMaterial = this.createFightSplatsMaterial(scene)
         this.weaponTrailMaterial = this.createWeaponTrailMaterial(scene)
         this.powerStrikeWeaponTrailMaterial = this.createPowerStrikeWeaponTrailMaterial(scene)
+        this.preciseShotArrowTrailMaterial = this.createPreciseShotArrowTrailMaterial(scene)
     },
 
     createTerrainMaterial1(scene: Scene): PBRCustomMaterial {
@@ -132,6 +134,14 @@ export const Materials = {
         mat.disableLighting = true
         mat.emissiveColor = new Color3(1, 1, 1)
         mat.alpha = 0.5
+        return mat
+    },
+
+    createPreciseShotArrowTrailMaterial(scene: Scene): StandardMaterial {
+        const mat = new StandardMaterial('preciseShotArrowTrailMat', scene)
+        mat.disableLighting = true
+        mat.emissiveColor = new Color3(1, 1, 1)
+        mat.alpha = 0.65
         return mat
     },
 

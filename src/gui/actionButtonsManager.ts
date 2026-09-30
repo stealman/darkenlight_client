@@ -39,6 +39,11 @@ class ActionButtonActionBinding {
     }
 }
 
+type ActionBindingOption = {
+    name: string,
+    actions: CharacterAction[],
+}
+
 class ActionButton {
     index: string
     htmlEl: HTMLElement | null = null
@@ -103,7 +108,11 @@ class ActionButton {
 
     setBinding(binding: ActionButtonActionBinding) {
         this.actionBinding = binding
-        const action: CharacterAction = CharacterActions.getActionByName(binding.name)!
+        const action = ActionButtonsManager.getActionForBinding(binding)
+        if (!action) {
+            this.clearBinding()
+            return
+        }
         const consumableCbId = ActionButtonsManager.getBoundConsumableCbId(binding)
         this.setImage(consumableCbId === null ? action.image : ActionButtonsManager.getConsumableItemImage(consumableCbId), consumableCbId !== null)
         this.setItemsAvailabilityState()
@@ -163,6 +172,9 @@ class ActionButton {
             case CharacterActions.PRECISE_SHOT.name:
                 this.htmlEl!.classList.toggle('unavailable', !MyPlayer.myChar?.isWeaponRanged())
                 return
+            case CharacterActions.WEAPON_SPECIAL_ATTACK.name:
+                this.htmlEl!.classList.toggle('unavailable', !MyPlayer.myChar?.getWeapon())
+                return
             default:
                 const consumableCbId = ActionButtonsManager.getBoundConsumableCbId(this.actionBinding)
                 this.htmlEl!.classList.toggle('unavailable', consumableCbId !== null && InventoryManager.getTotalResourceItemCountByType(consumableCbId) <= 0)
@@ -182,7 +194,7 @@ class ActionButton {
             return
         }
 
-        const action = CharacterActions.getActionByName(this.actionBinding.name)
+        const action = ActionButtonsManager.getActionForBinding(this.actionBinding)
         if (!action) {
             this.setCooldownPercent(100)
             return
@@ -224,9 +236,7 @@ class ActionButton {
         }
         if (imageSrc == CharacterActions.POWER_STRIKE.image) {
             const suffix = powerStrikeIconSuffixByWeaponCategory[MyPlayer.myChar?.getWeapon()?.weaponCategory ?? '']
-            if (suffix) {
-                imageSrc = `btn_power_strike_${suffix}`
-            }
+            imageSrc = `btn_power_strike_${suffix ?? 'sword'}`
         }
 
         return `/images/icons/buttons/${imageSrc}.png`
@@ -384,6 +394,9 @@ export const ActionButtonsManager = {
                 case CharacterActions.PRECISE_SHOT.name:
                     this.clickOnPreciseShotButton()
                     break
+                case CharacterActions.WEAPON_SPECIAL_ATTACK.name:
+                    this.clickOnWeaponSpecialAttackButton()
+                    break
                 case CharacterActions.HEAL.name:
                     this.clickOnHealingButton()
                     break
@@ -413,7 +426,9 @@ export const ActionButtonsManager = {
         this.actionButtons.forEach((btn) => {
             if (btn.actionBinding && (btn.actionBinding.name === action?.name ||
                 (action?.name === CharacterActions.AUTO_ATTACK.name && MyPlayer.powerStrikeQueued && btn.actionBinding.name === CharacterActions.POWER_STRIKE.name) ||
-                (action?.name === CharacterActions.AUTO_ATTACK.name && MyPlayer.preciseShotQueued && btn.actionBinding.name === CharacterActions.PRECISE_SHOT.name))) {
+                (action?.name === CharacterActions.AUTO_ATTACK.name && MyPlayer.preciseShotQueued && btn.actionBinding.name === CharacterActions.PRECISE_SHOT.name) ||
+                (action?.name === CharacterActions.AUTO_ATTACK.name && (MyPlayer.powerStrikeQueued || MyPlayer.preciseShotQueued) &&
+                    btn.actionBinding.name === CharacterActions.WEAPON_SPECIAL_ATTACK.name))) {
                 btn.activated()
             } else {
                 btn.deactivated()
@@ -486,6 +501,14 @@ export const ActionButtonsManager = {
         MyPlayer.preciseShotQueued = true
         MyPlayer.setAction(CharacterActions.AUTO_ATTACK.name)
         Connector.sendMessage(new PreciseShot(target.id, target.getObjectType()))
+    },
+
+    clickOnWeaponSpecialAttackButton() {
+        if (MyPlayer.myChar.isWeaponRanged()) {
+            this.clickOnPreciseShotButton()
+            return
+        }
+        this.clickOnPowerStrikeButton()
     },
 
     clickOnHealingButton() {
@@ -562,6 +585,19 @@ export const ActionButtonsManager = {
         return false
     },
 
+    getEquippedWeaponSpecialAction(): CharacterAction {
+        return MyPlayer.myChar?.isWeaponRanged()
+            ? CharacterActions.PRECISE_SHOT
+            : CharacterActions.POWER_STRIKE
+    },
+
+    getActionForBinding(binding: ActionButtonActionBinding): CharacterAction | undefined {
+        if (binding.name === CharacterActions.WEAPON_SPECIAL_ATTACK.name) {
+            return this.getEquippedWeaponSpecialAction()
+        }
+        return CharacterActions.getActionByName(binding.name)
+    },
+
     storeBindings() {
         if (!this.actionBindingKey) {
             return
@@ -570,42 +606,60 @@ export const ActionButtonsManager = {
     },
 
     getBindingIconForIndex(index: number): string | null {
+        return this.getBindingIconsForIndex(index)[0] ?? null
+    },
+
+    getBindingIconsForIndex(index: number): string[] {
         const binding = this.bindings.get(index)
-        if (!binding) return null
+        if (!binding) return []
 
         const consumableCbId = this.getBoundConsumableCbId(binding)
-        if (consumableCbId !== null) return this.getConsumableItemImage(consumableCbId)
-
-        const imageSrc = CharacterActions.getActionByName(binding.name)?.image
-        if (!imageSrc) return null
+        if (consumableCbId !== null) return [this.getConsumableItemImage(consumableCbId)]
 
         const actionButton = this.actionButtons.get(index)
-        if (actionButton) return actionButton.resolveImagePath(imageSrc)
+        if (!actionButton) return []
 
-        return null
+        if (binding.name === CharacterActions.WEAPON_SPECIAL_ATTACK.name) {
+            return [CharacterActions.POWER_STRIKE, CharacterActions.PRECISE_SHOT]
+                .map(action => actionButton.resolveImagePath(action.image))
+        }
+
+        const imageSrc = CharacterActions.getActionByName(binding.name)?.image
+        if (!imageSrc) return []
+
+        return [actionButton.resolveImagePath(imageSrc)]
     },
 
     getBindingDescriptionForIndex(index: number): string {
+        return this.getBindingDescriptionsForIndex(index)[0] ?? ''
+    },
+
+    getBindingDescriptionsForIndex(index: number): string[] {
         const binding = this.bindings.get(index)
-        if (!binding) return ''
+        if (!binding) return []
+
+        if (binding.name === CharacterActions.WEAPON_SPECIAL_ATTACK.name) {
+            return [CharacterActions.POWER_STRIKE, CharacterActions.PRECISE_SHOT]
+                .map(action => `${action.nameLoc}: ${this.getActionDescription(action.name)}`)
+        }
 
         const consumableCbId = this.getBoundConsumableCbId(binding)
         if (consumableCbId !== null) {
             const itemName = InventoryManager.inventory.find(item => item.cbId === consumableCbId)?.name ?? ''
             if (ConsumableHelper.getHealingPotionIds().includes(consumableCbId)) {
-                return `${itemName}: ${CharacterActions.HEALING_POTION.descLoc}`
+                return [`${itemName}: ${CharacterActions.HEALING_POTION.descLoc}`]
             }
             if (ConsumableHelper.getManaPotionIds().includes(consumableCbId)) {
-                return `${itemName}: ${CharacterActions.MANA_POTION.descLoc}`
+                return [`${itemName}: ${CharacterActions.MANA_POTION.descLoc}`]
             }
             if (ConsumableHelper.getStaminaPotionIds().includes(consumableCbId)) {
-                return `${itemName}: ${CharacterActions.STAMINA_POTION.descLoc}`
+                return [`${itemName}: ${CharacterActions.STAMINA_POTION.descLoc}`]
             }
-            return itemName
+            return itemName ? [itemName] : []
         }
 
         const action = CharacterActions.getActionByName(binding.name)
-        return action ? `${action.nameLoc}: ${this.getActionDescription(action.name)}` : ''
+        return action ? [`${action.nameLoc}: ${this.getActionDescription(action.name)}`] : []
     },
 
     getActionDescription(actionName: string): string {
@@ -625,7 +679,7 @@ export const ActionButtonsManager = {
         return this.bindings.get(index)?.name ?? null
     },
 
-    getAvailableActionsForBindings(): CharacterAction[] {
+    getAvailableActionsForBindings(): ActionBindingOption[] {
         const actions = [
             CharacterActions.AUTO_ATTACK,
             CharacterActions.HEAL,
@@ -636,13 +690,20 @@ export const ActionButtonsManager = {
             CharacterActions.CAMPING,
         ]
         const hasPowerStrike = (MyPlayer.myChar?.skillSet?.powerStrike?.rank ?? 0) > 0
-        if (hasPowerStrike) {
-            actions.splice(1, 0, CharacterActions.POWER_STRIKE)
+        const hasPreciseShot = (MyPlayer.myChar?.skillSet?.preciseShot?.rank ?? 0) > 0
+        const options = actions.map(action => ({name: action.name, actions: [action]}))
+
+        if (hasPowerStrike && hasPreciseShot) {
+            options.splice(1, 0, {
+                name: CharacterActions.WEAPON_SPECIAL_ATTACK.name,
+                actions: [CharacterActions.POWER_STRIKE, CharacterActions.PRECISE_SHOT],
+            })
+        } else if (hasPowerStrike) {
+            options.splice(1, 0, {name: CharacterActions.POWER_STRIKE.name, actions: [CharacterActions.POWER_STRIKE]})
+        } else if (hasPreciseShot) {
+            options.splice(1, 0, {name: CharacterActions.PRECISE_SHOT.name, actions: [CharacterActions.PRECISE_SHOT]})
         }
-        if ((MyPlayer.myChar?.skillSet?.preciseShot?.rank ?? 0) > 0) {
-            actions.splice(hasPowerStrike ? 2 : 1, 0, CharacterActions.PRECISE_SHOT)
-        }
-        return actions
+        return options
     },
 
     setBindingForIndex(index: number, actionName: string) {
@@ -778,7 +839,11 @@ export const ActionButtonsManager = {
             if (btn.actionBinding?.name === CharacterActions.PRECISE_SHOT.name) {
                 btn.setImage(CharacterActions.PRECISE_SHOT.image)
             }
+            if (btn.actionBinding?.name === CharacterActions.WEAPON_SPECIAL_ATTACK.name) {
+                btn.setImage(this.getEquippedWeaponSpecialAction().image)
+            }
             btn.setItemsAvailabilityState()
         })
+        this.notifyBindingsChanged()
     }
 }

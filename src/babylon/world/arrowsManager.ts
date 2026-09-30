@@ -177,7 +177,7 @@ const defaultFrostArrowEffect: ArrowEffectConfig = {
     },
 }
 
-function resolveArrowEffectConfig(effect: string): ArrowEffectConfig | null {
+function resolveArrowEffectConfig(effect: string | null | undefined): ArrowEffectConfig | null {
     if (!effect) {
         return null
     }
@@ -207,8 +207,8 @@ export const ArrowsManager = {
         this.mesh.material = mat
     },
 
-    addArrow(attacker: Attackable, target: Attackable, flyStartTime: number, effect: string): Arrow {
-        const arrow = new Arrow(attacker, target, flyStartTime, effect)
+    addArrow(attacker: Attackable, target: Attackable, flyStartTime: number, effect: string | null | undefined, preciseShot: boolean = false): Arrow {
+        const arrow = new Arrow(attacker, target, flyStartTime, effect, preciseShot)
         this.arrows.push(arrow)
         return arrow
     },
@@ -224,6 +224,7 @@ export const ArrowsManager = {
 
 export class Arrow {
     static readonly FIRE_EFFECT_LEAD_TIME_MS = 100
+    static readonly PRECISE_SHOT_SPEED_MULTIPLIER = 1.25
 
     attacker: Attackable
     target: Attackable
@@ -237,6 +238,8 @@ export class Arrow {
     effectTip: TransformNode | null = null
     fireParticles: ParticleSystem | null = null
     smokeParticles: ParticleSystem | null = null
+    preciseShotRingTip: TransformNode | null = null
+    preciseShotRingParticles: ParticleSystem | null = null
     fireEffectStarted = false
     pendingEffectSystems = 0
     disposed = false
@@ -257,10 +260,12 @@ export class Arrow {
     endPosFixed = Vector3.Zero()
     lastPos = Vector3.Zero()
     hasEffect = false
+    preciseShot: boolean
 
-    constructor(attacker: Attackable, target: Attackable, flyStartTime: number, effect: string) {
+    constructor(attacker: Attackable, target: Attackable, flyStartTime: number, effect: string | null | undefined, preciseShot: boolean) {
         this.attacker = attacker
         this.target = target
+        this.preciseShot = preciseShot
         this.creationTime = Date.now()
         this.flyStartTime = flyStartTime
         this.effectConfig = resolveArrowEffectConfig(effect)
@@ -301,8 +306,9 @@ export class Arrow {
         if (!this.trailTip) return
 
         this.trail = new TrailMesh('arrowTrail', this.trailTip, Renderer.scene, 0.35, 75, true)
-        this.trail.material = Materials.weaponTrailMaterial
+        this.trail.material = this.preciseShot ? Materials.preciseShotArrowTrailMaterial : Materials.weaponTrailMaterial
         this.startArrowEffect()
+        this.startPreciseShotRingEffect()
 
         // fix start position while still parented to hand
         this.startPos = this.meshClone.getAbsolutePosition().clone()
@@ -319,7 +325,8 @@ export class Arrow {
             this.endPosFixed = end.clone()
 
             const dist = Vector3.Distance(this.startPosFixed, this.endPosFixed)
-            this.flightDuration = Math.max(0.001, dist / this.speed) // konstantní rychlost
+            const flightSpeed = this.preciseShot ? this.speed * Arrow.PRECISE_SHOT_SPEED_MULTIPLIER : this.speed
+            this.flightDuration = Math.max(0.001, dist / flightSpeed) // konstantní rychlost
             this.flightTime = 0
 
             this.lastPos.copyFrom(this.currentPos)
@@ -349,7 +356,7 @@ export class Arrow {
 
             const basePos = Vector3.Lerp(this.startPosFixed, this.endPosFixed, t)
             const arc = 4 * t * (1 - t) // max 1 při t=0.5
-            const newPos = basePos.add(Vector3.Up().scale(this.arcHeight * arc))
+            const newPos = this.preciseShot ? basePos : basePos.add(Vector3.Up().scale(this.arcHeight * arc))
 
             this.meshClone.position.copyFrom(newPos)
 
@@ -379,6 +386,7 @@ export class Arrow {
         this.disposed = true
 
         this.releaseArrowEffect()
+        this.releasePreciseShotRingEffect()
 
         if (this.trail) {
             this.trail.dispose()
@@ -408,6 +416,45 @@ export class Arrow {
         if (this.effectConfig.smoke && Settings.isDetalLevelHigh()) {
             this.smokeParticles = this.createParticleSystem(this.effectConfig.smoke)
         }
+    }
+
+    private startPreciseShotRingEffect() {
+        if (!this.preciseShot || !this.meshClone || !Renderer.scene || this.preciseShotRingParticles) return
+
+        this.preciseShotRingTip = new TransformNode('preciseShotRingTip', Renderer.scene)
+        this.preciseShotRingTip.parent = this.meshClone
+        this.preciseShotRingTip.position.y = 0.75
+
+        const particles = new ParticleSystem(`preciseShotRings_${this.creationTime}`, 40, Renderer.scene)
+        particles.particleTexture = new Texture('images/gfx/precise-shot-ring-thick.png', Renderer.scene)
+        particles.emitter = this.preciseShotRingTip
+        particles.minEmitBox = Vector3.Zero()
+        particles.maxEmitBox = Vector3.Zero()
+        particles.direction1 = Vector3.Zero()
+        particles.direction2 = Vector3.Zero()
+        particles.minEmitPower = 0
+        particles.maxEmitPower = 0
+        particles.emitRate = 20
+        particles.minLifeTime = 0.7
+        particles.maxLifeTime = 0.9
+        particles.minSize = 1
+        particles.maxSize = 1
+        particles.gravity = Vector3.Zero()
+        particles.updateSpeed = 0.016
+        particles.blendMode = ParticleSystem.BLENDMODE_ADD
+        particles.addSizeGradient(0, 0.15)
+        particles.addSizeGradient(0.25, 0.42)
+        particles.addSizeGradient(0.5, 0.78)
+        particles.addSizeGradient(0.75, 1.08)
+        particles.addSizeGradient(1, 1.35)
+        particles.addColorGradient(0, new Color4(0.82, 0.82, 0.82, 0.75))
+        particles.addColorGradient(0.25, new Color4(0.72, 0.72, 0.72, 0.48))
+        particles.addColorGradient(0.5, new Color4(0.46, 0.46, 0.46, 0.16))
+        particles.addColorGradient(0.75, new Color4(0.2, 0.2, 0.2, 0.03))
+        particles.addColorGradient(1, new Color4(0, 0, 0, 0))
+        particles.start()
+
+        this.preciseShotRingParticles = particles
     }
 
     private startArrowEffect() {
@@ -453,6 +500,33 @@ export class Arrow {
         this.fireParticles = null
         this.smokeParticles = null
         this.fireEffectStarted = false
+    }
+
+    private releasePreciseShotRingEffect() {
+        const particles = this.preciseShotRingParticles
+        const detachedRingTip = this.preciseShotRingTip
+
+        if (detachedRingTip) {
+            detachedRingTip.setParent(null, true)
+            if (particles) {
+                particles.emitter = detachedRingTip
+            }
+            this.preciseShotRingTip = null
+        }
+
+        if (!particles) {
+            detachedRingTip?.dispose()
+            return
+        }
+
+        particles.disposeOnStop = true
+        particles.onDisposeObservable.addOnce(() => {
+            if (detachedRingTip && !detachedRingTip.isDisposed()) {
+                detachedRingTip.dispose()
+            }
+        })
+        particles.stop()
+        this.preciseShotRingParticles = null
     }
 
     private createParticleSystem(config: ArrowParticleConfig): ParticleSystem {

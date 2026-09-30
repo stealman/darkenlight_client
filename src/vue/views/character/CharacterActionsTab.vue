@@ -11,18 +11,30 @@
                 <button
                     type="button"
                     class="action-slot-icon-shell"
-                    :class="selectedSlotIndex === slotIndex ? 'selected' : ''"
+                    :class="{
+                        selected: selectedSlotIndex === slotIndex,
+                        'action-slot-icon-shell--multiple': getBindingIcons(slotIndex).length > 1,
+                    }"
                     @click.stop="openActionSelectionDialog(slotIndex)"
                 >
-                    <img
-                        v-if="getBindingIcon(slotIndex)"
-                        :src="getBindingIcon(slotIndex)!"
-                        :alt="`Action button ${slotIndex}`"
-                        class="action-slot-icon"
-                    />
+                    <div v-if="getBindingIcons(slotIndex).length" class="action-slot-icon-stack">
+                        <img
+                            v-for="(icon, iconIndex) in getBindingIcons(slotIndex)"
+                            :key="`${icon}-${iconIndex}`"
+                            :src="icon"
+                            :alt="`Action button ${slotIndex}`"
+                            class="action-slot-icon"
+                        />
+                    </div>
                 </button>
                 <div class="action-slot-description">
-                    <strong v-if="getBindingDescriptionParts(slotIndex).title" class="ui-text-gradient">{{ getBindingDescriptionParts(slotIndex).title }}</strong><span>{{ getBindingDescriptionParts(slotIndex).rest }}</span>
+                    <div
+                        v-for="(description, descriptionIndex) in getBindingDescriptionParts(slotIndex)"
+                        :key="descriptionIndex"
+                        class="action-slot-description-line"
+                    >
+                        <strong v-if="description.title" class="ui-text-gradient">{{ description.title }}</strong><span>{{ description.rest }}</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -51,25 +63,33 @@
                     </div>
 
                     <div
-                        v-for="action in availableActions"
-                        :key="action.name"
+                        v-for="option in availableActions"
+                        :key="option.name"
                         class="action-option-row"
                     >
                         <button
                             type="button"
                             class="action-option"
-                            :data-action-key="action.name"
-                            :class="getSelectedActionName(selectedSlotIndex) === action.name ? 'selected' : ''"
-                            @click="selectAction(action.name)"
+                            :data-action-key="option.name"
+                            :class="getSelectedActionName(selectedSlotIndex) === option.name ? 'selected' : ''"
+                            @click="selectAction(option.name)"
                         >
-                            <img
-                                :src="getActionImage(action.image)"
-                                :alt="action.nameLoc"
-                                class="action-option-icon"
-                            />
-                            <div class="action-option-text">
-                                <strong class="ui-text-gradient">{{ action.nameLoc }}</strong>
-                                <span>{{ getActionDescription(action.name) }}</span>
+                            <div class="action-option-entries">
+                                <div
+                                    v-for="action in option.actions"
+                                    :key="action.name"
+                                    class="action-option-entry"
+                                >
+                                    <img
+                                        :src="getActionImage(action.image)"
+                                        :alt="action.nameLoc"
+                                        class="action-option-icon"
+                                    />
+                                    <div class="action-option-text">
+                                        <strong class="ui-text-gradient">{{ action.nameLoc }}</strong>
+                                        <span>{{ getActionDescription(action.name) }}</span>
+                                    </div>
+                                </div>
                             </div>
                         </button>
                     </div>
@@ -94,33 +114,34 @@ const availableActions = computed(() => {
 const actionSelectionContentRef = ref<HTMLElement | null>(null)
 const { t } = useI18n()
 
-const getBindingIcon = (index: number) => {
+const getBindingIcons = (index: number) => {
     bindingsRevision.value
-    return ActionButtonsManager.getBindingIconForIndex(index)
+    return ActionButtonsManager.getBindingIconsForIndex(index)
 }
 
-const getBindingDescription = (index: number) => {
+const getBindingDescriptions = (index: number) => {
     bindingsRevision.value
-    return ActionButtonsManager.getBindingDescriptionForIndex(index)
+    return ActionButtonsManager.getBindingDescriptionsForIndex(index)
 }
 
 const getActionDescription = (actionName: string) => ActionButtonsManager.getActionDescription(actionName)
 
 const getBindingDescriptionParts = (index: number) => {
-    const description = getBindingDescription(index)
-    const separatorIndex = description.indexOf(':')
+    return getBindingDescriptions(index).map((description) => {
+        const separatorIndex = description.indexOf(':')
 
-    if (separatorIndex === -1) {
-        return {
-            title: '',
-            rest: description,
+        if (separatorIndex === -1) {
+            return {
+                title: '',
+                rest: description,
+            }
         }
-    }
 
-    return {
-        title: description.slice(0, separatorIndex + 1),
-        rest: description.slice(separatorIndex + 1),
-    }
+        return {
+            title: description.slice(0, separatorIndex + 1),
+            rest: description.slice(separatorIndex + 1),
+        }
+    })
 }
 
 const getSelectedActionName = (index: number) => {
@@ -279,6 +300,23 @@ defineExpose({
     background: rgba(var(--ui-darker), 0.75);
 }
 
+.action-slot-icon-shell--multiple {
+    height: 80px;
+}
+
+.action-slot-icon-stack {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.action-slot-icon-shell--multiple .action-slot-icon-stack {
+    flex-direction: column;
+    gap: 2px;
+}
+
 .action-slot-row--empty .action-slot-icon-shell:not(.selected):not(:hover) {
     border-color: rgba(var(--ui-dark), 0.45);
 }
@@ -290,6 +328,11 @@ defineExpose({
     display: block;
 }
 
+.action-slot-icon-shell--multiple .action-slot-icon {
+    width: 34px;
+    height: 34px;
+}
+
 .action-slot-description {
     color: rgb(var(--ui-base));
     font-size: 0.8rem;
@@ -299,6 +342,10 @@ defineExpose({
 
 .action-slot-description span {
     color: rgb(var(--ui-dark));
+}
+
+.action-slot-description-line + .action-slot-description-line {
+    margin-top: 6px;
 }
 
 .action-slot-row--empty .action-slot-label {
@@ -384,6 +431,25 @@ defineExpose({
     height: 40px;
     object-fit: contain;
     flex: 0 0 40px;
+}
+
+.action-option-entries {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.action-option-entry {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+
+.action-option-entry + .action-option-entry {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(var(--ui-dark), 0.45);
 }
 
 .action-option-text {
