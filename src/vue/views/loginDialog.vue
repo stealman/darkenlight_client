@@ -1,7 +1,7 @@
 <template>
     <GameDialog
         ref="gameDialog"
-        backdrop-class="inventory-dialog-backdrop"
+        backdrop-class="login-screen-backdrop"
         :window-class="['login-dialog-window', { 'login-dialog-window--mobile': useMobileLoginLayout }]"
         content-class="login-dialog-content"
         :close-on-backdrop="false"
@@ -84,7 +84,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import GameDialog from '@/vue/views/GameDialog.vue'
 import { Connector } from '@/network/connector'
 import { Settings } from '@/settings/settings'
@@ -136,7 +136,19 @@ onUnmounted(() => {
     window.removeEventListener('game:player-registration', onPlayerRegistration)
 })
 
-const doLogin = () => {
+const showLoadingBeforeRequest = async () => {
+    emit('login-requested')
+    await nextTick()
+
+    // The local server can answer quickly enough that processing its initial
+    // world batch starts before the browser paints Vue's loading state. Queue
+    // the request after a rendered frame so the progress UI is visible first.
+    await new Promise((resolve) => {
+        window.requestAnimationFrame(() => window.requestAnimationFrame(resolve))
+    })
+}
+
+const doLogin = async () => {
     const form = {
         login: login.value,
         password: password.value,
@@ -152,11 +164,11 @@ const doLogin = () => {
     }
 
     if (accountLoginReady.value && accountPasswordReady.value) {
+        await showLoadingBeforeRequest()
         Connector.sendLoginRequest(form.login, form.password)
-        emit('login-requested')
     } else if (guestLoginReady.value) {
+        await showLoadingBeforeRequest()
         Connector.checkGuestCharacterName(form.charName)
-        emit('login-requested')
     } else {
         alert(t('login.missingCredentials'))
     }
@@ -228,6 +240,12 @@ const onPlayerRegistration = (event) => {
 </script>
 
 <style>
+.dialog-backdrop.login-screen-backdrop {
+    background: #050709 url('/images/screen/splash1.jpg') center center / cover no-repeat;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+
 .dialog-window.login-dialog-window {
     width: 600px;
     max-width: calc(100vw - 32px);

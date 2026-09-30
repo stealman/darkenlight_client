@@ -48,22 +48,20 @@
         </div>
     </div>
 
-    <Transition name="game-dialog-fade">
-        <div class="dialog-backdrop" style="background-color: #000;" v-if="gameLoading">
-            <div class="dialog-window adaptive">
-                <div class="dialog-surface">
-                    <div class="dialog-header">{{ t('common.loading') }}</div>
-                    <div class="dialog-content dialog-content--modal loading-dialog-content">
-                        <div class="loading-dialog-phase">{{ t(loadingPhaseKey) }}</div>
-                        <div class="loading-progress-track" role="progressbar" :aria-valuenow="loadingProgress" aria-valuemin="0" aria-valuemax="100">
-                            <div class="loading-progress-fill" :style="{ width: `${loadingProgress}%` }"></div>
-                        </div>
-                        <div class="loading-progress-value">{{ loadingProgress }} %</div>
+    <div class="dialog-backdrop loading-dialog-backdrop" style="background-color: #000;" v-if="gameLoading">
+        <div class="dialog-window adaptive">
+            <div class="dialog-surface">
+                <div class="dialog-header">{{ t('common.loading') }}</div>
+                <div class="dialog-content dialog-content--modal loading-dialog-content">
+                    <div class="loading-dialog-phase">{{ t(loadingPhaseKey) }}</div>
+                    <div class="loading-progress-track" role="progressbar" :aria-valuenow="loadingProgress" aria-valuemin="0" aria-valuemax="100">
+                        <div class="loading-progress-fill" :style="{ width: `${loadingProgress}%` }"></div>
                     </div>
+                    <div class="loading-progress-value">{{ loadingProgress }} %</div>
                 </div>
             </div>
         </div>
-    </Transition>
+    </div>
 
     <Transition name="game-dialog-fade">
         <LoginDialog ref="loginDialog" v-if="displayLoginDialog" @login-requested="loginRequestStarted" />
@@ -456,10 +454,6 @@ const onLoadingProgress = (event: Event) => {
 }
 
 const scheduleTouchControlsLayout = () => {
-    if (!Settings.isPhoneOrTablet()) {
-        return
-    }
-
     if (touchControlsLayoutTimeout !== null) {
         window.clearTimeout(touchControlsLayoutTimeout)
     }
@@ -471,15 +465,18 @@ const scheduleTouchControlsLayout = () => {
             GameManager.onResize()
             WorldRenderer.lastPos = null
         }
-        touchControls.value?.updateFromSettings?.()
+        if (Settings.isPhoneOrTablet()) {
+            touchControls.value?.updateFromSettings?.()
+        }
     }, 180)
 }
 
 const syncAppViewportSize = () => {
     const viewport = window.visualViewport
-    const viewportWidth = Math.round(viewport?.width || window.innerWidth)
-    const viewportHeight = Math.round(viewport?.height || window.innerHeight)
-    const viewportTop = Math.round(viewport?.offsetTop || 0)
+    const useVisualViewport = Settings.isPhoneOrTablet()
+    const viewportWidth = Math.round(useVisualViewport ? (viewport?.width || window.innerWidth) : window.innerWidth)
+    const viewportHeight = Math.round(useVisualViewport ? (viewport?.height || window.innerHeight) : window.innerHeight)
+    const viewportTop = Math.round(useVisualViewport ? (viewport?.offsetTop || 0) : 0)
     const wrapper = document.getElementById('appWrapper')
     const app = document.getElementById('app')
 
@@ -488,7 +485,10 @@ const syncAppViewportSize = () => {
     document.documentElement.style.setProperty('--login-viewport-top-inset', `${Math.round(viewportHeight * 0.01)}px`)
     document.documentElement.style.setProperty('--login-viewport-bottom-inset', `${Math.round(viewportHeight * 0.04)}px`)
 
-    if (wrapper) wrapper.style.height = viewportHeight + 'px'
+    if (wrapper) {
+        wrapper.style.width = viewportWidth + 'px'
+        wrapper.style.height = viewportHeight + 'px'
+    }
     if (app) {
         app.style.width = viewportWidth + 'px'
         app.style.height = viewportHeight + 'px'

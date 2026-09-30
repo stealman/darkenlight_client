@@ -22,7 +22,11 @@ export const TreeManager = {
 
     addAllShadowCasters() {
         Object.values(this.prefabs).forEach(prefab => {
-            Lights.addShadowCaster(prefab!.mesh, true, true)
+            // Alpha-cutout crowns produce severe projection artifacts when the
+            // player's nearby spotlight sits inside or directly below them.
+            // Trunks use the opaque shared block mesh and keep casting personal
+            // shadows; crowns still cast sun/static-light shadows.
+            Lights.addShadowCaster(prefab!.mesh, false, true)
         })
     },
 

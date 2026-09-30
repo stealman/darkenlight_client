@@ -181,6 +181,16 @@
     padding: 14px 18px 18px;
 }
 
+.loading-dialog-backdrop {
+    /* The loading UI must be fully visible before login can start processing
+       its initial world batch. A fade can remain frozen at opacity 0 while a
+       local server and client compete for the desktop CPU. */
+    animation: none;
+    /* Login is rendered later in the DOM and its Vue leave transition can stay
+       mounted while the first local-server batch blocks the main thread. */
+    z-index: 3000;
+}
+
 .loading-dialog-phase {
     color: rgb(var(--ui-base));
     font-size: 0.94rem;

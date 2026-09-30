@@ -47,7 +47,13 @@ const STATIC_LIGHT_LIMITS = [4, 6, 6]
 const OUTDOOR_STATIC_LIGHT_LIMITS = [1, 2, 2]
 const ACTOR_STATIC_LIGHT_LIMIT = 4
 const OUTDOOR_ACTOR_STATIC_LIGHT_LIMIT = 2
-const PERSONAL_LIGHT_POSITION = new Vector3(-0.25, 2.75, -0.25)
+const PERSONAL_LIGHT_X_OFFSET = -0.35
+const PERSONAL_LIGHT_Z_OFFSET = -0.35
+const INDOOR_PERSONAL_LIGHT_HEIGHT = 2.75
+const OUTDOOR_PERSONAL_LIGHT_HEIGHT = 3.5
+const INDOOR_PERSONAL_SHADOW_DARKNESS = 0
+const OUTDOOR_PERSONAL_SHADOW_DARKNESS = 0.25
+const PERSONAL_LIGHT_POSITION = new Vector3(PERSONAL_LIGHT_X_OFFSET, OUTDOOR_PERSONAL_LIGHT_HEIGHT, PERSONAL_LIGHT_Z_OFFSET)
 const PERSONAL_LIGHT_DIRECTION = new Vector3(0.25, -2.75, 0.25).normalize()
 const DEFAULT_DAY_NIGHT_CYCLE_DURATION_MS = 120 * 60 * 1000
 const SUNRISE_END_PHASE = 1 / 12
@@ -150,7 +156,7 @@ export const Lights = {
 
             this.personalShadow = new ShadowGenerator(Settings.detailLevel.shadowQuality == 2 ? 2048 : 1024, this.personalLight, false)
             this.personalShadow.bias = 0.005
-            this.personalShadow.setDarkness(0)
+            this.personalShadow.setDarkness(OUTDOOR_PERSONAL_SHADOW_DARKNESS)
             this.personalShadow.usePoissonSampling = true
             this.personalShadow.frustumEdgeFalloff = 0.3
             this.personalLight.shadowMinZ = 0.05
@@ -641,8 +647,16 @@ export const Lights = {
 
     attachPersonalLight(parent: TransformNode) {
         this.personalLight.parent = parent
-        this.personalLight.position.copyFrom(PERSONAL_LIGHT_POSITION)
+        this.updatePersonalLightPosition()
         this.personalLight.direction.copyFrom(PERSONAL_LIGHT_DIRECTION)
+    },
+
+    updatePersonalLightPosition() {
+        this.personalLight.position.set(
+            PERSONAL_LIGHT_X_OFFSET,
+            this.indoor ? INDOOR_PERSONAL_LIGHT_HEIGHT : OUTDOOR_PERSONAL_LIGHT_HEIGHT,
+            PERSONAL_LIGHT_Z_OFFSET,
+        )
     },
 
     addShadowCaster(mesh: Mesh | AbstractMesh, castPersonalShadow: boolean = true, castStaticShadow: boolean = false) {
@@ -707,6 +721,12 @@ export const Lights = {
 
     setIndoor(indoor: boolean) {
         this.indoor = indoor
+        this.updatePersonalLightPosition()
+        if (Settings.isShadowsEnabled()) {
+            this.personalShadow.setDarkness(
+                indoor ? INDOOR_PERSONAL_SHADOW_DARKNESS : OUTDOOR_PERSONAL_SHADOW_DARKNESS,
+            )
+        }
         this.staticLightSlots.forEach(slot => {
             slot.light.shadowEnabled = indoor && slot.shadow != null
         })
