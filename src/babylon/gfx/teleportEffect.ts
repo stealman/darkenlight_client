@@ -35,6 +35,7 @@ export const TeleportEffect = {
         particles.addColorGradient(1, new Color4(0.58, 0.58, 0.58, 0))
         particles.emitRate = 0
         particles.manualEmitCount = Math.max(24, Settings.detailLevel.level * 40)
+        particles.targetStopDuration = particles.updateSpeed
         particles.disposeOnStop = true
         particles.onDisposeObservable.addOnce(() => emitter.dispose())
         particles.start()

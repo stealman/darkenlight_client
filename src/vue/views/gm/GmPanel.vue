@@ -35,6 +35,20 @@
                 </label>
                 <button @click="teleport">TELEPORT</button>
             </div>
+
+            <div class="gm-day-night-controls">
+                <label>
+                    World time
+                    <input v-model="dayNightTime" type="time" step="60" @keyup.enter="setDayNightTime()" />
+                </label>
+                <button @click="setDayNightTime()">SET &amp; FREEZE</button>
+                <button @click="setDayNightTime('07:00')">SUNRISE</button>
+                <button @click="setDayNightTime('12:00')">DAY</button>
+                <button @click="setDayNightTime('19:00')">SUNSET</button>
+                <button @click="setDayNightTime('00:00')">NIGHT</button>
+                <button @click="resumeDayNightCycle">NATURAL CYCLE</button>
+                <button @click="triggerLightning">LIGHTNING</button>
+            </div>
         </div>
 
         <!-- Terrain -->
@@ -83,6 +97,8 @@ import SpawnPanel from '@/vue/views/gm/SpawnPanel.vue'
 import NpcPanel from '@/vue/views/gm/NpcPanel.vue'
 import ModelRenderPanel from '@/vue/views/gm/ModelRenderPanel.vue'
 import ItemCreationPanel from '@/vue/views/gm/ItemCreationPanel.vue'
+import { Lights } from '@/babylon/scene/lights'
+import { LightningEffect } from '@/babylon/scene/lighting/lightningEffect'
 
 const actualTab = ref(GMTabs.OVERVIEW)
 const modelRenderPanel = ref(null)
@@ -94,6 +110,7 @@ const teleportWorldId = computed({
     get: () => GMManager.selectedTeleportWorld.value,
     set: (worldId) => { GMManager.selectedTeleportWorld.value = worldId }
 })
+const dayNightTime = ref(Lights.getGameTimeInfo().time)
 
 const selectTab = (tab) => {
     actualTab.value = tab
@@ -117,10 +134,31 @@ const teleport = () => {
         GMManager.teleport(teleportWorldId.value, teleportX.value, teleportZ.value)
     }
 }
+
+const setDayNightTime = (time = dayNightTime.value) => {
+    dayNightTime.value = time
+    GMManager.setDayNightTime(time)
+}
+
+const resumeDayNightCycle = () => {
+    GMManager.resumeDayNightCycle()
+}
+
+const triggerLightning = () => {
+    LightningEffect.trigger()
+}
 </script>
 
 <style scoped>
 .gm-panel-content {
     color: #fff;
+}
+
+.gm-day-night-controls {
+    display: flex;
+    align-items: end;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
 }
 </style>

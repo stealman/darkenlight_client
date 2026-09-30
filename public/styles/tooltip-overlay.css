@@ -102,11 +102,19 @@
 
 .ui-tooltip-top-right {
     flex: 0 0 auto;
+    align-items: baseline;
+    gap: 5px;
     font-size: 0.76rem;
     line-height: 1.1;
     color: rgba(238, 220, 184, 0.8);
     text-align: right;
     white-space: nowrap;
+}
+
+.ui-tooltip-top-right-meta {
+    font-size: 0.64rem;
+    font-weight: 400;
+    color: rgba(207, 181, 134, 0.62);
 }
 
 .ui-tooltip-description {

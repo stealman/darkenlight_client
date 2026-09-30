@@ -13,6 +13,7 @@ export class MonsterTemplate {
     meshName: string
     textureName: string
     emissiveTextureName: string | null
+    environmentIntensity: number
     scale: Vector3
     clonesAct: Array<MonsterTemplate> = []
     clonesInact: Array<MonsterTemplate> = []
@@ -28,11 +29,12 @@ export class MonsterTemplate {
     animation: AnimationGroup
     monster: Monster | null = null
 
-    constructor(id: number, meshName: string, textureName: string, scale: Vector3 | number, emissiveTextureName: string | null) {
+    constructor(id: number, meshName: string, textureName: string, scale: Vector3 | number, emissiveTextureName: string | null, environmentIntensity: number = 1) {
         this.id = id
         this.meshName = MonsterTemplate.withExtension(meshName, MonsterTemplate.MODEL_EXTENSION)
         this.textureName = MonsterTemplate.withExtension(textureName, MonsterTemplate.TEXTURE_EXTENSION)
         this.emissiveTextureName = emissiveTextureName ? MonsterTemplate.withExtension(emissiveTextureName, MonsterTemplate.TEXTURE_EXTENSION) : null
+        this.environmentIntensity = environmentIntensity
         this.scale = typeof scale === 'number' ? BabylonUtils.getSymVector(scale) : scale
     }
 
@@ -65,7 +67,7 @@ export class MonsterTemplate {
             doNotInstantiate: true,
         })
 
-        const clone = new MonsterTemplate(this.id, this.meshName, this.textureName, this.scale)
+        const clone = new MonsterTemplate(this.id, this.meshName, this.textureName, this.scale, this.emissiveTextureName, this.environmentIntensity)
         clone.node = entries.rootNodes[0] as Mesh
         clone.node.scaling.copyFrom(this.scale)
         clone.node.rotation = Vector3.Zero()
@@ -88,7 +90,7 @@ export class MonsterTemplate {
         clone.animation = entries.animationGroups[0]
 
         this.clonesAct.push(clone)
-        Lights.addShadowCaster(clone.mesh)
+        Lights.addShadowCaster(clone.mesh, true, false, true)
         Lights.registerActorLightMesh(clone.mesh)
         return clone
     }
@@ -119,7 +121,7 @@ export class MonsterTemplate {
 
         if (this.clonesToReuse.length > MonsterTemplate.MAX_REUSABLE_CLONES) {
             const disposableClone = this.clonesToReuse.shift()!
-            Lights.removeShadowCaster(disposableClone.mesh)
+            Lights.removeShadowCaster(disposableClone.mesh, true, false, true)
             Lights.unregisterActorLightMesh(disposableClone.mesh)
             disposableClone.animation.stop()
             disposableClone.animation.dispose()
@@ -137,7 +139,7 @@ export const MonsterTemplates = {
     CAT : new MonsterTemplate(1001, "cat", "cat", 0.85, null),
     SKELETON: new MonsterTemplate(1,  "skeleton", "skeleton",  0.35, null),
     WITHER: new MonsterTemplate(21,  "skeleton", "wither",  0.35, null),
-    ZOMBIE_ROTTEN: new MonsterTemplate(11,  "human_male", "zombie_rotten",  new Vector3(0.225, 0.25, 0.225), null),
-    ZOMBIE: new MonsterTemplate(12,  "human_male", "zombie",  0.25, null),
-    ZOMBIE_MUTANT: new MonsterTemplate(13,  "human_male", "zombie_mutant",  0.275, "zombie_mutant_em"),
+    ZOMBIE_ROTTEN: new MonsterTemplate(11,  "human_male", "zombie_rotten",  new Vector3(0.225, 0.25, 0.225), null, 1.4),
+    ZOMBIE: new MonsterTemplate(12,  "human_male", "zombie",  0.25, null, 1.4),
+    ZOMBIE_MUTANT: new MonsterTemplate(13,  "human_male", "zombie_mutant",  0.275, "zombie_mutant_em", 1.4),
 }

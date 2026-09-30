@@ -466,3 +466,12 @@ export class GMLoadItemCodebookMsg implements Message {
     d: any = {}
 }
 
+export class GMDayNightCycleMsg implements Message {
+    t: number = 1011
+    d: any
+
+    constructor(action: 'SET' | 'RESUME', minutes?: number) {
+        this.d = minutes === undefined ? {action} : {action, minutes}
+    }
+}
+

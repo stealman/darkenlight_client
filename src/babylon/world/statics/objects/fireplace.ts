@@ -65,9 +65,9 @@ abstract class BaseFireplace extends BaseStaticObject {
     private registerLight() {
         Lights.registerStaticLight(this.getLightId(), this.renderPosition, {
             color: FIREPLACE_LIGHT_COLOR,
-            height: 2.25 * this.fireplaceScaleReduced,
+            height: 2.25 + (this.fireplaceScaleReduced * 0.5),
             intensity: 3 * this.fireplaceScaleReduced,
-            range: 7 + (3 * this.fireplaceScaleReduced),
+            range: 5 + 2 * this.fireplaceScaleReduced,
             flicker: true,
         })
     }

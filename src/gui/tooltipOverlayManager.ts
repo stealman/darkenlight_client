@@ -11,6 +11,7 @@ export type TooltipOverlayContent = {
     titleClassName?: string | null
     titleMetaClassName?: string | null
     topRightText?: string | null
+    topRightMeta?: string | null
     description?: string | null
     rows?: TooltipOverlayRow[]
     variant?: 'neutral' | 'positive' | 'adverse'
@@ -38,6 +39,8 @@ export const TooltipOverlayManager = {
     titleEl: null as HTMLDivElement | null,
     titleMetaEl: null as HTMLSpanElement | null,
     topRightEl: null as HTMLDivElement | null,
+    topRightTextEl: null as HTMLSpanElement | null,
+    topRightMetaEl: null as HTMLSpanElement | null,
     descriptionEl: null as HTMLDivElement | null,
     rowsEl: null as HTMLDivElement | null,
     visible: false,
@@ -76,6 +79,15 @@ export const TooltipOverlayManager = {
         const topRightEl = document.createElement('div')
         topRightEl.className = 'ui-tooltip-top-right'
 
+        const topRightTextEl = document.createElement('span')
+        topRightTextEl.className = 'ui-tooltip-top-right-text'
+
+        const topRightMetaEl = document.createElement('span')
+        topRightMetaEl.className = 'ui-tooltip-top-right-meta'
+
+        topRightEl.appendChild(topRightTextEl)
+        topRightEl.appendChild(topRightMetaEl)
+
         headerEl.appendChild(titleWrapEl)
         headerEl.appendChild(topRightEl)
 
@@ -98,6 +110,8 @@ export const TooltipOverlayManager = {
         this.titleEl = titleEl
         this.titleMetaEl = titleMetaEl
         this.topRightEl = topRightEl
+        this.topRightTextEl = topRightTextEl
+        this.topRightMetaEl = topRightMetaEl
         this.descriptionEl = descriptionEl
         this.rowsEl = rowsEl
     },
@@ -245,8 +259,14 @@ export const TooltipOverlayManager = {
         }
 
         if (this.topRightEl) {
-            this.topRightEl.textContent = content.topRightText ?? ''
-            this.topRightEl.style.display = content.topRightText ? 'block' : 'none'
+            if (this.topRightTextEl) {
+                this.topRightTextEl.textContent = content.topRightText ?? ''
+            }
+            if (this.topRightMetaEl) {
+                this.topRightMetaEl.textContent = content.topRightMeta ?? ''
+                this.topRightMetaEl.style.display = content.topRightMeta ? 'inline' : 'none'
+            }
+            this.topRightEl.style.display = content.topRightText || content.topRightMeta ? 'flex' : 'none'
         }
 
         const description = content.description?.trim?.() ?? ''

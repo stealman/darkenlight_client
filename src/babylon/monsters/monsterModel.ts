@@ -351,6 +351,22 @@ export class MonsterModel implements EquipBearer {
         // Set particle color based on terrain type
         TerrainManager.setParticleSplashColorByTerrainType(ps, WorldDataManager.getBlockOnPosition(this.parent.pos)!)
 
+        // Babylon particles are effectively self-lit, so without this they stay
+        // unnaturally bright outdoors at night. Match their RGB brightness to
+        // the continuous day/night blend while preserving terrain tint/alpha.
+        if (!Lights.indoor) {
+            const brightness = 0.3 + (0.7 * Lights.daylightFactor)
+            ps.color1.r *= brightness
+            ps.color1.g *= brightness
+            ps.color1.b *= brightness
+            ps.color2.r *= brightness
+            ps.color2.g *= brightness
+            ps.color2.b *= brightness
+            ps.colorDead.r *= brightness
+            ps.colorDead.g *= brightness
+            ps.colorDead.b *= brightness
+        }
+
         const xOff = Math.sin(this.modelRotation + Math.PI / 2) * -0.75
         const zOff = Math.cos(this.modelRotation + Math.PI / 2) * -0.75
 
@@ -378,7 +394,12 @@ export class MonsterModel implements EquipBearer {
         ps.manualEmitCount = particleCount
         ps.updateSpeed = 0.02
 
+        // manualEmitCount emits one batch but does not stop the Babylon
+        // ParticleSystem. Stop after its first update so disposeOnStop can
+        // release the GPU buffers and texture once the last particle dies.
+        ps.targetStopDuration = ps.updateSpeed
         ps.disposeOnStop = true
+        ps.onDisposeObservable.addOnce(() => emitter.dispose())
         ps.start()
     }
 }

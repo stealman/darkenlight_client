@@ -106,7 +106,7 @@
                             <tr>
                                 <td class="item-label" style="width: 25%">{{ t('settings.brightness') }}</td>
                                 <td style="width: 25%">
-                                    <input class="range-slider" type="range" min="1" max="10" step="1" style="zoom: 1.5" v-model="storedSettings.brightness" @change="brightnessChanged()" />
+                                    <input class="range-slider" type="range" :min="BRIGHTNESS_MIN" :max="BRIGHTNESS_MAX" step="1" style="zoom: 1.5" v-model.number="storedSettings.brightness" @change="brightnessChanged()" />
                                 </td>
 
                                 <td class="item-label" style="width: 25%">{{ t('settings.targetMarkerBrightness') }}</td>
@@ -294,7 +294,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import GameDialog from '@/vue/views/GameDialog.vue'
-import { Settings } from '@/settings/settings'
+import { BRIGHTNESS_MAX, BRIGHTNESS_MIN, Settings } from '@/settings/settings'
 import { Renderer } from '@/babylon/scene/renderer'
 import { Lights } from '@/babylon/scene/lights'
 import { ActionButtonsManager } from '@/gui/actionButtonsManager'

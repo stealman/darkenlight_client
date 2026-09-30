@@ -346,7 +346,7 @@ export class EquipItemType {
         this.mesh.alwaysSelectAsActiveMesh = true
         this.mesh.parent = parentNode
         this.mesh.receiveShadows = true
-        Lights.addShadowCaster(this.mesh, castPersonalShadow)
+        Lights.addShadowCaster(this.mesh, castPersonalShadow, false, true)
         Lights.registerDynamicLightMesh(this.mesh)
     }
 

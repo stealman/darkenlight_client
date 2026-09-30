@@ -34,6 +34,7 @@ export interface AttackableCombatTO {
 export interface DayNightCycleSync {
     phase: number
     cycleDurationMs: number
+    paused?: boolean
 }
 
 export interface WorldMapDataMessage {

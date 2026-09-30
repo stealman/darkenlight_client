@@ -48,7 +48,7 @@
         </div>
     </div>
 
-    <div class="dialog-backdrop loading-dialog-backdrop" style="background-color: #000;" v-if="gameLoading">
+    <div class="dialog-backdrop login-screen-backdrop loading-dialog-backdrop" v-if="gameLoading">
         <div class="dialog-window adaptive">
             <div class="dialog-surface">
                 <div class="dialog-header">{{ t('common.loading') }}</div>

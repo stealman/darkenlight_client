@@ -2,6 +2,25 @@ import { AudioManager } from '@/babylon/audio/audioManager'
 import { ActionButtonsManager } from '@/gui/actionButtonsManager'
 import { UiIconManager } from '@/gui/uiIconManager'
 
+export const BRIGHTNESS_MIN = 0
+export const BRIGHTNESS_MAX = 10
+export const BRIGHTNESS_DEFAULT = 5
+
+export const clampBrightness = (value: number): number => {
+    return Math.min(BRIGHTNESS_MAX, Math.max(BRIGHTNESS_MIN, Number.isFinite(value) ? value : BRIGHTNESS_DEFAULT))
+}
+
+export const getBrightnessIntensityFactor = (value: number): number => {
+    const brightness = clampBrightness(value)
+    const distanceFromDefault = (brightness - BRIGHTNESS_DEFAULT) / BRIGHTNESS_DEFAULT
+
+    // Preserve the existing look at 5 while giving the slider substantially
+    // more useful headroom in both directions.
+    return distanceFromDefault < 0
+        ? 1 + (distanceFromDefault * 0.75)
+        : 1 + distanceFromDefault
+}
+
 class DetailLevel {
     level = 0
     name: string
@@ -36,7 +55,7 @@ export const Settings = {
     touchEnabled: false,
     mouseEnabled: false,
 
-    brightness: 5,
+    brightness: BRIGHTNESS_DEFAULT,
     cameraDistance: 100 as number,
     volume: 0.5,
     ambientVolume: 1,
@@ -78,7 +97,7 @@ export const Settings = {
         }
         this.detailLevelName = storedSettings.detailLevelName
 
-        this.brightness = parseInt(storedSettings.brightness)
+        this.brightness = clampBrightness(parseFloat(storedSettings.brightness))
         const storedCameraDistance = parseFloat(storedSettings.cameraDistance)
         this.cameraDistance = Number.isFinite(storedCameraDistance) ? Math.min(100, Math.max(80, storedCameraDistance)) : 100
         this.targetMarkerOpacity = Number.isFinite(parseFloat(storedSettings.targetMarkerOpacity)) ? parseFloat(storedSettings.targetMarkerOpacity) : 1
@@ -137,7 +156,7 @@ export const Settings = {
             targetLockBottom: targetLockDefaultPosition.bottom,
             targetLockLeft: targetLockDefaultPosition.left,
 
-            brightness: 5,
+            brightness: BRIGHTNESS_DEFAULT,
             cameraDistance: 100,
             volume: 0.5,
             ambientVolume: 1,

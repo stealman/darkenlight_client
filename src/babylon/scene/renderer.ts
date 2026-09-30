@@ -277,7 +277,7 @@ export const Renderer = {
         if (!this.scene) {
             return
         }
-        const defaultEnvironmentIntensity = 0.25 + Settings.brightness * 0.025
+        const defaultEnvironmentIntensity = Lights.getEnvironmentIntensity()
         this.scene.environmentIntensity = this.environmentType === 'indoor'
             ? defaultEnvironmentIntensity / 8
             : defaultEnvironmentIntensity

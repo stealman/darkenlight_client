@@ -131,6 +131,7 @@ export const MessageProcessor = {
                 case 70: this.processAccountCharacterNameCheck(msg.d); break
                 case 72: this.processPowerStrikeQueueState(msg.d); break
                 case 74: this.processPreciseShotQueueState(msg.d); break
+                case 75: this.processDayNightCycle(msg.d); break
                 case 1003: this.processGMAllSpawns(msg.d); break
                 case 1004: this.processGMSpawnChange(msg.d); break
                 default:
@@ -173,6 +174,10 @@ export const MessageProcessor = {
 
     processAccountCharacterNameCheck(data: AccountCharacterNameCheckData) {
         window.dispatchEvent(new CustomEvent('game:account-character-name-check', {detail: data}))
+    },
+
+    processDayNightCycle(data) {
+        Lights.synchronizeDayNightCycle(data)
     },
 
     processGuestCharacterNameCheck(data: GuestCharacterNameCheckData) {

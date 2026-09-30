@@ -33,7 +33,7 @@ export const MonsterLoader = {
             metallic: 0,
             roughness: 1,
             directIntensity: 1,
-            environmentIntensity: 1,
+            environmentIntensity: mobType.environmentIntensity,
         }, mobType.emissiveTextureName ? "/models/monsters/" + mobType.emissiveTextureName : null)
 
         // Monster meshes share the regular PBR material, while equipment uses

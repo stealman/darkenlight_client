@@ -1,5 +1,5 @@
 import { Connector } from '@/network/connector'
-import { GMCreateItemMsg, GMForceSaveDataMsg, GMLoadItemCodebookMsg, GMLoadWorldsMsg, GMNpcAction, GMSaveMapDataMsg, GMStaticObjectChange, GMTeleportMsg, GMTerrainChange } from '@/network/messages'
+import { GMCreateItemMsg, GMDayNightCycleMsg, GMForceSaveDataMsg, GMLoadItemCodebookMsg, GMLoadWorldsMsg, GMNpcAction, GMSaveMapDataMsg, GMStaticObjectChange, GMTeleportMsg, GMTerrainChange } from '@/network/messages'
 import { GMItemCodebookItem } from '@/network/messageIfs'
 import { GMSceneManager } from '@/babylon/gm/GmSceneManager'
 import { WorldDataManager } from '@/data/worldDataManager'
@@ -457,6 +457,23 @@ export const GMManager = {
 
     teleport(worldId: number, x: number, z: number) {
         Connector.sendMessage(new GMTeleportMsg(worldId, x, z))
+    },
+
+    setDayNightTime(time: string) {
+        const match = /^(\d{2}):(\d{2})$/.exec(time)
+        if (!match) {
+            return
+        }
+        const hours = Number(match[1])
+        const minutes = Number(match[2])
+        if (hours > 23 || minutes > 59) {
+            return
+        }
+        Connector.sendMessage(new GMDayNightCycleMsg('SET', hours * 60 + minutes))
+    },
+
+    resumeDayNightCycle() {
+        Connector.sendMessage(new GMDayNightCycleMsg('RESUME'))
     },
 
     loadTeleportWorlds() {

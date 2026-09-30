@@ -108,7 +108,7 @@ export class CharacterModel implements EquipBearer {
                 }
                 this.model.getChildMeshes().forEach((mesh) => {
                     mesh.material = material
-                    Lights.addShadowCaster(mesh)
+                    Lights.addShadowCaster(mesh, true, false, true)
                     Lights.registerActorLightMesh(mesh)
                     if (this.parent.isMyChar()) {
                         void Lights.warmLocalPlayerLightMaterial(mesh)
@@ -730,7 +730,7 @@ export class CharacterModel implements EquipBearer {
         this.removeFromView()
         this.model?.getChildMeshes().forEach((mesh) => {
             Lights.unregisterActorLightMesh(mesh)
-            Lights.removeShadowCaster(mesh)
+            Lights.removeShadowCaster(mesh, true, false, true)
         })
         this.model?.dispose()
         this.node.dispose()
