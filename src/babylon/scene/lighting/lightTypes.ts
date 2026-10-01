@@ -1,4 +1,4 @@
-import type { Color3, ShadowGenerator, SpotLight, Vector3 } from '@babylonjs/core'
+import type { AbstractMesh, Color3, ShadowGenerator, SpotLight, Vector3 } from '@babylonjs/core'
 
 export interface StaticLightProfile {
     color: Color3
@@ -12,6 +12,7 @@ export interface StaticLightProfile {
     angle?: number
     priority?: number
     outdoorRangeFactor?: number
+    shadowMapSize?: number
 }
 
 export interface StaticLightSource {
@@ -25,8 +26,11 @@ export interface StaticLightSource {
 export interface StaticLightSlot {
     light: SpotLight
     shadow: ShadowGenerator | null
+    standardShadow: ShadowGenerator | null
+    largeCampfireShadow: ShadowGenerator | null
     source: StaticLightSource | null
     targetIntensity: number
     currentIntensity: number
     flickerOffset: Vector3
+    actorShadowCasters: Set<AbstractMesh>
 }

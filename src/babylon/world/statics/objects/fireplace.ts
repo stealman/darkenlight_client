@@ -1,7 +1,13 @@
 import { Color3, Color4, Matrix, ParticleSystem, Texture, TransformNode, Vector2, Vector3 } from '@babylonjs/core'
 import { MaterialEnum1 } from '@/babylon/materials'
 import { Lights } from '@/babylon/scene/lights'
-import { OUTDOOR_STATIC_LIGHT_RANGE_FACTOR } from '@/babylon/scene/lighting/lightConfig'
+import {
+    LARGE_CAMPFIRE_SHADOW_MAP_SIZE,
+    OUTDOOR_STATIC_LIGHT_RANGE_FACTOR,
+    STATIC_FIRE_SMOKE_PARTICLE_FACTORS,
+    STATIC_SHADOW_MAP_SIZE,
+} from '@/babylon/scene/lighting/lightConfig'
+import { Settings } from '@/settings/settings'
 import { Renderer } from '@/babylon/scene/renderer'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { BaseStaticObject } from '@/babylon/world/statics/objects/baseStaticObject'
@@ -24,8 +30,9 @@ abstract class BaseFireplace extends BaseStaticObject {
     smokeParticles: ParticleSystem | null
     particleEmitter: TransformNode | null
     castsShadows: boolean
+    shadowMapSize: number
 
-    protected constructor(type: number, position: Vector3, rotation: number, material: Vector2, fireplaceScale: number, logLength: number, logInnerOffset: number, logTilt: number, castsShadows: boolean) {
+    protected constructor(type: number, position: Vector3, rotation: number, material: Vector2, fireplaceScale: number, logLength: number, logInnerOffset: number, logTilt: number, castsShadows: boolean, shadowMapSize: number) {
         super(type, position, rotation, material, null)
         this.fireplaceScale = fireplaceScale
         this.fireplaceScaleReduced = 1 + ((fireplaceScale - 1) * 0.5)
@@ -40,6 +47,7 @@ abstract class BaseFireplace extends BaseStaticObject {
         this.smokeParticles = null
         this.particleEmitter = null
         this.castsShadows = castsShadows
+        this.shadowMapSize = shadowMapSize
     }
 
     private getLogNoise(logIndex: number, channel: number): number {
@@ -74,6 +82,7 @@ abstract class BaseFireplace extends BaseStaticObject {
             flicker: true,
             castsShadows: this.castsShadows,
             castsActorShadows: this.castsShadows,
+            shadowMapSize: this.shadowMapSize,
         })
     }
 
@@ -123,14 +132,15 @@ abstract class BaseFireplace extends BaseStaticObject {
         }
 
         if (this.smokeParticles == null) {
-            const smokeParticles = new ParticleSystem(`fireplaceSmoke_${this.position.x}_${this.position.z}`, Math.round(80 * this.fireplaceScale), Renderer.scene)
+            const smokeFactor = STATIC_FIRE_SMOKE_PARTICLE_FACTORS[Settings.detailLevel.level - 1]
+            const smokeParticles = new ParticleSystem(`fireplaceSmoke_${this.position.x}_${this.position.z}`, Math.round(80 * this.fireplaceScale * smokeFactor), Renderer.scene)
             smokeParticles.particleTexture = new Texture('images/gfx/dust.png', Renderer.scene)
             smokeParticles.emitter = this.particleEmitter
             smokeParticles.minEmitBox = new Vector3(-0.15 * this.fireplaceScale, 0.02 * this.fireplaceScale * 8, -0.15 * this.fireplaceScale)
             smokeParticles.maxEmitBox = new Vector3(0.15 * this.fireplaceScale, 0.08 * this.fireplaceScale * 8, 0.15 * this.fireplaceScale)
             smokeParticles.minLifeTime = 3.5
             smokeParticles.maxLifeTime = 5
-            smokeParticles.emitRate = 20 * this.fireplaceScale
+            smokeParticles.emitRate = 20 * this.fireplaceScale * smokeFactor
             smokeParticles.blendMode = ParticleSystem.BLENDMODE_STANDARD
             smokeParticles.direction1 = new Vector3(-1 * this.fireplaceScale, 0.45 * this.fireplaceScaleReduced, -1 * this.fireplaceScale)
             smokeParticles.direction2 = new Vector3(1 * this.fireplaceScale, 0.7 * this.fireplaceScaleReduced, 1 * this.fireplaceScale)
@@ -228,13 +238,13 @@ abstract class BaseFireplace extends BaseStaticObject {
 
 export class FireplaceSmall extends BaseFireplace {
     constructor(type: number, position: Vector3, rotation: number, material: Vector2, castsShadows: boolean) {
-        super(type, position, rotation, material, 1, 0.45, 0.01, 0.5, castsShadows)
+        super(type, position, rotation, material, 1, 0.45, 0.01, 0.5, castsShadows, STATIC_SHADOW_MAP_SIZE)
     }
 }
 
 export class FireplaceLarge extends BaseFireplace {
     constructor(type: number, position: Vector3, rotation: number, material: Vector2, castsShadows: boolean) {
-        super(type, position, rotation, material, 2, 0.9, 0.02, 0.5, castsShadows)
+        super(type, position, rotation, material, 2, 0.9, 0.02, 0.5, castsShadows, LARGE_CAMPFIRE_SHADOW_MAP_SIZE)
     }
 
     getLightVisibilityRadius(): number {

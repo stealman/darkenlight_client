@@ -1,5 +1,7 @@
 import { Color3, Color4, Matrix, ParticleSystem, Texture, TransformNode, Vector2, Vector3 } from '@babylonjs/core'
 import { Lights } from '@/babylon/scene/lights'
+import { STATIC_FIRE_SMOKE_PARTICLE_FACTORS, STATIC_SHADOW_MAP_SIZE } from '@/babylon/scene/lighting/lightConfig'
+import { Settings } from '@/settings/settings'
 import { Renderer } from '@/babylon/scene/renderer'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { BaseStaticObject } from '@/babylon/world/statics/objects/baseStaticObject'
@@ -70,6 +72,7 @@ export class WallTorch extends BaseStaticObject {
             intensity: 2.2,
             range: 10,
             flicker: true,
+            shadowMapSize: STATIC_SHADOW_MAP_SIZE,
         })
     }
 
@@ -126,14 +129,15 @@ export class WallTorch extends BaseStaticObject {
         }
 
         if (this.smokeParticles == null) {
-            const smokeParticles = new ParticleSystem(`wallTorchSmoke_${this.position.x}_${this.position.z}`, 50, Renderer.scene)
+            const smokeFactor = STATIC_FIRE_SMOKE_PARTICLE_FACTORS[Settings.detailLevel.level - 1]
+            const smokeParticles = new ParticleSystem(`wallTorchSmoke_${this.position.x}_${this.position.z}`, Math.round(50 * smokeFactor), Renderer.scene)
             smokeParticles.particleTexture = new Texture('images/gfx/dust.png', Renderer.scene)
             smokeParticles.emitter = this.particleEmitter
             smokeParticles.minEmitBox = new Vector3(-width, 0.2, -depth)
             smokeParticles.maxEmitBox = new Vector3(width, 0.25, depth)
             smokeParticles.minLifeTime = 3.5
             smokeParticles.maxLifeTime = 5
-            smokeParticles.emitRate = 12
+            smokeParticles.emitRate = 12 * smokeFactor
             smokeParticles.blendMode = ParticleSystem.BLENDMODE_STANDARD
             smokeParticles.direction1 = new Vector3(-0.8, 0.35, -0.8)
             smokeParticles.direction2 = new Vector3(0.8, 0.55, 0.8)

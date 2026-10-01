@@ -12,12 +12,14 @@ import { MyPlayer } from '@/data/myPlayer'
 import { getBrightnessIntensityFactor, Settings } from '@/settings/settings'
 import {
     ACTOR_STATIC_LIGHT_LIMIT,
-    INDOOR_STATIC_SHADOW_MAP_SIZE,
+    ACTOR_STATIC_SHADOW_CASTER_UPDATE_SECONDS,
+    LARGE_CAMPFIRE_SHADOW_MAP_SIZE,
+    LARGE_CAMPFIRE_SHADOW_SLOT_COUNT,
     OUTDOOR_ACTOR_STATIC_LIGHT_LIMIT,
-    OUTDOOR_STATIC_SHADOW_MAP_SIZE,
     OUTDOOR_STATIC_LIGHT_INTENSITY_FACTOR,
     OUTDOOR_STATIC_LIGHT_LIMITS,
     OUTDOOR_STATIC_LIGHT_RANGE_FACTOR,
+    STATIC_SHADOW_MAP_SIZE,
     STATIC_LIGHT_DEFAULT_BRIGHTNESS_FACTOR,
     STATIC_LIGHT_FADE_SECONDS,
     STATIC_LIGHT_LIMITS,
@@ -37,6 +39,7 @@ export interface StaticLightingHost {
     staticLightShadersWarmed: boolean
     staticLightShadersWarming: boolean
     staticLightFlickerTime: number
+    actorStaticShadowCasterUpdateTime: number
     localLightFactor: number
     indoor: boolean
     updateDayNightLighting(): void
@@ -58,6 +61,7 @@ export function resetStaticLighting(host: StaticLightingHost) {
     host.staticLightShadersWarmed = false
     host.staticLightShadersWarming = false
     host.staticLightFlickerTime = 0
+    host.actorStaticShadowCasterUpdateTime = ACTOR_STATIC_SHADOW_CASTER_UPDATE_SECONDS
 }
 
 export function configureStaticLightMaterials(host: StaticLightingHost) {
@@ -91,32 +95,29 @@ export function configureStaticLightMaterials(host: StaticLightingHost) {
         light.setEnabled(true)
 
         let shadow: ShadowGenerator | null = null
+        let standardShadow: ShadowGenerator | null = null
+        let largeCampfireShadow: ShadowGenerator | null = null
         if (useStaticShadows) {
-            const shadowMapSize = i < outdoorStaticLightLimit
-                ? OUTDOOR_STATIC_SHADOW_MAP_SIZE
-                : INDOOR_STATIC_SHADOW_MAP_SIZE
-            shadow = new ShadowGenerator(shadowMapSize, light, false)
-            shadow.bias = 0.005
-            shadow.setDarkness(1)
-            shadow.usePoissonSampling = true
-            shadow.forceBackFacesOnly = true
-            shadow.frustumEdgeFalloff = 0.3
-            const shadowMap = shadow.getShadowMap()
-            if (shadowMap != null) {
-                shadowMap.refreshRate = RenderTargetTexture.REFRESHRATE_RENDER_ONCE
+            standardShadow = createStaticShadowGenerator(host, light, STATIC_SHADOW_MAP_SIZE)
+            if (i < LARGE_CAMPFIRE_SHADOW_SLOT_COUNT) {
+                largeCampfireShadow = createStaticShadowGenerator(host, light, LARGE_CAMPFIRE_SHADOW_MAP_SIZE)
             }
+            shadow = standardShadow
+            light.getShadowGenerators()?.set(null, shadow)
             light.shadowMinZ = 0.05
             light.shadowMaxZ = 12
-            host.staticShadowGenerators.push(shadow)
         }
 
         host.staticLightSlots.push({
             light,
             shadow,
+            standardShadow,
+            largeCampfireShadow,
             source: null,
             targetIntensity: 0,
             currentIntensity: 0,
             flickerOffset: new Vector3(),
+            actorShadowCasters: new Set<AbstractMesh>(),
         })
     }
 }
@@ -182,8 +183,8 @@ export function onLightsFrame(host: StaticLightingHost, timeRate: number) {
             if (playerPosition == null) return 0
             return Vector3.DistanceSquared(a.position, playerPosition) - Vector3.DistanceSquared(b.position, playerPosition)
         })
-    const activeSources = new Set(candidates.slice(0, staticLightLimit))
-    let actorShadowCastersChanged = false
+    const activeCandidates = candidates.slice(0, staticLightLimit)
+    const activeSources = new Set(activeCandidates)
 
     for (const slot of host.staticLightSlots) {
         if (slot.source != null && (!activeSources.has(slot.source) || !usableSlots.includes(slot))) {
@@ -191,16 +192,8 @@ export function onLightsFrame(host: StaticLightingHost, timeRate: number) {
         }
     }
 
-    for (const source of activeSources) {
-        if (usableSlots.some(slot => slot.source === source)) {
-            continue
-        }
-        const emptySlot = usableSlots.find(slot => slot.source == null && slot.currentIntensity === 0)
-        if (emptySlot != null) {
-            assignStaticLightSlot(host, emptySlot, source)
-            actorShadowCastersChanged = true
-        }
-    }
+    assignUnslottedStaticLightSources(host, usableSlots, activeCandidates, LARGE_CAMPFIRE_SHADOW_MAP_SIZE)
+    assignUnslottedStaticLightSources(host, usableSlots, activeCandidates, STATIC_SHADOW_MAP_SIZE)
 
     host.staticLightSlots.forEach((slot, index) => {
         const active = usableSlots.includes(slot) && slot.source != null && activeSources.has(slot.source)
@@ -236,12 +229,13 @@ export function onLightsFrame(host: StaticLightingHost, timeRate: number) {
         slot.light.intensity = slot.currentIntensity
 
         if (!active && slot.currentIntensity === 0 && slot.targetIntensity === 0) {
-            actorShadowCastersChanged ||= slot.source != null
             slot.source = null
         }
     })
 
-    if (actorShadowCastersChanged) {
+    host.actorStaticShadowCasterUpdateTime += timeRate
+    if (host.actorStaticShadowCasterUpdateTime >= ACTOR_STATIC_SHADOW_CASTER_UPDATE_SECONDS) {
+        host.actorStaticShadowCasterUpdateTime %= ACTOR_STATIC_SHADOW_CASTER_UPDATE_SECONDS
         host.updateActorStaticShadowCasters()
     }
 
@@ -289,6 +283,26 @@ export function getActorStaticLightLimit(host: Pick<StaticLightingHost, 'indoor'
     return host.indoor ? ACTOR_STATIC_LIGHT_LIMIT : OUTDOOR_ACTOR_STATIC_LIGHT_LIMIT
 }
 
+export function warmUpStaticShadowMaps(host: StaticLightingHost) {
+    const originalShadows = host.staticLightSlots.map(slot => slot.shadow)
+    let hasAlternateShadow = false
+
+    host.staticLightSlots.forEach(slot => {
+        if (slot.largeCampfireShadow != null) {
+            selectStaticShadowGenerator(slot, slot.largeCampfireShadow)
+            hasAlternateShadow = true
+        }
+    })
+
+    if (hasAlternateShadow) {
+        host.sunLight.getScene().render()
+    }
+
+    host.staticLightSlots.forEach((slot, index) => {
+        selectStaticShadowGenerator(slot, originalShadows[index])
+    })
+}
+
 export function updateStaticLightShadowMode(host: StaticLightingHost) {
     const shadowLightLimit = getStaticLightLimit(host)
     host.staticLightSlots.forEach((slot, index) => {
@@ -308,21 +322,13 @@ function updateStaticSlotShadowState(host: StaticLightingHost, slot: StaticLight
         && sourceActive
         && slot.source?.profile.castsShadows !== false
         && outdoorLightVisible
-    const darkness = shadowVisible ? 0 : 1
-    if (slot.shadow.getDarkness() !== darkness) {
-        slot.shadow.setDarkness(darkness)
-    }
-
-    const shadowMap = slot.shadow.getShadowMap()
-    const refreshRate = shadowVisible
-        ? RenderTargetTexture.REFRESHRATE_RENDER_ONEVERYFRAME
-        : RenderTargetTexture.REFRESHRATE_RENDER_ONCE
-    if (shadowMap != null && shadowMap.refreshRate !== refreshRate) {
-        shadowMap.refreshRate = refreshRate
-    }
+    setStaticShadowGeneratorActive(slot.shadow, shadowVisible)
 }
 
 function assignStaticLightSlot(host: StaticLightingHost, slot: StaticLightSlot, source: StaticLightSource) {
+    selectStaticShadowGenerator(slot, getStaticLightShadowMapSize(source) === LARGE_CAMPFIRE_SHADOW_MAP_SIZE
+        ? slot.largeCampfireShadow
+        : slot.standardShadow)
     slot.source = source
     slot.currentIntensity = 0
     slot.targetIntensity = 0
@@ -335,6 +341,108 @@ function assignStaticLightSlot(host: StaticLightingHost, slot: StaticLightSlot, 
     }
     slot.light.diffuse = source.profile.color
     slot.light.specular = source.profile.color
+}
+
+function assignUnslottedStaticLightSources(host: StaticLightingHost, usableSlots: StaticLightSlot[], sources: StaticLightSource[], shadowMapSize: number) {
+    const resolutionSpecificSlots = usableSlots.length > 0 && usableSlots[0].standardShadow != null
+    for (const source of sources) {
+        const requiredShadowMapSize = resolutionSpecificSlots
+            ? getStaticLightShadowMapSize(source)
+            : STATIC_SHADOW_MAP_SIZE
+        if (requiredShadowMapSize !== shadowMapSize || usableSlots.some(slot => slot.source === source)) {
+            continue
+        }
+        let emptySlot = findAvailableStaticLightSlot(usableSlots, shadowMapSize)
+        if (emptySlot == null && shadowMapSize === LARGE_CAMPFIRE_SHADOW_MAP_SIZE) {
+            emptySlot = moveStandardSourceOutOfLargeCampfireSlot(host, usableSlots)
+        }
+        if (emptySlot != null) {
+            assignStaticLightSlot(host, emptySlot, source)
+        }
+    }
+}
+
+function findAvailableStaticLightSlot(slots: StaticLightSlot[], shadowMapSize: number): StaticLightSlot | null {
+    if (shadowMapSize === LARGE_CAMPFIRE_SHADOW_MAP_SIZE) {
+        return slots.find(slot => slot.source == null && slot.currentIntensity === 0 && slot.largeCampfireShadow != null) ?? null
+    }
+
+    return slots.find(slot => slot.source == null && slot.currentIntensity === 0 && slot.largeCampfireShadow == null)
+        ?? slots.find(slot => slot.source == null && slot.currentIntensity === 0)
+        ?? null
+}
+
+function moveStandardSourceOutOfLargeCampfireSlot(host: StaticLightingHost, slots: StaticLightSlot[]): StaticLightSlot | null {
+    const targetSlot = slots.find(slot => slot.source == null
+        && slot.currentIntensity === 0
+        && slot.largeCampfireShadow == null)
+    const sourceSlot = slots.find(slot => slot.largeCampfireShadow != null
+        && slot.source != null
+        && getStaticLightShadowMapSize(slot.source) === STATIC_SHADOW_MAP_SIZE)
+    if (targetSlot == null || sourceSlot?.source == null) {
+        return null
+    }
+
+    const currentIntensity = sourceSlot.currentIntensity
+    const targetIntensity = sourceSlot.targetIntensity
+    assignStaticLightSlot(host, targetSlot, sourceSlot.source)
+    targetSlot.currentIntensity = currentIntensity
+    targetSlot.targetIntensity = targetIntensity
+    targetSlot.light.intensity = currentIntensity
+
+    sourceSlot.source = null
+    sourceSlot.currentIntensity = 0
+    sourceSlot.targetIntensity = 0
+    sourceSlot.light.intensity = 0
+    return sourceSlot
+}
+
+function getStaticLightShadowMapSize(source: StaticLightSource): number {
+    return source.profile.castsShadows === false
+        ? STATIC_SHADOW_MAP_SIZE
+        : source.profile.shadowMapSize ?? STATIC_SHADOW_MAP_SIZE
+}
+
+function selectStaticShadowGenerator(slot: StaticLightSlot, shadow: ShadowGenerator | null) {
+    if (slot.shadow === shadow) {
+        return
+    }
+    if (slot.shadow != null) {
+        setStaticShadowGeneratorActive(slot.shadow, false)
+    }
+    slot.shadow = shadow
+    if (shadow != null) {
+        slot.light.getShadowGenerators()?.set(null, shadow)
+    }
+}
+
+function createStaticShadowGenerator(host: StaticLightingHost, light: SpotLight, mapSize: number): ShadowGenerator {
+    const shadow = new ShadowGenerator(mapSize, light, false)
+    shadow.bias = 0.005
+    shadow.setDarkness(1)
+    shadow.usePoissonSampling = true
+    shadow.forceBackFacesOnly = true
+    shadow.frustumEdgeFalloff = 0.3
+    const shadowMap = shadow.getShadowMap()
+    if (shadowMap != null) {
+        shadowMap.refreshRate = RenderTargetTexture.REFRESHRATE_RENDER_ONCE
+    }
+    host.staticShadowGenerators.push(shadow)
+    return shadow
+}
+
+function setStaticShadowGeneratorActive(shadow: ShadowGenerator, active: boolean) {
+    const darkness = active ? 0 : 1
+    if (shadow.getDarkness() !== darkness) {
+        shadow.setDarkness(darkness)
+    }
+    const shadowMap = shadow.getShadowMap()
+    const refreshRate = active
+        ? RenderTargetTexture.REFRESHRATE_RENDER_ONEVERYFRAME
+        : RenderTargetTexture.REFRESHRATE_RENDER_ONCE
+    if (shadowMap != null && shadowMap.refreshRate !== refreshRate) {
+        shadowMap.refreshRate = refreshRate
+    }
 }
 
 function moveTowards(current: number, target: number, amount: number): number {

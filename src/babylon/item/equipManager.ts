@@ -346,7 +346,9 @@ export class EquipItemType {
         this.mesh.alwaysSelectAsActiveMesh = true
         this.mesh.parent = parentNode
         this.mesh.receiveShadows = true
-        Lights.addShadowCaster(this.mesh, castPersonalShadow, false, true)
+        // One mesh contains thin instances for every actor using this item type,
+        // so it has no single actor position that can be range-filtered.
+        Lights.addShadowCaster(this.mesh, castPersonalShadow, false, true, false)
         Lights.registerDynamicLightMesh(this.mesh)
     }
 

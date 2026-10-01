@@ -2,7 +2,10 @@
     <GameDialog
         ref="gameDialog"
         backdrop-class="login-screen-backdrop"
-        :window-class="['login-dialog-window', { 'login-dialog-window--mobile': useMobileLoginLayout }]"
+        :window-class="['login-dialog-window', {
+            'login-dialog-window--mobile': useMobileLoginLayout,
+            'login-dialog-window--phone': usePhoneLoginLayout,
+        }]"
         content-class="login-dialog-content"
         :close-on-backdrop="false"
         :close-on-escape="false"
@@ -48,7 +51,7 @@
         </section>
 
         <div class="dialog-actions login-dialog-actions">
-            <button class="dialog-button" :disabled="!canSubmit" @click="AudioManager.playGuiButtonClick(); doLogin()"><span class="ui-text-gradient--button-state">{{ t('login.submit') }}</span></button>
+            <button class="dialog-button login-submit-button" :disabled="!canSubmit" @click="AudioManager.playGuiButtonClick(); doLogin()"><span class="ui-text-gradient--button-state">{{ t('login.submit') }}</span></button>
             <button v-if="!charName.trim()" class="dialog-button" @click="AudioManager.playGuiButtonClick(); openRegistration()"><span class="ui-text-gradient--button-state">{{ t('login.register') }}</span></button>
         </div>
         </template>
@@ -105,6 +108,7 @@ const registrationSucceeded = ref(false)
 const registrationSubmitting = ref(false)
 const gameDialog = ref(null)
 const useMobileLoginLayout = Settings.isPhoneOrTablet()
+const usePhoneLoginLayout = Settings.getDeviceType() === 'PHONE'
 const guestLoginReady = computed(() => charName.value.trim().length >= 3)
 const accountLoginReady = computed(() => login.value.trim().length >= 3)
 const accountPasswordReady = computed(() => password.value.length >= 3)
@@ -457,22 +461,181 @@ const onPlayerRegistration = (event) => {
     padding-bottom: 4px;
 }
 
-@media (max-width: 520px) {
-    .login-field,
-    .login-checkbox-field {
-        grid-template-columns: 105px minmax(0, 1fr);
+@media (orientation: portrait) {
+    .dialog-window.login-dialog-window--mobile {
+        top: calc(var(--app-viewport-top, 0px) + (var(--app-viewport-height, 100vh) / 2));
+        left: 2vw;
+        width: 96vw;
+        max-width: 96vw;
+        height: auto;
+        max-height: calc(var(--app-viewport-height, 100vh) - var(--login-viewport-top-inset, 1vh) - var(--login-viewport-bottom-inset, 4vh));
+        transform: translateY(-50%);
     }
 
-    .login-checkbox-field {
-        width: calc(100% - 115px);
-        margin-left: 115px;
+    .login-dialog-window--mobile > .dialog-surface {
+        height: auto;
+        min-height: 0;
+        max-height: inherit;
+    }
+
+    .login-dialog-window--mobile > .dialog-surface > .dialog-header {
+        padding: 8px 5px;
+        font-size: 1.55rem;
+    }
+
+    .login-dialog-window--mobile > .dialog-surface > .login-dialog-content {
+        flex: 0 1 auto;
+        padding: 2px 8px 10px;
+    }
+
+    .login-dialog-window--mobile .login-guest-section,
+    .login-dialog-window--mobile .login-account-section,
+    .login-dialog-window--mobile .login-registration-section,
+    .login-dialog-window--mobile .login-section-divider {
+        box-sizing: border-box;
+        width: 100%;
+        max-width: none;
+    }
+
+    .login-dialog-window--mobile .login-section-title {
+        font-size: 1.2rem;
+    }
+
+    .login-dialog-window--mobile .login-section-description {
+        font-size: 1rem;
+    }
+
+    .login-dialog-window--mobile .login-field {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 6px;
+        font-size: 1.1rem;
+    }
+
+    .login-dialog-window--mobile .login-field > span {
+        text-align: left;
+    }
+
+    .login-dialog-window--mobile .login-checkbox-field {
+        width: 100%;
+        margin-left: 0;
         grid-template-columns: minmax(0, 1fr) auto;
+        font-size: 1.05rem;
     }
 
-    .login-guest-description {
-        margin-left: 115px;
+    .login-dialog-window--mobile .login-guest-description {
+        margin-left: 0;
+        white-space: normal;
     }
 
+    .login-dialog-window--mobile .login-dialog-content .login-field input {
+        height: 3.5rem;
+        padding: 10px 12px;
+        font-size: 1.25rem;
+    }
+
+    .login-dialog-window--mobile .login-account-form {
+        gap: 12px;
+    }
+
+    .login-dialog-window--mobile .login-section-divider {
+        margin: 12px auto;
+    }
+
+    .login-dialog-window--mobile .login-checkbox-field .p-checkbox-box {
+        width: 26px;
+        height: 26px;
+    }
+
+    .login-dialog-window--mobile .login-checkbox-field .p-checkbox-icon {
+        font-size: 19px;
+    }
+
+    .login-dialog-window--mobile .login-dialog-actions {
+        gap: 8px;
+        margin-top: 24px;
+        flex-wrap: wrap;
+    }
+
+    .login-dialog-window--mobile .login-dialog-actions .dialog-button {
+        flex: 1 1 130px;
+        padding: 12px 14px;
+        font-size: 1.05rem;
+    }
+
+    .login-dialog-window--mobile .login-submit-button {
+        font-size: 1.25rem;
+    }
+
+    .dialog-window.login-dialog-window--phone {
+        padding: 1vw;
+    }
+
+    .login-dialog-window--phone > .dialog-surface > .dialog-header {
+        padding: 2vw 1vw;
+        font-size: 6vw;
+    }
+
+    .login-dialog-window--phone > .dialog-surface > .login-dialog-content {
+        padding: 1vw 2vw 3vw;
+    }
+
+    .login-dialog-window--phone .login-section-copy {
+        margin-bottom: 3vw;
+    }
+
+    .login-dialog-window--phone .login-section-title {
+        font-size: 5vw;
+    }
+
+    .login-dialog-window--phone .login-section-description {
+        font-size: 4vw;
+    }
+
+    .login-dialog-window--phone .login-field {
+        gap: 1.5vw;
+        font-size: 4.8vw;
+    }
+
+    .login-dialog-window--phone .login-dialog-content .login-field input {
+        height: 14vw;
+        padding: 2.5vw 3vw;
+        font-size: 5vw;
+    }
+
+    .login-dialog-window--phone .login-account-form {
+        gap: 3vw;
+    }
+
+    .login-dialog-window--phone .login-section-divider {
+        margin: 4vw auto;
+    }
+
+    .login-dialog-window--phone .login-checkbox-field {
+        font-size: 4.5vw;
+    }
+
+    .login-dialog-window--phone .login-checkbox-field .p-checkbox-box {
+        width: 9vw;
+        height: 9vw;
+    }
+
+    .login-dialog-window--phone .login-checkbox-field .p-checkbox-icon {
+        font-size: 6vw;
+    }
+
+    .login-dialog-window--phone .login-dialog-actions {
+        gap: 2vw;
+        margin-top: 6vw;
+    }
+
+    .login-dialog-window--phone .login-dialog-actions .dialog-button {
+        padding: 3vw 3.5vw;
+        font-size: 4.8vw;
+    }
+
+    .login-dialog-window--phone .login-submit-button {
+        font-size: 5.5vw;
+    }
 }
 
 </style>

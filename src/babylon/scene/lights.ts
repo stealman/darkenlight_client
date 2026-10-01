@@ -44,6 +44,7 @@ import {
     resetStaticLighting,
     unregisterStaticLight,
     updateStaticLightShadowMode,
+    warmUpStaticShadowMaps,
     warmUpStaticLightShaders,
 } from '@/babylon/scene/lighting/staticLighting'
 import {
@@ -81,6 +82,7 @@ export const Lights = {
     sharedLightMeshes: new Set<AbstractMesh>(),
     actorLightMeshes: new Set<AbstractMesh>(),
     actorStaticShadowCasters: new Set<AbstractMesh>(),
+    unfilteredActorStaticShadowCasters: new Set<AbstractMesh>(),
     actorMaterialWarmups: new WeakMap<Material, Promise<void>>(),
     localPlayerLightWarmups: new WeakMap<Material, Promise<void>>(),
     localPlayerLightWarmingMeshes: new Set<AbstractMesh>(),
@@ -88,6 +90,7 @@ export const Lights = {
     staticLightShadersWarming: false,
     dayNightShadersWarmed: false,
     staticLightFlickerTime: 0,
+    actorStaticShadowCasterUpdateTime: 0,
     dayNightPhaseAtSync: INITIAL_DAY_NIGHT_PHASE,
     dayNightCycleDurationMs: DEFAULT_DAY_NIGHT_CYCLE_DURATION_MS,
     dayNightSynchronizedAt: 0,
@@ -249,6 +252,7 @@ export const Lights = {
             this.updateDayNightLighting()
             scene.markAllMaterialsAsDirty(Material.LightDirtyFlag)
             await scene.whenReadyAsync()
+            warmUpStaticShadowMaps(this)
             scene.render()
 
             onProgress?.(1, 1)
@@ -274,8 +278,8 @@ export const Lights = {
         )
     },
 
-    addShadowCaster(mesh: Mesh | AbstractMesh, castPersonalShadow: boolean = true, castStaticShadow: boolean = false, castOutdoorStaticShadow: boolean = false) {
-        addMeshShadowCaster(this, mesh, castPersonalShadow, castStaticShadow, castOutdoorStaticShadow)
+    addShadowCaster(mesh: Mesh | AbstractMesh, castPersonalShadow: boolean = true, castStaticShadow: boolean = false, castOutdoorStaticShadow: boolean = false, filterActorStaticShadowByDistance: boolean = true) {
+        addMeshShadowCaster(this, mesh, castPersonalShadow, castStaticShadow, castOutdoorStaticShadow, filterActorStaticShadowByDistance)
     },
 
     removeShadowCaster(mesh: Mesh | AbstractMesh, castPersonalShadow: boolean = true, castStaticShadow: boolean = false, castOutdoorStaticShadow: boolean = false) {
