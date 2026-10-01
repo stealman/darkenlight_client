@@ -5,6 +5,7 @@
         <!-- Action select buttons -->
         <div class="gm-action-selection" style="margin: 10px 0;">
             <button :disabled="actualTab === GMTabs.OVERVIEW" @click="selectTab(GMTabs.OVERVIEW)">Overview</button>
+            <button :disabled="actualTab === GMTabs.WORLDS" @click="openWorldsDialog">Worlds</button>
             <button :disabled="actualTab === GMTabs.TERRAIN_EDIT" @click="selectTab(GMTabs.TERRAIN_EDIT)">Terrain Edit</button>
             <button :disabled="actualTab === GMTabs.BIOME_EDIT" @click="selectTab(GMTabs.BIOME_EDIT)">Biome</button>
             <button :disabled="actualTab === GMTabs.WALLS_AND_FENCES_EDIT" @click="selectTab(GMTabs.WALLS_AND_FENCES_EDIT)">Walls & Fences</button>
@@ -18,37 +19,42 @@
 
         <!-- Overview -->
         <div v-if="actualTab === GMTabs.OVERVIEW">
-            <div style="display: flex; align-items: end; gap: 8px;">
+            <div class="gm-teleport-controls">
                 <label>
                     World
                     <select v-model.number="teleportWorldId">
                         <option v-for="world in teleportWorlds" :key="world.id" :value="world.id">{{ world.name }} ({{ world.id }})</option>
                     </select>
                 </label>
-                <label>
-                    X
-                    <input v-model.number="teleportX" type="number" step="1" @keyup.enter="teleport" />
-                </label>
-                <label>
-                    Z
-                    <input v-model.number="teleportZ" type="number" step="1" @keyup.enter="teleport" />
-                </label>
+                <div class="gm-teleport-coordinates">
+                    <label class="gm-teleport-coordinate">
+                        X
+                        <input v-model.number="teleportX" type="number" step="1" @keyup.enter="teleport" />
+                    </label>
+                    <label class="gm-teleport-coordinate">
+                        Z
+                        <input v-model.number="teleportZ" type="number" step="1" @keyup.enter="teleport" />
+                    </label>
+                </div>
                 <button @click="teleport">TELEPORT</button>
             </div>
 
-            <div class="gm-day-night-controls">
-                <label>
-                    World time
-                    <input v-model="dayNightTime" type="time" step="60" @keyup.enter="setDayNightTime()" />
-                </label>
-                <button @click="setDayNightTime()">SET &amp; FREEZE</button>
-                <button @click="setDayNightTime('07:00')">SUNRISE</button>
-                <button @click="setDayNightTime('12:00')">DAY</button>
-                <button @click="setDayNightTime('19:00')">SUNSET</button>
-                <button @click="setDayNightTime('00:00')">NIGHT</button>
-                <button @click="resumeDayNightCycle">NATURAL CYCLE</button>
-                <button @click="triggerLightning">LIGHTNING</button>
-            </div>
+            <details class="gm-day-night-section">
+                <summary>World time controls</summary>
+                <div class="gm-day-night-controls">
+                    <label>
+                        World time
+                        <input v-model="dayNightTime" type="time" step="60" @keyup.enter="setDayNightTime()" />
+                    </label>
+                    <button @click="setDayNightTime()">SET &amp; FREEZE</button>
+                    <button @click="setDayNightTime('07:00')">SUNRISE</button>
+                    <button @click="setDayNightTime('12:00')">DAY</button>
+                    <button @click="setDayNightTime('19:00')">SUNSET</button>
+                    <button @click="setDayNightTime('00:00')">NIGHT</button>
+                    <button @click="resumeDayNightCycle">NATURAL CYCLE</button>
+                    <button @click="triggerLightning">LIGHTNING</button>
+                </div>
+            </details>
         </div>
 
         <!-- Terrain -->
@@ -80,6 +86,7 @@
         </div>
 
         <ModelRenderPanel ref="modelRenderPanel" />
+        <WorldsPanel ref="worldsPanel" @close="worldsDialogClosed" />
         <ItemCreationPanel ref="itemCreationPanel" />
 
     </div>
@@ -96,12 +103,14 @@ import StaticsPanel from '@/vue/views/gm/StaticsPanel.vue'
 import SpawnPanel from '@/vue/views/gm/SpawnPanel.vue'
 import NpcPanel from '@/vue/views/gm/NpcPanel.vue'
 import ModelRenderPanel from '@/vue/views/gm/ModelRenderPanel.vue'
+import WorldsPanel from '@/vue/views/gm/WorldsPanel.vue'
 import ItemCreationPanel from '@/vue/views/gm/ItemCreationPanel.vue'
 import { Lights } from '@/babylon/scene/lights'
 import { LightningEffect } from '@/babylon/scene/lighting/lightningEffect'
 
 const actualTab = ref(GMTabs.OVERVIEW)
 const modelRenderPanel = ref(null)
+const worldsPanel = ref(null)
 const itemCreationPanel = ref(null)
 const teleportX = ref(99)
 const teleportZ = ref(80)
@@ -113,19 +122,45 @@ const teleportWorldId = computed({
 const dayNightTime = ref(Lights.getGameTimeInfo().time)
 
 const selectTab = (tab) => {
+    if (actualTab.value === GMTabs.WORLDS) {
+        worldsPanel.value?.closeDialog()
+    }
     actualTab.value = tab
     GMManager.openTab(tab)
 }
 
 const openModelRenderDialog = () => {
+    if (actualTab.value === GMTabs.WORLDS) {
+        worldsPanel.value?.closeDialog()
+    }
     modelRenderPanel.value?.openDialog()
 }
 
+const openWorldsDialog = () => {
+    actualTab.value = GMTabs.WORLDS
+    GMManager.openTab(GMTabs.WORLDS)
+    worldsPanel.value?.openDialog()
+}
+
+const worldsDialogClosed = () => {
+    if (actualTab.value !== GMTabs.WORLDS) {
+        return
+    }
+    actualTab.value = GMTabs.OVERVIEW
+    GMManager.openTab(GMTabs.OVERVIEW)
+}
+
 const openItemCreationDialog = () => {
+    if (actualTab.value === GMTabs.WORLDS) {
+        worldsPanel.value?.closeDialog()
+    }
     itemCreationPanel.value?.openDialog()
 }
 
 const forceSaveData = () => {
+    if (actualTab.value === GMTabs.WORLDS) {
+        worldsPanel.value?.closeDialog()
+    }
     GMManager.forceSaveData()
 }
 
@@ -152,6 +187,43 @@ const triggerLightning = () => {
 <style scoped>
 .gm-panel-content {
     color: #fff;
+}
+
+.gm-teleport-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+}
+
+.gm-teleport-controls label {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.gm-teleport-coordinates {
+    display: flex;
+    gap: 8px;
+}
+
+.gm-teleport-controls .gm-teleport-coordinate {
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+}
+
+.gm-teleport-coordinate input {
+    width: 5rem;
+}
+
+.gm-day-night-section {
+    margin-top: 12px;
+}
+
+.gm-day-night-section summary {
+    cursor: pointer;
+    user-select: none;
 }
 
 .gm-day-night-controls {

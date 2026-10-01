@@ -378,3 +378,19 @@ export interface GMItemCodebookItem {
     id: number
     name: string
 }
+
+export interface GMWorldSettingsData {
+    id: number
+    name: string
+    size: number
+    mapId: number
+    seaWaterLevel: number | null
+    environment: {type: 'outdoor' | 'indoor', category?: string}
+    attributes: Record<string, unknown>
+}
+
+export interface GMWorldMapImageData {
+    worldId: number
+    mapType: 'height' | 'terrain' | 'snow' | 'gathering'
+    image: string
+}

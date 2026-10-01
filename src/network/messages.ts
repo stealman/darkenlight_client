@@ -475,3 +475,39 @@ export class GMDayNightCycleMsg implements Message {
     }
 }
 
+export class GMLoadWorldSettingsMsg implements Message {
+    t: number = 1012
+    d: any
+
+    constructor(worldId: number) {
+        this.d = {worldId}
+    }
+}
+
+export class GMSaveWorldSettingsMsg implements Message {
+    t: number = 1013
+    d: any
+
+    constructor(worldId: number, settings: any) {
+        this.d = {worldId, ...settings}
+    }
+}
+
+export class GMLoadWorldMapImageMsg implements Message {
+    t: number = 1014
+    d: any
+
+    constructor(worldId: number, mapType: 'height' | 'terrain' | 'snow' | 'gathering') {
+        this.d = {worldId, mapType}
+    }
+}
+
+export class GMSaveWorldMapHeightChangesMsg implements Message {
+    t: number = 1016
+    d: any
+
+    constructor(worldId: number, changes: Array<{x: number, z: number, height: number}>) {
+        this.d = {worldId, changes}
+    }
+}
+

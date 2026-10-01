@@ -30,6 +30,8 @@ import {
     HealingMessage, HealingResultMessage, PlaySoundMessage, PotionUsedMessage, PubliclyVisibleAffectData, TextMessage,
     CraftingInitMenuData,
     GMItemCodebookItem,
+    GMWorldSettingsData,
+    GMWorldMapImageData,
     GMNpcDetailsData,
     GuestCharacterNameCheckData,
     AccountCharacterNameCheckData,
@@ -132,6 +134,8 @@ export const MessageProcessor = {
                 case 72: this.processPowerStrikeQueueState(msg.d); break
                 case 74: this.processPreciseShotQueueState(msg.d); break
                 case 75: this.processDayNightCycle(msg.d); break
+                case 76: this.processGMWorldSettings(msg.d); break
+                case 77: this.processGMWorldMapImage(msg.d); break
                 case 1003: this.processGMAllSpawns(msg.d); break
                 case 1004: this.processGMSpawnChange(msg.d); break
                 default:
@@ -367,6 +371,14 @@ export const MessageProcessor = {
 
     processGMItemCodebook(data: GMItemCodebookItem[]) {
         GMManager.consumeItemCodebook(data)
+    },
+
+    processGMWorldSettings(data: GMWorldSettingsData) {
+        GMManager.consumeWorldSettings(data)
+    },
+
+    processGMWorldMapImage(data: GMWorldMapImageData) {
+        GMManager.consumeWorldMapImage(data)
     },
 
     clearWorldForTransition() {

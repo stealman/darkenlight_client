@@ -1,6 +1,6 @@
 import { Connector } from '@/network/connector'
-import { GMCreateItemMsg, GMDayNightCycleMsg, GMForceSaveDataMsg, GMLoadItemCodebookMsg, GMLoadWorldsMsg, GMNpcAction, GMSaveMapDataMsg, GMStaticObjectChange, GMTeleportMsg, GMTerrainChange } from '@/network/messages'
-import { GMItemCodebookItem } from '@/network/messageIfs'
+import { GMCreateItemMsg, GMDayNightCycleMsg, GMForceSaveDataMsg, GMLoadItemCodebookMsg, GMLoadWorldMapImageMsg, GMLoadWorldSettingsMsg, GMLoadWorldsMsg, GMNpcAction, GMSaveMapDataMsg, GMSaveWorldMapHeightChangesMsg, GMSaveWorldSettingsMsg, GMStaticObjectChange, GMTeleportMsg, GMTerrainChange } from '@/network/messages'
+import { GMItemCodebookItem, GMWorldMapImageData, GMWorldSettingsData } from '@/network/messageIfs'
 import { GMSceneManager } from '@/babylon/gm/GmSceneManager'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { ref } from 'vue'
@@ -21,6 +21,7 @@ import { MyPlayer } from '@/data/myPlayer'
  */
 export const GmTabs = {
     OVERVIEW: 'overview',
+    WORLDS: 'worlds',
     TERRAIN_EDIT: 'terrain_edit',
     BIOME_EDIT: 'biome_edit',
     WALLS_AND_FENCES_EDIT: 'walls_and_fences_edit',
@@ -59,6 +60,8 @@ export const GMManager = {
     selectedNpc: ref<any | null>(null),
     npcDetailsDialogOpenRequested: ref(false),
     teleportWorlds: ref([] as Array<{id: number, name: string}>),
+    worldSettings: ref<GMWorldSettingsData | null>(null),
+    worldMapImage: ref<GMWorldMapImageData | null>(null),
     itemCodebook: ref([] as GMItemCodebookItem[]),
     selectedTeleportWorld: ref(0),
 
@@ -319,6 +322,9 @@ export const GMManager = {
             case GmTabs.OVERVIEW:
                 this.openTabOverview()
                 break
+            case GmTabs.WORLDS:
+                this.openTabWorlds()
+                break
             case GmTabs.TERRAIN_EDIT:
                 this.openTabTerrainEdit()
                 break
@@ -342,6 +348,10 @@ export const GMManager = {
 
     openTabOverview() {
         this.tab = GmTabs.OVERVIEW
+    },
+
+    openTabWorlds() {
+        this.tab = GmTabs.WORLDS
     },
 
     openTabTerrainEdit() {
@@ -484,6 +494,30 @@ export const GMManager = {
         this.teleportWorlds.value = worlds
         this.selectedTeleportWorld.value = MyPlayer.worldId
         this.entranceDestinationWorld.value = MyPlayer.worldId
+    },
+
+    loadWorldSettings(worldId: number) {
+        Connector.sendMessage(new GMLoadWorldSettingsMsg(worldId))
+    },
+
+    consumeWorldSettings(settings: GMWorldSettingsData) {
+        this.worldSettings.value = settings
+    },
+
+    saveWorldSettings(worldId: number, settings: Omit<GMWorldSettingsData, 'id' | 'size'>) {
+        Connector.sendMessage(new GMSaveWorldSettingsMsg(worldId, settings))
+    },
+
+    loadWorldMapImage(worldId: number, mapType: 'height' | 'terrain' | 'snow' | 'gathering') {
+        Connector.sendMessage(new GMLoadWorldMapImageMsg(worldId, mapType))
+    },
+
+    consumeWorldMapImage(image: GMWorldMapImageData) {
+        this.worldMapImage.value = image
+    },
+
+    saveWorldMapHeightChanges(worldId: number, changes: Array<{x: number, z: number, height: number}>) {
+        Connector.sendMessage(new GMSaveWorldMapHeightChangesMsg(worldId, changes))
     },
 
     loadItemCodebook() {
