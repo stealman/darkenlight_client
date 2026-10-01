@@ -10,6 +10,7 @@ import type { DayNightCycleSync } from '@/network/messageIfs'
 import {
     DEFAULT_DAY_NIGHT_CYCLE_DURATION_MS,
     INITIAL_DAY_NIGHT_PHASE,
+    NIGHT_ENVIRONMENT_INTENSITY_FACTOR,
 } from '@/babylon/scene/lighting/lightConfig'
 import { LightningEffect } from '@/babylon/scene/lighting/lightningEffect'
 
@@ -20,7 +21,6 @@ const PERSONAL_LIGHT_SUNRISE_END_PHASE = 1 / 32
 const PERSONAL_LIGHT_SUNSET_START_PHASE = 53 / 96
 const LIGHTING_PHASE_OFFSET = 3 / 4
 const NIGHT_SUN_INTENSITY_FACTOR = 0
-const NIGHT_ENVIRONMENT_INTENSITY_FACTOR = 0.05
 const DEFAULT_SUN_INTENSITY = 0.75
 const DEFAULT_PERSONAL_LIGHT_INTENSITY = 2.5 + (4 / 9)
 const OUTDOOR_PERSONAL_LIGHT_FACTOR = 0.75
@@ -142,7 +142,7 @@ export function updateDayNightLighting(host: DayNightLightingHost) {
     if (host.indoor) {
         host.sunLight.intensity = 0
         host.personalLight.intensity = personalIntensity
-        scene.environmentIntensity = environmentIntensity / 8
+        scene.environmentIntensity = environmentIntensity * NIGHT_ENVIRONMENT_INTENSITY_FACTOR
         updateShadowRefreshRates(host, 0, 1)
         return
     }

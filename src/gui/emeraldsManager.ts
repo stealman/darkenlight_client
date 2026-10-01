@@ -5,13 +5,14 @@ import { ref } from 'vue'
 
 const HUD_BUTTON_GAP = 5
 const HUD_MINIMAP_LEFT_FRAME_SIZE = 3
+const HUD_EMERALD_FONT_SIZE_RATIO = 0.375
 
 export const EmeraldsManager = {
     size: 32 as number,
     iconBaseSize: 24 as number,
     emeraldsInfoPanel: null as HTMLDivElement,
     emeraldsInfoIcon: null as HTMLImageElement,
-    emeraldsInfoCount: null as HTMLDivElement,
+    emeraldsInfoCount: null as HTMLSpanElement,
 
     myEmeralds: 0 as number,
     emeralds: ref(0),
@@ -27,7 +28,7 @@ export const EmeraldsManager = {
     initialize() {
         this.emeraldsInfoPanel = document.getElementById("emeralds-info") as HTMLDivElement
         this.emeraldsInfoIcon = document.getElementById("emeralds-info-icon") as HTMLImageElement
-        this.emeraldsInfoCount = document.getElementById("emeralds-info-count") as HTMLDivElement
+        this.emeraldsInfoCount = document.getElementById("emeralds-info-count") as HTMLSpanElement
         this.setSize(this.size)
     },
 
@@ -79,6 +80,9 @@ export const EmeraldsManager = {
         if (this.emeraldsInfoIcon != null) {
             this.emeraldsInfoIcon.style.width = `${this.iconBaseSize}px`
             this.emeraldsInfoIcon.style.height = `${this.iconBaseSize}px`
+        }
+        if (this.emeraldsInfoCount != null) {
+            this.emeraldsInfoCount.style.fontSize = `${size * HUD_EMERALD_FONT_SIZE_RATIO}px`
         }
         this.updatePositions(MiniMap.canvasSize || 100)
     },

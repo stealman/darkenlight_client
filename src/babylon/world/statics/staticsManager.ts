@@ -38,13 +38,13 @@ export const StaticsManager = {
         })
     },
 
-    consumeObjects(data: Array<{ tp: number, x: number, z: number, meta?: WallTorchMetadata | StoneEntranceMetadata }>) {
+    consumeObjects(data: Array<{ tp: number, x: number, z: number, meta?: WallTorchMetadata | StoneEntranceMetadata, tmp?: boolean }>) {
         data.forEach(obj => {
             this.addObject(obj)
         })
     },
 
-    addObject(obj: { tp: number, x: number, z: number, meta?: WallTorchMetadata | StoneEntranceMetadata }) {
+    addObject(obj: { tp: number, x: number, z: number, meta?: WallTorchMetadata | StoneEntranceMetadata, tmp?: boolean }) {
         const y = WorldDataManager.getBlockMap()[obj.x][obj.z].totalHeight
         const pos = new Vector3(obj.x, y, obj.z)
         const rotation = Math.floor(Math.random() * 4) * Math.PI / 2
@@ -71,8 +71,8 @@ export const StaticsManager = {
             case 221: this.allStatics.push(new Wall3(obj.tp, pos, rotation, MaterialEnum1.BRICK_GRAY.uv)); break
             case 222: this.allStatics.push(new Wall3(obj.tp, pos, rotation, MaterialEnum1.BRICK_RED.uv)); break
 
-            case 241: this.allStatics.push(new FireplaceSmall(obj.tp, pos, rotation, MaterialEnum1.WOOD_1.uv)); break
-            case 242: this.allStatics.push(new FireplaceLarge(obj.tp, pos, rotation, MaterialEnum1.WOOD_1.uv)); break
+            case 241: this.allStatics.push(new FireplaceSmall(obj.tp, pos, rotation, MaterialEnum1.WOOD_1.uv, obj.tmp !== true)); break
+            case 242: this.allStatics.push(new FireplaceLarge(obj.tp, pos, rotation, MaterialEnum1.WOOD_1.uv, obj.tmp !== true)); break
             case 261: this.allStatics.push(new WallTorch(obj.tp, pos, MaterialEnum1.WOOD_1.uv, obj.meta as WallTorchMetadata)); break
             case 281: {
                 const entrance = new StoneEntrance(obj.tp, pos, MaterialEnum1.BRICK_GRAY.uv, obj.meta as StoneEntranceMetadata)
@@ -153,13 +153,23 @@ export const StaticsManager = {
         const nextVisible: StaticObject[] = []
 
         for (const obj of this.allStatics) {
-            if (ViewportManager.isPointInVisibleMatrix(Math.floor(obj.position.x), Math.floor(obj.position.z), 2)) {
+            const x = Math.floor(obj.position.x)
+            const z = Math.floor(obj.position.z)
+            if (ViewportManager.isPointInVisibleMatrix(x, z, 2)) {
                 nextVisible.push(obj)
                 if (!previousVisible.has(obj)) {
                     obj.onVisible()
                 }
             } else if (previousVisible.has(obj)) {
                 obj.onHidden()
+            }
+
+            if (obj instanceof FireplaceLarge) {
+                obj.setLightVisible(ViewportManager.isPointNearVisibleBounds(
+                    obj.renderPosition.x,
+                    obj.renderPosition.z,
+                    obj.getLightVisibilityRadius(),
+                ))
             }
         }
 

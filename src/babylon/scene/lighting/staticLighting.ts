@@ -2,6 +2,7 @@ import {
     AbstractMesh,
     DirectionalLight,
     Mesh,
+    RenderTargetTexture,
     ShadowGenerator,
     SpotLight,
     Vector3,
@@ -41,9 +42,14 @@ export interface StaticLightingHost {
     updateDayNightLighting(): void
     updateSharedLightMeshes(): void
     updateActorLightMeshes(): void
+    updateActorStaticShadowCasters(): void
     registerSharedLightMesh(mesh: AbstractMesh): void
     warmUpStaticLightShaderVariant(meshes: Array<Mesh | AbstractMesh>, selectedLights: Array<DirectionalLight | SpotLight>): Promise<void>
 }
+
+const DEFAULT_STATIC_LIGHT_DIRECTION = new Vector3(0, -1, 0)
+const DEFAULT_STATIC_LIGHT_ANGLE = Math.PI * 0.96
+const DEFAULT_STATIC_LIGHT_PRIORITY = 1
 
 export function resetStaticLighting(host: StaticLightingHost) {
     host.staticLights.clear()
@@ -91,10 +97,14 @@ export function configureStaticLightMaterials(host: StaticLightingHost) {
                 : INDOOR_STATIC_SHADOW_MAP_SIZE
             shadow = new ShadowGenerator(shadowMapSize, light, false)
             shadow.bias = 0.005
-            shadow.setDarkness(0)
+            shadow.setDarkness(1)
             shadow.usePoissonSampling = true
             shadow.forceBackFacesOnly = true
             shadow.frustumEdgeFalloff = 0.3
+            const shadowMap = shadow.getShadowMap()
+            if (shadowMap != null) {
+                shadowMap.refreshRate = RenderTargetTexture.REFRESHRATE_RENDER_ONCE
+            }
             light.shadowMinZ = 0.05
             light.shadowMaxZ = 12
             host.staticShadowGenerators.push(shadow)
@@ -113,6 +123,8 @@ export function configureStaticLightMaterials(host: StaticLightingHost) {
 
 export function registerStaticLight(host: StaticLightingHost, id: string, position: Vector3, profile: StaticLightProfile) {
     let source = host.staticLights.get(id)
+    const actorShadowModeChanged = source != null
+        && source.profile.castsActorShadows !== profile.castsActorShadows
     if (source == null) {
         source = {
             id,
@@ -126,6 +138,9 @@ export function registerStaticLight(host: StaticLightingHost, id: string, positi
         source.position = position
         source.profile = profile
         source.visible = true
+    }
+    if (actorShadowModeChanged) {
+        host.updateActorStaticShadowCasters()
     }
 }
 
@@ -144,6 +159,7 @@ export function clearStaticLights(host: StaticLightingHost) {
         slot.targetIntensity = 0
         slot.light.intensity = 0
     })
+    host.updateActorStaticShadowCasters()
     host.updateSharedLightMeshes()
 }
 
@@ -160,10 +176,14 @@ export function onLightsFrame(host: StaticLightingHost, timeRate: number) {
     const candidates = Array.from(host.staticLights.values())
         .filter(source => source.visible)
         .sort((a, b) => {
+            const priorityDifference = (b.profile.priority ?? DEFAULT_STATIC_LIGHT_PRIORITY)
+                - (a.profile.priority ?? DEFAULT_STATIC_LIGHT_PRIORITY)
+            if (priorityDifference !== 0) return priorityDifference
             if (playerPosition == null) return 0
             return Vector3.DistanceSquared(a.position, playerPosition) - Vector3.DistanceSquared(b.position, playerPosition)
         })
     const activeSources = new Set(candidates.slice(0, staticLightLimit))
+    let actorShadowCastersChanged = false
 
     for (const slot of host.staticLightSlots) {
         if (slot.source != null && (!activeSources.has(slot.source) || !usableSlots.includes(slot))) {
@@ -178,11 +198,13 @@ export function onLightsFrame(host: StaticLightingHost, timeRate: number) {
         const emptySlot = usableSlots.find(slot => slot.source == null && slot.currentIntensity === 0)
         if (emptySlot != null) {
             assignStaticLightSlot(host, emptySlot, source)
+            actorShadowCastersChanged = true
         }
     }
 
-    host.staticLightSlots.forEach(slot => {
+    host.staticLightSlots.forEach((slot, index) => {
         const active = usableSlots.includes(slot) && slot.source != null && activeSources.has(slot.source)
+        updateStaticSlotShadowState(host, slot, index, staticLightLimit, active || slot.currentIntensity > 0.001)
         const flickerIntensity = active && shouldFlicker(slot.source!)
             ? getStaticLightFlickerIntensity(host, slot.source!)
             : 1
@@ -202,6 +224,8 @@ export function onLightsFrame(host: StaticLightingHost, timeRate: number) {
                 slot.source.position.y + slot.source.profile.height + flickerPosition.y,
                 slot.source.position.z + flickerPosition.z,
             )
+            slot.light.direction.copyFrom(slot.source.profile.direction ?? DEFAULT_STATIC_LIGHT_DIRECTION)
+            slot.light.angle = slot.source.profile.angle ?? DEFAULT_STATIC_LIGHT_ANGLE
             slot.light.range = getStaticLightRange(host, slot.source)
             if (slot.shadow != null) {
                 slot.light.shadowMaxZ = slot.light.range
@@ -211,10 +235,15 @@ export function onLightsFrame(host: StaticLightingHost, timeRate: number) {
         slot.currentIntensity = moveTowards(slot.currentIntensity, slot.targetIntensity, timeRate / STATIC_LIGHT_FADE_SECONDS)
         slot.light.intensity = slot.currentIntensity
 
-        if (slot.currentIntensity === 0 && slot.targetIntensity === 0) {
+        if (!active && slot.currentIntensity === 0 && slot.targetIntensity === 0) {
+            actorShadowCastersChanged ||= slot.source != null
             slot.source = null
         }
     })
+
+    if (actorShadowCastersChanged) {
+        host.updateActorStaticShadowCasters()
+    }
 
     host.staticLights.forEach((source, id) => {
         if (!source.visible && !host.staticLightSlots.some(slot => slot.source === source)) {
@@ -263,8 +292,34 @@ export function getActorStaticLightLimit(host: Pick<StaticLightingHost, 'indoor'
 export function updateStaticLightShadowMode(host: StaticLightingHost) {
     const shadowLightLimit = getStaticLightLimit(host)
     host.staticLightSlots.forEach((slot, index) => {
-        slot.light.shadowEnabled = slot.shadow != null && index < shadowLightLimit
+        updateStaticSlotShadowState(host, slot, index, shadowLightLimit, slot.source != null)
     })
+}
+
+function updateStaticSlotShadowState(host: StaticLightingHost, slot: StaticLightSlot, index: number, shadowLightLimit: number, sourceActive: boolean) {
+    const shadowSlotEnabled = slot.shadow != null && index < shadowLightLimit
+    slot.light.shadowEnabled = shadowSlotEnabled
+    if (slot.shadow == null) {
+        return
+    }
+
+    const outdoorLightVisible = host.indoor || host.localLightFactor > 0.05
+    const shadowVisible = shadowSlotEnabled
+        && sourceActive
+        && slot.source?.profile.castsShadows !== false
+        && outdoorLightVisible
+    const darkness = shadowVisible ? 0 : 1
+    if (slot.shadow.getDarkness() !== darkness) {
+        slot.shadow.setDarkness(darkness)
+    }
+
+    const shadowMap = slot.shadow.getShadowMap()
+    const refreshRate = shadowVisible
+        ? RenderTargetTexture.REFRESHRATE_RENDER_ONEVERYFRAME
+        : RenderTargetTexture.REFRESHRATE_RENDER_ONCE
+    if (shadowMap != null && shadowMap.refreshRate !== refreshRate) {
+        shadowMap.refreshRate = refreshRate
+    }
 }
 
 function assignStaticLightSlot(host: StaticLightingHost, slot: StaticLightSlot, source: StaticLightSource) {
@@ -272,6 +327,8 @@ function assignStaticLightSlot(host: StaticLightingHost, slot: StaticLightSlot, 
     slot.currentIntensity = 0
     slot.targetIntensity = 0
     slot.light.position.set(source.position.x, source.position.y + source.profile.height, source.position.z)
+    slot.light.direction.copyFrom(source.profile.direction ?? DEFAULT_STATIC_LIGHT_DIRECTION)
+    slot.light.angle = source.profile.angle ?? DEFAULT_STATIC_LIGHT_ANGLE
     slot.light.range = getStaticLightRange(host, source)
     if (slot.shadow != null) {
         slot.light.shadowMaxZ = slot.light.range
@@ -295,7 +352,7 @@ function getStaticLightIntensity(host: StaticLightingHost, source: StaticLightSo
 }
 
 function getStaticLightRange(host: StaticLightingHost, source: StaticLightSource): number {
-    return source.profile.range * (host.indoor ? 1 : OUTDOOR_STATIC_LIGHT_RANGE_FACTOR)
+    return source.profile.range * (host.indoor ? 1 : source.profile.outdoorRangeFactor ?? OUTDOOR_STATIC_LIGHT_RANGE_FACTOR)
 }
 
 function shouldFlicker(source: StaticLightSource): boolean {

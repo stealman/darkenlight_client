@@ -6,6 +6,12 @@ export interface StaticLightProfile {
     intensity: number
     range: number
     flicker?: boolean
+    castsShadows?: boolean
+    castsActorShadows?: boolean
+    direction?: Vector3
+    angle?: number
+    priority?: number
+    outdoorRangeFactor?: number
 }
 
 export interface StaticLightSource {

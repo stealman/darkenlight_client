@@ -21,7 +21,7 @@ export interface MeshLightingHost {
     staticLightSlots: StaticLightSlot[]
     sharedLightMeshes: Set<AbstractMesh>
     actorLightMeshes: Set<AbstractMesh>
-    outdoorStaticShadowCasters: Set<AbstractMesh>
+    actorStaticShadowCasters: Set<AbstractMesh>
     actorMaterialWarmups: WeakMap<Material, Promise<void>>
     localPlayerLightWarmups: WeakMap<Material, Promise<void>>
     localPlayerLightWarmingMeshes: Set<AbstractMesh>
@@ -31,7 +31,7 @@ export interface MeshLightingHost {
 export function resetMeshLighting(host: MeshLightingHost) {
     host.sharedLightMeshes.clear()
     host.actorLightMeshes.clear()
-    host.outdoorStaticShadowCasters.clear()
+    host.actorStaticShadowCasters.clear()
     host.actorMaterialWarmups = new WeakMap<Material, Promise<void>>()
     host.localPlayerLightWarmups = new WeakMap<Material, Promise<void>>()
     host.localPlayerLightWarmingMeshes.clear()
@@ -215,10 +215,12 @@ export function addShadowCaster(host: MeshLightingHost, mesh: Mesh | AbstractMes
         host.staticShadowGenerators.forEach(shadow => shadow.addShadowCaster(mesh))
     }
     if (castOutdoorStaticShadow) {
-        host.outdoorStaticShadowCasters.add(mesh)
-        if (!host.indoor) {
-            host.staticShadowGenerators.forEach(shadow => shadow.addShadowCaster(mesh))
-        }
+        host.actorStaticShadowCasters.add(mesh)
+        host.staticLightSlots.forEach(slot => {
+            if (staticLightSlotCastsActorShadows(host, slot)) {
+                slot.shadow!.addShadowCaster(mesh)
+            }
+        })
     }
 }
 
@@ -234,24 +236,31 @@ export function removeShadowCaster(host: MeshLightingHost, mesh: Mesh | Abstract
         host.staticShadowGenerators.forEach(shadow => shadow.removeShadowCaster(mesh))
     }
     if (castOutdoorStaticShadow) {
-        host.outdoorStaticShadowCasters.delete(mesh)
+        host.actorStaticShadowCasters.delete(mesh)
         host.staticShadowGenerators.forEach(shadow => shadow.removeShadowCaster(mesh))
     }
 }
 
-export function updateOutdoorStaticShadowCasters(host: MeshLightingHost) {
+export function updateActorStaticShadowCasters(host: MeshLightingHost) {
     if (!Settings.isShadowsEnabled()) {
         return
     }
-    host.outdoorStaticShadowCasters.forEach(mesh => {
-        host.staticShadowGenerators.forEach(shadow => {
-            if (host.indoor) {
-                shadow.removeShadowCaster(mesh)
+    host.actorStaticShadowCasters.forEach(mesh => {
+        host.staticLightSlots.forEach(slot => {
+            if (staticLightSlotCastsActorShadows(host, slot)) {
+                slot.shadow!.addShadowCaster(mesh)
             } else {
-                shadow.addShadowCaster(mesh)
+                slot.shadow?.removeShadowCaster(mesh)
             }
         })
     })
+}
+
+function staticLightSlotCastsActorShadows(host: MeshLightingHost, slot: StaticLightSlot): boolean {
+    return slot.shadow != null
+        && slot.source != null
+        && slot.source.profile.castsShadows !== false
+        && (!host.indoor || slot.source.profile.castsActorShadows === true)
 }
 
 export function pruneDisposedMeshReferences(host: MeshLightingHost) {
@@ -265,9 +274,9 @@ export function pruneDisposedMeshReferences(host: MeshLightingHost) {
             host.actorLightMeshes.delete(mesh)
         }
     })
-    host.outdoorStaticShadowCasters.forEach(mesh => {
+    host.actorStaticShadowCasters.forEach(mesh => {
         if (mesh.isDisposed()) {
-            host.outdoorStaticShadowCasters.delete(mesh)
+            host.actorStaticShadowCasters.delete(mesh)
         }
     })
 

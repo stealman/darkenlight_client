@@ -40,6 +40,7 @@ import { GroundItemsManager } from '@/babylon/world/groundItemsManager'
 import { EmeraldsManager } from '@/gui/emeraldsManager'
 import { GfxManager } from '@/babylon/gfx/gfxManager'
 import { StaticsManager } from '@/babylon/world/statics/staticsManager'
+import { NIGHT_ENVIRONMENT_INTENSITY_FACTOR } from '@/babylon/scene/lighting/lightConfig'
 import { invoke } from '@tauri-apps/api/core'
 
 function isTauriDesktop(): boolean {
@@ -279,7 +280,7 @@ export const Renderer = {
         }
         const defaultEnvironmentIntensity = Lights.getEnvironmentIntensity()
         this.scene.environmentIntensity = this.environmentType === 'indoor'
-            ? defaultEnvironmentIntensity / 8
+            ? defaultEnvironmentIntensity * NIGHT_ENVIRONMENT_INTENSITY_FACTOR
             : defaultEnvironmentIntensity
         this.scene.fogEnabled = FOG_ENABLED && this.environmentType !== 'indoor'
 

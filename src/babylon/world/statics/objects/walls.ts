@@ -1,5 +1,6 @@
-import { Matrix, Mesh, MeshBuilder, Vector2, Vector3 } from '@babylonjs/core'
+import { Color3, Matrix, Mesh, MeshBuilder, Vector2, Vector3 } from '@babylonjs/core'
 import { Materials, TerrainEnum1 } from '@/babylon/materials'
+import { Lights } from '@/babylon/scene/lights'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { BaseStaticObject } from '@/babylon/world/statics/objects/baseStaticObject'
@@ -36,8 +37,14 @@ export interface StoneEntranceMetadata {
     facing?: StoneEntranceFacing
 }
 
+const PORTAL_LIGHT_COLOR = new Color3(0.65, 0.16, 1)
+const PORTAL_LIGHT_HEIGHT = 1
+const PORTAL_LIGHT_OUTWARD_OFFSET = 1.05
+
 export class StoneEntrance extends BaseStaticObject {
     private readonly facing: StoneEntranceFacing
+    private readonly portalLightPosition = new Vector3()
+    private readonly portalLightDirection = new Vector3()
     private portalPlane: Mesh | null = null
 
     constructor(type: number, position: Vector3, material: Vector2, metadata?: StoneEntranceMetadata) {
@@ -51,23 +58,27 @@ export class StoneEntrance extends BaseStaticObject {
 
     render() {
         this.updatePortalPlanePosition()
+        this.registerLight()
     }
 
     onVisible() {
-        if (this.portalPlane || !WorldRenderer.worldParentNode) {
+        if (!WorldRenderer.worldParentNode) {
             return
         }
 
-        this.portalPlane = MeshBuilder.CreatePlane(
-            `stoneEntrancePortal_${this.position.x}_${this.position.z}`,
-            { width: 2, height: 2, sideOrientation: Mesh.DOUBLESIDE },
-            WorldRenderer.worldParentNode.getScene(),
-        )
-        this.portalPlane.parent = WorldRenderer.worldParentNode
-        this.portalPlane.material = Materials.entrancePortalMaterial
-        this.portalPlane.isPickable = false
-        this.portalPlane.alwaysSelectAsActiveMesh = true
+        if (!this.portalPlane) {
+            this.portalPlane = MeshBuilder.CreatePlane(
+                `stoneEntrancePortal_${this.position.x}_${this.position.z}`,
+                { width: 2, height: 2, sideOrientation: Mesh.DOUBLESIDE },
+                WorldRenderer.worldParentNode.getScene(),
+            )
+            this.portalPlane.parent = WorldRenderer.worldParentNode
+            this.portalPlane.material = Materials.entrancePortalMaterial
+            this.portalPlane.isPickable = false
+            this.portalPlane.alwaysSelectAsActiveMesh = true
+        }
         this.updatePortalPlanePosition()
+        this.registerLight()
     }
 
     onHidden() {
@@ -75,8 +86,44 @@ export class StoneEntrance extends BaseStaticObject {
     }
 
     dispose() {
+        Lights.unregisterStaticLight(this.getLightId())
         this.portalPlane?.dispose()
         this.portalPlane = null
+    }
+
+    private getLightId(): string {
+        return `stone_entrance_${this.position.x}_${this.position.z}`
+    }
+
+    private registerLight() {
+        this.updatePortalLightTransform()
+        Lights.registerStaticLight(this.getLightId(), this.portalLightPosition, {
+            color: PORTAL_LIGHT_COLOR,
+            height: 0,
+            intensity: 3.6,
+            range: 8,
+            direction: this.portalLightDirection,
+            angle: Math.PI * 0.72,
+            priority: 1,
+            outdoorRangeFactor: 1,
+            castsShadows: false,
+        })
+    }
+
+    private updatePortalLightTransform() {
+        const facingX = this.facing === '+X' ? 1 : this.facing === '-X' ? -1 : 0
+        const facingZ = this.facing === '+Z' ? 1 : this.facing === '-Z' ? -1 : 0
+        const approachDirection = Lights.indoor ? 1 : -1
+        this.portalLightPosition.set(
+            this.renderPosition.x + (facingX * PORTAL_LIGHT_OUTWARD_OFFSET),
+            this.renderPosition.y + PORTAL_LIGHT_HEIGHT,
+            this.renderPosition.z + (facingZ * PORTAL_LIGHT_OUTWARD_OFFSET),
+        )
+        this.portalLightDirection.set(
+            facingX * approachDirection,
+            -0.35,
+            facingZ * approachDirection,
+        ).normalize()
     }
 
     private updatePortalPlanePosition() {

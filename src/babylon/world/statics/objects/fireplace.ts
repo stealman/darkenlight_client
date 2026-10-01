@@ -1,6 +1,7 @@
 import { Color3, Color4, Matrix, ParticleSystem, Texture, TransformNode, Vector2, Vector3 } from '@babylonjs/core'
 import { MaterialEnum1 } from '@/babylon/materials'
 import { Lights } from '@/babylon/scene/lights'
+import { OUTDOOR_STATIC_LIGHT_RANGE_FACTOR } from '@/babylon/scene/lighting/lightConfig'
 import { Renderer } from '@/babylon/scene/renderer'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { BaseStaticObject } from '@/babylon/world/statics/objects/baseStaticObject'
@@ -22,8 +23,9 @@ abstract class BaseFireplace extends BaseStaticObject {
     fireParticles: ParticleSystem | null
     smokeParticles: ParticleSystem | null
     particleEmitter: TransformNode | null
+    castsShadows: boolean
 
-    protected constructor(type: number, position: Vector3, rotation: number, material: Vector2, fireplaceScale: number, logLength: number, logInnerOffset: number, logTilt: number) {
+    protected constructor(type: number, position: Vector3, rotation: number, material: Vector2, fireplaceScale: number, logLength: number, logInnerOffset: number, logTilt: number, castsShadows: boolean) {
         super(type, position, rotation, material, null)
         this.fireplaceScale = fireplaceScale
         this.fireplaceScaleReduced = 1 + ((fireplaceScale - 1) * 0.5)
@@ -37,6 +39,7 @@ abstract class BaseFireplace extends BaseStaticObject {
         this.fireParticles = null
         this.smokeParticles = null
         this.particleEmitter = null
+        this.castsShadows = castsShadows
     }
 
     private getLogNoise(logIndex: number, channel: number): number {
@@ -69,7 +72,17 @@ abstract class BaseFireplace extends BaseStaticObject {
             intensity: 3 * this.fireplaceScaleReduced,
             range: 5 + 2 * this.fireplaceScaleReduced,
             flicker: true,
+            castsShadows: this.castsShadows,
+            castsActorShadows: this.castsShadows,
         })
+    }
+
+    setLightVisible(visible: boolean) {
+        if (visible) {
+            this.registerLight()
+        } else {
+            Lights.unregisterStaticLight(this.getLightId())
+        }
     }
 
     private createParticles() {
@@ -214,13 +227,18 @@ abstract class BaseFireplace extends BaseStaticObject {
 }
 
 export class FireplaceSmall extends BaseFireplace {
-    constructor(type: number, position: Vector3, rotation: number, material: Vector2) {
-        super(type, position, rotation, material, 1, 0.45, 0.01, 0.5)
+    constructor(type: number, position: Vector3, rotation: number, material: Vector2, castsShadows: boolean) {
+        super(type, position, rotation, material, 1, 0.45, 0.01, 0.5, castsShadows)
     }
 }
 
 export class FireplaceLarge extends BaseFireplace {
-    constructor(type: number, position: Vector3, rotation: number, material: Vector2) {
-        super(type, position, rotation, material, 2, 0.9, 0.02, 0.5)
+    constructor(type: number, position: Vector3, rotation: number, material: Vector2, castsShadows: boolean) {
+        super(type, position, rotation, material, 2, 0.9, 0.02, 0.5, castsShadows)
+    }
+
+    getLightVisibilityRadius(): number {
+        const authoredRange = 5 + (2 * this.fireplaceScaleReduced)
+        return authoredRange * OUTDOOR_STATIC_LIGHT_RANGE_FACTOR
     }
 }

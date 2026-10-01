@@ -75,6 +75,24 @@ export const ViewportManager = {
         return true
     },
 
+    isPointNearVisibleBounds(x: number, z: number, distance: number) {
+        if (!this.viewPortInitialized) {
+            return false
+        }
+
+        const myPos = MyPlayer.myChar.getPositionRounded()
+        const relativeX = x - myPos.x
+        const relativeZ = z - myPos.z
+        const distanceX = relativeX < this.minX
+            ? this.minX - relativeX
+            : Math.max(0, relativeX - this.maxX)
+        const distanceZ = relativeZ < this.minZ
+            ? this.minZ - relativeZ
+            : Math.max(0, relativeZ - this.maxZ)
+
+        return (distanceX * distanceX) + (distanceZ * distanceZ) <= distance * distance
+    },
+
     calculateViewport(camera) {
         const borderTiles = []
         let axisDistance = 1

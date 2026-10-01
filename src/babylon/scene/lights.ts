@@ -59,7 +59,7 @@ import {
     unregisterSharedLightMesh,
     updateActorLightMesh,
     updateActorLightMeshes,
-    updateOutdoorStaticShadowCasters,
+    updateActorStaticShadowCasters,
     updateSharedLightMesh,
     updateSharedLightMeshes,
     warmActorMaterial,
@@ -80,7 +80,7 @@ export const Lights = {
     staticLightSlots: [] as StaticLightSlot[],
     sharedLightMeshes: new Set<AbstractMesh>(),
     actorLightMeshes: new Set<AbstractMesh>(),
-    outdoorStaticShadowCasters: new Set<AbstractMesh>(),
+    actorStaticShadowCasters: new Set<AbstractMesh>(),
     actorMaterialWarmups: new WeakMap<Material, Promise<void>>(),
     localPlayerLightWarmups: new WeakMap<Material, Promise<void>>(),
     localPlayerLightWarmingMeshes: new Set<AbstractMesh>(),
@@ -116,7 +116,9 @@ export const Lights = {
         this.personalLight.diffuse = new Color3(1, 0.82, 0.58)
         this.personalLight.specular = new Color3(1, 0.82, 0.58)
         this.personalLight.intensity = 3.5
-        this.personalLight.range = 18
+        this.personalLight.range = Settings.deviceType === 'PHONE'
+            ? 11
+            : Settings.deviceType === 'TABLET' ? 13 : 14
 
         if (Settings.isShadowsEnabled()) {
             this.shadow = new ShadowGenerator(Settings.detailLevel.shadowQuality == 2 ? 4096 : 2048, this.sunLight, false)
@@ -130,7 +132,7 @@ export const Lights = {
             this.personalShadow.usePoissonSampling = true
             this.personalShadow.frustumEdgeFalloff = 0.3
             this.personalLight.shadowMinZ = 0.05
-            this.personalLight.shadowMaxZ = 18
+            this.personalLight.shadowMaxZ = this.personalLight.range
             this.personalLight.shadowEnabled = true
         }
 
@@ -141,7 +143,7 @@ export const Lights = {
 
     configureStaticLightMaterials() {
         configureStaticLightMaterials(this)
-        updateOutdoorStaticShadowCasters(this)
+        updateActorStaticShadowCasters(this)
     },
 
     registerStaticLight(id: string, position: Vector3, profile: StaticLightProfile) {
@@ -206,6 +208,10 @@ export const Lights = {
 
     updateActorLightMesh(mesh: AbstractMesh) {
         updateActorLightMesh(this, mesh)
+    },
+
+    updateActorStaticShadowCasters() {
+        updateActorStaticShadowCasters(this)
     },
 
     warmLocalPlayerLightMaterial(mesh: AbstractMesh): Promise<void> {
@@ -292,7 +298,7 @@ export const Lights = {
                 indoor ? INDOOR_PERSONAL_SHADOW_DARKNESS : OUTDOOR_PERSONAL_SHADOW_DARKNESS,
             )
         }
-        updateOutdoorStaticShadowCasters(this)
+        updateActorStaticShadowCasters(this)
         updateStaticLightShadowMode(this)
         this.brightnessChanged()
         this.updateSharedLightMeshes()
