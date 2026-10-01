@@ -11,6 +11,7 @@ export const LARGE_CAMPFIRE_SHADOW_MAP_SIZE = 2048
 export const LARGE_CAMPFIRE_SHADOW_SLOT_COUNT = 2
 export const FILTER_ACTOR_STATIC_SHADOW_CASTERS_BY_DISTANCE = true
 export const ACTOR_STATIC_SHADOW_CASTER_UPDATE_SECONDS = 0.1
+export const STATIC_LIGHT_ASSIGNMENT_UPDATE_SECONDS = 0.1
 export const STATIC_FIRE_SMOKE_PARTICLE_FACTORS = [0.4, 0.65, 1]
 // A/B switch: false restores the original per-object CPU particle systems.
 export const USE_SHARED_GPU_STATIC_FIRE_PARTICLES = true

@@ -22,6 +22,7 @@ import {
     STATIC_SHADOW_MAP_SIZE,
     STATIC_LIGHT_DEFAULT_BRIGHTNESS_FACTOR,
     STATIC_LIGHT_FADE_SECONDS,
+    STATIC_LIGHT_ASSIGNMENT_UPDATE_SECONDS,
     STATIC_LIGHT_LIMITS,
     STATIC_LIGHT_PULSE_AMPLITUDE,
     STATIC_LIGHT_PULSE_PERIOD_SECONDS,
@@ -42,6 +43,8 @@ export interface StaticLightingHost {
     staticLightShadersWarming: boolean
     staticLightFlickerTime: number
     actorStaticShadowCasterUpdateTime: number
+    staticLightAssignmentUpdateTime: number
+    staticLightAssignmentsDirty: boolean
     localLightFactor: number
     indoor: boolean
     updateDayNightLighting(): void
@@ -64,6 +67,8 @@ export function resetStaticLighting(host: StaticLightingHost) {
     host.staticLightShadersWarming = false
     host.staticLightFlickerTime = 0
     host.actorStaticShadowCasterUpdateTime = ACTOR_STATIC_SHADOW_CASTER_UPDATE_SECONDS
+    host.staticLightAssignmentUpdateTime = STATIC_LIGHT_ASSIGNMENT_UPDATE_SECONDS
+    host.staticLightAssignmentsDirty = true
 }
 
 export function configureStaticLightMaterials(host: StaticLightingHost) {
@@ -116,6 +121,7 @@ export function configureStaticLightMaterials(host: StaticLightingHost) {
             standardShadow,
             largeCampfireShadow,
             source: null,
+            active: false,
             targetIntensity: 0,
             currentIntensity: 0,
             flickerOffset: new Vector3(),
@@ -145,12 +151,14 @@ export function registerStaticLight(host: StaticLightingHost, id: string, positi
     if (actorShadowModeChanged) {
         host.updateActorStaticShadowCasters()
     }
+    host.staticLightAssignmentsDirty = true
 }
 
 export function unregisterStaticLight(host: StaticLightingHost, id: string) {
     const source = host.staticLights.get(id)
     if (source != null) {
         source.visible = false
+        host.staticLightAssignmentsDirty = true
     }
 }
 
@@ -158,48 +166,42 @@ export function clearStaticLights(host: StaticLightingHost) {
     host.staticLights.clear()
     host.staticLightSlots.forEach(slot => {
         slot.source = null
+        slot.active = false
         slot.currentIntensity = 0
         slot.targetIntensity = 0
         slot.light.intensity = 0
     })
     host.updateActorStaticShadowCasters()
     host.updateSharedLightMeshes()
+    host.staticLightAssignmentUpdateTime = 0
+    host.staticLightAssignmentsDirty = false
 }
 
 export function onLightsFrame(host: StaticLightingHost, timeRate: number) {
+    // Vite HMR can preserve a Lights singleton created before these fields
+    // existed. Recover the scheduling state instead of letting NaN disable
+    // all later assignment refreshes.
+    if (!Number.isFinite(host.staticLightAssignmentUpdateTime)) {
+        host.staticLightAssignmentUpdateTime = STATIC_LIGHT_ASSIGNMENT_UPDATE_SECONDS
+        host.staticLightAssignmentsDirty = true
+    }
     host.staticLightFlickerTime += timeRate
     host.updateDayNightLighting()
     if (host.staticLights.size === 0 || host.staticLightShadersWarming) {
         return
     }
 
-    const playerPosition = MyPlayer.myChar?.pos
-    const staticLightLimit = getStaticLightLimit(host)
-    const usableSlots = host.staticLightSlots.slice(0, staticLightLimit)
-    const candidates = Array.from(host.staticLights.values())
-        .filter(source => source.visible)
-        .sort((a, b) => {
-            const priorityDifference = (b.profile.priority ?? DEFAULT_STATIC_LIGHT_PRIORITY)
-                - (a.profile.priority ?? DEFAULT_STATIC_LIGHT_PRIORITY)
-            if (priorityDifference !== 0) return priorityDifference
-            if (playerPosition == null) return 0
-            return Vector3.DistanceSquared(a.position, playerPosition) - Vector3.DistanceSquared(b.position, playerPosition)
-        })
-    const activeCandidates = candidates.slice(0, staticLightLimit)
-    const activeSources = new Set(activeCandidates)
-
-    for (const slot of host.staticLightSlots) {
-        if (slot.source != null && (!activeSources.has(slot.source) || !usableSlots.includes(slot))) {
-            slot.targetIntensity = 0
-        }
+    host.staticLightAssignmentUpdateTime += timeRate
+    const assignmentsDue = host.staticLightAssignmentsDirty
+        || host.staticLightAssignmentUpdateTime >= STATIC_LIGHT_ASSIGNMENT_UPDATE_SECONDS
+    if (assignmentsDue) {
+        host.staticLightAssignmentUpdateTime %= STATIC_LIGHT_ASSIGNMENT_UPDATE_SECONDS
+        updateStaticLightAssignments(host)
     }
 
-    assignUnslottedStaticLightSources(host, usableSlots, activeCandidates, LARGE_CAMPFIRE_SHADOW_MAP_SIZE)
-    assignUnslottedStaticLightSources(host, usableSlots, activeCandidates, STATIC_SHADOW_MAP_SIZE)
-
     host.staticLightSlots.forEach((slot, index) => {
-        const active = usableSlots.includes(slot) && slot.source != null && activeSources.has(slot.source)
-        updateStaticSlotShadowState(host, slot, index, staticLightLimit, active || slot.currentIntensity > 0.001)
+        const active = slot.active
+        updateStaticSlotShadowState(host, slot, index, getStaticLightLimit(host), active || slot.currentIntensity > 0.001)
         const animatedIntensity = active
             ? getStaticLightAnimatedIntensity(host, slot.source!)
             : 1
@@ -232,6 +234,7 @@ export function onLightsFrame(host: StaticLightingHost, timeRate: number) {
 
         if (!active && slot.currentIntensity === 0 && slot.targetIntensity === 0) {
             slot.source = null
+            slot.active = false
         }
     })
 
@@ -239,6 +242,7 @@ export function onLightsFrame(host: StaticLightingHost, timeRate: number) {
     if (host.actorStaticShadowCasterUpdateTime >= ACTOR_STATIC_SHADOW_CASTER_UPDATE_SECONDS) {
         host.actorStaticShadowCasterUpdateTime %= ACTOR_STATIC_SHADOW_CASTER_UPDATE_SECONDS
         host.updateActorStaticShadowCasters()
+        host.updateActorLightMeshes()
     }
 
     host.staticLights.forEach((source, id) => {
@@ -247,8 +251,37 @@ export function onLightsFrame(host: StaticLightingHost, timeRate: number) {
         }
     })
 
-    host.updateSharedLightMeshes()
-    host.updateActorLightMeshes()
+}
+
+function updateStaticLightAssignments(host: StaticLightingHost) {
+    const playerPosition = MyPlayer.myChar?.pos
+    const staticLightLimit = getStaticLightLimit(host)
+    const usableSlots = host.staticLightSlots.slice(0, staticLightLimit)
+    const candidates = Array.from(host.staticLights.values())
+        .filter(source => source.visible)
+        .sort((a, b) => {
+            const priorityDifference = (b.profile.priority ?? DEFAULT_STATIC_LIGHT_PRIORITY)
+                - (a.profile.priority ?? DEFAULT_STATIC_LIGHT_PRIORITY)
+            if (priorityDifference !== 0) return priorityDifference
+            if (playerPosition == null) return 0
+            return Vector3.DistanceSquared(a.position, playerPosition) - Vector3.DistanceSquared(b.position, playerPosition)
+        })
+    const activeCandidates = candidates.slice(0, staticLightLimit)
+    const activeSources = new Set(activeCandidates)
+
+    for (let index = 0; index < host.staticLightSlots.length; index++) {
+        const slot = host.staticLightSlots[index]
+        slot.active = index < staticLightLimit && slot.source != null && activeSources.has(slot.source)
+    }
+
+    assignUnslottedStaticLightSources(host, usableSlots, activeCandidates, LARGE_CAMPFIRE_SHADOW_MAP_SIZE)
+    assignUnslottedStaticLightSources(host, usableSlots, activeCandidates, STATIC_SHADOW_MAP_SIZE)
+
+    for (let index = 0; index < host.staticLightSlots.length; index++) {
+        const slot = host.staticLightSlots[index]
+        slot.active = index < staticLightLimit && slot.source != null && activeSources.has(slot.source)
+    }
+    host.staticLightAssignmentsDirty = false
 }
 
 export async function warmUpStaticLightShaders(host: StaticLightingHost, meshes: Array<Mesh | AbstractMesh>) {

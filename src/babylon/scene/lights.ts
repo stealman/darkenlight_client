@@ -93,6 +93,8 @@ export const Lights = {
     dayNightShadersWarmed: false,
     staticLightFlickerTime: 0,
     actorStaticShadowCasterUpdateTime: 0,
+    staticLightAssignmentUpdateTime: 0,
+    staticLightAssignmentsDirty: true,
     dayNightPhaseAtSync: INITIAL_DAY_NIGHT_PHASE,
     dayNightCycleDurationMs: DEFAULT_DAY_NIGHT_CYCLE_DURATION_MS,
     dayNightSynchronizedAt: 0,
@@ -298,6 +300,7 @@ export const Lights = {
 
     setIndoor(indoor: boolean) {
         this.indoor = indoor
+        this.staticLightAssignmentsDirty = true
         this.updatePersonalLightPosition()
         if (Settings.isShadowsEnabled()) {
             this.personalShadow.setDarkness(
