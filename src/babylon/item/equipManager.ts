@@ -330,7 +330,7 @@ export class EquipItemType {
     }
 
     /** Loads a GLB source mesh for weapons and vertex-colour armour. */
-    async initializeMeshGlb(parentNode: TransformNode, scene: Scene, fileName: string, material: PBRCustomMaterial | null, position: Vector3 = Vector3.Zero(), rotation: Vector3 = Vector3.Zero(), scale: Vector3 = Vector3.One(), castPersonalShadow = true) {
+    async initializeMeshGlb(parentNode: TransformNode, scene: Scene, fileName: string, material: PBRCustomMaterial | null, position: Vector3 = Vector3.Zero(), rotation: Vector3 = Vector3.Zero(), scale: Vector3 = Vector3.One(), castsShadows = true) {
         const result = await SceneLoader.ImportMeshAsync("", "/models/equip/", fileName, scene);
         const source = result.meshes[0].getChildMeshes()[0] as Mesh
         source.position = position
@@ -346,9 +346,23 @@ export class EquipItemType {
         this.mesh.alwaysSelectAsActiveMesh = true
         this.mesh.parent = parentNode
         this.mesh.receiveShadows = true
-        // One mesh contains thin instances for every actor using this item type,
-        // so it has no single actor position that can be range-filtered.
-        Lights.addShadowCaster(this.mesh, castPersonalShadow, false, true, false)
+        if (castsShadows) {
+            Lights.addShadowCaster(this.mesh, true, false, true, true, (lightPosition, lightRangeSquared) => {
+                const items = EquipManager.equippedItems.get(this)
+                if (items == null) {
+                    return false
+                }
+                for (const item of items) {
+                    const dx = item.position.x - lightPosition.x
+                    const dy = item.position.y - lightPosition.y
+                    const dz = item.position.z - lightPosition.z
+                    if (((dx * dx) + (dy * dy) + (dz * dz)) <= lightRangeSquared) {
+                        return true
+                    }
+                }
+                return false
+            })
+        }
         Lights.registerDynamicLightMesh(this.mesh)
     }
 

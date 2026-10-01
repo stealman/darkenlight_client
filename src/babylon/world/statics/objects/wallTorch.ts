@@ -5,6 +5,7 @@ import { Settings } from '@/settings/settings'
 import { Renderer } from '@/babylon/scene/renderer'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { BaseStaticObject } from '@/babylon/world/statics/objects/baseStaticObject'
+import { StaticFireParticleManager } from '@/babylon/world/statics/staticFireParticleManager'
 
 export type WallTorchFacing = '-X' | '+X' | '-Z' | '+Z'
 
@@ -77,6 +78,10 @@ export class WallTorch extends BaseStaticObject {
     }
 
     private updateParticleEmitterPosition() {
+        if (this.registerSharedParticles()) {
+            return
+        }
+
         if (this.particleEmitter == null) {
             return
         }
@@ -89,8 +94,45 @@ export class WallTorch extends BaseStaticObject {
         )
     }
 
+    private registerSharedParticles(): boolean {
+        if (Renderer.scene == null) {
+            return false
+        }
+
+        const normal = this.getWallNormal()
+        const width = normal.x === 0 ? 0.18 : 0.12
+        const depth = normal.z === 0 ? 0.18 : 0.12
+        return StaticFireParticleManager.register(Renderer.scene, this.getLightId(), {
+            profile: 'wallTorch',
+            x: this.renderPosition.x + (normal.x * WALL_SURFACE_OFFSET),
+            y: this.getTorchTopY(),
+            z: this.renderPosition.z + (normal.z * WALL_SURFACE_OFFSET),
+            fireHalfWidth: width / 2,
+            fireHalfDepth: depth / 2,
+            fireMaxY: 0.03,
+            smokeHalfWidth: width,
+            smokeHalfDepth: depth,
+            smokeMinY: 0.2,
+            smokeMaxY: 0.25,
+        })
+    }
+
     private createParticles() {
-        if ((this.fireParticles != null && this.smokeParticles != null) || Renderer.scene == null) {
+        if (Renderer.scene == null) {
+            return
+        }
+
+        if (this.registerSharedParticles()) {
+            this.fireParticles?.dispose()
+            this.smokeParticles?.dispose()
+            this.particleEmitter?.dispose()
+            this.fireParticles = null
+            this.smokeParticles = null
+            this.particleEmitter = null
+            return
+        }
+
+        if (this.fireParticles != null && this.smokeParticles != null) {
             return
         }
 
@@ -170,6 +212,7 @@ export class WallTorch extends BaseStaticObject {
 
     dispose() {
         Lights.unregisterStaticLight(this.getLightId())
+        StaticFireParticleManager.unregister(this.getLightId())
         this.fireParticles?.dispose()
         this.smokeParticles?.dispose()
         this.particleEmitter?.dispose()

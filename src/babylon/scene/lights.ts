@@ -48,6 +48,7 @@ import {
     warmUpStaticLightShaders,
 } from '@/babylon/scene/lighting/staticLighting'
 import {
+    ActorStaticShadowRangeTest,
     addShadowCaster as addMeshShadowCaster,
     compileActorLightVariants,
     pruneDisposedMeshReferences,
@@ -83,6 +84,7 @@ export const Lights = {
     actorLightMeshes: new Set<AbstractMesh>(),
     actorStaticShadowCasters: new Set<AbstractMesh>(),
     unfilteredActorStaticShadowCasters: new Set<AbstractMesh>(),
+    actorStaticShadowRangeTests: new WeakMap<AbstractMesh, ActorStaticShadowRangeTest>(),
     actorMaterialWarmups: new WeakMap<Material, Promise<void>>(),
     localPlayerLightWarmups: new WeakMap<Material, Promise<void>>(),
     localPlayerLightWarmingMeshes: new Set<AbstractMesh>(),
@@ -278,8 +280,8 @@ export const Lights = {
         )
     },
 
-    addShadowCaster(mesh: Mesh | AbstractMesh, castPersonalShadow: boolean = true, castStaticShadow: boolean = false, castOutdoorStaticShadow: boolean = false, filterActorStaticShadowByDistance: boolean = true) {
-        addMeshShadowCaster(this, mesh, castPersonalShadow, castStaticShadow, castOutdoorStaticShadow, filterActorStaticShadowByDistance)
+    addShadowCaster(mesh: Mesh | AbstractMesh, castPersonalShadow: boolean = true, castStaticShadow: boolean = false, castOutdoorStaticShadow: boolean = false, filterActorStaticShadowByDistance: boolean = true, actorStaticShadowRangeTest?: ActorStaticShadowRangeTest) {
+        addMeshShadowCaster(this, mesh, castPersonalShadow, castStaticShadow, castOutdoorStaticShadow, filterActorStaticShadowByDistance, actorStaticShadowRangeTest)
     },
 
     removeShadowCaster(mesh: Mesh | AbstractMesh, castPersonalShadow: boolean = true, castStaticShadow: boolean = false, castOutdoorStaticShadow: boolean = false) {

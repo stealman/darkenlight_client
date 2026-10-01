@@ -16,6 +16,8 @@ import {
 import type { StaticLightSlot } from '@/babylon/scene/lighting/lightTypes'
 import { getActorStaticLightLimit, getStaticLightLimit } from '@/babylon/scene/lighting/staticLighting'
 
+export type ActorStaticShadowRangeTest = (lightPosition: Vector3, lightRangeSquared: number) => boolean
+
 export interface MeshLightingHost {
     shadow: ShadowGenerator
     sunLight: DirectionalLight
@@ -27,6 +29,7 @@ export interface MeshLightingHost {
     actorLightMeshes: Set<AbstractMesh>
     actorStaticShadowCasters: Set<AbstractMesh>
     unfilteredActorStaticShadowCasters: Set<AbstractMesh>
+    actorStaticShadowRangeTests: WeakMap<AbstractMesh, ActorStaticShadowRangeTest>
     actorMaterialWarmups: WeakMap<Material, Promise<void>>
     localPlayerLightWarmups: WeakMap<Material, Promise<void>>
     localPlayerLightWarmingMeshes: Set<AbstractMesh>
@@ -40,6 +43,7 @@ export function resetMeshLighting(host: MeshLightingHost) {
     host.actorLightMeshes = new Set<AbstractMesh>()
     host.actorStaticShadowCasters = new Set<AbstractMesh>()
     host.unfilteredActorStaticShadowCasters = new Set<AbstractMesh>()
+    host.actorStaticShadowRangeTests = new WeakMap<AbstractMesh, ActorStaticShadowRangeTest>()
     host.actorMaterialWarmups = new WeakMap<Material, Promise<void>>()
     host.localPlayerLightWarmups = new WeakMap<Material, Promise<void>>()
     host.localPlayerLightWarmingMeshes = new Set<AbstractMesh>()
@@ -211,7 +215,7 @@ export async function warmUpStaticLightShaderVariant(meshes: Array<Mesh | Abstra
     await Promise.all(meshes.map(mesh => mesh.material?.forceCompilationAsync(mesh, {useInstances: true})))
 }
 
-export function addShadowCaster(host: MeshLightingHost, mesh: Mesh | AbstractMesh, castPersonalShadow: boolean = true, castStaticShadow: boolean = false, castOutdoorStaticShadow: boolean = false, filterActorStaticShadowByDistance: boolean = true) {
+export function addShadowCaster(host: MeshLightingHost, mesh: Mesh | AbstractMesh, castPersonalShadow: boolean = true, castStaticShadow: boolean = false, castOutdoorStaticShadow: boolean = false, filterActorStaticShadowByDistance: boolean = true, actorStaticShadowRangeTest?: ActorStaticShadowRangeTest) {
     if (!Settings.isShadowsEnabled()) {
         return
     }
@@ -227,6 +231,9 @@ export function addShadowCaster(host: MeshLightingHost, mesh: Mesh | AbstractMes
             ? host.actorStaticShadowCasters
             : host.unfilteredActorStaticShadowCasters
         casters.add(mesh)
+        if (actorStaticShadowRangeTest != null) {
+            host.actorStaticShadowRangeTests.set(mesh, actorStaticShadowRangeTest)
+        }
         updateActorStaticShadowCasters(host)
     }
 }
@@ -245,6 +252,7 @@ export function removeShadowCaster(host: MeshLightingHost, mesh: Mesh | Abstract
     if (castOutdoorStaticShadow) {
         host.actorStaticShadowCasters.delete(mesh)
         host.unfilteredActorStaticShadowCasters.delete(mesh)
+        host.actorStaticShadowRangeTests.delete(mesh)
         host.staticLightSlots.forEach(slot => setActorStaticShadowCaster(slot, mesh, false))
     }
 }
@@ -277,11 +285,17 @@ export function updateActorStaticShadowCasters(host: MeshLightingHost) {
                 setActorStaticShadowCaster(slot, mesh, true)
                 continue
             }
-            const meshPosition = mesh.getAbsolutePosition()
-            const dx = meshPosition.x - lightPosition.x
-            const dy = meshPosition.y - lightPosition.y
-            const dz = meshPosition.z - lightPosition.z
-            const inRange = ((dx * dx) + (dy * dy) + (dz * dz)) <= lightRangeSquared
+            const rangeTest = host.actorStaticShadowRangeTests.get(mesh)
+            let inRange: boolean
+            if (rangeTest != null) {
+                inRange = rangeTest(lightPosition, lightRangeSquared)
+            } else {
+                const meshPosition = mesh.getAbsolutePosition()
+                const dx = meshPosition.x - lightPosition.x
+                const dy = meshPosition.y - lightPosition.y
+                const dz = meshPosition.z - lightPosition.z
+                inRange = ((dx * dx) + (dy * dy) + (dz * dz)) <= lightRangeSquared
+            }
             setActorStaticShadowCaster(slot, mesh, inRange)
         }
 

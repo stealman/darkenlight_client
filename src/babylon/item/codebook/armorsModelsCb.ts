@@ -48,6 +48,7 @@ export const ArmorsCbManager = {
     async getVertexColorItem(data: EquipCbItem, material: PBRCustomMaterial): Promise<EquipItemType> {
         const item = new EquipItemType(data)
         const glbModelName = ArmorVertexColorGlbNames[data.id] ?? data.model
+        const castsShadows = data.id === EquipSlotModelsCb.SHIELD.modelId
         try {
             await item.initializeMeshGlb(
                 this.itemSourceParent!,
@@ -57,7 +58,7 @@ export const ArmorsCbManager = {
                 data.pos,
                 data.rot,
                 data.scale,
-                false,
+                castsShadows,
             )
         } catch (error) {
             const fallbackGlbName = ArmorVertexColorFallbackGlbNames[data.id]
@@ -72,7 +73,7 @@ export const ArmorsCbManager = {
                 data.pos,
                 data.rot,
                 data.scale,
-                false,
+                castsShadows,
             )
         }
         return item

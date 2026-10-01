@@ -11,6 +11,7 @@ import { Settings } from '@/settings/settings'
 import { Renderer } from '@/babylon/scene/renderer'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { BaseStaticObject } from '@/babylon/world/statics/objects/baseStaticObject'
+import { StaticFireParticleManager } from '@/babylon/world/statics/staticFireParticleManager'
 
 const FULL_CIRCLE = Math.PI * 2
 const FIREPLACE_LOG_COUNT = 7
@@ -62,6 +63,10 @@ abstract class BaseFireplace extends BaseStaticObject {
     }
 
     private updateParticleEmitterPosition() {
+        if (this.registerSharedParticles()) {
+            return
+        }
+
         if (this.particleEmitter == null) {
             return
         }
@@ -71,6 +76,26 @@ abstract class BaseFireplace extends BaseStaticObject {
 
     private getLightId(): string {
         return `fireplace_${this.type}_${this.position.x}_${this.position.z}`
+    }
+
+    private registerSharedParticles(): boolean {
+        if (Renderer.scene == null) {
+            return false
+        }
+
+        return StaticFireParticleManager.register(Renderer.scene, this.getLightId(), {
+            profile: this.fireplaceScale > 1 ? 'fireplaceLarge' : 'fireplaceSmall',
+            x: this.renderPosition.x,
+            y: this.renderPosition.y + (0.12 * this.fireplaceScaleReduced),
+            z: this.renderPosition.z,
+            fireHalfWidth: 0.12 * this.fireplaceScale,
+            fireHalfDepth: 0.12 * this.fireplaceScale,
+            fireMaxY: 0.03 * this.fireplaceScale,
+            smokeHalfWidth: 0.15 * this.fireplaceScale,
+            smokeHalfDepth: 0.15 * this.fireplaceScale,
+            smokeMinY: 0.02 * this.fireplaceScale * 8,
+            smokeMaxY: 0.08 * this.fireplaceScale * 8,
+        })
     }
 
     private registerLight() {
@@ -95,7 +120,21 @@ abstract class BaseFireplace extends BaseStaticObject {
     }
 
     private createParticles() {
-        if ((this.fireParticles != null && this.smokeParticles != null) || Renderer.scene == null) {
+        if (Renderer.scene == null) {
+            return
+        }
+
+        if (this.registerSharedParticles()) {
+            this.fireParticles?.dispose()
+            this.smokeParticles?.dispose()
+            this.particleEmitter?.dispose()
+            this.fireParticles = null
+            this.smokeParticles = null
+            this.particleEmitter = null
+            return
+        }
+
+        if (this.fireParticles != null && this.smokeParticles != null) {
             return
         }
 
@@ -174,6 +213,7 @@ abstract class BaseFireplace extends BaseStaticObject {
 
     dispose() {
         Lights.unregisterStaticLight(this.getLightId())
+        StaticFireParticleManager.unregister(this.getLightId())
         this.fireParticles?.dispose()
         this.smokeParticles?.dispose()
         this.particleEmitter?.dispose()

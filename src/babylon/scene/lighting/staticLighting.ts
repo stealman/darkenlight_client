@@ -23,6 +23,8 @@ import {
     STATIC_LIGHT_DEFAULT_BRIGHTNESS_FACTOR,
     STATIC_LIGHT_FADE_SECONDS,
     STATIC_LIGHT_LIMITS,
+    STATIC_LIGHT_PULSE_AMPLITUDE,
+    STATIC_LIGHT_PULSE_PERIOD_SECONDS,
 } from '@/babylon/scene/lighting/lightConfig'
 import type {
     StaticLightProfile,
@@ -198,11 +200,11 @@ export function onLightsFrame(host: StaticLightingHost, timeRate: number) {
     host.staticLightSlots.forEach((slot, index) => {
         const active = usableSlots.includes(slot) && slot.source != null && activeSources.has(slot.source)
         updateStaticSlotShadowState(host, slot, index, staticLightLimit, active || slot.currentIntensity > 0.001)
-        const flickerIntensity = active && shouldFlicker(slot.source!)
-            ? getStaticLightFlickerIntensity(host, slot.source!)
+        const animatedIntensity = active
+            ? getStaticLightAnimatedIntensity(host, slot.source!)
             : 1
         slot.targetIntensity = active
-            ? getStaticLightIntensity(host, slot.source!) * getStaticLightBrightnessFactor() * getLocalLightFactor(host) * flickerIntensity
+            ? getStaticLightIntensity(host, slot.source!) * getStaticLightBrightnessFactor() * getLocalLightFactor(host) * animatedIntensity
             : 0
 
         if (slot.source != null) {
@@ -465,6 +467,14 @@ function getStaticLightRange(host: StaticLightingHost, source: StaticLightSource
 
 function shouldFlicker(source: StaticLightSource): boolean {
     return Settings.isDetalLevelHigh() && source.profile.flicker === true
+}
+
+function getStaticLightAnimatedIntensity(host: StaticLightingHost, source: StaticLightSource): number {
+    if (source.profile.pulse === true) {
+        const pulsePhase = (host.staticLightFlickerTime / STATIC_LIGHT_PULSE_PERIOD_SECONDS) * Math.PI * 2
+        return 1 + (Math.sin(pulsePhase + source.flickerPhase) * STATIC_LIGHT_PULSE_AMPLITUDE)
+    }
+    return shouldFlicker(source) ? getStaticLightFlickerIntensity(host, source) : 1
 }
 
 function getStaticLightFlickerPhase(id: string): number {

@@ -15,6 +15,7 @@ import { WallTorch, WallTorchMetadata } from '@/babylon/world/statics/objects/wa
 import { StaticObjectsCodebook } from '@/babylon/world/statics/staticsCodebook'
 import { MyPlayer } from '@/data/myPlayer'
 import { AudioManager } from '@/babylon/audio/audioManager'
+import { StaticFireParticleManager } from '@/babylon/world/statics/staticFireParticleManager'
 
 export const StaticsManager = {
     prefabs: {
@@ -106,6 +107,7 @@ export const StaticsManager = {
                 this.dungeonEntrances.delete(obj)
                 obj.dispose()
                 this.allStatics.splice(i, 1)
+                StaticFireParticleManager.flush()
                 break
             }
         }
@@ -129,6 +131,7 @@ export const StaticsManager = {
         for (const element of this.visibleStatics) {
             element.render()
         }
+        StaticFireParticleManager.flush()
 
         Object.values(this.prefabs).forEach(prefab => {
             prefab!.setThinInstanceBuffers()
@@ -174,6 +177,7 @@ export const StaticsManager = {
         }
 
         this.visibleStatics = nextVisible
+        StaticFireParticleManager.flush()
         return this.visibleStatics
     },
 

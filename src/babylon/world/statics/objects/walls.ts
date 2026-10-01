@@ -102,6 +102,7 @@ export class StoneEntrance extends BaseStaticObject {
             height: 0,
             intensity: 3.6,
             range: 8,
+            pulse: true,
             direction: this.portalLightDirection,
             angle: Math.PI * 0.72,
             priority: 1,
