@@ -150,6 +150,10 @@ export const Lights = {
 
     configureStaticLightMaterials() {
         configureStaticLightMaterials(this)
+        // Equipment source meshes register before static slots are created.
+        // Refresh them once now so their stable shared layout includes those
+        // slots; afterwards it never needs a per-frame rebuild.
+        updateSharedLightMeshes(this)
         updateActorStaticShadowCasters(this)
     },
 

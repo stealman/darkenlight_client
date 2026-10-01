@@ -242,7 +242,6 @@ export function onLightsFrame(host: StaticLightingHost, timeRate: number) {
     if (host.actorStaticShadowCasterUpdateTime >= ACTOR_STATIC_SHADOW_CASTER_UPDATE_SECONDS) {
         host.actorStaticShadowCasterUpdateTime %= ACTOR_STATIC_SHADOW_CASTER_UPDATE_SECONDS
         host.updateActorStaticShadowCasters()
-        host.updateActorLightMeshes()
     }
 
     host.staticLights.forEach((source, id) => {
@@ -251,6 +250,10 @@ export function onLightsFrame(host: StaticLightingHost, timeRate: number) {
         }
     })
 
+    // Actor meshes select a subset of the stable static-light slots based on
+    // their own position. Keep this per-frame so entering a fireplace/torch
+    // range always changes lighting in the same frame as before.
+    host.updateActorLightMeshes()
 }
 
 function updateStaticLightAssignments(host: StaticLightingHost) {

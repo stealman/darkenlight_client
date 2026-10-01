@@ -30,8 +30,8 @@ export class MonsterModel implements EquipBearer {
 
     template: MonsterTemplate
 
-    worldMatrix: Matrix
-    rotationQuaternion: Quaternion
+    worldMatrix: Matrix = Matrix.Identity()
+    rotationQuaternion: Quaternion = Quaternion.Identity()
     modelRotation: number = 0
     modelYAngleOffset: number = Math.PI * 1 / 4
 
@@ -109,9 +109,8 @@ export class MonsterModel implements EquipBearer {
         if (!this.isActive()) return
 
         this.resolveMovement(timeRate)
-        this.rotationQuaternion = new Quaternion()
-        this.worldMatrix = this.mesh.getWorldMatrix();
-        this.worldMatrix.decompose(new Vector3(), this.rotationQuaternion, new Vector3());
+        this.worldMatrix = this.mesh.getWorldMatrix()
+        this.worldMatrix.decompose(undefined, this.rotationQuaternion, undefined)
 
         this.equipSet.forEach(item => {
             item.onFrame()
@@ -203,6 +202,9 @@ export class MonsterModel implements EquipBearer {
         }
 
         const anim = possibleAnims[Utils.rollDice(possibleAnims.length, true)]
+        if (anim == null) {
+            return
+        }
         this.transitionToAnimation(anim, true, false, baseAnimSpeed / this.parent.attackAnimationTime)
         this.setWeaponTrailEnabled(true)
     }
@@ -226,8 +228,8 @@ export class MonsterModel implements EquipBearer {
         AudioManager.playDeathRattle(this.parent.mobType.monsterSoundType, this.parent.pos)
     }
 
-    transitionToAnimation(target: MeshAnimation, fadeIn: boolean = false, loop = false, speed = 1.0) {
-        if (!this.isActive()) return
+    transitionToAnimation(target: MeshAnimation | undefined, fadeIn: boolean = false, loop = false, speed = 1.0) {
+        if (!this.isActive() || target == null) return
 
         this.activeAnims.forEach(anim => {
             if (anim !== target) {

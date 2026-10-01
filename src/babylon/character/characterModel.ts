@@ -26,8 +26,8 @@ export class CharacterModel implements EquipBearer {
     model: AbstractMesh | undefined
     modelYAngleOffset: number = (Math.PI * 1) / 4
     modelRotation: number = 0
-    worldMatrix: Matrix
-    rotationQuaternion: Quaternion
+    worldMatrix: Matrix = Matrix.Identity()
+    rotationQuaternion: Quaternion = Quaternion.Identity()
 
     skeleton: Skeleton | undefined
     lhandNode: TransformNode = new TransformNode('lhandNode')
@@ -343,9 +343,8 @@ export class CharacterModel implements EquipBearer {
         this.resolveDeathSink(timeRate)
 
         if (this.model) {
-            this.rotationQuaternion = new Quaternion()
             this.worldMatrix = this.model!.getWorldMatrix()
-            this.worldMatrix.decompose(new Vector3(), this.rotationQuaternion, new Vector3())
+            this.worldMatrix.decompose(undefined, this.rotationQuaternion, undefined)
         }
 
         this.equipSet.forEach((item) => {

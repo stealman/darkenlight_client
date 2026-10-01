@@ -77,11 +77,11 @@ export class EquipItem {
         Quaternion.FromRotationMatrixToRef(m, this.boneRotationQuaternion)
 
         // parentRot * boneRot
-        this.quaternion = this.parent.rotationQuaternion.multiply(this.boneRotationQuaternion)
+        this.parent.rotationQuaternion.multiplyToRef(this.boneRotationQuaternion, this.quaternion)
 
         // Apply specific item rotation
         if (this.itemRotation) {
-            this.quaternion = this.quaternion.multiply(this.itemRotation)
+            this.quaternion.multiplyToRef(this.itemRotation, this.quaternion)
         }
 
         // bone position do worldu parenta
@@ -322,6 +322,7 @@ export class EquipItemType {
     uvBuffer: Float32Array = new Float32Array(0)
     cbData: EquipCbItem
     _thinReady: boolean = false
+    uvBufferDirty: boolean = true
 
     constructor(data: EquipCbItem) {
         this.id = data.id
@@ -385,6 +386,7 @@ export class EquipItemType {
         this.count = count
         this.instanceBuffer = new Float32Array(16 * count)
         this.uvBuffer = new Float32Array(2 * count)
+        this.uvBufferDirty = true
 
         if (!this.mesh) return
 
@@ -445,6 +447,7 @@ export const EquipManager = {
             if (!type.mesh) return
 
             type.ensureThinBuffers(type)
+            const updateUvc = type.uvBufferDirty
 
             let i = 0
             items.forEach(item => {
@@ -456,15 +459,20 @@ export const EquipManager = {
 
                 this._tmpWorld.copyToArray(type.instanceBuffer, i * 16)
 
-                type.uvBuffer[i * 2] = item.matVector.x
-                type.uvBuffer[i * 2 + 1] = item.matVector.y
+                if (updateUvc) {
+                    type.uvBuffer[i * 2] = item.matVector.x
+                    type.uvBuffer[i * 2 + 1] = item.matVector.y
+                }
                 i++
             })
 
             // důležitý když máš buffery větší než aktuální počet
             type.mesh.thinInstanceCount = i
             type.mesh.thinInstanceBufferUpdated("matrix")
-            type.mesh.thinInstanceBufferUpdated("uvc")
+            if (updateUvc) {
+                type.mesh.thinInstanceBufferUpdated("uvc")
+                type.uvBufferDirty = false
+            }
         })
     }
 }
