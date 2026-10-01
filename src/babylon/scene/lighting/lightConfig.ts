@@ -14,6 +14,8 @@ export const ACTOR_STATIC_SHADOW_CASTER_UPDATE_SECONDS = 0.1
 export const STATIC_FIRE_SMOKE_PARTICLE_FACTORS = [0.4, 0.65, 1]
 // A/B switch: false restores the original per-object CPU particle systems.
 export const USE_SHARED_GPU_STATIC_FIRE_PARTICLES = true
+// A/B switch inside the shared GPU path: false restores the procedural flare flames.
+export const USE_ANIMATED_STATIC_FIRE_SPRITES = false
 export const STATIC_LIGHT_PULSE_PERIOD_SECONDS = 2.4
 export const STATIC_LIGHT_PULSE_AMPLITUDE = 0.3
 

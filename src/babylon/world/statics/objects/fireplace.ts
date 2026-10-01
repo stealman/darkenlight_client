@@ -93,8 +93,8 @@ abstract class BaseFireplace extends BaseStaticObject {
             fireMaxY: 0.03 * this.fireplaceScale,
             smokeHalfWidth: 0.15 * this.fireplaceScale,
             smokeHalfDepth: 0.15 * this.fireplaceScale,
-            smokeMinY: 0.02 * this.fireplaceScale * 8,
-            smokeMaxY: 0.08 * this.fireplaceScale * 8,
+            smokeMinY: (0.02 * this.fireplaceScale * 8) + 0.5,
+            smokeMaxY: (0.08 * this.fireplaceScale * 8) + 0.5,
         })
     }
 

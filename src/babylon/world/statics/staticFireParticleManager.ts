@@ -1,10 +1,13 @@
 import {
     Color4,
+    Constants,
     CustomParticleEmitter,
     GPUParticleSystem,
     ParticleSystem,
     Scene,
     ShaderStore,
+    Sprite,
+    SpriteManager,
     Texture,
     Vector3,
 } from '@babylonjs/core'
@@ -12,6 +15,7 @@ import '@babylonjs/core/Shaders/gpuUpdateParticles.vertex.js'
 import '@babylonjs/core/ShadersWGSL/gpuUpdateParticles.compute.js'
 import {
     STATIC_FIRE_SMOKE_PARTICLE_FACTORS,
+    USE_ANIMATED_STATIC_FIRE_SPRITES,
     USE_SHARED_GPU_STATIC_FIRE_PARTICLES,
 } from '@/babylon/scene/lighting/lightConfig'
 import { Settings } from '@/settings/settings'
@@ -59,8 +63,20 @@ interface StaticFireParticleProfileConfig {
 
 interface StaticFireProfileSystems {
     sourceKey: string
-    fire: GPUParticleSystem
+    fire: GPUParticleSystem | null
     smoke: GPUParticleSystem
+}
+
+interface StaticFireSpriteProfileConfig {
+    count: number
+    width: number
+    height: number
+    color: Color4
+}
+
+interface StaticFireSprite {
+    profile: StaticFireParticleProfile
+    sprites: Sprite[]
 }
 
 interface RetiringParticleSystem {
@@ -70,6 +86,8 @@ interface RetiringParticleSystem {
 
 const PROFILES: StaticFireParticleProfile[] = ['fireplaceSmall', 'fireplaceLarge', 'wallTorch']
 const SHARED_SYSTEM_NAME_PREFIX = 'sharedStatic'
+const SHARED_STATIC_FIRE_SPRITE_CAPACITY = 256
+const STATIC_FIRE_SPRITE_FRAME_DELAY_MS = 35
 const PARTICLE_BASELINE_FPS = 60
 const RETIRING_SYSTEM_GRACE_MS = 100
 const PROFILE_CONFIGS: Record<StaticFireParticleProfile, StaticFireParticleProfileConfig> = {
@@ -146,7 +164,11 @@ const PROFILE_CONFIGS: Record<StaticFireParticleProfile, StaticFireParticleProfi
         smokeLateAlpha: 0.03,
     },
 }
-
+const STATIC_FIRE_SPRITE_CONFIGS: Record<StaticFireParticleProfile, StaticFireSpriteProfileConfig> = {
+    fireplaceSmall: { count: 6, width: 0.7, height: 1.5, color: new Color4(1, 0.68, 0.18, 0.65) },
+    fireplaceLarge: { count: 10, width: 1.2, height: 2.5, color: new Color4(1, 0.68, 0.18, 0.65) },
+    wallTorch: { count: 3, width: 0.35, height: 0.72, color: new Color4(1, 0.68, 0.18, 0.6) },
+}
 const STATIC_FIRE_BALLISTIC_DEFINE = '#define STATIC_FIRE_BALLISTIC_EMITTER'
 let ballisticShaderInstalled: boolean | null = null
 
@@ -221,7 +243,11 @@ function setParticleStartPosition(source: StaticFireParticleSource, index: numbe
     )
 }
 
-function createEmitter(sources: StaticFireParticleSource[], config: StaticFireParticleProfileConfig, smoke: boolean): CustomParticleEmitter {
+function createEmitter(
+    sources: StaticFireParticleSource[],
+    config: StaticFireParticleProfileConfig,
+    smoke: boolean,
+): CustomParticleEmitter {
     const emitter = new StaticFireBallisticEmitter()
     emitter.particlePositionGenerator = (index, _particle, position) => {
         setParticleStartPosition(sources[index % sources.length], index, smoke, position)
@@ -241,6 +267,14 @@ function createEmitter(sources: StaticFireParticleSource[], config: StaticFirePa
         )
     }
     return emitter
+}
+
+function getSpriteSeed(id: string): number {
+    let hash = 0
+    for (let index = 0; index < id.length; index++) {
+        hash = ((hash * 31) + id.charCodeAt(index)) | 0
+    }
+    return hash >>> 0
 }
 
 function disposeOrphanedSystems(scene: Scene) {
@@ -264,6 +298,8 @@ export const StaticFireParticleManager = {
     sources: new Map<string, StaticFireParticleSource>(),
     systems: new Map<StaticFireParticleProfile, StaticFireProfileSystems>(),
     retiringSystems: new Set<RetiringParticleSystem>(),
+    fireSpriteManagers: new Map<StaticFireParticleProfile, SpriteManager>(),
+    fireSprites: new Map<string, StaticFireSprite>(),
     fireTexture: null as Texture | null,
     smokeTexture: null as Texture | null,
     dirty: false,
@@ -304,7 +340,13 @@ export const StaticFireParticleManager = {
             return
         }
 
-        if (this.sources.size > 0 && this.fireTexture == null) {
+        if (USE_ANIMATED_STATIC_FIRE_SPRITES) {
+            this.syncFireSprites()
+        } else {
+            this.disposeFireSprites()
+        }
+
+        if (!USE_ANIMATED_STATIC_FIRE_SPRITES && this.sources.size > 0 && this.fireTexture == null) {
             this.fireTexture = new Texture('images/gfx/flare.png', this.scene)
         }
         if (this.sources.size > 0 && this.smokeTexture == null) {
@@ -327,7 +369,9 @@ export const StaticFireParticleManager = {
             }
 
             if (current != null) {
-                this.retireSystem(current.fire)
+                if (current.fire != null) {
+                    this.retireSystem(current.fire)
+                }
                 this.retireSystem(current.smoke)
                 this.systems.delete(profile)
             }
@@ -338,10 +382,84 @@ export const StaticFireParticleManager = {
             const config = PROFILE_CONFIGS[profile]
             this.systems.set(profile, {
                 sourceKey,
-                fire: this.createSystem(profile, profileSources, config, false, this.fireTexture!),
+                fire: USE_ANIMATED_STATIC_FIRE_SPRITES
+                    ? null
+                    : this.createSystem(profile, profileSources, config, false, this.fireTexture!),
                 smoke: this.createSystem(profile, profileSources, config, true, this.smokeTexture!),
             })
         }
+    },
+
+    syncFireSprites() {
+        for (const [id, fireSprite] of this.fireSprites) {
+            const source = this.sources.get(id)
+            if (source != null && source.profile === fireSprite.profile) {
+                continue
+            }
+            for (const sprite of fireSprite.sprites) {
+                sprite.dispose()
+            }
+            this.fireSprites.delete(id)
+        }
+
+        for (const [id, source] of this.sources) {
+            const config = STATIC_FIRE_SPRITE_CONFIGS[source.profile]
+            let fireSprite = this.fireSprites.get(id)
+            if (fireSprite == null) {
+                let manager = this.fireSpriteManagers.get(source.profile)
+                if (manager == null) {
+                    manager = new SpriteManager(
+                        `${SHARED_SYSTEM_NAME_PREFIX}FireSprite_${source.profile}`,
+                        'images/gfx/flames_sprite.png',
+                        SHARED_STATIC_FIRE_SPRITE_CAPACITY,
+                        { width: 128, height: 256 },
+                        this.scene!,
+                    )
+                    manager.blendMode = Constants.ALPHA_ADD
+                    manager.disableDepthWrite = true
+                    manager.isPickable = false
+                    this.fireSpriteManagers.set(source.profile, manager)
+                }
+
+                const sprites: Sprite[] = []
+                const seed = getSpriteSeed(id)
+                for (let index = 0; index < config.count; index++) {
+                    const sprite = new Sprite(`${SHARED_SYSTEM_NAME_PREFIX}FireSprite_${id}_${index}`, manager)
+                    sprite.color = config.color
+                    sprite.playAnimation(0, 31, true, STATIC_FIRE_SPRITE_FRAME_DELAY_MS)
+                    sprite.cellIndex = (seed + (index * 11)) % 32
+                    sprites.push(sprite)
+                }
+                fireSprite = { profile: source.profile, sprites }
+                this.fireSprites.set(id, fireSprite)
+            }
+
+            const seed = getSpriteSeed(id)
+            for (let index = 0; index < fireSprite.sprites.length; index++) {
+                const scale = 0.78 + (deterministicRandom(seed + index, 8) * 0.32)
+                const sprite = fireSprite.sprites[index]
+                sprite.width = config.width * scale
+                sprite.height = config.height * scale
+                sprite.position.set(
+                    source.x + 0.2 + ((deterministicRandom(seed + index, 9) * 2 - 1) * source.fireHalfWidth * 1.2),
+                    source.y - 0.2 + (sprite.height / 2),
+                    source.z + 0.15 + ((deterministicRandom(seed + index, 10) * 2 - 1) * source.fireHalfDepth * 1.2),
+                )
+            }
+        }
+    },
+
+    disposeFireSprites() {
+        for (const fireSprite of this.fireSprites.values()) {
+            for (const sprite of fireSprite.sprites) {
+                sprite.dispose()
+            }
+        }
+        this.fireSprites.clear()
+        for (const manager of this.fireSpriteManagers.values()) {
+            manager.dispose()
+        }
+        this.fireSpriteManagers.clear()
     },
 
     retireSystem(system: GPUParticleSystem) {
@@ -407,7 +525,7 @@ export const StaticFireParticleManager = {
 
     disposeSystems() {
         for (const profileSystems of this.systems.values()) {
-            profileSystems.fire.dispose(false)
+            profileSystems.fire?.dispose(false)
             profileSystems.smoke.dispose(false)
         }
         this.systems.clear()
@@ -420,6 +538,7 @@ export const StaticFireParticleManager = {
 
     disposeResources() {
         this.disposeSystems()
+        this.disposeFireSprites()
         this.fireTexture?.dispose()
         this.smokeTexture?.dispose()
         this.fireTexture = null
