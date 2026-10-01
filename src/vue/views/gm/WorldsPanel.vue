@@ -131,11 +131,27 @@
 <script setup>
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { GMManager } from '@/gm/GM'
+import {
+    CIRCLE_BRUSH_SIZES,
+    createWaterOverlay as createHeightWaterOverlay,
+    drawBrushPreview as drawHeightBrushPreview,
+    drawImpassableBoundaries as drawHeightImpassableBoundaries,
+    getBrushBounds as getHeightBrushBounds,
+    getBrushPixelCoordinates as getHeightBrushPixelCoordinates,
+    getBrushTargetHeight as getHeightBrushTargetHeight,
+    getHeightMapPixelValue,
+    getStoredHeightTool,
+    getTargetBrushHeight,
+    HEIGHT_EDIT_MODES,
+    SQUARE_BRUSH_SIZES,
+    updateWaterOverlayPixel as updateHeightWaterOverlayPixel,
+} from './worldMaps/heightMapEditor'
+import { getTerrainMapPixelValue } from './worldMaps/terrainMapEditor'
+import { getSnowMapPixelValue } from './worldMaps/snowMapEditor'
+import { getGatheringMapPixelValue } from './worldMaps/gatheringMapEditor'
 
 const WORLD_MAP_ZOOM_LS_KEY = 'worlds-map-zoom'
 const WORLD_MAP_VIEW_LS_KEY = 'worlds-map-view'
-const WORLD_MAP_HEIGHT_TOOL_LS_KEY = 'worlds-map-height-tool'
-const HEIGHT_EDIT_MODES = ['exact', 'up', 'down']
 
 const getStoredMapZoom = () => {
     const zoom = Number(localStorage.getItem(WORLD_MAP_ZOOM_LS_KEY))
@@ -150,20 +166,6 @@ const getStoredMapView = () => {
             return null
         }
         return view
-    } catch {
-        return null
-    }
-}
-
-const getStoredHeightTool = () => {
-    try {
-        const tool = JSON.parse(localStorage.getItem(WORLD_MAP_HEIGHT_TOOL_LS_KEY) || 'null')
-        if (!tool || !Number.isInteger(tool.height) || ![1, 2, 4, 8, 12, 16].includes(tool.brushSize)) {
-            return null
-        }
-        const mode = ['exact', 'up', 'down'].includes(tool.mode) ? tool.mode : 'exact'
-        const brushShape = tool.brushShape === 'circle' ? 'circle' : 'square'
-        return {height: Math.max(1, Math.min(31, tool.height)), brushSize: tool.brushSize, brushShape, mode}
     } catch {
         return null
     }
@@ -199,8 +201,8 @@ const mapPanY = ref(initialMapView?.panY ?? 0)
 const mapHoverValue = ref('Move over the map')
 const mapHoverCoordinates = ref(null)
 const targetHeight = ref(initialHeightTool?.height ?? 1)
-const squareBrushSizes = [1, 2, 4, 8, 16]
-const circleBrushSizes = [4, 8, 12, 16]
+const squareBrushSizes = SQUARE_BRUSH_SIZES
+const circleBrushSizes = CIRCLE_BRUSH_SIZES
 const brushSize = ref(initialHeightTool?.brushSize ?? 1)
 const brushShape = ref(initialHeightTool?.brushShape ?? 'square')
 const heightEditMode = ref(initialHeightTool?.mode ?? 'exact')
@@ -353,38 +355,15 @@ const drawImpassableBoundaries = (ctx, viewportWidth, viewportHeight) => {
     if (!highlightImpassable.value || selectedMapType.value !== 'height' || !mapPixelCanvas || !mapPixelContext) {
         return
     }
-    const zoom = mapZoom.value
-    const minX = Math.max(0, Math.floor(-mapPanX.value / zoom) - 1)
-    const minZ = Math.max(0, Math.floor(-mapPanY.value / zoom) - 1)
-    const maxX = Math.min(mapPixelCanvas.width - 1, Math.ceil((viewportWidth - mapPanX.value) / zoom) + 1)
-    const maxZ = Math.min(mapPixelCanvas.height - 1, Math.ceil((viewportHeight - mapPanY.value) / zoom) + 1)
-    if (minX > maxX || minZ > maxZ) {
-        return
-    }
-
-    const regionWidth = maxX - minX + 1
-    const regionHeight = maxZ - minZ + 1
-    const heights = mapPixelContext.getImageData(minX, minZ, regionWidth, regionHeight).data
-    const getHeight = (x, z) => Math.floor(heights[((z - minZ) * regionWidth + x - minX) * 4] / 8)
-    ctx.strokeStyle = '#ff3030'
-    ctx.lineWidth = 1
-    ctx.beginPath()
-    for (let z = minZ; z <= maxZ; z++) {
-        for (let x = minX; x <= maxX; x++) {
-            const currentHeight = getHeight(x, z)
-            const screenX = mapPanX.value + x * zoom
-            const screenZ = mapPanY.value + z * zoom
-            if (x < maxX && Math.abs(currentHeight - getHeight(x + 1, z)) > 1) {
-                ctx.moveTo(screenX + zoom + 0.5, screenZ)
-                ctx.lineTo(screenX + zoom + 0.5, screenZ + zoom)
-            }
-            if (z < maxZ && Math.abs(currentHeight - getHeight(x, z + 1)) > 1) {
-                ctx.moveTo(screenX, screenZ + zoom + 0.5)
-                ctx.lineTo(screenX + zoom, screenZ + zoom + 0.5)
-            }
-        }
-    }
-    ctx.stroke()
+    drawHeightImpassableBoundaries(ctx, {
+        pixelCanvas: mapPixelCanvas,
+        pixelContext: mapPixelContext,
+        panX: mapPanX.value,
+        panY: mapPanY.value,
+        zoom: mapZoom.value,
+        viewportWidth,
+        viewportHeight,
+    })
 }
 
 const createWaterOverlay = () => {
@@ -395,36 +374,14 @@ const createWaterOverlay = () => {
     if (selectedMapType.value !== 'height' || !mapPixelCanvas || !mapPixelContext || seaWaterLevel === null || seaWaterLevel === undefined || !Number.isFinite(waterLevel)) {
         return
     }
-    const width = mapPixelCanvas.width
-    const height = mapPixelCanvas.height
-    const sourcePixels = mapPixelContext.getImageData(0, 0, width, height).data
-    waterOverlayCanvas = document.createElement('canvas')
-    waterOverlayCanvas.width = width
-    waterOverlayCanvas.height = height
-    waterOverlayContext = waterOverlayCanvas.getContext('2d')
-    const overlayPixels = waterOverlayContext.createImageData(width, height)
-    for (let index = 0; index < sourcePixels.length; index += 4) {
-        if (Math.floor(sourcePixels[index] / 8) < waterLevel) {
-            overlayPixels.data[index] = 12
-            overlayPixels.data[index + 1] = 43
-            overlayPixels.data[index + 2] = 100
-            overlayPixels.data[index + 3] = 150
-        }
-    }
-    waterOverlayContext.putImageData(overlayPixels, 0, 0)
+    const overlay = createHeightWaterOverlay(mapPixelCanvas, mapPixelContext, waterLevel)
+    waterOverlayCanvas = overlay?.canvas ?? null
+    waterOverlayContext = overlay?.context ?? null
 }
 
 const updateWaterOverlayPixel = (x, z, height) => {
     const seaWaterLevel = worldSettings.value?.seaWaterLevel
-    if (!waterOverlayContext || seaWaterLevel === null || seaWaterLevel === undefined || !Number.isFinite(Number(seaWaterLevel))) {
-        return
-    }
-    if (height < Number(worldSettings.value.seaWaterLevel)) {
-        waterOverlayContext.fillStyle = 'rgba(12, 43, 100, 0.59)'
-        waterOverlayContext.fillRect(x, z, 1, 1)
-        return
-    }
-    waterOverlayContext.clearRect(x, z, 1, 1)
+    updateHeightWaterOverlayPixel(waterOverlayContext, seaWaterLevel, x, z, height)
 }
 
 const drawBrushPreview = (ctx) => {
@@ -432,77 +389,27 @@ const drawBrushPreview = (ctx) => {
         return
     }
     const bounds = getBrushBounds(mapHoverCoordinates.value)
-    if (!bounds) {
-        return
-    }
     const brushPixels = getBrushPixelCoordinates(mapHoverCoordinates.value)
     const previewHeight = getBrushTargetHeight(brushPixels)
-    if (previewHeight !== null) {
-        const gray = previewHeight * 8
-        ctx.fillStyle = `rgb(${gray}, ${gray}, ${gray})`
-        for (const pixel of brushPixels) {
-            ctx.fillRect(
-                mapPanX.value + pixel.x * mapZoom.value,
-                mapPanY.value + pixel.z * mapZoom.value,
-                mapZoom.value,
-                mapZoom.value,
-            )
-        }
-    }
-    ctx.strokeStyle = '#ff3030'
-    ctx.lineWidth = 1
-    if (brushShape.value === 'square') {
-        ctx.strokeRect(
-            mapPanX.value + bounds.minX * mapZoom.value + 0.5,
-            mapPanY.value + bounds.minZ * mapZoom.value + 0.5,
-            (bounds.maxX - bounds.minX + 1) * mapZoom.value,
-            (bounds.maxZ - bounds.minZ + 1) * mapZoom.value,
-        )
-        return
-    }
-    const pixelKeys = new Set(brushPixels.map((pixel) => `${pixel.x};${pixel.z}`))
-    ctx.beginPath()
-    for (const pixel of brushPixels) {
-        const x = mapPanX.value + pixel.x * mapZoom.value
-        const z = mapPanY.value + pixel.z * mapZoom.value
-        const size = mapZoom.value
-        if (!pixelKeys.has(`${pixel.x - 1};${pixel.z}`)) {
-            ctx.moveTo(x + 0.5, z)
-            ctx.lineTo(x + 0.5, z + size)
-        }
-        if (!pixelKeys.has(`${pixel.x + 1};${pixel.z}`)) {
-            ctx.moveTo(x + size + 0.5, z)
-            ctx.lineTo(x + size + 0.5, z + size)
-        }
-        if (!pixelKeys.has(`${pixel.x};${pixel.z - 1}`)) {
-            ctx.moveTo(x, z + 0.5)
-            ctx.lineTo(x + size, z + 0.5)
-        }
-        if (!pixelKeys.has(`${pixel.x};${pixel.z + 1}`)) {
-            ctx.moveTo(x, z + size + 0.5)
-            ctx.lineTo(x + size, z + size + 0.5)
-        }
-    }
-    ctx.stroke()
+    drawHeightBrushPreview(ctx, {
+        bounds,
+        brushPixels,
+        brushShape: brushShape.value,
+        previewHeight,
+        panX: mapPanX.value,
+        panY: mapPanY.value,
+        zoom: mapZoom.value,
+    })
 }
 
 const getBrushTargetHeight = (brushPixels) => {
     const exactHeight = Math.max(1, Math.min(31, Math.round(targetHeight.value)))
-    if (heightEditMode.value === 'exact' || !mapPixelContext || brushPixels.length === 0) {
-        return exactHeight
-    }
-    let minHeight = 31
-    let maxHeight = 1
-    for (const pixel of brushPixels) {
-        const [red] = mapPixelContext.getImageData(pixel.x, pixel.z, 1, 1).data
-        const height = Math.floor(red / 8)
-        minHeight = Math.min(minHeight, height)
-        maxHeight = Math.max(maxHeight, height)
-    }
-    if (heightEditMode.value === 'up') {
-        return minHeight === maxHeight ? Math.min(31, maxHeight + 1) : maxHeight
-    }
-    return minHeight === maxHeight ? Math.max(1, minHeight - 1) : minHeight
+    return getHeightBrushTargetHeight(
+        brushPixels,
+        heightEditMode.value,
+        exactHeight,
+        (x, z) => Math.floor(mapPixelContext.getImageData(x, z, 1, 1).data[0] / 8),
+    )
 }
 
 const getBrushBounds = (center) => {
@@ -510,36 +417,14 @@ const getBrushBounds = (center) => {
         return null
     }
     const mapSize = worldSettings.value?.size ?? mapImage.value.naturalWidth
-    const startX = center.x - Math.floor(brushSize.value / 2)
-    const startZ = center.z - Math.floor(brushSize.value / 2)
-    const minX = Math.max(1, startX)
-    const minZ = Math.max(1, startZ)
-    const maxX = Math.min(mapSize - 2, startX + brushSize.value - 1)
-    const maxZ = Math.min(mapSize - 2, startZ + brushSize.value - 1)
-    if (minX > maxX || minZ > maxZ) {
-        return null
-    }
-    return {startX, startZ, minX, minZ, maxX, maxZ}
+    return getHeightBrushBounds(center, brushSize.value, mapSize)
 }
 
 const getBrushPixelCoordinates = (center) => {
-    const bounds = getBrushBounds(center)
-    if (!bounds) {
+    if (!mapImage.value) {
         return []
     }
-    const pixels = []
-    const circleCenterX = bounds.startX + brushSize.value / 2
-    const circleCenterZ = bounds.startZ + brushSize.value / 2
-    const radius = brushSize.value / 2
-    for (let x = bounds.minX; x <= bounds.maxX; x++) {
-        for (let z = bounds.minZ; z <= bounds.maxZ; z++) {
-            if (brushShape.value === 'circle' && Math.hypot(x + 0.5 - circleCenterX, z + 0.5 - circleCenterZ) > radius) {
-                continue
-            }
-            pixels.push({x, z})
-        }
-    }
-    return pixels
+    return getHeightBrushPixelCoordinates(center, brushSize.value, brushShape.value, worldSettings.value?.size ?? mapImage.value.naturalWidth)
 }
 
 const selectBrush = (shape, size) => {
@@ -653,13 +538,7 @@ const editMapPixel = (event) => {
 
     const exactHeight = Math.max(1, Math.min(31, Math.round(targetHeight.value)))
     targetHeight.value = exactHeight
-    const minBrushHeight = Math.min(...brushPixels.map((pixel) => pixel.height))
-    const maxBrushHeight = Math.max(...brushPixels.map((pixel) => pixel.height))
-    const targetBrushHeight = heightEditMode.value === 'up'
-        ? (minBrushHeight === maxBrushHeight ? Math.min(31, maxBrushHeight + 1) : maxBrushHeight)
-        : heightEditMode.value === 'down'
-            ? (minBrushHeight === maxBrushHeight ? Math.max(1, minBrushHeight - 1) : minBrushHeight)
-            : exactHeight
+    const targetBrushHeight = getTargetBrushHeight(brushPixels, heightEditMode.value, exactHeight)
     const gray = targetBrushHeight * 8
     mapPixelContext.fillStyle = `rgb(${gray}, ${gray}, ${gray})`
     for (const pixel of brushPixels) {
@@ -686,20 +565,15 @@ const saveMapData = () => {
 
 const getMapPixelValue = (r, g, b) => {
     if (selectedMapType.value === 'height') {
-        return `Y ${Math.floor(r / 8)}`
+        return getHeightMapPixelValue(r)
     }
     if (selectedMapType.value === 'terrain') {
-        if (r === 0 && g === 255 && b === 0) return 'Grass'
-        if (r === 128 && g === 128 && b === 128) return 'Mountain'
-        if (r === 110 && g === 90 && b === 60) return 'Muddy Dirt'
-        if (r === 0 && g === 0 && b === 255) return 'Water'
-        if (r === 0 && g === 0 && b === 0 && worldSettings.value?.environment.category === 'dungeon') return 'Empty'
-        return 'Dirt'
+        return getTerrainMapPixelValue(r, g, b, worldSettings.value?.environment.category)
     }
     if (selectedMapType.value === 'snow') {
-        return r === 255 && g === 255 && b === 255 ? 'Snow' : 'Empty'
+        return getSnowMapPixelValue(r, g, b)
     }
-    return `Value ${r}`
+    return getGatheringMapPixelValue(r)
 }
 
 const stopMapDrag = (event) => {
@@ -746,7 +620,7 @@ watch([targetHeight, brushSize, brushShape, heightEditMode], ([height, size, sha
         targetHeight.value = safeHeight
         return
     }
-    localStorage.setItem(WORLD_MAP_HEIGHT_TOOL_LS_KEY, JSON.stringify({height: safeHeight, brushSize: size, brushShape: shape, mode}))
+    localStorage.setItem('worlds-map-height-tool', JSON.stringify({height: safeHeight, brushSize: size, brushShape: shape, mode}))
 })
 
 watch([selectedWorldId, selectedMapType, mapPanX, mapPanY], ([worldId, mapType, panX, panY]) => {
