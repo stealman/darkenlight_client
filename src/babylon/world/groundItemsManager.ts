@@ -29,12 +29,19 @@ export const GroundItemsManager = {
     flatItemTypes: new Map<string, GroundFlatItemType>(),
     items: new Array<GroundItem>(),
     visibleItems: new Array<GroundItem>(),
+    visibleItemsDirty: true,
+    itemBuffersDirty: true,
+    lastVisiblePlayerX: Number.NaN,
+    lastVisiblePlayerZ: Number.NaN,
+    viewportWasInitialized: false,
+    animatingItems: new Set<GroundItem>(),
 
     tmpPos: new Matrix(),
     tmpRot: new Matrix(),
     tmpWorld: new Matrix(),
     tmpQuat: Quaternion.Identity(),
-    tmpVisibleItemIds: new Set<number>(),
+    visibleFxItemsById: new Map<number, GroundItem>(),
+    activeFxCountByItemId: new Map<number, number>(),
 
     spriteManager: null as SpriteManager | null,
     fxParticles: new Array<GroundItemFxParticle>(),
@@ -72,6 +79,15 @@ export const GroundItemsManager = {
         this.flatItemTypes.clear()
         this.fxParticles = []
         this.lastFxUpdateTime = 0
+        this.visibleItems.length = 0
+        this.visibleItemsDirty = true
+        this.itemBuffersDirty = true
+        this.lastVisiblePlayerX = Number.NaN
+        this.lastVisiblePlayerZ = Number.NaN
+        this.viewportWasInitialized = false
+        this.animatingItems.clear()
+        this.visibleFxItemsById.clear()
+        this.activeFxCountByItemId.clear()
 
         EquipManager.itemTypes.forEach((equipType, modelId) => {
             if (!equipType.mesh) {
@@ -105,52 +121,105 @@ export const GroundItemsManager = {
     },
 
     addItems(data: GroundItemTO[]) {
+        let changed = false
         for (const gitem of data) {
 
             const y = Utils.calculateWalkYPos(gitem.pos.x, gitem.pos.z, this.ITEM_BOX_SIZE) + this.ITEM_Y_OFFSET
             const item = new GroundItem(Item.fromData(gitem.item), new Vector3(gitem.pos.x, y, gitem.pos.z))
             this.items.push(item)
+            changed = true
+        }
+        if (changed) {
+            this.visibleItemsDirty = true
         }
     },
 
     removeItems(data: number[]) {
+        let changed = false
         for (const id of data) {
             const index = this.items.findIndex(i => i.item.id === id)
             if (index !== -1) {
+                const item = this.items[index]
                 this.items.splice(index, 1)
+                this.animatingItems.delete(item)
+                if (this.nearbyItem === item) {
+                    this.nearbyItem = null
+                }
+                changed = true
             }
+        }
+        if (changed) {
+            this.visibleItemsDirty = true
         }
     },
 
     clearWorld() {
-        this.items = []
-        this.visibleItems = []
+        this.items.length = 0
+        this.visibleItems.length = 0
         this.nearbyItem = null
+        this.animatingItems.clear()
+        this.visibleItemsDirty = false
+        this.itemBuffersDirty = true
+        this.lastVisiblePlayerX = Number.NaN
+        this.lastVisiblePlayerZ = Number.NaN
         this.fxParticles.forEach((particle) => particle.deactivate())
-        this.renderItems(Date.now())
+        this.renderItems()
     },
 
     onFrame(timeRate: number, time: number) {
         this.updateVisibleItems()
         this.detectNearestItemProximity(time)
-        for (const item of this.items) {
-            item.onFrame(timeRate, time)
+        for (const item of this.animatingItems) {
+            if (item.onFrame(timeRate, time)) {
+                this.itemBuffersDirty = true
+            }
+            if (!item.bounce && item.yOffset <= 0) {
+                this.animatingItems.delete(item)
+            }
         }
-        this.renderItems(time)
+        if (this.itemBuffersDirty) {
+            this.renderItems()
+        }
         this.updateItemFx(time)
     },
 
     updateVisibleItems() {
-        this.visibleItems = []
+        if (!ViewportManager.viewPortInitialized) {
+            this.viewportWasInitialized = false
+            return
+        }
+
+        const playerPosition = MyPlayer.myChar?.pos
+        if (!playerPosition) {
+            return
+        }
+        const playerX = Math.round(playerPosition.x)
+        const playerZ = Math.round(playerPosition.z)
+        if (!this.visibleItemsDirty && this.viewportWasInitialized && playerX === this.lastVisiblePlayerX && playerZ === this.lastVisiblePlayerZ) {
+            return
+        }
+
+        let visibleCount = 0
         for (const item of this.items) {
             if (ViewportManager.isPointInVisibleMatrix(Math.floor(item.pos.x), Math.floor(item.pos.z), 2)) {
-                this.visibleItems.push(item)
+                if (this.visibleItems[visibleCount] !== item) {
+                    this.itemBuffersDirty = true
+                }
+                this.visibleItems[visibleCount] = item
+                visibleCount++
             }
         }
+        if (this.visibleItems.length !== visibleCount) {
+            this.visibleItems.length = visibleCount
+            this.itemBuffersDirty = true
+        }
+        this.lastVisiblePlayerX = playerX
+        this.lastVisiblePlayerZ = playerZ
+        this.viewportWasInitialized = true
+        this.visibleItemsDirty = false
     },
 
-    renderItems(time: number) {
-        void time
+    renderItems() {
         const itemsByType = new Map<GroundItemType, Array<GroundItem>>()
         const flatItemsByType = new Map<GroundFlatItemType, Array<GroundItem>>()
 
@@ -230,6 +299,8 @@ export const GroundItemsManager = {
             type.mesh.thinInstanceBufferUpdated('matrix')
             type.mesh.thinInstanceRefreshBoundingInfo()
         })
+
+        this.itemBuffersDirty = false
     },
 
     getOrCreateFlatType(item: GroundItem): GroundFlatItemType | null {
@@ -326,14 +397,6 @@ export const GroundItemsManager = {
         }
     },
 
-    getItemFxConfig(item: Item): GroundItemFxConfig {
-        void item
-        return {
-            count: item.isEquippable() ? 4 : 2,
-            color: this.yellow_fx,
-        }
-    },
-
     updateItemFx(time: number) {
         if (!this.spriteManager || this.fxParticles.length === 0) {
             return
@@ -347,58 +410,39 @@ export const GroundItemsManager = {
         const dt = Math.min((time - this.lastFxUpdateTime) / 1000, 0.2)
         this.lastFxUpdateTime = time
 
-        this.tmpVisibleItemIds.clear()
-        const visibleItemsById = new Map<number, GroundItem>()
-        const fxConfigByItemId = new Map<number, GroundItemFxConfig>()
+        this.visibleFxItemsById.clear()
+        this.activeFxCountByItemId.clear()
+        let requestedParticles = 0
         for (const item of this.visibleItems) {
-            this.tmpVisibleItemIds.add(item.item.id)
-            visibleItemsById.set(item.item.id, item)
-            fxConfigByItemId.set(item.item.id, this.getItemFxConfig(item.item))
+            this.visibleFxItemsById.set(item.item.id, item)
+            requestedParticles += item.fxParticleCount
         }
 
-        const activePerItem = new Map<number, number>()
         for (const particle of this.fxParticles) {
             if (!particle.active) {
                 continue
             }
 
-            if (!this.tmpVisibleItemIds.has(particle.ownerItemId)) {
+            if (!this.visibleFxItemsById.has(particle.ownerItemId)) {
                 particle.life = 0
                 continue
             }
 
-            const fxConfig = fxConfigByItemId.get(particle.ownerItemId)
-            if (!fxConfig) {
-                particle.life = 0
-                continue
-            }
-
-            particle.baseColor.set(fxConfig.color.r, fxConfig.color.g, fxConfig.color.b, fxConfig.color.a)
-            activePerItem.set(particle.ownerItemId, (activePerItem.get(particle.ownerItemId) || 0) + 1)
-        }
-
-        let requestedParticles = 0
-        for (const fxConfig of fxConfigByItemId.values()) {
-            requestedParticles += Math.max(0, Math.floor(fxConfig.count))
+            this.activeFxCountByItemId.set(particle.ownerItemId, (this.activeFxCountByItemId.get(particle.ownerItemId) || 0) + 1)
         }
         const poolRatio = requestedParticles > 0 ? Math.min(1, this.FX_POOL_LIMIT / requestedParticles) : 0
 
         if (poolRatio > 0) {
-            for (const [itemId, item] of visibleItemsById.entries()) {
-                const fxConfig = fxConfigByItemId.get(itemId)
-                if (!fxConfig) {
-                    continue
-                }
-
-                const requestedCount = Math.max(0, Math.floor(fxConfig.count))
+            for (const item of this.visibleItems) {
+                const requestedCount = item.fxParticleCount
                 let targetPerItem = Math.floor(requestedCount * poolRatio)
                 if (requestedCount > 0 && targetPerItem === 0) {
                     targetPerItem = 1
                 }
 
-                let toSpawn = targetPerItem - (activePerItem.get(itemId) || 0)
+                let toSpawn = targetPerItem - (this.activeFxCountByItemId.get(item.item.id) || 0)
                 while (toSpawn > 0) {
-                    if (!this.spawnFxParticle(item, fxConfig.color)) {
+                    if (!this.spawnFxParticle(item)) {
                         break
                     }
                     toSpawn--
@@ -428,7 +472,7 @@ export const GroundItemsManager = {
         }
     },
 
-    spawnFxParticle(item: GroundItem, color: Color4): boolean {
+    spawnFxParticle(item: GroundItem): boolean {
         for (const particle of this.fxParticles) {
             if (particle.active) {
                 continue
@@ -442,7 +486,7 @@ export const GroundItemsManager = {
             particle.ownerItemId = item.item.id
             particle.maxLife = this.FX_LIFE_MIN + Math.random() * (this.FX_LIFE_MAX - this.FX_LIFE_MIN)
             particle.life = particle.maxLife
-            particle.baseColor.set(color.r, color.g, color.b, color.a)
+            particle.baseColor.set(this.yellow_fx.r, this.yellow_fx.g, this.yellow_fx.b, this.yellow_fx.a)
 
             particle.position.set(
                 item.pos.x + xOffset,
@@ -494,16 +538,17 @@ export const GroundItemsManager = {
         if (this.nearbyItem) {
             this.nearbyItem.bounce = false
             this.nearbyItem.nameDisplayTime = 0
+            this.animatingItems.add(this.nearbyItem)
         }
 
         this.nearbyItem = item
         if (this.nearbyItem) {
             this.nearbyItem.bounce = true
             this.nearbyItem.nameDisplayTime = time + 2000
+            this.animatingItems.add(this.nearbyItem)
         }
     },
 }
-
 class GroundItem {
     static readonly BOUNCE_HEIGHT = 0.175
     static readonly BOUNCE_SPEED = 0.008
@@ -516,6 +561,7 @@ class GroundItem {
     bounce: boolean = false
     yOffset: number = 0
     nameDisplayTime: number = 0
+    fxParticleCount: number
     private wasBouncing: boolean = false
     private bounceStartTime: number = 0
 
@@ -527,6 +573,7 @@ class GroundItem {
         const matIndex = Math.max((item.materialId || 1) - 1, 0)
         this.matVector = this.getAtlasUvcOffsets(type?.cbData.matCols || 1, type?.cbData.matRows || 1, matIndex)
         this.rotationY = item.is3DModel() ? Math.random() * Math.PI * 2 : Math.PI / 4
+        this.fxParticleCount = item.isEquippable() ? 4 : 2
     }
 
     getAtlasUvcOffsets(matCols: number, matRows: number, matIndex: number, pad = 0) {
@@ -546,7 +593,8 @@ class GroundItem {
         return ViewportManager.getPositionOnScreen(this.getNameTextNodeWorldPosition())
     }
 
-    onFrame(timeRate: number, time: number) {
+    onFrame(timeRate: number, time: number): boolean {
+        const previousYOffset = this.yOffset
         if (this.bounce) {
             if (!this.wasBouncing) {
                 this.wasBouncing = true
@@ -556,17 +604,18 @@ class GroundItem {
 
             const elapsed = time - this.bounceStartTime
             this.yOffset = ((Math.sin((elapsed * GroundItem.BOUNCE_SPEED) - (Math.PI / 2)) + 1) * 0.5) * GroundItem.BOUNCE_HEIGHT
-            return
+            return previousYOffset !== this.yOffset
         }
 
         this.wasBouncing = false
 
         if (this.yOffset <= 0) {
             this.yOffset = 0
-            return
+            return false
         }
 
         this.yOffset = Math.max(0, this.yOffset - (GroundItem.RETURN_TO_GROUND_SPEED * timeRate))
+        return previousYOffset !== this.yOffset
     }
 }
 
@@ -689,9 +738,4 @@ class GroundItemFxParticle {
         this.maxLife = 0
         this.sprite.isVisible = false
     }
-}
-
-type GroundItemFxConfig = {
-    count: number
-    color: Color4
 }
