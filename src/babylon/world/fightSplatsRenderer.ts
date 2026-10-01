@@ -4,6 +4,7 @@ import { Materials } from '@/babylon/materials'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { ViewportManager } from '@/utils/viewport'
 import { Settings } from '@/settings/settings'
+import { MyPlayer } from '@/data/myPlayer'
 
 export const FightSplatsRenderer = {
     splats: new Array<Splat>(),
@@ -11,6 +12,13 @@ export const FightSplatsRenderer = {
     maxSplats: 1000,
     ttl: 900000,
     splatPlane: null as Mesh | null,
+    matrixBuffer: new Float32Array(0),
+    uvBuffer: new Float32Array(0),
+    matricesDirty: true,
+    tmpPosition: new Matrix(),
+    tmpRotation: new Matrix(),
+    tmpWorld: new Matrix(),
+    tmpQuaternion: new Quaternion(),
 
     initialize (scene: Scene) {
         this.splatPlane = Builder.createHorizontalPlane(scene, null, 1, 0)
@@ -19,6 +27,7 @@ export const FightSplatsRenderer = {
     },
 
     consumeSplats(data: [{ lp: number, x: number, z: number, tp: number, s: number }]) {
+        let changed = false
         for (const dt of data) {
             const block = WorldDataManager.getBlockOnPosition(new Vector3(dt.x, 0, dt.z))
             if (!block || block.shallowWater || block.deepWater) {
@@ -28,60 +37,157 @@ export const FightSplatsRenderer = {
 
             const splat = new Splat(FightSplatTypes.getSplatById(dt.tp), pos, dt.lp, dt.s)
             this.splats.push(splat)
+            changed = true
 
             // If over max, remove oldest
             if (this.splats.length > this.maxSplats) {
                 this.splats.shift()
             }
         }
+        if (changed) {
+            this.matricesDirty = true
+        }
     },
 
     removeSplats(data: [{ lp: number, x: number, z: number, tp: number, s: number }]) {
+        let changed = false
         for (const dt of data) {
-            this.splats = this.splats.filter(mark => !(mark.pos.x === dt.x && mark.pos.z === dt.z))
+            for (let index = this.splats.length - 1; index >= 0; index--) {
+                const splat = this.splats[index]
+                if (splat.pos.x === dt.x && splat.pos.z === dt.z) {
+                    this.splats.splice(index, 1)
+                    changed = true
+                }
+            }
+        }
+        if (changed) {
+            this.matricesDirty = true
         }
     },
 
     clearWorld() {
         this.splats = []
         this.visibleSplats = []
+        this.matricesDirty = true
         this.renderStepMarks(Date.now())
     },
 
     update(timeRate: number, time: number) {
-        this.splats = this.splats.filter(mark => (time < mark.deadTime))
+        void timeRate
+        if (this.removeExpiredSplats(time)) {
+            this.matricesDirty = true
+        }
         this.updateVisibleSplats()
         this.renderStepMarks(time)
     },
 
     updateVisibleSplats() {
-        this.visibleSplats = []
+        const playerPosition = MyPlayer.myChar?.pos
+        const playerX = playerPosition == null ? 0 : Math.round(playerPosition.x)
+        const playerZ = playerPosition == null ? 0 : Math.round(playerPosition.z)
+        let visibleCount = 0
         for (const splat of this.splats) {
-            if (ViewportManager.isPointInVisibleMatrix(Math.floor(splat.pos.x), Math.floor(splat.pos.z), 2)) {
-                this.visibleSplats.push(splat)
+            if (this.isSplatVisible(splat, playerX, playerZ)) {
+                if (this.visibleSplats[visibleCount] !== splat) {
+                    this.matricesDirty = true
+                }
+                this.visibleSplats[visibleCount] = splat
+                visibleCount++
             }
+        }
+        if (this.visibleSplats.length !== visibleCount) {
+            this.visibleSplats.length = visibleCount
+            this.matricesDirty = true
         }
     },
 
     renderStepMarks(time: number) {
         if (!this.splatPlane) return
 
-        const buffer = new Float32Array(this.visibleSplats.length * 16)
-        const uvBuffer = new Float32Array(this.visibleSplats.length * 2)
-        let i = 0
-        for (const mark of this.visibleSplats) {
-            const posMatrix = Matrix.Translation(mark.pos.x, mark.pos.y, mark.pos.z)
-            const scaleMatrix = Matrix.Scaling(mark.scale.x, 1, mark.scale.y);
-            scaleMatrix.multiply(Matrix.FromQuaternionToRef(Quaternion.FromEulerAngles(0, mark.rot, 0), new Matrix()).multiply(posMatrix)).copyToArray(buffer, i * 16);
-
-            const uvc = mark.getUvcIndex(time)
-            uvBuffer[i * 2] = uvc.x
-            uvBuffer[i * 2 + 1] = uvc.y
-            i++
+        const splatCount = this.visibleSplats.length
+        if (this.matricesDirty) {
+            this.matrixBuffer = new Float32Array(splatCount * 16)
+            this.uvBuffer = new Float32Array(splatCount * 2)
+            for (let index = 0; index < splatCount; index++) {
+                const splat = this.visibleSplats[index]
+                this.writeSplatMatrix(splat, index)
+                this.writeSplatUvc(splat, index, time)
+            }
+            this.splatPlane.thinInstanceSetBuffer('matrix', this.matrixBuffer, 16, false)
+            this.splatPlane.thinInstanceSetBuffer('uvc', this.uvBuffer, 2, false)
+            this.splatPlane.thinInstanceCount = splatCount
+            this.splatPlane.setEnabled(splatCount > 0)
+            if (splatCount > 0) {
+                this.splatPlane.thinInstanceRefreshBoundingInfo()
+            }
+            this.matricesDirty = false
+            return
         }
-        this.splatPlane.thinInstanceSetBuffer('matrix', buffer, 16)
-        this.splatPlane.thinInstanceSetBuffer('uvc', uvBuffer, 2)
-        this.splatPlane.thinInstanceRefreshBoundingInfo()
+
+        let uvChanged = false
+        for (let index = 0; index < splatCount; index++) {
+            uvChanged = this.updateSplatUvc(this.visibleSplats[index], index, time) || uvChanged
+        }
+        if (uvChanged) {
+            this.splatPlane.thinInstanceBufferUpdated('uvc')
+        }
+    },
+
+    removeExpiredSplats(time: number): boolean {
+        let changed = false
+        for (let index = this.splats.length - 1; index >= 0; index--) {
+            if (time >= this.splats[index].deadTime) {
+                this.splats.splice(index, 1)
+                changed = true
+            }
+        }
+        return changed
+    },
+
+    isSplatVisible(splat: Splat, playerX: number, playerZ: number): boolean {
+        if (!ViewportManager.viewPortInitialized) {
+            return false
+        }
+        const relativeX = Math.floor(splat.pos.x) - playerX
+        const relativeZ = Math.floor(splat.pos.z) - playerZ
+        if (relativeX < ViewportManager.minX || relativeX > ViewportManager.maxX || relativeZ < ViewportManager.minZ || relativeZ > ViewportManager.maxZ) {
+            return false
+        }
+        if (ViewportManager.visibilityMatrix[relativeX]?.[relativeZ]) {
+            return true
+        }
+        const tolerance = 2
+        const approximateX = relativeX < 0 ? relativeX + tolerance : relativeX - tolerance
+        const approximateZ = relativeZ < 0 ? relativeZ + tolerance : relativeZ - tolerance
+        return ViewportManager.visibilityMatrix[approximateX]?.[approximateZ] === true
+    },
+
+    writeSplatMatrix(splat: Splat, index: number) {
+        Matrix.TranslationToRef(splat.pos.x, splat.pos.y, splat.pos.z, this.tmpPosition)
+        Quaternion.FromEulerAnglesToRef(0, splat.rot, 0, this.tmpQuaternion)
+        Matrix.FromQuaternionToRef(this.tmpQuaternion, this.tmpRotation)
+        this.tmpRotation.multiplyToRef(this.tmpPosition, this.tmpWorld)
+        Matrix.ScalingToRef(splat.scale.x, 1, splat.scale.y, this.tmpPosition)
+        this.tmpPosition.multiplyToRef(this.tmpWorld, this.tmpWorld)
+        this.tmpWorld.copyToArray(this.matrixBuffer, index * 16)
+    },
+
+    writeSplatUvc(splat: Splat, index: number, time: number) {
+        const uvc = splat.getUvcIndex(time)
+        const offset = index * 2
+        this.uvBuffer[offset] = uvc.x
+        this.uvBuffer[offset + 1] = uvc.y
+    },
+
+    updateSplatUvc(splat: Splat, index: number, time: number): boolean {
+        const uvc = splat.getUvcIndex(time)
+        const offset = index * 2
+        if (this.uvBuffer[offset] === uvc.x && this.uvBuffer[offset + 1] === uvc.y) {
+            return false
+        }
+        this.uvBuffer[offset] = uvc.x
+        this.uvBuffer[offset + 1] = uvc.y
+        return true
     }
 }
 

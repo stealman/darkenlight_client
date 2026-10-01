@@ -25,6 +25,14 @@ interface AnimatedHpBar {
     lastSeenAt: number
 }
 
+function removeExpiredOverlayEntries(entries: Array<{ expiresAt: number }>, time: number) {
+    for (let index = entries.length - 1; index >= 0; index--) {
+        if (entries[index].expiresAt <= time) {
+            entries.splice(index, 1)
+        }
+    }
+}
+
 export const OverlayManager = {
     overlayCanvas: null as HTMLCanvasElement,
     overlayCtx: null as CanvasRenderingContext2D | null,
@@ -36,8 +44,9 @@ export const OverlayManager = {
     emeraldGainIcon: null as HTMLImageElement | null,
     itemGainIcons: new Map<string, HTMLImageElement>(),
     iconStyleUnsubscribe: null as (() => void) | null,
-    animatedHpBars: new Map<string, AnimatedHpBar>(),
-    lastHpBarCleanupAt: 0 as number,
+    animatedHpBars: new WeakMap<object, AnimatedHpBar>(),
+    cameraOrigin: Vector3.Zero(),
+    cameraPosition: Vector3.Zero(),
 
     async initialize() {
         this.overlayCanvas = document.getElementById('overlayCanvas') as HTMLCanvasElement
@@ -65,8 +74,7 @@ export const OverlayManager = {
         this.damageNumbers = []
         this.emeraldGainNumbers = []
         this.itemGainNumbers = []
-        this.animatedHpBars.clear()
-        this.lastHpBarCleanupAt = 0
+        this.animatedHpBars = new WeakMap<object, AnimatedHpBar>()
         TargetSelector.unselectTarget()
     },
 
@@ -108,7 +116,7 @@ export const OverlayManager = {
     },
 
     setBloodyInnerGlow(hpPercent: number, time: number) {
-        const ctx = this.overlayCanvas.getContext('2d')
+        const ctx = this.overlayCtx
         if (!ctx) return
 
         const w = this.overlayCanvas.width / window.devicePixelRatio
@@ -245,7 +253,7 @@ export const OverlayManager = {
     },
 
     renderDamageNumbers(time: number) {
-        this.damageNumbers = this.damageNumbers.filter((item) => item.expiresAt > time)
+        removeExpiredOverlayEntries(this.damageNumbers, time)
         if (this.damageNumbers.length === 0) {
             return
         }
@@ -264,7 +272,7 @@ export const OverlayManager = {
     },
 
     renderEmeraldGainNumbers(time: number) {
-        this.emeraldGainNumbers = this.emeraldGainNumbers.filter((item) => item.expiresAt > time)
+        removeExpiredOverlayEntries(this.emeraldGainNumbers, time)
         if (this.emeraldGainNumbers.length === 0) {
             return
         }
@@ -283,7 +291,7 @@ export const OverlayManager = {
     },
 
     renderItemGainNumbers(time: number) {
-        this.itemGainNumbers = this.itemGainNumbers.filter((item) => item.expiresAt > time)
+        removeExpiredOverlayEntries(this.itemGainNumbers, time)
         if (this.itemGainNumbers.length === 0) {
             return
         }
@@ -325,7 +333,7 @@ export const OverlayManager = {
             if (!MonsterManager.visibleMonsters.has(monster.id)) {
                 return
             }
-            const displayedPercent = this.getAnimatedHpPercent(`M:${monster.id}`, monster.hpPercent, time)
+            const displayedPercent = this.getAnimatedHpPercent(monster, monster.hpPercent, time)
             if (monster.hpPercent < 100 || displayedPercent < 99.95) {
                 const pos = monster.getNameTextNodeScreenPosition()
                 if (pos) {
@@ -338,7 +346,7 @@ export const OverlayManager = {
             if (!CharacterManager.visibleCharacters.has(char.id)) {
                 return
             }
-            const displayedPercent = this.getAnimatedHpPercent(`C:${char.id}`, char.hpPercent, time)
+            const displayedPercent = this.getAnimatedHpPercent(char, char.hpPercent, time)
             if (char.hpPercent < 100 || displayedPercent < 99.95) {
                 const pos = char.getNameTextNodeScreenPosition()
                 if (pos) {
@@ -347,7 +355,7 @@ export const OverlayManager = {
             }
         })
 
-        const displayedMyHpPercent = this.getAnimatedHpPercent('P:me', MyPlayer.myChar.hpPercent, time)
+        const displayedMyHpPercent = this.getAnimatedHpPercent(MyPlayer.myChar, MyPlayer.myChar.hpPercent, time)
         if (MyPlayer.myChar.hpPercent < 99 || displayedMyHpPercent < 99.95) {
             const pos = MyPlayer.myChar.getNameTextNodeScreenPosition()
             if (pos) {
@@ -355,20 +363,26 @@ export const OverlayManager = {
             }
         }
 
-        this.cleanupAnimatedHpBars(time)
     },
 
-    getAnimatedHpPercent(key: string, hpPercent: number, time: number) {
+    getAnimatedHpPercent(target: object, hpPercent: number, time: number) {
         const numericHpPercent = Number(hpPercent)
         const targetPercent = Number.isFinite(numericHpPercent) ? Math.max(0, Math.min(100, numericHpPercent)) : 100
-        let state = this.animatedHpBars.get(key)
+        let state = this.animatedHpBars.get(target)
+        if (state && state.lastSeenAt + 15000 < time) {
+            this.animatedHpBars.delete(target)
+            state = undefined
+        }
         if (!state) {
+            if (targetPercent >= 100) {
+                return targetPercent
+            }
             state = {
-                displayedPercent: targetPercent < 100 ? 100 : targetPercent,
+                displayedPercent: 100,
                 lastUpdatedAt: time,
                 lastSeenAt: time,
             }
-            this.animatedHpBars.set(key, state)
+            this.animatedHpBars.set(target, state)
             return state.displayedPercent
         }
 
@@ -380,19 +394,6 @@ export const OverlayManager = {
         state.lastUpdatedAt = time
         state.lastSeenAt = time
         return state.displayedPercent
-    },
-
-    cleanupAnimatedHpBars(time: number) {
-        if (time - this.lastHpBarCleanupAt < 10000) {
-            return
-        }
-
-        this.animatedHpBars.forEach((state, key) => {
-            if (state.lastSeenAt + 15000 < time) {
-                this.animatedHpBars.delete(key)
-            }
-        })
-        this.lastHpBarCleanupAt = time
     },
 
     renderHealingMarkers(time) {
@@ -425,8 +426,13 @@ export const OverlayManager = {
                 const y = Math.round(screenPos.y)
 
                 const camWorldMatrix = Renderer.camera!.getWorldMatrix()
-                const cameraPos = Vector3.TransformCoordinates(Vector3.Zero(), camWorldMatrix)
-                const distanceFromCam = cameraPos.subtract(MyPlayer.myChar.autoAttackTarget.pos).length()
+                Vector3.TransformCoordinatesToRef(this.cameraOrigin, camWorldMatrix, this.cameraPosition)
+                const targetPosition = MyPlayer.myChar.autoAttackTarget.pos
+                const distanceFromCam = Math.hypot(
+                    this.cameraPosition.x - targetPosition.x,
+                    this.cameraPosition.y - targetPosition.y,
+                    this.cameraPosition.z - targetPosition.z,
+                )
                 const scale = (20 / distanceFromCam) * (Math.sin(actualTime / 250) * 0.2 + 1)
 
                 const w = sprite.width * scale

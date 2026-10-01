@@ -11,6 +11,14 @@ export const StepMarksRenderer = {
     otherStepMarks: new Array<StepMark>(),
     maxMarks: 250,
     stepMarkPlane: null as Mesh | null,
+    matrixBuffer: new Float32Array(0),
+    uvBuffer: new Float32Array(0),
+    matricesDirty: true,
+    tmpPosition: new Matrix(),
+    tmpRotation: new Matrix(),
+    tmpWorld: new Matrix(),
+    tmpQuaternion: new Quaternion(),
+    scaleMatrix: Matrix.Scaling(0.4, 1, 0.4),
 
     initialize (scene: Scene) {
         this.maxMarks = Settings.isDetalLevelHigh() ? 500 : 250
@@ -46,17 +54,21 @@ export const StepMarksRenderer = {
 
         const footPos = new Vector3( - randomize + object.pos.x + dx + (Math.random() * randomize * 2), yPos + 0.01, -randomize + object.pos.z + dz + (Math.random() * randomize * 2))
         tgtArray.push(new StepMark(footPos, (-randomize + (Math.random() * randomize * 2)) + rot + Math.PI / 2, time, ttl))
+        this.matricesDirty = true
     },
 
     update(timeRate: number, time: number) {
-        this.myStepMarks = this.myStepMarks.filter(mark => (time < mark.deadTime))
-        this.otherStepMarks = this.otherStepMarks.filter(mark => (time < mark.deadTime))
+        void timeRate
+        if (this.removeExpiredMarks(this.myStepMarks, time) || this.removeExpiredMarks(this.otherStepMarks, time)) {
+            this.matricesDirty = true
+        }
         this.renderStepMarks(time)
     },
 
     clearWorld() {
         this.myStepMarks = []
         this.otherStepMarks = []
+        this.matricesDirty = true
         localStorage.removeItem('myStepMarks')
         localStorage.removeItem('otherStepMarks')
         this.renderStepMarks(Date.now())
@@ -66,35 +78,85 @@ export const StepMarksRenderer = {
         if (!this.stepMarkPlane) {
             return
         }
-        const buffer = new Float32Array((this.myStepMarks.length + this.otherStepMarks.length) * 16)
-        const uvBuffer = new Float32Array((this.myStepMarks.length + this.otherStepMarks.length) * 2)
-        const size = 0.4
-        let i = 0
+        const markCount = this.myStepMarks.length + this.otherStepMarks.length
+        if (this.matricesDirty) {
+            this.matrixBuffer = new Float32Array(markCount * 16)
+            this.uvBuffer = new Float32Array(markCount * 2)
+
+            let index = 0
+            for (const mark of this.myStepMarks) {
+                this.writeMarkMatrix(mark, index)
+                this.writeMarkUvc(mark, index, time)
+                index++
+            }
+            for (const mark of this.otherStepMarks) {
+                this.writeMarkMatrix(mark, index)
+                this.writeMarkUvc(mark, index, time)
+                index++
+            }
+
+            this.stepMarkPlane.thinInstanceSetBuffer('matrix', this.matrixBuffer, 16, false)
+            this.stepMarkPlane.thinInstanceSetBuffer('uvc', this.uvBuffer, 2, false)
+            this.stepMarkPlane.thinInstanceCount = markCount
+            this.stepMarkPlane.setEnabled(markCount > 0)
+            if (markCount > 0) {
+                this.stepMarkPlane.thinInstanceRefreshBoundingInfo()
+            }
+            this.matricesDirty = false
+            return
+        }
+
+        let uvChanged = false
+        let index = 0
         for (const mark of this.myStepMarks) {
-            const posMatrix = Matrix.Translation(mark.pos.x, mark.pos.y, mark.pos.z)
-            const scaleMatrix = Matrix.Scaling(size, 1, size);
-            scaleMatrix.multiply(Matrix.FromQuaternionToRef(Quaternion.FromEulerAngles(0, mark.rot, 0), new Matrix()).multiply(posMatrix)).copyToArray(buffer, i * 16);
-
-            const uvc = mark.getUvcIndex(time)
-            uvBuffer[i * 2] = uvc.x
-            uvBuffer[i * 2 + 1] = uvc.y
-            i++
+            uvChanged = this.updateMarkUvc(mark, index, time) || uvChanged
+            index++
         }
-
         for (const mark of this.otherStepMarks) {
-            const posMatrix = Matrix.Translation(mark.pos.x, mark.pos.y, mark.pos.z)
-            const scaleMatrix = Matrix.Scaling(size, 1, size);
-            scaleMatrix.multiply(Matrix.FromQuaternionToRef(Quaternion.FromEulerAngles(0, mark.rot, 0), new Matrix()).multiply(posMatrix)).copyToArray(buffer, i * 16);
-
-            const uvc = mark.getUvcIndex(time)
-            uvBuffer[i * 2] = uvc.x
-            uvBuffer[i * 2 + 1] = uvc.y
-            i++
+            uvChanged = this.updateMarkUvc(mark, index, time) || uvChanged
+            index++
         }
+        if (uvChanged) {
+            this.stepMarkPlane.thinInstanceBufferUpdated('uvc')
+        }
+    },
 
-        this.stepMarkPlane.thinInstanceSetBuffer('matrix', buffer, 16)
-        this.stepMarkPlane.thinInstanceSetBuffer('uvc', uvBuffer, 2)
-        this.stepMarkPlane.thinInstanceRefreshBoundingInfo()
+    removeExpiredMarks(marks: StepMark[], time: number): boolean {
+        let changed = false
+        for (let index = marks.length - 1; index >= 0; index--) {
+            if (time >= marks[index].deadTime) {
+                marks.splice(index, 1)
+                changed = true
+            }
+        }
+        return changed
+    },
+
+    writeMarkMatrix(mark: StepMark, index: number) {
+        Matrix.TranslationToRef(mark.pos.x, mark.pos.y, mark.pos.z, this.tmpPosition)
+        Quaternion.FromEulerAnglesToRef(0, mark.rot, 0, this.tmpQuaternion)
+        Matrix.FromQuaternionToRef(this.tmpQuaternion, this.tmpRotation)
+        this.tmpRotation.multiplyToRef(this.tmpPosition, this.tmpWorld)
+        this.scaleMatrix.multiplyToRef(this.tmpWorld, this.tmpWorld)
+        this.tmpWorld.copyToArray(this.matrixBuffer, index * 16)
+    },
+
+    writeMarkUvc(mark: StepMark, index: number, time: number) {
+        const uvc = mark.getUvcIndex(time)
+        const offset = index * 2
+        this.uvBuffer[offset] = uvc.x
+        this.uvBuffer[offset + 1] = uvc.y
+    },
+
+    updateMarkUvc(mark: StepMark, index: number, time: number): boolean {
+        const uvc = mark.getUvcIndex(time)
+        const offset = index * 2
+        if (this.uvBuffer[offset] === uvc.x && this.uvBuffer[offset + 1] === uvc.y) {
+            return false
+        }
+        this.uvBuffer[offset] = uvc.x
+        this.uvBuffer[offset + 1] = uvc.y
+        return true
     },
 
     updateInLocalStorage() {
@@ -137,6 +199,7 @@ export const StepMarksRenderer = {
                 markData.deadTime - markData.creationTime
             ))
         }
+        this.matricesDirty = true
     },
 }
 

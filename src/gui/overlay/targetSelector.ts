@@ -7,6 +7,8 @@ import { CharacterActions } from '@/data/actions/characterActions'
 export const TargetSelector = {
     target: null as Targetable | null,
     selectedTime: new Date().getTime(),
+    cameraOrigin: Vector3.Zero(),
+    cameraPosition: Vector3.Zero(),
 
     selectTarget(target: Targetable) {
         this.target = target
@@ -40,8 +42,12 @@ export const TargetSelector = {
         const y = Math.round(screenPos.y)
 
         const camWorldMatrix = Renderer.camera!.getWorldMatrix()
-        const cameraPos = Vector3.TransformCoordinates(Vector3.Zero(), camWorldMatrix)
-        const distanceFromCam = cameraPos.subtract(this.target.pos).length()
+        Vector3.TransformCoordinatesToRef(this.cameraOrigin, camWorldMatrix, this.cameraPosition)
+        const distanceFromCam = Math.hypot(
+            this.cameraPosition.x - this.target.pos.x,
+            this.cameraPosition.y - this.target.pos.y,
+            this.cameraPosition.z - this.target.pos.z,
+        )
         const scale = (20 / distanceFromCam) * ((Math.sin((actualTime - this.selectedTime) / 250) * 0.2) + 1)
         const w = sprite.width * scale
         const h = sprite.height * scale
