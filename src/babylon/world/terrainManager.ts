@@ -1,5 +1,5 @@
 import { MapBlock, WorldDataManager } from '@/data/worldDataManager'
-import { Color4, InstancedMesh, Matrix, Mesh, ParticleSystem, Scene, Vector2 } from '@babylonjs/core'
+import { Color4, Matrix, Mesh, ParticleSystem, Scene, Vector2 } from '@babylonjs/core'
 import { BabylonUtils } from '@/babylon/utils'
 import { Builder } from '@/babylon/builder'
 import { Materials, PlaneEnum1, TerrainEnum1 } from '@/babylon/materials'
@@ -17,7 +17,6 @@ export const TerrainManager = {
     terrainPlane: null as Mesh | null,
     terrainWaterPlane: null as Mesh | null,
     waterPlane: null as Mesh | null,
-    waterPlaneLayers: [] as Array<{height: number, mesh: InstancedMesh}>,
     seaWaterLevel: null as number | null,
 
     hoverBlockMarker: null as Mesh | null,
@@ -51,12 +50,6 @@ export const TerrainManager = {
         this.waterPlane.alwaysSelectAsActiveMesh = true
         this.waterPlane.renderingGroupId = 0
 
-        this.waterPlaneLayers = []
-        for (let i = 1.25; i <= 4.75; i += 0.25) {
-            const layer = this.waterPlane.createInstance('plane' + i)
-            layer.position.y = i
-            this.waterPlaneLayers.push({height: i, mesh: layer})
-        }
         this.applySeaWaterLevel()
 
         this.hoverBlockMarker = Builder.createHorizontalPlane(scene, null,1, 0)
@@ -70,9 +63,9 @@ export const TerrainManager = {
     applySeaWaterLevel() {
         const hasSea = this.seaWaterLevel !== null
         this.waterPlane?.setEnabled(hasSea)
-        this.waterPlaneLayers.forEach((layer) => {
-            layer.mesh.setEnabled(hasSea && layer.height <= this.seaWaterLevel!)
-        })
+        if (hasSea && this.waterPlane) {
+            this.waterPlane.position.y = this.seaWaterLevel!
+        }
     },
 
     addWaterTerrainLayer(
