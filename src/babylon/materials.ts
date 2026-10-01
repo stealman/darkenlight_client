@@ -227,7 +227,7 @@ export const Materials = {
         mat.directIntensity = 1
         mat.environmentIntensity = 0.5
         mat.usePhysicalLightFalloff = false
-        mat.alpha = 0.25
+        mat.alpha = 0.5
 
         return mat
     },

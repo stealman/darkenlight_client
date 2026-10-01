@@ -86,17 +86,40 @@
                                 <div class="world-map-height-mode-controls">
                                     <label>
                                         <input v-model="heightEditMode" type="radio" value="exact"> Exact
-                                        <input v-if="heightEditMode === 'exact'" v-model.number="targetHeight" class="world-map-target-height-input" type="number" min="1" max="31" step="1">
+                                        <input v-if="heightEditMode === 'exact' || (heightEditMode === 'area' && areaAction === 'exact')" v-model.number="targetHeight" class="world-map-target-height-input" type="number" min="1" max="31" step="1">
                                     </label>
                                     <label><input v-model="heightEditMode" type="radio" value="up"> Up</label>
                                     <label><input v-model="heightEditMode" type="radio" value="down"> Down</label>
+                                    <label><input v-model="heightEditMode" type="radio" value="area"> Area</label>
                                 </div>
                                 <label class="world-map-highlight-control"><input v-model="highlightImpassable" type="checkbox"> Highlight impassable</label>
                             </div>
-                            <div v-if="selectedMapType === 'height'" class="world-map-brush-controls">
+                            <div v-if="selectedMapType === 'height' && (!selectedAreaPixels.size || heightEditMode !== 'area')" class="world-map-brush-controls">
                                 <span>Brush</span>
                                 <button v-for="size in squareBrushSizes" :key="`square-${size}`" :disabled="brushShape === 'square' && brushSize === size" @click="selectBrush('square', size)">{{ size }}</button>
                                 <button v-for="size in circleBrushSizes" :key="`circle-${size}`" class="world-map-circle-brush-button" :disabled="brushShape === 'circle' && brushSize === size" @click="selectBrush('circle', size)">◯ {{ size }}</button>
+                            </div>
+                            <div v-else-if="selectedMapType === 'height' && heightEditMode === 'area'" class="world-map-area-actions">
+                                <button @click="cancelAreaSelection">Cancel</button>
+                                <select v-model="areaAction">
+                                    <option value="">Choose action...</option>
+                                    <option value="exact">Exact</option>
+                                    <option value="up">Up</option>
+                                    <option value="down">Down</option>
+                                    <option value="randomize">Randomize</option>
+                                </select>
+                                <template v-if="areaAction === 'randomize'">
+                                    <label class="world-map-area-field">Min Y<input v-model.number="randomizeMinY" type="number" min="1" max="31"></label>
+                                    <label class="world-map-area-field">Max Y<input v-model.number="randomizeMaxY" type="number" min="1" max="31"></label>
+                                    <label class="world-map-area-field">Large feature size<input v-model.number="randomizeLargeFeatureSize" type="number" min="1" max="1024"></label>
+                                    <label class="world-map-area-field">Detail size<input v-model.number="randomizeDetailSize" type="number" min="1" max="1024"></label>
+                                    <label class="world-map-area-field">Detail strength<input v-model.number="randomizeDetailStrength" type="number" min="0" max="31"></label>
+                                    <label class="world-map-area-field">Roughness<input v-model.number="randomizeRoughness" type="number" min="0" max="6"></label>
+                                    <label class="world-map-area-field">MaxSlope<input v-model.number="randomizeMaxSlope" type="number" min="0" max="31"></label>
+                                    <label class="world-map-area-field">Seed<input v-model.number="randomizeSeed" type="number" min="0" max="2147483647"></label>
+                                    <button @click="rerollRandomizeSeed">Re-roll</button>
+                                </template>
+                                <button :disabled="!areaAction" @click="applyAreaAction">OK</button>
                             </div>
                             <span v-else>{{ selectedMapTypeLabel }} map</span>
                             <span class="world-map-hover-value">{{ mapHoverValue }}</span>
@@ -107,8 +130,8 @@
                             @contextmenu.prevent
                             @pointerdown="handleMapPointerDown"
                             @pointermove="handleMapPointerMove"
-                            @pointerup="stopMapDrag"
-                            @pointercancel="stopMapDrag"
+                            @pointerup="handleMapPointerUp"
+                            @pointercancel="handleMapPointerUp"
                             @click="editMapPixel"
                             @wheel.prevent="cycleBrush"
                         >
@@ -117,9 +140,14 @@
                         <div class="world-map-save-actions">
                             <span v-if="pendingHeightChangeCount">{{ pendingHeightChangeCount }} pending height {{ pendingHeightChangeCount === 1 ? 'change' : 'changes' }}</span>
                             <span v-else>No pending map changes</span>
-                            <button class="dialog-button" :disabled="selectedMapType !== 'height' || pendingHeightChangeCount === 0 || savingMapData" @click="saveMapData">
-                                <span class="ui-text-gradient--button-state">{{ savingMapData ? 'SAVING...' : 'SAVE MAP DATA' }}</span>
-                            </button>
+                            <div class="world-map-save-buttons">
+                                <button class="dialog-button" :disabled="selectedMapType !== 'height' || pendingHeightChangeCount === 0 || savingMapData" @click="saveMapData">
+                                    <span class="ui-text-gradient--button-state">{{ savingMapData ? 'SAVING...' : 'SAVE MAP DATA' }}</span>
+                                </button>
+                                <button class="dialog-button" :disabled="selectedMapType !== 'height' || pendingHeightChangeCount === 0 || savingMapData" @click="discardMapChanges">
+                                    <span class="ui-text-gradient--button-state">STORNO</span>
+                                </button>
+                            </div>
                         </div>
                     </section>
                 </div>
@@ -133,12 +161,19 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { GMManager } from '@/gm/GM'
 import {
     CIRCLE_BRUSH_SIZES,
+    appendAreaPathSegment,
+    createAreaOverlay as createHeightAreaOverlay,
+    createRandomizedAreaHeights,
     createWaterOverlay as createHeightWaterOverlay,
+    drawAreaOverlay as drawHeightAreaOverlay,
     drawBrushPreview as drawHeightBrushPreview,
     drawImpassableBoundaries as drawHeightImpassableBoundaries,
     getBrushBounds as getHeightBrushBounds,
     getBrushPixelCoordinates as getHeightBrushPixelCoordinates,
     getBrushTargetHeight as getHeightBrushTargetHeight,
+    getAreaSelection,
+    getAreaClosingTolerance,
+    getConnectedAreaByHeight,
     getHeightMapPixelValue,
     getStoredHeightTool,
     getTargetBrushHeight,
@@ -152,6 +187,7 @@ import { getGatheringMapPixelValue } from './worldMaps/gatheringMapEditor'
 
 const WORLD_MAP_ZOOM_LS_KEY = 'worlds-map-zoom'
 const WORLD_MAP_VIEW_LS_KEY = 'worlds-map-view'
+const WORLD_MAP_RANDOMIZE_LS_KEY = 'worlds-map-randomize'
 
 const getStoredMapZoom = () => {
     const zoom = Number(localStorage.getItem(WORLD_MAP_ZOOM_LS_KEY))
@@ -171,6 +207,18 @@ const getStoredMapView = () => {
     }
 }
 
+const getStoredRandomizeSettings = () => {
+    try {
+        const settings = JSON.parse(localStorage.getItem(WORLD_MAP_RANDOMIZE_LS_KEY) || 'null')
+        if (!settings || Object.values(settings).some((value) => !Number.isFinite(value))) {
+            return null
+        }
+        return settings
+    } catch {
+        return null
+    }
+}
+
 const emit = defineEmits(['close'])
 const dialogVisible = ref(false)
 const selectedWorldId = ref(null)
@@ -185,6 +233,7 @@ const attributesJson = ref('{}')
 const attributesError = ref('')
 const initialMapView = getStoredMapView()
 const initialHeightTool = getStoredHeightTool()
+const initialRandomizeSettings = getStoredRandomizeSettings()
 const mapTypes = [
     {id: 'height', label: 'Height'},
     {id: 'terrain', label: 'Terrain'},
@@ -207,11 +256,24 @@ const brushSize = ref(initialHeightTool?.brushSize ?? 1)
 const brushShape = ref(initialHeightTool?.brushShape ?? 'square')
 const heightEditMode = ref(initialHeightTool?.mode ?? 'exact')
 const highlightImpassable = ref(false)
+const selectedAreaPixels = ref(new Set())
+const areaAction = ref('')
+const randomizeMinY = ref(initialRandomizeSettings?.minY ?? 1)
+const randomizeMaxY = ref(initialRandomizeSettings?.maxY ?? 31)
+const randomizeLargeFeatureSize = ref(initialRandomizeSettings?.largeFeatureSize ?? 48)
+const randomizeDetailSize = ref(initialRandomizeSettings?.detailSize ?? 12)
+const randomizeDetailStrength = ref(initialRandomizeSettings?.detailStrength ?? 2)
+const randomizeRoughness = ref(initialRandomizeSettings?.roughness ?? 3)
+const randomizeMaxSlope = ref(initialRandomizeSettings?.maxSlope ?? 1)
+const randomizeSeed = ref(initialRandomizeSettings?.seed ?? Math.floor(Math.random() * 2147483648))
+const areaDraw = {active: false, path: []}
+const heightPaint = {active: false, lastCoords: null}
 const mapDrag = {active: false, x: 0, y: 0}
 let mapPixelContext = null
 let mapPixelCanvas = null
 let waterOverlayCanvas = null
 let waterOverlayContext = null
+let areaOverlayCanvas = null
 const pendingHeightChangesByWorld = new Map()
 const pendingHeightChangeCount = ref(0)
 const savingMapData = ref(false)
@@ -245,6 +307,16 @@ const closeDialog = () => {
 
 const onDialogKeyDown = (event) => {
     if (!dialogVisible.value) {
+        return
+    }
+    if (heightEditMode.value === 'exact' && event.key === 'Shift') {
+        event.preventDefault()
+        targetHeight.value = Math.min(31, targetHeight.value + 1)
+        return
+    }
+    if (heightEditMode.value === 'exact' && event.key === 'Control') {
+        event.preventDefault()
+        targetHeight.value = Math.max(1, targetHeight.value - 1)
         return
     }
     if (event.key === 'Tab') {
@@ -308,6 +380,8 @@ const loadMapImage = () => {
     mapPixelCanvas = null
     waterOverlayCanvas = null
     waterOverlayContext = null
+    areaOverlayCanvas = null
+    cancelAreaSelection()
     mapHoverValue.value = 'Loading map...'
     GMManager.loadWorldMapImage(selectedWorldId.value, selectedMapType.value)
     drawMap()
@@ -347,8 +421,24 @@ const drawMap = () => {
             mapImage.value.naturalHeight * mapZoom.value,
         )
     }
+    drawSelectedArea(ctx)
     drawBrushPreview(ctx)
     drawImpassableBoundaries(ctx, width, height)
+}
+
+const drawSelectedArea = (ctx) => {
+    if (selectedMapType.value !== 'height' || heightEditMode.value !== 'area') {
+        return
+    }
+    if (areaOverlayCanvas) {
+        ctx.drawImage(areaOverlayCanvas, mapPanX.value, mapPanY.value, areaOverlayCanvas.width * mapZoom.value, areaOverlayCanvas.height * mapZoom.value)
+        return
+    }
+    const mapWidth = mapPixelCanvas?.width ?? mapImage.value?.naturalWidth
+    if (!mapWidth) {
+        return
+    }
+    drawHeightAreaOverlay(ctx, new Set(areaDraw.path.map((pixel) => pixel.z * mapWidth + pixel.x)), mapWidth, mapPanX.value, mapPanY.value, mapZoom.value)
 }
 
 const drawImpassableBoundaries = (ctx, viewportWidth, viewportHeight) => {
@@ -385,7 +475,7 @@ const updateWaterOverlayPixel = (x, z, height) => {
 }
 
 const drawBrushPreview = (ctx) => {
-    if (selectedMapType.value !== 'height' || !mapHoverCoordinates.value || !mapImage.value) {
+    if (selectedMapType.value !== 'height' || heightEditMode.value === 'area' || !mapHoverCoordinates.value || !mapImage.value) {
         return
     }
     const bounds = getBrushBounds(mapHoverCoordinates.value)
@@ -457,10 +547,37 @@ const startMapDrag = (event) => {
 }
 
 const handleMapPointerDown = (event) => {
+    if (event.button === 0 && selectedMapType.value === 'height' && heightEditMode.value === 'area' && !selectedAreaPixels.value.size) {
+        const coords = getMapPixelCoordinates(event)
+        if (!coords) {
+            return
+        }
+        areaDraw.active = true
+        areaDraw.path = [coords]
+        event.currentTarget.setPointerCapture(event.pointerId)
+        drawMap()
+        return
+    }
+    if (event.button === 0 && selectedMapType.value === 'height' && heightEditMode.value === 'exact') {
+        const coords = getMapPixelCoordinates(event)
+        if (!coords) {
+            return
+        }
+        heightPaint.active = true
+        heightPaint.lastCoords = coords
+        event.currentTarget.setPointerCapture(event.pointerId)
+        editMapPixelAt(coords)
+        return
+    }
     if (event.button === 2 && selectedMapType.value === 'height') {
         event.preventDefault()
         const coords = getMapPixelCoordinates(event)
         if (!coords || !mapPixelContext) {
+            return
+        }
+        if (heightEditMode.value === 'area' && mapPixelCanvas) {
+            selectArea(getConnectedAreaByHeight(mapPixelContext, mapPixelCanvas.width, mapPixelCanvas.height, coords))
+            drawMap()
             return
         }
         const [r] = mapPixelContext.getImageData(coords.x, coords.z, 1, 1).data
@@ -483,7 +600,61 @@ const dragMap = (event) => {
 
 const handleMapPointerMove = (event) => {
     inspectMapPixel(event)
+    drawAreaSelection(event)
+    paintHeightAlongPath(event)
     dragMap(event)
+}
+
+const paintHeightAlongPath = (event) => {
+    if (!heightPaint.active) {
+        return
+    }
+    const coords = getMapPixelCoordinates(event)
+    if (!coords) {
+        heightPaint.lastCoords = null
+        return
+    }
+    if (!heightPaint.lastCoords) {
+        heightPaint.lastCoords = coords
+        editMapPixelAt(coords)
+        return
+    }
+    const path = appendAreaPathSegment([heightPaint.lastCoords], heightPaint.lastCoords, coords)
+    for (let index = 1; index < path.length; index++) {
+        editMapPixelAt(path[index])
+    }
+    heightPaint.lastCoords = coords
+}
+
+const drawAreaSelection = (event) => {
+    if (!areaDraw.active || !mapImage.value) {
+        return
+    }
+    const coords = getMapPixelCoordinates(event)
+    if (!coords) {
+        return
+    }
+    const previous = areaDraw.path[areaDraw.path.length - 1]
+    if (previous.x === coords.x && previous.z === coords.z) {
+        return
+    }
+    const path = appendAreaPathSegment(areaDraw.path, previous, coords)
+    const start = path[0]
+    const closeTolerance = getAreaClosingTolerance(path)
+    const closesArea = (coords.x === start.x && coords.z === start.z)
+        || (closeTolerance > 0 && Math.hypot(coords.x - start.x, coords.z - start.z) <= closeTolerance)
+    if (closesArea && path.length >= 4) {
+        const mapSize = mapPixelCanvas?.width ?? mapImage.value.naturalWidth
+        selectArea(getAreaSelection(appendAreaPathSegment(path, coords, start), mapSize))
+        areaDraw.active = false
+        areaDraw.path = []
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+            event.currentTarget.releasePointerCapture(event.pointerId)
+        }
+    } else {
+        areaDraw.path = path
+    }
+    drawMap()
 }
 
 const inspectMapPixel = (event) => {
@@ -515,11 +686,18 @@ const getMapPixelCoordinates = (event) => {
 }
 
 const editMapPixel = (event) => {
-    if (event.button !== 0 || selectedMapType.value !== 'height' || savingMapData.value || !Number.isInteger(selectedWorldId.value)) {
+    if (event.button !== 0 || selectedMapType.value !== 'height' || heightEditMode.value === 'area' || savingMapData.value || !Number.isInteger(selectedWorldId.value)) {
         return
     }
     const coords = getMapPixelCoordinates(event)
     if (!coords) {
+        return
+    }
+    editMapPixelAt(coords)
+}
+
+const editMapPixelAt = (coords) => {
+    if (selectedMapType.value !== 'height' || heightEditMode.value === 'area' || savingMapData.value || !Number.isInteger(selectedWorldId.value) || !mapPixelContext) {
         return
     }
     let changes = pendingHeightChangesByWorld.get(selectedWorldId.value)
@@ -563,6 +741,83 @@ const saveMapData = () => {
     GMManager.saveWorldMapHeightChanges(selectedWorldId.value, Array.from(changes.values()))
 }
 
+const discardMapChanges = () => {
+    if (!Number.isInteger(selectedWorldId.value) || savingMapData.value) {
+        return
+    }
+    pendingHeightChangesByWorld.delete(selectedWorldId.value)
+    pendingHeightChangeCount.value = 0
+    cancelAreaSelection()
+    loadMapImage()
+}
+
+const applyAreaAction = () => {
+    if (!['exact', 'up', 'down', 'randomize'].includes(areaAction.value) || !selectedAreaPixels.value.size || !mapPixelContext || !Number.isInteger(selectedWorldId.value)) {
+        return
+    }
+    const exactHeight = Math.max(1, Math.min(31, Math.round(targetHeight.value)))
+    targetHeight.value = exactHeight
+    const mapSize = mapPixelCanvas?.width ?? mapImage.value?.naturalWidth ?? 0
+    const clampInteger = (value, min, max, fallback) => Number.isFinite(value) ? Math.max(min, Math.min(max, Math.round(value))) : fallback
+    const minY = clampInteger(randomizeMinY.value, 1, 31, 1)
+    const maxY = Math.max(minY, clampInteger(randomizeMaxY.value, 1, 31, 31))
+    const largeFeatureSize = clampInteger(randomizeLargeFeatureSize.value, 1, mapSize, 48)
+    const detailSize = clampInteger(randomizeDetailSize.value, 1, mapSize, 12)
+    const detailStrength = clampInteger(randomizeDetailStrength.value, 0, 31, 2)
+    const roughness = clampInteger(randomizeRoughness.value, 0, 6, 3)
+    const maxSlope = clampInteger(randomizeMaxSlope.value, 0, 31, 1)
+    const seed = clampInteger(randomizeSeed.value, 0, 2147483647, 1)
+    randomizeMinY.value = minY
+    randomizeMaxY.value = maxY
+    randomizeLargeFeatureSize.value = largeFeatureSize
+    randomizeDetailSize.value = detailSize
+    randomizeDetailStrength.value = detailStrength
+    randomizeRoughness.value = roughness
+    randomizeMaxSlope.value = maxSlope
+    randomizeSeed.value = seed
+    let changes = pendingHeightChangesByWorld.get(selectedWorldId.value)
+    if (!changes) {
+        changes = new Map()
+        pendingHeightChangesByWorld.set(selectedWorldId.value, changes)
+    }
+    const mapPixels = mapPixelContext.getImageData(0, 0, mapSize, mapPixelCanvas?.height ?? mapSize)
+    const sourceHeights = new Uint8Array(mapSize * (mapPixelCanvas?.height ?? mapSize))
+    for (let index = 0; index < sourceHeights.length; index++) {
+        sourceHeights[index] = Math.floor(mapPixels.data[index * 4] / 8)
+    }
+    const randomHeights = areaAction.value === 'randomize'
+        ? createRandomizedAreaHeights(selectedAreaPixels.value, mapSize, sourceHeights, {minY, maxY, largeFeatureSize, detailSize, detailStrength, roughness, maxSlope, seed})
+        : null
+    for (const index of selectedAreaPixels.value) {
+        const x = index % mapSize
+        const z = Math.floor(index / mapSize)
+        if (x < 0 || z < 0 || x >= mapSize || z >= mapSize) {
+            continue
+        }
+        const currentHeight = Math.floor(mapPixels.data[index * 4] / 8)
+        const height = areaAction.value === 'randomize'
+            ? randomHeights[index]
+            : areaAction.value === 'up'
+            ? Math.min(31, currentHeight + 1)
+            : areaAction.value === 'down'
+                ? Math.max(1, currentHeight - 1)
+                : exactHeight
+        const gray = height * 8
+        mapPixels.data[index * 4] = gray
+        mapPixels.data[index * 4 + 1] = gray
+        mapPixels.data[index * 4 + 2] = gray
+        changes.set(`${x};${z}`, {x, z, height})
+    }
+    mapPixelContext.putImageData(mapPixels, 0, 0)
+    createWaterOverlay()
+    pendingHeightChangeCount.value = changes.size
+    drawMap()
+}
+
+const rerollRandomizeSeed = () => {
+    randomizeSeed.value = Math.floor(Math.random() * 2147483648)
+}
+
 const getMapPixelValue = (r, g, b) => {
     if (selectedMapType.value === 'height') {
         return getHeightMapPixelValue(r)
@@ -584,6 +839,42 @@ const stopMapDrag = (event) => {
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
         event.currentTarget.releasePointerCapture(event.pointerId)
     }
+}
+
+const handleMapPointerUp = (event) => {
+    if (heightPaint.active) {
+        heightPaint.active = false
+        heightPaint.lastCoords = null
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+            event.currentTarget.releasePointerCapture(event.pointerId)
+        }
+        return
+    }
+    if (areaDraw.active) {
+        areaDraw.active = false
+        areaDraw.path = []
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+            event.currentTarget.releasePointerCapture(event.pointerId)
+        }
+        drawMap()
+        return
+    }
+    stopMapDrag(event)
+}
+
+const cancelAreaSelection = () => {
+    selectedAreaPixels.value = new Set()
+    areaDraw.active = false
+    areaDraw.path = []
+    areaAction.value = ''
+    areaOverlayCanvas = null
+    drawMap()
+}
+
+const selectArea = (areaPixels) => {
+    selectedAreaPixels.value = areaPixels
+    areaAction.value = ''
+    areaOverlayCanvas = mapPixelCanvas ? createHeightAreaOverlay(areaPixels, mapPixelCanvas.width, mapPixelCanvas.height) : null
 }
 
 watch(worlds, () => {
@@ -621,6 +912,11 @@ watch([targetHeight, brushSize, brushShape, heightEditMode], ([height, size, sha
         return
     }
     localStorage.setItem('worlds-map-height-tool', JSON.stringify({height: safeHeight, brushSize: size, brushShape: shape, mode}))
+    drawMap()
+})
+
+watch([randomizeMinY, randomizeMaxY, randomizeLargeFeatureSize, randomizeDetailSize, randomizeDetailStrength, randomizeRoughness, randomizeMaxSlope, randomizeSeed], ([minY, maxY, largeFeatureSize, detailSize, detailStrength, roughness, maxSlope, seed]) => {
+    localStorage.setItem(WORLD_MAP_RANDOMIZE_LS_KEY, JSON.stringify({minY, maxY, largeFeatureSize, detailSize, detailStrength, roughness, maxSlope, seed}))
 })
 
 watch([selectedWorldId, selectedMapType, mapPanX, mapPanY], ([worldId, mapType, panX, panY]) => {
@@ -877,6 +1173,25 @@ defineExpose({
     gap: 4px;
 }
 
+.world-map-area-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.world-map-area-field {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 11px;
+    white-space: nowrap;
+}
+
+.world-map-area-field input {
+    width: 3.25rem;
+}
+
 .world-map-circle-brush-button {
     white-space: nowrap;
 }
@@ -915,5 +1230,10 @@ defineExpose({
     gap: 8px;
     margin-top: 8px;
     font-size: 12px;
+}
+
+.world-map-save-buttons {
+    display: flex;
+    gap: 6px;
 }
 </style>

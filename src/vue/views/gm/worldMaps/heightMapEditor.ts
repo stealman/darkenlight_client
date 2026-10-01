@@ -1,4 +1,4 @@
-export const HEIGHT_EDIT_MODES = ['exact', 'up', 'down']
+export const HEIGHT_EDIT_MODES = ['exact', 'up', 'down', 'area']
 export const SQUARE_BRUSH_SIZES = [1, 2, 4, 8, 16]
 export const CIRCLE_BRUSH_SIZES = [4, 8, 12, 16]
 
@@ -22,10 +22,10 @@ export const getStoredHeightTool = () => {
 export const getBrushBounds = (center, brushSize, mapSize) => {
     const startX = center.x - Math.floor(brushSize / 2)
     const startZ = center.z - Math.floor(brushSize / 2)
-    const minX = Math.max(1, startX)
-    const minZ = Math.max(1, startZ)
-    const maxX = Math.min(mapSize - 2, startX + brushSize - 1)
-    const maxZ = Math.min(mapSize - 2, startZ + brushSize - 1)
+    const minX = Math.max(0, startX)
+    const minZ = Math.max(0, startZ)
+    const maxX = Math.min(mapSize - 1, startX + brushSize - 1)
+    const maxZ = Math.min(mapSize - 1, startZ + brushSize - 1)
     return minX > maxX || minZ > maxZ ? null : {startX, startZ, minX, minZ, maxX, maxZ}
 }
 
@@ -162,3 +162,245 @@ export const drawImpassableBoundaries = (ctx, {pixelCanvas, pixelContext, panX, 
 }
 
 export const getHeightMapPixelValue = (red) => `Y ${Math.floor(red / 8)}`
+
+export const appendAreaPathSegment = (path, from, to) => {
+    const nextPath = [...path]
+    let x = from.x
+    let z = from.z
+    const stepX = Math.sign(to.x - from.x)
+    const stepZ = Math.sign(to.z - from.z)
+    const deltaX = Math.abs(to.x - from.x)
+    const deltaZ = Math.abs(to.z - from.z)
+    let error = deltaX - deltaZ
+    while (x !== to.x || z !== to.z) {
+        const twiceError = error * 2
+        if (twiceError > -deltaZ) { error -= deltaZ; x += stepX }
+        if (twiceError < deltaX) { error += deltaX; z += stepZ }
+        const previous = nextPath[nextPath.length - 1]
+        if (!previous || previous.x !== x || previous.z !== z) {
+            nextPath.push({x, z})
+        }
+    }
+    return nextPath
+}
+
+export const getAreaClosingTolerance = (path) => {
+    let length = 0
+    for (let index = 1; index < path.length; index++) {
+        length += Math.hypot(path[index].x - path[index - 1].x, path[index].z - path[index - 1].z)
+    }
+    if (length > 100) return 4
+    if (length > 50) return 3
+    if (length > 20) return 2
+    return 0
+}
+
+const isInsideAreaPath = (x, z, path) => {
+    let inside = false
+    for (let index = 0, previousIndex = path.length - 1; index < path.length; previousIndex = index++) {
+        const current = path[index]
+        const previous = path[previousIndex]
+        const intersects = (current.z > z) !== (previous.z > z)
+            && x < (previous.x - current.x) * (z - current.z) / (previous.z - current.z) + current.x
+        if (intersects) {
+            inside = !inside
+        }
+    }
+    return inside
+}
+
+export const getAreaSelection = (path, mapSize) => {
+    if (path.length < 4) {
+        return new Set()
+    }
+    const boundary = new Set(path.map((pixel) => pixel.z * mapSize + pixel.x))
+    const minX = Math.max(0, Math.min(...path.map((pixel) => pixel.x)))
+    const maxX = Math.min(mapSize - 1, Math.max(...path.map((pixel) => pixel.x)))
+    const minZ = Math.max(0, Math.min(...path.map((pixel) => pixel.z)))
+    const maxZ = Math.min(mapSize - 1, Math.max(...path.map((pixel) => pixel.z)))
+    for (let x = minX; x <= maxX; x++) {
+        for (let z = minZ; z <= maxZ; z++) {
+            if (isInsideAreaPath(x, z, path)) {
+                boundary.add(z * mapSize + x)
+            }
+        }
+    }
+    return boundary
+}
+
+export const getConnectedAreaByHeight = (pixelContext, width, height, start) => {
+    const pixels = pixelContext.getImageData(0, 0, width, height).data
+    const targetHeight = Math.floor(pixels[(start.z * width + start.x) * 4] / 8)
+    const visited = new Uint8Array(width * height)
+    const queue = new Int32Array(width * height)
+    const connected = new Set()
+    let readIndex = 0
+    let writeIndex = 1
+    queue[0] = start.z * width + start.x
+    visited[queue[0]] = 1
+    while (readIndex < writeIndex) {
+        const index = queue[readIndex++]
+        connected.add(index)
+        const x = index % width
+        const z = Math.floor(index / width)
+        const tryAdd = (neighborIndex) => {
+            if (!visited[neighborIndex] && Math.floor(pixels[neighborIndex * 4] / 8) === targetHeight) {
+                visited[neighborIndex] = 1
+                queue[writeIndex++] = neighborIndex
+            }
+        }
+        if (x > 0) tryAdd(index - 1)
+        if (x < width - 1) tryAdd(index + 1)
+        if (z > 0) tryAdd(index - width)
+        if (z < height - 1) tryAdd(index + width)
+    }
+    return connected
+}
+
+const randomAt = (x, z, seed) => {
+    let value = Math.imul(x ^ seed, 0x45d9f3b) ^ Math.imul(z ^ (seed >>> 16), 0x45d9f3b)
+    value = Math.imul(value ^ (value >>> 16), 0x45d9f3b)
+    return ((value ^ (value >>> 16)) >>> 0) / 0x100000000
+}
+
+const smoothStep = (value) => value * value * (3 - 2 * value)
+
+const valueNoise = (x, z, featureSize, seed) => {
+    const gridX = Math.floor(x / featureSize)
+    const gridZ = Math.floor(z / featureSize)
+    const localX = smoothStep((x - gridX * featureSize) / featureSize)
+    const localZ = smoothStep((z - gridZ * featureSize) / featureSize)
+    const top = randomAt(gridX, gridZ, seed) * (1 - localX) + randomAt(gridX + 1, gridZ, seed) * localX
+    const bottom = randomAt(gridX, gridZ + 1, seed) * (1 - localX) + randomAt(gridX + 1, gridZ + 1, seed) * localX
+    return top * (1 - localZ) + bottom * localZ
+}
+
+const getCardinalNeighbors = (index, width) => {
+    const x = index % width
+    const z = Math.floor(index / width)
+    return [
+        x > 0 ? index - 1 : -1,
+        x < width - 1 ? index + 1 : -1,
+        z > 0 ? index - width : -1,
+        z < width - 1 ? index + width : -1,
+    ]
+}
+
+const blendAreaEdges = (areaPixels, width, heights, outsideHeights, minY, maxY, maxSlope, largeFeatureSize) => {
+    const distances = new Int32Array(width * width)
+    distances.fill(-1)
+    const edgeHeights = new Uint8Array(width * width)
+    const queue = []
+    const edgeSlope = Math.min(maxSlope, 1)
+    for (const index of areaPixels) {
+        const outsideValues = getCardinalNeighbors(index, width)
+            .filter((neighbor) => neighbor >= 0 && !areaPixels.has(neighbor))
+            .map((neighbor) => outsideHeights[neighbor])
+        if (outsideValues.length === 0) {
+            continue
+        }
+        const average = Math.round(outsideValues.reduce((sum, value) => sum + value, 0) / outsideValues.length)
+        const allowedMin = Math.max(...outsideValues.map((value) => value - edgeSlope))
+        const allowedMax = Math.min(...outsideValues.map((value) => value + edgeSlope))
+        const edgeHeight = allowedMin <= allowedMax
+            ? Math.max(allowedMin, Math.min(allowedMax, average))
+            : average
+        edgeHeights[index] = Math.max(minY, Math.min(maxY, edgeHeight))
+        distances[index] = 0
+        queue.push(index)
+    }
+    if (queue.length === 0) {
+        return
+    }
+    for (let readIndex = 0; readIndex < queue.length; readIndex++) {
+        const index = queue[readIndex]
+        for (const neighbor of getCardinalNeighbors(index, width)) {
+            if (neighbor < 0 || !areaPixels.has(neighbor) || distances[neighbor] >= 0) {
+                continue
+            }
+            distances[neighbor] = distances[index] + 1
+            edgeHeights[neighbor] = edgeHeights[index]
+            queue.push(neighbor)
+        }
+    }
+    const blendWidth = Math.max(8, Math.round(largeFeatureSize / 2))
+    for (const index of areaPixels) {
+        const blend = smoothStep(Math.min(1, distances[index] / blendWidth))
+        heights[index] = Math.round(edgeHeights[index] * (1 - blend) + heights[index] * blend)
+    }
+}
+
+const limitAreaSlope = (areaPixels, width, heights, outsideHeights, minY, maxY, maxSlope) => {
+    if (maxSlope >= 31) {
+        return
+    }
+    const queue = Array.from(areaPixels)
+    for (let readIndex = 0; readIndex < queue.length; readIndex++) {
+        const index = queue[readIndex]
+        for (const neighbor of getCardinalNeighbors(index, width)) {
+            if (neighbor < 0) {
+                continue
+            }
+            if (!areaPixels.has(neighbor)) {
+                const limitedHeight = Math.max(minY, Math.min(maxY, Math.max(outsideHeights[neighbor] - maxSlope, Math.min(outsideHeights[neighbor] + maxSlope, heights[index]))))
+                if (limitedHeight !== heights[index]) {
+                    heights[index] = limitedHeight
+                    queue.push(index)
+                }
+                continue
+            }
+            const limitedHeight = Math.max(minY, Math.min(maxY, Math.max(heights[index] - maxSlope, Math.min(heights[index] + maxSlope, heights[neighbor]))))
+            if (limitedHeight !== heights[neighbor]) {
+                heights[neighbor] = limitedHeight
+                queue.push(neighbor)
+            }
+        }
+    }
+}
+
+export const createRandomizedAreaHeights = (areaPixels, width, outsideHeights, {minY, maxY, largeFeatureSize, detailSize, detailStrength, roughness, maxSlope, seed}) => {
+    const heights = new Uint8Array(width * width)
+    const areaIndexes = Array.from(areaPixels)
+    const heightRange = maxY - minY
+    for (const index of areaIndexes) {
+        const x = index % width
+        const z = Math.floor(index / width)
+        let detail = 0
+        let amplitude = detailStrength
+        let featureSize = detailSize
+        for (let octave = 0; octave < roughness; octave++) {
+            detail += (valueNoise(x, z, featureSize, seed + octave * 1013) * 2 - 1) * amplitude
+            amplitude *= 0.5
+            featureSize = Math.max(1, featureSize / 2)
+        }
+        const broadHeight = minY + valueNoise(x, z, largeFeatureSize, seed) * heightRange
+        heights[index] = Math.max(minY, Math.min(maxY, Math.round(broadHeight + detail)))
+    }
+    blendAreaEdges(areaPixels, width, heights, outsideHeights, minY, maxY, maxSlope, largeFeatureSize)
+    limitAreaSlope(areaPixels, width, heights, outsideHeights, minY, maxY, maxSlope)
+    return heights
+}
+
+export const createAreaOverlay = (areaPixels, width, height) => {
+    const canvas = document.createElement('canvas')
+    canvas.width = width
+    canvas.height = height
+    const context = canvas.getContext('2d')
+    context.fillStyle = 'rgba(255, 48, 48, 0.32)'
+    for (const index of areaPixels) {
+        context.fillRect(index % width, Math.floor(index / width), 1, 1)
+    }
+    return canvas
+}
+
+export const drawAreaOverlay = (ctx, areaPixels, mapWidth, panX, panY, zoom) => {
+    if (!areaPixels?.size) {
+        return
+    }
+    ctx.fillStyle = 'rgba(255, 48, 48, 0.32)'
+    for (const index of areaPixels) {
+        const x = index % mapWidth
+        const z = Math.floor(index / mapWidth)
+        ctx.fillRect(panX + x * zoom, panY + z * zoom, zoom, zoom)
+    }
+}
