@@ -110,6 +110,12 @@ export const Lights = {
         resetDayNightLighting(this)
         this.sunLight = new DirectionalLight("sunLight", new Vector3(-0.75, -0.75, 0.3), scene)
         this.sunLight.position = new Vector3(30, 30, 30);
+        // Keep the sun shadow projection stable and player-centered. Babylon's
+        // automatic caster fitting can produce a very different projection as
+        // thin-instance render lists change between distant map areas.
+        this.sunLight.shadowFrustumSize = 96
+        this.sunLight.shadowMinZ = 0.1
+        this.sunLight.shadowMaxZ = 128
         this.sunLight.diffuse = new Color3(1, 0.91, 0.78)
 
         this.personalLight = new SpotLight(
@@ -129,7 +135,7 @@ export const Lights = {
 
         if (Settings.isShadowsEnabled()) {
             this.shadow = new ShadowGenerator(Settings.detailLevel.shadowQuality == 2 ? 4096 : 2048, this.sunLight, false)
-            this.shadow.bias = 0.00001
+            this.shadow.bias = 0.001
             this.shadow.setDarkness(0)
             this.shadow.usePoissonSampling = true
             this.shadow.forceBackFacesOnly = true

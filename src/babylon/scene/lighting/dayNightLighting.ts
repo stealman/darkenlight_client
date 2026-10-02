@@ -38,6 +38,7 @@ const SUN_BASE_AZIMUTH = Math.atan2(0.3, -0.75)
 const SUN_AZIMUTH_RANGE = 20 * Math.PI / 180
 const SUN_MIN_ELEVATION = 38 * Math.PI / 180
 const SUN_MAX_ELEVATION = 48 * Math.PI / 180
+const SUN_SHADOW_DISTANCE = 64
 
 export const FOG_ENABLED = true
 
@@ -247,6 +248,10 @@ function updateSunDirection(host: DayNightLightingHost, phase: number) {
         -Math.sin(elevation),
         Math.sin(azimuth) * horizontal,
     )
+    // The light is parented to the player. Placing it directly opposite its
+    // direction keeps the player at the center of the fixed shadow frustum,
+    // independently of the player's absolute world coordinates.
+    host.sunLight.direction.scaleToRef(-SUN_SHADOW_DISTANCE, host.sunLight.position)
 }
 
 function smoothstep(value: number): number {

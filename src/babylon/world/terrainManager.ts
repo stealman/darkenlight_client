@@ -143,7 +143,10 @@ export const TerrainManager = {
 
                         // If minheight is lower than current block height - 1, then fill the gap with blocks
                         for (let fillHeight = minHeight + 1; fillHeight < block.height; fillHeight++) {
-                            const fillMatrix = Matrix.Translation(x, fillHeight + heightOffset, z);
+                            // heightOffset only extends the top block (for example the 0.1 snow layer).
+                            // Applying it to the regular fill blocks moves their top down from the
+                            // snow block and leaves a visible horizontal gap in a terrain wall.
+                            const fillMatrix = Matrix.Translation(x, fillHeight, z);
                             terrainMatrices1.push(fillMatrix)
                             terrainUvData1.push(TerrainEnum1.getTerrainForBlock(block, true))
                         }

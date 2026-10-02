@@ -609,11 +609,11 @@ const changeMapZoom = (delta, event = null) => {
         anchorX = event.clientX - rect.left
         anchorY = event.clientY - rect.top
     }
-    const mapX = (anchorX - mapPanX.value) / mapZoom.value
-    const mapY = (anchorY - mapPanY.value) / mapZoom.value
+    const mapX = (mapPanY.value + mapImage.value.naturalHeight * mapZoom.value - anchorY) / mapZoom.value
+    const mapY = (mapPanX.value + mapImage.value.naturalWidth * mapZoom.value - anchorX) / mapZoom.value
     mapZoom.value = nextZoom
-    mapPanX.value = anchorX - mapX * nextZoom
-    mapPanY.value = anchorY - mapY * nextZoom
+    mapPanX.value = anchorX - mapImage.value.naturalWidth * nextZoom + mapY * nextZoom
+    mapPanY.value = anchorY - mapImage.value.naturalHeight * nextZoom + mapX * nextZoom
     clampMapPan()
 }
 
@@ -636,12 +636,17 @@ const drawMap = () => {
     }
     clampMapPan()
     ctx.imageSmoothingEnabled = false
+    const mapWidth = mapImage.value.naturalWidth * mapZoom.value
+    const mapHeight = mapImage.value.naturalHeight * mapZoom.value
+    ctx.save()
+    ctx.translate(mapPanX.value + mapPanY.value + mapWidth, mapPanX.value + mapPanY.value + mapHeight)
+    ctx.transform(0, -1, -1, 0, 0, 0)
     ctx.drawImage(
         mapPixelCanvas || mapImage.value,
         mapPanX.value,
         mapPanY.value,
-        mapImage.value.naturalWidth * mapZoom.value,
-        mapImage.value.naturalHeight * mapZoom.value,
+        mapWidth,
+        mapHeight,
     )
     if (waterOverlayCanvas) {
         ctx.drawImage(
@@ -657,6 +662,7 @@ const drawMap = () => {
     drawBrushPreview(ctx)
     drawImpassableBoundaries(ctx, width, height)
     drawPlayerMapMarker(ctx)
+    ctx.restore()
 }
 
 const drawPlayerMapMarker = (ctx) => {
@@ -724,6 +730,8 @@ const drawImpassableBoundaries = (ctx, viewportWidth, viewportHeight) => {
         zoom: mapZoom.value,
         viewportWidth,
         viewportHeight,
+        rotate180: true,
+        swapAxes: true,
     })
 }
 
@@ -756,14 +764,17 @@ const rebuildSnowMapDisplay = () => {
     context.drawImage(snowTerrainPixelCanvas, 0, 0)
     const snowPixels = snowSourcePixelContext.getImageData(0, 0, canvas.width, canvas.height)
     const terrainPixels = snowTerrainPixelContext.getImageData(0, 0, canvas.width, canvas.height)
+    const heightPixels = snowHeightPixelContext?.getImageData(0, 0, canvas.width, canvas.height).data ?? null
     const displayPixels = context.getImageData(0, 0, canvas.width, canvas.height)
     for (let index = 0; index < displayPixels.data.length; index += 4) {
         const isWater = terrainPixels.data[index] === 0 && terrainPixels.data[index + 1] === 0 && terrainPixels.data[index + 2] === 255
         const isSnow = snowPixels.data[index] === 255 && snowPixels.data[index + 1] === 255 && snowPixels.data[index + 2] === 255
         if (!isWater && isSnow) {
-            displayPixels.data[index] = 255
-            displayPixels.data[index + 1] = 255
-            displayPixels.data[index + 2] = 255
+            const mapHeight = heightPixels ? Math.max(0, Math.min(31, Math.floor(heightPixels[index] / 8))) : 31
+            const snowShade = 128 + Math.round(mapHeight / 31 * 127)
+            displayPixels.data[index] = snowShade
+            displayPixels.data[index + 1] = snowShade
+            displayPixels.data[index + 2] = snowShade
         }
     }
     context.putImageData(displayPixels, 0, 0)
@@ -985,7 +996,7 @@ const handleMapPointerDown = (event) => {
             return
         }
         const [red, green, blue] = mapPixelContext.getImageData(coords.x, coords.z, 1, 1).data
-        snowAction.value = red === 255 && green === 255 && blue === 255
+        snowAction.value = red === green && green === blue && red >= 128
         return
     }
     startMapDrag(event)
@@ -1123,8 +1134,8 @@ const getMapPixelCoordinates = (event) => {
         return null
     }
     const rect = canvas.getBoundingClientRect()
-    const x = Math.floor((event.clientX - rect.left - mapPanX.value) / mapZoom.value)
-    const z = Math.floor((event.clientY - rect.top - mapPanY.value) / mapZoom.value)
+    const x = Math.floor((mapPanY.value + mapImage.value.naturalHeight * mapZoom.value - (event.clientY - rect.top)) / mapZoom.value)
+    const z = Math.floor((mapPanX.value + mapImage.value.naturalWidth * mapZoom.value - (event.clientX - rect.left)) / mapZoom.value)
     if (x < 0 || z < 0 || x >= mapImage.value.naturalWidth || z >= mapImage.value.naturalHeight) {
         mapHoverValue.value = 'Outside map'
         mapHoverCoordinates.value = null
@@ -1743,6 +1754,7 @@ watch(() => GMManager.worldMapImage.value, (data) => {
             snowHeightPixelContext = pixelCanvas.getContext('2d', {willReadFrequently: true})
             snowHeightPixelContext.drawImage(image, 0, 0)
             snowHeightPixelCanvas = pixelCanvas
+            rebuildSnowMapDisplay()
             createWaterOverlay()
             drawMap()
         }

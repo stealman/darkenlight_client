@@ -214,11 +214,19 @@ export const drawBrushPreview = (ctx, {bounds, brushPixels, brushShape, previewH
     ctx.stroke()
 }
 
-export const drawImpassableBoundaries = (ctx, {pixelCanvas, pixelContext, panX, panY, zoom, viewportWidth, viewportHeight}) => {
-    const minX = Math.max(0, Math.floor(-panX / zoom) - 1)
-    const minZ = Math.max(0, Math.floor(-panY / zoom) - 1)
-    const maxX = Math.min(pixelCanvas.width - 1, Math.ceil((viewportWidth - panX) / zoom) + 1)
-    const maxZ = Math.min(pixelCanvas.height - 1, Math.ceil((viewportHeight - panY) / zoom) + 1)
+export const drawImpassableBoundaries = (ctx, {pixelCanvas, pixelContext, panX, panY, zoom, viewportWidth, viewportHeight, rotate180 = false, swapAxes = false}) => {
+    const mapWidth = pixelCanvas.width * zoom
+    const mapHeight = pixelCanvas.height * zoom
+    const sourcePanX = swapAxes ? panY : panX
+    const sourcePanZ = swapAxes ? panX : panY
+    const sourceMapWidth = swapAxes ? mapHeight : mapWidth
+    const sourceMapHeight = swapAxes ? mapWidth : mapHeight
+    const sourceViewportWidth = swapAxes ? viewportHeight : viewportWidth
+    const sourceViewportHeight = swapAxes ? viewportWidth : viewportHeight
+    const minX = Math.max(0, Math.floor((rotate180 ? sourcePanX + sourceMapWidth - sourceViewportWidth : -sourcePanX) / zoom) - 1)
+    const minZ = Math.max(0, Math.floor((rotate180 ? sourcePanZ + sourceMapHeight - sourceViewportHeight : -sourcePanZ) / zoom) - 1)
+    const maxX = Math.min(pixelCanvas.width - 1, Math.ceil((rotate180 ? sourcePanX + sourceMapWidth : sourceViewportWidth - sourcePanX) / zoom) + 1)
+    const maxZ = Math.min(pixelCanvas.height - 1, Math.ceil((rotate180 ? sourcePanZ + sourceMapHeight : sourceViewportHeight - sourcePanZ) / zoom) + 1)
     if (minX > maxX || minZ > maxZ) {
         return
     }

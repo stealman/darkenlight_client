@@ -1,8 +1,8 @@
-export const getSnowMapPixelValue = (red, green, blue) => red === 255 && green === 255 && blue === 255 ? 'Snow' : 'Empty'
+export const getSnowMapPixelValue = (red, green, blue) => red === green && green === blue && red >= 128 ? 'Snow' : 'Empty'
 
 export const getConnectedAreaBySnow = (pixelContext, width, height, start) => {
     const [red, green, blue] = pixelContext.getImageData(start.x, start.z, 1, 1).data
-    const isSnow = red === 255 && green === 255 && blue === 255
+    const isSnow = red === green && green === blue && red >= 128
     const selected = new Set()
     const pending = [start]
 
@@ -13,7 +13,7 @@ export const getConnectedAreaBySnow = (pixelContext, width, height, start) => {
             continue
         }
         const [currentRed, currentGreen, currentBlue] = pixelContext.getImageData(pixel.x, pixel.z, 1, 1).data
-        if ((currentRed === 255 && currentGreen === 255 && currentBlue === 255) !== isSnow) {
+        if ((currentRed === currentGreen && currentGreen === currentBlue && currentRed >= 128) !== isSnow) {
             continue
         }
         selected.add(index)

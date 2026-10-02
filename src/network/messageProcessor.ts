@@ -266,6 +266,14 @@ export const MessageProcessor = {
         if (data.mapChunk) {
             WorldDataManager.consumeMapChunk(data.mapChunk)
             MiniMap.redrawMiniMap(data.mapChunk)
+            // A teleport can deliver entity chunk data before its terrain
+            // chunk. Re-anchor objects that may have been created from the
+            // placeholder height map, then rebuild the now-loaded area.
+            TreeManager.recountYPositions()
+            StaticsManager.recountYPositions()
+            if (MyPlayer.myChar != null && WorldRenderer.block1 != null) {
+                WorldRenderer.renderWorld()
+            }
         }
     },
 
@@ -284,6 +292,12 @@ export const MessageProcessor = {
             StaticsManager.removeObjects(chunk.statics)
             FightSplatsRenderer.removeSplats(chunk.splats)
         })
+        // WorldRenderer may already have recorded the teleport destination
+        // before this asynchronous entity payload arrived, so movement alone
+        // will not necessarily trigger another rebuild.
+        if (MyPlayer.myChar != null && WorldRenderer.block1 != null) {
+            WorldRenderer.renderWorld()
+        }
     },
 
     processAddTree(data) {
