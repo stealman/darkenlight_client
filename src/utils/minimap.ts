@@ -18,6 +18,8 @@ export const MiniMap = {
     minHeight: 6,
     maxHeight: 32,
     grassColorMap: [] as string[],
+    dirtColorMap: [] as string[],
+    rockColorMap: [] as string[],
     snowColorMap: [] as string[],
     environmentType: 'outdoor' as 'outdoor' | 'indoor',
     dungeonEntranceColor: '#a484c1' as string,
@@ -47,6 +49,15 @@ export const MiniMap = {
             const brightness = (height - this.minHeight) / (this.maxHeight - this.minHeight)
             const greenValue = Math.round(102 + brightness * (255 - 102))
             this.grassColorMap[height] = `#00${greenValue.toString(16).padStart(2, '0')}00`
+
+            // Keep the original mid-range colors while making the terrain relief visible.
+            const dirtRed = Math.round(84 + brightness * (196 - 84))
+            const dirtGreen = Math.round(40 + brightness * (98 - 40))
+            const dirtBlue = Math.round(13 + brightness * (25 - 13))
+            this.dirtColorMap[height] = `#${dirtRed.toString(16).padStart(2, '0')}${dirtGreen.toString(16).padStart(2, '0')}${dirtBlue.toString(16).padStart(2, '0')}`
+
+            const rockValue = Math.round(51 + brightness * (153 - 51))
+            this.rockColorMap[height] = `#${rockValue.toString(16).padStart(2, '0')}${rockValue.toString(16).padStart(2, '0')}${rockValue.toString(16).padStart(2, '0')}`
 
             // snow goes from light gray to white
             const snowValue = Math.round(128 + brightness * (255 - 128))
@@ -108,14 +119,31 @@ export const MiniMap = {
         TooltipOverlayManager.hideOwnerIfNotPinned(this.tooltipOwnerKey)
     },
 
+    getMapColor(height: number, type: number, snowed: boolean): string {
+        const waterColor = "#2222BB"
+        const colorHeight = Math.max(this.minHeight, Math.min(this.maxHeight, height))
+        if (this.environmentType === 'indoor' && type === 0) {
+            return "#000000"
+        }
+        if (height < 5 || type === 50) {
+            return waterColor
+        }
+        if (snowed) {
+            return this.snowColorMap[colorHeight]
+        }
+        if (type === 2) {
+            return this.grassColorMap[colorHeight]
+        }
+        if (type === 3) {
+            return this.rockColorMap[colorHeight]
+        }
+        return this.dirtColorMap[colorHeight]
+    },
+
     redrawMiniMap(mapChunk) {
         const blockMap = mapChunk.blockMap
         const offScreenContext = this.offScreenCanvas!.getContext("2d")
         if (!offScreenContext) return
-
-        const dirtColor = "#8B4513"
-        const waterColor = "#2222BB"
-        const rockColor = "#666666"
 
         //console.log("Add chunk to minimap...")
 
@@ -127,29 +155,26 @@ export const MiniMap = {
                 const height = parseInt(data[0])
                 const type = parseInt(data[1])
                 const snowed  = data[3] === "S"
-
-                if (this.environmentType === 'indoor' && type === 0) {
-                    offScreenContext.fillStyle = "#000000"
-                } else if (height < 5) {
-                    offScreenContext.fillStyle = waterColor
-                } else {
-                    offScreenContext.fillStyle = dirtColor
-
-                    if (snowed) {
-                        offScreenContext.fillStyle = this.snowColorMap[height]
-                    } else {
-                        if (type === 2) {
-                            offScreenContext.fillStyle = this.grassColorMap[height]
-                        } else if (type === 3) {
-                            offScreenContext.fillStyle = rockColor
-                        } else if (type === 50) {
-                            offScreenContext.fillStyle = waterColor
-                        }
-                    }
-                }
+                offScreenContext.fillStyle = this.getMapColor(height, type, snowed)
                 offScreenContext.fillRect(mapChunk.z + x, mapChunk.x + z, 1, 1)
             }
         }
+    },
+
+    redrawMapChanges(worldId: number, changes: Array<{x: number, z: number, data: string}>) {
+        if (worldId !== MyPlayer.worldId || !this.offScreenCanvas) {
+            return
+        }
+        const offScreenContext = this.offScreenCanvas.getContext("2d")
+        if (!offScreenContext) {
+            return
+        }
+        for (const change of changes) {
+            const data = change.data.split(":")
+            offScreenContext.fillStyle = this.getMapColor(parseInt(data[0]), parseInt(data[1]), data[3] === "S")
+            offScreenContext.fillRect(change.z, change.x, 1, 1)
+        }
+        this.updateMiniMap()
     },
 
     updateMiniMap() {

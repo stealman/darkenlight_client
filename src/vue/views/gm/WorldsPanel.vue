@@ -94,7 +94,14 @@
                                 </div>
                                 <label class="world-map-highlight-control"><input v-model="highlightImpassable" type="checkbox"> Highlight impassable</label>
                             </div>
-                            <div v-if="selectedMapType === 'height' && (!selectedAreaPixels.size || heightEditMode !== 'area')" class="world-map-brush-controls">
+                            <div v-if="selectedMapType === 'height' && heightEditMode === 'area' && !selectedAreaPixels.size" class="world-map-area-history">
+                                <span>Previous area</span>
+                                <select :value="selectedAreaHistoryIndex" @change="loadSavedArea($event.target.value)">
+                                    <option value="">Select saved area...</option>
+                                    <option v-for="(area, index) in savedAreas" :key="area.savedAt" :value="index">Area {{ index + 1 }} ({{ area.pixelCount }} px)</option>
+                                </select>
+                            </div>
+                            <div v-else-if="selectedMapType === 'height' && (!selectedAreaPixels.size || heightEditMode !== 'area')" class="world-map-brush-controls">
                                 <span>Brush</span>
                                 <button v-for="size in squareBrushSizes" :key="`square-${size}`" :disabled="brushShape === 'square' && brushSize === size" @click="selectBrush('square', size)">{{ size }}</button>
                                 <button v-for="size in circleBrushSizes" :key="`circle-${size}`" class="world-map-circle-brush-button" :disabled="brushShape === 'circle' && brushSize === size" @click="selectBrush('circle', size)">◯ {{ size }}</button>
@@ -109,8 +116,14 @@
                                     <option value="randomize">Randomize</option>
                                 </select>
                                 <template v-if="areaAction === 'randomize'">
-                                    <label class="world-map-area-field">Min Y<input v-model.number="randomizeMinY" type="number" min="1" max="31"></label>
-                                    <label class="world-map-area-field">Max Y<input v-model.number="randomizeMaxY" type="number" min="1" max="31"></label>
+                                    <label class="world-map-area-field">Elevation
+                                        <select v-model="randomizeElevationMode">
+                                            <option value="exact">Exact</option>
+                                            <option value="overlay">Overlay</option>
+                                        </select>
+                                    </label>
+                                    <label class="world-map-area-field">{{ randomizeElevationMode === 'overlay' ? 'Min ΔY' : 'Min Y' }}<input v-model.number="randomizeMinY" type="number" :min="randomizeElevationMode === 'overlay' ? -31 : 1" max="31"></label>
+                                    <label class="world-map-area-field">{{ randomizeElevationMode === 'overlay' ? 'Max ΔY' : 'Max Y' }}<input v-model.number="randomizeMaxY" type="number" :min="randomizeElevationMode === 'overlay' ? -31 : 1" max="31"></label>
                                     <label class="world-map-area-field">Large feature size<input v-model.number="randomizeLargeFeatureSize" type="number" min="1" max="1024"></label>
                                     <label class="world-map-area-field">Detail size<input v-model.number="randomizeDetailSize" type="number" min="1" max="1024"></label>
                                     <label class="world-map-area-field">Detail strength<input v-model.number="randomizeDetailStrength" type="number" min="0" max="31"></label>
@@ -119,7 +132,8 @@
                                     <label class="world-map-area-field">Seed<input v-model.number="randomizeSeed" type="number" min="0" max="2147483647"></label>
                                     <button @click="rerollRandomizeSeed">Re-roll</button>
                                 </template>
-                                <button :disabled="!areaAction" @click="applyAreaAction">OK</button>
+                                <button v-if="overlayRandomizeActive" @click="previewRandomizeOverlay">PREVIEW</button>
+                                <button :disabled="!areaAction || (overlayRandomizeActive && !hasRandomizePreview)" @click="applyAreaAction">OK</button>
                             </div>
                             <span v-else>{{ selectedMapTypeLabel }} map</span>
                             <span class="world-map-hover-value">{{ mapHoverValue }}</span>
@@ -168,6 +182,7 @@ import {
     drawAreaOverlay as drawHeightAreaOverlay,
     drawBrushPreview as drawHeightBrushPreview,
     drawImpassableBoundaries as drawHeightImpassableBoundaries,
+    deserializeAreaPixels,
     getBrushBounds as getHeightBrushBounds,
     getBrushPixelCoordinates as getHeightBrushPixelCoordinates,
     getBrushTargetHeight as getHeightBrushTargetHeight,
@@ -178,6 +193,8 @@ import {
     getStoredHeightTool,
     getTargetBrushHeight,
     HEIGHT_EDIT_MODES,
+    limitAreaSlope,
+    serializeAreaPixels,
     SQUARE_BRUSH_SIZES,
     updateWaterOverlayPixel as updateHeightWaterOverlayPixel,
 } from './worldMaps/heightMapEditor'
@@ -188,6 +205,7 @@ import { getGatheringMapPixelValue } from './worldMaps/gatheringMapEditor'
 const WORLD_MAP_ZOOM_LS_KEY = 'worlds-map-zoom'
 const WORLD_MAP_VIEW_LS_KEY = 'worlds-map-view'
 const WORLD_MAP_RANDOMIZE_LS_KEY = 'worlds-map-randomize'
+const WORLD_MAP_AREA_HISTORY_LS_KEY = 'worlds-map-area-history'
 
 const getStoredMapZoom = () => {
     const zoom = Number(localStorage.getItem(WORLD_MAP_ZOOM_LS_KEY))
@@ -210,12 +228,22 @@ const getStoredMapView = () => {
 const getStoredRandomizeSettings = () => {
     try {
         const settings = JSON.parse(localStorage.getItem(WORLD_MAP_RANDOMIZE_LS_KEY) || 'null')
-        if (!settings || Object.values(settings).some((value) => !Number.isFinite(value))) {
+        const numericKeys = ['minY', 'maxY', 'largeFeatureSize', 'detailSize', 'detailStrength', 'roughness', 'maxSlope', 'seed']
+        if (!settings || numericKeys.some((key) => !Number.isFinite(settings[key]))) {
             return null
         }
-        return settings
+        return {...settings, elevationMode: settings.elevationMode === 'overlay' ? 'overlay' : 'exact'}
     } catch {
         return null
+    }
+}
+
+const getStoredAreaHistory = () => {
+    try {
+        const history = JSON.parse(localStorage.getItem(WORLD_MAP_AREA_HISTORY_LS_KEY) || '{}')
+        return history && typeof history === 'object' && !Array.isArray(history) ? history : {}
+    } catch {
+        return {}
     }
 }
 
@@ -258,6 +286,9 @@ const heightEditMode = ref(initialHeightTool?.mode ?? 'exact')
 const highlightImpassable = ref(false)
 const selectedAreaPixels = ref(new Set())
 const areaAction = ref('')
+const areaHistoryByWorld = ref(getStoredAreaHistory())
+const selectedAreaHistoryIndex = ref('')
+const randomizeElevationMode = ref(initialRandomizeSettings?.elevationMode ?? 'exact')
 const randomizeMinY = ref(initialRandomizeSettings?.minY ?? 1)
 const randomizeMaxY = ref(initialRandomizeSettings?.maxY ?? 31)
 const randomizeLargeFeatureSize = ref(initialRandomizeSettings?.largeFeatureSize ?? 48)
@@ -266,6 +297,7 @@ const randomizeDetailStrength = ref(initialRandomizeSettings?.detailStrength ?? 
 const randomizeRoughness = ref(initialRandomizeSettings?.roughness ?? 3)
 const randomizeMaxSlope = ref(initialRandomizeSettings?.maxSlope ?? 1)
 const randomizeSeed = ref(initialRandomizeSettings?.seed ?? Math.floor(Math.random() * 2147483648))
+const hasRandomizePreview = ref(false)
 const areaDraw = {active: false, path: []}
 const heightPaint = {active: false, lastCoords: null}
 const mapDrag = {active: false, x: 0, y: 0}
@@ -274,12 +306,16 @@ let mapPixelCanvas = null
 let waterOverlayCanvas = null
 let waterOverlayContext = null
 let areaOverlayCanvas = null
+let randomizePreviewCanvas = null
+let randomizePreviewHeights = null
 const pendingHeightChangesByWorld = new Map()
 const pendingHeightChangeCount = ref(0)
 const savingMapData = ref(false)
 const savingMapWorldId = ref(null)
 
 const selectedMapTypeLabel = computed(() => mapTypes.find((mapType) => mapType.id === selectedMapType.value)?.label ?? '')
+const savedAreas = computed(() => Number.isInteger(selectedWorldId.value) ? areaHistoryByWorld.value[selectedWorldId.value] ?? [] : [])
+const overlayRandomizeActive = computed(() => areaAction.value === 'randomize' && randomizeElevationMode.value === 'overlay')
 
 const openDialog = () => {
     dialogVisible.value = true
@@ -381,6 +417,9 @@ const loadMapImage = () => {
     waterOverlayCanvas = null
     waterOverlayContext = null
     areaOverlayCanvas = null
+    randomizePreviewCanvas = null
+    randomizePreviewHeights = null
+    hasRandomizePreview.value = false
     cancelAreaSelection()
     mapHoverValue.value = 'Loading map...'
     GMManager.loadWorldMapImage(selectedWorldId.value, selectedMapType.value)
@@ -422,8 +461,22 @@ const drawMap = () => {
         )
     }
     drawSelectedArea(ctx)
+    drawRandomizePreview(ctx)
     drawBrushPreview(ctx)
     drawImpassableBoundaries(ctx, width, height)
+}
+
+const drawRandomizePreview = (ctx) => {
+    if (!randomizePreviewCanvas || !overlayRandomizeActive.value || heightEditMode.value !== 'area') {
+        return
+    }
+    ctx.drawImage(
+        randomizePreviewCanvas,
+        mapPanX.value,
+        mapPanY.value,
+        randomizePreviewCanvas.width * mapZoom.value,
+        randomizePreviewCanvas.height * mapZoom.value,
+    )
 }
 
 const drawSelectedArea = (ctx) => {
@@ -751,52 +804,139 @@ const discardMapChanges = () => {
     loadMapImage()
 }
 
+const getRandomizeSettings = (mapSize) => {
+    const clampInteger = (value, min, max, fallback) => Number.isFinite(value) ? Math.max(min, Math.min(max, Math.round(value))) : fallback
+    const elevationMode = randomizeElevationMode.value === 'overlay' ? 'overlay' : 'exact'
+    const randomizeMinimum = elevationMode === 'overlay' ? -31 : 1
+    const minY = clampInteger(randomizeMinY.value, randomizeMinimum, 31, randomizeMinimum)
+    const maxY = Math.max(minY, clampInteger(randomizeMaxY.value, randomizeMinimum, 31, 31))
+    return {
+        elevationMode,
+        minY,
+        maxY,
+        largeFeatureSize: clampInteger(randomizeLargeFeatureSize.value, 1, mapSize, 48),
+        detailSize: clampInteger(randomizeDetailSize.value, 1, mapSize, 12),
+        detailStrength: clampInteger(randomizeDetailStrength.value, 0, 31, 2),
+        roughness: clampInteger(randomizeRoughness.value, 0, 6, 3),
+        maxSlope: clampInteger(randomizeMaxSlope.value, 0, 31, 1),
+        seed: clampInteger(randomizeSeed.value, 0, 2147483647, 1),
+    }
+}
+
+const normalizeRandomizeSettings = (settings) => {
+    randomizeElevationMode.value = settings.elevationMode
+    randomizeMinY.value = settings.minY
+    randomizeMaxY.value = settings.maxY
+    randomizeLargeFeatureSize.value = settings.largeFeatureSize
+    randomizeDetailSize.value = settings.detailSize
+    randomizeDetailStrength.value = settings.detailStrength
+    randomizeRoughness.value = settings.roughness
+    randomizeMaxSlope.value = settings.maxSlope
+    randomizeSeed.value = settings.seed
+}
+
+const createRandomizedAreaResult = (settings) => {
+    if (!mapPixelCanvas || !mapPixelContext) {
+        return null
+    }
+    const mapSize = mapPixelCanvas.width
+    const mapHeight = mapPixelCanvas.height
+    const mapPixels = mapPixelContext.getImageData(0, 0, mapSize, mapHeight)
+    const sourceHeights = new Uint8Array(mapSize * mapHeight)
+    for (let index = 0; index < sourceHeights.length; index++) {
+        sourceHeights[index] = Math.floor(mapPixels.data[index * 4] / 8)
+    }
+    const randomHeights = createRandomizedAreaHeights(
+        selectedAreaPixels.value,
+        mapSize,
+        settings.elevationMode === 'overlay' ? new Int16Array(sourceHeights.length) : sourceHeights,
+        {...settings, maxSlope: settings.elevationMode === 'overlay' ? 31 : settings.maxSlope},
+    )
+    if (settings.elevationMode !== 'overlay') {
+        return {heights: randomHeights, mapSize, mapHeight}
+    }
+    const overlayHeights = new Int16Array(sourceHeights)
+    for (const index of selectedAreaPixels.value) {
+        overlayHeights[index] = Math.max(1, Math.min(31, sourceHeights[index] + randomHeights[index]))
+    }
+    limitAreaSlope(selectedAreaPixels.value, mapSize, overlayHeights, sourceHeights, 1, 31, settings.maxSlope)
+    return {heights: overlayHeights, mapSize, mapHeight}
+}
+
+const clearRandomizePreview = (redraw = true) => {
+    randomizePreviewCanvas = null
+    randomizePreviewHeights = null
+    hasRandomizePreview.value = false
+    if (redraw) {
+        drawMap()
+    }
+}
+
+const previewRandomizeOverlay = () => {
+    if (!overlayRandomizeActive.value || !selectedAreaPixels.value.size || !mapPixelCanvas || !mapPixelContext) {
+        return
+    }
+    const settings = getRandomizeSettings(mapPixelCanvas.width)
+    const result = createRandomizedAreaResult(settings)
+    if (!result) {
+        return
+    }
+    const canvas = document.createElement('canvas')
+    canvas.width = result.mapSize
+    canvas.height = result.mapHeight
+    const context = canvas.getContext('2d')
+    const pixels = context.createImageData(result.mapSize, result.mapHeight)
+    for (const index of selectedAreaPixels.value) {
+        const gray = result.heights[index] * 8
+        pixels.data[index * 4] = gray
+        pixels.data[index * 4 + 1] = gray
+        pixels.data[index * 4 + 2] = gray
+        pixels.data[index * 4 + 3] = 255
+    }
+    context.putImageData(pixels, 0, 0)
+    randomizePreviewCanvas = canvas
+    randomizePreviewHeights = result.heights
+    hasRandomizePreview.value = true
+    drawMap()
+}
+
 const applyAreaAction = () => {
-    if (!['exact', 'up', 'down', 'randomize'].includes(areaAction.value) || !selectedAreaPixels.value.size || !mapPixelContext || !Number.isInteger(selectedWorldId.value)) {
+    if (!['exact', 'up', 'down', 'randomize'].includes(areaAction.value) || !selectedAreaPixels.value.size || !mapPixelContext || !mapPixelCanvas || !Number.isInteger(selectedWorldId.value)) {
+        return
+    }
+    if (overlayRandomizeActive.value && (!hasRandomizePreview.value || !randomizePreviewHeights)) {
         return
     }
     const exactHeight = Math.max(1, Math.min(31, Math.round(targetHeight.value)))
     targetHeight.value = exactHeight
-    const mapSize = mapPixelCanvas?.width ?? mapImage.value?.naturalWidth ?? 0
-    const clampInteger = (value, min, max, fallback) => Number.isFinite(value) ? Math.max(min, Math.min(max, Math.round(value))) : fallback
-    const minY = clampInteger(randomizeMinY.value, 1, 31, 1)
-    const maxY = Math.max(minY, clampInteger(randomizeMaxY.value, 1, 31, 31))
-    const largeFeatureSize = clampInteger(randomizeLargeFeatureSize.value, 1, mapSize, 48)
-    const detailSize = clampInteger(randomizeDetailSize.value, 1, mapSize, 12)
-    const detailStrength = clampInteger(randomizeDetailStrength.value, 0, 31, 2)
-    const roughness = clampInteger(randomizeRoughness.value, 0, 6, 3)
-    const maxSlope = clampInteger(randomizeMaxSlope.value, 0, 31, 1)
-    const seed = clampInteger(randomizeSeed.value, 0, 2147483647, 1)
-    randomizeMinY.value = minY
-    randomizeMaxY.value = maxY
-    randomizeLargeFeatureSize.value = largeFeatureSize
-    randomizeDetailSize.value = detailSize
-    randomizeDetailStrength.value = detailStrength
-    randomizeRoughness.value = roughness
-    randomizeMaxSlope.value = maxSlope
-    randomizeSeed.value = seed
+    const mapSize = mapPixelCanvas.width
+    const mapHeight = mapPixelCanvas.height
+    let randomizedHeights = null
+    if (areaAction.value === 'randomize') {
+        const settings = getRandomizeSettings(mapSize)
+        randomizedHeights = settings.elevationMode === 'overlay'
+            ? randomizePreviewHeights
+            : createRandomizedAreaResult(settings)?.heights
+        normalizeRandomizeSettings(settings)
+        if (!randomizedHeights) {
+            return
+        }
+    }
     let changes = pendingHeightChangesByWorld.get(selectedWorldId.value)
     if (!changes) {
         changes = new Map()
         pendingHeightChangesByWorld.set(selectedWorldId.value, changes)
     }
-    const mapPixels = mapPixelContext.getImageData(0, 0, mapSize, mapPixelCanvas?.height ?? mapSize)
-    const sourceHeights = new Uint8Array(mapSize * (mapPixelCanvas?.height ?? mapSize))
-    for (let index = 0; index < sourceHeights.length; index++) {
-        sourceHeights[index] = Math.floor(mapPixels.data[index * 4] / 8)
-    }
-    const randomHeights = areaAction.value === 'randomize'
-        ? createRandomizedAreaHeights(selectedAreaPixels.value, mapSize, sourceHeights, {minY, maxY, largeFeatureSize, detailSize, detailStrength, roughness, maxSlope, seed})
-        : null
+    const mapPixels = mapPixelContext.getImageData(0, 0, mapSize, mapHeight)
     for (const index of selectedAreaPixels.value) {
         const x = index % mapSize
         const z = Math.floor(index / mapSize)
-        if (x < 0 || z < 0 || x >= mapSize || z >= mapSize) {
+        if (x < 0 || z < 0 || x >= mapSize || z >= mapHeight) {
             continue
         }
         const currentHeight = Math.floor(mapPixels.data[index * 4] / 8)
         const height = areaAction.value === 'randomize'
-            ? randomHeights[index]
+            ? randomizedHeights[index]
             : areaAction.value === 'up'
             ? Math.min(31, currentHeight + 1)
             : areaAction.value === 'down'
@@ -809,8 +949,10 @@ const applyAreaAction = () => {
         changes.set(`${x};${z}`, {x, z, height})
     }
     mapPixelContext.putImageData(mapPixels, 0, 0)
+    clearRandomizePreview(false)
     createWaterOverlay()
     pendingHeightChangeCount.value = changes.size
+    saveSelectedAreaHistory()
     drawMap()
 }
 
@@ -863,18 +1005,54 @@ const handleMapPointerUp = (event) => {
 }
 
 const cancelAreaSelection = () => {
+    clearRandomizePreview(false)
     selectedAreaPixels.value = new Set()
     areaDraw.active = false
     areaDraw.path = []
     areaAction.value = ''
+    selectedAreaHistoryIndex.value = ''
     areaOverlayCanvas = null
     drawMap()
 }
 
 const selectArea = (areaPixels) => {
+    clearRandomizePreview(false)
     selectedAreaPixels.value = areaPixels
     areaAction.value = ''
+    selectedAreaHistoryIndex.value = ''
     areaOverlayCanvas = mapPixelCanvas ? createHeightAreaOverlay(areaPixels, mapPixelCanvas.width, mapPixelCanvas.height) : null
+}
+
+const saveSelectedAreaHistory = () => {
+    if (!Number.isInteger(selectedWorldId.value) || !mapPixelCanvas || !selectedAreaPixels.value.size) {
+        return
+    }
+    const width = mapPixelCanvas.width
+    const rows = serializeAreaPixels(selectedAreaPixels.value, width)
+    const currentAreas = areaHistoryByWorld.value[selectedWorldId.value] ?? []
+    const serializedRows = JSON.stringify(rows)
+    const areas = [{savedAt: Date.now(), width, rows, pixelCount: selectedAreaPixels.value.size}, ...currentAreas.filter((area) => JSON.stringify(area.rows) !== serializedRows)].slice(0, 10)
+    areaHistoryByWorld.value = {...areaHistoryByWorld.value, [selectedWorldId.value]: areas}
+    try {
+        localStorage.setItem(WORLD_MAP_AREA_HISTORY_LS_KEY, JSON.stringify(areaHistoryByWorld.value))
+    } catch {
+        // A very large or fragmented area can exceed the browser localStorage quota.
+    }
+}
+
+const loadSavedArea = (historyIndex) => {
+    const index = Number(historyIndex)
+    const area = Number.isInteger(index) ? savedAreas.value[index] : null
+    if (!area || !mapPixelCanvas || area.width !== mapPixelCanvas.width) {
+        return
+    }
+    const areaPixels = deserializeAreaPixels(area.rows, area.width)
+    if (areaPixels.size === 0) {
+        return
+    }
+    selectArea(areaPixels)
+    selectedAreaHistoryIndex.value = String(index)
+    drawMap()
 }
 
 watch(worlds, () => {
@@ -915,9 +1093,12 @@ watch([targetHeight, brushSize, brushShape, heightEditMode], ([height, size, sha
     drawMap()
 })
 
-watch([randomizeMinY, randomizeMaxY, randomizeLargeFeatureSize, randomizeDetailSize, randomizeDetailStrength, randomizeRoughness, randomizeMaxSlope, randomizeSeed], ([minY, maxY, largeFeatureSize, detailSize, detailStrength, roughness, maxSlope, seed]) => {
-    localStorage.setItem(WORLD_MAP_RANDOMIZE_LS_KEY, JSON.stringify({minY, maxY, largeFeatureSize, detailSize, detailStrength, roughness, maxSlope, seed}))
+watch([randomizeElevationMode, randomizeMinY, randomizeMaxY, randomizeLargeFeatureSize, randomizeDetailSize, randomizeDetailStrength, randomizeRoughness, randomizeMaxSlope, randomizeSeed], ([elevationMode, minY, maxY, largeFeatureSize, detailSize, detailStrength, roughness, maxSlope, seed]) => {
+    clearRandomizePreview()
+    localStorage.setItem(WORLD_MAP_RANDOMIZE_LS_KEY, JSON.stringify({elevationMode, minY, maxY, largeFeatureSize, detailSize, detailStrength, roughness, maxSlope, seed}))
 })
+
+watch([areaAction, heightEditMode], () => clearRandomizePreview())
 
 watch([selectedWorldId, selectedMapType, mapPanX, mapPanY], ([worldId, mapType, panX, panY]) => {
     if (!Number.isInteger(worldId)) {
@@ -1177,6 +1358,12 @@ defineExpose({
     display: flex;
     align-items: center;
     flex-wrap: wrap;
+    gap: 6px;
+}
+
+.world-map-area-history {
+    display: flex;
+    align-items: center;
     gap: 6px;
 }
 

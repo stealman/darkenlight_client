@@ -316,6 +316,7 @@ export const MessageProcessor = {
 
     processWorldChangedData(data) {
         WorldDataManager.consumeMapUpdate(data.worldId, data.changes)
+        MiniMap.redrawMapChanges(data.worldId, data.changes)
     },
 
     processCharacterAttack(data: AutoAttackMessage) {

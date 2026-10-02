@@ -289,7 +289,7 @@ const getCardinalNeighbors = (index, width) => {
 const blendAreaEdges = (areaPixels, width, heights, outsideHeights, minY, maxY, maxSlope, largeFeatureSize) => {
     const distances = new Int32Array(width * width)
     distances.fill(-1)
-    const edgeHeights = new Uint8Array(width * width)
+    const edgeHeights = new Int16Array(width * width)
     const queue = []
     const edgeSlope = Math.min(maxSlope, 1)
     for (const index of areaPixels) {
@@ -330,36 +330,71 @@ const blendAreaEdges = (areaPixels, width, heights, outsideHeights, minY, maxY, 
     }
 }
 
-const limitAreaSlope = (areaPixels, width, heights, outsideHeights, minY, maxY, maxSlope) => {
+export const limitAreaSlope = (areaPixels, width, heights, outsideHeights, minY, maxY, maxSlope) => {
     if (maxSlope >= 31) {
         return
     }
-    const queue = Array.from(areaPixels)
-    for (let readIndex = 0; readIndex < queue.length; readIndex++) {
-        const index = queue[readIndex]
-        for (const neighbor of getCardinalNeighbors(index, width)) {
-            if (neighbor < 0) {
-                continue
-            }
-            if (!areaPixels.has(neighbor)) {
-                const limitedHeight = Math.max(minY, Math.min(maxY, Math.max(outsideHeights[neighbor] - maxSlope, Math.min(outsideHeights[neighbor] + maxSlope, heights[index]))))
-                if (limitedHeight !== heights[index]) {
-                    heights[index] = limitedHeight
-                    queue.push(index)
+    const areaIndexes = Array.from(areaPixels)
+    const fixedEdges = new Uint8Array(heights.length)
+    const clampHeight = (height) => Math.max(minY, Math.min(maxY, height))
+
+    // The outer map is immutable. Anchor each border pixel once before
+    // smoothing the interior, otherwise contradictory outer neighbours can
+    // make a queue-based relaxation toggle an edge pixel forever.
+    for (const index of areaIndexes) {
+        const outsideValues = getCardinalNeighbors(index, width)
+            .filter((neighbor) => neighbor >= 0 && !areaPixels.has(neighbor))
+            .map((neighbor) => outsideHeights[neighbor])
+        if (outsideValues.length === 0) {
+            continue
+        }
+        const allowedMin = Math.max(...outsideValues.map((height) => height - maxSlope))
+        const allowedMax = Math.min(...outsideValues.map((height) => height + maxSlope))
+        const average = Math.round(outsideValues.reduce((sum, height) => sum + height, 0) / outsideValues.length)
+        heights[index] = allowedMin <= allowedMax
+            ? clampHeight(Math.max(allowedMin, Math.min(allowedMax, heights[index])))
+            : clampHeight(average)
+        fixedEdges[index] = 1
+    }
+
+    // A few bounded forward/reverse relaxations smooth the generated detail
+    // toward the fixed border. The bound keeps a malformed/impossible slope
+    // configuration from ever blocking the browser UI.
+    const reverseAreaIndexes = [...areaIndexes].reverse()
+    for (let pass = 0; pass < 4; pass++) {
+        let changed = false
+        for (const indexes of [areaIndexes, reverseAreaIndexes]) {
+            for (const index of indexes) {
+                if (fixedEdges[index]) {
+                    continue
                 }
-                continue
+                let allowedMin = minY
+                let allowedMax = maxY
+                for (const neighbor of getCardinalNeighbors(index, width)) {
+                    if (neighbor < 0) {
+                        continue
+                    }
+                    const neighborHeight = areaPixels.has(neighbor) ? heights[neighbor] : outsideHeights[neighbor]
+                    allowedMin = Math.max(allowedMin, neighborHeight - maxSlope)
+                    allowedMax = Math.min(allowedMax, neighborHeight + maxSlope)
+                }
+                const nextHeight = allowedMin <= allowedMax
+                    ? clampHeight(Math.max(allowedMin, Math.min(allowedMax, heights[index])))
+                    : clampHeight(Math.round((allowedMin + allowedMax) / 2))
+                if (nextHeight !== heights[index]) {
+                    heights[index] = nextHeight
+                    changed = true
+                }
             }
-            const limitedHeight = Math.max(minY, Math.min(maxY, Math.max(heights[index] - maxSlope, Math.min(heights[index] + maxSlope, heights[neighbor]))))
-            if (limitedHeight !== heights[neighbor]) {
-                heights[neighbor] = limitedHeight
-                queue.push(neighbor)
-            }
+        }
+        if (!changed) {
+            break
         }
     }
 }
 
 export const createRandomizedAreaHeights = (areaPixels, width, outsideHeights, {minY, maxY, largeFeatureSize, detailSize, detailStrength, roughness, maxSlope, seed}) => {
-    const heights = new Uint8Array(width * width)
+    const heights = new Int16Array(width * width)
     const areaIndexes = Array.from(areaPixels)
     const heightRange = maxY - minY
     for (const index of areaIndexes) {
@@ -403,4 +438,52 @@ export const drawAreaOverlay = (ctx, areaPixels, mapWidth, panX, panY, zoom) => 
         const z = Math.floor(index / mapWidth)
         ctx.fillRect(panX + x * zoom, panY + z * zoom, zoom, zoom)
     }
+}
+
+export const serializeAreaPixels = (areaPixels, width) => {
+    const rows = []
+    for (let z = 0; z < width; z++) {
+        const row = [z]
+        let x = 0
+        while (x < width) {
+            const index = z * width + x
+            if (!areaPixels.has(index)) {
+                x++
+                continue
+            }
+            const startX = x
+            while (x + 1 < width && areaPixels.has(z * width + x + 1)) {
+                x++
+            }
+            row.push(startX, x)
+            x++
+        }
+        if (row.length > 1) {
+            rows.push(row)
+        }
+    }
+    return rows
+}
+
+export const deserializeAreaPixels = (rows, width) => {
+    const areaPixels = new Set()
+    if (!Array.isArray(rows) || !Number.isInteger(width) || width < 1) {
+        return areaPixels
+    }
+    for (const row of rows) {
+        if (!Array.isArray(row) || !Number.isInteger(row[0]) || row[0] < 0 || row[0] >= width) {
+            continue
+        }
+        for (let index = 1; index < row.length; index += 2) {
+            const startX = row[index]
+            const endX = row[index + 1]
+            if (!Number.isInteger(startX) || !Number.isInteger(endX)) {
+                continue
+            }
+            for (let x = Math.max(0, startX); x <= Math.min(width - 1, endX); x++) {
+                areaPixels.add(row[0] * width + x)
+            }
+        }
+    }
+    return areaPixels
 }
