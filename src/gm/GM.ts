@@ -1,5 +1,5 @@
 import { Connector } from '@/network/connector'
-import { GMCreateItemMsg, GMDayNightCycleMsg, GMForceSaveDataMsg, GMLoadItemCodebookMsg, GMLoadWorldMapImageMsg, GMLoadWorldSettingsMsg, GMLoadWorldsMsg, GMNpcAction, GMSaveMapDataMsg, GMSaveWorldMapHeightChangesMsg, GMSaveWorldSettingsMsg, GMStaticObjectChange, GMTeleportMsg, GMTerrainChange } from '@/network/messages'
+import { GMCreateItemMsg, GMDayNightCycleMsg, GMForceSaveDataMsg, GMLoadItemCodebookMsg, GMLoadWorldMapImageMsg, GMLoadWorldSettingsMsg, GMLoadWorldsMsg, GMNpcAction, GMSaveMapDataMsg, GMSaveWorldMapHeightChangesMsg, GMSaveWorldMapSnowChangesMsg, GMSaveWorldMapTerrainChangesMsg, GMSaveWorldSettingsMsg, GMStaticObjectChange, GMTeleportMsg, GMTerrainChange } from '@/network/messages'
 import { GMItemCodebookItem, GMWorldMapImageData, GMWorldSettingsData } from '@/network/messageIfs'
 import { GMSceneManager } from '@/babylon/gm/GmSceneManager'
 import { WorldDataManager } from '@/data/worldDataManager'
@@ -518,6 +518,14 @@ export const GMManager = {
 
     saveWorldMapHeightChanges(worldId: number, changes: Array<{x: number, z: number, height: number}>) {
         Connector.sendMessage(new GMSaveWorldMapHeightChangesMsg(worldId, changes))
+    },
+
+    saveWorldMapTerrainChanges(worldId: number, changes: Array<{x: number, z: number, type: number}>) {
+        Connector.sendMessage(new GMSaveWorldMapTerrainChangesMsg(worldId, changes))
+    },
+
+    saveWorldMapSnowChanges(worldId: number, changes: Array<{x: number, z: number, snowed: boolean}>) {
+        Connector.sendMessage(new GMSaveWorldMapSnowChangesMsg(worldId, changes))
     },
 
     loadItemCodebook() {

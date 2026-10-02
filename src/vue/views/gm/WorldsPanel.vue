@@ -62,6 +62,11 @@
                                     <span>Map and environment changes apply after a world reload.</span>
                                     <button class="dialog-button" @click="saveSettings"><span class="ui-text-gradient--button-state">SAVE SETTINGS</span></button>
                                 </div>
+                                <div class="worlds-teleport-action">
+                                    <button class="dialog-button" @click="teleportPicking = !teleportPicking">
+                                        <span class="ui-text-gradient--button-state">{{ teleportPicking ? 'CANCEL' : 'TELEPORT' }}</span>
+                                    </button>
+                                </div>
                             </template>
                         </section>
                     </aside>
@@ -77,8 +82,8 @@
                             </div>
                             <div class="world-map-zoom-controls">
                                 <span>Zoom {{ mapZoom }}×</span>
-                                <button :disabled="mapZoom <= 1" @click="mapZoom--">−</button>
-                                <button :disabled="mapZoom >= 8" @click="mapZoom++">+</button>
+                                <button :disabled="mapZoom <= 1" @click="changeMapZoom(-1)">−</button>
+                                <button :disabled="mapZoom >= 8" @click="changeMapZoom(1)">+</button>
                             </div>
                         </div>
                         <div class="world-map-info-row">
@@ -94,6 +99,27 @@
                                 </div>
                                 <label class="world-map-highlight-control"><input v-model="highlightImpassable" type="checkbox"> Highlight impassable</label>
                             </div>
+                            <div v-if="selectedMapType === 'terrain'" class="world-map-terrain-tool-controls">
+                                <div class="world-map-height-mode-controls">
+                                    <label><input v-model="terrainEditMode" type="radio" value="brush"> Brush</label>
+                                    <label><input v-model="terrainEditMode" type="radio" value="area"> Area</label>
+                                </div>
+                                <label class="world-map-terrain-select">Terrain
+                                    <select v-model.number="selectedTerrainType">
+                                        <option v-for="terrain in terrainTypes" :key="terrain.id" :value="terrain.id">{{ terrain.label }}</option>
+                                    </select>
+                                </label>
+                            </div>
+                            <div v-if="selectedMapType === 'snow'" class="world-map-terrain-tool-controls">
+                                <div class="world-map-height-mode-controls">
+                                    <label><input v-model="snowEditMode" type="radio" value="brush"> Brush</label>
+                                    <label><input v-model="snowEditMode" type="radio" value="area"> Area</label>
+                                </div>
+                                <div class="world-map-height-mode-controls">
+                                    <label><input v-model="snowAction" type="radio" :value="true"> Snow</label>
+                                    <label><input v-model="snowAction" type="radio" :value="false"> Clear</label>
+                                </div>
+                            </div>
                             <div v-if="selectedMapType === 'height' && heightEditMode === 'area' && !selectedAreaPixels.size" class="world-map-area-history">
                                 <span>Previous area</span>
                                 <select :value="selectedAreaHistoryIndex" @change="loadSavedArea($event.target.value)">
@@ -101,10 +127,40 @@
                                     <option v-for="(area, index) in savedAreas" :key="area.savedAt" :value="index">Area {{ index + 1 }} ({{ area.pixelCount }} px)</option>
                                 </select>
                             </div>
+                            <div v-else-if="selectedMapType === 'terrain' && terrainEditMode === 'area' && !selectedAreaPixels.size" class="world-map-area-history">
+                                <span>Previous area</span>
+                                <select :value="selectedAreaHistoryIndex" @change="loadSavedArea($event.target.value)">
+                                    <option value="">Select saved area...</option>
+                                    <option v-for="(area, index) in savedAreas" :key="area.savedAt" :value="index">Area {{ index + 1 }} ({{ area.pixelCount }} px)</option>
+                                </select>
+                            </div>
+                            <div v-else-if="selectedMapType === 'snow' && snowEditMode === 'area' && !selectedAreaPixels.size" class="world-map-area-history">
+                                <span>Previous area</span>
+                                <select :value="selectedAreaHistoryIndex" @change="loadSavedArea($event.target.value)">
+                                    <option value="">Select saved area...</option>
+                                    <option v-for="(area, index) in savedAreas" :key="area.savedAt" :value="index">Area {{ index + 1 }} ({{ area.pixelCount }} px)</option>
+                                </select>
+                                <label class="world-map-terrain-select">Pickup mode
+                                    <select v-model="snowAreaPickupMode">
+                                        <option value="height">Height</option>
+                                        <option value="terrain">Terrain</option>
+                                    </select>
+                                </label>
+                            </div>
                             <div v-else-if="selectedMapType === 'height' && (!selectedAreaPixels.size || heightEditMode !== 'area')" class="world-map-brush-controls">
                                 <span>Brush</span>
                                 <button v-for="size in squareBrushSizes" :key="`square-${size}`" :disabled="brushShape === 'square' && brushSize === size" @click="selectBrush('square', size)">{{ size }}</button>
                                 <button v-for="size in circleBrushSizes" :key="`circle-${size}`" class="world-map-circle-brush-button" :disabled="brushShape === 'circle' && brushSize === size" @click="selectBrush('circle', size)">◯ {{ size }}</button>
+                            </div>
+                            <div v-else-if="selectedMapType === 'terrain' && terrainEditMode === 'brush'" class="world-map-brush-controls">
+                                <span>Brush</span>
+                                <button v-for="size in squareBrushSizes" :key="`terrain-square-${size}`" :disabled="brushShape === 'square' && brushSize === size" @click="selectBrush('square', size)">{{ size }}</button>
+                                <button v-for="size in circleBrushSizes" :key="`terrain-circle-${size}`" class="world-map-circle-brush-button" :disabled="brushShape === 'circle' && brushSize === size" @click="selectBrush('circle', size)">◯ {{ size }}</button>
+                            </div>
+                            <div v-else-if="selectedMapType === 'snow' && snowEditMode === 'brush'" class="world-map-brush-controls">
+                                <span>Brush</span>
+                                <button v-for="size in squareBrushSizes" :key="`snow-square-${size}`" :disabled="brushShape === 'square' && brushSize === size" @click="selectBrush('square', size)">{{ size }}</button>
+                                <button v-for="size in circleBrushSizes" :key="`snow-circle-${size}`" class="world-map-circle-brush-button" :disabled="brushShape === 'circle' && brushSize === size" @click="selectBrush('circle', size)">◯ {{ size }}</button>
                             </div>
                             <div v-else-if="selectedMapType === 'height' && heightEditMode === 'area'" class="world-map-area-actions">
                                 <button @click="cancelAreaSelection">Cancel</button>
@@ -133,7 +189,24 @@
                                     <button @click="rerollRandomizeSeed">Re-roll</button>
                                 </template>
                                 <button v-if="overlayRandomizeActive" @click="previewRandomizeOverlay">PREVIEW</button>
+                                <label class="world-map-area-field">Edge size<input v-model.number="areaEdgeRandomizeStrength" type="number" min="0" max="32" :disabled="!!areaAction"></label>
+                                <label class="world-map-area-field">Edge density<input v-model.number="areaEdgeRandomizeDensity" type="number" min="1" max="10" :disabled="!!areaAction"></label>
+                                <button :disabled="!!areaAction" @click="randomizeSelectedAreaEdges">RANDOMIZE EDGES</button>
                                 <button :disabled="!areaAction || (overlayRandomizeActive && !hasRandomizePreview)" @click="applyAreaAction">OK</button>
+                            </div>
+                            <div v-else-if="selectedMapType === 'terrain' && terrainEditMode === 'area' && selectedAreaPixels.size" class="world-map-area-actions">
+                                <button @click="cancelAreaSelection">Cancel</button>
+                                <label class="world-map-area-field">Edge size<input v-model.number="areaEdgeRandomizeStrength" type="number" min="0" max="32"></label>
+                                <label class="world-map-area-field">Edge density<input v-model.number="areaEdgeRandomizeDensity" type="number" min="1" max="10"></label>
+                                <button @click="randomizeSelectedAreaEdges">RANDOMIZE EDGES</button>
+                                <button @click="applyTerrainArea">OK</button>
+                            </div>
+                            <div v-else-if="selectedMapType === 'snow' && snowEditMode === 'area' && selectedAreaPixels.size" class="world-map-area-actions">
+                                <button @click="cancelAreaSelection">Cancel</button>
+                                <label class="world-map-area-field">Edge size<input v-model.number="areaEdgeRandomizeStrength" type="number" min="0" max="32"></label>
+                                <label class="world-map-area-field">Edge density<input v-model.number="areaEdgeRandomizeDensity" type="number" min="1" max="10"></label>
+                                <button @click="randomizeSelectedAreaEdges">RANDOMIZE EDGES</button>
+                                <button @click="applySnowArea">OK</button>
                             </div>
                             <span v-else>{{ selectedMapTypeLabel }} map</span>
                             <span class="world-map-hover-value">{{ mapHoverValue }}</span>
@@ -141,24 +214,25 @@
                         <div
                             ref="mapViewportRef"
                             class="world-map-viewport"
+                            :class="{'world-map-viewport--teleport': teleportPicking}"
                             @contextmenu.prevent
                             @pointerdown="handleMapPointerDown"
                             @pointermove="handleMapPointerMove"
                             @pointerup="handleMapPointerUp"
                             @pointercancel="handleMapPointerUp"
                             @click="editMapPixel"
-                            @wheel.prevent="cycleBrush"
+                            @wheel.prevent="handleMapWheel"
                         >
                             <canvas ref="mapCanvasRef" class="world-map-canvas"></canvas>
                         </div>
                         <div class="world-map-save-actions">
-                            <span v-if="pendingHeightChangeCount">{{ pendingHeightChangeCount }} pending height {{ pendingHeightChangeCount === 1 ? 'change' : 'changes' }}</span>
+                            <span v-if="pendingMapChangeCount">{{ pendingMapChangeCount }} pending {{ selectedMapType }} {{ pendingMapChangeCount === 1 ? 'change' : 'changes' }}</span>
                             <span v-else>No pending map changes</span>
                             <div class="world-map-save-buttons">
-                                <button class="dialog-button" :disabled="selectedMapType !== 'height' || pendingHeightChangeCount === 0 || savingMapData" @click="saveMapData">
+                                <button class="dialog-button" :disabled="!isSavableMapType || pendingMapChangeCount === 0 || savingMapData" @click="saveMapData">
                                     <span class="ui-text-gradient--button-state">{{ savingMapData ? 'SAVING...' : 'SAVE MAP DATA' }}</span>
                                 </button>
-                                <button class="dialog-button" :disabled="selectedMapType !== 'height' || pendingHeightChangeCount === 0 || savingMapData" @click="discardMapChanges">
+                                <button class="dialog-button" :disabled="!isSavableMapType || pendingMapChangeCount === 0 || savingMapData" @click="discardMapChanges">
                                     <span class="ui-text-gradient--button-state">STORNO</span>
                                 </button>
                             </div>
@@ -173,6 +247,7 @@
 <script setup>
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { GMManager } from '@/gm/GM'
+import { MyPlayer } from '@/data/myPlayer'
 import {
     CIRCLE_BRUSH_SIZES,
     appendAreaPathSegment,
@@ -194,11 +269,12 @@ import {
     getTargetBrushHeight,
     HEIGHT_EDIT_MODES,
     limitAreaSlope,
+    randomizeAreaEdges,
     serializeAreaPixels,
     SQUARE_BRUSH_SIZES,
     updateWaterOverlayPixel as updateHeightWaterOverlayPixel,
 } from './worldMaps/heightMapEditor'
-import { getTerrainMapPixelValue } from './worldMaps/terrainMapEditor'
+import { getConnectedAreaByTerrain, getTerrainColor, getTerrainMapPixelValue, getTerrainTypeByColor, TERRAIN_TYPES } from './worldMaps/terrainMapEditor'
 import { getSnowMapPixelValue } from './worldMaps/snowMapEditor'
 import { getGatheringMapPixelValue } from './worldMaps/gatheringMapEditor'
 
@@ -206,6 +282,7 @@ const WORLD_MAP_ZOOM_LS_KEY = 'worlds-map-zoom'
 const WORLD_MAP_VIEW_LS_KEY = 'worlds-map-view'
 const WORLD_MAP_RANDOMIZE_LS_KEY = 'worlds-map-randomize'
 const WORLD_MAP_AREA_HISTORY_LS_KEY = 'worlds-map-area-history'
+const WORLD_MAP_AREA_HISTORY_LS_PREFIX = 'worlds-map-area-history-'
 
 const getStoredMapZoom = () => {
     const zoom = Number(localStorage.getItem(WORLD_MAP_ZOOM_LS_KEY))
@@ -238,9 +315,11 @@ const getStoredRandomizeSettings = () => {
     }
 }
 
-const getStoredAreaHistory = () => {
+const getStoredAreaHistory = (mapType) => {
     try {
-        const history = JSON.parse(localStorage.getItem(WORLD_MAP_AREA_HISTORY_LS_KEY) || '{}')
+        const storedHistory = localStorage.getItem(`${WORLD_MAP_AREA_HISTORY_LS_PREFIX}${mapType}`)
+            ?? (mapType === 'height' ? localStorage.getItem(WORLD_MAP_AREA_HISTORY_LS_KEY) : null)
+        const history = JSON.parse(storedHistory || '{}')
         return history && typeof history === 'object' && !Array.isArray(history) ? history : {}
     } catch {
         return {}
@@ -259,6 +338,7 @@ const environmentType = ref('outdoor')
 const environmentCategory = ref('')
 const attributesJson = ref('{}')
 const attributesError = ref('')
+const teleportPicking = ref(false)
 const initialMapView = getStoredMapView()
 const initialHeightTool = getStoredHeightTool()
 const initialRandomizeSettings = getStoredRandomizeSettings()
@@ -283,10 +363,18 @@ const circleBrushSizes = CIRCLE_BRUSH_SIZES
 const brushSize = ref(initialHeightTool?.brushSize ?? 1)
 const brushShape = ref(initialHeightTool?.brushShape ?? 'square')
 const heightEditMode = ref(initialHeightTool?.mode ?? 'exact')
+const terrainEditMode = ref('brush')
+const selectedTerrainType = ref(1)
+const snowEditMode = ref('brush')
+const snowAction = ref(true)
+const snowAreaPickupMode = ref('terrain')
+const areaEdgeRandomizeStrength = ref(3)
+const areaEdgeRandomizeDensity = ref(3)
 const highlightImpassable = ref(false)
 const selectedAreaPixels = ref(new Set())
+const originalAreaPixels = ref(new Set())
 const areaAction = ref('')
-const areaHistoryByWorld = ref(getStoredAreaHistory())
+const areaHistoryByMapType = ref(Object.fromEntries(mapTypes.map((mapType) => [mapType.id, getStoredAreaHistory(mapType.id)])))
 const selectedAreaHistoryIndex = ref('')
 const randomizeElevationMode = ref(initialRandomizeSettings?.elevationMode ?? 'exact')
 const randomizeMinY = ref(initialRandomizeSettings?.minY ?? 1)
@@ -300,22 +388,49 @@ const randomizeSeed = ref(initialRandomizeSettings?.seed ?? Math.floor(Math.rand
 const hasRandomizePreview = ref(false)
 const areaDraw = {active: false, path: []}
 const heightPaint = {active: false, lastCoords: null}
+const terrainPaint = {active: false, lastCoords: null}
+const snowPaint = {active: false, lastCoords: null}
 const mapDrag = {active: false, x: 0, y: 0}
+let suppressNextMapClick = false
 let mapPixelContext = null
 let mapPixelCanvas = null
 let waterOverlayCanvas = null
 let waterOverlayContext = null
+let terrainHeightPixelCanvas = null
+let terrainHeightPixelContext = null
+let terrainHeightMapRequestedForWorld = null
+let snowSourcePixelCanvas = null
+let snowSourcePixelContext = null
+let snowTerrainPixelCanvas = null
+let snowTerrainPixelContext = null
+let snowHeightPixelCanvas = null
+let snowHeightPixelContext = null
+let snowTerrainMapRequestedForWorld = null
+let snowHeightMapRequestedForWorld = null
 let areaOverlayCanvas = null
 let randomizePreviewCanvas = null
 let randomizePreviewHeights = null
+let playerMarkerTimer = null
 const pendingHeightChangesByWorld = new Map()
 const pendingHeightChangeCount = ref(0)
+const pendingTerrainChangesByWorld = new Map()
+const pendingTerrainChangeCount = ref(0)
+const pendingSnowChangesByWorld = new Map()
+const pendingSnowChangeCount = ref(0)
 const savingMapData = ref(false)
 const savingMapWorldId = ref(null)
+const savingMapType = ref(null)
 
 const selectedMapTypeLabel = computed(() => mapTypes.find((mapType) => mapType.id === selectedMapType.value)?.label ?? '')
-const savedAreas = computed(() => Number.isInteger(selectedWorldId.value) ? areaHistoryByWorld.value[selectedWorldId.value] ?? [] : [])
+const savedAreas = computed(() => Number.isInteger(selectedWorldId.value)
+    ? areaHistoryByMapType.value[selectedMapType.value]?.[selectedWorldId.value] ?? [] : [])
 const overlayRandomizeActive = computed(() => areaAction.value === 'randomize' && randomizeElevationMode.value === 'overlay')
+const terrainTypes = computed(() => TERRAIN_TYPES.filter((terrain) => terrain.id !== 0 || worldSettings.value?.environment.category === 'dungeon'))
+const isSavableMapType = computed(() => ['height', 'terrain', 'snow'].includes(selectedMapType.value))
+const pendingMapChangeCount = computed(() => selectedMapType.value === 'height'
+    ? pendingHeightChangeCount.value
+    : selectedMapType.value === 'terrain' ? pendingTerrainChangeCount.value
+    : selectedMapType.value === 'snow' ? pendingSnowChangeCount.value : 0)
 
 const openDialog = () => {
     dialogVisible.value = true
@@ -333,12 +448,27 @@ const openDialog = () => {
         GMManager.loadWorldSettings(selectedWorldId.value)
         loadMapImage()
     }
+    startPlayerMarkerUpdates()
     nextTick(drawMap)
 }
 
 const closeDialog = () => {
+    stopPlayerMarkerUpdates()
+    teleportPicking.value = false
     dialogVisible.value = false
     emit('close')
+}
+
+const startPlayerMarkerUpdates = () => {
+    stopPlayerMarkerUpdates()
+    playerMarkerTimer = window.setInterval(drawMap, 200)
+}
+
+const stopPlayerMarkerUpdates = () => {
+    if (playerMarkerTimer !== null) {
+        window.clearInterval(playerMarkerTimer)
+        playerMarkerTimer = null
+    }
 }
 
 const onDialogKeyDown = (event) => {
@@ -407,7 +537,7 @@ const saveSettings = () => {
     })
 }
 
-const loadMapImage = () => {
+const loadMapImage = (preserveArea = false) => {
     if (!Number.isInteger(selectedWorldId.value)) {
         return
     }
@@ -416,14 +546,75 @@ const loadMapImage = () => {
     mapPixelCanvas = null
     waterOverlayCanvas = null
     waterOverlayContext = null
+    terrainHeightPixelCanvas = null
+    terrainHeightPixelContext = null
+    terrainHeightMapRequestedForWorld = null
+    snowSourcePixelCanvas = null
+    snowSourcePixelContext = null
+    snowTerrainPixelCanvas = null
+    snowTerrainPixelContext = null
+    snowHeightPixelCanvas = null
+    snowHeightPixelContext = null
+    snowTerrainMapRequestedForWorld = null
+    snowHeightMapRequestedForWorld = null
     areaOverlayCanvas = null
     randomizePreviewCanvas = null
     randomizePreviewHeights = null
     hasRandomizePreview.value = false
-    cancelAreaSelection()
+    heightPaint.active = false
+    heightPaint.lastCoords = null
+    terrainPaint.active = false
+    terrainPaint.lastCoords = null
+    snowPaint.active = false
+    snowPaint.lastCoords = null
+    if (preserveArea) {
+        areaDraw.active = false
+        areaDraw.path = []
+    } else {
+        cancelAreaSelection()
+    }
     mapHoverValue.value = 'Loading map...'
     GMManager.loadWorldMapImage(selectedWorldId.value, selectedMapType.value)
     drawMap()
+}
+
+const clampMapPan = () => {
+    const viewport = mapViewportRef.value
+    if (!viewport || !mapImage.value) {
+        return
+    }
+    const mapWidth = mapImage.value.naturalWidth * mapZoom.value
+    const mapHeight = mapImage.value.naturalHeight * mapZoom.value
+    const clampAxis = (offset, mapSize, viewportSize) => mapSize <= viewportSize
+        ? (viewportSize - mapSize) / 2
+        : Math.max(viewportSize - mapSize, Math.min(0, offset))
+    mapPanX.value = clampAxis(mapPanX.value, mapWidth, viewport.clientWidth)
+    mapPanY.value = clampAxis(mapPanY.value, mapHeight, viewport.clientHeight)
+}
+
+const changeMapZoom = (delta, event = null) => {
+    if (!mapImage.value) {
+        return
+    }
+    const nextZoom = Math.max(1, Math.min(8, mapZoom.value + delta))
+    if (nextZoom === mapZoom.value) {
+        return
+    }
+    const viewport = mapViewportRef.value
+    const canvas = mapCanvasRef.value
+    let anchorX = viewport?.clientWidth / 2 ?? 0
+    let anchorY = viewport?.clientHeight / 2 ?? 0
+    if (event && canvas) {
+        const rect = canvas.getBoundingClientRect()
+        anchorX = event.clientX - rect.left
+        anchorY = event.clientY - rect.top
+    }
+    const mapX = (anchorX - mapPanX.value) / mapZoom.value
+    const mapY = (anchorY - mapPanY.value) / mapZoom.value
+    mapZoom.value = nextZoom
+    mapPanX.value = anchorX - mapX * nextZoom
+    mapPanY.value = anchorY - mapY * nextZoom
+    clampMapPan()
 }
 
 const drawMap = () => {
@@ -443,6 +634,7 @@ const drawMap = () => {
     if (!mapImage.value) {
         return
     }
+    clampMapPan()
     ctx.imageSmoothingEnabled = false
     ctx.drawImage(
         mapPixelCanvas || mapImage.value,
@@ -464,6 +656,29 @@ const drawMap = () => {
     drawRandomizePreview(ctx)
     drawBrushPreview(ctx)
     drawImpassableBoundaries(ctx, width, height)
+    drawPlayerMapMarker(ctx)
+}
+
+const drawPlayerMapMarker = (ctx) => {
+    if (!MyPlayer.myChar || selectedWorldId.value !== MyPlayer.worldId || !mapImage.value) {
+        return
+    }
+    const x = Math.floor(MyPlayer.myChar.pos.x)
+    const z = Math.floor(MyPlayer.myChar.pos.z)
+    if (x < 0 || z < 0 || x >= mapImage.value.naturalWidth || z >= mapImage.value.naturalHeight) {
+        return
+    }
+    const centerX = mapPanX.value + (x + 0.5) * mapZoom.value
+    const centerY = mapPanY.value + (z + 0.5) * mapZoom.value
+    const armSize = Math.max(13, mapZoom.value * 5)
+    const thickness = Math.max(3, mapZoom.value)
+    ctx.fillStyle = 'rgba(36, 229, 210, 0.9)'
+    ctx.fillRect(centerX - thickness / 2, centerY - armSize / 2, thickness, armSize)
+    ctx.fillRect(centerX - armSize / 2, centerY - thickness / 2, armSize, thickness)
+    ctx.strokeStyle = '#063f3b'
+    ctx.lineWidth = 1
+    ctx.strokeRect(centerX - thickness / 2 + 0.5, centerY - armSize / 2 + 0.5, thickness - 1, armSize - 1)
+    ctx.strokeRect(centerX - armSize / 2 + 0.5, centerY - thickness / 2 + 0.5, armSize - 1, thickness - 1)
 }
 
 const drawRandomizePreview = (ctx) => {
@@ -480,7 +695,10 @@ const drawRandomizePreview = (ctx) => {
 }
 
 const drawSelectedArea = (ctx) => {
-    if (selectedMapType.value !== 'height' || heightEditMode.value !== 'area') {
+    const isHeightArea = selectedMapType.value === 'height' && heightEditMode.value === 'area'
+    const isTerrainArea = selectedMapType.value === 'terrain' && terrainEditMode.value === 'area'
+    const isSnowArea = selectedMapType.value === 'snow' && snowEditMode.value === 'area'
+    if (!isHeightArea && !isTerrainArea && !isSnowArea) {
         return
     }
     if (areaOverlayCanvas) {
@@ -514,12 +732,44 @@ const createWaterOverlay = () => {
     waterOverlayContext = null
     const seaWaterLevel = worldSettings.value?.seaWaterLevel
     const waterLevel = Number(seaWaterLevel)
-    if (selectedMapType.value !== 'height' || !mapPixelCanvas || !mapPixelContext || seaWaterLevel === null || seaWaterLevel === undefined || !Number.isFinite(waterLevel)) {
+    const isHeightMap = selectedMapType.value === 'height'
+    const isTerrainMap = selectedMapType.value === 'terrain'
+    const isSnowMap = selectedMapType.value === 'snow'
+    const heightCanvas = isHeightMap ? mapPixelCanvas : isTerrainMap ? terrainHeightPixelCanvas : snowHeightPixelCanvas
+    const heightContext = isHeightMap ? mapPixelContext : isTerrainMap ? terrainHeightPixelContext : snowHeightPixelContext
+    if ((!isHeightMap && !isTerrainMap && !isSnowMap) || !heightCanvas || !heightContext || seaWaterLevel === null || seaWaterLevel === undefined || !Number.isFinite(waterLevel)) {
         return
     }
-    const overlay = createHeightWaterOverlay(mapPixelCanvas, mapPixelContext, waterLevel)
+    const overlay = createHeightWaterOverlay(heightCanvas, heightContext, waterLevel)
     waterOverlayCanvas = overlay?.canvas ?? null
     waterOverlayContext = overlay?.context ?? null
+}
+
+const rebuildSnowMapDisplay = () => {
+    if (!snowSourcePixelCanvas || !snowSourcePixelContext || !snowTerrainPixelCanvas || !snowTerrainPixelContext) {
+        return
+    }
+    const canvas = document.createElement('canvas')
+    canvas.width = snowSourcePixelCanvas.width
+    canvas.height = snowSourcePixelCanvas.height
+    const context = canvas.getContext('2d', {willReadFrequently: true})
+    context.drawImage(snowTerrainPixelCanvas, 0, 0)
+    const snowPixels = snowSourcePixelContext.getImageData(0, 0, canvas.width, canvas.height)
+    const terrainPixels = snowTerrainPixelContext.getImageData(0, 0, canvas.width, canvas.height)
+    const displayPixels = context.getImageData(0, 0, canvas.width, canvas.height)
+    for (let index = 0; index < displayPixels.data.length; index += 4) {
+        const isWater = terrainPixels.data[index] === 0 && terrainPixels.data[index + 1] === 0 && terrainPixels.data[index + 2] === 255
+        const isSnow = snowPixels.data[index] === 255 && snowPixels.data[index + 1] === 255 && snowPixels.data[index + 2] === 255
+        if (!isWater && isSnow) {
+            displayPixels.data[index] = 255
+            displayPixels.data[index + 1] = 255
+            displayPixels.data[index + 2] = 255
+        }
+    }
+    context.putImageData(displayPixels, 0, 0)
+    mapPixelCanvas = canvas
+    mapPixelContext = context
+    createWaterOverlay()
 }
 
 const updateWaterOverlayPixel = (x, z, height) => {
@@ -528,17 +778,21 @@ const updateWaterOverlayPixel = (x, z, height) => {
 }
 
 const drawBrushPreview = (ctx) => {
-    if (selectedMapType.value !== 'height' || heightEditMode.value === 'area' || !mapHoverCoordinates.value || !mapImage.value) {
+    const isHeightBrush = selectedMapType.value === 'height' && heightEditMode.value !== 'area'
+    const isTerrainBrush = selectedMapType.value === 'terrain' && terrainEditMode.value === 'brush'
+    const isSnowBrush = selectedMapType.value === 'snow' && snowEditMode.value === 'brush'
+    if ((!isHeightBrush && !isTerrainBrush && !isSnowBrush) || !mapHoverCoordinates.value || !mapImage.value) {
         return
     }
     const bounds = getBrushBounds(mapHoverCoordinates.value)
     const brushPixels = getBrushPixelCoordinates(mapHoverCoordinates.value)
-    const previewHeight = getBrushTargetHeight(brushPixels)
+    const previewHeight = isHeightBrush ? getBrushTargetHeight(brushPixels) : null
     drawHeightBrushPreview(ctx, {
         bounds,
         brushPixels,
         brushShape: brushShape.value,
         previewHeight,
+        previewColor: isTerrainBrush ? `rgb(${getTerrainColor(selectedTerrainType.value).join(', ')})` : isSnowBrush ? (snowAction.value ? 'rgb(255, 255, 255)' : 'rgba(255, 255, 255, 0.25)') : null,
         panX: mapPanX.value,
         panY: mapPanY.value,
         zoom: mapZoom.value,
@@ -576,7 +830,7 @@ const selectBrush = (shape, size) => {
 }
 
 const cycleBrush = (event) => {
-    if (selectedMapType.value !== 'height') {
+    if (!['height', 'terrain', 'snow'].includes(selectedMapType.value)) {
         return
     }
     const brushes = [
@@ -585,8 +839,32 @@ const cycleBrush = (event) => {
     ]
     const currentIndex = brushes.findIndex((brush) => brush.shape === brushShape.value && brush.size === brushSize.value)
     const direction = event.deltaY > 0 ? -1 : 1
-    const nextIndex = (currentIndex + direction + brushes.length) % brushes.length
+    const nextIndex = Math.max(0, Math.min(brushes.length - 1, currentIndex + direction))
     selectBrush(brushes[nextIndex].shape, brushes[nextIndex].size)
+}
+
+const handleMapWheel = (event) => {
+    if (selectedMapType.value === 'height') {
+        if (heightEditMode.value === 'area' || event.buttons & 2) {
+            changeMapZoom(event.deltaY < 0 ? 1 : -1, event)
+            return
+        }
+        cycleBrush(event)
+        return
+    }
+    if (selectedMapType.value === 'terrain') {
+        if (terrainEditMode.value === 'area' || event.buttons & 2) {
+            changeMapZoom(event.deltaY < 0 ? 1 : -1, event)
+            return
+        }
+        cycleBrush(event)
+        return
+    }
+    if (selectedMapType.value === 'snow') {
+        changeMapZoom(event.deltaY < 0 ? 1 : -1, event)
+        return
+    }
+    cycleBrush(event)
 }
 
 const startMapDrag = (event) => {
@@ -600,7 +878,20 @@ const startMapDrag = (event) => {
 }
 
 const handleMapPointerDown = (event) => {
-    if (event.button === 0 && selectedMapType.value === 'height' && heightEditMode.value === 'area' && !selectedAreaPixels.value.size) {
+    if (event.button === 0 && teleportPicking.value) {
+        const coords = getMapPixelCoordinates(event)
+        if (!coords || !Number.isInteger(selectedWorldId.value)) {
+            return
+        }
+        suppressNextMapClick = true
+        teleportPicking.value = false
+        GMManager.teleport(selectedWorldId.value, coords.x, coords.z)
+        return
+    }
+    const isAreaMode = (selectedMapType.value === 'height' && heightEditMode.value === 'area')
+        || (selectedMapType.value === 'terrain' && terrainEditMode.value === 'area')
+        || (selectedMapType.value === 'snow' && snowEditMode.value === 'area')
+    if (event.button === 0 && isAreaMode && !selectedAreaPixels.value.size) {
         const coords = getMapPixelCoordinates(event)
         if (!coords) {
             return
@@ -622,6 +913,28 @@ const handleMapPointerDown = (event) => {
         editMapPixelAt(coords)
         return
     }
+    if (event.button === 0 && selectedMapType.value === 'terrain' && terrainEditMode.value === 'brush') {
+        const coords = getMapPixelCoordinates(event)
+        if (!coords) {
+            return
+        }
+        terrainPaint.active = true
+        terrainPaint.lastCoords = coords
+        event.currentTarget.setPointerCapture(event.pointerId)
+        editTerrainPixelAt(coords)
+        return
+    }
+    if (event.button === 0 && selectedMapType.value === 'snow' && snowEditMode.value === 'brush') {
+        const coords = getMapPixelCoordinates(event)
+        if (!coords) {
+            return
+        }
+        snowPaint.active = true
+        snowPaint.lastCoords = coords
+        event.currentTarget.setPointerCapture(event.pointerId)
+        editSnowPixelAt(coords)
+        return
+    }
     if (event.button === 2 && selectedMapType.value === 'height') {
         event.preventDefault()
         const coords = getMapPixelCoordinates(event)
@@ -629,12 +942,50 @@ const handleMapPointerDown = (event) => {
             return
         }
         if (heightEditMode.value === 'area' && mapPixelCanvas) {
-            selectArea(getConnectedAreaByHeight(mapPixelContext, mapPixelCanvas.width, mapPixelCanvas.height, coords))
+            selectArea(getConnectedAreaByHeight(mapPixelContext, mapPixelCanvas.width, mapPixelCanvas.height, coords), event.shiftKey)
             drawMap()
             return
         }
         const [r] = mapPixelContext.getImageData(coords.x, coords.z, 1, 1).data
         targetHeight.value = Math.max(1, Math.min(31, Math.floor(r / 8)))
+        return
+    }
+    if (event.button === 2 && selectedMapType.value === 'terrain') {
+        event.preventDefault()
+        const coords = getMapPixelCoordinates(event)
+        if (!coords || !mapPixelContext) {
+            return
+        }
+        if (terrainEditMode.value === 'area' && mapPixelCanvas) {
+            selectArea(getConnectedAreaByTerrain(mapPixelContext, mapPixelCanvas.width, mapPixelCanvas.height, coords), event.shiftKey)
+            drawMap()
+            return
+        }
+        const [red, green, blue] = mapPixelContext.getImageData(coords.x, coords.z, 1, 1).data
+        selectedTerrainType.value = getTerrainTypeByColor(red, green, blue)
+        return
+    }
+    if (event.button === 2 && selectedMapType.value === 'snow') {
+        event.preventDefault()
+        const coords = getMapPixelCoordinates(event)
+        if (!coords || !mapPixelContext) {
+            return
+        }
+        if (snowEditMode.value === 'area' && mapPixelCanvas) {
+            const pickupCanvas = snowAreaPickupMode.value === 'height' ? snowHeightPixelCanvas : snowTerrainPixelCanvas
+            const pickupContext = snowAreaPickupMode.value === 'height' ? snowHeightPixelContext : snowTerrainPixelContext
+            if (!pickupCanvas || !pickupContext) {
+                return
+            }
+            const area = snowAreaPickupMode.value === 'height'
+                ? getConnectedAreaByHeight(pickupContext, pickupCanvas.width, pickupCanvas.height, coords)
+                : getConnectedAreaByTerrain(pickupContext, pickupCanvas.width, pickupCanvas.height, coords)
+            selectArea(area, event.shiftKey)
+            drawMap()
+            return
+        }
+        const [red, green, blue] = mapPixelContext.getImageData(coords.x, coords.z, 1, 1).data
+        snowAction.value = red === 255 && green === 255 && blue === 255
         return
     }
     startMapDrag(event)
@@ -648,6 +999,7 @@ const dragMap = (event) => {
     mapPanY.value += event.clientY - mapDrag.y
     mapDrag.x = event.clientX
     mapDrag.y = event.clientY
+    clampMapPan()
     drawMap()
 }
 
@@ -655,6 +1007,8 @@ const handleMapPointerMove = (event) => {
     inspectMapPixel(event)
     drawAreaSelection(event)
     paintHeightAlongPath(event)
+    paintTerrainAlongPath(event)
+    paintSnowAlongPath(event)
     dragMap(event)
 }
 
@@ -677,6 +1031,48 @@ const paintHeightAlongPath = (event) => {
         editMapPixelAt(path[index])
     }
     heightPaint.lastCoords = coords
+}
+
+const paintTerrainAlongPath = (event) => {
+    if (!terrainPaint.active) {
+        return
+    }
+    const coords = getMapPixelCoordinates(event)
+    if (!coords) {
+        terrainPaint.lastCoords = null
+        return
+    }
+    if (!terrainPaint.lastCoords) {
+        terrainPaint.lastCoords = coords
+        editTerrainPixelAt(coords)
+        return
+    }
+    const path = appendAreaPathSegment([terrainPaint.lastCoords], terrainPaint.lastCoords, coords)
+    for (let index = 1; index < path.length; index++) {
+        editTerrainPixelAt(path[index])
+    }
+    terrainPaint.lastCoords = coords
+}
+
+const paintSnowAlongPath = (event) => {
+    if (!snowPaint.active) {
+        return
+    }
+    const coords = getMapPixelCoordinates(event)
+    if (!coords) {
+        snowPaint.lastCoords = null
+        return
+    }
+    if (!snowPaint.lastCoords) {
+        snowPaint.lastCoords = coords
+        editSnowPixelAt(coords)
+        return
+    }
+    const path = appendAreaPathSegment([snowPaint.lastCoords], snowPaint.lastCoords, coords)
+    for (let index = 1; index < path.length; index++) {
+        editSnowPixelAt(path[index])
+    }
+    snowPaint.lastCoords = coords
 }
 
 const drawAreaSelection = (event) => {
@@ -739,14 +1135,26 @@ const getMapPixelCoordinates = (event) => {
 }
 
 const editMapPixel = (event) => {
-    if (event.button !== 0 || selectedMapType.value !== 'height' || heightEditMode.value === 'area' || savingMapData.value || !Number.isInteger(selectedWorldId.value)) {
+    if (suppressNextMapClick) {
+        suppressNextMapClick = false
+        return
+    }
+    if (event.button !== 0) {
         return
     }
     const coords = getMapPixelCoordinates(event)
     if (!coords) {
         return
     }
-    editMapPixelAt(coords)
+    if (selectedMapType.value === 'height' && heightEditMode.value !== 'area') {
+        editMapPixelAt(coords)
+    }
+    if (selectedMapType.value === 'terrain' && terrainEditMode.value === 'brush') {
+        editTerrainPixelAt(coords)
+    }
+    if (selectedMapType.value === 'snow' && snowEditMode.value === 'brush') {
+        editSnowPixelAt(coords)
+    }
 }
 
 const editMapPixelAt = (coords) => {
@@ -781,25 +1189,144 @@ const editMapPixelAt = (coords) => {
     drawMap()
 }
 
-const saveMapData = () => {
-    if (!Number.isInteger(selectedWorldId.value) || savingMapData.value) {
+const editTerrainPixelAt = (coords) => {
+    if (selectedMapType.value !== 'terrain' || terrainEditMode.value !== 'brush' || savingMapData.value || !Number.isInteger(selectedWorldId.value) || !mapPixelContext) {
         return
     }
-    const changes = pendingHeightChangesByWorld.get(selectedWorldId.value)
+    let changes = pendingTerrainChangesByWorld.get(selectedWorldId.value)
+    if (!changes) {
+        changes = new Map()
+        pendingTerrainChangesByWorld.set(selectedWorldId.value, changes)
+    }
+    const [red, green, blue] = getTerrainColor(selectedTerrainType.value)
+    mapPixelContext.fillStyle = `rgb(${red}, ${green}, ${blue})`
+    for (const pixel of getBrushPixelCoordinates(coords)) {
+        changes.set(`${pixel.x};${pixel.z}`, {x: pixel.x, z: pixel.z, type: selectedTerrainType.value})
+        mapPixelContext.fillRect(pixel.x, pixel.z, 1, 1)
+    }
+    pendingTerrainChangeCount.value = changes.size
+    drawMap()
+}
+
+const applyTerrainArea = () => {
+    if (selectedMapType.value !== 'terrain' || terrainEditMode.value !== 'area' || savingMapData.value || !Number.isInteger(selectedWorldId.value) || !mapPixelContext || !selectedAreaPixels.value.size) {
+        return
+    }
+    let changes = pendingTerrainChangesByWorld.get(selectedWorldId.value)
+    if (!changes) {
+        changes = new Map()
+        pendingTerrainChangesByWorld.set(selectedWorldId.value, changes)
+    }
+    const [red, green, blue] = getTerrainColor(selectedTerrainType.value)
+    mapPixelContext.fillStyle = `rgb(${red}, ${green}, ${blue})`
+    const mapWidth = mapPixelCanvas?.width ?? 0
+    const mapHeight = mapPixelCanvas?.height ?? 0
+    for (const index of selectedAreaPixels.value) {
+        const x = index % mapWidth
+        const z = Math.floor(index / mapWidth)
+        if (x < 0 || z < 0 || x >= mapWidth || z >= mapHeight) {
+            continue
+        }
+        changes.set(`${x};${z}`, {x, z, type: selectedTerrainType.value})
+        mapPixelContext.fillRect(x, z, 1, 1)
+    }
+    pendingTerrainChangeCount.value = changes.size
+    saveSelectedAreaHistory()
+    drawMap()
+}
+
+const editSnowPixelAt = (coords) => {
+    if (selectedMapType.value !== 'snow' || snowEditMode.value !== 'brush' || savingMapData.value || !Number.isInteger(selectedWorldId.value) || !mapPixelContext || !snowSourcePixelContext || !snowTerrainPixelContext) {
+        return
+    }
+    let changes = pendingSnowChangesByWorld.get(selectedWorldId.value)
+    if (!changes) {
+        changes = new Map()
+        pendingSnowChangesByWorld.set(selectedWorldId.value, changes)
+    }
+    for (const pixel of getBrushPixelCoordinates(coords)) {
+        applySnowChange(pixel.x, pixel.z, snowAction.value, changes)
+    }
+    pendingSnowChangeCount.value = changes.size
+    drawMap()
+}
+
+const applySnowChange = (x, z, snowed, changes) => {
+    const [terrainRed, terrainGreen, terrainBlue] = snowTerrainPixelContext.getImageData(x, z, 1, 1).data
+    const seaWaterLevel = Number(worldSettings.value?.seaWaterLevel)
+    const [heightRed] = snowHeightPixelContext?.getImageData(x, z, 1, 1).data ?? []
+    const isOcean = Number.isFinite(seaWaterLevel) && Math.floor(heightRed / 8) < seaWaterLevel
+    if (isOcean || terrainRed === 0 && terrainGreen === 0 && terrainBlue === 255) {
+        return
+    }
+    snowSourcePixelContext.fillStyle = snowed ? 'rgb(255, 255, 255)' : 'rgb(0, 0, 0)'
+    snowSourcePixelContext.fillRect(x, z, 1, 1)
+    mapPixelContext.fillStyle = snowed ? 'rgb(255, 255, 255)' : `rgb(${terrainRed}, ${terrainGreen}, ${terrainBlue})`
+    mapPixelContext.fillRect(x, z, 1, 1)
+    changes.set(`${x};${z}`, {x, z, snowed})
+}
+
+const applySnowArea = () => {
+    if (selectedMapType.value !== 'snow' || snowEditMode.value !== 'area' || savingMapData.value || !Number.isInteger(selectedWorldId.value) || !selectedAreaPixels.value.size) {
+        return
+    }
+    let changes = pendingSnowChangesByWorld.get(selectedWorldId.value)
+    if (!changes) {
+        changes = new Map()
+        pendingSnowChangesByWorld.set(selectedWorldId.value, changes)
+    }
+    const mapWidth = mapPixelCanvas?.width ?? 0
+    const mapHeight = mapPixelCanvas?.height ?? 0
+    for (const index of selectedAreaPixels.value) {
+        const x = index % mapWidth
+        const z = Math.floor(index / mapWidth)
+        if (x >= 0 && z >= 0 && x < mapWidth && z < mapHeight) {
+            applySnowChange(x, z, snowAction.value, changes)
+        }
+    }
+    pendingSnowChangeCount.value = changes.size
+    saveSelectedAreaHistory()
+    drawMap()
+}
+
+const saveMapData = () => {
+    if (!Number.isInteger(selectedWorldId.value) || savingMapData.value || !isSavableMapType.value) {
+        return
+    }
+    const changes = selectedMapType.value === 'height'
+        ? pendingHeightChangesByWorld.get(selectedWorldId.value)
+        : selectedMapType.value === 'terrain'
+            ? pendingTerrainChangesByWorld.get(selectedWorldId.value)
+            : pendingSnowChangesByWorld.get(selectedWorldId.value)
     if (!changes || changes.size === 0) {
         return
     }
     savingMapData.value = true
     savingMapWorldId.value = selectedWorldId.value
-    GMManager.saveWorldMapHeightChanges(selectedWorldId.value, Array.from(changes.values()))
+    savingMapType.value = selectedMapType.value
+    if (selectedMapType.value === 'height') {
+        GMManager.saveWorldMapHeightChanges(selectedWorldId.value, Array.from(changes.values()))
+    } else if (selectedMapType.value === 'terrain') {
+        GMManager.saveWorldMapTerrainChanges(selectedWorldId.value, Array.from(changes.values()))
+    } else {
+        GMManager.saveWorldMapSnowChanges(selectedWorldId.value, Array.from(changes.values()))
+    }
 }
 
 const discardMapChanges = () => {
-    if (!Number.isInteger(selectedWorldId.value) || savingMapData.value) {
+    if (!Number.isInteger(selectedWorldId.value) || savingMapData.value || !isSavableMapType.value) {
         return
     }
-    pendingHeightChangesByWorld.delete(selectedWorldId.value)
-    pendingHeightChangeCount.value = 0
+    if (selectedMapType.value === 'height') {
+        pendingHeightChangesByWorld.delete(selectedWorldId.value)
+        pendingHeightChangeCount.value = 0
+    } else if (selectedMapType.value === 'terrain') {
+        pendingTerrainChangesByWorld.delete(selectedWorldId.value)
+        pendingTerrainChangeCount.value = 0
+    } else {
+        pendingSnowChangesByWorld.delete(selectedWorldId.value)
+        pendingSnowChangeCount.value = 0
+    }
     cancelAreaSelection()
     loadMapImage()
 }
@@ -992,6 +1519,22 @@ const handleMapPointerUp = (event) => {
         }
         return
     }
+    if (terrainPaint.active) {
+        terrainPaint.active = false
+        terrainPaint.lastCoords = null
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+            event.currentTarget.releasePointerCapture(event.pointerId)
+        }
+        return
+    }
+    if (snowPaint.active) {
+        snowPaint.active = false
+        snowPaint.lastCoords = null
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+            event.currentTarget.releasePointerCapture(event.pointerId)
+        }
+        return
+    }
     if (areaDraw.active) {
         areaDraw.active = false
         areaDraw.path = []
@@ -1007,6 +1550,7 @@ const handleMapPointerUp = (event) => {
 const cancelAreaSelection = () => {
     clearRandomizePreview(false)
     selectedAreaPixels.value = new Set()
+    originalAreaPixels.value = new Set()
     areaDraw.active = false
     areaDraw.path = []
     areaAction.value = ''
@@ -1015,12 +1559,26 @@ const cancelAreaSelection = () => {
     drawMap()
 }
 
-const selectArea = (areaPixels) => {
+const selectArea = (areaPixels, append = false) => {
     clearRandomizePreview(false)
-    selectedAreaPixels.value = areaPixels
+    selectedAreaPixels.value = append ? new Set([...selectedAreaPixels.value, ...areaPixels]) : new Set(areaPixels)
+    originalAreaPixels.value = new Set(selectedAreaPixels.value)
     areaAction.value = ''
     selectedAreaHistoryIndex.value = ''
-    areaOverlayCanvas = mapPixelCanvas ? createHeightAreaOverlay(areaPixels, mapPixelCanvas.width, mapPixelCanvas.height) : null
+    areaOverlayCanvas = mapPixelCanvas ? createHeightAreaOverlay(selectedAreaPixels.value, mapPixelCanvas.width, mapPixelCanvas.height) : null
+}
+
+const randomizeSelectedAreaEdges = () => {
+    if (!selectedAreaPixels.value.size || !mapPixelCanvas || selectedMapType.value === 'height' && areaAction.value) {
+        return
+    }
+    const strength = Math.max(0, Math.min(32, Math.round(areaEdgeRandomizeStrength.value)))
+    const density = Math.max(1, Math.min(10, Math.round(areaEdgeRandomizeDensity.value)))
+    areaEdgeRandomizeStrength.value = strength
+    areaEdgeRandomizeDensity.value = density
+    selectedAreaPixels.value = randomizeAreaEdges(originalAreaPixels.value, mapPixelCanvas.width, mapPixelCanvas.height, strength, density)
+    areaOverlayCanvas = createHeightAreaOverlay(selectedAreaPixels.value, mapPixelCanvas.width, mapPixelCanvas.height)
+    drawMap()
 }
 
 const saveSelectedAreaHistory = () => {
@@ -1029,12 +1587,15 @@ const saveSelectedAreaHistory = () => {
     }
     const width = mapPixelCanvas.width
     const rows = serializeAreaPixels(selectedAreaPixels.value, width)
-    const currentAreas = areaHistoryByWorld.value[selectedWorldId.value] ?? []
+    const mapType = selectedMapType.value
+    const historyByWorld = areaHistoryByMapType.value[mapType] ?? {}
+    const currentAreas = historyByWorld[selectedWorldId.value] ?? []
     const serializedRows = JSON.stringify(rows)
     const areas = [{savedAt: Date.now(), width, rows, pixelCount: selectedAreaPixels.value.size}, ...currentAreas.filter((area) => JSON.stringify(area.rows) !== serializedRows)].slice(0, 10)
-    areaHistoryByWorld.value = {...areaHistoryByWorld.value, [selectedWorldId.value]: areas}
+    const nextHistoryByWorld = {...historyByWorld, [selectedWorldId.value]: areas}
+    areaHistoryByMapType.value = {...areaHistoryByMapType.value, [mapType]: nextHistoryByWorld}
     try {
-        localStorage.setItem(WORLD_MAP_AREA_HISTORY_LS_KEY, JSON.stringify(areaHistoryByWorld.value))
+        localStorage.setItem(`${WORLD_MAP_AREA_HISTORY_LS_PREFIX}${mapType}`, JSON.stringify(nextHistoryByWorld))
     } catch {
         // A very large or fragmented area can exceed the browser localStorage quota.
     }
@@ -1069,11 +1630,13 @@ watch(selectedWorldId, (worldId) => {
         mapPanX.value = worldId === storedMapView?.worldId ? storedMapView.panX : 0
         mapPanY.value = worldId === storedMapView?.worldId ? storedMapView.panY : 0
         pendingHeightChangeCount.value = pendingHeightChangesByWorld.get(worldId)?.size ?? 0
+        pendingTerrainChangeCount.value = pendingTerrainChangesByWorld.get(worldId)?.size ?? 0
+        pendingSnowChangeCount.value = pendingSnowChangesByWorld.get(worldId)?.size ?? 0
         loadMapImage()
     }
 })
 
-watch(selectedMapType, loadMapImage)
+watch(selectedMapType, () => loadMapImage(true))
 
 watch(mapZoom, (zoom) => {
     localStorage.setItem(WORLD_MAP_ZOOM_LS_KEY, String(zoom))
@@ -1082,6 +1645,8 @@ watch(mapZoom, (zoom) => {
 
 watch([brushSize, brushShape], drawMap)
 watch(highlightImpassable, drawMap)
+watch([terrainEditMode, selectedTerrainType], drawMap)
+watch([snowEditMode, snowAction], drawMap)
 
 watch([targetHeight, brushSize, brushShape, heightEditMode], ([height, size, shape, mode]) => {
     const safeHeight = Math.max(1, Math.min(31, Math.round(height)))
@@ -1111,13 +1676,78 @@ watch(() => GMManager.worldMapImage.value, (data) => {
     if (!data) {
         return
     }
-    if (data.mapType === 'height' && savingMapData.value && data.worldId === savingMapWorldId.value) {
-        pendingHeightChangesByWorld.delete(data.worldId)
+    if (savingMapData.value && data.worldId === savingMapWorldId.value && data.mapType === savingMapType.value) {
+        if (data.mapType === 'height') {
+            pendingHeightChangesByWorld.delete(data.worldId)
+        } else if (data.mapType === 'terrain') {
+            pendingTerrainChangesByWorld.delete(data.worldId)
+        } else if (data.mapType === 'snow') {
+            pendingSnowChangesByWorld.delete(data.worldId)
+        }
         savingMapData.value = false
         savingMapWorldId.value = null
+        savingMapType.value = null
         if (data.worldId === selectedWorldId.value) {
-            pendingHeightChangeCount.value = 0
+            if (data.mapType === 'height') {
+                pendingHeightChangeCount.value = 0
+            } else if (data.mapType === 'terrain') {
+                pendingTerrainChangeCount.value = 0
+            } else if (data.mapType === 'snow') {
+                pendingSnowChangeCount.value = 0
+            }
         }
+    }
+    if (data.worldId === selectedWorldId.value && selectedMapType.value === 'terrain'
+        && data.mapType === 'height' && terrainHeightMapRequestedForWorld === data.worldId) {
+        const image = new Image()
+        image.onload = () => {
+            const pixelCanvas = document.createElement('canvas')
+            pixelCanvas.width = image.naturalWidth
+            pixelCanvas.height = image.naturalHeight
+            terrainHeightPixelContext = pixelCanvas.getContext('2d', {willReadFrequently: true})
+            terrainHeightPixelContext.drawImage(image, 0, 0)
+            terrainHeightPixelCanvas = pixelCanvas
+            createWaterOverlay()
+            drawMap()
+        }
+        image.src = `data:image/png;base64,${data.image}`
+        return
+    }
+    if (data.worldId === selectedWorldId.value && selectedMapType.value === 'snow'
+        && data.mapType === 'terrain' && snowTerrainMapRequestedForWorld === data.worldId) {
+        const image = new Image()
+        image.onload = () => {
+            const pixelCanvas = document.createElement('canvas')
+            pixelCanvas.width = image.naturalWidth
+            pixelCanvas.height = image.naturalHeight
+            snowTerrainPixelContext = pixelCanvas.getContext('2d', {willReadFrequently: true})
+            snowTerrainPixelContext.drawImage(image, 0, 0)
+            snowTerrainPixelCanvas = pixelCanvas
+            rebuildSnowMapDisplay()
+            if (snowHeightMapRequestedForWorld !== data.worldId) {
+                snowHeightMapRequestedForWorld = data.worldId
+                GMManager.loadWorldMapImage(data.worldId, 'height')
+            }
+            drawMap()
+        }
+        image.src = `data:image/png;base64,${data.image}`
+        return
+    }
+    if (data.worldId === selectedWorldId.value && selectedMapType.value === 'snow'
+        && data.mapType === 'height' && snowHeightMapRequestedForWorld === data.worldId) {
+        const image = new Image()
+        image.onload = () => {
+            const pixelCanvas = document.createElement('canvas')
+            pixelCanvas.width = image.naturalWidth
+            pixelCanvas.height = image.naturalHeight
+            snowHeightPixelContext = pixelCanvas.getContext('2d', {willReadFrequently: true})
+            snowHeightPixelContext.drawImage(image, 0, 0)
+            snowHeightPixelCanvas = pixelCanvas
+            createWaterOverlay()
+            drawMap()
+        }
+        image.src = `data:image/png;base64,${data.image}`
+        return
     }
     if (data.worldId !== selectedWorldId.value || data.mapType !== selectedMapType.value) {
         return
@@ -1138,10 +1768,37 @@ watch(() => GMManager.worldMapImage.value, (data) => {
                 mapPixelContext.fillStyle = `rgb(${gray}, ${gray}, ${gray})`
                 mapPixelContext.fillRect(change.x, change.z, 1, 1)
             })
-            createWaterOverlay()
+        } else if (data.mapType === 'terrain') {
+            const pendingChanges = pendingTerrainChangesByWorld.get(data.worldId)
+            pendingChanges?.forEach((change) => {
+                const [red, green, blue] = getTerrainColor(change.type)
+                mapPixelContext.fillStyle = `rgb(${red}, ${green}, ${blue})`
+                mapPixelContext.fillRect(change.x, change.z, 1, 1)
+            })
+        } else if (data.mapType === 'snow') {
+            snowSourcePixelCanvas = pixelCanvas
+            snowSourcePixelContext = mapPixelContext
+            const pendingChanges = pendingSnowChangesByWorld.get(data.worldId)
+            pendingChanges?.forEach((change) => {
+                mapPixelContext.fillStyle = change.snowed ? 'rgb(255, 255, 255)' : 'rgb(0, 0, 0)'
+                mapPixelContext.fillRect(change.x, change.z, 1, 1)
+            })
+            rebuildSnowMapDisplay()
         }
+        createWaterOverlay()
+        areaOverlayCanvas = selectedAreaPixels.value.size
+            ? createHeightAreaOverlay(selectedAreaPixels.value, pixelCanvas.width, pixelCanvas.height)
+            : null
         mapImage.value = image
         mapHoverValue.value = 'Move over the map'
+        if (data.mapType === 'terrain' && terrainHeightMapRequestedForWorld !== data.worldId) {
+            terrainHeightMapRequestedForWorld = data.worldId
+            GMManager.loadWorldMapImage(data.worldId, 'height')
+        }
+        if (data.mapType === 'snow' && snowTerrainMapRequestedForWorld !== data.worldId) {
+            snowTerrainMapRequestedForWorld = data.worldId
+            GMManager.loadWorldMapImage(data.worldId, 'terrain')
+        }
         drawMap()
     }
     image.src = `data:image/png;base64,${data.image}`
@@ -1171,6 +1828,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+    stopPlayerMarkerUpdates()
     window.removeEventListener('keydown', onDialogKeyDown)
     window.removeEventListener('resize', drawMap)
 })
@@ -1278,6 +1936,18 @@ defineExpose({
     font-size: 11px;
 }
 
+.worlds-teleport-action {
+    margin-top: 16px;
+}
+
+.worlds-teleport-action .dialog-button {
+    width: 100%;
+}
+
+.world-map-viewport--teleport {
+    cursor: crosshair;
+}
+
 .worlds-settings-error {
     color: #ff8b8b;
 }
@@ -1329,6 +1999,20 @@ defineExpose({
     flex-direction: column;
     align-items: flex-start;
     gap: 2px;
+}
+
+.world-map-terrain-tool-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+}
+
+.world-map-terrain-select {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
 }
 
 .world-map-height-mode-controls label {

@@ -125,7 +125,9 @@ export const MiniMap = {
         if (this.environmentType === 'indoor' && type === 0) {
             return "#000000"
         }
-        if (height < 5 || type === 50) {
+        // The server sends deep water as effective type 51, while shallow
+        // water remains type 50. Both use the same minimap color.
+        if (height < 5 || type === 50 || type === 51) {
             return waterColor
         }
         if (snowed) {

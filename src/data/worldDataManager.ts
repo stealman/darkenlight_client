@@ -151,9 +151,13 @@ export class WorldData {
     consumeMapUpdate(changes) {
         for (const change of changes) {
             const data = change.data.split(":")
-            const block = this.blockMap[change.x][change.z]
-            block.height = parseInt(data[0])
-            block.type = parseInt(data[1])
+            // Keep live map updates identical to the initial chunk load. In
+            // particular, effective type 51 represents deep water and must be
+            // normalized by MapBlock to WATER (50). Assigning the raw value
+            // makes the terrain renderer treat it as a regular plane without
+            // a matching UV entry until the next relog.
+            const block = new MapBlock(parseInt(data[0]), parseInt(data[1]))
+            this.blockMap[change.x][change.z] = block
 
             // Planes are marked with "P" at the end
             if (data[2] === "P") {

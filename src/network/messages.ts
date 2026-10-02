@@ -511,3 +511,21 @@ export class GMSaveWorldMapHeightChangesMsg implements Message {
     }
 }
 
+export class GMSaveWorldMapTerrainChangesMsg implements Message {
+    t: number = 1017
+    d: any
+
+    constructor(worldId: number, changes: Array<{x: number, z: number, type: number}>) {
+        this.d = {worldId, changes}
+    }
+}
+
+export class GMSaveWorldMapSnowChangesMsg implements Message {
+    t: number = 1018
+    d: any
+
+    constructor(worldId: number, changes: Array<{x: number, z: number, snowed: boolean}>) {
+        this.d = {worldId, changes}
+    }
+}
+

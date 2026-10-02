@@ -124,8 +124,8 @@ export const Lights = {
         this.personalLight.specular = new Color3(1, 0.82, 0.58)
         this.personalLight.intensity = 3.5
         this.personalLight.range = Settings.deviceType === 'PHONE'
-            ? 11
-            : Settings.deviceType === 'TABLET' ? 13 : 14
+            ? 12
+            : Settings.deviceType === 'TABLET' ? 13 : 15
 
         if (Settings.isShadowsEnabled()) {
             this.shadow = new ShadowGenerator(Settings.detailLevel.shadowQuality == 2 ? 4096 : 2048, this.sunLight, false)

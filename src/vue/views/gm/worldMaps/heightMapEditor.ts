@@ -1,6 +1,6 @@
 export const HEIGHT_EDIT_MODES = ['exact', 'up', 'down', 'area']
-export const SQUARE_BRUSH_SIZES = [1, 2, 4, 8, 16]
-export const CIRCLE_BRUSH_SIZES = [4, 8, 12, 16]
+export const SQUARE_BRUSH_SIZES = [1, 2, 3]
+export const CIRCLE_BRUSH_SIZES = [4, 6, 8, 10, 12, 16, 20]
 
 export const getStoredHeightTool = () => {
     try {
@@ -47,6 +47,86 @@ export const getBrushPixelCoordinates = (center, brushSize, brushShape, mapSize)
         }
     }
     return pixels
+}
+
+export const randomizeAreaEdges = (areaPixels, width, height, strength, density = 3) => {
+    const result = new Set(areaPixels)
+    const safeStrength = Math.max(0, Math.min(32, Math.round(strength)))
+    if (safeStrength === 0) {
+        return result
+    }
+    const directions = [{x: -1, z: 0}, {x: 1, z: 0}, {x: 0, z: -1}, {x: 0, z: 1}]
+    const isSelected = (x, z) => areaPixels.has(z * width + x)
+    const edgePixels = Array.from(areaPixels).filter((index) => {
+        const x = index % width
+        const z = Math.floor(index / width)
+        return directions.some((direction) => {
+            const neighborX = x + direction.x
+            const neighborZ = z + direction.z
+            return neighborX < 0 || neighborZ < 0 || neighborX >= width || neighborZ >= height || !isSelected(neighborX, neighborZ)
+        })
+    })
+    const safeDensity = Math.max(1, Math.min(10, Math.round(density)))
+    const featureRatio = Math.min(0.5, Math.min(0.2, 0.025 + safeStrength * 0.006) * safeDensity / 3)
+    const featureCount = Math.max(1, Math.floor(edgePixels.length * featureRatio))
+    const smooth = (value) => value * value * (3 - 2 * value)
+    const randomAt = (x, z, seed) => {
+        const value = Math.sin(x * 127.1 + z * 311.7 + seed * 74.7) * 43758.5453123
+        return value - Math.floor(value)
+    }
+    const valueNoise = (x, z, scale, seed) => {
+        const gridX = Math.floor(x / scale)
+        const gridZ = Math.floor(z / scale)
+        const blendX = smooth(x / scale - gridX)
+        const blendZ = smooth(z / scale - gridZ)
+        const top = randomAt(gridX, gridZ, seed) * (1 - blendX) + randomAt(gridX + 1, gridZ, seed) * blendX
+        const bottom = randomAt(gridX, gridZ + 1, seed) * (1 - blendX) + randomAt(gridX + 1, gridZ + 1, seed) * blendX
+        return top * (1 - blendZ) + bottom * blendZ
+    }
+
+    for (let feature = 0; feature < featureCount; feature++) {
+        const edgeIndex = edgePixels[Math.floor(Math.random() * edgePixels.length)]
+        const edgeX = edgeIndex % width
+        const edgeZ = Math.floor(edgeIndex / width)
+        const outsideDirections = directions.filter((candidate) => {
+            const neighborX = edgeX + candidate.x
+            const neighborZ = edgeZ + candidate.z
+            return neighborX >= 0 && neighborZ >= 0 && neighborX < width && neighborZ < height && !isSelected(neighborX, neighborZ)
+        })
+        const direction = outsideDirections[Math.floor(Math.random() * outsideDirections.length)]
+        if (!direction) {
+            continue
+        }
+
+        const radius = 1 + Math.floor(safeStrength * Math.pow(Math.random(), 1.6))
+        const inward = Math.random() < 0.5
+        const radiusX = radius * (0.7 + Math.random() * 0.65)
+        const radiusZ = radius * (0.7 + Math.random() * 0.65)
+        const centerX = edgeX + direction.x * radius * (inward ? -0.25 : 0.55)
+        const centerZ = edgeZ + direction.z * radius * (inward ? -0.25 : 0.55)
+        const noiseScale = Math.max(1.5, radius * (0.35 + Math.random() * 0.25))
+        const noiseSeed = Math.random() * 10000
+        for (let x = Math.floor(centerX - radiusX - 1); x <= Math.ceil(centerX + radiusX + 1); x++) {
+            for (let z = Math.floor(centerZ - radiusZ - 1); z <= Math.ceil(centerZ + radiusZ + 1); z++) {
+                if (x < 0 || z < 0 || x >= width || z >= height) {
+                    continue
+                }
+                const ellipseDistance = Math.hypot((x - centerX) / radiusX, (z - centerZ) / radiusZ)
+                const noisyEdge = 1 + (valueNoise(x, z, noiseScale, noiseSeed) - 0.5) * 0.5
+                if (ellipseDistance > noisyEdge) {
+                    continue
+                }
+                const index = z * width + x
+                if (inward && isSelected(x, z)) {
+                    result.delete(index)
+                } else if (!inward && !isSelected(x, z)) {
+                    result.add(index)
+                }
+            }
+        }
+    }
+
+    return result
 }
 
 export const getTargetBrushHeight = (brushPixels, mode, exactHeight) => {
@@ -104,13 +184,13 @@ export const updateWaterOverlayPixel = (overlayContext, seaWaterLevel, x, z, hei
     overlayContext.clearRect(x, z, 1, 1)
 }
 
-export const drawBrushPreview = (ctx, {bounds, brushPixels, brushShape, previewHeight, panX, panY, zoom}) => {
+export const drawBrushPreview = (ctx, {bounds, brushPixels, brushShape, previewHeight, previewColor, panX, panY, zoom}) => {
     if (!bounds) {
         return
     }
-    if (previewHeight !== null) {
+    if (previewHeight !== null || previewColor) {
         const gray = previewHeight * 8
-        ctx.fillStyle = `rgb(${gray}, ${gray}, ${gray})`
+        ctx.fillStyle = previewColor ?? `rgb(${gray}, ${gray}, ${gray})`
         for (const pixel of brushPixels) {
             ctx.fillRect(panX + pixel.x * zoom, panY + pixel.z * zoom, zoom, zoom)
         }
