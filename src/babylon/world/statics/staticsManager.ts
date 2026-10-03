@@ -12,11 +12,13 @@ import { FireplaceLarge, FireplaceSmall } from '@/babylon/world/statics/objects/
 import { Shrub1x1_small, Shrub1x1_tall, Shrub2x2 } from '@/babylon/world/statics/objects/shrubs'
 import { PalisadeMetadata, PalisadeWall2, StoneEntrance, StoneEntranceMetadata, Wall2, Wall3 } from '@/babylon/world/statics/objects/walls'
 import { SpikedPalisade, SpikedPalisadeMetadata } from '@/babylon/world/statics/objects/spikedPalisade'
+import { TorchStand, TorchStandMetadata } from '@/babylon/world/statics/objects/torchStand'
 import { WallTorch, WallTorchMetadata } from '@/babylon/world/statics/objects/wallTorch'
 import { StaticObjectsCodebook } from '@/babylon/world/statics/staticsCodebook'
 import { MyPlayer } from '@/data/myPlayer'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { StaticFireParticleManager } from '@/babylon/world/statics/staticFireParticleManager'
+import { WalkableBlock, WalkableBlockMetadata } from '@/babylon/world/statics/objects/walkableBlock'
 
 export const StaticsManager = {
     prefabs: {
@@ -27,6 +29,7 @@ export const StaticsManager = {
     allStatics : [] as StaticObject[],
     visibleStatics : [] as StaticObject[],
     dungeonEntrances: new Set<StaticObject>(),
+    walkableObjectsByTile: new Map<string, StaticObject>(),
 
     initialize(scene: Scene) {
         this.prefabs.shrub2x2 = PrefabShrub2x2.getPrefab(scene)
@@ -40,16 +43,17 @@ export const StaticsManager = {
         })
     },
 
-    consumeObjects(data: Array<{ tp: number, x: number, z: number, meta?: WallTorchMetadata | StoneEntranceMetadata | PalisadeMetadata, tmp?: boolean }>) {
+    consumeObjects(data: Array<{ tp: number, x: number, z: number, meta?: WallTorchMetadata | StoneEntranceMetadata | PalisadeMetadata | WalkableBlockMetadata, tmp?: boolean }>) {
         data.forEach(obj => {
             this.addObject(obj)
         })
     },
 
-    addObject(obj: { tp: number, x: number, z: number, meta?: WallTorchMetadata | StoneEntranceMetadata | PalisadeMetadata, tmp?: boolean }) {
+    addObject(obj: { tp: number, x: number, z: number, meta?: WallTorchMetadata | StoneEntranceMetadata | PalisadeMetadata | WalkableBlockMetadata, tmp?: boolean }) {
         const y = WorldDataManager.getBlockMap()[obj.x][obj.z].totalHeight
         const pos = new Vector3(obj.x, y, obj.z)
         const rotation = Math.floor(Math.random() * 4) * Math.PI / 2
+        const previousCount = this.allStatics.length
 
         switch (obj.tp) {
             case 101: this.allStatics.push(new Shrub2x2(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_LIGHT.uv, this.prefabs.shrub2x2!)); break
@@ -83,6 +87,16 @@ export const StaticsManager = {
                 MaterialEnum1.WOOD_1.uv,
                 obj.meta as SpikedPalisadeMetadata,
             )); break
+            case 206: {
+                const metadata = obj.meta as WalkableBlockMetadata
+                const material = metadata?.material === 'STONE_GRAY'
+                    ? MaterialEnum1.BRICK_GRAY.uv
+                    : metadata?.material === 'STONE_RED'
+                        ? MaterialEnum1.BRICK_RED.uv
+                        : MaterialEnum1.WOOD_2.uv
+                this.allStatics.push(new WalkableBlock(obj.tp, pos, material, metadata))
+                break
+            }
 
             case 221: this.allStatics.push(new Wall3(obj.tp, pos, rotation, MaterialEnum1.BRICK_GRAY.uv)); break
             case 222: this.allStatics.push(new Wall3(obj.tp, pos, rotation, MaterialEnum1.BRICK_RED.uv)); break
@@ -90,6 +104,14 @@ export const StaticsManager = {
             case 241: this.allStatics.push(new FireplaceSmall(obj.tp, pos, rotation, MaterialEnum1.WOOD_1.uv, obj.tmp !== true)); break
             case 242: this.allStatics.push(new FireplaceLarge(obj.tp, pos, rotation, MaterialEnum1.WOOD_1.uv, obj.tmp !== true)); break
             case 261: this.allStatics.push(new WallTorch(obj.tp, pos, MaterialEnum1.WOOD_1.uv, obj.meta as WallTorchMetadata)); break
+            case 262: this.allStatics.push(new TorchStand(
+                obj.tp,
+                pos,
+                MaterialEnum1.ROCK1.uv,
+                MaterialEnum1.STEEL_1.uv,
+                MaterialEnum1.WOOD_1.uv,
+                obj.meta as TorchStandMetadata,
+            )); break
             case 281: {
                 const entrance = new StoneEntrance(obj.tp, pos, MaterialEnum1.BRICK_GRAY.uv, obj.meta as StoneEntranceMetadata)
                 this.allStatics.push(entrance)
@@ -98,6 +120,13 @@ export const StaticsManager = {
             }
             default:
                 break
+        }
+
+        if (this.allStatics.length > previousCount) {
+            const added = this.allStatics[this.allStatics.length - 1]
+            if (added.getWalkableHeight() !== null) {
+                this.walkableObjectsByTile.set(`${obj.x};${obj.z}`, added)
+            }
         }
     },
 
@@ -109,17 +138,21 @@ export const StaticsManager = {
         })
     },
 
-    removeObjects(data: [ { x: number, z: number } ]) {
+    removeObjects(data: Array<{ x: number, z: number, tp?: number }>) {
         data.forEach(obj => {
-            this.removeObjectAt(obj.x, obj.z)
+            this.removeObjectAt(obj.x, obj.z, obj.tp)
         })
     },
 
-    removeObjectAt(x: number, z: number) {
+    removeObjectAt(x: number, z: number, type?: number) {
         for (let i = 0; i < this.allStatics.length; i++) {
-            if (this.allStatics[i].position.x === x && this.allStatics[i].position.z === z) {
+            if (this.allStatics[i].position.x === x && this.allStatics[i].position.z === z
+                && (type === undefined || this.allStatics[i].type === type)) {
                 const obj = this.allStatics[i]
                 this.dungeonEntrances.delete(obj)
+                if (this.walkableObjectsByTile.get(`${x};${z}`) === obj) {
+                    this.walkableObjectsByTile.delete(`${x};${z}`)
+                }
                 obj.dispose()
                 this.allStatics.splice(i, 1)
                 StaticFireParticleManager.flush()
@@ -134,6 +167,7 @@ export const StaticsManager = {
         this.allStatics = []
         this.visibleStatics = []
         this.dungeonEntrances.clear()
+        this.walkableObjectsByTile.clear()
         this.renderObjects()
     },
 
@@ -279,5 +313,9 @@ export const StaticsManager = {
             }
         }
         return null
+    },
+
+    getWalkableHeightAtTile(x: number, z: number): number {
+        return this.walkableObjectsByTile.get(`${x};${z}`)?.getWalkableHeight() ?? 0
     }
 }

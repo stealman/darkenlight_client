@@ -40,7 +40,7 @@
         </div>
 
         <div v-if="selectedObjectType === 'TORCH'" style="margin-top: 1vh">
-            <label>Wall direction</label>
+            <label>Direction</label>
             &nbsp;&nbsp;
             <select v-model="torchFacing">
                 <option value="-X">-X</option>
@@ -49,9 +49,12 @@
                 <option value="+Z">+Z</option>
             </select>
             &nbsp;&nbsp;
-            <label>Height above floor</label>
-            &nbsp;&nbsp;
-            <input v-model.number="torchMountHeight" type="number" min="-10" max="10" step="0.1">
+            <template v-if="selectedObject === 261">
+                &nbsp;&nbsp;
+                <label>Height above floor</label>
+                &nbsp;&nbsp;
+                <input v-model.number="torchMountHeight" type="number" min="-10" max="10" step="0.1">
+            </template>
         </div>
 
         <div v-if="selectedObjectType === 'ENTRANCE'" style="margin-top: 1vh; display: grid; gap: 6px">
@@ -92,6 +95,7 @@ const objects = [
     { type: "FIREPLACE", name: "Fireplace Small", id: 241 },
     { type: "FIREPLACE", name: "Fireplace Large", id: 242 },
     { type: "TORCH", name: "Wall Torch", id: 261 },
+    { type: "TORCH", name: "Torch Stand", id: 262 },
     { type: "ENTRANCE", name: "Stone Entrance", id: 281 },
 ]
 

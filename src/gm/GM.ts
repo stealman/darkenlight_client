@@ -32,10 +32,12 @@ export const GmTabs = {
 
 export const VOID_TERRAIN_SELECTION = 102
 export const WALL_TORCH_STATIC_ID = 261
+export const TORCH_STAND_STATIC_ID = 262
 export const STONE_ENTRANCE_STATIC_ID = 281
 export const PALISADE_WALL_2_STATIC_ID = 203
 export const PALISADE_SMALL_STATIC_ID = 204
 export const PALISADE_SPIKED_STATIC_ID = 205
+export const WALKABLE_BLOCK_STATIC_ID = 206
 
 export const GMManager = {
     gmPanelVisible: ref(false),
@@ -54,6 +56,8 @@ export const GMManager = {
     selectedWallFence: ref (0),
     palisadeOrientation: ref('Z'),
     spikedPalisadeFacing: ref('+Z'),
+    walkableBlockHeight: ref(1),
+    walkableBlockMaterial: ref('WOOD'),
     selectedStatic: ref (0),
     torchFacing: ref('-Z'),
     torchMountHeight: ref(2),
@@ -168,7 +172,7 @@ export const GMManager = {
         if (this.tab === GmTabs.WALLS_AND_FENCES_EDIT) {
             const markerPos = new Vector3(GMSceneManager.hoverBlockMarker!.position.x, 0, GMSceneManager.hoverBlockMarker!.position.z)
             if (this.selectedWallFence.value > 0) {
-                const wallFenceData: { x: number, z: number, type: number, meta?: {orientation?: string, facing?: string} } = {
+                const wallFenceData: { x: number, z: number, type: number, meta?: {orientation?: string, facing?: string, surfaceHeight?: number, material?: string} } = {
                     x: markerPos.x,
                     z: markerPos.z,
                     type: this.selectedWallFence.value,
@@ -179,6 +183,12 @@ export const GMManager = {
                 }
                 if (this.selectedWallFence.value === PALISADE_SPIKED_STATIC_ID) {
                     wallFenceData.meta = {facing: this.spikedPalisadeFacing.value}
+                }
+                if (this.selectedWallFence.value === WALKABLE_BLOCK_STATIC_ID) {
+                    wallFenceData.meta = {
+                        surfaceHeight: this.walkableBlockHeight.value,
+                        material: this.walkableBlockMaterial.value,
+                    }
                 }
                 Connector.sendMessage(new GMStaticObjectChange("ADD_OBJECT", [wallFenceData] ) )
 
@@ -200,6 +210,9 @@ export const GMManager = {
                         facing: this.torchFacing.value,
                         mountHeight: this.torchMountHeight.value,
                     }
+                }
+                if (this.selectedStatic.value === TORCH_STAND_STATIC_ID) {
+                    staticData.meta = {facing: this.torchFacing.value}
                 }
                 if (this.selectedStatic.value === STONE_ENTRANCE_STATIC_ID) {
                     staticData.meta = {

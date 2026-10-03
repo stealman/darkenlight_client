@@ -101,14 +101,20 @@ abstract class BaseFireplace extends BaseStaticObject {
     private registerLight() {
         Lights.registerStaticLight(this.getLightId(), this.renderPosition, {
             color: FIREPLACE_LIGHT_COLOR,
-            height: 2.25 + (this.fireplaceScaleReduced * 0.5),
+            height: this.fireplaceScale > 1 ? 3.5 : 2.25 + (this.fireplaceScaleReduced * 0.5),
             intensity: 3 * this.fireplaceScaleReduced,
-            range: 5 + 2 * this.fireplaceScaleReduced,
+            range: this.getLightRange(),
             flicker: true,
             castsShadows: this.castsShadows,
             castsActorShadows: this.castsShadows,
             shadowMapSize: this.shadowMapSize,
         })
+    }
+
+    protected getLightRange(): number {
+        return this.fireplaceScale > 1
+            ? 12
+            : 5 + 2 * this.fireplaceScaleReduced
     }
 
     setLightVisible(visible: boolean) {
@@ -288,7 +294,6 @@ export class FireplaceLarge extends BaseFireplace {
     }
 
     getLightVisibilityRadius(): number {
-        const authoredRange = 5 + (2 * this.fireplaceScaleReduced)
-        return authoredRange * OUTDOOR_STATIC_LIGHT_RANGE_FACTOR
+        return this.getLightRange() * OUTDOOR_STATIC_LIGHT_RANGE_FACTOR
     }
 }

@@ -64,6 +64,23 @@
                 </select>
             </label>
         </div>
+
+        <div style="margin-top: 1vh">
+            <label class="tree-item" :class="{ selected: 'WALKABLE_BLOCK' === selectedObjectType }" @click="selectObjectType('WALKABLE_BLOCK')">Walkable Block</label>
+            <label v-if="selectedObjectType === 'WALKABLE_BLOCK'">
+                &nbsp;&nbsp;height
+                <select v-model.number="walkableBlockHeight">
+                    <option :value="0.5">0.5</option>
+                    <option :value="1">1</option>
+                </select>
+                &nbsp;&nbsp;material
+                <select v-model="walkableBlockMaterial">
+                    <option value="WOOD">Wood</option>
+                    <option value="STONE_GRAY">Stone Gray</option>
+                    <option value="STONE_RED">Stone Red</option>
+                </select>
+            </label>
+        </div>
     </div>
 </template>
 
@@ -77,6 +94,8 @@ const selectedObjectType = ref("")
 const selectedObject = GMManager.selectedWallFence
 const palisadeOrientation = GMManager.palisadeOrientation
 const spikedPalisadeFacing = GMManager.spikedPalisadeFacing
+const walkableBlockHeight = GMManager.walkableBlockHeight
+const walkableBlockMaterial = GMManager.walkableBlockMaterial
 
 const objects = [
     { type: "WALL2", name: "Wall2_GRAY", id: 201 },
@@ -84,6 +103,7 @@ const objects = [
     { type: "PALISADE", name: "PalisadeWall2", id: 203 },
     { type: "PALISADE_SMALL", name: "PalisadeSmall", id: 204 },
     { type: "PALISADE_SPIKED", name: "PalisadeSpiked", id: 205 },
+    { type: "WALKABLE_BLOCK", name: "WalkableBlock", id: 206 },
 
     { type: "WALL3", name: "Wall3_GRAY", id: 221 },
     { type: "WALL3", name: "Wall3_RED", id: 222 },

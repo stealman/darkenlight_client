@@ -16,6 +16,7 @@ export interface StaticObject {
     isBlocking(): boolean
     isObjectInCollision(tgtX: number, tgtZ: number, size: number): boolean
     getCollisionTolerance(): number
+    getWalkableHeight(): number | null
 }
 
 export abstract class BaseStaticObject implements StaticObject {
@@ -60,6 +61,10 @@ export abstract class BaseStaticObject implements StaticObject {
 
     getCollisionTolerance(): number {
         return this.objectInfo.collisionTolerance
+    }
+
+    getWalkableHeight(): number | null {
+        return null
     }
 
     isObjectInCollision(tgtX: number, tgtZ: number, size: number): boolean {

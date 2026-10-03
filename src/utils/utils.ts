@@ -25,14 +25,14 @@ export const Utils = {
     },
 
     calculateYPos(x: number, z: number, boxSize: number): number {
-        const map = WorldDataManager.getBlockMap()
         const coveredBlocks = Utils.getCoveredBlocks(x, z, boxSize)
 
         // From map get all blocks that are covered by the player and find the highest one
         let highest = 0
         coveredBlocks.forEach(block => {
-            if (map[block.x][block.z].totalHeight > highest) {
-                highest = map[block.x][block.z].totalHeight
+            const walkHeight = Utils.getWalkHeightAtTile(block.x, block.z, false)
+            if (walkHeight > highest) {
+                highest = walkHeight
             }
         })
 
@@ -40,17 +40,30 @@ export const Utils = {
     },
 
     calculateWalkYPos(x: number, z: number, boxSize: number, terrainMargin: number = 0): number {
-        const map = WorldDataManager.getBlockMap()
         const coveredBlocks = Utils.getCoveredBlocks(x, z, boxSize, 1, terrainMargin)
 
         let highest = 0
         coveredBlocks.forEach(block => {
-            if (map[block.x][block.z].walkHeight > highest) {
-                highest = map[block.x][block.z].walkHeight
+            const walkHeight = Utils.getWalkHeightAtTile(block.x, block.z)
+            if (walkHeight > highest) {
+                highest = walkHeight
             }
         })
 
         return highest
+    },
+
+    getWalkHeightAtTile(x: number, z: number, useWaterWalkHeight: boolean = true): number {
+        const block = WorldDataManager.getBlockMap()[x]?.[z]
+        if (!block) {
+            return 0
+        }
+        const platformHeight = StaticsManager.getWalkableHeightAtTile(x, z)
+        if (platformHeight > 0) {
+            return block.totalHeight + platformHeight
+        }
+        const terrainHeight = useWaterWalkHeight ? block.walkHeight : block.totalHeight
+        return terrainHeight
     },
 
     getTerrainCollisionMarginDepth(xPos: number, zPos: number, characterWidth: number, minWalkHeight: number): number {
@@ -61,7 +74,7 @@ export const Utils = {
         for (let x = Math.floor(xPos) - 2; x <= Math.ceil(xPos) + 2; x++) {
             for (let z = Math.floor(zPos) - 2; z <= Math.ceil(zPos) + 2; z++) {
                 const block = map[x]?.[z]
-                if (!block || block.walkHeight < minWalkHeight) continue
+                if (!block || Utils.getWalkHeightAtTile(x, z) < minWalkHeight) continue
 
                 const depth = threshold - Math.max(Math.abs(x - xPos), Math.abs(z - zPos))
                 if (depth > marginDepth) marginDepth = depth
@@ -109,8 +122,9 @@ export const Utils = {
         }
 
         // Shallow water is walkable, only deep water blocks movement
-        const coveredTargetBlocks = WorldDataManager.getCoveredBlocks(targetPos, charSize)
-        if (coveredTargetBlocks.some(block => block.deepWater)) {
+        const map = WorldDataManager.getBlockMap()
+        const coveredTargetBlocks = Utils.getCoveredBlocks(targetPos.x, targetPos.z, charSize)
+        if (coveredTargetBlocks.some(({x, z}) => map[x][z].deepWater && StaticsManager.getWalkableHeightAtTile(x, z) === 0)) {
             return {x: targetPos.x, z: targetPos.z}
         }
 

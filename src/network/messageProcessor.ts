@@ -319,7 +319,11 @@ export const MessageProcessor = {
     },
 
     processRemoveStaticObject(data) {
-        StaticsManager.removeObjectAt(data.x, data.z)
+        if (Array.isArray(data.objects)) {
+            StaticsManager.removeObjects(data.objects)
+        } else {
+            StaticsManager.removeObjectAt(data.x, data.z)
+        }
         StaticsManager.renderObjects()
         WorldRenderer.renderWorld()
     },

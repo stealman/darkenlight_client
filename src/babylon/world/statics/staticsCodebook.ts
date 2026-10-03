@@ -8,8 +8,9 @@ export class StaticObjectInfo {
     collisionTolerance: number = 0
     soundDistance: number = 0
     soundKey: string | null = null
+    walkable: boolean = false
 
-    constructor(type: number, name: string, blocking: boolean, size: number, collisionTolerance: number, soundDistance: number, soundKey: string | null, sizeZ: number = size) {
+    constructor(type: number, name: string, blocking: boolean, size: number, collisionTolerance: number, soundDistance: number, soundKey: string | null, sizeZ: number = size, walkable: boolean = false) {
         this.type = type
         this.name = name
         this.blocking = blocking
@@ -19,6 +20,7 @@ export class StaticObjectInfo {
         this.collisionTolerance = collisionTolerance
         this.soundDistance = soundDistance
         this.soundKey = soundKey
+        this.walkable = walkable
     }
 }
 
@@ -43,6 +45,7 @@ export const StaticObjectsCodebook: Map<number, StaticObjectInfo> = new Map([
     [203, new StaticObjectInfo(203, 'PalisadeWall2', true, 1, 0.375, 0, null)],
     [204, new StaticObjectInfo(204, 'PalisadeSmall', true, 1, 0.41, 0, null)],
     [205, new StaticObjectInfo(205, 'PalisadeSpiked', true, 1, 0, 0, null)],
+    [206, new StaticObjectInfo(206, 'WalkableBlock', false, 1, 0, 0, null, 1, true)],
 
     [221, new StaticObjectInfo(221, 'Wall3_GRAY', true, 1, 0, 0, null)],
     [222, new StaticObjectInfo(222, 'Wall3_RED', true, 1, 0, 0, null)],
@@ -51,5 +54,6 @@ export const StaticObjectsCodebook: Map<number, StaticObjectInfo> = new Map([
     [242, new StaticObjectInfo(242, 'FireplaceLarge', true, 2, 0.3, 6, 'CAMPFIRE')],
 
     [261, new StaticObjectInfo(261, 'WallTorch', false, 1, 0, 2, 'CAMPFIRE')],
+    [262, new StaticObjectInfo(262, 'TorchStand', true, 1, 0.3, 2, 'CAMPFIRE')],
     [281, new StaticObjectInfo(281, 'StoneEntrance', true, 4, 0, 0, null, 2)],
 ])
