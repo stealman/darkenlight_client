@@ -1,6 +1,6 @@
 import { Connector } from '@/network/connector'
-import { GMCreateItemMsg, GMDayNightCycleMsg, GMForceSaveDataMsg, GMLoadItemCodebookMsg, GMLoadWorldMapImageMsg, GMLoadWorldSettingsMsg, GMLoadWorldsMsg, GMNpcAction, GMSaveMapDataMsg, GMSaveWorldMapHeightChangesMsg, GMSaveWorldMapSnowChangesMsg, GMSaveWorldMapTerrainChangesMsg, GMSaveWorldSettingsMsg, GMStaticObjectChange, GMTeleportMsg, GMTerrainChange } from '@/network/messages'
-import { GMItemCodebookItem, GMWorldMapImageData, GMWorldSettingsData } from '@/network/messageIfs'
+import { GMCreateItemMsg, GMDayNightCycleMsg, GMForceSaveDataMsg, GMGenerateBiomeMsg, GMLoadItemCodebookMsg, GMLoadWorldMapImageMsg, GMLoadWorldSettingsMsg, GMLoadWorldsMsg, GMNpcAction, GMSaveMapDataMsg, GMSaveWorldMapHeightChangesMsg, GMSaveWorldMapSnowChangesMsg, GMSaveWorldMapTerrainChangesMsg, GMSaveWorldSettingsMsg, GMStaticObjectChange, GMTeleportMsg, GMTerrainChange } from '@/network/messages'
+import { GMItemCodebookItem, GMWorldBiomeTreesChangedData, GMWorldMapImageData, GMWorldSettingsData } from '@/network/messageIfs'
 import { GMSceneManager } from '@/babylon/gm/GmSceneManager'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { ref } from 'vue'
@@ -71,6 +71,7 @@ export const GMManager = {
     teleportWorlds: ref([] as Array<{id: number, name: string}>),
     worldSettings: ref<GMWorldSettingsData | null>(null),
     worldMapImage: ref<GMWorldMapImageData | null>(null),
+    worldBiomeTreesChanged: ref<GMWorldBiomeTreesChangedData | null>(null),
     itemCodebook: ref([] as GMItemCodebookItem[]),
     selectedTeleportWorld: ref(0),
 
@@ -537,12 +538,16 @@ export const GMManager = {
         Connector.sendMessage(new GMSaveWorldSettingsMsg(worldId, settings))
     },
 
-    loadWorldMapImage(worldId: number, mapType: 'height' | 'terrain' | 'snow' | 'gathering') {
+    loadWorldMapImage(worldId: number, mapType: 'height' | 'terrain' | 'snow' | 'biome' | 'gathering') {
         Connector.sendMessage(new GMLoadWorldMapImageMsg(worldId, mapType))
     },
 
     consumeWorldMapImage(image: GMWorldMapImageData) {
         this.worldMapImage.value = image
+    },
+
+    consumeWorldBiomeTreesChanged(change: GMWorldBiomeTreesChangedData) {
+        this.worldBiomeTreesChanged.value = change
     },
 
     saveWorldMapHeightChanges(worldId: number, changes: Array<{x: number, z: number, height: number}>) {
@@ -555,6 +560,14 @@ export const GMManager = {
 
     saveWorldMapSnowChanges(worldId: number, changes: Array<{x: number, z: number, snowed: boolean}>) {
         Connector.sendMessage(new GMSaveWorldMapSnowChangesMsg(worldId, changes))
+    },
+
+    generateBiome(worldId: number, preset: 'NORTH_WOOD', density: number, rows: number[][]) {
+        Connector.sendMessage(new GMGenerateBiomeMsg(worldId, 'GENERATE', preset, density, rows))
+    },
+
+    deforestBiome(worldId: number, rows: number[][]) {
+        Connector.sendMessage(new GMGenerateBiomeMsg(worldId, 'DEFOREST', 'NORTH_WOOD', 1, rows))
     },
 
     loadItemCodebook() {

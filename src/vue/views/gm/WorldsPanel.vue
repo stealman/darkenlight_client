@@ -120,6 +120,20 @@
                                     <label><input v-model="snowAction" type="radio" :value="false"> Clear</label>
                                 </div>
                             </div>
+                            <div v-if="selectedMapType === 'biome'" class="world-map-terrain-tool-controls">
+                                <div class="world-map-height-mode-controls">
+                                    <label><input v-model="biomeEditMode" type="radio" value="brush"> Brush</label>
+                                    <label><input v-model="biomeEditMode" type="radio" value="area"> Area</label>
+                                </div>
+                                <label class="world-map-terrain-select">Preset
+                                    <select v-model="selectedBiomePreset">
+                                        <option v-for="preset in biomePresets" :key="preset.id" :value="preset.id">{{ preset.label }}</option>
+                                    </select>
+                                </label>
+                                <label class="world-map-area-field">Density
+                                    <input v-model.number="biomeDensity" type="number" min="1" max="10" step="1">
+                                </label>
+                            </div>
                             <div v-if="selectedMapType === 'height' && heightEditMode === 'area' && !selectedAreaPixels.size" class="world-map-area-history">
                                 <span>Previous area</span>
                                 <select :value="selectedAreaHistoryIndex" @change="loadSavedArea($event.target.value)">
@@ -147,6 +161,13 @@
                                     </select>
                                 </label>
                             </div>
+                            <div v-else-if="selectedMapType === 'biome' && biomeEditMode === 'area' && !selectedAreaPixels.size" class="world-map-area-history">
+                                <span>Previous area</span>
+                                <select :value="selectedAreaHistoryIndex" @change="loadSavedArea($event.target.value)">
+                                    <option value="">Select saved area...</option>
+                                    <option v-for="(area, index) in savedAreas" :key="area.savedAt" :value="index">Area {{ index + 1 }} ({{ area.pixelCount }} px)</option>
+                                </select>
+                            </div>
                             <div v-else-if="selectedMapType === 'height' && (!selectedAreaPixels.size || heightEditMode !== 'area')" class="world-map-brush-controls">
                                 <span>Brush</span>
                                 <button v-for="size in squareBrushSizes" :key="`square-${size}`" :disabled="brushShape === 'square' && brushSize === size" @click="selectBrush('square', size)">{{ size }}</button>
@@ -161,6 +182,11 @@
                                 <span>Brush</span>
                                 <button v-for="size in squareBrushSizes" :key="`snow-square-${size}`" :disabled="brushShape === 'square' && brushSize === size" @click="selectBrush('square', size)">{{ size }}</button>
                                 <button v-for="size in circleBrushSizes" :key="`snow-circle-${size}`" class="world-map-circle-brush-button" :disabled="brushShape === 'circle' && brushSize === size" @click="selectBrush('circle', size)">◯ {{ size }}</button>
+                            </div>
+                            <div v-else-if="selectedMapType === 'biome' && biomeEditMode === 'brush'" class="world-map-brush-controls">
+                                <span>Brush</span>
+                                <button v-for="size in squareBrushSizes" :key="`biome-square-${size}`" :disabled="brushShape === 'square' && brushSize === size" @click="selectBrush('square', size)">{{ size }}</button>
+                                <button v-for="size in circleBrushSizes" :key="`biome-circle-${size}`" class="world-map-circle-brush-button" :disabled="brushShape === 'circle' && brushSize === size" @click="selectBrush('circle', size)">◯ {{ size }}</button>
                             </div>
                             <div v-else-if="selectedMapType === 'height' && heightEditMode === 'area'" class="world-map-area-actions">
                                 <button @click="cancelAreaSelection">Cancel</button>
@@ -208,6 +234,12 @@
                                 <button @click="randomizeSelectedAreaEdges">RANDOMIZE EDGES</button>
                                 <button @click="applySnowArea">OK</button>
                             </div>
+                            <div v-else-if="selectedMapType === 'biome' && biomeEditMode === 'area' && selectedAreaPixels.size" class="world-map-area-actions">
+                                <button @click="cancelAreaSelection">Cancel</button>
+                                <span>{{ selectedAreaPixels.size }} tiles selected</span>
+                                <button @click="deforestBiomeArea">DEFOREST</button>
+                                <button @click="applyBiomeArea">OK</button>
+                            </div>
                             <span v-else>{{ selectedMapTypeLabel }} map</span>
                             <span class="world-map-hover-value">{{ mapHoverValue }}</span>
                         </div>
@@ -225,7 +257,10 @@
                         >
                             <canvas ref="mapCanvasRef" class="world-map-canvas"></canvas>
                         </div>
-                        <div class="world-map-save-actions">
+                        <div v-if="selectedMapType === 'biome'" class="world-map-save-actions">
+                            <span>Biome changes are generated and saved immediately.</span>
+                        </div>
+                        <div v-else class="world-map-save-actions">
                             <span v-if="pendingMapChangeCount">{{ pendingMapChangeCount }} pending {{ selectedMapType }} {{ pendingMapChangeCount === 1 ? 'change' : 'changes' }}</span>
                             <span v-else>No pending map changes</span>
                             <div class="world-map-save-buttons">
@@ -277,6 +312,7 @@ import {
 import { getConnectedAreaByTerrain, getTerrainColor, getTerrainMapPixelValue, getTerrainTypeByColor, TERRAIN_TYPES } from './worldMaps/terrainMapEditor'
 import { getSnowMapPixelValue } from './worldMaps/snowMapEditor'
 import { getGatheringMapPixelValue } from './worldMaps/gatheringMapEditor'
+import { BIOME_PRESETS, clampBiomeDensity, getStoredBiomeTool, storeBiomeTool } from './worldMaps/biomeMapEditor'
 
 const WORLD_MAP_ZOOM_LS_KEY = 'worlds-map-zoom'
 const WORLD_MAP_VIEW_LS_KEY = 'worlds-map-view'
@@ -292,7 +328,7 @@ const getStoredMapZoom = () => {
 const getStoredMapView = () => {
     try {
         const view = JSON.parse(localStorage.getItem(WORLD_MAP_VIEW_LS_KEY) || 'null')
-        if (!view || !Number.isInteger(view.worldId) || !['height', 'terrain', 'snow', 'gathering'].includes(view.mapType)
+        if (!view || !Number.isInteger(view.worldId) || !['height', 'terrain', 'snow', 'biome', 'gathering'].includes(view.mapType)
             || !Number.isFinite(view.panX) || !Number.isFinite(view.panY)) {
             return null
         }
@@ -342,10 +378,12 @@ const teleportPicking = ref(false)
 const initialMapView = getStoredMapView()
 const initialHeightTool = getStoredHeightTool()
 const initialRandomizeSettings = getStoredRandomizeSettings()
+const initialBiomeTool = getStoredBiomeTool()
 const mapTypes = [
     {id: 'height', label: 'Height'},
     {id: 'terrain', label: 'Terrain'},
     {id: 'snow', label: 'Snow'},
+    {id: 'biome', label: 'Biome'},
     {id: 'gathering', label: 'Gathering'},
 ]
 const selectedMapType = ref(initialMapView?.mapType ?? 'terrain')
@@ -368,6 +406,10 @@ const selectedTerrainType = ref(1)
 const snowEditMode = ref('brush')
 const snowAction = ref(true)
 const snowAreaPickupMode = ref('terrain')
+const biomePresets = BIOME_PRESETS
+const biomeEditMode = ref(initialBiomeTool.mode)
+const selectedBiomePreset = ref(initialBiomeTool.preset)
+const biomeDensity = ref(initialBiomeTool.density)
 const areaEdgeRandomizeStrength = ref(3)
 const areaEdgeRandomizeDensity = ref(3)
 const highlightImpassable = ref(false)
@@ -396,6 +438,8 @@ let mapPixelContext = null
 let mapPixelCanvas = null
 let waterOverlayCanvas = null
 let waterOverlayContext = null
+let biomeTreeOverlayCanvas = null
+const biomeTreePixels = new Set()
 let terrainHeightPixelCanvas = null
 let terrainHeightPixelContext = null
 let terrainHeightMapRequestedForWorld = null
@@ -546,6 +590,8 @@ const loadMapImage = (preserveArea = false) => {
     mapPixelCanvas = null
     waterOverlayCanvas = null
     waterOverlayContext = null
+    biomeTreeOverlayCanvas = null
+    biomeTreePixels.clear()
     terrainHeightPixelCanvas = null
     terrainHeightPixelContext = null
     terrainHeightMapRequestedForWorld = null
@@ -657,6 +703,15 @@ const drawMap = () => {
             mapImage.value.naturalHeight * mapZoom.value,
         )
     }
+    if (selectedMapType.value === 'biome' && biomeTreeOverlayCanvas) {
+        ctx.drawImage(
+            biomeTreeOverlayCanvas,
+            mapPanX.value,
+            mapPanY.value,
+            biomeTreeOverlayCanvas.width * mapZoom.value,
+            biomeTreeOverlayCanvas.height * mapZoom.value,
+        )
+    }
     drawSelectedArea(ctx)
     drawRandomizePreview(ctx)
     drawBrushPreview(ctx)
@@ -704,7 +759,8 @@ const drawSelectedArea = (ctx) => {
     const isHeightArea = selectedMapType.value === 'height' && heightEditMode.value === 'area'
     const isTerrainArea = selectedMapType.value === 'terrain' && terrainEditMode.value === 'area'
     const isSnowArea = selectedMapType.value === 'snow' && snowEditMode.value === 'area'
-    if (!isHeightArea && !isTerrainArea && !isSnowArea) {
+    const isBiomeArea = selectedMapType.value === 'biome' && biomeEditMode.value === 'area'
+    if (!isHeightArea && !isTerrainArea && !isSnowArea && !isBiomeArea) {
         return
     }
     if (areaOverlayCanvas) {
@@ -741,7 +797,7 @@ const createWaterOverlay = () => {
     const seaWaterLevel = worldSettings.value?.seaWaterLevel
     const waterLevel = Number(seaWaterLevel)
     const isHeightMap = selectedMapType.value === 'height'
-    const isTerrainMap = selectedMapType.value === 'terrain'
+    const isTerrainMap = selectedMapType.value === 'terrain' || selectedMapType.value === 'biome'
     const isSnowMap = selectedMapType.value === 'snow'
     const heightCanvas = isHeightMap ? mapPixelCanvas : isTerrainMap ? terrainHeightPixelCanvas : snowHeightPixelCanvas
     const heightContext = isHeightMap ? mapPixelContext : isTerrainMap ? terrainHeightPixelContext : snowHeightPixelContext
@@ -788,11 +844,31 @@ const updateWaterOverlayPixel = (x, z, height) => {
     updateHeightWaterOverlayPixel(waterOverlayContext, seaWaterLevel, x, z, height)
 }
 
+const rebuildBiomeTreeOverlay = () => {
+    biomeTreeOverlayCanvas = null
+    if (!mapPixelCanvas || selectedMapType.value !== 'biome') {
+        return
+    }
+    const canvas = document.createElement('canvas')
+    canvas.width = mapPixelCanvas.width
+    canvas.height = mapPixelCanvas.height
+    const context = canvas.getContext('2d')
+    context.fillStyle = 'rgb(5, 72, 31)'
+    for (const key of biomeTreePixels) {
+        const [x, z] = key.split(';').map(Number)
+        if (x >= 0 && z >= 0 && x < canvas.width && z < canvas.height) {
+            context.fillRect(x, z, 1, 1)
+        }
+    }
+    biomeTreeOverlayCanvas = canvas
+}
+
 const drawBrushPreview = (ctx) => {
     const isHeightBrush = selectedMapType.value === 'height' && heightEditMode.value !== 'area'
     const isTerrainBrush = selectedMapType.value === 'terrain' && terrainEditMode.value === 'brush'
     const isSnowBrush = selectedMapType.value === 'snow' && snowEditMode.value === 'brush'
-    if ((!isHeightBrush && !isTerrainBrush && !isSnowBrush) || !mapHoverCoordinates.value || !mapImage.value) {
+    const isBiomeBrush = selectedMapType.value === 'biome' && biomeEditMode.value === 'brush'
+    if ((!isHeightBrush && !isTerrainBrush && !isSnowBrush && !isBiomeBrush) || !mapHoverCoordinates.value || !mapImage.value) {
         return
     }
     const bounds = getBrushBounds(mapHoverCoordinates.value)
@@ -803,7 +879,7 @@ const drawBrushPreview = (ctx) => {
         brushPixels,
         brushShape: brushShape.value,
         previewHeight,
-        previewColor: isTerrainBrush ? `rgb(${getTerrainColor(selectedTerrainType.value).join(', ')})` : isSnowBrush ? (snowAction.value ? 'rgb(255, 255, 255)' : 'rgba(255, 255, 255, 0.25)') : null,
+        previewColor: isTerrainBrush ? `rgb(${getTerrainColor(selectedTerrainType.value).join(', ')})` : isSnowBrush ? (snowAction.value ? 'rgb(255, 255, 255)' : 'rgba(255, 255, 255, 0.25)') : isBiomeBrush ? 'rgba(70, 190, 105, 0.55)' : null,
         panX: mapPanX.value,
         panY: mapPanY.value,
         zoom: mapZoom.value,
@@ -841,7 +917,7 @@ const selectBrush = (shape, size) => {
 }
 
 const cycleBrush = (event) => {
-    if (!['height', 'terrain', 'snow'].includes(selectedMapType.value)) {
+    if (!['height', 'terrain', 'snow', 'biome'].includes(selectedMapType.value)) {
         return
     }
     const brushes = [
@@ -875,6 +951,14 @@ const handleMapWheel = (event) => {
         changeMapZoom(event.deltaY < 0 ? 1 : -1, event)
         return
     }
+    if (selectedMapType.value === 'biome') {
+        if (biomeEditMode.value === 'area' || event.buttons & 2) {
+            changeMapZoom(event.deltaY < 0 ? 1 : -1, event)
+            return
+        }
+        cycleBrush(event)
+        return
+    }
     cycleBrush(event)
 }
 
@@ -902,6 +986,7 @@ const handleMapPointerDown = (event) => {
     const isAreaMode = (selectedMapType.value === 'height' && heightEditMode.value === 'area')
         || (selectedMapType.value === 'terrain' && terrainEditMode.value === 'area')
         || (selectedMapType.value === 'snow' && snowEditMode.value === 'area')
+        || (selectedMapType.value === 'biome' && biomeEditMode.value === 'area')
     if (event.button === 0 && isAreaMode && !selectedAreaPixels.value.size) {
         const coords = getMapPixelCoordinates(event)
         if (!coords) {
@@ -997,6 +1082,16 @@ const handleMapPointerDown = (event) => {
         }
         const [red, green, blue] = mapPixelContext.getImageData(coords.x, coords.z, 1, 1).data
         snowAction.value = red === green && green === blue && red >= 128
+        return
+    }
+    if (event.button === 2 && selectedMapType.value === 'biome' && biomeEditMode.value === 'area') {
+        event.preventDefault()
+        const coords = getMapPixelCoordinates(event)
+        if (!coords || !mapPixelCanvas || !mapPixelContext) {
+            return
+        }
+        selectArea(getConnectedAreaByTerrain(mapPixelContext, mapPixelCanvas.width, mapPixelCanvas.height, coords), event.shiftKey)
+        drawMap()
         return
     }
     startMapDrag(event)
@@ -1166,6 +1261,9 @@ const editMapPixel = (event) => {
     if (selectedMapType.value === 'snow' && snowEditMode.value === 'brush') {
         editSnowPixelAt(coords)
     }
+    if (selectedMapType.value === 'biome' && biomeEditMode.value === 'brush' && mapPixelCanvas) {
+        applyBiomePixels(new Set(getBrushPixelCoordinates(coords).map((pixel) => pixel.z * mapPixelCanvas.width + pixel.x)))
+    }
 }
 
 const editMapPixelAt = (coords) => {
@@ -1298,6 +1396,40 @@ const applySnowArea = () => {
     pendingSnowChangeCount.value = changes.size
     saveSelectedAreaHistory()
     drawMap()
+}
+
+const applyBiomePixels = (pixels) => {
+    if (selectedMapType.value !== 'biome' || !Number.isInteger(selectedWorldId.value) || !mapPixelCanvas || !pixels.size) {
+        return
+    }
+    const density = clampBiomeDensity(biomeDensity.value)
+    biomeDensity.value = density
+    GMManager.generateBiome(
+        selectedWorldId.value,
+        selectedBiomePreset.value,
+        density,
+        serializeAreaPixels(pixels, mapPixelCanvas.width),
+    )
+}
+
+const applyBiomeArea = () => {
+    if (biomeEditMode.value !== 'area' || !selectedAreaPixels.value.size) {
+        return
+    }
+    applyBiomePixels(selectedAreaPixels.value)
+    saveSelectedAreaHistory()
+}
+
+const deforestBiomeArea = () => {
+    if (selectedMapType.value !== 'biome' || biomeEditMode.value !== 'area' || !Number.isInteger(selectedWorldId.value)
+        || !mapPixelCanvas || !selectedAreaPixels.value.size) {
+        return
+    }
+    GMManager.deforestBiome(
+        selectedWorldId.value,
+        serializeAreaPixels(selectedAreaPixels.value, mapPixelCanvas.width),
+    )
+    saveSelectedAreaHistory()
 }
 
 const saveMapData = () => {
@@ -1508,6 +1640,9 @@ const getMapPixelValue = (r, g, b) => {
     if (selectedMapType.value === 'snow') {
         return getSnowMapPixelValue(r, g, b)
     }
+    if (selectedMapType.value === 'biome') {
+        return getTerrainMapPixelValue(r, g, b, worldSettings.value?.environment.category)
+    }
     return getGatheringMapPixelValue(r)
 }
 
@@ -1658,6 +1793,15 @@ watch([brushSize, brushShape], drawMap)
 watch(highlightImpassable, drawMap)
 watch([terrainEditMode, selectedTerrainType], drawMap)
 watch([snowEditMode, snowAction], drawMap)
+watch([selectedBiomePreset, biomeDensity, biomeEditMode], ([preset, density, mode]) => {
+    const safeDensity = clampBiomeDensity(density)
+    if (safeDensity !== biomeDensity.value) {
+        biomeDensity.value = safeDensity
+        return
+    }
+    storeBiomeTool(preset, safeDensity, mode)
+    drawMap()
+})
 
 watch([targetHeight, brushSize, brushShape, heightEditMode], ([height, size, shape, mode]) => {
     const safeHeight = Math.max(1, Math.min(31, Math.round(height)))
@@ -1708,7 +1852,7 @@ watch(() => GMManager.worldMapImage.value, (data) => {
             }
         }
     }
-    if (data.worldId === selectedWorldId.value && selectedMapType.value === 'terrain'
+    if (data.worldId === selectedWorldId.value && ['terrain', 'biome'].includes(selectedMapType.value)
         && data.mapType === 'height' && terrainHeightMapRequestedForWorld === data.worldId) {
         const image = new Image()
         image.onload = () => {
@@ -1773,6 +1917,13 @@ watch(() => GMManager.worldMapImage.value, (data) => {
         mapPixelContext.drawImage(image, 0, 0)
         mapPixelCanvas = pixelCanvas
         mapHoverCoordinates.value = null
+        if (data.mapType === 'biome') {
+            biomeTreePixels.clear()
+            for (const tree of data.trees ?? []) {
+                biomeTreePixels.add(`${tree.x};${tree.z}`)
+            }
+            rebuildBiomeTreeOverlay()
+        }
         if (data.mapType === 'height') {
             const pendingChanges = pendingHeightChangesByWorld.get(data.worldId)
             pendingChanges?.forEach((change) => {
@@ -1803,7 +1954,7 @@ watch(() => GMManager.worldMapImage.value, (data) => {
             : null
         mapImage.value = image
         mapHoverValue.value = 'Move over the map'
-        if (data.mapType === 'terrain' && terrainHeightMapRequestedForWorld !== data.worldId) {
+        if (['terrain', 'biome'].includes(data.mapType) && terrainHeightMapRequestedForWorld !== data.worldId) {
             terrainHeightMapRequestedForWorld = data.worldId
             GMManager.loadWorldMapImage(data.worldId, 'height')
         }
@@ -1814,6 +1965,20 @@ watch(() => GMManager.worldMapImage.value, (data) => {
         drawMap()
     }
     image.src = `data:image/png;base64,${data.image}`
+})
+
+watch(() => GMManager.worldBiomeTreesChanged.value, (change) => {
+    if (!change || change.worldId !== selectedWorldId.value) {
+        return
+    }
+    for (const tree of change.removedTrees) {
+        biomeTreePixels.delete(`${tree.x};${tree.z}`)
+    }
+    for (const tree of change.addedTrees) {
+        biomeTreePixels.add(`${tree.x};${tree.z}`)
+    }
+    rebuildBiomeTreeOverlay()
+    drawMap()
 })
 
 watch(environmentType, (type) => {

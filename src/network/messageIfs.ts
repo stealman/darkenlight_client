@@ -391,6 +391,13 @@ export interface GMWorldSettingsData {
 
 export interface GMWorldMapImageData {
     worldId: number
-    mapType: 'height' | 'terrain' | 'snow' | 'gathering'
+    mapType: 'height' | 'terrain' | 'snow' | 'biome' | 'gathering'
     image: string
+    trees?: Array<{x: number, z: number}>
+}
+
+export interface GMWorldBiomeTreesChangedData {
+    worldId: number
+    removedTrees: Array<{x: number, z: number}>
+    addedTrees: Array<{x: number, z: number}>
 }

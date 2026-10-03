@@ -32,6 +32,7 @@ import {
     GMItemCodebookItem,
     GMWorldSettingsData,
     GMWorldMapImageData,
+    GMWorldBiomeTreesChangedData,
     GMNpcDetailsData,
     GuestCharacterNameCheckData,
     AccountCharacterNameCheckData,
@@ -136,6 +137,8 @@ export const MessageProcessor = {
                 case 75: this.processDayNightCycle(msg.d); break
                 case 76: this.processGMWorldSettings(msg.d); break
                 case 77: this.processGMWorldMapImage(msg.d); break
+                case 78: this.processBiomeChanged(msg.d); break
+                case 79: this.processGMWorldBiomeTreesChanged(msg.d); break
                 case 1003: this.processGMAllSpawns(msg.d); break
                 case 1004: this.processGMSpawnChange(msg.d); break
                 default:
@@ -330,6 +333,18 @@ export const MessageProcessor = {
 
     monsterMoveStop(data) {
         MonsterManager.monsterMoveStop(data[0], { x: data[1], z: data[2] }, data[3] === true)
+    },
+
+    processBiomeChanged(data) {
+        TreeManager.removeTrees(data.removedTrees ?? [])
+        TreeManager.consumeTrees(data.addedTrees ?? [])
+        StaticsManager.removeObjects(data.removedShrubs ?? [])
+        StaticsManager.consumeObjects(data.addedShrubs ?? [])
+        WorldRenderer.renderWorld()
+    },
+
+    processGMWorldBiomeTreesChanged(data: GMWorldBiomeTreesChangedData) {
+        GMManager.consumeWorldBiomeTreesChanged(data)
     },
 
     processWorldChangedData(data) {
