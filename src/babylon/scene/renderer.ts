@@ -187,7 +187,7 @@ export const Renderer = {
             MyPlayer.onFrame(timeRate, actualTime)
             Materials.onFrame(actualTime)
             WorldRenderer.checkRenderWorld()
-            TreeManager.onFrame(timeRate)
+            TreeManager.onFrame(timeRate, this.camera)
             Lights.onFrame(timeRate)
             CharacterManager.onFrame(timeRate, actualTime, this.frame)
             NpcManager.onFrame(timeRate, actualTime, this.frame)

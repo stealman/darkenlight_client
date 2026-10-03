@@ -1,4 +1,4 @@
-import { Matrix, Mesh, PBRMaterial, Scene, Vector2, Vector3, VertexBuffer } from '@babylonjs/core'
+import { Camera, Matrix, Mesh, PBRMaterial, Scene, Vector2, Vector3, VertexBuffer } from '@babylonjs/core'
 import { Prefab, WorldRenderer } from '@/babylon/world/worldRenderer'
 import { MaterialAlphaEnum1, MaterialEnum1, Materials } from '@/babylon/materials'
 import { WorldDataManager } from '@/data/worldDataManager'
@@ -6,11 +6,14 @@ import { ViewportManager } from '@/utils/viewport'
 import { PrefabOak } from '@/babylon/world/prefabs/treeOak'
 import { PrefabFir } from '@/babylon/world/prefabs/treeFir'
 import { Lights } from '@/babylon/scene/lights'
+import { MyPlayer } from '@/data/myPlayer'
+import { TargetingManager } from '@/gui/targettingManager'
 
 export const TreeManager = {
-    fadeDistance: 3,
     fadedAlpha: 0.35,
     fadeDuration: 0.3,
+    occlusionCheckIntervalFrames: 10,
+    occlusionCheckFrame: 0,
     prefabs: {
         tree1: null as Prefab | null,
         tree2: null as Prefab | null,
@@ -22,6 +25,7 @@ export const TreeManager = {
     visibleTrees : [] as Tree[],
 
     initialize(scene: Scene) {
+        this.occlusionCheckFrame = 0
         this.fadedPersonalShadowCasters = new WeakSet<Mesh>()
         Lights.enableTransparentShadowCasters()
         this.prefabs.tree1 = PrefabOak.getPrefab(scene)
@@ -83,14 +87,66 @@ export const TreeManager = {
         return mesh
     },
 
-    onFrame(timeRate: number) {
+    onFrame(timeRate: number, camera: Camera | null) {
         let rebuildTrees = false
         this.allTrees.forEach(tree => {
             rebuildTrees = updateTreeFade(tree, timeRate, this.fadeDuration) || rebuildTrees
         })
+
+        this.occlusionCheckFrame++
+        if (this.occlusionCheckFrame >= this.occlusionCheckIntervalFrames) {
+            this.occlusionCheckFrame = 0
+            rebuildTrees = this.updateTreeOcclusion(camera) || rebuildTrees
+        }
+
         if (rebuildTrees) {
             WorldRenderer.renderWorld()
         }
+    },
+
+    updateTreeOcclusion(camera: Camera | null): boolean {
+        if (camera == null || MyPlayer.myModel == null) {
+            return false
+        }
+
+        const cameraPosition = camera.globalPosition
+        const playerCenter = MyPlayer.myModel.node.getAbsolutePosition().clone()
+        playerCenter.y += MyPlayer.myChar.getModelHeight() / 2
+        const occlusionTargets = [playerCenter]
+        const selectedTarget = TargetingManager.selectedTarget
+        if (selectedTarget != null && selectedTarget !== MyPlayer.myChar) {
+            occlusionTargets.push(new Vector3(
+                selectedTarget.pos.x,
+                selectedTarget.pos.y + (selectedTarget.getModelHeight() / 2),
+                selectedTarget.pos.z,
+            ))
+        }
+        const segments = occlusionTargets.map(target => {
+            const direction = target.subtract(cameraPosition)
+            const length = direction.length()
+            if (length > 0) {
+                direction.scaleInPlace(1 / length)
+            }
+            return { direction, length }
+        }).filter(segment => segment.length > 0)
+        if (segments.length === 0) {
+            return false
+        }
+
+        let changed = false
+
+        this.visibleTrees.forEach(tree => {
+            const shouldFade = segments.some(segment => tree.intersectsLeafOcclusionSegment(
+                cameraPosition,
+                segment.direction,
+                segment.length,
+            ))
+            if (tree.shouldFade !== shouldFade) {
+                tree.shouldFade = shouldFade
+                changed = true
+            }
+        })
+        return changed
     },
 
     addAllShadowCasters() {
@@ -175,7 +231,7 @@ export const TreeManager = {
         this.renderTrees()
     },
 
-    renderTrees(playerPosition?: Vector3) {
+    renderTrees() {
         // Prefabs clear the matrices
         Object.values(this.prefabs).forEach(prefab => {
             prefab?.clearMatrices()
@@ -186,13 +242,12 @@ export const TreeManager = {
         const visibleTrees = new Set(this.visibleTrees)
         this.allTrees.forEach(tree => {
             if (!visibleTrees.has(tree)) {
+                tree.shouldFade = false
                 disposeFadedTreeMeshes(tree)
             }
         })
         for (const element of this.visibleTrees) {
-            const dx = element.position.x - (playerPosition?.x ?? Number.POSITIVE_INFINITY)
-            const dz = element.position.z - (playerPosition?.z ?? Number.POSITIVE_INFINITY)
-            const faded = ((dx * dx) + (dz * dz)) <= this.fadeDistance * this.fadeDistance
+            const faded = element.shouldFade
             if (faded) {
                 element.fadeTarget = this.fadedAlpha
             } else if (element.fadedMeshes.length > 0) {
@@ -266,6 +321,7 @@ class TreeOak implements Tree {
     fadedMeshes: Mesh[] = []
     fadeVisibility = 1
     fadeTarget = 1
+    shouldFade = false
 
     constructor(position: Vector3, rotation: number, scale: number, leafMaterial: Vector2) {
         this.position = position
@@ -326,6 +382,25 @@ class TreeOak implements Tree {
             WorldRenderer.block1!.uvData.push(this.woodMaterial)
         }
     }
+
+    intersectsLeafOcclusionSegment(origin: Vector3, direction: Vector3, maxDistance: number): boolean {
+        const halfWidth = 1.25 * this.scale
+        return segmentIntersectsAabb(
+            origin,
+            direction,
+            maxDistance,
+            new Vector3(
+                this.position.x - halfWidth,
+                this.position.y + (2 * this.scale),
+                this.position.z - halfWidth,
+            ),
+            new Vector3(
+                this.position.x + halfWidth,
+                this.position.y + (3.75 * this.scale),
+                this.position.z + halfWidth,
+            ),
+        )
+    }
 }
 
 class TreeFir implements Tree {
@@ -338,6 +413,7 @@ class TreeFir implements Tree {
     fadedMeshes: Mesh[] = []
     fadeVisibility = 1
     fadeTarget = 1
+    shouldFade = false
 
     constructor(position: Vector3, rotation: number, scale: number, leafMaterial: Vector2) {
         this.position = position
@@ -398,7 +474,33 @@ class TreeFir implements Tree {
             WorldRenderer.block1!.uvData.push(this.woodMaterial)
         }
     }
+
+    intersectsLeafOcclusionSegment(origin: Vector3, direction: Vector3, maxDistance: number): boolean {
+        const crownBaseY = this.position.y - 1 + (2 * this.scale)
+        for (const layer of FIR_OCCLUSION_LAYERS) {
+            const halfWidth = layer.halfWidth * this.scale
+            if (segmentIntersectsAabb(
+                origin,
+                direction,
+                maxDistance,
+                new Vector3(
+                    this.position.x - halfWidth,
+                    crownBaseY + (layer.minY * this.scale),
+                    this.position.z - halfWidth,
+                ),
+                new Vector3(
+                    this.position.x + halfWidth,
+                    crownBaseY + (layer.maxY * this.scale),
+                    this.position.z + halfWidth,
+                ),
+            )) {
+                return true
+            }
+        }
+        return false
+    }
 }
+
 interface Tree {
     position: Vector3
     rotation: number
@@ -406,9 +508,59 @@ interface Tree {
     fadedMeshes: Mesh[]
     fadeVisibility: number
     fadeTarget: number
+    shouldFade: boolean
 
     renderLeaves(faded: boolean): void
     renderTrunk(faded: boolean): void
+    intersectsLeafOcclusionSegment(origin: Vector3, direction: Vector3, maxDistance: number): boolean
+}
+
+const FIR_OCCLUSION_LAYERS = [
+    { minY: 0, maxY: 0.25, halfWidth: 1.15 },
+    { minY: 0.25, maxY: 0.75, halfWidth: 0.85 },
+    { minY: 0.75, maxY: 1.25, halfWidth: 0.65 },
+    { minY: 1.25, maxY: 1.75, halfWidth: 0.5 },
+    { minY: 1.75, maxY: 2.25, halfWidth: 0.4 },
+    { minY: 2.25, maxY: 2.75, halfWidth: 0.25 },
+]
+
+function segmentIntersectsAabb(
+    origin: Vector3,
+    direction: Vector3,
+    maxDistance: number,
+    minimum: Vector3,
+    maximum: Vector3,
+): boolean {
+    let near = 0
+    let far = maxDistance
+    const origins = [origin.x, origin.y, origin.z]
+    const directions = [direction.x, direction.y, direction.z]
+    const minimums = [minimum.x, minimum.y, minimum.z]
+    const maximums = [maximum.x, maximum.y, maximum.z]
+
+    for (let axis = 0; axis < 3; axis++) {
+        if (Math.abs(directions[axis]) < 0.000001) {
+            if (origins[axis] < minimums[axis] || origins[axis] > maximums[axis]) {
+                return false
+            }
+            continue
+        }
+
+        const inverseDirection = 1 / directions[axis]
+        let axisNear = (minimums[axis] - origins[axis]) * inverseDirection
+        let axisFar = (maximums[axis] - origins[axis]) * inverseDirection
+        if (axisNear > axisFar) {
+            const swap = axisNear
+            axisNear = axisFar
+            axisFar = swap
+        }
+        near = Math.max(near, axisNear)
+        far = Math.min(far, axisFar)
+        if (near > far) {
+            return false
+        }
+    }
+    return true
 }
 
 function updateTreeFade(tree: Tree, timeRate: number, duration: number): boolean {

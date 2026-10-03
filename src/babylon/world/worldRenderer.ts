@@ -91,7 +91,7 @@ export const WorldRenderer = {
         }, snowCoverMask)
 
         // Render trees
-        TreeManager.renderTrees(MyPlayer.myChar.pos)
+        TreeManager.renderTrees()
 
         // Render statics
         StaticsManager.renderObjects()
