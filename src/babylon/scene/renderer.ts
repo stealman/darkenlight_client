@@ -40,6 +40,7 @@ import { GroundItemsManager } from '@/babylon/world/groundItemsManager'
 import { EmeraldsManager } from '@/gui/emeraldsManager'
 import { GfxManager } from '@/babylon/gfx/gfxManager'
 import { StaticsManager } from '@/babylon/world/statics/staticsManager'
+import { TreeManager } from '@/babylon/world/treeManager'
 import { NIGHT_ENVIRONMENT_INTENSITY_FACTOR } from '@/babylon/scene/lighting/lightConfig'
 import { invoke } from '@tauri-apps/api/core'
 
@@ -186,6 +187,7 @@ export const Renderer = {
             MyPlayer.onFrame(timeRate, actualTime)
             Materials.onFrame(actualTime)
             WorldRenderer.checkRenderWorld()
+            TreeManager.onFrame(timeRate)
             Lights.onFrame(timeRate)
             CharacterManager.onFrame(timeRate, actualTime, this.frame)
             NpcManager.onFrame(timeRate, actualTime, this.frame)

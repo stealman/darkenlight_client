@@ -175,6 +175,16 @@ export const Lights = {
         clearStaticLights(this)
     },
 
+    enableTransparentShadowCasters() {
+        const generators = [this.shadow, this.personalShadow, ...this.staticShadowGenerators]
+        generators.forEach(generator => {
+            if (generator?.getShadowMap != null) {
+                generator.transparencyShadow = true
+                generator.enableSoftTransparentShadow = false
+            }
+        })
+    },
+
     onFrame(timeRate: number) {
         onLightsFrame(this, timeRate)
     },
