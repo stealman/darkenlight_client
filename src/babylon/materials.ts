@@ -308,8 +308,8 @@ export const TerrainEnum1 = {
 
     TERRAIN_ORE_ROCK: new MaterialEnum(1003, new Vector2(6.5, 2.5)),
 
-    getTerrainForBlock(block: MapBlock, ignoreSnow: boolean = false): Vector2 {
-        let type = block.type;
+    getTerrainForBlock(block: MapBlock, ignoreSnow: boolean = false, overrideType?: number): Vector2 {
+        let type = overrideType ?? block.type;
         if (block.minableOreAvailable) {
             type += 1000;
         }
@@ -325,7 +325,7 @@ export const TerrainEnum1 = {
         // Ore can be assigned to a non-rock tile by the GM editor, and a
         // snowed ore tile has no dedicated atlas entry. Keep the terrain
         // renderable by falling back to the block's ordinary/snow variant.
-        const baseType = block.type + (block.snowed && !ignoreSnow ? 100 : 0)
+        const baseType = (overrideType ?? block.type) + (block.snowed && !ignoreSnow ? 100 : 0)
         const fallback = Object.values(TerrainEnum1).find(item => item.index === baseType)
         return fallback?.uv ?? TerrainEnum1.TERRAIN_DIRT.uv;
     }
@@ -344,9 +344,9 @@ export const PlaneEnum1 = {
     PLANE_SNOW_ROCK: new MaterialEnum(103, new Vector2(4.5, 6.5)),
     PLANE_SNOW_MUDDY_DIRT: new MaterialEnum(104, new Vector2(4.5, 6.5)),
 
-    getPlaneForBlock(block: MapBlock): Vector2 {
-        let type = block.type;
-        if (block.snowed) {
+    getPlaneForBlock(block: MapBlock, ignoreSnow: boolean = false, overrideType?: number): Vector2 {
+        let type = overrideType ?? block.type;
+        if (block.snowed && !ignoreSnow) {
             type += 100;
         }
         return Object.values(PlaneEnum1).find(item => item.index === type)?.uv;

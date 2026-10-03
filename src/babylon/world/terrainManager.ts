@@ -83,7 +83,7 @@ export const TerrainManager = {
         }
     },
 
-    renderTerrain(renderTerrainStatics?: (terrainMatrices: Matrix[], terrainUvData: Vector2[]) => void) {
+    renderTerrain(renderTerrainStatics?: (terrainMatrices: Matrix[], terrainUvData: Vector2[]) => void, snowCoverMask: Set<number> = new Set()) {
         const myPos = MyPlayer.myChar.getPositionRounded()
         const blockMap = WorldDataManager.getBlockMap()
         const planeBlockMap = WorldDataManager.getPlaneBlockMap()
@@ -104,7 +104,11 @@ export const TerrainManager = {
                 }
 
                 const block = blockMap[x][z]
-                const heightOffset = block.heightOffset
+                const hideSnow = block.snowed && snowCoverMask.has(x * blockMap.length + z)
+                const renderType = hideSnow && block.type === 2 ? DIRT_BLOCK_TYPE : undefined
+                const heightOffset = hideSnow
+                    ? block.type === WATER_BLOCK_TYPE ? -0.1 : 0
+                    : block.heightOffset
 
                 if (block.type > 0) {
                     if (planeBlockMap[x][z]) {
@@ -113,7 +117,7 @@ export const TerrainManager = {
                         } else {
                             const matrix = Matrix.Translation(x, block.height + heightOffset, z)
                             planeMatrices.push(matrix)
-                            planeUvData.push(PlaneEnum1.getPlaneForBlock(planeBlockMap[x][z]))
+                            planeUvData.push(PlaneEnum1.getPlaneForBlock(planeBlockMap[x][z], hideSnow, renderType))
                         }
                     } else {
 
@@ -139,7 +143,7 @@ export const TerrainManager = {
                         const matrix = scaleMatrix.multiply(Matrix.Translation( x, block.height + heightOffset * 0.5, z));
 
                         terrainMatrices1.push(matrix)
-                        terrainUvData1.push(TerrainEnum1.getTerrainForBlock(block))
+                        terrainUvData1.push(TerrainEnum1.getTerrainForBlock(block, hideSnow, renderType))
 
                         // If minheight is lower than current block height - 1, then fill the gap with blocks
                         for (let fillHeight = minHeight + 1; fillHeight < block.height; fillHeight++) {
@@ -148,7 +152,8 @@ export const TerrainManager = {
                             // snow block and leaves a visible horizontal gap in a terrain wall.
                             const fillMatrix = Matrix.Translation(x, fillHeight, z);
                             terrainMatrices1.push(fillMatrix)
-                            terrainUvData1.push(TerrainEnum1.getTerrainForBlock(block, true))
+                            const fillType = block.type === 2 ? DIRT_BLOCK_TYPE : renderType
+                            terrainUvData1.push(TerrainEnum1.getTerrainForBlock(block, true, fillType))
                         }
                     }
                 }

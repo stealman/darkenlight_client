@@ -20,6 +20,7 @@ import { ViewportManager } from '@/utils/viewport'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { TargetingManager } from '@/gui/targettingManager'
 import { MyPlayer } from '@/data/myPlayer'
+import { createSnowCoverMask } from '@/babylon/world/snowCoverMask'
 
 export const WorldRenderer = {
     block1: null as SymmetricBlock | null,
@@ -75,11 +76,19 @@ export const WorldRenderer = {
     renderWorld() {
         this.block1!.clearMatrices()
         this.blockWithAlpha1!.clearMatrices()
+        const blockMap = WorldDataManager.getBlockMap()
+        const snowCoverMask = createSnowCoverMask(
+            TreeManager.allTrees,
+            StaticsManager.allStatics,
+            blockMap.length,
+            MyPlayer.worldId,
+            (x, z) => blockMap[x][z].height,
+        )
 
         // Render terrain
         TerrainManager.renderTerrain((terrainMatrices, terrainUvData) => {
             StaticsManager.renderTerrainBlocks(terrainMatrices, terrainUvData)
-        })
+        }, snowCoverMask)
 
         // Render trees
         TreeManager.renderTrees()

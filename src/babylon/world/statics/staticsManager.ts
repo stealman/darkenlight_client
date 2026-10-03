@@ -19,6 +19,7 @@ import { MyPlayer } from '@/data/myPlayer'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { StaticFireParticleManager } from '@/babylon/world/statics/staticFireParticleManager'
 import { WalkableBlock, WalkableBlockMetadata } from '@/babylon/world/statics/objects/walkableBlock'
+import { isShrubType } from '@/babylon/world/snowCoverMask'
 
 export const StaticsManager = {
     prefabs: {
@@ -50,7 +51,8 @@ export const StaticsManager = {
     },
 
     addObject(obj: { tp: number, x: number, z: number, meta?: WallTorchMetadata | StoneEntranceMetadata | PalisadeMetadata | WalkableBlockMetadata, tmp?: boolean }) {
-        const y = WorldDataManager.getBlockMap()[obj.x][obj.z].totalHeight
+        const block = WorldDataManager.getBlockMap()[obj.x][obj.z]
+        const y = block.totalHeight - (isShrubType(obj.tp) && block.snowed ? 0.1 : 0)
         const pos = new Vector3(obj.x, y, obj.z)
         const rotation = Math.floor(Math.random() * 4) * Math.PI / 2
         const previousCount = this.allStatics.length
@@ -132,7 +134,8 @@ export const StaticsManager = {
 
     recountYPositions() {
         this.allStatics.forEach(obj => {
-            const y = WorldDataManager.getBlockMap()[Math.floor(obj.position.x)][Math.floor(obj.position.z)].totalHeight
+            const block = WorldDataManager.getBlockMap()[Math.floor(obj.position.x)][Math.floor(obj.position.z)]
+            const y = block.totalHeight - (isShrubType(obj.type) && block.snowed ? 0.1 : 0)
             obj.position.y = y
             obj.renderPosition.y = y
         })
