@@ -46,6 +46,7 @@ export const StaticObjectsCodebook: Map<number, StaticObjectInfo> = new Map([
     [204, new StaticObjectInfo(204, 'PalisadeSmall', true, 1, 0.41, 0, null)],
     [205, new StaticObjectInfo(205, 'PalisadeSpiked', true, 1, 0, 0, null)],
     [206, new StaticObjectInfo(206, 'WalkableBlock', false, 1, 0, 0, null, 1, true)],
+    [207, new StaticObjectInfo(207, 'CampFence', true, 1, 0.39, 0, null)],
 
     [221, new StaticObjectInfo(221, 'Wall3_GRAY', true, 1, 0, 0, null)],
     [222, new StaticObjectInfo(222, 'Wall3_RED', true, 1, 0, 0, null)],
@@ -56,4 +57,10 @@ export const StaticObjectsCodebook: Map<number, StaticObjectInfo> = new Map([
     [261, new StaticObjectInfo(261, 'WallTorch', false, 1, 0, 2, 'CAMPFIRE')],
     [262, new StaticObjectInfo(262, 'TorchStand', true, 1, 0.3, 2, 'CAMPFIRE')],
     [281, new StaticObjectInfo(281, 'StoneEntrance', true, 4, 0, 0, null, 2)],
+
+    [301, new StaticObjectInfo(301, 'CampBench', false, 2, 0, 0, null, 1)],
+    [302, new StaticObjectInfo(302, 'PlankPile', false, 1, 0, 0, null)],
+    [303, new StaticObjectInfo(303, 'LogPile', true, 1, 0.12, 0, null)],
+    [304, new StaticObjectInfo(304, 'SupplyCrate', true, 1, 0.12, 0, null)],
+    [305, new StaticObjectInfo(305, 'CampBarrel', true, 1, 0.12, 0, null)],
 ])

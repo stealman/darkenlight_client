@@ -12,9 +12,11 @@ export const FoliageManager = {
     ATLAS_ROWS: 8,
     GENERATE_ON_TERRAINS: [
         { terrain: TerrainEnum1.TERRAIN_GRASS, rowIndex: 0, avgTilesPerFoliage: 2 },
+        { terrain: TerrainEnum1.TERRAIN_GRASS_WINTER, rowIndex: 0, avgTilesPerFoliage: 2 },
         { terrain: TerrainEnum1.TERRAIN_MUDDY_DIRT, rowIndex: 1, avgTilesPerFoliage: 10 },
         { terrain: TerrainEnum1.TERRAIN_SNOW_GRASS, rowIndex: 2, avgTilesPerFoliage: 12 },
         { terrain: TerrainEnum1.TERRAIN_SNOW_MUDDY_DIRT, rowIndex: 2, avgTilesPerFoliage: 12 },
+        { terrain: TerrainEnum1.TERRAIN_SNOW_GRASS_WINTER, rowIndex: 2, avgTilesPerFoliage: 12 },
     ],
     foliageMesh: null as Mesh | null,
     foliageMaterial: null as PBRCustomMaterial | null,

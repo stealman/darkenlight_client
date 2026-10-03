@@ -237,7 +237,7 @@ export class MapBlock {
         }
 
         // Grass blocks are rendered slightly higher
-        if (this.type == 2) {
+        if (this.type === 2 || this.type === 5) {
             return  0.1
         }
 

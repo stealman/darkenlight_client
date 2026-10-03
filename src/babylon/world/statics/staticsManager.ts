@@ -20,6 +20,16 @@ import { AudioManager } from '@/babylon/audio/audioManager'
 import { StaticFireParticleManager } from '@/babylon/world/statics/staticFireParticleManager'
 import { WalkableBlock, WalkableBlockMetadata } from '@/babylon/world/statics/objects/walkableBlock'
 import { isShrubType } from '@/babylon/world/snowCoverMask'
+import {
+    CampBarrel,
+    CampBench,
+    CampFence,
+    CampFenceMetadata,
+    CampObjectMetadata,
+    LogPile,
+    PlankPile,
+    SupplyCrate,
+} from '@/babylon/world/statics/objects/campObjects'
 
 export const StaticsManager = {
     prefabs: {
@@ -44,13 +54,13 @@ export const StaticsManager = {
         })
     },
 
-    consumeObjects(data: Array<{ tp: number, x: number, z: number, meta?: WallTorchMetadata | StoneEntranceMetadata | PalisadeMetadata | WalkableBlockMetadata, tmp?: boolean }>) {
+    consumeObjects(data: Array<{ tp: number, x: number, z: number, meta?: WallTorchMetadata | StoneEntranceMetadata | PalisadeMetadata | WalkableBlockMetadata | CampObjectMetadata | CampFenceMetadata, tmp?: boolean }>) {
         data.forEach(obj => {
             this.addObject(obj)
         })
     },
 
-    addObject(obj: { tp: number, x: number, z: number, meta?: WallTorchMetadata | StoneEntranceMetadata | PalisadeMetadata | WalkableBlockMetadata, tmp?: boolean }) {
+    addObject(obj: { tp: number, x: number, z: number, meta?: WallTorchMetadata | StoneEntranceMetadata | PalisadeMetadata | WalkableBlockMetadata | CampObjectMetadata | CampFenceMetadata, tmp?: boolean }) {
         const block = WorldDataManager.getBlockMap()[obj.x][obj.z]
         const y = block.totalHeight - (isShrubType(obj.tp) && block.snowed ? 0.1 : 0)
         const pos = new Vector3(obj.x, y, obj.z)
@@ -99,6 +109,13 @@ export const StaticsManager = {
                 this.allStatics.push(new WalkableBlock(obj.tp, pos, material, metadata))
                 break
             }
+            case 207: this.allStatics.push(new CampFence(
+                obj.tp,
+                pos,
+                MaterialEnum1.WOOD_3.uv,
+                MaterialEnum1.WOOD_1.uv,
+                obj.meta as CampFenceMetadata,
+            )); break
 
             case 221: this.allStatics.push(new Wall3(obj.tp, pos, rotation, MaterialEnum1.BRICK_GRAY.uv)); break
             case 222: this.allStatics.push(new Wall3(obj.tp, pos, rotation, MaterialEnum1.BRICK_RED.uv)); break
@@ -120,6 +137,11 @@ export const StaticsManager = {
                 this.dungeonEntrances.add(entrance)
                 break
             }
+            case 301: this.allStatics.push(new CampBench(obj.tp, pos, MaterialEnum1.WOOD_1.uv, MaterialEnum1.WOOD_3.uv, obj.meta as CampObjectMetadata)); break
+            case 302: this.allStatics.push(new PlankPile(obj.tp, pos, MaterialEnum1.WOOD_2.uv, MaterialEnum1.WOOD_3.uv, obj.meta as CampObjectMetadata)); break
+            case 303: this.allStatics.push(new LogPile(obj.tp, pos, MaterialEnum1.WOOD_3.uv, MaterialEnum1.WOOD_1.uv, obj.meta as CampObjectMetadata)); break
+            case 304: this.allStatics.push(new SupplyCrate(obj.tp, pos, MaterialEnum1.WOOD_2.uv, MaterialEnum1.WOOD_3.uv, obj.meta as CampObjectMetadata)); break
+            case 305: this.allStatics.push(new CampBarrel(obj.tp, pos, MaterialEnum1.WOOD_1.uv, MaterialEnum1.STEEL_1.uv, obj.meta as CampObjectMetadata)); break
             default:
                 break
         }
@@ -179,7 +201,7 @@ export const StaticsManager = {
             prefab?.clearMatrices()
         })
 
-        this.resolvePalisadeCorners()
+        this.resolveConnectingCorners()
         this.updateVisibleObjects()
         for (const element of this.visibleStatics) {
             element.render()
@@ -197,29 +219,36 @@ export const StaticsManager = {
         })
     },
 
-    resolvePalisadeCorners() {
+    resolveConnectingCorners() {
         const palisades = this.allStatics.filter((obj): obj is PalisadeWall2 => obj instanceof PalisadeWall2)
-        const palisadesByTile = new Map(palisades.map((obj) => [`${obj.position.x};${obj.position.z}`, obj]))
+        const fences = this.allStatics.filter((obj): obj is CampFence => obj instanceof CampFence)
 
-        for (const palisade of palisades) {
-            palisade.setCornerDirections(null)
-            const axisDirections = palisade.getOrientation() === 'X'
+        this.resolveCorners(palisades)
+        this.resolveCorners(fences)
+    },
+
+    resolveCorners<T extends PalisadeWall2 | CampFence>(objects: T[]) {
+        const objectsByTile = new Map(objects.map((obj) => [`${obj.position.x};${obj.position.z}`, obj]))
+
+        for (const object of objects) {
+            object.setCornerDirections(null)
+            const axisDirections = object.getOrientation() === 'X'
                 ? [{x: -1, z: 0}, {x: 1, z: 0}]
                 : [{x: 0, z: -1}, {x: 0, z: 1}]
-            const perpendicularDirections = palisade.getOrientation() === 'X'
+            const perpendicularDirections = object.getOrientation() === 'X'
                 ? [{x: 0, z: -1}, {x: 0, z: 1}]
                 : [{x: -1, z: 0}, {x: 1, z: 0}]
             const continuations = axisDirections.filter((direction) => {
-                const neighbor = palisadesByTile.get(`${palisade.position.x + direction.x};${palisade.position.z + direction.z}`)
-                return neighbor?.getOrientation() === palisade.getOrientation()
+                const neighbor = objectsByTile.get(`${object.position.x + direction.x};${object.position.z + direction.z}`)
+                return neighbor?.getOrientation() === object.getOrientation()
             })
             const turns = perpendicularDirections.filter((direction) => {
-                const neighbor = palisadesByTile.get(`${palisade.position.x + direction.x};${palisade.position.z + direction.z}`)
-                return neighbor && neighbor.getOrientation() !== palisade.getOrientation()
+                const neighbor = objectsByTile.get(`${object.position.x + direction.x};${object.position.z + direction.z}`)
+                return neighbor && neighbor.getOrientation() !== object.getOrientation()
             })
 
             if (continuations.length === 1 && turns.length === 1) {
-                palisade.setCornerDirections([continuations[0], turns[0]])
+                object.setCornerDirections([continuations[0], turns[0]])
             }
         }
     },

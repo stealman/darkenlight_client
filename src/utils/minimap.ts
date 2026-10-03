@@ -18,6 +18,7 @@ export const MiniMap = {
     minHeight: 6,
     maxHeight: 32,
     grassColorMap: [] as string[],
+    winterGrassColorMap: [] as string[],
     dirtColorMap: [] as string[],
     rockColorMap: [] as string[],
     snowColorMap: [] as string[],
@@ -49,6 +50,11 @@ export const MiniMap = {
             const brightness = (height - this.minHeight) / (this.maxHeight - this.minHeight)
             const greenValue = Math.round(102 + brightness * (255 - 102))
             this.grassColorMap[height] = `#00${greenValue.toString(16).padStart(2, '0')}00`
+
+            const winterGrassRed = Math.round(72 + brightness * (176 - 72))
+            const winterGrassGreen = Math.round(90 + brightness * (204 - 90))
+            const winterGrassBlue = Math.round(8 + brightness * (64 - 8))
+            this.winterGrassColorMap[height] = `#${winterGrassRed.toString(16).padStart(2, '0')}${winterGrassGreen.toString(16).padStart(2, '0')}${winterGrassBlue.toString(16).padStart(2, '0')}`
 
             // Keep the original mid-range colors while making the terrain relief visible.
             const dirtRed = Math.round(84 + brightness * (196 - 84))
@@ -135,6 +141,9 @@ export const MiniMap = {
         }
         if (type === 2) {
             return this.grassColorMap[colorHeight]
+        }
+        if (type === 5) {
+            return this.winterGrassColorMap[colorHeight]
         }
         if (type === 3) {
             return this.rockColorMap[colorHeight]

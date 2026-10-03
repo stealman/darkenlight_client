@@ -66,6 +66,17 @@
         </div>
 
         <div style="margin-top: 1vh">
+            <label class="tree-item" :class="{ selected: 'CAMP_FENCE' === selectedObjectType }" @click="selectObjectType('CAMP_FENCE')">Camp Fence</label>
+            <label v-if="selectedObjectType === 'CAMP_FENCE'">
+                &nbsp;&nbsp;dir.
+                <select v-model="palisadeOrientation">
+                    <option value="X">X</option>
+                    <option value="Z">Z</option>
+                </select>
+            </label>
+        </div>
+
+        <div style="margin-top: 1vh">
             <label class="tree-item" :class="{ selected: 'WALKABLE_BLOCK' === selectedObjectType }" @click="selectObjectType('WALKABLE_BLOCK')">Walkable Block</label>
             <label v-if="selectedObjectType === 'WALKABLE_BLOCK'">
                 &nbsp;&nbsp;height
@@ -104,6 +115,7 @@ const objects = [
     { type: "PALISADE_SMALL", name: "PalisadeSmall", id: 204 },
     { type: "PALISADE_SPIKED", name: "PalisadeSpiked", id: 205 },
     { type: "WALKABLE_BLOCK", name: "WalkableBlock", id: 206 },
+    { type: "CAMP_FENCE", name: "CampFence", id: 207 },
 
     { type: "WALL3", name: "Wall3_GRAY", id: 221 },
     { type: "WALL3", name: "Wall3_RED", id: 222 },

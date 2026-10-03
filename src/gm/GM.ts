@@ -38,6 +38,12 @@ export const PALISADE_WALL_2_STATIC_ID = 203
 export const PALISADE_SMALL_STATIC_ID = 204
 export const PALISADE_SPIKED_STATIC_ID = 205
 export const WALKABLE_BLOCK_STATIC_ID = 206
+export const CAMP_FENCE_STATIC_ID = 207
+export const CAMP_BENCH_STATIC_ID = 301
+export const PLANK_PILE_STATIC_ID = 302
+export const LOG_PILE_STATIC_ID = 303
+export const SUPPLY_CRATE_STATIC_ID = 304
+export const CAMP_BARREL_STATIC_ID = 305
 
 export const GMManager = {
     gmPanelVisible: ref(false),
@@ -59,6 +65,8 @@ export const GMManager = {
     walkableBlockHeight: ref(1),
     walkableBlockMaterial: ref('WOOD'),
     selectedStatic: ref (0),
+    campObjectFacing: ref('+Z'),
+    logPileLength: ref(1),
     torchFacing: ref('-Z'),
     torchMountHeight: ref(2),
     entranceFacing: ref('+Z'),
@@ -179,7 +187,8 @@ export const GMManager = {
                     type: this.selectedWallFence.value,
                 }
                 if (this.selectedWallFence.value === PALISADE_WALL_2_STATIC_ID
-                    || this.selectedWallFence.value === PALISADE_SMALL_STATIC_ID) {
+                    || this.selectedWallFence.value === PALISADE_SMALL_STATIC_ID
+                    || this.selectedWallFence.value === CAMP_FENCE_STATIC_ID) {
                     wallFenceData.meta = {orientation: this.palisadeOrientation.value}
                 }
                 if (this.selectedWallFence.value === PALISADE_SPIKED_STATIC_ID) {
@@ -214,6 +223,19 @@ export const GMManager = {
                 }
                 if (this.selectedStatic.value === TORCH_STAND_STATIC_ID) {
                     staticData.meta = {facing: this.torchFacing.value}
+                }
+                if (this.selectedStatic.value === CAMP_BENCH_STATIC_ID
+                    || this.selectedStatic.value === PLANK_PILE_STATIC_ID
+                    || this.selectedStatic.value === LOG_PILE_STATIC_ID
+                    || this.selectedStatic.value === SUPPLY_CRATE_STATIC_ID
+                    || this.selectedStatic.value === CAMP_BARREL_STATIC_ID) {
+                    staticData.meta = {facing: this.campObjectFacing.value}
+                }
+                if (this.selectedStatic.value === LOG_PILE_STATIC_ID) {
+                    staticData.meta = {
+                        facing: this.campObjectFacing.value,
+                        length: this.logPileLength.value,
+                    }
                 }
                 if (this.selectedStatic.value === STONE_ENTRANCE_STATIC_ID) {
                     staticData.meta = {

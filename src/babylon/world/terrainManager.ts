@@ -9,6 +9,7 @@ import { ViewportManager } from '@/utils/viewport'
 import { MyPlayer } from '@/data/myPlayer'
 
 export const DIRT_BLOCK_TYPE = 1
+const GRASS_BLOCK_TYPES = new Set([2, 5])
 export const WATER_BLOCK_TYPE = 50
 const WATER_BOTTOM_BLOCK = new MapBlock(0, DIRT_BLOCK_TYPE)
 
@@ -105,7 +106,7 @@ export const TerrainManager = {
 
                 const block = blockMap[x][z]
                 const hideSnow = block.snowed && snowCoverMask.has(x * blockMap.length + z)
-                const renderType = hideSnow && block.type === 2 ? DIRT_BLOCK_TYPE : undefined
+                const renderType = hideSnow && GRASS_BLOCK_TYPES.has(block.type) ? DIRT_BLOCK_TYPE : undefined
                 const heightOffset = hideSnow
                     ? block.type === WATER_BLOCK_TYPE ? -0.1 : 0
                     : block.heightOffset
@@ -152,7 +153,7 @@ export const TerrainManager = {
                             // snow block and leaves a visible horizontal gap in a terrain wall.
                             const fillMatrix = Matrix.Translation(x, fillHeight, z);
                             terrainMatrices1.push(fillMatrix)
-                            const fillType = block.type === 2 ? DIRT_BLOCK_TYPE : renderType
+                            const fillType = GRASS_BLOCK_TYPES.has(block.type) ? DIRT_BLOCK_TYPE : renderType
                             terrainUvData1.push(TerrainEnum1.getTerrainForBlock(block, true, fillType))
                         }
                     }

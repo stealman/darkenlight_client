@@ -8,6 +8,7 @@ import { PrefabFir } from '@/babylon/world/prefabs/treeFir'
 import { Lights } from '@/babylon/scene/lights'
 import { MyPlayer } from '@/data/myPlayer'
 import { TargetingManager } from '@/gui/targettingManager'
+import { segmentIntersectsAabb } from '@/babylon/geometryUtils'
 
 export const TreeManager = {
     fadedAlpha: 0.35,
@@ -523,45 +524,6 @@ const FIR_OCCLUSION_LAYERS = [
     { minY: 1.75, maxY: 2.25, halfWidth: 0.4 },
     { minY: 2.25, maxY: 2.75, halfWidth: 0.25 },
 ]
-
-function segmentIntersectsAabb(
-    origin: Vector3,
-    direction: Vector3,
-    maxDistance: number,
-    minimum: Vector3,
-    maximum: Vector3,
-): boolean {
-    let near = 0
-    let far = maxDistance
-    const origins = [origin.x, origin.y, origin.z]
-    const directions = [direction.x, direction.y, direction.z]
-    const minimums = [minimum.x, minimum.y, minimum.z]
-    const maximums = [maximum.x, maximum.y, maximum.z]
-
-    for (let axis = 0; axis < 3; axis++) {
-        if (Math.abs(directions[axis]) < 0.000001) {
-            if (origins[axis] < minimums[axis] || origins[axis] > maximums[axis]) {
-                return false
-            }
-            continue
-        }
-
-        const inverseDirection = 1 / directions[axis]
-        let axisNear = (minimums[axis] - origins[axis]) * inverseDirection
-        let axisFar = (maximums[axis] - origins[axis]) * inverseDirection
-        if (axisNear > axisFar) {
-            const swap = axisNear
-            axisNear = axisFar
-            axisFar = swap
-        }
-        near = Math.max(near, axisNear)
-        far = Math.min(far, axisFar)
-        if (near > far) {
-            return false
-        }
-    }
-    return true
-}
 
 function updateTreeFade(tree: Tree, timeRate: number, duration: number): boolean {
     if (tree.fadedMeshes.length === 0 || tree.fadeVisibility === tree.fadeTarget) {

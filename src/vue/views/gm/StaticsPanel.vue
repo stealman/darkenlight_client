@@ -39,6 +39,37 @@
             </select>
         </div>
 
+        <div style="margin-top: 1vh">
+            <label class="tree-item" :class="{ selected: 'CAMP' === selectedObjectType }" @click="selectObjectType('CAMP')">Camp Props</label>
+            &nbsp;&nbsp;
+            <select v-if="selectedObjectType === 'CAMP'" @change="selectObject($event.target.value)">
+                <option v-for="obj in objects.filter(s => s.type === 'CAMP')" :key="obj.id" :value="obj.id" :selected="obj.id === selectedObject">
+                    {{ obj.name }}
+                </option>
+            </select>
+        </div>
+
+        <div v-if="selectedObjectType === 'CAMP'" style="margin-top: 1vh">
+            <label>Direction</label>
+            &nbsp;&nbsp;
+            <select v-model="campObjectFacing">
+                <option value="-X">-X</option>
+                <option value="+X">+X</option>
+                <option value="-Z">-Z</option>
+                <option value="+Z">+Z</option>
+            </select>
+            <template v-if="selectedObject === 303">
+                &nbsp;&nbsp;
+                <label>Log length</label>
+                &nbsp;&nbsp;
+                <select v-model.number="logPileLength">
+                    <option :value="1">1</option>
+                    <option :value="2">2</option>
+                    <option :value="3">3</option>
+                </select>
+            </template>
+        </div>
+
         <div v-if="selectedObjectType === 'TORCH'" style="margin-top: 1vh">
             <label>Direction</label>
             &nbsp;&nbsp;
@@ -85,6 +116,8 @@ const selectedObjectType = ref("")
 const selectedObject = GMManager.selectedStatic
 const torchFacing = GMManager.torchFacing
 const torchMountHeight = GMManager.torchMountHeight
+const campObjectFacing = GMManager.campObjectFacing
+const logPileLength = GMManager.logPileLength
 const entranceFacing = GMManager.entranceFacing
 const entranceDestinationWorld = GMManager.entranceDestinationWorld
 const entranceDestinationX = GMManager.entranceDestinationX
@@ -97,6 +130,11 @@ const objects = [
     { type: "TORCH", name: "Wall Torch", id: 261 },
     { type: "TORCH", name: "Torch Stand", id: 262 },
     { type: "ENTRANCE", name: "Stone Entrance", id: 281 },
+    { type: "CAMP", name: "Bench 2x1", id: 301 },
+    { type: "CAMP", name: "Plank Pile", id: 302 },
+    { type: "CAMP", name: "Log Pile", id: 303 },
+    { type: "CAMP", name: "Supply Crate", id: 304 },
+    { type: "CAMP", name: "Barrel", id: 305 },
 ]
 
 const selectObjectType = (type) => {

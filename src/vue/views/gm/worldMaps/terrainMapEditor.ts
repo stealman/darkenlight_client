@@ -3,6 +3,7 @@ export const TERRAIN_TYPES = [
     {id: 2, label: 'Grass', color: [0, 255, 0]},
     {id: 3, label: 'Mountain', color: [128, 128, 128]},
     {id: 4, label: 'Muddy Dirt', color: [110, 90, 60]},
+    {id: 5, label: 'Winter Grass', color: [128, 192, 0]},
     {id: 50, label: 'Water', color: [0, 0, 255]},
     {id: 0, label: 'Empty', color: [0, 0, 0]},
 ]
@@ -15,6 +16,7 @@ export const getTerrainMapPixelValue = (red, green, blue, environmentCategory) =
     if (red === 0 && green === 255 && blue === 0) return 'Grass'
     if (red === 128 && green === 128 && blue === 128) return 'Mountain'
     if (red === 110 && green === 90 && blue === 60) return 'Muddy Dirt'
+    if (red === 128 && green === 192 && blue === 0) return 'Winter Grass'
     if (red === 0 && green === 0 && blue === 255) return 'Water'
     if (red === 0 && green === 0 && blue === 0 && environmentCategory === 'dungeon') return 'Empty'
     return 'Dirt'

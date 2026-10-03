@@ -300,11 +300,14 @@ export const TerrainEnum1 = {
     TERRAIN_GRASS: new MaterialEnum(2, new Vector2(0.5, 6.5)),
     TERRAIN_ROCK: new MaterialEnum(3, new Vector2(6.5, 6.5)),
     TERRAIN_MUDDY_DIRT: new MaterialEnum(4, new Vector2(0.5, 4.5)),
+    // This block atlas cross sits about 14 px above the regular row alignment.
+    TERRAIN_GRASS_WINTER: new MaterialEnum(5, new Vector2(2.5, 4.65)),
 
     TERRAIN_SNOW_DIRT: new MaterialEnum(101, new Vector2(4.5, 6.5)),
     TERRAIN_SNOW_GRASS: new MaterialEnum(102, new Vector2(4.5, 6.5)),
     TERRAIN_SNOW_ROCK: new MaterialEnum(103, new Vector2(6.5, 4.5)),
     TERRAIN_SNOW_MUDDY_DIRT: new MaterialEnum(104, new Vector2(4.5, 6.5)),
+    TERRAIN_SNOW_GRASS_WINTER: new MaterialEnum(105, new Vector2(4.5, 6.5)),
 
     TERRAIN_ORE_ROCK: new MaterialEnum(1003, new Vector2(6.5, 2.5)),
 
@@ -336,6 +339,7 @@ export const PlaneEnum1 = {
     PLANE_GRASS: new MaterialEnum(2, new Vector2(0.5, 6.5)),
     PLANE_ROCK: new MaterialEnum(3, new Vector2(6.5, 6.5)),
     PLANE_MUDDY_DIRT: new MaterialEnum(4, new Vector2(0.5, 4.5)),
+    PLANE_GRASS_WINTER: new MaterialEnum(5, new Vector2(4.5, 4.5)),
 
     PLANE_WATER: new MaterialEnum(50, new Vector2(2.5, 4.5)),
 
@@ -343,6 +347,7 @@ export const PlaneEnum1 = {
     PLANE_SNOW_GRASS: new MaterialEnum(102, new Vector2(4.5, 6.5)),
     PLANE_SNOW_ROCK: new MaterialEnum(103, new Vector2(4.5, 6.5)),
     PLANE_SNOW_MUDDY_DIRT: new MaterialEnum(104, new Vector2(4.5, 6.5)),
+    PLANE_SNOW_GRASS_WINTER: new MaterialEnum(105, new Vector2(4.5, 6.5)),
 
     getPlaneForBlock(block: MapBlock, ignoreSnow: boolean = false, overrideType?: number): Vector2 {
         let type = overrideType ?? block.type;
