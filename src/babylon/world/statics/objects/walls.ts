@@ -4,7 +4,7 @@ import { Lights } from '@/babylon/scene/lights'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { BaseStaticObject } from '@/babylon/world/statics/objects/baseStaticObject'
-import { MyPlayer } from '@/data/myPlayer'
+import { getPalisadeRandom } from '@/babylon/world/statics/palisadeRandom'
 
 export class Wall2 extends BaseStaticObject {
     constructor(type: number, position: Vector3, rotation: number, material: Vector2) {
@@ -30,37 +30,82 @@ export interface PalisadeDirection {
     z: number
 }
 
+interface PalisadeRenderProfile {
+    beamCount: number
+    beamGap: number
+    edgeGap: number
+    maxBeamHeight: number
+    beamHeightVariation: number
+    beamDepth: number
+    maxDepthOffset: number
+    maxWidthVariation: number
+    maxDepthVariation: number
+    braceHeight: number
+    braceDepth: number
+    braceFaceOffset: number
+    braceCenterHeight: number
+    cornerBeamOffsets: number[]
+    cornerBraceLength: number
+}
+
+const PALISADE_LARGE_PROFILE: PalisadeRenderProfile = {
+    beamCount: 3,
+    beamGap: 0.0625,
+    edgeGap: 0.03125,
+    maxBeamHeight: 2,
+    beamHeightVariation: 0.25,
+    beamDepth: 0.25,
+    maxDepthOffset: 0.025,
+    maxWidthVariation: 0.015,
+    maxDepthVariation: 0.02,
+    braceHeight: 0.1,
+    braceDepth: 0.08,
+    braceFaceOffset: 0.18,
+    braceCenterHeight: 1,
+    cornerBeamOffsets: [1 / 3],
+    cornerBraceLength: 0.6,
+}
+
+const PALISADE_SMALL_PROFILE: PalisadeRenderProfile = {
+    beamCount: 5,
+    beamGap: 0.0625,
+    edgeGap: 0.03125,
+    maxBeamHeight: 1.25,
+    beamHeightVariation: 0.1,
+    beamDepth: 0.18,
+    maxDepthOffset: 0.018,
+    maxWidthVariation: 0.008,
+    maxDepthVariation: 0.012,
+    braceHeight: 0.07,
+    braceDepth: 0.055,
+    braceFaceOffset: 0.12,
+    braceCenterHeight: 0.62,
+    cornerBeamOffsets: [0.2, 0.4],
+    cornerBraceLength: 0.54,
+}
+
 export class PalisadeWall2 extends BaseStaticObject {
     private readonly orientation: PalisadeOrientation
+    private readonly braceMaterial: Vector2
+    private readonly profile: PalisadeRenderProfile
+    private readonly beamWidth: number
     private cornerDirections: [PalisadeDirection, PalisadeDirection] | null = null
 
-    private static readonly BEAM_COUNT = 3
-    private static readonly BEAM_GAP = 0.0625
-    private static readonly EDGE_GAP = 0.03125
-    private static readonly MAX_BEAM_HEIGHT = 2
-    private static readonly BEAM_HEIGHT_VARIATION = 0.25
     private static readonly MAX_YAW = Math.PI / 60
     private static readonly MAX_LEAN = Math.PI / 90
-    private static readonly MAX_DEPTH_OFFSET = 0.025
-    private static readonly MAX_WIDTH_VARIATION = 0.015
-    private static readonly MAX_DEPTH_VARIATION = 0.02
     private static readonly BRACE_LENGTH = 0.95
-    private static readonly BRACE_HEIGHT = 0.1
-    private static readonly BRACE_DEPTH = 0.08
-    private static readonly BRACE_FACE_OFFSET = 0.18
-    private static readonly BRACE_CENTER_HEIGHT = 1
     private static readonly MAX_BRACE_HEIGHT_OFFSET = 0.06
     private static readonly MAX_BRACE_ANGLE = Math.PI / 36
-    private static readonly CORNER_BEAM_OFFSET = 1 / 3
-    private static readonly CORNER_BRACE_LENGTH = 0.6
-    private static readonly BEAM_WIDTH = (
-        1
-        - 2 * PalisadeWall2.EDGE_GAP
-        - (PalisadeWall2.BEAM_COUNT - 1) * PalisadeWall2.BEAM_GAP
-    ) / PalisadeWall2.BEAM_COUNT
 
-    constructor(type: number, position: Vector3, material: Vector2, metadata?: PalisadeMetadata) {
+    constructor(type: number, position: Vector3, material: Vector2, braceMaterial: Vector2, metadata?: PalisadeMetadata) {
         super(type, position, 0, material, null)
+        this.braceMaterial = braceMaterial
+        this.profile = type === 204 ? PALISADE_SMALL_PROFILE : PALISADE_LARGE_PROFILE
+        this.beamWidth = (
+            1
+            - 2 * this.profile.edgeGap
+            - (this.profile.beamCount - 1) * this.profile.beamGap
+        ) / this.profile.beamCount
         this.orientation = metadata?.orientation === 'X' ? 'X' : 'Z'
         this.status = {orientation: this.orientation}
     }
@@ -68,17 +113,17 @@ export class PalisadeWall2 extends BaseStaticObject {
     render() {
         const beamOffsets = this.getBeamOffsets()
         for (let i = 0; i < beamOffsets.length; i++) {
-            const depthOffset = (this.getBeamRandom(i, 1) * 2 - 1) * PalisadeWall2.MAX_DEPTH_OFFSET
-            const height = PalisadeWall2.MAX_BEAM_HEIGHT
-                - this.getBeamRandom(i, 2) * PalisadeWall2.BEAM_HEIGHT_VARIATION
+            const depthOffset = (this.getBeamRandom(i, 1) * 2 - 1) * this.profile.maxDepthOffset
+            const height = this.profile.maxBeamHeight
+                - this.getBeamRandom(i, 2) * this.profile.beamHeightVariation
             const yaw = (this.orientation === 'Z' ? Math.PI / 2 : 0)
                 + (this.getBeamRandom(i, 3) * 2 - 1) * PalisadeWall2.MAX_YAW
             const pitch = (this.getBeamRandom(i, 4) * 2 - 1) * PalisadeWall2.MAX_LEAN
             const roll = (this.getBeamRandom(i, 5) * 2 - 1) * PalisadeWall2.MAX_LEAN
-            const width = PalisadeWall2.BEAM_WIDTH
-                + (this.getBeamRandom(i, 6) * 2 - 1) * PalisadeWall2.MAX_WIDTH_VARIATION
-            const depth = 0.25
-                + (this.getBeamRandom(i, 7) * 2 - 1) * PalisadeWall2.MAX_DEPTH_VARIATION
+            const width = this.beamWidth
+                + (this.getBeamRandom(i, 6) * 2 - 1) * this.profile.maxWidthVariation
+            const depth = this.profile.beamDepth
+                + (this.getBeamRandom(i, 7) * 2 - 1) * this.profile.maxDepthVariation
             const x = this.renderPosition.x + beamOffsets[i].x
                 + (this.cornerDirections || this.orientation === 'Z' ? depthOffset : 0)
             const z = this.renderPosition.z + beamOffsets[i].z
@@ -108,21 +153,21 @@ export class PalisadeWall2 extends BaseStaticObject {
     private getBeamOffsets(): PalisadeDirection[] {
         if (this.cornerDirections) {
             return [
-                {
-                    x: this.cornerDirections[0].x * PalisadeWall2.CORNER_BEAM_OFFSET,
-                    z: this.cornerDirections[0].z * PalisadeWall2.CORNER_BEAM_OFFSET,
-                },
+                ...this.profile.cornerBeamOffsets.slice().reverse().map((offset) => ({
+                    x: this.cornerDirections![0].x * offset,
+                    z: this.cornerDirections![0].z * offset,
+                })),
                 {x: 0, z: 0},
-                {
-                    x: this.cornerDirections[1].x * PalisadeWall2.CORNER_BEAM_OFFSET,
-                    z: this.cornerDirections[1].z * PalisadeWall2.CORNER_BEAM_OFFSET,
-                },
+                ...this.profile.cornerBeamOffsets.map((offset) => ({
+                    x: this.cornerDirections![1].x * offset,
+                    z: this.cornerDirections![1].z * offset,
+                })),
             ]
         }
 
-        const firstBeamCenter = -0.5 + PalisadeWall2.EDGE_GAP + PalisadeWall2.BEAM_WIDTH / 2
-        return Array.from({length: PalisadeWall2.BEAM_COUNT}, (_, i) => {
-            const offset = firstBeamCenter + i * (PalisadeWall2.BEAM_WIDTH + PalisadeWall2.BEAM_GAP)
+        const firstBeamCenter = -0.5 + this.profile.edgeGap + this.beamWidth / 2
+        return Array.from({length: this.profile.beamCount}, (_, i) => {
+            const offset = firstBeamCenter + i * (this.beamWidth + this.profile.beamGap)
             return {
                 x: this.orientation === 'X' ? offset : 0,
                 z: this.orientation === 'Z' ? offset : 0,
@@ -138,30 +183,31 @@ export class PalisadeWall2 extends BaseStaticObject {
                 * PalisadeWall2.MAX_BRACE_HEIGHT_OFFSET
             const angle = (this.getBeamRandom(sideIndex, 101) * 2 - 1) * PalisadeWall2.MAX_BRACE_ANGLE
             const x = this.renderPosition.x
-                + (this.orientation === 'Z' ? side * PalisadeWall2.BRACE_FACE_OFFSET : 0)
+                + (this.orientation === 'Z' ? side * this.profile.braceFaceOffset : 0)
             const z = this.renderPosition.z
-                + (this.orientation === 'X' ? side * PalisadeWall2.BRACE_FACE_OFFSET : 0)
+                + (this.orientation === 'X' ? side * this.profile.braceFaceOffset : 0)
             const y = this.renderPosition.y
-                + PalisadeWall2.BRACE_CENTER_HEIGHT
+                + this.profile.braceCenterHeight
                 + heightOffset
                 + 0.5
 
             WorldRenderer.block1!.matrices.push(
                 Matrix.Scaling(
                     PalisadeWall2.BRACE_LENGTH,
-                    PalisadeWall2.BRACE_HEIGHT,
-                    PalisadeWall2.BRACE_DEPTH,
+                    this.profile.braceHeight,
+                    this.profile.braceDepth,
                 )
                     .multiply(Matrix.RotationYawPitchRoll(baseYaw, 0, angle))
                     .multiply(Matrix.Translation(x, y, z)),
             )
-            WorldRenderer.block1!.uvData.push(this.material)
+            WorldRenderer.block1!.uvData.push(this.braceMaterial)
         }
     }
 
     private renderCornerBraces() {
         for (let armIndex = 0; armIndex < this.cornerDirections!.length; armIndex++) {
             const direction = this.cornerDirections![armIndex]
+            const cornerBeamOffset = this.profile.cornerBeamOffsets[this.profile.cornerBeamOffsets.length - 1]
             const baseYaw = Math.atan2(direction.z, direction.x)
             const normalX = -direction.z
             const normalZ = direction.x
@@ -173,46 +219,38 @@ export class PalisadeWall2 extends BaseStaticObject {
                 const angle = (this.getBeamRandom(randomIndex, 121) * 2 - 1)
                     * PalisadeWall2.MAX_BRACE_ANGLE
                 const x = this.renderPosition.x
-                    + direction.x * PalisadeWall2.CORNER_BEAM_OFFSET / 2
-                    + normalX * side * PalisadeWall2.BRACE_FACE_OFFSET
+                    + direction.x * cornerBeamOffset / 2
+                    + normalX * side * this.profile.braceFaceOffset
                 const z = this.renderPosition.z
-                    + direction.z * PalisadeWall2.CORNER_BEAM_OFFSET / 2
-                    + normalZ * side * PalisadeWall2.BRACE_FACE_OFFSET
+                    + direction.z * cornerBeamOffset / 2
+                    + normalZ * side * this.profile.braceFaceOffset
                 const y = this.renderPosition.y
-                    + PalisadeWall2.BRACE_CENTER_HEIGHT
+                    + this.profile.braceCenterHeight
                     + heightOffset
                     + 0.5
 
                 WorldRenderer.block1!.matrices.push(
                     Matrix.Scaling(
-                        PalisadeWall2.CORNER_BRACE_LENGTH,
-                        PalisadeWall2.BRACE_HEIGHT,
-                        PalisadeWall2.BRACE_DEPTH,
+                        this.profile.cornerBraceLength,
+                        this.profile.braceHeight,
+                        this.profile.braceDepth,
                     )
                         .multiply(Matrix.RotationYawPitchRoll(baseYaw, 0, angle))
                         .multiply(Matrix.Translation(x, y, z)),
                 )
-                WorldRenderer.block1!.uvData.push(this.material)
+                WorldRenderer.block1!.uvData.push(this.braceMaterial)
             }
         }
     }
 
     private getBeamRandom(beamIndex: number, salt: number): number {
-        const orientationSalt = this.orientation === 'X' ? 0 : 104729
-        let hash = (MyPlayer.worldId * 73856093)
-            ^ (this.position.x * 19349663)
-            ^ (this.position.z * 83492791)
-            ^ ((beamIndex * 10 + salt + orientationSalt) * 2654435761)
-        hash = Math.imul(hash ^ (hash >>> 16), 2246822519)
-        hash = Math.imul(hash ^ (hash >>> 13), 3266489917)
-        hash ^= hash >>> 16
-        return (hash >>> 0) / 4294967295
+        return getPalisadeRandom(this.position.x, this.position.z, this.orientation, beamIndex, salt)
     }
 
     isObjectInCollision(tgtX: number, tgtZ: number, size: number): boolean {
         const moverHalf = size / 2
-        const toleranceX = this.orientation === 'X' ? 0 : this.getCollisionTolerance()
-        const toleranceZ = this.orientation === 'Z' ? 0 : this.getCollisionTolerance()
+        const toleranceX = !this.cornerDirections && this.orientation === 'X' ? 0 : this.getCollisionTolerance()
+        const toleranceZ = !this.cornerDirections && this.orientation === 'Z' ? 0 : this.getCollisionTolerance()
         return tgtX - moverHalf < this.position.x + 0.5 - toleranceX
             && tgtX + moverHalf > this.position.x - 0.5 + toleranceX
             && tgtZ - moverHalf < this.position.z + 0.5 - toleranceZ

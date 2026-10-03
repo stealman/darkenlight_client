@@ -11,6 +11,7 @@ import { StaticObject } from '@/babylon/world/statics/objects/baseStaticObject'
 import { FireplaceLarge, FireplaceSmall } from '@/babylon/world/statics/objects/fireplace'
 import { Shrub1x1_small, Shrub1x1_tall, Shrub2x2 } from '@/babylon/world/statics/objects/shrubs'
 import { PalisadeMetadata, PalisadeWall2, StoneEntrance, StoneEntranceMetadata, Wall2, Wall3 } from '@/babylon/world/statics/objects/walls'
+import { SpikedPalisade, SpikedPalisadeMetadata } from '@/babylon/world/statics/objects/spikedPalisade'
 import { WallTorch, WallTorchMetadata } from '@/babylon/world/statics/objects/wallTorch'
 import { StaticObjectsCodebook } from '@/babylon/world/statics/staticsCodebook'
 import { MyPlayer } from '@/data/myPlayer'
@@ -68,7 +69,20 @@ export const StaticsManager = {
 
             case 201: this.allStatics.push(new Wall2(obj.tp, pos, rotation, MaterialEnum1.BRICK_GRAY.uv)); break
             case 202: this.allStatics.push(new Wall2(obj.tp, pos, rotation, MaterialEnum1.BRICK_RED.uv)); break
-            case 203: this.allStatics.push(new PalisadeWall2(obj.tp, pos, MaterialEnum1.WOOD_1.uv, obj.meta as PalisadeMetadata)); break
+            case 203:
+            case 204: this.allStatics.push(new PalisadeWall2(
+                obj.tp,
+                pos,
+                MaterialEnum1.WOOD_3.uv,
+                MaterialEnum1.WOOD_1.uv,
+                obj.meta as PalisadeMetadata,
+            )); break
+            case 205: this.allStatics.push(new SpikedPalisade(
+                obj.tp,
+                pos,
+                MaterialEnum1.WOOD_1.uv,
+                obj.meta as SpikedPalisadeMetadata,
+            )); break
 
             case 221: this.allStatics.push(new Wall3(obj.tp, pos, rotation, MaterialEnum1.BRICK_GRAY.uv)); break
             case 222: this.allStatics.push(new Wall3(obj.tp, pos, rotation, MaterialEnum1.BRICK_RED.uv)); break

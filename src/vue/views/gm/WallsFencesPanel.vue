@@ -32,13 +32,35 @@
 
         <div style="margin-top: 1vh">
             <label class="tree-item" :class="{ selected: 'PALISADE' === selectedObjectType }" @click="selectObjectType('PALISADE')">Palisade</label>
-        </div>
-        <div v-if="selectedObjectType === 'PALISADE'" style="margin-top: 1vh">
-            <label>
-                Orientation
+            <label v-if="selectedObjectType === 'PALISADE'">
+                &nbsp;&nbsp;dir.
                 <select v-model="palisadeOrientation">
                     <option value="X">X</option>
                     <option value="Z">Z</option>
+                </select>
+            </label>
+        </div>
+
+        <div style="margin-top: 1vh">
+            <label class="tree-item" :class="{ selected: 'PALISADE_SMALL' === selectedObjectType }" @click="selectObjectType('PALISADE_SMALL')">Palisade-S</label>
+            <label v-if="selectedObjectType === 'PALISADE_SMALL'">
+                &nbsp;&nbsp;dir.
+                <select v-model="palisadeOrientation">
+                    <option value="X">X</option>
+                    <option value="Z">Z</option>
+                </select>
+            </label>
+        </div>
+
+        <div style="margin-top: 1vh">
+            <label class="tree-item" :class="{ selected: 'PALISADE_SPIKED' === selectedObjectType }" @click="selectObjectType('PALISADE_SPIKED')">Palisade-Spiked</label>
+            <label v-if="selectedObjectType === 'PALISADE_SPIKED'">
+                &nbsp;&nbsp;dir.
+                <select v-model="spikedPalisadeFacing">
+                    <option value="-X">-X</option>
+                    <option value="+X">+X</option>
+                    <option value="-Z">-Z</option>
+                    <option value="+Z">+Z</option>
                 </select>
             </label>
         </div>
@@ -48,17 +70,20 @@
 <script setup>
 
 import { GMManager } from '@/gm/GM'
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
 
 // Biome edit constants
 const selectedObjectType = ref("")
 const selectedObject = GMManager.selectedWallFence
 const palisadeOrientation = GMManager.palisadeOrientation
+const spikedPalisadeFacing = GMManager.spikedPalisadeFacing
 
 const objects = [
     { type: "WALL2", name: "Wall2_GRAY", id: 201 },
     { type: "WALL2", name: "Wall2_RED", id: 202 },
     { type: "PALISADE", name: "PalisadeWall2", id: 203 },
+    { type: "PALISADE_SMALL", name: "PalisadeSmall", id: 204 },
+    { type: "PALISADE_SPIKED", name: "PalisadeSpiked", id: 205 },
 
     { type: "WALL3", name: "Wall3_GRAY", id: 221 },
     { type: "WALL3", name: "Wall3_RED", id: 222 },

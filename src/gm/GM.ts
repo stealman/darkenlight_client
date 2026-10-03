@@ -34,6 +34,8 @@ export const VOID_TERRAIN_SELECTION = 102
 export const WALL_TORCH_STATIC_ID = 261
 export const STONE_ENTRANCE_STATIC_ID = 281
 export const PALISADE_WALL_2_STATIC_ID = 203
+export const PALISADE_SMALL_STATIC_ID = 204
+export const PALISADE_SPIKED_STATIC_ID = 205
 
 export const GMManager = {
     gmPanelVisible: ref(false),
@@ -51,6 +53,7 @@ export const GMManager = {
 
     selectedWallFence: ref (0),
     palisadeOrientation: ref('Z'),
+    spikedPalisadeFacing: ref('+Z'),
     selectedStatic: ref (0),
     torchFacing: ref('-Z'),
     torchMountHeight: ref(2),
@@ -165,13 +168,17 @@ export const GMManager = {
         if (this.tab === GmTabs.WALLS_AND_FENCES_EDIT) {
             const markerPos = new Vector3(GMSceneManager.hoverBlockMarker!.position.x, 0, GMSceneManager.hoverBlockMarker!.position.z)
             if (this.selectedWallFence.value > 0) {
-                const wallFenceData: { x: number, z: number, type: number, meta?: {orientation: string} } = {
+                const wallFenceData: { x: number, z: number, type: number, meta?: {orientation?: string, facing?: string} } = {
                     x: markerPos.x,
                     z: markerPos.z,
                     type: this.selectedWallFence.value,
                 }
-                if (this.selectedWallFence.value === PALISADE_WALL_2_STATIC_ID) {
+                if (this.selectedWallFence.value === PALISADE_WALL_2_STATIC_ID
+                    || this.selectedWallFence.value === PALISADE_SMALL_STATIC_ID) {
                     wallFenceData.meta = {orientation: this.palisadeOrientation.value}
+                }
+                if (this.selectedWallFence.value === PALISADE_SPIKED_STATIC_ID) {
+                    wallFenceData.meta = {facing: this.spikedPalisadeFacing.value}
                 }
                 Connector.sendMessage(new GMStaticObjectChange("ADD_OBJECT", [wallFenceData] ) )
 

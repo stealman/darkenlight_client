@@ -41,6 +41,8 @@ export const StaticObjectsCodebook: Map<number, StaticObjectInfo> = new Map([
     [201, new StaticObjectInfo(201, 'Wall2_GRAY', true, 1, 0, 0, null)],
     [202, new StaticObjectInfo(202, 'Wall2_RED', true, 1, 0, 0, null)],
     [203, new StaticObjectInfo(203, 'PalisadeWall2', true, 1, 0.375, 0, null)],
+    [204, new StaticObjectInfo(204, 'PalisadeSmall', true, 1, 0.41, 0, null)],
+    [205, new StaticObjectInfo(205, 'PalisadeSpiked', true, 1, 0, 0, null)],
 
     [221, new StaticObjectInfo(221, 'Wall3_GRAY', true, 1, 0, 0, null)],
     [222, new StaticObjectInfo(222, 'Wall3_RED', true, 1, 0, 0, null)],
