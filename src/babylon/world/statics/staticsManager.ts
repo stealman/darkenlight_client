@@ -10,7 +10,7 @@ import { Lights } from '@/babylon/scene/lights'
 import { StaticObject } from '@/babylon/world/statics/objects/baseStaticObject'
 import { FireplaceLarge, FireplaceSmall } from '@/babylon/world/statics/objects/fireplace'
 import { Shrub1x1_small, Shrub1x1_tall, Shrub2x2 } from '@/babylon/world/statics/objects/shrubs'
-import { StoneEntrance, StoneEntranceMetadata, Wall2, Wall3 } from '@/babylon/world/statics/objects/walls'
+import { PalisadeMetadata, PalisadeWall2, StoneEntrance, StoneEntranceMetadata, Wall2, Wall3 } from '@/babylon/world/statics/objects/walls'
 import { WallTorch, WallTorchMetadata } from '@/babylon/world/statics/objects/wallTorch'
 import { StaticObjectsCodebook } from '@/babylon/world/statics/staticsCodebook'
 import { MyPlayer } from '@/data/myPlayer'
@@ -39,13 +39,13 @@ export const StaticsManager = {
         })
     },
 
-    consumeObjects(data: Array<{ tp: number, x: number, z: number, meta?: WallTorchMetadata | StoneEntranceMetadata, tmp?: boolean }>) {
+    consumeObjects(data: Array<{ tp: number, x: number, z: number, meta?: WallTorchMetadata | StoneEntranceMetadata | PalisadeMetadata, tmp?: boolean }>) {
         data.forEach(obj => {
             this.addObject(obj)
         })
     },
 
-    addObject(obj: { tp: number, x: number, z: number, meta?: WallTorchMetadata | StoneEntranceMetadata, tmp?: boolean }) {
+    addObject(obj: { tp: number, x: number, z: number, meta?: WallTorchMetadata | StoneEntranceMetadata | PalisadeMetadata, tmp?: boolean }) {
         const y = WorldDataManager.getBlockMap()[obj.x][obj.z].totalHeight
         const pos = new Vector3(obj.x, y, obj.z)
         const rotation = Math.floor(Math.random() * 4) * Math.PI / 2
@@ -68,6 +68,7 @@ export const StaticsManager = {
 
             case 201: this.allStatics.push(new Wall2(obj.tp, pos, rotation, MaterialEnum1.BRICK_GRAY.uv)); break
             case 202: this.allStatics.push(new Wall2(obj.tp, pos, rotation, MaterialEnum1.BRICK_RED.uv)); break
+            case 203: this.allStatics.push(new PalisadeWall2(obj.tp, pos, MaterialEnum1.WOOD_1.uv, obj.meta as PalisadeMetadata)); break
 
             case 221: this.allStatics.push(new Wall3(obj.tp, pos, rotation, MaterialEnum1.BRICK_GRAY.uv)); break
             case 222: this.allStatics.push(new Wall3(obj.tp, pos, rotation, MaterialEnum1.BRICK_RED.uv)); break
@@ -127,6 +128,7 @@ export const StaticsManager = {
             prefab?.clearMatrices()
         })
 
+        this.resolvePalisadeCorners()
         this.updateVisibleObjects()
         for (const element of this.visibleStatics) {
             element.render()
@@ -142,6 +144,33 @@ export const StaticsManager = {
                 prefab!.mesh.setEnabled(false)
             }
         })
+    },
+
+    resolvePalisadeCorners() {
+        const palisades = this.allStatics.filter((obj): obj is PalisadeWall2 => obj instanceof PalisadeWall2)
+        const palisadesByTile = new Map(palisades.map((obj) => [`${obj.position.x};${obj.position.z}`, obj]))
+
+        for (const palisade of palisades) {
+            palisade.setCornerDirections(null)
+            const axisDirections = palisade.getOrientation() === 'X'
+                ? [{x: -1, z: 0}, {x: 1, z: 0}]
+                : [{x: 0, z: -1}, {x: 0, z: 1}]
+            const perpendicularDirections = palisade.getOrientation() === 'X'
+                ? [{x: 0, z: -1}, {x: 0, z: 1}]
+                : [{x: -1, z: 0}, {x: 1, z: 0}]
+            const continuations = axisDirections.filter((direction) => {
+                const neighbor = palisadesByTile.get(`${palisade.position.x + direction.x};${palisade.position.z + direction.z}`)
+                return neighbor?.getOrientation() === palisade.getOrientation()
+            })
+            const turns = perpendicularDirections.filter((direction) => {
+                const neighbor = palisadesByTile.get(`${palisade.position.x + direction.x};${palisade.position.z + direction.z}`)
+                return neighbor && neighbor.getOrientation() !== palisade.getOrientation()
+            })
+
+            if (continuations.length === 1 && turns.length === 1) {
+                palisade.setCornerDirections([continuations[0], turns[0]])
+            }
+        }
     },
 
     renderTerrainBlocks(terrainMatrices: Matrix[], terrainUvData: Vector2[]) {

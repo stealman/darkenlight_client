@@ -29,6 +29,19 @@
                 </option>
             </select>
         </div>
+
+        <div style="margin-top: 1vh">
+            <label class="tree-item" :class="{ selected: 'PALISADE' === selectedObjectType }" @click="selectObjectType('PALISADE')">Palisade</label>
+        </div>
+        <div v-if="selectedObjectType === 'PALISADE'" style="margin-top: 1vh">
+            <label>
+                Orientation
+                <select v-model="palisadeOrientation">
+                    <option value="X">X</option>
+                    <option value="Z">Z</option>
+                </select>
+            </label>
+        </div>
     </div>
 </template>
 
@@ -40,10 +53,12 @@ import { ref, onMounted } from 'vue'
 // Biome edit constants
 const selectedObjectType = ref("")
 const selectedObject = GMManager.selectedWallFence
+const palisadeOrientation = GMManager.palisadeOrientation
 
 const objects = [
     { type: "WALL2", name: "Wall2_GRAY", id: 201 },
     { type: "WALL2", name: "Wall2_RED", id: 202 },
+    { type: "PALISADE", name: "PalisadeWall2", id: 203 },
 
     { type: "WALL3", name: "Wall3_GRAY", id: 221 },
     { type: "WALL3", name: "Wall3_RED", id: 222 },
