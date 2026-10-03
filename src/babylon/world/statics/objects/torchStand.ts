@@ -122,6 +122,7 @@ export class TorchStand extends BaseStaticObject {
             intensity: LIGHT_INTENSITY,
             range: LIGHT_RANGE,
             flicker: true,
+            flickerPosition: false,
             shadowMapSize: LARGE_CAMPFIRE_SHADOW_MAP_SIZE,
         })
         StaticFireParticleManager.register(Renderer.scene, this.getLightId(), {

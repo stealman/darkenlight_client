@@ -93,7 +93,7 @@ export const StaticsManager = {
                     ? MaterialEnum1.BRICK_GRAY.uv
                     : metadata?.material === 'STONE_RED'
                         ? MaterialEnum1.BRICK_RED.uv
-                        : MaterialEnum1.WOOD_2.uv
+                        : MaterialEnum1.WOOD_1.uv
                 this.allStatics.push(new WalkableBlock(obj.tp, pos, material, metadata))
                 break
             }

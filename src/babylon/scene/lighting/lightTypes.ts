@@ -6,6 +6,7 @@ export interface StaticLightProfile {
     intensity: number
     range: number
     flicker?: boolean
+    flickerPosition?: boolean
     pulse?: boolean
     castsShadows?: boolean
     castsActorShadows?: boolean

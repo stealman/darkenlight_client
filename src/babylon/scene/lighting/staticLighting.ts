@@ -211,7 +211,7 @@ export function onLightsFrame(host: StaticLightingHost, timeRate: number) {
 
         if (slot.source != null) {
             const flickerPosition = slot.flickerOffset
-            if (shouldFlicker(slot.source)) {
+            if (shouldFlicker(slot.source) && slot.source.profile.flickerPosition !== false) {
                 updateStaticLightFlickerPosition(host, slot.source, flickerPosition)
             } else {
                 flickerPosition.set(0, 0, 0)
@@ -365,7 +365,7 @@ function updateStaticSlotShadowState(host: StaticLightingHost, slot: StaticLight
 
 function assignStaticLightSlot(host: StaticLightingHost, slot: StaticLightSlot, source: StaticLightSource) {
     selectStaticShadowGenerator(slot, getStaticLightShadowMapSize(source) === LARGE_CAMPFIRE_SHADOW_MAP_SIZE
-        ? slot.largeCampfireShadow
+        ? slot.largeCampfireShadow ?? slot.standardShadow
         : slot.standardShadow)
     slot.source = source
     slot.currentIntensity = 0
@@ -393,6 +393,11 @@ function assignUnslottedStaticLightSources(host: StaticLightingHost, usableSlots
         let emptySlot = findAvailableStaticLightSlot(usableSlots, shadowMapSize)
         if (emptySlot == null && shadowMapSize === LARGE_CAMPFIRE_SHADOW_MAP_SIZE) {
             emptySlot = moveStandardSourceOutOfLargeCampfireSlot(host, usableSlots)
+        }
+        // A high-resolution shadow map is optional; the light itself is not.
+        // Fall back to any standard slot after all 2048-capable slots are busy.
+        if (emptySlot == null && shadowMapSize === LARGE_CAMPFIRE_SHADOW_MAP_SIZE) {
+            emptySlot = findAvailableStaticLightSlot(usableSlots, STATIC_SHADOW_MAP_SIZE)
         }
         if (emptySlot != null) {
             assignStaticLightSlot(host, emptySlot, source)
