@@ -145,11 +145,18 @@ export class SupplyCrate extends CampObject {
 }
 
 export class CampBarrel extends CampObject {
+    private readonly lidMaterial: Vector2
+
+    constructor(type: number, position: Vector3, material: Vector2, accentMaterial: Vector2, lidMaterial: Vector2, metadata?: CampObjectMetadata) {
+        super(type, position, material, accentMaterial, metadata)
+        this.lidMaterial = lidMaterial
+    }
+
     render() {
         this.part(0.62, 0.82, 0.62, 0, 0.41, 0)
         this.part(0.7, 0.09, 0.7, 0, 0.14, 0, this.accentMaterial)
         this.part(0.7, 0.09, 0.7, 0, 0.68, 0, this.accentMaterial)
-        this.part(0.66, 0.08, 0.66, 0, 0.86, 0)
+        this.part(0.56, 0.08, 0.56, 0, 0.86, 0, this.lidMaterial)
     }
 }
 

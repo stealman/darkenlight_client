@@ -14,6 +14,8 @@ import { getBrightnessIntensityFactor, Settings } from '@/settings/settings'
 import type { DayNightCycleSync } from '@/network/messageIfs'
 import type { StaticLightProfile, StaticLightSlot, StaticLightSource } from '@/babylon/scene/lighting/lightTypes'
 import {
+    BUILDING_PERSONAL_LIGHT_HEIGHT,
+    BUILDING_PERSONAL_LIGHT_TRANSITION_SECONDS,
     DEFAULT_DAY_NIGHT_CYCLE_DURATION_MS,
     DEFAULT_ENVIRONMENT_INTENSITY,
     INDOOR_PERSONAL_LIGHT_HEIGHT,
@@ -102,11 +104,15 @@ export const Lights = {
     daylightFactor: 1,
     localLightFactor: 0,
     indoor: false,
+    insideBuilding: false,
+    buildingInteriorBlend: 0,
 
     initialize(scene: Scene) {
         resetStaticLighting(this)
         resetMeshLighting(this)
         this.dayNightShadersWarmed = false
+        this.insideBuilding = false
+        this.buildingInteriorBlend = 0
         resetDayNightLighting(this)
         this.sunLight = new DirectionalLight("sunLight", new Vector3(-0.75, -0.75, 0.3), scene)
         this.sunLight.position = new Vector3(30, 30, 30);
@@ -186,6 +192,14 @@ export const Lights = {
     },
 
     onFrame(timeRate: number) {
+        const targetBlend = this.insideBuilding ? 1 : 0
+        if (this.buildingInteriorBlend !== targetBlend) {
+            const step = timeRate / BUILDING_PERSONAL_LIGHT_TRANSITION_SECONDS
+            this.buildingInteriorBlend = this.buildingInteriorBlend < targetBlend
+                ? Math.min(this.buildingInteriorBlend + step, targetBlend)
+                : Math.max(this.buildingInteriorBlend - step, targetBlend)
+            this.updatePersonalLightPosition()
+        }
         onLightsFrame(this, timeRate)
     },
 
@@ -295,9 +309,11 @@ export const Lights = {
     },
 
     updatePersonalLightPosition() {
+        const normalHeight = this.indoor ? INDOOR_PERSONAL_LIGHT_HEIGHT : OUTDOOR_PERSONAL_LIGHT_HEIGHT
         this.personalLight.position.set(
             PERSONAL_LIGHT_X_OFFSET,
-            this.indoor ? INDOOR_PERSONAL_LIGHT_HEIGHT : OUTDOOR_PERSONAL_LIGHT_HEIGHT,
+            normalHeight
+                + ((BUILDING_PERSONAL_LIGHT_HEIGHT - normalHeight) * this.buildingInteriorBlend),
             PERSONAL_LIGHT_Z_OFFSET,
         )
     },
@@ -332,6 +348,13 @@ export const Lights = {
         this.brightnessChanged()
         this.updateSharedLightMeshes()
         this.updateActorLightMeshes()
+    },
+
+    setInsideBuilding(insideBuilding: boolean) {
+        if (this.insideBuilding === insideBuilding) {
+            return
+        }
+        this.insideBuilding = insideBuilding
     },
 
     synchronizeDayNightCycle(sync: DayNightCycleSync | null | undefined) {

@@ -1,5 +1,5 @@
 import { Camera, Mesh, MeshBuilder, PBRMaterial, Scene, TransformNode, Vector2, Vector3 } from '@babylonjs/core'
-import { MaterialEnum1, Materials } from '@/babylon/materials'
+import { MaterialEnum1, MaterialEnumTrans, Materials } from '@/babylon/materials'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { ViewportManager } from '@/utils/viewport'
 import { Lights } from '@/babylon/scene/lights'
@@ -36,7 +36,7 @@ const DOOR_BRACE_HEIGHT = 0.1
 const DOOR_BRACE_DEPTH = 0.08
 const WINDOW_WIDTH = 0.8
 const WINDOW_HEIGHT = 0.4
-const WINDOW_BOTTOM = FLOOR_HEIGHT + 1.1
+const WINDOW_BOTTOM = FLOOR_HEIGHT + 1.2
 const ROOF_STEP_DEPTH = 0.5
 const ROOF_STEP_HEIGHT = 0.3
 const ROOF_ANGLE = Math.PI / 6
@@ -58,6 +58,7 @@ interface BuildingPrefabs {
     }>
     roof: Mesh
     door: Mesh
+    glass: Mesh
 }
 
 class BuildingView {
@@ -65,6 +66,7 @@ class BuildingView {
     readonly frontWallsMesh: Mesh
     readonly roofMesh: Mesh
     readonly doorMesh: Mesh
+    readonly glassMesh: Mesh
     readonly doorRoot: TransformNode
     readonly doorHinge: TransformNode
     readonly facing: BuildingFacing
@@ -82,6 +84,7 @@ class BuildingView {
         this.mesh = variant.shell.clone(`building_${data.id}`, parent)!
         this.frontWallsMesh = variant.frontWalls.clone(`building_${data.id}_front_walls`, parent)!
         this.roofMesh = prefabs.roof.clone(`building_${data.id}_roof`, parent)!
+        this.glassMesh = prefabs.glass.clone(`building_${data.id}_glass`, parent)!
         this.doorRoot = new TransformNode(`building_${data.id}_door_root`, parent.getScene())
         this.doorRoot.parent = parent
         this.doorHinge = new TransformNode(`building_${data.id}_door_hinge`, parent.getScene())
@@ -96,18 +99,21 @@ class BuildingView {
         this.frontWallsMesh.isPickable = false
         this.roofMesh.isPickable = false
         this.doorMesh.isPickable = false
+        this.glassMesh.isPickable = false
         this.frontWallsMesh.material = fadeMaterial
         this.doorMesh.material = fadeMaterial
         this.mesh.setEnabled(false)
         this.frontWallsMesh.setEnabled(false)
         this.roofMesh.setEnabled(false)
         this.doorMesh.setEnabled(false)
+        this.glassMesh.setEnabled(false)
         this.applyXZTransform()
         this.recountYPosition()
         Lights.registerSharedLightMesh(this.mesh)
         Lights.registerSharedLightMesh(this.frontWallsMesh)
         Lights.registerSharedLightMesh(this.roofMesh)
         Lights.registerSharedLightMesh(this.doorMesh)
+        Lights.registerSharedLightMesh(this.glassMesh)
         Lights.addShadowCaster(this.mesh, true, true)
         Lights.addShadowCaster(this.frontWallsMesh, true, true)
         Lights.addShadowCaster(this.roofMesh, true, true)
@@ -135,7 +141,7 @@ class BuildingView {
             z = this.data.z
             rotation = 0
         }
-        for (const mesh of [this.mesh, this.frontWallsMesh, this.roofMesh]) {
+        for (const mesh of [this.mesh, this.frontWallsMesh, this.roofMesh, this.glassMesh]) {
             mesh.position.x = x
             mesh.position.z = z
             mesh.rotation.y = rotation
@@ -150,6 +156,7 @@ class BuildingView {
         this.mesh.position.y = block?.totalHeight ?? 0
         this.frontWallsMesh.position.y = this.mesh.position.y
         this.roofMesh.position.y = this.mesh.position.y
+        this.glassMesh.position.y = this.mesh.position.y
         this.doorRoot.position.y = this.mesh.position.y
     }
 
@@ -327,6 +334,7 @@ class BuildingView {
         this.frontWallsMesh.setEnabled(visible)
         this.roofMesh.setEnabled(visible)
         this.doorMesh.setEnabled(visible)
+        this.glassMesh.setEnabled(visible)
     }
 
     updateFade(timeRate: number, playerInside: boolean) {
@@ -369,6 +377,7 @@ class BuildingView {
         Lights.unregisterSharedLightMesh(this.frontWallsMesh)
         Lights.unregisterSharedLightMesh(this.roofMesh)
         Lights.unregisterSharedLightMesh(this.doorMesh)
+        Lights.unregisterSharedLightMesh(this.glassMesh)
         Lights.removeShadowCaster(this.mesh, true, true)
         Lights.removeShadowCaster(this.frontWallsMesh, true, true)
         Lights.removeShadowCaster(this.roofMesh, true, true)
@@ -377,6 +386,7 @@ class BuildingView {
         this.frontWallsMesh.dispose()
         this.roofMesh.dispose()
         this.doorMesh.dispose()
+        this.glassMesh.dispose()
         this.doorHinge.dispose()
         this.doorRoot.dispose()
     }
@@ -494,13 +504,16 @@ export const BuildingManager = {
             this.occlusionCheckFrame = 0
             this.updateOcclusion(camera)
         }
+        let playerInsideBuilding = false
         this.buildings.forEach((building) => {
             building.updateDoorAnimation(timeRate)
-            building.updateFade(
-                timeRate,
-                playerX != null && playerZ != null && building.containsInteriorPoint(playerX, playerZ),
-            )
+            const playerInside = playerX != null
+                && playerZ != null
+                && building.containsInteriorPoint(playerX, playerZ)
+            playerInsideBuilding ||= playerInside
+            building.updateFade(timeRate, playerInside)
         })
+        Lights.setInsideBuilding(playerInsideBuilding)
     },
 
     updateOcclusion(camera: Camera | null) {
@@ -528,6 +541,7 @@ export const BuildingManager = {
     },
 
     clearWorld() {
+        Lights.setInsideBuilding(false)
         this.buildings.forEach((building) => building.dispose())
         this.buildings.clear()
         this.floorTiles.clear()
@@ -535,9 +549,9 @@ export const BuildingManager = {
     },
 
     createHousePrefab(scene: Scene) {
-        type PartGroup = 'base' | 'wallMinX' | 'wallMaxX' | 'wallMinZ' | 'wallMaxZ' | 'roof' | 'door'
+        type PartGroup = 'base' | 'wallMinX' | 'wallMaxX' | 'wallMinZ' | 'wallMaxZ' | 'roof' | 'door' | 'glass'
         const groups = {} as Record<PartGroup, {parts: Mesh[], uvData: number[]}>
-        for (const group of ['base', 'wallMinX', 'wallMaxX', 'wallMinZ', 'wallMaxZ', 'roof', 'door'] as PartGroup[]) {
+        for (const group of ['base', 'wallMinX', 'wallMaxX', 'wallMinZ', 'wallMaxZ', 'roof', 'door', 'glass'] as PartGroup[]) {
             groups[group] = {parts: [], uvData: []}
         }
         const addBox = (
@@ -593,6 +607,18 @@ export const BuildingManager = {
                 }
                 lengthOffset += pieceLength
             }
+        }
+        const addWindowPane = (x: number, z: number) => {
+            const pane = MeshBuilder.CreatePlane('buildingWindowGlass', {
+                width: WINDOW_WIDTH,
+                height: WINDOW_HEIGHT,
+            }, scene)
+            pane.position.set(x, WINDOW_BOTTOM + WINDOW_HEIGHT / 2, z)
+            pane.convertToUnIndexedMesh()
+            for (let i = 0; i < pane.getTotalVertices(); i++) {
+                groups.glass.uvData.push(MaterialEnumTrans.GLASS.uv.x, MaterialEnumTrans.GLASS.uv.y)
+            }
+            groups.glass.parts.push(pane)
         }
 
         for (let x = 0; x < HOUSE_WIDTH; x++) {
@@ -658,6 +684,7 @@ export const BuildingManager = {
             z: number,
             group: PartGroup,
         ) => {
+            addWindowPane(windowCenter, z)
             const sectionLength = sectionEnd - sectionStart
             const sectionCenter = (sectionStart + sectionEnd) / 2
             const windowStart = windowCenter - WINDOW_WIDTH / 2
@@ -898,6 +925,7 @@ export const BuildingManager = {
             variants,
             roof: mergeParts(groups.roof.parts, groups.roof.uvData, 'humanHouseRoof5x3Prefab', this.fadeMaterial!),
             door: mergeParts(groups.door.parts, groups.door.uvData, 'humanHouseDoor5x3Prefab', this.fadeMaterial!),
+            glass: mergeParts(groups.glass.parts, groups.glass.uvData, 'humanHouseGlass5x3Prefab', Materials.blockMatTrans!),
         }
     },
 }

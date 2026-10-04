@@ -8,6 +8,7 @@ import {
 import { getBrightnessIntensityFactor, Settings } from '@/settings/settings'
 import type { DayNightCycleSync } from '@/network/messageIfs'
 import {
+    BUILDING_PERSONAL_LIGHT_INTENSITY_FACTOR,
     DEFAULT_DAY_NIGHT_CYCLE_DURATION_MS,
     INITIAL_DAY_NIGHT_PHASE,
     NIGHT_ENVIRONMENT_INTENSITY_FACTOR,
@@ -54,6 +55,7 @@ export interface DayNightLightingHost {
     daylightFactor: number
     localLightFactor: number
     indoor: boolean
+    buildingInteriorBlend: number
     getEnvironmentIntensity(): number
     updateSharedLightMeshes(): void
     updateActorLightMeshes(): void
@@ -136,20 +138,22 @@ export function updateDayNightLighting(host: DayNightLightingHost) {
     const brightnessFactor = getBrightnessIntensityFactor(Settings.brightness)
     const sunIntensity = DEFAULT_SUN_INTENSITY * brightnessFactor
     const personalIntensity = DEFAULT_PERSONAL_LIGHT_INTENSITY * brightnessFactor
+    const buildingLightFactor = 1
+        + ((BUILDING_PERSONAL_LIGHT_INTENSITY_FACTOR - 1) * host.buildingInteriorBlend)
     const environmentIntensity = host.getEnvironmentIntensity()
     const scene = host.sunLight.getScene()
     updateFog(host, daylightFactor)
 
     if (host.indoor) {
         host.sunLight.intensity = 0
-        host.personalLight.intensity = personalIntensity
+        host.personalLight.intensity = personalIntensity * buildingLightFactor
         scene.environmentIntensity = environmentIntensity * NIGHT_ENVIRONMENT_INTENSITY_FACTOR
         updateShadowRefreshRates(host, 0, 1)
         return
     }
 
     host.sunLight.intensity = sunIntensity * (NIGHT_SUN_INTENSITY_FACTOR + ((1 - NIGHT_SUN_INTENSITY_FACTOR) * daylightFactor))
-    host.personalLight.intensity = personalIntensity * OUTDOOR_PERSONAL_LIGHT_FACTOR * personalLightFactor
+    host.personalLight.intensity = personalIntensity * OUTDOOR_PERSONAL_LIGHT_FACTOR * personalLightFactor * buildingLightFactor
     scene.environmentIntensity = environmentIntensity * (NIGHT_ENVIRONMENT_INTENSITY_FACTOR + ((1 - NIGHT_ENVIRONMENT_INTENSITY_FACTOR) * daylightFactor))
 
     setBlendedColor(host.sunLight.diffuse, NIGHT_SUN_COLOR, DAY_SUN_COLOR, TWILIGHT_SUN_COLOR, daylightFactor, twilightFactor, 0.72)

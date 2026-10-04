@@ -141,7 +141,7 @@ export const StaticsManager = {
             case 302: this.allStatics.push(new PlankPile(obj.tp, pos, MaterialEnum1.WOOD_2.uv, MaterialEnum1.WOOD_3.uv, obj.meta as CampObjectMetadata)); break
             case 303: this.allStatics.push(new LogPile(obj.tp, pos, MaterialEnum1.WOOD_3.uv, MaterialEnum1.WOOD_1.uv, obj.meta as CampObjectMetadata)); break
             case 304: this.allStatics.push(new SupplyCrate(obj.tp, pos, MaterialEnum1.WOOD_2.uv, MaterialEnum1.WOOD_3.uv, obj.meta as CampObjectMetadata)); break
-            case 305: this.allStatics.push(new CampBarrel(obj.tp, pos, MaterialEnum1.WOOD_1.uv, MaterialEnum1.STEEL_1.uv, obj.meta as CampObjectMetadata)); break
+            case 305: this.allStatics.push(new CampBarrel(obj.tp, pos, MaterialEnum1.WOOD_1.uv, MaterialEnum1.STEEL_1.uv, MaterialEnum1.WOOD_2.uv, obj.meta as CampObjectMetadata)); break
             default:
                 break
         }

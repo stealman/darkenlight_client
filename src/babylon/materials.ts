@@ -24,6 +24,7 @@ export const Materials = {
 
     blockMatAlpha1: null as PBRCustomMaterial | null,
     blockMat1: null as PBRCustomMaterial | null,
+    blockMatTrans: null as PBRCustomMaterial | null,
 
     waterMaterial: null as PBRMaterial | null,
     entrancePortalMaterial: null as PBRMaterial | null,
@@ -38,6 +39,7 @@ export const Materials = {
 
         this.blockMat1 = this.createBlockMat1(scene)
         this.blockMatAlpha1 = this.createBlockMatAlpha1(scene)
+        this.blockMatTrans = this.createBlockMatTrans(scene)
         this.waterMaterial = this.createWaterMaterial(scene)
         this.entrancePortalMaterial = this.createEntrancePortalMaterial(scene)
         this.stepMarksMaterial = this.createStepMarksMaterial(scene)
@@ -127,6 +129,21 @@ export const Materials = {
         mat.emissiveColor = new Color3(1, 1, 1)
         mat.alpha = 0.25
         return mat
+    },
+
+    createBlockMatTrans(scene: Scene): PBRCustomMaterial {
+        const material = this.getPBRCustomMaterial(scene, "sym_block_mats_trans", this.BASE_PATH, 'block_materials_trans.png', 1 / 16, 1 / 16, false)
+        const texture = material.albedoTexture as Texture
+        texture.hasAlpha = true
+        texture.getAlphaFromRGB = false
+        texture.updateSamplingMode(Texture.NEAREST_NEAREST)
+        material.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHABLEND
+        material.useAlphaFromAlbedoTexture = true
+        material.alpha = 1
+        material.forceAlphaTest = false
+        material.backFaceCulling = false
+        material.needDepthPrePass = true
+        return material
     },
 
     createPowerStrikeWeaponTrailMaterial(scene: Scene): StandardMaterial {
@@ -335,6 +352,10 @@ export const TerrainEnum1 = {
         const fallback = Object.values(TerrainEnum1).find(item => item.index === baseType)
         return fallback?.uv ?? TerrainEnum1.TERRAIN_DIRT.uv;
     }
+}
+
+export const MaterialEnumTrans = {
+    GLASS: new MaterialEnum(1, new Vector2(0.5, 14.5)),
 }
 
 export const PlaneEnum1 = {
