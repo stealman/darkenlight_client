@@ -1,8 +1,10 @@
-import { Mesh, MeshBuilder, PBRMaterial, Scene, TransformNode, Vector2, Vector3 } from '@babylonjs/core'
+import { Camera, Mesh, MeshBuilder, PBRMaterial, Scene, TransformNode, Vector2, Vector3 } from '@babylonjs/core'
 import { MaterialEnum1, Materials } from '@/babylon/materials'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { ViewportManager } from '@/utils/viewport'
 import { Lights } from '@/babylon/scene/lights'
+import { MyPlayer } from '@/data/myPlayer'
+import { segmentIntersectsAabb } from '@/babylon/geometryUtils'
 
 export interface BuildingData {
     id: number
@@ -35,34 +37,46 @@ const ROOF_END_OVERHANG = 0.5
 const ROOF_RUN = HOUSE_DEPTH / 2 + ROOF_EAVE_OVERHANG
 const ROOF_RISE = Math.tan(ROOF_ANGLE) * ROOF_RUN
 const ROOF_SLOPE_LENGTH = ROOF_RUN / Math.cos(ROOF_ANGLE)
-const FADED_ALPHA = 0
+const FADED_ALPHA = 0.35
 const FADE_DURATION = 0.3
 
 interface BuildingPrefabs {
-    shell: Mesh
+    variants: Record<BuildingFacing, {
+        shell: Mesh
+        frontWalls: Mesh
+    }>
     roof: Mesh
 }
 
 class BuildingView {
     readonly mesh: Mesh
+    readonly frontWallsMesh: Mesh
     readonly roofMesh: Mesh
     readonly facing: BuildingFacing
-    fadeVisibility = 1
-    fadeTarget = 1
+    roofVisibility = 1
+    wallVisibility = 1
+    shouldOcclusionFade = false
 
-    constructor(readonly data: BuildingData, prefabs: BuildingPrefabs, parent: TransformNode) {
+    constructor(readonly data: BuildingData, prefabs: BuildingPrefabs, parent: TransformNode, fadeMaterial: PBRMaterial) {
         this.facing = data.facing === '+X' || data.facing === '-X' || data.facing === '-Z' ? data.facing : '+Z'
-        this.mesh = prefabs.shell.clone(`building_${data.id}`, parent)!
+        const variant = prefabs.variants[this.facing]
+        this.mesh = variant.shell.clone(`building_${data.id}`, parent)!
+        this.frontWallsMesh = variant.frontWalls.clone(`building_${data.id}_front_walls`, parent)!
         this.roofMesh = prefabs.roof.clone(`building_${data.id}_roof`, parent)!
         this.mesh.isPickable = false
+        this.frontWallsMesh.isPickable = false
         this.roofMesh.isPickable = false
+        this.frontWallsMesh.material = fadeMaterial
         this.mesh.setEnabled(false)
+        this.frontWallsMesh.setEnabled(false)
         this.roofMesh.setEnabled(false)
         this.applyXZTransform()
         this.recountYPosition()
         Lights.registerSharedLightMesh(this.mesh)
+        Lights.registerSharedLightMesh(this.frontWallsMesh)
         Lights.registerSharedLightMesh(this.roofMesh)
         Lights.addShadowCaster(this.mesh, true, true)
+        Lights.addShadowCaster(this.frontWallsMesh, true, true)
         Lights.addShadowCaster(this.roofMesh, true, true)
     }
 
@@ -87,7 +101,7 @@ class BuildingView {
             z = this.data.z
             rotation = 0
         }
-        for (const mesh of [this.mesh, this.roofMesh]) {
+        for (const mesh of [this.mesh, this.frontWallsMesh, this.roofMesh]) {
             mesh.position.x = x
             mesh.position.z = z
             mesh.rotation.y = rotation
@@ -97,6 +111,7 @@ class BuildingView {
     recountYPosition() {
         const block = WorldDataManager.getBlockMap()[this.data.x]?.[this.data.z]
         this.mesh.position.y = block?.totalHeight ?? 0
+        this.frontWallsMesh.position.y = this.mesh.position.y
         this.roofMesh.position.y = this.mesh.position.y
     }
 
@@ -197,27 +212,71 @@ class BuildingView {
             && local.z > -0.4 && local.z < HOUSE_DEPTH - 0.6
     }
 
+    intersectsOcclusionSegment(origin: Vector3, direction: Vector3, maxDistance: number) {
+        const longAxisAlongX = this.facing === '+Z' || this.facing === '-Z'
+        const xOverhang = longAxisAlongX ? ROOF_END_OVERHANG : ROOF_EAVE_OVERHANG
+        const zOverhang = longAxisAlongX ? ROOF_EAVE_OVERHANG : ROOF_END_OVERHANG
+        const groundY = this.mesh.position.y
+        return segmentIntersectsAabb(
+            origin,
+            direction,
+            maxDistance,
+            new Vector3(
+                this.data.x - 0.5 - xOverhang,
+                groundY,
+                this.data.z - 0.5 - zOverhang,
+            ),
+            new Vector3(
+                this.data.x + this.getWidth() - 0.5 + xOverhang,
+                groundY + FLOOR_HEIGHT + WALL_HEIGHT * 2 + ROOF_RISE + ROOF_THICKNESS,
+                this.data.z + this.getDepth() - 0.5 + zOverhang,
+            ),
+        )
+    }
+
     setVisible(visible: boolean) {
         this.mesh.setEnabled(visible)
+        this.frontWallsMesh.setEnabled(visible)
         this.roofMesh.setEnabled(visible)
     }
 
-    updateFade(timeRate: number, shouldFade: boolean) {
-        this.fadeTarget = shouldFade ? FADED_ALPHA : 1
-        if (this.fadeVisibility === this.fadeTarget) return
-        const step = ((1 - FADED_ALPHA) / FADE_DURATION) * timeRate
-        this.fadeVisibility = this.fadeVisibility < this.fadeTarget
-            ? Math.min(this.fadeVisibility + step, this.fadeTarget)
-            : Math.max(this.fadeVisibility - step, this.fadeTarget)
-        this.roofMesh.visibility = this.fadeVisibility
+    updateFade(timeRate: number, playerInside: boolean) {
+        const occluded = this.shouldOcclusionFade && !playerInside
+        this.roofVisibility = this.updateMeshFade(
+            this.roofMesh,
+            this.roofVisibility,
+            playerInside ? 0 : occluded ? FADED_ALPHA : 1,
+            0,
+            timeRate,
+        )
+        this.wallVisibility = this.updateMeshFade(
+            this.frontWallsMesh,
+            this.wallVisibility,
+            playerInside ? FADED_ALPHA : 1,
+            FADED_ALPHA,
+            timeRate,
+        )
+    }
+
+    updateMeshFade(mesh: Mesh, visibility: number, target: number, fadedTarget: number, timeRate: number) {
+        if (visibility === target) return visibility
+        const step = ((1 - fadedTarget) / FADE_DURATION) * timeRate
+        const result = visibility < target
+            ? Math.min(visibility + step, target)
+            : Math.max(visibility - step, target)
+        mesh.visibility = result
+        return result
     }
 
     dispose() {
         Lights.unregisterSharedLightMesh(this.mesh)
+        Lights.unregisterSharedLightMesh(this.frontWallsMesh)
         Lights.unregisterSharedLightMesh(this.roofMesh)
         Lights.removeShadowCaster(this.mesh, true, true)
+        Lights.removeShadowCaster(this.frontWallsMesh, true, true)
         Lights.removeShadowCaster(this.roofMesh, true, true)
         this.mesh.dispose()
+        this.frontWallsMesh.dispose()
         this.roofMesh.dispose()
     }
 }
@@ -227,16 +286,19 @@ export const BuildingManager = {
     floorTiles: new Map<string, BuildingView>(),
     collisionTiles: new Map<string, Set<BuildingView>>(),
     housePrefabs: null as BuildingPrefabs | null,
-    roofMaterial: null as PBRMaterial | null,
+    fadeMaterial: null as PBRMaterial | null,
     parent: null as TransformNode | null,
+    occlusionCheckIntervalFrames: 10,
+    occlusionCheckFrame: 0,
 
     initialize(scene: Scene, parent: TransformNode) {
         this.parent = parent
+        this.occlusionCheckFrame = 0
         Lights.enableTransparentShadowCasters()
-        this.roofMaterial = Materials.createBlockMat1(scene)
-        this.roofMaterial.name = 'building_roof_faded_material'
-        this.roofMaterial.alpha = 1
-        this.roofMaterial.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHABLEND
+        this.fadeMaterial = Materials.createBlockMat1(scene)
+        this.fadeMaterial.name = 'building_faded_material'
+        this.fadeMaterial.alpha = 1
+        this.fadeMaterial.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHABLEND
         this.housePrefabs = this.createHousePrefab(scene)
     },
 
@@ -245,10 +307,10 @@ export const BuildingManager = {
     },
 
     addBuilding(data: BuildingData) {
-        if (data.tp !== 1 || this.buildings.has(data.id) || !this.housePrefabs || !this.parent) {
+        if (data.tp !== 1 || this.buildings.has(data.id) || !this.housePrefabs || !this.parent || !this.fadeMaterial) {
             return
         }
-        const building = new BuildingView(data, this.housePrefabs, this.parent)
+        const building = new BuildingView(data, this.housePrefabs, this.parent, this.fadeMaterial)
         this.buildings.set(data.id, building)
         building.getOccupiedTiles().forEach((tile) => this.floorTiles.set(`${tile.x};${tile.z}`, building))
         building.getCollisionIndexTiles().forEach((tile) => {
@@ -282,6 +344,10 @@ export const BuildingManager = {
         return this.floorTiles.has(`${x};${z}`) ? FLOOR_HEIGHT : 0
     },
 
+    hasFloorAtTile(x: number, z: number) {
+        return this.floorTiles.has(`${x};${z}`)
+    },
+
     getPointInBuilding(x: number, z: number, size: number, coveredBlocks: {x: number, z: number}[]) {
         const candidates = new Set<BuildingView>()
         coveredBlocks.forEach((tile) => {
@@ -299,12 +365,39 @@ export const BuildingManager = {
         this.buildings.forEach((building) => building.recountYPosition())
     },
 
-    onFrame(timeRate: number, playerX: number | null, playerZ: number | null) {
+    onFrame(timeRate: number, camera: Camera | null) {
+        const playerX = MyPlayer.myChar?.pos.x ?? null
+        const playerZ = MyPlayer.myChar?.pos.z ?? null
+        this.occlusionCheckFrame++
+        if (this.occlusionCheckFrame >= this.occlusionCheckIntervalFrames) {
+            this.occlusionCheckFrame = 0
+            this.updateOcclusion(camera)
+        }
         this.buildings.forEach((building) => {
             building.updateFade(
                 timeRate,
                 playerX != null && playerZ != null && building.containsInteriorPoint(playerX, playerZ),
             )
+        })
+    },
+
+    updateOcclusion(camera: Camera | null) {
+        if (camera == null || MyPlayer.myModel == null) {
+            this.buildings.forEach((building) => building.shouldOcclusionFade = false)
+            return
+        }
+
+        const cameraPosition = camera.globalPosition
+        const playerCenter = MyPlayer.myModel.node.getAbsolutePosition().clone()
+        playerCenter.y += MyPlayer.myChar.getModelHeight() / 2
+        const direction = playerCenter.subtract(cameraPosition)
+        const distance = direction.length()
+        if (distance <= 0) return
+        direction.scaleInPlace(1 / distance)
+
+        this.buildings.forEach((building) => {
+            building.shouldOcclusionFade = building.isVisible()
+                && building.intersectsOcclusionSegment(cameraPosition, direction, distance)
         })
     },
 
@@ -320,10 +413,11 @@ export const BuildingManager = {
     },
 
     createHousePrefab(scene: Scene) {
-        const shellParts: Mesh[] = []
-        const shellUvData: number[] = []
-        const roofParts: Mesh[] = []
-        const roofUvData: number[] = []
+        type PartGroup = 'base' | 'wallMinX' | 'wallMaxX' | 'wallMinZ' | 'wallMaxZ' | 'roof'
+        const groups = {} as Record<PartGroup, {parts: Mesh[], uvData: number[]}>
+        for (const group of ['base', 'wallMinX', 'wallMaxX', 'wallMinZ', 'wallMaxZ', 'roof'] as PartGroup[]) {
+            groups[group] = {parts: [], uvData: []}
+        }
         const addBox = (
             name: string,
             width: number,
@@ -334,18 +428,17 @@ export const BuildingManager = {
             z: number,
             material: Vector2,
             rotationX = 0,
-            group: 'shell' | 'roof' = 'shell',
+            group: PartGroup = 'base',
         ) => {
             const box = MeshBuilder.CreateBox(name, {width, height, depth, wrap: true}, scene)
             box.position.set(x, y, z)
             box.rotation.x = rotationX
             box.convertToUnIndexedMesh()
-            const uvData = group === 'roof' ? roofUvData : shellUvData
+            const uvData = groups[group].uvData
             for (let i = 0; i < box.getTotalVertices(); i++) {
                 uvData.push(material.x, material.y)
             }
-            if (group === 'roof') roofParts.push(box)
-            else shellParts.push(box)
+            groups[group].parts.push(box)
         }
         const addWallGrid = (
             name: string,
@@ -355,6 +448,7 @@ export const BuildingManager = {
             y: number,
             z: number,
             runsAlongX: boolean,
+            group: PartGroup,
         ) => {
             for (let lengthOffset = 0; lengthOffset < length - 0.001;) {
                 const pieceLength = Math.min(0.5, length - lengthOffset)
@@ -370,6 +464,8 @@ export const BuildingManager = {
                         y - height / 2 + heightOffset + pieceHeight / 2,
                         z + (runsAlongX ? 0 : horizontalOffset),
                         MaterialEnum1.WOOD_PLANKS.uv,
+                        0,
+                        group,
                     )
                     heightOffset += pieceHeight
                 }
@@ -407,7 +503,13 @@ export const BuildingManager = {
             {center: 3, length: 1},
             {center: 3.9, length: 0.8},
         ]
-        const addWindowSection = (sectionStart: number, sectionEnd: number, windowCenter: number, z: number) => {
+        const addWindowSection = (
+            sectionStart: number,
+            sectionEnd: number,
+            windowCenter: number,
+            z: number,
+            group: PartGroup,
+        ) => {
             const sectionLength = sectionEnd - sectionStart
             const sectionCenter = (sectionStart + sectionEnd) / 2
             const windowStart = windowCenter - WINDOW_WIDTH / 2
@@ -422,6 +524,7 @@ export const BuildingManager = {
                 FLOOR_HEIGHT + bottomHeight / 2,
                 z,
                 true,
+                group,
             )
             addWallGrid(
                 'buildingWindowTop',
@@ -431,6 +534,7 @@ export const BuildingManager = {
                 WINDOW_BOTTOM + WINDOW_HEIGHT + topHeight / 2,
                 z,
                 true,
+                group,
             )
             const leftJambWidth = windowStart - sectionStart
             const rightJambWidth = sectionEnd - windowEnd
@@ -443,6 +547,7 @@ export const BuildingManager = {
                     WINDOW_BOTTOM + WINDOW_HEIGHT / 2,
                     z,
                     true,
+                    group,
                 )
             }
             if (rightJambWidth > 0) {
@@ -454,11 +559,13 @@ export const BuildingManager = {
                     WINDOW_BOTTOM + WINDOW_HEIGHT / 2,
                     z,
                     true,
+                    group,
                 )
             }
         }
         for (const segment of longWallSegments) {
             for (const z of [-0.5, HOUSE_DEPTH - 0.5]) {
+                const wallGroup: PartGroup = z === -0.5 ? 'wallMinZ' : 'wallMaxZ'
                 if (z === HOUSE_DEPTH - 0.5 && segment.center === DOOR_CENTER_X) continue
                 if (z === HOUSE_DEPTH - 0.5 && (segment.center === 3 || segment.center === 3.9)) continue
                 const hasWindow = z === -0.5 && (segment.center === 1 || segment.center === 3)
@@ -468,15 +575,16 @@ export const BuildingManager = {
                         segment.center + segment.length / 2,
                         segment.center,
                         z,
+                        wallGroup,
                     )
                     continue
                 }
                 for (let level = 0; level < 2; level++) {
-                    addWallGrid('buildingWall', segment.length, WALL_HEIGHT, segment.center, 0.6 + level, z, true)
+                    addWallGrid('buildingWall', segment.length, WALL_HEIGHT, segment.center, 0.6 + level, z, true, wallGroup)
                 }
             }
         }
-        addWindowSection(2.5, 4.3, 3.5, HOUSE_DEPTH - 0.5)
+        addWindowSection(2.5, 4.3, 3.5, HOUSE_DEPTH - 0.5, 'wallMaxZ')
         addWallGrid(
             'buildingDoorLintel',
             DOOR_WIDTH,
@@ -485,6 +593,7 @@ export const BuildingManager = {
             2,
             HOUSE_DEPTH - 0.5,
             true,
+            'wallMaxZ',
         )
         const shortWallSegments = [
             {center: 0.1, length: 0.8},
@@ -493,8 +602,9 @@ export const BuildingManager = {
         ]
         for (const segment of shortWallSegments) {
             for (const x of [-0.5, HOUSE_WIDTH - 0.5]) {
+                const wallGroup: PartGroup = x === -0.5 ? 'wallMinX' : 'wallMaxX'
                 for (let level = 0; level < 2; level++) {
-                    addWallGrid('buildingWall', segment.length, WALL_HEIGHT, x, 0.6 + level, segment.center, false)
+                    addWallGrid('buildingWall', segment.length, WALL_HEIGHT, x, 0.6 + level, segment.center, false, wallGroup)
                 }
             }
         }
@@ -533,7 +643,7 @@ export const BuildingManager = {
                     x + endDirection * ROOF_END_OVERHANG / 2,
                     roofCenterY,
                     roofCenterZ + side * ROOF_RUN / 2,
-                    MaterialEnum1.BRICK_RED.uv,
+                    MaterialEnum1.HAY.uv,
                     side * ROOF_ANGLE,
                     'roof',
                 )
@@ -549,9 +659,48 @@ export const BuildingManager = {
             merged.setEnabled(false)
             return merged
         }
+        const source = {
+            base: mergeParts(groups.base.parts, groups.base.uvData, 'humanHouseBaseSource', Materials.blockMat1!),
+            wallMinX: mergeParts(groups.wallMinX.parts, groups.wallMinX.uvData, 'humanHouseWallMinXSource', Materials.blockMat1!),
+            wallMaxX: mergeParts(groups.wallMaxX.parts, groups.wallMaxX.uvData, 'humanHouseWallMaxXSource', Materials.blockMat1!),
+            wallMinZ: mergeParts(groups.wallMinZ.parts, groups.wallMinZ.uvData, 'humanHouseWallMinZSource', Materials.blockMat1!),
+            wallMaxZ: mergeParts(groups.wallMaxZ.parts, groups.wallMaxZ.uvData, 'humanHouseWallMaxZSource', Materials.blockMat1!),
+        }
+        type WallKey = 'wallMinX' | 'wallMaxX' | 'wallMinZ' | 'wallMaxZ'
+        const wallKeys: WallKey[] = ['wallMinX', 'wallMaxX', 'wallMinZ', 'wallMaxZ']
+        const frontWallKeys: Record<BuildingFacing, WallKey[]> = {
+            '+Z': ['wallMinX', 'wallMinZ'],
+            '-Z': ['wallMaxX', 'wallMaxZ'],
+            '+X': ['wallMaxX', 'wallMinZ'],
+            '-X': ['wallMinX', 'wallMaxZ'],
+        }
+        const mergePrefabs = (meshes: Mesh[], name: string) => {
+            const clones = meshes.map((mesh, index) => {
+                const clone = mesh.clone(`${name}_${index}`)!
+                clone.setEnabled(true)
+                return clone
+            })
+            const uvData = meshes.flatMap((mesh) => Array.from(mesh.getVerticesData('uvc') ?? []))
+            return mergeParts(clones, uvData, name, Materials.blockMat1!)
+        }
+        const variants = {} as BuildingPrefabs['variants']
+        for (const facing of ['+X', '-X', '+Z', '-Z'] as BuildingFacing[]) {
+            const front = frontWallKeys[facing]
+            variants[facing] = {
+                shell: mergePrefabs(
+                    [source.base, ...wallKeys.filter((key) => !front.includes(key)).map((key) => source[key])],
+                    `humanHouseShell5x3_${facing}`,
+                ),
+                frontWalls: mergePrefabs(
+                    front.map((key) => source[key]),
+                    `humanHouseFrontWalls5x3_${facing}`,
+                ),
+            }
+        }
+        Object.values(source).forEach((mesh) => mesh.dispose())
         return {
-            shell: mergeParts(shellParts, shellUvData, 'humanHouseShell5x3Prefab', Materials.blockMat1!),
-            roof: mergeParts(roofParts, roofUvData, 'humanHouseRoof5x3Prefab', this.roofMaterial!),
+            variants,
+            roof: mergeParts(groups.roof.parts, groups.roof.uvData, 'humanHouseRoof5x3Prefab', this.fadeMaterial!),
         }
     },
 }

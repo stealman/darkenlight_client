@@ -5,6 +5,7 @@ import { MapBlock, WorldDataManager } from '@/data/worldDataManager'
 import { TerrainEnum1 } from '@/babylon/materials'
 import { ViewportManager } from '@/utils/viewport'
 import { MyPlayer } from '@/data/myPlayer'
+import { BuildingManager } from '@/babylon/world/buildings/buildingManager'
 
 export const FoliageManager = {
     FOLIAGE_TYPE_COUNT: 1,
@@ -68,6 +69,10 @@ export const FoliageManager = {
         for (let x = Math.max(0, myPos.x + ViewportManager.minX); x <= Math.min(blockMap.length - 1, myPos.x + ViewportManager.maxX); x++) {
             for (let z = Math.max(0, myPos.z + ViewportManager.minZ); z <= Math.min(blockMap.length - 1, myPos.z + ViewportManager.maxZ); z++) {
                 if (!ViewportManager.isPointInVisibleMatrix(x, z, 2)) {
+                    continue
+                }
+
+                if (BuildingManager.hasFloorAtTile(x, z)) {
                     continue
                 }
 

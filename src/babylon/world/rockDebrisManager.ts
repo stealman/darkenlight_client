@@ -5,6 +5,7 @@ import { MaterialEnum1, Materials, TerrainEnum1 } from '@/babylon/materials'
 import { MapBlock, WorldDataManager } from '@/data/worldDataManager'
 import { ViewportManager } from '@/utils/viewport'
 import { MyPlayer } from '@/data/myPlayer'
+import { BuildingManager } from '@/babylon/world/buildings/buildingManager'
 
 export const RockDebrisManager = {
     BASE_DENSITY: 1 / 8,
@@ -38,6 +39,10 @@ export const RockDebrisManager = {
         for (let x = Math.max(0, myPos.x + ViewportManager.minX); x <= Math.min(blockMap.length - 1, myPos.x + ViewportManager.maxX); x++) {
             for (let z = Math.max(0, myPos.z + ViewportManager.minZ); z <= Math.min(blockMap.length - 1, myPos.z + ViewportManager.maxZ); z++) {
                 if (!ViewportManager.isPointInVisibleMatrix(x, z, 2)) {
+                    continue
+                }
+
+                if (BuildingManager.hasFloorAtTile(x, z)) {
                     continue
                 }
 

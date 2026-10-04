@@ -290,6 +290,7 @@ export const MaterialEnum1 = {
     WOOD_PLANKS: new MaterialEnum(12, new Vector2(6.5, 12.5)),
     EMBERS: new MaterialEnum(17, new Vector2(0.5, 10.5)),
     STEEL_1: new MaterialEnum(25, new Vector2(0.5, 8.5)),
+    HAY: new MaterialEnum(33, new Vector2(0.5, 6.5)),
 
     getMaterialByIndex(index: number): Vector2 {
         return Object.values(MaterialEnum1).find(item => item.index === index)?.uv;
