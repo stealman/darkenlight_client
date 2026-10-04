@@ -1,11 +1,13 @@
-import { Vector2, Vector3 } from '@babylonjs/core'
-import { Prefab } from '@/babylon/world/worldRenderer'
+import { Matrix, Mesh, Vector2, Vector3 } from '@babylonjs/core'
+import { Prefab, WorldRenderer } from '@/babylon/world/worldRenderer'
 import { StaticObjectInfo, StaticObjectsCodebook } from '@/babylon/world/statics/staticsCodebook'
+import { TerrainManager } from '@/babylon/world/terrainManager'
 
 export interface StaticObject {
     type: number
     position: Vector3
     renderPosition: Vector3
+    prefab: Prefab | null
 
     render(): void
     renderTerrain?(terrainMatrices: Matrix[], terrainUvData: Vector2[]): void
@@ -13,10 +15,16 @@ export interface StaticObject {
     onHidden(): void
     dispose(): void
     getSize(): number
+    getSizeX(): number
+    getSizeZ(): number
     isBlocking(): boolean
     isObjectInCollision(tgtX: number, tgtZ: number, size: number): boolean
     getCollisionTolerance(): number
     getWalkableHeight(): number | null
+    clearRenderMatrixCapture(): void
+    captureRenderMatrices(blockStart: number, prefabStart: number): void
+    applyDeleteBounceOffset(offset: number): Mesh[]
+    captureTerrainMatrices(start: number, matrices: Matrix[]): void
 }
 
 export abstract class BaseStaticObject implements StaticObject {
@@ -28,6 +36,12 @@ export abstract class BaseStaticObject implements StaticObject {
     prefab: Prefab | null
     objectInfo: StaticObjectInfo
     status: any
+    private blockMatrixIndices: number[] = []
+    private blockMatrixBaseY: number[] = []
+    private prefabMatrixIndices: number[] = []
+    private prefabMatrixBaseY: number[] = []
+    private terrainMatrixIndices: number[] = []
+    private terrainMatrixBaseY: number[] = []
 
     protected constructor(type: number, position: Vector3, rotation: number, material: Vector2, prefab: Prefab | null) {
         this.type = type
@@ -65,6 +79,65 @@ export abstract class BaseStaticObject implements StaticObject {
 
     getWalkableHeight(): number | null {
         return null
+    }
+
+    clearRenderMatrixCapture() {
+        this.blockMatrixIndices = []
+        this.blockMatrixBaseY = []
+        this.prefabMatrixIndices = []
+        this.prefabMatrixBaseY = []
+        this.terrainMatrixIndices = []
+        this.terrainMatrixBaseY = []
+    }
+
+    captureRenderMatrices(blockStart: number, prefabStart: number) {
+        this.blockMatrixIndices = Array.from(
+            {length: WorldRenderer.block1!.matrices.length - blockStart},
+            (_, index) => blockStart + index,
+        )
+        this.blockMatrixBaseY = this.blockMatrixIndices.map((index) => WorldRenderer.block1!.matrices[index].m[13])
+        if (!this.prefab) return
+        this.prefabMatrixIndices = Array.from(
+            {length: this.prefab.matrices.length - prefabStart},
+            (_, index) => prefabStart + index,
+        )
+        this.prefabMatrixBaseY = this.prefabMatrixIndices.map((index) => this.prefab!.matrices[index].m[13])
+    }
+
+    captureTerrainMatrices(start: number, matrices: Matrix[]) {
+        this.terrainMatrixIndices = Array.from(
+            {length: matrices.length - start},
+            (_, index) => start + index,
+        )
+        this.terrainMatrixBaseY = this.terrainMatrixIndices.map((index) => matrices[index].m[13])
+    }
+
+    applyDeleteBounceOffset(offset: number): Mesh[] {
+        const changedMeshes: Mesh[] = []
+        const blockBuffer = WorldRenderer.block1!.matrixBuffer
+        if (this.blockMatrixIndices.length > 0 && blockBuffer.length > 0) {
+            this.blockMatrixIndices.forEach((index, i) => {
+                blockBuffer[(index * 16) + 13] = this.blockMatrixBaseY[i] + offset
+            })
+            changedMeshes.push(WorldRenderer.block1!.mesh)
+        }
+        if (this.prefabMatrixIndices.length > 0 && this.prefab!.matrixBuffer.length > 0) {
+            this.prefabMatrixIndices.forEach((index, i) => {
+                this.prefab!.matrixBuffer[(index * 16) + 13] = this.prefabMatrixBaseY[i] + offset
+            })
+            changedMeshes.push(this.prefab!.mesh)
+        }
+        if (this.terrainMatrixIndices.length > 0 && TerrainManager.terrainBlockMatrixBuffer.length > 0) {
+            this.terrainMatrixIndices.forEach((index, i) => {
+                TerrainManager.terrainBlockMatrixBuffer[(index * 16) + 13] = this.terrainMatrixBaseY[i] + offset
+            })
+            changedMeshes.push(TerrainManager.terrainBlock1!)
+        }
+        this.onDeleteBounceOffset(offset)
+        return changedMeshes
+    }
+
+    protected onDeleteBounceOffset(_offset: number) {
     }
 
     isObjectInCollision(tgtX: number, tgtZ: number, size: number): boolean {

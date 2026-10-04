@@ -128,6 +128,21 @@
         </div>
     </div>
 
+    <div class="dialog-backdrop death-dialog-backdrop" v-if="gmDeleteConfirmationVisible" @click.self="GMManager.closeDeleteConfirmation()">
+        <div class="dialog-window adaptive">
+            <div class="dialog-surface">
+                <div class="dialog-header text-warning">{{ gmDeleteConfirmationTitle }}</div>
+                <div class="dialog-content dialog-content--modal" style="text-align: center;">
+                    <div>{{ gmDeleteConfirmationMessage }}</div>
+                    <div class="dialog-actions" style="margin-top: 20px;">
+                        <button class="dialog-button" @click="GMManager.confirmDelete()"><span class="ui-text-gradient--button-state">Smazat</span></button>
+                        <button class="dialog-button" @click="GMManager.closeDeleteConfirmation()"><span class="ui-text-gradient--button-state">Zavřít</span></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="dialog-backdrop" v-if="displayRestartPrompt" @click.self="displayRestartPrompt = false">
         <div class="dialog-window adaptive">
             <div class="dialog-surface">
@@ -201,6 +216,9 @@ import { useI18n } from '@/i18n'
 const canvas = ref<HTMLCanvasElement | null>(null)
 const miniMapCanvas = ref<HTMLCanvasElement | null>(null)
 const gmPanelVisible = GMManager.gmPanelVisible
+const gmDeleteConfirmationVisible = GMManager.deleteConfirmationVisible
+const gmDeleteConfirmationTitle = GMManager.deleteConfirmationTitle
+const gmDeleteConfirmationMessage = GMManager.deleteConfirmationMessage
 const myCharRef = MyPlayer.myCharRef
 const isDead = MyPlayer.isDead
 const deathDialogTime = ref(Date.now())
@@ -249,6 +267,7 @@ const npcDetailsDialog = ref()
 const { t } = useI18n()
 
 const closeGameplayDialogs = () => {
+    GMManager.closeDeleteConfirmation()
     targetLockSettingsActive.value = false
     displaySettingsDialog.value = false
     displayRestartPrompt.value = false

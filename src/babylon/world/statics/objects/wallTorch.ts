@@ -34,6 +34,7 @@ export class WallTorch extends BaseStaticObject {
             ? metadata.facing
             : '-Z'
         this.mountHeight = Number.isFinite(metadata?.mountHeight) ? metadata!.mountHeight! : 2
+        this.status = {facing: this.facing, mountHeight: this.mountHeight}
     }
 
     private getWallNormal(): Vector3 {

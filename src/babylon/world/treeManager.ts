@@ -24,6 +24,11 @@ export const TreeManager = {
     fadedPersonalShadowCasters: new WeakSet<Mesh>(),
     allTrees : [] as Tree[],
     visibleTrees : [] as Tree[],
+    deletePreviewTree: null as Tree | null,
+    deletePreviewStartTime: 0,
+    renderCaptures: new WeakMap<Tree, {
+        blockIndices: number[], blockBaseY: number[], leafIndices: number[], leafBaseY: number[], fadedBaseY: number[]
+    }>(),
 
     initialize(scene: Scene) {
         this.occlusionCheckFrame = 0
@@ -218,6 +223,7 @@ export const TreeManager = {
     removeTreeAt(x: number, z: number) {
         for (let i = 0; i < this.allTrees.length; i++) {
             if (this.allTrees[i].position.x === x && this.allTrees[i].position.z === z) {
+                if (this.deletePreviewTree === this.allTrees[i]) this.deletePreviewTree = null
                 disposeFadedTreeMeshes(this.allTrees[i])
                 this.allTrees.splice(i, 1)
                 break
@@ -229,6 +235,8 @@ export const TreeManager = {
         this.allTrees.forEach(tree => disposeFadedTreeMeshes(tree))
         this.allTrees = []
         this.visibleTrees = []
+        this.deletePreviewTree = null
+        this.renderCaptures = new WeakMap()
         this.renderTrees()
     },
 
@@ -248,6 +256,8 @@ export const TreeManager = {
             }
         })
         for (const element of this.visibleTrees) {
+            const blockStart = WorldRenderer.block1!.matrices.length
+            const leafStart = element.leavesPrefab.matrices.length
             const faded = element.shouldFade
             if (faded) {
                 element.fadeTarget = this.fadedAlpha
@@ -264,6 +274,21 @@ export const TreeManager = {
                 element.renderLeaves(false)
                 element.renderTrunk(false)
             }
+            const blockIndices = Array.from(
+                {length: WorldRenderer.block1!.matrices.length - blockStart},
+                (_, index) => blockStart + index,
+            )
+            const leafIndices = Array.from(
+                {length: element.leavesPrefab.matrices.length - leafStart},
+                (_, index) => leafStart + index,
+            )
+            this.renderCaptures.set(element, {
+                blockIndices,
+                blockBaseY: blockIndices.map((index) => WorldRenderer.block1!.matrices[index].m[13]),
+                leafIndices,
+                leafBaseY: leafIndices.map((index) => element.leavesPrefab.matrices[index].m[13]),
+                fadedBaseY: element.fadedMeshes.map((mesh) => mesh.position.y),
+            })
         }
 
         // Prefabs update thin instance buffers
@@ -289,6 +314,39 @@ export const TreeManager = {
             }
         }
         return this.visibleTrees
+    },
+
+    updateDeletePreview(active: boolean, x: number, z: number, time: number) {
+        const target = active
+            ? this.allTrees.find((tree) => tree.position.x === x && tree.position.z === z) ?? null
+            : null
+        if (target !== this.deletePreviewTree) {
+            if (this.deletePreviewTree) this.applyDeleteBounceOffset(this.deletePreviewTree, 0)
+            this.deletePreviewTree = target
+            this.deletePreviewStartTime = time
+        }
+        if (!this.deletePreviewTree) return
+        const elapsed = time - this.deletePreviewStartTime
+        const offset = ((Math.sin((elapsed * 0.008) - (Math.PI / 2)) + 1) * 0.5) * 0.175
+        this.applyDeleteBounceOffset(this.deletePreviewTree, offset)
+    },
+
+    applyDeleteBounceOffset(tree: Tree, offset: number) {
+        const capture = this.renderCaptures.get(tree)
+        if (!capture) return
+        const blockBuffer = WorldRenderer.block1!.matrixBuffer
+        capture.blockIndices.forEach((index, i) => {
+            blockBuffer[(index * 16) + 13] = capture.blockBaseY[i] + offset
+        })
+        const leafBuffer = tree.leavesPrefab.matrixBuffer
+        capture.leafIndices.forEach((index, i) => {
+            leafBuffer[(index * 16) + 13] = capture.leafBaseY[i] + offset
+        })
+        tree.fadedMeshes.forEach((mesh, i) => {
+            mesh.position.y = capture.fadedBaseY[i] + offset
+        })
+        if (capture.blockIndices.length > 0) WorldRenderer.block1!.mesh.thinInstanceBufferUpdated('matrix')
+        if (capture.leafIndices.length > 0) tree.leavesPrefab.mesh.thinInstanceBufferUpdated('matrix')
     },
 
     getPointInTree(x: number, z: number, size: number): { x: number, z: number } | null {
@@ -506,6 +564,7 @@ interface Tree {
     position: Vector3
     rotation: number
     scale: number
+    leavesPrefab: Prefab
     fadedMeshes: Mesh[]
     fadeVisibility: number
     fadeTarget: number

@@ -7,6 +7,7 @@ import { MyPlayer } from '@/data/myPlayer'
 import { segmentIntersectsAabb } from '@/babylon/geometryUtils'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { BabylonUtils } from '@/babylon/utils'
+import { TargetingManager } from '@/gui/targettingManager'
 
 export interface BuildingData {
     id: number
@@ -407,12 +408,13 @@ class BuildingView {
         }
     }
 
-    updateFade(timeRate: number, playerInside: boolean) {
-        const occluded = this.shouldOcclusionFade && !playerInside
+    updateFade(timeRate: number, playerInside: boolean, selectedTargetInside: boolean) {
+        const hideRoof = playerInside || selectedTargetInside
+        const occluded = this.shouldOcclusionFade && !hideRoof
         this.roofVisibility = this.updateMeshFade(
             this.roofMesh,
             this.roofVisibility,
-            playerInside ? HIDDEN_ROOF_VISIBILITY : occluded ? FADED_ALPHA : 1,
+            hideRoof ? HIDDEN_ROOF_VISIBILITY : occluded ? FADED_ALPHA : 1,
             HIDDEN_ROOF_VISIBILITY,
             timeRate,
         )
@@ -592,6 +594,13 @@ export const BuildingManager = {
     onFrame(timeRate: number, camera: Camera | null) {
         const playerX = MyPlayer.myChar?.pos.x ?? null
         const playerZ = MyPlayer.myChar?.pos.z ?? null
+        const selectedTarget = TargetingManager.selectedTarget
+        const selectedTargetX = selectedTarget != null && selectedTarget !== MyPlayer.myChar
+            ? selectedTarget.pos.x
+            : null
+        const selectedTargetZ = selectedTarget != null && selectedTarget !== MyPlayer.myChar
+            ? selectedTarget.pos.z
+            : null
         this.occlusionCheckFrame++
         if (this.occlusionCheckFrame >= this.occlusionCheckIntervalFrames) {
             this.occlusionCheckFrame = 0
@@ -604,8 +613,11 @@ export const BuildingManager = {
             const playerInside = playerX != null
                 && playerZ != null
                 && building.containsInteriorPoint(playerX, playerZ)
+            const selectedTargetInside = selectedTargetX != null
+                && selectedTargetZ != null
+                && building.containsInteriorPoint(selectedTargetX, selectedTargetZ)
             playerInsideBuilding ||= playerInside
-            rebuildOpaqueBatch = building.updateFade(timeRate, playerInside) || rebuildOpaqueBatch
+            rebuildOpaqueBatch = building.updateFade(timeRate, playerInside, selectedTargetInside) || rebuildOpaqueBatch
         })
         if (rebuildOpaqueBatch) this.rebuildOpaqueBatch()
         Lights.setInsideBuilding(playerInsideBuilding)
@@ -620,14 +632,29 @@ export const BuildingManager = {
         const cameraPosition = camera.globalPosition
         const playerCenter = MyPlayer.myModel.node.getAbsolutePosition().clone()
         playerCenter.y += MyPlayer.myChar.getModelHeight() / 2
-        const direction = playerCenter.subtract(cameraPosition)
-        const distance = direction.length()
-        if (distance <= 0) return
-        direction.scaleInPlace(1 / distance)
+        const occlusionTargets = [playerCenter]
+        const selectedTarget = TargetingManager.selectedTarget
+        if (selectedTarget != null && selectedTarget !== MyPlayer.myChar) {
+            occlusionTargets.push(new Vector3(
+                selectedTarget.pos.x,
+                selectedTarget.pos.y + (selectedTarget.getModelHeight() / 2),
+                selectedTarget.pos.z,
+            ))
+        }
+        const segments = occlusionTargets.map(target => {
+            const direction = target.subtract(cameraPosition)
+            const distance = direction.length()
+            if (distance > 0) direction.scaleInPlace(1 / distance)
+            return { direction, distance }
+        }).filter(segment => segment.distance > 0)
 
         this.buildings.forEach((building) => {
             building.shouldOcclusionFade = building.isVisible()
-                && building.intersectsOcclusionSegment(cameraPosition, direction, distance)
+                && segments.some(segment => building.intersectsOcclusionSegment(
+                    cameraPosition,
+                    segment.direction,
+                    segment.distance,
+                ))
         })
     },
 

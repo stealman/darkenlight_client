@@ -3,7 +3,7 @@
         backdrop-class="inventory-dialog-backdrop"
         window-class="adaptive inventory-dialog-window container-dialog-window"
         content-class="container-dialog-content"
-        :close-on-backdrop="false"
+        :close-on-backdrop="true"
         @close="closeDialog"
     >
         <template #header>{{ t('container.barrel') }}</template>

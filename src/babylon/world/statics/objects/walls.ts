@@ -286,6 +286,7 @@ export class StoneEntrance extends BaseStaticObject {
     private readonly portalLightPosition = new Vector3()
     private readonly portalLightDirection = new Vector3()
     private portalPlane: Mesh | null = null
+    private deleteBounceOffset = 0
 
     constructor(type: number, position: Vector3, material: Vector2, metadata?: StoneEntranceMetadata) {
         super(type, position, 0, material, null)
@@ -357,7 +358,7 @@ export class StoneEntrance extends BaseStaticObject {
         const approachDirection = Lights.indoor ? 1 : -1
         this.portalLightPosition.set(
             this.renderPosition.x + (facingX * PORTAL_LIGHT_OUTWARD_OFFSET),
-            this.renderPosition.y + PORTAL_LIGHT_HEIGHT,
+            this.renderPosition.y + PORTAL_LIGHT_HEIGHT + this.deleteBounceOffset,
             this.renderPosition.z + (facingZ * PORTAL_LIGHT_OUTWARD_OFFSET),
         )
         this.portalLightDirection.set(
@@ -376,10 +377,16 @@ export class StoneEntrance extends BaseStaticObject {
         const facingZ = this.facing === '+Z' ? 1 : this.facing === '-Z' ? -1 : 0
         this.portalPlane.position.set(
             this.renderPosition.x + facingX * 0.91,
-            this.renderPosition.y + 1,
+            this.renderPosition.y + 1 + this.deleteBounceOffset,
             this.renderPosition.z + facingZ * 0.91,
         )
         this.portalPlane.rotation.y = facingX === 0 ? 0 : Math.PI / 2
+    }
+
+    protected onDeleteBounceOffset(offset: number) {
+        this.deleteBounceOffset = offset
+        this.updatePortalPlanePosition()
+        this.updatePortalLightTransform()
     }
 
     renderTerrain(terrainMatrices: Matrix[], terrainUvData: Vector2[]) {

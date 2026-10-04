@@ -44,6 +44,9 @@ export const StaticsManager = {
     walkableObjectsByTile: new Map<string, StaticObject>(),
     activeBarrel: null as CampBarrel | null,
     animatingBarrels: new Set<CampBarrel>(),
+    deletePreviewObjects: new Set<StaticObject>(),
+    deletePreviewKey: '',
+    deletePreviewStartTime: 0,
 
     initialize(scene: Scene) {
         this.prefabs.shrub2x2 = PrefabShrub2x2.getPrefab(scene)
@@ -178,6 +181,7 @@ export const StaticsManager = {
             if (this.allStatics[i].position.x === x && this.allStatics[i].position.z === z
                 && (type === undefined || this.allStatics[i].type === type)) {
                 const obj = this.allStatics[i]
+                this.deletePreviewObjects.delete(obj)
                 if (obj instanceof CampBarrel) {
                     obj.clearRenderMatrices()
                     this.animatingBarrels.delete(obj)
@@ -204,6 +208,8 @@ export const StaticsManager = {
         this.walkableObjectsByTile.clear()
         this.activeBarrel = null
         this.animatingBarrels.clear()
+        this.deletePreviewObjects.clear()
+        this.deletePreviewKey = ''
         this.renderObjects()
     },
 
@@ -234,6 +240,40 @@ export const StaticsManager = {
         if (bufferChanged) WorldRenderer.block1!.mesh.thinInstanceBufferUpdated('matrix')
     },
 
+    updateDeletePreview(active: boolean, x: number, z: number, time: number) {
+        const targets = active ? this.getObjectsOnTile(x, z) : []
+        const targetKey = targets.map((obj) => `${obj.type}:${obj.position.x}:${obj.position.z}`).sort().join('|')
+        if (targetKey !== this.deletePreviewKey) {
+            const changedMeshes = new Set(Array.from(this.deletePreviewObjects)
+                .flatMap((obj) => obj.applyDeleteBounceOffset(0)))
+            changedMeshes.forEach((mesh) => mesh.thinInstanceBufferUpdated('matrix'))
+            this.deletePreviewObjects = new Set(targets)
+            this.deletePreviewKey = targetKey
+            this.deletePreviewStartTime = time
+        }
+        if (this.deletePreviewObjects.size === 0) return
+
+        const elapsed = time - this.deletePreviewStartTime
+        const offset = ((Math.sin((elapsed * 0.008) - (Math.PI / 2)) + 1) * 0.5) * 0.175
+        const changedMeshes = new Set(Array.from(this.deletePreviewObjects)
+            .flatMap((obj) => obj.applyDeleteBounceOffset(offset)))
+        changedMeshes.forEach((mesh) => mesh.thinInstanceBufferUpdated('matrix'))
+    },
+
+    getObjectsOnTile(x: number, z: number): StaticObject[] {
+        let targets = this.allStatics.filter((obj) => x >= obj.position.x && x < obj.position.x + obj.getSizeX()
+            && z >= obj.position.z && z < obj.position.z + obj.getSizeZ())
+        if (targets.length === 0) {
+            targets = this.allStatics.filter((obj) => obj.type === 261 && (
+                (obj.status?.facing === '-X' && obj.position.x - 1 === x && obj.position.z === z)
+                || (obj.status?.facing === '+X' && obj.position.x + 1 === x && obj.position.z === z)
+                || (obj.status?.facing === '-Z' && obj.position.x === x && obj.position.z - 1 === z)
+                || (obj.status?.facing === '+Z' && obj.position.x === x && obj.position.z + 1 === z)
+            ))
+        }
+        return targets
+    },
+
     renderObjects() {
         Object.values(this.prefabs).forEach(prefab => {
             prefab?.clearMatrices()
@@ -245,7 +285,10 @@ export const StaticsManager = {
         this.resolveConnectingCorners()
         this.updateVisibleObjects()
         for (const element of this.visibleStatics) {
+            const blockStart = WorldRenderer.block1!.matrices.length
+            const prefabStart = element.prefab?.matrices.length ?? 0
             element.render()
+            element.captureRenderMatrices(blockStart, prefabStart)
         }
         StaticFireParticleManager.flush()
 
@@ -295,9 +338,12 @@ export const StaticsManager = {
     },
 
     renderTerrainBlocks(terrainMatrices: Matrix[], terrainUvData: Vector2[]) {
+        this.allStatics.forEach((obj) => obj.clearRenderMatrixCapture())
         this.updateVisibleObjects()
         for (const element of this.visibleStatics) {
+            const start = terrainMatrices.length
             element.renderTerrain?.(terrainMatrices, terrainUvData)
+            element.captureTerrainMatrices(start, terrainMatrices)
         }
     },
 

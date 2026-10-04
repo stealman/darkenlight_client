@@ -356,6 +356,15 @@ export class GMBuildingChange implements Message {
     }
 }
 
+export class GMStaticDeleteInfoRequest implements Message {
+    t: number = 1021
+    d: {x: number, z: number}
+
+    constructor(x: number, z: number) {
+        this.d = {x, z}
+    }
+}
+
 export class PowerStrike implements Message {
     t: number = 71
 
@@ -488,8 +497,8 @@ export class GMTeleportMsg implements Message {
     t: number = 1008
     d: any
 
-    constructor(worldId: number, x: number, z: number) {
-        this.d = {worldId, x, z}
+    constructor(worldId: number, x: number, z: number, characterId: number) {
+        this.d = {worldId, x, z, characterId}
     }
 }
 

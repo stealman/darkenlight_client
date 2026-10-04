@@ -384,6 +384,11 @@ export interface GMItemCodebookItem {
     name: string
 }
 
+export interface GMWorldsData {
+    worlds: Array<{id: number, name: string}>
+    characters: Array<{id: number, name: string, worldId: number}>
+}
+
 export interface GMWorldSettingsData {
     id: number
     name: string
@@ -405,4 +410,11 @@ export interface GMWorldBiomeTreesChangedData {
     worldId: number
     removedTrees: Array<{x: number, z: number}>
     addedTrees: Array<{x: number, z: number}>
+}
+
+export interface GMStaticDeleteInfoData {
+    x: number
+    z: number
+    barrelCount: number
+    itemCount: number
 }

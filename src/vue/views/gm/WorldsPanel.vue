@@ -63,7 +63,15 @@
                                     <button class="dialog-button" @click="saveSettings"><span class="ui-text-gradient--button-state">SAVE SETTINGS</span></button>
                                 </div>
                                 <div class="worlds-teleport-action">
-                                    <button class="dialog-button" @click="teleportPicking = !teleportPicking">
+                                    <label class="worlds-control">
+                                        <span>Online player</span>
+                                        <select v-model.number="selectedTeleportCharacterId">
+                                            <option v-for="character in onlineCharacters" :key="character.id" :value="character.id">
+                                                {{ character.name }} (world {{ character.worldId }})
+                                            </option>
+                                        </select>
+                                    </label>
+                                    <button class="dialog-button" :disabled="!Number.isInteger(selectedTeleportCharacterId)" @click="teleportPicking = !teleportPicking">
                                         <span class="ui-text-gradient--button-state">{{ teleportPicking ? 'CANCEL' : 'TELEPORT' }}</span>
                                     </button>
                                 </div>
@@ -367,6 +375,8 @@ const dialogVisible = ref(false)
 const selectedWorldId = ref(null)
 const worldSettings = computed(() => GMManager.worldSettings.value)
 const worlds = computed(() => GMManager.teleportWorlds.value)
+const onlineCharacters = computed(() => GMManager.onlineCharacters.value)
+const selectedTeleportCharacterId = ref(null)
 const name = ref('')
 const mapId = ref(0)
 const seaWaterLevel = ref(null)
@@ -478,6 +488,7 @@ const pendingMapChangeCount = computed(() => selectedMapType.value === 'height'
 
 const openDialog = () => {
     dialogVisible.value = true
+    selectInitialTeleportCharacter()
     const storedMapView = getStoredMapView()
     if (storedMapView) {
         selectedMapType.value = storedMapView.mapType
@@ -549,6 +560,11 @@ const selectInitialWorld = () => {
     const storedWorld = worlds.value.find((world) => world.id === storedMapView?.worldId)
     const currentWorld = worlds.value.find((world) => world.id === GMManager.selectedTeleportWorld.value)
     selectedWorldId.value = storedWorld?.id ?? currentWorld?.id ?? worlds.value[0].id
+}
+
+const selectInitialTeleportCharacter = () => {
+    const ownCharacter = onlineCharacters.value.find((character) => character.id === MyPlayer.myChar?.id)
+    selectedTeleportCharacterId.value = ownCharacter?.id ?? onlineCharacters.value[0]?.id ?? null
 }
 
 const saveSettings = () => {
@@ -975,12 +991,12 @@ const startMapDrag = (event) => {
 const handleMapPointerDown = (event) => {
     if (event.button === 0 && teleportPicking.value) {
         const coords = getMapPixelCoordinates(event)
-        if (!coords || !Number.isInteger(selectedWorldId.value)) {
+        if (!coords || !Number.isInteger(selectedWorldId.value) || !Number.isInteger(selectedTeleportCharacterId.value)) {
             return
         }
         suppressNextMapClick = true
         teleportPicking.value = false
-        GMManager.teleport(selectedWorldId.value, coords.x, coords.z)
+        GMManager.teleport(selectedWorldId.value, coords.x, coords.z, selectedTeleportCharacterId.value)
         return
     }
     const isAreaMode = (selectedMapType.value === 'height' && heightEditMode.value === 'area')
@@ -1768,6 +1784,12 @@ watch(worlds, () => {
     }
 })
 
+watch(onlineCharacters, () => {
+    if (!dialogVisible.value) return
+    const selectionExists = onlineCharacters.value.some((character) => character.id === selectedTeleportCharacterId.value)
+    if (!selectionExists) selectInitialTeleportCharacter()
+})
+
 watch(selectedWorldId, (worldId) => {
     if (Number.isInteger(worldId)) {
         GMManager.worldSettings.value = null
@@ -2115,6 +2137,9 @@ defineExpose({
 
 .worlds-teleport-action {
     margin-top: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
 .worlds-teleport-action .dialog-button {

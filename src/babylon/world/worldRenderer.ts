@@ -132,6 +132,7 @@ export class Prefab {
     mesh: Mesh
     matrices: Matrix[] = []
     uvData: Vector2[] = []
+    matrixBuffer: Float32Array = new Float32Array(0)
 
     constructor(mesh: Mesh) {
         this.mesh = mesh
@@ -144,7 +145,8 @@ export class Prefab {
     }
 
     setThinInstanceBuffers() {
-        this.mesh.thinInstanceSetBuffer("matrix", BabylonUtils.createPositionBuffer(this.matrices), 16)
+        this.matrixBuffer = BabylonUtils.createPositionBuffer(this.matrices)
+        this.mesh.thinInstanceSetBuffer("matrix", this.matrixBuffer, 16, false)
         this.mesh.thinInstanceSetBuffer("uvc", BabylonUtils.createUvBuffer(this.uvData), 2)
     }
 }

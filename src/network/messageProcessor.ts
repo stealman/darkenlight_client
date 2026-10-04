@@ -31,8 +31,10 @@ import {
     CraftingInitMenuData,
     GMItemCodebookItem,
     GMWorldSettingsData,
+    GMWorldsData,
     GMWorldMapImageData,
     GMWorldBiomeTreesChangedData,
+    GMStaticDeleteInfoData,
     GMNpcDetailsData,
     GuestCharacterNameCheckData,
     AccountCharacterNameCheckData,
@@ -124,6 +126,7 @@ export const MessageProcessor = {
                 case 57: this.processCharacterCraftingFinished(msg.d); break
                 case 58: this.processBankState(msg.d); break
                 case 83: this.processContainerState(msg.d); break
+                case 84: this.processGMStaticDeleteInfo(msg.d); break
                 case 59: this.processCharacterDeath(msg.d); break
                 case 66: this.processCharacterCombatApproach(msg.d); break
                 case 60: this.processCharacterTeleport(msg.d); break
@@ -426,12 +429,16 @@ export const MessageProcessor = {
         CharacterManager.characterTeleported(data)
     },
 
-    processGMWorlds(data: Array<{id: number, name: string}>) {
+    processGMWorlds(data: GMWorldsData) {
         GMManager.consumeTeleportWorlds(data)
     },
 
     processGMItemCodebook(data: GMItemCodebookItem[]) {
         GMManager.consumeItemCodebook(data)
+    },
+
+    processGMStaticDeleteInfo(data: GMStaticDeleteInfoData) {
+        GMManager.consumeStaticDeleteInfo(data)
     },
 
     processGMWorldSettings(data: GMWorldSettingsData) {

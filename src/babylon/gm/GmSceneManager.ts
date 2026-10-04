@@ -3,10 +3,15 @@ import { Builder } from '@/babylon/builder'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { Spawn } from '@/gm/GmSpawns'
 import { MyPlayer } from '@/data/myPlayer'
+import { BuildingManager } from '@/babylon/world/buildings/buildingManager'
+
+const HOVER_MARKER_TERRAIN_OFFSET = 0.11
+const HOVER_MARKER_BUILDING_FLOOR_OFFSET = 0.121
 
 export const GMSceneManager = {
     initialized: false,
     hoverBlockMarker: null as Mesh | null,
+    hoverBlockMarkerTiles: [] as Array<{mesh: Mesh, offsetX: number, offsetZ: number}>,
     spawnMarker: null as Mesh | null,
 
     initialize (scene: Scene) {
@@ -22,6 +27,10 @@ export const GMSceneManager = {
         this.hoverBlockMarker.material = material
         this.hoverBlockMarker.material.diffuseColor = new Color3(1, 0, 0)
         this.hoverBlockMarker.material.alpha = 0.5
+        this.hoverBlockMarker.onEnabledStateChangedObservable.add(() => {
+            const enabled = this.hoverBlockMarker!.isEnabled()
+            this.hoverBlockMarkerTiles.forEach((tile) => tile.mesh.setEnabled(enabled))
+        })
 
         // Spawn Marker
         this.spawnMarker = Builder.createSpawnMarker(scene)
@@ -47,9 +56,14 @@ export const GMSceneManager = {
             return
         }
 
-        this.hoverBlockMarker!.position.x = markerX
-        this.hoverBlockMarker!.position.z = markerZ
-        this.hoverBlockMarker!.position.y = markerHeight
+        this.hoverBlockMarker.position.set(markerX, markerHeight, markerZ)
+        for (const tile of this.hoverBlockMarkerTiles) {
+            const tileX = markerX + tile.offsetX
+            const tileZ = markerZ + tile.offsetZ
+            const tileHeight = this.getHoverBlockMarkerHeight(tileX, tileZ)
+            tile.mesh.setEnabled(this.hoverBlockMarker.isEnabled() && tileHeight !== null)
+            if (tileHeight !== null) tile.mesh.position.set(tileX, tileHeight, tileZ)
+        }
     },
 
     updateHoverBlockMarkerFromRay(ray: Ray) {
@@ -85,16 +99,50 @@ export const GMSceneManager = {
             return null
         }
 
-        const blockHeight = Number.isFinite(block.totalHeight) ? block.totalHeight : block.height
-        return blockHeight + (block.type === 0 ? 2.11 : 0.11)
+        const hasBuildingFloor = BuildingManager.hasFloorAtTile(x, z)
+        const surfaceHeight = hasBuildingFloor && Number.isFinite(block.totalHeight)
+            ? block.totalHeight
+            : block.height
+        const surfaceOffset = hasBuildingFloor
+            ? HOVER_MARKER_BUILDING_FLOOR_OFFSET
+            : HOVER_MARKER_TERRAIN_OFFSET
+        return surfaceHeight + (block.type === 0 ? 2 : 0) + surfaceOffset
     },
 
     setHoverBlockMarkerSize(size: number) {
         if (!this.hoverBlockMarker) {
             return
         }
+        this.clearHoverBlockMarkerTiles()
         this.hoverBlockMarker!.scaling.x = size
         this.hoverBlockMarker!.scaling.z = size
+    },
+
+    setHoverBlockMarkerFootprint(offsets: Array<{x: number, z: number}>) {
+        if (!this.hoverBlockMarker) return
+
+        this.clearHoverBlockMarkerTiles()
+        this.hoverBlockMarker.scaling.x = 1
+        this.hoverBlockMarker.scaling.z = 1
+        const uniqueOffsets = new Map(offsets.map((offset) => [`${offset.x};${offset.z}`, offset]))
+        uniqueOffsets.delete('0;0')
+        for (const offset of uniqueOffsets.values()) {
+            const mesh = this.hoverBlockMarker.clone(`hoverBlockMarker_${offset.x}_${offset.z}`)
+            if (!mesh) continue
+            mesh.setEnabled(this.hoverBlockMarker.isEnabled())
+            this.hoverBlockMarkerTiles.push({mesh, offsetX: offset.x, offsetZ: offset.z})
+        }
+        this.updateHoverBlockMarker(this.hoverBlockMarker.position.x, this.hoverBlockMarker.position.z)
+    },
+
+    clearHoverBlockMarkerTiles() {
+        this.hoverBlockMarkerTiles.forEach((tile) => tile.mesh.dispose())
+        this.hoverBlockMarkerTiles = []
+    },
+
+    setHoverBlockMarkerEnabled(enabled: boolean) {
+        this.hoverBlockMarker?.setEnabled(enabled)
+        this.hoverBlockMarkerTiles.forEach((tile) => tile.mesh.setEnabled(enabled))
     },
 
     renderSpawnMarkers(spawns: Spawn[]) {

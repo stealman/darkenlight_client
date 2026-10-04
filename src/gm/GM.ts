@@ -1,9 +1,9 @@
 import { Connector } from '@/network/connector'
-import { GMBuildingChange, GMCreateItemMsg, GMDayNightCycleMsg, GMForceSaveDataMsg, GMGenerateBiomeMsg, GMLoadItemCodebookMsg, GMLoadWorldMapImageMsg, GMLoadWorldSettingsMsg, GMLoadWorldsMsg, GMNpcAction, GMSaveMapDataMsg, GMSaveWorldMapHeightChangesMsg, GMSaveWorldMapSnowChangesMsg, GMSaveWorldMapTerrainChangesMsg, GMSaveWorldSettingsMsg, GMStaticObjectChange, GMTeleportMsg, GMTerrainChange } from '@/network/messages'
-import { GMItemCodebookItem, GMWorldBiomeTreesChangedData, GMWorldMapImageData, GMWorldSettingsData } from '@/network/messageIfs'
+import { GMBuildingChange, GMCreateItemMsg, GMDayNightCycleMsg, GMForceSaveDataMsg, GMGenerateBiomeMsg, GMLoadItemCodebookMsg, GMLoadWorldMapImageMsg, GMLoadWorldSettingsMsg, GMLoadWorldsMsg, GMNpcAction, GMSaveMapDataMsg, GMSaveWorldMapHeightChangesMsg, GMSaveWorldMapSnowChangesMsg, GMSaveWorldMapTerrainChangesMsg, GMSaveWorldSettingsMsg, GMStaticDeleteInfoRequest, GMStaticObjectChange, GMTeleportMsg, GMTerrainChange } from '@/network/messages'
+import { GMItemCodebookItem, GMStaticDeleteInfoData, GMWorldBiomeTreesChangedData, GMWorldMapImageData, GMWorldSettingsData, GMWorldsData } from '@/network/messageIfs'
 import { GMSceneManager } from '@/babylon/gm/GmSceneManager'
 import { WorldDataManager } from '@/data/worldDataManager'
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { Vector3 } from '@babylonjs/core'
 import { Utils } from '@/utils/utils'
 import { GMSpawns } from '@/gm/GmSpawns'
@@ -12,6 +12,9 @@ import { OnScreenMessageManager } from '@/gui/onScreenMessageManager'
 import { NpcManager } from '@/babylon/npc/npcManager'
 import { TargetingManager } from '@/gui/targettingManager'
 import { MyPlayer } from '@/data/myPlayer'
+import { StaticObjectsCodebook } from '@/babylon/world/statics/staticsCodebook'
+import { StaticsManager } from '@/babylon/world/statics/staticsManager'
+import { TreeManager } from '@/babylon/world/treeManager'
 
 /**
  * Main GM tabs
@@ -45,6 +48,27 @@ export const PLANK_PILE_STATIC_ID = 302
 export const LOG_PILE_STATIC_ID = 303
 export const SUPPLY_CRATE_STATIC_ID = 304
 export const CAMP_BARREL_STATIC_ID = 305
+
+const rectangularFootprint = (sizeX: number, sizeZ: number) => {
+    const offsets: Array<{x: number, z: number}> = []
+    for (let x = 0; x < sizeX; x++) {
+        for (let z = 0; z < sizeZ; z++) offsets.push({x, z})
+    }
+    return offsets
+}
+
+const buildingFootprint = (facing: string) => {
+    const width = facing === '+X' || facing === '-X' ? 3 : 5
+    const depth = facing === '+X' || facing === '-X' ? 5 : 3
+    const offsets = rectangularFootprint(width, depth)
+    for (const localX of [1, 2, 3]) {
+        if (facing === '+X') offsets.push({x: 3, z: 4 - localX})
+        else if (facing === '-Z') offsets.push({x: 4 - localX, z: -1})
+        else if (facing === '-X') offsets.push({x: -1, z: localX})
+        else offsets.push({x: localX, z: 3})
+    }
+    return offsets
+}
 
 export const GMManager = {
     gmPanelVisible: ref(false),
@@ -80,11 +104,16 @@ export const GMManager = {
     selectedNpc: ref<any | null>(null),
     npcDetailsDialogOpenRequested: ref(false),
     teleportWorlds: ref([] as Array<{id: number, name: string}>),
+    onlineCharacters: ref([] as Array<{id: number, name: string, worldId: number}>),
     worldSettings: ref<GMWorldSettingsData | null>(null),
     worldMapImage: ref<GMWorldMapImageData | null>(null),
     worldBiomeTreesChanged: ref<GMWorldBiomeTreesChangedData | null>(null),
     itemCodebook: ref([] as GMItemCodebookItem[]),
     selectedTeleportWorld: ref(0),
+    deleteConfirmationVisible: ref(false),
+    deleteConfirmationTitle: ref(''),
+    deleteConfirmationMessage: ref(''),
+    pendingDelete: null as {type: 'STATIC' | 'BUILDING', x: number, z: number} | null,
 
     tab: GmTabs.OVERVIEW,
 
@@ -96,6 +125,7 @@ export const GMManager = {
             GMSceneManager.hoverBlockMarker?.setEnabled(false)
             GMSceneManager.spawnMarker?.setEnabled(false)
             GMSpawns.removeAllMarkers()
+            this.closeDeleteConfirmation()
         }
         GMSceneManager.initialize(Renderer.scene)
         this.gmPanelVisible.value = !this.gmPanelVisible.value
@@ -177,7 +207,7 @@ export const GMManager = {
                 Connector.sendMessage(new GMStaticObjectChange("ADD_OBJECT", [shrubData] ) )
 
             } else if (this.selectedTree.value === -1 && this.selectedShrub.value === -1) {
-                Connector.sendMessage(new GMStaticObjectChange("REMOVE_ON_TILE", [ { x: markerPos.x, z: markerPos.z } ] ) )
+                this.requestStaticDelete(markerPos.x, markerPos.z)
             }
         }
 
@@ -206,7 +236,7 @@ export const GMManager = {
                 Connector.sendMessage(new GMStaticObjectChange("ADD_OBJECT", [wallFenceData] ) )
 
             } else if (this.selectedWallFence.value === -1) {
-                Connector.sendMessage(new GMStaticObjectChange("REMOVE_ON_TILE", [ { x: markerPos.x, z: markerPos.z } ] ) )
+                this.requestStaticDelete(markerPos.x, markerPos.z)
             }
         }
 
@@ -251,7 +281,7 @@ export const GMManager = {
                 Connector.sendMessage(new GMStaticObjectChange("ADD_OBJECT", [staticData] ) )
 
             } else if (this.selectedStatic.value === -1) {
-                Connector.sendMessage(new GMStaticObjectChange("REMOVE_ON_TILE", [ { x: markerPos.x, z: markerPos.z } ] ) )
+                this.requestStaticDelete(markerPos.x, markerPos.z)
             }
         }
 
@@ -264,9 +294,11 @@ export const GMManager = {
                     type: this.selectedBuildingType.value,
                     facing: this.buildingFacing.value,
                 }))
-            } else if (this.selectedBuildingType.value === -1
-                && window.confirm(`Delete building at X ${markerPos.x}, Z ${markerPos.z}?`)) {
-                Connector.sendMessage(new GMBuildingChange('REMOVE_ON_TILE', {x: markerPos.x, z: markerPos.z}))
+            } else if (this.selectedBuildingType.value === -1) {
+                this.pendingDelete = {type: 'BUILDING', x: markerPos.x, z: markerPos.z}
+                this.deleteConfirmationTitle.value = 'Smazat budovu'
+                this.deleteConfirmationMessage.value = `Opravdu chcete smazat budovu na X ${markerPos.x}, Z ${markerPos.z}?`
+                this.deleteConfirmationVisible.value = true
             }
         }
 
@@ -297,6 +329,49 @@ export const GMManager = {
                 wanderingRange: 0
             }))
         }
+    },
+
+    requestStaticDelete(x: number, z: number) {
+        if (!StaticsManager.getObjectsOnTile(x, z).some((obj) => obj.type === CAMP_BARREL_STATIC_ID)) {
+            this.closeDeleteConfirmation()
+            Connector.sendMessage(new GMStaticObjectChange('REMOVE_ON_TILE', [{x, z}]))
+            return
+        }
+        this.deleteConfirmationVisible.value = false
+        this.pendingDelete = {type: 'STATIC', x, z}
+        Connector.sendMessage(new GMStaticDeleteInfoRequest(x, z))
+    },
+
+    consumeStaticDeleteInfo(data: GMStaticDeleteInfoData) {
+        if (this.pendingDelete?.type !== 'STATIC'
+            || this.pendingDelete.x !== data.x || this.pendingDelete.z !== data.z) return
+        if (data.barrelCount === 0) {
+            Connector.sendMessage(new GMStaticObjectChange('REMOVE_ON_TILE', [{x: data.x, z: data.z}]))
+            this.pendingDelete = null
+            return
+        }
+        const itemLabel = data.itemCount === 1 ? 'item' : data.itemCount >= 2 && data.itemCount <= 4 ? 'itemy' : 'itemů'
+        this.deleteConfirmationTitle.value = data.barrelCount === 1 ? 'Smazat barel' : 'Smazat barely'
+        this.deleteConfirmationMessage.value = data.barrelCount === 1
+            ? `Opravdu chcete smazat barel? Obsahuje ${data.itemCount} ${itemLabel}.`
+            : `Opravdu chcete smazat ${data.barrelCount} barely? Celkem obsahují ${data.itemCount} ${itemLabel}.`
+        this.deleteConfirmationVisible.value = true
+    },
+
+    confirmDelete() {
+        if (!this.pendingDelete) return
+        const {type, x, z} = this.pendingDelete
+        if (type === 'BUILDING') {
+            Connector.sendMessage(new GMBuildingChange('REMOVE_ON_TILE', {x, z}))
+        } else {
+            Connector.sendMessage(new GMStaticObjectChange('REMOVE_ON_TILE', [{x, z}]))
+        }
+        this.closeDeleteConfirmation()
+    },
+
+    closeDeleteConfirmation() {
+        this.deleteConfirmationVisible.value = false
+        this.pendingDelete = null
     },
 
     getLowestAffectedBlockHeight(centerPos: Vector3, size: number): number {
@@ -331,6 +406,24 @@ export const GMManager = {
         if (this.tab === GmTabs.SPAWNS_EDIT) {
             GMSpawns.onFrame(timeRate, actualTime)
         }
+        const deletingStatics = this.gmPanelVisible.value && (
+            (this.tab === GmTabs.STATICS_EDIT && this.selectedStatic.value === -1)
+            || (this.tab === GmTabs.WALLS_AND_FENCES_EDIT && this.selectedWallFence.value === -1)
+            || (this.tab === GmTabs.BIOME_EDIT && this.selectedTree.value === -1 && this.selectedShrub.value === -1)
+        )
+        const marker = GMSceneManager.hoverBlockMarker
+        StaticsManager.updateDeletePreview(
+            deletingStatics && marker?.isEnabled() === true,
+            Math.round(marker?.position.x ?? 0),
+            Math.round(marker?.position.z ?? 0),
+            actualTime,
+        )
+        TreeManager.updateDeletePreview(
+            deletingStatics && marker?.isEnabled() === true,
+            Math.round(marker?.position.x ?? 0),
+            Math.round(marker?.position.z ?? 0),
+            actualTime,
+        )
     },
 
     onMiddleClickEvent() {
@@ -343,6 +436,32 @@ export const GMManager = {
     affectedSizeChanged(size: number) {
         this.affectedSize.value = size
         GMSceneManager.setHoverBlockMarkerSize(size)
+    },
+
+    updateStaticMarkerFootprint() {
+        const objectInfo = StaticObjectsCodebook.get(this.selectedStatic.value)
+        if (!objectInfo) {
+            GMSceneManager.setHoverBlockMarkerFootprint([{x: 0, z: 0}])
+            return
+        }
+
+        let sizeX = objectInfo.sizeX
+        let sizeZ = objectInfo.sizeZ
+        let facing = this.selectedStatic.value === STONE_ENTRANCE_STATIC_ID
+            ? this.entranceFacing.value
+            : this.campObjectFacing.value
+        if (this.selectedStatic.value === LOG_PILE_STATIC_ID) {
+            sizeX = 1
+            sizeZ = this.logPileLength.value
+        }
+        if (facing === '-X' || facing === '+X') [sizeX, sizeZ] = [sizeZ, sizeX]
+        GMSceneManager.setHoverBlockMarkerFootprint(rectangularFootprint(sizeX, sizeZ))
+    },
+
+    updateBuildingMarkerFootprint() {
+        GMSceneManager.setHoverBlockMarkerFootprint(this.selectedBuildingType.value > 0
+            ? buildingFootprint(this.buildingFacing.value)
+            : [{x: 0, z: 0}])
     },
 
     getSanitizedMinableValue(): string | null {
@@ -556,8 +675,8 @@ export const GMManager = {
         OnScreenMessageManager.addMessage("Hra uložena")
     },
 
-    teleport(worldId: number, x: number, z: number) {
-        Connector.sendMessage(new GMTeleportMsg(worldId, x, z))
+    teleport(worldId: number, x: number, z: number, characterId: number) {
+        Connector.sendMessage(new GMTeleportMsg(worldId, x, z, characterId))
     },
 
     setDayNightTime(time: string) {
@@ -581,8 +700,9 @@ export const GMManager = {
         Connector.sendMessage(new GMLoadWorldsMsg())
     },
 
-    consumeTeleportWorlds(worlds: Array<{id: number, name: string}>) {
-        this.teleportWorlds.value = worlds
+    consumeTeleportWorlds(data: GMWorldsData) {
+        this.teleportWorlds.value = data.worlds
+        this.onlineCharacters.value = data.characters
         this.selectedTeleportWorld.value = MyPlayer.worldId
         this.entranceDestinationWorld.value = MyPlayer.worldId
     },
@@ -724,5 +844,17 @@ export const GMManager = {
         }
     }
 }
+
+watch([
+    GMManager.selectedStatic,
+    GMManager.campObjectFacing,
+    GMManager.logPileLength,
+    GMManager.entranceFacing,
+], () => GMManager.updateStaticMarkerFootprint())
+
+watch([
+    GMManager.selectedBuildingType,
+    GMManager.buildingFacing,
+], () => GMManager.updateBuildingMarkerFootprint())
 
 

@@ -17,6 +17,7 @@ export const TerrainManager = {
     terrainBlock1: null as Mesh | null,
     terrainPlane: null as Mesh | null,
     terrainWaterPlane: null as Mesh | null,
+    terrainBlockMatrixBuffer: new Float32Array(0),
     waterPlane: null as Mesh | null,
     seaWaterLevel: null as number | null,
 
@@ -164,7 +165,8 @@ export const TerrainManager = {
         renderTerrainStatics?.(terrainMatrices1, terrainUvData1)
 
         // Apply buffers for instances
-        this.terrainBlock1!.thinInstanceSetBuffer("matrix", BabylonUtils.createPositionBuffer(terrainMatrices1), 16)
+        this.terrainBlockMatrixBuffer = BabylonUtils.createPositionBuffer(terrainMatrices1)
+        this.terrainBlock1!.thinInstanceSetBuffer("matrix", this.terrainBlockMatrixBuffer, 16, false)
         this.terrainBlock1!.thinInstanceSetBuffer("uvc", BabylonUtils.createUvBuffer(terrainUvData1), 2)
         this.terrainPlane!.thinInstanceSetBuffer("matrix", BabylonUtils.createPositionBuffer(planeMatrices), 16)
         this.terrainPlane!.thinInstanceSetBuffer("uvc", BabylonUtils.createUvBuffer(planeUvData), 2)
