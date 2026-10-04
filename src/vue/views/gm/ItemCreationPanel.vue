@@ -46,11 +46,29 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { GMManager } from '@/gm/GM'
 import { t } from '@/i18n'
 
+const ITEM_SELECTION_STORAGE_KEY = 'gm-item-creation-selection'
+const validItemTypes = new Set(['WEAPON', 'ARMOR', 'JEWEL', 'TRINKET', 'RESOURCE'])
+
+const loadLastSelection = () => {
+    try {
+        const selection = JSON.parse(localStorage.getItem(ITEM_SELECTION_STORAGE_KEY) ?? '{}')
+        return {
+            itemType: validItemTypes.has(selection.itemType) ? selection.itemType : 'WEAPON',
+            codebookId: Number.isFinite(selection.codebookId) ? selection.codebookId : 0,
+            quantity: Number.isFinite(selection.quantity) ? selection.quantity : 1,
+            quality: Number.isFinite(selection.quality) ? selection.quality : 25,
+        }
+    } catch {
+        return {itemType: 'WEAPON', codebookId: 0, quantity: 1, quality: 25}
+    }
+}
+
+const lastSelection = loadLastSelection()
 const dialogVisible = ref(false)
-const itemType = ref('WEAPON')
-const codebookId = ref(0)
-const quantity = ref(1)
-const quality = ref(25)
+const itemType = ref(lastSelection.itemType)
+const codebookId = ref(lastSelection.codebookId)
+const quantity = ref(lastSelection.quantity)
+const quality = ref(lastSelection.quality)
 
 const isResource = computed(() => itemType.value === 'RESOURCE')
 const itemTypeLocalizationSections = {
@@ -87,10 +105,22 @@ const getItemName = (item) => {
 }
 
 watch(availableCodebookItems, (items) => {
+    if (items.length === 0) {
+        return
+    }
     if (!items.some((item) => item.id === codebookId.value)) {
         codebookId.value = items[0]?.id ?? 0
     }
 }, {immediate: true})
+
+watch([itemType, codebookId, quantity, quality], () => {
+    localStorage.setItem(ITEM_SELECTION_STORAGE_KEY, JSON.stringify({
+        itemType: itemType.value,
+        codebookId: codebookId.value,
+        quantity: quantity.value,
+        quality: quality.value,
+    }))
+})
 
 const createItem = () => {
     const selectedItem = availableCodebookItems.value.find((item) => item.id === codebookId.value)

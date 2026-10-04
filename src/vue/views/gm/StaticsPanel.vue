@@ -137,7 +137,13 @@ const objects = [
     { type: "CAMP", name: "Supply Crate", id: 304 },
     { type: "CAMP", name: "Barrel", id: 305 },
     { type: "CAMP", name: "Hay Stack", id: 306 },
+    { type: "CAMP", name: "Stump with Axe", id: 307 },
 ]
+
+const previouslySelectedObject = objects.find(obj => obj.id === selectedObject.value)
+if (previouslySelectedObject) {
+    selectedObjectType.value = previouslySelectedObject.type
+}
 
 const selectObjectType = (type) => {
     selectedObjectType.value = type

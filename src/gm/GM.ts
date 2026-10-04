@@ -48,6 +48,7 @@ export const PLANK_PILE_STATIC_ID = 302
 export const LOG_PILE_STATIC_ID = 303
 export const SUPPLY_CRATE_STATIC_ID = 304
 export const CAMP_BARREL_STATIC_ID = 305
+export const STUMP_WITH_AXE_STATIC_ID = 307
 
 const rectangularFootprint = (sizeX: number, sizeZ: number) => {
     const offsets: Array<{x: number, z: number}> = []
@@ -261,7 +262,8 @@ export const GMManager = {
                     || this.selectedStatic.value === PLANK_PILE_STATIC_ID
                     || this.selectedStatic.value === LOG_PILE_STATIC_ID
                     || this.selectedStatic.value === SUPPLY_CRATE_STATIC_ID
-                    || this.selectedStatic.value === CAMP_BARREL_STATIC_ID) {
+                    || this.selectedStatic.value === CAMP_BARREL_STATIC_ID
+                    || this.selectedStatic.value === STUMP_WITH_AXE_STATIC_ID) {
                     staticData.meta = {facing: this.campObjectFacing.value}
                 }
                 if (this.selectedStatic.value === LOG_PILE_STATIC_ID) {
@@ -593,7 +595,6 @@ export const GMManager = {
         this.tab = GmTabs.STATICS_EDIT
         this.consumePointerMoveEvents = true
         this.consumeLeftClickEvents = true
-        this.selectedStatic.value = 0
         GMSceneManager.setHoverBlockMarkerSize(1)
         GMSceneManager.hoverBlockMarker?.setEnabled(true)
     },

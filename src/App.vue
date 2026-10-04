@@ -107,7 +107,7 @@
     <CharacterDialog ref="characterDialog" v-show="displayCharacterDialog" @close="displayCharacterDialog = false" />
     <CraftingDialog ref="craftingDialog" v-show="displayCraftingDialog" @close="displayCraftingDialog = false" />
     <NpcUseDialog ref="npcUseDialog" v-show="displayNpcUseDialog" @close="displayNpcUseDialog = false" />
-    <ContainerDialog v-show="displayContainerDialog" @close="displayContainerDialog = false" />
+    <ContainerDialog v-show="displayContainerDialog" :visible="displayContainerDialog" @close="displayContainerDialog = false" />
 
     <div class="dialog-backdrop death-dialog-backdrop" v-if="isDead">
         <div class="dialog-window adaptive">

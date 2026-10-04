@@ -280,7 +280,12 @@ export const CharacterManager = {
     },
 
     basicDataChange(data: AttackableBasicTO) {
-        if (data.id === MyPlayer.myChar.id) {
+        if (!data) {
+            return
+        }
+
+        const myChar = MyPlayer.myChar
+        if (myChar && data.id === myChar.id) {
             MyPlayer.basicDataChange(data)
         } else {
             const char = this.characters.get(data.id)

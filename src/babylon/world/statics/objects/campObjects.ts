@@ -1,6 +1,7 @@
 import { Matrix, Vector2, Vector3 } from '@babylonjs/core'
 import { BaseStaticObject } from '@/babylon/world/statics/objects/baseStaticObject'
-import { WorldRenderer } from '@/babylon/world/worldRenderer'
+import { Prefab, WorldRenderer } from '@/babylon/world/worldRenderer'
+import { StaticEquipPartsRenderer } from '@/babylon/world/statics/staticEquipPartsRenderer'
 
 export type CampObjectFacing = '-X' | '+X' | '-Z' | '+Z'
 export type CampFenceOrientation = 'X' | 'Z'
@@ -33,8 +34,8 @@ abstract class CampObject extends BaseStaticObject {
     protected readonly facing: CampObjectFacing
     protected readonly accentMaterial: Vector2
 
-    protected constructor(type: number, position: Vector3, material: Vector2, accentMaterial: Vector2, metadata?: CampObjectMetadata) {
-        super(type, position, 0, material, null)
+    protected constructor(type: number, position: Vector3, material: Vector2, accentMaterial: Vector2, metadata?: CampObjectMetadata, prefab: Prefab | null = null) {
+        super(type, position, 0, material, prefab)
         this.facing = metadata?.facing === '-X' || metadata?.facing === '+X'
             || metadata?.facing === '-Z' || metadata?.facing === '+Z'
             ? metadata.facing
@@ -154,6 +155,37 @@ export class HayStack extends BaseStaticObject {
         addPart(0.6, 0.8, 0.6,
             this.renderPosition.x, this.renderPosition.y + 0.9,
             this.renderPosition.z, this.material)
+    }
+}
+
+export class StumpWithAxe extends CampObject {
+    private readonly cutMaterial: Vector2
+
+    constructor(type: number, position: Vector3, woodMaterial: Vector2, cutMaterial: Vector2, axePrefab: Prefab, metadata?: CampObjectMetadata) {
+        super(type, position, woodMaterial, cutMaterial, metadata, axePrefab)
+        this.cutMaterial = cutMaterial
+    }
+
+    render() {
+        this.part(0.66, 0.54, 0.66, 0, 0.27, 0)
+        this.part(0.62, 0.04, 0.62, 0, 0.56, 0, this.cutMaterial)
+
+        const facingYaw = this.facing === '+X' ? Math.PI / 2
+            : this.facing === '-Z' ? Math.PI
+                : this.facing === '-X' ? -Math.PI / 2 : 0
+        const localX = -0.4
+        const localY = 1.1
+        const localZ = 0
+        const cos = Math.cos(facingYaw)
+        const sin = Math.sin(facingYaw)
+        const x = this.renderPosition.x + localX * cos + localZ * sin
+        const z = this.renderPosition.z - localX * sin + localZ * cos
+        const axeMatrix = Matrix.Scaling(0.95, 0.95, 0.95)
+            .multiply(Matrix.RotationZ(-0.72))
+            .multiply(Matrix.RotationZ(-Math.PI / 2))
+            .multiply(Matrix.RotationY(facingYaw))
+            .multiply(Matrix.Translation(x, this.renderPosition.y + localY, z))
+        StaticEquipPartsRenderer.addPart(this.prefab!, 0, axeMatrix)
     }
 }
 

@@ -260,6 +260,7 @@
     "noStaminaPotions": "You have no stamina potions",
     "noCampWood": "No camp wood",
     "noCampableBlockAround": "You can't camp here",
+    "cannotCookHere": "You can't cook here",
     "autoAttack": "Auto-attack: {state}",
     "autoTarget": "Auto-targeting {state}",
     "enabled": "Enabled",

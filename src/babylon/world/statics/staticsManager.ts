@@ -29,8 +29,13 @@ import {
     HayStack,
     LogPile,
     PlankPile,
+    StumpWithAxe,
     SupplyCrate,
 } from '@/babylon/world/statics/objects/campObjects'
+import { StaticEquipPartsRenderer } from '@/babylon/world/statics/staticEquipPartsRenderer'
+import { WeaponModelsCb } from '@/babylon/item/codebook/weaponModelsCb'
+
+const isEmbeddedInSnow = (type: number) => isShrubType(type) || type === 281
 
 export const StaticsManager = {
     prefabs: {
@@ -52,6 +57,7 @@ export const StaticsManager = {
         this.prefabs.shrub2x2 = PrefabShrub2x2.getPrefab(scene)
         this.prefabs.shrub1x1_tall = PrefabShrub1x1_tall.getPrefab(scene)
         this.prefabs.shrub1x1_small = PrefabShrub1x1_small.getPrefab(scene)
+        StaticEquipPartsRenderer.initialize(WorldRenderer.worldParentNode!)
     },
 
     addAllShadowCasters() {
@@ -68,7 +74,7 @@ export const StaticsManager = {
 
     addObject(obj: { tp: number, x: number, z: number, meta?: WallTorchMetadata | StoneEntranceMetadata | PalisadeMetadata | WalkableBlockMetadata | CampObjectMetadata | CampFenceMetadata, tmp?: boolean }) {
         const block = WorldDataManager.getBlockMap()[obj.x][obj.z]
-        const y = block.totalHeight - (isShrubType(obj.tp) && block.snowed ? 0.1 : 0)
+        const y = block.totalHeight - (isEmbeddedInSnow(obj.tp) && block.snowed ? 0.1 : 0)
         const pos = new Vector3(obj.x, y, obj.z)
         const rotation = Math.floor(Math.random() * 4) * Math.PI / 2
         const previousCount = this.allStatics.length
@@ -149,6 +155,14 @@ export const StaticsManager = {
             case 304: this.allStatics.push(new SupplyCrate(obj.tp, pos, MaterialEnum1.WOOD_2.uv, MaterialEnum1.WOOD_3.uv, obj.meta as CampObjectMetadata)); break
             case 305: this.allStatics.push(new CampBarrel(obj.tp, pos, MaterialEnum1.WOOD_1.uv, MaterialEnum1.STEEL_1.uv, MaterialEnum1.WOOD_2.uv, obj.meta as CampObjectMetadata)); break
             case 306: this.allStatics.push(new HayStack(obj.tp, pos, MaterialEnum1.HAY.uv)); break
+            case 307: this.allStatics.push(new StumpWithAxe(
+                obj.tp,
+                pos,
+                MaterialEnum1.WOOD_3.uv,
+                MaterialEnum1.WOOD_CUT.uv,
+                StaticEquipPartsRenderer.getPrefab(WeaponModelsCb.HAND_AXE.id),
+                obj.meta as CampObjectMetadata,
+            )); break
             default:
                 break
         }
@@ -164,7 +178,7 @@ export const StaticsManager = {
     recountYPositions() {
         this.allStatics.forEach(obj => {
             const block = WorldDataManager.getBlockMap()[Math.floor(obj.position.x)][Math.floor(obj.position.z)]
-            const y = block.totalHeight - (isShrubType(obj.type) && block.snowed ? 0.1 : 0)
+            const y = block.totalHeight - (isEmbeddedInSnow(obj.type) && block.snowed ? 0.1 : 0)
             obj.position.y = y
             obj.renderPosition.y = y
         })
@@ -278,6 +292,7 @@ export const StaticsManager = {
         Object.values(this.prefabs).forEach(prefab => {
             prefab?.clearMatrices()
         })
+        StaticEquipPartsRenderer.clear()
 
         this.allStatics.forEach((obj) => {
             if (obj instanceof CampBarrel) obj.clearRenderMatrices()
@@ -301,6 +316,7 @@ export const StaticsManager = {
                 prefab!.mesh.setEnabled(false)
             }
         })
+        StaticEquipPartsRenderer.flush()
     },
 
     resolveConnectingCorners() {

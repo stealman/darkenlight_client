@@ -2,6 +2,12 @@ type SnowCoverSource = {
     position: {x: number, z: number}
 }
 
+type SnowCoverStaticSource = SnowCoverSource & {
+    type: number
+    getSizeX(): number
+    getSizeZ(): number
+}
+
 const deterministicRoll = (sourceX: number, sourceZ: number, x: number, z: number, salt: number) => {
     let value = Math.imul(sourceX + salt, 374761393) + Math.imul(sourceZ - salt, 668265263)
     value ^= Math.imul(x, 1274126177) + Math.imul(z, 1442695041)
@@ -62,9 +68,29 @@ const addSourceMask = (mask: Set<number>, source: SnowCoverSource, mapSize: numb
     }
 }
 
+const addStoneEntranceMask = (mask: Set<number>, entrance: SnowCoverStaticSource, mapSize: number) => {
+    const sourceX = Math.floor(entrance.position.x)
+    const sourceZ = Math.floor(entrance.position.z)
+    const sizeX = entrance.getSizeX()
+    const sizeZ = entrance.getSizeZ()
+    const runsAlongX = sizeX > sizeZ
+    const width = runsAlongX ? sizeX : sizeZ
+    const depth = runsAlongX ? sizeZ : sizeX
+
+    for (let depthOffset = 0; depthOffset < depth; depthOffset++) {
+        for (const widthOffset of [0, width - 1]) {
+            const x = sourceX + (runsAlongX ? widthOffset : depthOffset)
+            const z = sourceZ + (runsAlongX ? depthOffset : widthOffset)
+            if (x >= 0 && z >= 0 && x < mapSize && z < mapSize) {
+                mask.add(x * mapSize + z)
+            }
+        }
+    }
+}
+
 export const createSnowCoverMask = (
     trees: SnowCoverSource[],
-    statics: Array<SnowCoverSource & {type: number}>,
+    statics: SnowCoverStaticSource[],
     mapSize: number,
     worldId: number,
     getHeight: (x: number, z: number) => number,
@@ -76,6 +102,8 @@ export const createSnowCoverMask = (
     for (const object of statics) {
         if (isShrubType(object.type)) {
             addSourceMask(mask, object, mapSize, worldId * 101 + object.type, getHeight)
+        } else if (object.type === 281) {
+            addStoneEntranceMask(mask, object, mapSize)
         }
     }
     return mask

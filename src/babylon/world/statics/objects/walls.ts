@@ -400,7 +400,7 @@ export class StoneEntrance extends BaseStaticObject {
             const x = this.position.x + (runsAlongX ? widthOffset : depthOffset)
             const z = this.position.z + (runsAlongX ? depthOffset : widthOffset)
             terrainMatrices.push(Matrix.Translation(x, this.position.y + height, z))
-            terrainUvData.push(TerrainEnum1.getTerrainForBlock(terrainBlock))
+            terrainUvData.push(TerrainEnum1.getTerrainForBlock(terrainBlock, height < 3))
         }
 
         for (let depth = 0; depth < 2; depth++) {

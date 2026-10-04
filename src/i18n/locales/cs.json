@@ -260,6 +260,7 @@
       "noStaminaPotions": "Nemáš žádné lektvary výdrže",
       "noCampWood": "Nemáš žádné dřevo na táboření",
       "noCampableBlockAround": "Na tomto místě nemůžeš tábořit",
+      "cannotCookHere": "Na tomto místě nemůžeš vařit",
       "autoAttack": "Auto-útok: {state}",
       "autoTarget": "Auto-zaměření {state}",
       "enabled": "Zapnuto",
