@@ -47,6 +47,8 @@ export const AudioManager = {
     campingSound: null as Sound | null,
     potionUseSound: null as Sound | null,
     eatSound: null as Sound | null,
+    doorOpenSound: null as Sound | null,
+    doorCloseSound: null as Sound | null,
 
     initialize(scene: Scene) {
         this.globalVolume = Settings.volume;
@@ -177,6 +179,22 @@ export const AudioManager = {
             volume: 0.7,
             playbackRate: 1.1,
             loop: true,
+        });
+
+        this.doorOpenSound = new Sound("doorOpen", AudioManager.BASE_PATH_SFX + "open-door.ogg", scene, function() {
+            AudioManager.doorOpenSound!['loaded'] = true;
+            AudioManager.doorOpenSound!['defaultVolume'] = 1;
+        }, {
+            volume: 1,
+            playbackRate: 1,
+        });
+
+        this.doorCloseSound = new Sound("doorClose", AudioManager.BASE_PATH_SFX + "close-door.ogg", scene, function() {
+            AudioManager.doorCloseSound!['loaded'] = true;
+            AudioManager.doorCloseSound!['defaultVolume'] = 1;
+        }, {
+            volume: 1,
+            playbackRate: 1,
         });
 
         this.deathSound = new Sound("death", AudioManager.BASE_PATH_SFX + "death.ogg", scene, function() {
@@ -377,6 +395,23 @@ export const AudioManager = {
         if (modifiedPlayback) {
             sound.onEndedObservable.addOnce(() => sound.dispose())
         }
+        sound.play()
+    },
+
+    playDoorOpenSound(position: Vector3) {
+        this.playSoundAt(this.doorOpenSound, position)
+    },
+
+    playDoorCloseSound(position: Vector3) {
+        this.playSoundAt(this.doorCloseSound, position)
+    },
+
+    playSoundAt(sourceSound: Sound | null, position: Vector3) {
+        if (!sourceSound || !sourceSound['loaded']) return
+        const sound = sourceSound.clone()
+        if (!sound) return
+        sound.setVolume(sourceSound.defaultVolume * AudioUtils.getVolumeRatioByDistance(position))
+        sound.onEndedObservable.addOnce(() => sound.dispose())
         sound.play()
     },
 

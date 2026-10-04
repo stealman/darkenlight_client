@@ -142,6 +142,7 @@ export const MessageProcessor = {
                 case 79: this.processGMWorldBiomeTreesChanged(msg.d); break
                 case 80: this.processAddBuilding(msg.d); break
                 case 81: this.processRemoveBuilding(msg.d); break
+                case 82: this.processBuildingDoorState(msg.d); break
                 case 1003: this.processGMAllSpawns(msg.d); break
                 case 1004: this.processGMSpawnChange(msg.d); break
                 default:
@@ -349,6 +350,10 @@ export const MessageProcessor = {
     processRemoveBuilding(data) {
         BuildingManager.removeBuilding(data.id)
         WorldRenderer.renderWorld()
+    },
+
+    processBuildingDoorState(data) {
+        BuildingManager.setDoorOpen(data.id, data.open === true)
     },
 
     processBiomeChanged(data) {

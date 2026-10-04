@@ -288,6 +288,7 @@ export const MaterialEnum1 = {
     WOOD_2: new MaterialEnum(10, new Vector2(2.5, 12.5)),
     WOOD_3: new MaterialEnum(11, new Vector2(4.5, 12.5)),
     WOOD_PLANKS: new MaterialEnum(12, new Vector2(6.5, 12.5)),
+    WOOD_PLANKS_DARK: new MaterialEnum(13, new Vector2(8.5, 12.5)),
     EMBERS: new MaterialEnum(17, new Vector2(0.5, 10.5)),
     STEEL_1: new MaterialEnum(25, new Vector2(0.5, 8.5)),
     HAY: new MaterialEnum(33, new Vector2(0.5, 6.5)),

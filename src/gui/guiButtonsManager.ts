@@ -6,12 +6,13 @@ import { MyPlayer } from '@/data/myPlayer'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { WeaponCategories, WeaponTags } from '@/data/items/item'
 import { Connector } from '@/network/connector'
-import { FireArrowsActionMsg, GatheringActionMsg, RequestCookingMsg, RestingActionMsg } from '@/network/messages'
+import { FireArrowsActionMsg, GatheringActionMsg, RequestCookingMsg, RestingActionMsg, UseBuildingDoorMsg } from '@/network/messages'
 import { CharacterAction, CharacterActions } from '@/data/actions/characterActions'
 import { TargetingManager } from '@/gui/targettingManager'
 import { GMManager } from '@/gm/GM'
 import {NpcInteractionManager} from '@/data/npcInteractionManager'
 import {NpcManager} from '@/babylon/npc/npcManager'
+import { BuildingManager } from '@/babylon/world/buildings/buildingManager'
 
 const HUD_BUTTON_GAP = 5
 const HUD_MINIMAP_LEFT_FRAME_SIZE = 3
@@ -68,6 +69,7 @@ export const GuiOpportunityActions = {
     LUMBERJACKING: new GuiOpportunityButtonAction("LUMBERJACKING", "btn_lumber"),
     RESTING: new GuiOpportunityButtonAction("RESTING", "btn_rest"),
     COOKING: new GuiOpportunityButtonAction("COOKING", "btn_cooking"),
+    USE_DOOR: new GuiOpportunityButtonAction("USE_DOOR", "btn_use_door"),
     NPC_USE: new GuiOpportunityButtonAction("NPC_USE", "btn_chat"),
     NPC_EDIT: new GuiOpportunityButtonAction("NPC_EDIT", "", "NPC"),
 }
@@ -98,6 +100,7 @@ export const GuiButtonsManager = {
         this.opportunityButtons.set(GuiOpportunityActions.MINING.name, new GuiOpportunityButton(GuiOpportunityActions.MINING))
         this.opportunityButtons.set(GuiOpportunityActions.LUMBERJACKING.name, new GuiOpportunityButton(GuiOpportunityActions.LUMBERJACKING))
         this.opportunityButtons.set(GuiOpportunityActions.COOKING.name, new GuiOpportunityButton(GuiOpportunityActions.COOKING))
+        this.opportunityButtons.set(GuiOpportunityActions.USE_DOOR.name, new GuiOpportunityButton(GuiOpportunityActions.USE_DOOR))
         this.opportunityButtons.set(GuiOpportunityActions.NPC_USE.name, new GuiOpportunityButton(GuiOpportunityActions.NPC_USE))
         this.opportunityButtons.set(GuiOpportunityActions.NPC_EDIT.name, new GuiOpportunityButton(GuiOpportunityActions.NPC_EDIT))
     },
@@ -153,6 +156,9 @@ export const GuiButtonsManager = {
 
         this.opportunityButtons.get(GuiOpportunityActions.RESTING.name)!.setVisible(MyPlayer.nearFireplace !== null)
         this.opportunityButtons.get(GuiOpportunityActions.COOKING.name)!.setVisible(MyPlayer.nearFireplace !== null)
+        this.opportunityButtons.get(GuiOpportunityActions.USE_DOOR.name)!.setVisible(
+            BuildingManager.getClosestDoorIdInDistance(MyPlayer.myChar.pos, 1.5) !== null
+        )
         const selectedTarget = TargetingManager.selectedTarget
         const closestNpc = NpcManager.getClosestNpcInDistance(3)
         this.opportunityButtons.get(GuiOpportunityActions.NPC_USE.name)!.setVisible(
@@ -185,6 +191,9 @@ export const GuiButtonsManager = {
                 break
             case GuiOpportunityActions.COOKING.name:
                 this.clickOnCookingButton()
+                break
+            case GuiOpportunityActions.USE_DOOR.name:
+                this.clickOnUseDoorButton()
                 break
             case GuiOpportunityActions.NPC_USE.name:
                 this.clickOnNpcUseButton()
@@ -260,6 +269,13 @@ export const GuiButtonsManager = {
     clickOnCookingButton() {
         if (MyPlayer.nearFireplace) {
             Connector.sendMessage(new RequestCookingMsg(MyPlayer.nearFireplace.x, MyPlayer.nearFireplace.z))
+        }
+    },
+
+    clickOnUseDoorButton() {
+        const buildingId = BuildingManager.getClosestDoorIdInDistance(MyPlayer.myChar.pos, 1.5)
+        if (buildingId !== null) {
+            Connector.sendMessage(new UseBuildingDoorMsg(buildingId))
         }
     },
 

@@ -5,6 +5,7 @@ import { ViewportManager } from '@/utils/viewport'
 import { Lights } from '@/babylon/scene/lights'
 import { MyPlayer } from '@/data/myPlayer'
 import { segmentIntersectsAabb } from '@/babylon/geometryUtils'
+import { AudioManager } from '@/babylon/audio/audioManager'
 
 export interface BuildingData {
     id: number
@@ -12,22 +13,30 @@ export interface BuildingData {
     x: number
     z: number
     facing?: BuildingFacing
+    doorOpen?: boolean
 }
 
 type BuildingFacing = '+X' | '-X' | '+Z' | '-Z'
 
 const HOUSE_WIDTH = 5
 const HOUSE_DEPTH = 3
-const FLOOR_HEIGHT = 0.1
+const FLOOR_HEIGHT = 0.12
+const FLOOR_OVERHANG = 0.4
 const WALL_HEIGHT = 1
 const WALL_THICKNESS = 0.2
 const PILLAR_SIZE = 0.4
 const DOOR_CENTER_X = 2
-const DOOR_WIDTH = 1
+const DOOR_OPENING_WIDTH = 1
+const DOOR_WIDTH = DOOR_OPENING_WIDTH - 0.1
+const DOOR_HINGE_X = DOOR_CENTER_X - DOOR_WIDTH / 2
 const DOOR_COLLISION_WIDTH = 1.3
+const DOOR_HEIGHT = 1.8
+const DOOR_THICKNESS = 0.12
+const DOOR_BRACE_HEIGHT = 0.1
+const DOOR_BRACE_DEPTH = 0.08
 const WINDOW_WIDTH = 0.8
 const WINDOW_HEIGHT = 0.4
-const WINDOW_BOTTOM = 1.2
+const WINDOW_BOTTOM = FLOOR_HEIGHT + 1.1
 const ROOF_STEP_DEPTH = 0.5
 const ROOF_STEP_HEIGHT = 0.3
 const ROOF_ANGLE = Math.PI / 6
@@ -39,6 +48,8 @@ const ROOF_RISE = Math.tan(ROOF_ANGLE) * ROOF_RUN
 const ROOF_SLOPE_LENGTH = ROOF_RUN / Math.cos(ROOF_ANGLE)
 const FADED_ALPHA = 0.35
 const FADE_DURATION = 0.3
+const DOOR_ANIMATION_DURATION = 0.4 / 1.25
+const DOOR_OPEN_ANGLE = -Math.PI / 2
 
 interface BuildingPrefabs {
     variants: Record<BuildingFacing, {
@@ -46,15 +57,23 @@ interface BuildingPrefabs {
         frontWalls: Mesh
     }>
     roof: Mesh
+    door: Mesh
 }
 
 class BuildingView {
     readonly mesh: Mesh
     readonly frontWallsMesh: Mesh
     readonly roofMesh: Mesh
+    readonly doorMesh: Mesh
+    readonly doorRoot: TransformNode
+    readonly doorHinge: TransformNode
     readonly facing: BuildingFacing
+    readonly doorFadesInside: boolean
     roofVisibility = 1
     wallVisibility = 1
+    doorVisibility = 1
+    doorProgress: number
+    playCloseSoundWhenClosed = false
     shouldOcclusionFade = false
 
     constructor(readonly data: BuildingData, prefabs: BuildingPrefabs, parent: TransformNode, fadeMaterial: PBRMaterial) {
@@ -63,21 +82,36 @@ class BuildingView {
         this.mesh = variant.shell.clone(`building_${data.id}`, parent)!
         this.frontWallsMesh = variant.frontWalls.clone(`building_${data.id}_front_walls`, parent)!
         this.roofMesh = prefabs.roof.clone(`building_${data.id}_roof`, parent)!
+        this.doorRoot = new TransformNode(`building_${data.id}_door_root`, parent.getScene())
+        this.doorRoot.parent = parent
+        this.doorHinge = new TransformNode(`building_${data.id}_door_hinge`, parent.getScene())
+        this.doorHinge.parent = this.doorRoot
+        this.doorHinge.position.set(DOOR_HINGE_X, 0, HOUSE_DEPTH - 0.5)
+        this.doorMesh = prefabs.door.clone(`building_${data.id}_door`, this.doorHinge)!
+        this.doorMesh.position.set(-DOOR_HINGE_X, 0, -(HOUSE_DEPTH - 0.5))
+        this.doorProgress = data.doorOpen === true ? 1 : 0
+        this.doorHinge.rotation.y = this.doorProgress * DOOR_OPEN_ANGLE
+        this.doorFadesInside = this.facing === '-Z' || this.facing === '-X'
         this.mesh.isPickable = false
         this.frontWallsMesh.isPickable = false
         this.roofMesh.isPickable = false
+        this.doorMesh.isPickable = false
         this.frontWallsMesh.material = fadeMaterial
+        this.doorMesh.material = fadeMaterial
         this.mesh.setEnabled(false)
         this.frontWallsMesh.setEnabled(false)
         this.roofMesh.setEnabled(false)
+        this.doorMesh.setEnabled(false)
         this.applyXZTransform()
         this.recountYPosition()
         Lights.registerSharedLightMesh(this.mesh)
         Lights.registerSharedLightMesh(this.frontWallsMesh)
         Lights.registerSharedLightMesh(this.roofMesh)
+        Lights.registerSharedLightMesh(this.doorMesh)
         Lights.addShadowCaster(this.mesh, true, true)
         Lights.addShadowCaster(this.frontWallsMesh, true, true)
         Lights.addShadowCaster(this.roofMesh, true, true)
+        Lights.addShadowCaster(this.doorMesh, true, true)
     }
 
     applyXZTransform() {
@@ -106,6 +140,9 @@ class BuildingView {
             mesh.position.z = z
             mesh.rotation.y = rotation
         }
+        this.doorRoot.position.x = x
+        this.doorRoot.position.z = z
+        this.doorRoot.rotation.y = rotation
     }
 
     recountYPosition() {
@@ -113,6 +150,7 @@ class BuildingView {
         this.mesh.position.y = block?.totalHeight ?? 0
         this.frontWallsMesh.position.y = this.mesh.position.y
         this.roofMesh.position.y = this.mesh.position.y
+        this.doorRoot.position.y = this.mesh.position.y
     }
 
     isVisible() {
@@ -151,6 +189,14 @@ class BuildingView {
             }
         }
         return tiles
+    }
+
+    getFloorTiles() {
+        return [
+            ...this.getOccupiedTiles(),
+            ...[DOOR_CENTER_X - 1, DOOR_CENTER_X, DOOR_CENTER_X + 1]
+                .map((localX) => this.localTileToWorld(localX, HOUSE_DEPTH)),
+        ]
     }
 
     getCollisionIndexTiles() {
@@ -200,8 +246,9 @@ class BuildingView {
 
         return hitsPillar
             || intersects(minX + halfPillar, maxX - halfPillar, minZ - WALL_THICKNESS / 2, minZ + WALL_THICKNESS / 2)
-            || intersects(minX + halfPillar, doorMinX, maxZ - WALL_THICKNESS / 2, maxZ + WALL_THICKNESS / 2)
-            || intersects(doorMaxX, maxX - halfPillar, maxZ - WALL_THICKNESS / 2, maxZ + WALL_THICKNESS / 2)
+            || (!this.data.doorOpen && intersects(minX + halfPillar, maxX - halfPillar, maxZ - WALL_THICKNESS / 2, maxZ + WALL_THICKNESS / 2))
+            || (this.data.doorOpen && intersects(minX + halfPillar, doorMinX, maxZ - WALL_THICKNESS / 2, maxZ + WALL_THICKNESS / 2))
+            || (this.data.doorOpen && intersects(doorMaxX, maxX - halfPillar, maxZ - WALL_THICKNESS / 2, maxZ + WALL_THICKNESS / 2))
             || intersects(minX - WALL_THICKNESS / 2, minX + WALL_THICKNESS / 2, minZ + halfPillar, maxZ - halfPillar)
             || intersects(maxX - WALL_THICKNESS / 2, maxX + WALL_THICKNESS / 2, minZ + halfPillar, maxZ - halfPillar)
     }
@@ -210,6 +257,47 @@ class BuildingView {
         const local = this.worldPointToLocal(x, z)
         return local.x > -0.4 && local.x < HOUSE_WIDTH - 0.6
             && local.z > -0.4 && local.z < HOUSE_DEPTH - 0.6
+    }
+
+    getDoorPosition() {
+        return this.localTileToWorld(DOOR_CENTER_X, HOUSE_DEPTH - 0.5)
+    }
+
+    setDoorOpen(open: boolean) {
+        if (this.data.doorOpen === open) return
+        this.data.doorOpen = open
+        if (open) {
+            this.playCloseSoundWhenClosed = false
+            AudioManager.playDoorOpenSound(this.getDoorSoundPosition())
+        } else {
+            this.playCloseSoundWhenClosed = true
+        }
+    }
+
+    getDoorSoundPosition() {
+        const door = this.getDoorPosition()
+        return new Vector3(door.x, this.mesh.position.y + FLOOR_HEIGHT + DOOR_HEIGHT / 2, door.z)
+    }
+
+    updateDoorAnimation(timeRate: number) {
+        const target = this.data.doorOpen ? 1 : 0
+        if (this.doorProgress === target) {
+            this.finishDoorCloseSound(target)
+            return
+        }
+        const step = timeRate / DOOR_ANIMATION_DURATION
+        this.doorProgress = this.doorProgress < target
+            ? Math.min(this.doorProgress + step, target)
+            : Math.max(this.doorProgress - step, target)
+        this.doorHinge.rotation.y = this.doorProgress * DOOR_OPEN_ANGLE
+        this.finishDoorCloseSound(target)
+    }
+
+    finishDoorCloseSound(target: number) {
+        if (target === 0 && this.doorProgress === 0 && this.playCloseSoundWhenClosed) {
+            this.playCloseSoundWhenClosed = false
+            AudioManager.playDoorCloseSound(this.getDoorSoundPosition())
+        }
     }
 
     intersectsOcclusionSegment(origin: Vector3, direction: Vector3, maxDistance: number) {
@@ -238,6 +326,7 @@ class BuildingView {
         this.mesh.setEnabled(visible)
         this.frontWallsMesh.setEnabled(visible)
         this.roofMesh.setEnabled(visible)
+        this.doorMesh.setEnabled(visible)
     }
 
     updateFade(timeRate: number, playerInside: boolean) {
@@ -253,6 +342,13 @@ class BuildingView {
             this.frontWallsMesh,
             this.wallVisibility,
             playerInside ? FADED_ALPHA : 1,
+            FADED_ALPHA,
+            timeRate,
+        )
+        this.doorVisibility = this.updateMeshFade(
+            this.doorMesh,
+            this.doorVisibility,
+            playerInside && this.doorFadesInside ? FADED_ALPHA : 1,
             FADED_ALPHA,
             timeRate,
         )
@@ -272,12 +368,17 @@ class BuildingView {
         Lights.unregisterSharedLightMesh(this.mesh)
         Lights.unregisterSharedLightMesh(this.frontWallsMesh)
         Lights.unregisterSharedLightMesh(this.roofMesh)
+        Lights.unregisterSharedLightMesh(this.doorMesh)
         Lights.removeShadowCaster(this.mesh, true, true)
         Lights.removeShadowCaster(this.frontWallsMesh, true, true)
         Lights.removeShadowCaster(this.roofMesh, true, true)
+        Lights.removeShadowCaster(this.doorMesh, true, true)
         this.mesh.dispose()
         this.frontWallsMesh.dispose()
         this.roofMesh.dispose()
+        this.doorMesh.dispose()
+        this.doorHinge.dispose()
+        this.doorRoot.dispose()
     }
 }
 
@@ -312,7 +413,7 @@ export const BuildingManager = {
         }
         const building = new BuildingView(data, this.housePrefabs, this.parent, this.fadeMaterial)
         this.buildings.set(data.id, building)
-        building.getOccupiedTiles().forEach((tile) => this.floorTiles.set(`${tile.x};${tile.z}`, building))
+        building.getFloorTiles().forEach((tile) => this.floorTiles.set(`${tile.x};${tile.z}`, building))
         building.getCollisionIndexTiles().forEach((tile) => {
             const key = `${tile.x};${tile.z}`
             if (!this.collisionTiles.has(key)) this.collisionTiles.set(key, new Set())
@@ -327,7 +428,7 @@ export const BuildingManager = {
     removeBuilding(id: number) {
         const building = this.buildings.get(id)
         if (!building) return
-        building.getOccupiedTiles().forEach((tile) => {
+        building.getFloorTiles().forEach((tile) => {
             const key = `${tile.x};${tile.z}`
             if (this.floorTiles.get(key) === building) this.floorTiles.delete(key)
         })
@@ -346,6 +447,26 @@ export const BuildingManager = {
 
     hasFloorAtTile(x: number, z: number) {
         return this.floorTiles.has(`${x};${z}`)
+    },
+
+    getClosestDoorIdInDistance(position: Vector3, maxDistance: number) {
+        let closestId: number | null = null
+        let closestDistanceSquared = maxDistance * maxDistance
+        this.buildings.forEach((building) => {
+            const door = building.getDoorPosition()
+            const dx = position.x - door.x
+            const dz = position.z - door.z
+            const distanceSquared = dx * dx + dz * dz
+            if (distanceSquared <= closestDistanceSquared) {
+                closestDistanceSquared = distanceSquared
+                closestId = building.data.id
+            }
+        })
+        return closestId
+    },
+
+    setDoorOpen(id: number, open: boolean) {
+        this.buildings.get(id)?.setDoorOpen(open)
     },
 
     getPointInBuilding(x: number, z: number, size: number, coveredBlocks: {x: number, z: number}[]) {
@@ -374,6 +495,7 @@ export const BuildingManager = {
             this.updateOcclusion(camera)
         }
         this.buildings.forEach((building) => {
+            building.updateDoorAnimation(timeRate)
             building.updateFade(
                 timeRate,
                 playerX != null && playerZ != null && building.containsInteriorPoint(playerX, playerZ),
@@ -413,9 +535,9 @@ export const BuildingManager = {
     },
 
     createHousePrefab(scene: Scene) {
-        type PartGroup = 'base' | 'wallMinX' | 'wallMaxX' | 'wallMinZ' | 'wallMaxZ' | 'roof'
+        type PartGroup = 'base' | 'wallMinX' | 'wallMaxX' | 'wallMinZ' | 'wallMaxZ' | 'roof' | 'door'
         const groups = {} as Record<PartGroup, {parts: Mesh[], uvData: number[]}>
-        for (const group of ['base', 'wallMinX', 'wallMaxX', 'wallMinZ', 'wallMaxZ', 'roof'] as PartGroup[]) {
+        for (const group of ['base', 'wallMinX', 'wallMaxX', 'wallMinZ', 'wallMaxZ', 'roof', 'door'] as PartGroup[]) {
             groups[group] = {parts: [], uvData: []}
         }
         const addBox = (
@@ -475,8 +597,34 @@ export const BuildingManager = {
 
         for (let x = 0; x < HOUSE_WIDTH; x++) {
             for (let z = 0; z < HOUSE_DEPTH; z++) {
-                addBox('buildingFloor', 1, FLOOR_HEIGHT, 1, x, FLOOR_HEIGHT / 2, z, MaterialEnum1.ROCK1.uv)
+                const minXEdge = x === 0
+                const maxXEdge = x === HOUSE_WIDTH - 1
+                const minZEdge = z === 0
+                const hasFrontFloor = x >= DOOR_CENTER_X - 1 && x <= DOOR_CENTER_X + 1
+                const maxZEdge = z === HOUSE_DEPTH - 1 && !hasFrontFloor
+                addBox(
+                    'buildingFloor',
+                    1 + (minXEdge ? FLOOR_OVERHANG : 0) + (maxXEdge ? FLOOR_OVERHANG : 0),
+                    FLOOR_HEIGHT,
+                    1 + (minZEdge ? FLOOR_OVERHANG : 0) + (maxZEdge ? FLOOR_OVERHANG : 0),
+                    x + (maxXEdge ? FLOOR_OVERHANG / 2 : 0) - (minXEdge ? FLOOR_OVERHANG / 2 : 0),
+                    FLOOR_HEIGHT / 2,
+                    z + (maxZEdge ? FLOOR_OVERHANG / 2 : 0) - (minZEdge ? FLOOR_OVERHANG / 2 : 0),
+                    MaterialEnum1.ROCK1.uv,
+                )
             }
+        }
+        for (const x of [DOOR_CENTER_X - 1, DOOR_CENTER_X, DOOR_CENTER_X + 1]) {
+            addBox(
+                'buildingFrontFloor',
+                1,
+                FLOOR_HEIGHT,
+                1,
+                x,
+                FLOOR_HEIGHT / 2,
+                HOUSE_DEPTH,
+                MaterialEnum1.ROCK1.uv,
+            )
         }
 
         for (const x of [-0.5, HOUSE_WIDTH - 0.5]) {
@@ -488,7 +636,7 @@ export const BuildingManager = {
                         PILLAR_SIZE,
                         PILLAR_SIZE,
                         x,
-                        0.1 + PILLAR_SIZE / 2 + level * PILLAR_SIZE,
+                        FLOOR_HEIGHT + PILLAR_SIZE / 2 + level * PILLAR_SIZE,
                         z,
                         MaterialEnum1.BRICK_GRAY.uv,
                     )
@@ -580,21 +728,60 @@ export const BuildingManager = {
                     continue
                 }
                 for (let level = 0; level < 2; level++) {
-                    addWallGrid('buildingWall', segment.length, WALL_HEIGHT, segment.center, 0.6 + level, z, true, wallGroup)
+                    addWallGrid(
+                        'buildingWall',
+                        segment.length,
+                        WALL_HEIGHT,
+                        segment.center,
+                        FLOOR_HEIGHT + WALL_HEIGHT / 2 + level * WALL_HEIGHT,
+                        z,
+                        true,
+                        wallGroup,
+                    )
                 }
             }
         }
         addWindowSection(2.5, 4.3, 3.5, HOUSE_DEPTH - 0.5, 'wallMaxZ')
         addWallGrid(
             'buildingDoorLintel',
-            DOOR_WIDTH,
+            DOOR_OPENING_WIDTH,
             0.2,
             DOOR_CENTER_X,
-            2,
+            FLOOR_HEIGHT + DOOR_HEIGHT + 0.1,
             HOUSE_DEPTH - 0.5,
             true,
             'wallMaxZ',
         )
+        for (let xStep = 0; xStep < 2; xStep++) {
+            for (let yStep = 0; yStep < 4; yStep++) {
+                addBox(
+                    'buildingDoor',
+                    DOOR_WIDTH / 2,
+                    DOOR_HEIGHT / 4,
+                    DOOR_THICKNESS,
+                    DOOR_CENTER_X - DOOR_WIDTH / 4 + xStep * DOOR_WIDTH / 2,
+                    FLOOR_HEIGHT + DOOR_HEIGHT / 8 + yStep * DOOR_HEIGHT / 4,
+                    HOUSE_DEPTH - 0.5,
+                    MaterialEnum1.WOOD_PLANKS_DARK.uv,
+                    0,
+                    'door',
+                )
+            }
+        }
+        for (const heightRatio of [0.25, 0.75]) {
+            addBox(
+                'buildingDoorBrace',
+                DOOR_WIDTH,
+                DOOR_BRACE_HEIGHT,
+                DOOR_BRACE_DEPTH,
+                DOOR_CENTER_X,
+                FLOOR_HEIGHT + DOOR_HEIGHT * heightRatio,
+                HOUSE_DEPTH - 0.5 + DOOR_THICKNESS / 2 + DOOR_BRACE_DEPTH / 2,
+                MaterialEnum1.WOOD_1.uv,
+                0,
+                'door',
+            )
+        }
         const shortWallSegments = [
             {center: 0.1, length: 0.8},
             {center: 1, length: 1},
@@ -604,7 +791,16 @@ export const BuildingManager = {
             for (const x of [-0.5, HOUSE_WIDTH - 0.5]) {
                 const wallGroup: PartGroup = x === -0.5 ? 'wallMinX' : 'wallMaxX'
                 for (let level = 0; level < 2; level++) {
-                    addWallGrid('buildingWall', segment.length, WALL_HEIGHT, x, 0.6 + level, segment.center, false, wallGroup)
+                    addWallGrid(
+                        'buildingWall',
+                        segment.length,
+                        WALL_HEIGHT,
+                        x,
+                        FLOOR_HEIGHT + WALL_HEIGHT / 2 + level * WALL_HEIGHT,
+                        segment.center,
+                        false,
+                        wallGroup,
+                    )
                 }
             }
         }
@@ -701,6 +897,7 @@ export const BuildingManager = {
         return {
             variants,
             roof: mergeParts(groups.roof.parts, groups.roof.uvData, 'humanHouseRoof5x3Prefab', this.fadeMaterial!),
+            door: mergeParts(groups.door.parts, groups.door.uvData, 'humanHouseDoor5x3Prefab', this.fadeMaterial!),
         }
     },
 }

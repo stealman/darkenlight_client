@@ -82,6 +82,15 @@ export class AccountCharacterClaimMsg implements Message {
     }
 }
 
+export class UseBuildingDoorMsg implements Message {
+    t: number = 40
+    d: {id: number}
+
+    constructor(id: number) {
+        this.d = {id}
+    }
+}
+
 export class MyCharMoveMsg implements Message {
     t: number = 5
     d: any
