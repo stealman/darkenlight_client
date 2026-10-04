@@ -1,4 +1,4 @@
-import { Mesh, MeshBuilder, Scene, TransformNode, Vector2, Vector3 } from '@babylonjs/core'
+import { Mesh, MeshBuilder, PBRMaterial, Scene, TransformNode, Vector2, Vector3 } from '@babylonjs/core'
 import { MaterialEnum1, Materials } from '@/babylon/materials'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { ViewportManager } from '@/utils/viewport'
@@ -35,44 +35,69 @@ const ROOF_END_OVERHANG = 0.5
 const ROOF_RUN = HOUSE_DEPTH / 2 + ROOF_EAVE_OVERHANG
 const ROOF_RISE = Math.tan(ROOF_ANGLE) * ROOF_RUN
 const ROOF_SLOPE_LENGTH = ROOF_RUN / Math.cos(ROOF_ANGLE)
+const FADED_ALPHA = 0
+const FADE_DURATION = 0.3
+
+interface BuildingPrefabs {
+    shell: Mesh
+    roof: Mesh
+}
 
 class BuildingView {
     readonly mesh: Mesh
+    readonly roofMesh: Mesh
     readonly facing: BuildingFacing
+    fadeVisibility = 1
+    fadeTarget = 1
 
-    constructor(readonly data: BuildingData, prefab: Mesh, parent: TransformNode) {
+    constructor(readonly data: BuildingData, prefabs: BuildingPrefabs, parent: TransformNode) {
         this.facing = data.facing === '+X' || data.facing === '-X' || data.facing === '-Z' ? data.facing : '+Z'
-        this.mesh = prefab.clone(`building_${data.id}`, parent)!
+        this.mesh = prefabs.shell.clone(`building_${data.id}`, parent)!
+        this.roofMesh = prefabs.roof.clone(`building_${data.id}_roof`, parent)!
         this.mesh.isPickable = false
+        this.roofMesh.isPickable = false
         this.mesh.setEnabled(false)
+        this.roofMesh.setEnabled(false)
         this.applyXZTransform()
         this.recountYPosition()
+        Lights.registerSharedLightMesh(this.mesh)
+        Lights.registerSharedLightMesh(this.roofMesh)
         Lights.addShadowCaster(this.mesh, true, true)
+        Lights.addShadowCaster(this.roofMesh, true, true)
     }
 
     applyXZTransform() {
+        let x: number
+        let z: number
+        let rotation: number
         if (this.facing === '+X') {
-            this.mesh.position.x = this.data.x
-            this.mesh.position.z = this.data.z + HOUSE_WIDTH - 1
-            this.mesh.rotation.y = Math.PI / 2
+            x = this.data.x
+            z = this.data.z + HOUSE_WIDTH - 1
+            rotation = Math.PI / 2
         } else if (this.facing === '-Z') {
-            this.mesh.position.x = this.data.x + HOUSE_WIDTH - 1
-            this.mesh.position.z = this.data.z + HOUSE_DEPTH - 1
-            this.mesh.rotation.y = Math.PI
+            x = this.data.x + HOUSE_WIDTH - 1
+            z = this.data.z + HOUSE_DEPTH - 1
+            rotation = Math.PI
         } else if (this.facing === '-X') {
-            this.mesh.position.x = this.data.x + HOUSE_DEPTH - 1
-            this.mesh.position.z = this.data.z
-            this.mesh.rotation.y = -Math.PI / 2
+            x = this.data.x + HOUSE_DEPTH - 1
+            z = this.data.z
+            rotation = -Math.PI / 2
         } else {
-            this.mesh.position.x = this.data.x
-            this.mesh.position.z = this.data.z
-            this.mesh.rotation.y = 0
+            x = this.data.x
+            z = this.data.z
+            rotation = 0
+        }
+        for (const mesh of [this.mesh, this.roofMesh]) {
+            mesh.position.x = x
+            mesh.position.z = z
+            mesh.rotation.y = rotation
         }
     }
 
     recountYPosition() {
         const block = WorldDataManager.getBlockMap()[this.data.x]?.[this.data.z]
         this.mesh.position.y = block?.totalHeight ?? 0
+        this.roofMesh.position.y = this.mesh.position.y
     }
 
     isVisible() {
@@ -166,8 +191,34 @@ class BuildingView {
             || intersects(maxX - WALL_THICKNESS / 2, maxX + WALL_THICKNESS / 2, minZ + halfPillar, maxZ - halfPillar)
     }
 
+    containsInteriorPoint(x: number, z: number) {
+        const local = this.worldPointToLocal(x, z)
+        return local.x > -0.4 && local.x < HOUSE_WIDTH - 0.6
+            && local.z > -0.4 && local.z < HOUSE_DEPTH - 0.6
+    }
+
+    setVisible(visible: boolean) {
+        this.mesh.setEnabled(visible)
+        this.roofMesh.setEnabled(visible)
+    }
+
+    updateFade(timeRate: number, shouldFade: boolean) {
+        this.fadeTarget = shouldFade ? FADED_ALPHA : 1
+        if (this.fadeVisibility === this.fadeTarget) return
+        const step = ((1 - FADED_ALPHA) / FADE_DURATION) * timeRate
+        this.fadeVisibility = this.fadeVisibility < this.fadeTarget
+            ? Math.min(this.fadeVisibility + step, this.fadeTarget)
+            : Math.max(this.fadeVisibility - step, this.fadeTarget)
+        this.roofMesh.visibility = this.fadeVisibility
+    }
+
     dispose() {
+        Lights.unregisterSharedLightMesh(this.mesh)
+        Lights.unregisterSharedLightMesh(this.roofMesh)
+        Lights.removeShadowCaster(this.mesh, true, true)
+        Lights.removeShadowCaster(this.roofMesh, true, true)
         this.mesh.dispose()
+        this.roofMesh.dispose()
     }
 }
 
@@ -175,12 +226,18 @@ export const BuildingManager = {
     buildings: new Map<number, BuildingView>(),
     floorTiles: new Map<string, BuildingView>(),
     collisionTiles: new Map<string, Set<BuildingView>>(),
-    housePrefab: null as Mesh | null,
+    housePrefabs: null as BuildingPrefabs | null,
+    roofMaterial: null as PBRMaterial | null,
     parent: null as TransformNode | null,
 
     initialize(scene: Scene, parent: TransformNode) {
         this.parent = parent
-        this.housePrefab = this.createHousePrefab(scene)
+        Lights.enableTransparentShadowCasters()
+        this.roofMaterial = Materials.createBlockMat1(scene)
+        this.roofMaterial.name = 'building_roof_faded_material'
+        this.roofMaterial.alpha = 1
+        this.roofMaterial.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHABLEND
+        this.housePrefabs = this.createHousePrefab(scene)
     },
 
     consumeBuildings(data: BuildingData[]) {
@@ -188,10 +245,10 @@ export const BuildingManager = {
     },
 
     addBuilding(data: BuildingData) {
-        if (data.tp !== 1 || this.buildings.has(data.id) || !this.housePrefab || !this.parent) {
+        if (data.tp !== 1 || this.buildings.has(data.id) || !this.housePrefabs || !this.parent) {
             return
         }
-        const building = new BuildingView(data, this.housePrefab, this.parent)
+        const building = new BuildingView(data, this.housePrefabs, this.parent)
         this.buildings.set(data.id, building)
         building.getOccupiedTiles().forEach((tile) => this.floorTiles.set(`${tile.x};${tile.z}`, building))
         building.getCollisionIndexTiles().forEach((tile) => {
@@ -242,8 +299,17 @@ export const BuildingManager = {
         this.buildings.forEach((building) => building.recountYPosition())
     },
 
+    onFrame(timeRate: number, playerX: number | null, playerZ: number | null) {
+        this.buildings.forEach((building) => {
+            building.updateFade(
+                timeRate,
+                playerX != null && playerZ != null && building.containsInteriorPoint(playerX, playerZ),
+            )
+        })
+    },
+
     renderBuildings() {
-        this.buildings.forEach((building) => building.mesh.setEnabled(building.isVisible()))
+        this.buildings.forEach((building) => building.setVisible(building.isVisible()))
     },
 
     clearWorld() {
@@ -254,8 +320,10 @@ export const BuildingManager = {
     },
 
     createHousePrefab(scene: Scene) {
-        const parts: Mesh[] = []
-        const uvData: number[] = []
+        const shellParts: Mesh[] = []
+        const shellUvData: number[] = []
+        const roofParts: Mesh[] = []
+        const roofUvData: number[] = []
         const addBox = (
             name: string,
             width: number,
@@ -266,15 +334,18 @@ export const BuildingManager = {
             z: number,
             material: Vector2,
             rotationX = 0,
+            group: 'shell' | 'roof' = 'shell',
         ) => {
             const box = MeshBuilder.CreateBox(name, {width, height, depth, wrap: true}, scene)
             box.position.set(x, y, z)
             box.rotation.x = rotationX
             box.convertToUnIndexedMesh()
+            const uvData = group === 'roof' ? roofUvData : shellUvData
             for (let i = 0; i < box.getTotalVertices(); i++) {
                 uvData.push(material.x, material.y)
             }
-            parts.push(box)
+            if (group === 'roof') roofParts.push(box)
+            else shellParts.push(box)
         }
         const addWallGrid = (
             name: string,
@@ -442,6 +513,8 @@ export const BuildingManager = {
                         wallTop + ROOF_STEP_HEIGHT / 2 + yStep * ROOF_STEP_HEIGHT,
                         zStep * ROOF_STEP_DEPTH,
                         MaterialEnum1.WOOD_PLANKS.uv,
+                        0,
+                        'roof',
                     )
                 }
             }
@@ -462,16 +535,23 @@ export const BuildingManager = {
                     roofCenterZ + side * ROOF_RUN / 2,
                     MaterialEnum1.BRICK_RED.uv,
                     side * ROOF_ANGLE,
+                    'roof',
                 )
             }
         }
 
-        const merged = Mesh.MergeMeshes(parts, true, true)!
-        merged.name = 'humanHouseShell5x3Prefab'
-        merged.material = Materials.blockMat1
-        merged.setVerticesData('uvc', uvData, false, 2)
-        merged.isPickable = false
-        merged.setEnabled(false)
-        return merged
+        const mergeParts = (parts: Mesh[], uvData: number[], name: string, material: PBRMaterial) => {
+            const merged = Mesh.MergeMeshes(parts, true, true)!
+            merged.name = name
+            merged.material = material
+            merged.setVerticesData('uvc', uvData, false, 2)
+            merged.isPickable = false
+            merged.setEnabled(false)
+            return merged
+        }
+        return {
+            shell: mergeParts(shellParts, shellUvData, 'humanHouseShell5x3Prefab', Materials.blockMat1!),
+            roof: mergeParts(roofParts, roofUvData, 'humanHouseRoof5x3Prefab', this.roofMaterial!),
+        }
     },
 }
