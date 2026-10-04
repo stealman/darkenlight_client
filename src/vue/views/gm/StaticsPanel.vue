@@ -136,6 +136,7 @@ const objects = [
     { type: "CAMP", name: "Log Pile", id: 303 },
     { type: "CAMP", name: "Supply Crate", id: 304 },
     { type: "CAMP", name: "Barrel", id: 305 },
+    { type: "CAMP", name: "Hay Stack", id: 306 },
 ]
 
 const selectObjectType = (type) => {

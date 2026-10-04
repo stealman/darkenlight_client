@@ -57,6 +57,10 @@ const FADED_ALPHA = 0.35
 const FADE_DURATION = 0.3
 const DOOR_ANIMATION_DURATION = 0.4 / 1.25
 const DOOR_OPEN_ANGLE = -Math.PI / 2
+// Babylon skips meshes with exactly zero visibility before rendering shadow
+// maps. A tiny non-zero value keeps the roof visually absent while the shared
+// full-strength transparent-shadow mode continues to cast an opaque shadow.
+const HIDDEN_ROOF_VISIBILITY = 0.0001
 
 interface BuildingPrefabs {
     variants: Record<BuildingFacing, {
@@ -408,8 +412,8 @@ class BuildingView {
         this.roofVisibility = this.updateMeshFade(
             this.roofMesh,
             this.roofVisibility,
-            playerInside ? 0 : occluded ? FADED_ALPHA : 1,
-            0,
+            playerInside ? HIDDEN_ROOF_VISIBILITY : occluded ? FADED_ALPHA : 1,
+            HIDDEN_ROOF_VISIBILITY,
             timeRate,
         )
         this.wallVisibility = this.updateMeshFade(

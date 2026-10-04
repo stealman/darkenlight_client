@@ -1,5 +1,5 @@
 import { Matrix, Scene, Vector2, Vector3 } from '@babylonjs/core'
-import { Prefab } from '@/babylon/world/worldRenderer'
+import { Prefab, WorldRenderer } from '@/babylon/world/worldRenderer'
 import { MaterialAlphaEnum1, MaterialEnum1 } from '@/babylon/materials'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { ViewportManager } from '@/utils/viewport'
@@ -26,6 +26,7 @@ import {
     CampFence,
     CampFenceMetadata,
     CampObjectMetadata,
+    HayStack,
     LogPile,
     PlankPile,
     SupplyCrate,
@@ -41,6 +42,8 @@ export const StaticsManager = {
     visibleStatics : [] as StaticObject[],
     dungeonEntrances: new Set<StaticObject>(),
     walkableObjectsByTile: new Map<string, StaticObject>(),
+    activeBarrel: null as CampBarrel | null,
+    animatingBarrels: new Set<CampBarrel>(),
 
     initialize(scene: Scene) {
         this.prefabs.shrub2x2 = PrefabShrub2x2.getPrefab(scene)
@@ -142,6 +145,7 @@ export const StaticsManager = {
             case 303: this.allStatics.push(new LogPile(obj.tp, pos, MaterialEnum1.WOOD_3.uv, MaterialEnum1.WOOD_1.uv, obj.meta as CampObjectMetadata)); break
             case 304: this.allStatics.push(new SupplyCrate(obj.tp, pos, MaterialEnum1.WOOD_2.uv, MaterialEnum1.WOOD_3.uv, obj.meta as CampObjectMetadata)); break
             case 305: this.allStatics.push(new CampBarrel(obj.tp, pos, MaterialEnum1.WOOD_1.uv, MaterialEnum1.STEEL_1.uv, MaterialEnum1.WOOD_2.uv, obj.meta as CampObjectMetadata)); break
+            case 306: this.allStatics.push(new HayStack(obj.tp, pos, MaterialEnum1.HAY.uv)); break
             default:
                 break
         }
@@ -174,6 +178,11 @@ export const StaticsManager = {
             if (this.allStatics[i].position.x === x && this.allStatics[i].position.z === z
                 && (type === undefined || this.allStatics[i].type === type)) {
                 const obj = this.allStatics[i]
+                if (obj instanceof CampBarrel) {
+                    obj.clearRenderMatrices()
+                    this.animatingBarrels.delete(obj)
+                    if (this.activeBarrel === obj) this.activeBarrel = null
+                }
                 this.dungeonEntrances.delete(obj)
                 if (this.walkableObjectsByTile.get(`${x};${z}`) === obj) {
                     this.walkableObjectsByTile.delete(`${x};${z}`)
@@ -193,7 +202,36 @@ export const StaticsManager = {
         this.visibleStatics = []
         this.dungeonEntrances.clear()
         this.walkableObjectsByTile.clear()
+        this.activeBarrel = null
+        this.animatingBarrels.clear()
         this.renderObjects()
+    },
+
+    onFrame(timeRate: number, time: number) {
+        const closest = MyPlayer.myChar
+            ? this.getClosestStaticInDistance(305, MyPlayer.myChar.pos, 2)
+            : null
+        const activeBarrel = closest instanceof CampBarrel && typeof closest.status?.containerId === 'string'
+            ? closest
+            : null
+        if (activeBarrel !== this.activeBarrel) {
+            if (this.activeBarrel) {
+                this.activeBarrel.setBounce(false, time)
+                this.animatingBarrels.add(this.activeBarrel)
+            }
+            this.activeBarrel = activeBarrel
+            if (this.activeBarrel) {
+                this.activeBarrel.setBounce(true, time)
+                this.animatingBarrels.add(this.activeBarrel)
+            }
+        }
+
+        let bufferChanged = false
+        for (const barrel of this.animatingBarrels) {
+            bufferChanged = barrel.onFrame(timeRate, time) || bufferChanged
+            if (!barrel.isAnimating()) this.animatingBarrels.delete(barrel)
+        }
+        if (bufferChanged) WorldRenderer.block1!.mesh.thinInstanceBufferUpdated('matrix')
     },
 
     renderObjects() {
@@ -201,6 +239,9 @@ export const StaticsManager = {
             prefab?.clearMatrices()
         })
 
+        this.allStatics.forEach((obj) => {
+            if (obj instanceof CampBarrel) obj.clearRenderMatrices()
+        })
         this.resolveConnectingCorners()
         this.updateVisibleObjects()
         for (const element of this.visibleStatics) {

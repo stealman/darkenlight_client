@@ -63,4 +63,5 @@ export const StaticObjectsCodebook: Map<number, StaticObjectInfo> = new Map([
     [303, new StaticObjectInfo(303, 'LogPile', true, 1, 0.12, 0, null)],
     [304, new StaticObjectInfo(304, 'SupplyCrate', true, 1, 0.12, 0, null)],
     [305, new StaticObjectInfo(305, 'CampBarrel', true, 1, 0.12, 0, null)],
+    [306, new StaticObjectInfo(306, 'HayStack', true, 1, 0.2, 0, null)],
 ])

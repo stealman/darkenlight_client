@@ -145,8 +145,30 @@ export class SupplyCrate extends CampObject {
     }
 }
 
+export class HayStack extends BaseStaticObject {
+    constructor(type: number, position: Vector3, material: Vector2) {
+        super(type, position, 0, material, null)
+    }
+
+    render() {
+        addPart(0.6, 0.8, 0.6,
+            this.renderPosition.x, this.renderPosition.y + 0.9,
+            this.renderPosition.z, this.material)
+    }
+}
+
 export class CampBarrel extends CampObject {
+    static readonly BOUNCE_HEIGHT = 0.0875
+    static readonly BOUNCE_SPEED = 0.008
+    static readonly RETURN_TO_GROUND_SPEED = 0.8
+
     private readonly lidMaterial: Vector2
+    private renderMatrixIndices: number[] = []
+    private renderMatrixBaseY: number[] = []
+    private bounce = false
+    private wasBouncing = false
+    private bounceStartTime = 0
+    private yOffset = 0
 
     constructor(type: number, position: Vector3, material: Vector2, accentMaterial: Vector2, lidMaterial: Vector2, metadata?: CampObjectMetadata) {
         super(type, position, material, accentMaterial, metadata)
@@ -154,10 +176,55 @@ export class CampBarrel extends CampObject {
     }
 
     render() {
+        const firstMatrixIndex = WorldRenderer.block1!.matrices.length
         this.part(0.62, 0.82, 0.62, 0, 0.41, 0)
         this.part(0.7, 0.09, 0.7, 0, 0.14, 0, this.accentMaterial)
         this.part(0.7, 0.09, 0.7, 0, 0.68, 0, this.accentMaterial)
         this.part(0.56, 0.08, 0.56, 0, 0.86, 0, this.lidMaterial)
+        this.renderMatrixIndices = [firstMatrixIndex, firstMatrixIndex + 1, firstMatrixIndex + 2, firstMatrixIndex + 3]
+        this.renderMatrixBaseY = this.renderMatrixIndices.map((index) => WorldRenderer.block1!.matrices[index].m[13])
+        if (this.yOffset > 0) {
+            WorldRenderer.block1!.matrices[this.renderMatrixIndices[3]].m[13] = this.renderMatrixBaseY[3] + this.yOffset
+        }
+    }
+
+    clearRenderMatrices() {
+        this.renderMatrixIndices = []
+        this.renderMatrixBaseY = []
+    }
+
+    setBounce(bounce: boolean, time: number) {
+        if (this.bounce === bounce) return
+        this.bounce = bounce
+        if (bounce) {
+            this.wasBouncing = false
+            this.bounceStartTime = time
+        }
+    }
+
+    onFrame(timeRate: number, time: number): boolean {
+        const previousYOffset = this.yOffset
+        if (this.bounce) {
+            if (!this.wasBouncing) {
+                this.wasBouncing = true
+                this.bounceStartTime = time
+                this.yOffset = 0
+            }
+            const elapsed = time - this.bounceStartTime
+            this.yOffset = ((Math.sin((elapsed * CampBarrel.BOUNCE_SPEED) - (Math.PI / 2)) + 1) * 0.5) * CampBarrel.BOUNCE_HEIGHT
+        } else {
+            this.wasBouncing = false
+            this.yOffset = Math.max(0, this.yOffset - (CampBarrel.RETURN_TO_GROUND_SPEED * timeRate))
+        }
+
+        const matrixBuffer = WorldRenderer.block1!.matrixBuffer
+        const lidMatrixIndex = this.renderMatrixIndices[3]
+        if (lidMatrixIndex !== undefined) matrixBuffer[(lidMatrixIndex * 16) + 13] = this.renderMatrixBaseY[3] + this.yOffset
+        return previousYOffset !== this.yOffset && this.renderMatrixIndices.length > 0
+    }
+
+    isAnimating() {
+        return this.bounce || this.yOffset > 0
     }
 }
 

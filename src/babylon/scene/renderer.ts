@@ -188,6 +188,7 @@ export const Renderer = {
             MyPlayer.onFrame(timeRate, actualTime)
             Materials.onFrame(actualTime)
             WorldRenderer.checkRenderWorld()
+            StaticsManager.onFrame(timeRate, actualTime)
             TreeManager.onFrame(timeRate, this.camera)
             BuildingManager.onFrame(timeRate, this.camera)
             Lights.onFrame(timeRate)
