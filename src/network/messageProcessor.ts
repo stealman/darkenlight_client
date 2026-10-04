@@ -53,6 +53,7 @@ import { AudioManager } from '@/babylon/audio/audioManager'
 import { NpcManager } from '@/babylon/npc/npcManager'
 import {NpcInteractionManager} from '@/data/npcInteractionManager'
 import {GMManager} from '@/gm/GM'
+import {BuildingManager} from '@/babylon/world/buildings/buildingManager'
 import {BankManager} from '@/data/bankManager'
 import { TargetingManager } from '@/gui/targettingManager'
 import { ActionButtonsManager } from '@/gui/actionButtonsManager'
@@ -139,6 +140,8 @@ export const MessageProcessor = {
                 case 77: this.processGMWorldMapImage(msg.d); break
                 case 78: this.processBiomeChanged(msg.d); break
                 case 79: this.processGMWorldBiomeTreesChanged(msg.d); break
+                case 80: this.processAddBuilding(msg.d); break
+                case 81: this.processRemoveBuilding(msg.d); break
                 case 1003: this.processGMAllSpawns(msg.d); break
                 case 1004: this.processGMSpawnChange(msg.d); break
                 default:
@@ -274,6 +277,7 @@ export const MessageProcessor = {
             // placeholder height map, then rebuild the now-loaded area.
             TreeManager.recountYPositions()
             StaticsManager.recountYPositions()
+            BuildingManager.recountYPositions()
             if (MyPlayer.myChar != null && WorldRenderer.block1 != null) {
                 WorldRenderer.renderWorld()
             }
@@ -288,11 +292,13 @@ export const MessageProcessor = {
         data.a.forEach(chunk => {
             TreeManager.consumeTrees(chunk.trees)
             StaticsManager.consumeObjects(chunk.statics)
+            BuildingManager.consumeBuildings(chunk.buildings ?? [])
             FightSplatsRenderer.consumeSplats(chunk.splats)
         })
         data.r.forEach(chunk => {
             TreeManager.removeTrees(chunk.trees)
             StaticsManager.removeObjects(chunk.statics)
+            BuildingManager.removeBuildings(chunk.buildings ?? [])
             FightSplatsRenderer.removeSplats(chunk.splats)
         })
         // WorldRenderer may already have recorded the teleport destination
@@ -333,6 +339,16 @@ export const MessageProcessor = {
 
     monsterMoveStop(data) {
         MonsterManager.monsterMoveStop(data[0], { x: data[1], z: data[2] }, data[3] === true)
+    },
+
+    processAddBuilding(data) {
+        BuildingManager.addBuilding(data)
+        WorldRenderer.renderWorld()
+    },
+
+    processRemoveBuilding(data) {
+        BuildingManager.removeBuilding(data.id)
+        WorldRenderer.renderWorld()
     },
 
     processBiomeChanged(data) {
@@ -424,6 +440,7 @@ export const MessageProcessor = {
         NpcManager.clearWorld()
         TreeManager.clearWorld()
         StaticsManager.clearWorld()
+        BuildingManager.clearWorld()
         GroundItemsManager.clearWorld()
         FightSplatsRenderer.clearWorld()
         StepMarksRenderer.clearWorld()

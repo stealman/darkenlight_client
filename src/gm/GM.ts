@@ -1,5 +1,5 @@
 import { Connector } from '@/network/connector'
-import { GMCreateItemMsg, GMDayNightCycleMsg, GMForceSaveDataMsg, GMGenerateBiomeMsg, GMLoadItemCodebookMsg, GMLoadWorldMapImageMsg, GMLoadWorldSettingsMsg, GMLoadWorldsMsg, GMNpcAction, GMSaveMapDataMsg, GMSaveWorldMapHeightChangesMsg, GMSaveWorldMapSnowChangesMsg, GMSaveWorldMapTerrainChangesMsg, GMSaveWorldSettingsMsg, GMStaticObjectChange, GMTeleportMsg, GMTerrainChange } from '@/network/messages'
+import { GMBuildingChange, GMCreateItemMsg, GMDayNightCycleMsg, GMForceSaveDataMsg, GMGenerateBiomeMsg, GMLoadItemCodebookMsg, GMLoadWorldMapImageMsg, GMLoadWorldSettingsMsg, GMLoadWorldsMsg, GMNpcAction, GMSaveMapDataMsg, GMSaveWorldMapHeightChangesMsg, GMSaveWorldMapSnowChangesMsg, GMSaveWorldMapTerrainChangesMsg, GMSaveWorldSettingsMsg, GMStaticObjectChange, GMTeleportMsg, GMTerrainChange } from '@/network/messages'
 import { GMItemCodebookItem, GMWorldBiomeTreesChangedData, GMWorldMapImageData, GMWorldSettingsData } from '@/network/messageIfs'
 import { GMSceneManager } from '@/babylon/gm/GmSceneManager'
 import { WorldDataManager } from '@/data/worldDataManager'
@@ -65,6 +65,8 @@ export const GMManager = {
     walkableBlockHeight: ref(1),
     walkableBlockMaterial: ref('WOOD'),
     selectedStatic: ref (0),
+    selectedBuildingType: ref(0),
+    buildingFacing: ref('+Z'),
     campObjectFacing: ref('+Z'),
     logPileLength: ref(1),
     torchFacing: ref('-Z'),
@@ -209,7 +211,14 @@ export const GMManager = {
 
         if (this.tab === GmTabs.STATICS_EDIT) {
             const markerPos = new Vector3(GMSceneManager.hoverBlockMarker!.position.x, 0, GMSceneManager.hoverBlockMarker!.position.z)
-            if (this.selectedStatic.value > 0) {
+            if (this.selectedBuildingType.value > 0) {
+                Connector.sendMessage(new GMBuildingChange('ADD', {
+                    x: markerPos.x,
+                    z: markerPos.z,
+                    type: this.selectedBuildingType.value,
+                    facing: this.buildingFacing.value,
+                }))
+            } else if (this.selectedStatic.value > 0) {
                 const staticData: { x: number, z: number, type: number, meta?: Record<string, number | string> } = {
                     x: markerPos.x,
                     z: markerPos.z,
@@ -249,6 +258,7 @@ export const GMManager = {
 
             } else if (this.selectedStatic.value === -1) {
                 Connector.sendMessage(new GMStaticObjectChange("REMOVE_ON_TILE", [ { x: markerPos.x, z: markerPos.z } ] ) )
+                Connector.sendMessage(new GMBuildingChange('REMOVE_ON_TILE', {x: markerPos.x, z: markerPos.z}))
             }
         }
 
@@ -451,6 +461,7 @@ export const GMManager = {
         this.consumePointerMoveEvents = true
         this.consumeLeftClickEvents = true
         this.selectedStatic.value = 0
+        this.selectedBuildingType.value = 0
         GMSceneManager.setHoverBlockMarkerSize(1)
         GMSceneManager.hoverBlockMarker?.setEnabled(true)
     },

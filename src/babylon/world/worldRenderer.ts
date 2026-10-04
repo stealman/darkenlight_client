@@ -21,6 +21,7 @@ import { WorldDataManager } from '@/data/worldDataManager'
 import { TargetingManager } from '@/gui/targettingManager'
 import { MyPlayer } from '@/data/myPlayer'
 import { createSnowCoverMask } from '@/babylon/world/snowCoverMask'
+import { BuildingManager } from '@/babylon/world/buildings/buildingManager'
 
 export const WorldRenderer = {
     block1: null as SymmetricBlock | null,
@@ -46,6 +47,7 @@ export const WorldRenderer = {
         TerrainManager.initialize(scene)
         TreeManager.initialize(scene)
         StaticsManager.initialize(scene)
+        BuildingManager.initialize(scene, this.worldParentNode)
         FoliageManager.initialize(scene, this.worldParentNode)
         RockDebrisManager.initialize(scene, this.worldParentNode)
 
@@ -95,6 +97,9 @@ export const WorldRenderer = {
 
         // Render statics
         StaticsManager.renderObjects()
+
+        // Buildings own their meshes so they can later fade independently.
+        BuildingManager.renderBuildings()
 
         // Render decorative foliage
         FoliageManager.renderFoliage()

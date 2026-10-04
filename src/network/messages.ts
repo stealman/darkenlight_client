@@ -338,6 +338,15 @@ export class GMCreateItemMsg implements Message {
     }
 }
 
+export class GMBuildingChange implements Message {
+    t: number = 1020
+    d: any
+
+    constructor(changeType: string, data) {
+        this.d = {changeType, data}
+    }
+}
+
 export class PowerStrike implements Message {
     t: number = 71
 

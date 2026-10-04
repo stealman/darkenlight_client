@@ -8,6 +8,7 @@ import { Attackable } from '@/GameManager'
 import { MyPlayer } from '@/data/myPlayer'
 import { CharacterManager } from '@/babylon/character/characterManager'
 import { NpcManager } from '@/babylon/npc/npcManager'
+import { BuildingManager } from '@/babylon/world/buildings/buildingManager'
 
 // Keep local terrain collision slightly inside the server-valid movement area.
 // This absorbs the client/server movement tick offset when sliding along cliffs.
@@ -59,8 +60,9 @@ export const Utils = {
             return 0
         }
         const platformHeight = StaticsManager.getWalkableHeightAtTile(x, z)
-        if (platformHeight > 0) {
-            return block.totalHeight + platformHeight
+        const buildingFloorHeight = BuildingManager.getFloorHeightAtTile(x, z)
+        if (platformHeight > 0 || buildingFloorHeight > 0) {
+            return block.totalHeight + Math.max(platformHeight, buildingFloorHeight)
         }
         const terrainHeight = useWaterWalkHeight ? block.walkHeight : block.totalHeight
         return terrainHeight
@@ -153,6 +155,16 @@ export const Utils = {
             if (tgtDist < origDist) {
                 return {x: monsterInWay.pos.x, z: monsterInWay.pos.z}
             }
+        }
+
+        const pointInBuilding = BuildingManager.getPointInBuilding(
+            targetPos.x,
+            targetPos.z,
+            charSize,
+            coveredTargetBlocks,
+        )
+        if (pointInBuilding) {
+            return pointInBuilding
         }
 
         const characterInWay = CharacterManager.isPointInCharacter(targetPos.x, targetPos.z, charSize, MyPlayer.myChar?.id)
