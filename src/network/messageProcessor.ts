@@ -38,7 +38,7 @@ import {
     AccountCharacterNameCheckData,
     PlayerRegistrationData,
     NpcUseData,
-    BankStateData, SkillSetTO,
+    BankStateData, ContainerStateData, SkillSetTO,
     PowerStrikeQueueStateMessage,
     PreciseShotQueueStateMessage,
     WorldMapDataMessage,
@@ -55,6 +55,7 @@ import {NpcInteractionManager} from '@/data/npcInteractionManager'
 import {GMManager} from '@/gm/GM'
 import {BuildingManager} from '@/babylon/world/buildings/buildingManager'
 import {BankManager} from '@/data/bankManager'
+import {ContainerManager} from '@/data/containerManager'
 import { TargetingManager } from '@/gui/targettingManager'
 import { ActionButtonsManager } from '@/gui/actionButtonsManager'
 import { CharacterActions } from '@/data/actions/characterActions'
@@ -122,6 +123,7 @@ export const MessageProcessor = {
                 case 56: this.processGMNpcDetails(msg.d); break
                 case 57: this.processCharacterCraftingFinished(msg.d); break
                 case 58: this.processBankState(msg.d); break
+                case 83: this.processContainerState(msg.d); break
                 case 59: this.processCharacterDeath(msg.d); break
                 case 66: this.processCharacterCombatApproach(msg.d); break
                 case 60: this.processCharacterTeleport(msg.d); break
@@ -217,6 +219,10 @@ export const MessageProcessor = {
 
     processBankState(data: BankStateData) {
         BankManager.replaceState(data)
+    },
+
+    processContainerState(data: ContainerStateData) {
+        ContainerManager.replaceState(data)
     },
 
     processGMNpcDetails(data: GMNpcDetailsData) {

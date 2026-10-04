@@ -13,9 +13,12 @@ import { GMManager } from '@/gm/GM'
 import {NpcInteractionManager} from '@/data/npcInteractionManager'
 import {NpcManager} from '@/babylon/npc/npcManager'
 import { BuildingManager } from '@/babylon/world/buildings/buildingManager'
+import { StaticsManager } from '@/babylon/world/statics/staticsManager'
+import { ContainerManager } from '@/data/containerManager'
 
 const HUD_BUTTON_GAP = 5
 const HUD_MINIMAP_LEFT_FRAME_SIZE = 3
+const CAMP_BARREL_STATIC_TYPE = 305
 
 class GuiOpportunityButtonAction {
     name: string
@@ -70,6 +73,7 @@ export const GuiOpportunityActions = {
     RESTING: new GuiOpportunityButtonAction("RESTING", "btn_rest"),
     COOKING: new GuiOpportunityButtonAction("COOKING", "btn_cooking"),
     USE_DOOR: new GuiOpportunityButtonAction("USE_DOOR", "btn_use_door"),
+    USE_CHEST: new GuiOpportunityButtonAction("USE_CHEST", "btn_use_chest"),
     NPC_USE: new GuiOpportunityButtonAction("NPC_USE", "btn_chat"),
     NPC_EDIT: new GuiOpportunityButtonAction("NPC_EDIT", "", "NPC"),
 }
@@ -101,6 +105,7 @@ export const GuiButtonsManager = {
         this.opportunityButtons.set(GuiOpportunityActions.LUMBERJACKING.name, new GuiOpportunityButton(GuiOpportunityActions.LUMBERJACKING))
         this.opportunityButtons.set(GuiOpportunityActions.COOKING.name, new GuiOpportunityButton(GuiOpportunityActions.COOKING))
         this.opportunityButtons.set(GuiOpportunityActions.USE_DOOR.name, new GuiOpportunityButton(GuiOpportunityActions.USE_DOOR))
+        this.opportunityButtons.set(GuiOpportunityActions.USE_CHEST.name, new GuiOpportunityButton(GuiOpportunityActions.USE_CHEST))
         this.opportunityButtons.set(GuiOpportunityActions.NPC_USE.name, new GuiOpportunityButton(GuiOpportunityActions.NPC_USE))
         this.opportunityButtons.set(GuiOpportunityActions.NPC_EDIT.name, new GuiOpportunityButton(GuiOpportunityActions.NPC_EDIT))
     },
@@ -159,6 +164,9 @@ export const GuiButtonsManager = {
         this.opportunityButtons.get(GuiOpportunityActions.USE_DOOR.name)!.setVisible(
             BuildingManager.getClosestDoorIdInDistance(MyPlayer.myChar.pos, 1.5) !== null
         )
+        this.opportunityButtons.get(GuiOpportunityActions.USE_CHEST.name)!.setVisible(
+            typeof this.getClosestUsableBarrel()?.status?.containerId === 'string'
+        )
         const selectedTarget = TargetingManager.selectedTarget
         const closestNpc = NpcManager.getClosestNpcInDistance(3)
         this.opportunityButtons.get(GuiOpportunityActions.NPC_USE.name)!.setVisible(
@@ -194,6 +202,9 @@ export const GuiButtonsManager = {
                 break
             case GuiOpportunityActions.USE_DOOR.name:
                 this.clickOnUseDoorButton()
+                break
+            case GuiOpportunityActions.USE_CHEST.name:
+                this.clickOnUseChestButton()
                 break
             case GuiOpportunityActions.NPC_USE.name:
                 this.clickOnNpcUseButton()
@@ -277,6 +288,17 @@ export const GuiButtonsManager = {
         if (buildingId !== null) {
             Connector.sendMessage(new UseBuildingDoorMsg(buildingId))
         }
+    },
+
+    clickOnUseChestButton() {
+        const containerId = this.getClosestUsableBarrel()?.status?.containerId
+        if (typeof containerId === 'string') {
+            ContainerManager.open(containerId)
+        }
+    },
+
+    getClosestUsableBarrel() {
+        return StaticsManager.getClosestStaticInDistance(CAMP_BARREL_STATIC_TYPE, MyPlayer.myChar.pos, 2)
     },
 
     clickOnNpcEditButton() {

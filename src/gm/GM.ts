@@ -26,6 +26,7 @@ export const GmTabs = {
     BIOME_EDIT: 'biome_edit',
     WALLS_AND_FENCES_EDIT: 'walls_and_fences_edit',
     STATICS_EDIT: 'statics_edit',
+    BUILDINGS_EDIT: 'buildings_edit',
     SPAWNS_EDIT: 'spawns_edit',
     NPCS_EDIT: 'npcs_edit'
 }
@@ -211,14 +212,7 @@ export const GMManager = {
 
         if (this.tab === GmTabs.STATICS_EDIT) {
             const markerPos = new Vector3(GMSceneManager.hoverBlockMarker!.position.x, 0, GMSceneManager.hoverBlockMarker!.position.z)
-            if (this.selectedBuildingType.value > 0) {
-                Connector.sendMessage(new GMBuildingChange('ADD', {
-                    x: markerPos.x,
-                    z: markerPos.z,
-                    type: this.selectedBuildingType.value,
-                    facing: this.buildingFacing.value,
-                }))
-            } else if (this.selectedStatic.value > 0) {
+            if (this.selectedStatic.value > 0) {
                 const staticData: { x: number, z: number, type: number, meta?: Record<string, number | string> } = {
                     x: markerPos.x,
                     z: markerPos.z,
@@ -258,6 +252,20 @@ export const GMManager = {
 
             } else if (this.selectedStatic.value === -1) {
                 Connector.sendMessage(new GMStaticObjectChange("REMOVE_ON_TILE", [ { x: markerPos.x, z: markerPos.z } ] ) )
+            }
+        }
+
+        if (this.tab === GmTabs.BUILDINGS_EDIT) {
+            const markerPos = new Vector3(GMSceneManager.hoverBlockMarker!.position.x, 0, GMSceneManager.hoverBlockMarker!.position.z)
+            if (this.selectedBuildingType.value > 0) {
+                Connector.sendMessage(new GMBuildingChange('ADD', {
+                    x: markerPos.x,
+                    z: markerPos.z,
+                    type: this.selectedBuildingType.value,
+                    facing: this.buildingFacing.value,
+                }))
+            } else if (this.selectedBuildingType.value === -1
+                && window.confirm(`Delete building at X ${markerPos.x}, Z ${markerPos.z}?`)) {
                 Connector.sendMessage(new GMBuildingChange('REMOVE_ON_TILE', {x: markerPos.x, z: markerPos.z}))
             }
         }
@@ -370,6 +378,9 @@ export const GMManager = {
             case GmTabs.STATICS_EDIT:
                 this.closeTabStaticsEdit()
                 break
+            case GmTabs.BUILDINGS_EDIT:
+                this.closeTabBuildingsEdit()
+                break
             case GmTabs.SPAWNS_EDIT:
                 this.closeTabSpawnsEdit()
                 break
@@ -398,6 +409,9 @@ export const GMManager = {
                 break
             case GmTabs.STATICS_EDIT:
                 this.openTabStaticsEdit()
+                break
+            case GmTabs.BUILDINGS_EDIT:
+                this.openTabBuildingsEdit()
                 break
             case GmTabs.SPAWNS_EDIT:
                 this.openTabSpawnsEdit()
@@ -461,6 +475,14 @@ export const GMManager = {
         this.consumePointerMoveEvents = true
         this.consumeLeftClickEvents = true
         this.selectedStatic.value = 0
+        GMSceneManager.setHoverBlockMarkerSize(1)
+        GMSceneManager.hoverBlockMarker?.setEnabled(true)
+    },
+
+    openTabBuildingsEdit() {
+        this.tab = GmTabs.BUILDINGS_EDIT
+        this.consumePointerMoveEvents = true
+        this.consumeLeftClickEvents = true
         this.selectedBuildingType.value = 0
         GMSceneManager.setHoverBlockMarkerSize(1)
         GMSceneManager.hoverBlockMarker?.setEnabled(true)
@@ -501,6 +523,12 @@ export const GMManager = {
     },
 
     closeTabStaticsEdit() {
+        this.consumePointerMoveEvents = false
+        this.consumeLeftClickEvents = false
+        GMSceneManager.hoverBlockMarker?.setEnabled(false)
+    },
+
+    closeTabBuildingsEdit() {
         this.consumePointerMoveEvents = false
         this.consumeLeftClickEvents = false
         GMSceneManager.hoverBlockMarker?.setEnabled(false)

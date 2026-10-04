@@ -1,4 +1,7 @@
 {
+  "container": {
+    "barrel": "Barrel"
+  },
   "common": {
     "language": "Language",
     "czech": "Czech",

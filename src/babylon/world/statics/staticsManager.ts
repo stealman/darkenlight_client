@@ -338,6 +338,22 @@ export const StaticsManager = {
         return Math.sqrt(dx * dx + dz * dz)
     },
 
+    getClosestStaticInDistance(type: number, position: Vector3, maxDistance: number): StaticObject | null {
+        let closest: StaticObject | null = null
+        let closestDistance = maxDistance
+        for (const obj of this.allStatics) {
+            if (obj.type !== type) {
+                continue
+            }
+            const distance = this.getDistanceToStaticFootprint(position, obj.position, obj.getSize())
+            if (distance <= closestDistance) {
+                closest = obj
+                closestDistance = distance
+            }
+        }
+        return closest
+    },
+
     getPointInStatic(x: number, z: number, size: number): { x: number, z: number } | null {
         for (const obj of this.allStatics) {
             if (obj.isObjectInCollision(x, z, size)) {

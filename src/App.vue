@@ -107,6 +107,7 @@
     <CharacterDialog ref="characterDialog" v-show="displayCharacterDialog" @close="displayCharacterDialog = false" />
     <CraftingDialog ref="craftingDialog" v-show="displayCraftingDialog" @close="displayCraftingDialog = false" />
     <NpcUseDialog ref="npcUseDialog" v-show="displayNpcUseDialog" @close="displayNpcUseDialog = false" />
+    <ContainerDialog v-show="displayContainerDialog" @close="displayContainerDialog = false" />
 
     <div class="dialog-backdrop death-dialog-backdrop" v-if="isDead">
         <div class="dialog-window adaptive">
@@ -180,6 +181,8 @@ import InventoryDialog from '@/vue/views/inventory/inventoryDialog.vue'
 import CharacterDialog from '@/vue/views/character/CharacterDialog.vue'
 import CraftingDialog from '@/vue/views/crafting/craftingDialog.vue'
 import NpcUseDialog from '@/vue/views/npc/NpcUseDialog.vue'
+import ContainerDialog from '@/vue/views/container/ContainerDialog.vue'
+import { ContainerManager } from '@/data/containerManager'
 import OnScreenMessages from '@/vue/views/onScreenMessages.vue'
 import PwaControls from '@/vue/views/PwaControls.vue'
 import { Controller } from '@/controlls/controller'
@@ -232,6 +235,7 @@ const displayInventoryDialog = ref(false)
 const displayCharacterDialog = ref(false)
 const displayCraftingDialog = ref(false)
 const displayNpcUseDialog = ref(false)
+const displayContainerDialog = ref(false)
 const autoLoginTemporarilyDisabled = true
 
 const touchControls = ref()
@@ -252,6 +256,8 @@ const closeGameplayDialogs = () => {
     displayCharacterDialog.value = false
     displayCraftingDialog.value = false
     displayNpcUseDialog.value = false
+    displayContainerDialog.value = false
+    ContainerManager.close()
     gmPanelVisible.value = false
     inventoryDialog.value?.forceClose?.()
 }
@@ -519,6 +525,8 @@ watch(isDead, (dead) => {
     displayCharacterDialog.value = false
     displayCraftingDialog.value = false
     displayNpcUseDialog.value = false
+    displayContainerDialog.value = false
+    ContainerManager.close()
     gmPanelVisible.value = false
     inventoryDialog.value?.forceClose?.()
 })
@@ -538,6 +546,7 @@ onMounted(async () => {
     window.addEventListener('ui:open-character', onOpenCharacterHotkey)
     window.addEventListener('ui:open-crafting', onOpenCraftingMenu as EventListener)
     window.addEventListener('ui:open-npc-use', onOpenNpcUseMenu as EventListener)
+    window.addEventListener('ui:open-container', onOpenContainer)
     window.addEventListener('ui:inventory-updated', onInventoryUpdated as EventListener)
       window.addEventListener('game:started', onGameStarted)
       window.addEventListener('game:login-error', onLoginError as EventListener)
@@ -592,6 +601,7 @@ onUnmounted(() => {
     window.removeEventListener('ui:open-character', onOpenCharacterHotkey)
     window.removeEventListener('ui:open-crafting', onOpenCraftingMenu as EventListener)
     window.removeEventListener('ui:open-npc-use', onOpenNpcUseMenu as EventListener)
+    window.removeEventListener('ui:open-container', onOpenContainer)
     window.removeEventListener('ui:inventory-updated', onInventoryUpdated as EventListener)
       window.removeEventListener('game:started', onGameStarted)
       window.removeEventListener('game:login-error', onLoginError as EventListener)
@@ -726,6 +736,12 @@ const onOpenNpcUseMenu = (event: Event) => {
     nextTick(() => {
         npcUseDialog.value?.openDialog?.(detail)
     })
+}
+
+const onOpenContainer = () => {
+    if (!isDead.value) {
+        displayContainerDialog.value = true
+    }
 }
 
 const closeSettingsWithRestartPrompt = () => {

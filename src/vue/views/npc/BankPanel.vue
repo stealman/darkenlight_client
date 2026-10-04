@@ -32,12 +32,12 @@
         </div>
         <div class="bank-column">
             <div class="bank-column-title bank-storage-title">
-                <h3 class="bank-storage-title-label"><span class="ui-text-gradient">{{ t('vendor.banker') }}</span></h3>
-                <span class="bank-storage-capacity">{{ BankManager.items.length }}/{{ BankManager.capacity }}</span>
+                <h3 class="bank-storage-title-label"><span class="ui-text-gradient">{{ storageTitle }}</span></h3>
+                <span class="bank-storage-capacity">{{ storageItems.length }}/{{ storageCapacity }}</span>
             </div>
             <Backpack
                 class="bank-storage-inventory"
-                :slot-count="BankManager.capacity"
+                :slot-count="storageCapacity"
                 :tooltip-active-slot-index="activeBankTooltipIndex"
                 :column-count="4"
                 :slot-images="bankSlotImages"
@@ -73,6 +73,7 @@ import {computed, nextTick, onMounted, onUnmounted, ref} from 'vue'
 import Backpack from '@/vue/views/inventory/backpack.vue'
 import ItemInfoOverlay from '@/vue/views/inventory/itemInfoOverlay.vue'
 import {BankManager} from '@/data/bankManager'
+import {ContainerManager} from '@/data/containerManager'
 import {InventoryManager} from '@/data/inventoryManager'
 import {NpcInteractionManager} from '@/data/npcInteractionManager'
 import {ConsumableHelper} from '@/data/items/consumableHelper'
@@ -84,7 +85,9 @@ import EquipSet from '@/vue/views/inventory/equipSet.vue'
 import {MyPlayer} from '@/data/myPlayer'
 import {getEquipSetArmorSvg, getEquipSetArmsSvg, getEquipSetHandSvg, getEquipSetHelmetSvg, getEquipSetLegsSvg, getEquipSetNecklaceSvg, getEquipSetRingSvg} from '@/vue/icons/icons'
 
-const props = defineProps<{npcId: number}>()
+const props = withDefaults(defineProps<{npcId?: number, storage?: 'bank' | 'container'}>(), {
+    storage: 'bank',
+})
 const MIN_INVENTORY_SLOT_COUNT = 24
 const BANK_LEFT_MODE_STORAGE_KEY = 'DARKENLIGHT_BANK_LEFT_MODE'
 const OVERLAY_PADDING = 4
@@ -111,6 +114,15 @@ const getStoredLeftMode = (): 'inventory' | 'equipment' => {
     }
 }
 const leftMode = ref<'inventory' | 'equipment'>(getStoredLeftMode())
+const storageItems = computed(() => {
+    version.value
+    return props.storage === 'container' ? ContainerManager.items : BankManager.items
+})
+const storageCapacity = computed(() => {
+    version.value
+    return props.storage === 'container' ? ContainerManager.capacity : BankManager.capacity
+})
+const storageTitle = computed(() => props.storage === 'container' ? t('container.barrel') : t('vendor.banker'))
 
 const inventorySlotCount = computed(() => {
     version.value
@@ -122,16 +134,16 @@ const inventorySlotImages = computed(() => {
 })
 const bankSlotImages = computed(() => {
     version.value
-    return Array.from({length: BankManager.capacity}, (_, index) => BankManager.items[index] ? getItemImage(BankManager.items[index]) : null)
+    return Array.from({length: storageCapacity.value}, (_, index) => storageItems.value[index] ? getItemImage(storageItems.value[index]) : null)
 })
 
 const emptyMarkers = () => []
 const getInventoryStackCount = (index: number) => getItemStackCount(InventoryManager.inventory[index])
-const getBankStackCount = (index: number) => getItemStackCount(BankManager.items[index])
+const getBankStackCount = (index: number) => getItemStackCount(storageItems.value[index])
 const getInventoryDurabilityStatus = (index: number) => getItemDurabilityStatus(InventoryManager.inventory[index])
 const getInventoryDurabilityPercent = (index: number) => getItemDurabilityPercent(InventoryManager.inventory[index])
-const getBankDurabilityStatus = (index: number) => getItemDurabilityStatus(BankManager.items[index])
-const getBankDurabilityPercent = (index: number) => getItemDurabilityPercent(BankManager.items[index])
+const getBankDurabilityStatus = (index: number) => getItemDurabilityStatus(storageItems.value[index])
+const getBankDurabilityPercent = (index: number) => getItemDurabilityPercent(storageItems.value[index])
 
 const equipSlots = computed(() => {
     version.value
@@ -214,7 +226,7 @@ const showItemInfoOverlay = (item: any, pointer: {clientX: number, clientY: numb
         showSplitButton: item.cbType === 'R',
         showMergeButton: source === 'inventory'
             ? InventoryManager.canMergeResourceItem(item)
-            : source === 'bank' && BankManager.canMergeResourceItem(item),
+            : source === 'bank' && (props.storage === 'container' ? ContainerManager.canMergeResourceItem(item) : BankManager.canMergeResourceItem(item)),
         showCampButton: source === 'inventory' && ConsumableHelper.isItemCampWood(item),
     })
 
@@ -224,15 +236,22 @@ const showItemInfoOverlay = (item: any, pointer: {clientX: number, clientY: numb
 }
 
 const onInventoryClick = (index: number, pointer: {clientX: number, clientY: number}) => showItemInfoOverlay(InventoryManager.inventory[index], pointer, 'inventory', index)
-const onBankClick = (index: number, pointer: {clientX: number, clientY: number}) => showItemInfoOverlay(BankManager.items[index], pointer, 'bank', index)
+const onBankClick = (index: number, pointer: {clientX: number, clientY: number}) => showItemInfoOverlay(storageItems.value[index], pointer, 'bank', index)
+const storageAction = (action: string, itemId: number, splitCount?: number) => {
+    if (props.storage === 'container') {
+        ContainerManager.action(action, itemId, splitCount)
+    } else if (Number.isInteger(props.npcId)) {
+        NpcInteractionManager.bankAction(props.npcId!, action, itemId, splitCount)
+    }
+}
 const onInventoryDoubleClick = (index: number) => {
     const item = InventoryManager.inventory[index]
-    if (item) NpcInteractionManager.bankAction(props.npcId, 'DEPOSIT', item.id)
+    if (item) storageAction('DEPOSIT', item.id)
     hideItemInfoOverlay()
 }
 const onBankDoubleClick = (index: number) => {
-    const item = BankManager.items[index]
-    if (item) NpcInteractionManager.bankAction(props.npcId, leftMode.value === 'equipment' && item.isEquippable() ? 'EQUIP_FROM_BANK' : 'WITHDRAW', item.id)
+    const item = storageItems.value[index]
+    if (item) storageAction(leftMode.value === 'equipment' && item.isEquippable() ? 'EQUIP_FROM_BANK' : 'WITHDRAW', item.id)
     hideItemInfoOverlay()
 }
 const onInventoryPointerDown = createPointerDoubleClickHandler(onInventoryClick, onInventoryDoubleClick)
@@ -240,7 +259,7 @@ const onBankPointerDown = createPointerDoubleClickHandler(onBankClick, onBankDou
 const onEquipClick = (slot: string, pointer: {clientX: number, clientY: number}) => showItemInfoOverlay(MyPlayer.myChar?.equipSet?.get(slot), pointer, 'equip', -1, slot)
 const onEquipDoubleClick = (slot: string) => {
     const item = MyPlayer.myChar?.equipSet?.get(slot)
-    if (item) NpcInteractionManager.bankAction(props.npcId, 'UNEQUIP_TO_BANK', item.id)
+    if (item) storageAction('UNEQUIP_TO_BANK', item.id)
     hideItemInfoOverlay()
 }
 const onEquipPointerDown = createPointerDoubleClickHandler(onEquipClick, onEquipDoubleClick)
@@ -255,7 +274,7 @@ const splitItem = (payload: any) => {
     const splitCount = Number(payload?.splitCount)
     if (!Number.isInteger(itemId) || !Number.isInteger(splitCount)) return
     if (itemInfoOverlay.value.source === 'bank') {
-        NpcInteractionManager.bankAction(props.npcId, 'BANK_SPLIT', itemId, splitCount)
+        storageAction('BANK_SPLIT', itemId, splitCount)
     } else {
         InventoryManager.splitInventoryItem(itemId, splitCount)
     }
@@ -264,7 +283,7 @@ const mergeItem = (payload: any) => {
     const itemId = Number(payload?.itemId)
     if (!Number.isInteger(itemId)) return
     if (itemInfoOverlay.value.source === 'bank') {
-        NpcInteractionManager.bankAction(props.npcId, 'BANK_STACK', itemId)
+        storageAction('BANK_STACK', itemId)
     } else {
         InventoryManager.mergeInventoryItem(itemId)
     }
@@ -283,6 +302,7 @@ const refresh = () => {
 
 onMounted(() => {
     window.addEventListener('ui:bank-updated', refresh)
+    window.addEventListener('ui:container-updated', refresh)
     window.addEventListener('ui:inventory-updated', refresh)
 })
 onUnmounted(() => {
@@ -290,6 +310,7 @@ onUnmounted(() => {
     onBankPointerDown.cancel()
     onEquipPointerDown.cancel()
     window.removeEventListener('ui:bank-updated', refresh)
+    window.removeEventListener('ui:container-updated', refresh)
     window.removeEventListener('ui:inventory-updated', refresh)
 })
 </script>

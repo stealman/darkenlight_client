@@ -361,6 +361,11 @@ export interface BankStateData {
     capacity: number
 }
 
+export interface ContainerStateData extends BankStateData {
+    containerId: string
+    open?: boolean
+}
+
 export interface GMNpcDetailsData {
     id: number
     name: string

@@ -433,6 +433,25 @@ export class BankActionMsg implements Message {
     }
 }
 
+export class ContainerOpenMsg implements Message {
+    t: number = 41
+    d: any
+
+    constructor(containerId: string) {
+        this.d = {containerId}
+    }
+}
+
+export class ContainerActionMsg implements Message {
+    t: number = 42
+    d: any
+
+    constructor(containerId: string, action: string, itemId: number, splitCount?: number) {
+        this.d = {containerId, action, itemId}
+        if (splitCount !== undefined) this.d.splitCount = splitCount
+    }
+}
+
 export class NpcRepairMsg implements Message {
     t: number = 30
     d: any

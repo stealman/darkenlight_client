@@ -8,6 +8,7 @@ export type CampFenceOrientation = 'X' | 'Z'
 export interface CampObjectMetadata {
     facing?: CampObjectFacing
     length?: number
+    containerId?: string
 }
 
 export interface CampFenceMetadata {
@@ -39,7 +40,7 @@ abstract class CampObject extends BaseStaticObject {
             ? metadata.facing
             : '+Z'
         this.accentMaterial = accentMaterial
-        this.status = {facing: this.facing}
+        this.status = {facing: this.facing, containerId: metadata?.containerId}
         this.renderPosition.set(
             position.x - 0.5 + this.getSizeX() / 2,
             position.y,
@@ -161,6 +162,7 @@ export class CampBarrel extends CampObject {
 }
 
 export class CampFence extends BaseStaticObject {
+    private static readonly railHeights = [0.975, 1.35]
     private readonly orientation: CampFenceOrientation
     private readonly railMaterial: Vector2
     private cornerDirections: [Direction, Direction] | null = null
@@ -192,7 +194,7 @@ export class CampFence extends BaseStaticObject {
                 this.renderPosition.x + (alongX ? offset : 0), this.renderPosition.y + 0.975,
                 this.renderPosition.z + (alongX ? 0 : offset), this.material)
         }
-        for (const y of [0.78, 1.15]) {
+        for (const y of CampFence.railHeights) {
             addPart(alongX ? 0.94 : 0.09, 0.1, alongX ? 0.09 : 0.94,
                 this.renderPosition.x, this.renderPosition.y + y, this.renderPosition.z, this.railMaterial)
         }
@@ -204,7 +206,7 @@ export class CampFence extends BaseStaticObject {
             addPart(0.1, 0.95, 0.1,
                 this.renderPosition.x + direction.x * 0.42, this.renderPosition.y + 0.975,
                 this.renderPosition.z + direction.z * 0.42, this.material)
-            for (const y of [0.78, 1.15]) {
+            for (const y of CampFence.railHeights) {
                 addPart(direction.x === 0 ? 0.09 : 0.48, 0.1, direction.z === 0 ? 0.09 : 0.48,
                     this.renderPosition.x + direction.x * 0.22, this.renderPosition.y + y,
                     this.renderPosition.z + direction.z * 0.22, this.railMaterial)

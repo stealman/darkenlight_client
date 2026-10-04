@@ -10,6 +10,7 @@
             <button :disabled="actualTab === GMTabs.BIOME_EDIT" @click="selectTab(GMTabs.BIOME_EDIT)">Biome</button>
             <button :disabled="actualTab === GMTabs.WALLS_AND_FENCES_EDIT" @click="selectTab(GMTabs.WALLS_AND_FENCES_EDIT)">Walls & Fences</button>
             <button :disabled="actualTab === GMTabs.STATICS_EDIT" @click="selectTab(GMTabs.STATICS_EDIT)">Statics</button>
+            <button :disabled="actualTab === GMTabs.BUILDINGS_EDIT" @click="selectTab(GMTabs.BUILDINGS_EDIT)">Buildings</button>
             <button :disabled="actualTab === GMTabs.SPAWNS_EDIT" @click="selectTab(GMTabs.SPAWNS_EDIT)">Spawns</button>
             <button :disabled="actualTab === GMTabs.NPCS_EDIT" @click="selectTab(GMTabs.NPCS_EDIT)">NPCs</button>
             <button @click="openModelRenderDialog">Model Render</button>
@@ -76,6 +77,10 @@
             <StaticsPanel />
         </div>
 
+        <div v-if="actualTab === GMTabs.BUILDINGS_EDIT">
+            <BuildingsPanel />
+        </div>
+
         <!-- Spawns -->
         <div v-if="actualTab === GMTabs.SPAWNS_EDIT">
             <SpawnPanel />
@@ -100,6 +105,7 @@ import BiomePanel from '@/vue/views/gm/BiomePanel.vue'
 import TerrainPanel from '@/vue/views/gm/TerrainPanel.vue'
 import WallsFencesPanel from '@/vue/views/gm/WallsFencesPanel.vue'
 import StaticsPanel from '@/vue/views/gm/StaticsPanel.vue'
+import BuildingsPanel from '@/vue/views/gm/BuildingsPanel.vue'
 import SpawnPanel from '@/vue/views/gm/SpawnPanel.vue'
 import NpcPanel from '@/vue/views/gm/NpcPanel.vue'
 import ModelRenderPanel from '@/vue/views/gm/ModelRenderPanel.vue'

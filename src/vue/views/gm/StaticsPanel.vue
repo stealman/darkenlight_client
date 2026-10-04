@@ -106,20 +106,6 @@
             <label>Destination Z <input v-model.number="entranceDestinationZ" type="number" step="1"></label>
         </div>
 
-        <div style="margin-top: 2vh; font-weight: bold">Buildings</div>
-        <div style="margin-top: 1vh">
-            <label class="tree-item" :class="{ selected: selectedBuildingType === 1 }" @click="selectBuilding(1)">
-                Human House 5x3 (no roof)
-            </label>
-            <label v-if="selectedBuildingType === 1">Door facing
-                <select v-model="buildingFacing">
-                    <option value="+Z">+Z</option>
-                    <option value="-Z">-Z</option>
-                    <option value="+X">+X</option>
-                    <option value="-X">-X</option>
-                </select>
-            </label>
-        </div>
     </div>
 </template>
 
@@ -129,8 +115,6 @@ import { computed, ref } from 'vue'
 
 const selectedObjectType = ref("")
 const selectedObject = GMManager.selectedStatic
-const selectedBuildingType = GMManager.selectedBuildingType
-const buildingFacing = GMManager.buildingFacing
 const torchFacing = GMManager.torchFacing
 const torchMountHeight = GMManager.torchMountHeight
 const campObjectFacing = GMManager.campObjectFacing
@@ -155,7 +139,6 @@ const objects = [
 ]
 
 const selectObjectType = (type) => {
-    selectedBuildingType.value = 0
     selectedObjectType.value = type
 
     const firstObject = objects.find(s => s.type === type)
@@ -165,25 +148,16 @@ const selectObjectType = (type) => {
 }
 
 const selectObject = (id) => {
-    selectedBuildingType.value = 0
     selectedObject.value = parseInt(id)
-}
-
-const selectBuilding = (type) => {
-    selectedObject.value = 0
-    selectedObjectType.value = 'BUILDING'
-    selectedBuildingType.value = type
 }
 
 const selectNone = () => {
     selectedObject.value = 0
-    selectedBuildingType.value = 0
     selectedObjectType.value = ""
 }
 
 const selectDelete = () => {
     selectedObject.value = -1
-    selectedBuildingType.value = 0
     selectedObjectType.value = ""
 }
 </script>
