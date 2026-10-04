@@ -1,4 +1,4 @@
-import { Camera, Mesh, MeshBuilder, PBRMaterial, Scene, TransformNode, Vector2, Vector3 } from '@babylonjs/core'
+import { Camera, Matrix, Mesh, MeshBuilder, PBRMaterial, Scene, TransformNode, Vector2, Vector3 } from '@babylonjs/core'
 import { MaterialEnum1, MaterialEnumTrans, Materials } from '@/babylon/materials'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { ViewportManager } from '@/utils/viewport'
@@ -6,6 +6,7 @@ import { Lights } from '@/babylon/scene/lights'
 import { MyPlayer } from '@/data/myPlayer'
 import { segmentIntersectsAabb } from '@/babylon/geometryUtils'
 import { AudioManager } from '@/babylon/audio/audioManager'
+import { BabylonUtils } from '@/babylon/utils'
 
 export interface BuildingData {
     id: number
@@ -17,6 +18,12 @@ export interface BuildingData {
 }
 
 type BuildingFacing = '+X' | '-X' | '+Z' | '-Z'
+type OpaquePartGroup = 'base' | 'wallMinX' | 'wallMaxX' | 'wallMinZ' | 'wallMaxZ' | 'roof' | 'door'
+
+interface BuildingBlockPart {
+    matrix: Matrix
+    material: Vector2
+}
 
 const HOUSE_WIDTH = 5
 const HOUSE_DEPTH = 3
@@ -59,6 +66,8 @@ interface BuildingPrefabs {
     roof: Mesh
     door: Mesh
     glass: Mesh
+    blocks: Record<OpaquePartGroup, BuildingBlockPart[]>
+    glassPanes: Matrix[]
 }
 
 class BuildingView {
@@ -77,6 +86,10 @@ class BuildingView {
     doorProgress: number
     playCloseSoundWhenClosed = false
     shouldOcclusionFade = false
+    visible = false
+    roofInBatch = true
+    frontWallsInBatch = true
+    doorInBatch = true
 
     constructor(readonly data: BuildingData, prefabs: BuildingPrefabs, parent: TransformNode, fadeMaterial: PBRMaterial) {
         this.facing = data.facing === '+X' || data.facing === '-X' || data.facing === '-Z' ? data.facing : '+Z'
@@ -109,12 +122,9 @@ class BuildingView {
         this.glassMesh.setEnabled(false)
         this.applyXZTransform()
         this.recountYPosition()
-        Lights.registerSharedLightMesh(this.mesh)
         Lights.registerSharedLightMesh(this.frontWallsMesh)
         Lights.registerSharedLightMesh(this.roofMesh)
         Lights.registerSharedLightMesh(this.doorMesh)
-        Lights.registerSharedLightMesh(this.glassMesh)
-        Lights.addShadowCaster(this.mesh, true, true)
         Lights.addShadowCaster(this.frontWallsMesh, true, true)
         Lights.addShadowCaster(this.roofMesh, true, true)
         Lights.addShadowCaster(this.doorMesh, true, true)
@@ -290,7 +300,7 @@ class BuildingView {
         const target = this.data.doorOpen ? 1 : 0
         if (this.doorProgress === target) {
             this.finishDoorCloseSound(target)
-            return
+            return this.doorInBatch !== this.isDoorBatched()
         }
         const step = timeRate / DOOR_ANIMATION_DURATION
         this.doorProgress = this.doorProgress < target
@@ -298,6 +308,8 @@ class BuildingView {
             : Math.max(this.doorProgress - step, target)
         this.doorHinge.rotation.y = this.doorProgress * DOOR_OPEN_ANGLE
         this.finishDoorCloseSound(target)
+        this.setVisible(this.visible)
+        return this.doorInBatch !== this.isDoorBatched()
     }
 
     finishDoorCloseSound(target: number) {
@@ -330,11 +342,65 @@ class BuildingView {
     }
 
     setVisible(visible: boolean) {
-        this.mesh.setEnabled(visible)
-        this.frontWallsMesh.setEnabled(visible)
-        this.roofMesh.setEnabled(visible)
-        this.doorMesh.setEnabled(visible)
-        this.glassMesh.setEnabled(visible)
+        this.visible = visible
+        this.mesh.setEnabled(false)
+        this.frontWallsMesh.setEnabled(visible && !this.isFrontWallsBatched())
+        this.roofMesh.setEnabled(visible && !this.isRoofBatched())
+        this.doorMesh.setEnabled(visible && !this.isDoorBatched())
+        this.glassMesh.setEnabled(false)
+    }
+
+    isRoofBatched() {
+        return this.roofVisibility === 1 && !this.shouldOcclusionFade
+    }
+
+    isFrontWallsBatched() {
+        return this.wallVisibility === 1
+    }
+
+    isDoorBatched() {
+        return this.doorVisibility === 1 && this.doorProgress === 0 && this.data.doorOpen !== true
+    }
+
+    appendBatchedBlocks(matrices: Matrix[], uvData: Vector2[], prefabs: BuildingPrefabs) {
+        if (!this.visible) return
+        const frontWallGroups: Record<BuildingFacing, OpaquePartGroup[]> = {
+            '+Z': ['wallMinX', 'wallMinZ'],
+            '-Z': ['wallMaxX', 'wallMaxZ'],
+            '+X': ['wallMaxX', 'wallMinZ'],
+            '-X': ['wallMinX', 'wallMaxZ'],
+        }
+        const front = frontWallGroups[this.facing]
+        const groups: OpaquePartGroup[] = [
+            'base',
+            ...(['wallMinX', 'wallMaxX', 'wallMinZ', 'wallMaxZ'] as OpaquePartGroup[])
+                .filter((group) => !front.includes(group)),
+        ]
+        this.frontWallsInBatch = this.isFrontWallsBatched()
+        this.roofInBatch = this.isRoofBatched()
+        this.doorInBatch = this.isDoorBatched()
+        if (this.frontWallsInBatch) groups.push(...front)
+        if (this.roofInBatch) groups.push('roof')
+        if (this.doorInBatch) groups.push('door')
+
+        const world = Matrix.RotationY(this.mesh.rotation.y)
+            .multiply(Matrix.Translation(this.mesh.position.x, this.mesh.position.y, this.mesh.position.z))
+        for (const group of groups) {
+            for (const part of prefabs.blocks[group]) {
+                matrices.push(part.matrix.multiply(world))
+                uvData.push(part.material)
+            }
+        }
+    }
+
+    appendBatchedGlass(matrices: Matrix[], uvData: Vector2[], prefabs: BuildingPrefabs) {
+        if (!this.visible) return
+        const world = Matrix.RotationY(this.mesh.rotation.y)
+            .multiply(Matrix.Translation(this.mesh.position.x, this.mesh.position.y, this.mesh.position.z))
+        for (const pane of prefabs.glassPanes) {
+            matrices.push(pane.multiply(world))
+            uvData.push(MaterialEnumTrans.GLASS.uv)
+        }
     }
 
     updateFade(timeRate: number, playerInside: boolean) {
@@ -360,6 +426,10 @@ class BuildingView {
             FADED_ALPHA,
             timeRate,
         )
+        this.setVisible(this.visible)
+        return this.roofInBatch !== this.isRoofBatched()
+            || this.frontWallsInBatch !== this.isFrontWallsBatched()
+            || this.doorInBatch !== this.isDoorBatched()
     }
 
     updateMeshFade(mesh: Mesh, visibility: number, target: number, fadedTarget: number, timeRate: number) {
@@ -373,12 +443,9 @@ class BuildingView {
     }
 
     dispose() {
-        Lights.unregisterSharedLightMesh(this.mesh)
         Lights.unregisterSharedLightMesh(this.frontWallsMesh)
         Lights.unregisterSharedLightMesh(this.roofMesh)
         Lights.unregisterSharedLightMesh(this.doorMesh)
-        Lights.unregisterSharedLightMesh(this.glassMesh)
-        Lights.removeShadowCaster(this.mesh, true, true)
         Lights.removeShadowCaster(this.frontWallsMesh, true, true)
         Lights.removeShadowCaster(this.roofMesh, true, true)
         Lights.removeShadowCaster(this.doorMesh, true, true)
@@ -397,6 +464,8 @@ export const BuildingManager = {
     floorTiles: new Map<string, BuildingView>(),
     collisionTiles: new Map<string, Set<BuildingView>>(),
     housePrefabs: null as BuildingPrefabs | null,
+    opaqueBatchMesh: null as Mesh | null,
+    glassBatchMesh: null as Mesh | null,
     fadeMaterial: null as PBRMaterial | null,
     parent: null as TransformNode | null,
     occlusionCheckIntervalFrames: 10,
@@ -411,6 +480,25 @@ export const BuildingManager = {
         this.fadeMaterial.alpha = 1
         this.fadeMaterial.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHABLEND
         this.housePrefabs = this.createHousePrefab(scene)
+        this.opaqueBatchMesh = MeshBuilder.CreateBox('buildingOpaqueBlockBatch', {width: 1, height: 1, depth: 1, wrap: true}, scene)
+        this.opaqueBatchMesh.parent = parent
+        this.opaqueBatchMesh.position.y = -0.5
+        this.opaqueBatchMesh.convertToUnIndexedMesh()
+        this.opaqueBatchMesh.material = Materials.blockMat1!
+        this.opaqueBatchMesh.isPickable = false
+        this.opaqueBatchMesh.alwaysSelectAsActiveMesh = true
+        this.opaqueBatchMesh.doNotSyncBoundingInfo = true
+        this.opaqueBatchMesh.receiveShadows = true
+        Lights.registerSharedLightMesh(this.opaqueBatchMesh)
+        Lights.addShadowCaster(this.opaqueBatchMesh, true, true)
+        this.glassBatchMesh = MeshBuilder.CreatePlane('buildingGlassBatch', {width: 1, height: 1}, scene)
+        this.glassBatchMesh.parent = parent
+        this.glassBatchMesh.convertToUnIndexedMesh()
+        this.glassBatchMesh.material = Materials.blockMatTrans!
+        this.glassBatchMesh.isPickable = false
+        this.glassBatchMesh.alwaysSelectAsActiveMesh = true
+        this.glassBatchMesh.doNotSyncBoundingInfo = true
+        Lights.registerSharedLightMesh(this.glassBatchMesh)
     },
 
     consumeBuildings(data: BuildingData[]) {
@@ -494,6 +582,7 @@ export const BuildingManager = {
 
     recountYPositions() {
         this.buildings.forEach((building) => building.recountYPosition())
+        this.rebuildOpaqueBatch()
     },
 
     onFrame(timeRate: number, camera: Camera | null) {
@@ -505,14 +594,16 @@ export const BuildingManager = {
             this.updateOcclusion(camera)
         }
         let playerInsideBuilding = false
+        let rebuildOpaqueBatch = false
         this.buildings.forEach((building) => {
-            building.updateDoorAnimation(timeRate)
+            rebuildOpaqueBatch = building.updateDoorAnimation(timeRate) || rebuildOpaqueBatch
             const playerInside = playerX != null
                 && playerZ != null
                 && building.containsInteriorPoint(playerX, playerZ)
             playerInsideBuilding ||= playerInside
-            building.updateFade(timeRate, playerInside)
+            rebuildOpaqueBatch = building.updateFade(timeRate, playerInside) || rebuildOpaqueBatch
         })
+        if (rebuildOpaqueBatch) this.rebuildOpaqueBatch()
         Lights.setInsideBuilding(playerInsideBuilding)
     },
 
@@ -538,6 +629,23 @@ export const BuildingManager = {
 
     renderBuildings() {
         this.buildings.forEach((building) => building.setVisible(building.isVisible()))
+        this.rebuildOpaqueBatch()
+    },
+
+    rebuildOpaqueBatch() {
+        if (!this.opaqueBatchMesh || !this.glassBatchMesh || !this.housePrefabs) return
+        const matrices: Matrix[] = []
+        const uvData: Vector2[] = []
+        const glassMatrices: Matrix[] = []
+        const glassUvData: Vector2[] = []
+        this.buildings.forEach((building) => building.appendBatchedBlocks(matrices, uvData, this.housePrefabs!))
+        this.buildings.forEach((building) => building.appendBatchedGlass(glassMatrices, glassUvData, this.housePrefabs!))
+        this.opaqueBatchMesh.thinInstanceSetBuffer('matrix', BabylonUtils.createPositionBuffer(matrices), 16)
+        this.opaqueBatchMesh.thinInstanceSetBuffer('uvc', BabylonUtils.createUvBuffer(uvData), 2)
+        this.opaqueBatchMesh.thinInstanceRefreshBoundingInfo(false)
+        this.glassBatchMesh.thinInstanceSetBuffer('matrix', BabylonUtils.createPositionBuffer(glassMatrices), 16)
+        this.glassBatchMesh.thinInstanceSetBuffer('uvc', BabylonUtils.createUvBuffer(glassUvData), 2)
+        this.glassBatchMesh.thinInstanceRefreshBoundingInfo(false)
     },
 
     clearWorld() {
@@ -546,13 +654,19 @@ export const BuildingManager = {
         this.buildings.clear()
         this.floorTiles.clear()
         this.collisionTiles.clear()
+        this.rebuildOpaqueBatch()
     },
 
     createHousePrefab(scene: Scene) {
         type PartGroup = 'base' | 'wallMinX' | 'wallMaxX' | 'wallMinZ' | 'wallMaxZ' | 'roof' | 'door' | 'glass'
         const groups = {} as Record<PartGroup, {parts: Mesh[], uvData: number[]}>
+        const blockParts = {} as Record<OpaquePartGroup, BuildingBlockPart[]>
+        const glassPanes: Matrix[] = []
         for (const group of ['base', 'wallMinX', 'wallMaxX', 'wallMinZ', 'wallMaxZ', 'roof', 'door', 'glass'] as PartGroup[]) {
             groups[group] = {parts: [], uvData: []}
+        }
+        for (const group of ['base', 'wallMinX', 'wallMaxX', 'wallMinZ', 'wallMaxZ', 'roof', 'door'] as OpaquePartGroup[]) {
+            blockParts[group] = []
         }
         const addBox = (
             name: string,
@@ -575,6 +689,14 @@ export const BuildingManager = {
                 uvData.push(material.x, material.y)
             }
             groups[group].parts.push(box)
+            if (group !== 'glass') {
+                blockParts[group].push({
+                    matrix: Matrix.Scaling(width, height, depth)
+                        .multiply(Matrix.RotationX(rotationX))
+                        .multiply(Matrix.Translation(x, y + 0.5, z)),
+                    material,
+                })
+            }
         }
         const addWallGrid = (
             name: string,
@@ -619,6 +741,10 @@ export const BuildingManager = {
                 groups.glass.uvData.push(MaterialEnumTrans.GLASS.uv.x, MaterialEnumTrans.GLASS.uv.y)
             }
             groups.glass.parts.push(pane)
+            glassPanes.push(
+                Matrix.Scaling(WINDOW_WIDTH, WINDOW_HEIGHT, 1)
+                    .multiply(Matrix.Translation(x, WINDOW_BOTTOM + WINDOW_HEIGHT / 2, z)),
+            )
         }
 
         for (let x = 0; x < HOUSE_WIDTH; x++) {
@@ -926,6 +1052,8 @@ export const BuildingManager = {
             roof: mergeParts(groups.roof.parts, groups.roof.uvData, 'humanHouseRoof5x3Prefab', this.fadeMaterial!),
             door: mergeParts(groups.door.parts, groups.door.uvData, 'humanHouseDoor5x3Prefab', this.fadeMaterial!),
             glass: mergeParts(groups.glass.parts, groups.glass.uvData, 'humanHouseGlass5x3Prefab', Materials.blockMatTrans!),
+            blocks: blockParts,
+            glassPanes,
         }
     },
 }
