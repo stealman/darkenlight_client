@@ -15,6 +15,9 @@ import { MyPlayer } from '@/data/myPlayer'
 import { StaticObjectsCodebook } from '@/babylon/world/statics/staticsCodebook'
 import { StaticsManager } from '@/babylon/world/statics/staticsManager'
 import { TreeManager } from '@/babylon/world/treeManager'
+import type { StaticObject } from '@/babylon/world/statics/objects/baseStaticObject'
+import { BuildingManager } from '@/babylon/world/buildings/buildingManager'
+import type { BuildingData } from '@/babylon/world/buildings/buildingManager'
 
 /**
  * Main GM tabs
@@ -49,6 +52,9 @@ export const LOG_PILE_STATIC_ID = 303
 export const SUPPLY_CRATE_STATIC_ID = 304
 export const CAMP_BARREL_STATIC_ID = 305
 export const STUMP_WITH_AXE_STATIC_ID = 307
+
+const WALL_FENCE_STATIC_IDS = new Set([201, 202, 203, 204, 205, 206, 207, 221, 222])
+const GENERAL_STATIC_IDS = new Set([241, 242, 261, 262, 281, 301, 302, 303, 304, 305, 306, 307])
 
 const rectangularFootprint = (sizeX: number, sizeZ: number) => {
     const offsets: Array<{x: number, z: number}> = []
@@ -115,6 +121,8 @@ export const GMManager = {
     deleteConfirmationTitle: ref(''),
     deleteConfirmationMessage: ref(''),
     pendingDelete: null as {type: 'STATIC' | 'BUILDING', x: number, z: number} | null,
+    editingStatic: ref<StaticObject | null>(null),
+    editingBuilding: ref<BuildingData | null>(null),
 
     tab: GmTabs.OVERVIEW,
 
@@ -127,6 +135,8 @@ export const GMManager = {
             GMSceneManager.spawnMarker?.setEnabled(false)
             GMSpawns.removeAllMarkers()
             this.closeDeleteConfirmation()
+            this.editingStatic.value = null
+            this.editingBuilding.value = null
         }
         GMSceneManager.initialize(Renderer.scene)
         this.gmPanelVisible.value = !this.gmPanelVisible.value
@@ -214,27 +224,15 @@ export const GMManager = {
 
         if (this.tab === GmTabs.WALLS_AND_FENCES_EDIT) {
             const markerPos = new Vector3(GMSceneManager.hoverBlockMarker!.position.x, 0, GMSceneManager.hoverBlockMarker!.position.z)
-            if (this.selectedWallFence.value > 0) {
-                const wallFenceData: { x: number, z: number, type: number, meta?: {orientation?: string, facing?: string, surfaceHeight?: number, material?: string} } = {
-                    x: markerPos.x,
-                    z: markerPos.z,
-                    type: this.selectedWallFence.value,
-                }
-                if (this.selectedWallFence.value === PALISADE_WALL_2_STATIC_ID
-                    || this.selectedWallFence.value === PALISADE_SMALL_STATIC_ID
-                    || this.selectedWallFence.value === CAMP_FENCE_STATIC_ID) {
-                    wallFenceData.meta = {orientation: this.palisadeOrientation.value}
-                }
-                if (this.selectedWallFence.value === PALISADE_SPIKED_STATIC_ID) {
-                    wallFenceData.meta = {facing: this.spikedPalisadeFacing.value}
-                }
-                if (this.selectedWallFence.value === WALKABLE_BLOCK_STATIC_ID) {
-                    wallFenceData.meta = {
-                        surfaceHeight: this.walkableBlockHeight.value,
-                        material: this.walkableBlockMaterial.value,
-                    }
-                }
-                Connector.sendMessage(new GMStaticObjectChange("ADD_OBJECT", [wallFenceData] ) )
+            if (this.editingStatic.value) {
+                return
+            }
+            if (this.selectedWallFence.value === -2) {
+                this.beginStaticEdit(markerPos.x, markerPos.z, WALL_FENCE_STATIC_IDS)
+            } else if (this.selectedWallFence.value > 0) {
+                Connector.sendMessage(new GMStaticObjectChange('ADD_OBJECT', [
+                    this.createWallFenceData(markerPos.x, markerPos.z, this.selectedWallFence.value),
+                ]))
 
             } else if (this.selectedWallFence.value === -1) {
                 this.requestStaticDelete(markerPos.x, markerPos.z)
@@ -243,44 +241,15 @@ export const GMManager = {
 
         if (this.tab === GmTabs.STATICS_EDIT) {
             const markerPos = new Vector3(GMSceneManager.hoverBlockMarker!.position.x, 0, GMSceneManager.hoverBlockMarker!.position.z)
-            if (this.selectedStatic.value > 0) {
-                const staticData: { x: number, z: number, type: number, meta?: Record<string, number | string> } = {
-                    x: markerPos.x,
-                    z: markerPos.z,
-                    type: this.selectedStatic.value,
-                }
-                if (this.selectedStatic.value === WALL_TORCH_STATIC_ID) {
-                    staticData.meta = {
-                        facing: this.torchFacing.value,
-                        mountHeight: this.torchMountHeight.value,
-                    }
-                }
-                if (this.selectedStatic.value === TORCH_STAND_STATIC_ID) {
-                    staticData.meta = {facing: this.torchFacing.value}
-                }
-                if (this.selectedStatic.value === CAMP_BENCH_STATIC_ID
-                    || this.selectedStatic.value === PLANK_PILE_STATIC_ID
-                    || this.selectedStatic.value === LOG_PILE_STATIC_ID
-                    || this.selectedStatic.value === SUPPLY_CRATE_STATIC_ID
-                    || this.selectedStatic.value === CAMP_BARREL_STATIC_ID
-                    || this.selectedStatic.value === STUMP_WITH_AXE_STATIC_ID) {
-                    staticData.meta = {facing: this.campObjectFacing.value}
-                }
-                if (this.selectedStatic.value === LOG_PILE_STATIC_ID) {
-                    staticData.meta = {
-                        facing: this.campObjectFacing.value,
-                        length: this.logPileLength.value,
-                    }
-                }
-                if (this.selectedStatic.value === STONE_ENTRANCE_STATIC_ID) {
-                    staticData.meta = {
-                        facing: this.entranceFacing.value,
-                        destinationWorldId: this.entranceDestinationWorld.value,
-                        destinationX: this.entranceDestinationX.value,
-                        destinationZ: this.entranceDestinationZ.value,
-                    }
-                }
-                Connector.sendMessage(new GMStaticObjectChange("ADD_OBJECT", [staticData] ) )
+            if (this.editingStatic.value) {
+                return
+            }
+            if (this.selectedStatic.value === -2) {
+                this.beginStaticEdit(markerPos.x, markerPos.z, GENERAL_STATIC_IDS)
+            } else if (this.selectedStatic.value > 0) {
+                Connector.sendMessage(new GMStaticObjectChange('ADD_OBJECT', [
+                    this.createStaticData(markerPos.x, markerPos.z, this.selectedStatic.value),
+                ]))
 
             } else if (this.selectedStatic.value === -1) {
                 this.requestStaticDelete(markerPos.x, markerPos.z)
@@ -289,7 +258,12 @@ export const GMManager = {
 
         if (this.tab === GmTabs.BUILDINGS_EDIT) {
             const markerPos = new Vector3(GMSceneManager.hoverBlockMarker!.position.x, 0, GMSceneManager.hoverBlockMarker!.position.z)
-            if (this.selectedBuildingType.value > 0) {
+            if (this.editingBuilding.value) {
+                return
+            }
+            if (this.selectedBuildingType.value === -2) {
+                this.beginBuildingEdit(markerPos.x, markerPos.z)
+            } else if (this.selectedBuildingType.value > 0) {
                 Connector.sendMessage(new GMBuildingChange('ADD', {
                     x: markerPos.x,
                     z: markerPos.z,
@@ -376,6 +350,120 @@ export const GMManager = {
         this.pendingDelete = null
     },
 
+    createWallFenceData(x: number, z: number, type: number) {
+        const data: {x: number, z: number, type: number, meta?: Record<string, number | string>} = {x, z, type}
+        if (type === PALISADE_WALL_2_STATIC_ID || type === PALISADE_SMALL_STATIC_ID || type === CAMP_FENCE_STATIC_ID) {
+            data.meta = {orientation: this.palisadeOrientation.value}
+        } else if (type === PALISADE_SPIKED_STATIC_ID) {
+            data.meta = {facing: this.spikedPalisadeFacing.value}
+        } else if (type === WALKABLE_BLOCK_STATIC_ID) {
+            data.meta = {
+                surfaceHeight: this.walkableBlockHeight.value,
+                material: this.walkableBlockMaterial.value,
+            }
+        }
+        return data
+    },
+
+    createStaticData(x: number, z: number, type: number) {
+        const data: {x: number, z: number, type: number, meta?: Record<string, number | string>} = {x, z, type}
+        if (type === WALL_TORCH_STATIC_ID) {
+            data.meta = {facing: this.torchFacing.value, mountHeight: this.torchMountHeight.value}
+        } else if (type === TORCH_STAND_STATIC_ID) {
+            data.meta = {facing: this.torchFacing.value}
+        } else if (type === LOG_PILE_STATIC_ID) {
+            data.meta = {facing: this.campObjectFacing.value, length: this.logPileLength.value}
+        } else if (type === CAMP_BENCH_STATIC_ID || type === PLANK_PILE_STATIC_ID
+            || type === SUPPLY_CRATE_STATIC_ID || type === CAMP_BARREL_STATIC_ID
+            || type === STUMP_WITH_AXE_STATIC_ID) {
+            data.meta = {facing: this.campObjectFacing.value}
+        } else if (type === STONE_ENTRANCE_STATIC_ID) {
+            data.meta = {
+                facing: this.entranceFacing.value,
+                destinationWorldId: this.entranceDestinationWorld.value,
+                destinationX: this.entranceDestinationX.value,
+                destinationZ: this.entranceDestinationZ.value,
+            }
+        }
+        return data
+    },
+
+    beginStaticEdit(x: number, z: number, allowedTypes: Set<number>) {
+        const object = StaticsManager.getObjectsOnTile(x, z).find((candidate) => allowedTypes.has(candidate.type))
+        if (!object) return
+
+        this.editingStatic.value = object
+        if (this.tab === GmTabs.WALLS_AND_FENCES_EDIT) this.selectedWallFence.value = object.type
+        else this.selectedStatic.value = object.type
+
+        const status = object.status ?? {}
+        if (object.type === PALISADE_WALL_2_STATIC_ID || object.type === PALISADE_SMALL_STATIC_ID || object.type === CAMP_FENCE_STATIC_ID) {
+            this.palisadeOrientation.value = status.orientation === 'X' ? 'X' : 'Z'
+        } else if (object.type === PALISADE_SPIKED_STATIC_ID) {
+            this.spikedPalisadeFacing.value = status.facing ?? '+Z'
+        } else if (object.type === WALKABLE_BLOCK_STATIC_ID) {
+            this.walkableBlockHeight.value = status.surfaceHeight === 0.5 ? 0.5 : 1
+            this.walkableBlockMaterial.value = status.material ?? 'WOOD'
+        } else if (object.type === WALL_TORCH_STATIC_ID) {
+            this.torchFacing.value = status.facing ?? '-Z'
+            this.torchMountHeight.value = status.mountHeight ?? 2
+        } else if (object.type === TORCH_STAND_STATIC_ID) {
+            this.torchFacing.value = status.facing ?? '+Z'
+        } else if (object.type === LOG_PILE_STATIC_ID) {
+            this.campObjectFacing.value = status.facing ?? '+Z'
+            this.logPileLength.value = status.length === 2 || status.length === 3 ? status.length : 1
+        } else if (object.type === CAMP_BENCH_STATIC_ID || object.type === PLANK_PILE_STATIC_ID
+            || object.type === SUPPLY_CRATE_STATIC_ID || object.type === CAMP_BARREL_STATIC_ID
+            || object.type === STUMP_WITH_AXE_STATIC_ID) {
+            this.campObjectFacing.value = status.facing ?? '+Z'
+        } else if (object.type === STONE_ENTRANCE_STATIC_ID) {
+            this.entranceFacing.value = status.facing ?? '+Z'
+            this.entranceDestinationWorld.value = status.destinationWorldId ?? MyPlayer.worldId
+            this.entranceDestinationX.value = status.destinationX ?? 0
+            this.entranceDestinationZ.value = status.destinationZ ?? 0
+        }
+    },
+
+    saveStaticEdit() {
+        const object = this.editingStatic.value
+        if (!object) return
+        const data = this.tab === GmTabs.WALLS_AND_FENCES_EDIT
+            ? this.createWallFenceData(object.position.x, object.position.z, object.type)
+            : this.createStaticData(object.position.x, object.position.z, object.type)
+        Connector.sendMessage(new GMStaticObjectChange('UPDATE_OBJECT', [data]))
+        this.cancelStaticEdit()
+    },
+
+    cancelStaticEdit() {
+        this.editingStatic.value = null
+        if (this.tab === GmTabs.WALLS_AND_FENCES_EDIT) this.selectedWallFence.value = 0
+        if (this.tab === GmTabs.STATICS_EDIT) this.selectedStatic.value = 0
+    },
+
+    beginBuildingEdit(x: number, z: number) {
+        const building = BuildingManager.getBuildingOnTile(x, z)
+        if (!building) return
+        this.editingBuilding.value = building
+        this.selectedBuildingType.value = building.tp
+        this.buildingFacing.value = building.facing ?? '+Z'
+    },
+
+    saveBuildingEdit() {
+        const building = this.editingBuilding.value
+        if (!building) return
+        Connector.sendMessage(new GMBuildingChange('UPDATE', {
+            id: building.id,
+            type: building.tp,
+            facing: this.buildingFacing.value,
+        }))
+        this.cancelBuildingEdit()
+    },
+
+    cancelBuildingEdit() {
+        this.editingBuilding.value = null
+        this.selectedBuildingType.value = 0
+    },
+
     getLowestAffectedBlockHeight(centerPos: Vector3, size: number): number {
         let lowestHeight = Number.MAX_SAFE_INTEGER
         const halfSize = Math.floor(size / 2)
@@ -413,15 +501,34 @@ export const GMManager = {
             || (this.tab === GmTabs.WALLS_AND_FENCES_EDIT && this.selectedWallFence.value === -1)
             || (this.tab === GmTabs.BIOME_EDIT && this.selectedTree.value === -1 && this.selectedShrub.value === -1)
         )
+        const previewingStatics = deletingStatics || (this.gmPanelVisible.value && (
+            (this.tab === GmTabs.STATICS_EDIT && this.selectedStatic.value === -2 && !this.editingStatic.value)
+            || (this.tab === GmTabs.WALLS_AND_FENCES_EDIT && this.selectedWallFence.value === -2 && !this.editingStatic.value)
+        ))
         const marker = GMSceneManager.hoverBlockMarker
+        const previewTypes = this.tab === GmTabs.STATICS_EDIT && this.selectedStatic.value === -2
+            ? GENERAL_STATIC_IDS
+            : this.tab === GmTabs.WALLS_AND_FENCES_EDIT && this.selectedWallFence.value === -2
+                ? WALL_FENCE_STATIC_IDS
+                : undefined
         StaticsManager.updateDeletePreview(
+            previewingStatics && marker?.isEnabled() === true,
+            Math.round(marker?.position.x ?? 0),
+            Math.round(marker?.position.z ?? 0),
+            actualTime,
+            previewTypes,
+        )
+        TreeManager.updateDeletePreview(
             deletingStatics && marker?.isEnabled() === true,
             Math.round(marker?.position.x ?? 0),
             Math.round(marker?.position.z ?? 0),
             actualTime,
         )
-        TreeManager.updateDeletePreview(
-            deletingStatics && marker?.isEnabled() === true,
+        const previewingBuilding = this.gmPanelVisible.value && this.tab === GmTabs.BUILDINGS_EDIT
+            && (this.selectedBuildingType.value === -1
+                || (this.selectedBuildingType.value === -2 && !this.editingBuilding.value))
+        BuildingManager.updateSelectionPreview(
+            previewingBuilding && marker?.isEnabled() === true,
             Math.round(marker?.position.x ?? 0),
             Math.round(marker?.position.z ?? 0),
             actualTime,
@@ -576,6 +683,7 @@ export const GMManager = {
         this.consumePointerMoveEvents = true
         this.consumeLeftClickEvents = true
         this.selectedWallFence.value = 0
+        this.editingStatic.value = null
         GMSceneManager.setHoverBlockMarkerSize(1)
         GMSceneManager.hoverBlockMarker?.setEnabled(true)
     },
@@ -595,6 +703,8 @@ export const GMManager = {
         this.tab = GmTabs.STATICS_EDIT
         this.consumePointerMoveEvents = true
         this.consumeLeftClickEvents = true
+        this.selectedStatic.value = 0
+        this.editingStatic.value = null
         GMSceneManager.setHoverBlockMarkerSize(1)
         GMSceneManager.hoverBlockMarker?.setEnabled(true)
     },
@@ -604,6 +714,7 @@ export const GMManager = {
         this.consumePointerMoveEvents = true
         this.consumeLeftClickEvents = true
         this.selectedBuildingType.value = 0
+        this.editingBuilding.value = null
         GMSceneManager.setHoverBlockMarkerSize(1)
         GMSceneManager.hoverBlockMarker?.setEnabled(true)
     },
@@ -640,18 +751,21 @@ export const GMManager = {
         this.consumePointerMoveEvents = false
         this.consumeLeftClickEvents = false
         GMSceneManager.hoverBlockMarker?.setEnabled(false)
+        this.editingStatic.value = null
     },
 
     closeTabStaticsEdit() {
         this.consumePointerMoveEvents = false
         this.consumeLeftClickEvents = false
         GMSceneManager.hoverBlockMarker?.setEnabled(false)
+        this.editingStatic.value = null
     },
 
     closeTabBuildingsEdit() {
         this.consumePointerMoveEvents = false
         this.consumeLeftClickEvents = false
         GMSceneManager.hoverBlockMarker?.setEnabled(false)
+        this.editingBuilding.value = null
     },
 
     closeTabSpawnsEdit() {

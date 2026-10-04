@@ -280,7 +280,8 @@
       "notEnoughMana": "Nemáš dostatek many",
       "notEnoughHealth": "Nemáš dostatek zdraví",
       "fullyRested": "Jsi plně odpočatý",
-      "npcUseOutOfRange": "NPC je příliš daleko",
+    "npcUseOutOfRange": "NPC je příliš daleko",
+    "npcUseBlocked": "Cestu k NPC blokuje překážka",
       "notEnoughEmeralds": "Nedostatek emeraldů",
       "itemBrokenCannotEquip": "Poškozený předmět musíš nejdřív opravit",
       "weaponSkillRequired": {

@@ -275,6 +275,9 @@ export type StoneEntranceFacing = '-X' | '+X' | '-Z' | '+Z'
 
 export interface StoneEntranceMetadata {
     facing?: StoneEntranceFacing
+    destinationWorldId?: number
+    destinationX?: number
+    destinationZ?: number
 }
 
 const PORTAL_LIGHT_COLOR = new Color3(0.65, 0.16, 1)
@@ -293,7 +296,12 @@ export class StoneEntrance extends BaseStaticObject {
         this.facing = metadata?.facing === '-X' || metadata?.facing === '+X' || metadata?.facing === '-Z' || metadata?.facing === '+Z'
             ? metadata.facing
             : '+Z'
-        this.status = {facing: this.facing}
+        this.status = {
+            facing: this.facing,
+            destinationWorldId: metadata?.destinationWorldId,
+            destinationX: metadata?.destinationX,
+            destinationZ: metadata?.destinationZ,
+        }
         this.renderPosition.set(position.x - 0.5 + this.getSizeX() / 2, position.y, position.z - 0.5 + this.getSizeZ() / 2)
     }
 

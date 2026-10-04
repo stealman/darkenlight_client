@@ -95,6 +95,7 @@ class BuildingView {
     roofInBatch = true
     frontWallsInBatch = true
     doorInBatch = true
+    private previewYOffset = 0
 
     constructor(readonly data: BuildingData, prefabs: BuildingPrefabs, parent: TransformNode, fadeMaterial: PBRMaterial) {
         this.facing = data.facing === '+X' || data.facing === '-X' || data.facing === '-Z' ? data.facing : '+Z'
@@ -168,11 +169,18 @@ class BuildingView {
 
     recountYPosition() {
         const block = WorldDataManager.getBlockMap()[this.data.x]?.[this.data.z]
-        this.mesh.position.y = block?.totalHeight ?? 0
+        this.mesh.position.y = (block?.totalHeight ?? 0) + this.previewYOffset
         this.frontWallsMesh.position.y = this.mesh.position.y
         this.roofMesh.position.y = this.mesh.position.y
         this.glassMesh.position.y = this.mesh.position.y
         this.doorRoot.position.y = this.mesh.position.y
+    }
+
+    setPreviewYOffset(offset: number) {
+        if (this.previewYOffset === offset) return false
+        this.previewYOffset = offset
+        this.recountYPosition()
+        return true
     }
 
     isVisible() {
@@ -476,6 +484,8 @@ export const BuildingManager = {
     parent: null as TransformNode | null,
     occlusionCheckIntervalFrames: 10,
     occlusionCheckFrame: 0,
+    selectionPreviewBuilding: null as BuildingView | null,
+    selectionPreviewStartTime: 0,
 
     initialize(scene: Scene, parent: TransformNode) {
         this.parent = parent
@@ -532,6 +542,7 @@ export const BuildingManager = {
     removeBuilding(id: number) {
         const building = this.buildings.get(id)
         if (!building) return
+        if (this.selectionPreviewBuilding === building) this.selectionPreviewBuilding = null
         building.getFloorTiles().forEach((tile) => {
             const key = `${tile.x};${tile.z}`
             if (this.floorTiles.get(key) === building) this.floorTiles.delete(key)
@@ -543,6 +554,35 @@ export const BuildingManager = {
         })
         building.dispose()
         this.buildings.delete(id)
+    },
+
+    getBuildingOnTile(x: number, z: number): BuildingData | null {
+        const building = Array.from(this.buildings.values()).find((candidate) => {
+            return x >= candidate.data.x && x < candidate.data.x + candidate.getWidth()
+                && z >= candidate.data.z && z < candidate.data.z + candidate.getDepth()
+        })
+        return building?.data ?? null
+    },
+
+    updateSelectionPreview(active: boolean, x: number, z: number, time: number) {
+        const target = active
+            ? Array.from(this.buildings.values()).find((candidate) => {
+                return x >= candidate.data.x && x < candidate.data.x + candidate.getWidth()
+                    && z >= candidate.data.z && z < candidate.data.z + candidate.getDepth()
+            }) ?? null
+            : null
+        let changed = false
+        if (target !== this.selectionPreviewBuilding) {
+            changed = this.selectionPreviewBuilding?.setPreviewYOffset(0) === true || changed
+            this.selectionPreviewBuilding = target
+            this.selectionPreviewStartTime = time
+        }
+        if (target) {
+            const elapsed = time - this.selectionPreviewStartTime
+            const offset = ((Math.sin((elapsed * 0.008) - (Math.PI / 2)) + 1) * 0.5) * 0.175
+            changed = target.setPreviewYOffset(offset) || changed
+        }
+        if (changed) this.rebuildOpaqueBatch()
     },
 
     getFloorHeightAtTile(x: number, z: number) {
@@ -681,6 +721,7 @@ export const BuildingManager = {
 
     clearWorld() {
         Lights.setInsideBuilding(false)
+        this.selectionPreviewBuilding = null
         this.buildings.forEach((building) => building.dispose())
         this.buildings.clear()
         this.floorTiles.clear()

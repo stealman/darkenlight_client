@@ -254,8 +254,10 @@ export const StaticsManager = {
         if (bufferChanged) WorldRenderer.block1!.mesh.thinInstanceBufferUpdated('matrix')
     },
 
-    updateDeletePreview(active: boolean, x: number, z: number, time: number) {
-        const targets = active ? this.getObjectsOnTile(x, z) : []
+    updateDeletePreview(active: boolean, x: number, z: number, time: number, allowedTypes?: Set<number>) {
+        const targets = active
+            ? this.getObjectsOnTile(x, z).filter((obj) => !allowedTypes || allowedTypes.has(obj.type))
+            : []
         const targetKey = targets.map((obj) => `${obj.type}:${obj.position.x}:${obj.position.z}`).sort().join('|')
         if (targetKey !== this.deletePreviewKey) {
             const changedMeshes = new Set(Array.from(this.deletePreviewObjects)

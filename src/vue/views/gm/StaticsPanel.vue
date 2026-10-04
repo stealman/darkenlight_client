@@ -3,6 +3,9 @@
         <label class="tree-item" :class="{ selected: selectedObject === 0 }" @click="selectNone()">
             None
         </label>
+        <label style='color: deepskyblue; font-weight: bold' class="tree-item" :class="{ selected: selectedObject === -2 }" @click="selectEdit()">
+            Edit
+        </label>
         <label style='color: red; font-weight: bold' class="tree-item" :class="{ selected: selectedObject === -1 }" @click="selectDelete()">
             Delete
         </label>
@@ -12,7 +15,7 @@
         <div style="margin-top: 1vh">
             <label class="tree-item" :class="{ selected: 'FIREPLACE' === selectedObjectType }" @click="selectObjectType('FIREPLACE')">Fireplace</label>
             &nbsp;&nbsp;
-            <select v-if="selectedObjectType === 'FIREPLACE'" @change="selectObject($event.target.value)">
+            <select v-if="selectedObjectType === 'FIREPLACE'" :disabled="isEditing" @change="selectObject($event.target.value)">
                 <option v-for="obj in objects.filter(s => s.type === 'FIREPLACE')" :key="obj.id" :value="obj.id" :selected="obj.id === selectedObject">
                     {{ obj.name }}
                 </option>
@@ -22,7 +25,7 @@
         <div style="margin-top: 1vh">
             <label class="tree-item" :class="{ selected: 'ENTRANCE' === selectedObjectType }" @click="selectObjectType('ENTRANCE')">Entrance</label>
             &nbsp;&nbsp;
-            <select v-if="selectedObjectType === 'ENTRANCE'" @change="selectObject($event.target.value)">
+            <select v-if="selectedObjectType === 'ENTRANCE'" :disabled="isEditing" @change="selectObject($event.target.value)">
                 <option v-for="obj in objects.filter(s => s.type === 'ENTRANCE')" :key="obj.id" :value="obj.id" :selected="obj.id === selectedObject">
                     {{ obj.name }}
                 </option>
@@ -32,7 +35,7 @@
         <div style="margin-top: 1vh">
             <label class="tree-item" :class="{ selected: 'TORCH' === selectedObjectType }" @click="selectObjectType('TORCH')">Torch</label>
             &nbsp;&nbsp;
-            <select v-if="selectedObjectType === 'TORCH'" @change="selectObject($event.target.value)">
+            <select v-if="selectedObjectType === 'TORCH'" :disabled="isEditing" @change="selectObject($event.target.value)">
                 <option v-for="obj in objects.filter(s => s.type === 'TORCH')" :key="obj.id" :value="obj.id" :selected="obj.id === selectedObject">
                     {{ obj.name }}
                 </option>
@@ -42,7 +45,7 @@
         <div style="margin-top: 1vh">
             <label class="tree-item" :class="{ selected: 'CAMP' === selectedObjectType }" @click="selectObjectType('CAMP')">Camp Props</label>
             &nbsp;&nbsp;
-            <select v-if="selectedObjectType === 'CAMP'" @change="selectObject($event.target.value)">
+            <select v-if="selectedObjectType === 'CAMP'" :disabled="isEditing" @change="selectObject($event.target.value)">
                 <option v-for="obj in objects.filter(s => s.type === 'CAMP')" :key="obj.id" :value="obj.id" :selected="obj.id === selectedObject">
                     {{ obj.name }}
                 </option>
@@ -106,12 +109,17 @@
             <label>Destination Z <input v-model.number="entranceDestinationZ" type="number" step="1"></label>
         </div>
 
+        <div v-if="isEditing" style="margin-top: 1vh; display: flex; gap: 6px">
+            <button @click="saveEdit">Save</button>
+            <button @click="cancelEdit">Cancel</button>
+        </div>
+
     </div>
 </template>
 
 <script setup>
 import { GMManager } from '@/gm/GM'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 const selectedObjectType = ref("")
 const selectedObject = GMManager.selectedStatic
@@ -124,6 +132,7 @@ const entranceDestinationWorld = GMManager.entranceDestinationWorld
 const entranceDestinationX = GMManager.entranceDestinationX
 const entranceDestinationZ = GMManager.entranceDestinationZ
 const teleportWorlds = computed(() => GMManager.teleportWorlds.value)
+const isEditing = computed(() => GMManager.editingStatic.value !== null)
 
 const objects = [
     { type: "FIREPLACE", name: "Fireplace Small", id: 241 },
@@ -146,6 +155,7 @@ if (previouslySelectedObject) {
 }
 
 const selectObjectType = (type) => {
+    if (isEditing.value) return
     selectedObjectType.value = type
 
     const firstObject = objects.find(s => s.type === type)
@@ -155,16 +165,33 @@ const selectObjectType = (type) => {
 }
 
 const selectObject = (id) => {
+    if (isEditing.value) return
     selectedObject.value = parseInt(id)
 }
 
 const selectNone = () => {
+    GMManager.cancelStaticEdit()
     selectedObject.value = 0
     selectedObjectType.value = ""
 }
 
+const selectEdit = () => {
+    GMManager.cancelStaticEdit()
+    selectedObject.value = -2
+    selectedObjectType.value = ""
+}
+
 const selectDelete = () => {
+    GMManager.cancelStaticEdit()
     selectedObject.value = -1
     selectedObjectType.value = ""
 }
+
+
+const saveEdit = () => GMManager.saveStaticEdit()
+const cancelEdit = () => GMManager.cancelStaticEdit()
+
+watch(selectedObject, (id) => {
+    selectedObjectType.value = objects.find((obj) => obj.id === id)?.type ?? ""
+})
 </script>
