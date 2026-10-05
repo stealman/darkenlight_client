@@ -1,5 +1,5 @@
 import { Connector } from '@/network/connector'
-import { GMBuildingChange, GMCreateItemMsg, GMDayNightCycleMsg, GMForceSaveDataMsg, GMGenerateBiomeMsg, GMLoadItemCodebookMsg, GMLoadWorldMapImageMsg, GMLoadWorldSettingsMsg, GMLoadWorldsMsg, GMNpcAction, GMSaveMapDataMsg, GMSaveWorldMapHeightChangesMsg, GMSaveWorldMapSnowChangesMsg, GMSaveWorldMapTerrainChangesMsg, GMSaveWorldSettingsMsg, GMStaticDeleteInfoRequest, GMStaticObjectChange, GMTeleportMsg, GMTerrainChange } from '@/network/messages'
+import { GMBuildingChange, GMCreateItemMsg, GMDayNightCycleMsg, GMForceSaveDataMsg, GMGenerateBiomeMsg, GMLoadItemCodebookMsg, GMLoadWorldMapImageMsg, GMLoadWorldSettingsMsg, GMLoadWorldsMsg, GMNpcAction, GMSaveMapDataMsg, GMSaveWorldMapHeightChangesMsg, GMSaveWorldMapSurfaceChangesMsg, GMSaveWorldMapTerrainChangesMsg, GMSaveWorldSettingsMsg, GMStaticDeleteInfoRequest, GMStaticObjectChange, GMTeleportMsg, GMTerrainChange } from '@/network/messages'
 import { GMItemCodebookItem, GMStaticDeleteInfoData, GMWorldBiomeTreesChangedData, GMWorldMapImageData, GMWorldSettingsData, GMWorldsData } from '@/network/messageIfs'
 import { GMSceneManager } from '@/babylon/gm/GmSceneManager'
 import { WorldDataManager } from '@/data/worldDataManager'
@@ -38,6 +38,8 @@ export const GmTabs = {
 }
 
 export const VOID_TERRAIN_SELECTION = 102
+export const STONE_PATH_TERRAIN_SELECTION = 103
+export const BEIGE_STONE_PATH_TERRAIN_SELECTION = 104
 export const WALL_TORCH_STATIC_ID = 261
 export const TORCH_STAND_STATIC_ID = 262
 export const STONE_ENTRANCE_STATIC_ID = 281
@@ -162,6 +164,8 @@ export const GMManager = {
                 && this.selectedTerrain.value !== 0
                 && this.selectedTerrain.value !== 100
                 && this.selectedTerrain.value !== 101
+                && this.selectedTerrain.value !== STONE_PATH_TERRAIN_SELECTION
+                && this.selectedTerrain.value !== BEIGE_STONE_PATH_TERRAIN_SELECTION
                 && this.selectedTerrain.value !== VOID_TERRAIN_SELECTION
 
             for (let offsetX = -halfSize; offsetX <= halfSize; offsetX++) {
@@ -170,6 +174,8 @@ export const GMManager = {
                     let height = block.height
                     let type = block.type
                     let snowed = block.snowed
+                    let stonePath = block.stonePath
+                    let beigeStonePath = block.beigeStonePath
                     let minable = block.getMinableValue()
 
                     if (this.terrainEditMode.value === 'minable') {
@@ -191,8 +197,20 @@ export const GMManager = {
                         // Terrain type change
                         if (this.selectedTerrain.value == 100) {
                             snowed = true
+                            stonePath = false
+                            beigeStonePath = false
                         } else if (this.selectedTerrain.value == 101) {
                             snowed = false
+                            stonePath = false
+                            beigeStonePath = false
+                        } else if (this.selectedTerrain.value === STONE_PATH_TERRAIN_SELECTION) {
+                            snowed = false
+                            stonePath = true
+                            beigeStonePath = false
+                        } else if (this.selectedTerrain.value === BEIGE_STONE_PATH_TERRAIN_SELECTION) {
+                            snowed = false
+                            stonePath = false
+                            beigeStonePath = true
                         } else {
                             type = this.selectedTerrain.value === VOID_TERRAIN_SELECTION ? 0 : this.selectedTerrain.value
                         }
@@ -204,6 +222,8 @@ export const GMManager = {
                         height: height,
                         type: type,
                         snowed: snowed,
+                        stonePath: stonePath,
+                        beigeStonePath: beigeStonePath,
                         minable: minable,
                         materializeGeneratedWall: materializeGeneratedWall
                     })
@@ -861,7 +881,7 @@ export const GMManager = {
         Connector.sendMessage(new GMSaveWorldSettingsMsg(worldId, settings))
     },
 
-    loadWorldMapImage(worldId: number, mapType: 'height' | 'terrain' | 'snow' | 'biome' | 'gathering') {
+    loadWorldMapImage(worldId: number, mapType: 'height' | 'terrain' | 'surface' | 'biome' | 'gathering') {
         Connector.sendMessage(new GMLoadWorldMapImageMsg(worldId, mapType))
     },
 
@@ -881,8 +901,8 @@ export const GMManager = {
         Connector.sendMessage(new GMSaveWorldMapTerrainChangesMsg(worldId, changes))
     },
 
-    saveWorldMapSnowChanges(worldId: number, changes: Array<{x: number, z: number, snowed: boolean}>) {
-        Connector.sendMessage(new GMSaveWorldMapSnowChangesMsg(worldId, changes))
+    saveWorldMapSurfaceChanges(worldId: number, changes: Array<{x: number, z: number, surface: 'SNOW' | 'STONE_PATH' | 'BEIGE_STONE_PATH' | 'NONE'}>) {
+        Connector.sendMessage(new GMSaveWorldMapSurfaceChangesMsg(worldId, changes))
     },
 
     generateBiome(worldId: number, preset: 'NORTH_WOOD', density: number, rows: number[][]) {

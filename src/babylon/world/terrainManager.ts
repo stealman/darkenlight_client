@@ -2,7 +2,7 @@ import { MapBlock, WorldDataManager } from '@/data/worldDataManager'
 import { Color4, Matrix, Mesh, ParticleSystem, Scene, Vector2 } from '@babylonjs/core'
 import { BabylonUtils } from '@/babylon/utils'
 import { Builder } from '@/babylon/builder'
-import { Materials, PlaneEnum1, TerrainEnum1 } from '@/babylon/materials'
+import { MaterialEnum1, Materials, PlaneEnum1, TerrainEnum1 } from '@/babylon/materials'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { Settings } from '@/settings/settings'
 import { ViewportManager } from '@/utils/viewport'
@@ -111,13 +111,16 @@ export const TerrainManager = {
                 const heightOffset = hideSnow
                     ? block.type === WATER_BLOCK_TYPE ? -0.1 : 0
                     : block.heightOffset
+                // A stone path is its own thin floor. Unlike snow it must not
+                // stretch the terrain block beneath it.
+                const terrainHeightOffset = block.stonePath || block.beigeStonePath ? 0 : heightOffset
 
                 if (block.type > 0) {
                     if (planeBlockMap[x][z]) {
                         if (block.type === WATER_BLOCK_TYPE) {
                             this.addWaterTerrainLayer(x, z, block.height, heightOffset, block, terrainMatrices1, terrainUvData1, waterPlaneMatrices, waterPlaneUvData)
                         } else {
-                            const matrix = Matrix.Translation(x, block.height + heightOffset, z)
+                            const matrix = Matrix.Translation(x, block.height + terrainHeightOffset, z)
                             planeMatrices.push(matrix)
                             planeUvData.push(PlaneEnum1.getPlaneForBlock(planeBlockMap[x][z], hideSnow, renderType))
                         }
@@ -141,8 +144,8 @@ export const TerrainManager = {
                             }
                         }
 
-                        const scaleMatrix = Matrix.Scaling(1, 1 + heightOffset, 1);
-                        const matrix = scaleMatrix.multiply(Matrix.Translation( x, block.height + heightOffset * 0.5, z));
+                        const scaleMatrix = Matrix.Scaling(1, 1 + terrainHeightOffset, 1);
+                        const matrix = scaleMatrix.multiply(Matrix.Translation( x, block.height + terrainHeightOffset * 0.5, z));
 
                         terrainMatrices1.push(matrix)
                         terrainUvData1.push(TerrainEnum1.getTerrainForBlock(block, hideSnow, renderType))
@@ -157,6 +160,13 @@ export const TerrainManager = {
                             const fillType = GRASS_BLOCK_TYPES.has(block.type) ? DIRT_BLOCK_TYPE : renderType
                             terrainUvData1.push(TerrainEnum1.getTerrainForBlock(block, true, fillType))
                         }
+                    }
+
+                    if (block.stonePath || block.beigeStonePath) {
+                        WorldRenderer.block1!.matrices.push(
+                            Matrix.Scaling(1, 0.12, 1).multiply(Matrix.Translation(x, block.height + 0.56, z)),
+                        )
+                        WorldRenderer.block1!.uvData.push(block.beigeStonePath ? MaterialEnum1.ROCK1_BEIGE.uv : MaterialEnum1.ROCK1.uv)
                     }
                 }
             }

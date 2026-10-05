@@ -125,7 +125,7 @@ export const MiniMap = {
         TooltipOverlayManager.hideOwnerIfNotPinned(this.tooltipOwnerKey)
     },
 
-    getMapColor(height: number, type: number, snowed: boolean): string {
+    getMapColor(height: number, type: number, snowed: boolean, stonePath: boolean, beigeStonePath: boolean): string {
         const waterColor = "#2222BB"
         const colorHeight = Math.max(this.minHeight, Math.min(this.maxHeight, height))
         if (this.environmentType === 'indoor' && type === 0) {
@@ -138,6 +138,12 @@ export const MiniMap = {
         }
         if (snowed) {
             return this.snowColorMap[colorHeight]
+        }
+        if (stonePath) {
+            return '#777777'
+        }
+        if (beigeStonePath) {
+            return '#c0a070'
         }
         if (type === 2) {
             return this.grassColorMap[colorHeight]
@@ -166,7 +172,9 @@ export const MiniMap = {
                 const height = parseInt(data[0])
                 const type = parseInt(data[1])
                 const snowed  = data[3] === "S"
-                offScreenContext.fillStyle = this.getMapColor(height, type, snowed)
+                const stonePath = data[4] === 'R'
+                const beigeStonePath = data[4] === 'B'
+                offScreenContext.fillStyle = this.getMapColor(height, type, snowed, stonePath, beigeStonePath)
                 offScreenContext.fillRect(mapChunk.z + x, mapChunk.x + z, 1, 1)
             }
         }
@@ -182,7 +190,7 @@ export const MiniMap = {
         }
         for (const change of changes) {
             const data = change.data.split(":")
-            offScreenContext.fillStyle = this.getMapColor(parseInt(data[0]), parseInt(data[1]), data[3] === "S")
+            offScreenContext.fillStyle = this.getMapColor(parseInt(data[0]), parseInt(data[1]), data[3] === "S", data[4] === 'R', data[4] === 'B')
             offScreenContext.fillRect(change.z, change.x, 1, 1)
         }
         this.updateMiniMap()

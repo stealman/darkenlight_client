@@ -141,7 +141,12 @@ export class WorldData {
                 if (data[3] === "S") {
                     mapBlock.snowed = true
                 }
-                mapBlock.setMinable(data[4])
+                if (data[4] === "R") {
+                    mapBlock.stonePath = true
+                } else if (data[4] === 'B') {
+                    mapBlock.beigeStonePath = true
+                }
+                mapBlock.setMinable(data[5])
             }
         }
         this.computeBlockDataInArea(mapChunk.x - 1, mapChunk.z - 1, mapChunk.x + mapChunk.blockMap.length, mapChunk.z + mapChunk.blockMap[0].length)
@@ -172,7 +177,9 @@ export class WorldData {
             } else {
                 block.snowed = false
             }
-            block.setMinable(data[4])
+            block.stonePath = data[4] === "R"
+            block.beigeStonePath = data[4] === 'B'
+            block.setMinable(data[5])
         }
 
         for (const change of changes) {
@@ -209,6 +216,8 @@ export class MapBlock {
     shallowWater: boolean = false
     deepWater: boolean = false
     snowed: boolean = false
+    stonePath: boolean = false
+    beigeStonePath: boolean = false
     minableCoal: boolean
     minableOre: number | null
     minableOreAvailable: boolean = false
@@ -234,6 +243,10 @@ export class MapBlock {
     getRenderedHeightOffset() {
         if (this.snowed) {
             return  0.1
+        }
+
+        if (this.stonePath || this.beigeStonePath) {
+            return 0.12
         }
 
         // Grass blocks are rendered slightly higher
@@ -282,6 +295,8 @@ export class MapBlock {
     }
 
     equals(other: MapBlock) {
-        return this.height === other.height && this.type === other.type && this.snowed === other.snowed
+        return this.height === other.height && this.type === other.type
+            && this.snowed === other.snowed && this.stonePath === other.stonePath
+            && this.beigeStonePath === other.beigeStonePath
     }
 }

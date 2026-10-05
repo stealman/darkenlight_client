@@ -543,7 +543,7 @@ export class GMLoadWorldMapImageMsg implements Message {
     t: number = 1014
     d: any
 
-    constructor(worldId: number, mapType: 'height' | 'terrain' | 'snow' | 'biome' | 'gathering') {
+    constructor(worldId: number, mapType: 'height' | 'terrain' | 'surface' | 'biome' | 'gathering') {
         this.d = {worldId, mapType}
     }
 }
@@ -566,11 +566,11 @@ export class GMSaveWorldMapTerrainChangesMsg implements Message {
     }
 }
 
-export class GMSaveWorldMapSnowChangesMsg implements Message {
+export class GMSaveWorldMapSurfaceChangesMsg implements Message {
     t: number = 1018
     d: any
 
-    constructor(worldId: number, changes: Array<{x: number, z: number, snowed: boolean}>) {
+    constructor(worldId: number, changes: Array<{x: number, z: number, surface: 'SNOW' | 'STONE_PATH' | 'BEIGE_STONE_PATH' | 'NONE'}>) {
         this.d = {worldId, changes}
     }
 }

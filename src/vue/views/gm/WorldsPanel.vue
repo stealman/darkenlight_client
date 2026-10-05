@@ -118,14 +118,16 @@
                                     </select>
                                 </label>
                             </div>
-                            <div v-if="selectedMapType === 'snow'" class="world-map-terrain-tool-controls">
+                            <div v-if="selectedMapType === 'surface'" class="world-map-terrain-tool-controls">
                                 <div class="world-map-height-mode-controls">
                                     <label><input v-model="snowEditMode" type="radio" value="brush"> Brush</label>
                                     <label><input v-model="snowEditMode" type="radio" value="area"> Area</label>
                                 </div>
                                 <div class="world-map-height-mode-controls">
-                                    <label><input v-model="snowAction" type="radio" :value="true"> Snow</label>
-                                    <label><input v-model="snowAction" type="radio" :value="false"> Clear</label>
+                                    <label><input v-model="snowAction" type="radio" value="SNOW"> Snow</label>
+                                    <label><input v-model="snowAction" type="radio" value="STONE_PATH"> Stone path</label>
+                                    <label><input v-model="snowAction" type="radio" value="BEIGE_STONE_PATH"> Beige stone path</label>
+                                    <label><input v-model="snowAction" type="radio" value="NONE"> Clear surface</label>
                                 </div>
                             </div>
                             <div v-if="selectedMapType === 'biome'" class="world-map-terrain-tool-controls">
@@ -156,7 +158,7 @@
                                     <option v-for="(area, index) in savedAreas" :key="area.savedAt" :value="index">Area {{ index + 1 }} ({{ area.pixelCount }} px)</option>
                                 </select>
                             </div>
-                            <div v-else-if="selectedMapType === 'snow' && snowEditMode === 'area' && !selectedAreaPixels.size" class="world-map-area-history">
+                            <div v-else-if="selectedMapType === 'surface' && snowEditMode === 'area' && !selectedAreaPixels.size" class="world-map-area-history">
                                 <span>Previous area</span>
                                 <select :value="selectedAreaHistoryIndex" @change="loadSavedArea($event.target.value)">
                                     <option value="">Select saved area...</option>
@@ -186,7 +188,7 @@
                                 <button v-for="size in squareBrushSizes" :key="`terrain-square-${size}`" :disabled="brushShape === 'square' && brushSize === size" @click="selectBrush('square', size)">{{ size }}</button>
                                 <button v-for="size in circleBrushSizes" :key="`terrain-circle-${size}`" class="world-map-circle-brush-button" :disabled="brushShape === 'circle' && brushSize === size" @click="selectBrush('circle', size)">◯ {{ size }}</button>
                             </div>
-                            <div v-else-if="selectedMapType === 'snow' && snowEditMode === 'brush'" class="world-map-brush-controls">
+                            <div v-else-if="selectedMapType === 'surface' && snowEditMode === 'brush'" class="world-map-brush-controls">
                                 <span>Brush</span>
                                 <button v-for="size in squareBrushSizes" :key="`snow-square-${size}`" :disabled="brushShape === 'square' && brushSize === size" @click="selectBrush('square', size)">{{ size }}</button>
                                 <button v-for="size in circleBrushSizes" :key="`snow-circle-${size}`" class="world-map-circle-brush-button" :disabled="brushShape === 'circle' && brushSize === size" @click="selectBrush('circle', size)">◯ {{ size }}</button>
@@ -235,7 +237,7 @@
                                 <button @click="randomizeSelectedAreaEdges">RANDOMIZE EDGES</button>
                                 <button @click="applyTerrainArea">OK</button>
                             </div>
-                            <div v-else-if="selectedMapType === 'snow' && snowEditMode === 'area' && selectedAreaPixels.size" class="world-map-area-actions">
+                            <div v-else-if="selectedMapType === 'surface' && snowEditMode === 'area' && selectedAreaPixels.size" class="world-map-area-actions">
                                 <button @click="cancelAreaSelection">Cancel</button>
                                 <label class="world-map-area-field">Edge size<input v-model.number="areaEdgeRandomizeStrength" type="number" min="0" max="32"></label>
                                 <label class="world-map-area-field">Edge density<input v-model.number="areaEdgeRandomizeDensity" type="number" min="1" max="10"></label>
@@ -318,7 +320,7 @@ import {
     updateWaterOverlayPixel as updateHeightWaterOverlayPixel,
 } from './worldMaps/heightMapEditor'
 import { getConnectedAreaByTerrain, getTerrainColor, getTerrainMapPixelValue, getTerrainTypeByColor, TERRAIN_TYPES } from './worldMaps/terrainMapEditor'
-import { getSnowMapPixelValue } from './worldMaps/snowMapEditor'
+import { getSurfaceMapPixelValue } from './worldMaps/surfaceMapEditor'
 import { getGatheringMapPixelValue } from './worldMaps/gatheringMapEditor'
 import { BIOME_PRESETS, clampBiomeDensity, getStoredBiomeTool, storeBiomeTool } from './worldMaps/biomeMapEditor'
 
@@ -336,7 +338,7 @@ const getStoredMapZoom = () => {
 const getStoredMapView = () => {
     try {
         const view = JSON.parse(localStorage.getItem(WORLD_MAP_VIEW_LS_KEY) || 'null')
-        if (!view || !Number.isInteger(view.worldId) || !['height', 'terrain', 'snow', 'biome', 'gathering'].includes(view.mapType)
+        if (!view || !Number.isInteger(view.worldId) || !['height', 'terrain', 'surface', 'biome', 'gathering'].includes(view.mapType)
             || !Number.isFinite(view.panX) || !Number.isFinite(view.panY)) {
             return null
         }
@@ -392,7 +394,7 @@ const initialBiomeTool = getStoredBiomeTool()
 const mapTypes = [
     {id: 'height', label: 'Height'},
     {id: 'terrain', label: 'Terrain'},
-    {id: 'snow', label: 'Snow'},
+    {id: 'surface', label: 'Surface'},
     {id: 'biome', label: 'Biome'},
     {id: 'gathering', label: 'Gathering'},
 ]
@@ -414,7 +416,7 @@ const heightEditMode = ref(initialHeightTool?.mode ?? 'exact')
 const terrainEditMode = ref('brush')
 const selectedTerrainType = ref(1)
 const snowEditMode = ref('brush')
-const snowAction = ref(true)
+const snowAction = ref('SNOW')
 const snowAreaPickupMode = ref('terrain')
 const biomePresets = BIOME_PRESETS
 const biomeEditMode = ref(initialBiomeTool.mode)
@@ -480,11 +482,11 @@ const savedAreas = computed(() => Number.isInteger(selectedWorldId.value)
     ? areaHistoryByMapType.value[selectedMapType.value]?.[selectedWorldId.value] ?? [] : [])
 const overlayRandomizeActive = computed(() => areaAction.value === 'randomize' && randomizeElevationMode.value === 'overlay')
 const terrainTypes = computed(() => TERRAIN_TYPES.filter((terrain) => terrain.id !== 0 || worldSettings.value?.environment.category === 'dungeon'))
-const isSavableMapType = computed(() => ['height', 'terrain', 'snow'].includes(selectedMapType.value))
+const isSavableMapType = computed(() => ['height', 'terrain', 'surface'].includes(selectedMapType.value))
 const pendingMapChangeCount = computed(() => selectedMapType.value === 'height'
     ? pendingHeightChangeCount.value
     : selectedMapType.value === 'terrain' ? pendingTerrainChangeCount.value
-    : selectedMapType.value === 'snow' ? pendingSnowChangeCount.value : 0)
+    : selectedMapType.value === 'surface' ? pendingSnowChangeCount.value : 0)
 
 const openDialog = () => {
     dialogVisible.value = true
@@ -774,7 +776,7 @@ const drawRandomizePreview = (ctx) => {
 const drawSelectedArea = (ctx) => {
     const isHeightArea = selectedMapType.value === 'height' && heightEditMode.value === 'area'
     const isTerrainArea = selectedMapType.value === 'terrain' && terrainEditMode.value === 'area'
-    const isSnowArea = selectedMapType.value === 'snow' && snowEditMode.value === 'area'
+    const isSnowArea = selectedMapType.value === 'surface' && snowEditMode.value === 'area'
     const isBiomeArea = selectedMapType.value === 'biome' && biomeEditMode.value === 'area'
     if (!isHeightArea && !isTerrainArea && !isSnowArea && !isBiomeArea) {
         return
@@ -814,7 +816,7 @@ const createWaterOverlay = () => {
     const waterLevel = Number(seaWaterLevel)
     const isHeightMap = selectedMapType.value === 'height'
     const isTerrainMap = selectedMapType.value === 'terrain' || selectedMapType.value === 'biome'
-    const isSnowMap = selectedMapType.value === 'snow'
+    const isSnowMap = selectedMapType.value === 'surface'
     const heightCanvas = isHeightMap ? mapPixelCanvas : isTerrainMap ? terrainHeightPixelCanvas : snowHeightPixelCanvas
     const heightContext = isHeightMap ? mapPixelContext : isTerrainMap ? terrainHeightPixelContext : snowHeightPixelContext
     if ((!isHeightMap && !isTerrainMap && !isSnowMap) || !heightCanvas || !heightContext || seaWaterLevel === null || seaWaterLevel === undefined || !Number.isFinite(waterLevel)) {
@@ -841,12 +843,22 @@ const rebuildSnowMapDisplay = () => {
     for (let index = 0; index < displayPixels.data.length; index += 4) {
         const isWater = terrainPixels.data[index] === 0 && terrainPixels.data[index + 1] === 0 && terrainPixels.data[index + 2] === 255
         const isSnow = snowPixels.data[index] === 255 && snowPixels.data[index + 1] === 255 && snowPixels.data[index + 2] === 255
+        const isStonePath = snowPixels.data[index] === 128 && snowPixels.data[index + 1] === 128 && snowPixels.data[index + 2] === 128
+        const isBeigeStonePath = snowPixels.data[index] === 192 && snowPixels.data[index + 1] === 160 && snowPixels.data[index + 2] === 112
         if (!isWater && isSnow) {
             const mapHeight = heightPixels ? Math.max(0, Math.min(31, Math.floor(heightPixels[index] / 8))) : 31
             const snowShade = 128 + Math.round(mapHeight / 31 * 127)
             displayPixels.data[index] = snowShade
             displayPixels.data[index + 1] = snowShade
             displayPixels.data[index + 2] = snowShade
+        } else if (!isWater && isStonePath) {
+            displayPixels.data[index] = 128
+            displayPixels.data[index + 1] = 128
+            displayPixels.data[index + 2] = 128
+        } else if (!isWater && isBeigeStonePath) {
+            displayPixels.data[index] = 192
+            displayPixels.data[index + 1] = 160
+            displayPixels.data[index + 2] = 112
         }
     }
     context.putImageData(displayPixels, 0, 0)
@@ -882,7 +894,7 @@ const rebuildBiomeTreeOverlay = () => {
 const drawBrushPreview = (ctx) => {
     const isHeightBrush = selectedMapType.value === 'height' && heightEditMode.value !== 'area'
     const isTerrainBrush = selectedMapType.value === 'terrain' && terrainEditMode.value === 'brush'
-    const isSnowBrush = selectedMapType.value === 'snow' && snowEditMode.value === 'brush'
+    const isSnowBrush = selectedMapType.value === 'surface' && snowEditMode.value === 'brush'
     const isBiomeBrush = selectedMapType.value === 'biome' && biomeEditMode.value === 'brush'
     if ((!isHeightBrush && !isTerrainBrush && !isSnowBrush && !isBiomeBrush) || !mapHoverCoordinates.value || !mapImage.value) {
         return
@@ -895,7 +907,7 @@ const drawBrushPreview = (ctx) => {
         brushPixels,
         brushShape: brushShape.value,
         previewHeight,
-        previewColor: isTerrainBrush ? `rgb(${getTerrainColor(selectedTerrainType.value).join(', ')})` : isSnowBrush ? (snowAction.value ? 'rgb(255, 255, 255)' : 'rgba(255, 255, 255, 0.25)') : isBiomeBrush ? 'rgba(70, 190, 105, 0.55)' : null,
+        previewColor: isTerrainBrush ? `rgb(${getTerrainColor(selectedTerrainType.value).join(', ')})` : isSnowBrush ? (snowAction.value === 'SNOW' ? 'rgb(255, 255, 255)' : snowAction.value === 'STONE_PATH' ? 'rgb(128, 128, 128)' : snowAction.value === 'BEIGE_STONE_PATH' ? 'rgb(192, 160, 112)' : 'rgba(255, 255, 255, 0.25)') : isBiomeBrush ? 'rgba(70, 190, 105, 0.55)' : null,
         panX: mapPanX.value,
         panY: mapPanY.value,
         zoom: mapZoom.value,
@@ -933,7 +945,7 @@ const selectBrush = (shape, size) => {
 }
 
 const cycleBrush = (event) => {
-    if (!['height', 'terrain', 'snow', 'biome'].includes(selectedMapType.value)) {
+    if (!['height', 'terrain', 'surface', 'biome'].includes(selectedMapType.value)) {
         return
     }
     const brushes = [
@@ -963,7 +975,7 @@ const handleMapWheel = (event) => {
         cycleBrush(event)
         return
     }
-    if (selectedMapType.value === 'snow') {
+    if (selectedMapType.value === 'surface') {
         changeMapZoom(event.deltaY < 0 ? 1 : -1, event)
         return
     }
@@ -1001,7 +1013,7 @@ const handleMapPointerDown = (event) => {
     }
     const isAreaMode = (selectedMapType.value === 'height' && heightEditMode.value === 'area')
         || (selectedMapType.value === 'terrain' && terrainEditMode.value === 'area')
-        || (selectedMapType.value === 'snow' && snowEditMode.value === 'area')
+        || (selectedMapType.value === 'surface' && snowEditMode.value === 'area')
         || (selectedMapType.value === 'biome' && biomeEditMode.value === 'area')
     if (event.button === 0 && isAreaMode && !selectedAreaPixels.value.size) {
         const coords = getMapPixelCoordinates(event)
@@ -1036,7 +1048,7 @@ const handleMapPointerDown = (event) => {
         editTerrainPixelAt(coords)
         return
     }
-    if (event.button === 0 && selectedMapType.value === 'snow' && snowEditMode.value === 'brush') {
+    if (event.button === 0 && selectedMapType.value === 'surface' && snowEditMode.value === 'brush') {
         const coords = getMapPixelCoordinates(event)
         if (!coords) {
             return
@@ -1077,7 +1089,7 @@ const handleMapPointerDown = (event) => {
         selectedTerrainType.value = getTerrainTypeByColor(red, green, blue)
         return
     }
-    if (event.button === 2 && selectedMapType.value === 'snow') {
+    if (event.button === 2 && selectedMapType.value === 'surface') {
         event.preventDefault()
         const coords = getMapPixelCoordinates(event)
         if (!coords || !mapPixelContext) {
@@ -1097,7 +1109,10 @@ const handleMapPointerDown = (event) => {
             return
         }
         const [red, green, blue] = mapPixelContext.getImageData(coords.x, coords.z, 1, 1).data
-        snowAction.value = red === green && green === blue && red >= 128
+        snowAction.value = red === 255 && green === 255 && blue === 255
+            ? 'SNOW'
+            : red === 128 && green === 128 && blue === 128 ? 'STONE_PATH'
+                : red === 192 && green === 160 && blue === 112 ? 'BEIGE_STONE_PATH' : 'NONE'
         return
     }
     if (event.button === 2 && selectedMapType.value === 'biome' && biomeEditMode.value === 'area') {
@@ -1274,7 +1289,7 @@ const editMapPixel = (event) => {
     if (selectedMapType.value === 'terrain' && terrainEditMode.value === 'brush') {
         editTerrainPixelAt(coords)
     }
-    if (selectedMapType.value === 'snow' && snowEditMode.value === 'brush') {
+    if (selectedMapType.value === 'surface' && snowEditMode.value === 'brush') {
         editSnowPixelAt(coords)
     }
     if (selectedMapType.value === 'biome' && biomeEditMode.value === 'brush' && mapPixelCanvas) {
@@ -1361,7 +1376,7 @@ const applyTerrainArea = () => {
 }
 
 const editSnowPixelAt = (coords) => {
-    if (selectedMapType.value !== 'snow' || snowEditMode.value !== 'brush' || savingMapData.value || !Number.isInteger(selectedWorldId.value) || !mapPixelContext || !snowSourcePixelContext || !snowTerrainPixelContext) {
+    if (selectedMapType.value !== 'surface' || snowEditMode.value !== 'brush' || savingMapData.value || !Number.isInteger(selectedWorldId.value) || !mapPixelContext || !snowSourcePixelContext || !snowTerrainPixelContext) {
         return
     }
     let changes = pendingSnowChangesByWorld.get(selectedWorldId.value)
@@ -1376,7 +1391,7 @@ const editSnowPixelAt = (coords) => {
     drawMap()
 }
 
-const applySnowChange = (x, z, snowed, changes) => {
+const applySnowChange = (x, z, surface, changes) => {
     const [terrainRed, terrainGreen, terrainBlue] = snowTerrainPixelContext.getImageData(x, z, 1, 1).data
     const seaWaterLevel = Number(worldSettings.value?.seaWaterLevel)
     const [heightRed] = snowHeightPixelContext?.getImageData(x, z, 1, 1).data ?? []
@@ -1384,15 +1399,20 @@ const applySnowChange = (x, z, snowed, changes) => {
     if (isOcean || terrainRed === 0 && terrainGreen === 0 && terrainBlue === 255) {
         return
     }
-    snowSourcePixelContext.fillStyle = snowed ? 'rgb(255, 255, 255)' : 'rgb(0, 0, 0)'
+    const surfaceColor = surface === 'SNOW' ? 'rgb(255, 255, 255)'
+        : surface === 'STONE_PATH' ? 'rgb(128, 128, 128)'
+            : surface === 'BEIGE_STONE_PATH' ? 'rgb(192, 160, 112)' : 'rgb(0, 0, 0)'
+    snowSourcePixelContext.fillStyle = surfaceColor
     snowSourcePixelContext.fillRect(x, z, 1, 1)
-    mapPixelContext.fillStyle = snowed ? 'rgb(255, 255, 255)' : `rgb(${terrainRed}, ${terrainGreen}, ${terrainBlue})`
+    mapPixelContext.fillStyle = surface === 'SNOW' ? 'rgb(255, 255, 255)'
+        : surface === 'STONE_PATH' ? 'rgb(128, 128, 128)'
+            : surface === 'BEIGE_STONE_PATH' ? 'rgb(192, 160, 112)' : `rgb(${terrainRed}, ${terrainGreen}, ${terrainBlue})`
     mapPixelContext.fillRect(x, z, 1, 1)
-    changes.set(`${x};${z}`, {x, z, snowed})
+    changes.set(`${x};${z}`, {x, z, surface})
 }
 
 const applySnowArea = () => {
-    if (selectedMapType.value !== 'snow' || snowEditMode.value !== 'area' || savingMapData.value || !Number.isInteger(selectedWorldId.value) || !selectedAreaPixels.value.size) {
+    if (selectedMapType.value !== 'surface' || snowEditMode.value !== 'area' || savingMapData.value || !Number.isInteger(selectedWorldId.value) || !selectedAreaPixels.value.size) {
         return
     }
     let changes = pendingSnowChangesByWorld.get(selectedWorldId.value)
@@ -1468,7 +1488,7 @@ const saveMapData = () => {
     } else if (selectedMapType.value === 'terrain') {
         GMManager.saveWorldMapTerrainChanges(selectedWorldId.value, Array.from(changes.values()))
     } else {
-        GMManager.saveWorldMapSnowChanges(selectedWorldId.value, Array.from(changes.values()))
+        GMManager.saveWorldMapSurfaceChanges(selectedWorldId.value, Array.from(changes.values()))
     }
 }
 
@@ -1653,8 +1673,8 @@ const getMapPixelValue = (r, g, b) => {
     if (selectedMapType.value === 'terrain') {
         return getTerrainMapPixelValue(r, g, b, worldSettings.value?.environment.category)
     }
-    if (selectedMapType.value === 'snow') {
-        return getSnowMapPixelValue(r, g, b)
+    if (selectedMapType.value === 'surface') {
+        return getSurfaceMapPixelValue(r, g, b)
     }
     if (selectedMapType.value === 'biome') {
         return getTerrainMapPixelValue(r, g, b, worldSettings.value?.environment.category)
@@ -1858,7 +1878,7 @@ watch(() => GMManager.worldMapImage.value, (data) => {
             pendingHeightChangesByWorld.delete(data.worldId)
         } else if (data.mapType === 'terrain') {
             pendingTerrainChangesByWorld.delete(data.worldId)
-        } else if (data.mapType === 'snow') {
+        } else if (data.mapType === 'surface') {
             pendingSnowChangesByWorld.delete(data.worldId)
         }
         savingMapData.value = false
@@ -1869,7 +1889,7 @@ watch(() => GMManager.worldMapImage.value, (data) => {
                 pendingHeightChangeCount.value = 0
             } else if (data.mapType === 'terrain') {
                 pendingTerrainChangeCount.value = 0
-            } else if (data.mapType === 'snow') {
+            } else if (data.mapType === 'surface') {
                 pendingSnowChangeCount.value = 0
             }
         }
@@ -1890,7 +1910,7 @@ watch(() => GMManager.worldMapImage.value, (data) => {
         image.src = `data:image/png;base64,${data.image}`
         return
     }
-    if (data.worldId === selectedWorldId.value && selectedMapType.value === 'snow'
+    if (data.worldId === selectedWorldId.value && selectedMapType.value === 'surface'
         && data.mapType === 'terrain' && snowTerrainMapRequestedForWorld === data.worldId) {
         const image = new Image()
         image.onload = () => {
@@ -1910,7 +1930,7 @@ watch(() => GMManager.worldMapImage.value, (data) => {
         image.src = `data:image/png;base64,${data.image}`
         return
     }
-    if (data.worldId === selectedWorldId.value && selectedMapType.value === 'snow'
+    if (data.worldId === selectedWorldId.value && selectedMapType.value === 'surface'
         && data.mapType === 'height' && snowHeightMapRequestedForWorld === data.worldId) {
         const image = new Image()
         image.onload = () => {
@@ -1960,12 +1980,14 @@ watch(() => GMManager.worldMapImage.value, (data) => {
                 mapPixelContext.fillStyle = `rgb(${red}, ${green}, ${blue})`
                 mapPixelContext.fillRect(change.x, change.z, 1, 1)
             })
-        } else if (data.mapType === 'snow') {
+        } else if (data.mapType === 'surface') {
             snowSourcePixelCanvas = pixelCanvas
             snowSourcePixelContext = mapPixelContext
             const pendingChanges = pendingSnowChangesByWorld.get(data.worldId)
             pendingChanges?.forEach((change) => {
-                mapPixelContext.fillStyle = change.snowed ? 'rgb(255, 255, 255)' : 'rgb(0, 0, 0)'
+                mapPixelContext.fillStyle = change.surface === 'SNOW' ? 'rgb(255, 255, 255)'
+                    : change.surface === 'STONE_PATH' ? 'rgb(128, 128, 128)'
+                        : change.surface === 'BEIGE_STONE_PATH' ? 'rgb(192, 160, 112)' : 'rgb(0, 0, 0)'
                 mapPixelContext.fillRect(change.x, change.z, 1, 1)
             })
             rebuildSnowMapDisplay()
@@ -1980,7 +2002,7 @@ watch(() => GMManager.worldMapImage.value, (data) => {
             terrainHeightMapRequestedForWorld = data.worldId
             GMManager.loadWorldMapImage(data.worldId, 'height')
         }
-        if (data.mapType === 'snow' && snowTerrainMapRequestedForWorld !== data.worldId) {
+        if (data.mapType === 'surface' && snowTerrainMapRequestedForWorld !== data.worldId) {
             snowTerrainMapRequestedForWorld = data.worldId
             GMManager.loadWorldMapImage(data.worldId, 'terrain')
         }

@@ -30,10 +30,23 @@
             @click="selectTerrain(snow.id)"
         />
         <div
+            class="terrain-tile stone-path-tile"
+            :class="{ selected: terrainEditMode === 'terrain' && stonePath.id === selectedTerrain }"
+            title="Stone path"
+            @click="selectTerrain(stonePath.id)"
+        />
+        <div
+            class="terrain-tile beige-stone-path-tile"
+            :class="{ selected: terrainEditMode === 'terrain' && beigeStonePath.id === selectedTerrain }"
+            title="Beige stone path"
+            @click="selectTerrain(beigeStonePath.id)"
+        />
+        <div
             class="terrain-tile"
             :class="{ selected: terrainEditMode === 'terrain' && unsnow.id === selectedTerrain }"
             style="text-align: center;"
             :style="getTerrainStyle(snow)"
+            title="Clear surface"
             @click="selectTerrain(unsnow.id)">
             <span style="color: red; font-size: 2rem; position: relative; top: 0.75rem;">X</span>
         </div>
@@ -78,7 +91,7 @@
 
 <script setup>
 
-import { GMManager, VOID_TERRAIN_SELECTION } from '@/gm/GM'
+import { BEIGE_STONE_PATH_TERRAIN_SELECTION, GMManager, STONE_PATH_TERRAIN_SELECTION, VOID_TERRAIN_SELECTION } from '@/gm/GM'
 
 // Terrrain edit constants
 const TERRAIN_TILE_SIZE = 128
@@ -101,6 +114,8 @@ const terrains = [
 ]
 const snow = { id: 100, x: 4.5, y: 0.5 }
 const unsnow = { id: 101, x: 4.5, y: 0.5 }
+const stonePath = { id: STONE_PATH_TERRAIN_SELECTION }
+const beigeStonePath = { id: BEIGE_STONE_PATH_TERRAIN_SELECTION }
 const voidTerrain = { id: VOID_TERRAIN_SELECTION }
 
 const getTerrainStyle = (t) => ({
@@ -139,5 +154,15 @@ const saveMapData = () => {
 .minable-input {
     width: 7rem;
     padding: 0.25rem 0.4rem;
+}
+
+.stone-path-tile {
+    background: #777;
+    box-shadow: inset 0 0 0 2px #aaa;
+}
+
+.beige-stone-path-tile {
+    background: rgb(var(--ui-surface-beige-path));
+    box-shadow: inset 0 0 0 2px #ead3a2;
 }
 </style>

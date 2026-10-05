@@ -401,7 +401,7 @@ export interface GMWorldSettingsData {
 
 export interface GMWorldMapImageData {
     worldId: number
-    mapType: 'height' | 'terrain' | 'snow' | 'biome' | 'gathering'
+    mapType: 'height' | 'terrain' | 'surface' | 'biome' | 'gathering'
     image: string
     trees?: Array<{x: number, z: number}>
 }
