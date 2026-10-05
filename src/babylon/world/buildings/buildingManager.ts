@@ -1,4 +1,4 @@
-import { Camera, Matrix, Mesh, MeshBuilder, PBRMaterial, Scene, TransformNode, Vector2, Vector3 } from '@babylonjs/core'
+import { Camera, Matrix, Mesh, MeshBuilder, PBRMaterial, Quaternion, Scene, TransformNode, Vector2, Vector3 } from '@babylonjs/core'
 import { MaterialEnum1, MaterialEnumTrans, Materials } from '@/babylon/materials'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { ViewportManager } from '@/utils/viewport'
@@ -15,6 +15,10 @@ export interface BuildingData {
     x: number
     z: number
     facing?: BuildingFacing
+    width?: number
+    depth?: number
+    shedHighSide?: BuildingFacing
+    shedSideFills?: Partial<Record<BuildingFacing, 'CAMP_FENCE'>>
     doorOpen?: boolean
 }
 
@@ -28,6 +32,8 @@ interface BuildingBlockPart {
 
 const HOUSE_WIDTH = 5
 const HOUSE_DEPTH = 3
+const HUMAN_HOUSE_TYPE = 1
+const SHED_TYPE = 2
 const FLOOR_HEIGHT = 0.12
 const FLOOR_OVERHANG = 0.4
 const WALL_HEIGHT = 1
@@ -62,6 +68,21 @@ const DOOR_OPEN_ANGLE = -Math.PI / 2
 // maps. A tiny non-zero value keeps the roof visually absent while the shared
 // full-strength transparent-shadow mode continues to cast an opaque shadow.
 const HIDDEN_ROOF_VISIBILITY = 0.0001
+const SHED_MIN_SIZE = 2
+const SHED_POST_SIZE = 0.18
+const SHED_FENCE_THICKNESS = 0.1
+const SHED_POST_HEIGHT = 1.65
+const SHED_ROOF_RISE_PER_TILE = 0.15
+const SHED_ROOF_THICKNESS = 0.12
+const SHED_ROOF_OVERHANG = 0.1
+const SHED_PLANK_SIZE = 0.5
+const SHED_ROOF_STRIP_SIDE_OFFSET = 0.08
+const SHED_ROOF_STRIP_HEIGHT_OFFSET = 0.02
+const SHED_ROOF_BATTEN_WIDTH = 0.08
+const SHED_ROOF_BATTEN_HEIGHT = 0.03
+const SHED_ROOF_BATTEN_END_INSET = 0.2
+const SHED_ROOF_STEEL_FRAME_WIDTH = 0.08
+const SHED_ROOF_STEEL_FRAME_HEIGHT = 0.05
 
 interface BuildingPrefabs {
     variants: Record<BuildingFacing, {
@@ -229,6 +250,14 @@ class BuildingView {
         ]
     }
 
+    hasFloor() {
+        return true
+    }
+
+    affectsInteriorLighting() {
+        return true
+    }
+
     getCollisionIndexTiles() {
         const tiles = this.getOccupiedTiles().filter((tile) => {
             const local = this.worldPointToLocal(tile.x, tile.z)
@@ -291,6 +320,10 @@ class BuildingView {
 
     getDoorPosition() {
         return this.localTileToWorld(DOOR_CENTER_X, HOUSE_DEPTH - 0.5)
+    }
+
+    getCollisionCenter() {
+        return this.localTileToWorld(DOOR_CENTER_X, 1)
     }
 
     setDoorOpen(open: boolean) {
@@ -473,10 +506,425 @@ class BuildingView {
     }
 }
 
+class ShedView {
+    readonly roofMesh: Mesh
+    readonly blockParts: BuildingBlockPart[] = []
+    roofVisibility = 1
+    shouldOcclusionFade = false
+    visible = false
+    roofInBatch = true
+    private roofPartStart = 0
+    private previewYOffset = 0
+
+    constructor(readonly data: BuildingData, parent: TransformNode, fadeMaterial: PBRMaterial) {
+        const scene = parent.getScene()
+        const roofParts: Mesh[] = []
+        const roofUvData: number[] = []
+        const addBlock = (
+            width: number,
+            height: number,
+            depth: number,
+            x: number,
+            y: number,
+            z: number,
+            material: Vector2,
+            roof = false,
+            pitch = 0,
+            roll = 0,
+            yaw = 0,
+        ) => {
+            const rotation = Matrix.RotationY(yaw).multiply(Matrix.RotationYawPitchRoll(0, pitch, roll))
+            this.blockParts.push({
+                matrix: Matrix.Scaling(width, height, depth)
+                    .multiply(rotation)
+                    .multiply(Matrix.Translation(x, y + 0.5, z)),
+                material,
+            })
+            if (!roof) return
+            const block = MeshBuilder.CreateBox('shedRoofPlank', {width, height, depth, wrap: true}, scene)
+            block.position.set(x, y, z)
+            block.rotationQuaternion = Quaternion.FromRotationMatrix(rotation)
+            block.convertToUnIndexedMesh()
+            for (let i = 0; i < block.getTotalVertices(); i++) {
+                roofUvData.push(material.x, material.y)
+            }
+            roofParts.push(block)
+        }
+
+        for (const x of [-0.5, this.getWidth() - 0.5]) {
+            for (const z of [-0.5, this.getDepth() - 0.5]) {
+                const height = SHED_POST_HEIGHT + (this.isHighSide(x, z) ? this.getRoofRise() : 0)
+                addBlock(SHED_POST_SIZE, height, SHED_POST_SIZE, x, height / 2, z, MaterialEnum1.WOOD_3.uv)
+            }
+        }
+
+        for (const side of ['-X', '+X', '-Z', '+Z'] as BuildingFacing[]) {
+            if (this.data.shedSideFills?.[side] !== 'CAMP_FENCE') continue
+            const alongX = side === '-Z' || side === '+Z'
+            const length = alongX ? this.getWidth() : this.getDepth()
+            const fixed = side === '-X' ? -0.5
+                : side === '+X' ? this.getWidth() - 0.5
+                    : side === '-Z' ? -0.5 : this.getDepth() - 0.5
+            for (let offset = 0; offset < length; offset++) {
+                for (const postOffset of [-0.42, 0, 0.42]) {
+                    addBlock(
+                        0.1,
+                        0.95,
+                        0.1,
+                        alongX ? offset + postOffset : fixed,
+                        0.475,
+                        alongX ? fixed : offset + postOffset,
+                        MaterialEnum1.WOOD_3.uv,
+                    )
+                }
+                for (const y of [0.475, 0.85]) {
+                    addBlock(
+                        alongX ? 0.94 : 0.09,
+                        0.1,
+                        alongX ? 0.09 : 0.94,
+                        alongX ? offset : fixed,
+                        y,
+                        alongX ? fixed : offset,
+                        MaterialEnum1.WOOD_1.uv,
+                    )
+                }
+            }
+        }
+
+        this.roofPartStart = this.blockParts.length
+        const roofMinX = -0.5 - SHED_ROOF_OVERHANG
+        const roofMinZ = -0.5 - SHED_ROOF_OVERHANG
+        const roofWidth = this.getWidth() + SHED_ROOF_OVERHANG * 2
+        const roofDepth = this.getDepth() + SHED_ROOF_OVERHANG * 2
+        const roofPitch = this.getRoofPitch()
+        const roofRoll = this.getRoofRoll()
+        const slopesAlongX = this.getHighSide() === '-X' || this.getHighSide() === '+X'
+        const slopeLength = slopesAlongX ? roofWidth : roofDepth
+        const perpendicularLength = slopesAlongX ? roofDepth : roofWidth
+        const roofYaw = slopesAlongX ? Math.PI / 2 : 0
+        for (let stripOffset = 0, stripIndex = 0; stripOffset < perpendicularLength - 0.001; stripOffset += SHED_PLANK_SIZE, stripIndex++) {
+            const stripSize = Math.min(SHED_PLANK_SIZE, perpendicularLength - stripOffset)
+            const random = Math.sin((this.data.id + 1) * 13.37 + (stripIndex + 1) * 91.71) * 43758.5453
+            const sideOffset = (random - Math.floor(random) - 0.5) * SHED_ROOF_STRIP_SIDE_OFFSET
+            const heightRandom = Math.sin((this.data.id + 1) * 47.29 + (stripIndex + 1) * 17.13) * 43758.5453
+            const heightOffset = (heightRandom - Math.floor(heightRandom) - 0.5) * SHED_ROOF_STRIP_HEIGHT_OFFSET
+            for (let slopeOffset = 0; slopeOffset < slopeLength - 0.001; slopeOffset += SHED_PLANK_SIZE) {
+                const slopeSize = Math.min(SHED_PLANK_SIZE, slopeLength - slopeOffset)
+                const x = slopesAlongX
+                    ? roofMinX + slopeOffset + slopeSize / 2 + sideOffset
+                    : roofMinX + stripOffset + stripSize / 2
+                const z = slopesAlongX
+                    ? roofMinZ + stripOffset + stripSize / 2
+                    : roofMinZ + slopeOffset + slopeSize / 2 + sideOffset
+                addBlock(
+                    stripSize,
+                    SHED_ROOF_THICKNESS,
+                    slopeSize,
+                    x,
+                    this.getRoofY(x, z) + heightOffset,
+                    z,
+                    MaterialEnum1.WOOD_PLANKS_DARK.uv,
+                    true,
+                    roofPitch,
+                    roofRoll,
+                    roofYaw,
+                )
+            }
+        }
+
+        const battenLength = slopeLength - SHED_ROOF_BATTEN_END_INSET * 2
+        const battenCenter = (slopesAlongX ? roofMinX : roofMinZ)
+            + SHED_ROOF_BATTEN_END_INSET + battenLength / 2
+        const battenCount = (slopesAlongX ? this.getDepth() : this.getWidth()) + 1
+        for (let index = 0; index < battenCount; index++) {
+            const x = slopesAlongX ? battenCenter : index - 0.5
+            const z = slopesAlongX ? index - 0.5 : battenCenter
+            addBlock(
+                slopesAlongX ? battenLength : SHED_ROOF_BATTEN_WIDTH,
+                SHED_ROOF_BATTEN_HEIGHT,
+                slopesAlongX ? SHED_ROOF_BATTEN_WIDTH : battenLength,
+                x,
+                this.getRoofY(x, z) + SHED_ROOF_THICKNESS / 2 + SHED_ROOF_BATTEN_HEIGHT / 2,
+                z,
+                MaterialEnum1.WOOD_PLANKS_DARK.uv,
+                true,
+                roofPitch,
+                roofRoll,
+            )
+        }
+
+        const addSteelFrameBar = (width: number, depth: number, x: number, z: number) => {
+            addBlock(
+                width,
+                SHED_ROOF_STEEL_FRAME_HEIGHT,
+                depth,
+                x,
+                this.getRoofY(x, z) - SHED_ROOF_THICKNESS / 2 - SHED_ROOF_STEEL_FRAME_HEIGHT / 2,
+                z,
+                MaterialEnum1.STEEL_1.uv,
+                true,
+                roofPitch,
+                roofRoll,
+            )
+        }
+        addSteelFrameBar(
+            roofWidth,
+            SHED_ROOF_STEEL_FRAME_WIDTH,
+            roofMinX + roofWidth / 2,
+            roofMinZ + SHED_ROOF_STEEL_FRAME_WIDTH / 2,
+        )
+        addSteelFrameBar(
+            roofWidth,
+            SHED_ROOF_STEEL_FRAME_WIDTH,
+            roofMinX + roofWidth / 2,
+            roofMinZ + roofDepth - SHED_ROOF_STEEL_FRAME_WIDTH / 2,
+        )
+        addSteelFrameBar(
+            SHED_ROOF_STEEL_FRAME_WIDTH,
+            roofDepth,
+            roofMinX + SHED_ROOF_STEEL_FRAME_WIDTH / 2,
+            roofMinZ + roofDepth / 2,
+        )
+        addSteelFrameBar(
+            SHED_ROOF_STEEL_FRAME_WIDTH,
+            roofDepth,
+            roofMinX + roofWidth - SHED_ROOF_STEEL_FRAME_WIDTH / 2,
+            roofMinZ + roofDepth / 2,
+        )
+
+        this.roofMesh = Mesh.MergeMeshes(roofParts, true, true)!
+        this.roofMesh.name = `shed_${data.id}_roof`
+        this.roofMesh.parent = parent
+        this.roofMesh.material = fadeMaterial
+        this.roofMesh.setVerticesData('uvc', roofUvData, false, 2)
+        this.roofMesh.isPickable = false
+        this.roofMesh.setEnabled(false)
+        this.recountYPosition()
+        Lights.registerSharedLightMesh(this.roofMesh)
+        Lights.addShadowCaster(this.roofMesh, true, true)
+    }
+
+    getWidth() {
+        return Number.isInteger(this.data.width) ? Math.max(SHED_MIN_SIZE, this.data.width!) : SHED_MIN_SIZE
+    }
+
+    getDepth() {
+        return Number.isInteger(this.data.depth) ? Math.max(SHED_MIN_SIZE, this.data.depth!) : SHED_MIN_SIZE
+    }
+
+    getOccupiedTiles() {
+        const tiles: {x: number, z: number}[] = []
+        for (let x = 0; x < this.getWidth(); x++) {
+            for (let z = 0; z < this.getDepth(); z++) {
+                tiles.push({x: this.data.x + x, z: this.data.z + z})
+            }
+        }
+        return tiles
+    }
+
+    getFloorTiles() {
+        return []
+    }
+
+    getCollisionIndexTiles() {
+        const tiles = new Map<string, {x: number, z: number}>()
+        const addNearby = (x: number, z: number) => {
+            for (let tileX = x - 1; tileX <= x + 1; tileX++) {
+                for (let tileZ = z - 1; tileZ <= z + 1; tileZ++) {
+                    tiles.set(`${tileX};${tileZ}`, {x: tileX, z: tileZ})
+                }
+            }
+        }
+        for (const x of [this.data.x, this.data.x + this.getWidth() - 1]) {
+            for (const z of [this.data.z, this.data.z + this.getDepth() - 1]) addNearby(x, z)
+        }
+        for (const side of ['-X', '+X', '-Z', '+Z'] as BuildingFacing[]) {
+            if (!this.hasShedSideFill(side)) continue
+            const length = side === '-Z' || side === '+Z' ? this.getWidth() : this.getDepth()
+            for (let offset = 0; offset < length; offset++) {
+                addNearby(
+                    this.data.x + (side === '-X' ? 0 : side === '+X' ? this.getWidth() - 1 : offset),
+                    this.data.z + (side === '-Z' ? 0 : side === '+Z' ? this.getDepth() - 1 : offset),
+                )
+            }
+        }
+        return Array.from(tiles.values())
+    }
+
+    hasFloor() {
+        return false
+    }
+
+    affectsInteriorLighting() {
+        return false
+    }
+
+    isVisible() {
+        return this.getOccupiedTiles().some((tile) => ViewportManager.isPointInVisibleMatrix(tile.x, tile.z, 1))
+    }
+
+    recountYPosition() {
+        const block = WorldDataManager.getBlockMap()[this.data.x]?.[this.data.z]
+        this.roofMesh.position.set(this.data.x, (block?.totalHeight ?? 0) + this.previewYOffset, this.data.z)
+    }
+
+    setPreviewYOffset(offset: number) {
+        if (this.previewYOffset === offset) return false
+        this.previewYOffset = offset
+        this.recountYPosition()
+        return true
+    }
+
+    isPointInCollision(x: number, z: number, size: number) {
+        const halfMover = size / 2
+        const halfPost = SHED_POST_SIZE / 2
+        const hitsPost = [this.data.x - 0.5, this.data.x + this.getWidth() - 0.5].some((postX) => {
+            return [this.data.z - 0.5, this.data.z + this.getDepth() - 0.5].some((postZ) => {
+                return x - halfMover < postX + halfPost && x + halfMover > postX - halfPost
+                    && z - halfMover < postZ + halfPost && z + halfMover > postZ - halfPost
+            })
+        })
+        if (hitsPost) return true
+        const minX = this.data.x - 0.5
+        const maxX = this.data.x + this.getWidth() - 0.5
+        const minZ = this.data.z - 0.5
+        const maxZ = this.data.z + this.getDepth() - 0.5
+        const halfFence = SHED_FENCE_THICKNESS / 2
+        const intersects = (wallMinX: number, wallMaxX: number, wallMinZ: number, wallMaxZ: number) => {
+            return x - halfMover < wallMaxX && x + halfMover > wallMinX
+                && z - halfMover < wallMaxZ && z + halfMover > wallMinZ
+        }
+        return (this.hasShedSideFill('-X') && intersects(minX - halfFence, minX + halfFence, minZ, maxZ))
+            || (this.hasShedSideFill('+X') && intersects(maxX - halfFence, maxX + halfFence, minZ, maxZ))
+            || (this.hasShedSideFill('-Z') && intersects(minX, maxX, minZ - halfFence, minZ + halfFence))
+            || (this.hasShedSideFill('+Z') && intersects(minX, maxX, maxZ - halfFence, maxZ + halfFence))
+    }
+
+    containsInteriorPoint(x: number, z: number) {
+        return x > this.data.x - 0.4 && x < this.data.x + this.getWidth() - 0.6
+            && z > this.data.z - 0.4 && z < this.data.z + this.getDepth() - 0.6
+    }
+
+    getDoorPosition() {
+        return null
+    }
+
+    getCollisionCenter() {
+        return {
+            x: this.data.x + (this.getWidth() - 1) / 2,
+            z: this.data.z + (this.getDepth() - 1) / 2,
+        }
+    }
+
+    setDoorOpen(_open: boolean) {}
+
+    updateDoorAnimation(_timeRate: number) {
+        return false
+    }
+
+    intersectsOcclusionSegment(origin: Vector3, direction: Vector3, maxDistance: number) {
+        const groundY = this.roofMesh.position.y
+        return segmentIntersectsAabb(
+            origin,
+            direction,
+            maxDistance,
+            new Vector3(this.data.x - 0.5 - SHED_ROOF_OVERHANG, groundY, this.data.z - 0.5 - SHED_ROOF_OVERHANG),
+            new Vector3(
+                this.data.x + this.getWidth() - 0.5 + SHED_ROOF_OVERHANG,
+                groundY + SHED_POST_HEIGHT + this.getRoofRise() + SHED_ROOF_THICKNESS,
+                this.data.z + this.getDepth() - 0.5 + SHED_ROOF_OVERHANG,
+            ),
+        )
+    }
+
+    setVisible(visible: boolean) {
+        this.visible = visible
+        this.roofMesh.setEnabled(visible && !this.isRoofBatched())
+    }
+
+    isRoofBatched() {
+        return this.roofVisibility === 1 && !this.shouldOcclusionFade
+    }
+
+    appendBatchedBlocks(matrices: Matrix[], uvData: Vector2[]) {
+        if (!this.visible) return
+        this.roofInBatch = this.isRoofBatched()
+        const world = Matrix.Translation(this.roofMesh.position.x, this.roofMesh.position.y, this.roofMesh.position.z)
+        this.blockParts.forEach((part, index) => {
+            if (!this.roofInBatch && index >= this.roofPartStart) return
+            matrices.push(part.matrix.multiply(world))
+            uvData.push(part.material)
+        })
+    }
+
+    appendBatchedGlass(_matrices: Matrix[], _uvData: Vector2[], _prefabs: BuildingPrefabs) {}
+
+    updateFade(timeRate: number, playerInside: boolean, selectedTargetInside: boolean) {
+        const hideRoof = playerInside || selectedTargetInside
+        const target = hideRoof ? HIDDEN_ROOF_VISIBILITY : this.shouldOcclusionFade ? FADED_ALPHA : 1
+        if (this.roofVisibility !== target) {
+            const step = ((1 - HIDDEN_ROOF_VISIBILITY) / FADE_DURATION) * timeRate
+            this.roofVisibility = this.roofVisibility < target
+                ? Math.min(this.roofVisibility + step, target)
+                : Math.max(this.roofVisibility - step, target)
+            this.roofMesh.visibility = this.roofVisibility
+        }
+        this.setVisible(this.visible)
+        return this.roofInBatch !== this.isRoofBatched()
+    }
+
+    dispose() {
+        Lights.unregisterSharedLightMesh(this.roofMesh)
+        Lights.removeShadowCaster(this.roofMesh, true, true)
+        this.roofMesh.dispose()
+    }
+
+    private getHighSide() {
+        const side = this.data.shedHighSide
+        return side === '-X' || side === '+X' || side === '-Z' ? side : '+Z'
+    }
+
+    private hasShedSideFill(side: BuildingFacing) {
+        return this.data.shedSideFills?.[side] === 'CAMP_FENCE'
+    }
+
+    private isHighSide(x: number, z: number) {
+        const side = this.getHighSide()
+        return (side === '-X' && x < 0) || (side === '+X' && x > this.getWidth() - 1)
+            || (side === '-Z' && z < 0) || (side === '+Z' && z > this.getDepth() - 1)
+    }
+
+    private getRoofPitch() {
+        const angle = Math.atan(this.getRoofRise() / this.getDepth())
+        return this.getHighSide() === '+Z' ? -angle : this.getHighSide() === '-Z' ? angle : 0
+    }
+
+    private getRoofRoll() {
+        const angle = Math.atan(this.getRoofRise() / this.getWidth())
+        return this.getHighSide() === '+X' ? angle : this.getHighSide() === '-X' ? -angle : 0
+    }
+
+    private getRoofY(x: number, z: number) {
+        const side = this.getHighSide()
+        const progress = side === '+X' ? (x + 0.5) / this.getWidth()
+            : side === '-X' ? (this.getWidth() - 0.5 - x) / this.getWidth()
+                : side === '+Z' ? (z + 0.5) / this.getDepth()
+                    : (this.getDepth() - 0.5 - z) / this.getDepth()
+        return SHED_POST_HEIGHT + progress * this.getRoofRise() + SHED_ROOF_THICKNESS / 2
+    }
+
+    private getRoofRise() {
+        const side = this.getHighSide()
+        return SHED_ROOF_RISE_PER_TILE * (side === '-X' || side === '+X' ? this.getWidth() : this.getDepth())
+    }
+}
+
+type RenderedBuilding = BuildingView | ShedView
+
 export const BuildingManager = {
-    buildings: new Map<number, BuildingView>(),
-    floorTiles: new Map<string, BuildingView>(),
-    collisionTiles: new Map<string, Set<BuildingView>>(),
+    buildings: new Map<number, RenderedBuilding>(),
+    floorTiles: new Map<string, RenderedBuilding>(),
+    collisionTiles: new Map<string, Set<RenderedBuilding>>(),
     housePrefabs: null as BuildingPrefabs | null,
     opaqueBatchMesh: null as Mesh | null,
     glassBatchMesh: null as Mesh | null,
@@ -484,7 +932,7 @@ export const BuildingManager = {
     parent: null as TransformNode | null,
     occlusionCheckIntervalFrames: 10,
     occlusionCheckFrame: 0,
-    selectionPreviewBuilding: null as BuildingView | null,
+    selectionPreviewBuilding: null as RenderedBuilding | null,
     selectionPreviewStartTime: 0,
 
     initialize(scene: Scene, parent: TransformNode) {
@@ -522,10 +970,13 @@ export const BuildingManager = {
     },
 
     addBuilding(data: BuildingData) {
-        if (data.tp !== 1 || this.buildings.has(data.id) || !this.housePrefabs || !this.parent || !this.fadeMaterial) {
+        if ((data.tp !== HUMAN_HOUSE_TYPE && data.tp !== SHED_TYPE)
+            || this.buildings.has(data.id) || !this.housePrefabs || !this.parent || !this.fadeMaterial) {
             return
         }
-        const building = new BuildingView(data, this.housePrefabs, this.parent, this.fadeMaterial)
+        const building = data.tp === SHED_TYPE
+            ? new ShedView(data, this.parent, this.fadeMaterial)
+            : new BuildingView(data, this.housePrefabs, this.parent, this.fadeMaterial)
         this.buildings.set(data.id, building)
         building.getFloorTiles().forEach((tile) => this.floorTiles.set(`${tile.x};${tile.z}`, building))
         building.getCollisionIndexTiles().forEach((tile) => {
@@ -598,6 +1049,7 @@ export const BuildingManager = {
         let closestDistanceSquared = maxDistance * maxDistance
         this.buildings.forEach((building) => {
             const door = building.getDoorPosition()
+            if (!door) return
             const dx = position.x - door.x
             const dz = position.z - door.z
             const distanceSquared = dx * dx + dz * dz
@@ -614,13 +1066,13 @@ export const BuildingManager = {
     },
 
     getPointInBuilding(x: number, z: number, size: number, coveredBlocks: {x: number, z: number}[]) {
-        const candidates = new Set<BuildingView>()
+        const candidates = new Set<RenderedBuilding>()
         coveredBlocks.forEach((tile) => {
             this.collisionTiles.get(`${tile.x};${tile.z}`)?.forEach((building) => candidates.add(building))
         })
         for (const building of candidates) {
             if (building.isPointInCollision(x, z, size)) {
-                return building.localTileToWorld(2, 1)
+                return building.getCollisionCenter()
             }
         }
         return null
@@ -656,7 +1108,7 @@ export const BuildingManager = {
             const selectedTargetInside = selectedTargetX != null
                 && selectedTargetZ != null
                 && building.containsInteriorPoint(selectedTargetX, selectedTargetZ)
-            playerInsideBuilding ||= playerInside
+            playerInsideBuilding ||= playerInside && building.affectsInteriorLighting()
             rebuildOpaqueBatch = building.updateFade(timeRate, playerInside, selectedTargetInside) || rebuildOpaqueBatch
         })
         if (rebuildOpaqueBatch) this.rebuildOpaqueBatch()

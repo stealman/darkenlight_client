@@ -64,10 +64,11 @@ const rectangularFootprint = (sizeX: number, sizeZ: number) => {
     return offsets
 }
 
-const buildingFootprint = (facing: string) => {
-    const width = facing === '+X' || facing === '-X' ? 3 : 5
-    const depth = facing === '+X' || facing === '-X' ? 5 : 3
-    const offsets = rectangularFootprint(width, depth)
+const buildingFootprint = (type: number, facing: string, width: number, depth: number) => {
+    if (type === 2) return rectangularFootprint(Math.max(2, width), Math.max(2, depth))
+    const houseWidth = facing === '+X' || facing === '-X' ? 3 : 5
+    const houseDepth = facing === '+X' || facing === '-X' ? 5 : 3
+    const offsets = rectangularFootprint(houseWidth, houseDepth)
     for (const localX of [1, 2, 3]) {
         if (facing === '+X') offsets.push({x: 3, z: 4 - localX})
         else if (facing === '-Z') offsets.push({x: 4 - localX, z: -1})
@@ -99,6 +100,10 @@ export const GMManager = {
     selectedStatic: ref (0),
     selectedBuildingType: ref(0),
     buildingFacing: ref('+Z'),
+    buildingWidth: ref(2),
+    buildingDepth: ref(2),
+    shedHighSide: ref('+Z'),
+    shedSideFills: ref({'+X': '', '-X': '', '+Z': '', '-Z': ''} as Record<string, string>),
     campObjectFacing: ref('+Z'),
     logPileLength: ref(1),
     torchFacing: ref('-Z'),
@@ -259,6 +264,11 @@ export const GMManager = {
         if (this.tab === GmTabs.BUILDINGS_EDIT) {
             const markerPos = new Vector3(GMSceneManager.hoverBlockMarker!.position.x, 0, GMSceneManager.hoverBlockMarker!.position.z)
             if (this.editingBuilding.value) {
+                Connector.sendMessage(new GMBuildingChange('MOVE', {
+                    id: this.editingBuilding.value.id,
+                    x: markerPos.x,
+                    z: markerPos.z,
+                }))
                 return
             }
             if (this.selectedBuildingType.value === -2) {
@@ -269,6 +279,10 @@ export const GMManager = {
                     z: markerPos.z,
                     type: this.selectedBuildingType.value,
                     facing: this.buildingFacing.value,
+                    width: this.buildingWidth.value,
+                    depth: this.buildingDepth.value,
+                    shedHighSide: this.shedHighSide.value,
+                    shedSideFills: this.shedSideFills.value,
                 }))
             } else if (this.selectedBuildingType.value === -1) {
                 this.pendingDelete = {type: 'BUILDING', x: markerPos.x, z: markerPos.z}
@@ -446,6 +460,10 @@ export const GMManager = {
         this.editingBuilding.value = building
         this.selectedBuildingType.value = building.tp
         this.buildingFacing.value = building.facing ?? '+Z'
+        this.buildingWidth.value = building.width ?? 2
+        this.buildingDepth.value = building.depth ?? 2
+        this.shedHighSide.value = building.shedHighSide ?? '+Z'
+        this.shedSideFills.value = { '+X': '', '-X': '', '+Z': '', '-Z': '', ...building.shedSideFills }
     },
 
     saveBuildingEdit() {
@@ -455,6 +473,10 @@ export const GMManager = {
             id: building.id,
             type: building.tp,
             facing: this.buildingFacing.value,
+            width: this.buildingWidth.value,
+            depth: this.buildingDepth.value,
+            shedHighSide: this.shedHighSide.value,
+            shedSideFills: this.shedSideFills.value,
         }))
         this.cancelBuildingEdit()
     },
@@ -569,7 +591,12 @@ export const GMManager = {
 
     updateBuildingMarkerFootprint() {
         GMSceneManager.setHoverBlockMarkerFootprint(this.selectedBuildingType.value > 0
-            ? buildingFootprint(this.buildingFacing.value)
+            ? buildingFootprint(
+                this.selectedBuildingType.value,
+                this.buildingFacing.value,
+                this.buildingWidth.value,
+                this.buildingDepth.value,
+            )
             : [{x: 0, z: 0}])
     },
 
@@ -970,6 +997,8 @@ watch([
 watch([
     GMManager.selectedBuildingType,
     GMManager.buildingFacing,
+    GMManager.buildingWidth,
+    GMManager.buildingDepth,
 ], () => GMManager.updateBuildingMarkerFootprint())
 
 

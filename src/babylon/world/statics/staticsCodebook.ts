@@ -52,7 +52,7 @@ export const StaticObjectsCodebook: Map<number, StaticObjectInfo> = new Map([
     [222, new StaticObjectInfo(222, 'Wall3_RED', true, 1, 0, 0, null)],
 
     [241, new StaticObjectInfo(241, 'FireplaceSmall', false, 1, 0, 4, 'CAMPFIRE')],
-    [242, new StaticObjectInfo(242, 'FireplaceLarge', true, 2, 0.3, 6, 'CAMPFIRE')],
+    [242, new StaticObjectInfo(242, 'FireplaceLarge', true, 2, 0.45, 6, 'CAMPFIRE')],
 
     [261, new StaticObjectInfo(261, 'WallTorch', false, 1, 0, 2, 'CAMPFIRE')],
     [262, new StaticObjectInfo(262, 'TorchStand', true, 1, 0.3, 2, 'CAMPFIRE')],
