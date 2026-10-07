@@ -23,6 +23,8 @@ import {ActionButtonsManager} from '@/gui/actionButtonsManager'
 import {TeleportEffect} from '@/babylon/gfx/teleportEffect'
 import {AudioManager} from '@/babylon/audio/audioManager'
 import {CharacterActions} from '@/data/actions/characterActions'
+import {MonsterManager} from '@/babylon/monsters/monsterManager'
+import {NpcManager} from '@/babylon/npc/npcManager'
 
 export const CharacterManager = {
     characters: new Map<number, Character>(),
@@ -211,12 +213,25 @@ export const CharacterManager = {
             }
         }
 
+        if (data.tp === 'M') {
+            MonsterManager.basicDataChange(data.res.dt)
+        } else if (data.tp === 'C') {
+            this.basicDataChange(data.res.dt)
+        }
+
         if (data.tgt === MyPlayer.myChar.id) {
             OverlayManager.addMyCharDamageNumber(MyPlayer.myChar, -data.res.hp, 'h')
         } else {
             // If I am healing someone else, show heal numbers above their head
             if (data.id === MyPlayer.myChar.id && data.tp === 'C') {
                 OverlayManager.addCharacterDamageNumber(data.tgt, -data.res.hp, 'h')
+            } else if (data.id === MyPlayer.myChar.id && data.tp === 'M') {
+                const guard = NpcManager.guards.get(data.tgt)
+                if (guard) {
+                    OverlayManager.addCharacterTargetDamageNumber(guard, -data.res.hp, 'h')
+                } else {
+                    OverlayManager.addMonsterDamageNumber(data.tgt, -data.res.hp, 'h')
+                }
             }
         }
     },

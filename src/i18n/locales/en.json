@@ -2,6 +2,9 @@
   "container": {
     "barrel": "Barrel"
   },
+  "npcs": {
+    "defaultGuardName": "Guard"
+  },
   "common": {
     "language": "Language",
     "czech": "Czech",

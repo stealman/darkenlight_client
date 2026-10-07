@@ -179,7 +179,7 @@ export const OverlayManager = {
             if (!NpcManager.visibleGuards.has(guard.id)) return
             const pos = guard.getNameTextNodeScreenPosition()
             if (pos) {
-                this.renderNpcLabel(pos, `${guard.name} [${guard.level}]`, guard.getTitle(), tightText)
+                this.renderNpcLabel(pos, guard.getName(), guard.getTitle(), tightText)
             }
         })
 
@@ -225,6 +225,10 @@ export const OverlayManager = {
         if (!char) {
             return
         }
+        this.addCharacterTargetDamageNumber(char, damage, hitType, hitQuality, time)
+    },
+
+    addCharacterTargetDamageNumber(char: Character, damage: number, hitType: string = 'h', hitQuality: 'P' | 'N' | 'G' | null = null, time: number = Date.now()) {
         const damageNumber = DamageNumber.fromHitCharacter(MyPlayer.myChar, char, damage, hitType, hitQuality, time)
         if (!damageNumber) {
             return

@@ -28,13 +28,13 @@ export const NpcManager = {
         const guard = new Guard(data)
         this.guards.set(guard.id, guard)
         this.setNpcPosition(guard, data.x, data.z)
+        if (data.mv?.length === 3) {
+            this.guardMove([guard.id, data.x, data.z, data.mv[0], data.mv[1], data.mv[2]])
+        }
         await guard.createModel(false)
         guard.insideView = this.isNpcInViewport(guard)
         if (guard.insideView) {
             await guard.model!.initAsync()
-        }
-        if (data.mv?.length === 3) {
-            this.guardMove([guard.id, data.x, data.z, data.mv[0], data.mv[1], data.mv[2]])
         }
     },
 
@@ -42,6 +42,7 @@ export const NpcManager = {
         const guard = this.guards.get(id)
         if (!guard) return
         if (dead) {
+            guard.clearMovementTarget()
             guard.killedTime = Date.now()
             guard.die()
         } else {
@@ -57,6 +58,7 @@ export const NpcManager = {
         if (!guard) return
         this.setNpcPosition(guard, data[1], data[2])
         const angle = Utils.getAngleBetweenPoints(guard.pos, new Vector3(data[3], guard.pos.y, data[4]))
+        guard.setMovementTarget(data[3], data[4])
         guard.setMoveAngle(angle)
         guard.setActualSpeed(data[5])
         guard.setMoveType('W')
@@ -66,8 +68,8 @@ export const NpcManager = {
         const guard = this.guards.get(data[0])
         if (!guard) return
         this.setNpcPosition(guard, data[1], data[2])
-        guard.setMoveAngle(null)
-        guard.setActualSpeed(0)
+        guard.clearMovementTarget()
+        guard.stopMovementLocally()
     },
 
     async addNpc(data: any) {
@@ -112,6 +114,7 @@ export const NpcManager = {
         }
         this.setNpcPosition(npc, data[1], data[2])
         const angle = Utils.getAngleBetweenPoints(npc.pos, new Vector3(data[3], npc.pos.y, data[4]))
+        npc.setMovementTarget(data[3], data[4])
         npc.setMoveAngle(angle)
         npc.setActualSpeed(data[5])
         npc.setMoveType('W')
@@ -123,8 +126,8 @@ export const NpcManager = {
             return
         }
         this.setNpcPosition(npc, data[1], data[2])
-        npc.setMoveAngle(null)
-        npc.setActualSpeed(0)
+        npc.clearMovementTarget()
+        npc.stopMovementLocally()
         npc.setLookAngle(data[3] - Math.PI / 4)
     },
 
@@ -140,8 +143,8 @@ export const NpcManager = {
         if (data.mv?.length === 3) {
             this.npcMove([npc.id, data.x, data.z, data.mv[0], data.mv[1], data.mv[2]])
         } else {
-            npc.setMoveAngle(null)
-            npc.setActualSpeed(0)
+            npc.clearMovementTarget()
+            npc.stopMovementLocally()
             npc.setLookAngle((data.a ?? npc.getLookAngle()) - Math.PI / 4)
         }
     },

@@ -1,6 +1,8 @@
 import Character from '@/babylon/character/character'
 import { Item, EquipSlotModelsCb, WeaponCategories, WeaponTypes } from '@/data/items/item'
-import { getLocale } from '@/i18n'
+import { getLocale, t } from '@/i18n'
+import { Vector3 } from '@babylonjs/core'
+import { Utils } from '@/utils/utils'
 
 type NpcEquipmentItem = {
     modelId: number
@@ -16,6 +18,7 @@ export class Npc extends Character {
     bodyType: string
     equipment: NpcEquipment
     wanderingRange: number
+    private movementTarget: Vector3 | null = null
 
     constructor(data: any) {
         super({
@@ -68,8 +71,30 @@ export class Npc extends Character {
     }
 
     onFrame(timeRate: number, actualTime: number, myChar: boolean) {
+        if (!this.dead && this.movementTarget && this.getMoveAngle() !== null) {
+            const remainingDistance = Math.hypot(
+                this.pos.x - this.movementTarget.x,
+                this.pos.z - this.movementTarget.z,
+            )
+            if (remainingDistance <= this.getActualSpeed() * timeRate) {
+                this.pos.x = this.movementTarget.x
+                this.pos.z = this.movementTarget.z
+                this.logicYpos = Utils.calculateWalkYPos(this.pos.x, this.pos.z, this.getBoxSize())
+                this.pos.y = this.logicYpos
+                this.clearMovementTarget()
+                this.stopMovementLocally()
+            }
+        }
         super.onFrame(timeRate, actualTime, myChar)
         this.nameDisplayTime = Number.MAX_SAFE_INTEGER
+    }
+
+    setMovementTarget(x: number, z: number) {
+        this.movementTarget = new Vector3(x, this.pos.y, z)
+    }
+
+    clearMovementTarget() {
+        this.movementTarget = null
     }
 
     getObjectType(): string {
@@ -112,6 +137,10 @@ export class Guard extends Npc {
 
     getObjectType(): string {
         return 'M'
+    }
+
+    getName(): string {
+        return this.name === 'Guard' ? t('npcs.defaultGuardName') : this.name
     }
 
     getRelationToMyPlayer(): 'ALLY' | 'ENEMY' | 'NEUTRAL' {

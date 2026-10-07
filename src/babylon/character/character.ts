@@ -227,6 +227,15 @@ class Character implements Attackable, EffectTarget {
             return
         }
 
+        // Attack visuals must have a local end even if the result message is
+        // delayed or no longer visible to this client. Guards share this
+        // character renderer, so otherwise their weapon trail can survive the
+        // final swing and follow them during patrol movement.
+        if (this.autoAttackEnd > 0) {
+            this.autoAttackEnd = 0
+            this.model?.setWeaponTrailEnabled(false)
+        }
+
         if (this.arrowShotTime > 0 && Date.now() >= this.arrowShotTime) {
             if (this == MyPlayer.myChar || this.insideView) {
                 AudioManager.playWeaponSwing(this.weaponSoundType, this.pos, this.autoAttackMessage?.prs === true)
@@ -523,7 +532,7 @@ class Character implements Attackable, EffectTarget {
     }
 
     finishHealing(result: HealingResultMessage) {
-        CharacterManager.basicDataChange(result.res.dt)
+        this.healingActive = false
     }
 
     potionUsed() {

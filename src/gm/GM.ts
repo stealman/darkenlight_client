@@ -329,7 +329,7 @@ export const GMManager = {
                 this.selectedNpc.value = null
                 return
             }
-            const name = this.selectedNpcName.value.trim()
+            const name = this.selectedNpcName.value.trim() || (this.selectedNpcType.value === 'guard' ? 'Guard' : '')
             if (!name) {
                 return
             }

@@ -2,6 +2,9 @@
   "container": {
     "barrel": "Barel"
   },
+  "npcs": {
+    "defaultGuardName": "Str\u00e1\u017e"
+  },
   "common": {
     "language": "Jazyk",
     "czech": "Čeština",

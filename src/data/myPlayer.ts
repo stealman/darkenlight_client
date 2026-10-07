@@ -323,11 +323,14 @@ export const MyPlayer = {
         if (this.isDead.value) {
             return
         }
-        if (TargetingManager.selectedTarget && TargetingManager.selectedTarget.getObjectType() == 'C') {
-            const tgt = TargetingManager.selectedTarget as Attackable
+        const selectedTarget = TargetingManager.selectedTarget
+        if (selectedTarget
+            && (selectedTarget.getObjectType() === 'C' || selectedTarget.getObjectType() === 'M')
+            && selectedTarget.getRelationToMyPlayer() !== 'ENEMY') {
+            const tgt = selectedTarget as Attackable
 
             if (tgt.hpPercent <= 99) {
-                Connector.sendMessage(new HealingTargetAction(TargetingManager.selectedTarget.id, tgt.getObjectType()))
+                Connector.sendMessage(new HealingTargetAction(selectedTarget.id, tgt.getObjectType()))
                 return
             }
         }

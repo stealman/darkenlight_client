@@ -69,6 +69,10 @@ export class Monster implements Attackable, EffectTarget {
                 this.arrowCreateTime = 0
             }
         } else {
+            if (this.autoAttackEnd > 0) {
+                this.autoAttackEnd = 0
+                this.model.setWeaponTrailEnabled(false)
+            }
             if (this.arrowShotTime > 0 && Date.now() >= this.arrowShotTime) {
                 if (this == MyPlayer.myChar || this.insideView) AudioManager.playWeaponSwing(this.getWeaponSoundType(), this.pos)
                 this.arrowShotTime = 0
