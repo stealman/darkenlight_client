@@ -173,7 +173,10 @@ export const GuiButtonsManager = {
             closestNpc !== null
         )
         this.opportunityButtons.get(GuiOpportunityActions.NPC_EDIT.name)!.setVisible(
-            MyPlayer.myChar?.className === 'GM' && selectedTarget?.getObjectType() === 'N'
+            MyPlayer.myChar?.className === 'GM' && (
+                selectedTarget?.getObjectType() === 'N'
+                || (selectedTarget?.getObjectType() === 'M' && NpcManager.guards.has(selectedTarget.id))
+            )
         )
 
         this.trySendFireArrowsAction()
@@ -303,7 +306,9 @@ export const GuiButtonsManager = {
 
     clickOnNpcEditButton() {
         const target = TargetingManager.selectedTarget
-        if (MyPlayer.myChar?.className === 'GM' && target?.getObjectType() === 'N') {
+        const isNpc = target?.getObjectType() === 'N'
+        const isGuard = target?.getObjectType() === 'M' && NpcManager.guards.has(target.id)
+        if (MyPlayer.myChar?.className === 'GM' && (isNpc || isGuard)) {
             GMManager.openNpcDetails(target)
         }
     },

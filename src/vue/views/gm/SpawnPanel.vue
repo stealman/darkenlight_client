@@ -65,7 +65,7 @@
                 </tr>
                 <tr>
                     <td>Aggro Rng.</td>
-                    <td><input type='number' @focus="$event.target.select()" :disabled="selectedSpawn.id > 0 && selectedSpawnAction !=='EDIT'" v-model.number='selectedSpawn.aggroRange' min='1' max='32' /></td>
+                    <td><input type='number' @focus="$event.target.select()" :disabled="selectedSpawn.id > 0 && selectedSpawnAction !=='EDIT'" v-model.number='selectedSpawn.aggroRange' min='0' max='32' /></td>
                 </tr>
                 <tr>
                     <td>Wander Rng.</td>

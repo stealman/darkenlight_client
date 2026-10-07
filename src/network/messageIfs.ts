@@ -376,6 +376,13 @@ export interface GMNpcDetailsData {
     equipment: Record<string, {modelId: number, materialId: number}>
     features: any[]
     wanderingRange: number
+    guard?: {
+        level: number
+        aggroRange: number
+        pursueRange: number
+        respawnSeconds: number
+        patrolPoints: Array<{x: number, z: number}>
+    }
 }
 
 export interface GMItemCodebookItem {

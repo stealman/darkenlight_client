@@ -1,4 +1,4 @@
-import { Npc } from '@/babylon/npc/npc'
+import { Guard, Npc } from '@/babylon/npc/npc'
 import { ViewportManager } from '@/utils/viewport'
 import { MyPlayer } from '@/data/myPlayer'
 import { Utils } from '@/utils/utils'
@@ -8,10 +8,66 @@ import { TargetingManager } from '@/gui/targettingManager'
 export const NpcManager = {
     npcs: new Map<number, Npc>(),
     visibleNpcs: new Set<number>(),
+    guards: new Map<number, Guard>(),
+    visibleGuards: new Set<number>(),
 
     initialize() {
         this.npcs = new Map<number, Npc>()
         this.visibleNpcs = new Set<number>()
+        this.guards = new Map<number, Guard>()
+        this.visibleGuards = new Set<number>()
+    },
+
+    async addGuard(data: any) {
+        if (this.guards.has(data.id)) {
+            const guard = this.guards.get(data.id)!
+            this.setNpcPosition(guard, data.x, data.z)
+            guard.hpPercent = Number(data.hpp ?? guard.hpPercent)
+            return
+        }
+        const guard = new Guard(data)
+        this.guards.set(guard.id, guard)
+        this.setNpcPosition(guard, data.x, data.z)
+        await guard.createModel(false)
+        guard.insideView = this.isNpcInViewport(guard)
+        if (guard.insideView) {
+            await guard.model!.initAsync()
+        }
+        if (data.mv?.length === 3) {
+            this.guardMove([guard.id, data.x, data.z, data.mv[0], data.mv[1], data.mv[2]])
+        }
+    },
+
+    removeGuard(id: number, dead: boolean) {
+        const guard = this.guards.get(id)
+        if (!guard) return
+        if (dead) {
+            guard.killedTime = Date.now()
+            guard.die()
+        } else {
+            guard.model?.removeFromScene()
+            this.guards.delete(id)
+            this.visibleGuards.delete(id)
+        }
+        if (guard === TargetingManager.selectedTarget) TargetingManager.unselectTarget()
+    },
+
+    guardMove(data: number[]) {
+        const guard = this.guards.get(data[0])
+        if (!guard) return
+        this.setNpcPosition(guard, data[1], data[2])
+        const angle = Utils.getAngleBetweenPoints(guard.pos, new Vector3(data[3], guard.pos.y, data[4]))
+        guard.setMoveAngle(angle)
+        guard.setActualSpeed(data[5])
+        guard.setMoveType('W')
+    },
+
+    guardMoveStop(data: number[]) {
+        const guard = this.guards.get(data[0])
+        if (!guard) return
+        this.setNpcPosition(guard, data[1], data[2])
+        guard.setMoveAngle(null)
+        guard.setActualSpeed(0)
     },
 
     async addNpc(data: any) {
@@ -46,6 +102,7 @@ export const NpcManager = {
 
     clearWorld() {
         Array.from(this.npcs.keys()).forEach((id) => this.removeNpc(id))
+        Array.from(this.guards.keys()).forEach((id) => this.removeGuard(id, false))
     },
 
     npcMove(data: number[]) {
@@ -102,10 +159,25 @@ export const NpcManager = {
             this.npcs.forEach((npc) => {
                 npc.setVisible(this.visibleNpcs.has(npc.id))
             })
+            this.visibleGuards.clear()
+            this.guards.forEach((guard, id) => {
+                if (!guard.killedTime && this.isNpcInViewport(guard) && guard.getDistanceFromMyPlayer() <= MyPlayer.visibilityRadius) {
+                    this.visibleGuards.add(id)
+                }
+                guard.setVisible(this.visibleGuards.has(id) || guard.killedTime > 0)
+            })
         }
 
         this.npcs.forEach((npc) => {
             npc.onFrame(timeRate, actualTime, false)
+        })
+        this.guards.forEach((guard, id) => {
+            guard.onFrame(timeRate, actualTime, false)
+            if (guard.killedTime && actualTime - guard.killedTime > 4000) {
+                guard.model?.removeFromScene()
+                this.guards.delete(id)
+                this.visibleGuards.delete(id)
+            }
         })
     },
 
@@ -128,6 +200,11 @@ export const NpcManager = {
                 return npc
             }
         }
+        for (const guard of this.guards.values()) {
+            if (!guard.killedTime && Math.abs(guard.pos.x - x) < 0.75 && Math.abs(guard.pos.z - z) < 0.75) {
+                return guard
+            }
+        }
         return null
     },
 
@@ -136,6 +213,11 @@ export const NpcManager = {
         for (const npc of this.npcs.values()) {
             if (Math.abs(npc.pos.x - x) < size && Math.abs(npc.pos.z - z) < halfSize + npc.getBoxSize() / 2) {
                 return npc
+            }
+        }
+        for (const guard of this.guards.values()) {
+            if (!guard.killedTime && Math.abs(guard.pos.x - x) < size && Math.abs(guard.pos.z - z) < halfSize + guard.getBoxSize() / 2) {
+                return guard
             }
         }
         return null

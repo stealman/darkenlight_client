@@ -175,6 +175,14 @@ export const OverlayManager = {
             }
         })
 
+        NpcManager.guards.forEach((guard) => {
+            if (!NpcManager.visibleGuards.has(guard.id)) return
+            const pos = guard.getNameTextNodeScreenPosition()
+            if (pos) {
+                this.renderNpcLabel(pos, `${guard.name} [${guard.level}]`, guard.getTitle(), tightText)
+            }
+        })
+
         if (MyPlayer.myChar.nameDisplayTime > time || MyPlayer.myChar.activeTimedAction) {
             const pos = MyPlayer.myChar.getNameTextNodeScreenPosition()
             if (pos) {

@@ -318,7 +318,7 @@ class Character implements Attackable, EffectTarget {
             this.autoAttackTarget.markCombatActivity()
         }
 
-        if (TargetingManager.selectedTarget === null) {
+        if (TargetingManager.selectedTarget === null && this.getObjectType() !== 'M') {
             TargetingManager.setSelectedTarget(this.autoAttackTarget)
         }
 

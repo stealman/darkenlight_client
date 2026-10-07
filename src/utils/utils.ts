@@ -18,7 +18,7 @@ export const Utils = {
 
     getAttackTargetByTypeAndId(type: string, id: number): Attackable | null {
         if (type === 'M') {
-            return MonsterManager.monsters.get(id) || null
+            return MonsterManager.monsters.get(id) || NpcManager.guards.get(id) || null
         }
         if (type === 'C') {
             return id === MyPlayer.myChar.id ? MyPlayer.myChar : CharacterManager.characters.get(id) || null

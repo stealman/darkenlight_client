@@ -8,6 +8,12 @@
         </template>
 
         <template v-else>
+            <label>NPC type</label>
+            <select v-model="selectedNpcType">
+                <option value="common">Common</option>
+                <option value="guard">Guard</option>
+            </select>
+
             <label>NPC name</label>
             <input v-model="selectedNpcName" maxlength="32" placeholder="NPC name" />
 
@@ -20,6 +26,7 @@
 import { GMManager } from '@/gm/GM'
 
 const selectedNpcName = GMManager.selectedNpcName
+const selectedNpcType = GMManager.selectedNpcType
 const selectedNpc = GMManager.selectedNpc
 
 const cancelSelectedNpc = () => {

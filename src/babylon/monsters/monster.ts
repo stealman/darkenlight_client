@@ -18,6 +18,7 @@ export class Monster implements Attackable, EffectTarget {
     mobType: MonsterType
     model: MonsterModel
     targetPoint: Vector3 | null = null
+    alignment: 'evil' | 'neutral' | 'friendly'
 
     hp: number
     hpPercent: number = 100
@@ -45,10 +46,11 @@ export class Monster implements Attackable, EffectTarget {
     nameDisplayTime: number = 0
     publiclyVisibleAffects: Map<number, PubliclyVisibleAffect> = new Map<number, PubliclyVisibleAffect>()
 
-    constructor(id: number, mobType: MonsterType, xPos: number, zPos: number, hpp: number) {
+    constructor(id: number, mobType: MonsterType, xPos: number, zPos: number, hpp: number, alignment: 'evil' | 'neutral' | 'friendly' = 'evil') {
         this.id = id
         this.mobType = mobType
         this.hpPercent = hpp
+        this.alignment = alignment
         this.pos = new Vector3(xPos, 0, zPos)
         this.logicYpos = Utils.calculateWalkYPos(this.pos.x, this.pos.z, 0.4)
         this.pos.y = this.logicYpos
@@ -241,7 +243,7 @@ export class Monster implements Attackable, EffectTarget {
     }
 
     getRelationToMyPlayer(): 'ALLY' | 'ENEMY' | 'NEUTRAL' {
-        return 'ENEMY'
+        return this.alignment === 'evil' ? 'ENEMY' : this.alignment === 'friendly' ? 'ALLY' : 'NEUTRAL'
     }
 
     getWeaponSoundType(): string {

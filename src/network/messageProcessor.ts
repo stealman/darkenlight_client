@@ -169,7 +169,7 @@ export const MessageProcessor = {
     },
 
     addMonster(data) {
-        MonsterManager.addMonster(data.id, data.tp, { x: data.x, z: data.z }, data.hpp, data.mv, data.paf)
+        MonsterManager.addMonster(data.id, data.tp, { x: data.x, z: data.z }, data.hpp, data.mv, data.paf, data.role, data.alignment, data.guard)
     },
 
     monsterMove(data) {

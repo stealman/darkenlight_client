@@ -6,7 +6,6 @@ import { MonsterCodebook, MonsterType } from '@/babylon/monsters/codebook/monste
 import { ViewportManager } from '@/utils/viewport'
 import { TargetingManager } from '@/gui/targettingManager'
 import { MyPlayer } from '@/data/myPlayer'
-import { CharacterManager } from '@/babylon/character/characterManager'
 import {
     AttackableBasicTO,
     AutoAttackMessage,
@@ -17,6 +16,7 @@ import {
 import { OverlayManager } from '@/gui/overlay/overlayManager'
 import { Utils } from '@/utils/utils'
 import { PubliclyVisibleAffect } from '@/data/affects'
+import { NpcManager } from '@/babylon/npc/npcManager'
 
 export const MonsterManager = {
     monsters: new Map as Map<number, Monster>,
@@ -30,7 +30,11 @@ export const MonsterManager = {
         await MonsterLoader.initialize()
     },
 
-    addMonster (id: number, type: number, position: { x: number, z: number }, hpp: number, mv: number[] | undefined, ef: [{tp: number, p: number}] | undefined) {
+    addMonster (id: number, type: number, position: { x: number, z: number }, hpp: number, mv: number[] | undefined, ef: [{tp: number, p: number}] | undefined, role?: string, alignment?: string, guard?: any) {
+        if (role === 'guard' && guard) {
+            void NpcManager.addGuard({id, tp: type, x: position.x, z: position.z, hpp, mv, paf: ef, role, alignment, guard})
+            return
+        }
         if (this.monsters.has(id)) {
             const mob = this.monsters.get(id)
             mob!.pos.x = position.x
@@ -38,10 +42,11 @@ export const MonsterManager = {
             mob!.logicYpos = Utils.calculateWalkYPos(mob!.pos.x, mob!.pos.z, mob!.getBoxSize())
             mob!.pos.y = mob!.logicYpos
             mob!.hpPercent = hpp
+            mob!.alignment = alignment === 'neutral' || alignment === 'friendly' ? alignment : 'evil'
             if (ef) mob!.consumePubliclyVisibleAffects(ef)
         } else {
             const monsterType: MonsterType = MonsterCodebook.getMonsterTypeById(type)
-            const monster = new Monster(id, monsterType, position.x, position.z, hpp)
+            const monster = new Monster(id, monsterType, position.x, position.z, hpp, alignment === 'neutral' || alignment === 'friendly' ? alignment : 'evil')
             const monsterModel = new MonsterModel(monsterType, monster)
             monster.model = monsterModel
 
@@ -62,6 +67,10 @@ export const MonsterManager = {
     },
 
     removeMonster (id: number, dead: boolean) {
+        if (NpcManager.guards.has(id)) {
+            NpcManager.removeGuard(id, dead)
+            return
+        }
         if (this.monsters.has(id)) {
             const mob = this.monsters.get(id)
             if (dead) {
@@ -83,6 +92,10 @@ export const MonsterManager = {
     },
 
     monsterMove(id: number, position: { x: number, z: number }, target: { x: number, z: number }, speed: number) {
+        if (NpcManager.guards.has(id)) {
+            NpcManager.guardMove([id, position.x, position.z, target.x, target.z, speed])
+            return
+        }
         if (this.monsters.has(id)) {
             const mob = this.monsters.get(id)
             mob!.runSpeed = speed
@@ -94,17 +107,24 @@ export const MonsterManager = {
     },
 
     autoAttack(data: AutoAttackMessage) {
+        const guard = NpcManager.guards.get(data.id)
+        if (guard) {
+            guard.startAutoAttack({...data, cd: data.dur})
+            return
+        }
         const mob = this.monsters.get(data.id)
-        if (data.tp === 'C') {
-            const targetChar = MyPlayer.myChar.id === data.tgt ? MyPlayer.myChar : CharacterManager.characters.get(data.tgt)
-            if (!targetChar) {
-                return
-            }
-            mob?.doAutoAttack(targetChar, data.dur)
+        const target = Utils.getAttackTargetByTypeAndId(data.tp, data.tgt)
+        if (target) {
+            mob?.doAutoAttack(target, data.dur)
         }
     },
 
     autoAttackFinished(data: AutoAttackResultMessage) {
+        const guard = NpcManager.guards.get(data.id)
+        if (guard) {
+            guard.finishAutoAttack(data)
+            return
+        }
         const monster = this.monsters.get(data.id)
         if (!monster) {
             return
@@ -116,6 +136,11 @@ export const MonsterManager = {
     },
 
     basicDataChange(data: AttackableBasicTO) {
+        const guard = NpcManager.guards.get(data.id)
+        if (guard) {
+            guard.basicDataChange(data)
+            return
+        }
         const monster = this.monsters.get(data.id)
         if (!monster) {
             return
@@ -124,6 +149,10 @@ export const MonsterManager = {
     },
 
     monsterMoveStop(id: number, position: { x: number, z: number }, teleported: boolean = false) {
+        if (NpcManager.guards.has(id)) {
+            NpcManager.guardMoveStop([id, position.x, position.z])
+            return
+        }
         if (this.monsters.has(id)) {
             const mob = this.monsters.get(id)
             mob!.pos.x = position.x

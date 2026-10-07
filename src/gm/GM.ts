@@ -115,6 +115,7 @@ export const GMManager = {
     entranceDestinationX: ref(99),
     entranceDestinationZ: ref(80),
     selectedNpcName: ref(''),
+    selectedNpcType: ref<'common' | 'guard'>('common'),
     selectedNpc: ref<any | null>(null),
     npcDetailsDialogOpenRequested: ref(false),
     teleportWorlds: ref([] as Array<{id: number, name: string}>),
@@ -336,6 +337,7 @@ export const GMManager = {
                 x: markerPos.x,
                 z: markerPos.z,
                 name: name,
+                type: this.selectedNpcType.value,
                 wanderingRange: 0
             }))
         }
@@ -773,8 +775,10 @@ export const GMManager = {
         GMSceneManager.setHoverBlockMarkerSize(1)
         GMSceneManager.hoverBlockMarker?.setEnabled(true)
         const selectedTarget = TargetingManager.selectedTarget
-        if (selectedTarget?.getObjectType() === 'N') {
-            const npc = NpcManager.npcs.get(selectedTarget.id)
+        if (selectedTarget?.getObjectType() === 'N' || (selectedTarget?.getObjectType() === 'M' && NpcManager.guards.has(selectedTarget.id))) {
+            const npc = selectedTarget.getObjectType() === 'N'
+                ? NpcManager.npcs.get(selectedTarget.id)
+                : NpcManager.guards.get(selectedTarget.id)
             if (npc) {
                 this.selectNpcForEditing(npc)
             }
@@ -943,7 +947,7 @@ export const GMManager = {
 
     selectNpcForEditing(npc: any) {
         this.selectedNpc.value = {
-            id: npc.id,
+            id: npc.definitionId ?? npc.id,
             name: npc.name,
             titleCZ: npc.titleCZ ?? npc.title ?? '',
             titleEN: npc.titleEN ?? npc.title ?? '',
@@ -970,7 +974,8 @@ export const GMManager = {
                         ? {potionTiers: [...(feature.settings?.potionTiers ?? ['small', 'normal', 'great'])]}
                     : {}
             })),
-            wanderingRange: npc.wanderingRange ?? npc.wr ?? 0
+            wanderingRange: npc.wanderingRange ?? npc.wr ?? 0,
+            guard: npc.guard ?? npc.guardMetadata ?? {level: npc.level ?? 1, aggroRange: 6, pursueRange: 12, respawnSeconds: 15, patrolPoints: []},
         }
     },
 
@@ -978,7 +983,7 @@ export const GMManager = {
         if (npc) {
             this.selectNpcForEditing(npc)
         }
-        const id = npc?.id ?? this.selectedNpc.value?.id
+        const id = npc?.definitionId ?? npc?.id ?? this.selectedNpc.value?.id
         if (Number.isInteger(id)) {
             Connector.sendMessage(new GMNpcAction('DETAILS', {id: id}))
         }
@@ -994,7 +999,7 @@ export const GMManager = {
         this.selectedNpcName.value = ''
     },
 
-    setSelectedNpcDetails(name: string, titleCZ: string, titleEN: string, bodyType: string, equipment: any, features: any[], wanderingRange: number) {
+    setSelectedNpcDetails(name: string, titleCZ: string, titleEN: string, bodyType: string, equipment: any, features: any[], wanderingRange: number, guard: any) {
         if (this.selectedNpc.value) {
             this.selectedNpc.value.name = name
             this.selectedNpc.value.titleCZ = titleCZ
@@ -1003,6 +1008,7 @@ export const GMManager = {
             this.selectedNpc.value.equipment = equipment
             this.selectedNpc.value.features = features
             this.selectedNpc.value.wanderingRange = wanderingRange
+            this.selectedNpc.value.guard = guard
         }
     }
 }

@@ -152,6 +152,19 @@ export const TargetingManager = {
             }
         })
 
+        NpcManager.guards.forEach((guard) => {
+            if (!NpcManager.visibleGuards.has(guard.id) || !guard.model?.model) return
+            const mesh = guard.model.model.getChildMeshes()[0]
+            if (!mesh) return
+            if (!useSphere) {
+                const bbox = mesh.getBoundingInfo().boundingBox
+                if (ray.intersectsBoxMinMax(bbox.minimumWorld, bbox.maximumWorld)) target = guard
+            } else {
+                const sphere = guard.model.model.getBoundingInfo().boundingSphere
+                if (ray.intersectsSphere({center: sphere.centerWorld, radius: sphere.radiusWorld * 2} as any)) target = guard
+            }
+        })
+
         if (!useSphere && (target == null || target === this.selectedTarget)) {
             this.resolvePickRay(ray, true)
         } else if (target != null) {

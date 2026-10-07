@@ -15,6 +15,30 @@
                 </label>
             </div>
 
+            <div v-if="npcType === 'guard'" class="npc-details-row">
+                <label class="npc-details-control">
+                    <span>Guard level</span>
+                    <input v-model.number="guardLevel" type="number" min="1" max="10" step="1" />
+                </label>
+                <label class="npc-details-control">
+                    <span>Respawn (s)</span>
+                    <input v-model.number="guardRespawnSeconds" type="number" min="1" max="3600" step="1" />
+                </label>
+                <label class="npc-details-control">
+                    <span>Aggro range</span>
+                    <input v-model.number="guardAggroRange" type="number" min="1" max="32" step="1" />
+                </label>
+                <label class="npc-details-control">
+                    <span>Pursue range</span>
+                    <input v-model.number="guardPursueRange" type="number" min="1" max="64" step="1" />
+                </label>
+            </div>
+
+            <label v-if="npcType === 'guard'" class="npc-details-control">
+                <span>Patrol points</span>
+                <textarea v-model="guardPatrolPoints" rows="3" placeholder="One absolute X,Z point per line"></textarea>
+            </label>
+
             <div class="npc-details-row">
                 <label class="npc-details-control">
                     <span>Title CZ</span>
@@ -69,11 +93,18 @@
                         <option v-for="option in weaponOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
                     </select>
                 </label>
+
+                <label class="npc-details-control">
+                    <span>Shield</span>
+                    <select v-model="shieldSelection">
+                        <option v-for="option in shieldOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+                    </select>
+                </label>
             </div>
 
             <div class="npc-features-divider"></div>
 
-            <div class="npc-feature-add">
+            <div v-if="npcType !== 'guard'" class="npc-feature-add">
                 <span>Features</span>
                 <select v-model="featureTypeToAdd">
                     <option value="">Add feature</option>
@@ -82,7 +113,7 @@
                 <button class="dialog-button" :disabled="!featureTypeToAdd" @click="addFeature"><span class="ui-text-gradient--button-state">Add</span></button>
             </div>
 
-            <div class="npc-features-list">
+            <div v-if="npcType !== 'guard'" class="npc-features-list">
             <div v-for="(feature, index) in features" :key="feature.type" class="npc-feature">
                 <div class="npc-feature-heading">
                     <span>{{ featureLabels[feature.type] }}</span>
@@ -307,6 +338,9 @@ const bodyOptions = armorSlotOptions(
     armorOptions('plate armor', EquipSlotModelsCb.ARMOR_PLATE.modelId, [6, 401, 402, 403, 404, 405, 406]),
     armorOptions('Chain Mail', EquipSlotModelsCb.CHAIN_MAIL.modelId, [11, 901, 902, 903, 904, 905, 906]),
 )
+const shieldOptions = armorSlotOptions(
+    armorOptions('shield', EquipSlotModelsCb.SHIELD.modelId, [7, 501, 502, 503, 504, 505, 506]),
+)
 const weaponNames = {
     LONGSWORD: 'Longsword', BROADSWORD: 'Broadsword', GREATSWORD: 'Greatsword',
     HAND_AXE: 'Hand axe', BATTLE_AXE: 'Battle axe', GREATAXE: 'Great axe', PICKAXE: 'Pickaxe',
@@ -363,7 +397,13 @@ const vendorIndividualItemOptions = {
 }
 const dialogVisible = ref(false)
 const npcName = ref('')
+const npcType = ref('common')
 const wanderingRange = ref(0)
+const guardLevel = ref(1)
+const guardAggroRange = ref(6)
+const guardPursueRange = ref(12)
+const guardRespawnSeconds = ref(15)
+const guardPatrolPoints = ref('')
 const titleCZ = ref('')
 const titleEN = ref('')
 const bodyType = ref('steve')
@@ -372,6 +412,7 @@ const armsSelection = ref('')
 const legsSelection = ref('')
 const bodySelection = ref('')
 const weaponSelection = ref('')
+const shieldSelection = ref('')
 const features = ref([])
 const featureTypeToAdd = ref('')
 const vendorItemSelections = ref({weapons: null, bows: null, metalArmor: null, leatherArmor: null, resources: null})
@@ -435,13 +476,20 @@ const openDialog = () => {
     titleCZ.value = npc?.titleCZ ?? legacyTitle
     titleEN.value = npc?.titleEN ?? legacyTitle
     npcName.value = npc.name ?? ''
+    npcType.value = npc.type ?? 'common'
     wanderingRange.value = npc.wanderingRange ?? 0
+    guardLevel.value = npc.guard?.level ?? 1
+    guardAggroRange.value = npc.guard?.aggroRange ?? 6
+    guardPursueRange.value = npc.guard?.pursueRange ?? 12
+    guardRespawnSeconds.value = npc.guard?.respawnSeconds ?? 15
+    guardPatrolPoints.value = (npc.guard?.patrolPoints ?? []).map((point) => `${point.x},${point.z}`).join('\n')
     bodyType.value = npc?.bodyType ?? 'steve'
     headSelection.value = selectionFromItem(npc?.equipment?.head)
     armsSelection.value = selectionFromItem(npc?.equipment?.arms)
     legsSelection.value = selectionFromItem(npc?.equipment?.legs)
     bodySelection.value = selectionFromItem(npc?.equipment?.body)
     weaponSelection.value = selectionFromItem(npc?.equipment?.weapon)
+    shieldSelection.value = selectionFromItem(npc?.equipment?.shield)
     features.value = (npc?.features ?? []).map((feature) => ({
         type: feature.type,
         settings: feature.type === 'vendor' || feature.type === 'repairer'
@@ -473,13 +521,35 @@ const closeDialog = () => {
 }
 
 const saveDetails = () => {
+    const patrolPoints = guardPatrolPoints.value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).map((line) => {
+        const [x, z] = line.split(',').map((value) => Number(value.trim()))
+        return {x, z}
+    })
+    if (npcType.value === 'guard' && patrolPoints.some((point) => !Number.isInteger(point.x) || !Number.isInteger(point.z))) {
+        window.alert('Patrol points must use one integer X,Z pair per line.')
+        return
+    }
+    if (npcType.value === 'guard' && (!Number.isInteger(guardLevel.value) || guardLevel.value < 1 || guardLevel.value > 10
+        || guardAggroRange.value < 1 || guardAggroRange.value > 32
+        || guardPursueRange.value < guardAggroRange.value || guardPursueRange.value > 64
+        || !Number.isInteger(guardRespawnSeconds.value) || guardRespawnSeconds.value < 1 || guardRespawnSeconds.value > 3600)) {
+        window.alert('Guard values are invalid. Pursue range must be at least the aggro range.')
+        return
+    }
     GMManager.setSelectedNpcDetails(npcName.value, titleCZ.value.trim(), titleEN.value.trim(), bodyType.value, {
         head: itemFromSelection(headSelection.value),
         arms: itemFromSelection(armsSelection.value),
         legs: itemFromSelection(legsSelection.value),
         body: itemFromSelection(bodySelection.value),
         weapon: itemFromSelection(weaponSelection.value),
-    }, features.value, wanderingRange.value)
+        shield: itemFromSelection(shieldSelection.value),
+    }, npcType.value === 'guard' ? [] : features.value, wanderingRange.value, {
+        level: guardLevel.value,
+        aggroRange: guardAggroRange.value,
+        pursueRange: guardPursueRange.value,
+        respawnSeconds: guardRespawnSeconds.value,
+        patrolPoints,
+    })
     GMManager.saveSelectedNpc()
     closeDialog()
 }

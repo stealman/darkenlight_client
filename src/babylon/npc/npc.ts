@@ -1,5 +1,5 @@
 import Character from '@/babylon/character/character'
-import { Item, EquipSlotModelsCb } from '@/data/items/item'
+import { Item, EquipSlotModelsCb, WeaponCategories, WeaponTypes } from '@/data/items/item'
 import { getLocale } from '@/i18n'
 
 type NpcEquipmentItem = {
@@ -7,7 +7,7 @@ type NpcEquipmentItem = {
     materialId: number
 }
 
-type NpcEquipment = Partial<Record<'head' | 'arms' | 'legs' | 'body' | 'weapon', NpcEquipmentItem>>
+type NpcEquipment = Partial<Record<'head' | 'arms' | 'legs' | 'body' | 'weapon' | 'shield', NpcEquipmentItem>>
 
 export class Npc extends Character {
     type: string
@@ -42,6 +42,7 @@ export class Npc extends Character {
 
         const slots: Array<[keyof NpcEquipment, number]> = [
             ['weapon', 1],
+            ['shield', 6],
             ['body', 2],
             ['head', 3],
             ['arms', 4],
@@ -56,7 +57,8 @@ export class Npc extends Character {
             if (!slotInfo) {
                 continue
             }
-            this.equipSet.set(slotInfo.slot, new Item(-(this.id * 10 + itemId), itemData.modelId, slot === 'weapon' ? 'W' : 'A', itemData.modelId, itemData.materialId, null, '', new Map()))
+            const weaponCategory = slotInfo.weaponType === WeaponTypes.BOW ? WeaponCategories.BOW : null
+            this.equipSet.set(slotInfo.slot, new Item(-(this.id * 10 + itemId), itemData.modelId, slot === 'weapon' ? 'W' : 'A', itemData.modelId, itemData.materialId, null, '', new Map(), weaponCategory))
         }
 
         if (this.model?.initialized) {
@@ -80,5 +82,43 @@ export class Npc extends Character {
 
     getRelationToMyPlayer(): 'ALLY' | 'ENEMY' | 'NEUTRAL' {
         return 'ALLY'
+    }
+}
+
+export class Guard extends Npc {
+    definitionId: number
+    alignment: 'neutral' | 'friendly'
+    level: number
+    guardMetadata: any
+    killedTime: number = 0
+
+    constructor(data: any) {
+        super({
+            ...data.guard,
+            id: data.id,
+            x: data.x,
+            z: data.z,
+            hpp: data.hpp,
+            bsz: 0.8,
+            wr: data.guard?.wanderingRange ?? 0,
+        })
+        this.definitionId = data.guard.definitionId
+        this.alignment = data.alignment === 'friendly' ? 'friendly' : 'neutral'
+        this.level = data.guard.level ?? 1
+        this.guardMetadata = data.guard.metadata ?? {}
+        this.type = 'guard'
+        this.hpPercent = Number(data.hpp ?? 100)
+    }
+
+    getObjectType(): string {
+        return 'M'
+    }
+
+    getRelationToMyPlayer(): 'ALLY' | 'ENEMY' | 'NEUTRAL' {
+        return this.alignment === 'friendly' ? 'ALLY' : 'NEUTRAL'
+    }
+
+    isMyChar(): boolean {
+        return false
     }
 }
