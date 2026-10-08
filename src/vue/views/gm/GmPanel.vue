@@ -28,9 +28,9 @@
                         <input v-model="dayNightTime" type="time" step="60" @keyup.enter="setDayNightTime()" />
                     </label>
                     <button @click="setDayNightTime()">SET &amp; FREEZE</button>
-                    <button @click="setDayNightTime('07:00')">SUNRISE</button>
+                    <button @click="setDayNightTime('08:00')">SUNRISE</button>
                     <button @click="setDayNightTime('12:00')">DAY</button>
-                    <button @click="setDayNightTime('19:00')">SUNSET</button>
+                    <button @click="setDayNightTime('18:00')">SUNSET</button>
                     <button @click="setDayNightTime('00:00')">NIGHT</button>
                     <button @click="resumeDayNightCycle">NATURAL CYCLE</button>
                     <button @click="triggerLightning">LIGHTNING</button>

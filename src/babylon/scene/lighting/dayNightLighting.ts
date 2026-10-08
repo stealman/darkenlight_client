@@ -15,11 +15,12 @@ import {
 } from '@/babylon/scene/lighting/lightConfig'
 import { LightningEffect } from '@/babylon/scene/lighting/lightningEffect'
 
-const SUNRISE_END_PHASE = 1 / 12
-const SUNSET_START_PHASE = 1 / 2
-const SUNSET_END_PHASE = 7 / 12
-const PERSONAL_LIGHT_SUNRISE_END_PHASE = 1 / 32
-const PERSONAL_LIGHT_SUNSET_START_PHASE = 53 / 96
+const SUNRISE_START_PHASE = 1 / 24
+const SUNRISE_END_PHASE = 1 / 8
+const SUNSET_START_PHASE = 11 / 24
+const SUNSET_END_PHASE = 13 / 24
+const PERSONAL_LIGHT_SUNRISE_END_PHASE = 7 / 96
+const PERSONAL_LIGHT_SUNSET_START_PHASE = 49 / 96
 const LIGHTING_PHASE_OFFSET = 3 / 4
 const NIGHT_SUN_INTENSITY_FACTOR = 0
 const DEFAULT_SUN_INTENSITY = 0.75
@@ -95,8 +96,10 @@ export function getGameTimeInfo(host: DayNightLightingHost) {
     const totalMinutes = Math.floor(phase * 24 * 60)
     const hours = Math.floor(totalMinutes / 60)
     const minutes = totalMinutes % 60
-    const phaseName = lightingPhase < SUNRISE_END_PHASE
-        ? 'sunrise'
+    const phaseName = lightingPhase < SUNRISE_START_PHASE
+        ? 'night'
+        : lightingPhase < SUNRISE_END_PHASE
+            ? 'sunrise'
         : lightingPhase < SUNSET_START_PHASE
             ? 'day'
             : lightingPhase < SUNSET_END_PHASE
@@ -118,8 +121,10 @@ export function updateDayNightLighting(host: DayNightLightingHost) {
     let daylightFactor = 0
     let twilightFactor = 0
 
-    if (phase < SUNRISE_END_PHASE) {
-        const progress = phase / SUNRISE_END_PHASE
+    if (phase < SUNRISE_START_PHASE) {
+        daylightFactor = 0
+    } else if (phase < SUNRISE_END_PHASE) {
+        const progress = (phase - SUNRISE_START_PHASE) / (SUNRISE_END_PHASE - SUNRISE_START_PHASE)
         daylightFactor = smoothstep(progress)
         twilightFactor = Math.sin(Math.PI * progress)
     } else if (phase < SUNSET_START_PHASE) {
@@ -268,8 +273,14 @@ function getLightingPhase(clockPhase: number): number {
 }
 
 function getPersonalLightFactor(lightingPhase: number): number {
+    if (lightingPhase < SUNRISE_START_PHASE) {
+        return 1
+    }
     if (lightingPhase < PERSONAL_LIGHT_SUNRISE_END_PHASE) {
-        return 1 - smoothstep(lightingPhase / PERSONAL_LIGHT_SUNRISE_END_PHASE)
+        return 1 - smoothstep(
+            (lightingPhase - SUNRISE_START_PHASE)
+            / (PERSONAL_LIGHT_SUNRISE_END_PHASE - SUNRISE_START_PHASE),
+        )
     }
     if (lightingPhase < PERSONAL_LIGHT_SUNSET_START_PHASE) {
         return 0
