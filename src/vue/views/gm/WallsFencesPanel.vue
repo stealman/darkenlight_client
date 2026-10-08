@@ -80,6 +80,39 @@
         </div>
 
         <div style="margin-top: 1vh">
+            <label class="tree-item" :class="{ selected: 'CEMETERY_FENCE' === selectedObjectType }" @click="selectObjectType('CEMETERY_FENCE')">Cemetery Iron Fence</label>
+            <label v-if="selectedObjectType === 'CEMETERY_FENCE'">
+                &nbsp;&nbsp;dir.
+                <select v-model="palisadeOrientation">
+                    <option value="X">X</option>
+                    <option value="Z">Z</option>
+                </select>
+            </label>
+        </div>
+
+        <div style="margin-top: 1vh">
+            <label class="tree-item" :class="{ selected: 'CEMETERY_WALL' === selectedObjectType }" @click="selectObjectType('CEMETERY_WALL')">Ruined Cemetery Wall</label>
+            <label v-if="selectedObjectType === 'CEMETERY_WALL'">
+                &nbsp;&nbsp;dir.
+                <select v-model="palisadeOrientation">
+                    <option value="X">X</option>
+                    <option value="Z">Z</option>
+                </select>
+            </label>
+        </div>
+
+        <div style="margin-top: 1vh">
+            <label class="tree-item" :class="{ selected: 'CEMETERY_STONE_WALL' === selectedObjectType }" @click="selectObjectType('CEMETERY_STONE_WALL')">Cemetery Stone Wall</label>
+            <label v-if="selectedObjectType === 'CEMETERY_STONE_WALL'">
+                &nbsp;&nbsp;dir.
+                <select v-model="palisadeOrientation">
+                    <option value="X">X</option>
+                    <option value="Z">Z</option>
+                </select>
+            </label>
+        </div>
+
+        <div style="margin-top: 1vh">
             <label class="tree-item" :class="{ selected: 'WALKABLE_BLOCK' === selectedObjectType }" @click="selectObjectType('WALKABLE_BLOCK')">Walkable Block</label>
             <label v-if="selectedObjectType === 'WALKABLE_BLOCK'">
                 &nbsp;&nbsp;height
@@ -124,6 +157,9 @@ const objects = [
     { type: "PALISADE_SPIKED", name: "PalisadeSpiked", id: 205 },
     { type: "WALKABLE_BLOCK", name: "WalkableBlock", id: 206 },
     { type: "CAMP_FENCE", name: "CampFence", id: 207 },
+    { type: "CEMETERY_FENCE", name: "CemeteryIronFence", id: 208 },
+    { type: "CEMETERY_WALL", name: "RuinedCemeteryWall", id: 209 },
+    { type: "CEMETERY_STONE_WALL", name: "CemeteryStoneWall", id: 210 },
 
     { type: "WALL3", name: "Wall3_GRAY", id: 221 },
     { type: "WALL3", name: "Wall3_RED", id: 222 },

@@ -52,7 +52,17 @@
             </select>
         </div>
 
-        <div v-if="selectedObjectType === 'CAMP'" style="margin-top: 1vh">
+        <div style="margin-top: 1vh">
+            <label class="tree-item" :class="{ selected: 'CEMETERY' === selectedObjectType }" @click="selectObjectType('CEMETERY')">Cemetery</label>
+            &nbsp;&nbsp;
+            <select v-if="selectedObjectType === 'CEMETERY'" :disabled="isEditing" @change="selectObject($event.target.value)">
+                <option v-for="obj in objects.filter(s => s.type === 'CEMETERY')" :key="obj.id" :value="obj.id" :selected="obj.id === selectedObject">
+                    {{ obj.name }}
+                </option>
+            </select>
+        </div>
+
+        <div v-if="selectedObjectType === 'CAMP' || selectedObjectType === 'CEMETERY'" style="margin-top: 1vh">
             <label>Direction</label>
             &nbsp;&nbsp;
             <select v-model="campObjectFacing">
@@ -147,6 +157,14 @@ const objects = [
     { type: "CAMP", name: "Barrel", id: 305 },
     { type: "CAMP", name: "Hay Stack", id: 306 },
     { type: "CAMP", name: "Stump with Axe", id: 307 },
+    { type: "CEMETERY", name: "Headstone", id: 321 },
+    { type: "CEMETERY", name: "Stone Cross", id: 322 },
+    { type: "CEMETERY", name: "Stone Tomb 1x2", id: 323 },
+    { type: "CEMETERY", name: "Obelisk", id: 324 },
+    { type: "CEMETERY", name: "Gargoyle", id: 325 },
+    { type: "CEMETERY", name: "Gargoyle on Pedestal", id: 328 },
+    { type: "CEMETERY", name: "Stone Frame Grave", id: 329 },
+    { type: "CEMETERY", name: "Stone Frame Grave (shifted slab)", id: 330 },
 ]
 
 const previouslySelectedObject = objects.find(obj => obj.id === selectedObject.value)

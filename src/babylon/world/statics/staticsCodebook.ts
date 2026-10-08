@@ -47,6 +47,9 @@ export const StaticObjectsCodebook: Map<number, StaticObjectInfo> = new Map([
     [205, new StaticObjectInfo(205, 'PalisadeSpiked', true, 1, 0, 0, null)],
     [206, new StaticObjectInfo(206, 'WalkableBlock', false, 1, 0, 0, null, 1, true)],
     [207, new StaticObjectInfo(207, 'CampFence', true, 1, 0.39, 0, null)],
+    [208, new StaticObjectInfo(208, 'CemeteryIronFence', true, 1, 0.34, 0, null)],
+    [209, new StaticObjectInfo(209, 'RuinedCemeteryWall', true, 1, 0.2, 0, null)],
+    [210, new StaticObjectInfo(210, 'CemeteryStoneWall', true, 1, 0.2, 0, null)],
 
     [221, new StaticObjectInfo(221, 'Wall3_GRAY', true, 1, 0, 0, null)],
     [222, new StaticObjectInfo(222, 'Wall3_RED', true, 1, 0, 0, null)],
@@ -65,4 +68,13 @@ export const StaticObjectsCodebook: Map<number, StaticObjectInfo> = new Map([
     [305, new StaticObjectInfo(305, 'CampBarrel', true, 1, 0.12, 0, null)],
     [306, new StaticObjectInfo(306, 'HayStack', true, 1, 0.2, 0, null)],
     [307, new StaticObjectInfo(307, 'StumpWithAxe', true, 1, 0.2, 0, null)],
+
+    [321, new StaticObjectInfo(321, 'CemeteryHeadstone', true, 1, 0.23, 0, null)],
+    [322, new StaticObjectInfo(322, 'CemeteryCross', true, 1, 0.24, 0, null)],
+    [323, new StaticObjectInfo(323, 'StoneTomb', true, 1, 0.08, 0, null, 2)],
+    [324, new StaticObjectInfo(324, 'CemeteryObelisk', true, 1, 0.18, 0, null)],
+    [325, new StaticObjectInfo(325, 'StoneGargoyle', true, 1, 0.18, 0, null)],
+    [328, new StaticObjectInfo(328, 'GargoyleOnPedestal', true, 1, 0.04, 0, null)],
+    [329, new StaticObjectInfo(329, 'StoneFrameGrave', false, 1, 0, 0, null, 2, true)],
+    [330, new StaticObjectInfo(330, 'DisplacedStoneFrameGrave', false, 1, 0, 0, null, 2, true)],
 ])

@@ -34,6 +34,20 @@ import {
 } from '@/babylon/world/statics/objects/campObjects'
 import { StaticEquipPartsRenderer } from '@/babylon/world/statics/staticEquipPartsRenderer'
 import { WeaponModelsCb } from '@/babylon/item/codebook/weaponModelsCb'
+import {
+    CemeteryCross,
+    CemeteryHeadstone,
+    CemeteryIronFence,
+    CemeteryObjectMetadata,
+    CemeteryObelisk,
+    CemeteryStoneWall,
+    CemeteryWallMetadata,
+    GargoyleOnPedestal,
+    RuinedCemeteryWall,
+    StoneGargoyle,
+    StoneFrameGrave,
+    StoneTomb,
+} from '@/babylon/world/statics/objects/cemeteryObjects'
 
 const isEmbeddedInSnow = (type: number) => isShrubType(type) || type === 281
 
@@ -66,13 +80,13 @@ export const StaticsManager = {
         })
     },
 
-    consumeObjects(data: Array<{ tp: number, x: number, z: number, meta?: WallTorchMetadata | StoneEntranceMetadata | PalisadeMetadata | WalkableBlockMetadata | CampObjectMetadata | CampFenceMetadata, tmp?: boolean }>) {
+    consumeObjects(data: Array<{ tp: number, x: number, z: number, meta?: WallTorchMetadata | StoneEntranceMetadata | PalisadeMetadata | WalkableBlockMetadata | CampObjectMetadata | CampFenceMetadata | CemeteryObjectMetadata | CemeteryWallMetadata, tmp?: boolean }>) {
         data.forEach(obj => {
             this.addObject(obj)
         })
     },
 
-    addObject(obj: { tp: number, x: number, z: number, meta?: WallTorchMetadata | StoneEntranceMetadata | PalisadeMetadata | WalkableBlockMetadata | CampObjectMetadata | CampFenceMetadata, tmp?: boolean }) {
+    addObject(obj: { tp: number, x: number, z: number, meta?: WallTorchMetadata | StoneEntranceMetadata | PalisadeMetadata | WalkableBlockMetadata | CampObjectMetadata | CampFenceMetadata | CemeteryObjectMetadata | CemeteryWallMetadata, tmp?: boolean }) {
         const block = WorldDataManager.getBlockMap()[obj.x][obj.z]
         const y = block.totalHeight - (isEmbeddedInSnow(obj.tp) && block.snowed ? 0.1 : 0)
         const pos = new Vector3(obj.x, y, obj.z)
@@ -128,6 +142,9 @@ export const StaticsManager = {
                 MaterialEnum1.WOOD_1.uv,
                 obj.meta as CampFenceMetadata,
             )); break
+            case 208: this.allStatics.push(new CemeteryIronFence(obj.tp, pos, MaterialEnum1.BRICK_BLACK.uv, MaterialEnum1.STEEL_1.uv, obj.meta as CemeteryWallMetadata)); break
+            case 209: this.allStatics.push(new RuinedCemeteryWall(obj.tp, pos, MaterialEnum1.BRICK_GRAY.uv, MaterialEnum1.BRICK_GRAY.uv, obj.meta as CemeteryWallMetadata)); break
+            case 210: this.allStatics.push(new CemeteryStoneWall(obj.tp, pos, MaterialEnum1.BRICK_GRAY.uv, MaterialEnum1.BRICK_GRAY.uv, obj.meta as CemeteryWallMetadata)); break
 
             case 221: this.allStatics.push(new Wall3(obj.tp, pos, rotation, MaterialEnum1.BRICK_GRAY.uv)); break
             case 222: this.allStatics.push(new Wall3(obj.tp, pos, rotation, MaterialEnum1.BRICK_RED.uv)); break
@@ -163,6 +180,21 @@ export const StaticsManager = {
                 StaticEquipPartsRenderer.getPrefab(WeaponModelsCb.HAND_AXE.id),
                 obj.meta as CampObjectMetadata,
             )); break
+            case 321: this.allStatics.push(new CemeteryHeadstone(obj.tp, pos, MaterialEnum1.ROCK1.uv, MaterialEnum1.BRICK_BLACK.uv, obj.meta as CemeteryObjectMetadata)); break
+            case 322: this.allStatics.push(new CemeteryCross(obj.tp, pos, MaterialEnum1.ROCK1.uv, MaterialEnum1.BRICK_BLACK.uv, obj.meta as CemeteryObjectMetadata)); break
+            case 323: this.allStatics.push(new StoneTomb(obj.tp, pos, MaterialEnum1.BRICK_GRAY.uv, MaterialEnum1.ROCK1.uv, obj.meta as CemeteryObjectMetadata)); break
+            case 324: this.allStatics.push(new CemeteryObelisk(obj.tp, pos, MaterialEnum1.BRICK_BLACK.uv, MaterialEnum1.ROCK1.uv, obj.meta as CemeteryObjectMetadata)); break
+            case 325: this.allStatics.push(new StoneGargoyle(obj.tp, pos, MaterialEnum1.ROCK1.uv, MaterialEnum1.BRICK_BLACK.uv, obj.meta as CemeteryObjectMetadata)); break
+            case 328: this.allStatics.push(new GargoyleOnPedestal(obj.tp, pos, MaterialEnum1.BRICK_BLACK.uv, MaterialEnum1.ROCK1.uv, obj.meta as CemeteryObjectMetadata)); break
+            case 329:
+            case 330: this.allStatics.push(new StoneFrameGrave(
+                obj.tp,
+                pos,
+                MaterialEnum1.BRICK_GRAY.uv,
+                MaterialEnum1.ROCK1.uv,
+                MaterialEnum1.WOOD_1.uv,
+                obj.meta as CemeteryObjectMetadata,
+            )); break
             default:
                 break
         }
@@ -170,7 +202,11 @@ export const StaticsManager = {
         if (this.allStatics.length > previousCount) {
             const added = this.allStatics[this.allStatics.length - 1]
             if (added.getWalkableHeight() !== null) {
-                this.walkableObjectsByTile.set(`${obj.x};${obj.z}`, added)
+                for (let offsetX = 0; offsetX < added.getSizeX(); offsetX++) {
+                    for (let offsetZ = 0; offsetZ < added.getSizeZ(); offsetZ++) {
+                        this.walkableObjectsByTile.set(`${obj.x + offsetX};${obj.z + offsetZ}`, added)
+                    }
+                }
             }
         }
     },
@@ -202,8 +238,8 @@ export const StaticsManager = {
                     if (this.activeBarrel === obj) this.activeBarrel = null
                 }
                 this.dungeonEntrances.delete(obj)
-                if (this.walkableObjectsByTile.get(`${x};${z}`) === obj) {
-                    this.walkableObjectsByTile.delete(`${x};${z}`)
+                for (const [tile, walkable] of this.walkableObjectsByTile) {
+                    if (walkable === obj) this.walkableObjectsByTile.delete(tile)
                 }
                 obj.dispose()
                 this.allStatics.splice(i, 1)
@@ -324,12 +360,18 @@ export const StaticsManager = {
     resolveConnectingCorners() {
         const palisades = this.allStatics.filter((obj): obj is PalisadeWall2 => obj instanceof PalisadeWall2)
         const fences = this.allStatics.filter((obj): obj is CampFence => obj instanceof CampFence)
+        const cemeteryFences = this.allStatics.filter((obj): obj is CemeteryIronFence => obj instanceof CemeteryIronFence)
+        const cemeteryWalls = this.allStatics.filter((obj): obj is RuinedCemeteryWall => obj instanceof RuinedCemeteryWall)
+        const cemeteryStoneWalls = this.allStatics.filter((obj): obj is CemeteryStoneWall => obj instanceof CemeteryStoneWall)
 
         this.resolveCorners(palisades)
         this.resolveCorners(fences)
+        this.resolveCorners(cemeteryFences)
+        this.resolveCorners(cemeteryWalls)
+        this.resolveCorners(cemeteryStoneWalls)
     },
 
-    resolveCorners<T extends PalisadeWall2 | CampFence>(objects: T[]) {
+    resolveCorners<T extends PalisadeWall2 | CampFence | CemeteryIronFence | RuinedCemeteryWall | CemeteryStoneWall>(objects: T[]) {
         const objectsByTile = new Map(objects.map((obj) => [`${obj.position.x};${obj.position.z}`, obj]))
 
         for (const object of objects) {
