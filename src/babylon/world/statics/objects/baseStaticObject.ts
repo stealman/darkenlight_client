@@ -21,6 +21,8 @@ export interface StaticObject {
     isObjectInCollision(tgtX: number, tgtZ: number, size: number): boolean
     getCollisionTolerance(): number
     getWalkableHeight(): number | null
+    getPlacementSurfaceHeight(): number | null
+    shouldPlaceOnStatic(): boolean
     clearRenderMatrixCapture(): void
     captureRenderMatrices(blockStart: number, prefabStart: number): void
     applyDeleteBounceOffset(offset: number): Mesh[]
@@ -79,6 +81,14 @@ export abstract class BaseStaticObject implements StaticObject {
 
     getWalkableHeight(): number | null {
         return null
+    }
+
+    getPlacementSurfaceHeight(): number | null {
+        return this.getWalkableHeight()
+    }
+
+    shouldPlaceOnStatic(): boolean {
+        return false
     }
 
     clearRenderMatrixCapture() {

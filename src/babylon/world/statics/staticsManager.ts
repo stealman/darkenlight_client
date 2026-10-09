@@ -8,12 +8,14 @@ import { PrefabShrub1x1_tall } from '@/babylon/world/prefabs/shrub1x1-tall'
 import { PrefabShrub1x1_small } from '@/babylon/world/prefabs/shrub1x1-small'
 import { Lights } from '@/babylon/scene/lights'
 import { StaticObject } from '@/babylon/world/statics/objects/baseStaticObject'
-import { FireplaceLarge, FireplaceSmall } from '@/babylon/world/statics/objects/fireplace'
+import { FireplaceLarge, FireplaceMetadata, FireplaceSmall } from '@/babylon/world/statics/objects/fireplace'
 import { Shrub1x1_small, Shrub1x1_tall, Shrub2x2 } from '@/babylon/world/statics/objects/shrubs'
 import { PalisadeMetadata, PalisadeWall2, StoneEntrance, StoneEntranceMetadata, Wall2, Wall3 } from '@/babylon/world/statics/objects/walls'
 import { SpikedPalisade, SpikedPalisadeMetadata } from '@/babylon/world/statics/objects/spikedPalisade'
 import { TorchStand, TorchStandMetadata } from '@/babylon/world/statics/objects/torchStand'
 import { WallTorch, WallTorchMetadata } from '@/babylon/world/statics/objects/wallTorch'
+import { LanternStand, LanternStandMetadata } from '@/babylon/world/statics/objects/lanternStand'
+import { CemeteryEmberBowl, CemeteryEmberBowlMetadata } from '@/babylon/world/statics/objects/cemeteryEmberBowl'
 import { StaticObjectsCodebook } from '@/babylon/world/statics/staticsCodebook'
 import { MyPlayer } from '@/data/myPlayer'
 import { AudioManager } from '@/babylon/audio/audioManager'
@@ -86,13 +88,14 @@ export const StaticsManager = {
         })
     },
 
-    consumeObjects(data: Array<{ tp: number, x: number, z: number, meta?: WallTorchMetadata | StoneEntranceMetadata | PalisadeMetadata | WalkableBlockMetadata | CampObjectMetadata | CampFenceMetadata | CemeteryObjectMetadata | CemeteryWallMetadata, tmp?: boolean }>) {
+    consumeObjects(data: Array<{ tp: number, x: number, z: number, meta?: WallTorchMetadata | TorchStandMetadata | LanternStandMetadata | FireplaceMetadata | CemeteryEmberBowlMetadata | StoneEntranceMetadata | PalisadeMetadata | WalkableBlockMetadata | CampObjectMetadata | CampFenceMetadata | CemeteryObjectMetadata | CemeteryWallMetadata, tmp?: boolean }>) {
         data.forEach(obj => {
-            this.addObject(obj)
+            this.addObject(obj, false)
         })
+        this.resolveStackedStaticPositions()
     },
 
-    addObject(obj: { tp: number, x: number, z: number, meta?: WallTorchMetadata | StoneEntranceMetadata | PalisadeMetadata | WalkableBlockMetadata | CampObjectMetadata | CampFenceMetadata | CemeteryObjectMetadata | CemeteryWallMetadata, tmp?: boolean }) {
+    addObject(obj: { tp: number, x: number, z: number, meta?: WallTorchMetadata | TorchStandMetadata | LanternStandMetadata | FireplaceMetadata | CemeteryEmberBowlMetadata | StoneEntranceMetadata | PalisadeMetadata | WalkableBlockMetadata | CampObjectMetadata | CampFenceMetadata | CemeteryObjectMetadata | CemeteryWallMetadata, tmp?: boolean }, resolveStacking = true) {
         const block = WorldDataManager.getBlockMap()[obj.x][obj.z]
         const y = block.totalHeight - (isEmbeddedInSnow(obj.tp) && block.snowed ? 0.1 : 0)
         const pos = new Vector3(obj.x, y, obj.z)
@@ -155,8 +158,8 @@ export const StaticsManager = {
             case 221: this.allStatics.push(new Wall3(obj.tp, pos, rotation, MaterialEnum1.BRICK_GRAY.uv)); break
             case 222: this.allStatics.push(new Wall3(obj.tp, pos, rotation, MaterialEnum1.BRICK_RED.uv)); break
 
-            case 241: this.allStatics.push(new FireplaceSmall(obj.tp, pos, rotation, MaterialEnum1.WOOD_1.uv, obj.tmp !== true)); break
-            case 242: this.allStatics.push(new FireplaceLarge(obj.tp, pos, rotation, MaterialEnum1.WOOD_1.uv, obj.tmp !== true)); break
+            case 241: this.allStatics.push(new FireplaceSmall(obj.tp, pos, rotation, MaterialEnum1.WOOD_1.uv, obj.tmp !== true, obj.meta as FireplaceMetadata)); break
+            case 242: this.allStatics.push(new FireplaceLarge(obj.tp, pos, rotation, MaterialEnum1.WOOD_1.uv, obj.tmp !== true, obj.meta as FireplaceMetadata)); break
             case 261: this.allStatics.push(new WallTorch(obj.tp, pos, MaterialEnum1.WOOD_1.uv, obj.meta as WallTorchMetadata)); break
             case 262: this.allStatics.push(new TorchStand(
                 obj.tp,
@@ -165,6 +168,13 @@ export const StaticsManager = {
                 MaterialEnum1.STEEL_1.uv,
                 MaterialEnum1.WOOD_1.uv,
                 obj.meta as TorchStandMetadata,
+            )); break
+            case 263: this.allStatics.push(new LanternStand(
+                obj.tp,
+                pos,
+                MaterialEnum1.ROCK1.uv,
+                MaterialEnum1.STEEL_1.uv,
+                obj.meta as LanternStandMetadata,
             )); break
             case 281: {
                 const entrance = new StoneEntrance(obj.tp, pos, MaterialEnum1.BRICK_GRAY.uv, obj.meta as StoneEntranceMetadata)
@@ -207,6 +217,13 @@ export const StaticsManager = {
             case 334: this.allStatics.push(new CemeteryCrossPedestal(obj.tp, pos, MaterialEnum1.ROCK1.uv, MaterialEnum1.BRICK_DARK_GRAY.uv, obj.meta as CemeteryObjectMetadata)); break
             case 335: this.allStatics.push(new FallenCemeteryCross(obj.tp, pos, MaterialEnum1.ROCK1.uv)); break
             case 336: this.allStatics.push(new FallenCemeteryHeadstone(obj.tp, pos, MaterialEnum1.ROCK1.uv, MaterialEnum1.BRICK_DARK_GRAY.uv)); break
+            case 337: this.allStatics.push(new CemeteryEmberBowl(
+                obj.tp,
+                pos,
+                MaterialEnum1.BRICK_DARK_GRAY.uv,
+                MaterialEnum1.EMBERS.uv,
+                obj.meta as CemeteryEmberBowlMetadata,
+            )); break
             default:
                 break
         }
@@ -220,6 +237,23 @@ export const StaticsManager = {
                     }
                 }
             }
+            if (resolveStacking) this.resolveStackedStaticPositions()
+        }
+    },
+
+    resolveStackedStaticPositions() {
+        const surfaceHeights = new Map<string, number>()
+        for (const obj of this.allStatics) {
+            const surfaceHeight = obj.getPlacementSurfaceHeight()
+            if (surfaceHeight == null || obj.shouldPlaceOnStatic()) continue
+            const key = `${obj.position.x};${obj.position.z}`
+            surfaceHeights.set(key, Math.max(surfaceHeights.get(key) ?? 0, surfaceHeight))
+        }
+
+        for (const obj of this.allStatics) {
+            if (!obj.shouldPlaceOnStatic()) continue
+            const surfaceHeight = surfaceHeights.get(`${obj.position.x};${obj.position.z}`) ?? 0
+            obj.renderPosition.y = obj.position.y + surfaceHeight
         }
     },
 
@@ -230,6 +264,7 @@ export const StaticsManager = {
             obj.position.y = y
             obj.renderPosition.y = y
         })
+        this.resolveStackedStaticPositions()
     },
 
     removeObjects(data: Array<{ x: number, z: number, tp?: number }>) {
@@ -255,6 +290,7 @@ export const StaticsManager = {
                 }
                 obj.dispose()
                 this.allStatics.splice(i, 1)
+                this.resolveStackedStaticPositions()
                 StaticFireParticleManager.flush()
                 break
             }
@@ -435,7 +471,9 @@ export const StaticsManager = {
                 obj.onHidden()
             }
 
-            if (obj instanceof FireplaceLarge) {
+            if (obj instanceof FireplaceSmall || obj instanceof FireplaceLarge || obj instanceof WallTorch
+                || obj instanceof TorchStand || obj instanceof LanternStand || obj instanceof CemeteryEmberBowl
+                || obj instanceof StoneEntrance) {
                 obj.setLightVisible(ViewportManager.isPointNearVisibleBounds(
                     obj.renderPosition.x,
                     obj.renderPosition.z,

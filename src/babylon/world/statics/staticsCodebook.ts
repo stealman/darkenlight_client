@@ -59,6 +59,7 @@ export const StaticObjectsCodebook: Map<number, StaticObjectInfo> = new Map([
 
     [261, new StaticObjectInfo(261, 'WallTorch', false, 1, 0, 2, 'CAMPFIRE')],
     [262, new StaticObjectInfo(262, 'TorchStand', true, 1, 0.3, 2, 'CAMPFIRE')],
+    [263, new StaticObjectInfo(263, 'LanternStand', true, 1, 0.3, 2, 'CAMPFIRE')],
     [281, new StaticObjectInfo(281, 'StoneEntrance', true, 4, 0, 0, null, 2)],
 
     [301, new StaticObjectInfo(301, 'CampBench', false, 2, 0, 0, null, 1)],
@@ -83,4 +84,5 @@ export const StaticObjectsCodebook: Map<number, StaticObjectInfo> = new Map([
     [334, new StaticObjectInfo(334, 'CemeteryCrossPedestal', false, 1, 0, 0, null)],
     [335, new StaticObjectInfo(335, 'FallenCemeteryCross', false, 1, 0, 0, null)],
     [336, new StaticObjectInfo(336, 'FallenCemeteryHeadstone', false, 1, 0, 0, null)],
+    [337, new StaticObjectInfo(337, 'CemeteryEmberBowl', true, 1, 0.3, 2, 'CAMPFIRE')],
 ])

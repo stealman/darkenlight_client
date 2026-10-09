@@ -245,6 +245,10 @@ export class CemeteryPedestal extends CemeteryObject {
         this.part(0.72, 0.78, 0.72, 0, 0.57, 0, this.accentMaterial)
         this.part(0.86, 0.16, 0.86, 0, 1.04, 0, this.material)
     }
+
+    getPlacementSurfaceHeight(): number {
+        return 1.12
+    }
 }
 
 export class StoneFrameGrave extends CemeteryObject {

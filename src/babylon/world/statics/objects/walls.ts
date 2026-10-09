@@ -5,6 +5,7 @@ import { WorldDataManager } from '@/data/worldDataManager'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { BaseStaticObject } from '@/babylon/world/statics/objects/baseStaticObject'
 import { getPalisadeRandom } from '@/babylon/world/statics/palisadeRandom'
+import { getStaticLightIntensityLevelFactor, getStaticLightLevel, getStaticLightRangeLevelFactor, type StaticLightMetadata } from '@/babylon/scene/lighting/lightConfig'
 
 export class Wall2 extends BaseStaticObject {
     constructor(type: number, position: Vector3, rotation: number, material: Vector2) {
@@ -273,7 +274,7 @@ export class Wall3 extends BaseStaticObject {
 
 export type StoneEntranceFacing = '-X' | '+X' | '-Z' | '+Z'
 
-export interface StoneEntranceMetadata {
+export interface StoneEntranceMetadata extends StaticLightMetadata {
     facing?: StoneEntranceFacing
     destinationWorldId?: number
     destinationX?: number
@@ -288,6 +289,8 @@ export class StoneEntrance extends BaseStaticObject {
     private readonly facing: StoneEntranceFacing
     private readonly portalLightPosition = new Vector3()
     private readonly portalLightDirection = new Vector3()
+    private readonly lightIntensity: number
+    private readonly lightRange: number
     private portalPlane: Mesh | null = null
     private deleteBounceOffset = 0
 
@@ -296,11 +299,15 @@ export class StoneEntrance extends BaseStaticObject {
         this.facing = metadata?.facing === '-X' || metadata?.facing === '+X' || metadata?.facing === '-Z' || metadata?.facing === '+Z'
             ? metadata.facing
             : '+Z'
+        this.lightIntensity = getStaticLightLevel(metadata?.lightIntensity)
+        this.lightRange = getStaticLightLevel(metadata?.lightRange)
         this.status = {
             facing: this.facing,
             destinationWorldId: metadata?.destinationWorldId,
             destinationX: metadata?.destinationX,
             destinationZ: metadata?.destinationZ,
+            lightIntensity: this.lightIntensity,
+            lightRange: this.lightRange,
         }
         this.renderPosition.set(position.x - 0.5 + this.getSizeX() / 2, position.y, position.z - 0.5 + this.getSizeZ() / 2)
     }
@@ -349,8 +356,8 @@ export class StoneEntrance extends BaseStaticObject {
         Lights.registerStaticLight(this.getLightId(), this.portalLightPosition, {
             color: PORTAL_LIGHT_COLOR,
             height: 0,
-            intensity: 3.6,
-            range: 8,
+            intensity: 3.6 * getStaticLightIntensityLevelFactor(this.lightIntensity),
+            range: 8 * getStaticLightRangeLevelFactor(this.lightRange),
             pulse: true,
             direction: this.portalLightDirection,
             angle: Math.PI * 0.72,
@@ -358,6 +365,15 @@ export class StoneEntrance extends BaseStaticObject {
             outdoorRangeFactor: 1,
             castsShadows: false,
         })
+    }
+
+    setLightVisible(visible: boolean) {
+        if (visible) this.registerLight()
+        else Lights.unregisterStaticLight(this.getLightId())
+    }
+
+    getLightVisibilityRadius(): number {
+        return 8 * getStaticLightRangeLevelFactor(this.lightRange)
     }
 
     private updatePortalLightTransform() {

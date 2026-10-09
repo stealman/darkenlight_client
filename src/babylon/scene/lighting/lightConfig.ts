@@ -38,3 +38,18 @@ export const DEFAULT_ENVIRONMENT_INTENSITY = 0.375
 export const NIGHT_ENVIRONMENT_INTENSITY_FACTOR = 0.05
 export const OUTDOOR_STATIC_LIGHT_INTENSITY_FACTOR = 1.4
 export const OUTDOOR_STATIC_LIGHT_RANGE_FACTOR = 1.5
+
+export interface StaticLightMetadata {
+    lightIntensity?: number
+    lightRange?: number
+}
+
+export const STATIC_LIGHT_LEVEL_DEFAULT = 5
+
+export const getStaticLightLevel = (value: number | undefined): number => {
+    return Number.isInteger(value) && value != null && value >= 1 && value <= 10 ? value : STATIC_LIGHT_LEVEL_DEFAULT
+}
+
+export const getStaticLightIntensityLevelFactor = (level: number): number => getStaticLightLevel(level) / 5
+
+export const getStaticLightRangeLevelFactor = (level: number): number => 0.5 + ((getStaticLightLevel(level) - 1) * 0.125)

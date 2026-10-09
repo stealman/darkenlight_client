@@ -62,7 +62,7 @@
             </select>
         </div>
 
-        <div v-if="selectedObjectType === 'CAMP' || (selectedObjectType === 'CEMETERY' && selectedObject !== 335 && selectedObject !== 336)" style="margin-top: 1vh">
+        <div v-if="selectedObjectType === 'CAMP' || (selectedObjectType === 'CEMETERY' && selectedObject !== 335 && selectedObject !== 336 && selectedObject !== 337)" style="margin-top: 1vh">
             <label>Direction</label>
             &nbsp;&nbsp;
             <select v-model="campObjectFacing">
@@ -83,22 +83,35 @@
             </template>
         </div>
 
-        <div v-if="selectedObjectType === 'TORCH'" style="margin-top: 1vh">
-            <label>Direction</label>
-            &nbsp;&nbsp;
-            <select v-model="torchFacing">
-                <option value="-X">-X</option>
-                <option value="+X">+X</option>
-                <option value="-Z">-Z</option>
-                <option value="+Z">+Z</option>
-            </select>
-            &nbsp;&nbsp;
-            <template v-if="selectedObject === 261">
-                &nbsp;&nbsp;
-                <label>Height above floor</label>
-                &nbsp;&nbsp;
-                <input v-model.number="torchMountHeight" type="number" min="-10" max="10" step="0.1">
-            </template>
+        <div v-if="selectedObjectType === 'TORCH'" style="margin-top: 1vh; display: grid; gap: 6px">
+            <label style="display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px">
+                Direction
+                <select v-model="torchFacing">
+                    <option value="-X">-X</option>
+                    <option value="+X">+X</option>
+                    <option value="-Z">-Z</option>
+                    <option value="+Z">+Z</option>
+                </select>
+            </label>
+            <label v-if="selectedObject === 261" style="display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px">
+                Height above floor
+                <input v-model.number="torchMountHeight" type="number" min="-10" max="10" step="0.1" style="width: 64px">
+            </label>
+        </div>
+
+        <div v-if="hasLightSettings" style="margin-top: 1vh; display: grid; gap: 6px">
+            <label style="display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px">
+                Light intensity
+                <select v-model.number="lightIntensity">
+                    <option v-for="level in lightLevels" :key="level" :value="level">{{ level }}</option>
+                </select>
+            </label>
+            <label style="display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px">
+                Light range
+                <select v-model.number="lightRange">
+                    <option v-for="level in lightLevels" :key="level" :value="level">{{ level }}</option>
+                </select>
+            </label>
         </div>
 
         <div v-if="selectedObjectType === 'ENTRANCE'" style="margin-top: 1vh; display: grid; gap: 6px">
@@ -135,6 +148,8 @@ const selectedObjectType = ref("")
 const selectedObject = GMManager.selectedStatic
 const torchFacing = GMManager.torchFacing
 const torchMountHeight = GMManager.torchMountHeight
+const lightIntensity = GMManager.lightIntensity
+const lightRange = GMManager.lightRange
 const campObjectFacing = GMManager.campObjectFacing
 const logPileLength = GMManager.logPileLength
 const entranceFacing = GMManager.entranceFacing
@@ -143,12 +158,17 @@ const entranceDestinationX = GMManager.entranceDestinationX
 const entranceDestinationZ = GMManager.entranceDestinationZ
 const teleportWorlds = computed(() => GMManager.teleportWorlds.value)
 const isEditing = computed(() => GMManager.editingStatic.value !== null)
+const lightLevels = Array.from({length: 10}, (_, index) => index + 1)
+const hasLightSettings = computed(() => selectedObject.value === 241 || selectedObject.value === 242
+    || selectedObject.value === 261 || selectedObject.value === 262 || selectedObject.value === 263
+    || selectedObject.value === 281 || selectedObject.value === 337)
 
 const objects = [
     { type: "FIREPLACE", name: "Fireplace Small", id: 241 },
     { type: "FIREPLACE", name: "Fireplace Large", id: 242 },
     { type: "TORCH", name: "Wall Torch", id: 261 },
     { type: "TORCH", name: "Torch Stand", id: 262 },
+    { type: "TORCH", name: "Lantern Stand", id: 263 },
     { type: "ENTRANCE", name: "Stone Entrance", id: 281 },
     { type: "CAMP", name: "Bench 2x1", id: 301 },
     { type: "CAMP", name: "Plank Pile", id: 302 },
@@ -171,6 +191,7 @@ const objects = [
     { type: "CEMETERY", name: "Stone Cross Pedestal", id: 334 },
     { type: "CEMETERY", name: "Fallen Stone Cross", id: 335 },
     { type: "CEMETERY", name: "Fallen Headstone", id: 336 },
+    { type: "CEMETERY", name: "Ember Bowl", id: 337 },
 ]
 
 const previouslySelectedObject = objects.find(obj => obj.id === selectedObject.value)

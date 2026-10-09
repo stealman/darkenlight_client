@@ -4,6 +4,10 @@ import { Lights } from '@/babylon/scene/lights'
 import {
     LARGE_CAMPFIRE_SHADOW_MAP_SIZE,
     OUTDOOR_STATIC_LIGHT_RANGE_FACTOR,
+    getStaticLightIntensityLevelFactor,
+    getStaticLightLevel,
+    getStaticLightRangeLevelFactor,
+    type StaticLightMetadata,
     STATIC_FIRE_SMOKE_PARTICLE_FACTORS,
     STATIC_SHADOW_MAP_SIZE,
 } from '@/babylon/scene/lighting/lightConfig'
@@ -16,6 +20,8 @@ import { StaticFireParticleManager } from '@/babylon/world/statics/staticFirePar
 const FULL_CIRCLE = Math.PI * 2
 const FIREPLACE_LOG_COUNT = 7
 const FIREPLACE_LIGHT_COLOR = new Color3(1, 0.5, 0.18)
+
+export type FireplaceMetadata = StaticLightMetadata
 
 abstract class BaseFireplace extends BaseStaticObject {
     fireplaceScale: number
@@ -32,8 +38,10 @@ abstract class BaseFireplace extends BaseStaticObject {
     particleEmitter: TransformNode | null
     castsShadows: boolean
     shadowMapSize: number
+    lightIntensity: number
+    lightRange: number
 
-    protected constructor(type: number, position: Vector3, rotation: number, material: Vector2, fireplaceScale: number, logLength: number, logInnerOffset: number, logTilt: number, castsShadows: boolean, shadowMapSize: number) {
+    protected constructor(type: number, position: Vector3, rotation: number, material: Vector2, fireplaceScale: number, logLength: number, logInnerOffset: number, logTilt: number, castsShadows: boolean, shadowMapSize: number, metadata?: FireplaceMetadata) {
         super(type, position, rotation, material, null)
         this.fireplaceScale = fireplaceScale
         this.fireplaceScaleReduced = 1 + ((fireplaceScale - 1) * 0.5)
@@ -49,6 +57,9 @@ abstract class BaseFireplace extends BaseStaticObject {
         this.particleEmitter = null
         this.castsShadows = castsShadows
         this.shadowMapSize = shadowMapSize
+        this.lightIntensity = getStaticLightLevel(metadata?.lightIntensity)
+        this.lightRange = getStaticLightLevel(metadata?.lightRange)
+        this.status = {lightIntensity: this.lightIntensity, lightRange: this.lightRange}
     }
 
     private getLogNoise(logIndex: number, channel: number): number {
@@ -102,7 +113,7 @@ abstract class BaseFireplace extends BaseStaticObject {
         Lights.registerStaticLight(this.getLightId(), this.renderPosition, {
             color: FIREPLACE_LIGHT_COLOR,
             height: this.fireplaceScale > 1 ? 3.5 : 2.25 + (this.fireplaceScaleReduced * 0.5),
-            intensity: 3 * this.fireplaceScaleReduced,
+            intensity: 3 * this.fireplaceScaleReduced * getStaticLightIntensityLevelFactor(this.lightIntensity),
             range: this.getLightRange(),
             flicker: true,
             castsShadows: this.castsShadows,
@@ -112,9 +123,10 @@ abstract class BaseFireplace extends BaseStaticObject {
     }
 
     protected getLightRange(): number {
-        return this.fireplaceScale > 1
+        const range = this.fireplaceScale > 1
             ? 12
             : 5 + 2 * this.fireplaceScaleReduced
+        return range * getStaticLightRangeLevelFactor(this.lightRange)
     }
 
     setLightVisible(visible: boolean) {
@@ -123,6 +135,10 @@ abstract class BaseFireplace extends BaseStaticObject {
         } else {
             Lights.unregisterStaticLight(this.getLightId())
         }
+    }
+
+    getLightVisibilityRadius(): number {
+        return this.getLightRange() * OUTDOOR_STATIC_LIGHT_RANGE_FACTOR
     }
 
     private createParticles() {
@@ -283,17 +299,14 @@ abstract class BaseFireplace extends BaseStaticObject {
 }
 
 export class FireplaceSmall extends BaseFireplace {
-    constructor(type: number, position: Vector3, rotation: number, material: Vector2, castsShadows: boolean) {
-        super(type, position, rotation, material, 1, 0.45, 0.01, 0.5, castsShadows, STATIC_SHADOW_MAP_SIZE)
+    constructor(type: number, position: Vector3, rotation: number, material: Vector2, castsShadows: boolean, metadata?: FireplaceMetadata) {
+        super(type, position, rotation, material, 1, 0.45, 0.01, 0.5, castsShadows, STATIC_SHADOW_MAP_SIZE, metadata)
     }
 }
 
 export class FireplaceLarge extends BaseFireplace {
-    constructor(type: number, position: Vector3, rotation: number, material: Vector2, castsShadows: boolean) {
-        super(type, position, rotation, material, 2, 0.9, 0.02, 0.5, castsShadows, LARGE_CAMPFIRE_SHADOW_MAP_SIZE)
+    constructor(type: number, position: Vector3, rotation: number, material: Vector2, castsShadows: boolean, metadata?: FireplaceMetadata) {
+        super(type, position, rotation, material, 2, 0.9, 0.02, 0.5, castsShadows, LARGE_CAMPFIRE_SHADOW_MAP_SIZE, metadata)
     }
 
-    getLightVisibilityRadius(): number {
-        return this.getLightRange() * OUTDOOR_STATIC_LIGHT_RANGE_FACTOR
-    }
 }

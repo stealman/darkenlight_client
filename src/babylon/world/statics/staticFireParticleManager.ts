@@ -20,7 +20,7 @@ import {
 } from '@/babylon/scene/lighting/lightConfig'
 import { Settings } from '@/settings/settings'
 
-export type StaticFireParticleProfile = 'fireplaceSmall' | 'fireplaceLarge' | 'wallTorch'
+export type StaticFireParticleProfile = 'fireplaceSmall' | 'fireplaceLarge' | 'wallTorch' | 'lantern' | 'embers'
 
 export interface StaticFireParticleSource {
     profile: StaticFireParticleProfile
@@ -84,7 +84,7 @@ interface RetiringParticleSystem {
     timeout: ReturnType<typeof setTimeout>
 }
 
-const PROFILES: StaticFireParticleProfile[] = ['fireplaceSmall', 'fireplaceLarge', 'wallTorch']
+const PROFILES: StaticFireParticleProfile[] = ['fireplaceSmall', 'fireplaceLarge', 'wallTorch', 'lantern', 'embers']
 const SHARED_SYSTEM_NAME_PREFIX = 'sharedStatic'
 const SHARED_STATIC_FIRE_SPRITE_CAPACITY = 256
 const STATIC_FIRE_SPRITE_FRAME_DELAY_MS = 35
@@ -163,11 +163,61 @@ const PROFILE_CONFIGS: Record<StaticFireParticleProfile, StaticFireParticleProfi
         smokePeakAlpha: 0.08,
         smokeLateAlpha: 0.03,
     },
+    lantern: {
+        fireCapacity: 40,
+        fireEmitRate: 40,
+        fireMinSize: 0.065,
+        fireMaxSize: 0.1,
+        fireDirectionX: 0.035,
+        fireMinDirectionY: 0.55,
+        fireMaxDirectionY: 0.85,
+        fireMinPower: 0.3,
+        fireMaxPower: 0.45,
+        fireGravity: 0.36,
+        smokeCapacity: 15,
+        smokeEmitRate: 3,
+        smokeMinSize: 0.12,
+        smokeMaxSize: 0.18,
+        smokeDirectionX: 0.25,
+        smokeMinDirectionY: 0.2,
+        smokeMaxDirectionY: 0.35,
+        smokeMinPower: 0.06,
+        smokeMaxPower: 0.1,
+        smokeGravity: 0.08,
+        smokePeakAlpha: 0.05,
+        smokeLateAlpha: 0.015,
+    },
+    embers: {
+        fireCapacity: 18,
+        fireEmitRate: 8,
+        fireMinSize: 0.025,
+        fireMaxSize: 0.045,
+        fireDirectionX: 0.16,
+        fireMinDirectionY: 1,
+        fireMaxDirectionY: 1.8,
+        fireMinPower: 0.45,
+        fireMaxPower: 0.8,
+        fireGravity: -0.7,
+        smokeCapacity: 24,
+        smokeEmitRate: 5,
+        smokeMinSize: 0.14,
+        smokeMaxSize: 0.24,
+        smokeDirectionX: 0.3,
+        smokeMinDirectionY: 0.2,
+        smokeMaxDirectionY: 0.4,
+        smokeMinPower: 0.05,
+        smokeMaxPower: 0.11,
+        smokeGravity: 0.06,
+        smokePeakAlpha: 0.035,
+        smokeLateAlpha: 0.01,
+    },
 }
 const STATIC_FIRE_SPRITE_CONFIGS: Record<StaticFireParticleProfile, StaticFireSpriteProfileConfig> = {
     fireplaceSmall: { count: 6, width: 0.7, height: 1.5, color: new Color4(1, 0.68, 0.18, 0.65) },
     fireplaceLarge: { count: 10, width: 1.2, height: 2.5, color: new Color4(1, 0.68, 0.18, 0.65) },
     wallTorch: { count: 3, width: 0.35, height: 0.72, color: new Color4(1, 0.68, 0.18, 0.6) },
+    lantern: { count: 1, width: 0.18, height: 0.36, color: new Color4(1, 0.68, 0.18, 0.65) },
+    embers: { count: 0, width: 0, height: 0, color: new Color4(1, 0.35, 0.05, 0.8) },
 }
 const STATIC_FIRE_BALLISTIC_DEFINE = '#define STATIC_FIRE_BALLISTIC_EMITTER'
 let ballisticShaderInstalled: boolean | null = null
@@ -346,7 +396,9 @@ export const StaticFireParticleManager = {
             this.disposeFireSprites()
         }
 
-        if (!USE_ANIMATED_STATIC_FIRE_SPRITES && this.sources.size > 0 && this.fireTexture == null) {
+        const needsParticleFireTexture = !USE_ANIMATED_STATIC_FIRE_SPRITES
+            || Array.from(this.sources.values()).some(source => source.profile === 'embers')
+        if (needsParticleFireTexture && this.sources.size > 0 && this.fireTexture == null) {
             this.fireTexture = new Texture('images/gfx/flare.png', this.scene)
         }
         if (this.sources.size > 0 && this.smokeTexture == null) {
@@ -382,7 +434,7 @@ export const StaticFireParticleManager = {
             const config = PROFILE_CONFIGS[profile]
             this.systems.set(profile, {
                 sourceKey,
-                fire: USE_ANIMATED_STATIC_FIRE_SPRITES
+                fire: USE_ANIMATED_STATIC_FIRE_SPRITES && profile !== 'embers'
                     ? null
                     : this.createSystem(profile, profileSources, config, false, this.fireTexture!),
                 smoke: this.createSystem(profile, profileSources, config, true, this.smokeTexture!),
@@ -512,6 +564,10 @@ export const StaticFireParticleManager = {
             system.addColorGradient(0.3, new Color4(0.7, 0.7, 0.7, config.smokePeakAlpha))
             system.addColorGradient(0.7, new Color4(0.65, 0.65, 0.65, config.smokeLateAlpha))
             system.addColorGradient(1, new Color4(0.5, 0.5, 0.5, 0))
+        } else if (profile === 'embers') {
+            system.addColorGradient(0, new Color4(1, 0.75, 0.2, 1))
+            system.addColorGradient(0.45, new Color4(1, 0.22, 0.02, 0.9))
+            system.addColorGradient(1, new Color4(0.25, 0.02, 0, 0))
         } else {
             system.addColorGradient(0, new Color4(1, 0.8, 0.6, 1))
             system.addColorGradient(0.4, new Color4(1, 0.4, 0.1, 1))

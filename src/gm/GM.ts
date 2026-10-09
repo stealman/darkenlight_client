@@ -42,7 +42,11 @@ export const STONE_PATH_TERRAIN_SELECTION = 103
 export const BEIGE_STONE_PATH_TERRAIN_SELECTION = 104
 export const WALL_TORCH_STATIC_ID = 261
 export const TORCH_STAND_STATIC_ID = 262
+export const LANTERN_STAND_STATIC_ID = 263
 export const STONE_ENTRANCE_STATIC_ID = 281
+export const FIREPLACE_SMALL_STATIC_ID = 241
+export const FIREPLACE_LARGE_STATIC_ID = 242
+export const CEMETERY_EMBER_BOWL_STATIC_ID = 337
 export const PALISADE_WALL_2_STATIC_ID = 203
 export const PALISADE_SMALL_STATIC_ID = 204
 export const PALISADE_SPIKED_STATIC_ID = 205
@@ -60,7 +64,8 @@ export const STUMP_WITH_AXE_STATIC_ID = 307
 export const CEMETERY_STATIC_IDS = new Set([321, 322, 323, 324, 325, 328, 329, 330, 331, 332, 333, 334])
 
 const WALL_FENCE_STATIC_IDS = new Set([201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 221, 222])
-const GENERAL_STATIC_IDS = new Set([241, 242, 261, 262, 281, 301, 302, 303, 304, 305, 306, 307, 321, 322, 323, 324, 325, 328, 329, 330, 331, 332, 333, 334, 335, 336])
+const GENERAL_STATIC_IDS = new Set([241, 242, 261, 262, 263, 281, 301, 302, 303, 304, 305, 306, 307, 321, 322, 323, 324, 325, 328, 329, 330, 331, 332, 333, 334, 335, 336, 337])
+const LIGHT_SOURCE_STATIC_IDS = new Set([FIREPLACE_SMALL_STATIC_ID, FIREPLACE_LARGE_STATIC_ID, WALL_TORCH_STATIC_ID, TORCH_STAND_STATIC_ID, LANTERN_STAND_STATIC_ID, STONE_ENTRANCE_STATIC_ID, CEMETERY_EMBER_BOWL_STATIC_ID])
 
 const rectangularFootprint = (sizeX: number, sizeZ: number) => {
     const offsets: Array<{x: number, z: number}> = []
@@ -115,6 +120,8 @@ export const GMManager = {
     logPileLength: ref(1),
     torchFacing: ref('-Z'),
     torchMountHeight: ref(2),
+    lightIntensity: ref(5),
+    lightRange: ref(5),
     entranceFacing: ref('+Z'),
     entranceDestinationWorld: ref(0),
     entranceDestinationX: ref(99),
@@ -410,10 +417,13 @@ export const GMManager = {
 
     createStaticData(x: number, z: number, type: number) {
         const data: {x: number, z: number, type: number, meta?: Record<string, number | string>} = {x, z, type}
-        if (type === WALL_TORCH_STATIC_ID) {
-            data.meta = {facing: this.torchFacing.value, mountHeight: this.torchMountHeight.value}
-        } else if (type === TORCH_STAND_STATIC_ID) {
-            data.meta = {facing: this.torchFacing.value}
+        const lightMetadata = {lightIntensity: this.lightIntensity.value, lightRange: this.lightRange.value}
+        if (type === FIREPLACE_SMALL_STATIC_ID || type === FIREPLACE_LARGE_STATIC_ID || type === CEMETERY_EMBER_BOWL_STATIC_ID) {
+            data.meta = lightMetadata
+        } else if (type === WALL_TORCH_STATIC_ID) {
+            data.meta = {facing: this.torchFacing.value, mountHeight: this.torchMountHeight.value, ...lightMetadata}
+        } else if (type === TORCH_STAND_STATIC_ID || type === LANTERN_STAND_STATIC_ID) {
+            data.meta = {facing: this.torchFacing.value, ...lightMetadata}
         } else if (type === LOG_PILE_STATIC_ID) {
             data.meta = {facing: this.campObjectFacing.value, length: this.logPileLength.value}
         } else if (type === CAMP_BENCH_STATIC_ID || type === PLANK_PILE_STATIC_ID
@@ -426,6 +436,7 @@ export const GMManager = {
                 destinationWorldId: this.entranceDestinationWorld.value,
                 destinationX: this.entranceDestinationX.value,
                 destinationZ: this.entranceDestinationZ.value,
+                ...lightMetadata,
             }
         }
         return data
@@ -440,6 +451,10 @@ export const GMManager = {
         else this.selectedStatic.value = object.type
 
         const status = object.status ?? {}
+        if (LIGHT_SOURCE_STATIC_IDS.has(object.type)) {
+            this.lightIntensity.value = status.lightIntensity ?? 5
+            this.lightRange.value = status.lightRange ?? 5
+        }
         if (object.type === PALISADE_WALL_2_STATIC_ID || object.type === PALISADE_SMALL_STATIC_ID || object.type === CAMP_FENCE_STATIC_ID
             || object.type === CEMETERY_IRON_FENCE_STATIC_ID || object.type === RUINED_CEMETERY_WALL_STATIC_ID
             || object.type === CEMETERY_STONE_WALL_STATIC_ID) {
@@ -452,7 +467,7 @@ export const GMManager = {
         } else if (object.type === WALL_TORCH_STATIC_ID) {
             this.torchFacing.value = status.facing ?? '-Z'
             this.torchMountHeight.value = status.mountHeight ?? 2
-        } else if (object.type === TORCH_STAND_STATIC_ID) {
+        } else if (object.type === TORCH_STAND_STATIC_ID || object.type === LANTERN_STAND_STATIC_ID) {
             this.torchFacing.value = status.facing ?? '+Z'
         } else if (object.type === LOG_PILE_STATIC_ID) {
             this.campObjectFacing.value = status.facing ?? '+Z'

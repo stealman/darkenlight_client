@@ -2,13 +2,13 @@ import { Color3, Matrix, Vector2, Vector3 } from '@babylonjs/core'
 import { BaseStaticObject } from '@/babylon/world/statics/objects/baseStaticObject'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { Lights } from '@/babylon/scene/lights'
-import { LARGE_CAMPFIRE_SHADOW_MAP_SIZE } from '@/babylon/scene/lighting/lightConfig'
+import { getStaticLightIntensityLevelFactor, getStaticLightLevel, getStaticLightRangeLevelFactor, LARGE_CAMPFIRE_SHADOW_MAP_SIZE, type StaticLightMetadata, OUTDOOR_STATIC_LIGHT_RANGE_FACTOR } from '@/babylon/scene/lighting/lightConfig'
 import { StaticFireParticleManager } from '@/babylon/world/statics/staticFireParticleManager'
 import { Renderer } from '@/babylon/scene/renderer'
 
 export type TorchStandFacing = '-X' | '+X' | '-Z' | '+Z'
 
-export interface TorchStandMetadata {
+export interface TorchStandMetadata extends StaticLightMetadata {
     facing?: TorchStandFacing
 }
 
@@ -32,6 +32,8 @@ export class TorchStand extends BaseStaticObject {
     private readonly poleMaterial: Vector2
     private readonly firePosition = new Vector3()
     private readonly lightPosition = new Vector3()
+    private readonly lightIntensity: number
+    private readonly lightRange: number
 
     constructor(
         type: number,
@@ -48,7 +50,9 @@ export class TorchStand extends BaseStaticObject {
             || metadata?.facing === '-Z' || metadata?.facing === '+Z'
             ? metadata.facing
             : '+Z'
-        this.status = {facing: this.facing}
+        this.lightIntensity = getStaticLightLevel(metadata?.lightIntensity)
+        this.lightRange = getStaticLightLevel(metadata?.lightRange)
+        this.status = {facing: this.facing, lightIntensity: this.lightIntensity, lightRange: this.lightRange}
     }
 
     render() {
@@ -116,15 +120,7 @@ export class TorchStand extends BaseStaticObject {
             this.renderPosition.y + LIGHT_HEIGHT,
             this.firePosition.z + normal.z * LIGHT_FORWARD_OFFSET,
         )
-        Lights.registerStaticLight(this.getLightId(), this.lightPosition, {
-            color: LIGHT_COLOR,
-            height: 0,
-            intensity: LIGHT_INTENSITY,
-            range: LIGHT_RANGE,
-            flicker: true,
-            flickerPosition: false,
-            shadowMapSize: LARGE_CAMPFIRE_SHADOW_MAP_SIZE,
-        })
+        this.registerLight()
         StaticFireParticleManager.register(Renderer.scene, this.getLightId(), {
             profile: 'wallTorch',
             x: this.firePosition.x,
@@ -138,6 +134,37 @@ export class TorchStand extends BaseStaticObject {
             smokeMinY: 0.2,
             smokeMaxY: 0.25,
         })
+    }
+
+    private registerLight() {
+        Lights.registerStaticLight(this.getLightId(), this.lightPosition, {
+            color: LIGHT_COLOR,
+            height: 0,
+            intensity: LIGHT_INTENSITY * getStaticLightIntensityLevelFactor(this.lightIntensity),
+            range: LIGHT_RANGE * getStaticLightRangeLevelFactor(this.lightRange),
+            flicker: true,
+            flickerPosition: false,
+            shadowMapSize: LARGE_CAMPFIRE_SHADOW_MAP_SIZE,
+        })
+    }
+
+    setLightVisible(visible: boolean) {
+        if (visible) {
+            if (this.firePosition.y === 0) this.updateFirePosition()
+            const normal = this.getFacingNormal()
+            this.lightPosition.set(
+                this.firePosition.x + normal.x * LIGHT_FORWARD_OFFSET,
+                this.renderPosition.y + LIGHT_HEIGHT,
+                this.firePosition.z + normal.z * LIGHT_FORWARD_OFFSET,
+            )
+            this.registerLight()
+        } else {
+            Lights.unregisterStaticLight(this.getLightId())
+        }
+    }
+
+    getLightVisibilityRadius(): number {
+        return LIGHT_RANGE * getStaticLightRangeLevelFactor(this.lightRange) * OUTDOOR_STATIC_LIGHT_RANGE_FACTOR
     }
 
     private updateFirePosition() {

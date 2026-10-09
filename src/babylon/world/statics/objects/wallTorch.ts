@@ -1,6 +1,6 @@
 import { Color3, Color4, Matrix, ParticleSystem, Texture, TransformNode, Vector2, Vector3 } from '@babylonjs/core'
 import { Lights } from '@/babylon/scene/lights'
-import { STATIC_FIRE_SMOKE_PARTICLE_FACTORS, STATIC_SHADOW_MAP_SIZE } from '@/babylon/scene/lighting/lightConfig'
+import { getStaticLightIntensityLevelFactor, getStaticLightLevel, getStaticLightRangeLevelFactor, type StaticLightMetadata, OUTDOOR_STATIC_LIGHT_RANGE_FACTOR, STATIC_FIRE_SMOKE_PARTICLE_FACTORS, STATIC_SHADOW_MAP_SIZE } from '@/babylon/scene/lighting/lightConfig'
 import { Settings } from '@/settings/settings'
 import { Renderer } from '@/babylon/scene/renderer'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
@@ -9,7 +9,7 @@ import { StaticFireParticleManager } from '@/babylon/world/statics/staticFirePar
 
 export type WallTorchFacing = '-X' | '+X' | '-Z' | '+Z'
 
-export interface WallTorchMetadata {
+export interface WallTorchMetadata extends StaticLightMetadata {
     facing?: WallTorchFacing
     mountHeight?: number
 }
@@ -23,6 +23,8 @@ const BLOCK_LOCAL_TOP_Y = 0.5
 export class WallTorch extends BaseStaticObject {
     private readonly facing: WallTorchFacing
     private readonly mountHeight: number
+    private readonly lightIntensity: number
+    private readonly lightRange: number
     private readonly lightPosition = new Vector3()
     private fireParticles: ParticleSystem | null = null
     private smokeParticles: ParticleSystem | null = null
@@ -34,7 +36,9 @@ export class WallTorch extends BaseStaticObject {
             ? metadata.facing
             : '-Z'
         this.mountHeight = Number.isFinite(metadata?.mountHeight) ? metadata!.mountHeight! : 2
-        this.status = {facing: this.facing, mountHeight: this.mountHeight}
+        this.lightIntensity = getStaticLightLevel(metadata?.lightIntensity)
+        this.lightRange = getStaticLightLevel(metadata?.lightRange)
+        this.status = {facing: this.facing, mountHeight: this.mountHeight, lightIntensity: this.lightIntensity, lightRange: this.lightRange}
     }
 
     private getWallNormal(): Vector3 {
@@ -71,11 +75,20 @@ export class WallTorch extends BaseStaticObject {
         Lights.registerStaticLight(this.getLightId(), this.lightPosition, {
             color: TORCH_LIGHT_COLOR,
             height: 0,
-            intensity: 2.2,
-            range: 10,
+            intensity: 2.2 * getStaticLightIntensityLevelFactor(this.lightIntensity),
+            range: 10 * getStaticLightRangeLevelFactor(this.lightRange),
             flicker: true,
             shadowMapSize: STATIC_SHADOW_MAP_SIZE,
         })
+    }
+
+    setLightVisible(visible: boolean) {
+        if (visible) this.registerLight()
+        else Lights.unregisterStaticLight(this.getLightId())
+    }
+
+    getLightVisibilityRadius(): number {
+        return 10 * getStaticLightRangeLevelFactor(this.lightRange) * OUTDOOR_STATIC_LIGHT_RANGE_FACTOR
     }
 
     private updateParticleEmitterPosition() {
