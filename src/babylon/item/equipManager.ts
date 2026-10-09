@@ -308,6 +308,14 @@ export class EquipItem {
     }
 }
 
+export interface EquipThinInstance {
+    type: EquipItemType
+    matVector: Vector2
+    position: Vector3
+    quaternion: Quaternion
+    scaleMatrix: Matrix
+}
+
 /**
  * One mesh-type for each equipable item
  * The mesh contains thin instances for each equipped item of this type
@@ -411,7 +419,7 @@ export class EquipItemType {
  */
 export const EquipManager = {
     itemTypes: new Map<number, EquipItemType>(),
-    equippedItems: new Map<EquipItemType, Set<EquipItem>>(),
+    equippedItems: new Map<EquipItemType, Set<EquipThinInstance>>(),
 
     _tmpPos: new Matrix(),
     _tmpRot: new Matrix(),
@@ -423,6 +431,10 @@ export const EquipManager = {
     },
 
     addEquippedItem(item: EquipItem) {
+        this.addThinInstance(item)
+    },
+
+    addThinInstance(item: EquipThinInstance) {
         if (!this.equippedItems.has(item.type)) {
             this.equippedItems.set(item.type, new Set())
         }
@@ -437,8 +449,13 @@ export const EquipManager = {
             item.particleSystem.stop()
             item.particleSystem.dispose()
         }
-        this.equippedItems.get(item.type)?.delete(item)
-        item.type.updateCount(this.equippedItems.get(item.type)!.size)
+        this.removeThinInstance(item)
+    },
+
+    removeThinInstance(item: EquipThinInstance) {
+        const items = this.equippedItems.get(item.type)
+        items?.delete(item)
+        item.type.updateCount(items?.size ?? 0)
     },
 
     onFrame() {

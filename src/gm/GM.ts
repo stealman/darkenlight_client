@@ -1,5 +1,5 @@
 import { Connector } from '@/network/connector'
-import { GMBuildingChange, GMCreateItemMsg, GMDayNightCycleMsg, GMForceSaveDataMsg, GMGenerateBiomeMsg, GMLoadItemCodebookMsg, GMLoadWorldMapImageMsg, GMLoadWorldSettingsMsg, GMLoadWorldsMsg, GMNpcAction, GMSaveMapDataMsg, GMSaveWorldMapHeightChangesMsg, GMSaveWorldMapSurfaceChangesMsg, GMSaveWorldMapTerrainChangesMsg, GMSaveWorldSettingsMsg, GMStaticDeleteInfoRequest, GMStaticObjectChange, GMTeleportMsg, GMTerrainChange } from '@/network/messages'
+import { GMBuildingChange, GMCreateItemMsg, GMDayNightCycleMsg, GMEquipmentDecorationChange, GMForceSaveDataMsg, GMGenerateBiomeMsg, GMLoadItemCodebookMsg, GMLoadWorldMapImageMsg, GMLoadWorldSettingsMsg, GMLoadWorldsMsg, GMNpcAction, GMSaveMapDataMsg, GMSaveWorldMapHeightChangesMsg, GMSaveWorldMapSurfaceChangesMsg, GMSaveWorldMapTerrainChangesMsg, GMSaveWorldSettingsMsg, GMStaticDeleteInfoRequest, GMStaticObjectChange, GMTeleportMsg, GMTerrainChange } from '@/network/messages'
 import { GMItemCodebookItem, GMStaticDeleteInfoData, GMWorldBiomeTreesChangedData, GMWorldMapImageData, GMWorldSettingsData, GMWorldsData } from '@/network/messageIfs'
 import { GMSceneManager } from '@/babylon/gm/GmSceneManager'
 import { WorldDataManager } from '@/data/worldDataManager'
@@ -19,6 +19,8 @@ import type { StaticObject } from '@/babylon/world/statics/objects/baseStaticObj
 import { BuildingManager } from '@/babylon/world/buildings/buildingManager'
 import type { BuildingData } from '@/babylon/world/buildings/buildingManager'
 import { GMFoggyAreas } from '@/gm/GmFoggyAreas'
+import { EquipmentDecorationsManager } from '@/babylon/world/equipmentDecorationsManager'
+import type { EquipmentDecorationData } from '@/babylon/world/equipmentDecorationsManager'
 
 /**
  * Main GM tabs
@@ -33,6 +35,7 @@ export const GmTabs = {
     BIOME_EDIT: 'biome_edit',
     WALLS_AND_FENCES_EDIT: 'walls_and_fences_edit',
     STATICS_EDIT: 'statics_edit',
+    EQUIPMENT_DECORATIONS_EDIT: 'equipment_decorations_edit',
     BUILDINGS_EDIT: 'buildings_edit',
     SPAWNS_EDIT: 'spawns_edit',
     NPCS_EDIT: 'npcs_edit',
@@ -112,6 +115,13 @@ export const GMManager = {
     walkableBlockHeight: ref(1),
     walkableBlockMaterial: ref('WOOD'),
     selectedStatic: ref (0),
+    equipmentDecorationAction: ref<'ADD' | 'EDIT' | 'REMOVE_ON_TILE'>('ADD'),
+    equipmentDecorationCategory: ref<'WEAPON' | 'ARMOR'>('WEAPON'),
+    equipmentDecorationCodebookId: ref(0),
+    equipmentDecorationOffset: ref({x: 0, y: 0, z: 0}),
+    equipmentDecorationRotation: ref({x: 0, y: 0, z: 0}),
+    equipmentDecorationDraftTile: ref<{x: number, z: number} | null>(null),
+    equipmentDecorationEditing: ref<EquipmentDecorationData | null>(null),
     selectedBuildingType: ref(0),
     buildingFacing: ref('+Z'),
     buildingWidth: ref(2),
@@ -150,6 +160,7 @@ export const GMManager = {
 
     toggleGmPanel() {
         if (this.gmPanelVisible.value) {
+            this.cancelEquipmentDecorationDraft()
             this.consumePointerMoveEvents = false
             this.consumeLeftClickEvents = false
             this.consumeMiddleClickEvents = false
@@ -294,6 +305,21 @@ export const GMManager = {
 
             } else if (this.selectedStatic.value === -1) {
                 this.requestStaticDelete(markerPos.x, markerPos.z)
+            }
+        }
+
+        if (this.tab === GmTabs.EQUIPMENT_DECORATIONS_EDIT) {
+            const markerPos = GMSceneManager.hoverBlockMarker!.position
+            const action = this.equipmentDecorationAction.value
+            if (action === 'ADD') {
+                this.beginEquipmentDecorationDraft(Math.round(markerPos.x), Math.round(markerPos.z))
+            } else if (action === 'EDIT') {
+                this.beginEquipmentDecorationEdit(Math.round(markerPos.x), Math.round(markerPos.z))
+            } else {
+                Connector.sendMessage(new GMEquipmentDecorationChange(action, {
+                    x: Math.round(markerPos.x),
+                    z: Math.round(markerPos.z),
+                }))
             }
         }
 
@@ -687,6 +713,9 @@ export const GMManager = {
             case GmTabs.STATICS_EDIT:
                 this.closeTabStaticsEdit()
                 break
+            case GmTabs.EQUIPMENT_DECORATIONS_EDIT:
+                this.closeTabEquipmentDecorationsEdit()
+                break
             case GmTabs.BUILDINGS_EDIT:
                 this.closeTabBuildingsEdit()
                 break
@@ -721,6 +750,9 @@ export const GMManager = {
                 break
             case GmTabs.STATICS_EDIT:
                 this.openTabStaticsEdit()
+                break
+            case GmTabs.EQUIPMENT_DECORATIONS_EDIT:
+                this.openTabEquipmentDecorationsEdit()
                 break
             case GmTabs.BUILDINGS_EDIT:
                 this.openTabBuildingsEdit()
@@ -796,6 +828,88 @@ export const GMManager = {
         GMSceneManager.hoverBlockMarker?.setEnabled(true)
     },
 
+    openTabEquipmentDecorationsEdit() {
+        this.tab = GmTabs.EQUIPMENT_DECORATIONS_EDIT
+        this.consumePointerMoveEvents = true
+        this.consumeLeftClickEvents = true
+        GMSceneManager.setHoverBlockMarkerSize(1)
+        GMSceneManager.hoverBlockMarker?.setEnabled(true)
+        this.loadItemCodebook()
+    },
+
+    beginEquipmentDecorationDraft(x: number, z: number) {
+        this.cancelEquipmentDecorationDraft()
+        this.equipmentDecorationDraftTile.value = {x, z}
+        this.refreshEquipmentDecorationPreview()
+    },
+
+    beginEquipmentDecorationEdit(x: number, z: number) {
+        this.cancelEquipmentDecorationDraft()
+        const decoration = EquipmentDecorationsManager.getFirstOnTile(x, z)
+        if (!decoration) return
+
+        this.equipmentDecorationEditing.value = decoration
+        EquipmentDecorationsManager.remove(decoration.id)
+        this.equipmentDecorationCategory.value = decoration.category
+        this.equipmentDecorationCodebookId.value = decoration.codebookId
+        this.equipmentDecorationOffset.value = {...decoration.offset}
+        this.equipmentDecorationRotation.value = {...decoration.rotation}
+        this.equipmentDecorationDraftTile.value = {x, z}
+        this.refreshEquipmentDecorationPreview()
+    },
+
+    getEquipmentDecorationDraftData() {
+        const tile = this.equipmentDecorationDraftTile.value
+        const item = this.itemCodebook.value.find((candidate) =>
+            candidate.type === this.equipmentDecorationCategory.value
+            && candidate.id === this.equipmentDecorationCodebookId.value
+            && candidate.modelId !== undefined
+            && candidate.materialId !== undefined,
+        )
+        if (!tile || !item) return null
+        return {
+            category: this.equipmentDecorationCategory.value,
+            codebookId: item.id,
+            modelId: item.modelId!,
+            materialId: item.materialId!,
+            x: tile.x,
+            z: tile.z,
+            offset: {...this.equipmentDecorationOffset.value},
+            rotation: {...this.equipmentDecorationRotation.value},
+        }
+    },
+
+    refreshEquipmentDecorationPreview() {
+        const data = this.getEquipmentDecorationDraftData()
+        if (!data) {
+            EquipmentDecorationsManager.clearPreview()
+            return
+        }
+        EquipmentDecorationsManager.setPreview(data)
+    },
+
+    saveEquipmentDecorationDraft() {
+        const data = this.getEquipmentDecorationDraftData()
+        if (!data) return
+        const editing = this.equipmentDecorationEditing.value
+        EquipmentDecorationsManager.clearPreview()
+        this.equipmentDecorationDraftTile.value = null
+        this.equipmentDecorationEditing.value = null
+        Connector.sendMessage(new GMEquipmentDecorationChange(editing ? 'UPDATE' : 'ADD', {
+            ...data,
+            id: editing?.id,
+        }))
+    },
+
+    cancelEquipmentDecorationDraft() {
+        EquipmentDecorationsManager.clearPreview()
+        if (this.equipmentDecorationEditing.value) {
+            EquipmentDecorationsManager.add(this.equipmentDecorationEditing.value)
+        }
+        this.equipmentDecorationEditing.value = null
+        this.equipmentDecorationDraftTile.value = null
+    },
+
     openTabBuildingsEdit() {
         this.tab = GmTabs.BUILDINGS_EDIT
         this.consumePointerMoveEvents = true
@@ -857,6 +971,13 @@ export const GMManager = {
         this.consumeLeftClickEvents = false
         GMSceneManager.hoverBlockMarker?.setEnabled(false)
         this.editingStatic.value = null
+    },
+
+    closeTabEquipmentDecorationsEdit() {
+        this.cancelEquipmentDecorationDraft()
+        this.consumePointerMoveEvents = false
+        this.consumeLeftClickEvents = false
+        GMSceneManager.hoverBlockMarker?.setEnabled(false)
     },
 
     closeTabBuildingsEdit() {

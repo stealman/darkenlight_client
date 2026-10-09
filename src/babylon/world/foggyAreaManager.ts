@@ -200,7 +200,7 @@ export const FoggyAreaManager = {
         const red = nightRed + (0.72 - nightRed) * daylight
         const green = nightGreen + (0.75 - nightGreen) * daylight
         const blue = nightBlue + (0.75 - nightBlue) * daylight
-        const alpha = 0.0612 - daylight * 0.0012
+        const alpha = 0.06732 - daylight * 0.00732
         // Without a GPU color gradient, color1/color2 are captured by each
         // particle when it is emitted. Existing clouds retain their shade and
         // naturally fade out while new clouds adopt the current day/night tint.

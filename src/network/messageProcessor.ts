@@ -63,6 +63,7 @@ import { ActionButtonsManager } from '@/gui/actionButtonsManager'
 import { CharacterActions } from '@/data/actions/characterActions'
 import { FoggyAreaManager } from '@/babylon/world/foggyAreaManager'
 import { GMFoggyAreas } from '@/gm/GmFoggyAreas'
+import { EquipmentDecorationsManager } from '@/babylon/world/equipmentDecorationsManager'
 
 export const MessageProcessor = {
 
@@ -130,6 +131,8 @@ export const MessageProcessor = {
                 case 83: this.processContainerState(msg.d); break
                 case 84: this.processGMStaticDeleteInfo(msg.d); break
                 case 85: this.processFoggyAreaChanged(msg.d); break
+                case 86: this.processAddEquipmentDecoration(msg.d); break
+                case 87: this.processRemoveEquipmentDecorations(msg.d); break
                 case 59: this.processCharacterDeath(msg.d); break
                 case 66: this.processCharacterCombatApproach(msg.d); break
                 case 60: this.processCharacterTeleport(msg.d); break
@@ -292,6 +295,7 @@ export const MessageProcessor = {
             TreeManager.recountYPositions()
             StaticsManager.recountYPositions()
             BuildingManager.recountYPositions()
+            EquipmentDecorationsManager.recountYPositions()
             if (MyPlayer.myChar != null && WorldRenderer.block1 != null) {
                 WorldRenderer.renderWorld()
             }
@@ -307,12 +311,14 @@ export const MessageProcessor = {
             TreeManager.consumeTrees(chunk.trees)
             StaticsManager.consumeObjects(chunk.statics)
             BuildingManager.consumeBuildings(chunk.buildings ?? [])
+            EquipmentDecorationsManager.consume(chunk.equipmentDecorations ?? [])
             FightSplatsRenderer.consumeSplats(chunk.splats)
         })
         data.r.forEach(chunk => {
             TreeManager.removeTrees(chunk.trees)
             StaticsManager.removeObjects(chunk.statics)
             BuildingManager.removeBuildings(chunk.buildings ?? [])
+            EquipmentDecorationsManager.removeMany((chunk.equipmentDecorations ?? []).map((item) => item.id))
             FightSplatsRenderer.removeSplats(chunk.splats)
         })
         // WorldRenderer may already have recorded the teleport destination
@@ -357,11 +363,13 @@ export const MessageProcessor = {
 
     processAddBuilding(data) {
         BuildingManager.addBuilding(data)
+        EquipmentDecorationsManager.recountYPositions()
         WorldRenderer.renderWorld()
     },
 
     processRemoveBuilding(data) {
         BuildingManager.removeBuilding(data.id)
+        EquipmentDecorationsManager.recountYPositions()
         WorldRenderer.renderWorld()
     },
 
@@ -384,6 +392,15 @@ export const MessageProcessor = {
     processWorldChangedData(data) {
         WorldDataManager.consumeMapUpdate(data.worldId, data.changes)
         MiniMap.redrawMapChanges(data.worldId, data.changes)
+        EquipmentDecorationsManager.recountYPositions()
+    },
+
+    processAddEquipmentDecoration(data) {
+        EquipmentDecorationsManager.add(data)
+    },
+
+    processRemoveEquipmentDecorations(data) {
+        EquipmentDecorationsManager.removeMany(data.ids ?? [])
     },
 
     processCharacterAttack(data: AutoAttackMessage) {
@@ -463,6 +480,7 @@ export const MessageProcessor = {
         TreeManager.clearWorld()
         StaticsManager.clearWorld()
         BuildingManager.clearWorld()
+        EquipmentDecorationsManager.clearWorld()
         GroundItemsManager.clearWorld()
         FightSplatsRenderer.clearWorld()
         StepMarksRenderer.clearWorld()

@@ -41,6 +41,10 @@ const MAUSOLEUM_ENTRANCE_COLLISION_WIDTH = 1.5
 const MAUSOLEUM_WALL_HEIGHT = 2
 const MAUSOLEUM_PILLAR_SIZE = 0.56
 const MAUSOLEUM_WALL_THICKNESS = 0.24
+const MAUSOLEUM_GATE_WIDTH = 1.5
+const MAUSOLEUM_GATE_HEIGHT = 1.55
+const MAUSOLEUM_GATE_BAR_SIZE = 0.05
+const MAUSOLEUM_GATE_DEPTH = 0.07
 const FLOOR_HEIGHT = 0.12
 const FLOOR_OVERHANG = 0.4
 const WALL_HEIGHT = 1
@@ -933,6 +937,9 @@ class MausoleumView {
     readonly frontWallsMesh: Mesh
     readonly occlusionWallsMesh: Mesh
     readonly roofMesh: Mesh
+    readonly gateRoot: TransformNode
+    readonly gateHinges: [TransformNode, TransformNode]
+    readonly gateMeshes: [Mesh, Mesh]
     readonly blockParts: Array<BuildingBlockPart & {group: MausoleumPartGroup}> = []
     roofVisibility = 1
     wallVisibility = 1
@@ -942,6 +949,8 @@ class MausoleumView {
     roofInBatch = true
     frontWallsInBatch = true
     occlusionWallsInBatch = true
+    doorProgress: number
+    playCloseSoundWhenClosed = false
     private previewYOffset = 0
 
     constructor(readonly data: BuildingData, parent: TransformNode, fadeMaterial: PBRMaterial) {
@@ -955,6 +964,7 @@ class MausoleumView {
         const roofUvData: number[] = []
         const stone = MaterialEnum1.ROCK1.uv
         const darkStone = MaterialEnum1.BRICK_DARK_GRAY.uv
+        const steel = MaterialEnum1.STEEL_1.uv
         const worldMinusZSide: BuildingFacing = this.facing === '+X' ? '+X'
             : this.facing === '-Z' ? '+Z'
                 : this.facing === '-X' ? '-X' : '-Z'
@@ -1006,6 +1016,62 @@ class MausoleumView {
             }
             if (group === 'roof') addFadePart('mausoleum_roof_block', roofParts, roofUvData)
         }
+
+        this.gateRoot = new TransformNode(`mausoleum_${data.id}_gate_root`, scene)
+        this.gateRoot.parent = parent
+        const createGateLeaf = (side: 'left' | 'right') => {
+            const hinge = new TransformNode(`mausoleum_${data.id}_gate_${side}_hinge`, scene)
+            hinge.parent = this.gateRoot
+            const direction = side === 'left' ? 1 : -1
+            const leafWidth = MAUSOLEUM_GATE_WIDTH / 2
+            hinge.position.set(MAUSOLEUM_ENTRANCE_CENTER_X - direction * leafWidth, 0, 3.5)
+            const parts: Mesh[] = []
+            const uvData: number[] = []
+            const addGateBar = (width: number, height: number, x: number, y: number) => {
+                const bar = MeshBuilder.CreateBox('mausoleum_gate_bar', {
+                    width,
+                    height,
+                    depth: MAUSOLEUM_GATE_DEPTH,
+                    wrap: true,
+                }, scene)
+                bar.position.set(x, y, 0)
+                bar.convertToUnIndexedMesh()
+                for (let i = 0; i < bar.getTotalVertices(); i++) uvData.push(steel.x, steel.y)
+                parts.push(bar)
+            }
+            for (let rod = 0; rod <= 3; rod++) {
+                addGateBar(
+                    MAUSOLEUM_GATE_BAR_SIZE,
+                    MAUSOLEUM_GATE_HEIGHT,
+                    direction * leafWidth * rod / 3,
+                    FLOOR_HEIGHT + MAUSOLEUM_GATE_HEIGHT / 2,
+                )
+            }
+            for (const heightRatio of [0.03, 0.5, 0.97]) {
+                addGateBar(
+                    leafWidth,
+                    MAUSOLEUM_GATE_BAR_SIZE,
+                    direction * leafWidth / 2,
+                    FLOOR_HEIGHT + MAUSOLEUM_GATE_HEIGHT * heightRatio,
+                )
+            }
+            const mesh = Mesh.MergeMeshes(parts, true, true)!
+            mesh.name = `mausoleum_${data.id}_gate_${side}`
+            mesh.parent = hinge
+            mesh.material = fadeMaterial
+            mesh.setVerticesData('uvc', uvData, false, 2)
+            mesh.isPickable = false
+            mesh.setEnabled(false)
+            Lights.registerSharedLightMesh(mesh)
+            Lights.addShadowCaster(mesh, true, true)
+            return {hinge, mesh}
+        }
+        const leftGate = createGateLeaf('left')
+        const rightGate = createGateLeaf('right')
+        this.gateHinges = [leftGate.hinge, rightGate.hinge]
+        this.gateMeshes = [leftGate.mesh, rightGate.mesh]
+        this.doorProgress = data.doorOpen === true ? 1 : 0
+        this.applyGateRotation()
 
         // A tiled stone plinth avoids stretching the atlas over the full 5x5 footprint.
         for (let x = 0; x < MAUSOLEUM_SIZE; x++) {
@@ -1142,6 +1208,9 @@ class MausoleumView {
             mesh.position.z = z
             mesh.rotation.y = rotation
         }
+        this.gateRoot.position.x = x
+        this.gateRoot.position.z = z
+        this.gateRoot.rotation.y = rotation
     }
 
     getOccupiedTiles() {
@@ -1183,6 +1252,7 @@ class MausoleumView {
         this.frontWallsMesh.position.y = y
         this.occlusionWallsMesh.position.y = y
         this.roofMesh.position.y = y
+        this.gateRoot.position.y = y
     }
 
     setPreviewYOffset(offset: number) {
@@ -1210,8 +1280,9 @@ class MausoleumView {
         }))
         return hitsPillar
             || intersects(min + halfPillar, max - halfPillar, min - halfWall, min + halfWall)
-            || intersects(min + halfPillar, doorMinX, max - halfWall, max + halfWall)
-            || intersects(doorMaxX, max - halfPillar, max - halfWall, max + halfWall)
+            || (!this.data.doorOpen && intersects(min + halfPillar, max - halfPillar, max - halfWall, max + halfWall))
+            || (this.data.doorOpen && intersects(min + halfPillar, doorMinX, max - halfWall, max + halfWall))
+            || (this.data.doorOpen && intersects(doorMaxX, max - halfPillar, max - halfWall, max + halfWall))
             || intersects(min - halfWall, min + halfWall, min + halfPillar, max - halfPillar)
             || intersects(max - halfWall, max + halfWall, min + halfPillar, max - halfPillar)
     }
@@ -1221,10 +1292,45 @@ class MausoleumView {
         return local.x > -0.35 && local.x < 3.35 && local.z > -0.35 && local.z < 3.65
     }
 
-    getDoorPosition() { return null }
+    getDoorPosition() { return this.localTileToWorld(MAUSOLEUM_ENTRANCE_CENTER_X, MAUSOLEUM_SIZE - 0.5) }
     getCollisionCenter() { return this.localTileToWorld(1.5, 1.5) }
-    setDoorOpen(_open: boolean) {}
-    updateDoorAnimation(_timeRate: number) { return false }
+
+    setDoorOpen(open: boolean) {
+        if (this.data.doorOpen === open) return
+        this.data.doorOpen = open
+        if (open) {
+            this.playCloseSoundWhenClosed = false
+            AudioManager.playDoorOpenSound(this.getDoorSoundPosition())
+        } else {
+            this.playCloseSoundWhenClosed = true
+        }
+    }
+
+    updateDoorAnimation(timeRate: number) {
+        const target = this.data.doorOpen ? 1 : 0
+        if (this.doorProgress !== target) {
+            const step = timeRate / DOOR_ANIMATION_DURATION
+            this.doorProgress = this.doorProgress < target
+                ? Math.min(this.doorProgress + step, target)
+                : Math.max(this.doorProgress - step, target)
+            this.applyGateRotation()
+        }
+        if (target === 0 && this.doorProgress === 0 && this.playCloseSoundWhenClosed) {
+            this.playCloseSoundWhenClosed = false
+            AudioManager.playDoorCloseSound(this.getDoorSoundPosition())
+        }
+        return false
+    }
+
+    private applyGateRotation() {
+        this.gateHinges[0].rotation.y = this.doorProgress * -Math.PI / 2
+        this.gateHinges[1].rotation.y = this.doorProgress * Math.PI / 2
+    }
+
+    private getDoorSoundPosition() {
+        const door = this.getDoorPosition()
+        return new Vector3(door.x, this.gateRoot.position.y + FLOOR_HEIGHT + MAUSOLEUM_GATE_HEIGHT / 2, door.z)
+    }
 
     intersectsOcclusionSegment(origin: Vector3, direction: Vector3, maxDistance: number) {
         const groundY = this.roofMesh.position.y
@@ -1242,6 +1348,7 @@ class MausoleumView {
         this.frontWallsMesh.setEnabled(visible && !this.isFrontWallsBatched())
         this.occlusionWallsMesh.setEnabled(visible && !this.isOcclusionWallsBatched())
         this.roofMesh.setEnabled(visible && !this.isRoofBatched())
+        this.gateMeshes.forEach((mesh) => mesh.setEnabled(visible))
     }
 
     private isRoofBatched() { return this.roofVisibility === 1 && !this.shouldOcclusionFade }
@@ -1285,6 +1392,7 @@ class MausoleumView {
                 ? Math.min(this.wallVisibility + step, wallTarget)
                 : Math.max(this.wallVisibility - step, wallTarget)
             this.frontWallsMesh.visibility = this.wallVisibility
+            this.gateMeshes.forEach((mesh) => mesh.visibility = this.wallVisibility)
         }
         if (this.occlusionWallVisibility !== occlusionWallTarget) {
             this.occlusionWallVisibility = this.occlusionWallVisibility < occlusionWallTarget
@@ -1304,6 +1412,13 @@ class MausoleumView {
             Lights.removeShadowCaster(mesh, true, true)
             mesh.dispose()
         }
+        for (const mesh of this.gateMeshes) {
+            Lights.unregisterSharedLightMesh(mesh)
+            Lights.removeShadowCaster(mesh, true, true)
+            mesh.dispose()
+        }
+        this.gateHinges.forEach((hinge) => hinge.dispose())
+        this.gateRoot.dispose()
     }
 }
 

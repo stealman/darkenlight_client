@@ -400,6 +400,8 @@ export interface GMItemCodebookItem {
     type: string
     id: number
     name: string
+    modelId?: number
+    materialId?: number
 }
 
 export interface GMWorldsData {

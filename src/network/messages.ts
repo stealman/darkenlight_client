@@ -356,6 +356,15 @@ export class GMFoggyAreaAction implements Message {
     }
 }
 
+export class GMEquipmentDecorationChange implements Message {
+    t: number = 1023
+    d: any
+
+    constructor(action: 'ADD' | 'UPDATE' | 'REMOVE_ON_TILE', data: any) {
+        this.d = {action, data}
+    }
+}
+
 export class GMBuildingChange implements Message {
     t: number = 1020
     d: any
