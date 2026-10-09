@@ -18,6 +18,7 @@ import { TreeManager } from '@/babylon/world/treeManager'
 import type { StaticObject } from '@/babylon/world/statics/objects/baseStaticObject'
 import { BuildingManager } from '@/babylon/world/buildings/buildingManager'
 import type { BuildingData } from '@/babylon/world/buildings/buildingManager'
+import { GMFoggyAreas } from '@/gm/GmFoggyAreas'
 
 /**
  * Main GM tabs
@@ -34,7 +35,8 @@ export const GmTabs = {
     STATICS_EDIT: 'statics_edit',
     BUILDINGS_EDIT: 'buildings_edit',
     SPAWNS_EDIT: 'spawns_edit',
-    NPCS_EDIT: 'npcs_edit'
+    NPCS_EDIT: 'npcs_edit',
+    FOG_EDIT: 'fog_edit'
 }
 
 export const VOID_TERRAIN_SELECTION = 102
@@ -154,6 +156,7 @@ export const GMManager = {
             GMSceneManager.hoverBlockMarker?.setEnabled(false)
             GMSceneManager.spawnMarker?.setEnabled(false)
             GMSpawns.removeAllMarkers()
+            GMFoggyAreas.removeMarkers()
             this.closeDeleteConfirmation()
             this.editingStatic.value = null
             this.editingBuilding.value = null
@@ -328,6 +331,11 @@ export const GMManager = {
         if (this.tab === GmTabs.SPAWNS_EDIT) {
             const markerPos = new Vector3(GMSceneManager.hoverBlockMarker!.position.x, 0, GMSceneManager.hoverBlockMarker!.position.z)
             GMSpawns.onClick(markerPos.x, markerPos.z)
+        }
+
+        if (this.tab === GmTabs.FOG_EDIT) {
+            const markerPos = GMSceneManager.hoverBlockMarker!.position
+            GMFoggyAreas.onClick(markerPos.x, markerPos.z)
         }
 
         if (this.tab === GmTabs.NPCS_EDIT) {
@@ -688,6 +696,9 @@ export const GMManager = {
             case GmTabs.NPCS_EDIT:
                 this.closeTabNpcsEdit()
                 break
+            case GmTabs.FOG_EDIT:
+                this.closeTabFogEdit()
+                break
 
         }
 
@@ -719,6 +730,9 @@ export const GMManager = {
                 break
             case GmTabs.NPCS_EDIT:
                 this.openTabNpcsEdit()
+                break
+            case GmTabs.FOG_EDIT:
+                this.openTabFogEdit()
                 break
         }
     },
@@ -809,6 +823,15 @@ export const GMManager = {
         }
     },
 
+    openTabFogEdit() {
+        this.tab = GmTabs.FOG_EDIT
+        this.consumePointerMoveEvents = true
+        this.consumeLeftClickEvents = true
+        GMSceneManager.setHoverBlockMarkerSize(1)
+        GMSceneManager.hoverBlockMarker?.setEnabled(true)
+        GMFoggyAreas.renderMarkers()
+    },
+
     closeTabTerrainEdit() {
         this.consumePointerMoveEvents = false
         this.consumeLeftClickEvents = false
@@ -854,6 +877,14 @@ export const GMManager = {
         this.consumePointerMoveEvents = false
         this.consumeLeftClickEvents = false
         GMSceneManager.hoverBlockMarker?.setEnabled(false)
+    },
+
+    closeTabFogEdit() {
+        this.consumePointerMoveEvents = false
+        this.consumeLeftClickEvents = false
+        GMSceneManager.hoverBlockMarker?.setEnabled(false)
+        GMFoggyAreas.cancel()
+        GMFoggyAreas.removeMarkers()
     },
 
     saveMapData() {

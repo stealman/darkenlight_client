@@ -44,6 +44,7 @@ import { TreeManager } from '@/babylon/world/treeManager'
 import { BuildingManager } from '@/babylon/world/buildings/buildingManager'
 import { NIGHT_ENVIRONMENT_INTENSITY_FACTOR } from '@/babylon/scene/lighting/lightConfig'
 import { invoke } from '@tauri-apps/api/core'
+import { FoggyAreaManager } from '@/babylon/world/foggyAreaManager'
 
 function isTauriDesktop(): boolean {
     return '__TAURI_INTERNALS__' in window
@@ -192,6 +193,7 @@ export const Renderer = {
             TreeManager.onFrame(timeRate, this.camera)
             BuildingManager.onFrame(timeRate, this.camera)
             Lights.onFrame(timeRate)
+            FoggyAreaManager.onFrame()
             CharacterManager.onFrame(timeRate, actualTime, this.frame)
             NpcManager.onFrame(timeRate, actualTime, this.frame)
             MonsterManager.onFrame(timeRate, actualTime, this.frame)

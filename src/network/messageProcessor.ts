@@ -61,6 +61,8 @@ import {ContainerManager} from '@/data/containerManager'
 import { TargetingManager } from '@/gui/targettingManager'
 import { ActionButtonsManager } from '@/gui/actionButtonsManager'
 import { CharacterActions } from '@/data/actions/characterActions'
+import { FoggyAreaManager } from '@/babylon/world/foggyAreaManager'
+import { GMFoggyAreas } from '@/gm/GmFoggyAreas'
 
 export const MessageProcessor = {
 
@@ -127,6 +129,7 @@ export const MessageProcessor = {
                 case 58: this.processBankState(msg.d); break
                 case 83: this.processContainerState(msg.d); break
                 case 84: this.processGMStaticDeleteInfo(msg.d); break
+                case 85: this.processFoggyAreaChanged(msg.d); break
                 case 59: this.processCharacterDeath(msg.d); break
                 case 66: this.processCharacterCombatApproach(msg.d); break
                 case 60: this.processCharacterTeleport(msg.d); break
@@ -279,6 +282,7 @@ export const MessageProcessor = {
         }
         MyPlayer.worldId = data.id
         MyPlayer.worldName = data.name
+        FoggyAreaManager.setAreas(data.foggyAreas ?? [])
         if (data.mapChunk) {
             WorldDataManager.consumeMapChunk(data.mapChunk)
             MiniMap.redrawMiniMap(data.mapChunk)
@@ -462,8 +466,16 @@ export const MessageProcessor = {
         GroundItemsManager.clearWorld()
         FightSplatsRenderer.clearWorld()
         StepMarksRenderer.clearWorld()
+        FoggyAreaManager.clearWorld()
         GMSpawns.removeAllMarkers()
+        GMFoggyAreas.removeMarkers()
         Lights.pruneDisposedMeshReferences()
+    },
+
+    processFoggyAreaChanged(data) {
+        if (data.worldId !== MyPlayer.worldId) return
+        FoggyAreaManager.applyChange(data.area, data.deleted === true)
+        if (GMManager.gmPanelVisible.value && GMManager.tab === 'fog_edit') GMFoggyAreas.renderMarkers()
     },
 
     processCharacterRespawn(data: {id: number}) {

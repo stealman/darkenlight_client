@@ -22,6 +22,8 @@ import { TargetingManager } from '@/gui/targettingManager'
 import { MyPlayer } from '@/data/myPlayer'
 import { createSnowCoverMask } from '@/babylon/world/snowCoverMask'
 import { BuildingManager } from '@/babylon/world/buildings/buildingManager'
+import { FoggyAreaManager } from '@/babylon/world/foggyAreaManager'
+import { GMFoggyAreas } from '@/gm/GmFoggyAreas'
 
 export const WorldRenderer = {
     block1: null as SymmetricBlock | null,
@@ -50,6 +52,7 @@ export const WorldRenderer = {
         BuildingManager.initialize(scene, this.worldParentNode)
         FoliageManager.initialize(scene, this.worldParentNode)
         RockDebrisManager.initialize(scene, this.worldParentNode)
+        FoggyAreaManager.initialize(scene)
 
         Lights.addShadowCaster(TerrainManager.terrainBlock1!, true, true)
         Lights.addShadowCaster(TerrainManager.terrainPlane!, true, true)
@@ -106,9 +109,13 @@ export const WorldRenderer = {
 
         // Render decorative rock debris
         RockDebrisManager.renderRockDebris(Lights.indoor)
+        FoggyAreaManager.refreshVisibleAreas()
 
         if (GMManager.gmPanelVisible && GMManager.tab === GmTabs.SPAWNS_EDIT) {
             GMSpawns.renderSpawnMarkers()
+        }
+        if (GMManager.gmPanelVisible && GMManager.tab === GmTabs.FOG_EDIT) {
+            GMFoggyAreas.renderMarkers()
         }
 
         this.block1!.setThinInstanceBuffers()

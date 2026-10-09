@@ -347,6 +347,15 @@ export class GMCreateItemMsg implements Message {
     }
 }
 
+export class GMFoggyAreaAction implements Message {
+    t: number = 1022
+    d: any
+
+    constructor(action: string, data: any) {
+        this.d = {action, data}
+    }
+}
+
 export class GMBuildingChange implements Message {
     t: number = 1020
     d: any

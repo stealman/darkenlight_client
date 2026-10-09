@@ -46,6 +46,17 @@ export interface WorldMapDataMessage {
     environment?: {type: 'outdoor' | 'indoor', category?: string}
     dayNightCycle?: DayNightCycleSync
     mapChunk?: any
+    foggyAreas?: FoggyAreaData[]
+}
+
+export interface FoggyAreaData {
+    id: number
+    x: number
+    z: number
+    width: number
+    depth: number
+    rotation: number
+    intensity: number
 }
 
 export interface GuestCharacterNameCheckData {
