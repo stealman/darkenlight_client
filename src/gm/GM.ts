@@ -57,10 +57,10 @@ export const LOG_PILE_STATIC_ID = 303
 export const SUPPLY_CRATE_STATIC_ID = 304
 export const CAMP_BARREL_STATIC_ID = 305
 export const STUMP_WITH_AXE_STATIC_ID = 307
-export const CEMETERY_STATIC_IDS = new Set([321, 322, 323, 324, 325, 328, 329, 330])
+export const CEMETERY_STATIC_IDS = new Set([321, 322, 323, 324, 325, 328, 329, 330, 331, 332, 333, 334])
 
 const WALL_FENCE_STATIC_IDS = new Set([201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 221, 222])
-const GENERAL_STATIC_IDS = new Set([241, 242, 261, 262, 281, 301, 302, 303, 304, 305, 306, 307, 321, 322, 323, 324, 325, 328, 329, 330])
+const GENERAL_STATIC_IDS = new Set([241, 242, 261, 262, 281, 301, 302, 303, 304, 305, 306, 307, 321, 322, 323, 324, 325, 328, 329, 330, 331, 332, 333, 334, 335, 336])
 
 const rectangularFootprint = (sizeX: number, sizeZ: number) => {
     const offsets: Array<{x: number, z: number}> = []
@@ -72,6 +72,7 @@ const rectangularFootprint = (sizeX: number, sizeZ: number) => {
 
 const buildingFootprint = (type: number, facing: string, width: number, depth: number) => {
     if (type === 2) return rectangularFootprint(Math.max(2, width), Math.max(2, depth))
+    if (type === 3) return rectangularFootprint(4, 4)
     const houseWidth = facing === '+X' || facing === '-X' ? 3 : 5
     const houseDepth = facing === '+X' || facing === '-X' ? 5 : 3
     const offsets = rectangularFootprint(houseWidth, houseDepth)

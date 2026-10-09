@@ -67,6 +67,18 @@
                 </select>
             </label>
         </div>
+        <label class="tree-item" :class="{ selected: selectedBuildingType === 3 }" @click="selectBuilding(3)">
+            Stone Mausoleum 4x4
+        </label>
+        <label v-if="selectedBuildingType === 3">
+            Entrance facing
+            <select v-model="buildingFacing">
+                <option value="+Z">+Z</option>
+                <option value="-Z">-Z</option>
+                <option value="+X">+X</option>
+                <option value="-X">-X</option>
+            </select>
+        </label>
         <div v-if="isEditing" style="margin-top: 1vh; display: flex; gap: 6px">
             <button @click="saveEdit">Save</button>
             <button @click="cancelEdit">Cancel</button>

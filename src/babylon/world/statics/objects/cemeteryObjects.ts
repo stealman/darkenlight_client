@@ -72,10 +72,30 @@ abstract class CemeteryObject extends BaseStaticObject {
 
 export class CemeteryHeadstone extends CemeteryObject {
     render() {
+        this.renderHeadstone(Math.PI / 4)
+    }
+
+    protected renderHeadstone(capRoll: number) {
         this.part(0.82, 0.16, 0.48, 0, 0.08, 0)
         this.part(0.62, 0.82, 0.22, 0, 0.55, -0.02)
-        this.part(0.46, 0.18, 0.24, 0, 1.03, -0.02, this.accentMaterial, Math.PI / 4)
+        this.part(0.46, 0.18, 0.24, 0, 1.03, -0.02, this.accentMaterial, capRoll)
         this.part(0.3, 0.05, 0.025, 0, 0.63, 0.105, this.accentMaterial)
+    }
+}
+
+export class CemeteryHeadstone2 extends CemeteryHeadstone {
+    render() {
+        this.renderHeadstone(0)
+    }
+}
+
+export class CemeteryHeadstone3 extends CemeteryObject {
+    render() {
+        this.part(0.78, 0.14, 0.46, 0, 0.07, 0)
+        this.part(0.56, 0.56, 0.2, 0, 0.42, -0.02)
+        this.part(0.62, 0.1, 0.22, 0, 0.74, -0.02, this.accentMaterial)
+        this.part(0.1, 0.46, 0.1, 0, 1.01, -0.02, this.accentMaterial)
+        this.part(0.38, 0.1, 0.1, 0, 1.06, -0.02, this.accentMaterial)
     }
 }
 
@@ -86,6 +106,89 @@ export class CemeteryCross extends CemeteryObject {
         this.part(0.2, 1.45, 0.2, 0, 1.1, 0)
         this.part(0.82, 0.2, 0.2, 0, 1.32, 0)
         this.part(0.28, 0.12, 0.28, 0, 1.88, 0, this.accentMaterial, Math.PI / 4)
+    }
+}
+
+export class CemeteryCrossPedestal extends CemeteryObject {
+    render() {
+        this.part(0.72, 0.18, 0.58, 0, 0.09, 0)
+        this.part(0.42, 0.28, 0.38, 0, 0.31, 0)
+    }
+}
+
+export class FallenCemeteryCross extends BaseStaticObject {
+    constructor(type: number, position: Vector3, material: Vector2) {
+        super(type, position, 0, material, null)
+    }
+
+    render() {
+        const random = Math.sin((this.position.x * 91.7) + (this.position.z * 37.3) + 74.1) * 43758.5453
+        const yaw = (random - Math.floor(random)) * Math.PI * 2
+        addPart(
+            0.18,
+            0.12,
+            1.28,
+            this.renderPosition.x,
+            this.renderPosition.y + 0.62,
+            this.renderPosition.z,
+            this.material,
+            yaw,
+        )
+        addPart(
+            0.72,
+            0.12,
+            0.18,
+            this.renderPosition.x + Math.sin(yaw) * 0.18,
+            this.renderPosition.y + 0.62,
+            this.renderPosition.z + Math.cos(yaw) * 0.18,
+            this.material,
+            yaw,
+        )
+    }
+}
+
+export class FallenCemeteryHeadstone extends BaseStaticObject {
+    private readonly capMaterial: Vector2
+
+    constructor(type: number, position: Vector3, material: Vector2, capMaterial: Vector2) {
+        super(type, position, 0, material, null)
+        this.capMaterial = capMaterial
+    }
+
+    private random(salt: number): number {
+        const value = Math.sin((this.position.x * 91.7) + (this.position.z * 37.3) + salt * 17.1) * 43758.5453
+        return value - Math.floor(value)
+    }
+
+    render() {
+        const yaw = this.random(1) * Math.PI * 2
+        addPart(
+            0.62,
+            0.12,
+            0.82,
+            this.renderPosition.x,
+            this.renderPosition.y + 0.62,
+            this.renderPosition.z,
+            this.material,
+            yaw,
+            (this.random(2) - 0.5) * 0.12,
+        )
+
+        const localX = (this.random(3) - 0.5) * 0.24
+        const localZ = 0.52 + this.random(4) * 0.14
+        const capX = this.renderPosition.x + localX * Math.cos(yaw) + localZ * Math.sin(yaw)
+        const capZ = this.renderPosition.z - localX * Math.sin(yaw) + localZ * Math.cos(yaw)
+        addPart(
+            0.44,
+            0.11,
+            0.22,
+            capX,
+            this.renderPosition.y + 0.61,
+            capZ,
+            this.capMaterial,
+            yaw + (this.random(5) - 0.5) * 0.9,
+            (this.random(6) - 0.5) * 0.2,
+        )
     }
 }
 
@@ -133,6 +236,14 @@ export class GargoyleOnPedestal extends StoneGargoyle {
         this.part(0.72, 0.78, 0.72, 0, 0.57, 0, this.accentMaterial)
         this.part(0.86, 0.16, 0.86, 0, 1.04, 0, this.material)
         this.renderGargoyle(1.12)
+    }
+}
+
+export class CemeteryPedestal extends CemeteryObject {
+    render() {
+        this.part(0.92, 0.18, 0.92, 0, 0.09, 0, this.material)
+        this.part(0.72, 0.78, 0.72, 0, 0.57, 0, this.accentMaterial)
+        this.part(0.86, 0.16, 0.86, 0, 1.04, 0, this.material)
     }
 }
 
@@ -239,20 +350,20 @@ export class CemeteryIronFence extends CemeteryWall {
         }
         this.part(0.98, 0.44, 0.42, 0, 0.22, 0, this.material)
         for (const along of [-0.42, 0.42]) {
-            this.part(0.14, 1.7, 0.14, along, 1.02, 0, this.material)
-            this.part(0.22, 0.18, 0.22, along, 1.96, 0, this.material, Math.PI / 4)
+            this.part(0.14, 1.78, 0.14, along, 1.06, 0, this.material)
+            this.part(0.22, 0.18, 0.22, along, 2.04, 0, this.material, Math.PI / 4)
         }
         for (const along of [-0.28, 0, 0.28]) {
-            this.part(0.055, 1.28, 0.055, along, 1.05, 0, this.accentMaterial)
-            this.part(0.11, 0.16, 0.11, along, 1.77, 0, this.accentMaterial, Math.PI / 4)
+            this.part(0.055, 1.52, 0.055, along, 1.17, 0, this.accentMaterial)
+            this.part(0.11, 0.16, 0.11, along, 2.02, 0, this.accentMaterial, Math.PI / 4)
         }
-        for (const y of [0.73, 1.42]) this.part(0.82, 0.07, 0.08, 0, y, 0, this.accentMaterial)
+        for (const y of [0.73, 1.5]) this.part(0.82, 0.07, 0.08, 0, y, 0, this.accentMaterial)
     }
 
     private renderCorner() {
         this.worldPart(0.42, 0.44, 0.42, 0, 0.22, 0)
-        this.worldPart(0.16, 1.7, 0.16, 0, 1.02, 0)
-        this.worldPart(0.23, 0.18, 0.23, 0, 1.96, 0, this.material, Math.PI / 4)
+        this.worldPart(0.16, 1.78, 0.16, 0, 1.06, 0)
+        this.worldPart(0.23, 0.18, 0.23, 0, 2.04, 0, this.material, Math.PI / 4)
 
         for (const direction of this.cornerDirections!) {
             const alongX = direction.x !== 0
@@ -264,14 +375,14 @@ export class CemeteryIronFence extends CemeteryWall {
                 0.22,
                 direction.z * 0.29,
             )
-            this.worldPart(0.14, 1.7, 0.14, direction.x * 0.46, 1.02, direction.z * 0.46)
-            this.worldPart(0.22, 0.18, 0.22, direction.x * 0.46, 1.96, direction.z * 0.46, this.material, Math.PI / 4)
+            this.worldPart(0.14, 1.78, 0.14, direction.x * 0.46, 1.06, direction.z * 0.46)
+            this.worldPart(0.22, 0.18, 0.22, direction.x * 0.46, 2.04, direction.z * 0.46, this.material, Math.PI / 4)
 
             for (const distance of [0.16, 0.31]) {
-                this.worldPart(0.055, 1.28, 0.055, direction.x * distance, 1.05, direction.z * distance, this.accentMaterial)
-                this.worldPart(0.11, 0.16, 0.11, direction.x * distance, 1.77, direction.z * distance, this.accentMaterial, Math.PI / 4)
+                this.worldPart(0.055, 1.52, 0.055, direction.x * distance, 1.17, direction.z * distance, this.accentMaterial)
+                this.worldPart(0.11, 0.16, 0.11, direction.x * distance, 2.02, direction.z * distance, this.accentMaterial, Math.PI / 4)
             }
-            for (const y of [0.73, 1.42]) {
+            for (const y of [0.73, 1.5]) {
                 this.worldPart(
                     alongX ? 0.46 : 0.08,
                     0.07,

@@ -34,6 +34,13 @@ const HOUSE_WIDTH = 5
 const HOUSE_DEPTH = 3
 const HUMAN_HOUSE_TYPE = 1
 const SHED_TYPE = 2
+const STONE_MAUSOLEUM_TYPE = 3
+const MAUSOLEUM_SIZE = 4
+const MAUSOLEUM_ENTRANCE_CENTER_X = 1.5
+const MAUSOLEUM_ENTRANCE_COLLISION_WIDTH = 1.5
+const MAUSOLEUM_WALL_HEIGHT = 2
+const MAUSOLEUM_PILLAR_SIZE = 0.56
+const MAUSOLEUM_WALL_THICKNESS = 0.24
 const FLOOR_HEIGHT = 0.12
 const FLOOR_OVERHANG = 0.4
 const WALL_HEIGHT = 1
@@ -919,7 +926,388 @@ class ShedView {
     }
 }
 
-type RenderedBuilding = BuildingView | ShedView
+type MausoleumPartGroup = 'body' | 'front' | 'occlusion' | 'frontOcclusion' | 'roof'
+
+class MausoleumView {
+    readonly facing: BuildingFacing
+    readonly frontWallsMesh: Mesh
+    readonly occlusionWallsMesh: Mesh
+    readonly roofMesh: Mesh
+    readonly blockParts: Array<BuildingBlockPart & {group: MausoleumPartGroup}> = []
+    roofVisibility = 1
+    wallVisibility = 1
+    occlusionWallVisibility = 1
+    shouldOcclusionFade = false
+    visible = false
+    roofInBatch = true
+    frontWallsInBatch = true
+    occlusionWallsInBatch = true
+    private previewYOffset = 0
+
+    constructor(readonly data: BuildingData, parent: TransformNode, fadeMaterial: PBRMaterial) {
+        this.facing = data.facing === '+X' || data.facing === '-X' || data.facing === '-Z' ? data.facing : '+Z'
+        const scene = parent.getScene()
+        const frontParts: Mesh[] = []
+        const frontUvData: number[] = []
+        const occlusionParts: Mesh[] = []
+        const occlusionUvData: number[] = []
+        const roofParts: Mesh[] = []
+        const roofUvData: number[] = []
+        const stone = MaterialEnum1.ROCK1.uv
+        const darkStone = MaterialEnum1.BRICK_DARK_GRAY.uv
+        const worldMinusZSide: BuildingFacing = this.facing === '+X' ? '+X'
+            : this.facing === '-Z' ? '+Z'
+                : this.facing === '-X' ? '-X' : '-Z'
+        const worldPlusZSide: BuildingFacing = this.facing === '+X' ? '-X'
+            : this.facing === '-Z' ? '-Z'
+                : this.facing === '-X' ? '+X' : '+Z'
+        const worldPlusXSide: BuildingFacing = this.facing === '+X' ? '+Z'
+            : this.facing === '-Z' ? '-X'
+                : this.facing === '-X' ? '-Z' : '+X'
+        const fadesInside = (side: BuildingFacing) => side === '+Z' || side === worldMinusZSide
+        const fadesWhenOccluding = (side: BuildingFacing) => side === worldPlusZSide || side === worldPlusXSide
+        const wallGroup = (sides: BuildingFacing[]): MausoleumPartGroup => {
+            const front = sides.some(fadesInside)
+            const occlusion = sides.some(fadesWhenOccluding)
+            return front && occlusion ? 'frontOcclusion' : front ? 'front' : occlusion ? 'occlusion' : 'body'
+        }
+        const addBlock = (
+            width: number,
+            height: number,
+            depth: number,
+            x: number,
+            y: number,
+            z: number,
+            material: Vector2,
+            group: MausoleumPartGroup = 'body',
+            roll = 0,
+        ) => {
+            const rotation = Matrix.RotationYawPitchRoll(0, 0, roll)
+            this.blockParts.push({
+                matrix: Matrix.Scaling(width, height, depth)
+                    .multiply(rotation)
+                    .multiply(Matrix.Translation(x, y + 0.5, z)),
+                material,
+                group,
+            })
+            const addFadePart = (name: string, parts: Mesh[], uvData: number[]) => {
+                const block = MeshBuilder.CreateBox(name, {width, height, depth, wrap: true}, scene)
+                block.position.set(x, y, z)
+                block.rotationQuaternion = Quaternion.FromRotationMatrix(rotation)
+                block.convertToUnIndexedMesh()
+                for (let i = 0; i < block.getTotalVertices(); i++) uvData.push(material.x, material.y)
+                parts.push(block)
+            }
+            if (group === 'front' || group === 'frontOcclusion') {
+                addFadePart('mausoleum_front_block', frontParts, frontUvData)
+            }
+            if (group === 'occlusion' || group === 'frontOcclusion') {
+                addFadePart('mausoleum_occlusion_block', occlusionParts, occlusionUvData)
+            }
+            if (group === 'roof') addFadePart('mausoleum_roof_block', roofParts, roofUvData)
+        }
+
+        // A tiled stone plinth avoids stretching the atlas over the full 5x5 footprint.
+        for (let x = 0; x < MAUSOLEUM_SIZE; x++) {
+            for (let z = 0; z < MAUSOLEUM_SIZE; z++) {
+                addBlock(0.98, FLOOR_HEIGHT, 0.98, x, FLOOR_HEIGHT / 2, z, darkStone)
+            }
+        }
+        addBlock(1.55, 0.1, 0.62, MAUSOLEUM_ENTRANCE_CENTER_X, 0.05, 3.72, stone, wallGroup(['+Z']))
+
+        const courseHeight = 0.4
+        const masonryBlockHeight = courseHeight + 0.01
+        const masonryBlockLength = 1.01
+        const courses = Math.round(MAUSOLEUM_WALL_HEIGHT / courseHeight)
+        for (let course = 0; course < courses; course++) {
+            const y = FLOOR_HEIGHT + courseHeight / 2 + course * courseHeight
+            const stagger = course % 2 === 0 ? 0 : 0.04
+            for (let offset = 0; offset < MAUSOLEUM_SIZE; offset++) {
+                addBlock(
+                    masonryBlockLength, masonryBlockHeight, MAUSOLEUM_WALL_THICKNESS,
+                    offset + stagger, y, -0.5, stone, wallGroup(['-Z']),
+                )
+                addBlock(
+                    MAUSOLEUM_WALL_THICKNESS, masonryBlockHeight, masonryBlockLength,
+                    -0.5, y, offset + stagger, stone, wallGroup(['-X']),
+                )
+                addBlock(
+                    MAUSOLEUM_WALL_THICKNESS, masonryBlockHeight, masonryBlockLength,
+                    3.5, y, offset - stagger, stone, wallGroup(['+X']),
+                )
+            }
+            if (course < courses - 1) {
+                addBlock(1.21, masonryBlockHeight, MAUSOLEUM_WALL_THICKNESS, 0.1, y, 3.5, stone, wallGroup(['+Z']))
+                addBlock(1.21, masonryBlockHeight, MAUSOLEUM_WALL_THICKNESS, 2.9, y, 3.5, stone, wallGroup(['+Z']))
+            } else {
+                for (let offset = 0; offset < MAUSOLEUM_SIZE; offset++) {
+                    addBlock(masonryBlockLength, masonryBlockHeight, MAUSOLEUM_WALL_THICKNESS, offset - stagger, y, 3.5, stone, wallGroup(['+Z']))
+                }
+            }
+        }
+
+        const addPillar = (x: number, z: number, sides: BuildingFacing[]) => {
+            const group = wallGroup(sides)
+            addBlock(0.72, 0.18, 0.72, x, FLOOR_HEIGHT + 0.09, z, darkStone, group)
+            for (let course = 0; course < 4; course++) {
+                addBlock(
+                    MAUSOLEUM_PILLAR_SIZE,
+                    0.46,
+                    MAUSOLEUM_PILLAR_SIZE,
+                    x,
+                    FLOOR_HEIGHT + 0.18 + 0.23 + course * 0.46,
+                    z,
+                    course % 2 === 0 ? stone : darkStone,
+                    group,
+                )
+            }
+            addBlock(0.7, 0.2, 0.7, x, FLOOR_HEIGHT + 2.02, z, darkStone, group)
+        }
+        addPillar(-0.5, -0.5, ['-X', '-Z'])
+        addPillar(3.5, -0.5, ['+X', '-Z'])
+        addPillar(-0.5, 3.5, ['-X', '+Z'])
+        addPillar(3.5, 3.5, ['+X', '+Z'])
+
+        // Seven long stone chords form a readable barrel vault without a bespoke model.
+        const vault = [
+            {x: -0.08, y: 2.18, roll: Math.PI * 0.31},
+            {x: 0.45, y: 2.51, roll: Math.PI * 0.21},
+            {x: 1, y: 2.72, roll: Math.PI * 0.105},
+            {x: 1.5, y: 2.8, roll: 0},
+            {x: 2, y: 2.72, roll: -Math.PI * 0.105},
+            {x: 2.55, y: 2.51, roll: -Math.PI * 0.21},
+            {x: 3.08, y: 2.18, roll: -Math.PI * 0.31},
+        ]
+        vault.forEach((part, index) => {
+            addBlock(0.76, 0.24, 4.62, part.x, part.y, 1.5, stone, 'roof', part.roll)
+            if (index > 0 && index < vault.length - 1) {
+                for (const z of [-0.47, 0.85, 2.15, 3.47]) {
+                    addBlock(0.97, 0.1, 0.16, part.x, part.y + 0.15, z, darkStone, 'roof', part.roll)
+                }
+            }
+        })
+
+        this.frontWallsMesh = Mesh.MergeMeshes(frontParts, true, true)!
+        this.frontWallsMesh.name = `mausoleum_${data.id}_front`
+        this.frontWallsMesh.parent = parent
+        this.frontWallsMesh.material = fadeMaterial
+        this.frontWallsMesh.setVerticesData('uvc', frontUvData, false, 2)
+        this.occlusionWallsMesh = Mesh.MergeMeshes(occlusionParts, true, true)!
+        this.occlusionWallsMesh.name = `mausoleum_${data.id}_occlusion_walls`
+        this.occlusionWallsMesh.parent = parent
+        this.occlusionWallsMesh.material = fadeMaterial
+        this.occlusionWallsMesh.setVerticesData('uvc', occlusionUvData, false, 2)
+        this.roofMesh = Mesh.MergeMeshes(roofParts, true, true)!
+        this.roofMesh.name = `mausoleum_${data.id}_roof`
+        this.roofMesh.parent = parent
+        this.roofMesh.material = fadeMaterial
+        this.roofMesh.setVerticesData('uvc', roofUvData, false, 2)
+        for (const mesh of [this.frontWallsMesh, this.occlusionWallsMesh, this.roofMesh]) {
+            mesh.isPickable = false
+            mesh.setEnabled(false)
+            Lights.registerSharedLightMesh(mesh)
+            Lights.addShadowCaster(mesh, true, true)
+        }
+        this.applyXZTransform()
+        this.recountYPosition()
+    }
+
+    getWidth() { return MAUSOLEUM_SIZE }
+    getDepth() { return MAUSOLEUM_SIZE }
+
+    private localTileToWorld(localX: number, localZ: number) {
+        if (this.facing === '+X') return {x: this.data.x + localZ, z: this.data.z + MAUSOLEUM_SIZE - 1 - localX}
+        if (this.facing === '-Z') return {x: this.data.x + MAUSOLEUM_SIZE - 1 - localX, z: this.data.z + MAUSOLEUM_SIZE - 1 - localZ}
+        if (this.facing === '-X') return {x: this.data.x + MAUSOLEUM_SIZE - 1 - localZ, z: this.data.z + localX}
+        return {x: this.data.x + localX, z: this.data.z + localZ}
+    }
+
+    private worldPointToLocal(worldX: number, worldZ: number) {
+        const dx = worldX - this.data.x
+        const dz = worldZ - this.data.z
+        if (this.facing === '+X') return {x: MAUSOLEUM_SIZE - 1 - dz, z: dx}
+        if (this.facing === '-Z') return {x: MAUSOLEUM_SIZE - 1 - dx, z: MAUSOLEUM_SIZE - 1 - dz}
+        if (this.facing === '-X') return {x: dz, z: MAUSOLEUM_SIZE - 1 - dx}
+        return {x: dx, z: dz}
+    }
+
+    private applyXZTransform() {
+        const rotation = this.facing === '+X' ? Math.PI / 2
+            : this.facing === '-Z' ? Math.PI
+                : this.facing === '-X' ? -Math.PI / 2 : 0
+        const x = this.data.x + (this.facing === '-Z' || this.facing === '-X' ? MAUSOLEUM_SIZE - 1 : 0)
+        const z = this.data.z + (this.facing === '+X' || this.facing === '-Z' ? MAUSOLEUM_SIZE - 1 : 0)
+        for (const mesh of [this.frontWallsMesh, this.occlusionWallsMesh, this.roofMesh]) {
+            mesh.position.x = x
+            mesh.position.z = z
+            mesh.rotation.y = rotation
+        }
+    }
+
+    getOccupiedTiles() {
+        const tiles: {x: number, z: number}[] = []
+        for (let x = 0; x < MAUSOLEUM_SIZE; x++) {
+            for (let z = 0; z < MAUSOLEUM_SIZE; z++) tiles.push(this.localTileToWorld(x, z))
+        }
+        return tiles
+    }
+
+    getFloorTiles() { return this.getOccupiedTiles() }
+    hasFloor() { return true }
+    affectsInteriorLighting() { return true }
+
+    getCollisionIndexTiles() {
+        const tiles = this.getOccupiedTiles().filter((tile) => {
+            const local = this.worldPointToLocal(tile.x, tile.z)
+            return local.x === 0 || local.x === MAUSOLEUM_SIZE - 1
+                || local.z === 0 || local.z === MAUSOLEUM_SIZE - 1
+        })
+        for (let offset = -1; offset <= MAUSOLEUM_SIZE; offset++) {
+            tiles.push({x: this.data.x + offset, z: this.data.z - 1})
+            tiles.push({x: this.data.x + offset, z: this.data.z + MAUSOLEUM_SIZE})
+            if (offset >= 0 && offset < MAUSOLEUM_SIZE) {
+                tiles.push({x: this.data.x - 1, z: this.data.z + offset})
+                tiles.push({x: this.data.x + MAUSOLEUM_SIZE, z: this.data.z + offset})
+            }
+        }
+        return tiles
+    }
+
+    isVisible() {
+        return this.getOccupiedTiles().some((tile) => ViewportManager.isPointInVisibleMatrix(tile.x, tile.z, 1))
+    }
+
+    recountYPosition() {
+        const block = WorldDataManager.getBlockMap()[this.data.x]?.[this.data.z]
+        const y = (block?.totalHeight ?? 0) + this.previewYOffset
+        this.frontWallsMesh.position.y = y
+        this.occlusionWallsMesh.position.y = y
+        this.roofMesh.position.y = y
+    }
+
+    setPreviewYOffset(offset: number) {
+        if (this.previewYOffset === offset) return false
+        this.previewYOffset = offset
+        this.recountYPosition()
+        return true
+    }
+
+    isPointInCollision(x: number, z: number, size: number) {
+        const local = this.worldPointToLocal(x, z)
+        const half = size / 2
+        const intersects = (minX: number, maxX: number, minZ: number, maxZ: number) => {
+            return local.x - half < maxX && local.x + half > minX
+                && local.z - half < maxZ && local.z + half > minZ
+        }
+        const min = -0.5
+        const max = MAUSOLEUM_SIZE - 0.5
+        const halfPillar = MAUSOLEUM_PILLAR_SIZE / 2
+        const halfWall = MAUSOLEUM_WALL_THICKNESS / 2
+        const doorMinX = MAUSOLEUM_ENTRANCE_CENTER_X - MAUSOLEUM_ENTRANCE_COLLISION_WIDTH / 2
+        const doorMaxX = MAUSOLEUM_ENTRANCE_CENTER_X + MAUSOLEUM_ENTRANCE_COLLISION_WIDTH / 2
+        const hitsPillar = [min, max].some((pillarX) => [min, max].some((pillarZ) => {
+            return intersects(pillarX - halfPillar, pillarX + halfPillar, pillarZ - halfPillar, pillarZ + halfPillar)
+        }))
+        return hitsPillar
+            || intersects(min + halfPillar, max - halfPillar, min - halfWall, min + halfWall)
+            || intersects(min + halfPillar, doorMinX, max - halfWall, max + halfWall)
+            || intersects(doorMaxX, max - halfPillar, max - halfWall, max + halfWall)
+            || intersects(min - halfWall, min + halfWall, min + halfPillar, max - halfPillar)
+            || intersects(max - halfWall, max + halfWall, min + halfPillar, max - halfPillar)
+    }
+
+    containsInteriorPoint(x: number, z: number) {
+        const local = this.worldPointToLocal(x, z)
+        return local.x > -0.35 && local.x < 3.35 && local.z > -0.35 && local.z < 3.65
+    }
+
+    getDoorPosition() { return null }
+    getCollisionCenter() { return this.localTileToWorld(1.5, 1.5) }
+    setDoorOpen(_open: boolean) {}
+    updateDoorAnimation(_timeRate: number) { return false }
+
+    intersectsOcclusionSegment(origin: Vector3, direction: Vector3, maxDistance: number) {
+        const groundY = this.roofMesh.position.y
+        return segmentIntersectsAabb(
+            origin,
+            direction,
+            maxDistance,
+            new Vector3(this.data.x - 0.75, groundY, this.data.z - 0.75),
+            new Vector3(this.data.x + 3.75, groundY + 3.1, this.data.z + 3.75),
+        )
+    }
+
+    setVisible(visible: boolean) {
+        this.visible = visible
+        this.frontWallsMesh.setEnabled(visible && !this.isFrontWallsBatched())
+        this.occlusionWallsMesh.setEnabled(visible && !this.isOcclusionWallsBatched())
+        this.roofMesh.setEnabled(visible && !this.isRoofBatched())
+    }
+
+    private isRoofBatched() { return this.roofVisibility === 1 && !this.shouldOcclusionFade }
+    private isFrontWallsBatched() { return this.wallVisibility === 1 }
+    private isOcclusionWallsBatched() { return this.occlusionWallVisibility === 1 }
+
+    appendBatchedBlocks(matrices: Matrix[], uvData: Vector2[], _prefabs: BuildingPrefabs) {
+        if (!this.visible) return
+        this.roofInBatch = this.isRoofBatched()
+        this.frontWallsInBatch = this.isFrontWallsBatched()
+        this.occlusionWallsInBatch = this.isOcclusionWallsBatched()
+        const world = Matrix.RotationY(this.roofMesh.rotation.y)
+            .multiply(Matrix.Translation(this.roofMesh.position.x, this.roofMesh.position.y, this.roofMesh.position.z))
+        this.blockParts.forEach((part) => {
+            if (part.group === 'roof' && !this.roofInBatch) return
+            if (part.group === 'front' && !this.frontWallsInBatch) return
+            if (part.group === 'occlusion' && !this.occlusionWallsInBatch) return
+            if (part.group === 'frontOcclusion'
+                && (!this.frontWallsInBatch || !this.occlusionWallsInBatch)) return
+            matrices.push(part.matrix.multiply(world))
+            uvData.push(part.material)
+        })
+    }
+
+    appendBatchedGlass(_matrices: Matrix[], _uvData: Vector2[], _prefabs: BuildingPrefabs) {}
+
+    updateFade(timeRate: number, playerInside: boolean, selectedTargetInside: boolean) {
+        const roofTarget = playerInside || selectedTargetInside
+            ? HIDDEN_ROOF_VISIBILITY : this.shouldOcclusionFade ? FADED_ALPHA : 1
+        const wallTarget = playerInside ? FADED_ALPHA : 1
+        const occlusionWallTarget = !playerInside && this.shouldOcclusionFade ? FADED_ALPHA : 1
+        const step = ((1 - HIDDEN_ROOF_VISIBILITY) / FADE_DURATION) * timeRate
+        if (this.roofVisibility !== roofTarget) {
+            this.roofVisibility = this.roofVisibility < roofTarget
+                ? Math.min(this.roofVisibility + step, roofTarget)
+                : Math.max(this.roofVisibility - step, roofTarget)
+            this.roofMesh.visibility = this.roofVisibility
+        }
+        if (this.wallVisibility !== wallTarget) {
+            this.wallVisibility = this.wallVisibility < wallTarget
+                ? Math.min(this.wallVisibility + step, wallTarget)
+                : Math.max(this.wallVisibility - step, wallTarget)
+            this.frontWallsMesh.visibility = this.wallVisibility
+        }
+        if (this.occlusionWallVisibility !== occlusionWallTarget) {
+            this.occlusionWallVisibility = this.occlusionWallVisibility < occlusionWallTarget
+                ? Math.min(this.occlusionWallVisibility + step, occlusionWallTarget)
+                : Math.max(this.occlusionWallVisibility - step, occlusionWallTarget)
+            this.occlusionWallsMesh.visibility = this.occlusionWallVisibility
+        }
+        this.setVisible(this.visible)
+        return this.roofInBatch !== this.isRoofBatched()
+            || this.frontWallsInBatch !== this.isFrontWallsBatched()
+            || this.occlusionWallsInBatch !== this.isOcclusionWallsBatched()
+    }
+
+    dispose() {
+        for (const mesh of [this.frontWallsMesh, this.occlusionWallsMesh, this.roofMesh]) {
+            Lights.unregisterSharedLightMesh(mesh)
+            Lights.removeShadowCaster(mesh, true, true)
+            mesh.dispose()
+        }
+    }
+}
+
+type RenderedBuilding = BuildingView | ShedView | MausoleumView
 
 export const BuildingManager = {
     buildings: new Map<number, RenderedBuilding>(),
@@ -970,13 +1358,15 @@ export const BuildingManager = {
     },
 
     addBuilding(data: BuildingData) {
-        if ((data.tp !== HUMAN_HOUSE_TYPE && data.tp !== SHED_TYPE)
+        if ((data.tp !== HUMAN_HOUSE_TYPE && data.tp !== SHED_TYPE && data.tp !== STONE_MAUSOLEUM_TYPE)
             || this.buildings.has(data.id) || !this.housePrefabs || !this.parent || !this.fadeMaterial) {
             return
         }
         const building = data.tp === SHED_TYPE
             ? new ShedView(data, this.parent, this.fadeMaterial)
-            : new BuildingView(data, this.housePrefabs, this.parent, this.fadeMaterial)
+            : data.tp === STONE_MAUSOLEUM_TYPE
+                ? new MausoleumView(data, this.parent, this.fadeMaterial)
+                : new BuildingView(data, this.housePrefabs, this.parent, this.fadeMaterial)
         this.buildings.set(data.id, building)
         building.getFloorTiles().forEach((tile) => this.floorTiles.set(`${tile.x};${tile.z}`, building))
         building.getCollisionIndexTiles().forEach((tile) => {

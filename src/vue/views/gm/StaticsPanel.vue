@@ -62,7 +62,7 @@
             </select>
         </div>
 
-        <div v-if="selectedObjectType === 'CAMP' || selectedObjectType === 'CEMETERY'" style="margin-top: 1vh">
+        <div v-if="selectedObjectType === 'CAMP' || (selectedObjectType === 'CEMETERY' && selectedObject !== 335 && selectedObject !== 336)" style="margin-top: 1vh">
             <label>Direction</label>
             &nbsp;&nbsp;
             <select v-model="campObjectFacing">
@@ -165,6 +165,12 @@ const objects = [
     { type: "CEMETERY", name: "Gargoyle on Pedestal", id: 328 },
     { type: "CEMETERY", name: "Stone Frame Grave", id: 329 },
     { type: "CEMETERY", name: "Stone Frame Grave (shifted slab)", id: 330 },
+    { type: "CEMETERY", name: "Headstone 2 (flat cap)", id: 331 },
+    { type: "CEMETERY", name: "Headstone 3 (small cross)", id: 332 },
+    { type: "CEMETERY", name: "Empty Pedestal", id: 333 },
+    { type: "CEMETERY", name: "Stone Cross Pedestal", id: 334 },
+    { type: "CEMETERY", name: "Fallen Stone Cross", id: 335 },
+    { type: "CEMETERY", name: "Fallen Headstone", id: 336 },
 ]
 
 const previouslySelectedObject = objects.find(obj => obj.id === selectedObject.value)
