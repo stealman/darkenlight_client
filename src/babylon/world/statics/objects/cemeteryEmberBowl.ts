@@ -7,7 +7,6 @@ import {
     getStaticLightLevel,
     getStaticLightRangeLevelFactor,
     OUTDOOR_STATIC_LIGHT_RANGE_FACTOR,
-    STATIC_SHADOW_MAP_SIZE,
     type StaticLightMetadata,
 } from '@/babylon/scene/lighting/lightConfig'
 import { StaticFireParticleManager } from '@/babylon/world/statics/staticFireParticleManager'
@@ -132,7 +131,8 @@ export class CemeteryEmberBowl extends BaseStaticObject {
             flicker: true,
             flickerPosition: false,
             priority: 0,
-            shadowMapSize: STATIC_SHADOW_MAP_SIZE,
+            castsShadows: false,
+            castsActorShadows: false,
         })
     }
 

@@ -62,7 +62,7 @@
             </select>
         </div>
 
-        <div v-if="selectedObjectType === 'CAMP' || (selectedObjectType === 'CEMETERY' && selectedObject !== 335 && selectedObject !== 336 && selectedObject !== 337)" style="margin-top: 1vh">
+        <div v-if="(selectedObjectType === 'CAMP' && selectedObject !== 308 && selectedObject !== 310) || (selectedObjectType === 'CEMETERY' && selectedObject !== 335 && selectedObject !== 336 && selectedObject !== 337)" style="margin-top: 1vh">
             <label>Direction</label>
             &nbsp;&nbsp;
             <select v-model="campObjectFacing">
@@ -177,6 +177,9 @@ const objects = [
     { type: "CAMP", name: "Barrel", id: 305 },
     { type: "CAMP", name: "Hay Stack", id: 306 },
     { type: "CAMP", name: "Stump with Axe", id: 307 },
+    { type: "CAMP", name: "Water Trough 1x1", id: 308 },
+    { type: "CAMP", name: "Water Trough 2x1", id: 309 },
+    { type: "CAMP", name: "Stone Well", id: 310 },
     { type: "CEMETERY", name: "Headstone", id: 321 },
     { type: "CEMETERY", name: "Stone Cross", id: 322 },
     { type: "CEMETERY", name: "Stone Tomb 1x2", id: 323 },

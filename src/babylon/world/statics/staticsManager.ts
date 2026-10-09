@@ -1,6 +1,6 @@
 import { Matrix, Scene, Vector2, Vector3 } from '@babylonjs/core'
 import { Prefab, WorldRenderer } from '@/babylon/world/worldRenderer'
-import { MaterialAlphaEnum1, MaterialEnum1 } from '@/babylon/materials'
+import { MaterialAlphaEnum1, MaterialEnum1, MaterialEnumTrans } from '@/babylon/materials'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { ViewportManager } from '@/utils/viewport'
 import { PrefabShrub2x2 } from '@/babylon/world/prefabs/shrub2x2'
@@ -32,7 +32,9 @@ import {
     LogPile,
     PlankPile,
     StumpWithAxe,
+    StoneWell,
     SupplyCrate,
+    WaterTrough,
 } from '@/babylon/world/statics/objects/campObjects'
 import { StaticEquipPartsRenderer } from '@/babylon/world/statics/staticEquipPartsRenderer'
 import { WeaponModelsCb } from '@/babylon/item/codebook/weaponModelsCb'
@@ -195,6 +197,17 @@ export const StaticsManager = {
                 MaterialEnum1.WOOD_CUT.uv,
                 StaticEquipPartsRenderer.getPrefab(WeaponModelsCb.HAND_AXE.id),
                 obj.meta as CampObjectMetadata,
+            )); break
+            case 308: this.allStatics.push(new WaterTrough(obj.tp, pos, MaterialEnum1.WOOD_2.uv, MaterialEnumTrans.WATER.uv)); break
+            case 309: this.allStatics.push(new WaterTrough(obj.tp, pos, MaterialEnum1.WOOD_2.uv, MaterialEnumTrans.WATER.uv, obj.meta as CampObjectMetadata)); break
+            case 310: this.allStatics.push(new StoneWell(
+                obj.tp,
+                pos,
+                MaterialEnum1.BRICK_GRAY.uv,
+                MaterialEnum1.ROCK1.uv,
+                MaterialEnum1.WOOD_3.uv,
+                MaterialEnum1.WOOD_PLANKS_DARK.uv,
+                MaterialEnum1.STEEL_1.uv,
             )); break
             case 321: this.allStatics.push(new CemeteryHeadstone(obj.tp, pos, MaterialEnum1.ROCK1.uv, MaterialEnum1.BRICK_DARK_GRAY.uv, obj.meta as CemeteryObjectMetadata)); break
             case 322: this.allStatics.push(new CemeteryCross(obj.tp, pos, MaterialEnum1.ROCK1.uv, MaterialEnum1.BRICK_DARK_GRAY.uv, obj.meta as CemeteryObjectMetadata)); break
@@ -388,8 +401,9 @@ export const StaticsManager = {
         for (const element of this.visibleStatics) {
             const blockStart = WorldRenderer.block1!.matrices.length
             const prefabStart = element.prefab?.matrices.length ?? 0
+            const translucentStart = WorldRenderer.translucentPlane!.matrices.length
             element.render()
-            element.captureRenderMatrices(blockStart, prefabStart)
+            element.captureRenderMatrices(blockStart, prefabStart, translucentStart)
         }
         StaticFireParticleManager.flush()
 

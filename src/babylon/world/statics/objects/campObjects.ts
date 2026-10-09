@@ -89,6 +89,83 @@ export class CampBench extends CampObject {
     }
 }
 
+export class WaterTrough extends CampObject {
+    private readonly waterMaterial: Vector2
+
+    constructor(type: number, position: Vector3, material: Vector2, waterMaterial: Vector2, metadata?: CampObjectMetadata) {
+        super(type, position, material, material, metadata)
+        this.waterMaterial = waterMaterial
+    }
+
+    render() {
+        const length = this.getSizeX() > 1 || this.getSizeZ() > 1 ? 1.82 : 0.82
+        const endOffset = length / 2 - 0.07
+        this.part(length, 0.1, 0.54, 0, 0.08, 0)
+        this.part(length, 0.38, 0.1, 0, 0.24, -0.27)
+        this.part(length, 0.38, 0.1, 0, 0.24, 0.27)
+        this.part(0.14, 0.38, 0.44, -endOffset, 0.24, 0)
+        this.part(0.14, 0.38, 0.44, endOffset, 0.24, 0)
+
+        WorldRenderer.translucentPlane!.matrices.push(
+            Matrix.Scaling(length - 0.24, 1, 0.36)
+                .multiply(Matrix.RotationY(this.yaw))
+                .multiply(Matrix.Translation(
+                    this.renderPosition.x,
+                    this.renderPosition.y + 0.39,
+                    this.renderPosition.z,
+                )),
+        )
+        WorldRenderer.translucentPlane!.uvData.push(this.waterMaterial)
+    }
+
+    getWalkableHeight(): number {
+        return 0.43
+    }
+}
+
+export class StoneWell extends BaseStaticObject {
+    private readonly rimMaterial: Vector2
+    private readonly woodMaterial: Vector2
+    private readonly roofMaterial: Vector2
+    private readonly steelMaterial: Vector2
+
+    constructor(type: number, position: Vector3, stoneMaterial: Vector2, rimMaterial: Vector2, woodMaterial: Vector2, roofMaterial: Vector2, steelMaterial: Vector2) {
+        super(type, position, 0, stoneMaterial, null)
+        this.rimMaterial = rimMaterial
+        this.woodMaterial = woodMaterial
+        this.roofMaterial = roofMaterial
+        this.steelMaterial = steelMaterial
+    }
+
+    render() {
+        const x = this.renderPosition.x
+        const groundY = this.renderPosition.y + 0.5
+        const z = this.renderPosition.z
+
+        addPart(0.9, 0.75, 0.18, x, groundY + 0.375, z - 0.36, this.material)
+        addPart(0.9, 0.75, 0.18, x, groundY + 0.375, z + 0.36, this.material)
+        addPart(0.18, 0.75, 0.54, x - 0.36, groundY + 0.375, z, this.material)
+        addPart(0.18, 0.75, 0.54, x + 0.36, groundY + 0.375, z, this.material)
+
+        addPart(0.96, 0.1, 0.2, x, groundY + 0.75, z - 0.38, this.rimMaterial)
+        addPart(0.96, 0.1, 0.2, x, groundY + 0.75, z + 0.38, this.rimMaterial)
+        addPart(0.2, 0.1, 0.56, x - 0.38, groundY + 0.75, z, this.rimMaterial)
+        addPart(0.2, 0.1, 0.56, x + 0.38, groundY + 0.75, z, this.rimMaterial)
+
+        for (const postX of [-0.36, 0.36]) {
+            addPart(0.1, 1.15, 0.1, x + postX, groundY + 1.325, z, this.woodMaterial)
+        }
+        addPart(0.84, 0.1, 0.1, x, groundY + 1.72, z, this.woodMaterial)
+
+        const axleY = groundY + 1.32
+        addPart(1.02, 0.06, 0.06, x - 0.15, axleY, z, this.steelMaterial)
+        addPart(0.06, 0.24, 0.06, x - 0.66, axleY - 0.09, z, this.steelMaterial)
+
+        addPart(0.62, 0.08, 1.02, x - 0.22, groundY + 1.93, z, this.roofMaterial, 0, 0.42)
+        addPart(0.62, 0.08, 1.02, x + 0.22, groundY + 1.93, z, this.roofMaterial, 0, -0.42)
+    }
+}
+
 export class PlankPile extends CampObject {
     render() {
         const rows = [

@@ -24,7 +24,7 @@ export interface StaticObject {
     getPlacementSurfaceHeight(): number | null
     shouldPlaceOnStatic(): boolean
     clearRenderMatrixCapture(): void
-    captureRenderMatrices(blockStart: number, prefabStart: number): void
+    captureRenderMatrices(blockStart: number, prefabStart: number, translucentStart: number): void
     applyDeleteBounceOffset(offset: number): Mesh[]
     captureTerrainMatrices(start: number, matrices: Matrix[]): void
 }
@@ -42,6 +42,8 @@ export abstract class BaseStaticObject implements StaticObject {
     private blockMatrixBaseY: number[] = []
     private prefabMatrixIndices: number[] = []
     private prefabMatrixBaseY: number[] = []
+    private translucentMatrixIndices: number[] = []
+    private translucentMatrixBaseY: number[] = []
     private terrainMatrixIndices: number[] = []
     private terrainMatrixBaseY: number[] = []
 
@@ -96,22 +98,30 @@ export abstract class BaseStaticObject implements StaticObject {
         this.blockMatrixBaseY = []
         this.prefabMatrixIndices = []
         this.prefabMatrixBaseY = []
+        this.translucentMatrixIndices = []
+        this.translucentMatrixBaseY = []
         this.terrainMatrixIndices = []
         this.terrainMatrixBaseY = []
     }
 
-    captureRenderMatrices(blockStart: number, prefabStart: number) {
+    captureRenderMatrices(blockStart: number, prefabStart: number, translucentStart: number) {
         this.blockMatrixIndices = Array.from(
             {length: WorldRenderer.block1!.matrices.length - blockStart},
             (_, index) => blockStart + index,
         )
         this.blockMatrixBaseY = this.blockMatrixIndices.map((index) => WorldRenderer.block1!.matrices[index].m[13])
-        if (!this.prefab) return
-        this.prefabMatrixIndices = Array.from(
-            {length: this.prefab.matrices.length - prefabStart},
-            (_, index) => prefabStart + index,
+        if (this.prefab) {
+            this.prefabMatrixIndices = Array.from(
+                {length: this.prefab.matrices.length - prefabStart},
+                (_, index) => prefabStart + index,
+            )
+            this.prefabMatrixBaseY = this.prefabMatrixIndices.map((index) => this.prefab!.matrices[index].m[13])
+        }
+        this.translucentMatrixIndices = Array.from(
+            {length: WorldRenderer.translucentPlane!.matrices.length - translucentStart},
+            (_, index) => translucentStart + index,
         )
-        this.prefabMatrixBaseY = this.prefabMatrixIndices.map((index) => this.prefab!.matrices[index].m[13])
+        this.translucentMatrixBaseY = this.translucentMatrixIndices.map((index) => WorldRenderer.translucentPlane!.matrices[index].m[13])
     }
 
     captureTerrainMatrices(start: number, matrices: Matrix[]) {
@@ -136,6 +146,13 @@ export abstract class BaseStaticObject implements StaticObject {
                 this.prefab!.matrixBuffer[(index * 16) + 13] = this.prefabMatrixBaseY[i] + offset
             })
             changedMeshes.push(this.prefab!.mesh)
+        }
+        const translucentBuffer = WorldRenderer.translucentPlane!.matrixBuffer
+        if (this.translucentMatrixIndices.length > 0 && translucentBuffer.length > 0) {
+            this.translucentMatrixIndices.forEach((index, i) => {
+                translucentBuffer[(index * 16) + 13] = this.translucentMatrixBaseY[i] + offset
+            })
+            changedMeshes.push(WorldRenderer.translucentPlane!.mesh)
         }
         if (this.terrainMatrixIndices.length > 0 && TerrainManager.terrainBlockMatrixBuffer.length > 0) {
             this.terrainMatrixIndices.forEach((index, i) => {

@@ -66,10 +66,13 @@ export const LOG_PILE_STATIC_ID = 303
 export const SUPPLY_CRATE_STATIC_ID = 304
 export const CAMP_BARREL_STATIC_ID = 305
 export const STUMP_WITH_AXE_STATIC_ID = 307
+export const WATER_TROUGH_1X1_STATIC_ID = 308
+export const WATER_TROUGH_2X1_STATIC_ID = 309
+export const STONE_WELL_STATIC_ID = 310
 export const CEMETERY_STATIC_IDS = new Set([321, 322, 323, 324, 325, 328, 329, 330, 331, 332, 333, 334])
 
 const WALL_FENCE_STATIC_IDS = new Set([201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 221, 222])
-const GENERAL_STATIC_IDS = new Set([241, 242, 261, 262, 263, 281, 301, 302, 303, 304, 305, 306, 307, 321, 322, 323, 324, 325, 328, 329, 330, 331, 332, 333, 334, 335, 336, 337])
+const GENERAL_STATIC_IDS = new Set([241, 242, 261, 262, 263, 281, 301, 302, 303, 304, 305, 306, 307, 308, 309, 310, 321, 322, 323, 324, 325, 328, 329, 330, 331, 332, 333, 334, 335, 336, 337])
 const LIGHT_SOURCE_STATIC_IDS = new Set([FIREPLACE_SMALL_STATIC_ID, FIREPLACE_LARGE_STATIC_ID, WALL_TORCH_STATIC_ID, TORCH_STAND_STATIC_ID, LANTERN_STAND_STATIC_ID, STONE_ENTRANCE_STATIC_ID, CEMETERY_EMBER_BOWL_STATIC_ID])
 
 const rectangularFootprint = (sizeX: number, sizeZ: number) => {
@@ -462,7 +465,8 @@ export const GMManager = {
             data.meta = {facing: this.campObjectFacing.value, length: this.logPileLength.value}
         } else if (type === CAMP_BENCH_STATIC_ID || type === PLANK_PILE_STATIC_ID
             || type === SUPPLY_CRATE_STATIC_ID || type === CAMP_BARREL_STATIC_ID
-            || type === STUMP_WITH_AXE_STATIC_ID || CEMETERY_STATIC_IDS.has(type)) {
+            || type === STUMP_WITH_AXE_STATIC_ID || type === WATER_TROUGH_2X1_STATIC_ID
+            || CEMETERY_STATIC_IDS.has(type)) {
             data.meta = {facing: this.campObjectFacing.value}
         } else if (type === STONE_ENTRANCE_STATIC_ID) {
             data.meta = {
@@ -508,7 +512,8 @@ export const GMManager = {
             this.logPileLength.value = status.length === 2 || status.length === 3 ? status.length : 1
         } else if (object.type === CAMP_BENCH_STATIC_ID || object.type === PLANK_PILE_STATIC_ID
             || object.type === SUPPLY_CRATE_STATIC_ID || object.type === CAMP_BARREL_STATIC_ID
-            || object.type === STUMP_WITH_AXE_STATIC_ID || CEMETERY_STATIC_IDS.has(object.type)) {
+            || object.type === STUMP_WITH_AXE_STATIC_ID || object.type === WATER_TROUGH_2X1_STATIC_ID
+            || CEMETERY_STATIC_IDS.has(object.type)) {
             this.campObjectFacing.value = status.facing ?? '+Z'
         } else if (object.type === STONE_ENTRANCE_STATIC_ID) {
             this.entranceFacing.value = status.facing ?? '+Z'

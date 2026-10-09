@@ -28,6 +28,7 @@ import { GMFoggyAreas } from '@/gm/GmFoggyAreas'
 export const WorldRenderer = {
     block1: null as SymmetricBlock | null,
     blockWithAlpha1: null as SymmetricBlock | null,
+    translucentPlane: null as SymmetricBlock | null,
     worldParentNode: null as TransformNode | null,
 
     lastPos: null as Vector3 | null,
@@ -44,6 +45,10 @@ export const WorldRenderer = {
         this.blockWithAlpha1 = new SymmetricBlock(Builder.createBlock(scene, this.worldParentNode), Materials.blockMatAlpha1!)
         this.blockWithAlpha1.mesh.doNotSyncBoundingInfo = true
         this.blockWithAlpha1.mesh.receiveShadows = true
+
+        this.translucentPlane = new SymmetricBlock(Builder.createHorizontalPlane(scene, this.worldParentNode, 1, 0), Materials.blockMatTrans!)
+        this.translucentPlane.mesh.doNotSyncBoundingInfo = true
+        this.translucentPlane.mesh.receiveShadows = true
 
         // Initialize managers
         TerrainManager.initialize(scene)
@@ -81,6 +86,7 @@ export const WorldRenderer = {
     renderWorld() {
         this.block1!.clearMatrices()
         this.blockWithAlpha1!.clearMatrices()
+        this.translucentPlane!.clearMatrices()
         const blockMap = WorldDataManager.getBlockMap()
         const snowCoverMask = createSnowCoverMask(
             TreeManager.allTrees,
@@ -124,6 +130,9 @@ export const WorldRenderer = {
         this.blockWithAlpha1!.setThinInstanceBuffers()
         this.blockWithAlpha1!.mesh.thinInstanceRefreshBoundingInfo(false);
 
+        this.translucentPlane!.setThinInstanceBuffers()
+        this.translucentPlane!.mesh.thinInstanceRefreshBoundingInfo(false);
+
         // Static light slots are excluded from ordinary scene meshes and are
         // attached explicitly. Keep this registration separate from shader
         // warm-up so fireplaces and torches continue to illuminate terrain.
@@ -131,6 +140,7 @@ export const WorldRenderer = {
         Lights.registerSharedLightMesh(TerrainManager.terrainPlane!)
         Lights.registerSharedLightMesh(this.block1!.mesh)
         Lights.registerSharedLightMesh(this.blockWithAlpha1!.mesh)
+        Lights.registerSharedLightMesh(this.translucentPlane!.mesh)
         Lights.registerSharedLightMesh(RockDebrisManager.mesh!)
     }
 }

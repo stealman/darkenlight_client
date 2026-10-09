@@ -359,6 +359,7 @@ export const TerrainEnum1 = {
 
 export const MaterialEnumTrans = {
     GLASS: new MaterialEnum(1, new Vector2(0.5, 14.5)),
+    WATER: new MaterialEnum(2, new Vector2(0.5, 12.5)),
 }
 
 export const PlaneEnum1 = {

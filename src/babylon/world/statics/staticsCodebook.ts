@@ -69,6 +69,9 @@ export const StaticObjectsCodebook: Map<number, StaticObjectInfo> = new Map([
     [305, new StaticObjectInfo(305, 'CampBarrel', true, 1, 0.12, 0, null)],
     [306, new StaticObjectInfo(306, 'HayStack', true, 1, 0.2, 0, null)],
     [307, new StaticObjectInfo(307, 'StumpWithAxe', true, 1, 0.2, 0, null)],
+    [308, new StaticObjectInfo(308, 'WaterTrough1x1', false, 1, 0, 0, null, 1, true)],
+    [309, new StaticObjectInfo(309, 'WaterTrough2x1', false, 2, 0, 0, null, 1, true)],
+    [310, new StaticObjectInfo(310, 'StoneWell', true, 1, 0.1, 0, null)],
 
     [321, new StaticObjectInfo(321, 'CemeteryHeadstone', true, 1, 0.33, 0, null)],
     [322, new StaticObjectInfo(322, 'CemeteryCross', true, 1, 0.34, 0, null)],
