@@ -18,6 +18,7 @@ export class Monster implements Attackable, EffectTarget {
     mobType: MonsterType
     model: MonsterModel
     targetPoint: Vector3 | null = null
+    nextTargetPoint: Vector3 | null = null
     alignment: 'evil' | 'neutral' | 'friendly'
 
     hp: number
@@ -93,6 +94,7 @@ export class Monster implements Attackable, EffectTarget {
     }
 
     doAutoAttack(target: Attackable, dur: number) {
+        this.resetTargetPoint()
         // Ranged weapon attack animation is shorter to account for arrow travel time
         this.autoAttackTarget = target
         this.attackAnimationTime = dur
@@ -132,16 +134,25 @@ export class Monster implements Attackable, EffectTarget {
 
     resolveMovement(timeRate: number, actualTime: number) {
         const stepSize = this.runSpeed * timeRate
+        let reachedTarget = false
         if (this.targetPoint != null) {
             this.model.setWeaponTrailEnabled(false)
             const dx = Math.abs(this.targetPoint.x - this.pos.x)
             const dz = Math.abs(this.targetPoint.z - this.pos.z)
 
             if (dx <= stepSize && dz <= stepSize) {
+                reachedTarget = true
                 this.pos.x = this.targetPoint.x
                 this.pos.z = this.targetPoint.z
-                this.targetPoint = null
-                this.moveAngle = null
+                if (this.nextTargetPoint) {
+                    const nextTargetPoint = this.nextTargetPoint
+                    this.nextTargetPoint = null
+                    this.setMoveTargetAngle(nextTargetPoint)
+                    this.targetPoint = nextTargetPoint
+                } else {
+                    this.targetPoint = null
+                    this.moveAngle = null
+                }
             }
 
             this.resolveStepMark(actualTime, false)
@@ -149,8 +160,10 @@ export class Monster implements Attackable, EffectTarget {
 
         if (this.moveAngle != null) {
             this.lookAngle = this.moveAngle
-            this.pos.x += (Math.cos(this.moveAngle + Math.PI / 4) * stepSize)
-            this.pos.z -= (Math.sin(this.moveAngle + Math.PI / 4) * stepSize)
+            if (!reachedTarget) {
+                this.pos.x += (Math.cos(this.moveAngle + Math.PI / 4) * stepSize)
+                this.pos.z -= (Math.sin(this.moveAngle + Math.PI / 4) * stepSize)
+            }
             if (this.model.initialized) this.model.doWalk()
         } else {
             if (this.model.initialized) this.model.doIdle()
@@ -175,14 +188,20 @@ export class Monster implements Attackable, EffectTarget {
         this.hpPercent = data.hpp
     }
 
-    setTargetPoint(point: Vector3) {
+    setTargetPoint(point: Vector3, nextPoint: Vector3 | null = null) {
+        this.setMoveTargetAngle(point)
+        this.targetPoint = point
+        this.nextTargetPoint = nextPoint
+    }
+
+    private setMoveTargetAngle(point: Vector3) {
         const angle = Math.atan2(-(point.z - this.pos.z), point.x - this.pos.x)
         this.moveAngle = angle - Math.PI / 4
-        this.targetPoint = point
     }
 
     resetTargetPoint() {
         this.targetPoint = null
+        this.nextTargetPoint = null
         this.moveAngle = null
     }
 
@@ -196,6 +215,7 @@ export class Monster implements Attackable, EffectTarget {
     }
 
     killed() {
+        this.resetTargetPoint()
         this.killedTime = Date.now()
         this.arrowCreateTime = 0
         this.arrowShotTime = 0

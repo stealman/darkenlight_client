@@ -163,7 +163,7 @@ export const MonsterAATypes = {
 
 export const MonsterTypes = {
     // SKELETON MELEE
-    SKELETON: new MonsterType(1, MonsterGroups.SKELETON_MELEE, 1, 'Skeleton', 0.6, 1.8, 2.2, null, null, null, WeaponSoundTypes.BONE, BodySoundTypes.HARD, null, MonsterSoundTypes.SKELETON, null),
+    SKELETON: new MonsterType(1, MonsterGroups.SKELETON_MELEE, 1, 'Skeleton', 0.6, 1.8, 3, null, null, null, WeaponSoundTypes.BONE, BodySoundTypes.HARD, null, MonsterSoundTypes.SKELETON, null),
 
     SKELETON_FIGHTER: new MonsterType(
         2,
@@ -172,7 +172,7 @@ export const MonsterTypes = {
         'Skeleton Fighter',
         0.6,
         1.8,
-        2.2,
+        3,
         new MonsterEquipData([EquipSlotModelsCb.LONGSWORD.modelId], 0.8, null, null, 0),
         null,
         null,
@@ -190,10 +190,10 @@ export const MonsterTypes = {
         'Skeleton Warrior',
         0.6,
         1.8,
-        2.2,
+        3,
         new MonsterEquipData([EquipSlotModelsCb.LONGSWORD.modelId], 0.8, null, null, 0),
-        new MonsterEquipData([EquipSlotModelsCb.HELM.modelId], 1.07, VectorY90, new Vector3(0.01, 0.08, 0), 10),
-        new MonsterEquipData([EquipSlotModelsCb.ARMOR_PLATE.modelId], new Vector3(0.82, 0.7, 1), VectorY90, null, 10),
+        null,
+        new MonsterEquipData([EquipSlotModelsCb.ARMOR_PLATE.modelId], new Vector3(0.86, 0.7, 0.95), VectorY90, new Vector3(-0.025, 0.1, -0.01), 10),
         WeaponSoundTypes.SWORD,
         BodySoundTypes.HARD,
         WeaponSoundTypes.SWORD,
@@ -209,7 +209,7 @@ export const MonsterTypes = {
         'Skeleton Archer',
         0.6,
         1.8,
-        2.2,
+        3,
         new MonsterEquipData([EquipSlotModelsCb.HUNTINGBOW.modelId], 0.8, new Vector3(Math.PI, 0, Math.PI), null, 0),
         null,
         null,

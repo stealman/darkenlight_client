@@ -31,6 +31,7 @@ export class EquipItem {
     localPosition: Vector3 = Vector3.Zero()
     boneRotationQuaternion: Quaternion = Quaternion.Identity()
     scaleMatrix: Matrix = Matrix.Identity()
+    modelModifierMatrix: Matrix | null = null
 
     weaponTrail: TrailMesh | null = null
     weaponTrailStartDelayEnd: number = 0
@@ -45,7 +46,7 @@ export class EquipItem {
     private parentRotMatrix = new Matrix()
     private tmpOffset = new Vector3()
 
-    constructor(type: EquipItemType, matIndex: number, parent: EquipBearer, bone: Bone, scale: Vector3 | null, rotation: Vector3 | null, position: Vector3 | null) {
+    constructor(type: EquipItemType, matIndex: number, parent: EquipBearer, bone: Bone, scale: Vector3 | null, rotation: Vector3 | null, position: Vector3 | null, modelModifier: EquipModelModifier | null = null) {
         this.type = type
         this.parent = parent
         this.bone = bone
@@ -57,6 +58,13 @@ export class EquipItem {
         }
         this.matVector = this.getAtlasUvcOffsets(type.cbData.matCols, type.cbData.matRows, matIndex)
         this.scaleMatrix = Matrix.Scaling(this.scale.x, this.scale.y, this.scale.z)
+        if (modelModifier) {
+            this.modelModifierMatrix = Matrix.Compose(
+                modelModifier.scale,
+                Quaternion.FromEulerVector(modelModifier.rotation),
+                modelModifier.position,
+            )
+        }
     }
 
     getAtlasUvcOffsets = (matCols: number, matsRows: number, matIndex: number, pad = 0) => {
@@ -314,6 +322,13 @@ export interface EquipThinInstance {
     position: Vector3
     quaternion: Quaternion
     scaleMatrix: Matrix
+    modelModifierMatrix?: Matrix | null
+}
+
+export interface EquipModelModifier {
+    position: Vector3
+    rotation: Vector3
+    scale: Vector3
 }
 
 /**
@@ -424,6 +439,7 @@ export const EquipManager = {
     _tmpPos: new Matrix(),
     _tmpRot: new Matrix(),
     _tmpWorld: new Matrix(),
+    _tmpModel: new Matrix(),
 
     async initialize(scene: Scene) {
         await WeaponsCbManager.initMelee(this.itemTypes, scene)
@@ -472,7 +488,12 @@ export const EquipManager = {
                 Matrix.FromQuaternionToRef(item.quaternion, this._tmpRot)
 
                 this._tmpRot.multiplyToRef(this._tmpPos, this._tmpWorld)
-                item.scaleMatrix.multiplyToRef(this._tmpWorld, this._tmpWorld)
+                if (item.modelModifierMatrix) {
+                    item.modelModifierMatrix.multiplyToRef(item.scaleMatrix, this._tmpModel)
+                    this._tmpModel.multiplyToRef(this._tmpWorld, this._tmpWorld)
+                } else {
+                    item.scaleMatrix.multiplyToRef(this._tmpWorld, this._tmpWorld)
+                }
 
                 this._tmpWorld.copyToArray(type.instanceBuffer, i * 16)
 

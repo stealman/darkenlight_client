@@ -16,6 +16,7 @@ import { BabylonUtils } from '@/babylon/utils'
 import { EquipItemSlots, EquipSlotModelsCb, WeaponCategories, WeaponTypes } from '@/data/items/item'
 import { Utils } from '@/utils/utils'
 import { AudioUtils } from '@/babylon/audio/audioUtils'
+import { getCharacterModelEquipModifier } from '@/babylon/character/characterModelEquipModifiers'
 
 export class CharacterModel implements EquipBearer {
     parent: Character
@@ -80,11 +81,11 @@ export class CharacterModel implements EquipBearer {
     async initAsync() {
         // The versioned URL bypasses the legacy immutable browser cache once.
         // Subsequent loads revalidate through the no-cache response header.
-        await SceneLoader.ImportMeshAsync('', '/models/steve/', 'human_male.gltf?v=20260922', Renderer.scene)
+        await SceneLoader.ImportMeshAsync('', '/models/steve/', 'human_male.glb?v=20260922', Renderer.scene)
             .then((result) => {
                 this.model = result.meshes[0]
                 this.model.parent = this.node
-                this.model.scaling = new Vector3(0.25, 0.25, 0.25)
+                this.model.scaling = new Vector3(0.3, 0.28, 0.3)
                 this.model.rotation = new Vector3(0, 0, 0)
 
                 this.nameTextNode.parent = this.node
@@ -92,7 +93,7 @@ export class CharacterModel implements EquipBearer {
                 this.parent.nameDisplayTime = Date.now() + 3000
 
                 // Apply material
-                const material = Materials.getPBRMaterial(Renderer.scene, 'steveMaterial', '/models/steve/human_male2.png', false, false, {
+                const material = Materials.getPBRMaterial(Renderer.scene, 'steveMaterial', '/models/steve/human_male.png', false, false, {
                     metallic: 0,
                     roughness: 1,
                     directIntensity: 1,
@@ -229,33 +230,33 @@ export class CharacterModel implements EquipBearer {
     }
 
     assignArmor(type: number, matIndex: number) {
-        this.addEquippedItem('BODY', new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find((b) => b.id === 'Bone.001')!, null, null, null))
+        this.addEquippedItem('BODY', new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find((b) => b.id === 'Bone.001')!, null, null, null, getCharacterModelEquipModifier(type)))
     }
 
     assignHelmet(type: number, matIndex: number) {
-        this.addEquippedItem('HEAD', new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find((b) => b.id === 'Bone.002')!, null, null, null))
+        this.addEquippedItem('HEAD', new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find((b) => b.id === 'Bone.002')!, null, null, null, getCharacterModelEquipModifier(type)))
     }
 
     assignLeftPauldron(type: number, matIndex: number) {
         this.addEquippedItem(
             'LEFT_PAULDRON',
-            new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find((b) => b.id === 'Bone.010')!, null, new Vector3(0, -Math.PI / 2, 0), null),
+            new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find((b) => b.id === 'Bone.010')!, null, new Vector3(0, -Math.PI / 2, 0), null, getCharacterModelEquipModifier(type)),
         )
     }
 
     assignRightPauldron(type: number, matIndex: number) {
         this.addEquippedItem(
             'RIGHT_PAULDRON',
-            new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find((b) => b.id === 'Bone.003')!, null, new Vector3(0, Math.PI / 2, 0), new Vector3(0.02, 0, 0.02)),
+            new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find((b) => b.id === 'Bone.003')!, null, new Vector3(0, Math.PI / 2, 0), new Vector3(0.02, 0, 0.02), getCharacterModelEquipModifier(type)),
         )
     }
 
     assignLeftLeg(type: number, matIndex: number) {
-        this.addEquippedItem('LEFT_LEG', new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find((b) => b.id === 'Bone.008')!, null, null, null))
+        this.addEquippedItem('LEFT_LEG', new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find((b) => b.id === 'Bone.008')!, null, null, null, getCharacterModelEquipModifier(type)))
     }
 
     assignRightLeg(type: number, matIndex: number) {
-        this.addEquippedItem('RIGHT_LEG', new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find((b) => b.id === 'Bone.006')!, null, null, null))
+        this.addEquippedItem('RIGHT_LEG', new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find((b) => b.id === 'Bone.006')!, null, null, null, getCharacterModelEquipModifier(type)))
     }
 
     assignWeapon(type: number, matIndex: number) {
@@ -265,7 +266,7 @@ export class CharacterModel implements EquipBearer {
     }
 
     assignShield(type: number, matIndex: number) {
-        this.addEquippedItem('SHIELD', new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find((b) => b.id === 'Bone.012')!, null, null, null))
+        this.addEquippedItem('SHIELD', new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find((b) => b.id === 'Bone.012')!, null, null, null, getCharacterModelEquipModifier(type)))
     }
 
     addEquippedItem(slot: string, item: EquipItem) {

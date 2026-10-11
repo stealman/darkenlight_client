@@ -61,8 +61,9 @@ export const MonsterManager = {
             this.monsters.set(id, monster)
         }
 
-        if (mv?.length === 3) {
-            this.monsterMove(id, { x: position.x, z: position.z }, { x: mv[0], z: mv[1] }, mv[2])
+        if (mv && mv.length >= 3) {
+            const nextTarget = mv.length >= 5 ? {x: mv[3], z: mv[4]} : null
+            this.monsterMove(id, { x: position.x, z: position.z }, { x: mv[0], z: mv[1] }, mv[2], nextTarget)
         }
     },
 
@@ -91,7 +92,7 @@ export const MonsterManager = {
         }
     },
 
-    monsterMove(id: number, position: { x: number, z: number }, target: { x: number, z: number }, speed: number) {
+    monsterMove(id: number, position: { x: number, z: number }, target: { x: number, z: number }, speed: number, nextTarget: {x: number, z: number} | null = null) {
         if (NpcManager.guards.has(id)) {
             NpcManager.guardMove([id, position.x, position.z, target.x, target.z, speed])
             return
@@ -99,10 +100,16 @@ export const MonsterManager = {
         if (this.monsters.has(id)) {
             const mob = this.monsters.get(id)
             mob!.runSpeed = speed
-            mob!.pos.x = position.x
-            mob!.pos.z = position.z
+            const confirmsQueuedMove = mob!.targetPoint?.x === target.x && mob!.targetPoint?.z === target.z
+            if (!confirmsQueuedMove) {
+                mob!.pos.x = position.x
+                mob!.pos.z = position.z
+            }
             mob!.logicYpos = Utils.calculateWalkYPos(mob!.pos.x, mob!.pos.z, mob!.getBoxSize())
-            mob!.setTargetPoint(new Vector3(target.x, 0, target.z))
+            mob!.setTargetPoint(
+                new Vector3(target.x, 0, target.z),
+                nextTarget ? new Vector3(nextTarget.x, 0, nextTarget.z) : null,
+            )
         }
     },
 

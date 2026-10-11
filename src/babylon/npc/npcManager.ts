@@ -28,7 +28,7 @@ export const NpcManager = {
         const guard = new Guard(data)
         this.guards.set(guard.id, guard)
         this.setNpcPosition(guard, data.x, data.z)
-        if (data.mv?.length === 3) {
+        if (data.mv?.length >= 3) {
             this.guardMove([guard.id, data.x, data.z, data.mv[0], data.mv[1], data.mv[2]])
         }
         await guard.createModel(false)

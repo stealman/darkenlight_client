@@ -179,7 +179,8 @@ export const MessageProcessor = {
     },
 
     monsterMove(data) {
-        MonsterManager.monsterMove(data[0], { x: data[1], z: data[2] }, { x: data[3], z: data[4] }, data[5])
+        const nextTarget = data.length >= 8 ? {x: data[6], z: data[7]} : null
+        MonsterManager.monsterMove(data[0], { x: data[1], z: data[2] }, { x: data[3], z: data[4] }, data[5], nextTarget)
     },
 
     async addCharacter(data) {
