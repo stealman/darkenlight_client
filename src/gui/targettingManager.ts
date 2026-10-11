@@ -177,7 +177,11 @@ export const TargetingManager = {
         if (MyPlayer.isDead.value) {
             return
         }
+        if (this.selectedTarget !== target) {
+            this.selectedTarget?.setSelectedVisual?.(false)
+        }
         this.selectedTarget = target
+        target.setSelectedVisual?.(true)
         OverlayManager.targetSelected(target!)
         target.nameDisplayTime = Date.now() + 1000
 
@@ -228,6 +232,7 @@ export const TargetingManager = {
     },
 
     unselectTarget() {
+        this.selectedTarget?.setSelectedVisual?.(false)
         this.selectedTarget = null
         OverlayManager.unselectTarget()
     },
@@ -340,4 +345,5 @@ export interface Targetable {
     getObjectType(): string
     getRelationToMyPlayer(): 'ALLY' | 'ENEMY' | 'NEUTRAL'
     getDistanceFromMyPlayer(): number
+    setSelectedVisual?(selected: boolean): void
 }

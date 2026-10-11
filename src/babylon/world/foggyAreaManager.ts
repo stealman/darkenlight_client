@@ -27,6 +27,7 @@ const DETAIL_FACTORS = [0.45, 0.7, 1]
 const CAPACITY_LIMITS = [1800, 3500, 6000]
 const VISIBILITY_MARGIN = 6
 const FOG_ALPHA_FADE_DEFINE = '#define FOGGY_AREA_ALPHA_FADE'
+const NIGHT_PARTICLE_COLOR_FACTOR = 2
 let fogAlphaFadeShaderInstalled = false
 
 function installFogAlphaFadeShader(): boolean {
@@ -194,9 +195,9 @@ export const FoggyAreaManager = {
         this.lastLightingFactor = daylight
 
         const fog = this.scene.fogColor
-        const nightRed = 0.19 + fog.r * 0.4
-        const nightGreen = 0.2 + fog.g * 0.4
-        const nightBlue = 0.22 + fog.b * 0.4
+        const nightRed = Math.min(1, (0.19 + fog.r * 0.4) * NIGHT_PARTICLE_COLOR_FACTOR)
+        const nightGreen = Math.min(1, (0.2 + fog.g * 0.4) * NIGHT_PARTICLE_COLOR_FACTOR)
+        const nightBlue = Math.min(1, (0.22 + fog.b * 0.4) * NIGHT_PARTICLE_COLOR_FACTOR)
         const red = nightRed + (0.72 - nightRed) * daylight
         const green = nightGreen + (0.75 - nightGreen) * daylight
         const blue = nightBlue + (0.75 - nightBlue) * daylight

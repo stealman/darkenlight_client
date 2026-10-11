@@ -5,6 +5,85 @@ export type ReplaceColorWithTransparencyOptions = {
     cropPaddingScale?: number
 }
 
+const loadPngImage = (source: string): Promise<HTMLImageElement> => {
+    return new Promise((resolve, reject) => {
+        const image = new Image()
+        image.onload = () => resolve(image)
+        image.onerror = () => reject(new Error(`Browser could not decode PNG ${source}`))
+        image.src = source
+    })
+}
+
+const canvasToPngBlob = (canvas: HTMLCanvasElement): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+        canvas.toBlob((blob) => {
+            if (blob) {
+                resolve(blob)
+            } else {
+                reject(new Error('Canvas could not encode a PNG'))
+            }
+        }, 'image/png')
+    })
+}
+
+const srgbByteToLinear = (value: number): number => {
+    const normalized = value / 255
+    return normalized <= 0.04045
+        ? normalized / 12.92
+        : Math.pow((normalized + 0.055) / 1.055, 2.4)
+}
+
+const linearToSrgbByte = (value: number): number => {
+    const clamped = Math.min(1, Math.max(0, value))
+    const srgb = clamped <= 0.0031308
+        ? clamped * 12.92
+        : 1.055 * Math.pow(clamped, 1 / 2.4) - 0.055
+    return Math.round(srgb * 255)
+}
+
+export const createCombinedEmissivePngBlob = async (
+    albedoSource: string,
+    emissiveSource: string,
+    albedoStrength: number,
+): Promise<Blob> => {
+    const [albedoImage, emissiveImage] = await Promise.all([
+        loadPngImage(albedoSource),
+        loadPngImage(emissiveSource),
+    ])
+    const canvas = document.createElement('canvas')
+    canvas.width = albedoImage.naturalWidth
+    canvas.height = albedoImage.naturalHeight
+    const context = canvas.getContext('2d', {willReadFrequently: true})
+    if (!context) {
+        throw new Error('2D canvas context is unavailable')
+    }
+
+    context.drawImage(albedoImage, 0, 0)
+    const albedo = context.getImageData(0, 0, canvas.width, canvas.height)
+    context.clearRect(0, 0, canvas.width, canvas.height)
+    context.drawImage(emissiveImage, 0, 0, canvas.width, canvas.height)
+    const combined = context.getImageData(0, 0, canvas.width, canvas.height)
+
+    for (let index = 0; index < combined.data.length; index += 4) {
+        const albedoAlpha = albedo.data[index + 3] / 255
+        combined.data[index] = linearToSrgbByte(
+            srgbByteToLinear(combined.data[index])
+            + srgbByteToLinear(albedo.data[index]) * albedoStrength * albedoAlpha,
+        )
+        combined.data[index + 1] = linearToSrgbByte(
+            srgbByteToLinear(combined.data[index + 1])
+            + srgbByteToLinear(albedo.data[index + 1]) * albedoStrength * albedoAlpha,
+        )
+        combined.data[index + 2] = linearToSrgbByte(
+            srgbByteToLinear(combined.data[index + 2])
+            + srgbByteToLinear(albedo.data[index + 2]) * albedoStrength * albedoAlpha,
+        )
+    }
+
+    context.putImageData(combined, 0, 0)
+    return canvasToPngBlob(canvas)
+}
+
 export const canvasToPngBlobWithTransparentColor = async (
     sourceCanvas: HTMLCanvasElement,
     options: ReplaceColorWithTransparencyOptions = {}

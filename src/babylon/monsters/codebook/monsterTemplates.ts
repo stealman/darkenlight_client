@@ -1,4 +1,4 @@
-import { AnimationGroup, AssetContainer, Material, Mesh, Skeleton, Vector3 } from '@babylonjs/core'
+import { AnimationGroup, AssetContainer, Mesh, PBRMaterial, Skeleton, Vector3 } from '@babylonjs/core'
 import { BabylonUtils } from '@/babylon/utils'
 import { Monster } from '@/babylon/monsters/monster'
 import { Lights } from '@/babylon/scene/lights'
@@ -21,7 +21,8 @@ export class MonsterTemplate {
 
     // Original GLTF data used as source of clones
     assetContainer?: AssetContainer
-    material?: Material
+    material?: PBRMaterial
+    selectedMaterial?: PBRMaterial
 
     node: Mesh
     mesh: Mesh
@@ -52,8 +53,9 @@ export class MonsterTemplate {
         this.assetContainer.animationGroups[0].pause()
     }
 
-    setMaterial (material: Material) {
+    setMaterials (material: PBRMaterial, selectedMaterial: PBRMaterial) {
         this.material = material
+        this.selectedMaterial = selectedMaterial
     }
 
     clone (): MonsterTemplate {
@@ -73,6 +75,7 @@ export class MonsterTemplate {
         clone.node.rotation = Vector3.Zero()
         clone.node.alwaysSelectAsActiveMesh = true
         clone.material = this.material
+        clone.selectedMaterial = this.selectedMaterial
 
         clone.node.getChildMeshes().forEach(mesh => {
             clone.mesh = mesh as Mesh
@@ -115,6 +118,9 @@ export class MonsterTemplate {
 
     freeClone (clone: MonsterTemplate) {
         clone.monster = null
+        clone.node.getChildMeshes().forEach(mesh => {
+            mesh.material = clone.material ?? null
+        })
         this.clonesToReuse.push(clone)
         this.clonesAct = this.clonesAct.filter(c => c !== clone)
         this.clonesInact = this.clonesInact.filter(c => c !== clone)
@@ -138,8 +144,8 @@ export class MonsterTemplate {
 export const MonsterTemplates = {
     CAT: new MonsterTemplate(1001, 'cat', 'cat', 0.85, null),
     SKELETON: new MonsterTemplate(1, 'skeleton', 'skeleton', 0.4, null),
-    WITHER: new MonsterTemplate(21, 'skeleton', 'wither', 0.35, null),
-    ZOMBIE_ROTTEN: new MonsterTemplate(11, 'human_male', 'zombie_rotten', new Vector3(0.225, 0.25, 0.225), null, 1.4),
-    ZOMBIE: new MonsterTemplate(12, 'human_male', 'zombie', 0.25, null, 1.4),
-    ZOMBIE_MUTANT: new MonsterTemplate(13, 'human_male', 'zombie_mutant', 0.275, 'zombie_mutant_em', 1.4),
+    WITHER: new MonsterTemplate(21, 'skeleton', 'wither', 0.4, null),
+    ZOMBIE_ROTTEN: new MonsterTemplate(11, 'zombie', 'zombie_rotten', 0.42, null, 1.4),
+    ZOMBIE: new MonsterTemplate(12, 'zombie', 'zombie', 0.43, null, 1.4),
+    ZOMBIE_MUTANT: new MonsterTemplate(13, 'zombie', 'zombie_mutant', 0.48, null, 1.4),
 }

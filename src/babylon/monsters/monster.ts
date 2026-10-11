@@ -214,6 +214,10 @@ export class Monster implements Attackable, EffectTarget {
         this.insideView = visible
     }
 
+    setSelectedVisual(selected: boolean) {
+        this.model?.setSelectedVisual(selected)
+    }
+
     killed() {
         this.resetTargetPoint()
         this.killedTime = Date.now()

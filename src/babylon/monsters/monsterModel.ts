@@ -24,6 +24,8 @@ export class MonsterModel implements EquipBearer {
     initialized: boolean = false
     viewRequested: boolean = false
     preparingFirstView: boolean = false
+    selected: boolean = false
+    selectedMaterialApplied: boolean = false
     node: Mesh
     mesh: Mesh
     nameTextNode: TransformNode
@@ -108,6 +110,7 @@ export class MonsterModel implements EquipBearer {
     onFrame(timeRate: number) {
         if (!this.isActive()) return
 
+        if (this.selected) this.refreshSelectedMaterial()
         this.resolveMovement(timeRate)
         this.worldMatrix = this.mesh.getWorldMatrix()
         this.worldMatrix.decompose(undefined, this.rotationQuaternion, undefined)
@@ -217,6 +220,44 @@ export class MonsterModel implements EquipBearer {
         this.transitionToAnimation(this.idleAnim!, true, true, 1.0)
     }
 
+    setSelectedVisual(selected: boolean) {
+        this.selected = selected
+        if (!this.initialized) return
+
+        this.refreshSelectedMaterial()
+    }
+
+    private refreshSelectedMaterial() {
+        const shouldApplySelectedMaterial = this.selected && Lights.daylightFactor < 1
+        if (this.selectedMaterialApplied === shouldApplySelectedMaterial) return
+
+        this.applySelectedMaterial(shouldApplySelectedMaterial)
+        this.selectedMaterialApplied = shouldApplySelectedMaterial
+    }
+
+    private applySelectedMaterial(selected: boolean) {
+        const material = selected ? this.template.selectedMaterial : this.template.material
+        this.node.getChildMeshes().forEach(mesh => {
+            mesh.material = material ?? null
+        })
+    }
+
+    private async warmMonsterMaterials() {
+        try {
+            this.applySelectedMaterial(false)
+            await Lights.warmActorMaterial(this.mesh)
+
+            this.applySelectedMaterial(true)
+            await Lights.warmActorMaterial(this.mesh)
+        } finally {
+            if (!this.node.isDisposed()) {
+                const shouldApplySelectedMaterial = this.selected && Lights.daylightFactor < 1
+                this.applySelectedMaterial(shouldApplySelectedMaterial)
+                this.selectedMaterialApplied = shouldApplySelectedMaterial
+            }
+        }
+    }
+
     doDie() {
         if (!this.isActive()) return
         this.transitionToAnimation(this.deadAnim!, true, false, 2.5)
@@ -259,7 +300,7 @@ export class MonsterModel implements EquipBearer {
                 this.mesh.setEnabled(false)
                 this.equipSet.forEach(item => EquipManager.removeEquippedItem(item))
 
-                void Lights.warmActorMaterial(this.mesh).finally(() => {
+                void this.warmMonsterMaterials().finally(() => {
                     this.preparingFirstView = false
                     if (this.viewRequested && !this.node.isDisposed()) {
                         const template = MonsterLoader.monsterTemplates.get(this.template.id)

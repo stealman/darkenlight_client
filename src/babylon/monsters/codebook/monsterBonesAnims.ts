@@ -34,11 +34,11 @@ export const MonsterBonesAnims = {
 
     initZombie(model: MonsterModel) {
         const animations = [
-            { name: "Idle", startFrame: 0, endFrame: 75 },
-            { name: "Walk", startFrame: 76, endFrame: 225 },
-            { name: "Attack", startFrame: 500, endFrame: 575 },
-            { name: "AttackSlash", startFrame: 1000, endFrame: 1075 },
-            { name: "Dead", startFrame: 1400, endFrame: 1475 },
+            { name: 'Idle', startFrame: 0, endFrame: 75 },
+            { name: 'Walk', startFrame: 76, endFrame: 225 },
+            { name: 'Attack', startFrame: 226, endFrame: 300 },
+            { name: 'AttackSlash', startFrame: 326, endFrame: 400 },
+            { name: 'Dead', startFrame: 426, endFrame: 500 },
         ]
 
         const groups = animations.map(({ name, startFrame, endFrame }) => {

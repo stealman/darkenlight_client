@@ -10,8 +10,10 @@ import type { DayNightCycleSync } from '@/network/messageIfs'
 import {
     BUILDING_PERSONAL_LIGHT_INTENSITY_FACTOR,
     DEFAULT_DAY_NIGHT_CYCLE_DURATION_MS,
+    INDOOR_PERSONAL_SHADOW_DARKNESS,
     INITIAL_DAY_NIGHT_PHASE,
     NIGHT_ENVIRONMENT_INTENSITY_FACTOR,
+    OUTDOOR_PERSONAL_SHADOW_DARKNESS,
 } from '@/babylon/scene/lighting/lightConfig'
 import { LightningEffect } from '@/babylon/scene/lighting/lightningEffect'
 
@@ -19,6 +21,8 @@ const SUNRISE_START_PHASE = 1 / 24
 const SUNRISE_END_PHASE = 1 / 8
 const SUNSET_START_PHASE = 11 / 24
 const SUNSET_END_PHASE = 13 / 24
+const SUNRISE_SHADOW_SWITCH_PHASE = (SUNRISE_START_PHASE + SUNRISE_END_PHASE) / 2
+const SUNSET_SHADOW_SWITCH_PHASE = (SUNSET_START_PHASE + SUNSET_END_PHASE) / 2
 const PERSONAL_LIGHT_SUNRISE_END_PHASE = 7 / 96
 const PERSONAL_LIGHT_SUNSET_START_PHASE = 49 / 96
 const LIGHTING_PHASE_OFFSET = 3 / 4
@@ -153,7 +157,7 @@ export function updateDayNightLighting(host: DayNightLightingHost) {
         host.sunLight.intensity = 0
         host.personalLight.intensity = personalIntensity * buildingLightFactor
         scene.environmentIntensity = environmentIntensity * NIGHT_ENVIRONMENT_INTENSITY_FACTOR
-        updateShadowRefreshRates(host, 0, 1)
+        updateDynamicShadowMode(host, phase)
         return
     }
 
@@ -165,7 +169,7 @@ export function updateDayNightLighting(host: DayNightLightingHost) {
     host.sunLight.specular.copyFrom(host.sunLight.diffuse)
     setBlendedColor(scene.fogColor, NIGHT_FOG_COLOR, DAY_FOG_COLOR, TWILIGHT_FOG_COLOR, daylightFactor, twilightFactor, 0.45)
     updateSunDirection(host, phase)
-    updateShadowRefreshRates(host, daylightFactor, personalLightFactor)
+    updateDynamicShadowMode(host, phase)
     LightningEffect.apply(host.sunLight, scene, sunIntensity, environmentIntensity)
 }
 
@@ -203,25 +207,35 @@ function updateLightEnabledState(host: DayNightLightingHost) {
     host.updateActorLightMeshes()
 }
 
-function updateShadowRefreshRates(host: DayNightLightingHost, daylightFactor: number, personalLightFactor: number) {
+function updateDynamicShadowMode(host: DayNightLightingHost, phase: number) {
     if (!Settings.isShadowsEnabled()) {
         return
     }
 
-    const sunShadowMap = host.shadow.getShadowMap()
-    const personalShadowMap = host.personalShadow.getShadowMap()
-    const sunRefreshRate = daylightFactor > 0.05
-        ? RenderTargetTexture.REFRESHRATE_RENDER_ONEVERYFRAME
-        : RenderTargetTexture.REFRESHRATE_RENDER_ONCE
-    const personalRefreshRate = personalLightFactor > 0.05
-        ? RenderTargetTexture.REFRESHRATE_RENDER_ONEVERYFRAME
-        : RenderTargetTexture.REFRESHRATE_RENDER_ONCE
+    const personalShadowActive = host.indoor
+        || phase < SUNRISE_SHADOW_SWITCH_PHASE
+        || phase >= SUNSET_SHADOW_SWITCH_PHASE
+    setDynamicShadowActive(host.shadow, !personalShadowActive, 0)
+    setDynamicShadowActive(
+        host.personalShadow,
+        personalShadowActive,
+        host.indoor ? INDOOR_PERSONAL_SHADOW_DARKNESS : OUTDOOR_PERSONAL_SHADOW_DARKNESS,
+    )
+}
 
-    if (sunShadowMap != null && sunShadowMap.refreshRate !== sunRefreshRate) {
-        sunShadowMap.refreshRate = sunRefreshRate
+function setDynamicShadowActive(shadow: ShadowGenerator, active: boolean, activeDarkness: number) {
+    const darkness = active ? activeDarkness : 1
+    if (shadow.getDarkness() !== darkness) {
+        shadow.setDarkness(darkness)
     }
-    if (personalShadowMap != null && personalShadowMap.refreshRate !== personalRefreshRate) {
-        personalShadowMap.refreshRate = personalRefreshRate
+
+    const shadowMap = shadow.getShadowMap()
+    const refreshRate = active
+        ? RenderTargetTexture.REFRESHRATE_RENDER_ONEVERYFRAME
+        : RenderTargetTexture.REFRESHRATE_RENDER_ONCE
+    if (shadowMap != null && shadowMap.refreshRate !== refreshRate) {
+        shadowMap.refreshRate = refreshRate
+        if (active) shadowMap.resetRefreshCounter()
     }
 }
 
