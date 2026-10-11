@@ -148,4 +148,5 @@ export const MonsterTemplates = {
     ZOMBIE_ROTTEN: new MonsterTemplate(11, 'zombie', 'zombie_rotten', 0.42, null, 1.4),
     ZOMBIE: new MonsterTemplate(12, 'zombie', 'zombie', 0.43, null, 1.4),
     ZOMBIE_MUTANT: new MonsterTemplate(13, 'zombie', 'zombie_mutant', 0.48, null, 1.4),
+    WIGHT: new MonsterTemplate(31, 'wraith', 'wraith', 0.6, null),
 }

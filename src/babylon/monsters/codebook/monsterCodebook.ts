@@ -23,6 +23,10 @@ export const MonsterCodebook = {
             MonsterBonesAnims.initZombie(model)
         }
 
+        if (model.type.templateId === 31) {
+            MonsterBonesAnims.initWight(model)
+        }
+
         // TemplateId 1001 is a cat type
         if (model.type.templateId === 1001) {
             MonsterBonesAnims.initCat(model)
@@ -54,6 +58,7 @@ export class MonsterType {
     boxSize: number
     boxHeight: number = 2
     walkAnimSpeed: number = 4
+    deathAnimSpeed: number
     weapon: MonsterEquipData | null
     armor:MonsterEquipData | null
     helmet: MonsterEquipData | null
@@ -66,13 +71,14 @@ export class MonsterType {
     aaType: string = MonsterAATypes.MELEE
 
     constructor(id: number, group: MonsterGroup, templateId: number, name: string, boxSize: number, boxHeight: number, walkAnimSpeed: number, weapon: MonsterEquipData | null, helmet: MonsterEquipData | null, armor: MonsterEquipData | null,
-                weaponSoundType: string, bodySoundType: string, parrySoundType: string | null, monsterSoundType: string, aaType: string | null) {
+                weaponSoundType: string, bodySoundType: string, parrySoundType: string | null, monsterSoundType: string, aaType: string | null, deathAnimSpeed: number = 2.5) {
         this.id = id
         this.group = group
         this.templateId = templateId
         this.name = name
         this.boxSize = boxSize
         this.walkAnimSpeed = walkAnimSpeed
+        this.deathAnimSpeed = deathAnimSpeed
         this.boxHeight = boxHeight
         this.weapon = weapon
         this.armor = armor
@@ -134,6 +140,7 @@ export const MonsterGroups = {
     WITHER_MELEE: new MonsterGroup(20, 'Wither_Melee'),
     WITHER_RANGED: new MonsterGroup(21, 'Wither_Ranged'),
     ZOMBIE: new MonsterGroup(30, 'Zombie'),
+    WIGHTS: new MonsterGroup(40, 'Wights'),
     CAT: new MonsterGroup(1000, 'Cat'),
 
     getAsArray(): MonsterGroup[] {
@@ -224,6 +231,9 @@ export const MonsterTypes = {
     ZOMBIE_ROTTEN: new MonsterType(50, MonsterGroups.ZOMBIE, 11, 'Rotten Zombie', 0.6, 1.8, 2.2, null, null, null, WeaponSoundTypes.BONE, BodySoundTypes.HARD, null, MonsterSoundTypes.ZOMBIE, null),
     ZOMBIE: new MonsterType(51, MonsterGroups.ZOMBIE, 12, 'Zombie', 0.6, 1.8, 2.2, null, null, null, WeaponSoundTypes.BONE, BodySoundTypes.HARD, null, MonsterSoundTypes.ZOMBIE, null),
     ZOMBIE_MUTANT: new MonsterType(52, MonsterGroups.ZOMBIE, 13, 'Zombie Mutant', 0.7, 2, 2, null, null, null, WeaponSoundTypes.BONE, BodySoundTypes.HARD, null, MonsterSoundTypes.ZOMBIE, null),
+
+    // WIGHTS
+    WIGHT: new MonsterType(60, MonsterGroups.WIGHTS, 31, 'Wight', 0.6, 1.8, 2.2, null, null, null, WeaponSoundTypes.BONE, BodySoundTypes.SOFT, null, MonsterSoundTypes.ZOMBIE, null, 1.25),
 
     // WITHER MELEE
     WITHER: new MonsterType(200, MonsterGroups.WITHER_MELEE, 21, 'Wither', 0.6, 1.8, 3.2, null, null, null, WeaponSoundTypes.BONE, BodySoundTypes.HARD, null, MonsterSoundTypes.SKELETON, null),

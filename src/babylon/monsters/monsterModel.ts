@@ -198,8 +198,7 @@ export class MonsterModel implements EquipBearer {
 
         const possibleAnims = []
         if (!this.parent.isWeaponRanged()) {
-            possibleAnims.push(this.attackAnims[0])
-            possibleAnims.push(this.attackAnims[1])
+            possibleAnims.push(...this.attackAnims)
         } else {
             possibleAnims.push(this.attackBowAnim)
         }
@@ -260,11 +259,12 @@ export class MonsterModel implements EquipBearer {
 
     doDie() {
         if (!this.isActive()) return
-        this.transitionToAnimation(this.deadAnim!, true, false, 2.5)
+        const deathAnimationSpeed = this.type.deathAnimSpeed
+        this.transitionToAnimation(this.deadAnim!, true, false, deathAnimationSpeed)
 
         this.isDying = true
         this.disposeWeaponTrail()
-        this.fadeOutTimer = new Date().getTime() + 525
+        this.fadeOutTimer = new Date().getTime() + (525 * (2.5 / deathAnimationSpeed))
 
         AudioManager.playDeathRattle(this.parent.mobType.monsterSoundType, this.parent.pos)
     }

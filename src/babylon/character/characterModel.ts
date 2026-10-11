@@ -81,7 +81,7 @@ export class CharacterModel implements EquipBearer {
     async initAsync() {
         // The versioned URL bypasses the legacy immutable browser cache once.
         // Subsequent loads revalidate through the no-cache response header.
-        await SceneLoader.ImportMeshAsync('', '/models/steve/', 'human_male.glb?v=20260922', Renderer.scene)
+        await SceneLoader.ImportMeshAsync('', '/models/steve/', 'human_male.glb?v=20261011-3', Renderer.scene)
             .then((result) => {
                 this.model = result.meshes[0]
                 this.model.parent = this.node
@@ -126,7 +126,7 @@ export class CharacterModel implements EquipBearer {
                     const animations = [
                         { name: 'Idle', startFrame: 0, endFrame: 75 },
                         { name: 'Walk', startFrame: 76, endFrame: 225 },
-                        { name: 'Run', startFrame: 226, endFrame: 375 },
+                        { name: 'Run', startFrame: 225, endFrame: 375 },
                         { name: 'CombatIdle', startFrame: 400, endFrame: 475 },
 
                         // Attack animations are cut off last 15 frames to join smoothly with the next animation
