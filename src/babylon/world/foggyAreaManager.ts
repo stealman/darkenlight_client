@@ -23,11 +23,10 @@ export interface FoggyAreaData {
     intensity: number
 }
 
-const DETAIL_FACTORS = [0.45, 0.7, 1]
-const CAPACITY_LIMITS = [1800, 3500, 6000]
+const CAPACITY_LIMIT = 6000
 const VISIBILITY_MARGIN = 6
 const FOG_ALPHA_FADE_DEFINE = '#define FOGGY_AREA_ALPHA_FADE'
-const NIGHT_PARTICLE_COLOR_FACTOR = 2
+const NIGHT_PARTICLE_COLOR_FACTOR = 1.85
 let fogAlphaFadeShaderInstalled = false
 
 function installFogAlphaFadeShader(): boolean {
@@ -96,6 +95,13 @@ export const FoggyAreaManager = {
 
     refreshVisibleAreas() {
         if (!this.scene || !ViewportManager.viewPortInitialized) return
+        if (!Settings.isDetalLevelHigh()) {
+            this.particles?.dispose(false)
+            this.particles = null
+            this.activeAreas = []
+            this.activeKey = ''
+            return
+        }
         const active = this.areas.filter((area) => ViewportManager.isPointNearVisibleBounds(
             area.x,
             area.z,
@@ -135,12 +141,10 @@ export const FoggyAreaManager = {
     rebuildSystem() {
         this.particles?.dispose(false)
         this.particles = null
-        if (!this.scene || this.activeAreas.length === 0 || !GPUParticleSystem.IsSupported || !installFogAlphaFadeShader()) return
+        if (!Settings.isDetalLevelHigh() || !this.scene || this.activeAreas.length === 0 || !GPUParticleSystem.IsSupported || !installFogAlphaFadeShader()) return
 
-        const detailFactor = DETAIL_FACTORS[Settings.detailLevel.level - 1]
         const weightedArea = this.activeAreas.reduce((sum, area) => sum + areaWeight(area), 0)
-        const capacityLimit = CAPACITY_LIMITS[Settings.detailLevel.level - 1]
-        const capacity = Math.max(64, Math.min(capacityLimit, Math.ceil(weightedArea * 1.5 * detailFactor)))
+        const capacity = Math.max(64, Math.min(CAPACITY_LIMIT, Math.ceil(weightedArea * 1.5)))
         const emitter = new CustomParticleEmitter()
         const start = new Vector3()
         emitter.particlePositionGenerator = (index, _particle, position) => {
@@ -169,7 +173,7 @@ export const FoggyAreaManager = {
         particles.particleEmitterType = emitter
         particles.minLifeTime = 6
         particles.maxLifeTime = 9
-        particles.emitRate = Math.min(capacity / 5, weightedArea * 0.03 * detailFactor)
+        particles.emitRate = Math.min(capacity / 5, weightedArea * 0.03)
         particles.minAngularSpeed = -0.08
         particles.maxAngularSpeed = 0.08
         particles.updateSpeed = 0.01

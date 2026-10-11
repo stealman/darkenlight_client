@@ -5,6 +5,7 @@ import { MonsterManager } from '@/babylon/monsters/monsterManager'
 import { BurningEffect } from '@/babylon/gfx/burningEffect'
 import { SlowEffect } from '@/babylon/gfx/slowEffect'
 import { MyPlayer } from '@/data/myPlayer'
+import { MonsterPersistentEffect } from '@/babylon/gfx/monsterPersistentEffect'
 
 export const GfxManager = {
     BURNING_AFFECT_ID: 6,
@@ -15,6 +16,7 @@ export const GfxManager = {
     activeMonsterEffects: [] as MonsterEffect[],
     activeCharacterAffects: new Map<string, CharacterEffect>(),
     activeMonsterAffects: new Map<string, MonsterEffect>(),
+    activeMonsterPersistentEffects: new Map<number, MonsterEffect>(),
 
     initialize(scene: Scene) {
         this.clear()
@@ -39,6 +41,7 @@ export const GfxManager = {
         this.updateTimedMonsterEffects(actualTime)
         this.syncCharacterAffects(actualTime)
         this.syncMonsterAffects(actualTime)
+        this.syncMonsterPersistentEffects(actualTime)
     },
 
     clear() {
@@ -46,11 +49,13 @@ export const GfxManager = {
         this.activeMonsterEffects.forEach(effect => effect.onEnd())
         this.activeCharacterAffects.forEach(effect => effect.onEnd())
         this.activeMonsterAffects.forEach(effect => effect.onEnd())
+        this.activeMonsterPersistentEffects.forEach(effect => effect.onEnd())
 
         this.activeCharacterEffects = []
         this.activeMonsterEffects = []
         this.activeCharacterAffects.clear()
         this.activeMonsterAffects.clear()
+        this.activeMonsterPersistentEffects.clear()
     },
 
     updateTimedCharacterEffects(actualTime: number) {
@@ -107,6 +112,37 @@ export const GfxManager = {
         })
 
         this.cleanupInactiveMonsterAffects(activeKeys, actualTime)
+    },
+
+    syncMonsterPersistentEffects(actualTime: number) {
+        MonsterManager.monsters.forEach(monster => {
+            const effectType = monster.model?.template?.persistentEffectType
+            if (!effectType || monster.killedTime > 0 || !monster.isEffectVisible()) {
+                return
+            }
+
+            let effect = this.activeMonsterPersistentEffects.get(monster.id)
+            if (!effect) {
+                effect = new MonsterPersistentEffect(monster, effectType)
+                this.activeMonsterPersistentEffects.set(monster.id, effect)
+                effect.onStart(actualTime)
+            }
+
+            effect.onUpdate(actualTime)
+        })
+
+        this.activeMonsterPersistentEffects.forEach((effect, monsterId) => {
+            const monster = MonsterManager.monsters.get(monsterId)
+            if (monster?.model?.template?.persistentEffectType && monster.killedTime === 0 && monster.isEffectVisible()) {
+                return
+            }
+
+            if (!effect.target.isEffectVisible()) {
+                effect.onUpdate(actualTime)
+            }
+            effect.onEnd()
+            this.activeMonsterPersistentEffects.delete(monsterId)
+        })
     },
 
     syncCharacterAffect(target: EffectTarget, affectId: number, isActive: boolean, activeKeys: Set<string>, actualTime: number) {

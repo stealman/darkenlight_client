@@ -23,7 +23,7 @@ export const MonsterCodebook = {
             MonsterBonesAnims.initZombie(model)
         }
 
-        if (model.type.templateId === 31) {
+        if ([31, 32, 33].includes(model.type.templateId)) {
             MonsterBonesAnims.initWight(model)
         }
 
@@ -238,6 +238,8 @@ export const MonsterTypes = {
 
     // WIGHTS
     WIGHT: new MonsterType(60, MonsterGroups.WIGHTS, 31, 'Wight', 0.6, 2.8, 2.2, null, null, null, WeaponSoundTypes.BONE, BodySoundTypes.HARD, null, MonsterSoundTypes.WRAITH, null, 1.25, MonsterAttackSoundTypes.WRAITH, 0.5),
+    WRAITH: new MonsterType(61, MonsterGroups.WIGHTS, 32, 'Wraith', 0.6, 2.8, 2.2, null, null, null, WeaponSoundTypes.BONE, BodySoundTypes.HARD, null, MonsterSoundTypes.WRAITH, null, 1.25, MonsterAttackSoundTypes.WRAITH, 0.5),
+    WRAITH_LORD: new MonsterType(62, MonsterGroups.WIGHTS, 33, 'Wraith Lord', 0.6, 2.8, 2.2, null, null, null, WeaponSoundTypes.BONE, BodySoundTypes.HARD, null, MonsterSoundTypes.WRAITH, null, 1.25, MonsterAttackSoundTypes.WRAITH, 0.5),
 
     // WITHER MELEE
     WITHER: new MonsterType(200, MonsterGroups.WITHER_MELEE, 21, 'Wither', 0.6, 1.8, 3.2, null, null, null, WeaponSoundTypes.BONE, BodySoundTypes.HARD, null, MonsterSoundTypes.SKELETON, null),
