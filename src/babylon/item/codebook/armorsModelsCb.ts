@@ -1,4 +1,4 @@
-import { Scene, TransformNode, Vector2, Vector3 } from '@babylonjs/core'
+import { PBRMaterial, Scene, TransformNode, Vector2, Vector3 } from '@babylonjs/core'
 import { BabylonUtils } from '@/babylon/utils'
 import { EquipItemType} from '@/babylon/item/equipManager'
 import { EquipCbItem} from '@/babylon/item/codebook/equipCbItem'
@@ -7,6 +7,7 @@ import { Renderer } from '@/babylon/scene/renderer'
 import { EquipSlotModelsCb } from '@/data/items/item'
 import { createVertexColorWeaponMaterial } from '@/babylon/item/codebook/vertexColorPalettes/vertexColorWeaponMaterial'
 import { MetalArmorVertexColorPalette, ShieldDetailVertexColorPalette } from '@/babylon/item/codebook/vertexColorPalettes/armor'
+import { Materials } from '@/babylon/materials'
 
 export const BASE_EQUIP_MATERIAL_PATH = "/models/equip/"
 
@@ -15,13 +16,14 @@ const matMetalSize = new Vector2(16, 8)
 
 // Change when a vertex-colour armour GLB is replaced to avoid mixing it with its palette.
 export const ARMOR_MODEL_CACHE_VERSION = '20260925-armor-details-renamed'
+const TEXTURED_PLATE_ARMOR_CACHE_VERSION = '20261011-initial-test'
 
 export const ArmorsCbManager = {
     metalArmorVertexColorMaterial: null as PBRCustomMaterial,
     detailArmorVertexColorMaterial: null as PBRCustomMaterial,
     itemSourceParent: null as TransformNode | null,
 
-    async initArmors(map: Map<number, EquipItemType>, scene: Scene) {
+    async initArmors(map: Map<number, EquipItemType>, localPlayerOverrides: Map<number, EquipItemType>, scene: Scene) {
         this.itemSourceParent = new TransformNode("mobArmorSources", scene)
 
         // Load materials
@@ -37,6 +39,44 @@ export const ArmorsCbManager = {
         for (const armorModel of Object.values(ArmorModelsCb)) {
             map.set(armorModel.id, await this.getVertexColorItem(armorModel, this.getVertexColorMaterial(armorModel)))
         }
+
+        const texturedPlateMaterial = Materials.getPBRMaterial(
+            scene,
+            'localPlayerTexturedPlateArmor',
+            `${BASE_EQUIP_MATERIAL_PATH}armors/plate_armor.png`,
+            false,
+            false,
+            {
+                metallic: 1,
+                roughness: 0.7,
+                directIntensity: 1.5,
+                environmentIntensity: 1,
+            },
+        )
+        // The generated mesh contains visible faces with inconsistent winding.
+        // Render both sides, but keep its authored normals for stable lighting.
+        texturedPlateMaterial.backFaceCulling = false
+        texturedPlateMaterial.twoSidedLighting = false
+        texturedPlateMaterial.usePhysicalLightFalloff = false
+        localPlayerOverrides.set(
+            ArmorModelsCb.PLATE_ARMOR_MALE.id,
+            await this.getTexturedPlateArmor(ArmorModelsCb.PLATE_ARMOR_MALE, texturedPlateMaterial),
+        )
+    },
+
+    async getTexturedPlateArmor(data: EquipCbItem, material: PBRMaterial): Promise<EquipItemType> {
+        const item = new EquipItemType(data)
+        await item.initializeMeshGlb(
+            this.itemSourceParent!,
+            Renderer.scene!,
+            `armors/tripo-male-armor-plate.glb?v=${TEXTURED_PLATE_ARMOR_CACHE_VERSION}`,
+            material,
+            data.pos,
+            data.rot,
+            data.scale,
+            false,
+        )
+        return item
     },
 
     getVertexColorMaterial(data: EquipCbItem): PBRCustomMaterial {

@@ -13,7 +13,9 @@ const modifier = (position: Vector3, scale: Vector3, rotation = Vector3.Zero()):
  * The base transforms in ArmorModelsCb remain shared by ground items, decorations and monsters.
  */
 export const CharacterModelEquipModifiers = new Map<number, EquipModelModifier>([
-    [EquipSlotModelsCb.ARMOR_PLATE.modelId, modifier(new Vector3(0, 0, 0), new Vector3(1, 1, 1.05))],
+    // [EquipSlotModelsCb.ARMOR_PLATE.modelId, modifier(new Vector3(0, 0, 0), new Vector3(1, 1, 1.05))],
+
+    [EquipSlotModelsCb.ARMOR_PLATE.modelId, modifier(new Vector3(0, -0.57, -0.01), new Vector3(1.6, 1.45, 1.75))],
     [EquipSlotModelsCb.HELM.modelId, modifier(new Vector3(0.005, 0.046, 0.015), new Vector3(0.9, 1, 1.05))],
     [EquipSlotModelsCb.SHIELD.modelId, modifier(new Vector3(0, 0, 0), new Vector3(1, 1, 1))],
     [EquipSlotModelsCb.PAULDRONS_PLATE.modelId, modifier(new Vector3(0, 0, 0), new Vector3(1, 1, 1))],

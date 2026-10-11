@@ -230,7 +230,7 @@ export class CharacterModel implements EquipBearer {
     }
 
     assignArmor(type: number, matIndex: number) {
-        this.addEquippedItem('BODY', new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find((b) => b.id === 'Bone.001')!, null, null, null, getCharacterModelEquipModifier(type)))
+        this.addEquippedItem('BODY', new EquipItem(EquipManager.getItemType(type, this.parent.isMyChar())!, matIndex, this, this.skeleton!.bones.find((b) => b.id === 'Bone.001')!, null, null, null, getCharacterModelEquipModifier(type)))
     }
 
     assignHelmet(type: number, matIndex: number) {

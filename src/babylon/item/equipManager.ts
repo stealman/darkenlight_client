@@ -1,11 +1,10 @@
 import {
     Bone, Color4, GPUParticleSystem, Matrix,
-    Mesh, ParticleSystem,
+    Mesh, ParticleSystem, PBRMaterial,
     Quaternion,
     Scene,
     SceneLoader, Texture, TrailMesh, TransformNode, Vector2, Vector3
 } from '@babylonjs/core'
-import { PBRCustomMaterial } from '@babylonjs/materials'
 import { WeaponsCbManager } from '@/babylon/item/codebook/weaponModelsCb'
 import { ArmorsCbManager } from '@/babylon/item/codebook/armorsModelsCb'
 import { EquipCbItem } from '@/babylon/item/codebook/equipCbItem'
@@ -354,7 +353,7 @@ export class EquipItemType {
     }
 
     /** Loads a GLB source mesh for weapons and vertex-colour armour. */
-    async initializeMeshGlb(parentNode: TransformNode, scene: Scene, fileName: string, material: PBRCustomMaterial | null, position: Vector3 = Vector3.Zero(), rotation: Vector3 = Vector3.Zero(), scale: Vector3 = Vector3.One(), castsShadows = true) {
+    async initializeMeshGlb(parentNode: TransformNode, scene: Scene, fileName: string, material: PBRMaterial | null, position: Vector3 = Vector3.Zero(), rotation: Vector3 = Vector3.Zero(), scale: Vector3 = Vector3.One(), castsShadows = true) {
         const result = await SceneLoader.ImportMeshAsync("", "/models/equip/", fileName, scene);
         const source = result.meshes[0].getChildMeshes()[0] as Mesh
         source.position = position
@@ -434,6 +433,7 @@ export class EquipItemType {
  */
 export const EquipManager = {
     itemTypes: new Map<number, EquipItemType>(),
+    localPlayerItemTypeOverrides: new Map<number, EquipItemType>(),
     equippedItems: new Map<EquipItemType, Set<EquipThinInstance>>(),
 
     _tmpPos: new Matrix(),
@@ -443,7 +443,14 @@ export const EquipManager = {
 
     async initialize(scene: Scene) {
         await WeaponsCbManager.initMelee(this.itemTypes, scene)
-        await ArmorsCbManager.initArmors(this.itemTypes, scene)
+        await ArmorsCbManager.initArmors(this.itemTypes, this.localPlayerItemTypeOverrides, scene)
+    },
+
+    getItemType(modelId: number, localPlayerOverride = false): EquipItemType | undefined {
+        if (localPlayerOverride) {
+            return this.localPlayerItemTypeOverrides.get(modelId) ?? this.itemTypes.get(modelId)
+        }
+        return this.itemTypes.get(modelId)
     },
 
     addEquippedItem(item: EquipItem) {
