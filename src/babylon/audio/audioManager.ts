@@ -15,6 +15,7 @@ export const AudioManager = {
 
     footStepSounds: new Map<string, Sound>(),
     deathRattleSounds: new Map<string, Sound>(),
+    monsterAttackSounds: new Map<string, Sound>(),
     ambientSounds: new Map<object, Sound>(),
     staticObjectSounds: new Map<string, Sound>(),
 
@@ -92,6 +93,8 @@ export const AudioManager = {
         this.loadDeathRattleSound(MonsterSoundTypes.SKELETON, "death-skeleton.ogg", scene, { volume: 0.7, playbackRate: 0.85 } );
         this.loadDeathRattleSound(MonsterSoundTypes.CAT, "death-cat.ogg", scene, { volume: 0.3, playbackRate: 1 } );
         this.loadDeathRattleSound(MonsterSoundTypes.ZOMBIE, "death-zombie.ogg", scene, { volume: 1, playbackRate: 1 } );
+        this.loadDeathRattleSound(MonsterSoundTypes.WRAITH, "death-wraith.ogg", scene, { volume: 0.6, playbackRate: 1 } );
+        this.loadMonsterAttackSound(MonsterAttackSoundTypes.WRAITH, "att-wraith.ogg", scene, { volume: 0.75, playbackRate: 1 } );
 
         // Ambient sounds
         this.loadAmbientSound(AmbientSoundTypes.WINTER_FOREST, "winter-forest.ogg", scene, { volume: AmbientSoundTypes.WINTER_FOREST.defaultVolume, playbackRate: 1, loop: true } );
@@ -260,6 +263,14 @@ export const AudioManager = {
             sound['defaultVolume'] = options.volume;
         }, options);
         this.deathRattleSounds.set(type, sound);
+    },
+
+    loadMonsterAttackSound(type: string, fileName: string, scene: Scene, options: { volume: number, playbackRate: number }) {
+        const sound = new Sound("monsterAttack" + type, AudioManager.BASE_PATH_MONSTER + fileName, scene, function() {
+            sound['loaded'] = true
+            sound['defaultVolume'] = options.volume
+        }, options)
+        this.monsterAttackSounds.set(type, sound)
     },
 
     loadAmbientSound (type: object, fileName: string, scene: Scene, options: { volume: number, playbackRate: number, loop: boolean }) {
@@ -462,6 +473,11 @@ export const AudioManager = {
         }
     },
 
+    playMonsterAttack(type: string | null, position: Vector3) {
+        if (type == null) return
+        this.playSoundAt(this.monsterAttackSounds.get(type) ?? null, position)
+    },
+
     playDeath() {
         if (this.deathSound && this.deathSound['loaded']) {
             this.deathSound.play();
@@ -575,5 +591,10 @@ export const BodySoundTypes = {
 export const MonsterSoundTypes = {
     SKELETON: 'SKELETON',
     ZOMBIE: 'ZOMBIE',
+    WRAITH: 'WRAITH',
     CAT: 'CAT',
+}
+
+export const MonsterAttackSoundTypes = {
+    WRAITH: 'WRAITH',
 }

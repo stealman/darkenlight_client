@@ -47,6 +47,7 @@ export class MonsterModel implements EquipBearer {
     attackBowAnim: MeshAnimation | undefined
     deadAnim: MeshAnimation | undefined
     activeAnims: Set<MeshAnimation>
+    pendingAttackSoundAnim: MeshAnimation | null = null
 
     weaponEquipItem: EquipItem | null = null
     equipSet: Set<EquipItem> = new Set()
@@ -127,6 +128,14 @@ export class MonsterModel implements EquipBearer {
             this.skeleton.prepare()
             this.activeAnims.forEach(anim => {
                 anim.onAnimFrame()
+                if (anim === this.pendingAttackSoundAnim) {
+                    const range = anim.toFrame - anim.fromFrame
+                    const progress = anim.running && range > 0 ? anim.actualFrame / range : 1
+                    if (progress >= this.type.attackSoundProgress) {
+                        AudioManager.playMonsterAttack(this.type.attackSoundType, this.parent.pos)
+                        this.pendingAttackSoundAnim = null
+                    }
+                }
                 if (!anim.running) {
                     this.activeAnims.delete(anim)
                 }
@@ -208,14 +217,17 @@ export class MonsterModel implements EquipBearer {
             return
         }
         this.transitionToAnimation(anim, true, false, baseAnimSpeed / this.parent.attackAnimationTime)
+        this.pendingAttackSoundAnim = this.type.attackSoundType == null ? null : anim
         this.setWeaponTrailEnabled(true)
     }
 
     doWalk() {
+        this.pendingAttackSoundAnim = null
         this.transitionToAnimation(this.walkAnim!, true, true, this.parent.mobType.walkAnimSpeed)
     }
 
     doIdle() {
+        this.pendingAttackSoundAnim = null
         this.transitionToAnimation(this.idleAnim!, true, true, 1.0)
     }
 
@@ -259,6 +271,7 @@ export class MonsterModel implements EquipBearer {
 
     doDie() {
         if (!this.isActive()) return
+        this.pendingAttackSoundAnim = null
         const deathAnimationSpeed = this.type.deathAnimSpeed
         this.transitionToAnimation(this.deadAnim!, true, false, deathAnimationSpeed)
 
@@ -333,6 +346,7 @@ export class MonsterModel implements EquipBearer {
 
     removeFromView() {
         this.viewRequested = false
+        this.pendingAttackSoundAnim = null
         if (this.initialized) {
             this.animation.stop()
             MonsterLoader.monsterTemplates.get(this.template.id)?.deactivateClone(this.template)
