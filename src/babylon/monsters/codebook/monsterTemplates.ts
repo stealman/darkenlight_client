@@ -136,10 +136,10 @@ export class MonsterTemplate {
 }
 
 export const MonsterTemplates = {
-    CAT : new MonsterTemplate(1001, "cat", "cat", 0.85, null),
-    SKELETON: new MonsterTemplate(1,  "skeleton", "skeleton",  0.35, null),
-    WITHER: new MonsterTemplate(21,  "skeleton", "wither",  0.35, null),
-    ZOMBIE_ROTTEN: new MonsterTemplate(11,  "human_male", "zombie_rotten",  new Vector3(0.225, 0.25, 0.225), null, 1.4),
-    ZOMBIE: new MonsterTemplate(12,  "human_male", "zombie",  0.25, null, 1.4),
-    ZOMBIE_MUTANT: new MonsterTemplate(13,  "human_male", "zombie_mutant",  0.275, "zombie_mutant_em", 1.4),
+    CAT: new MonsterTemplate(1001, 'cat', 'cat', 0.85, null),
+    SKELETON: new MonsterTemplate(1, 'skeleton', 'skeleton', 0.4, null),
+    WITHER: new MonsterTemplate(21, 'skeleton', 'wither', 0.35, null),
+    ZOMBIE_ROTTEN: new MonsterTemplate(11, 'human_male', 'zombie_rotten', new Vector3(0.225, 0.25, 0.225), null, 1.4),
+    ZOMBIE: new MonsterTemplate(12, 'human_male', 'zombie', 0.25, null, 1.4),
+    ZOMBIE_MUTANT: new MonsterTemplate(13, 'human_male', 'zombie_mutant', 0.275, 'zombie_mutant_em', 1.4),
 }
