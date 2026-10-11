@@ -141,7 +141,12 @@ export const Renderer = {
         }
         WorldRenderer.renderWorld()
 
-        await Lights.warmUpDayNightCycle(onWarmupProgress)
+        onWarmupProgress?.(0, 2)
+        await WorldRenderer.warmUpOcclusionFadeShaders()
+        onWarmupProgress?.(1, 2)
+        await Lights.warmUpDayNightCycle((completed, total) => {
+            onWarmupProgress?.(1 + completed, 1 + total)
+        })
 
         this.engine!.runRenderLoop(() => {
             this.onFrame(this.scene)

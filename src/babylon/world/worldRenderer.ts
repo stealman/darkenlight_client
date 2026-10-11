@@ -142,6 +142,17 @@ export const WorldRenderer = {
         Lights.registerSharedLightMesh(this.blockWithAlpha1!.mesh)
         Lights.registerSharedLightMesh(this.translucentPlane!.mesh)
         Lights.registerSharedLightMesh(RockDebrisManager.mesh!)
+    },
+
+    async warmUpOcclusionFadeShaders() {
+        try {
+            await Promise.all([
+                TreeManager.warmUpFadeShaders(),
+                BuildingManager.warmUpFadeShader(),
+            ])
+        } catch (error) {
+            console.warn('World occlusion fade shader warm-up failed', error)
+        }
     }
 }
 

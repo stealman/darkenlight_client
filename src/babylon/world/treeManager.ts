@@ -93,6 +93,43 @@ export const TreeManager = {
         return mesh
     },
 
+    async warmUpFadeShaders() {
+        const leafSource = this.prefabs.tree1?.mesh
+        const trunkSource = WorldRenderer.block1?.mesh
+        if (leafSource == null || trunkSource == null || this.fadedLeafMaterial == null || this.fadedTrunkMaterial == null) {
+            return
+        }
+
+        const leafMesh = this.createFadedMesh(
+            leafSource,
+            'tree_faded_leaf_shader_warmup',
+            this.fadedLeafMaterial,
+            MaterialAlphaEnum1.TREE_LEAF_LIGHT.uv,
+            false,
+        )
+        const trunkMesh = this.createFadedMesh(
+            trunkSource,
+            'tree_faded_trunk_shader_warmup',
+            this.fadedTrunkMaterial,
+            MaterialEnum1.WOOD_1.uv,
+            true,
+        )
+        const meshes = [leafMesh, trunkMesh]
+        meshes.forEach(mesh => {
+            mesh.visibility = this.fadedAlpha
+            mesh.isPickable = false
+            mesh.setEnabled(false)
+        })
+
+        try {
+            await Promise.all(meshes.map(mesh => mesh.material?.forceCompilationAsync(mesh)))
+        } finally {
+            Lights.removeShadowCaster(leafMesh, false, true)
+            Lights.removeShadowCaster(trunkMesh, true, true)
+            meshes.forEach(mesh => mesh.dispose(false, false))
+        }
+    },
+
     onFrame(timeRate: number, camera: Camera | null) {
         let rebuildTrees = false
         this.allTrees.forEach(tree => {

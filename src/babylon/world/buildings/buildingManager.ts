@@ -1468,6 +1468,31 @@ export const BuildingManager = {
         Lights.registerSharedLightMesh(this.glassBatchMesh)
     },
 
+    async warmUpFadeShader() {
+        const source = this.housePrefabs?.roof
+        if (source == null || this.parent == null || this.fadeMaterial == null) {
+            return
+        }
+
+        const mesh = source.clone('building_faded_shader_warmup', this.parent)
+        if (mesh == null) {
+            return
+        }
+        mesh.material = this.fadeMaterial
+        mesh.visibility = FADED_ALPHA
+        mesh.isPickable = false
+        mesh.setEnabled(false)
+        Lights.registerSharedLightMesh(mesh)
+        Lights.addShadowCaster(mesh, true, true)
+        try {
+            await this.fadeMaterial.forceCompilationAsync(mesh)
+        } finally {
+            Lights.unregisterSharedLightMesh(mesh)
+            Lights.removeShadowCaster(mesh, true, true)
+            mesh.dispose(false, false)
+        }
+    },
+
     consumeBuildings(data: BuildingData[]) {
         data.forEach((building) => this.addBuilding(building))
     },
