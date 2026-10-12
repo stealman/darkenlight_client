@@ -56,7 +56,7 @@ export const ArmorsCbManager = {
             false,
             false,
             {
-                metallic: 0.6,
+                metallic: 0.75,
                 roughness: 0.9,
                 directIntensity: 1.5,
                 environmentIntensity: 1.2,
@@ -83,7 +83,7 @@ export const ArmorsCbManager = {
             false,
             false,
             {
-                metallic: 0.4,
+                metallic: 0.5,
                 roughness: 1,
                 directIntensity: 1.75,
                 environmentIntensity: 1.4,
