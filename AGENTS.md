@@ -22,7 +22,9 @@
 ## Project Map
 
 ### Root Entry Points
-- `src/main.js`: Vue/bootstrap entry.
+- `src/main.js`: lightweight path dispatcher; lazy-loads the normal game or `/adminUtils` without loading both.
+- `src/gameMain.js`: normal Vue/game bootstrap entry.
+- `src/adminUtils/adminUtils.ts`: offline Babylon model/equipment sandbox; must not initialize networking.
 - `src/App.vue`: top-level app shell.
 - `src/GameManager.ts`: high-level game startup and cross-system orchestration.
 

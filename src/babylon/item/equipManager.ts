@@ -8,7 +8,6 @@ import {
 import { WeaponsCbManager } from '@/babylon/item/codebook/weaponModelsCb'
 import { ArmorsCbManager } from '@/babylon/item/codebook/armorsModelsCb'
 import { EquipCbItem } from '@/babylon/item/codebook/equipCbItem'
-import { Renderer } from '@/babylon/scene/renderer'
 import { Materials } from '@/babylon/materials'
 import { Lights } from '@/babylon/scene/lights'
 import { BabylonUtils } from '@/babylon/utils'
@@ -105,7 +104,8 @@ export class EquipItem {
     }
 
     createWeaponTrail(bone: Bone): TrailMesh {
-        const tip = new TransformNode('weaponTip' + this.parent?.getOwnerId(), Renderer.scene)
+        const scene = this.type.mesh!.getScene()
+        const tip = new TransformNode('weaponTip' + this.parent?.getOwnerId(), scene)
         tip.attachToBone(bone, this.parent!.getMasterNode())
         this.weaponTrailTip = tip
 
@@ -118,7 +118,7 @@ export class EquipItem {
             p.y * s.y,
             p.z * s.z
         )
-        const trail = new TrailMesh('swordTrail', tip, Renderer.scene, 0.3, 60, false)
+        const trail = new TrailMesh('swordTrail', tip, scene, 0.3, 60, false)
         trail.material = Materials.weaponTrailMaterial
         trail.setEnabled(false)
         return trail
@@ -226,13 +226,14 @@ export class EquipItem {
     }
 
     private startPowerStrikeTrailParticles() {
-        if (!this.weaponTrailTip || !Renderer.scene) {
+        if (!this.weaponTrailTip) {
             return
         }
 
         if (!this.powerStrikeTrailParticles) {
-            const particles = new ParticleSystem(`powerStrikeTrailParticles_${this.parent.getOwnerId()}`, 96, Renderer.scene)
-            particles.particleTexture = new Texture('images/gfx/dust.png', Renderer.scene)
+            const scene = this.type.mesh!.getScene()
+            const particles = new ParticleSystem(`powerStrikeTrailParticles_${this.parent.getOwnerId()}`, 96, scene)
+            particles.particleTexture = new Texture('images/gfx/dust.png', scene)
             particles.emitter = this.weaponTrailTip
             particles.minEmitBox = Vector3.Zero()
             particles.maxEmitBox = Vector3.Zero()
@@ -271,15 +272,16 @@ export class EquipItem {
     }
 
     createSwordParticles(handNode: TransformNode) {
-        const emitter = new TransformNode('swordSmearEmitter', Renderer.scene)
+        const scene = this.type.mesh!.getScene()
+        const emitter = new TransformNode('swordSmearEmitter', scene)
         emitter.parent = handNode
         emitter.position = new Vector3(0, 2.8, 0)
 
         const ps = new GPUParticleSystem("charWeaponParticles", {
             capacity: 350
-        }, Renderer.scene);
+        }, scene);
 
-        ps.particleTexture = new Texture('images/gfx/flare-rect.png', Renderer.scene)
+        ps.particleTexture = new Texture('images/gfx/flare-rect.png', scene)
 
         ps.createBoxEmitter(
             Vector3.Zero(),
@@ -443,6 +445,10 @@ export const EquipManager = {
 
     async initialize(scene: Scene) {
         await WeaponsCbManager.initMelee(this.itemTypes, scene)
+        await this.initializeArmors(scene)
+    },
+
+    async initializeArmors(scene: Scene) {
         await ArmorsCbManager.initArmors(this.itemTypes, this.localPlayerItemTypeOverrides, scene)
     },
 

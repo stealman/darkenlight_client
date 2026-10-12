@@ -8,8 +8,7 @@ import { AudioManager, FootStepSpeeds, FootStepTypes } from '@/babylon/audio/aud
 import { Materials } from '@/babylon/materials'
 import { AnimTransition } from '@/babylon/animations/animation'
 import { Lights } from '@/babylon/scene/lights'
-import Character from '@/babylon/character/character'
-import { Renderer } from '@/babylon/scene/renderer'
+import type Character from '@/babylon/character/character'
 import { MyPlayer } from '@/data/myPlayer'
 import { EquipBearer, EquipItem, EquipManager } from '@/babylon/item/equipManager'
 import { BabylonUtils } from '@/babylon/utils'
@@ -81,7 +80,8 @@ export class CharacterModel implements EquipBearer {
     async initAsync() {
         // The versioned URL bypasses the legacy immutable browser cache once.
         // Subsequent loads revalidate through the no-cache response header.
-        await SceneLoader.ImportMeshAsync('', '/models/steve/', 'human_male.glb?v=20261011-3', Renderer.scene)
+        const scene = this.node.getScene()
+        await SceneLoader.ImportMeshAsync('', '/models/steve/', 'human_male.glb?v=20261011-3', scene)
             .then((result) => {
                 this.model = result.meshes[0]
                 this.model.parent = this.node
@@ -93,7 +93,7 @@ export class CharacterModel implements EquipBearer {
                 this.parent.nameDisplayTime = Date.now() + 3000
 
                 // Apply material
-                const material = Materials.getPBRMaterial(Renderer.scene, 'steveMaterial', '/models/steve/human_male.png', false, false, {
+                const material = Materials.getPBRMaterial(scene, 'steveMaterial', '/models/steve/human_male.png', false, false, {
                     metallic: 0,
                     roughness: 1,
                     directIntensity: 1,

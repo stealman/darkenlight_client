@@ -1,38 +1,19 @@
-import { createApp } from 'vue'
-import App from './App.vue'
-import PrimeVue from 'primevue/config';
+const isAdminUtilsPath = window.location.pathname === '/adminUtils' || window.location.pathname.startsWith('/adminUtils/')
+const showBootError = (label, error) => {
+    console.error(`${label} failed to start:`, error)
+    const root = document.querySelector('#appWrapper')
+    if (root) {
+        root.textContent = `${label} se nepodařilo spustit: ${error instanceof Error ? error.stack ?? error.message : String(error)}`
+        root.style.cssText = 'padding:24px;background:#160e0e;color:#ffb4a7;font:14px/1.5 monospace;white-space:pre-wrap;min-height:100vh'
+    }
+}
 
-// PrimeVue CSS
-import 'primevue/resources/primevue.min.css';
-import 'primeicons/primeicons.css';
-
-import './../public/styles/main.css';
-import './../public/styles/theme.css';
-import './../public/styles/icons.css';
-import './../public/styles/range-slider.css';
-import './../public/styles/onscreen-messages.css';
-import './../public/styles/selected-target.css';
-import './../public/styles/mystatus.css';
-import './../public/styles/action-buttons.css';
-import './../public/styles/gui-buttons.css';
-import './../public/styles/inventory.css';
-import './../public/styles/tooltip-overlay.css';
-
-
-import './../public/styles/gm.css';
-
-
-
-// Custom PrimeVue component styles
-import './../public/styles/primevue/checkbox.css';
-import Checkbox from 'primevue/checkbox';
-
-const app = createApp(App);
-
-// PrimeVue
-app.use(PrimeVue, {
-    theme: 'none',
-});
-
-app.component('Checkbox', Checkbox);
-app.mount('#appWrapper');
+if (isAdminUtilsPath) {
+    import('./adminUtils/adminUtils')
+        .then(({ mountAdminUtils }) => mountAdminUtils())
+        .catch((error) => showBootError('Admin utils', error))
+} else {
+    import('./gameMain')
+        .then(({ mountGame }) => mountGame())
+        .catch((error) => showBootError('Hru', error))
+}

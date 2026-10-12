@@ -1,7 +1,6 @@
 import { Scene, TransformNode, Vector2, Vector3 } from '@babylonjs/core'
 import { EquipItemType } from '@/babylon/item/equipManager'
 import { EquipCbItem } from '@/babylon/item/codebook/equipCbItem'
-import { Renderer } from '@/babylon/scene/renderer'
 import { PBRCustomMaterial } from '@babylonjs/materials'
 import { Materials } from '@/babylon/materials'
 import { BASE_EQUIP_MATERIAL_PATH } from '@/babylon/item/codebook/armorsModelsCb'
@@ -95,7 +94,7 @@ export const WeaponsCbManager = {
 
     async getItem(data: EquipCbItem, material: PBRCustomMaterial | null = null): Promise<EquipItemType> {
         const item = new EquipItemType(data)
-        await item.initializeMeshGlb(this.itemSourceParent!, Renderer.scene, `${this.BASE_WEAPONS_PATH}${data.model}.glb?v=${WEAPON_MODEL_CACHE_VERSION}`, material, data.pos, data.rot, data.scale)
+        await item.initializeMeshGlb(this.itemSourceParent!, this.itemSourceParent!.getScene(), `${this.BASE_WEAPONS_PATH}${data.model}.glb?v=${WEAPON_MODEL_CACHE_VERSION}`, material, data.pos, data.rot, data.scale)
         return item
     },
 
@@ -110,7 +109,7 @@ export const WeaponsCbManager = {
     },
 
     getMaterial(texture: string, matSize: Vector2, invertV: boolean = true) {
-        const mat = Materials.getPBRCustomMaterialFrom(Renderer.scene!, texture, BASE_EQUIP_MATERIAL_PATH + "weapons/", texture + ".png", 1 / matSize.x, 1 / matSize.y, false, {
+        const mat = Materials.getPBRCustomMaterialFrom(this.itemSourceParent!.getScene(), texture, BASE_EQUIP_MATERIAL_PATH + "weapons/", texture + ".png", 1 / matSize.x, 1 / matSize.y, false, {
             metallic: 0.25,
             roughness: 1,
             directIntensity: 1.5,

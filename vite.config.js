@@ -76,6 +76,7 @@ export default defineConfig(({ mode }) => {
             },
             injectManifest: {
                 globPatterns: ['**/*.{js,css,html,json,woff,woff2,ttf,eot}'],
+                globIgnores: ['assets/adminUtils-*'],
                 maximumFileSizeToCacheInBytes: 12 * 1024 * 1024,
             },
         }),

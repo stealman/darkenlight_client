@@ -3,7 +3,6 @@ import { BabylonUtils } from '@/babylon/utils'
 import { EquipItemType} from '@/babylon/item/equipManager'
 import { EquipCbItem} from '@/babylon/item/codebook/equipCbItem'
 import { PBRCustomMaterial } from '@babylonjs/materials'
-import { Renderer } from '@/babylon/scene/renderer'
 import { EquipSlotModelsCb } from '@/data/items/item'
 import { createVertexColorWeaponMaterial } from '@/babylon/item/codebook/vertexColorPalettes/vertexColorWeaponMaterial'
 import { MetalArmorVertexColorPalette, ShieldDetailVertexColorPalette } from '@/babylon/item/codebook/vertexColorPalettes/armor'
@@ -17,6 +16,7 @@ const matMetalSize = new Vector2(16, 8)
 // Change when a vertex-colour armour GLB is replaced to avoid mixing it with its palette.
 export const ARMOR_MODEL_CACHE_VERSION = '20260925-armor-details-renamed'
 const TEXTURED_PLATE_ARMOR_CACHE_VERSION = '20261011-initial-test'
+const TEXTURED_CHAIN_MAIL_CACHE_VERSION = '20261012-initial-test'
 
 export const ArmorsCbManager = {
     metalArmorVertexColorMaterial: null as PBRCustomMaterial,
@@ -47,10 +47,10 @@ export const ArmorsCbManager = {
             false,
             false,
             {
-                metallic: 1,
-                roughness: 0.7,
+                metallic: 0.5,
+                roughness: 0.9,
                 directIntensity: 1.5,
-                environmentIntensity: 1,
+                environmentIntensity: 1.2,
             },
         )
         // The generated mesh contains visible faces with inconsistent winding.
@@ -60,16 +60,45 @@ export const ArmorsCbManager = {
         texturedPlateMaterial.usePhysicalLightFalloff = false
         localPlayerOverrides.set(
             ArmorModelsCb.PLATE_ARMOR_MALE.id,
-            await this.getTexturedPlateArmor(ArmorModelsCb.PLATE_ARMOR_MALE, texturedPlateMaterial),
+            await this.getTexturedArmor(
+                ArmorModelsCb.PLATE_ARMOR_MALE,
+                texturedPlateMaterial,
+                `tripo-male-armor-plate.glb?v=${TEXTURED_PLATE_ARMOR_CACHE_VERSION}`,
+            ),
+        )
+
+        const texturedChainMailMaterial = Materials.getPBRMaterial(
+            scene,
+            'localPlayerTexturedChainMail',
+            `${BASE_EQUIP_MATERIAL_PATH}armors/chain_mail.png`,
+            false,
+            false,
+            {
+                metallic: 0.35,
+                roughness: 0.85,
+                directIntensity: 1.5,
+                environmentIntensity: 1.2,
+            },
+        )
+        texturedChainMailMaterial.backFaceCulling = false
+        texturedChainMailMaterial.twoSidedLighting = false
+        texturedChainMailMaterial.usePhysicalLightFalloff = false
+        localPlayerOverrides.set(
+            ArmorModelsCb.CHAIN_MAIL_MALE.id,
+            await this.getTexturedArmor(
+                ArmorModelsCb.CHAIN_MAIL_MALE,
+                texturedChainMailMaterial,
+                `tripo-male-armor-chain.glb?v=${TEXTURED_CHAIN_MAIL_CACHE_VERSION}`,
+            ),
         )
     },
 
-    async getTexturedPlateArmor(data: EquipCbItem, material: PBRMaterial): Promise<EquipItemType> {
+    async getTexturedArmor(data: EquipCbItem, material: PBRMaterial, fileName: string): Promise<EquipItemType> {
         const item = new EquipItemType(data)
         await item.initializeMeshGlb(
             this.itemSourceParent!,
-            Renderer.scene!,
-            `armors/tripo-male-armor-plate.glb?v=${TEXTURED_PLATE_ARMOR_CACHE_VERSION}`,
+            this.itemSourceParent!.getScene(),
+            `armors/${fileName}`,
             material,
             data.pos,
             data.rot,
@@ -92,7 +121,7 @@ export const ArmorsCbManager = {
         try {
             await item.initializeMeshGlb(
                 this.itemSourceParent!,
-                Renderer.scene!,
+                this.itemSourceParent!.getScene(),
                 `armors/${glbModelName}.glb?v=${ARMOR_MODEL_CACHE_VERSION}`,
                 material,
                 data.pos,
@@ -107,7 +136,7 @@ export const ArmorsCbManager = {
             }
             await item.initializeMeshGlb(
                 this.itemSourceParent!,
-                Renderer.scene!,
+                this.itemSourceParent!.getScene(),
                 `armors/${fallbackGlbName}.glb?v=${ARMOR_MODEL_CACHE_VERSION}`,
                 material,
                 data.pos,
