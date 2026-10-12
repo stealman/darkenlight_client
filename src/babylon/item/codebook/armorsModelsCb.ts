@@ -17,13 +17,21 @@ const matMetalSize = new Vector2(16, 8)
 export const ARMOR_MODEL_CACHE_VERSION = '20260925-armor-details-renamed'
 const TEXTURED_PLATE_ARMOR_CACHE_VERSION = '20261011-initial-test'
 const TEXTURED_CHAIN_MAIL_CACHE_VERSION = '20261012-initial-test'
+const TEXTURED_PLATE_LEG_CACHE_VERSION = '20261012-initial-test'
+const TEXTURED_CHAIN_LEG_CACHE_VERSION = '20261012-initial-test'
+const TEXTURED_ARMOR_MODEL_IDS = new Set([
+    EquipSlotModelsCb.ARMOR_PLATE.modelId,
+    EquipSlotModelsCb.LEGS_PLATE.modelId,
+    EquipSlotModelsCb.CHAIN_MAIL.modelId,
+    EquipSlotModelsCb.CHAIN_GREAVES.modelId,
+])
 
 export const ArmorsCbManager = {
     metalArmorVertexColorMaterial: null as PBRCustomMaterial,
     detailArmorVertexColorMaterial: null as PBRCustomMaterial,
     itemSourceParent: null as TransformNode | null,
 
-    async initArmors(map: Map<number, EquipItemType>, localPlayerOverrides: Map<number, EquipItemType>, scene: Scene) {
+    async initArmors(map: Map<number, EquipItemType>, scene: Scene) {
         this.itemSourceParent = new TransformNode("mobArmorSources", scene)
 
         // Load materials
@@ -37,17 +45,18 @@ export const ArmorsCbManager = {
         this.detailArmorVertexColorMaterial.twoSidedLighting = false
         // Init all armor types
         for (const armorModel of Object.values(ArmorModelsCb)) {
+            if (TEXTURED_ARMOR_MODEL_IDS.has(armorModel.id)) continue
             map.set(armorModel.id, await this.getVertexColorItem(armorModel, this.getVertexColorMaterial(armorModel)))
         }
 
         const texturedPlateMaterial = Materials.getPBRMaterial(
             scene,
-            'localPlayerTexturedPlateArmor',
+            'texturedPlateArmor',
             `${BASE_EQUIP_MATERIAL_PATH}armors/plate_armor.png`,
             false,
             false,
             {
-                metallic: 0.5,
+                metallic: 0.6,
                 roughness: 0.9,
                 directIntensity: 1.5,
                 environmentIntensity: 1.2,
@@ -58,7 +67,7 @@ export const ArmorsCbManager = {
         texturedPlateMaterial.backFaceCulling = false
         texturedPlateMaterial.twoSidedLighting = false
         texturedPlateMaterial.usePhysicalLightFalloff = false
-        localPlayerOverrides.set(
+        map.set(
             ArmorModelsCb.PLATE_ARMOR_MALE.id,
             await this.getTexturedArmor(
                 ArmorModelsCb.PLATE_ARMOR_MALE,
@@ -69,26 +78,77 @@ export const ArmorsCbManager = {
 
         const texturedChainMailMaterial = Materials.getPBRMaterial(
             scene,
-            'localPlayerTexturedChainMail',
+            'texturedChainMail',
             `${BASE_EQUIP_MATERIAL_PATH}armors/chain_mail.png`,
             false,
             false,
             {
-                metallic: 0.35,
-                roughness: 0.85,
-                directIntensity: 1.5,
-                environmentIntensity: 1.2,
+                metallic: 0.4,
+                roughness: 1,
+                directIntensity: 1.75,
+                environmentIntensity: 1.4,
             },
         )
         texturedChainMailMaterial.backFaceCulling = false
         texturedChainMailMaterial.twoSidedLighting = false
         texturedChainMailMaterial.usePhysicalLightFalloff = false
-        localPlayerOverrides.set(
+        map.set(
             ArmorModelsCb.CHAIN_MAIL_MALE.id,
             await this.getTexturedArmor(
                 ArmorModelsCb.CHAIN_MAIL_MALE,
                 texturedChainMailMaterial,
                 `tripo-male-armor-chain.glb?v=${TEXTURED_CHAIN_MAIL_CACHE_VERSION}`,
+            ),
+        )
+
+        const texturedPlateLegMaterial = Materials.getPBRMaterial(
+            scene,
+            'texturedPlateLeg',
+            `${BASE_EQUIP_MATERIAL_PATH}armors/plate_leg.png`,
+            false,
+            false,
+            {
+                metallic: 0.6,
+                roughness: 0.9,
+                directIntensity: 1.5,
+                environmentIntensity: 1.2,
+            },
+        )
+        // The right leg is a mirrored thin instance of this single-leg mesh.
+        texturedPlateLegMaterial.backFaceCulling = false
+        texturedPlateLegMaterial.twoSidedLighting = false
+        texturedPlateLegMaterial.usePhysicalLightFalloff = false
+        map.set(
+            ArmorModelsCb.LEG_MALE.id,
+            await this.getTexturedArmor(
+                ArmorModelsCb.LEG_MALE,
+                texturedPlateLegMaterial,
+                `tripo-male-leg-plate.glb?v=${TEXTURED_PLATE_LEG_CACHE_VERSION}`,
+            ),
+        )
+
+        const texturedChainLegMaterial = Materials.getPBRMaterial(
+            scene,
+            'texturedChainLeg',
+            `${BASE_EQUIP_MATERIAL_PATH}armors/chain_leg.png`,
+            false,
+            false,
+            {
+                metallic: 0.4,
+                roughness: 1,
+                directIntensity: 1.75,
+                environmentIntensity: 1.4,
+            },
+        )
+        texturedChainLegMaterial.backFaceCulling = false
+        texturedChainLegMaterial.twoSidedLighting = false
+        texturedChainLegMaterial.usePhysicalLightFalloff = false
+        map.set(
+            ArmorModelsCb.CHAIN_GREAVES_MALE.id,
+            await this.getTexturedArmor(
+                ArmorModelsCb.CHAIN_GREAVES_MALE,
+                texturedChainLegMaterial,
+                `tripo-male-leg-chain.glb?v=${TEXTURED_CHAIN_LEG_CACHE_VERSION}`,
             ),
         )
     },

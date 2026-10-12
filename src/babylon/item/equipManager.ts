@@ -435,7 +435,6 @@ export class EquipItemType {
  */
 export const EquipManager = {
     itemTypes: new Map<number, EquipItemType>(),
-    localPlayerItemTypeOverrides: new Map<number, EquipItemType>(),
     equippedItems: new Map<EquipItemType, Set<EquipThinInstance>>(),
 
     _tmpPos: new Matrix(),
@@ -449,13 +448,10 @@ export const EquipManager = {
     },
 
     async initializeArmors(scene: Scene) {
-        await ArmorsCbManager.initArmors(this.itemTypes, this.localPlayerItemTypeOverrides, scene)
+        await ArmorsCbManager.initArmors(this.itemTypes, scene)
     },
 
-    getItemType(modelId: number, localPlayerOverride = false): EquipItemType | undefined {
-        if (localPlayerOverride) {
-            return this.localPlayerItemTypeOverrides.get(modelId) ?? this.itemTypes.get(modelId)
-        }
+    getItemType(modelId: number): EquipItemType | undefined {
         return this.itemTypes.get(modelId)
     },
 

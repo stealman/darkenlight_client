@@ -230,7 +230,7 @@ export class CharacterModel implements EquipBearer {
     }
 
     assignArmor(type: number, matIndex: number) {
-        this.addEquippedItem('BODY', new EquipItem(EquipManager.getItemType(type, this.parent.isMyChar())!, matIndex, this, this.skeleton!.bones.find((b) => b.id === 'Bone.001')!, null, null, null, getCharacterModelEquipModifier(type)))
+        this.addEquippedItem('BODY', new EquipItem(EquipManager.getItemType(type)!, matIndex, this, this.skeleton!.bones.find((b) => b.id === 'Bone.001')!, null, null, null, getCharacterModelEquipModifier(type)))
     }
 
     assignHelmet(type: number, matIndex: number) {
@@ -252,11 +252,14 @@ export class CharacterModel implements EquipBearer {
     }
 
     assignLeftLeg(type: number, matIndex: number) {
-        this.addEquippedItem('LEFT_LEG', new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find((b) => b.id === 'Bone.008')!, null, null, null, getCharacterModelEquipModifier(type)))
+        const mirrorScale = type === EquipSlotModelsCb.LEGS_PLATE.modelId || type === EquipSlotModelsCb.CHAIN_GREAVES.modelId
+            ? new Vector3(1, 1, -1)
+            : null
+        this.addEquippedItem('LEFT_LEG', new EquipItem(EquipManager.getItemType(type)!, matIndex, this, this.skeleton!.bones.find((b) => b.id === 'Bone.008')!, mirrorScale, null, null, getCharacterModelEquipModifier(type)))
     }
 
     assignRightLeg(type: number, matIndex: number) {
-        this.addEquippedItem('RIGHT_LEG', new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find((b) => b.id === 'Bone.006')!, null, null, null, getCharacterModelEquipModifier(type)))
+        this.addEquippedItem('RIGHT_LEG', new EquipItem(EquipManager.getItemType(type)!, matIndex, this, this.skeleton!.bones.find((b) => b.id === 'Bone.006')!, null, null, null, getCharacterModelEquipModifier(type)))
     }
 
     assignWeapon(type: number, matIndex: number) {
