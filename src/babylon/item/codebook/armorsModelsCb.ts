@@ -16,11 +16,13 @@ const matMetalSize = new Vector2(16, 8)
 // Change when a vertex-colour armour GLB is replaced to avoid mixing it with its palette.
 export const ARMOR_MODEL_CACHE_VERSION = '20260925-armor-details-renamed'
 const TEXTURED_PLATE_ARMOR_CACHE_VERSION = '20261011-initial-test'
+const TEXTURED_PLATE_HELMET_CACHE_VERSION = '20261012-initial-test'
 const TEXTURED_CHAIN_MAIL_CACHE_VERSION = '20261012-initial-test'
 const TEXTURED_PLATE_LEG_CACHE_VERSION = '20261012-initial-test'
 const TEXTURED_CHAIN_LEG_CACHE_VERSION = '20261012-initial-test'
 const TEXTURED_ARMOR_MODEL_IDS = new Set([
     EquipSlotModelsCb.ARMOR_PLATE.modelId,
+    EquipSlotModelsCb.HELM.modelId,
     EquipSlotModelsCb.LEGS_PLATE.modelId,
     EquipSlotModelsCb.CHAIN_MAIL.modelId,
     EquipSlotModelsCb.CHAIN_GREAVES.modelId,
@@ -76,6 +78,31 @@ export const ArmorsCbManager = {
             ),
         )
 
+        const texturedPlateHelmetMaterial = Materials.getPBRMaterial(
+            scene,
+            'texturedPlateHelmet',
+            `${BASE_EQUIP_MATERIAL_PATH}armors/plate_helmet.png`,
+            false,
+            false,
+            {
+                metallic: 0.2,
+                roughness: 0.9,
+                directIntensity: 1.5,
+                environmentIntensity: 1.2,
+            },
+        )
+        texturedPlateHelmetMaterial.backFaceCulling = false
+        texturedPlateHelmetMaterial.twoSidedLighting = false
+        texturedPlateHelmetMaterial.usePhysicalLightFalloff = false
+        map.set(
+            ArmorModelsCb.HELM_MALE.id,
+            await this.getTexturedArmor(
+                ArmorModelsCb.HELM_MALE,
+                texturedPlateHelmetMaterial,
+                `tripo-helmet-plate.glb?v=${TEXTURED_PLATE_HELMET_CACHE_VERSION}`,
+            ),
+        )
+
         const texturedChainMailMaterial = Materials.getPBRMaterial(
             scene,
             'texturedChainMail',
@@ -108,7 +135,7 @@ export const ArmorsCbManager = {
             false,
             false,
             {
-                metallic: 0.6,
+                metallic: 0.75,
                 roughness: 0.9,
                 directIntensity: 1.5,
                 environmentIntensity: 1.2,
