@@ -1,5 +1,7 @@
 import { MyPlayer } from '@/data/myPlayer'
 import Character from '@/babylon/character/character'
+import { CharacterModel } from '@/babylon/character/characterModel'
+import type { Scene } from '@babylonjs/core'
 import { ViewportManager } from '@/utils/viewport'
 import { Utils } from '@/utils/utils'
 import {
@@ -245,6 +247,10 @@ export const CharacterManager = {
                 char.startCamping(data)
             }
         }
+    },
+
+    async preloadModels(scene: Scene) {
+        await CharacterModel.preload(scene)
     },
 
     clearWorld() {

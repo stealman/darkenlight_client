@@ -13,6 +13,7 @@ import { EquipBearer, EquipItem, EquipManager } from '@/babylon/item/equipManage
 import { Utils } from '@/utils/utils'
 import { Renderer } from '@/babylon/scene/renderer'
 import { WorldDataManager } from '@/data/worldDataManager'
+import { ActiveMeshFreezer } from '@/babylon/scene/activeMeshFreezer'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { TerrainManager } from '@/babylon/world/terrainManager'
 import { Settings } from '@/settings/settings'
@@ -339,12 +340,14 @@ export class MonsterModel implements EquipBearer {
                             this.node.setEnabled(true)
                             this.mesh.setEnabled(true)
                         }
+                        ActiveMeshFreezer.setSkeletonActive(this.skeleton, true)
                         this.equipSet.forEach(item => EquipManager.addEquippedItem(item))
                         this.parent.nameDisplayTime = Date.now() + 3000
                     }
                 })
                 return
             }
+            ActiveMeshFreezer.setSkeletonActive(this.skeleton, true)
             return
         }
 
@@ -353,6 +356,7 @@ export class MonsterModel implements EquipBearer {
         }
 
         MonsterLoader.monsterTemplates.get(this.template.id)?.activateClone(this.template)
+        ActiveMeshFreezer.setSkeletonActive(this.skeleton, true)
         this.equipSet.forEach(item => {
             EquipManager.addEquippedItem(item)
         })
@@ -364,6 +368,7 @@ export class MonsterModel implements EquipBearer {
         this.viewRequested = false
         this.pendingAttackSoundAnim = null
         if (this.initialized) {
+            ActiveMeshFreezer.setSkeletonActive(this.skeleton, false)
             this.animation.stop()
             MonsterLoader.monsterTemplates.get(this.template.id)?.deactivateClone(this.template)
         }
@@ -422,7 +427,10 @@ export class MonsterModel implements EquipBearer {
         ps.particleTexture = new Texture("images/gfx/flare-rect.png", Renderer.scene);
 
         // Set particle color based on terrain type
-        TerrainManager.setParticleSplashColorByTerrainType(ps, WorldDataManager.getBlockOnPosition(this.parent.pos)!)
+        const block = WorldDataManager.getBlockOnPosition(this.parent.pos)
+        if (block) {
+            TerrainManager.setParticleSplashColorByTerrainType(ps, block)
+        }
 
         // Babylon particles are effectively self-lit, so without this they stay
         // unnaturally bright outdoors at night. Match their RGB brightness to

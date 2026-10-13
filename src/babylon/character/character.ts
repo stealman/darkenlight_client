@@ -541,8 +541,8 @@ class Character implements Attackable, EffectTarget {
     }
 
     resolveStepMark(time: number, inCombat: boolean = false) {
-        const block = WorldDataManager.getBlockOnPosition(this.pos)!
-        if (!block.snowed) {
+        const block = WorldDataManager.getBlockOnPosition(this.pos)
+        if (!block?.snowed) {
             return
         }
         if (this.lastStepMarkTime < time - 250) {
@@ -758,10 +758,10 @@ class Character implements Attackable, EffectTarget {
     }
 
     getFootStepSoundType(): string {
-        const block = WorldDataManager.getBlockOnPosition(this.pos)!
-        if (block.snowed) {
+        const block = WorldDataManager.getBlockOnPosition(this.pos)
+        if (block?.snowed) {
             return FootStepTypes.SNOW
-        } else if (block.type === WATER_BLOCK_TYPE) {
+        } else if (block?.type === WATER_BLOCK_TYPE) {
             return FootStepTypes.WATER
         } else {
             return FootStepTypes.DIRT

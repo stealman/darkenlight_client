@@ -114,18 +114,22 @@ export const FoggyAreaManager = {
         this.rebuildSystem()
     },
 
-    getAreaForParticle(index: number): FoggyAreaData {
-        const totalWeight = this.activeAreas.reduce((sum, area) => sum + areaWeight(area), 0)
+    getAreaForParticle(index: number, areas: FoggyAreaData[]): FoggyAreaData | null {
+        const totalWeight = areas.reduce((sum, area) => sum + areaWeight(area), 0)
         let target = random(index, 1) * totalWeight
-        for (const area of this.activeAreas) {
+        for (const area of areas) {
             target -= areaWeight(area)
             if (target <= 0) return area
         }
-        return this.activeAreas[this.activeAreas.length - 1]
+        return areas[areas.length - 1] ?? null
     },
 
-    getParticleStart(index: number, target: Vector3): Vector3 {
-        const area = this.getAreaForParticle(index)
+    getParticleStart(index: number, target: Vector3, areas: FoggyAreaData[]): Vector3 {
+        const area = this.getAreaForParticle(index, areas)
+        if (!area) {
+            target.set(0, -10000, 0)
+            return target
+        }
         const angle = random(index, 2) * Math.PI * 2
         const radius = Math.sqrt(random(index, 3))
         const localX = Math.cos(angle) * radius * area.width * 0.5
@@ -145,13 +149,16 @@ export const FoggyAreaManager = {
 
         const weightedArea = this.activeAreas.reduce((sum, area) => sum + areaWeight(area), 0)
         const capacity = Math.max(64, Math.min(CAPACITY_LIMIT, Math.ceil(weightedArea * 1.5)))
+        // GPU particle callbacks can briefly outlive this manager's active-area
+        // transition. Keep their source data stable until that system is disposed.
+        const areas = this.activeAreas
         const emitter = new CustomParticleEmitter()
         const start = new Vector3()
         emitter.particlePositionGenerator = (index, _particle, position) => {
-            this.getParticleStart(index, position)
+            this.getParticleStart(index, position, areas)
         }
         emitter.particleDestinationGenerator = (index, _particle, destination) => {
-            this.getParticleStart(index, start)
+            this.getParticleStart(index, start, areas)
             const driftAngle = random(index, 4) * Math.PI * 2
             const drift = 0.8 + random(index, 5) * 1.8
             destination.set(

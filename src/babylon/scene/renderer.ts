@@ -109,6 +109,7 @@ export const Renderer = {
         Controller.initializeController(this.scene)
         Materials.initialize(this.scene)
         Lights.configureStaticLightMaterials()
+        await CharacterManager.preloadModels(this.scene)
         WorldRenderer.initialize(this.scene)
         WeatherManager.initialize()
         StepMarksRenderer.initialize(this.scene)
@@ -144,11 +145,15 @@ export const Renderer = {
         }
         WorldRenderer.renderWorld()
 
-        onWarmupProgress?.(0, 2)
+        onWarmupProgress?.(0, 4)
         await WorldRenderer.warmUpOcclusionFadeShaders()
-        onWarmupProgress?.(1, 2)
+        onWarmupProgress?.(1, 4)
+        await EquipManager.warmUpShaders()
+        onWarmupProgress?.(2, 4)
+        await MonsterManager.prepareModels()
+        onWarmupProgress?.(3, 4)
         await Lights.warmUpDayNightCycle((completed, total) => {
-            onWarmupProgress?.(1 + completed, 1 + total)
+            onWarmupProgress?.(3 + completed, 3 + total)
         })
 
         ActiveMeshFreezer.start()

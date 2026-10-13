@@ -14,6 +14,7 @@ export const ActiveMeshFreezer = {
     particleSystems: [] as any[],
     particleStartedStates: [] as boolean[],
     activeSkeletons: [] as Skeleton[],
+    managedSkeletons: new Set<Skeleton>(),
 
     initialize(scene: Scene) {
         this.scene = scene
@@ -25,6 +26,7 @@ export const ActiveMeshFreezer = {
         this.particleSystems = []
         this.particleStartedStates = []
         this.activeSkeletons = []
+        this.managedSkeletons.clear()
 
         if (!ACTIVE_MESH_FREEZING_ENABLED) {
             return
@@ -60,6 +62,18 @@ export const ActiveMeshFreezer = {
             return
         }
         this.dirty = true
+    },
+
+    setSkeletonActive(skeleton: Skeleton | undefined, active: boolean) {
+        if (!ACTIVE_MESH_FREEZING_ENABLED || !skeleton) {
+            return
+        }
+        if (active) {
+            this.managedSkeletons.add(skeleton)
+        } else {
+            this.managedSkeletons.delete(skeleton)
+        }
+        this.invalidate()
     },
 
     observeNode(node: Node) {
@@ -157,6 +171,12 @@ export const ActiveMeshFreezer = {
         // evaluation. That evaluation is precisely what we freeze, so keep
         // bone matrices current only for skeletons in the frozen active list.
         for (const skeleton of this.activeSkeletons) {
+            skeleton.prepare()
+        }
+        // Character/monster visibility is managed by our own viewport logic.
+        // Keep those skeletons updating even when Babylon's frozen active list
+        // briefly misses a hierarchy that has just been enabled again.
+        for (const skeleton of this.managedSkeletons) {
             skeleton.prepare()
         }
     },

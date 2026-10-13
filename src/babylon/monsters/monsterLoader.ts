@@ -3,6 +3,7 @@ import { Materials } from '@/babylon/materials'
 import { MonsterType } from '@/babylon/monsters/codebook/monsterCodebook'
 import { MonsterTemplate, MonsterTemplates } from '@/babylon/monsters/codebook/monsterTemplates'
 import { Renderer } from '@/babylon/scene/renderer'
+import { Lights } from '@/babylon/scene/lights'
 
 export const MonsterLoader = {
     monstersMeshes: [] as Mesh[],
@@ -76,6 +77,36 @@ export const MonsterLoader = {
     getMonsterClone (mobType: MonsterType): MonsterTemplate {
         const template = this.monsterTemplates.get(mobType.templateId)!.clone()
         return template
+    },
+
+    async prepareRuntimeClones(clonesPerTemplate = MonsterTemplate.MAX_REUSABLE_CLONES) {
+        for (const template of this.monsterTemplates.values()) {
+            const clones: MonsterTemplate[] = []
+            try {
+                for (let index = 0; index < clonesPerTemplate; index++) {
+                    clones.push(template.clone())
+                }
+
+                const warmupClone = clones[0]
+                if (warmupClone != null && template.material != null) {
+                    warmupClone.mesh.material = template.material
+                    await Lights.compileActorLightVariants(warmupClone.mesh, template.material)
+                }
+                if (warmupClone != null && template.selectedMaterial != null) {
+                    warmupClone.mesh.material = template.selectedMaterial
+                    await Lights.compileActorLightVariants(warmupClone.mesh, template.selectedMaterial)
+                    warmupClone.mesh.material = template.material ?? null
+                }
+            } catch (error) {
+                console.warn(`Monster runtime warm-up failed for template ${template.id}`, error)
+            } finally {
+                clones.forEach(clone => {
+                    clone.node.setEnabled(false)
+                    clone.mesh.setEnabled(false)
+                    template.freeClone(clone)
+                })
+            }
+        }
     },
 }
 

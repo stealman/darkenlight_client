@@ -52,10 +52,11 @@ export const TreeManager = {
             : PBRMaterial.PBRMATERIAL_ALPHABLEND
         material.forceAlphaTest = alphaCutout
         if (alphaCutout) {
-            // Babylon applies material.alpha before the alpha-test comparison.
-            // Keep fully transparent texels cut out without rejecting the
-            // visible leaf texels after they have been faded to 35%.
-            material.alphaCutOff = 0.01
+            // Mesh visibility is applied after Babylon's alpha test, so the
+            // faded crown can keep exactly the same cutout mask as its opaque
+            // thin-instance version. A lower cutoff fills the intended gaps
+            // with weak-alpha atlas pixels before the tree becomes translucent.
+            material.alphaCutOff = 0.5
         }
     },
 

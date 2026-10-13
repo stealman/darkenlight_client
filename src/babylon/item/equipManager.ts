@@ -415,6 +415,12 @@ export class EquipItemType {
      * When count is zero, the mesh is disabled to save performance
      */
     updateCount(count: number) {
+        if (this.count === count) {
+            // Membership may still have changed (one item replaced another),
+            // but the existing GPU buffers already have the right capacity.
+            this.uvBufferDirty = true
+            return
+        }
         this.count = count
         this.instanceBuffer = new Float32Array(16 * count)
         this.uvBuffer = new Float32Array(2 * count)
@@ -444,6 +450,7 @@ export class EquipItemType {
 export const EquipManager = {
     itemTypes: new Map<number, EquipItemType>(),
     equippedItems: new Map<EquipItemType, Set<EquipThinInstance>>(),
+    dirtyItemTypes: new Set<EquipItemType>(),
 
     _tmpPos: new Matrix(),
     _tmpRot: new Matrix(),
@@ -451,6 +458,7 @@ export const EquipManager = {
     _tmpModel: new Matrix(),
 
     async initialize(scene: Scene) {
+        this.dirtyItemTypes.clear()
         await WeaponsCbManager.initMelee(this.itemTypes, scene)
         await this.initializeArmors(scene)
     },
@@ -471,8 +479,12 @@ export const EquipManager = {
         if (!this.equippedItems.has(item.type)) {
             this.equippedItems.set(item.type, new Set())
         }
-        this.equippedItems.get(item.type)!.add(item)
-        item.type.updateCount(this.equippedItems.get(item.type)!.size)
+        const items = this.equippedItems.get(item.type)!
+        const previousSize = items.size
+        items.add(item)
+        if (items.size !== previousSize) {
+            this.dirtyItemTypes.add(item.type)
+        }
     },
 
     removeEquippedItem(item: EquipItem) {
@@ -487,11 +499,19 @@ export const EquipManager = {
 
     removeThinInstance(item: EquipThinInstance) {
         const items = this.equippedItems.get(item.type)
-        items?.delete(item)
-        item.type.updateCount(items?.size ?? 0)
+        if (items?.delete(item)) {
+            this.dirtyItemTypes.add(item.type)
+        }
     },
 
     onFrame() {
+        // Several characters can enter or leave the viewport in one visibility
+        // pass. Resize each affected thin-instance buffer only once per frame.
+        this.dirtyItemTypes.forEach(type => {
+            type.updateCount(this.equippedItems.get(type)?.size ?? 0)
+        })
+        this.dirtyItemTypes.clear()
+
         this.equippedItems.forEach((items, type) => {
             if (type.count <= 0) return
             if (!type.mesh) return
@@ -529,6 +549,21 @@ export const EquipManager = {
                 type.uvBufferDirty = false
             }
         })
+    },
+
+    async warmUpShaders() {
+        // Source meshes and textures are loaded during initialize(). Compile
+        // their instanced material variants while the loading overlay is up.
+        for (const type of this.itemTypes.values()) {
+            const mesh = type.mesh
+            if (mesh?.material == null || mesh.isDisposed()) continue
+            try {
+                type.ensureThinBuffers(type)
+                await mesh.material.forceCompilationAsync(mesh, {useInstances: true})
+            } catch (error) {
+                console.warn(`Equipment shader warm-up failed for model ${type.id}`, error)
+            }
+        }
     }
 }
 

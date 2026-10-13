@@ -180,8 +180,8 @@ export class Monster implements Attackable, EffectTarget {
     }
 
     resolveStepMark(time: number, inCombat: boolean = false) {
-        const block = WorldDataManager.getBlockOnPosition(this.pos)!
-        if (!block.snowed) {
+        const block = WorldDataManager.getBlockOnPosition(this.pos)
+        if (!block?.snowed) {
             return
         }
         if (this.lastStepMarkTime < time - 400) {

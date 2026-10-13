@@ -80,7 +80,7 @@ export const WorldDataManager = {
 
     getBlockOnPosition(pos: Vector3): MapBlock | null {
         const map = WorldDataManager.getBlockMap()
-        return map[Math.floor(pos.x)][Math.floor(pos.z)]
+        return map[Math.floor(pos.x)]?.[Math.floor(pos.z)] ?? null
     },
 
     getCoveredBlocks(pos: Vector3, boxSize: number, blockSize = 1): MapBlock[] {

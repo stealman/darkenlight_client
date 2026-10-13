@@ -1,7 +1,7 @@
 import {
-    AbstractMesh, Color3,
+    AbstractMesh, AssetContainer, Color3,
     AnimationGroup, Matrix, Mesh, Quaternion,
-    SceneLoader, Skeleton, Sound, TransformNode,
+    InstantiatedEntries, Scene, SceneLoader, Skeleton, Sound, TransformNode,
     Vector3,
 } from '@babylonjs/core'
 import { AudioManager, FootStepSpeeds, FootStepTypes } from '@/babylon/audio/audioManager'
@@ -17,8 +17,14 @@ import { Utils } from '@/utils/utils'
 import { AudioUtils } from '@/babylon/audio/audioUtils'
 import { getCharacterModelEquipModifier } from '@/babylon/character/characterModelEquipModifiers'
 import { Settings } from '@/settings/settings'
+import { ActiveMeshFreezer } from '@/babylon/scene/activeMeshFreezer'
 
 export class CharacterModel implements EquipBearer {
+    private static readonly MODEL_FILE = 'human_male.glb?v=20261011-3'
+    private static readonly preparedModelCount = 6
+    private static containerPromises = new WeakMap<Scene, Promise<AssetContainer>>()
+    private static preparedModels = new WeakMap<Scene, InstantiatedEntries[]>()
+
     parent: Character
     node: TransformNode = new TransformNode('characterModelNode')
     nameTextNode: TransformNode
@@ -80,13 +86,46 @@ export class CharacterModel implements EquipBearer {
         return model
     }
 
+    static async preload(scene: Scene) {
+        const container = await this.getContainer(scene)
+        let pool = this.preparedModels.get(scene)
+        if (pool == null) {
+            pool = []
+            this.preparedModels.set(scene, pool)
+        }
+        while (pool.length < this.preparedModelCount) {
+            const entries = container.instantiateModelsToScene(undefined, false, {doNotInstantiate: true})
+            entries.rootNodes[0]?.setEnabled(false)
+            pool.push(entries)
+        }
+    }
+
+    private static getContainer(scene: Scene): Promise<AssetContainer> {
+        let promise = this.containerPromises.get(scene)
+        if (promise == null) {
+            promise = SceneLoader.LoadAssetContainerAsync('', '/models/steve/' + this.MODEL_FILE, scene)
+            this.containerPromises.set(scene, promise)
+        }
+        return promise
+    }
+
+    private static async instantiate(scene: Scene): Promise<InstantiatedEntries> {
+        const container = await this.getContainer(scene)
+        const pool = this.preparedModels.get(scene)
+        const entries = pool?.pop()
+            ?? container.instantiateModelsToScene(undefined, false, {doNotInstantiate: true})
+        entries.rootNodes[0]?.setEnabled(true)
+        return entries
+    }
+
     async initAsync() {
-        // The versioned URL bypasses the legacy immutable browser cache once.
-        // Subsequent loads revalidate through the no-cache response header.
         const scene = this.node.getScene()
-        await SceneLoader.ImportMeshAsync('', '/models/steve/', 'human_male.glb?v=20261011-3', scene)
+        // The shared AssetContainer parses the GLB once. Most nearby human
+        // models are instantiated behind the loading overlay and only enabled
+        // when their character first enters the viewport.
+        await CharacterModel.instantiate(scene)
             .then((result) => {
-                this.model = result.meshes[0]
+                this.model = result.rootNodes[0] as AbstractMesh
                 this.model.parent = this.node
                 this.model.scaling = new Vector3(0.3, 0.28, 0.3)
                 this.model.rotation = new Vector3(0, 0, 0)
@@ -189,6 +228,9 @@ export class CharacterModel implements EquipBearer {
 
         this.assignEquippedItems()
         this.initialized = true
+        if (this.parent.insideView) {
+            ActiveMeshFreezer.setSkeletonActive(this.skeleton, true)
+        }
     }
 
     assignEquippedItems() {
@@ -361,17 +403,27 @@ export class CharacterModel implements EquipBearer {
 
     startWalkAnimation(speedRatio: number) {
         if (!this.isActive()) return
+        const speed = 3 * speedRatio
         if (this.actualAnim !== this.walkAnim) {
-            this.transitionToAnimation(this.walkAnim, 0.15, true, 3 * speedRatio)
+            this.transitionToAnimation(this.walkAnim, 0.15, true, speed)
             this.actualAnim = this.walkAnim
+        } else if (this.walkAnim && !this.walkAnim.isPlaying) {
+            this.idleAnimationFrozen = false
+            this.walkAnim.start(true, speed, this.walkAnim.from, this.walkAnim.to)
+            this.walkAnim.setWeightForAllAnimatables(1)
         }
     }
 
     startRunAnimation(speedRatio: number) {
         if (!this.isActive()) return
+        const speed = 3 * speedRatio
         if (this.actualAnim !== this.runAnim) {
-            this.transitionToAnimation(this.runAnim, 0.15, true, 3 * speedRatio)
+            this.transitionToAnimation(this.runAnim, 0.15, true, speed)
             this.actualAnim = this.runAnim
+        } else if (this.runAnim && !this.runAnim.isPlaying) {
+            this.idleAnimationFrozen = false
+            this.runAnim.start(true, speed, this.runAnim.from, this.runAnim.to)
+            this.runAnim.setWeightForAllAnimatables(1)
         }
     }
 
@@ -521,6 +573,9 @@ export class CharacterModel implements EquipBearer {
         if (this.actualAnim !== desiredAnimation) {
             this.transitionToAnimation(desiredAnimation, 0.25, true, animSpeed)
             this.actualAnim = desiredAnimation
+        } else if (!desiredAnimation.isPlaying) {
+            desiredAnimation.start(true, animSpeed, desiredAnimation.from, desiredAnimation.to)
+            desiredAnimation.setWeightForAllAnimatables(1)
         }
     }
 
@@ -758,6 +813,7 @@ export class CharacterModel implements EquipBearer {
         if (this.parent.dead) this.playDeathAnimation()
         this.setAnimationsPaused(false)
         this.model!.setEnabled(true)
+        ActiveMeshFreezer.setSkeletonActive(this.skeleton, true)
         this.equipSet.forEach((item) => {
             EquipManager.addEquippedItem(item)
             if (item.hasSwordParticles) {
@@ -770,6 +826,7 @@ export class CharacterModel implements EquipBearer {
     removeFromView() {
         this.viewRequested = false
         if (this.initialized) {
+            ActiveMeshFreezer.setSkeletonActive(this.skeleton, false)
             this.setAnimationsPaused(true)
             this.model!.setEnabled(false)
         }

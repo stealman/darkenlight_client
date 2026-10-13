@@ -30,6 +30,10 @@ export const MonsterManager = {
         await MonsterLoader.initialize()
     },
 
+    async prepareModels() {
+        await MonsterLoader.prepareRuntimeClones()
+    },
+
     addMonster (id: number, type: number, position: { x: number, z: number }, hpp: number, mv: number[] | undefined, ef: [{tp: number, p: number}] | undefined, role?: string, alignment?: string, guard?: any) {
         if (role === 'guard' && guard) {
             void NpcManager.addGuard({id, tp: type, x: position.x, z: position.z, hpp, mv, paf: ef, role, alignment, guard})
