@@ -425,8 +425,10 @@ function setActorStaticShadowCaster(slot: StaticLightSlot, mesh: AbstractMesh, e
 }
 
 function staticLightSlotCastsActorShadows(host: MeshLightingHost, slot: StaticLightSlot): boolean {
-    return slot.shadow != null
+    return Settings.isDetalLevelHigh()
+        && slot.shadow != null
         && slot.light.shadowEnabled
+        && slot.shadowActive
         && slot.source != null
         && slot.source.profile.castsShadows !== false
         && (!host.indoor || slot.source.profile.castsActorShadows === true)
@@ -435,6 +437,7 @@ function staticLightSlotCastsActorShadows(host: MeshLightingHost, slot: StaticLi
 function staticLightSlotCastsStaticShadows(slot: StaticLightSlot): boolean {
     return slot.shadow != null
         && slot.light.shadowEnabled
+        && slot.shadowActive
         && slot.source != null
         && slot.source.profile.castsShadows !== false
 }

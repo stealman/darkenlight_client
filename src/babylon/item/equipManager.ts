@@ -11,6 +11,7 @@ import { EquipCbItem } from '@/babylon/item/codebook/equipCbItem'
 import { Materials } from '@/babylon/materials'
 import { Lights } from '@/babylon/scene/lights'
 import { BabylonUtils } from '@/babylon/utils'
+import { ActiveMeshFreezer } from '@/babylon/scene/activeMeshFreezer'
 
 const WEAPON_TRAIL_START_DELAY = 150
 const WEAPON_TRAIL_FADE_DURATION = 180
@@ -204,9 +205,16 @@ export class EquipItem {
             const remaining = this.weaponTrailFadeInEnd - now
             if (remaining <= 0) {
                 this.weaponTrailFadeInEnd = 0
+                if (trail.visibility <= 0) {
+                    ActiveMeshFreezer.invalidate()
+                }
                 trail.visibility = 1
             } else {
-                trail.visibility = 1 - remaining / WEAPON_TRAIL_FADE_DURATION
+                const visibility = 1 - remaining / WEAPON_TRAIL_FADE_DURATION
+                if (trail.visibility <= 0 && visibility > 0) {
+                    ActiveMeshFreezer.invalidate()
+                }
+                trail.visibility = visibility
             }
             return
         }

@@ -23,6 +23,7 @@ import { MyPlayer } from '@/data/myPlayer'
 import { createSnowCoverMask } from '@/babylon/world/snowCoverMask'
 import { BuildingManager } from '@/babylon/world/buildings/buildingManager'
 import { FoggyAreaManager } from '@/babylon/world/foggyAreaManager'
+import { ActiveMeshFreezer } from '@/babylon/scene/activeMeshFreezer'
 import { GMFoggyAreas } from '@/gm/GmFoggyAreas'
 import { EquipmentDecorationsManager } from '@/babylon/world/equipmentDecorationsManager'
 
@@ -91,6 +92,7 @@ export const WorldRenderer = {
      * Renders the world around the player
      */
     renderWorld() {
+        ActiveMeshFreezer.invalidate()
         this.block1!.clearMatrices()
         this.blockWithAlpha1!.clearMatrices()
         this.translucentPlane!.clearMatrices()

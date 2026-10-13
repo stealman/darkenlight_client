@@ -74,8 +74,9 @@ export function resetStaticLighting(host: StaticLightingHost) {
 
 export function configureStaticLightMaterials(host: StaticLightingHost) {
     const staticLightLimit = STATIC_LIGHT_LIMITS[Settings.detailLevel.level - 1]
-    const useStaticShadows = Settings.isDetalLevelHigh() && Settings.isShadowsEnabled()
-    const useLargeStaticShadowMaps = !Settings.isPhoneOrTablet()
+    const useStaticShadows = STATIC_SHADOW_LIGHT_LIMITS[Settings.detailLevel.level - 1] > 0
+        && Settings.isShadowsEnabled()
+    const useLargeStaticShadowMaps = Settings.isDetalLevelHigh() && !Settings.isPhoneOrTablet()
     // This is a material capacity, not the number of lights in the current
     // day/night phase. Keep it stable to avoid mismatched light UBO layouts.
     const maxLights = staticLightLimit + 2
@@ -382,14 +383,16 @@ export function invalidateStaticShadowMaps(host: StaticLightingHost) {
 }
 
 function updateStaticSlotShadowState(host: StaticLightingHost, slot: StaticLightSlot, sourceActive: boolean) {
-    const shadowSlotEnabled = slot.shadow != null && slot.shadowActive
-    slot.light.shadowEnabled = shadowSlotEnabled
     if (slot.shadow == null) {
         return
     }
 
+    // Keep Babylon's shadow shader shape stable for the lifetime of the slot.
+    // Toggling light.shadowEnabled when a slot changes source marks affected
+    // materials dirty and causes a visible shader-compilation hitch. Darkness
+    // and the caster lists are enough to make an unused map inert.
     const outdoorLightVisible = host.indoor || host.localLightFactor > 0.05
-    const shadowVisible = shadowSlotEnabled
+    const shadowVisible = slot.shadowActive
         && sourceActive
         && slot.source?.profile.castsShadows !== false
         && outdoorLightVisible

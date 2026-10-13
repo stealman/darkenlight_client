@@ -45,6 +45,7 @@ import { BuildingManager } from '@/babylon/world/buildings/buildingManager'
 import { NIGHT_ENVIRONMENT_INTENSITY_FACTOR } from '@/babylon/scene/lighting/lightConfig'
 import { invoke } from '@tauri-apps/api/core'
 import { FoggyAreaManager } from '@/babylon/world/foggyAreaManager'
+import { ActiveMeshFreezer } from '@/babylon/scene/activeMeshFreezer'
 
 function isTauriDesktop(): boolean {
     return '__TAURI_INTERNALS__' in window
@@ -94,6 +95,7 @@ export const Renderer = {
         // Initialize game objects and managers
         this.instrumentation = new SceneInstrumentation(this.scene);
         this.instrumentation.captureFrameTime = true;
+        this.instrumentation.captureActiveMeshesEvaluationTime = true
 
         Lights.initialize(this.scene)
         AudioManager.initialize(this.scene)
@@ -119,6 +121,7 @@ export const Renderer = {
         EmeraldsManager.initialize()
         ActionButtonsManager.initialize()
         GuiButtonsManager.initialize()
+        ActiveMeshFreezer.initialize(this.scene)
 
         await OverlayManager.initialize()
         await TargetingManager.initialize()
@@ -147,6 +150,8 @@ export const Renderer = {
         await Lights.warmUpDayNightCycle((completed, total) => {
             onWarmupProgress?.(1 + completed, 1 + total)
         })
+
+        ActiveMeshFreezer.start()
 
         this.engine!.runRenderLoop(() => {
             this.onFrame(this.scene)
@@ -371,8 +376,9 @@ export const Renderer = {
 
     actualizeDebug() {
         const absoluteFPS = 1000 / this.instrumentation!.frameTimeCounter.lastSecAverage
+        const activeMeshesMs = this.instrumentation!.activeMeshesEvaluationTimeCounter.lastSecAverage
         MiniMap.setDebugInfo(
-            `${this.fps} | ${absoluteFPS.toFixed(0)}`,
+            `${this.fps} | ${absoluteFPS.toFixed(0)} | AM ${activeMeshesMs.toFixed(2)}ms`,
             MyPlayer.myChar?.getPositionRounded().toString() ?? '-'
         )
     },

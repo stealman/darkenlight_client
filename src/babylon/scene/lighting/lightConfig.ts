@@ -4,6 +4,7 @@ export const STATIC_LIGHT_FADE_SECONDS = 0.25
 export const STATIC_LIGHT_DEFAULT_BRIGHTNESS_FACTOR = 0.25 + (4 / 9)
 export const STATIC_LIGHT_LIMITS = [3, 4, 5]
 export const OUTDOOR_STATIC_LIGHT_LIMITS = STATIC_LIGHT_LIMITS
+// Low and medium keep static-light shadows disabled; high uses four slots.
 export const STATIC_SHADOW_LIGHT_LIMITS = [0, 0, 4]
 export const ACTOR_STATIC_LIGHT_LIMIT = 4
 export const OUTDOOR_ACTOR_STATIC_LIGHT_LIMIT = ACTOR_STATIC_LIGHT_LIMIT
