@@ -10,6 +10,7 @@ import {
 import { Settings } from '@/settings/settings'
 import {
     ACTOR_STATIC_LIGHT_LIMIT,
+    ACTOR_STATIC_SHADOW_RANGE_FACTOR,
     FILTER_ACTOR_STATIC_SHADOW_CASTERS_BY_DISTANCE,
     STATIC_LIGHT_LIMITS,
 } from '@/babylon/scene/lighting/lightConfig'
@@ -274,7 +275,10 @@ export function updateActorStaticShadowCasters(host: MeshLightingHost) {
         }
 
         const lightPosition = slot.light.position
-        const lightRangeSquared = slot.light.range * slot.light.range
+        // At the outer edge of a light's visual range its contribution is too
+        // weak to justify redrawing an actor shadow every frame.
+        const actorShadowRange = slot.light.range * ACTOR_STATIC_SHADOW_RANGE_FACTOR
+        const lightRangeSquared = actorShadowRange * actorShadowRange
 
         for (const mesh of host.actorStaticShadowCasters) {
             if (mesh.isDisposed() || !mesh.isEnabled()) {
