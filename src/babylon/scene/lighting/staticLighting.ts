@@ -147,6 +147,11 @@ export function registerStaticLight(host: StaticLightingHost, id: string, positi
         source.position = position
         source.profile = profile
         source.visible = true
+        host.staticLightSlots.forEach(slot => {
+            if (slot.source === source) {
+                invalidateStaticShadowSlot(slot)
+            }
+        })
     }
     if (actorShadowModeChanged) {
         host.updateActorStaticShadowCasters()
@@ -211,7 +216,12 @@ export function onLightsFrame(host: StaticLightingHost, timeRate: number) {
 
         if (slot.source != null) {
             const flickerPosition = slot.flickerOffset
-            if (shouldFlicker(slot.source) && slot.source.profile.flickerPosition !== false) {
+            // A moving light changes its shadow projection and forces a full
+            // shadow-map redraw. Shadow-casting static lights therefore keep a
+            // fixed position; their intensity can still flicker normally.
+            if (shouldFlicker(slot.source)
+                && slot.source.profile.flickerPosition !== false
+                && slot.source.profile.castsShadows === false) {
                 updateStaticLightFlickerPosition(host, slot.source, flickerPosition)
             } else {
                 flickerPosition.set(0, 0, 0)
@@ -348,6 +358,14 @@ export function updateStaticLightShadowMode(host: StaticLightingHost) {
     })
 }
 
+export function invalidateStaticShadowMaps(host: StaticLightingHost) {
+    host.staticLightSlots.forEach(slot => {
+        if (slot.active || slot.currentIntensity > 0.001) {
+            invalidateStaticShadowSlot(slot)
+        }
+    })
+}
+
 function updateStaticSlotShadowState(host: StaticLightingHost, slot: StaticLightSlot, index: number, shadowLightLimit: number, sourceActive: boolean) {
     const shadowSlotEnabled = slot.shadow != null && index < shadowLightLimit
     slot.light.shadowEnabled = shadowSlotEnabled
@@ -360,7 +378,7 @@ function updateStaticSlotShadowState(host: StaticLightingHost, slot: StaticLight
         && sourceActive
         && slot.source?.profile.castsShadows !== false
         && outdoorLightVisible
-    setStaticShadowGeneratorActive(slot.shadow, shadowVisible)
+    setStaticShadowGeneratorActive(slot.shadow, shadowVisible, slot.actorShadowCasters.size > 0)
 }
 
 function assignStaticLightSlot(host: StaticLightingHost, slot: StaticLightSlot, source: StaticLightSource) {
@@ -379,6 +397,7 @@ function assignStaticLightSlot(host: StaticLightingHost, slot: StaticLightSlot, 
     }
     slot.light.diffuse = source.profile.color
     slot.light.specular = source.profile.color
+    invalidateStaticShadowSlot(slot)
 }
 
 function assignUnslottedStaticLightSources(host: StaticLightingHost, usableSlots: StaticLightSlot[], sources: StaticLightSource[], shadowMapSize: number) {
@@ -474,18 +493,22 @@ function createStaticShadowGenerator(host: StaticLightingHost, light: SpotLight,
     return shadow
 }
 
-function setStaticShadowGeneratorActive(shadow: ShadowGenerator, active: boolean) {
+function setStaticShadowGeneratorActive(shadow: ShadowGenerator, active: boolean, hasDynamicCasters: boolean = false) {
     const darkness = active ? 0 : 1
     if (shadow.getDarkness() !== darkness) {
         shadow.setDarkness(darkness)
     }
     const shadowMap = shadow.getShadowMap()
-    const refreshRate = active
+    const refreshRate = active && hasDynamicCasters
         ? RenderTargetTexture.REFRESHRATE_RENDER_ONEVERYFRAME
         : RenderTargetTexture.REFRESHRATE_RENDER_ONCE
     if (shadowMap != null && shadowMap.refreshRate !== refreshRate) {
         shadowMap.refreshRate = refreshRate
     }
+}
+
+function invalidateStaticShadowSlot(slot: StaticLightSlot) {
+    slot.shadow?.getShadowMap()?.resetRefreshCounter()
 }
 
 function moveTowards(current: number, target: number, amount: number): number {

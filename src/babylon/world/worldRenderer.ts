@@ -136,6 +136,11 @@ export const WorldRenderer = {
         this.translucentPlane!.setThinInstanceBuffers()
         this.translucentPlane!.mesh.thinInstanceRefreshBoundingInfo(false);
 
+        // Static-light shadow maps are cached. The visible thin-instance set
+        // changed, so active maps need exactly one refresh for the new world
+        // buffers; maps containing nearby actors keep updating every frame.
+        Lights.invalidateStaticShadowMaps()
+
         // Static light slots are excluded from ordinary scene meshes and are
         // attached explicitly. Keep this registration separate from shader
         // warm-up so fireplaces and torches continue to illuminate terrain.

@@ -318,6 +318,10 @@ function setActorStaticShadowCaster(slot: StaticLightSlot, mesh: AbstractMesh, e
         slot.standardShadow?.removeShadowCaster(mesh)
         slot.largeCampfireShadow?.removeShadowCaster(mesh)
     }
+    // Both generator render lists stay synchronized, but only the currently
+    // selected map needs rendering. A later generator switch invalidates its
+    // newly selected map separately.
+    slot.shadow?.getShadowMap()?.resetRefreshCounter()
 }
 
 function staticLightSlotCastsActorShadows(host: MeshLightingHost, slot: StaticLightSlot): boolean {

@@ -41,6 +41,7 @@ import {
     configureStaticLightMaterials,
     getActorStaticLightLimit,
     getStaticLightLimit,
+    invalidateStaticShadowMaps,
     onLightsFrame,
     registerStaticLight,
     resetStaticLighting,
@@ -179,6 +180,10 @@ export const Lights = {
 
     clearStaticLights() {
         clearStaticLights(this)
+    },
+
+    invalidateStaticShadowMaps() {
+        invalidateStaticShadowMaps(this)
     },
 
     enableTransparentShadowCasters() {
