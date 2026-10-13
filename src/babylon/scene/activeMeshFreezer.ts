@@ -4,15 +4,12 @@ import { Node, Observer, Scene, Skeleton } from '@babylonjs/core'
 // normal Babylon active-mesh evaluation with the managed frozen list.
 export const ACTIVE_MESH_FREEZING_ENABLED = true
 
-const SAFETY_REFRESH_INTERVAL_FRAMES = 120
-
 export const ActiveMeshFreezer = {
     scene: null as Scene | null,
     running: false,
     frozen: false,
     freezePending: false,
     dirty: true,
-    framesSinceRefresh: 0,
     nodeObservers: new Map<Node, Observer<boolean>>(),
     particleSystems: [] as any[],
     particleStartedStates: [] as boolean[],
@@ -24,7 +21,6 @@ export const ActiveMeshFreezer = {
         this.frozen = false
         this.freezePending = false
         this.dirty = true
-        this.framesSinceRefresh = 0
         this.nodeObservers.clear()
         this.particleSystems = []
         this.particleStartedStates = []
@@ -84,11 +80,6 @@ export const ActiveMeshFreezer = {
         }
 
         this.detectParticleSystemChanges(scene)
-        this.framesSinceRefresh++
-        if (this.framesSinceRefresh >= SAFETY_REFRESH_INTERVAL_FRAMES) {
-            this.dirty = true
-        }
-
         if (!this.dirty || this.freezePending || !scene.isReady()) {
             return
         }
@@ -100,7 +91,6 @@ export const ActiveMeshFreezer = {
 
         this.dirty = false
         this.freezePending = true
-        this.framesSinceRefresh = 0
         scene.freezeActiveMeshes(
             false,
             () => {

@@ -234,14 +234,26 @@ export const Renderer = {
 
         if (this.frame % 10 === 0) {
             this.actualizeDebug()
+        }
+
+        if (this.frame % 10 === 2) {
             StepMarksRenderer.update(timeRate, actualTime)
             FightSplatsRenderer.update(timeRate, actualTime)
+        }
+
+        if (this.frame % 10 === 7) {
             StaticsManager.resolveSounds()
         }
 
-        if (this.frame % 60 === 0) {
+        if (this.frame % 60 === 15) {
             MiniMap.updateMiniMap()
+        }
+
+        if (this.frame % 60 === 30) {
             WeatherManager.update()
+        }
+
+        if (this.frame % 60 === 45) {
             AudioManager.processOneFrame()
         }
 

@@ -31,7 +31,9 @@ export const TreeManager = {
     }>(),
 
     initialize(scene: Scene) {
-        this.occlusionCheckFrame = 0
+        // Stagger the ten-frame visibility jobs instead of concentrating all
+        // character, monster and world occlusion work into the same frame.
+        this.occlusionCheckFrame = 2
         this.fadedPersonalShadowCasters = new WeakSet<Mesh>()
         Lights.enableTransparentShadowCasters()
         this.prefabs.tree1 = PrefabOak.getPrefab(scene)

@@ -1440,7 +1440,8 @@ export const BuildingManager = {
 
     initialize(scene: Scene, parent: TransformNode) {
         this.parent = parent
-        this.occlusionCheckFrame = 0
+        // Offset building occlusion from entity and tree visibility passes.
+        this.occlusionCheckFrame = 5
         Lights.enableTransparentShadowCasters()
         this.fadeMaterial = Materials.createBlockMat1(scene)
         this.fadeMaterial.name = 'building_faded_material'

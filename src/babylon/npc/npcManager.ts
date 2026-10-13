@@ -159,7 +159,7 @@ export const NpcManager = {
     },
 
     onFrame(timeRate: number, actualTime: number, frame: number) {
-        if (frame % 10 === 0) {
+        if (frame % 10 === 3) {
             this.updateVisibleNpcs()
             this.npcs.forEach((npc) => {
                 npc.setVisible(this.visibleNpcs.has(npc.id))

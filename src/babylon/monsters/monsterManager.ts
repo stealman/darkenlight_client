@@ -207,7 +207,7 @@ export const MonsterManager = {
     },
 
     onFrame(timeRate: number, actualTime: number, frame: number) {
-       if (frame % 10 === 0) {
+       if (frame % 10 === 6) {
             this.updateVisibleMonsters()
             this.monsters.forEach(monster => {
                 monster.setVisible(this.visibleMonsters.has(monster.id))

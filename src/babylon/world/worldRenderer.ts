@@ -23,9 +23,13 @@ import { MyPlayer } from '@/data/myPlayer'
 import { createSnowCoverMask } from '@/babylon/world/snowCoverMask'
 import { BuildingManager } from '@/babylon/world/buildings/buildingManager'
 import { FoggyAreaManager } from '@/babylon/world/foggyAreaManager'
-import { ActiveMeshFreezer } from '@/babylon/scene/activeMeshFreezer'
 import { GMFoggyAreas } from '@/gm/GmFoggyAreas'
 import { EquipmentDecorationsManager } from '@/babylon/world/equipmentDecorationsManager'
+import { Settings } from '@/settings/settings'
+
+// The viewport already renders a four-tile reserve. On touch devices, keep one
+// tile of that reserve instead of rebuilding every world buffer on every tile.
+const TOUCH_WORLD_RENDER_STEP_TILES = 2
 
 export const WorldRenderer = {
     block1: null as SymmetricBlock | null,
@@ -78,7 +82,11 @@ export const WorldRenderer = {
 
     checkRenderWorld() {
         const pos = MyPlayer.myChar.getPositionRounded()
-        if (this.lastPos == null || pos.x !== this.lastPos.x || pos.z !== this.lastPos.z) {
+        const renderStep = Settings.isPhoneOrTablet() ? TOUCH_WORLD_RENDER_STEP_TILES : 1
+        const renderDue = this.lastPos == null
+            || Math.abs(pos.x - this.lastPos.x) >= renderStep
+            || Math.abs(pos.z - this.lastPos.z) >= renderStep
+        if (renderDue) {
             if (ViewportManager.viewPortInitialized) {
                 WorldDataManager.fetchWorldDataIfNeeded()
                 WorldRenderer.renderWorld()
@@ -92,7 +100,6 @@ export const WorldRenderer = {
      * Renders the world around the player
      */
     renderWorld() {
-        ActiveMeshFreezer.invalidate()
         this.block1!.clearMatrices()
         this.blockWithAlpha1!.clearMatrices()
         this.translucentPlane!.clearMatrices()
