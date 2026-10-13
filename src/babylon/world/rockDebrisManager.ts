@@ -38,7 +38,8 @@ export const RockDebrisManager = {
 
         for (let x = Math.max(0, myPos.x + ViewportManager.minX); x <= Math.min(blockMap.length - 1, myPos.x + ViewportManager.maxX); x++) {
             for (let z = Math.max(0, myPos.z + ViewportManager.minZ); z <= Math.min(blockMap.length - 1, myPos.z + ViewportManager.maxZ); z++) {
-                if (!ViewportManager.isPointInVisibleMatrix(x, z, 2)) {
+                const block = blockMap[x][z]
+                if (!ViewportManager.isPointInVisibleMatrix(x, z, 2, block.totalHeight)) {
                     continue
                 }
 
@@ -46,7 +47,6 @@ export const RockDebrisManager = {
                     continue
                 }
 
-                const block = blockMap[x][z]
                 if (block.type !== TerrainEnum1.TERRAIN_ROCK.index || block.snowed || block.minableOreAvailable || block.minableCoal || (indoor && this.isDungeonWall(blockMap, x, z, block)) || !this.shouldSpawnPile(x, z, indoor)) {
                     continue
                 }

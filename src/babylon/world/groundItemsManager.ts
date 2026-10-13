@@ -204,7 +204,7 @@ export const GroundItemsManager = {
 
         let visibleCount = 0
         for (const item of this.items) {
-            if (ViewportManager.isPointInVisibleMatrix(Math.floor(item.pos.x), Math.floor(item.pos.z), 2)) {
+            if (ViewportManager.isPointInVisibleMatrix(Math.floor(item.pos.x), Math.floor(item.pos.z), 2, item.pos.y)) {
                 if (this.visibleItems[visibleCount] !== item) {
                     this.itemBuffersDirty = true
                 }

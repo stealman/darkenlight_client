@@ -68,7 +68,8 @@ export const FoliageManager = {
 
         for (let x = Math.max(0, myPos.x + ViewportManager.minX); x <= Math.min(blockMap.length - 1, myPos.x + ViewportManager.maxX); x++) {
             for (let z = Math.max(0, myPos.z + ViewportManager.minZ); z <= Math.min(blockMap.length - 1, myPos.z + ViewportManager.maxZ); z++) {
-                if (!ViewportManager.isPointInVisibleMatrix(x, z, 2)) {
+                const block = blockMap[x][z]
+                if (!ViewportManager.isPointInVisibleMatrix(x, z, 2, block.totalHeight)) {
                     continue
                 }
 
@@ -76,7 +77,6 @@ export const FoliageManager = {
                     continue
                 }
 
-                const block = blockMap[x][z]
                 const terrainConfig = this.getTerrainConfig(block)
                 if (block.type <= 0 || !terrainConfig || !this.shouldSpawnAt(x, z, terrainConfig.avgTilesPerFoliage!)) {
                     continue

@@ -4,7 +4,6 @@ import { Materials } from '@/babylon/materials'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { ViewportManager } from '@/utils/viewport'
 import { Settings } from '@/settings/settings'
-import { MyPlayer } from '@/data/myPlayer'
 
 export const FightSplatsRenderer = {
     splats: new Array<Splat>(),
@@ -82,12 +81,9 @@ export const FightSplatsRenderer = {
     },
 
     updateVisibleSplats() {
-        const playerPosition = MyPlayer.myChar?.pos
-        const playerX = playerPosition == null ? 0 : Math.round(playerPosition.x)
-        const playerZ = playerPosition == null ? 0 : Math.round(playerPosition.z)
         let visibleCount = 0
         for (const splat of this.splats) {
-            if (this.isSplatVisible(splat, playerX, playerZ)) {
+            if (this.isSplatVisible(splat)) {
                 if (this.visibleSplats[visibleCount] !== splat) {
                     this.matricesDirty = true
                 }
@@ -144,22 +140,13 @@ export const FightSplatsRenderer = {
         return changed
     },
 
-    isSplatVisible(splat: Splat, playerX: number, playerZ: number): boolean {
-        if (!ViewportManager.viewPortInitialized) {
-            return false
-        }
-        const relativeX = Math.floor(splat.pos.x) - playerX
-        const relativeZ = Math.floor(splat.pos.z) - playerZ
-        if (relativeX < ViewportManager.minX || relativeX > ViewportManager.maxX || relativeZ < ViewportManager.minZ || relativeZ > ViewportManager.maxZ) {
-            return false
-        }
-        if (ViewportManager.visibilityMatrix[relativeX]?.[relativeZ]) {
-            return true
-        }
-        const tolerance = 2
-        const approximateX = relativeX < 0 ? relativeX + tolerance : relativeX - tolerance
-        const approximateZ = relativeZ < 0 ? relativeZ + tolerance : relativeZ - tolerance
-        return ViewportManager.visibilityMatrix[approximateX]?.[approximateZ] === true
+    isSplatVisible(splat: Splat): boolean {
+        return ViewportManager.isPointInVisibleMatrix(
+            Math.floor(splat.pos.x),
+            Math.floor(splat.pos.z),
+            2,
+            splat.pos.y,
+        )
     },
 
     writeSplatMatrix(splat: Splat, index: number) {

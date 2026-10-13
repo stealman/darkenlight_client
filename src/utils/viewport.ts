@@ -10,8 +10,10 @@ export const ViewportManager = {
     viewPortInitialized: false,
     visibleTiles: [],
     visibilityMatrix: [],
+    visibilityMatricesByHeight: [] as boolean[][][],
     matrixSizeBonus: 4,
     yOffset: 6,
+    downwardHeightLayers: 6,
 
     minX: 0,
     maxX: 0,
@@ -46,20 +48,31 @@ export const ViewportManager = {
         this.viewportHeight = canvasBounds?.height || window.innerHeight
     },
 
-    isPointInVisibleMatrix(x, z, tolerance = 0) {
+    isPointInVisibleMatrix(x, z, tolerance = 0, worldY: number | null = null, positiveXInset = 0) {
         if (!this.viewPortInitialized) {
             return false
         }
 
         const myPos = MyPlayer.myChar.getPositionRounded()
+        const heightLayer = worldY == null
+            ? 0
+            : Math.min(this.downwardHeightLayers, Math.max(0, Math.round(myPos.y - worldY)))
+        const visibilityMatrix = this.visibilityMatricesByHeight[heightLayer] || this.visibilityMatrix
         x -= myPos.x
         z -= myPos.z
+
+        // Positive world X projects towards the fog-heavy upper-right part of
+        // the isometric view. Selected expensive renderers can move their
+        // lookup farther into that edge to stop rendering a few tiles sooner.
+        if (positiveXInset > 0 && x > 0) {
+            x += positiveXInset
+        }
 
         if (x < this.minX || x > this.maxX || z < this.minZ || z > this.maxZ) {
             return false
         }
 
-        if (!ViewportManager.visibilityMatrix[x][z]) {
+        if (!visibilityMatrix[x][z]) {
             if (tolerance === 0) {
                 return false
             }
@@ -67,7 +80,7 @@ export const ViewportManager = {
             // Approximate both x and z to the zero by given tolerance and check again
             const xAppr = x < 0 ? x + tolerance : x - tolerance
             const zAppr = z < 0 ? z + tolerance : z - tolerance
-            if (!ViewportManager.visibilityMatrix[xAppr][zAppr]) {
+            if (!visibilityMatrix[xAppr][zAppr]) {
                 return false
             }
         }
@@ -94,35 +107,36 @@ export const ViewportManager = {
     },
 
     calculateViewport(camera) {
-        const borderTiles = []
-        let axisDistance = 1
-        let visibleTileFound = true
         const myPos = MyPlayer.myChar.getPositionRounded()
+        const borderTilesByHeight: Vector3[][] = []
+        const frustumPlanes = Frustum.GetPlanes(camera.getTransformationMatrix())
 
-        while (visibleTileFound && axisDistance < 50) {
-            const points = this.getSurroundingTiles(myPos, axisDistance)
-            visibleTileFound = false
+        for (let heightLayer = 0; heightLayer <= this.downwardHeightLayers; heightLayer++) {
+            const borderTiles: Vector3[] = []
+            const layerY = myPos.y - heightLayer
+            let axisDistance = 1
+            let visibleTileFound = true
 
-            for (const point of points) {
-                point.y = myPos.y + this.yOffset
-                if (this.isPointInView(point, camera!)) {
-                    visibleTileFound = true
-                    borderTiles.push(point)
+            while (visibleTileFound && axisDistance < 50) {
+                const points = this.getSurroundingTiles(myPos, axisDistance)
+                visibleTileFound = false
+
+                for (const point of points) {
+                    point.y = layerY + this.yOffset
+                    if (this.isPointInView(point, camera!, frustumPlanes)) {
+                        visibleTileFound = true
+                        borderTiles.push(point.clone())
+                    }
+
+                    point.y = layerY
+                    if (this.isPointInView(point, camera!, frustumPlanes)) {
+                        visibleTileFound = true
+                        borderTiles.push(point.clone())
+                    }
                 }
-
-                point.y = myPos.y
-                if (this.isPointInView(point, camera!)) {
-                    visibleTileFound = true
-                    borderTiles.push(point)
-                }
-
-                point.y = myPos.y - this.yOffset
-                if (this.isPointInView(point, camera!)) {
-                    visibleTileFound = true
-                    borderTiles.push(point)
-                }
+                axisDistance++
             }
-            axisDistance ++
+            borderTilesByHeight.push(borderTiles)
         }
 
         //console.log("BORDER TILES FOUND: " + borderTiles.length)
@@ -133,18 +147,20 @@ export const ViewportManager = {
         this.minZ = myPos.z
         this.maxZ = myPos.z
 
-        for (const point of borderTiles) {
-            if (point.x < this.minX) {
-                this.minX = point.x
-            }
-            if (point.x > this.maxX) {
-                this.maxX = point.x
-            }
-            if (point.z < this.minZ) {
-                this.minZ = point.z
-            }
-            if (point.z > this.maxZ) {
-                this.maxZ = point.z
+        for (const borderTiles of borderTilesByHeight) {
+            for (const point of borderTiles) {
+                if (point.x < this.minX) {
+                    this.minX = point.x
+                }
+                if (point.x > this.maxX) {
+                    this.maxX = point.x
+                }
+                if (point.z < this.minZ) {
+                    this.minZ = point.z
+                }
+                if (point.z > this.maxZ) {
+                    this.maxZ = point.z
+                }
             }
         }
 
@@ -155,50 +171,56 @@ export const ViewportManager = {
 
         //console.log('Viewport tiles X: ' + this.minX + ' to ' + this.maxX + ' Z: ' + this.minZ + ' to ' + this.maxZ)
 
-        // loop through rectangular area defined by min and max x and z and find visible tiles
-        this.visibleTiles = []
-        for (let x = this.minX; x <= this.maxX; x++) {
-            for (let z = this.minZ; z <= this.maxZ; z++) {
+        // Build a separate screen footprint for the player's height and for
+        // each whole unit down to -6. A low object then uses only the wider
+        // footprint that its real height requires instead of widening the
+        // viewport for everything in the scene.
+        const visibleTilesByHeight: Vector3[][] = []
+        for (let heightLayer = 0; heightLayer <= this.downwardHeightLayers; heightLayer++) {
+            const layerY = myPos.y - heightLayer
+            const visibleTiles: Vector3[] = []
+            const visibleTileKeys = new Set<string>()
+            for (let x = this.minX; x <= this.maxX; x++) {
+                for (let z = this.minZ; z <= this.maxZ; z++) {
+                    const point = new Vector3(x, layerY + this.yOffset, z)
+                    const basePoint = new Vector3(x, layerY, z)
 
-                // Check 3 vertical levels
-                const point = new Vector3(x, myPos.y + this.yOffset, z)
-                const point2 = new Vector3(x, myPos.y -this.yOffset, z)
-                const point3 = new Vector3(x, myPos.y, z)
-
-                if (this.isPointInView(point, camera!) || this.isPointInView(point2, camera!) || this.isPointInView(point3, camera!)) {
-                    this.visibleTiles.push(point)
-
-                    // Also push all neighboring tiles to have buffer
-                    const neighbors = this.getSurroundingTiles(Vector3.Zero(), 1)
-                    for (const neighbor of neighbors) {
-                        const neighborPoint = new Vector3(x + neighbor.x, myPos.y - this.yOffset, z + neighbor.z)
-                        if (!this.visibleTiles.find(p => p.x === neighborPoint.x && p.z === neighborPoint.z)) {
-                            this.visibleTiles.push(neighborPoint)
+                    if (this.isPointInView(point, camera!, frustumPlanes) || this.isPointInView(basePoint, camera!, frustumPlanes)) {
+                        const points = [basePoint, ...this.getSurroundingTiles(basePoint, 1)]
+                        for (const visiblePoint of points) {
+                            const key = `${visiblePoint.x};${visiblePoint.z}`
+                            if (!visibleTileKeys.has(key)) {
+                                visibleTileKeys.add(key)
+                                visibleTiles.push(visiblePoint)
+                            }
                         }
                     }
                 }
             }
+            visibleTilesByHeight.push(visibleTiles)
         }
+        this.visibleTiles = visibleTilesByHeight[0]
 
         console.log(this.visibleTiles.length + ' visible tiles found in viewport')
 
-        // create visible matrix as 2D array of boolean values
-        this.visibilityMatrix = []
-
-        // fill matrix with false values
-        for (let x = this.minX - myPos.x; x <= this.maxX - myPos.x; x++) {
-            this.visibilityMatrix[x] = []
-            for (let z = this.minZ - myPos.z; z <= this.maxZ - myPos.z; z++) {
-                this.visibilityMatrix[x][z] = false
+        this.visibilityMatricesByHeight = []
+        for (const visibleTiles of visibleTilesByHeight) {
+            const visibilityMatrix: boolean[][] = []
+            for (let x = this.minX - myPos.x; x <= this.maxX - myPos.x; x++) {
+                visibilityMatrix[x] = []
+                for (let z = this.minZ - myPos.z; z <= this.maxZ - myPos.z; z++) {
+                    visibilityMatrix[x][z] = false
+                }
             }
-        }
 
-        // set visible tiles to true
-        for (const point of this.visibleTiles) {
-            if (point.x >= this.minX && point.x <= this.maxX && point.z >= this.minZ && point.z <= this.maxZ) {
-                this.visibilityMatrix[point.x - myPos.x][point.z - myPos.z] = true
+            for (const point of visibleTiles) {
+                if (point.x >= this.minX && point.x <= this.maxX && point.z >= this.minZ && point.z <= this.maxZ) {
+                    visibilityMatrix[point.x - myPos.x][point.z - myPos.z] = true
+                }
             }
+            this.visibilityMatricesByHeight.push(visibilityMatrix)
         }
+        this.visibilityMatrix = this.visibilityMatricesByHeight[0]
 
         this.viewPortInitialized = true
 
@@ -224,8 +246,8 @@ export const ViewportManager = {
         return points
     },
 
-    isPointInView (position, camera) {
-        const frustumPlanes = Frustum.GetPlanes(camera.getTransformationMatrix());
+    isPointInView (position, camera, existingFrustumPlanes = null) {
+        const frustumPlanes = existingFrustumPlanes || Frustum.GetPlanes(camera.getTransformationMatrix());
 
         // Project the point on each plane and check if it's in front of it
         for (const plane of frustumPlanes) {

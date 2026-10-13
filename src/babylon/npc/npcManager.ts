@@ -32,9 +32,10 @@ export const NpcManager = {
             this.guardMove([guard.id, data.x, data.z, data.mv[0], data.mv[1], data.mv[2]])
         }
         await guard.createModel(false)
-        guard.insideView = this.isNpcInViewport(guard)
+        guard.insideView = this.isNpcVisible(guard)
         if (guard.insideView) {
             await guard.model!.initAsync()
+            if (!guard.insideView) guard.model!.removeFromView()
         }
     },
 
@@ -83,9 +84,10 @@ export const NpcManager = {
         this.npcs.set(npc.id, npc)
         this.applyNpcData(npc, data)
         await npc.createModel(false)
-        npc.insideView = this.isNpcInViewport(npc)
+        npc.insideView = this.isNpcVisible(npc)
         if (npc.insideView) {
             await npc.model!.initAsync()
+            if (!npc.insideView) npc.model!.removeFromView()
         }
     },
 
@@ -164,7 +166,7 @@ export const NpcManager = {
             })
             this.visibleGuards.clear()
             this.guards.forEach((guard, id) => {
-                if (!guard.killedTime && this.isNpcInViewport(guard) && guard.getDistanceFromMyPlayer() <= MyPlayer.visibilityRadius) {
+                if (!guard.killedTime && this.isNpcVisible(guard)) {
                     this.visibleGuards.add(id)
                 }
                 guard.setVisible(this.visibleGuards.has(id) || guard.killedTime > 0)
@@ -187,14 +189,18 @@ export const NpcManager = {
     updateVisibleNpcs() {
         this.visibleNpcs.clear()
         this.npcs.forEach((npc, id) => {
-            if (this.isNpcInViewport(npc) && npc.getDistanceFromMyPlayer() <= MyPlayer.visibilityRadius) {
+            if (this.isNpcVisible(npc)) {
                 this.visibleNpcs.add(id)
             }
         })
     },
 
+    isNpcVisible(npc: Npc) {
+        return npc.getDistanceFromMyPlayer() <= MyPlayer.visibilityRadius && this.isNpcInViewport(npc)
+    },
+
     isNpcInViewport(npc: Npc) {
-        return ViewportManager.isPointInVisibleMatrix(Math.floor(npc.pos.x), Math.floor(npc.pos.z), 1)
+        return ViewportManager.isPointInVisibleMatrix(Math.floor(npc.pos.x), Math.floor(npc.pos.z), 1, npc.pos.y, 3)
     },
 
     getNpcOnTile(x: number, z: number): Npc | null {

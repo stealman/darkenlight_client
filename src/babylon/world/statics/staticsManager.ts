@@ -476,7 +476,7 @@ export const StaticsManager = {
         for (const obj of this.allStatics) {
             const x = Math.floor(obj.position.x)
             const z = Math.floor(obj.position.z)
-            if (ViewportManager.isPointInVisibleMatrix(x, z, 2)) {
+            if (ViewportManager.isPointInVisibleMatrix(x, z, 2, obj.position.y)) {
                 nextVisible.push(obj)
                 if (!previousVisible.has(obj)) {
                     obj.onVisible()

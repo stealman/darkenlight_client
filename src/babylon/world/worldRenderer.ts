@@ -24,6 +24,7 @@ import { createSnowCoverMask } from '@/babylon/world/snowCoverMask'
 import { BuildingManager } from '@/babylon/world/buildings/buildingManager'
 import { FoggyAreaManager } from '@/babylon/world/foggyAreaManager'
 import { GMFoggyAreas } from '@/gm/GmFoggyAreas'
+import { EquipmentDecorationsManager } from '@/babylon/world/equipmentDecorationsManager'
 
 export const WorldRenderer = {
     block1: null as SymmetricBlock | null,
@@ -115,6 +116,11 @@ export const WorldRenderer = {
 
         // Buildings own their meshes so they can later fade independently.
         BuildingManager.renderBuildings()
+
+        // Runtime chunks are wider than the visual viewport. Keep loaded
+        // equipment decorations in memory, but only submit visible ones to
+        // the shared equipment thin-instance meshes.
+        EquipmentDecorationsManager.refreshVisibility()
 
         // Render decorative foliage
         FoliageManager.renderFoliage()

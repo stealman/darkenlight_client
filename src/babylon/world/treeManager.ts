@@ -346,7 +346,7 @@ export const TreeManager = {
 
         for (const element of this.allTrees) {
             const tree = element
-            if (ViewportManager.isPointInVisibleMatrix(Math.floor(tree.position.x), Math.floor(tree.position.z), 2)) {
+            if (ViewportManager.isPointInVisibleMatrix(Math.floor(tree.position.x), Math.floor(tree.position.z), 2, tree.position.y)) {
                 this.visibleTrees.push(tree)
             }
         }

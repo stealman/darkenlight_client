@@ -23,6 +23,7 @@ export class CharacterModel implements EquipBearer {
     node: TransformNode = new TransformNode('characterModelNode')
     nameTextNode: TransformNode
     initialized: boolean = false
+    viewRequested: boolean = false
 
     model: AbstractMesh | undefined
     modelYAngleOffset: number = (Math.PI * 1) / 4
@@ -748,7 +749,12 @@ export class CharacterModel implements EquipBearer {
     }
 
     async addToView() {
+        this.viewRequested = true
         if (!this.initialized) await this.initAsync()
+        if (!this.viewRequested || this.node.isDisposed()) {
+            this.removeFromView()
+            return
+        }
         if (this.parent.dead) this.playDeathAnimation()
         this.setAnimationsPaused(false)
         this.model!.setEnabled(true)
@@ -762,6 +768,7 @@ export class CharacterModel implements EquipBearer {
     }
 
     removeFromView() {
+        this.viewRequested = false
         if (this.initialized) {
             this.setAnimationsPaused(true)
             this.model!.setEnabled(false)
@@ -789,6 +796,7 @@ export class CharacterModel implements EquipBearer {
     }
 
     removeFromScene() {
+        this.viewRequested = false
         this.stopAllStepSounds()
         this.removeFromView()
         this.model?.getChildMeshes().forEach((mesh) => {

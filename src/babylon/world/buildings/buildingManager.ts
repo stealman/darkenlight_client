@@ -216,7 +216,7 @@ class BuildingView {
     }
 
     isVisible() {
-        return this.getOccupiedTiles().some((tile) => ViewportManager.isPointInVisibleMatrix(tile.x, tile.z, 1))
+        return this.getOccupiedTiles().some((tile) => ViewportManager.isPointInVisibleMatrix(tile.x, tile.z, 1, this.mesh.position.y))
     }
 
     getWidth() {
@@ -771,7 +771,7 @@ class ShedView {
     }
 
     isVisible() {
-        return this.getOccupiedTiles().some((tile) => ViewportManager.isPointInVisibleMatrix(tile.x, tile.z, 1))
+        return this.getOccupiedTiles().some((tile) => ViewportManager.isPointInVisibleMatrix(tile.x, tile.z, 1, this.roofMesh.position.y))
     }
 
     recountYPosition() {
@@ -1243,7 +1243,7 @@ class MausoleumView {
     }
 
     isVisible() {
-        return this.getOccupiedTiles().some((tile) => ViewportManager.isPointInVisibleMatrix(tile.x, tile.z, 1))
+        return this.getOccupiedTiles().some((tile) => ViewportManager.isPointInVisibleMatrix(tile.x, tile.z, 1, this.roofMesh.position.y))
     }
 
     recountYPosition() {

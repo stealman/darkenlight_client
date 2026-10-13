@@ -50,7 +50,7 @@ export const MonsterManager = {
             const monsterModel = new MonsterModel(monsterType, monster)
             monster.model = monsterModel
 
-            monster.insideView = this.isMonsterInViewport(monster)
+            monster.insideView = this.isMonsterVisible(monster)
 
             // If monster is in view, initialize model immediately
             if (monster.insideView) {
@@ -251,17 +251,19 @@ export const MonsterManager = {
         this.visibleMonsters.clear()
 
         this.monsters.forEach((monster, id) => {
-            if (this.isMonsterInViewport(monster)) {
-                const distanceToPlayer = monster.getDistanceFromMyPlayer()
-                if (distanceToPlayer <= MyPlayer.visibilityRadius) {
-                    this.visibleMonsters.add(id)
-                }
+            if (this.isMonsterVisible(monster)) {
+                this.visibleMonsters.add(id)
             }
         })
     },
 
+    isMonsterVisible(monster: Monster) {
+        return monster.getDistanceFromMyPlayer() <= MyPlayer.visibilityRadius
+            && this.isMonsterInViewport(monster)
+    },
+
     isMonsterInViewport(monster: Monster) {
-        return ViewportManager.isPointInVisibleMatrix(Math.floor(monster.pos.x), Math.floor(monster.pos.z), 2)
+        return ViewportManager.isPointInVisibleMatrix(Math.floor(monster.pos.x), Math.floor(monster.pos.z), 2, monster.pos.y, 3)
     },
 
     isPointInMonster(x: number, z: number, size: number): Monster | null {

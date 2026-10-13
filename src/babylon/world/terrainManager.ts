@@ -99,13 +99,13 @@ export const TerrainManager = {
 
         for (let x = Math.max(0, myPos.x + ViewportManager.minX); x <= Math.min(blockMap.length -1, myPos.x + ViewportManager.maxX); x++) {
             for (let z = Math.max(0, myPos.z + ViewportManager.minZ); z <= Math.min(blockMap.length - 1, myPos.z + ViewportManager.maxZ); z++) {
+                const block = blockMap[x][z]
 
                 // Check if block is in visible matrix
-                if (!ViewportManager.isPointInVisibleMatrix(x, z, 2)) {
+                if (!ViewportManager.isPointInVisibleMatrix(x, z, 2, block.totalHeight)) {
                     continue
                 }
 
-                const block = blockMap[x][z]
                 const hideSnow = block.snowed && snowCoverMask.has(x * blockMap.length + z)
                 const renderType = hideSnow && GRASS_BLOCK_TYPES.has(block.type) ? DIRT_BLOCK_TYPE : undefined
                 const heightOffset = hideSnow

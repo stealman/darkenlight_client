@@ -433,7 +433,7 @@ export const CharacterManager = {
     },
 
     isCharInViewport(char: Character) {
-        return ViewportManager.isPointInVisibleMatrix(Math.floor(char.pos.x), Math.floor(char.pos.z), 1)
+        return ViewportManager.isPointInVisibleMatrix(Math.floor(char.pos.x), Math.floor(char.pos.z), 1, char.pos.y)
     },
 
     isPointInCharacter(x: number, z: number, size: number, ignoredId?: number): Character | null {

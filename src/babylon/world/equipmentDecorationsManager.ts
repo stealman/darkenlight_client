@@ -2,6 +2,7 @@ import { Matrix, Quaternion, Vector2, Vector3 } from '@babylonjs/core'
 import { EquipItemType, EquipManager, EquipThinInstance } from '@/babylon/item/equipManager'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { BuildingManager } from '@/babylon/world/buildings/buildingManager'
+import { ViewportManager } from '@/utils/viewport'
 
 export interface EquipmentDecorationData {
     id: number
@@ -50,6 +51,7 @@ class EquipmentDecorationInstance implements EquipThinInstance {
 
 export const EquipmentDecorationsManager = {
     decorations: new Map<number, EquipmentDecorationInstance>(),
+    visibleDecorationIds: new Set<number>(),
     previewId: -1,
 
     add(data: EquipmentDecorationData) {
@@ -60,7 +62,10 @@ export const EquipmentDecorationsManager = {
         }
         const decoration = new EquipmentDecorationInstance(data)
         this.decorations.set(data.id, decoration)
-        EquipManager.addThinInstance(decoration)
+        if (this.isVisible(decoration)) {
+            EquipManager.addThinInstance(decoration)
+            this.visibleDecorationIds.add(data.id)
+        }
     },
 
     consume(items: EquipmentDecorationData[]) {
@@ -70,7 +75,9 @@ export const EquipmentDecorationsManager = {
     remove(id: number) {
         const decoration = this.decorations.get(id)
         if (!decoration) return
-        EquipManager.removeThinInstance(decoration)
+        if (this.visibleDecorationIds.delete(id)) {
+            EquipManager.removeThinInstance(decoration)
+        }
         this.decorations.delete(id)
     },
 
@@ -99,7 +106,33 @@ export const EquipmentDecorationsManager = {
         this.decorations.forEach((decoration) => decoration.recountPosition())
     },
 
+    refreshVisibility() {
+        this.decorations.forEach((decoration, id) => {
+            const visible = this.isVisible(decoration)
+            const wasVisible = this.visibleDecorationIds.has(id)
+            if (visible === wasVisible) return
+
+            if (visible) {
+                EquipManager.addThinInstance(decoration)
+                this.visibleDecorationIds.add(id)
+            } else {
+                EquipManager.removeThinInstance(decoration)
+                this.visibleDecorationIds.delete(id)
+            }
+        })
+    },
+
+    isVisible(decoration: EquipmentDecorationInstance) {
+        return decoration.data.id === this.previewId || ViewportManager.isPointInVisibleMatrix(
+            Math.floor(decoration.data.x),
+            Math.floor(decoration.data.z),
+            1,
+            decoration.position.y,
+        )
+    },
+
     clearWorld() {
         Array.from(this.decorations.keys()).forEach((id) => this.remove(id))
+        this.visibleDecorationIds.clear()
     },
 }
