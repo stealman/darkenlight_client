@@ -58,17 +58,17 @@ class SnowEffect implements WeatherEffect {
 
     constructor(scene: Scene) {
         //console.log("Initializing snow effect")
-        let capacity = 10000
+        let capacity = 8500
         const particleSize = new Vector2(0.02, 0.03)
         if (Settings.isDetailLevelMedium()) {
             particleSize.x = 0.03
             particleSize.y = 0.04
-            capacity = 7500
+            capacity = 6400
         }
         if (Settings.isDetalLevelLow()) {
             particleSize.x = 0.05
             particleSize.y = 0.06
-            capacity = 4000
+            capacity = 3400
         }
 
         const snow = new GPUParticleSystem("snow", {
@@ -76,8 +76,8 @@ class SnowEffect implements WeatherEffect {
         }, scene);
 
         snow.particleTexture = new Texture("images/gfx/flare-rect.png", scene);
-        snow.minEmitBox = new Vector3(-14, 5, -14);
-        snow.maxEmitBox = new Vector3(16, 7, 16);
+        snow.minEmitBox = new Vector3(-13, 5, -13);
+        snow.maxEmitBox = new Vector3(13, 7, 13);
 
         const snowEmitter = MeshBuilder.CreateBox(
             "snowEmitter",

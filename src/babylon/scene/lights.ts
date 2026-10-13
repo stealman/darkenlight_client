@@ -4,6 +4,7 @@ import {
     DirectionalLight,
     Material,
     Mesh,
+    RenderTargetTexture,
     Scene,
     ShadowGenerator,
     SpotLight,
@@ -111,6 +112,7 @@ export const Lights = {
     indoor: false,
     insideBuilding: false,
     buildingInteriorBlend: 0,
+    personalShadowLightPosition: new Vector3(Number.NaN, Number.NaN, Number.NaN),
 
     initialize(scene: Scene) {
         resetStaticLighting(this)
@@ -118,6 +120,7 @@ export const Lights = {
         this.dayNightShadersWarmed = false
         this.insideBuilding = false
         this.buildingInteriorBlend = 0
+        this.personalShadowLightPosition.set(Number.NaN, Number.NaN, Number.NaN)
         resetDayNightLighting(this)
         this.sunLight = new DirectionalLight("sunLight", new Vector3(-0.75, -0.75, 0.3), scene)
         this.sunLight.position = new Vector3(30, 30, 30);
@@ -209,6 +212,7 @@ export const Lights = {
                 : Math.max(this.buildingInteriorBlend - step, targetBlend)
             this.updatePersonalLightPosition()
         }
+        this.updatePersonalShadowRefreshRate()
         onLightsFrame(this, timeRate)
     },
 
@@ -325,6 +329,27 @@ export const Lights = {
                 + ((BUILDING_PERSONAL_LIGHT_HEIGHT - normalHeight) * this.buildingInteriorBlend),
             PERSONAL_LIGHT_Z_OFFSET,
         )
+    },
+
+    updatePersonalShadowRefreshRate() {
+        if (!Settings.isShadowsEnabled()) {
+            return
+        }
+        const shadowMap = this.personalShadow.getShadowMap()
+        if (shadowMap == null) {
+            return
+        }
+
+        const lightPosition = this.personalLight.getAbsolutePosition()
+        const lightMoved = !Number.isFinite(this.personalShadowLightPosition.x)
+            || Vector3.DistanceSquared(lightPosition, this.personalShadowLightPosition) > 0.000001
+        const refreshRate = lightMoved
+            ? RenderTargetTexture.REFRESHRATE_RENDER_ONEVERYFRAME
+            : RenderTargetTexture.REFRESHRATE_RENDER_ONEVERYTWOFRAMES
+        if (shadowMap.refreshRate !== refreshRate) {
+            shadowMap.refreshRate = refreshRate
+        }
+        this.personalShadowLightPosition.copyFrom(lightPosition)
     },
 
     addShadowCaster(mesh: Mesh | AbstractMesh, castPersonalShadow: boolean = true, castStaticShadow: boolean = false, castOutdoorStaticShadow: boolean = false, filterActorStaticShadowByDistance: boolean = true, actorStaticShadowRangeTest?: ActorStaticShadowRangeTest, filterPersonalShadowByDistance: boolean = castOutdoorStaticShadow, castSunShadow: boolean = true) {

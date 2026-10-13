@@ -289,6 +289,9 @@ export function updateActorStaticShadowCasters(host: MeshLightingHost) {
         return
     }
     updatePersonalShadowCasters(host)
+    if (host.staticShadowGenerators.length === 0) {
+        return
+    }
     for (const slot of host.staticLightSlots) {
         updateStaticShadowCastersForSlot(host, slot)
         const slotCastsActorShadows = staticLightSlotCastsActorShadows(host, slot)
