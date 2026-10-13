@@ -48,6 +48,7 @@ export class MonsterModel implements EquipBearer {
     deadAnim: MeshAnimation | undefined
     activeAnims: Set<MeshAnimation>
     pendingAttackSoundAnim: MeshAnimation | null = null
+    idleAnimationFrozen: boolean = false
 
     weaponEquipItem: EquipItem | null = null
     equipSet: Set<EquipItem> = new Set()
@@ -125,7 +126,6 @@ export class MonsterModel implements EquipBearer {
         if (!this.isActive()) return
 
         if (this.activeAnims.size > 0) {
-            this.skeleton.prepare()
             this.activeAnims.forEach(anim => {
                 anim.onAnimFrame()
                 if (anim === this.pendingAttackSoundAnim) {
@@ -203,6 +203,7 @@ export class MonsterModel implements EquipBearer {
 
     doAttackAnimation() {
         if (!this.isActive()) return
+        this.idleAnimationFrozen = false
         const baseAnimSpeed = 1000
 
         const possibleAnims = []
@@ -223,11 +224,25 @@ export class MonsterModel implements EquipBearer {
 
     doWalk() {
         this.pendingAttackSoundAnim = null
+        this.idleAnimationFrozen = false
         this.transitionToAnimation(this.walkAnim!, true, true, this.parent.mobType.walkAnimSpeed)
     }
 
-    doIdle() {
+    doIdle(animate: boolean) {
         this.pendingAttackSoundAnim = null
+
+        if (!animate) {
+            if (this.idleAnimationFrozen) return
+
+            this.activeAnims.forEach(anim => anim.stop())
+            this.activeAnims.clear()
+            this.idleAnim?.start(false, 1, true)
+            this.idleAnim?.stop()
+            this.idleAnimationFrozen = true
+            return
+        }
+
+        this.idleAnimationFrozen = false
         this.transitionToAnimation(this.idleAnim!, true, true, 1.0)
     }
 
@@ -271,6 +286,7 @@ export class MonsterModel implements EquipBearer {
 
     doDie() {
         if (!this.isActive()) return
+        this.idleAnimationFrozen = false
         this.pendingAttackSoundAnim = null
         const deathAnimationSpeed = this.type.deathAnimSpeed
         this.transitionToAnimation(this.deadAnim!, true, false, deathAnimationSpeed)

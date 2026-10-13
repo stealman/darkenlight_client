@@ -15,8 +15,6 @@ export class MeshAnimation {
 
     constructor(animGroup: AnimationGroup, fromFrame: number, toFrame: number) {
         this.animation = animGroup
-        this.animation.play(true)
-        this.animation.pause()
         this.animation.setWeightForAllAnimatables(0)
         this.fromFrame = fromFrame
         this.toFrame = toFrame
@@ -55,6 +53,13 @@ export class MeshAnimation {
         this.speed = speed
         this.loop = loop
         this.actualFrame = 0
+
+        // Keep unused monster clips out of Scene.activeAnimatables. The group
+        // only needs live, paused animatables while goToFrame drives it.
+        if (!this.animation.isStarted) {
+            this.animation.start(true)
+            this.animation.pause()
+        }
         this.animation.goToFrame(this.fromFrame)
 
         this.running = true
@@ -74,6 +79,7 @@ export class MeshAnimation {
         this.actualFrame = 0
         this.weightChange = 0
         this.animation.setWeightForAllAnimatables(0)
+        this.animation.stop(true)
     }
 
     fadeOut() {

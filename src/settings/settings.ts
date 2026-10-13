@@ -245,6 +245,10 @@ export const Settings = {
         return this.deviceType === 'PHONE' || this.deviceType === 'TABLET'
     },
 
+    getIdleAnimationDistance(): number {
+        return this.deviceType === 'PHONE' ? 6 : this.deviceType === 'TABLET' ? 8 : 12
+    },
+
     setTargetMarkerOpacity(value: number) {
         this.targetMarkerOpacity = value;
     },

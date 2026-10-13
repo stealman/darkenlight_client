@@ -12,6 +12,7 @@ import { Arrow, ArrowsManager } from '@/babylon/world/arrowsManager'
 import { AttackableBasicTO, AutoAttackResultMessage } from '@/network/messageIfs'
 import { PubliclyVisibleAffect } from '@/data/affects'
 import { EffectTarget } from '@/babylon/gfx/characterEffect'
+import { Settings } from '@/settings/settings'
 
 export class Monster implements Attackable, EffectTarget {
     id: number
@@ -166,7 +167,13 @@ export class Monster implements Attackable, EffectTarget {
             }
             if (this.model.initialized) this.model.doWalk()
         } else {
-            if (this.model.initialized) this.model.doIdle()
+            if (this.model.initialized) {
+                const idleDistance = Settings.getIdleAnimationDistance()
+                const dx = this.pos.x - MyPlayer.myChar.pos.x
+                const dz = this.pos.z - MyPlayer.myChar.pos.z
+                const animateIdle = !Settings.isDetalLevelLow() && (dx * dx) + (dz * dz) <= idleDistance * idleDistance
+                this.model.doIdle(animateIdle)
+            }
         }
 
         this.logicYpos = Utils.calculateWalkYPos(this.pos.x, this.pos.z, 0.4)

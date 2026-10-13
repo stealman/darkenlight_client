@@ -16,6 +16,7 @@ import { EquipItemSlots, EquipSlotModelsCb, WeaponCategories, WeaponTypes } from
 import { Utils } from '@/utils/utils'
 import { AudioUtils } from '@/babylon/audio/audioUtils'
 import { getCharacterModelEquipModifier } from '@/babylon/character/characterModelEquipModifiers'
+import { Settings } from '@/settings/settings'
 
 export class CharacterModel implements EquipBearer {
     parent: Character
@@ -56,6 +57,7 @@ export class CharacterModel implements EquipBearer {
 
     actualAnim: AnimationGroup | undefined
     animTransition: AnimTransition | null = null
+    idleAnimationFrozen: boolean = false
     deathSink: number = 0
     deathSinkTarget: number = 0
 
@@ -490,10 +492,45 @@ export class CharacterModel implements EquipBearer {
         const desiredAnimation = this.parent.isRecentlyInCombat() ? this.combatIdleAnim : this.idleAnim
         const animSpeed = desiredAnimation === this.combatIdleAnim ? 0.75 : 0.5
 
+        if (!desiredAnimation) return
+
+        if (!this.shouldAnimateIdle()) {
+            if (this.idleAnimationFrozen && this.actualAnim === desiredAnimation) return
+
+            this.animTransition?.forceEnd()
+            this.animTransition = null
+            this.actualAnim?.stop()
+            desiredAnimation.stop()
+            desiredAnimation.start(true, animSpeed, desiredAnimation.from, desiredAnimation.to)
+            desiredAnimation.goToFrame(desiredAnimation.from)
+            desiredAnimation.setWeightForAllAnimatables(1)
+            desiredAnimation.pause()
+            this.actualAnim = desiredAnimation
+            this.idleAnimationFrozen = true
+            return
+        }
+
+        if (this.idleAnimationFrozen) {
+            this.idleAnimationFrozen = false
+            if (this.actualAnim === desiredAnimation && desiredAnimation.isStarted) {
+                desiredAnimation.restart()
+            }
+        }
+
         if (this.actualAnim !== desiredAnimation) {
             this.transitionToAnimation(desiredAnimation, 0.25, true, animSpeed)
             this.actualAnim = desiredAnimation
         }
+    }
+
+    private shouldAnimateIdle(): boolean {
+        if (this.parent.isMyChar()) return true
+        if (Settings.isDetalLevelLow()) return false
+
+        const maxDistance = Settings.getIdleAnimationDistance()
+        const dx = this.parent.pos.x - MyPlayer.myChar.pos.x
+        const dz = this.parent.pos.z - MyPlayer.myChar.pos.z
+        return (dx * dx) + (dz * dz) <= maxDistance * maxDistance
     }
 
     playDeathAnimation() {
@@ -604,6 +641,10 @@ export class CharacterModel implements EquipBearer {
         if (!this.isActive()) return
         if (!targetAnim || this.actualAnim === targetAnim) return
 
+        if (targetAnim !== this.idleAnim && targetAnim !== this.combatIdleAnim) {
+            this.idleAnimationFrozen = false
+        }
+
         // If there is already an ongoing transition
         if (this.animTransition) {
             // Force end the transition if the target animation is different
@@ -709,6 +750,7 @@ export class CharacterModel implements EquipBearer {
     async addToView() {
         if (!this.initialized) await this.initAsync()
         if (this.parent.dead) this.playDeathAnimation()
+        this.setAnimationsPaused(false)
         this.model!.setEnabled(true)
         this.equipSet.forEach((item) => {
             EquipManager.addEquippedItem(item)
@@ -721,10 +763,28 @@ export class CharacterModel implements EquipBearer {
 
     removeFromView() {
         if (this.initialized) {
+            this.setAnimationsPaused(true)
             this.model!.setEnabled(false)
         }
         this.equipSet.forEach((item) => {
             EquipManager.removeEquippedItem(item)
+        })
+    }
+
+    private setAnimationsPaused(paused: boolean) {
+        if (!paused && this.idleAnimationFrozen) return
+
+        const animations = new Set<AnimationGroup>()
+        if (this.actualAnim) animations.add(this.actualAnim)
+        if (this.animTransition?.fromAnimation) animations.add(this.animTransition.fromAnimation)
+        if (this.animTransition?.toAnimation) animations.add(this.animTransition.toAnimation)
+
+        animations.forEach((animation) => {
+            if (paused) {
+                if (animation.isPlaying) animation.pause()
+            } else if (animation.isStarted && !animation.isPlaying) {
+                animation.restart()
+            }
         })
     }
 
