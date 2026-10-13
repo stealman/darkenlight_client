@@ -126,6 +126,7 @@ export function configureStaticLightMaterials(host: StaticLightingHost) {
             currentIntensity: 0,
             flickerOffset: new Vector3(),
             actorShadowCasters: new Set<AbstractMesh>(),
+            staticShadowCasters: new Set<AbstractMesh>(),
         })
     }
 }
@@ -500,7 +501,7 @@ function setStaticShadowGeneratorActive(shadow: ShadowGenerator, active: boolean
     }
     const shadowMap = shadow.getShadowMap()
     const refreshRate = active && hasDynamicCasters
-        ? RenderTargetTexture.REFRESHRATE_RENDER_ONEVERYFRAME
+        ? RenderTargetTexture.REFRESHRATE_RENDER_ONEVERYTWOFRAMES
         : RenderTargetTexture.REFRESHRATE_RENDER_ONCE
     if (shadowMap != null && shadowMap.refreshRate !== refreshRate) {
         shadowMap.refreshRate = refreshRate

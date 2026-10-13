@@ -36,4 +36,5 @@ export interface StaticLightSlot {
     currentIntensity: number
     flickerOffset: Vector3
     actorShadowCasters: Set<AbstractMesh>
+    staticShadowCasters: Set<AbstractMesh>
 }

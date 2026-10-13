@@ -372,7 +372,7 @@ export class EquipItemType {
         this.mesh.parent = parentNode
         this.mesh.receiveShadows = true
         if (castsShadows) {
-            Lights.addShadowCaster(this.mesh, true, false, true, true, (lightPosition, lightRangeSquared) => {
+            Lights.addShadowCaster(this.mesh, true, false, false, true, (lightPosition, lightRangeSquared) => {
                 const items = EquipManager.equippedItems.get(this)
                 if (items == null) {
                     return false
@@ -386,7 +386,7 @@ export class EquipItemType {
                     }
                 }
                 return false
-            })
+            }, true, false)
         }
         Lights.registerDynamicLightMesh(this.mesh)
     }

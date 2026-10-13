@@ -31,6 +31,10 @@ export interface MeshLightingHost {
     actorStaticShadowCasters: Set<AbstractMesh>
     unfilteredActorStaticShadowCasters: Set<AbstractMesh>
     actorStaticShadowRangeTests: WeakMap<AbstractMesh, ActorStaticShadowRangeTest>
+    filteredStaticShadowCasters: Set<AbstractMesh>
+    filteredPersonalShadowCasters: Set<AbstractMesh>
+    activePersonalShadowCasters: Set<AbstractMesh>
+    personalShadowRangeTests: WeakMap<AbstractMesh, ActorStaticShadowRangeTest>
     actorMaterialWarmups: WeakMap<Material, Promise<void>>
     localPlayerLightWarmups: WeakMap<Material, Promise<void>>
     localPlayerLightWarmingMeshes: Set<AbstractMesh>
@@ -45,6 +49,10 @@ export function resetMeshLighting(host: MeshLightingHost) {
     host.actorStaticShadowCasters = new Set<AbstractMesh>()
     host.unfilteredActorStaticShadowCasters = new Set<AbstractMesh>()
     host.actorStaticShadowRangeTests = new WeakMap<AbstractMesh, ActorStaticShadowRangeTest>()
+    host.filteredStaticShadowCasters = new Set<AbstractMesh>()
+    host.filteredPersonalShadowCasters = new Set<AbstractMesh>()
+    host.activePersonalShadowCasters = new Set<AbstractMesh>()
+    host.personalShadowRangeTests = new WeakMap<AbstractMesh, ActorStaticShadowRangeTest>()
     host.actorMaterialWarmups = new WeakMap<Material, Promise<void>>()
     host.localPlayerLightWarmups = new WeakMap<Material, Promise<void>>()
     host.localPlayerLightWarmingMeshes = new Set<AbstractMesh>()
@@ -216,16 +224,29 @@ export async function warmUpStaticLightShaderVariant(meshes: Array<Mesh | Abstra
     await Promise.all(meshes.map(mesh => mesh.material?.forceCompilationAsync(mesh, {useInstances: true})))
 }
 
-export function addShadowCaster(host: MeshLightingHost, mesh: Mesh | AbstractMesh, castPersonalShadow: boolean = true, castStaticShadow: boolean = false, castOutdoorStaticShadow: boolean = false, filterActorStaticShadowByDistance: boolean = true, actorStaticShadowRangeTest?: ActorStaticShadowRangeTest) {
+export function addShadowCaster(host: MeshLightingHost, mesh: Mesh | AbstractMesh, castPersonalShadow: boolean = true, castStaticShadow: boolean = false, castOutdoorStaticShadow: boolean = false, filterActorStaticShadowByDistance: boolean = true, actorStaticShadowRangeTest?: ActorStaticShadowRangeTest, filterPersonalShadowByDistance: boolean = castOutdoorStaticShadow, castSunShadow: boolean = true) {
     if (!Settings.isShadowsEnabled()) {
         return
     }
-    host.shadow.addShadowCaster(mesh)
+    if (castSunShadow) {
+        host.shadow.addShadowCaster(mesh)
+    }
     if (castPersonalShadow) {
-        host.personalShadow.addShadowCaster(mesh)
+        if (filterPersonalShadowByDistance || (castStaticShadow && shouldFilterStaticShadowCaster(mesh))) {
+            host.filteredPersonalShadowCasters.add(mesh)
+            if (actorStaticShadowRangeTest != null) {
+                host.personalShadowRangeTests.set(mesh, actorStaticShadowRangeTest)
+            }
+        } else {
+            host.personalShadow.addShadowCaster(mesh)
+        }
     }
     if (castStaticShadow) {
-        host.staticShadowGenerators.forEach(shadow => shadow.addShadowCaster(mesh))
+        if (shouldFilterStaticShadowCaster(mesh)) {
+            host.filteredStaticShadowCasters.add(mesh)
+        } else {
+            host.staticShadowGenerators.forEach(shadow => shadow.addShadowCaster(mesh))
+        }
     }
     if (castOutdoorStaticShadow) {
         const casters = filterActorStaticShadowByDistance
@@ -235,8 +256,8 @@ export function addShadowCaster(host: MeshLightingHost, mesh: Mesh | AbstractMes
         if (actorStaticShadowRangeTest != null) {
             host.actorStaticShadowRangeTests.set(mesh, actorStaticShadowRangeTest)
         }
-        updateActorStaticShadowCasters(host)
     }
+    updateActorStaticShadowCasters(host)
 }
 
 export function removeShadowCaster(host: MeshLightingHost, mesh: Mesh | AbstractMesh, castPersonalShadow: boolean = true, castStaticShadow: boolean = false, castOutdoorStaticShadow: boolean = false) {
@@ -256,13 +277,20 @@ export function removeShadowCaster(host: MeshLightingHost, mesh: Mesh | Abstract
         host.actorStaticShadowRangeTests.delete(mesh)
         host.staticLightSlots.forEach(slot => setActorStaticShadowCaster(slot, mesh, false))
     }
+    host.filteredStaticShadowCasters.delete(mesh)
+    host.filteredPersonalShadowCasters.delete(mesh)
+    host.personalShadowRangeTests.delete(mesh)
+    setPersonalShadowCaster(host, mesh, false)
+    host.staticLightSlots.forEach(slot => setStaticShadowCaster(slot, mesh, false))
 }
 
 export function updateActorStaticShadowCasters(host: MeshLightingHost) {
     if (!Settings.isShadowsEnabled()) {
         return
     }
+    updatePersonalShadowCasters(host)
     for (const slot of host.staticLightSlots) {
+        updateStaticShadowCastersForSlot(host, slot)
         const slotCastsActorShadows = staticLightSlotCastsActorShadows(host, slot)
         if (!slotCastsActorShadows) {
             for (const mesh of host.actorStaticShadowCasters) {
@@ -309,6 +337,71 @@ export function updateActorStaticShadowCasters(host: MeshLightingHost) {
     }
 }
 
+function updatePersonalShadowCasters(host: MeshLightingHost) {
+    const lightPosition = host.personalLight.getAbsolutePosition()
+    const lightRangeSquared = host.personalLight.range * host.personalLight.range
+    for (const mesh of host.filteredPersonalShadowCasters) {
+        const enabled = !mesh.isDisposed()
+            && mesh.isEnabled()
+            && isMeshInLightRange(host.personalShadowRangeTests.get(mesh), mesh, lightPosition, lightRangeSquared)
+        setPersonalShadowCaster(host, mesh, enabled)
+    }
+}
+
+function updateStaticShadowCastersForSlot(host: MeshLightingHost, slot: StaticLightSlot) {
+    const enabled = staticLightSlotCastsStaticShadows(slot)
+    const lightPosition = slot.light.position
+    const lightRangeSquared = slot.light.range * slot.light.range
+    for (const mesh of host.filteredStaticShadowCasters) {
+        const inRange = enabled
+            && !mesh.isDisposed()
+            && mesh.isEnabled()
+            && isMeshInLightRange(undefined, mesh, lightPosition, lightRangeSquared)
+        setStaticShadowCaster(slot, mesh, inRange)
+    }
+}
+
+function isMeshInLightRange(rangeTest: ActorStaticShadowRangeTest | undefined, mesh: AbstractMesh, lightPosition: Vector3, lightRangeSquared: number): boolean {
+    if (rangeTest != null) {
+        return rangeTest(lightPosition, lightRangeSquared)
+    }
+    const meshPosition = mesh.getAbsolutePosition()
+    const dx = meshPosition.x - lightPosition.x
+    const dy = meshPosition.y - lightPosition.y
+    const dz = meshPosition.z - lightPosition.z
+    return ((dx * dx) + (dy * dy) + (dz * dz)) <= lightRangeSquared
+}
+
+function setPersonalShadowCaster(host: MeshLightingHost, mesh: AbstractMesh, enabled: boolean) {
+    if (enabled === host.activePersonalShadowCasters.has(mesh)) {
+        return
+    }
+    if (enabled) {
+        host.activePersonalShadowCasters.add(mesh)
+        host.personalShadow.addShadowCaster(mesh)
+    } else {
+        host.activePersonalShadowCasters.delete(mesh)
+        host.personalShadow.removeShadowCaster(mesh)
+    }
+    host.personalShadow.getShadowMap()?.resetRefreshCounter()
+}
+
+function setStaticShadowCaster(slot: StaticLightSlot, mesh: AbstractMesh, enabled: boolean) {
+    if (enabled === slot.staticShadowCasters.has(mesh)) {
+        return
+    }
+    if (enabled) {
+        slot.staticShadowCasters.add(mesh)
+        slot.standardShadow?.addShadowCaster(mesh)
+        slot.largeCampfireShadow?.addShadowCaster(mesh)
+    } else {
+        slot.staticShadowCasters.delete(mesh)
+        slot.standardShadow?.removeShadowCaster(mesh)
+        slot.largeCampfireShadow?.removeShadowCaster(mesh)
+    }
+    slot.shadow?.getShadowMap()?.resetRefreshCounter()
+}
+
 function setActorStaticShadowCaster(slot: StaticLightSlot, mesh: AbstractMesh, enabled: boolean) {
     if (enabled === slot.actorShadowCasters.has(mesh)) {
         return
@@ -336,6 +429,17 @@ function staticLightSlotCastsActorShadows(host: MeshLightingHost, slot: StaticLi
         && (!host.indoor || slot.source.profile.castsActorShadows === true)
 }
 
+function staticLightSlotCastsStaticShadows(slot: StaticLightSlot): boolean {
+    return slot.shadow != null
+        && slot.light.shadowEnabled
+        && slot.source != null
+        && slot.source.profile.castsShadows !== false
+}
+
+function shouldFilterStaticShadowCaster(mesh: AbstractMesh): boolean {
+    return mesh.doNotSyncBoundingInfo !== true && mesh.alwaysSelectAsActiveMesh !== true
+}
+
 export function pruneDisposedMeshReferences(host: MeshLightingHost) {
     host.sharedLightMeshes.forEach(mesh => {
         if (mesh.isDisposed()) {
@@ -357,10 +461,24 @@ export function pruneDisposedMeshReferences(host: MeshLightingHost) {
             host.unfilteredActorStaticShadowCasters.delete(mesh)
         }
     })
+    host.filteredStaticShadowCasters.forEach(mesh => {
+        if (mesh.isDisposed()) host.filteredStaticShadowCasters.delete(mesh)
+    })
+    host.filteredPersonalShadowCasters.forEach(mesh => {
+        if (mesh.isDisposed()) {
+            host.filteredPersonalShadowCasters.delete(mesh)
+            host.activePersonalShadowCasters.delete(mesh)
+        }
+    })
     host.staticLightSlots.forEach(slot => {
         slot.actorShadowCasters.forEach(mesh => {
             if (mesh.isDisposed()) {
                 slot.actorShadowCasters.delete(mesh)
+            }
+        })
+        slot.staticShadowCasters.forEach(mesh => {
+            if (mesh.isDisposed()) {
+                slot.staticShadowCasters.delete(mesh)
             }
         })
     })
