@@ -18,7 +18,7 @@ export const CharacterModelEquipModifiers = new Map<number, EquipModelModifier>(
     [EquipSlotModelsCb.ARMOR_PLATE.modelId, modifier(new Vector3(0, -0.58, -0.02), new Vector3(1.57, 1.45, 1.6), new Vector3(0.02, 0, 0))],
 
     // [EquipSlotModelsCb.HELM.modelId, modifier(new Vector3(0.005, 0.046, 0.015), new Vector3(0.9, 1, 1.05))],
-    [EquipSlotModelsCb.HELM.modelId, modifier(new Vector3(0, -0.39, 0.01), new Vector3(2.14, 1.9, 2.3))],
+    [EquipSlotModelsCb.HELM.modelId, modifier(new Vector3(0.005, -0.365, 0), new Vector3(1.87, 1.9, 2.3))],
 
     [EquipSlotModelsCb.SHIELD.modelId, modifier(new Vector3(0, 0, 0), new Vector3(1, 1, 1))],
     [EquipSlotModelsCb.PAULDRONS_PLATE.modelId, modifier(new Vector3(0, 0, 0), new Vector3(1, 1, 1))],

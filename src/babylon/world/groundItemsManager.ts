@@ -22,6 +22,7 @@ import { Lights } from '@/babylon/scene/lights'
 import { MyPlayer } from '@/data/myPlayer'
 import { GroundItemTO } from '@/network/messageIfs'
 import { UiIconManager } from '@/gui/uiIconManager'
+import { TEXTURED_ARMOR_MODEL_IDS } from '@/babylon/item/codebook/armorsModelsCb'
 
 export const GroundItemsManager = {
     scene: null as Scene | null,
@@ -112,7 +113,9 @@ export const GroundItemsManager = {
             groundMesh.receiveShadows = true
             groundMesh.thinInstanceCount = 0
 
-            Lights.addShadowCaster(groundMesh)
+            if (!TEXTURED_ARMOR_MODEL_IDS.has(modelId)) {
+                Lights.addShadowCaster(groundMesh)
+            }
             Lights.registerDynamicLightMesh(groundMesh, () => MyPlayer.myChar?.pos || null)
             this.itemTypes.set(modelId, new GroundItemType(modelId, equipType.cbData, groundMesh))
         })

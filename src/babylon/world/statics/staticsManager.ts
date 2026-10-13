@@ -86,7 +86,7 @@ export const StaticsManager = {
 
     addAllShadowCasters() {
         Object.values(this.prefabs).forEach(prefab => {
-            Lights.addShadowCaster(prefab!.mesh, true, true)
+            Lights.addShadowCaster(prefab!.mesh, true)
         })
     },
 

@@ -86,7 +86,7 @@ export const TreeManager = {
         mesh.material = material
         mesh.parent = sourceMesh.parent
         mesh.alwaysSelectAsActiveMesh = true
-        Lights.addShadowCaster(mesh, castPersonalShadow, true)
+        Lights.addShadowCaster(mesh, castPersonalShadow)
         if (castPersonalShadow) {
             this.fadedPersonalShadowCasters.add(mesh)
         }
@@ -124,8 +124,8 @@ export const TreeManager = {
         try {
             await Promise.all(meshes.map(mesh => mesh.material?.forceCompilationAsync(mesh)))
         } finally {
-            Lights.removeShadowCaster(leafMesh, false, true)
-            Lights.removeShadowCaster(trunkMesh, true, true)
+            Lights.removeShadowCaster(leafMesh, false)
+            Lights.removeShadowCaster(trunkMesh, true)
             meshes.forEach(mesh => mesh.dispose(false, false))
         }
     },
@@ -196,9 +196,9 @@ export const TreeManager = {
         Object.values(this.prefabs).forEach(prefab => {
             // Alpha-cutout crowns produce severe projection artifacts when the
             // player's nearby spotlight sits inside or directly below them.
-            // Trunks use the opaque shared block mesh and keep casting personal
-            // shadows; crowns still cast sun/static-light shadows.
-            Lights.addShadowCaster(prefab!.mesh, false, true)
+            // Crowns cast only sun shadows; static lights can opt into tree
+            // shadows later when a light is intentionally placed near them.
+            Lights.addShadowCaster(prefab!.mesh, false)
         })
     },
 
@@ -646,7 +646,7 @@ function updateTreeFade(tree: Tree, timeRate: number, duration: number): boolean
 function disposeFadedTreeMeshes(tree: Tree) {
     tree.fadedMeshes.forEach(mesh => {
         const castPersonalShadow = TreeManager.fadedPersonalShadowCasters.has(mesh)
-        Lights.removeShadowCaster(mesh, castPersonalShadow, true)
+        Lights.removeShadowCaster(mesh, castPersonalShadow)
         mesh.dispose(false, false)
     })
     tree.fadedMeshes = []

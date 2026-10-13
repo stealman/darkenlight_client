@@ -2,6 +2,7 @@ import { Matrix, TransformNode, Vector2 } from '@babylonjs/core'
 import { EquipManager } from '@/babylon/item/equipManager'
 import { Lights } from '@/babylon/scene/lights'
 import { Prefab } from '@/babylon/world/worldRenderer'
+import { TEXTURED_ARMOR_MODEL_IDS } from '@/babylon/item/codebook/armorsModelsCb'
 
 export const StaticEquipPartsRenderer = {
     parent: null as TransformNode | null,
@@ -28,7 +29,9 @@ export const StaticEquipPartsRenderer = {
 
         const prefab = new Prefab(mesh)
         this.prefabs.set(modelId, prefab)
-        Lights.addShadowCaster(mesh, true, true)
+        if (!TEXTURED_ARMOR_MODEL_IDS.has(modelId)) {
+            Lights.addShadowCaster(mesh, true, true)
+        }
         Lights.registerSharedLightMesh(mesh)
         return prefab
     },

@@ -59,11 +59,14 @@ export const WorldRenderer = {
         RockDebrisManager.initialize(scene, this.worldParentNode)
         FoggyAreaManager.initialize(scene)
 
-        Lights.addShadowCaster(TerrainManager.terrainBlock1!, true, true)
-        Lights.addShadowCaster(TerrainManager.terrainPlane!, true, true)
-        Lights.addShadowCaster(TerrainManager.terrainWaterPlane!, true, true)
+        // Terrain receives local-light shadows, but does not need to cast into
+        // every static-light shadow map. Keep its sun/personal-light shadows.
+        Lights.addShadowCaster(TerrainManager.terrainBlock1!, true)
+        Lights.addShadowCaster(TerrainManager.terrainPlane!, true)
+        Lights.addShadowCaster(TerrainManager.terrainWaterPlane!, true)
         Lights.addShadowCaster(this.block1.mesh, true, true)
-        Lights.addShadowCaster(this.blockWithAlpha1.mesh, true, true)
+        // Transparent/alpha world geometry is not a local static-light caster.
+        Lights.addShadowCaster(this.blockWithAlpha1.mesh, true)
         TreeManager.addAllShadowCasters()
         StaticsManager.addAllShadowCasters()
     },

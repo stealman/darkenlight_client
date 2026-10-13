@@ -20,7 +20,8 @@ const TEXTURED_PLATE_HELMET_CACHE_VERSION = '20261012-initial-test'
 const TEXTURED_CHAIN_MAIL_CACHE_VERSION = '20261012-initial-test'
 const TEXTURED_PLATE_LEG_CACHE_VERSION = '20261012-initial-test'
 const TEXTURED_CHAIN_LEG_CACHE_VERSION = '20261012-initial-test'
-const TEXTURED_ARMOR_MODEL_IDS = new Set([
+/** Textured Tripo armour is intentionally excluded from every shadow-generator render list. */
+export const TEXTURED_ARMOR_MODEL_IDS = new Set([
     EquipSlotModelsCb.ARMOR_PLATE.modelId,
     EquipSlotModelsCb.HELM.modelId,
     EquipSlotModelsCb.LEGS_PLATE.modelId,
@@ -85,7 +86,7 @@ export const ArmorsCbManager = {
             false,
             false,
             {
-                metallic: 0.2,
+                metallic: 0.4,
                 roughness: 0.9,
                 directIntensity: 1.5,
                 environmentIntensity: 1.2,
