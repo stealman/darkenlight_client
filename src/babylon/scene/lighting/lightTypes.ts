@@ -32,6 +32,7 @@ export interface StaticLightSlot {
     largeCampfireShadow: ShadowGenerator | null
     source: StaticLightSource | null
     active: boolean
+    shadowActive: boolean
     targetIntensity: number
     currentIntensity: number
     flickerOffset: Vector3
