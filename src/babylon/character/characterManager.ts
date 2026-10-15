@@ -1,7 +1,7 @@
 import { MyPlayer } from '@/data/myPlayer'
 import Character from '@/babylon/character/character'
 import { CharacterModel } from '@/babylon/character/characterModel'
-import type { Scene } from '@babylonjs/core'
+import { type Scene, Vector3 } from '@babylonjs/core'
 import { ViewportManager } from '@/utils/viewport'
 import { Utils } from '@/utils/utils'
 import {
@@ -123,6 +123,23 @@ export const CharacterManager = {
         } else {
             const char = this.characters.get(id)
             if (char) {
+                if (data.length >= 8) {
+                    char.syncServerMovement(
+                        data[1],
+                        data[2],
+                        new Vector3(data[6], 0, data[7]),
+                        data.length >= 10 ? new Vector3(data[8], 0, data[9]) : null,
+                    )
+                    char.pos.y = Utils.calculateWalkYPos(char.pos.x, char.pos.z, char.getBoxSize())
+                    char.logicYpos = char.pos.y
+                    char.setActualSpeed(data[4])
+                    char.setMoveType(data[5])
+                    return
+                }
+                if (data[3] === null && char.finishServerMovement(data[1], data[2])) {
+                    return
+                }
+                char.clearServerMovementTargets()
                 char.pos.x = data[1]
                 char.pos.z = data[2]
                 char.pos.y = Utils.calculateWalkYPos(char.pos.x, char.pos.z, char.getBoxSize())
