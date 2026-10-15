@@ -36,6 +36,7 @@ import {
     GMWorldBiomeTreesChangedData,
     GMStaticDeleteInfoData,
     GMNpcDetailsData,
+    GMBotDetailsData,
     GuestCharacterNameCheckData,
     AccountCharacterNameCheckData,
     PlayerRegistrationData,
@@ -133,6 +134,8 @@ export const MessageProcessor = {
                 case 85: this.processFoggyAreaChanged(msg.d); break
                 case 86: this.processAddEquipmentDecoration(msg.d); break
                 case 87: this.processRemoveEquipmentDecorations(msg.d); break
+                case 88: this.processGMBotDetails(msg.d); break
+                case 89: this.processCharacterNameChanged(msg.d); break
                 case 59: this.processCharacterDeath(msg.d); break
                 case 66: this.processCharacterCombatApproach(msg.d); break
                 case 60: this.processCharacterTeleport(msg.d); break
@@ -237,6 +240,14 @@ export const MessageProcessor = {
 
     processGMNpcDetails(data: GMNpcDetailsData) {
         GMManager.processNpcDetails(data)
+    },
+
+    processGMBotDetails(data: GMBotDetailsData) {
+        GMManager.processBotDetails(data)
+    },
+
+    processCharacterNameChanged(data: {id: number, name: string}) {
+        CharacterManager.changeCharacterName(data.id, data.name)
     },
 
     removeCharacter(data) {

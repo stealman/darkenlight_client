@@ -1,5 +1,5 @@
 import { Connector } from '@/network/connector'
-import { GMBuildingChange, GMCreateItemMsg, GMDayNightCycleMsg, GMEquipmentDecorationChange, GMForceSaveDataMsg, GMGenerateBiomeMsg, GMLoadItemCodebookMsg, GMLoadWorldMapImageMsg, GMLoadWorldSettingsMsg, GMLoadWorldsMsg, GMNpcAction, GMSaveMapDataMsg, GMSaveWorldMapHeightChangesMsg, GMSaveWorldMapSurfaceChangesMsg, GMSaveWorldMapTerrainChangesMsg, GMSaveWorldSettingsMsg, GMStaticDeleteInfoRequest, GMStaticObjectChange, GMTeleportMsg, GMTerrainChange } from '@/network/messages'
+import { GMBotAction, GMBuildingChange, GMCreateItemMsg, GMDayNightCycleMsg, GMEquipmentDecorationChange, GMForceSaveDataMsg, GMGenerateBiomeMsg, GMLoadItemCodebookMsg, GMLoadWorldMapImageMsg, GMLoadWorldSettingsMsg, GMLoadWorldsMsg, GMNpcAction, GMSaveMapDataMsg, GMSaveWorldMapHeightChangesMsg, GMSaveWorldMapSurfaceChangesMsg, GMSaveWorldMapTerrainChangesMsg, GMSaveWorldSettingsMsg, GMStaticDeleteInfoRequest, GMStaticObjectChange, GMTeleportMsg, GMTerrainChange } from '@/network/messages'
 import { GMItemCodebookItem, GMStaticDeleteInfoData, GMWorldBiomeTreesChangedData, GMWorldMapImageData, GMWorldSettingsData, GMWorldsData } from '@/network/messageIfs'
 import { GMSceneManager } from '@/babylon/gm/GmSceneManager'
 import { WorldDataManager } from '@/data/worldDataManager'
@@ -39,6 +39,7 @@ export const GmTabs = {
     BUILDINGS_EDIT: 'buildings_edit',
     SPAWNS_EDIT: 'spawns_edit',
     NPCS_EDIT: 'npcs_edit',
+    BOTS_EDIT: 'bots_edit',
     FOG_EDIT: 'fog_edit'
 }
 
@@ -145,6 +146,8 @@ export const GMManager = {
     selectedNpcType: ref<'common' | 'guard'>('common'),
     selectedNpc: ref<any | null>(null),
     npcDetailsDialogOpenRequested: ref(false),
+    selectedBot: ref<any | null>(null),
+    botDetailsDialogOpenRequested: ref(false),
     teleportWorlds: ref([] as Array<{id: number, name: string}>),
     onlineCharacters: ref([] as Array<{id: number, name: string, worldId: number}>),
     worldSettings: ref<GMWorldSettingsData | null>(null),
@@ -388,6 +391,14 @@ export const GMManager = {
                 name: name,
                 type: this.selectedNpcType.value,
                 wanderingRange: 0
+            }))
+        }
+
+        if (this.tab === GmTabs.BOTS_EDIT) {
+            const markerPos = GMSceneManager.hoverBlockMarker!.position
+            Connector.sendMessage(new GMBotAction('CREATE', {
+                x: Math.round(markerPos.x),
+                z: Math.round(markerPos.z),
             }))
         }
     },
@@ -730,6 +741,9 @@ export const GMManager = {
             case GmTabs.NPCS_EDIT:
                 this.closeTabNpcsEdit()
                 break
+            case GmTabs.BOTS_EDIT:
+                this.closeTabBotsEdit()
+                break
             case GmTabs.FOG_EDIT:
                 this.closeTabFogEdit()
                 break
@@ -767,6 +781,9 @@ export const GMManager = {
                 break
             case GmTabs.NPCS_EDIT:
                 this.openTabNpcsEdit()
+                break
+            case GmTabs.BOTS_EDIT:
+                this.openTabBotsEdit()
                 break
             case GmTabs.FOG_EDIT:
                 this.openTabFogEdit()
@@ -942,6 +959,14 @@ export const GMManager = {
         }
     },
 
+    openTabBotsEdit() {
+        this.tab = GmTabs.BOTS_EDIT
+        this.consumePointerMoveEvents = true
+        this.consumeLeftClickEvents = true
+        GMSceneManager.setHoverBlockMarkerSize(1)
+        GMSceneManager.hoverBlockMarker?.setEnabled(true)
+    },
+
     openTabFogEdit() {
         this.tab = GmTabs.FOG_EDIT
         this.consumePointerMoveEvents = true
@@ -1000,6 +1025,12 @@ export const GMManager = {
     },
 
     closeTabNpcsEdit() {
+        this.consumePointerMoveEvents = false
+        this.consumeLeftClickEvents = false
+        GMSceneManager.hoverBlockMarker?.setEnabled(false)
+    },
+
+    closeTabBotsEdit() {
         this.consumePointerMoveEvents = false
         this.consumeLeftClickEvents = false
         GMSceneManager.hoverBlockMarker?.setEnabled(false)
@@ -1173,6 +1204,30 @@ export const GMManager = {
     processNpcDetails(data: any) {
         this.selectNpcForEditing(data)
         this.npcDetailsDialogOpenRequested.value = true
+    },
+
+    openBotDetails(bot: any) {
+        if (!bot?.isBot) {
+            return
+        }
+        Connector.sendMessage(new GMBotAction('DETAILS', {id: bot.id}))
+    },
+
+    processBotDetails(data: any) {
+        this.selectedBot.value = {...data}
+        this.botDetailsDialogOpenRequested.value = true
+    },
+
+    saveSelectedBot(name: string) {
+        if (!this.selectedBot.value) {
+            return
+        }
+        Connector.sendMessage(new GMBotAction('UPDATE', {id: this.selectedBot.value.id, name}))
+        this.selectedBot.value = null
+    },
+
+    cancelSelectedBot() {
+        this.selectedBot.value = null
     },
 
     cancelSelectedNpc() {

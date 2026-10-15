@@ -66,6 +66,7 @@ class Character implements Attackable, EffectTarget {
     nameDisplayTime: number = 0
     gameClass: GameClass = GameClasses.FIGHTER
     className: string = GameClasses.FIGHTER.key
+    isBot: boolean = false
 
     boxSize: number = 0.8
     walkSpeed: number = 1
@@ -135,6 +136,7 @@ class Character implements Attackable, EffectTarget {
 
         this.pos = new Vector3(data.x, 0, data.z)
         this.name = data.name
+        this.isBot = data.bot === true
         const gameClassKey = data.gameClass?.key ?? data.cls
         this.gameClass = GameClasses.getByKey(gameClassKey) || GameClasses.FIGHTER
         this.className = this.gameClass.key

@@ -15,6 +15,7 @@
             <button :disabled="actualTab === GMTabs.SPAWNS_EDIT" @click="selectTab(GMTabs.SPAWNS_EDIT)">Spawns</button>
             <button :disabled="actualTab === GMTabs.FOG_EDIT" @click="selectTab(GMTabs.FOG_EDIT)">Fog</button>
             <button :disabled="actualTab === GMTabs.NPCS_EDIT" @click="selectTab(GMTabs.NPCS_EDIT)">NPCs</button>
+            <button :disabled="actualTab === GMTabs.BOTS_EDIT" @click="selectTab(GMTabs.BOTS_EDIT)">Bots</button>
             <button @click="openModelRenderDialog">Model Render</button>
             <button @click="openItemCreationDialog">Item Creation</button>
             <button @click="forceSaveData">Force Save Data</button>
@@ -76,6 +77,10 @@
             <NpcPanel />
         </div>
 
+        <div v-if="actualTab === GMTabs.BOTS_EDIT">
+            <BotPanel />
+        </div>
+
         <div v-if="actualTab === GMTabs.FOG_EDIT">
             <FoggyAreasPanel />
         </div>
@@ -99,6 +104,7 @@ import EquipmentDecorationsPanel from '@/vue/views/gm/EquipmentDecorationsPanel.
 import BuildingsPanel from '@/vue/views/gm/BuildingsPanel.vue'
 import SpawnPanel from '@/vue/views/gm/SpawnPanel.vue'
 import NpcPanel from '@/vue/views/gm/NpcPanel.vue'
+import BotPanel from '@/vue/views/gm/BotPanel.vue'
 import FoggyAreasPanel from '@/vue/views/gm/FoggyAreasPanel.vue'
 import ModelRenderPanel from '@/vue/views/gm/ModelRenderPanel.vue'
 import WorldsPanel from '@/vue/views/gm/WorldsPanel.vue'

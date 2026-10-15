@@ -43,6 +43,7 @@
 
             <GmPanel id="gmPanel" v-if="gmPanelVisible" />
             <NpcDetailsDialog ref="npcDetailsDialog" />
+            <BotDetailsDialog ref="botDetailsDialog" />
 
             <OnScreenMessages />
         </div>
@@ -184,6 +185,7 @@ import { Renderer } from './babylon/scene/renderer'
 import { GameManager } from '@/GameManager'
 import GmPanel from '@/vue/views/gm/GmPanel.vue'
 import NpcDetailsDialog from '@/vue/views/gm/NpcDetailsDialog.vue'
+import BotDetailsDialog from '@/vue/views/gm/BotDetailsDialog.vue'
 import { GMManager } from '@/gm/GM'
 import TouchControllers from '@/vue/views/touchControllers.vue'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
@@ -264,6 +266,7 @@ const characterDialog = ref()
 const craftingDialog = ref()
 const npcUseDialog = ref()
 const npcDetailsDialog = ref()
+const botDetailsDialog = ref()
 const { t } = useI18n()
 
 const closeGameplayDialogs = () => {
@@ -526,6 +529,14 @@ watch(GMManager.npcDetailsDialogOpenRequested, (openRequested) => {
     }
     GMManager.npcDetailsDialogOpenRequested.value = false
     npcDetailsDialog.value?.openDialog()
+})
+
+watch(GMManager.botDetailsDialogOpenRequested, (openRequested) => {
+    if (!openRequested) {
+        return
+    }
+    GMManager.botDetailsDialogOpenRequested.value = false
+    botDetailsDialog.value?.openDialog()
 })
 
 watch(isDead, (dead) => {

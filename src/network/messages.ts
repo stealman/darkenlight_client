@@ -511,6 +511,15 @@ export class GMNpcAction implements Message {
     }
 }
 
+export class GMBotAction implements Message {
+    t: number = 1024
+    d: {action: string, data: any}
+
+    constructor(action: string, data: any) {
+        this.d = {action, data}
+    }
+}
+
 export class GMTeleportMsg implements Message {
     t: number = 1008
     d: any

@@ -76,6 +76,7 @@ export const GuiOpportunityActions = {
     USE_CHEST: new GuiOpportunityButtonAction("USE_CHEST", "btn_use_chest"),
     NPC_USE: new GuiOpportunityButtonAction("NPC_USE", "btn_chat"),
     NPC_EDIT: new GuiOpportunityButtonAction("NPC_EDIT", "", "NPC"),
+    BOT_EDIT: new GuiOpportunityButtonAction("BOT_EDIT", "", "BOT"),
 }
 
 export const GuiButtonsManager = {
@@ -108,6 +109,7 @@ export const GuiButtonsManager = {
         this.opportunityButtons.set(GuiOpportunityActions.USE_CHEST.name, new GuiOpportunityButton(GuiOpportunityActions.USE_CHEST))
         this.opportunityButtons.set(GuiOpportunityActions.NPC_USE.name, new GuiOpportunityButton(GuiOpportunityActions.NPC_USE))
         this.opportunityButtons.set(GuiOpportunityActions.NPC_EDIT.name, new GuiOpportunityButton(GuiOpportunityActions.NPC_EDIT))
+        this.opportunityButtons.set(GuiOpportunityActions.BOT_EDIT.name, new GuiOpportunityButton(GuiOpportunityActions.BOT_EDIT))
     },
 
     renderOpportunityButtons() {
@@ -178,6 +180,11 @@ export const GuiButtonsManager = {
                 || (selectedTarget?.getObjectType() === 'M' && NpcManager.guards.has(selectedTarget.id))
             )
         )
+        this.opportunityButtons.get(GuiOpportunityActions.BOT_EDIT.name)!.setVisible(
+            MyPlayer.myChar?.className === 'GM'
+            && selectedTarget?.getObjectType() === 'C'
+            && (selectedTarget as any).isBot === true
+        )
 
         this.trySendFireArrowsAction()
     },
@@ -214,6 +221,9 @@ export const GuiButtonsManager = {
                 break
             case GuiOpportunityActions.NPC_EDIT.name:
                 this.clickOnNpcEditButton()
+                break
+            case GuiOpportunityActions.BOT_EDIT.name:
+                this.clickOnBotEditButton()
                 break
         }
     },
@@ -310,6 +320,13 @@ export const GuiButtonsManager = {
         const isGuard = target?.getObjectType() === 'M' && NpcManager.guards.has(target.id)
         if (MyPlayer.myChar?.className === 'GM' && (isNpc || isGuard)) {
             GMManager.openNpcDetails(target)
+        }
+    },
+
+    clickOnBotEditButton() {
+        const target = TargetingManager.selectedTarget as any
+        if (MyPlayer.myChar?.className === 'GM' && target?.getObjectType() === 'C' && target.isBot === true) {
+            GMManager.openBotDetails(target)
         }
     },
 

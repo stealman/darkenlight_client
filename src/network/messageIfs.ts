@@ -396,6 +396,12 @@ export interface GMNpcDetailsData {
     }
 }
 
+export interface GMBotDetailsData {
+    id: number
+    name: string
+    origin: {worldId: number, x: number, z: number}
+}
+
 export interface GMItemCodebookItem {
     type: string
     id: number

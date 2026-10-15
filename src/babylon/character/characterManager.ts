@@ -43,6 +43,8 @@ export const CharacterManager = {
             char!.pos.x = data.x
             char!.pos.z = data.z
             char!.hp = data.hp
+            char.name = data.name
+            char.isBot = data.bot === true
             char.pos.y = Utils.calculateWalkYPos(char.pos.x, char.pos.z, char.getBoxSize())
             char.logicYpos = char.pos.y
             if (data.dead === true) {
@@ -246,6 +248,13 @@ export const CharacterManager = {
             if (char) {
                 char.startCamping(data)
             }
+        }
+    },
+
+    changeCharacterName(id: number, name: string) {
+        const char = this.characters.get(id)
+        if (char) {
+            char.name = name
         }
     },
 
