@@ -253,7 +253,13 @@ class Character implements Attackable, EffectTarget {
                 this.setMoveAngle(Math.atan2(-(serverMoveTarget.z - this.pos.z), serverMoveTarget.x - this.pos.x))
             }
             this.setLookAngle(this.getMoveAngle() - (myChar ? Math.PI / 4 : Math.PI / 2))
-            const speed = this.getActualSpeed()
+            // Keep server-driven characters slightly behind the authoritative simulation.
+            // If more than two waypoints accumulate, catch up gently instead of building
+            // an ever-growing delay on long routes.
+            const serverMoveSpeedFactor = serverMoveTarget
+                ? (this.serverMoveTargets.length > 2 ? 1.02 : 0.98)
+                : 1
+            const speed = this.getActualSpeed() * serverMoveSpeedFactor
             const angle = Utils.roundToTwoDecimals(this.getMoveAngle()! - (myChar ? 0 : Math.PI / 4))
             const tgtPos = new Vector3(this.pos.x + Math.cos(angle) * speed * timeRate, 0, this.pos.z -Math.sin(angle) * speed * timeRate)
             const reachedServerMoveTarget = serverMoveTarget != null && Math.hypot(
@@ -552,10 +558,14 @@ class Character implements Attackable, EffectTarget {
     }
 
     syncServerMovement(serverX: number, serverZ: number, target: Vector3, nextTarget: Vector3 | null) {
-        const targetQueued = this.serverMoveTargets.some((point) => point.x === target.x && point.z === target.z)
-        if (!targetQueued) {
+        const targetIndex = this.serverMoveTargets.findIndex((point) => point.x === target.x && point.z === target.z)
+        if (targetIndex >= 0) {
+            // Keep unfinished older waypoints so the remote character cannot cut ahead,
+            // but discard any future waypoint the server has just cancelled.
+            this.serverMoveTargets = this.serverMoveTargets.slice(0, targetIndex + 1)
+        } else {
             const serverDrift = Math.hypot(this.pos.x - serverX, this.pos.z - serverZ)
-            if (this.serverMoveTargets.length === 0 || serverDrift > 2) {
+            if (serverDrift > 2) {
                 this.pos.x = serverX
                 this.pos.z = serverZ
             }

@@ -10,6 +10,7 @@ export const Connector = {
     socket: null as WebSocket,
     sentMessages: [] as Message[],
     queuedMessages: [] as Message[],
+    responseQueue: Promise.resolve() as Promise<void>,
     lastSecondLimit: 10,
 
     moveMessageTimeout: 50,
@@ -30,8 +31,11 @@ export const Connector = {
             console.log('WS connection estabilished')
         }
 
-        this.socket.onmessage = async (event) => {
-           await MessageProcessor.processResponse(JSON.parse(event.data))
+        this.socket.onmessage = (event) => {
+            const response = JSON.parse(event.data)
+            this.responseQueue = this.responseQueue
+                .then(() => MessageProcessor.processResponse(response))
+                .catch((error) => console.error('Failed to process server response:', error))
         }
 
         this.socket.onerror = (error) => {
