@@ -1,6 +1,6 @@
 import { Connector } from '@/network/connector'
 import { GMBotAction, GMBuildingChange, GMCreateItemMsg, GMDayNightCycleMsg, GMEquipmentDecorationChange, GMForceSaveDataMsg, GMGenerateBiomeMsg, GMLoadItemCodebookMsg, GMLoadWorldMapImageMsg, GMLoadWorldSettingsMsg, GMLoadWorldsMsg, GMNpcAction, GMSaveMapDataMsg, GMSaveWorldMapHeightChangesMsg, GMSaveWorldMapSurfaceChangesMsg, GMSaveWorldMapTerrainChangesMsg, GMSaveWorldSettingsMsg, GMStaticDeleteInfoRequest, GMStaticObjectChange, GMTeleportMsg, GMTerrainChange } from '@/network/messages'
-import { GMItemCodebookItem, GMStaticDeleteInfoData, GMWorldBiomeTreesChangedData, GMWorldMapImageData, GMWorldSettingsData, GMWorldsData } from '@/network/messageIfs'
+import { GMBotStatusData, GMExistingBotsData, GMItemCodebookItem, GMStaticDeleteInfoData, GMWorldBiomeTreesChangedData, GMWorldMapImageData, GMWorldSettingsData, GMWorldsData } from '@/network/messageIfs'
 import { GMSceneManager } from '@/babylon/gm/GmSceneManager'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { ref, watch } from 'vue'
@@ -148,6 +148,8 @@ export const GMManager = {
     npcDetailsDialogOpenRequested: ref(false),
     selectedBot: ref<any | null>(null),
     botDetailsDialogOpenRequested: ref(false),
+    botStatuses: ref([] as GMBotStatusData[]),
+    botStatusesUpdatedAt: ref(0),
     teleportWorlds: ref([] as Array<{id: number, name: string}>),
     onlineCharacters: ref([] as Array<{id: number, name: string, worldId: number}>),
     worldSettings: ref<GMWorldSettingsData | null>(null),
@@ -1216,6 +1218,15 @@ export const GMManager = {
     processBotDetails(data: any) {
         this.selectedBot.value = {...data}
         this.botDetailsDialogOpenRequested.value = true
+    },
+
+    requestBotStatuses() {
+        Connector.sendMessage(new GMBotAction('LIST', {}))
+    },
+
+    processBotStatuses(data: GMExistingBotsData) {
+        this.botStatuses.value = data.bots
+        this.botStatusesUpdatedAt.value = Date.now()
     },
 
     saveSelectedBot(name: string) {

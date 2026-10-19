@@ -402,6 +402,51 @@ export interface GMBotDetailsData {
     origin: {worldId: number, x: number, z: number}
 }
 
+export interface GMBotStatusData {
+    id: number
+    name: string
+    className: string
+    controllerActive: boolean
+    state: string
+    alive: boolean
+    deadForSeconds?: number | null
+    respawnInSeconds?: number | null
+    world: {id: number, name: string}
+    position: {x: number, y: number, z: number}
+    origin: {worldId: number, x: number, z: number} | null
+    vitals: {hp: number, maxHp: number, mp: number, maxMp: number, stamina: number, maxStamina: number, tired: boolean}
+    action: string | null
+    movement?: {type: string | null, speed: number, target: {x: number, z: number} | null, queuedWaypoints: number}
+    plan?: {
+        goal: string | null
+        remainingSeconds: number
+        spawn: {id: number, x: number, z: number} | null
+        monster: {id: number, name: string, x: number, z: number} | null
+        retreatDestination: {x: number, z: number} | null
+    }
+    navigation?: {
+        purpose: string | null
+        destination: {x: number, z: number} | null
+        waypoint: {x: number, z: number} | null
+        backtrackTarget: {x: number, z: number} | null
+        failedPlans: number
+        trailPoints: number
+    }
+    journey?: {from: string, to: string, breadcrumbs: number} | null
+    supplies?: {bandages: number, emeralds: number}
+    equipment?: Array<{slot: string, name: string, cbId: number, durability: number | null, maxDurability: number | null}>
+    memory?: {routes: number, spawnLinks: number}
+    home?: {
+        healerId: number | null
+        guardSafePoint: {x: number, z: number} | null
+        fireplace: {x: number, z: number} | null
+    }
+}
+
+export interface GMExistingBotsData {
+    bots: GMBotStatusData[]
+}
+
 export interface GMItemCodebookItem {
     type: string
     id: number

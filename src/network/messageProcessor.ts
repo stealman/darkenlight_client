@@ -37,6 +37,7 @@ import {
     GMStaticDeleteInfoData,
     GMNpcDetailsData,
     GMBotDetailsData,
+    GMExistingBotsData,
     GuestCharacterNameCheckData,
     AccountCharacterNameCheckData,
     PlayerRegistrationData,
@@ -136,6 +137,7 @@ export const MessageProcessor = {
                 case 87: this.processRemoveEquipmentDecorations(msg.d); break
                 case 88: this.processGMBotDetails(msg.d); break
                 case 89: this.processCharacterNameChanged(msg.d); break
+                case 90: this.processGMExistingBots(msg.d); break
                 case 59: this.processCharacterDeath(msg.d); break
                 case 66: this.processCharacterCombatApproach(msg.d); break
                 case 60: this.processCharacterTeleport(msg.d); break
@@ -244,6 +246,10 @@ export const MessageProcessor = {
 
     processGMBotDetails(data: GMBotDetailsData) {
         GMManager.processBotDetails(data)
+    },
+
+    processGMExistingBots(data: GMExistingBotsData) {
+        GMManager.processBotStatuses(data)
     },
 
     processCharacterNameChanged(data: {id: number, name: string}) {
