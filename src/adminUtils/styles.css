@@ -179,6 +179,11 @@ select {
     gap: 10px;
 }
 
+.admin-utils__atlas-material-group {
+    display: grid;
+    gap: 6px;
+}
+
 .admin-utils__atlas-material {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));

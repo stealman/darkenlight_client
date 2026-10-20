@@ -290,9 +290,12 @@ export class CharacterModel implements EquipBearer {
     }
 
     assignRightPauldron(type: number, matIndex: number) {
+        const mirrorScale = type === EquipSlotModelsCb.PAULDRONS_PLATE.modelId
+            ? new Vector3(1, 1, -1)
+            : null
         this.addEquippedItem(
             'RIGHT_PAULDRON',
-            new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find((b) => b.id === 'Bone.003')!, null, new Vector3(0, Math.PI / 2, 0), new Vector3(0.02, 0, 0.02), getCharacterModelEquipModifier(type)),
+            new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find((b) => b.id === 'Bone.003')!, mirrorScale, new Vector3(0, Math.PI / 2, 0), new Vector3(0.02, 0, 0.02), getCharacterModelEquipModifier(type)),
         )
     }
 

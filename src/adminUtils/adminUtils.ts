@@ -21,6 +21,8 @@ import './styles.css'
 
 type PreviewSlot = 'body' | 'head' | 'pauldrons' | 'legs' | 'shield'
 type PreviewAnimation = 'idle' | 'walk' | 'run' | 'combatIdle' | 'slash' | 'jab' | 'death'
+type AdminUtilsSection = 'materialAtlas' | 'equipment'
+type ArmorMaterialFamily = 'plate' | 'chain'
 type ModifierComponent = 'scale' | 'position' | 'rotation'
 type ModifierAxis = 'x' | 'y' | 'z'
 type AtlasMaterialParameter = 'brightness' | 'contrast' | 'hueR' | 'hueG' | 'hueB'
@@ -37,6 +39,8 @@ interface AdminUtilsSettings {
     equipment: Record<PreviewSlot, number | null>
     materials: Record<PreviewSlot, number>
     atlasMaterials: Record<string, GeneratedArmorMaterialParameters>
+    chainAtlasMaterials: Record<string, GeneratedArmorMaterialParameters>
+    sections: Record<AdminUtilsSection, boolean>
     animation: PreviewAnimation
 }
 
@@ -51,8 +55,14 @@ const PLATE_ARMOR_PRIMARY_TEXTURE = '/models/equip/armors/plate_armor_primary.pn
 const PLATE_ARMOR_SECONDARY_TEXTURE = '/models/equip/armors/plate_armor_secondary.png?v=20261020-generated-atlas'
 const PLATE_HELMET_PRIMARY_TEXTURE = '/models/equip/armors/plate_helmet_primary.png?v=20261020-generated-atlas'
 const PLATE_HELMET_SECONDARY_TEXTURE = '/models/equip/armors/plate_helmet_secondary.png?v=20261020-generated-atlas'
+const PLATE_PAULDRON_PRIMARY_TEXTURE = '/models/equip/armors/plate_pauldron_primary.png?v=20261020-generated-atlas'
+const PLATE_PAULDRON_SECONDARY_TEXTURE = '/models/equip/armors/plate_pauldron_secondary.png?v=20261020-generated-atlas'
 const PLATE_LEG_PRIMARY_TEXTURE = '/models/equip/armors/plate_leg_primary.png?v=20261020-generated-atlas'
 const PLATE_LEG_SECONDARY_TEXTURE = '/models/equip/armors/plate_leg_secondary.png?v=20261020-generated-atlas'
+const CHAIN_MAIL_PRIMARY_TEXTURE = '/models/equip/armors/chain_mail_primary.png?v=20261020-generated-atlas'
+const CHAIN_MAIL_SECONDARY_TEXTURE = '/models/equip/armors/chain_mail_secondary.png?v=20261020-generated-atlas'
+const CHAIN_LEG_PRIMARY_TEXTURE = '/models/equip/armors/chain_legs_primary.png?v=20261020-generated-atlas'
+const CHAIN_LEG_SECONDARY_TEXTURE = '/models/equip/armors/chain_legs_secondary.png?v=20261020-generated-atlas'
 
 const MODEL_IDS = {
     armorPlate: 1000,
@@ -83,6 +93,10 @@ const defaultMaterialSelections: Record<PreviewSlot, number> = {
     shield: 1,
 }
 const slotMaterialSelections = { ...defaultMaterialSelections }
+const sectionOpenStates: Record<AdminUtilsSection, boolean> = {
+    materialAtlas: true,
+    equipment: true,
+}
 
 const materialOptions: Array<{ label: string, value: number, atlasTile: number }> = [
     { label: 'Steel', value: 1, atlasTile: 0 },
@@ -144,7 +158,12 @@ function createDefaultAtlasMaterialSettings(): Record<string, GeneratedArmorMate
     ]))
 }
 
-const atlasMaterialSettings = createDefaultAtlasMaterialSettings()
+const plateAtlasMaterialSettings = createDefaultAtlasMaterialSettings()
+const chainAtlasMaterialSettings = createDefaultAtlasMaterialSettings()
+const atlasMaterialSettingsByFamily: Record<ArmorMaterialFamily, Record<string, GeneratedArmorMaterialParameters>> = {
+    plate: plateAtlasMaterialSettings,
+    chain: chainAtlasMaterialSettings,
+}
 
 function loadAtlasLayer(path: string): Promise<HTMLImageElement> {
     return new Promise((resolve, reject) => {
@@ -158,14 +177,15 @@ function loadAtlasLayer(path: string): Promise<HTMLImageElement> {
 interface ArmorAtlasLayers {
     primary: HTMLImageElement
     secondary: HTMLImageElement
+    primaryOnTop: boolean
 }
 
-async function loadArmorAtlasLayers(primaryPath: string, secondaryPath: string): Promise<ArmorAtlasLayers> {
+async function loadArmorAtlasLayers(primaryPath: string, secondaryPath: string, primaryOnTop = true): Promise<ArmorAtlasLayers> {
     const [primary, secondary] = await Promise.all([
         loadAtlasLayer(primaryPath),
         loadAtlasLayer(secondaryPath),
     ])
-    return { primary, secondary }
+    return { primary, secondary, primaryOnTop }
 }
 
 function clampColorChannel(value: number): number {
@@ -200,14 +220,18 @@ function createProcessedPrimaryLayer(
     return canvas
 }
 
-function renderGeneratedArmorAtlas(texture: DynamicTexture, layers: ArmorAtlasLayers) {
+function renderGeneratedArmorAtlas(
+    texture: DynamicTexture,
+    layers: ArmorAtlasLayers,
+    materialSettings: Record<string, GeneratedArmorMaterialParameters>,
+) {
     const context = texture.getContext() as unknown as CanvasRenderingContext2D
     context.clearRect(0, 0, GENERATED_ARMOR_ATLAS_SIZE, GENERATED_ARMOR_ATLAS_SIZE)
     const processedPrimaryLayers = new Map<number, HTMLCanvasElement>()
     materialOptions.forEach((option) => {
         processedPrimaryLayers.set(
             option.value,
-            createProcessedPrimaryLayer(layers.primary, atlasMaterialSettings[String(option.value)]),
+            createProcessedPrimaryLayer(layers.primary, materialSettings[String(option.value)]),
         )
     })
     const steelPrimary = processedPrimaryLayers.get(1)!
@@ -219,13 +243,23 @@ function renderGeneratedArmorAtlas(texture: DynamicTexture, layers: ArmorAtlasLa
         const y = tileY * GENERATED_ARMOR_TILE_SIZE
         const material = materialOptions.find((option) => option.atlasTile === tileIndex)
         const primary = material ? processedPrimaryLayers.get(material.value)! : steelPrimary
-        context.drawImage(layers.secondary, x, y, GENERATED_ARMOR_TILE_SIZE, GENERATED_ARMOR_TILE_SIZE)
-        context.drawImage(primary, x, y, GENERATED_ARMOR_TILE_SIZE, GENERATED_ARMOR_TILE_SIZE)
+        if (layers.primaryOnTop) {
+            context.drawImage(layers.secondary, x, y, GENERATED_ARMOR_TILE_SIZE, GENERATED_ARMOR_TILE_SIZE)
+            context.drawImage(primary, x, y, GENERATED_ARMOR_TILE_SIZE, GENERATED_ARMOR_TILE_SIZE)
+        } else {
+            context.drawImage(primary, x, y, GENERATED_ARMOR_TILE_SIZE, GENERATED_ARMOR_TILE_SIZE)
+            context.drawImage(layers.secondary, x, y, GENERATED_ARMOR_TILE_SIZE, GENERATED_ARMOR_TILE_SIZE)
+        }
     }
     texture.update(false)
 }
 
-function createGeneratedArmorAtlas(scene: Scene, name: string, layers: ArmorAtlasLayers): DynamicTexture {
+function createGeneratedArmorAtlas(
+    scene: Scene,
+    name: string,
+    layers: ArmorAtlasLayers,
+    materialSettings: Record<string, GeneratedArmorMaterialParameters>,
+): DynamicTexture {
     const texture = new DynamicTexture(
         name,
         { width: GENERATED_ARMOR_ATLAS_SIZE, height: GENERATED_ARMOR_ATLAS_SIZE },
@@ -238,7 +272,7 @@ function createGeneratedArmorAtlas(scene: Scene, name: string, layers: ArmorAtla
     texture.gammaSpace = true
     texture.uScale = 1 / GENERATED_ARMOR_ATLAS_COLUMNS
     texture.vScale = 1 / GENERATED_ARMOR_ATLAS_COLUMNS
-    renderGeneratedArmorAtlas(texture, layers)
+    renderGeneratedArmorAtlas(texture, layers, materialSettings)
     return texture
 }
 
@@ -258,6 +292,8 @@ function loadAdminUtilsSettings(): AdminUtilsSettings {
         equipment: { ...defaultSlotSelections },
         materials: { ...defaultMaterialSelections },
         atlasMaterials: createDefaultAtlasMaterialSettings(),
+        chainAtlasMaterials: createDefaultAtlasMaterialSettings(),
+        sections: { materialAtlas: true, equipment: true },
         animation: 'idle',
     }
 
@@ -278,15 +314,33 @@ function loadAdminUtilsSettings(): AdminUtilsSettings {
         })
         materialOptions.forEach((option) => {
             const storedParameters = stored.atlasMaterials?.[String(option.value)]
-            if (storedParameters == null) return
-            settings.atlasMaterials[String(option.value)] = {
-                brightness: normalizeAtlasParameter(storedParameters.brightness),
-                contrast: normalizeAtlasParameter(storedParameters.contrast),
-                hueR: normalizeAtlasParameter(storedParameters.hueR),
-                hueG: normalizeAtlasParameter(storedParameters.hueG),
-                hueB: normalizeAtlasParameter(storedParameters.hueB),
+            if (storedParameters != null) {
+                settings.atlasMaterials[String(option.value)] = {
+                    brightness: normalizeAtlasParameter(storedParameters.brightness),
+                    contrast: normalizeAtlasParameter(storedParameters.contrast),
+                    hueR: normalizeAtlasParameter(storedParameters.hueR),
+                    hueG: normalizeAtlasParameter(storedParameters.hueG),
+                    hueB: normalizeAtlasParameter(storedParameters.hueB),
+                }
+            }
+            const storedChainParameters = stored.chainAtlasMaterials?.[String(option.value)]
+            if (storedChainParameters != null) {
+                settings.chainAtlasMaterials[String(option.value)] = {
+                    brightness: normalizeAtlasParameter(storedChainParameters.brightness),
+                    contrast: normalizeAtlasParameter(storedChainParameters.contrast),
+                    hueR: normalizeAtlasParameter(storedChainParameters.hueR),
+                    hueG: normalizeAtlasParameter(storedChainParameters.hueG),
+                    hueB: normalizeAtlasParameter(storedChainParameters.hueB),
+                }
             }
         })
+
+        if (typeof stored.sections?.materialAtlas === 'boolean') {
+            settings.sections.materialAtlas = stored.sections.materialAtlas
+        }
+        if (typeof stored.sections?.equipment === 'boolean') {
+            settings.sections.equipment = stored.sections.equipment
+        }
 
         if (PREVIEW_ANIMATIONS.includes(stored.animation as PreviewAnimation)) {
             settings.animation = stored.animation as PreviewAnimation
@@ -303,7 +357,9 @@ function saveAdminUtilsSettings(animation: string) {
         localStorage.setItem(ADMIN_UTILS_STORAGE_KEY, JSON.stringify({
             equipment: slotSelections,
             materials: slotMaterialSelections,
-            atlasMaterials: atlasMaterialSettings,
+            atlasMaterials: plateAtlasMaterialSettings,
+            chainAtlasMaterials: chainAtlasMaterialSettings,
+            sections: sectionOpenStates,
             animation,
         }))
     } catch (error) {
@@ -325,11 +381,11 @@ function createShell(root: HTMLElement) {
                     <h1>Admin Utils</h1>
                     <p class="admin-utils__intro">Offline laboratoř modelů. Nepřipojuje se k hernímu serveru.</p>
                 </div>
-                <details class="admin-utils__section" open>
+                <details id="adminUtilsMaterialAtlasSection" class="admin-utils__section" open>
                     <summary><h2>Atlas materiálu</h2></summary>
                     <div id="adminUtilsMaterialAtlas" class="admin-utils__atlas-materials"></div>
                 </details>
-                <details class="admin-utils__section" open>
+                <details id="adminUtilsEquipmentSection" class="admin-utils__section" open>
                     <summary><h2>Výbava postavy</h2></summary>
                     <div id="adminUtilsEquipment" class="admin-utils__controls"></div>
                 </details>
@@ -356,80 +412,89 @@ function createShell(root: HTMLElement) {
 
 function createMaterialAtlasControls(container: HTMLElement) {
     materialOptions.forEach((material) => {
-        const group = document.createElement('fieldset')
-        group.className = 'admin-utils__atlas-material'
+        const materialGroup = document.createElement('div')
+        materialGroup.className = 'admin-utils__atlas-material-group'
 
-        const legend = document.createElement('legend')
-        legend.textContent = material.label
-        group.append(legend)
+        ;(['plate', 'chain'] as ArmorMaterialFamily[]).forEach((family) => {
+            const group = document.createElement('fieldset')
+            group.className = 'admin-utils__atlas-material'
+            group.dataset.atlasFamily = family
 
-        const createParameterInput = (parameter: AtlasMaterialParameter) => {
-            const input = document.createElement('input')
-            input.type = 'number'
-            input.min = '-100'
-            input.max = '100'
-            input.step = '1'
-            input.value = String(atlasMaterialSettings[String(material.value)][parameter])
-            input.dataset.atlasMaterial = String(material.value)
-            input.dataset.atlasParameter = parameter
-            return input
-        }
+            const legend = document.createElement('legend')
+            legend.textContent = `${material.label} – ${family === 'plate' ? 'Plate' : 'Chain'}`
+            group.append(legend)
 
-        const parameters: Array<{ key: AtlasMaterialParameter, label: string }> = [
-            { key: 'brightness', label: 'Brightness' },
-            { key: 'contrast', label: 'Contrast' },
-        ]
-        parameters.forEach((parameter) => {
-            const label = document.createElement('label')
-            label.className = 'admin-utils__atlas-parameter'
+            const createParameterInput = (parameter: AtlasMaterialParameter) => {
+                const input = document.createElement('input')
+                input.type = 'number'
+                input.min = '-100'
+                input.max = '100'
+                input.step = '1'
+                input.value = String(atlasMaterialSettingsByFamily[family][String(material.value)][parameter])
+                input.dataset.atlasMaterial = String(material.value)
+                input.dataset.atlasParameter = parameter
+                return input
+            }
 
-            const title = document.createElement('span')
-            title.textContent = parameter.label
-            label.append(title, createParameterInput(parameter.key))
-            group.append(label)
+            const parameters: Array<{ key: AtlasMaterialParameter, label: string }> = [
+                { key: 'brightness', label: 'Brightness' },
+                { key: 'contrast', label: 'Contrast' },
+            ]
+            parameters.forEach((parameter) => {
+                const label = document.createElement('label')
+                label.className = 'admin-utils__atlas-parameter'
+
+                const title = document.createElement('span')
+                title.textContent = parameter.label
+                label.append(title, createParameterInput(parameter.key))
+                group.append(label)
+            })
+
+            const hueGroup = document.createElement('div')
+            hueGroup.className = 'admin-utils__atlas-hue'
+            const hueTitle = document.createElement('span')
+            hueTitle.textContent = 'Hue (RGB)'
+            hueGroup.append(hueTitle)
+
+            const hueFields = document.createElement('div')
+            hueFields.className = 'admin-utils__atlas-hue-fields'
+            const hueParameters: Array<{ key: AtlasMaterialParameter, label: string }> = [
+                { key: 'hueR', label: 'R' },
+                { key: 'hueG', label: 'G' },
+                { key: 'hueB', label: 'B' },
+            ]
+            hueParameters.forEach((parameter) => {
+                const label = document.createElement('label')
+                const title = document.createElement('span')
+                title.textContent = parameter.label
+                label.append(title, createParameterInput(parameter.key))
+                hueFields.append(label)
+            })
+            hueGroup.append(hueFields)
+            group.append(hueGroup)
+
+            const confirmButton = document.createElement('button')
+            confirmButton.type = 'button'
+            confirmButton.className = 'admin-utils__atlas-confirm'
+            confirmButton.dataset.confirmAtlasMaterial = String(material.value)
+            confirmButton.textContent = 'potvrdit'
+            confirmButton.disabled = true
+            group.append(confirmButton)
+            materialGroup.append(group)
         })
-
-        const hueGroup = document.createElement('div')
-        hueGroup.className = 'admin-utils__atlas-hue'
-        const hueTitle = document.createElement('span')
-        hueTitle.textContent = 'Hue (RGB)'
-        hueGroup.append(hueTitle)
-
-        const hueFields = document.createElement('div')
-        hueFields.className = 'admin-utils__atlas-hue-fields'
-        const hueParameters: Array<{ key: AtlasMaterialParameter, label: string }> = [
-            { key: 'hueR', label: 'R' },
-            { key: 'hueG', label: 'G' },
-            { key: 'hueB', label: 'B' },
-        ]
-        hueParameters.forEach((parameter) => {
-            const label = document.createElement('label')
-            const title = document.createElement('span')
-            title.textContent = parameter.label
-            label.append(title, createParameterInput(parameter.key))
-            hueFields.append(label)
-        })
-        hueGroup.append(hueFields)
-        group.append(hueGroup)
-
-        const confirmButton = document.createElement('button')
-        confirmButton.type = 'button'
-        confirmButton.className = 'admin-utils__atlas-confirm'
-        confirmButton.dataset.confirmAtlasMaterial = String(material.value)
-        confirmButton.textContent = 'potvrdit'
-        confirmButton.disabled = true
-        group.append(confirmButton)
-        container.append(group)
+        container.append(materialGroup)
     })
 }
 
 function readMaterialAtlasControls(root: HTMLElement) {
+    const family = root.dataset.atlasFamily as ArmorMaterialFamily
+    const materialSettings = atlasMaterialSettingsByFamily[family]
     root.querySelectorAll<HTMLInputElement>('[data-atlas-material][data-atlas-parameter]').forEach((input) => {
         const materialId = input.dataset.atlasMaterial!
         const parameter = input.dataset.atlasParameter as AtlasMaterialParameter
         const value = normalizeAtlasParameter(input.value)
         input.value = String(value)
-        atlasMaterialSettings[materialId][parameter] = value
+        materialSettings[materialId][parameter] = value
     })
 }
 
@@ -665,8 +730,10 @@ export async function mountAdminUtils() {
     const savedSettings = loadAdminUtilsSettings()
     Object.assign(slotSelections, savedSettings.equipment)
     Object.assign(slotMaterialSelections, savedSettings.materials)
+    Object.assign(sectionOpenStates, savedSettings.sections)
     materialOptions.forEach((option) => {
-        Object.assign(atlasMaterialSettings[String(option.value)], savedSettings.atlasMaterials[String(option.value)])
+        Object.assign(plateAtlasMaterialSettings[String(option.value)], savedSettings.atlasMaterials[String(option.value)])
+        Object.assign(chainAtlasMaterialSettings[String(option.value)], savedSettings.chainAtlasMaterials[String(option.value)])
     })
 
     document.title = 'Admin Utils · Darkenlight'
@@ -677,6 +744,10 @@ export async function mountAdminUtils() {
     const canvas = root.querySelector<HTMLCanvasElement>('#adminUtilsCanvas')!
     const status = root.querySelector<HTMLElement>('#adminUtilsStatus')!
     const animationSelect = root.querySelector<HTMLSelectElement>('#adminUtilsAnimation')!
+    const collapsibleSections: Array<[AdminUtilsSection, HTMLDetailsElement]> = [
+        ['materialAtlas', root.querySelector<HTMLDetailsElement>('#adminUtilsMaterialAtlasSection')!],
+        ['equipment', root.querySelector<HTMLDetailsElement>('#adminUtilsEquipmentSection')!],
+    ]
     const equipmentSelects = Array.from(root.querySelectorAll<HTMLSelectElement>('[data-slot]'))
     const materialSelects = Array.from(root.querySelectorAll<HTMLSelectElement>('[data-material-slot]'))
     const atlasMaterialConfirmButtons = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-confirm-atlas-material]'))
@@ -684,6 +755,13 @@ export async function mountAdminUtils() {
     const modifierToggles = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-modifier-toggle]'))
     const modifierEditors = Array.from(root.querySelectorAll<HTMLElement>('[data-modifier-editor]'))
     animationSelect.value = savedSettings.animation
+    collapsibleSections.forEach(([section, details]) => {
+        details.open = sectionOpenStates[section]
+        details.addEventListener('toggle', () => {
+            sectionOpenStates[section] = details.open
+            saveAdminUtilsSettings(animationSelect.value)
+        })
+    })
 
     const engine = new Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true })
     const scene = new Scene(engine)
@@ -760,30 +838,51 @@ export async function mountAdminUtils() {
         const plateArmorMaterial = plateArmorType?.mesh?.material
         const plateHelmetType = EquipManager.getItemType(MODEL_IDS.helm)
         const plateHelmetMaterial = plateHelmetType?.mesh?.material
+        const platePauldronType = EquipManager.getItemType(MODEL_IDS.pauldronsPlate)
+        const platePauldronMaterial = platePauldronType?.mesh?.material
         const plateLegType = EquipManager.getItemType(MODEL_IDS.legsPlate)
         const plateLegMaterial = plateLegType?.mesh?.material
-        if (!(plateArmorMaterial instanceof PBRMaterial) || !(plateHelmetMaterial instanceof PBRMaterial) || !(plateLegMaterial instanceof PBRMaterial)) {
-            throw new Error('Plate armor material is unavailable for generated atlas preview')
+        const chainMailType = EquipManager.getItemType(MODEL_IDS.chainMail)
+        const chainMailMaterial = chainMailType?.mesh?.material
+        const chainLegType = EquipManager.getItemType(MODEL_IDS.chainGreaves)
+        const chainLegMaterial = chainLegType?.mesh?.material
+        if (!(plateArmorMaterial instanceof PBRMaterial) || !(plateHelmetMaterial instanceof PBRMaterial) || !(platePauldronMaterial instanceof PBRMaterial) || !(plateLegMaterial instanceof PBRMaterial) || !(chainMailMaterial instanceof PBRMaterial) || !(chainLegMaterial instanceof PBRMaterial)) {
+            throw new Error('Armor material is unavailable for generated atlas preview')
         }
         materialOptions.forEach((option) => {
             plateArmorType!.cbData.materialAtlasIndices?.set(option.value - 1, getEquipAtlasIndex(option.atlasTile))
             plateHelmetType!.cbData.materialAtlasIndices?.set(option.value - 1, getEquipAtlasIndex(option.atlasTile))
+            platePauldronType!.cbData.materialAtlasIndices?.set(option.value - 1, getEquipAtlasIndex(option.atlasTile))
             plateLegType!.cbData.materialAtlasIndices?.set(option.value - 1, getEquipAtlasIndex(option.atlasTile))
+            chainMailType!.cbData.materialAtlasIndices?.set(option.value - 1, getEquipAtlasIndex(option.atlasTile))
+            chainLegType!.cbData.materialAtlasIndices?.set(option.value - 1, getEquipAtlasIndex(option.atlasTile))
         })
-        const [plateArmorLayers, plateHelmetLayers, plateLegLayers] = await Promise.all([
+        const [plateArmorLayers, plateHelmetLayers, platePauldronLayers, plateLegLayers, chainMailLayers, chainLegLayers] = await Promise.all([
             loadArmorAtlasLayers(PLATE_ARMOR_PRIMARY_TEXTURE, PLATE_ARMOR_SECONDARY_TEXTURE),
             loadArmorAtlasLayers(PLATE_HELMET_PRIMARY_TEXTURE, PLATE_HELMET_SECONDARY_TEXTURE),
+            loadArmorAtlasLayers(PLATE_PAULDRON_PRIMARY_TEXTURE, PLATE_PAULDRON_SECONDARY_TEXTURE),
             loadArmorAtlasLayers(PLATE_LEG_PRIMARY_TEXTURE, PLATE_LEG_SECONDARY_TEXTURE),
+            loadArmorAtlasLayers(CHAIN_MAIL_PRIMARY_TEXTURE, CHAIN_MAIL_SECONDARY_TEXTURE),
+            loadArmorAtlasLayers(CHAIN_LEG_PRIMARY_TEXTURE, CHAIN_LEG_SECONDARY_TEXTURE),
         ])
-        const generatedPlateArmorAtlas = createGeneratedArmorAtlas(scene, 'adminUtilsGeneratedPlateArmorAtlas', plateArmorLayers)
-        const generatedPlateHelmetAtlas = createGeneratedArmorAtlas(scene, 'adminUtilsGeneratedPlateHelmetAtlas', plateHelmetLayers)
-        const generatedPlateLegAtlas = createGeneratedArmorAtlas(scene, 'adminUtilsGeneratedPlateLegAtlas', plateLegLayers)
+        const generatedPlateArmorAtlas = createGeneratedArmorAtlas(scene, 'adminUtilsGeneratedPlateArmorAtlas', plateArmorLayers, plateAtlasMaterialSettings)
+        const generatedPlateHelmetAtlas = createGeneratedArmorAtlas(scene, 'adminUtilsGeneratedPlateHelmetAtlas', plateHelmetLayers, plateAtlasMaterialSettings)
+        const generatedPlatePauldronAtlas = createGeneratedArmorAtlas(scene, 'adminUtilsGeneratedPlatePauldronAtlas', platePauldronLayers, plateAtlasMaterialSettings)
+        const generatedPlateLegAtlas = createGeneratedArmorAtlas(scene, 'adminUtilsGeneratedPlateLegAtlas', plateLegLayers, plateAtlasMaterialSettings)
+        const generatedChainMailAtlas = createGeneratedArmorAtlas(scene, 'adminUtilsGeneratedChainMailAtlas', chainMailLayers, chainAtlasMaterialSettings)
+        const generatedChainLegAtlas = createGeneratedArmorAtlas(scene, 'adminUtilsGeneratedChainLegAtlas', chainLegLayers, chainAtlasMaterialSettings)
         plateArmorMaterial.albedoTexture?.dispose()
         plateArmorMaterial.albedoTexture = generatedPlateArmorAtlas
         plateHelmetMaterial.albedoTexture?.dispose()
         plateHelmetMaterial.albedoTexture = generatedPlateHelmetAtlas
+        platePauldronMaterial.albedoTexture?.dispose()
+        platePauldronMaterial.albedoTexture = generatedPlatePauldronAtlas
         plateLegMaterial.albedoTexture?.dispose()
         plateLegMaterial.albedoTexture = generatedPlateLegAtlas
+        chainMailMaterial.albedoTexture?.dispose()
+        chainMailMaterial.albedoTexture = generatedChainMailAtlas
+        chainLegMaterial.albedoTexture?.dispose()
+        chainLegMaterial.albedoTexture = generatedChainLegAtlas
 
         const model = await CharacterModel.create(createPreviewCharacter(), true)
         model.node.rotation.y = Math.PI / 2
@@ -814,10 +913,10 @@ export async function mountAdminUtils() {
             const exportLink = root.querySelector<HTMLAnchorElement>(`[data-export-atlas="${slot}"]`)!
             toggle.disabled = modelId == null
             materialSelect.disabled = modelId == null
-            const canExportAtlas = modelId === MODEL_IDS.armorPlate || modelId === MODEL_IDS.helm || modelId === MODEL_IDS.legsPlate
+            const canExportAtlas = modelId === MODEL_IDS.armorPlate || modelId === MODEL_IDS.helm || modelId === MODEL_IDS.pauldronsPlate || modelId === MODEL_IDS.legsPlate || modelId === MODEL_IDS.chainMail || modelId === MODEL_IDS.chainGreaves
             exportLink.setAttribute('aria-disabled', String(!canExportAtlas))
             exportLink.tabIndex = canExportAtlas ? 0 : -1
-            exportLink.title = canExportAtlas ? '' : 'Export je zatím dostupný pouze pro plátovou zbroj, helmu nebo náholenice'
+            exportLink.title = canExportAtlas ? '' : 'Export atlasu není pro tento typ výbavy dostupný'
             if (modelId == null) {
                 if (expandedModifierSlot === slot) closeModifierEditors()
                 return
@@ -884,10 +983,18 @@ export async function mountAdminUtils() {
         atlasMaterialConfirmButtons.forEach((button) => {
             button.disabled = false
             button.addEventListener('click', () => {
-                readMaterialAtlasControls(button.closest<HTMLElement>('.admin-utils__atlas-material')!)
-                renderGeneratedArmorAtlas(generatedPlateArmorAtlas, plateArmorLayers)
-                renderGeneratedArmorAtlas(generatedPlateHelmetAtlas, plateHelmetLayers)
-                renderGeneratedArmorAtlas(generatedPlateLegAtlas, plateLegLayers)
+                const materialControls = button.closest<HTMLElement>('.admin-utils__atlas-material')!
+                const family = materialControls.dataset.atlasFamily as ArmorMaterialFamily
+                readMaterialAtlasControls(materialControls)
+                if (family === 'plate') {
+                    renderGeneratedArmorAtlas(generatedPlateArmorAtlas, plateArmorLayers, plateAtlasMaterialSettings)
+                    renderGeneratedArmorAtlas(generatedPlateHelmetAtlas, plateHelmetLayers, plateAtlasMaterialSettings)
+                    renderGeneratedArmorAtlas(generatedPlatePauldronAtlas, platePauldronLayers, plateAtlasMaterialSettings)
+                    renderGeneratedArmorAtlas(generatedPlateLegAtlas, plateLegLayers, plateAtlasMaterialSettings)
+                } else {
+                    renderGeneratedArmorAtlas(generatedChainMailAtlas, chainMailLayers, chainAtlasMaterialSettings)
+                    renderGeneratedArmorAtlas(generatedChainLegAtlas, chainLegLayers, chainAtlasMaterialSettings)
+                }
                 saveAdminUtilsSettings(animationSelect.value)
                 button.textContent = 'hotovo'
                 window.setTimeout(() => button.textContent = 'potvrdit', 900)
@@ -903,8 +1010,14 @@ export async function mountAdminUtils() {
                     exportAtlasAsJpeg(generatedPlateArmorAtlas, 'plate_armor.jpg')
                 } else if (modelId === MODEL_IDS.helm) {
                     exportAtlasAsJpeg(generatedPlateHelmetAtlas, 'plate_helmet.jpg')
+                } else if (modelId === MODEL_IDS.pauldronsPlate) {
+                    exportAtlasAsJpeg(generatedPlatePauldronAtlas, 'plate_pauldron.jpg')
                 } else if (modelId === MODEL_IDS.legsPlate) {
                     exportAtlasAsJpeg(generatedPlateLegAtlas, 'plate_leg.jpg')
+                } else if (modelId === MODEL_IDS.chainMail) {
+                    exportAtlasAsJpeg(generatedChainMailAtlas, 'chain_mail.jpg')
+                } else if (modelId === MODEL_IDS.chainGreaves) {
+                    exportAtlasAsJpeg(generatedChainLegAtlas, 'chain_leg.jpg')
                 }
             })
         })
