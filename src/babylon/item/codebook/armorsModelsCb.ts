@@ -11,7 +11,6 @@ import { Materials } from '@/babylon/materials'
 export const BASE_EQUIP_MATERIAL_PATH = "/models/equip/"
 
 // Armor materialId is a 1-based tile position in this atlas; EquipItem converts it to materialId - 1.
-const matMetalSize = new Vector2(16, 8)
 const plateArmorMaterialAtlasSize = new Vector2(4, 4)
 // Server material IDs are converted to zero-based indices before rendering.
 // The generated/exported atlas order is steel, agapyte, astracyte, gold,
@@ -33,6 +32,7 @@ export const ARMOR_MODEL_CACHE_VERSION = '20260925-armor-details-renamed'
 const TEXTURED_PLATE_ARMOR_CACHE_VERSION = '20261020-material-atlas'
 const TEXTURED_PLATE_HELMET_CACHE_VERSION = '20261020-material-atlas-jpg'
 const TEXTURED_PLATE_PAULDRON_CACHE_VERSION = '20261020-material-atlas-jpg'
+const TEXTURED_SHIELD_CACHE_VERSION = '20261021-material-atlas-jpg'
 const TEXTURED_CHAIN_MAIL_CACHE_VERSION = '20261020-material-atlas-jpg'
 const TEXTURED_CHAIN_COIF_CACHE_VERSION = '20261020-material-atlas-jpg'
 const TEXTURED_CHAIN_PAULDRON_CACHE_VERSION = '20261020-material-atlas-jpg'
@@ -58,6 +58,7 @@ export const TEXTURED_ARMOR_MODEL_IDS = new Set([
     EquipSlotModelsCb.HELM.modelId,
     EquipSlotModelsCb.PAULDRONS_PLATE.modelId,
     EquipSlotModelsCb.LEGS_PLATE.modelId,
+    EquipSlotModelsCb.SHIELD.modelId,
     EquipSlotModelsCb.CHAIN_MAIL.modelId,
     EquipSlotModelsCb.CHAIN_COIF.modelId,
     EquipSlotModelsCb.CHAIN_PAULDRONS.modelId,
@@ -144,6 +145,35 @@ export const ArmorsCbManager = {
                 ArmorModelsCb.HELM_MALE,
                 texturedPlateHelmetMaterial,
                 `tripo-helmet-plate.glb?v=${TEXTURED_PLATE_HELMET_CACHE_VERSION}`,
+            ),
+        )
+
+        const texturedShieldMaterial = Materials.getPBRCustomMaterialFrom(
+            scene,
+            'texturedShield',
+            `${BASE_EQUIP_MATERIAL_PATH}armors/`,
+            `shield.jpg?v=${TEXTURED_SHIELD_CACHE_VERSION}`,
+            1 / 4,
+            1 / 4,
+            false,
+            {
+                metallic: 0.75,
+                roughness: 0.9,
+                directIntensity: 1.5,
+                environmentIntensity: 1.2,
+            },
+            false,
+        )
+        texturedShieldMaterial.backFaceCulling = false
+        texturedShieldMaterial.twoSidedLighting = false
+        texturedShieldMaterial.usePhysicalLightFalloff = false
+        texturedShieldMaterial.bumpTexture = createArmorNormalTexture(scene, 'shield_normal.png')
+        map.set(
+            ArmorModelsCb.SHIELD.id,
+            await this.getTexturedArmor(
+                ArmorModelsCb.SHIELD,
+                texturedShieldMaterial,
+                `tripo_shield.glb?v=${TEXTURED_SHIELD_CACHE_VERSION}`,
             ),
         )
 
@@ -384,7 +414,7 @@ export const ArmorModelsCb = {
     PLATE_ARMOR_MALE: new EquipCbItem(EquipSlotModelsCb.ARMOR_PLATE.modelId, 'male-armor-plate2', new Vector3(0, 0.39, 0.01), new Vector3(0.23, 0.22, 0.24), null, plateArmorMaterialAtlasSize, plateArmorMaterialAtlasIndices, 12),
 
     HELM_MALE: new EquipCbItem(EquipSlotModelsCb.HELM.modelId, 'male-helmet', new Vector3(0, 0.25, 0.01), BabylonUtils.getSymVector(0.215), null, plateArmorMaterialAtlasSize, plateArmorMaterialAtlasIndices, 12),
-    SHIELD: new EquipCbItem(EquipSlotModelsCb.SHIELD.modelId, 'shield', new Vector3(0.15, 0, 0.15), new Vector3(0.22, 0.22, 0.2), null, matMetalSize),
+    SHIELD: new EquipCbItem(EquipSlotModelsCb.SHIELD.modelId, 'shield', new Vector3(0.15, 0, 0.15), new Vector3(0.22, 0.22, 0.2), null, plateArmorMaterialAtlasSize, plateArmorMaterialAtlasIndices, 12),
 
     PAULDRON_MALE: new EquipCbItem(EquipSlotModelsCb.PAULDRONS_PLATE.modelId, 'male-pauldron-plate', new Vector3(-0.06, 0, 0), new Vector3(0.26, 0.32, 0.36), null, plateArmorMaterialAtlasSize, plateArmorMaterialAtlasIndices, 12),
 
