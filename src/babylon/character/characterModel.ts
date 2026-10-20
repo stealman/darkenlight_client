@@ -290,7 +290,7 @@ export class CharacterModel implements EquipBearer {
     }
 
     assignRightPauldron(type: number, matIndex: number) {
-        const mirrorScale = type === EquipSlotModelsCb.PAULDRONS_PLATE.modelId
+        const mirrorScale = type === EquipSlotModelsCb.PAULDRONS_PLATE.modelId || type === EquipSlotModelsCb.CHAIN_PAULDRONS.modelId
             ? new Vector3(1, 1, -1)
             : null
         this.addEquippedItem(

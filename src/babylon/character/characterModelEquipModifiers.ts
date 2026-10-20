@@ -33,7 +33,9 @@ export const CharacterModelEquipModifiers = new Map<number, EquipModelModifier>(
 
     //[EquipSlotModelsCb.CHAIN_COIF.modelId, modifier(new Vector3(0, 0.046, 0.015), new Vector3(0.875, 1, 1.05))],
     [EquipSlotModelsCb.CHAIN_COIF.modelId, modifier(new Vector3(0.005, -0.37, 0.07), new Vector3(2, 1.9, 2.05))],
-    [EquipSlotModelsCb.CHAIN_PAULDRONS.modelId, modifier(new Vector3(0, 0, 0), new Vector3(1, 1, 1))],
+
+    //[EquipSlotModelsCb.CHAIN_PAULDRONS.modelId, modifier(new Vector3(0, 0, 0), new Vector3(1, 1, 1))],
+    [EquipSlotModelsCb.CHAIN_PAULDRONS.modelId, modifier(new Vector3(-0.1, 0.25, 0.13), new Vector3(2.45, 1.3, 1.8), new Vector3(2.95, 1.7, 0.09))],
 
     //[EquipSlotModelsCb.CHAIN_GREAVES.modelId, modifier(new Vector3(0.03, 0, -0.01), new Vector3(1.05, 1, 1.07))],
     [EquipSlotModelsCb.CHAIN_GREAVES.modelId, modifier(new Vector3(0.09, 0.72, -0.045), new Vector3(1.65, 1.3, 2.25), new Vector3(3.2, 1.58, 0.03))],

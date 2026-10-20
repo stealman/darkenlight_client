@@ -61,6 +61,10 @@ const PLATE_LEG_PRIMARY_TEXTURE = '/models/equip/armors/plate_leg_primary.png?v=
 const PLATE_LEG_SECONDARY_TEXTURE = '/models/equip/armors/plate_leg_secondary.png?v=20261020-generated-atlas'
 const CHAIN_MAIL_PRIMARY_TEXTURE = '/models/equip/armors/chain_mail_primary.png?v=20261020-generated-atlas'
 const CHAIN_MAIL_SECONDARY_TEXTURE = '/models/equip/armors/chain_mail_secondary.png?v=20261020-generated-atlas'
+const CHAIN_COIF_PRIMARY_TEXTURE = '/models/equip/armors/chain_coif_primary.png?v=20261020-generated-atlas'
+const CHAIN_COIF_SECONDARY_TEXTURE = '/models/equip/armors/chain_coif_secondary.png?v=20261020-generated-atlas'
+const CHAIN_PAULDRON_PRIMARY_TEXTURE = '/models/equip/armors/chain_pauldron_primary.png?v=20261020-generated-atlas'
+const CHAIN_PAULDRON_SECONDARY_TEXTURE = '/models/equip/armors/chain_pauldron_secondary.png?v=20261020-generated-atlas'
 const CHAIN_LEG_PRIMARY_TEXTURE = '/models/equip/armors/chain_legs_primary.png?v=20261020-generated-atlas'
 const CHAIN_LEG_SECONDARY_TEXTURE = '/models/equip/armors/chain_legs_secondary.png?v=20261020-generated-atlas'
 
@@ -844,9 +848,13 @@ export async function mountAdminUtils() {
         const plateLegMaterial = plateLegType?.mesh?.material
         const chainMailType = EquipManager.getItemType(MODEL_IDS.chainMail)
         const chainMailMaterial = chainMailType?.mesh?.material
+        const chainCoifType = EquipManager.getItemType(MODEL_IDS.chainCoif)
+        const chainCoifMaterial = chainCoifType?.mesh?.material
+        const chainPauldronType = EquipManager.getItemType(MODEL_IDS.chainPauldrons)
+        const chainPauldronMaterial = chainPauldronType?.mesh?.material
         const chainLegType = EquipManager.getItemType(MODEL_IDS.chainGreaves)
         const chainLegMaterial = chainLegType?.mesh?.material
-        if (!(plateArmorMaterial instanceof PBRMaterial) || !(plateHelmetMaterial instanceof PBRMaterial) || !(platePauldronMaterial instanceof PBRMaterial) || !(plateLegMaterial instanceof PBRMaterial) || !(chainMailMaterial instanceof PBRMaterial) || !(chainLegMaterial instanceof PBRMaterial)) {
+        if (!(plateArmorMaterial instanceof PBRMaterial) || !(plateHelmetMaterial instanceof PBRMaterial) || !(platePauldronMaterial instanceof PBRMaterial) || !(plateLegMaterial instanceof PBRMaterial) || !(chainMailMaterial instanceof PBRMaterial) || !(chainCoifMaterial instanceof PBRMaterial) || !(chainPauldronMaterial instanceof PBRMaterial) || !(chainLegMaterial instanceof PBRMaterial)) {
             throw new Error('Armor material is unavailable for generated atlas preview')
         }
         materialOptions.forEach((option) => {
@@ -855,14 +863,18 @@ export async function mountAdminUtils() {
             platePauldronType!.cbData.materialAtlasIndices?.set(option.value - 1, getEquipAtlasIndex(option.atlasTile))
             plateLegType!.cbData.materialAtlasIndices?.set(option.value - 1, getEquipAtlasIndex(option.atlasTile))
             chainMailType!.cbData.materialAtlasIndices?.set(option.value - 1, getEquipAtlasIndex(option.atlasTile))
+            chainCoifType!.cbData.materialAtlasIndices?.set(option.value - 1, getEquipAtlasIndex(option.atlasTile))
+            chainPauldronType!.cbData.materialAtlasIndices?.set(option.value - 1, getEquipAtlasIndex(option.atlasTile))
             chainLegType!.cbData.materialAtlasIndices?.set(option.value - 1, getEquipAtlasIndex(option.atlasTile))
         })
-        const [plateArmorLayers, plateHelmetLayers, platePauldronLayers, plateLegLayers, chainMailLayers, chainLegLayers] = await Promise.all([
+        const [plateArmorLayers, plateHelmetLayers, platePauldronLayers, plateLegLayers, chainMailLayers, chainCoifLayers, chainPauldronLayers, chainLegLayers] = await Promise.all([
             loadArmorAtlasLayers(PLATE_ARMOR_PRIMARY_TEXTURE, PLATE_ARMOR_SECONDARY_TEXTURE),
             loadArmorAtlasLayers(PLATE_HELMET_PRIMARY_TEXTURE, PLATE_HELMET_SECONDARY_TEXTURE),
             loadArmorAtlasLayers(PLATE_PAULDRON_PRIMARY_TEXTURE, PLATE_PAULDRON_SECONDARY_TEXTURE),
             loadArmorAtlasLayers(PLATE_LEG_PRIMARY_TEXTURE, PLATE_LEG_SECONDARY_TEXTURE),
             loadArmorAtlasLayers(CHAIN_MAIL_PRIMARY_TEXTURE, CHAIN_MAIL_SECONDARY_TEXTURE),
+            loadArmorAtlasLayers(CHAIN_COIF_PRIMARY_TEXTURE, CHAIN_COIF_SECONDARY_TEXTURE),
+            loadArmorAtlasLayers(CHAIN_PAULDRON_PRIMARY_TEXTURE, CHAIN_PAULDRON_SECONDARY_TEXTURE),
             loadArmorAtlasLayers(CHAIN_LEG_PRIMARY_TEXTURE, CHAIN_LEG_SECONDARY_TEXTURE),
         ])
         const generatedPlateArmorAtlas = createGeneratedArmorAtlas(scene, 'adminUtilsGeneratedPlateArmorAtlas', plateArmorLayers, plateAtlasMaterialSettings)
@@ -870,6 +882,8 @@ export async function mountAdminUtils() {
         const generatedPlatePauldronAtlas = createGeneratedArmorAtlas(scene, 'adminUtilsGeneratedPlatePauldronAtlas', platePauldronLayers, plateAtlasMaterialSettings)
         const generatedPlateLegAtlas = createGeneratedArmorAtlas(scene, 'adminUtilsGeneratedPlateLegAtlas', plateLegLayers, plateAtlasMaterialSettings)
         const generatedChainMailAtlas = createGeneratedArmorAtlas(scene, 'adminUtilsGeneratedChainMailAtlas', chainMailLayers, chainAtlasMaterialSettings)
+        const generatedChainCoifAtlas = createGeneratedArmorAtlas(scene, 'adminUtilsGeneratedChainCoifAtlas', chainCoifLayers, chainAtlasMaterialSettings)
+        const generatedChainPauldronAtlas = createGeneratedArmorAtlas(scene, 'adminUtilsGeneratedChainPauldronAtlas', chainPauldronLayers, chainAtlasMaterialSettings)
         const generatedChainLegAtlas = createGeneratedArmorAtlas(scene, 'adminUtilsGeneratedChainLegAtlas', chainLegLayers, chainAtlasMaterialSettings)
         plateArmorMaterial.albedoTexture?.dispose()
         plateArmorMaterial.albedoTexture = generatedPlateArmorAtlas
@@ -881,6 +895,10 @@ export async function mountAdminUtils() {
         plateLegMaterial.albedoTexture = generatedPlateLegAtlas
         chainMailMaterial.albedoTexture?.dispose()
         chainMailMaterial.albedoTexture = generatedChainMailAtlas
+        chainCoifMaterial.albedoTexture?.dispose()
+        chainCoifMaterial.albedoTexture = generatedChainCoifAtlas
+        chainPauldronMaterial.albedoTexture?.dispose()
+        chainPauldronMaterial.albedoTexture = generatedChainPauldronAtlas
         chainLegMaterial.albedoTexture?.dispose()
         chainLegMaterial.albedoTexture = generatedChainLegAtlas
 
@@ -913,7 +931,7 @@ export async function mountAdminUtils() {
             const exportLink = root.querySelector<HTMLAnchorElement>(`[data-export-atlas="${slot}"]`)!
             toggle.disabled = modelId == null
             materialSelect.disabled = modelId == null
-            const canExportAtlas = modelId === MODEL_IDS.armorPlate || modelId === MODEL_IDS.helm || modelId === MODEL_IDS.pauldronsPlate || modelId === MODEL_IDS.legsPlate || modelId === MODEL_IDS.chainMail || modelId === MODEL_IDS.chainGreaves
+            const canExportAtlas = modelId === MODEL_IDS.armorPlate || modelId === MODEL_IDS.helm || modelId === MODEL_IDS.pauldronsPlate || modelId === MODEL_IDS.legsPlate || modelId === MODEL_IDS.chainMail || modelId === MODEL_IDS.chainCoif || modelId === MODEL_IDS.chainPauldrons || modelId === MODEL_IDS.chainGreaves
             exportLink.setAttribute('aria-disabled', String(!canExportAtlas))
             exportLink.tabIndex = canExportAtlas ? 0 : -1
             exportLink.title = canExportAtlas ? '' : 'Export atlasu není pro tento typ výbavy dostupný'
@@ -993,6 +1011,8 @@ export async function mountAdminUtils() {
                     renderGeneratedArmorAtlas(generatedPlateLegAtlas, plateLegLayers, plateAtlasMaterialSettings)
                 } else {
                     renderGeneratedArmorAtlas(generatedChainMailAtlas, chainMailLayers, chainAtlasMaterialSettings)
+                    renderGeneratedArmorAtlas(generatedChainCoifAtlas, chainCoifLayers, chainAtlasMaterialSettings)
+                    renderGeneratedArmorAtlas(generatedChainPauldronAtlas, chainPauldronLayers, chainAtlasMaterialSettings)
                     renderGeneratedArmorAtlas(generatedChainLegAtlas, chainLegLayers, chainAtlasMaterialSettings)
                 }
                 saveAdminUtilsSettings(animationSelect.value)
@@ -1016,6 +1036,10 @@ export async function mountAdminUtils() {
                     exportAtlasAsJpeg(generatedPlateLegAtlas, 'plate_leg.jpg')
                 } else if (modelId === MODEL_IDS.chainMail) {
                     exportAtlasAsJpeg(generatedChainMailAtlas, 'chain_mail.jpg')
+                } else if (modelId === MODEL_IDS.chainCoif) {
+                    exportAtlasAsJpeg(generatedChainCoifAtlas, 'chain_coif.jpg')
+                } else if (modelId === MODEL_IDS.chainPauldrons) {
+                    exportAtlasAsJpeg(generatedChainPauldronAtlas, 'chain_pauldron.jpg')
                 } else if (modelId === MODEL_IDS.chainGreaves) {
                     exportAtlasAsJpeg(generatedChainLegAtlas, 'chain_leg.jpg')
                 }
