@@ -193,8 +193,9 @@ export const Materials = {
         )
     },
 
-    getPBRCustomMaterialFrom(scene: Scene, name: string, basePath: string, texturePath: string, uScale: number, vScale: number, hasAlpha: boolean, options: PBRBasicAtts): PBRCustomMaterial {
-        const albedoTexture = new Texture(basePath + texturePath, scene)
+    getPBRCustomMaterialFrom(scene: Scene, name: string, basePath: string, texturePath: string, uScale: number, vScale: number, hasAlpha: boolean,
+                             options: PBRBasicAtts, invertY: boolean = true): PBRCustomMaterial {
+        const albedoTexture = new Texture(basePath + texturePath, scene, {invertY})
         if (uScale != 1) {
             albedoTexture.uScale = uScale
         }

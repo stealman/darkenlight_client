@@ -125,6 +125,42 @@ select {
     text-transform: uppercase;
 }
 
+.admin-utils__section {
+    border: 0;
+}
+
+.admin-utils__section > summary {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+}
+
+.admin-utils__section > summary::-webkit-details-marker {
+    display: none;
+}
+
+.admin-utils__section > summary::before {
+    color: #829c73;
+    content: "▶";
+    font-size: 9px;
+    transition: transform 120ms ease;
+}
+
+.admin-utils__section[open] > summary::before {
+    transform: rotate(90deg);
+}
+
+.admin-utils__section > summary h2 {
+    margin: 0;
+}
+
+.admin-utils__section[open] > summary {
+    margin-bottom: 14px;
+}
+
 .admin-utils__intro {
     margin-bottom: 0;
     color: #9da99f;
@@ -136,6 +172,99 @@ select {
     display: grid;
     gap: 12px;
     margin-bottom: 12px;
+}
+
+.admin-utils__atlas-materials {
+    display: grid;
+    gap: 10px;
+}
+
+.admin-utils__atlas-material {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+    min-width: 0;
+    margin: 0;
+    padding: 10px;
+    border: 1px solid #334036;
+    border-radius: 5px;
+    background: rgb(5 10 7 / 42%);
+}
+
+.admin-utils__atlas-material legend {
+    padding: 0 5px;
+    color: #c1d2bd;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.admin-utils__atlas-parameter {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+    color: #8f9d91;
+    font-size: 10px;
+}
+
+.admin-utils__atlas-parameter input {
+    min-width: 0;
+    min-height: 32px;
+    padding: 5px 7px;
+    font-family: monospace;
+    font-size: 11px;
+}
+
+.admin-utils__atlas-hue {
+    display: grid;
+    grid-column: 1 / -1;
+    gap: 4px;
+    color: #8f9d91;
+    font-size: 10px;
+}
+
+.admin-utils__atlas-hue-fields {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.admin-utils__atlas-hue-fields label {
+    display: grid;
+    grid-template-columns: 12px minmax(0, 1fr);
+    gap: 3px;
+    align-items: center;
+}
+
+.admin-utils__atlas-hue-fields input {
+    min-width: 0;
+    min-height: 30px;
+    padding: 4px 5px;
+    font-family: monospace;
+    font-size: 10px;
+}
+
+.admin-utils__atlas-confirm {
+    grid-column: 1 / -1;
+    justify-self: end;
+    min-height: 24px;
+    padding: 3px 9px;
+    border: 1px solid #769d60;
+    border-radius: 4px;
+    background: #294720;
+    color: #e4f2dd;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+}
+
+.admin-utils__atlas-confirm:hover:not(:disabled) {
+    background: #355b2a;
+}
+
+.admin-utils__atlas-confirm:disabled {
+    cursor: wait;
+    opacity: 0.5;
 }
 
 .admin-utils__equipment-group {
@@ -194,6 +323,31 @@ select {
 }
 
 .admin-utils__modifier-toggle:disabled {
+    cursor: default;
+    opacity: 0.35;
+}
+
+.admin-utils__equipment-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.admin-utils__atlas-export {
+    color: #829c73;
+    font-size: 10px;
+    line-height: 1.4;
+    text-decoration: underline;
+    text-decoration-color: rgb(130 156 115 / 45%);
+    text-underline-offset: 3px;
+    cursor: pointer;
+}
+
+.admin-utils__atlas-export:hover:not([aria-disabled="true"]) {
+    color: #c1daaf;
+}
+
+.admin-utils__atlas-export[aria-disabled="true"] {
     cursor: default;
     opacity: 0.35;
 }
