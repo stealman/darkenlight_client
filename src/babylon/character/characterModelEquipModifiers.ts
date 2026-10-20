@@ -18,7 +18,7 @@ export const CharacterModelEquipModifiers = new Map<number, EquipModelModifier>(
     [EquipSlotModelsCb.ARMOR_PLATE.modelId, modifier(new Vector3(0, -0.58, -0.02), new Vector3(1.57, 1.45, 1.6), new Vector3(0.02, 0, 0))],
 
     // [EquipSlotModelsCb.HELM.modelId, modifier(new Vector3(0.005, 0.046, 0.015), new Vector3(0.9, 1, 1.05))],
-    [EquipSlotModelsCb.HELM.modelId, modifier(new Vector3(0.005, -0.365, 0), new Vector3(1.87, 1.9, 2.3))],
+    [EquipSlotModelsCb.HELM.modelId, modifier(new Vector3(0.005, -0.35, 0), new Vector3(2, 1.9, 2))],
 
     [EquipSlotModelsCb.SHIELD.modelId, modifier(new Vector3(0, 0, 0), new Vector3(1, 1, 1))],
     [EquipSlotModelsCb.PAULDRONS_PLATE.modelId, modifier(new Vector3(0, 0, 0), new Vector3(1, 1, 1))],
@@ -29,7 +29,8 @@ export const CharacterModelEquipModifiers = new Map<number, EquipModelModifier>(
     //[EquipSlotModelsCb.CHAIN_MAIL.modelId, modifier(new Vector3(0, 0, -0.015), new Vector3(1, 1, 1.14))],
     [EquipSlotModelsCb.CHAIN_MAIL.modelId, modifier(new Vector3(0, -0.56, -0.02), new Vector3(1.35, 1.45, 1.6), new Vector3(0.02, 0, 0))],
 
-    [EquipSlotModelsCb.CHAIN_COIF.modelId, modifier(new Vector3(0, 0.046, 0.015), new Vector3(0.875, 1, 1.05))],
+    //[EquipSlotModelsCb.CHAIN_COIF.modelId, modifier(new Vector3(0, 0.046, 0.015), new Vector3(0.875, 1, 1.05))],
+    [EquipSlotModelsCb.CHAIN_COIF.modelId, modifier(new Vector3(0.005, -0.37, 0.07), new Vector3(2, 1.9, 2))],
     [EquipSlotModelsCb.CHAIN_PAULDRONS.modelId, modifier(new Vector3(0, 0, 0), new Vector3(1, 1, 1))],
 
     //[EquipSlotModelsCb.CHAIN_GREAVES.modelId, modifier(new Vector3(0.03, 0, -0.01), new Vector3(1.05, 1, 1.07))],

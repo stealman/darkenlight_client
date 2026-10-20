@@ -18,6 +18,7 @@ export const ARMOR_MODEL_CACHE_VERSION = '20260925-armor-details-renamed'
 const TEXTURED_PLATE_ARMOR_CACHE_VERSION = '20261011-initial-test'
 const TEXTURED_PLATE_HELMET_CACHE_VERSION = '20261012-initial-test'
 const TEXTURED_CHAIN_MAIL_CACHE_VERSION = '20261012-initial-test'
+const TEXTURED_CHAIN_COIF_CACHE_VERSION = '20261020-initial-test'
 const TEXTURED_PLATE_LEG_CACHE_VERSION = '20261012-initial-test'
 const TEXTURED_CHAIN_LEG_CACHE_VERSION = '20261012-initial-test'
 /** Textured Tripo armour is intentionally excluded from every shadow-generator render list. */
@@ -26,6 +27,7 @@ export const TEXTURED_ARMOR_MODEL_IDS = new Set([
     EquipSlotModelsCb.HELM.modelId,
     EquipSlotModelsCb.LEGS_PLATE.modelId,
     EquipSlotModelsCb.CHAIN_MAIL.modelId,
+    EquipSlotModelsCb.CHAIN_COIF.modelId,
     EquipSlotModelsCb.CHAIN_GREAVES.modelId,
 ])
 
@@ -126,6 +128,31 @@ export const ArmorsCbManager = {
                 ArmorModelsCb.CHAIN_MAIL_MALE,
                 texturedChainMailMaterial,
                 `tripo-male-armor-chain.glb?v=${TEXTURED_CHAIN_MAIL_CACHE_VERSION}`,
+            ),
+        )
+
+        const texturedChainCoifMaterial = Materials.getPBRMaterial(
+            scene,
+            'texturedChainCoif',
+            `${BASE_EQUIP_MATERIAL_PATH}armors/chain_coif.png`,
+            false,
+            false,
+            {
+                metallic: 0.5,
+                roughness: 1,
+                directIntensity: 1.75,
+                environmentIntensity: 1.4,
+            },
+        )
+        texturedChainCoifMaterial.backFaceCulling = false
+        texturedChainCoifMaterial.twoSidedLighting = false
+        texturedChainCoifMaterial.usePhysicalLightFalloff = false
+        map.set(
+            ArmorModelsCb.CHAIN_COIF_MALE.id,
+            await this.getTexturedArmor(
+                ArmorModelsCb.CHAIN_COIF_MALE,
+                texturedChainCoifMaterial,
+                `tripo-chain-coif.glb?v=${TEXTURED_CHAIN_COIF_CACHE_VERSION}`,
             ),
         )
 

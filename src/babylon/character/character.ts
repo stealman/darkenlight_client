@@ -82,6 +82,7 @@ class Character implements Attackable, EffectTarget {
     private lookAngle: number | null = null
     private combatApproachTarget: Vector3 | null = null
     private serverMoveTargets: Vector3[] = []
+    private serverMoveLookAhead: Vector3 | null = null
     private serverMoveStopAtEnd: boolean = false
 
     equipSet: Map<string, Item> = new Map<string, Item>()
@@ -249,8 +250,15 @@ class Character implements Attackable, EffectTarget {
 
         if (this.getMoveAngle() != null) {
             const serverMoveTarget = !myChar ? this.serverMoveTargets[0] : null
+            const waitingForServerMoveTarget = !myChar && !serverMoveTarget
+                && this.serverMoveLookAhead !== null && !this.serverMoveStopAtEnd
             if (serverMoveTarget) {
                 this.setMoveAngle(Math.atan2(-(serverMoveTarget.z - this.pos.z), serverMoveTarget.x - this.pos.x))
+            } else if (waitingForServerMoveTarget) {
+                this.setMoveAngle(Math.atan2(
+                    -(this.serverMoveLookAhead!.z - this.pos.z),
+                    this.serverMoveLookAhead!.x - this.pos.x,
+                ))
             }
             this.setLookAngle(this.getMoveAngle() - (myChar ? Math.PI / 4 : Math.PI / 2))
             // Keep server-driven characters slightly behind the authoritative simulation.
@@ -262,6 +270,10 @@ class Character implements Attackable, EffectTarget {
             const speed = this.getActualSpeed() * serverMoveSpeedFactor
             const angle = Utils.roundToTwoDecimals(this.getMoveAngle()! - (myChar ? 0 : Math.PI / 4))
             const tgtPos = new Vector3(this.pos.x + Math.cos(angle) * speed * timeRate, 0, this.pos.z -Math.sin(angle) * speed * timeRate)
+            if (waitingForServerMoveTarget) {
+                tgtPos.x = this.pos.x
+                tgtPos.z = this.pos.z
+            }
             const reachedServerMoveTarget = serverMoveTarget != null && Math.hypot(
                 this.pos.x - serverMoveTarget.x,
                 this.pos.z - serverMoveTarget.z,
@@ -310,6 +322,11 @@ class Character implements Attackable, EffectTarget {
                     this.setMoveAngle(Math.atan2(-(nextTarget.z - this.pos.z), nextTarget.x - this.pos.x))
                 } else if (this.serverMoveStopAtEnd) {
                     this.stopMovementLocally()
+                } else if (this.serverMoveLookAhead) {
+                    this.setMoveAngle(Math.atan2(
+                        -(this.serverMoveLookAhead.z - this.pos.z),
+                        this.serverMoveLookAhead.x - this.pos.x,
+                    ))
                 } else {
                     this.setMoveAngle(null)
                 }
@@ -356,12 +373,19 @@ class Character implements Attackable, EffectTarget {
         if (!this.autoAttackTarget) {
             return
         }
+        if (this.serverMoveStopAtEnd && this.serverMoveTargets.length > 0) {
+            const finalTarget = this.serverMoveTargets[this.serverMoveTargets.length - 1]
+            this.pos.x = finalTarget.x
+            this.pos.z = finalTarget.z
+            this.logicYpos = Utils.calculateWalkYPos(this.pos.x, this.pos.z, this.getBoxSize())
+            this.stopMovementLocally()
+        }
         this.markCombatActivity()
         if (this.autoAttackTarget instanceof Character) {
             this.autoAttackTarget.markCombatActivity()
         }
 
-        if (TargetingManager.selectedTarget === null && this.getObjectType() !== 'M') {
+        if (TargetingManager.selectedTarget === null && this === MyPlayer.myChar) {
             TargetingManager.setSelectedTarget(this.autoAttackTarget)
         }
 
@@ -569,17 +593,20 @@ class Character implements Attackable, EffectTarget {
                 this.pos.x = serverX
                 this.pos.z = serverZ
             }
-            this.serverMoveTargets = [target]
+            const serverPositionIndex = this.serverMoveTargets.findIndex((point) =>
+                point.x === serverX && point.z === serverZ)
+            this.serverMoveTargets = serverPositionIndex >= 0
+                ? [...this.serverMoveTargets.slice(0, serverPositionIndex + 1), target]
+                : [target]
         }
-        if (nextTarget && !this.serverMoveTargets.some((point) => point.x === nextTarget.x && point.z === nextTarget.z)) {
-            this.serverMoveTargets.push(nextTarget)
-        }
+        this.serverMoveLookAhead = nextTarget
         this.serverMoveStopAtEnd = false
         const currentTarget = this.serverMoveTargets[0]
         this.setMoveAngle(Math.atan2(-(currentTarget.z - this.pos.z), currentTarget.x - this.pos.x))
     }
 
     finishServerMovement(serverX: number, serverZ: number): boolean {
+        this.serverMoveLookAhead = null
         if (this.serverMoveTargets.length === 0) {
             return false
         }
@@ -597,6 +624,7 @@ class Character implements Attackable, EffectTarget {
 
     clearServerMovementTargets() {
         this.serverMoveTargets = []
+        this.serverMoveLookAhead = null
         this.serverMoveStopAtEnd = false
     }
 
