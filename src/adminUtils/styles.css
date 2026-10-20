@@ -371,6 +371,22 @@ select {
     display: none;
 }
 
+.admin-utils__modifier-side {
+    display: grid;
+    gap: 5px;
+}
+
+.admin-utils__modifier-side + .admin-utils__modifier-side {
+    margin-top: 7px;
+    padding-top: 9px;
+    border-top: 1px solid #334036;
+}
+
+.admin-utils__modifier-side > strong {
+    color: #c1d2bd;
+    font-size: 11px;
+}
+
 .admin-utils__modifier-row {
     display: grid;
     grid-template-columns: 57px repeat(3, minmax(0, 1fr));

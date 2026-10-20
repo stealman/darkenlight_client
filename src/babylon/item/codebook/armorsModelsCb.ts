@@ -1,4 +1,4 @@
-import { PBRMaterial, Scene, TransformNode, Vector2, Vector3 } from '@babylonjs/core'
+import { PBRMaterial, Scene, Texture, TransformNode, Vector2, Vector3 } from '@babylonjs/core'
 import { BabylonUtils } from '@/babylon/utils'
 import { EquipItemType} from '@/babylon/item/equipManager'
 import { EquipCbItem} from '@/babylon/item/codebook/equipCbItem'
@@ -38,6 +38,20 @@ const TEXTURED_CHAIN_COIF_CACHE_VERSION = '20261020-material-atlas-jpg'
 const TEXTURED_CHAIN_PAULDRON_CACHE_VERSION = '20261020-material-atlas-jpg'
 const TEXTURED_PLATE_LEG_CACHE_VERSION = '20261020-material-atlas-jpg'
 const TEXTURED_CHAIN_LEG_CACHE_VERSION = '20261020-material-atlas-jpg'
+const ARMOR_NORMAL_CACHE_VERSION = '20261021-single-tile'
+
+function createArmorNormalTexture(scene: Scene, fileName: string): Texture {
+    const texture = new Texture(
+        `${BASE_EQUIP_MATERIAL_PATH}armors/${fileName}?v=${ARMOR_NORMAL_CACHE_VERSION}`,
+        scene,
+        { invertY: false },
+    )
+    texture.gammaSpace = false
+    texture.wrapU = Texture.WRAP_ADDRESSMODE
+    texture.wrapV = Texture.WRAP_ADDRESSMODE
+    return texture
+}
+
 /** Textured Tripo armour is intentionally excluded from every shadow-generator render list. */
 export const TEXTURED_ARMOR_MODEL_IDS = new Set([
     EquipSlotModelsCb.ARMOR_PLATE.modelId,
@@ -94,6 +108,7 @@ export const ArmorsCbManager = {
         texturedPlateMaterial.backFaceCulling = false
         texturedPlateMaterial.twoSidedLighting = false
         texturedPlateMaterial.usePhysicalLightFalloff = false
+        texturedPlateMaterial.bumpTexture = createArmorNormalTexture(scene, 'plate_armor_normal.png')
         map.set(
             ArmorModelsCb.PLATE_ARMOR_MALE.id,
             await this.getTexturedArmor(
@@ -122,6 +137,7 @@ export const ArmorsCbManager = {
         texturedPlateHelmetMaterial.backFaceCulling = false
         texturedPlateHelmetMaterial.twoSidedLighting = false
         texturedPlateHelmetMaterial.usePhysicalLightFalloff = false
+        texturedPlateHelmetMaterial.bumpTexture = createArmorNormalTexture(scene, 'plate_helmet_normal.png')
         map.set(
             ArmorModelsCb.HELM_MALE.id,
             await this.getTexturedArmor(
@@ -147,10 +163,11 @@ export const ArmorsCbManager = {
             },
             false,
         )
-        // The left pauldron is a mirrored thin instance of this single-side mesh.
+        // The right pauldron is a mirrored thin instance of this single-side mesh.
         texturedPlatePauldronMaterial.backFaceCulling = false
         texturedPlatePauldronMaterial.twoSidedLighting = false
         texturedPlatePauldronMaterial.usePhysicalLightFalloff = false
+        texturedPlatePauldronMaterial.bumpTexture = createArmorNormalTexture(scene, 'plate_pauldron_normal.png')
         map.set(
             ArmorModelsCb.PAULDRON_MALE.id,
             await this.getTexturedArmor(
@@ -179,6 +196,7 @@ export const ArmorsCbManager = {
         texturedChainMailMaterial.backFaceCulling = false
         texturedChainMailMaterial.twoSidedLighting = false
         texturedChainMailMaterial.usePhysicalLightFalloff = false
+        texturedChainMailMaterial.bumpTexture = createArmorNormalTexture(scene, 'chain_mail_normal.png')
         map.set(
             ArmorModelsCb.CHAIN_MAIL_MALE.id,
             await this.getTexturedArmor(
@@ -207,6 +225,7 @@ export const ArmorsCbManager = {
         texturedChainCoifMaterial.backFaceCulling = false
         texturedChainCoifMaterial.twoSidedLighting = false
         texturedChainCoifMaterial.usePhysicalLightFalloff = false
+        texturedChainCoifMaterial.bumpTexture = createArmorNormalTexture(scene, 'chain_coif_normal.png')
         map.set(
             ArmorModelsCb.CHAIN_COIF_MALE.id,
             await this.getTexturedArmor(
@@ -235,6 +254,7 @@ export const ArmorsCbManager = {
         texturedChainPauldronMaterial.backFaceCulling = false
         texturedChainPauldronMaterial.twoSidedLighting = false
         texturedChainPauldronMaterial.usePhysicalLightFalloff = false
+        texturedChainPauldronMaterial.bumpTexture = createArmorNormalTexture(scene, 'chain_pauldron_normal.png')
         map.set(
             ArmorModelsCb.CHAIN_PAULDRONS_MALE.id,
             await this.getTexturedArmor(
@@ -264,6 +284,7 @@ export const ArmorsCbManager = {
         texturedPlateLegMaterial.backFaceCulling = false
         texturedPlateLegMaterial.twoSidedLighting = false
         texturedPlateLegMaterial.usePhysicalLightFalloff = false
+        texturedPlateLegMaterial.bumpTexture = createArmorNormalTexture(scene, 'plate_leg_normal.png')
         map.set(
             ArmorModelsCb.LEG_MALE.id,
             await this.getTexturedArmor(
@@ -292,6 +313,7 @@ export const ArmorsCbManager = {
         texturedChainLegMaterial.backFaceCulling = false
         texturedChainLegMaterial.twoSidedLighting = false
         texturedChainLegMaterial.usePhysicalLightFalloff = false
+        texturedChainLegMaterial.bumpTexture = createArmorNormalTexture(scene, 'chain_legs_normal.png')
         map.set(
             ArmorModelsCb.CHAIN_GREAVES_MALE.id,
             await this.getTexturedArmor(

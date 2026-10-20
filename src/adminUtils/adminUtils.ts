@@ -25,6 +25,7 @@ type AdminUtilsSection = 'materialAtlas' | 'equipment'
 type ArmorMaterialFamily = 'plate' | 'chain'
 type ModifierComponent = 'scale' | 'position' | 'rotation'
 type ModifierAxis = 'x' | 'y' | 'z'
+type PauldronSide = 'left' | 'right'
 type AtlasMaterialParameter = 'brightness' | 'contrast' | 'hueR' | 'hueG' | 'hueB'
 
 interface GeneratedArmorMaterialParameters {
@@ -522,6 +523,38 @@ function exportAtlasAsJpeg(texture: DynamicTexture, fileName: string) {
     }, 'image/jpeg', 0.82)
 }
 
+function appendModifierControls(container: HTMLElement) {
+    const header = document.createElement('div')
+    header.className = 'admin-utils__modifier-row admin-utils__modifier-row--header'
+    header.append(document.createElement('span'))
+    MODIFIER_AXES.forEach((axis) => {
+        const axisLabel = document.createElement('span')
+        axisLabel.textContent = axis.toUpperCase()
+        header.append(axisLabel)
+    })
+    container.append(header)
+
+    MODIFIER_COMPONENTS.forEach((component) => {
+        const row = document.createElement('label')
+        row.className = 'admin-utils__modifier-row'
+
+        const componentLabel = document.createElement('span')
+        componentLabel.textContent = component
+        row.append(componentLabel)
+
+        MODIFIER_AXES.forEach((axis) => {
+            const input = document.createElement('input')
+            input.type = 'number'
+            input.step = '0.001'
+            input.dataset.modifierComponent = component
+            input.dataset.modifierAxis = axis
+            input.setAttribute('aria-label', `${component} ${axis}`)
+            row.append(input)
+        })
+        container.append(row)
+    })
+}
+
 function createEquipmentControls(container: HTMLElement) {
     (Object.keys(slotOptions) as PreviewSlot[]).forEach((slot) => {
         const group = document.createElement('div')
@@ -589,35 +622,20 @@ function createEquipmentControls(container: HTMLElement) {
         editor.dataset.modifierEditor = slot
         editor.hidden = true
 
-        const header = document.createElement('div')
-        header.className = 'admin-utils__modifier-row admin-utils__modifier-row--header'
-        header.append(document.createElement('span'))
-        MODIFIER_AXES.forEach((axis) => {
-            const axisLabel = document.createElement('span')
-            axisLabel.textContent = axis.toUpperCase()
-            header.append(axisLabel)
-        })
-        editor.append(header)
-
-        MODIFIER_COMPONENTS.forEach((component) => {
-            const row = document.createElement('label')
-            row.className = 'admin-utils__modifier-row'
-
-            const componentLabel = document.createElement('span')
-            componentLabel.textContent = component
-            row.append(componentLabel)
-
-            MODIFIER_AXES.forEach((axis) => {
-                const input = document.createElement('input')
-                input.type = 'number'
-                input.step = '0.001'
-                input.dataset.modifierComponent = component
-                input.dataset.modifierAxis = axis
-                input.setAttribute('aria-label', `${component} ${axis}`)
-                row.append(input)
+        if (slot === 'pauldrons') {
+            ;(['left', 'right'] as PauldronSide[]).forEach((side) => {
+                const sideEditor = document.createElement('div')
+                sideEditor.className = 'admin-utils__modifier-side'
+                sideEditor.dataset.modifierSide = side
+                const sideTitle = document.createElement('strong')
+                sideTitle.textContent = side === 'left' ? 'Levý pauldron' : 'Pravý pauldron'
+                sideEditor.append(sideTitle)
+                appendModifierControls(sideEditor)
+                editor.append(sideEditor)
             })
-            editor.append(row)
-        })
+        } else {
+            appendModifierControls(editor)
+        }
 
         group.append(label, materialLabel, actions, editor)
         container.append(group)
@@ -780,7 +798,7 @@ export async function mountAdminUtils() {
         { EquipManager },
         { Materials },
         { Lights },
-        { CharacterModelEquipModifiers },
+        { CharacterModelEquipModifiers, CharacterModelPauldronModifiers },
     ] = await Promise.all([
         import('@/babylon/character/characterModel'),
         import('@/babylon/item/equipManager'),
@@ -923,6 +941,17 @@ export async function mountAdminUtils() {
             modifierToggles.forEach((toggle) => toggle.classList.remove('admin-utils__modifier-toggle--expanded'))
             expandedModifierSlot = null
         }
+        const populateSlotModifierEditor = (editor: HTMLElement, slot: PreviewSlot, modelId: number) => {
+            if (slot !== 'pauldrons') {
+                populateModifierEditor(editor, CharacterModelEquipModifiers.get(modelId) ?? null)
+                return
+            }
+            const pairedModifiers = CharacterModelPauldronModifiers.get(modelId)
+            ;(['left', 'right'] as PauldronSide[]).forEach((side) => {
+                const sideEditor = editor.querySelector<HTMLElement>(`[data-modifier-side="${side}"]`)!
+                populateModifierEditor(sideEditor, pairedModifiers?.[side] ?? null)
+            })
+        }
         const refreshModifierControl = (slot: PreviewSlot) => {
             const modelId = slotSelections[slot]
             const toggle = root.querySelector<HTMLButtonElement>(`[data-modifier-toggle="${slot}"]`)!
@@ -940,7 +969,7 @@ export async function mountAdminUtils() {
                 return
             }
             if (expandedModifierSlot === slot) {
-                populateModifierEditor(editor, CharacterModelEquipModifiers.get(modelId) ?? null)
+                populateSlotModifierEditor(editor, slot, modelId)
             }
         }
 
@@ -957,7 +986,7 @@ export async function mountAdminUtils() {
                 if (modelId == null) return
                 closeModifierEditors()
                 const editor = root.querySelector<HTMLElement>(`[data-modifier-editor="${slot}"]`)!
-                populateModifierEditor(editor, CharacterModelEquipModifiers.get(modelId) ?? null)
+                populateSlotModifierEditor(editor, slot, modelId)
                 editor.hidden = false
                 toggle.classList.add('admin-utils__modifier-toggle--expanded')
                 expandedModifierSlot = slot
@@ -965,14 +994,25 @@ export async function mountAdminUtils() {
         })
 
         modifierEditors.forEach((editor) => {
-            editor.addEventListener('input', () => {
+            editor.addEventListener('input', (event) => {
                 const slot = editor.dataset.modifierEditor as PreviewSlot
                 const modelId = slotSelections[slot]
                 if (modelId == null) return
-                const modifier = readModifierEditor(editor)
+                const sideEditor = slot === 'pauldrons'
+                    ? (event.target as HTMLElement).closest<HTMLElement>('[data-modifier-side]')
+                    : editor
+                if (sideEditor == null) return
+                const modifier = readModifierEditor(sideEditor)
                 if (modifier == null) return
 
-                CharacterModelEquipModifiers.set(modelId, modifier)
+                if (slot === 'pauldrons') {
+                    const side = sideEditor.dataset.modifierSide as PauldronSide
+                    const pairedModifiers = CharacterModelPauldronModifiers.get(modelId)
+                    if (pairedModifiers == null) return
+                    pairedModifiers[side] = modifier
+                } else {
+                    CharacterModelEquipModifiers.set(modelId, modifier)
+                }
                 setEquipmentSlot(model, slot, modelId, slotMaterialSelections[slot] - 1)
             })
         })
