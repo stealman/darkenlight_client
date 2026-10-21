@@ -20,7 +20,7 @@ import { Settings } from '@/settings/settings'
 import { ActiveMeshFreezer } from '@/babylon/scene/activeMeshFreezer'
 
 export class CharacterModel implements EquipBearer {
-    private static readonly MODEL_FILE = 'human_male.glb?v=20261011-3'
+    private static readonly MODEL_FILE = 'human_male.glb?v=20261021-1'
     private static readonly preparedModelCount = 6
     private static containerPromises = new WeakMap<Scene, Promise<AssetContainer>>()
     private static preparedModels = new WeakMap<Scene, InstantiatedEntries[]>()

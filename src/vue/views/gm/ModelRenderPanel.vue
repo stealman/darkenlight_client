@@ -94,12 +94,13 @@
 </template>
 
 <script setup>
-import { ArcRotateCamera, Color3, Color4, CubeTexture, DirectionalLight, Engine, Mesh, Scene, SceneLoader, Vector2, Vector3 } from '@babylonjs/core'
+import { ArcRotateCamera, Color3, Color4, CubeTexture, DirectionalLight, Engine, Mesh, Scene, SceneLoader, Texture, Vector2, Vector3 } from '@babylonjs/core'
 import { WEAPON_MODEL_CACHE_VERSION, WeaponModelsCb } from '@/babylon/item/codebook/weaponModelsCb'
-import { ARMOR_MODEL_CACHE_VERSION, ArmorModelsCb, ArmorModelsWithDetailPalette, ArmorVertexColorFallbackGlbNames, ArmorVertexColorGlbNames } from '@/babylon/item/codebook/armorsModelsCb'
+import { ArmorModelsCb, BASE_EQUIP_MATERIAL_PATH, TEXTURED_ARMOR_ASSETS } from '@/babylon/item/codebook/armorsModelsCb'
+import { ArmorMaterialCatalog } from '@/babylon/item/codebook/armorMaterialCatalog'
 import { VertexColorWeaponPalettesByModelKey } from '@/babylon/item/codebook/vertexColorPalettes'
-import { MetalArmorVertexColorPalette, ShieldDetailVertexColorPalette } from '@/babylon/item/codebook/vertexColorPalettes/armor'
 import { createVertexColorWeaponMaterial } from '@/babylon/item/codebook/vertexColorPalettes/vertexColorWeaponMaterial'
+import { Materials } from '@/babylon/materials'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { Settings } from '@/settings/settings'
 import { canvasToPngBlobWithTransparentColor } from '@/utils/pngUtils'
@@ -113,8 +114,7 @@ const WEAPON_OPTIONS = Object.entries(VertexColorWeaponPalettesByModelKey).map((
     return { key, item, ...weapon, label: `${key} (${item.model})` }
 })
 const ARMOR_OPTIONS = Object.entries(ArmorModelsCb).map(([key, item]) => ({ key, item, label: `${key} (${item.model})` }))
-const ARMOR_MATERIAL_OPTIONS = MetalArmorVertexColorPalette.materialNames.map((label, index) => ({ index, label }))
-const CHAIN_ARMOR_PREVIEW_HIDDEN_COLORS = [[14, 9, 3]]
+const ARMOR_MATERIAL_OPTIONS = ArmorMaterialCatalog.materialNames.map((label, index) => ({ index, label }))
 const ARMOR_INVENTORY_BASE_NAMES = {
     PLATE_ARMOR_MALE: 'plate-armor',
     HELM_MALE: 'plate-helmet',
@@ -153,9 +153,7 @@ const selectedPreviewItem = computed(() => {
     return selectedPreviewOption.value?.item ?? null
 })
 const selectedWeaponPalette = computed(() => previewCategory.value === 'WEAPON' ? selectedPreviewOption.value?.palette ?? null : null)
-const selectedArmorPalette = computed(() => ArmorModelsWithDetailPalette.has(selectedPreviewItem.value?.id ?? -1)
-    ? ShieldDetailVertexColorPalette
-    : MetalArmorVertexColorPalette)
+const selectedArmorAsset = computed(() => TEXTURED_ARMOR_ASSETS.get(selectedPreviewItem.value?.id ?? -1) ?? null)
 const currentMaterialSlots = computed(() => {
     const item = selectedPreviewItem.value
     if (!item) {
@@ -164,7 +162,7 @@ const currentMaterialSlots = computed(() => {
     if (selectedWeaponPalette.value) {
         return selectedWeaponPalette.value.materialColors.length
     }
-    return selectedArmorPalette.value.materialColors.length
+    return ArmorMaterialCatalog.materialNames.length
 })
 const materialIndexOptions = computed(() => {
     if (previewCategory.value === 'ARMOR') {
@@ -364,7 +362,10 @@ const applyMaterialIndexToPreview = (materialIndex) => {
         previewMatIndex.value = safeIndex
     }
     const isWeapon = previewCategory.value === 'WEAPON'
-    applyAtlasIndexToMesh(previewMesh, isWeapon ? materialSlots : previewItem.matCols, isWeapon ? 1 : previewItem.matRows, safeIndex)
+    const atlasIndex = isWeapon
+        ? safeIndex
+        : (previewItem.materialAtlasIndices?.get(safeIndex) ?? previewItem.materialAtlasFallbackIndex)
+    applyAtlasIndexToMesh(previewMesh, isWeapon ? materialSlots : previewItem.matCols, isWeapon ? 1 : previewItem.matRows, atlasIndex)
 }
 
 const applyCurrentMaterialIndex = () => {
@@ -415,19 +416,14 @@ const loadPreview = async () => {
     if (isWeapon && !weaponPalette) {
         return
     }
+    const armorAsset = selectedArmorAsset.value
+    if (!isWeapon && !armorAsset) {
+        return
+    }
     const modelPath = isWeapon
         ? `weapons/${previewItem.model}.glb?v=${WEAPON_MODEL_CACHE_VERSION}`
-        : `armors/${ArmorVertexColorGlbNames[previewItem.id] ?? previewItem.model}.glb?v=${ARMOR_MODEL_CACHE_VERSION}`
-    let importResult
-    try {
-        importResult = await SceneLoader.ImportMeshAsync('', '/models/equip/', modelPath, scene)
-    } catch (error) {
-        const fallbackGlbName = isWeapon ? undefined : ArmorVertexColorFallbackGlbNames[previewItem.id]
-        if (!fallbackGlbName) {
-            throw error
-        }
-        importResult = await SceneLoader.ImportMeshAsync('', '/models/equip/', `armors/${fallbackGlbName}.glb?v=${ARMOR_MODEL_CACHE_VERSION}`, scene)
-    }
+        : `armors/${armorAsset.modelFile}`
+    const importResult = await SceneLoader.ImportMeshAsync('', '/models/equip/', modelPath, scene)
     const sourceMeshes = importResult.meshes.filter((m) => m instanceof Mesh && m.getTotalVertices() > 0)
     if (sourceMeshes.length === 0) {
         return
@@ -451,17 +447,34 @@ const loadPreview = async () => {
     previewBaseScaling = merged.scaling.clone()
     loadSettingsForCurrentSelection()
 
-    previewMaterial = createVertexColorWeaponMaterial(
-        `modelRenderMaterial-${previewCategory.value}-${previewItem.model}`,
-        scene,
-        isWeapon ? weaponPalette : selectedArmorPalette.value,
-        {
-            discardSourceColors: !isWeapon && selectedModelKey.value.startsWith('CHAIN_')
-                ? CHAIN_ARMOR_PREVIEW_HIDDEN_COLORS
-                : undefined,
-        },
-    )
-    if (!isWeapon) {
+    if (isWeapon) {
+        previewMaterial = createVertexColorWeaponMaterial(
+            `modelRenderMaterial-${previewCategory.value}-${previewItem.model}`,
+            scene,
+            weaponPalette,
+        )
+    } else {
+        previewMaterial = Materials.getPBRCustomMaterialFrom(
+            scene,
+            `modelRenderMaterial-${previewItem.model}`,
+            `${BASE_EQUIP_MATERIAL_PATH}armors/`,
+            armorAsset.albedoFile,
+            1 / 4,
+            1 / 4,
+            false,
+            armorAsset,
+            false,
+        )
+        const normalTexture = new Texture(
+            `${BASE_EQUIP_MATERIAL_PATH}armors/${armorAsset.normalFile}?v=20261021-single-tile`,
+            scene,
+            { invertY: false },
+        )
+        normalTexture.gammaSpace = false
+        normalTexture.wrapU = Texture.WRAP_ADDRESSMODE
+        normalTexture.wrapV = Texture.WRAP_ADDRESSMODE
+        previewMaterial.bumpTexture = normalTexture
+        previewMaterial.backFaceCulling = false
         previewMaterial.twoSidedLighting = false
     }
     merged.material = previewMaterial

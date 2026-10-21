@@ -26,14 +26,14 @@ function collectPngEntries(directory, publicPath) {
 
 export default defineConfig(({ mode }) => {
     const isTauriBuild = mode === 'tauri'
-    const steelArmorImageEntries = collectPngEntries(
+    const armorImageEntries = collectPngEntries(
         path.resolve(__dirname, 'public/images/items/armor'),
         '/images/items/armor',
-    ).filter(({ imagePath }) => path.posix.basename(imagePath).startsWith('steel-'))
+    )
     const pixelatedImageEntries = [
         ...collectPngEntries(path.resolve(__dirname, 'public/images/icons'), '/images/icons'),
         ...collectPngEntries(path.resolve(__dirname, 'public/images/items/resources'), '/images/items/resources'),
-        ...steelArmorImageEntries,
+        ...armorImageEntries,
     ]
     const pixelatedImagePaths = pixelatedImageEntries.map(({ imagePath }) => imagePath)
     const pixelatedImageVersions = Object.fromEntries(pixelatedImageEntries.map(({ imagePath, version }) => [imagePath, version]))

@@ -1,15 +1,11 @@
-import { MetalArmorVertexColorPalette } from '@/babylon/item/codebook/vertexColorPalettes/armor'
-import type { VertexRgb } from '@/babylon/item/codebook/vertexColorPalettes/types'
-
 const PIXELATED_PATH_PREFIXES = [
     '/images/icons/',
     '/images/items/resources/',
     '/images/items/armor/',
 ]
 const ARMOR_IMAGE_PATH_PREFIX = '/images/items/armor/'
-const STEEL_ARMOR_IMAGE_PATH_PREFIX = `${ARMOR_IMAGE_PATH_PREFIX}steel-`
 const IMAGE_URL_PATTERN = /url\(\s*(['"]?)(.*?)\1\s*\)/g
-const PROCESSED_PNG_CACHE_VERSION = 1
+const PROCESSED_PNG_CACHE_VERSION = 2
 const PROCESSED_PNG_DATABASE_NAME = 'darkenlight-ui-image-cache'
 const PROCESSED_PNG_STORE_NAME = 'processedPngs'
 
@@ -25,8 +21,6 @@ type CachedProcessedPng = ProcessedPngBlobs & {
     imagePath: string
     signature: string
 }
-type LinearRgb = readonly [number, number, number]
-
 export const UiIconManager = {
     pixelatedUrls: new Map<string, string>(),
     smoothUrls: new Map<string, string>(),
@@ -53,39 +47,18 @@ export const UiIconManager = {
             throw new Error(`UI image saturation must be zero or greater, received ${saturation}`)
         }
 
-        const armorMaterialCount = MetalArmorVertexColorPalette.materialNames
-            .filter((materialName) => materialName !== 'Reserved').length
-        const workUnits = __PIXELATED_IMAGE_PATHS__.map((imagePath) => {
-            return imagePath.startsWith(STEEL_ARMOR_IMAGE_PATH_PREFIX) ? armorMaterialCount : 1
-        })
-        const totalWorkUnits = workUnits.reduce((total, count) => total + count, 0)
+        const totalWorkUnits = __PIXELATED_IMAGE_PATHS__.length
         let completedWorkUnits = 0
         onProgress?.(completedWorkUnits, totalWorkUnits)
 
         const results = await Promise.allSettled(
-            __PIXELATED_IMAGE_PATHS__.map(async (imagePath, imageIndex) => {
-                let completedImageWorkUnits = 0
-                const reportImageProgress = () => {
-                    completedImageWorkUnits++
+            __PIXELATED_IMAGE_PATHS__.map(async (imagePath) => {
+                try {
+                    const imageSaturation = imagePath.startsWith(ARMOR_IMAGE_PATH_PREFIX) ? 1 : saturation
+                    this.storeProcessedPngUrls(imagePath, await this.createProcessedPngUrls(imagePath, pixelSize, imageSaturation))
+                } finally {
                     completedWorkUnits++
                     onProgress?.(completedWorkUnits, totalWorkUnits)
-                }
-
-                try {
-                    if (imagePath.startsWith(STEEL_ARMOR_IMAGE_PATH_PREFIX)) {
-                        const materialUrls = await this.createArmorMaterialPngUrls(imagePath, pixelSize, reportImageProgress)
-                        materialUrls.forEach(({ imagePath: materialImagePath, urls }) => {
-                            this.storeProcessedPngUrls(materialImagePath, urls)
-                        })
-                        return
-                    }
-
-                    this.storeProcessedPngUrls(imagePath, await this.createProcessedPngUrls(imagePath, pixelSize, saturation))
-                    reportImageProgress()
-                } finally {
-                    while (completedImageWorkUnits < workUnits[imageIndex]) {
-                        reportImageProgress()
-                    }
                 }
             }),
         )
@@ -133,12 +106,16 @@ export const UiIconManager = {
 
     async createProcessedPngUrls(iconPath: string, pixelSize: number, saturation: number): Promise<ProcessedPngUrls> {
         const signature = this.getProcessedPngSignature(iconPath, pixelSize, saturation)
-        const cachedBlobs = await this.getCachedProcessedPng(iconPath, signature)
+        // During asset authoring, always re-read source PNGs after a page reload.
+        // Production builds retain the persistent cache keyed by Vite's file version.
+        const cachedBlobs = import.meta.env.DEV
+            ? null
+            : await this.getCachedProcessedPng(iconPath, signature)
         if (cachedBlobs) {
             return this.createProcessedPngUrlsFromBlobs(cachedBlobs)
         }
 
-        const response = await fetch(iconPath, { cache: 'force-cache' })
+        const response = await fetch(iconPath, { cache: 'no-cache' })
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`)
         }
@@ -149,71 +126,10 @@ export const UiIconManager = {
         try {
             const image = await this.loadImage(sourceObjectUrl)
             const blobs = await this.createProcessedPngBlobsFromImage(image, pixelSize, saturation)
-            await this.cacheProcessedPng(iconPath, signature, blobs)
+            if (!import.meta.env.DEV) {
+                await this.cacheProcessedPng(iconPath, signature, blobs)
+            }
             return this.createProcessedPngUrlsFromBlobs(blobs)
-        } finally {
-            URL.revokeObjectURL(sourceObjectUrl)
-        }
-    },
-
-    async createArmorMaterialPngUrls(steelImagePath: string, pixelSize: number, onMaterialProcessed?: () => void) {
-        const armorImageSuffix = steelImagePath.slice(STEEL_ARMOR_IMAGE_PATH_PREFIX.length)
-        const steelColors = MetalArmorVertexColorPalette.materialColors[0]
-        const materialRequests = MetalArmorVertexColorPalette.materialNames.flatMap((materialName, materialIndex) => {
-            if (materialName === 'Reserved') {
-                return []
-            }
-
-            const materialFileName = materialName.toLowerCase().replaceAll(' ', '-')
-            const imagePath = `${ARMOR_IMAGE_PATH_PREFIX}${materialFileName}-${armorImageSuffix}`
-            const materialColors = MetalArmorVertexColorPalette.materialColors[materialIndex]
-            const signature = this.getArmorProcessedPngSignature(steelImagePath, pixelSize, steelColors, materialColors)
-            return [{ imagePath, materialIndex, materialColors, signature }]
-        })
-        const cachedMaterialBlobs = await Promise.all(materialRequests.map(({ imagePath, signature }) => {
-            return this.getCachedProcessedPng(imagePath, signature)
-        }))
-        if (cachedMaterialBlobs.every((blobs) => blobs !== null)) {
-            return materialRequests.map(({ imagePath }, index) => {
-                const result = {
-                    imagePath,
-                    urls: this.createProcessedPngUrlsFromBlobs(cachedMaterialBlobs[index]!),
-                }
-                onMaterialProcessed?.()
-                return result
-            })
-        }
-
-        const response = await fetch(steelImagePath, { cache: 'force-cache' })
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`)
-        }
-
-        const sourceBlob = await response.blob()
-        const sourceObjectUrl = URL.createObjectURL(sourceBlob)
-
-        try {
-            const image = await this.loadImage(sourceObjectUrl)
-            const materialUrls: Array<{ imagePath: string, urls: ProcessedPngUrls }> = []
-            for (let index = 0; index < materialRequests.length; index++) {
-                const request = materialRequests[index]
-                let blobs = cachedMaterialBlobs[index]
-                if (!blobs) {
-                    blobs = await this.createProcessedPngBlobsFromImage(
-                        image,
-                        pixelSize,
-                        1,
-                        request.materialIndex === 0 ? undefined : { source: steelColors, target: request.materialColors },
-                    )
-                    await this.cacheProcessedPng(request.imagePath, request.signature, blobs)
-                }
-                materialUrls.push({
-                    imagePath: request.imagePath,
-                    urls: this.createProcessedPngUrlsFromBlobs(blobs),
-                })
-                onMaterialProcessed?.()
-            }
-            return materialUrls
         } finally {
             URL.revokeObjectURL(sourceObjectUrl)
         }
@@ -223,7 +139,6 @@ export const UiIconManager = {
         image: HTMLImageElement,
         pixelSize: number,
         saturation: number,
-        colorRemap?: { source: readonly VertexRgb[], target: readonly VertexRgb[] },
     ): Promise<ProcessedPngBlobs> {
         const canvas = document.createElement('canvas')
         canvas.width = image.naturalWidth
@@ -237,14 +152,9 @@ export const UiIconManager = {
         context.clearRect(0, 0, canvas.width, canvas.height)
         context.drawImage(image, 0, 0)
 
-        if (colorRemap || saturation !== 1) {
+        if (saturation !== 1) {
             const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
-            if (colorRemap) {
-                this.remapArmorMaterialRgba(imageData.data, colorRemap.source, colorRemap.target)
-            }
-            if (saturation !== 1) {
-                this.adjustSaturationRgba(imageData.data, saturation)
-            }
+            this.adjustSaturationRgba(imageData.data, saturation)
             context.putImageData(imageData, 0, 0)
         }
         const smoothBlob = await this.createPngBlob(canvas)
@@ -270,74 +180,12 @@ export const UiIconManager = {
         }
     },
 
-    remapArmorMaterialRgba(data: Uint8ClampedArray, sourceColors: readonly VertexRgb[], targetColors: readonly VertexRgb[]) {
-        const sourceReference = this.getLinearPaletteAverage(sourceColors)
-        const targetReference = this.getLinearPaletteAverage(targetColors)
-        const redScale = targetReference[0] / sourceReference[0]
-        const greenScale = targetReference[1] / sourceReference[1]
-        const blueScale = targetReference[2] / sourceReference[2]
-
-        for (let index = 0; index < data.length; index += 4) {
-            if (data[index + 3] === 0) {
-                continue
-            }
-
-            data[index] = this.linearToSrgbByte(this.srgbByteToLinear(data[index]) * redScale)
-            data[index + 1] = this.linearToSrgbByte(this.srgbByteToLinear(data[index + 1]) * greenScale)
-            data[index + 2] = this.linearToSrgbByte(this.srgbByteToLinear(data[index + 2]) * blueScale)
-        }
-    },
-
-    getLinearPaletteAverage(colors: readonly VertexRgb[]): LinearRgb {
-        const total = colors.reduce((sum, color) => {
-            sum[0] += this.srgbByteToLinear(color[0])
-            sum[1] += this.srgbByteToLinear(color[1])
-            sum[2] += this.srgbByteToLinear(color[2])
-            return sum
-        }, [0, 0, 0])
-        return [
-            total[0] / colors.length,
-            total[1] / colors.length,
-            total[2] / colors.length,
-        ]
-    },
-
-    srgbByteToLinear(value: number): number {
-        const normalized = value / 255
-        return normalized <= 0.04045
-            ? normalized / 12.92
-            : Math.pow((normalized + 0.055) / 1.055, 2.4)
-    },
-
-    linearToSrgbByte(value: number): number {
-        const clamped = Math.min(1, Math.max(0, value))
-        const srgb = clamped <= 0.0031308
-            ? clamped * 12.92
-            : 1.055 * Math.pow(clamped, 1 / 2.4) - 0.055
-        return Math.round(srgb * 255)
-    },
-
     getProcessedPngSignature(imagePath: string, pixelSize: number, saturation: number): string {
         return [
             PROCESSED_PNG_CACHE_VERSION,
             __PIXELATED_IMAGE_VERSIONS__[imagePath] ?? 'unknown-source',
             pixelSize,
             saturation,
-        ].join('|')
-    },
-
-    getArmorProcessedPngSignature(
-        steelImagePath: string,
-        pixelSize: number,
-        steelColors: readonly VertexRgb[],
-        materialColors: readonly VertexRgb[],
-    ): string {
-        return [
-            PROCESSED_PNG_CACHE_VERSION,
-            __PIXELATED_IMAGE_VERSIONS__[steelImagePath] ?? 'unknown-source',
-            pixelSize,
-            JSON.stringify(steelColors),
-            JSON.stringify(materialColors),
         ].join('|')
     },
 

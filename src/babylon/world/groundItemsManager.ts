@@ -23,6 +23,7 @@ import { MyPlayer } from '@/data/myPlayer'
 import { GroundItemTO } from '@/network/messageIfs'
 import { UiIconManager } from '@/gui/uiIconManager'
 import { TEXTURED_ARMOR_MODEL_IDS } from '@/babylon/item/codebook/armorsModelsCb'
+import { getArmorEquipScale } from '@/babylon/item/codebook/armorEquipScales'
 
 export const GroundItemsManager = {
     scene: null as Scene | null,
@@ -39,6 +40,7 @@ export const GroundItemsManager = {
 
     tmpPos: new Matrix(),
     tmpRot: new Matrix(),
+    tmpScale: new Matrix(),
     tmpWorld: new Matrix(),
     tmpQuat: Quaternion.Identity(),
     visibleFxItemsById: new Map<number, GroundItem>(),
@@ -117,7 +119,12 @@ export const GroundItemsManager = {
                 Lights.addShadowCaster(groundMesh)
             }
             Lights.registerDynamicLightMesh(groundMesh, () => MyPlayer.myChar?.pos || null)
-            this.itemTypes.set(modelId, new GroundItemType(modelId, equipType.cbData, groundMesh))
+            this.itemTypes.set(modelId, new GroundItemType(
+                modelId,
+                equipType.cbData,
+                groundMesh,
+                getArmorEquipScale(modelId) ?? Vector3.One(),
+            ))
         })
 
         this.initializeItemFx(scene)
@@ -259,6 +266,7 @@ export const GroundItemsManager = {
             }
 
             type.ensureThinBuffers(type)
+            Matrix.ScalingToRef(type.scale.x, type.scale.y, type.scale.z, this.tmpScale)
             let i = 0
             for (const item of typeItems) {
                 const itemY = item.pos.y + item.yOffset
@@ -266,6 +274,7 @@ export const GroundItemsManager = {
                 Quaternion.FromEulerAnglesToRef(this.ITEM_ROTATION_X, item.rotationY, 0, this.tmpQuat)
                 Matrix.FromQuaternionToRef(this.tmpQuat, this.tmpRot)
                 this.tmpRot.multiplyToRef(this.tmpPos, this.tmpWorld)
+                this.tmpScale.multiplyToRef(this.tmpWorld, this.tmpWorld)
 
                 this.tmpWorld.copyToArray(type.instanceBuffer, i * 16)
                 type.uvBuffer[i * 2] = item.matVector.x
@@ -574,7 +583,8 @@ class GroundItem {
 
         const type = GroundItemsManager.itemTypes.get(item.modelId)
         const matIndex = Math.max((item.materialId || 1) - 1, 0)
-        this.matVector = this.getAtlasUvcOffsets(type?.cbData.matCols || 1, type?.cbData.matRows || 1, matIndex)
+        const atlasMatIndex = type?.cbData.resolveMaterialAtlasIndex(matIndex) ?? matIndex
+        this.matVector = this.getAtlasUvcOffsets(type?.cbData.matCols || 1, type?.cbData.matRows || 1, atlasMatIndex)
         this.rotationY = item.is3DModel() ? Math.random() * Math.PI * 2 : Math.PI / 4
         this.fxParticleCount = item.isEquippable() ? 4 : 2
     }
@@ -630,12 +640,14 @@ class GroundItemType {
     instanceBuffer: Float32Array = new Float32Array(0)
     uvBuffer: Float32Array = new Float32Array(0)
     cbData: EquipCbItem
+    scale: Vector3
     thinReady: boolean = false
 
-    constructor(id: number, cbData: EquipCbItem, mesh: Mesh) {
+    constructor(id: number, cbData: EquipCbItem, mesh: Mesh, scale: Vector3) {
         this.id = id
         this.cbData = cbData
         this.mesh = mesh
+        this.scale = scale
     }
 
     ensureThinBuffers(type: GroundItemType) {

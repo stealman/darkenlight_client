@@ -55,9 +55,7 @@ export class EquipItem {
         if (this.type.cbData.weaponTipPosition) {
             this.weaponTrail = this.createWeaponTrail(this.bone)
         }
-        const atlasMatIndex = type.cbData.materialAtlasIndices
-            ? (type.cbData.materialAtlasIndices.get(matIndex) ?? type.cbData.materialAtlasFallbackIndex)
-            : matIndex
+        const atlasMatIndex = type.cbData.resolveMaterialAtlasIndex(matIndex)
         this.matVector = this.getAtlasUvcOffsets(type.cbData.matCols, type.cbData.matRows, atlasMatIndex)
         this.scaleMatrix = Matrix.Scaling(this.scale.x, this.scale.y, this.scale.z)
         if (modelModifier) {

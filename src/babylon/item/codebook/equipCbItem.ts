@@ -31,4 +31,10 @@ export class EquipCbItem {
         this.materialAtlasFallbackIndex = materialAtlasFallbackIndex
         this.weaponTipPosition = weaponTipPosition
     }
+
+    resolveMaterialAtlasIndex(materialIndex: number): number {
+        return this.materialAtlasIndices
+            ? (this.materialAtlasIndices.get(materialIndex) ?? this.materialAtlasFallbackIndex)
+            : materialIndex
+    }
 }
