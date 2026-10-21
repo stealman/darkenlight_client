@@ -1,4 +1,4 @@
-import { AssetContainer, Color3, Mesh, PBRMaterial, SceneLoader } from '@babylonjs/core'
+import { AssetContainer, Color3, Mesh, PBRMaterial, SceneLoader, Texture } from '@babylonjs/core'
 import { Materials } from '@/babylon/materials'
 import { MonsterType } from '@/babylon/monsters/codebook/monsterCodebook'
 import { MonsterTemplate, MonsterTemplates } from '@/babylon/monsters/codebook/monsterTemplates'
@@ -36,6 +36,16 @@ export const MonsterLoader = {
             directIntensity: 1,
             environmentIntensity: mobType.environmentIntensity,
         }, mobType.emissiveTextureName ? "/models/monsters/" + mobType.emissiveTextureName : null)
+
+        if (mobType.normalTextureName) {
+            const normalTexture = new Texture(
+                "/models/monsters/" + mobType.normalTextureName,
+                Renderer.scene,
+                { invertY: false },
+            )
+            normalTexture.gammaSpace = false
+            material.bumpTexture = normalTexture
+        }
 
         // Monster meshes share the regular PBR material, while equipment uses
         // a two-sided lighting setup. Keep back-facing body polygons from

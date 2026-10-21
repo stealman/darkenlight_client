@@ -76,10 +76,13 @@ const BROADSWORD_PRIMARY_TEXTURE = '/models/equip/weapons/broadsword_primary.png
 const BROADSWORD_SECONDARY_TEXTURE = '/models/equip/weapons/broadsword_secondary.png?v=20261021-generated-atlas'
 const LONGSWORD_PRIMARY_TEXTURE = '/models/equip/weapons/longsword_primary.png?v=20261021-generated-atlas'
 const LONGSWORD_SECONDARY_TEXTURE = '/models/equip/weapons/longsword_secondary.png?v=20261021-generated-atlas'
+const GREATAXE_PRIMARY_TEXTURE = '/models/equip/weapons/greataxe_primary.png?v=20261022-generated-atlas'
+const GREATAXE_SECONDARY_TEXTURE = '/models/equip/weapons/greataxe_secondary.png?v=20261022-generated-atlas'
 
 const MODEL_IDS = {
     longsword: 10,
     broadsword: 20,
+    greataxe: 155,
     armorPlate: 1000,
     helm: 1100,
     pauldronsPlate: 1200,
@@ -167,6 +170,7 @@ const slotOptions: Record<PreviewSlot, Array<{ label: string, value: number | nu
         { label: 'Bez zbraně', value: null },
         { label: 'Longsword', value: MODEL_IDS.longsword },
         { label: 'Broadsword', value: MODEL_IDS.broadsword },
+        { label: 'Great axe', value: MODEL_IDS.greataxe },
     ],
 }
 
@@ -931,10 +935,13 @@ export async function mountAdminUtils() {
         await EquipManager.initializeArmors(scene)
         await WeaponsCbManager.initLongsword(EquipManager.itemTypes, scene)
         await EquipManager.initializeBroadsword(scene)
+        await WeaponsCbManager.initGreatAxe(EquipManager.itemTypes, scene)
         const longswordType = EquipManager.getItemType(MODEL_IDS.longsword)
         const longswordMaterial = longswordType?.mesh?.material
         const broadswordType = EquipManager.getItemType(MODEL_IDS.broadsword)
         const broadswordMaterial = broadswordType?.mesh?.material
+        const greataxeType = EquipManager.getItemType(MODEL_IDS.greataxe)
+        const greataxeMaterial = greataxeType?.mesh?.material
         const plateArmorType = EquipManager.getItemType(MODEL_IDS.armorPlate)
         const plateArmorMaterial = plateArmorType?.mesh?.material
         const plateHelmetType = EquipManager.getItemType(MODEL_IDS.helm)
@@ -953,7 +960,7 @@ export async function mountAdminUtils() {
         const chainPauldronMaterial = chainPauldronType?.mesh?.material
         const chainLegType = EquipManager.getItemType(MODEL_IDS.chainGreaves)
         const chainLegMaterial = chainLegType?.mesh?.material
-        if (!(longswordMaterial instanceof PBRMaterial) || !(broadswordMaterial instanceof PBRMaterial) || !(plateArmorMaterial instanceof PBRMaterial) || !(plateHelmetMaterial instanceof PBRMaterial) || !(platePauldronMaterial instanceof PBRMaterial) || !(plateLegMaterial instanceof PBRMaterial) || !(shieldMaterial instanceof PBRMaterial) || !(chainMailMaterial instanceof PBRMaterial) || !(chainCoifMaterial instanceof PBRMaterial) || !(chainPauldronMaterial instanceof PBRMaterial) || !(chainLegMaterial instanceof PBRMaterial)) {
+        if (!(longswordMaterial instanceof PBRMaterial) || !(broadswordMaterial instanceof PBRMaterial) || !(greataxeMaterial instanceof PBRMaterial) || !(plateArmorMaterial instanceof PBRMaterial) || !(plateHelmetMaterial instanceof PBRMaterial) || !(platePauldronMaterial instanceof PBRMaterial) || !(plateLegMaterial instanceof PBRMaterial) || !(shieldMaterial instanceof PBRMaterial) || !(chainMailMaterial instanceof PBRMaterial) || !(chainCoifMaterial instanceof PBRMaterial) || !(chainPauldronMaterial instanceof PBRMaterial) || !(chainLegMaterial instanceof PBRMaterial)) {
             throw new Error('Equipment material is unavailable for generated atlas preview')
         }
         materialOptions.forEach((option) => {
@@ -970,8 +977,9 @@ export async function mountAdminUtils() {
         weaponMaterialOptions.forEach((option) => {
             longswordType!.cbData.materialAtlasIndices?.set(option.value - 1, getEquipAtlasIndex(option.atlasTile))
             broadswordType!.cbData.materialAtlasIndices?.set(option.value - 1, getEquipAtlasIndex(option.atlasTile))
+            greataxeType!.cbData.materialAtlasIndices?.set(option.value - 1, getEquipAtlasIndex(option.atlasTile))
         })
-        const [plateArmorLayers, plateHelmetLayers, platePauldronLayers, plateLegLayers, shieldLayers, chainMailLayers, chainCoifLayers, chainPauldronLayers, chainLegLayers, broadswordLayers, longswordLayers] = await Promise.all([
+        const [plateArmorLayers, plateHelmetLayers, platePauldronLayers, plateLegLayers, shieldLayers, chainMailLayers, chainCoifLayers, chainPauldronLayers, chainLegLayers, broadswordLayers, longswordLayers, greataxeLayers] = await Promise.all([
             loadArmorAtlasLayers(PLATE_ARMOR_PRIMARY_TEXTURE, PLATE_ARMOR_SECONDARY_TEXTURE),
             loadArmorAtlasLayers(PLATE_HELMET_PRIMARY_TEXTURE, PLATE_HELMET_SECONDARY_TEXTURE),
             loadArmorAtlasLayers(PLATE_PAULDRON_PRIMARY_TEXTURE, PLATE_PAULDRON_SECONDARY_TEXTURE),
@@ -983,6 +991,7 @@ export async function mountAdminUtils() {
             loadArmorAtlasLayers(CHAIN_LEG_PRIMARY_TEXTURE, CHAIN_LEG_SECONDARY_TEXTURE),
             loadArmorAtlasLayers(BROADSWORD_PRIMARY_TEXTURE, BROADSWORD_SECONDARY_TEXTURE),
             loadArmorAtlasLayers(LONGSWORD_PRIMARY_TEXTURE, LONGSWORD_SECONDARY_TEXTURE),
+            loadArmorAtlasLayers(GREATAXE_PRIMARY_TEXTURE, GREATAXE_SECONDARY_TEXTURE),
         ])
         const generatedPlateArmorAtlas = createGeneratedArmorAtlas(scene, 'adminUtilsGeneratedPlateArmorAtlas', plateArmorLayers, plateAtlasMaterialSettings)
         const generatedPlateHelmetAtlas = createGeneratedArmorAtlas(scene, 'adminUtilsGeneratedPlateHelmetAtlas', plateHelmetLayers, plateAtlasMaterialSettings)
@@ -1004,6 +1013,13 @@ export async function mountAdminUtils() {
             scene,
             'adminUtilsGeneratedLongswordAtlas',
             longswordLayers,
+            weaponAtlasMaterialSettings,
+            weaponMaterialOptions,
+        )
+        const generatedGreataxeAtlas = createGeneratedArmorAtlas(
+            scene,
+            'adminUtilsGeneratedGreataxeAtlas',
+            greataxeLayers,
             weaponAtlasMaterialSettings,
             weaponMaterialOptions,
         )
@@ -1029,6 +1045,8 @@ export async function mountAdminUtils() {
         broadswordMaterial.albedoTexture = generatedBroadswordAtlas
         longswordMaterial.albedoTexture?.dispose()
         longswordMaterial.albedoTexture = generatedLongswordAtlas
+        greataxeMaterial.albedoTexture?.dispose()
+        greataxeMaterial.albedoTexture = generatedGreataxeAtlas
 
         const model = await CharacterModel.create(createPreviewCharacter(), true)
         model.node.rotation.y = Math.PI / 2
@@ -1070,7 +1088,7 @@ export async function mountAdminUtils() {
             const exportLink = root.querySelector<HTMLAnchorElement>(`[data-export-atlas="${slot}"]`)!
             toggle.disabled = modelId == null
             materialSelect.disabled = modelId == null
-            const canExportAtlas = modelId === MODEL_IDS.longsword || modelId === MODEL_IDS.broadsword || modelId === MODEL_IDS.armorPlate || modelId === MODEL_IDS.helm || modelId === MODEL_IDS.pauldronsPlate || modelId === MODEL_IDS.legsPlate || modelId === MODEL_IDS.shield || modelId === MODEL_IDS.chainMail || modelId === MODEL_IDS.chainCoif || modelId === MODEL_IDS.chainPauldrons || modelId === MODEL_IDS.chainGreaves
+            const canExportAtlas = modelId === MODEL_IDS.longsword || modelId === MODEL_IDS.broadsword || modelId === MODEL_IDS.greataxe || modelId === MODEL_IDS.armorPlate || modelId === MODEL_IDS.helm || modelId === MODEL_IDS.pauldronsPlate || modelId === MODEL_IDS.legsPlate || modelId === MODEL_IDS.shield || modelId === MODEL_IDS.chainMail || modelId === MODEL_IDS.chainCoif || modelId === MODEL_IDS.chainPauldrons || modelId === MODEL_IDS.chainGreaves
             exportLink.setAttribute('aria-disabled', String(!canExportAtlas))
             exportLink.tabIndex = canExportAtlas ? 0 : -1
             exportLink.title = canExportAtlas ? '' : 'Export atlasu není pro tento typ výbavy dostupný'
@@ -1168,6 +1186,7 @@ export async function mountAdminUtils() {
                 } else {
                     renderGeneratedArmorAtlas(generatedLongswordAtlas, longswordLayers, weaponAtlasMaterialSettings, weaponMaterialOptions)
                     renderGeneratedArmorAtlas(generatedBroadswordAtlas, broadswordLayers, weaponAtlasMaterialSettings, weaponMaterialOptions)
+                    renderGeneratedArmorAtlas(generatedGreataxeAtlas, greataxeLayers, weaponAtlasMaterialSettings, weaponMaterialOptions)
                 }
                 saveAdminUtilsSettings(animationSelect.value)
                 button.textContent = 'hotovo'
@@ -1184,6 +1203,8 @@ export async function mountAdminUtils() {
                     exportAtlasAsJpeg(generatedLongswordAtlas, 'longsword.jpg')
                 } else if (modelId === MODEL_IDS.broadsword) {
                     exportAtlasAsJpeg(generatedBroadswordAtlas, 'broadsword.jpg')
+                } else if (modelId === MODEL_IDS.greataxe) {
+                    exportAtlasAsJpeg(generatedGreataxeAtlas, 'greataxe.jpg')
                 } else if (modelId === MODEL_IDS.armorPlate) {
                     exportAtlasAsJpeg(generatedPlateArmorAtlas, 'plate_armor.jpg')
                 } else if (modelId === MODEL_IDS.helm) {

@@ -1,4 +1,4 @@
-import { Scene, TransformNode, Vector2, Vector3 } from '@babylonjs/core'
+import { Scene, Texture, TransformNode, Vector2, Vector3 } from '@babylonjs/core'
 import { EquipItemType } from '@/babylon/item/equipManager'
 import { EquipCbItem } from '@/babylon/item/codebook/equipCbItem'
 import { PBRCustomMaterial } from '@babylonjs/materials'
@@ -19,7 +19,7 @@ const matGreatswordSize = new Vector2(5, 1)
 const matPickaxeSize = new Vector2(6, 1)
 const matHandAxeSize = new Vector2(5, 1)
 const matBattleAxeSize = new Vector2(5, 1)
-const matGreatAxeSize = new Vector2(5, 1)
+const matGreatAxeSize = new Vector2(4, 4)
 const matLargeBattleAxeSize = new Vector2(5, 1)
 const matWarhammerSize = new Vector2(5, 1)
 const matFutureWeaponSize = new Vector2(5, 1)
@@ -29,6 +29,8 @@ const matFutureWeaponSize = new Vector2(5, 1)
 export const WEAPON_MODEL_CACHE_VERSION = '20260930-battlebow-v1'
 const LONGSWORD_ASSET_CACHE_VERSION = '20261021-material-atlas-v1'
 const BROADSWORD_ASSET_CACHE_VERSION = '20261021-material-atlas-v2'
+const GREATAXE_ASSET_CACHE_VERSION = '20261022-material-atlas-v1'
+const GREATAXE_NORMAL_CACHE_VERSION = '20261022-single-tile-v1'
 
 const createWeaponMaterialAtlasIndices = (atlasSize: Vector2) => new Map<number, number>(
     Array.from({ length: 5 }, (_, atlasTile) => {
@@ -39,6 +41,19 @@ const createWeaponMaterialAtlasIndices = (atlasSize: Vector2) => new Map<number,
 )
 const longswordMaterialAtlasIndices = createWeaponMaterialAtlasIndices(matLongswordSize)
 const broadswordMaterialAtlasIndices = createWeaponMaterialAtlasIndices(matBroadswordSize)
+const greataxeMaterialAtlasIndices = createWeaponMaterialAtlasIndices(matGreatAxeSize)
+
+function createWeaponNormalTexture(scene: Scene, fileName: string, cacheVersion: string): Texture {
+    const texture = new Texture(
+        `${BASE_EQUIP_MATERIAL_PATH}weapons/${fileName}?v=${cacheVersion}`,
+        scene,
+        { invertY: false },
+    )
+    texture.gammaSpace = false
+    texture.wrapU = Texture.WRAP_ADDRESSMODE
+    texture.wrapV = Texture.WRAP_ADDRESSMODE
+    return texture
+}
 
 export const WeaponsCbManager = {
     BASE_WEAPONS_PATH: 'weapons/',
@@ -73,7 +88,6 @@ export const WeaponsCbManager = {
         this.pickAxeMaterial = createVertexColorWeaponMaterial('pickaxeVertexColor', scene, AxeVertexColorPalettes.PICKAXE)
         this.handAxeMaterial = createVertexColorWeaponMaterial('handAxeVertexColor', scene, AxeVertexColorPalettes.HANDAXE)
         this.battleAxeMaterial = createVertexColorWeaponMaterial('battleAxeVertexColor', scene, AxeVertexColorPalettes.BATTLE_AXE)
-        this.greatAxeMaterial = createVertexColorWeaponMaterial('greatAxeVertexColor', scene, AxeVertexColorPalettes.GREATAXE)
         this.largeBattleAxeMaterial = createVertexColorWeaponMaterial('largeBattleAxeVertexColor', scene, AxeVertexColorPalettes.LARGE_BATTLE_AXE)
         this.lightMaceMaterial = createVertexColorWeaponMaterial('lightMaceVertexColor', scene, MaceVertexColorPalettes.LIGHT_MACE)
         this.warmaceMaterial = createVertexColorWeaponMaterial('warmaceVertexColor', scene, MaceVertexColorPalettes.WARMACE)
@@ -91,7 +105,7 @@ export const WeaponsCbManager = {
         map.set(WeaponModelsCb.PICKAXE.id, await this.getItem(WeaponModelsCb.PICKAXE, this.pickAxeMaterial))
         map.set(WeaponModelsCb.HAND_AXE.id, await this.getItem(WeaponModelsCb.HAND_AXE, this.handAxeMaterial))
         map.set(WeaponModelsCb.BATTLE_AXE.id, await this.getItem(WeaponModelsCb.BATTLE_AXE, this.battleAxeMaterial))
-        map.set(WeaponModelsCb.GREATAXE.id, await this.getItem(WeaponModelsCb.GREATAXE, this.greatAxeMaterial))
+        await this.initGreatAxe(map, scene)
         map.set(WeaponModelsCb.LARGE_BATTLE_AXE.id, await this.getItem(WeaponModelsCb.LARGE_BATTLE_AXE, this.largeBattleAxeMaterial))
         map.set(WeaponModelsCb.LIGHT_MACE.id, await this.getItem(WeaponModelsCb.LIGHT_MACE, this.lightMaceMaterial))
         map.set(WeaponModelsCb.WARMACE.id, await this.getItem(WeaponModelsCb.WARMACE, this.warmaceMaterial))
@@ -162,6 +176,37 @@ export const WeaponsCbManager = {
         ))
     },
 
+    async initGreatAxe(map: Map<number, EquipItemType>, scene: Scene) {
+        if (this.itemSourceParent == null) {
+            this.itemSourceParent = new TransformNode('mobWeaponSources', scene)
+        }
+        this.greatAxeMaterial = Materials.getPBRCustomMaterialFrom(
+            scene,
+            'greataxeMaterialAtlas',
+            BASE_EQUIP_MATERIAL_PATH + this.BASE_WEAPONS_PATH,
+            `greataxe.jpg?v=${GREATAXE_ASSET_CACHE_VERSION}`,
+            1 / matGreatAxeSize.x,
+            1 / matGreatAxeSize.y,
+            false,
+            {
+                metallic: 0.5,
+                roughness: 0.9,
+                directIntensity: 1.5,
+                environmentIntensity: 1.2,
+            },
+            false,
+        )
+        this.greatAxeMaterial.backFaceCulling = false
+        this.greatAxeMaterial.twoSidedLighting = false
+        this.greatAxeMaterial.usePhysicalLightFalloff = false
+        this.greatAxeMaterial.bumpTexture = createWeaponNormalTexture(scene, 'greataxe_normal.png', GREATAXE_NORMAL_CACHE_VERSION)
+        map.set(WeaponModelsCb.GREATAXE.id, await this.getItem(
+            WeaponModelsCb.GREATAXE,
+            this.greatAxeMaterial,
+            `tripo-greataxe.glb?v=${GREATAXE_ASSET_CACHE_VERSION}`,
+        ))
+    },
+
     async getItem(data: EquipCbItem, material: PBRCustomMaterial | null = null, fileName = `${data.model}.glb?v=${WEAPON_MODEL_CACHE_VERSION}`): Promise<EquipItemType> {
         const item = new EquipItemType(data)
         await item.initializeMeshGlb(this.itemSourceParent!, this.itemSourceParent!.getScene(), `${this.BASE_WEAPONS_PATH}${fileName}`, material, data.pos, data.rot, data.scale)
@@ -220,7 +265,16 @@ export const WeaponModelsCb = {
 
     BATTLE_AXE: new EquipCbItem(EquipSlotModelsCb.BATTLE_AXE.modelId, 'battleaxe', Vector3.Zero(), new Vector3(0.24, 0.24, 0.24), new Vector3(0, 2.2, 0), matBattleAxeSize),
 
-    GREATAXE: new EquipCbItem(EquipSlotModelsCb.GREATAXE.modelId, 'greataxe', Vector3.Zero(), new Vector3(0.22, 0.24, 0.18), new Vector3(0, 2.5, 0), matGreatAxeSize),
+    GREATAXE: new EquipCbItem(
+        EquipSlotModelsCb.GREATAXE.modelId,
+        'greataxe',
+        Vector3.Zero(),
+        new Vector3(0.25, 0.24, 0.25),
+        new Vector3(0, 2.5, 0),
+        matGreatAxeSize,
+        greataxeMaterialAtlasIndices,
+        greataxeMaterialAtlasIndices.get(0) ?? 12,
+    ),
 
     LARGE_BATTLE_AXE: new EquipCbItem(EquipSlotModelsCb.LARGE_BATTLE_AXE.modelId, 'largebattlexe', Vector3.Zero(), new Vector3(0.22, 0.24, 0.24), new Vector3(0, 2.5, 0), matLargeBattleAxeSize),
 

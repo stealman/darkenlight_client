@@ -14,6 +14,7 @@ export class MonsterTemplate {
     id: number
     meshName: string
     textureName: string
+    normalTextureName: string | null
     emissiveTextureName: string | null
     environmentIntensity: number
     selectedEmissiveStrength: number
@@ -34,10 +35,11 @@ export class MonsterTemplate {
     animation: AnimationGroup
     monster: Monster | null = null
 
-    constructor(id: number, meshName: string, textureName: string, scale: Vector3 | number, emissiveTextureName: string | null, environmentIntensity: number = 1, selectedEmissiveStrength: number = MonsterTemplate.DEFAULT_SELECTED_EMISSIVE_STRENGTH, persistentEffectType: MonsterPersistentEffectType | null = null) {
+    constructor(id: number, meshName: string, textureName: string, normalTextureName: string | null, scale: Vector3 | number, emissiveTextureName: string | null, environmentIntensity: number = 1, selectedEmissiveStrength: number = MonsterTemplate.DEFAULT_SELECTED_EMISSIVE_STRENGTH, persistentEffectType: MonsterPersistentEffectType | null = null) {
         this.id = id
         this.meshName = MonsterTemplate.withExtension(meshName, MonsterTemplate.MODEL_EXTENSION)
         this.textureName = MonsterTemplate.withExtension(textureName, MonsterTemplate.TEXTURE_EXTENSION)
+        this.normalTextureName = normalTextureName ? MonsterTemplate.withExtension(normalTextureName, MonsterTemplate.TEXTURE_EXTENSION) : null
         this.emissiveTextureName = emissiveTextureName ? MonsterTemplate.withExtension(emissiveTextureName, MonsterTemplate.TEXTURE_EXTENSION) : null
         this.environmentIntensity = environmentIntensity
         this.selectedEmissiveStrength = selectedEmissiveStrength
@@ -75,7 +77,7 @@ export class MonsterTemplate {
             doNotInstantiate: true,
         })
 
-        const clone = new MonsterTemplate(this.id, this.meshName, this.textureName, this.scale, this.emissiveTextureName, this.environmentIntensity, this.selectedEmissiveStrength, this.persistentEffectType)
+        const clone = new MonsterTemplate(this.id, this.meshName, this.textureName, this.normalTextureName, this.scale, this.emissiveTextureName, this.environmentIntensity, this.selectedEmissiveStrength, this.persistentEffectType)
         clone.node = entries.rootNodes[0] as Mesh
         clone.node.scaling.copyFrom(this.scale)
         clone.node.rotation = Vector3.Zero()
@@ -148,14 +150,14 @@ export class MonsterTemplate {
 }
 
 export const MonsterTemplates = {
-    CAT: new MonsterTemplate(1001, 'cat', 'cat', 0.85, null),
-    SKELETON: new MonsterTemplate(1, 'skeleton', 'skeleton', 0.4, null),
-    WITHER: new MonsterTemplate(21, 'skeleton', 'wither', 0.4, null),
-    ZOMBIE_ROTTEN: new MonsterTemplate(11, 'zombie', 'zombie_rotten', 0.42, null, 1.4),
-    ZOMBIE: new MonsterTemplate(12, 'zombie', 'zombie', 0.43, null, 1.4),
-    ZOMBIE_MUTANT: new MonsterTemplate(13, 'zombie', 'zombie_mutant', 0.48, null, 1.4),
-    WIGHT: new MonsterTemplate(31, 'wraith', 'wight', 0.6, 'wight_em'),
-    // WRAITH: new MonsterTemplate(32, 'wraith', 'wraith', 0.6, 'wraith_em', 1, MonsterTemplate.DEFAULT_SELECTED_EMISSIVE_STRENGTH, MonsterPersistentEffectTypes.SPECTRAL_AURA),
-    WRAITH: new MonsterTemplate(32, 'wraith', 'wraith', 0.6, 'wraith_em'),
-    WRAITH_LORD: new MonsterTemplate(33, 'wraith', 'wraith_lord', 0.6, 'wraith_lord_em', 1, MonsterTemplate.DEFAULT_SELECTED_EMISSIVE_STRENGTH, MonsterPersistentEffectTypes.WRAITH_LORD_DOWNWARD_SMOKE),
+    CAT: new MonsterTemplate(1001, 'cat', 'cat', null, 0.85, null),
+    SKELETON: new MonsterTemplate(1, 'skeleton', 'skeleton', null, 0.4, null),
+    WITHER: new MonsterTemplate(21, 'skeleton', 'wither', null, 0.4, null),
+    ZOMBIE_ROTTEN: new MonsterTemplate(11, 'zombie', 'zombie_rotten', 'zombie_normal', 0.42, null, 1.4),
+    ZOMBIE: new MonsterTemplate(12, 'zombie', 'zombie', 'zombie_normal', 0.43, null, 1.4),
+    ZOMBIE_MUTANT: new MonsterTemplate(13, 'zombie', 'zombie_mutant', 'zombie_normal', 0.48, null, 1.4),
+    WIGHT: new MonsterTemplate(31, 'wraith', 'wight', null, 0.6, 'wight_em'),
+    // WRAITH: new MonsterTemplate(32, 'wraith', 'wraith', null, 0.6, 'wraith_em', 1, MonsterTemplate.DEFAULT_SELECTED_EMISSIVE_STRENGTH, MonsterPersistentEffectTypes.SPECTRAL_AURA),
+    WRAITH: new MonsterTemplate(32, 'wraith', 'wraith', null, 0.6, 'wraith_em'),
+    WRAITH_LORD: new MonsterTemplate(33, 'wraith', 'wraith_lord', null, 0.6, 'wraith_lord_em', 1, MonsterTemplate.DEFAULT_SELECTED_EMISSIVE_STRENGTH, MonsterPersistentEffectTypes.WRAITH_LORD_DOWNWARD_SMOKE),
 }
