@@ -468,6 +468,10 @@ export const EquipManager = {
         await ArmorsCbManager.initArmors(this.itemTypes, scene)
     },
 
+    async initializeBroadsword(scene: Scene) {
+        await WeaponsCbManager.initBroadsword(this.itemTypes, scene)
+    },
+
     getItemType(modelId: number): EquipItemType | undefined {
         return this.itemTypes.get(modelId)
     },

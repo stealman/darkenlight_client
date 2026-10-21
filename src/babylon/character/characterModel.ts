@@ -311,7 +311,7 @@ export class CharacterModel implements EquipBearer {
     }
 
     assignWeapon(type: number, matIndex: number) {
-        this.weaponEquipItem = new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find((b) => b.id === 'Bone.009')!, null, null, null)
+        this.weaponEquipItem = new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find((b) => b.id === 'Bone.009')!, null, null, null, getCharacterModelEquipModifier(type))
         //this.weaponEquipItem.createSwordParticles(this.rhandNode)
         this.addEquippedItem('WEAPON', this.weaponEquipItem)
     }
