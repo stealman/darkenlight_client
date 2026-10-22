@@ -228,6 +228,7 @@ export class CharacterModel implements EquipBearer {
 
         this.assignEquippedItems()
         this.initialized = true
+        this.snapToParentPosition()
         if (this.parent.insideView) {
             ActiveMeshFreezer.setSkeletonActive(this.skeleton, true)
         }
@@ -735,7 +736,7 @@ export class CharacterModel implements EquipBearer {
     }
 
     snapToParentPosition() {
-        if (!this.isActive()) {
+        if (!this.initialized || !this.model) {
             return
         }
         this.node.position.x = this.parent.pos.x
@@ -813,6 +814,7 @@ export class CharacterModel implements EquipBearer {
             this.removeFromView()
             return
         }
+        this.snapToParentPosition()
         if (this.parent.dead) this.playDeathAnimation()
         this.setAnimationsPaused(false)
         this.model!.setEnabled(true)

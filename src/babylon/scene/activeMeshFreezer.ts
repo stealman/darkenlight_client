@@ -94,13 +94,22 @@ export const ActiveMeshFreezer = {
         }
 
         this.detectParticleSystemChanges(scene)
-        if (!this.dirty || this.freezePending || !scene.isReady()) {
+        if (!this.dirty || this.freezePending) {
             return
         }
 
+        // Give Babylon one complete render with live active-mesh evaluation
+        // after invalidation. Unfreezing and immediately freezing again in
+        // this same callback could keep newly configured meshes out of the
+        // rendered list until a later invalidation.
         if (this.frozen) {
             scene.unfreezeActiveMeshes()
             this.frozen = false
+            return
+        }
+
+        if (!scene.isReady()) {
+            return
         }
 
         this.dirty = false
