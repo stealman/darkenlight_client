@@ -25,6 +25,11 @@ interface AnimatedHpBar {
     lastSeenAt: number
 }
 
+interface TemporaryNameFadeState {
+    displayUntil: number
+    appearedAt: number
+}
+
 function removeExpiredOverlayEntries(entries: Array<{ expiresAt: number }>, time: number) {
     for (let index = entries.length - 1; index >= 0; index--) {
         if (entries[index].expiresAt <= time) {
@@ -45,6 +50,7 @@ export const OverlayManager = {
     itemGainIcons: new Map<string, HTMLImageElement>(),
     iconStyleUnsubscribe: null as (() => void) | null,
     animatedHpBars: new WeakMap<object, AnimatedHpBar>(),
+    temporaryNameFadeStates: new WeakMap<object, TemporaryNameFadeState>(),
     cameraOrigin: Vector3.Zero(),
     cameraPosition: Vector3.Zero(),
 
@@ -75,6 +81,7 @@ export const OverlayManager = {
         this.emeraldGainNumbers = []
         this.itemGainNumbers = []
         this.animatedHpBars = new WeakMap<object, AnimatedHpBar>()
+        this.temporaryNameFadeStates = new WeakMap<object, TemporaryNameFadeState>()
         TargetSelector.unselectTarget()
     },
 
@@ -95,6 +102,30 @@ export const OverlayManager = {
             return 1.5 - 0.5 * ((age - 98) / 127)
         }
         return 1
+    },
+
+    getSelectedNamePopScale(selectedAt: number, time: number) {
+        const age = Math.max(0, time - selectedAt)
+        const peakScale = 1.17
+        if (age < 140) {
+            return 1 + (peakScale - 1) * (age / 140)
+        }
+        if (age < 280) {
+            return peakScale - (peakScale - 1) * ((age - 140) / 140)
+        }
+        return 1
+    },
+
+    getTemporaryNameAlpha(owner: object, displayUntil: number, time: number, appearedAt: number = time) {
+        let state = this.temporaryNameFadeStates.get(owner)
+        if (!state || state.displayUntil !== displayUntil) {
+            state = { displayUntil, appearedAt }
+            this.temporaryNameFadeStates.set(owner, state)
+        }
+
+        const fadeInAlpha = Math.max(0, Math.min(1, (time - state.appearedAt) / 140))
+        const fadeOutAlpha = Math.max(0, Math.min(1, (displayUntil - time) / 200))
+        return Math.min(fadeInAlpha, fadeOutAlpha)
     },
 
     onFrame(timeRate: number, time: number) {
@@ -149,7 +180,15 @@ export const OverlayManager = {
             if (MonsterManager.visibleMonsters.has(monster.id) && monster.nameDisplayTime > time) {
                 const pos = monster.getNameTextNodeScreenPosition()
                 if (pos) {
-                    this.renderName(pos, monster.mobType.name, tightText, monster.getRelationToMyPlayer(), true)
+                    const selected = TargetSelector.target === monster
+                    const scale = selected ? this.getSelectedNamePopScale(TargetSelector.selectedTime, time) : 1
+                    const alpha = this.getTemporaryNameAlpha(
+                        monster,
+                        monster.nameDisplayTime,
+                        time,
+                        selected ? TargetSelector.selectedTime : time,
+                    )
+                    this.renderName(pos, monster.mobType.name, tightText, monster.getRelationToMyPlayer(), true, scale, alpha)
                 }
             }
         })
@@ -203,7 +242,8 @@ export const OverlayManager = {
                         displayName = `${qty}x  ${itemName}`
                     }
                 }
-                this.renderName(pos, displayName, tightText, 'NEUTRAL', true)
+                const alpha = this.getTemporaryNameAlpha(nearestItem, nearestItem.nameDisplayTime, time)
+                this.renderName(pos, displayName, tightText, 'NEUTRAL', true, 1, alpha)
             }
         }
     },
@@ -571,7 +611,15 @@ export const OverlayManager = {
         }
 
         if (name) {
-            this.renderOutlinedText(basePos.x, currentTextY, name, tightText, char.getRelationToMyPlayer(), nameFontSize, undefined, 1, null, true)
+            const selected = TargetSelector.target === char
+            const scale = selected ? this.getSelectedNamePopScale(TargetSelector.selectedTime, time) : 1
+            const alpha = this.getTemporaryNameAlpha(
+                char,
+                char.nameDisplayTime,
+                time,
+                selected ? TargetSelector.selectedTime : time,
+            )
+            this.renderScaledOutlinedText(basePos.x, currentTextY, name, tightText, char.getRelationToMyPlayer(), nameFontSize, scale, alpha)
             currentTextY += actionName ? nameFontSize / 2 + actionFontSize / 2 + 6 : 0
         }
 
@@ -581,11 +629,46 @@ export const OverlayManager = {
         }
     },
 
-    renderName(pos: Vector3, name: string, tightText: boolean, relation: 'ALLY' | 'ENEMY' | 'NEUTRAL', useGradient: boolean = false) {
+    renderName(
+        pos: Vector3,
+        name: string,
+        tightText: boolean,
+        relation: 'ALLY' | 'ENEMY' | 'NEUTRAL',
+        useGradient: boolean = false,
+        scale: number = 1,
+        alpha: number = 1,
+    ) {
         if (!Number.isFinite(pos.x) || !Number.isFinite(pos.y)) {
             return
         }
-        this.renderOutlinedText(pos.x, pos.y - 6, name, tightText, relation, this.fontSize, pos, 1, null, useGradient)
+        if (scale === 1 && alpha === 1) {
+            this.renderOutlinedText(pos.x, pos.y - 6, name, tightText, relation, this.fontSize, pos, 1, null, useGradient)
+            return
+        }
+        this.renderScaledOutlinedText(pos.x, pos.y - 6, name, tightText, relation, this.fontSize, scale, alpha, useGradient)
+    },
+
+    renderScaledOutlinedText(
+        x: number,
+        y: number,
+        text: string,
+        tightText: boolean,
+        relation: 'ALLY' | 'ENEMY' | 'NEUTRAL',
+        fontSize: number,
+        scale: number,
+        alpha: number,
+        useGradient: boolean = true,
+    ) {
+        if (scale === 1) {
+            this.renderOutlinedText(x, y, text, tightText, relation, fontSize, undefined, alpha, null, useGradient)
+            return
+        }
+        const ctx = this.overlayCtx!
+        ctx.save()
+        ctx.translate(x, y)
+        ctx.scale(scale, scale)
+        this.renderOutlinedText(0, 0, text, tightText, relation, fontSize, undefined, alpha, null, useGradient)
+        ctx.restore()
     },
 
     renderNpcLabel(pos: Vector3, name: string, title: string, tightText: boolean) {
