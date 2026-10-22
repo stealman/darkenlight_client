@@ -7,6 +7,8 @@ import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { Settings } from '@/settings/settings'
 import { ViewportManager } from '@/utils/viewport'
 import { MyPlayer } from '@/data/myPlayer'
+import { IndoorTerrainOcclusionManager } from '@/babylon/world/indoorTerrainOcclusionManager'
+import { Lights } from '@/babylon/scene/lights'
 
 export const DIRT_BLOCK_TYPE = 1
 const GRASS_BLOCK_TYPES = new Set([2, 5])
@@ -97,6 +99,8 @@ export const TerrainManager = {
         const waterPlaneMatrices = []
         const waterPlaneUvData = []
 
+        IndoorTerrainOcclusionManager.beginTerrainRender(blockMap, Lights.indoor)
+
         for (let x = Math.max(0, myPos.x + ViewportManager.minX); x <= Math.min(blockMap.length -1, myPos.x + ViewportManager.maxX); x++) {
             for (let z = Math.max(0, myPos.z + ViewportManager.minZ); z <= Math.min(blockMap.length - 1, myPos.z + ViewportManager.maxZ); z++) {
                 const block = blockMap[x][z]
@@ -147,8 +151,15 @@ export const TerrainManager = {
                         const scaleMatrix = Matrix.Scaling(1, 1 + terrainHeightOffset, 1);
                         const matrix = scaleMatrix.multiply(Matrix.Translation( x, block.height + terrainHeightOffset * 0.5, z));
 
-                        terrainMatrices1.push(matrix)
-                        terrainUvData1.push(TerrainEnum1.getTerrainForBlock(block, hideSnow, renderType))
+                        IndoorTerrainOcclusionManager.routeTerrainBlock(
+                            x,
+                            z,
+                            block.height,
+                            matrix,
+                            TerrainEnum1.getTerrainForBlock(block, hideSnow, renderType),
+                            terrainMatrices1,
+                            terrainUvData1,
+                        )
 
                         // If minheight is lower than current block height - 1, then fill the gap with blocks
                         for (let fillHeight = minHeight + 1; fillHeight < block.height; fillHeight++) {
@@ -156,9 +167,16 @@ export const TerrainManager = {
                             // Applying it to the regular fill blocks moves their top down from the
                             // snow block and leaves a visible horizontal gap in a terrain wall.
                             const fillMatrix = Matrix.Translation(x, fillHeight, z);
-                            terrainMatrices1.push(fillMatrix)
                             const fillType = GRASS_BLOCK_TYPES.has(block.type) ? DIRT_BLOCK_TYPE : renderType
-                            terrainUvData1.push(TerrainEnum1.getTerrainForBlock(block, true, fillType))
+                            IndoorTerrainOcclusionManager.routeTerrainBlock(
+                                x,
+                                z,
+                                fillHeight,
+                                fillMatrix,
+                                TerrainEnum1.getTerrainForBlock(block, true, fillType),
+                                terrainMatrices1,
+                                terrainUvData1,
+                            )
                         }
                     }
 
@@ -173,6 +191,7 @@ export const TerrainManager = {
         }
 
         renderTerrainStatics?.(terrainMatrices1, terrainUvData1)
+        IndoorTerrainOcclusionManager.finishTerrainRender()
 
         // Apply buffers for instances
         this.terrainBlockMatrixBuffer = BabylonUtils.createPositionBuffer(terrainMatrices1)

@@ -26,6 +26,7 @@ import { FoggyAreaManager } from '@/babylon/world/foggyAreaManager'
 import { GMFoggyAreas } from '@/gm/GmFoggyAreas'
 import { EquipmentDecorationsManager } from '@/babylon/world/equipmentDecorationsManager'
 import { Settings } from '@/settings/settings'
+import { IndoorTerrainOcclusionManager } from '@/babylon/world/indoorTerrainOcclusionManager'
 
 // The viewport already renders a four-tile reserve. On touch devices, keep one
 // tile of that reserve instead of rebuilding every world buffer on every tile.
@@ -58,6 +59,7 @@ export const WorldRenderer = {
 
         // Initialize managers
         TerrainManager.initialize(scene)
+        IndoorTerrainOcclusionManager.initialize(scene, this.worldParentNode)
         TreeManager.initialize(scene)
         StaticsManager.initialize(scene)
         BuildingManager.initialize(scene, this.worldParentNode)
@@ -175,6 +177,7 @@ export const WorldRenderer = {
             await Promise.all([
                 TreeManager.warmUpFadeShaders(),
                 BuildingManager.warmUpFadeShader(),
+                IndoorTerrainOcclusionManager.warmUpFadeShader(),
             ])
         } catch (error) {
             console.warn('World occlusion fade shader warm-up failed', error)

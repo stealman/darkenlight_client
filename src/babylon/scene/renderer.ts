@@ -46,6 +46,7 @@ import { NIGHT_ENVIRONMENT_INTENSITY_FACTOR } from '@/babylon/scene/lighting/lig
 import { invoke } from '@tauri-apps/api/core'
 import { FoggyAreaManager } from '@/babylon/world/foggyAreaManager'
 import { ActiveMeshFreezer } from '@/babylon/scene/activeMeshFreezer'
+import { IndoorTerrainOcclusionManager } from '@/babylon/world/indoorTerrainOcclusionManager'
 
 function isTauriDesktop(): boolean {
     return '__TAURI_INTERNALS__' in window
@@ -204,6 +205,7 @@ export const Renderer = {
             MyPlayer.onFrame(timeRate, actualTime)
             Materials.onFrame(actualTime)
             WorldRenderer.checkRenderWorld()
+            if (IndoorTerrainOcclusionManager.onFrame(timeRate)) WorldRenderer.renderWorld()
             StaticsManager.onFrame(timeRate, actualTime)
             TreeManager.onFrame(timeRate, this.camera)
             BuildingManager.onFrame(timeRate, this.camera)
@@ -344,15 +346,19 @@ export const Renderer = {
 
         if (this.environmentType === 'indoor') {
             const cameraDistance = cameraPosition.length()
-            cameraPosition.y += Settings.closeView ? 1 : 3
+            const outdoorHorizontalDistance = Math.sqrt(cameraPosition.x ** 2 + cameraPosition.z ** 2)
+            const previousIndoorY = Math.min(
+                cameraDistance,
+                cameraPosition.y + (Settings.closeView ? 1 : 3),
+            )
+            const outdoorAngle = Math.atan2(cameraPosition.y, outdoorHorizontalDistance)
+            const previousIndoorAngle = Math.asin(previousIndoorY / cameraDistance)
+            const indoorAngle = outdoorAngle + (previousIndoorAngle - outdoorAngle) * 0.5
+            const indoorHorizontalDistance = Math.cos(indoorAngle) * cameraDistance
 
-            // Raising the camera must not move it farther from the player.
-            // Reduce the horizontal offset while preserving the original
-            // camera-to-player distance.
-            const horizontalDistance = Math.sqrt(Math.max(0, cameraDistance ** 2 - cameraPosition.y ** 2))
-            const currentHorizontalDistance = Math.sqrt(cameraPosition.x ** 2 + cameraPosition.z ** 2)
-            if (currentHorizontalDistance > 0) {
-                const horizontalScale = horizontalDistance / currentHorizontalDistance
+            cameraPosition.y = Math.sin(indoorAngle) * cameraDistance
+            if (outdoorHorizontalDistance > 0) {
+                const horizontalScale = indoorHorizontalDistance / outdoorHorizontalDistance
                 cameraPosition.x *= horizontalScale
                 cameraPosition.z *= horizontalScale
             }
