@@ -24,6 +24,11 @@ export const CharacterModelEquipModifiers = new Map<number, EquipModelModifier>(
     [EquipSlotModelsCb.LONGSWORD.modelId, modifier(Vector3.Zero(), Vector3.One())],
     [EquipSlotModelsCb.BROADSWORD.modelId, modifier(Vector3.Zero(), Vector3.One())],
     [EquipSlotModelsCb.GREATAXE.modelId, modifier(Vector3.Zero(), Vector3.One())],
+    [EquipSlotModelsCb.HALBERD.modelId, modifier(Vector3.Zero(), Vector3.One())],
+    [EquipSlotModelsCb.PICKAXE.modelId, modifier(Vector3.Zero(), Vector3.One())],
+    [EquipSlotModelsCb.HAND_AXE.modelId, modifier(Vector3.Zero(), Vector3.One())],
+    [EquipSlotModelsCb.BATTLE_AXE.modelId, modifier(Vector3.Zero(), Vector3.One())],
+    [EquipSlotModelsCb.HUNTING_SPEAR.modelId, modifier(Vector3.Zero(), Vector3.One())],
     [EquipSlotModelsCb.ARMOR_PLATE.modelId, modifier(new Vector3(0, -0.58, -0.02), getArmorEquipScale(EquipSlotModelsCb.ARMOR_PLATE.modelId)!, new Vector3(0.02, 0, 0))],
     [EquipSlotModelsCb.HELM.modelId, modifier(new Vector3(0.005, -0.35, 0), getArmorEquipScale(EquipSlotModelsCb.HELM.modelId)!)],
 

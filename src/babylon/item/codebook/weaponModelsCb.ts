@@ -16,13 +16,15 @@ const matBowSize = new Vector2(6, 1)
 const matLongswordSize = new Vector2(4, 4)
 const matBroadswordSize = new Vector2(4, 4)
 const matGreatswordSize = new Vector2(5, 1)
-const matPickaxeSize = new Vector2(6, 1)
-const matHandAxeSize = new Vector2(5, 1)
-const matBattleAxeSize = new Vector2(5, 1)
+const matPickaxeSize = new Vector2(4, 4)
+const matHandAxeSize = new Vector2(4, 4)
+const matBattleAxeSize = new Vector2(4, 4)
 const matGreatAxeSize = new Vector2(4, 4)
 const matLargeBattleAxeSize = new Vector2(5, 1)
 const matWarhammerSize = new Vector2(5, 1)
 const matFutureWeaponSize = new Vector2(5, 1)
+const matHalberdSize = new Vector2(4, 4)
+const matHuntingSpearSize = new Vector2(4, 4)
 
 // Change this when a weapon GLB is replaced. The URL revision prevents an
 // installed PWA from combining a newly deployed shader with an old HTTP-cached model.
@@ -31,6 +33,11 @@ const LONGSWORD_ASSET_CACHE_VERSION = '20261021-material-atlas-v1'
 const BROADSWORD_ASSET_CACHE_VERSION = '20261021-material-atlas-v2'
 const GREATAXE_ASSET_CACHE_VERSION = '20261022-material-atlas-v1'
 const GREATAXE_NORMAL_CACHE_VERSION = '20261022-single-tile-v1'
+const HALBERD_ASSET_CACHE_VERSION = '20261022-material-atlas-v1'
+const PICKAXE_ASSET_CACHE_VERSION = '20261022-material-atlas-v1'
+const HANDAXE_ASSET_CACHE_VERSION = '20261022-material-atlas-v2'
+const BATTLEAXE_ASSET_CACHE_VERSION = '20261022-material-atlas-v1'
+const HUNTINGSPEAR_ASSET_CACHE_VERSION = '20261022-material-atlas-v1'
 
 const createWeaponMaterialAtlasIndices = (atlasSize: Vector2) => new Map<number, number>(
     Array.from({ length: 5 }, (_, atlasTile) => {
@@ -42,6 +49,11 @@ const createWeaponMaterialAtlasIndices = (atlasSize: Vector2) => new Map<number,
 const longswordMaterialAtlasIndices = createWeaponMaterialAtlasIndices(matLongswordSize)
 const broadswordMaterialAtlasIndices = createWeaponMaterialAtlasIndices(matBroadswordSize)
 const greataxeMaterialAtlasIndices = createWeaponMaterialAtlasIndices(matGreatAxeSize)
+const halberdMaterialAtlasIndices = createWeaponMaterialAtlasIndices(matHalberdSize)
+const pickaxeMaterialAtlasIndices = createWeaponMaterialAtlasIndices(matPickaxeSize)
+const handaxeMaterialAtlasIndices = createWeaponMaterialAtlasIndices(matHandAxeSize)
+const battleaxeMaterialAtlasIndices = createWeaponMaterialAtlasIndices(matBattleAxeSize)
+const huntingspearMaterialAtlasIndices = createWeaponMaterialAtlasIndices(matHuntingSpearSize)
 
 function createWeaponNormalTexture(scene: Scene, fileName: string, cacheVersion: string): Texture {
     const texture = new Texture(
@@ -85,16 +97,11 @@ export const WeaponsCbManager = {
         this.recurveBowMaterial = createVertexColorWeaponMaterial('recurveBowVertexColor', scene, BowVertexColorPalettes.RECURVE_BOW)
         this.battleBowMaterial = createVertexColorWeaponMaterial('battleBowVertexColor', scene, BowVertexColorPalettes.BATTLE_BOW)
         this.greatSwordMaterial = createVertexColorWeaponMaterial('greatswordVertexColor', scene, SwordVertexColorPalettes.GREATSWORD)
-        this.pickAxeMaterial = createVertexColorWeaponMaterial('pickaxeVertexColor', scene, AxeVertexColorPalettes.PICKAXE)
-        this.handAxeMaterial = createVertexColorWeaponMaterial('handAxeVertexColor', scene, AxeVertexColorPalettes.HANDAXE)
-        this.battleAxeMaterial = createVertexColorWeaponMaterial('battleAxeVertexColor', scene, AxeVertexColorPalettes.BATTLE_AXE)
         this.largeBattleAxeMaterial = createVertexColorWeaponMaterial('largeBattleAxeVertexColor', scene, AxeVertexColorPalettes.LARGE_BATTLE_AXE)
         this.lightMaceMaterial = createVertexColorWeaponMaterial('lightMaceVertexColor', scene, MaceVertexColorPalettes.LIGHT_MACE)
         this.warmaceMaterial = createVertexColorWeaponMaterial('warmaceVertexColor', scene, MaceVertexColorPalettes.WARMACE)
         this.warhammerMaterial = createVertexColorWeaponMaterial('warhammerVertexColor', scene, MaceVertexColorPalettes.WARHAMMER)
-        this.huntingSpearMaterial = createVertexColorWeaponMaterial('huntingSpearVertexColor', scene, PolearmVertexColorPalettes.HUNTING_SPEAR)
         this.warSpearMaterial = createVertexColorWeaponMaterial('warSpearVertexColor', scene, PolearmVertexColorPalettes.WAR_SPEAR)
-        this.halberdMaterial = createVertexColorWeaponMaterial('halberdVertexColor', scene, PolearmVertexColorPalettes.HALBERD)
 
         await this.initLongsword(map, scene)
         await this.initBroadsword(map, scene)
@@ -102,17 +109,17 @@ export const WeaponsCbManager = {
         map.set(WeaponModelsCb.HUNTINGBOW.id, await this.getItem(WeaponModelsCb.HUNTINGBOW, this.bowMaterial))
         map.set(WeaponModelsCb.RECURVE_BOW.id, await this.getItem(WeaponModelsCb.RECURVE_BOW, this.recurveBowMaterial))
         map.set(WeaponModelsCb.BATTLEBOW.id, await this.getItem(WeaponModelsCb.BATTLEBOW, this.battleBowMaterial))
-        map.set(WeaponModelsCb.PICKAXE.id, await this.getItem(WeaponModelsCb.PICKAXE, this.pickAxeMaterial))
-        map.set(WeaponModelsCb.HAND_AXE.id, await this.getItem(WeaponModelsCb.HAND_AXE, this.handAxeMaterial))
-        map.set(WeaponModelsCb.BATTLE_AXE.id, await this.getItem(WeaponModelsCb.BATTLE_AXE, this.battleAxeMaterial))
+        await this.initPickaxe(map, scene)
+        await this.initHandAxe(map, scene)
+        await this.initBattleAxe(map, scene)
         await this.initGreatAxe(map, scene)
         map.set(WeaponModelsCb.LARGE_BATTLE_AXE.id, await this.getItem(WeaponModelsCb.LARGE_BATTLE_AXE, this.largeBattleAxeMaterial))
         map.set(WeaponModelsCb.LIGHT_MACE.id, await this.getItem(WeaponModelsCb.LIGHT_MACE, this.lightMaceMaterial))
         map.set(WeaponModelsCb.WARMACE.id, await this.getItem(WeaponModelsCb.WARMACE, this.warmaceMaterial))
         map.set(WeaponModelsCb.WARHAMMER.id, await this.getItem(WeaponModelsCb.WARHAMMER, this.warhammerMaterial))
-        map.set(WeaponModelsCb.HUNTING_SPEAR.id, await this.getItem(WeaponModelsCb.HUNTING_SPEAR, this.huntingSpearMaterial))
+        await this.initHuntingSpear(map, scene)
         map.set(WeaponModelsCb.WAR_SPEAR.id, await this.getItem(WeaponModelsCb.WAR_SPEAR, this.warSpearMaterial))
-        map.set(WeaponModelsCb.HALBERD.id, await this.getItem(WeaponModelsCb.HALBERD, this.halberdMaterial))
+        await this.initHalberd(map, scene)
 
     },
 
@@ -207,6 +214,156 @@ export const WeaponsCbManager = {
         ))
     },
 
+    async initHalberd(map: Map<number, EquipItemType>, scene: Scene) {
+        if (this.itemSourceParent == null) {
+            this.itemSourceParent = new TransformNode('mobWeaponSources', scene)
+        }
+        this.halberdMaterial = Materials.getPBRCustomMaterialFrom(
+            scene,
+            'halberdMaterialAtlas',
+            BASE_EQUIP_MATERIAL_PATH + this.BASE_WEAPONS_PATH,
+            `halberd.jpg?v=${HALBERD_ASSET_CACHE_VERSION}`,
+            1 / matHalberdSize.x,
+            1 / matHalberdSize.y,
+            false,
+            {
+                metallic: 0.5,
+                roughness: 0.9,
+                directIntensity: 1.5,
+                environmentIntensity: 1.2,
+            },
+            false,
+        )
+        this.halberdMaterial.backFaceCulling = false
+        this.halberdMaterial.twoSidedLighting = false
+        this.halberdMaterial.usePhysicalLightFalloff = false
+        map.set(WeaponModelsCb.HALBERD.id, await this.getItem(
+            WeaponModelsCb.HALBERD,
+            this.halberdMaterial,
+            `tripo-halberd.glb?v=${HALBERD_ASSET_CACHE_VERSION}`,
+        ))
+    },
+
+    async initPickaxe(map: Map<number, EquipItemType>, scene: Scene) {
+        if (this.itemSourceParent == null) {
+            this.itemSourceParent = new TransformNode('mobWeaponSources', scene)
+        }
+        this.pickAxeMaterial = Materials.getPBRCustomMaterialFrom(
+            scene,
+            'pickaxeMaterialAtlas',
+            BASE_EQUIP_MATERIAL_PATH + this.BASE_WEAPONS_PATH,
+            `pickaxe.jpg?v=${PICKAXE_ASSET_CACHE_VERSION}`,
+            1 / matPickaxeSize.x,
+            1 / matPickaxeSize.y,
+            false,
+            {
+                metallic: 0.5,
+                roughness: 0.9,
+                directIntensity: 1.5,
+                environmentIntensity: 1.2,
+            },
+            false,
+        )
+        this.pickAxeMaterial.backFaceCulling = false
+        this.pickAxeMaterial.twoSidedLighting = false
+        this.pickAxeMaterial.usePhysicalLightFalloff = false
+        map.set(WeaponModelsCb.PICKAXE.id, await this.getItem(
+            WeaponModelsCb.PICKAXE,
+            this.pickAxeMaterial,
+            `tripo-pickaxe.glb?v=${PICKAXE_ASSET_CACHE_VERSION}`,
+        ))
+    },
+
+    async initHandAxe(map: Map<number, EquipItemType>, scene: Scene) {
+        if (this.itemSourceParent == null) {
+            this.itemSourceParent = new TransformNode('mobWeaponSources', scene)
+        }
+        this.handAxeMaterial = Materials.getPBRCustomMaterialFrom(
+            scene,
+            'handaxeMaterialAtlas',
+            BASE_EQUIP_MATERIAL_PATH + this.BASE_WEAPONS_PATH,
+            `handaxe.jpg?v=${HANDAXE_ASSET_CACHE_VERSION}`,
+            1 / matHandAxeSize.x,
+            1 / matHandAxeSize.y,
+            false,
+            {
+                metallic: 0.5,
+                roughness: 0.9,
+                directIntensity: 1.5,
+                environmentIntensity: 1.2,
+            },
+            false,
+        )
+        this.handAxeMaterial.backFaceCulling = false
+        this.handAxeMaterial.twoSidedLighting = false
+        this.handAxeMaterial.usePhysicalLightFalloff = false
+        map.set(WeaponModelsCb.HAND_AXE.id, await this.getItem(
+            WeaponModelsCb.HAND_AXE,
+            this.handAxeMaterial,
+            `tripo-handaxe.glb?v=${HANDAXE_ASSET_CACHE_VERSION}`,
+        ))
+    },
+
+    async initBattleAxe(map: Map<number, EquipItemType>, scene: Scene) {
+        if (this.itemSourceParent == null) {
+            this.itemSourceParent = new TransformNode('mobWeaponSources', scene)
+        }
+        this.battleAxeMaterial = Materials.getPBRCustomMaterialFrom(
+            scene,
+            'battleaxeMaterialAtlas',
+            BASE_EQUIP_MATERIAL_PATH + this.BASE_WEAPONS_PATH,
+            `battleaxe.jpg?v=${BATTLEAXE_ASSET_CACHE_VERSION}`,
+            1 / matBattleAxeSize.x,
+            1 / matBattleAxeSize.y,
+            false,
+            {
+                metallic: 0.5,
+                roughness: 0.9,
+                directIntensity: 1.5,
+                environmentIntensity: 1.2,
+            },
+            false,
+        )
+        this.battleAxeMaterial.backFaceCulling = false
+        this.battleAxeMaterial.twoSidedLighting = false
+        this.battleAxeMaterial.usePhysicalLightFalloff = false
+        map.set(WeaponModelsCb.BATTLE_AXE.id, await this.getItem(
+            WeaponModelsCb.BATTLE_AXE,
+            this.battleAxeMaterial,
+            `tripo-battleaxe.glb?v=${BATTLEAXE_ASSET_CACHE_VERSION}`,
+        ))
+    },
+
+    async initHuntingSpear(map: Map<number, EquipItemType>, scene: Scene) {
+        if (this.itemSourceParent == null) {
+            this.itemSourceParent = new TransformNode('mobWeaponSources', scene)
+        }
+        this.huntingSpearMaterial = Materials.getPBRCustomMaterialFrom(
+            scene,
+            'huntingspearMaterialAtlas',
+            BASE_EQUIP_MATERIAL_PATH + this.BASE_WEAPONS_PATH,
+            `huntingspear.jpg?v=${HUNTINGSPEAR_ASSET_CACHE_VERSION}`,
+            1 / matHuntingSpearSize.x,
+            1 / matHuntingSpearSize.y,
+            false,
+            {
+                metallic: 0.5,
+                roughness: 0.9,
+                directIntensity: 1.5,
+                environmentIntensity: 1.2,
+            },
+            false,
+        )
+        this.huntingSpearMaterial.backFaceCulling = false
+        this.huntingSpearMaterial.twoSidedLighting = false
+        this.huntingSpearMaterial.usePhysicalLightFalloff = false
+        map.set(WeaponModelsCb.HUNTING_SPEAR.id, await this.getItem(
+            WeaponModelsCb.HUNTING_SPEAR,
+            this.huntingSpearMaterial,
+            `tripo-huntingspear.glb?v=${HUNTINGSPEAR_ASSET_CACHE_VERSION}`,
+        ))
+    },
+
     async getItem(data: EquipCbItem, material: PBRCustomMaterial | null = null, fileName = `${data.model}.glb?v=${WEAPON_MODEL_CACHE_VERSION}`): Promise<EquipItemType> {
         const item = new EquipItemType(data)
         await item.initializeMeshGlb(this.itemSourceParent!, this.itemSourceParent!.getScene(), `${this.BASE_WEAPONS_PATH}${fileName}`, material, data.pos, data.rot, data.scale)
@@ -261,9 +418,27 @@ export const WeaponModelsCb = {
 
     GREATSWORD: new EquipCbItem(EquipSlotModelsCb.GREATSWORD.modelId, 'greatsword', Vector3.Zero(), new Vector3(0.24, 0.3, 0.3), new Vector3(0, 3.2, 0), matGreatswordSize),
 
-    HAND_AXE: new EquipCbItem(EquipSlotModelsCb.HAND_AXE.modelId, 'handaxe', Vector3.Zero(), new Vector3(0.24, 0.24, 0.24), new Vector3(0, 2, 0), matHandAxeSize),
+    HAND_AXE: new EquipCbItem(
+        EquipSlotModelsCb.HAND_AXE.modelId,
+        'handaxe',
+        Vector3.Zero(),
+        new Vector3(0.25, 0.28, 0.25),
+        new Vector3(0, 2, 0),
+        matHandAxeSize,
+        handaxeMaterialAtlasIndices,
+        handaxeMaterialAtlasIndices.get(0) ?? 12,
+    ),
 
-    BATTLE_AXE: new EquipCbItem(EquipSlotModelsCb.BATTLE_AXE.modelId, 'battleaxe', Vector3.Zero(), new Vector3(0.24, 0.24, 0.24), new Vector3(0, 2.2, 0), matBattleAxeSize),
+    BATTLE_AXE: new EquipCbItem(
+        EquipSlotModelsCb.BATTLE_AXE.modelId,
+        'battleaxe',
+        Vector3.Zero(),
+        new Vector3(0.25, 0.28, 0.25),
+        new Vector3(0, 2.2, 0),
+        matBattleAxeSize,
+        battleaxeMaterialAtlasIndices,
+        battleaxeMaterialAtlasIndices.get(0) ?? 12,
+    ),
 
     GREATAXE: new EquipCbItem(
         EquipSlotModelsCb.GREATAXE.modelId,
@@ -278,7 +453,16 @@ export const WeaponModelsCb = {
 
     LARGE_BATTLE_AXE: new EquipCbItem(EquipSlotModelsCb.LARGE_BATTLE_AXE.modelId, 'largebattlexe', Vector3.Zero(), new Vector3(0.22, 0.24, 0.24), new Vector3(0, 2.5, 0), matLargeBattleAxeSize),
 
-    PICKAXE: new EquipCbItem(EquipSlotModelsCb.PICKAXE.modelId, 'pickaxe', Vector3.Zero(), new Vector3(0.22, 0.22, 0.18), new Vector3(0, 2.2, 0), matPickaxeSize),
+    PICKAXE: new EquipCbItem(
+        EquipSlotModelsCb.PICKAXE.modelId,
+        'pickaxe',
+        Vector3.Zero(),
+        new Vector3(0.25, 0.22, 0.3),
+        new Vector3(0, 2.2, 0),
+        matPickaxeSize,
+        pickaxeMaterialAtlasIndices,
+        pickaxeMaterialAtlasIndices.get(0) ?? 12,
+    ),
 
     LIGHT_MACE: new EquipCbItem(EquipSlotModelsCb.LIGHT_MACE.modelId, 'lightmace', Vector3.Zero(), new Vector3(0.24, 0.24, 0.24), new Vector3(0, 2, 0), matFutureWeaponSize),
 
@@ -286,11 +470,29 @@ export const WeaponModelsCb = {
 
     WARHAMMER: new EquipCbItem(EquipSlotModelsCb.WARHAMMER.modelId, 'warhammer', Vector3.Zero(), new Vector3(0.24, 0.24, 0.24), new Vector3(0, 2.5, 0), matWarhammerSize),
 
-    HUNTING_SPEAR: new EquipCbItem(EquipSlotModelsCb.HUNTING_SPEAR.modelId, 'huntingspear', Vector3.Zero(), new Vector3(0.24, 0.24, 0.24), new Vector3(0, 2.8, 0), matFutureWeaponSize),
+    HUNTING_SPEAR: new EquipCbItem(
+        EquipSlotModelsCb.HUNTING_SPEAR.modelId,
+        'huntingspear',
+        Vector3.Zero(),
+        new Vector3(0.22, 0.24, 0.22),
+        new Vector3(0, 2.8, 0),
+        matHuntingSpearSize,
+        huntingspearMaterialAtlasIndices,
+        huntingspearMaterialAtlasIndices.get(0) ?? 12,
+    ),
 
     WAR_SPEAR: new EquipCbItem(EquipSlotModelsCb.WAR_SPEAR.modelId, 'warspear', Vector3.Zero(), new Vector3(0.24, 0.24, 0.24), new Vector3(0, 3.2, 0), matFutureWeaponSize),
 
-    HALBERD: new EquipCbItem(EquipSlotModelsCb.HALBERD.modelId, 'halberd', new Vector3(0, -0.1, 0), new Vector3(0.24, 0.3, 0.24), new Vector3(-0.2, 3.2, 0), matFutureWeaponSize),
+    HALBERD: new EquipCbItem(
+        EquipSlotModelsCb.HALBERD.modelId,
+        'halberd',
+        new Vector3(0, -0.1, 0),
+        new Vector3(0.25, 0.28, 0.25),
+        new Vector3(-0.2, 3.2, 0),
+        matHalberdSize,
+        halberdMaterialAtlasIndices,
+        halberdMaterialAtlasIndices.get(0) ?? 12,
+    ),
 
     HUNTINGBOW: new EquipCbItem(EquipSlotModelsCb.HUNTINGBOW.modelId, 'hunterbow', new Vector3(-0.1, 0, 0), new Vector3(0.17, 0.24, 0.2), null, matBowSize),
 

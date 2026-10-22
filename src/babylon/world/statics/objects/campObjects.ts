@@ -2,6 +2,7 @@ import { Matrix, Vector2, Vector3 } from '@babylonjs/core'
 import { BaseStaticObject } from '@/babylon/world/statics/objects/baseStaticObject'
 import { Prefab, WorldRenderer } from '@/babylon/world/worldRenderer'
 import { StaticEquipPartsRenderer } from '@/babylon/world/statics/staticEquipPartsRenderer'
+import { WeaponModelsCb } from '@/babylon/item/codebook/weaponModelsCb'
 
 export type CampObjectFacing = '-X' | '+X' | '-Z' | '+Z'
 export type CampFenceOrientation = 'X' | 'Z'
@@ -262,7 +263,11 @@ export class StumpWithAxe extends CampObject {
             .multiply(Matrix.RotationZ(-Math.PI / 2))
             .multiply(Matrix.RotationY(facingYaw))
             .multiply(Matrix.Translation(x, this.renderPosition.y + localY, z))
-        StaticEquipPartsRenderer.addPart(this.prefab!, 0, axeMatrix)
+        StaticEquipPartsRenderer.addPart(
+            this.prefab!,
+            WeaponModelsCb.HAND_AXE.resolveMaterialAtlasIndex(0),
+            axeMatrix,
+        )
     }
 }
 

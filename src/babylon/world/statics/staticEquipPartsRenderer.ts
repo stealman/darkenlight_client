@@ -1,4 +1,4 @@
-import { Matrix, TransformNode, Vector2 } from '@babylonjs/core'
+import { Matrix, Mesh, TransformNode, Vector2, VertexData } from '@babylonjs/core'
 import { EquipManager } from '@/babylon/item/equipManager'
 import { Lights } from '@/babylon/scene/lights'
 import { Prefab } from '@/babylon/world/worldRenderer'
@@ -20,8 +20,21 @@ export const StaticEquipPartsRenderer = {
         const source = EquipManager.itemTypes.get(modelId)?.mesh
         if (!source) throw new Error(`Missing equip model ${modelId} for static object part`)
 
-        const mesh = source.clone(`staticEquipPart_${modelId}`, this.parent, false)
-        if (!mesh) throw new Error(`Unable to clone equip model ${modelId} for static object part`)
+        // Do not clone the source mesh here. Babylon clones share Geometry,
+        // including its VAO cache, while the equipped item and this static
+        // prefab use different thin-instance buffers. A viewport rebuild can
+        // then bind the static buffers to the equipped mesh (or vice versa).
+        const mesh = new Mesh(`staticEquipPart_${modelId}`, source.getScene())
+        const vertexData = VertexData.ExtractFromMesh(source, true, true)
+        vertexData.applyToMesh(mesh, false)
+        mesh.parent = this.parent
+        mesh.material = source.material
+        mesh.position.copyFrom(source.position)
+        mesh.rotation.copyFrom(source.rotation)
+        mesh.scaling.copyFrom(source.scaling)
+        if (source.rotationQuaternion) {
+            mesh.rotationQuaternion = source.rotationQuaternion.clone()
+        }
         mesh.setEnabled(false)
         mesh.alwaysSelectAsActiveMesh = true
         mesh.doNotSyncBoundingInfo = true
