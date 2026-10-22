@@ -478,7 +478,7 @@ export class CharacterModel implements EquipBearer {
                         possibleAnims.push(this.slashAnim)
                         possibleAnims.push(this.slashAnim2)
                         possibleAnims.push(this.leftSlashAnim)
-                        possibleAnims.push(this.rightSlashAnim)
+                        //possibleAnims.push(this.rightSlashAnim)
                         break
                     }
                     case WeaponTypes.PICKAXE: {

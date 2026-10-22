@@ -50,6 +50,7 @@ const FLOOR_OVERHANG = 0.4
 const WALL_HEIGHT = 1
 const WALL_THICKNESS = 0.2
 const PILLAR_SIZE = 0.4
+const PILLAR_COLLISION_SIZE = WALL_THICKNESS
 const DOOR_CENTER_X = 2
 const DOOR_OPENING_WIDTH = 1
 const DOOR_WIDTH = DOOR_OPENING_WIDTH - 0.1
@@ -302,7 +303,7 @@ class BuildingView {
             return moverMinX < wallMaxX && moverMaxX > wallMinX
                 && moverMinZ < wallMaxZ && moverMaxZ > wallMinZ
         }
-        const halfPillar = PILLAR_SIZE / 2
+        const halfPillar = PILLAR_COLLISION_SIZE / 2
         const doorMinX = DOOR_CENTER_X - DOOR_COLLISION_WIDTH / 2
         const doorMaxX = doorMinX + DOOR_COLLISION_WIDTH
         const hitsPillar = [minX, maxX].some((pillarX) => [minZ, maxZ].some((pillarZ) => {
