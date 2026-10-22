@@ -12,7 +12,7 @@ import { ViewportManager } from '@/utils/viewport'
 import { CharacterModel } from '@/babylon/character/characterModel'
 import { Utils } from '@/utils/utils'
 import { Connector } from '@/network/connector'
-import { MyCharMoveMsg } from '@/network/messages'
+import { MyCharMoveMsg, PushThroughRequest } from '@/network/messages'
 import { MyPlayer } from '@/data/myPlayer'
 import { EquipItemSlots, EquipSlotModelsCb, Item, WeaponCategories, WeaponTypes } from '@/data/items/item'
 import { Arrow, ArrowsManager } from '@/babylon/world/arrowsManager'
@@ -29,6 +29,7 @@ import {
     CharacterRestingMessage,
     HealingMessage,
     HealingResultMessage,
+    PushThroughMessage,
     SkillCapsTO,
     SkillSetTO,
 } from '@/network/messageIfs'
@@ -84,6 +85,9 @@ class Character implements Attackable, EffectTarget {
     private serverMoveTargets: Vector3[] = []
     private serverMoveLookAhead: Vector3 | null = null
     private serverMoveStopAtEnd: boolean = false
+    private pushThroughContact: {type: string, id: number, angle: number, since: number, lastRequest: number} | null = null
+    private pushThroughVisualEnd: number = 0
+    private pushThroughCooldownEnd: number = 0
 
     equipSet: Map<string, Item> = new Map<string, Item>()
     skillSet: SkillSetTO = {}
@@ -293,13 +297,31 @@ class Character implements Attackable, EffectTarget {
             }
 
             // ONLY FOR MY CHAR
-            if (myChar && Utils.isMovementCollision(this.getBoxSize(), new Vector3(this.pos.x, 0, this.pos.z), tgtPos)) {
+            const movementOrigin = myChar ? new Vector3(this.pos.x, 0, this.pos.z) : null
+            const movementCollision = myChar && movementOrigin
+                ? Utils.isMovementCollision(this.getBoxSize(), movementOrigin, tgtPos)
+                : null
+            if (myChar && movementCollision) {
+                const blockingEntity = Utils.getMovementBlockingEntity(this.getBoxSize(), movementOrigin!, tgtPos)
+                let chargingPushThrough = false
+                if (blockingEntity) {
+                    chargingPushThrough = this.updatePushThroughContact(blockingEntity, angle, actualTime)
+                } else {
+                    this.pushThroughContact = null
+                }
                 if (combatApproaching) {
                     this.cancelCombatApproach()
                     this.model?.onFrame(timeRate)
                     return
                 }
-                this.checkMyCharAlternateMovementPos(tgtPos, angle, speed, timeRate)
+                if (chargingPushThrough) {
+                    tgtPos.x = this.pos.x
+                    tgtPos.z = this.pos.z
+                } else {
+                    this.checkMyCharAlternateMovementPos(tgtPos, angle, speed, timeRate)
+                }
+            } else if (myChar) {
+                this.pushThroughContact = null
             }
 
             // ONLY FOR MY CHAR - Check world boundaries
@@ -340,6 +362,9 @@ class Character implements Attackable, EffectTarget {
             if (this.movementType === 'W') { this.model?.startWalkAnimation(this.getActualSpeed() / 2) }
             this.resolveStepMark(actualTime, false)
         } else {
+            if (myChar) {
+                this.pushThroughContact = null
+            }
             this.model?.stopAnimation()
         }
         this.model?.onFrame(timeRate)
@@ -357,6 +382,49 @@ class Character implements Attackable, EffectTarget {
             tgtPos.z = this.pos.z
         }
         Connector.sendMoveMessage(new MyCharMoveMsg())
+    }
+
+    private updatePushThroughContact(target: Attackable, angle: number, time: number): boolean {
+        const targetType = target.getObjectType()
+        const contact = this.pushThroughContact
+        const angleDifference = contact
+            ? Math.abs(Math.atan2(Math.sin(angle - contact.angle), Math.cos(angle - contact.angle)))
+            : Infinity
+        if (!contact || contact.type !== targetType || contact.id !== target.id || angleDifference > Math.PI / 12) {
+            this.pushThroughContact = {type: targetType, id: target.id, angle, since: time, lastRequest: 0}
+            return time >= this.pushThroughCooldownEnd && this.st >= 20
+        }
+
+        contact.angle = angle
+        if (time < this.pushThroughCooldownEnd || this.st < 20) {
+            return false
+        }
+        if (contact.lastRequest > 0) return time - contact.lastRequest < 250
+        if (time - contact.since < 250) {
+            return true
+        }
+        contact.lastRequest = time
+        Connector.sendMessage(new PushThroughRequest(contact.type, contact.id, angle))
+        return true
+    }
+
+    pushThrough(data: PushThroughMessage) {
+        this.combatApproachTarget = null
+        this.clearServerMovementTargets()
+        this.pos.x = data.x
+        this.pos.z = data.z
+        this.pos.y = data.y
+        this.logicYpos = data.y
+        this.setLookAngle(data.a - Math.PI / 4)
+        this.pushThroughVisualEnd = Date.now() + data.dur
+        this.pushThroughContact = null
+        if (this === MyPlayer.myChar) {
+            this.pushThroughCooldownEnd = Date.now() + 5000
+        }
+    }
+
+    isPushThroughVisualActive() {
+        return Date.now() < this.pushThroughVisualEnd
     }
 
     markCombatActivity() {
@@ -547,6 +615,8 @@ class Character implements Attackable, EffectTarget {
         this.arrowCreateTime = 0
         this.arrowShotTime = 0
         this.combatApproachTarget = null
+        this.pushThroughContact = null
+        this.pushThroughVisualEnd = 0
         this.clearServerMovementTargets()
         this.setMoveAngle(null)
         this.setActualSpeed(0)
@@ -568,11 +638,14 @@ class Character implements Attackable, EffectTarget {
         this.pos.z = z
         this.pos.y = y
         this.logicYpos = y
+        this.pushThroughContact = null
+        this.pushThroughVisualEnd = 0
         this.model?.snapToParentPosition()
     }
 
     stopMovementLocally() {
         this.combatApproachTarget = null
+        this.pushThroughContact = null
         this.clearServerMovementTargets()
         this.setMoveAngle(null)
         this.setActualSpeed(0)

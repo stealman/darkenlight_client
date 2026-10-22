@@ -159,6 +159,15 @@ export interface CombatApproachMessage {
     d: number
 }
 
+export interface PushThroughMessage {
+    id: number
+    x: number
+    y: number
+    z: number
+    a: number
+    dur: number
+}
+
 export interface  HealingMessage {
     id: number
     tgt: number

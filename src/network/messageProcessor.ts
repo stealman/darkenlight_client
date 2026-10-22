@@ -45,6 +45,7 @@ import {
     BankStateData, ContainerStateData, SkillSetTO,
     PowerStrikeQueueStateMessage,
     PreciseShotQueueStateMessage,
+    PushThroughMessage,
     WorldMapDataMessage,
 } from '@/network/messageIfs'
 import { GroundItemsManager } from '@/babylon/world/groundItemsManager'
@@ -138,6 +139,7 @@ export const MessageProcessor = {
                 case 88: this.processGMBotDetails(msg.d); break
                 case 89: this.processCharacterNameChanged(msg.d); break
                 case 90: this.processGMExistingBots(msg.d); break
+                case 91: this.processPushThrough(msg.d); break
                 case 59: this.processCharacterDeath(msg.d); break
                 case 66: this.processCharacterCombatApproach(msg.d); break
                 case 60: this.processCharacterTeleport(msg.d); break
@@ -322,6 +324,10 @@ export const MessageProcessor = {
 
     removeMonster(data) {
         MonsterManager.removeMonster(data.id, data.dead)
+    },
+
+    processPushThrough(data: PushThroughMessage) {
+        CharacterManager.pushThrough(data)
     },
 
     processWorldChunkData(data) {

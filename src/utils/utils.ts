@@ -103,6 +103,30 @@ export const Utils = {
         return coveredBlocks;
     },
 
+    getMovementBlockingEntity(charSize: number, charPos: Vector3, targetPos: Vector3): Attackable | null {
+        const monster = MonsterManager.isPointInMonster(targetPos.x, targetPos.z, charSize)
+        if (monster && monster.hpPercent > 0
+            && Math.hypot(monster.pos.x - targetPos.x, monster.pos.z - targetPos.z)
+                < Math.hypot(monster.pos.x - charPos.x, monster.pos.z - charPos.z)) {
+            return monster
+        }
+
+        const character = CharacterManager.isPointInCharacter(targetPos.x, targetPos.z, charSize, MyPlayer.myChar?.id)
+        if (character
+            && Math.hypot(character.pos.x - targetPos.x, character.pos.z - targetPos.z)
+                < Math.hypot(character.pos.x - charPos.x, character.pos.z - charPos.z)) {
+            return character
+        }
+
+        const npc = NpcManager.isPointInNpc(targetPos.x, targetPos.z, charSize)
+        if (npc && npc.hpPercent > 0
+            && Math.hypot(npc.pos.x - targetPos.x, npc.pos.z - targetPos.z)
+                < Math.hypot(npc.pos.x - charPos.x, npc.pos.z - charPos.z)) {
+            return npc
+        }
+        return null
+    },
+
     isMovementCollision(charSize: number, charPos: Vector3, targetPos: Vector3): {x: number, z: number} | null {
 
         //  Check terrain height difference

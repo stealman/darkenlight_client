@@ -121,6 +121,15 @@ export class CombatApproachRequest implements Message {
     }
 }
 
+export class PushThroughRequest implements Message {
+    t: number = 74
+    d: {tp: string, id: number, a: number}
+
+    constructor(targetType: string, targetId: number, angle: number) {
+        this.d = {tp: targetType, id: targetId, a: Utils.roundToTwoDecimals(angle)}
+    }
+}
+
 export class AutoAttackBreak implements Message {
     t: number = 7
     d: any

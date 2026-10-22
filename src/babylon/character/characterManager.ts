@@ -15,7 +15,7 @@ import {
     CharacterGatheringResultMessage,
     CharacterRestingMessage,
     HealingMessage,
-    HealingResultMessage, PotionUsedMessage, PubliclyVisibleAffectData,
+    HealingResultMessage, PotionUsedMessage, PubliclyVisibleAffectData, PushThroughMessage,
 } from '@/network/messageIfs'
 import { OverlayManager } from '@/gui/overlay/overlayManager'
 import { TargetingManager } from '@/gui/targettingManager'
@@ -149,6 +149,11 @@ export const CharacterManager = {
                 char.setMoveType(data[5])
             }
         }
+    },
+
+    pushThrough(data: PushThroughMessage) {
+        const char = data.id === MyPlayer.myChar.id ? MyPlayer.myChar : this.characters.get(data.id)
+        char?.pushThrough(data)
     },
 
     startAutoAttack(data: AutoAttackMessage) {
