@@ -95,11 +95,9 @@
 
 <script setup>
 import { ArcRotateCamera, Color3, Color4, CubeTexture, DirectionalLight, Engine, Mesh, Scene, SceneLoader, Texture, Vector2, Vector3 } from '@babylonjs/core'
-import { WEAPON_MODEL_CACHE_VERSION, WeaponModelsCb } from '@/babylon/item/codebook/weaponModelsCb'
+import { WeaponModelsCb } from '@/babylon/item/codebook/weaponModelsCb'
 import { ArmorModelsCb, BASE_EQUIP_MATERIAL_PATH, TEXTURED_ARMOR_ASSETS } from '@/babylon/item/codebook/armorsModelsCb'
 import { ArmorMaterialCatalog } from '@/babylon/item/codebook/armorMaterialCatalog'
-import { VertexColorWeaponPalettesByModelKey } from '@/babylon/item/codebook/vertexColorPalettes'
-import { createVertexColorWeaponMaterial } from '@/babylon/item/codebook/vertexColorPalettes/vertexColorWeaponMaterial'
 import { Materials } from '@/babylon/materials'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { Settings } from '@/settings/settings'
@@ -109,9 +107,22 @@ const MODEL_RENDER_SETTINGS_LS_KEY = 'model-render-settings'
 const ALL_MATERIAL_INDEX = -1
 const ALL_MATERIAL_OPTION = { index: ALL_MATERIAL_INDEX, label: 'ALL' }
 
-const WEAPON_OPTIONS = Object.entries(VertexColorWeaponPalettesByModelKey).map(([key, weapon]) => {
-    const item = WeaponModelsCb[key]
-    return { key, item, ...weapon, label: `${key} (${item.model})` }
+const TRIPO_WEAPON_CACHE_VERSION = '20261022-material-atlas-v1'
+const WEAPON_MATERIAL_OPTIONS = ['Steel', 'Pyroxide', 'Geonite', 'Mythril', 'Chaotite']
+    .map((label, index) => ({ index, label }))
+const WEAPON_OPTIONS = [
+    { key: 'LONGSWORD', modelFile: 'tripo-longsword.glb', atlasFile: 'longsword.jpg', inventoryBaseName: 'longsword' },
+    { key: 'BROADSWORD', modelFile: 'tripo-broadsword.glb', atlasFile: 'broadsword.jpg', inventoryBaseName: 'broadsword' },
+    { key: 'GREATAXE', modelFile: 'tripo-greataxe.glb', atlasFile: 'greataxe.jpg', inventoryBaseName: 'great-axe' },
+    { key: 'HALBERD', modelFile: 'tripo-halberd.glb', atlasFile: 'halberd.jpg', inventoryBaseName: 'halberd' },
+    { key: 'PICKAXE', modelFile: 'tripo-pickaxe.glb', atlasFile: 'pickaxe.jpg', inventoryBaseName: 'pickaxe' },
+    { key: 'HAND_AXE', modelFile: 'tripo-handaxe.glb', atlasFile: 'handaxe.jpg', inventoryBaseName: 'hand-axe' },
+    { key: 'BATTLE_AXE', modelFile: 'tripo-battleaxe.glb', atlasFile: 'battleaxe.jpg', inventoryBaseName: 'battle-axe' },
+    { key: 'HUNTING_SPEAR', modelFile: 'tripo-huntingspear.glb', atlasFile: 'huntingspear.jpg', inventoryBaseName: 'hunting-spear' },
+    { key: 'LIGHT_MACE', modelFile: 'tripo-lightmace.glb', atlasFile: 'lightmace.jpg', inventoryBaseName: 'lightmace' },
+].map((weapon) => {
+    const item = WeaponModelsCb[weapon.key]
+    return { ...weapon, item, label: `${weapon.key} (${item.model})` }
 })
 const ARMOR_OPTIONS = Object.entries(ArmorModelsCb).map(([key, item]) => ({ key, item, label: `${key} (${item.model})` }))
 const ARMOR_MATERIAL_OPTIONS = ArmorMaterialCatalog.materialNames.map((label, index) => ({ index, label }))
@@ -152,28 +163,21 @@ const selectedPreviewOption = computed(() => {
 const selectedPreviewItem = computed(() => {
     return selectedPreviewOption.value?.item ?? null
 })
-const selectedWeaponPalette = computed(() => previewCategory.value === 'WEAPON' ? selectedPreviewOption.value?.palette ?? null : null)
 const selectedArmorAsset = computed(() => TEXTURED_ARMOR_ASSETS.get(selectedPreviewItem.value?.id ?? -1) ?? null)
 const currentMaterialSlots = computed(() => {
     const item = selectedPreviewItem.value
     if (!item) {
         return 0
     }
-    if (selectedWeaponPalette.value) {
-        return selectedWeaponPalette.value.materialColors.length
-    }
-    return ArmorMaterialCatalog.materialNames.length
+    return previewCategory.value === 'WEAPON'
+        ? WEAPON_MATERIAL_OPTIONS.length
+        : ArmorMaterialCatalog.materialNames.length
 })
 const materialIndexOptions = computed(() => {
     if (previewCategory.value === 'ARMOR') {
         return [ALL_MATERIAL_OPTION, ...ARMOR_MATERIAL_OPTIONS]
     }
-    const materialNames = selectedWeaponPalette.value?.materialNames
-    const options = Array.from({ length: currentMaterialSlots.value }, (_, index) => ({
-        index,
-        label: materialNames?.[index] ?? `Material ${index + 1}`,
-    }))
-    return [ALL_MATERIAL_OPTION, ...options]
+    return [ALL_MATERIAL_OPTION, ...WEAPON_MATERIAL_OPTIONS]
 })
 
 let engine = null
@@ -361,11 +365,8 @@ const applyMaterialIndexToPreview = (materialIndex) => {
     if (previewMatIndex.value !== ALL_MATERIAL_INDEX && safeIndex !== previewMatIndex.value) {
         previewMatIndex.value = safeIndex
     }
-    const isWeapon = previewCategory.value === 'WEAPON'
-    const atlasIndex = isWeapon
-        ? safeIndex
-        : (previewItem.materialAtlasIndices?.get(safeIndex) ?? previewItem.materialAtlasFallbackIndex)
-    applyAtlasIndexToMesh(previewMesh, isWeapon ? materialSlots : previewItem.matCols, isWeapon ? 1 : previewItem.matRows, atlasIndex)
+    const atlasIndex = previewItem.materialAtlasIndices?.get(safeIndex) ?? previewItem.materialAtlasFallbackIndex
+    applyAtlasIndexToMesh(previewMesh, previewItem.matCols, previewItem.matRows, atlasIndex)
 }
 
 const applyCurrentMaterialIndex = () => {
@@ -412,8 +413,8 @@ const loadPreview = async () => {
     previewMaterial = null
 
     const isWeapon = previewCategory.value === 'WEAPON'
-    const weaponPalette = selectedWeaponPalette.value
-    if (isWeapon && !weaponPalette) {
+    const weaponAsset = selectedPreviewOption.value
+    if (isWeapon && !weaponAsset) {
         return
     }
     const armorAsset = selectedArmorAsset.value
@@ -421,7 +422,7 @@ const loadPreview = async () => {
         return
     }
     const modelPath = isWeapon
-        ? `weapons/${previewItem.model}.glb?v=${WEAPON_MODEL_CACHE_VERSION}`
+        ? `weapons/${weaponAsset.modelFile}?v=${TRIPO_WEAPON_CACHE_VERSION}`
         : `armors/${armorAsset.modelFile}`
     const importResult = await SceneLoader.ImportMeshAsync('', '/models/equip/', modelPath, scene)
     const sourceMeshes = importResult.meshes.filter((m) => m instanceof Mesh && m.getTotalVertices() > 0)
@@ -448,11 +449,25 @@ const loadPreview = async () => {
     loadSettingsForCurrentSelection()
 
     if (isWeapon) {
-        previewMaterial = createVertexColorWeaponMaterial(
-            `modelRenderMaterial-${previewCategory.value}-${previewItem.model}`,
+        previewMaterial = Materials.getPBRCustomMaterialFrom(
             scene,
-            weaponPalette,
+            `modelRenderMaterial-${previewCategory.value}-${previewItem.model}`,
+            `${BASE_EQUIP_MATERIAL_PATH}weapons/`,
+            weaponAsset.atlasFile,
+            1 / previewItem.matCols,
+            1 / previewItem.matRows,
+            false,
+            {
+                metallic: 0.5,
+                roughness: 0.9,
+                directIntensity: 1.5,
+                environmentIntensity: 1.2,
+            },
+            false,
         )
+        previewMaterial.backFaceCulling = false
+        previewMaterial.twoSidedLighting = false
+        previewMaterial.usePhysicalLightFalloff = false
     } else {
         previewMaterial = Materials.getPBRCustomMaterialFrom(
             scene,
@@ -547,8 +562,10 @@ const onWindowResize = () => {
 }
 
 const getMaterialName = (materialIndex) => {
-    return selectedWeaponPalette.value?.materialNames[materialIndex]
-        ?? ARMOR_MATERIAL_OPTIONS.find((option) => option.index === materialIndex)?.label
+    const options = previewCategory.value === 'WEAPON'
+        ? WEAPON_MATERIAL_OPTIONS
+        : ARMOR_MATERIAL_OPTIONS
+    return options.find((option) => option.index === materialIndex)?.label
 }
 
 const getExportMaterialIndexes = () => {

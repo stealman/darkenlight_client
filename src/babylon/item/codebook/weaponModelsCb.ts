@@ -25,6 +25,7 @@ const matWarhammerSize = new Vector2(5, 1)
 const matFutureWeaponSize = new Vector2(5, 1)
 const matHalberdSize = new Vector2(4, 4)
 const matHuntingSpearSize = new Vector2(4, 4)
+const matLightMaceSize = new Vector2(4, 4)
 
 // Change this when a weapon GLB is replaced. The URL revision prevents an
 // installed PWA from combining a newly deployed shader with an old HTTP-cached model.
@@ -38,6 +39,7 @@ const PICKAXE_ASSET_CACHE_VERSION = '20261022-material-atlas-v1'
 const HANDAXE_ASSET_CACHE_VERSION = '20261022-material-atlas-v2'
 const BATTLEAXE_ASSET_CACHE_VERSION = '20261022-material-atlas-v1'
 const HUNTINGSPEAR_ASSET_CACHE_VERSION = '20261022-material-atlas-v1'
+const LIGHTMACE_ASSET_CACHE_VERSION = '20261022-material-atlas-v1'
 
 const createWeaponMaterialAtlasIndices = (atlasSize: Vector2) => new Map<number, number>(
     Array.from({ length: 5 }, (_, atlasTile) => {
@@ -54,6 +56,7 @@ const pickaxeMaterialAtlasIndices = createWeaponMaterialAtlasIndices(matPickaxeS
 const handaxeMaterialAtlasIndices = createWeaponMaterialAtlasIndices(matHandAxeSize)
 const battleaxeMaterialAtlasIndices = createWeaponMaterialAtlasIndices(matBattleAxeSize)
 const huntingspearMaterialAtlasIndices = createWeaponMaterialAtlasIndices(matHuntingSpearSize)
+const lightmaceMaterialAtlasIndices = createWeaponMaterialAtlasIndices(matLightMaceSize)
 
 function createWeaponNormalTexture(scene: Scene, fileName: string, cacheVersion: string): Texture {
     const texture = new Texture(
@@ -98,7 +101,6 @@ export const WeaponsCbManager = {
         this.battleBowMaterial = createVertexColorWeaponMaterial('battleBowVertexColor', scene, BowVertexColorPalettes.BATTLE_BOW)
         this.greatSwordMaterial = createVertexColorWeaponMaterial('greatswordVertexColor', scene, SwordVertexColorPalettes.GREATSWORD)
         this.largeBattleAxeMaterial = createVertexColorWeaponMaterial('largeBattleAxeVertexColor', scene, AxeVertexColorPalettes.LARGE_BATTLE_AXE)
-        this.lightMaceMaterial = createVertexColorWeaponMaterial('lightMaceVertexColor', scene, MaceVertexColorPalettes.LIGHT_MACE)
         this.warmaceMaterial = createVertexColorWeaponMaterial('warmaceVertexColor', scene, MaceVertexColorPalettes.WARMACE)
         this.warhammerMaterial = createVertexColorWeaponMaterial('warhammerVertexColor', scene, MaceVertexColorPalettes.WARHAMMER)
         this.warSpearMaterial = createVertexColorWeaponMaterial('warSpearVertexColor', scene, PolearmVertexColorPalettes.WAR_SPEAR)
@@ -114,7 +116,7 @@ export const WeaponsCbManager = {
         await this.initBattleAxe(map, scene)
         await this.initGreatAxe(map, scene)
         map.set(WeaponModelsCb.LARGE_BATTLE_AXE.id, await this.getItem(WeaponModelsCb.LARGE_BATTLE_AXE, this.largeBattleAxeMaterial))
-        map.set(WeaponModelsCb.LIGHT_MACE.id, await this.getItem(WeaponModelsCb.LIGHT_MACE, this.lightMaceMaterial))
+        await this.initLightMace(map, scene)
         map.set(WeaponModelsCb.WARMACE.id, await this.getItem(WeaponModelsCb.WARMACE, this.warmaceMaterial))
         map.set(WeaponModelsCb.WARHAMMER.id, await this.getItem(WeaponModelsCb.WARHAMMER, this.warhammerMaterial))
         await this.initHuntingSpear(map, scene)
@@ -364,6 +366,36 @@ export const WeaponsCbManager = {
         ))
     },
 
+    async initLightMace(map: Map<number, EquipItemType>, scene: Scene) {
+        if (this.itemSourceParent == null) {
+            this.itemSourceParent = new TransformNode('mobWeaponSources', scene)
+        }
+        this.lightMaceMaterial = Materials.getPBRCustomMaterialFrom(
+            scene,
+            'lightmaceMaterialAtlas',
+            BASE_EQUIP_MATERIAL_PATH + this.BASE_WEAPONS_PATH,
+            `lightmace.jpg?v=${LIGHTMACE_ASSET_CACHE_VERSION}`,
+            1 / matLightMaceSize.x,
+            1 / matLightMaceSize.y,
+            false,
+            {
+                metallic: 0.5,
+                roughness: 0.9,
+                directIntensity: 1.5,
+                environmentIntensity: 1.2,
+            },
+            false,
+        )
+        this.lightMaceMaterial.backFaceCulling = false
+        this.lightMaceMaterial.twoSidedLighting = false
+        this.lightMaceMaterial.usePhysicalLightFalloff = false
+        map.set(WeaponModelsCb.LIGHT_MACE.id, await this.getItem(
+            WeaponModelsCb.LIGHT_MACE,
+            this.lightMaceMaterial,
+            `tripo-lightmace.glb?v=${LIGHTMACE_ASSET_CACHE_VERSION}`,
+        ))
+    },
+
     async getItem(data: EquipCbItem, material: PBRCustomMaterial | null = null, fileName = `${data.model}.glb?v=${WEAPON_MODEL_CACHE_VERSION}`): Promise<EquipItemType> {
         const item = new EquipItemType(data)
         await item.initializeMeshGlb(this.itemSourceParent!, this.itemSourceParent!.getScene(), `${this.BASE_WEAPONS_PATH}${fileName}`, material, data.pos, data.rot, data.scale)
@@ -464,7 +496,16 @@ export const WeaponModelsCb = {
         pickaxeMaterialAtlasIndices.get(0) ?? 12,
     ),
 
-    LIGHT_MACE: new EquipCbItem(EquipSlotModelsCb.LIGHT_MACE.modelId, 'lightmace', Vector3.Zero(), new Vector3(0.24, 0.24, 0.24), new Vector3(0, 2, 0), matFutureWeaponSize),
+    LIGHT_MACE: new EquipCbItem(
+        EquipSlotModelsCb.LIGHT_MACE.modelId,
+        'lightmace',
+        Vector3.Zero(),
+        new Vector3(0.28, 0.26, 0.28),
+        new Vector3(0, 2, 0),
+        matLightMaceSize,
+        lightmaceMaterialAtlasIndices,
+        lightmaceMaterialAtlasIndices.get(0) ?? 12,
+    ),
 
     WARMACE: new EquipCbItem(EquipSlotModelsCb.WARMACE.modelId, 'warmace', Vector3.Zero(), new Vector3(0.24, 0.24, 0.24), new Vector3(0, 2.2, 0), matFutureWeaponSize),
 
