@@ -120,6 +120,7 @@ const WEAPON_OPTIONS = [
     { key: 'BATTLE_AXE', modelFile: 'tripo-battleaxe.glb', atlasFile: 'battleaxe.jpg', inventoryBaseName: 'battle-axe' },
     { key: 'HUNTING_SPEAR', modelFile: 'tripo-huntingspear.glb', atlasFile: 'huntingspear.jpg', inventoryBaseName: 'hunting-spear' },
     { key: 'LIGHT_MACE', modelFile: 'tripo-lightmace.glb', atlasFile: 'lightmace.jpg', inventoryBaseName: 'lightmace' },
+    { key: 'WARMACE', modelFile: 'tripo-warmace.glb', atlasFile: 'warmace.jpg', inventoryBaseName: 'warmace' },
 ].map((weapon) => {
     const item = WeaponModelsCb[weapon.key]
     return { ...weapon, item, label: `${weapon.key} (${item.model})` }
