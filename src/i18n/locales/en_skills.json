@@ -75,6 +75,8 @@
       "masterBonus": "Master bonus",
       "grandmasterBonus": "Grandmaster bonus",
       "unknown": "Unknown",
+      "halvesShieldPrecisionPenalty": "Halves the shield's Precision penalty",
+      "eliminatesShieldPrecisionPenalty": "Eliminates the shield's Precision penalty",
       "weaponAttackOfType": "weapon attack of type",
       "powerStrikeDamage": "Power Strike bonus attack",
       "preciseShotDamage": "Precise Shot bonus attack",

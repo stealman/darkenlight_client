@@ -228,6 +228,7 @@
     "durability": "Stav",
     "armor": "Brnění",
     "armorPenetration": "Průraznost",
+    "precision": "Přesnost",
     "defense": "Obrana",
     "maxHealth": "Maximum zdraví",
     "magicInterference": "Interference",

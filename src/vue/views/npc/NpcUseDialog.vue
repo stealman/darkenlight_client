@@ -211,12 +211,14 @@
                     <span>{{ t('vendor.speed') }} <strong class="ui-text-gradient">{{ formatSpeed(detailItem.atts?.speed) }}</strong></span>
                     <span>{{ t('vendor.range') }} <strong class="ui-text-gradient">{{ detailItem.atts?.range }}</strong></span>
                     <span v-if="isNonZero(detailItem.atts?.armorPen)">{{ t('inventory.armorPenetration') }} <strong class="ui-text-gradient">{{ detailItem.atts?.armorPen }}</strong></span>
-                    <span v-if="isNonZero(detailItem.atts?.defense)">{{ t('inventory.defense') }} <strong class="ui-text-gradient">{{ formatModifier(detailItem.atts?.defense) }}</strong></span>
+                    <span v-if="isNonZero(detailItem.atts?.precision)">{{ t('inventory.precision') }} <strong class="ui-text-gradient">{{ formatModifier(detailItem.atts?.precision) }}%</strong></span>
+                    <span v-if="isNonZero(detailItem.atts?.defense)">{{ t('inventory.defense') }} <strong class="ui-text-gradient">{{ formatModifier(detailItem.atts?.defense) }}%</strong></span>
                 </div>
                 <div v-else-if="detailItem.tp === 'A'" class="npc-vendor-overlay-stats">
+                    <span v-if="isNonZero(detailItem.atts?.precision)">{{ t('inventory.precision') }} <strong class="ui-text-gradient">{{ formatModifier(detailItem.atts?.precision) }}%</strong></span>
+                    <span v-if="isNonZero(detailItem.atts?.defense)">{{ t('inventory.defense') }} <strong class="ui-text-gradient">{{ formatModifier(detailItem.atts?.defense) }}%</strong></span>
                     <span>{{ t('inventory.armor') }} <strong class="ui-text-gradient">{{ detailItem.atts?.pdef }}</strong></span>
                     <span>{{ t('inventory.magicInterference') }} <strong class="ui-text-gradient">{{ detailItem.atts?.arcaneInterference }}%</strong></span>
-                    <span v-if="isNonZero(detailItem.atts?.defense)">{{ t('inventory.defense') }} <strong class="ui-text-gradient">{{ formatModifier(detailItem.atts?.defense) }}</strong></span>
                     <span v-if="isNonZero(detailItem.atts?.str)">{{ t('character.strength') }} <strong class="ui-text-gradient">{{ formatModifier(detailItem.atts?.str) }}</strong></span>
                     <span v-if="isNonZero(detailItem.atts?.agi)">{{ t('character.agility') }} <strong class="ui-text-gradient">{{ formatModifier(detailItem.atts?.agi) }}</strong></span>
                     <span v-if="isNonZero(detailItem.atts?.int)">{{ t('character.intelligence') }} <strong class="ui-text-gradient">{{ formatModifier(detailItem.atts?.int) }}</strong></span>
@@ -315,6 +317,7 @@ const repairItemInfoOverlay = ref({
     weaponSpeed: null,
     weaponRange: null,
     weaponArmorPen: null,
+    weaponPrecision: null,
     weaponDefense: null,
     armorStats: null,
 })

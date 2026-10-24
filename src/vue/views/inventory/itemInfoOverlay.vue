@@ -38,20 +38,22 @@
             <span v-if="isNonZero(itemInfo.weaponArmorPen)"
                 >{{ t('inventory.armorPenetration') }} <strong class="ui-text-gradient">{{ itemInfo.weaponArmorPen }}</strong></span
             >
+            <span v-if="isNonZero(itemInfo.weaponPrecision)"
+                >{{ t('inventory.precision') }} <strong class="ui-text-gradient">{{ formatModifier(itemInfo.weaponPrecision) }}%</strong></span
+            >
             <span v-if="isNonZero(itemInfo.weaponDefense)"
-                >{{ t('inventory.defense') }} <strong class="ui-text-gradient">{{ formatModifier(itemInfo.weaponDefense) }}</strong></span
+                >{{ t('inventory.defense') }} <strong class="ui-text-gradient">{{ formatModifier(itemInfo.weaponDefense) }}%</strong></span
             >
         </div>
 
         <div v-if="itemInfo.armorStats" class="inventory-item-overlay-stats">
+            <span v-if="isNonZero(itemInfo.armorStats.precision)">{{ t('inventory.precision') }} <strong class="ui-text-gradient">{{ formatModifier(itemInfo.armorStats.precision) }}%</strong></span>
+            <span v-if="isNonZero(itemInfo.armorStats.defense)">{{ t('inventory.defense') }} <strong class="ui-text-gradient">{{ formatModifier(itemInfo.armorStats.defense) }}%</strong></span>
             <span
                 >{{ t('inventory.armor') }} <strong class="ui-text-gradient">{{ itemInfo.armorStats.pdef }}</strong></span
             >
             <span
                 >{{ t('inventory.magicInterference') }} <strong class="ui-text-gradient">{{ itemInfo.armorStats.arcaneInterference }}%</strong></span
-            >
-            <span v-if="isNonZero(itemInfo.armorStats.defense)"
-                >{{ t('inventory.defense') }} <strong class="ui-text-gradient">{{ formatModifier(itemInfo.armorStats.defense) }}</strong></span
             >
             <span v-if="isNonZero(itemInfo.armorStats.str)"
                 >{{ t('character.strength') }} <strong class="ui-text-gradient">{{ formatModifier(itemInfo.armorStats.str) }}</strong></span

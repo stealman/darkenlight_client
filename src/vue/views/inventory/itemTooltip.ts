@@ -48,9 +48,11 @@ export const getItemTooltipData = (item: ItemTooltipSource) => {
     weaponSpeed: itemType === 'W' ? getAttribute(item, 'speed') : null,
     weaponRange: itemType === 'W' ? getAttribute(item, 'range') : null,
     weaponArmorPen: itemType === 'W' ? getAttribute(item, 'armorPen') ?? 0 : null,
+    weaponPrecision: itemType === 'W' ? getAttribute(item, 'precision') ?? 0 : null,
     weaponDefense: itemType === 'W' ? getAttribute(item, 'defense') ?? 0 : null,
     armorStats: itemType === 'A' ? {
         pdef: getAttribute(item, 'pdef') ?? 0,
+        precision: getAttribute(item, 'precision') ?? 0,
         defense: getAttribute(item, 'defense') ?? 0,
         str: getAttribute(item, 'str') ?? 0,
         agi: getAttribute(item, 'agi') ?? 0,

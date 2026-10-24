@@ -75,6 +75,8 @@
       "masterBonus": "Mistrovský bonus",
       "grandmasterBonus": "Velmistrovský bonus",
       "unknown": "Neznámý",
+      "halvesShieldPrecisionPenalty": "Snižuje postih štítu k přesnosti na polovinu",
+      "eliminatesShieldPrecisionPenalty": "Zcela odstraňuje postih štítu k přesnosti",
       "weaponAttackOfType": "útok zbraní typu",
       "powerStrikeDamage": "bonusový útok Silného úderu",
       "preciseShotDamage": "bonusový útok Přesného výstřelu",

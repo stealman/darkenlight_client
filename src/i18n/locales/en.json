@@ -228,6 +228,7 @@
     "durability": "Durability",
     "armor": "Armor",
     "armorPenetration": "Armor penetration",
+    "precision": "Precision",
     "defense": "Defense",
     "maxHealth": "Max health",
     "magicInterference": "Interference",

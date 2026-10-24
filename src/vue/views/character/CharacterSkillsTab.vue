@@ -131,17 +131,19 @@
                                     </div>
                                     <div class="skill-bonus-row">
                                         <span
-                                            class="skill-bonus-label skill-bonus-label--unknown"
-                                            :class="{ 'skill-bonus-label--active': skill.expertBonusUnlocked }"
+                                            class="skill-bonus-label"
+                                            :class="{ 'skill-bonus-label--active': skill.expertBonusUnlocked, 'skill-bonus-label--unknown': skill.key !== 'shields' }"
                                         >{{ t('skills.bonuses.expertBonus') }}</span>
-                                        <strong class="skill-bonus-value skill-bonus-value--unknown">{{ unknownBonusLabel }}</strong>
+                                        <span v-if="skill.key === 'shields'" class="skill-bonus-value">{{ t('skills.bonuses.halvesShieldPrecisionPenalty') }}</span>
+                                        <strong v-else class="skill-bonus-value skill-bonus-value--unknown">{{ unknownBonusLabel }}</strong>
                                     </div>
                                     <div class="skill-bonus-row">
                                         <span
-                                            class="skill-bonus-label skill-bonus-label--unknown"
-                                            :class="{ 'skill-bonus-label--active': skill.masterBonusUnlocked }"
+                                            class="skill-bonus-label"
+                                            :class="{ 'skill-bonus-label--active': skill.masterBonusUnlocked, 'skill-bonus-label--unknown': skill.key !== 'shields' }"
                                         >{{ t('skills.bonuses.masterBonus') }}</span>
-                                        <strong class="skill-bonus-value skill-bonus-value--unknown">{{ unknownBonusLabel }}</strong>
+                                        <span v-if="skill.key === 'shields'" class="skill-bonus-value">{{ t('skills.bonuses.eliminatesShieldPrecisionPenalty') }}</span>
+                                        <strong v-else class="skill-bonus-value skill-bonus-value--unknown">{{ unknownBonusLabel }}</strong>
                                     </div>
                                     <div class="skill-bonus-row">
                                         <span

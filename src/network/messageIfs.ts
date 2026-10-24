@@ -210,7 +210,7 @@ export interface ItemTO {
     matId: number
     name: string
     img: string
-    atts: Map<string, number | string>
+    atts: Map<string, number | string> // Weapon/shield precision/defense are percentage modifiers, not final scores.
     wCat?: string
     aCat?: string
     hReq?: number
@@ -322,7 +322,7 @@ export interface NpcVendorCatalogItem {
     name: string
     img: string
     price: number
-    atts?: Record<string, number | string>
+    atts?: Record<string, number | string> // Weapon/shield precision/defense are percentage modifiers.
     wCat?: string
     aCat?: string
     dmgTypes?: string[]

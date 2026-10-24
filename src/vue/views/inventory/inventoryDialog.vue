@@ -159,6 +159,7 @@ const itemInfoOverlay = ref({
     weaponSpeed: null,
     weaponRange: null,
     weaponArmorPen: null,
+    weaponPrecision: null,
     weaponDefense: null,
     armorStats: null,
     showDropButton: false,
