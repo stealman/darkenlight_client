@@ -330,8 +330,13 @@ let nextPurchaseEffectId = 0
 const features = computed(() => npcData.value?.features ?? [])
 const selectedFeature = computed<NpcUseFeatureData | null>(() => features.value[selectedFeatureIndex.value] ?? null)
 const vendorCategories = computed(() => Object.entries(selectedFeature.value?.categories ?? {}).map(([key, items]) => ({key, items})).filter((category) => category.items.length > 0))
-const selectedCategoryItems = computed(() => [...(selectedFeature.value?.categories?.[selectedCategory.value] ?? [])]
-    .sort((first, second) => first.price - second.price || first.name.localeCompare(second.name)))
+const selectedCategoryItems = computed(() => {
+    const items = [...(selectedFeature.value?.categories?.[selectedCategory.value] ?? [])]
+    if (selectedCategory.value === 'metalArmor') {
+        return items
+    }
+    return items.sort((first, second) => first.price - second.price || first.name.localeCompare(second.name))
+})
 const repairItems = computed(() => {
     resourceInventoryVersion.value
     const repairPrices = new Map((selectedFeature.value?.repairItems ?? []).map((repairItem) => [repairItem.id, repairItem.price]))

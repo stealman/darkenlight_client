@@ -580,7 +580,7 @@ defineExpose({
 .crafting-selection-note { font-size: 13px; }
 .crafting-result-note { margin-top: 2px; }
 .crafting-selection-note { margin-top: 2px; white-space: nowrap; }
-.crafting-result-name-disabled,
+.crafting-result-name-disabled { color: rgb(var(--ui-darker)); font-weight: 400; }
 .crafting-selection-note-muted,
 .crafting-selection-current-disabled { color: rgb(var(--ui-darkest)); }
 .crafting-result-note-missing,

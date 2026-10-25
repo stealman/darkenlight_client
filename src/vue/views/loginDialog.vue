@@ -14,7 +14,7 @@
             <span class="login-dialog-title ui-text-gradient">Darkenlight</span>
         </template>
 
-        <template v-if="dialogMode === 'login'">
+        <form v-if="dialogMode === 'login'" class="login-form" @submit.prevent="submitLogin">
         <section class="login-guest-section">
             <div class="login-section-copy">
                 <div class="login-section-title"><span class="ui-text-gradient">{{ t('login.guestTitle') }}</span></div>
@@ -51,10 +51,10 @@
         </section>
 
         <div class="dialog-actions login-dialog-actions">
-            <button class="dialog-button login-submit-button" :disabled="!canSubmit" @click="AudioManager.playGuiButtonClick(); doLogin()"><span class="ui-text-gradient--button-state">{{ t('login.submit') }}</span></button>
-            <button v-if="!charName.trim()" class="dialog-button" @click="AudioManager.playGuiButtonClick(); openRegistration()"><span class="ui-text-gradient--button-state">{{ t('login.register') }}</span></button>
+            <button type="submit" class="dialog-button login-submit-button" :disabled="!canSubmit"><span class="ui-text-gradient--button-state">{{ t('login.submit') }}</span></button>
+            <button v-if="!charName.trim()" type="button" class="dialog-button" @click="AudioManager.playGuiButtonClick(); openRegistration()"><span class="ui-text-gradient--button-state">{{ t('login.register') }}</span></button>
         </div>
-        </template>
+        </form>
 
         <template v-else>
             <section class="login-registration-section">
@@ -150,6 +150,11 @@ const showLoadingBeforeRequest = async () => {
     await new Promise((resolve) => {
         window.requestAnimationFrame(() => window.requestAnimationFrame(resolve))
     })
+}
+
+const submitLogin = () => {
+    AudioManager.playGuiButtonClick()
+    doLogin()
 }
 
 const doLogin = async () => {
