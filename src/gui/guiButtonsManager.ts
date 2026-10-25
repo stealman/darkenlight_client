@@ -15,6 +15,8 @@ import {NpcManager} from '@/babylon/npc/npcManager'
 import { BuildingManager } from '@/babylon/world/buildings/buildingManager'
 import { StaticsManager } from '@/babylon/world/statics/staticsManager'
 import { ContainerManager } from '@/data/containerManager'
+import { Vector3 } from '@babylonjs/core'
+import { Utils } from '@/utils/utils'
 
 const HUD_BUTTON_GAP = 5
 const HUD_MINIMAP_LEFT_FRAME_SIZE = 3
@@ -87,6 +89,7 @@ export const GuiButtonsManager = {
     btnCharacter: null as HTMLDivElement,
     opportunityButtonsPanel: null as HTMLElement,
     opportunityButtons: new Map<string, GuiOpportunityButton>(),
+    primaryOpportunityButton: null as GuiOpportunityButton | null,
 
     initialize() {
         this.btnBackpack = document.getElementById("btn-backpack") as HTMLDivElement
@@ -99,6 +102,7 @@ export const GuiButtonsManager = {
 
     createOpportunityButtons() {
         this.opportunityButtons.clear()
+        this.primaryOpportunityButton = null
         this.opportunityButtons.set(GuiOpportunityActions.PICKUP_ITEM.name, new GuiOpportunityButton(GuiOpportunityActions.PICKUP_ITEM))
         this.opportunityButtons.set(GuiOpportunityActions.RESTING.name, new GuiOpportunityButton(GuiOpportunityActions.RESTING))
 
@@ -144,6 +148,7 @@ export const GuiButtonsManager = {
     onFrame() {
         if (MyPlayer.isDead.value) {
             this.opportunityButtons.forEach((button) => button.setVisible(false))
+            this.setPrimaryOpportunityButton(null)
             return
         }
         // Show pickup button if there's an item nearby
@@ -186,7 +191,88 @@ export const GuiButtonsManager = {
             && (selectedTarget as any).isBot === true
         )
 
+        this.updateOpportunityPriority()
         this.trySendFireArrowsAction()
+    },
+
+    updateOpportunityPriority() {
+        let closestButton: GuiOpportunityButton | null = null
+        let closestDistanceSquared = Infinity
+        for (const button of this.opportunityButtons.values()) {
+            if (!button.visible) continue
+            const distanceSquared = this.getOpportunityDistanceSquared(button.action.name)
+            // Strict comparison preserves the original order when targets are equally close.
+            if (closestButton === null || distanceSquared < closestDistanceSquared) {
+                closestButton = button
+                closestDistanceSquared = distanceSquared
+            }
+        }
+        this.setPrimaryOpportunityButton(closestButton)
+    },
+
+    setPrimaryOpportunityButton(button: GuiOpportunityButton | null) {
+        if (button === this.primaryOpportunityButton) return
+        if (this.primaryOpportunityButton) this.primaryOpportunityButton.htmlEl.style.order = ''
+        this.primaryOpportunityButton = button
+        if (button) button.htmlEl.style.order = '-1'
+    },
+
+    getOpportunityDistanceSquared(actionName: string): number {
+        const playerPos = MyPlayer.myChar.pos
+        let target: { x: number, z: number } | null | undefined = null
+        switch (actionName) {
+            case GuiOpportunityActions.PICKUP_ITEM.name:
+                target = GroundItemsManager.nearbyItem?.pos
+                break
+            case GuiOpportunityActions.RESTING.name:
+            case GuiOpportunityActions.COOKING.name:
+                target = MyPlayer.nearFireplace
+                break
+            case GuiOpportunityActions.MINING.name: {
+                let closest = Infinity
+                const map = WorldDataManager.getBlockMap()
+                for (const coords of Utils.getCoveredBlocks(playerPos.x, playerPos.z, MyPlayer.myChar.getBoxSize())) {
+                    const block = map[coords.x]?.[coords.z]
+                    if (!block || (!block.minableCoal && !block.minableOreAvailable)) continue
+                    const dx = playerPos.x - coords.x
+                    const dz = playerPos.z - coords.z
+                    closest = Math.min(closest, dx * dx + dz * dz)
+                }
+                return closest
+            }
+            case GuiOpportunityActions.LUMBERJACKING.name: {
+                let closest = Infinity
+                for (const tree of TreeManager.visibleTrees) {
+                    if (Vector3.DistanceSquared(tree.position, playerPos) > 1.5 * 1.5) continue
+                    const dx = playerPos.x - tree.position.x
+                    const dz = playerPos.z - tree.position.z
+                    closest = Math.min(closest, dx * dx + dz * dz)
+                }
+                return closest
+            }
+            case GuiOpportunityActions.USE_DOOR.name: {
+                const doorId = BuildingManager.getClosestDoorIdInDistance(playerPos, 1.5)
+                target = doorId === null ? null : BuildingManager.buildings.get(doorId)?.getDoorPosition()
+                break
+            }
+            case GuiOpportunityActions.USE_CHEST.name: {
+                const barrel = this.getClosestUsableBarrel()
+                if (!barrel) return Infinity
+                const distance = StaticsManager.getDistanceToStaticFootprint(playerPos, barrel.position, barrel.getSize())
+                return distance * distance
+            }
+            case GuiOpportunityActions.NPC_USE.name:
+                target = NpcManager.getClosestNpcInDistance(3)?.pos
+                break
+            case GuiOpportunityActions.NPC_EDIT.name:
+            case GuiOpportunityActions.BOT_EDIT.name:
+                target = TargetingManager.selectedTarget?.pos
+                break
+        }
+        if (!target) return Infinity
+        const dx = playerPos.x - target.x
+        const dz = playerPos.z - target.z
+        return dx * dx + dz * dz
     },
 
     onclickOpportunityButton(actionName: string) {
@@ -232,10 +318,8 @@ export const GuiButtonsManager = {
         if (MyPlayer.isDead.value) {
             return false
         }
-        for (const button of this.opportunityButtons.values()) {
-            if (!button.visible) {
-                continue
-            }
+        const button = this.primaryOpportunityButton
+        if (button?.visible) {
             this.onclickOpportunityButton(button.action.name)
             return true
         }

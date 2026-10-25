@@ -194,7 +194,7 @@ export const OverlayManager = {
         })
 
         CharacterManager.characters.forEach((char) => {
-            if (char.nameDisplayTime <= time && !char.activeTimedAction) {
+            if (!CharacterManager.visibleCharacters.has(char.id) || (char.nameDisplayTime <= time && !char.activeTimedAction)) {
                 return
             }
 

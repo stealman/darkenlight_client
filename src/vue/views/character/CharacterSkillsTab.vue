@@ -132,25 +132,28 @@
                                     <div class="skill-bonus-row">
                                         <span
                                             class="skill-bonus-label"
-                                            :class="{ 'skill-bonus-label--active': skill.expertBonusUnlocked, 'skill-bonus-label--unknown': skill.key !== 'shields' }"
+                                            :class="{ 'skill-bonus-label--active': skill.expertBonusUnlocked, 'skill-bonus-label--unknown': skill.cap < 4 || (skill.key !== 'shields' && skill.key !== 'bows') }"
                                         >{{ t('skills.bonuses.expertBonus') }}</span>
-                                        <span v-if="skill.key === 'shields'" class="skill-bonus-value">{{ t('skills.bonuses.halvesShieldPrecisionPenalty') }}</span>
+                                        <span v-if="skill.cap >= 4 && skill.key === 'shields'" class="skill-bonus-value" :class="{ 'skill-bonus-value--pending': !skill.expertBonusUnlocked }">{{ t('skills.bonuses.halvesShieldPrecisionPenalty') }}</span>
+                                        <span v-else-if="skill.cap >= 4 && skill.key === 'bows'" class="skill-bonus-value" :class="{ 'skill-bonus-value--pending': !skill.expertBonusUnlocked }">{{ t('skills.bonuses.eliminatesLongRangePenalty') }}</span>
                                         <strong v-else class="skill-bonus-value skill-bonus-value--unknown">{{ unknownBonusLabel }}</strong>
                                     </div>
                                     <div class="skill-bonus-row">
                                         <span
                                             class="skill-bonus-label"
-                                            :class="{ 'skill-bonus-label--active': skill.masterBonusUnlocked, 'skill-bonus-label--unknown': skill.key !== 'shields' }"
+                                            :class="{ 'skill-bonus-label--active': skill.masterBonusUnlocked, 'skill-bonus-label--unknown': skill.cap < 7 || (skill.key !== 'shields' && skill.key !== 'bows') }"
                                         >{{ t('skills.bonuses.masterBonus') }}</span>
-                                        <span v-if="skill.key === 'shields'" class="skill-bonus-value">{{ t('skills.bonuses.eliminatesShieldPrecisionPenalty') }}</span>
+                                        <span v-if="skill.cap >= 7 && skill.key === 'shields'" class="skill-bonus-value" :class="{ 'skill-bonus-value--pending': !skill.masterBonusUnlocked }">{{ t('skills.bonuses.eliminatesShieldPrecisionPenalty') }}</span>
+                                        <span v-else-if="skill.cap >= 7 && skill.key === 'bows'" class="skill-bonus-value" :class="{ 'skill-bonus-value--pending': !skill.masterBonusUnlocked }">{{ t('skills.bonuses.halvesShortRangePenalty') }}</span>
                                         <strong v-else class="skill-bonus-value skill-bonus-value--unknown">{{ unknownBonusLabel }}</strong>
                                     </div>
                                     <div class="skill-bonus-row">
                                         <span
-                                            class="skill-bonus-label skill-bonus-label--unknown"
-                                            :class="{ 'skill-bonus-label--active': skill.grandmasterBonusUnlocked }"
+                                            class="skill-bonus-label"
+                                            :class="{ 'skill-bonus-label--active': skill.grandmasterBonusUnlocked, 'skill-bonus-label--unknown': skill.cap < 10 || skill.key !== 'bows' }"
                                         >{{ t('skills.bonuses.grandmasterBonus') }}</span>
-                                        <strong class="skill-bonus-value skill-bonus-value--unknown">{{ unknownBonusLabel }}</strong>
+                                        <span v-if="skill.cap >= 10 && skill.key === 'bows'" class="skill-bonus-value" :class="{ 'skill-bonus-value--pending': !skill.grandmasterBonusUnlocked }">{{ t('skills.bonuses.eliminatesShortRangePenalty') }}</span>
+                                        <strong v-else class="skill-bonus-value skill-bonus-value--unknown">{{ unknownBonusLabel }}</strong>
                                     </div>
                                 </div>
                                 <p class="skill-description">{{ t(skill.descriptionTranslationKey) }}</p>
@@ -775,6 +778,11 @@ const formatTrainingTime = (seconds: number) => {
     display: inline-block;
     margin-inline: 0.3em;
     font-weight: 700;
+}
+
+.skill-bonus-value--pending {
+    color: rgb(var(--ui-dark));
+    font-weight: 400;
 }
 
 .skill-bonus-value-emphasis:first-child {
