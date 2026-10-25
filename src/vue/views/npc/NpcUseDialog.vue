@@ -170,9 +170,9 @@
             />
 
             <template v-else-if="selectedFeature?.type === 'crafting'">
-                <div v-if="selectedFeature.craftingCategories?.length" class="npc-use-category-tabs">
+                <div v-if="craftingCategories.length" class="npc-use-category-tabs">
                     <button
-                        v-for="category in selectedFeature.craftingCategories"
+                        v-for="category in craftingCategories"
                         :key="category"
                         class="dialog-button npc-use-tab"
                         @click="openCrafting(category, $event)"
@@ -330,9 +330,12 @@ let nextPurchaseEffectId = 0
 const features = computed(() => npcData.value?.features ?? [])
 const selectedFeature = computed<NpcUseFeatureData | null>(() => features.value[selectedFeatureIndex.value] ?? null)
 const vendorCategories = computed(() => Object.entries(selectedFeature.value?.categories ?? {}).map(([key, items]) => ({key, items})).filter((category) => category.items.length > 0))
+const craftingCategoryOrder: Record<string, number> = {weapons: 0, bows: 1, metalArmor: 2, leatherArmor: 3, jewels: 4}
+const craftingCategories = computed(() => [...(selectedFeature.value?.craftingCategories ?? [])]
+    .sort((first, second) => (craftingCategoryOrder[first] ?? Number.MAX_SAFE_INTEGER) - (craftingCategoryOrder[second] ?? Number.MAX_SAFE_INTEGER)))
 const selectedCategoryItems = computed(() => {
     const items = [...(selectedFeature.value?.categories?.[selectedCategory.value] ?? [])]
-    if (selectedCategory.value === 'metalArmor') {
+    if (selectedCategory.value === 'metalArmor' || selectedCategory.value === 'weapons') {
         return items
     }
     return items.sort((first, second) => first.price - second.price || first.name.localeCompare(second.name))
