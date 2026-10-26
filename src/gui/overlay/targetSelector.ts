@@ -37,13 +37,11 @@ export const TargetSelector = {
         const screenPos = this.target.getPositionOnScreen()
         let sprite = null
         let attackTarget = false
-        if (this.target.getRelationToMyPlayer() === 'ENEMY') {
-            if (MyPlayer.activeAction === CharacterActions.AUTO_ATTACK && MyPlayer.myChar.autoAttackTarget && MyPlayer.myChar.autoAttackTarget === this.target) {
-                sprite = TargetingManager.getTargetSpriteEnemyAttackTarget()
-                attackTarget = true
-            } else {
-                sprite = TargetingManager.getTargetSpriteEnemy()
-            }
+        if (MyPlayer.activeAction === CharacterActions.AUTO_ATTACK && MyPlayer.myChar.autoAttackTarget === this.target) {
+            sprite = TargetingManager.getTargetSpriteEnemyAttackTarget()
+            attackTarget = true
+        } else if (this.target.getRelationToMyPlayer() === 'ENEMY') {
+            sprite = TargetingManager.getTargetSpriteEnemy()
         } else {
             sprite = TargetingManager.getTargetSpriteAlly()
         }

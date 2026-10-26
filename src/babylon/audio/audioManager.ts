@@ -427,7 +427,8 @@ export const AudioManager = {
     },
 
     playDeathRattle(type: string, position: Vector3) {
-        const sound = this.deathRattleSounds.get(type)!
+        const sound = this.deathRattleSounds.get(type)
+        if (!sound) return
 
         const ratio = AudioUtils.getVolumeRatioByDistance(position)
         sound.setVolume(sound.defaultVolume * ratio)

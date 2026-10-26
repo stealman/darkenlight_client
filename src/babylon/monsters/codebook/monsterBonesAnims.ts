@@ -70,6 +70,14 @@ export const MonsterBonesAnims = {
         model.deadAnim = groups[4]
     },
 
+    initDeer(model: MonsterModel) {
+        model.idleAnim = new MeshAnimation(model.animation.clone('DeerIdle' + Math.random(), undefined, true), 0, 75)
+        model.walkAnim = new MeshAnimation(model.animation.clone('DeerWalk' + Math.random(), undefined, true), 76, 225)
+        // Huntable deer flee instead of attacking; keep the unused attack slot valid.
+        model.attackAnims = [new MeshAnimation(model.animation.clone('DeerAttack' + Math.random(), undefined, true), 0, 75)]
+        model.deadAnim = new MeshAnimation(model.animation.clone('DeerDead' + Math.random(), undefined, true), 226, 375)
+    },
+
     initCat(model: MonsterModel) {
         const animations = [
             { name: "Idle", startFrame: 0, endFrame: 75 },

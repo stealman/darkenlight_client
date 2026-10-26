@@ -2,6 +2,7 @@ import { Matrix, Scene, Vector2, Vector3 } from '@babylonjs/core'
 import { Prefab, WorldRenderer } from '@/babylon/world/worldRenderer'
 import { MaterialAlphaEnum1, MaterialEnum1, MaterialEnumTrans } from '@/babylon/materials'
 import { WorldDataManager } from '@/data/worldDataManager'
+import { BuildingManager } from '@/babylon/world/buildings/buildingManager'
 import { ViewportManager } from '@/utils/viewport'
 import { PrefabShrub2x2 } from '@/babylon/world/prefabs/shrub2x2'
 import { PrefabShrub1x1_tall } from '@/babylon/world/prefabs/shrub1x1-tall'
@@ -98,8 +99,7 @@ export const StaticsManager = {
     },
 
     addObject(obj: { tp: number, x: number, z: number, meta?: WallTorchMetadata | TorchStandMetadata | LanternStandMetadata | FireplaceMetadata | CemeteryEmberBowlMetadata | StoneEntranceMetadata | PalisadeMetadata | WalkableBlockMetadata | CampObjectMetadata | CampFenceMetadata | CemeteryObjectMetadata | CemeteryWallMetadata, tmp?: boolean }, resolveStacking = true) {
-        const block = WorldDataManager.getBlockMap()[obj.x][obj.z]
-        const y = block.totalHeight - (isEmbeddedInSnow(obj.tp) && block.snowed ? 0.1 : 0)
+        const y = this.getBaseHeight(obj.x, obj.z, obj.tp)
         const pos = new Vector3(obj.x, y, obj.z)
         const rotation = Math.floor(Math.random() * 4) * Math.PI / 2
         const previousCount = this.allStatics.length
@@ -254,9 +254,20 @@ export const StaticsManager = {
         }
     },
 
+    getBaseHeight(x: number, z: number, type: number) {
+        const tileX = Math.floor(x)
+        const tileZ = Math.floor(z)
+        const block = WorldDataManager.getBlockMap()[tileX][tileZ]
+        return block.totalHeight + BuildingManager.getFloorHeightAtTile(tileX, tileZ)
+            - (isEmbeddedInSnow(type) && block.snowed ? 0.1 : 0)
+    },
+
     resolveStackedStaticPositions() {
         const surfaceHeights = new Map<string, number>()
         for (const obj of this.allStatics) {
+            const y = this.getBaseHeight(obj.position.x, obj.position.z, obj.type)
+            obj.position.y = y
+            obj.renderPosition.y = y
             const surfaceHeight = obj.getPlacementSurfaceHeight()
             if (surfaceHeight == null || obj.shouldPlaceOnStatic()) continue
             const key = `${obj.position.x};${obj.position.z}`
@@ -271,12 +282,6 @@ export const StaticsManager = {
     },
 
     recountYPositions() {
-        this.allStatics.forEach(obj => {
-            const block = WorldDataManager.getBlockMap()[Math.floor(obj.position.x)][Math.floor(obj.position.z)]
-            const y = block.totalHeight - (isEmbeddedInSnow(obj.type) && block.snowed ? 0.1 : 0)
-            obj.position.y = y
-            obj.renderPosition.y = y
-        })
         this.resolveStackedStaticPositions()
     },
 
@@ -460,6 +465,7 @@ export const StaticsManager = {
     },
 
     renderTerrainBlocks(terrainMatrices: Matrix[], terrainUvData: Vector2[]) {
+        this.resolveStackedStaticPositions()
         this.allStatics.forEach((obj) => obj.clearRenderMatrixCapture())
         this.updateVisibleObjects()
         for (const element of this.visibleStatics) {

@@ -467,7 +467,7 @@ export const ActionButtonsManager = {
             return
         }
         const target = TargetingManager.selectedTarget
-        if (!target || target.getRelationToMyPlayer() !== 'ENEMY') {
+        if (!target || !TargetingManager.isAttackableTarget(target)) {
             OnScreenMessageManager.addMessage(t('messages.powerStrikeRequiresTarget'), OnScreenMessageSeverities.ERROR)
             return
         }
@@ -492,7 +492,7 @@ export const ActionButtonsManager = {
             return
         }
         const target = TargetingManager.selectedTarget
-        if (!target || target.getRelationToMyPlayer() !== 'ENEMY') {
+        if (!target || !TargetingManager.isAttackableTarget(target)) {
             OnScreenMessageManager.addMessage(t('messages.preciseShotRequiresTarget'), OnScreenMessageSeverities.ERROR)
             return
         }

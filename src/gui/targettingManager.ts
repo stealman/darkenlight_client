@@ -35,6 +35,10 @@ export const TargetingManager = {
     onFrame(timeRate: number, actualTime: number) {
         if (actualTime - this.lastCycleTime > 1250) this.resetCycleIndex()
 
+        if (this.selectedTarget && !this.isTargetVisible(this.selectedTarget)) {
+            this.unselectTarget()
+        }
+
         if (this.pointerDownTime > -1 && Date.now() - this.pointerDownTime > 1000) {
             this.autoTargetingEnabled = !this.autoTargetingEnabled
             AudioManager.playGuiButtonToggle(this.autoTargetingEnabled)
@@ -49,16 +53,25 @@ export const TargetingManager = {
         }
 
         if (this.autoTargetingEnabled && this.lastAutoTargetTime + 1000 < actualTime) {
-            if (this.selectedTarget) {
-                if (Vector3.Distance(MyPlayer.myChar.pos, this.selectedTarget.pos) > 15) {
-                    this.unselectTarget()
-                }
-            }
-
             if (this.selectedTarget == null) {
                 this.cycleThroughClosestTargets()
                 this.lastAutoTargetTime = actualTime
             }
+        }
+    },
+
+    isTargetVisible(target: Targetable): boolean {
+        // Use the same visibility sets as names; their display timers do not
+        // determine whether a target can remain selected.
+        switch (target.getObjectType()) {
+            case 'M':
+                return MonsterManager.visibleMonsters.has(target.id) || NpcManager.visibleGuards.has(target.id)
+            case 'C':
+                return target === MyPlayer.myChar || CharacterManager.visibleCharacters.has(target.id)
+            case 'N':
+                return NpcManager.visibleNpcs.has(target.id)
+            default:
+                return target.getDistanceFromMyPlayer() <= MyPlayer.visibilityRadius
         }
     },
 
@@ -194,7 +207,7 @@ export const TargetingManager = {
             !MyPlayer.isDead.value &&
             !targetIsDeadCharacter &&
             this.selectedTarget &&
-            this.selectedTarget.getRelationToMyPlayer() === 'ENEMY' &&
+            this.isAttackableTarget(this.selectedTarget) &&
             (overrideToggle || ActionButtonsManager.isButtonToggled(CharacterActions.AUTO_ATTACK))
         ) {
             MyPlayer.myChar.autoAttackTarget = this.selectedTarget
@@ -203,6 +216,11 @@ export const TargetingManager = {
                 this.requestCombatApproach()
             }
         }
+    },
+
+    isAttackableTarget(target: Targetable): boolean {
+        return target.getRelationToMyPlayer() === 'ENEMY'
+            || (target.getObjectType() === 'M' && target.getRelationToMyPlayer() === 'NEUTRAL' && target.huntable === true)
     },
 
     requestCombatApproach() {
@@ -334,6 +352,7 @@ export const TargetingManager = {
 }
 
 export interface Targetable {
+    huntable?: boolean
     pos: Vector3
     id: number
     nameDisplayTime: number

@@ -121,6 +121,8 @@ export const MyPlayer = {
         this.myChar.model = null
         this.myChar.autoAttackStart = 0
         this.myChar.autoAttackEnd = 0
+        this.myChar.autoAttackCooldownStart = 0
+        this.myChar.autoAttackCooldownEnd = 0
         this.myChar.autoAttackTarget = null
         this.myModel = null
         this.activeAction = null
@@ -533,7 +535,7 @@ export const MyPlayer = {
 
         switch (action.name) {
             case CharacterActions.AUTO_ATTACK.name: {
-                return this.getCooldownPercent(actualTime, this.myChar.autoAttackStart, this.myChar.autoAttackCooldownEnd)
+                return this.getCooldownPercent(actualTime, this.myChar.autoAttackCooldownStart, this.myChar.autoAttackCooldownEnd)
             }
             case CharacterActions.HEAL.name: {
                 return this.getCooldownPercent(actualTime, this.myChar.healingStartTime, this.myChar.healingEndTime)

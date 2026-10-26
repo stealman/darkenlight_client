@@ -31,6 +31,10 @@ export const MonsterCodebook = {
         if (model.type.templateId === 1001) {
             MonsterBonesAnims.initCat(model)
         }
+
+        if (model.type.templateId === 1101) {
+            MonsterBonesAnims.initDeer(model)
+        }
     },
 
     initEquip(model: MonsterModel) {
@@ -146,6 +150,7 @@ export const MonsterGroups = {
     ZOMBIE: new MonsterGroup(30, 'Zombie'),
     WIGHTS: new MonsterGroup(40, 'Wights'),
     CAT: new MonsterGroup(1000, 'Cat'),
+    DEERS: new MonsterGroup(1100, 'Deers'),
 
     getAsArray(): MonsterGroup[] {
         const groups: MonsterGroup[] = []
@@ -286,4 +291,6 @@ export const MonsterTypes = {
     HOUSE_CAT: new MonsterType(1001, MonsterGroups.CAT, 1001, 'House Cat', 0.6, 1, 6, null, null, null, WeaponSoundTypes.BONE, BodySoundTypes.SOFT, null, MonsterSoundTypes.CAT, null),
 
     WILD_CAT: new MonsterType(1002, MonsterGroups.CAT, 1001, 'Wild Cat', 0.6, 1, 6, null, null, null, WeaponSoundTypes.BONE, BodySoundTypes.SOFT, null, MonsterSoundTypes.CAT, null),
+
+    DEER: new MonsterType(1101, MonsterGroups.DEERS, 1101, 'Deer', 1, 1.8, 2.8, null, null, null, WeaponSoundTypes.BONE, BodySoundTypes.SOFT, null, '', null),
 }

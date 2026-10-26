@@ -79,6 +79,18 @@
                 <option value="-X">-X</option>
             </select>
         </label>
+        <label class="tree-item" :class="{ selected: selectedBuildingType === 4 }" @click="selectBuilding(4)">
+            Cabin 4x3
+        </label>
+        <label v-if="selectedBuildingType === 4">
+            Door facing
+            <select v-model="buildingFacing">
+                <option value="+Z">+Z</option>
+                <option value="-Z">-Z</option>
+                <option value="+X">+X</option>
+                <option value="-X">-X</option>
+            </select>
+        </label>
         <div v-if="isEditing" style="margin-top: 1vh; display: flex; gap: 6px">
             <button @click="saveEdit">Save</button>
             <button @click="cancelEdit">Cancel</button>

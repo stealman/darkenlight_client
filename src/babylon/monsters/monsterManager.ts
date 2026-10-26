@@ -34,7 +34,7 @@ export const MonsterManager = {
         await MonsterLoader.prepareRuntimeClones()
     },
 
-    addMonster (id: number, type: number, position: { x: number, z: number }, hpp: number, mv: number[] | undefined, ef: [{tp: number, p: number}] | undefined, role?: string, alignment?: string, guard?: any) {
+    addMonster (id: number, type: number, position: { x: number, z: number }, hpp: number, mv: number[] | undefined, ef: [{tp: number, p: number}] | undefined, role?: string, alignment?: string, guard?: any, huntable: boolean = false) {
         if (role === 'guard' && guard) {
             void NpcManager.addGuard({id, tp: type, x: position.x, z: position.z, hpp, mv, paf: ef, role, alignment, guard})
             return
@@ -47,10 +47,12 @@ export const MonsterManager = {
             mob!.pos.y = mob!.logicYpos
             mob!.hpPercent = hpp
             mob!.alignment = alignment === 'neutral' || alignment === 'friendly' ? alignment : 'evil'
+            mob!.huntable = huntable
             if (ef) mob!.consumePubliclyVisibleAffects(ef)
         } else {
             const monsterType: MonsterType = MonsterCodebook.getMonsterTypeById(type)
             const monster = new Monster(id, monsterType, position.x, position.z, hpp, alignment === 'neutral' || alignment === 'friendly' ? alignment : 'evil')
+            monster.huntable = huntable
             const monsterModel = new MonsterModel(monsterType, monster)
             monster.model = monsterModel
 
@@ -187,8 +189,10 @@ export const MonsterManager = {
 
     monsterKilled(mob: Monster) {
         mob.killed()
-        mob.model.doDie()
         this.killedMonsters.add(mob)
+        this.visibleMonsters.delete(mob.id)
+        this.monsters.delete(mob.id)
+        mob.model.doDie()
     },
 
     publiclyVisibleAffectChange(data: PubliclyVisibleAffectData) {
@@ -226,11 +230,6 @@ export const MonsterManager = {
         })
 
         this.killedMonsters.forEach(monster => {
-            if (this.monsters.has(monster.id)) {
-                this.visibleMonsters.delete(monster.id)
-                this.monsters.delete(monster.id)
-            }
-
             monster.model.onFrame(timeRate, actualTime)
             if (actualTime - monster.killedTime > 4000) {
                 monster.removeModel()

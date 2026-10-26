@@ -106,6 +106,7 @@ class Character implements Attackable, EffectTarget {
     autoAttackTarget: Attackable | null = null
     autoAttackStart: number = 0
     autoAttackEnd: number = 0
+    autoAttackCooldownStart: number = 0
     autoAttackCooldownEnd: number = 0
     arrowCreateTime: number = 0
     arrowShotTime: number = 0
@@ -468,7 +469,10 @@ class Character implements Attackable, EffectTarget {
 
         this.autoAttackStart = Date.now()
         this.autoAttackEnd = this.autoAttackStart + this.attackAnimationTime
-        this.autoAttackCooldownEnd = this.autoAttackStart + data.cd
+        if (!data.ps && !data.prs) {
+            this.autoAttackCooldownStart = this.autoAttackStart
+            this.autoAttackCooldownEnd = this.autoAttackStart + data.cd
+        }
 
         const angle = Utils.getAngleBetweenPoints(this.pos, this.autoAttackTarget.pos)
         this.setLookAngle(angle - Math.PI / 4)
@@ -479,6 +483,7 @@ class Character implements Attackable, EffectTarget {
     breakAutoAttack() {
         this.autoAttackStart = 0
         this.autoAttackEnd = 0
+        this.autoAttackCooldownStart = 0
         this.autoAttackCooldownEnd = 0
         this.model?.setWeaponTrailEnabled(false)
         this.model?.stopAnimation()
@@ -611,6 +616,7 @@ class Character implements Attackable, EffectTarget {
         this.autoAttackMessage = null
         this.autoAttackStart = 0
         this.autoAttackEnd = 0
+        this.autoAttackCooldownStart = 0
         this.autoAttackCooldownEnd = 0
         this.arrowCreateTime = 0
         this.arrowShotTime = 0

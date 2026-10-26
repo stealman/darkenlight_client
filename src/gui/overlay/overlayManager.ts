@@ -249,7 +249,16 @@ export const OverlayManager = {
     },
 
     addMonsterDamageNumber(monsterId: number, damage: number, hitType: string = 'h', hitQuality: 'P' | 'N' | 'G' | null = null, time: number = Date.now()) {
-        const monster = MonsterManager.monsters.get(monsterId)
+        let monster = MonsterManager.monsters.get(monsterId)
+        // A lethal hit's result can arrive after removal from the live map.
+        if (!monster) {
+            for (const killed of MonsterManager.killedMonsters) {
+                if (killed.id === monsterId) {
+                    monster = killed
+                    break
+                }
+            }
+        }
         if (!monster) {
             return
         }
@@ -470,7 +479,8 @@ export const OverlayManager = {
     },
 
     renderAttackTargetIndicator(actualTime) {
-        if (MyPlayer.myChar.autoAttackTarget && TargetingManager.selectedTarget !== MyPlayer.myChar.autoAttackTarget) {
+        if (MyPlayer.myChar.autoAttackTarget && TargetingManager.selectedTarget !== MyPlayer.myChar.autoAttackTarget
+            && TargetingManager.isTargetVisible(MyPlayer.myChar.autoAttackTarget)) {
             const screenPos = MyPlayer.myChar.autoAttackTarget.getPositionOnScreen()
             const sprite = TargetingManager.getTargetSpriteEnemyAttackTarget()
             if (sprite && screenPos) {

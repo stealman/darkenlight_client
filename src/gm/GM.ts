@@ -87,6 +87,8 @@ const rectangularFootprint = (sizeX: number, sizeZ: number) => {
 const buildingFootprint = (type: number, facing: string, width: number, depth: number) => {
     if (type === 2) return rectangularFootprint(Math.max(2, width), Math.max(2, depth))
     if (type === 3) return rectangularFootprint(4, 4)
+    if (type === 4) return rectangularFootprint(facing === '+X' || facing === '-X' ? 3 : 4,
+        facing === '+X' || facing === '-X' ? 4 : 3)
     const houseWidth = facing === '+X' || facing === '-X' ? 3 : 5
     const houseDepth = facing === '+X' || facing === '-X' ? 5 : 3
     const offsets = rectangularFootprint(houseWidth, houseDepth)

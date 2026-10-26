@@ -1,4 +1,18 @@
 
+export interface MonsterSpawnData {
+    id: number
+    tp: number
+    x: number
+    z: number
+    hpp: number | string
+    mv?: number[]
+    paf?: [{tp: number, p: number}]
+    role?: string
+    alignment?: 'evil' | 'neutral' | 'friendly'
+    huntable?: boolean
+    guard?: any
+}
+
 export interface AttackableBasicTO {
     id: number
     hp: number

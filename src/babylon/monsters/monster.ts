@@ -21,6 +21,7 @@ export class Monster implements Attackable, EffectTarget {
     targetPoint: Vector3 | null = null
     nextTargetPoint: Vector3 | null = null
     alignment: 'evil' | 'neutral' | 'friendly'
+    huntable: boolean = false
 
     hp: number
     hpPercent: number = 100

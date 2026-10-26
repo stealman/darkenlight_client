@@ -290,7 +290,7 @@ export const MyStatusPanel = {
             const mealPower = affectGroup.af.find((affect) => affect.data[0] === 2)?.data[2] ?? affectGroup.p
             const mealBonuses = [
                 {labelKey: 'affects.healthRegeneration', valueKey: 'affects.restingRegenerationValue', percentPerPower: 50},
-                {labelKey: 'affects.autoAttackStaminaCost', valueKey: 'affects.mealStaminaCostValue', percentPerPower: 5},
+                {labelKey: 'affects.autoAttackStaminaCost', valueKey: 'affects.mealStaminaCostValue', percentPerPower: 10},
             ]
 
             for (const bonus of mealBonuses) {
@@ -306,7 +306,7 @@ export const MyStatusPanel = {
 
         return {
             title: affectGroup.getLocalizedName(),
-            titleMeta: affectGroup.getPowerLabel(),
+            titleMeta: affectGroup.id === 3 ? null : affectGroup.getPowerLabel(),
             topRightText: affectGroup.shouldDisplayDuration()
                 ? affectGroup.getFormattedRemainingDuration(actualTime)
                 : null,

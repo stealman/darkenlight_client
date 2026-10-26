@@ -151,6 +151,7 @@ export class MonsterTemplate {
 
 export const MonsterTemplates = {
     CAT: new MonsterTemplate(1001, 'cat', 'cat', null, 0.85, null),
+    DEER: new MonsterTemplate(1101, 'deer', 'deer', null, 0.5, null),
     SKELETON: new MonsterTemplate(1, 'skeleton', 'skeleton', null, 0.4, null),
     WITHER: new MonsterTemplate(21, 'skeleton', 'wither', null, 0.4, null),
     ZOMBIE_ROTTEN: new MonsterTemplate(11, 'zombie', 'zombie_rotten', 'zombie_normal', 0.42, null, 1.4),
