@@ -84,6 +84,7 @@ export class Monster implements Attackable, EffectTarget {
             this.resolveMovement(timeRate, actualTime)
         }
 
+        this.model.updateFootsteps(this.moveAngle !== null && this.autoAttackEnd <= actualTime && !this.killedTime)
         if (this.insideView) {
             this.model.onFrame(timeRate)
         }

@@ -4,9 +4,16 @@ import { Renderer } from '@/babylon/scene/renderer'
 
 export const AudioUtils = {
 
-    getVolumeRatioByDistance(source: Vector3): number {
-        const refDistance = Vector3.Distance(MyPlayer.myModel!.node.position, Renderer.camera.globalPosition)
-        const thisDistance = Vector3.Distance(source, Renderer.camera.globalPosition)
+    getVolumeRatioByDistance(source: Vector3, distanceMultiplier: number = 1): number {
+        const camera = Renderer.camera
+        if (!camera || !MyPlayer.myModel) return 0
+        const refDistance = Vector3.Distance(MyPlayer.myModel.node.position, camera.globalPosition)
+        const playerPos = MyPlayer.myChar.pos
+        const sourceX = playerPos.x + (source.x - playerPos.x) * distanceMultiplier
+        const sourceY = playerPos.y + (source.y - playerPos.y) * distanceMultiplier
+        const sourceZ = playerPos.z + (source.z - playerPos.z) * distanceMultiplier
+        const cameraPos = camera.globalPosition
+        const thisDistance = Math.hypot(sourceX - cameraPos.x, sourceY - cameraPos.y, sourceZ - cameraPos.z)
 
         const delta = thisDistance - refDistance
         const fallIntensity = 0.065
@@ -24,14 +31,14 @@ export const AudioUtils = {
         m = Math.max(0, Math.min(m, maxBoost))
         let screenFactor = 1
 
-        const distToMe = Vector3.Distance(source, MyPlayer.myChar.pos)
+        const distToMe = Vector3.Distance(source, playerPos) * distanceMultiplier
 
         const screenIgnoreUntil = 10
 
         if (distToMe > screenIgnoreUntil) {
-            const camPos = Renderer.camera.globalPosition
-            const toSrc = source.subtract(camPos).normalize()
-            const forward = Renderer.camera.getDirection(Vector3.Forward())
+            const camPos = camera.globalPosition
+            const toSrc = new Vector3(sourceX - camPos.x, sourceY - camPos.y, sourceZ - camPos.z).normalize()
+            const forward = camera.getDirection(Vector3.Forward())
 
             let dot = Vector3.Dot(forward, toSrc)
             dot = Math.max(0, dot)

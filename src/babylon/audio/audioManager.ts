@@ -92,6 +92,7 @@ export const AudioManager = {
         // Death rattles
         this.loadDeathRattleSound(MonsterSoundTypes.SKELETON, "death-skeleton.ogg", scene, { volume: 0.7, playbackRate: 0.85 } );
         this.loadDeathRattleSound(MonsterSoundTypes.CAT, "death-cat.ogg", scene, { volume: 0.3, playbackRate: 1 } );
+        this.loadDeathRattleSound(MonsterSoundTypes.DEER, "death-deer.ogg", scene, { volume: 0.8, playbackRate: 1 } );
         this.loadDeathRattleSound(MonsterSoundTypes.ZOMBIE, "death-zombie.ogg", scene, { volume: 1, playbackRate: 1 } );
         this.loadDeathRattleSound(MonsterSoundTypes.WRAITH, "death-wraith.ogg", scene, { volume: 0.6, playbackRate: 1 } );
         this.loadMonsterAttackSound(MonsterAttackSoundTypes.WRAITH, "att-wraith.ogg", scene, { volume: 0.75, playbackRate: 1 } );
@@ -594,6 +595,7 @@ export const MonsterSoundTypes = {
     ZOMBIE: 'ZOMBIE',
     WRAITH: 'WRAITH',
     CAT: 'CAT',
+    DEER: 'DEER',
 }
 
 export const MonsterAttackSoundTypes = {

@@ -2,7 +2,7 @@ import {
     AbstractMesh,
     AnimationGroup, Bone, Matrix,
     Mesh, ParticleSystem, Quaternion,
-    Skeleton, Texture, TransformNode, Vector3,
+    Skeleton, Sound, Texture, TransformNode, Vector3,
 } from '@babylonjs/core'
 import { Monster } from '@/babylon/monsters/monster'
 import { MonsterLoader } from '@/babylon/monsters/monsterLoader'
@@ -14,12 +14,15 @@ import { Utils } from '@/utils/utils'
 import { Renderer } from '@/babylon/scene/renderer'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { ActiveMeshFreezer } from '@/babylon/scene/activeMeshFreezer'
-import { AudioManager } from '@/babylon/audio/audioManager'
+import { AudioManager, FootStepSpeeds, FootStepTypes } from '@/babylon/audio/audioManager'
+import { AudioUtils } from '@/babylon/audio/audioUtils'
+import { WATER_BLOCK_TYPE } from '@/babylon/world/terrainManager'
 import { TerrainManager } from '@/babylon/world/terrainManager'
 import { Settings } from '@/settings/settings'
 import { Lights } from '@/babylon/scene/lights'
 
 export class MonsterModel implements EquipBearer {
+    private footStepSounds = new Map<string, Sound>()
     parent: Monster
     type: MonsterType
     initialized: boolean = false
@@ -223,6 +226,48 @@ export class MonsterModel implements EquipBearer {
         this.setWeaponTrailEnabled(true)
     }
 
+    updateFootsteps(moving: boolean) {
+        if (!this.type.group.footsteps) return
+        const volumeRatio = moving && this.isActive() && !this.isDying
+            ? AudioUtils.getVolumeRatioByDistance(this.parent.pos, 2) : 0
+        if (volumeRatio <= 0) {
+            this.stopFootsteps()
+            return
+        }
+        const block = WorldDataManager.getBlockOnPosition(this.parent.pos)
+        const type = block?.snowed ? FootStepTypes.SNOW
+            : block?.type === WATER_BLOCK_TYPE ? FootStepTypes.WATER : FootStepTypes.DIRT
+        const source = AudioManager.footStepSounds.get(type) as (Sound & {loaded?: boolean, defaultVolume?: number}) | undefined
+        if (!source?.loaded) {
+            this.stopFootsteps()
+            return
+        }
+        let sound = this.footStepSounds.get(type)
+        if (!sound) {
+            const clone = source.clone()
+            if (!clone) return
+            sound = clone
+            this.footStepSounds.set(type, sound)
+        }
+        this.stopFootsteps(sound)
+        const running = this.parent.runSpeed > 2
+        const speedRatio = this.parent.runSpeed / (running ? 3.2 : 2)
+        const playbackRate = type === FootStepTypes.SNOW
+            ? (running ? FootStepSpeeds.SNOW_RUN : FootStepSpeeds.SNOW_WALK)
+            : type === FootStepTypes.WATER
+                ? (running ? FootStepSpeeds.WATER_RUN : FootStepSpeeds.WATER_WALK)
+                : (running ? FootStepSpeeds.DIRT_RUN : FootStepSpeeds.DIRT_WALK)
+        sound.setPlaybackRate(playbackRate * speedRatio)
+        sound.setVolume((source.defaultVolume ?? 1) * volumeRatio * speedRatio)
+        if (!sound.isPlaying) sound.play()
+    }
+
+    private stopFootsteps(except?: Sound) {
+        this.footStepSounds.forEach(sound => {
+            if (sound !== except && sound.isPlaying) sound.stop()
+        })
+    }
+
     doWalk() {
         this.pendingAttackSoundAnim = null
         this.idleAnimationFrozen = false
@@ -286,6 +331,7 @@ export class MonsterModel implements EquipBearer {
     }
 
     doDie() {
+        this.stopFootsteps()
         if (!this.isActive()) return
         this.idleAnimationFrozen = false
         this.pendingAttackSoundAnim = null
@@ -365,6 +411,7 @@ export class MonsterModel implements EquipBearer {
     }
 
     removeFromView() {
+        this.stopFootsteps()
         this.viewRequested = false
         this.pendingAttackSoundAnim = null
         if (this.initialized) {
@@ -378,6 +425,8 @@ export class MonsterModel implements EquipBearer {
     }
 
     removeFromScene() {
+        this.footStepSounds.forEach(sound => sound.dispose())
+        this.footStepSounds.clear()
         this.viewRequested = false
         this.parent.insideView = false
         if (!this.initialized) {

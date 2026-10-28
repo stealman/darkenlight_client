@@ -500,7 +500,7 @@ class Character implements Attackable, EffectTarget {
             if (!this.isWeaponRanged()) AudioManager.playWeaponSwing(this.weaponSoundType, this.pos, this.autoAttackMessage?.ps === true)
         }
 
-        const target = Utils.getAttackTargetByTypeAndId(data.tp, data.tgt)
+        const target = Utils.getAttackTargetByTypeAndId(data.tp, data.tgt, true)
         if (!target) {
             return
         }

@@ -16,9 +16,17 @@ const TERRAIN_COLLISION_MARGIN = 0.2
 
 export const Utils = {
 
-    getAttackTargetByTypeAndId(type: string, id: number): Attackable | null {
+    getAttackTargetByTypeAndId(type: string, id: number, includeKilled: boolean = false): Attackable | null {
         if (type === 'M') {
-            return MonsterManager.monsters.get(id) || NpcManager.guards.get(id) || null
+            const target = MonsterManager.monsters.get(id) || NpcManager.guards.get(id)
+            if (target) return target
+            // Late hit results still need the dying model for impact effects.
+            if (includeKilled) {
+                for (const killed of MonsterManager.killedMonsters) {
+                    if (killed.id === id) return killed
+                }
+            }
+            return null
         }
         if (type === 'C') {
             return id === MyPlayer.myChar.id ? MyPlayer.myChar : CharacterManager.characters.get(id) || null
