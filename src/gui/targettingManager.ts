@@ -12,9 +12,11 @@ import { NpcManager } from '@/babylon/npc/npcManager'
 import { ActionButtonsManager } from '@/gui/actionButtonsManager'
 import { CharacterActions } from '@/data/actions/characterActions'
 import { t } from '@/i18n'
+import {ref} from 'vue'
 
 export const TargetingManager = {
     selectedTarget: null as Targetable | null,
+    selectedCharacterId: ref<number | null>(null),
     targetSpriteEnemy: null as HTMLCanvasElement,
     targetSpriteEnemyAttackTarget: null as HTMLCanvasElement,
     targetSpriteAlly: null as HTMLCanvasElement,
@@ -29,6 +31,7 @@ export const TargetingManager = {
     async initialize() {
         this.prepareTargetSprites()
         this.selectedTarget = null
+        this.selectedCharacterId.value = null
         this.autoTargetingEnabled = Settings.autoTarget
     },
 
@@ -194,6 +197,7 @@ export const TargetingManager = {
             this.selectedTarget?.setSelectedVisual?.(false)
         }
         this.selectedTarget = target
+        this.selectedCharacterId.value = target.getObjectType() === 'C' ? target.id : null
         target.setSelectedVisual?.(true)
         OverlayManager.targetSelected(target!)
         target.nameDisplayTime = Date.now() + 1000
@@ -252,6 +256,7 @@ export const TargetingManager = {
     unselectTarget() {
         this.selectedTarget?.setSelectedVisual?.(false)
         this.selectedTarget = null
+        this.selectedCharacterId.value = null
         OverlayManager.unselectTarget()
     },
 

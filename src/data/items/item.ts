@@ -1,5 +1,5 @@
-import { ItemTO } from '@/network/messageIfs'
-import { ConsumableHelper } from '@/data/items/consumableHelper'
+import type { ItemTO } from '@/network/messageIfs'
+import { ConsumablesCodebook } from './consumablesCodebook'
 import { t } from '@/i18n'
 
 const itemTypeLocalizationSections: Record<string, string> = {
@@ -85,7 +85,7 @@ export class Item {
     }
 
     isConsumable(): boolean {
-        return ConsumableHelper.isItemConsumable(this)
+        return ConsumablesCodebook.isItemConsumable(this)
     }
 
     hasWeaponTag(tag: string): boolean {

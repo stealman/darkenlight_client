@@ -620,3 +620,19 @@ export class GMGenerateBiomeMsg implements Message {
     }
 }
 
+export class PartyInviteMsg implements Message {
+    t = 43
+    d: {targetId: number}
+    constructor(targetId: number) { this.d = {targetId} }
+}
+
+export class PartyRespondMsg implements Message {
+    t = 44
+    d: {id: number, accept: boolean}
+    constructor(id: number, accept: boolean) { this.d = {id, accept} }
+}
+
+export class PartyLeaveMsg implements Message {
+    t = 45
+    d = {}
+}

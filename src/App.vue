@@ -5,6 +5,7 @@
         <canvas id="overlayCanvas" class="noselect game-session-canvas" :class="{ 'game-session-canvas--visible': gameSessionActive }"></canvas>
 
         <div v-show="gameSessionActive">
+            <PartyPanel v-if="gameSessionActive" />
             <div id="system-buttons">
                 <div @click="showSettingsDialog()" v-html="getHamburgerMenuSvg('icon-white', 'icon-settings')"></div>
                 <div v-if="myCharRef?.className === 'GM'" @click="showDebug" v-html="getInspectSvg('icon-white', 'icon-inspect')"></div>
@@ -214,6 +215,7 @@ import { TargetingManager } from '@/gui/targettingManager'
 import { MyPlayer } from '@/data/myPlayer'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { useI18n } from '@/i18n'
+import PartyPanel from '@/vue/views/PartyPanel.vue'
 
 const canvas = ref<HTMLCanvasElement | null>(null)
 const miniMapCanvas = ref<HTMLCanvasElement | null>(null)

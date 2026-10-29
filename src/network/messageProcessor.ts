@@ -68,6 +68,7 @@ import { CharacterActions } from '@/data/actions/characterActions'
 import { FoggyAreaManager } from '@/babylon/world/foggyAreaManager'
 import { GMFoggyAreas } from '@/gm/GmFoggyAreas'
 import { EquipmentDecorationsManager } from '@/babylon/world/equipmentDecorationsManager'
+import {PartyManager} from '@/data/partyManager'
 
 export const MessageProcessor = {
 
@@ -75,6 +76,11 @@ export const MessageProcessor = {
         for (const element of response) {
             const msg = element
             switch (msg.t) {
+                case 92:
+                    if (PartyManager.state.value && !msg.d) AudioManager.playPartyLeave()
+                    if (PartyManager.receiveState(msg.d)) AudioManager.playPartyJoin()
+                    break
+                case 93: PartyManager.receiveInvitation(msg.d); break
                 case 2: await this.loginResponse(msg.d); break
                 case 3: this.addMonster(msg.d); break
                 case 4: this.monsterMove(msg.d); break

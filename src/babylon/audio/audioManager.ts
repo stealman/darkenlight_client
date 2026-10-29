@@ -30,6 +30,8 @@ export const AudioManager = {
     guiButtonToggleOffSound: null as Sound | null,
     guiTickSound: null as Sound | null,
     guiFailSound: null as Sound | null,
+    partyJoinSound: null as Sound | null,
+    partyLeaveSound: null as Sound | null,
 
     lowHealthWarningSound: null as Sound | null,
     heartBeatSound: null as Sound | null,
@@ -161,6 +163,16 @@ export const AudioManager = {
         }, {
             volume: 0.3,
             playbackRate: 1.25,
+        });
+
+        this.partyJoinSound = new Sound('partyJoin', AudioManager.BASE_PATH_GUI + 'party-join.ogg', scene, undefined, {
+            volume: 0.825,
+            playbackRate: 1,
+        });
+
+        this.partyLeaveSound = new Sound('partyLeave', AudioManager.BASE_PATH_GUI + 'party-leave.ogg', scene, undefined, {
+            volume: 0.45,
+            playbackRate: 1,
         });
 
         this.guiFailSound = new Sound("guiFail", AudioManager.BASE_PATH_GUI + "fail.ogg", scene, function() {
@@ -460,6 +472,18 @@ export const AudioManager = {
     playGuiFail() {
         if (this.guiFailSound && this.guiFailSound['loaded']) {
             this.guiFailSound.play();
+        }
+    },
+
+    playPartyJoin() {
+        if (this.partyJoinSound?.isReady()) {
+            this.partyJoinSound.play()
+        }
+    },
+
+    playPartyLeave() {
+        if (this.partyLeaveSound?.isReady()) {
+            this.partyLeaveSound.play()
         }
     },
 

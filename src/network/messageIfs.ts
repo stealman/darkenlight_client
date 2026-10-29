@@ -512,3 +512,17 @@ export interface GMStaticDeleteInfoData {
     barrelCount: number
     itemCount: number
 }
+export interface PartyStateData {
+    leaderId: number
+    members: Array<{
+        id: number, name: string, worldId: number, x: number, z: number, nearby: boolean,
+        hp?: number, maxHp?: number, st?: number, maxSt?: number, mp?: number, maxMp?: number,
+    }>
+}
+
+export interface PartyInvitationData {
+    id: number
+    name: string
+    classKey?: string
+    remainingMs: number
+}

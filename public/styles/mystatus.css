@@ -105,11 +105,7 @@ div#myStatusPanel {
     top: 0;
     bottom: 0;
     width: 0%;
-    background: linear-gradient(
-        180deg,
-        rgba(36, 196, 196, 0.56) 0%,
-        rgba(12, 96, 96, 0.62) 100%
-    );
+    background: var(--ui-hp-fill);
 }
 
 #myStatusPanel .hpBlock:first-child{
@@ -176,19 +172,11 @@ div#myStatusPanel {
 }
 
 #myStatusPanel .staminaBar .secondaryBlockFill {
-    background: linear-gradient(
-        180deg,
-        rgba(224, 144, 60, 0.8) 0%,
-        rgba(122, 64, 18, 0.88) 100%
-    );
+    background: var(--ui-stamina-fill);
 }
 
 #myStatusPanel .manaBar .secondaryBlockFill {
-    background: linear-gradient(
-        180deg,
-        rgba(96, 150, 255, 0.82) 0%,
-        rgba(28, 64, 154, 0.88) 100%
-    );
+    background: var(--ui-mana-fill);
 }
 
 #myStatusPanel .affectsIcons {

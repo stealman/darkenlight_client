@@ -137,6 +137,9 @@ export const MyStatusPanel = {
         this.bodyEl.appendChild(hpRow)
         this.bodyEl.appendChild(secondaryRow)
         this.panel.appendChild(this.bodyEl)
+        const partyHost = document.createElement('div')
+        partyHost.id = 'party-panel-host'
+        this.panel.appendChild(partyHost)
         this.panel.appendChild(this.affectsRowEl)
         document.body.appendChild(this.panel)
         this.lastTooltipRefreshBucket = null

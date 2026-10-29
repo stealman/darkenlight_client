@@ -12,6 +12,7 @@ import { setLocale } from '@/i18n'
 import { MyStatusPanel } from '@/gui/myStatusPanel'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { UiIconManager } from '@/gui/uiIconManager'
+import {PartyManager} from '@/data/partyManager'
 
 const PIXELATED_UI_IMAGE_SIZE = 1.2 // 64 px -> 46 px after rounding.
 const PIXELATED_UI_IMAGE_SATURATION = 0.7 // 0 = grayscale, 1 = original saturation.
@@ -76,6 +77,7 @@ export const GameManager = {
     },
 
     async stopGame(notifyServer: boolean = true) {
+        PartyManager.reset()
         Connector.resetSession()
         if (notifyServer) {
             Connector.sendMessage(new LogoutMsg())

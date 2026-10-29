@@ -1,4 +1,14 @@
 {
+  "party": {
+    "title": "Skupina", "actions": "Akce skupiny", "invite": "Pozvat do skupiny", "leave": "Opustit",
+    "leader": "Vůdce skupiny", "away": "Mimo dosah skupiny", "invitation": "Pozvánka do skupiny",
+    "invitedBy": "{name} tě zve do skupiny.", "accept": "Přijmout", "decline": "Odmítnout",
+    "leaderOnly": "Zvát do skupiny může pouze její vůdce.", "full": "Skupina je plná (nejvýše 6 postav).",
+    "unavailable": "Postava nebo pozvánka už není dostupná.", "alreadyGrouped": "Tato postava už je ve skupině.",
+    "cooldown": "Po odmítnutí musíš před další pozvánkou této postavě počkat minutu.",
+    "pending": "Už čeká jiná pozvánka. Počkej na její vyřízení.", "sent": "Pozvánka odeslána (platí 10 sekund).",
+    "declined": "Pozvánka byla odmítnuta nebo vypršela. Další můžeš poslat za minutu."
+  },
   "container": {
     "barrel": "Barel"
   },

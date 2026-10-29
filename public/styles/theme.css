@@ -11,6 +11,12 @@
     --ui-accent-purple: 164, 132, 193;
     --ui-surface-beige-path: 192, 160, 112;
     --ui-success: 148, 194, 152;
+    --ui-party-marker: #58ef83;
+    --ui-character-name: 86, 170, 255;
+    --ui-ally-target-border: rgba(128, 164, 164, 0.75);
+    --ui-hp-fill: linear-gradient(180deg, rgba(36, 196, 196, 0.56) 0%, rgba(12, 96, 96, 0.62) 100%);
+    --ui-stamina-fill: linear-gradient(180deg, rgba(224, 144, 60, 0.8) 0%, rgba(122, 64, 18, 0.88) 100%);
+    --ui-mana-fill: linear-gradient(180deg, rgba(96, 150, 255, 0.82) 0%, rgba(28, 64, 154, 0.88) 100%);
     --ui-attribute-agility: 119, 171, 125;
     --ui-attention: 151, 71, 66;
     --ui-progress-experience-dark: 87, 135, 94;

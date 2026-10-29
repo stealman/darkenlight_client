@@ -17,6 +17,8 @@ import { StaticsManager } from '@/babylon/world/statics/staticsManager'
 import { ContainerManager } from '@/data/containerManager'
 import { Vector3 } from '@babylonjs/core'
 import { Utils } from '@/utils/utils'
+import {PartyManager} from '@/data/partyManager'
+import {t} from '@/i18n'
 
 const HUD_BUTTON_GAP = 5
 const HUD_MINIMAP_LEFT_FRAME_SIZE = 3
@@ -69,6 +71,7 @@ class GuiOpportunityButton {
 }
 
 export const GuiOpportunityActions = {
+    PARTY_INVITE: new GuiOpportunityButtonAction('PARTY_INVITE', 'btn_party_invite'),
     PICKUP_ITEM: new GuiOpportunityButtonAction("PICKUP_ITEM", "btn_pick"),
     MINING: new GuiOpportunityButtonAction("MINING", "btn_pickaxe"),
     LUMBERJACKING: new GuiOpportunityButtonAction("LUMBERJACKING", "btn_lumber"),
@@ -114,6 +117,11 @@ export const GuiButtonsManager = {
         this.opportunityButtons.set(GuiOpportunityActions.NPC_USE.name, new GuiOpportunityButton(GuiOpportunityActions.NPC_USE))
         this.opportunityButtons.set(GuiOpportunityActions.NPC_EDIT.name, new GuiOpportunityButton(GuiOpportunityActions.NPC_EDIT))
         this.opportunityButtons.set(GuiOpportunityActions.BOT_EDIT.name, new GuiOpportunityButton(GuiOpportunityActions.BOT_EDIT))
+        const invite = new GuiOpportunityButton(GuiOpportunityActions.PARTY_INVITE)
+        invite.htmlEl.setAttribute('role', 'button')
+        invite.htmlEl.title = t('party.invite')
+        invite.htmlEl.setAttribute('aria-label', t('party.invite'))
+        this.opportunityButtons.set(GuiOpportunityActions.PARTY_INVITE.name, invite)
     },
 
     renderOpportunityButtons() {
@@ -175,6 +183,13 @@ export const GuiButtonsManager = {
             typeof this.getClosestUsableBarrel()?.status?.containerId === 'string'
         )
         const selectedTarget = TargetingManager.selectedTarget
+        const party = PartyManager.state.value
+        this.opportunityButtons.get(GuiOpportunityActions.PARTY_INVITE.name)!.setVisible(
+            selectedTarget?.getObjectType() === 'C' && selectedTarget.id !== MyPlayer.myChar.id
+            && !(selectedTarget as any).isBot && !(selectedTarget as any).dead
+            && (!party || party.leaderId === MyPlayer.myChar.id)
+            && !party?.members.some(member => member.id === selectedTarget.id)
+        )
         const closestNpc = NpcManager.getClosestNpcInDistance(3)
         this.opportunityButtons.get(GuiOpportunityActions.NPC_USE.name)!.setVisible(
             closestNpc !== null
@@ -221,6 +236,9 @@ export const GuiButtonsManager = {
         const playerPos = MyPlayer.myChar.pos
         let target: { x: number, z: number } | null | undefined = null
         switch (actionName) {
+            case GuiOpportunityActions.PARTY_INVITE.name:
+                target = TargetingManager.selectedTarget?.pos
+                break
             case GuiOpportunityActions.PICKUP_ITEM.name:
                 target = GroundItemsManager.nearbyItem?.pos
                 break
@@ -281,6 +299,9 @@ export const GuiButtonsManager = {
         }
         AudioManager.playGuiButtonClick()
         switch (actionName) {
+            case GuiOpportunityActions.PARTY_INVITE.name:
+                if (TargetingManager.selectedTarget?.getObjectType() === 'C') PartyManager.invite(TargetingManager.selectedTarget.id)
+                break
             case GuiOpportunityActions.PICKUP_ITEM.name:
                 this.clickOnPickupItemButton()
                 break

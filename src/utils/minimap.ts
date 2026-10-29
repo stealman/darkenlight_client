@@ -4,6 +4,7 @@ import { TooltipOverlayContent, TooltipOverlayManager } from '@/gui/tooltipOverl
 import { t } from '@/i18n'
 import { StaticsManager } from '@/babylon/world/statics/staticsManager'
 import { Lights } from '@/babylon/scene/lights'
+import {PartyManager} from '@/data/partyManager'
 
 export const MiniMap = {
     tooltipOwnerKey: 'mini-map' as string,
@@ -24,6 +25,7 @@ export const MiniMap = {
     snowColorMap: [] as string[],
     environmentType: 'outdoor' as 'outdoor' | 'indoor',
     dungeonEntranceColor: '#a484c1' as string,
+    partyMarkerColor: '' as string,
 
     setEnvironmentType(environmentType?: string | null) {
         this.environmentType = environmentType === 'indoor' ? 'indoor' : 'outdoor'
@@ -40,6 +42,7 @@ export const MiniMap = {
         this.offScreenCanvas.height = this.mapHeight
 
         const accentPurple = getComputedStyle(document.documentElement).getPropertyValue('--ui-accent-purple').trim()
+        this.partyMarkerColor = getComputedStyle(document.documentElement).getPropertyValue('--ui-party-marker').trim()
         if (accentPurple) {
             this.dungeonEntranceColor = `rgb(${accentPurple})`
         }
@@ -230,12 +233,29 @@ export const MiniMap = {
 
         context.restore()
         this.drawDungeonEntrances(context, playerX, playerY, mapRotation)
+        this.drawPartyMembers(context, playerX, playerY, mapRotation)
 
         // Player position
         context.fillStyle = "red"
         context.beginPath()
         context.arc(this.canvasSize / 2, this.canvasSize / 2, 2 * this.canvasSize / this.viewSize, 0, Math.PI * 2)
         context.fill()
+    },
+
+    drawPartyMembers(context: CanvasRenderingContext2D, playerX: number, playerY: number, rotation: number) {
+        const state = PartyManager.state.value
+        if (!state) return
+        const scale = this.canvasSize / this.viewSize
+        const size = Math.max(4, Math.round(3 * scale))
+        const cos = Math.cos(rotation), sin = Math.sin(rotation)
+        context.fillStyle = this.partyMarkerColor
+        for (const member of state.members) {
+            if (member.id === MyPlayer.myChar.id || member.worldId !== MyPlayer.worldId) continue
+            const dx = (member.z - playerX) * scale, dy = (member.x - playerY) * scale
+            const x = this.canvasSize / 2 + dx * cos - dy * sin
+            const y = this.canvasSize / 2 + dx * sin + dy * cos
+            context.fillRect(x - size / 2, y - size / 2, size, size)
+        }
     },
 
     drawDungeonEntrances(context: CanvasRenderingContext2D, playerX: number, playerY: number, mapRotation: number) {
