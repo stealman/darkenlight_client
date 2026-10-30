@@ -163,6 +163,30 @@
                 </div>
             </div>
         </section>
+        <section v-if="monsterKnowledge.length" class="skill-category">
+            <h3 class="skill-category-title"><span class="ui-text-gradient">{{ t('skills.monsterKnowledge.title') }}</span></h3>
+            <div class="skill-list">
+                <div v-for="entry in monsterKnowledge" :key="entry.category" class="skill-row">
+                    <div class="skill-row-summary monster-knowledge-row">
+                        <span class="skill-name ui-text-gradient">{{ monsterCategoryName(entry.category) }}</span>
+                        <span class="skill-progress-rank skill-progress-rank--current">{{ t('skills.monsterKnowledge.level', {level: entry.level}) }}</span>
+                        <div class="skill-progress-stack"
+                            @mouseenter="showMonsterProgressTooltip(entry, $event)"
+                            @mousemove="TooltipOverlayManager.moveFromEvent(monsterTooltipKey(entry.category), $event)"
+                            @mouseleave="TooltipOverlayManager.hideOwnerIfNotPinned(monsterTooltipKey(entry.category))"
+                            @click.stop="showMonsterProgressTooltip(entry, $event, true)">
+                            <div class="skill-progress-row">
+                                <span class="skill-progress-track" role="progressbar" :aria-label="t('skills.monsterKnowledge.nextLevelProgress')"
+                                    :aria-valuenow="entry.progressPercent || 0" aria-valuemin="0" aria-valuemax="100">
+                                    <span class="skill-progress-fill skill-progress-fill--experience ui-progress-fill-gradient" :style="{width: `${entry.progressPercent || 0}%`}"></span>
+                                </span>
+                            </div>
+                        </div>
+                        <span class="monster-knowledge-bonus">{{ t('skills.monsterKnowledge.damageBonus', {percent: entry.damageBonusPercent}) }}</span>
+                    </div>
+                </div>
+            </div>
+        </section>
     </div>
 </template>
 
@@ -170,7 +194,7 @@
 import { computed, ref } from 'vue'
 import { MyPlayer } from '@/data/myPlayer'
 import { useI18n } from '@/i18n'
-import type {SkillKey, SkillProgressTO} from '@/network/messageIfs'
+import type {MonsterKnowledgeTO, SkillKey, SkillProgressTO} from '@/network/messageIfs'
 import {SkillDefinitions} from '@/data/skills/skillDefinitions'
 import type {SkillCategoryKey, SkillDefinition} from '@/data/skills/skillDefinitions'
 import { Connector } from '@/network/connector'
@@ -180,6 +204,14 @@ import { TooltipOverlayManager } from '@/gui/tooltipOverlayManager'
 
 const { locale, t } = useI18n()
 const myChar = MyPlayer.myCharRef
+const monsterKnowledge = computed(() => (myChar.value?.monsterKnowledge || [])
+    .filter(entry => entry.experience > 0)
+    .slice().sort((a, b) => monsterCategoryName(a.category).localeCompare(monsterCategoryName(b.category), locale.value)))
+const monsterCategoryName = (category: string) => {
+    const key = `skills.monsterKnowledge.categories.${category}`
+    const name = t(key)
+    return name === key ? category : name
+}
 const expandedSkillKey = ref<SkillKey | null>(null)
 
 const skillRankTranslationKeys: Partial<Record<number, string>> = {
@@ -360,6 +392,28 @@ const buildSkillProgressTooltip = (skill: {
     ],
 })
 
+const monsterTooltipKey = (category: string) => `monster-knowledge-progress:${category}`
+const showMonsterProgressTooltip = (entry: MonsterKnowledgeTO, event: MouseEvent, togglePinned = false) => {
+    const options = {
+        ownerKey: monsterTooltipKey(entry.category),
+        event,
+        content: {
+            title: monsterCategoryName(entry.category),
+            titleMeta: t('skills.monsterKnowledge.level', {level: entry.level}),
+            titleClassName: 'ui-text-gradient',
+            titleMetaClassName: 'ui-tooltip-title-meta--skill-rank',
+            rows: [{
+                label: t('skills.progress.experience'),
+                separator: '',
+                value: `${formatSkillExperience(entry.experience)} / ${formatSkillExperience(entry.nextExperienceRequired)}`,
+                className: 'ui-tooltip-row--experience',
+            }],
+        },
+    }
+    if (togglePinned) TooltipOverlayManager.togglePinnedFromEvent(options)
+    else if (!TooltipOverlayManager.pinned) TooltipOverlayManager.showFromEvent(options)
+}
+
 const showSkillProgressTooltip = (skill: Parameters<typeof buildSkillProgressTooltip>[0], event: MouseEvent) => {
     if (TooltipOverlayManager.pinned) {
         return
@@ -408,6 +462,10 @@ const formatTrainingTime = (seconds: number) => {
 </script>
 
 <style scoped>
+.monster-knowledge-row {
+    cursor: default;
+}
+.monster-knowledge-bonus { grid-column: 4 / -1; text-align: left; color: rgb(var(--ui-success)); font-variant-numeric: tabular-nums; }
 .character-tab-panel {
     width: 100%;
     min-height: 100%;

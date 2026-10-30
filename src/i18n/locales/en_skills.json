@@ -1,5 +1,12 @@
 {
   "skills": {
+    "monsterKnowledge": {
+      "title": "Monster Lore",
+      "level": "Level {level}",
+      "nextLevelProgress": "Progress to the next monster knowledge level",
+      "damageBonus": "+{percent}% damage",
+      "categories": {"Skeletons": "Skeletons", "Withers": "Withers", "Zombies": "Zombies", "Wights": "Wights", "Cats": "Cats", "Deers": "Deer", "Guards": "Guards"}
+    },
     "categories": {
       "weapons": "Weapons",
       "armor": "Armor",

@@ -76,6 +76,9 @@ export const MessageProcessor = {
         for (const element of response) {
             const msg = element
             switch (msg.t) {
+                case 94:
+                    if (MyPlayer.myCharRef.value) MyPlayer.myCharRef.value.monsterKnowledge = msg.d
+                    break
                 case 92:
                     if (PartyManager.state.value && !msg.d) AudioManager.playPartyLeave()
                     if (PartyManager.receiveState(msg.d)) AudioManager.playPartyJoin()

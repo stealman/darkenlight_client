@@ -526,3 +526,12 @@ export interface PartyInvitationData {
     classKey?: string
     remainingMs: number
 }
+
+export interface MonsterKnowledgeTO {
+    category: string
+    experience: number
+    level: number
+    damageBonusPercent: number
+    progressPercent: number
+    nextExperienceRequired: number
+}

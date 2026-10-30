@@ -1,5 +1,12 @@
 {
   "skills": {
+    "monsterKnowledge": {
+      "title": "Znalost Monster",
+      "level": "Úroveň {level}",
+      "nextLevelProgress": "Postup k další úrovni znalosti monster",
+      "damageBonus": "+{percent} % poškození",
+      "categories": {"Skeletons": "Kostlivci", "Withers": "Witherové", "Zombies": "Zombie", "Wights": "Přízraky", "Cats": "Kočky", "Deers": "Jeleni", "Guards": "Stráže"}
+    },
     "categories": {
       "weapons": "Zbraně",
       "armor": "Brnění",

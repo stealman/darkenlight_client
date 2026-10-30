@@ -46,6 +46,7 @@ import { CharacterActions, CharacterTimedAction } from '@/data/actions/character
 import { PubliclyVisibleAffect } from '@/data/affects'
 import { GameClass, GameClasses } from '@/data/gameClass'
 import { Monster } from '@/babylon/monsters/monster'
+import type {MonsterKnowledgeTO} from '@/network/messageIfs'
 
 class Character implements Attackable, EffectTarget {
     model: CharacterModel | null = null
@@ -92,6 +93,7 @@ class Character implements Attackable, EffectTarget {
     equipSet: Map<string, Item> = new Map<string, Item>()
     skillSet: SkillSetTO = {}
     skillCaps: SkillCapsTO = {}
+    monsterKnowledge: MonsterKnowledgeTO[] = []
 
     attackAnimationTime: number = 1000 // Updated before each attack from server
 
@@ -156,6 +158,7 @@ class Character implements Attackable, EffectTarget {
             this.skillSet = data.skillSet
             this.skillCaps = data.skillCaps || {}
         }
+        if (myChar) this.monsterKnowledge = data.monsterKnowledge || []
 
         this.initializeEquip(data.equipSet)
     }
