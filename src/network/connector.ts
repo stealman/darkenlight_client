@@ -12,6 +12,8 @@ export const Connector = {
     queuedMessages: [] as Message[],
     responseQueue: Promise.resolve() as Promise<void>,
     lastSecondLimit: 10,
+    speechQueue: [] as Message[],
+    lastSpeechTime: 0,
 
     moveMessageTimeout: 50,
     lastMoveMessage: null as Message | null,
@@ -101,12 +103,18 @@ export const Connector = {
     },
 
     resetSession() {
+        this.speechQueue = []
+        this.lastSpeechTime = 0
         this.queuedMessages = []
         this.sentMessages = []
         this.cancelPendingMoveMessage()
     },
 
     sendMessage(msg: Message) {
+        if (msg.t === 46) {
+            this.speechQueue.push(msg)
+            return
+        }
         const time = new Date().getTime()
 
         // Remove from sentMessages all that are older than 1 second
@@ -132,6 +140,14 @@ export const Connector = {
                 this.doSend(queuedMessage, time)
                 this.sentMessages.push(queuedMessage)
             }
+        }
+
+        if (this.speechQueue.length && time >= this.lastSpeechTime + 1000
+            && this.sentMessages.length < this.lastSecondLimit && this.socket?.readyState === WebSocket.OPEN) {
+            const msg = this.speechQueue.shift()!
+            this.doSend(msg, time)
+            this.sentMessages.push(msg)
+            this.lastSpeechTime = time
         }
 
         // If last move message was not sent due to timeout, send it now

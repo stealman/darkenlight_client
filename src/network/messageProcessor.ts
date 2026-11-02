@@ -1,4 +1,5 @@
 
+import { OverlayManager } from '@/gui/overlay/overlayManager'
 import { MonsterManager } from '@/babylon/monsters/monsterManager'
 import { TreeManager } from '@/babylon/world/treeManager'
 import { WorldDataManager } from '@/data/worldDataManager'
@@ -76,6 +77,9 @@ export const MessageProcessor = {
         for (const element of response) {
             const msg = element
             switch (msg.t) {
+                case 95:
+                    OverlayManager.addSpeech(msg.d)
+                    break
                 case 94:
                     if (MyPlayer.myCharRef.value) MyPlayer.myCharRef.value.monsterKnowledge = msg.d
                     break

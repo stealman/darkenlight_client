@@ -151,6 +151,17 @@ export const GuiButtonsManager = {
 
         this.btnBackpack.style.right = `${miniMapRightOffset + buttonStep}px`
         this.btnBackpack.style.top = `5px`
+        const speech = document.getElementById('btn-speech')
+        if (speech) {
+            speech.style.position = 'fixed'
+            speech.style.right = 'auto'
+            speech.style.top = 'auto'
+            speech.style.left = 'max(5px, env(safe-area-inset-left))'
+            speech.style.bottom = 'max(5px, env(safe-area-inset-bottom))'
+            speech.style.zIndex = '3'
+            speech.style.width = `${this.size}px`
+            speech.style.height = `${this.size}px`
+        }
     },
 
     onFrame() {
@@ -186,7 +197,7 @@ export const GuiButtonsManager = {
         const party = PartyManager.state.value
         this.opportunityButtons.get(GuiOpportunityActions.PARTY_INVITE.name)!.setVisible(
             selectedTarget?.getObjectType() === 'C' && selectedTarget.id !== MyPlayer.myChar.id
-            && !(selectedTarget as any).isBot && !(selectedTarget as any).dead
+            && !(selectedTarget as any).dead
             && (!party || party.leaderId === MyPlayer.myChar.id)
             && !party?.members.some(member => member.id === selectedTarget.id)
         )

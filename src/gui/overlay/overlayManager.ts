@@ -19,6 +19,14 @@ import { ItemGainNumber } from '@/gui/overlay/itemGainNumber'
 import { GmOreTierOverlay } from '@/gui/gm/oreTierOverlay'
 import { UiIconManager } from '@/gui/uiIconManager'
 
+import type { CharacterSpeechData } from '@/network/messageIfs'
+
+interface SpeechBubble {
+    lines: string[]
+    width: number
+    expiresAt: number
+}
+
 interface AnimatedHpBar {
     displayedPercent: number
     lastUpdatedAt: number
@@ -51,6 +59,7 @@ export const OverlayManager = {
     iconStyleUnsubscribe: null as (() => void) | null,
     animatedHpBars: new WeakMap<object, AnimatedHpBar>(),
     temporaryNameFadeStates: new WeakMap<object, TemporaryNameFadeState>(),
+    speech: new Map<Character, SpeechBubble[]>(),
     cameraOrigin: Vector3.Zero(),
     cameraPosition: Vector3.Zero(),
 
@@ -77,6 +86,7 @@ export const OverlayManager = {
     },
 
     reset() {
+        this.speech.clear()
         this.damageNumbers = []
         this.emeraldGainNumbers = []
         this.itemGainNumbers = []
@@ -142,8 +152,86 @@ export const OverlayManager = {
         this.renderItemGainNumbers(time)
         this.renderDamagedBars(time)
         this.renderHealingMarkers(time)
+        this.renderSpeech(time)
         this.renderAttackTargetIndicator(time)
         GmOreTierOverlay.onFrame(this.overlayCtx!)
+    },
+
+    addSpeech(data: CharacterSpeechData) {
+        const char = data.id === MyPlayer.myChar?.id ? MyPlayer.myChar : CharacterManager.characters.get(data.id)
+        if (!char || typeof data.text !== 'string' || !this.overlayCtx) return
+        const text = data.text.slice(0, 100).trim()
+        if (!text) return
+        const ctx = this.overlayCtx
+        ctx.save()
+        ctx.font = `${Math.max(12, this.fontSize - 2)}px "Roboto", Arial, sans-serif`
+        const tightText = Math.abs(this.letterSpacingFix) > 0
+        const textWidth = (value: string) => CanvasTextUtils.getTextWidth(ctx, value, tightText, this.letterSpacingFix)
+        const lines: string[] = []
+        let line = ''
+        // Prefer word boundaries; split oversized words by Unicode code point.
+        for (const word of text.split(/\s+/)) {
+            if (line && textWidth(line + ' ' + word) <= 220) {
+                line += ' ' + word
+                continue
+            }
+            if (line) lines.push(line)
+            line = ''
+            for (const letter of word) {
+                if (line && textWidth(line + letter) > 220) {
+                    lines.push(line)
+                    line = ''
+                }
+                line += letter
+            }
+        }
+        if (line) lines.push(line)
+        const width = Math.max(...lines.map(value => textWidth(value))) + 20
+        ctx.restore()
+        const bubbles = this.speech.get(char) || []
+        bubbles.push({lines, width, expiresAt: Date.now() + 3000 + (text.length - 1) * 3000 / 99})
+        this.speech.set(char, bubbles)
+    },
+
+    renderSpeech(time: number) {
+        const ctx = this.overlayCtx!
+        ctx.save()
+        const size = Math.max(12, this.fontSize - 2)
+        ctx.font = `${size}px "Roboto", Arial, sans-serif`
+        ctx.fontKerning = 'normal'
+        ctx.textBaseline = 'middle'
+        const tightText = Math.abs(this.letterSpacingFix) > 0
+        this.speech.forEach((bubbles, char) => {
+            removeExpiredOverlayEntries(bubbles, time)
+            if (!bubbles.length || (char !== MyPlayer.myChar && CharacterManager.characters.get(char.id) !== char)) {
+                this.speech.delete(char)
+                return
+            }
+            if (char !== MyPlayer.myChar && !CharacterManager.visibleCharacters.has(char.id)) return
+            const pos = char.getNameTextNodeScreenPosition()
+            if (!pos || !Number.isFinite(pos.x) || !Number.isFinite(pos.y)) return
+            let bottom = pos.y - 12
+            for (let i = bubbles.length - 1; i >= 0; i--) {
+                const bubble = bubbles[i]
+                const height = bubble.lines.length * (size + 4) + 14
+                const x = Math.max(bubble.width / 2 + 4, Math.min(this.overlayCanvas.clientWidth - bubble.width / 2 - 4, pos.x))
+                const top = bottom - height
+                ctx.globalAlpha = Math.min(1, (bubble.expiresAt - time) / 200)
+                ctx.fillStyle = 'rgba(40, 38, 32, 0.4)'
+                ctx.beginPath()
+                ctx.roundRect(x - bubble.width / 2, top, bubble.width, height, 8)
+                ctx.fill()
+                ctx.fillStyle = '#e9dabe'
+                bubble.lines.forEach((line, index) => {
+                    const width = CanvasTextUtils.getTextWidth(ctx, line, tightText, this.letterSpacingFix)
+                    ctx.textAlign = tightText ? 'left' : 'center'
+                    CanvasTextUtils.drawText(ctx, line, tightText ? x - width / 2 : x,
+                        top + 7 + (index + .5) * (size + 4), tightText, this.letterSpacingFix)
+                })
+                bottom = top - 6
+            }
+        })
+        ctx.restore()
     },
 
     setBloodyInnerGlow(hpPercent: number, time: number) {

@@ -6,6 +6,7 @@
 
         <div v-show="gameSessionActive">
             <PartyPanel v-if="gameSessionActive" />
+            <SpeechInput v-if="gameSessionActive" />
             <div id="system-buttons">
                 <div @click="showSettingsDialog()" v-html="getHamburgerMenuSvg('icon-white', 'icon-settings')"></div>
                 <div v-if="myCharRef?.className === 'GM'" @click="showDebug" v-html="getInspectSvg('icon-white', 'icon-inspect')"></div>
@@ -23,6 +24,10 @@
                 </div>
                 <div class="gui-action-button" id="btn-character" @click="showCharacterDialog()">
                     <img class="action-icon" src="/images/icons/buttons/btn_char.png" />
+                </div>
+                <div v-show="speechButtonVisible" id="btn-speech" class="gui-action-button" role="button" tabindex="0"
+                    :aria-label="t('speech.open')" @click="openSpeech" @keydown.enter.stop.prevent="openSpeech">
+                    <img class="action-icon" src="/images/icons/buttons/btn_speech.png" />
                 </div>
             </div>
 
@@ -216,6 +221,8 @@ import { MyPlayer } from '@/data/myPlayer'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { useI18n } from '@/i18n'
 import PartyPanel from '@/vue/views/PartyPanel.vue'
+import SpeechInput from '@/vue/views/SpeechInput.vue'
+const openSpeech = () => window.dispatchEvent(new CustomEvent('ui:open-speech'))
 
 const canvas = ref<HTMLCanvasElement | null>(null)
 const miniMapCanvas = ref<HTMLCanvasElement | null>(null)
@@ -246,6 +253,7 @@ const errorDialogCanRestart = ref(false)
 const loginRequestSentFlag = ref(false)
 const gameSessionActive = ref(false)
 const touchControlsReady = ref(false)
+const speechButtonVisible = ref(Settings.isPhoneOrTablet())
 const loadingPhaseKey = ref('app.loadingPreparing')
 const loadingProgress = ref(5)
 
@@ -297,6 +305,7 @@ const onGameStarted = async () => {
     gameLoading.value = false
     await nextTick()
     await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()))
+    speechButtonVisible.value = Settings.isPhoneOrTablet()
     gameSessionActive.value = true
     loginRequestSentFlag.value = true
     await nextTick()
@@ -786,6 +795,7 @@ const touchControlsChanged = () => {
 }
 
 const deviceTypeChanged = () => {
+    speechButtonVisible.value = Settings.isPhoneOrTablet()
     Settings.deviceTypeChanged()
     touchControls.value.updateFromSettings()
 }

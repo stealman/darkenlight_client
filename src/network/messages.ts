@@ -636,3 +636,8 @@ export class PartyLeaveMsg implements Message {
     t = 45
     d = {}
 }
+
+export class SayMsg implements Message {
+    t = 46
+    constructor(public d: {text: string}) {}
+}

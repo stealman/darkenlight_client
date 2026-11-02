@@ -540,3 +540,8 @@ export interface MonsterKnowledgeTO {
     progressPercent: number
     nextExperienceRequired: number
 }
+
+export interface CharacterSpeechData {
+    id: number
+    text: string
+}

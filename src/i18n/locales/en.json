@@ -1,4 +1,5 @@
 {
+  "speech": {"placeholder": "Say something?", "open": "Speak"},
   "party": {
     "title": "Party", "actions": "Party actions", "invite": "Invite to party", "leave": "Leave",
     "leader": "Party leader", "away": "Out of party range", "invitation": "Party invitation",

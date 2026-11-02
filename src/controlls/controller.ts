@@ -93,6 +93,12 @@ export const Controller = {
             return
         }
 
+        if (e.key === 'Enter' && !e.repeat && !e.isComposing) {
+            e.preventDefault()
+            window.dispatchEvent(new CustomEvent('ui:open-speech'))
+            return
+        }
+
         // I - open inventory
         if ((e.key && e.key.toLowerCase() === 'i') || e.code === 'KeyI') {
             if (e.repeat) return
