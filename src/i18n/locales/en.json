@@ -283,6 +283,7 @@
     "weaponSet-primary": "Primary weapon saved",
     "weaponSet-secondary": "Secondary weapon saved",
     "notEnoughStamina": "You are too tired",
+    "miningInsufficientSkill": "Your Mining skill is too low to extract the ore you found.",
     "powerStrikeRequiresTarget": "Power Strike requires a selected enemy",
     "powerStrikeOnCooldown": "Power Strike available in {seconds} seconds",
     "powerStrikeRequiresMeleeWeapon": "Power Strike requires a melee weapon",

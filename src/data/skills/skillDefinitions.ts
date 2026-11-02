@@ -1,13 +1,13 @@
 import type {SkillKey} from '@/network/messageIfs'
 
-export type SkillCategoryKey = 'weapons' | 'armor' | 'utility'
+export type SkillCategoryKey = 'weapons' | 'armor' | 'utility' | 'gathering'
 
 export type SkillDefinition = {
     key: SkillKey
     category: SkillCategoryKey
     translationKey: string
     descriptionTranslationKey: string
-    bonusKind?: 'weaponAttack' | 'powerStrikeDamage' | 'preciseShotDamage' | 'armor' | 'campingRestingRegen' | 'bandageHealing'
+    bonusKind?: 'weaponAttack' | 'powerStrikeDamage' | 'preciseShotDamage' | 'armor' | 'campingRestingRegen' | 'bandageHealing' | 'mining'
     bonusTargetTranslationKey?: string
 }
 
@@ -33,8 +33,13 @@ export const UtilitySkillDefinitions: SkillDefinition[] = [
     {key: 'healing', category: 'utility', translationKey: 'skills.utility.healing', descriptionTranslationKey: 'skills.descriptions.healing', bonusKind: 'bandageHealing'},
 ]
 
+export const GatheringSkillDefinitions: SkillDefinition[] = [
+    {key: 'mining', category: 'gathering', translationKey: 'skills.utility.mining', descriptionTranslationKey: 'skills.descriptions.mining', bonusKind: 'mining'},
+]
+
 export const SkillDefinitions: SkillDefinition[] = [
     ...PhysicalWeaponSkillDefinitions,
     ...ArmorSkillDefinitions,
     ...UtilitySkillDefinitions,
+    ...GatheringSkillDefinitions,
 ]

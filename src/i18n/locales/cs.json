@@ -283,6 +283,7 @@
       "weaponSet-primary": "Primární zbraň uložena",
       "weaponSet-secondary": "Sekundární zbraň uložena",
       "notEnoughStamina": "Nemáš dostatek výdrže",
+      "miningInsufficientSkill": "Na vytěžení nalezené rudy nemáš dostatečnou úroveň těžby.",
     "powerStrikeRequiresTarget": "Silný úder vyžaduje vybraného nepřítele",
     "powerStrikeOnCooldown": "Silný útok až za {seconds} vteřin",
     "powerStrikeRequiresMeleeWeapon": "Silný úder vyžaduje zbraň pro boj zblízka",

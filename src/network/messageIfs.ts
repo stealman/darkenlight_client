@@ -95,10 +95,13 @@ export interface AccountCharacterNameCheckData {
 export type PhysicalWeaponSkillKey = 'swords' | 'axes' | 'maces' | 'polearms' | 'bows'
 export type ArmorSkillKey = 'leatherArmor' | 'chainArmor' | 'plateArmor' | 'shields'
 export type UtilitySkillKey = 'camping' | 'healing'
+export type GatheringSkillKey = 'mining'
 export type CombatSkillKey = 'powerStrike' | 'preciseShot'
-export type SkillKey = PhysicalWeaponSkillKey | ArmorSkillKey | UtilitySkillKey | CombatSkillKey
+export type SkillKey = PhysicalWeaponSkillKey | ArmorSkillKey | UtilitySkillKey | GatheringSkillKey | CombatSkillKey
 
 export interface SkillProgressTO {
+    maxMiningOreResourceKey?: string
+    miningStaminaReductionPercent?: number
     rank: number
     experience: number
     trainingPoints: number

@@ -8,6 +8,7 @@
       "categories": {"Skeletons": "Skeletons", "Withers": "Withers", "Zombies": "Zombies", "Wights": "Wights", "Cats": "Cats", "Deers": "Deer", "Guards": "Guards"}
     },
     "categories": {
+      "gathering": "Resource Gathering",
       "weapons": "Weapons",
       "armor": "Armor",
       "utility": "Utility"
@@ -28,10 +29,12 @@
       "shields": "Shields"
     },
     "utility": {
+      "mining": "Mining",
       "camping": "Camping",
       "healing": "Healing"
     },
     "descriptions": {
+      "mining": "Allows you to mine ores of various materials and coal.",
       "swords": "Allows you to equip and effectively use Swords in combat",
       "axes": "Allows you to equip and effectively use Axes in combat",
       "maces": "Allows you to equip and effectively use Maces in combat",
@@ -77,6 +80,8 @@
       "classMaximumRank": "Class maximum rank"
     },
     "bonuses": {
+      "miningMaxOre": "Allows mining ores up to {ore}.",
+      "miningStaminaReduction": "Reduces mining stamina consumption by {percent}%.",
       "skillBonus": "Skill bonus",
       "expertBonus": "Expert bonus",
       "masterBonus": "Master bonus",

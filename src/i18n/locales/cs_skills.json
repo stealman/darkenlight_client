@@ -8,6 +8,7 @@
       "categories": {"Skeletons": "Kostlivci", "Withers": "Witherové", "Zombies": "Zombie", "Wights": "Přízraky", "Cats": "Kočky", "Deers": "Jeleni", "Guards": "Stráže"}
     },
     "categories": {
+      "gathering": "Získávání Surovin",
       "weapons": "Zbraně",
       "armor": "Brnění",
       "utility": "Užitkové"
@@ -28,10 +29,12 @@
       "shields": "Štíty"
     },
     "utility": {
+      "mining": "Těžba",
       "camping": "Táboření",
       "healing": "Léčba"
     },
     "descriptions": {
+      "mining": "Umožňuje těžit rudy různých materiálů a uhlí.",
       "swords": "Umožňuje nosit a účinně používat Meče v boji",
       "axes": "Umožňuje nosit a účinně používat Sekery v boji",
       "maces": "Umožňuje nosit a účinně používat Palcáty v boji",
@@ -77,6 +80,8 @@
       "classMaximumRank": "Maximální rank povolání"
     },
     "bonuses": {
+      "miningMaxOre": "Umožňuje těžit rudy až po {ore}.",
+      "miningStaminaReduction": "Snižuje spotřebu výdrže při těžbě o {percent} %.",
       "skillBonus": "Bonus dovednosti",
       "expertBonus": "Expertní bonus",
       "masterBonus": "Mistrovský bonus",
