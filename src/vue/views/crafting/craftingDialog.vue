@@ -39,7 +39,7 @@
                                             class="crafting-result-name"
                                             :class="{ 'crafting-result-name-disabled': getRecipeCraftableQty(recipe) <= 0 }"
                                         >
-                                            <span :class="{ 'ui-text-gradient': getRecipeCraftableQty(recipe) > 0 }">{{ resolveItemName(recipe.item) }}</span>
+                                            <span :class="{ 'ui-text-gradient': getRecipeCraftableQty(recipe) > 0 }">{{ resolveRecipeName(recipe) }}</span>
                                         </div>
                                         <div v-if="getRecipeCraftableQty(recipe) > 0" class="crafting-result-note">
                                             {{ t('crafting.craftable') }}: {{ getRecipeCraftableQty(recipe) }}
@@ -108,7 +108,7 @@
                     >
                         <div class="crafting-selection-summary">
                             <div class="crafting-selection-title">
-                                <span :class="{ 'ui-text-gradient': selectedRecipe }">{{ selectedRecipe ? resolveItemName(selectedRecipe.item) : '' }}</span>
+                                <span :class="{ 'ui-text-gradient': selectedRecipe }">{{ selectedRecipe ? resolveRecipeName(selectedRecipe) : '' }}</span>
                             </div>
                             <div v-if="selectedRecipe" class="crafting-selection-note">
 
@@ -319,6 +319,11 @@ const getItemAttribute = (item: ItemTO | null | undefined, key: string) => {
 }
 
 const getRecipeKey = (recipe: CraftingRecipe, index: number) => `${recipe.item?.cb ?? 'item'}-${recipe.skill ?? 'skill'}-${index}`
+
+const resolveRecipeName = (recipe: CraftingRecipe) => {
+    const quantity = recipe.outputQuantity ?? 1
+    return `${quantity > 1 ? `${quantity}× ` : ''}${resolveItemName(recipe.item)}`
+}
 
 const getIngredientKey = (ingredient: CraftingIngredientWithInventoryQty, index: number) => `${ingredient.res?.cb ?? 'res'}-${index}`
 

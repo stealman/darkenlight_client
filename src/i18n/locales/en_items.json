@@ -193,7 +193,42 @@
 
 
 
+    "resourceDescriptions": {
+      "bandages": "Treat your wounds or another character's injuries. Healing depends on your Healing skill.",
+      "purityPowder": "An additive for purifying materials needed for crafting",
+      "purityStone": "An additive for purifying materials needed for crafting",
+      "purityCrystal": "An additive for purifying materials needed for crafting",
+      "coal": "Fuel for smelting ores and crafting metal weapons, armour and shields.",
+      "ore": "Raw ore used for smelting metal ingots.",
+      "ingotEquipment": "Processed metal for crafting weapons, tools, metal armour and shields.",
+      "ingotArmor": "Processed metal for crafting metal armour and shields.",
+      "ingotWeapons": "Processed metal for crafting weapons and pickaxes.",
+      "ingotUnused": "Metal smelted from ore. Further crafting uses have not been introduced yet.",
+      "wood": "Wood for setting up camp and crafting bows.",
+      "campWood": "Wood for setting up a camp to rest and cook.",
+      "meat": "Raw meat. Cook it into a steak at a campfire.",
+      "steak": "Food that grants 10 minutes of satiety, supporting regeneration and reducing combat stamina and mana costs.",
+      "healingPotion": "Instantly restores up to {amount} health.",
+      "manaPotion": "Instantly restores up to {amount} mana.",
+      "staminaPotion": "Instantly restores up to {amount} stamina."
+    },
     "resources": {
+      "purity-powder": "Purity Powder",
+      "purity-stone": "Purity Stone",
+      "purity-crystal": "Purity Crystal",
+      "coal": "Coal",
+      "ingot-iron": "Iron Ingot",
+      "ingot-silver": "Silver Ingot",
+      "ingot-gold": "Gold Ingot",
+      "ingot-agapyte": "Agapyte Ingot",
+      "ingot-astracyte": "Astracyte Ingot",
+      "ingot-pyroxide": "Pyroxide Ingot",
+      "ingot-geonite": "Geonite Ingot",
+      "ingot-bloodstone": "Bloodstone Ingot",
+      "ingot-darkstone": "Darkstone Ingot",
+      "ingot-mythril": "Mythril Ingot",
+      "ingot-adamantium": "Adamantium Ingot",
+      "ingot-chaotite": "Chaotite Ingot",
       "bandages": "Bandages",
 
       "ore-iron": "Iron Ore",

@@ -34,7 +34,7 @@
       "healing": "Healing"
     },
     "descriptions": {
-      "mining": "Allows you to mine ores of various materials and coal.",
+      "mining": "Allows you to mine and smelt ores of various materials, and mine coal.",
       "swords": "Allows you to equip and effectively use Swords in combat",
       "axes": "Allows you to equip and effectively use Axes in combat",
       "maces": "Allows you to equip and effectively use Maces in combat",

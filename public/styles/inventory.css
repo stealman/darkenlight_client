@@ -437,6 +437,15 @@
     color: rgb(var(--ui-dark));
 }
 
+.item-resource-description {
+    color: rgb(var(--ui-dark));
+    max-width: 280px;
+    margin: 6px 0 0;
+    font-size: 12px;
+    line-height: 1.4;
+    white-space: normal;
+}
+
 .inventory-item-overlay-status-row {
     display: flex;
     align-items: center;

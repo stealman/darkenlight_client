@@ -1,6 +1,7 @@
 import type {Item} from '@/data/items/item'
 import type {ItemTO} from '@/network/messageIfs'
 import {t} from '@/i18n'
+import {getResourceDescription} from '@/data/items/resourceDescriptions'
 
 type ItemTooltipSource = Item | ItemTO
 
@@ -32,11 +33,13 @@ export const getArmorCategoryLabel = (category: string | null | undefined): stri
 
 export const getItemTooltipData = (item: ItemTooltipSource) => {
     const itemType = getItemType(item)
+    const cbId = (item as Item).cbId ?? (item as ItemTO).cb
 
     return {
     name: item.name || t('inventory.unknownItem'),
+    description: itemType === 'R' ? getResourceDescription(cbId) : null,
     id: item.id ?? null,
-    cbId: (item as Item).cbId ?? item.cb ?? null,
+    cbId: cbId ?? null,
     quality: getAttribute(item, 'qual'),
     durability: getAttribute(item, 'dur'),
     durabilityMax: getAttribute(item, 'durM'),

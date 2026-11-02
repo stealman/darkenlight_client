@@ -193,7 +193,42 @@
 
 
 
+        "resourceDescriptions": {
+            "bandages": "Obvazy k ošetření vlastních zranění i zranění ostatních. Účinek závisí na dovednosti Léčba.",
+            "purityPowder": "Přísada k čištění materiálů potřebných pro výrobu",
+            "purityStone": "Přísada k čištění materiálů potřebných pro výrobu",
+            "purityCrystal": "Přísada k čištění materiálů potřebných pro výrobu",
+            "coal": "Palivo pro tavení rud a výrobu kovových zbraní, brnění a štítů.",
+            "ore": "Surová ruda určená k tavení na kovové ingoty.",
+            "ingotEquipment": "Zpracovaný kov pro výrobu zbraní, nástrojů, kovového brnění a štítů.",
+            "ingotArmor": "Zpracovaný kov pro výrobu kovového brnění a štítů.",
+            "ingotWeapons": "Zpracovaný kov pro výrobu zbraní a krumpáčů.",
+            "ingotUnused": "Kov vytavený z rudy. Jeho další využití ve výrobě zatím není zavedené.",
+            "wood": "Dřevo na rozdělání tábora a výrobu luků.",
+            "campWood": "Dřevo na rozdělání tábora pro odpočinek a vaření.",
+            "meat": "Syrové maso. U táborového ohně z něj lze připravit steak.",
+            "steak": "Jídlo, které na 10 minut přidá sytost podporující regeneraci a snižující spotřebu výdrže v boji i many.",
+            "healingPotion": "Okamžitě doplní až {amount} bodů zdraví.",
+            "manaPotion": "Okamžitě doplní až {amount} bodů many.",
+            "staminaPotion": "Okamžitě doplní až {amount} bodů výdrže."
+        },
         "resources": {
+      "purity-powder": "Prášek Čistoty",
+      "purity-stone": "Kámen Čistoty",
+      "purity-crystal": "Krystal Čistoty",
+      "coal": "Uhlí",
+      "ingot-iron": "Železný ingot",
+      "ingot-silver": "Stříbrný ingot",
+      "ingot-gold": "Zlatý ingot",
+      "ingot-agapyte": "Agapytový ingot",
+      "ingot-astracyte": "Astracytový ingot",
+      "ingot-pyroxide": "Pyroxidový ingot",
+      "ingot-geonite": "Geonitový ingot",
+      "ingot-bloodstone": "Bloodstonový ingot",
+      "ingot-darkstone": "Darkstonový ingot",
+      "ingot-mythril": "Mythrilový ingot",
+      "ingot-adamantium": "Adamantiový ingot",
+      "ingot-chaotite": "Chaotitový ingot",
             "bandages": "Obvazy",
 
             "ore-iron": "Železná Ruda",

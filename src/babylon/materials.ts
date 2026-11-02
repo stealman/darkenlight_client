@@ -334,10 +334,13 @@ export const TerrainEnum1 = {
     TERRAIN_SNOW_GRASS_WINTER: new MaterialEnum(105, new Vector2(4.5, 6.5)),
 
     TERRAIN_ORE_ROCK: new MaterialEnum(1003, new Vector2(6.5, 2.5)),
+    TERRAIN_COAL_ROCK: new MaterialEnum(2003, new Vector2(4.5, 2.5)),
 
     getTerrainForBlock(block: MapBlock, ignoreSnow: boolean = false, overrideType?: number): Vector2 {
         let type = overrideType ?? block.type;
-        if (block.minableOreAvailable) {
+        if (block.minableCoal) {
+            type += 2000;
+        } else if (block.minableOreAvailable) {
             type += 1000;
         }
         if (block.snowed && !ignoreSnow) {
@@ -349,8 +352,8 @@ export const TerrainEnum1 = {
             return terrain.uv
         }
 
-        // Ore can be assigned to a non-rock tile by the GM editor, and a
-        // snowed ore tile has no dedicated atlas entry. Keep the terrain
+        // Ore/coal can be assigned to a non-rock tile by the GM editor, and a
+        // snowed deposit tile has no dedicated atlas entry. Keep the terrain
         // renderable by falling back to the block's ordinary/snow variant.
         const baseType = (overrideType ?? block.type) + (block.snowed && !ignoreSnow ? 100 : 0)
         const fallback = Object.values(TerrainEnum1).find(item => item.index === baseType)

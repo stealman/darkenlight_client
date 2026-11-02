@@ -318,6 +318,7 @@ export interface EffectDamageMessage {
 }
 
 export interface CraftingRecipe {
+    outputQuantity?: number
     diff: number
     ing: { res: ItemTO, qty: number }[]
     item: ItemTO

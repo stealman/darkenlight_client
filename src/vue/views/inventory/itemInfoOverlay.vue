@@ -17,6 +17,8 @@
             <span v-if="displayItemQuantity" class="inventory-item-overlay-name-quantity">({{ displayItemQuantity }})</span>
         </div>
 
+        <p v-if="itemInfo.description" class="item-resource-description">{{ itemInfo.description }}</p>
+
         <div v-if="itemInfo.quality || equipmentCategoryLabel" class="inventory-item-overlay-status-row">
             <div v-if="itemInfo.quality" :class="['inventory-item-overlay-dur', durabilityStatusClass]">{{ t('inventory.durability') }}: <strong>{{ itemInfo.durabilityDisplay ?? `${itemInfo.durability} / ${itemInfo.durabilityMax}` }}</strong></div>
             <span v-if="equipmentCategoryLabel" class="inventory-item-overlay-weapon-category">{{ equipmentCategoryLabel }}</span>

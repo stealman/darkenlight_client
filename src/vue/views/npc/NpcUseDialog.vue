@@ -201,6 +201,7 @@
             </div>
             <div v-if="detailItem" class="npc-vendor-item-overlay" :style="detailOverlayStyle" @click="detailItem = null">
                 <div class="npc-vendor-overlay-name"><span class="ui-text-gradient">{{ getItemName(detailItem) }}</span></div>
+                <p v-if="detailResourceDescription" class="item-resource-description">{{ detailResourceDescription }}</p>
                 <div v-if="detailWeaponDurability || detailEquipmentCategoryLabel" class="npc-vendor-overlay-category-row">
                     <span v-if="detailWeaponDurability" :class="['npc-vendor-overlay-durability', detailWeaponDurabilityStatus ? `item-durability--${detailWeaponDurabilityStatus}` : null]">{{ t('inventory.durability') }}: <strong>{{ detailWeaponDurability }}</strong></span>
                     <span v-if="detailEquipmentCategoryLabel" class="inventory-item-overlay-weapon-category">{{ detailEquipmentCategoryLabel }}</span>
@@ -225,7 +226,7 @@
                     <span v-if="isNonZero(detailItem.atts?.wis)">{{ t('character.wisdom') }} <strong class="ui-text-gradient">{{ formatModifier(detailItem.atts?.wis) }}</strong></span>
                     <span v-if="isNonZero(detailItem.atts?.maxHp)">{{ t('inventory.maxHealth') }} <strong class="ui-text-gradient">{{ formatModifier(detailItem.atts?.maxHp) }}</strong></span>
                 </div>
-                <div v-else class="npc-vendor-overlay-muted">{{ t('vendor.detailsSoon') }}</div>
+                <div v-else-if="!detailResourceDescription" class="npc-vendor-overlay-muted">{{ t('vendor.detailsSoon') }}</div>
             </div>
             <ItemInfoOverlay
                 v-if="repairItemInfoOverlay.visible"
@@ -257,11 +258,12 @@ import {MyPlayer} from '@/data/myPlayer'
 import type {Item} from '@/data/items/item'
 import ItemInfoOverlay from '@/vue/views/inventory/itemInfoOverlay.vue'
 import {getArmorCategoryLabel, getItemDurabilityStatus, getItemTooltipData, getWeaponCategoryLabel, type ItemDurabilityStatus} from '@/vue/views/inventory/itemTooltip'
+import {getResourceDescription} from '@/data/items/resourceDescriptions'
 
 const emit = defineEmits(['close'])
 
 const featureLabels: Record<string, string> = {vendor: 'vendor.vendor', repairer: 'vendor.repairer', crafting: 'vendor.crafting', banker: 'vendor.banker', healer: 'vendor.healer', trainer: 'vendor.trainer'}
-const categoryLabels: Record<string, string> = {weapons: 'vendor.weapons', bows: 'vendor.bows', metalArmor: 'vendor.metalArmor', leatherArmor: 'vendor.leatherArmor', jewels: 'vendor.jewels', resources: 'vendor.resources', trinkets: 'vendor.trinkets'}
+const categoryLabels: Record<string, string> = {weapons: 'vendor.weapons', bows: 'vendor.bows', metalArmor: 'vendor.metalArmor', leatherArmor: 'vendor.leatherArmor', jewels: 'vendor.jewels', oreSmelting: 'vendor.oreSmelting', resources: 'vendor.resources', trinkets: 'vendor.trinkets'}
 const itemTypeLocalizationSections: Record<string, string> = {W: 'weapons', A: 'armors', J: 'jewels', T: 'trinkets', R: 'resources'}
 const damageTypeLabels: Record<string, string> = {PHYSICAL_SLASH: 'vendor.damageSlash', PHYSICAL_PIERCE: 'vendor.damagePierce', PHYSICAL_BLUNT: 'vendor.damageBlunt'}
 const IGNORE_BACKDROP_CLICK_AFTER_OPEN_MS = 350
@@ -330,7 +332,7 @@ let nextPurchaseEffectId = 0
 const features = computed(() => npcData.value?.features ?? [])
 const selectedFeature = computed<NpcUseFeatureData | null>(() => features.value[selectedFeatureIndex.value] ?? null)
 const vendorCategories = computed(() => Object.entries(selectedFeature.value?.categories ?? {}).map(([key, items]) => ({key, items})).filter((category) => category.items.length > 0))
-const craftingCategoryOrder: Record<string, number> = {weapons: 0, bows: 1, metalArmor: 2, leatherArmor: 3, jewels: 4}
+const craftingCategoryOrder: Record<string, number> = {weapons: 0, bows: 1, metalArmor: 2, leatherArmor: 3, jewels: 4, oreSmelting: 5}
 const craftingCategories = computed(() => [...(selectedFeature.value?.craftingCategories ?? [])]
     .sort((first, second) => (craftingCategoryOrder[first] ?? Number.MAX_SAFE_INTEGER) - (craftingCategoryOrder[second] ?? Number.MAX_SAFE_INTEGER)))
 const selectedCategoryItems = computed(() => {
@@ -353,6 +355,7 @@ const repairItems = computed(() => {
     }
 })
 const detailOverlayStyle = computed(() => ({left: `${detailOverlayPosition.value.x}px`, top: `${detailOverlayPosition.value.y}px`}))
+const detailResourceDescription = computed(() => detailItem.value?.tp === 'R' ? getResourceDescription(detailItem.value.cb) : null)
 const detailWeaponCategoryLabel = computed(() => detailItem.value?.tp === 'W' ? getWeaponCategoryLabel(detailItem.value.wCat) : null)
 const detailArmorCategoryLabel = computed(() => detailItem.value?.tp === 'A' ? getArmorCategoryLabel(detailItem.value.aCat) : null)
 const detailEquipmentCategoryLabel = computed(() => detailWeaponCategoryLabel.value || detailArmorCategoryLabel.value)

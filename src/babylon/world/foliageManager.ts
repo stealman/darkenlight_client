@@ -115,7 +115,9 @@ export const FoliageManager = {
 
     getTerrainIndex(block: MapBlock): number {
         let type = block.type
-        if (block.minableOreAvailable) {
+        if (block.minableCoal) {
+            type += 2000
+        } else if (block.minableOreAvailable) {
             type += 1000
         }
         if (block.snowed) {

@@ -1,6 +1,8 @@
 import {
     CustomParticleEmitter,
     GPUParticleSystem,
+    Frustum,
+    Plane,
     ParticleSystem,
     Scene,
     ShaderStore,
@@ -24,7 +26,8 @@ export interface FoggyAreaData {
 }
 
 const CAPACITY_LIMIT = 6000
-const VISIBILITY_MARGIN = 6
+// Maximum cloud radius (12 / 2) plus maximum horizontal drift (2.6).
+const VISIBILITY_MARGIN = 9
 const FOG_ALPHA_FADE_DEFINE = '#define FOGGY_AREA_ALPHA_FADE'
 const NIGHT_PARTICLE_COLOR_FACTOR = 1.85
 let fogAlphaFadeShaderInstalled = false
@@ -61,9 +64,7 @@ function areaWeight(area: FoggyAreaData): number {
 export const FoggyAreaManager = {
     scene: null as Scene | null,
     areas: reactive([] as FoggyAreaData[]) as FoggyAreaData[],
-    activeAreas: [] as FoggyAreaData[],
-    activeKey: '',
-    particles: null as GPUParticleSystem | null,
+    systems: new Map<number, {key: string, particles: GPUParticleSystem}>(),
     texture: null as Texture | null,
     lastLightingFactor: -1,
 
@@ -76,7 +77,6 @@ export const FoggyAreaManager = {
         const next = (areas ?? []).map((area) => ({...area}))
         if (JSON.stringify(next) === JSON.stringify(this.areas)) return
         this.areas.splice(0, this.areas.length, ...next)
-        this.activeKey = ''
         this.refreshVisibleAreas()
     },
 
@@ -89,47 +89,90 @@ export const FoggyAreaManager = {
         } else {
             this.areas.push({...area})
         }
-        this.activeKey = ''
         this.refreshVisibleAreas()
     },
 
     refreshVisibleAreas() {
-        if (!this.scene || !ViewportManager.viewPortInitialized) return
+        const camera = this.scene?.activeCamera
+        if (!this.scene || !camera || !ViewportManager.viewPortInitialized) return
         if (!Settings.isDetalLevelHigh()) {
-            this.particles?.dispose(false)
-            this.particles = null
-            this.activeAreas = []
-            this.activeKey = ''
+            this.disposeSystems()
             return
         }
-        const active = this.areas.filter((area) => ViewportManager.isPointNearVisibleBounds(
-            area.x,
-            area.z,
-            Math.max(area.width, area.depth) * 0.5 + VISIBILITY_MARGIN,
-        ))
-        const key = active.map((area) => `${area.id}:${area.x}:${area.z}:${area.width}:${area.depth}:${area.rotation}:${area.intensity}`).join('|')
-        if (key === this.activeKey) return
-        this.activeKey = key
-        this.activeAreas = active
-        this.rebuildSystem()
+        // Terrain's viewport includes tall objects and lower height layers.
+        // Fog instead uses its own terrain-height bounds against the real camera.
+        camera.getViewMatrix()
+        camera.getProjectionMatrix()
+        const planes = Frustum.GetPlanes(camera.getTransformationMatrix())
+        const activeIds = new Set<number>()
+        for (const area of this.areas) {
+            if (!this.isAreaVisible(area, planes)) continue
+            activeIds.add(area.id)
+            const key = `${area.x}:${area.z}:${area.width}:${area.depth}:${area.rotation}:${area.intensity}`
+            const existing = this.systems.get(area.id)
+            if (existing?.key === key) continue
+            existing?.particles.dispose(false)
+            this.systems.delete(area.id)
+            const particles = this.createSystem({...area})
+            if (particles) this.systems.set(area.id, {key, particles})
+        }
+        for (const [id, system] of this.systems) {
+            if (!activeIds.has(id)) {
+                system.particles.dispose(false)
+                this.systems.delete(id)
+            }
+        }
+        this.updateParticleColors(true)
     },
 
-    getAreaForParticle(index: number, areas: FoggyAreaData[]): FoggyAreaData | null {
-        const totalWeight = areas.reduce((sum, area) => sum + areaWeight(area), 0)
-        let target = random(index, 1) * totalWeight
-        for (const area of areas) {
-            target -= areaWeight(area)
-            if (target <= 0) return area
+    isAreaVisible(area: FoggyAreaData, planes: Plane[]): boolean {
+        const rotation = area.rotation * Math.PI / 180
+        const cos = Math.cos(rotation)
+        const sin = Math.sin(rotation)
+        const halfWidth = area.width * 0.5
+        const halfDepth = area.depth * 0.5
+        const extentX = Math.hypot(halfWidth * cos, halfDepth * sin)
+        const extentZ = Math.hypot(halfWidth * sin, halfDepth * cos)
+        // Match the world's configured visibility distance as well as the
+        // screen footprint; the frustum itself reaches all the way to maxZ.
+        if (this.scene?.fogMode === Scene.FOGMODE_LINEAR && this.scene.activeCamera) {
+            const camera = this.scene.activeCamera.globalPosition
+            const dx = Math.max(0, Math.abs(camera.x - area.x) - extentX - VISIBILITY_MARGIN)
+            const dz = Math.max(0, Math.abs(camera.z - area.z) - extentZ - VISIBILITY_MARGIN)
+            if (Math.hypot(dx, dz) > this.scene.fogEnd) return false
         }
-        return areas[areas.length - 1] ?? null
+        const map = WorldDataManager.getBlockMap()
+        let minY = Infinity
+        let maxY = -Infinity
+        for (let x = Math.max(0, Math.floor(area.x - extentX)); x <= Math.min(map.length - 1, Math.floor(area.x + extentX)); x++) {
+            const column = map[x]
+            if (!column) continue
+            for (let z = Math.max(0, Math.floor(area.z - extentZ)); z <= Math.min(column.length - 1, Math.floor(area.z + extentZ)); z++) {
+                const height = column[z]?.totalHeight
+                if (!Number.isFinite(height)) continue
+                minY = Math.min(minY, height)
+                maxY = Math.max(maxY, height)
+            }
+        }
+        if (!Number.isFinite(minY)) return false
+        // Cloud centres rise up to 1.55 units above their terrain anchor.
+        minY += 0.12 - 6
+        maxY += 0.12 + 1.55 + 6
+        for (const plane of planes) {
+            const n = plane.normal
+            // Support of the rotated ellipse, expanded by cloud size and drift.
+            const horizontalRadius = Math.hypot(
+                halfWidth * (n.x * cos + n.z * sin),
+                halfDepth * (-n.x * sin + n.z * cos),
+            ) + VISIBILITY_MARGIN * Math.hypot(n.x, n.z)
+            const highestDistance = n.x * area.x + n.z * area.z
+                + n.y * (n.y >= 0 ? maxY : minY) + plane.d + horizontalRadius
+            if (highestDistance < 0) return false
+        }
+        return true
     },
 
-    getParticleStart(index: number, target: Vector3, areas: FoggyAreaData[]): Vector3 {
-        const area = this.getAreaForParticle(index, areas)
-        if (!area) {
-            target.set(0, -10000, 0)
-            return target
-        }
+    getParticleStart(index: number, target: Vector3, area: FoggyAreaData): Vector3 {
         const angle = random(index, 2) * Math.PI * 2
         const radius = Math.sqrt(random(index, 3))
         const localX = Math.cos(angle) * radius * area.width * 0.5
@@ -142,23 +185,17 @@ export const FoggyAreaManager = {
         return target
     },
 
-    rebuildSystem() {
-        this.particles?.dispose(false)
-        this.particles = null
-        if (!Settings.isDetalLevelHigh() || !this.scene || this.activeAreas.length === 0 || !GPUParticleSystem.IsSupported || !installFogAlphaFadeShader()) return
-
-        const weightedArea = this.activeAreas.reduce((sum, area) => sum + areaWeight(area), 0)
+    createSystem(area: FoggyAreaData): GPUParticleSystem | null {
+        if (!this.scene || !GPUParticleSystem.IsSupported || !installFogAlphaFadeShader()) return null
+        const weightedArea = areaWeight(area)
         const capacity = Math.max(64, Math.min(CAPACITY_LIMIT, Math.ceil(weightedArea * 1.5)))
-        // GPU particle callbacks can briefly outlive this manager's active-area
-        // transition. Keep their source data stable until that system is disposed.
-        const areas = this.activeAreas
         const emitter = new CustomParticleEmitter()
         const start = new Vector3()
         emitter.particlePositionGenerator = (index, _particle, position) => {
-            this.getParticleStart(index, position, areas)
+            this.getParticleStart(index, position, area)
         }
         emitter.particleDestinationGenerator = (index, _particle, destination) => {
-            this.getParticleStart(index, start, areas)
+            this.getParticleStart(index, start, area)
             const driftAngle = random(index, 4) * Math.PI * 2
             const drift = 0.8 + random(index, 5) * 1.8
             destination.set(
@@ -169,7 +206,7 @@ export const FoggyAreaManager = {
         }
 
         if (!this.texture) this.texture = new Texture('images/gfx/dust.png', this.scene)
-        const particles = new GPUParticleSystem('foggyAreas', {capacity}, this.scene)
+        const particles = new GPUParticleSystem(`foggyArea:${area.id}`, {capacity}, this.scene)
         const fillDefines = particles.fillDefines.bind(particles)
         particles.fillDefines = (defines, blendMode, fillImageProcessing) => {
             fillDefines(defines, blendMode, fillImageProcessing)
@@ -189,10 +226,8 @@ export const FoggyAreaManager = {
         particles.addSizeGradient(0, 5.5)
         particles.addSizeGradient(0.45, 9)
         particles.addSizeGradient(1, 12)
-        this.particles = particles
-        this.lastLightingFactor = -1
-        this.updateParticleColors(true)
         particles.start()
+        return particles
     },
 
     onFrame() {
@@ -200,7 +235,7 @@ export const FoggyAreaManager = {
     },
 
     updateParticleColors(force: boolean) {
-        if (!this.particles || !this.scene) return
+        if (!this.systems.size || !this.scene) return
         const daylight = Lights.indoor ? 1 : Lights.daylightFactor
         if (!force && Math.abs(daylight - this.lastLightingFactor) < 0.025) return
         this.lastLightingFactor = daylight
@@ -216,18 +251,22 @@ export const FoggyAreaManager = {
         // Without a GPU color gradient, color1/color2 are captured by each
         // particle when it is emitted. Existing clouds retain their shade and
         // naturally fade out while new clouds adopt the current day/night tint.
-        this.particles.color1.set(red, green, blue, alpha)
-        this.particles.color2.set(red * 0.9, green * 0.92, blue, alpha * 0.8)
-        this.particles.colorDead.set(red * 0.85, green * 0.85, blue * 0.85, 0)
+        for (const {particles} of this.systems.values()) {
+            particles.color1.set(red, green, blue, alpha)
+            particles.color2.set(red * 0.9, green * 0.92, blue, alpha * 0.8)
+            particles.colorDead.set(red * 0.85, green * 0.85, blue * 0.85, 0)
+        }
+    },
+
+    disposeSystems() {
+        for (const {particles} of this.systems.values()) particles.dispose(false)
+        this.systems.clear()
+        this.lastLightingFactor = -1
     },
 
     clearWorld() {
-        this.particles?.dispose(false)
-        this.particles = null
+        this.disposeSystems()
         this.areas.splice(0)
-        this.activeAreas = []
-        this.activeKey = ''
-        this.lastLightingFactor = -1
     },
 
     disposeResources() {

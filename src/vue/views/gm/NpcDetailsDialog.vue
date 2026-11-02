@@ -263,6 +263,7 @@
 import { computed, ref } from 'vue'
 import { GMManager } from '@/gm/GM'
 import GameDialog from '@/vue/views/GameDialog.vue'
+import {useI18n} from '@/i18n'
 import { EquipSlotModelsCb } from '@/data/items/item'
 
 const featureTypes = [
@@ -284,7 +285,11 @@ const vendorCategories = [
     { value: 'trinkets', label: 'Trinkets' },
 ]
 const repairerCategories = vendorCategories.filter((category) => ['weapons', 'bows', 'metalArmor', 'leatherArmor'].includes(category.value))
-const craftingCategories = vendorCategories.filter((category) => ['weapons', 'bows', 'metalArmor', 'leatherArmor', 'jewels'].includes(category.value))
+const {t} = useI18n()
+const craftingCategories = computed(() => [
+    ...vendorCategories.filter((category) => ['weapons', 'bows', 'metalArmor', 'leatherArmor', 'jewels'].includes(category.value)),
+    {value: 'oreSmelting', label: t('vendor.oreSmelting')},
+])
 const healerPotionTiers = [
     {value: 'small', label: 'Small potions'},
     {value: 'normal', label: 'Normal potions'},
@@ -362,6 +367,7 @@ const pickaxeCodebookIds = { 1: 3, 2: 5, 3: 6, 4: 7, 5: 8, 6: 4 }
 const resourceOptions = [
     { codebookId: 1, label: 'Bandages' },
     { codebookId: 101, label: 'Iron ore' },
+    { codebookId: 119, label: 'Coal' },
     { codebookId: 201, label: 'Wooden log' },
     { codebookId: 301, label: 'Common meat' },
     { codebookId: 351, label: 'Steak' },
