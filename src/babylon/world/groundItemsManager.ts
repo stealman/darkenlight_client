@@ -136,6 +136,11 @@ export const GroundItemsManager = {
 
             const y = Utils.calculateWalkYPos(gitem.pos.x, gitem.pos.z, this.ITEM_BOX_SIZE) + this.ITEM_Y_OFFSET
             const item = new GroundItem(Item.fromData(gitem.item), new Vector3(gitem.pos.x, y, gitem.pos.z))
+            if (gitem.dropFrom && ViewportManager.viewPortInitialized &&
+                ViewportManager.isPointInVisibleMatrix(Math.floor(gitem.dropFrom.x), Math.floor(gitem.dropFrom.z), 0, gitem.dropFrom.y)) {
+                item.startDrop(gitem.dropFrom)
+                this.animatingItems.add(item)
+            }
             this.items.push(item)
             changed = true
         }
@@ -183,7 +188,7 @@ export const GroundItemsManager = {
             if (item.onFrame(timeRate, time)) {
                 this.itemBuffersDirty = true
             }
-            if (!item.bounce && item.yOffset <= 0) {
+            if (!item.dropping && !item.bounce && item.yOffset <= 0) {
                 this.animatingItems.delete(item)
             }
         }
@@ -270,7 +275,7 @@ export const GroundItemsManager = {
             let i = 0
             for (const item of typeItems) {
                 const itemY = item.pos.y + item.yOffset
-                Matrix.TranslationToRef(item.pos.x, itemY, item.pos.z, this.tmpPos)
+                Matrix.TranslationToRef(item.pos.x + item.dropOffsetX, itemY, item.pos.z + item.dropOffsetZ, this.tmpPos)
                 Quaternion.FromEulerAnglesToRef(this.ITEM_ROTATION_X, item.rotationY, 0, this.tmpQuat)
                 Matrix.FromQuaternionToRef(this.tmpQuat, this.tmpRot)
                 this.tmpRot.multiplyToRef(this.tmpPos, this.tmpWorld)
@@ -299,7 +304,7 @@ export const GroundItemsManager = {
             let i = 0
             for (const item of typeItems) {
                 const itemY = item.pos.y + item.yOffset + this.ITEM_FLAT_Y_LIFT
-                Matrix.TranslationToRef(item.pos.x, itemY, item.pos.z, this.tmpPos)
+                Matrix.TranslationToRef(item.pos.x + item.dropOffsetX, itemY, item.pos.z + item.dropOffsetZ, this.tmpPos)
                 Quaternion.FromEulerAnglesToRef(this.ITEM_FLAT_ROTATION_X, item.rotationY, 0, this.tmpQuat)
                 Matrix.FromQuaternionToRef(this.tmpQuat, this.tmpRot)
                 this.tmpRot.multiplyToRef(this.tmpPos, this.tmpWorld)
@@ -426,6 +431,7 @@ export const GroundItemsManager = {
         this.activeFxCountByItemId.clear()
         let requestedParticles = 0
         for (const item of this.visibleItems) {
+            if (item.dropping) continue
             this.visibleFxItemsById.set(item.item.id, item)
             requestedParticles += item.fxParticleCount
         }
@@ -446,6 +452,7 @@ export const GroundItemsManager = {
 
         if (poolRatio > 0) {
             for (const item of this.visibleItems) {
+                if (item.dropping) continue
                 const requestedCount = item.fxParticleCount
                 let targetPerItem = Math.floor(requestedCount * poolRatio)
                 if (requestedCount > 0 && targetPerItem === 0) {
@@ -527,6 +534,7 @@ export const GroundItemsManager = {
         let nearestDist = 9999
 
         for (const item of this.items) {
+            if (item.dropping) continue
             const dist = Vector3.Distance(myPos, item.pos)
             if (dist <= 1 && dist < nearestDist) {
                 nearestDist = dist
@@ -562,6 +570,14 @@ export const GroundItemsManager = {
     },
 }
 class GroundItem {
+    static readonly DROP_DURATION = 650
+    static readonly DROP_HEIGHT = 0.9
+    dropping = false
+    dropOffsetX = 0
+    dropOffsetZ = 0
+    private dropStartTime = 0
+    private dropStart: Vector3 | null = null
+
     static readonly BOUNCE_HEIGHT = 0.175
     static readonly BOUNCE_SPEED = 0.008
     static readonly RETURN_TO_GROUND_SPEED = 0.8
@@ -589,6 +605,15 @@ class GroundItem {
         this.fxParticleCount = item.isEquippable() ? 4 : 2
     }
 
+    startDrop(source: { x: number, y: number, z: number }) {
+        this.dropStart = new Vector3(source.x, source.y + 0.45, source.z)
+        this.dropStartTime = Date.now()
+        this.dropping = true
+        this.dropOffsetX = source.x - this.pos.x
+        this.dropOffsetZ = source.z - this.pos.z
+        this.yOffset = this.dropStart.y - this.pos.y
+    }
+
     getAtlasUvcOffsets(matCols: number, matRows: number, matIndex: number, pad = 0) {
         const tileX = matIndex % matCols
         const tileY = Math.floor(matIndex / matCols)
@@ -607,6 +632,18 @@ class GroundItem {
     }
 
     onFrame(timeRate: number, time: number): boolean {
+        if (this.dropping && this.dropStart) {
+            const progress = Math.min(1, Math.max(0, (time - this.dropStartTime) / GroundItem.DROP_DURATION))
+            const remaining = 1 - progress
+            this.dropOffsetX = (this.dropStart.x - this.pos.x) * remaining
+            this.dropOffsetZ = (this.dropStart.z - this.pos.z) * remaining
+            this.yOffset = (this.dropStart.y - this.pos.y) * remaining + 4 * GroundItem.DROP_HEIGHT * progress * remaining
+            if (progress === 1) {
+                this.dropping = false
+                this.dropStart = null
+            }
+            return true
+        }
         const previousYOffset = this.yOffset
         if (this.bounce) {
             if (!this.wasBouncing) {

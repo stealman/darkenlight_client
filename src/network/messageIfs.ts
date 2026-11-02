@@ -237,6 +237,7 @@ export interface ItemTO {
 }
 
 export interface GroundItemTO {
+    dropFrom?: { x: number, y: number, z: number }
     item: ItemTO
     pos: { x: number, z: number }
 }
