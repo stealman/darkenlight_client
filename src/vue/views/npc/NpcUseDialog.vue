@@ -319,6 +319,7 @@ const repairItemInfoOverlay = ref({
     weaponSpeed: null,
     weaponRange: null,
     weaponArmorPen: null,
+    weaponUndeadDamageBonusPercent: null,
     weaponPrecision: null,
     weaponDefense: null,
     armorStats: null,

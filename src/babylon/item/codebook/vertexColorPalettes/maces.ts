@@ -1,7 +1,7 @@
-import { METAL_WEAPON_MATERIAL_NAMES, VertexColorWeaponPalette, WEAPON_METAL_COLOR_STEPS, WEAPON_STEEL_COLOR_STEPS } from './types'
+import { withSilverWeaponPalettes, METAL_WEAPON_MATERIAL_NAMES, VertexColorWeaponPalette, WEAPON_METAL_COLOR_STEPS, WEAPON_STEEL_COLOR_STEPS } from './types'
 
 /** Local vertex-colour palettes for mace and hammer models. */
-export const MaceVertexColorPalettes: Record<string, VertexColorWeaponPalette> = {
+export const MaceVertexColorPalettes: Record<string, VertexColorWeaponPalette> = withSilverWeaponPalettes({
     LIGHT_MACE: {
         materialNames: METAL_WEAPON_MATERIAL_NAMES,
         twoSided: true,
@@ -67,4 +67,4 @@ export const MaceVertexColorPalettes: Record<string, VertexColorWeaponPalette> =
             [WEAPON_METAL_COLOR_STEPS.chaotite.mid, WEAPON_METAL_COLOR_STEPS.chaotite.dark, WEAPON_METAL_COLOR_STEPS.chaotite.light, [39, 5, 52], [100, 14, 109]],
         ],
     },
-}
+})

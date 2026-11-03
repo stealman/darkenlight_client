@@ -1,7 +1,7 @@
-import { METAL_WEAPON_MATERIAL_NAMES, PICKAXE_MATERIAL_NAMES, VertexColorWeaponPalette, WEAPON_METAL_COLOR_STEPS, WEAPON_STEEL_COLOR_STEPS } from './types'
+import { withSilverWeaponPalettes, METAL_WEAPON_MATERIAL_NAMES, PICKAXE_MATERIAL_NAMES, VertexColorWeaponPalette, WEAPON_METAL_COLOR_STEPS, WEAPON_STEEL_COLOR_STEPS } from './types'
 
 /** Local vertex-colour palettes for axe and pickaxe models. */
-export const AxeVertexColorPalettes: Record<string, VertexColorWeaponPalette> = {
+export const AxeVertexColorPalettes: Record<string, VertexColorWeaponPalette> = withSilverWeaponPalettes({
     HANDAXE: {
         materialNames: METAL_WEAPON_MATERIAL_NAMES,
         twoSided: true,
@@ -82,7 +82,7 @@ export const AxeVertexColorPalettes: Record<string, VertexColorWeaponPalette> = 
 
     PICKAXE: {
         materialNames: PICKAXE_MATERIAL_NAMES,
-        metallicMaterialIndexes: [0, 1, 2, 3, 4],
+        metallicMaterialIndexes: [0, 1, 2, 3, 4, 6],
         twoSided: true,
         slots: [
             {index: 0, source: [15, 15, 15], role: 'head dark', isMetal: true},
@@ -134,4 +134,4 @@ export const AxeVertexColorPalettes: Record<string, VertexColorWeaponPalette> = 
             [WEAPON_METAL_COLOR_STEPS.chaotite.dark, WEAPON_METAL_COLOR_STEPS.chaotite.mid, WEAPON_METAL_COLOR_STEPS.chaotite.light, [69, 17, 78], [154, 42, 126]],
         ],
     },
-}
+})

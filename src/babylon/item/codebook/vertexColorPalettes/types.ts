@@ -99,7 +99,17 @@ export interface VertexColorWeaponPalette {
     twoSided?: boolean
 }
 
-export const METAL_WEAPON_MATERIAL_NAMES = ['Steel', 'Pyroxide', 'Geonite', 'Mythril', 'Chaotite']
+export const METAL_WEAPON_MATERIAL_NAMES = ['Steel', 'Pyroxide', 'Geonite', 'Mythril', 'Chaotite', 'Reserved', 'Silver']
 // Ebony is appended as materialId 6 to preserve existing bow material IDs 1-5.
 export const BOW_WEAPON_MATERIAL_NAMES = ['Wooden', 'Cherrywood', 'Mahogany', 'Elven', 'Ethereal', 'Ebony']
-export const PICKAXE_MATERIAL_NAMES = [...METAL_WEAPON_MATERIAL_NAMES, 'Diamond']
+export const PICKAXE_MATERIAL_NAMES = ['Steel', 'Pyroxide', 'Geonite', 'Mythril', 'Chaotite', 'Diamond', 'Silver']
+
+/** Append Silver at materialId 7 with Steel colours until authored assets arrive. */
+export function withSilverWeaponPalettes<T extends Record<string, VertexColorWeaponPalette>>(palettes: T): T {
+    for (const palette of Object.values(palettes)) {
+        const rows = [...palette.materialColors]
+        while (rows.length < 7) rows.push(rows[0])
+        palette.materialColors = rows
+    }
+    return palettes
+}

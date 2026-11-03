@@ -165,6 +165,7 @@
     "physicalAttack": "Physical attack",
     "physicalDefense": "Armor",
     "armorPenetration": "Armor penetration",
+    "undeadDamageBonus": "Damage against undead",
     "precision": "Precision",
     "defense": "Defense",
     "interference": "Interference"

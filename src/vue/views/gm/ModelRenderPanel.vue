@@ -107,8 +107,8 @@ const MODEL_RENDER_SETTINGS_LS_KEY = 'model-render-settings'
 const ALL_MATERIAL_INDEX = -1
 const ALL_MATERIAL_OPTION = { index: ALL_MATERIAL_INDEX, label: 'ALL' }
 
-const TRIPO_WEAPON_CACHE_VERSION = '20261022-material-atlas-v1'
-const WEAPON_MATERIAL_OPTIONS = ['Steel', 'Pyroxide', 'Geonite', 'Mythril', 'Chaotite']
+const TRIPO_WEAPON_CACHE_VERSION = '20261103-silver-atlas-v1'
+const WEAPON_MATERIAL_OPTIONS = ['Steel', 'Pyroxide', 'Geonite', 'Mythril', 'Chaotite', 'Reserved', 'Silver']
     .map((label, index) => ({ index, label }))
 const WEAPON_OPTIONS = [
     { key: 'LONGSWORD', modelFile: 'tripo-longsword.glb', atlasFile: 'longsword.jpg', inventoryBaseName: 'longsword' },

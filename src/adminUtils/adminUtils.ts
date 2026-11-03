@@ -156,6 +156,7 @@ const weaponMaterialOptions: Array<{ label: string, value: number, atlasTile: nu
     { label: 'Geonite', value: 3, atlasTile: 2 },
     { label: 'Mythril', value: 4, atlasTile: 3 },
     { label: 'Chaotite', value: 5, atlasTile: 4 },
+    { label: 'Silver', value: 7, atlasTile: 5 },
 ]
 
 function getMaterialOptionsForSlot(slot: PreviewSlot) {

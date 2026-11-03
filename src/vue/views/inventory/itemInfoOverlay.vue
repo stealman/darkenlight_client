@@ -37,9 +37,12 @@
             <span
                 >{{ t('vendor.range') }} <strong class="ui-text-gradient">{{ itemInfo.weaponRange }}</strong></span
             >
-            <span v-if="isNonZero(itemInfo.weaponArmorPen)"
-                >{{ t('inventory.armorPenetration') }} <strong class="ui-text-gradient">{{ itemInfo.weaponArmorPen }}</strong></span
-            >
+            <span v-if="isNonZero(itemInfo.weaponArmorPen)">
+                {{ t('inventory.armorPenetration') }} <strong class="ui-text-gradient">{{ itemInfo.weaponArmorPen }}</strong>
+            </span>
+            <span v-if="isNonZero(itemInfo.weaponUndeadDamageBonusPercent)">
+                {{ t('inventory.undeadDamageBonus') }} <strong class="ui-text-gradient">+{{ itemInfo.weaponUndeadDamageBonusPercent }}%</strong>
+            </span>
             <span v-if="isNonZero(itemInfo.weaponPrecision)"
                 >{{ t('inventory.precision') }} <strong class="ui-text-gradient">{{ formatModifier(itemInfo.weaponPrecision) }}%</strong></span
             >

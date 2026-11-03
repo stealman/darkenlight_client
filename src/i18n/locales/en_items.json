@@ -2,8 +2,11 @@
   "items": {
     "weapons": {
       "steel-broadsword": "Steel Broadsword",
+      "silver-broadsword": "Silver Broadsword",
       "steel-longsword": "Steel Longsword",
+      "silver-longsword": "Silver Longsword",
       "steel-greatsword": "Steel Greatsword",
+      "silver-greatsword": "Silver Greatsword",
       "pyroxide-longsword": "Pyroxide Longsword",
       "pyroxide-broadsword": "Pyroxide Broadsword",
       "pyroxide-greatsword": "Pyroxide Greatsword",
@@ -18,8 +21,11 @@
       "chaotite-greatsword": "Chaotite Greatsword",
 
       "steel-hand-axe": "Steel Hand Axe",
+      "silver-hand-axe": "Silver Hand Axe",
       "steel-battle-axe": "Steel Battle Axe",
+      "silver-battle-axe": "Silver Battle Axe",
       "steel-great-axe": "Steel Great Axe",
+      "silver-great-axe": "Silver Great Axe",
       "pyroxide-hand-axe": "Pyroxide Hand Axe",
       "pyroxide-battle-axe": "Pyroxide Battle Axe",
       "pyroxide-great-axe": "Pyroxide Great Axe",
@@ -34,14 +40,18 @@
       "chaotite-great-axe": "Chaotite Great Axe",
 
       "steel-large-battle-axe": "Steel Large Battle Axe",
+      "silver-large-battle-axe": "Silver Large Battle Axe",
       "pyroxide-large-battle-axe": "Pyroxide Large Battle Axe",
       "geonite-large-battle-axe": "Geonite Large Battle Axe",
       "mythril-large-battle-axe": "Mythril Large Battle Axe",
       "chaotite-large-battle-axe": "Chaotite Large Battle Axe",
 
       "steel-light-mace": "Steel Light Mace",
+      "silver-light-mace": "Silver Light Mace",
       "steel-warmace": "Steel Warmace",
+      "silver-warmace": "Silver Warmace",
       "steel-warhammer": "Steel Warhammer",
+      "silver-warhammer": "Silver Warhammer",
       "pyroxide-light-mace": "Pyroxide Light Mace",
       "pyroxide-warmace": "Pyroxide Warmace",
       "pyroxide-warhammer": "Pyroxide Warhammer",
@@ -56,8 +66,11 @@
       "chaotite-warhammer": "Chaotite Warhammer",
 
       "steel-hunting-spear": "Steel Hunting Spear",
+      "silver-hunting-spear": "Silver Hunting Spear",
       "steel-war-spear": "Steel War Spear",
+      "silver-war-spear": "Silver War Spear",
       "steel-halberd": "Steel Halberd",
+      "silver-halberd": "Silver Halberd",
       "pyroxide-hunting-spear": "Pyroxide Hunting Spear",
       "pyroxide-war-spear": "Pyroxide War Spear",
       "pyroxide-halberd": "Pyroxide Halberd",
@@ -91,6 +104,7 @@
       "ethereal-battle-bow": "Ethereal Battle Bow",
 
       "steel-pickaxe": "Steel Pickaxe",
+      "silver-pickaxe": "Silver Pickaxe",
       "diamond-pickaxe": "Diamond Pickaxe",
       "pyroxide-pickaxe": "Pyroxide Pickaxe",
       "geonite-pickaxe": "Geonite Pickaxe",

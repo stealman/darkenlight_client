@@ -1,4 +1,4 @@
-import { METAL_WEAPON_MATERIAL_NAMES, VertexColorWeaponPalette, WEAPON_METAL_COLOR_STEPS, WEAPON_STEEL_COLOR_STEPS } from './types'
+import { withSilverWeaponPalettes, METAL_WEAPON_MATERIAL_NAMES, VertexColorWeaponPalette, WEAPON_METAL_COLOR_STEPS, WEAPON_STEEL_COLOR_STEPS } from './types'
 
 /** Local vertex-colour palettes for spear and halberd models. */
 const SPEAR_VERTEX_COLOR_PALETTE: VertexColorWeaponPalette = {
@@ -22,7 +22,7 @@ const SPEAR_VERTEX_COLOR_PALETTE: VertexColorWeaponPalette = {
     twoSided: true,
 }
 
-export const PolearmVertexColorPalettes: Record<string, VertexColorWeaponPalette> = {
+export const PolearmVertexColorPalettes: Record<string, VertexColorWeaponPalette> = withSilverWeaponPalettes({
     HUNTING_SPEAR: SPEAR_VERTEX_COLOR_PALETTE,
 
     WAR_SPEAR: SPEAR_VERTEX_COLOR_PALETTE,
@@ -47,4 +47,4 @@ export const PolearmVertexColorPalettes: Record<string, VertexColorWeaponPalette
         ],
         twoSided: true,
     },
-}
+})

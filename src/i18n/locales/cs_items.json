@@ -2,8 +2,11 @@
     "items": {
         "weapons": {
             "steel-broadsword": "Ocelový Široký Meč",
+            "silver-broadsword": "St\u0159\u00edbrn\u00fd \u0160irok\u00fd Me\u010d",
             "steel-longsword": "Ocelový Dlouhý Meč",
+            "silver-longsword": "St\u0159\u00edbrn\u00fd Dlouh\u00fd Me\u010d",
             "steel-greatsword": "Ocelový Obouruční Meč",
+            "silver-greatsword": "St\u0159\u00edbrn\u00fd Obouru\u010dn\u00ed Me\u010d",
             "pyroxide-longsword": "Pyroxidový Dlouhý Meč",
             "pyroxide-broadsword": "Pyroxidový Široký Meč",
             "pyroxide-greatsword": "Pyroxidový Obouruční Meč",
@@ -18,8 +21,11 @@
             "chaotite-greatsword": "Chaotitový Obouruční Meč",
 
             "steel-hand-axe": "Ocelová Sekera",
+            "silver-hand-axe": "St\u0159\u00edbrn\u00e1 Sekera",
             "steel-battle-axe": "Ocelová Bitevní Sekera",
+            "silver-battle-axe": "St\u0159\u00edbrn\u00e1 Bitevn\u00ed Sekera",
             "steel-great-axe": "Ocelová Velká Sekera",
+            "silver-great-axe": "St\u0159\u00edbrn\u00e1 Velk\u00e1 Sekera",
             "pyroxide-hand-axe": "Pyroxidová Sekera",
             "pyroxide-battle-axe": "Pyroxidová Bitevní Sekera",
             "pyroxide-great-axe": "Pyroxidová Velká Sekera",
@@ -34,14 +40,18 @@
             "chaotite-great-axe": "Chaotitová Velká Sekera",
 
             "steel-large-battle-axe": "Ocelov\u00e1 Velk\u00e1 Bitevn\u00ed Sekera",
+            "silver-large-battle-axe": "St\u0159\u00edbrn\u00e1 Velk\u00e1 Bitevn\u00ed Sekera",
             "pyroxide-large-battle-axe": "Pyroxidov\u00e1 Velk\u00e1 Bitevn\u00ed Sekera",
             "geonite-large-battle-axe": "Geonitov\u00e1 Velk\u00e1 Bitevn\u00ed Sekera",
             "mythril-large-battle-axe": "Mythrilov\u00e1 Velk\u00e1 Bitevn\u00ed Sekera",
             "chaotite-large-battle-axe": "Chaotitov\u00e1 Velk\u00e1 Bitevn\u00ed Sekera",
 
             "steel-light-mace": "Ocelový Lehký Palcát",
+            "silver-light-mace": "St\u0159\u00edbrn\u00fd Lehk\u00fd Palc\u00e1t",
             "steel-warmace": "Ocelový Válečný Palcát",
+            "silver-warmace": "St\u0159\u00edbrn\u00fd V\u00e1le\u010dn\u00fd Palc\u00e1t",
             "steel-warhammer": "Ocelové Válečné Kladivo",
+            "silver-warhammer": "St\u0159\u00edbrn\u00e9 V\u00e1le\u010dn\u00e9 Kladivo",
             "pyroxide-light-mace": "Pyroxidový Lehký Palcát",
             "pyroxide-warmace": "Pyroxidový Válečný Palcát",
             "pyroxide-warhammer": "Pyroxidové Válečné Kladivo",
@@ -56,8 +66,11 @@
             "chaotite-warhammer": "Chaotitové Válečné Kladivo",
 
             "steel-hunting-spear": "Ocelové Lovecké Kopí",
+            "silver-hunting-spear": "St\u0159\u00edbrn\u00e9 Loveck\u00e9 Kop\u00ed",
             "steel-war-spear": "Ocelové Válečné Kopí",
+            "silver-war-spear": "St\u0159\u00edbrn\u00e9 V\u00e1le\u010dn\u00e9 Kop\u00ed",
             "steel-halberd": "Ocelová Halapartna",
+            "silver-halberd": "St\u0159\u00edbrn\u00e1 Halapartna",
             "pyroxide-hunting-spear": "Pyroxidové Lovecké Kopí",
             "pyroxide-war-spear": "Pyroxidové Válečné Kopí",
             "pyroxide-halberd": "Pyroxidová Halapartna",
@@ -91,6 +104,7 @@
             "ethereal-battle-bow": "Éterický Bitevní Luk",
 
             "steel-pickaxe": "Ocelový Krumpáč",
+            "silver-pickaxe": "St\u0159\u00edbrn\u00fd Krump\u00e1\u010d",
             "diamond-pickaxe": "Diamantový Krumpáč",
             "pyroxide-pickaxe": "Pyroxidový Krumpáč",
             "geonite-pickaxe": "Geonitový Krumpáč",

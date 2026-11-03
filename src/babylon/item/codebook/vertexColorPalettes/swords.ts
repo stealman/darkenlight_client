@@ -1,4 +1,4 @@
-import { METAL_WEAPON_MATERIAL_NAMES, VertexColorWeaponPalette, WEAPON_METAL_COLOR_STEPS, WEAPON_STEEL_COLOR_STEPS } from './types'
+import { withSilverWeaponPalettes, METAL_WEAPON_MATERIAL_NAMES, VertexColorWeaponPalette, WEAPON_METAL_COLOR_STEPS, WEAPON_STEEL_COLOR_STEPS } from './types'
 
 /**
  * Local vertex-colour palettes for every sword model.
@@ -6,7 +6,7 @@ import { METAL_WEAPON_MATERIAL_NAMES, VertexColorWeaponPalette, WEAPON_METAL_COL
  * Source RGB values belong only to their own GLB.  They do not need to match
  * MagicaVoxel colours used by any other weapon.
  */
-export const SwordVertexColorPalettes: Record<string, VertexColorWeaponPalette> = {
+export const SwordVertexColorPalettes: Record<string, VertexColorWeaponPalette> = withSilverWeaponPalettes({
     LONGSWORD: {
         materialNames: METAL_WEAPON_MATERIAL_NAMES,
         twoSided: true,
@@ -88,4 +88,4 @@ export const SwordVertexColorPalettes: Record<string, VertexColorWeaponPalette> 
             [WEAPON_METAL_COLOR_STEPS.chaotite.dark, WEAPON_METAL_COLOR_STEPS.chaotite.mid, WEAPON_METAL_COLOR_STEPS.chaotite.light, [39, 5, 52], [100, 14, 109], [201, 36, 174]],
         ],
     },
-}
+})

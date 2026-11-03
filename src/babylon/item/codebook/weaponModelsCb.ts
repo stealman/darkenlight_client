@@ -31,23 +31,24 @@ const matWarmaceSize = new Vector2(4, 4)
 // Change this when a weapon GLB is replaced. The URL revision prevents an
 // installed PWA from combining a newly deployed shader with an old HTTP-cached model.
 export const WEAPON_MODEL_CACHE_VERSION = '20260930-battlebow-v1'
-const LONGSWORD_ASSET_CACHE_VERSION = '20261021-material-atlas-v1'
-const BROADSWORD_ASSET_CACHE_VERSION = '20261021-material-atlas-v2'
-const GREATAXE_ASSET_CACHE_VERSION = '20261022-material-atlas-v1'
+const LONGSWORD_ASSET_CACHE_VERSION = '20261103-silver-atlas-v1'
+const BROADSWORD_ASSET_CACHE_VERSION = '20261103-silver-atlas-v1'
+const GREATAXE_ASSET_CACHE_VERSION = '20261103-silver-atlas-v1'
 const GREATAXE_NORMAL_CACHE_VERSION = '20261022-single-tile-v1'
-const HALBERD_ASSET_CACHE_VERSION = '20261022-material-atlas-v1'
-const PICKAXE_ASSET_CACHE_VERSION = '20261022-material-atlas-v1'
-const HANDAXE_ASSET_CACHE_VERSION = '20261022-material-atlas-v2'
-const BATTLEAXE_ASSET_CACHE_VERSION = '20261022-material-atlas-v1'
-const HUNTINGSPEAR_ASSET_CACHE_VERSION = '20261022-material-atlas-v1'
-const LIGHTMACE_ASSET_CACHE_VERSION = '20261022-material-atlas-v1'
-const WARMACE_ASSET_CACHE_VERSION = '20261022-material-atlas-v1'
+const HALBERD_ASSET_CACHE_VERSION = '20261103-silver-atlas-v1'
+const PICKAXE_ASSET_CACHE_VERSION = '20261103-silver-atlas-v1'
+const HANDAXE_ASSET_CACHE_VERSION = '20261103-silver-atlas-v1'
+const BATTLEAXE_ASSET_CACHE_VERSION = '20261103-silver-atlas-v1'
+const HUNTINGSPEAR_ASSET_CACHE_VERSION = '20261103-silver-atlas-v1'
+const LIGHTMACE_ASSET_CACHE_VERSION = '20261103-silver-atlas-v1'
+const WARMACE_ASSET_CACHE_VERSION = '20261103-silver-atlas-v1'
 
 const createWeaponMaterialAtlasIndices = (atlasSize: Vector2) => new Map<number, number>(
-    Array.from({ length: 5 }, (_, atlasTile) => {
+    // Silver uses materialId 7 (index 6); index 5 remains reserved for Diamond.
+    [0, 1, 2, 3, 4, 6].map((materialIndex, atlasTile) => {
         const tileX = atlasTile % atlasSize.x
         const tileY = Math.floor(atlasTile / atlasSize.x)
-        return [atlasTile, (atlasSize.y - 1 - tileY) * atlasSize.x + tileX] as [number, number]
+        return [materialIndex, (atlasSize.y - 1 - tileY) * atlasSize.x + tileX] as [number, number]
     }),
 )
 const longswordMaterialAtlasIndices = createWeaponMaterialAtlasIndices(matLongswordSize)
