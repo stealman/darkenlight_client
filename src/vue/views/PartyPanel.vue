@@ -90,10 +90,10 @@ const leave = () => { menuOpen.value = false; PartyManager.leave() }
 </script>
 
 <style>
-.party-panel { width: clamp(134px, 18vw, 220px); max-width: 42vw; margin: 4px 0 0 3px; color: rgb(var(--ui-base)); pointer-events: auto; text-align: left; font-size: 11px; text-shadow: 0 1px 2px rgb(var(--ui-darkest)); }
-.party-actions { position: relative; display: flex; justify-content: flex-start; margin-top: 3px; }
+.party-panel { position: relative; width: clamp(134px, 18vw, 220px); max-width: 42vw; margin: 4px 0 0 3px; color: rgb(var(--ui-base)); pointer-events: auto; text-align: left; font-size: 11px; text-shadow: 0 1px 2px rgb(var(--ui-darkest)); }
+.party-actions { position: absolute; top: 2px; left: calc(100% + 4px); display: flex; justify-content: flex-start; }
 .party-menu-button { color: rgb(var(--ui-base)); background: rgba(var(--ui-darkest), .7); border: 1px solid rgba(var(--ui-dark), .25); border-radius: 3px; width: 32px; height: 24px; font-size: 20px; line-height: 16px; cursor: pointer; }
-.party-leave { position: absolute; top: calc(100% + 2px); left: 0; z-index: 2; white-space: nowrap; min-height: 36px; }
+.party-leave { position: absolute; top: calc(100% + 2px); right: 0; z-index: 2; white-space: nowrap; min-height: 36px; }
 .party-member { display: flex; align-items: center; gap: 6px; width: 100%; min-height: 29px; padding: 4px 6px; margin: 2px 0; background: rgba(var(--ui-darkest), .65); border: 1px solid rgba(var(--ui-dark), .15); border-radius: 3px; color: inherit; font: inherit; cursor: pointer; text-align: left; }
 .party-member:hover, .party-member:focus-visible, .party-member--selected { border-color: var(--ui-ally-target-border); background: rgba(var(--ui-darkest), .9); }
 .party-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
