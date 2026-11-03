@@ -159,6 +159,7 @@ export interface AutoAttackResult {
     d: number
     q: 'P' | 'N' | 'G' | null
     tgt: AttackableBasicTO
+    fx?: 'silverUndead'
 }
 
 export interface AutoAttackResultMessage {

@@ -519,8 +519,9 @@ class Character implements Attackable, EffectTarget {
             const preciseShot = this.autoAttackMessage?.prs === true
             AudioManager.playWeaponHit(this.weaponSoundType, target.getBodySoundType(), target.pos, powerStrike || preciseShot)
             if (target instanceof Monster) {
-                GfxManager.addEffect(new HitSparkEffect(target, this.pos))
-                if (powerStrike || preciseShot) {
+                const silverUndead = data.res.fx === 'silverUndead'
+                GfxManager.addEffect(new HitSparkEffect(target, this.pos, silverUndead ? 'silverSmoke' : 'sparks', powerStrike))
+                if (!silverUndead && (powerStrike || preciseShot)) {
                     GfxManager.addEffect(new PowerStrikeSparkFountainEffect(target))
                 }
             }
