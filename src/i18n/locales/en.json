@@ -240,6 +240,8 @@
     "durability": "Durability",
     "armor": "Armor",
     "armorPenetration": "Armor penetration",
+    "undeadDamageBonus": "Damage against undead",
+    "animalPrecisionBonusPercent": "Precision against animals",
     "precision": "Precision",
     "defense": "Defense",
     "maxHealth": "Max health",

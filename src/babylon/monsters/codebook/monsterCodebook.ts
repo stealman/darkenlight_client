@@ -32,8 +32,11 @@ export const MonsterCodebook = {
             MonsterBonesAnims.initCat(model)
         }
 
-        if (model.type.templateId === 1101) {
+        if ([1101, 1102].includes(model.type.templateId)) {
             MonsterBonesAnims.initDeer(model)
+        }
+        if (model.type.templateId === 1201) {
+            MonsterBonesAnims.initSheep(model)
         }
     },
 
@@ -153,6 +156,7 @@ export const MonsterGroups = {
     WIGHTS: new MonsterGroup(40, 'Wights'),
     CAT: new MonsterGroup(1000, 'Cat'),
     DEERS: new MonsterGroup(1100, 'Deers', true),
+    SHEEPS: new MonsterGroup(1200, 'Sheeps'),
 
     getAsArray(): MonsterGroup[] {
         const groups: MonsterGroup[] = []
@@ -295,4 +299,6 @@ export const MonsterTypes = {
     WILD_CAT: new MonsterType(1002, MonsterGroups.CAT, 1001, 'Wild Cat', 0.6, 1, 6, null, null, null, WeaponSoundTypes.BONE, BodySoundTypes.SOFT, null, MonsterSoundTypes.CAT, null),
 
     DEER: new MonsterType(1101, MonsterGroups.DEERS, 1101, 'Deer', 1, 1.8, 2.8, null, null, null, WeaponSoundTypes.BONE, BodySoundTypes.HARD, null, MonsterSoundTypes.DEER, null),
+    HIND: new MonsterType(1102, MonsterGroups.DEERS, 1102, 'Hind', 1, 1.8, 2.8, null, null, null, WeaponSoundTypes.BONE, BodySoundTypes.HARD, null, MonsterSoundTypes.DEER, null),
+    SHEEP: new MonsterType(1201, MonsterGroups.SHEEPS, 1201, 'Sheep', 0.6, 1, 4, null, null, null, WeaponSoundTypes.BONE, BodySoundTypes.SOFT, null, '', null),
 }

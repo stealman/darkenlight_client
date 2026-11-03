@@ -78,6 +78,11 @@ export const MonsterBonesAnims = {
         model.deadAnim = new MeshAnimation(model.animation.clone('DeerDead' + Math.random(), undefined, true), 226, 375)
     },
 
+    initSheep(model: MonsterModel) {
+        model.idleAnim = new MeshAnimation(model.animation.clone('SheepIdle' + Math.random(), undefined, true), 0, 75)
+        model.walkAnim = new MeshAnimation(model.animation.clone('SheepWalk' + Math.random(), undefined, true), 76, 225)
+    },
+
     initCat(model: MonsterModel) {
         const animations = [
             { name: "Idle", startFrame: 0, endFrame: 75 },

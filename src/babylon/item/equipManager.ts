@@ -395,7 +395,7 @@ export class EquipItemType {
                     }
                 }
                 return false
-            }, true, false)
+            }, true, true)
         }
         Lights.registerDynamicLightMesh(this.mesh)
     }

@@ -40,15 +40,17 @@
             <span v-if="isNonZero(itemInfo.weaponArmorPen)">
                 {{ t('inventory.armorPenetration') }} <strong class="ui-text-gradient">{{ itemInfo.weaponArmorPen }}</strong>
             </span>
-            <span v-if="isNonZero(itemInfo.weaponUndeadDamageBonusPercent)">
-                {{ t('inventory.undeadDamageBonus') }} <strong class="ui-text-gradient">+{{ itemInfo.weaponUndeadDamageBonusPercent }}%</strong>
-            </span>
             <span v-if="isNonZero(itemInfo.weaponPrecision)"
                 >{{ t('inventory.precision') }} <strong class="ui-text-gradient">{{ formatModifier(itemInfo.weaponPrecision) }}%</strong></span
             >
             <span v-if="isNonZero(itemInfo.weaponDefense)"
                 >{{ t('inventory.defense') }} <strong class="ui-text-gradient">{{ formatModifier(itemInfo.weaponDefense) }}%</strong></span
             >
+        </div>
+
+        <div v-if="itemInfo.weaponAttack !== null && (isNonZero(itemInfo.weaponUndeadDamageBonusPercent) || isNonZero(itemInfo.weaponAnimalPrecisionBonusPercent))" class="inventory-item-overlay-special-stats">
+            <span v-if="isNonZero(itemInfo.weaponUndeadDamageBonusPercent)">{{ t('inventory.undeadDamageBonus') }} <strong>+{{ itemInfo.weaponUndeadDamageBonusPercent }}%</strong></span>
+            <span v-if="isNonZero(itemInfo.weaponAnimalPrecisionBonusPercent)">{{ t('inventory.animalPrecisionBonusPercent') }} <strong>+{{ itemInfo.weaponAnimalPrecisionBonusPercent }}%</strong></span>
         </div>
 
         <div v-if="itemInfo.armorStats" class="inventory-item-overlay-stats">
@@ -223,7 +225,7 @@ const formatSpeed = (speed) => {
     return Number.isFinite(milliseconds) ? `${(milliseconds / 1000).toFixed(2)}s` : '-'
 }
 
-const isNonZero = (value) => Number(value) !== 0
+const isNonZero = (value) => Number(value ?? 0) !== 0
 
 const formatModifier = (value) => {
     const number = Number(value)

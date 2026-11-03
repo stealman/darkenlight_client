@@ -158,10 +158,11 @@ export class MonsterModel implements EquipBearer {
     }
 
     resolveMovement(timeRate: number) {
-        // approximate to x and z position
+        // Clamp the blend so long frames cannot overshoot the authoritative position.
+        const positionBlend = Math.min(1, 15 * timeRate)
         if (!this.isDying) {
-            this.node.position.x += (this.parent.pos.x - this.node.position.x) * 15 * timeRate
-            this.node.position.z += (this.parent.pos.z - this.node.position.z) * 15 * timeRate
+            this.node.position.x += (this.parent.pos.x - this.node.position.x) * positionBlend
+            this.node.position.z += (this.parent.pos.z - this.node.position.z) * positionBlend
 
             this.resolveModelYpos(timeRate)
             this.resolveModelRotation(timeRate)
@@ -175,7 +176,7 @@ export class MonsterModel implements EquipBearer {
      * Approximate model Y position to the player Y position
      */
     resolveModelYpos(timeRate: number) {
-        this.parent.pos.y += (this.parent.logicYpos - this.parent.pos.y) * 15 * timeRate
+        this.parent.pos.y += (this.parent.logicYpos - this.parent.pos.y) * Math.min(1, 15 * timeRate)
         this.node.position.y = this.parent.pos.y
     }
 

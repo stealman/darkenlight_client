@@ -240,6 +240,8 @@
     "durability": "Stav",
     "armor": "Brnění",
     "armorPenetration": "Průraznost",
+    "undeadDamageBonus": "Poškození proti nemrtvým",
+    "animalPrecisionBonusPercent": "P\u0159esnost proti zv\u00ed\u0159at\u016fm",
     "precision": "Přesnost",
     "defense": "Obrana",
     "maxHealth": "Maximum zdraví",

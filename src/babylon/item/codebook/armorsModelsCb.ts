@@ -365,7 +365,7 @@ export const ArmorsCbManager = {
             data.pos,
             data.rot,
             data.scale,
-            false,
+            data.id === ArmorModelsCb.SHIELD.id,
         )
         return item
     }

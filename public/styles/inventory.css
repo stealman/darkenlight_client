@@ -487,6 +487,22 @@
     font-weight: 600;
 }
 
+.inventory-item-overlay-special-stats {
+    margin-top: 6px;
+    color: rgb(var(--ui-item-special-stat));
+}
+
+.inventory-item-overlay-special-stats > span {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.inventory-item-overlay-special-stats strong {
+    color: inherit;
+    font-weight: 600;
+}
+
 .inventory-item-overlay-dur {
     color: rgb(var(--ui-dark));
 }
