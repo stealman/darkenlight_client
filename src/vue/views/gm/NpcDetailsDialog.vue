@@ -286,9 +286,10 @@ const vendorCategories = [
     { value: 'resources', label: 'Resources' },
     { value: 'potions', label: 'Potions' },
     { value: 'food', label: 'Food' },
+    { value: 'ingredients', label: 'Ingredients' },
     { value: 'trinkets', label: 'Trinkets' },
 ]
-const resourceVendorCategories = vendorCategories.filter(category => ['resources', 'potions', 'food'].includes(category.value))
+const resourceVendorCategories = vendorCategories.filter(category => ['resources', 'potions', 'food', 'ingredients'].includes(category.value))
 const repairerCategories = vendorCategories.filter((category) => ['weapons', 'bows', 'metalArmor', 'leatherArmor'].includes(category.value))
 const {t} = useI18n()
 const craftingCategories = computed(() => [
@@ -380,6 +381,18 @@ const resourceOptions = [
     { codebookId: 302, label: 'Wool (10 pieces)' },
     { codebookId: 303, label: 'Cloth' },
 ]
+const ingredientOptions = [
+    { codebookId: 401, label: 'Dried Herbs' },
+    { codebookId: 402, label: 'Ginseng' },
+    { codebookId: 403, label: 'Bone Shards' },
+    { codebookId: 404, label: 'Garlic' },
+    { codebookId: 405, label: 'Claw' },
+    { codebookId: 406, label: 'Venom Sac' },
+    { codebookId: 407, label: 'Spider Silk' },
+    { codebookId: 408, label: 'Mandrake' },
+    { codebookId: 409, label: 'Ectoplasm' },
+    { codebookId: 410, label: 'Scales' },
+]
 const foodOptions = [
     { codebookId: 351, label: 'Steak' },
 ]
@@ -415,6 +428,7 @@ const vendorIndividualItemOptions = {
     resources: resourceOptions,
     potions: potionOptions,
     food: foodOptions,
+    ingredients: ingredientOptions,
 }
 const dialogVisible = ref(false)
 const npcName = ref('')
@@ -436,7 +450,7 @@ const weaponSelection = ref('')
 const shieldSelection = ref('')
 const features = ref([])
 const featureTypeToAdd = ref('')
-const vendorItemSelections = ref({weapons: null, bows: null, metalArmor: null, leatherArmor: null, resources: null, potions: null, food: null})
+const vendorItemSelections = ref({weapons: null, bows: null, metalArmor: null, leatherArmor: null, resources: null, potions: null, food: null, ingredients: null})
 const availableFeatureTypes = computed(() => featureTypes.filter((featureType) => !features.value.some((feature) => feature.type === featureType.value)))
 
 const selectionFromItem = (item) => item ? optionValue(item.modelId, item.materialId) : ''
@@ -451,7 +465,7 @@ const itemFromSelection = (selection) => {
 const createFeature = (type) => ({
     type,
     settings: type === 'vendor' || type === 'repairer'
-        ? { itemCategories: [], weaponMaterials: [], armorMaterials: [], bowMaterials: [], individualItems: {weapons: [], bows: [], metalArmor: [], leatherArmor: [], resources: [], potions: [], food: []} }
+        ? { itemCategories: [], weaponMaterials: [], armorMaterials: [], bowMaterials: [], individualItems: {weapons: [], bows: [], metalArmor: [], leatherArmor: [], resources: [], potions: [], food: [], ingredients: []} }
         : type === 'crafting'
             ? {itemCategories: []}
         : type === 'healer'
@@ -527,6 +541,7 @@ const openDialog = () => {
                     resources: [...(feature.settings?.individualItems?.resources ?? [])],
                     potions: [...(feature.settings?.individualItems?.potions ?? [])],
                     food: [...(feature.settings?.individualItems?.food ?? [])],
+                    ingredients: [...(feature.settings?.individualItems?.ingredients ?? [])],
                 },
             }
             : feature.type === 'crafting'

@@ -12,6 +12,7 @@ const descriptionKeys: Record<number, string> = {
 }
 
 export const getResourceDescription = (codebookId: number): string | null => {
+    if (codebookId >= 401 && codebookId <= 410) return t('items.resourceDescriptions.ingredient')
     if (codebookId >= 101 && codebookId <= 112) {
         return t('items.resourceDescriptions.ore')
     }

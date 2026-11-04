@@ -263,7 +263,7 @@ import {getResourceDescription} from '@/data/items/resourceDescriptions'
 const emit = defineEmits(['close'])
 
 const featureLabels: Record<string, string> = {vendor: 'vendor.vendor', repairer: 'vendor.repairer', crafting: 'vendor.crafting', banker: 'vendor.banker', healer: 'vendor.healer', trainer: 'vendor.trainer'}
-const categoryLabels: Record<string, string> = {weapons: 'vendor.weapons', bows: 'vendor.bows', metalArmor: 'vendor.metalArmor', leatherArmor: 'vendor.leatherArmor', jewels: 'vendor.jewels', oreSmelting: 'vendor.oreSmelting', resources: 'vendor.resources', potions: 'vendor.potions', food: 'vendor.food', trinkets: 'vendor.trinkets'}
+const categoryLabels: Record<string, string> = {weapons: 'vendor.weapons', bows: 'vendor.bows', metalArmor: 'vendor.metalArmor', leatherArmor: 'vendor.leatherArmor', jewels: 'vendor.jewels', oreSmelting: 'vendor.oreSmelting', resources: 'vendor.resources', potions: 'vendor.potions', food: 'vendor.food', ingredients: 'vendor.ingredients', trinkets: 'vendor.trinkets'}
 const itemTypeLocalizationSections: Record<string, string> = {W: 'weapons', A: 'armors', J: 'jewels', T: 'trinkets', R: 'resources'}
 const damageTypeLabels: Record<string, string> = {PHYSICAL_SLASH: 'vendor.damageSlash', PHYSICAL_PIERCE: 'vendor.damagePierce', PHYSICAL_BLUNT: 'vendor.damageBlunt'}
 const IGNORE_BACKDROP_CLICK_AFTER_OPEN_MS = 350

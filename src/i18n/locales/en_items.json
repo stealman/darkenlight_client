@@ -208,6 +208,7 @@
 
 
     "resourceDescriptions": {
+      "ingredient": "An ingredient for potions and spells.",
       "cloth": "A raw material for making clothing or bandages.",
       "wool": "A raw material that can be woven into cloth.",
       "bandages": "Treat your wounds or another character's injuries. Healing depends on your Healing skill.",
@@ -229,6 +230,17 @@
       "staminaPotion": "Instantly restores up to {amount} stamina."
     },
     "resources": {
+      "dried-herbs": "Dried Herbs",
+      "ginseng": "Ginseng",
+      "bone-shards": "Bone Shards",
+      "garlic": "Garlic",
+      "claw": "Claw",
+      "venom-sac": "Venom Sac",
+      "spider-silk": "Spider Silk",
+      "mandrake": "Mandrake",
+      "ectoplasm": "Ectoplasm",
+      "scales": "Scales",
+
       "purity-powder": "Purity Powder",
       "purity-stone": "Purity Stone",
       "purity-crystal": "Purity Crystal",

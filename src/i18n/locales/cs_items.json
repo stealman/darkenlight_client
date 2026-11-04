@@ -208,6 +208,7 @@
 
 
         "resourceDescriptions": {
+      "ingredient": "Přísada pro lektvary a kouzla.",
             "cloth": "Surovina k výrobě oblečení nebo obvazů.",
             "wool": "Surovina, ze které lze utkat látku.",
             "bandages": "Obvazy k ošetření vlastních zranění i zranění ostatních. Účinek závisí na dovednosti Léčba.",
@@ -229,6 +230,17 @@
             "staminaPotion": "Okamžitě doplní až {amount} bodů výdrže."
         },
         "resources": {
+      "dried-herbs": "Sušené byliny",
+      "ginseng": "Kořen ženšenu",
+      "bone-shards": "Úlomky kostí",
+      "garlic": "Česnek",
+      "claw": "Dráp",
+      "venom-sac": "Jedový váček",
+      "spider-silk": "Pavoučí hedvábí",
+      "mandrake": "Mandragora",
+      "ectoplasm": "Ektoplazma",
+      "scales": "Šupiny",
+
       "purity-powder": "Prášek Čistoty",
       "purity-stone": "Kámen Čistoty",
       "purity-crystal": "Krystal Čistoty",

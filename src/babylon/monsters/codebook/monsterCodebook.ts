@@ -13,12 +13,12 @@ export const MonsterCodebook = {
     },
 
     initializeEquipAndAnimations(model: MonsterModel) {
-        // TemplateId 1 and 21 are skeletons types
-        if ([1, 21].includes(model.type.templateId)) {
+        // Skeleton and kobold templates share bones and animation ranges
+        if ([1, 21, 41].includes(model.type.templateId)) {
             MonsterBonesAnims.initSkeleton(model)
         }
 
-        // TemplateId 11, 12 is a zombie type
+        // Zombie templates
         if ([11, 12, 13].includes(model.type.templateId)) {
             MonsterBonesAnims.initZombie(model)
         }
@@ -154,6 +154,7 @@ export const MonsterGroups = {
     WITHER_RANGED: new MonsterGroup(21, 'Wither_Ranged'),
     ZOMBIE: new MonsterGroup(30, 'Zombie'),
     WIGHTS: new MonsterGroup(40, 'Wights'),
+    KOBOLDS: new MonsterGroup(50, 'Kobolds'),
     CAT: new MonsterGroup(1000, 'Cat'),
     DEERS: new MonsterGroup(1100, 'Deers', true),
     SHEEPS: new MonsterGroup(1200, 'Sheeps'),
@@ -251,6 +252,26 @@ export const MonsterTypes = {
     WIGHT: new MonsterType(60, MonsterGroups.WIGHTS, 31, 'Wight', 0.6, 2.8, 2.2, null, null, null, WeaponSoundTypes.BONE, BodySoundTypes.HARD, null, MonsterSoundTypes.WRAITH, null, 1.25, MonsterAttackSoundTypes.WRAITH, 0.5),
     WRAITH: new MonsterType(61, MonsterGroups.WIGHTS, 32, 'Wraith', 0.6, 2.8, 2.2, null, null, null, WeaponSoundTypes.BONE, BodySoundTypes.HARD, null, MonsterSoundTypes.WRAITH, null, 1.25, MonsterAttackSoundTypes.WRAITH, 0.5),
     WRAITH_LORD: new MonsterType(62, MonsterGroups.WIGHTS, 33, 'Wraith Lord', 0.6, 2.8, 2.2, null, null, null, WeaponSoundTypes.BONE, BodySoundTypes.HARD, null, MonsterSoundTypes.WRAITH, null, 1.25, MonsterAttackSoundTypes.WRAITH, 0.5),
+
+    KOBOLD: new MonsterType(70, MonsterGroups.KOBOLDS, 41, 'Kobold', 0.6, 1.8, 2.8, new MonsterEquipData([EquipSlotModelsCb.LIGHT_MACE.modelId], 0.8, null, null, 0), null, null, WeaponSoundTypes.BONE, BodySoundTypes.HARD, null, MonsterSoundTypes.ZOMBIE, null),
+
+    KOBOLD_HUNTER: new MonsterType(
+        71,
+        MonsterGroups.KOBOLDS,
+        41,
+        'Kobold Hunter',
+        0.6,
+        1.8,
+        2.8,
+        new MonsterEquipData([EquipSlotModelsCb.HUNTINGBOW.modelId], 0.8, new Vector3(Math.PI, 0, Math.PI), null, 0),
+        null,
+        null,
+        WeaponSoundTypes.BONE,
+        BodySoundTypes.HARD,
+        null,
+        MonsterSoundTypes.ZOMBIE,
+        MonsterAATypes.RANGED_ARROW,
+    ),
 
     // WITHER MELEE
     WITHER: new MonsterType(200, MonsterGroups.WITHER_MELEE, 21, 'Wither', 0.6, 1.8, 3.2, null, null, null, WeaponSoundTypes.BONE, BodySoundTypes.HARD, null, MonsterSoundTypes.SKELETON, null),
