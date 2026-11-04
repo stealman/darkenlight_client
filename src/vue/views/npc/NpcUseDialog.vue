@@ -341,7 +341,12 @@ const selectedCategoryItems = computed(() => {
     if (selectedCategory.value === 'metalArmor' || selectedCategory.value === 'weapons') {
         return items
     }
-    return items.sort((first, second) => first.price - second.price || first.name.localeCompare(second.name))
+    return items.sort((first, second) => {
+        const priorityDiff = selectedCategory.value === 'resources'
+            ? InventoryManager.getResourceSortPriority(first.cb) - InventoryManager.getResourceSortPriority(second.cb)
+            : 0
+        return priorityDiff || first.price - second.price || first.name.localeCompare(second.name)
+    })
 })
 const repairItems = computed(() => {
     resourceInventoryVersion.value

@@ -7,6 +7,7 @@ import { GroundItemsManager } from '@/babylon/world/groundItemsManager'
 import { ItemTO } from '@/network/messageIfs'
 import { ActionButtonsManager } from '@/gui/actionButtonsManager'
 import { ConsumableHelper } from '@/data/items/consumableHelper'
+import { ConsumablesCodebook } from '@/data/items/consumablesCodebook'
 import {OnScreenMessageManager, OnScreenMessageSeverities} from '@/gui/onScreenMessageManager'
 import {t} from '@/i18n'
 import {WeaponSkillRequirements} from '@/data/items/weaponSkillRequirements'
@@ -65,6 +66,10 @@ export const InventoryManager = {
         this.inventory.sort((a, b) => this.compareItemsForDisplay(a, b))
     },
 
+    getResourceSortPriority(cbId: number): number {
+        return ConsumablesCodebook.isItemPotion(cbId) || (cbId >= 1031 && cbId <= 1033) ? 0 : 1
+    },
+
     compareItemsForDisplay(a: Item, b: Item): number {
         const typeRankDiff = this.getItemTypeSortRank(a.cbType) - this.getItemTypeSortRank(b.cbType)
         if (typeRankDiff !== 0) {
@@ -73,15 +78,19 @@ export const InventoryManager = {
 
         const cbIdA = Number(a.cbId)
         const cbIdB = Number(b.cbId)
+        const resourceTypeRank = this.getItemTypeSortRank('R')
+        const isResourcePair =
+            this.getItemTypeSortRank(a.cbType) === resourceTypeRank
+            && this.getItemTypeSortRank(b.cbType) === resourceTypeRank
+        if (isResourcePair) {
+            const priorityDiff = this.getResourceSortPriority(cbIdA) - this.getResourceSortPriority(cbIdB)
+            if (priorityDiff !== 0) return priorityDiff
+        }
         if (cbIdA !== cbIdB) {
             return cbIdA - cbIdB
         }
 
         // For resources of the same type/codebook, keep bigger stacks first.
-        const resourceTypeRank = this.getItemTypeSortRank('R')
-        const isResourcePair =
-            this.getItemTypeSortRank(a.cbType) === resourceTypeRank
-            && this.getItemTypeSortRank(b.cbType) === resourceTypeRank
         if (isResourcePair) {
             const qtyDiff = this.getItemQuantity(b) - this.getItemQuantity(a)
             if (qtyDiff !== 0) {

@@ -208,6 +208,7 @@
 
 
         "resourceDescriptions": {
+            "emptyPotion": "Prázdná láhev, do které se dají načepovat lektvary.",
       "ingredient": "Přísada pro lektvary a kouzla.",
             "cloth": "Surovina k výrobě oblečení nebo obvazů.",
             "wool": "Surovina, ze které lze utkat látku.",
@@ -294,7 +295,10 @@
             "great-mana-potion": "Velký Lektvar Many",
             "small-stamina-potion": "Malý Lektvar Výdrže",
             "stamina-potion": "Lektvar Výdrže",
-            "great-stamina-potion": "Velký Lektvar Výdrže"
+            "great-stamina-potion": "Velký Lektvar Výdrže",
+            "small-empty-potion": "Malá Prázdná Lahvička",
+            "empty-potion": "Prázdná Lahvička",
+            "great-empty-potion": "Velká Prázdná Lahvička"
         }
     }
 }

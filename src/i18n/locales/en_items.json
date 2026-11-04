@@ -208,6 +208,7 @@
 
 
     "resourceDescriptions": {
+      "emptyPotion": "An empty bottle that can be filled with potions.",
       "ingredient": "An ingredient for potions and spells.",
       "cloth": "A raw material for making clothing or bandages.",
       "wool": "A raw material that can be woven into cloth.",
@@ -294,7 +295,10 @@
       "great-mana-potion": "Great Mana Potion",
       "small-stamina-potion": "Small Stamina Potion",
       "stamina-potion": "Stamina Potion",
-      "great-stamina-potion": "Great Stamina Potion"
+      "great-stamina-potion": "Great Stamina Potion",
+      "small-empty-potion": "Small Empty Potion Bottle",
+      "empty-potion": "Empty Potion Bottle",
+      "great-empty-potion": "Great Empty Potion Bottle"
     }
   }
 }

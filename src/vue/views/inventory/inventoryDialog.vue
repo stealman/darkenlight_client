@@ -681,6 +681,7 @@ const onInventoryDoubleClick = (index) => {
 const storeWeaponSetup = (setupType) => {
     InventoryManager.updateWeaponSetup(setupType)
     refreshStoredWeaponSetups()
+    refreshEquipSlotImages()
     AudioManager.playGuiButtonToggle(true)
     OnScreenMessageManager.addMessage(t('messages.weaponSet-' + setupType))
 }

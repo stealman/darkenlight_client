@@ -15,6 +15,17 @@
                 </label>
             </div>
 
+            <div class="npc-details-row">
+                <label class="npc-details-control">
+                    <span>Spawn X</span>
+                    <input v-model.number="spawnX" type="number" min="1" step="1" />
+                </label>
+                <label class="npc-details-control">
+                    <span>Spawn Z</span>
+                    <input v-model.number="spawnZ" type="number" min="1" step="1" />
+                </label>
+            </div>
+
             <div v-if="npcType === 'guard'" class="npc-details-row">
                 <label class="npc-details-control">
                     <span>Guard level</span>
@@ -374,6 +385,9 @@ const weaponCodebookBaseIds = {
 const pickaxeCodebookIds = { 1: 3, 2: 5, 3: 6, 4: 7, 5: 8, 6: 4 }
 const resourceOptions = [
     { codebookId: 1, label: 'Bandages' },
+    { codebookId: 1031, label: 'Small empty potion bottle' },
+    { codebookId: 1032, label: 'Empty potion bottle' },
+    { codebookId: 1033, label: 'Great empty potion bottle' },
     { codebookId: 101, label: 'Iron ore' },
     { codebookId: 119, label: 'Coal' },
     { codebookId: 201, label: 'Wooden log' },
@@ -432,6 +446,8 @@ const vendorIndividualItemOptions = {
 }
 const dialogVisible = ref(false)
 const npcName = ref('')
+const spawnX = ref(1)
+const spawnZ = ref(1)
 const npcType = ref('common')
 const wanderingRange = ref(0)
 const guardLevel = ref(1)
@@ -511,6 +527,8 @@ const openDialog = () => {
     titleCZ.value = npc?.titleCZ ?? legacyTitle
     titleEN.value = npc?.titleEN ?? legacyTitle
     npcName.value = npc.name ?? ''
+    spawnX.value = npc.spawn.x
+    spawnZ.value = npc.spawn.z
     npcType.value = npc.type ?? 'common'
     wanderingRange.value = npc.wanderingRange ?? 0
     guardLevel.value = npc.guard?.level ?? 1
@@ -559,6 +577,10 @@ const closeDialog = () => {
 }
 
 const saveDetails = () => {
+    if (!Number.isFinite(spawnX.value) || !Number.isFinite(spawnZ.value) || spawnX.value < 1 || spawnZ.value < 1) {
+        window.alert('Spawn coordinates must be valid numbers greater than or equal to 1.')
+        return
+    }
     const patrolPoints = guardPatrolPoints.value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).map((line) => {
         const [x, z] = line.split(',').map((value) => Number(value.trim()))
         return {x, z}
@@ -587,7 +609,7 @@ const saveDetails = () => {
         pursueRange: guardPursueRange.value,
         respawnSeconds: guardRespawnSeconds.value,
         patrolPoints,
-    })
+    }, {x: spawnX.value, z: spawnZ.value})
     GMManager.saveSelectedNpc()
     closeDialog()
 }

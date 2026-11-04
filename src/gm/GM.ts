@@ -1164,6 +1164,7 @@ export const GMManager = {
     selectNpcForEditing(npc: any) {
         this.selectedNpc.value = {
             id: npc.definitionId ?? npc.id,
+            spawn: npc.spawn ? {...npc.spawn} : undefined,
             name: npc.name,
             titleCZ: npc.titleCZ ?? npc.title ?? '',
             titleEN: npc.titleEN ?? npc.title ?? '',
@@ -1231,11 +1232,17 @@ export const GMManager = {
         this.botStatusesUpdatedAt.value = Date.now()
     },
 
-    saveSelectedBot(name: string) {
+    respawnSelectedBot() {
+        if (!this.selectedBot.value) return
+        Connector.sendMessage(new GMBotAction('RESPAWN', {id: this.selectedBot.value.id}))
+        this.selectedBot.value = null
+    },
+
+    saveSelectedBot(name: string, x: number, z: number) {
         if (!this.selectedBot.value) {
             return
         }
-        Connector.sendMessage(new GMBotAction('UPDATE', {id: this.selectedBot.value.id, name}))
+        Connector.sendMessage(new GMBotAction('UPDATE', {id: this.selectedBot.value.id, name, x, z}))
         this.selectedBot.value = null
     },
 
@@ -1248,9 +1255,10 @@ export const GMManager = {
         this.selectedNpcName.value = ''
     },
 
-    setSelectedNpcDetails(name: string, titleCZ: string, titleEN: string, bodyType: string, equipment: any, features: any[], wanderingRange: number, guard: any) {
+    setSelectedNpcDetails(name: string, titleCZ: string, titleEN: string, bodyType: string, equipment: any, features: any[], wanderingRange: number, guard: any, spawn: {x: number, z: number}) {
         if (this.selectedNpc.value) {
             this.selectedNpc.value.name = name
+            this.selectedNpc.value.spawn = {...spawn}
             this.selectedNpc.value.titleCZ = titleCZ
             this.selectedNpc.value.titleEN = titleEN
             this.selectedNpc.value.bodyType = bodyType

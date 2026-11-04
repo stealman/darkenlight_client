@@ -408,6 +408,7 @@ export interface ContainerStateData extends BankStateData {
 }
 
 export interface GMNpcDetailsData {
+    spawn: {x: number, z: number}
     id: number
     name: string
     titleCZ: string

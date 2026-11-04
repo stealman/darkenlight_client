@@ -9,6 +9,7 @@ const descriptionKeys: Record<number, string> = {
     128: 'ingotEquipment', 129: 'ingotEquipment', 130: 'ingotEquipment', 131: 'ingotEquipment',
     201: 'wood', 202: 'campWood', 203: 'campWood', 204: 'campWood', 205: 'campWood', 206: 'campWood',
     301: 'meat', 302: 'wool', 303: 'cloth', 351: 'steak',
+    1031: 'emptyPotion', 1032: 'emptyPotion', 1033: 'emptyPotion',
 }
 
 export const getResourceDescription = (codebookId: number): string | null => {
