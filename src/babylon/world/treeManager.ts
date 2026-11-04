@@ -9,6 +9,7 @@ import { Lights } from '@/babylon/scene/lights'
 import { MyPlayer } from '@/data/myPlayer'
 import { TargetingManager } from '@/gui/targettingManager'
 import { segmentIntersectsAabb } from '@/babylon/geometryUtils'
+import { CollisionGrid } from '@/babylon/world/collisionGrid'
 
 export const TreeManager = {
     fadedAlpha: 0.35,
@@ -23,6 +24,7 @@ export const TreeManager = {
     fadedTrunkMaterial: null as PBRMaterial | null,
     fadedPersonalShadowCasters: new WeakSet<Mesh>(),
     allTrees : [] as Tree[],
+    collisionGrid: new CollisionGrid<Tree>(),
     visibleTrees : [] as Tree[],
     deletePreviewTree: null as Tree | null,
     deletePreviewStartTime: 0,
@@ -212,6 +214,7 @@ export const TreeManager = {
     },
 
     addTree(tree: { type: number, x: number, z: number, size: number }) {
+        const previousCount = this.allTrees.length
         const y = WorldDataManager.getBlockMap()[tree.x][tree.z].height + 0.5
         const size = tree.size
         const rotation = Math.floor(Math.random() * 4) * Math.PI / 2
@@ -245,6 +248,12 @@ export const TreeManager = {
             default:
                 break
         }
+        if (this.allTrees.length > previousCount) {
+            const added = this.allTrees[this.allTrees.length - 1]
+            const half = added.scale * 0.75 / 2
+            this.collisionGrid.add(added, added.position.x - half, added.position.z - half,
+                added.position.x + half, added.position.z + half)
+        }
     },
 
     recountYPositions() {
@@ -265,6 +274,7 @@ export const TreeManager = {
             if (this.allTrees[i].position.x === x && this.allTrees[i].position.z === z) {
                 if (this.deletePreviewTree === this.allTrees[i]) this.deletePreviewTree = null
                 disposeFadedTreeMeshes(this.allTrees[i])
+                this.collisionGrid.remove(this.allTrees[i])
                 this.allTrees.splice(i, 1)
                 break
             }
@@ -274,6 +284,7 @@ export const TreeManager = {
     clearWorld() {
         this.allTrees.forEach(tree => disposeFadedTreeMeshes(tree))
         this.allTrees = []
+        this.collisionGrid.clear()
         this.visibleTrees = []
         this.deletePreviewTree = null
         this.renderCaptures = new WeakMap()
@@ -390,14 +401,11 @@ export const TreeManager = {
     },
 
     getPointInTree(x: number, z: number, size: number): { x: number, z: number } | null {
-        for (const element of this.allTrees) {
-            const tree = element
+        const tree = this.collisionGrid.findFirst(x, z, size, tree => {
             const combinedSize = ((tree.scale * 0.75) + size) / 2
-            if (Math.abs(tree.position.x - x) < combinedSize && Math.abs(tree.position.z - z) < combinedSize) {
-                return { x: tree.position.x, z: tree.position.z }
-            }
-        }
-        return null
+            return Math.abs(tree.position.x - x) < combinedSize && Math.abs(tree.position.z - z) < combinedSize
+        })
+        return tree ? {x: tree.position.x, z: tree.position.z} : null
     },
 
     isAnyTreeInDistance(pos: Vector3, maxDistance: number): boolean {

@@ -10,7 +10,8 @@ function loadModule(path, dependencies) {
         compilerOptions: {module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020},
     }).outputText
     const exports = {}
-    new Function('exports', 'require', compiled)(exports, name => dependencies[name] || {})
+    new Function('exports', 'require', compiled)(exports, name => dependencies[name]
+        || (name === '@/babylon/world/collisionGrid' ? loadModule('babylon/world/collisionGrid.ts', {}) : {}))
     return exports
 }
 
@@ -72,6 +73,9 @@ test('type index follows addition, removal and clearing, preserving closest-obje
         constructor(type, position) {this.type = type; this.position = position; this.renderPosition = position}
         getSize() {return 1}
         getWalkableHeight() {return null}
+        getSizeX() {return 1}
+        getSizeZ() {return 1}
+        getCollisionTolerance() {return .12}
         clearRenderMatrices() {}
         dispose() {}
     }

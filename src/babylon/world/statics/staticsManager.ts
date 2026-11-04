@@ -20,6 +20,7 @@ import { AudioManager } from '@/babylon/audio/audioManager'
 import { StaticFireParticleManager } from '@/babylon/world/statics/staticFireParticleManager'
 import { WalkableBlock, WalkableBlockMetadata } from '@/babylon/world/statics/objects/walkableBlock'
 import { isShrubType } from '@/babylon/world/snowCoverMask'
+import { CollisionGrid } from '@/babylon/world/collisionGrid'
 import {
     CampBarrel,
     CampBench,
@@ -62,6 +63,7 @@ const isEmbeddedInSnow = (type: number) => isShrubType(type) || type === 281
 export const StaticsManager = {
     allStatics : [] as StaticObject[],
     staticsByType: new Map<number, Set<StaticObject>>(),
+    collisionGrid: new CollisionGrid<StaticObject>(),
     visibleStatics : [] as StaticObject[],
     dungeonEntrances: new Set<StaticObject>(),
     walkableObjectsByTile: new Map<string, StaticObject>(),
@@ -233,6 +235,13 @@ export const StaticsManager = {
                 this.staticsByType.set(added.type, objects)
             }
             objects.add(added)
+            // Full footprint also covers thin fences, connected corners and
+            // the pillars of rotated dungeon entrances. Exact tests stay below.
+            const padding = Math.max(0, -added.getCollisionTolerance())
+            this.collisionGrid.add(added,
+                added.position.x - 0.5 - padding, added.position.z - 0.5 - padding,
+                added.position.x + added.getSizeX() - 0.5 + padding,
+                added.position.z + added.getSizeZ() - 0.5 + padding)
             if (added.getWalkableHeight() !== null) {
                 for (let offsetX = 0; offsetX < added.getSizeX(); offsetX++) {
                     for (let offsetZ = 0; offsetZ < added.getSizeZ(); offsetZ++) {
@@ -286,6 +295,7 @@ export const StaticsManager = {
             if (this.allStatics[i].position.x === x && this.allStatics[i].position.z === z
                 && (type === undefined || this.allStatics[i].type === type)) {
                 const obj = this.allStatics[i]
+                this.collisionGrid.remove(obj)
                 const objects = this.staticsByType.get(obj.type)
                 objects?.delete(obj)
                 if (objects?.size === 0) this.staticsByType.delete(obj.type)
@@ -313,6 +323,7 @@ export const StaticsManager = {
         this.allStatics.forEach((obj) => obj.dispose())
         this.allStatics = []
         this.staticsByType.clear()
+        this.collisionGrid.clear()
         this.visibleStatics = []
         this.dungeonEntrances.clear()
         this.walkableObjectsByTile.clear()
@@ -554,12 +565,8 @@ export const StaticsManager = {
     },
 
     getPointInStatic(x: number, z: number, size: number): { x: number, z: number } | null {
-        for (const obj of this.allStatics) {
-            if (obj.isObjectInCollision(x, z, size)) {
-                return { x: obj.renderPosition.x, z: obj.renderPosition.z }
-            }
-        }
-        return null
+        const obj = this.collisionGrid.findFirst(x, z, size, candidate => candidate.isObjectInCollision(x, z, size))
+        return obj ? {x: obj.renderPosition.x, z: obj.renderPosition.z} : null
     },
 
     getWalkableHeightAtTile(x: number, z: number): number {
