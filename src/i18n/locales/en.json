@@ -340,6 +340,8 @@
     "leatherArmor": "Leather armor",
     "jewels": "Jewels",
     "resources": "Resources",
+    "potions": "Potions",
+    "food": "Food",
     "trinkets": "Trinkets",
       "buy": "Buy",
       "repair": "Repair",

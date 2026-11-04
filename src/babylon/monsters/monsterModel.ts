@@ -1,8 +1,8 @@
 import {
     AbstractMesh,
     AnimationGroup, Bone, Matrix,
-    Mesh, ParticleSystem, Quaternion,
-    Skeleton, Sound, Texture, TransformNode, Vector3,
+    Mesh, Quaternion,
+    Skeleton, Sound, TransformNode, Vector3,
 } from '@babylonjs/core'
 import { Monster } from '@/babylon/monsters/monster'
 import { MonsterLoader } from '@/babylon/monsters/monsterLoader'
@@ -21,6 +21,7 @@ import { TerrainManager } from '@/babylon/world/terrainManager'
 import { Settings } from '@/settings/settings'
 import { Lights } from '@/babylon/scene/lights'
 import { MyPlayer } from '@/data/myPlayer'
+import { GfxManager } from '@/babylon/gfx/gfxManager'
 
 export class MonsterModel implements EquipBearer {
     private footStepSounds = new Map<string, Sound>()
@@ -117,7 +118,7 @@ export class MonsterModel implements EquipBearer {
     onFrame(timeRate: number) {
         if (!this.isActive()) return
 
-        if (this.selected) this.refreshSelectedMaterial()
+        if (this.selected || this.type.id === 1201) this.refreshSelectedMaterial()
         this.resolveMovement(timeRate)
         this.worldMatrix = this.mesh.getWorldMatrix()
         this.worldMatrix.decompose(undefined, this.rotationQuaternion, undefined)
@@ -303,14 +304,22 @@ export class MonsterModel implements EquipBearer {
 
     private refreshSelectedMaterial() {
         const shouldApplySelectedMaterial = this.selected && Lights.daylightFactor < 1
-        if (this.selectedMaterialApplied === shouldApplySelectedMaterial) return
+        if (this.selectedMaterialApplied === shouldApplySelectedMaterial
+            && this.mesh.material === this.getBodyMaterial(shouldApplySelectedMaterial)) return
 
         this.applySelectedMaterial(shouldApplySelectedMaterial)
         this.selectedMaterialApplied = shouldApplySelectedMaterial
     }
 
+    private getBodyMaterial(selected: boolean) {
+        if (this.type.id === 1201 && this.parent.woolReadyAt > Date.now()) {
+            return selected ? MonsterLoader.selectedShavedSheepMaterial : MonsterLoader.shavedSheepMaterial
+        }
+        return selected ? this.template.selectedMaterial : this.template.material
+    }
+
     private applySelectedMaterial(selected: boolean) {
-        const material = selected ? this.template.selectedMaterial : this.template.material
+        const material = this.getBodyMaterial(selected)
         this.node.getChildMeshes().forEach(mesh => {
             mesh.material = material ?? null
         })
@@ -484,9 +493,14 @@ export class MonsterModel implements EquipBearer {
     }
 
     createDyingParticleEffect() {
-        const particleCount = Settings.detailLevel.level * 100
-        const ps = new ParticleSystem('deathPoof', particleCount, Renderer.scene)
-        ps.particleTexture = new Texture("images/gfx/flare-rect.png", Renderer.scene);
+        const highDetail = Settings.isDetalLevelHigh()
+        const particleCount = highDetail ? 200 : Settings.isDetailLevelMedium() ? 64 : 24
+        const particleSizeRatio = highDetail ? 1 : 1.25
+        const ps = GfxManager.getDeathParticleSystem()
+        if (!ps) return
+        ps.color1.set(1, 1, 1, 1)
+        ps.color2.set(1, 1, 1, 1)
+        ps.colorDead.set(0, 0, 0, 1)
 
         // Set particle color based on terrain type
         const block = WorldDataManager.getBlockOnPosition(this.parent.pos)
@@ -513,10 +527,8 @@ export class MonsterModel implements EquipBearer {
         const xOff = Math.sin(this.modelRotation + Math.PI / 2) * -0.75
         const zOff = Math.cos(this.modelRotation + Math.PI / 2) * -0.75
 
-        const computedFallPosition = this.node.position
-        const emitter = new TransformNode('deathEmitter', Renderer.scene)
-        emitter.position.copyFrom(computedFallPosition)
-        ps.emitter = emitter
+        // Particle positions are emitted in world space; no scene node is needed.
+        ;(ps.emitter as Vector3).copyFrom(this.node.position)
 
         ps.minEmitBox = new Vector3(-0.7 + xOff  , -0.2, -0.7 + zOff)
         ps.maxEmitBox = new Vector3(0.7 + xOff, 0.2, 0.7 + zOff)
@@ -527,24 +539,21 @@ export class MonsterModel implements EquipBearer {
         ps.maxLifeTime = 3.5
         ps.minEmitPower = 0.15
         ps.maxEmitPower = 0.4
-        ps.minSize = 0.1
-        ps.maxSize = 0.15
+        ps.minSize = 0.1 * particleSizeRatio
+        ps.maxSize = 0.15 * particleSizeRatio
 
         ps.direction1 = new Vector3(-0.8, 2.5, -0.8)
         ps.direction2 = new Vector3(0.8, 4.0, 0.8)
         ps.gravity = new Vector3(0, -1, 0)
 
-        ps.blendMode = ParticleSystem.BLENDMODE_STANDARD
         ps.emitRate = 0
         ps.manualEmitCount = particleCount
         ps.updateSpeed = 0.02
 
-        // manualEmitCount emits one batch but does not stop the Babylon
-        // ParticleSystem. Stop after its first update so disposeOnStop can
-        // release the GPU buffers and texture once the last particle dies.
-        ps.targetStopDuration = ps.updateSpeed
-        ps.disposeOnStop = true
-        ps.onDisposeObservable.addOnce(() => emitter.dispose())
+        // Stop emission after the first rendered batch, then retain the empty
+        // system for reuse. A tiny targetStopDuration could stop before the
+        // first batch on slower frames, discarding the effect immediately.
+        ps.onBeforeDrawParticlesObservable.addOnce(() => ps.stop())
         ps.start()
     }
 }

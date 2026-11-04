@@ -1,4 +1,4 @@
-import { Scene } from '@babylonjs/core'
+import { ParticleSystem, Scene, Texture, Vector3 } from '@babylonjs/core'
 import { CharacterEffect, EffectTarget, MonsterEffect } from '@/babylon/gfx/characterEffect'
 import { CharacterManager } from '@/babylon/character/characterManager'
 import { MonsterManager } from '@/babylon/monsters/monsterManager'
@@ -19,10 +19,31 @@ export const GfxManager = {
     activeMonsterPersistentEffects: new Map<number, MonsterEffect>(),
     characterAffectKeys: new Set<string>(),
     monsterAffectKeys: new Set<string>(),
+    deathParticleSystems: [] as ParticleSystem[],
+    deathParticleTexture: null as Texture | null,
 
     initialize(scene: Scene) {
         this.clear()
         this.scene = scene
+        this.deathParticleTexture = new Texture('images/gfx/flare-rect.png', scene)
+        // Prepare the first system during loading, including its shader/texture.
+        this.getDeathParticleSystem()
+    },
+
+    getDeathParticleSystem(): ParticleSystem | null {
+        if (!this.scene || !this.deathParticleTexture) return null
+        const available = this.deathParticleSystems.find(system => !system.isStarted())
+        if (available) return available
+        // Bound overlapping bursts during mass deaths as well as retained buffers.
+        if (this.deathParticleSystems.length >= 4) return null
+
+        const system = new ParticleSystem('deathPoof', 200, this.scene)
+        system.particleTexture = this.deathParticleTexture
+        system.emitter = Vector3.Zero()
+        system.emitRate = 0
+        system.blendMode = ParticleSystem.BLENDMODE_STANDARD
+        this.deathParticleSystems.push(system)
+        return system
     },
 
     addEffect(effect: CharacterEffect, actualTime: number = Date.now()) {
@@ -60,6 +81,10 @@ export const GfxManager = {
         this.activeMonsterPersistentEffects.clear()
         this.characterAffectKeys.clear()
         this.monsterAffectKeys.clear()
+        this.deathParticleSystems.forEach(system => system.dispose(false))
+        this.deathParticleSystems.length = 0
+        this.deathParticleTexture?.dispose()
+        this.deathParticleTexture = null
     },
 
     updateTimedCharacterEffects(actualTime: number) {

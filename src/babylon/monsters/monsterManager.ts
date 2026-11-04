@@ -1,4 +1,3 @@
-import { Vector3 } from '@babylonjs/core'
 import { Monster } from '@/babylon/monsters/monster'
 import { MonsterLoader } from '@/babylon/monsters/monsterLoader'
 import { MonsterModel } from '@/babylon/monsters/monsterModel'
@@ -68,8 +67,9 @@ export const MonsterManager = {
         }
 
         if (mv && mv.length >= 3) {
-            const nextTarget = mv.length >= 5 ? {x: mv[3], z: mv[4]} : null
-            this.monsterMove(id, { x: position.x, z: position.z }, { x: mv[0], z: mv[1] }, mv[2], nextTarget)
+            const move = [id, position.x, position.z, mv[0], mv[1], mv[2]]
+            if (mv.length >= 5) move.push(mv[3], mv[4])
+            this.monsterMove(move)
         }
     },
 
@@ -98,24 +98,22 @@ export const MonsterManager = {
         }
     },
 
-    monsterMove(id: number, position: { x: number, z: number }, target: { x: number, z: number }, speed: number, nextTarget: {x: number, z: number} | null = null) {
+    monsterMove(data: number[]) {
+        const id = data[0]
         if (NpcManager.guards.has(id)) {
-            NpcManager.guardMove([id, position.x, position.z, target.x, target.z, speed])
+            NpcManager.guardMove(data)
             return
         }
-        if (this.monsters.has(id)) {
-            const mob = this.monsters.get(id)
-            mob!.runSpeed = speed
-            const confirmsQueuedMove = mob!.targetPoint?.x === target.x && mob!.targetPoint?.z === target.z
+        const mob = this.monsters.get(id)
+        if (mob) {
+            mob.runSpeed = data[5]
+            const confirmsQueuedMove = mob.targetPoint?.x === data[3] && mob.targetPoint?.z === data[4]
             if (!confirmsQueuedMove) {
-                mob!.pos.x = position.x
-                mob!.pos.z = position.z
+                mob.pos.x = data[1]
+                mob.pos.z = data[2]
             }
-            mob!.logicYpos = Utils.calculateWalkYPos(mob!.pos.x, mob!.pos.z, mob!.getBoxSize())
-            mob!.setTargetPoint(
-                new Vector3(target.x, 0, target.z),
-                nextTarget ? new Vector3(nextTarget.x, 0, nextTarget.z) : null,
-            )
+            mob.logicYpos = Utils.calculateWalkYPos(mob.pos.x, mob.pos.z, mob.getBoxSize())
+            mob.setTargetPoint(data[3], data[4], data.length >= 8 ? data[6] : undefined, data.length >= 8 ? data[7] : undefined)
         }
     },
 
@@ -161,22 +159,21 @@ export const MonsterManager = {
         monster.basicDataChange(data)
     },
 
-    monsterMoveStop(id: number, position: { x: number, z: number }, teleported: boolean = false) {
+    monsterMoveStop(data: [number, number, number, boolean?]) {
+        const id = data[0]
         if (NpcManager.guards.has(id)) {
-            NpcManager.guardMoveStop([id, position.x, position.z])
+            NpcManager.guardMoveStop(data)
             return
         }
-        if (this.monsters.has(id)) {
-            const mob = this.monsters.get(id)
-            mob!.pos.x = position.x
-            mob!.pos.z = position.z
-            mob!.logicYpos = Utils.calculateWalkYPos(mob!.pos.x, mob!.pos.z, mob!.getBoxSize())
-            mob!.pos.y = mob!.logicYpos
-            mob!.resetTargetPoint()
-            if (teleported && mob!.model.initialized) {
-                mob!.model.node.position.x = mob!.pos.x
-                mob!.model.node.position.y = mob!.pos.y
-                mob!.model.node.position.z = mob!.pos.z
+        const mob = this.monsters.get(id)
+        if (mob) {
+            mob.pos.x = data[1]
+            mob.pos.z = data[2]
+            mob.logicYpos = Utils.calculateWalkYPos(mob.pos.x, mob.pos.z, mob.getBoxSize())
+            mob.pos.y = mob.logicYpos
+            mob.resetTargetPoint()
+            if (data[3] === true && mob.model.initialized) {
+                mob.model.node.position.copyFrom(mob.pos)
             }
         }
     },

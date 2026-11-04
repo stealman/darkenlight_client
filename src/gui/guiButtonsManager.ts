@@ -19,10 +19,15 @@ import { Vector3 } from '@babylonjs/core'
 import { Utils } from '@/utils/utils'
 import {PartyManager} from '@/data/partyManager'
 import {t} from '@/i18n'
+import {MonsterManager} from '@/babylon/monsters/monsterManager'
+import {Monster} from '@/babylon/monsters/monster'
+import {MonsterTypes} from '@/babylon/monsters/codebook/monsterCodebook'
+import {ShearSheepMsg} from '@/network/messages'
 
 const HUD_BUTTON_GAP = 5
 const HUD_MINIMAP_LEFT_FRAME_SIZE = 3
 const CAMP_BARREL_STATIC_TYPE = 305
+const OPPORTUNITY_UPDATE_INTERVAL = 100
 
 class GuiOpportunityButtonAction {
     name: string
@@ -71,6 +76,7 @@ class GuiOpportunityButton {
 }
 
 export const GuiOpportunityActions = {
+    SHEAR_SHEEP: new GuiOpportunityButtonAction('SHEAR_SHEEP', 'btn_shear'),
     PARTY_INVITE: new GuiOpportunityButtonAction('PARTY_INVITE', 'btn_party_invite'),
     PICKUP_ITEM: new GuiOpportunityButtonAction("PICKUP_ITEM", "btn_pick"),
     MINING: new GuiOpportunityButtonAction("MINING", "btn_pickaxe"),
@@ -93,8 +99,11 @@ export const GuiButtonsManager = {
     opportunityButtonsPanel: null as HTMLElement,
     opportunityButtons: new Map<string, GuiOpportunityButton>(),
     primaryOpportunityButton: null as GuiOpportunityButton | null,
+    nextOpportunityUpdateAt: 0,
+    opportunityDistances: new Map<string, number>(),
 
     initialize() {
+        this.nextOpportunityUpdateAt = 0
         this.btnBackpack = document.getElementById("btn-backpack") as HTMLDivElement
         this.btnCharacter = document.getElementById("btn-character") as HTMLDivElement
         this.opportunityButtonsPanel = document.getElementById("opportunity-action-buttons") as HTMLElement
@@ -105,6 +114,10 @@ export const GuiButtonsManager = {
 
     createOpportunityButtons() {
         this.opportunityButtons.clear()
+        const shear = new GuiOpportunityButton(GuiOpportunityActions.SHEAR_SHEEP)
+        shear.htmlEl.setAttribute('aria-label', t('items.resources.shear-sheep'))
+        shear.htmlEl.setAttribute('role', 'button')
+        this.opportunityButtons.set(GuiOpportunityActions.SHEAR_SHEEP.name, shear)
         this.primaryOpportunityButton = null
         this.opportunityButtons.set(GuiOpportunityActions.PICKUP_ITEM.name, new GuiOpportunityButton(GuiOpportunityActions.PICKUP_ITEM))
         this.opportunityButtons.set(GuiOpportunityActions.RESTING.name, new GuiOpportunityButton(GuiOpportunityActions.RESTING))
@@ -164,12 +177,17 @@ export const GuiButtonsManager = {
         }
     },
 
-    onFrame() {
+    onFrame(actualTime: number = Date.now()) {
         if (MyPlayer.isDead.value) {
             this.opportunityButtons.forEach((button) => button.setVisible(false))
             this.setPrimaryOpportunityButton(null)
+            this.nextOpportunityUpdateAt = 0
             return
         }
+        this.trySendFireArrowsAction()
+        if (actualTime < this.nextOpportunityUpdateAt) return
+        this.nextOpportunityUpdateAt = actualTime + OPPORTUNITY_UPDATE_INTERVAL
+        this.opportunityDistances.clear()
         // Show pickup button if there's an item nearby
         this.opportunityButtons.get(GuiOpportunityActions.PICKUP_ITEM.name)!.setVisible(GroundItemsManager.nearbyItem !== null)
 
@@ -187,12 +205,17 @@ export const GuiButtonsManager = {
 
         this.opportunityButtons.get(GuiOpportunityActions.RESTING.name)!.setVisible(MyPlayer.nearFireplace !== null)
         this.opportunityButtons.get(GuiOpportunityActions.COOKING.name)!.setVisible(MyPlayer.nearFireplace !== null)
-        this.opportunityButtons.get(GuiOpportunityActions.USE_DOOR.name)!.setVisible(
-            BuildingManager.getClosestDoorIdInDistance(MyPlayer.myChar.pos, 1.5) !== null
-        )
+        const doorId = BuildingManager.getClosestDoorIdInDistance(MyPlayer.myChar.pos, 1.5)
+        this.opportunityButtons.get(GuiOpportunityActions.USE_DOOR.name)!.setVisible(doorId !== null)
+        this.cacheOpportunityDistance(GuiOpportunityActions.USE_DOOR.name,
+            doorId === null ? null : BuildingManager.buildings.get(doorId)?.getDoorPosition())
+        const barrel = this.getClosestUsableBarrel()
         this.opportunityButtons.get(GuiOpportunityActions.USE_CHEST.name)!.setVisible(
-            typeof this.getClosestUsableBarrel()?.status?.containerId === 'string'
+            typeof barrel?.status?.containerId === 'string'
         )
+        const barrelDistance = barrel
+            ? StaticsManager.getDistanceToStaticFootprint(MyPlayer.myChar.pos, barrel.position, barrel.getSize()) : Infinity
+        this.opportunityDistances.set(GuiOpportunityActions.USE_CHEST.name, barrelDistance * barrelDistance)
         const selectedTarget = TargetingManager.selectedTarget
         const party = PartyManager.state.value
         this.opportunityButtons.get(GuiOpportunityActions.PARTY_INVITE.name)!.setVisible(
@@ -202,6 +225,10 @@ export const GuiButtonsManager = {
             && !party?.members.some(member => member.id === selectedTarget.id)
         )
         const closestNpc = NpcManager.getClosestNpcInDistance(3)
+        const sheep = this.getClosestShearableSheep()
+        this.opportunityButtons.get(GuiOpportunityActions.SHEAR_SHEEP.name)!.setVisible(sheep !== null)
+        this.cacheOpportunityDistance(GuiOpportunityActions.SHEAR_SHEEP.name, sheep?.pos)
+        this.cacheOpportunityDistance(GuiOpportunityActions.NPC_USE.name, closestNpc?.pos)
         this.opportunityButtons.get(GuiOpportunityActions.NPC_USE.name)!.setVisible(
             closestNpc !== null
         )
@@ -218,7 +245,12 @@ export const GuiButtonsManager = {
         )
 
         this.updateOpportunityPriority()
-        this.trySendFireArrowsAction()
+    },
+
+    cacheOpportunityDistance(actionName: string, target: {x: number, z: number} | null | undefined) {
+        const position = MyPlayer.myChar.pos
+        this.opportunityDistances.set(actionName, target
+            ? (position.x - target.x) ** 2 + (position.z - target.z) ** 2 : Infinity)
     },
 
     updateOpportunityPriority() {
@@ -244,9 +276,14 @@ export const GuiButtonsManager = {
     },
 
     getOpportunityDistanceSquared(actionName: string): number {
+        const cached = this.opportunityDistances.get(actionName)
+        if (cached !== undefined) return cached
         const playerPos = MyPlayer.myChar.pos
         let target: { x: number, z: number } | null | undefined = null
         switch (actionName) {
+            case GuiOpportunityActions.SHEAR_SHEEP.name:
+                target = this.getClosestShearableSheep()?.pos
+                break
             case GuiOpportunityActions.PARTY_INVITE.name:
                 target = TargetingManager.selectedTarget?.pos
                 break
@@ -310,6 +347,11 @@ export const GuiButtonsManager = {
         }
         AudioManager.playGuiButtonClick()
         switch (actionName) {
+            case GuiOpportunityActions.SHEAR_SHEEP.name: {
+                const sheep = this.getClosestShearableSheep()
+                if (sheep) Connector.sendMessage(new ShearSheepMsg(sheep.id))
+                break
+            }
             case GuiOpportunityActions.PARTY_INVITE.name:
                 if (TargetingManager.selectedTarget?.getObjectType() === 'C') PartyManager.invite(TargetingManager.selectedTarget.id)
                 break
@@ -350,6 +392,8 @@ export const GuiButtonsManager = {
         if (MyPlayer.isDead.value) {
             return false
         }
+        this.nextOpportunityUpdateAt = 0
+        this.onFrame()
         const button = this.primaryOpportunityButton
         if (button?.visible) {
             this.onclickOpportunityButton(button.action.name)
@@ -360,6 +404,22 @@ export const GuiButtonsManager = {
 
     clickOnPickupItemButton() {
         InventoryManager.pickItem()
+    },
+
+    getClosestShearableSheep(): Monster | null {
+        if (!MyPlayer.myChar) return null
+        let closest: Monster | null = null
+        let distanceSquared = 3 * 3
+        const now = Date.now()
+        for (const sheep of MonsterManager.monsters.values()) {
+            if (sheep.mobType !== MonsterTypes.SHEEP || sheep.killedTime || sheep.hpPercent <= 0 || sheep.woolReadyAt > now) continue
+            const currentDistanceSquared = Vector3.DistanceSquared(MyPlayer.myChar.pos, sheep.pos)
+            if (currentDistanceSquared <= distanceSquared) {
+                closest = sheep
+                distanceSquared = currentDistanceSquared
+            }
+        }
+        return closest
     },
 
     clickOnMiningButton() {

@@ -57,11 +57,16 @@ export const CharacterManager = {
             this.characters.set(data.id, newChar)
 
             await newChar.createModel(false)
+            if (this.characters.get(data.id) !== newChar) {
+                newChar.model?.removeFromScene()
+                return
+            }
             newChar.insideView = this.isCharInViewport(newChar)
 
             // If char is in view, initialize model immediately
             if (newChar.insideView) {
                 await newChar.model!.initAsync();
+                if (!newChar.insideView) newChar.model!.removeFromView()
             }
             if (newChar.dead) {
                 newChar.die()
@@ -107,11 +112,13 @@ export const CharacterManager = {
     charMove(data) {
         const id = data[0]
         if (id === MyPlayer.myChar.id) {
-            const dist = Math.sqrt( (MyPlayer.myChar.pos.x - data[1]) * (MyPlayer.myChar.pos.x - data[1]) + (MyPlayer.myChar.pos.z - data[2]) * (MyPlayer.myChar.pos.z - data[2]) )
+            const dx = MyPlayer.myChar.pos.x - data[1]
+            const dz = MyPlayer.myChar.pos.z - data[2]
             const serverStopped = data[3] === null || data[4] <= 0
-            if (dist > 1 || serverStopped) {
+            if (dx * dx + dz * dz > 1 || serverStopped) {
                 MyPlayer.myChar.pos.x = data[1]
                 MyPlayer.myChar.pos.z = data[2]
+                MyPlayer.myChar.logicYpos = Utils.calculateWalkYPos(data[1], data[2], MyPlayer.myChar.getBoxSize())
                 if (serverStopped) {
                     MyPlayer.myChar.stopMovementLocally()
                 } else {
@@ -127,8 +134,9 @@ export const CharacterManager = {
                     char.syncServerMovement(
                         data[1],
                         data[2],
-                        new Vector3(data[6], 0, data[7]),
-                        data.length >= 10 ? new Vector3(data[8], 0, data[9]) : null,
+                        data[6], data[7],
+                        data.length >= 10 ? data[8] : undefined,
+                        data.length >= 10 ? data[9] : undefined,
                     )
                     char.pos.y = Utils.calculateWalkYPos(char.pos.x, char.pos.z, char.getBoxSize())
                     char.logicYpos = char.pos.y

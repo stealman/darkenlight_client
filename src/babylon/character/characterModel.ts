@@ -33,6 +33,7 @@ export class CharacterModel implements EquipBearer {
 
     model: AbstractMesh | undefined
     private instantiatedEntries: InstantiatedEntries | null = null
+    private initializationPromise: Promise<void> | null = null
     modelYAngleOffset: number = (Math.PI * 1) / 4
     modelRotation: number = 0
     worldMatrix: Matrix = Matrix.Identity()
@@ -119,7 +120,17 @@ export class CharacterModel implements EquipBearer {
         return entries
     }
 
-    async initAsync() {
+    initAsync(): Promise<void> {
+        if (this.initialized || this.node.isDisposed()) return Promise.resolve()
+        if (!this.initializationPromise) {
+            this.initializationPromise = this.initializeModelAsync().finally(() => {
+                this.initializationPromise = null
+            })
+        }
+        return this.initializationPromise
+    }
+
+    private async initializeModelAsync() {
         const scene = this.node.getScene()
         // The shared AssetContainer parses the GLB once. Most nearby human
         // models are instantiated behind the loading overlay and only enabled
@@ -215,6 +226,14 @@ export class CharacterModel implements EquipBearer {
                     this.highJabAnim = newAnimationGroups[8]
                     this.slashAnim2 = newAnimationGroups[9]
                     this.bowAimAnim = newAnimationGroups[10]
+                    // One observer per model, rather than one per attack.
+                    // Interrupted shots must not accumulate pending callbacks.
+                    this.bowAimAnim.onAnimationEndObservable.add(() => {
+                        if (this.actualAnim !== this.bowAimAnim || !this.isActive() || this.parent.dead) return
+                        const animation = this.bowAimAnim!
+                        animation.start(true, 1, animation.to, animation.to)
+                        animation.setWeightForAllAnimatables(1)
+                    })
                     this.greatAxeAttackAnim = newAnimationGroups[11]
                     this.oreMiningAnim = newAnimationGroups[12]
                     this.deathAnim = newAnimationGroups[13]
@@ -499,11 +518,6 @@ export class CharacterModel implements EquipBearer {
                     case WeaponTypes.BOW: {
                         possibleAnims.push(this.bowAimAnim)
                         baseAnimSpeed = 1150
-                        this.bowAimAnim!.onAnimationEndObservable.addOnce(() => {
-                            const a = this.bowAimAnim!
-                            a.start(true, 1, a.to, a.to)
-                            a.setWeightForAllAnimatables(1)
-                        })
                         break
                     }
                     default: {
@@ -733,9 +747,11 @@ export class CharacterModel implements EquipBearer {
      */
     moveModel(timeRate: number) {
         const approximationSpeed = this.parent.isPushThroughVisualActive() ? 15 : this.parent == MyPlayer.myChar ? 12 : 8
-        this.node.position.x += (this.parent.pos.x - this.node.position.x) * approximationSpeed * timeRate
-        this.node.position.z += (this.parent.pos.z - this.node.position.z) * approximationSpeed * timeRate
-        this.node.position.y += (this.parent.logicYpos - this.node.position.y) * this.parent.yMoveSpeed * timeRate
+        const positionBlend = Math.min(1, approximationSpeed * timeRate)
+        const heightBlend = Math.min(1, this.parent.yMoveSpeed * timeRate)
+        this.node.position.x += (this.parent.pos.x - this.node.position.x) * positionBlend
+        this.node.position.z += (this.parent.pos.z - this.node.position.z) * positionBlend
+        this.node.position.y += (this.parent.logicYpos - this.node.position.y) * heightBlend
         this.parent.pos.y = this.node.position.y
 
         this.node.markAsDirty('position')

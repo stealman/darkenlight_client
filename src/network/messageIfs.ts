@@ -1,5 +1,6 @@
 
 export interface MonsterSpawnData {
+    woolCooldown?: number
     id: number
     tp: number
     x: number

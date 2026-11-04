@@ -90,7 +90,8 @@ export class Npc extends Character {
     }
 
     setMovementTarget(x: number, z: number) {
-        this.movementTarget = new Vector3(x, this.pos.y, z)
+        if (this.movementTarget) this.movementTarget.set(x, this.pos.y, z)
+        else this.movementTarget = new Vector3(x, this.pos.y, z)
     }
 
     clearMovementTarget() {

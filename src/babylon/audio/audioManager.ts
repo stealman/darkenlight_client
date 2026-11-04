@@ -16,6 +16,7 @@ export const AudioManager = {
     footStepSounds: new Map<string, Sound>(),
     deathRattleSounds: new Map<string, Sound>(),
     monsterAttackSounds: new Map<string, Sound>(),
+    monsterIdleSounds: new Map<number, Sound>(),
     ambientSounds: new Map<object, Sound>(),
     staticObjectSounds: new Map<string, Sound>(),
 
@@ -50,10 +51,13 @@ export const AudioManager = {
     campingSound: null as Sound | null,
     potionUseSound: null as Sound | null,
     eatSound: null as Sound | null,
+    scissorsSound: null as Sound | null,
     doorOpenSound: null as Sound | null,
     doorCloseSound: null as Sound | null,
 
     initialize(scene: Scene) {
+        this.monsterIdleSounds.clear()
+        this.loadMonsterIdleSound(1201, 'idle_sheep.ogg', scene, {volume: 1.2, playbackRate: 1})
         this.globalVolume = Settings.volume;
         this.ambientSoundVolume = Settings.ambientVolume;
 
@@ -128,6 +132,10 @@ export const AudioManager = {
             volume: 0.75,
             playbackRate: 1,
         });
+
+        this.scissorsSound = new Sound('scissors', AudioManager.BASE_PATH_SFX + 'scissors.ogg', scene, () => {
+            AudioManager.scissorsSound!['loaded'] = true
+        }, {volume: 1, playbackRate: 1})
 
         this.campingSound = new Sound("camping", AudioManager.BASE_PATH_SFX + "camping.ogg", scene, function() {
             AudioManager.campingSound!['loaded'] = true;
@@ -286,6 +294,26 @@ export const AudioManager = {
         this.monsterAttackSounds.set(type, sound)
     },
 
+    loadMonsterIdleSound(typeId: number, fileName: string, scene: Scene, options: {volume: number, playbackRate: number}) {
+        const sound = new Sound('monsterIdle' + typeId, this.BASE_PATH_MONSTER + fileName, scene, () => {
+            sound['loaded'] = true
+            sound['defaultVolume'] = options.volume
+        }, options)
+        this.monsterIdleSounds.set(typeId, sound)
+    },
+
+    playMonsterIdle(typeId: number, position: Vector3) {
+        const source = this.monsterIdleSounds.get(typeId)
+        if (!source?.['loaded']) return
+        const ratio = AudioUtils.getVolumeRatioByDistance(position)
+        if (ratio <= 0) return
+        const sound = source.clone()
+        if (!sound) return
+        sound.setVolume(source.defaultVolume * ratio)
+        sound.onEndedObservable.addOnce(() => sound.dispose())
+        sound.play()
+    },
+
     loadAmbientSound (type: object, fileName: string, scene: Scene, options: { volume: number, playbackRate: number, loop: boolean }) {
         const sound = new Sound("ambientSound" + type, AudioManager.BASE_PATH_AMBIENT + fileName, scene, function() {
             sound['loaded'] = true;
@@ -348,6 +376,10 @@ export const AudioManager = {
     playMiningSound(position: Vector3) {
         const volumeRatio = AudioUtils.getVolumeRatioByDistance(position)
         this.playRandomSound(this.miningSounds, volumeRatio)
+    },
+
+    playShearingSound() {
+        if (this.scissorsSound?.['loaded']) this.scissorsSound.play()
     },
 
     playLumberJackingSound(position: Vector3) {

@@ -208,6 +208,8 @@
 
 
     "resourceDescriptions": {
+      "cloth": "A raw material for making clothing or bandages.",
+      "wool": "A raw material that can be woven into cloth.",
       "bandages": "Treat your wounds or another character's injuries. Healing depends on your Healing skill.",
       "purityPowder": "An additive for purifying materials needed for crafting",
       "purityStone": "An additive for purifying materials needed for crafting",
@@ -266,6 +268,9 @@
       "log-ethereal": "Ethereal Wood",
 
       "meat-common": "Meat",
+      "wool": "Wool",
+      "cloth": "Cloth",
+      "shear-sheep": "Shear sheep",
 
       "steak": "Steak",
 

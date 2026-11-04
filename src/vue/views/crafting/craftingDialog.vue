@@ -460,7 +460,7 @@ const onConfirmSelectedRecipe = () => {
 
     AudioManager.playGuiButtonClick()
     CraftingManager.submitCraftRequest(selectedRecipe.value, selectedRecipeQuantity.value)
-    closeDialog()
+    closeDialog(false)
 }
 
 const onCancelSelectedRecipe = () => {
@@ -489,9 +489,9 @@ const openDialog = (data: CraftingInitMenuData) => {
     clearSelectedRecipe()
 }
 
-const closeDialog = () => {
+const closeDialog = (returnToNpc = true) => {
     hideItemInfoOverlay()
-    emit('close')
+    emit('close', returnToNpc ? craftingMenuData.value?.npcId : undefined)
 }
 
 const onBackdropClick = () => {

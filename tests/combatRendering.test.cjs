@@ -199,11 +199,16 @@ test('removing human models releases all animation clips, skeletons and footstep
             entries.rootNodes.push(root)
             entries.skeletons.push(skeleton)
             entries.animationGroups.push(source)
-            CharacterModel.instantiate = async () => entries
+            let instantiations = 0
+            CharacterModel.instantiate = async () => {instantiations++; return entries}
             const model = new CharacterModel({id: i, pos: core.Vector3.Zero(), insideView: true,
                 isMyChar: () => false, getModelHeight: () => 2, equipSet: new Map()})
             model.snapToParentPosition = () => {}
+            const loading = model.initAsync()
+            assert.equal(model.initAsync(), loading, 'overlapping visibility and spawn initialization share one load')
+            await loading
             await model.initAsync()
+            assert.equal(instantiations, 1)
             assert.equal(scene.animationGroups.length, 18)
             let soundDisposed = false
             model.footStepSounds.set('dirt', {isPlaying: false, dispose() {soundDisposed = true}})

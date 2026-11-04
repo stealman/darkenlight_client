@@ -112,7 +112,7 @@
 
     <InventoryDialog ref="inventoryDialog" v-show="displayInventoryDialog" @close="displayInventoryDialog = false" />
     <CharacterDialog ref="characterDialog" v-show="displayCharacterDialog" @close="displayCharacterDialog = false" />
-    <CraftingDialog ref="craftingDialog" v-show="displayCraftingDialog" @close="displayCraftingDialog = false" />
+    <CraftingDialog v-if="displayCraftingDialog" ref="craftingDialog" @close="onCloseCraftingMenu" />
     <NpcUseDialog ref="npcUseDialog" v-show="displayNpcUseDialog" @close="displayNpcUseDialog = false" />
     <ContainerDialog v-show="displayContainerDialog" :visible="displayContainerDialog" @close="displayContainerDialog = false" />
 
@@ -218,6 +218,7 @@ import {
 import { Settings } from '@/settings/settings'
 import { TargetingManager } from '@/gui/targettingManager'
 import { MyPlayer } from '@/data/myPlayer'
+import { NpcInteractionManager } from '@/data/npcInteractionManager'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { useI18n } from '@/i18n'
 import PartyPanel from '@/vue/views/PartyPanel.vue'
@@ -763,6 +764,14 @@ const onOpenCraftingMenu = (event: Event) => {
     nextTick(() => {
         craftingDialog.value?.openDialog?.(detail)
     })
+}
+
+const onCloseCraftingMenu = (npcId?: number) => {
+    if (!displayCraftingDialog.value) return
+    displayCraftingDialog.value = false
+    if (npcId != null && !isDead.value && loginRequestSentFlag.value) {
+        NpcInteractionManager.useNpc(npcId, 'crafting')
+    }
 }
 
 const onOpenNpcUseMenu = (event: Event) => {

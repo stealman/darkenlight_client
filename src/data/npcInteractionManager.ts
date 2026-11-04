@@ -3,7 +3,10 @@ import {BankActionMsg, BankOpenMsg, NpcCraftingMenuMsg, NpcLearnSkillMsg, NpcPur
 import type {NpcUseData, NpcVendorCatalogItem, SkillKey} from '@/network/messageIfs'
 
 export const NpcInteractionManager = {
-    useNpc(id: number) {
+    preferredFeature: null as {npcId: number, type: string} | null,
+
+    useNpc(id: number, featureType?: string) {
+        this.preferredFeature = featureType ? {npcId: id, type: featureType} : null
         Connector.sendMessage(new NpcUseMsg(id))
     },
 
@@ -36,6 +39,8 @@ export const NpcInteractionManager = {
     },
 
     processNpcUse(data: NpcUseData) {
-        window.dispatchEvent(new CustomEvent('ui:open-npc-use', {detail: data}))
+        const initialFeature = this.preferredFeature?.npcId === data.id ? this.preferredFeature.type : undefined
+        this.preferredFeature = null
+        window.dispatchEvent(new CustomEvent('ui:open-npc-use', {detail: {...data, initialFeature}}))
     },
 }

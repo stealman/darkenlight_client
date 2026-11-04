@@ -15,6 +15,7 @@ import { EffectTarget } from '@/babylon/gfx/characterEffect'
 import { Settings } from '@/settings/settings'
 
 export class Monster implements Attackable, EffectTarget {
+    woolReadyAt: number = 0
     id: number
     mobType: MonsterType
     model: MonsterModel
@@ -47,6 +48,7 @@ export class Monster implements Attackable, EffectTarget {
     arrow: Arrow | null = null
 
     nameDisplayTime: number = 0
+    nextIdleSoundAt: number = 0
     publiclyVisibleAffects: Map<number, PubliclyVisibleAffect> = new Map<number, PubliclyVisibleAffect>()
 
     constructor(id: number, mobType: MonsterType, xPos: number, zPos: number, hpp: number, alignment: 'evil' | 'neutral' | 'friendly' = 'evil') {
@@ -60,6 +62,7 @@ export class Monster implements Attackable, EffectTarget {
     }
 
     onFrame(timeRate: number, actualTime: number) {
+        this.updateIdleSound(actualTime)
         if (this.autoAttackEnd > actualTime) {
 
             if (this.arrowCreateTime > 0 && actualTime >= this.arrowCreateTime && this.autoAttackTarget && (this.insideView || this.autoAttackTarget!.insideView)) {
@@ -93,6 +96,17 @@ export class Monster implements Attackable, EffectTarget {
     onAnimFrame() {
         if (this.insideView) {
             this.model.onAnimFrame()
+        }
+    }
+
+    private updateIdleSound(actualTime: number) {
+        if (!AudioManager.monsterIdleSounds.has(this.mobType.id) || this.killedTime || this.hpPercent <= 0) return
+        if (this.nextIdleSoundAt === 0 || actualTime >= this.nextIdleSoundAt) {
+            const firstInterval = this.nextIdleSoundAt === 0
+            this.nextIdleSoundAt = actualTime + 20000 + Math.random() * 40000
+            if (!firstInterval && this.insideView && this.autoAttackEnd <= actualTime) {
+                AudioManager.playMonsterIdle(this.mobType.id, this.pos)
+            }
         }
     }
 
@@ -197,10 +211,16 @@ export class Monster implements Attackable, EffectTarget {
         this.hpPercent = data.hpp
     }
 
-    setTargetPoint(point: Vector3, nextPoint: Vector3 | null = null) {
-        this.setMoveTargetAngle(point)
-        this.targetPoint = point
-        this.nextTargetPoint = nextPoint
+    setTargetPoint(x: number, z: number, nextX?: number, nextZ?: number) {
+        if (this.targetPoint) this.targetPoint.set(x, 0, z)
+        else this.targetPoint = new Vector3(x, 0, z)
+        this.setMoveTargetAngle(this.targetPoint)
+        if (nextX !== undefined && nextZ !== undefined) {
+            if (this.nextTargetPoint) this.nextTargetPoint.set(nextX, 0, nextZ)
+            else this.nextTargetPoint = new Vector3(nextX, 0, nextZ)
+        } else {
+            this.nextTargetPoint = null
+        }
     }
 
     private setMoveTargetAngle(point: Vector3) {

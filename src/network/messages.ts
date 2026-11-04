@@ -641,3 +641,8 @@ export class SayMsg implements Message {
     t = 46
     constructor(public d: {text: string}) {}
 }
+export class ShearSheepMsg implements Message {
+    t = 47
+    d: {id: number}
+    constructor(id: number) { this.d = {id} }
+}

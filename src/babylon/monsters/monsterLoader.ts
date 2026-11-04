@@ -9,11 +9,15 @@ export const MonsterLoader = {
     monstersMeshes: [] as Mesh[],
     monsterTemplates: new Map<number, MonsterTemplate>(),
     modelContainers: new Map<string, AssetContainer>(),
+    shavedSheepMaterial: null as PBRMaterial | null,
+    selectedShavedSheepMaterial: null as PBRMaterial | null,
 
     async initialize () {
         this.monstersMeshes = []
         this.monsterTemplates.clear()
         this.modelContainers.clear()
+        this.shavedSheepMaterial = null
+        this.selectedShavedSheepMaterial = null
         for (const key in MonsterTemplates) {
             console.log("Loading monster mesh: " + key)
             await this.loadMonsterMesh(MonsterTemplates[key])
@@ -81,6 +85,16 @@ export const MonsterLoader = {
 
         mobType.setAssetContainer(assetContainer)
         mobType.setMaterials(material, selectedMaterial)
+        if (mobType.id === 1201) {
+            const texture = new Texture('/models/monsters/sheep_shaved.png', Renderer.scene, {invertY: false})
+            texture.hasAlpha = true
+            texture.gammaSpace = true
+            this.shavedSheepMaterial = material.clone('sheep_shaved')
+            this.shavedSheepMaterial.albedoTexture = texture
+            this.selectedShavedSheepMaterial = selectedMaterial.clone('sheep_shaved_selected')
+            this.selectedShavedSheepMaterial.albedoTexture = texture
+            this.selectedShavedSheepMaterial.emissiveTexture = texture
+        }
         this.monsterTemplates.set(mobType.id, mobType)
     },
 
@@ -105,6 +119,14 @@ export const MonsterLoader = {
                 if (warmupClone != null && template.selectedMaterial != null) {
                     warmupClone.mesh.material = template.selectedMaterial
                     await Lights.compileActorLightVariants(warmupClone.mesh, template.selectedMaterial)
+                    warmupClone.mesh.material = template.material ?? null
+                }
+                if (warmupClone != null && template.id === 1201) {
+                    for (const material of [this.shavedSheepMaterial, this.selectedShavedSheepMaterial]) {
+                        if (!material) continue
+                        warmupClone.mesh.material = material
+                        await Lights.compileActorLightVariants(warmupClone.mesh, material)
+                    }
                     warmupClone.mesh.material = template.material ?? null
                 }
             } catch (error) {

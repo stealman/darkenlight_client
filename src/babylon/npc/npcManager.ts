@@ -2,7 +2,6 @@ import { Guard, Npc } from '@/babylon/npc/npc'
 import { ViewportManager } from '@/utils/viewport'
 import { MyPlayer } from '@/data/myPlayer'
 import { Utils } from '@/utils/utils'
-import { Vector3 } from '@babylonjs/core'
 import { TargetingManager } from '@/gui/targettingManager'
 
 export const NpcManager = {
@@ -32,6 +31,10 @@ export const NpcManager = {
             this.guardMove([guard.id, data.x, data.z, data.mv[0], data.mv[1], data.mv[2]])
         }
         await guard.createModel(false)
+        if (this.guards.get(data.id) !== guard) {
+            guard.model?.removeFromScene()
+            return
+        }
         guard.insideView = this.isNpcVisible(guard)
         if (guard.insideView) {
             await guard.model!.initAsync()
@@ -58,19 +61,20 @@ export const NpcManager = {
         const guard = this.guards.get(data[0])
         if (!guard) return
         this.setNpcPosition(guard, data[1], data[2])
-        const angle = Utils.getAngleBetweenPoints(guard.pos, new Vector3(data[3], guard.pos.y, data[4]))
+        const angle = Math.atan2(-(data[4] - guard.pos.z), data[3] - guard.pos.x)
         guard.setMovementTarget(data[3], data[4])
         guard.setMoveAngle(angle)
         guard.setActualSpeed(data[5])
         guard.setMoveType('W')
     },
 
-    guardMoveStop(data: number[]) {
+    guardMoveStop(data: readonly [number, number, number, boolean?]) {
         const guard = this.guards.get(data[0])
         if (!guard) return
         this.setNpcPosition(guard, data[1], data[2])
         guard.clearMovementTarget()
         guard.stopMovementLocally()
+        if (data[3] === true) guard.model?.snapToParentPosition()
     },
 
     async addNpc(data: any) {
@@ -84,6 +88,10 @@ export const NpcManager = {
         this.npcs.set(npc.id, npc)
         this.applyNpcData(npc, data)
         await npc.createModel(false)
+        if (this.npcs.get(data.id) !== npc) {
+            npc.model?.removeFromScene()
+            return
+        }
         npc.insideView = this.isNpcVisible(npc)
         if (npc.insideView) {
             await npc.model!.initAsync()
@@ -115,7 +123,7 @@ export const NpcManager = {
             return
         }
         this.setNpcPosition(npc, data[1], data[2])
-        const angle = Utils.getAngleBetweenPoints(npc.pos, new Vector3(data[3], npc.pos.y, data[4]))
+        const angle = Math.atan2(-(data[4] - npc.pos.z), data[3] - npc.pos.x)
         npc.setMovementTarget(data[3], data[4])
         npc.setMoveAngle(angle)
         npc.setActualSpeed(data[5])

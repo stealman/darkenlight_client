@@ -208,6 +208,8 @@
 
 
         "resourceDescriptions": {
+            "cloth": "Surovina k výrobě oblečení nebo obvazů.",
+            "wool": "Surovina, ze které lze utkat látku.",
             "bandages": "Obvazy k ošetření vlastních zranění i zranění ostatních. Účinek závisí na dovednosti Léčba.",
             "purityPowder": "Přísada k čištění materiálů potřebných pro výrobu",
             "purityStone": "Přísada k čištění materiálů potřebných pro výrobu",
@@ -266,6 +268,9 @@
             "log-ethereal": "Éterické Dřevo",
 
             "meat-common": "Maso",
+            "wool": "Vlna",
+            "cloth": "Látka",
+            "shear-sheep": "Ostříhat ovci",
 
             "steak": "Steak",
 

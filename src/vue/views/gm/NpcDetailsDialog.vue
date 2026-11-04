@@ -213,21 +213,23 @@
                         </div>
                     </div>
 
-                    <div v-if="feature.settings.itemCategories.includes('resources')" class="npc-vendor-materials">
-                        <strong>Resources</strong>
-                        <div class="npc-vendor-individual-items">
-                            <div class="npc-vendor-item-add">
-                                <select v-model="vendorItemSelections.resources">
-                                    <option :value="null">Add individual resource</option>
-                                    <option v-for="option in vendorIndividualItemOptions.resources" :key="option.codebookId" :value="option.codebookId">{{ option.label }}</option>
-                                </select>
-                                <button class="dialog-button" :disabled="vendorItemSelections.resources === null" @click="addVendorIndividualItem(feature, 'resources')"><span class="ui-text-gradient--button-state">Add</span></button>
-                            </div>
-                            <div v-if="feature.settings.individualItems.resources.length" class="npc-vendor-item-list">
-                                <button v-for="itemId in feature.settings.individualItems.resources" :key="itemId" class="npc-vendor-item-chip" @click="removeVendorIndividualItem(feature, 'resources', itemId)">{{ getVendorIndividualItemLabel('resources', itemId) }} ×</button>
+                    <template v-for="category in resourceVendorCategories" :key="category.value">
+                        <div v-if="feature.settings.itemCategories.includes(category.value)" class="npc-vendor-materials">
+                            <strong>{{ category.label }}</strong>
+                            <div class="npc-vendor-individual-items">
+                                <div class="npc-vendor-item-add">
+                                    <select v-model="vendorItemSelections[category.value]">
+                                        <option :value="null">Add individual item</option>
+                                        <option v-for="option in vendorIndividualItemOptions[category.value]" :key="option.codebookId" :value="option.codebookId">{{ option.label }}</option>
+                                    </select>
+                                    <button class="dialog-button" :disabled="vendorItemSelections[category.value] === null" @click="addVendorIndividualItem(feature, category.value)"><span class="ui-text-gradient--button-state">Add</span></button>
+                                </div>
+                                <div v-if="feature.settings.individualItems[category.value].length" class="npc-vendor-item-list">
+                                    <button v-for="itemId in feature.settings.individualItems[category.value]" :key="itemId" class="npc-vendor-item-chip" @click="removeVendorIndividualItem(feature, category.value, itemId)">{{ getVendorIndividualItemLabel(category.value, itemId) }} ×</button>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    </template>
                 </template>
 
                 <template v-else-if="feature.type === 'crafting'">
@@ -282,13 +284,18 @@ const vendorCategories = [
     { value: 'leatherArmor', label: 'Leather armor' },
     { value: 'jewels', label: 'Jewels' },
     { value: 'resources', label: 'Resources' },
+    { value: 'potions', label: 'Potions' },
+    { value: 'food', label: 'Food' },
     { value: 'trinkets', label: 'Trinkets' },
 ]
+const resourceVendorCategories = vendorCategories.filter(category => ['resources', 'potions', 'food'].includes(category.value))
 const repairerCategories = vendorCategories.filter((category) => ['weapons', 'bows', 'metalArmor', 'leatherArmor'].includes(category.value))
 const {t} = useI18n()
 const craftingCategories = computed(() => [
     ...vendorCategories.filter((category) => ['weapons', 'bows', 'metalArmor', 'leatherArmor', 'jewels'].includes(category.value)),
     {value: 'oreSmelting', label: t('vendor.oreSmelting')},
+    {value: 'potions', label: t('vendor.potions')},
+    {value: 'resources', label: t('vendor.resources')},
 ])
 const healerPotionTiers = [
     {value: 'small', label: 'Small potions'},
@@ -370,7 +377,13 @@ const resourceOptions = [
     { codebookId: 119, label: 'Coal' },
     { codebookId: 201, label: 'Wooden log' },
     { codebookId: 301, label: 'Common meat' },
+    { codebookId: 302, label: 'Wool (10 pieces)' },
+    { codebookId: 303, label: 'Cloth' },
+]
+const foodOptions = [
     { codebookId: 351, label: 'Steak' },
+]
+const potionOptions = [
     { codebookId: 1001, label: 'Small healing potion' },
     { codebookId: 1002, label: 'Healing potion' },
     { codebookId: 1003, label: 'Great healing potion' },
@@ -400,6 +413,8 @@ const vendorIndividualItemOptions = {
     metalArmor: [...headOptions, ...armsOptions, ...legsOptions, ...bodyOptions].filter((option) => option.codebookId),
     leatherArmor: [],
     resources: resourceOptions,
+    potions: potionOptions,
+    food: foodOptions,
 }
 const dialogVisible = ref(false)
 const npcName = ref('')
@@ -421,7 +436,7 @@ const weaponSelection = ref('')
 const shieldSelection = ref('')
 const features = ref([])
 const featureTypeToAdd = ref('')
-const vendorItemSelections = ref({weapons: null, bows: null, metalArmor: null, leatherArmor: null, resources: null})
+const vendorItemSelections = ref({weapons: null, bows: null, metalArmor: null, leatherArmor: null, resources: null, potions: null, food: null})
 const availableFeatureTypes = computed(() => featureTypes.filter((featureType) => !features.value.some((feature) => feature.type === featureType.value)))
 
 const selectionFromItem = (item) => item ? optionValue(item.modelId, item.materialId) : ''
@@ -436,7 +451,7 @@ const itemFromSelection = (selection) => {
 const createFeature = (type) => ({
     type,
     settings: type === 'vendor' || type === 'repairer'
-        ? { itemCategories: [], weaponMaterials: [], armorMaterials: [], bowMaterials: [], individualItems: {weapons: [], bows: [], metalArmor: [], leatherArmor: [], resources: []} }
+        ? { itemCategories: [], weaponMaterials: [], armorMaterials: [], bowMaterials: [], individualItems: {weapons: [], bows: [], metalArmor: [], leatherArmor: [], resources: [], potions: [], food: []} }
         : type === 'crafting'
             ? {itemCategories: []}
         : type === 'healer'
@@ -510,6 +525,8 @@ const openDialog = () => {
                     metalArmor: [...(feature.settings?.individualItems?.metalArmor ?? [])],
                     leatherArmor: [...(feature.settings?.individualItems?.leatherArmor ?? [])],
                     resources: [...(feature.settings?.individualItems?.resources ?? [])],
+                    potions: [...(feature.settings?.individualItems?.potions ?? [])],
+                    food: [...(feature.settings?.individualItems?.food ?? [])],
                 },
             }
             : feature.type === 'crafting'

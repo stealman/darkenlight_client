@@ -70,6 +70,7 @@ import { FoggyAreaManager } from '@/babylon/world/foggyAreaManager'
 import { GMFoggyAreas } from '@/gm/GmFoggyAreas'
 import { EquipmentDecorationsManager } from '@/babylon/world/equipmentDecorationsManager'
 import {PartyManager} from '@/data/partyManager'
+import { Utils } from '@/utils/utils'
 
 export const MessageProcessor = {
 
@@ -88,6 +89,11 @@ export const MessageProcessor = {
                     if (PartyManager.receiveState(msg.d)) AudioManager.playPartyJoin()
                     break
                 case 93: PartyManager.receiveInvitation(msg.d); break
+                case 96: {
+                    const sheep = MonsterManager.monsters.get(msg.d.id)
+                    if (sheep) sheep.woolReadyAt = Date.now() + msg.d.cooldown
+                    break
+                }
                 case 2: await this.loginResponse(msg.d); break
                 case 3: this.addMonster(msg.d); break
                 case 4: this.monsterMove(msg.d); break
@@ -197,11 +203,12 @@ export const MessageProcessor = {
 
     addMonster(data: MonsterSpawnData) {
         MonsterManager.addMonster(data.id, data.tp, { x: data.x, z: data.z }, Number(data.hpp), data.mv, data.paf, data.role, data.alignment, data.guard, data.huntable === true)
+        const sheep = MonsterManager.monsters.get(data.id)
+        if (sheep) sheep.woolReadyAt = Date.now() + (data.woolCooldown ?? 0)
     },
 
     monsterMove(data) {
-        const nextTarget = data.length >= 8 ? {x: data[6], z: data[7]} : null
-        MonsterManager.monsterMove(data[0], { x: data[1], z: data[2] }, { x: data[3], z: data[4] }, data[5], nextTarget)
+        MonsterManager.monsterMove(data)
     },
 
     async addCharacter(data) {
@@ -286,6 +293,7 @@ export const MessageProcessor = {
             console.log('Desync')
             MyPlayer.myChar.pos.x = data[1]
             MyPlayer.myChar.pos.z = data[2]
+            MyPlayer.myChar.logicYpos = Utils.calculateWalkYPos(data[1], data[2], MyPlayer.myChar.getBoxSize())
             MyPlayer.myChar.setMoveAngle(data[3])
             MyPlayer.myChar.setActualSpeed(data[4])
         }
@@ -369,19 +377,16 @@ export const MessageProcessor = {
 
     processAddTree(data) {
         TreeManager.addTree(data)
-        TreeManager.renderTrees()
         WorldRenderer.renderWorld()
     },
 
     processRemoveTree(data) {
         TreeManager.removeTreeAt(data.x, data.z)
-        TreeManager.renderTrees()
         WorldRenderer.renderWorld()
     },
 
     processAddStaticObject(data) {
         StaticsManager.addObject(data)
-        StaticsManager.renderObjects()
         WorldRenderer.renderWorld()
     },
 
@@ -391,12 +396,11 @@ export const MessageProcessor = {
         } else {
             StaticsManager.removeObjectAt(data.x, data.z)
         }
-        StaticsManager.renderObjects()
         WorldRenderer.renderWorld()
     },
 
     monsterMoveStop(data) {
-        MonsterManager.monsterMoveStop(data[0], { x: data[1], z: data[2] }, data[3] === true)
+        MonsterManager.monsterMoveStop(data)
     },
 
     processAddBuilding(data) {

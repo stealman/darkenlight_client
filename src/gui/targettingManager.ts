@@ -80,9 +80,12 @@ export const TargetingManager = {
 
     cycleThroughClosestTargets() {
         const sortedMobs = MonsterManager.getVisibleMonstersSortedByDistance()
+        const eligibleMobs = this.autoTargetingEnabled
+            ? sortedMobs.filter(mob => mob.getObjectType() === 'M' && mob.getRelationToMyPlayer() === 'ENEMY')
+            : sortedMobs
 
         const maxTargetsToCycle = 6
-        const targetsToConsider = sortedMobs.slice(0, maxTargetsToCycle)
+        const targetsToConsider = eligibleMobs.slice(0, maxTargetsToCycle)
         if (targetsToConsider.length === 0) return
 
         this.targetCycleIndex = (this.targetCycleIndex + 1) % targetsToConsider.length

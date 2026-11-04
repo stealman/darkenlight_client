@@ -263,7 +263,7 @@ import {getResourceDescription} from '@/data/items/resourceDescriptions'
 const emit = defineEmits(['close'])
 
 const featureLabels: Record<string, string> = {vendor: 'vendor.vendor', repairer: 'vendor.repairer', crafting: 'vendor.crafting', banker: 'vendor.banker', healer: 'vendor.healer', trainer: 'vendor.trainer'}
-const categoryLabels: Record<string, string> = {weapons: 'vendor.weapons', bows: 'vendor.bows', metalArmor: 'vendor.metalArmor', leatherArmor: 'vendor.leatherArmor', jewels: 'vendor.jewels', oreSmelting: 'vendor.oreSmelting', resources: 'vendor.resources', trinkets: 'vendor.trinkets'}
+const categoryLabels: Record<string, string> = {weapons: 'vendor.weapons', bows: 'vendor.bows', metalArmor: 'vendor.metalArmor', leatherArmor: 'vendor.leatherArmor', jewels: 'vendor.jewels', oreSmelting: 'vendor.oreSmelting', resources: 'vendor.resources', potions: 'vendor.potions', food: 'vendor.food', trinkets: 'vendor.trinkets'}
 const itemTypeLocalizationSections: Record<string, string> = {W: 'weapons', A: 'armors', J: 'jewels', T: 'trinkets', R: 'resources'}
 const damageTypeLabels: Record<string, string> = {PHYSICAL_SLASH: 'vendor.damageSlash', PHYSICAL_PIERCE: 'vendor.damagePierce', PHYSICAL_BLUNT: 'vendor.damageBlunt'}
 const IGNORE_BACKDROP_CLICK_AFTER_OPEN_MS = 350
@@ -620,9 +620,9 @@ const showItemDetails = (item: NpcVendorCatalogItem, event: MouseEvent | Keyboar
         : {x: Math.max(12, window.innerWidth / 2 - 135), y: Math.max(12, window.innerHeight / 2 - 80)}
 }
 
-const openDialog = (data: NpcUseData) => {
+const openDialog = (data: NpcUseData & {initialFeature?: string}) => {
     npcData.value = data
-    const storedFeature = localStorage.getItem(NPC_FEATURE_TAB_STORAGE_KEY)
+    const storedFeature = data.initialFeature ?? localStorage.getItem(NPC_FEATURE_TAB_STORAGE_KEY)
     const storedFeatureIndex = data.features.findIndex((feature) => feature.type === storedFeature)
     selectFeature(storedFeatureIndex >= 0 ? storedFeatureIndex : 0, false)
     openedAt.value = Date.now()

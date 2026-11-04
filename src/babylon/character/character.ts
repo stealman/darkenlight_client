@@ -558,6 +558,7 @@ class Character implements Attackable, EffectTarget {
             }
 
             if (this === MyPlayer.myChar && data.g > 0) {
+                if (data.gt === 'S' && data.q > 0) AudioManager.playShearingSound()
                 const items = InventoryManager.getResourceItemsByType(data.g)
                 if (items.length > 0) {
                     OverlayManager.addCharacterItemGainNumber(this, data.q, items[0])
@@ -665,12 +666,12 @@ class Character implements Attackable, EffectTarget {
         this.model?.stopAllStepSounds()
     }
 
-    syncServerMovement(serverX: number, serverZ: number, target: Vector3, nextTarget: Vector3 | null) {
-        const targetIndex = this.serverMoveTargets.findIndex((point) => point.x === target.x && point.z === target.z)
+    syncServerMovement(serverX: number, serverZ: number, targetX: number, targetZ: number, nextX?: number, nextZ?: number) {
+        const targetIndex = this.serverMoveTargets.findIndex((point) => point.x === targetX && point.z === targetZ)
         if (targetIndex >= 0) {
             // Keep unfinished older waypoints so the remote character cannot cut ahead,
             // but discard any future waypoint the server has just cancelled.
-            this.serverMoveTargets = this.serverMoveTargets.slice(0, targetIndex + 1)
+            this.serverMoveTargets.length = targetIndex + 1
         } else {
             const serverDrift = Math.hypot(this.pos.x - serverX, this.pos.z - serverZ)
             if (serverDrift > 2) {
@@ -679,11 +680,15 @@ class Character implements Attackable, EffectTarget {
             }
             const serverPositionIndex = this.serverMoveTargets.findIndex((point) =>
                 point.x === serverX && point.z === serverZ)
-            this.serverMoveTargets = serverPositionIndex >= 0
-                ? [...this.serverMoveTargets.slice(0, serverPositionIndex + 1), target]
-                : [target]
+            this.serverMoveTargets.length = serverPositionIndex >= 0 ? serverPositionIndex + 1 : 0
+            this.serverMoveTargets.push(new Vector3(targetX, 0, targetZ))
         }
-        this.serverMoveLookAhead = nextTarget
+        if (nextX !== undefined && nextZ !== undefined) {
+            if (this.serverMoveLookAhead) this.serverMoveLookAhead.set(nextX, 0, nextZ)
+            else this.serverMoveLookAhead = new Vector3(nextX, 0, nextZ)
+        } else {
+            this.serverMoveLookAhead = null
+        }
         this.serverMoveStopAtEnd = false
         const currentTarget = this.serverMoveTargets[0]
         this.setMoveAngle(Math.atan2(-(currentTarget.z - this.pos.z), currentTarget.x - this.pos.x))
@@ -699,7 +704,7 @@ class Character implements Attackable, EffectTarget {
             this.clearServerMovementTargets()
             return false
         }
-        this.serverMoveTargets = this.serverMoveTargets.slice(0, finalTargetIndex + 1)
+        this.serverMoveTargets.length = finalTargetIndex + 1
         this.serverMoveStopAtEnd = true
         const currentTarget = this.serverMoveTargets[0]
         this.setMoveAngle(Math.atan2(-(currentTarget.z - this.pos.z), currentTarget.x - this.pos.x))
@@ -707,7 +712,7 @@ class Character implements Attackable, EffectTarget {
     }
 
     clearServerMovementTargets() {
-        this.serverMoveTargets = []
+        this.serverMoveTargets.length = 0
         this.serverMoveLookAhead = null
         this.serverMoveStopAtEnd = false
     }

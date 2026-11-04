@@ -236,7 +236,7 @@ export const Renderer = {
             SelectedTargetPanel.onFrame(actualTime)
             MyStatusPanel.onFrame(actualTime)
             ActionButtonsManager.onFrame(actualTime)
-            GuiButtonsManager.onFrame()
+            GuiButtonsManager.onFrame(actualTime)
             EmeraldsManager.onFrame(actualTime)
         }
 
