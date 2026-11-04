@@ -61,6 +61,7 @@ const isEmbeddedInSnow = (type: number) => isShrubType(type) || type === 281
 
 export const StaticsManager = {
     allStatics : [] as StaticObject[],
+    staticsByType: new Map<number, Set<StaticObject>>(),
     visibleStatics : [] as StaticObject[],
     dungeonEntrances: new Set<StaticObject>(),
     walkableObjectsByTile: new Map<string, StaticObject>(),
@@ -226,6 +227,12 @@ export const StaticsManager = {
 
         if (this.allStatics.length > previousCount) {
             const added = this.allStatics[this.allStatics.length - 1]
+            let objects = this.staticsByType.get(added.type)
+            if (!objects) {
+                objects = new Set()
+                this.staticsByType.set(added.type, objects)
+            }
+            objects.add(added)
             if (added.getWalkableHeight() !== null) {
                 for (let offsetX = 0; offsetX < added.getSizeX(); offsetX++) {
                     for (let offsetZ = 0; offsetZ < added.getSizeZ(); offsetZ++) {
@@ -279,6 +286,9 @@ export const StaticsManager = {
             if (this.allStatics[i].position.x === x && this.allStatics[i].position.z === z
                 && (type === undefined || this.allStatics[i].type === type)) {
                 const obj = this.allStatics[i]
+                const objects = this.staticsByType.get(obj.type)
+                objects?.delete(obj)
+                if (objects?.size === 0) this.staticsByType.delete(obj.type)
                 this.deletePreviewObjects.delete(obj)
                 if (obj instanceof CampBarrel) {
                     obj.clearRenderMatrices()
@@ -302,6 +312,7 @@ export const StaticsManager = {
         Lights.clearStaticLights()
         this.allStatics.forEach((obj) => obj.dispose())
         this.allStatics = []
+        this.staticsByType.clear()
         this.visibleStatics = []
         this.dungeonEntrances.clear()
         this.walkableObjectsByTile.clear()
@@ -530,10 +541,9 @@ export const StaticsManager = {
     getClosestStaticInDistance(type: number, position: Vector3, maxDistance: number): StaticObject | null {
         let closest: StaticObject | null = null
         let closestDistance = maxDistance
-        for (const obj of this.allStatics) {
-            if (obj.type !== type) {
-                continue
-            }
+        const objects = this.staticsByType.get(type)
+        if (!objects) return null
+        for (const obj of objects) {
             const distance = this.getDistanceToStaticFootprint(position, obj.position, obj.getSize())
             if (distance <= closestDistance) {
                 closest = obj

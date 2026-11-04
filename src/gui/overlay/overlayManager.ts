@@ -264,8 +264,9 @@ export const OverlayManager = {
     },
 
     renderNames(time: number, tightText: boolean) {
-        MonsterManager.monsters.forEach((monster) => {
-            if (MonsterManager.visibleMonsters.has(monster.id) && monster.nameDisplayTime > time) {
+        MonsterManager.visibleMonsters.forEach((id) => {
+            const monster = MonsterManager.monsters.get(id)
+            if (monster && monster.nameDisplayTime > time) {
                 const pos = monster.getNameTextNodeScreenPosition()
                 if (pos) {
                     const selected = TargetSelector.target === monster
@@ -281,8 +282,9 @@ export const OverlayManager = {
             }
         })
 
-        CharacterManager.characters.forEach((char) => {
-            if (!CharacterManager.visibleCharacters.has(char.id) || (char.nameDisplayTime <= time && !char.activeTimedAction)) {
+        CharacterManager.visibleCharacters.forEach((id) => {
+            const char = CharacterManager.characters.get(id)
+            if (!char || (char.nameDisplayTime <= time && !char.activeTimedAction)) {
                 return
             }
 
@@ -292,8 +294,9 @@ export const OverlayManager = {
             }
         })
 
-        NpcManager.npcs.forEach((npc) => {
-            if (!NpcManager.visibleNpcs.has(npc.id)) {
+        NpcManager.visibleNpcs.forEach((id) => {
+            const npc = NpcManager.npcs.get(id)
+            if (!npc) {
                 return
             }
             const pos = npc.getNameTextNodeScreenPosition()
@@ -302,8 +305,9 @@ export const OverlayManager = {
             }
         })
 
-        NpcManager.guards.forEach((guard) => {
-            if (!NpcManager.visibleGuards.has(guard.id)) return
+        NpcManager.visibleGuards.forEach((id) => {
+            const guard = NpcManager.guards.get(id)
+            if (!guard) return
             const pos = guard.getNameTextNodeScreenPosition()
             if (pos) {
                 this.renderNpcLabel(pos, guard.getName(), guard.getTitle(), tightText)

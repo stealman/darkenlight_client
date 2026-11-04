@@ -135,7 +135,7 @@ export const TreeManager = {
 
     onFrame(timeRate: number, camera: Camera | null) {
         let rebuildTrees = false
-        this.allTrees.forEach(tree => {
+        this.visibleTrees.forEach(tree => {
             rebuildTrees = updateTreeFade(tree, timeRate, this.fadeDuration) || rebuildTrees
         })
 

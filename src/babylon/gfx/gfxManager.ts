@@ -17,6 +17,8 @@ export const GfxManager = {
     activeCharacterAffects: new Map<string, CharacterEffect>(),
     activeMonsterAffects: new Map<string, MonsterEffect>(),
     activeMonsterPersistentEffects: new Map<number, MonsterEffect>(),
+    characterAffectKeys: new Set<string>(),
+    monsterAffectKeys: new Set<string>(),
 
     initialize(scene: Scene) {
         this.clear()
@@ -56,6 +58,8 @@ export const GfxManager = {
         this.activeCharacterAffects.clear()
         this.activeMonsterAffects.clear()
         this.activeMonsterPersistentEffects.clear()
+        this.characterAffectKeys.clear()
+        this.monsterAffectKeys.clear()
     },
 
     updateTimedCharacterEffects(actualTime: number) {
@@ -87,7 +91,8 @@ export const GfxManager = {
     },
 
     syncCharacterAffects(actualTime: number) {
-        const activeKeys = new Set<string>()
+        const activeKeys = this.characterAffectKeys
+        activeKeys.clear()
 
         const myChar = MyPlayer.myChar
         if (myChar) {
@@ -95,7 +100,9 @@ export const GfxManager = {
             this.syncCharacterAffect(myChar, this.SLOWING_AFFECT_ID, MyPlayer.affectGroups.some(group => group.id === this.SLOWING_AFFECT_ID), activeKeys, actualTime)
         }
 
-        CharacterManager.characters.forEach(character => {
+        CharacterManager.visibleCharacters.forEach(id => {
+            const character = CharacterManager.characters.get(id)
+            if (!character) return
             this.syncCharacterAffect(character, this.BURNING_AFFECT_ID, character.publiclyVisibleAffects.has(this.BURNING_AFFECT_ID), activeKeys, actualTime)
             this.syncCharacterAffect(character, this.SLOWING_AFFECT_ID, character.publiclyVisibleAffects.has(this.SLOWING_AFFECT_ID), activeKeys, actualTime)
         })
@@ -104,9 +111,12 @@ export const GfxManager = {
     },
 
     syncMonsterAffects(actualTime: number) {
-        const activeKeys = new Set<string>()
+        const activeKeys = this.monsterAffectKeys
+        activeKeys.clear()
 
-        MonsterManager.monsters.forEach(monster => {
+        MonsterManager.visibleMonsters.forEach(id => {
+            const monster = MonsterManager.monsters.get(id)
+            if (!monster) return
             this.syncMonsterAffect(monster, this.BURNING_AFFECT_ID, monster.publiclyVisibleAffects.has(this.BURNING_AFFECT_ID), activeKeys, actualTime)
             this.syncMonsterAffect(monster, this.SLOWING_AFFECT_ID, monster.publiclyVisibleAffects.has(this.SLOWING_AFFECT_ID), activeKeys, actualTime)
         })
@@ -115,7 +125,9 @@ export const GfxManager = {
     },
 
     syncMonsterPersistentEffects(actualTime: number) {
-        MonsterManager.monsters.forEach(monster => {
+        MonsterManager.visibleMonsters.forEach(id => {
+            const monster = MonsterManager.monsters.get(id)
+            if (!monster) return
             const effectType = monster.model?.template?.persistentEffectType
             if (!effectType || monster.killedTime > 0 || !monster.isEffectVisible()) {
                 return

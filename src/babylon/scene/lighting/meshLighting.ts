@@ -141,33 +141,54 @@ export function updateActorLightMeshes(host: MeshLightingHost) {
     })
 }
 
+// Reused only during this synchronous selection pass; meshes retain their own
+// light arrays when the selection actually changes.
+const nearestActorSlots: StaticLightSlot[] = []
+const nearestActorDistances: number[] = []
+const actorLightSelection: Array<DirectionalLight | SpotLight> = []
+
 export function updateActorLightMesh(host: MeshLightingHost, mesh: AbstractMesh) {
     if (host.localPlayerLightWarmingMeshes.has(mesh)) {
         return
     }
     const meshPosition = mesh.getAbsolutePosition()
     const staticLightLimit = getActorStaticLightLimit(host)
-    const availableSlots = host.staticLightSlots.slice(0, getStaticLightLimit(host))
-    const selectedStaticSlots = availableSlots
-        .filter(slot => slot.source != null)
-        .filter(slot => Vector3.DistanceSquared(slot.light.position, meshPosition) <= Math.pow(slot.light.range, 2))
-        .sort((a, b) => Vector3.DistanceSquared(a.light.position, meshPosition) - Vector3.DistanceSquared(b.light.position, meshPosition))
-        .slice(0, staticLightLimit)
-    // Pad with inert slots so nearest-source changes preserve shader shape.
-    const staticLights = [
-        ...selectedStaticSlots,
-        ...availableSlots.filter(slot => !selectedStaticSlots.includes(slot)),
-    ].slice(0, staticLightLimit).map(slot => slot.light)
-    const selectedLights: Array<DirectionalLight | SpotLight> = host.indoor
-        ? [host.personalLight, ...staticLights]
-        : [host.sunLight, host.personalLight, ...staticLights]
-    const currentLights = mesh.lightSources
-
-    if (sameLights(currentLights, selectedLights)) {
-        return
+    const availableCount = Math.min(host.staticLightSlots.length, getStaticLightLimit(host))
+    nearestActorSlots.length = 0
+    nearestActorDistances.length = 0
+    for (let index = 0; index < availableCount && staticLightLimit > 0; index++) {
+        const slot = host.staticLightSlots[index]
+        if (slot.source == null) continue
+        const distance = Vector3.DistanceSquared(slot.light.position, meshPosition)
+        if (distance > slot.light.range * slot.light.range) continue
+        let insertion = nearestActorSlots.length
+        while (insertion > 0 && distance < nearestActorDistances[insertion - 1]) insertion--
+        if (insertion >= staticLightLimit) continue
+        const last = Math.min(nearestActorSlots.length, staticLightLimit - 1)
+        for (let offset = last; offset > insertion; offset--) {
+            nearestActorSlots[offset] = nearestActorSlots[offset - 1]
+            nearestActorDistances[offset] = nearestActorDistances[offset - 1]
+        }
+        nearestActorSlots[insertion] = slot
+        nearestActorDistances[insertion] = distance
     }
-    mesh._lightSources = selectedLights
-    mesh._markSubMeshesAsLightDirty()
+    // Pad with inert slots so nearest-source changes preserve shader shape.
+    for (let index = 0; index < availableCount && nearestActorSlots.length < staticLightLimit; index++) {
+        const slot = host.staticLightSlots[index]
+        if (!nearestActorSlots.includes(slot)) nearestActorSlots.push(slot)
+    }
+    const selectedLights = actorLightSelection
+    selectedLights.length = 0
+    if (!host.indoor) selectedLights.push(host.sunLight)
+    selectedLights.push(host.personalLight)
+    for (const slot of nearestActorSlots) selectedLights.push(slot.light)
+    const currentLights = mesh.lightSources
+    const changed = !sameLights(currentLights, selectedLights)
+    if (changed) mesh._lightSources = selectedLights.slice()
+    nearestActorSlots.length = 0
+    nearestActorDistances.length = 0
+    selectedLights.length = 0
+    if (changed) mesh._markSubMeshesAsLightDirty()
 }
 
 export function warmLocalPlayerLightMaterial(host: MeshLightingHost, mesh: AbstractMesh): Promise<void> {
