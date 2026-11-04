@@ -51,7 +51,6 @@ export const Builder = {
         cube.setVerticesData(VertexBuffer.UVKind, uvs);
         cube.parent = parent
         cube.position.y = -0.5
-        cube.convertToUnIndexedMesh()
         cube.alwaysSelectAsActiveMesh = true
         return cube;
     },
@@ -64,7 +63,6 @@ export const Builder = {
         const cube = MeshBuilder.CreateBox('block', { width: size, height: size, depth: size, wrap: true }, scene)
         cube.parent = parent
         cube.position.y = -0.5
-        cube.convertToUnIndexedMesh()
         cube.alwaysSelectAsActiveMesh = true
         return cube
     },
@@ -73,7 +71,6 @@ export const Builder = {
         const cube = MeshBuilder.CreateBox("block", { width: size, depth: size, height: size }, scene);
         cube.parent = parent
         cube.position.y = -0.5
-        cube.convertToUnIndexedMesh()
         cube.alwaysSelectAsActiveMesh = true
         return cube;
     },

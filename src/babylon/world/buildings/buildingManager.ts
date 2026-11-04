@@ -567,7 +567,6 @@ class ShedView {
             const block = MeshBuilder.CreateBox('shedRoofPlank', {width, height, depth, wrap: true}, scene)
             block.position.set(x, y, z)
             block.rotationQuaternion = Quaternion.FromRotationMatrix(rotation)
-            block.convertToUnIndexedMesh()
             for (let i = 0; i < block.getTotalVertices(); i++) {
                 roofUvData.push(material.x, material.y)
             }
@@ -1016,7 +1015,6 @@ class MausoleumView {
                 const block = MeshBuilder.CreateBox(name, {width, height, depth, wrap: true}, scene)
                 block.position.set(x, y, z)
                 block.rotationQuaternion = Quaternion.FromRotationMatrix(rotation)
-                block.convertToUnIndexedMesh()
                 for (let i = 0; i < block.getTotalVertices(); i++) uvData.push(material.x, material.y)
                 parts.push(block)
             }
@@ -1047,7 +1045,6 @@ class MausoleumView {
                     wrap: true,
                 }, scene)
                 bar.position.set(x, y, 0)
-                bar.convertToUnIndexedMesh()
                 for (let i = 0; i < bar.getTotalVertices(); i++) uvData.push(steel.x, steel.y)
                 parts.push(bar)
             }
@@ -1465,7 +1462,6 @@ export const BuildingManager = {
         this.opaqueBatchMesh = MeshBuilder.CreateBox('buildingOpaqueBlockBatch', {width: 1, height: 1, depth: 1, wrap: true}, scene)
         this.opaqueBatchMesh.parent = parent
         this.opaqueBatchMesh.position.y = -0.5
-        this.opaqueBatchMesh.convertToUnIndexedMesh()
         this.opaqueBatchMesh.material = Materials.blockMat1!
         this.opaqueBatchMesh.isPickable = false
         this.opaqueBatchMesh.alwaysSelectAsActiveMesh = true
@@ -1475,7 +1471,6 @@ export const BuildingManager = {
         Lights.addShadowCaster(this.opaqueBatchMesh, true, true)
         this.glassBatchMesh = MeshBuilder.CreatePlane('buildingGlassBatch', {width: 1, height: 1}, scene)
         this.glassBatchMesh.parent = parent
-        this.glassBatchMesh.convertToUnIndexedMesh()
         this.glassBatchMesh.material = Materials.blockMatTrans!
         this.glassBatchMesh.isPickable = false
         this.glassBatchMesh.alwaysSelectAsActiveMesh = true
@@ -1758,7 +1753,6 @@ export const BuildingManager = {
             const box = MeshBuilder.CreateBox(name, {width, height, depth, wrap: true}, scene)
             box.position.set(x, y, z)
             box.rotation.set(rotationX, 0, rotationZ)
-            box.convertToUnIndexedMesh()
             const uvData = groups[group].uvData
             for (let i = 0; i < box.getTotalVertices(); i++) {
                 uvData.push(material.x, material.y)
@@ -1827,7 +1821,6 @@ export const BuildingManager = {
             }, scene)
             pane.position.set(x, WINDOW_BOTTOM + WINDOW_HEIGHT / 2, z)
             pane.rotation.y = rotationY
-            pane.convertToUnIndexedMesh()
             for (let i = 0; i < pane.getTotalVertices(); i++) {
                 groups.glass.uvData.push(MaterialEnumTrans.GLASS.uv.x, MaterialEnumTrans.GLASS.uv.y)
             }

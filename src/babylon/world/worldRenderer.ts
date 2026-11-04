@@ -79,7 +79,6 @@ export const WorldRenderer = {
         // Transparent/alpha world geometry is not a local static-light caster.
         Lights.addShadowCaster(this.blockWithAlpha1.mesh, true)
         TreeManager.addAllShadowCasters()
-        StaticsManager.addAllShadowCasters()
     },
 
     checkRenderWorld() {

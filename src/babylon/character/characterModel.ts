@@ -332,6 +332,7 @@ export class CharacterModel implements EquipBearer {
     }
 
     addEquippedItem(slot: string, item: EquipItem) {
+        item.castsOutdoorShadow = this.parent.isMyChar() && (slot === 'WEAPON' || slot === 'SHIELD')
         this.equipSet.set(slot, item)
         EquipManager.addEquippedItem(item)
     }

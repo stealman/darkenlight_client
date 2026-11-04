@@ -10,8 +10,6 @@ export const ActiveMeshFreezer = {
     frozen: false,
     freezePending: false,
     dirty: true,
-    unfreezeCount: 0,
-    unfreezeLogTime: 0,
     nodeObservers: new Map<Node, Observer<boolean>>(),
     particleSystems: [] as any[],
     particleStartedStates: [] as boolean[],
@@ -24,8 +22,6 @@ export const ActiveMeshFreezer = {
         this.frozen = false
         this.freezePending = false
         this.dirty = true
-        this.unfreezeCount = 0
-        this.unfreezeLogTime = 0
         this.nodeObservers.clear()
         this.particleSystems = []
         this.particleStartedStates = []
@@ -58,8 +54,6 @@ export const ActiveMeshFreezer = {
             return
         }
         this.running = true
-        this.unfreezeCount = 0
-        this.unfreezeLogTime = performance.now()
         this.invalidate()
     },
 
@@ -99,14 +93,6 @@ export const ActiveMeshFreezer = {
             return
         }
 
-        const now = performance.now()
-        const elapsed = now - this.unfreezeLogTime
-        if (elapsed >= 1000) {
-            console.log(`[ActiveMeshFreezer] unfreeze: ${this.unfreezeCount} in ${Math.round(elapsed)} ms`)
-            this.unfreezeCount = 0
-            this.unfreezeLogTime = now
-        }
-
         this.detectParticleSystemChanges(scene)
         if (!this.dirty || this.freezePending) {
             return
@@ -118,7 +104,6 @@ export const ActiveMeshFreezer = {
         // rendered list until a later invalidation.
         if (this.frozen) {
             scene.unfreezeActiveMeshes()
-            this.unfreezeCount++
             this.frozen = false
             return
         }
@@ -140,7 +125,6 @@ export const ActiveMeshFreezer = {
                 // rebuilding the list. Keep that invalidation for next frame.
                 if (this.dirty) {
                     scene.unfreezeActiveMeshes()
-                    this.unfreezeCount++
                     this.frozen = false
                 }
             },

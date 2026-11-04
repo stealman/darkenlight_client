@@ -1,12 +1,9 @@
 import { Matrix, Scene, Vector2, Vector3 } from '@babylonjs/core'
-import { Prefab, WorldRenderer } from '@/babylon/world/worldRenderer'
+import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { MaterialAlphaEnum1, MaterialEnum1, MaterialEnumTrans } from '@/babylon/materials'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { BuildingManager } from '@/babylon/world/buildings/buildingManager'
 import { ViewportManager } from '@/utils/viewport'
-import { PrefabShrub2x2 } from '@/babylon/world/prefabs/shrub2x2'
-import { PrefabShrub1x1_tall } from '@/babylon/world/prefabs/shrub1x1-tall'
-import { PrefabShrub1x1_small } from '@/babylon/world/prefabs/shrub1x1-small'
 import { Lights } from '@/babylon/scene/lights'
 import { StaticObject } from '@/babylon/world/statics/objects/baseStaticObject'
 import { FireplaceLarge, FireplaceMetadata, FireplaceSmall } from '@/babylon/world/statics/objects/fireplace'
@@ -63,11 +60,6 @@ import {
 const isEmbeddedInSnow = (type: number) => isShrubType(type) || type === 281
 
 export const StaticsManager = {
-    prefabs: {
-        shrub2x2: null as Prefab | null,
-        shrub1x1_tall: null as Prefab | null,
-        shrub1x1_small: null as Prefab | null,
-    },
     allStatics : [] as StaticObject[],
     visibleStatics : [] as StaticObject[],
     dungeonEntrances: new Set<StaticObject>(),
@@ -79,16 +71,7 @@ export const StaticsManager = {
     deletePreviewStartTime: 0,
 
     initialize(scene: Scene) {
-        this.prefabs.shrub2x2 = PrefabShrub2x2.getPrefab(scene)
-        this.prefabs.shrub1x1_tall = PrefabShrub1x1_tall.getPrefab(scene)
-        this.prefabs.shrub1x1_small = PrefabShrub1x1_small.getPrefab(scene)
         StaticEquipPartsRenderer.initialize(WorldRenderer.worldParentNode!)
-    },
-
-    addAllShadowCasters() {
-        Object.values(this.prefabs).forEach(prefab => {
-            Lights.addShadowCaster(prefab!.mesh, true)
-        })
     },
 
     consumeObjects(data: Array<{ tp: number, x: number, z: number, meta?: WallTorchMetadata | TorchStandMetadata | LanternStandMetadata | FireplaceMetadata | CemeteryEmberBowlMetadata | StoneEntranceMetadata | PalisadeMetadata | WalkableBlockMetadata | CampObjectMetadata | CampFenceMetadata | CemeteryObjectMetadata | CemeteryWallMetadata, tmp?: boolean }>) {
@@ -105,20 +88,20 @@ export const StaticsManager = {
         const previousCount = this.allStatics.length
 
         switch (obj.tp) {
-            case 101: this.allStatics.push(new Shrub2x2(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_LIGHT.uv, this.prefabs.shrub2x2!)); break
-            case 102: this.allStatics.push(new Shrub2x2(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_DARK.uv, this.prefabs.shrub2x2!)); break
-            case 103: this.allStatics.push(new Shrub2x2(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_AUTUMN.uv, this.prefabs.shrub2x2!)); break
-            case 104: this.allStatics.push(new Shrub2x2(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_NORTH.uv, this.prefabs.shrub2x2!)); break
+            case 101: this.allStatics.push(new Shrub2x2(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_LIGHT.uv)); break
+            case 102: this.allStatics.push(new Shrub2x2(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_DARK.uv)); break
+            case 103: this.allStatics.push(new Shrub2x2(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_AUTUMN.uv)); break
+            case 104: this.allStatics.push(new Shrub2x2(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_NORTH.uv)); break
 
-            case 121: this.allStatics.push(new Shrub1x1_tall(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_LIGHT.uv, this.prefabs.shrub1x1_tall!)); break
-            case 122: this.allStatics.push(new Shrub1x1_tall(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_DARK.uv, this.prefabs.shrub1x1_tall!)); break
-            case 123: this.allStatics.push(new Shrub1x1_tall(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_AUTUMN.uv, this.prefabs.shrub1x1_tall!)); break
-            case 124: this.allStatics.push(new Shrub1x1_tall(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_NORTH.uv, this.prefabs.shrub1x1_tall!)); break
+            case 121: this.allStatics.push(new Shrub1x1_tall(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_LIGHT.uv)); break
+            case 122: this.allStatics.push(new Shrub1x1_tall(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_DARK.uv)); break
+            case 123: this.allStatics.push(new Shrub1x1_tall(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_AUTUMN.uv)); break
+            case 124: this.allStatics.push(new Shrub1x1_tall(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_NORTH.uv)); break
 
-            case 141: this.allStatics.push(new Shrub1x1_small(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_LIGHT.uv, this.prefabs.shrub1x1_small!)); break
-            case 142: this.allStatics.push(new Shrub1x1_small(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_DARK.uv, this.prefabs.shrub1x1_small!)); break
-            case 143: this.allStatics.push(new Shrub1x1_small(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_AUTUMN.uv, this.prefabs.shrub1x1_small!)); break
-            case 144: this.allStatics.push(new Shrub1x1_small(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_NORTH.uv, this.prefabs.shrub1x1_small!)); break
+            case 141: this.allStatics.push(new Shrub1x1_small(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_LIGHT.uv)); break
+            case 142: this.allStatics.push(new Shrub1x1_small(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_DARK.uv)); break
+            case 143: this.allStatics.push(new Shrub1x1_small(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_AUTUMN.uv)); break
+            case 144: this.allStatics.push(new Shrub1x1_small(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_NORTH.uv)); break
 
             case 201: this.allStatics.push(new Wall2(obj.tp, pos, rotation, MaterialEnum1.BRICK_GRAY.uv)); break
             case 202: this.allStatics.push(new Wall2(obj.tp, pos, rotation, MaterialEnum1.BRICK_RED.uv)); break
@@ -393,9 +376,6 @@ export const StaticsManager = {
     },
 
     renderObjects() {
-        Object.values(this.prefabs).forEach(prefab => {
-            prefab?.clearMatrices()
-        })
         StaticEquipPartsRenderer.clear()
 
         this.allStatics.forEach((obj) => {
@@ -407,20 +387,12 @@ export const StaticsManager = {
             const blockStart = WorldRenderer.block1!.matrices.length
             const prefabStart = element.prefab?.matrices.length ?? 0
             const translucentStart = WorldRenderer.translucentPlane!.matrices.length
+            const alphaStart = WorldRenderer.blockWithAlpha1!.matrices.length
             element.render()
-            element.captureRenderMatrices(blockStart, prefabStart, translucentStart)
+            element.captureRenderMatrices(blockStart, prefabStart, translucentStart, alphaStart)
         }
         StaticFireParticleManager.flush()
 
-        Object.values(this.prefabs).forEach(prefab => {
-            prefab!.setThinInstanceBuffers()
-
-            if (prefab!.mesh.thinInstanceCount && prefab!.mesh.thinInstanceCount > 0) {
-                prefab!.mesh.setEnabled(true)
-            } else {
-                prefab!.mesh.setEnabled(false)
-            }
-        })
         StaticEquipPartsRenderer.flush()
     },
 

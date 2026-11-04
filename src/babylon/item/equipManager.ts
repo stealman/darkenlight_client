@@ -21,6 +21,7 @@ export class EquipItem {
     parent: EquipBearer
     type: EquipItemType
     matVector: Vector2
+    castsOutdoorShadow: boolean = false
 
     position: Vector3 = Vector3.Zero()
     quaternion: Quaternion = Quaternion.Identity()
@@ -349,6 +350,7 @@ export interface EquipThinInstance {
     quaternion: Quaternion
     scaleMatrix: Matrix
     modelModifierMatrix?: Matrix | null
+    castsOutdoorShadow?: boolean
 }
 
 export interface EquipModelModifier {
@@ -372,6 +374,8 @@ export class EquipItemType {
     cbData: EquipCbItem
     _thinReady: boolean = false
     uvBufferDirty: boolean = true
+    castsShadows: boolean = false
+    sunShadowEnabled: boolean = false
 
     constructor(data: EquipCbItem) {
         this.id = data.id
@@ -396,10 +400,13 @@ export class EquipItemType {
         this.mesh.alwaysSelectAsActiveMesh = true
         this.mesh.parent = parentNode
         this.mesh.receiveShadows = true
+        this.castsShadows = castsShadows
+        this.sunShadowEnabled = castsShadows && !Settings.isDetailLevelMedium()
         if (castsShadows) {
             Lights.addShadowCaster(this.mesh, true, false, false, true, (lightPosition, lightRangeSquared) => {
-                // Medium keeps equipment shadows only on indoor maps, including at night.
-                if (Settings.isDetailLevelMedium() && !Lights.indoor) {
+                // Medium enables the shared batch outdoors when it contains
+                // the local player's weapon or shield.
+                if (Settings.isDetailLevelMedium() && !Lights.indoor && !this.hasLocalPlayerShadowEquipment()) {
                     return false
                 }
                 const items = EquipManager.equippedItems.get(this)
@@ -418,6 +425,28 @@ export class EquipItemType {
             }, true, !Settings.isDetailLevelMedium())
         }
         Lights.registerDynamicLightMesh(this.mesh)
+    }
+
+    hasLocalPlayerShadowEquipment(): boolean {
+        const items = EquipManager.equippedItems.get(this)
+        if (items) {
+            for (const item of items) {
+                if (item.castsOutdoorShadow) return true
+            }
+        }
+        return false
+    }
+
+    updateOutdoorShadows() {
+        if (!Settings.isDetailLevelMedium() || !this.castsShadows || !this.mesh) return
+        const enabled = this.hasLocalPlayerShadowEquipment()
+        if (enabled === this.sunShadowEnabled) return
+        if (enabled) {
+            Lights.shadow.addShadowCaster(this.mesh)
+        } else {
+            Lights.shadow.removeShadowCaster(this.mesh)
+        }
+        this.sunShadowEnabled = enabled
     }
 
     ensureThinBuffers(type: EquipItemType) {
@@ -509,6 +538,7 @@ export const EquipManager = {
         items.add(item)
         if (items.size !== previousSize) {
             this.dirtyItemTypes.add(item.type)
+            item.type.updateOutdoorShadows()
         }
     },
 
@@ -526,6 +556,7 @@ export const EquipManager = {
         const items = this.equippedItems.get(item.type)
         if (items?.delete(item)) {
             this.dirtyItemTypes.add(item.type)
+            item.type.updateOutdoorShadows()
         }
     },
 

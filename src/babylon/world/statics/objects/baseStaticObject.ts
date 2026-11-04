@@ -24,7 +24,7 @@ export interface StaticObject {
     getPlacementSurfaceHeight(): number | null
     shouldPlaceOnStatic(): boolean
     clearRenderMatrixCapture(): void
-    captureRenderMatrices(blockStart: number, prefabStart: number, translucentStart: number): void
+    captureRenderMatrices(blockStart: number, prefabStart: number, translucentStart: number, alphaStart: number): void
     applyDeleteBounceOffset(offset: number): Mesh[]
     captureTerrainMatrices(start: number, matrices: Matrix[]): void
 }
@@ -40,6 +40,8 @@ export abstract class BaseStaticObject implements StaticObject {
     status: any
     private blockMatrixIndices: number[] = []
     private blockMatrixBaseY: number[] = []
+    private alphaMatrixIndices: number[] = []
+    private alphaMatrixBaseY: number[] = []
     private prefabMatrixIndices: number[] = []
     private prefabMatrixBaseY: number[] = []
     private translucentMatrixIndices: number[] = []
@@ -96,6 +98,8 @@ export abstract class BaseStaticObject implements StaticObject {
     clearRenderMatrixCapture() {
         this.blockMatrixIndices = []
         this.blockMatrixBaseY = []
+        this.alphaMatrixIndices = []
+        this.alphaMatrixBaseY = []
         this.prefabMatrixIndices = []
         this.prefabMatrixBaseY = []
         this.translucentMatrixIndices = []
@@ -104,12 +108,17 @@ export abstract class BaseStaticObject implements StaticObject {
         this.terrainMatrixBaseY = []
     }
 
-    captureRenderMatrices(blockStart: number, prefabStart: number, translucentStart: number) {
+    captureRenderMatrices(blockStart: number, prefabStart: number, translucentStart: number, alphaStart: number) {
         this.blockMatrixIndices = Array.from(
             {length: WorldRenderer.block1!.matrices.length - blockStart},
             (_, index) => blockStart + index,
         )
         this.blockMatrixBaseY = this.blockMatrixIndices.map((index) => WorldRenderer.block1!.matrices[index].m[13])
+        this.alphaMatrixIndices = Array.from(
+            {length: WorldRenderer.blockWithAlpha1!.matrices.length - alphaStart},
+            (_, index) => alphaStart + index,
+        )
+        this.alphaMatrixBaseY = this.alphaMatrixIndices.map((index) => WorldRenderer.blockWithAlpha1!.matrices[index].m[13])
         if (this.prefab) {
             this.prefabMatrixIndices = Array.from(
                 {length: this.prefab.matrices.length - prefabStart},
@@ -134,6 +143,13 @@ export abstract class BaseStaticObject implements StaticObject {
 
     applyDeleteBounceOffset(offset: number): Mesh[] {
         const changedMeshes: Mesh[] = []
+        const alphaBuffer = WorldRenderer.blockWithAlpha1!.matrixBuffer
+        if (this.alphaMatrixIndices.length > 0 && alphaBuffer.length > 0) {
+            this.alphaMatrixIndices.forEach((index, i) => {
+                alphaBuffer[(index * 16) + 13] = this.alphaMatrixBaseY[i] + offset
+            })
+            changedMeshes.push(WorldRenderer.blockWithAlpha1!.mesh)
+        }
         const blockBuffer = WorldRenderer.block1!.matrixBuffer
         if (this.blockMatrixIndices.length > 0 && blockBuffer.length > 0) {
             this.blockMatrixIndices.forEach((index, i) => {
