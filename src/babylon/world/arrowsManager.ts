@@ -2,6 +2,7 @@ import {
     Color4,
     Mesh,
     MeshBuilder,
+    InstancedMesh,
     ParticleSystem,
     StandardMaterial,
     Color3,
@@ -233,7 +234,7 @@ export class Arrow {
     flyStartTime: number
     handNode: TransformNode
 
-    meshClone: Mesh | null = null
+    meshInstance: InstancedMesh | null = null
     trail: TrailMesh | null = null
     trailTip: TransformNode | null = null
     effectTip: TransformNode | null = null
@@ -274,12 +275,12 @@ export class Arrow {
         this.heightOffset.y = (0.3 + Math.random() * 0.4) * target.getModelHeight()
 
         if (ArrowsManager.mesh) {
-            this.meshClone = ArrowsManager.mesh.clone("arrowClone")
-            this.meshClone!.isVisible = true
-            this.meshClone!.position = Vector3.Zero()
+            this.meshInstance = ArrowsManager.mesh.createInstance("arrowInstance")
+            this.meshInstance!.isVisible = true
+            this.meshInstance!.position = Vector3.Zero()
 
             this.trailTip = new TransformNode('arrowTrailTip', Renderer.scene)
-            this.trailTip.parent = this.meshClone
+            this.trailTip.parent = this.meshInstance
             this.trailTip.position.y = -1
 
             if (this.hasEffect) {
@@ -295,14 +296,14 @@ export class Arrow {
     assignHandNode(handNode: TransformNode, scale: number = 1) {
         this.handNode = handNode
 
-        if (this.meshClone) {
-            this.meshClone.parent = this.handNode
-            this.meshClone.scaling.scaleInPlace(scale)
+        if (this.meshInstance) {
+            this.meshInstance.parent = this.handNode
+            this.meshInstance.scaling.scaleInPlace(scale)
         }
     }
 
     startFlying() {
-        if (!this.meshClone) return
+        if (!this.meshInstance) return
 
         if (!this.trailTip) return
 
@@ -312,12 +313,12 @@ export class Arrow {
         this.startPreciseShotRingEffect()
 
         // fix start position while still parented to hand
-        this.startPos = this.meshClone.getAbsolutePosition().clone()
+        this.startPos = this.meshInstance.getAbsolutePosition().clone()
         this.currentPos = this.startPos.clone()
 
         // detach from hand
-        this.meshClone.setParent(null, true)
-        this.currentPos.copyFrom(this.meshClone.position)
+        this.meshInstance.setParent(null, true)
+        this.currentPos.copyFrom(this.meshInstance.position)
         this.startedFlying = true
 
         const end = this.target?.pos.add(this.heightOffset)
@@ -335,7 +336,7 @@ export class Arrow {
     }
 
     onFrame(time: number, timeRate: number) {
-        if (!this.meshClone || this.disposed) return
+        if (!this.meshInstance || this.disposed) return
 
         if (!this.startedFlying && time >= this.flyStartTime - Arrow.FIRE_EFFECT_LEAD_TIME_MS) {
             this.startArrowEffect()
@@ -360,14 +361,14 @@ export class Arrow {
             const arcHeightMultiplier = this.preciseShot ? Arrow.PRECISE_SHOT_ARC_HEIGHT_MULTIPLIER : 1
             const newPos = basePos.add(Vector3.Up().scale(this.arcHeight * arc * arcHeightMultiplier))
 
-            this.meshClone.position.copyFrom(newPos)
+            this.meshInstance.position.copyFrom(newPos)
 
             const dir = newPos.subtract(this.lastPos)
             if (dir.lengthSquared() > 0.0000001) {
                 dir.normalize()
                 const lookQ = Quaternion.FromLookDirectionLH(dir, Vector3.Up())
                 const fixQ = Quaternion.RotationAxis(Vector3.Right(), -Math.PI / 2)
-                this.meshClone.rotationQuaternion = lookQ.multiply(fixQ)
+                this.meshInstance.rotationQuaternion = lookQ.multiply(fixQ)
             }
 
             this.currentPos.copyFrom(newPos)
@@ -391,6 +392,7 @@ export class Arrow {
         this.releasePreciseShotRingEffect()
 
         if (this.trail) {
+            this.trail.stop()
             this.trail.dispose()
             this.trail = null
         }
@@ -400,17 +402,17 @@ export class Arrow {
             this.trailTip = null
         }
 
-        if (this.meshClone) {
-            this.meshClone.dispose()
-            this.meshClone = null
+        if (this.meshInstance) {
+            this.meshInstance.dispose()
+            this.meshInstance = null
         }
     }
 
     private createArrowEffect() {
-        if (!this.meshClone || !Renderer.scene || !this.effectConfig || this.fireParticles || this.smokeParticles) return
+        if (!this.meshInstance || !Renderer.scene || !this.effectConfig || this.fireParticles || this.smokeParticles) return
 
         this.effectTip = new TransformNode('arrowEffectTip', Renderer.scene)
-        this.effectTip.parent = this.meshClone
+        this.effectTip.parent = this.meshInstance
         this.effectTip.position.y = 0.7
 
         this.fireParticles = this.createParticleSystem(this.effectConfig.main)
@@ -421,10 +423,10 @@ export class Arrow {
     }
 
     private startPreciseShotRingEffect() {
-        if (!this.preciseShot || !this.meshClone || !Renderer.scene || this.preciseShotRingParticles) return
+        if (!this.preciseShot || !this.meshInstance || !Renderer.scene || this.preciseShotRingParticles) return
 
         this.preciseShotRingTip = new TransformNode('preciseShotRingTip', Renderer.scene)
-        this.preciseShotRingTip.parent = this.meshClone
+        this.preciseShotRingTip.parent = this.meshInstance
         this.preciseShotRingTip.position.y = 0.75
 
         const particles = new ParticleSystem(`preciseShotRings_${this.creationTime}`, 40, Renderer.scene)

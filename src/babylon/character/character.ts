@@ -47,6 +47,7 @@ import { PubliclyVisibleAffect } from '@/data/affects'
 import { GameClass, GameClasses } from '@/data/gameClass'
 import { Monster } from '@/babylon/monsters/monster'
 import type {MonsterKnowledgeTO} from '@/network/messageIfs'
+import { Settings } from '@/settings/settings'
 
 class Character implements Attackable, EffectTarget {
     model: CharacterModel | null = null
@@ -518,7 +519,7 @@ class Character implements Attackable, EffectTarget {
             const powerStrike = this.autoAttackMessage?.ps === true
             const preciseShot = this.autoAttackMessage?.prs === true
             AudioManager.playWeaponHit(this.weaponSoundType, target.getBodySoundType(), target.pos, powerStrike || preciseShot)
-            if (target instanceof Monster) {
+            if (Settings.isCombatEffectEnabled(this === MyPlayer.myChar || target === MyPlayer.myChar) && target instanceof Monster) {
                 const silverUndead = data.res.fx === 'silverUndead'
                 GfxManager.addEffect(new HitSparkEffect(target, this.pos, silverUndead ? 'silverSmoke' : 'sparks', powerStrike))
                 if (!silverUndead && (powerStrike || preciseShot)) {

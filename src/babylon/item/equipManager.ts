@@ -53,9 +53,6 @@ export class EquipItem {
         this.scale = scale ? scale : Vector3.One()
         this.itemPosition = position ? position : Vector3.Zero()
         this.itemRotation = rotation ? Quaternion.FromEulerVector(rotation) : null
-        if (this.type.cbData.weaponTipPosition) {
-            this.weaponTrail = this.createWeaponTrail(this.bone)
-        }
         const atlasMatIndex = type.cbData.resolveMaterialAtlasIndex(matIndex)
         this.matVector = this.getAtlasUvcOffsets(type.cbData.matCols, type.cbData.matRows, atlasMatIndex)
         this.scaleMatrix = Matrix.Scaling(this.scale.x, this.scale.y, this.scale.z)
@@ -129,6 +126,9 @@ export class EquipItem {
 
     setWeaponTrailEnabled(enabled: boolean, powerStrike: boolean = false) {
         if (enabled) {
+            if (!this.weaponTrail && this.type.cbData.weaponTipPosition) {
+                this.weaponTrail = this.createWeaponTrail(this.bone)
+            }
             this.startWeaponTrail(powerStrike)
         } else {
             this.fadeWeaponTrail()
@@ -159,25 +159,28 @@ export class EquipItem {
 
         this.stopPowerStrikeTrailParticles()
         this.powerStrikeTrailActive = powerStrike
-        trail.reset()
+        trail.stop()
         trail.material = powerStrike ? Materials.powerStrikeWeaponTrailMaterial : Materials.weaponTrailMaterial
         this.weaponTrailStartDelayEnd = Date.now() + WEAPON_TRAIL_START_DELAY
         this.weaponTrailFadeInEnd = 0
         this.weaponTrailFadeEnd = 0
         trail.visibility = 0
-        trail.setEnabled(true)
-        trail.start()
+        trail.setEnabled(false)
     }
 
     private fadeWeaponTrail() {
         const trail = this.weaponTrail
         this.stopPowerStrikeTrailParticles()
-        if (!trail || !trail.isEnabled() || this.weaponTrailFadeEnd > 0) {
+        if (!trail || this.weaponTrailFadeEnd > 0) {
             return
         }
 
         if (this.weaponTrailStartDelayEnd > 0 || this.weaponTrailFadeInEnd > 0) {
             this.stopWeaponTrailImmediately()
+            return
+        }
+
+        if (!trail.isEnabled()) {
             return
         }
 
@@ -198,6 +201,9 @@ export class EquipItem {
             }
             this.weaponTrailStartDelayEnd = 0
             this.weaponTrailFadeInEnd = now + WEAPON_TRAIL_FADE_DURATION
+            trail.reset()
+            trail.setEnabled(true)
+            trail.start()
             if (this.powerStrikeTrailActive) {
                 this.startPowerStrikeTrailParticles()
             }

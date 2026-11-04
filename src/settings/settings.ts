@@ -237,6 +237,10 @@ export const Settings = {
         return this.detailLevel === DetailLevels.MEDIUM
     },
 
+    isCombatEffectEnabled(playerInvolved: boolean): boolean {
+        return this.isDetalLevelHigh() || (this.isDetailLevelMedium() && playerInvolved)
+    },
+
     getDeviceType(): string {
         return this.deviceType
     },

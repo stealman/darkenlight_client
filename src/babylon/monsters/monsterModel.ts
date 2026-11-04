@@ -20,6 +20,7 @@ import { WATER_BLOCK_TYPE } from '@/babylon/world/terrainManager'
 import { TerrainManager } from '@/babylon/world/terrainManager'
 import { Settings } from '@/settings/settings'
 import { Lights } from '@/babylon/scene/lights'
+import { MyPlayer } from '@/data/myPlayer'
 
 export class MonsterModel implements EquipBearer {
     private footStepSounds = new Map<string, Sound>()
@@ -441,10 +442,14 @@ export class MonsterModel implements EquipBearer {
     }
 
     setWeaponTrailEnabled(enabled: boolean) {
+        if (enabled && !Settings.isCombatEffectEnabled(this.parent.autoAttackTarget === MyPlayer.myChar)) {
+            return
+        }
         this.weaponEquipItem?.setWeaponTrailEnabled(enabled)
     }
 
     disposeWeaponTrail() {
+        this.weaponEquipItem?.stopWeaponTrailImmediately()
         this.weaponEquipItem?.weaponTrail?.dispose()
     }
 

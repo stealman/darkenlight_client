@@ -773,6 +773,9 @@ export class CharacterModel implements EquipBearer {
     }
 
     setWeaponTrailEnabled(enabled: boolean, powerStrike: boolean = false) {
+        if (enabled && !Settings.isCombatEffectEnabled(this.parent === MyPlayer.myChar || this.parent.autoAttackTarget === MyPlayer.myChar)) {
+            return
+        }
         this.weaponEquipItem?.setWeaponTrailEnabled(enabled, powerStrike)
     }
 
@@ -781,6 +784,7 @@ export class CharacterModel implements EquipBearer {
     }
 
     disposeWeaponTrail() {
+        this.weaponEquipItem?.stopWeaponTrailImmediately()
         this.weaponEquipItem?.weaponTrail?.dispose()
     }
 
