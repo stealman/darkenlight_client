@@ -10,6 +10,7 @@ import { ArmorsCbManager } from '@/babylon/item/codebook/armorsModelsCb'
 import { EquipCbItem } from '@/babylon/item/codebook/equipCbItem'
 import { Materials } from '@/babylon/materials'
 import { Lights } from '@/babylon/scene/lights'
+import { Settings } from '@/settings/settings'
 import { BabylonUtils } from '@/babylon/utils'
 import { ActiveMeshFreezer } from '@/babylon/scene/activeMeshFreezer'
 
@@ -382,6 +383,10 @@ export class EquipItemType {
         this.mesh.receiveShadows = true
         if (castsShadows) {
             Lights.addShadowCaster(this.mesh, true, false, false, true, (lightPosition, lightRangeSquared) => {
+                // Medium keeps equipment shadows only on indoor maps, including at night.
+                if (Settings.isDetailLevelMedium() && !Lights.indoor) {
+                    return false
+                }
                 const items = EquipManager.equippedItems.get(this)
                 if (items == null) {
                     return false
@@ -395,7 +400,7 @@ export class EquipItemType {
                     }
                 }
                 return false
-            }, true, true)
+            }, true, !Settings.isDetailLevelMedium())
         }
         Lights.registerDynamicLightMesh(this.mesh)
     }

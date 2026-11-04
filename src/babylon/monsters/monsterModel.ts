@@ -509,8 +509,10 @@ export class MonsterModel implements EquipBearer {
         ps.minEmitBox = new Vector3(-0.7 + xOff  , -0.2, -0.7 + zOff)
         ps.maxEmitBox = new Vector3(0.7 + xOff, 0.2, 0.7 + zOff)
 
-        ps.minLifeTime = 6
-        ps.maxLifeTime = 9
+        // At updateSpeed 0.02 this is ~1.25–2.9 real seconds, covering the
+        // upward burst and fall without a long simulation below the floor.
+        ps.minLifeTime = 1.5
+        ps.maxLifeTime = 3.5
         ps.minEmitPower = 0.15
         ps.maxEmitPower = 0.4
         ps.minSize = 0.1
