@@ -59,8 +59,8 @@ table.gmSpawnTable input {
 }
 
 table.gmSpawnTable input:disabled {
-    background-color: #f8f8f8;
-    color: black;
+    background-color: var(--ui-field-bg);
+    color: rgb(var(--ui-darker));
 }
 
 table.gmSpawnTable select {
@@ -68,8 +68,8 @@ table.gmSpawnTable select {
 }
 
 table.gmSpawnTable select:disabled {
-    background-color: #fff;
-    color: black;
+    background-color: var(--ui-field-bg);
+    color: rgb(var(--ui-darker));
 }
 
 

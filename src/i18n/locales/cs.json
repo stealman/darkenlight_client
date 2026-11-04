@@ -1,13 +1,23 @@
 {
   "speech": {"placeholder": "Napiš zprávu…", "open": "Promluvit"},
   "party": {
+    "lootRandomChoice": "P\u0159id\u011blit n\u00e1hodn\u011b",
+    "lootFinderChoice": "Pat\u0159\u00ed n\u00e1lezci",
+    "settings": "Nastaven\u00ed party",
+    "items": "P\u0159edm\u011bty",
+    "lootFinder": "Pat\u0159\u00ed n\u00e1lezci",
+    "lootRandom": "N\u00e1hodn\u00e9mu \u010dlenovi party",
+    "emeraldSharing": "Emeraldy se v\u017edy d\u011bl\u00ed rovn\u00fdm d\u00edlem mezi hr\u00e1\u010de.",
+    "sendInvite": "Pozvat",
+    "cancel": "Zru\u0161it",
+
     "title": "Skupina", "actions": "Akce skupiny", "invite": "Pozvat do skupiny", "leave": "Opustit",
     "leader": "Vůdce skupiny", "away": "Mimo dosah skupiny", "invitation": "Pozvánka do skupiny",
     "invitedBy": "{name} tě zve do skupiny.", "accept": "Přijmout", "decline": "Odmítnout",
     "leaderOnly": "Zvát do skupiny může pouze její vůdce.", "full": "Skupina je plná (nejvýše 6 postav).",
     "unavailable": "Postava nebo pozvánka už není dostupná.", "alreadyGrouped": "Tato postava už je ve skupině.",
     "cooldown": "Po odmítnutí musíš před další pozvánkou této postavě počkat minutu.",
-    "pending": "Už čeká jiná pozvánka. Počkej na její vyřízení.", "sent": "Pozvánka odeslána (platí 10 sekund).",
+    "pending": "Už čeká jiná pozvánka. Počkej na její vyřízení.", "sent": "Pozvánka odeslána (platí 20 sekund).",
     "declined": "Pozvánka byla odmítnuta nebo vypršela. Další můžeš poslat za minutu."
   },
   "container": {
@@ -275,6 +285,7 @@
     }
   },
   "messages": {
+    "droppedItemProtected": "Tento p\u0159edm\u011bt lze sebrat a\u017e za {seconds} s.",
       "noBandages": "Nemáš žádné obvazy",
       "noHealthPotions": "Nemáš žádné lektvary zdraví",
       "noManaPotions": "Nemáš žádné lektvary many",

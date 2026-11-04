@@ -1,3 +1,4 @@
+import {PartyManager} from '@/data/partyManager'
 import { Vector3 } from '@babylonjs/core'
 import { Utils } from '@/utils/utils'
 import Character from '@/babylon/character/character'
@@ -114,6 +115,7 @@ export const MyPlayer = {
 
         MyStatusPanel.setMyName(this.myChar.name)
         MyStatusPanel.refreshAffectGroups()
+        PartyManager.preferredLootMode.value = charData.preferredPartyLootMode === 'finder' ? 'finder' : 'random'
         EmeraldsManager.setMyEmeralds(charData.emeralds, true, charData.emeralds, null)
     },
 

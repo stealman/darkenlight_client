@@ -1,5 +1,5 @@
 <template>
-    <GameDialog v-if="dialogVisible" window-class="adaptive inventory-dialog-window bot-details-dialog-window" @close="closeDialog">
+    <GameDialog v-if="dialogVisible" window-class="adaptive inventory-dialog-window bot-details-dialog-window dialog-themed-fields" @close="closeDialog">
         <template #header>Bot details</template>
 
         <div class="bot-details-dialog-content">

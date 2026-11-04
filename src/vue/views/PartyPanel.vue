@@ -21,13 +21,39 @@
             </div>
         </section>
     </Teleport>
-    <GameDialog v-if="invitation && remaining > 0" backdrop-class="party-invite-backdrop" window-class="party-invite-window adaptive"
+    <GameDialog v-if="pendingInviteTarget !== null" window-class="party-invite-window adaptive dialog-themed-fields"
+        :close-on-backdrop="false" @backdrop-click="onSettingsBackdropClick" @close="PartyManager.cancelInvite()">
+        <template #header>{{ t('party.settings') }}</template>
+        <div class="party-invite-content" @pointerdown.stop @pointerup.stop>
+            <div class="party-loot-setting" role="group" :aria-label="t('party.items')">
+                <span class="ui-text-gradient">{{ t('party.items') }}</span>
+                <button type="button" class="party-loot-choice party-loot-choice--random"
+                    :aria-pressed="inviteLootMode === 'random'" :disabled="!!state" @click="selectLootMode('random')">
+                    <span class="ui-text-gradient ui-text-gradient--accent ui-text-gradient--no-shadow">{{ t('party.lootRandomChoice') }}</span>
+                </button>
+                <button type="button" class="party-loot-choice party-loot-choice--finder"
+                    :aria-pressed="inviteLootMode === 'finder'" :disabled="!!state" @click="selectLootMode('finder')">
+                    <span class="ui-text-gradient ui-text-gradient--accent ui-text-gradient--no-shadow">{{ t('party.lootFinderChoice') }}</span>
+                </button>
+            </div>
+            <p>{{ t('party.emeraldSharing') }}</p>
+            <div class="party-invite-buttons">
+                <button class="dialog-button" @click="PartyManager.sendInvite()">{{ t('party.sendInvite') }}</button>
+                <button class="dialog-button" @click="PartyManager.cancelInvite()">{{ t('party.cancel') }}</button>
+            </div>
+        </div>
+    </GameDialog>
+    <GameDialog v-if="invitation && remaining > 0" backdrop-class="party-invite-backdrop" window-class="party-invite-window party-invitation-window adaptive"
         :close-on-backdrop="false" @close="PartyManager.respond(false)">
         <template #header><span>{{ t('party.invitation') }}</span></template>
         <div class="party-invite-content" @pointerdown.stop @pointerup.stop>
             <img src="/images/icons/buttons/btn_party_invite.png" alt="" class="party-invite-icon" />
             <p>{{ invitationText[0] }}<span class="party-inviter-name">{{ invitation.name }}</span><span v-if="inviterClass"> ({{ inviterClass }})</span>{{ invitationText[1] }}</p>
-            <div class="party-invite-progress"><span :style="{width: percent(remaining, invitation.remainingMs) + '%'}"></span></div>
+            <p>{{ t('party.items') }} <span :class="invitation.lootMode === 'random' ? 'party-loot-random' : 'party-loot-finder'">{{ t(invitation.lootMode === 'random' ? 'party.lootRandom' : 'party.lootFinder') }}</span></p>
+            <p>{{ t('party.emeraldSharing') }}</p>
+            <div class="party-invite-progress loading-progress-track" role="progressbar" :aria-valuenow="remaining" aria-valuemin="0" :aria-valuemax="invitation.remainingMs" :aria-label="t('party.invitation')">
+                <div class="loading-progress-fill" :style="{width: percent(remaining, invitation.remainingMs) + '%'}"></div>
+            </div>
             <div class="party-invite-buttons">
                 <button class="dialog-button" type="button" @pointerdown.prevent.stop @click="PartyManager.respond(true)">
                     {{ t('party.accept') }}
@@ -41,13 +67,31 @@
 </template>
 
 <script setup lang="ts">
-import {computed, onMounted, onUnmounted, ref} from 'vue'
+import {computed, onMounted, onUnmounted, ref, watch} from 'vue'
 import {PartyManager} from '@/data/partyManager'
+import {AudioManager} from '@/babylon/audio/audioManager'
+import type {PartyLootMode} from '@/network/messageIfs'
 import {MyPlayer} from '@/data/myPlayer'
 import {TargetingManager} from '@/gui/targettingManager'
 import {t} from '@/i18n'
 import GameDialog from './GameDialog.vue'
 
+const pendingInviteTarget = PartyManager.pendingInviteTarget
+const IGNORE_BACKDROP_CLICK_AFTER_OPEN_MS = 350
+const settingsOpenedAt = ref(0)
+watch(pendingInviteTarget, (targetId) => {
+    if (targetId !== null) settingsOpenedAt.value = Date.now()
+})
+const onSettingsBackdropClick = () => {
+    if (Date.now() - settingsOpenedAt.value < IGNORE_BACKDROP_CLICK_AFTER_OPEN_MS) return
+    PartyManager.cancelInvite()
+}
+const inviteLootMode = PartyManager.inviteLootMode
+const selectLootMode = (mode: PartyLootMode) => {
+    if (PartyManager.state.value) return
+    inviteLootMode.value = mode
+    AudioManager.playGuiButtonClick()
+}
 const state = PartyManager.state
 const selectedCharacterId = TargetingManager.selectedCharacterId
 const invitation = PartyManager.invitation
@@ -90,6 +134,17 @@ const leave = () => { menuOpen.value = false; PartyManager.leave() }
 </script>
 
 <style>
+.party-loot-random { color: rgb(var(--ui-success)); }
+.party-loot-finder { color: rgb(var(--ui-danger)); }
+.party-loot-setting { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: center; gap: 8px; margin: 6px 0 12px; font-size: 15px; text-align: left; }
+.party-loot-setting > span { text-align: right; }
+.party-loot-choice { min-width: 0; min-height: 44px; padding: 6px 2px; border: 0; background: none; color: rgb(var(--ui-darker)); font: inherit; cursor: pointer; text-align: center; touch-action: manipulation; }
+.party-loot-choice--random { --ui-text-gradient-accent: var(--ui-success); color: rgb(var(--ui-success)); }
+.party-loot-choice--finder { --ui-text-gradient-accent: var(--ui-danger); color: rgb(var(--ui-danger)); }
+.party-loot-choice[aria-pressed="false"] { opacity: 0.55; }
+.party-loot-choice[aria-pressed="true"] { font-weight: 700; text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 2px; }
+.party-loot-choice:focus-visible { outline: 1px solid rgb(var(--ui-base)); outline-offset: -2px; }
+.party-loot-choice:disabled { cursor: default; }
 .party-panel { position: relative; width: clamp(134px, 18vw, 220px); max-width: 42vw; margin: 4px 0 0 3px; color: rgb(var(--ui-base)); pointer-events: auto; text-align: left; font-size: 11px; text-shadow: 0 1px 2px rgb(var(--ui-darkest)); }
 .party-actions { position: absolute; top: 2px; left: calc(100% + 4px); display: flex; justify-content: flex-start; }
 .party-menu-button { color: rgb(var(--ui-base)); background: rgba(var(--ui-darkest), .7); border: 1px solid rgba(var(--ui-dark), .25); border-radius: 3px; width: 32px; height: 24px; font-size: 20px; line-height: 16px; cursor: pointer; }
@@ -106,15 +161,18 @@ const leave = () => { menuOpen.value = false; PartyManager.leave() }
 .party-bar--hp > span { background: var(--ui-hp-fill); }
 .party-bar--st > span { background: var(--ui-stamina-fill); }
 .party-bar--mp > span { background: var(--ui-mana-fill); }
-.party-invite-backdrop { pointer-events: none; align-items: flex-start; padding-top: max(65px, 12vh); box-sizing: border-box; }
+.party-invite-backdrop { --party-invite-top: max(65px, 12dvh); pointer-events: none; align-items: flex-start; padding-top: var(--party-invite-top); box-sizing: border-box; }
 .party-invite-window { pointer-events: auto; width: 310px; max-width: calc(100vw - 24px); }
 .party-invite-window .dialog-header { display: flex; align-items: center; justify-content: center; }
+.dialog-window.party-invitation-window { width: 600px; max-width: calc(100vw - 24px); max-height: calc(100dvh - var(--party-invite-top) - 12px); box-sizing: border-box; display: flex; flex-direction: column; }
+.party-invitation-window > .dialog-surface { display: flex; flex-direction: column; min-height: 0; }
+.party-invitation-window .dialog-header { flex-shrink: 0; }
+.party-invitation-window .dialog-content { min-height: 0; overflow-y: auto; }
 .party-invite-content { padding: 6px 10px 10px; }
 .party-invite-content p { font-size: 13px; line-height: 1.5; margin: 5px 0 12px; overflow-wrap: anywhere; }
 .party-inviter-name { color: rgb(var(--ui-character-name)); }
 .party-invite-icon { width: 48px; height: 48px; object-fit: contain; }
-.party-invite-progress { height: 3px; background: rgba(var(--ui-dark), .2); margin-bottom: 12px; }
-.party-invite-progress span { display: block; height: 100%; background: rgb(var(--ui-durability-warning)); transition: width .1s linear; }
+.party-invite-progress { margin-bottom: 12px; }
 .party-invite-buttons { display: flex; gap: 8px; justify-content: center; }
 .party-invite-buttons button { flex: 1; min-height: 38px; }
 .party-invite-decline span { color: rgb(var(--ui-attention)); text-shadow: 0 0 4px rgba(var(--ui-attention), .45); }

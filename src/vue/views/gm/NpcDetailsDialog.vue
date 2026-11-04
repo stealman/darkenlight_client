@@ -1,5 +1,5 @@
 <template>
-    <GameDialog v-if="dialogVisible" window-class="adaptive inventory-dialog-window npc-details-dialog-window" @close="closeDialog">
+    <GameDialog v-if="dialogVisible" window-class="adaptive inventory-dialog-window npc-details-dialog-window dialog-themed-fields" @close="closeDialog">
         <template #header>NPC details</template>
 
         <div class="npc-details-dialog-content">

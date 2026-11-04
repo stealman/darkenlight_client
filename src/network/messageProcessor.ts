@@ -618,7 +618,7 @@ export const MessageProcessor = {
     },
 
     processTextMessage(data: TextMessage) {
-        OnScreenMessageManager.addMessage(t(data.txt), data.sev)
+        OnScreenMessageManager.addMessage(t(data.txt, data.params), data.sev)
     },
 
     processPlaySound(data: PlaySoundMessage) {

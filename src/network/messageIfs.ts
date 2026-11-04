@@ -287,6 +287,7 @@ export interface CharacterRestingMessage {
 export interface TextMessage {
     txt: string
     sev: string
+    params?: Record<string, string | number | boolean>
 }
 
 export interface PlaySoundMessage {
@@ -520,7 +521,10 @@ export interface GMStaticDeleteInfoData {
     barrelCount: number
     itemCount: number
 }
+export type PartyLootMode = 'finder' | 'random'
+
 export interface PartyStateData {
+    lootMode: PartyLootMode
     leaderId: number
     members: Array<{
         id: number, name: string, worldId: number, x: number, z: number, nearby: boolean,
@@ -529,6 +533,7 @@ export interface PartyStateData {
 }
 
 export interface PartyInvitationData {
+    lootMode: PartyLootMode
     id: number
     name: string
     classKey?: string

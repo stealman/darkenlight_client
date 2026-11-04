@@ -622,8 +622,8 @@ export class GMGenerateBiomeMsg implements Message {
 
 export class PartyInviteMsg implements Message {
     t = 43
-    d: {targetId: number}
-    constructor(targetId: number) { this.d = {targetId} }
+    d: {targetId: number, lootMode: 'finder' | 'random'}
+    constructor(targetId: number, lootMode: 'finder' | 'random') { this.d = {targetId, lootMode} }
 }
 
 export class PartyRespondMsg implements Message {

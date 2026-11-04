@@ -5,6 +5,9 @@
     --ui-darker: 125, 116, 100;
     --ui-darkest: 40, 38, 32;
 
+    --ui-field-bg: rgb(var(--ui-darkest));
+    --ui-field-border: rgba(var(--ui-dark), 0.65);
+
     /* Semantic accents */
     --ui-item-special-stat: 200, 200, 200;
     --ui-accent-red: 204, 123, 108;
@@ -479,3 +482,26 @@
     }
 }
 
+
+/* Party settings and GM controls share the dialog's warm stone palette. */
+:is(.dialog-themed-fields, .gm-panel-content, #gmPanel) :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="button"]):not([type="submit"]), select, textarea) {
+    background-color: var(--ui-field-bg);
+    color: rgb(var(--ui-base));
+    border: 1px solid var(--ui-field-border);
+    border-radius: 2px;
+    color-scheme: dark;
+}
+
+:is(.dialog-themed-fields, .gm-panel-content, #gmPanel) select option {
+    background-color: var(--ui-field-bg);
+    color: rgb(var(--ui-base));
+}
+
+:is(.dialog-themed-fields, .gm-panel-content, #gmPanel) :is(input, select, textarea):focus-visible {
+    outline: 1px solid rgb(var(--ui-base));
+    outline-offset: 1px;
+}
+
+:is(.dialog-themed-fields, .gm-panel-content, #gmPanel) :is(input, select, textarea):disabled {
+    color: rgb(var(--ui-darker));
+}
