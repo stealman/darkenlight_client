@@ -431,11 +431,19 @@ export class MonsterModel implements EquipBearer {
         this.footStepSounds.clear()
         this.viewRequested = false
         this.parent.insideView = false
+        this.nameTextNode.dispose()
+        this.lhandNode.dispose()
         if (!this.initialized) {
             return
         }
 
         this.removeFromView()
+        this.equipSet.forEach(item => item.disposeWeaponTrail())
+        this.equipSet.clear()
+        this.weaponEquipItem = null
+        const animations = new Set([this.idleAnim, this.walkAnim, this.deadAnim, this.attackBowAnim, ...this.attackAnims])
+        animations.forEach(anim => anim?.animation.dispose())
+        this.pendingAttackSoundAnim = null
         MonsterLoader.monsterTemplates.get(this.template.id)?.freeClone(this.template)
         this.activeAnims.clear()
         this.initialized = false
@@ -449,8 +457,7 @@ export class MonsterModel implements EquipBearer {
     }
 
     disposeWeaponTrail() {
-        this.weaponEquipItem?.stopWeaponTrailImmediately()
-        this.weaponEquipItem?.weaponTrail?.dispose()
+        this.weaponEquipItem?.disposeWeaponTrail()
     }
 
     getNameTextNodeWorldPosition(): Vector3 {

@@ -151,6 +151,15 @@ export class EquipItem {
         trail.reset()
     }
 
+    disposeWeaponTrail() {
+        this.stopWeaponTrailImmediately()
+        this.disposePowerStrikeTrailParticles()
+        this.weaponTrail?.dispose()
+        this.weaponTrail = null
+        this.weaponTrailTip?.dispose()
+        this.weaponTrailTip = null
+    }
+
     private startWeaponTrail(powerStrike: boolean) {
         const trail = this.weaponTrail
         if (!trail) {

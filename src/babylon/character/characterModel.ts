@@ -32,6 +32,7 @@ export class CharacterModel implements EquipBearer {
     viewRequested: boolean = false
 
     model: AbstractMesh | undefined
+    private instantiatedEntries: InstantiatedEntries | null = null
     modelYAngleOffset: number = (Math.PI * 1) / 4
     modelRotation: number = 0
     worldMatrix: Matrix = Matrix.Identity()
@@ -125,6 +126,11 @@ export class CharacterModel implements EquipBearer {
         // when their character first enters the viewport.
         await CharacterModel.instantiate(scene)
             .then((result) => {
+                if (this.node.isDisposed()) {
+                    result.dispose()
+                    return
+                }
+                this.instantiatedEntries = result
                 this.model = result.rootNodes[0] as AbstractMesh
                 this.model.parent = this.node
                 this.model.scaling = new Vector3(0.3, 0.28, 0.3)
@@ -196,6 +202,7 @@ export class CharacterModel implements EquipBearer {
                         newGroup.to = endFrame
                         return newGroup
                     })
+                    result.animationGroups.push(...newAnimationGroups)
 
                     this.idleAnim = newAnimationGroups[0]
                     this.walkAnim = newAnimationGroups[1]
@@ -226,6 +233,7 @@ export class CharacterModel implements EquipBearer {
                 console.error('Error loading model:', error)
             })
 
+        if (this.node.isDisposed()) return
         this.assignEquippedItems()
         this.initialized = true
         this.snapToParentPosition()
@@ -271,8 +279,10 @@ export class CharacterModel implements EquipBearer {
     clearAllEquippedItems() {
         this.equipSet.forEach((item) => {
             EquipManager.removeEquippedItem(item)
+            item.disposeWeaponTrail()
         })
         this.equipSet.clear()
+        this.weaponEquipItem = null
     }
 
     assignArmor(type: number, matIndex: number) {
@@ -784,8 +794,7 @@ export class CharacterModel implements EquipBearer {
     }
 
     disposeWeaponTrail() {
-        this.weaponEquipItem?.stopWeaponTrailImmediately()
-        this.weaponEquipItem?.weaponTrail?.dispose()
+        this.weaponEquipItem?.disposeWeaponTrail()
     }
 
     getOwnerId(): number {
@@ -864,13 +873,25 @@ export class CharacterModel implements EquipBearer {
     removeFromScene() {
         this.viewRequested = false
         this.stopAllStepSounds()
+        this.footStepSounds.forEach(sound => sound.dispose())
+        this.footStepSounds.clear()
+        this.actualStepSound = null
         this.removeFromView()
         this.model?.getChildMeshes().forEach((mesh) => {
             Lights.unregisterActorLightMesh(mesh)
             Lights.removeShadowCaster(mesh, true, false, true)
         })
-        this.model?.dispose()
+        this.equipSet.forEach(item => item.disposeWeaponTrail())
+        this.instantiatedEntries?.dispose()
+        this.instantiatedEntries = null
+        this.equipSet.clear()
+        this.weaponEquipItem = null
+        this.animTransition = null
+        this.actualAnim = undefined
+        this.initialized = false
+        this.nameTextNode.dispose()
+        this.lhandNode.dispose()
+        this.rhandNode.dispose()
         this.node.dispose()
-        this.disposeWeaponTrail()
     }
 }

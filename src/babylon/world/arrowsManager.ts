@@ -196,6 +196,7 @@ export const ArrowsManager = {
     mesh: null as Mesh | null,
 
     initialize () {
+        this.clear()
         this.mesh = MeshBuilder.CreateBox("box", { width: 0.1, height: 1.5, depth: 0.1 }, Renderer.scene)
         this.mesh.isVisible = false
         this.mesh.rotationQuaternion = Quaternion.Identity()
@@ -214,12 +215,18 @@ export const ArrowsManager = {
         return arrow
     },
 
+    clear() {
+        for (const arrow of this.arrows) arrow.dispose()
+        this.arrows.length = 0
+    },
+
     onFrame(timeRate: number, time: number) {
+        let activeCount = 0
         for (const arrow of this.arrows) {
             arrow.onFrame(time, timeRate)
+            if (!arrow.disposed) this.arrows[activeCount++] = arrow
         }
-
-        this.arrows = this.arrows.filter(arrow => !arrow.disposed)
+        this.arrows.length = activeCount
     },
 }
 
@@ -261,6 +268,9 @@ export class Arrow {
     startPosFixed = Vector3.Zero()
     endPosFixed = Vector3.Zero()
     lastPos = Vector3.Zero()
+    private readonly flightDirection = Vector3.Zero()
+    private readonly flightRotation = Quaternion.Identity()
+    private readonly arrowRotationFix = Quaternion.RotationAxis(Vector3.Right(), -Math.PI / 2)
     hasEffect = false
     preciseShot: boolean
 
@@ -347,8 +357,7 @@ export class Arrow {
         }
 
         if (this.startedFlying) {
-            const endNow = this.target?.pos.add(this.heightOffset)
-            if (!endNow) {
+            if (!this.target) {
                 this.dispose()
                 return
             }
@@ -356,23 +365,22 @@ export class Arrow {
             this.flightTime += timeRate
             const t = Math.max(0, Math.min(1, this.flightTime / this.flightDuration))
 
-            const basePos = Vector3.Lerp(this.startPosFixed, this.endPosFixed, t)
+            Vector3.LerpToRef(this.startPosFixed, this.endPosFixed, t, this.currentPos)
             const arc = 4 * t * (1 - t) // max 1 při t=0.5
             const arcHeightMultiplier = this.preciseShot ? Arrow.PRECISE_SHOT_ARC_HEIGHT_MULTIPLIER : 1
-            const newPos = basePos.add(Vector3.Up().scale(this.arcHeight * arc * arcHeightMultiplier))
+            this.currentPos.y += this.arcHeight * arc * arcHeightMultiplier
 
-            this.meshInstance.position.copyFrom(newPos)
+            this.meshInstance.position.copyFrom(this.currentPos)
 
-            const dir = newPos.subtract(this.lastPos)
+            const dir = this.flightDirection
+            this.currentPos.subtractToRef(this.lastPos, dir)
             if (dir.lengthSquared() > 0.0000001) {
                 dir.normalize()
-                const lookQ = Quaternion.FromLookDirectionLH(dir, Vector3.Up())
-                const fixQ = Quaternion.RotationAxis(Vector3.Right(), -Math.PI / 2)
-                this.meshInstance.rotationQuaternion = lookQ.multiply(fixQ)
+                Quaternion.FromLookDirectionLHToRef(dir, Vector3.UpReadOnly, this.flightRotation)
+                this.flightRotation.multiplyToRef(this.arrowRotationFix, this.meshInstance.rotationQuaternion!)
             }
 
-            this.currentPos.copyFrom(newPos)
-            this.lastPos.copyFrom(newPos)
+            this.lastPos.copyFrom(this.currentPos)
 
             if (t >= 1) {
                 this.dispose()
@@ -482,12 +490,11 @@ export class Arrow {
             this.effectTip = null
         }
 
-        this.pendingEffectSystems = 0
+        const systems = [this.fireParticles, this.smokeParticles].filter((system): system is ParticleSystem => system !== null)
+        this.pendingEffectSystems = systems.length
+        if (systems.length === 0) detachedEffectTip?.dispose()
 
-        const releaseParticles = (particleSystem: ParticleSystem | null) => {
-            if (!particleSystem) return
-
-            this.pendingEffectSystems += 1
+        for (const particleSystem of systems) {
             particleSystem.disposeOnStop = true
             particleSystem.onDisposeObservable.addOnce(() => {
                 this.pendingEffectSystems -= 1
@@ -495,11 +502,12 @@ export class Arrow {
                     detachedEffectTip.dispose()
                 }
             })
-            particleSystem.stop()
+            if (particleSystem.isStarted()) {
+                particleSystem.stop()
+            } else {
+                particleSystem.dispose()
+            }
         }
-
-        releaseParticles(this.fireParticles)
-        releaseParticles(this.smokeParticles)
 
         this.fireParticles = null
         this.smokeParticles = null

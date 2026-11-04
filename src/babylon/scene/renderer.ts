@@ -166,6 +166,7 @@ export const Renderer = {
 
     async gameStopped() {
         this.engine!.stopRenderLoop()
+        ArrowsManager.clear()
         MonsterManager.clearWorld()
         GfxManager.clear()
         this.scene.dispose()
