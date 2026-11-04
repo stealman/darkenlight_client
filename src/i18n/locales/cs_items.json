@@ -230,13 +230,13 @@
             "staminaPotion": "Okamžitě doplní až {amount} bodů výdrže."
         },
         "resources": {
-      "dried-herbs": "Sušené byliny",
-      "ginseng": "Kořen ženšenu",
-      "bone-shards": "Úlomky kostí",
+      "dried-herbs": "Sušené Byliny",
+      "ginseng": "Kořen Ženšenu",
+      "bone-shards": "Úlomky Kostí",
       "garlic": "Česnek",
       "claw": "Dráp",
-      "venom-sac": "Jedový váček",
-      "spider-silk": "Pavoučí hedvábí",
+      "venom-sac": "Jedový Váček",
+      "spider-silk": "Pavoučí Hedvábí",
       "mandrake": "Mandragora",
       "ectoplasm": "Ektoplazma",
       "scales": "Šupiny",

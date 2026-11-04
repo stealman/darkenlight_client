@@ -300,6 +300,7 @@ export const InventoryManager = {
             return
         }
         AudioManager.playBackpackHandle2()
+        GroundItemsManager.ignoredAutoPickupItemIds.add(item.id)
         Connector.sendMessage(new DropItemMsg(item.id))
         this.inventory = this.inventory.filter(i => i !== item)
         this.sortInventory()

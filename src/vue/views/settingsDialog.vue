@@ -83,6 +83,25 @@
                             </tbody>
                         </table>
                     </div>
+                    <div style="margin-top: 20px">{{ t('settings.autoPickup') }}</div>
+                    <table style="margin-top: 20px">
+                        <tbody>
+                            <tr>
+                                <td class="item-label" style="width: 25%">
+                                    <label for="auto-pickup-ingredients">{{ t('settings.autoPickupIngredients') }}</label>
+                                </td>
+                                <td style="width: 25%">
+                                    <Checkbox input-id="auto-pickup-ingredients" v-model="storedSettings.autoPickupIngredients" binary @change="storeSettings" />
+                                </td>
+                                <td class="item-label" style="width: 25%">
+                                    <label for="auto-pickup-purity">{{ t('settings.autoPickupPurity') }}</label>
+                                </td>
+                                <td style="width: 25%">
+                                    <Checkbox input-id="auto-pickup-purity" v-model="storedSettings.autoPickupPurity" binary @change="storeSettings" />
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 

@@ -113,6 +113,9 @@
     "missingCredentials": "Enter login credentials or a guest character name"
   },
   "settings": {
+    "autoPickup": "Auto pickup",
+    "autoPickupIngredients": "Ingredients",
+    "autoPickupPurity": "Purity Stones",
     "tabs": {
       "controls": "Controls",
       "graphics": "Graphics",

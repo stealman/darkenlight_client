@@ -113,6 +113,9 @@
     "missingCredentials": "Zadejte přihlašovací jméno a heslo, nebo jméno postavy hosta"
   },
   "settings": {
+    "autoPickup": "Autosběr",
+    "autoPickupIngredients": "Ingredience",
+    "autoPickupPurity": "Kameny Čistoty",
     "tabs": {
       "controls": "Ovládání",
       "graphics": "Grafika",

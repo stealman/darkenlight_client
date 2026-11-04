@@ -72,6 +72,8 @@ export const Settings = {
     targetLockLeft: 200 as number,
 
     autoTarget: false as boolean,
+    autoPickupIngredients: true,
+    autoPickupPurity: false,
     actionButtonSize: 64 as number,
     miniMapSize: 50 as number,
     actionButtonsLayout: '1COLUMN' as string,
@@ -119,6 +121,8 @@ export const Settings = {
         this.targetLockBottom = Number.isFinite(storedTargetLockBottom) && !hasPreviousTargetLockDefault ? storedTargetLockBottom : targetLockDefaultPosition.bottom
         this.targetLockLeft = Number.isFinite(storedTargetLockLeft) && !hasPreviousTargetLockDefault ? storedTargetLockLeft : targetLockDefaultPosition.left
         this.autoTarget = storedSettings.autoTarget
+        this.autoPickupIngredients = typeof storedSettings.autoPickupIngredients === 'boolean' ? storedSettings.autoPickupIngredients : true
+        this.autoPickupPurity = storedSettings.autoPickupPurity === true
         this.volume = parseFloat(storedSettings.volume)
         this.ambientVolume = parseFloat(storedSettings.ambientVolume)
 
@@ -166,6 +170,8 @@ export const Settings = {
             hudSize: 1,
 
             autoTarget: false,
+            autoPickupIngredients: true,
+            autoPickupPurity: false,
             actionButtonSize: Settings.touchEnabled ? 40 : 64,
             miniMapSize: 50,
             actionButtonsLayout: '1COLUMN',

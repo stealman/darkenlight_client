@@ -24,6 +24,11 @@ import { GroundItemTO } from '@/network/messageIfs'
 import { UiIconManager } from '@/gui/uiIconManager'
 import { TEXTURED_ARMOR_MODEL_IDS } from '@/babylon/item/codebook/armorsModelsCb'
 import { getArmorEquipScale } from '@/babylon/item/codebook/armorEquipScales'
+import { Settings } from '@/settings/settings'
+import { Connector } from '@/network/connector'
+import { PickItemMsg } from '@/network/messages'
+import { PartyManager } from '@/data/partyManager'
+import { CharacterManager } from '@/babylon/character/characterManager'
 
 export const GroundItemsManager = {
     scene: null as Scene | null,
@@ -70,6 +75,8 @@ export const GroundItemsManager = {
     yellow_fx: new Color4(0.8, 0.6, 0.3, 1),
     PROXIMITY_RANGE_XZ: 1,
     nearbyItem: null as GroundItem | null,
+    nextAutoPickupTime: 0,
+    ignoredAutoPickupItemIds: new Set<number>(),
     iconStyleUnsubscribe: null as (() => void) | null,
 
     initialize(scene: Scene) {
@@ -133,6 +140,7 @@ export const GroundItemsManager = {
     addItems(data: GroundItemTO[]) {
         let changed = false
         for (const gitem of data) {
+            if (this.isVisiblePartyDrop(gitem)) this.ignoredAutoPickupItemIds.add(gitem.item.id)
 
             const y = Utils.calculateWalkYPos(gitem.pos.x, gitem.pos.z, this.ITEM_BOX_SIZE) + this.ITEM_Y_OFFSET
             const item = new GroundItem(Item.fromData(gitem.item), new Vector3(gitem.pos.x, y, gitem.pos.z))
@@ -152,6 +160,7 @@ export const GroundItemsManager = {
     removeItems(data: number[]) {
         let changed = false
         for (const id of data) {
+            this.ignoredAutoPickupItemIds.delete(id)
             const index = this.items.findIndex(i => i.item.id === id)
             if (index !== -1) {
                 const item = this.items[index]
@@ -169,6 +178,8 @@ export const GroundItemsManager = {
     },
 
     clearWorld() {
+        this.nextAutoPickupTime = 0
+        this.ignoredAutoPickupItemIds.clear()
         this.items.length = 0
         this.visibleItems.length = 0
         this.nearbyItem = null
@@ -532,6 +543,9 @@ export const GroundItemsManager = {
 
         let nearest: GroundItem | null = null
         let nearestDist = 9999
+        let autoPickup: GroundItem | null = null
+        let autoPickupDist = Infinity
+        const canAutoPickup = !MyPlayer.isDead.value && time >= this.nextAutoPickupTime
 
         for (const item of this.items) {
             if (item.dropping) continue
@@ -540,6 +554,21 @@ export const GroundItemsManager = {
                 nearestDist = dist
                 nearest = item
             }
+            if (canAutoPickup && dist <= 1 && dist < autoPickupDist && time >= item.nextAutoPickupTime
+                && !this.ignoredAutoPickupItemIds.has(item.item.id)
+                && item.item.cbType === 'R'
+                && ((Settings.autoPickupIngredients && item.item.cbId >= 401 && item.item.cbId <= 410)
+                    || (Settings.autoPickupPurity && item.item.cbId >= 51 && item.item.cbId <= 53))) {
+                autoPickup = item
+                autoPickupDist = dist
+            }
+        }
+
+        if (autoPickup) {
+            // Allow the server response to arrive before retrying the same stack.
+            autoPickup.nextAutoPickupTime = time + 2000
+            this.nextAutoPickupTime = time + 1000
+            Connector.sendMessage(new PickItemMsg(autoPickup.item.id))
         }
 
         if (!nearest) {
@@ -548,6 +577,22 @@ export const GroundItemsManager = {
         }
 
         this.setNearbyItem(nearest, time)
+    },
+
+    isVisiblePartyDrop(data: GroundItemTO): boolean {
+        // Monster loot has temporary negative IDs. Existing items arriving with no
+        // drop animation carry no local exclusion when we return to the area.
+        if (!data.dropFrom || data.item.id <= 0) return false
+        for (const member of PartyManager.state.value?.members ?? []) {
+            const character = CharacterManager.characters.get(member.id)
+            if (!character?.insideView) continue
+            // The protocol contains the source position, not the dropper ID.
+            // Allow a small movement/interpolation difference for visible members.
+            const dx = character.pos.x - data.dropFrom.x
+            const dz = character.pos.z - data.dropFrom.z
+            if (dx * dx + dz * dz <= 0.75 * 0.75) return true
+        }
+        return false
     },
 
     setNearbyItem(item: GroundItem | null, time: number = Date.now()) {
@@ -589,6 +634,7 @@ class GroundItem {
     bounce: boolean = false
     yOffset: number = 0
     nameDisplayTime: number = 0
+    nextAutoPickupTime: number = 0
     fxParticleCount: number
     private wasBouncing: boolean = false
     private bounceStartTime: number = 0

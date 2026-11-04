@@ -5,7 +5,7 @@
       "level": "Úroveň {level}",
       "nextLevelProgress": "Postup k další úrovni znalosti monster",
       "damageBonus": "+{percent} % poškození",
-      "categories": {"KOBOLDS": "Koboldi", "Skeletons": "Kostlivci", "Withers": "Witherové", "Zombies": "Zombie", "Wights": "Přízraky", "Cats": "Kočky", "Deers": "Jeleni", "Guards": "Stráže"}
+      "categories": {"Kobolds": "Koboldi", "Skeletons": "Kostlivci", "Withers": "Witherové", "Zombies": "Zombie", "Wights": "Přízraky", "Cats": "Kočky", "Deers": "Jeleni", "Guards": "Stráže"}
     },
     "categories": {
       "gathering": "Získávání Surovin",

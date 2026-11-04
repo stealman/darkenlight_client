@@ -14,7 +14,7 @@ export const MonsterCodebook = {
 
     initializeEquipAndAnimations(model: MonsterModel) {
         // Skeleton and kobold templates share bones and animation ranges
-        if ([1, 21, 41].includes(model.type.templateId)) {
+        if ([1, 21, 41, 42].includes(model.type.templateId)) {
             MonsterBonesAnims.initSkeleton(model)
         }
 
@@ -258,7 +258,7 @@ export const MonsterTypes = {
     KOBOLD_HUNTER: new MonsterType(
         71,
         MonsterGroups.KOBOLDS,
-        41,
+        42,
         'Kobold Hunter',
         0.6,
         1.8,
