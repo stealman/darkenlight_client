@@ -16,6 +16,7 @@ import { StaticObjectsCodebook } from '@/babylon/world/statics/staticsCodebook'
 import { BuildingManager } from '@/babylon/world/buildings/buildingManager'
 import { TreeManager } from '@/babylon/world/treeManager'
 import { StaticEquipPartsRenderer } from '@/babylon/world/statics/staticEquipPartsRenderer'
+import { StaticLeafPlanes } from '@/babylon/world/statics/staticLeafPlanes'
 import { EquipManager } from '@/babylon/item/equipManager'
 import { WeaponModelsCb } from '@/babylon/item/codebook/weaponModelsCb'
 import { Renderer } from '@/babylon/scene/renderer'
@@ -89,7 +90,7 @@ export async function installAssetPreview(root: HTMLElement, scene: Scene, camer
     Object.values(TreeManager.prefabs).forEach(prefab => { if (prefab) prefab.mesh.parent = parent })
     StaticsManager.initialize(scene)
     BuildingManager.initialize(scene, parent)
-    const buffers = () => [WorldRenderer.block1!, WorldRenderer.blockWithAlpha1!, WorldRenderer.translucentPlane!, ...Object.values(TreeManager.prefabs).filter(p => p != null), ...StaticEquipPartsRenderer.prefabs.values(), ...SpecimenPrefabs.all]
+    const buffers = () => [WorldRenderer.block1!, WorldRenderer.blockWithAlpha1!, WorldRenderer.translucentPlane!, StaticLeafPlanes.prefab!, ...Object.values(TreeManager.prefabs).filter(p => p != null), ...StaticEquipPartsRenderer.prefabs.values(), ...SpecimenPrefabs.all]
     const refreshBuildingBatches = () => {
         BuildingManager.rebuildOpaqueBatch()
         // Babylon renders the source box/plane when a thin-instance batch is empty.

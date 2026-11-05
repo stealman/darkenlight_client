@@ -37,6 +37,7 @@ import {
     WaterTrough,
 } from '@/babylon/world/statics/objects/campObjects'
 import { StaticEquipPartsRenderer } from '@/babylon/world/statics/staticEquipPartsRenderer'
+import { StaticLeafPlanes } from '@/babylon/world/statics/staticLeafPlanes'
 import { WeaponModelsCb } from '@/babylon/item/codebook/weaponModelsCb'
 import {
     CemeteryCross,
@@ -76,6 +77,7 @@ export const StaticsManager = {
 
     initialize(scene: Scene) {
         StaticEquipPartsRenderer.initialize(WorldRenderer.worldParentNode!)
+        StaticLeafPlanes.initialize(WorldRenderer.worldParentNode!)
     },
 
     consumeObjects(data: Array<{ tp: number, x: number, z: number, meta?: WallTorchMetadata | TorchStandMetadata | LanternStandMetadata | FireplaceMetadata | CemeteryEmberBowlMetadata | StoneEntranceMetadata | PalisadeMetadata | WalkableBlockMetadata | CampObjectMetadata | CampFenceMetadata | CemeteryObjectMetadata | CemeteryWallMetadata, tmp?: boolean }>, finalize = true) {
@@ -412,6 +414,7 @@ export const StaticsManager = {
 
     renderObjects(visibilityReady = false) {
         StaticEquipPartsRenderer.clear()
+        StaticLeafPlanes.clear()
         SpecimenPrefabs.clear()
 
         this.allStatics.forEach((obj) => {
@@ -430,6 +433,7 @@ export const StaticsManager = {
         StaticFireParticleManager.flush()
 
         StaticEquipPartsRenderer.flush()
+        StaticLeafPlanes.flush()
         SpecimenPrefabs.flush()
     },
 

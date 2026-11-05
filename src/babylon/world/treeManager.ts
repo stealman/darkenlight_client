@@ -521,14 +521,14 @@ class TreeOak implements Tree {
     }
 
     intersectsLeafOcclusionSegment(origin: Vector3, direction: Vector3, maxDistance: number): boolean {
-        const halfWidth = 1.25 * this.scale
+        const halfWidth = 1.3 * this.scale
         return segmentIntersectsAabb(
             origin,
             direction,
             maxDistance,
             new Vector3(
                 this.position.x - halfWidth,
-                this.position.y + (1.25 * this.scale),
+                this.position.y + (1.2 * this.scale),
                 this.position.z - halfWidth,
             ),
             new Vector3(
@@ -736,10 +736,10 @@ interface Tree {
 }
 
 const FIR_OCCLUSION_LAYERS = [
-    { minY: 0, maxY: 0.25, halfWidth: 1.15 },
-    { minY: 0.25, maxY: 0.75, halfWidth: 0.85 },
-    { minY: 0.75, maxY: 1.25, halfWidth: 0.65 },
-    { minY: 1.25, maxY: 1.75, halfWidth: 0.5 },
+    { minY: -0.35, maxY: 0.35, halfWidth: 1.3 },
+    { minY: 0.15, maxY: 0.85, halfWidth: 1.0 },
+    { minY: 0.65, maxY: 1.35, halfWidth: 0.8 },
+    { minY: 1.15, maxY: 1.85, halfWidth: 0.65 },
     { minY: 1.75, maxY: 2.25, halfWidth: 0.4 },
     { minY: 2.25, maxY: 2.75, halfWidth: 0.25 },
 ]

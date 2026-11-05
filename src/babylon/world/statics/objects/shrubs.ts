@@ -1,6 +1,8 @@
 import { Matrix, Vector2, Vector3 } from '@babylonjs/core'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { BaseStaticObject } from '@/babylon/world/statics/objects/baseStaticObject'
+import { StaticLeafPlanes } from '@/babylon/world/statics/staticLeafPlanes'
+import { createLeafBlockPlaneMatrix } from '@/babylon/world/prefabs/leafBlockPlanes'
 
 function createBlocks(layers: number[][][]): Matrix[] {
     const scale = Matrix.Scaling(0.5, 0.5, 0.5)
@@ -28,9 +30,30 @@ const LARGE_BLOCKS = createBlocks([
     [[-0.35, -0.1], [0.35, -0.1], [-0.2, 0.25], [0.2, 0.25], [0, 0.5]],
 ])
 
+function createLeafPlanes(blocks: Matrix[]): Matrix[] {
+    const planes: Matrix[] = []
+    const halfSize = new Vector3(0.25, 0.25, 0.25)
+    const top = Math.max(...blocks.map(block => block.m[13]))
+    blocks.forEach((block, index) => {
+        const x = block.m[12], y = block.m[13], z = block.m[14]
+        if (!(index % 3 === 0 && Math.hypot(x, z) >= 0.5) && y !== top) return
+        // Block centres include the source mesh's fixed -0.5 Y offset.
+        const position = Matrix.Translation(x, y - 0.5, z)
+        for (let face = 0; face < 2; face++) {
+            planes.push(createLeafBlockPlaneMatrix(halfSize, index, face).multiply(position))
+        }
+    })
+    return planes
+}
+
+const SMALL_PLANES = createLeafPlanes(SMALL_BLOCKS)
+const TALL_PLANES = createLeafPlanes(TALL_BLOCKS)
+const LARGE_PLANES = createLeafPlanes(LARGE_BLOCKS)
+
 abstract class Shrub extends BaseStaticObject {
-    protected constructor(type: number, position: Vector3, rotation: number, material: Vector2, private readonly blocks: Matrix[]) {
-        super(type, position, rotation, material, null)
+    protected constructor(type: number, position: Vector3, rotation: number, material: Vector2,
+        private readonly blocks: Matrix[], private readonly planes: Matrix[]) {
+        super(type, position, rotation, material, StaticLeafPlanes.prefab)
     }
 
     render() {
@@ -43,23 +66,27 @@ abstract class Shrub extends BaseStaticObject {
             WorldRenderer.blockWithAlpha1!.matrices.push(block.multiply(world))
             WorldRenderer.blockWithAlpha1!.uvData.push(this.material)
         }
+        for (const plane of this.planes) {
+            this.prefab!.matrices.push(plane.multiply(world))
+            this.prefab!.uvData.push(this.material)
+        }
     }
 }
 
 export class Shrub2x2 extends Shrub {
     constructor(type: number, position: Vector3, rotation: number, material: Vector2) {
-        super(type, position, rotation, material, LARGE_BLOCKS)
+        super(type, position, rotation, material, LARGE_BLOCKS, LARGE_PLANES)
     }
 }
 
 export class Shrub1x1_tall extends Shrub {
     constructor(type: number, position: Vector3, rotation: number, material: Vector2) {
-        super(type, position, rotation, material, TALL_BLOCKS)
+        super(type, position, rotation, material, TALL_BLOCKS, TALL_PLANES)
     }
 }
 
 export class Shrub1x1_small extends Shrub {
     constructor(type: number, position: Vector3, rotation: number, material: Vector2) {
-        super(type, position, rotation, material, SMALL_BLOCKS)
+        super(type, position, rotation, material, SMALL_BLOCKS, SMALL_PLANES)
     }
 }

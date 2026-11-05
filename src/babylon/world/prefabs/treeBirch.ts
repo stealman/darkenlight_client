@@ -1,6 +1,7 @@
 import { Mesh, MeshBuilder, Scene } from '@babylonjs/core'
 import { Prefab } from '@/babylon/world/worldRenderer'
 import { Materials } from '@/babylon/materials'
+import { addLeafBlockPlanes } from './leafBlockPlanes'
 
 export const PrefabBirch = {
     getPrefab(scene: Scene): Prefab {
@@ -31,6 +32,9 @@ export const PrefabBirch = {
                 )
                 mesh.rotation.z = roll
                 parts.push(mesh)
+                if (j < 4 && Math.hypot(mesh.position.x, mesh.position.z) > 0.7 && (i + j) % 3 === 0) {
+                    addLeafBlockPlanes(parts, mesh, i * 5 + j)
+                }
             }
         }
         const mesh = Mesh.MergeMeshes(parts, true)!

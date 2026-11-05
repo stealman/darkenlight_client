@@ -1,6 +1,7 @@
 import { Mesh, MeshBuilder, Scene } from '@babylonjs/core'
 import { Prefab } from '@/babylon/world/worldRenderer'
 import { Materials } from '@/babylon/materials'
+import { addLeafBlockPlanes } from './leafBlockPlanes'
 
 export const PrefabOak = {
     getPrefab(scene: Scene): Prefab {
@@ -32,6 +33,9 @@ export const PrefabOak = {
                 block.position.set(cx + x * cos - z * sin, cy + y, cz + x * sin + z * cos)
                 block.rotation.z = Math.sin(angle + i) * 0.1
                 blocks.push(block)
+                if (i < 4 && Math.hypot(block.position.x, block.position.z) > 0.75 && (lobe + i) % 3 === 0) {
+                    addLeafBlockPlanes(blocks, block, lobe * 5 + i)
+                }
             }
         })
 

@@ -1,6 +1,7 @@
 import { Mesh, MeshBuilder, Scene, Vector3 } from '@babylonjs/core'
 import { Prefab } from '@/babylon/world/worldRenderer'
 import { Materials } from '@/babylon/materials'
+import { addLeafBlockPlanes } from './leafBlockPlanes'
 
 export const PrefabFir = {
     getPrefab(scene: Scene) {
@@ -57,11 +58,14 @@ export const PrefabFir = {
             ]
         ];
 
-        layers.forEach(layer => {
-            layer.forEach(pos => {
+        layers.forEach((layer, layerIndex) => {
+            layer.forEach((pos, index) => {
                 const c = box.clone("clone");
                 c.position = new Vector3(pos.x, y, pos.z);
                 blocks.push(c);
+                if (Math.hypot(pos.x, pos.z) >= 0.25 && index % 3 === layerIndex % 3) {
+                    addLeafBlockPlanes(blocks, c, layerIndex * 8 + index)
+                }
             });
             y += 0.5;
         });
