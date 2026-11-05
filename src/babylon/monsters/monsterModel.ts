@@ -427,6 +427,12 @@ export class MonsterModel implements EquipBearer {
         this.pendingAttackSoundAnim = null
         if (this.initialized) {
             ActiveMeshFreezer.setSkeletonActive(this.skeleton, false)
+            // The base group is only a source for the actual animation clips.
+            // Paused clip animatables otherwise remain in Babylon's per-frame
+            // active list after their monster leaves the viewport.
+            this.activeAnims.forEach(anim => anim.stop())
+            this.activeAnims.clear()
+            this.idleAnimationFrozen = false
             this.animation.stop()
             MonsterLoader.monsterTemplates.get(this.template.id)?.deactivateClone(this.template)
         }
