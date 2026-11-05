@@ -5,6 +5,7 @@ import { WorldDataManager } from '@/data/worldDataManager'
 import { ViewportManager } from '@/utils/viewport'
 import { PrefabOak } from '@/babylon/world/prefabs/treeOak'
 import { PrefabFir } from '@/babylon/world/prefabs/treeFir'
+import { PrefabBirch } from '@/babylon/world/prefabs/treeBirch'
 import { Lights } from '@/babylon/scene/lights'
 import { MyPlayer } from '@/data/myPlayer'
 import { TargetingManager } from '@/gui/targettingManager'
@@ -19,6 +20,7 @@ export const TreeManager = {
     prefabs: {
         tree1: null as Prefab | null,
         tree2: null as Prefab | null,
+        birch: null as Prefab | null,
     },
     fadedLeafMaterial: null as PBRMaterial | null,
     fadedTrunkMaterial: null as PBRMaterial | null,
@@ -40,6 +42,7 @@ export const TreeManager = {
         Lights.enableTransparentShadowCasters()
         this.prefabs.tree1 = PrefabOak.getPrefab(scene)
         this.prefabs.tree2 = PrefabFir.getPrefab(scene)
+        this.prefabs.birch = PrefabBirch.getPrefab(scene)
         this.fadedLeafMaterial = Materials.createBlockMatAlpha1(scene)
         this.configureFadedMaterial(this.fadedLeafMaterial, 'tree_leaves_faded_material', true)
         this.fadedTrunkMaterial = Materials.createBlockMat1(scene)
@@ -245,6 +248,12 @@ export const TreeManager = {
             case 8:
                 this.allTrees.push(new TreeFir(pos, rotation, size, MaterialAlphaEnum1.getMaterialByIndex(4)))
                 break
+            case 9:
+            case 10:
+            case 11:
+            case 12:
+                this.allTrees.push(new TreeBirch(pos, rotation, size, MaterialAlphaEnum1.getMaterialByIndex(tree.type - 8)))
+                break
             default:
                 break
         }
@@ -419,6 +428,7 @@ export const TreeManager = {
 }
 
 class TreeOak implements Tree {
+    protected leafHeightOffset = 1.55
     position: Vector3
     rotation: number
     scale: number
@@ -448,7 +458,7 @@ class TreeOak implements Tree {
                 this.leafMaterial,
                 false,
             )
-            mesh.position.set(this.position.x, this.position.y + (2 * this.scale), this.position.z)
+            mesh.position.set(this.position.x, this.position.y + (this.leafHeightOffset * this.scale), this.position.z)
             mesh.rotation.y = this.rotation
             mesh.scaling.setAll(this.scale)
             mesh.visibility = this.fadeVisibility
@@ -456,7 +466,7 @@ class TreeOak implements Tree {
             return
         }
 
-        const matrix = Matrix.Translation( this.position.x, this.position.y + (2 * this.scale), this.position.z);
+        const matrix = Matrix.Translation( this.position.x, this.position.y + (this.leafHeightOffset * this.scale), this.position.z);
         const rotationMatrix = Matrix.RotationY(this.rotation);
         const scaleMatrix = Matrix.Scaling(this.scale, this.scale, this.scale);
 
@@ -465,10 +475,15 @@ class TreeOak implements Tree {
     }
 
     renderTrunk(faded: boolean) {
-        const scaleMatrix = Matrix.Scaling(this.scale / 2, this.scale / 2, this.scale / 2)
-
-        // Blocks for trunk
-        for (let i = 0; i <= 2.5 * this.scale; i += this.scale / 2) {
+        const cos = Math.cos(this.rotation)
+        const sin = Math.sin(this.rotation)
+        const rotation = Matrix.RotationY(this.rotation)
+        const block = (x: number, y: number, z: number, size: number, height = size) => {
+            const px = this.position.x + (x * cos + z * sin) * this.scale
+            const py = this.position.y + y * this.scale
+            const pz = this.position.z + (z * cos - x * sin) * this.scale
+            const width = size * this.scale
+            const blockHeight = height * this.scale
             if (faded) {
                 const mesh = TreeManager.createFadedMesh(
                     WorldRenderer.block1!.mesh,
@@ -477,17 +492,23 @@ class TreeOak implements Tree {
                     this.woodMaterial,
                     true,
                 )
-                mesh.position.set(this.position.x, this.position.y + i - 0.5, this.position.z)
-                mesh.scaling.setAll(this.scale / 2)
+                mesh.position.set(px, py - 0.5, pz)
+                mesh.rotation.y = this.rotation
+                mesh.scaling.set(width, blockHeight, width)
                 mesh.visibility = this.fadeVisibility
                 this.fadedMeshes.push(mesh)
-                continue
+                return
             }
-            const positionMatrix = Matrix.Translation(this.position.x, this.position.y + i, this.position.z)
-
-            WorldRenderer.block1!.matrices.push(scaleMatrix.multiply(positionMatrix))
+            WorldRenderer.block1!.matrices.push(Matrix.Scaling(width, blockHeight, width)
+                .multiply(rotation).multiply(Matrix.Translation(px, py, pz)))
             WorldRenderer.block1!.uvData.push(this.woodMaterial)
         }
+        for (let i = 0; i <= 4; i++) block(0, i * 0.5, 0, 0.5 * 0.85, 0.5)
+        for (const [x, y, z] of [
+            [-0.22, 1.45, 0.1], [-0.44, 1.66, 0.2], [-0.62, 1.8, 0.28],
+            [0.2, 1.6, -0.16], [0.4, 1.82, -0.32], [0.56, 2, -0.4],
+            [0.05, 1.8, 0.24], [0.1, 2, 0.45],
+        ]) block(x, y, z, 0.32 * 0.85)
     }
 
     intersectsLeafOcclusionSegment(origin: Vector3, direction: Vector3, maxDistance: number): boolean {
@@ -498,15 +519,58 @@ class TreeOak implements Tree {
             maxDistance,
             new Vector3(
                 this.position.x - halfWidth,
-                this.position.y + (2 * this.scale),
+                this.position.y + (1.25 * this.scale),
                 this.position.z - halfWidth,
             ),
             new Vector3(
                 this.position.x + halfWidth,
-                this.position.y + (3.75 * this.scale),
+                this.position.y + (3.2 * this.scale),
                 this.position.z + halfWidth,
             ),
         )
+    }
+}
+
+class TreeBirch extends TreeOak {
+    constructor(position: Vector3, rotation: number, scale: number, leafMaterial: Vector2) {
+        super(position, rotation, scale, leafMaterial)
+        this.woodMaterial = MaterialEnum1.BIRCH_BARK.uv
+        this.leavesPrefab = TreeManager.prefabs.birch!
+        this.leafHeightOffset = 1
+    }
+
+    renderTrunk(faded: boolean) {
+        const cos = Math.cos(this.rotation)
+        const sin = Math.sin(this.rotation)
+        const rotation = Matrix.RotationY(this.rotation)
+        const block = (x: number, y: number, width: number, height: number) => {
+            const px = this.position.x + x * cos * this.scale
+            const py = this.position.y + y * this.scale
+            const pz = this.position.z - x * sin * this.scale
+            if (faded) {
+                const mesh = TreeManager.createFadedMesh(WorldRenderer.block1!.mesh,
+                    'tree_birch_trunk_faded', TreeManager.fadedTrunkMaterial!, this.woodMaterial, true)
+                mesh.position.set(px, py - 0.5, pz)
+                mesh.rotation.y = this.rotation
+                mesh.scaling.set(width * this.scale, height * this.scale, width * this.scale)
+                mesh.visibility = this.fadeVisibility
+                this.fadedMeshes.push(mesh)
+            } else {
+                WorldRenderer.block1!.matrices.push(Matrix.Scaling(width * this.scale, height * this.scale, width * this.scale)
+                    .multiply(rotation).multiply(Matrix.Translation(px, py, pz)))
+                WorldRenderer.block1!.uvData.push(this.woodMaterial)
+            }
+        }
+        for (let i = 0; i < 5; i++) block(0, 0.2 + i * 0.4, 0.32, 0.4)
+        for (const side of [-1, 1]) {
+            for (let i = 1; i <= 4; i++) block(side * i * 0.16, 1.25 + i * 0.14, 0.22, 0.3)
+        }
+    }
+
+    intersectsLeafOcclusionSegment(origin: Vector3, direction: Vector3, maxDistance: number): boolean {
+        return segmentIntersectsAabb(origin, direction, maxDistance,
+            new Vector3(this.position.x - 1.25 * this.scale, this.position.y + 0.8 * this.scale, this.position.z - 1.25 * this.scale),
+            new Vector3(this.position.x + 1.25 * this.scale, this.position.y + 3.2 * this.scale, this.position.z + 1.25 * this.scale))
     }
 }
 

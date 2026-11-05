@@ -1,3 +1,4 @@
+import { SpecimenTree, StandingBanner, BannerMetadata, SpecimenPrefabs } from './objects/specimens'
 import { Matrix, Scene, Vector2, Vector3 } from '@babylonjs/core'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { MaterialAlphaEnum1, MaterialEnum1, MaterialEnumTrans } from '@/babylon/materials'
@@ -91,6 +92,8 @@ export const StaticsManager = {
         const previousCount = this.allStatics.length
 
         switch (obj.tp) {
+            case 402: this.allStatics.push(new SpecimenTree(obj.tp, pos)); break
+            case 403: this.allStatics.push(new StandingBanner(obj.tp, pos, obj.meta as BannerMetadata)); break
             case 101: this.allStatics.push(new Shrub2x2(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_LIGHT.uv)); break
             case 102: this.allStatics.push(new Shrub2x2(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_DARK.uv)); break
             case 103: this.allStatics.push(new Shrub2x2(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_AUTUMN.uv)); break
@@ -409,6 +412,7 @@ export const StaticsManager = {
 
     renderObjects(visibilityReady = false) {
         StaticEquipPartsRenderer.clear()
+        SpecimenPrefabs.clear()
 
         this.allStatics.forEach((obj) => {
             if (obj instanceof CampBarrel) obj.clearRenderMatrices()
@@ -426,6 +430,7 @@ export const StaticsManager = {
         StaticFireParticleManager.flush()
 
         StaticEquipPartsRenderer.flush()
+        SpecimenPrefabs.flush()
     },
 
     resolveConnectingCorners() {

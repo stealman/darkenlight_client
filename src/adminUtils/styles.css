@@ -433,3 +433,10 @@ select {
         border-left: 0;
     }
 }
+
+.admin-utils__tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.admin-utils__tabs button[aria-pressed="true"] { outline: 2px solid currentColor; }
+.admin-utils [hidden] { display: none !important; }
+.admin-utils textarea { width: 100%; resize: vertical; font-family: monospace; }
+#assetChoice { min-height: 190px; }
+#assetError { overflow-wrap: anywhere; }

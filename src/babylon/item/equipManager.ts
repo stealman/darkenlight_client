@@ -45,6 +45,7 @@ export class EquipItem {
     hasSwordParticles: boolean = false
     particleSystem: GPUParticleSystem | null = null
 
+    private inverseRestMatrix = Matrix.Identity()
     private parentRotMatrix = new Matrix()
     private tmpOffset = new Vector3()
 
@@ -62,6 +63,15 @@ export class EquipItem {
         this.scale = scale ? scale : Vector3.One()
         this.itemPosition = position ? position : Vector3.Zero()
         this.itemRotation = rotation ? Quaternion.FromEulerVector(rotation) : null
+        if (bone) {
+            // Keep existing offsets in the model's rest-pose axes and world units.
+            // Use the authored rest pose, including on reused animated clones.
+            this.inverseRestMatrix.copyFrom(bone.getRestMatrix())
+            for (let ancestor = bone.getParent(); ancestor; ancestor = ancestor.getParent()) {
+                this.inverseRestMatrix.multiplyToRef(ancestor.getRestMatrix(), this.inverseRestMatrix)
+            }
+            this.inverseRestMatrix.invert()
+        }
         const atlasMatIndex = type.cbData.resolveMaterialAtlasIndex(matIndex)
         this.matVector = this.getAtlasUvcOffsets(type.cbData.matCols, type.cbData.matRows, atlasMatIndex)
         this.scaleMatrix = Matrix.Scaling(this.scale.x, this.scale.y, this.scale.z)
@@ -102,10 +112,12 @@ export class EquipItem {
         // bone position do worldu parenta
         Vector3.TransformCoordinatesToRef(this.localPosition, this.parent.worldMatrix, this.position)
 
-        // Apply specific item position offset (bez new Matrix)
-        if (this.itemPosition) {
+        // Carry the rest-pose offset with the bone, independently of item rotation.
+        if (this.itemPosition && !this.itemPosition.equalsToFloats(0, 0, 0)) {
+            Vector3.TransformNormalToRef(this.itemPosition, this.inverseRestMatrix, this.tmpOffset)
+            Vector3.TransformNormalToRef(this.tmpOffset, m, this.tmpOffset)
             Matrix.FromQuaternionToRef(this.parent.rotationQuaternion, this.parentRotMatrix)
-            Vector3.TransformCoordinatesToRef(this.itemPosition, this.parentRotMatrix, this.tmpOffset)
+            Vector3.TransformNormalToRef(this.tmpOffset, this.parentRotMatrix, this.tmpOffset)
             this.position.addInPlace(this.tmpOffset)
         }
 

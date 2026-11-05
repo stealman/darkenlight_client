@@ -203,7 +203,7 @@ export class Prefab {
     }
 }
 
-class SymmetricBlock {
+export class SymmetricBlock {
     mesh: Mesh
     matrices: Matrix[] = []
     uvData: Vector2[] = []

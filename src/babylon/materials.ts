@@ -106,6 +106,12 @@ export const Materials = {
 
     createBlockMat1(scene: Scene): PBRCustomMaterial {
         const material = this.getPBRCustomMaterial(scene, "sym_block_mats1", this.BASE_PATH, 'block_materials1.png', 1 / 16, 1 / 16, false)
+        // Tint only birch bark; keep the shared atlas and instance batches intact.
+        const bark = MaterialEnum1.BIRCH_BARK.uv
+        material.Vertex_Definitions(`${material.CustomParts.Vertex_Definitions}\nvarying float vBirchBarkTint;`)
+        material.Vertex_MainEnd(`vBirchBarkTint = distance(uvc, vec2(${bark.x}, ${bark.y})) < 0.01 ? 0.6 : 1.0;`)
+        material.Fragment_Definitions('varying float vBirchBarkTint;')
+        material.Fragment_Custom_Albedo('result *= vBirchBarkTint;')
         material.bumpTexture = new Texture(this.BASE_PATH + 'block_materials1_norm.png', scene)
         material.bumpTexture.uScale = 1 / 16
         material.bumpTexture.vScale = 1 / 16
@@ -289,6 +295,8 @@ export const MaterialAlphaEnum1 = {
     TREE_LEAF_AUTUMN: new MaterialEnum(3, new Vector2(4.5, 6.5)),
     TREE_LEAF_NORTH: new MaterialEnum(4, new Vector2(6.5, 6.5)),
     TREE_LEAF_5: new MaterialEnum(5, new Vector2(0.5, 4.5)),
+    BIRCH_LEAVES: new MaterialEnum(7, new Vector2(4.5, 4.5)),
+    WILLOW_LEAVES: new MaterialEnum(8, new Vector2(6.5, 4.5)),
     TREE_LEAF_6: new MaterialEnum(6, new Vector2(2.5, 4.5)),
 
     getMaterialByIndex(index: number): Vector2 {
@@ -310,6 +318,8 @@ export const MaterialEnum1 = {
     WOOD_PLANKS: new MaterialEnum(12, new Vector2(6.5, 12.5)),
     WOOD_PLANKS_DARK: new MaterialEnum(13, new Vector2(8.5, 12.5)),
     WOOD_CUT: new MaterialEnum(14, new Vector2(10.5, 12.5)),
+    BIRCH_BARK: new MaterialEnum(15, new Vector2(12.5, 12.5)),
+    WILLOW_BARK: new MaterialEnum(16, new Vector2(14.5, 12.5)),
     EMBERS: new MaterialEnum(17, new Vector2(0.5, 10.5)),
     STEEL_1: new MaterialEnum(25, new Vector2(0.5, 8.5)),
     HAY: new MaterialEnum(33, new Vector2(0.5, 6.5)),

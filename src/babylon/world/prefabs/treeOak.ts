@@ -1,53 +1,40 @@
-import { Mesh, MeshBuilder, Scene, Vector3 } from '@babylonjs/core'
+import { Mesh, MeshBuilder, Scene } from '@babylonjs/core'
 import { Prefab } from '@/babylon/world/worldRenderer'
 import { Materials } from '@/babylon/materials'
 
 export const PrefabOak = {
-    getPrefab(scene: Scene) {
-        const box = MeshBuilder.CreateBox("box", { width: 0.5, height: 0.5, depth: 0.5}, scene);
-        box.position = new Vector3(0, 0, 0);
-        box.isVisible = false
-
+    getPrefab(scene: Scene): Prefab {
         const blocks: Mesh[] = []
-        let y = 0
-        let layer = [{ x: 0, z: 0 }, {x: -0.5, z: -1}, {x: 0, z: -1}, {x: 0.5, z: -1}, {x: -1, z: -0.5}, {x: 1, z: -0.5}, {x: -1, z: 0}, {x: 1, z: 0}, {x: -1, z: 0.5}, {x: 1, z: 0.5}, {x: -0.5, z: 1}, {x: 0, z: 1}, {x: 0.5, z: 1}, {x: 1, z: 1} ]
-        layer.forEach((pos) => {
-            const clone = box.clone("clone")
-            clone.position = new Vector3(pos.x, y, pos.z)
-            blocks.push(clone)
+        // Uneven lobes break the circular silhouette without filling the crown.
+        const lobes = [
+            [-0.5, 0.1, -0.4], [0.45, 0.22, -0.42],
+            [-0.52, 0.35, 0.36], [0.48, 0.08, 0.4],
+            [-0.35, 0.8, -0.12], [0.25, 1.05, 0.24], [0.1, 0.65, -0.46],
+            [0.56, 0.64, -0.06], [-0.22, 0.65, 0.5],
+        ]
+        const offsets = [
+            [-0.28, -0.12, -0.24], [0.28, 0.08, -0.24],
+            [-0.28, 0.1, 0.24], [0.28, -0.1, 0.24], [0, 0.3, 0],
+        ]
+        lobes.forEach(([cx, cy, cz], lobe) => {
+            const angle = lobe * 1.37
+            const cos = Math.cos(angle)
+            const sin = Math.sin(angle)
+            for (let i = 0; i < offsets.length; i++) {
+                const [x, y, z] = offsets[i]
+                const variation = ((lobe * 3 + i * 2) % 5) / 4
+                // Match the birch's block sizes and deterministic variation.
+                const block = MeshBuilder.CreateBox('oakLeaf', {
+                    width: 0.5 + variation * 0.06,
+                    height: 0.36 + (1 - variation) * 0.06,
+                    depth: 0.46 + variation * 0.06,
+                }, scene)
+                block.position.set(cx + x * cos - z * sin, cy + y, cz + x * sin + z * cos)
+                block.rotation.z = Math.sin(angle + i) * 0.1
+                blocks.push(block)
+            }
         })
 
-        y += 0.5
-        layer = [{ x: 0, z: 0 }, { x: -0.5, z: -1 }, { x: 0, z: -1 }, { x: 0.5, z: -1 }, { x: -1, z: -0.5 }, { x: -0.5, z: -0.5 }, { x: 1, z: -0.5 }, { x: -1, z: 0 }, { x: 1, z: 0 },
-            { x: -1, z: 0.5 }, { x: 0.5, z: 0.5 }, { x: 1, z: 0.5 }, { x: -0.5, z: 1 }, { x: 0, z: 1 }, { x: 0.5, z: 1 }, { x: 1, z: 1 }];
-
-        layer.forEach((pos) => {
-            const clone = box.clone("clone")
-            clone.position = new Vector3(pos.x, y, pos.z)
-            blocks.push(clone)
-        })
-
-        y += 0.5
-        layer = [{ x: 0, z: -0.5 }, { x: 0.5, z: -0.5 },
-            { x: -0.5, z: 0 }, { x: 0.5, z: 0 },
-            { x: 0, z: 0.5 }, { x: -0.5, z: 0.5 }];
-
-        layer.forEach((pos) => {
-            const clone = box.clone("clone")
-            clone.position = new Vector3(pos.x, y, pos.z)
-            blocks.push(clone)
-        })
-
-        y += 0.5
-        layer = [{ x: 0.5, z: 0 }, { x: 0, z: -0.5 }, { x: 0, z: 0.5 }, { x: 0, z: 0 }];
-
-        layer.forEach((pos) => {
-            const clone = box.clone("clone")
-            clone.position = new Vector3(pos.x, y, pos.z)
-            blocks.push(clone)
-        })
-
-        // Merge bloks and set material
         const merged = Mesh.MergeMeshes(blocks, true) as Mesh
         merged.material = Materials.blockMatAlpha1
         merged.name = "prefab_tree1"

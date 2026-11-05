@@ -830,7 +830,7 @@ function setEquipmentSlot(model: CharacterModel, slot: PreviewSlot, modelId: num
     }
 }
 
-function playAnimation(model: CharacterModel, animationName: string) {
+function playAnimation(model: CharacterModel, animationName: string, loop = true) {
     const animations = {
         idle: model.idleAnim,
         walk: model.walkAnim,
@@ -842,7 +842,7 @@ function playAnimation(model: CharacterModel, animationName: string) {
     }
     Object.values(animations).forEach((animation) => animation?.stop())
     const animation = animations[animationName as keyof typeof animations]
-    animation?.start(!['slash', 'jab', 'death'].includes(animationName), 1)
+    animation?.start(loop, 1)
 }
 
 export async function mountAdminUtils() {
@@ -925,18 +925,25 @@ export async function mountAdminUtils() {
 
     Lights.initialize(scene)
     Materials.initialize(scene)
+    // Keep asset colours stable under the game's midday sun, rather than the
+    // default sunrise phase used before the server synchronizes the clock.
+    Lights.synchronizeDayNightCycle({
+        phase: 0.5,
+        cycleDurationMs: Lights.dayNightCycleDurationMs,
+        paused: true,
+    })
     Lights.sunLight.intensity = 2.2
 
     const fillLight = new HemisphericLight('adminUtilsFillLight', Vector3.Up(), scene)
-    fillLight.diffuse = new Color3(0.72, 0.8, 0.9)
-    fillLight.groundColor = new Color3(0.18, 0.22, 0.16)
+    fillLight.diffuse = Color3.White()
+    fillLight.groundColor = new Color3(0.18, 0.18, 0.18)
     fillLight.specular = new Color3(0.08, 0.08, 0.08)
-    fillLight.intensity = 0.4
+    fillLight.intensity = 0.85
 
     const backLight = new DirectionalLight('adminUtilsBackLight', new Vector3(0.35, -0.45, -0.82), scene)
-    backLight.diffuse = new Color3(0.9, 0.86, 0.78)
+    backLight.diffuse = Color3.White()
     backLight.specular = new Color3(0.12, 0.12, 0.12)
-    backLight.intensity = 1.05
+    backLight.intensity = 1.4
 
     const ground = MeshBuilder.CreateGround('adminUtilsGrass', { width: 12, height: 12, subdivisions: 2 }, scene)
     const grassMaterial = new StandardMaterial('adminUtilsGrassMaterial', scene)
@@ -963,16 +970,7 @@ export async function mountAdminUtils() {
 
     try {
         await EquipManager.initializeArmors(scene)
-        await WeaponsCbManager.initLongsword(EquipManager.itemTypes, scene)
-        await EquipManager.initializeBroadsword(scene)
-        await WeaponsCbManager.initGreatAxe(EquipManager.itemTypes, scene)
-        await WeaponsCbManager.initHalberd(EquipManager.itemTypes, scene)
-        await WeaponsCbManager.initPickaxe(EquipManager.itemTypes, scene)
-        await WeaponsCbManager.initHandAxe(EquipManager.itemTypes, scene)
-        await WeaponsCbManager.initBattleAxe(EquipManager.itemTypes, scene)
-        await WeaponsCbManager.initHuntingSpear(EquipManager.itemTypes, scene)
-        await WeaponsCbManager.initLightMace(EquipManager.itemTypes, scene)
-        await WeaponsCbManager.initWarmace(EquipManager.itemTypes, scene)
+        await WeaponsCbManager.initMelee(EquipManager.itemTypes, scene)
         const longswordType = EquipManager.getItemType(MODEL_IDS.longsword)
         const longswordMaterial = longswordType?.mesh?.material
         const broadswordType = EquipManager.getItemType(MODEL_IDS.broadsword)
@@ -1376,10 +1374,21 @@ export async function mountAdminUtils() {
             })
         })
 
+        const loopControl = document.createElement('label')
+        loopControl.innerHTML = '<input type="checkbox" checked> Loop'
+        animationSelect.after(loopControl)
+        const replay = document.createElement('button')
+        replay.textContent = 'Přehrát znovu'
+        loopControl.after(replay)
+        const play = () => playAnimation(model, animationSelect.value, loopControl.querySelector('input')!.checked)
+        replay.onclick = play
+        loopControl.onchange = play
+        const { installAssetPreview } = await import('./assetPreview')
+        await installAssetPreview(root, scene, camera, model)
         animationSelect.disabled = false
         playAnimation(model, savedSettings.animation)
         animationSelect.addEventListener('change', () => {
-            playAnimation(model, animationSelect.value)
+            play()
             saveAdminUtilsSettings(animationSelect.value)
         })
 
