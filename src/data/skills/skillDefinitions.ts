@@ -8,7 +8,6 @@ export type SkillDefinition = {
     translationKey: string
     descriptionTranslationKey: string
     bonusDescriptionTranslationKey?: string
-    trainingEnabled?: boolean
     bonusKind?: 'weaponAttack' | 'powerStrikeDamage' | 'preciseShotDamage' | 'armor' | 'campingRestingRegen' | 'bandageHealing' | 'mining'
     bonusTargetTranslationKey?: string
 }
@@ -40,9 +39,9 @@ export const GatheringSkillDefinitions: SkillDefinition[] = [
 ]
 
 export const CraftingSkillDefinitions: SkillDefinition[] = [
-    {key: 'blacksmithy', category: 'crafting', translationKey: 'skills.crafting.blacksmithy', descriptionTranslationKey: 'skills.descriptions.blacksmithy', bonusDescriptionTranslationKey: 'skills.bonuses.blacksmithy', trainingEnabled: false},
-    {key: 'bowcraft', category: 'crafting', translationKey: 'skills.crafting.bowcraft', descriptionTranslationKey: 'skills.descriptions.bowcraft', trainingEnabled: false},
-    {key: 'armorsmithy', category: 'crafting', translationKey: 'skills.crafting.armorsmithy', descriptionTranslationKey: 'skills.descriptions.armorsmithy', trainingEnabled: false},
+    {key: 'blacksmithy', category: 'crafting', translationKey: 'skills.crafting.blacksmithy', descriptionTranslationKey: 'skills.descriptions.blacksmithy', bonusDescriptionTranslationKey: 'skills.bonuses.blacksmithy'},
+    {key: 'bowcraft', category: 'crafting', translationKey: 'skills.crafting.bowcraft', descriptionTranslationKey: 'skills.descriptions.bowcraft'},
+    {key: 'armorsmithy', category: 'crafting', translationKey: 'skills.crafting.armorsmithy', descriptionTranslationKey: 'skills.descriptions.armorsmithy'},
 ]
 
 export const SkillDefinitions: SkillDefinition[] = [

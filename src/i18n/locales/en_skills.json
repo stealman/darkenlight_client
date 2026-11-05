@@ -70,7 +70,8 @@
       "fallback": "Level {rank}"
     },
     "progress": {
-      "trainingUnavailable": "Training is not available yet",
+      "visitTrainer": "Visit a trainer",
+      "pause": "Pause",
       "experience": "Experience",
       "training": "Training",
       "train": "Train",

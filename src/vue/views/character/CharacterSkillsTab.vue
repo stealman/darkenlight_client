@@ -26,7 +26,7 @@
                         class="skill-row-summary"
                         :class="{
                             'skill-row--untrained': !skill.progress,
-                            'skill-row--capped': skill.progress && skill.nextExperienceRequired == null,
+                            'skill-row--capped': skill.progress && skill.nextTrainingRequired == null,
                         }"
                         role="button"
                         tabindex="0"
@@ -37,11 +37,7 @@
                         @keydown.space.prevent="toggleSkillDetails(skill.key)"
                     >
                     <span :class="['skill-name', { 'ui-text-gradient': skill.progress }]">{{ skill.name }}</span>
-                    <template v-if="skill.progress && skill.trainingEnabled === false">
-                        <span class="skill-progress-rank skill-progress-rank--current skill-progress-rank--maximum">{{ getSkillRankName(skill.rank) }}</span>
-                        <span class="skill-progress-state">{{ t('skills.progress.trainingUnavailable') }}</span>
-                    </template>
-                    <template v-else-if="skill.nextExperienceRequired != null">
+                    <template v-if="skill.nextTrainingRequired != null">
                         <span class="skill-progress-rank skill-progress-rank--current">{{ getSkillRankName(skill.rank) }}</span>
                         <div
                             class="skill-progress-stack"
@@ -50,7 +46,7 @@
                             @mouseleave="hideSkillProgressTooltip(skill.key)"
                             @click.stop="toggleSkillProgressTooltip(skill, $event)"
                         >
-                            <div class="skill-progress-row">
+                            <div v-if="skill.nextExperienceRequired != null" class="skill-progress-row">
                                 <span class="skill-progress-track">
                                     <span class="skill-progress-fill skill-progress-fill--experience ui-progress-fill-gradient" :style="{ width: `${skill.experiencePercent}%` }"></span>
                                 </span>
@@ -62,7 +58,8 @@
                             </div>
                         </div>
                         <span class="skill-progress-rank skill-progress-rank--next">{{ getSkillRankName(skill.rank + 1) }}</span>
-                        <span v-if="skill.needsExperience" class="skill-experience-shortage">
+                        <span v-if="skill.trainingUnlocked === false" class="skill-training-locked">{{ t('skills.progress.visitTrainer') }}</span>
+                        <span v-else-if="skill.needsExperience" class="skill-experience-shortage">
                             {{ insufficientExperienceLabel }}
                         </span>
                         <button
@@ -74,9 +71,10 @@
                         >
                             {{ t('skills.progress.train') }}
                         </button>
-                        <span v-else class="skill-training-time">
-                            {{ formatTrainingTime(skill.trainingRemainingSeconds) }}
-                        </span>
+                        <template v-else>
+                            <span class="skill-training-time">{{ formatTrainingTime(skill.trainingRemainingSeconds) }}</span>
+                            <button type="button" class="skill-training-button dialog-button" @click.stop="stopTraining" @keydown.stop>{{ t('skills.progress.pause') }}</button>
+                        </template>
                     </template>
                     <template v-else-if="skill.progress">
                         <span class="skill-progress-rank skill-progress-rank--current skill-progress-rank--maximum">
@@ -307,6 +305,7 @@ const skills = computed(() => {
             grandmasterBonusUnlocked: rank >= 10,
             nextExperienceRequired: progress?.nextExperienceRequired,
             nextTrainingRequired: progress?.nextTrainingRequired,
+            trainingUnlocked: progress?.trainingUnlocked,
             experience: progress?.experience ?? 0,
             cap: skillCaps[skill.key] ?? 0,
             activeTraining: skillSet?.activeTrainingSkill === skill.key,
@@ -392,12 +391,12 @@ const buildSkillProgressTooltip = (skill: {
     titleClassName: 'ui-text-gradient',
     titleMetaClassName: 'ui-tooltip-title-meta--skill-rank',
     rows: [
-        {
+        ...(skill.nextExperienceRequired != null ? [{
             label: t('skills.progress.experience'),
             separator: '',
             value: `${formatSkillExperience(skill.experience)} / ${formatSkillExperience(skill.nextExperienceRequired ?? 0)}`,
             className: 'ui-tooltip-row--experience',
-        },
+        }] : []),
         {
             label: t('skills.progress.training'),
             separator: '',
@@ -462,6 +461,11 @@ const toggleSkillProgressTooltip = (skill: Parameters<typeof buildSkillProgressT
 const startTraining = (skill: SkillKey) => {
     AudioManager.playGuiButtonClick()
     Connector.sendMessage(new StartSkillTrainingMsg(skill))
+}
+
+const stopTraining = () => {
+    AudioManager.playGuiButtonClick()
+    Connector.sendMessage(new StartSkillTrainingMsg(null))
 }
 
 const formatTrainingTime = (seconds: number) => {
@@ -703,6 +707,7 @@ const formatTrainingTime = (seconds: number) => {
     color: rgb(var(--ui-accent-blue));
 }
 
+.skill-training-locked,
 .skill-experience-shortage {
     grid-column: 5 / -1;
     color: rgb(var(--ui-danger));

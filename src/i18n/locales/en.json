@@ -343,6 +343,8 @@
       }
   },
   "vendor": {
+    "unlockTraining": "Unlock",
+    "noTrainingOffers": "No further lessons are available.",
       "vendor": "Vendor",
       "repairer": "Repair",
       "crafting": "Crafting",

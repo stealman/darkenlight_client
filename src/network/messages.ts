@@ -414,9 +414,9 @@ export class PreciseShot implements Message {
 
 export class StartSkillTrainingMsg implements Message {
     t: number = 32
-    d: { skill: string }
+    d: { skill: string | null }
 
-    constructor(skill: string) {
+    constructor(skill: string | null) {
         this.d = { skill }
     }
 }
@@ -645,4 +645,13 @@ export class ShearSheepMsg implements Message {
     t = 47
     d: {id: number}
     constructor(id: number) { this.d = {id} }
+}
+
+export class NpcUnlockSkillTrainingMsg implements Message {
+    t: number = 48
+    d: {id: number, skill: string, targetRank: number}
+
+    constructor(id: number, skill: string, targetRank: number) {
+        this.d = {id, skill, targetRank}
+    }
 }

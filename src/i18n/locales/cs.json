@@ -342,6 +342,8 @@
       }
   },
   "vendor": {
+    "unlockTraining": "Odemknout",
+    "noTrainingOffers": "Žádná další výuka není k dispozici.",
       "vendor": "Obchod",
       "repairer": "Oprava",
       "crafting": "Výroba",

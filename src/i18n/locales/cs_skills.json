@@ -70,7 +70,8 @@
       "fallback": "Úroveň {rank}"
     },
     "progress": {
-      "trainingUnavailable": "Zatím nelze trénovat",
+      "visitTrainer": "Navštiv trenéra",
+      "pause": "Přerušit",
       "experience": "Zkušenost",
       "training": "Trénink",
       "train": "Trénovat",

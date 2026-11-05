@@ -102,6 +102,8 @@ export type CraftingSkillKey = 'blacksmithy' | 'bowcraft' | 'armorsmithy'
 export type SkillKey = CraftingSkillKey | PhysicalWeaponSkillKey | ArmorSkillKey | UtilitySkillKey | GatheringSkillKey | CombatSkillKey
 
 export interface SkillProgressTO {
+    trainingUnlocked?: boolean
+    trainingUnlockPrice?: number
     maxMiningOreResourceKey?: string
     miningStaminaReductionPercent?: number
     rank: number

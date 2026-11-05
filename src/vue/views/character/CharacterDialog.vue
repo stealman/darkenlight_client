@@ -66,12 +66,12 @@ const hasAvailableSkillTraining = computed(() => {
     return Object.keys(skillCaps).some((key) => {
         const skill = skillSet[key as SkillKey]
 
-        if (!skill || skill.nextExperienceRequired == null || skill.nextTrainingRequired == null) {
+        if (!skill || skill.nextTrainingRequired == null || skill.trainingUnlocked === false) {
             return false
         }
 
         const timeTrainingIsComplete = skill.trainingPoints >= skill.nextTrainingRequired
-        const practicalExperienceIsMissing = skill.experience < skill.nextExperienceRequired
+        const practicalExperienceIsMissing = skill.nextExperienceRequired != null && skill.experience < skill.nextExperienceRequired
         return !timeTrainingIsComplete || !practicalExperienceIsMissing
     })
 })
