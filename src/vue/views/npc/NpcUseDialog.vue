@@ -170,17 +170,26 @@
             />
 
             <template v-else-if="selectedFeature?.type === 'crafting'">
-                <div v-if="craftingCategories.length" class="npc-use-category-tabs">
-                    <button
+                <div v-if="craftingCategories.length" class="npc-crafting-categories">
+                    <div
                         v-for="category in craftingCategories"
                         :key="category"
-                        class="dialog-button npc-use-tab"
-                        @click="openCrafting(category, $event)"
+                        class="npc-crafting-category"
                     >
-                        <span class="ui-text-gradient--button-state">
-                            {{ getCategoryLabel(category) }}
-                        </span>
-                    </button>
+                        <button class="dialog-button npc-use-tab" @click="openCrafting(category, $event)">
+                            <span class="ui-text-gradient--button-state">{{ getCategoryLabel(category) }}</span>
+                        </button>
+                        <div v-if="craftingSkills[category]" class="npc-crafting-skill-summary">
+                            <span class="npc-crafting-skill">{{ t(`skills.crafting.${craftingSkills[category]}`) }}</span>
+                            <span :class="getCraftingSkillRank(category) ? 'npc-crafting-skill-rank' : 'npc-crafting-skill-missing'">&nbsp;({{ getCraftingSkillRankName(category) }})</span>
+                        </div>
+                        <p v-if="craftingDescriptions[category]" class="npc-crafting-description">
+                            {{ t(craftingDescriptions[category]) }}
+                            <template v-if="craftingSkills[category]">
+                                {{ t('crafting.categoryInfo.npcHelp', {npc: npcData?.name ?? ''}) }}
+                            </template>
+                        </p>
+                    </div>
                 </div>
                 <div v-else class="npc-use-empty-state">{{ t('vendor.emptyCategory') }}</div>
             </template>
@@ -246,7 +255,7 @@
 import {computed, nextTick, onMounted, onUnmounted, ref} from 'vue'
 import GameDialog from '@/vue/views/GameDialog.vue'
 import {NpcInteractionManager} from '@/data/npcInteractionManager'
-import type {NpcHealerService, NpcUseData, NpcUseFeatureData, NpcVendorCatalogItem, SkillKey} from '@/network/messageIfs'
+import type {CraftingSkillKey, NpcHealerService, NpcUseData, NpcUseFeatureData, NpcVendorCatalogItem, SkillKey} from '@/network/messageIfs'
 import {t} from '@/i18n'
 import {EmeraldsManager} from '@/gui/emeraldsManager'
 import {InventoryManager} from '@/data/inventoryManager'
@@ -334,6 +343,17 @@ const features = computed(() => npcData.value?.features ?? [])
 const selectedFeature = computed<NpcUseFeatureData | null>(() => features.value[selectedFeatureIndex.value] ?? null)
 const vendorCategories = computed(() => Object.entries(selectedFeature.value?.categories ?? {}).map(([key, items]) => ({key, items})).filter((category) => category.items.length > 0))
 const craftingCategoryOrder: Record<string, number> = {weapons: 0, bows: 1, metalArmor: 2, leatherArmor: 3, jewels: 4, oreSmelting: 5}
+const craftingSkills: Record<string, CraftingSkillKey> = {weapons: 'blacksmithy', bows: 'bowcraft', metalArmor: 'armorsmithy'}
+const craftingDescriptions: Record<string, string> = Object.fromEntries(
+    ['weapons', 'bows', 'metalArmor', 'oreSmelting', 'resources'].map((key) => [key, `crafting.categoryInfo.${key}`]))
+const getCraftingSkillRank = (category: string) => MyPlayer.myCharRef.value?.skillSet?.[craftingSkills[category]]?.rank ?? 0
+const craftingSkillRankNames = ['untrained', 'novice', 'neophyte', 'apprentice', 'expert', 'journeyman', 'veteran', 'master', 'highMaster', 'exemplar', 'grandmaster']
+const getCraftingSkillRankName = (category: string) => {
+    const rank = getCraftingSkillRank(category)
+    if (!rank) return t('crafting.categoryInfo.skillMissing')
+    const name = craftingSkillRankNames[rank]
+    return name ? t(`skills.ranks.${name}`) : t('skills.ranks.fallback', {rank})
+}
 const craftingCategories = computed(() => [...(selectedFeature.value?.craftingCategories ?? [])]
     .sort((first, second) => (craftingCategoryOrder[first] ?? Number.MAX_SAFE_INTEGER) - (craftingCategoryOrder[second] ?? Number.MAX_SAFE_INTEGER)))
 const selectedCategoryItems = computed(() => {
@@ -681,6 +701,14 @@ defineExpose({openDialog})
 .npc-use-content-shell { display: flex; flex-direction: column; width: 100%; height: min(600px, calc(85vh - 48px)); box-sizing: border-box; padding: 10px; gap: 10px; overflow: hidden; }
 .npc-use-category-tabs { display: flex; flex-wrap: wrap; gap: 6px; flex: 0 0 auto; }
 .npc-use-tab { min-width: 82px; }
+.npc-crafting-categories { display: grid; grid-template-columns: max-content minmax(0, 1fr); align-content: start; gap: 24px 12px; min-height: 0; overflow-y: auto; }
+.npc-crafting-category { display: grid; grid-template-columns: subgrid; grid-column: 1 / -1; align-items: center; gap: 6px 12px; text-align: left; }
+.npc-crafting-category > .npc-use-tab { align-self: start; }
+.npc-crafting-skill-summary { min-width: 0; font-size: 14px; line-height: 1.3; overflow-wrap: anywhere; }
+.npc-crafting-description { grid-column: 1 / -1; margin: 0; color: rgb(var(--ui-dark)); font-size: inherit; font-weight: 400; line-height: 1.3; text-align: left; }
+.npc-crafting-skill { color: rgb(var(--ui-success)); font-weight: 700; }
+.npc-crafting-skill-rank { color: rgb(var(--ui-accent-blue)); font-weight: 700; }
+.npc-crafting-skill-missing { color: rgb(var(--ui-danger)); }
 .npc-use-tab.selected,
 .npc-use-tab:not(:disabled):hover {
     background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('/images/gui/bck_stone1.png');

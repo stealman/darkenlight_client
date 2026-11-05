@@ -1,12 +1,14 @@
 import type {SkillKey} from '@/network/messageIfs'
 
-export type SkillCategoryKey = 'weapons' | 'armor' | 'utility' | 'gathering'
+export type SkillCategoryKey = 'weapons' | 'armor' | 'utility' | 'gathering' | 'crafting'
 
 export type SkillDefinition = {
     key: SkillKey
     category: SkillCategoryKey
     translationKey: string
     descriptionTranslationKey: string
+    bonusDescriptionTranslationKey?: string
+    trainingEnabled?: boolean
     bonusKind?: 'weaponAttack' | 'powerStrikeDamage' | 'preciseShotDamage' | 'armor' | 'campingRestingRegen' | 'bandageHealing' | 'mining'
     bonusTargetTranslationKey?: string
 }
@@ -37,9 +39,16 @@ export const GatheringSkillDefinitions: SkillDefinition[] = [
     {key: 'mining', category: 'gathering', translationKey: 'skills.utility.mining', descriptionTranslationKey: 'skills.descriptions.mining', bonusKind: 'mining'},
 ]
 
+export const CraftingSkillDefinitions: SkillDefinition[] = [
+    {key: 'blacksmithy', category: 'crafting', translationKey: 'skills.crafting.blacksmithy', descriptionTranslationKey: 'skills.descriptions.blacksmithy', bonusDescriptionTranslationKey: 'skills.bonuses.blacksmithy', trainingEnabled: false},
+    {key: 'bowcraft', category: 'crafting', translationKey: 'skills.crafting.bowcraft', descriptionTranslationKey: 'skills.descriptions.bowcraft', trainingEnabled: false},
+    {key: 'armorsmithy', category: 'crafting', translationKey: 'skills.crafting.armorsmithy', descriptionTranslationKey: 'skills.descriptions.armorsmithy', trainingEnabled: false},
+]
+
 export const SkillDefinitions: SkillDefinition[] = [
     ...PhysicalWeaponSkillDefinitions,
     ...ArmorSkillDefinitions,
     ...UtilitySkillDefinitions,
     ...GatheringSkillDefinitions,
+    ...CraftingSkillDefinitions,
 ]

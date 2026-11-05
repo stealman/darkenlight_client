@@ -98,7 +98,8 @@ export type ArmorSkillKey = 'leatherArmor' | 'chainArmor' | 'plateArmor' | 'shie
 export type UtilitySkillKey = 'camping' | 'healing'
 export type GatheringSkillKey = 'mining'
 export type CombatSkillKey = 'powerStrike' | 'preciseShot'
-export type SkillKey = PhysicalWeaponSkillKey | ArmorSkillKey | UtilitySkillKey | GatheringSkillKey | CombatSkillKey
+export type CraftingSkillKey = 'blacksmithy' | 'bowcraft' | 'armorsmithy'
+export type SkillKey = CraftingSkillKey | PhysicalWeaponSkillKey | ArmorSkillKey | UtilitySkillKey | GatheringSkillKey | CombatSkillKey
 
 export interface SkillProgressTO {
     maxMiningOreResourceKey?: string
@@ -322,6 +323,8 @@ export interface EffectDamageMessage {
 }
 
 export interface CraftingRecipe {
+    qualityMin?: number
+    qualityMax?: number
     outputQuantity?: number
     diff: number
     ing: { res: ItemTO, qty: number }[]

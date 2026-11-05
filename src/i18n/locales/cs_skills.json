@@ -1,5 +1,6 @@
 {
   "skills": {
+    "crafting": {"blacksmithy": "Kovářství", "bowcraft": "Výroba Luků", "armorsmithy": "Zbrojířství"},
     "monsterKnowledge": {
       "title": "Znalost Monster",
       "level": "Úroveň {level}",
@@ -8,6 +9,7 @@
       "categories": {"Kobolds": "Koboldi", "Skeletons": "Kostlivci", "Withers": "Witherové", "Zombies": "Zombie", "Wights": "Přízraky", "Cats": "Kočky", "Deers": "Jeleni", "Guards": "Stráže"}
     },
     "categories": {
+      "crafting": "Výroba",
       "gathering": "Získávání Surovin",
       "weapons": "Zbraně",
       "armor": "Brnění",
@@ -34,6 +36,10 @@
       "healing": "Léčba"
     },
     "descriptions": {
+      "blacksmithy": "Dovednost pro výrobu kovových zbraní.",
+      "bowcraft": "Dovednost pro výrobu luků.",
+      "armorsmithy": "Dovednost pro výrobu kovového brnění.",
+
       "mining": "Umožňuje těžit a tavit rudy různých materiálů a těžit uhlí.",
       "swords": "Umožňuje nosit a účinně používat Meče v boji",
       "axes": "Umožňuje nosit a účinně používat Sekery v boji",
@@ -61,9 +67,10 @@
       "highMaster": "Vyšší mistr",
       "exemplar": "Výjimečný mistr",
       "grandmaster": "Velmistr",
-      "fallback": "Rank {rank}"
+      "fallback": "Úroveň {rank}"
     },
     "progress": {
+      "trainingUnavailable": "Zatím nelze trénovat",
       "experience": "Zkušenost",
       "training": "Trénink",
       "train": "Trénovat",
@@ -76,13 +83,17 @@
       "maximum": "Maximum"
     },
     "details": {
-      "currentRank": "Aktuální rank",
-      "classMaximumRank": "Maximální rank povolání"
+      "currentRank": "Úroveň",
+      "classMaximumRank": "Maximální úroveň povolání"
     },
     "bonuses": {
       "miningMaxOre": "Umožňuje těžit rudy až po {ore}.",
       "miningStaminaReduction": "Snižuje spotřebu výdrže při těžbě o {percent} %.",
       "skillBonus": "Bonus dovednosti",
+      "blacksmithy": "Umožňuje vyrábět složitější kovové zbraně ve vyšší kvalitě.",
+      "blacksmithyExpert": "Díky zručnému zpracování šetří při výrobě {range} % materiálu.",
+      "blacksmithyMaster": "Vyšší šance na lepší kvalitu.",
+      "blacksmithyGrandmaster": "Díky dokonalému zpracování šetří při výrobě {range} % materiálu.",
       "expertBonus": "Expertní bonus",
       "masterBonus": "Mistrovský bonus",
       "grandmasterBonus": "Velmistrovský bonus",

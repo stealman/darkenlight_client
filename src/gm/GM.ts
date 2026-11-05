@@ -1125,7 +1125,7 @@ export const GMManager = {
         Connector.sendMessage(new GMSaveWorldMapSurfaceChangesMsg(worldId, changes))
     },
 
-    generateBiome(worldId: number, preset: 'NORTH_WOOD', density: number, rows: number[][]) {
+    generateBiome(worldId: number, preset: 'NORTH_WOOD' | 'NORTH_WOOD_SHRUBS', density: number, rows: number[][]) {
         Connector.sendMessage(new GMGenerateBiomeMsg(worldId, 'GENERATE', preset, density, rows))
     },
 

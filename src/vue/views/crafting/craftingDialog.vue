@@ -110,10 +110,10 @@
                             <div class="crafting-selection-title">
                                 <span :class="{ 'ui-text-gradient': selectedRecipe }">{{ selectedRecipe ? resolveRecipeName(selectedRecipe) : '' }}</span>
                             </div>
-                            <div v-if="selectedRecipe" class="crafting-selection-note">
-
+                            <div v-if="selectedRecipe?.qualityMin != null && selectedRecipe?.qualityMax != null" class="crafting-selection-note">
+                                {{ t('crafting.qualityRange', {min: selectedRecipe.qualityMin, max: selectedRecipe.qualityMax}) }}
                             </div>
-                            <div v-else class="crafting-selection-note crafting-selection-note-muted">
+                            <div v-else-if="!selectedRecipe" class="crafting-selection-note crafting-selection-note-muted">
                                 {{ recipes.length > 0 ? t('crafting.selectRecipe') : t('crafting.noRecipes') }}
                             </div>
                         </div>
@@ -124,12 +124,12 @@
                                     <div class="crafting-selection-slider-row">
                                         <span class="crafting-selection-boundary">{{ selectedRecipeMinQuantity }}</span>
                                         <input
-                                            v-model.number="selectedRecipeQuantity"
                                             class="range-slider crafting-selection-slider"
                                             type="range"
                                             :min="selectedRecipeMinQuantity"
                                             :max="selectedRecipeCraftableQty"
                                             :step="selectedRecipeStep"
+                                            :value="selectedRecipeQuantity"
                                             style="zoom: 1.5;"
                                             @pointerdown.stop
                                             @click.stop
@@ -373,7 +373,11 @@ const selectedRecipeCraftableQty = computed(() => {
     return getRecipeCraftableQty(selectedRecipe.value)
 })
 
-const selectedRecipeStep = computed(() => getQuantityStep(selectedRecipeCraftableQty.value))
+const selectedRecipeStep = computed(() => {
+    const maximum = selectedRecipeCraftableQty.value
+    const step = getQuantityStep(maximum)
+    return (maximum - selectedRecipeMinQuantity.value) % step === 0 ? step : 1
+})
 
 const selectedRecipeMinQuantity = computed(() => 1)
 
@@ -437,7 +441,8 @@ const onResultIconClick = (item: ItemTO, recipeIndex: number, event: PointerEven
     showItemInfoOverlay(item, sourceKey, event)
 }
 
-const onSelectedRecipeSliderInput = () => {
+const onSelectedRecipeSliderInput = (event: Event) => {
+    selectedRecipeQuantity.value = Number((event.target as HTMLInputElement).value)
     const now = Date.now()
     if ((now - lastSelectedRecipeSliderTickAt.value) < 100) {
         return
@@ -519,7 +524,10 @@ watch(selectedRecipeCraftableQty, (craftableQty) => {
 })
 
 watch(selectedRecipeIndex, () => {
-    selectedRecipeQuantity.value = selectedRecipeCraftableQty.value > 0 ? 1 : 0
+    const craftableQty = selectedRecipeCraftableQty.value
+    const type = craftingMenuData.value?.type
+    const selectMaximum = type === 'NPC_ORE_SMELTING' || type === 'NPC_RESOURCES'
+    selectedRecipeQuantity.value = selectMaximum ? craftableQty : craftableQty > 0 ? 1 : 0
 })
 
 defineExpose({

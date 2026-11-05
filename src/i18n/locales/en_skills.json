@@ -1,5 +1,6 @@
 {
   "skills": {
+    "crafting": {"blacksmithy": "Blacksmithy", "bowcraft": "Bowcraft", "armorsmithy": "Armorsmithy"},
     "monsterKnowledge": {
       "title": "Monster Lore",
       "level": "Level {level}",
@@ -8,6 +9,7 @@
       "categories": {"Kobolds": "Kobolds", "Skeletons": "Skeletons", "Withers": "Withers", "Zombies": "Zombies", "Wights": "Wights", "Cats": "Cats", "Deers": "Deer", "Guards": "Guards"}
     },
     "categories": {
+      "crafting": "Crafting",
       "gathering": "Resource Gathering",
       "weapons": "Weapons",
       "armor": "Armor",
@@ -34,19 +36,23 @@
       "healing": "Healing"
     },
     "descriptions": {
+      "blacksmithy": "A skill for crafting metal weapons.",
+      "bowcraft": "A skill for crafting bows.",
+      "armorsmithy": "A skill for crafting metal armor.",
+
       "mining": "Allows you to mine and smelt ores of various materials, and mine coal.",
       "swords": "Allows you to equip and effectively use Swords in combat",
       "axes": "Allows you to equip and effectively use Axes in combat",
       "maces": "Allows you to equip and effectively use Maces in combat",
       "polearms": "Allows you to equip and effectively use Polearms in combat",
       "bows": "Allows you to equip and effectively use Bows in combat",
-      "powerStrike": "A fast, powerful weapon strike whose bonus attack increases by 15% per skill rank",
-      "preciseShot": "A bow shot that always lands as a perfect hit and whose bonus attack increases by 7.5% per skill rank",
+      "powerStrike": "A fast, powerful weapon strike whose bonus attack increases by 15% per skill level",
+      "preciseShot": "A bow shot that always lands as a perfect hit and whose bonus attack increases by 7.5% per skill level",
       "leatherArmor": "Allows you to equip and effectively use Leather Armor",
       "chainArmor": "Allows you to equip and effectively use Chain Armor",
       "plateArmor": "Allows you to equip and effectively use Plate Armor",
       "shields": "Allows you to equip and effectively use Shields",
-      "camping": "Allows you to set up a camp for rest and increases regeneration while resting at a campfire by 25% per rank",
+      "camping": "Allows you to set up a camp for rest and increases regeneration while resting at a campfire by 25% per level",
       "healing": "Allows you to heal injuries using bandages"
     },
     "ranks": {
@@ -61,9 +67,10 @@
       "highMaster": "High Master",
       "exemplar": "Exemplar",
       "grandmaster": "Grandmaster",
-      "fallback": "Rank {rank}"
+      "fallback": "Level {rank}"
     },
     "progress": {
+      "trainingUnavailable": "Training is not available yet",
       "experience": "Experience",
       "training": "Training",
       "train": "Train",
@@ -76,13 +83,17 @@
       "maximum": "Maximum"
     },
     "details": {
-      "currentRank": "Current rank",
-      "classMaximumRank": "Class maximum rank"
+      "currentRank": "Level",
+      "classMaximumRank": "Class maximum level"
     },
     "bonuses": {
       "miningMaxOre": "Allows mining ores up to {ore}.",
       "miningStaminaReduction": "Reduces mining stamina consumption by {percent}%.",
       "skillBonus": "Skill bonus",
+      "blacksmithy": "Allows you to craft more complex metal weapons of higher quality.",
+      "blacksmithyExpert": "Skilled workmanship saves {range}% of crafting materials.",
+      "blacksmithyMaster": "Higher chance of better quality.",
+      "blacksmithyGrandmaster": "Flawless workmanship saves {range}% of crafting materials.",
       "expertBonus": "Expert bonus",
       "masterBonus": "Master bonus",
       "grandmasterBonus": "Grandmaster bonus",
@@ -100,8 +111,8 @@
       "armorOfType": "armor of type",
       "restingRegenAtCampfire": "campfire resting regeneration bonus",
       "healedHealth": "health restored",
-      "healedHealthPerRank": "({amount} per rank)",
-      "bonusPerRank": " ({percent}% per rank)",
+      "healedHealthPerRank": "({amount} per level)",
+      "bonusPerRank": " ({percent}% per level)",
       "weaponTypes": {
         "swords": "Sword",
         "axes": "Axe",

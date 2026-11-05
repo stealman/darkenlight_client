@@ -615,7 +615,7 @@ export class GMGenerateBiomeMsg implements Message {
     t: number = 1019
     d: any
 
-    constructor(worldId: number, action: 'GENERATE' | 'DEFOREST', preset: 'NORTH_WOOD', density: number, rows: number[][]) {
+    constructor(worldId: number, action: 'GENERATE' | 'DEFOREST', preset: 'NORTH_WOOD' | 'NORTH_WOOD_SHRUBS', density: number, rows: number[][]) {
         this.d = {worldId, action, preset, density, rows}
     }
 }

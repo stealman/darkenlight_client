@@ -2,6 +2,7 @@ const BIOME_TOOL_LS_KEY = 'worlds-map-biome-tool'
 
 export const BIOME_PRESETS = [
     {id: 'NORTH_WOOD', label: 'North Wood'},
+    {id: 'NORTH_WOOD_SHRUBS', label: 'North Wood Shrubs'},
 ] as const
 
 export type BiomePresetId = typeof BIOME_PRESETS[number]['id']

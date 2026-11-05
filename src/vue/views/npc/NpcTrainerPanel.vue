@@ -111,7 +111,7 @@ const emit = defineEmits<{
 }>()
 
 const trainerTabs: TrainerTab[] = ['training', 'newSkills', 'promotion']
-const trainerSkillCategoryOrder: SkillCategoryKey[] = ['weapons', 'armor', 'utility', 'gathering']
+const trainerSkillCategoryOrder: SkillCategoryKey[] = ['weapons', 'armor', 'utility', 'gathering', 'crafting']
 const skillRankTranslationKeys: Partial<Record<number, string>> = {
     0: 'skills.ranks.untrained',
     1: 'skills.ranks.novice',

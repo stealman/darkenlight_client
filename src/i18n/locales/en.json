@@ -266,6 +266,16 @@
     "cancelSplit": "Cancel split"
   },
   "crafting": {
+    "qualityRange": "Quality {min} - {max}",
+    "categoryInfo": {
+      "weapons": "Crafting metal weapons.",
+      "bows": "Crafting bows.",
+      "metalArmor": "Crafting metal armor.",
+      "oreSmelting": "Smelting purifies ore into ingots used to craft weapons and armor. Rarer metals require special purifying additives.",
+      "resources": "Crafting useful resources and materials that are often needed for further crafting.",
+      "skillMissing": "untrained",
+      "npcHelp": "{npc} will help you craft the simplest ones."
+    },
     "title": "Crafting",
     "COOKING": "Cooking",
     "BLACKSMITHY": "Crafting",
