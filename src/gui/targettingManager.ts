@@ -78,9 +78,9 @@ export const TargetingManager = {
         }
     },
 
-    cycleThroughClosestTargets() {
+    cycleThroughClosestTargets(enemiesOnly: boolean = false) {
         const sortedMobs = MonsterManager.getVisibleMonstersSortedByDistance()
-        const eligibleMobs = this.autoTargetingEnabled
+        const eligibleMobs = enemiesOnly || this.autoTargetingEnabled
             ? sortedMobs.filter(mob => mob.getObjectType() === 'M' && mob.getRelationToMyPlayer() === 'ENEMY')
             : sortedMobs
 
@@ -105,7 +105,7 @@ export const TargetingManager = {
     onPointerDown() {
         AudioManager.playGuiButtonClick()
         this.pointerDownTime = Date.now()
-        this.cycleThroughClosestTargets()
+        this.cycleThroughClosestTargets(true)
     },
 
     onPointerUp() {

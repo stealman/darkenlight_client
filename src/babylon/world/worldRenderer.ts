@@ -7,7 +7,7 @@ import {
 import { Builder } from '@/babylon/builder'
 import { Materials } from '@/babylon/materials'
 import { TreeManager } from '@/babylon/world/treeManager'
-import { BabylonUtils } from '@/babylon/utils'
+import { updateWorldInstanceBuffers } from '@/babylon/world/worldInstanceBuffers'
 import { TerrainManager } from '@/babylon/world/terrainManager'
 import { PBRCustomMaterial } from '@babylonjs/materials'
 import { StaticsManager } from '@/babylon/world/statics/staticsManager'
@@ -122,7 +122,8 @@ export const WorldRenderer = {
         TreeManager.renderTrees()
 
         // Render statics
-        StaticsManager.renderObjects()
+        // renderTerrainBlocks already updated visibility for this same pass.
+        StaticsManager.renderObjects(true)
 
         // Buildings own their meshes so they can later fade independently.
         BuildingManager.renderBuildings()
@@ -147,13 +148,10 @@ export const WorldRenderer = {
         }
 
         this.block1!.setThinInstanceBuffers()
-        this.block1!.mesh.thinInstanceRefreshBoundingInfo(false);
 
         this.blockWithAlpha1!.setThinInstanceBuffers()
-        this.blockWithAlpha1!.mesh.thinInstanceRefreshBoundingInfo(false);
 
         this.translucentPlane!.setThinInstanceBuffers()
-        this.translucentPlane!.mesh.thinInstanceRefreshBoundingInfo(false);
 
         // Static-light shadow maps are cached. The visible thin-instance set
         // changed, so active maps need exactly one refresh for the new world
@@ -201,9 +199,7 @@ export class Prefab {
     }
 
     setThinInstanceBuffers() {
-        this.matrixBuffer = BabylonUtils.createPositionBuffer(this.matrices)
-        this.mesh.thinInstanceSetBuffer("matrix", this.matrixBuffer, 16, false)
-        this.mesh.thinInstanceSetBuffer("uvc", BabylonUtils.createUvBuffer(this.uvData), 2)
+        this.matrixBuffer = updateWorldInstanceBuffers(this.mesh, this.matrices, this.uvData)
     }
 }
 
@@ -224,8 +220,6 @@ class SymmetricBlock {
     }
 
     setThinInstanceBuffers() {
-        this.matrixBuffer = BabylonUtils.createPositionBuffer(this.matrices)
-        this.mesh.thinInstanceSetBuffer("matrix", this.matrixBuffer, 16, false)
-        this.mesh.thinInstanceSetBuffer("uvc", BabylonUtils.createUvBuffer(this.uvData), 2)
+        this.matrixBuffer = updateWorldInstanceBuffers(this.mesh, this.matrices, this.uvData)
     }
 }

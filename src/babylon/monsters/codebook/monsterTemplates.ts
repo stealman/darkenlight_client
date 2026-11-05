@@ -3,12 +3,16 @@ import { BabylonUtils } from '@/babylon/utils'
 import { Monster } from '@/babylon/monsters/monster'
 import { Lights } from '@/babylon/scene/lights'
 import { Settings } from '@/settings/settings'
+import { MeshAnimation } from '@/babylon/animations/animation'
 import { MonsterPersistentEffectType, MonsterPersistentEffectTypes } from '@/babylon/gfx/monsterPersistentEffectTypes'
 
 export class MonsterTemplate {
     static readonly MODEL_EXTENSION = '.gltf'
     static readonly TEXTURE_EXTENSION = '.png'
-    static readonly MAX_REUSABLE_CLONES = 3
+    static readonly PREWARM_CLONES = 3
+    // Keep recently removed groups ready across server chunk boundaries.
+    // This is a per-template ceiling; models are retained only as encountered.
+    static readonly MAX_REUSABLE_CLONES = 8
     static readonly DEFAULT_SELECTED_EMISSIVE_STRENGTH = 0.1
 
     id: number
@@ -33,6 +37,7 @@ export class MonsterTemplate {
     mesh: Mesh
     skeleton: Skeleton
     animation: AnimationGroup
+    private animationClips = new Map<string, MeshAnimation>()
     monster: Monster | null = null
 
     constructor(id: number, meshName: string, textureName: string, normalTextureName: string | null, scale: Vector3 | number, emissiveTextureName: string | null, environmentIntensity: number = 1, selectedEmissiveStrength: number = MonsterTemplate.DEFAULT_SELECTED_EMISSIVE_STRENGTH, persistentEffectType: MonsterPersistentEffectType | null = null) {
@@ -115,6 +120,16 @@ export class MonsterTemplate {
         clone.mesh.setEnabled(false)
     }
 
+    getAnimationClip(name: string, fromFrame: number, toFrame: number): MeshAnimation {
+        const key = `${name}:${fromFrame}:${toFrame}`
+        let clip = this.animationClips.get(key)
+        if (!clip) {
+            clip = new MeshAnimation(this.animation.clone(`${name}_${this.mesh.uniqueId}`, undefined, true), fromFrame, toFrame)
+            this.animationClips.set(key, clip)
+        }
+        return clip
+    }
+
     activateClone (clone: MonsterTemplate) {
         this.clonesInact = this.clonesInact.filter(c => c !== clone)
         this.clonesAct.push(clone)
@@ -126,6 +141,17 @@ export class MonsterTemplate {
 
     freeClone (clone: MonsterTemplate) {
         clone.monster = null
+        // Clips target this clone's own bones and can outlive a MonsterModel.
+        // Reset playback before another entity borrows the same clone.
+        clone.animationClips.forEach(clip => {
+            clip.stop()
+            clip.loop = false
+            clip.speed = 1
+            clip.weight = 0
+        })
+        clone.animation.stop()
+        clone.node.setEnabled(false)
+        clone.mesh.setEnabled(false)
         clone.node.getChildMeshes().forEach(mesh => {
             mesh.material = clone.material ?? null
         })
@@ -137,6 +163,8 @@ export class MonsterTemplate {
             const disposableClone = this.clonesToReuse.shift()!
             Lights.removeShadowCaster(disposableClone.mesh, true, false, true)
             Lights.unregisterActorLightMesh(disposableClone.mesh)
+            disposableClone.animationClips.forEach(clip => clip.animation.dispose())
+            disposableClone.animationClips.clear()
             disposableClone.animation.stop()
             disposableClone.animation.dispose()
             disposableClone.skeleton.dispose()

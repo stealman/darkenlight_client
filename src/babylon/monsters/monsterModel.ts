@@ -450,8 +450,6 @@ export class MonsterModel implements EquipBearer {
         this.equipSet.forEach(item => item.disposeWeaponTrail())
         this.equipSet.clear()
         this.weaponEquipItem = null
-        const animations = new Set([this.idleAnim, this.walkAnim, this.deadAnim, this.attackBowAnim, ...this.attackAnims])
-        animations.forEach(anim => anim?.animation.dispose())
         this.pendingAttackSoundAnim = null
         MonsterLoader.monsterTemplates.get(this.template.id)?.freeClone(this.template)
         this.activeAnims.clear()

@@ -103,7 +103,7 @@ export const MonsterLoader = {
         return template
     },
 
-    async prepareRuntimeClones(clonesPerTemplate = MonsterTemplate.MAX_REUSABLE_CLONES) {
+    async prepareRuntimeClones(clonesPerTemplate = MonsterTemplate.PREWARM_CLONES) {
         for (const template of this.monsterTemplates.values()) {
             const clones: MonsterTemplate[] = []
             try {

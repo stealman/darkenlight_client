@@ -8,6 +8,7 @@ import { segmentIntersectsAabb } from '@/babylon/geometryUtils'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { BabylonUtils } from '@/babylon/utils'
 import { TargetingManager } from '@/gui/targettingManager'
+import { updateWorldInstanceBuffers } from '@/babylon/world/worldInstanceBuffers'
 
 export interface BuildingData {
     id: number
@@ -1433,8 +1434,16 @@ class MausoleumView {
 
 type RenderedBuilding = BuildingView | ShedView | MausoleumView
 
+const MAX_CACHED_BUILDINGS = 16
+const buildingGeometryKey = (data: BuildingData) => JSON.stringify([
+    data.tp, data.x, data.z, data.facing, data.width, data.depth, data.shedHighSide,
+    data.shedSideFills?.['+X'], data.shedSideFills?.['-X'],
+    data.shedSideFills?.['+Z'], data.shedSideFills?.['-Z'],
+])
+
 export const BuildingManager = {
     buildings: new Map<number, RenderedBuilding>(),
+    cachedBuildings: new Map<number, RenderedBuilding>(),
     floorTiles: new Map<string, RenderedBuilding>(),
     collisionTiles: new Map<string, Set<RenderedBuilding>>(),
     housePrefabs: null as BuildingPrefabs | null,
@@ -1449,6 +1458,7 @@ export const BuildingManager = {
     selectionPreviewStartTime: 0,
 
     initialize(scene: Scene, parent: TransformNode) {
+        this.cachedBuildings.clear()
         this.parent = parent
         // Offset building occlusion from entity and tree visibility passes.
         this.occlusionCheckFrame = 5
@@ -1512,7 +1522,28 @@ export const BuildingManager = {
             || this.buildings.has(data.id) || !this.housePrefabs || !this.parent || !this.fadeMaterial) {
             return
         }
-        const building = data.tp === SHED_TYPE
+        let building = this.cachedBuildings.get(data.id)
+        if (building) {
+            this.cachedBuildings.delete(data.id)
+            if (buildingGeometryKey(building.data) !== buildingGeometryKey(data)) {
+                building.dispose()
+                building = undefined
+            } else {
+                Object.assign(building.data, data)
+                building.data.doorOpen = data.doorOpen === true
+                building.shouldOcclusionFade = false
+                building.setPreviewYOffset(0)
+                building.recountYPosition()
+                // Snap to the server's current door/fade state without playing
+                // sounds for changes that happened while the chunk was absent.
+                if (building instanceof BuildingView || building instanceof MausoleumView) {
+                    building.playCloseSoundWhenClosed = false
+                }
+                building.updateDoorAnimation(1)
+                building.updateFade(1, false, false)
+            }
+        }
+        building ??= data.tp === SHED_TYPE
             ? new ShedView(data, this.parent, this.fadeMaterial)
             : data.tp === STONE_MAUSOLEUM_TYPE
                 ? new MausoleumView(data, this.parent, this.fadeMaterial)
@@ -1527,10 +1558,17 @@ export const BuildingManager = {
     },
 
     removeBuildings(data: BuildingData[]) {
-        data.forEach((building) => this.removeBuilding(building.id))
+        // Only chunk eviction retains geometry. Explicit building deletion
+        // must still dispose it immediately, including an inactive cached view.
+        data.forEach((building) => this.removeBuilding(building.id, true))
     },
 
-    removeBuilding(id: number) {
+    removeBuilding(id: number, retainGeometry = false) {
+        const cached = this.cachedBuildings.get(id)
+        if (cached && !retainGeometry) {
+            cached.dispose()
+            this.cachedBuildings.delete(id)
+        }
         const building = this.buildings.get(id)
         if (!building) return
         if (this.selectionPreviewBuilding === building) this.selectionPreviewBuilding = null
@@ -1543,7 +1581,17 @@ export const BuildingManager = {
             this.collisionTiles.get(key)?.delete(building)
             if (this.collisionTiles.get(key)?.size === 0) this.collisionTiles.delete(key)
         })
-        building.dispose()
+        if (retainGeometry) {
+            building.setVisible(false)
+            this.cachedBuildings.set(id, building)
+            if (this.cachedBuildings.size > MAX_CACHED_BUILDINGS) {
+                const oldestId = this.cachedBuildings.keys().next().value!
+                this.cachedBuildings.get(oldestId)!.dispose()
+                this.cachedBuildings.delete(oldestId)
+            }
+        } else {
+            building.dispose()
+        }
         this.buildings.delete(id)
     },
 
@@ -1703,12 +1751,8 @@ export const BuildingManager = {
         const glassUvData: Vector2[] = []
         this.buildings.forEach((building) => building.appendBatchedBlocks(matrices, uvData, this.housePrefabs!))
         this.buildings.forEach((building) => building.appendBatchedGlass(glassMatrices, glassUvData, this.housePrefabs!))
-        this.opaqueBatchMesh.thinInstanceSetBuffer('matrix', BabylonUtils.createPositionBuffer(matrices), 16)
-        this.opaqueBatchMesh.thinInstanceSetBuffer('uvc', BabylonUtils.createUvBuffer(uvData), 2)
-        this.opaqueBatchMesh.thinInstanceRefreshBoundingInfo(false)
-        this.glassBatchMesh.thinInstanceSetBuffer('matrix', BabylonUtils.createPositionBuffer(glassMatrices), 16)
-        this.glassBatchMesh.thinInstanceSetBuffer('uvc', BabylonUtils.createUvBuffer(glassUvData), 2)
-        this.glassBatchMesh.thinInstanceRefreshBoundingInfo(false)
+        updateWorldInstanceBuffers(this.opaqueBatchMesh, matrices, uvData)
+        updateWorldInstanceBuffers(this.glassBatchMesh, glassMatrices, glassUvData)
     },
 
     clearWorld() {
@@ -1716,6 +1760,8 @@ export const BuildingManager = {
         this.selectionPreviewBuilding = null
         this.buildings.forEach((building) => building.dispose())
         this.buildings.clear()
+        this.cachedBuildings.forEach((building) => building.dispose())
+        this.cachedBuildings.clear()
         this.floorTiles.clear()
         this.collisionTiles.clear()
         this.rebuildOpaqueBatch()

@@ -1,5 +1,4 @@
 import { MonsterModel } from '@/babylon/monsters/monsterModel'
-import { MeshAnimation } from '@/babylon/animations/animation'
 import { MonsterCodebook } from '@/babylon/monsters/codebook/monsterCodebook'
 
 export const MonsterBonesAnims = {
@@ -21,7 +20,7 @@ export const MonsterBonesAnims = {
         ]
 
         const groups = animations.map(({ name, startFrame, endFrame }) => {
-            return new MeshAnimation(model.animation.clone(name + Math.random(), undefined, true), startFrame, endFrame)
+            return model.template.getAnimationClip(name, startFrame, endFrame)
         });
 
         model.idleAnim = groups[0]
@@ -42,7 +41,7 @@ export const MonsterBonesAnims = {
         ]
 
         const groups = animations.map(({ name, startFrame, endFrame }) => {
-            return new MeshAnimation(model.animation.clone(name + Math.random(), undefined, true), startFrame, endFrame)
+            return model.template.getAnimationClip(name, startFrame, endFrame)
         });
 
         model.idleAnim = groups[0]
@@ -61,7 +60,7 @@ export const MonsterBonesAnims = {
         ]
 
         const groups = animations.map(({ name, startFrame, endFrame }) => {
-            return new MeshAnimation(model.animation.clone(name + Math.random(), undefined, true), startFrame, endFrame)
+            return model.template.getAnimationClip(name, startFrame, endFrame)
         })
 
         model.idleAnim = groups[0]
@@ -71,16 +70,16 @@ export const MonsterBonesAnims = {
     },
 
     initDeer(model: MonsterModel) {
-        model.idleAnim = new MeshAnimation(model.animation.clone('DeerIdle' + Math.random(), undefined, true), 0, 75)
-        model.walkAnim = new MeshAnimation(model.animation.clone('DeerWalk' + Math.random(), undefined, true), 76, 225)
+        model.idleAnim = model.template.getAnimationClip('DeerIdle', 0, 75)
+        model.walkAnim = model.template.getAnimationClip('DeerWalk', 76, 225)
         // Huntable deer flee instead of attacking; keep the unused attack slot valid.
-        model.attackAnims = [new MeshAnimation(model.animation.clone('DeerAttack' + Math.random(), undefined, true), 0, 75)]
-        model.deadAnim = new MeshAnimation(model.animation.clone('DeerDead' + Math.random(), undefined, true), 226, 375)
+        model.attackAnims = [model.template.getAnimationClip('DeerAttack', 0, 75)]
+        model.deadAnim = model.template.getAnimationClip('DeerDead', 226, 375)
     },
 
     initSheep(model: MonsterModel) {
-        model.idleAnim = new MeshAnimation(model.animation.clone('SheepIdle' + Math.random(), undefined, true), 0, 75)
-        model.walkAnim = new MeshAnimation(model.animation.clone('SheepWalk' + Math.random(), undefined, true), 76, 225)
+        model.idleAnim = model.template.getAnimationClip('SheepIdle', 0, 75)
+        model.walkAnim = model.template.getAnimationClip('SheepWalk', 76, 225)
     },
 
     initCat(model: MonsterModel) {
@@ -92,7 +91,7 @@ export const MonsterBonesAnims = {
         ]
 
         const groups = animations.map(({ name, startFrame, endFrame }) => {
-            return new MeshAnimation(model.animation.clone(name + Math.random(), undefined, true), startFrame, endFrame)
+            return model.template.getAnimationClip(name, startFrame, endFrame)
         });
 
         model.idleAnim = groups[0]

@@ -1,6 +1,6 @@
-import { Color3, Matrix, Mesh, MeshBuilder, PBRMaterial, Scene, Texture, TransformNode, Vector2, Vector3 } from '@babylonjs/core'
+import { Color3, Matrix, Mesh, MeshBuilder, PBRMaterial, Quaternion, Scene, Texture, TransformNode, Vector2, Vector3 } from '@babylonjs/core'
 import { PBRCustomMaterial } from '@babylonjs/materials'
-import { BabylonUtils } from '@/babylon/utils'
+import { updateWorldInstanceBuffers } from '@/babylon/world/worldInstanceBuffers'
 import { MapBlock, WorldDataManager } from '@/data/worldDataManager'
 import { TerrainEnum1 } from '@/babylon/materials'
 import { ViewportManager } from '@/utils/viewport'
@@ -21,6 +21,8 @@ export const FoliageManager = {
     ],
     foliageMesh: null as Mesh | null,
     foliageMaterial: null as PBRCustomMaterial | null,
+    instancePosition: Vector3.Zero(),
+    instanceRotation: Quaternion.Identity(),
 
     initialize(scene: Scene, parent: TransformNode | null) {
         this.foliageMesh = this.createFoliageMesh(scene, parent)
@@ -87,21 +89,15 @@ export const FoliageManager = {
                 const offset = this.getOffset(x, z, foliageType)
                 const rotation = this.getRotation(x, z, foliageType)
                 const baseHeight = block.totalHeight - (block.snowed ? 0 : 0)
-                const position = Matrix.Translation(x + offset.x, baseHeight, z + offset.z)
-                const rotationMatrix = Matrix.RotationY(rotation)
-                const scaleMatrix = Matrix.Scaling(scale.x, scale.y, scale.z)
-
-                matrices.push(scaleMatrix.multiply(rotationMatrix).multiply(position))
+                this.instancePosition.set(x + offset.x, baseHeight, z + offset.z)
+                Quaternion.RotationYawPitchRollToRef(rotation, 0, 0, this.instanceRotation)
+                matrices.push(Matrix.Compose(scale, this.instanceRotation, this.instancePosition))
                 uvData.push(this.getAtlasOffset(x, z, terrainConfig.rowIndex))
             }
         }
 
-        mesh.thinInstanceSetBuffer('matrix', BabylonUtils.createPositionBuffer(matrices), 16)
-        mesh.thinInstanceSetBuffer('uvc', BabylonUtils.createUvBuffer(uvData), 2)
+        updateWorldInstanceBuffers(mesh, matrices, uvData)
         mesh.setEnabled(matrices.length > 0)
-        if (matrices.length > 0) {
-            mesh.thinInstanceRefreshBoundingInfo(false)
-        }
     },
 
     shouldSpawnAt(x: number, z: number, avgTilesPerFoliage: number): boolean {

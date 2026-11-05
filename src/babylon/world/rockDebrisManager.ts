@@ -1,6 +1,6 @@
 import { Matrix, Mesh, Scene, TransformNode, Vector2, VertexBuffer } from '@babylonjs/core'
 import { Builder } from '@/babylon/builder'
-import { BabylonUtils } from '@/babylon/utils'
+import { updateWorldInstanceBuffers } from '@/babylon/world/worldInstanceBuffers'
 import { MaterialEnum1, Materials, TerrainEnum1 } from '@/babylon/materials'
 import { MapBlock, WorldDataManager } from '@/data/worldDataManager'
 import { ViewportManager } from '@/utils/viewport'
@@ -59,12 +59,8 @@ export const RockDebrisManager = {
             }
         }
 
-        mesh.thinInstanceSetBuffer('matrix', BabylonUtils.createPositionBuffer(matrices), 16)
-        mesh.thinInstanceSetBuffer('uvc', BabylonUtils.createUvBuffer(uvData), 2)
+        updateWorldInstanceBuffers(mesh, matrices, uvData)
         mesh.setEnabled(matrices.length > 0)
-        if (matrices.length > 0) {
-            mesh.thinInstanceRefreshBoundingInfo(false)
-        }
     },
 
     shouldSpawnPile(x: number, z: number, indoor: boolean): boolean {

@@ -71,6 +71,15 @@ import { GMFoggyAreas } from '@/gm/GmFoggyAreas'
 import { EquipmentDecorationsManager } from '@/babylon/world/equipmentDecorationsManager'
 import {PartyManager} from '@/data/partyManager'
 import { Utils } from '@/utils/utils'
+import { ViewportManager } from '@/utils/viewport'
+import { StaticFireParticleManager } from '@/babylon/world/statics/staticFireParticleManager'
+
+type WorldChunkVisibilityData = {
+    trees: Array<{x: number, z: number}>
+    statics: Array<{x: number, z: number}>
+    buildings?: Array<{x: number, z: number, width?: number, depth?: number}>
+    equipmentDecorations?: Array<{x: number, z: number}>
+}
 
 export const MessageProcessor = {
 
@@ -353,26 +362,55 @@ export const MessageProcessor = {
     },
 
     processWorldChunkData(data) {
+        let staticsChanged = false
         data.a.forEach(chunk => {
             TreeManager.consumeTrees(chunk.trees)
-            StaticsManager.consumeObjects(chunk.statics)
+            StaticsManager.consumeObjects(chunk.statics, false)
+            staticsChanged ||= chunk.statics.length > 0
             BuildingManager.consumeBuildings(chunk.buildings ?? [])
             EquipmentDecorationsManager.consume(chunk.equipmentDecorations ?? [])
             FightSplatsRenderer.consumeSplats(chunk.splats)
         })
         data.r.forEach(chunk => {
             TreeManager.removeTrees(chunk.trees)
-            StaticsManager.removeObjects(chunk.statics)
+            StaticsManager.removeObjects(chunk.statics, false)
+            staticsChanged ||= chunk.statics.length > 0
             BuildingManager.removeBuildings(chunk.buildings ?? [])
             EquipmentDecorationsManager.removeMany((chunk.equipmentDecorations ?? []).map((item) => item.id))
             FightSplatsRenderer.removeSplats(chunk.splats)
         })
+        if (staticsChanged) {
+            StaticsManager.resolveStackedStaticPositions()
+            StaticFireParticleManager.flush()
+        }
         // WorldRenderer may already have recorded the teleport destination
         // before this asynchronous entity payload arrived, so movement alone
         // will not necessarily trigger another rebuild.
         if (MyPlayer.myChar != null && WorldRenderer.block1 != null) {
-            WorldRenderer.renderWorld()
+            const rebuild = WorldRenderer.lastPos == null || !ViewportManager.viewPortInitialized
+                || data.a.some((chunk: WorldChunkVisibilityData) => this.chunkAffectsVisibleWorld(chunk))
+                || data.r.some((chunk: WorldChunkVisibilityData) => this.chunkAffectsVisibleWorld(chunk))
+            if (rebuild) {
+                WorldRenderer.renderWorld()
+            } else if (staticsChanged) {
+                // Static lights can reach beyond the visual footprint. Keep
+                // their visibility current without rebuilding geometry.
+                StaticsManager.updateVisibleObjects()
+            }
         }
+    },
+    chunkAffectsVisibleWorld(chunk: WorldChunkVisibilityData) {
+        // Check a conservative bounding rectangle, including the position of
+        // the last geometry rebuild and a reserve for snow/connected statics.
+        const pos = MyPlayer.myChar.pos
+        const last = WorldRenderer.lastPos
+        const reserve = 8 + (last ? Math.max(Math.abs(pos.x - last.x), Math.abs(pos.z - last.z)) : 0)
+        const near = (point: {x: number, z: number}, extra = 0) =>
+            ViewportManager.isPointNearVisibleBounds(point.x, point.z, reserve + extra)
+        return chunk.trees.some(point => near(point))
+            || chunk.statics.some(point => near(point))
+            || (chunk.buildings ?? []).some(building => near(building, Math.max(building.width ?? 5, building.depth ?? 5)))
+            || (chunk.equipmentDecorations ?? []).some(point => near(point))
     },
 
     processAddTree(data) {

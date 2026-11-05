@@ -77,11 +77,11 @@ export const StaticsManager = {
         StaticEquipPartsRenderer.initialize(WorldRenderer.worldParentNode!)
     },
 
-    consumeObjects(data: Array<{ tp: number, x: number, z: number, meta?: WallTorchMetadata | TorchStandMetadata | LanternStandMetadata | FireplaceMetadata | CemeteryEmberBowlMetadata | StoneEntranceMetadata | PalisadeMetadata | WalkableBlockMetadata | CampObjectMetadata | CampFenceMetadata | CemeteryObjectMetadata | CemeteryWallMetadata, tmp?: boolean }>) {
+    consumeObjects(data: Array<{ tp: number, x: number, z: number, meta?: WallTorchMetadata | TorchStandMetadata | LanternStandMetadata | FireplaceMetadata | CemeteryEmberBowlMetadata | StoneEntranceMetadata | PalisadeMetadata | WalkableBlockMetadata | CampObjectMetadata | CampFenceMetadata | CemeteryObjectMetadata | CemeteryWallMetadata, tmp?: boolean }>, finalize = true) {
         data.forEach(obj => {
             this.addObject(obj, false)
         })
-        this.resolveStackedStaticPositions()
+        if (finalize && data.length > 0) this.resolveStackedStaticPositions()
     },
 
     addObject(obj: { tp: number, x: number, z: number, meta?: WallTorchMetadata | TorchStandMetadata | LanternStandMetadata | FireplaceMetadata | CemeteryEmberBowlMetadata | StoneEntranceMetadata | PalisadeMetadata | WalkableBlockMetadata | CampObjectMetadata | CampFenceMetadata | CemeteryObjectMetadata | CemeteryWallMetadata, tmp?: boolean }, resolveStacking = true) {
@@ -284,13 +284,20 @@ export const StaticsManager = {
         this.resolveStackedStaticPositions()
     },
 
-    removeObjects(data: Array<{ x: number, z: number, tp?: number }>) {
+    removeObjects(data: Array<{ x: number, z: number, tp?: number }>, finalize = true) {
+        let changed = false
         data.forEach(obj => {
-            this.removeObjectAt(obj.x, obj.z, obj.tp)
+            changed = this.removeObjectAt(obj.x, obj.z, obj.tp, false) || changed
         })
+        // Chunk removal can contain many objects. Recompute the surviving
+        // stack positions and fire systems once, after the complete batch.
+        if (changed && finalize) {
+            this.resolveStackedStaticPositions()
+            StaticFireParticleManager.flush()
+        }
     },
 
-    removeObjectAt(x: number, z: number, type?: number) {
+    removeObjectAt(x: number, z: number, type?: number, finalize = true): boolean {
         for (let i = 0; i < this.allStatics.length; i++) {
             if (this.allStatics[i].position.x === x && this.allStatics[i].position.z === z
                 && (type === undefined || this.allStatics[i].type === type)) {
@@ -311,11 +318,14 @@ export const StaticsManager = {
                 }
                 obj.dispose()
                 this.allStatics.splice(i, 1)
-                this.resolveStackedStaticPositions()
-                StaticFireParticleManager.flush()
-                break
+                if (finalize) {
+                    this.resolveStackedStaticPositions()
+                    StaticFireParticleManager.flush()
+                }
+                return true
             }
         }
+        return false
     },
 
     clearWorld() {
@@ -397,14 +407,14 @@ export const StaticsManager = {
         return targets
     },
 
-    renderObjects() {
+    renderObjects(visibilityReady = false) {
         StaticEquipPartsRenderer.clear()
 
         this.allStatics.forEach((obj) => {
             if (obj instanceof CampBarrel) obj.clearRenderMatrices()
         })
         this.resolveConnectingCorners()
-        this.updateVisibleObjects()
+        if (!visibilityReady) this.updateVisibleObjects()
         for (const element of this.visibleStatics) {
             const blockStart = WorldRenderer.block1!.matrices.length
             const prefabStart = element.prefab?.matrices.length ?? 0

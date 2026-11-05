@@ -1,7 +1,7 @@
 import {
     AbstractMesh, AssetContainer, Color3,
-    AnimationGroup, Matrix, Mesh, Quaternion,
-    InstantiatedEntries, Scene, SceneLoader, Skeleton, Sound, TransformNode,
+    AnimationGroup, Matrix, Mesh, Quaternion, TargetedAnimation,
+    InstantiatedEntries, Observer, Scene, SceneLoader, Skeleton, Sound, TransformNode,
     Vector3,
 } from '@babylonjs/core'
 import { AudioManager, FootStepSpeeds, FootStepTypes } from '@/babylon/audio/audioManager'
@@ -22,8 +22,10 @@ import { ActiveMeshFreezer } from '@/babylon/scene/activeMeshFreezer'
 export class CharacterModel implements EquipBearer {
     private static readonly MODEL_FILE = 'human_male.glb?v=20261021-1'
     private static readonly preparedModelCount = 6
+    private static readonly maxReusableModels = 8
     private static containerPromises = new WeakMap<Scene, Promise<AssetContainer>>()
     private static preparedModels = new WeakMap<Scene, InstantiatedEntries[]>()
+    private static preparedAnimations = new WeakMap<InstantiatedEntries, AnimationGroup[]>()
 
     parent: Character
     node: TransformNode = new TransformNode('characterModelNode')
@@ -34,6 +36,7 @@ export class CharacterModel implements EquipBearer {
     model: AbstractMesh | undefined
     private instantiatedEntries: InstantiatedEntries | null = null
     private initializationPromise: Promise<void> | null = null
+    private bowAimEndObserver: Observer<TargetedAnimation> | null = null
     modelYAngleOffset: number = (Math.PI * 1) / 4
     modelRotation: number = 0
     worldMatrix: Matrix = Matrix.Identity()
@@ -120,6 +123,32 @@ export class CharacterModel implements EquipBearer {
         return entries
     }
 
+    private static release(scene: Scene, entries: InstantiatedEntries) {
+        // Animation observers owned by the outgoing character must be removed
+        // before stopping groups (stop can notify animation-end observers).
+        entries.animationGroups.forEach(animation => {
+            animation.stop()
+            animation.setWeightForAllAnimatables(0)
+            animation.speedRatio = 1
+        })
+        entries.rootNodes.forEach(node => {
+            node.setEnabled(false)
+            node.parent = null
+            if (node instanceof TransformNode) node.position.setAll(0)
+        })
+        let pool = this.preparedModels.get(scene)
+        if (!pool) {
+            pool = []
+            this.preparedModels.set(scene, pool)
+        }
+        if (!scene.isDisposed && pool.length < this.maxReusableModels) {
+            pool.push(entries)
+        } else {
+            this.preparedAnimations.delete(entries)
+            entries.dispose()
+        }
+    }
+
     initAsync(): Promise<void> {
         if (this.initialized || this.node.isDisposed()) return Promise.resolve()
         if (!this.initializationPromise) {
@@ -138,7 +167,7 @@ export class CharacterModel implements EquipBearer {
         await CharacterModel.instantiate(scene)
             .then((result) => {
                 if (this.node.isDisposed()) {
-                    result.dispose()
+                    CharacterModel.release(scene, result)
                     return
                 }
                 this.instantiatedEntries = result
@@ -207,13 +236,17 @@ export class CharacterModel implements EquipBearer {
                         { name: 'TwoHandedSpearAttack', startFrame: 1700, endFrame: 1760 },
                     ]
 
-                    const newAnimationGroups = animations.map(({ name, startFrame, endFrame }) => {
-                        const newGroup = animationGroup.clone(name)
-                        newGroup.from = startFrame
-                        newGroup.to = endFrame
-                        return newGroup
-                    })
-                    result.animationGroups.push(...newAnimationGroups)
+                    let newAnimationGroups = CharacterModel.preparedAnimations.get(result)
+                    if (!newAnimationGroups) {
+                        newAnimationGroups = animations.map(({ name, startFrame, endFrame }) => {
+                            const newGroup = animationGroup.clone(name)
+                            newGroup.from = startFrame
+                            newGroup.to = endFrame
+                            return newGroup
+                        })
+                        result.animationGroups.push(...newAnimationGroups)
+                        CharacterModel.preparedAnimations.set(result, newAnimationGroups)
+                    }
 
                     this.idleAnim = newAnimationGroups[0]
                     this.walkAnim = newAnimationGroups[1]
@@ -228,7 +261,7 @@ export class CharacterModel implements EquipBearer {
                     this.bowAimAnim = newAnimationGroups[10]
                     // One observer per model, rather than one per attack.
                     // Interrupted shots must not accumulate pending callbacks.
-                    this.bowAimAnim.onAnimationEndObservable.add(() => {
+                    this.bowAimEndObserver = this.bowAimAnim.onAnimationEndObservable.add(() => {
                         if (this.actualAnim !== this.bowAimAnim || !this.isActive() || this.parent.dead) return
                         const animation = this.bowAimAnim!
                         animation.start(true, 1, animation.to, animation.to)
@@ -888,6 +921,7 @@ export class CharacterModel implements EquipBearer {
     }
 
     removeFromScene() {
+        if (this.node.isDisposed()) return
         this.viewRequested = false
         this.stopAllStepSounds()
         this.footStepSounds.forEach(sound => sound.dispose())
@@ -899,7 +933,13 @@ export class CharacterModel implements EquipBearer {
             Lights.removeShadowCaster(mesh, true, false, true)
         })
         this.equipSet.forEach(item => item.disposeWeaponTrail())
-        this.instantiatedEntries?.dispose()
+        if (this.bowAimEndObserver) {
+            this.bowAimAnim?.onAnimationEndObservable.remove(this.bowAimEndObserver)
+            this.bowAimEndObserver = null
+        }
+        if (this.instantiatedEntries) {
+            CharacterModel.release(this.node.getScene(), this.instantiatedEntries)
+        }
         this.instantiatedEntries = null
         this.equipSet.clear()
         this.weaponEquipItem = null

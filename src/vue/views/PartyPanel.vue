@@ -176,5 +176,9 @@ const leave = () => { menuOpen.value = false; PartyManager.leave() }
 .party-invite-buttons { display: flex; gap: 8px; justify-content: center; }
 .party-invite-buttons button { flex: 1; min-height: 38px; }
 .party-invite-decline span { color: rgb(var(--ui-attention)); text-shadow: 0 0 4px rgba(var(--ui-attention), .45); }
-@media (pointer: coarse) { .party-member { min-height: 32px; } .party-menu-button { height: 28px; width: 36px; } }
+@media (pointer: coarse) {
+    .party-member { min-height: 28px; padding-block: 2px; }
+    .party-name { font-size: min(11px, 2vh); }
+    .party-menu-button { height: 28px; width: 36px; }
+}
 </style>

@@ -472,13 +472,21 @@ export class EquipItemType {
             return
         }
         this.count = count
-        this.instanceBuffer = new Float32Array(16 * count)
-        this.uvBuffer = new Float32Array(2 * count)
+        const capacity = this.instanceBuffer.length / 16
+        if (count > capacity) {
+            // Retain spare capacity when actors leave, including an empty
+            // batch. Only growing the high-water mark replaces GPU buffers.
+            const nextCapacity = Math.max(8, count, capacity * 2)
+            this.instanceBuffer = new Float32Array(16 * nextCapacity)
+            this.uvBuffer = new Float32Array(2 * nextCapacity)
+            this._thinReady = false
+        }
         this.uvBufferDirty = true
 
         if (!this.mesh) return
 
         if (count === 0) {
+            this.mesh.thinInstanceCount = 0
             this.mesh.setEnabled(false)
             return
         }
@@ -486,9 +494,10 @@ export class EquipItemType {
         this.mesh.alwaysSelectAsActiveMesh = true
         this.mesh.setEnabled(true)
 
-        // důležité: buffer se změnil => znovu setnout
-        this._thinReady = false
         this.ensureThinBuffers(this)
+        // Binding a capacity-sized matrix buffer sets Babylon's instance
+        // count to its capacity. Render only the occupied slots.
+        this.mesh.thinInstanceCount = count
     }
 }
 

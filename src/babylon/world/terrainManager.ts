@@ -1,6 +1,6 @@
 import { MapBlock, WorldDataManager } from '@/data/worldDataManager'
 import { Color4, Matrix, Mesh, ParticleSystem, Scene, Vector2 } from '@babylonjs/core'
-import { BabylonUtils } from '@/babylon/utils'
+import { updateWorldInstanceBuffers } from '@/babylon/world/worldInstanceBuffers'
 import { Builder } from '@/babylon/builder'
 import { MaterialEnum1, Materials, PlaneEnum1, TerrainEnum1 } from '@/babylon/materials'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
@@ -148,8 +148,8 @@ export const TerrainManager = {
                             }
                         }
 
-                        const scaleMatrix = Matrix.Scaling(1, 1 + terrainHeightOffset, 1);
-                        const matrix = scaleMatrix.multiply(Matrix.Translation( x, block.height + terrainHeightOffset * 0.5, z));
+                        const matrix = Matrix.Scaling(1, 1 + terrainHeightOffset, 1)
+                        matrix.setTranslationFromFloats(x, block.height + terrainHeightOffset * 0.5, z)
 
                         IndoorTerrainOcclusionManager.routeTerrainBlock(
                             x,
@@ -181,9 +181,9 @@ export const TerrainManager = {
                     }
 
                     if (block.stonePath || block.beigeStonePath) {
-                        WorldRenderer.block1!.matrices.push(
-                            Matrix.Scaling(1, 0.12, 1).multiply(Matrix.Translation(x, block.height + 0.56, z)),
-                        )
+                        const pathMatrix = Matrix.Scaling(1, 0.12, 1)
+                        pathMatrix.setTranslationFromFloats(x, block.height + 0.56, z)
+                        WorldRenderer.block1!.matrices.push(pathMatrix)
                         WorldRenderer.block1!.uvData.push(block.beigeStonePath ? MaterialEnum1.ROCK1_BEIGE.uv : MaterialEnum1.ROCK1.uv)
                     }
                 }
@@ -194,13 +194,9 @@ export const TerrainManager = {
         IndoorTerrainOcclusionManager.finishTerrainRender()
 
         // Apply buffers for instances
-        this.terrainBlockMatrixBuffer = BabylonUtils.createPositionBuffer(terrainMatrices1)
-        this.terrainBlock1!.thinInstanceSetBuffer("matrix", this.terrainBlockMatrixBuffer, 16, false)
-        this.terrainBlock1!.thinInstanceSetBuffer("uvc", BabylonUtils.createUvBuffer(terrainUvData1), 2)
-        this.terrainPlane!.thinInstanceSetBuffer("matrix", BabylonUtils.createPositionBuffer(planeMatrices), 16)
-        this.terrainPlane!.thinInstanceSetBuffer("uvc", BabylonUtils.createUvBuffer(planeUvData), 2)
-        this.terrainWaterPlane!.thinInstanceSetBuffer("matrix", BabylonUtils.createPositionBuffer(waterPlaneMatrices), 16)
-        this.terrainWaterPlane!.thinInstanceSetBuffer("uvc", BabylonUtils.createUvBuffer(waterPlaneUvData), 2)
+        this.terrainBlockMatrixBuffer = updateWorldInstanceBuffers(this.terrainBlock1!, terrainMatrices1, terrainUvData1)
+        updateWorldInstanceBuffers(this.terrainPlane!, planeMatrices, planeUvData)
+        updateWorldInstanceBuffers(this.terrainWaterPlane!, waterPlaneMatrices, waterPlaneUvData)
 
         // Set enabled based on if there are instances to show
         this.terrainBlock1!.setEnabled(terrainMatrices1.length > 0)
