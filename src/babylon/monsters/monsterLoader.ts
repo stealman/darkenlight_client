@@ -4,6 +4,7 @@ import { MonsterType } from '@/babylon/monsters/codebook/monsterCodebook'
 import { MonsterTemplate, MonsterTemplates } from '@/babylon/monsters/codebook/monsterTemplates'
 import { Renderer } from '@/babylon/scene/renderer'
 import { Lights } from '@/babylon/scene/lights'
+import { modelAssetUrl } from '@/babylon/modelAssetUrl'
 
 export const MonsterLoader = {
     monstersMeshes: [] as Mesh[],
@@ -29,7 +30,7 @@ export const MonsterLoader = {
         if (!assetContainer) {
             assetContainer = await SceneLoader.LoadAssetContainerAsync(
                 "",
-                "/models/monsters/" + mobType.meshName, Renderer.scene
+                modelAssetUrl('/models/monsters/' + mobType.meshName), Renderer.scene
             )
             this.modelContainers.set(mobType.meshName, assetContainer)
         }

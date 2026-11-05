@@ -18,9 +18,10 @@ import { AudioUtils } from '@/babylon/audio/audioUtils'
 import { getCharacterModelEquipModifier } from '@/babylon/character/characterModelEquipModifiers'
 import { Settings } from '@/settings/settings'
 import { ActiveMeshFreezer } from '@/babylon/scene/activeMeshFreezer'
+import { modelAssetUrl } from '@/babylon/modelAssetUrl'
 
 export class CharacterModel implements EquipBearer {
-    private static readonly MODEL_FILE = 'human_male.glb?v=20261021-1'
+    private static readonly MODEL_FILE = 'human_male.glb'
     private static readonly preparedModelCount = 6
     private static readonly maxReusableModels = 8
     private static containerPromises = new WeakMap<Scene, Promise<AssetContainer>>()
@@ -108,7 +109,7 @@ export class CharacterModel implements EquipBearer {
     private static getContainer(scene: Scene): Promise<AssetContainer> {
         let promise = this.containerPromises.get(scene)
         if (promise == null) {
-            promise = SceneLoader.LoadAssetContainerAsync('', '/models/steve/' + this.MODEL_FILE, scene)
+            promise = SceneLoader.LoadAssetContainerAsync('', modelAssetUrl('/models/steve/' + this.MODEL_FILE), scene)
             this.containerPromises.set(scene, promise)
         }
         return promise
@@ -849,6 +850,10 @@ export class CharacterModel implements EquipBearer {
 
     getOwnerId(): number {
         return this.parent.id
+    }
+
+    getEquipmentDebugLabel(): string {
+        return `Steve / ${this.parent.name} / ID ${this.parent.id}`
     }
 
     getNameTextNodeWorldPosition(): Vector3 {

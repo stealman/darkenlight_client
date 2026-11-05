@@ -484,6 +484,10 @@ export class MonsterModel implements EquipBearer {
         return this.parent.id
     }
 
+    getEquipmentDebugLabel(): string {
+        return `${this.type.name} / ${this.template.meshName} / ID ${this.parent.id}`
+    }
+
     getWeaponScale(): Vector3 | undefined {
         return this.parent.mobType.weapon?.scale
     }

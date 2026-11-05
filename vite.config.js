@@ -3,6 +3,7 @@ import vue from '@vitejs/plugin-vue'
 import { VitePWA } from 'vite-plugin-pwa'
 import fs from 'node:fs'
 import path from 'path'
+import { collectModelAssets } from './build/modelAssets.cjs'
 
 function collectPngEntries(directory, publicPath) {
     return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -24,8 +25,11 @@ function collectPngEntries(directory, publicPath) {
     })
 }
 
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ mode, command }) => {
     const isTauriBuild = mode === 'tauri'
+    const modelAssets = command === 'build'
+        ? collectModelAssets(path.resolve(__dirname, 'public/models'))
+        : { urls: {}, files: [] }
     const armorImageEntries = collectPngEntries(
         path.resolve(__dirname, 'public/images/items/armor'),
         '/images/items/armor',
@@ -41,11 +45,21 @@ export default defineConfig(({ mode }) => {
     return {
     base: '/',
     define: {
+        __CLIENT_BUILD_ID__: JSON.stringify(new Date().toISOString()),
+        __MODEL_ASSET_URLS__: JSON.stringify(modelAssets.urls),
         __PIXELATED_IMAGE_PATHS__: JSON.stringify(pixelatedImagePaths),
         __PIXELATED_IMAGE_VERSIONS__: JSON.stringify(pixelatedImageVersions),
     },
     plugins: [
         vue(),
+        {
+            name: 'versioned-model-assets',
+            generateBundle() {
+                for (const asset of modelAssets.files) {
+                    this.emitFile({ type: 'asset', fileName: asset.fileName, source: asset.source })
+                }
+            },
+        },
         !isTauriBuild && VitePWA({
             strategies: 'injectManifest',
             srcDir: 'src',
@@ -76,7 +90,7 @@ export default defineConfig(({ mode }) => {
             },
             injectManifest: {
                 globPatterns: ['**/*.{js,css,html,json,woff,woff2,ttf,eot}'],
-                globIgnores: ['assets/adminUtils-*'],
+                globIgnores: ['assets/adminUtils-*', 'model-assets/**', 'models/**'],
                 maximumFileSizeToCacheInBytes: 12 * 1024 * 1024,
             },
         }),

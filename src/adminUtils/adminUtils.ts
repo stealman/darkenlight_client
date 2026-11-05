@@ -1,3 +1,4 @@
+import '@/babylon/installModelAssetUrls'
 import '@babylonjs/loaders/glTF'
 import {
     ArcRotateCamera,

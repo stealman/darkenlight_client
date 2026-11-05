@@ -13,6 +13,7 @@ import { Lights } from '@/babylon/scene/lights'
 import { Settings } from '@/settings/settings'
 import { BabylonUtils } from '@/babylon/utils'
 import { ActiveMeshFreezer } from '@/babylon/scene/activeMeshFreezer'
+import { modelAssetUrl } from '@/babylon/modelAssetUrl'
 
 const WEAPON_TRAIL_START_DELAY = 150
 const WEAPON_TRAIL_FADE_DURATION = 180
@@ -48,6 +49,13 @@ export class EquipItem {
     private tmpOffset = new Vector3()
 
     constructor(type: EquipItemType, matIndex: number, parent: EquipBearer, bone: Bone, scale: Vector3 | null, rotation: Vector3 | null, position: Vector3 | null, modelModifier: EquipModelModifier | null = null) {
+        if (!bone && typeof window !== 'undefined') {
+            const message = `Chybí kost: ${parent.getEquipmentDebugLabel?.() ?? `objekt ${parent.getOwnerId()}`}; vybavení ${type.cbData.name} (ID ${type.id})`
+            // Report at attachment time, before the anonymous per-frame error.
+            // Keep this separate from the stack trace so it stays readable on touch devices.
+            window.dispatchEvent(new CustomEvent('game:equipment-bone-error', { detail: { message } }))
+            console.error(message)
+        }
         this.type = type
         this.parent = parent
         this.bone = bone
@@ -385,7 +393,7 @@ export class EquipItemType {
 
     /** Loads a GLB source mesh for weapons and vertex-colour armour. */
     async initializeMeshGlb(parentNode: TransformNode, scene: Scene, fileName: string, material: PBRMaterial | null, position: Vector3 = Vector3.Zero(), rotation: Vector3 = Vector3.Zero(), scale: Vector3 = Vector3.One(), castsShadows = true) {
-        const result = await SceneLoader.ImportMeshAsync("", "/models/equip/", fileName, scene);
+        const result = await SceneLoader.ImportMeshAsync('', '', modelAssetUrl('/models/equip/' + fileName), scene)
         const source = result.meshes[0].getChildMeshes()[0] as Mesh
         source.position = position
         source.rotation = rotation
@@ -633,6 +641,7 @@ export const EquipManager = {
 }
 
 export interface EquipBearer {
+    getEquipmentDebugLabel?(): string
     worldMatrix: Matrix
     rotationQuaternion: Quaternion
     getOwnerId(): number

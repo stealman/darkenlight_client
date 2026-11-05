@@ -1,3 +1,7 @@
+import { initializeDiagnostics } from './diagnostics'
+
+initializeDiagnostics()
+
 const isAdminUtilsPath = window.location.pathname === '/adminUtils' || window.location.pathname.startsWith('/adminUtils/')
 const showBootError = (label, error) => {
     console.error(`${label} failed to start:`, error)

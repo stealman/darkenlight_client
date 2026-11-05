@@ -47,6 +47,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { FoggyAreaManager } from '@/babylon/world/foggyAreaManager'
 import { ActiveMeshFreezer } from '@/babylon/scene/activeMeshFreezer'
 import { IndoorTerrainOcclusionManager } from '@/babylon/world/indoorTerrainOcclusionManager'
+import { modelAssetUrl } from '@/babylon/modelAssetUrl'
 
 function isTauriDesktop(): boolean {
     return '__TAURI_INTERNALS__' in window
@@ -79,8 +80,8 @@ export const Renderer = {
 
         DracoCompression.Configuration = {
             decoder: {
-                wasmUrl: `${window.location.origin}/models/draco/draco_decoder_gltf.wasm`,
-                fallbackUrl: `${window.location.origin}/models/draco/draco_decoder_gltf.js`,
+                wasmUrl: window.location.origin + modelAssetUrl('/models/draco/draco_decoder_gltf.wasm'),
+                fallbackUrl: window.location.origin + modelAssetUrl('/models/draco/draco_decoder_gltf.js'),
             }
         };
 
