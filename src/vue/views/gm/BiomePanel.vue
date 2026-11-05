@@ -40,6 +40,16 @@
         </select>
     </div>
 
+    <div style="margin-top: 1vh">
+        <label class="tree-item" :class="{ selected: 'WILLOW' === selectedTreeType }" @click="selectTreeType('WILLOW')">Willow</label>
+        &nbsp;&nbsp;
+        <select v-if="selectedTreeType === 'WILLOW'" @change="selectTree($event.target.value)">
+            <option v-for="tree in trees.filter(t => t.type === 'WILLOW')" :key="tree.id" :value="tree.id" :selected="tree.id === selectedTree">
+                {{ tree.name }}
+            </option>
+        </select>
+    </div>
+
     <!-- SHRUBS -->
     <div style="margin-top: 1vh">
         <div style="margin-top: 1vh">
@@ -97,7 +107,11 @@ const trees = [
     { type: "BIRCH", name: "Birch_1", id: 9 },
     { type: "BIRCH", name: "Birch_2", id: 10 },
     { type: "BIRCH", name: "Birch_3", id: 11 },
-    { type: "BIRCH", name: "Birch_4", id: 12 }
+    { type: "BIRCH", name: "Birch_4", id: 12 },
+    { type: "WILLOW", name: "Willow_1", id: 13 },
+    { type: "WILLOW", name: "Willow_2", id: 14 },
+    { type: "WILLOW", name: "Willow_3", id: 15 },
+    { type: "WILLOW", name: "Willow_4", id: 16 }
 ]
 
 const shrubs = [

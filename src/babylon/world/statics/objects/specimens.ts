@@ -1,8 +1,9 @@
 import { Matrix, Mesh, MeshBuilder, PBRMaterial, Scene, Texture, Vector2, Vector3 } from '@babylonjs/core'
 import { BaseStaticObject } from './baseStaticObject'
 import { Prefab, WorldRenderer } from '../../worldRenderer'
-import { MaterialAlphaEnum1, MaterialEnum1, Materials } from '@/babylon/materials'
+import { MaterialAlphaEnum1, MaterialEnum1 } from '@/babylon/materials'
 import { Lights } from '@/babylon/scene/lights'
+import { PrefabWillow, WILLOW_WOOD_BLOCKS } from '@/babylon/world/prefabs/treeWillow'
 
 // Separate shared leaf meshes allow day shadows without local/night shadow casting.
 export const SpecimenPrefabs = {
@@ -15,21 +16,10 @@ function crown(): Prefab {
     const scene = WorldRenderer.worldParentNode!.getScene()
     const cached = crowns.get(scene)
     if (cached) return cached
-    const parts: Mesh[] = []
-    for (let i = 0; i < 12; i++) {
-        const angle = i * 2.39996
-        const mesh = MeshBuilder.CreateBox('leaf', {width: 0.65, height: 1.6 + (i % 3) * 0.3, depth: 0.65}, scene)
-        mesh.position.set(Math.cos(angle) * 1.25, 2.3 + (i % 3) * 0.2, Math.sin(angle) * 1.25)
-        mesh.rotation.z = Math.sin(angle) * 0.15
-        parts.push(mesh)
-    }
-    const mesh = Mesh.MergeMeshes(parts, true)!
-    mesh.parent = WorldRenderer.worldParentNode
-    mesh.material = Materials.blockMatAlpha1
-    mesh.alwaysSelectAsActiveMesh = true
-    mesh.setEnabled(false)
-    Lights.addShadowCaster(mesh, true)
-    const prefab = new Prefab(mesh)
+    const prefab = PrefabWillow.getPrefab(scene)
+    prefab.mesh.parent = WorldRenderer.worldParentNode
+    prefab.mesh.setEnabled(false)
+    Lights.addShadowCaster(prefab.mesh, false)
     SpecimenPrefabs.all.add(prefab)
     crowns.set(scene, prefab)
     return prefab
@@ -41,14 +31,13 @@ export class SpecimenTree extends BaseStaticObject {
     }
     render() {
         const p = this.renderPosition
-        const part = (w: number, h: number, d: number, x: number, y: number, z: number, roll = 0, material = this.material) => {
-            WorldRenderer.block1!.matrices.push(Matrix.Scaling(w, h, d).multiply(Matrix.RotationZ(roll)).multiply(Matrix.Translation(p.x + x, p.y + y + 0.5, p.z + z)))
-            WorldRenderer.block1!.uvData.push(material)
+        for (const [x, y, z, width, height] of WILLOW_WOOD_BLOCKS) {
+            WorldRenderer.block1!.matrices.push(Matrix.Scaling(width, height, width)
+                .multiply(Matrix.Translation(p.x + x, p.y + y + 0.5, p.z + z)))
+            WorldRenderer.block1!.uvData.push(this.material)
         }
-        part(0.32, 3.4, 0.32, 0, 1.7, 0)
-        for (const side of [-1, 1]) part(0.16, 1.5, 0.16, side * 0.45, 2.6, 0, side * -0.65)
-        this.prefab!.matrices.push(Matrix.Translation(p.x, p.y, p.z))
-        this.prefab!.uvData.push(MaterialAlphaEnum1.WILLOW_LEAVES.uv)
+        this.prefab!.matrices.push(Matrix.Translation(p.x, p.y + 0.5, p.z))
+        this.prefab!.uvData.push(MaterialAlphaEnum1.TREE_LEAF_LIGHT.uv)
 
     }
 

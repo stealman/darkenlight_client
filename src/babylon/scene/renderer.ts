@@ -217,6 +217,7 @@ export const Renderer = {
             NpcManager.onFrame(timeRate, actualTime, this.frame)
             MonsterManager.onFrame(timeRate, actualTime, this.frame)
             GroundItemsManager.onFrame(timeRate, actualTime)
+            Controller.updateHoverNames(scene, actualTime)
 
             EquipManager.onFrame()
             GfxManager.onFrame(actualTime)

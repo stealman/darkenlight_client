@@ -124,7 +124,7 @@ export async function installAssetPreview(root: HTMLElement, scene: Scene, camer
         buffers().forEach(b => { b.clearMatrices(); b.setThinInstanceBuffers(); b.mesh.setEnabled(false) })
     }
     const entries = () => tab === 'Statics'
-        ? [...Array.from(StaticObjectsCodebook.values(), v => ({ id: String(v.type), name: v.name })), ...Array.from({length: 12}, (_, i) => ({id: 'tree:' + (i + 1), name: ['Oak', 'Pine', 'Birch'][Math.floor(i / 4)] + ' ' + (i % 4 + 1)}))]
+        ? [...Array.from(StaticObjectsCodebook.values(), v => ({ id: String(v.type), name: v.name })), ...Array.from({length: 16}, (_, i) => ({id: 'tree:' + (i + 1), name: ['Oak', 'Pine', 'Birch', 'Willow'][Math.floor(i / 4)] + ' ' + (i % 4 + 1)}))]
         : tab === 'Buildings' ? ['House', 'Shed', 'Mausoleum', 'Cabin'].map((name, i) => ({id: String(i + 1), name}))
         : Object.values(MonsterTypes).map(v => ({id: String(v.id), name: v.name}))
     const play = () => {

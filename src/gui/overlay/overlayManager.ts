@@ -129,7 +129,7 @@ export const OverlayManager = {
     getTemporaryNameAlpha(owner: object, displayUntil: number, time: number, appearedAt: number = time) {
         let state = this.temporaryNameFadeStates.get(owner)
         if (!state || state.displayUntil !== displayUntil) {
-            state = { displayUntil, appearedAt }
+            state = { displayUntil, appearedAt: state && state.displayUntil > time ? state.appearedAt : appearedAt }
             this.temporaryNameFadeStates.set(owner, state)
         }
 
@@ -322,19 +322,30 @@ export const OverlayManager = {
         }
 
         const nearestItem = GroundItemsManager.nearbyItem
-        if (nearestItem && nearestItem.nameDisplayTime > time) {
-            const pos = nearestItem.getNameTextNodeScreenPosition()
-            const itemName = nearestItem.item.name
+        const hoveredItem = GroundItemsManager.hoveredItem
+        if (nearestItem && nearestItem !== hoveredItem) {
+            this.renderGroundItemName(nearestItem, nearestItem.nameDisplayTime, time, tightText)
+        }
+        if (hoveredItem) {
+            this.renderGroundItemName(hoveredItem, Math.max(hoveredItem.nameDisplayTime,
+                GroundItemsManager.hoverNameDisplayTime), time, tightText)
+        }
+    },
+
+    renderGroundItemName(item: NonNullable<typeof GroundItemsManager.nearbyItem>, displayUntil: number, time: number, tightText: boolean) {
+        if (displayUntil > time) {
+            const pos = item.getNameTextNodeScreenPosition()
+            const itemName = item.item.name
             if (pos && itemName) {
                 let displayName = itemName
-                if (nearestItem.item.isStackable()) {
-                    const qtyRaw = (nearestItem.item.atts as any)?.qty
+                if (item.item.isStackable()) {
+                    const qtyRaw = (item.item.atts as any)?.qty
                     const qty = Number(qtyRaw)
                     if (!Number.isNaN(qty) && qty > 0) {
                         displayName = `${qty}x  ${itemName}`
                     }
                 }
-                const alpha = this.getTemporaryNameAlpha(nearestItem, nearestItem.nameDisplayTime, time)
+                const alpha = this.getTemporaryNameAlpha(item, displayUntil, time)
                 this.renderName(pos, displayName, tightText, 'NEUTRAL', true, 1, alpha)
             }
         }

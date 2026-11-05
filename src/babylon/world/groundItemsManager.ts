@@ -75,6 +75,8 @@ export const GroundItemsManager = {
     yellow_fx: new Color4(0.8, 0.6, 0.3, 1),
     PROXIMITY_RANGE_XZ: 1,
     nearbyItem: null as GroundItem | null,
+    hoveredItem: null as GroundItem | null,
+    hoverNameDisplayTime: 0,
     nextAutoPickupTime: 0,
     ignoredAutoPickupItemIds: new Set<number>(),
     iconStyleUnsubscribe: null as (() => void) | null,
@@ -169,6 +171,7 @@ export const GroundItemsManager = {
                 if (this.nearbyItem === item) {
                     this.nearbyItem = null
                 }
+                if (this.hoveredItem === item) this.hoveredItem = null
                 changed = true
             }
         }
@@ -183,6 +186,8 @@ export const GroundItemsManager = {
         this.items.length = 0
         this.visibleItems.length = 0
         this.nearbyItem = null
+        this.hoveredItem = null
+        this.hoverNameDisplayTime = 0
         this.animatingItems.clear()
         this.visibleItemsDirty = false
         this.itemBuffersDirty = true
@@ -194,6 +199,7 @@ export const GroundItemsManager = {
 
     onFrame(timeRate: number, time: number) {
         this.updateVisibleItems()
+        if (time >= this.hoverNameDisplayTime) this.hoveredItem = null
         this.detectNearestItemProximity(time)
         for (const item of this.animatingItems) {
             if (item.onFrame(timeRate, time)) {
@@ -243,6 +249,7 @@ export const GroundItemsManager = {
         this.lastVisiblePlayerZ = playerZ
         this.viewportWasInitialized = true
         this.visibleItemsDirty = false
+        if (this.hoveredItem && !this.visibleItems.includes(this.hoveredItem)) this.hoveredItem = null
     },
 
     renderItems() {

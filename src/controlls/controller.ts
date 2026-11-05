@@ -1,4 +1,4 @@
-import { Scene, PointerEventTypes, Vector3, PointerInfo} from '@babylonjs/core'
+import { Scene, PointerEventTypes, Vector3, PointerInfo, Matrix, Ray} from '@babylonjs/core'
 import {MyPlayer} from "@/data/myPlayer";
 import { Settings } from '@/settings/settings'
 import { ViewportManager } from '@/utils/viewport'
@@ -8,6 +8,13 @@ import { TargetingManager } from '@/gui/targettingManager'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { ActionButtonsManager } from '@/gui/actionButtonsManager'
 import { GuiButtonsManager } from '@/gui/guiButtonsManager'
+import { GroundItemsManager } from '@/babylon/world/groundItemsManager'
+import { CharacterManager } from '@/babylon/character/characterManager'
+import { MonsterManager } from '@/babylon/monsters/monsterManager'
+import { NpcManager } from '@/babylon/npc/npcManager'
+import type { Targetable } from '@/gui/targettingManager'
+
+const HOVER_AXES = ['x', 'y', 'z'] as const
 
 export const Controller = {
     leftPressedTime: 0,
@@ -18,9 +25,21 @@ export const Controller = {
     lastRightPointerPosition: null as { x: number, y: number } | null,
     lastJoystickVector: { dx: 0, dy: 0 },
     movementInputCancelled: false,
+    hoverPointer: null as { x: number, y: number } | null,
+    nextHoverCheckTime: 0,
+    hoverRay: new Ray(Vector3.Zero(), Vector3.Zero()),
+    hoverWorld: Matrix.Identity(),
+    hoverMin: Vector3.Zero(),
+    hoverMax: Vector3.Zero(),
 
     initializeController(scene: Scene) {
+        this.hoverPointer = null
+        this.nextHoverCheckTime = 0
         scene.onPointerObservable.add((pointerInfo) => {
+            if ((pointerInfo.event as PointerEvent).pointerType === 'mouse' &&
+                (pointerInfo.type === PointerEventTypes.POINTERMOVE || pointerInfo.type === PointerEventTypes.POINTERDOWN)) {
+                this.hoverPointer = { x: pointerInfo.event.clientX, y: pointerInfo.event.clientY }
+            }
             if (MyPlayer.isDead.value) {
                 return
             }
@@ -83,6 +102,101 @@ export const Controller = {
                 }
             }
         })
+    },
+
+    updateHoverNames(scene: Scene, time: number) {
+        if (time < this.nextHoverCheckTime) return
+        this.nextHoverCheckTime = time + 200
+        const pointer = this.hoverPointer
+        const canvas = scene.getEngine().getRenderingCanvas()
+        if (!pointer || !canvas || !document.hasFocus() || MyPlayer.isDead.value ||
+            GMManager.consumePointerMoveEvents || document.elementFromPoint(pointer.x, pointer.y) !== canvas) return
+
+        const rect = canvas.getBoundingClientRect()
+        if (rect.width <= 0 || rect.height <= 0) return
+        // Babylon's picking coordinates are CSS pixels relative to the canvas.
+        scene.createPickingRayToRef(pointer.x - rect.left, pointer.y - rect.top,
+            this.hoverWorld, this.hoverRay, scene.activeCamera)
+
+        let nearestDistance = Infinity
+        let target: Targetable | null = null
+        let groundItem: typeof GroundItemsManager.nearbyItem = null
+        for (const item of GroundItemsManager.visibleItems) {
+            if (item.dropping) continue
+            const x = item.pos.x + item.dropOffsetX
+            const y = item.pos.y + item.yOffset
+            const z = item.pos.z + item.dropOffsetZ
+            // Thin instances stay unpickable; give small loot a forgiving hit area.
+            this.hoverMin.set(x - 0.35, y - 0.15, z - 0.35)
+            this.hoverMax.set(x + 0.35, y + 0.4, z + 0.35)
+            const distance = this.getHoverBoxDistance()
+            if (distance < nearestDistance) {
+                nearestDistance = distance
+                groundItem = item
+            }
+        }
+
+        const checkActor = (actor: Targetable, position: Vector3) => {
+            const halfSize = Math.max(0.35, actor.getBoxSize() / 2)
+            this.hoverMin.set(position.x - halfSize, position.y, position.z - halfSize)
+            this.hoverMax.set(position.x + halfSize, position.y + actor.getModelHeight(), position.z + halfSize)
+            const distance = this.getHoverBoxDistance()
+            if (distance < nearestDistance) {
+                nearestDistance = distance
+                target = actor
+                groundItem = null
+            }
+        }
+        for (const id of MonsterManager.visibleMonsters) {
+            const monster = MonsterManager.monsters.get(id)
+            if (monster?.model?.initialized) checkActor(monster, monster.model.node.position)
+        }
+        for (const id of CharacterManager.visibleCharacters) {
+            const char = CharacterManager.characters.get(id)
+            if (char?.model?.initialized) checkActor(char, char.model.node.position)
+        }
+        if (MyPlayer.myChar?.model?.initialized) {
+            checkActor(MyPlayer.myChar, MyPlayer.myChar.model.node.position)
+        }
+        for (const id of NpcManager.visibleNpcs) {
+            const npc = NpcManager.npcs.get(id)
+            if (npc?.model?.initialized) checkActor(npc, npc.model.node.position)
+        }
+        for (const id of NpcManager.visibleGuards) {
+            const guard = NpcManager.guards.get(id)
+            if (guard?.model?.initialized) checkActor(guard, guard.model.node.position)
+        }
+        if (target) {
+            const actor = target as Targetable
+            actor.nameDisplayTime = Math.max(actor.nameDisplayTime, time + 600)
+        }
+        if (groundItem) {
+            GroundItemsManager.hoveredItem = groundItem
+            GroundItemsManager.hoverNameDisplayTime = time + 600
+        }
+    },
+
+    getHoverBoxDistance(): number {
+        // Slab intersection returns the front face, so overlapping objects choose
+        // the closest hit rather than whichever collection was visited last.
+        let near = 0
+        let far = this.hoverRay.length
+        for (const axis of HOVER_AXES) {
+            const origin = this.hoverRay.origin[axis]
+            const direction = this.hoverRay.direction[axis]
+            const min = this.hoverMin[axis]
+            const max = this.hoverMax[axis]
+            if (Math.abs(direction) < 1e-8) {
+                if (origin < min || origin > max) return Infinity
+            } else {
+                const a = (min - origin) / direction
+                const b = (max - origin) / direction
+                near = Math.max(near, Math.min(a, b))
+                far = Math.min(far, Math.max(a, b))
+                if (near > far) return Infinity
+            }
+        }
+        return near
     },
 
     processKeydown(e) {

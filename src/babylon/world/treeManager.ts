@@ -6,6 +6,7 @@ import { ViewportManager } from '@/utils/viewport'
 import { PrefabOak } from '@/babylon/world/prefabs/treeOak'
 import { PrefabFir } from '@/babylon/world/prefabs/treeFir'
 import { PrefabBirch } from '@/babylon/world/prefabs/treeBirch'
+import { PrefabWillow, WILLOW_WOOD_BLOCKS } from '@/babylon/world/prefabs/treeWillow'
 import { Lights } from '@/babylon/scene/lights'
 import { MyPlayer } from '@/data/myPlayer'
 import { TargetingManager } from '@/gui/targettingManager'
@@ -21,6 +22,7 @@ export const TreeManager = {
         tree1: null as Prefab | null,
         tree2: null as Prefab | null,
         birch: null as Prefab | null,
+        willow: null as Prefab | null,
     },
     fadedLeafMaterial: null as PBRMaterial | null,
     fadedTrunkMaterial: null as PBRMaterial | null,
@@ -43,6 +45,7 @@ export const TreeManager = {
         this.prefabs.tree1 = PrefabOak.getPrefab(scene)
         this.prefabs.tree2 = PrefabFir.getPrefab(scene)
         this.prefabs.birch = PrefabBirch.getPrefab(scene)
+        this.prefabs.willow = PrefabWillow.getPrefab(scene)
         this.fadedLeafMaterial = Materials.createBlockMatAlpha1(scene)
         this.configureFadedMaterial(this.fadedLeafMaterial, 'tree_leaves_faded_material', true)
         this.fadedTrunkMaterial = Materials.createBlockMat1(scene)
@@ -253,6 +256,12 @@ export const TreeManager = {
             case 11:
             case 12:
                 this.allTrees.push(new TreeBirch(pos, rotation, size, MaterialAlphaEnum1.getMaterialByIndex(tree.type - 8)))
+                break
+            case 13:
+            case 14:
+            case 15:
+            case 16:
+                this.allTrees.push(new TreeWillow(pos, rotation, size, MaterialAlphaEnum1.getMaterialByIndex(tree.type - 12)))
                 break
             default:
                 break
@@ -528,6 +537,45 @@ class TreeOak implements Tree {
                 this.position.z + halfWidth,
             ),
         )
+    }
+}
+
+class TreeWillow extends TreeOak {
+    constructor(position: Vector3, rotation: number, scale: number, leafMaterial: Vector2) {
+        super(position, rotation, scale, leafMaterial)
+        this.woodMaterial = MaterialEnum1.WILLOW_BARK.uv
+        this.leavesPrefab = TreeManager.prefabs.willow!
+        this.leafHeightOffset = 0
+    }
+
+    renderTrunk(faded: boolean) {
+        const cos = Math.cos(this.rotation)
+        const sin = Math.sin(this.rotation)
+        const rotation = Matrix.RotationY(this.rotation)
+        for (const [x, y, z, width, height] of WILLOW_WOOD_BLOCKS) {
+            const px = this.position.x + (x * cos + z * sin) * this.scale
+            const py = this.position.y + y * this.scale
+            const pz = this.position.z + (z * cos - x * sin) * this.scale
+            if (faded) {
+                const mesh = TreeManager.createFadedMesh(WorldRenderer.block1!.mesh,
+                    'tree_willow_trunk_faded', TreeManager.fadedTrunkMaterial!, this.woodMaterial, true)
+                mesh.position.set(px, py - 0.5, pz)
+                mesh.rotation.y = this.rotation
+                mesh.scaling.set(width * this.scale, height * this.scale, width * this.scale)
+                mesh.visibility = this.fadeVisibility
+                this.fadedMeshes.push(mesh)
+            } else {
+                WorldRenderer.block1!.matrices.push(Matrix.Scaling(width * this.scale, height * this.scale, width * this.scale)
+                    .multiply(rotation).multiply(Matrix.Translation(px, py, pz)))
+                WorldRenderer.block1!.uvData.push(this.woodMaterial)
+            }
+        }
+    }
+
+    intersectsLeafOcclusionSegment(origin: Vector3, direction: Vector3, maxDistance: number): boolean {
+        return segmentIntersectsAabb(origin, direction, maxDistance,
+            new Vector3(this.position.x - 1.1 * this.scale, this.position.y + 0.1 * this.scale, this.position.z - 1.1 * this.scale),
+            new Vector3(this.position.x + 1.1 * this.scale, this.position.y + 2.2 * this.scale, this.position.z + 1.1 * this.scale))
     }
 }
 
