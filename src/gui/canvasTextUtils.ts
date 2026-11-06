@@ -1,3 +1,28 @@
+export interface OverlayCanvasView {
+    canvas: HTMLCanvasElement
+    ctx: CanvasRenderingContext2D | null
+    fontSize: number
+    letterSpacingFix: number
+}
+
+export function removeExpiredOverlayEntries(entries: Array<{ expiresAt: number }>, time: number) {
+    for (let index = entries.length - 1; index >= 0; index--) {
+        if (entries[index].expiresAt <= time) {
+            entries.splice(index, 1)
+        }
+    }
+}
+
+export function createOverlayRaster(width: number, height: number) {
+    const dpr = window.devicePixelRatio || 1
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.ceil(width * dpr)
+    canvas.height = Math.ceil(height * dpr)
+    const ctx = canvas.getContext('2d')!
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    return {canvas, ctx}
+}
+
 export const CanvasTextUtils = {
     getDarkenedColor(color: string, factor: number = 0.72) {
         let hex = color.startsWith('#') ? color.slice(1) : color

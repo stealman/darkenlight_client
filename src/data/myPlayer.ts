@@ -2,6 +2,7 @@ import {PartyManager} from '@/data/partyManager'
 import { Vector3 } from '@babylonjs/core'
 import { Utils } from '@/utils/utils'
 import Character from '@/babylon/character/character'
+import { CharacterManager } from '@/babylon/character/characterManager'
 import { CharacterModel } from '@/babylon/character/characterModel'
 import { ref } from 'vue'
 import { TargetingManager } from '@/gui/targettingManager'
@@ -335,6 +336,27 @@ export const MyPlayer = {
 
             if (tgt.hpPercent <= 99) {
                 Connector.sendMessage(new HealingTargetAction(selectedTarget.id, tgt.getObjectType()))
+                return
+            }
+        }
+        if (this.myChar.hp >= this.myChar.maxHp) {
+            let nearestMemberId: number | null = null
+            let nearestDistance = Infinity
+            for (const member of PartyManager.state.value?.members ?? []) {
+                if (member.id === this.myChar.id || !member.nearby || member.worldId !== this.worldId
+                    || member.hp === undefined || member.maxHp === undefined
+                    || member.hp <= 0 || member.hp >= member.maxHp) continue
+
+                const character = CharacterManager.characters.get(member.id)
+                if (!character || character.dead) continue
+                const distance = Math.hypot(character.pos.x - this.myChar.pos.x, character.pos.z - this.myChar.pos.z)
+                if (distance <= 10 && distance < nearestDistance) {
+                    nearestMemberId = member.id
+                    nearestDistance = distance
+                }
+            }
+            if (nearestMemberId !== null) {
+                Connector.sendMessage(new HealingTargetAction(nearestMemberId, 'C'))
                 return
             }
         }

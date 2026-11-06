@@ -120,7 +120,7 @@ test('name overlay uses visible IDs and tolerates IDs removed before the next vi
     const MonsterManager = makeManager('monsters', 'visibleMonsters')
     const CharacterManager = makeManager('characters', 'visibleCharacters')
     const NpcManager = {...makeManager('npcs', 'visibleNpcs'), ...makeManager('guards', 'visibleGuards')}
-    const {OverlayManager: overlay} = loadModule('gui/overlay/overlayManager.ts', {
+    const {OverlayLabels} = loadModule('gui/overlay/overlayLabels.ts', {
         '@babylonjs/core': core,
         '@/babylon/monsters/monsterManager': {MonsterManager},
         '@/babylon/character/characterManager': {CharacterManager},
@@ -129,6 +129,7 @@ test('name overlay uses visible IDs and tolerates IDs removed before the next vi
         '@/babylon/world/groundItemsManager': {GroundItemsManager: {}},
         '@/gui/overlay/targetSelector': {TargetSelector: {}},
     })
+    const overlay = new OverlayLabels({})
     const rendered = []
     overlay.getTemporaryNameAlpha = () => 1
     overlay.renderName = () => rendered.push('monster')

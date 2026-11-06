@@ -405,7 +405,8 @@ class Character implements Attackable, EffectTarget {
             return false
         }
         if (contact.lastRequest > 0) return time - contact.lastRequest < 250
-        if (time - contact.since < 250) {
+        const contactDelay = targetType === 'M' && target.getRelationToMyPlayer() === 'ENEMY' ? 500 : 250
+        if (time - contact.since < contactDelay) {
             return true
         }
         contact.lastRequest = time

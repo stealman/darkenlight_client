@@ -19,14 +19,16 @@ test('aggro alert pulses above the HP bar for five seconds and ignores other wor
     const MyPlayer = {worldId: 7}
     const monster = {hpPercent: 100, getNameTextNodeScreenPosition: () => ({x: 100, y: 80})}
     const MonsterManager = {monsters: new Map([[42, monster]]), visibleMonsters: new Set([42])}
-    const {OverlayManager: overlay} = loadModule('gui/overlay/overlayManager.ts', {
+    const {OverlayIndicators} = loadModule('gui/overlay/overlayIndicators.ts', {
         '@/data/myPlayer': {MyPlayer}, '@/babylon/monsters/monsterManager': {MonsterManager},
     }, {now: () => 1000})
+    const view = {ctx: null, canvas: {}, fontSize: 14, letterSpacingFix: 0}
+    const overlay = new OverlayIndicators(view)
     const drawn = []
     const icon = {width: 40, height: 50}
     overlay.aggroAlertIcon = icon
     const ctx = {save() {}, restore() {}, drawImage(...args) {drawn.push({args, alpha: this.globalAlpha})}}
-    overlay.overlayCtx = ctx
+    view.ctx = ctx
     overlay.addMonsterAggroAlert({id: 42, worldId: 8})
     assert.equal(overlay.monsterAggroAlerts.size, 0)
     overlay.addMonsterAggroAlert({id: 42, worldId: 7})
@@ -417,15 +419,19 @@ test('speech, healing and NPC labels reuse rasters and invalidate text caches', 
         drawImage(...args) { draws.push(args) },
     })
     const document = {createElement() { allocations++; return {getContext: () => makeContext()} }}
-    const {CanvasTextUtils} = loadModule('gui/canvasTextUtils.ts', {})
+    const globals = {document, window: {devicePixelRatio: 2}}
+    const canvasUtils = loadModule('gui/canvasTextUtils.ts', {}, Date, globals)
     const char = {id: 1, getNameTextNodeScreenPosition: () => ({x: 150, y: 250})}
-    const {OverlayManager: overlay} = loadModule('gui/overlay/overlayManager.ts', {
+    const dependencies = {
         '@/data/myPlayer': {MyPlayer: {myChar: char}},
-        '@/gui/canvasTextUtils': {CanvasTextUtils},
+        '@/gui/canvasTextUtils': canvasUtils,
         '@/utils/viewport': {ViewportManager: {movePositionToScreen() {}}},
-    }, {now: () => 1000}, {document, window: {devicePixelRatio: 2}})
-    overlay.overlayCtx = makeContext()
-    overlay.overlayCanvas = {clientWidth: 800}
+    }
+    const {OverlayLabels} = loadModule('gui/overlay/overlayLabels.ts', dependencies, {now: () => 1000}, globals)
+    const {OverlayIndicators} = loadModule('gui/overlay/overlayIndicators.ts', dependencies, Date, globals)
+    const view = {ctx: makeContext(), canvas: {clientWidth: 800}, fontSize: 14, letterSpacingFix: 0}
+    const overlay = new OverlayLabels(view)
+    const indicators = new OverlayIndicators(view)
     overlay.addSpeech({id: 1, text: 'Hello there'})
     const bubble = overlay.speech.get(char)[0]
     assert.ok(bubble.image)
@@ -438,25 +444,25 @@ test('speech, healing and NPC labels reuse rasters and invalidate text caches', 
     assert.equal(overlay.speech.size, 0)
     assert.equal(draws.length, 2)
 
-    overlay.prepareHealingAtlas()
+    indicators.prepareHealingAtlas()
     const healingPaints = paints
     const initialAllocations = allocations
-    overlay.renderHealingMarker({x: 100, y: 200}, 1000, false)
+    indicators.renderHealingMarker({x: 100, y: 200}, 1000, false)
     const green = draws.at(-1)
-    overlay.renderHealingMarker({x: 100, y: 200}, 1100, true)
+    indicators.renderHealingMarker({x: 100, y: 200}, 1100, true)
     const red = draws.at(-1)
     assert.equal(paints, healingPaints)
     assert.equal(allocations, initialAllocations)
     assert.notEqual(green[2], red[2])
     assert.deepEqual(green.slice(5), red.slice(5))
 
-    overlay.letterSpacingFix = -6
+    view.letterSpacingFix = -6
     overlay.renderNpcLabel({x: 150, y: 250}, 'Merchant', 'Trader')
     assert.deepEqual(strokedText.slice(-2), ['Merchant', '[Trader]'])
     assert.equal(draws.at(-1)[3], 76)
     const labelPaints = paints
     const labelImage = draws.at(-1)[0]
-    overlay.letterSpacingFix = -20
+    view.letterSpacingFix = -20
     overlay.renderNpcLabel({x: 180, y: 260}, 'Merchant', 'Trader')
     assert.equal(draws.at(-1)[0], labelImage)
     assert.equal(paints, labelPaints)
@@ -465,20 +471,20 @@ test('speech, healing and NPC labels reuse rasters and invalidate text caches', 
     for (let i = 0; i < 130; i++) overlay.renderNpcLabel({x: 150, y: 250}, `NPC ${i}`, '')
     assert.equal(overlay.npcLabels.size, 128)
     // Mobile spacing correction must not shrink cached player/monster names.
-    overlay.letterSpacingFix = -20
+    view.letterSpacingFix = -20
     overlay.renderName({x: 150, y: 250}, 'Skeleton', true, 'ENEMY', true)
     const monsterImage = draws.at(-1)[0]
     assert.equal(strokedText.at(-1), 'Skeleton')
     assert.equal(draws.at(-1)[3], 76)
     const namePaints = paints
-    overlay.renderScaledOutlinedText(180, 260, 'Skeleton', true, 'ENEMY', overlay.fontSize, 1.17, .4)
+    overlay.renderScaledOutlinedText(180, 260, 'Skeleton', true, 'ENEMY', view.fontSize, 1.17, .4)
     const scaledName = draws.at(-1)
     assert.equal(scaledName[0], monsterImage)
     assert.equal(paints, namePaints)
     assert.ok(Math.abs(scaledName[3] - 76 * 1.17) < 1e-9)
     assert.ok(Math.abs(scaledName[1] + scaledName[3] / 2 - 180) < 1e-9)
-    assert.equal(overlay.overlayCtx.globalAlpha, .4)
-    overlay.renderScaledOutlinedText(180, 260, 'Skeleton', true, 'ALLY', overlay.fontSize, 1, 1, true, '#58ef83')
+    assert.equal(view.ctx.globalAlpha, .4)
+    overlay.renderScaledOutlinedText(180, 260, 'Skeleton', true, 'ALLY', view.fontSize, 1, 1, true, '#58ef83')
     assert.notEqual(draws.at(-1)[0], monsterImage)
     overlay.renderName({x: 150, y: 250}, 'Renamed', true, 'ENEMY', true)
     assert.notEqual(draws.at(-1)[0], monsterImage)
@@ -491,4 +497,71 @@ test('speech, healing and NPC labels reuse rasters and invalidate text caches', 
     assert.equal(overlay.speech.get(char)[0].image, null)
     overlay.renderSpeech(1100)
     assert.ok(overlay.speech.get(char)[0].image)
+})
+
+
+test('overlay manager shares its view, routes events and preserves frame and reset ordering', async () => {
+    const calls = []
+    let labels, indicators
+    class OverlayLabels {
+        constructor(view) { this.view = view; labels = this }
+        initialize() { calls.push('labels:init') }
+        reset() { calls.push('labels:reset') }
+        invalidateTextRasters() { calls.push('labels:invalidate') }
+        addSpeech(data) { this.speech = data }
+        renderNames() { calls.push('names') }
+        renderSpeech() { calls.push('speech') }
+    }
+    class OverlayIndicators {
+        constructor(view) { this.view = view; indicators = this }
+        initialize() { calls.push('indicators:init') }
+        reset() { calls.push('indicators:reset') }
+        onResize() { calls.push('indicators:resize') }
+        addMonsterAggroAlert(data) { this.alert = data }
+        renderDamagedBars() { calls.push('hp') }
+        renderMonsterAggroAlerts() { calls.push('aggro') }
+        renderHealingMarkers() { calls.push('healing') }
+    }
+    const ctx = {clearRect() { calls.push('clear') }, setTransform() {}}
+    const canvas = {clientWidth: 800, clientHeight: 600, getContext: () => ctx}
+    const {OverlayManager: overlay} = loadModule('gui/overlay/overlayManager.ts', {
+        '@/gui/overlay/overlayLabels': {OverlayLabels},
+        '@/gui/overlay/overlayIndicators': {OverlayIndicators},
+        '@/gui/canvasTextUtils': {CanvasTextUtils: {computeLetterSpacingFix: () => -2}},
+        '@/data/myPlayer': {MyPlayer: {myChar: {hpPercent: 100}}},
+        '@/gui/uiIconManager': {UiIconManager: {getUrl: url => url, onStyleChanged: () => () => {}}},
+        '@/gui/overlay/targetSelector': {TargetSelector: {
+            initialize() { calls.push('targets:init') }, unselectTarget() { calls.push('targets:reset') },
+        }},
+        '@/gui/gm/oreTierOverlay': {GmOreTierOverlay: {onFrame() { calls.push('gm') }}},
+    }, Date, {document: {getElementById: () => canvas}, window: {devicePixelRatio: 2}, Image: class {}})
+    await overlay.initialize()
+    assert.equal(labels.view, indicators.view)
+    assert.equal(labels.view.ctx, ctx)
+    assert.equal(overlay.fontSize, 14)
+    assert.deepEqual(calls, ['indicators:init', 'labels:init', 'labels:reset', 'indicators:reset', 'targets:reset', 'targets:init'])
+    const speech = {id: 1, text: 'Hello'}
+    const alert = {id: 2, worldId: 3}
+    overlay.addSpeech(speech)
+    overlay.addMonsterAggroAlert(alert)
+    assert.equal(labels.speech, speech)
+    assert.equal(indicators.alert, alert)
+    overlay.onResize()
+    assert.equal(canvas.width, 1600)
+    assert.equal(canvas.height, 1200)
+    assert.equal(labels.view.letterSpacingFix, -2)
+    assert.equal(overlay.letterSpacingFix, -2)
+    for (const [method, label] of [['renderDamageNumbers', 'damage'], ['renderEmeraldGainNumbers', 'emerald'], ['renderItemGainNumbers', 'items']]) {
+        overlay[method] = () => calls.push(label)
+    }
+    calls.length = 0
+    overlay.onFrame(1 / 60, 1000)
+    assert.deepEqual(calls, ['clear', 'names', 'damage', 'emerald', 'items', 'hp', 'aggro', 'healing', 'speech', 'gm'])
+    overlay.damageNumbers.push({})
+    overlay.emeraldGainNumbers.push({})
+    overlay.itemGainNumbers.push({})
+    calls.length = 0
+    overlay.reset()
+    assert.equal(overlay.damageNumbers.length + overlay.emeraldGainNumbers.length + overlay.itemGainNumbers.length, 0)
+    assert.deepEqual(calls, ['labels:reset', 'indicators:reset', 'targets:reset'])
 })
