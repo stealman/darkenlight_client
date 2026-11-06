@@ -21,7 +21,7 @@ import { ItemGainNumber } from '@/gui/overlay/itemGainNumber'
 import { GmOreTierOverlay } from '@/gui/gm/oreTierOverlay'
 import { UiIconManager } from '@/gui/uiIconManager'
 
-import type { CharacterSpeechData } from '@/network/messageIfs'
+import type { CharacterSpeechData, MonsterAggroAlertData } from '@/network/messageIfs'
 
 interface SpeechBubble {
     lines: string[]
@@ -62,12 +62,15 @@ export const OverlayManager = {
     animatedHpBars: new WeakMap<object, AnimatedHpBar>(),
     temporaryNameFadeStates: new WeakMap<object, TemporaryNameFadeState>(),
     speech: new Map<Character, SpeechBubble[]>(),
+    monsterAggroAlerts: new Map<number, {worldId: number, startedAt: number}>(),
+    aggroAlertColor: '',
 
     async initialize() {
         this.overlayCanvas = document.getElementById('overlayCanvas') as HTMLCanvasElement
         this.overlayCtx = this.overlayCanvas.getContext('2d')
         this.overlayCtx!.lineWidth = 1
         this.fontSize = window.devicePixelRatio > 1 ? 14 : 18
+        this.aggroAlertColor = `rgb(${getComputedStyle(document.documentElement).getPropertyValue('--ui-danger').trim()})`
         this.emeraldGainIcon = new Image()
         this.refreshIconSources()
         if (!this.iconStyleUnsubscribe) {
@@ -88,6 +91,7 @@ export const OverlayManager = {
 
     reset() {
         this.speech.clear()
+        this.monsterAggroAlerts.clear()
         this.damageNumbers = []
         this.emeraldGainNumbers = []
         this.itemGainNumbers = []
@@ -155,6 +159,7 @@ export const OverlayManager = {
         this.renderEmeraldGainNumbers(time)
         this.renderItemGainNumbers(time)
         this.renderDamagedBars(time)
+        this.renderMonsterAggroAlerts(time)
         this.renderHealingMarkers(time)
         this.renderSpeech(time)
         GmOreTierOverlay.onFrame(this.overlayCtx!)
@@ -493,6 +498,41 @@ export const OverlayManager = {
             this.itemGainIcons.set(normalizedUrl, icon)
         }
         return icon
+    },
+
+    addMonsterAggroAlert(data: MonsterAggroAlertData) {
+        if (data.worldId !== MyPlayer.worldId) return
+        this.monsterAggroAlerts.set(data.id, {worldId: data.worldId, startedAt: Date.now()})
+    },
+
+    renderMonsterAggroAlerts(time: number) {
+        if (!this.monsterAggroAlerts.size) return
+        const ctx = this.overlayCtx!
+        ctx.save()
+        ctx.font = `bold ${this.fontSize + 6}px "Roboto", Arial, sans-serif`
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'bottom'
+        ctx.fillStyle = this.aggroAlertColor
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.85)'
+        ctx.lineWidth = 3
+        ctx.lineJoin = 'round'
+        ctx.shadowColor = 'rgba(0, 0, 0, .65)'
+        ctx.shadowBlur = 3
+        for (const [id, alert] of this.monsterAggroAlerts) {
+            const age = Math.max(0, time - alert.startedAt)
+            const monster = MonsterManager.monsters.get(id)
+            if (age >= 5000 || alert.worldId !== MyPlayer.worldId || monster?.killedTime || (monster && monster.hpPercent <= 0)) {
+                this.monsterAggroAlerts.delete(id)
+                continue
+            }
+            if (!monster || !MonsterManager.visibleMonsters.has(id)) continue
+            const pos = monster.getNameTextNodeScreenPosition()
+            if (!pos || !Number.isFinite(pos.x) || !Number.isFinite(pos.y)) continue
+            ctx.globalAlpha = (.6 + .3 * Math.cos(age / 700 * Math.PI * 2)) * Math.min(1, (5000 - age) / 400)
+            ctx.strokeText('!', pos.x, pos.y - 10)
+            ctx.fillText('!', pos.x, pos.y - 10)
+        }
+        ctx.restore()
     },
 
     renderDamagedBars(time: number) {

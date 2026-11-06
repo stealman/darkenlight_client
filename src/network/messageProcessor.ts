@@ -49,6 +49,7 @@ import {
     PreciseShotQueueStateMessage,
     PushThroughMessage,
     WorldMapDataMessage,
+    MonsterDangerChangedData,
 } from '@/network/messageIfs'
 import { GroundItemsManager } from '@/babylon/world/groundItemsManager'
 import { InventoryManager } from '@/data/inventoryManager'
@@ -87,6 +88,12 @@ export const MessageProcessor = {
         for (const element of response) {
             const msg = element
             switch (msg.t) {
+                case 98:
+                    this.processMonsterDangerChanged(msg.d)
+                    break
+                case 97:
+                    OverlayManager.addMonsterAggroAlert(msg.d)
+                    break
                 case 95:
                     OverlayManager.addSpeech(msg.d)
                     break
@@ -213,7 +220,18 @@ export const MessageProcessor = {
     addMonster(data: MonsterSpawnData) {
         MonsterManager.addMonster(data.id, data.tp, { x: data.x, z: data.z }, Number(data.hpp), data.mv, data.paf, data.role, data.alignment, data.guard, data.huntable === true)
         const sheep = MonsterManager.monsters.get(data.id)
-        if (sheep) sheep.woolReadyAt = Date.now() + (data.woolCooldown ?? 0)
+        if (sheep) {
+            sheep.woolReadyAt = Date.now() + (data.woolCooldown ?? 0)
+            sheep.skulls = data.skulls ?? 0
+        }
+    },
+
+    processMonsterDangerChanged(data: MonsterDangerChangedData) {
+        if (data.worldId !== MyPlayer.worldId) return
+        for (const entry of data.monsters) {
+            const monster = MonsterManager.monsters.get(entry.id)
+            if (monster) monster.skulls = entry.skulls
+        }
     },
 
     monsterMove(data) {

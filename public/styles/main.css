@@ -77,19 +77,28 @@ div#emeralds-info {
 }
 
 #system-buttons {
-    position: absolute;
-    left: 26%;
-    top: 0px;
+    position: fixed;
+    left: max(5px, env(safe-area-inset-left));
+    bottom: max(5px, env(safe-area-inset-bottom));
+    z-index: 1000;
     display: flex;
     gap: 8px;          /* mezera mezi ikonami */
     align-items: center;
 }
 
-#system-buttons .gm-panel-button {
-    padding: 2px 6px;
-    font-size: 12px;
-    color: #aaa;
+#system-buttons button,
+#system-buttons button * {
+    cursor: url('/images/cursor-hover.png') 3 3, url('/images/cursor.png') 3 3, pointer;
 }
+
+#system-buttons .gm-panel-button {
+    min-height: 32px;
+    box-sizing: border-box;
+    padding: 4px 10px;
+    font-size: 12px;
+}
+
+@media (pointer: coarse) { #system-buttons .gm-panel-button { min-height: 36px; } }
 
 button {
     font-size: 18px;

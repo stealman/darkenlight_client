@@ -61,6 +61,9 @@ div#selectedTargetPanel {
 }
 
 #selectedTargetPanel .targetName {
+    display: flex;
+    align-items: center;
+    gap: 4px;
     position: absolute;
     top: var(--hud-target-name-top, 4px);
     left: var(--hud-target-name-left, 8px);
@@ -85,6 +88,24 @@ div#selectedTargetPanel {
 
 #selectedTargetPanel.ally .targetName {
     color: rgb(var(--ui-base));
+}
+
+#selectedTargetPanel .targetSkulls {
+    color: var(--gui-status-enemy-color);
+    flex-shrink: 0;
+    margin-left: auto;
+}
+
+#selectedTargetPanel .targetName > .ui-text-gradient {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#selectedTargetPanel .targetSkulls svg {
+    width: 1em;
+    height: 1em;
+    vertical-align: -0.1em;
 }
 
 #selectedTargetPanel .hpBlock{

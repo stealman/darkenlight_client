@@ -13,6 +13,30 @@ function loadModule(path, dependencies) {
     return exports
 }
 
+test('monster aggro message routes to the private overlay alert', async () => {
+    const calls = []
+    const {MessageProcessor: processor} = loadModule('network/messageProcessor.ts', {
+        '@/gui/overlay/overlayManager': {OverlayManager: {addMonsterAggroAlert(data) {calls.push(data)}}},
+    })
+    const data = {id: 42, worldId: 7}
+    await processor.processResponse([{t: 97, d: data}])
+    assert.deepEqual(calls, [data])
+})
+
+test('danger skull counts arrive with spawns and update only in the current world', async () => {
+    const monster = {}
+    const {MessageProcessor: processor} = loadModule('network/messageProcessor.ts', {
+        '@/babylon/monsters/monsterManager': {MonsterManager: {addMonster() {}, monsters: new Map([[42, monster]])}},
+        '@/data/myPlayer': {MyPlayer: {worldId: 7}},
+    })
+    processor.addMonster({id: 42, skulls: 2})
+    assert.equal(monster.skulls, 2)
+    await processor.processResponse([{t: 98, d: {worldId: 8, monsters: [{id: 42, skulls: 3}]}}])
+    assert.equal(monster.skulls, 2)
+    await processor.processResponse([{t: 98, d: {worldId: 7, monsters: [{id: 42, skulls: 0}]}}])
+    assert.equal(monster.skulls, 0)
+})
+
 test('world mutation messages render once through the complete world renderer', async () => {
     const calls = []
     const TreeManager = {addTree() {calls.push('addTree')}, removeTreeAt() {calls.push('removeTree')},

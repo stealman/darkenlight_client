@@ -26,6 +26,7 @@ export class Monster implements Attackable, EffectTarget {
 
     hp: number
     hpPercent: number = 100
+    skulls: number = 0
     killedTime: number = 0
     runSpeed: number = 0
     rotationSpeed: number = 8

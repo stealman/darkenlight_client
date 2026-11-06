@@ -15,6 +15,31 @@ function loadModule(path, dependencies, clock = Date) {
     return exports
 }
 
+test('aggro alert pulses above the HP bar for five seconds and ignores other worlds', () => {
+    const MyPlayer = {worldId: 7}
+    const monster = {hpPercent: 100, getNameTextNodeScreenPosition: () => ({x: 100, y: 80})}
+    const MonsterManager = {monsters: new Map([[42, monster]]), visibleMonsters: new Set([42])}
+    const {OverlayManager: overlay} = loadModule('gui/overlay/overlayManager.ts', {
+        '@/data/myPlayer': {MyPlayer}, '@/babylon/monsters/monsterManager': {MonsterManager},
+    }, {now: () => 1000})
+    const drawn = []
+    const outlines = []
+    const ctx = {save() {}, restore() {}, strokeText(...args) {outlines.push(args)}, fillText(...args) {drawn.push({args, alpha: this.globalAlpha})}}
+    overlay.overlayCtx = ctx
+    overlay.addMonsterAggroAlert({id: 42, worldId: 8})
+    assert.equal(overlay.monsterAggroAlerts.size, 0)
+    overlay.addMonsterAggroAlert({id: 42, worldId: 7})
+    overlay.renderMonsterAggroAlerts(1000)
+    assert.deepEqual(drawn[0].args, ['!', 100, 70])
+    assert.deepEqual(outlines[0], drawn[0].args)
+    assert.equal(ctx.lineWidth, 3)
+    overlay.renderMonsterAggroAlerts(1350)
+    assert.ok(drawn[1].alpha < drawn[0].alpha)
+    overlay.renderMonsterAggroAlerts(6000)
+    assert.equal(drawn.length, 2)
+    assert.equal(overlay.monsterAggroAlerts.size, 0)
+})
+
 test('combat detail rules include incoming attacks and exclude unrelated fights on medium', () => {
     const {Settings} = loadModule('settings/settings.ts', {})
     const MyPlayer = {myChar: {}}

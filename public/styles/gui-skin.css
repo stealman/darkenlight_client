@@ -28,7 +28,8 @@
     --gui-status-fill-opacity: .9;
     --gui-status-frame-opacity: .75;
     --gui-status-frame-width: 4px;
-    --gui-status-enemy-fill: linear-gradient(180deg, #b76560, #743a3b);
+    --gui-status-enemy-color: #b76560;
+    --gui-status-enemy-fill: linear-gradient(180deg, var(--gui-status-enemy-color), #743a3b);
     --gui-status-shine: inset 0 1px 0 rgba(255, 255, 255, .16);
     --ui-field-bg: #171d21;
     --ui-field-border: #606463;

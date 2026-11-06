@@ -1,12 +1,15 @@
 import { TargetingManager } from '@/gui/targettingManager'
 import { TooltipOverlayContent, TooltipOverlayManager } from '@/gui/tooltipOverlayManager'
 import { t } from '@/i18n'
+import { GameClasses } from '@/data/gameClass'
 
 export const SelectedTargetPanel = {
     tooltipOwnerKey: 'selected-target-panel' as string,
     tooltipRefreshIntervalMs: 250 as number,
     panel: null as HTMLDivElement | null,
     nameEl: null as HTMLSpanElement | null,
+    nameTextEl: null as HTMLSpanElement | null,
+    skullsEl: null as HTMLSpanElement | null,
     hpBlockEls: [] as HTMLDivElement[],
     hpFillEls: [] as HTMLDivElement[],
     lastTooltipRefreshBucket: null as number | null,
@@ -44,7 +47,14 @@ export const SelectedTargetPanel = {
         }
 
         this.nameEl = document.createElement('span')
-        this.nameEl.className = 'targetName ui-text-gradient ui-text-gradient--no-shadow'
+        this.nameEl.className = 'targetName'
+        this.skullsEl = document.createElement('span')
+        this.skullsEl.className = 'targetSkulls'
+        this.skullsEl.setAttribute('aria-hidden', 'true')
+        this.skullsEl.innerHTML = '<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M8 1a6 6 0 0 0-4 10.47V15h2v-2h1v2h2v-2h1v2h2v-3.53A6 6 0 0 0 8 1ZM5.5 6a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Zm5 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3ZM8 9l-1 2h2Z"/></svg>'.repeat(3)
+        this.nameTextEl = document.createElement('span')
+        this.nameTextEl.className = 'ui-text-gradient ui-text-gradient--no-shadow'
+        this.nameEl.append(this.nameTextEl, this.skullsEl)
 
         this.panel.appendChild(hpBlocks)
         this.panel.appendChild(this.nameEl)
@@ -57,13 +67,20 @@ export const SelectedTargetPanel = {
             return null
         }
 
-        const titleMeta = target.getObjectType() === 'C' && 'className' in target
-            ? `(${target.className})`
+        const gameClass = target.getObjectType() === 'C' && 'className' in target && typeof target.className === 'string'
+            ? GameClasses.getByKey(target.className)
             : null
+        const gameClassKey = gameClass?.key.toLowerCase() ?? ''
+        const classLocalizationKey = gameClassKey ? `classes.${gameClassKey}` : ''
+        const localizedClassName = classLocalizationKey ? t(classLocalizationKey) : ''
 
         return {
             title: target.getName(),
-            titleMeta,
+            titleMeta: gameClass ? (localizedClassName === classLocalizationKey ? gameClass.name : localizedClassName) : null,
+            titleClassName: 'ui-tooltip-title--character-name ui-text-gradient',
+            titleMetaClassName: gameClassKey
+                ? `ui-tooltip-title-meta--character-class ui-text-gradient ui-text-gradient--accent ui-tooltip-title-meta--${gameClassKey}`
+                : null,
             rows: [
                 {
                     label: t('common.health'),
@@ -135,7 +152,8 @@ export const SelectedTargetPanel = {
             if (!this.panel.classList.contains('empty')) {
                 this.panel.classList.remove('enemy', 'ally', 'neutral')
                 this.panel.classList.add('empty')
-                this.nameEl.textContent = ''
+                this.nameTextEl!.textContent = ''
+                this.skullsEl!.style.display = 'none'
                 for (const fillEl of this.hpFillEls) fillEl.style.width = '0%'
             }
             if (TooltipOverlayManager.isVisibleFor(this.tooltipOwnerKey)) {
@@ -146,7 +164,11 @@ export const SelectedTargetPanel = {
         }
 
         this.panel.classList.remove('empty')
-        this.nameEl.textContent = target.getName()
+        const skulls = target.getObjectType() === 'M' && 'skulls' in target && typeof target.skulls === 'number' ? target.skulls : 0
+        const skullCount = Math.max(0, Math.min(3, skulls))
+        this.skullsEl!.style.display = skullCount ? '' : 'none'
+        for (let i = 0; i < 3; i++) (this.skullsEl!.children[i] as SVGElement).style.display = i < skullCount ? '' : 'none'
+        this.nameTextEl!.textContent = target.getName()
 
         // Add class enemy/ally based on relation
         const relation = target.getRelationToMyPlayer()

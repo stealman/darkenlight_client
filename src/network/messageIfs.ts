@@ -1,5 +1,6 @@
 
 export interface MonsterSpawnData {
+    skulls?: number
     woolCooldown?: number
     id: number
     tp: number
@@ -557,4 +558,14 @@ export interface MonsterKnowledgeTO {
 export interface CharacterSpeechData {
     id: number
     text: string
+}
+
+export interface MonsterAggroAlertData {
+    id: number
+    worldId: number
+}
+
+export interface MonsterDangerChangedData {
+    worldId: number
+    monsters: Array<{id: number, skulls: number}>
 }

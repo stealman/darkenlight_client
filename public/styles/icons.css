@@ -57,12 +57,12 @@
 .hud-settings-button, .party-menu-button { opacity: var(--gui-hud-utility-button-opacity); }
 .hud-settings-button:hover { border-image-source: var(--gui-selected); filter: brightness(1.12); }
 .hud-settings-button:focus-visible { outline: 1px solid rgb(var(--gui-gold)); outline-offset: 2px; }
-#system-buttons > .hud-settings-button { position: fixed; bottom: max(5px, env(safe-area-inset-bottom)); left: max(5px, env(safe-area-inset-left)); z-index: 1000; }
 @media (pointer: coarse) { .hud-settings-button { width: 36px; height: 36px; } }
 
 #icon-inspect {
-    height: 32px;
-    width: 30px;
+    fill: rgb(var(--ui-base));
+    height: 100%;
+    width: 100%;
 }
 
 #icon-target-lock {

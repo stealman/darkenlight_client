@@ -8,9 +8,9 @@
             <PartyPanel v-if="gameSessionActive" />
             <SpeechInput v-if="gameSessionActive" />
             <div id="system-buttons">
-                <button type="button" class="hud-settings-button" :aria-label="t('app.settings')" :title="t('app.settings')" @click="showSettingsDialog()" v-html="getSettingsSvg('', 'icon-settings')"></button>
-                <div v-if="myCharRef?.className === 'GM'" @click="showDebug" v-html="getInspectSvg('icon-white', 'icon-inspect')"></div>
-                <button v-if="myCharRef?.className === 'GM'" class="gm-panel-button" @click="toggleGmPanel()">{{ t('app.gmPanel') }}</button>
+                <button type="button" class="hud-settings-button" :aria-label="t('app.settings')" @click="showSettingsDialog()" v-html="getSettingsSvg('', 'icon-settings')"></button>
+                <button v-if="myCharRef?.className === 'GM'" type="button" class="hud-settings-button" aria-label="Debug" @click="showDebug" v-html="getInspectSvg('icon-white', 'icon-inspect')"></button>
+                <button v-if="myCharRef?.className === 'GM'" type="button" class="gm-panel-button dialog-button" @click="toggleGmPanel()"><span class="ui-text-gradient--button-state">{{ t('app.gmPanel') }}</span></button>
             </div>
 
             <div id="gui-buttons">

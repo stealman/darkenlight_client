@@ -5,7 +5,7 @@
 .party-actions .party-menu-button { height: auto; flex-shrink: 0; }
 .party-menu-button svg { pointer-events: none; }
 .party-menu-button { display: flex; align-items: center; justify-content: center; box-sizing: border-box; padding: 3px; color: rgb(var(--ui-base)); background: var(--gui-button-surface) center / auto 100%; border: 0 solid transparent; border-image: var(--gui-button) 18 / 2px / 0 stretch; border-radius: 4px; width: 32px; height: 32px; font-size: 20px; line-height: 16px; cursor: var(--ui-cursor-pointer); }
-.party-leave { position: absolute; top: calc(100% + 2px); right: 0; z-index: 2; white-space: nowrap; min-height: 36px; }
+.party-actions .party-leave { position: absolute; top: calc(100% + 6px); left: 38px; right: auto; z-index: 2; white-space: nowrap; min-height: 32px; box-sizing: border-box; padding: 4px 10px; font-size: 12px; }
 .party-member { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); align-items: center; gap: 4px; width: 100%; min-height: 30px; padding: 5px 7px; margin: 3px 0; box-sizing: border-box; background: transparent; border: 0 solid transparent; border-image: var(--gui-button) 18 / 2px / 0 stretch; border-radius: 4px; color: inherit; font: inherit; cursor: var(--ui-cursor-pointer); text-align: left; }
 .party-member::before { content: ''; position: absolute; inset: 2px; background: var(--gui-button-surface) center / auto 100%; opacity: var(--gui-status-background-opacity); pointer-events: none; }
 .party-member > span { z-index: 1; }
@@ -29,6 +29,7 @@
 .party-bar--st > span { background: var(--ui-stamina-fill); }
 .party-bar--mp > span { background: var(--ui-mana-fill); }
 @media (pointer: coarse) { .party-member { min-height: 28px; padding-block: 3px; } .party-name { font-size: clamp(10px, 2vh, 11px); } .party-menu-button { height: 36px; width: 36px; } }
+@media (pointer: coarse) { .party-actions .party-leave { left: 42px; min-height: 36px; } }
 @media (pointer: coarse) and (max-width: 600px), (pointer: coarse) and (max-height: 600px) {
     .party-panel:has(> .party-member:nth-child(4)) .party-actions { position: absolute; top: 3px; left: calc(100% + 4px); margin: 0; }
     .party-panel:has(> .party-member:nth-child(4)) .party-menu-button { height: 36px; }
