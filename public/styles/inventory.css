@@ -40,7 +40,7 @@
 .equipment-panel {
     width: 25%;
     height: 100%;
-    border-right: 1px solid rgba(176, 143, 86, 0.35);
+    border-right: 1px solid rgba(var(--ui-dark), 0.24);
     padding: 2%;
     box-sizing: border-box;
 }
@@ -55,11 +55,11 @@
     position: absolute;
     width: calc(var(--slot-size-factor) * 100%);
     aspect-ratio: 1 / 1;
-    border: none;
+    border: 0 solid transparent;
+    border-image: var(--gui-slot) 18 / 3px / 0 stretch;
+    border-radius: 4px;
     padding: 2px;
-    background-image: url('/images/gui/bck_stone1.png');
-    background-repeat: repeat;
-    background-attachment: fixed;
+    background: var(--gui-button-surface) center / auto 100%;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -79,7 +79,8 @@
     content: '';
     position: absolute;
     inset: 2px;
-    background: var(--dialog-bg-darker);
+    background: var(--gui-slot-shade);
+    border-radius: 2px;
     pointer-events: none;
     z-index: 0;
 }
@@ -201,12 +202,19 @@
 
 .inventory-grid-wrapper {
     width: 100%;
-    height: auto;
+    height: 100%;
     max-height: 100%;
-    aspect-ratio: 6 / 4;
+    aspect-ratio: auto;
     overflow-y: auto;
     overflow-x: hidden;
     touch-action: pan-y;
+    --inventory-scroll-mask: linear-gradient(to bottom,
+        rgba(0, 0, 0, var(--inventory-edge-top-opacity, 1)) 0,
+        #000 14px,
+        #000 calc(100% - 14px),
+        rgba(0, 0, 0, var(--inventory-edge-bottom-opacity, 1)) 100%);
+    -webkit-mask-image: var(--inventory-scroll-mask);
+    mask-image: var(--inventory-scroll-mask);
 }
 
 .inventory-grid {
@@ -214,18 +222,20 @@
     display: grid;
     grid-template-columns: repeat(var(--inventory-grid-columns, 6), minmax(0, 1fr));
     align-content: flex-start;
-    gap: 1.75%;
+    column-gap: 1.75%;
+    /* A percentage row-gap grows with the entire inventory's content height. */
+    row-gap: clamp(3px, 0.5vw, 6px);
 }
 
 .inventory-item-slot {
     position: relative;
     width: 100%;
     aspect-ratio: 1 / 1;
-    border: none;
+    border: 0 solid transparent;
+    border-image: var(--gui-slot) 18 / 3px / 0 stretch;
+    border-radius: 4px;
     padding: 1px;
-    background-image: url('/images/gui/bck_stone1.png');
-    background-repeat: repeat;
-    background-attachment: fixed;
+    background: var(--gui-button-surface) center / auto 100%;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -242,7 +252,8 @@
     content: '';
     position: absolute;
     inset: 1px;
-    background: var(--dialog-bg-darker);
+    background: var(--gui-slot-shade);
+    border-radius: 2px;
     pointer-events: none;
     z-index: 0;
 }
@@ -257,12 +268,25 @@
     z-index: 3;
 }
 
+@media (hover: hover) {
+    .inventory-item-slot:hover,
+    .equip-slot:hover {
+        border-image-source: var(--gui-slot-selected);
+    }
+}
+
+.equip-slot.pressed {
+    border-image-source: var(--gui-slot-selected);
+}
+
 .inventory-item-slot--tooltip-active::after,
 .equip-slot--tooltip-active::after {
     content: '';
     position: absolute;
     inset: 0;
-    border: 2px solid rgba(var(--ui-base), 0.95);
+    border: 0 solid transparent;
+    border-image: var(--gui-slot-selected) 18 / 3px / 0 stretch;
+    border-radius: 4px;
     box-shadow: inset 0 0 5px rgba(var(--ui-base), 0.45), 0 0 5px rgba(var(--ui-base), 0.5);
     pointer-events: none;
     z-index: 4;
@@ -311,16 +335,18 @@
     z-index: 1000;
     min-width: 180px;
     padding: 8px 10px;
-    border: 1px solid rgb(var(--ui-dark));
-    background: rgba(15, 11, 8, 0.94);
-    color: #f2e7cf;
+    border: 1px solid transparent;
+    border-image: var(--gui-panel) 24 / 6px / 0 stretch;
+    border-radius: 6px;
+    background: var(--gui-surface) repeat;
+    color: rgb(var(--ui-base));
     font-size: 0.85rem;
     line-height: 1.2;
     box-sizing: border-box;
     pointer-events: auto;
     overflow: hidden;
     text-overflow: ellipsis;
-    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.68), 0 4px 10px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(0, 0, 0, 0.45);
+    box-shadow: var(--gui-panel-shadow);
     display: flex;
     flex-direction: column;
     gap: 8px;

@@ -20,6 +20,7 @@ import './../public/styles/inventory.css'
 import './../public/styles/tooltip-overlay.css'
 import './../public/styles/gm.css'
 import './../public/styles/primevue/checkbox.css'
+import './../public/styles/gui-skin.css'
 
 export function mountGame() {
     const app = createApp(App)

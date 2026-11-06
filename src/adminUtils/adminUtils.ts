@@ -470,6 +470,7 @@ function createShell(root: HTMLElement) {
                 <div>
                     <p class="admin-utils__eyebrow">Darkenlight</p>
                     <h1>Admin Utils</h1>
+                    <p><a href="/adminUtils/gui">GUI — náhled dialogů a ovládacích prvků</a></p>
                     <p class="admin-utils__intro">Offline laboratoř modelů. Nepřipojuje se k hernímu serveru.</p>
                 </div>
                 <details id="adminUtilsMaterialAtlasSection" class="admin-utils__section" open>

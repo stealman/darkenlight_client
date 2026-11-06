@@ -12,7 +12,11 @@ const showBootError = (label, error) => {
     }
 }
 
-if (isAdminUtilsPath) {
+if (window.location.pathname === '/adminUtils/gui') {
+    import('./adminUtils/guiPreview')
+        .then(({ mountGuiPreview }) => mountGuiPreview())
+        .catch((error) => showBootError('GUI preview', error))
+} else if (isAdminUtilsPath) {
     import('./adminUtils/adminUtils')
         .then(({ mountAdminUtils }) => mountAdminUtils())
         .catch((error) => showBootError('Admin utils', error))

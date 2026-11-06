@@ -1,7 +1,7 @@
 <template>
     <div class="inventory-panel">
-        <div class="inventory-grid-wrapper" @scroll="emit('scroll')">
-            <div class="inventory-grid" :style="{'--inventory-grid-columns': columnCount}">
+        <div ref="scrollViewport" class="inventory-grid-wrapper" @scroll="onScroll">
+            <div ref="slotGrid" class="inventory-grid" :style="{'--inventory-grid-columns': columnCount}">
                 <div
                     v-for="slotIndex in slotCount"
                     :key="slotIndex"
@@ -43,6 +43,8 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted, onUnmounted, onUpdated, ref } from 'vue'
+
 type WeaponMarker = 'primary' | 'secondary'
 
 defineProps<{
@@ -59,6 +61,36 @@ defineProps<{
 const TAP_MOVE_TOLERANCE = 8
 
 const emit = defineEmits(['slot-pointerdown', 'scroll'])
+
+const scrollViewport = ref<HTMLDivElement | null>(null)
+const slotGrid = ref<HTMLDivElement | null>(null)
+let scrollResizeObserver: ResizeObserver | null = null
+
+const updateScrollFade = () => {
+    const viewport = scrollViewport.value
+    if (!viewport) return
+    const remaining = Math.max(0, viewport.scrollHeight - viewport.clientHeight - viewport.scrollTop)
+    // Reduce the mask's strength near the ends, not its height: shrinking a
+    // transparent edge to 1px keeps hiding the last border until scrolling stops.
+    // Allow 1px for fractional scroll positions / rounded scrollHeight values.
+    const edgeOpacity = (distance: number) => 1 - Math.min(1, Math.max(0, distance - 1) / 14)
+    viewport.style.setProperty('--inventory-edge-top-opacity', String(edgeOpacity(viewport.scrollTop)))
+    viewport.style.setProperty('--inventory-edge-bottom-opacity', String(edgeOpacity(remaining)))
+}
+
+const onScroll = () => {
+    updateScrollFade()
+    emit('scroll')
+}
+
+onMounted(() => {
+    updateScrollFade()
+    scrollResizeObserver = new ResizeObserver(updateScrollFade)
+    if (scrollViewport.value) scrollResizeObserver.observe(scrollViewport.value)
+    if (slotGrid.value) scrollResizeObserver.observe(slotGrid.value)
+})
+onUpdated(updateScrollFade)
+onUnmounted(() => scrollResizeObserver?.disconnect())
 
 let activePointerId: number | null = null
 let activeSlotIndex: number | null = null

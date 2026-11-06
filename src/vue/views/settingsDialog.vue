@@ -581,7 +581,7 @@ watch(
 }
 
 #setting-dialog-backdrop .dialog-content .dialog-button:not(:disabled):hover {
-    background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('/images/gui/bck_stone1.png');
+    background-image: var(--gui-selected-surface);
 }
 
 .settings-joystick-label {

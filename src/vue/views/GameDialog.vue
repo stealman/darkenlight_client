@@ -7,6 +7,8 @@
         <div
             ref="windowRef"
             :class="windowClass"
+            @input="updateRangeSkin"
+            @change="updateRangeSkin"
         >
             <div class="dialog-surface">
                 <div v-if="$slots.header" class="dialog-header">
@@ -22,7 +24,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, onUpdated, ref } from 'vue'
 
 const props = withDefaults(defineProps<{
     backdropId?: string
@@ -42,6 +44,17 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits(['close', 'backdrop-click'])
 const windowRef = ref<HTMLElement | null>(null)
+
+// Native range controls keep their behavior; only expose the fill to the skin.
+const updateRangeSkin = () => {
+    windowRef.value?.querySelectorAll<HTMLInputElement>('input.range-slider').forEach((input) => {
+        const min = Number(input.min || 0)
+        const max = Number(input.max || 100)
+        const fraction = max > min ? (Number(input.value) - min) / (max - min) : 0
+        input.style.setProperty('--gui-range-fill', `${Math.max(0, Math.min(1, fraction)) * 100}%`)
+    })
+}
+onUpdated(updateRangeSkin)
 
 const backdropClass = computed(() => ['dialog-backdrop', props.backdropClass])
 const windowClass = computed(() => ['dialog-window', props.windowClass])
@@ -65,6 +78,7 @@ const onDialogKeyDown = (event: KeyboardEvent) => {
 }
 
 onMounted(() => {
+    updateRangeSkin()
     window.addEventListener('keydown', onDialogKeyDown)
 })
 

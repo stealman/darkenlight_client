@@ -59,7 +59,6 @@ class ActionButton {
         this.htmlEl = document.createElement('div')
         this.htmlEl.id = 'act-btn-' + index
         this.htmlEl.className = 'action-button'
-        this.htmlEl.style.backgroundImage = `url('images/icons/buttons/btn_background.png')`
 
         this.cooldownOverlayEl = document.createElement('div')
         this.cooldownOverlayEl.className = 'action-button-cooldown-overlay'

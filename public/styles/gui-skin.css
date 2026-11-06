@@ -1,0 +1,128 @@
+/* Swappable raster skin. Source dimensions / slicing contract: skins/charcoal/README.md.
+   Border-image paints into existing padding, preserving dialog/control geometry. */
+:root {
+    --gui-panel: url('/images/gui/skins/charcoal/panel.png');
+    --gui-surface: url('/images/gui/skins/charcoal/surface.png');
+    --gui-button: url('/images/gui/skins/charcoal/button.png');
+    --gui-button-surface: url('/images/gui/skins/charcoal/button-surface.png');
+    --gui-selected: url('/images/gui/skins/charcoal/button-selected.png');
+    --gui-selected-surface: url('/images/gui/skins/charcoal/selected-surface.png');
+    --gui-pressed: url('/images/gui/skins/charcoal/button-pressed.png');
+    --gui-pressed-surface: url('/images/gui/skins/charcoal/pressed-surface.png');
+    --gui-checkbox: url('/images/gui/skins/charcoal/checkbox.png');
+    --gui-checkbox-selected: url('/images/gui/skins/charcoal/checkbox-selected.png');
+    --gui-thumb: url('/images/gui/skins/charcoal/thumb.png');
+    --gui-slot: var(--gui-button);
+    --gui-slot-selected: var(--gui-selected);
+    --gui-slot-shade: rgba(0, 0, 0, .24);
+    --gui-track: url('/images/gui/skins/charcoal/track.png');
+    --gui-track-fill: url('/images/gui/skins/charcoal/track-fill.png');
+    --gui-gold: 230, 192, 127;
+    --gui-panel-shadow: 0 12px 32px rgba(0, 0, 0, .45);
+    --gui-hud-panel-opacity: .7;
+    --gui-hud-button-opacity: .55;
+    --gui-hud-bound-button-opacity: .7;
+    --gui-hud-utility-button-opacity: .85;
+    --ui-field-bg: #171d21;
+    --ui-field-border: #606463;
+    --dialog-bg: transparent;
+    --dialog-bg-darker: rgba(0, 0, 0, .15);
+}
+
+:root .dialog-window {
+    background: var(--gui-surface) repeat;
+    background-attachment: scroll;
+    border: 2px solid transparent;
+    border-image: var(--gui-panel) 24 / 8px / 0 stretch;
+    border-radius: 10px;
+    box-shadow: var(--gui-panel-shadow);
+}
+:root .dialog-surface { background: transparent; border-radius: 5px; }
+:root .dialog-header {
+    background: var(--gui-button-surface) repeat;
+    background-attachment: scroll;
+    color: rgb(var(--ui-base));
+    text-shadow: none;
+    border-bottom: 2px solid rgba(var(--ui-dark), .24);
+    border-radius: 4px 4px 0 0;
+}
+:root .dialog-button,
+:root .dialog-header div.tab-item {
+    background: var(--gui-button-surface) center / auto 100%;
+    border: 2px solid transparent;
+    border-image: var(--gui-button) 18 / 5px / 0 stretch;
+    border-radius: 4px;
+    color: rgb(var(--ui-base));
+    text-shadow: 0 1px 2px rgba(0, 0, 0, .7);
+    box-shadow: 0 2px 3px rgba(0, 0, 0, .25);
+    transition: filter 120ms ease;
+}
+:root .dialog-button.selected,
+:root .dialog-header div.tab-item.active,
+:root .dialog-button:not(:disabled):hover,
+:root .dialog-header div.tab-item:not(.active):hover {
+    background: var(--gui-selected-surface) center / auto 100%;
+    border: 2px solid transparent;
+    border-image: var(--gui-selected) 18 / 5px / 0 stretch;
+    color: rgb(var(--gui-gold));
+    text-shadow: 0 1px 2px rgba(0, 0, 0, .7);
+}
+:root .dialog-button:not(:disabled):active {
+    background-image: var(--gui-pressed-surface);
+    border-image-source: var(--gui-pressed);
+}
+:root .dialog-button:focus-visible,
+:root .range-slider:focus-visible {
+    outline: 2px solid rgb(var(--gui-gold));
+    outline-offset: 2px;
+}
+:root .dialog-button:disabled { filter: grayscale(.7); opacity: .45; box-shadow: none; }
+
+:root .p-checkbox .p-checkbox-box,
+:root .p-checkbox:hover .p-checkbox-box {
+    background: var(--gui-checkbox) center / 100% 100% no-repeat;
+    border-color: transparent;
+    box-shadow: none;
+}
+:root .p-checkbox.p-checkbox-checked .p-checkbox-box {
+    background-image: var(--gui-checkbox-selected);
+    border-color: transparent;
+}
+:root .p-checkbox.p-checkbox-checked .p-checkbox-icon { color: rgb(var(--gui-gold)); }
+:root .p-checkbox:focus-within .p-checkbox-box { outline: 1px solid rgb(var(--gui-gold)); outline-offset: 2px; }
+:root .p-checkbox.p-disabled { opacity: .45; }
+
+:root .range-slider {
+    background-image: var(--gui-track-fill), var(--gui-track);
+    background-position: left center, center;
+    background-size: var(--gui-range-fill, 0%) 100%, 100% 100%;
+    background-repeat: no-repeat;
+    background-attachment: scroll;
+    border-color: transparent;
+    border-radius: 6px;
+}
+:root .range-slider:disabled { opacity: .45; }
+:root .range-slider::-webkit-slider-thumb,
+:root .range-slider::-webkit-slider-thumb:hover {
+    background: var(--gui-thumb) center / 100% 100% no-repeat;
+    border: 2px solid transparent;
+    border-radius: 3px;
+    box-shadow: 0 2px 3px rgba(0, 0, 0, .35);
+}
+:root .range-slider::-moz-range-track { background: transparent; border-color: transparent; }
+:root .range-slider::-moz-range-thumb,
+:root .range-slider::-moz-range-thumb:hover {
+    background: var(--gui-thumb) center / 100% 100% no-repeat;
+    border: 2px solid transparent;
+    border-radius: 3px;
+    box-shadow: 0 2px 3px rgba(0, 0, 0, .35);
+}
+:root .range-slider::-moz-range-progress { height: 8px; background: var(--gui-track-fill) center / 100% 100%; border-radius: 6px; }
+
+:root .dialog-content input:is([type='text'], [type='password'], [type='email']),
+:root .dialog-themed-fields :is(select, textarea) {
+    background: var(--ui-field-bg);
+    border-color: var(--ui-field-border);
+    border-radius: 3px;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, .35);
+}

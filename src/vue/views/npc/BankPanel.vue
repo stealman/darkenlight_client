@@ -327,7 +327,7 @@ onUnmounted(() => {
 .bank-mode-button { min-width: 0; flex: 1 1 50%; padding: 5px 10px; font-size: 0.9rem; line-height: 1; }
 .bank-mode-button.selected,
 .bank-mode-button:not(:disabled):hover {
-    background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('/images/gui/bck_stone1.png');
+    background-image: var(--gui-selected-surface);
 }
 .bank-column :deep(.inventory-panel) { width: 100%; flex: 1 1 auto; min-height: 0; padding: 0; }
 .bank-column :deep(.inventory-grid-wrapper) { height: 100%; max-height: none; aspect-ratio: auto; }

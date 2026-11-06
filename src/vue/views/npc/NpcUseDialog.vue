@@ -726,10 +726,10 @@ defineExpose({openDialog})
 .npc-crafting-skill-missing { color: rgb(var(--ui-danger)); }
 .npc-use-tab.selected,
 .npc-use-tab:not(:disabled):hover {
-    background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('/images/gui/bck_stone1.png');
+    background-image: var(--gui-selected-surface);
 }
 .npc-vendor-purchase-button:not(:disabled):hover {
-    background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('/images/gui/bck_stone1.png');
+    background-image: var(--gui-selected-surface);
 }
 .npc-use-tab, .npc-vendor-buy-button, .npc-vendor-quick-buy-button { padding: 5px 10px; font-size: 0.9rem; line-height: 1; }
 .npc-use-content-shell :deep(.bank-panel) { flex: 1 1 auto; min-height: 0; }

@@ -40,18 +40,18 @@ div#action-buttons-2::after {
 div#action-buttons-1::before,
 div#action-buttons-2::before {
     inset: 0;
-    background-image: url('/images/gui/bck_stone1.png');
-    background-repeat: repeat;
-    background-attachment: fixed;
-    opacity: 0.75;
+    background: var(--gui-surface) repeat;
+    border-radius: 7px;
+    opacity: var(--gui-hud-panel-opacity);
     z-index: 0;
 }
 
 div#action-buttons-1::after,
 div#action-buttons-2::after {
-    inset: var(--action-buttons-panel-border) 0 0 var(--action-buttons-panel-border);
-    background: rgba(var(--ui-darker), 0.5);
-    opacity: 0.75;
+    inset: 0;
+    border: 0 solid transparent;
+    border-image: var(--gui-panel) 24 / 6px / 0 stretch;
+    border-radius: 7px;
     z-index: 1;
 }
 
@@ -75,15 +75,16 @@ div#opportunity-action-buttons {
 div#opportunity-action-buttons div.gui-action-button,
 div#gui-buttons div.gui-action-button {
     box-sizing: border-box;
-    background-color: rgba(115, 115, 115, 0.5);
-    border: 1px solid rgb(var(--ui-darker));
+    background: transparent;
+    border: 1px solid transparent;
+    border-image: var(--gui-button) 18 / 2px / 0 stretch;
     border-radius: 4px;
-    transition: background-color 0.15s ease;
+    transition: filter 0.15s ease;
 }
 
 div#opportunity-action-buttons div.gui-action-button:hover,
 div#gui-buttons div.gui-action-button:hover {
-    background-color: rgba(95, 95, 95, 0.65);
+    border-image-source: var(--gui-selected);
 }
 
 div#opportunity-action-buttons div.gui-opportunity-text-button {
@@ -102,12 +103,34 @@ div.action-button {
     justify-content: center;
     cursor: url('/images/cursor-pointer.png') 0 10, pointer;
 
-    background-size: contain;
-    background-repeat: no-repeat;
-    background-position: center;
+    background: transparent;
+    border-radius: 4px;
 
     position: relative;
     overflow: hidden;
+}
+
+/* Only the underlay fades: icons, frames and cooldowns remain legible. */
+div.action-button::before,
+div#opportunity-action-buttons div.gui-action-button::before,
+div#gui-buttons div.gui-action-button::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--gui-button-surface) center / auto 100% no-repeat;
+    border-radius: inherit;
+    opacity: var(--gui-hud-button-opacity);
+    pointer-events: none;
+    z-index: 0;
+}
+
+div#opportunity-action-buttons div.gui-action-button::before,
+div#gui-buttons div.gui-action-button::before {
+    opacity: var(--gui-hud-utility-button-opacity);
+}
+
+div.action-button:has(> img.action-icon)::before {
+    opacity: var(--gui-hud-bound-button-opacity);
 }
 
 div.action-button img.action-icon {
@@ -143,14 +166,24 @@ div.action-button::after {
     content: '';
     position: absolute;
     inset: 0;
-    background: rgba(0, 0, 0, 0.25);
-    opacity: 0;
-    transition: opacity 0.2s;
+    background: transparent;
+    border: 0 solid transparent;
+    border-image: var(--gui-button) 18 / 4px / 0 stretch;
+    border-radius: 4px;
+    pointer-events: none;
+    transition: background-color 0.2s;
     z-index: 3;
 }
 
 div.action-button:hover::after {
-    opacity: 1;
+    background: rgba(0, 0, 0, 0.15);
+    border-image-source: var(--gui-selected);
+}
+
+div.action-button.toggled::after,
+div.action-button.active::after,
+div.action-button.cooldown-active::after {
+    border-image-source: var(--gui-selected);
 }
 
 div.action-button.toggled {

@@ -191,7 +191,7 @@ const getPromotionRequirementSkillName = (requirement: ClassPromotionRequirement
 .npc-trainer-tab { min-width: 82px; padding: 5px 10px; font-size: 0.9rem; line-height: 1; }
 .npc-trainer-tab.selected,
 .npc-trainer-tab:not(:disabled):hover,
-.npc-trainer-promote-button:not(:disabled):hover { background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('/images/gui/bck_stone1.png'); }
+.npc-trainer-promote-button:not(:disabled):hover { background-image: var(--gui-selected-surface); }
 .npc-trainer-skill-list { display: flex; flex: 1 1 auto; min-height: 0; flex-direction: column; overflow-y: auto; }
 .npc-trainer-skill-category { margin-top: 4px; }
 .npc-trainer-skill-category + .npc-trainer-skill-category { margin-top: 10px; }
