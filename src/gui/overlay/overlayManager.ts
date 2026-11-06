@@ -27,6 +27,8 @@ interface SpeechBubble {
     lines: string[]
     width: number
     expiresAt: number
+    image: HTMLCanvasElement | null
+    height: number
 }
 
 interface AnimatedHpBar {
@@ -48,9 +50,23 @@ function removeExpiredOverlayEntries(entries: Array<{ expiresAt: number }>, time
     }
 }
 
+function createOverlayRaster(width: number, height: number) {
+    const dpr = window.devicePixelRatio || 1
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.ceil(width * dpr)
+    canvas.height = Math.ceil(height * dpr)
+    const ctx = canvas.getContext('2d')!
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    return {canvas, ctx}
+}
+
+const HEALING_CELL_SIZE = 96
+const HEALING_LEVELS = 16
+
 export const OverlayManager = {
     overlayCanvas: null as HTMLCanvasElement,
     overlayCtx: null as CanvasRenderingContext2D | null,
+    damagedBarBackground: null as HTMLCanvasElement | null,
     letterSpacingFix: 0 as number,
     fontSize: 14 as number,
     damageNumbers: [] as DamageNumber[],
@@ -63,18 +79,56 @@ export const OverlayManager = {
     temporaryNameFadeStates: new WeakMap<object, TemporaryNameFadeState>(),
     speech: new Map<Character, SpeechBubble[]>(),
     monsterAggroAlerts: new Map<number, {worldId: number, startedAt: number}>(),
-    aggroAlertColor: '',
+    aggroAlertIcon: null as HTMLCanvasElement | null,
+    healingAtlas: null as HTMLCanvasElement | null,
+    npcLabels: new Map<string, {image: HTMLCanvasElement, width: number, height: number, textWidth: number, totalHeight: number}>(),
+    nameLabels: new Map<string, {image: HTMLCanvasElement, width: number, height: number, textWidth: number}>(),
+    fontListenerInitialized: false,
 
     async initialize() {
         this.overlayCanvas = document.getElementById('overlayCanvas') as HTMLCanvasElement
         this.overlayCtx = this.overlayCanvas.getContext('2d')
         this.overlayCtx!.lineWidth = 1
+        if (!this.damagedBarBackground) {
+            // Rasterize the rounded background once; frame rendering only copies pixels.
+            const background = document.createElement('canvas')
+            background.width = 50
+            background.height = 6
+            const ctx = background.getContext('2d')!
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.42)'
+            ctx.beginPath()
+            ctx.roundRect(0, 0, background.width, background.height, 2)
+            ctx.fill()
+            this.damagedBarBackground = background
+        }
         this.fontSize = window.devicePixelRatio > 1 ? 14 : 18
-        this.aggroAlertColor = `rgb(${getComputedStyle(document.documentElement).getPropertyValue('--ui-danger').trim()})`
+        const alertIcon = document.createElement('canvas')
+        const alertFontSize = this.fontSize + 6
+        const padding = 10 // Leave room for the outline and blurred shadow.
+        alertIcon.width = alertFontSize * 2 + padding * 2
+        alertIcon.height = alertFontSize * 2 + padding * 2
+        const alertCtx = alertIcon.getContext('2d')!
+        alertCtx.font = `bold ${alertFontSize}px "Roboto", Arial, sans-serif`
+        alertCtx.textAlign = 'center'
+        alertCtx.textBaseline = 'bottom'
+        alertCtx.fillStyle = `rgb(${getComputedStyle(document.documentElement).getPropertyValue('--ui-danger').trim()})`
+        alertCtx.strokeStyle = 'rgba(0, 0, 0, 0.85)'
+        alertCtx.lineWidth = 3
+        alertCtx.lineJoin = 'round'
+        alertCtx.shadowColor = 'rgba(0, 0, 0, .65)'
+        alertCtx.shadowBlur = 3
+        alertCtx.strokeText('!', alertIcon.width / 2, alertIcon.height - padding)
+        alertCtx.fillText('!', alertIcon.width / 2, alertIcon.height - padding)
+        this.aggroAlertIcon = alertIcon
         this.emeraldGainIcon = new Image()
         this.refreshIconSources()
         if (!this.iconStyleUnsubscribe) {
             this.iconStyleUnsubscribe = UiIconManager.onStyleChanged(() => this.refreshIconSources())
+        }
+        this.prepareHealingAtlas()
+        if (!this.fontListenerInitialized && document.fonts) {
+            document.fonts.addEventListener('loadingdone', () => this.invalidateTextRasters())
+            this.fontListenerInitialized = true
         }
         this.reset()
         TargetSelector.initialize()
@@ -91,6 +145,8 @@ export const OverlayManager = {
 
     reset() {
         this.speech.clear()
+        this.npcLabels.clear()
+        this.nameLabels.clear()
         this.monsterAggroAlerts.clear()
         this.damageNumbers = []
         this.emeraldGainNumbers = []
@@ -197,18 +253,41 @@ export const OverlayManager = {
         const width = Math.max(...lines.map(value => textWidth(value))) + 20
         ctx.restore()
         const bubbles = this.speech.get(char) || []
-        bubbles.push({lines, width, expiresAt: Date.now() + 3000 + (text.length - 1) * 3000 / 99})
+        bubbles.push({lines, width, height: 0, image: null, expiresAt: Date.now() + 3000 + (text.length - 1) * 3000 / 99})
+        this.prepareSpeechBubble(bubbles[bubbles.length - 1])
         this.speech.set(char, bubbles)
+    },
+
+    prepareSpeechBubble(bubble: SpeechBubble) {
+        const size = Math.max(12, this.fontSize - 2)
+        const tightText = Math.abs(this.letterSpacingFix) > 0
+        const measureCtx = this.overlayCtx!
+        measureCtx.save()
+        measureCtx.font = `${size}px "Roboto", Arial, sans-serif`
+        bubble.width = Math.max(...bubble.lines.map(line => CanvasTextUtils.getTextWidth(measureCtx, line, tightText, this.letterSpacingFix))) + 20
+        measureCtx.restore()
+        bubble.height = bubble.lines.length * (size + 4) + 14
+        const {canvas, ctx} = createOverlayRaster(bubble.width, bubble.height)
+        ctx.font = `${size}px "Roboto", Arial, sans-serif`
+        ctx.fontKerning = 'normal'
+        ctx.textBaseline = 'middle'
+        ctx.fillStyle = 'rgba(40, 38, 32, 0.4)'
+        ctx.beginPath()
+        ctx.roundRect(0, 0, bubble.width, bubble.height, 8)
+        ctx.fill()
+        ctx.fillStyle = '#e9dabe'
+        bubble.lines.forEach((line, index) => {
+            const width = CanvasTextUtils.getTextWidth(ctx, line, tightText, this.letterSpacingFix)
+            ctx.textAlign = tightText ? 'left' : 'center'
+            CanvasTextUtils.drawText(ctx, line, tightText ? (bubble.width - width) / 2 : bubble.width / 2,
+                7 + (index + .5) * (size + 4), tightText, this.letterSpacingFix)
+        })
+        bubble.image = canvas
     },
 
     renderSpeech(time: number) {
         const ctx = this.overlayCtx!
         ctx.save()
-        const size = Math.max(12, this.fontSize - 2)
-        ctx.font = `${size}px "Roboto", Arial, sans-serif`
-        ctx.fontKerning = 'normal'
-        ctx.textBaseline = 'middle'
-        const tightText = Math.abs(this.letterSpacingFix) > 0
         this.speech.forEach((bubbles, char) => {
             removeExpiredOverlayEntries(bubbles, time)
             if (!bubbles.length || (char !== MyPlayer.myChar && CharacterManager.characters.get(char.id) !== char)) {
@@ -221,21 +300,12 @@ export const OverlayManager = {
             let bottom = pos.y - 12
             for (let i = bubbles.length - 1; i >= 0; i--) {
                 const bubble = bubbles[i]
-                const height = bubble.lines.length * (size + 4) + 14
+                if (!bubble.image) this.prepareSpeechBubble(bubble)
+                const height = bubble.height
                 const x = Math.max(bubble.width / 2 + 4, Math.min(this.overlayCanvas.clientWidth - bubble.width / 2 - 4, pos.x))
                 const top = bottom - height
                 ctx.globalAlpha = Math.min(1, (bubble.expiresAt - time) / 200)
-                ctx.fillStyle = 'rgba(40, 38, 32, 0.4)'
-                ctx.beginPath()
-                ctx.roundRect(x - bubble.width / 2, top, bubble.width, height, 8)
-                ctx.fill()
-                ctx.fillStyle = '#e9dabe'
-                bubble.lines.forEach((line, index) => {
-                    const width = CanvasTextUtils.getTextWidth(ctx, line, tightText, this.letterSpacingFix)
-                    ctx.textAlign = tightText ? 'left' : 'center'
-                    CanvasTextUtils.drawText(ctx, line, tightText ? x - width / 2 : x,
-                        top + 7 + (index + .5) * (size + 4), tightText, this.letterSpacingFix)
-                })
+                ctx.drawImage(bubble.image!, x - bubble.width / 2, top, bubble.width, height)
                 bottom = top - 6
             }
         })
@@ -309,7 +379,7 @@ export const OverlayManager = {
             }
             const pos = npc.getNameTextNodeScreenPosition()
             if (pos) {
-                this.renderNpcLabel(pos, npc.name, npc.getTitle(), tightText)
+                this.renderNpcLabel(pos, npc.name, npc.getTitle())
             }
         })
 
@@ -318,7 +388,7 @@ export const OverlayManager = {
             if (!guard) return
             const pos = guard.getNameTextNodeScreenPosition()
             if (pos) {
-                this.renderNpcLabel(pos, guard.getName(), guard.getTitle(), tightText)
+                this.renderNpcLabel(pos, guard.getName(), guard.getTitle())
             }
         })
 
@@ -508,16 +578,8 @@ export const OverlayManager = {
     renderMonsterAggroAlerts(time: number) {
         if (!this.monsterAggroAlerts.size) return
         const ctx = this.overlayCtx!
+        const icon = this.aggroAlertIcon!
         ctx.save()
-        ctx.font = `bold ${this.fontSize + 6}px "Roboto", Arial, sans-serif`
-        ctx.textAlign = 'center'
-        ctx.textBaseline = 'bottom'
-        ctx.fillStyle = this.aggroAlertColor
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.85)'
-        ctx.lineWidth = 3
-        ctx.lineJoin = 'round'
-        ctx.shadowColor = 'rgba(0, 0, 0, .65)'
-        ctx.shadowBlur = 3
         for (const [id, alert] of this.monsterAggroAlerts) {
             const age = Math.max(0, time - alert.startedAt)
             const monster = MonsterManager.monsters.get(id)
@@ -528,9 +590,13 @@ export const OverlayManager = {
             if (!monster || !MonsterManager.visibleMonsters.has(id)) continue
             const pos = monster.getNameTextNodeScreenPosition()
             if (!pos || !Number.isFinite(pos.x) || !Number.isFinite(pos.y)) continue
-            ctx.globalAlpha = (.6 + .3 * Math.cos(age / 700 * Math.PI * 2)) * Math.min(1, (5000 - age) / 400)
-            ctx.strokeText('!', pos.x, pos.y - 10)
-            ctx.fillText('!', pos.x, pos.y - 10)
+            const pulse = Math.cos(age / 700 * Math.PI * 2)
+            const scale = 1 + .1 * (pulse + 1)
+            const width = icon.width * scale
+            const height = icon.height * scale
+            ctx.globalAlpha = (.6 + .3 * pulse) * Math.min(1, (5000 - age) / 400)
+            // The cached text baseline is 10px above the bottom of the image.
+            ctx.drawImage(icon, pos.x - width / 2, pos.y - 10 - (icon.height - 10) * scale, width, height)
         }
         ctx.restore()
     },
@@ -632,17 +698,15 @@ export const OverlayManager = {
         }
 
         const ctx = this.overlayCtx!
-        const barWidth = 50
-        const barHeight = 6
+        const background = this.damagedBarBackground!
+        const barWidth = background.width
+        const barHeight = background.height
 
         const x = pos.x - barWidth / 2
         const y = pos.y - 2
 
         // Background
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.42)'
-        ctx.beginPath()
-        ctx.roundRect(x, y, barWidth, barHeight, 2)
-        ctx.fill()
+        ctx.drawImage(background, x, y)
 
         // Fill
         const fillWidth = (barWidth - 2) * (percent / 100)
@@ -658,25 +722,37 @@ export const OverlayManager = {
             fillGradient.addColorStop(1, 'rgba(48, 214, 204, 0.7)')
         }
         ctx.fillStyle = fillGradient
-        ctx.beginPath()
-        ctx.roundRect(x + 1, y + 1, fillWidth, barHeight - 2, Math.min(1, fillWidth / 2))
-        ctx.fill()
+        ctx.fillRect(x + 1, y + 1, fillWidth, barHeight - 2)
+    },
+
+    prepareHealingAtlas() {
+        const {canvas, ctx} = createOverlayRaster(HEALING_CELL_SIZE * 8, HEALING_CELL_SIZE * 4)
+        for (let colour = 0; colour < 2; colour++) {
+            for (let level = 0; level < HEALING_LEVELS; level++) {
+                const index = colour * HEALING_LEVELS + level
+                this.paintHealingMarker(ctx, (index % 8 + .5) * HEALING_CELL_SIZE,
+                    (Math.floor(index / 8) + .5) * HEALING_CELL_SIZE, level / (HEALING_LEVELS - 1), colour === 1)
+            }
+        }
+        this.healingAtlas = canvas
     },
 
     renderHealingMarker(pos: Vector3, time: number, healSelf: boolean) {
-        if (!Number.isFinite(pos.x) || !Number.isFinite(pos.y) || !Number.isFinite(time)) {
-            return
-        }
+        if (!Number.isFinite(pos.x) || !Number.isFinite(pos.y) || !Number.isFinite(time) || !this.healingAtlas) return
+        const pulse = (Math.sin(time / 200) + 1) / 2
+        const index = (healSelf ? HEALING_LEVELS : 0) + Math.round(pulse * (HEALING_LEVELS - 1))
+        const sourceSize = this.healingAtlas.width / 8
+        this.overlayCtx!.drawImage(this.healingAtlas, index % 8 * sourceSize, Math.floor(index / 8) * sourceSize,
+            sourceSize, sourceSize, pos.x + 40 - HEALING_CELL_SIZE / 2, pos.y - HEALING_CELL_SIZE / 2,
+            HEALING_CELL_SIZE, HEALING_CELL_SIZE)
+    },
 
-        const ctx = this.overlayCtx!
-        const x = pos.x + 40
-
+    paintHealingMarker(ctx: CanvasRenderingContext2D, x: number, y: number, pulse: number, healSelf: boolean) {
         const size = 15
         const thickness = 5
-        const pulse = (Math.sin(time / 200) + 1) / 2
         const alpha = 0.2 + pulse * 0.65
         const glowColor = healSelf ? '255, 68, 54' : '78, 255, 82'
-        const fillGradient = ctx.createLinearGradient(x - size / 2, pos.y - size / 2, x + size / 2, pos.y + size / 2)
+        const fillGradient = ctx.createLinearGradient(x - size / 2, y - size / 2, x + size / 2, y + size / 2)
 
         if (healSelf) {
             fillGradient.addColorStop(0, `rgba(255, 196, 178, ${alpha})`)
@@ -690,8 +766,8 @@ export const OverlayManager = {
 
         const drawCross = (crossSize: number, crossThickness: number) => {
             ctx.beginPath()
-            ctx.rect(x - crossThickness / 2, pos.y - crossSize / 2, crossThickness, crossSize)
-            ctx.rect(x - crossSize / 2, pos.y - crossThickness / 2, crossSize, crossThickness)
+            ctx.rect(x - crossThickness / 2, y - crossSize / 2, crossThickness, crossSize)
+            ctx.rect(x - crossSize / 2, y - crossThickness / 2, crossSize, crossThickness)
             ctx.fill()
         }
 
@@ -728,7 +804,8 @@ export const OverlayManager = {
         const nameFontSize = this.fontSize
         const actionFontSize = Math.max(12, this.fontSize - 2)
         const spacingFix = this.letterSpacingFix
-        const nameWidth = name ? CanvasTextUtils.getTextWidth(ctx, name, tightText, spacingFix) : 0
+        const nameWidth = name ? this.getCachedName(name, nameFontSize, char.getRelationToMyPlayer(), true,
+            isPartyTarget(char) ? PARTY_TARGET_COLOR : null).textWidth : 0
         const actionWidth = actionName ? CanvasTextUtils.getTextWidth(ctx, actionName, tightText, spacingFix) : 0
         const maxWidth = Math.max(nameWidth, actionWidth)
         const textLines = (name ? 1 : 0) + (actionName ? 1 : 0)
@@ -765,30 +842,62 @@ export const OverlayManager = {
         }
     },
 
+    getCachedName(text: string, fontSize: number, relation: 'ALLY' | 'ENEMY' | 'NEUTRAL', useGradient: boolean, color: string | null = null) {
+        const key = JSON.stringify([text, fontSize, relation, useGradient, color])
+        let label = this.nameLabels.get(key)
+        if (!label) {
+            const {canvas, ctx} = createOverlayRaster(1, 1)
+            ctx.font = `${fontSize}px "Roboto", Arial, sans-serif`
+            ctx.fontKerning = 'normal'
+            // Rasterized names use native spacing, just like cached NPC labels.
+            const textWidth = CanvasTextUtils.getTextWidth(ctx, text, false)
+            const width = Math.ceil(textWidth + 12)
+            const height = Math.ceil(fontSize + 12)
+            const dpr = window.devicePixelRatio || 1
+            canvas.width = Math.ceil(width * dpr)
+            canvas.height = Math.ceil(height * dpr)
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+            this.renderOutlinedText(width / 2, height / 2, text, false, relation, fontSize, undefined, 1, color, useGradient, ctx)
+            label = {image: canvas, width, height, textWidth}
+            if (this.nameLabels.size >= 256) this.nameLabels.delete(this.nameLabels.keys().next().value!)
+            this.nameLabels.set(key, label)
+        }
+        return label
+    },
+
+    drawCachedName(label: {image: HTMLCanvasElement, width: number, height: number}, x: number, y: number, scale: number, alpha: number) {
+        if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(scale) || !Number.isFinite(alpha) || alpha <= 0) return
+        const ctx = this.overlayCtx!
+        const width = label.width * scale
+        const height = label.height * scale
+        ctx.save()
+        ctx.globalAlpha = alpha
+        ctx.drawImage(label.image, x - width / 2, y - height / 2, width, height)
+        ctx.restore()
+    },
+
     renderName(
         pos: Vector3,
         name: string,
-        tightText: boolean,
+        _tightText: boolean,
         relation: 'ALLY' | 'ENEMY' | 'NEUTRAL',
         useGradient: boolean = false,
         scale: number = 1,
         alpha: number = 1,
     ) {
-        if (!Number.isFinite(pos.x) || !Number.isFinite(pos.y)) {
-            return
-        }
+        if (!Number.isFinite(pos.x) || !Number.isFinite(pos.y)) return
+        const label = this.getCachedName(name, this.fontSize, relation, useGradient)
         if (scale === 1 && alpha === 1) {
-            this.renderOutlinedText(pos.x, pos.y - 6, name, tightText, relation, this.fontSize, pos, 1, null, useGradient)
-            return
+            ViewportManager.movePositionToScreen(pos, label.textWidth / 2, this.fontSize + 10)
         }
-        this.renderScaledOutlinedText(pos.x, pos.y - 6, name, tightText, relation, this.fontSize, scale, alpha, useGradient)
+        this.drawCachedName(label, pos.x, pos.y - 6, scale, alpha)
     },
 
     renderScaledOutlinedText(
         x: number,
         y: number,
         text: string,
-        tightText: boolean,
+        _tightText: boolean,
         relation: 'ALLY' | 'ENEMY' | 'NEUTRAL',
         fontSize: number,
         scale: number,
@@ -796,42 +905,43 @@ export const OverlayManager = {
         useGradient: boolean = true,
         color: string | null = null,
     ) {
-        if (scale === 1) {
-            this.renderOutlinedText(x, y, text, tightText, relation, fontSize, undefined, alpha, color, useGradient)
-            return
-        }
-        const ctx = this.overlayCtx!
-        ctx.save()
-        ctx.translate(x, y)
-        ctx.scale(scale, scale)
-        this.renderOutlinedText(0, 0, text, tightText, relation, fontSize, undefined, alpha, color, useGradient)
-        ctx.restore()
+        if (!Number.isFinite(fontSize)) return
+        this.drawCachedName(this.getCachedName(text, fontSize, relation, useGradient, color), x, y, scale, alpha)
     },
 
-    renderNpcLabel(pos: Vector3, name: string, title: string, tightText: boolean) {
-        if (!Number.isFinite(pos.x) || !Number.isFinite(pos.y)) {
-            return
+    renderNpcLabel(pos: Vector3, name: string, title: string) {
+        if (!Number.isFinite(pos.x) || !Number.isFinite(pos.y)) return
+        const key = JSON.stringify([name, title, this.fontSize])
+        let label = this.npcLabels.get(key)
+        if (!label) {
+            const titleFontSize = Math.max(12, this.fontSize - 2)
+            // Offscreen text uses native spacing; the overlay-only mobile correction
+            // must affect neither raster measurement nor raster drawing.
+            const {canvas, ctx} = createOverlayRaster(1, 1)
+            ctx.font = `${this.fontSize}px "Roboto", Arial, sans-serif`
+            const nameWidth = CanvasTextUtils.getTextWidth(ctx, name, false)
+            ctx.font = `${titleFontSize}px "Roboto", Arial, sans-serif`
+            const titleText = title ? `[${title}]` : ''
+            const titleWidth = title ? CanvasTextUtils.getTextWidth(ctx, titleText, false) : 0
+            const textWidth = Math.max(nameWidth, titleWidth)
+            const totalHeight = this.fontSize + (title ? titleFontSize + 6 : 0)
+            const width = Math.ceil(textWidth + 12)
+            const height = Math.ceil(totalHeight + 12)
+            const dpr = window.devicePixelRatio || 1
+            canvas.width = Math.ceil(width * dpr)
+            canvas.height = Math.ceil(height * dpr)
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+            this.renderOutlinedText(width / 2, 6 + this.fontSize / 2, name, false, 'NEUTRAL', this.fontSize, undefined, 1, null, true, ctx)
+            if (title) this.renderOutlinedText(width / 2, 6 + this.fontSize + 6 + titleFontSize / 2,
+                titleText, false, 'NEUTRAL', titleFontSize, undefined, 1, '#e9dabe', true, ctx)
+            label = {image: canvas, width, height, textWidth, totalHeight}
+            // Bound raster memory even when visiting many different NPCs.
+            if (this.npcLabels.size >= 128) this.npcLabels.delete(this.npcLabels.keys().next().value!)
+            this.npcLabels.set(key, label)
         }
-        if (!title) {
-            this.renderName(pos, name, tightText, 'NEUTRAL', true)
-            return
-        }
-
-        const ctx = this.overlayCtx!
-        const titleText = `[${title}]`
-        const titleFontSize = Math.max(12, this.fontSize - 2)
-        const spacingFix = this.letterSpacingFix
-        ctx.font = `${this.fontSize}px "Roboto", Arial, sans-serif`
-        const nameWidth = CanvasTextUtils.getTextWidth(ctx, name, tightText, spacingFix)
-        ctx.font = `${titleFontSize}px "Roboto", Arial, sans-serif`
-        const titleWidth = CanvasTextUtils.getTextWidth(ctx, titleText, tightText, spacingFix)
-        const totalHeight = this.fontSize + titleFontSize + 6
-
-        ViewportManager.movePositionToScreen(pos, Math.max(nameWidth, titleWidth) / 2, totalHeight + 10)
-
-        const nameY = pos.y - totalHeight + this.fontSize / 2
-        this.renderOutlinedText(pos.x, nameY, name, tightText, 'NEUTRAL', this.fontSize, undefined, 1, null, true)
-        this.renderOutlinedText(pos.x, nameY + this.fontSize / 2 + titleFontSize / 2 + 6, titleText, tightText, 'NEUTRAL', titleFontSize, undefined, 1, '#e9dabe', true)
+        ViewportManager.movePositionToScreen(pos, label.textWidth / 2, label.totalHeight + 10)
+        const top = title ? pos.y - label.totalHeight - 6 : pos.y - 12 - this.fontSize / 2
+        this.overlayCtx!.drawImage(label.image, pos.x - label.width / 2, top, label.width, label.height)
     },
 
     renderOutlinedText(
@@ -845,12 +955,13 @@ export const OverlayManager = {
         textAlpha: number = 1,
         color: string | null = null,
         useGradient: boolean = false,
+        renderCtx?: CanvasRenderingContext2D,
     ) {
         if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(fontSize) || !Number.isFinite(textAlpha)) {
             return
         }
 
-        const ctx = this.overlayCtx!
+        const ctx = renderCtx ?? this.overlayCtx!
         ctx.font = `${fontSize}px "Roboto", Arial, sans-serif`
         ctx.fontKerning = 'normal'
         ctx.textBaseline = 'middle'
@@ -928,8 +1039,16 @@ export const OverlayManager = {
         ctx.fillRect(x + 1, y + 1, fillWidth, barHeight - 2)
     },
 
+    invalidateTextRasters() {
+        this.npcLabels.clear()
+        this.nameLabels.clear()
+        this.speech.forEach(bubbles => bubbles.forEach(bubble => { bubble.image = null }))
+    },
+
     onResize() {
         const dpr = window.devicePixelRatio || 1
+        this.invalidateTextRasters()
+        if (this.healingAtlas && this.healingAtlas.width !== Math.ceil(HEALING_CELL_SIZE * 8 * dpr)) this.prepareHealingAtlas()
         this.overlayCanvas.width = this.overlayCanvas.clientWidth * dpr
         this.overlayCanvas.height = this.overlayCanvas.clientHeight * dpr
 

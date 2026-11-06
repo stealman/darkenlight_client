@@ -18,7 +18,10 @@ export const SelectedTargetPanel = {
     hpFillEls: [] as HTMLDivElement[],
     lastTooltipRefreshBucket: null as number | null,
 
+    renderedTarget: null as {name: string, skulls: number, relation: string, hp: number} | null,
+
     initialize() {
+        this.renderedTarget = null
         if (this.panel) {
             this.panel.remove()
             this.panel = null
@@ -170,8 +173,8 @@ export const SelectedTargetPanel = {
         if (!this.panel || !this.nameEl) return
 
         const target = TargetingManager.selectedTarget
-        this.panel.style.display = 'flex'
         if (!target) {
+            this.renderedTarget = null
             if (!this.panel.classList.contains('empty')) {
                 this.panel.classList.remove('enemy', 'ally', 'neutral')
                 this.panel.classList.add('empty')
@@ -186,33 +189,31 @@ export const SelectedTargetPanel = {
             return
         }
 
-        this.panel.classList.remove('empty')
+        const previous = this.renderedTarget
+        if (!previous) this.panel.classList.remove('empty')
         const skulls = target.getObjectType() === 'M' && 'skulls' in target && typeof target.skulls === 'number' ? target.skulls : 0
         const skullCount = Math.max(0, Math.min(3, skulls))
-        this.skullsEl!.style.display = skullCount ? '' : 'none'
-        for (let i = 0; i < 3; i++) (this.skullsEl!.children[i] as SVGElement).style.display = i < skullCount ? '' : 'none'
-        this.nameTextEl!.textContent = target.getName()
-
-        // Add class enemy/ally based on relation
-        const relation = target.getRelationToMyPlayer()
-        this.panel.classList.remove('enemy', 'ally', 'neutral')
-        if (relation === 'ENEMY') {
-            this.panel.classList.add('enemy')
-        } else if (relation === 'ALLY') {
-            this.panel.classList.add('ally')
-        } else {
-            this.panel.classList.add('neutral')
+        if (!previous || previous.skulls !== skullCount) {
+            this.skullsEl!.style.display = skullCount ? '' : 'none'
+            for (let i = 0; i < 3; i++) (this.skullsEl!.children[i] as SVGElement).style.display = i < skullCount ? '' : 'none'
         }
-
+        const name = target.getName()
+        if (!previous || previous.name !== name) this.nameTextEl!.textContent = name
+        const relation = target.getRelationToMyPlayer()
+        if (!previous || previous.relation !== relation) {
+            this.panel.classList.toggle('enemy', relation === 'ENEMY')
+            this.panel.classList.toggle('ally', relation === 'ALLY')
+            this.panel.classList.toggle('neutral', relation !== 'ENEMY' && relation !== 'ALLY')
+        }
         const hpPercent = Math.max(0, Math.min(100, target.hpPercent ?? 0))
-
-        for (let i = 0; i < 10; i++) {
-            const start = i * 10
-            const within = hpPercent - start
-            const fillPct = Math.max(0, Math.min(10, within)) * 10 // 0..100
-
-            const fillEl = this.hpFillEls[i]
-            fillEl.style.width = `${fillPct}%`
+        if (!previous || previous.hp !== hpPercent) {
+            for (let i = 0; i < 10; i++) {
+                const fillPct = Math.max(0, Math.min(10, hpPercent - i * 10)) * 10
+                this.hpFillEls[i].style.width = `${fillPct}%`
+            }
+        }
+        if (!previous || previous.name !== name || previous.skulls !== skullCount || previous.relation !== relation || previous.hp !== hpPercent) {
+            this.renderedTarget = {name, skulls: skullCount, relation, hp: hpPercent}
         }
 
         if (TooltipOverlayManager.isVisibleFor(this.tooltipOwnerKey)) {

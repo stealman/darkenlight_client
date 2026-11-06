@@ -51,7 +51,8 @@ const updateRangeSkin = () => {
         const min = Number(input.min || 0)
         const max = Number(input.max || 100)
         const fraction = max > min ? (Number(input.value) - min) / (max - min) : 0
-        input.style.setProperty('--gui-range-fill', `${Math.max(0, Math.min(1, fraction)) * 100}%`)
+        const fill = `${Math.max(0, Math.min(1, fraction)) * 100}%`
+        if (input.style.getPropertyValue('--gui-range-fill') !== fill) input.style.setProperty('--gui-range-fill', fill)
     })
 }
 onUpdated(updateRangeSkin)

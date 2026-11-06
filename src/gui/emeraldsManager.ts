@@ -13,6 +13,7 @@ export const EmeraldsManager = {
     emeralds: ref(0),
     displayedEmeralds: 0 as number,
     animationStartDifference: 0 as number,
+    iconPulsing: false,
 
     lastActializationTime: 0 as number,
 
@@ -21,6 +22,7 @@ export const EmeraldsManager = {
     },
 
     initialize() {
+        this.iconPulsing = false
         this.emeraldsInfoPanel = document.createElement('div')
         this.emeraldsInfoPanel.id = 'emeralds-info'
         this.emeraldsInfoCount = document.createElement('span')
@@ -41,7 +43,6 @@ export const EmeraldsManager = {
         this.updateIconPulse(time, difference)
         if (difference === 0) {
             this.animationStartDifference = 0
-            this.emeraldsInfoCount.innerText = this.formatEmeraldAmount(this.displayedEmeralds)
             return
         }
 
@@ -66,7 +67,7 @@ export const EmeraldsManager = {
         }
 
         AudioManager.playGuiTick()
-        this.emeraldsInfoCount.innerText = this.formatEmeraldAmount(this.displayedEmeralds)
+        this.emeraldsInfoCount.textContent = this.formatEmeraldAmount(this.displayedEmeralds)
         this.lastActializationTime = time
     },
 
@@ -89,6 +90,8 @@ export const EmeraldsManager = {
         }
 
         if (difference === 0) {
+            if (!this.iconPulsing) return
+            this.iconPulsing = false
             this.emeraldsInfoIcon.style.width = `var(--hud-currency-icon-size, ${this.iconBaseSize}px)`
             this.emeraldsInfoIcon.style.height = `var(--hud-currency-icon-size, ${this.iconBaseSize}px)`
             this.emeraldsInfoIcon.style.transform = 'none'
@@ -96,6 +99,7 @@ export const EmeraldsManager = {
             return
         }
 
+        this.iconPulsing = true
         const pulse = Math.sin(time * 0.015)
         const opacity = 0.9 + (pulse * 0.1)
 
@@ -114,7 +118,7 @@ export const EmeraldsManager = {
         this.emeralds.value = amount
         if (immediate) {
             this.displayedEmeralds = amount
-            this.emeraldsInfoCount.innerText = this.formatEmeraldAmount(this.displayedEmeralds)
+            this.emeraldsInfoCount.textContent = this.formatEmeraldAmount(this.displayedEmeralds)
         }
     }
 }

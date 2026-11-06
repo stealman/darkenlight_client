@@ -43,7 +43,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, onUpdated, ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 
 type WeaponMarker = 'primary' | 'secondary'
 
@@ -74,8 +74,14 @@ const updateScrollFade = () => {
     // transparent edge to 1px keeps hiding the last border until scrolling stops.
     // Allow 1px for fractional scroll positions / rounded scrollHeight values.
     const edgeOpacity = (distance: number) => 1 - Math.min(1, Math.max(0, distance - 1) / 14)
-    viewport.style.setProperty('--inventory-edge-top-opacity', String(edgeOpacity(viewport.scrollTop)))
-    viewport.style.setProperty('--inventory-edge-bottom-opacity', String(edgeOpacity(remaining)))
+    const topOpacity = String(edgeOpacity(viewport.scrollTop))
+    if (viewport.style.getPropertyValue('--inventory-edge-top-opacity') !== topOpacity) {
+        viewport.style.setProperty('--inventory-edge-top-opacity', topOpacity)
+    }
+    const bottomOpacity = String(edgeOpacity(remaining))
+    if (viewport.style.getPropertyValue('--inventory-edge-bottom-opacity') !== bottomOpacity) {
+        viewport.style.setProperty('--inventory-edge-bottom-opacity', bottomOpacity)
+    }
 }
 
 const onScroll = () => {
@@ -89,7 +95,6 @@ onMounted(() => {
     if (scrollViewport.value) scrollResizeObserver.observe(scrollViewport.value)
     if (slotGrid.value) scrollResizeObserver.observe(slotGrid.value)
 })
-onUpdated(updateScrollFade)
 onUnmounted(() => scrollResizeObserver?.disconnect())
 
 let activePointerId: number | null = null

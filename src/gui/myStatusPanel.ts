@@ -27,7 +27,10 @@ export const MyStatusPanel = {
     hoveredAffectGroupId: null as number | null,
     lastTooltipRefreshBucket: null as number | null,
 
+    renderedBars: null as {hp: number, st: number, mp: number, hasMana: boolean} | null,
+
     initialize() {
+        this.renderedBars = null
         if (this.panel) {
             this.panel.remove()
             this.panel = null
@@ -475,52 +478,66 @@ export const MyStatusPanel = {
         const secondarySegmentCount = hasMana ? 5 : 10
         const secondarySegmentSize = 100 / secondarySegmentCount
 
-        for (let i = 0; i < 10; i++) {
-            const start = i * 10
-            const within = hpPercent - start
-            const fillPct = Math.max(0, Math.min(10, within)) * 10 // 0..100
+        const previous = this.renderedBars
+        const modeChanged = !previous || previous.hasMana !== hasMana
+        if (!previous || previous.hp !== hpPercent) {
+            for (let i = 0; i < 10; i++) {
+                const start = i * 10
+                const within = hpPercent - start
+                const fillPct = Math.max(0, Math.min(10, within)) * 10 // 0..100
 
-            const fillEl = this.hpFillEls[i]
-            fillEl.style.width = `${fillPct}%`
-        }
-
-        for (let i = 0; i < 10; i++) {
-            const fillEl = this.stFillEls[i]
-            if (i >= secondarySegmentCount) {
-                fillEl.style.width = '0%'
-                fillEl.style.filter = ''
-                fillEl.style.boxShadow = ''
-                continue
+                const fillEl = this.hpFillEls[i]
+                fillEl.style.width = `${fillPct}%`
             }
-
-            const start = i * secondarySegmentSize
-            const within = stPercent - start
-            const fillPct = Math.max(0, Math.min(secondarySegmentSize, within)) / secondarySegmentSize * 100
-            const thresholdOverlap = Math.max(0, Math.min(20, start + secondarySegmentSize) - start)
-            const isThresholdSegment = thresholdOverlap > 0
-            const endsAtThreshold = Math.abs((start + secondarySegmentSize) - 20) < 0.001
-            fillEl.style.width = `${fillPct}%`
-            fillEl.style.filter = isThresholdSegment ? 'saturate(1.15) brightness(0.7) hue-rotate(-18deg)' : ''
-            fillEl.style.boxShadow = endsAtThreshold ? 'inset -1px 0 0 rgba(255, 210, 160, 0.55)' : ''
         }
 
-        for (let i = 0; i < 10; i++) {
-            const fillEl = this.mpFillEls[i]
-            if (i >= secondarySegmentCount) {
-                fillEl.style.width = '0%'
-                continue
+        if (!previous || previous.st !== stPercent || modeChanged) {
+            for (let i = 0; i < 10; i++) {
+                const fillEl = this.stFillEls[i]
+                if (i >= secondarySegmentCount) {
+                    fillEl.style.width = '0%'
+                    fillEl.style.filter = ''
+                    fillEl.style.boxShadow = ''
+                    continue
+                }
+
+                const start = i * secondarySegmentSize
+                const within = stPercent - start
+                const fillPct = Math.max(0, Math.min(secondarySegmentSize, within)) / secondarySegmentSize * 100
+                const thresholdOverlap = Math.max(0, Math.min(20, start + secondarySegmentSize) - start)
+                const isThresholdSegment = thresholdOverlap > 0
+                const endsAtThreshold = Math.abs((start + secondarySegmentSize) - 20) < 0.001
+                fillEl.style.width = `${fillPct}%`
+                fillEl.style.filter = isThresholdSegment ? 'saturate(1.15) brightness(0.7) hue-rotate(-18deg)' : ''
+                fillEl.style.boxShadow = endsAtThreshold ? 'inset -1px 0 0 rgba(255, 210, 160, 0.55)' : ''
             }
-
-            const start = i * secondarySegmentSize
-            const within = mpPercent - start
-            const fillPct = Math.max(0, Math.min(secondarySegmentSize, within)) / secondarySegmentSize * 100
-            fillEl.style.width = `${fillPct}%`
         }
 
-        this.mpBarEl.style.display = hasMana ? 'block' : 'none'
-        this.stBarEl.classList.toggle('fullWidth', !hasMana)
-        this.stBarEl.classList.toggle('halfSegments', hasMana)
-        this.mpBarEl.classList.toggle('halfSegments', hasMana)
+        if (!previous || previous.mp !== mpPercent || modeChanged) {
+            for (let i = 0; i < 10; i++) {
+                const fillEl = this.mpFillEls[i]
+                if (i >= secondarySegmentCount) {
+                    fillEl.style.width = '0%'
+                    continue
+                }
+
+                const start = i * secondarySegmentSize
+                const within = mpPercent - start
+                const fillPct = Math.max(0, Math.min(secondarySegmentSize, within)) / secondarySegmentSize * 100
+                fillEl.style.width = `${fillPct}%`
+            }
+        }
+
+        if (modeChanged) {
+            this.mpBarEl.style.display = hasMana ? 'block' : 'none'
+            this.stBarEl.classList.toggle('fullWidth', !hasMana)
+            this.stBarEl.classList.toggle('halfSegments', hasMana)
+            this.mpBarEl.classList.toggle('halfSegments', hasMana)
+        }
+
+        if (!previous || previous.hp !== hpPercent || previous.st !== stPercent || previous.mp !== mpPercent || modeChanged) {
+            this.renderedBars = {hp: hpPercent, st: stPercent, mp: mpPercent, hasMana}
+        }
 
         if (TooltipOverlayManager.visible && TooltipOverlayManager.ownerKey === this.myStatusTooltipOwnerKey) {
             const currentRefreshBucket = Math.floor(actualTime / this.tooltipRefreshIntervalMs)

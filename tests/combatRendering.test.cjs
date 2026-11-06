@@ -5,13 +5,13 @@ const {join} = require('node:path')
 const vm = require('node:vm')
 const ts = require('typescript')
 
-function loadModule(path, dependencies, clock = Date) {
+function loadModule(path, dependencies, clock = Date, globals = {}) {
     const source = readFileSync(join(__dirname, '../src', path), 'utf8')
     const compiled = ts.transpileModule(source, {
         compilerOptions: {module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020},
     }).outputText
     const exports = {}
-    vm.runInNewContext(compiled, {exports, Date: clock, require: name => dependencies[name] || {}})
+    vm.runInNewContext(compiled, {...globals, exports, Date: clock, require: name => dependencies[name] || {}})
     return exports
 }
 
@@ -23,18 +23,25 @@ test('aggro alert pulses above the HP bar for five seconds and ignores other wor
         '@/data/myPlayer': {MyPlayer}, '@/babylon/monsters/monsterManager': {MonsterManager},
     }, {now: () => 1000})
     const drawn = []
-    const outlines = []
-    const ctx = {save() {}, restore() {}, strokeText(...args) {outlines.push(args)}, fillText(...args) {drawn.push({args, alpha: this.globalAlpha})}}
+    const icon = {width: 40, height: 50}
+    overlay.aggroAlertIcon = icon
+    const ctx = {save() {}, restore() {}, drawImage(...args) {drawn.push({args, alpha: this.globalAlpha})}}
     overlay.overlayCtx = ctx
     overlay.addMonsterAggroAlert({id: 42, worldId: 8})
     assert.equal(overlay.monsterAggroAlerts.size, 0)
     overlay.addMonsterAggroAlert({id: 42, worldId: 7})
     overlay.renderMonsterAggroAlerts(1000)
-    assert.deepEqual(drawn[0].args, ['!', 100, 70])
-    assert.deepEqual(outlines[0], drawn[0].args)
-    assert.equal(ctx.lineWidth, 3)
+    assert.equal(drawn[0].args[0], icon)
+    assert.ok(Math.abs(drawn[0].args[3] - icon.width * 1.2) < 1e-9)
     overlay.renderMonsterAggroAlerts(1350)
     assert.ok(drawn[1].alpha < drawn[0].alpha)
+    assert.ok(drawn[1].args[3] < drawn[0].args[3])
+    assert.ok(Math.abs(drawn[1].args[3] - icon.width) < 1e-9)
+    for (const {args} of drawn) {
+        const [, x, y, width, height] = args
+        assert.ok(Math.abs(x + width / 2 - 100) < 1e-9)
+        assert.ok(Math.abs(y + height * (icon.height - 10) / icon.height - 70) < 1e-9)
+    }
     overlay.renderMonsterAggroAlerts(6000)
     assert.equal(drawn.length, 2)
     assert.equal(overlay.monsterAggroAlerts.size, 0)
@@ -320,4 +327,168 @@ test('a human model removed while loading disposes the late result without activ
         scene.dispose()
         engine.dispose()
     }
+})
+
+
+test('HUD panels leave unchanged DOM alone and refresh resource and target changes', () => {
+    let writes = 0
+    const element = () => {
+        const classes = new Set()
+        return new Proxy({
+            style: new Proxy({}, {set(obj, key, value) { writes++; obj[key] = value; return true }}),
+            classList: {
+                contains: key => classes.has(key),
+                add(key) { writes++; classes.add(key) },
+                remove(...keys) { writes++; keys.forEach(key => classes.delete(key)) },
+                toggle(key, enabled) { writes++; enabled ? classes.add(key) : classes.delete(key) },
+            },
+        }, {set(obj, key, value) { writes++; obj[key] = value; return true }})
+    }
+    const MyPlayer = {myChar: {hp: 100, maxHp: 100, st: 80, maxSt: 100, mp: 50, maxMp: 100}}
+    const tooltip = {visible: false, isVisibleFor: () => false}
+    const {MyStatusPanel: status} = loadModule('gui/myStatusPanel.ts', {
+        '@/data/myPlayer': {MyPlayer}, '@/gui/tooltipOverlayManager': {TooltipOverlayManager: tooltip},
+    })
+    status.panel = element()
+    status.nameEl = element()
+    status.stBarEl = element()
+    status.mpBarEl = element()
+    for (const key of ['hpFillEls', 'stFillEls', 'mpFillEls']) status[key] = Array.from({length: 10}, element)
+    status.onFrame(1000)
+    writes = 0
+    status.onFrame(1100)
+    assert.equal(writes, 0)
+    MyPlayer.myChar.hp = 95
+    status.onFrame(1200)
+    assert.equal(status.hpFillEls[9].style.width, '50%')
+    MyPlayer.myChar.maxMp = 0
+    status.onFrame(1300)
+    assert.equal(status.mpBarEl.style.display, 'none')
+    assert.equal(status.stFillEls[7].style.width, '100%')
+    writes = 0
+    status.onFrame(1400)
+    assert.equal(writes, 0)
+
+    let name = 'Skeleton'
+    const target = {getName: () => name, getObjectType: () => 'M', getRelationToMyPlayer: () => 'ENEMY', hpPercent: 100, skulls: 1}
+    const targeting = {selectedTarget: target}
+    const {SelectedTargetPanel: selected} = loadModule('gui/selectedTargetPanel.ts', {
+        '@/gui/targettingManager': {TargetingManager: targeting},
+        '@/gui/tooltipOverlayManager': {TooltipOverlayManager: tooltip},
+    })
+    selected.panel = element()
+    selected.nameEl = element()
+    selected.nameTextEl = element()
+    selected.skullsEl = element()
+    selected.skullsEl.children = Array.from({length: 3}, element)
+    selected.hpFillEls = Array.from({length: 10}, element)
+    selected.onFrame(1000)
+    writes = 0
+    selected.onFrame(1100)
+    assert.equal(writes, 0)
+    name = 'Warrior'
+    target.hpPercent = 95
+    selected.onFrame(1200)
+    assert.equal(selected.nameTextEl.textContent, name)
+    assert.equal(selected.hpFillEls[9].style.width, '50%')
+    targeting.selectedTarget = null
+    selected.onFrame(1300)
+    writes = 0
+    selected.onFrame(1400)
+    assert.equal(writes, 0)
+    targeting.selectedTarget = target
+    selected.onFrame(1500)
+    assert.equal(selected.nameTextEl.textContent, name)
+    assert.equal(selected.hpFillEls[9].style.width, '50%')
+})
+
+
+test('speech, healing and NPC labels reuse rasters and invalidate text caches', () => {
+    let paints = 0
+    let allocations = 0
+    const draws = []
+    const strokedText = []
+    const makeContext = () => ({
+        save() {}, restore() {}, setTransform() {},
+        beginPath() { paints++ }, roundRect() { paints++ }, rect() { paints++ }, fill() { paints++ },
+        strokeText(text) { paints++; strokedText.push(text) }, fillText() { paints++ },
+        measureText(text) { return {width: text.length * 8} },
+        createLinearGradient() { return {addColorStop() {}} },
+        drawImage(...args) { draws.push(args) },
+    })
+    const document = {createElement() { allocations++; return {getContext: () => makeContext()} }}
+    const {CanvasTextUtils} = loadModule('gui/canvasTextUtils.ts', {})
+    const char = {id: 1, getNameTextNodeScreenPosition: () => ({x: 150, y: 250})}
+    const {OverlayManager: overlay} = loadModule('gui/overlay/overlayManager.ts', {
+        '@/data/myPlayer': {MyPlayer: {myChar: char}},
+        '@/gui/canvasTextUtils': {CanvasTextUtils},
+        '@/utils/viewport': {ViewportManager: {movePositionToScreen() {}}},
+    }, {now: () => 1000}, {document, window: {devicePixelRatio: 2}})
+    overlay.overlayCtx = makeContext()
+    overlay.overlayCanvas = {clientWidth: 800}
+    overlay.addSpeech({id: 1, text: 'Hello there'})
+    const bubble = overlay.speech.get(char)[0]
+    assert.ok(bubble.image)
+    const speechPaints = paints
+    overlay.renderSpeech(1100)
+    overlay.renderSpeech(1200)
+    assert.equal(paints, speechPaints)
+    assert.equal(draws.length, 2)
+    overlay.renderSpeech(bubble.expiresAt + 1)
+    assert.equal(overlay.speech.size, 0)
+    assert.equal(draws.length, 2)
+
+    overlay.prepareHealingAtlas()
+    const healingPaints = paints
+    const initialAllocations = allocations
+    overlay.renderHealingMarker({x: 100, y: 200}, 1000, false)
+    const green = draws.at(-1)
+    overlay.renderHealingMarker({x: 100, y: 200}, 1100, true)
+    const red = draws.at(-1)
+    assert.equal(paints, healingPaints)
+    assert.equal(allocations, initialAllocations)
+    assert.notEqual(green[2], red[2])
+    assert.deepEqual(green.slice(5), red.slice(5))
+
+    overlay.letterSpacingFix = -6
+    overlay.renderNpcLabel({x: 150, y: 250}, 'Merchant', 'Trader')
+    assert.deepEqual(strokedText.slice(-2), ['Merchant', '[Trader]'])
+    assert.equal(draws.at(-1)[3], 76)
+    const labelPaints = paints
+    const labelImage = draws.at(-1)[0]
+    overlay.letterSpacingFix = -20
+    overlay.renderNpcLabel({x: 180, y: 260}, 'Merchant', 'Trader')
+    assert.equal(draws.at(-1)[0], labelImage)
+    assert.equal(paints, labelPaints)
+    overlay.renderNpcLabel({x: 150, y: 250}, 'Merchant', 'Blacksmith')
+    assert.notEqual(draws.at(-1)[0], labelImage)
+    for (let i = 0; i < 130; i++) overlay.renderNpcLabel({x: 150, y: 250}, `NPC ${i}`, '')
+    assert.equal(overlay.npcLabels.size, 128)
+    // Mobile spacing correction must not shrink cached player/monster names.
+    overlay.letterSpacingFix = -20
+    overlay.renderName({x: 150, y: 250}, 'Skeleton', true, 'ENEMY', true)
+    const monsterImage = draws.at(-1)[0]
+    assert.equal(strokedText.at(-1), 'Skeleton')
+    assert.equal(draws.at(-1)[3], 76)
+    const namePaints = paints
+    overlay.renderScaledOutlinedText(180, 260, 'Skeleton', true, 'ENEMY', overlay.fontSize, 1.17, .4)
+    const scaledName = draws.at(-1)
+    assert.equal(scaledName[0], monsterImage)
+    assert.equal(paints, namePaints)
+    assert.ok(Math.abs(scaledName[3] - 76 * 1.17) < 1e-9)
+    assert.ok(Math.abs(scaledName[1] + scaledName[3] / 2 - 180) < 1e-9)
+    assert.equal(overlay.overlayCtx.globalAlpha, .4)
+    overlay.renderScaledOutlinedText(180, 260, 'Skeleton', true, 'ALLY', overlay.fontSize, 1, 1, true, '#58ef83')
+    assert.notEqual(draws.at(-1)[0], monsterImage)
+    overlay.renderName({x: 150, y: 250}, 'Renamed', true, 'ENEMY', true)
+    assert.notEqual(draws.at(-1)[0], monsterImage)
+    for (let i = 0; i < 260; i++) overlay.renderName({x: 150, y: 250}, `Player ${i}`, true, 'ALLY', true)
+    assert.equal(overlay.nameLabels.size, 256)
+    overlay.addSpeech({id: 1, text: 'Resize me'})
+    overlay.invalidateTextRasters()
+    assert.equal(overlay.npcLabels.size, 0)
+    assert.equal(overlay.nameLabels.size, 0)
+    assert.equal(overlay.speech.get(char)[0].image, null)
+    overlay.renderSpeech(1100)
+    assert.ok(overlay.speech.get(char)[0].image)
 })
