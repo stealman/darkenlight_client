@@ -8,14 +8,9 @@
             <PartyPanel v-if="gameSessionActive" />
             <SpeechInput v-if="gameSessionActive" />
             <div id="system-buttons">
-                <div @click="showSettingsDialog()" v-html="getHamburgerMenuSvg('icon-white', 'icon-settings')"></div>
+                <button type="button" class="hud-settings-button" :class="{ 'hud-settings-button--with-chat': speechButtonVisible }" :aria-label="t('app.settings')" :title="t('app.settings')" @click="showSettingsDialog()" v-html="getSettingsSvg('', 'icon-settings')"></button>
                 <div v-if="myCharRef?.className === 'GM'" @click="showDebug" v-html="getInspectSvg('icon-white', 'icon-inspect')"></div>
                 <button v-if="myCharRef?.className === 'GM'" class="gm-panel-button" @click="toggleGmPanel()">{{ t('app.gmPanel') }}</button>
-            </div>
-
-            <div id="emeralds-info">
-                <span id="emeralds-info-count" class="ui-emerald-text-gradient">0</span>
-                <img id="emeralds-info-icon" src="/images/icons/emerald.png" style="width: 16px; height: 16px; margin-right: 4px;" />
             </div>
 
             <div id="gui-buttons">
@@ -33,7 +28,7 @@
 
             <TouchControllers v-if="gameSessionActive && touchControlsReady" ref="touchControls" :settings-active="targetLockSettingsActive" />
 
-            <label id="btn-target-lock" :class="{ 'target-lock--settings-active': targetLockSettingsActive }" style="display: none; opacity: 0.65; position: absolute; width: 64px; height: 64px;" v-html="getTargetLockSvg('icon-red', 'icon-target-lock')" @pointerdown="TargetingManager.onPointerDown()" @pointerup="TargetingManager.onPointerUp()"></label>
+            <label id="btn-target-lock" :class="{ 'target-lock--settings-active': targetLockSettingsActive }" style="display: none; position: absolute; width: 64px; height: 64px;" v-html="getTargetLockSvg('touch-target-icon', 'icon-target-lock')" @pointerdown="TargetingManager.onPointerDown()" @pointerup="TargetingManager.onPointerUp()"></label>
 
             <label id="btn-action-stop" style="display: none; opacity: 0.65; position: absolute; width: 64px; height: 64px;" v-html="getStopActionSvg('icon-blue', 'icon-stop-action')" @pointerdown="AudioManager.playGuiButtonClick(); MyPlayer.stopActions()"></label>
 
@@ -210,7 +205,7 @@ import OnScreenMessages from '@/vue/views/onScreenMessages.vue'
 import PwaControls from '@/vue/views/PwaControls.vue'
 import { Controller } from '@/controlls/controller'
 import {
-    getHamburgerMenuSvg,
+    getSettingsSvg,
     getInspectSvg,
     getStopActionSvg,
     getTargetLockSvg,

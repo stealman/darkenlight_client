@@ -1,11 +1,6 @@
-import { MiniMap } from '@/utils/minimap'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { OverlayManager } from '@/gui/overlay/overlayManager'
 import { ref } from 'vue'
-
-const HUD_BUTTON_GAP = 5
-const HUD_MINIMAP_LEFT_FRAME_SIZE = 3
-const HUD_EMERALD_FONT_SIZE_RATIO = 0.375
 
 export const EmeraldsManager = {
     size: 32 as number,
@@ -26,17 +21,19 @@ export const EmeraldsManager = {
     },
 
     initialize() {
-        this.emeraldsInfoPanel = document.getElementById("emeralds-info") as HTMLDivElement
-        this.emeraldsInfoIcon = document.getElementById("emeralds-info-icon") as HTMLImageElement
-        this.emeraldsInfoCount = document.getElementById("emeralds-info-count") as HTMLSpanElement
+        this.emeraldsInfoPanel = document.createElement('div')
+        this.emeraldsInfoPanel.id = 'emeralds-info'
+        this.emeraldsInfoCount = document.createElement('span')
+        this.emeraldsInfoCount.id = 'emeralds-info-count'
+        this.emeraldsInfoCount.className = 'ui-emerald-text-gradient'
+        this.emeraldsInfoCount.textContent = this.formatEmeraldAmount(this.displayedEmeralds)
+        this.emeraldsInfoIcon = document.createElement('img')
+        this.emeraldsInfoIcon.id = 'emeralds-info-icon'
+        this.emeraldsInfoIcon.src = '/images/icons/emerald.png'
+        this.emeraldsInfoIcon.alt = ''
+        this.emeraldsInfoPanel.append(this.emeraldsInfoCount, this.emeraldsInfoIcon)
+        document.getElementById('my-status-currency-host')?.replaceChildren(this.emeraldsInfoPanel)
         this.setSize(this.size)
-    },
-
-    updatePositions(miniMapSize: number) {
-        const buttonStep = this.size + HUD_BUTTON_GAP
-        const miniMapRightOffset = miniMapSize + HUD_MINIMAP_LEFT_FRAME_SIZE + HUD_BUTTON_GAP
-        this.emeraldsInfoPanel.style.right = `${miniMapRightOffset + (buttonStep * 2)}px`
-        this.emeraldsInfoPanel.style.top = `5px`
     },
 
     onFrame(time: number) {
@@ -75,16 +72,15 @@ export const EmeraldsManager = {
 
     setSize(size: number) {
         this.size = size
-        this.iconBaseSize = size * 0.75
+        this.iconBaseSize = Math.max(9, Math.min(13, size * 0.2))
 
         if (this.emeraldsInfoIcon != null) {
             this.emeraldsInfoIcon.style.width = `${this.iconBaseSize}px`
             this.emeraldsInfoIcon.style.height = `${this.iconBaseSize}px`
         }
         if (this.emeraldsInfoCount != null) {
-            this.emeraldsInfoCount.style.fontSize = `${size * HUD_EMERALD_FONT_SIZE_RATIO}px`
+            this.emeraldsInfoCount.style.fontSize = `${Math.max(9, Math.min(12, size * 0.2))}px`
         }
-        this.updatePositions(MiniMap.canvasSize || 100)
     },
 
     updateIconPulse(time: number, difference: number) {

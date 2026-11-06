@@ -55,6 +55,7 @@
     }
   },
   "app": {
+    "settings": "Settings",
     "gmPanel": "GM Panel",
     "restartGame": "Restart game",
     "restartPrompt": "A game restart is required to apply the new settings.",

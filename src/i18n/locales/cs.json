@@ -55,6 +55,7 @@
     }
   },
   "app": {
+    "settings": "Nastavení",
     "gmPanel": "GM Panel",
     "restartGame": "Restart hry",
     "restartPrompt": "Pro aplikaci nových nastavení je potřeba restartovat hru.",

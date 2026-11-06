@@ -47,10 +47,18 @@
 }
 
 #icon-settings {
-    height: 32px;
-    width: 32px;
-    fill: rgb(var(--ui-base));
+    height: 100%;
+    width: 100%;
+    display: block;
 }
+
+.hud-settings-button { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; flex-shrink: 0; box-sizing: border-box; padding: 3px; background: var(--gui-button-surface) center / auto 100%; border: 0 solid transparent; border-image: var(--gui-button) 18 / 2px / 0 stretch; border-radius: 4px; cursor: url('/images/cursor-pointer.png') 0 10, pointer; }
+.hud-settings-button svg { display: block; width: 100%; height: 100%; pointer-events: none; }
+.hud-settings-button:hover { border-image-source: var(--gui-selected); filter: brightness(1.12); }
+.hud-settings-button:focus-visible { outline: 1px solid rgb(var(--gui-gold)); outline-offset: 2px; }
+#system-buttons > .hud-settings-button { position: fixed; bottom: max(5px, env(safe-area-inset-bottom)); left: max(5px, env(safe-area-inset-left)); z-index: 1000; }
+#system-buttons > .hud-settings-button--with-chat { left: calc(max(5px, env(safe-area-inset-left)) + var(--hud-dock-button-size, 48px) + 5px); }
+@media (pointer: coarse) { .hud-settings-button { width: 36px; height: 36px; } }
 
 #icon-inspect {
     height: 32px;
@@ -58,8 +66,57 @@
 }
 
 #icon-target-lock {
-    height: 100%;
-    width: 100%;
+    position: relative;
+    height: 84%;
+    width: 84%;
+    display: block;
+    margin: 8%;
+    pointer-events: none;
+}
+
+.touch-target-face {
+    position: absolute;
+    inset: 15%;
+    box-sizing: border-box;
+    border-radius: 50%;
+    border: 2px solid rgba(var(--gui-gold), .65);
+    background: radial-gradient(circle at 35% 25%, rgba(var(--gui-gold), .2), transparent 65%), var(--gui-button-surface) center / cover;
+    box-shadow: inset 0 0 0 2px rgba(0, 0, 0, .5), inset 0 1px 4px rgba(var(--gui-gold), .2), 0 3px 7px rgba(0, 0, 0, .65);
+    opacity: .65;
+}
+
+.touch-target-tick {
+    position: absolute;
+    width: 8%;
+    height: 24%;
+    left: 46%;
+    top: 4%;
+    border-radius: 2px;
+    background: linear-gradient(90deg, rgba(0, 0, 0, .65), rgba(var(--gui-gold), .8) 35%, rgba(var(--ui-dark), .9)), var(--gui-button-surface);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .8), inset 0 1px 0 rgba(var(--gui-gold), .55);
+}
+
+.touch-target-tick--south { top: auto; bottom: 4%; }
+.touch-target-tick--east,
+.touch-target-tick--west { top: 38%; left: 8%; transform: rotate(90deg); }
+.touch-target-tick--east { left: auto; right: 8%; }
+
+#btn-target-lock:active .touch-target-face {
+    border-color: rgb(var(--gui-gold));
+}
+
+#btn-target-lock {
+    box-sizing: border-box;
+    border: 0;
+    background: transparent;
+    opacity: .8;
+    touch-action: none;
+    user-select: none;
+}
+
+#btn-target-lock:active {
+    filter: brightness(1.2);
+    opacity: 1;
 }
 
 #btn-target-lock.target-lock--settings-active {

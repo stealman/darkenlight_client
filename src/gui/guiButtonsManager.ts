@@ -23,9 +23,8 @@ import {MonsterManager} from '@/babylon/monsters/monsterManager'
 import {Monster} from '@/babylon/monsters/monster'
 import {MonsterTypes} from '@/babylon/monsters/codebook/monsterCodebook'
 import {ShearSheepMsg} from '@/network/messages'
+import {Settings} from '@/settings/settings'
 
-const HUD_BUTTON_GAP = 5
-const HUD_MINIMAP_LEFT_FRAME_SIZE = 3
 const CAMP_BARREL_STATIC_TYPE = 305
 const OPPORTUNITY_UPDATE_INTERVAL = 100
 
@@ -92,6 +91,7 @@ export const GuiOpportunityActions = {
 
 export const GuiButtonsManager = {
     size: 32 as number,
+    dockButtonSize: 32 as number,
     fireArrowsMessageCooldown: 5000 as number,
     lastFireArrowsMessageTime: 0 as number,
     btnBackpack: null as HTMLDivElement,
@@ -155,25 +155,12 @@ export const GuiButtonsManager = {
         })
     },
 
-    updatePositions(miniMapSize: number) {
-        const buttonStep = this.size + HUD_BUTTON_GAP
-        const miniMapRightOffset = miniMapSize + HUD_MINIMAP_LEFT_FRAME_SIZE + HUD_BUTTON_GAP
-
-        this.btnCharacter.style.right = `${miniMapRightOffset}px`
-        this.btnCharacter.style.top = `5px`
-
-        this.btnBackpack.style.right = `${miniMapRightOffset + buttonStep}px`
-        this.btnBackpack.style.top = `5px`
+    updatePositions() {
+        document.documentElement.style.setProperty('--hud-dock-button-size', `${this.dockButtonSize}px`)
         const speech = document.getElementById('btn-speech')
         if (speech) {
-            speech.style.position = 'fixed'
-            speech.style.right = 'auto'
-            speech.style.top = 'auto'
-            speech.style.left = 'max(5px, env(safe-area-inset-left))'
-            speech.style.bottom = 'max(5px, env(safe-area-inset-bottom))'
-            speech.style.zIndex = '3'
-            speech.style.width = `${this.size}px`
-            speech.style.height = `${this.size}px`
+            speech.style.width = `${this.dockButtonSize}px`
+            speech.style.height = `${this.dockButtonSize}px`
         }
     },
 
@@ -556,17 +543,19 @@ export const GuiButtonsManager = {
 
     setSize(size: number) {
         this.size = size
+        this.dockButtonSize = Settings.isPhoneOrTablet() ? Math.min(size, 48) : size
 
         if (this.btnBackpack != null) {
-            this.btnBackpack.style.width = `${size}px`
-            this.btnBackpack.style.height = `${size}px`
+            this.btnBackpack.style.width = `${this.dockButtonSize}px`
+            this.btnBackpack.style.height = `${this.dockButtonSize}px`
         }
 
         if (this.btnCharacter != null) {
-            this.btnCharacter.style.width = `${size}px`
-            this.btnCharacter.style.height = `${size}px`
+            this.btnCharacter.style.width = `${this.dockButtonSize}px`
+            this.btnCharacter.style.height = `${this.dockButtonSize}px`
         }
 
         this.opportunityButtons.forEach((button) => button.setSize(size))
+        if (this.btnBackpack && this.btnCharacter) this.updatePositions()
     }
 }

@@ -42,16 +42,24 @@ div.gui-action-button:hover::after {
     opacity: 1;
 }
 
-div#btn-backpack {
+div#gui-buttons {
     position: absolute;
-    top: 0px;
-    right: 0px;
+    top: 32px;
+    right: calc(var(--hud-minimap-size, 100px) + 9px);
+    display: flex;
+    gap: 5px;
+    z-index: 1000;
 }
 
-div#btn-character {
-    position: absolute;
-    top: 64px;
-    right: 0px;
+div#gui-buttons > .gui-action-button {
+    position: relative;
+    flex-shrink: 0;
+}
+
+div#gui-buttons > #btn-speech {
+    position: fixed;
+    left: max(5px, env(safe-area-inset-left));
+    bottom: max(5px, env(safe-area-inset-bottom));
 }
 
 

@@ -130,8 +130,14 @@ export const SelectedTargetPanel = {
         if (!this.panel || !this.nameEl) return
 
         const target = TargetingManager.selectedTarget
+        this.panel.style.display = 'flex'
         if (!target) {
-            this.panel.style.display = 'none'
+            if (!this.panel.classList.contains('empty')) {
+                this.panel.classList.remove('enemy', 'ally', 'neutral')
+                this.panel.classList.add('empty')
+                this.nameEl.textContent = ''
+                for (const fillEl of this.hpFillEls) fillEl.style.width = '0%'
+            }
             if (TooltipOverlayManager.isVisibleFor(this.tooltipOwnerKey)) {
                 TooltipOverlayManager.hideOwner(this.tooltipOwnerKey)
             }
@@ -139,7 +145,7 @@ export const SelectedTargetPanel = {
             return
         }
 
-        this.panel.style.display = 'flex'
+        this.panel.classList.remove('empty')
         this.nameEl.textContent = target.getName()
 
         // Add class enemy/ally based on relation

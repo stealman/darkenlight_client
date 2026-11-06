@@ -3,6 +3,7 @@ div#myStatusPanel {
     top: 0px;
     left: 0px;
     width: 25%;
+    max-width: 260px;
     pointer-events: none;
     align-items: stretch;
     justify-content: flex-start;
@@ -13,22 +14,46 @@ div#myStatusPanel {
 }
 
 #myStatusPanel .myStatusPanelBody {
+    position: relative;
     width: 100%;
-    min-height: 5.1vh;
+    min-height: clamp(42px, 5.1vh, 54px);
+    box-sizing: border-box;
+    padding: 5px 6px 6px;
     display: flex;
     align-items: stretch;
     justify-content: flex-start;
     flex-direction: column;
-    background-color: rgba(0, 0, 0, 0.25);
-    border: 1px solid rgba(128, 128, 128, 0.75);
-    border-radius: 0 0 4px 0;
-    border-top: none;
+    background: transparent;
+    border: 0 solid transparent;
+    border-radius: 6px;
+    box-shadow: -2px 3px 2px rgba(0, 0, 0, .08);
     overflow: hidden;
     pointer-events: auto;
 }
 
+#myStatusPanel .myStatusPanelBody::before {
+    content: '';
+    position: absolute;
+    inset: 3px;
+    background: var(--gui-surface) repeat;
+    opacity: var(--gui-status-background-opacity);
+    pointer-events: none;
+}
+
+#myStatusPanel .myStatusPanelBody::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 0 solid transparent;
+    border-image: var(--gui-panel) 24 / var(--gui-status-frame-width) / 0 stretch;
+    opacity: var(--gui-status-frame-opacity);
+    pointer-events: none;
+    z-index: 3;
+}
+
 #myStatusPanel .statusRow {
     position: relative;
+    z-index: 1;
     width: 100%;
     display: flex;
     justify-content: center;
@@ -37,46 +62,62 @@ div#myStatusPanel {
 }
 
 #myStatusPanel .statusRowMain {
-    flex: 2 1 0;
-    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) fit-content(55%);
+    align-content: start;
+    align-items: start;
+    gap: 3px;
+    flex: 1 1 auto;
+    min-height: 23px;
 }
 
 #myStatusPanel .statusRowSecondary {
-    flex: 1 1 0;
-    gap: 0vh;
+    flex: 0 0 5px;
+    gap: 4px;
     padding: 0 0 0 0;
     justify-content: flex-start;
-    margin-top: -1px;
+    margin-top: 4px;
 }
 
 #myStatusPanel .statusRowAffects {
-    width: 100%;
-    min-height: 1.8vh;
+    position: absolute;
+    top: 0;
+    left: calc(100% + 5px);
+    width: min(260px, calc(50vw - var(--hud-minimap-size, 100px) - 24px));
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    align-items: stretch;
     justify-content: flex-start;
-    padding: 0.2vh 0.15vh 0 0.15vh;
+    gap: 0;
+    padding: 0;
     box-sizing: border-box;
-    overflow: hidden;
+    overflow: visible;
     pointer-events: auto;
 }
 
 #myStatusPanel .myName {
-    font-size: 2vh;
+    text-align: left;
+    font-size: clamp(10px, 1.6vh, 15px);
     position: relative;
+    max-width: calc(100% - 2px);
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
     z-index: 2;
     line-height: 1;
-    text-shadow:
-        1px 0 0 rgba(0, 0, 0, 0.9),
-        -1px 0 0 rgba(0, 0, 0, 0.9),
-        0 1px 0 rgba(0, 0, 0, 0.9),
-        0 -1px 0 rgba(0, 0, 0, 0.9);
-    color: #fff2d5;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, .75);
+    letter-spacing: .03em;
+    color: rgb(var(--ui-base));
 }
+
+#my-status-currency-host { position: relative; z-index: 2; min-width: 0; }
+#my-status-currency-host #emeralds-info { position: static; display: flex; align-items: center; justify-content: flex-end; gap: 2px; padding: 0; width: auto; max-width: 100%; line-height: 1; }
+#my-status-currency-host #emeralds-info-count { font-size: clamp(9px, 1.3vh, 12px); letter-spacing: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#my-status-currency-host #emeralds-info-icon { width: 10px; height: 10px; flex-shrink: 0; }
 
 #myStatusPanel .hpBlocks{
     position: absolute;
-    inset: 0;
+    inset: auto 0 0;
     z-index: 1;
     pointer-events: none;
 
@@ -84,28 +125,34 @@ div#myStatusPanel {
     grid-auto-flow: column;
     grid-template-columns: repeat(10, 1fr);
     gap: 0px;
-    padding: 0.2vh 0.1vh;
+    padding: 0;
+    background: var(--gui-status-track);
+    border-radius: 2px;
+    overflow: hidden;
     align-items: center;
     box-sizing: border-box;
 }
 
 #myStatusPanel .hpBlock{
+    box-sizing: border-box;
     width: 100%;
     height: 100%;
     border-radius: 0;
     background: rgba(25, 25, 25, 0);
     position: relative;
     overflow: hidden;
-    border-left: 1px solid rgba(32, 32, 32, 0.4);
+    border-left: 1px solid rgba(0, 0, 0, .18);
 }
 
 #myStatusPanel .hpFill{
+    opacity: var(--gui-status-fill-opacity);
     position: absolute;
     left: 0;
     top: 0;
     bottom: 0;
     width: 0%;
     background: var(--ui-hp-fill);
+    box-shadow: var(--gui-status-shine);
 }
 
 #myStatusPanel .hpBlock:first-child{
@@ -117,15 +164,18 @@ div#myStatusPanel {
     border-color: rgba(32, 32, 32, 0.5);
 }
 
-#myStatusPanel .hpBlocks{ height: 100%; }
+#myStatusPanel .hpBlocks{ height: 7px; }
 
 #myStatusPanel .secondaryBar {
     position: relative;
-    width: calc(50% - 0.06vh);
+    flex: 1 1 0;
+    min-width: 0;
+    width: auto;
     height: 100%;
     overflow: hidden;
-    border: 1px solid rgba(32, 32, 32, 0.5);
-    border-radius: 0;
+    border: none;
+    background: var(--gui-status-track);
+    border-radius: 2px;
     box-sizing: border-box;
 }
 
@@ -148,6 +198,7 @@ div#myStatusPanel {
 }
 
 #myStatusPanel .secondaryBlock {
+    box-sizing: border-box;
     width: 100%;
     height: 100%;
     position: relative;
@@ -164,6 +215,7 @@ div#myStatusPanel {
 }
 
 #myStatusPanel .secondaryBlockFill {
+    opacity: var(--gui-status-fill-opacity);
     position: absolute;
     left: 0;
     top: 0;
@@ -173,18 +225,26 @@ div#myStatusPanel {
 
 #myStatusPanel .staminaBar .secondaryBlockFill {
     background: var(--ui-stamina-fill);
+    box-shadow: var(--gui-status-shine);
 }
 
 #myStatusPanel .manaBar .secondaryBlockFill {
     background: var(--ui-mana-fill);
+    box-shadow: var(--gui-status-shine);
 }
 
 #myStatusPanel .affectsIcons {
+    box-sizing: border-box;
     display: flex;
     align-items: center;
     gap: var(--affect-icon-gap, 6px);
-    overflow: hidden;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
     pointer-events: auto;
+    padding: 0 2px 3px;
+    min-height: calc(var(--affect-icon-size, 32px) + 3px);
+    flex-shrink: 0;
 }
 
 #myStatusPanel .affectIcon {
@@ -197,7 +257,7 @@ div#myStatusPanel {
     align-items: center;
     justify-content: center;
     box-sizing: border-box;
-    overflow: hidden;
+    overflow: visible;
     border-radius: 4px;
     box-shadow: inset 0 0 0.35vh rgba(0, 0, 0, 0.35);
     color: rgba(25, 16, 4, 0.95);
@@ -206,20 +266,22 @@ div#myStatusPanel {
 }
 
 #myStatusPanel .affectIcon.positive {
-    background-color: rgba(115, 115, 115, 0.5);
-    border: 1px solid rgba(60, 60, 60, 0.3);
+    background: var(--gui-button-surface) center / auto 100%;
+    border: 0 solid transparent;
+    border-image: var(--gui-button) 18 / 2px / 0 stretch;
 }
 
 #myStatusPanel .affectIcon.adverse {
     background: linear-gradient(135deg, rgba(200, 130, 130, 0.3), rgba(145, 64, 64, 0.4));
-    border: 1px solid rgba(135, 40, 40, 0.75);
+    border: 0 solid transparent;
+    border-image: var(--gui-selected) 18 / 2px / 0 stretch;
     box-shadow:
         inset 0 0 0.35vh rgba(45, 0, 0, 0.45),
         0 0 0.35vh rgba(120, 30, 30, 0.18);
 }
 
 #myStatusPanel .affectIcon.firstAdverse {
-    margin-left: var(--affect-icon-adverse-gap, 16px);
+    margin-left: 0;
 }
 
 #myStatusPanel .affectIconImage {
@@ -234,7 +296,7 @@ div#myStatusPanel {
 #myStatusPanel .affectIconText {
     display: block;
     max-width: 100%;
-    font-size: 0.82vh;
+    font-size: clamp(8px, .82vh, 10px);
     line-height: 1;
 }
 
@@ -254,3 +316,5 @@ div#myStatusPanel {
     font-size: var(--affect-icon-count-font-size, 10px);
     line-height: 1;
 }
+
+#myStatusPanel .affectsIcons::-webkit-scrollbar { display: none; }

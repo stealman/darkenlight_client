@@ -3,7 +3,6 @@ import { Renderer } from '@/babylon/scene/renderer'
 import { MiniMap } from '@/utils/minimap'
 import { MyPlayer } from '@/data/myPlayer'
 import { GuiButtonManager, GuiButtonsManager } from '@/gui/guiButtonsManager'
-import { EmeraldsManager } from '@/gui/emeraldsManager'
 import { Settings } from '@/settings/settings'
 
 export const ViewportManager = {
@@ -39,8 +38,7 @@ export const ViewportManager = {
         const baseMiniMapSize = Math.min(150, Math.min(window.innerHeight, window.innerWidth) / 5)
         const miniMapSize = Math.round(baseMiniMapSize * Settings.miniMapSize / 50)
         MiniMap.updateCanvasSize(miniMapSize, baseMiniMapSize)
-        GuiButtonsManager.updatePositions(miniMapSize)
-        EmeraldsManager.updatePositions(miniMapSize)
+        GuiButtonsManager.updatePositions()
         this.viewPortInitialized = false
 
         const canvasBounds = Renderer.canvas?.getBoundingClientRect()

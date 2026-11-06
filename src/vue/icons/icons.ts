@@ -45,6 +45,22 @@ export function getRestoreDefaultsSvg(className: string, id: string) {
 `
 }
 
+// Beveled brass gear matching the charcoal HUD skin.
+export function getSettingsSvg(className: string, id: string) {
+    const teeth = Array.from({ length: 32 }, (_, index) => {
+        const angle = index * Math.PI / 16 - Math.PI / 2
+        const radius = index % 4 === 1 || index % 4 === 2 ? 21 : 16.5
+        return `${(24 + Math.cos(angle) * radius).toFixed(2)},${(24 + Math.sin(angle) * radius).toFixed(2)}`
+    }).join(' ')
+    return `<svg class="${className} noselect" id="${id}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" aria-hidden="true">
+        <defs><linearGradient id="${id}-metal" x1="0" y1="0" x2=".4" y2="1"><stop stop-color="rgb(var(--ui-base))"/><stop offset=".35" stop-color="rgb(var(--gui-gold))"/><stop offset="1" stop-color="rgb(var(--ui-darker))"/></linearGradient></defs>
+        <polygon points="${teeth}" transform="translate(0 1.5)" fill="rgb(var(--ui-darkest))" stroke="rgb(var(--ui-darkest))" stroke-width="2" stroke-linejoin="round"/>
+        <polygon points="${teeth}" fill="url(#${id}-metal)" stroke="rgb(var(--ui-darker))" stroke-width="1" stroke-linejoin="round"/>
+        <circle cx="24" cy="24" r="10" fill="rgb(var(--ui-darkest))" stroke="rgb(var(--ui-base))" stroke-opacity=".65"/>
+        <circle cx="24" cy="24" r="6.5" fill="none" stroke="rgb(var(--gui-gold))" stroke-opacity=".45" stroke-width="2"/>
+    </svg>`
+}
+
 // HAMBURGER MENU SVG
 export function getHamburgerMenuSvg(className: string, id: string) {
     return `
@@ -73,11 +89,13 @@ export function getInspectSvg(className: string, id: string) {
 // LOCK TARGET SVG
 export function getTargetLockSvg(className: string, id: string) {
     return `
-<svg class="${className} noselect" id="${id}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"  xml:space="preserve">
-<g>
-<path d="M21.56 15.16h-1.56c-0.44-4.2-3.76-7.56-7.96-7.96v-1.56c0-0.48-0.36-0.84-0.84-0.84s-0.84 0.36-0.84 0.84v1.56c-4.2 0.4-7.56 3.76-7.96 7.96h-1.56c-0.48 0-0.84 0.36-0.84 0.84s0.36 0.84 0.84 0.84h1.56c0.4 4.2 3.76 7.56 7.96 7.96v1.56c0 0.48 0.36 0.84 0.84 0.84s0.84-0.36 0.84-0.84v-1.56c4.2-0.4 7.56-3.76 7.96-7.96h1.56c0.48 0 0.84-0.36 0.84-0.84s-0.4-0.84-0.84-0.84zM16.8 16.84h1.48c-0.4 3.28-3 5.88-6.24 6.24v-1.48c0-0.48-0.36-0.84-0.84-0.84s-0.84 0.36-0.84 0.84v1.48c-3.28-0.4-5.88-3-6.24-6.24h1.48c0.48 0 0.84-0.36 0.84-0.84s-0.36-0.84-0.84-0.84h-1.48c0.4-3.28 3-5.88 6.24-6.24v1.48c0 0.48 0.36 0.84 0.84 0.84s0.84-0.36 0.84-0.84v-1.48c3.28 0.4 5.88 3 6.24 6.24h-1.48c-0.48 0-0.84 0.36-0.84 0.84s0.4 0.84 0.84 0.84z"></path>
-</g>
-</svg>
+<span class="${className} noselect" id="${id}" aria-hidden="true">
+    <span class="touch-target-face"></span>
+    <span class="touch-target-tick touch-target-tick--north"></span>
+    <span class="touch-target-tick touch-target-tick--east"></span>
+    <span class="touch-target-tick touch-target-tick--south"></span>
+    <span class="touch-target-tick touch-target-tick--west"></span>
+</span>
 `
 }
 

@@ -293,6 +293,7 @@ export const MiniMap = {
     updateCanvasSize(size, viewSize = size) {
         this.canvasSize = size
         this.viewSize = viewSize
+        document.documentElement.style.setProperty('--hud-minimap-size', `${size}px`)
         document.getElementById("miniMapCanvas").style.width = size + "px"
         document.getElementById("miniMapCanvas").style.height = size + "px"
 

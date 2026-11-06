@@ -22,6 +22,7 @@ export const MyStatusPanel = {
     // Affects
     affectsRowEl: null as HTMLDivElement | null,
     affectsIconsEl: null as HTMLDivElement | null,
+    adverseIconsEl: null as HTMLDivElement | null,
     affectIconEls: new Map<number, HTMLDivElement>(),
     hoveredAffectGroupId: null as number | null,
     lastTooltipRefreshBucket: null as number | null,
@@ -69,6 +70,9 @@ export const MyStatusPanel = {
         hpRow.className = 'statusRow statusRowMain'
         hpRow.appendChild(hpBlocks)
         hpRow.appendChild(this.nameEl)
+        const currencyHost = document.createElement('div')
+        currencyHost.id = 'my-status-currency-host'
+        hpRow.appendChild(currencyHost)
 
         const secondaryRow = document.createElement('div')
         secondaryRow.className = 'statusRow statusRowSecondary'
@@ -129,10 +133,13 @@ export const MyStatusPanel = {
         this.affectsRowEl.className = 'statusRowAffects'
 
         this.affectsIconsEl = document.createElement('div')
-        this.affectsIconsEl.className = 'affectsIcons'
+        this.affectsIconsEl.className = 'affectsIcons affectsIcons--positive'
+        this.adverseIconsEl = document.createElement('div')
+        this.adverseIconsEl.className = 'affectsIcons affectsIcons--adverse'
         this.affectIconEls.clear()
 
         this.affectsRowEl.appendChild(this.affectsIconsEl)
+        this.affectsRowEl.appendChild(this.adverseIconsEl)
 
         this.bodyEl.appendChild(hpRow)
         this.bodyEl.appendChild(secondaryRow)
@@ -179,7 +186,7 @@ export const MyStatusPanel = {
     },
 
     refreshAffectGroups() {
-        if (!this.affectsRowEl || !this.affectsIconsEl) {
+        if (!this.affectsRowEl || !this.affectsIconsEl || !this.adverseIconsEl) {
             return
         }
 
@@ -218,7 +225,8 @@ export const MyStatusPanel = {
             if (!iconEl.isConnected) {
                 this.updateAffectIconEl(iconEl, affectGroup, affectGroup.id === firstAdverseAffectId)
             }
-            this.affectsIconsEl.appendChild(iconEl)
+            const row = affectGroup.isAdverse() ? this.adverseIconsEl : this.affectsIconsEl
+            row.appendChild(iconEl)
         }
     },
 

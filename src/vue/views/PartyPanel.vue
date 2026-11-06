@@ -145,22 +145,6 @@ const leave = () => { menuOpen.value = false; PartyManager.leave() }
 .party-loot-choice[aria-pressed="true"] { font-weight: 700; text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 2px; }
 .party-loot-choice:focus-visible { outline: 1px solid rgb(var(--ui-base)); outline-offset: -2px; }
 .party-loot-choice:disabled { cursor: default; }
-.party-panel { position: relative; width: clamp(134px, 18vw, 220px); max-width: 42vw; margin: 4px 0 0 3px; color: rgb(var(--ui-base)); pointer-events: auto; text-align: left; font-size: 11px; text-shadow: 0 1px 2px rgb(var(--ui-darkest)); }
-.party-actions { position: absolute; top: 2px; left: calc(100% + 4px); display: flex; justify-content: flex-start; }
-.party-menu-button { color: rgb(var(--ui-base)); background: rgba(var(--ui-darkest), .7); border: 1px solid rgba(var(--ui-dark), .25); border-radius: 3px; width: 32px; height: 24px; font-size: 20px; line-height: 16px; cursor: pointer; }
-.party-leave { position: absolute; top: calc(100% + 2px); right: 0; z-index: 2; white-space: nowrap; min-height: 36px; }
-.party-member { display: flex; align-items: center; gap: 6px; width: 100%; min-height: 29px; padding: 4px 6px; margin: 2px 0; background: rgba(var(--ui-darkest), .65); border: 1px solid rgba(var(--ui-dark), .15); border-radius: 3px; color: inherit; font: inherit; cursor: pointer; text-align: left; }
-.party-member:hover, .party-member:focus-visible, .party-member--selected { border-color: var(--ui-ally-target-border); background: rgba(var(--ui-darkest), .9); }
-.party-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.party-leader { color: rgb(var(--ui-durability-warning)); margin-right: 3px; }
-.party-member--away { color: rgb(var(--ui-darker)); }
-.party-away-mark { color: rgb(var(--ui-darker)); width: 45px; text-align: center; }
-.party-resources { display: flex; flex-direction: column; gap: 2px; width: 45px; flex-shrink: 0; }
-.party-bar { display: block; height: 3px; background: rgba(var(--ui-dark), .18); overflow: hidden; border-radius: 1px; }
-.party-bar > span { display: block; height: 100%; transition: width .2s linear; }
-.party-bar--hp > span { background: var(--ui-hp-fill); }
-.party-bar--st > span { background: var(--ui-stamina-fill); }
-.party-bar--mp > span { background: var(--ui-mana-fill); }
 .party-invite-backdrop { --party-invite-top: max(65px, 12dvh); pointer-events: none; align-items: flex-start; padding-top: var(--party-invite-top); box-sizing: border-box; }
 .party-invite-window { pointer-events: auto; width: 310px; max-width: calc(100vw - 24px); }
 .party-invite-window .dialog-header { display: flex; align-items: center; justify-content: center; }
@@ -176,9 +160,4 @@ const leave = () => { menuOpen.value = false; PartyManager.leave() }
 .party-invite-buttons { display: flex; gap: 8px; justify-content: center; }
 .party-invite-buttons button { flex: 1; min-height: 38px; }
 .party-invite-decline span { color: rgb(var(--ui-attention)); text-shadow: 0 0 4px rgba(var(--ui-attention), .45); }
-@media (pointer: coarse) {
-    .party-member { min-height: 28px; padding-block: 2px; }
-    .party-name { font-size: min(11px, 2vh); }
-    .party-menu-button { height: 28px; width: 36px; }
-}
 </style>

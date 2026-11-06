@@ -4,10 +4,11 @@
             <a href="/adminUtils">Admin utils</a>
             <span>GUI · offline náhled</span>
             <label>Úzký panel <input v-model="narrow" type="checkbox"></label>
-            <label>Náhled <select v-model="preview"><option value="controls">Ovládací prvky</option><option value="inventory">Inventář</option><option value="storage">Banka / barel</option><option value="hud">Akční panel a minimapa</option></select></label>
+            <label>Náhled <select v-model="preview"><option value="controls">Ovládací prvky</option><option value="inventory">Inventář</option><option value="storage">Banka / barel</option><option value="hud">Akční panel a minimapa</option><option value="status">Postava, party a cíl</option></select></label>
             <label v-if="preview === 'inventory' || preview === 'storage'">Dlouhý inventář <input v-model="longInventory" type="checkbox"></label>
         </nav>
         <HudSkinPreview v-if="preview === 'hud'" :small="narrow" />
+        <StatusSkinPreview v-else-if="preview === 'status'" :small="narrow" />
         <GameDialog v-else :window-class="['adaptive', 'gui-preview-window', narrow ? 'gui-preview-window--narrow' : '']" :close-on-backdrop="false" :close-on-escape="false">
             <template #header v-if="preview === 'controls'">
                 <div v-for="tab in tabs" :key="tab" class="tab-item" :class="{ active: activeTab === tab }" @click="activeTab = tab">{{ tab }}</div>
@@ -45,6 +46,7 @@ import { ref } from 'vue'
 import GameDialog from '../vue/views/GameDialog.vue'
 import InventorySkinPreview from './InventorySkinPreview.vue'
 import HudSkinPreview from './HudSkinPreview.vue'
+import StatusSkinPreview from './StatusSkinPreview.vue'
 const preview = ref('controls')
 const longInventory = ref(false)
 const tabs = ['Ovládání', 'Grafika', 'GUI', 'Zvuk', 'Účet']
