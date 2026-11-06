@@ -73,6 +73,7 @@ import { EquipmentDecorationsManager } from '@/babylon/world/equipmentDecoration
 import {PartyManager} from '@/data/partyManager'
 import { Utils } from '@/utils/utils'
 import { ViewportManager } from '@/utils/viewport'
+import { MonsterCatalog } from '@/data/monsterCatalog'
 import { StaticFireParticleManager } from '@/babylon/world/statics/staticFireParticleManager'
 
 type WorldChunkVisibilityData = {
@@ -88,6 +89,7 @@ export const MessageProcessor = {
         for (const element of response) {
             const msg = element
             switch (msg.t) {
+                case 99: MonsterCatalog.receive(msg.d); break
                 case 98:
                     this.processMonsterDangerChanged(msg.d)
                     break
@@ -218,6 +220,7 @@ export const MessageProcessor = {
     },
 
     addMonster(data: MonsterSpawnData) {
+        MonsterCatalog.get(data.tp)
         MonsterManager.addMonster(data.id, data.tp, { x: data.x, z: data.z }, Number(data.hpp), data.mv, data.paf, data.role, data.alignment, data.guard, data.huntable === true)
         const sheep = MonsterManager.monsters.get(data.id)
         if (sheep) {

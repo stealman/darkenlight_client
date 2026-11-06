@@ -6,7 +6,8 @@
       "level": "Level {level}",
       "nextLevelProgress": "Progress to the next monster knowledge level",
       "damageBonus": "+{percent}% damage",
-      "categories": {"Kobolds": "Kobolds", "Skeletons": "Skeletons", "Withers": "Withers", "Zombies": "Zombies", "Wights": "Wights", "Cats": "Cats", "Deers": "Deer", "Guards": "Guards"}
+      "tags": {"UNDEAD": "Undead", "ANIMAL": "Animal"},
+      "categories": {"Sheeps": "Sheep", "Kobolds": "Kobolds", "Skeletons": "Skeletons", "Withers": "Withers", "Zombies": "Zombies", "Wights": "Wights", "Cats": "Cats", "Deers": "Deer", "Guards": "Guards"}
     },
     "categories": {
       "crafting": "Crafting",

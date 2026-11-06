@@ -655,3 +655,9 @@ export class NpcUnlockSkillTrainingMsg implements Message {
         this.d = {id, skill, targetRank}
     }
 }
+
+export class MonsterCatalogRequest implements Message {
+    t = 49
+    d: {types: number[]}
+    constructor(types: number[]) { this.d = {types} }
+}

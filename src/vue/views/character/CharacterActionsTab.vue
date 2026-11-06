@@ -283,21 +283,28 @@ defineExpose({
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--dialog-bg);
-    border: 1px solid rgb(var(--ui-dark));
+    background: var(--gui-button-surface) center / auto 100%;
+    border: 0 solid transparent;
+    border-image: var(--gui-slot) 18 / 3px / 0 stretch;
+    border-radius: 4px;
     box-sizing: border-box;
     padding: 0;
     cursor: var(--ui-cursor-pointer);
 }
 
 .action-slot-icon-shell:hover {
-    border-color: rgb(var(--ui-darker));
-    background: rgba(var(--ui-darker), 0.2);
+    border-image-source: var(--gui-slot-selected);
+    background-image: var(--gui-selected-surface);
 }
 
 .action-slot-icon-shell.selected {
-    border-color: rgb(var(--ui-darker));
-    background: rgba(var(--ui-darker), 0.75);
+    border-image-source: var(--gui-slot-selected);
+    background-image: var(--gui-selected-surface);
+}
+
+.action-slot-icon-shell:focus-visible {
+    outline: 2px solid rgb(var(--gui-gold));
+    outline-offset: 2px;
 }
 
 .action-slot-icon-shell--multiple {
@@ -315,10 +322,6 @@ defineExpose({
 .action-slot-icon-shell--multiple .action-slot-icon-stack {
     flex-direction: column;
     gap: 2px;
-}
-
-.action-slot-row--empty .action-slot-icon-shell:not(.selected):not(:hover) {
-    border-color: rgba(var(--ui-dark), 0.45);
 }
 
 .action-slot-icon {

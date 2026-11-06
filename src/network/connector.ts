@@ -1,4 +1,6 @@
 import { AccountCharacterClaimMsg, AccountCharacterCreateMsg, AccountCharacterNameCheckMsg, GuestCharacterCreateMsg, GuestCharacterNameCheckMsg, LoginMsg, Message, PlayerRegistrationMsg } from '@/network/messages'
+import { MonsterCatalog } from '@/data/monsterCatalog'
+import { MonsterCatalogRequest } from '@/network/messages'
 import { MessageProcessor } from '@/network/messageProcessor'
 import { invoke } from '@tauri-apps/api/core'
 
@@ -27,6 +29,7 @@ export const Connector = {
                 || (import.meta.env.DEV
                     ? `ws://${window.location.hostname}:3000`
                     : `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ws`)
+        MonsterCatalog.reset(types => this.sendMessage(new MonsterCatalogRequest(types)))
         this.socket = new WebSocket(socketUrl)
 
         this.socket.onopen = () => {

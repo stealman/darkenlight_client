@@ -1,6 +1,10 @@
+import { MyPlayer } from '@/data/myPlayer'
+import { Monster } from '@/babylon/monsters/monster'
 import { TargetingManager } from '@/gui/targettingManager'
 import { TooltipOverlayContent, TooltipOverlayManager } from '@/gui/tooltipOverlayManager'
 import { t } from '@/i18n'
+import { MonsterCatalog } from '@/data/monsterCatalog'
+import type { TooltipOverlayRow } from '@/gui/tooltipOverlayManager'
 import { GameClasses } from '@/data/gameClass'
 
 export const SelectedTargetPanel = {
@@ -74,6 +78,30 @@ export const SelectedTargetPanel = {
         const classLocalizationKey = gameClassKey ? `classes.${gameClassKey}` : ''
         const localizedClassName = classLocalizationKey ? t(classLocalizationKey) : ''
 
+        const rows: TooltipOverlayRow[] = []
+        if (target instanceof Monster) {
+            const info = MonsterCatalog.get(target.mobType.id)
+            if (info) {
+                const categoryKey = `skills.monsterKnowledge.categories.${info.category}`
+                const category = t(categoryKey)
+                const knowledge = MyPlayer.myCharRef.value?.monsterKnowledge.find(entry => entry.category === info.category)
+                rows.push({
+                    label: category === categoryKey ? info.category : category,
+                    separator: '',
+                    value: t('skills.monsterKnowledge.damageBonus', {percent: knowledge?.damageBonusPercent ?? 0}),
+                    className: 'ui-tooltip-row--monster-category',
+                })
+                for (const tag of info.tags) {
+                    const tagKey = `skills.monsterKnowledge.tags.${tag}`
+                    const name = t(tagKey)
+                    rows.push({
+                        value: name === tagKey ? tag : name,
+                        className: tag === 'UNDEAD' ? 'ui-tooltip-row--undead' : 'ui-tooltip-row--monster-tag',
+                    })
+                }
+            }
+        }
+
         return {
             title: target.getName(),
             titleMeta: gameClass ? (localizedClassName === classLocalizationKey ? gameClass.name : localizedClassName) : null,
@@ -81,12 +109,7 @@ export const SelectedTargetPanel = {
             titleMetaClassName: gameClassKey
                 ? `ui-tooltip-title-meta--character-class ui-text-gradient ui-text-gradient--accent ui-tooltip-title-meta--${gameClassKey}`
                 : null,
-            rows: [
-                {
-                    label: t('common.health'),
-                    value: `${Math.max(0, Math.round(target.hpPercent ?? 0))}%`,
-                },
-            ],
+            rows,
             variant: target.getRelationToMyPlayer() === 'ALLY' ? 'positive' : 'adverse',
         }
     },

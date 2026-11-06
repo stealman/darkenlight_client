@@ -1,3 +1,4 @@
+import { MonsterCatalog } from '@/data/monsterCatalog'
 import { MonsterModel } from '@/babylon/monsters/monsterModel'
 import { MonsterBonesAnims } from '@/babylon/monsters/codebook/monsterBonesAnims'
 import { BabylonUtils, VectorY90 } from '@/babylon/utils'
@@ -61,7 +62,9 @@ export class MonsterType {
     id: number
     group: MonsterGroup
     templateId: number
-    name: string
+    get name(): string {
+        return MonsterCatalog.get(this.id)?.name ?? `Monster #${this.id}`
+    }
     boxSize: number
     boxHeight: number = 2
     walkAnimSpeed: number = 4
@@ -79,12 +82,11 @@ export class MonsterType {
 
     aaType: string = MonsterAATypes.MELEE
 
-    constructor(id: number, group: MonsterGroup, templateId: number, name: string, boxSize: number, boxHeight: number, walkAnimSpeed: number, weapon: MonsterEquipData | null, helmet: MonsterEquipData | null, armor: MonsterEquipData | null,
+    constructor(id: number, group: MonsterGroup, templateId: number, boxSize: number, boxHeight: number, walkAnimSpeed: number, weapon: MonsterEquipData | null, helmet: MonsterEquipData | null, armor: MonsterEquipData | null,
                 weaponSoundType: string, bodySoundType: string, parrySoundType: string | null, monsterSoundType: string, aaType: string | null, deathAnimSpeed: number = 2.5, attackSoundType: string | null = null, attackSoundProgress: number = 0.5) {
         this.id = id
         this.group = group
         this.templateId = templateId
-        this.name = name
         this.boxSize = boxSize
         this.walkAnimSpeed = walkAnimSpeed
         this.deathAnimSpeed = deathAnimSpeed
@@ -186,13 +188,12 @@ export const MonsterAATypes = {
 
 export const MonsterTypes = {
     // SKELETON MELEE
-    SKELETON: new MonsterType(1, MonsterGroups.SKELETON_MELEE, 1, 'Skeleton', 0.6, 1.8, 3, null, null, null, WeaponSoundTypes.BONE, BodySoundTypes.HARD, null, MonsterSoundTypes.SKELETON, null),
+    SKELETON: new MonsterType(1, MonsterGroups.SKELETON_MELEE, 1, 0.6, 1.8, 3, null, null, null, WeaponSoundTypes.BONE, BodySoundTypes.HARD, null, MonsterSoundTypes.SKELETON, null),
 
     SKELETON_FIGHTER: new MonsterType(
         2,
         MonsterGroups.SKELETON_MELEE,
         1,
-        'Skeleton Fighter',
         0.6,
         1.8,
         3,
@@ -210,7 +211,6 @@ export const MonsterTypes = {
         3,
         MonsterGroups.SKELETON_MELEE,
         1,
-        'Skeleton Warrior',
         0.6,
         1.8,
         3,
@@ -229,7 +229,6 @@ export const MonsterTypes = {
         20,
         MonsterGroups.SKELETON_RANGED,
         1,
-        'Skeleton Archer',
         0.6,
         1.8,
         3,
@@ -244,16 +243,15 @@ export const MonsterTypes = {
     ),
 
     // ZOMBIE
-    ZOMBIE_ROTTEN: new MonsterType(50, MonsterGroups.ZOMBIE, 11, 'Rotten Zombie', 0.6, 1.8, 2.2, null, null, null, WeaponSoundTypes.BONE, BodySoundTypes.HARD, null, MonsterSoundTypes.ZOMBIE, null),
-    ZOMBIE: new MonsterType(51, MonsterGroups.ZOMBIE, 12, 'Zombie', 0.6, 1.8, 2.2, null, null, null, WeaponSoundTypes.BONE, BodySoundTypes.HARD, null, MonsterSoundTypes.ZOMBIE, null),
-    ZOMBIE_MUTANT: new MonsterType(52, MonsterGroups.ZOMBIE, 13, 'Zombie Mutant', 0.7, 2, 2, null, null, null, WeaponSoundTypes.BONE, BodySoundTypes.HARD, null, MonsterSoundTypes.ZOMBIE, null),
+    ZOMBIE_ROTTEN: new MonsterType(50, MonsterGroups.ZOMBIE, 11, 0.6, 1.8, 2.2, null, null, null, WeaponSoundTypes.BONE, BodySoundTypes.HARD, null, MonsterSoundTypes.ZOMBIE, null),
+    ZOMBIE: new MonsterType(51, MonsterGroups.ZOMBIE, 12, 0.6, 1.8, 2.2, null, null, null, WeaponSoundTypes.BONE, BodySoundTypes.HARD, null, MonsterSoundTypes.ZOMBIE, null),
+    ZOMBIE_MUTANT: new MonsterType(52, MonsterGroups.ZOMBIE, 13, 0.7, 2, 2, null, null, null, WeaponSoundTypes.BONE, BodySoundTypes.HARD, null, MonsterSoundTypes.ZOMBIE, null),
 
     // WIGHTS
     WIGHT: new MonsterType(
         60,
         MonsterGroups.WIGHTS,
         31,
-        'Wight',
         0.6,
         2.8,
         2.2,
@@ -273,7 +271,6 @@ export const MonsterTypes = {
         61,
         MonsterGroups.WIGHTS,
         32,
-        'Wraith',
         0.6,
         2.8,
         2.2,
@@ -293,7 +290,6 @@ export const MonsterTypes = {
         62,
         MonsterGroups.WIGHTS,
         33,
-        'Wraith Lord',
         0.6,
         2.8,
         2.2,
@@ -314,7 +310,6 @@ export const MonsterTypes = {
         70,
         MonsterGroups.KOBOLDS,
         41,
-        'Kobold',
         0.6,
         1.8,
         2.8,
@@ -332,7 +327,6 @@ export const MonsterTypes = {
         71,
         MonsterGroups.KOBOLDS,
         42,
-        'Kobold Hunter',
         0.6,
         1.8,
         2.8,
@@ -347,13 +341,12 @@ export const MonsterTypes = {
     ),
 
     // WITHER MELEE
-    WITHER: new MonsterType(200, MonsterGroups.WITHER_MELEE, 21, 'Wither', 0.6, 1.8, 3.2, null, null, null, WeaponSoundTypes.BONE, BodySoundTypes.HARD, null, MonsterSoundTypes.SKELETON, null),
+    WITHER: new MonsterType(200, MonsterGroups.WITHER_MELEE, 21, 0.6, 1.8, 3.2, null, null, null, WeaponSoundTypes.BONE, BodySoundTypes.HARD, null, MonsterSoundTypes.SKELETON, null),
 
     WITHER_CHAMPION: new MonsterType(
         201,
         MonsterGroups.WITHER_MELEE,
         21,
-        'Wither Champion',
         0.6,
         1.8,
         3.2,
@@ -371,7 +364,6 @@ export const MonsterTypes = {
         202,
         MonsterGroups.WITHER_MELEE,
         21,
-        'Wither Knight',
         0.6,
         1.8,
         3.2,
@@ -388,11 +380,11 @@ export const MonsterTypes = {
     // WITHER RANGED
 
     // CAT TYPES
-    HOUSE_CAT: new MonsterType(1001, MonsterGroups.CAT, 1001, 'House Cat', 0.6, 1, 6, null, null, null, WeaponSoundTypes.BONE, BodySoundTypes.SOFT, null, MonsterSoundTypes.CAT, null),
+    HOUSE_CAT: new MonsterType(1001, MonsterGroups.CAT, 1001, 0.6, 1, 6, null, null, null, WeaponSoundTypes.BONE, BodySoundTypes.SOFT, null, MonsterSoundTypes.CAT, null),
 
-    WILD_CAT: new MonsterType(1002, MonsterGroups.CAT, 1001, 'Wild Cat', 0.6, 1, 6, null, null, null, WeaponSoundTypes.BONE, BodySoundTypes.SOFT, null, MonsterSoundTypes.CAT, null),
+    WILD_CAT: new MonsterType(1002, MonsterGroups.CAT, 1001, 0.6, 1, 6, null, null, null, WeaponSoundTypes.BONE, BodySoundTypes.SOFT, null, MonsterSoundTypes.CAT, null),
 
-    DEER: new MonsterType(1101, MonsterGroups.DEERS, 1101, 'Deer', 1, 1.8, 2.8, null, null, null, WeaponSoundTypes.BONE, BodySoundTypes.HARD, null, MonsterSoundTypes.DEER, null),
-    HIND: new MonsterType(1102, MonsterGroups.DEERS, 1102, 'Hind', 1, 1.8, 2.8, null, null, null, WeaponSoundTypes.BONE, BodySoundTypes.HARD, null, MonsterSoundTypes.DEER, null),
-    SHEEP: new MonsterType(1201, MonsterGroups.SHEEPS, 1201, 'Sheep', 0.6, 1, 4, null, null, null, WeaponSoundTypes.BONE, BodySoundTypes.SOFT, null, '', null),
+    DEER: new MonsterType(1101, MonsterGroups.DEERS, 1101, 1, 1.8, 2.8, null, null, null, WeaponSoundTypes.BONE, BodySoundTypes.HARD, null, MonsterSoundTypes.DEER, null),
+    HIND: new MonsterType(1102, MonsterGroups.DEERS, 1102, 1, 1.8, 2.8, null, null, null, WeaponSoundTypes.BONE, BodySoundTypes.HARD, null, MonsterSoundTypes.DEER, null),
+    SHEEP: new MonsterType(1201, MonsterGroups.SHEEPS, 1201, 0.6, 1, 4, null, null, null, WeaponSoundTypes.BONE, BodySoundTypes.SOFT, null, '', null),
 }

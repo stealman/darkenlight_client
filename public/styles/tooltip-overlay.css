@@ -176,3 +176,19 @@
 .ui-tooltip-row--training .ui-tooltip-row-value {
     color: rgb(var(--ui-accent-blue));
 }
+
+.ui-tooltip-row--undead .ui-tooltip-row-value {
+    color: rgb(var(--ui-item-special-stat));
+}
+
+.ui-tooltip-row--monster-tag .ui-tooltip-row-value {
+    color: rgb(var(--ui-dark));
+}
+
+.ui-tooltip-overlay .ui-tooltip-row--monster-category .ui-tooltip-row-label {
+    color: rgb(var(--ui-base));
+}
+
+.ui-tooltip-row--monster-category .ui-tooltip-row-value {
+    color: rgb(var(--ui-success));
+}

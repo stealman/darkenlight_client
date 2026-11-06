@@ -87,18 +87,30 @@ div#emeralds-info {
 }
 
 #system-buttons button,
-#system-buttons button * {
+#system-buttons button *,
+#gm-system-buttons button,
+#gm-system-buttons button * {
     cursor: url('/images/cursor-hover.png') 3 3, url('/images/cursor.png') 3 3, pointer;
 }
 
-#system-buttons .gm-panel-button {
+#gm-system-buttons {
+    position: fixed;
+    top: calc(var(--hud-minimap-size, 100px) + 12px);
+    right: max(5px, env(safe-area-inset-right));
+    z-index: 1000;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+#gm-system-buttons .gm-panel-button {
     min-height: 32px;
     box-sizing: border-box;
     padding: 4px 10px;
     font-size: 12px;
 }
 
-@media (pointer: coarse) { #system-buttons .gm-panel-button { min-height: 36px; } }
+@media (pointer: coarse) { #gm-system-buttons .gm-panel-button { min-height: 36px; } }
 
 button {
     font-size: 18px;

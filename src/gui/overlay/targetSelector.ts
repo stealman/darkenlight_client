@@ -99,7 +99,6 @@ export const TargetSelector = {
     target: null as Targetable | null,
     selectedTime: 0,
     markerPopTime: 0,
-    attackTargetActive: false,
     material: null as StandardMaterial | null,
     selectedMesh: null as Mesh | null,
     attackMesh: null as Mesh | null,
@@ -151,12 +150,10 @@ export const TargetSelector = {
         this.target = target
         this.selectedTime = Date.now()
         this.markerPopTime = this.selectedTime
-        this.attackTargetActive = false
     },
 
     unselectTarget() {
         this.target = null
-        this.attackTargetActive = false
         this.selectedMesh?.setEnabled(false)
         this.attackMesh?.setEnabled(false)
     },
@@ -183,13 +180,11 @@ export const TargetSelector = {
         if (this.target) {
             const attacking = MyPlayer.activeAction === CharacterActions.AUTO_ATTACK
                 && MyPlayer.myChar.autoAttackTarget === this.target
-            if (attacking && !this.attackTargetActive) this.markerPopTime = time
-            this.attackTargetActive = attacking
             const age = Math.max(0, time - this.markerPopTime)
             const intro = Math.pow(Math.max(0, 1 - age / INTRO_DURATION), 3)
             const scale = age < INTRO_DURATION
                 ? 1 + .65 * intro
-                : 1 + Math.sin(age / 650) * .025
+                : 1 + .075 * (1 - Math.cos((age - INTRO_DURATION) / (attacking ? 160 : 325)))
             const cell = attacking ? 2 : isPartyTarget(this.target) ? 3
                 : this.target.getRelationToMyPlayer() === 'ENEMY' ? 1 : 0
             this.updateMarker(this.selectedMesh, this.target, cell, time, scale, opacity, .5 * intro)
@@ -198,7 +193,8 @@ export const TargetSelector = {
         }
         const attackTarget = MyPlayer.myChar?.autoAttackTarget
         if (attackTarget && attackTarget !== this.target) {
-            this.updateMarker(this.attackMesh, attackTarget, 2, time, 1, opacity)
+            const scale = 1 + .075 * (1 - Math.cos(time / 160))
+            this.updateMarker(this.attackMesh, attackTarget, 2, time, scale, opacity)
         } else {
             this.attackMesh.setEnabled(false)
         }

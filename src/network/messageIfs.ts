@@ -569,3 +569,10 @@ export interface MonsterDangerChangedData {
     worldId: number
     monsters: Array<{id: number, skulls: number}>
 }
+
+export interface MonsterCatalogEntry {
+    type: number
+    name: string
+    category: string
+    tags: string[]
+}
