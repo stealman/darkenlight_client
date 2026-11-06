@@ -108,7 +108,7 @@
     />
 
     <InventoryDialog ref="inventoryDialog" v-show="displayInventoryDialog" @close="displayInventoryDialog = false" />
-    <CharacterDialog ref="characterDialog" v-show="displayCharacterDialog" @close="displayCharacterDialog = false" />
+    <CharacterDialog ref="characterDialog" v-show="displayCharacterDialog" :visible="displayCharacterDialog" @close="displayCharacterDialog = false" />
     <CraftingDialog v-if="displayCraftingDialog" ref="craftingDialog" @close="onCloseCraftingMenu" />
     <NpcUseDialog ref="npcUseDialog" v-show="displayNpcUseDialog" @close="displayNpcUseDialog = false" />
     <ContainerDialog v-show="displayContainerDialog" :visible="displayContainerDialog" @close="displayContainerDialog = false" />

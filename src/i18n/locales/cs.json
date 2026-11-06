@@ -1,4 +1,12 @@
 {
+  "chat": {
+    "public": "Public", "private": "Private", "party": "Party",
+    "send": "Odeslat", "placeholder": "Napiš zprávu…", "privatePlaceholder": "Jméno postavy: zpráva",
+    "hint": "Tab přepíná chaty · Enter odešle zprávu",
+    "privateHint": "Jméno: zpráva · ↑ / ↓ posledních 5 kontaktů · Tab přepíná chaty",
+    "empty": {"public": "Veřejný chat — zde uvidíš řeč postav ve svém okolí.", "private": "Soukromý chat — napiš jméno postavy a dvojtečku, nebo klikni na jméno ve zprávě.", "party": "Skupinový chat — zprávy uvidí všichni členové tvé party."},
+    "errors": {"self": "Sobě soukromou zprávu poslat nemůžeš.", "offline": "Postava {name} není online.", "noParty": "Nejsi členem žádné party.", "format": "Zadej jméno postavy, dvojtečku a zprávu.", "sendFailed": "Zprávu se nepodařilo uložit a odeslat. Zkus to znovu.", "historyFailed": "Soukromou historii se nepodařilo načíst.", "tooFast": "Zprávy odesíláš příliš rychle. Chvilku počkej."}
+  },
   "speech": {"placeholder": "Napiš zprávu…", "open": "Promluvit"},
   "party": {
     "lootRandomChoice": "P\u0159id\u011blit n\u00e1hodn\u011b",

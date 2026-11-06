@@ -77,11 +77,12 @@ export class OverlayLabels {
         if (!char || typeof data.text !== 'string' || !this.view.ctx) return
         const text = data.text.slice(0, 100).trim()
         if (!text) return
-        const ctx = this.view.ctx
-        ctx.save()
+        // Measure on the same kind of offscreen canvas used for rasterization.
+        // The mobile spacing correction belongs only to direct overlay text.
+        const {ctx} = createOverlayRaster(1, 1)
         ctx.font = `${Math.max(12, this.view.fontSize - 2)}px "Roboto", Arial, sans-serif`
-        const tightText = Math.abs(this.view.letterSpacingFix) > 0
-        const textWidth = (value: string) => CanvasTextUtils.getTextWidth(ctx, value, tightText, this.view.letterSpacingFix)
+        ctx.fontKerning = 'normal'
+        const textWidth = (value: string) => CanvasTextUtils.getTextWidth(ctx, value, false)
         const lines: string[] = []
         let line = ''
         // Prefer word boundaries; split oversized words by Unicode code point.
@@ -101,24 +102,23 @@ export class OverlayLabels {
             }
         }
         if (line) lines.push(line)
-        const width = Math.max(...lines.map(value => textWidth(value))) + 20
-        ctx.restore()
         const bubbles = this.speech.get(char) || []
-        bubbles.push({lines, width, height: 0, image: null, expiresAt: Date.now() + 3000 + (text.length - 1) * 3000 / 99})
+        bubbles.push({lines, width: 0, height: 0, image: null, expiresAt: Date.now() + 3000 + (text.length - 1) * 3000 / 99})
         this.prepareSpeechBubble(bubbles[bubbles.length - 1])
         this.speech.set(char, bubbles)
     }
 
     prepareSpeechBubble(bubble: SpeechBubble) {
         const size = Math.max(12, this.view.fontSize - 2)
-        const tightText = Math.abs(this.view.letterSpacingFix) > 0
-        const measureCtx = this.view.ctx!
-        measureCtx.save()
-        measureCtx.font = `${size}px "Roboto", Arial, sans-serif`
-        bubble.width = Math.max(...bubble.lines.map(line => CanvasTextUtils.getTextWidth(measureCtx, line, tightText, this.view.letterSpacingFix))) + 20
-        measureCtx.restore()
+        const {canvas, ctx} = createOverlayRaster(1, 1)
+        ctx.font = `${size}px "Roboto", Arial, sans-serif`
+        ctx.fontKerning = 'normal'
+        bubble.width = Math.max(...bubble.lines.map(line => CanvasTextUtils.getTextWidth(ctx, line, false))) + 20
         bubble.height = bubble.lines.length * (size + 4) + 14
-        const {canvas, ctx} = createOverlayRaster(bubble.width, bubble.height)
+        const dpr = window.devicePixelRatio || 1
+        canvas.width = Math.ceil(bubble.width * dpr)
+        canvas.height = Math.ceil(bubble.height * dpr)
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
         ctx.font = `${size}px "Roboto", Arial, sans-serif`
         ctx.fontKerning = 'normal'
         ctx.textBaseline = 'middle'
@@ -127,11 +127,9 @@ export class OverlayLabels {
         ctx.roundRect(0, 0, bubble.width, bubble.height, 8)
         ctx.fill()
         ctx.fillStyle = '#e9dabe'
+        ctx.textAlign = 'center'
         bubble.lines.forEach((line, index) => {
-            const width = CanvasTextUtils.getTextWidth(ctx, line, tightText, this.view.letterSpacingFix)
-            ctx.textAlign = tightText ? 'left' : 'center'
-            CanvasTextUtils.drawText(ctx, line, tightText ? (bubble.width - width) / 2 : bubble.width / 2,
-                7 + (index + .5) * (size + 4), tightText, this.view.letterSpacingFix)
+            ctx.fillText(line, bubble.width / 2, 7 + (index + .5) * (size + 4))
         })
         bubble.image = canvas
     }

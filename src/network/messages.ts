@@ -6,6 +6,16 @@ export interface Message {
     d: any
 }
 
+export class ChatSendMsg implements Message {
+    t = 75
+    constructor(public d: {channel: 'private' | 'party', text: string, to?: string}) {}
+}
+
+export class ChatHistoryMsg implements Message {
+    t = 76
+    d = {}
+}
+
 export class LoginMsg {
     t: number = 1
     login: string

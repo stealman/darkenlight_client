@@ -1,4 +1,6 @@
 import {PartyManager} from '@/data/partyManager'
+import {ChatManager} from '@/data/chatManager'
+import {ChatHistoryMsg} from '@/network/messages'
 import { Vector3 } from '@babylonjs/core'
 import { Utils } from '@/utils/utils'
 import Character from '@/babylon/character/character'
@@ -85,6 +87,8 @@ export const MyPlayer = {
         this.myChar.pos.y = Utils.calculateWalkYPos(this.myChar.pos.x, this.myChar.pos.z, this.myChar.getBoxSize())
         this.myChar.logicYpos = this.myChar.pos.y
         this.myCharRef.value = this.myChar
+        ChatManager.initialize(this.myChar.id, this.myChar.name)
+        Connector.sendMessage(new ChatHistoryMsg())
         this.isDead.value = this.myChar.dead
         if (this.isDead.value) {
             const deathAt = Number.isFinite(charData.dat) ? charData.dat : Date.now()

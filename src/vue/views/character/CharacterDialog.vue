@@ -20,11 +20,11 @@
             </div>
         </template>
 
-        <div class="inventory-content-shell character-content-shell">
+        <div class="inventory-content-shell character-content-shell" :class="{'chat-content-shell': activeTabId === 'chat'}">
             <CharacterOverviewTab v-if="activeTabId === 'character'" />
             <CharacterActionsTab v-else-if="activeTabId === 'actions'" ref="characterActionsTabRef" />
             <CharacterSkillsTab v-else-if="activeTabId === 'skills'" />
-            <CharacterChatTab v-else-if="activeTabId === 'chat'" />
+            <CharacterChatTab v-else-if="activeTabId === 'chat'" :visible="visible" />
         </div>
     </GameDialog>
 </template>
@@ -42,6 +42,7 @@ import { MyPlayer } from '@/data/myPlayer'
 import type {SkillKey} from '@/network/messageIfs'
 
 const emit = defineEmits(['close'])
+defineProps<{visible?: boolean}>()
 const { t } = useI18n()
 const myChar = MyPlayer.myCharRef
 
@@ -114,6 +115,8 @@ defineExpose({
     padding: 0 4px 4px;
     box-sizing: border-box;
 }
+
+.chat-content-shell { display: flex; }
 
 .tab-item--training-available label {
     animation: character-skill-training-available-pulse 1.8s ease-in-out infinite;

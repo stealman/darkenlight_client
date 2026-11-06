@@ -13,6 +13,7 @@ import { WeatherManager } from '@/babylon/world/weather/weatherManager'
 import { StepMarksRenderer } from '@/babylon/world/stepMarksRenderer'
 import { GMSpawns } from '@/gm/GmSpawns'
 import { MyPlayer } from '@/data/myPlayer'
+import {ChatManager} from '@/data/chatManager'
 import { FightSplatsRenderer } from '@/babylon/world/fightSplatsRenderer'
 import { GameManager } from '@/GameManager'
 import { CharacterManager } from '@/babylon/character/characterManager'
@@ -97,7 +98,11 @@ export const MessageProcessor = {
                     OverlayManager.addMonsterAggroAlert(msg.d)
                     break
                 case 95:
+                    ChatManager.speech(msg.d)
                     OverlayManager.addSpeech(msg.d)
+                    break
+                case 100:
+                    ChatManager.receive(msg.d)
                     break
                 case 94:
                     if (MyPlayer.myCharRef.value) MyPlayer.myCharRef.value.monsterKnowledge = msg.d

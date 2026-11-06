@@ -558,6 +558,24 @@ export interface MonsterKnowledgeTO {
 export interface CharacterSpeechData {
     id: number
     text: string
+    name: string
+    time: number
+}
+
+export interface ChatEntry {
+    id: string
+    channel: 'public' | 'private' | 'party'
+    from: string
+    to?: string
+    text: string
+    time: number
+}
+
+export interface ChatPacketData {
+    entry?: ChatEntry
+    history?: ChatEntry[]
+    error?: string
+    name?: string
 }
 
 export interface MonsterAggroAlertData {

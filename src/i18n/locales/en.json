@@ -1,4 +1,12 @@
 {
+  "chat": {
+    "public": "Public", "private": "Private", "party": "Party",
+    "send": "Send", "placeholder": "Write a message…", "privatePlaceholder": "Character name: message",
+    "hint": "Tab switches channels · Enter sends",
+    "privateHint": "Name: message · ↑ / ↓ last 5 contacts · Tab switches channels",
+    "empty": {"public": "Public chat — speech from characters nearby appears here.", "private": "Private chat — type a character name and colon, or click a name in a message.", "party": "Party chat — messages are shared with every member of your party."},
+    "errors": {"self": "You cannot send a private message to yourself.", "offline": "Character {name} is not online.", "noParty": "You are not in a party.", "format": "Enter a character name, colon and message.", "sendFailed": "Could not save and send the message. Please try again.", "historyFailed": "Could not load private chat history.", "tooFast": "You are sending messages too quickly. Please wait a moment."}
+  },
   "speech": {"placeholder": "Say something?", "open": "Speak"},
   "party": {
     "lootRandomChoice": "Assign randomly",

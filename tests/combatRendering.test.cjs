@@ -410,10 +410,11 @@ test('speech, healing and NPC labels reuse rasters and invalidate text caches', 
     let allocations = 0
     const draws = []
     const strokedText = []
+    const filledText = []
     const makeContext = () => ({
         save() {}, restore() {}, setTransform() {},
         beginPath() { paints++ }, roundRect() { paints++ }, rect() { paints++ }, fill() { paints++ },
-        strokeText(text) { paints++; strokedText.push(text) }, fillText() { paints++ },
+        strokeText(text) { paints++; strokedText.push(text) }, fillText(text) { paints++; filledText.push(text) },
         measureText(text) { return {width: text.length * 8} },
         createLinearGradient() { return {addColorStop() {}} },
         drawImage(...args) { draws.push(args) },
@@ -429,12 +430,15 @@ test('speech, healing and NPC labels reuse rasters and invalidate text caches', 
     }
     const {OverlayLabels} = loadModule('gui/overlay/overlayLabels.ts', dependencies, {now: () => 1000}, globals)
     const {OverlayIndicators} = loadModule('gui/overlay/overlayIndicators.ts', dependencies, Date, globals)
-    const view = {ctx: makeContext(), canvas: {clientWidth: 800}, fontSize: 14, letterSpacingFix: 0}
+    const view = {ctx: makeContext(), canvas: {clientWidth: 800}, fontSize: 14, letterSpacingFix: -20}
+    view.ctx.measureText = () => { throw new Error('Raster text must not be measured on the overlay') }
     const overlay = new OverlayLabels(view)
     const indicators = new OverlayIndicators(view)
     overlay.addSpeech({id: 1, text: 'Hello there'})
     const bubble = overlay.speech.get(char)[0]
     assert.ok(bubble.image)
+    assert.equal(bubble.width, 108)
+    assert.equal(filledText.at(-1), 'Hello there')
     const speechPaints = paints
     overlay.renderSpeech(1100)
     overlay.renderSpeech(1200)
@@ -443,6 +447,12 @@ test('speech, healing and NPC labels reuse rasters and invalidate text caches', 
     overlay.renderSpeech(bubble.expiresAt + 1)
     assert.equal(overlay.speech.size, 0)
     assert.equal(draws.length, 2)
+
+    overlay.addSpeech({id: 1, text: 'W'.repeat(60)})
+    const longBubble = overlay.speech.get(char)[0]
+    assert.deepEqual(Array.from(longBubble.lines, line => line.length), [27, 27, 6])
+    assert.equal(longBubble.width, 236)
+    overlay.speech.clear()
 
     indicators.prepareHealingAtlas()
     const healingPaints = paints
