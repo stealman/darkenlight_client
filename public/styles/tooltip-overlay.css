@@ -89,15 +89,24 @@
 }
 
 .ui-tooltip-title-meta--fighter {
+    --ui-text-gradient-accent: var(--ui-accent-red);
     color: rgb(var(--ui-accent-red));
 }
 
-.ui-tooltip-title-meta--adept {
+.ui-tooltip-title-meta--adept,
+.ui-tooltip-title-meta--mystic {
+    --ui-text-gradient-accent: var(--ui-accent-purple);
     color: rgb(var(--ui-accent-purple));
 }
 
 .ui-tooltip-title-meta--gm {
+    --ui-text-gradient-accent: var(--ui-base);
     color: rgb(var(--ui-base));
+}
+
+.ui-tooltip-title-meta--character-class.ui-text-gradient {
+    --ui-text-gradient-bottom: rgba(var(--ui-text-gradient-accent), var(--ui-text-gradient-accent-bottom-opacity));
+    --ui-text-gradient-top: rgb(var(--ui-text-gradient-accent));
 }
 
 .ui-tooltip-top-right {

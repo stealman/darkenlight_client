@@ -64,7 +64,7 @@ export const MyStatusPanel = {
         }
 
         this.nameEl = document.createElement('span')
-        this.nameEl.className = 'myName'
+        this.nameEl.className = 'myName ui-text-gradient ui-text-gradient--no-shadow'
 
         const hpRow = document.createElement('div')
         hpRow.className = 'statusRow statusRowMain'
@@ -353,9 +353,9 @@ export const MyStatusPanel = {
         return {
             title: myChar?.name ?? '',
             titleMeta: gameClass ? (localizedClassName === classLocalizationKey ? gameClass.name : localizedClassName) : null,
-            titleClassName: 'ui-tooltip-title--character-name',
+            titleClassName: 'ui-tooltip-title--character-name ui-text-gradient',
             titleMetaClassName: gameClassKey
-                ? `ui-tooltip-title-meta--character-class ui-tooltip-title-meta--${gameClassKey}`
+                ? `ui-tooltip-title-meta--character-class ui-text-gradient ui-text-gradient--accent ui-tooltip-title-meta--${gameClassKey}`
                 : null,
             rows,
         }

@@ -157,6 +157,13 @@ export const GuiButtonsManager = {
 
     updatePositions() {
         document.documentElement.style.setProperty('--hud-dock-button-size', `${this.dockButtonSize}px`)
+        const dock = document.getElementById('gui-buttons')
+        if (dock) {
+            dock.classList.toggle('gui-buttons--touch', Settings.isPhoneOrTablet())
+            dock.style.setProperty('--hud-joystick-left', `${Settings.joystickLeft}px`)
+            dock.style.setProperty('--hud-joystick-bottom', `${Settings.joystickBottom}px`)
+            dock.style.setProperty('--hud-joystick-size', `${Settings.joystickSize}px`)
+        }
         const speech = document.getElementById('btn-speech')
         if (speech) {
             speech.style.width = `${this.dockButtonSize}px`

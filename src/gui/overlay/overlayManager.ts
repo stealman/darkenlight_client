@@ -1,5 +1,6 @@
-import { Targetable, TargetingManager } from '@/gui/targettingManager'
-import { Renderer } from '@/babylon/scene/renderer'
+import type { Targetable } from '@/gui/targettingManager'
+// Keep the existing initialization order of the targeting/character modules.
+import '@/gui/targettingManager'
 import { Vector3 } from '@babylonjs/core'
 import { CanvasTextUtils } from '@/gui/canvasTextUtils'
 import { MonsterManager } from '@/babylon/monsters/monsterManager'
@@ -13,6 +14,7 @@ import { GroundItemsManager } from '@/babylon/world/groundItemsManager'
 import { Item } from '@/data/items/item'
 import { CharacterActions } from '@/data/actions/characterActions'
 import { TargetSelector } from '@/gui/overlay/targetSelector'
+import { isPartyTarget, PARTY_TARGET_COLOR } from '@/gui/overlay/partyTarget'
 import { DamageNumber } from '@/gui/overlay/damageNumber'
 import { EmeraldGainNumber } from '@/gui/overlay/emeraldGainNumber'
 import { ItemGainNumber } from '@/gui/overlay/itemGainNumber'
@@ -60,8 +62,6 @@ export const OverlayManager = {
     animatedHpBars: new WeakMap<object, AnimatedHpBar>(),
     temporaryNameFadeStates: new WeakMap<object, TemporaryNameFadeState>(),
     speech: new Map<Character, SpeechBubble[]>(),
-    cameraOrigin: Vector3.Zero(),
-    cameraPosition: Vector3.Zero(),
 
     async initialize() {
         this.overlayCanvas = document.getElementById('overlayCanvas') as HTMLCanvasElement
@@ -74,6 +74,7 @@ export const OverlayManager = {
             this.iconStyleUnsubscribe = UiIconManager.onStyleChanged(() => this.refreshIconSources())
         }
         this.reset()
+        TargetSelector.initialize()
     },
 
     refreshIconSources() {
@@ -97,6 +98,10 @@ export const OverlayManager = {
 
     targetSelected(target: Targetable) {
         TargetSelector.selectTarget(target)
+    },
+
+    updateTargetMarkers(time: number, opacity: number) {
+        TargetSelector.onFrame(time, opacity)
     },
 
     unselectTarget() {
@@ -145,7 +150,6 @@ export const OverlayManager = {
             this.setBloodyInnerGlow(MyPlayer.myChar.hpPercent, time)
         }
 
-        TargetSelector.onFrame(timeRate, time, this.overlayCtx!)
         this.renderNames(time, Math.abs(this.letterSpacingFix) > 0)
         this.renderDamageNumbers(time)
         this.renderEmeraldGainNumbers(time)
@@ -153,7 +157,6 @@ export const OverlayManager = {
         this.renderDamagedBars(time)
         this.renderHealingMarkers(time)
         this.renderSpeech(time)
-        this.renderAttackTargetIndicator(time)
         GmOreTierOverlay.onFrame(this.overlayCtx!)
     },
 
@@ -581,32 +584,7 @@ export const OverlayManager = {
         }
     },
 
-    renderAttackTargetIndicator(actualTime) {
-        if (MyPlayer.myChar.autoAttackTarget && TargetingManager.selectedTarget !== MyPlayer.myChar.autoAttackTarget
-            && TargetingManager.isTargetVisible(MyPlayer.myChar.autoAttackTarget)) {
-            const screenPos = MyPlayer.myChar.autoAttackTarget.getPositionOnScreen()
-            const sprite = TargetingManager.getTargetSpriteEnemyAttackTarget()
-            if (sprite && screenPos) {
-                const x = Math.round(screenPos.x)
-                const y = Math.round(screenPos.y)
 
-                const camWorldMatrix = Renderer.camera!.getWorldMatrix()
-                Vector3.TransformCoordinatesToRef(this.cameraOrigin, camWorldMatrix, this.cameraPosition)
-                const targetPosition = MyPlayer.myChar.autoAttackTarget.pos
-                const distanceFromCam = Math.hypot(
-                    this.cameraPosition.x - targetPosition.x,
-                    this.cameraPosition.y - targetPosition.y,
-                    this.cameraPosition.z - targetPosition.z,
-                )
-                const scale = (20 / distanceFromCam) * (Math.sin(actualTime / 250) * 0.2 + 1)
-
-                const w = sprite.width * scale
-                const h = sprite.height * scale
-
-                this.overlayCtx!.drawImage(sprite, x - w / 2, y - h / 2, w, h)
-            }
-        }
-    },
 
     renderDamagedBar(pos: Vector3, percent: number, enemy: boolean) {
         if (!Number.isFinite(pos.x) || !Number.isFinite(pos.y) || !Number.isFinite(percent)) {
@@ -732,7 +710,8 @@ export const OverlayManager = {
                 time,
                 selected ? TargetSelector.selectedTime : time,
             )
-            this.renderScaledOutlinedText(basePos.x, currentTextY, name, tightText, char.getRelationToMyPlayer(), nameFontSize, scale, alpha)
+            this.renderScaledOutlinedText(basePos.x, currentTextY, name, tightText, char.getRelationToMyPlayer(), nameFontSize, scale, alpha,
+                true, isPartyTarget(char) ? PARTY_TARGET_COLOR : null)
             currentTextY += actionName ? nameFontSize / 2 + actionFontSize / 2 + 6 : 0
         }
 
@@ -771,16 +750,17 @@ export const OverlayManager = {
         scale: number,
         alpha: number,
         useGradient: boolean = true,
+        color: string | null = null,
     ) {
         if (scale === 1) {
-            this.renderOutlinedText(x, y, text, tightText, relation, fontSize, undefined, alpha, null, useGradient)
+            this.renderOutlinedText(x, y, text, tightText, relation, fontSize, undefined, alpha, color, useGradient)
             return
         }
         const ctx = this.overlayCtx!
         ctx.save()
         ctx.translate(x, y)
         ctx.scale(scale, scale)
-        this.renderOutlinedText(0, 0, text, tightText, relation, fontSize, undefined, alpha, null, useGradient)
+        this.renderOutlinedText(0, 0, text, tightText, relation, fontSize, undefined, alpha, color, useGradient)
         ctx.restore()
     },
 

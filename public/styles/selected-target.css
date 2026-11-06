@@ -3,9 +3,9 @@ div#selectedTargetPanel {
     top: 0;
     right: calc(var(--hud-minimap-size, 100px) + 3px);
     left: auto;
-    width: clamp(112px, 25%, 260px);
-    max-width: 260px;
-    height: 28px;
+    width: clamp(112px, 25%, var(--hud-status-max-width, 260px));
+    max-width: var(--hud-status-max-width, 260px);
+    height: var(--hud-target-panel-height, 28px);
     box-sizing: border-box;
     padding: 3px 6px;
     pointer-events: auto;
@@ -44,7 +44,7 @@ div#selectedTargetPanel {
 
 #selectedTargetPanel .hpBlocks{
     position: absolute;
-    inset: auto 6px 4px;
+    inset: auto 6px var(--hud-target-hp-bottom, 4px);
     z-index: 1;
     pointer-events: none;
 
@@ -62,22 +62,24 @@ div#selectedTargetPanel {
 
 #selectedTargetPanel .targetName {
     position: absolute;
-    top: 4px;
-    left: 8px;
+    top: var(--hud-target-name-top, 4px);
+    left: var(--hud-target-name-left, 8px);
     right: 8px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     text-align: left;
     z-index: 2;
-    font-size: clamp(10px, 1.4vh, 13px);
+    font-size: var(--hud-target-name-size, clamp(10px, 1.4vh, 13px));
     color: rgb(var(--ui-base));
-    line-height: 1;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, .75);
+    line-height: var(--hud-target-name-line-height, 1);
+    text-shadow: none;
     letter-spacing: .03em;
 }
 
 #selectedTargetPanel.enemy .targetName {
+    --ui-text-gradient-bottom: rgba(var(--ui-danger), var(--ui-text-gradient-accent-bottom-opacity));
+    --ui-text-gradient-top: rgb(var(--ui-danger));
     color: rgb(var(--ui-danger));
 }
 
@@ -124,4 +126,4 @@ div#selectedTargetPanel {
     background: rgba(25, 128, 128, 0.5);
 }
 
-#selectedTargetPanel .hpBlocks{ height: 4px; }
+#selectedTargetPanel .hpBlocks{ height: var(--hud-target-hp-height, 4px); }

@@ -44,7 +44,7 @@ export const SelectedTargetPanel = {
         }
 
         this.nameEl = document.createElement('span')
-        this.nameEl.className = 'targetName'
+        this.nameEl.className = 'targetName ui-text-gradient ui-text-gradient--no-shadow'
 
         this.panel.appendChild(hpBlocks)
         this.panel.appendChild(this.nameEl)

@@ -3,7 +3,7 @@ div#myStatusPanel {
     top: 0px;
     left: 0px;
     width: 25%;
-    max-width: 260px;
+    max-width: var(--hud-status-max-width, 260px);
     pointer-events: none;
     align-items: stretch;
     justify-content: flex-start;
@@ -16,7 +16,7 @@ div#myStatusPanel {
 #myStatusPanel .myStatusPanelBody {
     position: relative;
     width: 100%;
-    min-height: clamp(42px, 5.1vh, 54px);
+    min-height: var(--hud-player-panel-height, clamp(42px, 5.1vh, 54px));
     box-sizing: border-box;
     padding: 5px 6px 6px;
     display: flex;
@@ -64,15 +64,16 @@ div#myStatusPanel {
 #myStatusPanel .statusRowMain {
     display: grid;
     grid-template-columns: minmax(0, 1fr) fit-content(55%);
-    align-content: start;
-    align-items: start;
+    align-content: var(--hud-player-main-align, start);
+    align-items: var(--hud-player-main-align, start);
+    padding-bottom: var(--hud-player-main-bottom-space, 0px);
     gap: 3px;
     flex: 1 1 auto;
     min-height: 23px;
 }
 
 #myStatusPanel .statusRowSecondary {
-    flex: 0 0 5px;
+    flex: 0 0 var(--hud-secondary-bar-height, 5px);
     gap: 4px;
     padding: 0 0 0 0;
     justify-content: flex-start;
@@ -97,7 +98,7 @@ div#myStatusPanel {
 
 #myStatusPanel .myName {
     text-align: left;
-    font-size: clamp(10px, 1.6vh, 15px);
+    font-size: var(--hud-player-name-size, clamp(10px, 1.6vh, 15px));
     position: relative;
     max-width: calc(100% - 2px);
     overflow: hidden;
@@ -105,15 +106,15 @@ div#myStatusPanel {
     text-overflow: ellipsis;
     z-index: 2;
     line-height: 1;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, .75);
+    text-shadow: none;
     letter-spacing: .03em;
     color: rgb(var(--ui-base));
 }
 
 #my-status-currency-host { position: relative; z-index: 2; min-width: 0; }
 #my-status-currency-host #emeralds-info { position: static; display: flex; align-items: center; justify-content: flex-end; gap: 2px; padding: 0; width: auto; max-width: 100%; line-height: 1; }
-#my-status-currency-host #emeralds-info-count { font-size: clamp(9px, 1.3vh, 12px); letter-spacing: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-#my-status-currency-host #emeralds-info-icon { width: 10px; height: 10px; flex-shrink: 0; }
+#my-status-currency-host #emeralds-info-count { font-size: var(--hud-currency-font-size, clamp(9px, 1.3vh, 12px)); letter-spacing: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#my-status-currency-host #emeralds-info-icon { width: var(--hud-currency-icon-size, 10px); height: var(--hud-currency-icon-size, 10px); flex-shrink: 0; }
 
 #myStatusPanel .hpBlocks{
     position: absolute;
@@ -164,7 +165,7 @@ div#myStatusPanel {
     border-color: rgba(32, 32, 32, 0.5);
 }
 
-#myStatusPanel .hpBlocks{ height: 7px; }
+#myStatusPanel .hpBlocks{ height: var(--hud-player-hp-height, 7px); }
 
 #myStatusPanel .secondaryBar {
     position: relative;
@@ -274,7 +275,7 @@ div#myStatusPanel {
 #myStatusPanel .affectIcon.adverse {
     background: linear-gradient(135deg, rgba(200, 130, 130, 0.3), rgba(145, 64, 64, 0.4));
     border: 0 solid transparent;
-    border-image: var(--gui-selected) 18 / 2px / 0 stretch;
+    border-image: var(--gui-button) 18 / 2px / 0 stretch;
     box-shadow:
         inset 0 0 0.35vh rgba(45, 0, 0, 0.45),
         0 0 0.35vh rgba(120, 30, 30, 0.18);

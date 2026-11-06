@@ -223,6 +223,7 @@ export const Renderer = {
             GfxManager.onFrame(actualTime)
             ArrowsManager.onFrame(timeRate, actualTime)
             TargetingManager.onFrame(timeRate, actualTime)
+            OverlayManager.updateTargetMarkers(actualTime, Settings.targetMarkerOpacity)
             OnScreenMessageManager.onFrame(actualTime)
             if (!Settings.isDetalLevelLow()) {
                 OverlayManager.onFrame(timeRate, actualTime)

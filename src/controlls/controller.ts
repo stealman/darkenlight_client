@@ -137,6 +137,7 @@ export const Controller = {
         }
 
         const checkActor = (actor: Targetable, position: Vector3) => {
+            if (actor === MyPlayer.myChar) return
             const halfSize = Math.max(0.35, actor.getBoxSize() / 2)
             this.hoverMin.set(position.x - halfSize, position.y, position.z - halfSize)
             this.hoverMax.set(position.x + halfSize, position.y + actor.getModelHeight(), position.z + halfSize)
@@ -154,9 +155,6 @@ export const Controller = {
         for (const id of CharacterManager.visibleCharacters) {
             const char = CharacterManager.characters.get(id)
             if (char?.model?.initialized) checkActor(char, char.model.node.position)
-        }
-        if (MyPlayer.myChar?.model?.initialized) {
-            checkActor(MyPlayer.myChar, MyPlayer.myChar.model.node.position)
         }
         for (const id of NpcManager.visibleNpcs) {
             const npc = NpcManager.npcs.get(id)

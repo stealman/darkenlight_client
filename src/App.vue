@@ -8,7 +8,7 @@
             <PartyPanel v-if="gameSessionActive" />
             <SpeechInput v-if="gameSessionActive" />
             <div id="system-buttons">
-                <button type="button" class="hud-settings-button" :class="{ 'hud-settings-button--with-chat': speechButtonVisible }" :aria-label="t('app.settings')" :title="t('app.settings')" @click="showSettingsDialog()" v-html="getSettingsSvg('', 'icon-settings')"></button>
+                <button type="button" class="hud-settings-button" :aria-label="t('app.settings')" :title="t('app.settings')" @click="showSettingsDialog()" v-html="getSettingsSvg('', 'icon-settings')"></button>
                 <div v-if="myCharRef?.className === 'GM'" @click="showDebug" v-html="getInspectSvg('icon-white', 'icon-inspect')"></div>
                 <button v-if="myCharRef?.className === 'GM'" class="gm-panel-button" @click="toggleGmPanel()">{{ t('app.gmPanel') }}</button>
             </div>
@@ -53,7 +53,7 @@
     <div class="dialog-backdrop login-screen-backdrop loading-dialog-backdrop" v-if="gameLoading">
         <div class="dialog-window adaptive">
             <div class="dialog-surface">
-                <div class="dialog-header">{{ t('common.loading') }}</div>
+                <div class="dialog-header"><span class="ui-text-gradient">{{ t('common.loading') }}</span></div>
                 <div class="dialog-content dialog-content--modal loading-dialog-content">
                     <div class="loading-dialog-phase">{{ t(loadingPhaseKey) }}</div>
                     <div class="loading-progress-track" role="progressbar" :aria-valuenow="loadingProgress" aria-valuemin="0" aria-valuemax="100">
@@ -114,7 +114,7 @@
     <div class="dialog-backdrop death-dialog-backdrop" v-if="isDead">
         <div class="dialog-window adaptive">
             <div class="dialog-surface">
-                <div class="dialog-header text-warning">{{ t('death.title') }}</div>
+                <div class="dialog-header text-warning"><span class="ui-text-gradient ui-text-gradient--accent" style="--ui-text-gradient-accent: var(--ui-danger)">{{ t('death.title') }}</span></div>
                 <div class="dialog-content death-dialog-content" style="text-align: center;">
                     <div>{{ t('death.description') }}</div>
                     <div class="dialog-actions death-dialog-actions">
@@ -133,7 +133,7 @@
     <div class="dialog-backdrop death-dialog-backdrop" v-if="gmDeleteConfirmationVisible" @click.self="GMManager.closeDeleteConfirmation()">
         <div class="dialog-window adaptive">
             <div class="dialog-surface">
-                <div class="dialog-header text-warning">{{ gmDeleteConfirmationTitle }}</div>
+                <div class="dialog-header text-warning"><span class="ui-text-gradient ui-text-gradient--accent" style="--ui-text-gradient-accent: var(--ui-danger)">{{ gmDeleteConfirmationTitle }}</span></div>
                 <div class="dialog-content dialog-content--modal" style="text-align: center;">
                     <div>{{ gmDeleteConfirmationMessage }}</div>
                     <div class="dialog-actions" style="margin-top: 20px;">
@@ -148,7 +148,7 @@
     <div class="dialog-backdrop" v-if="displayRestartPrompt" @click.self="displayRestartPrompt = false">
         <div class="dialog-window adaptive">
             <div class="dialog-surface">
-                <div class="dialog-header">{{ t('app.restartGame') }}</div>
+                <div class="dialog-header"><span class="ui-text-gradient">{{ t('app.restartGame') }}</span></div>
                 <div class="dialog-content dialog-content--modal">
                     {{ t('app.restartPrompt') }}
                     <div class="dialog-actions" style="margin-top: 20px;">
@@ -163,7 +163,7 @@
     <div v-if="displayErrorDialog" class="dialog-backdrop inventory-dialog-backdrop">
         <div class="dialog-window adaptive">
             <div class="dialog-surface">
-                <div class="dialog-header text-warning">{{ t('app.errorTitle') }}</div>
+                <div class="dialog-header text-warning"><span class="ui-text-gradient ui-text-gradient--accent" style="--ui-text-gradient-accent: var(--ui-danger)">{{ t('app.errorTitle') }}</span></div>
                 <div class="dialog-content dialog-content--modal" style="text-align: center;">
                     <div>{{ errorDialogMessage }}</div>
 

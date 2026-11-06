@@ -36,6 +36,28 @@
     --dialog-bg-darker: rgba(0, 0, 0, .15);
 }
 
+/* The chosen control mode takes precedence over physical screen/touch support. */
+@media (min-width: 1280px) and (min-height: 600px) {
+    :root:has(#gui-buttons:not(.gui-buttons--touch)) {
+        --hud-status-max-width: 360px;
+        --hud-player-panel-height: 64px;
+        --hud-target-panel-height: calc(var(--hud-player-panel-height) - var(--hud-secondary-bar-height) - 4px);
+        --hud-player-name-size: 18px;
+        --hud-target-name-size: var(--hud-player-name-size);
+        --hud-target-name-top: 5px;
+        --hud-target-name-left: 6px;
+        --hud-target-name-line-height: calc(var(--hud-target-panel-height) - 5px - 6px - var(--hud-player-main-bottom-space));
+        --hud-target-hp-bottom: 6px;
+        --hud-currency-font-size: 16px;
+        --hud-currency-icon-size: 19px;
+        --hud-player-main-align: center;
+        --hud-player-main-bottom-space: 12px;
+        --hud-player-hp-height: 9px;
+        --hud-secondary-bar-height: 7px;
+        --hud-target-hp-height: var(--hud-player-hp-height);
+    }
+}
+
 :root .dialog-window {
     background: var(--gui-surface) repeat;
     background-attachment: scroll;

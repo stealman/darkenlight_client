@@ -1,7 +1,9 @@
 import { Renderer } from '@/babylon/scene/renderer'
 import { ViewportManager } from '@/utils/viewport'
 import { OverlayManager } from '@/gui/overlay/overlayManager'
-import { Targetable, TargetingManager } from '@/gui/targettingManager'
+import type { Targetable } from '@/gui/targettingManager'
+// Preserve module evaluation order in the character/NPC dependency cycle.
+import '@/gui/targettingManager'
 import { MyPlayer } from '@/data/myPlayer'
 import { Settings } from '@/settings/settings'
 import { Connector } from '@/network/connector'
@@ -94,7 +96,6 @@ export const GameManager = {
         ViewportManager.onResize()
         ActionButtonsManager.renderActionButtons()
         MyStatusPanel.onResize()
-        TargetingManager.prepareTargetSprites()
     }
 }
 

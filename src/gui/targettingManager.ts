@@ -17,9 +17,6 @@ import {ref} from 'vue'
 export const TargetingManager = {
     selectedTarget: null as Targetable | null,
     selectedCharacterId: ref<number | null>(null),
-    targetSpriteEnemy: null as HTMLCanvasElement,
-    targetSpriteEnemyAttackTarget: null as HTMLCanvasElement,
-    targetSpriteAlly: null as HTMLCanvasElement,
 
     targetCycleIndex: -1,
     lastCycleTime: 0 as number,
@@ -29,7 +26,6 @@ export const TargetingManager = {
     lastAutoTargetTime: 0 as number,
 
     async initialize() {
-        this.prepareTargetSprites()
         this.selectedTarget = null
         this.selectedCharacterId.value = null
         this.autoTargetingEnabled = Settings.autoTarget
@@ -263,99 +259,8 @@ export const TargetingManager = {
         OverlayManager.unselectTarget()
     },
 
-    getTargetSpriteEnemy(): HTMLCanvasElement | null {
-        return this.targetSpriteEnemy
-    },
-
-    getTargetSpriteAlly(): HTMLCanvasElement | null {
-        return this.targetSpriteAlly
-    },
-
-    getTargetSpriteEnemyAttackTarget(): HTMLCanvasElement | null {
-        return this.targetSpriteEnemyAttackTarget
-    },
-
     resetCycleIndex() {
         this.targetCycleIndex = -1
-    },
-
-    prepareTargetSprites(): HTMLCanvasElement {
-        if (this.targetSpriteEnemy != null) {
-            this.targetSpriteEnemy.remove()
-        }
-        this.targetSpriteEnemy = this.createTargetSprites('#f08f56')
-        if (this.targetSpriteAlly != null) {
-            this.targetSpriteAlly.remove()
-        }
-        this.targetSpriteAlly = this.createTargetSprites('#56baff')
-        if (this.targetSpriteEnemyAttackTarget != null) {
-            this.targetSpriteEnemyAttackTarget.remove()
-        }
-        this.targetSpriteEnemyAttackTarget = this.createTargetSprites('#ff4444')
-
-        return this.targetSpriteEnemyAttackTarget
-    },
-
-    createTargetSprites(color: string): HTMLCanvasElement {
-        const sprite = document.createElement('canvas')
-        const dpr = window.devicePixelRatio || 1
-        const size = 16 / dpr
-        const gap = 40 / dpr
-        const margin = 12 / dpr
-        const visibleLineLength = margin / 2
-
-        sprite.width = gap + size + margin
-        sprite.height = size * 2 + margin
-
-        const ctx = sprite.getContext('2d')!
-        const markerOpacity = Math.max(0, Number.isFinite(Settings.targetMarkerOpacity) ? Settings.targetMarkerOpacity : 1)
-        const rgb = [Number.parseInt(color.slice(1, 3), 16), Number.parseInt(color.slice(3, 5), 16), Number.parseInt(color.slice(5, 7), 16)]
-        const centerX = sprite.width / 2
-        const centerY = sprite.height / 2
-        const segments = [
-            [margin / 2, centerY - size, 0, centerY - size + visibleLineLength],
-            [0, centerY + size - visibleLineLength, margin / 2, centerY + size],
-            [sprite.width - margin / 2, centerY - size, sprite.width, centerY - size + visibleLineLength],
-            [sprite.width, centerY + size - visibleLineLength, sprite.width - margin / 2, centerY + size],
-        ]
-
-        const drawTriangle = ([startX, startY, endX, endY]: number[]) => {
-            const baseCenterX = (startX + endX) / 2
-            const baseCenterY = (startY + endY) / 2
-            const segmentLength = Math.hypot(endX - startX, endY - startY)
-            const triangleHeight = segmentLength * 2
-            const directionX = centerX - baseCenterX
-            const directionY = centerY - baseCenterY
-            const directionLength = Math.hypot(directionX, directionY)
-            const apexX = baseCenterX + (directionX / directionLength) * triangleHeight
-            const apexY = baseCenterY + (directionY / directionLength) * triangleHeight
-            const gradient = ctx.createLinearGradient(baseCenterX, baseCenterY, apexX, apexY)
-
-            gradient.addColorStop(0, `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${Math.min(0.65 * markerOpacity, 1)})`)
-            gradient.addColorStop(0.58, `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${Math.min(0.2 * markerOpacity, 1)})`)
-            gradient.addColorStop(1, `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0)`)
-
-            ctx.fillStyle = gradient
-            ctx.beginPath()
-            ctx.moveTo(startX, startY)
-            ctx.lineTo(endX, endY)
-            ctx.lineTo(apexX, apexY)
-            ctx.closePath()
-            ctx.fill()
-        }
-
-        segments.forEach(drawTriangle)
-
-        ctx.strokeStyle = color
-        ctx.lineWidth = 3
-        segments.forEach(([startX, startY, endX, endY]) => {
-            ctx.beginPath()
-            ctx.moveTo(startX, startY)
-            ctx.lineTo(endX, endY)
-            ctx.stroke()
-        })
-
-        return sprite
     },
 }
 

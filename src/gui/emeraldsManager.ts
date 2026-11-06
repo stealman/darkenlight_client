@@ -75,11 +75,11 @@ export const EmeraldsManager = {
         this.iconBaseSize = Math.max(9, Math.min(13, size * 0.2))
 
         if (this.emeraldsInfoIcon != null) {
-            this.emeraldsInfoIcon.style.width = `${this.iconBaseSize}px`
-            this.emeraldsInfoIcon.style.height = `${this.iconBaseSize}px`
+            this.emeraldsInfoIcon.style.width = `var(--hud-currency-icon-size, ${this.iconBaseSize}px)`
+            this.emeraldsInfoIcon.style.height = `var(--hud-currency-icon-size, ${this.iconBaseSize}px)`
         }
         if (this.emeraldsInfoCount != null) {
-            this.emeraldsInfoCount.style.fontSize = `${Math.max(9, Math.min(12, size * 0.2))}px`
+            this.emeraldsInfoCount.style.fontSize = `var(--hud-currency-font-size, ${Math.max(9, Math.min(12, size * 0.2))}px)`
         }
     },
 
@@ -89,8 +89,8 @@ export const EmeraldsManager = {
         }
 
         if (difference === 0) {
-            this.emeraldsInfoIcon.style.width = `${this.iconBaseSize}px`
-            this.emeraldsInfoIcon.style.height = `${this.iconBaseSize}px`
+            this.emeraldsInfoIcon.style.width = `var(--hud-currency-icon-size, ${this.iconBaseSize}px)`
+            this.emeraldsInfoIcon.style.height = `var(--hud-currency-icon-size, ${this.iconBaseSize}px)`
             this.emeraldsInfoIcon.style.transform = 'none'
             this.emeraldsInfoIcon.style.opacity = '1'
             return

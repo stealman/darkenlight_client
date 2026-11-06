@@ -6,6 +6,7 @@
             <label><input v-model="mana" type="checkbox"> Mana</label>
             <label><input v-model="longName" type="checkbox"> Dlouhá jména</label>
             <label><input v-model="hasTarget" type="checkbox"> Označený cíl</label>
+            <label><input v-model="touchLayout" type="checkbox"> Mobilní rozmístění</label>
         </div>
         <div class="status-skin-stage" :style="{ '--hud-minimap-size': mapSize + 'px' }">
             <button class="hud-settings-button" type="button" aria-label="Náhled nastavení" v-html="getSettingsSvg('', 'preview-settings')"></button>
@@ -14,7 +15,7 @@
                 <div class="myStatusPanelBody">
                     <div class="statusRow statusRowMain">
                         <div class="hpBlocks"><div v-for="n in 10" :key="n" class="hpBlock"><div class="hpFill" :style="{ width: segment(hp, n, 10) }"></div></div></div>
-                        <span class="myName">{{ longName ? 'Ace Stealman Dlouhé příjmení' : 'Ace Stealman' }}</span>
+                        <span class="myName ui-text-gradient ui-text-gradient--no-shadow">{{ longName ? 'Ace Stealman Dlouhé příjmení' : 'Ace Stealman' }}</span>
                         <div id="my-status-currency-host"><div id="emeralds-info"><span id="emeralds-info-count" class="ui-emerald-text-gradient">35 153</span><img id="emeralds-info-icon" src="/images/icons/emerald.png" alt=""></div></div>
                     </div>
                     <div class="statusRow statusRowSecondary">
@@ -37,15 +38,15 @@
                     <div class="party-actions"><button class="party-menu-button" aria-label="Akce party">⋯</button></div>
                 </section></div>
             </div>
-            <div id="gui-buttons">
+            <div id="gui-buttons" :class="{ 'gui-buttons--touch': touchLayout }" style="--hud-joystick-left: 120px; --hud-joystick-bottom: 50px; --hud-joystick-size: 100px; --hud-dock-button-size: 48px">
                 <div id="btn-backpack" class="gui-action-button" style="width: 48px; height: 48px"><img class="action-icon" src="/images/icons/buttons/btn_backpack.png" alt="Inventář"></div>
                 <div id="btn-character" class="gui-action-button" style="width: 48px; height: 48px"><img class="action-icon" src="/images/icons/buttons/btn_char.png" alt="Postava"></div>
-                <div id="btn-speech" class="gui-action-button" style="width: 48px; height: 48px"><img class="action-icon" src="/images/icons/buttons/btn_speech.png" alt="Chat"></div>
+                <div v-if="touchLayout" id="btn-speech" class="gui-action-button" style="width: 48px; height: 48px"><img class="action-icon" src="/images/icons/buttons/btn_speech.png" alt="Chat"></div>
             </div>
-            <div class="status-skin-joystick" aria-label="Poloha joysticku v náhledu">Joystick</div>
+            <div v-if="touchLayout" class="status-skin-joystick" aria-label="Poloha joysticku v náhledu">Joystick</div>
             <div id="selectedTargetPanel" :class="!hasTarget ? 'empty' : ally ? 'ally' : 'enemy'" style="display: flex">
                 <div class="hpBlocks"><div v-for="n in 10" :key="n" class="hpBlock"><div class="hpFill" :style="{ width: segment(hasTarget ? hp : 0, n, 10) }"></div></div></div>
-                <span class="targetName">{{ !hasTarget ? '' : ally ? 'Lesní strážce' : longName ? 'Prastarý vlk ze Severního údolí' : 'Prastarý vlk' }}</span>
+                <span class="targetName ui-text-gradient ui-text-gradient--no-shadow">{{ !hasTarget ? '' : ally ? 'Lesní strážce' : longName ? 'Prastarý vlk ze Severního údolí' : 'Prastarý vlk' }}</span>
             </div>
             <p class="status-skin-caption">Offline náhled · stejné styly jako ve hře</p>
         </div>
@@ -57,6 +58,7 @@ import { onMounted, onUnmounted, ref } from 'vue'
 import { getSettingsSvg } from '../vue/icons/icons'
 defineProps<{ small: boolean }>()
 const hp = ref(68)
+const touchLayout = ref(true)
 const hasTarget = ref(true)
 const miniMap = ref<HTMLCanvasElement | null>(null)
 const mapSize = ref(100)
@@ -90,10 +92,9 @@ const segment = (value: number, index: number, count: number) => `${Math.max(0, 
 .status-skin-stage { position: relative; min-height: 220px; height: min(600px, 100dvh); background: radial-gradient(ellipse at 25% 60%, #394c40, #202b30 70%); }
 .status-skin-caption { position: absolute; bottom: 12px; left: 125px; right: 12px; font-size: 12px; color: rgb(var(--ui-dark)); }
 .status-skin-joystick { position: absolute; left: 120px; bottom: 50px; width: 100px; height: 100px; border-radius: 50%; background: rgba(75, 122, 163, .12); border: 1px dashed rgba(139, 183, 218, .4); display: flex; align-items: center; justify-content: center; color: rgb(var(--ui-dark)); font-size: 10px; pointer-events: none; }
-.status-skin-stage > .hud-settings-button { position: absolute; bottom: max(5px, env(safe-area-inset-bottom)); left: calc(max(5px, env(safe-area-inset-left)) + 53px); }
-.status-skin-stage #gui-buttons { position: static; }
-.status-skin-stage #gui-buttons > #btn-backpack,
-.status-skin-stage #gui-buttons > #btn-character { position: absolute; top: 32px; right: calc(var(--hud-minimap-size, 100px) + 9px); }
-.status-skin-stage #gui-buttons > #btn-backpack { right: calc(var(--hud-minimap-size, 100px) + 62px); }
-.status-skin-stage #gui-buttons > #btn-speech { position: absolute; }
+.status-skin-stage > .hud-settings-button { position: absolute; bottom: max(5px, env(safe-area-inset-bottom)); left: max(5px, env(safe-area-inset-left)); }
+.status-skin-stage #gui-buttons.gui-buttons--touch { position: static; }
+.status-skin-stage #gui-buttons.gui-buttons--touch > #btn-backpack,
+.status-skin-stage #gui-buttons.gui-buttons--touch > #btn-character,
+.status-skin-stage #gui-buttons.gui-buttons--touch > #btn-speech { position: absolute; }
 </style>
