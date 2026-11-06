@@ -1,4 +1,6 @@
 :root {
+    --ui-cursor-default: url('/images/cursor.png') 3 3, auto;
+    --ui-cursor-pointer: url('/images/cursor-hover.png') 3 3, pointer;
     /* Basic colors */
     --ui-base: 233, 218, 190;
     --ui-dark: 170, 159, 137;
@@ -53,8 +55,7 @@
 }
 
 .ui-text-gradient,
-.dialog-button.selected .ui-text-gradient--button-state,
-.dialog-button:not(:disabled):hover .ui-text-gradient--button-state {
+.ui-text-gradient--button-state {
     display: inline-block;
     background: linear-gradient(to top, var(--ui-text-gradient-bottom), var(--ui-text-gradient-top));
     background-clip: text;
@@ -63,8 +64,14 @@
     -webkit-text-fill-color: transparent;
 }
 
+.ui-text-gradient--button-state {
+    text-shadow: none;
+}
+
 .dialog-button.selected .ui-text-gradient--button-state,
-.dialog-button:not(:disabled):hover .ui-text-gradient--button-state {
+.dialog-button:not(:disabled):hover .ui-text-gradient--button-state,
+.dialog-header .tab-item.active .ui-text-gradient,
+.dialog-header .tab-item:hover .ui-text-gradient {
     text-shadow: none;
 }
 
@@ -278,14 +285,14 @@
     font-weight: bold;
     text-transform: uppercase;
     text-shadow: 0 0 3px rgb(var(--ui-base));
-    cursor: url('/images/cursor-pointer.png') 0 10, pointer;
+    cursor: var(--ui-cursor-pointer);
     box-shadow: none;
     transition: filter 0.2s ease, box-shadow 0.2s ease;
     opacity: 1;
 }
 
 .dialog-button.selected {
-    cursor: url('/images/cursor.png') 4 4, auto;
+    cursor: var(--ui-cursor-default);
     background-image: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url('/images/gui/bck_stone1.png');
     background-attachment: fixed;
     border: 2px solid transparent;
@@ -323,14 +330,14 @@
     border: 2px solid transparent;
     border-bottom: 2px solid rgba(0, 0, 0, 0.4);
     border-right: 2px solid rgba(0, 0, 0, 0.4);
-    cursor: url('/images/cursor-pointer.png') 0 10, pointer;
+    cursor: var(--ui-cursor-pointer);
     transition: filter 0.2s ease, box-shadow 0.2s ease;
     font-size: 0.9rem;
     color: rgb(var(--ui-darkest));
 }
 
 .dialog-header div.tab-item:not(.active) * {
-    cursor: url('/images/cursor-pointer.png') 0 10, pointer;
+    cursor: var(--ui-cursor-pointer);
 }
 
 .dialog-header div.tab-item.active {
@@ -341,11 +348,11 @@
     border-left: 2px solid rgba(0, 0, 0, 0.1);
     color: rgb(var(--ui-base));
     text-shadow: 0 0 3px rgb(var(--ui-darkest));
-    cursor: url('/images/cursor.png') 4 4, auto;
+    cursor: var(--ui-cursor-default);
 }
 
 .dialog-header div.tab-item.active * {
-    cursor: url('/images/cursor.png') 4 4, auto;
+    cursor: var(--ui-cursor-default);
 }
 
 .dialog-content,

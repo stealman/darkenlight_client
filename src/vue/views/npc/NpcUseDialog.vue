@@ -17,7 +17,7 @@
                         :class="{ active: selectedFeatureIndex === index }"
                         @click="selectFeature(index)"
                     >
-                        <label :class="['noselect', { 'ui-text-gradient': selectedFeatureIndex === index, 'ui-text-gradient--no-shadow': selectedFeatureIndex === index }]">{{ getFeatureLabel(feature.type) }}</label>
+                        <label class="noselect ui-text-gradient ui-text-gradient--no-shadow">{{ getFeatureLabel(feature.type) }}</label>
                     </div>
                 </div>
                 <div class="npc-use-emeralds">
@@ -734,7 +734,7 @@ defineExpose({openDialog})
 .npc-use-tab, .npc-vendor-buy-button, .npc-vendor-quick-buy-button { padding: 5px 10px; font-size: 0.9rem; line-height: 1; }
 .npc-use-content-shell :deep(.bank-panel) { flex: 1 1 auto; min-height: 0; }
 .npc-vendor-item-list { display: flex; flex: 1 1 auto; min-height: 0; flex-direction: column; overflow-y: auto; border-top: 1px solid rgba(var(--ui-darker), 0.8); border-bottom: 1px solid rgba(var(--ui-darker), 0.8); }
-.npc-vendor-item-row { display: grid; grid-template-columns: 46px minmax(0, 1fr) max-content auto; align-items: center; gap: 12px; min-height: 46px; padding: 3px 8px; border-bottom: 1px solid rgba(var(--ui-darker), 0.65); color: rgb(var(--ui-base)); cursor: url('/images/cursor-pointer.png') 0 10, pointer; }
+.npc-vendor-item-row { display: grid; grid-template-columns: 46px minmax(0, 1fr) max-content auto; align-items: center; gap: 12px; min-height: 46px; padding: 3px 8px; border-bottom: 1px solid rgba(var(--ui-darker), 0.65); color: rgb(var(--ui-base)); cursor: var(--ui-cursor-pointer); }
 .npc-vendor-catalog-list { border-top: 0; border-bottom: 0; }
 .npc-vendor-catalog-list .npc-vendor-item-row:last-child { border-bottom: 0; }
 .npc-repairer-item-row { grid-template-columns: 46px minmax(0, 1fr) 128px 80px auto; }

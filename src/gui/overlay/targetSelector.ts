@@ -161,12 +161,12 @@ export const TargetSelector = {
         this.attackMesh?.setEnabled(false)
     },
 
-    updateMarker(mesh: Mesh, target: Targetable, cell: number, time: number, scale: number, opacity: number) {
+    updateMarker(mesh: Mesh, target: Targetable, cell: number, time: number, scale: number, opacity: number, heightOffset = 0) {
         const visible = TargetingManager.isTargetVisible(target)
         mesh.setEnabled(visible)
         if (!visible) return
         mesh.position.copyFrom(target.pos)
-        mesh.position.y += .025
+        mesh.position.y += .025 + heightOffset
         const atlasFrame = cell * FRAME_COUNT + Math.floor(time / FRAME_DURATION) % FRAME_COUNT
         if (mesh.metadata.markerCell !== atlasFrame) {
             mesh.updateVerticesData(VertexBuffer.UVKind, FRAME_UVS[atlasFrame])
@@ -186,12 +186,13 @@ export const TargetSelector = {
             if (attacking && !this.attackTargetActive) this.markerPopTime = time
             this.attackTargetActive = attacking
             const age = Math.max(0, time - this.markerPopTime)
+            const intro = Math.pow(Math.max(0, 1 - age / INTRO_DURATION), 3)
             const scale = age < INTRO_DURATION
-                ? 1 + .35 * Math.pow(1 - age / INTRO_DURATION, 3)
+                ? 1 + .65 * intro
                 : 1 + Math.sin(age / 650) * .025
             const cell = attacking ? 2 : isPartyTarget(this.target) ? 3
                 : this.target.getRelationToMyPlayer() === 'ENEMY' ? 1 : 0
-            this.updateMarker(this.selectedMesh, this.target, cell, time, scale, opacity)
+            this.updateMarker(this.selectedMesh, this.target, cell, time, scale, opacity, .5 * intro)
         } else {
             this.selectedMesh.setEnabled(false)
         }

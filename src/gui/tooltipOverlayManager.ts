@@ -30,8 +30,8 @@ type EventTooltipOptions = {
     pinned?: boolean
 }
 
-const TOOLTIP_OFFSET_X = 18
-const TOOLTIP_OFFSET_Y = 18
+const TOOLTIP_OFFSET_X = 6
+const TOOLTIP_OFFSET_Y = 6
 const TOOLTIP_VIEWPORT_PADDING = 8
 
 export const TooltipOverlayManager = {

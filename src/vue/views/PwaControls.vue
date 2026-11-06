@@ -100,7 +100,7 @@ onUnmounted(() => {
     background: linear-gradient(180deg, #3b5a67, #1d303a);
     color: #fff4d0;
     font: 600 13px Montserrat, sans-serif;
-    cursor: pointer;
+    cursor: var(--ui-cursor-pointer);
 }
 
 .pwa-install-button {

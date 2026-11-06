@@ -16,17 +16,22 @@
                 <span v-else class="party-away-mark" aria-hidden="true">· · ·</span>
             </button>
             <div ref="actionsMenu" class="party-actions">
-                <button class="party-menu-button" :aria-label="t('party.actions')" :aria-expanded="menuOpen" @click="menuOpen = !menuOpen">⋯</button>
-                <button v-if="menuOpen" class="party-leave dialog-button" @click="leave">{{ t('party.leave') }}</button>
+                <button class="party-menu-button" :aria-label="t('party.actions')" :aria-expanded="menuOpen" @click="menuOpen = !menuOpen"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 5h12M4 10h12M4 15h12" /></svg></button>
+                <button v-if="menuOpen" class="party-leave dialog-button" @click="leave"><span class="ui-text-gradient--button-state">{{ t('party.leave') }}</span></button>
             </div>
         </section>
     </Teleport>
     <GameDialog v-if="pendingInviteTarget !== null" window-class="party-invite-window adaptive dialog-themed-fields"
         :close-on-backdrop="false" @backdrop-click="onSettingsBackdropClick" @close="PartyManager.cancelInvite()">
-        <template #header>{{ t('party.settings') }}</template>
+        <template #header><span class="ui-text-gradient">{{ t('party.settings') }}</span></template>
         <div class="party-invite-content" @pointerdown.stop @pointerup.stop>
-            <div class="party-loot-setting" role="group" :aria-label="t('party.items')">
+            <div class="party-loot-setting" :class="{ 'party-loot-setting--fixed': !!state }" role="group" :aria-label="t('party.items')">
                 <span class="ui-text-gradient">{{ t('party.items') }}</span>
+                <span v-if="state" class="party-loot-fixed ui-text-gradient ui-text-gradient--accent"
+                    :class="state.lootMode === 'random' ? 'party-loot-choice--random' : 'party-loot-choice--finder'">
+                    {{ t(state.lootMode === 'random' ? 'party.lootRandomChoice' : 'party.lootFinderChoice') }}
+                </span>
+                <template v-else>
                 <button type="button" class="party-loot-choice party-loot-choice--random"
                     :aria-pressed="inviteLootMode === 'random'" :disabled="!!state" @click="selectLootMode('random')">
                     <span class="ui-text-gradient ui-text-gradient--accent ui-text-gradient--no-shadow">{{ t('party.lootRandomChoice') }}</span>
@@ -35,17 +40,18 @@
                     :aria-pressed="inviteLootMode === 'finder'" :disabled="!!state" @click="selectLootMode('finder')">
                     <span class="ui-text-gradient ui-text-gradient--accent ui-text-gradient--no-shadow">{{ t('party.lootFinderChoice') }}</span>
                 </button>
+                </template>
             </div>
             <p>{{ t('party.emeraldSharing') }}</p>
             <div class="party-invite-buttons">
-                <button class="dialog-button" @click="PartyManager.sendInvite()">{{ t('party.sendInvite') }}</button>
-                <button class="dialog-button" @click="PartyManager.cancelInvite()">{{ t('party.cancel') }}</button>
+                <button class="dialog-button" @click="PartyManager.sendInvite()"><span class="ui-text-gradient--button-state">{{ t('party.sendInvite') }}</span></button>
+                <button class="dialog-button" @click="PartyManager.cancelInvite()"><span class="ui-text-gradient--button-state">{{ t('party.cancel') }}</span></button>
             </div>
         </div>
     </GameDialog>
     <GameDialog v-if="invitation && remaining > 0" backdrop-class="party-invite-backdrop" window-class="party-invite-window party-invitation-window adaptive"
         :close-on-backdrop="false" @close="PartyManager.respond(false)">
-        <template #header><span>{{ t('party.invitation') }}</span></template>
+        <template #header><span class="ui-text-gradient">{{ t('party.invitation') }}</span></template>
         <div class="party-invite-content" @pointerdown.stop @pointerup.stop>
             <img src="/images/icons/buttons/btn_party_invite.png" alt="" class="party-invite-icon" />
             <p>{{ invitationText[0] }}<span class="party-inviter-name">{{ invitation.name }}</span><span v-if="inviterClass"> ({{ inviterClass }})</span>{{ invitationText[1] }}</p>
@@ -56,10 +62,10 @@
             </div>
             <div class="party-invite-buttons">
                 <button class="dialog-button" type="button" @pointerdown.prevent.stop @click="PartyManager.respond(true)">
-                    {{ t('party.accept') }}
+                    <span class="ui-text-gradient--button-state">{{ t('party.accept') }}</span>
                 </button>
                 <button class="dialog-button party-invite-decline" type="button" @pointerdown.prevent.stop @click="PartyManager.respond(false)">
-                    <span>{{ t('party.decline') }}</span>
+                    <span class="ui-text-gradient--button-state">{{ t('party.decline') }}</span>
                 </button>
             </div>
         </div>
@@ -138,7 +144,9 @@ const leave = () => { menuOpen.value = false; PartyManager.leave() }
 .party-loot-finder { color: rgb(var(--ui-danger)); }
 .party-loot-setting { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: center; gap: 8px; margin: 6px 0 12px; font-size: 15px; text-align: left; }
 .party-loot-setting > span { text-align: right; }
-.party-loot-choice { min-width: 0; min-height: 44px; padding: 6px 2px; border: 0; background: none; color: rgb(var(--ui-darker)); font: inherit; cursor: pointer; text-align: center; touch-action: manipulation; }
+.party-loot-setting--fixed { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); }
+.party-loot-setting > .party-loot-fixed { text-align: center; padding: 6px 2px; }
+.party-loot-choice { min-width: 0; min-height: 44px; padding: 6px 2px; border: 0; background: none; color: rgb(var(--ui-darker)); font: inherit; cursor: var(--ui-cursor-pointer); text-align: center; touch-action: manipulation; }
 .party-loot-choice--random { --ui-text-gradient-accent: var(--ui-success); color: rgb(var(--ui-success)); }
 .party-loot-choice--finder { --ui-text-gradient-accent: var(--ui-danger); color: rgb(var(--ui-danger)); }
 .party-loot-choice[aria-pressed="false"] { opacity: 0.55; }
@@ -159,5 +167,5 @@ const leave = () => { menuOpen.value = false; PartyManager.leave() }
 .party-invite-progress { margin-bottom: 12px; }
 .party-invite-buttons { display: flex; gap: 8px; justify-content: center; }
 .party-invite-buttons button { flex: 1; min-height: 38px; }
-.party-invite-decline span { color: rgb(var(--ui-attention)); text-shadow: 0 0 4px rgba(var(--ui-attention), .45); }
+.party-invite-decline .ui-text-gradient--button-state { --ui-text-gradient-top: rgb(var(--ui-attention)); --ui-text-gradient-bottom: rgba(var(--ui-attention), .55); }
 </style>

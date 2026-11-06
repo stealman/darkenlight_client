@@ -69,11 +69,11 @@
                             @click.stop="startTraining(skill.key)"
                             @keydown.stop
                         >
-                            {{ t('skills.progress.train') }}
+                            <span class="ui-text-gradient--button-state">{{ t('skills.progress.train') }}</span>
                         </button>
                         <template v-else>
                             <span class="skill-training-time">{{ formatTrainingTime(skill.trainingRemainingSeconds) }}</span>
-                            <button type="button" class="skill-training-button dialog-button" @click.stop="stopTraining" @keydown.stop>{{ t('skills.progress.pause') }}</button>
+                            <button type="button" class="skill-training-button dialog-button" @click.stop="stopTraining" @keydown.stop><span class="ui-text-gradient--button-state">{{ t('skills.progress.pause') }}</span></button>
                         </template>
                     </template>
                     <template v-else-if="skill.progress">
@@ -554,7 +554,7 @@ const formatTrainingTime = (seconds: number) => {
     min-height: 35px;
     padding: 5px 9px 5px 11px;
     box-sizing: border-box;
-    cursor: url('/images/cursor-pointer.png') 0 10, pointer;
+    cursor: var(--ui-cursor-pointer);
 }
 
 .skill-row:last-child {

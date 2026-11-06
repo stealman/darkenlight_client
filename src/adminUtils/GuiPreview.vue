@@ -11,14 +11,14 @@
         <StatusSkinPreview v-else-if="preview === 'status'" :small="narrow" />
         <GameDialog v-else :window-class="['adaptive', 'gui-preview-window', narrow ? 'gui-preview-window--narrow' : '']" :close-on-backdrop="false" :close-on-escape="false">
             <template #header v-if="preview === 'controls'">
-                <div v-for="tab in tabs" :key="tab" class="tab-item" :class="{ active: activeTab === tab }" @click="activeTab = tab">{{ tab }}</div>
+                <div v-for="tab in tabs" :key="tab" class="tab-item" :class="{ active: activeTab === tab }" @click="activeTab = tab"><span class="ui-text-gradient--button-state">{{ tab }}</span></div>
             </template>
             <template #header v-else>{{ preview === 'inventory' ? 'Inventář' : 'Banka / barel' }}</template>
             <InventorySkinPreview v-if="preview !== 'controls'" :storage="preview === 'storage'" :slot-count="longInventory ? 120 : 24" />
             <section v-else class="gui-preview-content">
                 <p>Úroveň detailů grafiky.</p>
                 <div class="dialog-actions">
-                    <button v-for="level in levels" :key="level" class="dialog-button" :class="{ selected: selected === level }" @click="selected = level">{{ level }}</button>
+                    <button v-for="level in levels" :key="level" class="dialog-button" :class="{ selected: selected === level }" @click="selected = level"><span class="ui-text-gradient--button-state">{{ level }}</span></button>
                 </div>
                 <label class="gui-preview-range">Jas <input v-model="brightness" aria-label="Jas" class="range-slider" type="range" min="0" max="100"></label>
                 <label class="gui-preview-range">Jas označníku <input v-model="marker" aria-label="Jas označníku" class="range-slider" type="range" min="0" max="100"></label>
@@ -27,8 +27,8 @@
                     <label><Checkbox :model-value="false" binary disabled /> Nedostupné</label>
                 </div>
                 <div class="dialog-actions">
-                    <button class="dialog-button" @click="modal = true">Otevřít dialog</button>
-                    <button class="dialog-button" disabled>Nedostupné</button>
+                    <button class="dialog-button" @click="modal = true"><span class="ui-text-gradient--button-state">Otevřít dialog</span></button>
+                    <button class="dialog-button" disabled><span class="ui-text-gradient--button-state">Nedostupné</span></button>
                 </div>
                 <label class="gui-preview-field">Jméno <input type="text" placeholder="Jméno postavy"></label>
             </section>
@@ -36,7 +36,7 @@
         <GameDialog v-if="modal" window-class="adaptive" content-class="dialog-content--modal" @close="modal = false">
             <template #header>Potvrzení</template>
             <p>Náhled malého dialogu se stejnou sadou podkladů.</p>
-            <div class="dialog-actions"><button class="dialog-button" @click="modal = false">Zpět</button><button class="dialog-button selected" @click="modal = false">Potvrdit</button></div>
+            <div class="dialog-actions"><button class="dialog-button" @click="modal = false"><span class="ui-text-gradient--button-state">Zpět</span></button><button class="dialog-button selected" @click="modal = false"><span class="ui-text-gradient--button-state">Potvrdit</span></button></div>
         </GameDialog>
     </main>
 </template>

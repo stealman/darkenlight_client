@@ -250,9 +250,25 @@ const onPlayerRegistration = (event) => {
 
 <style>
 .dialog-backdrop.login-screen-backdrop {
-    background: #050709 url('/images/screen/splash1.jpg') center center / cover no-repeat;
+    background: #050709;
+    isolation: isolate;
+    overflow: hidden;
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
+}
+
+.dialog-backdrop.login-screen-backdrop::before {
+    content: '';
+    position: absolute;
+    inset: -8px;
+    z-index: -1;
+    background: url('/images/screen/splash1.jpg') center center / cover no-repeat;
+    filter: blur(1px);
+    pointer-events: none;
+}
+
+.dialog-backdrop.login-screen-backdrop > .dialog-window {
+    box-shadow: 0 0 100px 25px #050709, 0 0 220px 55px #050709;
 }
 
 .dialog-window.login-dialog-window {
@@ -386,7 +402,7 @@ const onPlayerRegistration = (event) => {
 .login-checkbox-field,
 .login-checkbox-field .p-checkbox,
 .login-checkbox-field .p-checkbox-input {
-    cursor: url('/images/cursor-pointer.png') 0 10, pointer !important;
+    cursor: var(--ui-cursor-pointer) !important;
 }
 
 .login-dialog-content .login-field input {

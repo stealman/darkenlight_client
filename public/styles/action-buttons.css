@@ -101,7 +101,7 @@ div.action-button {
 
     align-items: center;
     justify-content: center;
-    cursor: url('/images/cursor-pointer.png') 0 10, pointer;
+    cursor: var(--ui-cursor-pointer);
 
     background: transparent;
     border-radius: 4px;

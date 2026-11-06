@@ -7,7 +7,7 @@
                     <div class="settings-header-action" @click.stop="emit('toggle-fullscreen')" v-html="getFullScreenSvg('icon-white', 'icon-fullscreen')"></div>
                 </div>
                 <div v-for="tab in tabs" :key="tab.id" class="tab-item" :class="tab.id === activeTabId ? 'active' : ''" @click="activeTabId = tab.id">
-                    <label :class="['noselect', { 'ui-text-gradient': tab.id === activeTabId, 'ui-text-gradient--no-shadow': tab.id === activeTabId }]">{{ tab.name }}</label>
+                    <label class="noselect ui-text-gradient ui-text-gradient--no-shadow">{{ tab.name }}</label>
                 </div>
             </template>
 
@@ -602,7 +602,7 @@ watch(
     display: flex;
     align-items: center;
     justify-content: center;
-    cursor: url('/images/cursor-pointer.png') 0 10, pointer;
+    cursor: var(--ui-cursor-pointer);
 }
 
 .settings-header-action .icon-white {

@@ -599,8 +599,10 @@ export const OverlayManager = {
         const y = pos.y - 2
 
         // Background
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)'
-        ctx.fillRect(x, y, barWidth, barHeight)
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.42)'
+        ctx.beginPath()
+        ctx.roundRect(x, y, barWidth, barHeight, 2)
+        ctx.fill()
 
         // Fill
         const fillWidth = (barWidth - 2) * (percent / 100)
@@ -609,14 +611,16 @@ export const OverlayManager = {
         }
         const fillGradient = ctx.createLinearGradient(x + 1, y, x + 1 + fillWidth, y)
         if (enemy) {
-            fillGradient.addColorStop(0, 'rgba(112, 20, 20, 0.7)')
-            fillGradient.addColorStop(1, 'rgba(230, 58, 52, 0.82)')
+            fillGradient.addColorStop(0, 'rgba(112, 20, 20, 0.6)')
+            fillGradient.addColorStop(1, 'rgba(230, 58, 52, 0.7)')
         } else {
-            fillGradient.addColorStop(0, 'rgba(12, 92, 92, 0.7)')
-            fillGradient.addColorStop(1, 'rgba(48, 214, 204, 0.82)')
+            fillGradient.addColorStop(0, 'rgba(12, 92, 92, 0.6)')
+            fillGradient.addColorStop(1, 'rgba(48, 214, 204, 0.7)')
         }
         ctx.fillStyle = fillGradient
-        ctx.fillRect(x + 1, y + 1, fillWidth, barHeight - 2)
+        ctx.beginPath()
+        ctx.roundRect(x + 1, y + 1, fillWidth, barHeight - 2, Math.min(1, fillWidth / 2))
+        ctx.fill()
     },
 
     renderHealingMarker(pos: Vector3, time: number, healSelf: boolean) {

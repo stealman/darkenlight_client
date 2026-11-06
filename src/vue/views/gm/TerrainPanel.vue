@@ -1,14 +1,14 @@
 <template>
     <div>
         Size:&nbsp;&nbsp;&nbsp;
-        <label style='cursor: pointer;' :style="affectedSize == 1 ? 'border: 2px solid #4caf50' : ''" @click="GMManager.affectedSizeChanged(1)">1x1</label>&nbsp;&nbsp;&nbsp;
-        <label style='cursor: pointer;' :style="affectedSize == 3 ? 'border: 2px solid #4caf50' : ''" @click="GMManager.affectedSizeChanged(3)">3x3</label>&nbsp;&nbsp;&nbsp;
-        <label style='cursor: pointer;' :style="affectedSize == 5 ? 'border: 2px solid #4caf50' : ''" @click="GMManager.affectedSizeChanged(5)">5x5</label>
+        <label style='cursor: var(--ui-cursor-pointer);' :style="affectedSize == 1 ? 'border: 2px solid #4caf50' : ''" @click="GMManager.affectedSizeChanged(1)">1x1</label>&nbsp;&nbsp;&nbsp;
+        <label style='cursor: var(--ui-cursor-pointer);' :style="affectedSize == 3 ? 'border: 2px solid #4caf50' : ''" @click="GMManager.affectedSizeChanged(3)">3x3</label>&nbsp;&nbsp;&nbsp;
+        <label style='cursor: var(--ui-cursor-pointer);' :style="affectedSize == 5 ? 'border: 2px solid #4caf50' : ''" @click="GMManager.affectedSizeChanged(5)">5x5</label>
     </div>
 
     <!-- Elevation control -->
     <div style="margin-top: 2vh">
-        <label style='cursor: pointer;' :style="terrainEditMode === 'terrain' && selectedTerrain == 0 ? 'border: 2px solid #4caf50' : ''" @click="selectTerrain(0)">Elevation</label>&nbsp;&nbsp;&nbsp;
+        <label style='cursor: var(--ui-cursor-pointer);' :style="terrainEditMode === 'terrain' && selectedTerrain == 0 ? 'border: 2px solid #4caf50' : ''" @click="selectTerrain(0)">Elevation</label>&nbsp;&nbsp;&nbsp;
         <span v-if="!shiftKeyPressed">UP</span>
         <span v-else>DOWN</span>
     </div>

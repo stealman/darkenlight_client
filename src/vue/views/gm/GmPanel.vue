@@ -185,7 +185,7 @@ const triggerLightning = () => {
 }
 
 .gm-day-night-section summary {
-    cursor: pointer;
+    cursor: var(--ui-cursor-pointer);
     user-select: none;
 }
 

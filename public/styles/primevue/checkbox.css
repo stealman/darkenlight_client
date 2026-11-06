@@ -2,7 +2,7 @@
 .p-checkbox {
     display: inline-flex;
     align-items: center;
-    cursor: url('/images/cursor-pointer.png') 0 10, pointer;
+    cursor: var(--ui-cursor-pointer);
     user-select: none;
 }
 

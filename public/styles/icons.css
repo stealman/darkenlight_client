@@ -1,13 +1,13 @@
 .icon-white {
     fill: #bbb;
     transition: all 0.2s ease;
-    cursor: url('/images/cursor-pointer.png') 0 10, pointer;
+    cursor: var(--ui-cursor-pointer);
 }
 
 .icon-blue {
     fill: #00f;
     transition: all 0.2s ease;
-    cursor: url('/images/cursor-pointer.png') 0 10, pointer;
+    cursor: var(--ui-cursor-pointer);
     opacity: 0.75
 }
 
@@ -15,7 +15,7 @@
 .icon-red {
     fill: #f00;
     transition: all 0.2s ease;
-    cursor: url('/images/cursor-pointer.png') 0 10, pointer;
+    cursor: var(--ui-cursor-pointer);
     opacity: 0.75
 }
 
@@ -52,8 +52,9 @@
     display: block;
 }
 
-.hud-settings-button { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; flex-shrink: 0; box-sizing: border-box; padding: 3px; background: var(--gui-button-surface) center / auto 100%; border: 0 solid transparent; border-image: var(--gui-button) 18 / 2px / 0 stretch; border-radius: 4px; cursor: url('/images/cursor-pointer.png') 0 10, pointer; }
+.hud-settings-button { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; flex-shrink: 0; box-sizing: border-box; padding: 3px; background: var(--gui-button-surface) center / auto 100%; border: 0 solid transparent; border-image: var(--gui-button) 18 / 2px / 0 stretch; border-radius: 4px; cursor: var(--ui-cursor-pointer); }
 .hud-settings-button svg { display: block; width: 100%; height: 100%; pointer-events: none; }
+.hud-settings-button, .party-menu-button { opacity: var(--gui-hud-utility-button-opacity); }
 .hud-settings-button:hover { border-image-source: var(--gui-selected); filter: brightness(1.12); }
 .hud-settings-button:focus-visible { outline: 1px solid rgb(var(--gui-gold)); outline-offset: 2px; }
 #system-buttons > .hud-settings-button { position: fixed; bottom: max(5px, env(safe-area-inset-bottom)); left: max(5px, env(safe-area-inset-left)); z-index: 1000; }

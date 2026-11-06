@@ -16,7 +16,7 @@
                 }"
                 @click="selectTab(tab.id)"
             >
-                <label :class="['noselect', { 'ui-text-gradient': tab.id === activeTabId, 'ui-text-gradient--no-shadow': tab.id === activeTabId }]">{{ tab.name }}</label>
+                <label class="noselect ui-text-gradient ui-text-gradient--no-shadow">{{ tab.name }}</label>
             </div>
         </template>
 

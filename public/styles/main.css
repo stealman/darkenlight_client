@@ -6,7 +6,7 @@
 body {
     margin: 0px;
     background-color: #000000;
-    cursor: url('../images/cursor.png') 4 4, auto;
+    cursor: var(--ui-cursor-default);
 }
 
 .noselect {

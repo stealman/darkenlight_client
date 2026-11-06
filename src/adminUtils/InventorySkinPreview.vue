@@ -13,7 +13,7 @@
         <div v-if="selected !== null && images[selected]" class="inventory-item-overlay inventory-skin-preview-tooltip">
             <div class="inventory-item-overlay-name">Náhled předmětu</div>
             <div class="inventory-item-overlay-dur item-durability--warning">Stav: 35 %</div>
-            <button class="dialog-button" @click="selected = null">Zavřít detail</button>
+            <button class="dialog-button" @click="selected = null"><span class="ui-text-gradient--button-state">Zavřít detail</span></button>
         </div>
     </section>
 </template>

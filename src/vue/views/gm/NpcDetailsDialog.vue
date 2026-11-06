@@ -764,7 +764,7 @@ defineExpose({
     background: rgba(0, 0, 0, 0.2);
     color: rgb(var(--ui-base));
     font-size: 11px;
-    cursor: pointer;
+    cursor: var(--ui-cursor-pointer);
 }
 
 .npc-feature-checkbox.npc-feature-checkbox-selected {
