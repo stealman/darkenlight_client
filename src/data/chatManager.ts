@@ -6,6 +6,7 @@ export const ChatManager = {
     characterId: 0,
     characterName: '',
     visible: false,
+    hudVisible: false,
     state: reactive({messages: [] as ChatEntry[], recent: [] as string[], error: '', errorName: '', errorVersion: 0,
         active: 'public' as ChatChannel, unread: {public: 0, private: 0, party: 0}}),
     initialize(id: number, name: string) {
@@ -42,7 +43,7 @@ export const ChatManager = {
         this.state.messages = this.state.messages.filter(message => message.channel !== entry.channel)
             .concat(this.state.messages.filter(message => message.channel === entry.channel).slice(-200))
             .sort((a, b) => a.time - b.time)
-        if (!this.visible || this.state.active !== entry.channel) this.state.unread[entry.channel]++
+        if ((!this.visible && !this.hudVisible) || this.state.active !== entry.channel) this.state.unread[entry.channel]++
         this.rebuildRecent()
         this.save()
     },

@@ -86,6 +86,10 @@ div#emeralds-info {
     align-items: center;
 }
 
+:root:has(.chat-panel--hud) #system-buttons {
+    bottom: calc(3 * var(--hud-player-panel-height, clamp(42px, 5.1vh, 54px)) + 6px);
+}
+
 #system-buttons button,
 #system-buttons button *,
 #gm-system-buttons button,

@@ -44,11 +44,12 @@ test('public history is bounded and unread counts respect active visible channel
     assert.equal(chat.state.unread.public, 1)
 })
 
-function setupPanel(deviceType = 'DESKTOP') {
+function setupPanel(deviceType = 'DESKTOP', desktopHud = false) {
     const {parse} = require('@vue/compiler-sfc')
     const vue = require('vue')
     const ChatManager = setup(); ChatManager.initialize(1, 'Alice')
     const sent = []
+    const targetCycles = []
     const deps = {
         vue: {...vue, onMounted() {}, onUnmounted() {}},
         '@/data/chatManager': {ChatManager},
@@ -58,16 +59,17 @@ function setupPanel(deviceType = 'DESKTOP') {
         '@/data/myPlayer': {MyPlayer: {stopMove() {}}},
         '@/i18n': {useI18n: () => ({t: x => x})},
         '@/settings/settings': {Settings: {getDeviceType: () => deviceType, isPhoneOrTablet: () => deviceType !== 'DESKTOP'}},
+        '@/gui/targettingManager': {TargetingManager: {cycleThroughClosestTargets: () => targetCycles.push(true)}},
     }
     const path = require('node:path').join(__dirname, '../src/vue/views/character/CharacterChatTab.vue')
     const source = parse(fs.readFileSync(path, 'utf8')).descriptor.scriptSetup.content
-        + '\nexport {send, drafts, cyclePerson, onKeyDown, reply, select, input, phoneLayout};'
+        + '\nexport {send, drafts, cyclePerson, onKeyDown, reply, select, input, phoneLayout, focusInput};'
     const exports = {}
     vm.runInNewContext(ts.transpileModule(source, {compilerOptions: {module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020}}).outputText, {
-        exports, require: name => deps[name], defineProps: () => ({visible: true}), defineExpose() {}, setTimeout, clearTimeout,
+        exports, require: name => deps[name], defineProps: () => ({visible: true, desktopHud}), defineExpose() {}, setTimeout, clearTimeout,
         CustomEvent: class {constructor(type, opts) {this.type = type; this.detail = opts.detail}},
     })
-    return {...exports, chat: ChatManager, sent}
+    return {...exports, chat: ChatManager, sent, targetCycles}
 }
 test('private composer parses recipient and text; arrows cycle contacts preserving body', () => {
     const s = setupPanel()
@@ -132,4 +134,32 @@ test('selected-player tooltip offers private chat only for another human player'
     assert.equal(panel.buildTooltipContent().titleAction, undefined)
     target.id = 2; target.getObjectType = () => 'N'
     assert.equal(panel.buildTooltipContent().titleAction, undefined)
+})
+
+test('desktop HUD focuses on request, sends and releases typing; Tab cycles targets instead of chats', () => {
+    const s = setupPanel('DESKTOP', true)
+    let focuses = 0, blurs = 0
+    s.input.value = {focus: () => focuses++, blur: () => blurs++}
+    s.focusInput()
+    assert.equal(focuses, 1)
+    assert.equal(s.chat.hudVisible, true)
+    assert.equal(s.chat.visible, false)
+    s.drafts.public = 'Hello from HUD'
+    s.send()
+    assert.equal(s.sent[0].text, 'Hello from HUD')
+    assert.equal(blurs, 1)
+    s.onKeyDown({key: 'Tab', preventDefault() {}, stopPropagation() {}})
+    assert.equal(s.chat.state.active, 'public')
+    assert.equal(s.targetCycles.length, 1)
+    assert.equal(blurs, 2)
+    s.onKeyDown({key: 'Escape', preventDefault() {}, stopPropagation() {}})
+    assert.equal(blurs, 3)
+})
+
+test('visible desktop HUD marks only the selected channel as read', () => {
+    const chat = setup(); chat.initialize(1, 'Alice'); chat.hudVisible = true
+    chat.add(message('1', 'public'))
+    chat.add(message('2', 'private'))
+    assert.equal(chat.state.unread.public, 0)
+    assert.equal(chat.state.unread.private, 1)
 })

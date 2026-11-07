@@ -6,7 +6,9 @@
 
         <div v-show="gameSessionActive">
             <PartyPanel v-if="gameSessionActive" />
-            <SpeechInput v-if="gameSessionActive" />
+            <SpeechInput v-if="gameSessionActive && speechButtonVisible" />
+            <CharacterChatTab v-if="gameSessionActive && !speechButtonVisible" v-show="!displayCharacterDialog"
+                ref="desktopChat" desktop-hud :visible="!displayCharacterDialog" />
             <div id="system-buttons">
                 <button type="button" class="hud-settings-button" :aria-label="t('app.settings')" @click="showSettingsDialog()" v-html="getSettingsSvg('', 'icon-settings')"></button>
             </div>
@@ -220,6 +222,11 @@ import { AudioManager } from '@/babylon/audio/audioManager'
 import { useI18n } from '@/i18n'
 import PartyPanel from '@/vue/views/PartyPanel.vue'
 import SpeechInput from '@/vue/views/SpeechInput.vue'
+import CharacterChatTab from '@/vue/views/character/CharacterChatTab.vue'
+const desktopChat = ref<InstanceType<typeof CharacterChatTab> | null>(null)
+const focusDesktopChat = () => {
+    if (!Settings.isPhoneOrTablet() && !displayCharacterDialog.value) desktopChat.value?.focusInput()
+}
 const openSpeech = () => window.dispatchEvent(new CustomEvent('ui:open-speech'))
 
 const canvas = ref<HTMLCanvasElement | null>(null)
@@ -585,6 +592,7 @@ onMounted(async () => {
     window.visualViewport?.addEventListener('scroll', syncAppViewportSize)
     window.addEventListener('ui:open-inventory', onOpenInventoryHotkey)
     window.addEventListener('ui:open-character', onOpenCharacterHotkey)
+    window.addEventListener('ui:open-speech', focusDesktopChat)
     window.addEventListener('ui:open-private-chat', onOpenPrivateChat)
     window.addEventListener('ui:open-crafting', onOpenCraftingMenu as EventListener)
     window.addEventListener('ui:open-npc-use', onOpenNpcUseMenu as EventListener)
@@ -643,6 +651,7 @@ onUnmounted(() => {
     window.visualViewport?.removeEventListener('scroll', syncAppViewportSize)
     window.removeEventListener('ui:open-inventory', onOpenInventoryHotkey)
     window.removeEventListener('ui:open-character', onOpenCharacterHotkey)
+    window.removeEventListener('ui:open-speech', focusDesktopChat)
     window.removeEventListener('ui:open-private-chat', onOpenPrivateChat)
     window.removeEventListener('ui:open-crafting', onOpenCraftingMenu as EventListener)
     window.removeEventListener('ui:open-npc-use', onOpenNpcUseMenu as EventListener)
@@ -721,6 +730,14 @@ const showCharacterDialog = () => {
 const onOpenPrivateChat = (event: Event) => {
     const name = (event as CustomEvent<{name: string}>).detail?.name
     if (!gameSessionActive.value || isDead.value || typeof name !== 'string' || !name.trim()) return
+    if (!Settings.isPhoneOrTablet()) {
+        displayCharacterDialog.value = false
+        nextTick(() => {
+            desktopChat.value?.reply(name)
+            desktopChat.value?.focusInput()
+        })
+        return
+    }
     showCharacterDialog()
     nextTick(() => { void characterDialog.value?.openPrivateChat(name) })
 }

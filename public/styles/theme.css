@@ -356,6 +356,7 @@
 }
 
 .dialog-content,
+.chat-log,
 .inventory-content-shell,
 .inventory-grid-wrapper,
 .action-slots-list,
@@ -367,6 +368,7 @@
 }
 
 .dialog-content::-webkit-scrollbar,
+.chat-log::-webkit-scrollbar,
 .inventory-content-shell::-webkit-scrollbar,
 .inventory-grid-wrapper::-webkit-scrollbar,
 .action-slots-list::-webkit-scrollbar,
@@ -377,6 +379,7 @@
 }
 
 .dialog-content::-webkit-scrollbar-track,
+.chat-log::-webkit-scrollbar-track,
 .inventory-content-shell::-webkit-scrollbar-track,
 .inventory-grid-wrapper::-webkit-scrollbar-track,
 .action-slots-list::-webkit-scrollbar-track,
@@ -388,6 +391,7 @@
 }
 
 .dialog-content::-webkit-scrollbar-thumb,
+.chat-log::-webkit-scrollbar-thumb,
 .inventory-content-shell::-webkit-scrollbar-thumb,
 .inventory-grid-wrapper::-webkit-scrollbar-thumb,
 .action-slots-list::-webkit-scrollbar-thumb,
@@ -403,6 +407,7 @@
 }
 
 .dialog-content::-webkit-scrollbar-thumb:hover,
+.chat-log::-webkit-scrollbar-thumb:hover,
 .inventory-content-shell::-webkit-scrollbar-thumb:hover,
 .inventory-grid-wrapper::-webkit-scrollbar-thumb:hover,
 .action-slots-list::-webkit-scrollbar-thumb:hover,
