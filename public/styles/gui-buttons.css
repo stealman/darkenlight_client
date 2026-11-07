@@ -87,7 +87,7 @@ div#gui-buttons.gui-buttons--touch > #btn-backpack {
 }
 
 div#gui-buttons.gui-buttons--touch > #btn-speech {
-    left: max(5px, env(safe-area-inset-left), calc(var(--hud-joystick-left) + var(--hud-joystick-size) / 2 - var(--hud-dock-button-size) / 2 - (var(--hud-joystick-size) / 2 + var(--hud-dock-button-size) / 2 + 8px) * .7071));
+    left: calc(var(--hud-joystick-left) + var(--hud-joystick-size) / 2 - var(--hud-dock-button-size) / 2 - (var(--hud-joystick-size) / 2 + var(--hud-dock-button-size) / 2 + 8px) * .7071);
     bottom: max(5px, env(safe-area-inset-bottom), calc(var(--hud-joystick-bottom) + var(--hud-joystick-size) / 2 - var(--hud-dock-button-size) / 2 - (var(--hud-joystick-size) / 2 + var(--hud-dock-button-size) / 2 + 8px) * .7071));
 }
 
