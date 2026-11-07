@@ -286,6 +286,10 @@ export const OverlayManager = {
         labels.addSpeech(data)
     },
 
+    addChatSpeech(data: import('@/network/messageIfs').ChatEntry) {
+        labels.addChatSpeech(data)
+    },
+
     addMonsterAggroAlert(data: MonsterAggroAlertData) {
         indicators.addMonsterAggroAlert(data)
     },

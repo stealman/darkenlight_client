@@ -38,7 +38,7 @@ export const ChatManager = {
         this.state.recent = people
     },
     add(entry: ChatEntry) {
-        if (this.state.messages.some(message => message.id === entry.id)) return
+        if (this.state.messages.some(message => message.id === entry.id)) return false
         this.state.messages.push(entry)
         this.state.messages = this.state.messages.filter(message => message.channel !== entry.channel)
             .concat(this.state.messages.filter(message => message.channel === entry.channel).slice(-200))
@@ -46,6 +46,7 @@ export const ChatManager = {
         if ((!this.visible && !this.hudVisible) || this.state.active !== entry.channel) this.state.unread[entry.channel]++
         this.rebuildRecent()
         this.save()
+        return true
     },
     speech(data: CharacterSpeechData) {
         this.add({id: `speech:${data.id}:${data.time}:${data.text}`, channel: 'public', from: data.name,
@@ -68,6 +69,6 @@ export const ChatManager = {
             this.rebuildRecent()
             this.save()
         }
-        if (data.entry) this.add(data.entry)
+        return data.entry ? this.add(data.entry) : false
     },
 }

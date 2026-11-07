@@ -102,7 +102,7 @@ export const MessageProcessor = {
                     OverlayManager.addSpeech(msg.d)
                     break
                 case 100:
-                    ChatManager.receive(msg.d)
+                    if (ChatManager.receive(msg.d)) OverlayManager.addChatSpeech(msg.d.entry)
                     break
                 case 94:
                     if (MyPlayer.myCharRef.value) MyPlayer.myCharRef.value.monsterKnowledge = msg.d

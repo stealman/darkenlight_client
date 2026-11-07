@@ -10,9 +10,10 @@ import type Character from '@/babylon/character/character'
 import { ViewportManager } from '@/utils/viewport'
 import { TargetSelector } from '@/gui/overlay/targetSelector'
 import { isPartyTarget, PARTY_TARGET_COLOR } from '@/gui/overlay/partyTarget'
-import type { CharacterSpeechData } from '@/network/messageIfs'
+import type { CharacterSpeechData, ChatEntry } from '@/network/messageIfs'
 
 interface SpeechBubble {
+    color?: string
     lines: string[]
     width: number
     expiresAt: number
@@ -72,10 +73,20 @@ export class OverlayLabels {
         return Math.min(fadeInAlpha, fadeOutAlpha)
     }
 
-    addSpeech(data: CharacterSpeechData) {
+    addChatSpeech(entry: ChatEntry) {
+        if (entry.channel === 'public' || entry.from === MyPlayer.myChar?.name) return
+        for (const id of CharacterManager.visibleCharacters) {
+            const char = CharacterManager.characters.get(id)
+            if (char?.name !== entry.from) continue
+            this.addSpeech({id, name: entry.from, text: entry.text, time: entry.time}, entry.channel)
+            return
+        }
+    }
+
+    addSpeech(data: CharacterSpeechData, channel: ChatEntry['channel'] = 'public') {
         const char = data.id === MyPlayer.myChar?.id ? MyPlayer.myChar : CharacterManager.characters.get(data.id)
         if (!char || typeof data.text !== 'string' || !this.view.ctx) return
-        const text = data.text.slice(0, 100).trim()
+        const text = data.text.slice(0, channel === 'public' ? 100 : 500).trim()
         if (!text) return
         // Measure on the same kind of offscreen canvas used for rasterization.
         // The mobile spacing correction belongs only to direct overlay text.
@@ -103,7 +114,9 @@ export class OverlayLabels {
         }
         if (line) lines.push(line)
         const bubbles = this.speech.get(char) || []
-        bubbles.push({lines, width: 0, height: 0, image: null, expiresAt: Date.now() + 3000 + (text.length - 1) * 3000 / 99})
+        const color = channel === 'public' ? '#e9dabe'
+            : `rgb(${getComputedStyle(document.documentElement).getPropertyValue(channel === 'private' ? '--ui-accent-purple' : '--ui-attribute-agility').trim()})`
+        bubbles.push({lines, color, width: 0, height: 0, image: null, expiresAt: Date.now() + 3000 + (text.length - 1) * 3000 / 99})
         this.prepareSpeechBubble(bubbles[bubbles.length - 1])
         this.speech.set(char, bubbles)
     }
@@ -126,7 +139,7 @@ export class OverlayLabels {
         ctx.beginPath()
         ctx.roundRect(0, 0, bubble.width, bubble.height, 8)
         ctx.fill()
-        ctx.fillStyle = '#e9dabe'
+        ctx.fillStyle = bubble.color || '#e9dabe'
         ctx.textAlign = 'center'
         bubble.lines.forEach((line, index) => {
             ctx.fillText(line, bubble.width / 2, 7 + (index + .5) * (size + 4))

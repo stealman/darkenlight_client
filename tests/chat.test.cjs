@@ -204,3 +204,11 @@ test('HUD stored sizes are validated and constrained to usable screen bounds', (
     assert.equal(s.hudSize.value.width, 220)
     assert.equal(s.hudSize.value.height, 100)
 })
+
+test('only new live messages signal a bubble; history and duplicates do not', () => {
+    const chat = setup(); chat.initialize(1, 'Alice')
+    assert.equal(chat.receive({history: [message('1')]}), false)
+    assert.equal(chat.receive({entry: message('1')}), false)
+    assert.equal(chat.receive({entry: message('2')}), true)
+    assert.equal(chat.receive({entry: message('2')}), false)
+})
