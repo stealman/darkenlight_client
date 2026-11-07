@@ -6,7 +6,7 @@ export function getDamagePositionSuffix(direction?: AutoAttackResult['a'], heigh
 }
 
 export function getDamageHeightSuffix(heightBlocks?: number): string {
-    return heightBlocks ? ` ${heightBlocks > 0 ? Math.min(3, heightBlocks) : Math.abs(heightBlocks)}▣` : ''
+    return heightBlocks ? ` ${'▣'.repeat(heightBlocks > 0 ? Math.min(3, heightBlocks) : Math.abs(heightBlocks))}` : ''
 }
 
 export function getHeightColorToken(heightBlocks: number): string {
