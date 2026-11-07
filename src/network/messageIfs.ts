@@ -170,6 +170,7 @@ export interface AutoAttackResult {
     q: 'P' | 'N' | 'G' | null
     tgt: AttackableBasicTO
     fx?: 'silverUndead'
+    a?: 's' | 'b'
 }
 
 export interface AutoAttackResultMessage {

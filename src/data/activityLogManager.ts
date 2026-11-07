@@ -3,7 +3,7 @@ import {t} from '@/i18n'
 import {Item} from '@/data/items/item'
 import type {ActivityLogData, PartyStateData} from '@/network/messageIfs'
 
-export interface ActivityEntry {id: number; time: number; text: string; color?: string; negative?: boolean; positive?: boolean; kill?: {before: string; name: string; after: string; color?: string}; damage?: {before: string; value: string; after: string}}
+export interface ActivityEntry {id: number; time: number; text: string; color?: string; negative?: boolean; positive?: boolean; kill?: {before: string; name: string; after: string; color?: string}; damage?: {before: string; value: string; after: string}; item?: {before: string; name: string; after: string}}
 function expandHealingHighlight(entry: ActivityEntry): ActivityEntry {
     const part = entry.damage
     if (entry.color === '#20ff20' && part && /\+\s*$/.test(part.before) && /^\s*HP\b/.test(part.after)) {
@@ -20,11 +20,14 @@ export const ActivityLogManager = {
     characterId: 0,
     lastAttackWeaponName: '',
     lastAttackSkillName: '',
+    pendingKills: new Map<number, {timer: ReturnType<typeof setTimeout>; text: string; time: number; kill: NonNullable<ActivityEntry['kill']>}>(),
     rememberAttackWeapon(weapon: Item | null) {
         this.lastAttackWeaponName = weapon?.name || t('activityLog.unarmed')
     },
     state: reactive({entries: [] as ActivityEntry[]}),
     initialize(id: number) {
+        for (const pending of this.pendingKills.values()) clearTimeout(pending.timer)
+        this.pendingKills.clear()
         this.characterId = id
         this.lastAttackWeaponName = ''
         this.lastAttackSkillName = ''
@@ -50,7 +53,20 @@ export const ActivityLogManager = {
             })
         } catch { /* Storage is optional. */ }
     },
-    add(text: string, color?: string, time = Date.now(), details: Pick<ActivityEntry, 'negative' | 'positive' | 'damage' | 'kill'> = {}) {
+    addKill(targetId: number, text: string, kill: NonNullable<ActivityEntry['kill']>) {
+        // Death arrives before the finishing hit. Wait briefly for its log entry;
+        // kills from damage over time still appear when no attack result follows.
+        this.flushKill(targetId)
+        this.pendingKills.set(targetId, {text, kill, time: Date.now(), timer: setTimeout(() => this.flushKill(targetId), 100)})
+    },
+    flushKill(targetId: number) {
+        const pending = this.pendingKills.get(targetId)
+        if (!pending) return
+        clearTimeout(pending.timer)
+        this.pendingKills.delete(targetId)
+        this.add(pending.text, undefined, pending.time, {kill: pending.kill})
+    },
+    add(text: string, color?: string, time = Date.now(), details: Pick<ActivityEntry, 'negative' | 'positive' | 'damage' | 'kill' | 'item'> = {}) {
         if (!this.characterId) return
         const last = this.state.entries[this.state.entries.length - 1]
         const id = Math.max(Date.now(), (last?.id || 0) + 1)
@@ -78,6 +94,13 @@ export const ActivityLogManager = {
         this.add(t('activityLog.worldChanged', {from, to}), undefined, undefined, {positive: true})
     },
     receive(data: ActivityLogData) {
-        this.add(t(`activityLog.${data.event}`, {item: data.item ? Item.fromData(data.item).name || '?' : '', quantity: data.quantity || 1}), undefined, data.time, {negative: data.event === 'drop'})
+        const name = data.item ? Item.fromData(data.item).name || '?' : ''
+        const text = t(`activityLog.${data.event}`, {item: name, quantity: data.quantity || 1})
+        const offset = name ? text.indexOf(name) : -1
+        this.add(text, undefined, data.time, {
+            negative: data.event === 'drop',
+            item: offset >= 0 && (data.event === 'pickup' || data.event === 'drop')
+                ? {before: text.slice(0, offset), name, after: text.slice(offset + name.length)} : undefined,
+        })
     },
 }

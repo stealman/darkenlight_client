@@ -394,8 +394,8 @@ export const MessageProcessor = {
             const name = this.combatLogName(data.id, true)
             const text = t('activityLog.kill', {name})
             const offset = text.lastIndexOf(name)
-            ActivityLogManager.add(text, undefined, undefined, {
-                kill: {before: text.slice(0, offset), name, after: text.slice(offset + name.length), color},
+            ActivityLogManager.addKill(data.id, text, {
+                before: text.slice(0, offset), name, after: text.slice(offset + name.length), color,
             })
         }
         MonsterManager.removeMonster(data.id, data.dead)
@@ -561,14 +561,17 @@ export const MessageProcessor = {
         const weapon = mine ? ActivityLogManager.lastAttackWeaponName || MyPlayer.myChar.getWeapon()?.name || t('activityLog.unarmed') : ''
         const skill = mine ? ActivityLogManager.lastAttackSkillName : ''
         const description = [skill, weapon].filter(Boolean).join(', ')
-        const text = description ? `${baseText} (${description})` : baseText
         const hit = data.res.h === 'h'
+        const direction = hit && data.res.a
+            ? t(data.res.a === 's' ? 'activityLog.sideAttack' : 'activityLog.backAttack') : ''
+        const text = (description ? `${baseText} (${description})` : baseText) + (direction ? ` - ${direction}` : '')
         const offset = baseText.lastIndexOf(result)
         const value = String(Math.round(data.res.d))
         ActivityLogManager.add(text, hit ? getDamageColor(data.res.q, incoming ? '#ff2020' : '#f08f56') : undefined, undefined, {
             negative: incoming && hit && data.res.d > 0,
             damage: hit ? {before: text.slice(0, offset), value, after: text.slice(offset + value.length)} : undefined,
         })
+        if (mine && hit && data.tp === 'M') ActivityLogManager.flushKill(data.tgt)
     },
 
     processCharacterAttackFinished(data: AutoAttackResultMessage) {

@@ -1,5 +1,7 @@
 {
   "activityLog": {
+    "sideAttack": "útok ze strany",
+    "backAttack": "útok zezadu",
     "partyCreated": "Založil jsi partu.",
     "partyJoined": "Připojil ses do party.",
     "partyLeft": "Už nejsi v partě.",

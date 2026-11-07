@@ -1,4 +1,4 @@
-﻿<template>
+<template>
     <section ref="panel" class="chat-panel" :style="hudStyle" :class="[`chat-tab--${state.active}`, {'chat-panel--phone': phoneLayout, 'chat-panel--hud': desktopHud, 'chat-panel--resizing': resizing}]" @keydown="onKeyDown" @keyup.stop @pointerdown.stop @wheel.stop>
         <div class="chat-window">
         <nav class="chat-tabs" role="tablist" :aria-label="t('character.tabs.chat')">
@@ -11,7 +11,7 @@
         <div ref="log" class="chat-log" role="log" aria-live="polite" @scroll="onScroll">
             <div v-if="state.active === 'log' && !activityEntries.length" class="chat-empty">{{ t('activityLog.empty') }}</div>
             <div v-if="state.active === 'log'">
-                <div v-for="entry in activityEntries" :key="entry.id" class="chat-message activity-entry" :class="{'activity-entry--negative': entry.negative, 'activity-entry--positive': entry.positive, 'activity-entry--kill': !!entry.kill}" :title="new Date(entry.time).toLocaleString()"><template v-if="entry.kill">{{ entry.kill.before }}<span class="activity-kill-name" :style="{color: entry.kill.color}">{{ entry.kill.name }}</span>{{ entry.kill.after }}</template><template v-else-if="entry.damage">{{ entry.damage.before }}<span :style="{color: entry.color}">{{ entry.damage.value }}</span>{{ entry.damage.after }}</template><template v-else>{{ entry.text }}</template></div>
+                <div v-for="entry in activityEntries" :key="entry.id" class="chat-message activity-entry" :class="{'activity-entry--negative': entry.negative, 'activity-entry--positive': entry.positive, 'activity-entry--kill': !!entry.kill}" :title="new Date(entry.time).toLocaleString()"><template v-if="entry.kill">{{ entry.kill.before }}<span class="activity-kill-name" :style="{color: entry.kill.color}">{{ entry.kill.name }}</span>{{ entry.kill.after }}</template><template v-else-if="entry.damage">{{ entry.damage.before }}<span :style="{color: entry.color}">{{ entry.damage.value }}</span>{{ entry.damage.after }}</template><template v-else-if="entry.item">{{ entry.item.before }}<strong class="activity-item-name">{{ entry.item.name }}{{ entry.item.after }}</strong></template><template v-else>{{ entry.text }}</template></div>
             </div>
             <div v-if="state.active !== 'log' && !messages.length" class="chat-empty">{{ t(`chat.empty.${state.active}`) }}</div>
             <div v-for="message in messages" :key="message.id" class="chat-message" :class="{mine: message.from === ChatManager.characterName}">
@@ -240,6 +240,7 @@ onUnmounted(() => {
 .chat-tabs button { flex: 1; --ui-text-gradient-accent: var(--chat-accent); color: rgb(var(--chat-accent)); border: 0; border-radius: 0; padding: 6px 12px; background: rgba(var(--chat-accent), .06); }
 .chat-panel .chat-message.activity-entry { padding: 3px 6px; white-space: pre-wrap; overflow-wrap: anywhere; text-align: left; font-weight: 200; text-shadow: none; font-synthesis: none; }
 .chat-panel .chat-message.activity-entry--kill { font-weight: 700; }
+.activity-item-name { font-weight: 700; }
 .activity-kill-name { color: rgb(var(--ui-item-special-stat)); }
 .activity-entry--positive { color: rgb(var(--ui-success)); }
 .activity-entry--negative { background: rgba(var(--ui-danger), .1); }
@@ -306,7 +307,8 @@ onUnmounted(() => {
     .chat-panel--hud { transition: none; }
 }
 .chat-panel--hud .chat-window { position: relative; isolation: isolate; background: transparent; }
-.chat-panel--hud .chat-window::before { content: ''; position: absolute; inset: 0; z-index: -1; background: var(--gui-surface) repeat; opacity: var(--gui-status-background-opacity); pointer-events: none; }
+.chat-panel--hud .chat-window::before { content: ''; position: absolute; inset: 0; z-index: -1; background: var(--gui-surface) repeat; opacity: var(--gui-status-background-opacity); pointer-events: none; transition: opacity .25s ease 3s; }
+.chat-panel--hud:hover .chat-window::before, .chat-panel--hud:focus-within .chat-window::before, .chat-panel--hud.chat-panel--resizing .chat-window::before { opacity: .8; transition-delay: 0s; }
 .chat-panel--hud .chat-tabs button { padding: 3px 5px; font-size: .65rem; line-height: 16px; }
 .chat-panel--hud .chat-log { padding: 3px 6px; }
 .chat-panel--hud .chat-message { padding: 1px 0; font-size: 12px; }
