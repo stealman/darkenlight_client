@@ -107,6 +107,12 @@ export const SelectedTargetPanel = {
 
         return {
             title: target.getName(),
+            titleAction: target.getObjectType() === 'C' && target.id !== MyPlayer.myChar?.id
+                && 'isBot' in target && target.isBot === false ? {
+                    icon: '/images/icons/buttons/btn_speech.png',
+                    label: t('chat.writeTo', {name: target.getName()}),
+                    onClick: () => window.dispatchEvent(new CustomEvent('ui:open-private-chat', {detail: {name: target.getName()}})),
+                } : undefined,
             titleMeta: gameClass ? (localizedClassName === classLocalizationKey ? gameClass.name : localizedClassName) : null,
             titleClassName: 'ui-tooltip-title--character-name ui-text-gradient',
             titleMetaClassName: gameClassKey

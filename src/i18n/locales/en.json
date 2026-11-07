@@ -1,5 +1,6 @@
 {
   "chat": {
+    "writeTo": "Message {name}",
     "public": "Public", "private": "Private", "party": "Party",
     "send": "Send", "placeholder": "Write a message…", "privatePlaceholder": "Character name: message",
     "hint": "Tab switches channels · Enter sends",

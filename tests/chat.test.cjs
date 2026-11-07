@@ -64,7 +64,7 @@ function setupPanel(deviceType = 'DESKTOP') {
         + '\nexport {send, drafts, cyclePerson, onKeyDown, reply, select, input, phoneLayout};'
     const exports = {}
     vm.runInNewContext(ts.transpileModule(source, {compilerOptions: {module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020}}).outputText, {
-        exports, require: name => deps[name], defineProps: () => ({visible: true}), setTimeout, clearTimeout,
+        exports, require: name => deps[name], defineProps: () => ({visible: true}), defineExpose() {}, setTimeout, clearTimeout,
         CustomEvent: class {constructor(type, opts) {this.type = type; this.detail = opts.detail}},
     })
     return {...exports, chat: ChatManager, sent}
@@ -102,4 +102,34 @@ test('switching chats focuses input only on desktop and compact layout is phone-
         assert.equal(focuses, device === 'DESKTOP' ? 1 : 0, device)
         assert.equal(s.phoneLayout.value, device === 'PHONE', device)
     }
+})
+
+test('selected-player tooltip offers private chat only for another human player', () => {
+    const exports = {}, events = []
+    const target = {id: 2, isBot: false, getName: () => 'Bob', getObjectType: () => 'C', getRelationToMyPlayer: () => 'ALLY'}
+    const targeting = {selectedTarget: target}
+    const deps = {
+        '@/data/myPlayer': {MyPlayer: {myChar: {id: 1}}},
+        '@/babylon/monsters/monster': {Monster: class {}},
+        '@/gui/targettingManager': {TargetingManager: targeting},
+        '@/gui/tooltipOverlayManager': {}, '@/data/monsterCatalog': {},
+        '@/data/gameClass': {GameClasses: {}}, '@/i18n': {t: key => key},
+    }
+    const source = fs.readFileSync(require('node:path').join(__dirname, '../src/gui/selectedTargetPanel.ts'), 'utf8')
+    vm.runInNewContext(ts.transpileModule(source, {compilerOptions: {module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020}}).outputText, {
+        exports, require: name => deps[name], window: {dispatchEvent: event => events.push(event)},
+        CustomEvent: class {constructor(type, options) {this.type = type; this.detail = options.detail}},
+    })
+    const panel = exports.SelectedTargetPanel
+    const action = panel.buildTooltipContent().titleAction
+    assert.equal(action.icon, '/images/icons/buttons/btn_speech.png')
+    action.onClick()
+    assert.equal(events[0].type, 'ui:open-private-chat')
+    assert.equal(events[0].detail.name, 'Bob')
+    target.isBot = true
+    assert.equal(panel.buildTooltipContent().titleAction, undefined)
+    target.isBot = false; target.id = 1
+    assert.equal(panel.buildTooltipContent().titleAction, undefined)
+    target.id = 2; target.getObjectType = () => 'N'
+    assert.equal(panel.buildTooltipContent().titleAction, undefined)
 })

@@ -581,8 +581,11 @@ onMounted(async () => {
     window.addEventListener('orientationchange', scheduleTouchControlsLayout)
     document.addEventListener('fullscreenchange', scheduleTouchControlsLayout)
     window.visualViewport?.addEventListener('resize', scheduleTouchControlsLayout)
+    window.visualViewport?.addEventListener('resize', syncAppViewportSize)
+    window.visualViewport?.addEventListener('scroll', syncAppViewportSize)
     window.addEventListener('ui:open-inventory', onOpenInventoryHotkey)
     window.addEventListener('ui:open-character', onOpenCharacterHotkey)
+    window.addEventListener('ui:open-private-chat', onOpenPrivateChat)
     window.addEventListener('ui:open-crafting', onOpenCraftingMenu as EventListener)
     window.addEventListener('ui:open-npc-use', onOpenNpcUseMenu as EventListener)
     window.addEventListener('ui:open-container', onOpenContainer)
@@ -636,8 +639,11 @@ onUnmounted(() => {
     window.removeEventListener('orientationchange', scheduleTouchControlsLayout)
     document.removeEventListener('fullscreenchange', scheduleTouchControlsLayout)
     window.visualViewport?.removeEventListener('resize', scheduleTouchControlsLayout)
+    window.visualViewport?.removeEventListener('resize', syncAppViewportSize)
+    window.visualViewport?.removeEventListener('scroll', syncAppViewportSize)
     window.removeEventListener('ui:open-inventory', onOpenInventoryHotkey)
     window.removeEventListener('ui:open-character', onOpenCharacterHotkey)
+    window.removeEventListener('ui:open-private-chat', onOpenPrivateChat)
     window.removeEventListener('ui:open-crafting', onOpenCraftingMenu as EventListener)
     window.removeEventListener('ui:open-npc-use', onOpenNpcUseMenu as EventListener)
     window.removeEventListener('ui:open-container', onOpenContainer)
@@ -710,6 +716,13 @@ const showCharacterDialog = () => {
     nextTick(() => {
         characterDialog.value?.openDialog()
     })
+}
+
+const onOpenPrivateChat = (event: Event) => {
+    const name = (event as CustomEvent<{name: string}>).detail?.name
+    if (!gameSessionActive.value || isDead.value || typeof name !== 'string' || !name.trim()) return
+    showCharacterDialog()
+    nextTick(() => { void characterDialog.value?.openPrivateChat(name) })
 }
 
 const onOpenCharacterHotkey = () => {

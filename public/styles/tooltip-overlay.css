@@ -56,6 +56,31 @@
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.65);
 }
 
+.ui-tooltip-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+
+.ui-tooltip-title-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    align-self: center;
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    padding: 2px;
+    border: 0;
+    border-radius: 4px;
+    background: rgba(var(--ui-base), .08);
+    cursor: var(--ui-cursor-pointer);
+}
+.ui-tooltip-title-action img { width: 24px; height: 24px; object-fit: contain; }
+.ui-tooltip-title-action:hover { background: rgba(var(--ui-base), .16); }
+.ui-tooltip-title-action:focus-visible { outline: 1px solid rgb(var(--ui-accent-blue)); }
+
 .ui-tooltip-title--character-name {
     font-weight: 400;
 }

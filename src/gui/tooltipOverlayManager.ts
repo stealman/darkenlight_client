@@ -7,6 +7,7 @@ export type TooltipOverlayRow = {
 
 export type TooltipOverlayContent = {
     title: string
+    titleAction?: {icon: string, label: string, onClick: () => void}
     titleMeta?: string | null
     titleClassName?: string | null
     titleMetaClassName?: string | null
@@ -37,6 +38,8 @@ const TOOLTIP_VIEWPORT_PADDING = 8
 export const TooltipOverlayManager = {
     rootEl: null as HTMLDivElement | null,
     titleEl: null as HTMLDivElement | null,
+    titleActionEl: null as HTMLButtonElement | null,
+    actionsEl: null as HTMLDivElement | null,
     titleMetaEl: null as HTMLSpanElement | null,
     topRightEl: null as HTMLDivElement | null,
     topRightTextEl: null as HTMLSpanElement | null,
@@ -73,8 +76,28 @@ export const TooltipOverlayManager = {
         const titleMetaEl = document.createElement('span')
         titleMetaEl.className = 'ui-tooltip-title-meta'
 
+        const titleActionEl = document.createElement('button')
+        titleActionEl.type = 'button'
+        titleActionEl.className = 'ui-tooltip-title-action'
+        titleActionEl.style.display = 'none'
+        const actionIcon = document.createElement('img')
+        actionIcon.alt = ''
+        titleActionEl.appendChild(actionIcon)
+        titleActionEl.onclick = event => {
+            event.stopPropagation()
+            const action = this.content?.titleAction
+            if (!action) return
+            this.hide()
+            action.onClick()
+        }
+
         titleWrapEl.appendChild(titleEl)
         titleWrapEl.appendChild(titleMetaEl)
+
+        const actionsEl = document.createElement('div')
+        actionsEl.className = 'ui-tooltip-actions'
+        actionsEl.style.display = 'none'
+        actionsEl.appendChild(titleActionEl)
 
         const topRightEl = document.createElement('div')
         topRightEl.className = 'ui-tooltip-top-right'
@@ -98,6 +121,7 @@ export const TooltipOverlayManager = {
         rowsEl.className = 'ui-tooltip-rows'
 
         rootEl.appendChild(headerEl)
+        rootEl.appendChild(actionsEl)
         rootEl.appendChild(descriptionEl)
         rootEl.appendChild(rowsEl)
 
@@ -108,6 +132,8 @@ export const TooltipOverlayManager = {
 
         this.rootEl = rootEl
         this.titleEl = titleEl
+        this.titleActionEl = titleActionEl
+        this.actionsEl = actionsEl
         this.titleMetaEl = titleMetaEl
         this.topRightEl = topRightEl
         this.topRightTextEl = topRightTextEl
@@ -252,6 +278,16 @@ export const TooltipOverlayManager = {
 
         this.titleEl.className = `ui-tooltip-title${content.titleClassName ? ` ${content.titleClassName}` : ''}`
         this.titleEl.textContent = content.title ?? ''
+        if (this.actionsEl) this.actionsEl.style.display = content.titleAction ? 'flex' : 'none'
+        if (this.titleActionEl) {
+            this.titleActionEl.style.display = content.titleAction ? 'inline-flex' : 'none'
+            if (content.titleAction) {
+                this.titleActionEl.setAttribute('aria-label', content.titleAction.label)
+                this.titleActionEl.title = content.titleAction.label
+                const icon = this.titleActionEl.firstElementChild as HTMLImageElement
+                if (icon.getAttribute('src') !== content.titleAction.icon) icon.src = content.titleAction.icon
+            }
+        }
         if (this.titleMetaEl) {
             this.titleMetaEl.className = `ui-tooltip-title-meta${content.titleMetaClassName ? ` ${content.titleMetaClassName}` : ''}`
             this.titleMetaEl.textContent = content.titleMeta ?? ''

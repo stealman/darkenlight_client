@@ -11,18 +11,21 @@ import {SayMsg} from '@/network/messages'
 import {MyPlayer} from '@/data/myPlayer'
 import {Controller} from '@/controlls/controller'
 import {useI18n} from '@/i18n'
+import {Settings} from '@/settings/settings'
 const {t} = useI18n()
 const label = computed(() => t('speech.placeholder'))
 const opened = ref(false)
 const text = ref('')
 const input = ref<HTMLInputElement | null>(null)
-function cancel() { opened.value = false; text.value = '' }
+function unlockViewport() { document.getElementById('appWrapper')?.classList.remove('speech-viewport-locked') }
+function cancel() { opened.value = false; text.value = ''; unlockViewport() }
 function open() {
     if (MyPlayer.isDead.value) return
     Controller.cancelHeldMovement()
     MyPlayer.stopMove()
+    if (Settings.isPhoneOrTablet()) document.getElementById('appWrapper')?.classList.add('speech-viewport-locked')
     opened.value = true
-    nextTick(() => input.value?.focus())
+    nextTick(() => input.value?.focus({preventScroll: true}))
 }
 function onKeyDown(event: KeyboardEvent) {
     if (event.isComposing || event.repeat) return
@@ -35,13 +38,20 @@ function onKeyDown(event: KeyboardEvent) {
     }
 }
 onMounted(() => window.addEventListener('ui:open-speech', open))
-onUnmounted(() => window.removeEventListener('ui:open-speech', open))
+onUnmounted(() => { unlockViewport(); window.removeEventListener('ui:open-speech', open) })
 </script>
 
 <style scoped>
+:global(#appWrapper.speech-viewport-locked) {
+    position: fixed;
+    top: var(--app-viewport-top, 0px);
+    left: 0;
+    overflow: hidden;
+}
 .speech-input {
     position: fixed;
-    bottom: 0;
+    top: calc(var(--app-viewport-top, 0px) + var(--app-viewport-height, 100vh));
+    transform: translateY(-100%);
     left: 0;
     width: 100%;
     box-sizing: border-box;

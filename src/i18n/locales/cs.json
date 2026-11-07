@@ -1,6 +1,7 @@
 {
   "chat": {
-    "public": "Public", "private": "Private", "party": "Party",
+    "writeTo": "Napsat hráči {name}",
+    "public": "Veřejný", "private": "Soukromý", "party": "Skupina",
     "send": "Odeslat", "placeholder": "Napiš zprávu…", "privatePlaceholder": "Jméno postavy: zpráva",
     "hint": "Tab přepíná chaty · Enter odešle zprávu",
     "privateHint": "Jméno: zpráva · ↑ / ↓ posledních 5 kontaktů · Tab přepíná chaty",

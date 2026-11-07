@@ -24,13 +24,13 @@
             <CharacterOverviewTab v-if="activeTabId === 'character'" />
             <CharacterActionsTab v-else-if="activeTabId === 'actions'" ref="characterActionsTabRef" />
             <CharacterSkillsTab v-else-if="activeTabId === 'skills'" />
-            <CharacterChatTab v-else-if="activeTabId === 'chat'" :visible="visible" />
+            <CharacterChatTab v-else-if="activeTabId === 'chat'" ref="characterChatTabRef" :visible="visible" />
         </div>
     </GameDialog>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, nextTick } from 'vue'
 import GameDialog from '@/vue/views/GameDialog.vue'
 import CharacterOverviewTab from '@/vue/views/character/CharacterOverviewTab.vue'
 import CharacterActionsTab from '@/vue/views/character/CharacterActionsTab.vue'
@@ -55,6 +55,7 @@ const tabs = computed(() => [
 
 const activeTabId = ref('character')
 const characterActionsTabRef = ref()
+const characterChatTabRef = ref<InstanceType<typeof CharacterChatTab> | null>(null)
 
 const hasAvailableSkillTraining = computed(() => {
     const skillSet = myChar.value?.skillSet
@@ -94,9 +95,13 @@ const closeDialog = () => {
     emit('close')
 }
 
-defineExpose({
-    openDialog
-})
+const openPrivateChat = async (name: string) => {
+    activeTabId.value = 'chat'
+    await nextTick()
+    characterChatTabRef.value?.reply(name)
+}
+
+defineExpose({openDialog, openPrivateChat})
 </script>
 
 <style scoped>
