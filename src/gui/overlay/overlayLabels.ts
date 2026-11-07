@@ -29,8 +29,6 @@ interface TemporaryNameFadeState {
 export class OverlayLabels {
     temporaryNameFadeStates = new WeakMap<object, TemporaryNameFadeState>()
     speech = new Map<Character, SpeechBubble[]>()
-    npcLabels = new Map<string, {image: HTMLCanvasElement, width: number, height: number, textWidth: number, totalHeight: number}>()
-    nameLabels = new Map<string, {image: HTMLCanvasElement, width: number, height: number, textWidth: number}>()
     private fontListenerInitialized = false
 
     constructor(private readonly view: OverlayCanvasView) {}
@@ -44,8 +42,6 @@ export class OverlayLabels {
 
     reset() {
         this.speech.clear()
-        this.npcLabels.clear()
-        this.nameLabels.clear()
         this.temporaryNameFadeStates = new WeakMap<object, TemporaryNameFadeState>()
     }
 
@@ -212,7 +208,7 @@ export class OverlayLabels {
             }
             const pos = npc.getNameTextNodeScreenPosition()
             if (pos) {
-                this.renderNpcLabel(pos, npc.name, npc.getTitle())
+                this.renderNpcLabel(pos, npc.name, npc.getTitle(), tightText)
             }
         })
 
@@ -221,7 +217,7 @@ export class OverlayLabels {
             if (!guard) return
             const pos = guard.getNameTextNodeScreenPosition()
             if (pos) {
-                this.renderNpcLabel(pos, guard.getName(), guard.getTitle())
+                this.renderNpcLabel(pos, guard.getName(), guard.getTitle(), tightText)
             }
         })
 
@@ -279,8 +275,7 @@ export class OverlayLabels {
         const nameFontSize = this.view.fontSize
         const actionFontSize = Math.max(12, this.view.fontSize - 2)
         const spacingFix = this.view.letterSpacingFix
-        const nameWidth = name ? this.getCachedName(name, nameFontSize, char.getRelationToMyPlayer(), true,
-            isPartyTarget(char) ? PARTY_TARGET_COLOR : null).textWidth : 0
+        const nameWidth = name ? CanvasTextUtils.getTextWidth(ctx, name, tightText, spacingFix) : 0
         const actionWidth = actionName ? CanvasTextUtils.getTextWidth(ctx, actionName, tightText, spacingFix) : 0
         const maxWidth = Math.max(nameWidth, actionWidth)
         const textLines = (name ? 1 : 0) + (actionName ? 1 : 0)
@@ -317,62 +312,30 @@ export class OverlayLabels {
         }
     }
 
-    getCachedName(text: string, fontSize: number, relation: 'ALLY' | 'ENEMY' | 'NEUTRAL', useGradient: boolean, color: string | null = null) {
-        const key = JSON.stringify([text, fontSize, relation, useGradient, color])
-        let label = this.nameLabels.get(key)
-        if (!label) {
-            const {canvas, ctx} = createOverlayRaster(1, 1)
-            ctx.font = `${fontSize}px "Roboto", Arial, sans-serif`
-            ctx.fontKerning = 'normal'
-            // Rasterized names use native spacing, just like cached NPC labels.
-            const textWidth = CanvasTextUtils.getTextWidth(ctx, text, false)
-            const width = Math.ceil(textWidth + 12)
-            const height = Math.ceil(fontSize + 12)
-            const dpr = window.devicePixelRatio || 1
-            canvas.width = Math.ceil(width * dpr)
-            canvas.height = Math.ceil(height * dpr)
-            ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-            this.renderOutlinedText(width / 2, height / 2, text, false, relation, fontSize, undefined, 1, color, useGradient, ctx)
-            label = {image: canvas, width, height, textWidth}
-            if (this.nameLabels.size >= 256) this.nameLabels.delete(this.nameLabels.keys().next().value!)
-            this.nameLabels.set(key, label)
-        }
-        return label
-    }
-
-    drawCachedName(label: {image: HTMLCanvasElement, width: number, height: number}, x: number, y: number, scale: number, alpha: number) {
-        if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(scale) || !Number.isFinite(alpha) || alpha <= 0) return
-        const ctx = this.view.ctx!
-        const width = label.width * scale
-        const height = label.height * scale
-        ctx.save()
-        ctx.globalAlpha = alpha
-        ctx.drawImage(label.image, x - width / 2, y - height / 2, width, height)
-        ctx.restore()
-    }
-
     renderName(
         pos: Vector3,
         name: string,
-        _tightText: boolean,
+        tightText: boolean,
         relation: 'ALLY' | 'ENEMY' | 'NEUTRAL',
         useGradient: boolean = false,
         scale: number = 1,
         alpha: number = 1,
     ) {
-        if (!Number.isFinite(pos.x) || !Number.isFinite(pos.y)) return
-        const label = this.getCachedName(name, this.view.fontSize, relation, useGradient)
-        if (scale === 1 && alpha === 1) {
-            ViewportManager.movePositionToScreen(pos, label.textWidth / 2, this.view.fontSize + 10)
+        if (!Number.isFinite(pos.x) || !Number.isFinite(pos.y)) {
+            return
         }
-        this.drawCachedName(label, pos.x, pos.y - 6, scale, alpha)
+        if (scale === 1 && alpha === 1) {
+            this.renderOutlinedText(pos.x, pos.y - 6, name, tightText, relation, this.view.fontSize, pos, 1, null, useGradient)
+            return
+        }
+        this.renderScaledOutlinedText(pos.x, pos.y - 6, name, tightText, relation, this.view.fontSize, scale, alpha, useGradient)
     }
 
     renderScaledOutlinedText(
         x: number,
         y: number,
         text: string,
-        _tightText: boolean,
+        tightText: boolean,
         relation: 'ALLY' | 'ENEMY' | 'NEUTRAL',
         fontSize: number,
         scale: number,
@@ -380,43 +343,42 @@ export class OverlayLabels {
         useGradient: boolean = true,
         color: string | null = null,
     ) {
-        if (!Number.isFinite(fontSize)) return
-        this.drawCachedName(this.getCachedName(text, fontSize, relation, useGradient, color), x, y, scale, alpha)
+        if (scale === 1) {
+            this.renderOutlinedText(x, y, text, tightText, relation, fontSize, undefined, alpha, color, useGradient)
+            return
+        }
+        const ctx = this.view.ctx!
+        ctx.save()
+        ctx.translate(x, y)
+        ctx.scale(scale, scale)
+        this.renderOutlinedText(0, 0, text, tightText, relation, fontSize, undefined, alpha, color, useGradient)
+        ctx.restore()
     }
 
-    renderNpcLabel(pos: Vector3, name: string, title: string) {
-        if (!Number.isFinite(pos.x) || !Number.isFinite(pos.y)) return
-        const key = JSON.stringify([name, title, this.view.fontSize])
-        let label = this.npcLabels.get(key)
-        if (!label) {
-            const titleFontSize = Math.max(12, this.view.fontSize - 2)
-            // Offscreen text uses native spacing; the overlay-only mobile correction
-            // must affect neither raster measurement nor raster drawing.
-            const {canvas, ctx} = createOverlayRaster(1, 1)
-            ctx.font = `${this.view.fontSize}px "Roboto", Arial, sans-serif`
-            const nameWidth = CanvasTextUtils.getTextWidth(ctx, name, false)
-            ctx.font = `${titleFontSize}px "Roboto", Arial, sans-serif`
-            const titleText = title ? `[${title}]` : ''
-            const titleWidth = title ? CanvasTextUtils.getTextWidth(ctx, titleText, false) : 0
-            const textWidth = Math.max(nameWidth, titleWidth)
-            const totalHeight = this.view.fontSize + (title ? titleFontSize + 6 : 0)
-            const width = Math.ceil(textWidth + 12)
-            const height = Math.ceil(totalHeight + 12)
-            const dpr = window.devicePixelRatio || 1
-            canvas.width = Math.ceil(width * dpr)
-            canvas.height = Math.ceil(height * dpr)
-            ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-            this.renderOutlinedText(width / 2, 6 + this.view.fontSize / 2, name, false, 'NEUTRAL', this.view.fontSize, undefined, 1, null, true, ctx)
-            if (title) this.renderOutlinedText(width / 2, 6 + this.view.fontSize + 6 + titleFontSize / 2,
-                titleText, false, 'NEUTRAL', titleFontSize, undefined, 1, '#e9dabe', true, ctx)
-            label = {image: canvas, width, height, textWidth, totalHeight}
-            // Bound raster memory even when visiting many different NPCs.
-            if (this.npcLabels.size >= 128) this.npcLabels.delete(this.npcLabels.keys().next().value!)
-            this.npcLabels.set(key, label)
+    renderNpcLabel(pos: Vector3, name: string, title: string, tightText: boolean) {
+        if (!Number.isFinite(pos.x) || !Number.isFinite(pos.y)) {
+            return
         }
-        ViewportManager.movePositionToScreen(pos, label.textWidth / 2, label.totalHeight + 10)
-        const top = title ? pos.y - label.totalHeight - 6 : pos.y - 12 - this.view.fontSize / 2
-        this.view.ctx!.drawImage(label.image, pos.x - label.width / 2, top, label.width, label.height)
+        if (!title) {
+            this.renderName(pos, name, tightText, 'NEUTRAL', true)
+            return
+        }
+
+        const ctx = this.view.ctx!
+        const titleText = `[${title}]`
+        const titleFontSize = Math.max(12, this.view.fontSize - 2)
+        const spacingFix = this.view.letterSpacingFix
+        ctx.font = `${this.view.fontSize}px "Roboto", Arial, sans-serif`
+        const nameWidth = CanvasTextUtils.getTextWidth(ctx, name, tightText, spacingFix)
+        ctx.font = `${titleFontSize}px "Roboto", Arial, sans-serif`
+        const titleWidth = CanvasTextUtils.getTextWidth(ctx, titleText, tightText, spacingFix)
+        const totalHeight = this.view.fontSize + titleFontSize + 6
+
+        ViewportManager.movePositionToScreen(pos, Math.max(nameWidth, titleWidth) / 2, totalHeight + 10)
+
+        const nameY = pos.y - totalHeight + this.view.fontSize / 2
+        this.renderOutlinedText(pos.x, nameY, name, tightText, 'NEUTRAL', this.view.fontSize, undefined, 1, null, true)
+        this.renderOutlinedText(pos.x, nameY + this.view.fontSize / 2 + titleFontSize / 2 + 6, titleText, tightText, 'NEUTRAL', titleFontSize, undefined, 1, '#e9dabe', true)
     }
 
     renderOutlinedText(
@@ -515,8 +477,6 @@ export class OverlayLabels {
     }
 
     invalidateTextRasters() {
-        this.npcLabels.clear()
-        this.nameLabels.clear()
         this.speech.forEach(bubbles => bubbles.forEach(bubble => { bubble.image = null }))
     }
 }

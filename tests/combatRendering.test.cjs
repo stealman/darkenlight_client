@@ -405,14 +405,14 @@ test('HUD panels leave unchanged DOM alone and refresh resource and target chang
 })
 
 
-test('speech, healing and NPC labels reuse rasters and invalidate text caches', () => {
+test('speech reuses rasters while names and healing draw directly without canvas allocations', () => {
     let paints = 0
     let allocations = 0
     const draws = []
     const strokedText = []
     const filledText = []
     const makeContext = () => ({
-        save() {}, restore() {}, setTransform() {},
+        save() {}, restore() {}, setTransform() {}, translate() {}, scale() {},
         beginPath() { paints++ }, roundRect() { paints++ }, rect() { paints++ }, fill() { paints++ },
         strokeText(text) { paints++; strokedText.push(text) }, fillText(text) { paints++; filledText.push(text) },
         measureText(text) { return {width: text.length * 8} },
@@ -454,56 +454,31 @@ test('speech, healing and NPC labels reuse rasters and invalidate text caches', 
     assert.equal(longBubble.width, 236)
     overlay.speech.clear()
 
-    indicators.prepareHealingAtlas()
-    const healingPaints = paints
     const initialAllocations = allocations
+    const initialDraws = draws.length
+    const healingPaints = paints
     indicators.renderHealingMarker({x: 100, y: 200}, 1000, false)
-    const green = draws.at(-1)
     indicators.renderHealingMarker({x: 100, y: 200}, 1100, true)
-    const red = draws.at(-1)
-    assert.equal(paints, healingPaints)
+    assert.ok(paints > healingPaints)
+    assert.equal(draws.length, initialDraws)
     assert.equal(allocations, initialAllocations)
-    assert.notEqual(green[2], red[2])
-    assert.deepEqual(green.slice(5), red.slice(5))
 
-    view.letterSpacingFix = -6
-    overlay.renderNpcLabel({x: 150, y: 250}, 'Merchant', 'Trader')
+    view.ctx.measureText = text => ({width: text.length * 8})
+    overlay.renderNpcLabel({x: 150, y: 250}, 'Merchant', 'Trader', false)
     assert.deepEqual(strokedText.slice(-2), ['Merchant', '[Trader]'])
-    assert.equal(draws.at(-1)[3], 76)
     const labelPaints = paints
-    const labelImage = draws.at(-1)[0]
-    view.letterSpacingFix = -20
-    overlay.renderNpcLabel({x: 180, y: 260}, 'Merchant', 'Trader')
-    assert.equal(draws.at(-1)[0], labelImage)
-    assert.equal(paints, labelPaints)
-    overlay.renderNpcLabel({x: 150, y: 250}, 'Merchant', 'Blacksmith')
-    assert.notEqual(draws.at(-1)[0], labelImage)
-    for (let i = 0; i < 130; i++) overlay.renderNpcLabel({x: 150, y: 250}, `NPC ${i}`, '')
-    assert.equal(overlay.npcLabels.size, 128)
-    // Mobile spacing correction must not shrink cached player/monster names.
-    view.letterSpacingFix = -20
-    overlay.renderName({x: 150, y: 250}, 'Skeleton', true, 'ENEMY', true)
-    const monsterImage = draws.at(-1)[0]
+    overlay.renderNpcLabel({x: 180, y: 260}, 'Merchant', 'Trader', false)
+    assert.ok(paints > labelPaints)
+    overlay.renderName({x: 150, y: 250}, 'Skeleton', false, 'ENEMY', true)
     assert.equal(strokedText.at(-1), 'Skeleton')
-    assert.equal(draws.at(-1)[3], 76)
-    const namePaints = paints
-    overlay.renderScaledOutlinedText(180, 260, 'Skeleton', true, 'ENEMY', view.fontSize, 1.17, .4)
-    const scaledName = draws.at(-1)
-    assert.equal(scaledName[0], monsterImage)
-    assert.equal(paints, namePaints)
-    assert.ok(Math.abs(scaledName[3] - 76 * 1.17) < 1e-9)
-    assert.ok(Math.abs(scaledName[1] + scaledName[3] / 2 - 180) < 1e-9)
+    overlay.renderScaledOutlinedText(180, 260, 'Skeleton', false, 'ENEMY', view.fontSize, 1.17, .4)
     assert.equal(view.ctx.globalAlpha, .4)
-    overlay.renderScaledOutlinedText(180, 260, 'Skeleton', true, 'ALLY', view.fontSize, 1, 1, true, '#58ef83')
-    assert.notEqual(draws.at(-1)[0], monsterImage)
-    overlay.renderName({x: 150, y: 250}, 'Renamed', true, 'ENEMY', true)
-    assert.notEqual(draws.at(-1)[0], monsterImage)
-    for (let i = 0; i < 260; i++) overlay.renderName({x: 150, y: 250}, `Player ${i}`, true, 'ALLY', true)
-    assert.equal(overlay.nameLabels.size, 256)
+    overlay.renderScaledOutlinedText(180, 260, 'Skeleton', false, 'ALLY', view.fontSize, 1, 1, false, '#58ef83')
+    assert.equal(view.ctx.fillStyle, '#58ef83')
+    assert.equal(draws.length, initialDraws)
+    assert.equal(allocations, initialAllocations)
     overlay.addSpeech({id: 1, text: 'Resize me'})
     overlay.invalidateTextRasters()
-    assert.equal(overlay.npcLabels.size, 0)
-    assert.equal(overlay.nameLabels.size, 0)
     assert.equal(overlay.speech.get(char)[0].image, null)
     overlay.renderSpeech(1100)
     assert.ok(overlay.speech.get(char)[0].image)

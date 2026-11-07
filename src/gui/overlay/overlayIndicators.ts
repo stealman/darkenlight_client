@@ -1,5 +1,4 @@
 import type { Vector3 } from '@babylonjs/core'
-import { createOverlayRaster } from '@/gui/canvasTextUtils'
 import type { OverlayCanvasView } from '@/gui/canvasTextUtils'
 import { MonsterManager } from '@/babylon/monsters/monsterManager'
 import { CharacterManager } from '@/babylon/character/characterManager'
@@ -13,15 +12,12 @@ interface AnimatedHpBar {
     lastSeenAt: number
 }
 
-const HEALING_CELL_SIZE = 96
-const HEALING_LEVELS = 16
 
 export class OverlayIndicators {
     damagedBarBackground: HTMLCanvasElement | null = null
     animatedHpBars = new WeakMap<object, AnimatedHpBar>()
     monsterAggroAlerts = new Map<number, {worldId: number, startedAt: number}>()
     aggroAlertIcon: HTMLCanvasElement | null = null
-    healingAtlas: HTMLCanvasElement | null = null
 
     constructor(private readonly view: OverlayCanvasView) {}
 
@@ -56,7 +52,6 @@ export class OverlayIndicators {
         alertCtx.strokeText('!', alertIcon.width / 2, alertIcon.height - padding)
         alertCtx.fillText('!', alertIcon.width / 2, alertIcon.height - padding)
         this.aggroAlertIcon = alertIcon
-        this.prepareHealingAtlas()
     }
 
     reset() {
@@ -64,10 +59,7 @@ export class OverlayIndicators {
         this.animatedHpBars = new WeakMap<object, AnimatedHpBar>()
     }
 
-    onResize() {
-        const dpr = window.devicePixelRatio || 1
-        if (this.healingAtlas && this.healingAtlas.width !== Math.ceil(HEALING_CELL_SIZE * 8 * dpr)) this.prepareHealingAtlas()
-    }
+    onResize() {}
 
     addMonsterAggroAlert(data: MonsterAggroAlertData) {
         if (data.worldId !== MyPlayer.worldId) return
@@ -222,34 +214,20 @@ export class OverlayIndicators {
         ctx.fillRect(x + 1, y + 1, fillWidth, barHeight - 2)
     }
 
-    prepareHealingAtlas() {
-        const {canvas, ctx} = createOverlayRaster(HEALING_CELL_SIZE * 8, HEALING_CELL_SIZE * 4)
-        for (let colour = 0; colour < 2; colour++) {
-            for (let level = 0; level < HEALING_LEVELS; level++) {
-                const index = colour * HEALING_LEVELS + level
-                this.paintHealingMarker(ctx, (index % 8 + .5) * HEALING_CELL_SIZE,
-                    (Math.floor(index / 8) + .5) * HEALING_CELL_SIZE, level / (HEALING_LEVELS - 1), colour === 1)
-            }
-        }
-        this.healingAtlas = canvas
-    }
-
     renderHealingMarker(pos: Vector3, time: number, healSelf: boolean) {
-        if (!Number.isFinite(pos.x) || !Number.isFinite(pos.y) || !Number.isFinite(time) || !this.healingAtlas) return
-        const pulse = (Math.sin(time / 200) + 1) / 2
-        const index = (healSelf ? HEALING_LEVELS : 0) + Math.round(pulse * (HEALING_LEVELS - 1))
-        const sourceSize = this.healingAtlas.width / 8
-        this.view.ctx!.drawImage(this.healingAtlas, index % 8 * sourceSize, Math.floor(index / 8) * sourceSize,
-            sourceSize, sourceSize, pos.x + 40 - HEALING_CELL_SIZE / 2, pos.y - HEALING_CELL_SIZE / 2,
-            HEALING_CELL_SIZE, HEALING_CELL_SIZE)
-    }
+        if (!Number.isFinite(pos.x) || !Number.isFinite(pos.y) || !Number.isFinite(time)) {
+            return
+        }
 
-    paintHealingMarker(ctx: CanvasRenderingContext2D, x: number, y: number, pulse: number, healSelf: boolean) {
+        const ctx = this.view.ctx!
+        const x = pos.x + 40
+
         const size = 15
         const thickness = 5
+        const pulse = (Math.sin(time / 200) + 1) / 2
         const alpha = 0.2 + pulse * 0.65
         const glowColor = healSelf ? '255, 68, 54' : '78, 255, 82'
-        const fillGradient = ctx.createLinearGradient(x - size / 2, y - size / 2, x + size / 2, y + size / 2)
+        const fillGradient = ctx.createLinearGradient(x - size / 2, pos.y - size / 2, x + size / 2, pos.y + size / 2)
 
         if (healSelf) {
             fillGradient.addColorStop(0, `rgba(255, 196, 178, ${alpha})`)
@@ -263,8 +241,8 @@ export class OverlayIndicators {
 
         const drawCross = (crossSize: number, crossThickness: number) => {
             ctx.beginPath()
-            ctx.rect(x - crossThickness / 2, y - crossSize / 2, crossThickness, crossSize)
-            ctx.rect(x - crossSize / 2, y - crossThickness / 2, crossSize, crossThickness)
+            ctx.rect(x - crossThickness / 2, pos.y - crossSize / 2, crossThickness, crossSize)
+            ctx.rect(x - crossSize / 2, pos.y - crossThickness / 2, crossSize, crossThickness)
             ctx.fill()
         }
 
@@ -283,4 +261,5 @@ export class OverlayIndicators {
         ctx.fillStyle = fillGradient
         drawCross(size, thickness)
     }
+
 }
