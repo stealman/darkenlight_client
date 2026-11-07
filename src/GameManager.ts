@@ -15,6 +15,7 @@ import { MyStatusPanel } from '@/gui/myStatusPanel'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { UiIconManager } from '@/gui/uiIconManager'
 import {PartyManager} from '@/data/partyManager'
+import { GMManager } from '@/gm/GM'
 
 const PIXELATED_UI_IMAGE_SIZE = 1.2 // 64 px -> 46 px after rounding.
 const PIXELATED_UI_IMAGE_SATURATION = 0.7 // 0 = grayscale, 1 = original saturation.
@@ -65,6 +66,7 @@ export const GameManager = {
     async startGame(charData) {
         reportLoadingProgress(35, 'app.loadingCharacter')
         await MyPlayer.initialize(charData)
+        GMManager.restoreNoAggro()
         reportLoadingProgress(70, 'app.loadingWorld')
         InventoryManager.initializeWeaponSetupsForCharacter()
         ActionButtonsManager.loadBindingsForCharacter(MyPlayer.myChar.id)

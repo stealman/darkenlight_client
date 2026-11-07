@@ -9,11 +9,9 @@
     </div>
 
     <div>
-        <label>Tree level (1?6) <input v-model.number="GMManager.treeLevel.value" type="number" min="1" max="6" step="1"></label>
-        <button @click="selectEditTree">Edit tree level</button>
-        <div v-if="GMManager.editingTree.value && selectedTree === -2">
+        <label>Tree level (1?6) <input ref="treeLevelInput" @change="GMManager.saveTreeLevel()" v-model.number="GMManager.treeLevel.value" type="number" min="1" max="6" step="1"></label>
+        <div v-if="GMManager.editingTree.value">
             Tree {{ GMManager.editingTree.value.x }}, {{ GMManager.editingTree.value.z }}
-            <button @click="GMManager.saveTreeLevel()">Save level</button>
         </div>
     </div>
 
@@ -95,8 +93,16 @@
 
 <script setup>
 
-import { GMManager, GmTabs as GMTabs } from '@/gm/GM'
-import { ref, onMounted } from 'vue'
+import { GMManager } from '@/gm/GM'
+import { ref, watch, nextTick } from 'vue'
+
+const treeLevelInput = ref(null)
+watch(GMManager.editingTree, async (tree) => {
+    if (!tree) return
+    await nextTick()
+    treeLevelInput.value?.focus()
+    treeLevelInput.value?.select()
+})
 
 // Biome edit constants
 const selectedTreeType = ref("")
@@ -141,6 +147,7 @@ const shrubs = [
 ]
 
 const selectTreeType = (type) => {
+    GMManager.editingTree.value = null
     selectedTreeType.value = type
     selectedShrubType.value = ""
 
@@ -152,11 +159,13 @@ const selectTreeType = (type) => {
 }
 
 const selectTree = (id) => {
+    GMManager.editingTree.value = null
     selectedTree.value = parseInt(id)
     selectedShrub.value = 0
 }
 
 const selectShrubType = (type) => {
+    GMManager.editingTree.value = null
     selectedShrubType.value = type
     selectedTreeType.value = ""
 
@@ -168,19 +177,13 @@ const selectShrubType = (type) => {
 }
 
 const selectShrub = (id) => {
+    GMManager.editingTree.value = null
     selectedShrub.value = parseInt(id)
     selectedTree.value = 0
 }
 
-const selectEditTree = () => {
-    selectedTree.value = -2
-    selectedShrub.value = 0
-    GMManager.editingTree.value = null
-    selectedTreeType.value = ""
-    selectedShrubType.value = ""
-}
-
 const selectNone = () => {
+    GMManager.editingTree.value = null
     selectedTree.value = 0
     selectedShrub.value = 0
     selectedTreeType.value = ""
@@ -188,6 +191,7 @@ const selectNone = () => {
 }
 
 const selectDelete = () => {
+    GMManager.editingTree.value = null
     selectedTree.value = -1
     selectedShrub.value = -1
     selectedTreeType.value = ""

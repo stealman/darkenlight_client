@@ -671,3 +671,12 @@ export class MonsterCatalogRequest implements Message {
     d: {types: number[]}
     constructor(types: number[]) { this.d = {types} }
 }
+
+export class GMNoAggroMsg implements Message {
+    t: number = 1025
+    d: {enabled: boolean}
+
+    constructor(enabled: boolean) {
+        this.d = {enabled}
+    }
+}

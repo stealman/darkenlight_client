@@ -126,7 +126,7 @@
                                                 'skill-bonus-label--unknown': !skill.skillBonus && !skill.maxWood && !skill.miningMaxOre && !skill.bonusDescriptionTranslationKey,
                                             }"
                                         >{{ skill.key === 'preciseShot' ? '' : t('skills.bonuses.skillBonus') }}</span>
-                                        <span v-if="skill.maxWood" class="skill-bonus-value"><span>{{ lumberjackingBonusParts[0] }}</span><strong class="skill-bonus-value-emphasis">{{ skill.maxWood }}</strong><span>{{ lumberjackingBonusParts[1] }}</span></span>
+                                        <span v-if="skill.maxWood" class="skill-bonus-value"><span>{{ lumberjackingBonusParts[0] }}</span><strong class="skill-bonus-value-emphasis">{{ skill.maxWood }}</strong><span>{{ lumberjackingBonusParts[1] }}</span><span v-if="skill.woodCapacityPreservationPercent > 0"> {{ t('skills.bonuses.lumberjackingCapacityPreservation', {percent: skill.woodCapacityPreservationPercent}) }}</span></span>
                                         <span v-else-if="skill.miningMaxOre" class="skill-bonus-value"><span>{{ miningBonusParts[0] }}</span><strong class="skill-bonus-value-emphasis">{{ skill.miningMaxOre }}</strong><span>{{ miningBonusParts[1] }}</span></span>
                                         <span v-else-if="skill.bonusDescriptionTranslationKey" class="skill-bonus-value">{{ t(skill.bonusDescriptionTranslationKey) }}</span>
                                         <span v-else-if="skill.skillBonus" class="skill-bonus-value">
@@ -137,10 +137,10 @@
                                     <div class="skill-bonus-row">
                                         <span
                                             class="skill-bonus-label"
-                                            :class="{ 'skill-bonus-label--active': skill.expertBonusUnlocked, 'skill-bonus-label--unknown': skill.cap < 4 || (skill.key !== 'shields' && skill.key !== 'bows' && skill.key !== 'mining' && skill.key !== 'blacksmithy' && skill.key !== 'armorsmithy' && skill.key !== 'bowcraft') }"
+                                            :class="{ 'skill-bonus-label--active': skill.expertBonusUnlocked, 'skill-bonus-label--unknown': skill.cap < 4 || (skill.key !== 'shields' && skill.key !== 'bows' && skill.key !== 'mining' && skill.key !== 'lumberjacking' && skill.key !== 'blacksmithy' && skill.key !== 'armorsmithy' && skill.key !== 'bowcraft') }"
                                         >{{ t('skills.bonuses.expertBonus') }}</span>
                                         <span v-if="skill.cap >= 4 && (skill.key === 'blacksmithy' || skill.key === 'armorsmithy' || skill.key === 'bowcraft')" class="skill-bonus-value" :class="{ 'skill-bonus-value--pending': !skill.expertBonusUnlocked }"><span>{{ blacksmithyExpertBonusParts[0] }}</span><strong class="skill-bonus-value-emphasis">5–15</strong><span>{{ blacksmithyExpertBonusParts[1] }}</span></span>
-                                        <span v-else-if="skill.cap >= 4 && skill.key === 'mining'" class="skill-bonus-value" :class="{ 'skill-bonus-value--pending': !skill.expertBonusUnlocked }">{{ t('skills.bonuses.miningStaminaReduction', { percent: 15 }) }}</span>
+                                        <span v-else-if="skill.cap >= 4 && (skill.key === 'mining' || skill.key === 'lumberjacking')" class="skill-bonus-value" :class="{ 'skill-bonus-value--pending': !skill.expertBonusUnlocked }">{{ t(skill.key === 'lumberjacking' ? 'skills.bonuses.lumberjackingStaminaReduction' : 'skills.bonuses.miningStaminaReduction', { percent: 15 }) }}</span>
                                         <span v-else-if="skill.cap >= 4 && skill.key === 'shields'" class="skill-bonus-value" :class="{ 'skill-bonus-value--pending': !skill.expertBonusUnlocked }">{{ t('skills.bonuses.halvesShieldPrecisionPenalty') }}</span>
                                         <span v-else-if="skill.cap >= 4 && skill.key === 'bows'" class="skill-bonus-value" :class="{ 'skill-bonus-value--pending': !skill.expertBonusUnlocked }">{{ t('skills.bonuses.eliminatesLongRangePenalty') }}</span>
                                         <strong v-else class="skill-bonus-value skill-bonus-value--unknown">{{ unknownBonusLabel }}</strong>
@@ -148,10 +148,10 @@
                                     <div class="skill-bonus-row">
                                         <span
                                             class="skill-bonus-label"
-                                            :class="{ 'skill-bonus-label--active': skill.masterBonusUnlocked, 'skill-bonus-label--unknown': skill.cap < 7 || (skill.key !== 'shields' && skill.key !== 'bows' && skill.key !== 'mining' && skill.key !== 'blacksmithy' && skill.key !== 'armorsmithy' && skill.key !== 'bowcraft') }"
+                                            :class="{ 'skill-bonus-label--active': skill.masterBonusUnlocked, 'skill-bonus-label--unknown': skill.cap < 7 || (skill.key !== 'shields' && skill.key !== 'bows' && skill.key !== 'mining' && skill.key !== 'lumberjacking' && skill.key !== 'blacksmithy' && skill.key !== 'armorsmithy' && skill.key !== 'bowcraft') }"
                                         >{{ t('skills.bonuses.masterBonus') }}</span>
                                         <span v-if="skill.cap >= 7 && (skill.key === 'blacksmithy' || skill.key === 'armorsmithy' || skill.key === 'bowcraft')" class="skill-bonus-value" :class="{ 'skill-bonus-value--pending': !skill.masterBonusUnlocked }">{{ t('skills.bonuses.blacksmithyMaster') }}</span>
-                                        <span v-else-if="skill.cap >= 7 && skill.key === 'mining'" class="skill-bonus-value" :class="{ 'skill-bonus-value--pending': !skill.masterBonusUnlocked }">{{ t('skills.bonuses.miningStaminaReduction', { percent: 30 }) }}</span>
+                                        <span v-else-if="skill.cap >= 7 && (skill.key === 'mining' || skill.key === 'lumberjacking')" class="skill-bonus-value" :class="{ 'skill-bonus-value--pending': !skill.masterBonusUnlocked }">{{ t(skill.key === 'lumberjacking' ? 'skills.bonuses.lumberjackingStaminaReduction' : 'skills.bonuses.miningStaminaReduction', { percent: 30 }) }}</span>
                                         <span v-else-if="skill.cap >= 7 && skill.key === 'shields'" class="skill-bonus-value" :class="{ 'skill-bonus-value--pending': !skill.masterBonusUnlocked }">{{ t('skills.bonuses.eliminatesShieldPrecisionPenalty') }}</span>
                                         <span v-else-if="skill.cap >= 7 && skill.key === 'bows'" class="skill-bonus-value" :class="{ 'skill-bonus-value--pending': !skill.masterBonusUnlocked }">{{ t('skills.bonuses.halvesShortRangePenalty') }}</span>
                                         <strong v-else class="skill-bonus-value skill-bonus-value--unknown">{{ unknownBonusLabel }}</strong>
@@ -159,10 +159,10 @@
                                     <div class="skill-bonus-row">
                                         <span
                                             class="skill-bonus-label"
-                                            :class="{ 'skill-bonus-label--active': skill.grandmasterBonusUnlocked, 'skill-bonus-label--unknown': skill.cap < 10 || (skill.key !== 'bows' && skill.key !== 'mining' && skill.key !== 'blacksmithy' && skill.key !== 'armorsmithy' && skill.key !== 'bowcraft') }"
+                                            :class="{ 'skill-bonus-label--active': skill.grandmasterBonusUnlocked, 'skill-bonus-label--unknown': skill.cap < 10 || (skill.key !== 'bows' && skill.key !== 'mining' && skill.key !== 'lumberjacking' && skill.key !== 'blacksmithy' && skill.key !== 'armorsmithy' && skill.key !== 'bowcraft') }"
                                         >{{ t('skills.bonuses.grandmasterBonus') }}</span>
                                         <span v-if="skill.cap >= 10 && (skill.key === 'blacksmithy' || skill.key === 'armorsmithy' || skill.key === 'bowcraft')" class="skill-bonus-value" :class="{ 'skill-bonus-value--pending': !skill.grandmasterBonusUnlocked }"><span>{{ blacksmithyGrandmasterBonusParts[0] }}</span><strong class="skill-bonus-value-emphasis">15–30</strong><span>{{ blacksmithyGrandmasterBonusParts[1] }}</span></span>
-                                        <span v-else-if="skill.cap >= 10 && skill.key === 'mining'" class="skill-bonus-value" :class="{ 'skill-bonus-value--pending': !skill.grandmasterBonusUnlocked }">{{ t('skills.bonuses.miningStaminaReduction', { percent: 45 }) }}</span>
+                                        <span v-else-if="skill.cap >= 10 && (skill.key === 'mining' || skill.key === 'lumberjacking')" class="skill-bonus-value" :class="{ 'skill-bonus-value--pending': !skill.grandmasterBonusUnlocked }">{{ t(skill.key === 'lumberjacking' ? 'skills.bonuses.lumberjackingStaminaReduction' : 'skills.bonuses.miningStaminaReduction', { percent: 45 }) }}</span>
                                         <span v-else-if="skill.cap >= 10 && skill.key === 'bows'" class="skill-bonus-value" :class="{ 'skill-bonus-value--pending': !skill.grandmasterBonusUnlocked }">{{ t('skills.bonuses.eliminatesShortRangePenalty') }}</span>
                                         <strong v-else class="skill-bonus-value skill-bonus-value--unknown">{{ unknownBonusLabel }}</strong>
                                     </div>
@@ -299,6 +299,7 @@ const skills = computed(() => {
             name: t(skill.translationKey),
             rank,
             skillBonus: getSkillBonusValue(skill, rank, progress),
+            woodCapacityPreservationPercent: progress?.lumberjackingCapacityPreservationPercent ?? 0,
             maxWood: skill.key === 'lumberjacking' && progress?.maxWoodResourceKey ? t(`items.resources.${progress.maxWoodResourceKey}`) : null,
             miningMaxOre: skill.key === 'mining' && progress?.maxMiningOreResourceKey
                 ? t(`items.resources.${progress.maxMiningOreResourceKey}`) : undefined,

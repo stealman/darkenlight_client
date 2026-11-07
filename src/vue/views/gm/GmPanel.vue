@@ -39,6 +39,7 @@
                     <button @click="triggerLightning">LIGHTNING</button>
                 </div>
             </details>
+            <label><input type="checkbox" :checked="GMManager.noAggro.value" @change="GMManager.setNoAggro($event.target.checked)"> Do not aggro</label>
         </div>
 
         <!-- Terrain -->

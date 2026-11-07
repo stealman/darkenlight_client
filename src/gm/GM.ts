@@ -1,5 +1,5 @@
 import { Connector } from '@/network/connector'
-import { GMBotAction, GMBuildingChange, GMCreateItemMsg, GMDayNightCycleMsg, GMEquipmentDecorationChange, GMForceSaveDataMsg, GMGenerateBiomeMsg, GMLoadItemCodebookMsg, GMLoadWorldMapImageMsg, GMLoadWorldSettingsMsg, GMLoadWorldsMsg, GMNpcAction, GMSaveMapDataMsg, GMSaveWorldMapHeightChangesMsg, GMSaveWorldMapSurfaceChangesMsg, GMSaveWorldMapTerrainChangesMsg, GMSaveWorldSettingsMsg, GMStaticDeleteInfoRequest, GMStaticObjectChange, GMTeleportMsg, GMTerrainChange } from '@/network/messages'
+import { GMNoAggroMsg, GMBotAction, GMBuildingChange, GMCreateItemMsg, GMDayNightCycleMsg, GMEquipmentDecorationChange, GMForceSaveDataMsg, GMGenerateBiomeMsg, GMLoadItemCodebookMsg, GMLoadWorldMapImageMsg, GMLoadWorldSettingsMsg, GMLoadWorldsMsg, GMNpcAction, GMSaveMapDataMsg, GMSaveWorldMapHeightChangesMsg, GMSaveWorldMapSurfaceChangesMsg, GMSaveWorldMapTerrainChangesMsg, GMSaveWorldSettingsMsg, GMStaticDeleteInfoRequest, GMStaticObjectChange, GMTeleportMsg, GMTerrainChange } from '@/network/messages'
 import { GMBotStatusData, GMExistingBotsData, GMItemCodebookItem, GMStaticDeleteInfoData, GMWorldBiomeTreesChangedData, GMWorldMapImageData, GMWorldSettingsData, GMWorldsData } from '@/network/messageIfs'
 import { GMSceneManager } from '@/babylon/gm/GmSceneManager'
 import { WorldDataManager } from '@/data/worldDataManager'
@@ -103,6 +103,19 @@ const buildingFootprint = (type: number, facing: string, width: number, depth: n
 
 export const GMManager = {
     gmPanelVisible: ref(false),
+    noAggro: ref(false),
+
+    setNoAggro(enabled: boolean) {
+        this.noAggro.value = enabled
+        localStorage.setItem('DARKENLIGHT_GM_NO_AGGRO', String(enabled))
+        Connector.sendMessage(new GMNoAggroMsg(enabled))
+    },
+
+    restoreNoAggro() {
+        this.noAggro.value = false
+        if (MyPlayer.myChar?.className !== 'GM') return
+        this.setNoAggro(localStorage.getItem('DARKENLIGHT_GM_NO_AGGRO') === 'true')
+    },
     consumePointerMoveEvents: false,
     consumeLeftClickEvents: false,
     consumeMiddleClickEvents: false,
@@ -273,10 +286,13 @@ export const GMManager = {
 
         if (this.tab === GmTabs.BIOME_EDIT) {
             const markerPos = new Vector3(GMSceneManager.hoverBlockMarker!.position.x, 0, GMSceneManager.hoverBlockMarker!.position.z)
-            if (this.selectedTree.value === -2) {
-                const tree = TreeManager.allTrees.find(t => t.position.x === markerPos.x && t.position.z === markerPos.z)
-                this.editingTree.value = tree ? {x: markerPos.x, z: markerPos.z} : null
-                if (tree) this.treeLevel.value = tree.level ?? 1
+            const tree = TreeManager.allTrees.find(t => t.position.x === markerPos.x && t.position.z === markerPos.z)
+            this.editingTree.value = null
+            if (this.selectedTree.value === -1 && this.selectedShrub.value === -1) {
+                this.requestStaticDelete(markerPos.x, markerPos.z)
+            } else if (tree) {
+                this.treeLevel.value = tree.level ?? 1
+                this.editingTree.value = {x: markerPos.x, z: markerPos.z}
             } else if (this.selectedTree.value > 0) {
                 const treeData = { x: markerPos.x, z: markerPos.z, size: Utils.roundToOneDecimal(1.1 + Math.random() * 0.6) , type: this.selectedTree.value, level: this.treeLevel.value }
                 Connector.sendMessage(new GMStaticObjectChange("ADD_TREE", [treeData] ) )
@@ -285,8 +301,6 @@ export const GMManager = {
                 const shrubData = { x: markerPos.x, z: markerPos.z, type: this.selectedShrub.value }
                 Connector.sendMessage(new GMStaticObjectChange("ADD_OBJECT", [shrubData] ) )
 
-            } else if (this.selectedTree.value === -1 && this.selectedShrub.value === -1) {
-                this.requestStaticDelete(markerPos.x, markerPos.z)
             }
         }
 
@@ -1000,6 +1014,7 @@ export const GMManager = {
     },
 
     closeTabBiomeEdit() {
+        this.editingTree.value = null
         this.consumePointerMoveEvents = false
         this.consumeLeftClickEvents = false
         GMSceneManager.hoverBlockMarker?.setEnabled(false)
@@ -1295,5 +1310,3 @@ watch([
     GMManager.buildingWidth,
     GMManager.buildingDepth,
 ], () => GMManager.updateBuildingMarkerFootprint())
-
-

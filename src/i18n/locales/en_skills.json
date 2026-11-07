@@ -91,8 +91,10 @@
       "classMaximumRank": "Class maximum level"
     },
     "bonuses": {
+      "lumberjackingCapacityPreservation": "Adds a {percent}% bonus to tree yield.",
       "lumberjackingMaxWood": "Allows harvesting wood up to {wood}.",
       "miningMaxOre": "Allows mining ores up to {ore} and recognizing deposit rarity based on your skill rank.",
+      "lumberjackingStaminaReduction": "Reduces lumberjacking stamina consumption by {percent}%.",
       "miningStaminaReduction": "Reduces mining stamina consumption by {percent}%.",
       "skillBonus": "Skill bonus",
       "blacksmithy": "Allows you to craft more complex metal weapons of higher quality.",

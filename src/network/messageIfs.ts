@@ -107,6 +107,8 @@ export interface SkillProgressTO {
     trainingUnlockPrice?: number
     maxWoodResourceKey?: string
     maxMiningOreResourceKey?: string
+    lumberjackingCapacityPreservationPercent?: number
+    lumberjackingStaminaReductionPercent?: number
     miningStaminaReductionPercent?: number
     rank: number
     experience: number
