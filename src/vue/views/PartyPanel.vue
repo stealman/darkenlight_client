@@ -154,7 +154,7 @@ const leave = () => { menuOpen.value = false; PartyManager.leave() }
 .party-loot-choice:focus-visible { outline: 1px solid rgb(var(--ui-base)); outline-offset: -2px; }
 .party-loot-choice:disabled { cursor: default; }
 .party-invite-backdrop { --party-invite-top: max(65px, 12dvh); pointer-events: none; align-items: flex-start; padding-top: var(--party-invite-top); box-sizing: border-box; }
-.party-invite-window { pointer-events: auto; width: 310px; max-width: calc(100vw - 24px); }
+.dialog-window.party-invite-window { pointer-events: auto; width: 600px; max-width: calc(100vw - 24px); box-sizing: border-box; }
 .party-invite-window .dialog-header { display: flex; align-items: center; justify-content: center; }
 .dialog-window.party-invitation-window { width: 600px; max-width: calc(100vw - 24px); max-height: calc(100dvh - var(--party-invite-top) - 12px); box-sizing: border-box; display: flex; flex-direction: column; }
 .party-invitation-window > .dialog-surface { display: flex; flex-direction: column; min-height: 0; }
