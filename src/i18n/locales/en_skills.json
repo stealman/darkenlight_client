@@ -2,6 +2,7 @@
   "skills": {
     "crafting": {"blacksmithy": "Blacksmithy", "bowcraft": "Bowcraft", "armorsmithy": "Armorsmithy"},
     "monsterKnowledge": {
+      "huntable": "Can be hunted",
       "title": "Monster Lore",
       "level": "Level {level}",
       "nextLevelProgress": "Progress to the next monster knowledge level",
@@ -32,12 +33,14 @@
       "shields": "Shields"
     },
     "utility": {
+      "hunting": "Hunting",
       "lumberjacking": "Lumberjacking",
       "mining": "Mining",
       "camping": "Camping",
       "healing": "Healing"
     },
     "descriptions": {
+      "hunting": "Hunting animals provides hides and material for bowstrings.",
       "lumberjacking": "Allows harvesting different types of wood based on your skill rank and the tree rarity.",
       "blacksmithy": "A skill for crafting metal weapons.",
       "bowcraft": "A skill for crafting bows.",
@@ -94,6 +97,9 @@
       "lumberjackingCapacityPreservation": "Adds a {percent}% bonus to tree yield.",
       "lumberjackingMaxWood": "Allows harvesting wood up to {wood}.",
       "miningMaxOre": "Allows mining ores up to {ore} and recognizing deposit rarity based on your skill rank.",
+      "huntingMaxHide": "Allows gathering hides up to {hide}",
+      "huntingMaxBowstring": " and bowstrings up to {bowstring}",
+      "huntingExtraMaterial": "Successful hunts have a {percent}% chance to yield one extra piece of the same material.",
       "lumberjackingStaminaReduction": "Reduces lumberjacking stamina consumption by {percent}%.",
       "miningStaminaReduction": "Reduces mining stamina consumption by {percent}%.",
       "skillBonus": "Skill bonus",

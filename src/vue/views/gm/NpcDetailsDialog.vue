@@ -385,6 +385,12 @@ const weaponCodebookBaseIds = {
 }
 const pickaxeCodebookIds = { 1: 3, 2: 5, 3: 6, 4: 7, 5: 8, 6: 4 }
 const resourceOptions = [
+    { codebookId: 311, label: 'Common Hide' },
+    { codebookId: 312, label: 'Hard Hide' },
+    { codebookId: 313, label: 'Wolf Hide' },
+    { codebookId: 314, label: 'Lizard Hide' },
+    { codebookId: 315, label: 'Dragon Hide' },
+
     { codebookId: 1, label: 'Bandages' },
     { codebookId: 1031, label: 'Small empty potion bottle' },
     { codebookId: 1032, label: 'Empty potion bottle' },
@@ -395,6 +401,9 @@ const resourceOptions = [
     { codebookId: 231, label: 'Coarse Bowstring' },
     { codebookId: 232, label: 'Fine Bowstring' },
     { codebookId: 233, label: 'Superior Bowstring' },
+    { codebookId: 234, label: 'Spider Silk Bowstring' },
+    { codebookId: 235, label: 'Unicorn Mane Bowstring' },
+    { codebookId: 236, label: 'Demonic Bowstring' },
     { codebookId: 301, label: 'Common meat' },
     { codebookId: 302, label: 'Wool (10 pieces)' },
     { codebookId: 303, label: 'Cloth' },

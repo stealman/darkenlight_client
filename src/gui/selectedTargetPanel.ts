@@ -94,9 +94,26 @@ export const SelectedTargetPanel = {
                     value: t('skills.monsterKnowledge.damageBonus', {percent: knowledge?.damageBonusPercent ?? 0}),
                     className: 'ui-tooltip-row--monster-category',
                 })
+            }
+            if (target.huntable && !info?.tags.includes('ANIMAL')) {
+                rows.push({
+                    value: t('skills.monsterKnowledge.huntable'),
+                    className: 'ui-tooltip-row--huntable',
+                })
+            }
+            if (info) {
                 for (const tag of info.tags) {
                     const tagKey = `skills.monsterKnowledge.tags.${tag}`
                     const name = t(tagKey)
+                    if (tag === 'ANIMAL' && target.huntable) {
+                        rows.push({
+                            label: name === tagKey ? tag : name,
+                            separator: ',',
+                            value: t('skills.monsterKnowledge.huntable'),
+                            className: 'ui-tooltip-row--huntable ui-tooltip-row--huntable-animal',
+                        })
+                        continue
+                    }
                     rows.push({
                         value: name === tagKey ? tag : name,
                         className: tag === 'UNDEAD' ? 'ui-tooltip-row--undead' : 'ui-tooltip-row--monster-tag',

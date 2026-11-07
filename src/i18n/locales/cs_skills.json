@@ -2,6 +2,7 @@
   "skills": {
     "crafting": {"blacksmithy": "Kovářství", "bowcraft": "Výroba Luků", "armorsmithy": "Zbrojířství"},
     "monsterKnowledge": {
+      "huntable": "Lze lovit",
       "title": "Znalost Monster",
       "level": "Úroveň {level}",
       "nextLevelProgress": "Postup k další úrovni znalosti monster",
@@ -32,12 +33,14 @@
       "shields": "Štíty"
     },
     "utility": {
+      "hunting": "Lov",
       "lumberjacking": "Dřevorubectví",
       "mining": "Těžba",
       "camping": "Táboření",
       "healing": "Léčba"
     },
     "descriptions": {
+      "hunting": "Lovem zvířat lze získávat kůže a materiál pro tětivy luků.",
       "lumberjacking": "Umožňuje získávat různé druhy dřeva podle úrovně dovednosti a vzácnosti stromu.",
       "blacksmithy": "Dovednost pro výrobu kovových zbraní.",
       "bowcraft": "Dovednost pro výrobu luků.",
@@ -94,6 +97,9 @@
       "lumberjackingCapacityPreservation": "Přidává bonus {percent} % k výtěžnosti stromu.",
       "lumberjackingMaxWood": "Umožňuje získávat dřevo až po {wood}.",
       "miningMaxOre": "Umožňuje těžit rudy až po {ore} a rozpoznávat vzácnost ložiska v závislosti na úrovni dovednosti.",
+      "huntingMaxHide": "Umožňuje získávat kůži až po {hide}",
+      "huntingMaxBowstring": " a tětivu až po {bowstring}",
+      "huntingExtraMaterial": "Při úspěšném lovu máš {percent}% šanci získat jeden kus stejného materiálu navíc.",
       "lumberjackingStaminaReduction": "Snižuje spotřebu výdrže při kácení o {percent} %.",
       "miningStaminaReduction": "Snižuje spotřebu výdrže při těžbě o {percent} %.",
       "skillBonus": "Bonus dovednosti",

@@ -10,6 +10,7 @@ const descriptionKeys: Record<number, string> = {
     201: 'wood', 202: 'campWood', 203: 'campWood', 204: 'campWood', 205: 'campWood', 206: 'campWood',
     221: 'plank', 222: 'plank', 223: 'plank', 224: 'plank', 225: 'plank', 226: 'plank',
     231: 'coarseBowstring', 232: 'fineBowstring', 233: 'superiorBowstring',
+    234: 'spiderSilkBowstring', 235: 'unicornManeBowstring', 236: 'demonicBowstring',
     301: 'meat', 302: 'wool', 303: 'cloth', 351: 'steak',
     1031: 'emptyPotion', 1032: 'emptyPotion', 1033: 'emptyPotion',
 }
