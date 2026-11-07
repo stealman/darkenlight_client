@@ -7,8 +7,8 @@
         <div v-show="gameSessionActive">
             <PartyPanel v-if="gameSessionActive" />
             <SpeechInput v-if="gameSessionActive && speechButtonVisible" />
-            <CharacterChatTab v-if="gameSessionActive && !speechButtonVisible" v-show="!displayCharacterDialog"
-                ref="desktopChat" desktop-hud :visible="!displayCharacterDialog" />
+            <CharacterChatTab v-if="gameSessionActive && !speechButtonVisible" v-show="!displayCharacterDialog && !gmPanelVisible"
+                ref="desktopChat" desktop-hud :visible="!displayCharacterDialog && !gmPanelVisible" />
             <div id="system-buttons">
                 <button type="button" class="hud-settings-button" :aria-label="t('app.settings')" @click="showSettingsDialog()" v-html="getSettingsSvg('', 'icon-settings')"></button>
             </div>
@@ -225,7 +225,7 @@ import SpeechInput from '@/vue/views/SpeechInput.vue'
 import CharacterChatTab from '@/vue/views/character/CharacterChatTab.vue'
 const desktopChat = ref<InstanceType<typeof CharacterChatTab> | null>(null)
 const focusDesktopChat = () => {
-    if (!Settings.isPhoneOrTablet() && !displayCharacterDialog.value) desktopChat.value?.focusInput()
+    if (!Settings.isPhoneOrTablet() && !displayCharacterDialog.value && !gmPanelVisible.value) desktopChat.value?.focusInput()
 }
 const openSpeech = () => window.dispatchEvent(new CustomEvent('ui:open-speech'))
 
@@ -731,6 +731,7 @@ const onOpenPrivateChat = (event: Event) => {
     const name = (event as CustomEvent<{name: string}>).detail?.name
     if (!gameSessionActive.value || isDead.value || typeof name !== 'string' || !name.trim()) return
     if (!Settings.isPhoneOrTablet()) {
+        if (gmPanelVisible.value) return
         displayCharacterDialog.value = false
         nextTick(() => {
             desktopChat.value?.reply(name)

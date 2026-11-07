@@ -200,6 +200,7 @@ watch(() => props.visible, visible => {
     else ChatManager.visible = !!visible
     phoneLayout.value = Settings.getDeviceType() === 'PHONE'
     if (visible) { state.unread[state.active] = 0; scrollBottom() }
+    else { input.value?.blur(); endResize() }
 }, {immediate: true})
 onMounted(() => {
     window.addEventListener('ui:cycle-chat', cycle); scrollBottom()
