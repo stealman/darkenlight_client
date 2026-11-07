@@ -382,7 +382,9 @@
     appearance: none;
     -webkit-appearance: none;
     background-color: transparent;
-    border: none;
+    border: 0 solid transparent;
+    border-image: var(--gui-button) 18 / 2px / 0 stretch;
+    border-radius: 4px;
     padding: 0;
 }
 

@@ -84,7 +84,6 @@
                 v-if="shouldShowDropButton"
                 class="action-button inventory-action-button inventory-drop-button"
                 type="button"
-                :style="{ backgroundImage: `url('/images/icons/buttons/btn_background.png')` }"
                 @pointerdown.prevent.stop
                 @click.stop="onDropItemClick"
             >
@@ -95,7 +94,6 @@
                 v-if="shouldShowSplitButton"
                 class="action-button inventory-action-button inventory-split-button"
                 type="button"
-                :style="{ backgroundImage: `url('/images/icons/buttons/btn_background.png')` }"
                 @pointerdown.prevent.stop
                 @click.stop="onSplitItemClick"
             >
@@ -106,7 +104,6 @@
                 v-if="shouldShowMergeButton"
                 class="action-button inventory-action-button inventory-merge-button"
                 type="button"
-                :style="{ backgroundImage: `url('/images/icons/buttons/btn_background.png')` }"
                 @pointerdown.prevent.stop
                 @click.stop="onMergeItemClick"
             >
@@ -117,7 +114,6 @@
                 v-if="shouldShowCampButton"
                 class="action-button inventory-action-button inventory-camp-button"
                 type="button"
-                :style="{ backgroundImage: `url('/images/icons/buttons/btn_background.png')` }"
                 @pointerdown.prevent.stop
                 @click.stop="onCreateCampClick"
             >
@@ -128,7 +124,6 @@
                 v-if="shouldShowBindButton"
                 class="action-button inventory-action-button inventory-text-action-button"
                 type="button"
-                :style="{ backgroundImage: `url('/images/icons/buttons/btn_background.png')` }"
                 @pointerdown.prevent.stop
                 @click.stop="onBindConsumableClick"
             >
@@ -139,7 +134,6 @@
                 v-if="showSplitControls"
                 class="action-button inventory-action-button inventory-text-action-button"
                 type="button"
-                :style="{ backgroundImage: `url('/images/icons/buttons/btn_background.png')` }"
                 @pointerdown.prevent.stop
                 @click.stop="onSplitConfirmClick"
             >
@@ -150,7 +144,6 @@
                 v-if="showSplitControls"
                 class="action-button inventory-action-button inventory-text-action-button"
                 type="button"
-                :style="{ backgroundImage: `url('/images/icons/buttons/btn_background.png')` }"
                 @pointerdown.prevent.stop
                 @click.stop="onSplitCancelClick"
             >
