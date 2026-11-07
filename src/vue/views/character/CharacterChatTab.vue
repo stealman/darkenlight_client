@@ -11,7 +11,7 @@
         <div ref="log" class="chat-log" role="log" aria-live="polite" @scroll="onScroll">
             <div v-if="state.active === 'log' && !activityEntries.length" class="chat-empty">{{ t('activityLog.empty') }}</div>
             <div v-if="state.active === 'log'">
-                <div v-for="entry in activityEntries" :key="entry.id" class="chat-message activity-entry" :class="{'activity-entry--negative': entry.negative, 'activity-entry--positive': entry.positive, 'activity-entry--kill': !!entry.kill}" :title="new Date(entry.time).toLocaleString()"><template v-if="entry.kill">{{ entry.kill.before }}<span class="activity-kill-name" :style="{color: entry.kill.color}">{{ entry.kill.name }}</span>{{ entry.kill.after }}</template><template v-else-if="entry.damage">{{ entry.damage.before }}<span :style="{color: entry.color}">{{ entry.damage.value }}</span>{{ entry.damage.after }}</template><template v-else-if="entry.item">{{ entry.item.before }}<strong class="activity-item-name">{{ entry.item.name }}{{ entry.item.after }}</strong></template><template v-else>{{ entry.text }}</template></div>
+                <div v-for="entry in activityEntries" :key="entry.id" class="chat-message activity-entry" :class="{'activity-entry--negative': entry.negative, 'activity-entry--positive': entry.positive, 'activity-entry--kill': !!entry.kill}" :title="new Date(entry.time).toLocaleString()"><template v-if="entry.kill">{{ entry.kill.before }}<span class="activity-kill-name" :style="{color: entry.kill.color}">{{ entry.kill.name }}</span>{{ entry.kill.after }}</template><template v-else-if="entry.damage">{{ entry.damage.before }}<span :style="{color: entry.color}">{{ entry.damage.heightBlocks ? entry.damage.value.slice(0, -getDamageHeightSuffix(entry.damage.heightBlocks).length) : entry.damage.value }}<span v-if="entry.damage.heightBlocks" :style="{color: `rgb(var(${getHeightColorToken(entry.damage.heightBlocks)}))`}">{{ getDamageHeightSuffix(entry.damage.heightBlocks) }}</span></span>{{ entry.damage.after }}</template><template v-else-if="entry.item">{{ entry.item.before }}<strong class="activity-item-name">{{ entry.item.name }}{{ entry.item.after }}</strong></template><template v-else>{{ entry.text }}</template></div>
             </div>
             <div v-if="state.active !== 'log' && !messages.length" class="chat-empty">{{ t(`chat.empty.${state.active}`) }}</div>
             <div v-for="message in messages" :key="message.id" class="chat-message" :class="{mine: message.from === ChatManager.characterName}">
@@ -40,6 +40,7 @@
 <script setup lang="ts">
 import {computed, nextTick, onMounted, onUnmounted, reactive, ref, watch} from 'vue'
 import {ActivityLogManager} from '@/data/activityLogManager'
+import {getDamageHeightSuffix, getHeightColorToken} from '@/gui/combatText'
 import {ChatManager, type ChatChannel} from '@/data/chatManager'
 import {Connector} from '@/network/connector'
 import {ChatSendMsg, SayMsg} from '@/network/messages'

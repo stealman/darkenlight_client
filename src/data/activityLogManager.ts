@@ -3,7 +3,7 @@ import {t} from '@/i18n'
 import {Item} from '@/data/items/item'
 import type {ActivityLogData, PartyStateData} from '@/network/messageIfs'
 
-export interface ActivityEntry {id: number; time: number; text: string; color?: string; negative?: boolean; positive?: boolean; kill?: {before: string; name: string; after: string; color?: string}; damage?: {before: string; value: string; after: string}; item?: {before: string; name: string; after: string}}
+export interface ActivityEntry {id: number; time: number; text: string; color?: string; negative?: boolean; positive?: boolean; kill?: {before: string; name: string; after: string; color?: string}; damage?: {before: string; value: string; after: string; heightBlocks?: number}; item?: {before: string; name: string; after: string}}
 function expandHealingHighlight(entry: ActivityEntry): ActivityEntry {
     const part = entry.damage
     if (entry.color === '#20ff20' && part && /\+\s*$/.test(part.before) && /^\s*HP\b/.test(part.after)) {

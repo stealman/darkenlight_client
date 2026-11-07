@@ -1,6 +1,7 @@
 import {AffectGroups} from '@/data/affects'
 import {ActivityLogManager} from '@/data/activityLogManager'
 import {getDamageColor, getRelationColor} from '@/gui/combatColors'
+import {getDamagePositionSuffix} from '@/gui/combatText'
 
 import { OverlayManager } from '@/gui/overlay/overlayManager'
 import { MonsterManager } from '@/babylon/monsters/monsterManager'
@@ -557,7 +558,7 @@ export const MessageProcessor = {
         const incoming = data.tp === 'C' && data.tgt === MyPlayer.myChar.id
         if (!mine && !incoming) return
         const hit = data.res.h === 'h'
-        const direction = hit ? data.res.a === 's' ? ' >' : data.res.a === 'b' ? ' ^' : '' : ''
+        const direction = hit ? getDamagePositionSuffix(data.res.a, data.res.v) : ''
         const value = String(Math.round(data.res.d)) + direction
         const result = data.res.h === 'm' ? t('common.miss') : data.res.h === 'b' ? t('common.blocked') : value
         const baseText = t(mine ? 'activityLog.outgoing' : 'activityLog.incoming', {name: mine ? this.combatLogName(data.tgt, data.tp === 'M') : this.combatLogName(data.id, monsterAttacker), result})
@@ -568,7 +569,7 @@ export const MessageProcessor = {
         const offset = baseText.lastIndexOf(result)
         ActivityLogManager.add(text, hit ? getDamageColor(data.res.q, incoming ? '#ff2020' : '#f08f56') : undefined, undefined, {
             negative: incoming && hit && data.res.d > 0,
-            damage: hit ? {before: text.slice(0, offset), value, after: text.slice(offset + value.length)} : undefined,
+            damage: hit ? {before: text.slice(0, offset), value, after: text.slice(offset + value.length), heightBlocks: data.res.v} : undefined,
         })
         if (mine && hit && data.tp === 'M') ActivityLogManager.flushKill(data.tgt)
     },

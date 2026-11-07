@@ -171,6 +171,7 @@ export interface AutoAttackResult {
     tgt: AttackableBasicTO
     fx?: 'silverUndead'
     a?: 's' | 'b'
+    v?: number
 }
 
 export interface AutoAttackResultMessage {

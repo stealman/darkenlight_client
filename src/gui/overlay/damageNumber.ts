@@ -1,4 +1,5 @@
 import {getDamageColor} from '@/gui/combatColors'
+import {getDamagePositionSuffix} from '@/gui/combatText'
 import { Attackable } from '@/GameManager'
 import { Monster } from '@/babylon/monsters/monster'
 import Character from '@/babylon/character/character'
@@ -44,7 +45,7 @@ export class DamageNumber {
         if (damage === 0) {
             return null
         }
-        return new DamageNumber(attacker, monster, null, `-${Math.round(damage)}${direction === 's' ? ' >' : direction === 'b' ? ' ^' : ''}`, this.getDamageColor(hitQuality, '#f08f56'), time)
+        return new DamageNumber(attacker, monster, null, `-${Math.round(damage)}${getDamagePositionSuffix(direction)}`, this.getDamageColor(hitQuality, '#f08f56'), time)
     }
 
     static fromHitCharacter(attacker: Attackable, char: Character, damage: number, hitType: string = 'h', hitQuality: 'P' | 'N' | 'G' | null = null, time: number = Date.now(), direction?: AutoAttackResult['a']): DamageNumber | null {
@@ -58,7 +59,7 @@ export class DamageNumber {
             // Healing is sent as negative damage, but we want to display it as positive number with plus sign.
             return new DamageNumber(attacker, null, char, `+${this.getHealingDisplayAmount(damage)}`, '#20ff20', time)
         } else if (damage > 0) {
-            return new DamageNumber(attacker, null, char, `-${Math.round(damage)}${direction === 's' ? ' >' : direction === 'b' ? ' ^' : ''}`, this.getDamageColor(hitQuality, '#f08f56'), time)
+            return new DamageNumber(attacker, null, char, `-${Math.round(damage)}${getDamagePositionSuffix(direction)}`, this.getDamageColor(hitQuality, '#f08f56'), time)
         }
     }
 
@@ -73,7 +74,7 @@ export class DamageNumber {
             // Healing is sent as negative damage, but we want to display it as positive number with plus sign.
             return new DamageNumber(attacker, null, MyPlayer.myChar, `+${this.getHealingDisplayAmount(damage)}`, '#20ff20', time)
         } else if (damage > 0) {
-            return new DamageNumber(attacker, null, MyPlayer.myChar, `-${Math.round(damage)}${direction === 's' ? ' >' : direction === 'b' ? ' ^' : ''}`, this.getDamageColor(hitQuality, '#ff2020'), time)
+            return new DamageNumber(attacker, null, MyPlayer.myChar, `-${Math.round(damage)}${getDamagePositionSuffix(direction)}`, this.getDamageColor(hitQuality, '#ff2020'), time)
         }
     }
 
