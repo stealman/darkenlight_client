@@ -307,6 +307,7 @@ const craftingCategories = computed(() => [
     ...vendorCategories.filter((category) => ['weapons', 'bows', 'metalArmor', 'leatherArmor', 'jewels'].includes(category.value)),
     {value: 'oreSmelting', label: t('vendor.oreSmelting')},
     {value: 'woodProcessing', label: t('vendor.woodProcessing')},
+    {value: 'leatherProcessing', label: t('vendor.leatherProcessing')},
     {value: 'potions', label: t('vendor.potions')},
     {value: 'resources', label: t('vendor.resources')},
 ])
@@ -385,6 +386,12 @@ const weaponCodebookBaseIds = {
 }
 const pickaxeCodebookIds = { 1: 3, 2: 5, 3: 6, 4: 7, 5: 8, 6: 4 }
 const resourceOptions = [
+    { codebookId: 321, label: 'Processed Common Leather' },
+    { codebookId: 322, label: 'Processed Hard Leather' },
+    { codebookId: 323, label: 'Processed Wolf Leather' },
+    { codebookId: 324, label: 'Processed Lizard Leather' },
+    { codebookId: 325, label: 'Processed Dragon Leather' },
+
     { codebookId: 311, label: 'Common Hide' },
     { codebookId: 312, label: 'Hard Hide' },
     { codebookId: 313, label: 'Wolf Hide' },

@@ -208,6 +208,7 @@
 
 
         "resourceDescriptions": {
+            "processedLeather": "Zpracovaná kůže připravená pro výrobu koženého brnění.",
             "emptyPotion": "Prázdná láhev, do které se dají načepovat lektvary.",
       "ingredient": "Přísada pro lektvary a kouzla.",
             "cloth": "Surovina k výrobě oblečení nebo obvazů.",
@@ -238,6 +239,11 @@
             "staminaPotion": "Okamžitě doplní až {amount} bodů výdrže."
         },
         "resources": {
+            "processed-common-leather": "Zpracovaná Obyčejná Kůže",
+            "processed-hard-leather": "Zpracovaná Tvrdá Kůže",
+            "processed-wolf-leather": "Zpracovaná Vlčí Kůže",
+            "processed-lizard-leather": "Zpracovaná Ještěří Kůže",
+            "processed-dragon-leather": "Zpracovaná Dračí Kůže",
       "dried-herbs": "Sušené Byliny",
       "ginseng": "Kořen Ženšenu",
       "bone-shards": "Úlomky Kostí",

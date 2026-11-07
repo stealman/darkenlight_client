@@ -284,6 +284,7 @@
       "metalArmor": "Výroba kovového brnění.",
       "oreSmelting": "Tavení slouží k vyčištění rudy a výrobě ingotů, ze kterých se vyrábějí zbraně a brnění. Vzácnější kovy vyžadují k vyčištění speciální čisticí přísady.",
       "woodProcessing": "Zpracováním dřeva získáš prkna pro výrobu luků, holí a hůlek. Vzácnější dřeva vyžadují čisticí přísady.",
+      "leatherProcessing": "Zpracováním surových kůží získáš materiál pro výrobu koženého brnění. Vzácnější kůže vyžadují čisticí přísady.",
       "resources": "Výroba různých užitečných surovin a materiálů, které jsou často potřeba pro další výrobu.",
       "skillMissing": "neovládáš",
       "npcHelp": "S výrobou těch nejjednodušších ti {npc} pomůže."
@@ -376,6 +377,7 @@
     "metalArmor": "Kovové Brnění",
     "oreSmelting": "Tavení Rudy",
     "woodProcessing": "Zpracování dřeva",
+    "leatherProcessing": "Zpracování kůže",
     "leatherArmor": "Kožené Brnění",
     "jewels": "Šperky",
     "resources": "Suroviny",

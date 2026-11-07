@@ -526,7 +526,7 @@ watch(selectedRecipeCraftableQty, (craftableQty) => {
 watch(selectedRecipeIndex, () => {
     const craftableQty = selectedRecipeCraftableQty.value
     const type = craftingMenuData.value?.type
-    const selectMaximum = type === 'NPC_ORE_SMELTING' || type === 'NPC_WOOD_PROCESSING' || type === 'NPC_RESOURCES'
+    const selectMaximum = type === 'NPC_ORE_SMELTING' || type === 'NPC_WOOD_PROCESSING' || type === 'NPC_LEATHER_PROCESSING' || type === 'NPC_RESOURCES'
     selectedRecipeQuantity.value = selectMaximum ? craftableQty : craftableQty > 0 ? 1 : 0
 })
 
