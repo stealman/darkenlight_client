@@ -44,7 +44,7 @@ test('public history is bounded and unread counts respect active visible channel
     assert.equal(chat.state.unread.public, 1)
 })
 
-function setupPanel(deviceType = 'DESKTOP', desktopHud = false) {
+function setupPanel(deviceType = 'DESKTOP', desktopHud = false, storage = new Map()) {
     const {parse} = require('@vue/compiler-sfc')
     const vue = require('vue')
     const ChatManager = setup(); ChatManager.initialize(1, 'Alice')
@@ -63,10 +63,13 @@ function setupPanel(deviceType = 'DESKTOP', desktopHud = false) {
     }
     const path = require('node:path').join(__dirname, '../src/vue/views/character/CharacterChatTab.vue')
     const source = parse(fs.readFileSync(path, 'utf8')).descriptor.scriptSetup.content
-        + '\nexport {send, drafts, cyclePerson, onKeyDown, reply, select, input, phoneLayout, focusInput};'
+        + '\nexport {send, drafts, cyclePerson, onKeyDown, reply, select, input, phoneLayout, focusInput, panel, hudSize, resizing, startResize, moveResize, endResize, restoreHudSize, onViewportResize};'
     const exports = {}
     vm.runInNewContext(ts.transpileModule(source, {compilerOptions: {module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020}}).outputText, {
         exports, require: name => deps[name], defineProps: () => ({visible: true, desktopHud}), defineExpose() {}, setTimeout, clearTimeout,
+        window: {innerWidth: 1000, innerHeight: 800},
+        document: {documentElement: {style: {setProperty() {}}}},
+        localStorage: {getItem: key => storage.get(key), setItem: (key, val) => storage.set(key, val)},
         CustomEvent: class {constructor(type, opts) {this.type = type; this.detail = opts.detail}},
     })
     return {...exports, chat: ChatManager, sent, targetCycles}
@@ -162,4 +165,42 @@ test('visible desktop HUD marks only the selected channel as read', () => {
     chat.add(message('2', 'private'))
     assert.equal(chat.state.unread.public, 0)
     assert.equal(chat.state.unread.private, 1)
+})
+
+test('HUD resizes from top right, persists on release, and restores saved dimensions', () => {
+    const storage = new Map()
+    const s = setupPanel('DESKTOP', true, storage)
+    s.panel.value = {getBoundingClientRect: () => ({width: 300, height: 150})}
+    const pointers = new Set()
+    const handle = {setPointerCapture: id => pointers.add(id), hasPointerCapture: id => pointers.has(id), releasePointerCapture: id => pointers.delete(id)}
+    s.startResize({button: 0, pointerId: 7, clientX: 300, clientY: 500, currentTarget: handle})
+    assert.equal(s.resizing.value, true)
+    s.moveResize({pointerId: 8, clientX: 999, clientY: 0})
+    assert.equal(s.hudSize.value, null)
+    s.moveResize({pointerId: 7, clientX: 450, clientY: 400})
+    assert.equal(s.hudSize.value.width, 450)
+    assert.equal(s.hudSize.value.height, 250)
+    assert.equal(storage.size, 0)
+    s.endResize({pointerId: 7})
+    assert.equal(s.resizing.value, false)
+    assert.equal(pointers.size, 0)
+    const restored = setupPanel('DESKTOP', true, storage)
+    restored.restoreHudSize()
+    assert.equal(restored.hudSize.value.width, 450)
+    assert.equal(restored.hudSize.value.height, 250)
+})
+
+test('HUD stored sizes are validated and constrained to usable screen bounds', () => {
+    const storage = new Map([['darkenlight:desktopChatSize', '{broken']])
+    const s = setupPanel('DESKTOP', true, storage)
+    s.restoreHudSize()
+    assert.equal(s.hudSize.value, null)
+    storage.set('darkenlight:desktopChatSize', JSON.stringify({width: 9999, height: 9999}))
+    s.restoreHudSize()
+    assert.equal(s.hudSize.value.width, 1000)
+    assert.equal(s.hudSize.value.height, 752)
+    storage.set('darkenlight:desktopChatSize', JSON.stringify({width: 1, height: 1}))
+    s.restoreHudSize()
+    assert.equal(s.hudSize.value.width, 220)
+    assert.equal(s.hudSize.value.height, 100)
 })

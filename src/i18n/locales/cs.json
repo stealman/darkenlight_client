@@ -1,5 +1,6 @@
 {
   "chat": {
+    "resize": "Změnit velikost chatu",
     "writeTo": "Napsat hráči {name}",
     "public": "Veřejný", "private": "Soukromý", "party": "Skupina",
     "send": "Odeslat", "placeholder": "Napiš zprávu…", "privatePlaceholder": "Jméno postavy: zpráva",

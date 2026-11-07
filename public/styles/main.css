@@ -87,7 +87,7 @@ div#emeralds-info {
 }
 
 :root:has(.chat-panel--hud) #system-buttons {
-    bottom: calc(3 * var(--hud-player-panel-height, clamp(42px, 5.1vh, 54px)) + 6px);
+    bottom: calc(var(--desktop-chat-height, calc(3 * var(--hud-player-panel-height, clamp(42px, 5.1vh, 54px)))) + 6px);
 }
 
 #system-buttons button,
