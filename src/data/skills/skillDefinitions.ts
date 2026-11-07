@@ -40,8 +40,8 @@ export const GatheringSkillDefinitions: SkillDefinition[] = [
 
 export const CraftingSkillDefinitions: SkillDefinition[] = [
     {key: 'blacksmithy', category: 'crafting', translationKey: 'skills.crafting.blacksmithy', descriptionTranslationKey: 'skills.descriptions.blacksmithy', bonusDescriptionTranslationKey: 'skills.bonuses.blacksmithy'},
-    {key: 'bowcraft', category: 'crafting', translationKey: 'skills.crafting.bowcraft', descriptionTranslationKey: 'skills.descriptions.bowcraft'},
-    {key: 'armorsmithy', category: 'crafting', translationKey: 'skills.crafting.armorsmithy', descriptionTranslationKey: 'skills.descriptions.armorsmithy'},
+    {key: 'bowcraft', category: 'crafting', translationKey: 'skills.crafting.bowcraft', descriptionTranslationKey: 'skills.descriptions.bowcraft', bonusDescriptionTranslationKey: 'skills.bonuses.bowcraft'},
+    {key: 'armorsmithy', category: 'crafting', translationKey: 'skills.crafting.armorsmithy', descriptionTranslationKey: 'skills.descriptions.armorsmithy', bonusDescriptionTranslationKey: 'skills.bonuses.armorsmithy'},
 ]
 
 export const SkillDefinitions: SkillDefinition[] = [

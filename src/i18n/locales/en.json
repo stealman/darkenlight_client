@@ -283,6 +283,7 @@
       "bows": "Crafting bows.",
       "metalArmor": "Crafting metal armor.",
       "oreSmelting": "Smelting purifies ore into ingots used to craft weapons and armor. Rarer metals require special purifying additives.",
+      "woodProcessing": "Process logs into planks for crafting bows, staves and wands. Rarer woods require purifying additives.",
       "resources": "Crafting useful resources and materials that are often needed for further crafting.",
       "skillMissing": "untrained",
       "npcHelp": "{npc} will help you craft the simplest ones."
@@ -374,6 +375,7 @@
     "bows": "Bows",
     "metalArmor": "Metal armor",
     "oreSmelting": "Ore Smelting",
+    "woodProcessing": "Wood Processing",
     "leatherArmor": "Leather armor",
     "jewels": "Jewels",
     "resources": "Resources",

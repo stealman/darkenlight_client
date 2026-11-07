@@ -93,6 +93,8 @@
       "miningStaminaReduction": "Reduces mining stamina consumption by {percent}%.",
       "skillBonus": "Skill bonus",
       "blacksmithy": "Allows you to craft more complex metal weapons of higher quality.",
+      "armorsmithy": "Allows you to craft more complex metal armor and shields of higher quality.",
+      "bowcraft": "Allows you to craft more complex bows of higher quality.",
       "blacksmithyExpert": "Skilled workmanship saves {range}% of crafting materials.",
       "blacksmithyMaster": "Higher chance of better quality.",
       "blacksmithyGrandmaster": "Flawless workmanship saves {range}% of crafting materials.",

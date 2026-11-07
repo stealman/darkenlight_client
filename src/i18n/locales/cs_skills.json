@@ -93,6 +93,8 @@
       "miningStaminaReduction": "Snižuje spotřebu výdrže při těžbě o {percent} %.",
       "skillBonus": "Bonus dovednosti",
       "blacksmithy": "Umožňuje vyrábět složitější kovové zbraně ve vyšší kvalitě.",
+      "armorsmithy": "Umožňuje vyrábět složitější kovové brnění a štíty ve vyšší kvalitě.",
+      "bowcraft": "Umožňuje vyrábět složitější luky ve vyšší kvalitě.",
       "blacksmithyExpert": "Díky zručnému zpracování šetří při výrobě {range} % materiálu.",
       "blacksmithyMaster": "Vyšší šance na lepší kvalitu.",
       "blacksmithyGrandmaster": "Díky dokonalému zpracování šetří při výrobě {range} % materiálu.",

@@ -306,6 +306,7 @@ const {t} = useI18n()
 const craftingCategories = computed(() => [
     ...vendorCategories.filter((category) => ['weapons', 'bows', 'metalArmor', 'leatherArmor', 'jewels'].includes(category.value)),
     {value: 'oreSmelting', label: t('vendor.oreSmelting')},
+    {value: 'woodProcessing', label: t('vendor.woodProcessing')},
     {value: 'potions', label: t('vendor.potions')},
     {value: 'resources', label: t('vendor.resources')},
 ])
@@ -391,6 +392,9 @@ const resourceOptions = [
     { codebookId: 101, label: 'Iron ore' },
     { codebookId: 119, label: 'Coal' },
     { codebookId: 201, label: 'Wooden log' },
+    { codebookId: 231, label: 'Coarse Bowstring' },
+    { codebookId: 232, label: 'Fine Bowstring' },
+    { codebookId: 233, label: 'Superior Bowstring' },
     { codebookId: 301, label: 'Common meat' },
     { codebookId: 302, label: 'Wool (10 pieces)' },
     { codebookId: 303, label: 'Cloth' },

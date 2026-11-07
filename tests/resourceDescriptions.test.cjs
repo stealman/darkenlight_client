@@ -20,6 +20,8 @@ test('every resource has a localized description and potion tooltips show exact 
         ...Array.from({length: 12}, (_, i) => 101 + i),
         ...Array.from({length: 12}, (_, i) => 120 + i),
         ...Array.from({length: 6}, (_, i) => 201 + i),
+        ...Array.from({length: 6}, (_, i) => 221 + i),
+        231, 232, 233,
         1001, 1002, 1003, 1011, 1012, 1013, 1021, 1022, 1023]
     for (const locale of ['cs', 'en']) {
         const messages = JSON.parse(fs.readFileSync(`src/i18n/locales/${locale}_items.json`, 'utf8'))
