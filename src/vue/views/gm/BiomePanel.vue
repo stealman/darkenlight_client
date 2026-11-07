@@ -8,6 +8,15 @@
         </label>
     </div>
 
+    <div>
+        <label>Tree level (1?6) <input v-model.number="GMManager.treeLevel.value" type="number" min="1" max="6" step="1"></label>
+        <button @click="selectEditTree">Edit tree level</button>
+        <div v-if="GMManager.editingTree.value && selectedTree === -2">
+            Tree {{ GMManager.editingTree.value.x }}, {{ GMManager.editingTree.value.z }}
+            <button @click="GMManager.saveTreeLevel()">Save level</button>
+        </div>
+    </div>
+
     <!-- TREES -->
     <div style="margin-top: 2vh">
         <div style="margin-top: 1vh">
@@ -161,6 +170,14 @@ const selectShrubType = (type) => {
 const selectShrub = (id) => {
     selectedShrub.value = parseInt(id)
     selectedTree.value = 0
+}
+
+const selectEditTree = () => {
+    selectedTree.value = -2
+    selectedShrub.value = 0
+    GMManager.editingTree.value = null
+    selectedTreeType.value = ""
+    selectedShrubType.value = ""
 }
 
 const selectNone = () => {

@@ -440,6 +440,11 @@ export const MessageProcessor = {
     },
 
     processAddTree(data) {
+        const existing = TreeManager.allTrees.find(tree => tree.position.x === data.x && tree.position.z === data.z)
+        if (existing) {
+            existing.level = data.level ?? 1
+            return
+        }
         TreeManager.addTree(data)
         WorldRenderer.renderWorld()
     },

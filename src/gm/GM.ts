@@ -113,6 +113,8 @@ export const GMManager = {
     terrainEditMode: ref('terrain'),
     selectedMinable: ref('M1'),
     selectedTree: ref (0),
+    treeLevel: ref(1),
+    editingTree: ref<{x: number, z: number} | null>(null),
     selectedShrub: ref (0),
 
     selectedWallFence: ref (0),
@@ -271,8 +273,12 @@ export const GMManager = {
 
         if (this.tab === GmTabs.BIOME_EDIT) {
             const markerPos = new Vector3(GMSceneManager.hoverBlockMarker!.position.x, 0, GMSceneManager.hoverBlockMarker!.position.z)
-            if (this.selectedTree.value > 0) {
-                const treeData = { x: markerPos.x, z: markerPos.z, size: Utils.roundToOneDecimal(1.1 + Math.random() * 0.6) , type: this.selectedTree.value }
+            if (this.selectedTree.value === -2) {
+                const tree = TreeManager.allTrees.find(t => t.position.x === markerPos.x && t.position.z === markerPos.z)
+                this.editingTree.value = tree ? {x: markerPos.x, z: markerPos.z} : null
+                if (tree) this.treeLevel.value = tree.level ?? 1
+            } else if (this.selectedTree.value > 0) {
+                const treeData = { x: markerPos.x, z: markerPos.z, size: Utils.roundToOneDecimal(1.1 + Math.random() * 0.6) , type: this.selectedTree.value, level: this.treeLevel.value }
                 Connector.sendMessage(new GMStaticObjectChange("ADD_TREE", [treeData] ) )
 
             } else if (this.selectedShrub.value > 0) {
@@ -811,6 +817,12 @@ export const GMManager = {
         this.selectedTerrain.value = 0
         this.terrainEditMode.value = 'terrain'
         GMSceneManager.hoverBlockMarker?.setEnabled(true)
+    },
+
+    saveTreeLevel() {
+        const tree = this.editingTree.value
+        if (!tree) return
+        Connector.sendMessage(new GMStaticObjectChange('UPDATE_TREE_LEVEL', [{...tree, level: this.treeLevel.value}]))
     },
 
     openTabBiomeEdit() {

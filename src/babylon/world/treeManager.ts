@@ -213,13 +213,13 @@ export const TreeManager = {
         })
     },
 
-    consumeTrees(data: [ { type: number, x: number, z: number, size: number } ]) {
+    consumeTrees(data: [ { type: number, x: number, z: number, size: number, level?: number } ]) {
         data.forEach(tree => {
             this.addTree(tree)
         })
     },
 
-    addTree(tree: { type: number, x: number, z: number, size: number }) {
+    addTree(tree: { type: number, x: number, z: number, size: number, level?: number }) {
         const previousCount = this.allTrees.length
         const y = WorldDataManager.getBlockMap()[tree.x][tree.z].height + 0.5
         const size = tree.size
@@ -268,6 +268,7 @@ export const TreeManager = {
         }
         if (this.allTrees.length > previousCount) {
             const added = this.allTrees[this.allTrees.length - 1]
+            added.level = tree.level ?? 1
             const half = added.scale * 0.75 / 2
             this.collisionGrid.add(added, added.position.x - half, added.position.z - half,
                 added.position.x + half, added.position.z + half)
@@ -721,6 +722,7 @@ class TreeFir implements Tree {
 }
 
 interface Tree {
+    level?: number
     position: Vector3
     rotation: number
     scale: number

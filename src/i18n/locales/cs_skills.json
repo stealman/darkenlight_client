@@ -32,16 +32,18 @@
       "shields": "Štíty"
     },
     "utility": {
+      "lumberjacking": "Dřevorubectví",
       "mining": "Těžba",
       "camping": "Táboření",
       "healing": "Léčba"
     },
     "descriptions": {
+      "lumberjacking": "Umožňuje získávat různé druhy dřeva podle úrovně dovednosti a vzácnosti stromu.",
       "blacksmithy": "Dovednost pro výrobu kovových zbraní.",
       "bowcraft": "Dovednost pro výrobu luků.",
       "armorsmithy": "Dovednost pro výrobu kovového brnění.",
 
-      "mining": "Umožňuje těžit a tavit rudy různých materiálů a těžit uhlí.",
+      "mining": "Umožňuje těžit a tavit rudy různých materiálů, těžit uhlí a s krumpáčem v ruce rozpoznávat vzácnost ložiska až do úrovně skillu.",
       "swords": "Umožňuje nosit a účinně používat Meče v boji",
       "axes": "Umožňuje nosit a účinně používat Sekery v boji",
       "maces": "Umožňuje nosit a účinně používat Palcáty v boji",
@@ -89,7 +91,8 @@
       "classMaximumRank": "Maximální úroveň povolání"
     },
     "bonuses": {
-      "miningMaxOre": "Umožňuje těžit rudy až po {ore}.",
+      "lumberjackingMaxWood": "Umožňuje získávat dřevo až po {wood}.",
+      "miningMaxOre": "Umožňuje těžit rudy až po {ore} a rozpoznávat vzácnost ložiska v závislosti na úrovni dovednosti.",
       "miningStaminaReduction": "Snižuje spotřebu výdrže při těžbě o {percent} %.",
       "skillBonus": "Bonus dovednosti",
       "blacksmithy": "Umožňuje vyrábět složitější kovové zbraně ve vyšší kvalitě.",

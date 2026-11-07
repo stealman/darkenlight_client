@@ -123,10 +123,11 @@
                                             class="skill-bonus-label"
                                             :class="{
                                                 'skill-bonus-label--active': skill.skillBonusUnlocked,
-                                                'skill-bonus-label--unknown': !skill.skillBonus && !skill.miningMaxOre && !skill.bonusDescriptionTranslationKey,
+                                                'skill-bonus-label--unknown': !skill.skillBonus && !skill.maxWood && !skill.miningMaxOre && !skill.bonusDescriptionTranslationKey,
                                             }"
                                         >{{ skill.key === 'preciseShot' ? '' : t('skills.bonuses.skillBonus') }}</span>
-                                        <span v-if="skill.miningMaxOre" class="skill-bonus-value"><span>{{ miningBonusParts[0] }}</span><strong class="skill-bonus-value-emphasis">{{ skill.miningMaxOre }}</strong><span>{{ miningBonusParts[1] }}</span></span>
+                                        <span v-if="skill.maxWood" class="skill-bonus-value"><span>{{ lumberjackingBonusParts[0] }}</span><strong class="skill-bonus-value-emphasis">{{ skill.maxWood }}</strong><span>{{ lumberjackingBonusParts[1] }}</span></span>
+                                        <span v-else-if="skill.miningMaxOre" class="skill-bonus-value"><span>{{ miningBonusParts[0] }}</span><strong class="skill-bonus-value-emphasis">{{ skill.miningMaxOre }}</strong><span>{{ miningBonusParts[1] }}</span></span>
                                         <span v-else-if="skill.bonusDescriptionTranslationKey" class="skill-bonus-value">{{ t(skill.bonusDescriptionTranslationKey) }}</span>
                                         <span v-else-if="skill.skillBonus" class="skill-bonus-value">
                                             <strong class="skill-bonus-value-emphasis">{{ skill.skillBonus.percentage }}</strong><span>{{ t(skill.skillBonus.effectTranslationKey) }}</span><strong v-if="skill.skillBonus.target" class="skill-bonus-value-emphasis">{{ skill.skillBonus.target }}</strong><span>{{ t(skill.skillBonus.perRankTranslationKey, { percent: skill.skillBonus.perRank, amount: skill.skillBonus.perRank }) }}</span>
@@ -213,6 +214,7 @@ import { AudioManager } from '@/babylon/audio/audioManager'
 import { TooltipOverlayManager } from '@/gui/tooltipOverlayManager'
 
 const { locale, t } = useI18n()
+const lumberjackingBonusParts = computed(() => t('skills.bonuses.lumberjackingMaxWood', {wood: '{wood}'}).split('{wood}'))
 const miningBonusParts = computed(() => t('skills.bonuses.miningMaxOre', { ore: '{ore}' }).split('{ore}'))
 const blacksmithyExpertBonusParts = computed(() => t('skills.bonuses.blacksmithyExpert', {range: '{range}'}).split('{range}'))
 const blacksmithyGrandmasterBonusParts = computed(() => t('skills.bonuses.blacksmithyGrandmaster', {range: '{range}'}).split('{range}'))
@@ -297,9 +299,10 @@ const skills = computed(() => {
             name: t(skill.translationKey),
             rank,
             skillBonus: getSkillBonusValue(skill, rank, progress),
+            maxWood: skill.key === 'lumberjacking' && progress?.maxWoodResourceKey ? t(`items.resources.${progress.maxWoodResourceKey}`) : null,
             miningMaxOre: skill.key === 'mining' && progress?.maxMiningOreResourceKey
                 ? t(`items.resources.${progress.maxMiningOreResourceKey}`) : undefined,
-            skillBonusUnlocked: !!(skill.bonusKind || skill.bonusDescriptionTranslationKey) && rank >= 1,
+            skillBonusUnlocked: !!(skill.bonusKind || skill.bonusDescriptionTranslationKey || skill.key === 'lumberjacking') && rank >= 1,
             expertBonusUnlocked: rank >= 4,
             masterBonusUnlocked: rank >= 7,
             grandmasterBonusUnlocked: rank >= 10,

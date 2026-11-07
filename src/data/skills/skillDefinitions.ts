@@ -35,6 +35,7 @@ export const UtilitySkillDefinitions: SkillDefinition[] = [
 ]
 
 export const GatheringSkillDefinitions: SkillDefinition[] = [
+    {key: 'lumberjacking', category: 'gathering', translationKey: 'skills.utility.lumberjacking', descriptionTranslationKey: 'skills.descriptions.lumberjacking'},
     {key: 'mining', category: 'gathering', translationKey: 'skills.utility.mining', descriptionTranslationKey: 'skills.descriptions.mining', bonusKind: 'mining'},
 ]
 

@@ -3,12 +3,15 @@ import { WorldDataManager } from '@/data/worldDataManager'
 import { GMManager, GmTabs } from '@/gm/GM'
 import { MyPlayer } from '@/data/myPlayer'
 import { ViewportManager } from '@/utils/viewport'
+import { WeaponTags } from '@/data/items/item'
 
 export const GmOreTierOverlay = {
     orePosition: new Vector3(0, 0, 0),
 
     onFrame(ctx: CanvasRenderingContext2D) {
-        if (!GMManager.gmPanelVisible.value || GMManager.tab !== GmTabs.TERRAIN_EDIT || MyPlayer.myChar?.className !== 'GM') {
+        const char = MyPlayer.myChar
+        const showGmValues = char?.className === 'GM' && GMManager.gmPanelVisible.value && GMManager.tab === GmTabs.TERRAIN_EDIT
+        if (!showGmValues && !char?.getWeapon()?.hasWeaponTag(WeaponTags.PICKAXE)) {
             return
         }
 

@@ -323,6 +323,7 @@
       "weaponSet-primary": "Primární zbraň uložena",
       "weaponSet-secondary": "Sekundární zbraň uložena",
       "notEnoughStamina": "Nemáš dostatek výdrže",
+      "lumberjackingInsufficientSkill": "Na získání nalezeného dřeva nemáš dostatečnou úroveň dřevorubectví.",
       "miningInsufficientSkill": "Na vytěžení nalezené rudy nemáš dostatečnou úroveň těžby.",
     "powerStrikeRequiresTarget": "Silný úder vyžaduje vybraného nepřítele",
     "powerStrikeOnCooldown": "Silný útok až za {seconds} vteřin",

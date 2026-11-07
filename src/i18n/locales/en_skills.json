@@ -32,16 +32,18 @@
       "shields": "Shields"
     },
     "utility": {
+      "lumberjacking": "Lumberjacking",
       "mining": "Mining",
       "camping": "Camping",
       "healing": "Healing"
     },
     "descriptions": {
+      "lumberjacking": "Allows harvesting different types of wood based on your skill rank and the tree rarity.",
       "blacksmithy": "A skill for crafting metal weapons.",
       "bowcraft": "A skill for crafting bows.",
       "armorsmithy": "A skill for crafting metal armor.",
 
-      "mining": "Allows you to mine and smelt ores of various materials, and mine coal.",
+      "mining": "Allows you to mine and smelt ores of various materials, mine coal, and recognize deposit rarity up to your skill rank while holding a pickaxe.",
       "swords": "Allows you to equip and effectively use Swords in combat",
       "axes": "Allows you to equip and effectively use Axes in combat",
       "maces": "Allows you to equip and effectively use Maces in combat",
@@ -89,7 +91,8 @@
       "classMaximumRank": "Class maximum level"
     },
     "bonuses": {
-      "miningMaxOre": "Allows mining ores up to {ore}.",
+      "lumberjackingMaxWood": "Allows harvesting wood up to {wood}.",
+      "miningMaxOre": "Allows mining ores up to {ore} and recognizing deposit rarity based on your skill rank.",
       "miningStaminaReduction": "Reduces mining stamina consumption by {percent}%.",
       "skillBonus": "Skill bonus",
       "blacksmithy": "Allows you to craft more complex metal weapons of higher quality.",
