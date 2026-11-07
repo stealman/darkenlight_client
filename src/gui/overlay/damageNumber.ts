@@ -1,3 +1,4 @@
+import {getDamageColor} from '@/gui/combatColors'
 import { Attackable } from '@/GameManager'
 import { Monster } from '@/babylon/monsters/monster'
 import Character from '@/babylon/character/character'
@@ -76,13 +77,7 @@ export class DamageNumber {
     }
 
     static getDamageColor(hitQuality: 'P' | 'N' | 'G' | null, defaultColor: string): string {
-        if (hitQuality === 'P') {
-            return '#ffd45c'
-        }
-        if (hitQuality === 'G') {
-            return '#a9a9a9'
-        }
-        return defaultColor
+        return getDamageColor(hitQuality, defaultColor)
     }
 
     private static getHealingDisplayAmount(damage: number): number {

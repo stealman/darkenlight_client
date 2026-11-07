@@ -1,6 +1,6 @@
 {
   "skills": {
-    "crafting": {"blacksmithy": "Blacksmithy", "bowcraft": "Bowcraft", "armorsmithy": "Armorsmithy"},
+    "crafting": {"alchemy": "Alchemy", "blacksmithy": "Blacksmithy", "bowcraft": "Bowcraft", "armorsmithy": "Armorsmithy"},
     "monsterKnowledge": {
       "huntable": "Can be hunted",
       "title": "Monster Lore",
@@ -40,6 +40,7 @@
       "healing": "Healing"
     },
     "descriptions": {
+      "alchemy": "Allows you to craft potions and elixirs.",
       "hunting": "Hunting animals provides hides and material for bowstrings.",
       "lumberjacking": "Allows harvesting different types of wood based on your skill rank and the tree rarity.",
       "blacksmithy": "A skill for crafting metal weapons.",
@@ -94,6 +95,8 @@
       "classMaximumRank": "Class maximum level"
     },
     "bonuses": {
+      "alchemy": "Reduces potion crafting time by {percent}.",
+      "alchemySavings": "Saves {percent}% of crafting ingredients.",
       "lumberjackingCapacityPreservation": "Adds a {percent}% bonus to tree yield.",
       "lumberjackingMaxWood": "Allows harvesting wood up to {wood}.",
       "miningMaxOre": "Allows mining ores up to {ore} and recognizing deposit rarity based on your skill rank.",

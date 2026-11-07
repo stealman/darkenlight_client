@@ -1,3 +1,4 @@
+import {getRelationColor} from '@/gui/combatColors'
 import { Vector3 } from '@babylonjs/core'
 import { CanvasTextUtils, createOverlayRaster, removeExpiredOverlayEntries } from '@/gui/canvasTextUtils'
 import type { OverlayCanvasView } from '@/gui/canvasTextUtils'
@@ -410,22 +411,7 @@ export class OverlayLabels {
             ViewportManager.movePositionToScreen(pos, textWidth / 2, fontSize + 10)
         }
 
-        let fillColor = color || '#aaa'
-        if (color) {
-            fillColor = color
-        } else {
-            switch (relation) {
-                case 'ALLY':
-                    fillColor = '#56aaff'
-                    break
-                case 'ENEMY':
-                    fillColor = '#f08f56'
-                    break
-                case 'NEUTRAL':
-                    fillColor = '#aaa'
-                    break
-            }
-        }
+        const fillColor = color || getRelationColor(relation)
         if (useGradient) {
             const fillGradient = ctx.createLinearGradient(x, y - fontSize * 0.75, x, y + fontSize * 0.25)
             fillGradient.addColorStop(0, fillColor)

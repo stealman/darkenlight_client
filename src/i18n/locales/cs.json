@@ -1,4 +1,29 @@
 {
+  "activityLog": {
+    "partyCreated": "Založil jsi partu.",
+    "partyJoined": "Připojil ses do party.",
+    "partyLeft": "Už nejsi v partě.",
+    "partyMemberJoined": "Do party se připojil: {name}",
+    "partyMemberLeft": "Partu opustil: {name}",
+    "worldChanged": "Změna světa: {from} → {to}",
+    "affect": "Získán afekt: {name}",
+    "potionHP": "Použita léčivá lahev: +{amount} HP",
+    "potionMP": "Použita mana lahev: +{amount} MP",
+    "potionST": "Použita lahev staminy: +{amount} ST",
+    "unarmed": "Holé ruce",
+    "healOutgoing": "Ty → {name}: léčení +{amount} HP",
+    "healIncoming": "{name} → ty: léčení +{amount} HP",
+    "healSelf": "Obnoveno +{amount} HP",
+    "empty": "Zatím žádné události.",
+    "pickup": "Sebráno: {item} ×{quantity}",
+    "purchase": "Koupeno: {item} ×{quantity}",
+    "craft": "Vyrobeno: {item} ×{quantity}",
+    "drop": "Zahozeno: {item} ×{quantity}",
+    "campfire": "Rozdělal jsi oheň.",
+    "kill": "Zabil jsi: {name}",
+    "outgoing": "Ty → {name}: {result}",
+    "incoming": "{name} → ty: {result}"
+},
   "chat": {
     "resize": "Změnit velikost chatu",
     "writeTo": "Napsat hráči {name}",
@@ -281,6 +306,7 @@
     "categoryInfo": {
       "weapons": "Výroba kovových zbraní.",
       "bows": "Výroba luků.",
+      "potions": "Míchání lektvarů a elixírů z bylin a dalších přísad.",
       "metalArmor": "Výroba kovového brnění.",
       "oreSmelting": "Tavení slouží k vyčištění rudy a výrobě ingotů, ze kterých se vyrábějí zbraně a brnění. Vzácnější kovy vyžadují k vyčištění speciální čisticí přísady.",
       "woodProcessing": "Zpracováním dřeva získáš prkna pro výrobu luků, holí a hůlek. Vzácnější dřeva vyžadují čisticí přísady.",

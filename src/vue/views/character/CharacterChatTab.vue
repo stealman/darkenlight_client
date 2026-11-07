@@ -4,12 +4,16 @@
         <nav class="chat-tabs" role="tablist" :aria-label="t('character.tabs.chat')">
             <button v-for="channel in channels" :key="channel" role="tab" :aria-selected="state.active === channel"
                 :class="[`chat-tab--${channel}`, {selected: state.active === channel, 'chat-tab--unread': channel !== 'public' && state.unread[channel] > 0}]" @click="select(channel)">
-                <span class="ui-text-gradient ui-text-gradient--accent ui-text-gradient--no-shadow">{{ t(`chat.${channel}`) }}</span>
+                <span class="ui-text-gradient ui-text-gradient--accent ui-text-gradient--no-shadow">{{ channel === 'log' ? 'LOG' : t(`chat.${channel}`) }}</span>
             </button>
         </nav>
         <div class="chat-history">
         <div ref="log" class="chat-log" role="log" aria-live="polite" @scroll="onScroll">
-            <div v-if="!messages.length" class="chat-empty">{{ t(`chat.empty.${state.active}`) }}</div>
+            <div v-if="state.active === 'log' && !activityEntries.length" class="chat-empty">{{ t('activityLog.empty') }}</div>
+            <div v-if="state.active === 'log'">
+                <div v-for="entry in activityEntries" :key="entry.id" class="chat-message activity-entry" :class="{'activity-entry--negative': entry.negative, 'activity-entry--positive': entry.positive, 'activity-entry--kill': !!entry.kill}" :title="new Date(entry.time).toLocaleString()"><template v-if="entry.kill">{{ entry.kill.before }}<span class="activity-kill-name" :style="{color: entry.kill.color}">{{ entry.kill.name }}</span>{{ entry.kill.after }}</template><template v-else-if="entry.damage">{{ entry.damage.before }}<span :style="{color: entry.color}">{{ entry.damage.value }}</span>{{ entry.damage.after }}</template><template v-else>{{ entry.text }}</template></div>
+            </div>
+            <div v-if="state.active !== 'log' && !messages.length" class="chat-empty">{{ t(`chat.empty.${state.active}`) }}</div>
             <div v-for="message in messages" :key="message.id" class="chat-message" :class="{mine: message.from === ChatManager.characterName}">
                 <div class="message-content">
                     <template v-if="message.channel === 'private' && message.from === ChatManager.characterName && message.to">→ <button class="chat-name" @click="reply(message.to)">{{ message.to }}</button></template>
@@ -20,7 +24,7 @@
         </div>
         <div v-if="state.error" :key="state.errorVersion" class="chat-error" role="alert">{{ t(`chat.errors.${state.error}`, {name: state.errorName}) }}</div>
         </div>
-        <form class="chat-compose" @submit.prevent="send">
+        <form v-if="state.active !== 'log'" class="chat-compose" @submit.prevent="send">
             <input ref="input" v-model="drafts[state.active]" :maxlength="state.active === 'public' ? 100 : 605" @beforeinput="onBeforeInput"
                 :placeholder="t(state.active === 'private' ? 'chat.privatePlaceholder' : 'chat.placeholder')"
                 :aria-label="t(`chat.${state.active}`)" autocomplete="off" enterkeyhint="send" @focus="stopMovement"
@@ -35,6 +39,7 @@
 </template>
 <script setup lang="ts">
 import {computed, nextTick, onMounted, onUnmounted, reactive, ref, watch} from 'vue'
+import {ActivityLogManager} from '@/data/activityLogManager'
 import {ChatManager, type ChatChannel} from '@/data/chatManager'
 import {Connector} from '@/network/connector'
 import {ChatSendMsg, SayMsg} from '@/network/messages'
@@ -46,9 +51,10 @@ import {TargetingManager} from '@/gui/targettingManager'
 const {t} = useI18n()
 const props = defineProps<{visible?: boolean, desktopHud?: boolean}>()
 const phoneLayout = ref(Settings.getDeviceType() === 'PHONE')
-const channels: ChatChannel[] = ['public', 'private', 'party']
+const channels: ChatChannel[] = ['public', 'private', 'party', 'log']
 const state = ChatManager.state
-const drafts = reactive({public: '', private: '', party: ''})
+const activityEntries = computed(() => ActivityLogManager.state.entries)
+const drafts = reactive({public: '', private: '', party: '', log: ''})
 const input = ref<HTMLInputElement | null>(null)
 const log = ref<HTMLElement | null>(null)
 const panel = ref<HTMLElement | null>(null)
@@ -120,6 +126,7 @@ function scrollBottom() { nextTick(() => { if (log.value) log.value.scrollTop = 
 function onScroll() { const el = log.value; if (el) stickToBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 40 }
 function select(channel: ChatChannel) {
     state.active = channel; state.unread[channel] = 0; state.error = ''; recentIndex = -1
+    ChatManager.save()
     stickToBottom = true; scrollBottom()
     if (!Settings.isPhoneOrTablet()) nextTick(() => input.value?.focus())
 }
@@ -175,6 +182,7 @@ function cyclePerson(event: KeyboardEvent, direction: number) {
 }
 function send() {
     const channel = state.active
+    if (channel === 'log') return
     const text = drafts[channel].trim()
     if (!text) { if (props.desktopHud) input.value?.blur(); return }
     state.error = ''
@@ -191,7 +199,7 @@ function send() {
     stickToBottom = true; scrollBottom()
     if (props.desktopHud) input.value?.blur()
 }
-watch(() => [messages.value.length, messages.value[messages.value.length - 1]?.id], () => {
+watch(() => [messages.value.length, messages.value[messages.value.length - 1]?.id, activityEntries.value[activityEntries.value.length - 1]?.id], () => {
     if (props.visible) state.unread[state.active] = 0
     if (stickToBottom) scrollBottom()
 })
@@ -230,6 +238,13 @@ onUnmounted(() => {
 .chat-tabs button { font-family: inherit; font-size: .75rem; font-weight: 700; text-transform: uppercase; }
 .chat-tabs button, .chat-compose button { color: inherit; background: rgba(var(--ui-darkest), .5); border: 1px solid rgba(var(--ui-base), .2); border-radius: 7px; padding: 9px 16px; cursor: var(--ui-cursor-pointer); }
 .chat-tabs button { flex: 1; --ui-text-gradient-accent: var(--chat-accent); color: rgb(var(--chat-accent)); border: 0; border-radius: 0; padding: 6px 12px; background: rgba(var(--chat-accent), .06); }
+.chat-panel .chat-message.activity-entry { padding: 3px 6px; white-space: pre-wrap; overflow-wrap: anywhere; text-align: left; font-weight: 200; text-shadow: none; font-synthesis: none; }
+.chat-panel .chat-message.activity-entry--kill { font-weight: 700; }
+.activity-kill-name { color: rgb(var(--ui-item-special-stat)); }
+.activity-entry--positive { color: rgb(var(--ui-success)); }
+.activity-entry--negative { background: rgba(var(--ui-danger), .1); }
+.chat-tab--log { --chat-accent: var(--ui-base); }
+.chat-tab--log .chat-log, .chat-tab--log .chat-empty { text-align: left; font-weight: 200; text-shadow: none; font-synthesis: none; }
 .chat-tab--public { --chat-accent: var(--ui-base); }
 .chat-tab--private { --chat-accent: var(--ui-accent-purple); }
 .chat-tab--party { --chat-accent: var(--ui-attribute-agility); }

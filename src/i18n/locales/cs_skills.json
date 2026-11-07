@@ -1,6 +1,6 @@
 {
   "skills": {
-    "crafting": {"blacksmithy": "Kovářství", "bowcraft": "Výroba Luků", "armorsmithy": "Zbrojířství"},
+    "crafting": {"alchemy": "Alchymie", "blacksmithy": "Kovářství", "bowcraft": "Výroba Luků", "armorsmithy": "Zbrojířství"},
     "monsterKnowledge": {
       "huntable": "Lze lovit",
       "title": "Znalost Monster",
@@ -40,6 +40,7 @@
       "healing": "Léčba"
     },
     "descriptions": {
+      "alchemy": "Umožňuje vyrábět lektvary a elixíry.",
       "hunting": "Lovem zvířat lze získávat kůže a materiál pro tětivy luků.",
       "lumberjacking": "Umožňuje získávat různé druhy dřeva podle úrovně dovednosti a vzácnosti stromu.",
       "blacksmithy": "Dovednost pro výrobu kovových zbraní.",
@@ -94,6 +95,8 @@
       "classMaximumRank": "Maximální úroveň povolání"
     },
     "bonuses": {
+      "alchemy": "Zkracuje dobu výroby lektvarů o {percent}.",
+      "alchemySavings": "Šetří {percent} % přísad při výrobě.",
       "lumberjackingCapacityPreservation": "Přidává bonus {percent} % k výtěžnosti stromu.",
       "lumberjackingMaxWood": "Umožňuje získávat dřevo až po {wood}.",
       "miningMaxOre": "Umožňuje těžit rudy až po {ore} a rozpoznávat vzácnost ložiska v závislosti na úrovni dovednosti.",

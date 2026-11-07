@@ -1,4 +1,29 @@
 {
+  "activityLog": {
+    "partyCreated": "You created a party.",
+    "partyJoined": "You joined a party.",
+    "partyLeft": "You are no longer in a party.",
+    "partyMemberJoined": "Joined the party: {name}",
+    "partyMemberLeft": "Left the party: {name}",
+    "worldChanged": "World changed: {from} → {to}",
+    "affect": "Received effect: {name}",
+    "potionHP": "Used healing potion: +{amount} HP",
+    "potionMP": "Used mana potion: +{amount} MP",
+    "potionST": "Used stamina potion: +{amount} ST",
+    "unarmed": "Bare hands",
+    "healOutgoing": "You → {name}: healing +{amount} HP",
+    "healIncoming": "{name} → you: healing +{amount} HP",
+    "healSelf": "Recovered +{amount} HP",
+    "empty": "No events yet.",
+    "pickup": "Picked up: {item} ×{quantity}",
+    "purchase": "Purchased: {item} ×{quantity}",
+    "craft": "Crafted: {item} ×{quantity}",
+    "drop": "Dropped: {item} ×{quantity}",
+    "campfire": "You lit a campfire.",
+    "kill": "You killed: {name}",
+    "outgoing": "You → {name}: {result}",
+    "incoming": "{name} → you: {result}"
+},
   "chat": {
     "resize": "Resize chat",
     "writeTo": "Message {name}",
@@ -281,6 +306,7 @@
     "categoryInfo": {
       "weapons": "Crafting metal weapons.",
       "bows": "Crafting bows.",
+      "potions": "Brewing potions and elixirs from herbs and other ingredients.",
       "metalArmor": "Crafting metal armor.",
       "oreSmelting": "Smelting purifies ore into ingots used to craft weapons and armor. Rarer metals require special purifying additives.",
       "woodProcessing": "Process logs into planks for crafting bows, staves and wands. Rarer woods require purifying additives.",

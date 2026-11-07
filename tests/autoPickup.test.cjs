@@ -39,6 +39,33 @@ test('old settings enable ingredients by default and preserve explicit checkbox 
     assert.equal(defaults.autoPickupPurity, false)
 })
 
+test('opening settings refreshes checkbox state after settings were loaded outside the Vue proxy', () => {
+    const {ref, computed, triggerRef} = require('vue')
+    const {parse} = require('@vue/compiler-sfc')
+    const {descriptor} = parse(readFileSync(join(__dirname, '../src/vue/views/settingsDialog.vue'), 'utf8'))
+    const ast = ts.createSourceFile('settings.ts', descriptor.scriptSetup.content, ts.ScriptTarget.Latest, true)
+    const declaration = ast.statements.filter(ts.isVariableStatement)
+        .flatMap(statement => [...statement.declarationList.declarations])
+        .find(declaration => declaration.name.getText(ast) === 'openDialog')
+    const settings = {autoPickupIngredients: true, autoPickupPurity: false}
+    const storedSettings = ref(settings)
+    const ingredientCheckbox = computed(() => storedSettings.value.autoPickupIngredients)
+    const purityCheckbox = computed(() => storedSettings.value.autoPickupPurity)
+    assert.equal(ingredientCheckbox.value, true)
+    assert.equal(purityCheckbox.value, false)
+    settings.autoPickupIngredients = false
+    settings.autoPickupPurity = true
+    assert.equal(ingredientCheckbox.value, true, 'reproduces the stale checkbox before refresh')
+    const open = new Function('triggerRef', 'storedSettings', 'graphicSettingsChanged', 'syncSelectedDeviceType',
+        'return ' + ts.transpileModule(declaration.initializer.getText(ast), {}).outputText)(
+        triggerRef, storedSettings, {value: false}, () => {})
+    open()
+    assert.equal(ingredientCheckbox.value, settings.autoPickupIngredients)
+    assert.equal(purityCheckbox.value, settings.autoPickupPurity)
+    storedSettings.value.autoPickupIngredients = true
+    assert.equal(settings.autoPickupIngredients, true, 'checkbox still changes the setting used by auto pickup')
+})
+
 test('auto pickup respects proximity, falling animation, category, death and request throttling', async () => {
     const core = await import('@babylonjs/core/index.js')
     const settings = {autoPickupIngredients: true, autoPickupPurity: false}
@@ -55,7 +82,7 @@ test('auto pickup respects proximity, falling animation, category, death and req
         item: {id, cbId, cbType: 'R'}, pos: new core.Vector3(distance, 0, 0),
         dropping: false, nextAutoPickupTime: 0, ...extra,
     })
-    const ingredient = item(1, 401, 1)
+    const ingredient = item(1, 401, 1, {item: {id: 1, cbId: 401, cbType: 'R', atts: new Map([['qty', 2]])}})
     const purity = item(2, 51, 0.1)
     manager.items = [purity, ingredient]
     manager.detectNearestItemProximity(100)

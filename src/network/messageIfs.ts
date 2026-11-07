@@ -99,7 +99,7 @@ export type ArmorSkillKey = 'leatherArmor' | 'chainArmor' | 'plateArmor' | 'shie
 export type UtilitySkillKey = 'camping' | 'healing'
 export type GatheringSkillKey = 'mining' | 'lumberjacking' | 'hunting'
 export type CombatSkillKey = 'powerStrike' | 'preciseShot'
-export type CraftingSkillKey = 'blacksmithy' | 'bowcraft' | 'armorsmithy'
+export type CraftingSkillKey = 'blacksmithy' | 'bowcraft' | 'armorsmithy' | 'alchemy'
 export type SkillKey = CraftingSkillKey | PhysicalWeaponSkillKey | ArmorSkillKey | UtilitySkillKey | GatheringSkillKey | CombatSkillKey
 
 export interface SkillProgressTO {
@@ -598,4 +598,11 @@ export interface MonsterCatalogEntry {
     name: string
     category: string
     tags: string[]
+}
+
+export interface ActivityLogData {
+    event: 'pickup' | 'purchase' | 'drop' | 'campfire' | 'craft'
+    item?: ItemTO
+    quantity?: number
+    time?: number
 }

@@ -370,6 +370,8 @@ export const CharacterManager = {
     },
 
     characterTeleported(data: {id: number, x: number, y: number, z: number, fx: number, fy: number, fz: number, departure: boolean}) {
+        // Teleport broadcasts can arrive before login has created our character.
+        if (!MyPlayer.myChar) return
         if (data.departure) {
             if (data.id === MyPlayer.myChar.id) {
                 MyPlayer.myChar.breakAutoAttack()

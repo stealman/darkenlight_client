@@ -1,23 +1,25 @@
 import {reactive} from 'vue'
 import type {ChatEntry, ChatPacketData, CharacterSpeechData} from '@/network/messageIfs'
 
-export type ChatChannel = ChatEntry['channel']
+export type ChatChannel = ChatEntry['channel'] | 'log'
 export const ChatManager = {
     characterId: 0,
     characterName: '',
     visible: false,
     hudVisible: false,
     state: reactive({messages: [] as ChatEntry[], recent: [] as string[], error: '', errorName: '', errorVersion: 0,
-        active: 'public' as ChatChannel, unread: {public: 0, private: 0, party: 0}}),
+        active: 'public' as ChatChannel, unread: {public: 0, private: 0, party: 0, log: 0}}),
     initialize(id: number, name: string) {
         this.characterId = id
         this.characterName = name
         this.state.messages = []
         this.state.recent = []
         this.state.error = ''
-        this.state.unread = {public: 0, private: 0, party: 0}
+        this.state.active = 'public'
+        this.state.unread = {public: 0, private: 0, party: 0, log: 0}
         try {
             const saved = JSON.parse(localStorage.getItem(`chat:${id}`) || '{}')
+            if (['public', 'private', 'party', 'log'].includes(saved.active)) this.state.active = saved.active
             this.state.messages = (Array.isArray(saved.messages) ? saved.messages : []).filter((entry: ChatEntry) =>
                 entry && ['public', 'private', 'party'].includes(entry.channel) && typeof entry.text === 'string'
                 && typeof entry.from === 'string' && typeof entry.id === 'string' && Number.isFinite(entry.time)).slice(-600)
@@ -25,7 +27,7 @@ export const ChatManager = {
         } catch { /* Storage can be unavailable. */ }
     },
     save() {
-        try { localStorage.setItem(`chat:${this.characterId}`, JSON.stringify({messages: this.state.messages})) } catch { /* Keep chat usable without storage. */ }
+        try { localStorage.setItem(`chat:${this.characterId}`, JSON.stringify({messages: this.state.messages, active: this.state.active})) } catch { /* Keep chat usable without storage. */ }
     },
     rebuildRecent() {
         const people: string[] = []

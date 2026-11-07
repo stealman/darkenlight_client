@@ -1,3 +1,6 @@
+import {AffectGroups} from '@/data/affects'
+import {ActivityLogManager} from '@/data/activityLogManager'
+import {getDamageColor, getRelationColor} from '@/gui/combatColors'
 
 import { OverlayManager } from '@/gui/overlay/overlayManager'
 import { MonsterManager } from '@/babylon/monsters/monsterManager'
@@ -90,6 +93,7 @@ export const MessageProcessor = {
         for (const element of response) {
             const msg = element
             switch (msg.t) {
+                case 101: ActivityLogManager.receive(msg.d); break
                 case 99: MonsterCatalog.receive(msg.d); break
                 case 98:
                     this.processMonsterDangerChanged(msg.d)
@@ -108,6 +112,7 @@ export const MessageProcessor = {
                     if (MyPlayer.myCharRef.value) MyPlayer.myCharRef.value.monsterKnowledge = msg.d
                     break
                 case 92:
+                    if (MyPlayer.myChar) ActivityLogManager.partyChanged(PartyManager.state.value, msg.d, MyPlayer.myChar.id)
                     if (PartyManager.state.value && !msg.d) AudioManager.playPartyLeave()
                     if (PartyManager.receiveState(msg.d)) AudioManager.playPartyJoin()
                     break
@@ -360,6 +365,9 @@ export const MessageProcessor = {
             WorldDataManager.replaceWorldData(data.id, data.size)
             TerrainManager.setSeaWaterLevel(data.seaWaterLevel ?? null)
         }
+        if (worldChanged && MyPlayer.myChar && MyPlayer.worldName) {
+            ActivityLogManager.worldChanged(MyPlayer.worldName, data.name)
+        }
         MyPlayer.worldId = data.id
         MyPlayer.worldName = data.name
         FoggyAreaManager.setAreas(data.foggyAreas ?? [])
@@ -380,6 +388,16 @@ export const MessageProcessor = {
     },
 
     removeMonster(data) {
+        if (data.dead && data.killerIsCharacter && data.killer === MyPlayer.myChar.id) {
+            const target = MonsterManager.monsters.get(data.id) || NpcManager.guards.get(data.id)
+            const color = getRelationColor(target?.getRelationToMyPlayer() || 'NEUTRAL')
+            const name = this.combatLogName(data.id, true)
+            const text = t('activityLog.kill', {name})
+            const offset = text.lastIndexOf(name)
+            ActivityLogManager.add(text, undefined, undefined, {
+                kill: {before: text.slice(0, offset), name, after: text.slice(offset + name.length), color},
+            })
+        }
         MonsterManager.removeMonster(data.id, data.dead)
     },
 
@@ -515,6 +533,10 @@ export const MessageProcessor = {
     },
 
     processCharacterAttack(data: AutoAttackMessage) {
+        if (data.id === MyPlayer.myChar?.id) {
+            ActivityLogManager.rememberAttackWeapon(MyPlayer.myChar.getWeapon())
+            ActivityLogManager.lastAttackSkillName = data.ps ? t('skills.weapons.powerStrike') : data.prs ? t('skills.weapons.preciseShot') : ''
+        }
         CharacterManager.startAutoAttack(data)
     },
 
@@ -522,7 +544,35 @@ export const MessageProcessor = {
         MyPlayer.startCombatApproach(data)
     },
 
+    combatLogName(id: number, monster: boolean): string {
+        if (!monster) return (id === MyPlayer.myChar.id ? MyPlayer.myChar : CharacterManager.characters.get(id))?.getName() || `Character #${id}`
+        // Death/removal can precede the finishing attack result.
+        const entity = MonsterManager.monsters.get(id) || NpcManager.guards.get(id)
+            || Array.from(MonsterManager.killedMonsters).find(mob => mob.id === id)
+        return entity?.getName() || `Monster #${id}`
+    },
+
+    logAttack(data: AutoAttackResultMessage, monsterAttacker: boolean) {
+        const mine = !monsterAttacker && data.id === MyPlayer.myChar.id
+        const incoming = data.tp === 'C' && data.tgt === MyPlayer.myChar.id
+        if (!mine && !incoming) return
+        const result = data.res.h === 'm' ? t('common.miss') : data.res.h === 'b' ? t('common.blocked') : String(Math.round(data.res.d))
+        const baseText = t(mine ? 'activityLog.outgoing' : 'activityLog.incoming', {name: mine ? this.combatLogName(data.tgt, data.tp === 'M') : this.combatLogName(data.id, monsterAttacker), result})
+        const weapon = mine ? ActivityLogManager.lastAttackWeaponName || MyPlayer.myChar.getWeapon()?.name || t('activityLog.unarmed') : ''
+        const skill = mine ? ActivityLogManager.lastAttackSkillName : ''
+        const description = [skill, weapon].filter(Boolean).join(', ')
+        const text = description ? `${baseText} (${description})` : baseText
+        const hit = data.res.h === 'h'
+        const offset = baseText.lastIndexOf(result)
+        const value = String(Math.round(data.res.d))
+        ActivityLogManager.add(text, hit ? getDamageColor(data.res.q, incoming ? '#ff2020' : '#f08f56') : undefined, undefined, {
+            negative: incoming && hit && data.res.d > 0,
+            damage: hit ? {before: text.slice(0, offset), value, after: text.slice(offset + value.length)} : undefined,
+        })
+    },
+
     processCharacterAttackFinished(data: AutoAttackResultMessage) {
+        this.logAttack(data, false)
         CharacterManager.finishAutoAttack(data)
     },
 
@@ -532,6 +582,7 @@ export const MessageProcessor = {
     },
 
     processMonsterAttackFinished(data: AutoAttackResultMessage) {
+        this.logAttack(data, true)
         MonsterManager.autoAttackFinished(data)
     },
 
@@ -641,7 +692,20 @@ export const MessageProcessor = {
         MyPlayer.setPreciseShotQueued(data.q === true)
     },
 
+    logHealing(source: number | null, target: number, type: string, amount: number) {
+        const myId = MyPlayer.myChar?.id
+        if (!(amount > 0) || myId === undefined || (source !== myId && !(type === 'C' && target === myId))) return
+        const key = source === myId ? 'activityLog.healOutgoing' : source === null ? 'activityLog.healSelf' : 'activityLog.healIncoming'
+        const value = String(Math.max(1, Math.floor(amount)))
+        const text = t(key, {name: this.combatLogName(source === myId ? target : source ?? target, source === myId && type === 'M'), amount: value})
+        const offset = text.lastIndexOf(value)
+        ActivityLogManager.add(text, '#20ff20', undefined, {
+            damage: {before: text.slice(0, offset), value, after: text.slice(offset + value.length)},
+        })
+    },
+
     processCharacterHealingFinished(data: HealingResultMessage) {
+        this.logHealing(data.id, data.tgt, data.tp, data.res.hp)
         CharacterManager.finishHealing(data)
     },
 
@@ -683,6 +747,10 @@ export const MessageProcessor = {
     },
 
     processCharacterGatheringFinished(data: CharacterGatheringResultMessage) {
+        if (data.id === MyPlayer.myChar.id && data.g > 0 && data.q > 0) {
+            const item = InventoryManager.getResourceItemsByType(data.g)[0]
+            if (item) ActivityLogManager.add(t('activityLog.pickup', {item: item.name || '?', quantity: data.q}))
+        }
         CharacterManager.finishGathering(data)
     },
 
@@ -699,6 +767,14 @@ export const MessageProcessor = {
     },
 
     processPotionUsed(data: PotionUsedMessage) {
+        if (data.tp === 'C' && data.id === MyPlayer.myChar?.id && ['HP', 'MP', 'ST'].includes(data.add)) {
+            const value = String(Math.max(0, Math.floor(data.val)))
+            const text = t(`activityLog.potion${data.add}`, {amount: value})
+            const offset = text.lastIndexOf(value)
+            ActivityLogManager.add(text, data.add === 'HP' ? '#20ff20' : undefined, undefined, {
+                damage: data.add === 'HP' ? {before: text.slice(0, offset), value, after: text.slice(offset + value.length)} : undefined,
+            })
+        }
         if (data.tp === 'C') {
             CharacterManager.potionUsed(data)
         }
@@ -720,6 +796,7 @@ export const MessageProcessor = {
     },
 
     processCharacterCraftingFinished(data: CharacterCraftingResultMessage) {
+        if (data.id === MyPlayer.myChar.id && data.q > 0 && data.item) ActivityLogManager.receive({event: "craft", item: data.item, quantity: data.q})
         CharacterManager.finishCrafting(data)
     },
 
@@ -732,6 +809,17 @@ export const MessageProcessor = {
     },
 
     processCharacterAffectGroupChange(data: AffectGroupData) {
+        const definition = AffectGroups[data.id as keyof typeof AffectGroups]
+        const previous = MyPlayer.affectGroups.find(group => group.id === data.id)
+        const elapsed = previous ? Math.max(0, (Date.now() - previous.lastUpdatedAt) / 1000) : 0
+        const received = data.af.length > 0 && (!previous || data.p > previous.p || data.af.some(effect => {
+            const old = previous.af.find(existing => existing.data[0] === effect.data[0])
+            return !old || effect.data[2] > old.data[2]
+                || (definition?.displayDuration && effect.data[1] > Math.max(0, old.data[1] - elapsed) + 1)
+        }))
+        if (received) ActivityLogManager.add(t('activityLog.affect', {
+            name: definition?.getNameLocalized() || `#${data.id}`,
+        }), undefined, undefined, {negative: definition?.adverse === true})
         MyPlayer.affectGroupChange(data)
     },
 
@@ -744,6 +832,12 @@ export const MessageProcessor = {
     },
 
     processEffectDamage(data: EffectDamageMessage) {
+        if (data.d < 0) {
+            const myId = MyPlayer.myChar?.id
+            // A combined regeneration tick does not identify each source's contribution.
+            if (data.tp === 'C' && data.id === myId) this.logHealing(null, data.id, data.tp, -data.d)
+            else if (myId !== undefined && data.ids.length === 1 && data.ids[0] === myId) this.logHealing(myId, data.id, data.tp, -data.d)
+        }
         if (data.tp === 'C') {
             CharacterManager.processEffectDamage(data)
         } else if (data.tp === 'M') {

@@ -1,3 +1,4 @@
+import {ActivityLogManager} from '@/data/activityLogManager'
 import {PartyManager} from '@/data/partyManager'
 import {ChatManager} from '@/data/chatManager'
 import {ChatHistoryMsg} from '@/network/messages'
@@ -88,6 +89,7 @@ export const MyPlayer = {
         this.myChar.logicYpos = this.myChar.pos.y
         this.myCharRef.value = this.myChar
         ChatManager.initialize(this.myChar.id, this.myChar.name)
+        ActivityLogManager.initialize(this.myChar.id)
         Connector.sendMessage(new ChatHistoryMsg())
         this.isDead.value = this.myChar.dead
         if (this.isDead.value) {

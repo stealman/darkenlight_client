@@ -311,7 +311,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, triggerRef, watch } from 'vue'
 import GameDialog from '@/vue/views/GameDialog.vue'
 import { BRIGHTNESS_MAX, BRIGHTNESS_MIN, Settings } from '@/settings/settings'
 import { Renderer } from '@/babylon/scene/renderer'
@@ -349,6 +349,7 @@ onMounted(() => {
 })
 
 const openDialog = () => {
+    triggerRef(storedSettings)
     graphicSettingsChanged.value = false
     syncSelectedDeviceType()
 }
@@ -558,6 +559,7 @@ watch(
     [activeTabId, () => props.visible],
     () => {
         if (props.visible) {
+            triggerRef(storedSettings)
             syncSelectedDeviceType()
         }
         emit('target-lock-settings-active', props.visible && activeTabId.value === 1)

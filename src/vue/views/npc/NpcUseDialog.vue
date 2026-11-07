@@ -344,9 +344,9 @@ const features = computed(() => npcData.value?.features ?? [])
 const selectedFeature = computed<NpcUseFeatureData | null>(() => features.value[selectedFeatureIndex.value] ?? null)
 const vendorCategories = computed(() => Object.entries(selectedFeature.value?.categories ?? {}).map(([key, items]) => ({key, items})).filter((category) => category.items.length > 0))
 const craftingCategoryOrder: Record<string, number> = {weapons: 0, bows: 1, metalArmor: 2, leatherArmor: 3, jewels: 4, oreSmelting: 5, woodProcessing: 6, leatherProcessing: 7}
-const craftingSkills: Record<string, CraftingSkillKey> = {weapons: 'blacksmithy', bows: 'bowcraft', metalArmor: 'armorsmithy'}
+const craftingSkills: Record<string, CraftingSkillKey> = {weapons: 'blacksmithy', bows: 'bowcraft', metalArmor: 'armorsmithy', potions: 'alchemy'}
 const craftingDescriptions: Record<string, string> = Object.fromEntries(
-    ['weapons', 'bows', 'metalArmor', 'oreSmelting', 'woodProcessing', 'leatherProcessing', 'resources'].map((key) => [key, `crafting.categoryInfo.${key}`]))
+    ['weapons', 'bows', 'metalArmor', 'potions', 'oreSmelting', 'woodProcessing', 'leatherProcessing', 'resources'].map((key) => [key, `crafting.categoryInfo.${key}`]))
 const getCraftingSkillRank = (category: string) => MyPlayer.myCharRef.value?.skillSet?.[craftingSkills[category]]?.rank ?? 0
 const craftingSkillRankNames = ['untrained', 'novice', 'neophyte', 'apprentice', 'expert', 'journeyman', 'veteran', 'master', 'highMaster', 'exemplar', 'grandmaster']
 const getCraftingSkillRankName = (category: string) => {

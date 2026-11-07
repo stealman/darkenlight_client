@@ -27,6 +27,21 @@ test('storage is isolated per character and restores public/party/private histor
     chat.initialize(2, 'Bob'); assert.equal(chat.state.messages.length, 0)
     chat.initialize(1, 'Alice'); assert.equal(chat.state.messages.length, 3)
 })
+test('selected chat tab including LOG restores per character', () => {
+    const chat = setup()
+    chat.initialize(1, 'Alice')
+    chat.state.active = 'log'
+    chat.save()
+    chat.initialize(2, 'Bob')
+    assert.equal(chat.state.active, 'public')
+    chat.state.active = 'party'
+    chat.save()
+    chat.initialize(1, 'Alice')
+    assert.equal(chat.state.active, 'log')
+    chat.initialize(2, 'Bob')
+    assert.equal(chat.state.active, 'party')
+})
+
 test('recent contacts keep the latest five and incoming correspondents', () => {
     const chat = setup(); chat.initialize(1, 'Alice')
     for (let i = 0; i < 7; i++) chat.add(message(String(i), 'private', 'Person'+i, 'Alice'))
