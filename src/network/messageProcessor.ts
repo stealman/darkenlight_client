@@ -556,17 +556,16 @@ export const MessageProcessor = {
         const mine = !monsterAttacker && data.id === MyPlayer.myChar.id
         const incoming = data.tp === 'C' && data.tgt === MyPlayer.myChar.id
         if (!mine && !incoming) return
-        const result = data.res.h === 'm' ? t('common.miss') : data.res.h === 'b' ? t('common.blocked') : String(Math.round(data.res.d))
+        const hit = data.res.h === 'h'
+        const direction = hit ? data.res.a === 's' ? ' >' : data.res.a === 'b' ? ' ^' : '' : ''
+        const value = String(Math.round(data.res.d)) + direction
+        const result = data.res.h === 'm' ? t('common.miss') : data.res.h === 'b' ? t('common.blocked') : value
         const baseText = t(mine ? 'activityLog.outgoing' : 'activityLog.incoming', {name: mine ? this.combatLogName(data.tgt, data.tp === 'M') : this.combatLogName(data.id, monsterAttacker), result})
         const weapon = mine ? ActivityLogManager.lastAttackWeaponName || MyPlayer.myChar.getWeapon()?.name || t('activityLog.unarmed') : ''
         const skill = mine ? ActivityLogManager.lastAttackSkillName : ''
         const description = [skill, weapon].filter(Boolean).join(', ')
-        const hit = data.res.h === 'h'
-        const direction = hit && data.res.a
-            ? t(data.res.a === 's' ? 'activityLog.sideAttack' : 'activityLog.backAttack') : ''
-        const text = (description ? `${baseText} (${description})` : baseText) + (direction ? ` - ${direction}` : '')
+        const text = description ? `${baseText} (${description})` : baseText
         const offset = baseText.lastIndexOf(result)
-        const value = String(Math.round(data.res.d))
         ActivityLogManager.add(text, hit ? getDamageColor(data.res.q, incoming ? '#ff2020' : '#f08f56') : undefined, undefined, {
             negative: incoming && hit && data.res.d > 0,
             damage: hit ? {before: text.slice(0, offset), value, after: text.slice(offset + value.length)} : undefined,

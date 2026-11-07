@@ -179,15 +179,18 @@ export const CharacterManager = {
         if (data.id === MyPlayer.myChar.id) {
             MyPlayer.finishAutoAttack(data)
             if (data.tp === 'M') {
-                OverlayManager.addMonsterDamageNumber(data.tgt, data.res.d, data.res.h, data.res.q)
+                OverlayManager.addMonsterDamageNumber(data.tgt, data.res.d, data.res.h, data.res.q, undefined, data.res.a)
             }
             if (data.tp === 'C') {
-                OverlayManager.addCharacterDamageNumber(data.tgt, data.res.d, data.res.h, data.res.q)
+                OverlayManager.addCharacterDamageNumber(data.tgt, data.res.d, data.res.h, data.res.q, undefined, data.res.a)
             }
         } else {
             const char = this.characters.get(data.id)
             if (char) {
                 char.finishAutoAttack(data)
+                if (data.tp === 'C' && data.tgt === MyPlayer.myChar.id) {
+                    OverlayManager.addMyCharDamageNumber(char, data.res.d, data.res.h, data.res.q, undefined, data.res.a)
+                }
             }
         }
 

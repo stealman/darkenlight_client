@@ -1,7 +1,5 @@
 {
   "activityLog": {
-    "sideAttack": "attack from the side",
-    "backAttack": "attack from behind",
     "partyCreated": "You created a party.",
     "partyJoined": "You joined a party.",
     "partyLeft": "You are no longer in a party.",

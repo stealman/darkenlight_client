@@ -134,6 +134,9 @@ export const MonsterManager = {
         const guard = NpcManager.guards.get(data.id)
         if (guard) {
             guard.finishAutoAttack(data)
+            if (data.tp === 'C' && data.tgt === MyPlayer.myChar.id) {
+                OverlayManager.addMyCharDamageNumber(guard, data.res.d, data.res.h, data.res.q, undefined, data.res.a)
+            }
             return
         }
         const monster = this.monsters.get(data.id)
@@ -142,7 +145,7 @@ export const MonsterManager = {
         }
         monster.autoAttackFinished(data)
         if (data.tp === 'C' && data.tgt === MyPlayer.myChar.id) {
-            OverlayManager.addMyCharDamageNumber(monster, data.res.d, data.res.h, data.res.q)
+            OverlayManager.addMyCharDamageNumber(monster, data.res.d, data.res.h, data.res.q, undefined, data.res.a)
         }
     },
 

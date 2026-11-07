@@ -16,7 +16,7 @@ import { GmOreTierOverlay } from '@/gui/gm/oreTierOverlay'
 import { TreeLevelOverlay } from '@/gui/gm/treeLevelOverlay'
 import { UiIconManager } from '@/gui/uiIconManager'
 
-import type { CharacterSpeechData, MonsterAggroAlertData } from '@/network/messageIfs'
+import type { AutoAttackResult, CharacterSpeechData, MonsterAggroAlertData } from '@/network/messageIfs'
 
 import type { OverlayCanvasView } from '@/gui/canvasTextUtils'
 import { OverlayLabels } from '@/gui/overlay/overlayLabels'
@@ -143,7 +143,7 @@ export const OverlayManager = {
         ctx.fillRect(0, 0, w, h)
     },
 
-    addMonsterDamageNumber(monsterId: number, damage: number, hitType: string = 'h', hitQuality: 'P' | 'N' | 'G' | null = null, time: number = Date.now()) {
+    addMonsterDamageNumber(monsterId: number, damage: number, hitType: string = 'h', hitQuality: 'P' | 'N' | 'G' | null = null, time: number = Date.now(), direction?: AutoAttackResult['a']) {
         let monster = MonsterManager.monsters.get(monsterId)
         // A lethal hit's result can arrive after removal from the live map.
         if (!monster) {
@@ -157,31 +157,31 @@ export const OverlayManager = {
         if (!monster) {
             return
         }
-        const damageNumber = DamageNumber.fromHitMonster(MyPlayer.myChar, monster, damage, hitType, hitQuality, time)
+        const damageNumber = DamageNumber.fromHitMonster(MyPlayer.myChar, monster, damage, hitType, hitQuality, time, direction)
         if (!damageNumber) {
             return
         }
         this.damageNumbers.push(damageNumber)
     },
 
-    addCharacterDamageNumber(charId: number, damage: number, hitType: string = 'h', hitQuality: 'P' | 'N' | 'G' | null = null, time: number = Date.now()) {
+    addCharacterDamageNumber(charId: number, damage: number, hitType: string = 'h', hitQuality: 'P' | 'N' | 'G' | null = null, time: number = Date.now(), direction?: AutoAttackResult['a']) {
         const char = CharacterManager.characters.get(charId)
         if (!char) {
             return
         }
-        this.addCharacterTargetDamageNumber(char, damage, hitType, hitQuality, time)
+        this.addCharacterTargetDamageNumber(char, damage, hitType, hitQuality, time, direction)
     },
 
-    addCharacterTargetDamageNumber(char: Character, damage: number, hitType: string = 'h', hitQuality: 'P' | 'N' | 'G' | null = null, time: number = Date.now()) {
-        const damageNumber = DamageNumber.fromHitCharacter(MyPlayer.myChar, char, damage, hitType, hitQuality, time)
+    addCharacterTargetDamageNumber(char: Character, damage: number, hitType: string = 'h', hitQuality: 'P' | 'N' | 'G' | null = null, time: number = Date.now(), direction?: AutoAttackResult['a']) {
+        const damageNumber = DamageNumber.fromHitCharacter(MyPlayer.myChar, char, damage, hitType, hitQuality, time, direction)
         if (!damageNumber) {
             return
         }
         this.damageNumbers.push(damageNumber)
     },
 
-    addMyCharDamageNumber(attacker: Attackable, damage: number, hitType: string = 'h', hitQuality: 'P' | 'N' | 'G' | null = null, time: number = Date.now()) {
-        const damageNumber = DamageNumber.fromHitMyChar(attacker, damage, hitType, hitQuality, time)
+    addMyCharDamageNumber(attacker: Attackable, damage: number, hitType: string = 'h', hitQuality: 'P' | 'N' | 'G' | null = null, time: number = Date.now(), direction?: AutoAttackResult['a']) {
+        const damageNumber = DamageNumber.fromHitMyChar(attacker, damage, hitType, hitQuality, time, direction)
         if (!damageNumber) {
             return
         }

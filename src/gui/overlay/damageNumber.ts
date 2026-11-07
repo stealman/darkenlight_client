@@ -7,6 +7,7 @@ import { MonsterManager } from '@/babylon/monsters/monsterManager'
 import { CanvasTextUtils } from '@/gui/canvasTextUtils'
 import { OverlayManager } from '@/gui/overlay/overlayManager'
 import { t } from '@/i18n'
+import type { AutoAttackResult } from '@/network/messageIfs'
 
 export class DamageNumber {
     attacker: Attackable
@@ -30,7 +31,7 @@ export class DamageNumber {
         this.expiresAt = createdAt + DamageNumber.ttl
     }
 
-    static fromHitMonster(attacker: Attackable, monster: Monster, damage: number, hitType: string = 'h', hitQuality: 'P' | 'N' | 'G' | null = null, time: number = Date.now()): DamageNumber | null {
+    static fromHitMonster(attacker: Attackable, monster: Monster, damage: number, hitType: string = 'h', hitQuality: 'P' | 'N' | 'G' | null = null, time: number = Date.now(), direction?: AutoAttackResult['a']): DamageNumber | null {
         if (hitType === 'm') {
             return new DamageNumber(attacker, monster, null, t('common.miss'), '#c7c7c7', time)
         }
@@ -43,10 +44,10 @@ export class DamageNumber {
         if (damage === 0) {
             return null
         }
-        return new DamageNumber(attacker, monster, null, `-${Math.round(damage)}`, this.getDamageColor(hitQuality, '#f08f56'), time)
+        return new DamageNumber(attacker, monster, null, `-${Math.round(damage)}${direction === 's' ? ' >' : direction === 'b' ? ' ^' : ''}`, this.getDamageColor(hitQuality, '#f08f56'), time)
     }
 
-    static fromHitCharacter(attacker: Attackable, char: Character, damage: number, hitType: string = 'h', hitQuality: 'P' | 'N' | 'G' | null = null, time: number = Date.now()): DamageNumber | null {
+    static fromHitCharacter(attacker: Attackable, char: Character, damage: number, hitType: string = 'h', hitQuality: 'P' | 'N' | 'G' | null = null, time: number = Date.now(), direction?: AutoAttackResult['a']): DamageNumber | null {
         if (hitType === 'm') {
             return new DamageNumber(attacker, null, char, t('common.miss'), '#c7c7c7', time)
         }
@@ -57,11 +58,11 @@ export class DamageNumber {
             // Healing is sent as negative damage, but we want to display it as positive number with plus sign.
             return new DamageNumber(attacker, null, char, `+${this.getHealingDisplayAmount(damage)}`, '#20ff20', time)
         } else if (damage > 0) {
-            return new DamageNumber(attacker, null, char, `-${Math.round(damage)}`, this.getDamageColor(hitQuality, '#f08f56'), time)
+            return new DamageNumber(attacker, null, char, `-${Math.round(damage)}${direction === 's' ? ' >' : direction === 'b' ? ' ^' : ''}`, this.getDamageColor(hitQuality, '#f08f56'), time)
         }
     }
 
-    static fromHitMyChar(attacker: Attackable, damage: number, hitType: string = 'h', hitQuality: 'P' | 'N' | 'G' | null = null, time: number = Date.now()): DamageNumber | null {
+    static fromHitMyChar(attacker: Attackable, damage: number, hitType: string = 'h', hitQuality: 'P' | 'N' | 'G' | null = null, time: number = Date.now(), direction?: AutoAttackResult['a']): DamageNumber | null {
         if (hitType === 'm') {
             return new DamageNumber(attacker, null, MyPlayer.myChar, t('common.miss'), '#c7c7c7', time)
         }
@@ -72,7 +73,7 @@ export class DamageNumber {
             // Healing is sent as negative damage, but we want to display it as positive number with plus sign.
             return new DamageNumber(attacker, null, MyPlayer.myChar, `+${this.getHealingDisplayAmount(damage)}`, '#20ff20', time)
         } else if (damage > 0) {
-            return new DamageNumber(attacker, null, MyPlayer.myChar, `-${Math.round(damage)}`, this.getDamageColor(hitQuality, '#ff2020'), time)
+            return new DamageNumber(attacker, null, MyPlayer.myChar, `-${Math.round(damage)}${direction === 's' ? ' >' : direction === 'b' ? ' ^' : ''}`, this.getDamageColor(hitQuality, '#ff2020'), time)
         }
     }
 
