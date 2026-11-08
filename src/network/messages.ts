@@ -685,7 +685,7 @@ export class GMNoAggroMsg implements Message {
 export class GMWorldAreasRequest implements Message {
     t = 1026
     constructor(public d: {
-        worldId: number, action: 'load' | 'save', requestId: string,
+        worldId: number, action: 'load' | 'save' | 'signpostTargets', requestId: string,
         revision?: number, areas?: import('../data/worldAreas').WorldArea[],
     }) {}
 }

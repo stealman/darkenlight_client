@@ -617,6 +617,12 @@ export interface GMSpawnStatusData {
 }
 
 export interface WorldAreasData {
+    signpostTargets?: {
+        currentAreaId: number | null
+        currentAreaName: string
+        targets: Array<{id: number, name: string, x: number, z: number, depth: number}>
+    }
+
     worldId: number
     size: number
     revision: number

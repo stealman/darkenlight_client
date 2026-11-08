@@ -133,8 +133,3 @@ div.gui-action-button.active {
                 0 0 6px rgba(230, 60, 60, 0.35);
     }
 }
-
-/* Keep the painted eye smaller than full-tile inventory icons. */
-#btn-opportunity-read_signpost img.action-icon {
-    transform: scale(2.25);
-}

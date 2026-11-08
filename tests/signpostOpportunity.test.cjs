@@ -47,7 +47,7 @@ test('read-signpost opportunity uses the nearest sign within two tiles and reche
     const {GuiButtonsManager: gui, GuiOpportunityActions: actions} = evaluate(read('gui/guiButtonsManager.ts'), dependencies, document)
     gui.createOpportunityButtons()
     const button = gui.opportunityButtons.get(actions.READ_SIGNPOST.name)
-    assert.match(button.htmlEl.innerHTML, /btn_eye\.png"/)
+    assert.match(button.htmlEl.innerHTML, /btn_lupa\.png"/)
     assert.equal(button.htmlEl.attributes['aria-label'], 'signpost.read')
     const refresh = () => {gui.nextOpportunityUpdateAt = 0; gui.onFrame(1000)}
     refresh()

@@ -108,15 +108,23 @@
                     <option v-for="count in 4" :key="count" :value="count">{{ count }}</option>
                 </select>
             </label>
+            <div class="signpost-area-controls">
+                <span>{{ areaPicker.loading ? 'Loading subareas...' : areaPicker.currentAreaName }}</span>
+                <button class="dialog-button" :disabled="areaPicker.loading" @click="refreshSignpostAreas(true)">Refresh areas</button>
+                <span v-if="areaPicker.error" role="alert">{{ areaPicker.error }}</span>
+            </div>
             <div v-for="index in signCount" :key="index" style="display: grid; gap: 4px">
-                <label>Sign {{ index }} direction
-                    <select v-model="signDirections[index - 1]">
-                        <option v-for="direction in ['+X', '-X', '+Z', '-Z']" :key="direction" :value="direction">{{ direction }}</option>
+                <strong>Sign {{ index }}</strong>
+                <label>Subarea
+                    <select :value="''" :disabled="areaPicker.loading || !areaPicker.targets.length" @change="selectSignpostArea(index - 1, $event)">
+                        <option value="">{{ areaPicker.loading ? 'Loading...' : areaPicker.targets.length ? 'Select a subarea...' : 'No subareas here' }}</option>
+                        <option v-for="area in areaPicker.targets" :key="area.id" :value="area.id">{{ '\u00a0\u00a0'.repeat(area.depth) }}{{ area.name }}</option>
                     </select>
                 </label>
-                <label>Sign {{ index }} text
-                    <textarea v-model="signTexts[index - 1]" rows="2" maxlength="256" style="display: block; width: 100%; box-sizing: border-box"></textarea>
-                </label>
+                <select v-model="signDirections[index - 1]" :aria-label="`Sign ${index} direction`">
+                    <option v-for="(direction, value) in SIGNPOST_DIRECTIONS" :key="value" :value="value">{{ t(`signpost.${direction.name}`) }} ({{ value }})</option>
+                </select>
+                <textarea v-model="signTexts[index - 1]" :aria-label="`Sign ${index} text`" rows="2" maxlength="256" style="display: block; width: 100%; box-sizing: border-box"></textarea>
             </div>
         </div>
 
@@ -162,8 +170,13 @@
 </template>
 
 <script setup>
+import { SIGNPOST_DIRECTIONS } from '@/babylon/world/statics/objects/woodenSignpost'
+import { t } from '@/i18n'
 import { GMManager } from '@/gm/GM'
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
+import { SignpostAreaPicker, directionToSignpostTarget } from '@/gm/signpostAreaPicker'
+import { WorldAreaManager } from '@/data/worldAreaManager'
+import { MyPlayer } from '@/data/myPlayer'
 
 const selectedObjectType = ref("")
 const selectedObject = GMManager.selectedStatic
@@ -183,6 +196,30 @@ const lightLevels = Array.from({length: 10}, (_, index) => index + 1)
 const hasLightSettings = computed(() => selectedObject.value === 241 || selectedObject.value === 242
     || selectedObject.value === 261 || selectedObject.value === 262 || selectedObject.value === 263
     || selectedObject.value === 281 || selectedObject.value === 337)
+
+const areaPicker = reactive(new SignpostAreaPicker())
+const refreshSignpostAreas = (force = false) => {
+    if (selectedObjectType.value !== 'SIGNPOST' || !MyPlayer.myChar) return
+    const pos = MyPlayer.myChar.pos
+    const areaId = WorldAreaManager.index.getAt(pos.x, pos.z)?.id ?? null
+    areaPicker.refresh(MyPlayer.worldId, areaId, force)
+}
+const selectSignpostArea = (index, event) => {
+    const target = areaPicker.targets.find(area => area.id === Number(event.target.value))
+    if (!target) return
+    GMManager.signTexts.value[index] = target.name
+    const origin = GMManager.editingStatic.value?.renderPosition ?? MyPlayer.myChar?.pos
+    if (origin) {
+        const direction = directionToSignpostTarget(origin.x, origin.z, target)
+        if (direction) GMManager.signDirections.value[index] = direction
+    }
+    event.target.value = ''
+}
+watch(() => WorldAreaManager.response.value, data => { if (data) areaPicker.receive(data) }, {flush: 'sync'})
+watch(selectedObjectType, () => refreshSignpostAreas(), {immediate: true})
+let areaRefreshTimer
+onMounted(() => { refreshSignpostAreas(); areaRefreshTimer = setInterval(() => refreshSignpostAreas(), 500) })
+onUnmounted(() => { clearInterval(areaRefreshTimer); areaPicker.dispose() })
 
 const signTexts = GMManager.signTexts
 const signCount = GMManager.signCount
@@ -269,3 +306,7 @@ watch(selectedObject, (id) => {
     selectedObjectType.value = objects.find((obj) => obj.id === id)?.type ?? ""
 })
 </script>
+
+<style scoped>
+.signpost-area-controls { display: grid; gap: 4px; font-size: 12px; }
+</style>

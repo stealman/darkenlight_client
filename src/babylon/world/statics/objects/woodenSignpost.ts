@@ -7,7 +7,17 @@ import { StaticSurfaceAtlas, StaticSurfacePlanes } from '../staticSurfacePlanes'
 
 import { t } from '@/i18n'
 
-type Direction = '+X' | '-X' | '+Z' | '-Z'
+type Direction = '+X' | '-X' | '+Z' | '-Z' | '+X+Z' | '+X-Z' | '-X+Z' | '-X-Z'
+export const SIGNPOST_DIRECTIONS: Record<Direction, {name: string, yaw: number}> = {
+    '+X': {name: 'north', yaw: 0},
+    '+X-Z': {name: 'northEast', yaw: Math.PI / 4},
+    '-Z': {name: 'east', yaw: Math.PI / 2},
+    '-X-Z': {name: 'southEast', yaw: Math.PI * 3 / 4},
+    '-X': {name: 'south', yaw: Math.PI},
+    '-X+Z': {name: 'southWest', yaw: -Math.PI * 3 / 4},
+    '+Z': {name: 'west', yaw: -Math.PI / 2},
+    '+X+Z': {name: 'northWest', yaw: -Math.PI / 4},
+}
 export interface SignpostMetadata {
     signCount?: number
     sign1Text?: string
@@ -19,20 +29,26 @@ export interface SignpostMetadata {
     sign3?: Direction
     sign4?: Direction
 }
+const POLE_HEIGHT = 2.2
+const TOP_SIGN_HEIGHT = 1.92
 const defaults: Direction[] = ['+X', '-X', '+Z', '-Z']
 
 export class WoodenSignpost extends BaseStaticObject {
     getReadingEntries() {
-        const directions: Record<Direction, string> = {
-            '+X': t('signpost.north'), '-X': t('signpost.south'),
-            '+Z': t('signpost.west'), '-Z': t('signpost.east'),
-        }
-        const arrowRotations: Record<Direction, number> = {'+X': 0, '-X': 180, '+Z': -90, '-Z': 90}
         return Array.from({length: this.status.signCount}, (_, index) => ({
-            direction: directions[this.status[`sign${index + 1}`] as Direction],
-            arrowRotation: arrowRotations[this.status[`sign${index + 1}`] as Direction],
+            direction: t(`signpost.${SIGNPOST_DIRECTIONS[this.status[`sign${index + 1}`] as Direction].name}`),
+            arrowRotation: SIGNPOST_DIRECTIONS[this.status[`sign${index + 1}`] as Direction].yaw * 180 / Math.PI,
             text: this.status[`sign${index + 1}Text`] || t('signpost.blank'),
         }))
+    }
+
+    private getSignHeight(index: number): number {
+        const direction = this.status[`sign${index + 1}`]
+        let row = 0
+        for (let previous = 0; previous < index; previous++) {
+            if (this.status[`sign${previous + 1}`] === direction) row++
+        }
+        return TOP_SIGN_HEIGHT - row * 0.31
     }
 
     intersectsRay(ray: Ray): boolean {
@@ -40,14 +56,15 @@ export class WoodenSignpost extends BaseStaticObject {
         const hitBox = (x: number, y: number, z: number, hx: number, hy: number, hz: number) =>
             ray.intersectsBoxMinMax(new Vector3(p.x + x - hx, p.y + y - hy, p.z + z - hz),
                 new Vector3(p.x + x + hx, p.y + y + hy, p.z + z + hz))
-        if (hitBox(0, 1.35, 0, 0.12, 1.35, 0.12)) return true
+        if (hitBox(0, POLE_HEIGHT / 2, 0, 0.12, POLE_HEIGHT / 2, 0.12)) return true
         for (let index = 0; index < this.status.signCount; index++) {
             const direction = this.status[`sign${index + 1}`] as Direction
-            const alongX = direction === '+X' || direction === '-X'
-            const sign = direction === '+X' || direction === '+Z' ? 1 : -1
-            // Include the pointed end, while keeping gaps between boards unpickable.
-            if (hitBox(alongX ? sign * 0.425 : 0, 2.42 - index * 0.31,
-                alongX ? 0 : sign * 0.425, alongX ? 0.49 : 0.06, 0.12, alongX ? 0.06 : 0.49)) return true
+            const yaw = SIGNPOST_DIRECTIONS[direction].yaw
+            const localRay = Ray.Transform(ray, Matrix.Translation(-p.x, -p.y, -p.z).multiply(Matrix.RotationY(-yaw)))
+            // Test the rotated board in its own coordinates, including its pointed end.
+            const y = this.getSignHeight(index)
+            if (localRay.intersectsBoxMinMax(new Vector3(-0.065, y - 0.12, -0.06),
+                new Vector3(0.915, y + 0.12, 0.06))) return true
         }
         return false
     }
@@ -66,7 +83,7 @@ export class WoodenSignpost extends BaseStaticObject {
         defaults.forEach((fallback, index) => {
             const key = `sign${index + 1}` as keyof SignpostMetadata
             const direction = metadata?.[key]
-            this.status[key] = defaults.includes(direction as Direction) ? direction : fallback
+            this.status[key] = Object.prototype.hasOwnProperty.call(SIGNPOST_DIRECTIONS, direction as string) ? direction : fallback
             const textKey = `sign${index + 1}Text` as keyof SignpostMetadata
             this.status[textKey] = typeof metadata?.[textKey] === 'string' ? metadata[textKey] : ''
         })
@@ -80,13 +97,12 @@ export class WoodenSignpost extends BaseStaticObject {
                 .multiply(Matrix.Translation(p.x + x, p.y + 0.5 + y, p.z + z)))
             WorldRenderer.block1!.uvData.push(material)
         }
-        add(0.18, 2.7, 0.18, 0, 1.35, 0, 0, 0, this.material)
+        add(0.18, POLE_HEIGHT, 0.18, 0, POLE_HEIGHT / 2, 0, 0, 0, this.material)
         for (let i = 0; i < this.status.signCount; i++) {
             const direction = this.status[`sign${i + 1}`] as Direction
-            const yaw = direction === '+X' ? 0 : direction === '-X' ? Math.PI
-                : direction === '+Z' ? -Math.PI / 2 : Math.PI / 2
+            const yaw = SIGNPOST_DIRECTIONS[direction].yaw
             const dx = Math.cos(yaw), dz = -Math.sin(yaw)
-            const y = 2.42 - i * 0.31
+            const y = this.getSignHeight(i)
             add(0.85, 0.22, 0.07, dx * 0.37, y, dz * 0.37, yaw)
             // The shared block mesh has a -0.5 Y offset; the plane mesh is centred.
             for (const side of [-1, 1]) {

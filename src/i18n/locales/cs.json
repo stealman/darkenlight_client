@@ -1,5 +1,5 @@
 {
-  "signpost": {"title": "Rozcestník", "north": "Sever", "south": "Jih", "east": "Východ", "west": "Západ", "blank": "—", "read": "Přečíst rozcestník"},
+  "signpost": {"northEast": "Severovýchod", "southEast": "Jihovýchod", "southWest": "Jihozápad", "northWest": "Severozápad", "title": "Rozcestník", "north": "Sever", "south": "Jih", "east": "Východ", "west": "Západ", "blank": "—", "read": "Přečíst rozcestník"},
   "activityLog": {
     "partyCreated": "Založil jsi partu.",
     "partyJoined": "Připojil ses do party.",

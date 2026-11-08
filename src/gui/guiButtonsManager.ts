@@ -87,7 +87,7 @@ export const GuiOpportunityActions = {
     COOKING: new GuiOpportunityButtonAction("COOKING", "btn_cooking"),
     USE_DOOR: new GuiOpportunityButtonAction("USE_DOOR", "btn_use_door"),
     USE_CHEST: new GuiOpportunityButtonAction("USE_CHEST", "btn_use_chest"),
-    READ_SIGNPOST: new GuiOpportunityButtonAction('READ_SIGNPOST', 'btn_eye'),
+    READ_SIGNPOST: new GuiOpportunityButtonAction('READ_SIGNPOST', 'btn_lupa'),
     NPC_USE: new GuiOpportunityButtonAction("NPC_USE", "btn_chat"),
     NPC_EDIT: new GuiOpportunityButtonAction("NPC_EDIT", "", "NPC"),
     BOT_EDIT: new GuiOpportunityButtonAction("BOT_EDIT", "", "BOT"),

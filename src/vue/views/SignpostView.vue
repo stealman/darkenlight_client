@@ -10,7 +10,7 @@
         @pointerdown.stop
         @click.stop
     >
-        <section ref="reader" class="signpost-reader" tabindex="-1" @click.self="SignpostReader.closeFromBackdrop()" @keydown.esc.stop.prevent="SignpostReader.close()" @keydown.tab.stop.prevent="closeButton?.focus()">
+        <section ref="reader" class="signpost-reader" tabindex="-1" @click.self="SignpostReader.closeFromBackdrop()" @keydown.esc.stop.prevent="SignpostReader.close()" @keydown.tab.stop.prevent="reader?.focus()">
             <svg width="0" height="0" aria-hidden="true" focusable="false" class="signpost-reader-filters">
                 <defs>
                     <filter id="signpost-incised-text" color-interpolation-filters="sRGB">
@@ -48,9 +48,6 @@
                     </div>
                 </article>
             </div>
-            <button v-if="!isTouchDevice" ref="closeButton" class="signpost-reader-close" type="button" :aria-label="t('common.close')" @click="SignpostReader.close()">
-                <span aria-hidden="true">&times;</span> <kbd>Esc</kbd>
-            </button>
         </section>
     </div>
 </template>
@@ -59,15 +56,13 @@
 import { onMounted, onUnmounted, ref } from 'vue'
 import { SignpostReader } from '@/gui/signpostReader'
 import { t } from '@/i18n'
-import { Settings } from '@/settings/settings'
 
 const entries = SignpostReader.entries
 const backdrop = ref<HTMLElement | null>(null)
 const readerScale = ref(1)
-const isTouchDevice = Settings.touchEnabled || Settings.isPhoneOrTablet() || window.matchMedia('(any-pointer: coarse)').matches
 let resizeObserver: ResizeObserver | null = null
 
-// Fit the whole composition, including its close control and rotated edges.
+// Fit the whole composition, including its rotated edges.
 // Measure unscaled layout so applying the transform cannot feed back into sizing.
 const fitReader = () => {
     if (!reader.value || !backdrop.value) return
@@ -79,7 +74,6 @@ const fitReader = () => {
         height / (reader.value.offsetHeight + 48)))
 }
 const reader = ref<HTMLElement | null>(null)
-const closeButton = ref<HTMLButtonElement | null>(null)
 let previousFocus: HTMLElement | null = null
 onMounted(() => {
     previousFocus = document.activeElement as HTMLElement | null
@@ -173,25 +167,6 @@ onUnmounted(() => {
 .signpost-reader-cut-shadow { flood-color: var(--signpost-reader-cut-shadow); }
 .signpost-reader-cut-highlight { flood-color: var(--signpost-reader-cut-highlight); }
 .signpost-reader-text--long { font-size: clamp(12px, 2vw, 18px); }
-.signpost-reader-close {
-    position: absolute;
-    top: -16px;
-    right: 14px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    min-width: 44px;
-    min-height: 44px;
-    justify-content: center;
-    padding: 8px 12px;
-    border: 0;
-    background: transparent;
-    color: var(--signpost-reader-muted);
-    font: 13px Georgia, 'Times New Roman', serif;
-    cursor: pointer;
-}
-.signpost-reader-close:hover, .signpost-reader-close:focus-visible { color: var(--signpost-reader-ink); }
-.signpost-reader-close kbd { margin-left: 8px; padding: 2px 5px; border: 1px solid currentColor; border-radius: 3px; font: inherit; font-size: 11px; }
 @media (max-width: 480px) {
     .signpost-reader-inscription { padding-top: 22px; padding-bottom: 22px; }
     .signpost-reader-boards { gap: 10px; }
