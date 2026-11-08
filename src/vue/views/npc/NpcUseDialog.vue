@@ -220,8 +220,11 @@
                     <span>{{ t('vendor.attack') }} <strong class="ui-text-gradient">{{ formatWeaponAttack(detailItem.atts?.patk) }}</strong></span>
                     <span>{{ t('vendor.attackType') }} <strong class="ui-text-gradient">{{ formatDamageTypes(detailItem) }}</strong></span>
                     <span>{{ t('vendor.speed') }} <strong class="ui-text-gradient">{{ formatSpeed(detailItem.atts?.speed) }}</strong></span>
-                    <span>{{ t('vendor.range') }} <strong class="ui-text-gradient">{{ detailItem.atts?.range }}</strong></span>
-                    <span v-if="isNonZero(detailItem.atts?.armorPen)">{{ t('inventory.armorPenetration') }} <strong class="ui-text-gradient">{{ detailItem.atts?.armorPen }}</strong></span>
+                    <span>
+                        {{ t('inventory.armorPenetration') }}
+                        <strong v-if="isNonZero(detailItem.atts?.armorPen)" class="ui-text-gradient">{{ detailItem.atts?.armorPen }}</strong>
+                        <span v-else>0</span>
+                    </span>
                     <span v-if="isNonZero(detailItem.atts?.precision)">{{ t('inventory.precision') }} <strong class="ui-text-gradient">{{ formatModifier(detailItem.atts?.precision) }}%</strong></span>
                     <span v-if="isNonZero(detailItem.atts?.defense)">{{ t('inventory.defense') }} <strong class="ui-text-gradient">{{ formatModifier(detailItem.atts?.defense) }}%</strong></span>
                 </div>
