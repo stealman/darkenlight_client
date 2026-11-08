@@ -15,6 +15,16 @@
         </div>
     </div>
 
+    <div style="margin-top: 2vh">
+        <label>Terrain fragments</label>
+        <div style="margin-top: 1vh">
+            <button v-for="(type, index) in [151, 152, 154, 153, 155]" :key="type"
+                :class="{ selected: selectedShrub === type }" @click="selectDebris(type)">
+                {{ index + 1 }}
+            </button>
+        </div>
+    </div>
+
     <!-- TREES -->
     <div style="margin-top: 2vh">
         <div style="margin-top: 1vh">
@@ -147,6 +157,7 @@ const shrubs = [
 ]
 
 const selectTreeType = (type) => {
+    selectedShrub.value = 0
     GMManager.editingTree.value = null
     selectedTreeType.value = type
     selectedShrubType.value = ""
@@ -165,6 +176,7 @@ const selectTree = (id) => {
 }
 
 const selectShrubType = (type) => {
+    selectedTree.value = 0
     GMManager.editingTree.value = null
     selectedShrubType.value = type
     selectedTreeType.value = ""
@@ -188,6 +200,11 @@ const selectNone = () => {
     selectedShrub.value = 0
     selectedTreeType.value = ""
     selectedShrubType.value = ""
+}
+
+const selectDebris = (type) => {
+    selectNone()
+    selectedShrub.value = type
 }
 
 const selectDelete = () => {

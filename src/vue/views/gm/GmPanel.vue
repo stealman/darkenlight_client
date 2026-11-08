@@ -86,6 +86,16 @@
             <FoggyAreasPanel />
         </div>
 
+        <GameDialog v-if="pendingTerrainNavigation" window-class="adaptive" content-class="dialog-content--modal"
+            :close-on-backdrop="false" @close="GMManager.cancelTerrainNavigation()">
+            <template #header>Neuložené změny terénu</template>
+            <div>Terén obsahuje neuložené změny. Před odchodem je ulož.</div>
+            <div class="dialog-actions" style="margin-top: 20px">
+                <button class="dialog-button" @click="GMManager.saveTerrainAndContinue()"><span class="ui-text-gradient--button-state">Uložit a pokračovat</span></button>
+                <button class="dialog-button" @click="GMManager.cancelTerrainNavigation()"><span class="ui-text-gradient--button-state">Zůstat v editoru</span></button>
+            </div>
+        </GameDialog>
+
         <ModelRenderPanel ref="modelRenderPanel" />
         <WorldsPanel ref="worldsPanel" @close="worldsDialogClosed" />
         <ItemCreationPanel ref="itemCreationPanel" />
@@ -97,6 +107,7 @@
 
 import { GMManager, GmTabs as GMTabs } from '@/gm/GM'
 import { ref } from 'vue'
+import GameDialog from '@/vue/views/GameDialog.vue'
 import BiomePanel from '@/vue/views/gm/BiomePanel.vue'
 import TerrainPanel from '@/vue/views/gm/TerrainPanel.vue'
 import WallsFencesPanel from '@/vue/views/gm/WallsFencesPanel.vue'
@@ -113,6 +124,7 @@ import ItemCreationPanel from '@/vue/views/gm/ItemCreationPanel.vue'
 import { Lights } from '@/babylon/scene/lights'
 import { LightningEffect } from '@/babylon/scene/lighting/lightningEffect'
 
+const pendingTerrainNavigation = GMManager.pendingTerrainNavigation
 const actualTab = ref(GMTabs.OVERVIEW)
 const modelRenderPanel = ref(null)
 const worldsPanel = ref(null)
@@ -120,6 +132,7 @@ const itemCreationPanel = ref(null)
 const dayNightTime = ref(Lights.getGameTimeInfo().time)
 
 const selectTab = (tab) => {
+    if (tab !== actualTab.value && GMManager.deferTerrainNavigation(() => selectTab(tab))) return
     if (actualTab.value === GMTabs.WORLDS) {
         worldsPanel.value?.closeDialog()
     }
@@ -135,6 +148,7 @@ const openModelRenderDialog = () => {
 }
 
 const openWorldsDialog = () => {
+    if (GMManager.deferTerrainNavigation(openWorldsDialog)) return
     actualTab.value = GMTabs.WORLDS
     GMManager.openTab(GMTabs.WORLDS)
     worldsPanel.value?.openDialog()

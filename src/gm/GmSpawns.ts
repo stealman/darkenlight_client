@@ -22,7 +22,7 @@ export const GMSpawns = {
                 this.selectedSpawn.value.markerMesh!.position.y = this.selectedSpawn.value.origYPos
             }
             this.selectedSpawn.value = clickedSpawn
-            this.selectedSpawnAction.value = ''
+            this.selectedSpawnAction.value = 'EDIT'
         } else {
 
             // Move existing spawn
@@ -31,6 +31,8 @@ export const GMSpawns = {
                 this.selectedSpawn.value!.z = z
                 Connector.sendMessage(new GMSpawnAction(this.selectedSpawnAction.value, {id: this.selectedSpawn.value.id, pos: {x: x, z: z}}))
                 this.renderSpawnMarkers()
+                this.selectedSpawnAction.value = 'EDIT'
+                return
             } else if (this.selectedSpawn.value !== null) {
 
                 // Deselect current spawn
@@ -50,7 +52,6 @@ export const GMSpawns = {
                     power: 5,
                     spawnRange: 5,
                     aggroRange: 5,
-                    wanderingMoveRange: 10,
                     pursueRange: 30
                 })
                 this.selectedSpawn.value = newSpawn
@@ -69,9 +70,13 @@ export const GMSpawns = {
                 power: this.selectedSpawn.value.power,
                 spawnRange: this.selectedSpawn.value.spawnRange,
                 aggroRange: this.selectedSpawn.value.aggroRange,
-                wanderingMoveRange: this.selectedSpawn.value.wanderingMoveRange,
                 pursueRange: this.selectedSpawn.value.pursueRange
             }))
+            if (this.selectedSpawn.value.markerMesh) {
+                this.selectedSpawn.value.markerMesh.position.y = this.selectedSpawn.value.origYPos
+            }
+            this.selectedSpawn.value = null
+            this.selectedSpawnAction.value = ''
         }
     },
 
@@ -86,7 +91,6 @@ export const GMSpawns = {
                 power: this.selectedSpawn.value.power,
                 spawnRange: this.selectedSpawn.value.spawnRange,
                 aggroRange: this.selectedSpawn.value.aggroRange,
-                wanderingMoveRange: this.selectedSpawn.value.wanderingMoveRange,
                 pursueRange: this.selectedSpawn.value.pursueRange
             }))
             this.selectedSpawn.value = null
@@ -198,7 +202,6 @@ export class Spawn {
     power: number
     spawnRange: number
     aggroRange: number
-    wanderingMoveRange: number
     pursueRange: number
 
     markerMesh: InstancedMesh | null = null
@@ -214,7 +217,6 @@ export class Spawn {
         this.power = spawn.power
         this.spawnRange = spawn.spawnRange
         this.aggroRange = spawn.aggroRange
-        this.wanderingMoveRange = spawn.wanderingMoveRange
         this.pursueRange = spawn.pursueRange
     }
 }

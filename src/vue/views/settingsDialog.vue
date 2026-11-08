@@ -156,6 +156,12 @@
                                         @input="cameraDistanceChanged()"
                                     />
                                 </td>
+                                <td class="item-label" style="width: 25%">
+                                    <label for="foggy-areas-enabled">{{ t('settings.foggyAreas') }}</label>
+                                </td>
+                                <td style="width: 25%">
+                                    <Checkbox input-id="foggy-areas-enabled" v-model="foggyAreasEnabled" binary />
+                                </td>
                             </tr>
                         </tbody>
                     </table>
@@ -316,6 +322,7 @@ import GameDialog from '@/vue/views/GameDialog.vue'
 import { BRIGHTNESS_MAX, BRIGHTNESS_MIN, Settings } from '@/settings/settings'
 import { Renderer } from '@/babylon/scene/renderer'
 import { Lights } from '@/babylon/scene/lights'
+import { FoggyAreaManager } from '@/babylon/world/foggyAreaManager'
 import { ActionButtonsManager } from '@/gui/actionButtonsManager'
 import { TargetingManager } from '@/gui/targettingManager'
 import { ViewportManager } from '@/utils/viewport'
@@ -326,6 +333,14 @@ const props = defineProps({
     visible: Boolean,
 })
 const storedSettings = ref(Settings)
+const foggyAreasEnabled = computed({
+    get: () => storedSettings.value.isFoggyAreasEnabled(),
+    set: (enabled) => {
+        storedSettings.value.foggyAreasOverride = enabled
+        FoggyAreaManager.refreshVisibleAreas()
+        storeSettings()
+    },
+})
 const emit = defineEmits(['close', 'closeWithRestartPrompt', 'deviceTypeSelected', 'touchColtrolsChanged', 'logout', 'toggle-fullscreen', 'target-lock-settings-active'])
 const { t } = useI18n()
 
@@ -405,6 +420,7 @@ const setDeviceType = (deviceType) => {
 
     storeSettings()
     Renderer.updateCameraForEnvironment()
+    FoggyAreaManager.refreshVisibleAreas()
     ActionButtonsManager.renderActionButtons()
     emit('deviceTypeSelected')
 }
@@ -417,6 +433,7 @@ const setActionButtonsLayout = (layout) => {
 
 const setDetailsLevel = (level) => {
     storedSettings.value.setDetailLevel(level)
+    FoggyAreaManager.refreshVisibleAreas()
     graphicSettingsChanged.value = true
     storeSettings()
 }
@@ -513,6 +530,7 @@ const restoreDefaultSettings = () => {
     Settings.setVolume(defaultSettings.volume)
     Settings.setAmbientVolume(defaultSettings.ambientVolume)
     Settings.setSmoothIcons(defaultSettings.smoothIcons)
+    FoggyAreaManager.refreshVisibleAreas()
     setLocale(defaultSettings.language)
     Renderer.brightnessChanged()
     Lights.brightnessChanged()

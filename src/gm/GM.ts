@@ -103,6 +103,25 @@ const buildingFootprint = (type: number, facing: string, width: number, depth: n
 
 export const GMManager = {
     gmPanelVisible: ref(false),
+    terrainHasUnsavedChanges: ref(false),
+    pendingTerrainNavigation: ref<(() => void) | null>(null),
+
+    deferTerrainNavigation(action: () => void): boolean {
+        if (this.tab !== GmTabs.TERRAIN_EDIT || !this.terrainHasUnsavedChanges.value) return false
+        this.pendingTerrainNavigation.value = action
+        return true
+    },
+
+    cancelTerrainNavigation() {
+        this.pendingTerrainNavigation.value = null
+    },
+
+    saveTerrainAndContinue() {
+        const action = this.pendingTerrainNavigation.value
+        this.saveMapData()
+        this.pendingTerrainNavigation.value = null
+        action?.()
+    },
     noAggro: ref(false),
 
     setNoAggro(enabled: boolean) {
@@ -183,7 +202,33 @@ export const GMManager = {
 
     tab: GmTabs.OVERVIEW,
 
+    onEscape() {
+        if (this.editingStatic.value) {
+            this.cancelStaticEdit()
+        } else if (this.editingBuilding.value) {
+            this.cancelBuildingEdit()
+        } else if (this.equipmentDecorationDraftTile.value || this.equipmentDecorationEditing.value) {
+            this.cancelEquipmentDecorationDraft()
+        } else if (GMSpawns.selectedSpawn.value) {
+            const spawn = GMSpawns.selectedSpawn.value
+            if (spawn.markerMesh) spawn.markerMesh.position.y = spawn.origYPos
+            GMSpawns.selectedSpawn.value = null
+            GMSpawns.selectedSpawnAction.value = ''
+        } else if (GMFoggyAreas.selectedArea.value) {
+            GMFoggyAreas.cancel()
+        } else if (this.selectedNpc.value) {
+            this.cancelSelectedNpc()
+        } else if (this.selectedBot.value) {
+            this.cancelSelectedBot()
+        } else if (this.editingTree.value) {
+            this.editingTree.value = null
+        } else {
+            this.toggleGmPanel()
+        }
+    },
+
     toggleGmPanel() {
+        if (this.gmPanelVisible.value && this.deferTerrainNavigation(() => this.toggleGmPanel())) return
         if (this.gmPanelVisible.value) {
             this.cancelEquipmentDecorationDraft()
             this.consumePointerMoveEvents = false
@@ -205,6 +250,7 @@ export const GMManager = {
     },
 
     onLeftClickEvent() {
+        if (this.pendingTerrainNavigation.value) return
         if (this.tab === GmTabs.TERRAIN_EDIT) {
             const data = []
             const markerPos = new Vector3(GMSceneManager.hoverBlockMarker!.position.x, 0, GMSceneManager.hoverBlockMarker!.position.z)
@@ -282,6 +328,7 @@ export const GMManager = {
                 }
             }
             Connector.sendMessage(new GMTerrainChange(data))
+            this.terrainHasUnsavedChanges.value = true
         }
 
         if (this.tab === GmTabs.BIOME_EDIT) {
@@ -1077,6 +1124,7 @@ export const GMManager = {
 
     saveMapData() {
         Connector.sendMessage(new GMSaveMapDataMsg())
+        this.terrainHasUnsavedChanges.value = false
     },
 
     forceSaveData() {

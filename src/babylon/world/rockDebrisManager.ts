@@ -6,6 +6,7 @@ import { MapBlock, WorldDataManager } from '@/data/worldDataManager'
 import { ViewportManager } from '@/utils/viewport'
 import { MyPlayer } from '@/data/myPlayer'
 import { BuildingManager } from '@/babylon/world/buildings/buildingManager'
+import { TerrainDebrisManager } from './terrainDebrisManager'
 
 export const RockDebrisManager = {
     BASE_DENSITY: 1 / 8,
@@ -43,7 +44,7 @@ export const RockDebrisManager = {
                     continue
                 }
 
-                if (BuildingManager.hasFloorAtTile(x, z)) {
+                if (BuildingManager.hasFloorAtTile(x, z) || TerrainDebrisManager.hasPileAt(x, z)) {
                     continue
                 }
 

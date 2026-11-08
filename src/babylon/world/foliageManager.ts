@@ -14,9 +14,9 @@ export const FoliageManager = {
     GENERATE_ON_TERRAINS: [
         { terrain: TerrainEnum1.TERRAIN_GRASS, rowIndex: 0, avgTilesPerFoliage: 2 },
         { terrain: TerrainEnum1.TERRAIN_GRASS_WINTER, rowIndex: 0, avgTilesPerFoliage: 2 },
-        { terrain: TerrainEnum1.TERRAIN_MUDDY_DIRT, rowIndex: 1, avgTilesPerFoliage: 10 },
+        { terrain: TerrainEnum1.TERRAIN_MUDDY_DIRT, rowIndex: 1, spawnChance: 0.2 },
         { terrain: TerrainEnum1.TERRAIN_SNOW_GRASS, rowIndex: 2, avgTilesPerFoliage: 12 },
-        { terrain: TerrainEnum1.TERRAIN_SNOW_MUDDY_DIRT, rowIndex: 2, avgTilesPerFoliage: 12 },
+        { terrain: TerrainEnum1.TERRAIN_SNOW_MUDDY_DIRT, rowIndex: 2, spawnChance: 0.15 },
         { terrain: TerrainEnum1.TERRAIN_SNOW_GRASS_WINTER, rowIndex: 2, avgTilesPerFoliage: 12 },
     ],
     foliageMesh: null as Mesh | null,
@@ -67,6 +67,12 @@ export const FoliageManager = {
         const uvData = []
         const blockMap = WorldDataManager.getBlockMap()
         const myPos = MyPlayer.myChar.getPositionRounded()
+        const buildingBounds = Array.from(BuildingManager.buildings.values(), building => ({
+            minX: building.data.x,
+            maxX: building.data.x + building.getWidth(),
+            minZ: building.data.z,
+            maxZ: building.data.z + building.getDepth(),
+        }))
 
         for (let x = Math.max(0, myPos.x + ViewportManager.minX); x <= Math.min(blockMap.length - 1, myPos.x + ViewportManager.maxX); x++) {
             for (let z = Math.max(0, myPos.z + ViewportManager.minZ); z <= Math.min(blockMap.length - 1, myPos.z + ViewportManager.maxZ); z++) {
@@ -75,12 +81,13 @@ export const FoliageManager = {
                     continue
                 }
 
-                if (BuildingManager.hasFloorAtTile(x, z)) {
+                if (block.stonePath || block.beigeStonePath || BuildingManager.hasFloorAtTile(x, z)
+                    || buildingBounds.some(bounds => x >= bounds.minX && x < bounds.maxX && z >= bounds.minZ && z < bounds.maxZ)) {
                     continue
                 }
 
                 const terrainConfig = this.getTerrainConfig(block)
-                if (block.type <= 0 || !terrainConfig || !this.shouldSpawnAt(x, z, terrainConfig.avgTilesPerFoliage!)) {
+                if (block.type <= 0 || !terrainConfig || !this.shouldSpawnAt(x, z, terrainConfig)) {
                     continue
                 }
 
@@ -100,11 +107,13 @@ export const FoliageManager = {
         mesh.setEnabled(matrices.length > 0)
     },
 
-    shouldSpawnAt(x: number, z: number, avgTilesPerFoliage: number): boolean {
-        return this.hashTile(x, z, 0) % Math.max(1, avgTilesPerFoliage) === 0
+    shouldSpawnAt(x: number, z: number, config: {avgTilesPerFoliage?: number, spawnChance?: number}): boolean {
+        const hash = this.hashTile(x, z, 0)
+        if (config.spawnChance !== undefined) return hash / 0x100000000 < config.spawnChance
+        return hash % Math.max(1, config.avgTilesPerFoliage ?? 1) === 0
     },
 
-    getTerrainConfig(block: MapBlock): { terrain: { index: number }, rowIndex: number, avgTilesPerFoliage?: number } | null {
+    getTerrainConfig(block: MapBlock): { terrain: { index: number }, rowIndex: number, avgTilesPerFoliage?: number, spawnChance?: number } | null {
         const terrainIndex = this.getTerrainIndex(block)
         return this.GENERATE_ON_TERRAINS.find(config => config.terrain.index === terrainIndex) ?? null
     },

@@ -25,6 +25,12 @@ export class StaticObjectInfo {
 }
 
 export const StaticObjectsCodebook: Map<number, StaticObjectInfo> = new Map([
+    [151, new StaticObjectInfo(151, 'TerrainDebris1', false, 1, 0, 0, null)],
+    [152, new StaticObjectInfo(152, 'TerrainDebris2', false, 1, 0, 0, null)],
+    [153, new StaticObjectInfo(153, 'TerrainDebris4', false, 1, 0, 0, null)],
+    [154, new StaticObjectInfo(154, 'TerrainDebris3', false, 1, 0, 0, null)],
+    [155, new StaticObjectInfo(155, 'TerrainDebris5', false, 1, 0, 0, null)],
+
     [403, new StaticObjectInfo(403, 'StandingBanner', true, 1, 0.3, 0, null)],
 
     [101, new StaticObjectInfo(101, 'Shrub2x2_1', true, 2, 0.4, 0, null)],

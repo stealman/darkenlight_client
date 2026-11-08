@@ -176,6 +176,7 @@
     "joystickSettings": "Joystick settings",
     "targetLockSettings": "Target lock settings",
     "graphicsLevel": "Graphics detail level.",
+    "foggyAreas": "Fog areas",
     "graphicsHigh": "High",
     "graphicsMedium": "Medium",
     "graphicsLow": "Low",

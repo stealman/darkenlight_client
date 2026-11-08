@@ -7,9 +7,9 @@
         <div v-show="gameSessionActive">
             <PartyPanel v-if="gameSessionActive" />
             <SpeechInput v-if="gameSessionActive && speechButtonVisible" />
-            <CharacterChatTab v-if="gameSessionActive && !speechButtonVisible" v-show="!displayCharacterDialog && !gmPanelVisible"
+            <CharacterChatTab v-if="gameSessionActive && !speechButtonVisible && !gmPanelVisible" v-show="!displayCharacterDialog"
                 ref="desktopChat" desktop-hud :visible="!displayCharacterDialog && !gmPanelVisible" />
-            <div id="system-buttons">
+            <div v-show="!gmPanelVisible" id="system-buttons">
                 <button type="button" class="hud-settings-button" :aria-label="t('app.settings')" @click="showSettingsDialog()" v-html="getSettingsSvg('', 'icon-settings')"></button>
             </div>
             <div v-if="myCharRef?.className === 'GM'" id="gm-system-buttons">
@@ -675,6 +675,24 @@ const onKeyDown = (event: KeyboardEvent) => {
         event.preventDefault()
         void Renderer.toggleFullscreen()
         return
+    }
+    if (event.key === 'Escape' && gmPanelVisible.value) {
+        if (event.repeat || event.defaultPrevented) return
+        // Dialogs handle Escape themselves after this document listener.
+        const dialogOpen = Array.from(document.querySelectorAll<HTMLElement>('.dialog-backdrop'))
+            .some(dialog => dialog.getClientRects().length > 0)
+        if (dialogOpen) return
+        const target = event.target as HTMLElement | null
+        if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement || target?.isContentEditable) {
+            target.blur()
+            return
+        }
+        if (!MyPlayer.activeAction && !TargetingManager.selectedTarget && !MyPlayer.powerStrikeQueued && !MyPlayer.preciseShotQueued) {
+            event.preventDefault()
+            event.stopPropagation()
+            GMManager.onEscape()
+            return
+        }
     }
     Controller.processKeydown(event)
 }

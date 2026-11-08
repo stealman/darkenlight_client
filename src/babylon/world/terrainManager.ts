@@ -16,9 +16,9 @@ import { SNOW_BLOCK_HEIGHT } from '@/babylon/world/beveledTerrainBlock'
 export const DIRT_BLOCK_TYPE = 1
 const GRASS_BLOCK_TYPES = new Set([2, 5])
 export const WATER_BLOCK_TYPE = 50
-const WATER_BOTTOM_BLOCK = new MapBlock(0, DIRT_BLOCK_TYPE)
 
 export const TerrainManager = {
+    waterBottomBlock: null as MapBlock | null,
     terrainBlock1: null as Mesh | null,
     terrainPlane: null as Mesh | null,
     terrainWaterPlane: null as Mesh | null,
@@ -29,6 +29,7 @@ export const TerrainManager = {
     hoverBlockMarker: null as Mesh | null,
 
     initialize (scene: Scene) {
+        this.waterBottomBlock = new MapBlock(0, DIRT_BLOCK_TYPE)
 
         // Terrain and plane blocks
         this.terrainBlock1 = Builder.createBlockWithFaces(scene, WorldRenderer.worldParentNode!)
@@ -83,7 +84,7 @@ export const TerrainManager = {
         x: number, z: number, blockHeight: number, planeHeightOffset: number, block: MapBlock, terrainMatrices1: Matrix[], terrainUvData1: Vector2[], waterPlaneMatrices: Matrix[], waterPlaneUvData: Vector2[]) {
         const bottomY = block.deepWater ? blockHeight - 1 : blockHeight - 0.5
         terrainMatrices1.push(Matrix.Translation(x, bottomY, z))
-        terrainUvData1.push(TerrainEnum1.getTerrainForBlock(WATER_BOTTOM_BLOCK))
+        terrainUvData1.push(TerrainEnum1.getTerrainForBlock(this.waterBottomBlock!))
 
         waterPlaneMatrices.push(Matrix.Translation(x, blockHeight + planeHeightOffset, z))
         waterPlaneUvData.push(PlaneEnum1.PLANE_WATER.uv)

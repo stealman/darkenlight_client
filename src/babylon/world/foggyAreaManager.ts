@@ -93,12 +93,12 @@ export const FoggyAreaManager = {
     },
 
     refreshVisibleAreas() {
-        const camera = this.scene?.activeCamera
-        if (!this.scene || !camera || !ViewportManager.viewPortInitialized) return
-        if (!Settings.isDetalLevelHigh()) {
+        if (!Settings.isFoggyAreasEnabled()) {
             this.disposeSystems()
             return
         }
+        const camera = this.scene?.activeCamera
+        if (!this.scene || !camera || !ViewportManager.viewPortInitialized) return
         // Terrain's viewport includes tall objects and lower height layers.
         // Fog instead uses its own terrain-height bounds against the real camera.
         camera.getViewMatrix()

@@ -22,7 +22,7 @@
                   <template v-if="selectedSpawnAction ==='EDIT'">
                       <button style='background-color: lightblue; color: black' @click="onClickSaveEdit()">Save</button>
                       &nbsp;
-                      <button  @click="onClickCancelEdit()">Cancel</button>
+                      <button @click="onClickMove()">Move</button>
                   </template>
 
                   <template v-if="selectedSpawnAction ==='MOVE'">
@@ -66,10 +66,6 @@
                 <tr>
                     <td>Aggro Rng.</td>
                     <td><input type='number' @focus="$event.target.select()" :disabled="selectedSpawn.id > 0 && selectedSpawnAction !=='EDIT'" v-model.number='selectedSpawn.aggroRange' min='0' max='32' /></td>
-                </tr>
-                <tr>
-                    <td>Wander Rng.</td>
-                    <td><input type='number' @focus="$event.target.select()" :disabled="selectedSpawn.id > 0 && selectedSpawnAction !=='EDIT'" v-model.number='selectedSpawn.wanderingMoveRange' min='1' max='32'/></td>
                 </tr>
                 <tr>
                     <td>Pursue Rng.</td>
@@ -132,12 +128,8 @@ const onClickSaveCreate = () => {
     selectedSpawnAction.value = ''
 }
 
-const onClickCancelEdit = () => {
-    selectedSpawnAction.value = ''
-}
-
 const onClickCancelMove = () => {
-    selectedSpawnAction.value = ''
+    selectedSpawnAction.value = 'EDIT'
 }
 
 const onClickCancelCreate = () => {

@@ -27,12 +27,14 @@ import { GMFoggyAreas } from '@/gm/GmFoggyAreas'
 import { EquipmentDecorationsManager } from '@/babylon/world/equipmentDecorationsManager'
 import { Settings } from '@/settings/settings'
 import { IndoorTerrainOcclusionManager } from '@/babylon/world/indoorTerrainOcclusionManager'
+import { TerrainDebrisManager } from '@/babylon/world/terrainDebrisManager'
 
 // The viewport already renders a four-tile reserve. On touch devices, keep one
 // tile of that reserve instead of rebuilding every world buffer on every tile.
 const TOUCH_WORLD_RENDER_STEP_TILES = 2
 
 export const WorldRenderer = {
+    snowCoverMask: new Set<number>(),
     block1: null as SymmetricBlock | null,
     blockWithAlpha1: null as SymmetricBlock | null,
     translucentPlane: null as SymmetricBlock | null,
@@ -105,7 +107,7 @@ export const WorldRenderer = {
         this.blockWithAlpha1!.clearMatrices()
         this.translucentPlane!.clearMatrices()
         const blockMap = WorldDataManager.getBlockMap()
-        const snowCoverMask = createSnowCoverMask(
+        const snowCoverMask = this.snowCoverMask = createSnowCoverMask(
             TreeManager.allTrees,
             StaticsManager.allStatics,
             blockMap.length,
@@ -116,6 +118,7 @@ export const WorldRenderer = {
         // Render terrain
         TerrainManager.renderTerrain((terrainMatrices, terrainUvData) => {
             StaticsManager.renderTerrainBlocks(terrainMatrices, terrainUvData)
+            TerrainDebrisManager.render(terrainMatrices, terrainUvData)
         }, snowCoverMask)
 
         // Render trees

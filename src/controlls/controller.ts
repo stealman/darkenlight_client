@@ -217,6 +217,16 @@ export const Controller = {
             return
         }
 
+        // G - toggle the GM panel.
+        if ((e.key && e.key.toLowerCase() === 'g') || e.code === 'KeyG') {
+            if (e.repeat || e.isComposing || e.ctrlKey || e.altKey || e.metaKey) return
+            if (MyPlayer.myChar?.className === 'GM') {
+                e.preventDefault()
+                GMManager.toggleGmPanel()
+            }
+            return
+        }
+
         // I - open inventory
         if ((e.key && e.key.toLowerCase() === 'i') || e.code === 'KeyI') {
             if (e.repeat) return

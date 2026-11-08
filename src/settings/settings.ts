@@ -62,6 +62,7 @@ export const Settings = {
     targetMarkerOpacity: 1,
     displayGlow: true as boolean,
     smoothIcons: false as boolean,
+    foggyAreasOverride: null as boolean | null,
 
     hudSize: 1 as number,
     joystickSize: 100 as number,
@@ -98,6 +99,7 @@ export const Settings = {
                 this.detailLevel = DetailLevels.MEDIUM;
         }
         this.detailLevelName = storedSettings.detailLevelName
+        this.foggyAreasOverride = typeof storedSettings.foggyAreasOverride === 'boolean' ? storedSettings.foggyAreasOverride : null
 
         this.brightness = clampBrightness(parseFloat(storedSettings.brightness))
         const storedCameraDistance = parseFloat(storedSettings.cameraDistance)
@@ -166,6 +168,7 @@ export const Settings = {
             ambientVolume: 1,
             displayGlow: !Settings.touchEnabled,
             smoothIcons: !Settings.touchEnabled,
+            foggyAreasOverride: null as boolean | null,
             targetMarkerOpacity: 1,
             hudSize: 1,
 
@@ -221,6 +224,10 @@ export const Settings = {
 
     deviceTypeChanged() {
         ActionButtonsManager.buttonSizeChanged(this.actionButtonSize)
+    },
+
+    isFoggyAreasEnabled(): boolean {
+        return this.foggyAreasOverride ?? (this.deviceType === 'DESKTOP' && this.isDetalLevelHigh())
     },
 
     isShadowsEnabled(): boolean {

@@ -59,6 +59,7 @@ import {
     StoneFrameGrave,
     StoneTomb,
 } from '@/babylon/world/statics/objects/cemeteryObjects'
+import { TerrainDebris } from './objects/terrainDebris'
 
 const isEmbeddedInSnow = (type: number) => isShrubType(type) || type === 281
 
@@ -94,6 +95,11 @@ export const StaticsManager = {
         const previousCount = this.allStatics.length
 
         switch (obj.tp) {
+            case 151:
+            case 152:
+            case 153:
+            case 154:
+            case 155: this.allStatics.push(new TerrainDebris(obj.tp, pos)); break;
             case 403: this.allStatics.push(new StandingBanner(obj.tp, pos, obj.meta as BannerMetadata)); break
             case 101: this.allStatics.push(new Shrub2x2(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_LIGHT.uv)); break
             case 102: this.allStatics.push(new Shrub2x2(obj.tp, pos, rotation, MaterialAlphaEnum1.TREE_LEAF_DARK.uv)); break
