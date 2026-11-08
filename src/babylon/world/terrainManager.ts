@@ -9,6 +9,7 @@ import { ViewportManager } from '@/utils/viewport'
 import { MyPlayer } from '@/data/myPlayer'
 import { IndoorTerrainOcclusionManager } from '@/babylon/world/indoorTerrainOcclusionManager'
 import { Lights } from '@/babylon/scene/lights'
+import { smoothTerrainExperiment } from '@/babylon/world/terrainExperiment'
 
 export const DIRT_BLOCK_TYPE = 1
 const GRASS_BLOCK_TYPES = new Set([2, 5])
@@ -57,6 +58,9 @@ export const TerrainManager = {
         this.applySeaWaterLevel()
 
         this.hoverBlockMarker = Builder.createHorizontalPlane(scene, null,1, 0)
+        smoothTerrainExperiment?.initialize(scene, WorldRenderer.worldParentNode, () => {
+            if (ViewportManager.viewPortInitialized) WorldRenderer.renderWorld()
+        })
     },
 
     setSeaWaterLevel(seaWaterLevel: number | null) {
@@ -100,6 +104,7 @@ export const TerrainManager = {
         const waterPlaneUvData = []
 
         IndoorTerrainOcclusionManager.beginTerrainRender(blockMap, Lights.indoor)
+        smoothTerrainExperiment?.begin()
 
         for (let x = Math.max(0, myPos.x + ViewportManager.minX); x <= Math.min(blockMap.length -1, myPos.x + ViewportManager.maxX); x++) {
             for (let z = Math.max(0, myPos.z + ViewportManager.minZ); z <= Math.min(blockMap.length - 1, myPos.z + ViewportManager.maxZ); z++) {
@@ -120,7 +125,9 @@ export const TerrainManager = {
                 const terrainHeightOffset = block.stonePath || block.beigeStonePath ? 0 : heightOffset
 
                 if (block.type > 0) {
-                    if (planeBlockMap[x][z]) {
+                    if (smoothTerrainExperiment?.accepts(block, x, z)) {
+                        smoothTerrainExperiment.requestTile(x, z)
+                    } else if (planeBlockMap[x][z]) {
                         if (block.type === WATER_BLOCK_TYPE) {
                             this.addWaterTerrainLayer(x, z, block.height, heightOffset, block, terrainMatrices1, terrainUvData1, waterPlaneMatrices, waterPlaneUvData)
                         } else {
@@ -192,6 +199,7 @@ export const TerrainManager = {
 
         renderTerrainStatics?.(terrainMatrices1, terrainUvData1)
         IndoorTerrainOcclusionManager.finishTerrainRender()
+        smoothTerrainExperiment?.finish(blockMap, snowCoverMask)
 
         // Apply buffers for instances
         this.terrainBlockMatrixBuffer = updateWorldInstanceBuffers(this.terrainBlock1!, terrainMatrices1, terrainUvData1)
