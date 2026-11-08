@@ -54,6 +54,8 @@ export interface DayNightCycleSync {
 }
 
 export interface WorldMapDataMessage {
+    areas?: import('../data/worldAreas').WorldArea[]
+    areasRevision?: number
     id: number
     name: string
     size: number
@@ -612,4 +614,14 @@ export interface ActivityLogData {
 export interface GMSpawnStatusData {
     worldId: number
     spawns: Array<{id: number, count: number, nextSpawnInMs: number | null, depleted: boolean}>
+}
+
+export interface WorldAreasData {
+    worldId: number
+    size: number
+    revision: number
+    areas: import('../data/worldAreas').WorldArea[]
+    requestId?: string
+    saved?: boolean
+    error?: string
 }

@@ -3,7 +3,7 @@
         <!-- Action select buttons -->
         <div class="gm-action-selection" style="margin: 10px 0;">
             <button :disabled="actualTab === GMTabs.OVERVIEW" @click="selectTab(GMTabs.OVERVIEW)">Overview</button>
-            <button :disabled="actualTab === GMTabs.WORLDS" @click="openWorldsDialog">Worlds</button>
+            <button @click="openWorldsDialog">Worlds</button>
             <button :disabled="actualTab === GMTabs.TERRAIN_EDIT" @click="selectTab(GMTabs.TERRAIN_EDIT)">Terrain Edit</button>
             <button :disabled="actualTab === GMTabs.BIOME_EDIT" @click="selectTab(GMTabs.BIOME_EDIT)">Biome</button>
             <button :disabled="actualTab === GMTabs.WALLS_AND_FENCES_EDIT" @click="selectTab(GMTabs.WALLS_AND_FENCES_EDIT)">Walls & Fences</button>
@@ -95,7 +95,7 @@
         </GameDialog>
 
         <ModelRenderPanel ref="modelRenderPanel" />
-        <WorldsPanel ref="worldsPanel" @close="worldsDialogClosed" />
+        <WorldsPanel ref="worldsPanel" />
         <ItemCreationPanel ref="itemCreationPanel" />
 
     </div>
@@ -132,7 +132,7 @@ const dayNightTime = ref(Lights.getGameTimeInfo().time)
 const selectTab = (tab) => {
     if (tab !== actualTab.value && GMManager.deferTerrainNavigation(() => selectTab(tab))) return
     if (actualTab.value === GMTabs.WORLDS) {
-        worldsPanel.value?.closeDialog()
+        if (worldsPanel.value?.closeDialog() === false) return
     }
     actualTab.value = tab
     GMManager.openTab(tab)
@@ -140,7 +140,7 @@ const selectTab = (tab) => {
 
 const openModelRenderDialog = () => {
     if (actualTab.value === GMTabs.WORLDS) {
-        worldsPanel.value?.closeDialog()
+        if (worldsPanel.value?.closeDialog() === false) return
     }
     modelRenderPanel.value?.openDialog()
 }
@@ -152,24 +152,16 @@ const openWorldsDialog = () => {
     worldsPanel.value?.openDialog()
 }
 
-const worldsDialogClosed = () => {
-    if (actualTab.value !== GMTabs.WORLDS) {
-        return
-    }
-    actualTab.value = GMTabs.OVERVIEW
-    GMManager.openTab(GMTabs.OVERVIEW)
-}
-
 const openItemCreationDialog = () => {
     if (actualTab.value === GMTabs.WORLDS) {
-        worldsPanel.value?.closeDialog()
+        if (worldsPanel.value?.closeDialog() === false) return
     }
     itemCreationPanel.value?.openDialog()
 }
 
 const forceSaveData = () => {
     if (actualTab.value === GMTabs.WORLDS) {
-        worldsPanel.value?.closeDialog()
+        if (worldsPanel.value?.closeDialog() === false) return
     }
     GMManager.forceSaveData()
 }

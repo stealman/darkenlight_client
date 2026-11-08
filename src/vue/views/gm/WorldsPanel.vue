@@ -3,8 +3,13 @@
         <div class="dialog-window adaptive worlds-dialog-window">
             <div class="dialog-surface">
                 <div class="dialog-header">Worlds</div>
+                <div class="worlds-subtabs">
+                    <button class="dialog-button" :disabled="worldTab === 'maps'" @click="changeWorldTab('maps')">Maps &amp; settings</button>
+                    <button class="dialog-button" :disabled="worldTab === 'areas'" @click="changeWorldTab('areas')">Areas</button>
+                    <button class="dialog-button worlds-close" @click="closeDialog">Close</button>
+                </div>
                 <div class="dialog-content worlds-dialog-content">
-                    <aside class="worlds-sidebar">
+                    <aside v-show="worldTab === 'maps'" class="worlds-sidebar">
                         <label class="worlds-control">
                             <span>World</span>
                             <select v-model.number="selectedWorldId">
@@ -78,7 +83,8 @@
                             </template>
                         </section>
                     </aside>
-                    <section class="worlds-workspace">
+                    <WorldAreasPanel v-if="worldTab === 'areas'" ref="areasPanel" :world-id="selectedWorldId" :worlds="worlds" @world-change="selectedWorldId = $event" />
+                    <section v-show="worldTab === 'maps'" class="worlds-workspace">
                         <div class="world-map-toolbar">
                             <div class="world-map-type-buttons">
                                 <button
@@ -292,6 +298,8 @@
 <script setup>
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { GMManager } from '@/gm/GM'
+import WorldAreasPanel from './WorldAreasPanel.vue'
+import { WorldAreaPreview } from '@/gm/worldAreaPreview'
 import { MyPlayer } from '@/data/myPlayer'
 import {
     CIRCLE_BRUSH_SIZES,
@@ -374,6 +382,14 @@ const getStoredAreaHistory = (mapType) => {
 
 const emit = defineEmits(['close'])
 const dialogVisible = ref(false)
+const worldTab = ref('maps')
+const areasPanel = ref(null)
+const changeWorldTab = (tab) => {
+    if (tab === worldTab.value || (worldTab.value === 'areas' && !areasPanel.value?.canLeave())) return
+    teleportPicking.value = false
+    worldTab.value = tab
+    if (tab === 'maps') { loadMapImage(); nextTick(drawMap) }
+}
 const selectedWorldId = ref(null)
 const worldSettings = computed(() => GMManager.worldSettings.value)
 const worlds = computed(() => GMManager.teleportWorlds.value)
@@ -489,6 +505,7 @@ const pendingMapChangeCount = computed(() => selectedMapType.value === 'height'
     : selectedMapType.value === 'surface' ? pendingSnowChangeCount.value : 0)
 
 const openDialog = () => {
+    WorldAreaPreview.clear()
     dialogVisible.value = true
     selectInitialTeleportCharacter()
     const storedMapView = getStoredMapView()
@@ -510,10 +527,13 @@ const openDialog = () => {
 }
 
 const closeDialog = () => {
+    if (worldTab.value === 'areas' && areasPanel.value && !areasPanel.value.canLeave()) return false
+    if (dialogVisible.value && worldTab.value === 'areas') areasPanel.value?.showSelectedPreview()
     stopPlayerMarkerUpdates()
     teleportPicking.value = false
     dialogVisible.value = false
     emit('close')
+    return true
 }
 
 const startPlayerMarkerUpdates = () => {
@@ -529,7 +549,7 @@ const stopPlayerMarkerUpdates = () => {
 }
 
 const onDialogKeyDown = (event) => {
-    if (!dialogVisible.value) {
+    if (!dialogVisible.value || worldTab.value === 'areas') {
         return
     }
     if (heightEditMode.value === 'exact' && event.key === 'Shift') {
@@ -600,6 +620,7 @@ const saveSettings = () => {
 }
 
 const loadMapImage = (preserveArea = false) => {
+    if (worldTab.value === 'areas') return
     if (!Number.isInteger(selectedWorldId.value)) {
         return
     }
@@ -2061,6 +2082,8 @@ defineExpose({
 </script>
 
 <style scoped>
+.worlds-close { margin-left: auto; }
+.worlds-subtabs { display: flex; gap: 8px; padding: 8px; }
 .dialog-backdrop.worlds-dialog-backdrop {
     left: 250px;
     width: calc(100vw - 250px);
@@ -2070,18 +2093,28 @@ defineExpose({
     width: 90%;
     max-width: none;
     height: 90vh;
+    box-sizing: border-box;
     max-height: none;
     min-height: 0;
 }
 
 .worlds-dialog-window > .dialog-surface {
     height: 100%;
+    min-height: 0;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
+}
+
+.worlds-dialog-window .dialog-header,
+.worlds-subtabs {
+    flex-shrink: 0;
 }
 
 .worlds-dialog-content {
     flex: 1;
+    min-height: 0;
+    overflow: hidden;
     padding: 8px;
     display: flex;
     gap: 8px;
@@ -2090,6 +2123,7 @@ defineExpose({
 
 .worlds-sidebar {
     flex: 0 0 20%;
+    min-height: 0;
     min-width: 180px;
     box-sizing: border-box;
     padding: 8px;
@@ -2107,6 +2141,8 @@ defineExpose({
 
 .worlds-workspace {
     flex: 1;
+    min-height: 0;
+    overflow-y: auto;
     border: 1px dashed rgba(255, 255, 255, 0.2);
     background: rgba(255, 255, 255, 0.03);
     min-width: 0;
@@ -2177,6 +2213,7 @@ defineExpose({
 }
 
 .world-map-toolbar {
+    flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -2192,6 +2229,7 @@ defineExpose({
 }
 
 .world-map-info-row {
+    flex-shrink: 0;
     min-height: 24px;
     display: flex;
     align-items: center;
@@ -2300,7 +2338,7 @@ defineExpose({
 }
 
 .world-map-viewport {
-    flex: 1;
+    flex: 1 0 0;
     min-height: 0;
     overflow: hidden;
     background: #0d0d12;
@@ -2318,6 +2356,7 @@ defineExpose({
 }
 
 .world-map-save-actions {
+    flex-shrink: 0;
     min-height: 32px;
     display: flex;
     align-items: center;

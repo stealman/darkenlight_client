@@ -2,6 +2,7 @@ import { Scene, PointerEventTypes, Vector3, PointerInfo, Matrix, Ray} from '@bab
 import {MyPlayer} from "@/data/myPlayer";
 import { Settings } from '@/settings/settings'
 import { ViewportManager } from '@/utils/viewport'
+import { WorldAreaPreview } from '@/gm/worldAreaPreview'
 import { GMSceneManager } from '@/babylon/gm/GmSceneManager'
 import { GMManager } from '@/gm/GM'
 import { TargetingManager } from '@/gui/targettingManager'
@@ -37,6 +38,7 @@ export const Controller = {
         this.hoverPointer = null
         this.nextHoverCheckTime = 0
         scene.onPointerObservable.add((pointerInfo) => {
+            if (WorldAreaPreview.handlePointer(pointerInfo, scene)) return
             if ((pointerInfo.event as PointerEvent).pointerType === 'mouse' &&
                 (pointerInfo.type === PointerEventTypes.POINTERMOVE || pointerInfo.type === PointerEventTypes.POINTERDOWN)) {
                 this.hoverPointer = { x: pointerInfo.event.clientX, y: pointerInfo.event.clientY }

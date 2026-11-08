@@ -5,7 +5,7 @@ import { MyPlayer } from '@/data/myPlayer'
 import { TooltipOverlayManager } from '@/gui/tooltipOverlayManager'
 
 export const SignpostReader = {
-    entries: ref<Array<{direction: string, text: string}>>([]),
+    entries: ref<Array<{direction: string, arrowRotation: number, text: string}>>([]),
     openedAt: 0,
     open(signpost: WoodenSignpost) {
         if (MyPlayer.isDead.value) return

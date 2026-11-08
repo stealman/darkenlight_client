@@ -1,5 +1,6 @@
 import { WorldDataManager } from '@/data/worldDataManager'
 import { MyPlayer } from '@/data/myPlayer'
+import { WorldAreaManager } from '@/data/worldAreaManager'
 import { TooltipOverlayContent, TooltipOverlayManager } from '@/gui/tooltipOverlayManager'
 import { t } from '@/i18n'
 import { StaticsManager } from '@/babylon/world/statics/staticsManager'
@@ -89,7 +90,7 @@ export const MiniMap = {
     buildTooltipContent(): TooltipOverlayContent {
         const gameTime = Lights.getGameTimeInfo()
         return {
-            title: MyPlayer.worldName || t('settings.miniMapSize'),
+            title: (MyPlayer.myChar && WorldAreaManager.index.getAt(MyPlayer.myChar.pos.x, MyPlayer.myChar.pos.z)?.name) || MyPlayer.worldName || t('settings.miniMapSize'),
             topRightText: gameTime.time,
             topRightMeta: t(`dayNight.${gameTime.phaseName}`),
             rows: [

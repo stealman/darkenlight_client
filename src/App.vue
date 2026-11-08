@@ -50,6 +50,7 @@
             <NpcDetailsDialog ref="npcDetailsDialog" />
             <BotDetailsDialog ref="botDetailsDialog" />
 
+            <AreaAnnouncement v-if="gameSessionActive" />
             <OnScreenMessages />
         </div>
     </div>
@@ -186,6 +187,7 @@
 </template>
 
 <script setup lang="ts">
+import AreaAnnouncement from '@/vue/views/AreaAnnouncement.vue'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { Renderer } from './babylon/scene/renderer'
 import { GameManager } from '@/GameManager'

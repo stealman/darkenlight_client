@@ -40,7 +40,10 @@
                         <image href="/images/gui/signpost-board.png" width="2172" height="724" />
                     </svg>
                     <div class="signpost-reader-inscription">
-                        <div class="signpost-reader-direction" :aria-label="entry.direction">{{ entry.direction.charAt(0).toLocaleUpperCase() }}</div>
+                        <svg class="signpost-reader-direction" viewBox="0 0 24 24" role="img" :aria-label="entry.direction">
+                            <path d="M5 19 19 5 M5 5 H19 V19" :transform="`rotate(${entry.arrowRotation} 12 12)`"
+                                fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="square" stroke-linejoin="miter" />
+                        </svg>
                         <div class="signpost-reader-text" :class="{'signpost-reader-text--long': entry.text.length > 85}">{{ entry.text }}</div>
                     </div>
                 </article>
@@ -143,6 +146,8 @@ onUnmounted(() => {
 .signpost-reader-board:nth-child(even) { transform: rotate(.55deg); }
 .signpost-reader-image { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .signpost-reader-inscription {
+    color: var(--signpost-reader-inscription-ink);
+    opacity: 0.6;
     position: relative;
     display: grid;
     grid-template-columns: clamp(28px, 4.6vw, 44px) minmax(0, 1fr);
@@ -151,9 +156,10 @@ onUnmounted(() => {
     padding: 24px 17% 26px 10%;
 }
 .signpost-reader-direction {
-    color: var(--signpost-reader-muted);
-    font: 400 clamp(20px, 3.4vw, 32px)/1 "Press Start 2P", monospace;
-    text-transform: uppercase;
+    color: inherit;
+    display: block;
+    width: clamp(32px, 5vw, 48px);
+    height: clamp(32px, 5vw, 48px);
     filter: url(#signpost-incised-text);
 }
 .signpost-reader-text {

@@ -680,3 +680,12 @@ export class GMNoAggroMsg implements Message {
         this.d = {enabled}
     }
 }
+
+// 1026: GM area load/save, independent of terrain PNG editing.
+export class GMWorldAreasRequest implements Message {
+    t = 1026
+    constructor(public d: {
+        worldId: number, action: 'load' | 'save', requestId: string,
+        revision?: number, areas?: import('../data/worldAreas').WorldArea[],
+    }) {}
+}

@@ -11,6 +11,7 @@ import { MiniMap } from '@/utils/minimap'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { Renderer } from '@/babylon/scene/renderer'
 import { Lights } from '@/babylon/scene/lights'
+import { WorldAreaManager } from '@/data/worldAreaManager'
 import { StaticsManager } from '@/babylon/world/statics/staticsManager'
 import { TerrainManager } from '@/babylon/world/terrainManager'
 import { WeatherManager } from '@/babylon/world/weather/weatherManager'
@@ -94,6 +95,7 @@ export const MessageProcessor = {
         for (const element of response) {
             const msg = element
             switch (msg.t) {
+                case 102: WorldAreaManager.receive(msg.d); break
                 case 101: ActivityLogManager.receive(msg.d); break
                 case 99: MonsterCatalog.receive(msg.d); break
                 case 98:
@@ -372,6 +374,7 @@ export const MessageProcessor = {
         }
         MyPlayer.worldId = data.id
         MyPlayer.worldName = data.name
+        if (worldChanged || data.areas) WorldAreaManager.setWorld(data.id, data.areas ?? [], data.areasRevision ?? 0, data.name)
         FoggyAreaManager.setAreas(data.foggyAreas ?? [])
         if (data.mapChunk) {
             WorldDataManager.consumeMapChunk(data.mapChunk)

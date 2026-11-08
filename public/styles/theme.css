@@ -521,6 +521,7 @@
 
 :root {
     --signpost-reader-ink: #f4ead6;
+    --signpost-reader-inscription-ink: #b3a48f;
     --signpost-reader-muted: #c5b795;
     --signpost-reader-cut-shadow: #160f09;
     --signpost-reader-cut-highlight: #fff3d4;

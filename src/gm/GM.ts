@@ -1,6 +1,7 @@
 import { Connector } from '@/network/connector'
 import { GMNoAggroMsg, GMBotAction, GMBuildingChange, GMCreateItemMsg, GMDayNightCycleMsg, GMEquipmentDecorationChange, GMForceSaveDataMsg, GMGenerateBiomeMsg, GMLoadItemCodebookMsg, GMLoadWorldMapImageMsg, GMLoadWorldSettingsMsg, GMLoadWorldsMsg, GMNpcAction, GMSaveMapDataMsg, GMSaveWorldMapHeightChangesMsg, GMSaveWorldMapSurfaceChangesMsg, GMSaveWorldMapTerrainChangesMsg, GMSaveWorldSettingsMsg, GMStaticDeleteInfoRequest, GMStaticObjectChange, GMTeleportMsg, GMTerrainChange } from '@/network/messages'
 import { GMBotStatusData, GMExistingBotsData, GMItemCodebookItem, GMStaticDeleteInfoData, GMWorldBiomeTreesChangedData, GMWorldMapImageData, GMWorldSettingsData, GMWorldsData } from '@/network/messageIfs'
+import { WorldAreaPreview } from '@/gm/worldAreaPreview'
 import { GMSceneManager } from '@/babylon/gm/GmSceneManager'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { ref, watch } from 'vue'
@@ -233,6 +234,7 @@ export const GMManager = {
     toggleGmPanel() {
         if (this.gmPanelVisible.value && this.deferTerrainNavigation(() => this.toggleGmPanel())) return
         if (this.gmPanelVisible.value) {
+            WorldAreaPreview.clear()
             this.cancelEquipmentDecorationDraft()
             this.consumePointerMoveEvents = false
             this.consumeLeftClickEvents = false
@@ -696,6 +698,8 @@ export const GMManager = {
     },
 
     onFrame(timeRate: number, actualTime: number) {
+        if (this.gmPanelVisible.value) WorldAreaPreview.update()
+        else WorldAreaPreview.clear()
         if (this.tab === GmTabs.SPAWNS_EDIT) {
             GMSpawns.onFrame(timeRate, actualTime)
         }
@@ -800,6 +804,7 @@ export const GMManager = {
     },
 
     openTab(tab: string) {
+        if (tab !== this.tab) WorldAreaPreview.clear()
         // Close current tab
         switch (this.tab) {
             case GmTabs.TERRAIN_EDIT:

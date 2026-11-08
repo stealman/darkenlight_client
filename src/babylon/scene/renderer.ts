@@ -1,3 +1,4 @@
+import { WorldAreaManager } from '@/data/worldAreaManager'
 import {
     Engine,
     Scene,
@@ -205,6 +206,7 @@ export const Renderer = {
             this.animationSpeedRatio = timeRate * 60
 
             MyPlayer.onFrame(timeRate, actualTime)
+            if (MyPlayer.myChar) WorldAreaManager.updateLocation(MyPlayer.worldId, MyPlayer.myChar.pos.x, MyPlayer.myChar.pos.z, actualTime)
             Materials.onFrame(actualTime)
             WorldRenderer.checkRenderWorld()
             if (IndoorTerrainOcclusionManager.onFrame(timeRate)) WorldRenderer.renderWorld()

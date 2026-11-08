@@ -25,10 +25,12 @@ export class WoodenSignpost extends BaseStaticObject {
     getReadingEntries() {
         const directions: Record<Direction, string> = {
             '+X': t('signpost.north'), '-X': t('signpost.south'),
-            '+Z': t('signpost.east'), '-Z': t('signpost.west'),
+            '+Z': t('signpost.west'), '-Z': t('signpost.east'),
         }
+        const arrowRotations: Record<Direction, number> = {'+X': 0, '-X': 180, '+Z': -90, '-Z': 90}
         return Array.from({length: this.status.signCount}, (_, index) => ({
             direction: directions[this.status[`sign${index + 1}`] as Direction],
+            arrowRotation: arrowRotations[this.status[`sign${index + 1}`] as Direction],
             text: this.status[`sign${index + 1}Text`] || t('signpost.blank'),
         }))
     }
