@@ -6,10 +6,10 @@ import { Settings } from '@/settings/settings'
 import { createBeveledTerrainVertexData, SNOW_BLOCK_HEIGHT, TERRAIN_BEVEL_DROP, TerrainCorner, TerrainEdge, TerrainVerticalCorner } from './beveledTerrainBlock'
 import { ActiveMeshFreezer } from '@/babylon/scene/activeMeshFreezer'
 
-// Opt-in only. No terrain parameter (or terrain=blocks) uses the original
-// renderer, including its original snow height. Reload after switching modes.
+// Beveled terrain is the default. terrain=blocks restores the original renderer;
+// terrain=smooth selects the smooth experiment. Reload after switching modes.
 export const BEVELED_TERRAIN_ENABLED = typeof window !== 'undefined'
-    && new URLSearchParams(window.location.search).get('terrain') === 'beveled'
+    && (new URLSearchParams(window.location.search).get('terrain') ?? 'beveled') === 'beveled'
 
 interface BevelSlot {
     id: number
