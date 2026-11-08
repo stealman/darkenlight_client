@@ -1,7 +1,5 @@
 <template>
     <div class="gm-panel-content">
-        <span>Game Master Panel</span>
-
         <!-- Action select buttons -->
         <div class="gm-action-selection" style="margin: 10px 0;">
             <button :disabled="actualTab === GMTabs.OVERVIEW" @click="selectTab(GMTabs.OVERVIEW)">Overview</button>

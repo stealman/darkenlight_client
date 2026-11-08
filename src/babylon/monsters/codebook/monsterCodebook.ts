@@ -216,13 +216,20 @@ export const MonsterTypes = {
         3,
         new MonsterEquipData([EquipSlotModelsCb.LONGSWORD.modelId], 0.8, null, null, 0),
         null,
-        new MonsterEquipData([EquipSlotModelsCb.ARMOR_PLATE.modelId], new Vector3(0.86, 0.7, 0.95), VectorY90, new Vector3(-0.025, 0.1, -0.01), 10),
+        new MonsterEquipData([EquipSlotModelsCb.CHAIN_MAIL.modelId], new Vector3(1.191, 1.271, 1.211), VectorY90, new Vector3(-0.02, -0.51, 0), 10),
         WeaponSoundTypes.SWORD,
         BodySoundTypes.HARD,
         WeaponSoundTypes.SWORD,
         MonsterSoundTypes.SKELETON,
         null,
     ),
+
+    /**
+     *
+     *
+     * ,
+     * position: ,
+     */
 
     // SKELETON RANGED
     SKELETON_ARCHER: new MonsterType(
@@ -232,7 +239,7 @@ export const MonsterTypes = {
         0.6,
         1.8,
         3,
-        new MonsterEquipData([EquipSlotModelsCb.HUNTINGBOW.modelId], 0.8, new Vector3(Math.PI, 0, Math.PI), null, 0),
+        new MonsterEquipData([EquipSlotModelsCb.HUNTINGBOW.modelId], 0.8, new Vector3(Math.PI, 0, Math.PI), new Vector3(-0.05, 0.12, 0), 0),
         null,
         null,
         WeaponSoundTypes.SWORD,

@@ -212,6 +212,7 @@ export const MessageProcessor = {
                 case 82: this.processBuildingDoorState(msg.d); break
                 case 1003: this.processGMAllSpawns(msg.d); break
                 case 1004: this.processGMSpawnChange(msg.d); break
+                case 1005: GMSpawns.receiveSpawnStatuses(msg.d); break
                 default:
                     console.log('Unknown message type: ' + msg.t)
                     break

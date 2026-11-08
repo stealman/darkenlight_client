@@ -24,8 +24,11 @@ import {Monster} from '@/babylon/monsters/monster'
 import {MonsterTypes} from '@/babylon/monsters/codebook/monsterCodebook'
 import {ShearSheepMsg} from '@/network/messages'
 import {Settings} from '@/settings/settings'
+import { SignpostReader } from '@/gui/signpostReader'
+import type { WoodenSignpost } from '@/babylon/world/statics/objects/woodenSignpost'
 
 const CAMP_BARREL_STATIC_TYPE = 305
+const SIGNPOST_STATIC_TYPE = 404
 const OPPORTUNITY_UPDATE_INTERVAL = 100
 
 class GuiOpportunityButtonAction {
@@ -84,6 +87,7 @@ export const GuiOpportunityActions = {
     COOKING: new GuiOpportunityButtonAction("COOKING", "btn_cooking"),
     USE_DOOR: new GuiOpportunityButtonAction("USE_DOOR", "btn_use_door"),
     USE_CHEST: new GuiOpportunityButtonAction("USE_CHEST", "btn_use_chest"),
+    READ_SIGNPOST: new GuiOpportunityButtonAction('READ_SIGNPOST', 'btn_eye'),
     NPC_USE: new GuiOpportunityButtonAction("NPC_USE", "btn_chat"),
     NPC_EDIT: new GuiOpportunityButtonAction("NPC_EDIT", "", "NPC"),
     BOT_EDIT: new GuiOpportunityButtonAction("BOT_EDIT", "", "BOT"),
@@ -130,6 +134,11 @@ export const GuiButtonsManager = {
         this.opportunityButtons.set(GuiOpportunityActions.NPC_USE.name, new GuiOpportunityButton(GuiOpportunityActions.NPC_USE))
         this.opportunityButtons.set(GuiOpportunityActions.NPC_EDIT.name, new GuiOpportunityButton(GuiOpportunityActions.NPC_EDIT))
         this.opportunityButtons.set(GuiOpportunityActions.BOT_EDIT.name, new GuiOpportunityButton(GuiOpportunityActions.BOT_EDIT))
+        const readSignpost = new GuiOpportunityButton(GuiOpportunityActions.READ_SIGNPOST)
+        readSignpost.htmlEl.setAttribute('role', 'button')
+        readSignpost.htmlEl.setAttribute('aria-label', t('signpost.read'))
+        readSignpost.htmlEl.title = t('signpost.read')
+        this.opportunityButtons.set(GuiOpportunityActions.READ_SIGNPOST.name, readSignpost)
         const invite = new GuiOpportunityButton(GuiOpportunityActions.PARTY_INVITE)
         invite.htmlEl.setAttribute('role', 'button')
         invite.htmlEl.title = t('party.invite')
@@ -210,6 +219,11 @@ export const GuiButtonsManager = {
         const barrelDistance = barrel
             ? StaticsManager.getDistanceToStaticFootprint(MyPlayer.myChar.pos, barrel.position, barrel.getSize()) : Infinity
         this.opportunityDistances.set(GuiOpportunityActions.USE_CHEST.name, barrelDistance * barrelDistance)
+        const signpost = this.getClosestReadableSignpost()
+        this.opportunityButtons.get(GuiOpportunityActions.READ_SIGNPOST.name)!.setVisible(signpost !== null)
+        const signpostDistance = signpost
+            ? StaticsManager.getDistanceToStaticFootprint(MyPlayer.myChar.pos, signpost.position, signpost.getSize()) : Infinity
+        this.opportunityDistances.set(GuiOpportunityActions.READ_SIGNPOST.name, signpostDistance * signpostDistance)
         const selectedTarget = TargetingManager.selectedTarget
         const party = PartyManager.state.value
         this.opportunityButtons.get(GuiOpportunityActions.PARTY_INVITE.name)!.setVisible(
@@ -321,6 +335,12 @@ export const GuiButtonsManager = {
                 const distance = StaticsManager.getDistanceToStaticFootprint(playerPos, barrel.position, barrel.getSize())
                 return distance * distance
             }
+            case GuiOpportunityActions.READ_SIGNPOST.name: {
+                const signpost = this.getClosestReadableSignpost()
+                if (!signpost) return Infinity
+                const distance = StaticsManager.getDistanceToStaticFootprint(playerPos, signpost.position, signpost.getSize())
+                return distance * distance
+            }
             case GuiOpportunityActions.NPC_USE.name:
                 target = NpcManager.getClosestNpcInDistance(3)?.pos
                 break
@@ -337,6 +357,12 @@ export const GuiButtonsManager = {
 
     onclickOpportunityButton(actionName: string) {
         if (MyPlayer.isDead.value) {
+            return
+        }
+        // The reader owns its opening/closing click sound.
+        if (actionName === GuiOpportunityActions.READ_SIGNPOST.name) {
+            const signpost = this.getClosestReadableSignpost()
+            if (signpost) SignpostReader.open(signpost)
             return
         }
         AudioManager.playGuiButtonClick()
@@ -478,6 +504,11 @@ export const GuiButtonsManager = {
         if (typeof containerId === 'string') {
             ContainerManager.open(containerId)
         }
+    },
+
+    getClosestReadableSignpost(): WoodenSignpost | null {
+        if (!MyPlayer.myChar) return null
+        return StaticsManager.getClosestStaticInDistance(SIGNPOST_STATIC_TYPE, MyPlayer.myChar.pos, 2) as WoodenSignpost | null
     },
 
     getClosestUsableBarrel() {

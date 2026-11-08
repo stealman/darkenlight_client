@@ -14,6 +14,7 @@ import { EmeraldGainNumber } from '@/gui/overlay/emeraldGainNumber'
 import { ItemGainNumber } from '@/gui/overlay/itemGainNumber'
 import { GmOreTierOverlay } from '@/gui/gm/oreTierOverlay'
 import { TreeLevelOverlay } from '@/gui/gm/treeLevelOverlay'
+import { SpawnCountOverlay } from '@/gui/gm/spawnCountOverlay'
 import { UiIconManager } from '@/gui/uiIconManager'
 
 import type { AutoAttackResult, CharacterSpeechData, MonsterAggroAlertData } from '@/network/messageIfs'
@@ -112,6 +113,7 @@ export const OverlayManager = {
         labels.renderSpeech(time)
         GmOreTierOverlay.onFrame(this.overlayCtx!)
         TreeLevelOverlay.onFrame(this.overlayCtx!)
+        SpawnCountOverlay.onFrame(this.overlayCtx!)
     },
 
     setBloodyInnerGlow(hpPercent: number, time: number) {

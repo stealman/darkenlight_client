@@ -1,3 +1,4 @@
+import monsterNames from 'virtual:admin-monster-names'
 import { createMonsterEquipmentEditor } from './monsterEquipmentEditor'
 import { SpecimenPrefabs } from '@/babylon/world/statics/objects/specimens'
 import { ArcRotateCamera, Scene, TransformNode, Vector3 } from '@babylonjs/core'
@@ -127,7 +128,10 @@ export async function installAssetPreview(root: HTMLElement, scene: Scene, camer
     const entries = () => tab === 'Statics'
         ? [...Array.from(StaticObjectsCodebook.values(), v => ({ id: String(v.type), name: v.name })), ...Array.from({length: 16}, (_, i) => ({id: 'tree:' + (i + 1), name: ['Oak', 'Pine', 'Birch', 'Willow'][Math.floor(i / 4)] + ' ' + (i % 4 + 1)}))]
         : tab === 'Buildings' ? ['House', 'Shed', 'Mausoleum', 'Cabin'].map((name, i) => ({id: String(i + 1), name}))
-        : Object.values(MonsterTypes).map(v => ({id: String(v.id), name: v.name}))
+        : Object.entries(MonsterTypes).map(([key, type]) => ({
+            id: String(type.id),
+            name: monsterNames[type.id] ?? key.toLowerCase().replace(/(^|_)([a-z])/g, (_, prefix, letter) => (prefix ? ' ' : '') + letter.toUpperCase()),
+        }))
     const play = () => {
         clips.forEach(([, clip]) => clip.stop())
         clips[Number(animation.value)]?.[1].start(false, 1, loop.checked)
@@ -152,7 +156,7 @@ export async function installAssetPreview(root: HTMLElement, scene: Scene, camer
         if (!choice.value) return
         try {
             const id = Number(choice.value)
-            if (reset) parameters.value = JSON.stringify(tab === 'Statics' ? choice.value.startsWith('tree:') ? { size: 1 } : { ...StaticObjectsCodebook.get(id), meta: id === 403 ? { textureUrl: '/textures/statics/darkenlight-banner.svg' } : { facing: '+Z' } } : tab === 'Buildings' ? { facing: '+Z', ...(id === 2 ? {width: 5, depth: 3} : {}), doorOpen: false } : { ...Object.values(MonsterTypes).find(v => v.id === id) }, null, 2)
+            if (reset) parameters.value = JSON.stringify(tab === 'Statics' ? choice.value.startsWith('tree:') ? { size: 1 } : { ...StaticObjectsCodebook.get(id), meta: id === 403 ? { bannerIndex: 0 } : { facing: '+Z' } } : tab === 'Buildings' ? { facing: '+Z', ...(id === 2 ? {width: 5, depth: 3} : {}), doorOpen: false } : { ...Object.values(MonsterTypes).find(v => v.id === id) }, null, 2)
             const data = JSON.parse(parameters.value)
             if (tab === 'Statics') {
                 if (choice.value.startsWith('tree:')) {

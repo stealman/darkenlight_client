@@ -13,7 +13,7 @@ export function createMonsterEquipmentEditor(container: HTMLElement) {
     section.innerHTML = `<h2>Usazení výbavy</h2>
         <label class="admin-utils__field">Nasazený item<select data-item></select></label>
         <div class="admin-utils__modifier-row admin-utils__modifier-row--header"><span></span><span>X</span><span>Y</span><span>Z</span></div>
-        ${components.map(component => `<div class="admin-utils__modifier-row"><span>${component === 'rotation' ? 'Rotace °' : component === 'position' ? 'Pozice' : 'Scale'}</span>${axes.map(axis => `<input type="number" step="${component === 'rotation' ? '1' : '0.01'}" ${component === 'scale' ? 'min="0.001"' : ''} data-component="${component}" data-axis="${axis}" aria-label="${component} ${axis}">`).join('')}</div>`).join('')}
+        ${components.map(component => `<div class="admin-utils__modifier-row"><span>${component === 'rotation' ? 'Rotace °' : component === 'position' ? 'Pozice' : 'Scale'}</span>${axes.map(axis => `<input type="number" step="0.01" ${component === 'scale' ? 'min="0.01"' : ''} data-component="${component}" data-axis="${axis}" aria-label="${component} ${axis}">`).join('')}</div>`).join('')}
         <button type="button" data-reset>Vrátit původní hodnoty</button>
         <label class="admin-utils__field">Hodnoty pro kód (rotace v radiánech)<textarea data-code readonly rows="6" spellcheck="false"></textarea></label>
         <button type="button" data-copy>Kopírovat hodnoty</button>
@@ -33,7 +33,7 @@ export function createMonsterEquipmentEditor(container: HTMLElement) {
     })
     const clone = (value: ItemTransform): ItemTransform => ({scale: value.scale.clone(), position: value.position.clone(), rotation: value.rotation.clone()})
     const current = () => items[Number(select.value)]
-    const format = (value: number) => String(Number(value.toFixed(8)))
+    const format = (value: number) => String(Number(value.toFixed(2)))
     const writeCode = (value: ItemTransform) => {
         code.value = components.map(component => `${component}: new Vector3(${axes.map(axis => format(value[component][axis])).join(', ')}),`).join('\n')
     }
@@ -59,13 +59,16 @@ export function createMonsterEquipmentEditor(container: HTMLElement) {
     }
     for (const input of inputs) input.addEventListener('input', () => {
         const item = current()
-        if (!item || input.value === '' || !input.validity.valid || !Number.isFinite(input.valueAsNumber)) return
+        if (!item || input.value === '' || input.validity.badInput || !Number.isFinite(input.valueAsNumber)) return
         const value = edited.get(item)!
         const component = input.dataset.component as Component
         const axis = input.dataset.axis as typeof axes[number]
-        value[component][axis] = input.valueAsNumber * (component === 'rotation' ? Math.PI / 180 : 1)
+        const rounded = Number(input.valueAsNumber.toFixed(2))
+        if (component === 'scale' && rounded < 0.01) return
+        value[component][axis] = rounded * (component === 'rotation' ? Math.PI / 180 : 1)
         apply(item, value)
     })
+    for (const input of inputs) input.addEventListener('change', populate)
     select.addEventListener('change', populate)
     section.querySelector<HTMLButtonElement>('[data-reset]')!.onclick = () => {
         const item = current()

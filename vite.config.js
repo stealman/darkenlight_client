@@ -4,6 +4,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 import fs from 'node:fs'
 import path from 'path'
 import { collectModelAssets } from './build/modelAssets.cjs'
+import { adminMonsterNamesPlugin } from './build/adminMonsterNames.cjs'
 
 function collectPngEntries(directory, publicPath) {
     return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -51,6 +52,7 @@ export default defineConfig(({ mode, command }) => {
         __PIXELATED_IMAGE_VERSIONS__: JSON.stringify(pixelatedImageVersions),
     },
     plugins: [
+        adminMonsterNamesPlugin(path.resolve(__dirname, '../../server/darkenlight_server/src/monster/monstersCb.ts')),
         vue(),
         {
             name: 'versioned-model-assets',

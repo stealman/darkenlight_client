@@ -11,3 +11,8 @@
   Preserve viewport filtering and shared alpha materials.
 - For atlas artifacts check scale, cell units, row direction and clamp/wrap.
   Do not assume alpha material alone explains missing shadows.
+
+- Static surfaces must use shared texture atlases and thin-instance batches.
+  Select variants with per-instance UVs; never create a texture/material/mesh
+  per banner, inscription or other static surface variant. Separate batches
+  are allowed for different rendering passes (for example blended portals).

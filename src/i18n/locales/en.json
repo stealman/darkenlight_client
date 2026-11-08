@@ -1,4 +1,5 @@
 {
+  "signpost": {"title": "Signpost", "north": "North", "south": "South", "east": "East", "west": "West", "blank": "—", "read": "Read signpost"},
   "activityLog": {
     "partyCreated": "You created a party.",
     "partyJoined": "You joined a party.",

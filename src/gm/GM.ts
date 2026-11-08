@@ -73,7 +73,7 @@ export const STONE_WELL_STATIC_ID = 310
 export const CEMETERY_STATIC_IDS = new Set([321, 322, 323, 324, 325, 328, 329, 330, 331, 332, 333, 334])
 
 const WALL_FENCE_STATIC_IDS = new Set([201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 221, 222])
-const GENERAL_STATIC_IDS = new Set([241, 242, 261, 262, 263, 281, 301, 302, 303, 304, 305, 306, 307, 308, 309, 310, 321, 322, 323, 324, 325, 328, 329, 330, 331, 332, 333, 334, 335, 336, 337])
+const GENERAL_STATIC_IDS = new Set([404, 241, 242, 261, 262, 263, 281, 301, 302, 303, 304, 305, 306, 307, 308, 309, 310, 321, 322, 323, 324, 325, 328, 329, 330, 331, 332, 333, 334, 335, 336, 337])
 const LIGHT_SOURCE_STATIC_IDS = new Set([FIREPLACE_SMALL_STATIC_ID, FIREPLACE_LARGE_STATIC_ID, WALL_TORCH_STATIC_ID, TORCH_STAND_STATIC_ID, LANTERN_STAND_STATIC_ID, STONE_ENTRANCE_STATIC_ID, CEMETERY_EMBER_BOWL_STATIC_ID])
 
 const rectangularFootprint = (sizeX: number, sizeZ: number) => {
@@ -174,6 +174,9 @@ export const GMManager = {
     torchMountHeight: ref(2),
     lightIntensity: ref(5),
     lightRange: ref(5),
+    signCount: ref(4),
+    signDirections: ref(['+X', '-X', '+Z', '-Z']),
+    signTexts: ref(['', '', '', '']),
     entranceFacing: ref('+Z'),
     entranceDestinationWorld: ref(0),
     entranceDestinationX: ref(99),
@@ -536,6 +539,12 @@ export const GMManager = {
 
     createStaticData(x: number, z: number, type: number) {
         const data: {x: number, z: number, type: number, meta?: Record<string, number | string>} = {x, z, type}
+        if (type === 404) {
+            data.meta = {signCount: this.signCount.value}
+            this.signDirections.value.forEach((direction, index) => { data.meta![`sign${index + 1}`] = direction })
+            this.signTexts.value.forEach((text, index) => { data.meta![`sign${index + 1}Text`] = text })
+            return data
+        }
         const lightMetadata = {lightIntensity: this.lightIntensity.value, lightRange: this.lightRange.value}
         if (type === FIREPLACE_SMALL_STATIC_ID || type === FIREPLACE_LARGE_STATIC_ID || type === CEMETERY_EMBER_BOWL_STATIC_ID) {
             data.meta = lightMetadata
@@ -571,6 +580,11 @@ export const GMManager = {
         else this.selectedStatic.value = object.type
 
         const status = object.status ?? {}
+        if (object.type === 404) {
+            this.signCount.value = status.signCount ?? 4
+            this.signTexts.value = [status.sign1Text ?? '', status.sign2Text ?? '', status.sign3Text ?? '', status.sign4Text ?? '']
+            this.signDirections.value = [status.sign1 ?? '+X', status.sign2 ?? '-X', status.sign3 ?? '+Z', status.sign4 ?? '-Z']
+        }
         if (LIGHT_SOURCE_STATIC_IDS.has(object.type)) {
             this.lightIntensity.value = status.lightIntensity ?? 5
             this.lightRange.value = status.lightRange ?? 5
@@ -907,6 +921,7 @@ export const GMManager = {
     },
 
     openTabSpawnsEdit() {
+        GMSpawns.rangeMarkersEnabled = true
         this.tab = GmTabs.SPAWNS_EDIT
         this.consumePointerMoveEvents = true
         this.consumeLeftClickEvents = true

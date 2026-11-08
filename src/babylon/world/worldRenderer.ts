@@ -143,10 +143,10 @@ export const WorldRenderer = {
         RockDebrisManager.renderRockDebris(Lights.indoor)
         FoggyAreaManager.refreshVisibleAreas()
 
-        if (GMManager.gmPanelVisible && GMManager.tab === GmTabs.SPAWNS_EDIT) {
+        if (GMManager.gmPanelVisible.value && GMManager.tab === GmTabs.SPAWNS_EDIT) {
             GMSpawns.renderSpawnMarkers()
         }
-        if (GMManager.gmPanelVisible && GMManager.tab === GmTabs.FOG_EDIT) {
+        if (GMManager.gmPanelVisible.value && GMManager.tab === GmTabs.FOG_EDIT) {
             GMFoggyAreas.renderMarkers()
         }
 

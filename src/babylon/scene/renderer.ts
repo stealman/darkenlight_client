@@ -228,7 +228,7 @@ export const Renderer = {
             if (!Settings.isDetalLevelLow()) {
                 OverlayManager.onFrame(timeRate, actualTime)
             }
-            if (GMManager.gmPanelVisible) GMManager.onFrame(timeRate, actualTime)
+            if (GMManager.gmPanelVisible.value) GMManager.onFrame(timeRate, actualTime)
         }
 
         if (this.frame % 2 === 0) {

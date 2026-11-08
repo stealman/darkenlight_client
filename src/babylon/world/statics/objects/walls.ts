@@ -1,11 +1,13 @@
-import { Color3, Matrix, Mesh, MeshBuilder, Vector2, Vector3 } from '@babylonjs/core'
-import { Materials, TerrainEnum1 } from '@/babylon/materials'
+import { Color3, Matrix, Vector2, Vector3 } from '@babylonjs/core'
+import { TerrainEnum1 } from '@/babylon/materials'
 import { Lights } from '@/babylon/scene/lights'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { BaseStaticObject } from '@/babylon/world/statics/objects/baseStaticObject'
 import { getPalisadeRandom } from '@/babylon/world/statics/palisadeRandom'
 import { getStaticLightIntensityLevelFactor, getStaticLightLevel, getStaticLightRangeLevelFactor, type StaticLightMetadata } from '@/babylon/scene/lighting/lightConfig'
+
+import { StaticSurfaceAtlas, StaticSurfacePlanes } from '../staticSurfacePlanes'
 
 export class Wall2 extends BaseStaticObject {
     constructor(type: number, position: Vector3, rotation: number, material: Vector2) {
@@ -291,11 +293,10 @@ export class StoneEntrance extends BaseStaticObject {
     private readonly portalLightDirection = new Vector3()
     private readonly lightIntensity: number
     private readonly lightRange: number
-    private portalPlane: Mesh | null = null
     private deleteBounceOffset = 0
 
     constructor(type: number, position: Vector3, material: Vector2, metadata?: StoneEntranceMetadata) {
-        super(type, position, 0, material, null)
+        super(type, position, 0, material, StaticSurfacePlanes.getPrefab(true))
         this.facing = metadata?.facing === '-X' || metadata?.facing === '+X' || metadata?.facing === '-Z' || metadata?.facing === '+Z'
             ? metadata.facing
             : '+Z'
@@ -313,27 +314,17 @@ export class StoneEntrance extends BaseStaticObject {
     }
 
     render() {
-        this.updatePortalPlanePosition()
+        const facingX = this.facing === '+X' ? 1 : this.facing === '-X' ? -1 : 0
+        const facingZ = this.facing === '+Z' ? 1 : this.facing === '-Z' ? -1 : 0
+        this.prefab!.matrices.push(Matrix.Scaling(2, 2, 1)
+            .multiply(Matrix.RotationY(facingX === 0 ? 0 : Math.PI / 2))
+            .multiply(Matrix.Translation(this.renderPosition.x + facingX * 0.91,
+                this.renderPosition.y + 1, this.renderPosition.z + facingZ * 0.91)))
+        this.prefab!.uvData.push(StaticSurfaceAtlas.portal)
         this.registerLight()
     }
 
     onVisible() {
-        if (!WorldRenderer.worldParentNode) {
-            return
-        }
-
-        if (!this.portalPlane) {
-            this.portalPlane = MeshBuilder.CreatePlane(
-                `stoneEntrancePortal_${this.position.x}_${this.position.z}`,
-                { width: 2, height: 2, sideOrientation: Mesh.DOUBLESIDE },
-                WorldRenderer.worldParentNode.getScene(),
-            )
-            this.portalPlane.parent = WorldRenderer.worldParentNode
-            this.portalPlane.material = Materials.entrancePortalMaterial
-            this.portalPlane.isPickable = false
-            this.portalPlane.alwaysSelectAsActiveMesh = true
-        }
-        this.updatePortalPlanePosition()
         this.registerLight()
     }
 
@@ -343,8 +334,6 @@ export class StoneEntrance extends BaseStaticObject {
 
     dispose() {
         Lights.unregisterStaticLight(this.getLightId())
-        this.portalPlane?.dispose()
-        this.portalPlane = null
     }
 
     private getLightId(): string {
@@ -392,24 +381,8 @@ export class StoneEntrance extends BaseStaticObject {
         ).normalize()
     }
 
-    private updatePortalPlanePosition() {
-        if (!this.portalPlane) {
-            return
-        }
-
-        const facingX = this.facing === '+X' ? 1 : this.facing === '-X' ? -1 : 0
-        const facingZ = this.facing === '+Z' ? 1 : this.facing === '-Z' ? -1 : 0
-        this.portalPlane.position.set(
-            this.renderPosition.x + facingX * 0.91,
-            this.renderPosition.y + 1 + this.deleteBounceOffset,
-            this.renderPosition.z + facingZ * 0.91,
-        )
-        this.portalPlane.rotation.y = facingX === 0 ? 0 : Math.PI / 2
-    }
-
     protected onDeleteBounceOffset(offset: number) {
         this.deleteBounceOffset = offset
-        this.updatePortalPlanePosition()
         this.updatePortalLightTransform()
     }
 

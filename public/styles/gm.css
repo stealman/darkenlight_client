@@ -8,6 +8,10 @@
     background-color: rgba(0, 0, 0, 0.2);
 }
 
+#gmPanel button:not(.dialog-button):not(.danger):not(:disabled) {
+    color: rgb(var(--ui-darkest));
+}
+
 div.gm-action-selection button {
     display: block;
     width: 100%;
@@ -53,6 +57,11 @@ div.gm-action-selection button:disabled {
     outline: 2px solid #4caf50;
 }
 
+table.gmSpawnTable {
+    width: 100%;
+    table-layout: fixed;
+}
+
 table.gmSpawnTable input {
     width: 50px;
     margin-left: 10px;
@@ -64,7 +73,14 @@ table.gmSpawnTable input:disabled {
 }
 
 table.gmSpawnTable select {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    margin: 0;
+}
 
+table.gmSpawnTable select + select {
+    margin-top: 8px;
 }
 
 table.gmSpawnTable select:disabled {

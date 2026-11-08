@@ -113,6 +113,7 @@
     <CharacterDialog ref="characterDialog" v-show="displayCharacterDialog" :visible="displayCharacterDialog" @close="displayCharacterDialog = false" />
     <CraftingDialog v-if="displayCraftingDialog" ref="craftingDialog" @close="onCloseCraftingMenu" />
     <NpcUseDialog ref="npcUseDialog" v-show="displayNpcUseDialog" @close="displayNpcUseDialog = false" />
+    <SignpostView v-if="gameSessionActive && !isDead && signpostEntries.length" />
     <ContainerDialog v-show="displayContainerDialog" :visible="displayContainerDialog" @close="displayContainerDialog = false" />
 
     <div class="dialog-backdrop death-dialog-backdrop" v-if="isDead">
@@ -216,6 +217,8 @@ import {
 } from '@/vue/icons/icons'
 import { Settings } from '@/settings/settings'
 import { TargetingManager } from '@/gui/targettingManager'
+import { SignpostReader } from '@/gui/signpostReader'
+import SignpostView from '@/vue/views/SignpostView.vue'
 import { MyPlayer } from '@/data/myPlayer'
 import { NpcInteractionManager } from '@/data/npcInteractionManager'
 import { AudioManager } from '@/babylon/audio/audioManager'
@@ -271,6 +274,7 @@ const displayCharacterDialog = ref(false)
 const displayCraftingDialog = ref(false)
 const displayNpcUseDialog = ref(false)
 const displayContainerDialog = ref(false)
+const signpostEntries = SignpostReader.entries
 const autoLoginTemporarilyDisabled = true
 
 const touchControls = ref()
@@ -285,6 +289,7 @@ const botDetailsDialog = ref()
 const { t } = useI18n()
 
 const closeGameplayDialogs = () => {
+    SignpostReader.close()
     GMManager.closeDeleteConfirmation()
     targetLockSettingsActive.value = false
     displaySettingsDialog.value = false
@@ -563,6 +568,7 @@ watch(isDead, (dead) => {
         }
         return
     }
+    SignpostReader.close()
     deathDialogTime.value = Date.now()
     deathDialogTimer = window.setInterval(() => deathDialogTime.value = Date.now(), 250)
     displaySettingsDialog.value = false
@@ -676,6 +682,11 @@ const onKeyDown = (event: KeyboardEvent) => {
         void Renderer.toggleFullscreen()
         return
     }
+    if (signpostEntries.value.length) {
+        if (event.key === 'Escape') SignpostReader.close()
+        event.preventDefault()
+        return
+    }
     if (event.key === 'Escape' && gmPanelVisible.value) {
         if (event.repeat || event.defaultPrevented) return
         // Dialogs handle Escape themselves after this document listener.
@@ -698,6 +709,7 @@ const onKeyDown = (event: KeyboardEvent) => {
 }
 
 const onKeyUp = (event: KeyboardEvent) => {
+    if (signpostEntries.value.length) return
     Controller.processKeyup(event)
 }
 

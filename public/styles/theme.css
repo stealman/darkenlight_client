@@ -518,3 +518,10 @@
 :is(.dialog-themed-fields, .gm-panel-content, #gmPanel) :is(input, select, textarea):disabled {
     color: rgb(var(--ui-darker));
 }
+
+:root {
+    --signpost-reader-ink: #f4ead6;
+    --signpost-reader-muted: #c5b795;
+    --signpost-reader-cut-shadow: #160f09;
+    --signpost-reader-cut-highlight: #fff3d4;
+}

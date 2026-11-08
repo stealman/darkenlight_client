@@ -31,6 +31,7 @@ export const StaticObjectsCodebook: Map<number, StaticObjectInfo> = new Map([
     [154, new StaticObjectInfo(154, 'TerrainDebris3', false, 1, 0, 0, null)],
     [155, new StaticObjectInfo(155, 'TerrainDebris5', false, 1, 0, 0, null)],
 
+    [404, new StaticObjectInfo(404, 'WoodenSignpost', true, 1, 0.4, 0, null)],
     [403, new StaticObjectInfo(403, 'StandingBanner', true, 1, 0.3, 0, null)],
 
     [101, new StaticObjectInfo(101, 'Shrub2x2_1', true, 2, 0.4, 0, null)],

@@ -99,6 +99,27 @@
             </label>
         </div>
 
+        <div style="margin-top: 1vh">
+            <label class="tree-item" :class="{ selected: selectedObjectType === 'SIGNPOST' }" @click="selectObjectType('SIGNPOST')">Wooden Signpost</label>
+        </div>
+        <div v-if="selectedObjectType === 'SIGNPOST'" style="margin-top: 1vh; display: grid; gap: 6px">
+            <label>Signs
+                <select v-model.number="signCount">
+                    <option v-for="count in 4" :key="count" :value="count">{{ count }}</option>
+                </select>
+            </label>
+            <div v-for="index in signCount" :key="index" style="display: grid; gap: 4px">
+                <label>Sign {{ index }} direction
+                    <select v-model="signDirections[index - 1]">
+                        <option v-for="direction in ['+X', '-X', '+Z', '-Z']" :key="direction" :value="direction">{{ direction }}</option>
+                    </select>
+                </label>
+                <label>Sign {{ index }} text
+                    <textarea v-model="signTexts[index - 1]" rows="2" maxlength="256" style="display: block; width: 100%; box-sizing: border-box"></textarea>
+                </label>
+            </div>
+        </div>
+
         <div v-if="hasLightSettings" style="margin-top: 1vh; display: grid; gap: 6px">
             <label style="display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px">
                 Light intensity
@@ -163,7 +184,12 @@ const hasLightSettings = computed(() => selectedObject.value === 241 || selected
     || selectedObject.value === 261 || selectedObject.value === 262 || selectedObject.value === 263
     || selectedObject.value === 281 || selectedObject.value === 337)
 
+const signTexts = GMManager.signTexts
+const signCount = GMManager.signCount
+const signDirections = GMManager.signDirections
+
 const objects = [
+    { type: 'SIGNPOST', name: 'Wooden Signpost', id: 404 },
     { type: "FIREPLACE", name: "Fireplace Small", id: 241 },
     { type: "FIREPLACE", name: "Fireplace Large", id: 242 },
     { type: "TORCH", name: "Wall Torch", id: 261 },

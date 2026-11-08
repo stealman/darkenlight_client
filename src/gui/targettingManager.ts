@@ -13,6 +13,9 @@ import { ActionButtonsManager } from '@/gui/actionButtonsManager'
 import { CharacterActions } from '@/data/actions/characterActions'
 import { t } from '@/i18n'
 import {ref} from 'vue'
+import { StaticsManager } from '@/babylon/world/statics/staticsManager'
+import { WoodenSignpost } from '@/babylon/world/statics/objects/woodenSignpost'
+import { SignpostReader } from '@/gui/signpostReader'
 
 export const TargetingManager = {
     selectedTarget: null as Targetable | null,
@@ -180,6 +183,19 @@ export const TargetingManager = {
             }
         })
 
+        if (target == null && !useSphere) {
+            let closestDistance = Infinity
+            let signpost: WoodenSignpost | null = null
+            for (const object of StaticsManager.visibleStatics) {
+                if (!(object instanceof WoodenSignpost) || !object.intersectsRay(ray)) continue
+                const distance = Vector3.DistanceSquared(ray.origin, object.renderPosition)
+                if (distance < closestDistance) { signpost = object; closestDistance = distance }
+            }
+            if (signpost && !MyPlayer.isDead.value) {
+                SignpostReader.open(signpost)
+                return
+            }
+        }
         if (!useSphere && (target == null || target === this.selectedTarget)) {
             this.resolvePickRay(ray, true)
         } else if (target != null) {
@@ -231,7 +247,7 @@ export const TargetingManager = {
         const myChar = MyPlayer.myChar
         const weapon = myChar?.getWeapon()
         const weaponRange = Number((weapon?.atts as any)?.range ?? weapon?.atts?.get?.('range'))
-        if (!target || !weapon || myChar.isWeaponRanged() || myChar.getMoveAngle() !== null || !Number.isFinite(weaponRange)) {
+        if (!target || !this.isAttackableTarget(target) || !weapon || myChar.isWeaponRanged() || myChar.getMoveAngle() !== null || !Number.isFinite(weaponRange)) {
             return
         }
 

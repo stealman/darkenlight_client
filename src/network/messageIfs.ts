@@ -608,3 +608,8 @@ export interface ActivityLogData {
     quantity?: number
     time?: number
 }
+
+export interface GMSpawnStatusData {
+    worldId: number
+    spawns: Array<{id: number, count: number, nextSpawnInMs: number | null, depleted: boolean}>
+}

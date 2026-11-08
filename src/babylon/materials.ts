@@ -27,7 +27,8 @@ export const Materials = {
     blockMatTrans: null as PBRCustomMaterial | null,
 
     waterMaterial: null as PBRMaterial | null,
-    entrancePortalMaterial: null as PBRMaterial | null,
+    entrancePortalMaterial: null as PBRCustomMaterial | null,
+    staticSurfaceMaterial: null as PBRCustomMaterial | null,
     weaponTrailMaterial: null as StandardMaterial | null,
     powerStrikeWeaponTrailMaterial: null as StandardMaterial | null,
     preciseShotArrowTrailMaterial: null as StandardMaterial | null,
@@ -41,6 +42,8 @@ export const Materials = {
         this.blockMatAlpha1 = this.createBlockMatAlpha1(scene)
         this.blockMatTrans = this.createBlockMatTrans(scene)
         this.waterMaterial = this.createWaterMaterial(scene)
+        this.staticSurfaceMaterial = this.getPBRCustomMaterial(scene, "staticSurfaces", "/textures/statics/", "static-surfaces.svg", 1 / 16, 1 / 4, true)
+        this.staticSurfaceMaterial.albedoTexture!.hasAlpha = true
         this.entrancePortalMaterial = this.createEntrancePortalMaterial(scene)
         this.stepMarksMaterial = this.createStepMarksMaterial(scene)
         this.fightSplatsMaterial = this.createFightSplatsMaterial(scene)
@@ -256,8 +259,13 @@ export const Materials = {
         return mat
     },
 
-    createEntrancePortalMaterial(scene: Scene): PBRMaterial {
-        const mat = this.createWaterMaterial(scene)
+    createEntrancePortalMaterial(scene: Scene): PBRCustomMaterial {
+        const mat = this.getPBRCustomMaterialFrom(scene, 'staticPortals', '/textures/statics/', 'static-surfaces.svg', 1 / 16, 1 / 4, false,
+            {metallic: 0.6, roughness: 0.4, directIntensity: 1, environmentIntensity: 0.5})
+        mat.albedoTexture!.hasAlpha = true
+        mat.backFaceCulling = false
+        mat.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHABLEND
+        mat.useAlphaFromAlbedoTexture = true
         mat.name = 'stoneEntrancePortalMaterial'
         mat.alpha = 0.42
         mat.emissiveColor = new Color3(0.08, 0.02, 0.08)
