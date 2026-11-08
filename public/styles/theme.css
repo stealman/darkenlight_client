@@ -12,6 +12,7 @@
 
     /* Semantic accents */
     --ui-item-special-stat: 200, 200, 200;
+    --ui-item-quality-prefix: 145, 205, 255;
     --ui-accent-red: 204, 123, 108;
     --ui-accent-blue: 108, 155, 193;
     --ui-accent-purple: 164, 132, 193;

@@ -31,6 +31,12 @@ export const getArmorCategoryLabel = (category: string | null | undefined): stri
     return t(armorCategoryLabels[category] ?? category)
 }
 
+export const formatWeaponAttack = (value: number | string | null | undefined): number | null => {
+    if (value == null) return null
+    const damage = Number(value)
+    return Number.isFinite(damage) ? Math.round(damage * 2) / 2 : null
+}
+
 export const getItemTooltipData = (item: ItemTooltipSource) => {
     const itemType = getItemType(item)
     const cbId = (item as Item).cbId ?? (item as ItemTO).cb
@@ -46,7 +52,7 @@ export const getItemTooltipData = (item: ItemTooltipSource) => {
     quantity: getAttribute(item, 'qty'),
     weaponCategory: itemType === 'W' ? getWeaponCategory(item) : null,
     armorCategory: itemType === 'A' ? getArmorCategory(item) : null,
-    weaponAttack: itemType === 'W' ? getAttribute(item, 'patk') : null,
+    weaponAttack: itemType === 'W' ? formatWeaponAttack(getAttribute(item, 'patk')) : null,
     weaponDamageTypes: itemType === 'W' ? getWeaponDamageTypes(item) : [],
     weaponSpeed: itemType === 'W' ? getAttribute(item, 'speed') : null,
     weaponRange: itemType === 'W' ? getAttribute(item, 'range') : null,

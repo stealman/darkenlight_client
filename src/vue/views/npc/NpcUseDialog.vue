@@ -217,7 +217,7 @@
                     <span v-if="detailEquipmentCategoryLabel" class="inventory-item-overlay-weapon-category">{{ detailEquipmentCategoryLabel }}</span>
                 </div>
                 <div v-if="detailItem.tp === 'W'" class="npc-vendor-overlay-stats">
-                    <span>{{ t('vendor.attack') }} <strong class="ui-text-gradient">{{ detailItem.atts?.patk }}</strong></span>
+                    <span>{{ t('vendor.attack') }} <strong class="ui-text-gradient">{{ formatWeaponAttack(detailItem.atts?.patk) }}</strong></span>
                     <span>{{ t('vendor.attackType') }} <strong class="ui-text-gradient">{{ formatDamageTypes(detailItem) }}</strong></span>
                     <span>{{ t('vendor.speed') }} <strong class="ui-text-gradient">{{ formatSpeed(detailItem.atts?.speed) }}</strong></span>
                     <span>{{ t('vendor.range') }} <strong class="ui-text-gradient">{{ detailItem.atts?.range }}</strong></span>
@@ -253,6 +253,7 @@
 </template>
 
 <script setup lang="ts">
+import {formatWeaponAttack} from '@/vue/views/inventory/itemTooltip'
 import {computed, nextTick, onMounted, onUnmounted, ref} from 'vue'
 import GameDialog from '@/vue/views/GameDialog.vue'
 import {NpcInteractionManager} from '@/data/npcInteractionManager'

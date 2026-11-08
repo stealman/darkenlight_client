@@ -461,6 +461,10 @@
     font-weight: 600;
 }
 
+.inventory-item-overlay-quality-prefix {
+    color: rgb(var(--ui-item-quality-prefix));
+}
+
 .inventory-item-overlay-name-quantity {
     color: rgb(var(--ui-dark));
 }

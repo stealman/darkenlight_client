@@ -60,11 +60,28 @@ export class Item {
         const localizedName = t(fullLocalizationKey)
 
         if (localizedName !== fullLocalizationKey) {
-            return localizedName
+            return this.withQualityPrefix(localizedName)
         }
 
         const directLocalizedName = t(this.nameKey)
-        return directLocalizedName === this.nameKey ? this.nameKey : directLocalizedName
+        return this.withQualityPrefix(directLocalizedName === this.nameKey ? this.nameKey : directLocalizedName)
+    }
+
+    private withQualityPrefix(name: string): string {
+        if (this.cbType !== 'W' && this.cbType !== 'A') return name
+        const attributes = this.atts as Map<string, number | string> | Record<string, number | string>
+        const quality = Number((attributes instanceof Map ? attributes.get('qual') : attributes?.qual) ?? 0)
+        if (!Number.isFinite(quality) || quality < 90) return name
+        const tier = quality >= 98 ? 'perfect' : quality >= 95 ? 'superior' : 'fine'
+        let gender = 'masculine'
+        if (this.cbType === 'W') {
+            if (this.nameKey?.endsWith('axe') && !this.nameKey.endsWith('pickaxe') || this.nameKey?.endsWith('halberd')) gender = 'feminine'
+            else if (this.nameKey?.endsWith('spear') || this.nameKey?.endsWith('warhammer')) gender = 'neuter'
+        } else {
+            if (this.nameKey?.endsWith('greaves') || this.nameKey?.endsWith('pauldrons')) gender = 'plural'
+            else if (this.armorCategory !== 'SHIELD') gender = 'feminine'
+        }
+        return `${t(`items.qualityPrefixes.${tier}.${gender}`)} ${name}`
     }
 
     static fromData(data: ItemTO): Item {

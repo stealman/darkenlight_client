@@ -13,7 +13,7 @@
         @click="onOverlayClick"
     >
         <div class="inventory-item-overlay-name">
-            <span class="inventory-item-overlay-name-text ui-text-gradient">{{ displayItemName }}</span>
+            <span class="inventory-item-overlay-name-text"><span v-if="displayItemQualityPrefix" class="inventory-item-overlay-quality-prefix">{{ displayItemQualityPrefix + ' ' }}</span><span class="ui-text-gradient">{{ displayItemBaseName }}</span></span>
             <span v-if="displayItemQuantity" class="inventory-item-overlay-name-quantity">({{ displayItemQuantity }})</span>
         </div>
 
@@ -248,6 +248,19 @@ const shouldShowDropButton = computed(() => {
 const displayItemName = computed(() => {
     return props.itemInfo?.name ?? t('inventory.unknownItem')
 })
+
+const displayItemQualityPrefix = computed(() => {
+    const quality = Number(props.itemInfo?.quality)
+    if (!Number.isFinite(quality) || quality < 90 || (!props.itemInfo.weaponCategory && !props.itemInfo.armorStats)) return ''
+    const tier = quality >= 98 ? 'perfect' : quality >= 95 ? 'superior' : 'fine'
+    return ['masculine', 'feminine', 'neuter', 'plural']
+        .map(gender => t(`items.qualityPrefixes.${tier}.${gender}`))
+        .find(prefix => displayItemName.value.startsWith(`${prefix} `)) ?? ''
+})
+
+const displayItemBaseName = computed(() => displayItemQualityPrefix.value
+    ? displayItemName.value.slice(displayItemQualityPrefix.value.length + 1)
+    : displayItemName.value)
 
 const displayItemQuantity = computed(() => {
     const quantity = Number(props.itemInfo?.quantity)

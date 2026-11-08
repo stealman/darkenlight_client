@@ -1,5 +1,25 @@
 {
     "items": {
+        "qualityPrefixes": {
+            "fine": {
+                "masculine": "Dobr\u00fd",
+                "feminine": "Dobr\u00e1",
+                "neuter": "Dobr\u00e9",
+                "plural": "Dobr\u00e9"
+            },
+            "superior": {
+                "masculine": "Skv\u011bl\u00fd",
+                "feminine": "Skv\u011bl\u00e1",
+                "neuter": "Skv\u011bl\u00e9",
+                "plural": "Skv\u011bl\u00e9"
+            },
+            "perfect": {
+                "masculine": "Perfektn\u00ed",
+                "feminine": "Perfektn\u00ed",
+                "neuter": "Perfektn\u00ed",
+                "plural": "Perfektn\u00ed"
+            }
+        },
         "weapons": {
             "steel-broadsword": "Ocelový Široký Meč",
             "silver-broadsword": "St\u0159\u00edbrn\u00fd \u0160irok\u00fd Me\u010d",

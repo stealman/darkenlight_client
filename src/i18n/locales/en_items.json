@@ -1,5 +1,25 @@
 {
   "items": {
+        "qualityPrefixes": {
+            "fine": {
+                "masculine": "Fine",
+                "feminine": "Fine",
+                "neuter": "Fine",
+                "plural": "Fine"
+            },
+            "superior": {
+                "masculine": "Superior",
+                "feminine": "Superior",
+                "neuter": "Superior",
+                "plural": "Superior"
+            },
+            "perfect": {
+                "masculine": "Perfect",
+                "feminine": "Perfect",
+                "neuter": "Perfect",
+                "plural": "Perfect"
+            }
+        },
     "weapons": {
       "steel-broadsword": "Steel Broadsword",
       "silver-broadsword": "Silver Broadsword",
