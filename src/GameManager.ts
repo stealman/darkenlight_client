@@ -66,7 +66,7 @@ export const GameManager = {
     async startGame(charData) {
         reportLoadingProgress(35, 'app.loadingCharacter')
         await MyPlayer.initialize(charData)
-        GMManager.restoreNoAggro()
+        GMManager.restoreNoAggro(charData.gmNoAggro ?? true)
         reportLoadingProgress(70, 'app.loadingWorld')
         InventoryManager.initializeWeaponSetupsForCharacter()
         ActionButtonsManager.loadBindingsForCharacter(MyPlayer.myChar.id)

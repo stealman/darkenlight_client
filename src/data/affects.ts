@@ -74,7 +74,32 @@ export class ClientAffectGroup {
 
     getPowerLabel() {
         const nameKey = this.getDefinition()?.nameKey
+        if (nameKey === 'resting') {
+            const level = this.getIconBadgeLabel()
+            return level === null ? '' : `(${level})`
+        }
         return nameKey === 'damagedWeapon' || nameKey === 'damagedArmor' ? `(-${this.p}%)` : `(${this.p})`
+    }
+
+    getIconBadgeLabel(): string | null {
+        if (this.getDefinition()?.nameKey === 'resting') {
+            const level = this.af.find(affect => affect.data[0] === 3)?.level
+            return level !== undefined ? String(level) : null
+        }
+        if (!Number.isFinite(this.p) || this.p <= 0) return null
+        const power = Math.round(this.p * 10) / 10
+        switch (this.getDefinition()?.nameKey) {
+            case 'damagedWeapon':
+            case 'damagedArmor':
+                return String(this.p >= 75 ? 3 : this.p >= 50 ? 2 : 1)
+            case 'slow':
+            case 'meal':
+            case 'flameArrows':
+            case 'burning':
+                return String(power)
+            default:
+                return null
+        }
     }
 
     isAdverse() {

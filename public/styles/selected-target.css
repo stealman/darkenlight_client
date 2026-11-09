@@ -1,3 +1,12 @@
+/* The panel and its action buttons share the actual height, including attribute icons. */
+:root {
+    --hud-selected-target-height: var(--hud-target-panel-height, 28px);
+}
+
+:root:has(#selectedTargetPanel .targetAttributes > .affectIcon) {
+    --hud-selected-target-height: max(var(--hud-target-panel-height, 28px), calc(var(--hud-target-name-top, 4px) + var(--affect-icon-size, 32px) + var(--affect-icon-count-offset, 3px) + var(--hud-target-hp-height, 4px) + var(--hud-target-hp-bottom, 4px) + 4px));
+}
+
 div#selectedTargetPanel {
     position: absolute;
     top: 0;
@@ -5,7 +14,7 @@ div#selectedTargetPanel {
     left: auto;
     width: clamp(112px, 25%, var(--hud-status-max-width, 260px));
     max-width: var(--hud-status-max-width, 260px);
-    height: var(--hud-target-panel-height, 28px);
+    height: var(--hud-selected-target-height);
     box-sizing: border-box;
     padding: 3px 6px;
     pointer-events: auto;
@@ -68,7 +77,7 @@ div#selectedTargetPanel {
     top: var(--hud-target-name-top, 4px);
     left: var(--hud-target-name-left, 8px);
     right: 8px;
-    overflow: hidden;
+    overflow: visible;
     text-overflow: ellipsis;
     white-space: nowrap;
     text-align: left;
@@ -91,9 +100,8 @@ div#selectedTargetPanel {
 }
 
 #selectedTargetPanel .targetSkulls {
-    color: var(--gui-status-enemy-color);
+    color: rgb(var(--ui-target-danger-color));
     flex-shrink: 0;
-    margin-left: auto;
 }
 
 #selectedTargetPanel .targetName > .ui-text-gradient {
@@ -148,3 +156,11 @@ div#selectedTargetPanel {
 }
 
 #selectedTargetPanel .hpBlocks{ height: var(--hud-target-hp-height, 4px); }
+
+#selectedTargetPanel .targetAttributes {
+    display: flex;
+    gap: var(--affect-icon-gap, 4px);
+    margin-left: auto;
+    padding-right: var(--affect-icon-count-offset, 3px);
+    flex-shrink: 0;
+}

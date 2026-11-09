@@ -127,14 +127,11 @@ export const GMManager = {
 
     setNoAggro(enabled: boolean) {
         this.noAggro.value = enabled
-        localStorage.setItem('DARKENLIGHT_GM_NO_AGGRO', String(enabled))
         Connector.sendMessage(new GMNoAggroMsg(enabled))
     },
 
-    restoreNoAggro() {
-        this.noAggro.value = false
-        if (MyPlayer.myChar?.className !== 'GM') return
-        this.setNoAggro(localStorage.getItem('DARKENLIGHT_GM_NO_AGGRO') === 'true')
+    restoreNoAggro(enabled: boolean = true) {
+        this.noAggro.value = MyPlayer.myChar?.className === 'GM' && enabled
     },
     consumePointerMoveEvents: false,
     consumeLeftClickEvents: false,

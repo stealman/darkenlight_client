@@ -14,6 +14,8 @@ export const SelectedTargetPanel = {
     nameEl: null as HTMLSpanElement | null,
     nameTextEl: null as HTMLSpanElement | null,
     skullsEl: null as HTMLSpanElement | null,
+    attributesEl: null as HTMLSpanElement | null,
+    renderedAttributes: null as unknown,
     hpBlockEls: [] as HTMLDivElement[],
     hpFillEls: [] as HTMLDivElement[],
     lastTooltipRefreshBucket: null as number | null,
@@ -58,10 +60,13 @@ export const SelectedTargetPanel = {
         this.skullsEl = document.createElement('span')
         this.skullsEl.className = 'targetSkulls'
         this.skullsEl.setAttribute('aria-hidden', 'true')
-        this.skullsEl.innerHTML = '<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M8 1a6 6 0 0 0-4 10.47V15h2v-2h1v2h2v-2h1v2h2v-3.53A6 6 0 0 0 8 1ZM5.5 6a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Zm5 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3ZM8 9l-1 2h2Z"/></svg>'.repeat(3)
+        this.skullsEl.innerHTML = '<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M8 1a6 6 0 0 0-4 10.47V15h2v-2h1v2h2v-2h1v2h2v-3.53A6 6 0 0 0 8 1ZM5.5 6a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Zm5 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3ZM8 9l-1 2h2Z"/></svg>'
         this.nameTextEl = document.createElement('span')
         this.nameTextEl.className = 'ui-text-gradient ui-text-gradient--no-shadow'
-        this.nameEl.append(this.nameTextEl, this.skullsEl)
+        this.attributesEl = document.createElement('span')
+        this.attributesEl.className = 'targetAttributes'
+        this.renderedAttributes = null
+        this.nameEl.append(this.nameTextEl, this.skullsEl, this.attributesEl)
 
         this.panel.appendChild(hpBlocks)
         this.panel.appendChild(this.nameEl)
@@ -119,6 +124,23 @@ export const SelectedTargetPanel = {
                         className: tag === 'UNDEAD' ? 'ui-tooltip-row--undead' : 'ui-tooltip-row--monster-tag',
                     })
                 }
+            }
+            for (const attribute of info?.specialAttributes ?? []) {
+                if (!attribute.value) continue
+                const isDefense = attribute.type.startsWith('DEFENSE_')
+                const changePercent = attribute.value * (isDefense ? 10 : -10)
+                rows.push({
+                    label: t(`skills.monsterKnowledge.${isDefense ? 'defenseTypes' : 'damageReceived'}.${attribute.type}`),
+                    value: `${changePercent > 0 ? '+' : ''}${changePercent} %`,
+                    className: attribute.value < 0 ? 'ui-tooltip-row--monster-weakness' : 'ui-tooltip-row--monster-resistance',
+                })
+            }
+            const dangerLevel = Math.max(0, Math.min(3, target.skulls))
+            if (dangerLevel > 0) {
+                rows.push({
+                    value: t(`skills.monsterKnowledge.danger.${dangerLevel}`),
+                    className: `ui-tooltip-row--target-danger ui-target-danger--${dangerLevel}`,
+                })
             }
         }
 
@@ -203,6 +225,8 @@ export const SelectedTargetPanel = {
                 this.panel.classList.add('empty')
                 this.nameTextEl!.textContent = ''
                 this.skullsEl!.style.display = 'none'
+                this.attributesEl?.replaceChildren()
+                this.renderedAttributes = null
                 for (const fillEl of this.hpFillEls) fillEl.style.width = '0%'
             }
             if (TooltipOverlayManager.isVisibleFor(this.tooltipOwnerKey)) {
@@ -212,13 +236,33 @@ export const SelectedTargetPanel = {
             return
         }
 
+        const attributes = target instanceof Monster ? MonsterCatalog.get(target.mobType.id)?.specialAttributes : undefined
+        if (this.renderedAttributes !== attributes && this.attributesEl) {
+            this.renderedAttributes = attributes
+            this.attributesEl.replaceChildren()
+            for (const attribute of attributes ?? []) {
+                if (!attribute.value) continue
+                const icon = document.createElement('span')
+                icon.className = `affectIcon ${attribute.value > 0 ? 'adverse' : 'positive'}`
+                const image = document.createElement('img')
+                image.className = 'affectIconImage'
+                const kind = attribute.value > 0 ? 'resistance' : 'weakness'
+                image.src = `/images/icons/attributes/${attribute.type.toLowerCase()}-${kind}.png`
+                image.alt = t(`skills.monsterKnowledge.${attribute.type.startsWith('DEFENSE_') ? 'defenseTypes' : 'physicalTypes'}.${attribute.type}`)
+                const level = document.createElement('span')
+                level.className = 'affectIconCount'
+                level.textContent = String(Math.abs(attribute.value))
+                icon.append(image, level)
+                this.attributesEl.appendChild(icon)
+            }
+        }
         const previous = this.renderedTarget
         if (!previous) this.panel.classList.remove('empty')
         const skulls = target.getObjectType() === 'M' && 'skulls' in target && typeof target.skulls === 'number' ? target.skulls : 0
         const skullCount = Math.max(0, Math.min(3, skulls))
         if (!previous || previous.skulls !== skullCount) {
             this.skullsEl!.style.display = skullCount ? '' : 'none'
-            for (let i = 0; i < 3; i++) (this.skullsEl!.children[i] as SVGElement).style.display = i < skullCount ? '' : 'none'
+            this.skullsEl!.className = `targetSkulls ui-target-danger--${skullCount}`
         }
         const name = target.getName()
         if (!previous || previous.name !== name) this.nameTextEl!.textContent = name

@@ -2,6 +2,13 @@
   "skills": {
     "crafting": {"alchemy": "Alchymie", "blacksmithy": "Kovářství", "bowcraft": "Výroba Luků", "armorsmithy": "Zbrojířství"},
     "monsterKnowledge": {
+      "defenseTypes": {"DEFENSE_MELEE": "Obrana zblízka", "DEFENSE_MISSILE": "Obrana proti střelbě"},
+      "damageReceived": {"PHYSICAL_PIERCE": "Bodné poškození", "PHYSICAL_SLASH": "Sečné poškození", "PHYSICAL_BLUNT": "Drtivé poškození"},
+      "resistance": "Rezistence",
+      "weakness": "Slabina",
+      "physicalTypes": {"PHYSICAL_PIERCE": "Bodné", "PHYSICAL_SLASH": "Sečné", "PHYSICAL_BLUNT": "Drtivé"},
+
+      "danger": {"1": "Nebezpečný", "2": "Velmi nebezpečný", "3": "Extrémně nebezpečný"},
       "huntable": "Lze lovit",
       "title": "Znalost Monster",
       "level": "Úroveň {level}",

@@ -174,12 +174,12 @@ export const MyStatusPanel = {
         const countOffsetPx = Math.max(3, Math.round(iconSizePx * 0.1))
 
         this.affectIconSizePx = iconSizePx
-        this.panel.style.setProperty('--affect-icon-size', `${iconSizePx}px`)
-        this.panel.style.setProperty('--affect-icon-count-size', `${countSizePx}px`)
-        this.panel.style.setProperty('--affect-icon-count-offset', `${countOffsetPx}px`)
-        this.panel.style.setProperty('--affect-icon-count-font-size', `${Math.max(10, Math.round(countSizePx * 0.62))}px`)
-        this.panel.style.setProperty('--affect-icon-gap', `${Math.max(4, Math.round(iconSizePx * 0.11))}px`)
-        this.panel.style.setProperty('--affect-icon-adverse-gap', `${iconSizePx / 2}px`)
+        document.documentElement.style.setProperty('--affect-icon-size', `${iconSizePx}px`)
+        document.documentElement.style.setProperty('--affect-icon-count-size', `${countSizePx}px`)
+        document.documentElement.style.setProperty('--affect-icon-count-offset', `${countOffsetPx}px`)
+        document.documentElement.style.setProperty('--affect-icon-count-font-size', `${Math.max(10, Math.round(countSizePx * 0.62))}px`)
+        document.documentElement.style.setProperty('--affect-icon-gap', `${Math.max(4, Math.round(iconSizePx * 0.11))}px`)
+        document.documentElement.style.setProperty('--affect-icon-adverse-gap', `${iconSizePx / 2}px`)
     },
 
     setMyName(name: string) {
@@ -264,13 +264,14 @@ export const MyStatusPanel = {
         }
 
         let countEl = iconEl.querySelector('.affectIconCount') as HTMLSpanElement | null
-        if (affectGroup.af.length > 1) {
+        const badgeLabel = affectGroup.getIconBadgeLabel()
+        if (badgeLabel !== null) {
             if (!countEl) {
                 countEl = document.createElement('span')
                 countEl.className = 'affectIconCount'
                 iconEl.appendChild(countEl)
             }
-            countEl.textContent = affectGroup.af.length.toString()
+            countEl.textContent = badgeLabel
             return
         }
 
@@ -320,7 +321,7 @@ export const MyStatusPanel = {
 
         return {
             title: affectGroup.getLocalizedName(),
-            titleMeta: affectGroup.id === 3 ? null : affectGroup.getPowerLabel(),
+            titleMeta: affectGroup.getPowerLabel(),
             topRightText: affectGroup.shouldDisplayDuration()
                 ? affectGroup.getFormattedRemainingDuration(actualTime)
                 : null,

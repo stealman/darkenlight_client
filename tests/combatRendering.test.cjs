@@ -375,6 +375,7 @@ test('HUD panels leave unchanged DOM alone and refresh resource and target chang
     const target = {getName: () => name, getObjectType: () => 'M', getRelationToMyPlayer: () => 'ENEMY', hpPercent: 100, skulls: 1}
     const targeting = {selectedTarget: target}
     const {SelectedTargetPanel: selected} = loadModule('gui/selectedTargetPanel.ts', {
+        '@/babylon/monsters/monster': {Monster: class Monster {}},
         '@/gui/targettingManager': {TargetingManager: targeting},
         '@/gui/tooltipOverlayManager': {TooltipOverlayManager: tooltip},
     })
@@ -393,8 +394,13 @@ test('HUD panels leave unchanged DOM alone and refresh resource and target chang
     selected.onFrame(1200)
     assert.equal(selected.nameTextEl.textContent, name)
     assert.equal(selected.hpFillEls[9].style.width, '50%')
+    let attributeClears = 0
+    selected.attributesEl = {replaceChildren() { attributeClears++ }}
+    selected.renderedAttributes = [{type: 'PHYSICAL_BLUNT', value: -3}]
     targeting.selectedTarget = null
     selected.onFrame(1300)
+    assert.equal(attributeClears, 1)
+    assert.equal(selected.renderedAttributes, null)
     writes = 0
     selected.onFrame(1400)
     assert.equal(writes, 0)

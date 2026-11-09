@@ -227,3 +227,33 @@
 .ui-tooltip-row--monster-category .ui-tooltip-row-value {
     color: rgb(var(--ui-success));
 }
+
+.ui-tooltip-row--target-danger {
+    margin-top: 1lh;
+}
+
+.ui-tooltip-row--target-danger .ui-tooltip-row-value {
+    color: rgb(var(--ui-target-danger-color));
+}
+
+.ui-tooltip-row--target-danger .ui-tooltip-row-value::before {
+    content: '';
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    margin-right: 0.35em;
+    vertical-align: -0.1em;
+    background-color: currentColor;
+    mask: url('/images/gui/target-skull.svg') center / contain no-repeat;
+    -webkit-mask: url('/images/gui/target-skull.svg') center / contain no-repeat;
+}
+
+.ui-tooltip-overlay .ui-tooltip-row--monster-weakness .ui-tooltip-row-label,
+.ui-tooltip-overlay .ui-tooltip-row--monster-weakness .ui-tooltip-row-value {
+    color: rgb(var(--ui-success));
+}
+
+.ui-tooltip-overlay .ui-tooltip-row--monster-resistance .ui-tooltip-row-label,
+.ui-tooltip-overlay .ui-tooltip-row--monster-resistance .ui-tooltip-row-value {
+    color: rgb(var(--ui-danger));
+}

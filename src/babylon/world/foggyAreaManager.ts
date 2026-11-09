@@ -29,7 +29,7 @@ const CAPACITY_LIMIT = 6000
 // Maximum cloud radius (12 / 2) plus maximum horizontal drift (2.6).
 const VISIBILITY_MARGIN = 9
 const FOG_ALPHA_FADE_DEFINE = '#define FOGGY_AREA_ALPHA_FADE'
-const NIGHT_PARTICLE_COLOR_FACTOR = 1.85
+const NIGHT_PARTICLE_COLOR_FACTOR = 1.25
 let fogAlphaFadeShaderInstalled = false
 
 function installFogAlphaFadeShader(): boolean {

@@ -223,7 +223,7 @@ export const MonsterTypes = {
         MonsterSoundTypes.SKELETON,
         null,
     ),
-    
+
     // SKELETON RANGED
     SKELETON_ARCHER: new MonsterType(
         20,

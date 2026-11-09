@@ -35,6 +35,9 @@
     --ui-text-gradient-base-top: rgb(var(--ui-base));
     --ui-text-gradient-accent-bottom-opacity: 0.55;
 
+    --ui-target-danger-low: var(--ui-base);
+    --ui-target-danger-medium: 211, 125, 61;
+    --ui-target-danger-high: var(--ui-danger);
     --ui-danger: 210, 106, 106;
     --ui-durability-warning: 205, 174, 76;
     --ui-durability-danger: 211, 125, 61;
@@ -526,3 +529,7 @@
     --signpost-reader-cut-shadow: #160f09;
     --signpost-reader-cut-highlight: #fff3d4;
 }
+
+.ui-target-danger--1 { --ui-target-danger-color: var(--ui-target-danger-low); }
+.ui-target-danger--2 { --ui-target-danger-color: var(--ui-target-danger-medium); }
+.ui-target-danger--3 { --ui-target-danger-color: var(--ui-target-danger-high); }

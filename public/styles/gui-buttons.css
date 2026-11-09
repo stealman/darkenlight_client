@@ -44,7 +44,7 @@ div.gui-action-button:hover::after {
 
 div#gui-buttons {
     position: absolute;
-    top: calc(var(--hud-target-panel-height, 28px) + 4px);
+    top: calc(var(--hud-selected-target-height, var(--hud-target-panel-height, 28px)) + 4px);
     right: calc(var(--hud-minimap-size, 100px) + 9px);
     display: flex;
     gap: 5px;

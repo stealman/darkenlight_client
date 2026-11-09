@@ -2,6 +2,13 @@
   "skills": {
     "crafting": {"alchemy": "Alchemy", "blacksmithy": "Blacksmithy", "bowcraft": "Bowcraft", "armorsmithy": "Armorsmithy"},
     "monsterKnowledge": {
+      "defenseTypes": {"DEFENSE_MELEE": "Melee defense", "DEFENSE_MISSILE": "Missile defense"},
+      "damageReceived": {"PHYSICAL_PIERCE": "Pierce damage taken", "PHYSICAL_SLASH": "Slash damage taken", "PHYSICAL_BLUNT": "Blunt damage taken"},
+      "resistance": "Resistance",
+      "weakness": "Weakness",
+      "physicalTypes": {"PHYSICAL_PIERCE": "Pierce", "PHYSICAL_SLASH": "Slash", "PHYSICAL_BLUNT": "Blunt"},
+
+      "danger": {"1": "Dangerous", "2": "Very dangerous", "3": "Extremely dangerous"},
       "huntable": "Can be hunted",
       "title": "Monster Lore",
       "level": "Level {level}",

@@ -316,6 +316,7 @@ export interface AffectGroupData {
 }
 
 export interface AffectData {
+    level?: number
     data: number[] // [typeId, duration, power]
 }
 
@@ -597,10 +598,13 @@ export interface MonsterDangerChangedData {
     monsters: Array<{id: number, skulls: number}>
 }
 
+export type MonsterSpecialAttribute = {type: 'PHYSICAL_PIERCE' | 'PHYSICAL_SLASH' | 'PHYSICAL_BLUNT' | 'DEFENSE_MELEE' | 'DEFENSE_MISSILE', value: number}
+
 export interface MonsterCatalogEntry {
     type: number
     name: string
     category: string
+    specialAttributes?: readonly MonsterSpecialAttribute[]
     tags: string[]
 }
 
