@@ -413,6 +413,7 @@
     "potions": "Potions",
     "ingredients": "Ingredients",
     "food": "Food",
+    "allFood": "Offers all food when no individual items are selected.",
     "trinkets": "Trinkets",
       "buy": "Buy",
       "repair": "Repair",

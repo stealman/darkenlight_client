@@ -12,7 +12,9 @@ const descriptionKeys: Record<number, string> = {
     231: 'coarseBowstring', 232: 'fineBowstring', 233: 'superiorBowstring',
     234: 'spiderSilkBowstring', 235: 'unicornManeBowstring', 236: 'demonicBowstring',
     321: 'processedLeather', 322: 'processedLeather', 323: 'processedLeather', 324: 'processedLeather', 325: 'processedLeather',
-    301: 'meat', 302: 'wool', 303: 'cloth', 351: 'steak',
+    301: 'meat', 302: 'wool', 303: 'cloth', 351: 'steak', 352: 'steak', 353: 'steak',
+    361: 'cookingIngredient', 362: 'cookingIngredient', 363: 'cookingIngredient',
+    364: 'cookingIngredient', 365: 'cookingIngredient', 366: 'cookingIngredient', 367: 'cookingIngredient', 368: 'cookingIngredient',
     1031: 'emptyPotion', 1032: 'emptyPotion', 1033: 'emptyPotion',
 }
 

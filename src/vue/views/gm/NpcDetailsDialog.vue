@@ -227,6 +227,7 @@
                     <template v-for="category in resourceVendorCategories" :key="category.value">
                         <div v-if="feature.settings.itemCategories.includes(category.value)" class="npc-vendor-materials">
                             <strong>{{ category.label }}</strong>
+                            <span v-if="category.value === 'food' && !feature.settings.individualItems.food.length">{{ t('vendor.allFood') }}</span>
                             <div class="npc-vendor-individual-items">
                                 <div class="npc-vendor-item-add">
                                     <select v-model="vendorItemSelections[category.value]">
@@ -411,7 +412,6 @@ const resourceOptions = [
     { codebookId: 234, label: 'Spider Silk Bowstring' },
     { codebookId: 235, label: 'Unicorn Mane Bowstring' },
     { codebookId: 236, label: 'Demonic Bowstring' },
-    { codebookId: 301, label: 'Common meat' },
     { codebookId: 302, label: 'Wool (10 pieces)' },
     { codebookId: 303, label: 'Cloth' },
 ]
@@ -428,7 +428,15 @@ const ingredientOptions = [
     { codebookId: 410, label: 'Scales' },
 ]
 const foodOptions = [
-    { codebookId: 351, label: 'Steak' },
+    { codebookId: 301, label: 'Raw meat' },
+    { codebookId: 361, label: 'Salt' },
+    { codebookId: 362, label: 'Bread' },
+    { codebookId: 363, label: 'Potatoes' },
+    { codebookId: 364, label: 'Milk' },
+    { codebookId: 365, label: 'Cheese' },
+    { codebookId: 366, label: 'Cheap spices' },
+    { codebookId: 367, label: 'Exclusive spices' },
+    { codebookId: 368, label: 'Onion' },
 ]
 const potionOptions = [
     { codebookId: 1001, label: 'Small healing potion' },

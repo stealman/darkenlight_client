@@ -6,7 +6,7 @@ export const ConsumablesCodebook = {
     manaPotionIds: [1011, 1012, 1013],
     staminaPotionIds: [1021, 1022, 1023],
     woodIds: Array.from({length: 20}, (_, index) => 201 + index),
-    foodIds: [351],
+    foodIds: [351, 352, 353],
 
     isItemConsumable(item: Item): boolean {
         return this.getHealingPotionIds().includes(item.cbId) || this.getManaPotionIds().includes(item.cbId)

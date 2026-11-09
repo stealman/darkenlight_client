@@ -1,6 +1,6 @@
 {
   "skills": {
-    "crafting": {"alchemy": "Alchemy", "blacksmithy": "Blacksmithy", "bowcraft": "Bowcraft", "armorsmithy": "Armorsmithy"},
+    "crafting": {"alchemy": "Alchemy", "blacksmithy": "Blacksmithy", "bowcraft": "Bowcraft", "armorsmithy": "Armorsmithy", "cooking": "Cooking"},
     "monsterKnowledge": {
       "defenseTypes": {"DEFENSE_MELEE": "Melee defense", "DEFENSE_MISSILE": "Missile defense"},
       "damageReceived": {"PHYSICAL_PIERCE": "Pierce damage taken", "PHYSICAL_SLASH": "Slash damage taken", "PHYSICAL_BLUNT": "Blunt damage taken"},
@@ -47,6 +47,7 @@
       "healing": "Healing"
     },
     "descriptions": {
+      "cooking": "A skill for preparing meals.",
       "alchemy": "Allows you to craft potions and elixirs.",
       "hunting": "Hunting animals provides hides and material for bowstrings.",
       "lumberjacking": "Allows harvesting different types of wood based on your skill rank and the tree rarity.",
@@ -102,6 +103,7 @@
       "classMaximumRank": "Class maximum level"
     },
     "bonuses": {
+      "cooking": "Higher ranks unlock new recipes.",
       "alchemy": "Reduces potion crafting time by {percent}.",
       "alchemySavings": "Saves {percent}% of crafting ingredients.",
       "lumberjackingCapacityPreservation": "Adds a {percent}% bonus to tree yield.",

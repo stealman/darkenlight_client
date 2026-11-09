@@ -1,6 +1,6 @@
 {
   "skills": {
-    "crafting": {"alchemy": "Alchymie", "blacksmithy": "Kovářství", "bowcraft": "Výroba Luků", "armorsmithy": "Zbrojířství"},
+    "crafting": {"alchemy": "Alchymie", "blacksmithy": "Kovářství", "bowcraft": "Výroba Luků", "armorsmithy": "Zbrojířství", "cooking": "Vaření"},
     "monsterKnowledge": {
       "defenseTypes": {"DEFENSE_MELEE": "Obrana zblízka", "DEFENSE_MISSILE": "Obrana proti střelbě"},
       "damageReceived": {"PHYSICAL_PIERCE": "Bodné poškození", "PHYSICAL_SLASH": "Sečné poškození", "PHYSICAL_BLUNT": "Drtivé poškození"},
@@ -47,6 +47,7 @@
       "healing": "Léčba"
     },
     "descriptions": {
+      "cooking": "Dovednost pro přípravu jídel.",
       "alchemy": "Umožňuje vyrábět lektvary a elixíry.",
       "hunting": "Lovem zvířat lze získávat kůže a materiál pro tětivy luků.",
       "lumberjacking": "Umožňuje získávat různé druhy dřeva podle úrovně dovednosti a vzácnosti stromu.",
@@ -102,6 +103,7 @@
       "classMaximumRank": "Maximální úroveň povolání"
     },
     "bonuses": {
+      "cooking": "Vyšší úrovně odemykají nové recepty.",
       "alchemy": "Zkracuje dobu výroby lektvarů o {percent}.",
       "alchemySavings": "Šetří {percent} % přísad při výrobě.",
       "lumberjackingCapacityPreservation": "Přidává bonus {percent} % k výtěžnosti stromu.",

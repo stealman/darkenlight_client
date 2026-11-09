@@ -151,7 +151,7 @@ export class PubliclyVisibleAffect {
     id: number
     p: number
 
-    constructor(id: number, p: number) {
+    constructor(id: number, p: number, public timed: boolean = true) {
         this.id = id
         this.p = p
     }

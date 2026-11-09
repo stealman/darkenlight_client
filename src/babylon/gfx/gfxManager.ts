@@ -122,14 +122,15 @@ export const GfxManager = {
         const myChar = MyPlayer.myChar
         if (myChar) {
             this.syncCharacterAffect(myChar, this.BURNING_AFFECT_ID, MyPlayer.affectGroups.some(group => group.id === this.BURNING_AFFECT_ID), activeKeys, actualTime)
-            this.syncCharacterAffect(myChar, this.SLOWING_AFFECT_ID, MyPlayer.affectGroups.some(group => group.id === this.SLOWING_AFFECT_ID), activeKeys, actualTime)
+            this.syncCharacterAffect(myChar, this.SLOWING_AFFECT_ID, MyPlayer.affectGroups.some(group => group.id === this.SLOWING_AFFECT_ID
+                && group.af.some(affect => typeof affect.data[1] === 'number' && Number.isFinite(affect.data[1]) && affect.data[1] > 0)), activeKeys, actualTime)
         }
 
         CharacterManager.visibleCharacters.forEach(id => {
             const character = CharacterManager.characters.get(id)
             if (!character) return
             this.syncCharacterAffect(character, this.BURNING_AFFECT_ID, character.publiclyVisibleAffects.has(this.BURNING_AFFECT_ID), activeKeys, actualTime)
-            this.syncCharacterAffect(character, this.SLOWING_AFFECT_ID, character.publiclyVisibleAffects.has(this.SLOWING_AFFECT_ID), activeKeys, actualTime)
+            this.syncCharacterAffect(character, this.SLOWING_AFFECT_ID, character.publiclyVisibleAffects.get(this.SLOWING_AFFECT_ID)?.timed === true, activeKeys, actualTime)
         })
 
         this.cleanupInactiveCharacterAffects(activeKeys, actualTime)

@@ -303,6 +303,12 @@ export const MyStatusPanel = {
 
         if (affectGroup.id === 2) {
             const mealPower = affectGroup.af.find((affect) => affect.data[0] === 2)?.data[2] ?? affectGroup.p
+            rows.push({
+                label: t('affects.experienceGain'),
+                value: t('affects.restingRegenerationValue', {total: mealPower > 0 ? 5 + (mealPower - 1) * 2.5 : 0}),
+                separator: '',
+                className: 'ui-tooltip-row--meal-experience',
+            })
             const mealBonuses = [
                 {labelKey: 'affects.healthRegeneration', valueKey: 'affects.restingRegenerationValue', percentPerPower: 50},
                 {labelKey: 'affects.autoAttackStaminaCost', valueKey: 'affects.mealStaminaCostValue', percentPerPower: 10},

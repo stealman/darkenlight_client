@@ -845,11 +845,11 @@ class Character implements Attackable, EffectTarget {
         Connector.sendMoveMessage(new MyCharMoveMsg())
     }
 
-    consumePubliclyVisibleAffects(affects: [{tp: number, p: number}]) {
+    consumePubliclyVisibleAffects(affects: [{tp: number, p: number, timed?: boolean}]) {
         this.publiclyVisibleAffects.clear()
         affects.forEach(aff => {
             if (aff.p > 0) {
-                this.publiclyVisibleAffects.set(aff.tp, new PubliclyVisibleAffect(aff.tp, aff.p))
+                this.publiclyVisibleAffects.set(aff.tp, new PubliclyVisibleAffect(aff.tp, aff.p, aff.timed))
             }
         })
     }

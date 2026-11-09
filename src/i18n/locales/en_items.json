@@ -228,6 +228,7 @@
 
 
     "resourceDescriptions": {
+      "cookingIngredient": "Cooking ingredient",
       "processedLeather": "Processed leather ready for crafting leather armor.",
       "emptyPotion": "An empty bottle that can be filled with potions.",
       "ingredient": "An ingredient for potions and spells.",
@@ -336,6 +337,16 @@
       "shear-sheep": "Shear sheep",
 
       "steak": "Steak",
+      "bread-with-cheese": "Bread with Cheese",
+      "steak-with-potatoes": "Steak with Potatoes",
+      "salt": "Salt",
+      "bread": "Bread",
+      "potatoes": "Potatoes",
+      "milk": "Milk",
+      "cheese": "Cheese",
+      "cheap-spices": "Cheap Spices",
+      "exclusive-spices": "Exclusive Spices",
+      "onion": "Onion",
 
       "small-healing-potion": "Small Healing Potion",
       "healing-potion": "Healing Potion",

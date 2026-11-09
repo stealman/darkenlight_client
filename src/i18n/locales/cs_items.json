@@ -228,6 +228,7 @@
 
 
         "resourceDescriptions": {
+            "cookingIngredient": "Surovina pro vaření",
             "processedLeather": "Zpracovaná kůže připravená pro výrobu koženého brnění.",
             "emptyPotion": "Prázdná láhev, do které se dají načepovat lektvary.",
       "ingredient": "Přísada pro lektvary a kouzla.",
@@ -336,6 +337,16 @@
             "shear-sheep": "Ostříhat ovci",
 
             "steak": "Steak",
+            "bread-with-cheese": "Chléb se sýrem",
+            "steak-with-potatoes": "Steak s bramborem",
+            "salt": "Sůl",
+            "bread": "Chléb",
+            "potatoes": "Brambory",
+            "milk": "Mléko",
+            "cheese": "Sýr",
+            "cheap-spices": "Levné koření",
+            "exclusive-spices": "Exkluzivní koření",
+            "onion": "Cibule",
 
             "small-healing-potion": "Malý Lektvar Zdraví",
             "healing-potion": "Lektvar Zdraví",

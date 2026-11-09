@@ -1,5 +1,6 @@
 {
   "affects": {
+    "experienceGain": "Získané zkušenosti",
     "restingName": "Odpočinek",
     "restingDescription": "Zvyšuje regeneraci zdraví, many a únavy",
     "healthRegeneration": "Regenerace zdraví",

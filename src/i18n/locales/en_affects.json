@@ -1,5 +1,6 @@
 {
   "affects": {
+    "experienceGain": "Experience gained",
     "restingName": "Resting",
     "restingDescription": "Increases health, mana and stamina regeneration",
     "healthRegeneration": "Health regeneration",

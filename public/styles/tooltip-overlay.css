@@ -194,6 +194,8 @@
 
 .ui-tooltip-row--huntable .ui-tooltip-row-value,
 .ui-tooltip-row--experience .ui-tooltip-row-label,
+.ui-tooltip-row--meal-experience .ui-tooltip-row-label,
+.ui-tooltip-row--meal-experience .ui-tooltip-row-value,
 .ui-tooltip-row--experience .ui-tooltip-row-value {
     color: rgb(var(--ui-success));
 }

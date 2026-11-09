@@ -452,7 +452,7 @@ export const CharacterManager = {
             return
         }
         if (data.p > 0) {
-            char.publiclyVisibleAffects.set(data.id, new PubliclyVisibleAffect(data.id, data.p))
+            char.publiclyVisibleAffects.set(data.id, new PubliclyVisibleAffect(data.id, data.p, data.timed))
         } else {
             char.publiclyVisibleAffects.delete(data.id)
         }
