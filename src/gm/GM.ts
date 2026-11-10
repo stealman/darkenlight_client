@@ -1,5 +1,5 @@
 import { Connector } from '@/network/connector'
-import { GMNoAggroMsg, GMBotAction, GMBuildingChange, GMCreateItemMsg, GMDayNightCycleMsg, GMEquipmentDecorationChange, GMForceSaveDataMsg, GMGenerateBiomeMsg, GMLoadItemCodebookMsg, GMLoadWorldMapImageMsg, GMLoadWorldSettingsMsg, GMLoadWorldsMsg, GMNpcAction, GMSaveMapDataMsg, GMSaveWorldMapHeightChangesMsg, GMSaveWorldMapSurfaceChangesMsg, GMSaveWorldMapTerrainChangesMsg, GMSaveWorldSettingsMsg, GMStaticDeleteInfoRequest, GMStaticObjectChange, GMTeleportMsg, GMTerrainChange } from '@/network/messages'
+import { GMFastModeMsg, GMNoAggroMsg, GMBotAction, GMBuildingChange, GMCreateItemMsg, GMDayNightCycleMsg, GMEquipmentDecorationChange, GMForceSaveDataMsg, GMGenerateBiomeMsg, GMLoadItemCodebookMsg, GMLoadWorldMapImageMsg, GMLoadWorldSettingsMsg, GMLoadWorldsMsg, GMNpcAction, GMSaveMapDataMsg, GMSaveWorldMapHeightChangesMsg, GMSaveWorldMapSurfaceChangesMsg, GMSaveWorldMapTerrainChangesMsg, GMSaveWorldSettingsMsg, GMStaticDeleteInfoRequest, GMStaticObjectChange, GMTeleportMsg, GMTerrainChange } from '@/network/messages'
 import { GMBotStatusData, GMExistingBotsData, GMItemCodebookItem, GMStaticDeleteInfoData, GMWorldBiomeTreesChangedData, GMWorldMapImageData, GMWorldSettingsData, GMWorldsData } from '@/network/messageIfs'
 import { WorldAreaPreview } from '@/gm/worldAreaPreview'
 import { GMSceneManager } from '@/babylon/gm/GmSceneManager'
@@ -122,6 +122,13 @@ export const GMManager = {
         this.saveMapData()
         this.pendingTerrainNavigation.value = null
         action?.()
+    },
+    fastMode: ref(false),
+
+    setFastMode(enabled: boolean) {
+        if (MyPlayer.myChar?.className !== 'GM') return
+        this.fastMode.value = enabled
+        Connector.sendMessage(new GMFastModeMsg({enabled}))
     },
     noAggro: ref(false),
 

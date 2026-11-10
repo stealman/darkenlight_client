@@ -351,7 +351,8 @@ export const TooltipOverlayManager = {
     },
 
     onDocumentKeyDown(event: KeyboardEvent) {
-        if (event.key === 'Escape') {
+        if (event.key === 'Escape' && TooltipOverlayManager.visible) {
+            event.preventDefault()
             TooltipOverlayManager.hide()
         }
     },

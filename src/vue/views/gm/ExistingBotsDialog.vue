@@ -47,6 +47,7 @@
                             <strong>{{ bot.state }}</strong>
                             <span>Action: {{ bot.action || 'none' }}</span>
                             <span>Goal: {{ bot.plan?.goal || 'none' }}</span>
+                            <small v-if="bot.plan?.woodland">Woodland {{ bot.plan.woodland.key }} at {{ point(bot.plan.woodland) }}</small>
                             <small v-if="bot.plan?.spawn">Spawn #{{ bot.plan.spawn.id }} at {{ point(bot.plan.spawn) }}</small>
                             <small v-if="bot.plan?.monster">Target {{ bot.plan.monster.name }} #{{ bot.plan.monster.id }} at {{ point(bot.plan.monster) }}</small>
                             <small v-if="bot.plan?.retreatDestination">Retreat to {{ point(bot.plan.retreatDestination) }}</small>
@@ -67,10 +68,11 @@
                             <small v-if="bot.movement?.target">Server target {{ point(bot.movement.target) }} (+{{ bot.movement.queuedWaypoints }})</small>
                             <small v-if="bot.navigation?.backtrackTarget">Backtrack {{ point(bot.navigation.backtrackTarget) }}</small>
                             <small>Failed plans {{ bot.navigation?.failedPlans ?? 0 }} · trail {{ bot.navigation?.trailPoints ?? 0 }}</small>
-                            <small v-if="bot.journey">Journey {{ bot.journey.from }} → {{ bot.journey.to }} ({{ bot.journey.breadcrumbs }})</small>
+                            <small v-if="bot.journey">Journey {{ bot.journey.from }} → {{ bot.journey.to }}</small>
                         </td>
                         <td>
-                            <span>Routes {{ bot.memory?.routes ?? 0 }} · links {{ bot.memory?.spawnLinks ?? 0 }}</span>
+                            <span>Risky sections {{ bot.memory?.routeFailures ?? 0 }} · avoided {{ bot.memory?.avoidedSections ?? 0 }}</span>
+                            <small v-if="bot.memory?.nextRetrySeconds">Next retry in {{ Math.ceil(bot.memory.nextRetrySeconds / 60) }} min</small>
                             <small>Healer {{ bot.home?.healerId ?? 'none' }}</small>
                             <small>Guard safe {{ bot.home?.guardSafePoint ? point(bot.home.guardSafePoint) : 'none' }}</small>
                             <small>Fireplace {{ bot.home?.fireplace ? point(bot.home.fireplace) : 'none' }}</small>

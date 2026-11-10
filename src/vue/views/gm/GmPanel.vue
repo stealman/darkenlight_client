@@ -38,6 +38,7 @@
                 </div>
             </details>
             <label><input type="checkbox" :checked="GMManager.noAggro.value" @change="GMManager.setNoAggro($event.target.checked)"> Do not aggro</label>
+            <div><label><input type="checkbox" :checked="GMManager.fastMode.value" @change="GMManager.setFastMode($event.target.checked)"> Fast mode</label></div>
         </div>
 
         <!-- Terrain -->

@@ -19,6 +19,8 @@
             </div>
             <fieldset v-if="editor.draft" :disabled="editor.busy" class="areas-properties">
                 <label>Name <input v-model="editor.draft.name" maxlength="80"></label>
+                <label class="areas-checkbox"><input v-model="editor.draft.safeSpot" type="checkbox"> Safe spot</label>
+                <label class="areas-checkbox"><input v-model="editor.draft.navigationRegion" type="checkbox"> Separate navigation region</label>
                 <label>Parent area
                     <select v-model="editor.draft.parentId">
                         <option :value="undefined">None (root area)</option>
@@ -309,6 +311,8 @@ defineExpose({canLeave, showSelectedPreview})
 .areas-sidebar { display: flex; flex-direction: column; gap: 10px; min-height: 0; overflow-y: auto; padding: 6px; }
 .areas-sidebar label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
 .areas-sidebar input, .areas-sidebar select { width: 100%; box-sizing: border-box; }
+.areas-sidebar .areas-checkbox { flex-direction: row; align-items: center; }
+.areas-sidebar .areas-checkbox input { width: auto; }
 .areas-actions { display: flex; flex-wrap: wrap; gap: 5px; }
 .areas-tree { min-height: 90px; max-height: 26vh; overflow: auto; border: 1px solid var(--ui-field-border); }
 .world-areas .areas-tree-row { display: block; width: 100%; border: 0; padding: 7px; text-align: left; background: transparent; color: rgb(var(--gui-gold)); cursor: pointer; }

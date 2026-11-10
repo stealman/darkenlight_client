@@ -707,6 +707,26 @@ const onKeyDown = (event: KeyboardEvent) => {
             return
         }
     }
+    if (event.key === 'Escape') {
+        if (event.repeat || event.defaultPrevented) return
+        const target = event.target as HTMLElement | null
+        const editing = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement
+            || target instanceof HTMLSelectElement || target?.isContentEditable
+        const dialogOpen = Array.from(document.querySelectorAll<HTMLElement>('.dialog-backdrop'))
+            .some(dialog => dialog.getClientRects().length > 0)
+        const actionActive = MyPlayer.activeAction || TargetingManager.selectedTarget
+            || MyPlayer.powerStrikeQueued || MyPlayer.preciseShotQueued
+            || MyPlayer.myChar?.autoAttackTarget || MyPlayer.myChar?.getMoveAngle() != null
+        if (gameSessionActive.value && !isDead.value && !editing && !dialogOpen && !gmPanelVisible.value && !actionActive) {
+            // Let the remaining key handlers consume Escape before opening settings.
+            window.setTimeout(() => {
+                if (!event.defaultPrevented && gameSessionActive.value && !isDead.value) {
+                    showSettingsDialog()
+                }
+            }, 0)
+            return
+        }
+    }
     Controller.processKeydown(event)
 }
 

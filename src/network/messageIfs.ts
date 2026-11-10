@@ -483,6 +483,7 @@ export interface GMBotStatusData {
     movement?: {type: string | null, speed: number, target: {x: number, z: number} | null, queuedWaypoints: number}
     plan?: {
         goal: string | null
+        woodland?: {key: string, x: number, z: number} | null
         remainingSeconds: number
         spawn: {id: number, x: number, z: number} | null
         monster: {id: number, name: string, x: number, z: number} | null
@@ -496,10 +497,10 @@ export interface GMBotStatusData {
         failedPlans: number
         trailPoints: number
     }
-    journey?: {from: string, to: string, breadcrumbs: number} | null
+    journey?: {from: string, to: string} | null
     supplies?: {bandages: number, emeralds: number}
     equipment?: Array<{slot: string, name: string, cbId: number, durability: number | null, maxDurability: number | null}>
-    memory?: {routes: number, spawnLinks: number}
+    memory?: {routeFailures: number, avoidedSections: number, nextRetrySeconds: number}
     home?: {
         healerId: number | null
         guardSafePoint: {x: number, z: number} | null

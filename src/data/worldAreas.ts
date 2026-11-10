@@ -2,6 +2,8 @@ export interface WorldArea {
     id: number
     name: string
     parentId?: number
+    safeSpot?: boolean
+    navigationRegion?: boolean
     /** Alternating world X/Z coordinates; closing vertex is implicit. */
     points: number[]
 }
@@ -126,7 +128,11 @@ export function validateWorldAreas(input: unknown, size: number): WorldArea[] {
             }
         }
         if (Math.abs(signedArea(points)) < 0.0625) throw new Error(`${name}: polygon has no usable area.`)
-        return {id: value.id, name, ...(value.parentId === undefined ? {} : {parentId: value.parentId}), points: [...points]}
+        if (value.safeSpot !== undefined && typeof value.safeSpot !== 'boolean') throw new Error(`${name}: safe spot must be a boolean.`)
+        if (value.navigationRegion !== undefined && typeof value.navigationRegion !== 'boolean') throw new Error(`${name}: navigation region must be a boolean.`)
+        return {id: value.id, name, ...(value.parentId === undefined ? {} : {parentId: value.parentId}),
+            ...(value.safeSpot === true ? {safeSpot: true} : {}),
+            ...(value.navigationRegion === true ? {navigationRegion: true} : {}), points: [...points]}
     })
     const byId = new Map(areas.map(a => [a.id, a]))
     for (const area of areas) {
@@ -169,5 +175,8 @@ export class WorldAreaIndex {
         let area = this.getAt(x, z)
         while (area) { result.push(area); area = this.byId.get(area.parentId!) ?? null }
         return result.reverse()
+    }
+    getNavigationRegionAt(x: number, z: number): number | null {
+        return this.getChainAt(x, z).reverse().find(area => area.navigationRegion)?.id ?? null
     }
 }

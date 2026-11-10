@@ -57,6 +57,27 @@ function isTauriDesktop(): boolean {
 /**
  * Main Renderer
  */
+// Keyboard Lock keeps a short Escape press available to the game in browser fullscreen.
+// Browsers retain their long-press escape hatch and may require user permission.
+let fullscreenKeyboardListenerInstalled = false
+const installFullscreenKeyboardLock = () => {
+    if (fullscreenKeyboardListenerInstalled) return
+    const keyboard = (navigator as Navigator & {
+        keyboard?: {lock(keys: string[]): Promise<void>, unlock(): void}
+    }).keyboard
+    if (!keyboard?.lock) return
+    fullscreenKeyboardListenerInstalled = true
+    screenFull.on('change', () => {
+        if (screenFull.isFullscreen) {
+            void keyboard.lock(['Escape']).catch(() => {
+                // Fullscreen remains usable when permission is denied.
+            })
+        } else {
+            keyboard.unlock()
+        }
+    })
+}
+
 export const Renderer = {
     canvas: null as HTMLCanvasElement | null,
     scene: null as Scene,
@@ -418,6 +439,7 @@ export const Renderer = {
             return
         }
         if (screenFull.request) {
+            installFullscreenKeyboardLock()
             await screenFull.request()
         }
     },
@@ -428,6 +450,7 @@ export const Renderer = {
             return
         }
         if (screenFull.toggle) {
+            installFullscreenKeyboardLock()
             await screenFull.toggle()
         }
     },
