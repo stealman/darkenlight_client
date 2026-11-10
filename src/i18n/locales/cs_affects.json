@@ -1,5 +1,9 @@
 {
   "affects": {
+    "manaCost": "Spotřeba many",
+    "mealDescription": "Dobré jídlo dodá sílu na další cestu.",
+    "duration": "Doba trvání",
+    "durationMinutes": "{minutes} minut",
     "experienceGain": "Získané zkušenosti",
     "restingName": "Odpočinek",
     "restingDescription": "Zvyšuje regeneraci zdraví, many a únavy",

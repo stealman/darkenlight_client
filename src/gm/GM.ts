@@ -1276,6 +1276,9 @@ export const GMManager = {
                         metalArmor: [...(feature.settings?.individualItems?.metalArmor ?? [])],
                         leatherArmor: [...(feature.settings?.individualItems?.leatherArmor ?? [])],
                         resources: [...(feature.settings?.individualItems?.resources ?? [])],
+                        potions: [...(feature.settings?.individualItems?.potions ?? [])],
+                        food: [...(feature.settings?.individualItems?.food ?? [])],
+                        ingredients: [...(feature.settings?.individualItems?.ingredients ?? [])],
                     },
                 } : feature.type === 'crafting'
                     ? {itemCategories: [...(feature.settings?.itemCategories ?? [])]}

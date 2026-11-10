@@ -54,6 +54,8 @@ export class ClientAffectGroup {
     }
 
     getLocalizedName() {
+        const meal = this.af.find(affect => affect.data[0] === 2)?.meal
+        if (meal) return t(`items.resources.${meal.name}`)
         return this.getDefinition()?.getNameLocalized() ?? `Affect group ${this.id}`
     }
 
@@ -69,11 +71,14 @@ export class ClientAffectGroup {
     }
 
     getImageUrl() {
+        const meal = this.af.find(affect => affect.data[0] === 2)?.meal
+        if (meal) return `/images/items/resources/${meal.image}.png`
         return this.getDefinition()?.getImageUrl() ?? ''
     }
 
     getPowerLabel() {
         const nameKey = this.getDefinition()?.nameKey
+        if (nameKey === 'meal') return ''
         if (nameKey === 'resting') {
             const level = this.getIconBadgeLabel()
             return level === null ? '' : `(${level})`

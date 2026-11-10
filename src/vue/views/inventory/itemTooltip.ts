@@ -2,6 +2,7 @@ import type {Item} from '@/data/items/item'
 import type {ItemTO} from '@/network/messageIfs'
 import {t} from '@/i18n'
 import {getResourceDescription} from '@/data/items/resourceDescriptions'
+import {getMealBonusRows, mealBonusKeys} from '@/data/items/mealBonuses'
 
 type ItemTooltipSource = Item | ItemTO
 
@@ -43,7 +44,13 @@ export const getItemTooltipData = (item: ItemTooltipSource) => {
 
     return {
     name: item.name || t('inventory.unknownItem'),
-    description: itemType === 'R' ? getResourceDescription(cbId) : null,
+    description: itemType === 'R' && getAttribute(item, 'meal_duration')
+        ? t('affects.mealDescription')
+        : itemType === 'R' ? getResourceDescription(cbId) : null,
+    mealRows: itemType === 'R' ? getMealBonusRows({
+        duration: Number(getAttribute(item, 'meal_duration')),
+        ...Object.fromEntries(mealBonusKeys.map(key => [key, Number(getAttribute(item, `meal_${key}`))])),
+    }) : [],
     id: item.id ?? null,
     cbId: cbId ?? null,
     quality: getAttribute(item, 'qual'),

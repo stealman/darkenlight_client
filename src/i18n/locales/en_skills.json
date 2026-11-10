@@ -103,9 +103,10 @@
       "classMaximumRank": "Class maximum level"
     },
     "bonuses": {
-      "cooking": "Higher ranks unlock new recipes.",
+      "cooking": "Reduces cooking time by {percent}.",
       "alchemy": "Reduces potion crafting time by {percent}.",
       "alchemySavings": "Saves {percent}% of crafting ingredients.",
+      "cookingSavings": "Saves {percent}% of cooking resources.",
       "lumberjackingCapacityPreservation": "Adds a {percent}% bonus to tree yield.",
       "lumberjackingMaxWood": "Allows harvesting wood up to {wood}.",
       "miningMaxOre": "Allows mining ores up to {ore} and recognizing deposit rarity based on your skill rank.",

@@ -316,8 +316,23 @@ export interface AffectGroupData {
 }
 
 export interface AffectData {
+    meal?: MealData
     level?: number
     data: number[] // [typeId, duration, power]
+}
+
+export interface MealData {
+    itemId: number
+    category: 'CATEGORY_1' | 'CATEGORY_2'
+    level: number
+    image: string
+    name: string
+    duration: number
+    hpRegen: number
+    mpRegen: number
+    staminaReduction: number
+    manaReduction: number
+    experience: number
 }
 
 export interface PubliclyVisibleAffectData {

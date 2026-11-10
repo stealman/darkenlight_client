@@ -2,6 +2,7 @@ import { MyPlayer } from '@/data/myPlayer'
 import { ClientAffectGroup } from '@/data/affects'
 import { TooltipOverlayContent, TooltipOverlayManager } from '@/gui/tooltipOverlayManager'
 import { t } from '@/i18n'
+import {getMealBonusRows} from '@/data/items/mealBonuses'
 
 export const MyStatusPanel = {
     myStatusTooltipOwnerKey: 'my-status-panel' as string,
@@ -302,27 +303,8 @@ export const MyStatusPanel = {
         }
 
         if (affectGroup.id === 2) {
-            const mealPower = affectGroup.af.find((affect) => affect.data[0] === 2)?.data[2] ?? affectGroup.p
-            rows.push({
-                label: t('affects.experienceGain'),
-                value: t('affects.restingRegenerationValue', {total: mealPower > 0 ? 5 + (mealPower - 1) * 2.5 : 0}),
-                separator: '',
-                className: 'ui-tooltip-row--meal-experience',
-            })
-            const mealBonuses = [
-                {labelKey: 'affects.healthRegeneration', valueKey: 'affects.restingRegenerationValue', percentPerPower: 50},
-                {labelKey: 'affects.autoAttackStaminaCost', valueKey: 'affects.mealStaminaCostValue', percentPerPower: 10},
-            ]
-
-            for (const bonus of mealBonuses) {
-                rows.push({
-                    label: t(bonus.labelKey),
-                    value: t(bonus.valueKey, {
-                        total: Math.round(bonus.percentPerPower * mealPower),
-                    }),
-                    separator: '',
-                })
-            }
+            const meal = affectGroup.af.find(affect => affect.data[0] === 2)?.meal
+            if (meal) rows.push(...getMealBonusRows(meal, false))
         }
 
         return {

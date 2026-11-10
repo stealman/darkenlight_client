@@ -5,6 +5,7 @@ import fs from 'node:fs'
 import path from 'path'
 import { collectModelAssets } from './build/modelAssets.cjs'
 import { adminMonsterNamesPlugin } from './build/adminMonsterNames.cjs'
+import { collectUiImages } from './build/uiImages.cjs'
 
 function collectPngEntries(directory, publicPath) {
     return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -18,15 +19,13 @@ function collectPngEntries(directory, publicPath) {
             return []
         }
 
-        const stats = fs.statSync(entryPath)
         return [{
             imagePath: entryPublicPath,
-            version: `${stats.size}-${Math.trunc(stats.mtimeMs)}`,
         }]
     })
 }
 
-export default defineConfig(({ mode, command }) => {
+export default defineConfig(async ({ mode, command }) => {
     const isTauriBuild = mode === 'tauri'
     const modelAssets = command === 'build'
         ? collectModelAssets(path.resolve(__dirname, 'public/models'))
@@ -41,7 +40,9 @@ export default defineConfig(({ mode, command }) => {
         ...armorImageEntries,
     ]
     const pixelatedImagePaths = pixelatedImageEntries.map(({ imagePath }) => imagePath)
-    const pixelatedImageVersions = Object.fromEntries(pixelatedImageEntries.map(({ imagePath, version }) => [imagePath, version]))
+    const uiImages = command === 'build'
+        ? await collectUiImages(path.resolve(__dirname, 'public'), pixelatedImageEntries)
+        : {urls: {}, files: []}
 
     return {
     base: '/',
@@ -49,7 +50,7 @@ export default defineConfig(({ mode, command }) => {
         __CLIENT_BUILD_ID__: JSON.stringify(new Date().toISOString()),
         __MODEL_ASSET_URLS__: JSON.stringify(modelAssets.urls),
         __PIXELATED_IMAGE_PATHS__: JSON.stringify(pixelatedImagePaths),
-        __PIXELATED_IMAGE_VERSIONS__: JSON.stringify(pixelatedImageVersions),
+        __UI_IMAGE_URLS__: JSON.stringify(uiImages.urls),
     },
     plugins: [
         adminMonsterNamesPlugin(path.resolve(__dirname, '../../server/darkenlight_server/src/monster/monstersCb.ts')),
@@ -57,6 +58,9 @@ export default defineConfig(({ mode, command }) => {
         {
             name: 'versioned-model-assets',
             generateBundle() {
+                for (const asset of uiImages.files) {
+                    this.emitFile({type: 'asset', fileName: asset.fileName, source: asset.source})
+                }
                 for (const asset of modelAssets.files) {
                     this.emitFile({ type: 'asset', fileName: asset.fileName, source: asset.source })
                 }

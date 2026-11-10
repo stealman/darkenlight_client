@@ -18,6 +18,9 @@
         </div>
 
         <p v-if="itemInfo.description" class="item-resource-description">{{ itemInfo.description }}</p>
+        <div v-if="itemInfo.mealRows?.length" class="inventory-item-overlay-stats">
+            <span v-for="row in itemInfo.mealRows" :key="row.label" :class="row.className">{{ row.label }} <strong :class="{'ui-text-gradient': row.className !== 'ui-tooltip-row--meal-experience'}">{{ row.value }}</strong></span>
+        </div>
 
         <div v-if="itemInfo.quality || equipmentCategoryLabel" class="inventory-item-overlay-status-row">
             <div v-if="itemInfo.quality" :class="['inventory-item-overlay-dur', durabilityStatusClass]">{{ t('inventory.durability') }}: <strong>{{ itemInfo.durabilityDisplay ?? `${itemInfo.durability} / ${itemInfo.durabilityMax}` }}</strong></div>
@@ -435,4 +438,16 @@ defineExpose({
 })
 </script>
 
-<style scoped></style>
+<style scoped>
+.ui-tooltip-row--meal-duration,
+.ui-tooltip-row--meal-experience,
+.ui-tooltip-row--meal-duration + span,
+.ui-tooltip-row--meal-experience + span {
+    grid-column: 1;
+}
+
+.ui-tooltip-row--meal-experience,
+.ui-tooltip-row--meal-experience strong {
+    color: rgb(var(--ui-success));
+}
+</style>

@@ -5,9 +5,6 @@ const PIXELATED_PATH_PREFIXES = [
 ]
 const ARMOR_IMAGE_PATH_PREFIX = '/images/items/armor/'
 const IMAGE_URL_PATTERN = /url\(\s*(['"]?)(.*?)\1\s*\)/g
-const PROCESSED_PNG_CACHE_VERSION = 2
-const PROCESSED_PNG_DATABASE_NAME = 'darkenlight-ui-image-cache'
-const PROCESSED_PNG_STORE_NAME = 'processedPngs'
 
 type ProcessedPngUrls = {
     pixelatedUrl: string
@@ -17,10 +14,6 @@ type ProcessedPngBlobs = {
     pixelatedBlob: Blob
     smoothBlob: Blob
 }
-type CachedProcessedPng = ProcessedPngBlobs & {
-    imagePath: string
-    signature: string
-}
 export const UiIconManager = {
     pixelatedUrls: new Map<string, string>(),
     smoothUrls: new Map<string, string>(),
@@ -28,7 +21,6 @@ export const UiIconManager = {
     styleChangeListeners: new Set<() => void>(),
     pixelatedEnabled: false,
     domObserver: null as MutationObserver | null,
-    cacheDatabasePromise: null as Promise<IDBDatabase | null> | null,
 
     async initialize(
         pixelated: boolean,
@@ -39,6 +31,14 @@ export const UiIconManager = {
         this.stopDomObserver()
         this.revokeProcessedUrls()
         this.pixelatedEnabled = pixelated
+
+        if (import.meta.env.PROD) {
+            for (const [imagePath, urls] of Object.entries(__UI_IMAGE_URLS__)) this.storeProcessedPngUrls(imagePath, urls)
+            onProgress?.(__PIXELATED_IMAGE_PATHS__.length, __PIXELATED_IMAGE_PATHS__.length)
+            this.applyToSubtree(document.documentElement)
+            this.startDomObserver()
+            return
+        }
 
         if (!Number.isFinite(pixelSize) || pixelSize <= 1) {
             throw new Error(`UI image pixel size must be greater than one, received ${pixelSize}`)
@@ -97,6 +97,8 @@ export const UiIconManager = {
         this.smoothUrls.set(imagePath, smoothUrl)
         this.sourcePathsByProcessedUrl.set(pixelatedUrl, imagePath)
         this.sourcePathsByProcessedUrl.set(smoothUrl, imagePath)
+        this.sourcePathsByProcessedUrl.set(new URL(pixelatedUrl, window.location.href).href, imagePath)
+        this.sourcePathsByProcessedUrl.set(new URL(smoothUrl, window.location.href).href, imagePath)
     },
 
     onStyleChanged(listener: () => void): () => void {
@@ -105,16 +107,6 @@ export const UiIconManager = {
     },
 
     async createProcessedPngUrls(iconPath: string, pixelSize: number, saturation: number): Promise<ProcessedPngUrls> {
-        const signature = this.getProcessedPngSignature(iconPath, pixelSize, saturation)
-        // During asset authoring, always re-read source PNGs after a page reload.
-        // Production builds retain the persistent cache keyed by Vite's file version.
-        const cachedBlobs = import.meta.env.DEV
-            ? null
-            : await this.getCachedProcessedPng(iconPath, signature)
-        if (cachedBlobs) {
-            return this.createProcessedPngUrlsFromBlobs(cachedBlobs)
-        }
-
         const response = await fetch(iconPath, { cache: 'no-cache' })
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`)
@@ -126,9 +118,6 @@ export const UiIconManager = {
         try {
             const image = await this.loadImage(sourceObjectUrl)
             const blobs = await this.createProcessedPngBlobsFromImage(image, pixelSize, saturation)
-            if (!import.meta.env.DEV) {
-                await this.cacheProcessedPng(iconPath, signature, blobs)
-            }
             return this.createProcessedPngUrlsFromBlobs(blobs)
         } finally {
             URL.revokeObjectURL(sourceObjectUrl)
@@ -178,81 +167,6 @@ export const UiIconManager = {
             pixelatedUrl: URL.createObjectURL(pixelatedBlob),
             smoothUrl: URL.createObjectURL(smoothBlob),
         }
-    },
-
-    getProcessedPngSignature(imagePath: string, pixelSize: number, saturation: number): string {
-        return [
-            PROCESSED_PNG_CACHE_VERSION,
-            __PIXELATED_IMAGE_VERSIONS__[imagePath] ?? 'unknown-source',
-            pixelSize,
-            saturation,
-        ].join('|')
-    },
-
-    getProcessedPngCacheDatabase(): Promise<IDBDatabase | null> {
-        if (this.cacheDatabasePromise) {
-            return this.cacheDatabasePromise
-        }
-        if (!('indexedDB' in window)) {
-            this.cacheDatabasePromise = Promise.resolve(null)
-            return this.cacheDatabasePromise
-        }
-
-        this.cacheDatabasePromise = new Promise((resolve) => {
-            const request = indexedDB.open(PROCESSED_PNG_DATABASE_NAME, 1)
-            request.onupgradeneeded = () => {
-                const database = request.result
-                if (!database.objectStoreNames.contains(PROCESSED_PNG_STORE_NAME)) {
-                    database.createObjectStore(PROCESSED_PNG_STORE_NAME, { keyPath: 'imagePath' })
-                }
-            }
-            request.onsuccess = () => resolve(request.result)
-            request.onerror = () => {
-                console.warn('Persistent UI image cache is unavailable', request.error)
-                resolve(null)
-            }
-        })
-        return this.cacheDatabasePromise
-    },
-
-    async getCachedProcessedPng(imagePath: string, signature: string): Promise<ProcessedPngBlobs | null> {
-        const database = await this.getProcessedPngCacheDatabase()
-        if (!database) {
-            return null
-        }
-
-        return new Promise((resolve) => {
-            const request = database.transaction(PROCESSED_PNG_STORE_NAME, 'readonly')
-                .objectStore(PROCESSED_PNG_STORE_NAME)
-                .get(imagePath)
-            request.onsuccess = () => {
-                const cached = request.result as CachedProcessedPng | undefined
-                if (!cached || cached.signature !== signature) {
-                    resolve(null)
-                    return
-                }
-                resolve({
-                    pixelatedBlob: cached.pixelatedBlob,
-                    smoothBlob: cached.smoothBlob,
-                })
-            }
-            request.onerror = () => resolve(null)
-        })
-    },
-
-    async cacheProcessedPng(imagePath: string, signature: string, blobs: ProcessedPngBlobs): Promise<void> {
-        const database = await this.getProcessedPngCacheDatabase()
-        if (!database) {
-            return
-        }
-
-        await new Promise<void>((resolve) => {
-            const transaction = database.transaction(PROCESSED_PNG_STORE_NAME, 'readwrite')
-            transaction.objectStore(PROCESSED_PNG_STORE_NAME).put({ imagePath, signature, ...blobs })
-            transaction.oncomplete = () => resolve()
-            transaction.onerror = () => resolve()
-            transaction.onabort = () => resolve()
-        })
     },
 
     async createPngBlob(canvas: HTMLCanvasElement): Promise<Blob> {
@@ -389,7 +303,7 @@ export const UiIconManager = {
         if (element instanceof HTMLImageElement) {
             const source = element.getAttribute('src')
             const pixelatedSource = source ? this.getUrl(source) : source
-            if (source && pixelatedSource !== source) {
+            if (source && pixelatedSource && pixelatedSource !== source) {
                 element.src = pixelatedSource
                 element.style.imageRendering = this.pixelatedEnabled ? 'pixelated' : ''
             }
@@ -424,8 +338,8 @@ export const UiIconManager = {
     },
 
     revokeProcessedUrls() {
-        this.pixelatedUrls.forEach((url) => URL.revokeObjectURL(url))
-        this.smoothUrls.forEach((url) => URL.revokeObjectURL(url))
+        this.pixelatedUrls.forEach((url) => url.startsWith('blob:') && URL.revokeObjectURL(url))
+        this.smoothUrls.forEach((url) => url.startsWith('blob:') && URL.revokeObjectURL(url))
         this.pixelatedUrls.clear()
         this.smoothUrls.clear()
         this.sourcePathsByProcessedUrl.clear()

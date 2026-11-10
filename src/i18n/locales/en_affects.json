@@ -1,5 +1,9 @@
 {
   "affects": {
+    "manaCost": "Mana cost",
+    "mealDescription": "A good meal gives you strength for the journey ahead.",
+    "duration": "Duration",
+    "durationMinutes": "{minutes} minutes",
     "experienceGain": "Experience gained",
     "restingName": "Resting",
     "restingDescription": "Increases health, mana and stamina regeneration",

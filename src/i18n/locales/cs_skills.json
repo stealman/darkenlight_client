@@ -103,9 +103,10 @@
       "classMaximumRank": "Maximální úroveň povolání"
     },
     "bonuses": {
-      "cooking": "Vyšší úrovně odemykají nové recepty.",
+      "cooking": "Zkracuje dobu přípravy jídel o {percent}.",
       "alchemy": "Zkracuje dobu výroby lektvarů o {percent}.",
       "alchemySavings": "Šetří {percent} % přísad při výrobě.",
+      "cookingSavings": "Šetří {percent} % surovin při vaření.",
       "lumberjackingCapacityPreservation": "Přidává bonus {percent} % k výtěžnosti stromu.",
       "lumberjackingMaxWood": "Umožňuje získávat dřevo až po {wood}.",
       "miningMaxOre": "Umožňuje těžit rudy až po {ore} a rozpoznávat vzácnost ložiska v závislosti na úrovni dovednosti.",

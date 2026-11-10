@@ -16,9 +16,8 @@ import { WorldDataManager } from '@/data/worldDataManager'
 import { UiIconManager } from '@/gui/uiIconManager'
 import {PartyManager} from '@/data/partyManager'
 import { GMManager } from '@/gm/GM'
+import uiImageSettings from '@/gui/uiImageSettings.json'
 
-const PIXELATED_UI_IMAGE_SIZE = 1.2 // 64 px -> 46 px after rounding.
-const PIXELATED_UI_IMAGE_SATURATION = 0.7 // 0 = grayscale, 1 = original saturation.
 const UI_IMAGE_PROGRESS_START = 5
 const UI_IMAGE_PROGRESS_END = 30
 
@@ -43,11 +42,10 @@ export const GameManager = {
         Settings.initialize(storedSettings)
         setLocale(Settings.language)
 
-        // Previous stronger variant: PIXELATED_UI_IMAGE_SIZE = 2
         await UiIconManager.initialize(
             !Settings.smoothIcons,
-            PIXELATED_UI_IMAGE_SIZE,
-            PIXELATED_UI_IMAGE_SATURATION,
+            uiImageSettings.pixelSize,
+            uiImageSettings.saturation,
             (completed, total) => {
                 const ratio = total > 0 ? completed / total : 1
                 const progress = Math.floor(

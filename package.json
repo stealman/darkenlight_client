@@ -30,6 +30,7 @@
     "@babylonjs/gui": "^7.31.2",
     "@babylonjs/inspector": "^7.31.2",
     "@babylonjs/loaders": "^7.31.2",
+    "@napi-rs/canvas": "^1.1.0",
     "@tauri-apps/cli": "2.11.5",
     "@typescript-eslint/eslint-plugin": "^8.11.0",
     "@typescript-eslint/parser": "^8.11.0",
