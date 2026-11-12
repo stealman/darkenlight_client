@@ -23,6 +23,19 @@ test('build emits deterministic PNG variants, retaining transparency and the arm
         fs.mkdirSync(path.dirname(target), {recursive: true})
         fs.writeFileSync(target, canvas.toBuffer('image/png'))
     }
+    const weaponPath = '/images/items/weapons/test.png'
+    const weaponFile = path.join(directory, weaponPath.slice(1))
+    fs.mkdirSync(path.dirname(weaponFile), {recursive: true})
+    fs.writeFileSync(weaponFile, canvas.toBuffer('image/png'))
+    const originals = [{imagePath: weaponPath}]
+    const versioned = await collectUiImages(directory, [], originals)
+    const weaponUrl = versioned.urls[weaponPath].smoothUrl
+    assert.equal(weaponUrl, versioned.urls[weaponPath].pixelatedUrl)
+    assert.deepEqual(versioned.files[0].source, fs.readFileSync(weaponFile))
+    context.fillStyle = '#00ff00'
+    context.fillRect(0, 0, 1, 1)
+    fs.writeFileSync(weaponFile, canvas.toBuffer('image/png'))
+    assert.notEqual((await collectUiImages(directory, [], originals)).urls[weaponPath].smoothUrl, weaponUrl)
     const result = await collectUiImages(directory, entries)
     assert.deepEqual((await collectUiImages(directory, entries)).urls, result.urls)
     for (const {imagePath} of entries) {

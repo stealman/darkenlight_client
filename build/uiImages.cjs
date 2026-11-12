@@ -4,7 +4,7 @@ const {createHash} = require('node:crypto')
 const {createCanvas, loadImage} = require('@napi-rs/canvas')
 const settings = require('../src/gui/uiImageSettings.json')
 
-async function collectUiImages(publicDirectory, entries) {
+async function collectUiImages(publicDirectory, entries, originalEntries = []) {
     if (!Number.isFinite(settings.pixelSize) || settings.pixelSize <= 1) throw new Error('UI pixel size must be greater than one')
     if (!Number.isFinite(settings.saturation) || settings.saturation < 0) throw new Error('UI saturation must be zero or greater')
     const urls = {}
@@ -71,6 +71,10 @@ async function collectUiImages(publicDirectory, entries) {
             context.drawImage(scaled, 0, 0, scaled.width, scaled.height, 0, 0, canvas.width, canvas.height)
         }
         urls[imagePath] = {smoothUrl, pixelatedUrl: emit(await canvas.encode('png'))}
+    }
+    for (const {imagePath} of originalEntries) {
+        const url = emit(fs.readFileSync(path.join(publicDirectory, imagePath.slice(1))))
+        urls[imagePath] = {smoothUrl: url, pixelatedUrl: url}
     }
     return {urls, files: [...files.values()]}
 }

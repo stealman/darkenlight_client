@@ -2,6 +2,7 @@ const PIXELATED_PATH_PREFIXES = [
     '/images/icons/',
     '/images/items/resources/',
     '/images/items/armor/',
+    '/images/items/weapons/',
 ]
 const ARMOR_IMAGE_PATH_PREFIX = '/images/items/armor/'
 const IMAGE_URL_PATTERN = /url\(\s*(['"]?)(.*?)\1\s*\)/g

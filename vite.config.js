@@ -41,7 +41,8 @@ export default defineConfig(async ({ mode, command }) => {
     ]
     const pixelatedImagePaths = pixelatedImageEntries.map(({ imagePath }) => imagePath)
     const uiImages = command === 'build'
-        ? await collectUiImages(path.resolve(__dirname, 'public'), pixelatedImageEntries)
+        ? await collectUiImages(path.resolve(__dirname, 'public'), pixelatedImageEntries,
+            collectPngEntries(path.resolve(__dirname, 'public/images/items/weapons'), '/images/items/weapons'))
         : {urls: {}, files: []}
 
     return {
