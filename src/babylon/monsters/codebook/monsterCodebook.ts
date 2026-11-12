@@ -15,7 +15,7 @@ export const MonsterCodebook = {
 
     initializeEquipAndAnimations(model: MonsterModel) {
         // Skeleton and kobold templates share bones and animation ranges
-        if ([1, 21, 41, 42].includes(model.type.templateId)) {
+        if ([1, 21, 41, 42, 43].includes(model.type.templateId)) {
             MonsterBonesAnims.initSkeleton(model)
         }
 
@@ -157,6 +157,7 @@ export const MonsterGroups = {
     ZOMBIE: new MonsterGroup(30, 'Zombie'),
     WIGHTS: new MonsterGroup(40, 'Wights'),
     KOBOLDS: new MonsterGroup(50, 'Kobolds'),
+    KOBOLDS_2: new MonsterGroup(51, 'Kobolds_2'),
     CAT: new MonsterGroup(1000, 'Cat'),
     DEERS: new MonsterGroup(1100, 'Deers', true),
     SHEEPS: new MonsterGroup(1200, 'Sheeps'),
@@ -338,6 +339,23 @@ export const MonsterTypes = {
         null,
         MonsterSoundTypes.ZOMBIE,
         MonsterAATypes.RANGED_ARROW,
+    ),
+
+    KOBOLD_WARRIOR: new MonsterType(
+        72,
+        MonsterGroups.KOBOLDS_2,
+        43,
+        0.6,
+        1.8,
+        3,
+        new MonsterEquipData([EquipSlotModelsCb.BROADSWORD.modelId], 1, null, new Vector3(-0.15, -0.12, -0.03), 0),
+        null,
+        null,
+        WeaponSoundTypes.SWORD,
+        BodySoundTypes.HARD,
+        WeaponSoundTypes.SWORD,
+        MonsterSoundTypes.ZOMBIE,
+        null,
     ),
 
     // WITHER MELEE

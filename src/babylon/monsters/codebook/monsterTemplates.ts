@@ -189,6 +189,7 @@ export const MonsterTemplates = {
     ZOMBIE_MUTANT: new MonsterTemplate(13, 'zombie', 'zombie_mutant', 'zombie_normal', 0.48, null, 1.4),
     KOBOLD: new MonsterTemplate(41, 'kobold', 'kobold', null, 0.46, null, 1.4),
     KOBOLD_HUNTER: new MonsterTemplate(42, 'kobold', 'kobold_brown', null, 0.46, null, 1.4),
+    KOBOLD_2: new MonsterTemplate(43, 'kobold_2', 'kobold_2', null, 0.46, null, 1.4),
     WIGHT: new MonsterTemplate(31, 'wraith', 'wight', null, 0.6, 'wight_em'),
     // WRAITH: new MonsterTemplate(32, 'wraith', 'wraith', null, 0.6, 'wraith_em', 1, MonsterTemplate.DEFAULT_SELECTED_EMISSIVE_STRENGTH, MonsterPersistentEffectTypes.SPECTRAL_AURA),
     WRAITH: new MonsterTemplate(32, 'wraith', 'wraith', null, 0.6, 'wraith_em'),

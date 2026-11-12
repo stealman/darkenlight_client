@@ -5,7 +5,6 @@ import { PBRCustomMaterial } from '@babylonjs/materials'
 import { Materials } from '@/babylon/materials'
 import { BASE_EQUIP_MATERIAL_PATH } from '@/babylon/item/codebook/armorsModelsCb'
 import { EquipSlotModelsCb } from '@/data/items/item'
-import { SwordVertexColorPalettes } from './vertexColorPalettes/swords'
 import { BowVertexColorPalettes } from './vertexColorPalettes/bows'
 import { AxeVertexColorPalettes } from './vertexColorPalettes/axes'
 import { MaceVertexColorPalettes } from './vertexColorPalettes/maces'
@@ -15,7 +14,7 @@ import { createVertexColorWeaponMaterial } from './vertexColorPalettes/vertexCol
 const matBowSize = new Vector2(6, 1)
 const matLongswordSize = new Vector2(4, 4)
 const matBroadswordSize = new Vector2(4, 4)
-const matGreatswordSize = new Vector2(5, 1)
+const matGreatswordSize = new Vector2(4, 4)
 const matPickaxeSize = new Vector2(4, 4)
 const matHandAxeSize = new Vector2(4, 4)
 const matBattleAxeSize = new Vector2(4, 4)
@@ -32,6 +31,7 @@ const matWarmaceSize = new Vector2(4, 4)
 // installed PWA from combining a newly deployed shader with an old HTTP-cached model.
 export const WEAPON_MODEL_CACHE_VERSION = '20260930-battlebow-v1'
 const LONGSWORD_ASSET_CACHE_VERSION = '20261103-silver-atlas-v1'
+const GREATSWORD_ASSET_CACHE_VERSION = '20261112-material-atlas-v1'
 const BROADSWORD_ASSET_CACHE_VERSION = '20261103-silver-atlas-v1'
 const GREATAXE_ASSET_CACHE_VERSION = '20261103-silver-atlas-v1'
 const GREATAXE_NORMAL_CACHE_VERSION = '20261022-single-tile-v1'
@@ -52,6 +52,7 @@ const createWeaponMaterialAtlasIndices = (atlasSize: Vector2) => new Map<number,
     }),
 )
 const longswordMaterialAtlasIndices = createWeaponMaterialAtlasIndices(matLongswordSize)
+const greatswordMaterialAtlasIndices = createWeaponMaterialAtlasIndices(matGreatswordSize)
 const broadswordMaterialAtlasIndices = createWeaponMaterialAtlasIndices(matBroadswordSize)
 const greataxeMaterialAtlasIndices = createWeaponMaterialAtlasIndices(matGreatAxeSize)
 const halberdMaterialAtlasIndices = createWeaponMaterialAtlasIndices(matHalberdSize)
@@ -103,14 +104,13 @@ export const WeaponsCbManager = {
         this.bowMaterial = createVertexColorWeaponMaterial('huntingBowVertexColor', scene, BowVertexColorPalettes.HUNTING_BOW)
         this.recurveBowMaterial = createVertexColorWeaponMaterial('recurveBowVertexColor', scene, BowVertexColorPalettes.RECURVE_BOW)
         this.battleBowMaterial = createVertexColorWeaponMaterial('battleBowVertexColor', scene, BowVertexColorPalettes.BATTLE_BOW)
-        this.greatSwordMaterial = createVertexColorWeaponMaterial('greatswordVertexColor', scene, SwordVertexColorPalettes.GREATSWORD)
         this.largeBattleAxeMaterial = createVertexColorWeaponMaterial('largeBattleAxeVertexColor', scene, AxeVertexColorPalettes.LARGE_BATTLE_AXE)
         this.warhammerMaterial = createVertexColorWeaponMaterial('warhammerVertexColor', scene, MaceVertexColorPalettes.WARHAMMER)
         this.warSpearMaterial = createVertexColorWeaponMaterial('warSpearVertexColor', scene, PolearmVertexColorPalettes.WAR_SPEAR)
 
         await this.initLongsword(map, scene)
         await this.initBroadsword(map, scene)
-        map.set(WeaponModelsCb.GREATSWORD.id, await this.getItem(WeaponModelsCb.GREATSWORD, this.greatSwordMaterial))
+        await this.initGreatsword(map, scene)
         map.set(WeaponModelsCb.HUNTINGBOW.id, await this.getItem(WeaponModelsCb.HUNTINGBOW, this.bowMaterial))
         map.set(WeaponModelsCb.RECURVE_BOW.id, await this.getItem(WeaponModelsCb.RECURVE_BOW, this.recurveBowMaterial))
         map.set(WeaponModelsCb.BATTLEBOW.id, await this.getItem(WeaponModelsCb.BATTLEBOW, this.battleBowMaterial))
@@ -185,6 +185,36 @@ export const WeaponsCbManager = {
             WeaponModelsCb.BROADSWORD,
             this.broadSwordMaterial,
             `tripo-broadsword.glb?v=${BROADSWORD_ASSET_CACHE_VERSION}`,
+        ))
+    },
+
+    async initGreatsword(map: Map<number, EquipItemType>, scene: Scene) {
+        if (this.itemSourceParent == null) {
+            this.itemSourceParent = new TransformNode('mobWeaponSources', scene)
+        }
+        this.greatSwordMaterial = Materials.getPBRCustomMaterialFrom(
+            scene,
+            'greatswordMaterialAtlas',
+            BASE_EQUIP_MATERIAL_PATH + this.BASE_WEAPONS_PATH,
+            `greatsword.jpg?v=${GREATSWORD_ASSET_CACHE_VERSION}`,
+            1 / matGreatswordSize.x,
+            1 / matGreatswordSize.y,
+            false,
+            {
+                metallic: 0.5,
+                roughness: 0.9,
+                directIntensity: 1.5,
+                environmentIntensity: 1.2,
+            },
+            false,
+        )
+        this.greatSwordMaterial.backFaceCulling = false
+        this.greatSwordMaterial.twoSidedLighting = false
+        this.greatSwordMaterial.usePhysicalLightFalloff = false
+        map.set(WeaponModelsCb.GREATSWORD.id, await this.getItem(
+            WeaponModelsCb.GREATSWORD,
+            this.greatSwordMaterial,
+            `tripo-greatsword.glb?v=${GREATSWORD_ASSET_CACHE_VERSION}`,
         ))
     },
 
@@ -481,7 +511,16 @@ export const WeaponModelsCb = {
         broadswordMaterialAtlasIndices.get(0) ?? 12,
     ),
 
-    GREATSWORD: new EquipCbItem(EquipSlotModelsCb.GREATSWORD.modelId, 'greatsword', Vector3.Zero(), new Vector3(0.24, 0.3, 0.3), new Vector3(0, 3.2, 0), matGreatswordSize),
+    GREATSWORD: new EquipCbItem(
+        EquipSlotModelsCb.GREATSWORD.modelId,
+        'greatsword',
+        new Vector3(0, -0.1, 0),
+        new Vector3(0.2, 0.28, 0.18),
+        new Vector3(0, 3.2, 0),
+        matGreatswordSize,
+        greatswordMaterialAtlasIndices,
+        greatswordMaterialAtlasIndices.get(0) ?? 12,
+    ),
 
     HAND_AXE: new EquipCbItem(
         EquipSlotModelsCb.HAND_AXE.modelId,

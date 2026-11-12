@@ -56,9 +56,9 @@ export const MonsterLoader = {
         // a two-sided lighting setup. Keep back-facing body polygons from
         // becoming unnaturally black under the close, downward indoor light.
         material.twoSidedLighting = true
-        // The shared kobold mesh has inconsistent triangle winding. Render both
-        // sides for both skins so back-face culling does not leave visible holes.
-        if (mobType.meshName === MonsterTemplates.KOBOLD.meshName) {
+        // Kobold meshes have inconsistent triangle winding. Render both sides
+        // for all their skins so back-face culling does not leave visible holes.
+        if ([MonsterTemplates.KOBOLD.meshName, MonsterTemplates.KOBOLD_2.meshName].includes(mobType.meshName)) {
             material.backFaceCulling = false
         }
         // Match the equipment materials' range-based attenuation. Babylon's
