@@ -6,7 +6,6 @@ import { Materials } from '@/babylon/materials'
 import { BASE_EQUIP_MATERIAL_PATH } from '@/babylon/item/codebook/armorsModelsCb'
 import { EquipSlotModelsCb } from '@/data/items/item'
 import { BowVertexColorPalettes } from './vertexColorPalettes/bows'
-import { AxeVertexColorPalettes } from './vertexColorPalettes/axes'
 import { MaceVertexColorPalettes } from './vertexColorPalettes/maces'
 import { PolearmVertexColorPalettes } from './vertexColorPalettes/polearms'
 import { createVertexColorWeaponMaterial } from './vertexColorPalettes/vertexColorWeaponMaterial'
@@ -19,7 +18,7 @@ const matPickaxeSize = new Vector2(4, 4)
 const matHandAxeSize = new Vector2(4, 4)
 const matBattleAxeSize = new Vector2(4, 4)
 const matGreatAxeSize = new Vector2(4, 4)
-const matLargeBattleAxeSize = new Vector2(5, 1)
+const matLargeBattleAxeSize = new Vector2(4, 4)
 const matWarhammerSize = new Vector2(5, 1)
 const matFutureWeaponSize = new Vector2(5, 1)
 const matHalberdSize = new Vector2(4, 4)
@@ -31,6 +30,7 @@ const matWarmaceSize = new Vector2(4, 4)
 // installed PWA from combining a newly deployed shader with an old HTTP-cached model.
 export const WEAPON_MODEL_CACHE_VERSION = '20260930-battlebow-v1'
 const LONGSWORD_ASSET_CACHE_VERSION = '20261103-silver-atlas-v1'
+const LARGE_BATTLE_AXE_ASSET_CACHE_VERSION = '20261112-material-atlas-v1'
 const GREATSWORD_ASSET_CACHE_VERSION = '20261112-material-atlas-v1'
 const BROADSWORD_ASSET_CACHE_VERSION = '20261103-silver-atlas-v1'
 const GREATAXE_ASSET_CACHE_VERSION = '20261103-silver-atlas-v1'
@@ -52,6 +52,7 @@ const createWeaponMaterialAtlasIndices = (atlasSize: Vector2) => new Map<number,
     }),
 )
 const longswordMaterialAtlasIndices = createWeaponMaterialAtlasIndices(matLongswordSize)
+const largeBattleAxeMaterialAtlasIndices = createWeaponMaterialAtlasIndices(matLargeBattleAxeSize)
 const greatswordMaterialAtlasIndices = createWeaponMaterialAtlasIndices(matGreatswordSize)
 const broadswordMaterialAtlasIndices = createWeaponMaterialAtlasIndices(matBroadswordSize)
 const greataxeMaterialAtlasIndices = createWeaponMaterialAtlasIndices(matGreatAxeSize)
@@ -104,7 +105,6 @@ export const WeaponsCbManager = {
         this.bowMaterial = createVertexColorWeaponMaterial('huntingBowVertexColor', scene, BowVertexColorPalettes.HUNTING_BOW)
         this.recurveBowMaterial = createVertexColorWeaponMaterial('recurveBowVertexColor', scene, BowVertexColorPalettes.RECURVE_BOW)
         this.battleBowMaterial = createVertexColorWeaponMaterial('battleBowVertexColor', scene, BowVertexColorPalettes.BATTLE_BOW)
-        this.largeBattleAxeMaterial = createVertexColorWeaponMaterial('largeBattleAxeVertexColor', scene, AxeVertexColorPalettes.LARGE_BATTLE_AXE)
         this.warhammerMaterial = createVertexColorWeaponMaterial('warhammerVertexColor', scene, MaceVertexColorPalettes.WARHAMMER)
         this.warSpearMaterial = createVertexColorWeaponMaterial('warSpearVertexColor', scene, PolearmVertexColorPalettes.WAR_SPEAR)
 
@@ -118,7 +118,7 @@ export const WeaponsCbManager = {
         await this.initHandAxe(map, scene)
         await this.initBattleAxe(map, scene)
         await this.initGreatAxe(map, scene)
-        map.set(WeaponModelsCb.LARGE_BATTLE_AXE.id, await this.getItem(WeaponModelsCb.LARGE_BATTLE_AXE, this.largeBattleAxeMaterial))
+        await this.initLargeBattleAxe(map, scene)
         await this.initLightMace(map, scene)
         await this.initWarmace(map, scene)
         map.set(WeaponModelsCb.WARHAMMER.id, await this.getItem(WeaponModelsCb.WARHAMMER, this.warhammerMaterial))
@@ -215,6 +215,36 @@ export const WeaponsCbManager = {
             WeaponModelsCb.GREATSWORD,
             this.greatSwordMaterial,
             `tripo-greatsword.glb?v=${GREATSWORD_ASSET_CACHE_VERSION}`,
+        ))
+    },
+
+    async initLargeBattleAxe(map: Map<number, EquipItemType>, scene: Scene) {
+        if (this.itemSourceParent == null) {
+            this.itemSourceParent = new TransformNode('mobWeaponSources', scene)
+        }
+        this.largeBattleAxeMaterial = Materials.getPBRCustomMaterialFrom(
+            scene,
+            'largeBattleAxeMaterialAtlas',
+            BASE_EQUIP_MATERIAL_PATH + this.BASE_WEAPONS_PATH,
+            `large_battleaxe.jpg?v=${LARGE_BATTLE_AXE_ASSET_CACHE_VERSION}`,
+            1 / matLargeBattleAxeSize.x,
+            1 / matLargeBattleAxeSize.y,
+            false,
+            {
+                metallic: 0.5,
+                roughness: 0.9,
+                directIntensity: 1.5,
+                environmentIntensity: 1.2,
+            },
+            false,
+        )
+        this.largeBattleAxeMaterial.backFaceCulling = false
+        this.largeBattleAxeMaterial.twoSidedLighting = false
+        this.largeBattleAxeMaterial.usePhysicalLightFalloff = false
+        map.set(WeaponModelsCb.LARGE_BATTLE_AXE.id, await this.getItem(
+            WeaponModelsCb.LARGE_BATTLE_AXE,
+            this.largeBattleAxeMaterial,
+            `tripo-large-battleaxe.glb?v=${LARGE_BATTLE_AXE_ASSET_CACHE_VERSION}`,
         ))
     },
 
@@ -555,7 +585,7 @@ export const WeaponModelsCb = {
         greataxeMaterialAtlasIndices.get(0) ?? 12,
     ),
 
-    LARGE_BATTLE_AXE: new EquipCbItem(EquipSlotModelsCb.LARGE_BATTLE_AXE.modelId, 'largebattlexe', Vector3.Zero(), new Vector3(0.22, 0.24, 0.24), new Vector3(0, 2.5, 0), matLargeBattleAxeSize),
+    LARGE_BATTLE_AXE: new EquipCbItem(EquipSlotModelsCb.LARGE_BATTLE_AXE.modelId, 'largebattlexe', new Vector3(0, -0.075, 0), new Vector3(0.22, 0.24, 0.24), new Vector3(0, 2.5, 0), matLargeBattleAxeSize, largeBattleAxeMaterialAtlasIndices, largeBattleAxeMaterialAtlasIndices.get(0) ?? 12),
 
     PICKAXE: new EquipCbItem(
         EquipSlotModelsCb.PICKAXE.modelId,

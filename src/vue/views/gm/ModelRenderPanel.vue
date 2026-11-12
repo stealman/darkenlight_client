@@ -114,6 +114,7 @@ const WEAPON_OPTIONS = [
     { key: 'LONGSWORD', modelFile: 'tripo-longsword.glb', atlasFile: 'longsword.jpg', inventoryBaseName: 'longsword' },
     { key: 'BROADSWORD', modelFile: 'tripo-broadsword.glb', atlasFile: 'broadsword.jpg', inventoryBaseName: 'broadsword' },
     { key: 'GREATSWORD', modelFile: 'tripo-greatsword.glb', atlasFile: 'greatsword.jpg', inventoryBaseName: 'greatsword' },
+    { key: 'LARGE_BATTLE_AXE', modelFile: 'tripo-large-battleaxe.glb', atlasFile: 'large_battleaxe.jpg', inventoryBaseName: 'large-battle-axe' },
     { key: 'GREATAXE', modelFile: 'tripo-greataxe.glb', atlasFile: 'greataxe.jpg', inventoryBaseName: 'great-axe' },
     { key: 'HALBERD', modelFile: 'tripo-halberd.glb', atlasFile: 'halberd.jpg', inventoryBaseName: 'halberd' },
     { key: 'PICKAXE', modelFile: 'tripo-pickaxe.glb', atlasFile: 'pickaxe.jpg', inventoryBaseName: 'pickaxe' },
