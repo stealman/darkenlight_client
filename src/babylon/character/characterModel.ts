@@ -19,9 +19,11 @@ import { getCharacterModelEquipModifier } from '@/babylon/character/characterMod
 import { Settings } from '@/settings/settings'
 import { ActiveMeshFreezer } from '@/babylon/scene/activeMeshFreezer'
 import { modelAssetUrl } from '@/babylon/modelAssetUrl'
+import { HUMAN_MODEL_FILE, HUMAN_ANIMATION_SPEED, getHumanAnimationRange, prepareHumanSkeleton } from './humanModelRig'
+import { applyCharacterEquipmentFitting, preloadCharacterEquipmentFitting } from './characterEquipmentFitting'
 
 export class CharacterModel implements EquipBearer {
-    private static readonly MODEL_FILE = 'human_male.glb'
+    private static readonly MODEL_FILE = HUMAN_MODEL_FILE
     private static readonly preparedModelCount = 6
     private static readonly maxReusableModels = 8
     private static containerPromises = new WeakMap<Scene, Promise<AssetContainer>>()
@@ -86,8 +88,9 @@ export class CharacterModel implements EquipBearer {
         this.nameTextNode = new TransformNode('nameTextNode' + this.parent.id)
     }
 
-    static async create(data: Character, init: boolean): Promise<CharacterModel> {
+    static async create(data: Character, init: boolean, entries?: InstantiatedEntries): Promise<CharacterModel> {
         const model = new CharacterModel(data)
+        if (entries) model.instantiatedEntries = entries
         if (init) await model.initAsync()
         return model
     }
@@ -109,7 +112,10 @@ export class CharacterModel implements EquipBearer {
     private static getContainer(scene: Scene): Promise<AssetContainer> {
         let promise = this.containerPromises.get(scene)
         if (promise == null) {
-            promise = SceneLoader.LoadAssetContainerAsync('', modelAssetUrl('/models/steve/' + this.MODEL_FILE), scene)
+            promise = Promise.all([
+                SceneLoader.LoadAssetContainerAsync('', modelAssetUrl('/models/steve/' + this.MODEL_FILE), scene),
+                preloadCharacterEquipmentFitting(scene),
+            ]).then(([container]) => container)
             this.containerPromises.set(scene, promise)
         }
         return promise
@@ -165,7 +171,7 @@ export class CharacterModel implements EquipBearer {
         // The shared AssetContainer parses the GLB once. Most nearby human
         // models are instantiated behind the loading overlay and only enabled
         // when their character first enters the viewport.
-        await CharacterModel.instantiate(scene)
+        await (this.instantiatedEntries ? Promise.resolve(this.instantiatedEntries) : CharacterModel.instantiate(scene))
             .then((result) => {
                 if (this.node.isDisposed()) {
                     CharacterModel.release(scene, result)
@@ -174,7 +180,8 @@ export class CharacterModel implements EquipBearer {
                 this.instantiatedEntries = result
                 this.model = result.rootNodes[0] as AbstractMesh
                 this.model.parent = this.node
-                this.model.scaling = new Vector3(0.3, 0.28, 0.3)
+                // Preserve the glTF root's handedness conversion.
+                this.model.scaling = new Vector3(0.3, 0.28, -0.3)
                 this.model.rotation = new Vector3(0, 0, 0)
 
                 this.nameTextNode.parent = this.node
@@ -211,31 +218,13 @@ export class CharacterModel implements EquipBearer {
                     const animationGroup = result.animationGroups[0] // Assuming there is one animation group
                     animationGroup.stop()
 
-                    // Define frame ranges for each animation
+                    // Unauthored actions keep separate groups but temporarily sample IDLE.
                     const animations = [
-                        { name: 'Idle', startFrame: 0, endFrame: 75 },
-                        { name: 'Walk', startFrame: 76, endFrame: 225 },
-                        { name: 'Run', startFrame: 225, endFrame: 375 },
-                        { name: 'CombatIdle', startFrame: 400, endFrame: 475 },
-
-                        // Attack animations are cut off last 15 frames to join smoothly with the next animation
-                        { name: 'Slash', startFrame: 500, endFrame: 560 },
-                        { name: 'Jab', startFrame: 600, endFrame: 660 },
-                        { name: 'LeftSlash', startFrame: 700, endFrame: 760 },
-                        { name: 'RightSlash', startFrame: 800, endFrame: 860 },
-                        { name: 'HighJab', startFrame: 900, endFrame: 960 },
-                        { name: 'Slash2', startFrame: 1000, endFrame: 1060 },
-
-                        { name: 'BowAim', startFrame: 1100, endFrame: 1175 },
-
-                        { name: 'GreatAxeAttack', startFrame: 1200, endFrame: 1260 },
-
-                        { name: 'OreMining', startFrame: 1300, endFrame: 1360 },
-                        { name: 'Death', startFrame: 1400, endFrame: 1460 },
-                        { name: 'TwoHandedSwordAttack', startFrame: 1500, endFrame: 1560 },
-                        { name: 'TwoHandedSwordAttack2', startFrame: 1600, endFrame: 1660 },
-                        { name: 'TwoHandedSpearAttack', startFrame: 1700, endFrame: 1760 },
-                    ]
+                        'Idle', 'Walk', 'Run', 'CombatIdle', 'Slash', 'Jab',
+                        'LeftSlash', 'RightSlash', 'HighJab', 'Slash2', 'BowAim',
+                        'GreatAxeAttack', 'OreMining', 'Death', 'TwoHandedSwordAttack',
+                        'TwoHandedSwordAttack2', 'TwoHandedSpearAttack',
+                    ].map(name => ({ name, ...getHumanAnimationRange(name) }))
 
                     let newAnimationGroups = CharacterModel.preparedAnimations.get(result)
                     if (!newAnimationGroups) {
@@ -275,10 +264,11 @@ export class CharacterModel implements EquipBearer {
                     this.twoHandedSwordAttackAnim2 = newAnimationGroups[15]
                     this.twoHandedSpearAttackAnim = newAnimationGroups[16]
 
-                    this.idleAnim?.start(true, 0.5)
+                    this.idleAnim?.start(true, HUMAN_ANIMATION_SPEED.idle)
                     this.actualAnim = this.idleAnim
                 }
                 this.skeleton = result.skeletons[0]
+                prepareHumanSkeleton(this.skeleton)
                 this.lhandNode.attachToBone(this.skeleton.bones.find((b) => b.id === 'Bone.012')!, this.model) // Lhand 012
                 this.rhandNode.attachToBone(this.skeleton.bones.find((b) => b.id === 'Bone.009')!, this.model) // Rhand 009
             })
@@ -287,6 +277,10 @@ export class CharacterModel implements EquipBearer {
             })
 
         if (this.node.isDisposed()) return
+        if (this.model) {
+            this.worldMatrix.copyFrom(this.model.computeWorldMatrix(true))
+            this.worldMatrix.decompose(undefined, this.rotationQuaternion)
+        }
         this.assignEquippedItems()
         this.initialized = true
         this.snapToParentPosition()
@@ -385,6 +379,7 @@ export class CharacterModel implements EquipBearer {
     }
 
     addEquippedItem(slot: string, item: EquipItem) {
+        applyCharacterEquipmentFitting(this.node.getScene(), slot, item)
         item.castsOutdoorShadow = this.parent.isMyChar() && (slot === 'WEAPON' || slot === 'SHIELD')
         this.equipSet.set(slot, item)
         EquipManager.addEquippedItem(item)
@@ -471,7 +466,7 @@ export class CharacterModel implements EquipBearer {
 
     startWalkAnimation(speedRatio: number) {
         if (!this.isActive()) return
-        const speed = 3 * speedRatio
+        const speed = HUMAN_ANIMATION_SPEED.walk * speedRatio
         if (this.actualAnim !== this.walkAnim) {
             this.transitionToAnimation(this.walkAnim, 0.15, true, speed)
             this.actualAnim = this.walkAnim
@@ -484,7 +479,7 @@ export class CharacterModel implements EquipBearer {
 
     startRunAnimation(speedRatio: number) {
         if (!this.isActive()) return
-        const speed = 3 * speedRatio
+        const speed = HUMAN_ANIMATION_SPEED.run * speedRatio
         if (this.actualAnim !== this.runAnim) {
             this.transitionToAnimation(this.runAnim, 0.15, true, speed)
             this.actualAnim = this.runAnim
@@ -606,7 +601,7 @@ export class CharacterModel implements EquipBearer {
 
     stopAnimation() {
         const desiredAnimation = this.parent.isRecentlyInCombat() ? this.combatIdleAnim : this.idleAnim
-        const animSpeed = desiredAnimation === this.combatIdleAnim ? 0.75 : 0.5
+        const animSpeed = desiredAnimation === this.combatIdleAnim ? HUMAN_ANIMATION_SPEED.combatIdle : HUMAN_ANIMATION_SPEED.idle
 
         if (!desiredAnimation) return
 

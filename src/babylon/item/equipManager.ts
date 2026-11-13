@@ -34,6 +34,10 @@ export class EquipItem {
     boneRotationQuaternion: Quaternion = Quaternion.Identity()
     scaleMatrix: Matrix = Matrix.Identity()
     modelModifierMatrix: Matrix | null = null
+    attachmentWorldMatrix: Matrix | null = null
+    private attachmentLocalMatrix: Matrix | null = null
+    private attachmentUsesJoint = true
+    private attachmentBoneWorld = Matrix.Identity()
 
     weaponTrail: TrailMesh | null = null
     weaponTrailStartDelayEnd: number = 0
@@ -96,7 +100,32 @@ export class EquipItem {
     /**
     * Update world position and rotation from the bone each frame
      */
+    attachUsingFullBoneTransform(local: Matrix, useJoint = true) {
+        this.attachmentLocalMatrix = local.clone()
+        this.attachmentWorldMatrix = Matrix.Identity()
+        this.attachmentUsesJoint = useJoint
+        this.updateAttachmentWorldMatrix()
+    }
+
+    updateAttachmentWorldMatrix() {
+        if (!this.attachmentLocalMatrix || !this.attachmentWorldMatrix) return
+        const joint = this.attachmentUsesJoint ? this.bone.getTransformNode() : null
+        if (joint) {
+            this.attachmentLocalMatrix.multiplyToRef(joint.computeWorldMatrix(true), this.attachmentWorldMatrix)
+        } else {
+            this.bone.getSkeleton().prepare()
+            this.attachmentLocalMatrix.multiplyToRef(this.bone.getFinalMatrix(), this.attachmentBoneWorld)
+            this.attachmentBoneWorld.multiplyToRef(this.parent.worldMatrix, this.attachmentWorldMatrix)
+        }
+        this.attachmentWorldMatrix.decompose(undefined, this.quaternion, this.position)
+    }
+
     onFrame() {
+        if (this.attachmentLocalMatrix) {
+            this.updateAttachmentWorldMatrix()
+            this.updateWeaponTrailFade()
+            return
+        }
         const m = this.bone.getFinalMatrix()
         m.getTranslationToRef(this.localPosition)
         Quaternion.FromRotationMatrixToRef(m, this.boneRotationQuaternion)
@@ -370,6 +399,8 @@ export interface EquipThinInstance {
     quaternion: Quaternion
     scaleMatrix: Matrix
     modelModifierMatrix?: Matrix | null
+    attachmentWorldMatrix?: Matrix | null
+    updateAttachmentWorldMatrix?(): void
     castsOutdoorShadow?: boolean
 }
 
@@ -606,18 +637,23 @@ export const EquipManager = {
 
             let i = 0
             items.forEach(item => {
-                Matrix.TranslationToRef(item.position.x, item.position.y, item.position.z, this._tmpPos)
-                Matrix.FromQuaternionToRef(item.quaternion, this._tmpRot)
-
-                this._tmpRot.multiplyToRef(this._tmpPos, this._tmpWorld)
-                if (item.modelModifierMatrix) {
-                    item.modelModifierMatrix.multiplyToRef(item.scaleMatrix, this._tmpModel)
-                    this._tmpModel.multiplyToRef(this._tmpWorld, this._tmpWorld)
+                if (item.attachmentWorldMatrix) {
+                    item.updateAttachmentWorldMatrix?.()
+                    item.attachmentWorldMatrix.copyToArray(type.instanceBuffer, i * 16)
                 } else {
-                    item.scaleMatrix.multiplyToRef(this._tmpWorld, this._tmpWorld)
-                }
+                    Matrix.TranslationToRef(item.position.x, item.position.y, item.position.z, this._tmpPos)
+                    Matrix.FromQuaternionToRef(item.quaternion, this._tmpRot)
 
-                this._tmpWorld.copyToArray(type.instanceBuffer, i * 16)
+                    this._tmpRot.multiplyToRef(this._tmpPos, this._tmpWorld)
+                    if (item.modelModifierMatrix) {
+                        item.modelModifierMatrix.multiplyToRef(item.scaleMatrix, this._tmpModel)
+                        this._tmpModel.multiplyToRef(this._tmpWorld, this._tmpWorld)
+                    } else {
+                        item.scaleMatrix.multiplyToRef(this._tmpWorld, this._tmpWorld)
+                    }
+
+                    this._tmpWorld.copyToArray(type.instanceBuffer, i * 16)
+                }
 
                 if (updateUvc) {
                     type.uvBuffer[i * 2] = item.matVector.x

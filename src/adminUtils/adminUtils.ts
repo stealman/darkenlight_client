@@ -8,17 +8,25 @@ import {
     DynamicTexture,
     Engine,
     HemisphericLight,
+    Matrix,
     MeshBuilder,
     PBRMaterial,
+    Quaternion,
     Scene,
+    SceneLoader,
     StandardMaterial,
     Texture,
     Vector3,
 } from '@babylonjs/core'
 import type Character from '@/babylon/character/character'
+import { modelAssetUrl } from '@/babylon/modelAssetUrl'
+import { HUMAN_ANIMATION_SPEED, HUMAN_MODEL_FILE } from '@/babylon/character/humanModelRig'
 import type { CharacterModel } from '@/babylon/character/characterModel'
 import type { EquipModelModifier } from '@/babylon/item/equipManager'
 import './styles.css'
+import { bindPreviewEquipment, bindPreviewWeapon, getPreviewPairedModifiers } from './equipmentModifierConfig'
+import { initializePreviewArmorSources } from './previewArmorSources'
+import { preparePreviewSkeleton } from './previewSkeleton'
 
 type PreviewSlot = 'body' | 'head' | 'pauldrons' | 'legs' | 'shield' | 'weapon'
 type PreviewAnimation = 'idle' | 'walk' | 'run' | 'combatIdle' | 'slash' | 'jab' | 'death'
@@ -650,7 +658,7 @@ function appendModifierControls(container: HTMLElement) {
         MODIFIER_AXES.forEach((axis) => {
             const input = document.createElement('input')
             input.type = 'number'
-            input.step = '0.001'
+            input.step = '0.01'
             input.dataset.modifierComponent = component
             input.dataset.modifierAxis = axis
             input.setAttribute('aria-label', `${component} ${axis}`)
@@ -727,13 +735,15 @@ function createEquipmentControls(container: HTMLElement) {
         editor.dataset.modifierEditor = slot
         editor.hidden = true
 
-        if (slot === 'pauldrons') {
+        if (slot === 'pauldrons' || slot === 'legs') {
             ;(['left', 'right'] as PauldronSide[]).forEach((side) => {
                 const sideEditor = document.createElement('div')
                 sideEditor.className = 'admin-utils__modifier-side'
                 sideEditor.dataset.modifierSide = side
                 const sideTitle = document.createElement('strong')
-                sideTitle.textContent = side === 'left' ? 'Levý pauldron' : 'Pravý pauldron'
+                sideTitle.textContent = slot === 'legs'
+                    ? (side === 'left' ? 'Levá nohavice' : 'Pravá nohavice')
+                    : (side === 'left' ? 'Levý pauldron' : 'Pravý pauldron')
                 sideEditor.append(sideTitle)
                 appendModifierControls(sideEditor)
                 editor.append(sideEditor)
@@ -765,7 +775,7 @@ function readModifierEditor(editor: HTMLElement): EquipModelModifier | null {
     const readVector = (component: ModifierComponent): Vector3 | null => {
         const values = MODIFIER_AXES.map((axis) => {
             const input = editor.querySelector<HTMLInputElement>(`[data-modifier-component="${component}"][data-modifier-axis="${axis}"]`)
-            return Number(input?.value)
+            return input?.value.trim() ? Number(input.value) : NaN
         })
         if (!values.every(Number.isFinite)) return null
         return new Vector3(values[0], values[1], values[2])
@@ -837,6 +847,16 @@ function setEquipmentSlot(model: CharacterModel, slot: PreviewSlot, modelId: num
             model.assignWeapon(modelId, materialIndex)
             break
     }
+    model.equipSet.forEach((item) => {
+        if (item.type.id !== modelId) return
+        if (slot === 'pauldrons' || slot === 'legs') {
+            const side = item === model.equipSet.get(slot === 'legs' ? 'LEFT_LEG' : 'LEFT_PAULDRON') ? 'left' : 'right'
+            const modifier = getPreviewPairedModifiers(slot, modelId)[side]
+            item.modelModifierMatrix = Matrix.Compose(modifier.scale, Quaternion.FromEulerVector(modifier.rotation), modifier.position)
+        }
+        if (slot === 'weapon') bindPreviewWeapon(item, model)
+        else bindPreviewEquipment(item, model, true)
+    })
 }
 
 function playAnimation(model: CharacterModel, animationName: string, loop = true) {
@@ -851,7 +871,8 @@ function playAnimation(model: CharacterModel, animationName: string, loop = true
     }
     Object.values(animations).forEach((animation) => animation?.stop())
     const animation = animations[animationName as keyof typeof animations]
-    animation?.start(loop, 1)
+    const speed = HUMAN_ANIMATION_SPEED[animationName as keyof typeof HUMAN_ANIMATION_SPEED] ?? HUMAN_ANIMATION_SPEED.idle
+    animation?.start(loop, speed)
 }
 
 export async function mountAdminUtils() {
@@ -1209,7 +1230,43 @@ export async function mountAdminUtils() {
         greatswordMaterial.albedoTexture = generatedGreatswordAtlas
         largeBattleAxeMaterial.albedoTexture = generatedLargeBattleAxeAtlas
 
-        const model = await CharacterModel.create(createPreviewCharacter(), true)
+        const { loadEquipmentModifierConfig } = await import('./equipmentModifierConfig')
+        const modifierConfig = await loadEquipmentModifierConfig(CharacterModelEquipModifiers, CharacterModelPauldronModifiers)
+        await initializePreviewArmorSources(scene, EquipManager.itemTypes)
+        const saveModifiers = document.createElement('button')
+        saveModifiers.type = 'button'
+        saveModifiers.textContent = 'Proporce načteny ze souboru'
+        saveModifiers.disabled = true
+        animationSelect.after(saveModifiers)
+        let modifierRevision = 0
+        let savedModifierRevision = 0
+        let savingModifiers = false
+        saveModifiers.addEventListener('click', async () => {
+            const revision = modifierRevision
+            savingModifiers = true
+            saveModifiers.disabled = true
+            saveModifiers.textContent = 'Ukládám proporce…'
+            try {
+                await modifierConfig.save()
+                savedModifierRevision = revision
+                saveModifiers.disabled = revision === modifierRevision
+                saveModifiers.textContent = revision === modifierRevision ? 'Proporce uloženy do souboru' : 'Uložit proporce do souboru *'
+            } catch (error) {
+                console.error(error)
+                saveModifiers.disabled = false
+                saveModifiers.textContent = 'Uložení selhalo – zkusit znovu (vyžaduje dev server)'
+            } finally {
+                savingModifiers = false
+            }
+        })
+        window.addEventListener('beforeunload', (event) => {
+            if (savedModifierRevision !== modifierRevision) event.preventDefault()
+        })
+        const container = await SceneLoader.LoadAssetContainerAsync('', modelAssetUrl('/models/steve/' + HUMAN_MODEL_FILE), scene)
+        scene.onDisposeObservable.addOnce(() => container.dispose())
+        const entries = container.instantiateModelsToScene(undefined, false, { doNotInstantiate: true })
+        entries.skeletons.forEach(preparePreviewSkeleton)
+        const model = await CharacterModel.create(createPreviewCharacter(), true, entries)
         model.node.rotation.y = Math.PI / 2
 
         ;(Object.keys(slotSelections) as PreviewSlot[]).forEach((slot) => {
@@ -1231,11 +1288,11 @@ export async function mountAdminUtils() {
             expandedModifierSlot = null
         }
         const populateSlotModifierEditor = (editor: HTMLElement, slot: PreviewSlot, modelId: number) => {
-            if (slot !== 'pauldrons') {
+            if (slot !== 'pauldrons' && slot !== 'legs') {
                 populateModifierEditor(editor, CharacterModelEquipModifiers.get(modelId) ?? null)
                 return
             }
-            const pairedModifiers = CharacterModelPauldronModifiers.get(modelId)
+            const pairedModifiers = getPreviewPairedModifiers(slot, modelId)
             ;(['left', 'right'] as PauldronSide[]).forEach((side) => {
                 const sideEditor = editor.querySelector<HTMLElement>(`[data-modifier-side="${side}"]`)!
                 populateModifierEditor(sideEditor, pairedModifiers?.[side] ?? null)
@@ -1248,6 +1305,8 @@ export async function mountAdminUtils() {
             const materialSelect = root.querySelector<HTMLSelectElement>(`[data-material-slot="${slot}"]`)!
             const exportLink = root.querySelector<HTMLAnchorElement>(`[data-export-atlas="${slot}"]`)!
             toggle.disabled = modelId == null
+            toggle.textContent = 'Editovat proporce'
+            toggle.title = ''
             materialSelect.disabled = modelId == null
             const canExportAtlas = modelId === MODEL_IDS.longsword || modelId === MODEL_IDS.broadsword || modelId === MODEL_IDS.greataxe || modelId === MODEL_IDS.halberd || modelId === MODEL_IDS.pickaxe || modelId === MODEL_IDS.handAxe || modelId === MODEL_IDS.battleAxe || modelId === MODEL_IDS.huntingSpear || modelId === MODEL_IDS.lightMace || modelId === MODEL_IDS.warmace || modelId === MODEL_IDS.greatsword || modelId === MODEL_IDS.largeBattleAxe || modelId === MODEL_IDS.armorPlate || modelId === MODEL_IDS.helm || modelId === MODEL_IDS.pauldronsPlate || modelId === MODEL_IDS.legsPlate || modelId === MODEL_IDS.shield || modelId === MODEL_IDS.chainMail || modelId === MODEL_IDS.chainCoif || modelId === MODEL_IDS.chainPauldrons || modelId === MODEL_IDS.chainGreaves
             exportLink.setAttribute('aria-disabled', String(!canExportAtlas))
@@ -1287,21 +1346,25 @@ export async function mountAdminUtils() {
                 const slot = editor.dataset.modifierEditor as PreviewSlot
                 const modelId = slotSelections[slot]
                 if (modelId == null) return
-                const sideEditor = slot === 'pauldrons'
+                const sideEditor = slot === 'pauldrons' || slot === 'legs'
                     ? (event.target as HTMLElement).closest<HTMLElement>('[data-modifier-side]')
                     : editor
                 if (sideEditor == null) return
                 const modifier = readModifierEditor(sideEditor)
                 if (modifier == null) return
 
-                if (slot === 'pauldrons') {
+                if (slot === 'pauldrons' || slot === 'legs') {
                     const side = sideEditor.dataset.modifierSide as PauldronSide
-                    const pairedModifiers = CharacterModelPauldronModifiers.get(modelId)
+                    const pairedModifiers = getPreviewPairedModifiers(slot, modelId)
                     if (pairedModifiers == null) return
                     pairedModifiers[side] = modifier
                 } else {
                     CharacterModelEquipModifiers.set(modelId, modifier)
                 }
+                modifierConfig.record(modelId, slot === 'pauldrons' || slot === 'legs' ? slot : undefined)
+                modifierRevision++
+                saveModifiers.disabled = savingModifiers
+                saveModifiers.textContent = 'Uložit proporce do souboru *'
                 setEquipmentSlot(model, slot, modelId, slotMaterialSelections[slot] - 1)
             })
         })
@@ -1437,16 +1500,17 @@ export async function mountAdminUtils() {
         status.classList.add('admin-utils__status--ready')
         window.setTimeout(() => status.classList.add('admin-utils__status--hidden'), 1200)
 
-        engine.runRenderLoop(() => {
+        scene.onBeforeRenderObservable.add(() => {
             model.model?.computeWorldMatrix(true)
             if (model.model) {
                 model.worldMatrix.copyFrom(model.model.getWorldMatrix())
                 model.worldMatrix.decompose(undefined, model.rotationQuaternion, undefined)
             }
+            model.skeleton?.prepare()
             model.equipSet.forEach((item) => item.onFrame())
             EquipManager.onFrame()
-            scene.render()
         })
+        engine.runRenderLoop(() => scene.render())
     } catch (error) {
         console.error('Admin character preview failed to initialize:', error)
         status.textContent = 'Model se nepodařilo načíst. Podrobnosti jsou v konzoli.'

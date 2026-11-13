@@ -5,6 +5,7 @@ import fs from 'node:fs'
 import path from 'path'
 import { collectModelAssets } from './build/modelAssets.cjs'
 import { adminMonsterNamesPlugin } from './build/adminMonsterNames.cjs'
+import { adminEquipmentModifiersPlugin } from './build/adminEquipmentModifiers.cjs'
 import { collectUiImages } from './build/uiImages.cjs'
 
 function collectPngEntries(directory, publicPath) {
@@ -54,6 +55,7 @@ export default defineConfig(async ({ mode, command }) => {
         __UI_IMAGE_URLS__: JSON.stringify(uiImages.urls),
     },
     plugins: [
+        adminEquipmentModifiersPlugin(path.resolve(__dirname, 'public/admin-utils/equipment-modifiers.json')),
         adminMonsterNamesPlugin(path.resolve(__dirname, '../../server/darkenlight_server/src/monster/monstersCb.ts')),
         vue(),
         {
@@ -107,7 +109,7 @@ export default defineConfig(async ({ mode, command }) => {
         historyApiFallback: true,
         watch: {
             // Tauri writes generated Rust files while running; they are not frontend sources.
-            ignored: ['**/src-tauri/**'],
+            ignored: ['**/src-tauri/**', '**/public/admin-utils/equipment-modifiers.json*'],
         },
     },
     resolve: {

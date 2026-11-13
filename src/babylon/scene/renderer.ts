@@ -242,7 +242,6 @@ export const Renderer = {
             GroundItemsManager.onFrame(timeRate, actualTime)
             Controller.updateHoverNames(scene, actualTime)
 
-            EquipManager.onFrame()
             GfxManager.onFrame(actualTime)
             ArrowsManager.onFrame(timeRate, actualTime)
             TargetingManager.onFrame(timeRate, actualTime)
@@ -318,6 +317,8 @@ export const Renderer = {
 
     createScene(engine: Engine) {
         this.scene = new Scene(engine)
+        // Upload equipment after Babylon has evaluated this frame's bone animation.
+        this.scene.onBeforeRenderObservable.add(() => EquipManager.onFrame())
         this.scene.clearColor = new Color4(0, 0, 0, 1)
         this.scene.imageProcessingConfiguration.exposure = 1.2
         this.scene.skipPointerMovePicking = true
