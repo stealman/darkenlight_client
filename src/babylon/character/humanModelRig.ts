@@ -3,16 +3,19 @@ import type { Skeleton } from '@babylonjs/core'
 export const HUMAN_MODEL_FILE = 'human_male_new.glb'
 export const HUMAN_ANIMATION_SPEED = { idle: 1, walk: 3, run: 3.2, combatIdle: 1 } as const
 
-// Blender 24 FPS -> imported glTF 60 FPS. All unauthored actions temporarily use IDLE.
+// Blender 24 FPS -> imported glTF 60 FPS. All unauthored actions temporarily use JAB.
 const authoredRanges: Record<string, { startFrame: number, endFrame: number }> = {
     Idle: { startFrame: 0, endFrame: 75 },
     Walk: { startFrame: 100, endFrame: 250 },
     Run: { startFrame: 275, endFrame: 425 },
     CombatIdle: { startFrame: 450, endFrame: 525 },
+    Slash: { startFrame: 550, endFrame: 625 },
+    Jab: { startFrame: 650, endFrame: 725 },
+    LeftSlash: { startFrame: 750, endFrame: 825 },
 }
 
 export function getHumanAnimationRange(name: string) {
-    return authoredRanges[name] ?? authoredRanges.Idle
+    return authoredRanges[name] ?? authoredRanges.Jab
 }
 
 export function prepareHumanSkeleton(skeleton: Skeleton) {

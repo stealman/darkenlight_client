@@ -218,7 +218,7 @@ export class CharacterModel implements EquipBearer {
                     const animationGroup = result.animationGroups[0] // Assuming there is one animation group
                     animationGroup.stop()
 
-                    // Unauthored actions keep separate groups but temporarily sample IDLE.
+                    // Unauthored actions keep separate groups but temporarily sample JAB.
                     const animations = [
                         'Idle', 'Walk', 'Run', 'CombatIdle', 'Slash', 'Jab',
                         'LeftSlash', 'RightSlash', 'HighJab', 'Slash2', 'BowAim',
@@ -768,7 +768,9 @@ export class CharacterModel implements EquipBearer {
                 return
             }
         }
-        this.animTransition = new AnimTransition(duration, this.actualAnim, targetAnim, loop, speed)
+        const returningFromAction = (targetAnim === this.idleAnim || targetAnim === this.combatIdleAnim)
+            && this.actualAnim != null && !this.actualAnim.loopAnimation
+        this.animTransition = new AnimTransition(returningFromAction ? 0.35 : duration, this.actualAnim, targetAnim, loop, speed, returningFromAction)
     }
 
     /**

@@ -29,7 +29,7 @@ import { initializePreviewArmorSources } from './previewArmorSources'
 import { preparePreviewSkeleton } from './previewSkeleton'
 
 type PreviewSlot = 'body' | 'head' | 'pauldrons' | 'legs' | 'shield' | 'weapon'
-type PreviewAnimation = 'idle' | 'walk' | 'run' | 'combatIdle' | 'slash' | 'jab' | 'death'
+type PreviewAnimation = 'idle' | 'walk' | 'run' | 'combatIdle' | 'slash' | 'jab' | 'leftSlash' | 'death'
 type AdminUtilsSection = 'materialAtlas' | 'weaponMaterialAtlas' | 'equipment'
 type ArmorMaterialFamily = 'plate' | 'chain'
 type MaterialFamily = ArmorMaterialFamily | 'weapon'
@@ -57,7 +57,7 @@ interface AdminUtilsSettings {
 }
 
 const ADMIN_UTILS_STORAGE_KEY = 'darkenlight.adminUtils.settings.v1'
-const PREVIEW_ANIMATIONS: PreviewAnimation[] = ['idle', 'walk', 'run', 'combatIdle', 'slash', 'jab', 'death']
+const PREVIEW_ANIMATIONS: PreviewAnimation[] = ['idle', 'walk', 'run', 'combatIdle', 'slash', 'jab', 'leftSlash', 'death']
 const MODIFIER_COMPONENTS: ModifierComponent[] = ['scale', 'position', 'rotation']
 const MODIFIER_AXES: ModifierAxis[] = ['x', 'y', 'z']
 const GENERATED_ARMOR_ATLAS_SIZE = 1024
@@ -512,6 +512,7 @@ function createShell(root: HTMLElement) {
                             <option value="combatIdle">Combat idle</option>
                             <option value="slash">Útok – slash</option>
                             <option value="jab">Útok – jab</option>
+                            <option value="leftSlash">Útok – left slash</option>
                             <option value="death">Smrt</option>
                         </select>
                     </label>
@@ -867,6 +868,7 @@ function playAnimation(model: CharacterModel, animationName: string, loop = true
         combatIdle: model.combatIdleAnim,
         slash: model.slashAnim,
         jab: model.jabAnim,
+        leftSlash: model.leftSlashAnim,
         death: model.deathAnim,
     }
     Object.values(animations).forEach((animation) => animation?.stop())
@@ -1267,6 +1269,16 @@ export async function mountAdminUtils() {
         const entries = container.instantiateModelsToScene(undefined, false, { doNotInstantiate: true })
         entries.skeletons.forEach(preparePreviewSkeleton)
         const model = await CharacterModel.create(createPreviewCharacter(), true, entries)
+        // Preview the full authored SLASH, Blender 220–250 (24 FPS -> 60 FPS).
+        if (model.slashAnim) {
+            model.slashAnim.from = 550
+            model.slashAnim.to = 625
+        }
+        // LEFT SLASH preview only: Blender 300–330.
+        if (model.leftSlashAnim) {
+            model.leftSlashAnim.from = 750
+            model.leftSlashAnim.to = 825
+        }
         model.node.rotation.y = Math.PI / 2
 
         ;(Object.keys(slotSelections) as PreviewSlot[]).forEach((slot) => {

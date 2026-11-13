@@ -97,20 +97,34 @@ export class AnimTransition {
     fromWeight: number
     toWeight: number
     ended: boolean
+    private elapsed = 0
+    private smoothPoseReturn: boolean
 
-    constructor(duration: number, fromAnimation: AnimationGroup | undefined, toAnimation: AnimationGroup, loop = false, speed = 1.0) {
+    constructor(duration: number, fromAnimation: AnimationGroup | undefined, toAnimation: AnimationGroup, loop = false, speed = 1.0, smoothPoseReturn = false) {
         this.duration = duration
         this.fromAnimation = fromAnimation
         this.toAnimation = toAnimation
         this.loop = loop
         this.speed = speed
         this.ended = false
+        this.smoothPoseReturn = smoothPoseReturn
 
         this.fromWeight = 1
         this.toWeight = 0
 
-        // Start target animation but set its weight to 0 initially
-        this.toAnimation.start(loop, speed, this.toAnimation['startFrame'], this.toAnimation['endFrame'])
+        if (smoothPoseReturn && fromAnimation) {
+            // Keep the outgoing pose contributing throughout the blend. A non-looping
+            // clip otherwise removes its animatables when it ends, causing a snap.
+            if (!fromAnimation.isStarted) {
+                fromAnimation.start(true, 1, fromAnimation.to, fromAnimation.to)
+            }
+            // Keep evaluating weights while holding the frame; pause() would also
+            // stop the outgoing pose from contributing to Babylon's weighted blend.
+            fromAnimation.speedRatio = 0
+        }
+
+        // Start target animation but set its weight to 0 initially.
+        this.toAnimation.start(loop, speed, this.toAnimation.from, this.toAnimation.to)
         this.toAnimation.setWeightForAllAnimatables(0)
         this.fromAnimation?.setWeightForAllAnimatables(1)
     }
@@ -118,8 +132,15 @@ export class AnimTransition {
     onFrame(timeRate: number) {
         const weightChange = timeRate / this.duration
 
-        this.fromWeight = Math.max(0, this.fromWeight - weightChange)
-        this.toWeight = Math.min(1, this.toWeight + weightChange)
+        if (this.smoothPoseReturn) {
+            this.elapsed += timeRate
+            const progress = Math.min(1, this.elapsed / this.duration)
+            this.toWeight = progress * progress * (3 - 2 * progress)
+            this.fromWeight = 1 - this.toWeight
+        } else {
+            this.fromWeight = Math.max(0, this.fromWeight - weightChange)
+            this.toWeight = Math.min(1, this.toWeight + weightChange)
+        }
 
         this.fromAnimation?.setWeightForAllAnimatables(this.fromWeight)
         this.toAnimation.setWeightForAllAnimatables(this.toWeight)
