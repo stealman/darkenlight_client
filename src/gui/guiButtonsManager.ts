@@ -165,9 +165,9 @@ export const GuiButtonsManager = {
     },
 
     updatePositions() {
-        document.documentElement.style.setProperty('--hud-dock-button-size', `${this.dockButtonSize}px`)
         const dock = document.getElementById('gui-buttons')
         if (dock) {
+            dock.style.setProperty('--hud-dock-button-size', `${this.dockButtonSize}px`)
             dock.classList.toggle('gui-buttons--touch', Settings.isPhoneOrTablet())
             dock.style.setProperty('--hud-joystick-left', `${Settings.joystickLeft}px`)
             dock.style.setProperty('--hud-joystick-bottom', `${Settings.joystickBottom}px`)

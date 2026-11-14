@@ -13,6 +13,7 @@ import {
     EffectDamageMessage,
     CharacterGatheringMessage,
     CharacterGatheringResultMessage,
+    CharacterPickupData,
     CharacterRestingMessage,
     HealingMessage,
     HealingResultMessage, PotionUsedMessage, PubliclyVisibleAffectData, PushThroughMessage,
@@ -27,10 +28,30 @@ import {AudioManager} from '@/babylon/audio/audioManager'
 import {CharacterActions} from '@/data/actions/characterActions'
 import {MonsterManager} from '@/babylon/monsters/monsterManager'
 import {NpcManager} from '@/babylon/npc/npcManager'
+import {ActivityLogManager} from '@/data/activityLogManager'
+import {Item} from '@/data/items/item'
+import {t} from '@/i18n'
 
 export const CharacterManager = {
     characters: new Map<number, Character>(),
     visibleCharacters: new Set<number>(),
+
+    receivePickup(data: CharacterPickupData) {
+        if (data.worldId !== MyPlayer.worldId || data.id === MyPlayer.myChar?.id
+            || !this.visibleCharacters.has(data.id)) return
+        const character = this.characters.get(data.id)
+        if (!character) return
+
+        if (character.getMoveAngle() == null || character.getActualSpeed() <= 0) {
+            character.model?.playPickupAnimation()
+        }
+        const name = Item.fromData(data.item).name || '?'
+        const text = t('activityLog.otherPickup', {name: character.getName(), item: name, quantity: data.quantity})
+        const offset = text.lastIndexOf(name)
+        ActivityLogManager.add(text, undefined, data.time, {
+            item: offset >= 0 ? {before: text.slice(0, offset), name, after: text.slice(offset + name.length)} : undefined,
+        })
+    },
 
     initialize () {
         this.characters = new Map<number, Character>()

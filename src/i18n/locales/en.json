@@ -16,6 +16,7 @@
     "healIncoming": "{name} → you: healing +{amount} HP",
     "healSelf": "Recovered +{amount} HP",
     "empty": "No events yet.",
+    "otherPickup": "{name} picked up: {item} ×{quantity}",
     "pickup": "Picked up: {item} ×{quantity}",
     "purchase": "Purchased: {item} ×{quantity}",
     "craft": "Crafted: {item} ×{quantity}",

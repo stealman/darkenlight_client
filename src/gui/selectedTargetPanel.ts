@@ -11,6 +11,7 @@ export const SelectedTargetPanel = {
     tooltipOwnerKey: 'selected-target-panel' as string,
     tooltipRefreshIntervalMs: 250 as number,
     panel: null as HTMLDivElement | null,
+    guiButtons: null as HTMLElement | null,
     nameEl: null as HTMLSpanElement | null,
     nameTextEl: null as HTMLSpanElement | null,
     skullsEl: null as HTMLSpanElement | null,
@@ -24,6 +25,8 @@ export const SelectedTargetPanel = {
 
     initialize() {
         this.renderedTarget = null
+        this.guiButtons = document.getElementById('gui-buttons')
+        this.guiButtons?.classList.remove('has-target-attributes')
         if (this.panel) {
             this.panel.remove()
             this.panel = null
@@ -214,6 +217,12 @@ export const SelectedTargetPanel = {
         this.markTooltipRefreshNow()
     },
 
+    setHasAttributes(hasAttributes: boolean) {
+        // Keep height changes local; a variable on :root invalidates the entire UI.
+        this.panel?.classList.toggle('has-target-attributes', hasAttributes)
+        this.guiButtons?.classList.toggle('has-target-attributes', hasAttributes)
+    },
+
     onFrame(actualTime: number) {
         if (!this.panel || !this.nameEl) return
 
@@ -226,6 +235,7 @@ export const SelectedTargetPanel = {
                 this.nameTextEl!.textContent = ''
                 this.skullsEl!.style.display = 'none'
                 this.attributesEl?.replaceChildren()
+                this.setHasAttributes(false)
                 this.renderedAttributes = null
                 for (const fillEl of this.hpFillEls) fillEl.style.width = '0%'
             }
@@ -255,6 +265,7 @@ export const SelectedTargetPanel = {
                 icon.append(image, level)
                 this.attributesEl.appendChild(icon)
             }
+            this.setHasAttributes(this.attributesEl.childElementCount > 0)
         }
         const previous = this.renderedTarget
         if (!previous) this.panel.classList.remove('empty')

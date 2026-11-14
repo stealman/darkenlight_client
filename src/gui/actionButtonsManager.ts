@@ -437,7 +437,7 @@ export const ActionButtonsManager = {
 
     clickOnAutoAttackButton() {
         if (!TargetingManager.selectedTarget) {
-            OnScreenMessageManager.addMessage(t('messages.autoAttackRequiresTarget'), OnScreenMessageSeverities.ERROR)
+            TargetingManager.cycleThroughClosestTargets()
             return
         }
         if (MyPlayer.activeAction &&
@@ -456,6 +456,10 @@ export const ActionButtonsManager = {
     },
 
     clickOnPowerStrikeButton() {
+        if (!TargetingManager.selectedTarget) {
+            TargetingManager.cycleThroughClosestTargets()
+            return
+        }
         if (!MyPlayer.myChar.getWeapon() || MyPlayer.myChar.isWeaponRanged()) {
             OnScreenMessageManager.addMessage(t('messages.powerStrikeRequiresMeleeWeapon'), OnScreenMessageSeverities.ERROR)
             return
@@ -481,6 +485,10 @@ export const ActionButtonsManager = {
     },
 
     clickOnPreciseShotButton() {
+        if (!TargetingManager.selectedTarget) {
+            TargetingManager.cycleThroughClosestTargets()
+            return
+        }
         if (!MyPlayer.myChar.getWeapon() || !MyPlayer.myChar.isWeaponRanged()) {
             OnScreenMessageManager.addMessage(t('messages.preciseShotRequiresBow'), OnScreenMessageSeverities.ERROR)
             return

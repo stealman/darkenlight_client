@@ -632,6 +632,14 @@ export interface ActivityLogData {
     time?: number
 }
 
+export interface CharacterPickupData {
+    id: number
+    worldId: number
+    item: ItemTO
+    quantity: number
+    time: number
+}
+
 export interface GMSpawnStatusData {
     worldId: number
     spawns: Array<{id: number, count: number, nextSpawnInMs: number | null, depleted: boolean}>

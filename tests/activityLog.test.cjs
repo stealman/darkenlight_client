@@ -80,8 +80,9 @@ test('combat log retains the name of a killed target and identifies guard attack
         '@/babylon/character/characterManager': {CharacterManager: {characters: new Map(), startAutoAttack() {}}},
         '@/babylon/npc/npcManager': {NpcManager: {guards: new Map([[9, {getName: () => 'Guard'}]])}},
         '@/data/inventoryManager': {InventoryManager: {inventory: []}},
-        '@/data/activityLogManager': {ActivityLogManager: {lastAttackWeaponName: '', rememberAttackWeapon(weapon) {this.lastAttackWeaponName = weapon?.name || 'Bare hands'}, add(text, color, time, details) {entries.push({text, color, ...details})}}},
+        '@/data/activityLogManager': {ActivityLogManager: {lastAttackWeaponName: '', flushKill() {}, rememberAttackWeapon(weapon) {this.lastAttackWeaponName = weapon?.name || 'Bare hands'}, add(text, color, time, details) {entries.push({text, color, ...details})}}},
         '@/gui/combatColors': {getDamageColor: () => '#ffd45c'},
+        '@/gui/combatText': {getDamagePositionSuffix: () => ''},
         '@/i18n': {t: (key, params = {}) => key === 'items.weapons.steel-sword' ? 'Steel Sword' : key === 'activityLog.unarmed' ? 'Bare hands' : `${key}: ${params.name || ''}: ${params.result || params.amount || ''}`} ,
     }
     const exports = {}

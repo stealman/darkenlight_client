@@ -16,6 +16,7 @@
     "healIncoming": "{name} → ty: léčení +{amount} HP",
     "healSelf": "Obnoveno +{amount} HP",
     "empty": "Zatím žádné události.",
+    "otherPickup": "{name} sebral(a): {item} ×{quantity}",
     "pickup": "Sebráno: {item} ×{quantity}",
     "purchase": "Koupeno: {item} ×{quantity}",
     "craft": "Vyrobeno: {item} ×{quantity}",

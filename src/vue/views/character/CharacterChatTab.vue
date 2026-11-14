@@ -1,5 +1,5 @@
 <template>
-    <section ref="panel" class="chat-panel" :style="hudStyle" :class="[`chat-tab--${state.active}`, {'chat-panel--phone': phoneLayout, 'chat-panel--hud': desktopHud, 'chat-panel--resizing': resizing}]" @keydown="onKeyDown" @keyup.stop @pointerdown.stop @wheel.stop>
+    <section ref="panel" class="chat-panel" :class="[`chat-tab--${state.active}`, {'chat-panel--phone': phoneLayout, 'chat-panel--hud': desktopHud, 'chat-panel--resizing': resizing}]" @keydown="onKeyDown" @keyup.stop @pointerdown.stop @wheel.stop>
         <div class="chat-window">
         <nav class="chat-tabs" role="tablist" :aria-label="t('character.tabs.chat')">
             <button v-for="channel in channels" :key="channel" role="tab" :aria-selected="state.active === channel"
@@ -61,8 +61,7 @@ const log = ref<HTMLElement | null>(null)
 const panel = ref<HTMLElement | null>(null)
 const hudSize = ref<{width: number, height: number} | null>(null)
 const resizing = ref(false)
-const hudStyle = computed(() => props.desktopHud && hudSize.value
-    ? {width: `${hudSize.value.width}px`, height: `${hudSize.value.height}px`} : {})
+let resizeFrame: number | null = null
 const HUD_SIZE_KEY = 'darkenlight:desktopChatSize'
 let resizeDrag: {id: number, x: number, y: number, width: number, height: number, handle: HTMLElement} | null = null
 function constrainSize(width: number, height: number) {
@@ -74,7 +73,11 @@ function constrainSize(width: number, height: number) {
 function syncHudHeight() {
     if (!props.desktopHud) return
     const height = hudSize.value?.height ?? panel.value?.getBoundingClientRect().height
-    if (height) document.documentElement.style.setProperty('--desktop-chat-height', `${height}px`)
+    const buttons = document.getElementById('system-buttons')
+    if (height && buttons) {
+        buttons.classList.add('system-buttons--desktop-chat')
+        buttons.style.setProperty('--desktop-chat-height', `${height}px`)
+    }
 }
 function restoreHudSize() {
     try {
@@ -82,11 +85,18 @@ function restoreHudSize() {
         if (saved && Number.isFinite(saved.width) && Number.isFinite(saved.height) && saved.width > 0 && saved.height > 0)
             hudSize.value = constrainSize(saved.width, saved.height)
     } catch { /* Retain default dimensions when storage is unavailable. */ }
+    applyHudSize()
+}
+function applyHudSize() {
+    if (panel.value && hudSize.value) {
+        panel.value.style.width = `${hudSize.value.width}px`
+        panel.value.style.height = `${hudSize.value.height}px`
+    }
     syncHudHeight()
 }
 function onViewportResize() {
     if (hudSize.value) hudSize.value = constrainSize(hudSize.value.width, hudSize.value.height)
-    nextTick(syncHudHeight)
+    applyHudSize()
 }
 function startResize(event: PointerEvent) {
     if (!props.desktopHud || event.button !== 0 || resizeDrag || !panel.value) return
@@ -100,11 +110,20 @@ function moveResize(event: PointerEvent) {
     if (!resizeDrag || event.pointerId !== resizeDrag.id) return
     hudSize.value = constrainSize(resizeDrag.width + event.clientX - resizeDrag.x,
         resizeDrag.height + resizeDrag.y - event.clientY)
-    syncHudHeight()
-    if (stickToBottom) scrollBottom()
+    if (resizeFrame === null) resizeFrame = window.requestAnimationFrame(() => {
+        resizeFrame = null
+        applyHudSize()
+        if (stickToBottom) scrollBottom()
+    })
 }
 function endResize(event?: PointerEvent) {
     if (!resizeDrag || (event && event.pointerId !== resizeDrag.id)) return
+    if (resizeFrame !== null) {
+        window.cancelAnimationFrame(resizeFrame)
+        resizeFrame = null
+        applyHudSize()
+        if (stickToBottom) scrollBottom()
+    }
     const drag = resizeDrag
     resizeDrag = null
     resizing.value = false
@@ -224,7 +243,9 @@ onUnmounted(() => {
     if (props.desktopHud) {
         window.removeEventListener('resize', onViewportResize)
         window.removeEventListener('blur', onResizeBlur)
-        document.documentElement.style.removeProperty('--desktop-chat-height')
+        const buttons = document.getElementById('system-buttons')
+        buttons?.classList.remove('system-buttons--desktop-chat')
+        buttons?.style.removeProperty('--desktop-chat-height')
     }
     clearTimeout(errorTimer)
     if (props.desktopHud) ChatManager.hudVisible = false

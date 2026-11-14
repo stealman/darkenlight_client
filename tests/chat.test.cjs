@@ -65,9 +65,22 @@ function setupPanel(deviceType = 'DESKTOP', desktopHud = false, storage = new Ma
     const ChatManager = setup(); ChatManager.initialize(1, 'Alice')
     const sent = []
     const targetCycles = []
+    const frames = new Map()
+    let frameId = 0
+    const buttonStyles = new Map(), buttonClasses = new Set()
+    const systemButtons = {
+        classList: {add: c => buttonClasses.add(c), remove: c => buttonClasses.delete(c)},
+        style: {setProperty: (k, v) => buttonStyles.set(k, v), removeProperty: k => buttonStyles.delete(k)},
+    }
+    const flushFrame = () => {
+        const callbacks = [...frames.values()]; frames.clear()
+        callbacks.forEach(callback => callback())
+    }
     const deps = {
         vue: {...vue, onMounted() {}, onUnmounted() {}},
         '@/data/chatManager': {ChatManager},
+        '@/data/activityLogManager': {ActivityLogManager: {state: vue.reactive({entries: []})}},
+        '@/gui/combatText': {},
         '@/network/connector': {Connector: {sendMessage: msg => sent.push(msg.d)}},
         '@/network/messages': {ChatSendMsg: class {constructor(d) {this.d = d}}, SayMsg: class {constructor(d) {this.d = d}}},
         '@/controlls/controller': {Controller: {cancelHeldMovement() {}}},
@@ -82,12 +95,14 @@ function setupPanel(deviceType = 'DESKTOP', desktopHud = false, storage = new Ma
     const exports = {}
     vm.runInNewContext(ts.transpileModule(source, {compilerOptions: {module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020}}).outputText, {
         exports, require: name => deps[name], defineProps: () => ({visible: true, desktopHud}), defineExpose() {}, setTimeout, clearTimeout,
-        window: {innerWidth: 1000, innerHeight: 800},
-        document: {documentElement: {style: {setProperty() {}}}},
+        window: {innerWidth: 1000, innerHeight: 800,
+            requestAnimationFrame: callback => {frames.set(++frameId, callback); return frameId},
+            cancelAnimationFrame: id => frames.delete(id)},
+        document: {getElementById: id => id === 'system-buttons' ? systemButtons : null},
         localStorage: {getItem: key => storage.get(key), setItem: (key, val) => storage.set(key, val)},
         CustomEvent: class {constructor(type, opts) {this.type = type; this.detail = opts.detail}},
     })
-    return {...exports, chat: ChatManager, sent, targetCycles}
+    return {...exports, chat: ChatManager, sent, targetCycles, frames, flushFrame, buttonStyles, buttonClasses}
 }
 test('private composer parses recipient and text; arrows cycle contacts preserving body', () => {
     const s = setupPanel()
@@ -185,7 +200,7 @@ test('visible desktop HUD marks only the selected channel as read', () => {
 test('HUD resizes from top right, persists on release, and restores saved dimensions', () => {
     const storage = new Map()
     const s = setupPanel('DESKTOP', true, storage)
-    s.panel.value = {getBoundingClientRect: () => ({width: 300, height: 150})}
+    s.panel.value = {style: {}, getBoundingClientRect: () => ({width: 300, height: 150})}
     const pointers = new Set()
     const handle = {setPointerCapture: id => pointers.add(id), hasPointerCapture: id => pointers.has(id), releasePointerCapture: id => pointers.delete(id)}
     s.startResize({button: 0, pointerId: 7, clientX: 300, clientY: 500, currentTarget: handle})
@@ -196,8 +211,20 @@ test('HUD resizes from top right, persists on release, and restores saved dimens
     assert.equal(s.hudSize.value.width, 450)
     assert.equal(s.hudSize.value.height, 250)
     assert.equal(storage.size, 0)
+    s.moveResize({pointerId: 7, clientX: 460, clientY: 390})
+    assert.equal(s.frames.size, 1, 'pointer moves share one rendering frame')
+    assert.equal(s.panel.value.style.width, undefined)
+    s.flushFrame()
+    assert.equal(s.panel.value.style.width, '460px')
+    assert.equal(s.panel.value.style.height, '260px')
+    assert.equal(s.buttonStyles.get('--desktop-chat-height'), '260px')
+    assert.ok(s.buttonClasses.has('system-buttons--desktop-chat'))
+    s.moveResize({pointerId: 7, clientX: 450, clientY: 400})
     s.endResize({pointerId: 7})
     assert.equal(s.resizing.value, false)
+    assert.equal(s.frames.size, 0, 'release flushes and cancels pending resize')
+    assert.equal(s.panel.value.style.width, '450px')
+    assert.equal(s.buttonStyles.get('--desktop-chat-height'), '250px')
     assert.equal(pointers.size, 0)
     const restored = setupPanel('DESKTOP', true, storage)
     restored.restoreHudSize()

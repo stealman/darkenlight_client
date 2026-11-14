@@ -95,6 +95,7 @@ export const MessageProcessor = {
         for (const element of response) {
             const msg = element
             switch (msg.t) {
+                case 103: CharacterManager.receivePickup(msg.d); break
                 case 102: WorldAreaManager.receive(msg.d); break
                 case 101: ActivityLogManager.receive(msg.d); break
                 case 99: MonsterCatalog.receive(msg.d); break
