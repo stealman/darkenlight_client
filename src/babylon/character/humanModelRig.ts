@@ -24,6 +24,7 @@ const authoredRanges: Record<string, { startFrame: number, endFrame: number }> =
     TwoHandedSpearAttack: { startFrame: 1750, endFrame: 1825 },
     Death: { startFrame: 1850, endFrame: 1925 },
     Pickup: { startFrame: 1950, endFrame: 1975 },
+    SittingIdle: { startFrame: 2000, endFrame: 2075 },
 }
 
 export function getHumanAnimationRange(name: string) {

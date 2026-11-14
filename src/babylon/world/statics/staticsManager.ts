@@ -405,6 +405,18 @@ export const StaticsManager = {
         changedMeshes.forEach((mesh) => mesh.thinInstanceBufferUpdated('matrix'))
     },
 
+    getBenchAtPosition(x: number, z: number): StaticObject | null {
+        const benches = this.staticsByType.get(301)
+        if (!benches) return null
+        const tileX = Math.round(x)
+        const tileZ = Math.round(z)
+        for (const bench of benches) {
+            if (tileX >= bench.position.x && tileX < bench.position.x + bench.getSizeX()
+                && tileZ >= bench.position.z && tileZ < bench.position.z + bench.getSizeZ()) return bench
+        }
+        return null
+    },
+
     getObjectsOnTile(x: number, z: number): StaticObject[] {
         let targets = this.allStatics.filter((obj) => x >= obj.position.x && x < obj.position.x + obj.getSizeX()
             && z >= obj.position.z && z < obj.position.z + obj.getSizeZ())

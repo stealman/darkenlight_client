@@ -21,6 +21,8 @@ import { ActiveMeshFreezer } from '@/babylon/scene/activeMeshFreezer'
 import { modelAssetUrl } from '@/babylon/modelAssetUrl'
 import { HUMAN_MODEL_FILE, HUMAN_ANIMATION_SPEED, getHumanAnimationRange, prepareHumanSkeleton } from './humanModelRig'
 import { applyCharacterEquipmentFitting, preloadCharacterEquipmentFitting } from './characterEquipmentFitting'
+import { StaticsManager } from '@/babylon/world/statics/staticsManager'
+import { CharacterActions } from '@/data/actions/characterActions'
 
 export class CharacterModel implements EquipBearer {
     private static readonly MODEL_FILE = HUMAN_MODEL_FILE
@@ -52,6 +54,7 @@ export class CharacterModel implements EquipBearer {
     walkAnim: AnimationGroup | undefined
     runAnim: AnimationGroup | undefined
     idleAnim: AnimationGroup | undefined
+    sittingIdleAnim: AnimationGroup | undefined
     combatIdleAnim: AnimationGroup | undefined
     combatIdleTwoHandedAnim: AnimationGroup | undefined
     slashAnim: AnimationGroup | undefined
@@ -225,7 +228,7 @@ export class CharacterModel implements EquipBearer {
                         'Idle', 'Walk', 'Run', 'CombatIdle', 'Slash', 'Jab',
                         'LeftSlash', 'RightSlash', 'HighJab', 'Slash2', 'BowAim',
                         'GreatAxeAttack', 'OreMining', 'Death', 'TwoHandedSwordAttack',
-                        'TwoHandedSwordAttack2', 'TwoHandedSpearAttack', 'CombatIdleTwoHanded', 'Pickup',
+                        'TwoHandedSwordAttack2', 'TwoHandedSpearAttack', 'CombatIdleTwoHanded', 'Pickup', 'SittingIdle',
                     ].map(name => ({ name, ...getHumanAnimationRange(name) }))
 
                     let newAnimationGroups = CharacterModel.preparedAnimations.get(result)
@@ -267,6 +270,7 @@ export class CharacterModel implements EquipBearer {
                     this.twoHandedSpearAttackAnim = newAnimationGroups[16]
                     this.combatIdleTwoHandedAnim = newAnimationGroups[17]
                     this.pickupAnim = newAnimationGroups[18]
+                    this.sittingIdleAnim = newAnimationGroups[19]
 
                     this.idleAnim?.start(true, HUMAN_ANIMATION_SPEED.idle)
                     this.actualAnim = this.idleAnim
@@ -453,7 +457,7 @@ export class CharacterModel implements EquipBearer {
         if (this.parent !== MyPlayer.myChar || this.parent.getMoveAngle() != null || hasPositionDrift || Math.abs(this.parent.pos.y - this.parent.logicYpos) > 0.1) {
             this.moveModel(timeRate)
         }
-        if (this.parent.getLookAngle() != null) {
+        if (this.parent.getLookAngle() != null || this.actualAnim === this.sittingIdleAnim) {
             this.resolveModelRotation(timeRate)
         }
         this.resolveDeathSink(timeRate)
@@ -592,7 +596,7 @@ export class CharacterModel implements EquipBearer {
     playPickupAnimation() {
         if (!this.isActive() || !this.pickupAnim || this.parent.dead || this.parent.healingActive) return
         const standingPose = this.actualAnim === this.idleAnim || this.actualAnim === this.combatIdleAnim
-            || this.actualAnim === this.combatIdleTwoHandedAnim
+            || this.actualAnim === this.combatIdleTwoHandedAnim || this.actualAnim === this.sittingIdleAnim
         if (this.actualAnim?.isPlaying && !standingPose) return
 
         this.transitionToAnimation(this.pickupAnim, 0.05, false, 1)
@@ -638,6 +642,16 @@ export class CharacterModel implements EquipBearer {
         return usesTwoHandedStance ? this.combatIdleTwoHandedAnim ?? this.combatIdleAnim : this.combatIdleAnim
     }
 
+    private getIdleAnimation(): AnimationGroup | undefined {
+        const action = this.parent === MyPlayer.myChar ? MyPlayer.activeAction?.name : null
+        const animatedAction = action === CharacterActions.AUTO_ATTACK.name || action === CharacterActions.MINING.name
+            || action === CharacterActions.LUMBERJACKING.name
+        if (!this.sittingIdleAnim || this.parent.dead || animatedAction
+            || this.parent.getMoveAngle() != null || this.parent.autoAttackEnd > Date.now()) return this.idleAnim
+
+        return StaticsManager.getBenchAtPosition(this.parent.pos.x, this.parent.pos.z) ? this.sittingIdleAnim : this.idleAnim
+    }
+
     stopAnimation() {
         // The server's action timer can end before the full authored clip.
         // Keep its existing playback tempo and finish it before returning to a standing pose.
@@ -645,7 +659,7 @@ export class CharacterModel implements EquipBearer {
         if (this.actualAnim?.isPlaying && !this.actualAnim.loopAnimation) return
 
         const inCombat = this.parent.isRecentlyInCombat()
-        const desiredAnimation = inCombat ? this.getCombatIdleAnimation() : this.idleAnim
+        const desiredAnimation = inCombat ? this.getCombatIdleAnimation() : this.getIdleAnimation()
         const animSpeed = inCombat ? HUMAN_ANIMATION_SPEED.combatIdle : HUMAN_ANIMATION_SPEED.idle
 
         if (!desiredAnimation) return
@@ -674,7 +688,7 @@ export class CharacterModel implements EquipBearer {
         }
 
         if (this.actualAnim !== desiredAnimation) {
-            this.transitionToAnimation(desiredAnimation, 0.25, true, animSpeed)
+            this.transitionToAnimation(desiredAnimation, desiredAnimation === this.sittingIdleAnim ? 0.4 : 0.25, true, animSpeed)
             this.actualAnim = desiredAnimation
         } else if (!desiredAnimation.isPlaying) {
             desiredAnimation.start(true, animSpeed, desiredAnimation.from, desiredAnimation.to)
@@ -800,7 +814,9 @@ export class CharacterModel implements EquipBearer {
         if (!this.isActive()) return
         if (!targetAnim || this.actualAnim === targetAnim) return
 
-        const standingPose = targetAnim === this.idleAnim || targetAnim === this.combatIdleAnim || targetAnim === this.combatIdleTwoHandedAnim
+        const sittingTransition = targetAnim === this.sittingIdleAnim || this.actualAnim === this.sittingIdleAnim
+        const standingPose = targetAnim === this.idleAnim || targetAnim === this.combatIdleAnim
+            || targetAnim === this.combatIdleTwoHandedAnim || targetAnim === this.sittingIdleAnim
         if (!standingPose) {
             this.idleAnimationFrozen = false
         }
@@ -815,7 +831,7 @@ export class CharacterModel implements EquipBearer {
             }
         }
         const returningFromAction = standingPose
-            && this.actualAnim != null && !this.actualAnim.loopAnimation
+            && !sittingTransition && this.actualAnim != null && !this.actualAnim.loopAnimation
         if (returningFromAction) {
             // Temporary comparison: switch directly to the standing pose without blending.
             this.animTransition = null
@@ -824,7 +840,7 @@ export class CharacterModel implements EquipBearer {
             targetAnim.setWeightForAllAnimatables(1)
             return
         }
-        this.animTransition = new AnimTransition(duration, this.actualAnim, targetAnim, loop, speed)
+        this.animTransition = new AnimTransition(duration, this.actualAnim, targetAnim, loop, speed, sittingTransition)
     }
 
     /**
@@ -867,7 +883,19 @@ export class CharacterModel implements EquipBearer {
             return
         }
         const model = this.model!
-        const lookAngle = this.parent.getLookAngle()
+        let lookAngle = this.parent.getLookAngle()
+        if (this.actualAnim === this.sittingIdleAnim && this.parent.getMoveAngle() == null) {
+            const bench = StaticsManager.getBenchAtPosition(this.parent.pos.x, this.parent.pos.z)
+            if (bench) {
+                const axis = bench.getSizeX() >= bench.getSizeZ() ? Math.PI / 2 : 0
+                const action = this.parent.activeTimedAction
+                const reference = action?.x != null && action.z != null && lookAngle != null
+                    ? lookAngle + this.modelYAngleOffset : model.rotation.y
+                const delta = Math.atan2(Math.sin(axis - reference), Math.cos(axis - reference))
+                const nearestDirection = Math.abs(delta) <= Math.PI / 2 ? axis : axis + Math.PI
+                lookAngle = nearestDirection - this.modelYAngleOffset
+            }
+        }
         if (lookAngle == null) return
 
         const rotationSpeed = (this.parent == MyPlayer.myChar ? 15 : 8) * timeRate

@@ -212,6 +212,16 @@ export const MyPlayer = {
                 const fireMaxX = fireX + fireSize - 1
                 const fireMaxZ = fireZ + fireSize - 1
 
+                if (obj.type === 242) {
+                    // Match the server's covered-tile reach plus half a field, without tile rounding.
+                    const margin = 1.5 + 1 - this.myChar.getBoxSize() / 2
+                    const pos = this.myChar.pos
+                    if (pos.x > fireX - margin && pos.x < fireMaxX + margin
+                        && pos.z > fireZ - margin && pos.z < fireMaxZ + margin) {
+                        return { x: fireX, z: fireZ }
+                    }
+                    continue
+                }
                 const isNearFireplace = block.x >= fireX - 1 && block.x <= fireMaxX + 1
                     && block.z >= fireZ - 1 && block.z <= fireMaxZ + 1
                 if (isNearFireplace) {

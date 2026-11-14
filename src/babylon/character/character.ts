@@ -48,6 +48,8 @@ import { GameClass, GameClasses } from '@/data/gameClass'
 import { Monster } from '@/babylon/monsters/monster'
 import type {MonsterKnowledgeTO} from '@/network/messageIfs'
 import { Settings } from '@/settings/settings'
+import { CraftingManager, CraftingTypes } from '@/data/crafting/craftingManager'
+import { StaticsManager } from '@/babylon/world/statics/staticsManager'
 
 class Character implements Attackable, EffectTarget {
     model: CharacterModel | null = null
@@ -596,6 +598,25 @@ class Character implements Attackable, EffectTarget {
     }
 
     startCrafting(data: CharacterCraftingMessage) {
+        if (data.type === CraftingTypes.COOKING) {
+            const context = this === MyPlayer.myChar ? CraftingManager.activeCraftingContext : null
+            let fire: { x: number, z: number } | null = context?.type === CraftingTypes.COOKING ? context : null
+            if (!fire) {
+                // Other characters' crafting messages contain no fire coordinates.
+                let distance = 3
+                for (const type of [241, 242]) {
+                    const candidate = StaticsManager.getClosestStaticInDistance(type, this.pos, distance)
+                    if (candidate) {
+                        fire = candidate.position
+                        distance = StaticsManager.getDistanceToStaticFootprint(this.pos, candidate.position, candidate.getSize())
+                    }
+                }
+            }
+            if (fire) {
+                this.startTimedAction(CharacterActions.CRAFTING.name, { ...data, x: fire.x, z: fire.z })
+                return
+            }
+        }
         this.startTimedAction(CharacterActions.CRAFTING.name, data)
     }
 
