@@ -29,7 +29,7 @@ import { initializePreviewArmorSources } from './previewArmorSources'
 import { preparePreviewSkeleton } from './previewSkeleton'
 
 type PreviewSlot = 'body' | 'head' | 'pauldrons' | 'legs' | 'shield' | 'weapon'
-type PreviewAnimation = 'idle' | 'walk' | 'run' | 'combatIdle' | 'slash' | 'jab' | 'leftSlash' | 'death'
+type PreviewAnimation = 'idle' | 'walk' | 'run' | 'combatIdle' | 'slash' | 'jab' | 'leftSlash' | 'rightSlash' | 'death'
 type AdminUtilsSection = 'materialAtlas' | 'weaponMaterialAtlas' | 'equipment'
 type ArmorMaterialFamily = 'plate' | 'chain'
 type MaterialFamily = ArmorMaterialFamily | 'weapon'
@@ -57,7 +57,7 @@ interface AdminUtilsSettings {
 }
 
 const ADMIN_UTILS_STORAGE_KEY = 'darkenlight.adminUtils.settings.v1'
-const PREVIEW_ANIMATIONS: PreviewAnimation[] = ['idle', 'walk', 'run', 'combatIdle', 'slash', 'jab', 'leftSlash', 'death']
+const PREVIEW_ANIMATIONS: PreviewAnimation[] = ['idle', 'walk', 'run', 'combatIdle', 'slash', 'jab', 'leftSlash', 'rightSlash', 'death']
 const MODIFIER_COMPONENTS: ModifierComponent[] = ['scale', 'position', 'rotation']
 const MODIFIER_AXES: ModifierAxis[] = ['x', 'y', 'z']
 const GENERATED_ARMOR_ATLAS_SIZE = 1024
@@ -513,6 +513,7 @@ function createShell(root: HTMLElement) {
                             <option value="slash">Útok – slash</option>
                             <option value="jab">Útok – jab</option>
                             <option value="leftSlash">Útok – left slash</option>
+                            <option value="rightSlash">Útok – right slash</option>
                             <option value="death">Smrt</option>
                         </select>
                     </label>
@@ -869,11 +870,15 @@ function playAnimation(model: CharacterModel, animationName: string, loop = true
         slash: model.slashAnim,
         jab: model.jabAnim,
         leftSlash: model.leftSlashAnim,
+        rightSlash: model.rightSlashAnim,
         death: model.deathAnim,
     }
     Object.values(animations).forEach((animation) => animation?.stop())
     const animation = animations[animationName as keyof typeof animations]
-    const speed = HUMAN_ANIMATION_SPEED[animationName as keyof typeof HUMAN_ANIMATION_SPEED] ?? HUMAN_ANIMATION_SPEED.idle
+    const attack = animationName === 'slash' || animationName === 'jab'
+        || animationName === 'leftSlash' || animationName === 'rightSlash'
+    const speed = attack ? 1000 / 900
+        : HUMAN_ANIMATION_SPEED[animationName as keyof typeof HUMAN_ANIMATION_SPEED] ?? HUMAN_ANIMATION_SPEED.idle
     animation?.start(loop, speed)
 }
 
@@ -1278,6 +1283,11 @@ export async function mountAdminUtils() {
         if (model.leftSlashAnim) {
             model.leftSlashAnim.from = 750
             model.leftSlashAnim.to = 825
+        }
+        // RIGHT SLASH preview only: Blender 340–370.
+        if (model.rightSlashAnim) {
+            model.rightSlashAnim.from = 850
+            model.rightSlashAnim.to = 925
         }
         model.node.rotation.y = Math.PI / 2
 

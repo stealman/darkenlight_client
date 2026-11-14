@@ -600,6 +600,11 @@ export class CharacterModel implements EquipBearer {
     }
 
     stopAnimation() {
+        // The server's action timer can end before the full authored clip.
+        // Keep its existing playback tempo and finish it before returning to a standing pose.
+        // Movement and a new attack can still interrupt it through their normal transitions.
+        if (this.actualAnim?.isPlaying && !this.actualAnim.loopAnimation) return
+
         const desiredAnimation = this.parent.isRecentlyInCombat() ? this.combatIdleAnim : this.idleAnim
         const animSpeed = desiredAnimation === this.combatIdleAnim ? HUMAN_ANIMATION_SPEED.combatIdle : HUMAN_ANIMATION_SPEED.idle
 
@@ -770,7 +775,15 @@ export class CharacterModel implements EquipBearer {
         }
         const returningFromAction = (targetAnim === this.idleAnim || targetAnim === this.combatIdleAnim)
             && this.actualAnim != null && !this.actualAnim.loopAnimation
-        this.animTransition = new AnimTransition(returningFromAction ? 0.35 : duration, this.actualAnim, targetAnim, loop, speed, returningFromAction)
+        if (returningFromAction) {
+            // Temporary comparison: switch directly to the standing pose without blending.
+            this.animTransition = null
+            this.actualAnim?.stop()
+            targetAnim.start(loop, speed, targetAnim.from, targetAnim.to)
+            targetAnim.setWeightForAllAnimatables(1)
+            return
+        }
+        this.animTransition = new AnimTransition(duration, this.actualAnim, targetAnim, loop, speed)
     }
 
     /**

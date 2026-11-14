@@ -12,6 +12,7 @@ const authoredRanges: Record<string, { startFrame: number, endFrame: number }> =
     Slash: { startFrame: 550, endFrame: 625 },
     Jab: { startFrame: 650, endFrame: 725 },
     LeftSlash: { startFrame: 750, endFrame: 825 },
+    RightSlash: { startFrame: 850, endFrame: 925 },
 }
 
 export function getHumanAnimationRange(name: string) {
