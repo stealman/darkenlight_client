@@ -1,7 +1,7 @@
 import { MyPlayer } from '@/data/myPlayer'
 import { EquipItemSlots, Item } from '@/data/items/item'
 import { Connector } from '@/network/connector'
-import { DropItemMsg, EquipItemMsg, MergeItemMsg, PickItemMsg, SplitItemMsg, UnequipItemMsg } from '@/network/messages'
+import { DropItemMsg, EquipItemMsg, MergeItemMsg, SplitItemMsg, UnequipItemMsg } from '@/network/messages'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { GroundItemsManager } from '@/babylon/world/groundItemsManager'
 import { ItemTO } from '@/network/messageIfs'
@@ -336,7 +336,7 @@ export const InventoryManager = {
         }
         const item = GroundItemsManager.nearbyItem
         if (!item) return
-        Connector.sendMessage(new PickItemMsg(item.item.id))
+        GroundItemsManager.pickItem(item)
     },
 
     getCurrentWeaponSetup(): WeaponSetup {

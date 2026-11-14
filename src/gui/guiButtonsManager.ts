@@ -192,7 +192,8 @@ export const GuiButtonsManager = {
         this.nextOpportunityUpdateAt = actualTime + OPPORTUNITY_UPDATE_INTERVAL
         this.opportunityDistances.clear()
         // Show pickup button if there's an item nearby
-        this.opportunityButtons.get(GuiOpportunityActions.PICKUP_ITEM.name)!.setVisible(GroundItemsManager.nearbyItem !== null)
+        this.opportunityButtons.get(GuiOpportunityActions.PICKUP_ITEM.name)!.setVisible(
+            GroundItemsManager.nearbyItem !== null && GroundItemsManager.canPickUpItem())
 
         const coveredBlocks = MyPlayer.myChar ? WorldDataManager.getCoveredBlocks(MyPlayer.myChar.pos, MyPlayer.myChar.getBoxSize()) : []
 

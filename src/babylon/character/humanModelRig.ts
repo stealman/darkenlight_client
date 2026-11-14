@@ -23,6 +23,7 @@ const authoredRanges: Record<string, { startFrame: number, endFrame: number }> =
     TwoHandedSwordAttack2: { startFrame: 1650, endFrame: 1725 },
     TwoHandedSpearAttack: { startFrame: 1750, endFrame: 1825 },
     Death: { startFrame: 1850, endFrame: 1925 },
+    Pickup: { startFrame: 1950, endFrame: 1975 },
 }
 
 export function getHumanAnimationRange(name: string) {

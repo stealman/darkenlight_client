@@ -70,6 +70,7 @@ export class CharacterModel implements EquipBearer {
 
     oreMiningAnim: AnimationGroup | undefined
     deathAnim: AnimationGroup | undefined
+    pickupAnim: AnimationGroup | undefined
 
     actualAnim: AnimationGroup | undefined
     animTransition: AnimTransition | null = null
@@ -224,7 +225,7 @@ export class CharacterModel implements EquipBearer {
                         'Idle', 'Walk', 'Run', 'CombatIdle', 'Slash', 'Jab',
                         'LeftSlash', 'RightSlash', 'HighJab', 'Slash2', 'BowAim',
                         'GreatAxeAttack', 'OreMining', 'Death', 'TwoHandedSwordAttack',
-                        'TwoHandedSwordAttack2', 'TwoHandedSpearAttack', 'CombatIdleTwoHanded',
+                        'TwoHandedSwordAttack2', 'TwoHandedSpearAttack', 'CombatIdleTwoHanded', 'Pickup',
                     ].map(name => ({ name, ...getHumanAnimationRange(name) }))
 
                     let newAnimationGroups = CharacterModel.preparedAnimations.get(result)
@@ -265,6 +266,7 @@ export class CharacterModel implements EquipBearer {
                     this.twoHandedSwordAttackAnim2 = newAnimationGroups[15]
                     this.twoHandedSpearAttackAnim = newAnimationGroups[16]
                     this.combatIdleTwoHandedAnim = newAnimationGroups[17]
+                    this.pickupAnim = newAnimationGroups[18]
 
                     this.idleAnim?.start(true, HUMAN_ANIMATION_SPEED.idle)
                     this.actualAnim = this.idleAnim
@@ -585,6 +587,16 @@ export class CharacterModel implements EquipBearer {
 
         this.transitionToAnimation(anim, 0.15, false, speed)
         this.actualAnim = anim
+    }
+
+    playPickupAnimation() {
+        if (!this.isActive() || !this.pickupAnim || this.parent.dead || this.parent.healingActive) return
+        const standingPose = this.actualAnim === this.idleAnim || this.actualAnim === this.combatIdleAnim
+            || this.actualAnim === this.combatIdleTwoHandedAnim
+        if (this.actualAnim?.isPlaying && !standingPose) return
+
+        this.transitionToAnimation(this.pickupAnim, 0.05, false, 1)
+        this.actualAnim = this.pickupAnim
     }
 
     doOreMiningAnimation() {

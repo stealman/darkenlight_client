@@ -541,6 +541,19 @@ export const GroundItemsManager = {
         return false
     },
 
+    canPickUpItem(): boolean {
+        const character = MyPlayer.myChar
+        return !MyPlayer.isDead.value && character != null
+            && (character.getMoveAngle() == null || character.getActualSpeed() <= 0)
+    },
+
+    pickItem(item: GroundItem): boolean {
+        if (!this.canPickUpItem()) return false
+        Connector.sendMessage(new PickItemMsg(item.item.id))
+        MyPlayer.myChar.model?.playPickupAnimation()
+        return true
+    },
+
     detectNearestItemProximity(time: number) {
         const myPos = MyPlayer.myChar?.pos
         if (!myPos || this.items.length === 0) {
@@ -552,7 +565,7 @@ export const GroundItemsManager = {
         let nearestDist = 9999
         let autoPickup: GroundItem | null = null
         let autoPickupDist = Infinity
-        const canAutoPickup = !MyPlayer.isDead.value && time >= this.nextAutoPickupTime
+        const canAutoPickup = this.canPickUpItem() && time >= this.nextAutoPickupTime
 
         for (const item of this.items) {
             if (item.dropping) continue
@@ -571,11 +584,10 @@ export const GroundItemsManager = {
             }
         }
 
-        if (autoPickup) {
+        if (autoPickup && this.pickItem(autoPickup)) {
             // Allow the server response to arrive before retrying the same stack.
             autoPickup.nextAutoPickupTime = time + 2000
             this.nextAutoPickupTime = time + 1000
-            Connector.sendMessage(new PickItemMsg(autoPickup.item.id))
         }
 
         if (!nearest) {
