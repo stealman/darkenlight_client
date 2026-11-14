@@ -1,6 +1,7 @@
 import { Matrix, Vector3 } from '@babylonjs/core'
 import type { EquipBearer, EquipItem, EquipModelModifier } from '@/babylon/item/equipManager'
 import type { CharacterPauldronModifiers } from '@/babylon/character/characterModelEquipModifiers'
+import { getCharacterWeaponAttachmentMatrix } from '@/babylon/character/characterEquipmentFitting'
 
 type Vector = { x: number, y: number, z: number }
 type Transform = { position: Vector, rotation: Vector, scale: Vector }
@@ -27,9 +28,7 @@ export function getPreviewPairedModifiers(slot: 'pauldrons' | 'legs', modelId: n
 }
 
 export function bindPreviewWeapon(item: EquipItem, owner: Pick<EquipBearer, 'worldMatrix'>) {
-    if (weaponCorrection) {
-        item.modelModifierMatrix = (item.modelModifierMatrix ?? Matrix.Identity()).multiply(weaponCorrection)
-    }
+    item.modelModifierMatrix = getCharacterWeaponAttachmentMatrix(item.modelModifierMatrix ?? Matrix.Identity(), weaponCorrection)
     bindPreviewEquipment(item, owner)
 }
 

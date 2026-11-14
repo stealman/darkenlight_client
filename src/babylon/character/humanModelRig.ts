@@ -13,6 +13,16 @@ const authoredRanges: Record<string, { startFrame: number, endFrame: number }> =
     Jab: { startFrame: 650, endFrame: 725 },
     LeftSlash: { startFrame: 750, endFrame: 825 },
     RightSlash: { startFrame: 850, endFrame: 925 },
+    HighJab: { startFrame: 950, endFrame: 1025 },
+    Slash2: { startFrame: 1050, endFrame: 1125 },
+    BowAim: { startFrame: 1150, endFrame: 1225 },
+    CombatIdleTwoHanded: { startFrame: 1250, endFrame: 1325 },
+    GreatAxeAttack: { startFrame: 1350, endFrame: 1425 },
+    OreMining: { startFrame: 1450, endFrame: 1525 },
+    TwoHandedSwordAttack: { startFrame: 1550, endFrame: 1625 },
+    TwoHandedSwordAttack2: { startFrame: 1650, endFrame: 1725 },
+    TwoHandedSpearAttack: { startFrame: 1750, endFrame: 1825 },
+    Death: { startFrame: 1850, endFrame: 1925 },
 }
 
 export function getHumanAnimationRange(name: string) {

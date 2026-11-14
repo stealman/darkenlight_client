@@ -40,6 +40,10 @@ export const CharacterModelEquipModifiers = new Map<number, EquipModelModifier>(
     [EquipSlotModelsCb.CHAIN_MAIL.modelId, modifier(new Vector3(0, -0.38, -0.08), getArmorEquipScale(EquipSlotModelsCb.CHAIN_MAIL.modelId)!, new Vector3(0.1, 0, 0))],
     [EquipSlotModelsCb.CHAIN_COIF.modelId, modifier(new Vector3(0.005, -0.37, 0.07), getArmorEquipScale(EquipSlotModelsCb.CHAIN_COIF.modelId)!)],
     [EquipSlotModelsCb.CHAIN_GREAVES.modelId, modifier(new Vector3(0.09, 0.72, -0.045), getArmorEquipScale(EquipSlotModelsCb.CHAIN_GREAVES.modelId)!, new Vector3(3.2, 1.58, 0.03))],
+
+    [EquipSlotModelsCb.HUNTINGBOW.modelId, modifier(new Vector3(0.12, 0, 0), new Vector3(0.9, 0.9, 0.9), new Vector3(0, 0, 0))],
+    [EquipSlotModelsCb.RECURVE_BOW.modelId, modifier(new Vector3(0.12, 0, 0), new Vector3(0.9, 0.9, 0.9), new Vector3(0, 0, 0))],
+    [EquipSlotModelsCb.BATTLEBOW.modelId, modifier(new Vector3(0.12, 0, 0), new Vector3(0.9, 0.9, 0.9), new Vector3(0, 0, 0))],
 ])
 
 export const CharacterModelPauldronModifiers = new Map<number, CharacterPauldronModifiers>([
@@ -59,3 +63,4 @@ export const getCharacterModelEquipModifier = (modelId: number, pauldronSide?: C
     }
     return CharacterModelEquipModifiers.get(modelId) ?? null
 }
+

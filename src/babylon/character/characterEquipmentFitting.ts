@@ -16,6 +16,12 @@ const scenes = new WeakMap<Scene, { config: EquipmentFitting, sources: Map<numbe
 const loading = new WeakMap<Scene, Promise<void>>()
 const vector = ({ x, y, z }: Vector) => new Vector3(x, y, z)
 const matrix = (value: Transform) => Matrix.Compose(vector(value.scale), Quaternion.FromEulerVector(vector(value.rotation)), vector(value.position))
+const weaponGripRotation = Matrix.RotationY(Math.PI)
+
+export function getCharacterWeaponAttachmentMatrix(modifier: Matrix, correction: Matrix | null) {
+    const local = weaponGripRotation.multiply(modifier)
+    return correction ? local.multiply(correction) : local
+}
 
 export async function loadRawArmorGeometry(scene: Scene, file: string) {
     const container = await SceneLoader.LoadAssetContainerAsync('', modelAssetUrl('/models/equip/armors/' + file), scene)
@@ -91,11 +97,12 @@ export function applyCharacterEquipmentFitting(scene: Scene, slot: string, item:
     } else {
         fitting = state.config.equipment[id]
     }
-    if (fitting) {
+    if (slot === 'WEAPON') {
+        const modifier = fitting ? matrix(fitting) : item.modelModifierMatrix ?? Matrix.Identity()
+        const correction = state.config.weaponAttachment ? Matrix.FromArray(state.config.weaponAttachment.correction) : null
+        item.attachUsingFullBoneTransform(getCharacterWeaponAttachmentMatrix(modifier, correction), false)
+    } else if (fitting) {
         item.type = state.sources.get(id) ?? item.type
         item.attachUsingFullBoneTransform(matrix(fitting))
-    } else if (slot === 'WEAPON' && state.config.weaponAttachment) {
-        const modifier = item.modelModifierMatrix ?? Matrix.Identity()
-        item.attachUsingFullBoneTransform(modifier.multiply(Matrix.FromArray(state.config.weaponAttachment.correction)), false)
     }
 }

@@ -317,12 +317,8 @@ export class Arrow {
 
         if (!this.trailTip) return
 
-        this.trail = new TrailMesh('arrowTrail', this.trailTip, Renderer.scene, 0.35, 75, true)
-        this.trail.material = this.preciseShot ? Materials.preciseShotArrowTrailMaterial : Materials.weaponTrailMaterial
-        this.startArrowEffect()
-        this.startPreciseShotRingEffect()
-
         // fix start position while still parented to hand
+        this.meshInstance.computeWorldMatrix(true)
         this.startPos = this.meshInstance.getAbsolutePosition().clone()
         this.currentPos = this.startPos.clone()
 
@@ -342,7 +338,27 @@ export class Arrow {
             this.flightTime = 0
 
             this.lastPos.copyFrom(this.currentPos)
+
+            // Initial tangent of the same parabola used by onFrame, at t = 0.
+            this.endPosFixed.subtractToRef(this.startPosFixed, this.flightDirection)
+            const arcHeightMultiplier = this.preciseShot ? Arrow.PRECISE_SHOT_ARC_HEIGHT_MULTIPLIER : 1
+            this.flightDirection.y += 4 * this.arcHeight * arcHeightMultiplier
+            if (this.flightDirection.lengthSquared() > 0.0000001) {
+                this.flightDirection.normalize()
+                Quaternion.FromLookDirectionLHToRef(this.flightDirection, Vector3.UpReadOnly, this.flightRotation)
+                this.flightRotation.multiplyToRef(this.arrowRotationFix, this.meshInstance.rotationQuaternion!)
+            }
         }
+
+        // Seed the trail at the flight pose, never at the cached hand pose.
+        this.meshInstance.computeWorldMatrix(true)
+        this.trailTip.computeWorldMatrix(true)
+        this.trail = new TrailMesh('arrowTrail', this.trailTip, Renderer.scene, 0.35, 75, false)
+        this.trail.material = this.preciseShot ? Materials.preciseShotArrowTrailMaterial : Materials.weaponTrailMaterial
+        this.trail.reset()
+        this.trail.start()
+        this.startArrowEffect()
+        this.startPreciseShotRingEffect()
     }
 
     onFrame(time: number, timeRate: number) {

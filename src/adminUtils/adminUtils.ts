@@ -23,13 +23,14 @@ import { modelAssetUrl } from '@/babylon/modelAssetUrl'
 import { HUMAN_ANIMATION_SPEED, HUMAN_MODEL_FILE } from '@/babylon/character/humanModelRig'
 import type { CharacterModel } from '@/babylon/character/characterModel'
 import type { EquipModelModifier } from '@/babylon/item/equipManager'
+import { BOW_WEAPON_MATERIAL_NAMES } from '@/babylon/item/codebook/vertexColorPalettes/types'
 import './styles.css'
 import { bindPreviewEquipment, bindPreviewWeapon, getPreviewPairedModifiers } from './equipmentModifierConfig'
 import { initializePreviewArmorSources } from './previewArmorSources'
 import { preparePreviewSkeleton } from './previewSkeleton'
 
 type PreviewSlot = 'body' | 'head' | 'pauldrons' | 'legs' | 'shield' | 'weapon'
-type PreviewAnimation = 'idle' | 'walk' | 'run' | 'combatIdle' | 'slash' | 'jab' | 'leftSlash' | 'rightSlash' | 'death'
+type PreviewAnimation = 'idle' | 'walk' | 'run' | 'combatIdle' | 'combatIdleTwoHanded' | 'slash' | 'jab' | 'leftSlash' | 'rightSlash' | 'highJab' | 'slash2' | 'bowAim' | 'greatAxeAttack' | 'oreMining' | 'twoHandedSwordAttack' | 'twoHandedSwordAttack2' | 'twoHandedSpearAttack' | 'death'
 type AdminUtilsSection = 'materialAtlas' | 'weaponMaterialAtlas' | 'equipment'
 type ArmorMaterialFamily = 'plate' | 'chain'
 type MaterialFamily = ArmorMaterialFamily | 'weapon'
@@ -57,7 +58,7 @@ interface AdminUtilsSettings {
 }
 
 const ADMIN_UTILS_STORAGE_KEY = 'darkenlight.adminUtils.settings.v1'
-const PREVIEW_ANIMATIONS: PreviewAnimation[] = ['idle', 'walk', 'run', 'combatIdle', 'slash', 'jab', 'leftSlash', 'rightSlash', 'death']
+const PREVIEW_ANIMATIONS: PreviewAnimation[] = ['idle', 'walk', 'run', 'combatIdle', 'combatIdleTwoHanded', 'slash', 'jab', 'leftSlash', 'rightSlash', 'highJab', 'slash2', 'bowAim', 'greatAxeAttack', 'oreMining', 'twoHandedSwordAttack', 'twoHandedSwordAttack2', 'twoHandedSpearAttack', 'death']
 const MODIFIER_COMPONENTS: ModifierComponent[] = ['scale', 'position', 'rotation']
 const MODIFIER_AXES: ModifierAxis[] = ['x', 'y', 'z']
 const GENERATED_ARMOR_ATLAS_SIZE = 1024
@@ -119,6 +120,9 @@ const MODEL_IDS = {
     warmace: 220,
     greatsword: 30,
     largeBattleAxe: 165,
+    huntingBow: 510,
+    recurveBow: 520,
+    battleBow: 530,
     armorPlate: 1000,
     helm: 1100,
     pauldronsPlate: 1200,
@@ -174,8 +178,27 @@ const weaponMaterialOptions: Array<{ label: string, value: number, atlasTile: nu
     { label: 'Silver', value: 7, atlasTile: 5 },
 ]
 
-function getMaterialOptionsForSlot(slot: PreviewSlot) {
-    return slot === 'weapon' ? weaponMaterialOptions : materialOptions
+const bowMaterialOptions = BOW_WEAPON_MATERIAL_NAMES.map((label, index) => ({
+    label,
+    value: index + 1,
+    atlasTile: index,
+}))
+
+function getMaterialOptionsForSlot(slot: PreviewSlot, modelId = slotSelections[slot]) {
+    if (slot !== 'weapon') return materialOptions
+    return modelId === MODEL_IDS.huntingBow || modelId === MODEL_IDS.recurveBow || modelId === MODEL_IDS.battleBow
+        ? bowMaterialOptions
+        : weaponMaterialOptions
+}
+
+function populateMaterialSelect(select: HTMLSelectElement, slot: PreviewSlot) {
+    select.replaceChildren(...getMaterialOptionsForSlot(slot).map((option) => {
+        const element = document.createElement('option')
+        element.value = String(option.value)
+        element.textContent = option.label
+        element.selected = option.value === slotMaterialSelections[slot]
+        return element
+    }))
 }
 
 const slotOptions: Record<PreviewSlot, Array<{ label: string, value: number | null }>> = {
@@ -217,6 +240,9 @@ const slotOptions: Record<PreviewSlot, Array<{ label: string, value: number | nu
         { label: 'Greatsword', value: MODEL_IDS.greatsword },
         { label: 'Large battle axe', value: MODEL_IDS.largeBattleAxe },
         { label: 'Hunting spear', value: MODEL_IDS.huntingSpear },
+        { label: 'Hunting bow', value: MODEL_IDS.huntingBow },
+        { label: 'Recurve bow', value: MODEL_IDS.recurveBow },
+        { label: 'Battle bow', value: MODEL_IDS.battleBow },
     ],
 }
 
@@ -399,7 +425,7 @@ function loadAdminUtilsSettings(): AdminUtilsSettings {
                 settings.equipment[slot] = storedModelId
             }
             const storedMaterial = stored.materials?.[slot] ?? stored.materialVariant
-            if (getMaterialOptionsForSlot(slot).some((option) => option.value === storedMaterial)) {
+            if (getMaterialOptionsForSlot(slot, settings.equipment[slot]).some((option) => option.value === storedMaterial)) {
                 settings.materials[slot] = storedMaterial!
             }
         })
@@ -510,10 +536,19 @@ function createShell(root: HTMLElement) {
                             <option value="walk">Chůze</option>
                             <option value="run">Běh</option>
                             <option value="combatIdle">Combat idle</option>
+                            <option value="combatIdleTwoHanded">Combat idle – two handed</option>
                             <option value="slash">Útok – slash</option>
                             <option value="jab">Útok – jab</option>
                             <option value="leftSlash">Útok – left slash</option>
                             <option value="rightSlash">Útok – right slash</option>
+                            <option value="highJab">Útok – high jab</option>
+                            <option value="slash2">Útok – slash 2</option>
+                            <option value="bowAim">Luk – bow aim</option>
+                            <option value="greatAxeAttack">Útok – great axe attack</option>
+                            <option value="oreMining">Těžba / kácení</option>
+                            <option value="twoHandedSwordAttack">Útok – two handed sword attack</option>
+                            <option value="twoHandedSwordAttack2">Útok – two handed sword attack 2</option>
+                            <option value="twoHandedSpearAttack">Útok – two handed spear attack</option>
                             <option value="death">Smrt</option>
                         </select>
                     </label>
@@ -704,13 +739,7 @@ function createEquipmentControls(container: HTMLElement) {
         const materialSelect = document.createElement('select')
         materialSelect.dataset.materialSlot = slot
         materialSelect.disabled = true
-        getMaterialOptionsForSlot(slot).forEach((option) => {
-            const element = document.createElement('option')
-            element.value = String(option.value)
-            element.textContent = option.label
-            element.selected = option.value === slotMaterialSelections[slot]
-            materialSelect.append(element)
-        })
+        populateMaterialSelect(materialSelect, slot)
         materialLabel.append(materialSelect)
 
         const toggle = document.createElement('button')
@@ -867,17 +896,26 @@ function playAnimation(model: CharacterModel, animationName: string, loop = true
         walk: model.walkAnim,
         run: model.runAnim,
         combatIdle: model.combatIdleAnim,
+        combatIdleTwoHanded: model.combatIdleTwoHandedAnim,
         slash: model.slashAnim,
         jab: model.jabAnim,
         leftSlash: model.leftSlashAnim,
         rightSlash: model.rightSlashAnim,
+        highJab: model.highJabAnim,
+        slash2: model.slashAnim2,
+        bowAim: model.bowAimAnim,
+        greatAxeAttack: model.greatAxeAttackAnim,
+        oreMining: model.oreMiningAnim,
+        twoHandedSwordAttack: model.twoHandedSwordAttackAnim,
+        twoHandedSwordAttack2: model.twoHandedSwordAttackAnim2,
+        twoHandedSpearAttack: model.twoHandedSpearAttackAnim,
         death: model.deathAnim,
     }
     Object.values(animations).forEach((animation) => animation?.stop())
     const animation = animations[animationName as keyof typeof animations]
     const attack = animationName === 'slash' || animationName === 'jab'
-        || animationName === 'leftSlash' || animationName === 'rightSlash'
-    const speed = attack ? 1000 / 900
+        || animationName === 'leftSlash' || animationName === 'rightSlash' || animationName === 'highJab' || animationName === 'slash2' || animationName === 'greatAxeAttack' || animationName === 'twoHandedSwordAttack' || animationName === 'twoHandedSwordAttack2' || animationName === 'twoHandedSpearAttack'
+    const speed = animationName === 'combatIdleTwoHanded' ? HUMAN_ANIMATION_SPEED.combatIdle : attack ? 1000 / 900
         : HUMAN_ANIMATION_SPEED[animationName as keyof typeof HUMAN_ANIMATION_SPEED] ?? HUMAN_ANIMATION_SPEED.idle
     animation?.start(loop, speed)
 }
@@ -1289,6 +1327,16 @@ export async function mountAdminUtils() {
             model.rightSlashAnim.from = 850
             model.rightSlashAnim.to = 925
         }
+        // HIGH JAB preview only: Blender 380–410.
+        if (model.highJabAnim) {
+            model.highJabAnim.from = 950
+            model.highJabAnim.to = 1025
+        }
+        // BOW AIM preview only: Blender 460–490.
+        if (model.bowAimAnim) {
+            model.bowAimAnim.from = 1150
+            model.bowAimAnim.to = 1225
+        }
         model.node.rotation.y = Math.PI / 2
 
         ;(Object.keys(slotSelections) as PreviewSlot[]).forEach((slot) => {
@@ -1329,6 +1377,7 @@ export async function mountAdminUtils() {
             toggle.disabled = modelId == null
             toggle.textContent = 'Editovat proporce'
             toggle.title = ''
+            populateMaterialSelect(materialSelect, slot)
             materialSelect.disabled = modelId == null
             const canExportAtlas = modelId === MODEL_IDS.longsword || modelId === MODEL_IDS.broadsword || modelId === MODEL_IDS.greataxe || modelId === MODEL_IDS.halberd || modelId === MODEL_IDS.pickaxe || modelId === MODEL_IDS.handAxe || modelId === MODEL_IDS.battleAxe || modelId === MODEL_IDS.huntingSpear || modelId === MODEL_IDS.lightMace || modelId === MODEL_IDS.warmace || modelId === MODEL_IDS.greatsword || modelId === MODEL_IDS.largeBattleAxe || modelId === MODEL_IDS.armorPlate || modelId === MODEL_IDS.helm || modelId === MODEL_IDS.pauldronsPlate || modelId === MODEL_IDS.legsPlate || modelId === MODEL_IDS.shield || modelId === MODEL_IDS.chainMail || modelId === MODEL_IDS.chainCoif || modelId === MODEL_IDS.chainPauldrons || modelId === MODEL_IDS.chainGreaves
             exportLink.setAttribute('aria-disabled', String(!canExportAtlas))
@@ -1396,6 +1445,10 @@ export async function mountAdminUtils() {
             select.addEventListener('change', () => {
                 const value = select.value === '' ? null : Number(select.value)
                 const slot = select.dataset.slot as PreviewSlot
+                const options = getMaterialOptionsForSlot(slot, value)
+                if (!options.some((option) => option.value === slotMaterialSelections[slot])) {
+                    slotMaterialSelections[slot] = options[0].value
+                }
                 setEquipmentSlot(model, slot, value, slotMaterialSelections[slot] - 1)
                 refreshModifierControl(slot)
                 saveAdminUtilsSettings(animationSelect.value)

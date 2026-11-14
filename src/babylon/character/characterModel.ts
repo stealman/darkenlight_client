@@ -53,6 +53,7 @@ export class CharacterModel implements EquipBearer {
     runAnim: AnimationGroup | undefined
     idleAnim: AnimationGroup | undefined
     combatIdleAnim: AnimationGroup | undefined
+    combatIdleTwoHandedAnim: AnimationGroup | undefined
     slashAnim: AnimationGroup | undefined
     slashAnim2: AnimationGroup | undefined
     jabAnim: AnimationGroup | undefined
@@ -223,7 +224,7 @@ export class CharacterModel implements EquipBearer {
                         'Idle', 'Walk', 'Run', 'CombatIdle', 'Slash', 'Jab',
                         'LeftSlash', 'RightSlash', 'HighJab', 'Slash2', 'BowAim',
                         'GreatAxeAttack', 'OreMining', 'Death', 'TwoHandedSwordAttack',
-                        'TwoHandedSwordAttack2', 'TwoHandedSpearAttack',
+                        'TwoHandedSwordAttack2', 'TwoHandedSpearAttack', 'CombatIdleTwoHanded',
                     ].map(name => ({ name, ...getHumanAnimationRange(name) }))
 
                     let newAnimationGroups = CharacterModel.preparedAnimations.get(result)
@@ -263,6 +264,7 @@ export class CharacterModel implements EquipBearer {
                     this.twoHandedSwordAttackAnim = newAnimationGroups[14]
                     this.twoHandedSwordAttackAnim2 = newAnimationGroups[15]
                     this.twoHandedSpearAttackAnim = newAnimationGroups[16]
+                    this.combatIdleTwoHandedAnim = newAnimationGroups[17]
 
                     this.idleAnim?.start(true, HUMAN_ANIMATION_SPEED.idle)
                     this.actualAnim = this.idleAnim
@@ -506,7 +508,9 @@ export class CharacterModel implements EquipBearer {
             if (weapon.modelId === EquipSlotModelsCb.WAR_SPEAR.modelId) {
                 possibleAnims.push(this.twoHandedSpearAttackAnim)
             } else if (usesHeavyTwoHandedAnimations) {
-                possibleAnims.push(this.greatAxeAttackAnim)
+                if (weapon.modelId !== EquipSlotModelsCb.HALBERD.modelId) {
+                    possibleAnims.push(this.greatAxeAttackAnim)
+                }
                 possibleAnims.push(this.twoHandedSwordAttackAnim)
                 possibleAnims.push(this.twoHandedSwordAttackAnim2)
             } else {
@@ -537,7 +541,7 @@ export class CharacterModel implements EquipBearer {
                         possibleAnims.push(this.slashAnim)
                         possibleAnims.push(this.slashAnim2)
                         possibleAnims.push(this.leftSlashAnim)
-                        //possibleAnims.push(this.rightSlashAnim)
+                        possibleAnims.push(this.rightSlashAnim)
                         break
                     }
                     case WeaponTypes.PICKAXE: {
@@ -606,14 +610,31 @@ export class CharacterModel implements EquipBearer {
         }
     }
 
+    private getCombatIdleAnimation(): AnimationGroup | undefined {
+        const weapon = this.parent.getWeapon()
+        const weaponType = weapon?.slotInfo?.weaponType
+        const usesTwoHandedStance = weapon != null && (
+            weaponType === WeaponTypes.TWO_HANDED_SWORD ||
+            weaponType === WeaponTypes.TWO_HANDED_MACE ||
+            weaponType === WeaponTypes.TWO_HANDED_POLEARM ||
+            (weapon.isTwoHanded() && (
+                weapon.weaponCategory === WeaponCategories.SWORD ||
+                weapon.weaponCategory === WeaponCategories.AXE ||
+                weapon.weaponCategory === WeaponCategories.MACE
+            ) && weaponType !== WeaponTypes.PICKAXE)
+        )
+        return usesTwoHandedStance ? this.combatIdleTwoHandedAnim ?? this.combatIdleAnim : this.combatIdleAnim
+    }
+
     stopAnimation() {
         // The server's action timer can end before the full authored clip.
         // Keep its existing playback tempo and finish it before returning to a standing pose.
         // Movement and a new attack can still interrupt it through their normal transitions.
         if (this.actualAnim?.isPlaying && !this.actualAnim.loopAnimation) return
 
-        const desiredAnimation = this.parent.isRecentlyInCombat() ? this.combatIdleAnim : this.idleAnim
-        const animSpeed = desiredAnimation === this.combatIdleAnim ? HUMAN_ANIMATION_SPEED.combatIdle : HUMAN_ANIMATION_SPEED.idle
+        const inCombat = this.parent.isRecentlyInCombat()
+        const desiredAnimation = inCombat ? this.getCombatIdleAnimation() : this.idleAnim
+        const animSpeed = inCombat ? HUMAN_ANIMATION_SPEED.combatIdle : HUMAN_ANIMATION_SPEED.idle
 
         if (!desiredAnimation) return
 
@@ -767,7 +788,8 @@ export class CharacterModel implements EquipBearer {
         if (!this.isActive()) return
         if (!targetAnim || this.actualAnim === targetAnim) return
 
-        if (targetAnim !== this.idleAnim && targetAnim !== this.combatIdleAnim) {
+        const standingPose = targetAnim === this.idleAnim || targetAnim === this.combatIdleAnim || targetAnim === this.combatIdleTwoHandedAnim
+        if (!standingPose) {
             this.idleAnimationFrozen = false
         }
 
@@ -780,7 +802,7 @@ export class CharacterModel implements EquipBearer {
                 return
             }
         }
-        const returningFromAction = (targetAnim === this.idleAnim || targetAnim === this.combatIdleAnim)
+        const returningFromAction = standingPose
             && this.actualAnim != null && !this.actualAnim.loopAnimation
         if (returningFromAction) {
             // Temporary comparison: switch directly to the standing pose without blending.
