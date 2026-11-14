@@ -560,7 +560,14 @@ export class CharacterModel implements EquipBearer {
         const anim = possibleAnims[Utils.rollDice(possibleAnims.length, true)]
         if (!anim) return
 
-        const speed = baseAnimSpeed / this.parent.attackAnimationTime
+        const attack = this.parent.autoAttackMessage
+        const fillAttackInterval = attack && !attack.ps && !attack.prs
+            && !this.parent.isWeaponRanged() && attack.cd > 0
+        const clipDurationMs = (anim.to - anim.from) / anim.targetedAnimations[0].animation.framePerSecond * 1000
+        // Let a normal melee swing occupy the full start-to-start interval.
+        // Hit timing stays server-owned; ranged and special attacks retain their timing.
+        const speed = fillAttackInterval ? clipDurationMs / attack.cd
+            : baseAnimSpeed / this.parent.attackAnimationTime
         if (this.actualAnim === anim) {
             // Consecutive attacks may legitimately use the same clip (notably Power Strike -> AA).
             // Restart it explicitly; the generic transition guard deliberately ignores the same clip.
