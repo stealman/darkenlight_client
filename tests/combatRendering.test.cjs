@@ -49,6 +49,59 @@ test('aggro alert pulses above the HP bar for five seconds and ignores other wor
     assert.equal(overlay.monsterAggroAlerts.size, 0)
 })
 
+test('sitting shares one bench lookup every five frames and movement interrupts immediately', async () => {
+    const core = await import('@babylonjs/core/index.js')
+    const engine = new core.NullEngine()
+    const scene = new core.Scene(engine)
+    let frame = 100
+    scene.getFrameId = () => frame
+    let moving = false
+    const parent = {id: 1, pos: new core.Vector3(4, 0, 4), autoAttackEnd: 0,
+        getMoveAngle: () => moving ? 0 : null, getLookAngle: () => 0}
+    const bench = {getSizeX: () => 2, getSizeZ: () => 1}
+    let currentBench = bench
+    const calls = []
+    const {CharacterModel} = loadModule('babylon/character/characterModel.ts', {
+        '@babylonjs/core': core,
+        '@/data/myPlayer': {MyPlayer: {myChar: parent}},
+        '@/data/actions/characterActions': {CharacterActions: {
+            AUTO_ATTACK: {name: 'attack'}, MINING: {name: 'mining'}, LUMBERJACKING: {name: 'wood'},
+        }},
+        '@/babylon/world/statics/staticsManager': {StaticsManager: {
+            getBenchAtPosition: (x, z) => {calls.push([frame, x, z]); return currentBench},
+        }},
+    })
+    try {
+        const model = new CharacterModel(parent)
+        model.model = {rotation: {y: 0}}
+        model.idleAnim = {}
+        model.sittingIdleAnim = {}
+        for (; frame < 115; frame++) {
+            assert.equal(model.getIdleAnimation(), model.sittingIdleAnim)
+            model.actualAnim = model.sittingIdleAnim
+            model.resolveModelRotation(1 / 60)
+            model.getIdleAnimation()
+        }
+        assert.deepEqual(calls, [[100, 4, 4], [105, 4, 4], [110, 4, 4]])
+        moving = true
+        assert.equal(model.getIdleAnimation(), model.idleAnim)
+        assert.equal(calls.length, 3)
+        moving = false
+        currentBench = null
+        parent.pos.x = 8
+        assert.equal(model.getIdleAnimation(), model.idleAnim)
+        assert.deepEqual(calls.at(-1), [115, 8, 4])
+        currentBench = bench
+        frame = 119
+        assert.equal(model.getIdleAnimation(), model.idleAnim, 'cache also retains misses')
+        frame = 120
+        assert.equal(model.getIdleAnimation(), model.sittingIdleAnim)
+    } finally {
+        scene.dispose()
+        engine.dispose()
+    }
+})
+
 test('combat detail rules include incoming attacks and exclude unrelated fights on medium', () => {
     const {Settings} = loadModule('settings/settings.ts', {})
     const MyPlayer = {myChar: {}}

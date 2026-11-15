@@ -1,4 +1,11 @@
 
+export interface CharacterAppearanceData {
+    headTypeId?: number
+    hairTypeId?: number
+    hairColor?: string
+    hairLightness?: number
+}
+
 export interface MonsterSpawnData {
     skulls?: number
     woolCooldown?: number

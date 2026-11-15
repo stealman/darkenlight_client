@@ -1,11 +1,10 @@
 import {
-    AbstractMesh, AssetContainer, Color3,
+    AbstractMesh, AssetContainer,
     AnimationGroup, Matrix, Mesh, Quaternion, TargetedAnimation,
     InstantiatedEntries, Observer, Scene, SceneLoader, Skeleton, Sound, TransformNode,
     Vector3,
 } from '@babylonjs/core'
 import { AudioManager, FootStepSpeeds, FootStepTypes } from '@/babylon/audio/audioManager'
-import { Materials } from '@/babylon/materials'
 import { AnimTransition } from '@/babylon/animations/animation'
 import { Lights } from '@/babylon/scene/lights'
 import type Character from '@/babylon/character/character'
@@ -20,9 +19,13 @@ import { Settings } from '@/settings/settings'
 import { ActiveMeshFreezer } from '@/babylon/scene/activeMeshFreezer'
 import { modelAssetUrl } from '@/babylon/modelAssetUrl'
 import { HUMAN_MODEL_FILE, HUMAN_ANIMATION_SPEED, getHumanAnimationRange, prepareHumanSkeleton } from './humanModelRig'
-import { applyCharacterEquipmentFitting, preloadCharacterEquipmentFitting } from './characterEquipmentFitting'
+import { applyCharacterEquipmentFitting, getCharacterHairFitting, preloadCharacterEquipmentFitting } from './characterEquipmentFitting'
 import { StaticsManager } from '@/babylon/world/statics/staticsManager'
+import type { StaticObject } from '@/babylon/world/statics/objects/baseStaticObject'
 import { CharacterActions } from '@/data/actions/characterActions'
+import { characterHeadMatrix, getCharacterHeadType, loadCharacterHead } from './characterHead'
+import { createCharacterMaterial } from './characterMaterial'
+import { attachCharacterHair, loadCharacterHair, setCharacterHairColor, setCharacterHairLightness } from './characterHair'
 
 export class CharacterModel implements EquipBearer {
     private static readonly MODEL_FILE = HUMAN_MODEL_FILE
@@ -55,6 +58,8 @@ export class CharacterModel implements EquipBearer {
     runAnim: AnimationGroup | undefined
     idleAnim: AnimationGroup | undefined
     sittingIdleAnim: AnimationGroup | undefined
+    private cachedBench: StaticObject | null = null
+    private benchCheckFrame = -Infinity
     combatIdleAnim: AnimationGroup | undefined
     combatIdleTwoHandedAnim: AnimationGroup | undefined
     slashAnim: AnimationGroup | undefined
@@ -101,7 +106,7 @@ export class CharacterModel implements EquipBearer {
     }
 
     static async preload(scene: Scene) {
-        const container = await this.getContainer(scene)
+        const [container] = await Promise.all([this.getContainer(scene), loadCharacterHead(scene), loadCharacterHair(scene)])
         let pool = this.preparedModels.get(scene)
         if (pool == null) {
             pool = []
@@ -176,8 +181,12 @@ export class CharacterModel implements EquipBearer {
         // The shared AssetContainer parses the GLB once. Most nearby human
         // models are instantiated behind the loading overlay and only enabled
         // when their character first enters the viewport.
-        await (this.instantiatedEntries ? Promise.resolve(this.instantiatedEntries) : CharacterModel.instantiate(scene))
-            .then((result) => {
+        await Promise.all([
+            this.instantiatedEntries ? Promise.resolve(this.instantiatedEntries) : CharacterModel.instantiate(scene),
+            loadCharacterHead(scene, this.parent.headTypeId),
+            loadCharacterHair(scene, this.parent.hairTypeId),
+        ])
+            .then(([result, headType, hairType]) => {
                 if (this.node.isDisposed()) {
                     CharacterModel.release(scene, result)
                     return
@@ -194,20 +203,7 @@ export class CharacterModel implements EquipBearer {
                 this.parent.nameDisplayTime = Date.now() + 3000
 
                 // Apply material
-                const material = Materials.getPBRMaterial(scene, 'steveMaterial', '/models/steve/human_male.png', false, false, {
-                    metallic: 0,
-                    roughness: 1,
-                    directIntensity: 1,
-                    environmentIntensity: 1,
-                })
-                // Keep the player body lit consistently with monster bodies and
-                // equipped items under the close indoor light.
-                material.twoSidedLighting = true
-                material.usePhysicalLightFalloff = false
-                if (this.parent.isMyChar()) {
-                    material.emissiveTexture = material.albedoTexture
-                    material.emissiveColor = new Color3(0.15, 0.15, 0.15)
-                }
+                const material = createCharacterMaterial(scene, 'steveMaterial', '/models/steve/human_male.png')
                 this.model.getChildMeshes().forEach((mesh) => {
                     mesh.material = material
                     Lights.addShadowCaster(mesh, true, false, true)
@@ -279,6 +275,13 @@ export class CharacterModel implements EquipBearer {
                 prepareHumanSkeleton(this.skeleton)
                 this.lhandNode.attachToBone(this.skeleton.bones.find((b) => b.id === 'Bone.012')!, this.model) // Lhand 012
                 this.rhandNode.attachToBone(this.skeleton.bones.find((b) => b.id === 'Bone.009')!, this.model) // Rhand 009
+                const head = new EquipItem(headType, 0, this, this.skeleton.bones.find(b => b.id === 'Bone.002')!, null, null, null)
+                head.attachUsingFullBoneTransform(characterHeadMatrix(getCharacterHeadType(this.parent.headTypeId).fitting))
+                head.castsOutdoorShadow = this.parent.isMyChar()
+                this.equipSet.set('FACE', head)
+                EquipManager.addEquippedItem(head)
+                attachCharacterHair(this, hairType, getCharacterHairFitting(scene, this.parent.hairTypeId ?? 1),
+                    this.parent.hairColor, this.parent.hairLightness)
             })
             .catch((error) => {
                 console.error('Error loading model:', error)
@@ -295,6 +298,22 @@ export class CharacterModel implements EquipBearer {
         if (this.parent.insideView) {
             ActiveMeshFreezer.setSkeletonActive(this.skeleton, true)
         }
+    }
+
+    async refreshHairAppearance() {
+        if (!this.initialized || this.node.isDisposed()) return
+        const typeId = this.parent.hairTypeId
+        const type = await loadCharacterHair(this.node.getScene(), typeId)
+        if (this.node.isDisposed() || this.parent.hairTypeId !== typeId) return
+        const current = this.equipSet.get('HAIR')
+        if (current?.type === type) {
+            setCharacterHairColor(current, this.parent.hairColor)
+            setCharacterHairLightness(current, this.parent.hairLightness)
+            return
+        }
+        const item = attachCharacterHair(this, type, getCharacterHairFitting(this.node.getScene(), typeId),
+            this.parent.hairColor, this.parent.hairLightness)
+        if (!this.parent.insideView) EquipManager.removeEquippedItem(item)
     }
 
     assignEquippedItems() {
@@ -332,11 +351,12 @@ export class CharacterModel implements EquipBearer {
     }
 
     clearAllEquippedItems() {
-        this.equipSet.forEach((item) => {
+        this.equipSet.forEach((item, slot) => {
+            if (slot === 'FACE' || slot === 'HAIR') return
             EquipManager.removeEquippedItem(item)
             item.disposeWeaponTrail()
+            this.equipSet.delete(slot)
         })
-        this.equipSet.clear()
         this.weaponEquipItem = null
     }
 
@@ -642,6 +662,15 @@ export class CharacterModel implements EquipBearer {
         return usesTwoHandedStance ? this.combatIdleTwoHandedAnim ?? this.combatIdleAnim : this.combatIdleAnim
     }
 
+    private getBenchForSitting(): StaticObject | null {
+        const frame = this.node.getScene().getFrameId()
+        if (frame < this.benchCheckFrame || frame - this.benchCheckFrame >= 5) {
+            this.cachedBench = StaticsManager.getBenchAtPosition(this.parent.pos.x, this.parent.pos.z)
+            this.benchCheckFrame = frame
+        }
+        return this.cachedBench
+    }
+
     private getIdleAnimation(): AnimationGroup | undefined {
         const action = this.parent === MyPlayer.myChar ? MyPlayer.activeAction?.name : null
         const animatedAction = action === CharacterActions.AUTO_ATTACK.name || action === CharacterActions.MINING.name
@@ -649,7 +678,7 @@ export class CharacterModel implements EquipBearer {
         if (!this.sittingIdleAnim || this.parent.dead || animatedAction
             || this.parent.getMoveAngle() != null || this.parent.autoAttackEnd > Date.now()) return this.idleAnim
 
-        return StaticsManager.getBenchAtPosition(this.parent.pos.x, this.parent.pos.z) ? this.sittingIdleAnim : this.idleAnim
+        return this.getBenchForSitting() ? this.sittingIdleAnim : this.idleAnim
     }
 
     stopAnimation() {
@@ -885,7 +914,7 @@ export class CharacterModel implements EquipBearer {
         const model = this.model!
         let lookAngle = this.parent.getLookAngle()
         if (this.actualAnim === this.sittingIdleAnim && this.parent.getMoveAngle() == null) {
-            const bench = StaticsManager.getBenchAtPosition(this.parent.pos.x, this.parent.pos.z)
+            const bench = this.getBenchForSitting()
             if (bench) {
                 const axis = bench.getSizeX() >= bench.getSizeZ() ? Math.PI / 2 : 0
                 const action = this.parent.activeTimedAction

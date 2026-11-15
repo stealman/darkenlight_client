@@ -1,6 +1,6 @@
 import { Matrix, Mesh, Quaternion, SceneLoader, Vector3, VertexData } from '@babylonjs/core'
 import type { Scene } from '@babylonjs/core'
-import type { EquipItem, EquipItemType } from '@/babylon/item/equipManager'
+import type { EquipItem, EquipItemType, EquipModelModifier } from '@/babylon/item/equipManager'
 import { modelAssetUrl } from '@/babylon/modelAssetUrl'
 
 type Vector = { x: number, y: number, z: number }
@@ -10,6 +10,7 @@ interface EquipmentFitting {
     pauldrons: Record<string, { left: Transform, right: Transform }>
     legs?: Record<string, { left: Transform, right: Transform }>
     weaponAttachment?: { correction: number[] }
+    hair?: Record<string, Transform>
 }
 
 const scenes = new WeakMap<Scene, { config: EquipmentFitting, sources: Map<number, EquipItemType> }>()
@@ -17,6 +18,13 @@ const loading = new WeakMap<Scene, Promise<void>>()
 const vector = ({ x, y, z }: Vector) => new Vector3(x, y, z)
 const matrix = (value: Transform) => Matrix.Compose(vector(value.scale), Quaternion.FromEulerVector(vector(value.rotation)), vector(value.position))
 const weaponGripRotation = Matrix.RotationY(Math.PI)
+
+export function getCharacterHairFitting(scene: Scene, typeId: number): EquipModelModifier {
+    const fitting = scenes.get(scene)?.config.hair?.[typeId]
+    return fitting
+        ? {position: vector(fitting.position), rotation: vector(fitting.rotation), scale: vector(fitting.scale)}
+        : {position: Vector3.Zero(), rotation: Vector3.Zero(), scale: Vector3.One()}
+}
 
 export function getCharacterWeaponAttachmentMatrix(modifier: Matrix, correction: Matrix | null) {
     const local = weaponGripRotation.multiply(modifier)

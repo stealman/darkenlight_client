@@ -1,0 +1,119 @@
+const assert = require('node:assert/strict')
+const {test} = require('node:test')
+const {readFileSync} = require('node:fs')
+const {join} = require('node:path')
+const ts = require('typescript')
+
+function load(file, dependencies) {
+    const exports = {}
+    const compiled = ts.transpileModule(readFileSync(join(__dirname, '../src', file), 'utf8'), {
+        compilerOptions: {module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020},
+    }).outputText
+    new Function('exports', 'require', compiled)(exports, name => dependencies[name] ?? {})
+    return exports
+}
+
+test('game models render data-driven shared hair and retain it across equipment and viewport changes', async () => {
+    const core = await import('@babylonjs/core/index.js')
+    const {PBRCustomMaterial} = await import('@babylonjs/materials/custom/pbrCustomMaterial.js')
+    await import('@babylonjs/loaders/glTF/index.js')
+    const engine = new core.NullEngine()
+    const scene = new core.Scene(engine)
+    const loads = new Map()
+    const readGlb = file => core.SceneLoader.LoadAssetContainerAsync('',
+        `data:;base64,${readFileSync(join(__dirname, '../public/models/steve', file)).toString('base64')}`, scene, undefined, '.glb')
+    const deps = {
+        '@babylonjs/core': {...core, SceneLoader: {LoadAssetContainerAsync: async (_root, url) => {
+            loads.set(url, (loads.get(url) ?? 0) + 1)
+            return readGlb(url.split('/').pop())
+        }}},
+        '@/babylon/modelAssetUrl': {modelAssetUrl: url => url},
+        '@/settings/settings': {Settings: {isDetailLevelMedium: () => false}},
+        '@/data/myPlayer': {MyPlayer: {myChar: null}},
+        '@/data/items/item': {EquipItemSlots: {}},
+        '@/babylon/scene/activeMeshFreezer': {ActiveMeshFreezer: {setSkeletonActive() {}}},
+        '@/babylon/scene/lights': {Lights: {
+            registerDynamicLightMesh() {}, addShadowCaster() {}, registerActorLightMesh() {},
+            unregisterActorLightMesh() {}, removeShadowCaster() {}, warmLocalPlayerLightMaterial: async () => {},
+        }},
+    }
+    const equipment = load('babylon/item/equipManager.ts', deps)
+    deps['@/babylon/item/equipManager'] = equipment
+    deps['@/babylon/item/codebook/equipCbItem'] = load('babylon/item/codebook/equipCbItem.ts', deps)
+    const material = load('babylon/character/characterMaterial.ts', deps)
+    deps['@/babylon/character/characterMaterial'] = material
+    const head = load('babylon/character/characterHead.ts', {...deps, './characterMaterial': material})
+    deps['@/babylon/character/characterHead'] = head
+    const hairMaterial = load('babylon/character/characterHairMaterial.ts', {...deps, '@babylonjs/materials': {PBRCustomMaterial}})
+    const hair = load('babylon/character/characterHair.ts', {...deps, './characterHairMaterial': hairMaterial})
+    const config = JSON.parse(readFileSync(join(__dirname, '../public/admin-utils/equipment-modifiers.json'), 'utf8'))
+    const fitting = id => {
+        const value = config.hair[id]
+        return Object.fromEntries(['position', 'rotation', 'scale'].map(key => [key, new core.Vector3(value[key].x, value[key].y, value[key].z)]))
+    }
+    const equipmentFitting = load('babylon/character/characterEquipmentFitting.ts', deps)
+    const originalFetch = global.fetch
+    try {
+        global.fetch = async () => ({ok: true, json: async () => ({equipment: {}, pauldrons: {}, hair: config.hair})})
+        await equipmentFitting.preloadCharacterEquipmentFitting(scene)
+    } finally {
+        global.fetch = originalFetch
+    }
+    const {CharacterModel} = load('babylon/character/characterModel.ts', {...deps,
+        './characterMaterial': material, './characterHead': head, './characterHair': hair,
+        './humanModelRig': load('babylon/character/humanModelRig.ts', deps),
+        './characterEquipmentFitting': equipmentFitting,
+    })
+    const models = []
+    try {
+        const body = await readGlb('human_male.glb')
+        for (let index = 0; index < 2; index++) {
+            const owner = {id: index + 1, pos: new core.Vector3(index * 3, 0, 0), logicYpos: 0, insideView: true,
+                headTypeId: 1, hairTypeId: 1, hairColor: index ? '#efdb80' : '#664e0a', hairLightness: index ? 1.5 : 0.6,
+                equipSet: new Map(), getModelHeight: () => 2, isMyChar: () => index === 0}
+            models.push(await CharacterModel.create(owner, true, body.instantiateModelsToScene(undefined, false, {doNotInstantiate: true})))
+        }
+        const type = models[0].equipSet.get('HAIR').type
+        assert.equal(models[1].equipSet.get('HAIR').type, type)
+        assert.equal(loads.get('/models/steve/human_male_hair_1.glb'), 1)
+        equipment.EquipManager.onFrame()
+        assert.equal(type.mesh.thinInstanceCount, 2)
+        const firstTint = core.Color3.FromHexString('#664e0a').toLinearSpace()
+        for (let index = 0; index < 3; index++) assert.ok(Math.abs(type.tintBuffer[index] - firstTint.asArray()[index]) < 1e-6)
+        assert.ok(Math.abs(type.tintBuffer[3] - 0.6) < 1e-6)
+        assert.equal(type.tintBuffer[7], 1.5)
+        assert.ok(models[0].equipSet.get('HAIR').attachmentWorldMatrix.equalsWithEpsilon(
+            head.characterHeadMatrix(fitting(1)).multiply(models[0].equipSet.get('FACE').bone.getTransformNode().computeWorldMatrix(true)), 1e-5))
+        models[0].clearAllEquippedItems()
+        assert.ok(models[0].equipSet.has('HAIR'))
+        models[0].parent.insideView = false
+        models[0].removeFromView()
+        equipment.EquipManager.onFrame()
+        assert.equal(type.mesh.thinInstanceCount, 1)
+        models[1].parent.hairColor = '#ff0000'
+        const originalItem = models[1].equipSet.get('HAIR')
+        await models[1].refreshHairAppearance()
+        equipment.EquipManager.onFrame()
+        assert.equal(models[1].equipSet.get('HAIR'), originalItem, 'color updates keep the same instance')
+        assert.deepEqual(Array.from(type.tintBuffer.slice(0, 3)), [1, 0, 0])
+        models[1].parent.hairTypeId = 2
+        await models[1].refreshHairAppearance()
+        equipment.EquipManager.onFrame()
+        assert.equal(type.mesh.isEnabled(), false)
+        assert.notEqual(models[1].equipSet.get('HAIR').type, type)
+        models[0].parent.hairTypeId = 3
+        await models[0].refreshHairAppearance()
+        equipment.EquipManager.onFrame()
+        assert.equal(models[0].equipSet.get('HAIR').type.mesh.isEnabled(), false, 'hidden characters stay hidden after style updates')
+        models[0].parent.insideView = true
+        await models[0].addToView()
+        equipment.EquipManager.onFrame()
+        assert.equal(models[0].equipSet.get('HAIR').type.mesh.thinInstanceCount, 1)
+        models.forEach(model => model.removeFromScene())
+        equipment.EquipManager.onFrame()
+        for (const [type] of equipment.EquipManager.equippedItems) assert.equal(type.mesh.isEnabled(), false)
+    } finally {
+        scene.dispose()
+        engine.dispose()
+    }
+})

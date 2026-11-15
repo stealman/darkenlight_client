@@ -39,7 +39,7 @@ test('Blender chain mail thin instance matches exported geometry and placement t
         assert.equal(type.mesh, target)
         assert.equal(target.material, material)
         assert.deepEqual(Array.from(otherMesh.getVerticesData('position')), otherPositions)
-        const rigContainer = await read('human_male_new.glb')
+        const rigContainer = await read('human_male.glb')
         const entries = rigContainer.instantiateModelsToScene(undefined, false, {doNotInstantiate: true})
         const previewRoot = entries.rootNodes[0]
         const referenceRoot = reference.rootNodes[0]

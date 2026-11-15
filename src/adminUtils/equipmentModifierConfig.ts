@@ -10,6 +10,9 @@ interface Config {
     pauldrons: Record<string, { left: Transform, right: Transform }>
     legs?: Record<string, { left: Transform, right: Transform }>
     weaponAttachment?: { correction: number[] }
+    hair?: Record<string, Transform>
+    hairPreviewColor?: string
+    hairPreviewLightness?: number
 }
 
 let weaponCorrection: Matrix | null = null
@@ -72,6 +75,25 @@ export async function loadEquipmentModifierConfig(
         left: deserialize(value.left), right: deserialize(value.right),
     }))
     return {
+        getHairColor(): string {
+            return config.hairPreviewColor ?? '#ffffff'
+        },
+        recordHairColor(hexColor: string) {
+            config.hairPreviewColor = hexColor
+        },
+        getHairLightness(): number {
+            return config.hairPreviewLightness ?? 0
+        },
+        recordHairLightness(lightness: number) {
+            config.hairPreviewLightness = lightness
+        },
+        getHair(typeId: number): EquipModelModifier {
+            const value = config.hair?.[typeId]
+            return value ? deserialize(value) : neutral()
+        },
+        recordHair(typeId: number, modifier: EquipModelModifier) {
+            (config.hair ??= {})[typeId] = serialize(modifier)
+        },
         record(modelId: number, slot?: 'pauldrons' | 'legs') {
             if (slot) {
                 const value = getPreviewPairedModifiers(slot, modelId)

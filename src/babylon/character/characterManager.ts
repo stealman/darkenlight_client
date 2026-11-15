@@ -66,6 +66,7 @@ export const CharacterManager = {
             char!.hp = data.hp
             char.name = data.name
             char.isBot = data.bot === true
+            await char.changeHairAppearance(data)
             char.pos.y = Utils.calculateWalkYPos(char.pos.x, char.pos.z, char.getBoxSize())
             char.logicYpos = char.pos.y
             if (data.dead === true) {

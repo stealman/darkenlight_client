@@ -21,6 +21,7 @@ import {
     AutoAttackMessage,
     AutoAttackResultMessage,
     CharacterCampingMessage,
+    CharacterAppearanceData,
     CombatApproachMessage,
     CharacterCraftingMessage,
     CharacterCraftingResultMessage,
@@ -50,6 +51,7 @@ import type {MonsterKnowledgeTO} from '@/network/messageIfs'
 import { Settings } from '@/settings/settings'
 import { CraftingManager, CraftingTypes } from '@/data/crafting/craftingManager'
 import { StaticsManager } from '@/babylon/world/statics/staticsManager'
+import { resolveCharacterHairAppearance, resolveCharacterHeadTypeId } from './characterAppearance'
 
 class Character implements Attackable, EffectTarget {
     model: CharacterModel | null = null
@@ -68,6 +70,10 @@ class Character implements Attackable, EffectTarget {
     stPercent: number = 100
 
     name: string = "Player"
+    headTypeId: number = 1
+    hairTypeId: number = 1
+    hairColor: string = '#664e0a'
+    hairLightness: number = 0.6
     nameDisplayTime: number = 0
     gameClass: GameClass = GameClasses.FIGHTER
     className: string = GameClasses.FIGHTER.key
@@ -126,7 +132,7 @@ class Character implements Attackable, EffectTarget {
     activeTimedAction: CharacterTimedAction | null = null
     publiclyVisibleAffects: Map<number, PubliclyVisibleAffect> = new Map<number, PubliclyVisibleAffect>()
 
-    constructor(data: any, myChar: boolean = false) {
+    constructor(data: CharacterAppearanceData & Record<string, any>, myChar: boolean = false) {
         this.id = data.id
         this.dead = data.dead === true || (myChar && data.hp <= 0)
         if (data.hpp != null) {
@@ -149,6 +155,8 @@ class Character implements Attackable, EffectTarget {
 
         this.pos = new Vector3(data.x, 0, data.z)
         this.name = data.name
+        this.headTypeId = resolveCharacterHeadTypeId(data.headTypeId)
+        Object.assign(this, resolveCharacterHairAppearance(data))
         this.isBot = data.bot === true
         const gameClassKey = data.gameClass?.key ?? data.cls
         this.gameClass = GameClasses.getByKey(gameClassKey) || GameClasses.FIGHTER
@@ -168,6 +176,13 @@ class Character implements Attackable, EffectTarget {
 
     async createModel(init: boolean) {
         this.model = await CharacterModel.create(this, init)
+    }
+
+    async changeHairAppearance(data: CharacterAppearanceData) {
+        const hair = resolveCharacterHairAppearance(data)
+        if (this.hairTypeId === hair.hairTypeId && this.hairColor === hair.hairColor && this.hairLightness === hair.hairLightness) return
+        Object.assign(this, hair)
+        await this.model?.refreshHairAppearance()
     }
 
     initializeEquip(equip: any) {

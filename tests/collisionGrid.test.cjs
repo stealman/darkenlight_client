@@ -22,7 +22,7 @@ function createLoader(core) {
         const exports = {}
         cache.set(name, exports)
         new Function('exports', 'require', compiled)(exports, dependency => dependencies[dependency]
-            || (/^@\/babylon\/world\/(collisionGrid|statics\/objects\/|statics\/staticsCodebook)/.test(dependency) ? load(dependency) : {}))
+            || (/^@\/babylon\/world\/(collisionGrid|prefabs\/leafBlockPlanes|statics\/objects\/|statics\/staticsCodebook)/.test(dependency) ? load(dependency) : {}))
         return exports
     }
     return {load, dependencies}
@@ -110,6 +110,36 @@ test('static manager preserves rotated footprints, connected fences and open dun
     manager.clearWorld()
     assert.equal(manager.getPointInStatic(4, 4, .8), null)
     assert.equal(manager.collisionGrid.cells.size, 0)
+})
+
+test('bench tile index preserves rounded positions, rotated footprints, overlaps and removal', async () => {
+    const core = await import('@babylonjs/core/index.js')
+    const {load, dependencies} = createLoader(core)
+    dependencies['@/babylon/world/statics/staticFireParticleManager'] = {StaticFireParticleManager: {flush() {}}}
+    const {StaticsManager: manager} = load('@/babylon/world/statics/staticsManager')
+    manager.getBaseHeight = () => 0
+    manager.resolveStackedStaticPositions = () => {}
+    manager.renderObjects = () => {}
+    for (const [x, z, facing] of [[4, 4, '+Z'], [5, 4, '+X'], [-4, -4, '-X']]) {
+        manager.addObject({tp: 301, x, z, meta: {facing}})
+    }
+    for (let x = -6; x < 9; x += .23) for (let z = -6; z < 9; z += .31) {
+        const expected = manager.allStatics.find(bench => Math.round(x) >= bench.position.x
+            && Math.round(x) < bench.position.x + bench.getSizeX()
+            && Math.round(z) >= bench.position.z && Math.round(z) < bench.position.z + bench.getSizeZ())
+        assert.equal(manager.getBenchAtPosition(x, z), expected ?? null)
+    }
+    const [first, second] = manager.allStatics
+    assert.equal(manager.getBenchAtPosition(5, 4), first)
+    manager.removeObjectAt(4, 4, 301)
+    assert.equal(manager.getBenchAtPosition(4, 4), null)
+    assert.equal(manager.getBenchAtPosition(5, 4), second)
+    assert.equal(manager.getBenchAtPosition(5, 5), second)
+    manager.removeObjectAt(5, 4, 301)
+    assert.equal(manager.getBenchAtPosition(5, 5), null)
+    manager.clearWorld()
+    assert.equal(manager.benchesByTile.size, 0)
+    assert.equal(manager.getBenchAtPosition(-4, -4), null)
 })
 
 test('tree manager indexes scaled trunks and updates its grid through removal and world reset', async () => {

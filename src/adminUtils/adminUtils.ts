@@ -819,9 +819,169 @@ function readModifierEditor(editor: HTMLElement): EquipModelModifier | null {
     return { scale, position, rotation }
 }
 
+async function installHeadControls(root: HTMLElement, model: CharacterModel) {
+    // Load runtime dependencies only after mountAdminUtils initializes Renderer.
+    const { characterHeadMatrix, getCharacterHeadType } = await import('@/babylon/character/characterHead')
+    const head = getCharacterHeadType(model.parent.headTypeId)
+    const constantName = head.id === 1 ? 'HUMAN_HEAD_FITTING' : `HUMAN_HEAD${head.id}_FITTING`
+    const panel = document.createElement('details')
+    panel.className = 'admin-utils__equipment-group'
+    const title = document.createElement('summary')
+    title.textContent = `Hlava · ${head.file} (offsety)`
+    const editor = document.createElement('div')
+    editor.className = 'admin-utils__modifier-editor'
+    appendModifierControls(editor)
+    const note = document.createElement('small')
+    note.textContent = `Lokální transformace vůči hlavové kosti. Rotace v radiánech. Hodnoty přenes do ${constantName} v characterHead.ts.`
+    const output = document.createElement('textarea')
+    output.readOnly = true
+    output.rows = 6
+    output.setAttribute('aria-label', 'Hodnoty hlavy pro kód')
+    const reset = document.createElement('button')
+    reset.type = 'button'
+    reset.textContent = 'Obnovit hodnoty z kódu'
+    const storageKey = `adminUtils.${head.file}.fitting`
+    const apply = (save = true) => {
+        const fitting = readModifierEditor(editor)
+        if (!fitting) return
+        model.equipSet.get('FACE')?.attachUsingFullBoneTransform(characterHeadMatrix(fitting))
+        output.value = `export const ${constantName}: EquipModelModifier = {\n`
+            + MODIFIER_COMPONENTS.map(component => `    ${component}: new Vector3(${MODIFIER_AXES.map(axis => fitting[component][axis]).join(', ')}),`).join('\n')
+            + '\n}'
+        if (save) {
+            try { localStorage.setItem(storageKey, JSON.stringify(fitting)) } catch { /* Storage may be unavailable. */ }
+        }
+    }
+    populateModifierEditor(editor, head.fitting)
+    try {
+        const saved = JSON.parse(localStorage.getItem(storageKey) ?? 'null')
+        if (saved && MODIFIER_COMPONENTS.every(component => MODIFIER_AXES.every(axis => typeof saved[component]?.[axis] === 'number' && Number.isFinite(saved[component][axis])))) {
+            populateModifierEditor(editor, saved)
+        }
+    } catch { /* Use code defaults if storage is unavailable or invalid. */ }
+    apply(false)
+    editor.addEventListener('input', () => apply())
+    reset.addEventListener('click', () => {
+        populateModifierEditor(editor, head.fitting)
+        apply()
+    })
+    output.addEventListener('click', () => output.select())
+    panel.append(title, editor, note, output, reset)
+    root.querySelector('#adminUtilsEquipment')!.prepend(panel)
+}
+
+async function installHairControls(root: HTMLElement, model: CharacterModel, config: {
+    getHair(typeId: number): EquipModelModifier
+    recordHair(typeId: number, fitting: EquipModelModifier): void
+    getHairColor(): string
+    recordHairColor(hexColor: string): void
+    getHairLightness(): number
+    recordHairLightness(lightness: number): void
+}, changed: () => void) {
+    const { PREVIEW_HAIR_TYPES, loadPreviewHair, attachPreviewHair, setPreviewHairColor, setPreviewHairLightness } = await import('./hairPreview')
+    const { characterHeadMatrix } = await import('@/babylon/character/characterHead')
+    const panel = document.createElement('details')
+    panel.className = 'admin-utils__equipment-group'
+    panel.open = true
+    const title = document.createElement('summary')
+    title.textContent = 'Účes · typ a offsety'
+    const label = document.createElement('label')
+    label.className = 'admin-utils__field'
+    label.textContent = 'Typ účesu'
+    const select = document.createElement('select')
+    select.setAttribute('aria-label', 'Typ účesu pro nastavení offsetů')
+    PREVIEW_HAIR_TYPES.forEach(type => {
+        const option = document.createElement('option')
+        option.value = String(type.id)
+        option.textContent = `Účes ${type.id} · ${type.file}`
+        select.append(option)
+    })
+    label.append(select)
+    const colorLabel = document.createElement('label')
+    colorLabel.className = 'admin-utils__field'
+    colorLabel.textContent = 'Barva vlasů (RGB)'
+    const colorPicker = document.createElement('input')
+    colorPicker.type = 'color'
+    colorPicker.value = config.getHairColor()
+    colorPicker.setAttribute('aria-label', 'Barva vlasů')
+    const colorCode = document.createElement('output')
+    colorCode.value = colorPicker.value
+    colorLabel.append(colorPicker, colorCode)
+    const lightnessLabel = document.createElement('label')
+    lightnessLabel.className = 'admin-utils__field'
+    lightnessLabel.textContent = 'Světlost vlasů (0 = původní, vyšší = světlejší)'
+    const lightnessSlider = document.createElement('input')
+    lightnessSlider.type = 'range'
+    lightnessSlider.min = '-2'
+    lightnessSlider.max = '4'
+    lightnessSlider.step = '0.05'
+    lightnessSlider.value = String(config.getHairLightness())
+    lightnessSlider.setAttribute('aria-label', 'Světlost vlasů')
+    const lightnessValue = document.createElement('output')
+    lightnessValue.value = Number(lightnessSlider.value).toFixed(2)
+    lightnessLabel.append(lightnessSlider, lightnessValue)
+    const editor = document.createElement('div')
+    editor.className = 'admin-utils__modifier-editor'
+    appendModifierControls(editor)
+    const note = document.createElement('small')
+    const help = 'Rotace v radiánech. Ulož tlačítkem „Uložit proporce do souboru“; offsety se ukládají zvlášť pro každý typ účesu.'
+    note.textContent = help
+    panel.append(title, label, colorLabel, lightnessLabel, editor, note)
+    root.querySelector('#adminUtilsEquipment')!.prepend(panel)
+    let item: ReturnType<typeof attachPreviewHair> | null = null
+    let activeTypeId = Number(select.value)
+    const showSelected = async () => {
+        select.disabled = true
+        editor.hidden = true
+        try {
+            const id = Number(select.value)
+            const type = await loadPreviewHair(model.node.getScene(), id)
+            const fitting = config.getHair(id)
+            item = attachPreviewHair(model, type, fitting, colorPicker.value, Number(lightnessSlider.value))
+            activeTypeId = id
+            populateModifierEditor(editor, fitting)
+            editor.hidden = false
+            note.textContent = help
+        } finally {
+            select.disabled = false
+        }
+    }
+    editor.addEventListener('input', () => {
+        const fitting = readModifierEditor(editor)
+        if (!fitting || !item) return
+        item.attachUsingFullBoneTransform(characterHeadMatrix(fitting))
+        config.recordHair(activeTypeId, fitting)
+        changed()
+    })
+    colorPicker.addEventListener('input', () => {
+        colorCode.value = colorPicker.value
+        if (item) setPreviewHairColor(item, colorPicker.value)
+        config.recordHairColor(colorPicker.value)
+        changed()
+    })
+    lightnessSlider.addEventListener('input', () => {
+        const lightness = Number(lightnessSlider.value)
+        lightnessValue.value = lightness.toFixed(2)
+        if (item) setPreviewHairLightness(item, lightness)
+        config.recordHairLightness(lightness)
+        changed()
+    })
+    select.addEventListener('change', () => {
+        void showSelected().catch(error => {
+            console.error('Hair preview failed:', error)
+            note.textContent = 'Účes se nepodařilo načíst. Podrobnosti jsou v konzoli.'
+        })
+    })
+    await showSelected()
+}
+
 function createPreviewCharacter(): Character {
     return {
         id: -1,
+        headTypeId: 1,
+        hairTypeId: 1,
+        hairColor: '#664e0a',
+        hairLightness: 0.6,
         pos: Vector3.Zero(),
         logicYpos: 0,
         nameDisplayTime: 0,
@@ -1286,6 +1446,11 @@ export async function mountAdminUtils() {
         let modifierRevision = 0
         let savedModifierRevision = 0
         let savingModifiers = false
+        const markModifiersChanged = () => {
+            modifierRevision++
+            saveModifiers.disabled = savingModifiers
+            saveModifiers.textContent = 'Uložit proporce do souboru *'
+        }
         saveModifiers.addEventListener('click', async () => {
             const revision = modifierRevision
             savingModifiers = true
@@ -1312,6 +1477,8 @@ export async function mountAdminUtils() {
         const entries = container.instantiateModelsToScene(undefined, false, { doNotInstantiate: true })
         entries.skeletons.forEach(preparePreviewSkeleton)
         const model = await CharacterModel.create(createPreviewCharacter(), true, entries)
+        await installHeadControls(root, model)
+        await installHairControls(root, model, modifierConfig, markModifiersChanged)
         // Preview the full authored SLASH, Blender 220–250 (24 FPS -> 60 FPS).
         if (model.slashAnim) {
             model.slashAnim.from = 550
@@ -1433,9 +1600,7 @@ export async function mountAdminUtils() {
                     CharacterModelEquipModifiers.set(modelId, modifier)
                 }
                 modifierConfig.record(modelId, slot === 'pauldrons' || slot === 'legs' ? slot : undefined)
-                modifierRevision++
-                saveModifiers.disabled = savingModifiers
-                saveModifiers.textContent = 'Uložit proporce do souboru *'
+                markModifiersChanged()
                 setEquipmentSlot(model, slot, modelId, slotMaterialSelections[slot] - 1)
             })
         })

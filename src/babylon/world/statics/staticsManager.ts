@@ -71,6 +71,7 @@ export const StaticsManager = {
     visibleStatics : [] as StaticObject[],
     dungeonEntrances: new Set<StaticObject>(),
     walkableObjectsByTile: new Map<string, StaticObject>(),
+    benchesByTile: new Map<string, StaticObject[]>(),
     activeBarrel: null as CampBarrel | null,
     animatingBarrels: new Set<CampBarrel>(),
     deletePreviewObjects: new Set<StaticObject>(),
@@ -247,6 +248,16 @@ export const StaticsManager = {
                 this.staticsByType.set(added.type, objects)
             }
             objects.add(added)
+            if (added.type === 301) {
+                for (let x = 0; x < added.getSizeX(); x++) {
+                    for (let z = 0; z < added.getSizeZ(); z++) {
+                        const key = `${obj.x + x};${obj.z + z}`
+                        const benches = this.benchesByTile.get(key)
+                        if (benches) benches.push(added)
+                        else this.benchesByTile.set(key, [added])
+                    }
+                }
+            }
             // Full footprint also covers thin fences, connected corners and
             // the pillars of rotated dungeon entrances. Exact tests stay below.
             const padding = Math.max(0, -added.getCollisionTolerance())
@@ -318,6 +329,18 @@ export const StaticsManager = {
                 const objects = this.staticsByType.get(obj.type)
                 objects?.delete(obj)
                 if (objects?.size === 0) this.staticsByType.delete(obj.type)
+                if (obj.type === 301) {
+                    for (let x = 0; x < obj.getSizeX(); x++) {
+                        for (let z = 0; z < obj.getSizeZ(); z++) {
+                            const key = `${obj.position.x + x};${obj.position.z + z}`
+                            const benches = this.benchesByTile.get(key)
+                            if (!benches) continue
+                            const index = benches.indexOf(obj)
+                            if (index !== -1) benches.splice(index, 1)
+                            if (benches.length === 0) this.benchesByTile.delete(key)
+                        }
+                    }
+                }
                 this.deletePreviewObjects.delete(obj)
                 if (obj instanceof CampBarrel) {
                     obj.clearRenderMatrices()
@@ -349,6 +372,7 @@ export const StaticsManager = {
         this.visibleStatics = []
         this.dungeonEntrances.clear()
         this.walkableObjectsByTile.clear()
+        this.benchesByTile.clear()
         this.activeBarrel = null
         this.animatingBarrels.clear()
         this.deletePreviewObjects.clear()
@@ -406,15 +430,7 @@ export const StaticsManager = {
     },
 
     getBenchAtPosition(x: number, z: number): StaticObject | null {
-        const benches = this.staticsByType.get(301)
-        if (!benches) return null
-        const tileX = Math.round(x)
-        const tileZ = Math.round(z)
-        for (const bench of benches) {
-            if (tileX >= bench.position.x && tileX < bench.position.x + bench.getSizeX()
-                && tileZ >= bench.position.z && tileZ < bench.position.z + bench.getSizeZ()) return bench
-        }
-        return null
+        return this.benchesByTile.get(`${Math.round(x)};${Math.round(z)}`)?.[0] ?? null
     },
 
     getObjectsOnTile(x: number, z: number): StaticObject[] {

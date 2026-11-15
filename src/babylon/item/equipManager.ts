@@ -1,5 +1,5 @@
 import {
-    Bone, Color4, GPUParticleSystem, Matrix,
+    Bone, Color3, Color4, GPUParticleSystem, Matrix,
     Mesh, ParticleSystem, PBRMaterial,
     Quaternion,
     Scene,
@@ -19,6 +19,8 @@ const WEAPON_TRAIL_START_DELAY = 150
 const WEAPON_TRAIL_FADE_DURATION = 180
 
 export class EquipItem {
+    tint?: Color3
+    tintLightness?: number
     parent: EquipBearer
     type: EquipItemType
     matVector: Vector2
@@ -393,6 +395,8 @@ export class EquipItem {
 }
 
 export interface EquipThinInstance {
+    tint?: Color3
+    tintLightness?: number
     type: EquipItemType
     matVector: Vector2
     position: Vector3
@@ -422,6 +426,9 @@ export class EquipItemType {
 
     instanceBuffer: Float32Array = new Float32Array(0)
     uvBuffer: Float32Array = new Float32Array(0)
+    // Optional per-instance linear RGB + lightness for materials using tint.
+    tintBuffer: Float32Array | null = null
+    tintBufferDirty: boolean = true
     cbData: EquipCbItem
     _thinReady: boolean = false
     uvBufferDirty: boolean = true
@@ -507,6 +514,7 @@ export class EquipItemType {
         type.mesh.thinInstanceSetBuffer("matrix", type.instanceBuffer, 16, false) // dynamic
         type.mesh.thinInstanceRegisterAttribute("uvc", 2)
         type.mesh.thinInstanceSetBuffer("uvc", type.uvBuffer, 2, false) // dynamic
+        if (type.tintBuffer) type.mesh.thinInstanceSetBuffer('tint', type.tintBuffer, 4, false)
 
         type._thinReady = true
     }
@@ -516,6 +524,7 @@ export class EquipItemType {
      * When count is zero, the mesh is disabled to save performance
      */
     updateCount(count: number) {
+        if (this.tintBuffer) this.tintBufferDirty = true
         if (this.count === count) {
             // Membership may still have changed (one item replaced another),
             // but the existing GPU buffers already have the right capacity.
@@ -530,6 +539,7 @@ export class EquipItemType {
             const nextCapacity = Math.max(8, count, capacity * 2)
             this.instanceBuffer = new Float32Array(16 * nextCapacity)
             this.uvBuffer = new Float32Array(2 * nextCapacity)
+            if (this.tintBuffer) this.tintBuffer = new Float32Array(4 * nextCapacity)
             this._thinReady = false
         }
         this.uvBufferDirty = true
@@ -634,6 +644,7 @@ export const EquipManager = {
 
             type.ensureThinBuffers(type)
             const updateUvc = type.uvBufferDirty
+            const updateTint = type.tintBuffer != null && type.tintBufferDirty
 
             let i = 0
             items.forEach(item => {
@@ -659,6 +670,12 @@ export const EquipManager = {
                     type.uvBuffer[i * 2] = item.matVector.x
                     type.uvBuffer[i * 2 + 1] = item.matVector.y
                 }
+                if (updateTint) {
+                    type.tintBuffer![i * 4] = item.tint?.r ?? 1
+                    type.tintBuffer![i * 4 + 1] = item.tint?.g ?? 1
+                    type.tintBuffer![i * 4 + 2] = item.tint?.b ?? 1
+                    type.tintBuffer![i * 4 + 3] = item.tintLightness ?? 0
+                }
                 i++
             })
 
@@ -668,6 +685,10 @@ export const EquipManager = {
             if (updateUvc) {
                 type.mesh.thinInstanceBufferUpdated("uvc")
                 type.uvBufferDirty = false
+            }
+            if (updateTint) {
+                type.mesh.thinInstanceBufferUpdated('tint')
+                type.tintBufferDirty = false
             }
         })
     },

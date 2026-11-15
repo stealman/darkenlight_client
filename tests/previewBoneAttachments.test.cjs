@@ -39,7 +39,7 @@ test('neutral preview equipment follows authored bones with no additional rotati
     const engine = new core.NullEngine()
     const scene = new core.Scene(engine)
     try {
-        const bytes = readFileSync(join(__dirname, '../public/models/steve/human_male_new.glb'))
+        const bytes = readFileSync(join(__dirname, '../public/models/steve/human_male.glb'))
         const container = await core.SceneLoader.LoadAssetContainerAsync('', `data:;base64,${bytes.toString('base64')}`, scene, undefined, '.glb')
         const entries = container.instantiateModelsToScene(undefined, false, {doNotInstantiate: true})
         const root = entries.rootNodes[0]

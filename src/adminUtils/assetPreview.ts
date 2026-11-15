@@ -116,6 +116,7 @@ export async function installAssetPreview(root: HTMLElement, scene: Scene, camer
         StaticsManager.allStatics = []
         StaticsManager.staticsByType.clear()
         StaticsManager.walkableObjectsByTile.clear()
+        StaticsManager.benchesByTile.clear()
         StaticsManager.dungeonEntrances.clear()
         TreeManager.allTrees = []
         BuildingManager.buildings.forEach(b => b.dispose())

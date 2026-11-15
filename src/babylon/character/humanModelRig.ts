@@ -1,6 +1,6 @@
 import type { Skeleton } from '@babylonjs/core'
 
-export const HUMAN_MODEL_FILE = 'human_male_new.glb'
+export const HUMAN_MODEL_FILE = 'human_male.glb'
 export const HUMAN_ANIMATION_SPEED = { idle: 1, walk: 3, run: 3.2, combatIdle: 1 } as const
 
 // Blender 24 FPS -> imported glTF 60 FPS. All unauthored actions temporarily use JAB.
