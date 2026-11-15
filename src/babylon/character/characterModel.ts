@@ -208,6 +208,10 @@ export class CharacterModel implements EquipBearer {
                 // Apply material
                 const material = createCharacterMaterial(scene, 'steveMaterial', '/models/steve/human_male.png')
                 this.model.getChildMeshes().forEach((mesh) => {
+                    // Visibility is managed by Character.setVisible(). A moving
+                    // body excluded by frustum culling when the active list is
+                    // frozen would stay missing until the next invalidation.
+                    mesh.alwaysSelectAsActiveMesh = true
                     mesh.material = material
                     Lights.addShadowCaster(mesh, true, false, true)
                     Lights.registerActorLightMesh(mesh)
