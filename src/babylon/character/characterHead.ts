@@ -48,7 +48,7 @@ export function loadCharacterHead(scene: Scene, headTypeId = DEFAULT_HEAD_TYPE_I
 }
 
 async function createHeadSource(scene: Scene, definition: ReturnType<typeof getCharacterHeadType>): Promise<EquipItemType> {
-    const container = await SceneLoader.LoadAssetContainerAsync('', modelAssetUrl('/models/steve/' + definition.file), scene)
+    const container = await SceneLoader.LoadAssetContainerAsync('', modelAssetUrl('/models/human/' + definition.file), scene)
     try {
         const meshes = container.meshes.filter(mesh => mesh instanceof Mesh && mesh.getTotalVertices() > 0 && !mesh.skeleton)
         if (meshes.length !== 1) throw new Error(`Expected one rigid mesh in ${definition.file}`)
@@ -56,7 +56,7 @@ async function createHeadSource(scene: Scene, definition: ReturnType<typeof getC
         const mesh = new Mesh(`human-male-head${definition.id}`, scene)
         VertexData.ExtractFromMesh(meshes[0] as Mesh, true, true).applyToMesh(mesh)
         mesh.material = createCharacterMaterial(scene, `human-head${definition.id}-material`,
-            definition.albedoFile ? '/models/steve/' + definition.albedoFile : undefined)
+            definition.albedoFile ? '/models/human/' + definition.albedoFile : undefined)
         mesh.receiveShadows = true
         mesh.alwaysSelectAsActiveMesh = true
         mesh.setEnabled(false)

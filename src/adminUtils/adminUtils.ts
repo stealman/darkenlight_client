@@ -1495,7 +1495,7 @@ export async function mountAdminUtils() {
         window.addEventListener('beforeunload', (event) => {
             if (savedModifierRevision !== modifierRevision) event.preventDefault()
         })
-        const container = await SceneLoader.LoadAssetContainerAsync('', modelAssetUrl('/models/steve/' + HUMAN_MODEL_FILE), scene)
+        const container = await SceneLoader.LoadAssetContainerAsync('', modelAssetUrl('/models/human/' + HUMAN_MODEL_FILE), scene)
         scene.onDisposeObservable.addOnce(() => container.dispose())
         const entries = container.instantiateModelsToScene(undefined, false, { doNotInstantiate: true })
         entries.skeletons.forEach(preparePreviewSkeleton)

@@ -154,7 +154,7 @@ export const WeaponsCbManager = {
         map.set(WeaponModelsCb.LONGSWORD.id, await this.getItem(
             WeaponModelsCb.LONGSWORD,
             this.longSwordMaterial,
-            `tripo-longsword.glb?v=${LONGSWORD_ASSET_CACHE_VERSION}`,
+            `longsword.glb?v=${LONGSWORD_ASSET_CACHE_VERSION}`,
         ))
     },
 
@@ -184,7 +184,7 @@ export const WeaponsCbManager = {
         map.set(WeaponModelsCb.BROADSWORD.id, await this.getItem(
             WeaponModelsCb.BROADSWORD,
             this.broadSwordMaterial,
-            `tripo-broadsword.glb?v=${BROADSWORD_ASSET_CACHE_VERSION}`,
+            `broadsword.glb?v=${BROADSWORD_ASSET_CACHE_VERSION}`,
         ))
     },
 
@@ -214,7 +214,7 @@ export const WeaponsCbManager = {
         map.set(WeaponModelsCb.GREATSWORD.id, await this.getItem(
             WeaponModelsCb.GREATSWORD,
             this.greatSwordMaterial,
-            `tripo-greatsword.glb?v=${GREATSWORD_ASSET_CACHE_VERSION}`,
+            `greatsword.glb?v=${GREATSWORD_ASSET_CACHE_VERSION}`,
         ))
     },
 
@@ -244,7 +244,7 @@ export const WeaponsCbManager = {
         map.set(WeaponModelsCb.LARGE_BATTLE_AXE.id, await this.getItem(
             WeaponModelsCb.LARGE_BATTLE_AXE,
             this.largeBattleAxeMaterial,
-            `tripo-large-battleaxe.glb?v=${LARGE_BATTLE_AXE_ASSET_CACHE_VERSION}`,
+            `large-battleaxe.glb?v=${LARGE_BATTLE_AXE_ASSET_CACHE_VERSION}`,
         ))
     },
 
@@ -275,7 +275,7 @@ export const WeaponsCbManager = {
         map.set(WeaponModelsCb.GREATAXE.id, await this.getItem(
             WeaponModelsCb.GREATAXE,
             this.greatAxeMaterial,
-            `tripo-greataxe.glb?v=${GREATAXE_ASSET_CACHE_VERSION}`,
+            `greataxe.glb?v=${GREATAXE_ASSET_CACHE_VERSION}`,
         ))
     },
 
@@ -305,7 +305,7 @@ export const WeaponsCbManager = {
         map.set(WeaponModelsCb.HALBERD.id, await this.getItem(
             WeaponModelsCb.HALBERD,
             this.halberdMaterial,
-            `tripo-halberd.glb?v=${HALBERD_ASSET_CACHE_VERSION}`,
+            `halberd.glb?v=${HALBERD_ASSET_CACHE_VERSION}`,
         ))
     },
 
@@ -335,7 +335,7 @@ export const WeaponsCbManager = {
         map.set(WeaponModelsCb.PICKAXE.id, await this.getItem(
             WeaponModelsCb.PICKAXE,
             this.pickAxeMaterial,
-            `tripo-pickaxe.glb?v=${PICKAXE_ASSET_CACHE_VERSION}`,
+            `pickaxe.glb?v=${PICKAXE_ASSET_CACHE_VERSION}`,
         ))
     },
 
@@ -365,7 +365,7 @@ export const WeaponsCbManager = {
         map.set(WeaponModelsCb.HAND_AXE.id, await this.getItem(
             WeaponModelsCb.HAND_AXE,
             this.handAxeMaterial,
-            `tripo-handaxe.glb?v=${HANDAXE_ASSET_CACHE_VERSION}`,
+            `handaxe.glb?v=${HANDAXE_ASSET_CACHE_VERSION}`,
         ))
     },
 
@@ -395,7 +395,7 @@ export const WeaponsCbManager = {
         map.set(WeaponModelsCb.BATTLE_AXE.id, await this.getItem(
             WeaponModelsCb.BATTLE_AXE,
             this.battleAxeMaterial,
-            `tripo-battleaxe.glb?v=${BATTLEAXE_ASSET_CACHE_VERSION}`,
+            `battleaxe.glb?v=${BATTLEAXE_ASSET_CACHE_VERSION}`,
         ))
     },
 
@@ -425,7 +425,7 @@ export const WeaponsCbManager = {
         map.set(WeaponModelsCb.HUNTING_SPEAR.id, await this.getItem(
             WeaponModelsCb.HUNTING_SPEAR,
             this.huntingSpearMaterial,
-            `tripo-huntingspear.glb?v=${HUNTINGSPEAR_ASSET_CACHE_VERSION}`,
+            `huntingspear.glb?v=${HUNTINGSPEAR_ASSET_CACHE_VERSION}`,
         ))
     },
 
@@ -455,7 +455,7 @@ export const WeaponsCbManager = {
         map.set(WeaponModelsCb.LIGHT_MACE.id, await this.getItem(
             WeaponModelsCb.LIGHT_MACE,
             this.lightMaceMaterial,
-            `tripo-lightmace.glb?v=${LIGHTMACE_ASSET_CACHE_VERSION}`,
+            `lightmace.glb?v=${LIGHTMACE_ASSET_CACHE_VERSION}`,
         ))
     },
 
@@ -485,7 +485,7 @@ export const WeaponsCbManager = {
         map.set(WeaponModelsCb.WARMACE.id, await this.getItem(
             WeaponModelsCb.WARMACE,
             this.warmaceMaterial,
-            `tripo-warmace.glb?v=${WARMACE_ASSET_CACHE_VERSION}`,
+            `warmace.glb?v=${WARMACE_ASSET_CACHE_VERSION}`,
         ))
     },
 

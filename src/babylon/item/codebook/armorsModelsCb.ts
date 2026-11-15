@@ -47,15 +47,15 @@ export interface TexturedArmorAsset {
 
 /** Shared asset metadata for runtime armour and the GM model-render preview. */
 export const TEXTURED_ARMOR_ASSETS = new Map<number, TexturedArmorAsset>([
-    [EquipSlotModelsCb.ARMOR_PLATE.modelId, { modelFile: `tripo-male-armor-plate.glb?v=${TEXTURED_PLATE_ARMOR_CACHE_VERSION}`, albedoFile: `plate_armor.jpg?v=${TEXTURED_PLATE_ARMOR_CACHE_VERSION}`, normalFile: 'plate_armor_normal.png', metallic: 0.75, roughness: 0.9, directIntensity: 1.5, environmentIntensity: 1.2 }],
-    [EquipSlotModelsCb.HELM.modelId, { modelFile: `tripo-helmet-plate.glb?v=${TEXTURED_PLATE_HELMET_CACHE_VERSION}`, albedoFile: `plate_helmet.jpg?v=${TEXTURED_PLATE_HELMET_CACHE_VERSION}`, normalFile: 'plate_helmet_normal.png', metallic: 0.75, roughness: 0.9, directIntensity: 1.5, environmentIntensity: 1.2 }],
-    [EquipSlotModelsCb.PAULDRONS_PLATE.modelId, { modelFile: `tripo-pauldron-plate.glb?v=${TEXTURED_PLATE_PAULDRON_CACHE_VERSION}`, albedoFile: `plate_pauldron.jpg?v=${TEXTURED_PLATE_PAULDRON_CACHE_VERSION}`, normalFile: 'plate_pauldron_normal.png', metallic: 0.75, roughness: 0.9, directIntensity: 1.5, environmentIntensity: 1.2 }],
-    [EquipSlotModelsCb.LEGS_PLATE.modelId, { modelFile: `tripo-male-leg-plate.glb?v=${TEXTURED_PLATE_LEG_CACHE_VERSION}`, albedoFile: `plate_leg.jpg?v=${TEXTURED_PLATE_LEG_CACHE_VERSION}`, normalFile: 'plate_leg_normal.png', metallic: 0.75, roughness: 0.9, directIntensity: 1.5, environmentIntensity: 1.2 }],
-    [EquipSlotModelsCb.SHIELD.modelId, { modelFile: `tripo_shield.glb?v=${TEXTURED_SHIELD_CACHE_VERSION}`, albedoFile: `shield.jpg?v=${TEXTURED_SHIELD_CACHE_VERSION}`, normalFile: 'shield_normal.png', metallic: 0.75, roughness: 0.9, directIntensity: 1.5, environmentIntensity: 1.2 }],
-    [EquipSlotModelsCb.CHAIN_MAIL.modelId, { modelFile: `tripo-male-armor-chain.glb?v=${TEXTURED_CHAIN_MAIL_CACHE_VERSION}`, albedoFile: `chain_mail.jpg?v=${TEXTURED_CHAIN_MAIL_CACHE_VERSION}`, normalFile: 'chain_mail_normal.png', metallic: 0.5, roughness: 1, directIntensity: 1.75, environmentIntensity: 1.4 }],
-    [EquipSlotModelsCb.CHAIN_COIF.modelId, { modelFile: `tripo-chain-coif.glb?v=${TEXTURED_CHAIN_COIF_CACHE_VERSION}`, albedoFile: `chain_coif.jpg?v=${TEXTURED_CHAIN_COIF_CACHE_VERSION}`, normalFile: 'chain_coif_normal.png', metallic: 0.5, roughness: 1, directIntensity: 1.75, environmentIntensity: 1.4 }],
-    [EquipSlotModelsCb.CHAIN_PAULDRONS.modelId, { modelFile: `tripo-pauldron-chain.glb?v=${TEXTURED_CHAIN_PAULDRON_CACHE_VERSION}`, albedoFile: `chain_pauldron.jpg?v=${TEXTURED_CHAIN_PAULDRON_CACHE_VERSION}`, normalFile: 'chain_pauldron_normal.png', metallic: 0.5, roughness: 1, directIntensity: 1.75, environmentIntensity: 1.4 }],
-    [EquipSlotModelsCb.CHAIN_GREAVES.modelId, { modelFile: `tripo-male-leg-chain.glb?v=${TEXTURED_CHAIN_LEG_CACHE_VERSION}`, albedoFile: `chain_leg.jpg?v=${TEXTURED_CHAIN_LEG_CACHE_VERSION}`, normalFile: 'chain_legs_normal.png', metallic: 0.4, roughness: 1, directIntensity: 1.75, environmentIntensity: 1.4 }],
+    [EquipSlotModelsCb.ARMOR_PLATE.modelId, { modelFile: `male-armor-plate.glb?v=${TEXTURED_PLATE_ARMOR_CACHE_VERSION}`, albedoFile: `plate_armor.jpg?v=${TEXTURED_PLATE_ARMOR_CACHE_VERSION}`, normalFile: 'plate_armor_normal.png', metallic: 0.75, roughness: 0.9, directIntensity: 1.5, environmentIntensity: 1.2 }],
+    [EquipSlotModelsCb.HELM.modelId, { modelFile: `helmet-plate.glb?v=${TEXTURED_PLATE_HELMET_CACHE_VERSION}`, albedoFile: `plate_helmet.jpg?v=${TEXTURED_PLATE_HELMET_CACHE_VERSION}`, normalFile: 'plate_helmet_normal.png', metallic: 0.75, roughness: 0.9, directIntensity: 1.5, environmentIntensity: 1.2 }],
+    [EquipSlotModelsCb.PAULDRONS_PLATE.modelId, { modelFile: `pauldron-plate.glb?v=${TEXTURED_PLATE_PAULDRON_CACHE_VERSION}`, albedoFile: `plate_pauldron.jpg?v=${TEXTURED_PLATE_PAULDRON_CACHE_VERSION}`, normalFile: 'plate_pauldron_normal.png', metallic: 0.75, roughness: 0.9, directIntensity: 1.5, environmentIntensity: 1.2 }],
+    [EquipSlotModelsCb.LEGS_PLATE.modelId, { modelFile: `male-leg-plate.glb?v=${TEXTURED_PLATE_LEG_CACHE_VERSION}`, albedoFile: `plate_leg.jpg?v=${TEXTURED_PLATE_LEG_CACHE_VERSION}`, normalFile: 'plate_leg_normal.png', metallic: 0.75, roughness: 0.9, directIntensity: 1.5, environmentIntensity: 1.2 }],
+    [EquipSlotModelsCb.SHIELD.modelId, { modelFile: `shield.glb?v=${TEXTURED_SHIELD_CACHE_VERSION}`, albedoFile: `shield.jpg?v=${TEXTURED_SHIELD_CACHE_VERSION}`, normalFile: 'shield_normal.png', metallic: 0.75, roughness: 0.9, directIntensity: 1.5, environmentIntensity: 1.2 }],
+    [EquipSlotModelsCb.CHAIN_MAIL.modelId, { modelFile: `male-armor-chain.glb?v=${TEXTURED_CHAIN_MAIL_CACHE_VERSION}`, albedoFile: `chain_mail.jpg?v=${TEXTURED_CHAIN_MAIL_CACHE_VERSION}`, normalFile: 'chain_mail_normal.png', metallic: 0.5, roughness: 1, directIntensity: 1.75, environmentIntensity: 1.4 }],
+    [EquipSlotModelsCb.CHAIN_COIF.modelId, { modelFile: `chain-coif.glb?v=${TEXTURED_CHAIN_COIF_CACHE_VERSION}`, albedoFile: `chain_coif.jpg?v=${TEXTURED_CHAIN_COIF_CACHE_VERSION}`, normalFile: 'chain_coif_normal.png', metallic: 0.5, roughness: 1, directIntensity: 1.75, environmentIntensity: 1.4 }],
+    [EquipSlotModelsCb.CHAIN_PAULDRONS.modelId, { modelFile: `pauldron-chain.glb?v=${TEXTURED_CHAIN_PAULDRON_CACHE_VERSION}`, albedoFile: `chain_pauldron.jpg?v=${TEXTURED_CHAIN_PAULDRON_CACHE_VERSION}`, normalFile: 'chain_pauldron_normal.png', metallic: 0.5, roughness: 1, directIntensity: 1.75, environmentIntensity: 1.4 }],
+    [EquipSlotModelsCb.CHAIN_GREAVES.modelId, { modelFile: `male-leg-chain.glb?v=${TEXTURED_CHAIN_LEG_CACHE_VERSION}`, albedoFile: `chain_leg.jpg?v=${TEXTURED_CHAIN_LEG_CACHE_VERSION}`, normalFile: 'chain_legs_normal.png', metallic: 0.4, roughness: 1, directIntensity: 1.75, environmentIntensity: 1.4 }],
 ])
 
 function createArmorNormalTexture(scene: Scene, fileName: string): Texture {
@@ -116,7 +116,7 @@ export const ArmorsCbManager = {
             await this.getTexturedArmor(
                 ArmorModelsCb.PLATE_ARMOR_MALE,
                 texturedPlateMaterial,
-                `tripo-male-armor-plate.glb?v=${TEXTURED_PLATE_ARMOR_CACHE_VERSION}`,
+                `male-armor-plate.glb?v=${TEXTURED_PLATE_ARMOR_CACHE_VERSION}`,
             ),
         )
 
@@ -145,7 +145,7 @@ export const ArmorsCbManager = {
             await this.getTexturedArmor(
                 ArmorModelsCb.HELM_MALE,
                 texturedPlateHelmetMaterial,
-                `tripo-helmet-plate.glb?v=${TEXTURED_PLATE_HELMET_CACHE_VERSION}`,
+                `helmet-plate.glb?v=${TEXTURED_PLATE_HELMET_CACHE_VERSION}`,
             ),
         )
 
@@ -174,7 +174,7 @@ export const ArmorsCbManager = {
             await this.getTexturedArmor(
                 ArmorModelsCb.SHIELD,
                 texturedShieldMaterial,
-                `tripo_shield.glb?v=${TEXTURED_SHIELD_CACHE_VERSION}`,
+                `shield.glb?v=${TEXTURED_SHIELD_CACHE_VERSION}`,
             ),
         )
 
@@ -204,7 +204,7 @@ export const ArmorsCbManager = {
             await this.getTexturedArmor(
                 ArmorModelsCb.PAULDRON_MALE,
                 texturedPlatePauldronMaterial,
-                `tripo-pauldron-plate.glb?v=${TEXTURED_PLATE_PAULDRON_CACHE_VERSION}`,
+                `pauldron-plate.glb?v=${TEXTURED_PLATE_PAULDRON_CACHE_VERSION}`,
             ),
         )
 
@@ -233,7 +233,7 @@ export const ArmorsCbManager = {
             await this.getTexturedArmor(
                 ArmorModelsCb.CHAIN_MAIL_MALE,
                 texturedChainMailMaterial,
-                `tripo-male-armor-chain.glb?v=${TEXTURED_CHAIN_MAIL_CACHE_VERSION}`,
+                `male-armor-chain.glb?v=${TEXTURED_CHAIN_MAIL_CACHE_VERSION}`,
             ),
         )
 
@@ -262,7 +262,7 @@ export const ArmorsCbManager = {
             await this.getTexturedArmor(
                 ArmorModelsCb.CHAIN_COIF_MALE,
                 texturedChainCoifMaterial,
-                `tripo-chain-coif.glb?v=${TEXTURED_CHAIN_COIF_CACHE_VERSION}`,
+                `chain-coif.glb?v=${TEXTURED_CHAIN_COIF_CACHE_VERSION}`,
             ),
         )
 
@@ -291,7 +291,7 @@ export const ArmorsCbManager = {
             await this.getTexturedArmor(
                 ArmorModelsCb.CHAIN_PAULDRONS_MALE,
                 texturedChainPauldronMaterial,
-                `tripo-pauldron-chain.glb?v=${TEXTURED_CHAIN_PAULDRON_CACHE_VERSION}`,
+                `pauldron-chain.glb?v=${TEXTURED_CHAIN_PAULDRON_CACHE_VERSION}`,
             ),
         )
 
@@ -321,7 +321,7 @@ export const ArmorsCbManager = {
             await this.getTexturedArmor(
                 ArmorModelsCb.LEG_MALE,
                 texturedPlateLegMaterial,
-                `tripo-male-leg-plate.glb?v=${TEXTURED_PLATE_LEG_CACHE_VERSION}`,
+                `male-leg-plate.glb?v=${TEXTURED_PLATE_LEG_CACHE_VERSION}`,
             ),
         )
 
@@ -350,7 +350,7 @@ export const ArmorsCbManager = {
             await this.getTexturedArmor(
                 ArmorModelsCb.CHAIN_GREAVES_MALE,
                 texturedChainLegMaterial,
-                `tripo-male-leg-chain.glb?v=${TEXTURED_CHAIN_LEG_CACHE_VERSION}`,
+                `male-leg-chain.glb?v=${TEXTURED_CHAIN_LEG_CACHE_VERSION}`,
             ),
         )
     },

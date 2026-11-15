@@ -63,7 +63,7 @@ test('hair preview loads the real textured mesh once and follows the animated he
     const headModule = load('babylon/character/characterHead.ts', deps)
     let loads = 0
     const readGlb = name => core.SceneLoader.LoadAssetContainerAsync('',
-        `data:;base64,${readFileSync(join(__dirname, '../public/models/steve', name)).toString('base64')}`, scene, undefined, '.glb')
+        `data:;base64,${readFileSync(join(__dirname, '../public/models/human', name)).toString('base64')}`, scene, undefined, '.glb')
     const hairMaterial = load('babylon/character/characterHairMaterial.ts', {
         '@babylonjs/materials': {PBRCustomMaterial},
         '@/babylon/character/characterMaterial': load('babylon/character/characterMaterial.ts', deps),
@@ -89,7 +89,7 @@ test('hair preview loads the real textured mesh once and follows the animated he
         assert.equal(loads, 1)
         assert.equal(scene.meshes.length, 1, 'source GLB nodes are disposed')
         assert.ok(type.mesh.getVerticesData('uv').length > 0)
-        assert.equal(type.mesh.material.albedoTexture.name, '/models/steve/human_male_hair_1.png')
+        assert.equal(type.mesh.material.albedoTexture.name, '/models/human/human_male_hair_1.png')
         assert.equal(type.mesh.material.backFaceCulling, false)
         assert.ok(type.mesh.material.emissiveColor.equals(new core.Color3(0.15, 0.15, 0.15)))
         const body = await readGlb('human_male.glb')

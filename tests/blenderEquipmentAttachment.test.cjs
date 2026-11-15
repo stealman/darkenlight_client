@@ -19,7 +19,7 @@ test('Blender chain mail thin instance matches exported geometry and placement t
     const engine = new core.NullEngine()
     const scene = new core.Scene(engine)
     const read = name => core.SceneLoader.LoadAssetContainerAsync('',
-        `data:;base64,${readFileSync(join(__dirname, '../public/models/steve/' + name)).toString('base64')}`, scene, undefined, '.glb')
+        `data:;base64,${readFileSync(join(__dirname, '../public/models/human/' + name)).toString('base64')}`, scene, undefined, '.glb')
     try {
         const reference = await read('chain_mail_attachment_test.glb')
         const importContainer = await read('chain_mail_attachment_test.glb')
@@ -35,7 +35,7 @@ test('Blender chain mail thin instance matches exported geometry and placement t
         type.mesh = target
         const otherMesh = core.MeshBuilder.CreateBox('unrelated-equipment', {}, scene)
         const otherPositions = Array.from(otherMesh.getVerticesData('position'))
-        await authored.loadBlenderEquipmentAttachment(scene, type, '/models/steve/chain_mail_attachment_test.glb', 'Body')
+        await authored.loadBlenderEquipmentAttachment(scene, type, '/models/human/chain_mail_attachment_test.glb', 'Body')
         assert.equal(type.mesh, target)
         assert.equal(target.material, material)
         assert.deepEqual(Array.from(otherMesh.getVerticesData('position')), otherPositions)

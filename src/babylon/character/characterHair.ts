@@ -52,14 +52,14 @@ export function loadCharacterHair(scene: Scene, typeId = 1, underHelmet = false)
 }
 
 async function createSource(scene: Scene, definition: typeof CHARACTER_HAIR_TYPES[number]) {
-    const container = await SceneLoader.LoadAssetContainerAsync('', modelAssetUrl('/models/steve/' + definition.file), scene)
+    const container = await SceneLoader.LoadAssetContainerAsync('', modelAssetUrl('/models/human/' + definition.file), scene)
     try {
         const meshes = container.meshes.filter(mesh => mesh instanceof Mesh && mesh.getTotalVertices() > 0 && !mesh.skeleton)
         if (meshes.length !== 1) throw new Error(`Expected one rigid mesh in ${definition.file}`)
         const suffix = definition.file === definition.helmetFile ? '-helmet' : ''
         const mesh = new Mesh(`character-hair-${definition.id}${suffix}`, scene)
         VertexData.ExtractFromMesh(meshes[0] as Mesh, true, true).applyToMesh(mesh)
-        mesh.material = createCharacterHairMaterial(scene, `character-hair-material-${definition.id}${suffix}`, '/models/steve/' + definition.albedoFile)
+        mesh.material = createCharacterHairMaterial(scene, `character-hair-material-${definition.id}${suffix}`, '/models/human/' + definition.albedoFile)
         mesh.receiveShadows = true
         mesh.alwaysSelectAsActiveMesh = true
         mesh.setEnabled(false)

@@ -30,7 +30,7 @@ test('heads share one GLB batch, follow separate animated head joints and surviv
         ...dependencies,
         '@babylonjs/core': {...core, SceneLoader: {LoadAssetContainerAsync: async (_root, url) => {
             loads++
-            assert.equal(url, '/models/steve/human_male_head_1.glb')
+            assert.equal(url, '/models/human/human_male_head_1.glb')
             const bytes = readFileSync(join(__dirname, '../public' + url))
             return core.SceneLoader.LoadAssetContainerAsync('', `data:;base64,${bytes.toString('base64')}`, scene, undefined, '.glb')
         }}},
@@ -47,8 +47,8 @@ test('heads share one GLB batch, follow separate animated head joints and surviv
         assert.equal(scene.meshes.length, 1, 'imported source rig is disposed')
         assert.ok(type.mesh.getTotalVertices() > 0)
         assert.equal(type.mesh.material.roughness, 1)
-        assert.equal(type.mesh.material.albedoTexture.name, '/models/steve/human_male_head_1.png')
-        const bytes = readFileSync(join(__dirname, '../public/models/steve/human_male.glb'))
+        assert.equal(type.mesh.material.albedoTexture.name, '/models/human/human_male_head_1.png')
+        const bytes = readFileSync(join(__dirname, '../public/models/human/human_male.glb'))
         const body = await core.SceneLoader.LoadAssetContainerAsync('', `data:;base64,${bytes.toString('base64')}`, scene, undefined, '.glb')
         const {CharacterModel} = load('babylon/character/characterModel.ts', {
             ...dependencies, '@/babylon/item/equipManager': equipment,
@@ -103,7 +103,7 @@ test('heads share one GLB batch, follow separate animated head joints and surviv
         assert.equal(finalHead.mesh.material.albedoTexture.invertY, false)
         assert.equal(finalHead.mesh.material.backFaceCulling, false)
         const {createCharacterMaterial} = load('babylon/character/characterMaterial.ts', dependencies)
-        const bodyMaterial = createCharacterMaterial(scene, 'body', '/models/steve/human_male.png')
+        const bodyMaterial = createCharacterMaterial(scene, 'body', '/models/human/human_male.png')
         for (const property of ['metallic', 'roughness', 'directIntensity', 'environmentIntensity',
             'backFaceCulling', 'twoSidedLighting', 'usePhysicalLightFalloff']) {
             assert.equal(finalHead.mesh.material[property], bodyMaterial[property], property)

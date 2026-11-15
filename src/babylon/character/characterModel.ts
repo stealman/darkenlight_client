@@ -125,7 +125,7 @@ export class CharacterModel implements EquipBearer {
         let promise = this.containerPromises.get(scene)
         if (promise == null) {
             promise = Promise.all([
-                SceneLoader.LoadAssetContainerAsync('', modelAssetUrl('/models/steve/' + this.MODEL_FILE), scene),
+                SceneLoader.LoadAssetContainerAsync('', modelAssetUrl('/models/human/' + this.MODEL_FILE), scene),
                 preloadCharacterEquipmentFitting(scene),
             ]).then(([container]) => container)
             this.containerPromises.set(scene, promise)
@@ -206,7 +206,7 @@ export class CharacterModel implements EquipBearer {
                 this.parent.nameDisplayTime = Date.now() + 3000
 
                 // Apply material
-                const material = createCharacterMaterial(scene, 'steveMaterial', '/models/steve/human_male.png')
+                const material = createCharacterMaterial(scene, 'steveMaterial', '/models/human/human_male.png')
                 this.model.getChildMeshes().forEach((mesh) => {
                     // Visibility is managed by Character.setVisible(). A moving
                     // body excluded by frustum culling when the active list is

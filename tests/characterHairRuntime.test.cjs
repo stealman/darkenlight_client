@@ -21,7 +21,7 @@ test('game models render data-driven shared hair and retain it across equipment 
     const scene = new core.Scene(engine)
     const loads = new Map()
     const readGlb = file => core.SceneLoader.LoadAssetContainerAsync('',
-        `data:;base64,${readFileSync(join(__dirname, '../public/models/steve', file)).toString('base64')}`, scene, undefined, '.glb')
+        `data:;base64,${readFileSync(join(__dirname, '../public/models/human', file)).toString('base64')}`, scene, undefined, '.glb')
     const deps = {
         '@babylonjs/core': {...core, SceneLoader: {LoadAssetContainerAsync: async (_root, url) => {
             loads.set(url, (loads.get(url) ?? 0) + 1)
@@ -83,7 +83,7 @@ test('game models render data-driven shared hair and retain it across equipment 
         }
         const type = models[0].equipSet.get('HAIR').type
         assert.equal(models[1].equipSet.get('HAIR').type, type)
-        assert.equal(loads.get('/models/steve/human_male_hair_1.glb'), 1)
+        assert.equal(loads.get('/models/human/human_male_hair_1.glb'), 1)
         equipment.EquipManager.onFrame()
         assert.equal(type.mesh.thinInstanceCount, 2)
         const firstTint = core.Color3.FromHexString('#664e0a').toLinearSpace()
@@ -128,7 +128,7 @@ test('game models render data-driven shared hair and retain it across equipment 
         assert.equal(initialCoif.equipSet.has('HAIR'), false, 'a character wearing coif starts without hair')
         const initialPlate = await createWithHeadgear(1100, 4)
         assert.equal(initialPlate.equipSet.get('HAIR').type.mesh.name, 'character-hair-4-helmet')
-        assert.equal(loads.get('/models/steve/human_male_hair_4.glb'), undefined, 'initial plate equipment loads only the covered model')
+        assert.equal(loads.get('/models/human/human_male_hair_4.glb'), undefined, 'initial plate equipment loads only the covered model')
         for (const hairTypeId of [1, 2, 3, 4]) {
             const model = models[1]
             model.parent.hairTypeId = hairTypeId

@@ -111,18 +111,18 @@ const TRIPO_WEAPON_CACHE_VERSION = '20261103-silver-atlas-v1'
 const WEAPON_MATERIAL_OPTIONS = ['Steel', 'Pyroxide', 'Geonite', 'Mythril', 'Chaotite', 'Reserved', 'Silver']
     .map((label, index) => ({ index, label }))
 const WEAPON_OPTIONS = [
-    { key: 'LONGSWORD', modelFile: 'tripo-longsword.glb', atlasFile: 'longsword.jpg', inventoryBaseName: 'longsword' },
-    { key: 'BROADSWORD', modelFile: 'tripo-broadsword.glb', atlasFile: 'broadsword.jpg', inventoryBaseName: 'broadsword' },
-    { key: 'GREATSWORD', modelFile: 'tripo-greatsword.glb', atlasFile: 'greatsword.jpg', inventoryBaseName: 'greatsword' },
-    { key: 'LARGE_BATTLE_AXE', modelFile: 'tripo-large-battleaxe.glb', atlasFile: 'large_battleaxe.jpg', inventoryBaseName: 'large-battle-axe' },
-    { key: 'GREATAXE', modelFile: 'tripo-greataxe.glb', atlasFile: 'greataxe.jpg', inventoryBaseName: 'great-axe' },
-    { key: 'HALBERD', modelFile: 'tripo-halberd.glb', atlasFile: 'halberd.jpg', inventoryBaseName: 'halberd' },
-    { key: 'PICKAXE', modelFile: 'tripo-pickaxe.glb', atlasFile: 'pickaxe.jpg', inventoryBaseName: 'pickaxe' },
-    { key: 'HAND_AXE', modelFile: 'tripo-handaxe.glb', atlasFile: 'handaxe.jpg', inventoryBaseName: 'hand-axe' },
-    { key: 'BATTLE_AXE', modelFile: 'tripo-battleaxe.glb', atlasFile: 'battleaxe.jpg', inventoryBaseName: 'battle-axe' },
-    { key: 'HUNTING_SPEAR', modelFile: 'tripo-huntingspear.glb', atlasFile: 'huntingspear.jpg', inventoryBaseName: 'hunting-spear' },
-    { key: 'LIGHT_MACE', modelFile: 'tripo-lightmace.glb', atlasFile: 'lightmace.jpg', inventoryBaseName: 'lightmace' },
-    { key: 'WARMACE', modelFile: 'tripo-warmace.glb', atlasFile: 'warmace.jpg', inventoryBaseName: 'warmace' },
+    { key: 'LONGSWORD', modelFile: 'longsword.glb', atlasFile: 'longsword.jpg', inventoryBaseName: 'longsword' },
+    { key: 'BROADSWORD', modelFile: 'broadsword.glb', atlasFile: 'broadsword.jpg', inventoryBaseName: 'broadsword' },
+    { key: 'GREATSWORD', modelFile: 'greatsword.glb', atlasFile: 'greatsword.jpg', inventoryBaseName: 'greatsword' },
+    { key: 'LARGE_BATTLE_AXE', modelFile: 'large-battleaxe.glb', atlasFile: 'large_battleaxe.jpg', inventoryBaseName: 'large-battle-axe' },
+    { key: 'GREATAXE', modelFile: 'greataxe.glb', atlasFile: 'greataxe.jpg', inventoryBaseName: 'great-axe' },
+    { key: 'HALBERD', modelFile: 'halberd.glb', atlasFile: 'halberd.jpg', inventoryBaseName: 'halberd' },
+    { key: 'PICKAXE', modelFile: 'pickaxe.glb', atlasFile: 'pickaxe.jpg', inventoryBaseName: 'pickaxe' },
+    { key: 'HAND_AXE', modelFile: 'handaxe.glb', atlasFile: 'handaxe.jpg', inventoryBaseName: 'hand-axe' },
+    { key: 'BATTLE_AXE', modelFile: 'battleaxe.glb', atlasFile: 'battleaxe.jpg', inventoryBaseName: 'battle-axe' },
+    { key: 'HUNTING_SPEAR', modelFile: 'huntingspear.glb', atlasFile: 'huntingspear.jpg', inventoryBaseName: 'hunting-spear' },
+    { key: 'LIGHT_MACE', modelFile: 'lightmace.glb', atlasFile: 'lightmace.jpg', inventoryBaseName: 'lightmace' },
+    { key: 'WARMACE', modelFile: 'warmace.glb', atlasFile: 'warmace.jpg', inventoryBaseName: 'warmace' },
 ].map((weapon) => {
     const item = WeaponModelsCb[weapon.key]
     return { ...weapon, item, label: `${weapon.key} (${item.model})` }

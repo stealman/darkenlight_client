@@ -16,7 +16,7 @@ const compile = file => ts.transpileModule(fs.readFileSync(path.join(root, file)
 vm.runInNewContext(compile('src/babylon/modelAssetUrl.ts'), context)
 
 test('all model resources use content-hashed URLs, replacing manual dates without changing external URLs', () => {
-    for (const url of ['/models/monsters/skeleton.gltf', '/models/steve/human_male.glb', '/models/equip/armors/plate_armor.jpg', '/models/draco/draco_decoder_gltf.wasm']) {
+    for (const url of ['/models/monsters/skeleton.gltf', '/models/human/human_male.glb', '/models/equip/armors/plate_armor.jpg', '/models/draco/draco_decoder_gltf.wasm']) {
         const target = context.exports.modelAssetUrl(url)
         assert.match(target, /^\/model-assets\/.*\.[a-f0-9]{16}\.[a-z0-9]+$/)
         assert.equal(context.exports.modelAssetUrl(url + '?v=old'), target)
