@@ -878,7 +878,7 @@ async function installHairControls(root: HTMLElement, model: CharacterModel, con
     getHairLightness(): number
     recordHairLightness(lightness: number): void
 }, changed: () => void) {
-    const { PREVIEW_HAIR_TYPES, loadPreviewHair, attachPreviewHair, setPreviewHairColor, setPreviewHairLightness } = await import('./hairPreview')
+    const { PREVIEW_HAIR_TYPES, getPreviewHairMode, loadPreviewHair, attachPreviewHair, hidePreviewHair, setPreviewHairColor, setPreviewHairLightness } = await import('./hairPreview')
     const { characterHeadMatrix } = await import('@/babylon/character/characterHead')
     const panel = document.createElement('details')
     panel.className = 'admin-utils__equipment-group'
@@ -930,20 +930,39 @@ async function installHairControls(root: HTMLElement, model: CharacterModel, con
     root.querySelector('#adminUtilsEquipment')!.prepend(panel)
     let item: ReturnType<typeof attachPreviewHair> | null = null
     let activeTypeId = Number(select.value)
+    let generation = 0
     const showSelected = async () => {
+        const request = ++generation
         select.disabled = true
         editor.hidden = true
         try {
             const id = Number(select.value)
-            const type = await loadPreviewHair(model.node.getScene(), id)
+            const headEquipmentId = model.equipSet.get('HEAD')?.type.id
+            const mode = getPreviewHairMode(headEquipmentId)
+            if (mode === 'hidden') {
+                hidePreviewHair(model)
+                item = null
+                activeTypeId = id
+                note.textContent = 'Pod kroužkovou kuklou jsou vlasy skryté. ' + help
+                return
+            }
+            const underHelmet = mode === 'helmet'
+            const type = await loadPreviewHair(model.node.getScene(), id, underHelmet)
+            if (request !== generation || model.node.isDisposed()) return
+            const headMesh = model.equipSet.get('FACE')?.type.mesh
+            if (headMesh && type.mesh) {
+                type.mesh._lightSources = headMesh.lightSources.slice()
+                type.mesh._markSubMeshesAsLightDirty()
+            }
             const fitting = config.getHair(id)
             item = attachPreviewHair(model, type, fitting, colorPicker.value, Number(lightnessSlider.value))
             activeTypeId = id
             populateModifierEditor(editor, fitting)
             editor.hidden = false
-            note.textContent = help
+            note.textContent = underHelmet && PREVIEW_HAIR_TYPES.find(type => type.id === id)?.helmetFile
+                ? 'Náhled používá variantu účesu pod pokrývku hlavy. ' + help : help
         } finally {
-            select.disabled = false
+            if (request === generation) select.disabled = false
         }
     }
     editor.addEventListener('input', () => {
@@ -966,11 +985,15 @@ async function installHairControls(root: HTMLElement, model: CharacterModel, con
         config.recordHairLightness(lightness)
         changed()
     })
-    select.addEventListener('change', () => {
+    const refresh = () => {
         void showSelected().catch(error => {
             console.error('Hair preview failed:', error)
             note.textContent = 'Účes se nepodařilo načíst. Podrobnosti jsou v konzoli.'
         })
+    }
+    select.addEventListener('change', refresh)
+    root.addEventListener('change', event => {
+        if ((event.target as HTMLElement).matches('[data-slot="head"]')) refresh()
     })
     await showSelected()
 }
@@ -1477,8 +1500,9 @@ export async function mountAdminUtils() {
         const entries = container.instantiateModelsToScene(undefined, false, { doNotInstantiate: true })
         entries.skeletons.forEach(preparePreviewSkeleton)
         const model = await CharacterModel.create(createPreviewCharacter(), true, entries)
+        // The preview controls own the chosen hair type, fitting and async refresh.
+        model.hairEquipmentRefreshEnabled = false
         await installHeadControls(root, model)
-        await installHairControls(root, model, modifierConfig, markModifiersChanged)
         // Preview the full authored SLASH, Blender 220–250 (24 FPS -> 60 FPS).
         if (model.slashAnim) {
             model.slashAnim.from = 550
@@ -1509,6 +1533,7 @@ export async function mountAdminUtils() {
         ;(Object.keys(slotSelections) as PreviewSlot[]).forEach((slot) => {
             setEquipmentSlot(model, slot, slotSelections[slot], slotMaterialSelections[slot] - 1)
         })
+        await installHairControls(root, model, modifierConfig, markModifiersChanged)
 
         await Promise.all(model.model!.getChildMeshes().map((mesh) => Lights.warmLocalPlayerLightMaterial(mesh)))
         scene.meshes.forEach((mesh) => {

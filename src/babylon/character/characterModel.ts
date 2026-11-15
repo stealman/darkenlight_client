@@ -25,7 +25,7 @@ import type { StaticObject } from '@/babylon/world/statics/objects/baseStaticObj
 import { CharacterActions } from '@/data/actions/characterActions'
 import { characterHeadMatrix, getCharacterHeadType, loadCharacterHead } from './characterHead'
 import { createCharacterMaterial } from './characterMaterial'
-import { attachCharacterHair, loadCharacterHair, setCharacterHairColor, setCharacterHairLightness } from './characterHair'
+import { attachCharacterHair, getCharacterHairMode, hideCharacterHair, loadCharacterHair, setCharacterHairColor, setCharacterHairLightness } from './characterHair'
 
 export class CharacterModel implements EquipBearer {
     private static readonly MODEL_FILE = HUMAN_MODEL_FILE
@@ -40,10 +40,12 @@ export class CharacterModel implements EquipBearer {
     nameTextNode: TransformNode
     initialized: boolean = false
     viewRequested: boolean = false
+    hairEquipmentRefreshEnabled = true
 
     model: AbstractMesh | undefined
     private instantiatedEntries: InstantiatedEntries | null = null
     private initializationPromise: Promise<void> | null = null
+    private hairAppearanceRevision = 0
     private bowAimEndObserver: Observer<TargetedAnimation> | null = null
     modelYAngleOffset: number = (Math.PI * 1) / 4
     modelRotation: number = 0
@@ -178,13 +180,14 @@ export class CharacterModel implements EquipBearer {
 
     private async initializeModelAsync() {
         const scene = this.node.getScene()
+        const hairMode = getCharacterHairMode(this.parent.equipSet.get(EquipItemSlots.HEAD)?.modelId)
         // The shared AssetContainer parses the GLB once. Most nearby human
         // models are instantiated behind the loading overlay and only enabled
         // when their character first enters the viewport.
         await Promise.all([
             this.instantiatedEntries ? Promise.resolve(this.instantiatedEntries) : CharacterModel.instantiate(scene),
             loadCharacterHead(scene, this.parent.headTypeId),
-            loadCharacterHair(scene, this.parent.hairTypeId),
+            hairMode === 'hidden' ? Promise.resolve(null) : loadCharacterHair(scene, this.parent.hairTypeId, hairMode === 'helmet'),
         ])
             .then(([result, headType, hairType]) => {
                 if (this.node.isDisposed()) {
@@ -280,7 +283,7 @@ export class CharacterModel implements EquipBearer {
                 head.castsOutdoorShadow = this.parent.isMyChar()
                 this.equipSet.set('FACE', head)
                 EquipManager.addEquippedItem(head)
-                attachCharacterHair(this, hairType, getCharacterHairFitting(scene, this.parent.hairTypeId ?? 1),
+                if (hairType) attachCharacterHair(this, hairType, getCharacterHairFitting(scene, this.parent.hairTypeId ?? 1),
                     this.parent.hairColor, this.parent.hairLightness)
             })
             .catch((error) => {
@@ -294,6 +297,7 @@ export class CharacterModel implements EquipBearer {
         }
         this.assignEquippedItems()
         this.initialized = true
+        await this.refreshHairAppearance()
         this.snapToParentPosition()
         if (this.parent.insideView) {
             ActiveMeshFreezer.setSkeletonActive(this.skeleton, true)
@@ -302,9 +306,15 @@ export class CharacterModel implements EquipBearer {
 
     async refreshHairAppearance() {
         if (!this.initialized || this.node.isDisposed()) return
+        const revision = ++this.hairAppearanceRevision
+        const mode = getCharacterHairMode(this.equipSet.get('HEAD')?.type.id)
+        if (mode === 'hidden') {
+            hideCharacterHair(this)
+            return
+        }
         const typeId = this.parent.hairTypeId
-        const type = await loadCharacterHair(this.node.getScene(), typeId)
-        if (this.node.isDisposed() || this.parent.hairTypeId !== typeId) return
+        const type = await loadCharacterHair(this.node.getScene(), typeId, mode === 'helmet')
+        if (this.node.isDisposed() || revision !== this.hairAppearanceRevision || this.parent.hairTypeId !== typeId) return
         const current = this.equipSet.get('HAIR')
         if (current?.type === type) {
             setCharacterHairColor(current, this.parent.hairColor)
@@ -314,6 +324,11 @@ export class CharacterModel implements EquipBearer {
         const item = attachCharacterHair(this, type, getCharacterHairFitting(this.node.getScene(), typeId),
             this.parent.hairColor, this.parent.hairLightness)
         if (!this.parent.insideView) EquipManager.removeEquippedItem(item)
+    }
+
+    private requestHairRefresh() {
+        if (!this.hairEquipmentRefreshEnabled) return
+        void this.refreshHairAppearance().catch(error => console.error('Could not update character hair:', error))
     }
 
     assignEquippedItems() {
@@ -358,6 +373,7 @@ export class CharacterModel implements EquipBearer {
             this.equipSet.delete(slot)
         })
         this.weaponEquipItem = null
+        this.requestHairRefresh()
     }
 
     assignArmor(type: number, matIndex: number) {
@@ -411,6 +427,7 @@ export class CharacterModel implements EquipBearer {
         item.castsOutdoorShadow = this.parent.isMyChar() && (slot === 'WEAPON' || slot === 'SHIELD')
         this.equipSet.set(slot, item)
         EquipManager.addEquippedItem(item)
+        if (slot === 'HEAD') this.requestHairRefresh()
     }
 
     removeEquippedItem(slot: string) {
@@ -426,6 +443,7 @@ export class CharacterModel implements EquipBearer {
         switch (slot) {
             case 'HEAD': {
                 removeModelSlot('HEAD')
+                this.requestHairRefresh()
                 break
             }
             case 'BODY': {

@@ -69,11 +69,12 @@ test('hair preview loads the real textured mesh once and follows the animated he
         '@/babylon/character/characterMaterial': load('babylon/character/characterMaterial.ts', deps),
     })
     const {CHARACTER_HAIR_TYPES: PREVIEW_HAIR_TYPES, loadCharacterHair: loadPreviewHair, attachCharacterHair: attachPreviewHair,
-        setCharacterHairColor: setPreviewHairColor, setCharacterHairLightness: setPreviewHairLightness} = load('babylon/character/characterHair.ts', {
+        setCharacterHairColor: setPreviewHairColor, setCharacterHairLightness: setPreviewHairLightness,
+        hideCharacterHair: hidePreviewHair} = load('babylon/character/characterHair.ts', {
         ...deps,
         '@babylonjs/core': {...core, SceneLoader: {LoadAssetContainerAsync: async (_root, url) => {
             loads++
-            assert.match(url, /^\/models\/steve\/human_male_hair_\d+\.glb$/)
+            assert.match(url, /^\/models\/steve\/human_male_hair_\d+(_helmet)?\.glb$/)
             return readGlb(url.split('/').pop())
         }}},
         '@/babylon/item/equipManager': equipment,
@@ -190,6 +191,50 @@ test('hair preview loads the real textured mesh once and follows the animated he
             EquipManager.removeEquippedItem(nextHair)
         }
         assert.equal(loads, PREVIEW_HAIR_TYPES.length)
+        const helmetType = await loadPreviewHair(scene, 1, true)
+        assert.notEqual(helmetType, type)
+        assert.equal(helmetType.mesh.name, 'character-hair-1-helmet')
+        assert.ok(helmetType.mesh.getTotalVertices() > 0)
+        assert.equal(helmetType.mesh.material.albedoTexture.name, type.mesh.material.albedoTexture.name)
+        const coveredHair = attachPreviewHair(model, helmetType, fitting, '#664e0a', 0.6)
+        EquipManager.onFrame()
+        assert.equal(helmetType.mesh.thinInstanceCount, 1)
+        assert.equal(type.mesh.isEnabled(), false)
+        assert.ok(Math.abs(helmetType.tintBuffer[3] - 0.6) < 1e-6)
+        assert.ok(coveredHair.tint.equals(core.Color3.FromHexString('#664e0a').toLinearSpace()))
+        assert.equal(await loadPreviewHair(scene, 1, true), helmetType, 'helmet preview reuses the covered hair source')
+        for (const definition of PREVIEW_HAIR_TYPES.slice(1)) {
+            const covered = await loadPreviewHair(scene, definition.id, true)
+            const normal = await loadPreviewHair(scene, definition.id)
+            if (definition.helmetFile) {
+                assert.notEqual(covered, normal)
+                assert.equal(covered.mesh.name, `character-hair-${definition.id}-helmet`)
+                assert.ok(covered.mesh.getTotalVertices() > 0)
+                assert.equal(covered.mesh.material.albedoTexture.name, normal.mesh.material.albedoTexture.name)
+                const item = attachPreviewHair(model, covered, fitting, '#664e0a', 0.6)
+                EquipManager.onFrame()
+                assert.equal(covered.mesh.thinInstanceCount, 1)
+                assert.equal(helmetType.mesh.isEnabled(), false)
+                assert.ok(item.tint.equals(coveredHair.tint))
+                assert.equal(item.tintLightness, coveredHair.tintLightness)
+                assert.equal(await loadPreviewHair(scene, definition.id, true), covered)
+            } else {
+                assert.equal(covered, normal, 'styles without a helmet model retain their normal geometry')
+            }
+        }
+        hidePreviewHair(model)
+        hidePreviewHair(model)
+        EquipManager.onFrame()
+        assert.equal(helmetType.mesh.isEnabled(), false, 'coif removes the hair thin instance')
+        assert.equal(model.equipSet.has('HAIR'), false, 'changing asset tabs cannot re-enable hidden hair')
+        assert.equal(model.equipSet.get('FACE'), face)
+        const uncoveredHair = attachPreviewHair(model, await loadPreviewHair(scene, 1), fitting, '#664e0a', 0.6)
+        EquipManager.onFrame()
+        assert.equal(helmetType.mesh.isEnabled(), false)
+        assert.equal(type.mesh.thinInstanceCount, 1)
+        assert.ok(uncoveredHair.attachmentWorldMatrix.equalsWithEpsilon(coveredHair.attachmentWorldMatrix, 1e-5))
+        assert.equal(loads, PREVIEW_HAIR_TYPES.length + PREVIEW_HAIR_TYPES.filter(type => type.helmetFile).length)
+        EquipManager.removeEquippedItem(uncoveredHair)
         EquipManager.removeEquippedItem(finalHair)
     } finally {
         scene.dispose()

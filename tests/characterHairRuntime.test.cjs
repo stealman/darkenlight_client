@@ -30,7 +30,8 @@ test('game models render data-driven shared hair and retain it across equipment 
         '@/babylon/modelAssetUrl': {modelAssetUrl: url => url},
         '@/settings/settings': {Settings: {isDetailLevelMedium: () => false}},
         '@/data/myPlayer': {MyPlayer: {myChar: null}},
-        '@/data/items/item': {EquipItemSlots: {}},
+        '@/data/items/item': {EquipItemSlots: {HEAD: 'HEAD'}, EquipSlotModelsCb: {HELM: {modelId: 1100}, CHAIN_COIF: {modelId: 2100}}},
+        '@/babylon/character/characterModelEquipModifiers': {getCharacterModelEquipModifier: () => null},
         '@/babylon/scene/activeMeshFreezer': {ActiveMeshFreezer: {setSkeletonActive() {}}},
         '@/babylon/scene/lights': {Lights: {
             registerDynamicLightMesh() {}, addShadowCaster() {}, registerActorLightMesh() {},
@@ -40,6 +41,13 @@ test('game models render data-driven shared hair and retain it across equipment 
     const equipment = load('babylon/item/equipManager.ts', deps)
     deps['@/babylon/item/equipManager'] = equipment
     deps['@/babylon/item/codebook/equipCbItem'] = load('babylon/item/codebook/equipCbItem.ts', deps)
+    for (const id of [1100, 2100]) {
+        const definition = new deps['@/babylon/item/codebook/equipCbItem'].EquipCbItem(id, 'test-headgear', core.Vector3.Zero(), core.Vector3.One(), null, null)
+        const type = new equipment.EquipItemType(definition)
+        type.mesh = core.MeshBuilder.CreateBox(`test-headgear-${id}`, {}, scene)
+        type.mesh.setEnabled(false)
+        equipment.EquipManager.itemTypes.set(id, type)
+    }
     const material = load('babylon/character/characterMaterial.ts', deps)
     deps['@/babylon/character/characterMaterial'] = material
     const head = load('babylon/character/characterHead.ts', {...deps, './characterMaterial': material})
@@ -109,6 +117,38 @@ test('game models render data-driven shared hair and retain it across equipment 
         await models[0].addToView()
         equipment.EquipManager.onFrame()
         assert.equal(models[0].equipSet.get('HAIR').type.mesh.thinInstanceCount, 1)
+        const createWithHeadgear = async (modelId, hairTypeId) => {
+            const owner = {...models[1].parent, id: models.length + 1, hairTypeId,
+                equipSet: new Map([['HEAD', {modelId, materialId: 1}]])}
+            const model = await CharacterModel.create(owner, true, body.instantiateModelsToScene(undefined, false, {doNotInstantiate: true}))
+            models.push(model)
+            return model
+        }
+        const initialCoif = await createWithHeadgear(2100, 2)
+        assert.equal(initialCoif.equipSet.has('HAIR'), false, 'a character wearing coif starts without hair')
+        const initialPlate = await createWithHeadgear(1100, 4)
+        assert.equal(initialPlate.equipSet.get('HAIR').type.mesh.name, 'character-hair-4-helmet')
+        assert.equal(loads.get('/models/steve/human_male_hair_4.glb'), undefined, 'initial plate equipment loads only the covered model')
+        for (const hairTypeId of [1, 2, 3, 4]) {
+            const model = models[1]
+            model.parent.hairTypeId = hairTypeId
+            await model.refreshHairAppearance()
+            model.assignHelmet(1100, 0)
+            await hair.loadCharacterHair(scene, hairTypeId, true)
+            await Promise.resolve()
+            const covered = model.equipSet.get('HAIR')
+            assert.equal(covered.type.mesh.name, `character-hair-${hairTypeId}-helmet`)
+            assert.ok(covered.tint.equals(core.Color3.FromHexString(model.parent.hairColor).toLinearSpace()))
+            assert.equal(covered.tintLightness, model.parent.hairLightness)
+            model.removeEquippedItem('HEAD')
+            model.assignHelmet(2100, 0)
+            await Promise.resolve()
+            assert.equal(model.equipSet.has('HAIR'), false, 'coif wins over pending uncovered hair refresh')
+            model.removeEquippedItem('HEAD')
+            await hair.loadCharacterHair(scene, hairTypeId)
+            await Promise.resolve()
+            assert.equal(model.equipSet.get('HAIR').type.mesh.name, `character-hair-${hairTypeId}`)
+        }
         models.forEach(model => model.removeFromScene())
         equipment.EquipManager.onFrame()
         for (const [type] of equipment.EquipManager.equippedItems) assert.equal(type.mesh.isEnabled(), false)

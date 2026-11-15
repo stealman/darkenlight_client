@@ -8,31 +8,45 @@ import type { EquipModelModifier } from '@/babylon/item/equipManager'
 import { modelAssetUrl } from '@/babylon/modelAssetUrl'
 import { Lights } from '@/babylon/scene/lights'
 import { Settings } from '@/settings/settings'
+import { EquipSlotModelsCb } from '@/data/items/item'
 
-export const CHARACTER_HAIR_TYPES = [
-    { id: 1, file: 'human_male_hair_1.glb', albedoFile: 'human_male_hair_1.png' },
-    { id: 2, file: 'human_male_hair_2.glb', albedoFile: 'human_male_hair_1.png' },
-    { id: 3, file: 'human_male_hair_3.glb', albedoFile: 'human_male_hair_1.png' },
-    { id: 4, file: 'human_male_hair_4.glb', albedoFile: 'human_male_hair_1.png' },
+export function getCharacterHairMode(headModelId?: number): 'normal' | 'helmet' | 'hidden' {
+    if (headModelId == null) return 'normal'
+    if (headModelId === EquipSlotModelsCb.CHAIN_COIF.modelId) return 'hidden'
+    return headModelId === EquipSlotModelsCb.HELM.modelId ? 'helmet' : 'normal'
+}
+
+export function hideCharacterHair(model: CharacterModel) {
+    const item = model.equipSet.get('HAIR')
+    if (!item) return
+    EquipManager.removeEquippedItem(item)
+    model.equipSet.delete('HAIR')
+}
+
+export const CHARACTER_HAIR_TYPES: Array<{id: number, file: string, albedoFile: string, helmetFile?: string}> = [
+    { id: 1, file: 'human_male_hair_1.glb', albedoFile: 'human_male_hair_1.png', helmetFile: 'human_male_hair_1_helmet.glb' },
+    { id: 2, file: 'human_male_hair_2.glb', albedoFile: 'human_male_hair_1.png', helmetFile: 'human_male_hair_2_helmet.glb' },
+    { id: 3, file: 'human_male_hair_3.glb', albedoFile: 'human_male_hair_1.png', helmetFile: 'human_male_hair_3_helmet.glb' },
+    { id: 4, file: 'human_male_hair_4.glb', albedoFile: 'human_male_hair_1.png', helmetFile: 'human_male_hair_4_helmet.glb' },
 ]
 
-const sources = new WeakMap<Scene, Map<number, Promise<EquipItemType>>>()
+const sources = new WeakMap<Scene, Map<string, Promise<EquipItemType>>>()
 
-export function loadCharacterHair(scene: Scene, typeId = 1): Promise<EquipItemType> {
+export function loadCharacterHair(scene: Scene, typeId = 1, underHelmet = false): Promise<EquipItemType> {
     const definition = CHARACTER_HAIR_TYPES.find(type => type.id === typeId) ?? CHARACTER_HAIR_TYPES[0]
-    typeId = definition.id
+    const file = underHelmet && definition.helmetFile ? definition.helmetFile : definition.file
     let types = sources.get(scene)
     if (!types) {
         types = new Map()
         sources.set(scene, types)
     }
-    let source = types.get(typeId)
+    let source = types.get(file)
     if (!source) {
-        source = createSource(scene, definition).catch(error => {
-            types.delete(typeId)
+        source = createSource(scene, {...definition, file}).catch(error => {
+            types.delete(file)
             throw error
         })
-        types.set(typeId, source)
+        types.set(file, source)
     }
     return source
 }
@@ -42,9 +56,10 @@ async function createSource(scene: Scene, definition: typeof CHARACTER_HAIR_TYPE
     try {
         const meshes = container.meshes.filter(mesh => mesh instanceof Mesh && mesh.getTotalVertices() > 0 && !mesh.skeleton)
         if (meshes.length !== 1) throw new Error(`Expected one rigid mesh in ${definition.file}`)
-        const mesh = new Mesh(`character-hair-${definition.id}`, scene)
+        const suffix = definition.file === definition.helmetFile ? '-helmet' : ''
+        const mesh = new Mesh(`character-hair-${definition.id}${suffix}`, scene)
         VertexData.ExtractFromMesh(meshes[0] as Mesh, true, true).applyToMesh(mesh)
-        mesh.material = createCharacterHairMaterial(scene, `character-hair-material-${definition.id}`, '/models/steve/' + definition.albedoFile)
+        mesh.material = createCharacterHairMaterial(scene, `character-hair-material-${definition.id}${suffix}`, '/models/steve/' + definition.albedoFile)
         mesh.receiveShadows = true
         mesh.alwaysSelectAsActiveMesh = true
         mesh.setEnabled(false)
