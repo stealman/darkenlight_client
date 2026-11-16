@@ -573,7 +573,7 @@ test('overlay manager shares its view, routes events and preserves frame and res
         '@/gui/overlay/overlayIndicators': {OverlayIndicators},
         '@/gui/canvasTextUtils': {CanvasTextUtils: {computeLetterSpacingFix: () => -2}},
         '@/data/myPlayer': {MyPlayer: {myChar: {hpPercent: 100}}},
-        '@/gui/uiIconManager': {UiIconManager: {getUrl: url => url, onStyleChanged: () => () => {}}},
+        '@/gui/uiIconManager': {UiIconManager: {getUrl: url => url}},
         '@/gui/overlay/targetSelector': {TargetSelector: {
             initialize() { calls.push('targets:init') }, unselectTarget() { calls.push('targets:reset') },
         }},

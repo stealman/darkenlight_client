@@ -1,4 +1,4 @@
-const PIXELATED_PATH_PREFIXES = [
+const UI_IMAGE_PATH_PREFIXES = [
     '/images/icons/',
     '/images/items/resources/',
     '/images/items/armor/',
@@ -7,56 +7,39 @@ const PIXELATED_PATH_PREFIXES = [
 const ARMOR_IMAGE_PATH_PREFIX = '/images/items/armor/'
 const IMAGE_URL_PATTERN = /url\(\s*(['"]?)(.*?)\1\s*\)/g
 
-type ProcessedPngUrls = {
-    pixelatedUrl: string
-    smoothUrl: string
-}
-type ProcessedPngBlobs = {
-    pixelatedBlob: Blob
-    smoothBlob: Blob
-}
 export const UiIconManager = {
-    pixelatedUrls: new Map<string, string>(),
     smoothUrls: new Map<string, string>(),
     sourcePathsByProcessedUrl: new Map<string, string>(),
-    styleChangeListeners: new Set<() => void>(),
-    pixelatedEnabled: false,
     domObserver: null as MutationObserver | null,
 
     async initialize(
-        pixelated: boolean,
-        pixelSize: number = 2,
         saturation: number = 1,
         onProgress?: (completed: number, total: number) => void,
     ) {
         this.stopDomObserver()
         this.revokeProcessedUrls()
-        this.pixelatedEnabled = pixelated
 
         if (import.meta.env.PROD) {
             for (const [imagePath, urls] of Object.entries(__UI_IMAGE_URLS__)) this.storeProcessedPngUrls(imagePath, urls)
-            onProgress?.(__PIXELATED_IMAGE_PATHS__.length, __PIXELATED_IMAGE_PATHS__.length)
+            onProgress?.(__UI_IMAGE_PATHS__.length, __UI_IMAGE_PATHS__.length)
             this.applyToSubtree(document.documentElement)
             this.startDomObserver()
             return
         }
 
-        if (!Number.isFinite(pixelSize) || pixelSize <= 1) {
-            throw new Error(`UI image pixel size must be greater than one, received ${pixelSize}`)
-        }
         if (!Number.isFinite(saturation) || saturation < 0) {
             throw new Error(`UI image saturation must be zero or greater, received ${saturation}`)
         }
 
-        const totalWorkUnits = __PIXELATED_IMAGE_PATHS__.length
+        const totalWorkUnits = __UI_IMAGE_PATHS__.length
         let completedWorkUnits = 0
         onProgress?.(completedWorkUnits, totalWorkUnits)
 
         const results = await Promise.allSettled(
-            __PIXELATED_IMAGE_PATHS__.map(async (imagePath) => {
+            __UI_IMAGE_PATHS__.map(async (imagePath) => {
                 try {
                     const imageSaturation = imagePath.startsWith(ARMOR_IMAGE_PATH_PREFIX) ? 1 : saturation
-                    this.storeProcessedPngUrls(imagePath, await this.createProcessedPngUrls(imagePath, pixelSize, imageSaturation))
+                    this.storeProcessedPngUrls(imagePath, await this.createProcessedPngUrls(imagePath, imageSaturation))
                 } finally {
                     completedWorkUnits++
                     onProgress?.(completedWorkUnits, totalWorkUnits)
@@ -66,7 +49,7 @@ export const UiIconManager = {
 
         results.forEach((result, index) => {
             if (result.status === 'rejected') {
-                console.warn(`Cannot pixelate UI image ${__PIXELATED_IMAGE_PATHS__[index]}`, result.reason)
+                console.warn(`Cannot prepare UI image ${__UI_IMAGE_PATHS__[index]}`, result.reason)
             }
         })
 
@@ -79,35 +62,16 @@ export const UiIconManager = {
         if (!imagePath) {
             return iconUrl
         }
-        const selectedUrls = this.pixelatedEnabled ? this.pixelatedUrls : this.smoothUrls
-        return selectedUrls.get(imagePath) ?? iconUrl
+        return this.smoothUrls.get(imagePath) ?? iconUrl
     },
 
-    setPixelated(pixelated: boolean) {
-        if (this.pixelatedEnabled === pixelated) {
-            return
-        }
-
-        this.pixelatedEnabled = pixelated
-        this.applyToSubtree(document.documentElement)
-        this.styleChangeListeners.forEach((listener) => listener())
+    storeProcessedPngUrls(imagePath: string, url: string) {
+        this.smoothUrls.set(imagePath, url)
+        this.sourcePathsByProcessedUrl.set(url, imagePath)
+        this.sourcePathsByProcessedUrl.set(new URL(url, window.location.href).href, imagePath)
     },
 
-    storeProcessedPngUrls(imagePath: string, { pixelatedUrl, smoothUrl }: ProcessedPngUrls) {
-        this.pixelatedUrls.set(imagePath, pixelatedUrl)
-        this.smoothUrls.set(imagePath, smoothUrl)
-        this.sourcePathsByProcessedUrl.set(pixelatedUrl, imagePath)
-        this.sourcePathsByProcessedUrl.set(smoothUrl, imagePath)
-        this.sourcePathsByProcessedUrl.set(new URL(pixelatedUrl, window.location.href).href, imagePath)
-        this.sourcePathsByProcessedUrl.set(new URL(smoothUrl, window.location.href).href, imagePath)
-    },
-
-    onStyleChanged(listener: () => void): () => void {
-        this.styleChangeListeners.add(listener)
-        return () => this.styleChangeListeners.delete(listener)
-    },
-
-    async createProcessedPngUrls(iconPath: string, pixelSize: number, saturation: number): Promise<ProcessedPngUrls> {
+    async createProcessedPngUrls(iconPath: string, saturation: number): Promise<string> {
         const response = await fetch(iconPath, { cache: 'no-cache' })
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`)
@@ -118,18 +82,16 @@ export const UiIconManager = {
 
         try {
             const image = await this.loadImage(sourceObjectUrl)
-            const blobs = await this.createProcessedPngBlobsFromImage(image, pixelSize, saturation)
-            return this.createProcessedPngUrlsFromBlobs(blobs)
+            return URL.createObjectURL(await this.createProcessedPngBlobFromImage(image, saturation))
         } finally {
             URL.revokeObjectURL(sourceObjectUrl)
         }
     },
 
-    async createProcessedPngBlobsFromImage(
+    async createProcessedPngBlobFromImage(
         image: HTMLImageElement,
-        pixelSize: number,
         saturation: number,
-    ): Promise<ProcessedPngBlobs> {
+    ): Promise<Blob> {
         const canvas = document.createElement('canvas')
         canvas.width = image.naturalWidth
         canvas.height = image.naturalHeight
@@ -147,27 +109,7 @@ export const UiIconManager = {
             this.adjustSaturationRgba(imageData.data, saturation)
             context.putImageData(imageData, 0, 0)
         }
-        const smoothBlob = await this.createPngBlob(canvas)
-
-        if (Number.isInteger(pixelSize)) {
-            const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
-            this.pixelateRgba(imageData.data, canvas.width, canvas.height, pixelSize)
-            context.putImageData(imageData, 0, 0)
-        } else {
-            this.pixelateCanvasByScale(canvas, context, pixelSize)
-        }
-
-        return {
-            pixelatedBlob: await this.createPngBlob(canvas),
-            smoothBlob,
-        }
-    },
-
-    createProcessedPngUrlsFromBlobs({ pixelatedBlob, smoothBlob }: ProcessedPngBlobs): ProcessedPngUrls {
-        return {
-            pixelatedUrl: URL.createObjectURL(pixelatedBlob),
-            smoothUrl: URL.createObjectURL(smoothBlob),
-        }
+        return this.createPngBlob(canvas)
     },
 
     async createPngBlob(canvas: HTMLCanvasElement): Promise<Blob> {
@@ -180,69 +122,6 @@ export const UiIconManager = {
                 }
             }, 'image/png')
         })
-    },
-
-    pixelateRgba(data: Uint8ClampedArray, width: number, height: number, pixelSize: number) {
-        for (let blockY = 0; blockY < height; blockY += pixelSize) {
-            const blockHeight = Math.min(pixelSize, height - blockY)
-
-            for (let blockX = 0; blockX < width; blockX += pixelSize) {
-                const blockWidth = Math.min(pixelSize, width - blockX)
-                const pixelCount = blockWidth * blockHeight
-                let alphaSum = 0
-                let premultipliedRed = 0
-                let premultipliedGreen = 0
-                let premultipliedBlue = 0
-
-                for (let y = 0; y < blockHeight; y++) {
-                    for (let x = 0; x < blockWidth; x++) {
-                        const sourceIndex = ((blockY + y) * width + blockX + x) * 4
-                        const alpha = data[sourceIndex + 3]
-                        alphaSum += alpha
-                        premultipliedRed += data[sourceIndex] * alpha
-                        premultipliedGreen += data[sourceIndex + 1] * alpha
-                        premultipliedBlue += data[sourceIndex + 2] * alpha
-                    }
-                }
-
-                const red = alphaSum > 0 ? Math.round(premultipliedRed / alphaSum) : 0
-                const green = alphaSum > 0 ? Math.round(premultipliedGreen / alphaSum) : 0
-                const blue = alphaSum > 0 ? Math.round(premultipliedBlue / alphaSum) : 0
-                const alpha = Math.round(alphaSum / pixelCount)
-
-                for (let y = 0; y < blockHeight; y++) {
-                    for (let x = 0; x < blockWidth; x++) {
-                        const targetIndex = ((blockY + y) * width + blockX + x) * 4
-                        data[targetIndex] = red
-                        data[targetIndex + 1] = green
-                        data[targetIndex + 2] = blue
-                        data[targetIndex + 3] = alpha
-                    }
-                }
-            }
-        }
-    },
-
-    pixelateCanvasByScale(canvas: HTMLCanvasElement, context: CanvasRenderingContext2D, pixelSize: number) {
-        const scaledWidth = Math.max(1, Math.round(canvas.width / pixelSize))
-        const scaledHeight = Math.max(1, Math.round(canvas.height / pixelSize))
-        const scaledCanvas = document.createElement('canvas')
-        scaledCanvas.width = scaledWidth
-        scaledCanvas.height = scaledHeight
-
-        const scaledContext = scaledCanvas.getContext('2d')
-        if (!scaledContext) {
-            throw new Error('Scaled 2D canvas context is unavailable')
-        }
-
-        scaledContext.clearRect(0, 0, scaledWidth, scaledHeight)
-        scaledContext.imageSmoothingEnabled = true
-        scaledContext.imageSmoothingQuality = 'high'
-        scaledContext.drawImage(canvas, 0, 0, scaledWidth, scaledHeight)
-
-        context.clearRect(0, 0, canvas.width, canvas.height)
-        context.imageSmoothingEnabled = false
-        context.drawImage(scaledCanvas, 0, 0, scaledWidth, scaledHeight, 0, 0, canvas.width, canvas.height)
     },
 
     adjustSaturationRgba(data: Uint8ClampedArray, saturation: number) {
@@ -303,10 +182,9 @@ export const UiIconManager = {
     applyToElement(element: HTMLElement) {
         if (element instanceof HTMLImageElement) {
             const source = element.getAttribute('src')
-            const pixelatedSource = source ? this.getUrl(source) : source
-            if (source && pixelatedSource && pixelatedSource !== source) {
-                element.src = pixelatedSource
-                element.style.imageRendering = this.pixelatedEnabled ? 'pixelated' : ''
+            const processedSource = source ? this.getUrl(source) : source
+            if (source && processedSource && processedSource !== source) {
+                element.src = processedSource
             }
         }
 
@@ -315,13 +193,12 @@ export const UiIconManager = {
             return
         }
 
-        const pixelatedBackground = backgroundImage.replace(IMAGE_URL_PATTERN, (match, quote, source) => {
-            const pixelatedSource = this.getUrl(source)
-            return pixelatedSource === source ? match : `url("${pixelatedSource}")`
+        const processedBackground = backgroundImage.replace(IMAGE_URL_PATTERN, (match, quote, source) => {
+            const processedSource = this.getUrl(source)
+            return processedSource === source ? match : `url("${processedSource}")`
         })
-        if (pixelatedBackground !== backgroundImage) {
-            element.style.backgroundImage = pixelatedBackground
-            element.style.imageRendering = this.pixelatedEnabled ? 'pixelated' : ''
+        if (processedBackground !== backgroundImage) {
+            element.style.backgroundImage = processedBackground
         }
     },
 
@@ -332,16 +209,14 @@ export const UiIconManager = {
 
         try {
             const pathName = new URL(iconUrl, window.location.href).pathname
-            return PIXELATED_PATH_PREFIXES.some((prefix) => pathName.startsWith(prefix)) ? pathName : null
+            return UI_IMAGE_PATH_PREFIXES.some((prefix) => pathName.startsWith(prefix)) ? pathName : null
         } catch {
             return null
         }
     },
 
     revokeProcessedUrls() {
-        this.pixelatedUrls.forEach((url) => url.startsWith('blob:') && URL.revokeObjectURL(url))
         this.smoothUrls.forEach((url) => url.startsWith('blob:') && URL.revokeObjectURL(url))
-        this.pixelatedUrls.clear()
         this.smoothUrls.clear()
         this.sourcePathsByProcessedUrl.clear()
     },

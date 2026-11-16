@@ -93,6 +93,12 @@ async function main() {
         exhaustedSpawn.respawnAt = []
         partialSpawn.alive = 1
         partialSpawn.respawnAt = []
+        const resourceStates = savedDocument.collections.characters[0].resourceStates
+        assert.ok(resourceStates?.length > 0, 'No resource progress was saved')
+        const worldDefinition = JSON.parse(readFileSync(join(files, 'world/world.json'), 'utf8')).worlds.find(world => world.id === firstWorld.worldId)
+        const [treeX, treeZ] = worldDefinition.trees[0].split(';').map(Number)
+        const resourceState = resourceStates.find(world => world.worldId === firstWorld.worldId)
+        resourceState.trees = [{x: treeX, z: treeZ, capacity: 0}]
         // Exercise loading a later day without waiting for several complete cycles.
         savedDocument.collections.characters[0].gameTimeMs = (6 + 750 / 1440) * initialClock.cycleDurationMs
         save = JSON.stringify(savedDocument)
@@ -113,7 +119,9 @@ async function main() {
         const restoredSpawns = JSON.parse(save).collections.characters[0].spawnStates.find(world => world.worldId === firstWorld.worldId).spawns
         assert.equal(restoredSpawns.find(spawn => spawn.id === exhaustedSpawn.id).alive, 0, 'Exhausted one-time spawn was repopulated')
         assert.equal(restoredSpawns.find(spawn => spawn.id === partialSpawn.id).alive, 1, 'Surviving population was not preserved')
-        console.log('PASS: bundled game worker, two connection isolation, real character creation, map/login ordering, party, game clock and spawn progress save/restore')
+        const restoredResources = JSON.parse(save).collections.characters[0].resourceStates.find(world => world.worldId === firstWorld.worldId)
+        assert.equal(restoredResources.trees.find(tree => tree.x === treeX && tree.z === treeZ).capacity, 0, 'Exhausted tree was restored after loading')
+        console.log('PASS: bundled game worker, two connection isolation, real character creation, map/login ordering, party, game clock, spawn and resource progress save/restore')
     } finally {
         if (current) await current.worker.terminate()
         await new Promise(resolve => server.close(resolve))

@@ -236,10 +236,10 @@ export class HayStack extends BaseStaticObject {
     }
 }
 
-export class StumpWithAxe extends CampObject {
+export class Stump extends CampObject {
     private readonly cutMaterial: Vector2
 
-    constructor(type: number, position: Vector3, woodMaterial: Vector2, cutMaterial: Vector2, axePrefab: Prefab, metadata?: CampObjectMetadata) {
+    constructor(type: number, position: Vector3, woodMaterial: Vector2, cutMaterial: Vector2, axePrefab: Prefab | null = null, metadata?: CampObjectMetadata) {
         super(type, position, woodMaterial, cutMaterial, metadata, axePrefab)
         this.cutMaterial = cutMaterial
     }
@@ -248,6 +248,12 @@ export class StumpWithAxe extends CampObject {
         this.part(0.66, 0.54, 0.66, 0, 0.27, 0)
         this.part(0.62, 0.04, 0.62, 0, 0.56, 0, this.cutMaterial)
 
+    }
+}
+
+export class StumpWithAxe extends Stump {
+    render() {
+        super.render()
         const facingYaw = this.facing === '+X' ? Math.PI / 2
             : this.facing === '-Z' ? Math.PI
                 : this.facing === '-X' ? -Math.PI / 2 : 0

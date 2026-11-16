@@ -1,6 +1,5 @@
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { ActionButtonsManager } from '@/gui/actionButtonsManager'
-import { UiIconManager } from '@/gui/uiIconManager'
 
 export const BRIGHTNESS_MIN = 0
 export const BRIGHTNESS_MAX = 10
@@ -61,7 +60,6 @@ export const Settings = {
     ambientVolume: 1,
     targetMarkerOpacity: 1,
     displayGlow: true as boolean,
-    smoothIcons: false as boolean,
     foggyAreasOverride: null as boolean | null,
 
     hudSize: 1 as number,
@@ -106,7 +104,6 @@ export const Settings = {
         this.cameraDistance = Number.isFinite(storedCameraDistance) ? Math.min(100, Math.max(80, storedCameraDistance)) : 100
         this.targetMarkerOpacity = Number.isFinite(parseFloat(storedSettings.targetMarkerOpacity)) ? parseFloat(storedSettings.targetMarkerOpacity) : 1
         this.displayGlow = storedSettings.displayGlow
-        this.smoothIcons = storedSettings.smoothIcons === true
         this.hudSize = parseFloat(storedSettings.hudSize)
         this.joystickSize = parseInt(storedSettings.joystickSize)
         this.joystickBottom = parseInt(storedSettings.joystickBottom)
@@ -167,7 +164,6 @@ export const Settings = {
             volume: 0.5,
             ambientVolume: 1,
             displayGlow: !Settings.touchEnabled,
-            smoothIcons: !Settings.touchEnabled,
             foggyAreasOverride: null as boolean | null,
             targetMarkerOpacity: 1,
             hudSize: 1,
@@ -282,11 +278,6 @@ export const Settings = {
 
     setDisplayGlow(value: boolean) {
         this.displayGlow = value;
-    },
-
-    setSmoothIcons(value: boolean) {
-        this.smoothIcons = value
-        UiIconManager.setPixelated(!value)
     },
 
     setCameraDistance(value: number) {

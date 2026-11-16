@@ -32,6 +32,7 @@ import {
     HayStack,
     LogPile,
     PlankPile,
+    Stump,
     StumpWithAxe,
     StoneWell,
     SupplyCrate,
@@ -197,6 +198,7 @@ export const StaticsManager = {
                 StaticEquipPartsRenderer.getPrefab(WeaponModelsCb.HAND_AXE.id),
                 obj.meta as CampObjectMetadata,
             )); break
+            case 311: this.allStatics.push(new Stump(obj.tp, pos, MaterialEnum1.WOOD_3.uv, MaterialEnum1.WOOD_CUT.uv)); break
             case 308: this.allStatics.push(new WaterTrough(obj.tp, pos, MaterialEnum1.WOOD_2.uv, MaterialEnumTrans.WATER.uv)); break
             case 309: this.allStatics.push(new WaterTrough(obj.tp, pos, MaterialEnum1.WOOD_2.uv, MaterialEnumTrans.WATER.uv, obj.meta as CampObjectMetadata)); break
             case 310: this.allStatics.push(new StoneWell(

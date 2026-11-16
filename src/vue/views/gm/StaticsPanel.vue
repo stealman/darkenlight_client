@@ -240,6 +240,7 @@ const objects = [
     { type: "CAMP", name: "Barrel", id: 305 },
     { type: "CAMP", name: "Hay Stack", id: 306 },
     { type: "CAMP", name: "Stump with Axe", id: 307 },
+    { type: "CAMP", name: "Stump", id: 311 },
     { type: "CAMP", name: "Water Trough 1x1", id: 308 },
     { type: "CAMP", name: "Water Trough 2x1", id: 309 },
     { type: "CAMP", name: "Stone Well", id: 310 },

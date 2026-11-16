@@ -100,7 +100,7 @@ const shiftKeyPressed = GMManager.shiftKeyPressed
 const selectedTerrain = GMManager.selectedTerrain
 const terrainEditMode = GMManager.terrainEditMode
 const selectedMinable = GMManager.selectedMinable
-const minableOptions = Array.from({ length: 10 }, (_, index) => ({
+const minableOptions = Array.from({ length: 5 }, (_, index) => ({
     value: `M${index + 1}`,
     label: `Ore ${index + 1}`
 }))

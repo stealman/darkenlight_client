@@ -235,16 +235,6 @@
                                         />
                                     </td>
                                 </tr>
-                                <tr>
-                                    <td class="item-label" style="width: 25%; padding-top: 1rem">
-                                        <label for="smooth-icons">{{ t('settings.smoothIcons') }}</label>
-                                    </td>
-                                    <td style="width: 25%; padding-top: 1rem">
-                                        <Checkbox input-id="smooth-icons" v-model="storedSettings.smoothIcons" binary @change="smoothIconsChanged" />
-                                    </td>
-                                    <td style="width: 25%"></td>
-                                    <td style="width: 25%"></td>
-                                </tr>
                             </tbody>
                         </table>
                     </div>
@@ -515,11 +505,6 @@ const miniMapSizeChanged = () => {
     storeSettings()
 }
 
-const smoothIconsChanged = () => {
-    Settings.setSmoothIcons(Boolean(storedSettings.value.smoothIcons))
-    storeSettings()
-}
-
 const restoreDefaultSettings = () => {
     const defaultSettings = Settings.getDefaultSettings()
     const detailLevelChanged = storedSettings.value.detailLevelName !== defaultSettings.detailLevelName
@@ -529,7 +514,6 @@ const restoreDefaultSettings = () => {
     syncSelectedDeviceType()
     Settings.setVolume(defaultSettings.volume)
     Settings.setAmbientVolume(defaultSettings.ambientVolume)
-    Settings.setSmoothIcons(defaultSettings.smoothIcons)
     FoggyAreaManager.refreshVisibleAreas()
     setLocale(defaultSettings.language)
     Renderer.brightnessChanged()

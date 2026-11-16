@@ -79,13 +79,9 @@ export const GroundItemsManager = {
     hoverNameDisplayTime: 0,
     nextAutoPickupTime: 0,
     ignoredAutoPickupItemIds: new Set<number>(),
-    iconStyleUnsubscribe: null as (() => void) | null,
 
     initialize(scene: Scene) {
         this.scene = scene
-        if (!this.iconStyleUnsubscribe) {
-            this.iconStyleUnsubscribe = UiIconManager.onStyleChanged(() => this.refreshFlatItemTextures())
-        }
         this.flatItemTypes.forEach(type => type.dispose())
         this.itemTypes.clear()
         this.flatItemTypes.clear()
@@ -397,20 +393,6 @@ export const GroundItemsManager = {
         texture.getAlphaFromRGB = false
         texture.updateSamplingMode(Texture.NEAREST_NEAREST)
         return texture
-    },
-
-    refreshFlatItemTextures() {
-        this.flatItemTypes.forEach((type) => {
-            if (!type.material) {
-                return
-            }
-
-            const previousTexture = type.material.albedoTexture
-            const texture = this.createFlatItemTexture(type.id)
-            type.material.albedoTexture = texture
-            type.material.emissiveTexture = texture
-            texture.onLoadObservable.addOnce(() => previousTexture?.dispose())
-        })
     },
 
     initializeItemFx(scene: Scene) {

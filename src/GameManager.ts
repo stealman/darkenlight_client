@@ -43,8 +43,6 @@ export const GameManager = {
         setLocale(Settings.language)
 
         await UiIconManager.initialize(
-            !Settings.smoothIcons,
-            uiImageSettings.pixelSize,
             uiImageSettings.saturation,
             (completed, total) => {
                 const ratio = total > 0 ? completed / total : 1

@@ -37,14 +37,14 @@ export default defineConfig(async ({ mode, command }) => {
         path.resolve(__dirname, 'public/images/items/armor'),
         '/images/items/armor',
     )
-    const pixelatedImageEntries = [
+    const uiImageEntries = [
         ...collectPngEntries(path.resolve(__dirname, 'public/images/icons'), '/images/icons'),
         ...collectPngEntries(path.resolve(__dirname, 'public/images/items/resources'), '/images/items/resources'),
         ...armorImageEntries,
     ]
-    const pixelatedImagePaths = pixelatedImageEntries.map(({ imagePath }) => imagePath)
+    const uiImagePaths = uiImageEntries.map(({ imagePath }) => imagePath)
     const uiImages = command === 'build'
-        ? await collectUiImages(path.resolve(__dirname, 'public'), pixelatedImageEntries,
+        ? await collectUiImages(path.resolve(__dirname, 'public'), uiImageEntries,
             collectPngEntries(path.resolve(__dirname, 'public/images/items/weapons'), '/images/items/weapons'))
         : {urls: {}, files: []}
 
@@ -53,7 +53,7 @@ export default defineConfig(async ({ mode, command }) => {
     define: {
         __CLIENT_BUILD_ID__: JSON.stringify(new Date().toISOString()),
         __MODEL_ASSET_URLS__: JSON.stringify(modelAssets.urls),
-        __PIXELATED_IMAGE_PATHS__: JSON.stringify(pixelatedImagePaths),
+        __UI_IMAGE_PATHS__: JSON.stringify(uiImagePaths),
         __UI_IMAGE_URLS__: JSON.stringify(uiImages.urls),
     },
     plugins: [

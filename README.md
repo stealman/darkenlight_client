@@ -38,11 +38,11 @@ local development bridge. Tauri is not needed for authoring.
 Create/select local characters by name, without accounts or passwords. Each has
 its own save; the menu also supports deleting a character and its save. Browser
 saves use IndexedDB; desktop saves use the native app data directory. Saves hold
-character state, spawn progress and counters, not the authored world definition.
+character state, spawn and resource progress, and counters, not the authored world definition.
 Migration between changed source worlds remains undecided.
 
 A new GM starts without equipment. Its character save is local, while each session
-loads the authored world with saved spawn progress. GM world edits are saved to local MongoDB/PNGs;
+loads the authored world with saved spawn and resource progress. GM world edits are saved to local MongoDB/PNGs;
 existing Mongo accounts and characters are not used for local play.
 
 ## Build and try a release

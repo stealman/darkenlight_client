@@ -37,7 +37,6 @@ export const OverlayManager = {
     itemGainNumbers: [] as ItemGainNumber[],
     emeraldGainIcon: null as HTMLImageElement | null,
     itemGainIcons: new Map<string, HTMLImageElement>(),
-    iconStyleUnsubscribe: null as (() => void) | null,
 
     async initialize() {
         view.canvas = document.getElementById('overlayCanvas') as HTMLCanvasElement
@@ -46,22 +45,10 @@ export const OverlayManager = {
         view.fontSize = window.devicePixelRatio > 1 ? 14 : 18
         indicators.initialize()
         this.emeraldGainIcon = new Image()
-        this.refreshIconSources()
-        if (!this.iconStyleUnsubscribe) {
-            this.iconStyleUnsubscribe = UiIconManager.onStyleChanged(() => this.refreshIconSources())
-        }
+        this.emeraldGainIcon.src = UiIconManager.getUrl('/images/icons/emerald.png')
         labels.initialize()
         this.reset()
         TargetSelector.initialize()
-    },
-
-    refreshIconSources() {
-        if (this.emeraldGainIcon) {
-            this.emeraldGainIcon.src = UiIconManager.getUrl('/images/icons/emerald.png')
-        }
-        this.itemGainIcons.forEach((icon, source) => {
-            icon.src = UiIconManager.getUrl(source)
-        })
     },
 
     reset() {

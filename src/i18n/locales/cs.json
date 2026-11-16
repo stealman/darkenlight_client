@@ -1,5 +1,5 @@
 {
-  "localCharacters": {"saved": "Tvoje postavy", "empty": "Zatím nemáš žádnou uloženou postavu.", "continue": "Pokračovat", "new": "Nová postava", "gm": "Vytvořit GM postavu", "gmHint": "GM postava, vybaven\u00ed a stav spawn\u016f se ukl\u00e1daj\u00ed lok\u00e1ln\u011b.", "create": "Vytvořit", "delete": "Smazat", "deleteNamed": "Smazat postavu {name}", "deleteTitle": "Smazat postavu?", "deleteDescription": "Postava {name} a její uložený postup budou trvale smazány. Tuto akci nelze vrátit.", "cancel": "Zrušit"},
+  "localCharacters": {"empty": "Zatím nemáš žádnou uloženou postavu.", "continue": "Pokračovat", "new": "Nová postava", "gm": "Vytvořit GM postavu", "gmHint": "GM postava, vybaven\u00ed a stav spawn\u016f se ukl\u00e1daj\u00ed lok\u00e1ln\u011b.", "create": "Vytvořit", "delete": "Smazat", "deleteNamed": "Smazat postavu {name}", "deleteTitle": "Smazat postavu?", "deleteDescription": "Postava {name} a její uložený postup budou trvale smazány. Tuto akci nelze vrátit.", "cancel": "Zrušit"},
   "signpost": {"northEast": "Severovýchod", "southEast": "Jihovýchod", "southWest": "Jihozápad", "northWest": "Severozápad", "title": "Rozcestník", "north": "Sever", "south": "Jih", "east": "Východ", "west": "Západ", "blank": "—", "read": "Přečíst rozcestník"},
   "activityLog": {
     "partyCreated": "Založil jsi partu.",
@@ -172,7 +172,6 @@
     "restoreDefaultsConfirm": "Obnovit",
     "restoreDefaultsCancel": "Zrušit",
     "actionButtons": "Akční tlačítka",
-    "smoothIcons": "Hladké ikony",
     "layoutOneColumn": "1 sloupec",
     "layoutTwoColumns": "2 sloupce",
     "layoutCorner": "Roh",
@@ -183,7 +182,7 @@
     "volume": "Hlasitost",
     "ambient": "Ambient",
     "graphicsRestartWarning": "Změny v nastavení grafiky se projeví až po restartu hry",
-    "logout": "Odhlásit"
+    "logout": "Odejít"
   },
   "character": {
     "tabs": {
@@ -335,8 +334,8 @@
       "weaponSet-primary": "Primární zbraň uložena",
       "weaponSet-secondary": "Sekundární zbraň uložena",
       "notEnoughStamina": "Nemáš dostatek výdrže",
-      "lumberjackingInsufficientSkill": "Na získání nalezeného dřeva nemáš dostatečnou úroveň dřevorubectví.",
-      "miningInsufficientSkill": "Na vytěžení nalezené rudy nemáš dostatečnou úroveň těžby.",
+      "lumberjackingInsufficientSkill": "Na těžbu tohoto stromu nebo získání tohoto dřeva nemáš dostatečnou úroveň dřevorubectví.",
+      "miningInsufficientSkill": "Na těžbu tohoto ložiska nemáš dostatečnou úroveň těžby.",
     "powerStrikeRequiresTarget": "Silný úder vyžaduje vybraného nepřítele",
     "powerStrikeOnCooldown": "Silný útok až za {seconds} vteřin",
     "powerStrikeRequiresMeleeWeapon": "Silný úder vyžaduje zbraň pro boj zblízka",

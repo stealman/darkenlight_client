@@ -9,7 +9,7 @@
     </div>
 
     <div>
-        <label>Tree level (1?6) <input ref="treeLevelInput" @change="GMManager.saveTreeLevel()" v-model.number="GMManager.treeLevel.value" type="number" min="1" max="6" step="1"></label>
+        <label>Tree level (1-5) <input ref="treeLevelInput" @change="GMManager.saveTreeLevel()" v-model.number="GMManager.treeLevel.value" type="number" min="1" max="5" step="1"></label>
         <div v-if="GMManager.editingTree.value">
             Tree {{ GMManager.editingTree.value.x }}, {{ GMManager.editingTree.value.z }}
         </div>
