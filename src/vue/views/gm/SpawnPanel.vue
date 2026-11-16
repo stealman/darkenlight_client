@@ -35,8 +35,12 @@
                     <td style='padding-top: 2vh;'><input type='number' @focus="$event.target.select()" :disabled="selectedSpawn.id > 0 && selectedSpawnAction !=='EDIT'" @input="GMSpawns.saveEditedSpawn()" v-model.number='selectedSpawn.maxCount' min='1' max='32' /></td>
                 </tr>
                 <tr>
-                    <td>Spawn Power</td>
-                    <td><input type='number' @focus="$event.target.select()" :disabled="selectedSpawn.id > 0 && selectedSpawnAction !=='EDIT'" @input="GMSpawns.saveEditedSpawn()" v-model.number='selectedSpawn.power' min='1' max='32' /></td>
+                    <td>Respawn Time</td>
+                    <td class="spawn-respawn-time">
+                        <label><input type="number" @focus="$event.target.select()" :disabled="selectedSpawn.id > 0 && selectedSpawnAction !== 'EDIT'" @input="GMSpawns.saveEditedSpawn()" v-model.number="selectedSpawn.respawnDays" min="0" max="3650" /> days</label>
+                        <label><input type="number" @focus="$event.target.select()" :disabled="selectedSpawn.id > 0 && selectedSpawnAction !== 'EDIT'" @input="GMSpawns.saveEditedSpawn()" v-model.number="selectedSpawn.respawnHours" min="0" max="23" /> hours</label>
+                        <small>0 days, 0 hours = one-time mobs</small>
+                    </td>
                 </tr>
                 <tr>
                     <td>Spawn Rng.</td>
@@ -139,3 +143,9 @@ const monsterGroupChanged = () => {
 }
 
 </script>
+
+<style scoped>
+.spawn-respawn-time label { display: inline-flex; align-items: center; gap: 4px; margin-right: 8px; }
+.spawn-respawn-time input { width: 60px; }
+.spawn-respawn-time small { display: block; margin-top: 4px; }
+</style>

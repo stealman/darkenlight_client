@@ -38,7 +38,7 @@ export const GMSpawns = {
             Connector.sendMessage(new GMSpawnAction('CREATE', {
                 requestId, x, z,
                 mobGrpId: source.mobGrpId, mobTypeId: source.mobTypeId,
-                maxCount: source.maxCount, power: source.power,
+                maxCount: source.maxCount, respawnDays: source.respawnDays, respawnHours: source.respawnHours,
                 spawnRange: source.spawnRange, aggroRange: source.aggroRange, pursueRange: source.pursueRange,
             }))
             return
@@ -77,7 +77,8 @@ export const GMSpawns = {
                     mobGrpId: 1,
                     mobTypeId: 0,
                     maxCount: 3,
-                    power: 5,
+                    respawnDays: 0,
+                    respawnHours: 0,
                     spawnRange: 4,
                     aggroRange: 5,
                     pursueRange: 30
@@ -92,7 +93,7 @@ export const GMSpawns = {
         const spawn = this.selectedSpawn.value
         if (!spawn || spawn.id <= 0) return
         // Number inputs can temporarily be empty or outside their limits while typing.
-        const fields = [[spawn.maxCount, 1, 32], [spawn.power, 1, 32], [spawn.spawnRange, 1, 32],
+        const fields = [[spawn.maxCount, 1, 32], [spawn.respawnDays, 0, 3650], [spawn.respawnHours, 0, 23], [spawn.spawnRange, 1, 32],
             [spawn.aggroRange, 0, 32], [spawn.pursueRange, 1, 128]]
         if (fields.some(([value, min, max]) => !Number.isInteger(value) || value < min || value > max)) return
         Connector.sendMessage(new GMSpawnAction('UPDATE', {
@@ -100,7 +101,8 @@ export const GMSpawns = {
             mobGrpId: spawn.mobGrpId,
             mobTypeId: spawn.mobTypeId,
             maxCount: spawn.maxCount,
-            power: spawn.power,
+            respawnDays: spawn.respawnDays,
+            respawnHours: spawn.respawnHours,
             spawnRange: spawn.spawnRange,
             aggroRange: spawn.aggroRange,
             pursueRange: spawn.pursueRange
@@ -115,7 +117,8 @@ export const GMSpawns = {
                 mobGrpId: this.selectedSpawn.value.mobGrpId,
                 mobTypeId: this.selectedSpawn.value.mobTypeId,
                 maxCount: this.selectedSpawn.value.maxCount,
-                power: this.selectedSpawn.value.power,
+                respawnDays: this.selectedSpawn.value.respawnDays,
+                respawnHours: this.selectedSpawn.value.respawnHours,
                 spawnRange: this.selectedSpawn.value.spawnRange,
                 aggroRange: this.selectedSpawn.value.aggroRange,
                 pursueRange: this.selectedSpawn.value.pursueRange
@@ -309,7 +312,8 @@ export class Spawn {
     mobGrpId: number
     mobTypeId: number
     maxCount: number
-    power: number
+    respawnDays: number
+    respawnHours: number
     spawnRange: number
     aggroRange: number
     pursueRange: number
@@ -324,7 +328,8 @@ export class Spawn {
         this.mobGrpId = spawn.mobGrpId
         this.mobTypeId = spawn.mobTypeId
         this.maxCount = spawn.maxCount
-        this.power = spawn.power
+        this.respawnDays = spawn.respawnDays ?? 0
+        this.respawnHours = spawn.respawnHours ?? 0
         this.spawnRange = spawn.spawnRange
         this.aggroRange = spawn.aggroRange
         this.pursueRange = spawn.pursueRange

@@ -617,7 +617,7 @@ export interface CharacterPickupData {
 
 export interface GMSpawnStatusData {
     worldId: number
-    spawns: Array<{id: number, count: number, nextSpawnInMs: number | null, depleted: boolean}>
+    spawns: Array<{id: number, count: number, nextSpawnInGameHours: number | null}>
 }
 
 export interface WorldAreasData {

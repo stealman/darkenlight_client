@@ -84,6 +84,15 @@ async function main() {
         assert(save, 'No local save was written')
         const savedDocument = JSON.parse(save)
         assert.ok(savedDocument.collections.characters[0].gameTimeMs > 0, 'Running game time was not saved')
+        const spawnStates = savedDocument.collections.characters[0].spawnStates
+        assert.ok(spawnStates?.length > 0, 'No spawn progress was saved')
+        const firstWorld = spawnStates.find(world => world.spawns.length >= 2)
+        assert(firstWorld, 'Integration fixture needs two spawns')
+        const exhaustedSpawn = firstWorld.spawns[0], partialSpawn = firstWorld.spawns[1]
+        exhaustedSpawn.alive = 0
+        exhaustedSpawn.respawnAt = []
+        partialSpawn.alive = 1
+        partialSpawn.respawnAt = []
         // Exercise loading a later day without waiting for several complete cycles.
         savedDocument.collections.characters[0].gameTimeMs = (6 + 750 / 1440) * initialClock.cycleDurationMs
         save = JSON.stringify(savedDocument)
@@ -101,7 +110,10 @@ async function main() {
         current.send({kind: 'stop', requestId: 2})
         assert.equal((await current.wait(event => event.kind === 'done' && event.requestId === 2)).error, undefined)
         assert.ok(JSON.parse(save).collections.characters[0].gameTimeMs >= savedDocument.collections.characters[0].gameTimeMs, 'Restored clock did not continue into the next save')
-        console.log('PASS: bundled game worker, two connection isolation, real character creation, map/login ordering, party and game clock save/restore')
+        const restoredSpawns = JSON.parse(save).collections.characters[0].spawnStates.find(world => world.worldId === firstWorld.worldId).spawns
+        assert.equal(restoredSpawns.find(spawn => spawn.id === exhaustedSpawn.id).alive, 0, 'Exhausted one-time spawn was repopulated')
+        assert.equal(restoredSpawns.find(spawn => spawn.id === partialSpawn.id).alive, 1, 'Surviving population was not preserved')
+        console.log('PASS: bundled game worker, two connection isolation, real character creation, map/login ordering, party, game clock and spawn progress save/restore')
     } finally {
         if (current) await current.worker.terminate()
         await new Promise(resolve => server.close(resolve))

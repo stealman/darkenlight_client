@@ -1,3 +1,4 @@
+import {Lights} from '@/babylon/scene/lights'
 import { Vector3 } from '@babylonjs/core'
 import { GMSpawns } from '@/gm/GmSpawns'
 import { MyPlayer } from '@/data/myPlayer'
@@ -34,11 +35,13 @@ export const SpawnCountOverlay = {
             ctx.fillText(label, screen.x, screen.y)
             let timer = '...'
             if (status) {
-                if (status.nextSpawnInMs === null) timer = 'Full'
+                if (status.nextSpawnInGameHours === null) timer = status.count >= spawn.maxCount ? 'Full' : 'No respawn'
                 else {
-                    const seconds = Math.max(0, Math.ceil((status.nextSpawnInMs - Math.max(0, now - status.receivedAt)) / 1000))
-                    const time = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
-                    timer = seconds === 0 ? 'Ready' : `${status.depleted ? 'Recovery' : 'Next'}: ${time}`
+                    const elapsedHours = Lights.dayNightPaused ? 0 : Math.max(0, now - status.receivedAt) / Lights.dayNightCycleDurationMs * 24
+                    const minutes = Math.max(0, Math.ceil((status.nextSpawnInGameHours - elapsedHours) * 60))
+                    const days = Math.floor(minutes / 1440)
+                    const hours = Math.floor(minutes % 1440 / 60)
+                    timer = minutes === 0 ? 'Ready' : `Next: ${days}d ${hours}h ${minutes % 60}m`
                 }
             }
             ctx.font = '13px "Roboto", Arial, sans-serif'
