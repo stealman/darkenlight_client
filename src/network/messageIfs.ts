@@ -505,10 +505,8 @@ export interface GMBotStatusData {
         failedPlans: number
         trailPoints: number
     }
-    journey?: {from: string, to: string} | null
     supplies?: {bandages: number, emeralds: number}
     equipment?: Array<{slot: string, name: string, cbId: number, durability: number | null, maxDurability: number | null}>
-    memory?: {routeFailures: number, avoidedSections: number, nextRetrySeconds: number}
     home?: {
         healerId: number | null
         guardSafePoint: {x: number, z: number} | null
