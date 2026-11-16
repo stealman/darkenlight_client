@@ -5,10 +5,8 @@
         <canvas id="overlayCanvas" class="noselect game-session-canvas" :class="{ 'game-session-canvas--visible': gameSessionActive }"></canvas>
 
         <div v-show="gameSessionActive">
+            <div id="status-panels-host"></div>
             <PartyPanel v-if="gameSessionActive" />
-            <SpeechInput v-if="gameSessionActive && speechButtonVisible" />
-            <CharacterChatTab v-if="gameSessionActive && !speechButtonVisible && !gmPanelVisible" v-show="!displayCharacterDialog"
-                ref="desktopChat" desktop-hud :visible="!displayCharacterDialog && !gmPanelVisible" />
             <div v-show="!gmPanelVisible" id="system-buttons">
                 <button type="button" class="hud-settings-button" :aria-label="t('app.settings')" @click="showSettingsDialog()" v-html="getSettingsSvg('', 'icon-settings')"></button>
             </div>
@@ -23,10 +21,6 @@
                 </div>
                 <div class="gui-action-button" id="btn-character" @click="showCharacterDialog()">
                     <img class="action-icon" src="/images/icons/buttons/btn_char.png" />
-                </div>
-                <div v-show="speechButtonVisible" id="btn-speech" class="gui-action-button" role="button" tabindex="0"
-                    :aria-label="t('speech.open')" @click="openSpeech" @keydown.enter.stop.prevent="openSpeech">
-                    <img class="action-icon" src="/images/icons/buttons/btn_speech.png" />
                 </div>
             </div>
 
@@ -228,13 +222,6 @@ import { NpcInteractionManager } from '@/data/npcInteractionManager'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { useI18n } from '@/i18n'
 import PartyPanel from '@/vue/views/PartyPanel.vue'
-import SpeechInput from '@/vue/views/SpeechInput.vue'
-import CharacterChatTab from '@/vue/views/character/CharacterChatTab.vue'
-const desktopChat = ref<InstanceType<typeof CharacterChatTab> | null>(null)
-const focusDesktopChat = () => {
-    if (!Settings.isPhoneOrTablet() && !displayCharacterDialog.value && !gmPanelVisible.value) desktopChat.value?.focusInput()
-}
-const openSpeech = () => window.dispatchEvent(new CustomEvent('ui:open-speech'))
 
 const canvas = ref<HTMLCanvasElement | null>(null)
 const miniMapCanvas = ref<HTMLCanvasElement | null>(null)
@@ -265,7 +252,6 @@ const errorDialogCanRestart = ref(false)
 const loginRequestSentFlag = ref(false)
 const gameSessionActive = ref(false)
 const touchControlsReady = ref(false)
-const speechButtonVisible = ref(Settings.isPhoneOrTablet())
 const loadingPhaseKey = ref('app.loadingPreparing')
 const loadingProgress = ref(5)
 
@@ -319,7 +305,6 @@ const onGameStarted = async () => {
     gameLoading.value = false
     await nextTick()
     await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()))
-    speechButtonVisible.value = Settings.isPhoneOrTablet()
     gameSessionActive.value = true
     loginRequestSentFlag.value = true
     await nextTick()
@@ -617,8 +602,6 @@ onMounted(async () => {
     window.visualViewport?.addEventListener('scroll', syncAppViewportSize)
     window.addEventListener('ui:open-inventory', onOpenInventoryHotkey)
     window.addEventListener('ui:open-character', onOpenCharacterHotkey)
-    window.addEventListener('ui:open-speech', focusDesktopChat)
-    window.addEventListener('ui:open-private-chat', onOpenPrivateChat)
     window.addEventListener('ui:open-crafting', onOpenCraftingMenu as EventListener)
     window.addEventListener('ui:open-npc-use', onOpenNpcUseMenu as EventListener)
     window.addEventListener('ui:open-container', onOpenContainer)
@@ -669,8 +652,6 @@ onUnmounted(() => {
     window.visualViewport?.removeEventListener('scroll', syncAppViewportSize)
     window.removeEventListener('ui:open-inventory', onOpenInventoryHotkey)
     window.removeEventListener('ui:open-character', onOpenCharacterHotkey)
-    window.removeEventListener('ui:open-speech', focusDesktopChat)
-    window.removeEventListener('ui:open-private-chat', onOpenPrivateChat)
     window.removeEventListener('ui:open-crafting', onOpenCraftingMenu as EventListener)
     window.removeEventListener('ui:open-npc-use', onOpenNpcUseMenu as EventListener)
     window.removeEventListener('ui:open-container', onOpenContainer)
@@ -789,22 +770,6 @@ const showCharacterDialog = () => {
     })
 }
 
-const onOpenPrivateChat = (event: Event) => {
-    const name = (event as CustomEvent<{name: string}>).detail?.name
-    if (!gameSessionActive.value || isDead.value || typeof name !== 'string' || !name.trim()) return
-    if (!Settings.isPhoneOrTablet()) {
-        if (gmPanelVisible.value) return
-        displayCharacterDialog.value = false
-        nextTick(() => {
-            desktopChat.value?.reply(name)
-            desktopChat.value?.focusInput()
-        })
-        return
-    }
-    showCharacterDialog()
-    nextTick(() => { void characterDialog.value?.openPrivateChat(name) })
-}
-
 const onOpenCharacterHotkey = () => {
     if (!loginRequestSentFlag.value || isDead.value) {
         return
@@ -894,7 +859,6 @@ const touchControlsChanged = () => {
 }
 
 const deviceTypeChanged = () => {
-    speechButtonVisible.value = Settings.isPhoneOrTablet()
     Settings.deviceTypeChanged()
     touchControls.value.updateFromSettings()
 }

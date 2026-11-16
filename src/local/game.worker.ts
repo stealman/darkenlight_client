@@ -77,7 +77,7 @@ async function start(options: WorkerStart) {
             async value => { await hostIO('write-save', options.slot, value) })
         storage = {
             execute: (value: StorageRequest) => {
-                if (['characters', 'players', 'privateChat'].includes(value.collection) && value.method !== 'nextId') {
+                if (['characters', 'players'].includes(value.collection) && value.method !== 'nextId') {
                     return characterStorage.execute(value)
                 }
                 const operation = request('storage', value.method === 'nextId' ? {...value, collection: 'counters'} : value)
@@ -159,13 +159,13 @@ scope.onmessage = ({data}) => {
             peers.set(data.connectionId, Connector.createConnection({
                 staticWorldMaps: staticMaps,
                 get open() { return open && !stopping },
-                send: frame => emit({kind: 'frame', connectionId: data.connectionId, frame}),
+                sendMessages: frame => emit({kind: 'frame', connectionId: data.connectionId, frame}),
                 close: () => { open = false },
             }))
         } else if (data.kind === 'frame') {
             const conn = peers.get(data.connectionId)
             if (!conn) throw new Error('Unknown local connection')
-            Connector.receive(conn, data.frame)
+            Connector.receiveMessage(conn, data.frame as import('@game/network/messages').Message)
         } else if (data.kind === 'disconnect') {
             const conn = peers.get(data.connectionId)
             peers.delete(data.connectionId)

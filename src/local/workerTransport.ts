@@ -1,4 +1,4 @@
-import type {GameTransport} from '@/network/transport'
+import type {GameTransport, GameCommand, GameMessage} from '@/network/transport'
 import type {HostMessage, LocalGameMode, WorkerMessage} from './workerProtocol'
 import {loadSave, writeSave, type CharacterProfile} from './saveStore'
 import {loadWorldBundle, localWorldMaps} from './worldBundle'
@@ -7,7 +7,7 @@ declare const __AUTHORING_TOKEN__: string
 
 export class WorkerTransport implements GameTransport {
     readonly ready: Promise<void>
-    onFrame: ((frame: string) => void) | null = null
+    onFrame: ((frame: GameMessage[]) => void) | null = null
     onClose: ((error?: Error) => void) | null = null
     onError: ((error: Error) => void) | null = null
     private worker: Worker
@@ -72,7 +72,7 @@ export class WorkerTransport implements GameTransport {
 
     private post(message: HostMessage) { this.worker.postMessage(message) }
     get open() { return this.active && !this.closing }
-    send(frame: string) {
+    send(frame: GameCommand) {
         if (!this.open) throw new Error('Local game is not ready')
         this.post({kind: 'frame', frame, connectionId: this.connectionId})
     }

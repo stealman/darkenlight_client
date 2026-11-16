@@ -16,8 +16,6 @@ export const Connector = {
     queuedMessages: [] as OutgoingMessage[],
     responseQueue: Promise.resolve() as Promise<void>,
     lastSecondLimit: 10,
-    speechQueue: [] as Message[],
-    lastSpeechTime: 0,
 
     moveMessageTimeout: 50,
     lastMoveMessage: null as Message | null,
@@ -43,7 +41,7 @@ export const Connector = {
         MonsterCatalog.reset(types => this.sendMessage(new MonsterCatalogRequest(types)))
         transport.onFrame = frame => {
             if (generation !== this.generation) return
-            const response = JSON.parse(frame)
+            const response = frame
             this.responseQueue = this.responseQueue.then(() => {
                 if (generation === this.generation) return MessageProcessor.processResponse(response)
             }).catch(error => {
@@ -79,31 +77,31 @@ export const Connector = {
 
     sendLoginRequest(username: string, password: string, guestName: string | null) {
         const loginMsg = new LoginMsg(username, password, guestName)
-        this.transport!.send(JSON.stringify(loginMsg))
+        this.transport!.send(loginMsg)
     },
 
     checkGuestCharacterName(name: string) {
-        this.transport!.send(JSON.stringify(new GuestCharacterNameCheckMsg(name)))
+        this.transport!.send(new GuestCharacterNameCheckMsg(name))
     },
 
     createGuestCharacter(name: string, classKey: 'FIGHTER' | 'MYSTIC') {
-        this.transport!.send(JSON.stringify(new GuestCharacterCreateMsg(name, classKey)))
+        this.transport!.send(new GuestCharacterCreateMsg(name, classKey))
     },
 
     registerPlayer(email: string, password: string) {
-        this.transport!.send(JSON.stringify(new PlayerRegistrationMsg(email, password)))
+        this.transport!.send(new PlayerRegistrationMsg(email, password))
     },
 
     checkAccountCharacterName(name: string) {
-        this.transport!.send(JSON.stringify(new AccountCharacterNameCheckMsg(name)))
+        this.transport!.send(new AccountCharacterNameCheckMsg(name))
     },
 
     createAccountCharacter(name: string, classKey: 'FIGHTER' | 'MYSTIC') {
-        this.transport!.send(JSON.stringify(new AccountCharacterCreateMsg(name, classKey)))
+        this.transport!.send(new AccountCharacterCreateMsg(name, classKey))
     },
 
     claimGuestCharacter(name: string) {
-        this.transport!.send(JSON.stringify(new AccountCharacterClaimMsg(name)))
+        this.transport!.send(new AccountCharacterClaimMsg(name))
     },
 
     sendMoveMessage(msg: Message) {
@@ -124,18 +122,12 @@ export const Connector = {
     },
 
     resetSession() {
-        this.speechQueue = []
-        this.lastSpeechTime = 0
         this.queuedMessages = []
         this.sentMessages = []
         this.cancelPendingMoveMessage()
     },
 
     sendMessage(msg: Message) {
-        if (msg.t === 46) {
-            this.speechQueue.push(msg)
-            return
-        }
         const time = new Date().getTime()
 
         // Remove from sentMessages all that are older than 1 second
@@ -163,13 +155,6 @@ export const Connector = {
             }
         }
 
-        if (this.speechQueue.length && time >= this.lastSpeechTime + 1000
-            && this.sentMessages.length < this.lastSecondLimit && this.transport?.open) {
-            const msg = this.speechQueue.shift()!
-            this.doSend(msg, time)
-            this.sentMessages.push(msg)
-            this.lastSpeechTime = time
-        }
 
         // If last move message was not sent due to timeout, send it now
         if (this.lastMoveMessage != null && this.lastSentMoveMessage != this.lastMoveMessage && time > this.lastMoveMessageTime + this.moveMessageTimeout) {
@@ -192,7 +177,7 @@ export const Connector = {
 
     doSend(msg: OutgoingMessage, time: number) {
         // console.log('Sending message:', msg)
-        this.transport!.send(JSON.stringify(msg))
+        this.transport!.send(msg)
         msg.sentTime = time
     }
 }

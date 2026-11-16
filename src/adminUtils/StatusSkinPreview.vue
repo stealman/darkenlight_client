@@ -41,7 +41,6 @@
             <div id="gui-buttons" :class="{ 'gui-buttons--touch': touchLayout }" style="--hud-joystick-left: 120px; --hud-joystick-bottom: 50px; --hud-joystick-size: 100px; --hud-dock-button-size: 48px">
                 <div id="btn-backpack" class="gui-action-button" style="width: 48px; height: 48px"><img class="action-icon" src="/images/icons/buttons/btn_backpack.png" alt="Inventář"></div>
                 <div id="btn-character" class="gui-action-button" style="width: 48px; height: 48px"><img class="action-icon" src="/images/icons/buttons/btn_char.png" alt="Postava"></div>
-                <div v-if="touchLayout" id="btn-speech" class="gui-action-button" style="width: 48px; height: 48px"><img class="action-icon" src="/images/icons/buttons/btn_speech.png" alt="Chat"></div>
             </div>
             <div v-if="touchLayout" class="status-skin-joystick" aria-label="Poloha joysticku v náhledu">Joystick</div>
             <div id="selectedTargetPanel" :class="!hasTarget ? 'empty' : ally ? 'ally' : 'enemy'" style="display: flex">
@@ -95,6 +94,5 @@ const segment = (value: number, index: number, count: number) => `${Math.max(0, 
 .status-skin-stage > .hud-settings-button { position: absolute; bottom: max(5px, env(safe-area-inset-bottom)); left: max(5px, env(safe-area-inset-left)); }
 .status-skin-stage #gui-buttons.gui-buttons--touch { position: static; }
 .status-skin-stage #gui-buttons.gui-buttons--touch > #btn-backpack,
-.status-skin-stage #gui-buttons.gui-buttons--touch > #btn-character,
-.status-skin-stage #gui-buttons.gui-buttons--touch > #btn-speech { position: absolute; }
+.status-skin-stage #gui-buttons.gui-buttons--touch > #btn-character { position: absolute; }
 </style>

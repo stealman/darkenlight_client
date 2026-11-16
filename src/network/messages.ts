@@ -6,16 +6,6 @@ export interface Message {
     d: any
 }
 
-export class ChatSendMsg implements Message {
-    t = 75
-    constructor(public d: {channel: 'private' | 'party', text: string, to?: string}) {}
-}
-
-export class ChatHistoryMsg implements Message {
-    t = 76
-    d = {}
-}
-
 export class LoginMsg {
     t: number = 1
     login: string
@@ -647,10 +637,6 @@ export class PartyLeaveMsg implements Message {
     d = {}
 }
 
-export class SayMsg implements Message {
-    t = 46
-    constructor(public d: {text: string}) {}
-}
 export class ShearSheepMsg implements Message {
     t = 47
     d: {id: number}

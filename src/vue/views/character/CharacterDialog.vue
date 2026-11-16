@@ -20,22 +20,22 @@
             </div>
         </template>
 
-        <div class="inventory-content-shell character-content-shell" :class="{'chat-content-shell': activeTabId === 'chat'}">
+        <div class="inventory-content-shell character-content-shell" :class="{'story-content-shell': activeTabId === 'story'}">
             <CharacterOverviewTab v-if="activeTabId === 'character'" />
             <CharacterActionsTab v-else-if="activeTabId === 'actions'" ref="characterActionsTabRef" />
             <CharacterSkillsTab v-else-if="activeTabId === 'skills'" />
-            <CharacterChatTab v-else-if="activeTabId === 'chat'" ref="characterChatTabRef" :visible="visible" />
+            <CharacterStoryTab v-else-if="activeTabId === 'story'" :visible="visible" />
         </div>
     </GameDialog>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, nextTick } from 'vue'
+import { computed, ref } from 'vue'
 import GameDialog from '@/vue/views/GameDialog.vue'
 import CharacterOverviewTab from '@/vue/views/character/CharacterOverviewTab.vue'
 import CharacterActionsTab from '@/vue/views/character/CharacterActionsTab.vue'
 import CharacterSkillsTab from '@/vue/views/character/CharacterSkillsTab.vue'
-import CharacterChatTab from '@/vue/views/character/CharacterChatTab.vue'
+import CharacterStoryTab from '@/vue/views/character/CharacterStoryTab.vue'
 import { useI18n } from '@/i18n'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { MyPlayer } from '@/data/myPlayer'
@@ -50,12 +50,11 @@ const tabs = computed(() => [
     { id: 'character', name: t('character.tabs.character') },
     { id: 'actions', name: t('character.tabs.actions') },
     { id: 'skills', name: t('character.tabs.skills') },
-    { id: 'chat', name: t('character.tabs.chat') },
+    { id: 'story', name: t('character.tabs.story') },
 ])
 
 const activeTabId = ref('character')
 const characterActionsTabRef = ref()
-const characterChatTabRef = ref<InstanceType<typeof CharacterChatTab> | null>(null)
 
 const hasAvailableSkillTraining = computed(() => {
     const skillSet = myChar.value?.skillSet
@@ -95,13 +94,7 @@ const closeDialog = () => {
     emit('close')
 }
 
-const openPrivateChat = async (name: string) => {
-    activeTabId.value = 'chat'
-    await nextTick()
-    characterChatTabRef.value?.reply(name)
-}
-
-defineExpose({openDialog, openPrivateChat})
+defineExpose({openDialog})
 </script>
 
 <style scoped>
@@ -121,7 +114,7 @@ defineExpose({openDialog, openPrivateChat})
     box-sizing: border-box;
 }
 
-.chat-content-shell { display: flex; }
+.story-content-shell { display: flex; }
 
 .tab-item--training-available label {
     animation: character-skill-training-available-pulse 1.8s ease-in-out infinite;

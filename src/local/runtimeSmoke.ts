@@ -16,7 +16,7 @@ export async function runDesktopRuntimeSmoke() {
             failure = undefined
             const connection = new WorkerTransport('play', slot)
             transport = connection
-            connection.onFrame = frame => messages.push(...JSON.parse(frame))
+            connection.onFrame = frame => messages.push(...frame)
             connection.onClose = error => { failure = error || new Error('Worker closed unexpectedly') }
             await connection.ready
             return connection
@@ -33,7 +33,7 @@ export async function runDesktopRuntimeSmoke() {
         }
         const first = await connect()
         checks.push('packaged-worker-started-and-loaded-compiled-world')
-        first.send(JSON.stringify({t: 35, d: {name, classKey: 'FIGHTER'}}))
+        first.send({t: 35, d: {name, classKey: 'FIGHTER'}})
         const login = await waitFor(message => message.t === 2)
         if (!login.d.char) throw new Error(login.d.message || 'Character creation failed')
         if (messages.findIndex(message => message.t === 7) < 0
@@ -47,14 +47,14 @@ export async function runDesktopRuntimeSmoke() {
         await nativeWindow.unminimize()
         if (await first.inspectTick() <= beforeMinimize) throw new Error('Simulation stopped while minimized')
         checks.push('simulation-ticked-during-minimize-and-restore')
-        first.send(JSON.stringify({t: 49, d: {types: [1]}}))
+        first.send({t: 49, d: {types: [1]}})
         // Save is also a barrier for preceding asynchronous game commands.
         await first.save()
         checks.push('native-save-written')
         const originalId = login.d.char.id
         await first.close()
         const second = await connect()
-        second.send(JSON.stringify({t: 1, login: '', password: '', guestName: name}))
+        second.send({t: 1, login: '', password: '', guestName: name})
         const restored = await waitFor(message => message.t === 2)
         if (restored.d.char?.id !== originalId || restored.d.char?.name !== name) throw new Error('Native save did not restore the same character')
         checks.push('fresh-worker-restored-native-save')

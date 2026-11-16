@@ -14,7 +14,6 @@ import { CharacterManager } from '@/babylon/character/characterManager'
 import { MonsterManager } from '@/babylon/monsters/monsterManager'
 import { NpcManager } from '@/babylon/npc/npcManager'
 import type { Targetable } from '@/gui/targettingManager'
-import {ChatManager} from '@/data/chatManager'
 
 const HOVER_AXES = ['x', 'y', 'z'] as const
 
@@ -201,11 +200,6 @@ export const Controller = {
     },
 
     processKeydown(e) {
-        if (e.key === 'Tab' && ChatManager.visible) {
-            e.preventDefault()
-            window.dispatchEvent(new CustomEvent('ui:cycle-chat', {detail: e.shiftKey ? -1 : 1}))
-            return
-        }
         if (MyPlayer.isDead.value) {
             return
         }
@@ -213,11 +207,6 @@ export const Controller = {
             return
         }
 
-        if (e.key === 'Enter' && !e.repeat && !e.isComposing) {
-            e.preventDefault()
-            window.dispatchEvent(new CustomEvent('ui:open-speech'))
-            return
-        }
 
         // G - toggle the GM panel.
         if ((e.key && e.key.toLowerCase() === 'g') || e.code === 'KeyG') {

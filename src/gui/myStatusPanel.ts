@@ -152,7 +152,7 @@ export const MyStatusPanel = {
         const partyHost = document.createElement('div')
         partyHost.id = 'party-panel-host'
         this.panel.appendChild(partyHost)
-        document.body.appendChild(this.panel)
+        document.getElementById('status-panels-host')!.appendChild(this.panel)
         this.lastTooltipRefreshBucket = null
         TooltipOverlayManager.initialize()
         this.onResize()

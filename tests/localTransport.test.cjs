@@ -11,7 +11,7 @@ function loadConnector(processResponse = async () => {}, clock = Date) {
         open = true
         frames = []
         constructor() { transports.push(this) }
-        send(frame) { this.frames.push(frame) }
+        send(frame) { this.frames.push(structuredClone(frame)) }
         async close() { this.open = false }
         async save() {}
     }
@@ -32,7 +32,7 @@ function loadConnector(processResponse = async () => {}, clock = Date) {
     return {connector: exports.Connector, transports}
 }
 
-test('local transport retains outgoing limits, speech pacing and deferred movement behavior', async () => {
+test('local transport retains outgoing limits and deferred movement behavior', async () => {
     const savedWindow = globalThis.window
     let time = 10000
     class Clock extends Date {
@@ -52,32 +52,23 @@ test('local transport retains outgoing limits, speech pacing and deferred moveme
         time += 1000
         connector.processMessages(time)
         assert.equal(transport.frames.length, 12)
-        assert.deepEqual(transport.frames.map(frame => JSON.parse(frame).d.index), Array.from({length: 12}, (_, index) => index))
-        connector.resetSession()
-        connector.sendMessage({t: 46, d: {text: 'one'}})
-        connector.sendMessage({t: 46, d: {text: 'two'}})
-        connector.processMessages(time)
-        connector.processMessages(time + 999)
-        assert.equal(connector.speechQueue.length, 1)
-        time += 1000
-        connector.processMessages(time)
-        assert.equal(connector.speechQueue.length, 0)
+        assert.deepEqual(transport.frames.map(frame => frame.d.index), Array.from({length: 12}, (_, index) => index))
         connector.resetSession()
         connector.sendMoveMessage({t: 5, d: {index: 1}})
         connector.sendMoveMessage({t: 5, d: {index: 2}})
         const beforeMovement = transport.frames.length
         connector.processMessages(time + 51)
         assert.equal(transport.frames.length, beforeMovement + 1)
-        assert.equal(JSON.parse(transport.frames.at(-1)).d.index, 2)
+        assert.equal(transport.frames.at(-1).d.index, 2)
         connector.processMessages(time + 52)
         assert.equal(transport.frames.length, beforeMovement + 1)
         const original = {t: 9, d: {value: 1}}
         connector.doSend(original, time)
         original.d.value = 2
-        assert.equal(JSON.parse(transport.frames.at(-1)).d.value, 1)
-        assert.equal(JSON.parse(transport.frames.at(-1)).sentTime, undefined)
+        assert.equal(transport.frames.at(-1).d.value, 1)
+        assert.equal(transport.frames.at(-1).sentTime, undefined)
         connector.sendLoginRequest('user', 'password', null)
-        assert.deepEqual(JSON.parse(transport.frames.at(-1)), {t: 1, login: 'user', password: 'password', guestName: null})
+        assert.deepEqual({...transport.frames.at(-1)}, {t: 1, login: 'user', password: 'password', guestName: null})
     } finally { globalThis.window = savedWindow }
 })
 
@@ -93,8 +84,8 @@ test('response processing keeps the async barrier and ignores frames from a prev
             if (response[0].t === 1) await barrier
         })
         await connector.initialize()
-        transports[0].onFrame('[{"t":1,"d":{}}]')
-        transports[0].onFrame('[{"t":2,"d":{}}]')
+        transports[0].onFrame([{"t":1,"d":{}}])
+        transports[0].onFrame([{"t":2,"d":{}}])
         await new Promise(resolve => setImmediate(resolve))
         assert.deepEqual(received, [1])
         release()
@@ -102,8 +93,8 @@ test('response processing keeps the async barrier and ignores frames from a prev
         assert.deepEqual(received, [1, 2])
         const staleCallback = transports[0].onFrame
         await connector.initialize()
-        staleCallback('[{"t":99,"d":{}}]')
-        transports[1].onFrame('[{"t":3,"d":{}}]')
+        staleCallback([{"t":99,"d":{}}])
+        transports[1].onFrame([{"t":3,"d":{}}])
         await connector.responseQueue
         assert.deepEqual(received, [1, 2, 3])
     } finally { globalThis.window = savedWindow }
@@ -124,12 +115,12 @@ test('closing waits for the active response and discards queued and late frames 
         })
         await connector.initialize()
         const receive = transports[0].onFrame
-        receive('[{"t":1}]')
-        receive('[{"t":2}]')
+        receive([{"t":1}])
+        receive([{"t":2}])
         await new Promise(resolve => setImmediate(resolve))
         let closed = false
         const closing = connector.closeConnection().then(() => { closed = true; worldAvailable = false })
-        receive('[{"t":3}]')
+        receive([{"t":3}])
         await new Promise(resolve => setImmediate(resolve))
         assert.equal(closed, false, 'Connection close must drain its active response')
         release()
@@ -170,7 +161,7 @@ test('authoritative broadcasts preserve recipient isolation and snapshot a batch
     const {Connector} = require(join(server, 'src/network/connector.ts'))
     const {GameManager} = require(join(server, 'src/game/game.ts'))
     const frames = [[], []]
-    const connections = frames.map(target => Connector.createConnection({open: true, send: frame => target.push(JSON.parse(frame)), close() {}}))
+    const connections = frames.map(target => Connector.createConnection({open: true, sendMessages: frame => target.push(structuredClone(frame)), close() {}}))
     const recipients = connections.map(conn => ({conn}))
     const batch = [{t: 41, d: {text: 'private'}}]
     GameManager.messageQueue.set(recipients[0], batch)
@@ -193,19 +184,60 @@ test('WebSocket and local peers deliver identical setup frames to the same autho
     const host = startWebSocketHost(0)
     await new Promise(resolve => host.once('listening', resolve))
     const localFrames = []
-    const local = Connector.createConnection({open: true, send: frame => localFrames.push(frame), close() {}})
+    const local = Connector.createConnection({open: true, sendMessages: frame => localFrames.push(structuredClone(frame)), close() {}})
     const remote = new WebSocket(`ws://127.0.0.1:${host.address().port}`)
     try {
         await new Promise((resolve, reject) => { remote.once('open', resolve); remote.once('error', reject) })
         const frame = JSON.stringify({t: 34, d: {name: 'ProtocolCompatibility'}})
-        Connector.receive(local, frame)
+        Connector.receiveMessage(local, JSON.parse(frame))
         await Connector.waitForIdle()
         const response = new Promise(resolve => remote.once('message', data => resolve(data.toString())))
         remote.send(frame)
-        assert.equal(await response, localFrames[0])
+        assert.deepEqual(JSON.parse(await response), localFrames[0])
     } finally {
         await new Promise(resolve => { remote.once('close', resolve); remote.close() })
         await Connector.closeConnection(local)
         await new Promise(resolve => host.close(resolve))
     }
+})
+
+
+test('player movement skips static neighborhoods while gathering queries nearby world tiles', () => {
+    const server = resolve(__dirname, '../../../server/darkenlight_server')
+    require(join(server, 'node_modules/ts-node')).register({project: join(server, 'tsconfig.json'), transpileOnly: true})
+    const {CharacterVisibility} = require(join(server, 'src/character/characterVisibility.ts'))
+    const {LumberJackingAction} = require(join(server, 'src/game/actions/lumberJackingAction.ts'))
+    const {CampingAction} = require(join(server, 'src/game/actions/campingAction.ts'))
+    const tree = {x: 10, z: 11}
+    const player = {
+        isBot: false, nearbyDistance: 3, getPos: () => ({x: 10, z: 10}),
+        monstersNearby: new Set(), npcsNearby: new Set(), charactersNearby: new Set(),
+        monstersAround: new Set(), npcsAround: new Set(), charactersAround: new Set(),
+        // Accessing chunks would reproduce the old broad static scan.
+        get chunksAround() { throw new Error('Player movement scanned static chunks') },
+        world: {trees: []}, treesNearby: new Set(),
+    }
+    CharacterVisibility.actualizeNearbyObjects.call(player)
+    player.world.trees[10] = []
+    player.world.trees[10][11] = tree
+    assert.equal(LumberJackingAction.getJackableTree(player), tree)
+    const action = new LumberJackingAction(player, tree)
+    assert.equal(action.isJackedTreeInRange(), true)
+    player.world.mapData = {blockMap: []}
+    player.world.mapData.blockMap[10] = []
+    player.world.mapData.blockMap[10][11] = {isCampable: () => true}
+    player.chunk = {hasStaticObjectOnBlock: () => false}
+    assert.equal(CampingAction.isBlockCampable(player, 10, 11), false)
+    delete player.world.trees[10][11]
+    assert.equal(action.isJackedTreeInRange(), false)
+    assert.equal(CampingAction.isBlockCampable(player, 10, 11), true)
+    player.world.trees[13] = []
+    player.world.trees[13][10] = {x: 13, z: 10}
+    assert.equal(LumberJackingAction.getJackableTree(player), null)
+    const bot = Object.create(player)
+    bot.isBot = true
+    bot.blockingStaticObjectsNearby = new Set()
+    Object.defineProperty(bot, 'chunksAround', {value: [{trees: [tree], blockingStaticObjects: []}]})
+    CharacterVisibility.actualizeNearbyObjects.call(bot)
+    assert.equal(bot.treesNearby.has(tree), true)
 })

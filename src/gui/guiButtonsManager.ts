@@ -173,11 +173,6 @@ export const GuiButtonsManager = {
             dock.style.setProperty('--hud-joystick-bottom', `${Settings.joystickBottom}px`)
             dock.style.setProperty('--hud-joystick-size', `${Settings.joystickSize}px`)
         }
-        const speech = document.getElementById('btn-speech')
-        if (speech) {
-            speech.style.width = `${this.dockButtonSize}px`
-            speech.style.height = `${this.dockButtonSize}px`
-        }
     },
 
     onFrame(actualTime: number = Date.now()) {

@@ -1,4 +1,5 @@
 import type {CharacterProfile} from './saveStore'
+import type {GameCommand, GameMessage} from '../network/transport'
 export type LocalGameMode = 'play' | 'authoring'
 export interface WorkerStart {
     kind: 'start'
@@ -11,13 +12,13 @@ export interface WorkerStart {
 }
 
 export type HostMessage = WorkerStart
-    | {kind: 'frame', frame: string, connectionId: string}
+    | {kind: 'frame', frame: GameCommand, connectionId: string}
     | {kind: 'connect' | 'disconnect', connectionId: string}
     | {kind: 'save' | 'stop' | 'inspect', requestId: number}
     | {kind: 'io-result', requestId: number, value?: string | null, error?: string}
 
 export type WorkerMessage = {kind: 'ready'}
-    | {kind: 'frame', frame: string, connectionId: string}
+    | {kind: 'frame', frame: GameMessage[], connectionId: string}
     | {kind: 'error', error: string}
     | {kind: 'save-error', error: string}
     | {kind: 'done', requestId: number, error?: string, value?: number}

@@ -597,22 +597,6 @@ export interface CharacterSpeechData {
     time: number
 }
 
-export interface ChatEntry {
-    id: string
-    channel: 'public' | 'private' | 'party'
-    from: string
-    to?: string
-    text: string
-    time: number
-}
-
-export interface ChatPacketData {
-    entry?: ChatEntry
-    history?: ChatEntry[]
-    error?: string
-    name?: string
-}
-
 export interface MonsterAggroAlertData {
     id: number
     worldId: number
