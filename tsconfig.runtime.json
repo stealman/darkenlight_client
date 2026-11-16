@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "useDefineForClassFields": false
+  },
+  "include": [
+    "src/local/browserPlatform.ts",
+    "src/local/game.worker.ts",
+    "src/local/workerProtocol.ts",
+    "src/local/workerTransport.ts",
+    "src/local/runtimeSmoke.ts",
+    "src/network/transport.ts",
+    "src/**/*.d.ts"
+  ]
+}

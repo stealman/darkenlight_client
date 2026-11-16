@@ -5,6 +5,8 @@ import { TreeManager } from '@/babylon/world/treeManager'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { StaticsManager } from '@/babylon/world/statics/staticsManager'
 import { MyPlayer } from '@/data/myPlayer'
+import {localWorldMaps} from '@/local/worldBundle'
+import {TileFlags, type CompiledMap} from '@game/runtime/compiledMap'
 
 export const WorldDataManager = {
     MAP_CHUNK_SIZE: 128 as number,
@@ -14,11 +16,12 @@ export const WorldDataManager = {
         this.worldDataMap.clear()
     },
 
-    replaceWorldData(worldId: number, size: number) {
-        this.worldDataMap.set(worldId, new WorldData(size))
+    replaceWorldData(worldId: number, size: number, maxOreTier = Infinity) {
+        this.worldDataMap.set(worldId, new WorldData(size, localWorldMaps.get(worldId), maxOreTier))
     },
 
     fetchWorldDataIfNeeded() {
+        if (this.worldDataMap.get(MyPlayer.worldId)?.allChunksLoaded) return
         if (!this.worldDataMap.has(MyPlayer.worldId)) {
             this.worldDataMap.set(MyPlayer.worldId, new WorldData(1024))
         }
@@ -63,6 +66,7 @@ export const WorldDataManager = {
 
     consumeMapUpdate(worldId, data) {
         this.worldDataMap.get(worldId)!.consumeMapUpdate(data)
+        if (!MyPlayer.myChar) return
         TreeManager.recountYPositions()
         TreeManager.renderTrees()
         StaticsManager.recountYPositions()
@@ -113,13 +117,33 @@ export const WorldDataManager = {
 }
 
 export class WorldData {
+    allChunksLoaded = false
     worldSize: number = 1024
     blockMap: MapBlock[][] = [] as MapBlock[][]
-    planeBlockMap: MapBlock[][] = [] as MapBlock[][]
+    planeBlockMap: (MapBlock | false)[][] = []
     loadedChunkCoords: Vector3[] = []
 
-    constructor(size: number) {
+    constructor(size: number, compiled?: CompiledMap, maxOreTier = Infinity) {
         this.worldSize = size
+        if (compiled) {
+            if (compiled.width < size || compiled.depth < size) throw new Error('Compiled terrain is smaller than its world')
+            const palette = compiled.palette.map(tile => {
+                const block = new MapBlock(tile.height, tile.flags & TileFlags.deep ? 51 : tile.type)
+                block.snowed = !!(tile.flags & TileFlags.snow)
+                block.stonePath = !!(tile.flags & TileFlags.stone)
+                block.beigeStonePath = !!(tile.flags & TileFlags.beige)
+                block.setMinable(tile.flags & TileFlags.coal ? 'C' : tile.ore > 0
+                    ? maxOreTier > 0 ? `M${Math.min(tile.ore, maxOreTier)}` : 'M' : null)
+                block.computeData()
+                return block
+            })
+            this.blockMap = Array.from({length: size}, (_, x) =>
+                Array.from({length: size}, (_, z) => palette[compiled.indices[x * compiled.depth + z]]))
+            this.planeBlockMap = this.blockMap.map((row, x) => row.map((block, z) =>
+                compiled.palette[compiled.indices[x * compiled.depth + z]].flags & TileFlags.plane ? block : false))
+            this.allChunksLoaded = true
+            return
+        }
         this.blockMap = Array.from({ length: size }, () => Array(size).fill(new MapBlock(0, 0)))
         this.planeBlockMap = Array.from({ length: size }, () => Array(size).fill(false))
     }
@@ -186,7 +210,7 @@ export class WorldData {
             this.computeBlockDataInArea(change.x - 1, change.z - 1, change.x + 1, change.z + 1)
         }
 
-        WorldRenderer.renderWorld()
+        if (MyPlayer.myChar) WorldRenderer.renderWorld()
     }
 
     computeBlockDataInArea(fromX: number, fromZ: number, toX: number, toZ: number) {
@@ -203,7 +227,7 @@ export class WorldData {
     }
 
     hasChunkAt(x: number, z: number): boolean {
-        return this.loadedChunkCoords.some(coord => coord.x === x && coord.z === z)
+        return this.allChunksLoaded || this.loadedChunkCoords.some(coord => coord.x === x && coord.z === z)
     }
 }
 

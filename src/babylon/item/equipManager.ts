@@ -578,6 +578,10 @@ export const EquipManager = {
     _tmpModel: new Matrix(),
 
     async initialize(scene: Scene) {
+        // Equipment and its source meshes belong to one scene. A new session
+        // must not update attachments whose skeleton textures were disposed.
+        this.equippedItems.clear()
+        this.itemTypes.clear()
         this.dirtyItemTypes.clear()
         await WeaponsCbManager.initMelee(this.itemTypes, scene)
         await this.initializeArmors(scene)

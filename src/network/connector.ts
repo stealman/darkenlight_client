@@ -2,16 +2,18 @@ import { AccountCharacterClaimMsg, AccountCharacterCreateMsg, AccountCharacterNa
 import { MonsterCatalog } from '@/data/monsterCatalog'
 import { MonsterCatalogRequest } from '@/network/messages'
 import { MessageProcessor } from '@/network/messageProcessor'
-import { invoke } from '@tauri-apps/api/core'
+import {WebSocketTransport, type GameTransport} from './transport'
+import {WorkerTransport} from '@/local/workerTransport'
+import type {LocalGameMode} from '@/local/workerProtocol'
+import type {CharacterProfile} from '@/local/saveStore'
 
-function isTauriDesktop(): boolean {
-    return '__TAURI_INTERNALS__' in window
-}
+type OutgoingMessage = Message & {sentTime?: number}
 
 export const Connector = {
-    socket: null as WebSocket,
-    sentMessages: [] as Message[],
-    queuedMessages: [] as Message[],
+    transport: null as GameTransport | null,
+    generation: 0,
+    sentMessages: [] as OutgoingMessage[],
+    queuedMessages: [] as OutgoingMessage[],
     responseQueue: Promise.resolve() as Promise<void>,
     lastSecondLimit: 10,
     speechQueue: [] as Message[],
@@ -22,70 +24,86 @@ export const Connector = {
     lastSentMoveMessage: null as Message | null,
     lastMoveMessageTime: 0,
 
-    async initialize() {
-        const socketUrl = isTauriDesktop()
-            ? await invoke<string>('load_server_url')
-            : import.meta.env.VITE_GAME_WS_URL
-                || (import.meta.env.DEV
-                    ? `ws://${window.location.hostname}:3000`
-                    : `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ws`)
+    async initialize(mode: LocalGameMode = 'play', profile?: CharacterProfile) {
+        const generation = ++this.generation
+        if (this.transport) {
+            this.transport.onFrame = null
+            this.transport.onClose = null
+            this.transport.onError = null
+            await this.transport.close()
+        }
+        this.resetSession()
+        this.responseQueue = Promise.resolve()
+        const parameters = new URLSearchParams(window.location.search)
+        const remoteUrl = import.meta.env.DEV && parameters.get('transport') === 'websocket'
+            ? import.meta.env.VITE_GAME_WS_URL || `ws://${window.location.hostname}:3000` : null
+        const transport = remoteUrl ? new WebSocketTransport(remoteUrl)
+            : new WorkerTransport(mode, profile?.id || parameters.get('save') || 'default', profile)
+        this.transport = transport
         MonsterCatalog.reset(types => this.sendMessage(new MonsterCatalogRequest(types)))
-        this.socket = new WebSocket(socketUrl)
-
-        this.socket.onopen = () => {
-            console.log('WS connection estabilished')
+        transport.onFrame = frame => {
+            if (generation !== this.generation) return
+            const response = JSON.parse(frame)
+            this.responseQueue = this.responseQueue.then(() => {
+                if (generation === this.generation) return MessageProcessor.processResponse(response)
+            }).catch(error => {
+                console.error('Failed to process game response:', error)
+                window.dispatchEvent(new CustomEvent('game:application-error', {detail: {message: String(error)}}))
+            })
         }
-
-        this.socket.onmessage = (event) => {
-            const response = JSON.parse(event.data)
-            this.responseQueue = this.responseQueue
-                .then(() => MessageProcessor.processResponse(response))
-                .catch((error) => console.error('Failed to process server response:', error))
+        transport.onClose = error => {
+            if (generation === this.generation) window.dispatchEvent(new CustomEvent('game:application-error', {
+                detail: {message: error?.message || 'Game connection closed.'},
+            }))
         }
-
-        this.socket.onerror = (error) => {
-            console.error('Chyba spojení:', error)
-        }
-
-        this.socket.onclose = () => {
-            console.log('Spojení uzavřeno')
-            window.dispatchEvent(new CustomEvent('game:application-error', {detail: {message: 'Připojení k serveru bylo ukončeno.'}}))
-        }
+        transport.onError = transport.onClose
+        await transport.ready
     },
 
-    closeConnection() {
-        if (this.socket) {
-            this.socket.close()
+    async closeConnection() {
+        ++this.generation
+        this.resetSession()
+        if (this.transport) {
+            this.transport.onFrame = null
+            this.transport.onClose = null
+            this.transport.onError = null
         }
+        // Queued frames are invalidated by generation. A handler already in
+        // progress must finish before its caller tears down world data.
+        await this.responseQueue
+        await this.transport?.close()
+        this.transport = null
     },
+
+    async save() { await this.transport?.save() },
 
     sendLoginRequest(username: string, password: string, guestName: string | null) {
         const loginMsg = new LoginMsg(username, password, guestName)
-        this.socket.send(JSON.stringify(loginMsg))
+        this.transport!.send(JSON.stringify(loginMsg))
     },
 
     checkGuestCharacterName(name: string) {
-        this.socket.send(JSON.stringify(new GuestCharacterNameCheckMsg(name)))
+        this.transport!.send(JSON.stringify(new GuestCharacterNameCheckMsg(name)))
     },
 
     createGuestCharacter(name: string, classKey: 'FIGHTER' | 'MYSTIC') {
-        this.socket.send(JSON.stringify(new GuestCharacterCreateMsg(name, classKey)))
+        this.transport!.send(JSON.stringify(new GuestCharacterCreateMsg(name, classKey)))
     },
 
     registerPlayer(email: string, password: string) {
-        this.socket.send(JSON.stringify(new PlayerRegistrationMsg(email, password)))
+        this.transport!.send(JSON.stringify(new PlayerRegistrationMsg(email, password)))
     },
 
     checkAccountCharacterName(name: string) {
-        this.socket.send(JSON.stringify(new AccountCharacterNameCheckMsg(name)))
+        this.transport!.send(JSON.stringify(new AccountCharacterNameCheckMsg(name)))
     },
 
     createAccountCharacter(name: string, classKey: 'FIGHTER' | 'MYSTIC') {
-        this.socket.send(JSON.stringify(new AccountCharacterCreateMsg(name, classKey)))
+        this.transport!.send(JSON.stringify(new AccountCharacterCreateMsg(name, classKey)))
     },
 
     claimGuestCharacter(name: string) {
-        this.socket.send(JSON.stringify(new AccountCharacterClaimMsg(name)))
+        this.transport!.send(JSON.stringify(new AccountCharacterClaimMsg(name)))
     },
 
     sendMoveMessage(msg: Message) {
@@ -121,7 +139,7 @@ export const Connector = {
         const time = new Date().getTime()
 
         // Remove from sentMessages all that are older than 1 second
-        this.sentMessages = this.sentMessages.filter((m) => m.sentTime + 1000 > time)
+        this.sentMessages = this.sentMessages.filter((m) => m.sentTime! + 1000 > time)
 
         if (this.sentMessages.length < this.lastSecondLimit) {
             this.doSend(msg, time)
@@ -134,7 +152,7 @@ export const Connector = {
 
     processMessages(time: number) {
         // Remove from sentMessages all that are older than 1 second
-        this.sentMessages = this.sentMessages.filter((m) => m.sentTime + 1000 > time)
+        this.sentMessages = this.sentMessages.filter((m) => m.sentTime! + 1000 > time)
 
         if (this.queuedMessages.length > 0 && this.sentMessages.length < this.lastSecondLimit) {
             // Process up to 10 - sentMessages.length messages
@@ -146,7 +164,7 @@ export const Connector = {
         }
 
         if (this.speechQueue.length && time >= this.lastSpeechTime + 1000
-            && this.sentMessages.length < this.lastSecondLimit && this.socket?.readyState === WebSocket.OPEN) {
+            && this.sentMessages.length < this.lastSecondLimit && this.transport?.open) {
             const msg = this.speechQueue.shift()!
             this.doSend(msg, time)
             this.sentMessages.push(msg)
@@ -172,10 +190,10 @@ export const Connector = {
         }*/
     },
 
-    doSend(msg: Message, time: number) {
+    doSend(msg: OutgoingMessage, time: number) {
         // console.log('Sending message:', msg)
-        this.socket.send(JSON.stringify(msg))
-        msg['sentTime'] = time
+        this.transport!.send(JSON.stringify(msg))
+        msg.sentTime = time
     }
 }
 

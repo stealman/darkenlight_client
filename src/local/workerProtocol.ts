@@ -1,0 +1,24 @@
+import type {CharacterProfile} from './saveStore'
+export type LocalGameMode = 'play' | 'authoring'
+export interface WorkerStart {
+    kind: 'start'
+    mode: LocalGameMode
+    baseUrl: string
+    authoringToken: string
+    slot: string
+    profile?: CharacterProfile
+    bundle?: import('./worldBundle').LocalWorldBundle
+}
+
+export type HostMessage = WorkerStart
+    | {kind: 'frame', frame: string, connectionId: string}
+    | {kind: 'connect' | 'disconnect', connectionId: string}
+    | {kind: 'save' | 'stop' | 'inspect', requestId: number}
+    | {kind: 'io-result', requestId: number, value?: string | null, error?: string}
+
+export type WorkerMessage = {kind: 'ready'}
+    | {kind: 'frame', frame: string, connectionId: string}
+    | {kind: 'error', error: string}
+    | {kind: 'save-error', error: string}
+    | {kind: 'done', requestId: number, error?: string, value?: number}
+    | {kind: 'io', requestId: number, operation: 'load-save' | 'write-save', slot: string, value?: string}

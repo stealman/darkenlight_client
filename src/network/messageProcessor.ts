@@ -367,7 +367,7 @@ export const MessageProcessor = {
         Lights.synchronizeDayNightCycle(data.dayNightCycle)
         WeatherManager.setEnabled(environmentType !== 'indoor')
         if (worldChanged) {
-            WorldDataManager.replaceWorldData(data.id, data.size)
+            WorldDataManager.replaceWorldData(data.id, data.size, data.mapOreTier)
             TerrainManager.setSeaWaterLevel(data.seaWaterLevel ?? null)
         }
         if (worldChanged && MyPlayer.myChar && MyPlayer.worldName) {
@@ -375,6 +375,7 @@ export const MessageProcessor = {
         }
         MyPlayer.worldId = data.id
         MyPlayer.worldName = data.name
+        if (worldChanged && WorldDataManager.worldDataMap.get(data.id)?.allChunksLoaded) MiniMap.redrawLocalWorld()
         if (worldChanged || data.areas) WorldAreaManager.setWorld(data.id, data.areas ?? [], data.areasRevision ?? 0, data.name)
         FoggyAreaManager.setAreas(data.foggyAreas ?? [])
         if (data.mapChunk) {

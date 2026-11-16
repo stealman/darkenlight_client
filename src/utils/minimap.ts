@@ -184,6 +184,29 @@ export const MiniMap = {
         }
     },
 
+    redrawLocalWorld() {
+        const world = WorldDataManager.worldDataMap.get(MyPlayer.worldId)
+        const context = this.offScreenCanvas?.getContext('2d')
+        if (!world || !context) return
+        const image = context.createImageData(world.worldSize, world.worldSize)
+        const colors = new Map<object, number>()
+        for (let x = 0; x < world.worldSize; x++) for (let z = 0; z < world.worldSize; z++) {
+            const block = world.blockMap[x][z]
+            let color = colors.get(block)
+            if (color === undefined) {
+                color = parseInt(this.getMapColor(block.height, block.type, block.snowed, block.stonePath, block.beigeStonePath).slice(1), 16)
+                colors.set(block, color)
+            }
+            const offset = (x * world.worldSize + z) * 4
+            image.data[offset] = color >> 16
+            image.data[offset + 1] = color >> 8 & 255
+            image.data[offset + 2] = color & 255
+            image.data[offset + 3] = 255
+        }
+        context.clearRect(0, 0, this.mapWidth, this.mapHeight)
+        context.putImageData(image, 0, 0)
+    },
+
     redrawMapChanges(worldId: number, changes: Array<{x: number, z: number, data: string}>) {
         if (worldId !== MyPlayer.worldId || !this.offScreenCanvas) {
             return
@@ -197,7 +220,7 @@ export const MiniMap = {
             offScreenContext.fillStyle = this.getMapColor(parseInt(data[0]), parseInt(data[1]), data[3] === "S", data[4] === 'R', data[4] === 'B')
             offScreenContext.fillRect(change.z, change.x, 1, 1)
         }
-        this.updateMiniMap()
+        if (MyPlayer.myChar) this.updateMiniMap()
     },
 
     updateMiniMap() {

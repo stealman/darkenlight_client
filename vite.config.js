@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { VitePWA } from 'vite-plugin-pwa'
 import fs from 'node:fs'
@@ -7,6 +7,7 @@ import { collectModelAssets } from './build/modelAssets.cjs'
 import { adminMonsterNamesPlugin } from './build/adminMonsterNames.cjs'
 import { adminEquipmentModifiersPlugin } from './build/adminEquipmentModifiers.cjs'
 import { collectUiImages } from './build/uiImages.cjs'
+import { localGamePlugin } from './build/localGame.cjs'
 
 function collectPngEntries(directory, publicPath) {
     return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -27,6 +28,7 @@ function collectPngEntries(directory, publicPath) {
 }
 
 export default defineConfig(async ({ mode, command }) => {
+    const gmAuthoring = command === 'serve' && loadEnv(mode, __dirname, 'VITE_').VITE_GM_MODE === 'true'
     const isTauriBuild = mode === 'tauri'
     const modelAssets = command === 'build'
         ? collectModelAssets(path.resolve(__dirname, 'public/models'))
@@ -55,6 +57,7 @@ export default defineConfig(async ({ mode, command }) => {
         __UI_IMAGE_URLS__: JSON.stringify(uiImages.urls),
     },
     plugins: [
+        localGamePlugin(path.resolve(__dirname, '../../server/darkenlight_server'), gmAuthoring),
         adminEquipmentModifiersPlugin(path.resolve(__dirname, 'public/admin-utils/equipment-modifiers.json')),
         adminMonsterNamesPlugin(path.resolve(__dirname, '../../server/darkenlight_server/src/monster/monstersCb.ts')),
         vue(),
@@ -98,7 +101,7 @@ export default defineConfig(async ({ mode, command }) => {
                 ],
             },
             injectManifest: {
-                globPatterns: ['**/*.{js,css,html,json,woff,woff2,ttf,eot}'],
+                globPatterns: ['**/*.{js,css,html,json,woff,woff2,ttf,eot}', 'world/**/*.{png,dlm}'],
                 globIgnores: ['assets/adminUtils-*', 'model-assets/**', 'models/**'],
                 maximumFileSizeToCacheInBytes: 12 * 1024 * 1024,
             },
@@ -106,19 +109,28 @@ export default defineConfig(async ({ mode, command }) => {
     ].filter(Boolean),
     server: {
         host: true,
+        fs: {allow: [__dirname, path.resolve(__dirname, '../../server/darkenlight_server')]},
         historyApiFallback: true,
         watch: {
             // Tauri writes generated Rust files while running; they are not frontend sources.
             ignored: ['**/src-tauri/**', '**/public/admin-utils/equipment-modifiers.json*'],
         },
     },
+    worker: {format: 'es'},
+    optimizeDeps: {
+        // The worker starts after character selection, outside the HTML import
+        // graph. Scan it up front so its first use cannot trigger a page reload.
+        entries: ['index.html', 'src/local/game.worker.ts'],
+    },
     resolve: {
+        dedupe: ['bson'],
         alias: [
             {
                 find: '@/pwa/register',
                 replacement: path.resolve(__dirname, isTauriBuild ? './src/pwa/registerDesktop.ts' : './src/pwa/register.ts'),
             },
             { find: '@', replacement: path.resolve(__dirname, './src') },
+            { find: '@game', replacement: path.resolve(__dirname, '../../server/darkenlight_server/src') },
         ],
     },
 }})

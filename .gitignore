@@ -23,3 +23,7 @@ pnpm-debug.log*
 *.sw?
 /yarn.lock
 /models
+/.codex-backups/
+/public/world/
+/.world-export-*/
+/.world-previous-*/

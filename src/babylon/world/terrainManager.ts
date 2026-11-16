@@ -148,7 +148,7 @@ export const TerrainManager = {
                         } else {
                             const matrix = Matrix.Translation(x, block.height + terrainHeightOffset, z)
                             planeMatrices.push(matrix)
-                            planeUvData.push(PlaneEnum1.getPlaneForBlock(planeBlockMap[x][z], hideSnow, renderType))
+                            planeUvData.push(PlaneEnum1.getPlaneForBlock(planeBlockMap[x][z] as MapBlock, hideSnow, renderType))
                         }
                     } else {
 

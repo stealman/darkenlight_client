@@ -1,4 +1,5 @@
 {
+  "localCharacters": {"saved": "Tvoje postavy", "empty": "Zatím nemáš žádnou uloženou postavu.", "continue": "Pokračovat", "new": "Nová postava", "gm": "Vytvořit GM postavu", "gmHint": "GM si ukládá postavu a vybavení. Svět se při každém spuštění načte znovu z autorských dat.", "create": "Vytvořit", "delete": "Smazat", "deleteNamed": "Smazat postavu {name}", "deleteTitle": "Smazat postavu?", "deleteDescription": "Postava {name} a její uložený postup budou trvale smazány. Tuto akci nelze vrátit.", "cancel": "Zrušit"},
   "signpost": {"northEast": "Severovýchod", "southEast": "Jihovýchod", "southWest": "Jihozápad", "northWest": "Severozápad", "title": "Rozcestník", "north": "Sever", "south": "Jih", "east": "Východ", "west": "Západ", "blank": "—", "read": "Přečíst rozcestník"},
   "activityLog": {
     "partyCreated": "Založil jsi partu.",

@@ -12,16 +12,28 @@ const showBootError = (label, error) => {
     }
 }
 
-if (window.location.pathname === '/adminUtils/gui') {
-    import('./adminUtils/guiPreview')
-        .then(({ mountGuiPreview }) => mountGuiPreview())
-        .catch((error) => showBootError('GUI preview', error))
-} else if (isAdminUtilsPath) {
-    import('./adminUtils/adminUtils')
-        .then(({ mountAdminUtils }) => mountAdminUtils())
-        .catch((error) => showBootError('Admin utils', error))
-} else {
-    import('./gameMain')
-        .then(({ mountGame }) => mountGame())
-        .catch((error) => showBootError('Hru', error))
+async function boot() {
+    if ('__TAURI_INTERNALS__' in window) {
+        const {invoke} = await import('@tauri-apps/api/core')
+        if (await invoke('runtime_smoke_test_enabled')) {
+            const {runDesktopRuntimeSmoke} = await import('./local/runtimeSmoke')
+            await runDesktopRuntimeSmoke()
+            return
+        }
+    }
+    if (window.location.pathname === '/adminUtils/gui') {
+        import('./adminUtils/guiPreview')
+            .then(({ mountGuiPreview }) => mountGuiPreview())
+            .catch((error) => showBootError('GUI preview', error))
+    } else if (isAdminUtilsPath) {
+        import('./adminUtils/adminUtils')
+            .then(({ mountAdminUtils }) => mountAdminUtils())
+            .catch((error) => showBootError('Admin utils', error))
+    } else {
+        import('./gameMain')
+            .then(({ mountGame }) => mountGame())
+            .catch((error) => showBootError('Hru', error))
+    }
+
 }
+boot().catch(error => showBootError('Hru', error))

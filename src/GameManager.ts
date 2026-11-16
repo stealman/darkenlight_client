@@ -80,11 +80,14 @@ export const GameManager = {
     },
 
     async stopGame(notifyServer: boolean = true) {
-        PartyManager.reset()
-        Connector.resetSession()
+        Renderer.engine?.stopRenderLoop()
         if (notifyServer) {
             Connector.sendMessage(new LogoutMsg())
         }
+        // Drain the active response and save/stop the runtime while the world
+        // still exists. No network callbacks may run against the reset scene.
+        await Connector.closeConnection()
+        PartyManager.reset()
         MyPlayer.reset()
         WorldDataManager.reset()
         this.started = false

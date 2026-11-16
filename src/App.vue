@@ -71,7 +71,7 @@
     </div>
 
     <Transition name="game-dialog-fade">
-        <LoginDialog ref="loginDialog" v-if="displayLoginDialog" @login-requested="loginRequestStarted" />
+        <LocalCharactersDialog v-if="displayLoginDialog" @enter="requestGameEntryFullscreen" @start="startLocalCharacter" />
     </Transition>
 
     <Transition name="game-dialog-fade">
@@ -198,7 +198,9 @@ import { GMManager } from '@/gm/GM'
 import TouchControllers from '@/vue/views/touchControllers.vue'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { Connector } from '@/network/connector'
-import LoginDialog from '@/vue/views/loginDialog.vue'
+import LocalCharactersDialog from '@/vue/views/LocalCharactersDialog.vue'
+import type {CharacterProfile} from '@/local/saveStore'
+import {initializeLocalGameLifecycle} from '@/local/lifecycle'
 import GuestCharacterCreationDialog from '@/vue/views/guestCharacterCreationDialog.vue'
 import AccountCharacterNameDialog from '@/vue/views/accountCharacterNameDialog.vue'
 import SettingsDialog from '@/vue/views/settingsDialog.vue'
@@ -364,6 +366,21 @@ const closeErrorDialog = () => {
     displayErrorDialog.value = false
     errorDialogMessage.value = ''
     errorDialogCanRestart.value = false
+}
+
+const startLocalCharacter = async (profile: CharacterProfile) => {
+    loginRequestStarted()
+    try {
+        await Connector.initialize(profile.gm ? 'authoring' : 'play', profile)
+        Connector.sendLoginRequest('', '', profile.name)
+    } catch (error) {
+        onLoginFailed()
+        showErrorDialog(String(error))
+    }
+}
+
+const requestGameEntryFullscreen = () => {
+    if (Settings.deviceType !== 'DESKTOP') requestFullscreen()
 }
 
 const loginRequestStarted = () => {
@@ -621,7 +638,13 @@ onMounted(async () => {
 
     if (document.getElementById('renderCanvas')) {
         console.log('INIT GAME', Date.now())
-        await Connector.initialize()
+        try {
+            await initializeLocalGameLifecycle()
+        } catch (error) {
+            gameLoading.value = false
+            onApplicationError(new CustomEvent('game:application-error', {detail: {message: String(error)}}))
+            return
+        }
         await GameManager.prepareGame(document.getElementById('renderCanvas') as HTMLCanvasElement)
         console.log('GAME INITIALIZED', Date.now())
 
@@ -630,20 +653,7 @@ onMounted(async () => {
         gameLoading.value = false
         displayLoginDialog.value = true
 
-        const loginForm = localStorage.getItem('DARKENLIGHT_LOGIN_FORM')
-        if (loginForm) {
-            const form = JSON.parse(loginForm)
-            if (form.autoLogin && !autoLoginTemporarilyDisabled) {
-                displayLoginDialog.value = false
-                Connector.sendLoginRequest(form.login, form.password)
-                loginRequestSent()
-                return
-            } else {
-                displayLoginDialog.value = true
-            }
-        } else {
-            displayLoginDialog.value = true
-        }
+
     }
 })
 
@@ -901,7 +911,8 @@ const toggleFullscreen = () => {
     void Renderer.toggleFullscreen().catch((error) => console.error('Cannot toggle fullscreen:', error))
 }
 
-const reloadPage = () => {
+const reloadPage = async () => {
+    await Connector.closeConnection()
     window.location.reload()
 }
 
@@ -923,7 +934,7 @@ const logout = async (notifyServer: boolean = true) => {
     loadingPhaseKey.value = 'app.loadingDisconnecting'
     loadingProgress.value = 15
     gameLoading.value = true
-    await GameManager.stopGame(notifyServer)
+    await GameManager.stopGame(false)
     gameLoading.value = false
     displayLoginDialog.value = true
 }

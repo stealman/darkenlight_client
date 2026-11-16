@@ -61,6 +61,7 @@ export interface DayNightCycleSync {
 }
 
 export interface WorldMapDataMessage {
+    mapOreTier?: number
     areas?: import('../data/worldAreas').WorldArea[]
     areasRevision?: number
     id: number
