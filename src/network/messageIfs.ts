@@ -568,7 +568,7 @@ export interface PartyStateData {
     lootMode: PartyLootMode
     leaderId: number
     members: Array<{
-        id: number, name: string, worldId: number, x: number, z: number, nearby: boolean,
+        id: number, name: string, worldId: number, x: number, z: number,
         hp?: number, maxHp?: number, st?: number, maxSt?: number, mp?: number, maxMp?: number,
     }>
 }

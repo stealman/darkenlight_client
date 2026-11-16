@@ -55,7 +55,7 @@ export const PartyManager = {
             import('@/babylon/character/characterManager'), import('@/gui/targettingManager'), import('@/data/myPlayer'),
         ])
         const member = this.state.value?.members.find(member => member.id === id)
-        if (!member || !member.nearby || member.worldId !== MyPlayer.worldId) return
+        if (!member || member.worldId !== MyPlayer.worldId) return
         const character = id === MyPlayer.myChar?.id ? MyPlayer.myChar : CharacterManager.characters.get(id)
         if (character) TargetingManager.setSelectedTarget(character)
     },

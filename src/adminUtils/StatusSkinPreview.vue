@@ -30,10 +30,9 @@
                     </div>
                 </div></div>
                 <div id="party-panel-host"><section class="party-panel">
-                    <button v-for="(member, index) in members" :key="member.name" class="party-member" :class="{ 'party-member--selected': selected === index, 'party-member--away': index === 2 }" @click="selected = index">
+                    <button v-for="(member, index) in members" :key="member.name" class="party-member" :class="{ 'party-member--selected': selected === index }" @click="selected = index">
                         <span class="party-name"><span v-if="index === 0" class="party-leader">♛</span>{{ longName ? member.name + ' ze Severního údolí' : member.name }}</span>
-                        <span v-if="index !== 2" class="party-resources"><span v-for="(value, resource) in member.bars" :key="resource" class="party-bar" :class="'party-bar--' + resource"><span :style="{ width: value + '%' }"></span></span></span>
-                        <span v-else class="party-away-mark">· · ·</span>
+                        <span class="party-resources"><span v-for="(value, resource) in member.bars" :key="resource" class="party-bar" :class="'party-bar--' + resource"><span :style="{ width: value + '%' }"></span></span></span>
                     </button>
                     <div class="party-actions"><button class="party-menu-button" aria-label="Akce party">⋯</button></div>
                 </section></div>

@@ -355,7 +355,7 @@ export const MyPlayer = {
             let nearestMemberId: number | null = null
             let nearestDistance = Infinity
             for (const member of PartyManager.state.value?.members ?? []) {
-                if (member.id === this.myChar.id || !member.nearby || member.worldId !== this.worldId
+                if (member.id === this.myChar.id || member.worldId !== this.worldId
                     || member.hp === undefined || member.maxHp === undefined
                     || member.hp <= 0 || member.hp >= member.maxHp) continue
 
