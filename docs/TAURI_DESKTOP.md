@@ -11,7 +11,8 @@ yarn.cmd tauri:build
 yarn.cmd test:runtime:desktop
 ```
 
-The build exports the local Mongo world and source PNG maps before packaging.
+The build exports the local Mongo world, compiles PNG terrain and precomputes
+bot navigation before packaging.
 Save and close GM authoring first. To use an already exported world without
 MongoDB during the build, set `DARKENLIGHT_WORLD_BUNDLE` to that bundle directory.
 
@@ -27,6 +28,9 @@ selection records in `profiles/`. Saves contain character state and ID counters,
 not world definitions. Each character has its own slot. Window settings use
 `config` beside the executable. The legacy `serverUrl` setting does not select
 the transport for local play.
+
+Future local cooperative multiplayer is not yet available. Current release
+architecture and browser development: [README](../README.md).
 
 The desktop runtime check starts its own test instance, creates a synthetic
 character in a separate save slot, checks packaged worker communication and

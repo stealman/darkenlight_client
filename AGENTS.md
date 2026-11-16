@@ -2,6 +2,10 @@
 
 - TypeScript, Vue, Babylon.js. Keep gameplay logic in TypeScript managers and Vue
   components thin. Prefer focused changes and existing managers.
+- Singleplayer with future local co-op. `src/local` hosts the sibling server's
+  simulation in a worker after character selection; logout saves and stops it.
+  Preserve message queues and transport independence. Static maps load directly
+  from the release bundle; simulation changes use messages. [Setup](README.md).
 - Use PowerShell `Get-ChildItem` / `Select-String` for searches.
 - `src/main.js` dispatches to `gameMain.js` or the offline `adminUtils` sandbox.
   The sandbox must not initialize networking.

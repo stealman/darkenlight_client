@@ -13,7 +13,10 @@ async function main() {
         page.setDefaultTimeout(90000)
         const errors = [], terrain = [], png = [], sockets = []
         page.on('pageerror', error => errors.push(error.stack))
-        page.on('console', message => { if (message.type() === 'error' && /game|TypeError|Error:/.test(message.text())) errors.push(message.text()) })
+        page.on('console', message => {
+            if (message.text().startsWith('[POI world=')) errors.push('Production rebuilt navigation: ' + message.text())
+            if (message.type() === 'error' && /game|TypeError|Error:/.test(message.text())) errors.push(message.text())
+        })
         page.on('request', request => {
             if (/\/world\/assets\/terrain\/.*\.dlm/.test(request.url())) terrain.push(request.url())
             if (/\/world\/assets\/maps\/.*\.png/.test(request.url())) png.push(request.url())

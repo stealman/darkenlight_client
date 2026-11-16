@@ -10,7 +10,7 @@ const {MapData} = require(join(server, 'src/world/mapData.ts'))
 
 test('derived terrain does not change the source version used by existing saves', () => {
     const manifest = JSON.parse(readFileSync(join(__dirname, '../public/world/manifest.json'), 'utf8'))
-    const sources = Object.fromEntries(Object.keys(manifest.files).filter(path => !path.endsWith('.dlm')).sort().map(path => [path, manifest.files[path]]))
+    const sources = Object.fromEntries(Object.keys(manifest.files).filter(path => !path.endsWith('.dlm') && !path.startsWith('assets/navigation/')).sort().map(path => [path, manifest.files[path]]))
     const hash = require('node:crypto').createHash('sha256').update(JSON.stringify(sources)).digest('hex')
     assert.equal(manifest.contentId, hash)
 })

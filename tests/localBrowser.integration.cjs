@@ -115,6 +115,7 @@ async function main() {
         const exported = EJSON.parse(await fs.readFile(join(output, 'world.json'), 'utf8'))
         const manifest = JSON.parse(await fs.readFile(join(output, 'manifest.json'), 'utf8'))
         assert.equal(Object.keys(manifest.terrainMaps).length, exported.worlds.length)
+        assert.equal(Object.keys(manifest.navigationMaps).length, exported.worlds.length)
         assert.equal(exported.worlds.find(world => world.id === 1).areas[0].name, areas[0].name)
         assert.equal(exported.players.length, 0)
         assert.equal(exported.characters.length, 0)

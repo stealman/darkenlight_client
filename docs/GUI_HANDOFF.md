@@ -8,5 +8,5 @@
   `src/gui/overlay`.
 - Validate mobile viewport and touch behavior on a real device. Existing
   `visualViewport` handling must not be replaced with plain `100vh`.
-- Resetting preferences must preserve credentials and mapped actions.
+- Resetting preferences must preserve local character profiles, saves and mapped actions.
 - Current panel behavior and detailed styles are defined by code, not this file.

@@ -47,6 +47,7 @@ async function start(options: WorkerStart) {
     let readFile: (path: string) => Promise<Uint8Array>
     let writeFile: (path: string, bytes: Uint8Array) => Promise<void>
     let loadWorldMap: RuntimePlatform['loadWorldMap']
+    let loadWorldNavigation: RuntimePlatform['loadWorldNavigation']
 
     if (options.mode === 'authoring') {
         if (!import.meta.env.DEV || import.meta.env.VITE_GM_MODE !== 'true') {
@@ -96,6 +97,15 @@ async function start(options: WorkerStart) {
         storage = new LocalGameStorage(bundle.contentId, restoreCharacterSave(initial, saved, bundle.contentId),
             async value => { await hostIO('write-save', options.slot, value) })
         const maps = new Map(bundle.maps.map(entry => [entry.worldId, entry.map]))
+        if (!import.meta.env.DEV) {
+            const navigation = new Map(bundle.navigation.map(graph => [graph.worldId, graph]))
+            loadWorldNavigation = async world => {
+                const graph = navigation.get(world.id)
+                if (!graph || graph.worldSize !== world.size) throw new Error(`Missing compiled navigation for world ${world.id}`)
+                navigation.delete(world.id)
+                return graph
+            }
+        }
         loadWorldMap = async world => {
             const map = maps.get(world.id)
             if (!map || map.width < world.size || map.depth < world.size) throw new Error(`Missing compiled terrain for world ${world.id}`)
@@ -110,6 +120,7 @@ async function start(options: WorkerStart) {
         storageTimer = setInterval(() => { void storage.flush().catch(error => emit({kind: 'save-error', error: String(error)})) }, 2000)
         const platform = browserPlatform({readFile, writeFile})
         if (loadWorldMap) platform.loadWorldMap = loadWorldMap
+        if (loadWorldNavigation) platform.loadWorldNavigation = loadWorldNavigation
         runtime = await startGameRuntime(platform, storage)
         if (options.profile) {
             const existing = await CharacterRepo.repo!.findAll()

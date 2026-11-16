@@ -1,9 +1,11 @@
 import {decodeCompiledMap, type CompiledMap} from '@game/runtime/compiledMap'
+import type {CompiledNavigation} from '@game/bot/poiNavigation'
 
 export interface LocalWorldBundle {
     contentId: string
     worldJson: string
     maps: Array<{worldId: number, map: CompiledMap}>
+    navigation: CompiledNavigation[]
 }
 
 /** Main-thread map templates are independent of the simulation and save slot. */
@@ -14,8 +16,8 @@ export async function loadWorldBundle(baseUrl: string): Promise<LocalWorldBundle
     const response = await fetch(new URL('manifest.json', base))
     if (!response.ok) throw new Error('World bundle is missing. Run yarn export:world.')
     const manifest = await response.json()
-    if (manifest.schemaVersion !== 1 || typeof manifest.contentId !== 'string' || !manifest.files || !manifest.terrainMaps) {
-        throw new Error('World bundle needs compiled terrain. Run yarn export:world and rebuild the game.')
+    if (manifest.schemaVersion !== 1 || typeof manifest.contentId !== 'string' || !manifest.files || !manifest.terrainMaps || !manifest.navigationMaps) {
+        throw new Error('World bundle needs compiled terrain and navigation. Run yarn export:world and rebuild the game.')
     }
     const read = async (path: string) => {
         if (!manifest.files[path] || path.includes('..') || path.startsWith('/')) throw new Error('Invalid world asset path')
@@ -36,5 +38,13 @@ export async function loadWorldBundle(baseUrl: string): Promise<LocalWorldBundle
         if (!Number.isSafeInteger(worldId) || worldId <= 0) throw new Error('Invalid compiled world ID')
         maps.push({worldId, map: decodeCompiledMap(await read(path as string))})
     }
-    return {contentId: manifest.contentId, worldJson, maps}
+    const navigation: CompiledNavigation[] = []
+    for (const {worldId} of maps) {
+        const path = manifest.navigationMaps[worldId]
+        if (typeof path !== 'string') throw new Error(`Missing navigation for world ${worldId}`)
+        const graph = JSON.parse(new TextDecoder().decode(await read(path))) as CompiledNavigation
+        if (graph.schemaVersion !== 1 || graph.worldId !== worldId) throw new Error('Invalid world navigation asset')
+        navigation.push(graph)
+    }
+    return {contentId: manifest.contentId, worldJson, maps, navigation}
 }

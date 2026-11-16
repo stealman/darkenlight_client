@@ -9,7 +9,7 @@ async function main() {
     if (process.env.DARKENLIGHT_WORLD_BUNDLE) {
         const source = path.resolve(process.env.DARKENLIGHT_WORLD_BUNDLE)
         const manifest = JSON.parse(fs.readFileSync(path.join(source, 'manifest.json'), 'utf8'))
-        if (manifest.schemaVersion !== 1 || !manifest.contentId || !manifest.files || !manifest.terrainMaps) throw new Error('World bundle needs compiled terrain. Export it again.')
+        if (manifest.schemaVersion !== 1 || !manifest.contentId || !manifest.files || !manifest.terrainMaps || !manifest.navigationMaps) throw new Error('World bundle needs compiled terrain and navigation. Export it again.')
         const {createHash} = require('node:crypto')
         for (const [name, expected] of Object.entries(manifest.files)) {
             const file = path.resolve(source, name)

@@ -1,66 +1,76 @@
 # Darkenlight
 
-The local game simulation runs in a worker. Install dependencies in both
-`client/darkenlight_client` and `server/darkenlight_server`; keep the sibling
-project layout. There is no root npm package.
+Darkenlight is currently a singleplayer game, with local cooperative multiplayer
+planned. Windows Tauri EXE and the browser use the same local simulation. The
+architecture migration does not redesign classes, combat, skills or progression.
+The separate `darkenlight_online` repository is outside this setup.
 
-From the client directory:
+## Architecture
 
-```powershell
-yarn.cmd dev
-```
+- `client/darkenlight_client`: Vue interface, Babylon rendering, input and local saves.
+- `server/darkenlight_server`: gameplay rules and simulation, embedded in a Web
+  Worker. It starts after character selection and saves/stops on logout.
+- Gameplay uses the existing message protocol and queues. Local worker and remote
+  transports share that boundary; local co-op connection/UI work is still pending.
+  Player movement collisions are handled by the client; AI collisions stay in the simulation.
+- Release world data comes from an exported bundle. The client loads static
+  terrain directly; live world changes still arrive as messages. Terrain and bot
+  navigation are prepared during export. DEV/GM recalculates navigation at startup.
 
-Create `.env.local` in this directory containing `VITE_GM_MODE=true` (see
-`.env.example`), then start/restart `yarn dev`. This enables the **Create a GM
-character** checkbox in the local character menu. It does not automatically
-select GM mode. Without the flag (and in every release), only ordinary
-characters can be created or selected.
+Keep both sibling projects and install dependencies in each; there is no root
+package. Ordinary play needs neither a standalone Node server nor MongoDB.
 
-The menu lists locally created characters and starts empty. Create a character
-with just a name and choose Fighter/Mystic, or select the GM checkbox. Every
-character has a separate save ID; there are no account/password forms and no
-characters are read from or written to MongoDB. Existing Mongo characters and
-older unlisted test save slots are left untouched.
+## Development and GM authoring
 
-A new GM has no starter items. Its character/inventory save is local; the GM
-world is loaded afresh from authoring Mongo and source PNGs on every start.
-GM panel edits still persist to those authoring sources. The standalone Node
-game server is not needed. Authoring requests are only accepted from this PC.
-
-Ordinary play loads world definitions and compiled binary terrain from the
-exported bundle on every start. Saves contain only character state (including
-inventory, equipment and bank) and ID counters. World definitions are never copied into a save.
-Additional persistent world/story changes require explicit design and are not
-saved yet. Export once
-before browser development play:
+Run from `client/darkenlight_client`:
 
 ```powershell
 yarn.cmd export:world
+yarn.cmd dev
 ```
 
-Save GM changes and close the GM session before exporting. If an active-session
-error remains after closing the tab, stop the development server and retry.
-Export never includes player accounts, characters or chat. Generated world data
-is not committed to Git.
+Export requires local MongoDB and source map PNGs. For GM authoring, set
+`VITE_GM_MODE=true` in `.env.local` (see `.env.example`) and restart `yarn dev`.
+This enables the GM checkbox; it never appears in release builds. Authoring runs
+in the browser on the authoring PC, using MongoDB and editable PNGs through the
+local development bridge. Tauri is not needed for authoring.
+
+Create/select local characters by name, without accounts or passwords. Each has
+its own save; the menu also supports deleting a character and its save. Browser
+saves use IndexedDB; desktop saves use the native app data directory. Saves hold
+character state and counters, not the world definition. Additional persistent
+world/story state and migration between changed source worlds remain undecided.
+
+A new GM starts without equipment. Its character save is local, while each session
+starts from the authored world. GM world edits are saved to local MongoDB/PNGs;
+existing Mongo accounts and characters are not used for local play.
+
+## Build and try a release
+
+Save and close GM authoring before building. From the client directory:
 
 ```powershell
 yarn.cmd build
-yarn.cmd tauri:build
+yarn.cmd serve --host 0.0.0.0 --port 4173 --strictPort
 ```
 
-Both release builds export the current local Mongo world and compile source
-map PNGs first. Re-export older bundles that do not contain compiled terrain.
-Rebuilding derived terrain alone preserves the source content version used by saves.
-The packaged game does not require MongoDB or a game server. CI may set
-`DARKENLIGHT_WORLD_BUNDLE` to an already exported bundle directory to build
-without Mongo access. Keep that immutable bundle with the release artifacts.
+Open `http://<PC-LAN-IP>:4173` on a phone on the same network. This serves the
+production `dist`, without the DEV server. Characters are saved on that device
+and browser origin; they are not synchronized between devices.
 
-Saves are tied to their world's content version; migration between changed
-world bundles is not implemented. Browser saves use IndexedDB; desktop saves
-use the application's native data directory. Use `?save=<slot>` for separate
-browser playtest slots.
+For Windows EXE: `yarn.cmd tauri:build`. The packaged game runs without Yarn,
+MongoDB or a game server. See [desktop setup](docs/TAURI_DESKTOP.md).
 
-Checks from this directory:
+Both builds export the authored world, compiled terrain and navigation. To build
+without Mongo access, set `DARKENLIGHT_WORLD_BUNDLE` to a complete pre-exported
+bundle containing those assets. Re-export older incomplete bundles. Derived asset
+rebuilds alone preserve the source content version used by saves.
+Production hosting serves the complete `dist`; see the
+[deployment runbook](../../deploy/PRODUCTION_DEPLOYMENT.md).
+
+## Verification
+
+Tests are run explicitly; ordinary development, builds and play do not launch them.
 
 ```powershell
 yarn.cmd test:runtime
@@ -69,15 +79,11 @@ yarn.cmd test:runtime:worker
 yarn.cmd test:runtime:desktop
 ```
 
-The GM check requires Chrome, local MongoDB and an exported world. It uses a
-temporary database and map copies. The worker check requires a built `dist`;
-the desktop check requires a built release EXE. Validate runtime TypeScript
-with `npx.cmd tsc --noEmit --pretty false -p tsconfig.runtime.json`, and server
-TypeScript from its own directory. The full client type-check has known errors.
+The GM check uses Chrome, local MongoDB and isolated database/map copies. Worker
+checks need a built `dist`; desktop checks need a built EXE. Runtime type-check:
+`npx.cmd tsc --noEmit --pretty false -p tsconfig.runtime.json`. Server type-check,
+from its directory: `npx.cmd tsc --noEmit --pretty false`. Full client type-check
+has known errors. Development conventions: [AGENTS.md](AGENTS.md).
 
-The standalone Node/WebSocket entry point remains available for compatibility
-checks: start it from the server directory, then open development mode with
-`?transport=websocket`. It uses the configured MongoDB.
-
-Desktop: [Tauri commands and configuration](docs/TAURI_DESKTOP.md).
-Development conventions: [AGENTS.md](AGENTS.md).
+The optional legacy Node/WebSocket host remains for compatibility checks; browser
+DEV can select it with `?transport=websocket`. It is not a deployed singleplayer service.

@@ -22,6 +22,11 @@ async function main() {
         const worker = new Worker(`
             const {parentPort} = require('node:worker_threads');
             globalThis.setImmediate = undefined;
+            const originalLog = console.log;
+            console.log = (...args) => {
+                if (String(args[0]).startsWith('[POI world=')) throw new Error('Packaged game rebuilt navigation instead of loading it');
+                originalLog(...args);
+            };
             globalThis.postMessage = message => parentPort.postMessage(message);
             globalThis.addEventListener = (type, fn) => { if (type === 'unhandledrejection') process.on('unhandledRejection', reason => fn({reason, preventDefault(){}})); };
             parentPort.on('message', data => globalThis.onmessage({data}));
