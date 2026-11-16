@@ -27,8 +27,6 @@
     --ui-attribute-agility: 119, 171, 125;
     --ui-attention: 151, 71, 66;
     --ui-progress-experience-dark: 87, 135, 94;
-    --ui-progress-training-light: 139, 183, 218;
-    --ui-progress-training-dark: 75, 122, 163;
 
     /* Shared text-gradient tuning */
     --ui-text-gradient-base-bottom: rgb(var(--ui-dark));

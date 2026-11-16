@@ -41,8 +41,8 @@
                     <span class="ui-emerald-text-gradient">{{ EmeraldsManager.formatEmeraldAmount(skill.price) }}</span>
                     <img src="/images/icons/emerald.png" alt="Emerald" />
                 </span>
-                <button class="dialog-button npc-trainer-action-button" @click.stop="emit('unlock-training', skill.key, skill.targetRank, skill.price, $event)">
-                    <span class="ui-text-gradient--button-state">{{ t('vendor.unlockTraining') }}</span>
+                <button class="dialog-button npc-trainer-action-button" @click.stop="emit('upgrade-skill', skill.key, skill.targetRank, skill.price, $event)">
+                    <span class="ui-text-gradient--button-state">{{ t('vendor.upgradeSkill') }}</span>
                 </button>
             </div>
             <div v-if="trainerTrainingOffers.length === 0" class="npc-trainer-empty-state">{{ t('vendor.noTrainingOffers') }}</div>
@@ -124,7 +124,7 @@ const props = defineProps<{
 const emit = defineEmits<{
     'update:selectedTab': [tab: TrainerTab]
     'learn-skill': [skill: SkillKey, event: MouseEvent]
-    'unlock-training': [skill: SkillKey, targetRank: number, price: number, event: MouseEvent]
+    'upgrade-skill': [skill: SkillKey, targetRank: number, price: number, event: MouseEvent]
 }>()
 
 const trainerTabs: TrainerTab[] = ['training', 'newSkills', 'promotion']
@@ -152,8 +152,8 @@ const trainerTrainingOffers = computed(() => {
     const skillSet = MyPlayer.myCharRef.value?.skillSet
     return SkillDefinitions.flatMap(skill => {
         const progress = skillSet?.[skill.key]
-        return progress?.trainingUnlocked === false && progress.trainingUnlockPrice != null
-            ? [{...skill, targetRank: progress.rank + 1, price: progress.trainingUnlockPrice}]
+        return progress?.rankUpgradePrice != null
+            ? [{...skill, targetRank: progress.rank + 1, price: progress.rankUpgradePrice}]
             : []
     })
 })

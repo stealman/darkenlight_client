@@ -16,11 +16,8 @@ test('item definitions initialize without player, networking or rendering depend
         const {PartyManager} = await server.ssrLoadModule('/src/data/partyManager.ts')
         PartyManager.receiveState({leaderId: 1, members: []})
         assert.equal(PartyManager.state.value.leaderId, 1)
-        PartyManager.receiveInvitation({id: 1, name: 'Test', remainingMs: 10000})
-        assert.equal(PartyManager.invitation.value.id, 1)
         PartyManager.reset()
         assert.equal(PartyManager.state.value, null)
-        assert.equal(PartyManager.invitation.value, null)
         const party = {leaderId: 1, members: [{id: 1}, {id: 2}]}
         assert.equal(PartyManager.receiveState(party), true, 'joining a party triggers the sound')
         assert.equal(PartyManager.receiveState(party), false, 'ordinary state updates stay silent')

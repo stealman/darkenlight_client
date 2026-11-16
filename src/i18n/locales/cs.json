@@ -28,24 +28,15 @@
     "incoming": "{name} → ty: {result}"
 },
   "party": {
-    "lootRandomChoice": "P\u0159id\u011blit n\u00e1hodn\u011b",
-    "lootFinderChoice": "Pat\u0159\u00ed n\u00e1lezci",
-    "settings": "Nastaven\u00ed party",
-    "items": "P\u0159edm\u011bty",
-    "lootFinder": "Pat\u0159\u00ed n\u00e1lezci",
-    "lootRandom": "N\u00e1hodn\u00e9mu \u010dlenovi party",
-    "emeraldSharing": "Emeraldy se v\u017edy d\u011bl\u00ed rovn\u00fdm d\u00edlem mezi hr\u00e1\u010de.",
-    "sendInvite": "Pozvat",
-    "cancel": "Zru\u0161it",
-
-    "title": "Skupina", "actions": "Akce skupiny", "invite": "Pozvat do skupiny", "leave": "Opustit",
-    "leader": "Vůdce skupiny", "invitation": "Pozvánka do skupiny",
-    "invitedBy": "{name} tě zve do skupiny.", "accept": "Přijmout", "decline": "Odmítnout",
-    "leaderOnly": "Zvát do skupiny může pouze její vůdce.", "full": "Skupina je plná (nejvýše 6 postav).",
-    "unavailable": "Postava nebo pozvánka už není dostupná.", "alreadyGrouped": "Tato postava už je ve skupině.",
-    "cooldown": "Po odmítnutí musíš před další pozvánkou této postavě počkat minutu.",
-    "pending": "Už čeká jiná pozvánka. Počkej na její vyřízení.", "sent": "Pozvánka odeslána (platí 20 sekund).",
-    "declined": "Pozvánka byla odmítnuta nebo vypršela. Další můžeš poslat za minutu."
+    "title": "Skupina",
+    "actions": "Akce skupiny",
+    "invite": "Pozvat do skupiny",
+    "leave": "Opustit",
+    "leader": "V\u016fdce skupiny",
+    "leaderOnly": "Postavy m\u016f\u017ee p\u0159id\u00e1vat jen v\u016fdce party.",
+    "full": "Skupina je pln\u00e1 (nejv\u00fd\u0161e 6 postav).",
+    "unavailable": "Postava ji\u017e nen\u00ed dostupn\u00e1.",
+    "alreadyGrouped": "Tato postava u\u017e je ve skupin\u011b."
   },
   "container": {
     "barrel": "Barel"
@@ -376,7 +367,7 @@
       }
   },
   "vendor": {
-    "unlockTraining": "Odemknout",
+    "upgradeSkill": "Pov\u00fd\u0161it",
     "noTrainingOffers": "Žádná další výuka není k dispozici.",
       "vendor": "Obchod",
       "repairer": "Oprava",

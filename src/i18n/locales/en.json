@@ -28,24 +28,15 @@
     "incoming": "{name} → you: {result}"
 },
   "party": {
-    "lootRandomChoice": "Assign randomly",
-    "lootFinderChoice": "Finder keeps it",
-    "settings": "Party settings",
-    "items": "Items",
-    "lootFinder": "Finder keeps items",
-    "lootRandom": "Random party member",
-    "emeraldSharing": "Emeralds are always split equally among players.",
-    "sendInvite": "Invite",
-    "cancel": "Cancel",
-
-    "title": "Party", "actions": "Party actions", "invite": "Invite to party", "leave": "Leave",
-    "leader": "Party leader", "invitation": "Party invitation",
-    "invitedBy": "{name} invites you to a party.", "accept": "Accept", "decline": "Decline",
-    "leaderOnly": "Only the party leader can invite players.", "full": "The party is full (maximum 6 characters).",
-    "unavailable": "The character or invitation is no longer available.", "alreadyGrouped": "This character is already in a party.",
-    "cooldown": "Wait one minute after a rejection before inviting this character again.",
-    "pending": "Another invitation is pending. Wait for it to be resolved.", "sent": "Invitation sent (expires in 20 seconds).",
-    "declined": "The invitation was declined or expired. You can invite again in one minute."
+    "title": "Party",
+    "actions": "Party actions",
+    "invite": "Invite to party",
+    "leave": "Leave",
+    "leader": "Party leader",
+    "leaderOnly": "Only the party leader can add members.",
+    "full": "The party is full (maximum 6 characters).",
+    "unavailable": "The character is no longer available.",
+    "alreadyGrouped": "This character is already in a party."
   },
   "container": {
     "barrel": "Barrel"
@@ -377,7 +368,7 @@
       }
   },
   "vendor": {
-    "unlockTraining": "Unlock",
+    "upgradeSkill": "Upgrade",
     "noTrainingOffers": "No further lessons are available.",
       "vendor": "Vendor",
       "repairer": "Repair",

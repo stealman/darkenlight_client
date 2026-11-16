@@ -200,11 +200,6 @@
     color: rgb(var(--ui-success));
 }
 
-.ui-tooltip-row--training .ui-tooltip-row-label,
-.ui-tooltip-row--training .ui-tooltip-row-value {
-    color: rgb(var(--ui-accent-blue));
-}
-
 .ui-tooltip-row--undead .ui-tooltip-row-value {
     color: rgb(var(--ui-item-special-stat));
 }

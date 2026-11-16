@@ -86,15 +86,8 @@
     },
     "progress": {
       "visitTrainer": "Navštiv trenéra",
-      "pause": "Přerušit",
       "experience": "Zkušenost",
-      "training": "Trénink",
-      "train": "Trénovat",
-      "currentTraining": "Nyní trénuješ",
-      "toRank": "na úroveň",
-      "remainingTime": "zbývající čas:",
       "learnNovice": "Tuto dovednost zatím neovládáš",
-      "insufficientExperience": "Nedostatek zkušenosti",
       "highestLevelFor": "Nejvyšší možná úroveň pro",
       "maximum": "Maximum"
     },

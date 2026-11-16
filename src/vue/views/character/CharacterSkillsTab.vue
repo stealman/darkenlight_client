@@ -1,15 +1,5 @@
 <template>
     <div class="character-tab-panel character-skills-tab">
-        <div v-if="activeTrainingSkill" class="active-training-summary">
-            <span>{{ t('skills.progress.currentTraining') }}</span>
-            <span class="active-training-summary-accent">{{ activeTrainingSkill.name }}</span>
-            <span>{{ t('skills.progress.toRank') }}</span>
-            <span class="active-training-summary-accent">{{ getSkillRankName(activeTrainingSkill.rank + 1) }}</span>
-            <span>{{ t('skills.progress.remainingTime') }}</span>
-            <span class="active-training-summary-accent">
-                {{ formatTrainingTime(activeTrainingSkill.trainingRemainingSeconds) }}
-            </span>
-        </div>
         <section v-for="category in visibleSkillCategories" :key="category.key" class="skill-category">
             <h3 class="skill-category-title"><span class="ui-text-gradient">{{ t(`skills.categories.${category.key}`) }}</span></h3>
             <div class="skill-list">
@@ -19,14 +9,12 @@
                     class="skill-row"
                     :class="{
                         'skill-row--expanded': expandedSkillKey === skill.key,
-                        'skill-row--active-training': skill.activeTraining,
                     }"
                 >
                     <div
                         class="skill-row-summary"
                         :class="{
                             'skill-row--untrained': !skill.progress,
-                            'skill-row--capped': skill.progress && skill.nextTrainingRequired == null,
                         }"
                         role="button"
                         tabindex="0"
@@ -37,44 +25,24 @@
                         @keydown.space.prevent="toggleSkillDetails(skill.key)"
                     >
                     <span :class="['skill-name', { 'ui-text-gradient': skill.progress }]">{{ skill.name }}</span>
-                    <template v-if="skill.nextTrainingRequired != null">
+                    <template v-if="skill.progress && skill.rank < skill.cap">
                         <span class="skill-progress-rank skill-progress-rank--current">{{ getSkillRankName(skill.rank) }}</span>
                         <div
+                            v-if="skill.nextExperienceRequired != null"
                             class="skill-progress-stack"
                             @mouseenter="showSkillProgressTooltip(skill, $event)"
                             @mousemove="moveSkillProgressTooltip(skill.key, $event)"
                             @mouseleave="hideSkillProgressTooltip(skill.key)"
                             @click.stop="toggleSkillProgressTooltip(skill, $event)"
                         >
-                            <div v-if="skill.nextExperienceRequired != null" class="skill-progress-row">
+                            <div class="skill-progress-row">
                                 <span class="skill-progress-track">
                                     <span class="skill-progress-fill skill-progress-fill--experience ui-progress-fill-gradient" :style="{ width: `${skill.experiencePercent}%` }"></span>
                                 </span>
                             </div>
-                            <div class="skill-progress-row">
-                                <span class="skill-progress-track">
-                                    <span class="skill-progress-fill skill-progress-fill--training ui-progress-fill-gradient" :style="{ width: `${skill.trainingPercent}%` }"></span>
-                                </span>
-                            </div>
                         </div>
                         <span class="skill-progress-rank skill-progress-rank--next">{{ getSkillRankName(skill.rank + 1) }}</span>
-                        <span v-if="skill.trainingUnlocked === false" class="skill-training-locked">{{ t('skills.progress.visitTrainer') }}</span>
-                        <span v-else-if="skill.needsExperience" class="skill-experience-shortage">
-                            {{ insufficientExperienceLabel }}
-                        </span>
-                        <button
-                            v-else-if="!skill.activeTraining"
-                            type="button"
-                            class="skill-training-button dialog-button"
-                            @click.stop="startTraining(skill.key)"
-                            @keydown.stop
-                        >
-                            <span class="ui-text-gradient--button-state">{{ t('skills.progress.train') }}</span>
-                        </button>
-                        <template v-else>
-                            <span class="skill-training-time">{{ formatTrainingTime(skill.trainingRemainingSeconds) }}</span>
-                            <button type="button" class="skill-training-button dialog-button" @click.stop="stopTraining" @keydown.stop><span class="ui-text-gradient--button-state">{{ t('skills.progress.pause') }}</span></button>
-                        </template>
+                        <span v-if="skill.rankUpgradePrice != null" class="skill-trainer-required">{{ t('skills.progress.visitTrainer') }}</span>
                     </template>
                     <template v-else-if="skill.progress">
                         <span class="skill-progress-rank skill-progress-rank--current skill-progress-rank--maximum">
@@ -216,9 +184,6 @@ import { useI18n } from '@/i18n'
 import type {MonsterKnowledgeTO, SkillKey, SkillProgressTO} from '@/network/messageIfs'
 import {SkillDefinitions} from '@/data/skills/skillDefinitions'
 import type {SkillCategoryKey, SkillDefinition} from '@/data/skills/skillDefinitions'
-import { Connector } from '@/network/connector'
-import { StartSkillTrainingMsg } from '@/network/messages'
-import { AudioManager } from '@/babylon/audio/audioManager'
 import { TooltipOverlayManager } from '@/gui/tooltipOverlayManager'
 
 const { locale, t } = useI18n()
@@ -323,25 +288,12 @@ const skills = computed(() => {
             masterBonusUnlocked: rank >= 7,
             grandmasterBonusUnlocked: rank >= 10,
             nextExperienceRequired: progress?.nextExperienceRequired,
-            nextTrainingRequired: progress?.nextTrainingRequired,
-            trainingUnlocked: progress?.trainingUnlocked,
+            rankUpgradePrice: progress?.rankUpgradePrice,
             experience: progress?.experience ?? 0,
             cap: skillCaps[skill.key] ?? 0,
-            activeTraining: skillSet?.activeTrainingSkill === skill.key,
-            needsExperience: progress?.nextTrainingRequired != null &&
-                progress?.nextExperienceRequired != null &&
-                progress.trainingPoints >= progress.nextTrainingRequired &&
-                progress.experience < progress.nextExperienceRequired,
             experiencePercent: progress?.nextExperienceRequired != null
                 ? Math.min(100, Math.max(0, (progress.experience - (progress.currentExperienceRequired ?? 0)) /
                     (progress.nextExperienceRequired - (progress.currentExperienceRequired ?? 0)) * 100))
-                : 0,
-            trainingPercent: progress?.nextTrainingRequired
-                ? Math.min(100, progress.trainingPoints / progress.nextTrainingRequired * 100)
-                : 0,
-            trainingRemainingSeconds: progress?.nextTrainingRequired
-                ? Math.max(0, Math.ceil((progress.nextTrainingRequired - progress.trainingPoints) /
-                    (skillSet.trainingPointsPerSecond ?? 1)))
                 : 0,
         }
     })
@@ -351,22 +303,11 @@ const skillCategoryOrder: SkillCategoryKey[] = ['weapons', 'armor', 'utility', '
 const visibleSkillCategories = computed(() => skillCategoryOrder
     .map((key) => ({key, skills: skills.value.filter((skill) => skill.category === key)}))
     .filter((category) => category.skills.length > 0))
-const activeTrainingSkill = computed(() => skills.value.find((skill) => skill.activeTraining))
 const skillDetailsId = (skill: SkillKey) => `skill-details-${skill}`
 const toggleSkillDetails = (skill: SkillKey) => {
     expandedSkillKey.value = expandedSkillKey.value === skill ? null : skill
 }
 
-const insufficientExperienceLabel = computed(() => {
-    const translationKey = 'skills.progress.insufficientExperience'
-    const translatedLabel = t(translationKey)
-
-    if (translatedLabel !== translationKey) {
-        return translatedLabel
-    }
-
-    return locale.value === 'en' ? 'Insufficient experience' : 'Nedostatek zkuÄąË‡enosti'
-})
 const unknownBonusLabel = computed(() => t('skills.bonuses.unknown'))
 const gameClassKey = computed(() => myChar.value?.gameClass?.key.toLowerCase() ?? '')
 const gameClassName = computed(() => {
@@ -400,10 +341,8 @@ const buildSkillProgressTooltip = (skill: {
     key: SkillKey
     name: string
     rank: number
-    activeTraining: boolean
     experience: number
     nextExperienceRequired?: number
-    trainingRemainingSeconds: number
 }) => ({
     title: skill.name,
     titleMeta: getSkillRankName(skill.rank),
@@ -416,14 +355,6 @@ const buildSkillProgressTooltip = (skill: {
             value: `${formatSkillExperience(skill.experience)} / ${formatSkillExperience(skill.nextExperienceRequired ?? 0)}`,
             className: 'ui-tooltip-row--experience',
         }] : []),
-        {
-            label: t('skills.progress.training'),
-            separator: '',
-            value: skill.activeTraining
-                ? `${formatTrainingTime(skill.trainingRemainingSeconds)} ${t('skills.progress.currentTraining')}`
-                : formatTrainingTime(skill.trainingRemainingSeconds),
-            className: 'ui-tooltip-row--training',
-        },
     ],
 })
 
@@ -477,28 +408,6 @@ const toggleSkillProgressTooltip = (skill: Parameters<typeof buildSkillProgressT
     })
 }
 
-const startTraining = (skill: SkillKey) => {
-    AudioManager.playGuiButtonClick()
-    Connector.sendMessage(new StartSkillTrainingMsg(skill))
-}
-
-const stopTraining = () => {
-    AudioManager.playGuiButtonClick()
-    Connector.sendMessage(new StartSkillTrainingMsg(null))
-}
-
-const formatTrainingTime = (seconds: number) => {
-    const minutes = Math.ceil(seconds / 60)
-    const days = Math.floor(minutes / (24 * 60))
-    const hours = Math.floor(minutes % (24 * 60) / 60)
-    const remainingMinutes = minutes % 60
-    const parts: string[] = []
-
-    if (days > 0) parts.push(`${days}d`)
-    if (hours > 0 || days > 0) parts.push(`${hours}h`)
-    parts.push(`${remainingMinutes}m`)
-    return parts.join(' ')
-}
 </script>
 
 <style scoped>
@@ -519,22 +428,6 @@ const formatTrainingTime = (seconds: number) => {
     padding: 4px 8px 8px;
     box-sizing: border-box;
     color: rgb(var(--ui-base));
-}
-
-.active-training-summary {
-    margin: 0 2px 11px;
-    color: rgb(var(--ui-base));
-    font-size: 0.92em;
-    font-weight: 400;
-    line-height: 1.2;
-    text-align: left;
-}
-
-.active-training-summary-accent {
-    margin: 0 0.5em;
-    color: rgb(var(--ui-accent-blue));
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
 }
 
 .skill-category {
@@ -567,7 +460,7 @@ const formatTrainingTime = (seconds: number) => {
 
 .skill-row-summary {
     display: grid;
-    grid-template-columns: minmax(0, 22%) minmax(0, 112px) minmax(72px, min(150px, 20%)) minmax(0, 112px) max-content minmax(0, 1fr);
+    grid-template-columns: minmax(0, 22%) minmax(0, 112px) minmax(72px, min(150px, 20%)) minmax(0, 112px) minmax(0, 1fr);
     align-items: center;
     column-gap: 8px;
     min-height: 35px;
@@ -601,15 +494,6 @@ const formatTrainingTime = (seconds: number) => {
     font-weight: 400;
 }
 
-.skill-row--active-training {
-    --skill-training-pulse-duration: 2.2s;
-    animation: skill-training-glow var(--skill-training-pulse-duration) ease-in-out infinite;
-    box-shadow:
-        inset 3px 0 0 var(--skill-row-expanded-left-accent, transparent),
-        inset 0 0 0 1px rgba(var(--ui-accent-blue), 0.42),
-        inset 0 0 20px rgba(var(--ui-accent-blue), 0.35);
-}
-
 .skill-name {
     flex: 0 1 22%;
     justify-self: start;
@@ -625,17 +509,7 @@ const formatTrainingTime = (seconds: number) => {
     --ui-text-gradient-bottom: rgb(var(--ui-accent-blue));
 }
 
-.skill-row--active-training .skill-row-summary:not(.skill-row--untrained) .skill-name {
-    background: none;
-    color: rgb(var(--ui-accent-blue));
-    -webkit-text-fill-color: rgb(var(--ui-accent-blue));
-}
-
 .skill-progress-stack {
-    display: flex;
-    flex: 0 1 clamp(72px, 18vw, 150px);
-    flex-direction: column;
-    gap: 3px;
     min-width: 0;
 }
 
@@ -671,21 +545,6 @@ const formatTrainingTime = (seconds: number) => {
     --ui-progress-gradient-right: var(--ui-success);
 }
 
-.skill-progress-fill--training {
-    width: 0;
-    --ui-progress-gradient-left: var(--ui-progress-training-dark);
-    --ui-progress-gradient-right: var(--ui-progress-training-light);
-}
-
-.skill-row--active-training .skill-progress-row:last-child .skill-progress-track {
-    border-color: rgba(var(--ui-accent-blue), 0.8);
-    animation: skill-training-progress-glow var(--skill-training-pulse-duration) ease-in-out infinite;
-}
-
-.skill-row--active-training .skill-progress-fill--training {
-    animation: skill-training-progress-pulse var(--skill-training-pulse-duration) ease-in-out infinite;
-}
-
 .skill-progress-state {
     flex: 1 1 auto;
     min-width: 0;
@@ -694,9 +553,7 @@ const formatTrainingTime = (seconds: number) => {
     text-overflow: ellipsis;
 }
 
-.skill-progress-rank,
-.skill-training-button,
-.skill-training-time {
+.skill-progress-rank {
     flex: 0 0 auto;
     font-weight: 700;
     white-space: nowrap;
@@ -719,15 +576,11 @@ const formatTrainingTime = (seconds: number) => {
 }
 
 .skill-progress-rank--next {
+    grid-column: 4;
     text-align: left;
 }
 
-.skill-row--active-training .skill-progress-rank--next {
-    color: rgb(var(--ui-accent-blue));
-}
-
-.skill-training-locked,
-.skill-experience-shortage {
+.skill-trainer-required {
     grid-column: 5 / -1;
     color: rgb(var(--ui-danger));
     font-size: 0.85em;
@@ -767,24 +620,6 @@ const formatTrainingTime = (seconds: number) => {
 
 .skill-maximum-state-class--gm {
     color: rgb(var(--ui-base));
-}
-
-.skill-training-button {
-    padding: 2px 7px;
-    border-radius: 0;
-    font: inherit;
-    font-size: 1.15em;
-    font-weight: 700;
-    line-height: 1.15;
-    text-transform: none;
-}
-
-.skill-training-time {
-    margin-left: 4px;
-    color: rgb(var(--ui-accent-blue));
-    font-size: 1em;
-    font-weight: inherit;
-    font-variant-numeric: tabular-nums;
 }
 
 .skill-row--untrained .skill-progress-state {
@@ -909,41 +744,16 @@ const formatTrainingTime = (seconds: number) => {
     text-align: left;
 }
 
-@keyframes skill-training-glow {
-    50% {
-        box-shadow:
-        inset 3px 0 0 var(--skill-row-expanded-left-accent, transparent),
-        inset 0 0 0 1px rgba(var(--ui-accent-blue), 0.68),
-        inset 0 0 28px rgba(var(--ui-accent-blue), 0.56);
-    }
-}
-
-@keyframes skill-training-progress-glow {
-    50% {
-        box-shadow: 0 0 7px rgba(var(--ui-accent-blue), 0.8), inset 0 0 4px rgba(var(--ui-accent-blue), 0.55);
-    }
-}
-
-@keyframes skill-training-progress-pulse {
-    50% {
-        filter: brightness(1.35);
-    }
-}
-
 @media (max-height: 600px) and (min-aspect-ratio: 8 / 5) {
     .skill-list {
         font-size: 0.88em;
     }
 
     .skill-row-summary {
-        grid-template-columns: minmax(0, 20%) minmax(0, 1fr) minmax(64px, 20%) minmax(0, 1fr) 76px minmax(0, 1fr);
+        grid-template-columns: minmax(0, 20%) minmax(0, 1fr) minmax(64px, 20%) minmax(0, 1fr) minmax(0, 1fr);
         column-gap: 4px;
     }
 
-    .skill-training-button,
-    .skill-training-time {
-        justify-self: end;
-    }
 }
 
 @media (max-width: 600px) {
@@ -954,7 +764,7 @@ const formatTrainingTime = (seconds: number) => {
 
 @media (max-width: 460px) {
     .skill-row-summary {
-        grid-template-columns: minmax(0, 20%) minmax(0, 1fr) minmax(56px, 20%) minmax(0, 1fr) 76px minmax(0, 1fr);
+        grid-template-columns: minmax(0, 20%) minmax(0, 1fr) minmax(56px, 20%) minmax(0, 1fr) minmax(0, 1fr);
         column-gap: 4px;
         padding-right: 7px;
         padding-left: 9px;
@@ -962,19 +772,6 @@ const formatTrainingTime = (seconds: number) => {
 
     .skill-name {
         flex-basis: 22%;
-    }
-
-    .skill-training-button,
-    .skill-training-time {
-        justify-self: end;
-    }
-
-    .skill-training-button {
-        font-size: 1.05em;
-    }
-
-    .skill-training-time {
-        font-size: 0.72em;
     }
 
     .skill-details {

@@ -412,14 +412,7 @@ export class PreciseShot implements Message {
     }
 }
 
-export class StartSkillTrainingMsg implements Message {
-    t: number = 32
-    d: { skill: string | null }
-
-    constructor(skill: string | null) {
-        this.d = { skill }
-    }
-}
+// Message ID 32 retired: timed skill training.
 
 export class NpcLearnSkillMsg implements Message {
     t: number = 33
@@ -622,15 +615,11 @@ export class GMGenerateBiomeMsg implements Message {
 
 export class PartyInviteMsg implements Message {
     t = 43
-    d: {targetId: number, lootMode: 'finder' | 'random'}
-    constructor(targetId: number, lootMode: 'finder' | 'random') { this.d = {targetId, lootMode} }
+    d: {targetId: number}
+    constructor(targetId: number) { this.d = {targetId} }
 }
 
-export class PartyRespondMsg implements Message {
-    t = 44
-    d: {id: number, accept: boolean}
-    constructor(id: number, accept: boolean) { this.d = {id, accept} }
-}
+// Message ID 44 retired: party invitation response.
 
 export class PartyLeaveMsg implements Message {
     t = 45
@@ -643,7 +632,7 @@ export class ShearSheepMsg implements Message {
     constructor(id: number) { this.d = {id} }
 }
 
-export class NpcUnlockSkillTrainingMsg implements Message {
+export class NpcUpgradeSkillMsg implements Message {
     t: number = 48
     d: {id: number, skill: string, targetRank: number}
 

@@ -86,15 +86,8 @@
     },
     "progress": {
       "visitTrainer": "Visit a trainer",
-      "pause": "Pause",
       "experience": "Experience",
-      "training": "Training",
-      "train": "Train",
-      "currentTraining": "You are training",
-      "toRank": "to",
-      "remainingTime": "remaining time:",
       "learnNovice": "You do not know this skill yet",
-      "insufficientExperience": "Insufficient experience",
       "highestLevelFor": "Highest possible level for",
       "maximum": "Maximum"
     },

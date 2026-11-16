@@ -167,7 +167,7 @@
                 :selected-tab="selectedTrainerTab"
                 @update:selected-tab="selectedTrainerTab = $event"
                 @learn-skill="learnSkill"
-                @unlock-training="unlockTraining"
+                @upgrade-skill="upgradeSkill"
             />
 
             <template v-else-if="selectedFeature?.type === 'crafting'">
@@ -626,7 +626,7 @@ const learnSkill = (skill: SkillKey, event: MouseEvent) => {
     NpcInteractionManager.learnSkill(npcData.value!.id, skill)
 }
 
-const unlockTraining = (skill: SkillKey, targetRank: number, price: number, event: MouseEvent) => {
+const upgradeSkill = (skill: SkillKey, targetRank: number, price: number, event: MouseEvent) => {
     const npc = npcData.value ? NpcManager.npcs.get(npcData.value.id) : null
     if (!npc || npc.getDistanceFromMyPlayer() > NPC_PURCHASE_DISTANCE) {
         addPurchaseEffect(t('messages.npcUseOutOfRange'), event, true)
@@ -637,7 +637,7 @@ const unlockTraining = (skill: SkillKey, targetRank: number, price: number, even
         return
     }
     addPurchaseEffect(`-${EmeraldsManager.formatEmeraldAmount(price)}`, event)
-    NpcInteractionManager.unlockSkillTraining(npcData.value!.id, skill, targetRank)
+    NpcInteractionManager.upgradeSkill(npcData.value!.id, skill, targetRank)
 }
 
 const openCrafting = (category: string, event: MouseEvent) => {

@@ -114,8 +114,7 @@ export type CraftingSkillKey = 'blacksmithy' | 'bowcraft' | 'armorsmithy' | 'alc
 export type SkillKey = CraftingSkillKey | PhysicalWeaponSkillKey | ArmorSkillKey | UtilitySkillKey | GatheringSkillKey | CombatSkillKey
 
 export interface SkillProgressTO {
-    trainingUnlocked?: boolean
-    trainingUnlockPrice?: number
+    rankUpgradePrice?: number
     maxWoodResourceKey?: string
     maxMiningOreResourceKey?: string
     maxHuntingHideResourceKey?: string
@@ -125,10 +124,8 @@ export interface SkillProgressTO {
     miningStaminaReductionPercent?: number
     rank: number
     experience: number
-    trainingPoints: number
     currentExperienceRequired?: number
     nextExperienceRequired?: number
-    nextTrainingRequired?: number
     weaponAttackBonusPercent?: number
     weaponAttackBonusPercentPerRank?: number
     powerStrikeDamageBonusPercent?: number
@@ -147,10 +144,7 @@ export interface SkillProgressTO {
     bandageHealingAmountMaximumPerRank?: number
 }
 
-export type SkillSetTO = Partial<Record<SkillKey, SkillProgressTO>> & {
-    activeTrainingSkill?: SkillKey
-    trainingPointsPerSecond?: number
-}
+export type SkillSetTO = Partial<Record<SkillKey, SkillProgressTO>>
 
 export type SkillCapsTO = Partial<Record<SkillKey, number>>
 
@@ -561,23 +555,13 @@ export interface GMStaticDeleteInfoData {
     barrelCount: number
     itemCount: number
 }
-export type PartyLootMode = 'finder' | 'random'
 
 export interface PartyStateData {
-    lootMode: PartyLootMode
     leaderId: number
     members: Array<{
         id: number, name: string, worldId: number, x: number, z: number,
         hp?: number, maxHp?: number, st?: number, maxSt?: number, mp?: number, maxMp?: number,
     }>
-}
-
-export interface PartyInvitationData {
-    lootMode: PartyLootMode
-    id: number
-    name: string
-    classKey?: string
-    remainingMs: number
 }
 
 export interface MonsterKnowledgeTO {

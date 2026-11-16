@@ -115,7 +115,7 @@ export const MessageProcessor = {
                     if (PartyManager.state.value && !msg.d) AudioManager.playPartyLeave()
                     if (PartyManager.receiveState(msg.d)) AudioManager.playPartyJoin()
                     break
-                case 93: PartyManager.receiveInvitation(msg.d); break
+                // 93 retired: party invitation dialog.
                 case 96: {
                     const sheep = MonsterManager.monsters.get(msg.d.id)
                     if (sheep) sheep.woolReadyAt = Date.now() + msg.d.cooldown

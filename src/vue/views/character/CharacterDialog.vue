@@ -12,7 +12,6 @@
                 class="tab-item"
                 :class="{
                     active: tab.id === activeTabId,
-                    'tab-item--training-available': tab.id === 'skills' && hasAvailableSkillTraining,
                 }"
                 @click="selectTab(tab.id)"
             >
@@ -38,13 +37,10 @@ import CharacterSkillsTab from '@/vue/views/character/CharacterSkillsTab.vue'
 import CharacterStoryTab from '@/vue/views/character/CharacterStoryTab.vue'
 import { useI18n } from '@/i18n'
 import { AudioManager } from '@/babylon/audio/audioManager'
-import { MyPlayer } from '@/data/myPlayer'
-import type {SkillKey} from '@/network/messageIfs'
 
 const emit = defineEmits(['close'])
 defineProps<{visible?: boolean}>()
 const { t } = useI18n()
-const myChar = MyPlayer.myCharRef
 
 const tabs = computed(() => [
     { id: 'character', name: t('character.tabs.character') },
@@ -55,27 +51,6 @@ const tabs = computed(() => [
 
 const activeTabId = ref('character')
 const characterActionsTabRef = ref()
-
-const hasAvailableSkillTraining = computed(() => {
-    const skillSet = myChar.value?.skillSet
-    const skillCaps = myChar.value?.skillCaps
-
-    if (!skillSet || !skillCaps || skillSet.activeTrainingSkill) {
-        return false
-    }
-
-    return Object.keys(skillCaps).some((key) => {
-        const skill = skillSet[key as SkillKey]
-
-        if (!skill || skill.nextTrainingRequired == null || skill.trainingUnlocked === false) {
-            return false
-        }
-
-        const timeTrainingIsComplete = skill.trainingPoints >= skill.nextTrainingRequired
-        const practicalExperienceIsMissing = skill.nextExperienceRequired != null && skill.experience < skill.nextExperienceRequired
-        return !timeTrainingIsComplete || !practicalExperienceIsMissing
-    })
-})
 
 const selectTab = (tabId: string) => {
     if (activeTabId.value === tabId) {
@@ -115,27 +90,5 @@ defineExpose({openDialog})
 }
 
 .story-content-shell { display: flex; }
-
-.tab-item--training-available label {
-    animation: character-skill-training-available-pulse 1.8s ease-in-out infinite;
-}
-
-@keyframes character-skill-training-available-pulse {
-    0%, 100% {
-        color: inherit;
-        text-shadow: inherit;
-    }
-
-    50% {
-        color: rgb(var(--ui-attention));
-        text-shadow: 0 0 4px rgba(var(--ui-attention), 0.45);
-    }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .tab-item--training-available label {
-        animation: none;
-    }
-}
 
 </style>

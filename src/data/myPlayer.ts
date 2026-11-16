@@ -118,7 +118,6 @@ export const MyPlayer = {
 
         MyStatusPanel.setMyName(this.myChar.name)
         MyStatusPanel.refreshAffectGroups()
-        PartyManager.preferredLootMode.value = charData.preferredPartyLootMode === 'finder' ? 'finder' : 'random'
         EmeraldsManager.setMyEmeralds(charData.emeralds, true, charData.emeralds, null)
     },
 
