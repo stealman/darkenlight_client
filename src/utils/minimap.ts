@@ -91,7 +91,7 @@ export const MiniMap = {
         const gameTime = Lights.getGameTimeInfo()
         return {
             title: (MyPlayer.myChar && WorldAreaManager.index.getAt(MyPlayer.myChar.pos.x, MyPlayer.myChar.pos.z)?.name) || MyPlayer.worldName || t('settings.miniMapSize'),
-            topRightText: gameTime.time,
+            topRightText: t('dayNight.dateTime', {day: gameTime.day, time: gameTime.time}),
             topRightMeta: t(`dayNight.${gameTime.phaseName}`),
             rows: [
                 { label: 'FPS', value: this.fpsInfo },

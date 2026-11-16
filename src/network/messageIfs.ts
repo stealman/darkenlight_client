@@ -56,6 +56,7 @@ export interface AttackableCombatTO {
 
 export interface DayNightCycleSync {
     phase: number
+    day: number
     cycleDurationMs: number
     paused?: boolean
 }

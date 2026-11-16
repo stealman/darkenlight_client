@@ -53,6 +53,7 @@ export interface DayNightLightingHost {
     sunLight: DirectionalLight
     personalLight: SpotLight
     personalShadow: ShadowGenerator
+    dayNightDayAtSync: number
     dayNightPhaseAtSync: number
     dayNightCycleDurationMs: number
     dayNightSynchronizedAt: number
@@ -67,6 +68,7 @@ export interface DayNightLightingHost {
 }
 
 export function resetDayNightLighting(host: DayNightLightingHost) {
+    host.dayNightDayAtSync = 1
     host.dayNightPhaseAtSync = INITIAL_DAY_NIGHT_PHASE
     host.dayNightCycleDurationMs = DEFAULT_DAY_NIGHT_CYCLE_DURATION_MS
     host.dayNightSynchronizedAt = performance.now()
@@ -79,6 +81,7 @@ export function synchronizeDayNightCycle(host: DayNightLightingHost, sync: DayNi
     if (sync == null || !Number.isFinite(sync.phase) || !Number.isFinite(sync.cycleDurationMs) || sync.cycleDurationMs <= 0) {
         return
     }
+    host.dayNightDayAtSync = sync.day
     host.dayNightPhaseAtSync = ((sync.phase % 1) + 1) % 1
     host.dayNightCycleDurationMs = sync.cycleDurationMs
     host.dayNightSynchronizedAt = performance.now()
@@ -86,16 +89,19 @@ export function synchronizeDayNightCycle(host: DayNightLightingHost, sync: DayNi
     updateDayNightLighting(host)
 }
 
+function getGameCycles(host: DayNightLightingHost): number {
+    const cyclesAtSync = host.dayNightDayAtSync - 1 + host.dayNightPhaseAtSync
+    const elapsed = host.dayNightPaused ? 0 : performance.now() - host.dayNightSynchronizedAt
+    return cyclesAtSync + elapsed / host.dayNightCycleDurationMs
+}
+
 export function getDayNightPhase(host: DayNightLightingHost): number {
-    if (host.dayNightPaused) {
-        return host.dayNightPhaseAtSync
-    }
-    const elapsed = performance.now() - host.dayNightSynchronizedAt
-    return (host.dayNightPhaseAtSync + (elapsed / host.dayNightCycleDurationMs)) % 1
+    return getGameCycles(host) % 1
 }
 
 export function getGameTimeInfo(host: DayNightLightingHost) {
-    const phase = getDayNightPhase(host)
+    const cycles = getGameCycles(host)
+    const phase = cycles % 1
     const lightingPhase = getLightingPhase(phase)
     const totalMinutes = Math.floor(phase * 24 * 60)
     const hours = Math.floor(totalMinutes / 60)
@@ -111,6 +117,7 @@ export function getGameTimeInfo(host: DayNightLightingHost) {
                 : 'night'
 
     return {
+        day: Math.floor(cycles) + 1,
         time: `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`,
         phaseName,
     }

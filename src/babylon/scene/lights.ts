@@ -103,6 +103,7 @@ export const Lights = {
     actorStaticShadowCasterUpdateTime: 0,
     staticLightAssignmentUpdateTime: 0,
     staticLightAssignmentsDirty: true,
+    dayNightDayAtSync: 1,
     dayNightPhaseAtSync: INITIAL_DAY_NIGHT_PHASE,
     dayNightCycleDurationMs: DEFAULT_DAY_NIGHT_CYCLE_DURATION_MS,
     dayNightSynchronizedAt: 0,

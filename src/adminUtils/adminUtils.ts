@@ -1187,6 +1187,7 @@ export async function mountAdminUtils() {
     // default sunrise phase used before the server synchronizes the clock.
     Lights.synchronizeDayNightCycle({
         phase: 0.5,
+        day: 1,
         cycleDurationMs: Lights.dayNightCycleDurationMs,
         paused: true,
     })

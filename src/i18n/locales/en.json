@@ -69,6 +69,7 @@
     "position": "Position"
   },
   "dayNight": {
+    "dateTime": "Day {day}, {time}",
     "sunrise": "Sunrise",
     "day": "Day",
     "sunset": "Dusk",

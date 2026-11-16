@@ -69,6 +69,10 @@ async function main() {
         const messages = current.events.filter(event => event.kind === 'frame' && event.connectionId === 'one').flatMap(event => event.frame)
         const character = login.frame.find(message => message.t === 2).d.char
         assert(character, 'Actual game runtime did not create a character')
+        const initialClock = messages.find(message => message.t === 7).d.dayNightCycle
+        assert.equal(initialClock.day, 1)
+        assert.equal(initialClock.paused, false)
+        assert.ok(initialClock.phase < 0.01, 'New character did not start at midnight')
         assert(messages.findIndex(message => message.t === 7) < messages.findIndex(message => message.t === 2), 'Login preceded map data')
         assert(messages.filter(message => message.t === 7).every(message => message.d.mapChunk === null), 'Local simulation sent static terrain chunks')
         current.send({kind: 'frame', connectionId: 'one', frame: {t: 43, d: {targetId: -1, lootMode: 'finder'}}})
@@ -77,16 +81,26 @@ async function main() {
         const stopped = await current.wait(event => event.kind === 'done' && event.requestId === 1)
         assert.equal(stopped.error, undefined)
         assert(save, 'No local save was written')
+        const savedDocument = JSON.parse(save)
+        assert.ok(savedDocument.collections.characters[0].gameTimeMs > 0, 'Running game time was not saved')
+        // Exercise loading a later day without waiting for several complete cycles.
+        savedDocument.collections.characters[0].gameTimeMs = (6 + 750 / 1440) * initialClock.cycleDurationMs
+        save = JSON.stringify(savedDocument)
         await current.worker.terminate()
         current = await boot()
         current.send({kind: 'connect', connectionId: 'restored'})
         current.send({kind: 'frame', connectionId: 'restored', frame: {t: 1, login: '', password: '', guestName: 'LocalOne'}})
         const restored = await current.wait(event => event.kind === 'frame' && event.frame.some(message => message.t === 2))
         assert.equal(restored.frame.find(message => message.t === 2).d.char?.id, character.id)
+        const restoredMap = current.events.filter(event => event.kind === 'frame').flatMap(event => event.frame).find(message => message.t === 7)
+        assert.equal(restoredMap.d.dayNightCycle.day, 7)
+        assert.equal(restoredMap.d.dayNightCycle.paused, false)
+        assert.ok(Math.abs(restoredMap.d.dayNightCycle.phase - 750 / 1440) < 0.001, 'Saved game time was not restored')
         await current.wait(event => event.kind === 'frame' && event.frame.some(message => message.t === 92 && message.d?.members.some(member => member.id === -1)))
         current.send({kind: 'stop', requestId: 2})
         assert.equal((await current.wait(event => event.kind === 'done' && event.requestId === 2)).error, undefined)
-        console.log('PASS: bundled game worker, two connection isolation, real character creation, map/login ordering, save and restore')
+        assert.ok(JSON.parse(save).collections.characters[0].gameTimeMs >= savedDocument.collections.characters[0].gameTimeMs, 'Restored clock did not continue into the next save')
+        console.log('PASS: bundled game worker, two connection isolation, real character creation, map/login ordering, party and game clock save/restore')
     } finally {
         if (current) await current.worker.terminate()
         await new Promise(resolve => server.close(resolve))
