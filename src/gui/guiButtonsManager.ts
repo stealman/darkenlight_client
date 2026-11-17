@@ -95,7 +95,6 @@ export const GuiOpportunityActions = {
 
 export const GuiButtonsManager = {
     size: 32 as number,
-    dockButtonSize: 32 as number,
     fireArrowsMessageCooldown: 5000 as number,
     lastFireArrowsMessageTime: 0 as number,
     btnBackpack: null as HTMLDivElement,
@@ -167,11 +166,7 @@ export const GuiButtonsManager = {
     updatePositions() {
         const dock = document.getElementById('gui-buttons')
         if (dock) {
-            dock.style.setProperty('--hud-dock-button-size', `${this.dockButtonSize}px`)
             dock.classList.toggle('gui-buttons--touch', Settings.isPhoneOrTablet())
-            dock.style.setProperty('--hud-joystick-left', `${Settings.joystickLeft}px`)
-            dock.style.setProperty('--hud-joystick-bottom', `${Settings.joystickBottom}px`)
-            dock.style.setProperty('--hud-joystick-size', `${Settings.joystickSize}px`)
         }
     },
 
@@ -577,16 +572,15 @@ export const GuiButtonsManager = {
 
     setSize(size: number) {
         this.size = size
-        this.dockButtonSize = Settings.isPhoneOrTablet() ? Math.min(size, 48) : size
 
         if (this.btnBackpack != null) {
-            this.btnBackpack.style.width = `${this.dockButtonSize}px`
-            this.btnBackpack.style.height = `${this.dockButtonSize}px`
+            this.btnBackpack.style.width = `${size}px`
+            this.btnBackpack.style.height = `${size}px`
         }
 
         if (this.btnCharacter != null) {
-            this.btnCharacter.style.width = `${this.dockButtonSize}px`
-            this.btnCharacter.style.height = `${this.dockButtonSize}px`
+            this.btnCharacter.style.width = `${size}px`
+            this.btnCharacter.style.height = `${size}px`
         }
 
         this.opportunityButtons.forEach((button) => button.setSize(size))

@@ -6,6 +6,7 @@ import {WebSocketTransport, type GameTransport} from './transport'
 import {WorkerTransport} from '@/local/workerTransport'
 import type {LocalGameMode} from '@/local/workerProtocol'
 import type {CharacterProfile} from '@/local/saveStore'
+import {MyPlayer} from '@/data/myPlayer'
 
 type OutgoingMessage = Message & {sentTime?: number}
 
@@ -105,6 +106,7 @@ export const Connector = {
     },
 
     sendMoveMessage(msg: Message) {
+        if (MyPlayer.worldTransitionPending) return
         this.lastMoveMessage = msg
 
         const time = new Date().getTime()

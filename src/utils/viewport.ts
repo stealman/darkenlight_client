@@ -7,7 +7,7 @@ import { Settings } from '@/settings/settings'
 
 export const ViewportManager = {
     viewPortInitialized: false,
-    visibleTiles: [],
+    visibleTileOffsets: [] as Vector3[],
     visibilityMatrix: [],
     visibilityMatricesByHeight: [] as boolean[][][],
     matrixSizeBonus: 4,
@@ -197,9 +197,9 @@ export const ViewportManager = {
             }
             visibleTilesByHeight.push(visibleTiles)
         }
-        this.visibleTiles = visibleTilesByHeight[0]
+        this.visibleTileOffsets = visibleTilesByHeight[0].map(tile => tile.subtract(myPos))
 
-        console.log(this.visibleTiles.length + ' visible tiles found in viewport')
+        console.log(this.visibleTileOffsets.length + ' visible tiles found in viewport')
 
         this.visibilityMatricesByHeight = []
         for (const visibleTiles of visibleTilesByHeight) {

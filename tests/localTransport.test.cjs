@@ -4,7 +4,7 @@ const {readFileSync} = require('node:fs')
 const {join, resolve} = require('node:path')
 const ts = require('typescript')
 
-function loadConnector(processResponse = async () => {}, clock = Date) {
+function loadConnector(processResponse = async () => {}, clock = Date, player = {}) {
     const transports = []
     class Transport {
         ready = Promise.resolve()
@@ -22,6 +22,7 @@ function loadConnector(processResponse = async () => {}, clock = Date) {
     const source = readFileSync(join(__dirname, '../src/network/connector.ts'), 'utf8').replaceAll('import.meta.env', '({DEV: false})')
     const exports = {}
     const dependencies = {
+        '@/data/myPlayer': {MyPlayer: player},
         '@/network/messages': {LoginMsg},
         '@/data/monsterCatalog': {MonsterCatalog: {reset() {}}},
         '@/network/messageProcessor': {MessageProcessor: {processResponse}},
@@ -31,6 +32,25 @@ function loadConnector(processResponse = async () => {}, clock = Date) {
     new Function('exports', 'require', 'Date', ts.transpileModule(source, {compilerOptions: {module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020}}).outputText)(exports, name => dependencies[name] || {}, clock)
     return {connector: exports.Connector, transports}
 }
+
+test('movement stays blocked throughout world loading, including deferred packets', () => {
+    const player = {worldTransitionPending: false}
+    const {connector} = loadConnector(undefined, Date, player)
+    const frames = []
+    connector.transport = {send: message => frames.push(message)}
+    connector.sendMoveMessage({t: 5, d: [96, 82, 0, 'W', 2]})
+    connector.sendMoveMessage({t: 5, d: [96.1, 82, 0, 'W', 2]})
+    player.worldTransitionPending = true
+    connector.cancelPendingMoveMessage()
+    connector.sendMoveMessage({t: 5, d: [96.2, 82, 0, 'W', 1]})
+    connector.processMessages(Date.now() + 1000)
+    assert.equal(frames.length, 1)
+    player.worldTransitionPending = false
+    connector.sendMoveMessage({t: 5, d: [966, 1004, 0, 'W', 1]})
+    connector.processMessages(Date.now() + 1000)
+    assert.equal(frames.length, 2)
+    assert.equal(frames[1].d[0], 966)
+})
 
 test('local transport retains outgoing limits and deferred movement behavior', async () => {
     const savedWindow = globalThis.window

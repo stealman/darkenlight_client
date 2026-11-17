@@ -15,7 +15,7 @@ test('derived terrain does not change the source version used by existing saves'
     assert.equal(manifest.contentId, hash)
 })
 
-test('direct client terrain matches protocol decoding for all terrain variants and Mining ranks', async () => {
+test('direct client terrain matches protocol decoding for all terrain variants', async () => {
     const core = await import('@babylonjs/core/index.js')
     const source = readFileSync(join(__dirname, '../src/data/worldDataManager.ts'), 'utf8')
     const exports = {}
@@ -32,23 +32,21 @@ test('direct client terrain matches protocol decoding for all terrain variants a
         const simulation = new MapData(compiled)
         const first = new Map()
         compiled.indices.forEach((value, index) => { if (!first.has(value)) first.set(value, index) })
-        for (const rank of [0, 1, 5, Infinity]) {
-            const direct = new WorldData(1024, compiled, rank)
-            const protocol = new WorldData(1024)
-            assert.equal(direct.allChunksLoaded, true)
-            assert.equal(direct.hasChunkAt(896, 896), true)
-            for (const index of first.values()) {
-                const x = Math.floor(index / compiled.depth), z = index % compiled.depth
-                const blockMap = simulation.getBlockMapChunk(new core.Vector3(x, 0, z), 1, rank)
-                protocol.consumeMapChunk({x, z, blockMap})
-                assert.deepEqual(direct.blockMap[x][z], protocol.blockMap[x][z], `World ${id}, rank ${rank}, ${x},${z}`)
-                assert.equal(!!direct.planeBlockMap[x][z], !!protocol.planeBlockMap[x][z])
-            }
-            const untouched = direct.blockMap[1][1]
-            direct.consumeMapUpdate([{x: 0, z: 0, data: '12:51:P:S::M'}])
-            assert.equal(direct.blockMap[0][0].deepWater, true)
-            assert.equal(direct.blockMap[0][0].height, 12)
-            assert.equal(direct.blockMap[1][1], untouched)
+        const direct = new WorldData(1024, compiled)
+        const protocol = new WorldData(1024)
+        assert.equal(direct.allChunksLoaded, true)
+        assert.equal(direct.hasChunkAt(896, 896), true)
+        for (const index of first.values()) {
+            const x = Math.floor(index / compiled.depth), z = index % compiled.depth
+            const blockMap = simulation.getBlockMapChunk(new core.Vector3(x, 0, z), 1)
+            protocol.consumeMapChunk({x, z, blockMap})
+            assert.deepEqual(direct.blockMap[x][z], protocol.blockMap[x][z], `World ${id}, ${x},${z}`)
+            assert.equal(!!direct.planeBlockMap[x][z], !!protocol.planeBlockMap[x][z])
         }
+        const untouched = direct.blockMap[1][1]
+        direct.consumeMapUpdate([{x: 0, z: 0, data: '12:51:P:S::M'}])
+        assert.equal(direct.blockMap[0][0].deepWater, true)
+        assert.equal(direct.blockMap[0][0].height, 12)
+        assert.equal(direct.blockMap[1][1], untouched)
     }
 })

@@ -56,32 +56,9 @@ div#gui-buttons > .gui-action-button {
     flex-shrink: 0;
 }
 
-div#gui-buttons.gui-buttons--touch > #btn-backpack,
-div#gui-buttons.gui-buttons--touch > #btn-character,
-div#gui-buttons.gui-buttons--touch > #btn-backpack::before,
-div#gui-buttons.gui-buttons--touch > #btn-character::before {
-    opacity: .45;
+div#gui-buttons > .gui-action-button img.action-icon {
+    opacity: 1;
 }
-
-div#gui-buttons.gui-buttons--touch > #btn-backpack {
-    left: calc(var(--hud-joystick-left) + var(--hud-joystick-size) / 2 - var(--hud-dock-button-size) / 2 + (var(--hud-joystick-size) / 2 + var(--hud-dock-button-size) / 2 + 8px) * .7071);
-    bottom: max(5px, env(safe-area-inset-bottom), calc(var(--hud-joystick-bottom) + var(--hud-joystick-size) / 2 - var(--hud-dock-button-size) / 2 - (var(--hud-joystick-size) / 2 + var(--hud-dock-button-size) / 2 + 8px) * .7071));
-}
-
-div#gui-buttons.gui-buttons--touch > #btn-character {
-    left: calc(var(--hud-joystick-left) + (var(--hud-joystick-size) - var(--hud-dock-button-size)) / 2);
-    bottom: max(5px, env(safe-area-inset-bottom), calc(var(--hud-joystick-bottom) - var(--hud-dock-button-size) - 8px));
-}
-
-div#gui-buttons.gui-buttons--touch > #btn-backpack .action-icon,
-div#gui-buttons.gui-buttons--touch > #btn-character .action-icon {
-    width: 82%;
-    height: 82%;
-    margin: 9%;
-}
-
-
-
 
 div.gui-action-button.active {
     border-color: rgba(230, 60, 60, 0.8);

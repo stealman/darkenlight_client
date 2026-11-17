@@ -16,7 +16,7 @@ export const GmOreTierOverlay = {
         }
 
         const blockMap = WorldDataManager.getBlockMap()
-        if (ViewportManager.visibleTiles.length === 0) {
+        if (ViewportManager.visibleTileOffsets.length === 0) {
             return
         }
 
@@ -28,12 +28,13 @@ export const GmOreTierOverlay = {
         ctx.strokeStyle = 'rgba(0, 0, 0, 0.9)'
         ctx.fillStyle = '#ffd45a'
 
-        for (const tile of ViewportManager.visibleTiles) {
-            const x = Math.floor(tile.x)
-            const z = Math.floor(tile.z)
+        const position = char.getPositionRounded()
+        for (const tile of ViewportManager.visibleTileOffsets) {
+            const x = position.x + tile.x
+            const z = position.z + tile.z
             const block = blockMap[x]?.[z]
             const oreTier = block?.minableOre
-            if (!oreTier) {
+            if (!oreTier || oreTier <= 1) {
                 continue
             }
 

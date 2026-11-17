@@ -58,6 +58,8 @@ export const MyPlayer = {
 
     worldId: 0 as number,
     worldName: "" as string,
+    worldTransitionPending: false,
+    worldTransitionVersion: 0,
 
     heartBeatSoundTime: 0 as number,
 
@@ -122,6 +124,8 @@ export const MyPlayer = {
     },
 
     reset() {
+        this.worldTransitionPending = false
+        this.worldTransitionVersion++
         this.myChar.model = null
         this.myChar.autoAttackStart = 0
         this.myChar.autoAttackEnd = 0
@@ -148,6 +152,7 @@ export const MyPlayer = {
     },
 
     onFrame(timeRate: number, actualTime: number) {
+        if (this.worldTransitionPending) return
         const coveredBlockCoords = Utils.getCoveredBlocks(this.myChar.pos.x, this.myChar.pos.z, this.myChar.getBoxSize())
 
         // Cancel auto attack immediately if moving away from target
@@ -229,7 +234,7 @@ export const MyPlayer = {
     },
 
     startMove(movementType: string, angle: number) {
-        if (this.isDead.value) {
+        if (this.isDead.value || this.worldTransitionPending) {
             return
         }
         this.myChar.cancelCombatApproach()
@@ -244,8 +249,15 @@ export const MyPlayer = {
     },
 
     stopMove() {
+        if (this.worldTransitionPending) return
         this.myChar.cancelCombatApproach()
         this.myChar.stopMove()
+    },
+
+    beginWorldTransition() {
+        this.worldTransitionPending = true
+        this.worldTransitionVersion++
+        this.stopMovementForTeleport()
     },
 
     stopMovementForTeleport() {

@@ -342,7 +342,8 @@ export const MessageProcessor = {
     processWorldData(data: WorldMapDataMessage) {
         const worldChanged = MyPlayer.worldId !== data.id
         if (worldChanged) {
-            MyPlayer.stopMovementForTeleport()
+            if (GameManager.started && MyPlayer.myChar) MyPlayer.beginWorldTransition()
+            else MyPlayer.stopMovementForTeleport()
             if (MyPlayer.activeAction?.name !== CharacterActions.HEAL.name) {
                 MyPlayer.setAction(null)
             }
@@ -362,7 +363,7 @@ export const MessageProcessor = {
         Lights.synchronizeDayNightCycle(data.dayNightCycle)
         WeatherManager.setEnabled(environmentType !== 'indoor')
         if (worldChanged) {
-            WorldDataManager.replaceWorldData(data.id, data.size, data.mapOreTier)
+            WorldDataManager.replaceWorldData(data.id, data.size)
             TerrainManager.setSeaWaterLevel(data.seaWaterLevel ?? null)
         }
         if (worldChanged && MyPlayer.myChar && MyPlayer.worldName) {
@@ -613,7 +614,21 @@ export const MessageProcessor = {
     },
 
     processCharacterTeleport(data: {id: number, x: number, y: number, z: number, fx: number, fy: number, fz: number, departure: boolean}) {
+        const ownArrival = MyPlayer.myChar && data.id === MyPlayer.myChar.id && !data.departure
+        if (ownArrival && !MyPlayer.worldTransitionPending) MyPlayer.beginWorldTransition()
         CharacterManager.characterTeleported(data)
+        if (!ownArrival) return
+
+        // The simulation queues terrain and the destination's entity chunks
+        // before this arrival packet. Rebuild at the final position, then keep
+        // movement locked until that world has actually rendered a frame.
+        WorldRenderer.renderWorld()
+        const version = MyPlayer.worldTransitionVersion
+        Renderer.scene.onAfterRenderObservable.addOnce(() => {
+            if (version !== MyPlayer.worldTransitionVersion) return
+            MyPlayer.stopMovementForTeleport()
+            MyPlayer.worldTransitionPending = false
+        })
     },
 
     processGMWorlds(data: GMWorldsData) {

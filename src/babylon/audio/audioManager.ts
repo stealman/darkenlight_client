@@ -267,7 +267,9 @@ export const AudioManager = {
         }
     },
 
-    loadSoundArray(targetArray: [Sound], fileNames: string[], soundName: string, scene: Scene, options: { volume: number, playbackRate: number }): Sound[] {
+    loadSoundArray(targetArray: Sound[], fileNames: string[], soundName: string, scene: Scene, options: { volume: number, playbackRate: number }): void {
+        // Scene teardown disposes the old sounds; never keep them in random selection.
+        targetArray.length = 0
         fileNames.forEach((file, index) => {
             const sound = new Sound(soundName + index, AudioManager.BASE_PATH_SFX + file, scene, function() {
                 sound['loaded'] = true;

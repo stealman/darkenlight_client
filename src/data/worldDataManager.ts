@@ -16,8 +16,8 @@ export const WorldDataManager = {
         this.worldDataMap.clear()
     },
 
-    replaceWorldData(worldId: number, size: number, maxOreTier = Infinity) {
-        this.worldDataMap.set(worldId, new WorldData(size, localWorldMaps.get(worldId), maxOreTier))
+    replaceWorldData(worldId: number, size: number) {
+        this.worldDataMap.set(worldId, new WorldData(size, localWorldMaps.get(worldId)))
     },
 
     fetchWorldDataIfNeeded() {
@@ -123,7 +123,7 @@ export class WorldData {
     planeBlockMap: (MapBlock | false)[][] = []
     loadedChunkCoords: Vector3[] = []
 
-    constructor(size: number, compiled?: CompiledMap, maxOreTier = Infinity) {
+    constructor(size: number, compiled?: CompiledMap) {
         this.worldSize = size
         if (compiled) {
             if (compiled.width < size || compiled.depth < size) throw new Error('Compiled terrain is smaller than its world')
@@ -133,7 +133,7 @@ export class WorldData {
                 block.stonePath = !!(tile.flags & TileFlags.stone)
                 block.beigeStonePath = !!(tile.flags & TileFlags.beige)
                 block.setMinable(tile.flags & TileFlags.coal ? 'C' : tile.ore > 0
-                    ? maxOreTier > 0 ? `M${Math.min(tile.ore, maxOreTier)}` : 'M' : null)
+                    ? `M${tile.ore}` : null)
                 block.computeData()
                 return block
             })

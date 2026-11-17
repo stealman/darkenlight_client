@@ -37,7 +37,7 @@
                     <div class="party-actions"><button class="party-menu-button" aria-label="Akce party">⋯</button></div>
                 </section></div>
             </div>
-            <div id="gui-buttons" :class="{ 'gui-buttons--touch': touchLayout }" style="--hud-joystick-left: 120px; --hud-joystick-bottom: 50px; --hud-joystick-size: 100px; --hud-dock-button-size: 48px">
+            <div id="gui-buttons" :class="{ 'gui-buttons--touch': touchLayout }">
                 <div id="btn-backpack" class="gui-action-button" style="width: 48px; height: 48px"><img class="action-icon" src="/images/icons/buttons/btn_backpack.png" alt="Inventář"></div>
                 <div id="btn-character" class="gui-action-button" style="width: 48px; height: 48px"><img class="action-icon" src="/images/icons/buttons/btn_char.png" alt="Postava"></div>
             </div>
@@ -91,7 +91,4 @@ const segment = (value: number, index: number, count: number) => `${Math.max(0, 
 .status-skin-caption { position: absolute; bottom: 12px; left: 125px; right: 12px; font-size: 12px; color: rgb(var(--ui-dark)); }
 .status-skin-joystick { position: absolute; left: 120px; bottom: 50px; width: 100px; height: 100px; border-radius: 50%; background: rgba(75, 122, 163, .12); border: 1px dashed rgba(139, 183, 218, .4); display: flex; align-items: center; justify-content: center; color: rgb(var(--ui-dark)); font-size: 10px; pointer-events: none; }
 .status-skin-stage > .hud-settings-button { position: absolute; bottom: max(5px, env(safe-area-inset-bottom)); left: max(5px, env(safe-area-inset-left)); }
-.status-skin-stage #gui-buttons.gui-buttons--touch { position: static; }
-.status-skin-stage #gui-buttons.gui-buttons--touch > #btn-backpack,
-.status-skin-stage #gui-buttons.gui-buttons--touch > #btn-character { position: absolute; }
 </style>
