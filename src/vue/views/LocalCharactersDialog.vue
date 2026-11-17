@@ -7,7 +7,7 @@
                 <h3>{{ t('localCharacters.deleteTitle') }}</h3>
                 <p>{{ t('localCharacters.deleteDescription', {name: pendingDelete.name}) }}</p>
                 <div class="dialog-actions">
-                    <button type="button" class="dialog-button" :disabled="busy" @click="pendingDelete = null">
+                    <button type="button" class="dialog-button" :disabled="busy" @click="AudioManager.playGuiButtonClick(); pendingDelete = null">
                         <span class="ui-text-gradient--button-state">{{ t('localCharacters.cancel') }}</span>
                     </button>
                     <button type="button" class="dialog-button" :disabled="busy" @click="removeCharacter">
@@ -30,7 +30,7 @@
                         <span>{{ t('localCharacters.continue') }}</span>
                     </button>
                     <button type="button" class="dialog-button" :data-delete-profile-id="profile.id" :disabled="busy"
-                        :aria-label="t('localCharacters.deleteNamed', {name: profile.name})" @click="error = ''; pendingDelete = profile">
+                        :aria-label="t('localCharacters.deleteNamed', {name: profile.name})" @click="AudioManager.playGuiButtonClick(); error = ''; pendingDelete = profile">
                         <span class="local-character-delete ui-text-gradient ui-text-gradient--accent ui-text-gradient--no-shadow">{{ t('localCharacters.delete') }}</span>
                     </button>
                 </div>
@@ -63,6 +63,7 @@ import {createProfile, deleteProfile, listProfiles, loadSave, type CharacterProf
 import {useI18n} from '@/i18n'
 import {EJSON} from 'bson'
 import {OUTDOOR_DAY_NIGHT_CYCLE_DURATION_MS} from '@game/world/dayNightCycle'
+import {AudioManager} from '@/babylon/audio/audioManager'
 
 const emit = defineEmits<{start: [profile: CharacterProfile], enter: []}>()
 const {t} = useI18n()
@@ -106,12 +107,14 @@ onMounted(async () => {
 })
 function start(profile: CharacterProfile) {
     if (busy.value) return
+    AudioManager.playGuiButtonClick()
     busy.value = true
     emit('enter')
     emit('start', profile)
 }
 async function removeCharacter() {
     if (busy.value || !pendingDelete.value) return
+    AudioManager.playGuiButtonClick()
     busy.value = true
     error.value = ''
     try {
@@ -132,6 +135,7 @@ async function create(classKey: 'FIGHTER' | 'MYSTIC') {
 }
 function beginCreation() {
     if (!canCreate.value) return
+    AudioManager.playGuiButtonClick()
     // Request fullscreen synchronously from the submit gesture, before class selection.
     emit('enter')
     error.value = ''

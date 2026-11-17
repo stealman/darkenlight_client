@@ -6,11 +6,19 @@
 import {onBeforeUnmount, onMounted, ref} from 'vue'
 import type {Particle} from '@babylonjs/core'
 import {Camera, Color4, Engine, EngineStore, FreeCamera, ParticleSystem, Scene, Texture, Vector3} from '@babylonjs/core'
+import {AudioManager} from '@/babylon/audio/audioManager'
 
 const canvas = ref<HTMLCanvasElement | null>(null)
 let engine: Engine | null = null
 let resize: (() => void) | null = null
+const unlockMenuAudio = () => {
+    Engine.audioEngine?.unlock()
+    AudioManager.setMenuAudioActive(true)
+}
 onMounted(() => {
+    AudioManager.setMenuAudioActive(true)
+    window.addEventListener('pointerdown', unlockMenuAudio)
+    window.addEventListener('keydown', unlockMenuAudio)
     // Keep default-scene constructors in the gameplay renderer on its own scene.
     const previousScene = EngineStore.LastCreatedScene
     try {
@@ -84,6 +92,9 @@ onMounted(() => {
     } finally { EngineStore._LastCreatedScene = previousScene }
 })
 onBeforeUnmount(() => {
+    window.removeEventListener('pointerdown', unlockMenuAudio)
+    window.removeEventListener('keydown', unlockMenuAudio)
+    AudioManager.setMenuAudioActive(false)
     if (resize) window.removeEventListener('resize', resize)
     // Release the menu's GPU context now, without waiting for browser GC.
     engine?.stopRenderLoop()

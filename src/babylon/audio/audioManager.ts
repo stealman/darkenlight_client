@@ -44,6 +44,7 @@ export const AudioManager = {
     backpackHandle2Sound: null as Sound | null,
 
     actualAmbientSound: null as Sound | null,
+    menuAudioActive: false,
 
     miningSounds: [] as Sound[],
     lumberJackingSounds: [] as Sound[],
@@ -267,6 +268,19 @@ export const AudioManager = {
         }
     },
 
+    setMenuAudioActive(active: boolean) {
+        this.menuAudioActive = active
+        const fire = this.staticObjectSounds.get('CAMPFIRE')
+        if (active) {
+            this.setAmbientSoundForEnvironment('outdoor')
+            if (this.actualAmbientSound?.isReady() && !this.actualAmbientSound.isPlaying) this.actualAmbientSound.play()
+            if (fire?.isReady() && !fire.isPlaying) fire.play()
+        } else {
+            fire?.stop()
+            this.stopAmbientSound()
+        }
+    },
+
     loadSoundArray(targetArray: Sound[], fileNames: string[], soundName: string, scene: Scene, options: { volume: number, playbackRate: number }): void {
         // Scene teardown disposes the old sounds; never keep them in random selection.
         targetArray.length = 0
@@ -319,6 +333,7 @@ export const AudioManager = {
     loadAmbientSound (type: object, fileName: string, scene: Scene, options: { volume: number, playbackRate: number, loop: boolean }) {
         const sound = new Sound("ambientSound" + type, AudioManager.BASE_PATH_AMBIENT + fileName, scene, function() {
             sound['loaded'] = true;
+            if (AudioManager.menuAudioActive && type === AmbientSoundTypes.WINTER_FOREST) sound.play()
         }, options);
         this.ambientSounds.set(type, sound);
     },
@@ -327,6 +342,7 @@ export const AudioManager = {
         const sound = new Sound("staticObjectSound" + type, AudioManager.BASE_PATH_SFX + fileName, scene, function() {
             sound['loaded'] = true;
             sound['defaultVolume'] = options.volume;
+            if (AudioManager.menuAudioActive && type === 'CAMPFIRE') sound.play()
         }, options);
         this.staticObjectSounds.set(type, sound);
     },

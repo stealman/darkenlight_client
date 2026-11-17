@@ -724,10 +724,11 @@ const onKeyDown = (event: KeyboardEvent) => {
             return
         }
     }
-    Controller.processKeydown(event)
+    if (gameSessionActive.value) Controller.processKeydown(event)
 }
 
 const onKeyUp = (event: KeyboardEvent) => {
+    if (!gameSessionActive.value) return
     if (signpostEntries.value.length) return
     Controller.processKeyup(event)
 }

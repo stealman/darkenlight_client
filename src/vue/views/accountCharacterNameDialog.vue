@@ -4,7 +4,8 @@
         :window-class="['login-dialog-window', 'account-character-name-dialog-window', { 'login-dialog-window--mobile': useMobileLoginLayout }]"
         content-class="login-dialog-content account-character-name-dialog-content"
         :close-on-backdrop="false"
-        :close-on-escape="false"
+        :close-on-escape="true"
+        @close="claimClassName ? cancelClaim() : goBack()"
     >
         <template #header>
             <span class="account-character-name-dialog-title ui-text-gradient">{{ t('login.accountCharacterNameTitle') }}</span>

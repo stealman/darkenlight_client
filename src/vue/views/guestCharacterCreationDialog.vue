@@ -4,7 +4,8 @@
         :window-class="['login-dialog-window', 'guest-character-creation-dialog-window', { 'login-dialog-window--mobile': useMobileLoginLayout }]"
         content-class="login-dialog-content guest-character-creation-dialog-content"
         :close-on-backdrop="false"
-        :close-on-escape="false"
+        :close-on-escape="true"
+        @close="goBack"
     >
         <template #header>
             <span class="guest-character-creation-dialog-title ui-text-gradient">{{ t('login.guestCreationTitle') }}</span>
@@ -64,7 +65,9 @@ const focusedClass = ref<StarterClass | null>(null)
 const activePreview = computed(() => hoveredClass.value ?? focusedClass.value ?? selectedClass.value)
 const creating = ref(false)
 function activatePreview(classKey: 'FIGHTER' | 'MYSTIC') {
-    if (!previewsLoading.value) selectedClass.value = classKey
+    if (previewsLoading.value) return
+    AudioManager.playGuiButtonClick()
+    selectedClass.value = classKey
 }
 const previewAbort = new AbortController()
 onMounted(async () => {
@@ -82,6 +85,7 @@ const selectClass = () => {
 }
 
 const goBack = () => {
+    if (creating.value) return
     AudioManager.playGuiButtonClick()
     emit('back')
 }
