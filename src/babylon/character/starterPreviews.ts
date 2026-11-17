@@ -1,4 +1,4 @@
-import {AbstractMesh, Color4, DirectionalLight, FreeCamera, HemisphericLight, Matrix, Quaternion, TransformNode, Vector3} from '@babylonjs/core'
+import {AbstractMesh, Color3, Color4, FreeCamera, HemisphericLight, Matrix, Quaternion, ShadowGenerator, SpotLight, TransformNode, Vector3} from '@babylonjs/core'
 import '@babylonjs/core/Engines/Extensions/engine.views'
 import Character from './character'
 import {HUMAN_ANIMATION_SPEED} from './humanModelRig'
@@ -9,6 +9,7 @@ import {Materials, TerrainEnum1} from '@/babylon/materials'
 import {FoliageManager} from '@/babylon/world/foliageManager'
 import {updateWorldInstanceBuffers} from '@/babylon/world/worldInstanceBuffers'
 import {getStarterEquipment} from '@game/character/starterEquipment'
+import {getStarterHairAppearance} from '@game/character/characterAppearance'
 
 /** Live Babylon views share the already loaded runtime models and equipment. */
 export async function startStarterPreviews(canvases: HTMLCanvasElement[], signal: AbortSignal, activeClass: () => string | null): Promise<void> {
@@ -21,9 +22,12 @@ export async function startStarterPreviews(canvases: HTMLCanvasElement[], signal
     const originalClear = scene.clearColor
     const originalAutoClear = scene.autoClear
     const originalDepthClear = scene.autoClearDepthAndStencil
+    const originalEnvironmentIntensity = scene.environmentIntensity
+    scene.environmentIntensity = 0.08
     const originalSize = {width: engine.getRenderWidth(), height: engine.getRenderHeight()}
     const previewMask = 0x10000000
     const layers = new Map<AbstractMesh, number>()
+    const shadowReceivers = new Map<AbstractMesh, boolean>()
     const characters: Character[] = []
     const cameras: FreeCamera[] = []
     const platformRoot = new TransformNode('starterPreviewPlatforms', scene)
@@ -57,21 +61,47 @@ export async function startStarterPreviews(canvases: HTMLCanvasElement[], signal
     const originalLights = scene.lights.map(light => ({light, enabled: light.isEnabled()}))
     originalLights.forEach(({light}) => light.setEnabled(false))
     const fill = new HemisphericLight('starterPreviewFill', Vector3.Up(), scene)
-    fill.intensity = 0.35
-    const light = new DirectionalLight('starterPreviewKey', new Vector3(-0.4, -1, 0.6), scene)
-    light.intensity = 0.95
+    fill.intensity = 0.12
+    const lights = classKeys.map((_, index) => {
+        const light = new SpotLight('starterPreviewKey' + index,
+            new Vector3(index * 10 + 1.2, 3.5, -1.8), new Vector3(-1.2, -3, 1.8).normalize(),
+            Math.PI * 0.8, 1, scene)
+        light.diffuse = new Color3(1, 0.82, 0.58)
+        light.specular = light.diffuse.clone()
+        light.intensity = 3.2
+        light.range = 6
+        light.shadowMinZ = 0.05
+        light.shadowMaxZ = 6
+        return light
+    })
+    const shadows = lights.map(light => {
+        const shadow = new ShadowGenerator(1024, light, false)
+        shadow.bias = 0.005
+        shadow.usePoissonSampling = true
+        shadow.forceBackFacesOnly = true
+        shadow.setDarkness(0)
+        return shadow
+    })
     const include = (mesh: AbstractMesh) => {
         if (!layers.has(mesh)) layers.set(mesh, mesh.layerMask)
+        if (!shadowReceivers.has(mesh)) shadowReceivers.set(mesh, mesh.receiveShadows)
         mesh.layerMask = previewMask
+        mesh.receiveShadows = true
+        shadows.forEach(shadow => shadow.addShadowCaster(mesh, false))
     }
+    platforms.receiveShadows = true
+    foliage.receiveShadows = true
+    shadows.forEach(shadow => {
+        shadow.addShadowCaster(platforms, false)
+        shadow.addShadowCaster(foliage, false)
+    })
     let previousActive: string | null = null
     const render = () => {
         if (signal.aborted) return
         const active = activeClass()
         const enteredFighter = active === 'FIGHTER' && previousActive !== active
         previousActive = active
-        const viewIndex = cameras.indexOf(scene.activeCamera as FreeCamera)
-        light.intensity = active === classKeys[viewIndex] ? 1.65 : 0.95
+        lights.forEach((light, index) => { light.intensity = active === classKeys[index] ? 4.2 : 3.2 })
         for (const [index, character] of characters.entries()) {
             const model = character.model!
             const highlighted = active === classKeys[index]
@@ -112,15 +142,18 @@ export async function startStarterPreviews(canvases: HTMLCanvasElement[], signal
         for (const character of characters) character.model?.removeFromScene()
         EquipManager.onFrame()
         layers.forEach((mask, mesh) => { if (!mesh.isDisposed()) mesh.layerMask = mask })
+        shadowReceivers.forEach((receive, mesh) => { if (!mesh.isDisposed()) mesh.receiveShadows = receive })
         cameras.forEach(camera => camera.dispose())
         platformRoot.dispose()
-        light.dispose()
+        shadows.forEach(shadow => shadow.dispose())
+        lights.forEach(light => light.dispose())
         fill.dispose()
         originalLights.forEach(({light, enabled}) => light.setEnabled(enabled))
         scene.activeCamera = originalCamera
         scene.clearColor = originalClear
         scene.autoClear = originalAutoClear
         scene.autoClearDepthAndStencil = originalDepthClear
+        scene.environmentIntensity = originalEnvironmentIntensity
         engine.setSize(originalSize.width, originalSize.height)
     }
     signal.addEventListener('abort', cleanup, {once: true})
@@ -133,7 +166,8 @@ export async function startStarterPreviews(canvases: HTMLCanvasElement[], signal
                     img: cb.url, atts: new Map(), slot: cbType === 'W' ? 'R_HAND' : cb.slot}
             }
             const position = new Vector3(index * 10, 0, 0)
-            const character = new Character({id: -9001-index, name: '', x: position.x, z: 0, bsz: 0.8, cls: classKey, equipSet}, false, position)
+            const character = new Character({id: -9001-index, name: '', x: position.x, z: 0, bsz: 0.8, cls: classKey, equipSet,
+                ...getStarterHairAppearance(classKey)}, false, position)
             characters.push(character)
             await character.createModel(true)
             if (signal.aborted) { character.model?.removeFromScene(); return }
