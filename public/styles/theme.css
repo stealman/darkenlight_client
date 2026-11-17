@@ -1,4 +1,5 @@
 :root {
+    --ui-menu-backdrop: 5, 7, 9;
     --ui-cursor-default: url('/images/cursor.png') 3 3, auto;
     --ui-cursor-pointer: url('/images/cursor-hover.png') 3 3, pointer;
     /* Basic colors */
@@ -115,6 +116,23 @@
 }
 
 /* dialog window */
+.dialog-backdrop.login-screen-backdrop {
+    background: transparent;
+    isolation: isolate;
+    overflow: hidden;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+
+.dialog-window.local-characters-dialog-window,
+.dialog-window.guest-character-creation-dialog-window {
+    opacity: 0.9;
+}
+
+.dialog-backdrop.login-screen-backdrop > .dialog-window {
+    box-shadow: 0 0 100px 25px rgb(var(--ui-menu-backdrop)), 0 0 220px 55px rgb(var(--ui-menu-backdrop));
+}
+
 .dialog-window {
     background-image: url('/images/gui/bck_stone1.png');
     background-repeat: repeat;

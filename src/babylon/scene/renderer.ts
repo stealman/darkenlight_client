@@ -1,3 +1,5 @@
+import '@babylonjs/core/Shaders/pbr.vertex.js'
+import '@babylonjs/core/Shaders/pbr.fragment.js'
 import { WorldAreaManager } from '@/data/worldAreaManager'
 import {
     Engine,

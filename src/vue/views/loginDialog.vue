@@ -249,28 +249,6 @@ const onPlayerRegistration = (event) => {
 </script>
 
 <style>
-.dialog-backdrop.login-screen-backdrop {
-    background: #050709;
-    isolation: isolate;
-    overflow: hidden;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-}
-
-.dialog-backdrop.login-screen-backdrop::before {
-    content: '';
-    position: absolute;
-    inset: -8px;
-    z-index: -1;
-    background: url('/images/screen/splash1.jpg') center center / cover no-repeat;
-    filter: blur(1px);
-    pointer-events: none;
-}
-
-.dialog-backdrop.login-screen-backdrop > .dialog-window {
-    box-shadow: 0 0 100px 25px #050709, 0 0 220px 55px #050709;
-}
-
 .dialog-window.login-dialog-window {
     width: 600px;
     max-width: calc(100vw - 32px);

@@ -132,7 +132,7 @@ class Character implements Attackable, EffectTarget {
     activeTimedAction: CharacterTimedAction | null = null
     publiclyVisibleAffects: Map<number, PubliclyVisibleAffect> = new Map<number, PubliclyVisibleAffect>()
 
-    constructor(data: CharacterAppearanceData & Record<string, any>, myChar: boolean = false) {
+    constructor(data: CharacterAppearanceData & Record<string, any>, myChar: boolean = false, previewPosition?: Vector3) {
         this.id = data.id
         this.dead = data.dead === true || (myChar && data.hp <= 0)
         if (data.hpp != null) {
@@ -153,7 +153,7 @@ class Character implements Attackable, EffectTarget {
             this.runSpeed = data.spd2
         }
 
-        this.pos = new Vector3(data.x, 0, data.z)
+        this.pos = previewPosition?.clone() ?? new Vector3(data.x, 0, data.z)
         this.name = data.name
         this.headTypeId = resolveCharacterHeadTypeId(data.headTypeId)
         Object.assign(this, resolveCharacterHairAppearance(data))
@@ -162,7 +162,7 @@ class Character implements Attackable, EffectTarget {
         this.gameClass = GameClasses.getByKey(gameClassKey) || GameClasses.FIGHTER
         this.className = this.gameClass.key
         this.boxSize = data.bsz
-        this.pos.y = Utils.calculateWalkYPos(this.pos.x, this.pos.z, this.getBoxSize())
+        this.pos.y = previewPosition?.y ?? Utils.calculateWalkYPos(this.pos.x, this.pos.z, this.getBoxSize())
         this.logicYpos = this.pos.y
 
         if (myChar && data.skillSet) {
@@ -1006,7 +1006,7 @@ class Character implements Attackable, EffectTarget {
     }
 
     isMyChar(): boolean {
-        return this.id === MyPlayer.myChar.id
+        return this.id === MyPlayer.myChar?.id
     }
 
     getEffectAnchorNode(): TransformNode | null {

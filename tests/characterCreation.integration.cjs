@@ -6,7 +6,7 @@ const {mkdtemp, rm} = require('node:fs/promises')
 async function main() {
     const root = resolve(__dirname, '..')
     const coldStart = process.argv.includes('--cold-start')
-    const cacheDir = coldStart ? await mkdtemp(join(root, 'node_modules/.vite-character-test-')) : undefined
+    const cacheDir = await mkdtemp(join(root, 'node_modules/.vite-character-test-'))
     process.env.VITE_GM_MODE = 'false'
     const {createServer} = await import('vite')
     const vite = await createServer({root, cacheDir, configFile: join(root, 'vite.config.js'), server: {host: '127.0.0.1', port: 0}, logLevel: coldStart ? 'info' : 'warn'})
@@ -38,7 +38,7 @@ async function main() {
             const send = WorkerTransport.prototype.send
             window.__mapRequests = []
             WorkerTransport.prototype.send = function(frame) {
-                if (JSON.parse(frame).t === 2) window.__mapRequests.push(frame)
+                if (frame.t === 2) window.__mapRequests.push(frame)
                 return send.call(this, frame)
             }
         })
@@ -68,7 +68,13 @@ async function main() {
         }
         await page.locator('#local-character-name').fill('CreationHero')
         await page.locator('form button').click()
-        await page.getByRole('button', {name: 'FIGHTER', exact: true}).click()
+        await page.waitForFunction(() => {
+            const button = document.querySelector('.guest-character-class-option button')
+            return button && !button.disabled
+        })
+        assert.equal(await page.locator('.guest-character-preview canvas').count(), 2)
+        assert.deepEqual(errors, [], 'Starter previews raised an error')
+        await page.locator('.guest-character-class-option button').first().click()
         await Promise.race([
             page.locator('#renderCanvas.game-session-canvas--visible').waitFor(),
             page.waitForEvent('framenavigated', {predicate: frame => frame === page.mainFrame()}).then(() => {
@@ -118,7 +124,7 @@ async function main() {
         }
         await page.locator('#local-character-name').fill('SecondHero')
         await page.locator('form button').click()
-        await page.getByRole('button', {name: 'MYSTIC', exact: true}).click()
+        await page.locator('.guest-character-class-option button').nth(1).click()
         await page.locator('#renderCanvas.game-session-canvas--visible').waitFor()
         await renderedFrames()
         await logout()
@@ -135,7 +141,8 @@ async function main() {
     } finally {
         await browser?.close()
         await vite.close()
-        if (cacheDir) await rm(cacheDir, {recursive: true, force: true})
+        if (!cacheDir.startsWith(join(root, 'node_modules/.vite-character-test-'))) throw new Error('Unsafe test cache cleanup')
+        await rm(cacheDir, {recursive: true, force: true})
     }
 }
 main().catch(error => { console.error(error); process.exitCode = 1 })

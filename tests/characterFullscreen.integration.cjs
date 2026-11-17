@@ -1,12 +1,14 @@
 const assert = require('node:assert/strict')
 const {join, resolve} = require('node:path')
 const {chromium} = require('playwright-core')
+const {mkdtemp, rm} = require('node:fs/promises')
 
 async function main() {
     const root = resolve(__dirname, '..')
     process.env.VITE_GM_MODE = 'false'
+    const cacheDir = await mkdtemp(join(root, 'node_modules/.vite-fullscreen-test-'))
     const {createServer} = await import('vite')
-    const vite = await createServer({root, configFile: join(root, 'vite.config.js'), server: {host: '127.0.0.1', port: 0}, logLevel: 'warn'})
+    const vite = await createServer({root, cacheDir, configFile: join(root, 'vite.config.js'), server: {host: '127.0.0.1', port: 0}, logLevel: 'warn'})
     let browser
     try {
         await vite.listen()
@@ -61,6 +63,8 @@ async function main() {
     } finally {
         await browser?.close()
         await vite.close()
+        if (!cacheDir.startsWith(join(root, 'node_modules/.vite-fullscreen-test-'))) throw new Error('Unsafe test cache cleanup')
+        await rm(cacheDir, {recursive: true, force: true})
     }
 }
 main().catch(error => { console.error(error); process.exitCode = 1 })

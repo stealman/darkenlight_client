@@ -1,6 +1,6 @@
 <template>
     <GuestCharacterCreationDialog v-if="chooseClass" :name="name.trim()" @create="create" @back="chooseClass = false" />
-    <GameDialog v-else backdrop-class="login-screen-backdrop" window-class="adaptive" :close-on-backdrop="false" :close-on-escape="false">
+    <GameDialog v-else backdrop-class="login-screen-backdrop" window-class="adaptive local-characters-dialog-window" :close-on-backdrop="false" :close-on-escape="false">
         <template #header><span class="ui-text-gradient">Darkenlight</span></template>
         <div class="local-characters">
             <template v-if="pendingDelete">
@@ -37,13 +37,14 @@
                 <form @submit.prevent="beginCreation">
                     <label class="login-field" for="local-character-name">
                         <span class="local-character-new-label">{{ t('localCharacters.new') }}</span>
-                        <input id="local-character-name" v-model="name" type="text" :disabled="busy" maxlength="40" autocomplete="off" />
+                        <input id="local-character-name" v-model="name" type="text" :disabled="busy" :aria-invalid="nameTaken" :aria-describedby="nameTaken ? 'local-character-name-error' : undefined" maxlength="40" autocomplete="off" />
                     </label>
+                    <p v-if="nameTaken" id="local-character-name-error" class="local-character-name-error" role="alert">{{ t('login.accountCharacterNameTaken') }}</p>
                     <label v-if="gmAllowed" class="local-character-gm" for="local-character-gm">
                         <Checkbox input-id="local-character-gm" v-model="gm" binary :disabled="busy" /> {{ t('localCharacters.gm') }}
                     </label>
                     <p v-if="gm">{{ t('localCharacters.gmHint') }}</p>
-                    <div class="dialog-actions"><button class="dialog-button" :disabled="busy || name.trim().length < 3">
+                    <div class="dialog-actions"><button class="dialog-button" :disabled="!canCreate">
                         <span class="ui-text-gradient--button-state">{{ t('localCharacters.create') }}</span>
                     </button></div>
                 </form>
@@ -79,6 +80,9 @@ function characterTime(profile: CharacterProfile) {
     return t('dayNight.dateTime', {day: Math.floor(cycles) + 1, time})
 }
 const name = ref('')
+const profilesLoaded = ref(false)
+const nameTaken = computed(() => profiles.value.some(profile => profile.name.trim().toLowerCase() === name.value.trim().toLowerCase()))
+const canCreate = computed(() => profilesLoaded.value && !busy.value && name.value.trim().length >= 3 && name.value.trim().length <= 40 && !nameTaken.value)
 const gm = ref(false)
 const chooseClass = ref(false)
 const busy = ref(false)
@@ -87,6 +91,7 @@ const pendingDelete = ref<CharacterProfile | null>(null)
 onMounted(async () => {
     try {
         profiles.value = await listProfiles()
+        profilesLoaded.value = true
         await Promise.all(visibleProfiles.value.map(async profile => {
             try {
                 const contents = await loadSave(profile.id)
@@ -119,8 +124,6 @@ async function removeCharacter() {
 }
 async function create(classKey: 'FIGHTER' | 'MYSTIC') {
     busy.value = true
-    // Fullscreen must be requested by the click, before IndexedDB yields.
-    emit('enter')
     try {
         const profile = await createProfile(name.value, gm.value, classKey)
         chooseClass.value = false
@@ -128,6 +131,9 @@ async function create(classKey: 'FIGHTER' | 'MYSTIC') {
     } catch (value) { error.value = String(value); chooseClass.value = false; busy.value = false }
 }
 function beginCreation() {
+    if (!canCreate.value) return
+    // Request fullscreen synchronously from the submit gesture, before class selection.
+    emit('enter')
     error.value = ''
     if (gm.value) void create('FIGHTER')
     else chooseClass.value = true
@@ -143,6 +149,7 @@ function beginCreation() {
 .login-field input { box-sizing: border-box; flex: 1; min-width: 0; width: 100%; min-height: 40px; }
 .local-characters .dialog-actions { display: flex; justify-content: center; gap: 8px; }
 .local-characters form p { margin: 0; }
+.local-character-name-error { color: rgb(var(--ui-accent-red)); }
 .local-character-row { display: flex; gap: 8px; width: 100%; margin-bottom: 8px; }
 .local-character-continue { display: flex; flex: 1; min-width: 0; justify-content: space-between; align-items: center; gap: 16px; overflow-wrap: anywhere; }
 .local-character-details { display: flex; flex-direction: column; gap: 4px; text-align: left; min-width: 0; }

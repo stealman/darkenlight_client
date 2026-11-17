@@ -1,6 +1,6 @@
 <template>
     <GameDialog
-        backdrop-class="inventory-dialog-backdrop"
+        backdrop-class="login-screen-backdrop"
         :window-class="['login-dialog-window', 'guest-character-creation-dialog-window', { 'login-dialog-window--mobile': useMobileLoginLayout }]"
         content-class="login-dialog-content guest-character-creation-dialog-content"
         :close-on-backdrop="false"
@@ -10,22 +10,26 @@
             <span class="guest-character-creation-dialog-title ui-text-gradient">{{ t('login.guestCreationTitle') }}</span>
         </template>
 
-        <div class="guest-character-creation-copy">
-            <div>{{ t('login.guestCreationNameAvailable') }}</div>
-            <div class="guest-character-creation-name ui-text-gradient ui-text-gradient--accent">{{ name }}</div>
-            <div>{{ t('login.guestCreationDescriptionEnd') }}</div>
+        <div class="guest-character-creation-identity">
+            <span class="guest-character-creation-name ui-text-gradient ui-text-gradient--no-shadow">{{ name }}</span>
+            <span v-if="activePreview" :class="['guest-character-creation-class', 'ui-text-gradient', 'ui-text-gradient--accent', 'ui-text-gradient--no-shadow', `guest-character-creation-class--${activePreview.toLowerCase()}`]">{{ t(`classes.${activePreview.toLowerCase()}`) }}</span>
         </div>
-        <div class="guest-character-creation-choice">{{ t('login.guestCreationChooseClass') }}</div>
         <div class="dialog-actions guest-character-creation-actions">
-            <button class="dialog-button" @click="selectClass('FIGHTER')">
-                <span class="ui-text-gradient--button-state">FIGHTER</span>
-            </button>
-            <button class="dialog-button" @click="selectClass('MYSTIC')">
-                <span class="ui-text-gradient--button-state">MYSTIC</span>
-            </button>
-        </div>
-        <div class="dialog-actions guest-character-creation-back-action">
-            <button class="dialog-button" @click="goBack">
+            <div v-for="classKey in ['FIGHTER', 'MYSTIC'] as const" :key="classKey" class="guest-character-class-option"
+                :class="{ 'guest-character-class-option--active': activePreview === classKey }"
+                @pointerenter="event => { if (event.pointerType !== 'touch') activePreview = classKey }"
+                @pointerleave="event => { if (event.pointerType !== 'touch') activePreview = null }" @focusin="activePreview = classKey" @focusout="activePreview = null">
+                <div class="guest-character-preview" :aria-busy="previewsLoading">
+                    <canvas :ref="element => { if (element) previewCanvases[classKey] = element as HTMLCanvasElement }" :aria-label="t(`classes.${classKey.toLowerCase()}`)"
+                        role="button" tabindex="0" :aria-pressed="activePreview === classKey" :aria-disabled="previewsLoading"
+                        @click="activatePreview(classKey)" @keydown.enter.prevent="activatePreview(classKey)" @keydown.space.prevent="activatePreview(classKey)" />
+                    <span v-if="previewsLoading">{{ t('common.loading') }}</span>
+                </div>
+                <button class="dialog-button" :disabled="previewsLoading" @click="selectClass(classKey)">
+                    <span :class="['ui-text-gradient', 'ui-text-gradient--accent', 'ui-text-gradient--no-shadow', `guest-character-creation-class--${classKey.toLowerCase()}`]">{{ t(`classes.${classKey.toLowerCase()}`) }}</span>
+                </button>
+            </div>
+            <button class="dialog-button guest-character-creation-back-action" @click="goBack">
                 <span class="ui-text-gradient--button-state">{{ t('login.guestCreationBack') }}</span>
             </button>
         </div>
@@ -33,6 +37,8 @@
 </template>
 
 <script setup lang="ts">
+import {onMounted, onUnmounted, ref} from 'vue'
+import {startStarterPreviews} from '@/babylon/character/starterPreviews'
 import GameDialog from '@/vue/views/GameDialog.vue'
 import { useI18n } from '@/i18n'
 import { Settings } from '@/settings/settings'
@@ -45,6 +51,19 @@ const emit = defineEmits<{
     back: []
 }>()
 const { t } = useI18n()
+const previewCanvases: Record<string, HTMLCanvasElement> = {}
+const previewsLoading = ref(true)
+const activePreview = ref<string | null>(null)
+function activatePreview(classKey: string) {
+    if (!previewsLoading.value) activePreview.value = classKey
+}
+const previewAbort = new AbortController()
+onMounted(async () => {
+    try { await startStarterPreviews([previewCanvases.FIGHTER, previewCanvases.MYSTIC], previewAbort.signal, () => activePreview.value) }
+    catch (error) { console.error('Could not render starter previews', error) }
+    finally { previewsLoading.value = false }
+})
+onUnmounted(() => previewAbort.abort())
 
 const selectClass = (classKey: 'FIGHTER' | 'MYSTIC') => {
     AudioManager.playGuiButtonClick()
@@ -59,8 +78,9 @@ const goBack = () => {
 
 <style>
 .dialog-window.guest-character-creation-dialog-window {
-    width: 600px;
+    width: 720px;
     max-width: calc(100vw - 32px);
+    max-height: calc(100dvh - 24px);
 }
 
 .login-dialog-window.guest-character-creation-dialog-window:not(.login-dialog-window--mobile) > .dialog-surface {
@@ -82,36 +102,53 @@ const goBack = () => {
     text-align: center;
 }
 
-.guest-character-creation-copy {
-    color: rgb(var(--ui-base));
-    line-height: 1.4;
-}
-
+.guest-character-creation-identity { display: flex; justify-content: center; align-items: center; gap: 0.4em; margin: 16px 0 4px; font-size: 1.4rem; line-height: 1.2; min-height: 1.2em; }
+.guest-character-creation-class { flex-shrink: 0; font-size: inherit; line-height: inherit; font-weight: 700; }
+.guest-character-creation-class--fighter { --ui-text-gradient-accent: var(--ui-accent-red); }
+.guest-character-creation-class--mystic { --ui-text-gradient-accent: var(--ui-accent-purple); }
 .guest-character-creation-name {
-    --ui-text-gradient-accent: var(--ui-attribute-agility);
-    margin: 4px 0;
-    font-size: 1.4rem;
-    font-weight: 700;
-    line-height: 1.2;
+    margin: 0;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: inherit;
+    font-weight: 400;
+    line-height: inherit;
     text-align: center;
-}
-
-.guest-character-creation-choice {
-    margin-top: 14px;
-    color: rgb(var(--ui-dark));
-    font-size: 0.9rem;
-    font-style: italic;
+    text-transform: uppercase;
 }
 
 .guest-character-creation-actions {
-    margin-top: 12px;
+    position: relative;
+    margin-top: -16px;
+    display: flex;
+    justify-content: center;
+    gap: clamp(64px, 10vw, 80px);
 }
+.guest-character-class-option { flex: 1; min-width: 0; max-width: 280px; }
+.guest-character-preview { position: relative; transform: translateY(clamp(18px, 3.5vh, 28px)); height: clamp(120px, 42vh, 340px); display: flex; justify-content: center; align-items: center; }
+.guest-character-preview canvas { width: 100%; height: 100%; display: block; cursor: var(--ui-cursor-pointer); filter: grayscale(1); transition: filter 200ms ease; }
+.guest-character-class-option--active .guest-character-preview canvas { filter: grayscale(0); }
+.guest-character-preview > span { position: absolute; }
 
-.guest-character-creation-actions .dialog-button {
+
+:root .guest-character-creation-actions .dialog-button {
+    position: relative;
+    z-index: 1;
     min-width: 120px;
+    box-shadow: 0 0 16px 5px rgba(var(--ui-darkest), 0.9), 0 6px 12px rgba(var(--ui-darkest), 0.8);
 }
 
-.guest-character-creation-back-action {
-    margin-top: 26px;
+:root .guest-character-creation-actions .guest-character-creation-back-action {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    min-width: 96px;
+}
+@media (max-width: 480px) {
+    :root .guest-character-creation-actions .dialog-button { min-width: 0; padding: 10px 8px; font-size: 0.8rem; }
+    :root .guest-character-creation-actions .guest-character-creation-back-action { min-width: 76px; }
 }
 </style>

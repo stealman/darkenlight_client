@@ -49,6 +49,8 @@
         </div>
     </div>
 
+    <MenuAtmosphere v-if="gameLoading || displayLoginDialog || displayGuestCharacterCreationDialog || displayAccountCharacterNameDialog" />
+
     <div class="dialog-backdrop login-screen-backdrop loading-dialog-backdrop" v-if="gameLoading">
         <div class="dialog-window adaptive">
             <div class="dialog-surface">
@@ -192,6 +194,7 @@ import { GMManager } from '@/gm/GM'
 import TouchControllers from '@/vue/views/touchControllers.vue'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { Connector } from '@/network/connector'
+import MenuAtmosphere from '@/vue/views/MenuAtmosphere.vue'
 import LocalCharactersDialog from '@/vue/views/LocalCharactersDialog.vue'
 import type {CharacterProfile} from '@/local/saveStore'
 import {initializeLocalGameLifecycle} from '@/local/lifecycle'
@@ -365,7 +368,7 @@ const startLocalCharacter = async (profile: CharacterProfile) => {
 }
 
 const requestGameEntryFullscreen = () => {
-    if (Settings.deviceType !== 'DESKTOP') requestFullscreen()
+    if (Settings.touchEnabled || Settings.deviceType !== 'DESKTOP') requestFullscreen()
 }
 
 const loginRequestStarted = () => {

@@ -1,6 +1,6 @@
 <template>
     <GameDialog
-        backdrop-class="inventory-dialog-backdrop"
+        backdrop-class="login-screen-backdrop"
         :window-class="['login-dialog-window', 'account-character-name-dialog-window', { 'login-dialog-window--mobile': useMobileLoginLayout }]"
         content-class="login-dialog-content account-character-name-dialog-content"
         :close-on-backdrop="false"

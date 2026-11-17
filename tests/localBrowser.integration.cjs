@@ -40,7 +40,7 @@ async function main() {
         process.env.VITE_GM_MODE = 'true'
         const {createServer} = await import('vite')
         const testHost = process.env.DARKENLIGHT_TEST_HOST || '127.0.0.1'
-        vite = await createServer({root, configFile: join(root, 'vite.config.js'), server: {host: testHost, port: 0}, logLevel: 'warn'})
+        vite = await createServer({root, cacheDir: join(fixture, '.vite'), configFile: join(root, 'vite.config.js'), server: {host: testHost, port: 0}, logLevel: 'warn'})
         await vite.listen()
         const url = `http://${testHost}:${vite.httpServer.address().port}/`
         browser = await chromium.launch({channel: 'chrome', headless: true, args: ['--enable-unsafe-swiftshader']})

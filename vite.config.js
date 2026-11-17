@@ -121,6 +121,8 @@ export default defineConfig(async ({ mode, command }) => {
         // The worker starts after character selection, outside the HTML import
         // graph. Scan it up front so its first use cannot trigger a page reload.
         entries: ['index.html', 'src/local/game.worker.ts'],
+        // Keep lazy PBR shader imports as stable optimizer entry points.
+        include: ['@babylonjs/core/Shaders/pbr.vertex.js', '@babylonjs/core/Shaders/pbr.fragment.js'],
     },
     resolve: {
         dedupe: ['bson'],
