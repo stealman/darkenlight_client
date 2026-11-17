@@ -15,6 +15,7 @@ export async function startStarterPreviews(canvases: HTMLCanvasElement[], signal
     if (signal.aborted) return
     const classKeys = ['FIGHTER', 'MYSTIC'] as const
     const scene = Renderer.scene
+    Renderer.menuPreviewSceneUsed = true
     const engine = Renderer.engine!
     const originalCamera = scene.activeCamera
     const originalClear = scene.clearColor

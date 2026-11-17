@@ -3,7 +3,7 @@
 </template>
 
 <script setup lang="ts">
-import {onMounted, onUnmounted, ref} from 'vue'
+import {onBeforeUnmount, onMounted, ref} from 'vue'
 import type {Particle} from '@babylonjs/core'
 import {Camera, Color4, Engine, EngineStore, FreeCamera, ParticleSystem, Scene, Texture, Vector3} from '@babylonjs/core'
 
@@ -14,7 +14,7 @@ onMounted(() => {
     // Keep default-scene constructors in the gameplay renderer on its own scene.
     const previousScene = EngineStore.LastCreatedScene
     try {
-        engine = new Engine(canvas.value!, false, {alpha: true, stencil: false}, false)
+        engine = new Engine(canvas.value!, false, {alpha: true, stencil: false, loseContextOnDispose: true}, false)
         engine.setHardwareScalingLevel(1.5)
         const scene = new Scene(engine)
         scene.clearColor = new Color4(0, 0, 0, 0)
@@ -83,9 +83,13 @@ onMounted(() => {
         console.warn('Could not initialize menu smoke', error)
     } finally { EngineStore._LastCreatedScene = previousScene }
 })
-onUnmounted(() => {
+onBeforeUnmount(() => {
     if (resize) window.removeEventListener('resize', resize)
+    // Release the menu's GPU context now, without waiting for browser GC.
+    engine?.stopRenderLoop()
     engine?.dispose()
+    engine = null
+    resize = null
 })
 </script>
 

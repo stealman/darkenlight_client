@@ -14,8 +14,21 @@ async function main() {
     try {
         await vite.listen()
         browser = await chromium.launch({channel: 'chrome', headless: true, args: ['--enable-unsafe-swiftshader']})
-        const page = await browser.newPage({viewport: {width: 1280, height: 800}})
+        const page = await browser.newPage(process.argv.includes('--touch')
+            ? {viewport: {width: 844, height: 390}, isMobile: true, hasTouch: true,
+                userAgent: 'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36'}
+            : {viewport: {width: 1280, height: 800}})
         page.setDefaultTimeout(90000)
+        await page.addInitScript(() => {
+            window.__webglContexts = []
+            const getContext = HTMLCanvasElement.prototype.getContext
+            HTMLCanvasElement.prototype.getContext = function(type, ...args) {
+                const context = getContext.call(this, type, ...args)
+                if (context && ['webgl', 'webgl2', 'experimental-webgl'].includes(type)
+                    && !window.__webglContexts.includes(context)) window.__webglContexts.push(context)
+                return context
+            }
+        })
         const errors = []
         const mapRequests = []
         page.on('request', request => { if (/\/world\/assets\/maps\/.*\.png/.test(request.url())) mapRequests.push(request.url()) })
@@ -45,6 +58,18 @@ async function main() {
         const renderedFrames = async () => {
             const start = await page.evaluate(async () => (await import('/src/babylon/scene/renderer.ts')).Renderer.frame)
             await page.waitForFunction(async start => (await import('/src/babylon/scene/renderer.ts')).Renderer.frame >= start + 30, start)
+            const resources = await page.evaluate(async () => {
+                const {Renderer} = await import('/src/babylon/scene/renderer.ts')
+                const engines = Renderer.engine.constructor.Instances
+                return {engines: engines.length,
+                    loops: engines.reduce((sum, engine) => sum + engine.activeRenderLoops.length, 0),
+                    liveContexts: window.__webglContexts.filter(context => !context.isContextLost()).length,
+                    menuCanvases: document.querySelectorAll('.menu-atmosphere canvas, .guest-character-preview canvas').length,
+                    menuParticles: engines.some(engine => engine.scenes.some(scene => scene.particleSystems.some(system => system.name === 'menuSmoke')))}
+            })
+            console.log('Gameplay rendering resources:', resources)
+            assert.deepEqual(resources, {engines: 1, loops: 1, liveContexts: 1, menuCanvases: 0, menuParticles: false},
+                'Menu GPU contexts or render loops survived game entry')
             assert.deepEqual(errors, [], 'Character rendering raised an error')
             assert.deepEqual(reloads, [], 'Creating or switching characters triggered a development server reload')
             assert.deepEqual(mapRequests, [], 'Ordinary play decoded authoring PNG maps')
@@ -74,6 +99,11 @@ async function main() {
         })
         assert.equal(await page.locator('.guest-character-preview canvas').count(), 2)
         assert.deepEqual(errors, [], 'Starter previews raised an error')
+        await page.evaluate(async () => {
+            const {Renderer} = await import('/src/babylon/scene/renderer.ts')
+            window.__previewScene = Renderer.scene
+            window.__previewEngine = Renderer.engine
+        })
         await page.locator('.guest-character-class-option button').first().click()
         await Promise.race([
             page.locator('#renderCanvas.game-session-canvas--visible').waitFor(),
@@ -82,6 +112,12 @@ async function main() {
             }),
         ])
         await renderedFrames()
+        assert.equal(await page.evaluate(async () => {
+            const {Renderer} = await import('/src/babylon/scene/renderer.ts')
+            return window.__previewScene.isDisposed && window.__previewScene !== Renderer.scene
+                && window.__previewEngine !== Renderer.engine && !Renderer.menuPreviewSceneUsed
+                && !Renderer.scene.lights.some(light => light.name.startsWith('starterPreview'))
+        }), true, 'Gameplay must have a fresh engine and scene, independent of menu lighting')
         const origin = await page.evaluate(async () => {
             const {MyPlayer} = await import('/src/data/myPlayer.ts')
             const {Utils} = await import('/src/utils/utils.ts')

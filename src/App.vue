@@ -359,6 +359,9 @@ const closeErrorDialog = () => {
 const startLocalCharacter = async (profile: CharacterProfile) => {
     loginRequestStarted()
     try {
+        // Unmount previews first so their cleanup cannot touch the new renderer.
+        await nextTick()
+        if (Renderer.menuPreviewSceneUsed) await Renderer.gameStopped()
         await Connector.initialize(profile.gm ? 'authoring' : 'play', profile)
         Connector.sendLoginRequest('', '', profile.name)
     } catch (error) {

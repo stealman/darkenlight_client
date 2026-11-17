@@ -87,6 +87,8 @@ export const Renderer = {
     engine: null as Engine | null,
     camera: null as FreeCamera | null,
 
+    menuPreviewSceneUsed: false,
+
     fps: 0 as number,
     frame: 0 as number,
     animationSpeedRatio: 1 as number,
@@ -101,6 +103,7 @@ export const Renderer = {
         this.engine = new Engine(canvas, Settings.detailLevel.antialias)
         this.engine.setHardwareScalingLevel(1)
         this.createScene(this.engine)
+        this.menuPreviewSceneUsed = false
 
         DracoCompression.Configuration = {
             decoder: {
