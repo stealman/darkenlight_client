@@ -25,7 +25,6 @@ const SPEAR_VERTEX_COLOR_PALETTE: VertexColorWeaponPalette = {
 export const PolearmVertexColorPalettes: Record<string, VertexColorWeaponPalette> = withSilverWeaponPalettes({
     HUNTING_SPEAR: SPEAR_VERTEX_COLOR_PALETTE,
 
-    WAR_SPEAR: SPEAR_VERTEX_COLOR_PALETTE,
 
     HALBERD: {
         materialNames: METAL_WEAPON_MATERIAL_NAMES,

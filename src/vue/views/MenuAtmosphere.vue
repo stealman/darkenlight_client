@@ -3,22 +3,20 @@
 </template>
 
 <script setup lang="ts">
-import {onBeforeUnmount, onMounted, ref, watch} from 'vue'
+import {onBeforeUnmount, onMounted, ref} from 'vue'
 import type {Particle} from '@babylonjs/core'
 import {Camera, Color4, Engine, EngineStore, FreeCamera, GPUParticleSystem, ParticleSystem, Scene, Texture, Vector3} from '@babylonjs/core'
 import {AudioManager} from '@/babylon/audio/audioManager'
 
 const canvas = ref<HTMLCanvasElement | null>(null)
-const props = defineProps<{musicActive: boolean}>()
-watch(() => props.musicActive, active => AudioManager.setMenuMusicActive(active))
 let engine: Engine | null = null
 let resize: (() => void) | null = null
 const unlockMenuAudio = () => {
     Engine.audioEngine?.unlock()
-    AudioManager.setMenuAudioActive(true, props.musicActive)
+    AudioManager.setMenuAudioActive(true)
 }
 onMounted(() => {
-    AudioManager.setMenuAudioActive(true, props.musicActive)
+    AudioManager.setMenuAudioActive(true)
     window.addEventListener('pointerdown', unlockMenuAudio)
     window.addEventListener('keydown', unlockMenuAudio)
     // Keep default-scene constructors in the gameplay renderer on its own scene.

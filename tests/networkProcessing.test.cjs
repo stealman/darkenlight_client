@@ -128,7 +128,7 @@ test('interrupted bow attacks keep one animation-end observer and cannot restart
         '@babylonjs/core': core,
         '@/babylon/materials': {Materials: {getPBRMaterial: () => new core.PBRMaterial('human', scene)}},
         '@/data/items/item': {EquipItemSlots: {}, WeaponTypes: {BOW: 'bow'}, WeaponCategories: {AXE: 'axe'},
-            EquipSlotModelsCb: {WAR_SPEAR: {modelId: 42}}},
+            EquipSlotModelsCb: {HALBERD: {modelId: 42}}},
         '@/utils/utils': {Utils: {rollDice: () => 0}},
         '@/babylon/animations/animation': {AnimTransition: class {
             constructor(_duration, _from, to) {to.start(false)}

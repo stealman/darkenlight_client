@@ -6,6 +6,7 @@ import { AudioUtils } from '@/babylon/audio/audioUtils'
 const CAMPFIRE_VOLUME = 1.75
 const MENU_CAMPFIRE_VOLUME = CAMPFIRE_VOLUME * 0.8
 const MENU_MUSIC_VOLUME_FACTOR = 1.2
+const menuTrackVolumeFactors = new WeakMap<Sound, number>()
 
 export const AudioManager = {
     globalVolume: 0.5,
@@ -270,16 +271,18 @@ export const AudioManager = {
 
     processOneFrame() {
         // If actual ambient sound is not playing, play it
-        if (this.actualAmbientSound && !this.actualAmbientSound.isPlaying) {
+        if (!this.menuAudioActive && this.actualAmbientSound && !this.actualAmbientSound.isPlaying) {
             this.actualAmbientSound.play();
         }
     },
 
     initializeMenuMusic(scene: Scene) {
         const tracks = ['the_last_horn.ogg', 'battle_theme.ogg'].map((file, index) => {
+            const volumeFactor = file === 'battle_theme.ogg' ? 0.8 : 1
             const music = new Sound('menuMusic' + index, this.BASE_PATH + 'music/' + file, scene, () => {
                 if (this.menuMusicActive && this.menuMusic === music) music.play()
-            }, {volume: this.ambientSoundVolume * MENU_MUSIC_VOLUME_FACTOR, loop: false})
+            }, {volume: this.ambientSoundVolume * MENU_MUSIC_VOLUME_FACTOR * volumeFactor, loop: false})
+            menuTrackVolumeFactors.set(music, volumeFactor)
             music.onEndedObservable.add(() => {
                 if (!this.menuMusicActive || this.menuMusic !== music) return
                 this.menuMusic = tracks[(index + 1) % tracks.length]
@@ -293,16 +296,18 @@ export const AudioManager = {
         })
     },
 
-    setMenuAudioActive(active: boolean, musicActive: boolean = active) {
+    setMenuAudioActive(active: boolean) {
         this.menuAudioActive = active
-        this.setMenuMusicActive(active && musicActive)
+        this.setMenuMusicActive(active)
         const fire = this.staticObjectSounds.get('CAMPFIRE')
         if (active) {
+            this.stopAmbientSound()
             fire?.setVolume(MENU_CAMPFIRE_VOLUME)
             if (fire?.isReady() && !fire.isPlaying) fire.play()
         } else {
             fire?.stop()
             fire?.setVolume(CAMPFIRE_VOLUME)
+            this.processOneFrame()
         }
     },
 
@@ -314,7 +319,7 @@ export const AudioManager = {
         if (active) {
             if (this.menuMusicFadeTimer !== null) clearTimeout(this.menuMusicFadeTimer)
             this.menuMusicFadeTimer = null
-            music.setVolume(this.ambientSoundVolume * MENU_MUSIC_VOLUME_FACTOR)
+            music.setVolume(this.ambientSoundVolume * MENU_MUSIC_VOLUME_FACTOR * (menuTrackVolumeFactors.get(music) ?? 1))
             if (music.isReady() && !music.isPlaying) music.play()
         } else if (changed) {
             music.setVolume(0, 1.5)
@@ -638,7 +643,9 @@ export const AudioManager = {
 
     setAmbientSoundVolume(volume: number) {
         this.ambientSoundVolume = volume
-        if (this.menuMusicActive) this.menuMusic?.setVolume(volume * MENU_MUSIC_VOLUME_FACTOR)
+        if (this.menuMusicActive && this.menuMusic) {
+            this.menuMusic.setVolume(volume * MENU_MUSIC_VOLUME_FACTOR * (menuTrackVolumeFactors.get(this.menuMusic) ?? 1))
+        }
         Object.keys(AmbientSoundTypes).forEach((key) => {
             const ambientSound = this.ambientSounds.get(AmbientSoundTypes[key]);
             if (ambientSound) {
@@ -659,7 +666,7 @@ export const AudioManager = {
 
         this.stopAmbientSound()
         this.actualAmbientSound = ambientSound
-        this.actualAmbientSound.play()
+        if (!this.menuAudioActive) this.actualAmbientSound.play()
     },
 
     stopAmbientSound() {

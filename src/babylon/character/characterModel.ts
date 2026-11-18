@@ -74,7 +74,6 @@ export class CharacterModel implements EquipBearer {
     greatAxeAttackAnim: AnimationGroup | undefined
     twoHandedSwordAttackAnim: AnimationGroup | undefined
     twoHandedSwordAttackAnim2: AnimationGroup | undefined
-    twoHandedSpearAttackAnim: AnimationGroup | undefined
 
     bowAimAnim: AnimationGroup | undefined
 
@@ -231,7 +230,7 @@ export class CharacterModel implements EquipBearer {
                         'Idle', 'Walk', 'Run', 'CombatIdle', 'Slash', 'Jab',
                         'LeftSlash', 'RightSlash', 'HighJab', 'Slash2', 'BowAim',
                         'GreatAxeAttack', 'OreMining', 'Death', 'TwoHandedSwordAttack',
-                        'TwoHandedSwordAttack2', 'TwoHandedSpearAttack', 'CombatIdleTwoHanded', 'Pickup', 'SittingIdle',
+                        'TwoHandedSwordAttack2', 'CombatIdleTwoHanded', 'Pickup', 'SittingIdle',
                     ].map(name => ({ name, ...getHumanAnimationRange(name) }))
 
                     let newAnimationGroups = CharacterModel.preparedAnimations.get(result)
@@ -270,10 +269,9 @@ export class CharacterModel implements EquipBearer {
                     this.deathAnim = newAnimationGroups[13]
                     this.twoHandedSwordAttackAnim = newAnimationGroups[14]
                     this.twoHandedSwordAttackAnim2 = newAnimationGroups[15]
-                    this.twoHandedSpearAttackAnim = newAnimationGroups[16]
-                    this.combatIdleTwoHandedAnim = newAnimationGroups[17]
-                    this.pickupAnim = newAnimationGroups[18]
-                    this.sittingIdleAnim = newAnimationGroups[19]
+                    this.combatIdleTwoHandedAnim = newAnimationGroups[16]
+                    this.pickupAnim = newAnimationGroups[17]
+                    this.sittingIdleAnim = newAnimationGroups[18]
 
                     this.idleAnim?.start(true, HUMAN_ANIMATION_SPEED.idle)
                     this.actualAnim = this.idleAnim
@@ -553,9 +551,7 @@ export class CharacterModel implements EquipBearer {
                 weaponType === WeaponTypes.TWO_HANDED_MACE ||
                 (weapon.weaponCategory === WeaponCategories.AXE && weapon.isTwoHanded() && weaponType !== WeaponTypes.PICKAXE)
 
-            if (weapon.modelId === EquipSlotModelsCb.WAR_SPEAR.modelId) {
-                possibleAnims.push(this.twoHandedSpearAttackAnim)
-            } else if (usesHeavyTwoHandedAnimations) {
+            if (usesHeavyTwoHandedAnimations) {
                 if (weapon.modelId !== EquipSlotModelsCb.HALBERD.modelId) {
                     possibleAnims.push(this.greatAxeAttackAnim)
                 }

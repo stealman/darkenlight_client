@@ -30,10 +30,10 @@ import { initializePreviewArmorSources } from './previewArmorSources'
 import { preparePreviewSkeleton } from './previewSkeleton'
 
 type PreviewSlot = 'body' | 'head' | 'pauldrons' | 'legs' | 'shield' | 'weapon'
-type PreviewAnimation = 'idle' | 'walk' | 'run' | 'combatIdle' | 'combatIdleTwoHanded' | 'slash' | 'jab' | 'leftSlash' | 'rightSlash' | 'highJab' | 'slash2' | 'bowAim' | 'greatAxeAttack' | 'oreMining' | 'twoHandedSwordAttack' | 'twoHandedSwordAttack2' | 'twoHandedSpearAttack' | 'death'
-type AdminUtilsSection = 'materialAtlas' | 'weaponMaterialAtlas' | 'equipment'
+type PreviewAnimation = 'idle' | 'walk' | 'run' | 'combatIdle' | 'combatIdleTwoHanded' | 'slash' | 'jab' | 'leftSlash' | 'rightSlash' | 'highJab' | 'slash2' | 'bowAim' | 'greatAxeAttack' | 'oreMining' | 'twoHandedSwordAttack' | 'twoHandedSwordAttack2' | 'death'
+type AdminUtilsSection = 'materialAtlas' | 'weaponMaterialAtlas' | 'bowMaterialAtlas' | 'equipment'
 type ArmorMaterialFamily = 'plate' | 'chain'
-type MaterialFamily = ArmorMaterialFamily | 'weapon'
+type MaterialFamily = ArmorMaterialFamily | 'weapon' | 'bow'
 type ModifierComponent = 'scale' | 'position' | 'rotation'
 type ModifierAxis = 'x' | 'y' | 'z'
 type PauldronSide = 'left' | 'right'
@@ -53,12 +53,13 @@ interface AdminUtilsSettings {
     atlasMaterials: Record<string, GeneratedArmorMaterialParameters>
     chainAtlasMaterials: Record<string, GeneratedArmorMaterialParameters>
     weaponAtlasMaterials: Record<string, GeneratedArmorMaterialParameters>
+    bowAtlasMaterials: Record<string, GeneratedArmorMaterialParameters>
     sections: Record<AdminUtilsSection, boolean>
     animation: PreviewAnimation
 }
 
 const ADMIN_UTILS_STORAGE_KEY = 'darkenlight.adminUtils.settings.v1'
-const PREVIEW_ANIMATIONS: PreviewAnimation[] = ['idle', 'walk', 'run', 'combatIdle', 'combatIdleTwoHanded', 'slash', 'jab', 'leftSlash', 'rightSlash', 'highJab', 'slash2', 'bowAim', 'greatAxeAttack', 'oreMining', 'twoHandedSwordAttack', 'twoHandedSwordAttack2', 'twoHandedSpearAttack', 'death']
+const PREVIEW_ANIMATIONS: PreviewAnimation[] = ['idle', 'walk', 'run', 'combatIdle', 'combatIdleTwoHanded', 'slash', 'jab', 'leftSlash', 'rightSlash', 'highJab', 'slash2', 'bowAim', 'greatAxeAttack', 'oreMining', 'twoHandedSwordAttack', 'twoHandedSwordAttack2', 'death']
 const MODIFIER_COMPONENTS: ModifierComponent[] = ['scale', 'position', 'rotation']
 const MODIFIER_AXES: ModifierAxis[] = ['x', 'y', 'z']
 const GENERATED_ARMOR_ATLAS_SIZE = 1024
@@ -159,6 +160,7 @@ const slotMaterialSelections = { ...defaultMaterialSelections }
 const sectionOpenStates: Record<AdminUtilsSection, boolean> = {
     materialAtlas: true,
     weaponMaterialAtlas: true,
+    bowMaterialAtlas: true,
     equipment: true,
 }
 
@@ -277,10 +279,12 @@ function createDefaultAtlasMaterialSettings(options = materialOptions): Record<s
 const plateAtlasMaterialSettings = createDefaultAtlasMaterialSettings()
 const chainAtlasMaterialSettings = createDefaultAtlasMaterialSettings()
 const weaponAtlasMaterialSettings = createDefaultAtlasMaterialSettings(weaponMaterialOptions)
+const bowAtlasMaterialSettings = createDefaultAtlasMaterialSettings(bowMaterialOptions)
 const atlasMaterialSettingsByFamily: Record<MaterialFamily, Record<string, GeneratedArmorMaterialParameters>> = {
     plate: plateAtlasMaterialSettings,
     chain: chainAtlasMaterialSettings,
     weapon: weaponAtlasMaterialSettings,
+    bow: bowAtlasMaterialSettings,
 }
 
 function loadAtlasLayer(path: string): Promise<HTMLImageElement> {
@@ -414,7 +418,8 @@ function loadAdminUtilsSettings(): AdminUtilsSettings {
         atlasMaterials: createDefaultAtlasMaterialSettings(),
         chainAtlasMaterials: createDefaultAtlasMaterialSettings(),
         weaponAtlasMaterials: createDefaultAtlasMaterialSettings(weaponMaterialOptions),
-        sections: { materialAtlas: true, weaponMaterialAtlas: true, equipment: true },
+        bowAtlasMaterials: createDefaultAtlasMaterialSettings(bowMaterialOptions),
+        sections: { materialAtlas: true, weaponMaterialAtlas: true, bowMaterialAtlas: true, equipment: true },
         animation: 'idle',
     }
 
@@ -467,12 +472,27 @@ function loadAdminUtilsSettings(): AdminUtilsSettings {
                 }
             }
         })
+        bowMaterialOptions.forEach((option) => {
+            const storedParameters = stored.bowAtlasMaterials?.[String(option.value)]
+            if (storedParameters != null) {
+                settings.bowAtlasMaterials[String(option.value)] = {
+                    brightness: normalizeAtlasParameter(storedParameters.brightness),
+                    contrast: normalizeAtlasParameter(storedParameters.contrast),
+                    hueR: normalizeAtlasParameter(storedParameters.hueR),
+                    hueG: normalizeAtlasParameter(storedParameters.hueG),
+                    hueB: normalizeAtlasParameter(storedParameters.hueB),
+                }
+            }
+        })
 
         if (typeof stored.sections?.materialAtlas === 'boolean') {
             settings.sections.materialAtlas = stored.sections.materialAtlas
         }
         if (typeof stored.sections?.weaponMaterialAtlas === 'boolean') {
             settings.sections.weaponMaterialAtlas = stored.sections.weaponMaterialAtlas
+        }
+        if (typeof stored.sections?.bowMaterialAtlas === 'boolean') {
+            settings.sections.bowMaterialAtlas = stored.sections.bowMaterialAtlas
         }
         if (typeof stored.sections?.equipment === 'boolean') {
             settings.sections.equipment = stored.sections.equipment
@@ -496,6 +516,7 @@ function saveAdminUtilsSettings(animation: string) {
             atlasMaterials: plateAtlasMaterialSettings,
             chainAtlasMaterials: chainAtlasMaterialSettings,
             weaponAtlasMaterials: weaponAtlasMaterialSettings,
+            bowAtlasMaterials: bowAtlasMaterialSettings,
             sections: sectionOpenStates,
             animation,
         }))
@@ -527,6 +548,10 @@ function createShell(root: HTMLElement) {
                     <summary><h2>Materiál Zbraní</h2></summary>
                     <div id="adminUtilsWeaponMaterialAtlas" class="admin-utils__atlas-materials"></div>
                 </details>
+                <details id="adminUtilsBowMaterialAtlasSection" class="admin-utils__section" open>
+                    <summary><h2>Materiály luků</h2></summary>
+                    <div id="adminUtilsBowMaterialAtlas" class="admin-utils__atlas-materials"></div>
+                </details>
                 <details id="adminUtilsEquipmentSection" class="admin-utils__section" open>
                     <summary><h2>Výbava postavy</h2></summary>
                     <div id="adminUtilsEquipment" class="admin-utils__controls"></div>
@@ -552,7 +577,6 @@ function createShell(root: HTMLElement) {
                             <option value="oreMining">Těžba / kácení</option>
                             <option value="twoHandedSwordAttack">Útok – two handed sword attack</option>
                             <option value="twoHandedSwordAttack2">Útok – two handed sword attack 2</option>
-                            <option value="twoHandedSpearAttack">Útok – two handed spear attack</option>
                             <option value="death">Smrt</option>
                         </select>
                     </label>
@@ -578,7 +602,7 @@ function createMaterialAtlasControls(
             group.dataset.atlasFamily = family
 
             const legend = document.createElement('legend')
-            legend.textContent = family === 'weapon'
+            legend.textContent = family === 'weapon' || family === 'bow'
                 ? material.label
                 : `${material.label} – ${family === 'plate' ? 'Plate' : 'Chain'}`
             group.append(legend)
@@ -1095,13 +1119,12 @@ function playAnimation(model: CharacterModel, animationName: string, loop = true
         oreMining: model.oreMiningAnim,
         twoHandedSwordAttack: model.twoHandedSwordAttackAnim,
         twoHandedSwordAttack2: model.twoHandedSwordAttackAnim2,
-        twoHandedSpearAttack: model.twoHandedSpearAttackAnim,
         death: model.deathAnim,
     }
     Object.values(animations).forEach((animation) => animation?.stop())
     const animation = animations[animationName as keyof typeof animations]
     const attack = animationName === 'slash' || animationName === 'jab'
-        || animationName === 'leftSlash' || animationName === 'rightSlash' || animationName === 'highJab' || animationName === 'slash2' || animationName === 'greatAxeAttack' || animationName === 'twoHandedSwordAttack' || animationName === 'twoHandedSwordAttack2' || animationName === 'twoHandedSpearAttack'
+        || animationName === 'leftSlash' || animationName === 'rightSlash' || animationName === 'highJab' || animationName === 'slash2' || animationName === 'greatAxeAttack' || animationName === 'twoHandedSwordAttack' || animationName === 'twoHandedSwordAttack2'
     const speed = animationName === 'combatIdleTwoHanded' ? HUMAN_ANIMATION_SPEED.combatIdle : attack ? 1000 / 900
         : HUMAN_ANIMATION_SPEED[animationName as keyof typeof HUMAN_ANIMATION_SPEED] ?? HUMAN_ANIMATION_SPEED.idle
     animation?.start(loop, speed)
@@ -1123,10 +1146,15 @@ export async function mountAdminUtils() {
         Object.assign(weaponAtlasMaterialSettings[String(option.value)], savedSettings.weaponAtlasMaterials[String(option.value)])
     })
 
+    bowMaterialOptions.forEach((option) => {
+        Object.assign(bowAtlasMaterialSettings[String(option.value)], savedSettings.bowAtlasMaterials[String(option.value)])
+    })
+
     document.title = 'Admin Utils · Darkenlight'
     createShell(root)
     createMaterialAtlasControls(root.querySelector('#adminUtilsMaterialAtlas')!, materialOptions, ['plate', 'chain'])
     createMaterialAtlasControls(root.querySelector('#adminUtilsWeaponMaterialAtlas')!, weaponMaterialOptions, ['weapon'])
+    createMaterialAtlasControls(root.querySelector('#adminUtilsBowMaterialAtlas')!, bowMaterialOptions, ['bow'])
     createEquipmentControls(root.querySelector('#adminUtilsEquipment')!)
 
     const canvas = root.querySelector<HTMLCanvasElement>('#adminUtilsCanvas')!
@@ -1135,6 +1163,7 @@ export async function mountAdminUtils() {
     const collapsibleSections: Array<[AdminUtilsSection, HTMLDetailsElement]> = [
         ['materialAtlas', root.querySelector<HTMLDetailsElement>('#adminUtilsMaterialAtlasSection')!],
         ['weaponMaterialAtlas', root.querySelector<HTMLDetailsElement>('#adminUtilsWeaponMaterialAtlasSection')!],
+        ['bowMaterialAtlas', root.querySelector<HTMLDetailsElement>('#adminUtilsBowMaterialAtlasSection')!],
         ['equipment', root.querySelector<HTMLDetailsElement>('#adminUtilsEquipmentSection')!],
     ]
     const equipmentSelects = Array.from(root.querySelectorAll<HTMLSelectElement>('[data-slot]'))
@@ -1234,6 +1263,39 @@ export async function mountAdminUtils() {
     try {
         await EquipManager.initializeArmors(scene)
         await WeaponsCbManager.initMelee(EquipManager.itemTypes, scene)
+        const battleBowLayers = await loadArmorAtlasLayers(
+            '/models/equip/weapons/battlebow_primary.png',
+            '/models/equip/weapons/battlebow_secondary.png',
+        )
+        const generatedBattleBowAtlas = createGeneratedArmorAtlas(scene, 'adminUtilsGeneratedBattleBowAtlas', battleBowLayers, bowAtlasMaterialSettings, bowMaterialOptions)
+        const battleBowMaterial = EquipManager.getItemType(MODEL_IDS.battleBow)?.mesh?.material
+        if (!(battleBowMaterial instanceof PBRMaterial)) {
+            throw new Error('Battle bow material is unavailable for generated atlas preview')
+        }
+        battleBowMaterial.albedoTexture?.dispose()
+        battleBowMaterial.albedoTexture = generatedBattleBowAtlas
+        const recurveBowLayers = await loadArmorAtlasLayers(
+            '/models/equip/weapons/recurvebow_primary.png',
+            '/models/equip/weapons/recurvebow_secondary.png',
+        )
+        const generatedRecurveBowAtlas = createGeneratedArmorAtlas(scene, 'adminUtilsGeneratedRecurveBowAtlas', recurveBowLayers, bowAtlasMaterialSettings, bowMaterialOptions)
+        const recurveBowMaterial = EquipManager.getItemType(MODEL_IDS.recurveBow)?.mesh?.material
+        if (!(recurveBowMaterial instanceof PBRMaterial)) {
+            throw new Error('Recurve bow material is unavailable for generated atlas preview')
+        }
+        recurveBowMaterial.albedoTexture?.dispose()
+        recurveBowMaterial.albedoTexture = generatedRecurveBowAtlas
+        const bowLayers = await loadArmorAtlasLayers(
+            '/models/equip/weapons/huntingbow_primary.png',
+            '/models/equip/weapons/huntingbow_secondary.png',
+        )
+        const generatedBowAtlas = createGeneratedArmorAtlas(scene, 'adminUtilsGeneratedBowAtlas', bowLayers, bowAtlasMaterialSettings, bowMaterialOptions)
+        const bowMaterial = EquipManager.getItemType(MODEL_IDS.huntingBow)?.mesh?.material
+        if (!(bowMaterial instanceof PBRMaterial)) {
+            throw new Error('Hunting bow material is unavailable for generated atlas preview')
+        }
+        bowMaterial.albedoTexture?.dispose()
+        bowMaterial.albedoTexture = generatedBowAtlas
         const longswordType = EquipManager.getItemType(MODEL_IDS.longsword)
         const longswordMaterial = longswordType?.mesh?.material
         const broadswordType = EquipManager.getItemType(MODEL_IDS.broadsword)
@@ -1589,7 +1651,7 @@ export async function mountAdminUtils() {
             toggle.title = ''
             populateMaterialSelect(materialSelect, slot)
             materialSelect.disabled = modelId == null
-            const canExportAtlas = modelId === MODEL_IDS.longsword || modelId === MODEL_IDS.broadsword || modelId === MODEL_IDS.greataxe || modelId === MODEL_IDS.halberd || modelId === MODEL_IDS.pickaxe || modelId === MODEL_IDS.handAxe || modelId === MODEL_IDS.battleAxe || modelId === MODEL_IDS.huntingSpear || modelId === MODEL_IDS.lightMace || modelId === MODEL_IDS.warhammer || modelId === MODEL_IDS.warmace || modelId === MODEL_IDS.greatsword || modelId === MODEL_IDS.largeBattleAxe || modelId === MODEL_IDS.armorPlate || modelId === MODEL_IDS.helm || modelId === MODEL_IDS.pauldronsPlate || modelId === MODEL_IDS.legsPlate || modelId === MODEL_IDS.shield || modelId === MODEL_IDS.chainMail || modelId === MODEL_IDS.chainCoif || modelId === MODEL_IDS.chainPauldrons || modelId === MODEL_IDS.chainGreaves
+            const canExportAtlas = modelId === MODEL_IDS.battleBow || modelId === MODEL_IDS.recurveBow || modelId === MODEL_IDS.huntingBow || modelId === MODEL_IDS.longsword || modelId === MODEL_IDS.broadsword || modelId === MODEL_IDS.greataxe || modelId === MODEL_IDS.halberd || modelId === MODEL_IDS.pickaxe || modelId === MODEL_IDS.handAxe || modelId === MODEL_IDS.battleAxe || modelId === MODEL_IDS.huntingSpear || modelId === MODEL_IDS.lightMace || modelId === MODEL_IDS.warhammer || modelId === MODEL_IDS.warmace || modelId === MODEL_IDS.greatsword || modelId === MODEL_IDS.largeBattleAxe || modelId === MODEL_IDS.armorPlate || modelId === MODEL_IDS.helm || modelId === MODEL_IDS.pauldronsPlate || modelId === MODEL_IDS.legsPlate || modelId === MODEL_IDS.shield || modelId === MODEL_IDS.chainMail || modelId === MODEL_IDS.chainCoif || modelId === MODEL_IDS.chainPauldrons || modelId === MODEL_IDS.chainGreaves
             exportLink.setAttribute('aria-disabled', String(!canExportAtlas))
             exportLink.tabIndex = canExportAtlas ? 0 : -1
             exportLink.title = canExportAtlas ? '' : 'Export atlasu není pro tento typ výbavy dostupný'
@@ -1685,6 +1747,10 @@ export async function mountAdminUtils() {
                     renderGeneratedArmorAtlas(generatedPlatePauldronAtlas, platePauldronLayers, plateAtlasMaterialSettings)
                     renderGeneratedArmorAtlas(generatedPlateLegAtlas, plateLegLayers, plateAtlasMaterialSettings)
                     renderGeneratedArmorAtlas(generatedShieldAtlas, shieldLayers, plateAtlasMaterialSettings)
+                } else if (family === 'bow') {
+                    renderGeneratedArmorAtlas(generatedBowAtlas, bowLayers, bowAtlasMaterialSettings, bowMaterialOptions)
+                    renderGeneratedArmorAtlas(generatedRecurveBowAtlas, recurveBowLayers, bowAtlasMaterialSettings, bowMaterialOptions)
+                    renderGeneratedArmorAtlas(generatedBattleBowAtlas, battleBowLayers, bowAtlasMaterialSettings, bowMaterialOptions)
                 } else if (family === 'chain') {
                     renderGeneratedArmorAtlas(generatedChainMailAtlas, chainMailLayers, chainAtlasMaterialSettings)
                     renderGeneratedArmorAtlas(generatedChainCoifAtlas, chainCoifLayers, chainAtlasMaterialSettings)
@@ -1716,7 +1782,13 @@ export async function mountAdminUtils() {
                 event.preventDefault()
                 const slot = link.dataset.exportAtlas as PreviewSlot
                 const modelId = slotSelections[slot]
-                if (modelId === MODEL_IDS.longsword) {
+                if (modelId === MODEL_IDS.huntingBow) {
+                    exportAtlasAsJpeg(generatedBowAtlas, 'huntingbow.jpg')
+                } else if (modelId === MODEL_IDS.recurveBow) {
+                    exportAtlasAsJpeg(generatedRecurveBowAtlas, 'recurvebow.jpg')
+                } else if (modelId === MODEL_IDS.battleBow) {
+                    exportAtlasAsJpeg(generatedBattleBowAtlas, 'battlebow.jpg')
+                } else if (modelId === MODEL_IDS.longsword) {
                     exportAtlasAsJpeg(generatedLongswordAtlas, 'longsword.jpg')
                 } else if (modelId === MODEL_IDS.broadsword) {
                     exportAtlasAsJpeg(generatedBroadswordAtlas, 'broadsword.jpg')

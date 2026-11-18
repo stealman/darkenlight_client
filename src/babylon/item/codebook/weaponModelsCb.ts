@@ -5,11 +5,11 @@ import { PBRCustomMaterial } from '@babylonjs/materials'
 import { Materials } from '@/babylon/materials'
 import { BASE_EQUIP_MATERIAL_PATH } from '@/babylon/item/codebook/armorsModelsCb'
 import { EquipSlotModelsCb } from '@/data/items/item'
-import { BowVertexColorPalettes } from './vertexColorPalettes/bows'
+import { BOW_WEAPON_MATERIAL_NAMES } from './vertexColorPalettes/types'
 import { PolearmVertexColorPalettes } from './vertexColorPalettes/polearms'
 import { createVertexColorWeaponMaterial } from './vertexColorPalettes/vertexColorWeaponMaterial'
 
-const matBowSize = new Vector2(6, 1)
+const matTexturedBowSize = new Vector2(4, 4)
 const matLongswordSize = new Vector2(4, 4)
 const matBroadswordSize = new Vector2(4, 4)
 const matGreatswordSize = new Vector2(4, 4)
@@ -41,6 +41,9 @@ const BATTLEAXE_ASSET_CACHE_VERSION = '20261103-silver-atlas-v1'
 const HUNTINGSPEAR_ASSET_CACHE_VERSION = '20261103-silver-atlas-v1'
 const LIGHTMACE_ASSET_CACHE_VERSION = '20261103-silver-atlas-v1'
 const WARHAMMER_ASSET_CACHE_VERSION = '20261118-draco-atlas-v3'
+const BATTLEBOW_ASSET_CACHE_VERSION = '20261118-material-atlas-v1'
+const RECURVEBOW_ASSET_CACHE_VERSION = '20261118-material-atlas-v1'
+const HUNTINGBOW_ASSET_CACHE_VERSION = '20261118-material-atlas-v1'
 const WARMACE_ASSET_CACHE_VERSION = '20261103-silver-atlas-v1'
 
 const createWeaponMaterialAtlasIndices = (atlasSize: Vector2) => new Map<number, number>(
@@ -50,6 +53,11 @@ const createWeaponMaterialAtlasIndices = (atlasSize: Vector2) => new Map<number,
         const tileY = Math.floor(atlasTile / atlasSize.x)
         return [materialIndex, (atlasSize.y - 1 - tileY) * atlasSize.x + tileX] as [number, number]
     }),
+)
+const bowMaterialAtlasIndices = new Map<number, number>(
+    BOW_WEAPON_MATERIAL_NAMES.map((_, index) => [
+        index, (matTexturedBowSize.y - 1 - Math.floor(index / matTexturedBowSize.x)) * matTexturedBowSize.x + index % matTexturedBowSize.x,
+    ]),
 )
 const longswordMaterialAtlasIndices = createWeaponMaterialAtlasIndices(matLongswordSize)
 const largeBattleAxeMaterialAtlasIndices = createWeaponMaterialAtlasIndices(matLargeBattleAxeSize)
@@ -96,24 +104,17 @@ export const WeaponsCbManager = {
     warmaceMaterial: null as PBRCustomMaterial | null,
     warhammerMaterial: null as PBRCustomMaterial | null,
     huntingSpearMaterial: null as PBRCustomMaterial | null,
-    warSpearMaterial: null as PBRCustomMaterial | null,
     halberdMaterial: null as PBRCustomMaterial | null,
 
     async initMelee(map: Map<number, EquipItemType>, scene: Scene) {
         this.itemSourceParent = new TransformNode("mobWeaponSources", scene)
 
-        // Load materials
-        this.bowMaterial = createVertexColorWeaponMaterial('huntingBowVertexColor', scene, BowVertexColorPalettes.HUNTING_BOW)
-        this.recurveBowMaterial = createVertexColorWeaponMaterial('recurveBowVertexColor', scene, BowVertexColorPalettes.RECURVE_BOW)
-        this.battleBowMaterial = createVertexColorWeaponMaterial('battleBowVertexColor', scene, BowVertexColorPalettes.BATTLE_BOW)
-        this.warSpearMaterial = createVertexColorWeaponMaterial('warSpearVertexColor', scene, PolearmVertexColorPalettes.WAR_SPEAR)
-
         await this.initLongsword(map, scene)
         await this.initBroadsword(map, scene)
         await this.initGreatsword(map, scene)
-        map.set(WeaponModelsCb.HUNTINGBOW.id, await this.getItem(WeaponModelsCb.HUNTINGBOW, this.bowMaterial))
-        map.set(WeaponModelsCb.RECURVE_BOW.id, await this.getItem(WeaponModelsCb.RECURVE_BOW, this.recurveBowMaterial))
-        map.set(WeaponModelsCb.BATTLEBOW.id, await this.getItem(WeaponModelsCb.BATTLEBOW, this.battleBowMaterial))
+        await this.initHuntingBow(map, scene)
+        await this.initRecurveBow(map, scene)
+        await this.initBattleBow(map, scene)
         await this.initPickaxe(map, scene)
         await this.initHandAxe(map, scene)
         await this.initBattleAxe(map, scene)
@@ -123,9 +124,74 @@ export const WeaponsCbManager = {
         await this.initWarmace(map, scene)
         await this.initWarhammer(map, scene)
         await this.initHuntingSpear(map, scene)
-        map.set(WeaponModelsCb.WAR_SPEAR.id, await this.getItem(WeaponModelsCb.WAR_SPEAR, this.warSpearMaterial))
         await this.initHalberd(map, scene)
 
+    },
+
+    async initHuntingBow(map: Map<number, EquipItemType>, scene: Scene) {
+        if (this.itemSourceParent == null) {
+            this.itemSourceParent = new TransformNode('mobWeaponSources', scene)
+        }
+        this.bowMaterial = Materials.getPBRCustomMaterialFrom(
+            scene,
+            'huntingBowMaterialAtlas',
+            BASE_EQUIP_MATERIAL_PATH + this.BASE_WEAPONS_PATH,
+            `huntingbow.jpg?v=${HUNTINGBOW_ASSET_CACHE_VERSION}`,
+            1 / matTexturedBowSize.x,
+            1 / matTexturedBowSize.y,
+            false,
+            { metallic: 0.25, roughness: 1, directIntensity: 1.5, environmentIntensity: 1 },
+            false,
+        )
+        map.set(WeaponModelsCb.HUNTINGBOW.id, await this.getItem(
+            WeaponModelsCb.HUNTINGBOW,
+            this.bowMaterial,
+            `huntingbow.glb?v=${HUNTINGBOW_ASSET_CACHE_VERSION}`,
+        ))
+    },
+
+    async initRecurveBow(map: Map<number, EquipItemType>, scene: Scene) {
+        if (this.itemSourceParent == null) {
+            this.itemSourceParent = new TransformNode('mobWeaponSources', scene)
+        }
+        this.recurveBowMaterial = Materials.getPBRCustomMaterialFrom(
+            scene,
+            'recurveBowMaterialAtlas',
+            BASE_EQUIP_MATERIAL_PATH + this.BASE_WEAPONS_PATH,
+            `recurvebow.jpg?v=${RECURVEBOW_ASSET_CACHE_VERSION}`,
+            1 / matTexturedBowSize.x,
+            1 / matTexturedBowSize.y,
+            false,
+            { metallic: 0.25, roughness: 1, directIntensity: 1.5, environmentIntensity: 1 },
+            false,
+        )
+        map.set(WeaponModelsCb.RECURVE_BOW.id, await this.getItem(
+            WeaponModelsCb.RECURVE_BOW,
+            this.recurveBowMaterial,
+            `recurvebow.glb?v=${RECURVEBOW_ASSET_CACHE_VERSION}`,
+        ))
+    },
+
+    async initBattleBow(map: Map<number, EquipItemType>, scene: Scene) {
+        if (this.itemSourceParent == null) {
+            this.itemSourceParent = new TransformNode('mobWeaponSources', scene)
+        }
+        this.battleBowMaterial = Materials.getPBRCustomMaterialFrom(
+            scene,
+            'battleBowMaterialAtlas',
+            BASE_EQUIP_MATERIAL_PATH + this.BASE_WEAPONS_PATH,
+            `battlebow.jpg?v=${BATTLEBOW_ASSET_CACHE_VERSION}`,
+            1 / matTexturedBowSize.x,
+            1 / matTexturedBowSize.y,
+            false,
+            { metallic: 0.25, roughness: 1, directIntensity: 1.5, environmentIntensity: 1 },
+            false,
+        )
+        map.set(WeaponModelsCb.BATTLEBOW.id, await this.getItem(
+            WeaponModelsCb.BATTLEBOW,
+            this.battleBowMaterial,
+            `battlebow.glb?v=${BATTLEBOW_ASSET_CACHE_VERSION}`,
+        ))
     },
 
     async initLongsword(map: Map<number, EquipItemType>, scene: Scene) {
@@ -663,7 +729,6 @@ export const WeaponModelsCb = {
         huntingspearMaterialAtlasIndices.get(0) ?? 12,
     ),
 
-    WAR_SPEAR: new EquipCbItem(EquipSlotModelsCb.WAR_SPEAR.modelId, 'warspear', Vector3.Zero(), new Vector3(0.24, 0.24, 0.24), new Vector3(0, 3.2, 0), matFutureWeaponSize),
 
     HALBERD: new EquipCbItem(
         EquipSlotModelsCb.HALBERD.modelId,
@@ -676,9 +741,9 @@ export const WeaponModelsCb = {
         halberdMaterialAtlasIndices.get(0) ?? 12,
     ),
 
-    HUNTINGBOW: new EquipCbItem(EquipSlotModelsCb.HUNTINGBOW.modelId, 'hunterbow', new Vector3(-0.1, 0, 0), new Vector3(0.17, 0.24, 0.2), null, matBowSize),
+    HUNTINGBOW: new EquipCbItem(EquipSlotModelsCb.HUNTINGBOW.modelId, 'huntingbow', new Vector3(-0.1, 0, 0), new Vector3(0.17, 0.24, 0.2), null, matTexturedBowSize, bowMaterialAtlasIndices, bowMaterialAtlasIndices.get(0) ?? 12),
 
-    RECURVE_BOW: new EquipCbItem(EquipSlotModelsCb.RECURVE_BOW.modelId, 'recurvebow', new Vector3(-0.1, 0, 0), new Vector3(0.17, 0.24, 0.2), null, matBowSize),
+    RECURVE_BOW: new EquipCbItem(EquipSlotModelsCb.RECURVE_BOW.modelId, 'recurvebow', new Vector3(-0.1, 0, 0), new Vector3(0.17, 0.24, 0.2), null, matTexturedBowSize, bowMaterialAtlasIndices, bowMaterialAtlasIndices.get(0) ?? 12),
 
-    BATTLEBOW: new EquipCbItem(EquipSlotModelsCb.BATTLEBOW.modelId, 'battlebow', new Vector3(-0.1, 0, 0), new Vector3(0.17, 0.24, 0.2), null, matBowSize),
+    BATTLEBOW: new EquipCbItem(EquipSlotModelsCb.BATTLEBOW.modelId, 'battlebow', new Vector3(-0.1, 0, 0), new Vector3(0.17, 0.24, 0.2), null, matTexturedBowSize, bowMaterialAtlasIndices, bowMaterialAtlasIndices.get(0) ?? 12),
 }

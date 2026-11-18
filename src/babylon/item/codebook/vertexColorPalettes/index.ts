@@ -1,5 +1,4 @@
 import { AxeVertexColorPalettes } from './axes'
-import { BowVertexColorPalettes } from './bows'
 import { MaceVertexColorPalettes } from './maces'
 import { PolearmVertexColorPalettes } from './polearms'
 import { SwordVertexColorPalettes } from './swords'
@@ -17,9 +16,5 @@ export const VertexColorWeaponPalettesByModelKey = {
     LIGHT_MACE: { palette: MaceVertexColorPalettes.LIGHT_MACE, inventoryBaseName: 'lightmace' },
     WARMACE: { palette: MaceVertexColorPalettes.WARMACE, inventoryBaseName: 'warmace' },
     HUNTING_SPEAR: { palette: PolearmVertexColorPalettes.HUNTING_SPEAR, inventoryBaseName: 'hunting-spear' },
-    WAR_SPEAR: { palette: PolearmVertexColorPalettes.WAR_SPEAR, inventoryBaseName: 'war-spear' },
     HALBERD: { palette: PolearmVertexColorPalettes.HALBERD, inventoryBaseName: 'halberd' },
-    HUNTINGBOW: { palette: BowVertexColorPalettes.HUNTING_BOW, inventoryBaseName: 'hunting-bow' },
-    RECURVE_BOW: { palette: BowVertexColorPalettes.RECURVE_BOW, inventoryBaseName: 'recurve-bow' },
-    BATTLEBOW: { palette: BowVertexColorPalettes.BATTLE_BOW, inventoryBaseName: 'battle-bow' },
 }

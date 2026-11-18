@@ -21,7 +21,6 @@ const authoredRanges: Record<string, { startFrame: number, endFrame: number }> =
     OreMining: { startFrame: 1450, endFrame: 1525 },
     TwoHandedSwordAttack: { startFrame: 1550, endFrame: 1625 },
     TwoHandedSwordAttack2: { startFrame: 1650, endFrame: 1725 },
-    TwoHandedSpearAttack: { startFrame: 1750, endFrame: 1825 },
     Death: { startFrame: 1850, endFrame: 1925 },
     Pickup: { startFrame: 1950, endFrame: 1975 },
     SittingIdle: { startFrame: 2000, endFrame: 2075 },

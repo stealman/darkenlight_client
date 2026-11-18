@@ -95,6 +95,7 @@
 
 <script setup>
 import { ArcRotateCamera, Color3, Color4, CubeTexture, DirectionalLight, Engine, Mesh, Scene, SceneLoader, Texture, Vector2, Vector3 } from '@babylonjs/core'
+import { BOW_WEAPON_MATERIAL_NAMES } from '@/babylon/item/codebook/vertexColorPalettes/types'
 import { WeaponModelsCb } from '@/babylon/item/codebook/weaponModelsCb'
 import { ArmorModelsCb, BASE_EQUIP_MATERIAL_PATH, TEXTURED_ARMOR_ASSETS } from '@/babylon/item/codebook/armorsModelsCb'
 import { ArmorMaterialCatalog } from '@/babylon/item/codebook/armorMaterialCatalog'
@@ -110,6 +111,7 @@ const ALL_MATERIAL_OPTION = { index: ALL_MATERIAL_INDEX, label: 'ALL' }
 const TRIPO_WEAPON_CACHE_VERSION = '20261103-silver-atlas-v1'
 const WEAPON_MATERIAL_OPTIONS = ['Steel', 'Pyroxide', 'Geonite', 'Mythril', 'Chaotite', 'Reserved', 'Silver']
     .map((label, index) => ({ index, label }))
+const BOW_MATERIAL_OPTIONS = BOW_WEAPON_MATERIAL_NAMES.map((label, index) => ({ index, label }))
 const WEAPON_OPTIONS = [
     { key: 'LONGSWORD', modelFile: 'longsword.glb', atlasFile: 'longsword.jpg', inventoryBaseName: 'longsword' },
     { key: 'BROADSWORD', modelFile: 'broadsword.glb', atlasFile: 'broadsword.jpg', inventoryBaseName: 'broadsword' },
@@ -124,6 +126,9 @@ const WEAPON_OPTIONS = [
     { key: 'LIGHT_MACE', modelFile: 'lightmace.glb', atlasFile: 'lightmace.jpg', inventoryBaseName: 'lightmace' },
     { key: 'WARMACE', modelFile: 'warmace.glb', atlasFile: 'warmace.jpg', inventoryBaseName: 'warmace' },
     { key: 'WARHAMMER', modelFile: 'warhammer.glb', atlasFile: 'warhammer.jpg', cacheVersion: '20261118-draco-atlas-v3', inventoryBaseName: 'warhammer' },
+    { key: 'HUNTINGBOW', modelFile: 'huntingbow.glb', atlasFile: 'huntingbow.jpg', cacheVersion: '20261118-material-atlas-v1', inventoryBaseName: 'hunting-bow', materialOptions: BOW_MATERIAL_OPTIONS },
+    { key: 'RECURVE_BOW', modelFile: 'recurvebow.glb', atlasFile: 'recurvebow.jpg', cacheVersion: '20261118-material-atlas-v1', inventoryBaseName: 'recurve-bow', materialOptions: BOW_MATERIAL_OPTIONS },
+    { key: 'BATTLEBOW', modelFile: 'battlebow.glb', atlasFile: 'battlebow.jpg', cacheVersion: '20261118-material-atlas-v1', inventoryBaseName: 'battle-bow', materialOptions: BOW_MATERIAL_OPTIONS },
 ].map((weapon) => {
     const item = WeaponModelsCb[weapon.key]
     return { ...weapon, item, label: `${weapon.key} (${item.model})` }
@@ -168,21 +173,11 @@ const selectedPreviewItem = computed(() => {
     return selectedPreviewOption.value?.item ?? null
 })
 const selectedArmorAsset = computed(() => TEXTURED_ARMOR_ASSETS.get(selectedPreviewItem.value?.id ?? -1) ?? null)
-const currentMaterialSlots = computed(() => {
-    const item = selectedPreviewItem.value
-    if (!item) {
-        return 0
-    }
-    return previewCategory.value === 'WEAPON'
-        ? WEAPON_MATERIAL_OPTIONS.length
-        : ArmorMaterialCatalog.materialNames.length
-})
-const materialIndexOptions = computed(() => {
-    if (previewCategory.value === 'ARMOR') {
-        return [ALL_MATERIAL_OPTION, ...ARMOR_MATERIAL_OPTIONS]
-    }
-    return [ALL_MATERIAL_OPTION, ...WEAPON_MATERIAL_OPTIONS]
-})
+const currentMaterialOptions = computed(() => previewCategory.value === 'ARMOR'
+    ? ARMOR_MATERIAL_OPTIONS
+    : selectedPreviewOption.value?.materialOptions ?? WEAPON_MATERIAL_OPTIONS)
+const currentMaterialSlots = computed(() => selectedPreviewItem.value ? currentMaterialOptions.value.length : 0)
+const materialIndexOptions = computed(() => [ALL_MATERIAL_OPTION, ...currentMaterialOptions.value])
 
 let engine = null
 let scene = null
@@ -566,10 +561,7 @@ const onWindowResize = () => {
 }
 
 const getMaterialName = (materialIndex) => {
-    const options = previewCategory.value === 'WEAPON'
-        ? WEAPON_MATERIAL_OPTIONS
-        : ARMOR_MATERIAL_OPTIONS
-    return options.find((option) => option.index === materialIndex)?.label
+    return currentMaterialOptions.value.find((option) => option.index === materialIndex)?.label
 }
 
 const getExportMaterialIndexes = () => {
