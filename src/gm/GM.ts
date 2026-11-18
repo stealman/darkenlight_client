@@ -1288,7 +1288,7 @@ export const GMManager = {
                         ingredients: [...(feature.settings?.individualItems?.ingredients ?? [])],
                     },
                 } : feature.type === 'crafting'
-                    ? {itemCategories: [...(feature.settings?.itemCategories ?? [])]}
+                    ? {itemCategories: [...(feature.settings?.itemCategories ?? [])], categoryLevels: {...(feature.settings?.categoryLevels ?? {})}}
                     : feature.type === 'healer'
                         ? {potionTiers: [...(feature.settings?.potionTiers ?? ['small', 'normal', 'great'])]}
                     : {}

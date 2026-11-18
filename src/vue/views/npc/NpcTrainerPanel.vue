@@ -33,21 +33,6 @@
             <div v-if="trainerNewSkills.length === 0" class="npc-trainer-empty-state">{{ t('vendor.noNewSkills') }}</div>
         </div>
 
-        <div v-else-if="selectedTab === 'training'" class="npc-trainer-skill-list">
-            <div v-for="skill in trainerTrainingOffers" :key="skill.key" class="npc-trainer-skill-row">
-                <span class="npc-trainer-skill-name"><span class="ui-text-gradient">{{ t(skill.translationKey) }}</span></span>
-                <span class="npc-trainer-training-level">{{ getSkillRankName(skill.targetRank) }}</span>
-                <span class="npc-trainer-skill-price">
-                    <span class="ui-emerald-text-gradient">{{ EmeraldsManager.formatEmeraldAmount(skill.price) }}</span>
-                    <img src="/images/icons/emerald.png" alt="Emerald" />
-                </span>
-                <button class="dialog-button npc-trainer-action-button" @click.stop="emit('upgrade-skill', skill.key, skill.targetRank, skill.price, $event)">
-                    <span class="ui-text-gradient--button-state">{{ t('vendor.upgradeSkill') }}</span>
-                </button>
-            </div>
-            <div v-if="trainerTrainingOffers.length === 0" class="npc-trainer-empty-state">{{ t('vendor.noTrainingOffers') }}</div>
-        </div>
-
         <div v-else-if="selectedTab === 'promotion'" class="npc-trainer-promotion-list">
             <p class="npc-trainer-promotion-intro">{{ t('classProgression.intro') }}</p>
             <article
@@ -110,11 +95,10 @@ import {computed, watch} from 'vue'
 import type {ClassPromotionRequirementData, NpcUseFeatureData, SkillKey} from '@/network/messageIfs'
 import {t} from '@/i18n'
 import {MyPlayer} from '@/data/myPlayer'
-import {EmeraldsManager} from '@/gui/emeraldsManager'
 import {SkillDefinitions} from '@/data/skills/skillDefinitions'
 import type {SkillCategoryKey} from '@/data/skills/skillDefinitions'
 
-type TrainerTab = 'training' | 'newSkills' | 'promotion'
+type TrainerTab = 'newSkills' | 'promotion'
 
 const props = defineProps<{
     feature: NpcUseFeatureData
@@ -124,11 +108,11 @@ const props = defineProps<{
 const emit = defineEmits<{
     'update:selectedTab': [tab: TrainerTab]
     'learn-skill': [skill: SkillKey, event: MouseEvent]
-    'upgrade-skill': [skill: SkillKey, targetRank: number, price: number, event: MouseEvent]
 }>()
 
-const trainerTabs: TrainerTab[] = ['training', 'newSkills', 'promotion']
-const trainerSkillCategoryOrder: SkillCategoryKey[] = ['weapons', 'armor', 'utility', 'gathering', 'crafting']
+const trainerTabs: TrainerTab[] = ['newSkills', 'promotion']
+const trainerSkillCategoryOrder: SkillCategoryKey[] = ['weapons', 'armor', 'utility', 'gathering']
+
 const skillRankTranslationKeys: Partial<Record<number, string>> = {
     0: 'skills.ranks.untrained',
     1: 'skills.ranks.novice',
@@ -143,19 +127,15 @@ const skillRankTranslationKeys: Partial<Record<number, string>> = {
     10: 'skills.ranks.grandmaster',
 }
 
+const getSkillRankName = (rank: number) => {
+    const translationKey = skillRankTranslationKeys[rank]
+    return translationKey ? t(translationKey) : t('skills.ranks.fallback', {rank})
+}
+
 const trainerNewSkills = computed(() => {
     const skillSet = MyPlayer.myCharRef.value?.skillSet ?? {}
     const skillCaps = MyPlayer.myCharRef.value?.skillCaps ?? {}
     return SkillDefinitions.filter((skill) => (skillCaps[skill.key] ?? 0) >= 1 && !skillSet[skill.key])
-})
-const trainerTrainingOffers = computed(() => {
-    const skillSet = MyPlayer.myCharRef.value?.skillSet
-    return SkillDefinitions.flatMap(skill => {
-        const progress = skillSet?.[skill.key]
-        return progress?.rankUpgradePrice != null
-            ? [{...skill, targetRank: progress.rank + 1, price: progress.rankUpgradePrice}]
-            : []
-    })
 })
 const trainerNewSkillCategories = computed(() => trainerSkillCategoryOrder
     .map((key) => ({key, skills: trainerNewSkills.value.filter((skill) => skill.category === key)}))
@@ -165,7 +145,7 @@ const trainerPromotions = computed(() => props.feature.promotions ?? [])
 
 watch(trainerNewSkills, (skills) => {
     if (skills.length === 0 && props.selectedTab === 'newSkills') {
-        emit('update:selectedTab', 'training')
+        emit('update:selectedTab', 'promotion')
     }
 })
 
@@ -174,10 +154,6 @@ const getClassName = (classKey: string) => {
     const localizationKey = `classes.${classKey.toLowerCase()}`
     const localizedName = t(localizationKey)
     return localizedName === localizationKey ? classKey : localizedName
-}
-const getSkillRankName = (rank: number) => {
-    const translationKey = skillRankTranslationKeys[rank]
-    return translationKey ? t(translationKey) : t('skills.ranks.fallback', {rank})
 }
 const getPromotionRequirementSkillName = (requirement: ClassPromotionRequirementData) => {
     const definition = SkillDefinitions.find((skill) => skill.key === requirement.skill)
@@ -201,7 +177,6 @@ const getPromotionRequirementSkillName = (requirement: ClassPromotionRequirement
 .npc-trainer-skill-row:last-child { border-bottom: 0; }
 .npc-trainer-skill-name { justify-self: start; color: rgb(var(--ui-base)); font-weight: 700; text-align: left; }
 .npc-trainer-skill-description { min-width: 0; color: rgb(var(--ui-dark)); font-size: 12px; line-height: 1.2; text-align: left; }
-.npc-trainer-training-level { color: rgb(var(--ui-accent-blue)); text-align: left; }
 .npc-trainer-skill-row:hover { background: rgba(255, 255, 255, 0.06); }
 .npc-trainer-skill-row:hover .npc-trainer-skill-price { transform-origin: center; animation: npc-trainer-price-pulse 1.2s ease-in-out infinite; }
 .npc-trainer-skill-price { display: inline-flex; align-items: center; gap: 4px; color: #7ef58e; white-space: nowrap; font-size: 15px; }

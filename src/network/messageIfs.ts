@@ -106,14 +106,12 @@ export interface AccountCharacterNameCheckData {
 
 export type PhysicalWeaponSkillKey = 'swords' | 'axes' | 'maces' | 'polearms' | 'bows'
 export type ArmorSkillKey = 'leatherArmor' | 'chainArmor' | 'plateArmor' | 'shields'
-export type UtilitySkillKey = 'camping' | 'healing'
+export type UtilitySkillKey = 'camping' | 'healing' | 'cooking'
 export type GatheringSkillKey = 'mining' | 'lumberjacking' | 'hunting'
 export type CombatSkillKey = 'powerStrike' | 'preciseShot'
-export type CraftingSkillKey = 'blacksmithy' | 'bowcraft' | 'armorsmithy' | 'alchemy' | 'cooking'
-export type SkillKey = CraftingSkillKey | PhysicalWeaponSkillKey | ArmorSkillKey | UtilitySkillKey | GatheringSkillKey | CombatSkillKey
+export type SkillKey = PhysicalWeaponSkillKey | ArmorSkillKey | UtilitySkillKey | GatheringSkillKey | CombatSkillKey
 
 export interface SkillProgressTO {
-    rankUpgradePrice?: number
     maxWoodResourceKey?: string
     maxMiningOreResourceKey?: string
     maxHuntingHideResourceKey?: string

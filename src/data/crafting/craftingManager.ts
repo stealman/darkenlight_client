@@ -6,9 +6,6 @@ import {EmeraldsManager} from '@/gui/emeraldsManager'
 
 export const CraftingTypes = {
     COOKING: "COOKING",
-    BLACKSMITHY: "BLACKSMITHY",
-    BOWCRAFTING: "BOWCRAFTING",
-    JEWELERY: "JEWELRY",
 }
 
 export const CraftingManager = {

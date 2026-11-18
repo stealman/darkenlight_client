@@ -292,16 +292,11 @@
       "oreSmelting": "Tavení slouží k vyčištění rudy a výrobě ingotů, ze kterých se vyrábějí zbraně a brnění. Vzácnější kovy vyžadují k vyčištění speciální čisticí přísady.",
       "woodProcessing": "Zpracováním dřeva získáš prkna pro výrobu luků, holí a hůlek. Vzácnější dřeva vyžadují čisticí přísady.",
       "leatherProcessing": "Zpracováním surových kůží získáš materiál pro výrobu koženého brnění. Vzácnější kůže vyžadují čisticí přísady.",
-      "resources": "Výroba různých užitečných surovin a materiálů, které jsou často potřeba pro další výrobu.",
-      "skillMissing": "neovládáš",
-      "npcHelp": "S výrobou těch nejjednodušších ti {npc} pomůže."
+      "resources": "Výroba různých užitečných surovin a materiálů, které jsou často potřeba pro další výrobu."
     },
     "title": "Výroba",
     "COOKING": "Vaření",
-    "BLACKSMITHY": "Výroba",
-    "BOWCRAFTING": "Výroba",
     "JEWELRY": "Výroba",
-    "JEWELERY": "Výroba",
     "noRecipes": "Není k dispozici žádný recept",
     "selectRecipe": "Vyber recept",
       "noResources": "Nemáš suroviny",
@@ -309,8 +304,6 @@
       "craftable": "Můžeš vyrobit",
     "types": {
       "cooking": "Vaření",
-      "blacksmithy": "Kovářství",
-      "bowcrafting": "Lukařství",
       "jewelry": "Šperkařství"
     }
   },
@@ -363,8 +356,7 @@
       }
   },
   "vendor": {
-    "upgradeSkill": "Pov\u00fd\u0161it",
-    "noTrainingOffers": "Žádná další výuka není k dispozici.",
+    "craftingLevel": "Úroveň výroby",
       "vendor": "Obchod",
       "repairer": "Oprava",
       "crafting": "Výroba",
@@ -374,7 +366,6 @@
     "bankLoading": "Otevírám banku...",
     "healer": "Léčitel",
     "trainer": "Trenér",
-    "training": "Trénink",
     "newSkills": "Nové dovednosti",
     "promotion": "Povýšení",
     "learnSkill": "Naučit",

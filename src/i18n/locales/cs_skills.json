@@ -1,6 +1,5 @@
 {
   "skills": {
-    "crafting": {"alchemy": "Alchymie", "blacksmithy": "Kovářství", "bowcraft": "Výroba Luků", "armorsmithy": "Zbrojířství", "cooking": "Vaření"},
     "monsterKnowledge": {
       "defenseTypes": {"DEFENSE_MELEE": "Obrana zblízka", "DEFENSE_MISSILE": "Obrana proti střelbě"},
       "damageReceived": {"PHYSICAL_PIERCE": "Bodné poškození", "PHYSICAL_SLASH": "Sečné poškození", "PHYSICAL_BLUNT": "Drtivé poškození"},
@@ -18,7 +17,6 @@
       "categories": {"Sheeps": "Ovce", "Kobolds": "Koboldi", "Skeletons": "Kostlivci", "Withers": "Witherové", "Zombies": "Zombie", "Wights": "Přízraky", "Cats": "Kočky", "Deers": "Jeleni", "Guards": "Stráže"}
     },
     "categories": {
-      "crafting": "Výroba",
       "gathering": "Získávání Surovin",
       "weapons": "Zbraně",
       "armor": "Brnění",
@@ -40,6 +38,7 @@
       "shields": "Štíty"
     },
     "utility": {
+      "cooking": "Vaření",
       "hunting": "Lov",
       "lumberjacking": "Dřevorubectví",
       "mining": "Těžba",
@@ -48,12 +47,8 @@
     },
     "descriptions": {
       "cooking": "Dovednost pro přípravu jídel.",
-      "alchemy": "Umožňuje vyrábět lektvary a elixíry.",
       "hunting": "Lovem zvířat lze získávat kůže a materiál pro tětivy luků.",
       "lumberjacking": "Umožňuje získávat různé druhy dřeva podle úrovně dovednosti a vzácnosti stromu.",
-      "blacksmithy": "Dovednost pro výrobu kovových zbraní.",
-      "bowcraft": "Dovednost pro výrobu luků.",
-      "armorsmithy": "Dovednost pro výrobu kovového brnění.",
 
       "mining": "Umožňuje těžit a tavit rudy různých materiálů, těžit uhlí a s krumpáčem v ruce rozpoznávat vzácnost ložiska až do úrovně dovednosti.",
       "swords": "Umožňuje nosit a účinně používat Meče v boji",
@@ -85,7 +80,6 @@
       "fallback": "Úroveň {rank}"
     },
     "progress": {
-      "visitTrainer": "Navštiv trenéra",
       "experience": "Zkušenost",
       "learnNovice": "Tuto dovednost zatím neovládáš",
       "highestLevelFor": "Nejvyšší možná úroveň pro",
@@ -97,8 +91,6 @@
     },
     "bonuses": {
       "cooking": "Zkracuje dobu přípravy jídel o {percent}.",
-      "alchemy": "Zkracuje dobu výroby lektvarů o {percent}.",
-      "alchemySavings": "Šetří {percent} % přísad při výrobě.",
       "cookingSavings": "Šetří {percent} % surovin při vaření.",
       "lumberjackingCapacityPreservation": "Přidává bonus {percent} % k výtěžnosti stromu.",
       "lumberjackingMaxWood": "Umožňuje získávat dřevo až po {wood}.",
@@ -109,12 +101,6 @@
       "lumberjackingStaminaReduction": "Snižuje spotřebu výdrže při kácení o {percent} %.",
       "miningStaminaReduction": "Snižuje spotřebu výdrže při těžbě o {percent} %.",
       "skillBonus": "Bonus dovednosti",
-      "blacksmithy": "Umožňuje vyrábět složitější kovové zbraně ve vyšší kvalitě.",
-      "armorsmithy": "Umožňuje vyrábět složitější kovové brnění a štíty ve vyšší kvalitě.",
-      "bowcraft": "Umožňuje vyrábět složitější luky ve vyšší kvalitě.",
-      "blacksmithyExpert": "Díky zručnému zpracování šetří při výrobě {range} % materiálu.",
-      "blacksmithyMaster": "Vyšší šance na lepší kvalitu.",
-      "blacksmithyGrandmaster": "Díky dokonalému zpracování šetří při výrobě {range} % materiálu.",
       "expertBonus": "Expertní bonus",
       "masterBonus": "Mistrovský bonus",
       "grandmasterBonus": "Velmistrovský bonus",

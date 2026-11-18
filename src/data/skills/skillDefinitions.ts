@@ -1,6 +1,6 @@
 import type {SkillKey} from '@/network/messageIfs'
 
-export type SkillCategoryKey = 'weapons' | 'armor' | 'utility' | 'gathering' | 'crafting'
+export type SkillCategoryKey = 'weapons' | 'armor' | 'utility' | 'gathering'
 
 export type SkillDefinition = {
     key: SkillKey
@@ -30,6 +30,7 @@ export const ArmorSkillDefinitions: SkillDefinition[] = [
 ]
 
 export const UtilitySkillDefinitions: SkillDefinition[] = [
+    {key: 'cooking', category: 'utility', translationKey: 'skills.utility.cooking', descriptionTranslationKey: 'skills.descriptions.cooking', bonusDescriptionTranslationKey: 'skills.bonuses.cooking'},
     {key: 'camping', category: 'utility', translationKey: 'skills.utility.camping', descriptionTranslationKey: 'skills.descriptions.camping', bonusKind: 'campingRestingRegen'},
     {key: 'healing', category: 'utility', translationKey: 'skills.utility.healing', descriptionTranslationKey: 'skills.descriptions.healing', bonusKind: 'bandageHealing'},
 ]
@@ -40,18 +41,9 @@ export const GatheringSkillDefinitions: SkillDefinition[] = [
     {key: 'mining', category: 'gathering', translationKey: 'skills.utility.mining', descriptionTranslationKey: 'skills.descriptions.mining', bonusKind: 'mining'},
 ]
 
-export const CraftingSkillDefinitions: SkillDefinition[] = [
-    {key: 'cooking', category: 'crafting', translationKey: 'skills.crafting.cooking', descriptionTranslationKey: 'skills.descriptions.cooking', bonusDescriptionTranslationKey: 'skills.bonuses.cooking'},
-    {key: 'alchemy', category: 'crafting', translationKey: 'skills.crafting.alchemy', descriptionTranslationKey: 'skills.descriptions.alchemy', bonusDescriptionTranslationKey: 'skills.bonuses.alchemy'},
-    {key: 'blacksmithy', category: 'crafting', translationKey: 'skills.crafting.blacksmithy', descriptionTranslationKey: 'skills.descriptions.blacksmithy', bonusDescriptionTranslationKey: 'skills.bonuses.blacksmithy'},
-    {key: 'bowcraft', category: 'crafting', translationKey: 'skills.crafting.bowcraft', descriptionTranslationKey: 'skills.descriptions.bowcraft', bonusDescriptionTranslationKey: 'skills.bonuses.bowcraft'},
-    {key: 'armorsmithy', category: 'crafting', translationKey: 'skills.crafting.armorsmithy', descriptionTranslationKey: 'skills.descriptions.armorsmithy', bonusDescriptionTranslationKey: 'skills.bonuses.armorsmithy'},
-]
-
 export const SkillDefinitions: SkillDefinition[] = [
     ...PhysicalWeaponSkillDefinitions,
     ...ArmorSkillDefinitions,
     ...UtilitySkillDefinitions,
     ...GatheringSkillDefinitions,
-    ...CraftingSkillDefinitions,
 ]

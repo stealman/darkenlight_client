@@ -509,7 +509,8 @@ export class GMNpcAction implements Message {
     d: any
 
     constructor(action: string, data: any) {
-        this.d = {action: action, data: data}
+        // GM forms contain nested Vue proxies; snapshot the JSON payload before worker transport.
+        this.d = JSON.parse(JSON.stringify({action, data}))
     }
 }
 
@@ -632,14 +633,7 @@ export class ShearSheepMsg implements Message {
     constructor(id: number) { this.d = {id} }
 }
 
-export class NpcUpgradeSkillMsg implements Message {
-    t: number = 48
-    d: {id: number, skill: string, targetRank: number}
-
-    constructor(id: number, skill: string, targetRank: number) {
-        this.d = {id, skill, targetRank}
-    }
-}
+// Message ID 48 retired: purchasing crafting skill ranks. Do not reuse.
 
 export class MonsterCatalogRequest implements Message {
     t = 49

@@ -246,10 +246,17 @@
 
                 <template v-else-if="feature.type === 'crafting'">
                     <div class="npc-feature-checkboxes">
-                        <label v-for="category in craftingCategories" :key="category.value" class="npc-feature-checkbox" :class="{ 'npc-feature-checkbox-selected': feature.settings.itemCategories.includes(category.value) }">
-                            <input v-model="feature.settings.itemCategories" type="checkbox" :value="category.value" />
-                            <span>{{ category.label }}</span>
-                        </label>
+                        <div v-for="category in craftingCategories" :key="category.value" class="npc-crafting-level-row">
+                            <label class="npc-feature-checkbox" :class="{ 'npc-feature-checkbox-selected': feature.settings.itemCategories.includes(category.value) }">
+                                <input v-model="feature.settings.itemCategories" type="checkbox" :value="category.value" />
+                                <span>{{ category.label }}</span>
+                            </label>
+                            <select v-if="feature.settings.itemCategories.includes(category.value)"
+                                v-model.number="feature.settings.categoryLevels[category.value]"
+                                :aria-label="category.label + ': ' + t('vendor.craftingLevel')">
+                                <option v-for="level in 10" :key="level" :value="level">{{ level }}</option>
+                            </select>
+                        </div>
                     </div>
                 </template>
 
@@ -511,7 +518,7 @@ const createFeature = (type) => ({
     settings: type === 'vendor' || type === 'repairer'
         ? { itemCategories: [], weaponMaterials: [], armorMaterials: [], bowMaterials: [], individualItems: {weapons: [], bows: [], metalArmor: [], leatherArmor: [], resources: [], potions: [], food: [], ingredients: []} }
         : type === 'crafting'
-            ? {itemCategories: []}
+            ? {itemCategories: [], categoryLevels: Object.fromEntries(craftingCategories.value.map(category => [category.value, 1]))}
         : type === 'healer'
             ? {potionTiers: healerPotionTiers.map((tier) => tier.value)}
         : {},
@@ -591,7 +598,7 @@ const openDialog = () => {
                 },
             }
             : feature.type === 'crafting'
-                ? {itemCategories: [...(feature.settings?.itemCategories ?? [])]}
+                ? {itemCategories: [...(feature.settings?.itemCategories ?? [])], categoryLevels: Object.fromEntries(craftingCategories.value.map(category => [category.value, feature.settings?.categoryLevels?.[category.value] ?? 1]))}
                 : feature.type === 'healer'
                     ? {potionTiers: [...(feature.settings?.potionTiers ?? healerPotionTiers.map((tier) => tier.value))]}
                 : {},
@@ -802,4 +809,5 @@ defineExpose({
 .npc-delete-button {
     color: #b84848;
 }
+.npc-crafting-level-row { display: flex; align-items: center; gap: 12px; }
 </style>

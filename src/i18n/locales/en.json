@@ -292,16 +292,11 @@
       "oreSmelting": "Smelting purifies ore into ingots used to craft weapons and armor. Rarer metals require special purifying additives.",
       "woodProcessing": "Process logs into planks for crafting bows, staves and wands. Rarer woods require purifying additives.",
       "leatherProcessing": "Process raw hides into leather for crafting leather armor. Rarer hides require purifying additives.",
-      "resources": "Crafting useful resources and materials that are often needed for further crafting.",
-      "skillMissing": "untrained",
-      "npcHelp": "{npc} will help you craft the simplest ones."
+      "resources": "Crafting useful resources and materials that are often needed for further crafting."
     },
     "title": "Crafting",
     "COOKING": "Cooking",
-    "BLACKSMITHY": "Crafting",
-    "BOWCRAFTING": "Crafting",
     "JEWELRY": "Crafting",
-    "JEWELERY": "Crafting",
     "noRecipes": "No recipes available",
     "selectRecipe": "Select a recipe",
       "noResources": "Missing resources",
@@ -309,8 +304,6 @@
       "craftable": "You can craft",
     "types": {
       "cooking": "Cooking",
-      "blacksmithy": "Blacksmithy",
-      "bowcrafting": "Bowcrafting",
       "jewelry": "Jewelry"
     }
   },
@@ -364,8 +357,7 @@
       }
   },
   "vendor": {
-    "upgradeSkill": "Upgrade",
-    "noTrainingOffers": "No further lessons are available.",
+    "craftingLevel": "Crafting level",
       "vendor": "Vendor",
       "repairer": "Repair",
       "crafting": "Crafting",
@@ -375,7 +367,6 @@
     "bankLoading": "Opening bank...",
     "healer": "Healer",
     "trainer": "Trainer",
-    "training": "Training",
     "newSkills": "New skills",
     "promotion": "Promotion",
     "learnSkill": "Learn",
