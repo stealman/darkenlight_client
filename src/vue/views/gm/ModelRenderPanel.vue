@@ -123,6 +123,7 @@ const WEAPON_OPTIONS = [
     { key: 'HUNTING_SPEAR', modelFile: 'huntingspear.glb', atlasFile: 'huntingspear.jpg', inventoryBaseName: 'hunting-spear' },
     { key: 'LIGHT_MACE', modelFile: 'lightmace.glb', atlasFile: 'lightmace.jpg', inventoryBaseName: 'lightmace' },
     { key: 'WARMACE', modelFile: 'warmace.glb', atlasFile: 'warmace.jpg', inventoryBaseName: 'warmace' },
+    { key: 'WARHAMMER', modelFile: 'warhammer.glb', atlasFile: 'warhammer.jpg', cacheVersion: '20261118-draco-atlas-v3', inventoryBaseName: 'warhammer' },
 ].map((weapon) => {
     const item = WeaponModelsCb[weapon.key]
     return { ...weapon, item, label: `${weapon.key} (${item.model})` }
@@ -425,7 +426,7 @@ const loadPreview = async () => {
         return
     }
     const modelPath = isWeapon
-        ? `weapons/${weaponAsset.modelFile}?v=${TRIPO_WEAPON_CACHE_VERSION}`
+        ? `weapons/${weaponAsset.modelFile}?v=${weaponAsset.cacheVersion ?? TRIPO_WEAPON_CACHE_VERSION}`
         : `armors/${armorAsset.modelFile}`
     const importResult = await SceneLoader.ImportMeshAsync('', '/models/equip/', modelPath, scene)
     const sourceMeshes = importResult.meshes.filter((m) => m instanceof Mesh && m.getTotalVertices() > 0)
@@ -456,7 +457,7 @@ const loadPreview = async () => {
             scene,
             `modelRenderMaterial-${previewCategory.value}-${previewItem.model}`,
             `${BASE_EQUIP_MATERIAL_PATH}weapons/`,
-            weaponAsset.atlasFile,
+            `${weaponAsset.atlasFile}?v=${weaponAsset.cacheVersion ?? TRIPO_WEAPON_CACHE_VERSION}`,
             1 / previewItem.matCols,
             1 / previewItem.matRows,
             false,

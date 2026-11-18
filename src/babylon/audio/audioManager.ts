@@ -3,6 +3,10 @@ import { Utils } from '@/utils/utils'
 import { Settings } from '@/settings/settings'
 import { AudioUtils } from '@/babylon/audio/audioUtils'
 
+const CAMPFIRE_VOLUME = 1.75
+const MENU_CAMPFIRE_VOLUME = CAMPFIRE_VOLUME * 0.8
+const MENU_MUSIC_VOLUME_FACTOR = 1.2
+
 export const AudioManager = {
     globalVolume: 0.5,
     ambientSoundVolume: 0.5,
@@ -45,6 +49,9 @@ export const AudioManager = {
 
     actualAmbientSound: null as Sound | null,
     menuAudioActive: false,
+    menuMusicActive: false,
+    menuMusic: null as Sound | null,
+    menuMusicFadeTimer: null as ReturnType<typeof setTimeout> | null,
 
     miningSounds: [] as Sound[],
     lumberJackingSounds: [] as Sound[],
@@ -110,7 +117,7 @@ export const AudioManager = {
         this.actualAmbientSound = this.ambientSounds.get(AmbientSoundTypes.WINTER_FOREST)!;
 
         // Static object sounds
-        this.loadStaticObjectSound("CAMPFIRE", "campfire.ogg", scene, { volume: 1.75, playbackRate: 1, loop: true } );
+        this.loadStaticObjectSound("CAMPFIRE", "campfire.ogg", scene, { volume: CAMPFIRE_VOLUME, playbackRate: 1, loop: true } );
 
         // Mining sounds
         this.loadSoundArray(this.miningSounds, ["mining1.ogg", "mining2.ogg", "mining3.ogg", "mining4.ogg"], "miningSound", scene, { volume: 1, playbackRate: 1 } );
@@ -268,16 +275,53 @@ export const AudioManager = {
         }
     },
 
-    setMenuAudioActive(active: boolean) {
+    initializeMenuMusic(scene: Scene) {
+        const tracks = ['the_last_horn.ogg', 'battle_theme.ogg'].map((file, index) => {
+            const music = new Sound('menuMusic' + index, this.BASE_PATH + 'music/' + file, scene, () => {
+                if (this.menuMusicActive && this.menuMusic === music) music.play()
+            }, {volume: this.ambientSoundVolume * MENU_MUSIC_VOLUME_FACTOR, loop: false})
+            music.onEndedObservable.add(() => {
+                if (!this.menuMusicActive || this.menuMusic !== music) return
+                this.menuMusic = tracks[(index + 1) % tracks.length]
+                this.setMenuMusicActive(true)
+            })
+            return music
+        })
+        this.menuMusic = tracks[0]
+        scene.onDisposeObservable.addOnce(() => {
+            if (this.menuMusic && tracks.includes(this.menuMusic)) this.menuMusic = null
+        })
+    },
+
+    setMenuAudioActive(active: boolean, musicActive: boolean = active) {
         this.menuAudioActive = active
+        this.setMenuMusicActive(active && musicActive)
         const fire = this.staticObjectSounds.get('CAMPFIRE')
         if (active) {
-            this.setAmbientSoundForEnvironment('outdoor')
-            if (this.actualAmbientSound?.isReady() && !this.actualAmbientSound.isPlaying) this.actualAmbientSound.play()
+            fire?.setVolume(MENU_CAMPFIRE_VOLUME)
             if (fire?.isReady() && !fire.isPlaying) fire.play()
         } else {
             fire?.stop()
-            this.stopAmbientSound()
+            fire?.setVolume(CAMPFIRE_VOLUME)
+        }
+    },
+
+    setMenuMusicActive(active: boolean) {
+        const changed = this.menuMusicActive !== active
+        this.menuMusicActive = active
+        const music = this.menuMusic
+        if (!music) return
+        if (active) {
+            if (this.menuMusicFadeTimer !== null) clearTimeout(this.menuMusicFadeTimer)
+            this.menuMusicFadeTimer = null
+            music.setVolume(this.ambientSoundVolume * MENU_MUSIC_VOLUME_FACTOR)
+            if (music.isReady() && !music.isPlaying) music.play()
+        } else if (changed) {
+            music.setVolume(0, 1.5)
+            this.menuMusicFadeTimer = setTimeout(() => {
+                music.stop()
+                this.menuMusicFadeTimer = null
+            }, 1500)
         }
     },
 
@@ -333,7 +377,6 @@ export const AudioManager = {
     loadAmbientSound (type: object, fileName: string, scene: Scene, options: { volume: number, playbackRate: number, loop: boolean }) {
         const sound = new Sound("ambientSound" + type, AudioManager.BASE_PATH_AMBIENT + fileName, scene, function() {
             sound['loaded'] = true;
-            if (AudioManager.menuAudioActive && type === AmbientSoundTypes.WINTER_FOREST) sound.play()
         }, options);
         this.ambientSounds.set(type, sound);
     },
@@ -342,7 +385,10 @@ export const AudioManager = {
         const sound = new Sound("staticObjectSound" + type, AudioManager.BASE_PATH_SFX + fileName, scene, function() {
             sound['loaded'] = true;
             sound['defaultVolume'] = options.volume;
-            if (AudioManager.menuAudioActive && type === 'CAMPFIRE') sound.play()
+            if (AudioManager.menuAudioActive && type === 'CAMPFIRE') {
+                sound.setVolume(MENU_CAMPFIRE_VOLUME)
+                sound.play()
+            }
         }, options);
         this.staticObjectSounds.set(type, sound);
     },
@@ -591,6 +637,8 @@ export const AudioManager = {
     },
 
     setAmbientSoundVolume(volume: number) {
+        this.ambientSoundVolume = volume
+        if (this.menuMusicActive) this.menuMusic?.setVolume(volume * MENU_MUSIC_VOLUME_FACTOR)
         Object.keys(AmbientSoundTypes).forEach((key) => {
             const ambientSound = this.ambientSounds.get(AmbientSoundTypes[key]);
             if (ambientSound) {

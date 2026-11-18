@@ -3,20 +3,22 @@
 </template>
 
 <script setup lang="ts">
-import {onBeforeUnmount, onMounted, ref} from 'vue'
+import {onBeforeUnmount, onMounted, ref, watch} from 'vue'
 import type {Particle} from '@babylonjs/core'
-import {Camera, Color4, Engine, EngineStore, FreeCamera, ParticleSystem, Scene, Texture, Vector3} from '@babylonjs/core'
+import {Camera, Color4, Engine, EngineStore, FreeCamera, GPUParticleSystem, ParticleSystem, Scene, Texture, Vector3} from '@babylonjs/core'
 import {AudioManager} from '@/babylon/audio/audioManager'
 
 const canvas = ref<HTMLCanvasElement | null>(null)
+const props = defineProps<{musicActive: boolean}>()
+watch(() => props.musicActive, active => AudioManager.setMenuMusicActive(active))
 let engine: Engine | null = null
 let resize: (() => void) | null = null
 const unlockMenuAudio = () => {
     Engine.audioEngine?.unlock()
-    AudioManager.setMenuAudioActive(true)
+    AudioManager.setMenuAudioActive(true, props.musicActive)
 }
 onMounted(() => {
-    AudioManager.setMenuAudioActive(true)
+    AudioManager.setMenuAudioActive(true, props.musicActive)
     window.addEventListener('pointerdown', unlockMenuAudio)
     window.addEventListener('keydown', unlockMenuAudio)
     // Keep default-scene constructors in the gameplay renderer on its own scene.
@@ -25,6 +27,7 @@ onMounted(() => {
         engine = new Engine(canvas.value!, false, {alpha: true, stencil: false, loseContextOnDispose: true}, false)
         engine.setHardwareScalingLevel(1.5)
         const scene = new Scene(engine)
+        AudioManager.initializeMenuMusic(scene)
         scene.clearColor = new Color4(0, 0, 0, 0)
         const camera = new FreeCamera('menuSmokeCamera', new Vector3(0, 0, -5), scene)
         camera.setTarget(Vector3.Zero())
@@ -72,6 +75,31 @@ onMounted(() => {
         smoke.addColorGradient(1, new Color4(0.6, 0.62, 0.65, 0))
         smoke.preWarmCycles = 240
         smoke.preWarmStepOffset = 5
+        const sparks = GPUParticleSystem.IsSupported
+            ? new GPUParticleSystem('menuSparks', {capacity: 1200}, scene)
+            : new ParticleSystem('menuSparks', 1200, scene)
+        sparks.particleTexture = new Texture('/images/gfx/flare.png', scene)
+        sparks.emitter = Vector3.Zero()
+        sparks.minEmitBox = new Vector3(-6, -3.6, -0.5)
+        sparks.maxEmitBox = new Vector3(6, -3.1, 0)
+        sparks.direction1 = new Vector3(-0.22, 0.65, 0)
+        sparks.direction2 = new Vector3(0.3, 1.2, 0)
+        sparks.minEmitPower = 0.6
+        sparks.maxEmitPower = 1.1
+        sparks.gravity = new Vector3(0.025, 0.025, 0)
+        sparks.minLifeTime = 3
+        sparks.maxLifeTime = 7
+        sparks.minSize = 0.015
+        sparks.maxSize = 0.035
+        sparks.emitRate = 100
+        sparks.updateSpeed = 0.016
+        sparks.blendMode = ParticleSystem.BLENDMODE_ADD
+        sparks.addColorGradient(0, new Color4(1, 0.65, 0.2, 0))
+        sparks.addColorGradient(0.08, new Color4(1, 0.55, 0.12, 0.85))
+        sparks.addColorGradient(0.45, new Color4(1, 0.32, 0.05, 0.65))
+        sparks.addColorGradient(1, new Color4(0.6, 0.12, 0.02, 0))
+        sparks.preWarmCycles = 100
+        sparks.preWarmStepOffset = 3
         resize = () => {
             engine?.resize()
             const halfWidth = 3 * canvas.value!.clientWidth / Math.max(1, canvas.value!.clientHeight)
@@ -79,10 +107,13 @@ onMounted(() => {
             camera.orthoRight = halfWidth
             smoke.minEmitBox.x = -halfWidth - 1
             smoke.maxEmitBox.x = halfWidth + 1
+            sparks.minEmitBox.x = -halfWidth - 0.3
+            sparks.maxEmitBox.x = halfWidth + 0.3
         }
         resize()
         window.addEventListener('resize', resize)
         smoke.start()
+        sparks.start()
         engine.runRenderLoop(() => scene.render())
     } catch (error) {
         if (resize) window.removeEventListener('resize', resize)
@@ -96,9 +127,10 @@ onBeforeUnmount(() => {
     window.removeEventListener('keydown', unlockMenuAudio)
     AudioManager.setMenuAudioActive(false)
     if (resize) window.removeEventListener('resize', resize)
-    // Release the menu's GPU context now, without waiting for browser GC.
     engine?.stopRenderLoop()
-    engine?.dispose()
+    // Let the music finish fading even if gameplay loads in less than 1.5 seconds.
+    const menuEngine = engine
+    window.setTimeout(() => menuEngine?.dispose(), 1500)
     engine = null
     resize = null
 })

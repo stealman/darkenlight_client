@@ -6,7 +6,6 @@ import { Materials } from '@/babylon/materials'
 import { BASE_EQUIP_MATERIAL_PATH } from '@/babylon/item/codebook/armorsModelsCb'
 import { EquipSlotModelsCb } from '@/data/items/item'
 import { BowVertexColorPalettes } from './vertexColorPalettes/bows'
-import { MaceVertexColorPalettes } from './vertexColorPalettes/maces'
 import { PolearmVertexColorPalettes } from './vertexColorPalettes/polearms'
 import { createVertexColorWeaponMaterial } from './vertexColorPalettes/vertexColorWeaponMaterial'
 
@@ -19,7 +18,7 @@ const matHandAxeSize = new Vector2(4, 4)
 const matBattleAxeSize = new Vector2(4, 4)
 const matGreatAxeSize = new Vector2(4, 4)
 const matLargeBattleAxeSize = new Vector2(4, 4)
-const matWarhammerSize = new Vector2(5, 1)
+const matWarhammerSize = new Vector2(4, 4)
 const matFutureWeaponSize = new Vector2(5, 1)
 const matHalberdSize = new Vector2(4, 4)
 const matHuntingSpearSize = new Vector2(4, 4)
@@ -41,6 +40,7 @@ const HANDAXE_ASSET_CACHE_VERSION = '20261103-silver-atlas-v1'
 const BATTLEAXE_ASSET_CACHE_VERSION = '20261103-silver-atlas-v1'
 const HUNTINGSPEAR_ASSET_CACHE_VERSION = '20261103-silver-atlas-v1'
 const LIGHTMACE_ASSET_CACHE_VERSION = '20261103-silver-atlas-v1'
+const WARHAMMER_ASSET_CACHE_VERSION = '20261118-draco-atlas-v3'
 const WARMACE_ASSET_CACHE_VERSION = '20261103-silver-atlas-v1'
 
 const createWeaponMaterialAtlasIndices = (atlasSize: Vector2) => new Map<number, number>(
@@ -62,6 +62,7 @@ const handaxeMaterialAtlasIndices = createWeaponMaterialAtlasIndices(matHandAxeS
 const battleaxeMaterialAtlasIndices = createWeaponMaterialAtlasIndices(matBattleAxeSize)
 const huntingspearMaterialAtlasIndices = createWeaponMaterialAtlasIndices(matHuntingSpearSize)
 const lightmaceMaterialAtlasIndices = createWeaponMaterialAtlasIndices(matLightMaceSize)
+const warhammerMaterialAtlasIndices = createWeaponMaterialAtlasIndices(matWarhammerSize)
 const warmaceMaterialAtlasIndices = createWeaponMaterialAtlasIndices(matWarmaceSize)
 
 function createWeaponNormalTexture(scene: Scene, fileName: string, cacheVersion: string): Texture {
@@ -105,7 +106,6 @@ export const WeaponsCbManager = {
         this.bowMaterial = createVertexColorWeaponMaterial('huntingBowVertexColor', scene, BowVertexColorPalettes.HUNTING_BOW)
         this.recurveBowMaterial = createVertexColorWeaponMaterial('recurveBowVertexColor', scene, BowVertexColorPalettes.RECURVE_BOW)
         this.battleBowMaterial = createVertexColorWeaponMaterial('battleBowVertexColor', scene, BowVertexColorPalettes.BATTLE_BOW)
-        this.warhammerMaterial = createVertexColorWeaponMaterial('warhammerVertexColor', scene, MaceVertexColorPalettes.WARHAMMER)
         this.warSpearMaterial = createVertexColorWeaponMaterial('warSpearVertexColor', scene, PolearmVertexColorPalettes.WAR_SPEAR)
 
         await this.initLongsword(map, scene)
@@ -121,7 +121,7 @@ export const WeaponsCbManager = {
         await this.initLargeBattleAxe(map, scene)
         await this.initLightMace(map, scene)
         await this.initWarmace(map, scene)
-        map.set(WeaponModelsCb.WARHAMMER.id, await this.getItem(WeaponModelsCb.WARHAMMER, this.warhammerMaterial))
+        await this.initWarhammer(map, scene)
         await this.initHuntingSpear(map, scene)
         map.set(WeaponModelsCb.WAR_SPEAR.id, await this.getItem(WeaponModelsCb.WAR_SPEAR, this.warSpearMaterial))
         await this.initHalberd(map, scene)
@@ -489,6 +489,36 @@ export const WeaponsCbManager = {
         ))
     },
 
+    async initWarhammer(map: Map<number, EquipItemType>, scene: Scene) {
+        if (this.itemSourceParent == null) {
+            this.itemSourceParent = new TransformNode('mobWeaponSources', scene)
+        }
+        this.warhammerMaterial = Materials.getPBRCustomMaterialFrom(
+            scene,
+            'warhammerMaterialAtlas',
+            BASE_EQUIP_MATERIAL_PATH + this.BASE_WEAPONS_PATH,
+            `warhammer.jpg?v=${WARHAMMER_ASSET_CACHE_VERSION}`,
+            1 / matWarhammerSize.x,
+            1 / matWarhammerSize.y,
+            false,
+            {
+                metallic: 0.5,
+                roughness: 0.9,
+                directIntensity: 1.5,
+                environmentIntensity: 1.2,
+            },
+            false,
+        )
+        this.warhammerMaterial.backFaceCulling = false
+        this.warhammerMaterial.twoSidedLighting = false
+        this.warhammerMaterial.usePhysicalLightFalloff = false
+        map.set(WeaponModelsCb.WARHAMMER.id, await this.getItem(
+            WeaponModelsCb.WARHAMMER,
+            this.warhammerMaterial,
+            `warhammer.glb?v=${WARHAMMER_ASSET_CACHE_VERSION}`,
+        ))
+    },
+
     async getItem(data: EquipCbItem, material: PBRCustomMaterial | null = null, fileName = `${data.model}.glb?v=${WEAPON_MODEL_CACHE_VERSION}`): Promise<EquipItemType> {
         const item = new EquipItemType(data)
         await item.initializeMeshGlb(this.itemSourceParent!, this.itemSourceParent!.getScene(), `${this.BASE_WEAPONS_PATH}${fileName}`, material, data.pos, data.rot, data.scale)
@@ -620,7 +650,7 @@ export const WeaponModelsCb = {
         warmaceMaterialAtlasIndices.get(0) ?? 12,
     ),
 
-    WARHAMMER: new EquipCbItem(EquipSlotModelsCb.WARHAMMER.modelId, 'warhammer', Vector3.Zero(), new Vector3(0.24, 0.24, 0.24), new Vector3(0, 2.5, 0), matWarhammerSize),
+    WARHAMMER: new EquipCbItem(EquipSlotModelsCb.WARHAMMER.modelId, 'warhammer', Vector3.Zero(), new Vector3(0.24, 0.24, 0.24), new Vector3(0, 2.5, 0), matWarhammerSize, warhammerMaterialAtlasIndices, warhammerMaterialAtlasIndices.get(0) ?? 12),
 
     HUNTING_SPEAR: new EquipCbItem(
         EquipSlotModelsCb.HUNTING_SPEAR.modelId,

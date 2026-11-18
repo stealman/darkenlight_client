@@ -49,7 +49,7 @@
         </div>
     </div>
 
-    <MenuAtmosphere v-if="gameLoading || displayLoginDialog || displayGuestCharacterCreationDialog || displayAccountCharacterNameDialog" />
+    <MenuAtmosphere v-if="gameLoading || displayLoginDialog || displayGuestCharacterCreationDialog || displayAccountCharacterNameDialog" :music-active="!gameLoading" />
 
     <div class="dialog-backdrop login-screen-backdrop loading-dialog-backdrop" v-if="gameLoading">
         <div class="dialog-window adaptive">
