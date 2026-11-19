@@ -32,6 +32,7 @@ import { preparePreviewSkeleton } from './previewSkeleton'
 type PreviewSlot = 'body' | 'head' | 'pauldrons' | 'legs' | 'shield' | 'weapon'
 type PreviewBodyVariant = 'male' | 'female'
 let previewBodyVariant: PreviewBodyVariant = 'male'
+let previewArmorSources: Awaited<ReturnType<typeof initializePreviewArmorSources>> | null = null
 type PreviewAnimation = 'idle' | 'walk' | 'run' | 'combatIdle' | 'combatIdleTwoHanded' | 'slash' | 'jab' | 'leftSlash' | 'rightSlash' | 'highJab' | 'slash2' | 'bowAim' | 'greatAxeAttack' | 'oreMining' | 'twoHandedSwordAttack' | 'twoHandedSwordAttack2' | 'death'
 type AdminUtilsSection = 'materialAtlas' | 'weaponMaterialAtlas' | 'bowMaterialAtlas' | 'equipment'
 type ArmorMaterialFamily = 'plate' | 'chain'
@@ -1107,6 +1108,7 @@ function setEquipmentSlot(model: CharacterModel, slot: PreviewSlot, modelId: num
     }
     model.equipSet.forEach((item) => {
         if (item.type.id !== modelId) return
+        previewArmorSources?.useChainMailSource(item, previewBodyVariant)
         if (slot === 'pauldrons' || slot === 'legs') {
             const side = item === model.equipSet.get(slot === 'legs' ? 'LEFT_LEG' : 'LEFT_PAULDRON') ? 'left' : 'right'
             const modifier = getPreviewPairedModifiers(slot, modelId)[side]
@@ -1561,7 +1563,7 @@ export async function mountAdminUtils() {
         const modifierConfigs = { male: maleModifierConfig, female: femaleModifierConfig }
         let modifierConfig = maleModifierConfig
         modifierConfig.activate()
-        await initializePreviewArmorSources(scene, EquipManager.itemTypes)
+        previewArmorSources = await initializePreviewArmorSources(scene, EquipManager.itemTypes)
         const saveModifiers = document.createElement('button')
         saveModifiers.type = 'button'
         saveModifiers.textContent = 'Proporce načteny ze souboru'
@@ -1600,7 +1602,7 @@ export async function mountAdminUtils() {
         scene.onDisposeObservable.addOnce(() => container.dispose())
         const entries = container.instantiateModelsToScene(undefined, false, { doNotInstantiate: true })
         entries.skeletons.forEach(preparePreviewSkeleton)
-        let model = await CharacterModel.create(createPreviewCharacter(), true, entries)
+        let model = await CharacterModel.create(createPreviewCharacter(), true, entries, { renderHelmet: true })
         const previewModels: Partial<Record<PreviewBodyVariant, CharacterModel>> = { male: model }
         // The preview controls own the chosen hair type, fitting and async refresh.
         model.hairEquipmentRefreshEnabled = false
@@ -1881,7 +1883,7 @@ export async function mountAdminUtils() {
                     const femaleEntries = femaleContainer.instantiateModelsToScene(undefined, false, { doNotInstantiate: true })
                     femaleEntries.skeletons.forEach(preparePreviewSkeleton)
                     next = await CharacterModel.create(createPreviewCharacter(), true, femaleEntries, {
-                        bodyTextureUrl: '/models/human/human_female.png', separateHeadAndHair: false,
+                        bodyTextureUrl: '/models/human/human_female.png', separateHeadAndHair: false, renderHelmet: true,
                     })
                     if (!next.model || !next.skeleton) throw new Error('Female preview did not initialize')
                     next.hairEquipmentRefreshEnabled = false

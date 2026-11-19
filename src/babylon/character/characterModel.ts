@@ -30,6 +30,7 @@ import { attachCharacterHair, getCharacterHairMode, hideCharacterHair, loadChara
 interface CharacterModelAppearance {
     bodyTextureUrl?: string
     separateHeadAndHair?: boolean
+    renderHelmet?: boolean
 }
 
 export class CharacterModel implements EquipBearer {
@@ -184,7 +185,7 @@ export class CharacterModel implements EquipBearer {
 
     private async initializeModelAsync() {
         const scene = this.node.getScene()
-        const hairMode = getCharacterHairMode(this.parent.equipSet.get(EquipItemSlots.HEAD)?.modelId)
+        const hairMode = getCharacterHairMode(this.appearance.renderHelmet ? this.parent.equipSet.get(EquipItemSlots.HEAD)?.modelId : undefined)
         // The shared AssetContainer parses the GLB once. Most nearby human
         // models are instantiated behind the loading overlay and only enabled
         // when their character first enters the viewport.
@@ -316,7 +317,7 @@ export class CharacterModel implements EquipBearer {
     async refreshHairAppearance() {
         if (!this.initialized || this.node.isDisposed() || this.appearance.separateHeadAndHair === false) return
         const revision = ++this.hairAppearanceRevision
-        const mode = getCharacterHairMode(this.equipSet.get('HEAD')?.type.id)
+        const mode = getCharacterHairMode(this.appearance.renderHelmet ? this.equipSet.get('HEAD')?.type.id : undefined)
         if (mode === 'hidden') {
             hideCharacterHair(this)
             return
@@ -356,7 +357,7 @@ export class CharacterModel implements EquipBearer {
             this.assignArmor(armor.modelId, armor.materialId - 1)
         }
 
-        if (this.parent.equipSet.get(EquipItemSlots.HEAD) && !this.equipSet.get('HEAD')) {
+        if (this.appearance.renderHelmet && this.parent.equipSet.get(EquipItemSlots.HEAD) && !this.equipSet.get('HEAD')) {
             const helmet = this.parent.equipSet.get(EquipItemSlots.HEAD)!
             this.assignHelmet(helmet.modelId, helmet.materialId - 1)
         }
@@ -390,6 +391,8 @@ export class CharacterModel implements EquipBearer {
     }
 
     assignHelmet(type: number, matIndex: number) {
+        // Helmets remain functional equipment; only the authoring preview renders them.
+        if (!this.appearance.renderHelmet) return
         this.addEquippedItem('HEAD', new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find((b) => b.id === 'Bone.002')!, null, null, null, getCharacterModelEquipModifier(type)))
     }
 

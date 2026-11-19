@@ -35,6 +35,40 @@ async function main() {
         assert.equal(male.length, 1)
         assert.match(male[0].texture, /human_male\.png/)
         assert.ok(male[0].slots.includes('FACE'))
+        assert.ok(male[0].slots.includes('HEAD'), 'adminUtils keeps helmet authoring available')
+        await page.evaluate(async () => {
+            const {EquipManager} = await import('/src/babylon/item/equipManager.ts')
+            const {CharacterModel} = await import('/src/babylon/character/characterModel.ts')
+            const preview = [...EquipManager.equippedItems.values()].flatMap(set => [...set]).find(item => item.parent.node?.isEnabled()).parent
+            for (const modelId of [1100, 2100]) {
+                const owner = {...preview.parent, id: -2, equipSet: new Map([['HEAD', {modelId, materialId: 1}]])}
+                const model = await CharacterModel.create(owner, true)
+                try {
+                    const check = () => {
+                        if (model.equipSet.has('HEAD')) throw new Error('A game character renders a helmet')
+                        if (!owner.equipSet.has('HEAD')) throw new Error('Helmet disappeared from equipment data')
+                        if (model.equipSet.get('HAIR')?.type.mesh.name !== 'character-hair-1') throw new Error('Hidden helmet changes hair')
+                    }
+                    check()
+                    model.clearAllEquippedItems()
+                    model.assignEquippedItems()
+                    model.assignHelmet(modelId, 0)
+                    await model.refreshHairAppearance()
+                    check()
+                } finally {
+                    model.removeFromScene()
+                }
+            }
+        })
+        const chainGeometry = () => page.evaluate(async () => {
+            const {EquipManager} = await import('/src/babylon/item/equipManager.ts')
+            const item = [...EquipManager.equippedItems.values()].flatMap(set => [...set])
+                .find(item => item.type.id === 2000 && item.parent.node?.isEnabled())
+            return {positions: Array.from(item.type.mesh.getVerticesData('position')), material: item.type.mesh.material.uniqueId}
+        })
+        await page.locator('[data-slot="body"]').selectOption('2000')
+        const maleChain = (await snapshot())[0]
+        const maleChainGeometry = await chainGeometry()
         await variant.selectOption('female')
         await page.waitForFunction(() => !document.querySelector('#adminUtilsBodyVariant').disabled)
         let female = await snapshot()
@@ -42,6 +76,20 @@ async function main() {
         assert.match(female[0].texture, /human_female\.png/)
         assert.ok(!female[0].slots.includes('FACE') && !female[0].slots.includes('HAIR'))
         assert.ok(female[0].allBonesPresent)
+        const femaleChainGeometry = await chainGeometry()
+        assert.equal(femaleChainGeometry.material, maleChainGeometry.material, 'both armor shapes share the same atlas material')
+        assert.notDeepEqual(femaleChainGeometry.positions, maleChainGeometry.positions)
+        await page.evaluate(async () => {
+            const {EquipManager} = await import('/src/babylon/item/equipManager.ts')
+            const {loadRawArmorGeometry} = await import('/src/babylon/character/characterEquipmentFitting.ts')
+            const item = [...EquipManager.equippedItems.values()].flatMap(set => [...set])
+                .find(item => item.type.id === 2000 && item.parent.node?.isEnabled())
+            const expected = await loadRawArmorGeometry(item.type.mesh.getScene(), 'female-armor-chain.glb')
+            const actual = item.type.mesh.getVerticesData('position')
+            if (actual.length !== expected.positions.length || actual.some((v, i) => Math.abs(v - expected.positions[i]) > 1e-6)) {
+                throw new Error('Female preview does not use the authored female chain armor geometry')
+            }
+        })
         await page.locator('#adminUtilsAnimation').selectOption('walk')
         assert.equal((await snapshot())[0].animation, 'Walk')
         await page.locator('[data-modifier-toggle="body"]').click()
@@ -50,10 +98,12 @@ async function main() {
         assert.ok(Math.abs((await snapshot())[0].bodyX - 0.123) < 1e-6)
         await variant.selectOption('male')
         await page.waitForFunction(() => !document.querySelector('#adminUtilsBodyVariant').disabled)
-        assert.ok(Math.abs((await snapshot())[0].bodyX - male[0].bodyX) < 1e-6)
+        assert.ok(Math.abs((await snapshot())[0].bodyX - maleChain.bodyX) < 1e-6)
+        assert.deepEqual(await chainGeometry(), maleChainGeometry, 'male chain geometry survives switching')
         await variant.selectOption('female')
         await page.waitForFunction(() => !document.querySelector('#adminUtilsBodyVariant').disabled)
         assert.ok(Math.abs((await snapshot())[0].bodyX - 0.123) < 1e-6)
+        assert.deepEqual(await chainGeometry(), femaleChainGeometry, 'female geometry survives switching')
         // All preset animations must be selectable with this GLB.
         for (const animation of await page.locator('#adminUtilsAnimation option').evaluateAll(options => options.map(option => option.value))) {
             await page.locator('#adminUtilsAnimation').selectOption(animation)
