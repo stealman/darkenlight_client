@@ -1108,7 +1108,7 @@ function setEquipmentSlot(model: CharacterModel, slot: PreviewSlot, modelId: num
     }
     model.equipSet.forEach((item) => {
         if (item.type.id !== modelId) return
-        previewArmorSources?.useChainMailSource(item, previewBodyVariant)
+        previewArmorSources?.useSource(item, previewBodyVariant)
         if (slot === 'pauldrons' || slot === 'legs') {
             const side = item === model.equipSet.get(slot === 'legs' ? 'LEFT_LEG' : 'LEFT_PAULDRON') ? 'left' : 'right'
             const modifier = getPreviewPairedModifiers(slot, modelId)[side]

@@ -60,15 +60,27 @@ async function main() {
                 }
             }
         })
-        const chainGeometry = () => page.evaluate(async () => {
+        const armorGeometry = (modelId = 2000) => page.evaluate(async modelId => {
             const {EquipManager} = await import('/src/babylon/item/equipManager.ts')
             const item = [...EquipManager.equippedItems.values()].flatMap(set => [...set])
-                .find(item => item.type.id === 2000 && item.parent.node?.isEnabled())
+                .find(item => item.type.id === modelId && item.parent.node?.isEnabled())
             return {positions: Array.from(item.type.mesh.getVerticesData('position')), material: item.type.mesh.material.uniqueId}
-        })
+        }, modelId)
+        const checkFemaleArmor = (modelId, file) => page.evaluate(async ([modelId, file]) => {
+            const {EquipManager} = await import('/src/babylon/item/equipManager.ts')
+            const {loadRawArmorGeometry} = await import('/src/babylon/character/characterEquipmentFitting.ts')
+            const item = [...EquipManager.equippedItems.values()].flatMap(set => [...set])
+                .find(item => item.type.id === modelId && item.parent.node?.isEnabled())
+            const expected = await loadRawArmorGeometry(item.type.mesh.getScene(), file)
+            const actual = item.type.mesh.getVerticesData('position')
+            if (actual.length !== expected.positions.length || actual.some((v, i) => Math.abs(v - expected.positions[i]) > 1e-6)) {
+                throw new Error(`Female preview does not use ${file}`)
+            }
+        }, [modelId, file])
+        const malePlateGeometry = await armorGeometry(1000)
         await page.locator('[data-slot="body"]').selectOption('2000')
         const maleChain = (await snapshot())[0]
-        const maleChainGeometry = await chainGeometry()
+        const maleChainGeometry = await armorGeometry()
         await variant.selectOption('female')
         await page.waitForFunction(() => !document.querySelector('#adminUtilsBodyVariant').disabled)
         let female = await snapshot()
@@ -76,20 +88,10 @@ async function main() {
         assert.match(female[0].texture, /human_female\.png/)
         assert.ok(!female[0].slots.includes('FACE') && !female[0].slots.includes('HAIR'))
         assert.ok(female[0].allBonesPresent)
-        const femaleChainGeometry = await chainGeometry()
+        const femaleChainGeometry = await armorGeometry()
         assert.equal(femaleChainGeometry.material, maleChainGeometry.material, 'both armor shapes share the same atlas material')
         assert.notDeepEqual(femaleChainGeometry.positions, maleChainGeometry.positions)
-        await page.evaluate(async () => {
-            const {EquipManager} = await import('/src/babylon/item/equipManager.ts')
-            const {loadRawArmorGeometry} = await import('/src/babylon/character/characterEquipmentFitting.ts')
-            const item = [...EquipManager.equippedItems.values()].flatMap(set => [...set])
-                .find(item => item.type.id === 2000 && item.parent.node?.isEnabled())
-            const expected = await loadRawArmorGeometry(item.type.mesh.getScene(), 'female-armor-chain.glb')
-            const actual = item.type.mesh.getVerticesData('position')
-            if (actual.length !== expected.positions.length || actual.some((v, i) => Math.abs(v - expected.positions[i]) > 1e-6)) {
-                throw new Error('Female preview does not use the authored female chain armor geometry')
-            }
-        })
+        await checkFemaleArmor(2000, 'female-armor-chain.glb')
         await page.locator('#adminUtilsAnimation').selectOption('walk')
         assert.equal((await snapshot())[0].animation, 'Walk')
         await page.locator('[data-modifier-toggle="body"]').click()
@@ -99,11 +101,22 @@ async function main() {
         await variant.selectOption('male')
         await page.waitForFunction(() => !document.querySelector('#adminUtilsBodyVariant').disabled)
         assert.ok(Math.abs((await snapshot())[0].bodyX - maleChain.bodyX) < 1e-6)
-        assert.deepEqual(await chainGeometry(), maleChainGeometry, 'male chain geometry survives switching')
+        assert.deepEqual(await armorGeometry(), maleChainGeometry, 'male chain geometry survives switching')
         await variant.selectOption('female')
         await page.waitForFunction(() => !document.querySelector('#adminUtilsBodyVariant').disabled)
         assert.ok(Math.abs((await snapshot())[0].bodyX - 0.123) < 1e-6)
-        assert.deepEqual(await chainGeometry(), femaleChainGeometry, 'female geometry survives switching')
+        assert.deepEqual(await armorGeometry(), femaleChainGeometry, 'female geometry survives switching')
+        await page.locator('[data-slot="body"]').selectOption('1000')
+        const femalePlateGeometry = await armorGeometry(1000)
+        assert.equal(femalePlateGeometry.material, malePlateGeometry.material, 'plate variants share the atlas material')
+        assert.notDeepEqual(femalePlateGeometry.positions, malePlateGeometry.positions)
+        await checkFemaleArmor(1000, 'female-armor-plate.glb')
+        await variant.selectOption('male')
+        await page.waitForFunction(() => !document.querySelector('#adminUtilsBodyVariant').disabled)
+        assert.deepEqual(await armorGeometry(1000), malePlateGeometry, 'male plate geometry survives switching')
+        await variant.selectOption('female')
+        await page.waitForFunction(() => !document.querySelector('#adminUtilsBodyVariant').disabled)
+        assert.deepEqual(await armorGeometry(1000), femalePlateGeometry, 'female plate geometry survives switching')
         // All preset animations must be selectable with this GLB.
         for (const animation of await page.locator('#adminUtilsAnimation option').evaluateAll(options => options.map(option => option.value))) {
             await page.locator('#adminUtilsAnimation').selectOption(animation)
