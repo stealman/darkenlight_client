@@ -39,10 +39,10 @@ export class GuestCharacterNameCheckMsg implements Message {
 
 export class GuestCharacterCreateMsg implements Message {
     t: number = 35
-    d: {name: string, classKey: 'FIGHTER' | 'MYSTIC'}
+    d: {name: string, classKey: 'FIGHTER' | 'MYSTIC', gender: 'M' | 'F'}
 
-    constructor(name: string, classKey: 'FIGHTER' | 'MYSTIC') {
-        this.d = {name, classKey}
+    constructor(name: string, classKey: 'FIGHTER' | 'MYSTIC', gender: 'M' | 'F' = 'M') {
+        this.d = {name, classKey, gender}
     }
 }
 
@@ -66,10 +66,10 @@ export class AccountCharacterNameCheckMsg implements Message {
 
 export class AccountCharacterCreateMsg implements Message {
     t: number = 38
-    d: {name: string, classKey: 'FIGHTER' | 'MYSTIC'}
+    d: {name: string, classKey: 'FIGHTER' | 'MYSTIC', gender: 'M' | 'F'}
 
-    constructor(name: string, classKey: 'FIGHTER' | 'MYSTIC') {
-        this.d = {name, classKey}
+    constructor(name: string, classKey: 'FIGHTER' | 'MYSTIC', gender: 'M' | 'F' = 'M') {
+        this.d = {name, classKey, gender}
     }
 }
 

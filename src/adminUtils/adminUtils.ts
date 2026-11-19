@@ -1043,9 +1043,10 @@ async function installHairControls(root: HTMLElement, model: CharacterModel, con
     return showSelected
 }
 
-function createPreviewCharacter(): Character {
+function createPreviewCharacter(gender: 'M' | 'F' = 'M'): Character {
     return {
         id: -1,
+        gender,
         headTypeId: 1,
         hairTypeId: 1,
         hairColor: '#664e0a',
@@ -1882,8 +1883,8 @@ export async function mountAdminUtils() {
                     scene.onDisposeObservable.addOnce(() => femaleContainer.dispose())
                     const femaleEntries = femaleContainer.instantiateModelsToScene(undefined, false, { doNotInstantiate: true })
                     femaleEntries.skeletons.forEach(preparePreviewSkeleton)
-                    next = await CharacterModel.create(createPreviewCharacter(), true, femaleEntries, {
-                        bodyTextureUrl: '/models/human/human_female.png', separateHeadAndHair: false, renderHelmet: true,
+                    next = await CharacterModel.create(createPreviewCharacter('F'), true, femaleEntries, {
+                        renderHelmet: true,
                     })
                     if (!next.model || !next.skeleton) throw new Error('Female preview did not initialize')
                     next.hairEquipmentRefreshEnabled = false

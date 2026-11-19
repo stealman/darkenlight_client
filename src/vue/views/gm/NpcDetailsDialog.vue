@@ -69,6 +69,7 @@
                 </select>
             </label>
 
+            <label class="npc-details-control"><span>Gender</span><select v-model="npcGender" aria-label="Gender"><option value="M">&#9794;</option><option value="F">&#9792;</option></select></label>
             <div class="npc-details-equipment">
                 <label class="npc-details-control">
                     <span>Helm</span>
@@ -481,6 +482,7 @@ const vendorIndividualItemOptions = {
 }
 const dialogVisible = ref(false)
 const npcName = ref('')
+const npcGender = ref('M')
 const spawnX = ref(1)
 const spawnZ = ref(1)
 const npcType = ref('common')
@@ -561,6 +563,7 @@ const openDialog = () => {
     const legacyTitle = npc?.title ?? ''
     titleCZ.value = npc?.titleCZ ?? legacyTitle
     titleEN.value = npc?.titleEN ?? legacyTitle
+    npcGender.value = npc.gender === 'F' ? 'F' : 'M'
     npcName.value = npc.name ?? ''
     spawnX.value = npc.spawn.x
     spawnZ.value = npc.spawn.z
@@ -644,7 +647,7 @@ const saveDetails = () => {
         pursueRange: guardPursueRange.value,
         respawnSeconds: guardRespawnSeconds.value,
         patrolPoints,
-    }, {x: spawnX.value, z: spawnZ.value})
+    }, {x: spawnX.value, z: spawnZ.value}, npcGender.value)
     GMManager.saveSelectedNpc()
     closeDialog()
 }

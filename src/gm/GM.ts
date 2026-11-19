@@ -1269,6 +1269,7 @@ export const GMManager = {
             titleEN: npc.titleEN ?? npc.title ?? '',
             type: npc.type,
             bodyType: npc.bodyType ?? 'steve',
+            gender: npc.gender === 'F' ? 'F' : 'M',
             equipment: {...(npc.equipment ?? {})},
             features: (npc.features ?? []).map((feature: any) => ({
                 type: feature.type,
@@ -1340,11 +1341,11 @@ export const GMManager = {
         this.selectedBot.value = null
     },
 
-    saveSelectedBot(name: string, x: number, z: number) {
+    saveSelectedBot(name: string, x: number, z: number, gender: 'M' | 'F' = 'M') {
         if (!this.selectedBot.value) {
             return
         }
-        Connector.sendMessage(new GMBotAction('UPDATE', {id: this.selectedBot.value.id, name, x, z}))
+        Connector.sendMessage(new GMBotAction('UPDATE', {id: this.selectedBot.value.id, name, x, z, gender}))
         this.selectedBot.value = null
     },
 
@@ -1357,13 +1358,14 @@ export const GMManager = {
         this.selectedNpcName.value = ''
     },
 
-    setSelectedNpcDetails(name: string, titleCZ: string, titleEN: string, bodyType: string, equipment: any, features: any[], wanderingRange: number, guard: any, spawn: {x: number, z: number}) {
+    setSelectedNpcDetails(name: string, titleCZ: string, titleEN: string, bodyType: string, equipment: any, features: any[], wanderingRange: number, guard: any, spawn: {x: number, z: number}, gender: 'M' | 'F' = 'M') {
         if (this.selectedNpc.value) {
             this.selectedNpc.value.name = name
             this.selectedNpc.value.spawn = {...spawn}
             this.selectedNpc.value.titleCZ = titleCZ
             this.selectedNpc.value.titleEN = titleEN
             this.selectedNpc.value.bodyType = bodyType
+            this.selectedNpc.value.gender = gender
             this.selectedNpc.value.equipment = equipment
             this.selectedNpc.value.features = features
             this.selectedNpc.value.wanderingRange = wanderingRange

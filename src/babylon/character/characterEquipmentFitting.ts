@@ -2,6 +2,7 @@ import { Matrix, Mesh, Quaternion, SceneLoader, Vector3, VertexData } from '@bab
 import type { Scene } from '@babylonjs/core'
 import type { EquipItem, EquipItemType, EquipModelModifier } from '@/babylon/item/equipManager'
 import { modelAssetUrl } from '@/babylon/modelAssetUrl'
+import type { CharacterGender } from './characterAppearance'
 
 type Vector = { x: number, y: number, z: number }
 type Transform = { position: Vector, rotation: Vector, scale: Vector }
@@ -13,14 +14,14 @@ interface EquipmentFitting {
     hair?: Record<string, Transform>
 }
 
-const scenes = new WeakMap<Scene, { config: EquipmentFitting, sources: Map<number, EquipItemType> }>()
-const loading = new WeakMap<Scene, Promise<void>>()
+const scenes = new WeakMap<Scene, Map<CharacterGender, { config: EquipmentFitting, sources: Map<number, EquipItemType> }>>()
+const loading = new WeakMap<Scene, Map<CharacterGender, Promise<void>>>()
 const vector = ({ x, y, z }: Vector) => new Vector3(x, y, z)
 const matrix = (value: Transform) => Matrix.Compose(vector(value.scale), Quaternion.FromEulerVector(vector(value.rotation)), vector(value.position))
 const weaponGripRotation = Matrix.RotationY(Math.PI)
 
 export function getCharacterHairFitting(scene: Scene, typeId: number): EquipModelModifier {
-    const fitting = scenes.get(scene)?.config.hair?.[typeId]
+    const fitting = scenes.get(scene)?.get('M')?.config.hair?.[typeId]
     return fitting
         ? {position: vector(fitting.position), rotation: vector(fitting.rotation), scale: vector(fitting.scale)}
         : {position: Vector3.Zero(), rotation: Vector3.Zero(), scale: Vector3.One()}
@@ -42,17 +43,20 @@ export async function loadRawArmorGeometry(scene: Scene, file: string) {
     }
 }
 
-export function preloadCharacterEquipmentFitting(scene: Scene): Promise<void> {
-    let promise = loading.get(scene)
+export function preloadCharacterEquipmentFitting(scene: Scene, gender: CharacterGender = 'M'): Promise<void> {
+    let variants = loading.get(scene)
+    if (!variants) { variants = new Map(); loading.set(scene, variants) }
+    let promise = variants.get(gender)
     if (!promise) {
-        promise = loadCharacterEquipmentFitting(scene)
-        loading.set(scene, promise)
+        promise = loadCharacterEquipmentFitting(scene, gender)
+        variants.set(gender, promise)
     }
     return promise
 }
 
-async function loadCharacterEquipmentFitting(scene: Scene) {
-    const response = await fetch('/admin-utils/equipment-modifiers.json', { cache: 'no-store' })
+async function loadCharacterEquipmentFitting(scene: Scene, gender: CharacterGender) {
+    const url = gender === 'F' ? '/admin-utils/equipment-modifiers-female.json' : '/admin-utils/equipment-modifiers.json'
+    const response = await fetch(url, { cache: 'no-store' })
     if (!response.ok) throw new Error('Could not load character equipment fitting')
     const config: EquipmentFitting = await response.json()
     const [{ TEXTURED_ARMOR_ASSETS }, { EquipManager, EquipItemType }, { Lights }, { Settings }] = await Promise.all([
@@ -65,10 +69,11 @@ async function loadCharacterEquipmentFitting(scene: Scene) {
         const asset = TEXTURED_ARMOR_ASSETS.get(id)
         const base = EquipManager.getItemType(id)
         if (!asset || !base?.mesh) throw new Error(`Equipment source ${id} is unavailable`)
-        const data = await loadRawArmorGeometry(scene, asset.modelFile.split('?')[0])
+        const femaleFile = id === 1000 ? 'female-armor-plate.glb' : id === 2000 ? 'female-armor-chain.glb' : undefined
+        const data = await loadRawArmorGeometry(scene, gender === 'F' && femaleFile ? femaleFile : asset.modelFile.split('?')[0])
         // Keep the existing normalized sources for monsters and ground items.
         const type = new EquipItemType(base.cbData)
-        const mesh = new Mesh(`character-equipment-${id}`, scene)
+        const mesh = new Mesh(`character-equipment-${gender}-${id}`, scene)
         data.applyToMesh(mesh)
         mesh.material = base.mesh.material
         mesh.parent = base.mesh.parent
@@ -90,11 +95,13 @@ async function loadCharacterEquipmentFitting(scene: Scene) {
         }
         sources.set(id, type)
     }))
-    scenes.set(scene, { config, sources })
+    let variants = scenes.get(scene)
+    if (!variants) { variants = new Map(); scenes.set(scene, variants) }
+    variants.set(gender, { config, sources })
 }
 
-export function applyCharacterEquipmentFitting(scene: Scene, slot: string, item: EquipItem) {
-    const state = scenes.get(scene)
+export function applyCharacterEquipmentFitting(scene: Scene, slot: string, item: EquipItem, gender: CharacterGender = 'M') {
+    const state = scenes.get(scene)?.get(gender)
     if (!state) return
     const id = item.type.id
     let fitting: Transform | undefined

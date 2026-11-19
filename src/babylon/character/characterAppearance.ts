@@ -1,3 +1,9 @@
+export type CharacterGender = 'M' | 'F'
+
+export function resolveCharacterGender(value: unknown): CharacterGender {
+    return value === 'F' ? 'F' : 'M'
+}
+
 // The finished head is ID 1; migrate the former preview ID 2 as well.
 export function resolveCharacterHeadTypeId(headTypeId?: number): number {
     return headTypeId === 2 ? 1 : headTypeId ?? 1

@@ -18,6 +18,7 @@ import { getCharacterModelEquipModifier } from '@/babylon/character/characterMod
 import { Settings } from '@/settings/settings'
 import { ActiveMeshFreezer } from '@/babylon/scene/activeMeshFreezer'
 import { modelAssetUrl } from '@/babylon/modelAssetUrl'
+import type { CharacterGender } from './characterAppearance'
 import { HUMAN_MODEL_FILE, HUMAN_ANIMATION_SPEED, getHumanAnimationRange, prepareHumanSkeleton } from './humanModelRig'
 import { applyCharacterEquipmentFitting, getCharacterHairFitting, preloadCharacterEquipmentFitting } from './characterEquipmentFitting'
 import { StaticsManager } from '@/babylon/world/statics/staticsManager'
@@ -28,19 +29,17 @@ import { createCharacterMaterial } from './characterMaterial'
 import { attachCharacterHair, getCharacterHairMode, hideCharacterHair, loadCharacterHair, setCharacterHairColor, setCharacterHairLightness } from './characterHair'
 
 interface CharacterModelAppearance {
-    bodyTextureUrl?: string
-    separateHeadAndHair?: boolean
     renderHelmet?: boolean
 }
 
 export class CharacterModel implements EquipBearer {
-    private static readonly MODEL_FILE = HUMAN_MODEL_FILE
     private static readonly preparedModelCount = 6
     private static readonly maxReusableModels = 8
-    private static containerPromises = new WeakMap<Scene, Promise<AssetContainer>>()
-    private static preparedModels = new WeakMap<Scene, InstantiatedEntries[]>()
+    private static containerPromises = new WeakMap<Scene, Map<CharacterGender, Promise<AssetContainer>>>()
+    private static preparedModels = new WeakMap<Scene, Map<CharacterGender, InstantiatedEntries[]>>()
     private static preparedAnimations = new WeakMap<InstantiatedEntries, AnimationGroup[]>()
 
+    private readonly gender: CharacterGender
     parent: Character
     node: TransformNode = new TransformNode('characterModelNode')
     nameTextNode: TransformNode
@@ -101,6 +100,7 @@ export class CharacterModel implements EquipBearer {
 
     constructor(parent: Character, private readonly appearance: CharacterModelAppearance = {}) {
         this.parent = parent
+        this.gender = parent.gender === 'F' ? 'F' : 'M'
         this.node.position.copyFrom(this.parent.pos)
         this.nameTextNode = new TransformNode('nameTextNode' + this.parent.id)
     }
@@ -112,42 +112,53 @@ export class CharacterModel implements EquipBearer {
         return model
     }
 
-    static async preload(scene: Scene) {
-        const [container] = await Promise.all([this.getContainer(scene), loadCharacterHead(scene), loadCharacterHair(scene)])
-        let pool = this.preparedModels.get(scene)
-        if (pool == null) {
-            pool = []
-            this.preparedModels.set(scene, pool)
-        }
-        while (pool.length < this.preparedModelCount) {
-            const entries = container.instantiateModelsToScene(undefined, false, {doNotInstantiate: true})
-            entries.rootNodes[0]?.setEnabled(false)
-            pool.push(entries)
-        }
+    private static getPool(scene: Scene, gender: CharacterGender): InstantiatedEntries[] {
+        let pools = this.preparedModels.get(scene)
+        if (!pools) { pools = new Map(); this.preparedModels.set(scene, pools) }
+        let pool = pools.get(gender)
+        if (!pool) { pool = []; pools.set(gender, pool) }
+        return pool
     }
 
-    private static getContainer(scene: Scene): Promise<AssetContainer> {
-        let promise = this.containerPromises.get(scene)
-        if (promise == null) {
+    static async preload(scene: Scene) {
+        await Promise.all([
+            ...(['M', 'F'] as const).map(async gender => {
+                const container = await this.getContainer(scene, gender)
+                const pool = this.getPool(scene, gender)
+                while (pool.length < this.preparedModelCount) {
+                    const entries = container.instantiateModelsToScene(undefined, false, {doNotInstantiate: true})
+                    entries.rootNodes[0]?.setEnabled(false)
+                    pool.push(entries)
+                }
+            }),
+            loadCharacterHead(scene), loadCharacterHair(scene),
+        ])
+    }
+
+    private static getContainer(scene: Scene, gender: CharacterGender): Promise<AssetContainer> {
+        let containers = this.containerPromises.get(scene)
+        if (!containers) { containers = new Map(); this.containerPromises.set(scene, containers) }
+        let promise = containers.get(gender)
+        if (!promise) {
+            const file = gender === 'F' ? 'human_female.glb' : HUMAN_MODEL_FILE
             promise = Promise.all([
-                SceneLoader.LoadAssetContainerAsync('', modelAssetUrl('/models/human/' + this.MODEL_FILE), scene),
-                preloadCharacterEquipmentFitting(scene),
+                SceneLoader.LoadAssetContainerAsync('', modelAssetUrl('/models/human/' + file), scene),
+                preloadCharacterEquipmentFitting(scene, gender),
             ]).then(([container]) => container)
-            this.containerPromises.set(scene, promise)
+            containers.set(gender, promise)
         }
         return promise
     }
 
-    private static async instantiate(scene: Scene): Promise<InstantiatedEntries> {
-        const container = await this.getContainer(scene)
-        const pool = this.preparedModels.get(scene)
-        const entries = pool?.pop()
+    private static async instantiate(scene: Scene, gender: CharacterGender): Promise<InstantiatedEntries> {
+        const container = await this.getContainer(scene, gender)
+        const entries = this.getPool(scene, gender).pop()
             ?? container.instantiateModelsToScene(undefined, false, {doNotInstantiate: true})
         entries.rootNodes[0]?.setEnabled(true)
         return entries
     }
 
-    private static release(scene: Scene, entries: InstantiatedEntries) {
+    private static release(scene: Scene, entries: InstantiatedEntries, gender: CharacterGender) {
         // Animation observers owned by the outgoing character must be removed
         // before stopping groups (stop can notify animation-end observers).
         entries.animationGroups.forEach(animation => {
@@ -160,11 +171,7 @@ export class CharacterModel implements EquipBearer {
             node.parent = null
             if (node instanceof TransformNode) node.position.setAll(0)
         })
-        let pool = this.preparedModels.get(scene)
-        if (!pool) {
-            pool = []
-            this.preparedModels.set(scene, pool)
-        }
+        const pool = this.getPool(scene, gender)
         if (!scene.isDisposed && pool.length < this.maxReusableModels) {
             pool.push(entries)
         } else {
@@ -190,13 +197,13 @@ export class CharacterModel implements EquipBearer {
         // models are instantiated behind the loading overlay and only enabled
         // when their character first enters the viewport.
         await Promise.all([
-            this.instantiatedEntries ? Promise.resolve(this.instantiatedEntries) : CharacterModel.instantiate(scene),
-            this.appearance.separateHeadAndHair === false ? Promise.resolve(null) : loadCharacterHead(scene, this.parent.headTypeId),
-            this.appearance.separateHeadAndHair === false || hairMode === 'hidden' ? Promise.resolve(null) : loadCharacterHair(scene, this.parent.hairTypeId, hairMode === 'helmet'),
+            this.instantiatedEntries ? Promise.resolve(this.instantiatedEntries) : CharacterModel.instantiate(scene, this.gender),
+            this.gender === 'F' ? Promise.resolve(null) : loadCharacterHead(scene, this.parent.headTypeId),
+            this.gender === 'F' || hairMode === 'hidden' ? Promise.resolve(null) : loadCharacterHair(scene, this.parent.hairTypeId, hairMode === 'helmet'),
         ])
             .then(([result, headType, hairType]) => {
                 if (this.node.isDisposed()) {
-                    CharacterModel.release(scene, result)
+                    CharacterModel.release(scene, result, this.gender)
                     return
                 }
                 this.instantiatedEntries = result
@@ -211,7 +218,7 @@ export class CharacterModel implements EquipBearer {
                 this.parent.nameDisplayTime = Date.now() + 3000
 
                 // Apply material
-                const material = createCharacterMaterial(scene, 'steveMaterial', this.appearance.bodyTextureUrl ?? '/models/human/human_male.png')
+                const material = createCharacterMaterial(scene, 'steveMaterial', this.gender === 'F' ? '/models/human/human_female.png' : '/models/human/human_male.png')
                 this.model.getChildMeshes().forEach((mesh) => {
                     // Visibility is managed by Character.setVisible(). A moving
                     // body excluded by frustum culling when the active list is
@@ -315,7 +322,7 @@ export class CharacterModel implements EquipBearer {
     }
 
     async refreshHairAppearance() {
-        if (!this.initialized || this.node.isDisposed() || this.appearance.separateHeadAndHair === false) return
+        if (!this.initialized || this.node.isDisposed() || this.gender === 'F') return
         const revision = ++this.hairAppearanceRevision
         const mode = getCharacterHairMode(this.appearance.renderHelmet ? this.equipSet.get('HEAD')?.type.id : undefined)
         if (mode === 'hidden') {
@@ -435,7 +442,7 @@ export class CharacterModel implements EquipBearer {
     }
 
     addEquippedItem(slot: string, item: EquipItem) {
-        applyCharacterEquipmentFitting(this.node.getScene(), slot, item)
+        applyCharacterEquipmentFitting(this.node.getScene(), slot, item, this.gender)
         item.castsOutdoorShadow = this.parent.isMyChar() && (slot === 'WEAPON' || slot === 'SHIELD')
         this.equipSet.set(slot, item)
         EquipManager.addEquippedItem(item)
@@ -1079,7 +1086,7 @@ export class CharacterModel implements EquipBearer {
             this.bowAimEndObserver = null
         }
         if (this.instantiatedEntries) {
-            CharacterModel.release(this.node.getScene(), this.instantiatedEntries)
+            CharacterModel.release(this.node.getScene(), this.instantiatedEntries, this.gender)
         }
         this.instantiatedEntries = null
         this.equipSet.clear()

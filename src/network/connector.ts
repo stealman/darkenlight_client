@@ -85,8 +85,8 @@ export const Connector = {
         this.transport!.send(new GuestCharacterNameCheckMsg(name))
     },
 
-    createGuestCharacter(name: string, classKey: 'FIGHTER' | 'MYSTIC') {
-        this.transport!.send(new GuestCharacterCreateMsg(name, classKey))
+    createGuestCharacter(name: string, classKey: 'FIGHTER' | 'MYSTIC', gender: 'M' | 'F' = 'M') {
+        this.transport!.send(new GuestCharacterCreateMsg(name, classKey, gender))
     },
 
     registerPlayer(email: string, password: string) {
@@ -97,8 +97,8 @@ export const Connector = {
         this.transport!.send(new AccountCharacterNameCheckMsg(name))
     },
 
-    createAccountCharacter(name: string, classKey: 'FIGHTER' | 'MYSTIC') {
-        this.transport!.send(new AccountCharacterCreateMsg(name, classKey))
+    createAccountCharacter(name: string, classKey: 'FIGHTER' | 'MYSTIC', gender: 'M' | 'F' = 'M') {
+        this.transport!.send(new AccountCharacterCreateMsg(name, classKey, gender))
     },
 
     claimGuestCharacter(name: string) {

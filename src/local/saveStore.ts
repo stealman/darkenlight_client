@@ -4,6 +4,7 @@ export interface CharacterProfile {
     id: string
     name: string
     gm: boolean
+    gender?: 'M' | 'F'
     classKey: 'FIGHTER' | 'MYSTIC'
     createdAt: number
 }
@@ -67,12 +68,13 @@ export async function deleteProfile(id: string): Promise<void> {
     } finally { db.close() }
 }
 
-export async function createProfile(name: string, gm: boolean, classKey: CharacterProfile['classKey']): Promise<CharacterProfile> {
+export async function createProfile(name: string, gm: boolean, classKey: CharacterProfile['classKey'], gender: 'M' | 'F' = 'M'): Promise<CharacterProfile> {
+    if (gender !== 'M' && gender !== 'F') throw new Error('Invalid character gender')
     name = name.trim()
     if (name.length < 3 || name.length > 40) throw new Error('Character name must contain 3–40 characters')
     if (gm && !(import.meta.env.DEV && import.meta.env.VITE_GM_MODE === 'true')) throw new Error('GM creation is disabled')
     const bytes = crypto.getRandomValues(new Uint8Array(16))
-    const profile = {id: 'char-' + Array.from(bytes, value => value.toString(16).padStart(2, '0')).join(''), name, gm, classKey, createdAt: Date.now()}
+    const profile = {id: 'char-' + Array.from(bytes, value => value.toString(16).padStart(2, '0')).join(''), name, gm, classKey, gender, createdAt: Date.now()}
     if ('__TAURI_INTERNALS__' in window) await invoke('write_character_profile', {profile})
     else await stored('profiles', true, store => store.add(profile, profile.id))
     return profile

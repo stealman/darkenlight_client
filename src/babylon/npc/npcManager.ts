@@ -22,7 +22,7 @@ export const NpcManager = {
             const guard = this.guards.get(data.id)!
             this.setNpcPosition(guard, data.x, data.z)
             guard.hpPercent = Number(data.hpp ?? guard.hpPercent)
-            await guard.changeHairAppearance(data.guard ?? {})
+            await guard.changeCharacterAppearance(data.guard ?? {})
             return
         }
         const guard = new Guard(data)
@@ -80,7 +80,7 @@ export const NpcManager = {
 
     async addNpc(data: any) {
         if (this.npcs.has(data.id)) {
-            await this.npcs.get(data.id)!.changeHairAppearance(data)
+            await this.npcs.get(data.id)!.changeCharacterAppearance(data)
             const npc = this.npcs.get(data.id)!
             this.applyNpcData(npc, data)
             return

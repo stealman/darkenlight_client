@@ -189,8 +189,12 @@ struct CharacterProfile {
     name: String,
     gm: bool,
     class_key: String,
+    #[serde(default = "default_character_gender")]
+    gender: String,
     created_at: u64,
 }
+
+fn default_character_gender() -> String { "M".into() }
 
 #[tauri::command]
 fn list_character_profiles(app: tauri::AppHandle) -> Result<Vec<CharacterProfile>, String> {
@@ -226,6 +230,7 @@ fn write_character_profile(app: tauri::AppHandle, profile: CharacterProfile) -> 
         || profile.name.trim().chars().count() < 3
         || profile.name.chars().count() > 40
         || !["FIGHTER", "MYSTIC"].contains(&profile.class_key.as_str())
+        || !["M", "F"].contains(&profile.gender.as_str())
     {
         return Err("Invalid local character profile.".into());
     }

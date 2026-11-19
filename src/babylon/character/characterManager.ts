@@ -66,7 +66,7 @@ export const CharacterManager = {
             char!.hp = data.hp
             char.name = data.name
             char.isBot = data.bot === true
-            await char.changeHairAppearance(data)
+            await char.changeCharacterAppearance(data)
             char.pos.y = Utils.calculateWalkYPos(char.pos.x, char.pos.z, char.getBoxSize())
             char.logicYpos = char.pos.y
             if (data.dead === true) {
@@ -306,10 +306,11 @@ export const CharacterManager = {
         }
     },
 
-    changeCharacterName(id: number, name: string) {
+    async changeCharacterName(id: number, name: string, gender?: 'M' | 'F') {
         const char = this.characters.get(id)
         if (char) {
             char.name = name
+            await char.changeCharacterAppearance({gender, hairTypeId: char.hairTypeId, hairColor: char.hairColor, hairLightness: char.hairLightness})
         }
     },
 

@@ -128,7 +128,7 @@ async function start(options: WorkerStart) {
                 || (existing[0].class === 'GM') !== options.profile.gm))) throw new Error('Save contains a different character')
             if (!existing.length) {
                 await CharactersManager.createCharacter(options.profile.name, null, GameManager.worlds.get(1)!,
-                    options.profile.gm ? 'GM' : options.profile.classKey)
+                    options.profile.gm ? 'GM' : options.profile.classKey, options.profile.gender ?? 'M')
                 await storage.flush()
             }
         }

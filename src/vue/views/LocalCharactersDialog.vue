@@ -125,10 +125,10 @@ async function removeCharacter() {
     } catch (value) { error.value = String(value) }
     finally { busy.value = false }
 }
-async function create(classKey: 'FIGHTER' | 'MYSTIC') {
+async function create(classKey: 'FIGHTER' | 'MYSTIC', gender: 'M' | 'F' = 'M') {
     busy.value = true
     try {
-        const profile = await createProfile(name.value, gm.value, classKey)
+        const profile = await createProfile(name.value, gm.value, classKey, gender)
         chooseClass.value = false
         emit('start', profile)
     } catch (value) { error.value = String(value); chooseClass.value = false; busy.value = false }

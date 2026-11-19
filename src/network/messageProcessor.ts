@@ -184,7 +184,7 @@ export const MessageProcessor = {
                 case 86: this.processAddEquipmentDecoration(msg.d); break
                 case 87: this.processRemoveEquipmentDecorations(msg.d); break
                 case 88: this.processGMBotDetails(msg.d); break
-                case 89: this.processCharacterNameChanged(msg.d); break
+                case 89: await this.processCharacterNameChanged(msg.d); break
                 case 90: this.processGMExistingBots(msg.d); break
                 case 91: this.processPushThrough(msg.d); break
                 case 59: this.processCharacterDeath(msg.d); break
@@ -315,8 +315,8 @@ export const MessageProcessor = {
         GMManager.processBotStatuses(data)
     },
 
-    processCharacterNameChanged(data: {id: number, name: string}) {
-        CharacterManager.changeCharacterName(data.id, data.name)
+    async processCharacterNameChanged(data: {id: number, name: string, gender?: 'M' | 'F'}) {
+        await CharacterManager.changeCharacterName(data.id, data.name, data.gender)
     },
 
     removeCharacter(data) {

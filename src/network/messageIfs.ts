@@ -1,5 +1,6 @@
 
 export interface CharacterAppearanceData {
+    gender?: 'M' | 'F'
     headTypeId?: number
     hairTypeId?: number
     hairColor?: string
@@ -440,7 +441,7 @@ export interface ContainerStateData extends BankStateData {
     open?: boolean
 }
 
-export interface GMNpcDetailsData {
+export interface GMNpcDetailsData extends CharacterAppearanceData {
     spawn: {x: number, z: number}
     id: number
     name: string
@@ -460,7 +461,7 @@ export interface GMNpcDetailsData {
     }
 }
 
-export interface GMBotDetailsData {
+export interface GMBotDetailsData extends CharacterAppearanceData {
     id: number
     name: string
     origin: {worldId: number, x: number, z: number}

@@ -8,6 +8,7 @@
                 <input v-model="botName" type="text" maxlength="32" placeholder="Bot name" @keyup.enter="saveDetails" />
             </label>
 
+            <label class="bot-details-control"><span>Gender</span><select v-model="botGender" aria-label="Gender"><option value="M">&#9794;</option><option value="F">&#9792;</option></select></label>
             <div class="bot-details-spawn-row">
                 <label class="bot-details-control">
                     <span>Spawn X</span>
@@ -35,6 +36,7 @@ import GameDialog from '@/vue/views/GameDialog.vue'
 
 const dialogVisible = ref(false)
 const botName = ref('')
+const botGender = ref('M')
 const botX = ref(1)
 const botZ = ref(1)
 const validPosition = computed(() => Number.isInteger(botX.value) && botX.value >= 1
@@ -45,6 +47,7 @@ const openDialog = () => {
     if (!bot) {
         return
     }
+    botGender.value = bot.gender === 'F' ? 'F' : 'M'
     botName.value = bot.name ?? 'BOT'
     botX.value = bot.origin.x
     botZ.value = bot.origin.z
@@ -61,7 +64,7 @@ const saveDetails = () => {
     if (!name || !validPosition.value) {
         return
     }
-    GMManager.saveSelectedBot(name, botX.value, botZ.value)
+    GMManager.saveSelectedBot(name, botX.value, botZ.value, botGender.value)
     dialogVisible.value = false
 }
 

@@ -15,6 +15,13 @@
             <span class="guest-character-creation-name ui-text-gradient ui-text-gradient--no-shadow">{{ name }}</span>
             <span v-if="selectedClass" :class="['guest-character-creation-class', 'ui-text-gradient', 'ui-text-gradient--accent', 'ui-text-gradient--no-shadow', `guest-character-creation-class--${selectedClass.toLowerCase()}`]">{{ t(`classes.${selectedClass.toLowerCase()}`) }}</span>
         </div>
+        <div class="guest-character-gender" role="group" :aria-label="t('characterGender.label')">
+            <button v-for="option in ['M', 'F'] as const" :key="option" type="button" class="dialog-button"
+                :aria-label="t(option === 'M' ? 'characterGender.male' : 'characterGender.female')"
+                :aria-pressed="gender === option" :disabled="creating" @click="selectGender(option)">
+                <span v-if="option === 'M'" aria-hidden="true">&#9794;</span><span v-else aria-hidden="true">&#9792;</span>
+            </button>
+        </div>
         <div class="dialog-actions guest-character-creation-actions">
             <div v-for="classKey in ['FIGHTER', 'MYSTIC'] as const" :key="classKey" class="guest-character-class-option"
                 :class="{ 'guest-character-class-option--active': activePreview === classKey }"
@@ -34,7 +41,7 @@
             <button class="dialog-button guest-character-creation-back-action" @click="goBack">
                 <span class="ui-text-gradient--button-state">{{ t('login.guestCreationBack') }}</span>
             </button>
-            <button v-if="selectedClass" class="dialog-button guest-character-creation-continue-action" :disabled="creating" @click="selectClass">
+            <button v-if="selectedClass" class="dialog-button guest-character-creation-continue-action" :disabled="creating || previewsLoading" @click="selectClass">
                 <span class="ui-text-gradient--button-state">{{ t('localCharacters.continue') }}</span>
             </button>
         </div>
@@ -42,7 +49,7 @@
 </template>
 
 <script setup lang="ts">
-import {computed, onMounted, onUnmounted, ref} from 'vue'
+import {computed, onMounted, onUnmounted, ref, watch} from 'vue'
 import {startStarterPreviews} from '@/babylon/character/starterPreviews'
 import GameDialog from '@/vue/views/GameDialog.vue'
 import { useI18n } from '@/i18n'
@@ -52,7 +59,7 @@ import { AudioManager } from '@/babylon/audio/audioManager'
 defineProps<{name: string}>()
 const useMobileLoginLayout = Settings.isPhoneOrTablet()
 const emit = defineEmits<{
-    create: [classKey: 'FIGHTER' | 'MYSTIC']
+    create: [classKey: 'FIGHTER' | 'MYSTIC', gender: 'M' | 'F']
     back: []
 }>()
 const { t } = useI18n()
@@ -64,24 +71,41 @@ const hoveredClass = ref<StarterClass | null>(null)
 const focusedClass = ref<StarterClass | null>(null)
 const activePreview = computed(() => hoveredClass.value ?? focusedClass.value ?? selectedClass.value)
 const creating = ref(false)
+const gender = ref<'M' | 'F'>('M')
+function selectGender(value: 'M' | 'F') {
+    if (gender.value === value) return
+    AudioManager.playGuiButtonClick()
+    gender.value = value
+}
 function activatePreview(classKey: 'FIGHTER' | 'MYSTIC') {
     if (previewsLoading.value) return
     AudioManager.playGuiButtonClick()
     selectedClass.value = classKey
 }
-const previewAbort = new AbortController()
-onMounted(async () => {
-    try { await startStarterPreviews([previewCanvases.FIGHTER, previewCanvases.MYSTIC], previewAbort.signal, () => activePreview.value) }
-    catch (error) { console.error('Could not render starter previews', error) }
-    finally { previewsLoading.value = false }
-})
+let previewAbort = new AbortController()
+let previewJob: Promise<void> = Promise.resolve()
+function refreshPreviews() {
+    previewAbort.abort()
+    const controller = new AbortController()
+    previewAbort = controller
+    const selectedGender = gender.value
+    previewsLoading.value = true
+    previewJob = previewJob.then(async () => {
+        if (controller.signal.aborted) return
+        try { await startStarterPreviews([previewCanvases.FIGHTER, previewCanvases.MYSTIC], controller.signal, () => activePreview.value, selectedGender) }
+        catch (error) { console.error('Could not render starter previews', error) }
+        finally { if (!controller.signal.aborted) previewsLoading.value = false }
+    })
+}
+onMounted(refreshPreviews)
+watch(gender, refreshPreviews)
 onUnmounted(() => previewAbort.abort())
 
 const selectClass = () => {
     if (!selectedClass.value || creating.value) return
     creating.value = true
     AudioManager.playGuiButtonClick()
-    emit('create', selectedClass.value)
+    emit('create', selectedClass.value, gender.value)
 }
 
 const goBack = () => {
@@ -133,6 +157,10 @@ const goBack = () => {
     text-align: center;
     text-transform: uppercase;
 }
+
+.guest-character-gender { display: flex; justify-content: center; gap: 8px; position: relative; z-index: 2; margin: 8px 0; }
+.guest-character-gender .dialog-button { min-width: 44px; padding: 3px 12px; font-size: 1.5rem; line-height: 1.2; }
+.guest-character-gender [aria-pressed="true"] { color: rgb(var(--ui-base)); outline: 1px solid currentColor; }
 
 .guest-character-creation-actions {
     position: relative;

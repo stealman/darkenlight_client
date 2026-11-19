@@ -12,7 +12,7 @@ import {getStarterEquipment} from '@game/character/starterEquipment'
 import {getStarterHairAppearance} from '@game/character/characterAppearance'
 
 /** Live Babylon views share the already loaded runtime models and equipment. */
-export async function startStarterPreviews(canvases: HTMLCanvasElement[], signal: AbortSignal, activeClass: () => string | null): Promise<void> {
+export async function startStarterPreviews(canvases: HTMLCanvasElement[], signal: AbortSignal, activeClass: () => string | null, gender: 'M' | 'F' = 'M'): Promise<void> {
     if (signal.aborted) return
     const classKeys = ['FIGHTER', 'MYSTIC'] as const
     const scene = Renderer.scene
@@ -166,7 +166,7 @@ export async function startStarterPreviews(canvases: HTMLCanvasElement[], signal
                     img: cb.url, atts: new Map(), slot: cbType === 'W' ? 'R_HAND' : cb.slot}
             }
             const position = new Vector3(index * 10, 0, 0)
-            const character = new Character({id: -9001-index, name: '', x: position.x, z: 0, bsz: 0.8, cls: classKey, equipSet,
+            const character = new Character({id: -9001-index, name: '', gender, x: position.x, z: 0, bsz: 0.8, cls: classKey, equipSet,
                 ...getStarterHairAppearance(classKey)}, false, position)
             characters.push(character)
             await character.createModel(true)

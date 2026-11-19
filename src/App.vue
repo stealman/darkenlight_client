@@ -469,14 +469,14 @@ const onAccountCharacterNameCheck = (event: Event) => {
     displayGuestCharacterCreationDialog.value = true
 }
 
-const createGuestCharacter = (classKey: 'FIGHTER' | 'MYSTIC') => {
+const createGuestCharacter = (classKey: 'FIGHTER' | 'MYSTIC', gender: 'M' | 'F') => {
     if (!pendingGuestCharacterName.value) {
         return
     }
     if (creatingAccountCharacter.value) {
-        Connector.createAccountCharacter(pendingGuestCharacterName.value, classKey)
+        Connector.createAccountCharacter(pendingGuestCharacterName.value, classKey, gender)
     } else {
-        Connector.createGuestCharacter(pendingGuestCharacterName.value, classKey)
+        Connector.createGuestCharacter(pendingGuestCharacterName.value, classKey, gender)
     }
     loginRequestSent()
 }

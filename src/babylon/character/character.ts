@@ -51,7 +51,7 @@ import type {MonsterKnowledgeTO} from '@/network/messageIfs'
 import { Settings } from '@/settings/settings'
 import { CraftingManager, CraftingTypes } from '@/data/crafting/craftingManager'
 import { StaticsManager } from '@/babylon/world/statics/staticsManager'
-import { resolveCharacterHairAppearance, resolveCharacterHeadTypeId } from './characterAppearance'
+import { resolveCharacterHairAppearance, resolveCharacterHeadTypeId, resolveCharacterGender } from './characterAppearance'
 
 class Character implements Attackable, EffectTarget {
     model: CharacterModel | null = null
@@ -70,6 +70,7 @@ class Character implements Attackable, EffectTarget {
     stPercent: number = 100
 
     name: string = "Player"
+    gender: 'M' | 'F' = 'M'
     headTypeId: number = 1
     hairTypeId: number = 1
     hairColor: string = '#664e0a'
@@ -155,6 +156,7 @@ class Character implements Attackable, EffectTarget {
 
         this.pos = previewPosition?.clone() ?? new Vector3(data.x, 0, data.z)
         this.name = data.name
+        this.gender = resolveCharacterGender(data.gender)
         this.headTypeId = resolveCharacterHeadTypeId(data.headTypeId)
         Object.assign(this, resolveCharacterHairAppearance(data))
         this.isBot = data.bot === true
@@ -178,11 +180,25 @@ class Character implements Attackable, EffectTarget {
         this.model = await CharacterModel.create(this, init)
     }
 
-    async changeHairAppearance(data: CharacterAppearanceData) {
+    async changeCharacterAppearance(data: CharacterAppearanceData) {
+        const gender = resolveCharacterGender(data.gender)
         const hair = resolveCharacterHairAppearance(data)
-        if (this.hairTypeId === hair.hairTypeId && this.hairColor === hair.hairColor && this.hairLightness === hair.hairLightness) return
+        const hairChanged = this.hairTypeId !== hair.hairTypeId || this.hairColor !== hair.hairColor || this.hairLightness !== hair.hairLightness
         Object.assign(this, hair)
-        await this.model?.refreshHairAppearance()
+        if (this.gender !== gender) {
+            this.gender = gender
+            const initialize = this.model?.initialized || this.insideView
+            this.model?.removeFromScene()
+            const model = await CharacterModel.create(this, false)
+            if (this.gender !== gender) { model.removeFromScene(); return }
+            this.model = model
+            if (initialize) {
+                await model.initAsync()
+                if (!this.insideView) model.removeFromView()
+            }
+        } else if (hairChanged) {
+            await this.model?.refreshHairAppearance()
+        }
     }
 
     initializeEquip(equip: any) {
