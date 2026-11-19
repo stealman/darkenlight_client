@@ -30,6 +30,8 @@ import { initializePreviewArmorSources } from './previewArmorSources'
 import { preparePreviewSkeleton } from './previewSkeleton'
 
 type PreviewSlot = 'body' | 'head' | 'pauldrons' | 'legs' | 'shield' | 'weapon'
+type PreviewBodyVariant = 'male' | 'female'
+let previewBodyVariant: PreviewBodyVariant = 'male'
 type PreviewAnimation = 'idle' | 'walk' | 'run' | 'combatIdle' | 'combatIdleTwoHanded' | 'slash' | 'jab' | 'leftSlash' | 'rightSlash' | 'highJab' | 'slash2' | 'bowAim' | 'greatAxeAttack' | 'oreMining' | 'twoHandedSwordAttack' | 'twoHandedSwordAttack2' | 'death'
 type AdminUtilsSection = 'materialAtlas' | 'weaponMaterialAtlas' | 'bowMaterialAtlas' | 'equipment'
 type ArmorMaterialFamily = 'plate' | 'chain'
@@ -48,6 +50,7 @@ interface GeneratedArmorMaterialParameters {
 }
 
 interface AdminUtilsSettings {
+    bodyVariant: PreviewBodyVariant
     equipment: Record<PreviewSlot, number | null>
     materials: Record<PreviewSlot, number>
     atlasMaterials: Record<string, GeneratedArmorMaterialParameters>
@@ -413,6 +416,7 @@ function getEquipAtlasIndex(atlasTile: number): number {
 
 function loadAdminUtilsSettings(): AdminUtilsSettings {
     const settings: AdminUtilsSettings = {
+        bodyVariant: 'male',
         equipment: { ...defaultSlotSelections },
         materials: { ...defaultMaterialSelections },
         atlasMaterials: createDefaultAtlasMaterialSettings(),
@@ -428,6 +432,7 @@ function loadAdminUtilsSettings(): AdminUtilsSettings {
         if (storedValue == null) return settings
 
         const stored = JSON.parse(storedValue) as Partial<AdminUtilsSettings> & { materialVariant?: number }
+        if (stored.bodyVariant === 'female') settings.bodyVariant = 'female'
         ;(Object.keys(slotOptions) as PreviewSlot[]).forEach((slot) => {
             const storedModelId = stored.equipment?.[slot]
             if (storedModelId !== undefined && slotOptions[slot].some((option) => option.value === storedModelId)) {
@@ -513,6 +518,7 @@ function saveAdminUtilsSettings(animation: string) {
         localStorage.setItem(ADMIN_UTILS_STORAGE_KEY, JSON.stringify({
             equipment: slotSelections,
             materials: slotMaterialSelections,
+            bodyVariant: previewBodyVariant,
             atlasMaterials: plateAtlasMaterialSettings,
             chainAtlasMaterials: chainAtlasMaterialSettings,
             weaponAtlasMaterials: weaponAtlasMaterialSettings,
@@ -540,6 +546,13 @@ function createShell(root: HTMLElement) {
                     <p><a href="/adminUtils/gui">GUI — náhled dialogů a ovládacích prvků</a></p>
                     <p class="admin-utils__intro">Offline laboratoř modelů. Nepřipojuje se k hernímu serveru.</p>
                 </div>
+                <label class="admin-utils__field">
+                    <span>Model postavy</span>
+                    <select id="adminUtilsBodyVariant" disabled>
+                        <option value="male">Male</option>
+                        <option value="female">Female</option>
+                    </select>
+                </label>
                 <details id="adminUtilsMaterialAtlasSection" class="admin-utils__section" open>
                     <summary><h2>Materiál Brnění</h2></summary>
                     <div id="adminUtilsMaterialAtlas" class="admin-utils__atlas-materials"></div>
@@ -854,6 +867,7 @@ async function installHeadControls(root: HTMLElement, model: CharacterModel) {
     const constantName = head.id === 1 ? 'HUMAN_HEAD_FITTING' : `HUMAN_HEAD${head.id}_FITTING`
     const panel = document.createElement('details')
     panel.className = 'admin-utils__equipment-group'
+    panel.dataset.maleAppearance = ''
     const title = document.createElement('summary')
     title.textContent = `Hlava · ${head.file} (offsety)`
     const editor = document.createElement('div')
@@ -910,6 +924,7 @@ async function installHairControls(root: HTMLElement, model: CharacterModel, con
     const { characterHeadMatrix } = await import('@/babylon/character/characterHead')
     const panel = document.createElement('details')
     panel.className = 'admin-utils__equipment-group'
+    panel.dataset.maleAppearance = ''
     panel.open = true
     const title = document.createElement('summary')
     title.textContent = 'Účes · typ a offsety'
@@ -976,7 +991,7 @@ async function installHairControls(root: HTMLElement, model: CharacterModel, con
             }
             const underHelmet = mode === 'helmet'
             const type = await loadPreviewHair(model.node.getScene(), id, underHelmet)
-            if (request !== generation || model.node.isDisposed()) return
+            if (request !== generation || model.node.isDisposed() || !model.node.isEnabled()) return
             const headMesh = model.equipSet.get('FACE')?.type.mesh
             if (headMesh && type.mesh) {
                 type.mesh._lightSources = headMesh.lightSources.slice()
@@ -1021,9 +1036,10 @@ async function installHairControls(root: HTMLElement, model: CharacterModel, con
     }
     select.addEventListener('change', refresh)
     root.addEventListener('change', event => {
-        if ((event.target as HTMLElement).matches('[data-slot="head"]')) refresh()
+        if (model.node.isEnabled() && (event.target as HTMLElement).matches('[data-slot="head"]')) refresh()
     })
     await showSelected()
+    return showSelected
 }
 
 function createPreviewCharacter(): Character {
@@ -1128,6 +1144,7 @@ function playAnimation(model: CharacterModel, animationName: string, loop = true
     const speed = animationName === 'combatIdleTwoHanded' ? HUMAN_ANIMATION_SPEED.combatIdle : attack ? 1000 / 900
         : HUMAN_ANIMATION_SPEED[animationName as keyof typeof HUMAN_ANIMATION_SPEED] ?? HUMAN_ANIMATION_SPEED.idle
     animation?.start(loop, speed)
+    model.actualAnim = animation
 }
 
 export async function mountAdminUtils() {
@@ -1539,7 +1556,11 @@ export async function mountAdminUtils() {
         largeBattleAxeMaterial.albedoTexture = generatedLargeBattleAxeAtlas
 
         const { loadEquipmentModifierConfig } = await import('./equipmentModifierConfig')
-        const modifierConfig = await loadEquipmentModifierConfig(CharacterModelEquipModifiers, CharacterModelPauldronModifiers)
+        const maleModifierConfig = await loadEquipmentModifierConfig(CharacterModelEquipModifiers, CharacterModelPauldronModifiers)
+        const femaleModifierConfig = await loadEquipmentModifierConfig(CharacterModelEquipModifiers, CharacterModelPauldronModifiers, 'female')
+        const modifierConfigs = { male: maleModifierConfig, female: femaleModifierConfig }
+        let modifierConfig = maleModifierConfig
+        modifierConfig.activate()
         await initializePreviewArmorSources(scene, EquipManager.itemTypes)
         const saveModifiers = document.createElement('button')
         saveModifiers.type = 'button'
@@ -1560,7 +1581,7 @@ export async function mountAdminUtils() {
             saveModifiers.disabled = true
             saveModifiers.textContent = 'Ukládám proporce…'
             try {
-                await modifierConfig.save()
+                await Promise.all(Object.values(modifierConfigs).map(config => config.save()))
                 savedModifierRevision = revision
                 saveModifiers.disabled = revision === modifierRevision
                 saveModifiers.textContent = revision === modifierRevision ? 'Proporce uloženy do souboru' : 'Uložit proporce do souboru *'
@@ -1579,7 +1600,8 @@ export async function mountAdminUtils() {
         scene.onDisposeObservable.addOnce(() => container.dispose())
         const entries = container.instantiateModelsToScene(undefined, false, { doNotInstantiate: true })
         entries.skeletons.forEach(preparePreviewSkeleton)
-        const model = await CharacterModel.create(createPreviewCharacter(), true, entries)
+        let model = await CharacterModel.create(createPreviewCharacter(), true, entries)
+        const previewModels: Partial<Record<PreviewBodyVariant, CharacterModel>> = { male: model }
         // The preview controls own the chosen hair type, fitting and async refresh.
         model.hairEquipmentRefreshEnabled = false
         await installHeadControls(root, model)
@@ -1613,7 +1635,7 @@ export async function mountAdminUtils() {
         ;(Object.keys(slotSelections) as PreviewSlot[]).forEach((slot) => {
             setEquipmentSlot(model, slot, slotSelections[slot], slotMaterialSelections[slot] - 1)
         })
-        await installHairControls(root, model, modifierConfig, markModifiersChanged)
+        const refreshMaleHair = await installHairControls(root, model, maleModifierConfig, markModifiersChanged)
 
         await Promise.all(model.model!.getChildMeshes().map((mesh) => Lights.warmLocalPlayerLightMaterial(mesh)))
         scene.meshes.forEach((mesh) => {
@@ -1846,7 +1868,68 @@ export async function mountAdminUtils() {
         replay.onclick = play
         loopControl.onchange = play
         const { installAssetPreview } = await import('./assetPreview')
-        await installAssetPreview(root, scene, camera, model)
+        await installAssetPreview(root, scene, camera, () => model)
+        const bodyVariantSelect = root.querySelector<HTMLSelectElement>('#adminUtilsBodyVariant')!
+        const switchBodyVariant = async (variant: PreviewBodyVariant) => {
+            if (variant === previewBodyVariant) return
+            bodyVariantSelect.disabled = true
+            try {
+                let next = previewModels[variant]
+                if (!next) {
+                    const femaleContainer = await SceneLoader.LoadAssetContainerAsync('', modelAssetUrl('/models/human/human_female.glb'), scene)
+                    scene.onDisposeObservable.addOnce(() => femaleContainer.dispose())
+                    const femaleEntries = femaleContainer.instantiateModelsToScene(undefined, false, { doNotInstantiate: true })
+                    femaleEntries.skeletons.forEach(preparePreviewSkeleton)
+                    next = await CharacterModel.create(createPreviewCharacter(), true, femaleEntries, {
+                        bodyTextureUrl: '/models/human/human_female.png', separateHeadAndHair: false,
+                    })
+                    if (!next.model || !next.skeleton) throw new Error('Female preview did not initialize')
+                    next.hairEquipmentRefreshEnabled = false
+                    previewModels[variant] = next
+                }
+                const visible = model.node.isEnabled()
+                next.node.parent = model.node.parent
+                next.node.rotation.copyFrom(model.node.rotation)
+                model.actualAnim?.stop()
+                model.node.setEnabled(false)
+                model.equipSet.forEach(item => EquipManager.removeEquippedItem(item))
+                model = next
+                previewBodyVariant = variant
+                modifierConfig = modifierConfigs[variant]
+                modifierConfig.activate()
+                model.node.setEnabled(visible)
+                model.equipSet.forEach(item => EquipManager.addEquippedItem(item))
+                ;(Object.keys(slotSelections) as PreviewSlot[]).forEach(slot => {
+                    setEquipmentSlot(model, slot, slotSelections[slot], slotMaterialSelections[slot] - 1)
+                    refreshModifierControl(slot)
+                })
+                root.querySelectorAll<HTMLElement>('[data-male-appearance]').forEach(panel => { panel.hidden = variant === 'female' })
+                if (variant === 'male' && visible) await refreshMaleHair()
+                if (!visible) model.equipSet.forEach(item => EquipManager.removeEquippedItem(item))
+                await Promise.all(model.model!.getChildMeshes().map(mesh => Lights.warmLocalPlayerLightMaterial(mesh)))
+                model.model!.getChildMeshes().forEach(mesh => {
+                    if (!mesh.lightSources.includes(fillLight)) mesh.lightSources.push(fillLight)
+                    if (!mesh.lightSources.includes(backLight)) mesh.lightSources.push(backLight)
+                    mesh._markSubMeshesAsLightDirty()
+                })
+                play()
+                bodyVariantSelect.value = variant
+                saveAdminUtilsSettings(animationSelect.value)
+            } finally {
+                bodyVariantSelect.value = previewBodyVariant
+                bodyVariantSelect.disabled = false
+            }
+        }
+        bodyVariantSelect.addEventListener('change', () => {
+            void switchBodyVariant(bodyVariantSelect.value as PreviewBodyVariant).catch(error => {
+                console.error('Character preview switch failed:', error)
+                status.textContent = 'Model se nepodařilo přepnout. Podrobnosti jsou v konzoli.'
+                status.classList.remove('admin-utils__status--hidden')
+                status.classList.add('admin-utils__status--error')
+            })
+        })
+        await switchBodyVariant(savedSettings.bodyVariant)
+        bodyVariantSelect.disabled = false
         animationSelect.disabled = false
         playAnimation(model, savedSettings.animation)
         animationSelect.addEventListener('change', () => {

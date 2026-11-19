@@ -13,6 +13,44 @@ function load(file, dependencies) {
     return exports
 }
 
+test('male and female equipment tuning remains independent through switches, saves and reloads', async () => {
+    const core = await import('@babylonjs/core/index.js')
+    const {loadEquipmentModifierConfig, getPreviewPairedModifiers} = load('adminUtils/equipmentModifierConfig.ts', {'@babylonjs/core': core})
+    const maleUrl = '/admin-utils/equipment-modifiers.json'
+    const femaleUrl = '/admin-utils/equipment-modifiers-female.json'
+    const files = Object.fromEntries([maleUrl, femaleUrl].map(url => [url,
+        JSON.parse(readFileSync(join(__dirname, '../public' + url), 'utf8'))]))
+    const originalMale = structuredClone(files[maleUrl])
+    const originalFetch = global.fetch
+    global.fetch = async (url, options) => {
+        assert.ok(files[url], url)
+        if (options?.method === 'PUT') files[url] = JSON.parse(options.body)
+        return {ok: true, json: async () => structuredClone(files[url])}
+    }
+    try {
+        const equipment = new Map(), pauldrons = new Map()
+        const male = await loadEquipmentModifierConfig(equipment, pauldrons)
+        const female = await loadEquipmentModifierConfig(equipment, pauldrons, 'female')
+        equipment.get(1000).position.x = 12
+        female.record(1000)
+        getPreviewPairedModifiers('legs', 1300).left.position.z = 7
+        female.record(1300, 'legs')
+        male.activate()
+        assert.equal(equipment.get(1000).position.x, originalMale.equipment[1000].position.x)
+        assert.notEqual(getPreviewPairedModifiers('legs', 1300).left.position.z, 7)
+        female.activate()
+        assert.equal(equipment.get(1000).position.x, 12)
+        assert.equal(getPreviewPairedModifiers('legs', 1300).left.position.z, 7)
+        await female.save()
+        assert.deepEqual(files[maleUrl], originalMale)
+        await loadEquipmentModifierConfig(equipment, pauldrons, 'female')
+        assert.equal(equipment.get(1000).position.x, 12)
+        assert.equal(getPreviewPairedModifiers('legs', 1300).left.position.z, 7)
+    } finally {
+        global.fetch = originalFetch
+    }
+})
+
 test('hair fittings save independently per type and survive reload without changing armor tuning', async () => {
     const core = await import('@babylonjs/core/index.js')
     const {loadEquipmentModifierConfig} = load('adminUtils/equipmentModifierConfig.ts', {'@babylonjs/core': core})

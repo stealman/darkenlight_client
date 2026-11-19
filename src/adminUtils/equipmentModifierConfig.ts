@@ -44,7 +44,6 @@ export function bindPreviewEquipment(item: EquipItem, owner: Pick<EquipBearer, '
     item.attachUsingFullBoneTransform(local, useJointNode)
 }
 
-const url = '/admin-utils/equipment-modifiers.json'
 const serialize = (modifier: EquipModelModifier): Transform => {
     const vector = ({ x, y, z }: Vector): Vector => ({ x, y, z })
     return { position: vector(modifier.position), rotation: vector(modifier.rotation), scale: vector(modifier.scale) }
@@ -57,24 +56,33 @@ const deserialize = (modifier: Transform): EquipModelModifier => {
 export async function loadEquipmentModifierConfig(
     equipment: Map<number, EquipModelModifier>,
     pauldrons: Map<number, CharacterPauldronModifiers>,
+    variant: 'male' | 'female' = 'male',
 ) {
-    // The offline preview starts with neutral transforms, independently of game tuning.
-    pauldronModifiers = pauldrons
-    legModifiers.clear()
-    equipment.forEach((_, id) => { if (id >= 1000) equipment.set(id, neutral()) })
-    pauldrons.forEach((_, id) => pauldrons.set(id, { left: neutral(), right: neutral() }))
+    const url = variant === 'female' ? '/admin-utils/equipment-modifiers-female.json' : '/admin-utils/equipment-modifiers.json'
+    const defaults = new Map(equipment)
     const response = await fetch(url, { cache: 'no-store' })
     if (!response.ok) throw new Error('Could not load equipment modifiers')
     const config: Config = await response.json()
-    weaponCorrection = config.weaponAttachment ? Matrix.FromArray(config.weaponAttachment.correction) : null
-    Object.entries(config.equipment).forEach(([id, value]) => equipment.set(Number(id), deserialize(value)))
-    Object.entries(config.pauldrons).forEach(([id, value]) => pauldrons.set(Number(id), {
-        left: deserialize(value.left), right: deserialize(value.right),
-    }))
-    Object.entries(config.legs ?? {}).forEach(([id, value]) => legModifiers.set(Number(id), {
-        left: deserialize(value.left), right: deserialize(value.right),
-    }))
+    const activate = () => {
+        // The offline preview starts with neutral transforms, independently of game tuning.
+        pauldronModifiers = pauldrons
+        legModifiers.clear()
+        equipment.clear()
+        defaults.forEach((value, id) => equipment.set(id, value))
+        equipment.forEach((_, id) => { if (id >= 1000) equipment.set(id, neutral()) })
+        pauldrons.forEach((_, id) => pauldrons.set(id, { left: neutral(), right: neutral() }))
+        weaponCorrection = config.weaponAttachment ? Matrix.FromArray(config.weaponAttachment.correction) : null
+        Object.entries(config.equipment).forEach(([id, value]) => equipment.set(Number(id), deserialize(value)))
+        Object.entries(config.pauldrons).forEach(([id, value]) => pauldrons.set(Number(id), {
+            left: deserialize(value.left), right: deserialize(value.right),
+        }))
+        Object.entries(config.legs ?? {}).forEach(([id, value]) => legModifiers.set(Number(id), {
+            left: deserialize(value.left), right: deserialize(value.right),
+        }))
+    }
+    activate()
     return {
+        activate,
         getHairColor(): string {
             return config.hairPreviewColor ?? '#ffffff'
         },

@@ -24,7 +24,7 @@ import { Renderer } from '@/babylon/scene/renderer'
 import type { MeshAnimation } from '@/babylon/animations/animation'
 
 // This sandbox deliberately calls geometry factories, never the world/network loop.
-export async function installAssetPreview(root: HTMLElement, scene: Scene, camera: ArcRotateCamera, character: CharacterModel) {
+export async function installAssetPreview(root: HTMLElement, scene: Scene, camera: ArcRotateCamera, getCharacter: () => CharacterModel) {
     const panel = root.querySelector<HTMLElement>('.admin-utils__panel')!
     const characterControls = document.createElement('div')
     while (panel.children.length > 1) characterControls.append(panel.children[1])
@@ -69,7 +69,7 @@ export async function installAssetPreview(root: HTMLElement, scene: Scene, camer
     let clips: [string, MeshAnimation][] = []
     let generation = 0
     const parent = new TransformNode('assetPreview', scene)
-    character.node.parent = parent
+    getCharacter().node.parent = parent
     const rotatePreview = () => {
         parent.rotation.y = Number(rotationSlider.value) * Math.PI / 180
         rotationOutput.value = rotationSlider.value + '°'
@@ -214,6 +214,7 @@ export async function installAssetPreview(root: HTMLElement, scene: Scene, camer
         button.textContent = name
         button.onclick = () => {
             tab = name; clear()
+            const character = getCharacter()
             character.node.setEnabled(name === 'Postava')
             character.equipSet.forEach(item => { if (name !== 'Postava') EquipManager.removeEquippedItem(item); else EquipManager.addEquippedItem(item) })
             characterControls.hidden = name !== 'Postava'; controls.hidden = name === 'Postava'

@@ -28,7 +28,10 @@ function adminEquipmentModifiersPlugin(configPath) {
         apply: 'serve',
         configureServer(server) {
             server.middlewares.use(async (req, res, next) => {
-                if (req.url?.split('?')[0] !== endpoint || req.method !== 'PUT') return next()
+                const requestPath = req.url?.split('?')[0]
+                const femaleEndpoint = '/admin-utils/equipment-modifiers-female.json'
+                if (![endpoint, femaleEndpoint].includes(requestPath) || req.method !== 'PUT') return next()
+                const targetPath = requestPath === femaleEndpoint ? configPath.replace(/\.json$/, '-female.json') : configPath
                 if (req.headers.origin !== `http://${req.headers.host}` && req.headers.origin !== `https://${req.headers.host}`) {
                     res.writeHead(403).end('Invalid origin')
                     return
@@ -47,8 +50,8 @@ function adminEquipmentModifiersPlugin(configPath) {
                         res.writeHead(400).end('Invalid equipment modifiers')
                         return
                     }
-                    await fs.writeFile(configPath + '.tmp', JSON.stringify(config, null, 2) + '\n', 'utf8')
-                    await fs.rename(configPath + '.tmp', configPath)
+                    await fs.writeFile(targetPath + '.tmp', JSON.stringify(config, null, 2) + '\n', 'utf8')
+                    await fs.rename(targetPath + '.tmp', targetPath)
                     res.writeHead(204).end()
                 } catch (error) {
                     server.config.logger.error(`Could not save equipment modifiers: ${error.message}`)

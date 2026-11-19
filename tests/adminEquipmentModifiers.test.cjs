@@ -26,6 +26,12 @@ test('equipment configuration persists transforms and rejects invalid writes', a
     try {
         assert.equal((await put(config)).status, 204)
         assert.deepEqual(JSON.parse(await fs.readFile(configPath, 'utf8')), config)
+        const female = {...config, equipment: {1000: {...transform, position: {x: 1, y: 2, z: 3}}}}
+        assert.equal((await fetch(origin + '/admin-utils/equipment-modifiers-female.json', {
+            method: 'PUT', headers: {Origin: origin, 'Content-Type': 'application/json'}, body: JSON.stringify(female),
+        })).status, 204)
+        assert.deepEqual(JSON.parse(await fs.readFile(configPath.replace('.json', '-female.json'), 'utf8')), female)
+        assert.deepEqual(JSON.parse(await fs.readFile(configPath, 'utf8')), config, 'female saves preserve male tuning')
         assert.equal((await put({...config, hair: {1: {position: vector}}})).status, 400)
         assert.equal((await put({...config, hair: {0: transform}})).status, 400)
         assert.equal((await put({...config, hairPreviewColor: 'red'})).status, 400)
