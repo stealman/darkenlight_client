@@ -82,12 +82,12 @@ export async function startStarterPreviews(canvases: HTMLCanvasElement[], signal
         shadow.setDarkness(0)
         return shadow
     })
-    const include = (mesh: AbstractMesh) => {
+    const include = (mesh: AbstractMesh, castsShadows = true) => {
         if (!layers.has(mesh)) layers.set(mesh, mesh.layerMask)
         if (!shadowReceivers.has(mesh)) shadowReceivers.set(mesh, mesh.receiveShadows)
         mesh.layerMask = previewMask
         mesh.receiveShadows = true
-        shadows.forEach(shadow => shadow.addShadowCaster(mesh, false))
+        if (castsShadows) shadows.forEach(shadow => shadow.addShadowCaster(mesh, false))
     }
     platforms.receiveShadows = true
     foliage.receiveShadows = true
@@ -173,8 +173,10 @@ export async function startStarterPreviews(canvases: HTMLCanvasElement[], signal
             if (signal.aborted) { character.model?.removeFromScene(); return }
             const model = character.model!
             await model.addToView()
-            model.model!.getChildMeshes().forEach(include)
-            model.equipSet.forEach(item => { if (item.type.mesh) include(item.type.mesh) })
+            model.model!.getChildMeshes().forEach(mesh => include(mesh))
+            model.equipSet.forEach((item, slot) => {
+                if (item.type.mesh) include(item.type.mesh, slot !== 'HAIR' || item.type.castsShadows)
+            })
             const camera = new FreeCamera('starterPreviewCamera'+index, position.add(new Vector3(3, 2.4, -5)), scene)
             camera.setTarget(position.add(new Vector3(0, 0.55, 0)))
             model.model!.rotation.y = Math.atan2(position.z - camera.position.z, camera.position.x - position.x)

@@ -7,7 +7,6 @@ import type { CharacterModel } from '@/babylon/character/characterModel'
 import type { EquipModelModifier } from '@/babylon/item/equipManager'
 import { modelAssetUrl } from '@/babylon/modelAssetUrl'
 import { Lights } from '@/babylon/scene/lights'
-import { Settings } from '@/settings/settings'
 import { EquipSlotModelsCb } from '@/data/items/item'
 
 export function getCharacterHairMode(headModelId?: number): 'normal' | 'helmet' | 'hidden' {
@@ -75,16 +74,7 @@ async function createSource(scene: Scene, definition: typeof CHARACTER_HAIR_TYPE
         const type = new EquipItemType(new EquipCbItem(-10000 - definition.id - (gender === 'F' ? 100 : 0), mesh.name, Vector3.Zero(), Vector3.One(), null, null))
         type.mesh = mesh
         type.tintBuffer = new Float32Array(0)
-        type.castsShadows = true
-        type.sunShadowEnabled = !Settings.isDetailLevelMedium()
         Lights.registerDynamicLightMesh(mesh)
-        Lights.addShadowCaster(mesh, true, false, false, true, (position, rangeSquared) => {
-            if (Settings.isDetailLevelMedium() && !Lights.indoor && !type.hasLocalPlayerShadowEquipment()) return false
-            for (const item of EquipManager.equippedItems.get(type) ?? []) {
-                if (Vector3.DistanceSquared(position, item.position) <= rangeSquared) return true
-            }
-            return false
-        }, true, !Settings.isDetailLevelMedium())
         return type
     } finally {
         container.dispose()
@@ -109,7 +99,6 @@ export function attachCharacterHair(model: CharacterModel, type: EquipItemType, 
     item.attachUsingFullBoneTransform(characterHeadMatrix(fitting))
     setCharacterHairColor(item, hexColor)
     setCharacterHairLightness(item, lightness)
-    item.castsOutdoorShadow = head.castsOutdoorShadow
     model.equipSet.set('HAIR', item)
     EquipManager.addEquippedItem(item)
     return item
