@@ -20,8 +20,9 @@ const vector = ({ x, y, z }: Vector) => new Vector3(x, y, z)
 const matrix = (value: Transform) => Matrix.Compose(vector(value.scale), Quaternion.FromEulerVector(vector(value.rotation)), vector(value.position))
 const weaponGripRotation = Matrix.RotationY(Math.PI)
 
-export function getCharacterHairFitting(scene: Scene, typeId: number): EquipModelModifier {
-    const fitting = scenes.get(scene)?.get('M')?.config.hair?.[typeId]
+export function getCharacterHairFitting(scene: Scene, typeId: number, gender: CharacterGender = 'M'): EquipModelModifier {
+    const hair = scenes.get(scene)?.get(gender)?.config.hair
+    const fitting = hair?.[typeId] ?? (gender === 'F' ? hair?.[1] : undefined)
     return fitting
         ? {position: vector(fitting.position), rotation: vector(fitting.rotation), scale: vector(fitting.scale)}
         : {position: Vector3.Zero(), rotation: Vector3.Zero(), scale: Vector3.One()}

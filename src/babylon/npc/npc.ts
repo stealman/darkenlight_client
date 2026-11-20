@@ -12,6 +12,10 @@ type NpcEquipmentItem = {
 type NpcEquipment = Partial<Record<'head' | 'arms' | 'legs' | 'body' | 'weapon' | 'shield', NpcEquipmentItem>>
 
 export class Npc extends Character {
+    override get rendersHelmet(): boolean {
+        return true
+    }
+
     type: string
     titleCZ: string
     titleEN: string

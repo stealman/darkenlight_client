@@ -23,6 +23,7 @@ test('game models render data-driven shared hair and retain it across equipment 
     const readGlb = file => core.SceneLoader.LoadAssetContainerAsync('',
         `data:;base64,${readFileSync(join(__dirname, '../public/models/human', file)).toString('base64')}`, scene, undefined, '.glb')
     const deps = {
+        '@babylonjs/materials': {PBRCustomMaterial},
         '@babylonjs/core': {...core, SceneLoader: {LoadAssetContainerAsync: async (_root, url) => {
             loads.set(url, (loads.get(url) ?? 0) + 1)
             return readGlb(url.split('/').pop())

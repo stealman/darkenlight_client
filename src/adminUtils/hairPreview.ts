@@ -2,6 +2,7 @@ export {
     getCharacterHairMode as getPreviewHairMode,
     hideCharacterHair as hidePreviewHair,
     CHARACTER_HAIR_TYPES as PREVIEW_HAIR_TYPES,
+    FEMALE_CHARACTER_HAIR_TYPES as FEMALE_PREVIEW_HAIR_TYPES,
     loadCharacterHair as loadPreviewHair,
     attachCharacterHair as attachPreviewHair,
     setCharacterHairColor as setPreviewHairColor,

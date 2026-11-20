@@ -15,10 +15,12 @@ function load(file, dependencies) {
 
 test('heads share one GLB batch, follow separate animated head joints and survive helmet removal', async () => {
     const core = await import('@babylonjs/core/index.js')
+    const {PBRCustomMaterial} = await import('@babylonjs/materials/custom/pbrCustomMaterial.js')
     await import('@babylonjs/loaders/glTF/index.js')
     const engine = new core.NullEngine()
     const scene = new core.Scene(engine)
     const dependencies = {
+        '@babylonjs/materials': {PBRCustomMaterial},
         '@babylonjs/core': core,
         '@/settings/settings': {Settings: {isDetailLevelMedium: () => false}},
         '@/babylon/scene/lights': {Lights: {registerDynamicLightMesh() {}, addShadowCaster() {}}},

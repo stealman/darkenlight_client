@@ -62,14 +62,25 @@
                 </label>
             </div>
 
-            <label class="npc-details-control">
-                <span>Body type</span>
-                <select v-model="bodyType">
-                    <option value="steve">Steve</option>
-                </select>
-            </label>
-
-            <label class="npc-details-control"><span>Gender</span><select v-model="npcGender" aria-label="Gender"><option value="M">&#9794;</option><option value="F">&#9792;</option></select></label>
+            <div class="npc-details-row npc-details-appearance">
+                <label class="npc-details-control">
+                    <span>Body type</span>
+                    <select v-model="npcGender" aria-label="Body type">
+                        <option value="M">Male</option>
+                        <option value="F">Female</option>
+                    </select>
+                </label>
+                <label class="npc-details-control">
+                    <span>Hair type</span>
+                    <select v-model.number="hairTypeId" aria-label="Hair type">
+                        <option v-for="id in 4" :key="id" :value="id">{{ id }}</option>
+                    </select>
+                </label>
+                <label class="npc-details-control">
+                    <span>Hair color</span>
+                    <input v-model="hairColor" type="color" aria-label="Hair color" />
+                </label>
+            </div>
             <div class="npc-details-equipment">
                 <label class="npc-details-control">
                     <span>Helm</span>
@@ -494,7 +505,8 @@ const guardRespawnSeconds = ref(15)
 const guardPatrolPoints = ref('')
 const titleCZ = ref('')
 const titleEN = ref('')
-const bodyType = ref('steve')
+const hairTypeId = ref(1)
+const hairColor = ref('#664e0a')
 const headSelection = ref('')
 const armsSelection = ref('')
 const legsSelection = ref('')
@@ -574,7 +586,8 @@ const openDialog = () => {
     guardPursueRange.value = npc.guard?.pursueRange ?? 12
     guardRespawnSeconds.value = npc.guard?.respawnSeconds ?? 15
     guardPatrolPoints.value = (npc.guard?.patrolPoints ?? []).map((point) => `${point.x},${point.z}`).join('\n')
-    bodyType.value = npc?.bodyType ?? 'steve'
+    hairTypeId.value = npc.hairTypeId ?? 1
+    hairColor.value = npc.hairColor ?? '#664e0a'
     headSelection.value = selectionFromItem(npc?.equipment?.head)
     armsSelection.value = selectionFromItem(npc?.equipment?.arms)
     legsSelection.value = selectionFromItem(npc?.equipment?.legs)
@@ -634,7 +647,7 @@ const saveDetails = () => {
         window.alert('Guard values are invalid. Pursue range must be at least the aggro range.')
         return
     }
-    GMManager.setSelectedNpcDetails(npcName.value, titleCZ.value.trim(), titleEN.value.trim(), bodyType.value, {
+    GMManager.setSelectedNpcDetails(npcName.value, titleCZ.value.trim(), titleEN.value.trim(), 'steve', {
         head: itemFromSelection(headSelection.value),
         arms: itemFromSelection(armsSelection.value),
         legs: itemFromSelection(legsSelection.value),
@@ -647,7 +660,7 @@ const saveDetails = () => {
         pursueRange: guardPursueRange.value,
         respawnSeconds: guardRespawnSeconds.value,
         patrolPoints,
-    }, {x: spawnX.value, z: spawnZ.value}, npcGender.value)
+    }, {x: spawnX.value, z: spawnZ.value}, npcGender.value, hairTypeId.value, hairColor.value)
     GMManager.saveSelectedNpc()
     closeDialog()
 }
@@ -705,6 +718,16 @@ defineExpose({
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
+}
+
+.npc-details-appearance {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.npc-details-control input[type="color"] {
+    height: 34px;
+    padding: 2px;
+    cursor: pointer;
 }
 
 .npc-details-control input,

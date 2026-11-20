@@ -864,11 +864,11 @@ function readModifierEditor(editor: HTMLElement): EquipModelModifier | null {
 async function installHeadControls(root: HTMLElement, model: CharacterModel) {
     // Load runtime dependencies only after mountAdminUtils initializes Renderer.
     const { characterHeadMatrix, getCharacterHeadType } = await import('@/babylon/character/characterHead')
-    const head = getCharacterHeadType(model.parent.headTypeId)
-    const constantName = head.id === 1 ? 'HUMAN_HEAD_FITTING' : `HUMAN_HEAD${head.id}_FITTING`
+    const head = getCharacterHeadType(model.parent.headTypeId, model.parent.gender)
+    const constantName = model.parent.gender === 'F' ? 'HUMAN_FEMALE_HEAD_FITTING' : head.id === 1 ? 'HUMAN_HEAD_FITTING' : `HUMAN_HEAD${head.id}_FITTING`
     const panel = document.createElement('details')
     panel.className = 'admin-utils__equipment-group'
-    panel.dataset.maleAppearance = ''
+    panel.dataset.headGender = model.parent.gender ?? 'M'
     const title = document.createElement('summary')
     title.textContent = `Hlava · ${head.file} (offsety)`
     const editor = document.createElement('div')
@@ -892,7 +892,10 @@ async function installHeadControls(root: HTMLElement, model: CharacterModel) {
             + MODIFIER_COMPONENTS.map(component => `    ${component}: new Vector3(${MODIFIER_AXES.map(axis => fitting[component][axis]).join(', ')}),`).join('\n')
             + '\n}'
         if (save) {
-            try { localStorage.setItem(storageKey, JSON.stringify(fitting)) } catch { /* Storage may be unavailable. */ }
+            const stored = Object.fromEntries(MODIFIER_COMPONENTS.map(component => [component, {
+                x: fitting[component].x, y: fitting[component].y, z: fitting[component].z,
+            }]))
+            try { localStorage.setItem(storageKey, JSON.stringify(stored)) } catch { /* Storage may be unavailable. */ }
         }
     }
     populateModifierEditor(editor, head.fitting)
@@ -921,11 +924,13 @@ async function installHairControls(root: HTMLElement, model: CharacterModel, con
     getHairLightness(): number
     recordHairLightness(lightness: number): void
 }, changed: () => void) {
-    const { PREVIEW_HAIR_TYPES, getPreviewHairMode, loadPreviewHair, attachPreviewHair, hidePreviewHair, setPreviewHairColor, setPreviewHairLightness } = await import('./hairPreview')
+    const { PREVIEW_HAIR_TYPES, FEMALE_PREVIEW_HAIR_TYPES, getPreviewHairMode, loadPreviewHair, attachPreviewHair, hidePreviewHair, setPreviewHairColor, setPreviewHairLightness } = await import('./hairPreview')
+    const gender = model.parent.gender ?? 'M'
+    const hairTypes = gender === 'F' ? FEMALE_PREVIEW_HAIR_TYPES : PREVIEW_HAIR_TYPES
     const { characterHeadMatrix } = await import('@/babylon/character/characterHead')
     const panel = document.createElement('details')
     panel.className = 'admin-utils__equipment-group'
-    panel.dataset.maleAppearance = ''
+    panel.dataset.hairGender = gender
     panel.open = true
     const title = document.createElement('summary')
     title.textContent = 'Účes · typ a offsety'
@@ -934,7 +939,7 @@ async function installHairControls(root: HTMLElement, model: CharacterModel, con
     label.textContent = 'Typ účesu'
     const select = document.createElement('select')
     select.setAttribute('aria-label', 'Typ účesu pro nastavení offsetů')
-    PREVIEW_HAIR_TYPES.forEach(type => {
+    hairTypes.forEach(type => {
         const option = document.createElement('option')
         option.value = String(type.id)
         option.textContent = `Účes ${type.id} · ${type.file}`
@@ -982,7 +987,7 @@ async function installHairControls(root: HTMLElement, model: CharacterModel, con
         try {
             const id = Number(select.value)
             const headEquipmentId = model.equipSet.get('HEAD')?.type.id
-            const mode = getPreviewHairMode(headEquipmentId)
+            const mode = gender === 'F' ? 'normal' : getPreviewHairMode(headEquipmentId)
             if (mode === 'hidden') {
                 hidePreviewHair(model)
                 item = null
@@ -991,7 +996,7 @@ async function installHairControls(root: HTMLElement, model: CharacterModel, con
                 return
             }
             const underHelmet = mode === 'helmet'
-            const type = await loadPreviewHair(model.node.getScene(), id, underHelmet)
+            const type = await loadPreviewHair(model.node.getScene(), id, underHelmet, gender)
             if (request !== generation || model.node.isDisposed() || !model.node.isEnabled()) return
             const headMesh = model.equipSet.get('FACE')?.type.mesh
             if (headMesh && type.mesh) {
@@ -1003,7 +1008,7 @@ async function installHairControls(root: HTMLElement, model: CharacterModel, con
             activeTypeId = id
             populateModifierEditor(editor, fitting)
             editor.hidden = false
-            note.textContent = underHelmet && PREVIEW_HAIR_TYPES.find(type => type.id === id)?.helmetFile
+            note.textContent = underHelmet && hairTypes.find(type => type.id === id)?.helmetFile
                 ? 'Náhled používá variantu účesu pod pokrývku hlavy. ' + help : help
         } finally {
             if (request === generation) select.disabled = false
@@ -1639,6 +1644,7 @@ export async function mountAdminUtils() {
             setEquipmentSlot(model, slot, slotSelections[slot], slotMaterialSelections[slot] - 1)
         })
         const refreshMaleHair = await installHairControls(root, model, maleModifierConfig, markModifiersChanged)
+        const refreshHair: Partial<Record<PreviewBodyVariant, () => Promise<void>>> = { male: refreshMaleHair }
 
         await Promise.all(model.model!.getChildMeshes().map((mesh) => Lights.warmLocalPlayerLightMaterial(mesh)))
         scene.meshes.forEach((mesh) => {
@@ -1888,6 +1894,8 @@ export async function mountAdminUtils() {
                     })
                     if (!next.model || !next.skeleton) throw new Error('Female preview did not initialize')
                     next.hairEquipmentRefreshEnabled = false
+                    await installHeadControls(root, next)
+                    refreshHair[variant] = await installHairControls(root, next, femaleModifierConfig, markModifiersChanged)
                     previewModels[variant] = next
                 }
                 const visible = model.node.isEnabled()
@@ -1906,11 +1914,14 @@ export async function mountAdminUtils() {
                     setEquipmentSlot(model, slot, slotSelections[slot], slotMaterialSelections[slot] - 1)
                     refreshModifierControl(slot)
                 })
-                root.querySelectorAll<HTMLElement>('[data-male-appearance]').forEach(panel => { panel.hidden = variant === 'female' })
-                if (variant === 'male' && visible) await refreshMaleHair()
+                root.querySelectorAll<HTMLElement>('[data-head-gender]').forEach(panel => { panel.hidden = panel.dataset.headGender !== (variant === 'female' ? 'F' : 'M') })
+                root.querySelectorAll<HTMLElement>('[data-hair-gender]').forEach(panel => { panel.hidden = panel.dataset.hairGender !== (variant === 'female' ? 'F' : 'M') })
+                if (visible) await refreshHair[variant]?.()
                 if (!visible) model.equipSet.forEach(item => EquipManager.removeEquippedItem(item))
                 await Promise.all(model.model!.getChildMeshes().map(mesh => Lights.warmLocalPlayerLightMaterial(mesh)))
-                model.model!.getChildMeshes().forEach(mesh => {
+                // Detached heads and equipment use source meshes outside the body hierarchy.
+                scene.meshes.forEach(mesh => {
+                    if (mesh.material == null) return
                     if (!mesh.lightSources.includes(fillLight)) mesh.lightSources.push(fillLight)
                     if (!mesh.lightSources.includes(backLight)) mesh.lightSources.push(backLight)
                     mesh._markSubMeshesAsLightDirty()

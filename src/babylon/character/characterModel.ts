@@ -40,6 +40,7 @@ export class CharacterModel implements EquipBearer {
     private static preparedAnimations = new WeakMap<InstantiatedEntries, AnimationGroup[]>()
 
     private readonly gender: CharacterGender
+    private readonly renderHelmet: boolean
     parent: Character
     node: TransformNode = new TransformNode('characterModelNode')
     nameTextNode: TransformNode
@@ -98,9 +99,10 @@ export class CharacterModel implements EquipBearer {
     actualStepSound: Sound | null = null
     footStepSounds: Map<string, Sound> = new Map()
 
-    constructor(parent: Character, private readonly appearance: CharacterModelAppearance = {}) {
+    constructor(parent: Character, appearance: CharacterModelAppearance = {}) {
         this.parent = parent
         this.gender = parent.gender === 'F' ? 'F' : 'M'
+        this.renderHelmet = appearance.renderHelmet ?? parent.rendersHelmet ?? false
         this.node.position.copyFrom(this.parent.pos)
         this.nameTextNode = new TransformNode('nameTextNode' + this.parent.id)
     }
@@ -131,7 +133,7 @@ export class CharacterModel implements EquipBearer {
                     pool.push(entries)
                 }
             }),
-            loadCharacterHead(scene), loadCharacterHair(scene),
+            loadCharacterHead(scene), loadCharacterHead(scene, 1, 'F'), loadCharacterHair(scene), loadCharacterHair(scene, 1, false, 'F'),
         ])
     }
 
@@ -192,14 +194,14 @@ export class CharacterModel implements EquipBearer {
 
     private async initializeModelAsync() {
         const scene = this.node.getScene()
-        const hairMode = getCharacterHairMode(this.appearance.renderHelmet ? this.parent.equipSet.get(EquipItemSlots.HEAD)?.modelId : undefined)
+        const hairMode = this.gender === 'F' ? 'normal' : getCharacterHairMode(this.renderHelmet ? this.parent.equipSet.get(EquipItemSlots.HEAD)?.modelId : undefined)
         // The shared AssetContainer parses the GLB once. Most nearby human
         // models are instantiated behind the loading overlay and only enabled
         // when their character first enters the viewport.
         await Promise.all([
             this.instantiatedEntries ? Promise.resolve(this.instantiatedEntries) : CharacterModel.instantiate(scene, this.gender),
-            this.gender === 'F' ? Promise.resolve(null) : loadCharacterHead(scene, this.parent.headTypeId),
-            this.gender === 'F' || hairMode === 'hidden' ? Promise.resolve(null) : loadCharacterHair(scene, this.parent.hairTypeId, hairMode === 'helmet'),
+            loadCharacterHead(scene, this.parent.headTypeId, this.gender),
+            hairMode === 'hidden' ? Promise.resolve(null) : loadCharacterHair(scene, this.parent.hairTypeId, hairMode === 'helmet', this.gender),
         ])
             .then(([result, headType, hairType]) => {
                 if (this.node.isDisposed()) {
@@ -295,12 +297,12 @@ export class CharacterModel implements EquipBearer {
                 this.rhandNode.attachToBone(this.skeleton.bones.find((b) => b.id === 'Bone.009')!, this.model) // Rhand 009
                 if (headType) {
                     const head = new EquipItem(headType, 0, this, this.skeleton.bones.find(b => b.id === 'Bone.002')!, null, null, null)
-                    head.attachUsingFullBoneTransform(characterHeadMatrix(getCharacterHeadType(this.parent.headTypeId).fitting))
+                    head.attachUsingFullBoneTransform(characterHeadMatrix(getCharacterHeadType(this.parent.headTypeId, this.gender).fitting))
                     head.castsOutdoorShadow = this.parent.isMyChar()
                     this.equipSet.set('FACE', head)
                     EquipManager.addEquippedItem(head)
                 }
-                if (hairType) attachCharacterHair(this, hairType, getCharacterHairFitting(scene, this.parent.hairTypeId ?? 1),
+                if (hairType) attachCharacterHair(this, hairType, getCharacterHairFitting(scene, this.parent.hairTypeId ?? 1, this.gender),
                     this.parent.hairColor, this.parent.hairLightness)
             })
             .catch((error) => {
@@ -322,15 +324,15 @@ export class CharacterModel implements EquipBearer {
     }
 
     async refreshHairAppearance() {
-        if (!this.initialized || this.node.isDisposed() || this.gender === 'F') return
+        if (!this.initialized || this.node.isDisposed()) return
         const revision = ++this.hairAppearanceRevision
-        const mode = getCharacterHairMode(this.appearance.renderHelmet ? this.equipSet.get('HEAD')?.type.id : undefined)
+        const mode = this.gender === 'F' ? 'normal' : getCharacterHairMode(this.renderHelmet ? this.equipSet.get('HEAD')?.type.id : undefined)
         if (mode === 'hidden') {
             hideCharacterHair(this)
             return
         }
         const typeId = this.parent.hairTypeId
-        const type = await loadCharacterHair(this.node.getScene(), typeId, mode === 'helmet')
+        const type = await loadCharacterHair(this.node.getScene(), typeId, mode === 'helmet', this.gender)
         if (this.node.isDisposed() || revision !== this.hairAppearanceRevision || this.parent.hairTypeId !== typeId) return
         const current = this.equipSet.get('HAIR')
         if (current?.type === type) {
@@ -338,7 +340,7 @@ export class CharacterModel implements EquipBearer {
             setCharacterHairLightness(current, this.parent.hairLightness)
             return
         }
-        const item = attachCharacterHair(this, type, getCharacterHairFitting(this.node.getScene(), typeId),
+        const item = attachCharacterHair(this, type, getCharacterHairFitting(this.node.getScene(), typeId, this.gender),
             this.parent.hairColor, this.parent.hairLightness)
         if (!this.parent.insideView) EquipManager.removeEquippedItem(item)
     }
@@ -364,7 +366,7 @@ export class CharacterModel implements EquipBearer {
             this.assignArmor(armor.modelId, armor.materialId - 1)
         }
 
-        if (this.appearance.renderHelmet && this.parent.equipSet.get(EquipItemSlots.HEAD) && !this.equipSet.get('HEAD')) {
+        if (this.renderHelmet && this.parent.equipSet.get(EquipItemSlots.HEAD) && !this.equipSet.get('HEAD')) {
             const helmet = this.parent.equipSet.get(EquipItemSlots.HEAD)!
             this.assignHelmet(helmet.modelId, helmet.materialId - 1)
         }
@@ -398,8 +400,8 @@ export class CharacterModel implements EquipBearer {
     }
 
     assignHelmet(type: number, matIndex: number) {
-        // Helmets remain functional equipment; only the authoring preview renders them.
-        if (!this.appearance.renderHelmet) return
+        // Players and bots keep helmet stats without displaying the mesh.
+        if (!this.renderHelmet) return
         this.addEquippedItem('HEAD', new EquipItem(EquipManager.itemTypes.get(type)!, matIndex, this, this.skeleton!.bones.find((b) => b.id === 'Bone.002')!, null, null, null, getCharacterModelEquipModifier(type)))
     }
 

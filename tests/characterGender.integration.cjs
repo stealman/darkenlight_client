@@ -17,10 +17,17 @@ async function main() {
         page.on('pageerror', error => errors.push(String(error)))
         page.on('console', message => {if (message.type() === 'error') {errors.push(message.text()); console.error(message.text())}})
         await page.goto(`http://127.0.0.1:${server.httpServer.address().port}/`)
-        const waitPreviews = () => page.waitForFunction(() => {
-            const button = document.querySelector('.guest-character-class-label')
-            return button && !button.disabled
-        })
+        const waitPreviews = async () => {
+            await page.waitForFunction(() => {
+                const button = document.querySelector('.guest-character-class-label')
+                return button && !button.disabled
+            })
+            await page.evaluate(async () => {
+                const {Renderer} = await import('/src/babylon/scene/renderer.ts')
+                await Renderer.scene.whenReadyAsync()
+                await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+            })
+        }
         const previewTextures = () => page.evaluate(async () => {
             const {Renderer} = await import('/src/babylon/scene/renderer.ts')
             return Renderer.scene.meshes.filter(mesh => mesh.skeleton && mesh.isEnabled() && mesh.getTotalVertices() > 0)
@@ -59,6 +66,31 @@ async function main() {
         await chooseGender('F')
         await chooseGender('M')
         await chooseGender('F')
+        await page.evaluate(async () => {
+            const {EquipManager} = await import('/src/babylon/item/equipManager.ts')
+            const owners = [...new Set([...EquipManager.equippedItems.values()].flatMap(set => [...set]).map(item => item.parent))]
+                .filter(owner => owner.parent?.id === -9001 || owner.parent?.id === -9002)
+            const fitting = (await (await fetch('/admin-utils/equipment-modifiers-female.json')).json()).hair['1']
+            if (owners.length !== 2) throw new Error('Missing class preview models')
+            for (const owner of owners) {
+                const body = owner.model.getChildMeshes().find(mesh => mesh.skeleton).material
+                const head = owner.equipSet.get('FACE')?.type.mesh.material
+                if (!head?.albedoTexture.name.includes('human_female_head_1.png')) throw new Error('Missing runtime female head in class preview')
+                const hair = owner.equipSet.get('HAIR')
+                if (!hair?.type.mesh.material.albedoTexture.name.includes('human_female_hair_1.png') || hair.bone.name !== 'Head') {
+                    throw new Error('Missing runtime female hair attached to Head')
+                }
+                const position = hair.attachmentLocalMatrix.getTranslation()
+                for (const axis of ['x', 'y', 'z']) {
+                    if (Math.abs(position[axis] - fitting.position[axis]) > 1e-6) throw new Error('Female hair does not use saved fitting')
+                }
+                if (body.unlit || head.unlit || !body.CustomParts.Fragment_Before_Lights
+                    || body.CustomParts.Fragment_Before_Lights !== head.CustomParts.Fragment_Before_Lights) {
+                    throw new Error('Preview body/head must use the shared lit character shader')
+                }
+            }
+        })
+        await page.locator('.guest-character-class-option').nth(1).hover()
         if (process.env.GENDER_SCREENSHOT) await page.screenshot({path: process.env.GENDER_SCREENSHOT})
         await page.locator('.guest-character-class-label').first().click()
         if (process.argv.includes('--layout-only')) {
@@ -73,7 +105,7 @@ async function main() {
         let state = await appearance()
         assert.equal(state.gender, 'F')
         assert.match(state.texture, /human_female\.png/)
-        assert.ok(!state.slots.includes('FACE') && !state.slots.includes('HAIR') && !state.slots.includes('HEAD'))
+        assert.ok(state.slots.includes('FACE') && state.slots.includes('HAIR') && !state.slots.includes('HEAD'))
         assert.equal(state.armor, 'character-equipment-F-2000')
         const saved = await page.evaluate(async () => {
             const {Connector} = await import('/src/network/connector.ts')
@@ -101,7 +133,7 @@ async function main() {
                 await MessageProcessor.processResponse([{t: 89, d: {id, name: 'Test bot', gender}}])
                 const texture = bot.model.model.getChildMeshes().find(mesh => mesh.skeleton).material.albedoTexture.name
                 if (!texture.includes(gender === 'F' ? 'human_female.png' : 'human_male.png')) throw new Error('Gender pool mixed body meshes')
-                if (bot.model.equipSet.has('FACE') !== (gender === 'M')) throw new Error('Wrong detachable head for gender')
+                if (!bot.model.equipSet.has('FACE')) throw new Error('Wrong detachable head for gender')
             }
             CharacterManager.removeCharacter(id)
         })
@@ -115,7 +147,7 @@ async function main() {
             const npc = NpcManager.npcs.get(data.id)
             npc.insideView = true
             await npc.model.initAsync()
-            if (npc.gender !== 'F' || npc.model.equipSet.has('FACE')) throw new Error('Female NPC has wrong appearance')
+            if (npc.gender !== 'F' || !npc.model.equipSet.has('FACE')) throw new Error('Female NPC has wrong appearance')
             await NpcManager.addNpc({...data, gender: 'M'})
             if (npc.gender !== 'M' || !npc.model.equipSet.has('FACE')) throw new Error('NPC gender update did not replace the model')
             NpcManager.removeNpc(data.id)
@@ -125,7 +157,7 @@ async function main() {
             const guard = NpcManager.guards.get(guardData.id)
             guard.insideView = true
             await guard.model.initAsync()
-            if (guard.gender !== 'F' || guard.model.equipSet.has('FACE')) throw new Error('Female guard has wrong appearance')
+            if (guard.gender !== 'F' || !guard.model.equipSet.has('FACE')) throw new Error('Female guard has wrong appearance')
             NpcManager.removeGuard(guardData.id, false)
         })
         // Exercise both GM forms without mutating authoring data.
@@ -145,7 +177,7 @@ async function main() {
             GMManager.processNpcDetails({id: 77001, name: 'Test NPC', gender: 'M', type: 'common',
                 bodyType: 'steve', spawn: {x: 10, z: 10}, equipment: {}, features: [], wanderingRange: 0})
         })
-        await page.locator('.npc-details-dialog-window select[aria-label="Gender"]').selectOption('F')
+        await page.locator('.npc-details-dialog-window select[aria-label="Body type"]').selectOption('F')
         await page.locator('.npc-details-dialog-window').getByRole('button', {name: 'Save', exact: true}).click()
         assert.equal(await page.evaluate(() => window.__genderMessages.at(-1).d.data.gender), 'F')
         await page.evaluate(async () => {

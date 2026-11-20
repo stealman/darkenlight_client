@@ -1270,6 +1270,8 @@ export const GMManager = {
             type: npc.type,
             bodyType: npc.bodyType ?? 'steve',
             gender: npc.gender === 'F' ? 'F' : 'M',
+            hairTypeId: npc.hairTypeId ?? 1,
+            hairColor: npc.hairColor ?? '#664e0a',
             equipment: {...(npc.equipment ?? {})},
             features: (npc.features ?? []).map((feature: any) => ({
                 type: feature.type,
@@ -1358,7 +1360,7 @@ export const GMManager = {
         this.selectedNpcName.value = ''
     },
 
-    setSelectedNpcDetails(name: string, titleCZ: string, titleEN: string, bodyType: string, equipment: any, features: any[], wanderingRange: number, guard: any, spawn: {x: number, z: number}, gender: 'M' | 'F' = 'M') {
+    setSelectedNpcDetails(name: string, titleCZ: string, titleEN: string, bodyType: string, equipment: any, features: any[], wanderingRange: number, guard: any, spawn: {x: number, z: number}, gender: 'M' | 'F' = 'M', hairTypeId = 1, hairColor = '#664e0a') {
         if (this.selectedNpc.value) {
             this.selectedNpc.value.name = name
             this.selectedNpc.value.spawn = {...spawn}
@@ -1366,6 +1368,8 @@ export const GMManager = {
             this.selectedNpc.value.titleEN = titleEN
             this.selectedNpc.value.bodyType = bodyType
             this.selectedNpc.value.gender = gender
+            this.selectedNpc.value.hairTypeId = hairTypeId
+            this.selectedNpc.value.hairColor = hairColor
             this.selectedNpc.value.equipment = equipment
             this.selectedNpc.value.features = features
             this.selectedNpc.value.wanderingRange = wanderingRange

@@ -25,20 +25,41 @@ async function main() {
             const owners = [...new Set(items.map(item => item.parent))].filter(owner => owner.node?.isEnabled())
             return owners.map(owner => ({
                 texture: owner.model.getChildMeshes().find(mesh => mesh.skeleton)?.material.albedoTexture.name,
+                bodyUnlit: owner.model.getChildMeshes().find(mesh => mesh.skeleton)?.material.unlit,
+                bodyLights: owner.model.getChildMeshes().find(mesh => mesh.skeleton)?.lightSources.map(light => [light.name, light.intensity]),
                 slots: [...owner.equipSet.keys()],
                 animation: owner.actualAnim?.name,
                 bodyX: owner.equipSet.get('BODY')?.modelModifierMatrix?.getTranslation().x,
                 allBonesPresent: [...owner.equipSet.values()].every(item => !!item.bone),
+                hair: owner.equipSet.has('HAIR') ? {
+                    name: owner.equipSet.get('HAIR').type.mesh.name,
+                    texture: owner.equipSet.get('HAIR').type.mesh.material.albedoTexture.name,
+                    bone: owner.equipSet.get('HAIR').bone.name,
+                    x: owner.equipSet.get('HAIR').attachmentLocalMatrix.getTranslation().x,
+                    lights: owner.equipSet.get('HAIR').type.mesh.lightSources.map(light => [light.name, light.intensity]),
+                } : null,
+                head: owner.equipSet.has('FACE') ? {
+                    texture: owner.equipSet.get('FACE').type.mesh.material.albedoTexture.name,
+                    unlit: owner.equipSet.get('FACE').type.mesh.material.unlit,
+                    lights: owner.equipSet.get('FACE').type.mesh.lightSources.map(light => [light.name, light.intensity]),
+                    bone: owner.equipSet.get('FACE').bone.name,
+                    x: owner.equipSet.get('FACE').attachmentLocalMatrix.getTranslation().x,
+                } : null,
             }))
         })
         const male = await snapshot()
         assert.equal(male.length, 1)
         assert.match(male[0].texture, /human_male\.png/)
         assert.ok(male[0].slots.includes('FACE'))
+        assert.deepEqual(male[0].head.lights, male[0].bodyLights)
+        assert.ok(male[0].head.lights.some(([name, intensity]) => name === 'adminUtilsFillLight' && intensity === 0.85))
+        assert.ok(male[0].head.lights.some(([name, intensity]) => name === 'adminUtilsBackLight' && intensity === 1.4))
         assert.ok(male[0].slots.includes('HEAD'), 'adminUtils keeps helmet authoring available')
         await page.evaluate(async () => {
             const {EquipManager} = await import('/src/babylon/item/equipManager.ts')
             const {CharacterModel} = await import('/src/babylon/character/characterModel.ts')
+            const {default: Character} = await import('/src/babylon/character/character.ts')
+            const {Npc, Guard} = await import('/src/babylon/npc/npc.ts')
             const preview = [...EquipManager.equippedItems.values()].flatMap(set => [...set]).find(item => item.parent.node?.isEnabled()).parent
             for (const modelId of [1100, 2100]) {
                 const owner = {...preview.parent, id: -2, equipSet: new Map([['HEAD', {modelId, materialId: 1}]])}
@@ -57,6 +78,43 @@ async function main() {
                     check()
                 } finally {
                     model.removeFromScene()
+                }
+            }
+            for (const gender of ['M', 'F']) {
+                for (const modelId of [1100, 2100]) {
+                    for (const role of ['player', 'bot', 'npc', 'guard']) {
+                        const data = {id: -3, name: 'Helmet test', gender, x: 1, z: 1, cls: 'FIGHTER', bsz: 0.8,
+                            bot: role === 'bot', type: 'common', bodyType: 'steve',
+                            equipment: {head: {modelId, materialId: 1}},
+                            equipSet: {head: {id: -4, cb: 10, tp: 'A', mId: modelId, matId: 1, img: '', atts: {}}}}
+                        const character = role === 'npc' ? new Npc(data) : role === 'guard'
+                            ? new Guard({...data, guard: {...data, definitionId: 1}})
+                            : new Character(data, false, preview.parent.pos)
+                        character.insideView = true
+                        await character.createModel(true)
+                        try {
+                            const visibleHelmet = role === 'npc' || role === 'guard'
+                            if (character.model.equipSet.has('HEAD') !== visibleHelmet) throw new Error(`${gender} ${role}: wrong helmet visibility`)
+                            if (!character.equipSet.has('HEAD')) throw new Error(`${role}: helmet lost from equipment`)
+                            if (gender === 'M') {
+                                const hairName = character.model.equipSet.get('HAIR')?.type.mesh.name
+                                const expected = visibleHelmet ? (modelId === 2100 ? undefined : 'character-hair-1-helmet') : 'character-hair-1'
+                                if (hairName !== expected) throw new Error(`${role}: wrong hair variant for helmet`)
+                            }
+                            if (visibleHelmet) {
+                                character.changeAppearance('steve', {})
+                                await character.model.refreshHairAppearance()
+                                if (character.model.equipSet.has('HEAD')) throw new Error(`${role}: removed helmet still visible`)
+                                character.changeAppearance('steve', data.equipment)
+                                await character.model.refreshHairAppearance()
+                                if (!character.model.equipSet.has('HEAD')) throw new Error(`${role}: equipped helmet missing`)
+                                await character.changeCharacterAppearance({gender: gender === 'F' ? 'M' : 'F'})
+                                if (!character.model.equipSet.has('HEAD')) throw new Error(`${role}: gender change hid the helmet`)
+                            }
+                        } finally {
+                            character.model.removeFromScene()
+                        }
+                    }
                 }
             }
         })
@@ -86,7 +144,55 @@ async function main() {
         let female = await snapshot()
         assert.equal(female.length, 1)
         assert.match(female[0].texture, /human_female\.png/)
-        assert.ok(!female[0].slots.includes('FACE') && !female[0].slots.includes('HAIR'))
+        assert.deepEqual(female[0].head.lights, male[0].head.lights, 'female head gets the same studio lighting as the male head')
+        assert.deepEqual(female[0].head.lights, female[0].bodyLights)
+        assert.ok(female[0].slots.includes('FACE') && female[0].slots.includes('HAIR'))
+        assert.match(female[0].hair.texture, /human_female_hair_1\.png/)
+        assert.equal(female[0].hair.bone, 'Head')
+        assert.deepEqual(female[0].hair.lights, female[0].head.lights)
+        const femaleHair = page.locator('[data-hair-gender="F"]')
+        assert.equal(await femaleHair.locator('select').inputValue(), '1')
+        assert.equal(await femaleHair.locator('select option').count(), 4)
+        for (const id of [3, 4]) {
+            await femaleHair.locator('select').selectOption(String(id))
+            await page.waitForFunction(() => !document.querySelector('[data-hair-gender="F"] select').disabled)
+            assert.equal((await snapshot())[0].hair.name, `character-female-hair-${id}`)
+        }
+        await femaleHair.locator('select').selectOption('2')
+        await page.waitForFunction(() => !document.querySelector('[data-hair-gender="F"] select').disabled)
+        assert.equal((await snapshot())[0].hair.name, 'character-female-hair-2')
+        await femaleHair.locator('[data-modifier-component="position"][data-modifier-axis="x"]').fill('0.3456')
+        assert.ok(Math.abs((await snapshot())[0].hair.x - 0.3456) < 1e-6)
+        await page.evaluate(async () => {
+            const {CharacterModel} = await import('/src/babylon/character/characterModel.ts')
+            const {EquipManager} = await import('/src/babylon/item/equipManager.ts')
+            const preview = [...EquipManager.equippedItems.values()].flatMap(set => [...set]).find(item => item.parent.node?.isEnabled()).parent
+            const owner = {...preview.parent, id: -20, hairTypeId: 2, equipSet: new Map()}
+            const model = await CharacterModel.create(owner, true)
+            try {
+                if (model.equipSet.get('HAIR')?.type.mesh.name !== 'character-female-hair-2') throw new Error('Runtime female hairstyle 2 missing')
+                for (const id of [3, 4]) {
+                    owner.hairTypeId = id
+                    await model.refreshHairAppearance()
+                    if (model.equipSet.get('HAIR')?.type.mesh.name !== `character-female-hair-${id}`) throw new Error(`Runtime female hairstyle ${id} missing`)
+                }
+                owner.hairTypeId = 1
+                await model.refreshHairAppearance()
+                if (model.equipSet.get('HAIR')?.type.mesh.name !== 'character-female-hair-1') throw new Error('Runtime hair switch failed')
+            } finally { model.removeFromScene() }
+        })
+        await femaleHair.locator('select').selectOption('1')
+        await page.waitForFunction(() => !document.querySelector('[data-hair-gender="F"] select').disabled)
+        await femaleHair.locator('[data-modifier-component="position"][data-modifier-axis="x"]').fill('0.2345')
+        assert.ok(Math.abs((await snapshot())[0].hair.x - 0.2345) < 1e-6)
+        assert.match(female[0].head.texture, /human_female_head_1\.png/)
+        assert.equal(female[0].head.bone, 'Head')
+        assert.equal(female[0].bodyUnlit, false)
+        assert.equal(female[0].head.unlit, false)
+        const femaleHead = page.locator('[data-head-gender="F"]')
+        await femaleHead.evaluate(panel => {panel.open = true})
+        await femaleHead.locator('[data-modifier-component="position"][data-modifier-axis="x"]').fill('0.1234')
+        assert.ok(Math.abs((await snapshot())[0].head.x - 0.1234) < 1e-6)
         assert.ok(female[0].allBonesPresent)
         const femaleChainGeometry = await armorGeometry()
         assert.equal(femaleChainGeometry.material, maleChainGeometry.material, 'both armor shapes share the same atlas material')
@@ -102,10 +208,14 @@ async function main() {
         await page.waitForFunction(() => !document.querySelector('#adminUtilsBodyVariant').disabled)
         assert.ok(Math.abs((await snapshot())[0].bodyX - maleChain.bodyX) < 1e-6)
         assert.deepEqual(await armorGeometry(), maleChainGeometry, 'male chain geometry survives switching')
+        assert.equal((await snapshot())[0].head.x, male[0].head.x, 'female head fitting preserves the male head')
+        assert.equal((await snapshot())[0].hair.x, male[0].hair.x, 'female hair fitting preserves male hair')
         await variant.selectOption('female')
         await page.waitForFunction(() => !document.querySelector('#adminUtilsBodyVariant').disabled)
         assert.ok(Math.abs((await snapshot())[0].bodyX - 0.123) < 1e-6)
         assert.deepEqual(await armorGeometry(), femaleChainGeometry, 'female geometry survives switching')
+        assert.ok(Math.abs((await snapshot())[0].head.x - 0.1234) < 1e-6)
+        assert.ok(Math.abs((await snapshot())[0].hair.x - 0.2345) < 1e-6)
         await page.locator('[data-slot="body"]').selectOption('1000')
         const femalePlateGeometry = await armorGeometry(1000)
         assert.equal(femalePlateGeometry.material, malePlateGeometry.material, 'plate variants share the atlas material')
@@ -129,6 +239,7 @@ async function main() {
         await page.reload()
         await page.waitForFunction(() => document.querySelector('#adminUtilsBodyVariant')?.disabled === false)
         assert.equal(await variant.inputValue(), 'female')
+        assert.ok(Math.abs((await snapshot())[0].head.x - 0.1234) < 1e-6, 'female head fitting survives reload')
         assert.deepEqual(sockets, [], 'adminUtils must remain offline')
         assert.deepEqual(errors, [])
         console.log('PASS: male/female meshes, texture, bones, animations, independent offsets and remembered selection')

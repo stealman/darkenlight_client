@@ -180,6 +180,10 @@ class Character implements Attackable, EffectTarget {
         this.model = await CharacterModel.create(this, init)
     }
 
+    get rendersHelmet(): boolean {
+        return false
+    }
+
     async changeCharacterAppearance(data: CharacterAppearanceData) {
         const gender = resolveCharacterGender(data.gender)
         const hair = resolveCharacterHairAppearance(data)
