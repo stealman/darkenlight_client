@@ -109,6 +109,8 @@ export default defineConfig(async ({ mode, command }) => {
     ].filter(Boolean),
     server: {
         host: true,
+        // Revalidate dev modules after the dependency optimizer changes its graph.
+        headers: { 'Cache-Control': 'no-cache' },
         fs: {allow: [__dirname, path.resolve(__dirname, '../../server/darkenlight_server')]},
         historyApiFallback: true,
         watch: {
@@ -121,11 +123,15 @@ export default defineConfig(async ({ mode, command }) => {
         // The worker starts after character selection, outside the HTML import
         // graph. Scan it up front so its first use cannot trigger a page reload.
         entries: ['index.html', 'src/local/game.worker.ts'],
-        // Keep lazy PBR shader imports as stable optimizer entry points.
-        include: ['@babylonjs/core/Shaders/pbr.vertex.js', '@babylonjs/core/Shaders/pbr.fragment.js'],
+        include: [
+            '@babylonjs/core',
+            '@babylonjs/loaders/glTF',
+            '@babylonjs/core/Shaders/pbr.vertex.js',
+            '@babylonjs/core/Shaders/pbr.fragment.js',
+        ],
     },
     resolve: {
-        dedupe: ['bson'],
+        dedupe: ['bson', '@babylonjs/core', '@babylonjs/loaders'],
         alias: [
             {
                 find: '@/pwa/register',

@@ -629,12 +629,12 @@ onMounted(async () => {
         console.log('INIT GAME', Date.now())
         try {
             await initializeLocalGameLifecycle()
+            await GameManager.prepareGame(document.getElementById('renderCanvas') as HTMLCanvasElement)
         } catch (error) {
             gameLoading.value = false
-            onApplicationError(new CustomEvent('game:application-error', {detail: {message: String(error)}}))
+            window.dispatchEvent(new CustomEvent('game:application-error', {detail: {message: String(error)}}))
             return
         }
-        await GameManager.prepareGame(document.getElementById('renderCanvas') as HTMLCanvasElement)
         console.log('GAME INITIALIZED', Date.now())
 
         await nextTick()

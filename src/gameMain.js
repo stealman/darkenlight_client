@@ -1,3 +1,4 @@
+import '@babylonjs/loaders/glTF'
 import './babylon/installModelAssetUrls'
 import { createApp } from 'vue'
 import App from './App.vue'
