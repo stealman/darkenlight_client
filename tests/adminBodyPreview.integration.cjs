@@ -264,6 +264,15 @@ async function main() {
         await legs.selectOption(leatherLegId)
         const leatherLegGeometry = await armorGeometry(Number(leatherLegId))
         await checkArmorGeometry(Number(leatherLegId), 'male-leg-leather.glb')
+        const helmets = page.locator('[data-slot="head"]')
+        const leatherHelmetId = await helmets.locator('option').filter({hasText: 'Kožená helma'}).getAttribute('value')
+        await helmets.selectOption(leatherHelmetId)
+        const leatherHelmetGeometry = await armorGeometry(Number(leatherHelmetId))
+        await checkArmorGeometry(Number(leatherHelmetId), 'helmet-leather.glb')
+        assert.equal((await snapshot())[0].hair, null)
+        await page.locator('[data-modifier-toggle="head"]').click()
+        const helmetX = page.locator('[data-modifier-editor="head"] [data-modifier-component="position"][data-modifier-axis="x"]')
+        await helmetX.fill('0.19')
         const leatherMaterial = page.locator('[data-material-slot="body"]')
         assert.deepEqual(await leatherMaterial.locator('option').allTextContents(),
             ['Common Leather', 'Hard Leather', 'Wolf Leather', 'Lizard Leather', 'Dragon Leather'])
@@ -273,6 +282,9 @@ async function main() {
         const legMaterial = page.locator('[data-material-slot="legs"]')
         assert.deepEqual(await legMaterial.locator('option').allTextContents(), await leatherMaterial.locator('option').allTextContents())
         await legMaterial.selectOption({label: 'Dragon Leather'})
+        const helmetMaterial = page.locator('[data-material-slot="head"]')
+        assert.deepEqual(await helmetMaterial.locator('option').allTextContents(), await leatherMaterial.locator('option').allTextContents())
+        await helmetMaterial.selectOption({label: 'Dragon Leather'})
         await leatherMaterial.selectOption({label: 'Dragon Leather'})
         const maleLeatherGeometry = await armorGeometry(Number(leatherId))
         const dragonControls = page.locator('[data-atlas-family="leather"]').filter({hasText: 'Dragon Leather'})
@@ -282,7 +294,7 @@ async function main() {
             const scene = EquipManager.getItemType(id).mesh.getScene()
             return Promise.all([
                 'adminUtilsMaleLeatherTorsoAtlas', 'adminUtilsFemaleLeatherTorsoAtlas',
-                'adminUtilsLeatherPauldronAtlas', 'adminUtilsLeatherLegAtlas',
+                'adminUtilsLeatherPauldronAtlas', 'adminUtilsLeatherLegAtlas', 'adminUtilsLeatherHelmetAtlas',
             ].map(async name => {
                 const texture = scene.getTextureByName(name)
                 const context = texture.getContext()
@@ -299,6 +311,7 @@ async function main() {
         assert.notDeepEqual(after[1], before[1], 'the shared controls update the female atlas')
         assert.notDeepEqual(after[2], before[2], 'the shared controls update the pauldron atlas')
         assert.notDeepEqual(after[3], before[3], 'the shared controls update the leg atlas')
+        assert.notDeepEqual(after[4], before[4], 'the shared controls update the helmet atlas')
         const exportAtlas = page.waitForEvent('download')
         await page.locator('[data-export-atlas="body"]').click()
         assert.equal((await exportAtlas).suggestedFilename(), 'leather_armor_male.jpg')
@@ -310,10 +323,19 @@ async function main() {
         assert.equal(await bodySelect.inputValue(), leatherId)
         assert.equal(await pauldrons.inputValue(), leatherPauldronId)
         assert.equal(await legs.inputValue(), leatherLegId)
+        assert.equal(await helmets.inputValue(), leatherHelmetId)
         assert.equal(await pauldronMaterial.locator('option:checked').textContent(), 'Dragon Leather')
         assert.equal(await legMaterial.locator('option:checked').textContent(), 'Dragon Leather')
+        assert.equal(await helmetMaterial.locator('option:checked').textContent(), 'Dragon Leather')
         assert.deepEqual(await armorGeometry(Number(leatherPauldronId)), pauldronGeometry)
         assert.deepEqual(await armorGeometry(Number(leatherLegId)), leatherLegGeometry)
+        assert.deepEqual(await armorGeometry(Number(leatherHelmetId)), leatherHelmetGeometry)
+        assert.equal((await snapshot())[0].hair, null)
+        await page.locator('[data-modifier-toggle="head"]').click()
+        assert.equal(Number(await helmetX.inputValue()), femaleModifiers[leatherHelmetId].position.x)
+        const exportHelmetAtlas = page.waitForEvent('download')
+        await page.locator('[data-export-atlas="head"]').click()
+        assert.equal((await exportHelmetAtlas).suggestedFilename(), 'leather_helmet.jpg')
         assert.ok((await snapshot())[0].slots.includes('LEFT_PAULDRON'))
         assert.ok((await snapshot())[0].slots.includes('RIGHT_PAULDRON'))
         assert.ok((await snapshot())[0].slots.includes('LEFT_LEG'))
@@ -351,6 +373,8 @@ async function main() {
         assert.deepEqual(await armorGeometry(Number(leatherId)), maleLeatherGeometry)
         assert.equal(await leatherHue.inputValue(), '-18')
         assert.ok(Math.abs((await snapshot())[0].bodyX - 0.17) < 1e-6)
+        await page.locator('[data-modifier-toggle="head"]').click()
+        assert.equal(Number(await helmetX.inputValue()), 0.19)
         const maleLegDefaults = require('../public/admin-utils/equipment-modifiers.json').legs
         const femaleLegDefaults = require('../public/admin-utils/equipment-modifiers-female.json').legs
         await page.locator('[data-modifier-toggle="legs"]').click()

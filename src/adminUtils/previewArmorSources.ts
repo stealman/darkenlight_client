@@ -8,6 +8,7 @@ import { loadRawArmorGeometry } from '@/babylon/character/characterEquipmentFitt
 export const PREVIEW_LEATHER_TORSO_ID = 900
 export const PREVIEW_LEATHER_PAULDRON_ID = 901
 export const PREVIEW_LEATHER_LEG_ID = 902
+export const PREVIEW_LEATHER_HELMET_ID = 903
 
 async function createLeatherPreview(
     scene: Scene,
@@ -27,10 +28,10 @@ async function createLeatherPreview(
     material.albedoTexture = atlas
     material.metallic = 0
     material.roughness = 1
-    // Both legs share one thin-instance mesh, including the mirrored right leg.
-    const isLeg = id === PREVIEW_LEATHER_LEG_ID
-    material.backFaceCulling = !isLeg
-    material.twoSidedLighting = !isLeg
+    // Show the inside of the helmet and the reversed faces of the mirrored leg.
+    const renderBackFaces = id === PREVIEW_LEATHER_HELMET_ID || id === PREVIEW_LEATHER_LEG_ID
+    material.backFaceCulling = !renderBackFaces
+    material.twoSidedLighting = !renderBackFaces
     material.usePhysicalLightFalloff = false
     material.AddAttribute('uvc')
     material.Vertex_Definitions('attribute vec2 uvc;')
@@ -53,7 +54,7 @@ async function createLeatherPreview(
 export async function initializePreviewArmorSources(
     scene: Scene,
     types: Map<number, EquipItemType>,
-    leatherAtlases: {male: Texture, female: Texture, pauldron: Texture, leg: Texture},
+    leatherAtlases: {male: Texture, female: Texture, pauldron: Texture, leg: Texture, helmet: Texture},
     leatherAtlasIndices: Map<number, number>,
 ) {
     const { TEXTURED_ARMOR_ASSETS, ArmorModelsCb } = await import('@/babylon/item/codebook/armorsModelsCb')
@@ -71,7 +72,7 @@ export async function initializePreviewArmorSources(
     }))
     const { EquipItemType, EquipManager } = await import('@/babylon/item/equipManager')
     const { Lights } = await import('@/babylon/scene/lights')
-    const [maleLeather, femaleLeather, leatherPauldron, leatherLeg] = await Promise.all([
+    const [maleLeather, femaleLeather, leatherPauldron, leatherLeg, leatherHelmet] = await Promise.all([
         createLeatherPreview(scene, PREVIEW_LEATHER_TORSO_ID, 'adminUtilsMaleLeatherTorso',
             'male-armor-leather.glb', leatherAtlases.male, leatherAtlasIndices),
         createLeatherPreview(scene, PREVIEW_LEATHER_TORSO_ID, 'adminUtilsFemaleLeatherTorso',
@@ -80,10 +81,13 @@ export async function initializePreviewArmorSources(
             'pauldron-leather.glb', leatherAtlases.pauldron, leatherAtlasIndices),
         createLeatherPreview(scene, PREVIEW_LEATHER_LEG_ID, 'adminUtilsLeatherLeg',
             'male-leg-leather.glb', leatherAtlases.leg, leatherAtlasIndices),
+        createLeatherPreview(scene, PREVIEW_LEATHER_HELMET_ID, 'adminUtilsLeatherHelmet',
+            'helmet-leather.glb', leatherAtlases.helmet, leatherAtlasIndices),
     ])
     types.set(PREVIEW_LEATHER_TORSO_ID, maleLeather)
     types.set(PREVIEW_LEATHER_PAULDRON_ID, leatherPauldron)
     types.set(PREVIEW_LEATHER_LEG_ID, leatherLeg)
+    types.set(PREVIEW_LEATHER_HELMET_ID, leatherHelmet)
     const femaleSources = new Map<number, EquipItemType>([[PREVIEW_LEATHER_TORSO_ID, femaleLeather]])
     const femaleAssets: Array<[number, string]> = [
         [ArmorModelsCb.CHAIN_MAIL_MALE.id, 'female-armor-chain.glb'],

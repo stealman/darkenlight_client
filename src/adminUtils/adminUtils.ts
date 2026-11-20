@@ -27,7 +27,10 @@ import { BOW_WEAPON_MATERIAL_NAMES } from '@/babylon/item/codebook/vertexColorPa
 import { ResourcesCodebookData } from '@game/character/items/codebook/resourcesCodebook'
 import './styles.css'
 import { bindPreviewEquipment, bindPreviewWeapon, getPreviewPairedModifiers } from './equipmentModifierConfig'
-import { initializePreviewArmorSources, PREVIEW_LEATHER_LEG_ID, PREVIEW_LEATHER_PAULDRON_ID, PREVIEW_LEATHER_TORSO_ID } from './previewArmorSources'
+import {
+    initializePreviewArmorSources, PREVIEW_LEATHER_HELMET_ID, PREVIEW_LEATHER_LEG_ID,
+    PREVIEW_LEATHER_PAULDRON_ID, PREVIEW_LEATHER_TORSO_ID,
+} from './previewArmorSources'
 import { preparePreviewSkeleton } from './previewSkeleton'
 
 type PreviewSlot = 'body' | 'head' | 'pauldrons' | 'legs' | 'shield' | 'weapon'
@@ -85,6 +88,7 @@ const MALE_LEATHER_PRIMARY_TEXTURE = '/models/equip/armors/leather_armor_male_pr
 const FEMALE_LEATHER_PRIMARY_TEXTURE = '/models/equip/armors/leather_armor_female_primary.png'
 const LEATHER_PAULDRON_PRIMARY_TEXTURE = '/models/equip/armors/leather_pauldron_primary.png'
 const LEATHER_LEG_PRIMARY_TEXTURE = '/models/equip/armors/leather_leg_primary.png'
+const LEATHER_HELMET_PRIMARY_TEXTURE = '/models/equip/armors/leather_helmet_primary.png'
 const CHAIN_MAIL_PRIMARY_TEXTURE = '/models/equip/armors/chain_mail_primary.png?v=20261020-generated-atlas'
 const CHAIN_MAIL_SECONDARY_TEXTURE = '/models/equip/armors/chain_mail_secondary.png?v=20261020-generated-atlas'
 const CHAIN_COIF_PRIMARY_TEXTURE = '/models/equip/armors/chain_coif_primary.png?v=20261020-generated-atlas'
@@ -141,6 +145,7 @@ const MODEL_IDS = {
     leatherTorso: PREVIEW_LEATHER_TORSO_ID,
     leatherPauldron: PREVIEW_LEATHER_PAULDRON_ID,
     leatherLeg: PREVIEW_LEATHER_LEG_ID,
+    leatherHelmet: PREVIEW_LEATHER_HELMET_ID,
     helm: 1100,
     pauldronsPlate: 1200,
     legsPlate: 1300,
@@ -213,7 +218,8 @@ const bowMaterialOptions = BOW_WEAPON_MATERIAL_NAMES.map((label, index) => ({
 }))
 
 function isLeatherModel(modelId: number | null) {
-    return modelId === MODEL_IDS.leatherTorso || modelId === MODEL_IDS.leatherPauldron || modelId === MODEL_IDS.leatherLeg
+    return modelId === MODEL_IDS.leatherTorso || modelId === MODEL_IDS.leatherPauldron
+        || modelId === MODEL_IDS.leatherLeg || modelId === MODEL_IDS.leatherHelmet
 }
 
 function getMaterialOptionsForSlot(slot: PreviewSlot, modelId = slotSelections[slot]) {
@@ -245,6 +251,7 @@ const slotOptions: Record<PreviewSlot, Array<{ label: string, value: number | nu
         { label: 'Bez helmy', value: null },
         { label: 'Plátová helma', value: MODEL_IDS.helm },
         { label: 'Kroužková kukla', value: MODEL_IDS.chainCoif },
+        { label: 'Kožená helma', value: MODEL_IDS.leatherHelmet },
     ],
     pauldrons: [
         { label: 'Bez nárameníků', value: null },
@@ -1020,7 +1027,7 @@ async function installHairControls(root: HTMLElement, model: CharacterModel, con
         try {
             const id = Number(select.value)
             const headEquipmentId = model.equipSet.get('HEAD')?.type.id
-            if (isPreviewHairHidden(headEquipmentId, gender)) {
+            if (headEquipmentId === MODEL_IDS.leatherHelmet || isPreviewHairHidden(headEquipmentId, gender)) {
                 hidePreviewHair(model)
                 item = null
                 activeTypeId = id
@@ -1600,17 +1607,21 @@ export async function mountAdminUtils() {
             const atlas = createGeneratedArmorAtlas(scene, name, layers, leatherAtlasMaterialSettings, leatherMaterialOptions)
             return {atlas, layers}
         }
-        const [maleLeather, femaleLeather, leatherPauldron, leatherLeg] = await Promise.all([
+        const [maleLeather, femaleLeather, leatherPauldron, leatherLeg, leatherHelmet] = await Promise.all([
             createLeatherAtlas(MALE_LEATHER_PRIMARY_TEXTURE, 'adminUtilsMaleLeatherTorsoAtlas'),
             createLeatherAtlas(FEMALE_LEATHER_PRIMARY_TEXTURE, 'adminUtilsFemaleLeatherTorsoAtlas'),
             createLeatherAtlas(LEATHER_PAULDRON_PRIMARY_TEXTURE, 'adminUtilsLeatherPauldronAtlas'),
             createLeatherAtlas(LEATHER_LEG_PRIMARY_TEXTURE, 'adminUtilsLeatherLegAtlas'),
+            createLeatherAtlas(LEATHER_HELMET_PRIMARY_TEXTURE, 'adminUtilsLeatherHelmetAtlas'),
         ])
         const leatherAtlasIndices = new Map(leatherMaterialOptions.map(option =>
             [option.value - 1, getEquipAtlasIndex(option.atlasTile)],
         ))
         previewArmorSources = await initializePreviewArmorSources(scene, EquipManager.itemTypes,
-            {male: maleLeather.atlas, female: femaleLeather.atlas, pauldron: leatherPauldron.atlas, leg: leatherLeg.atlas},
+            {
+                male: maleLeather.atlas, female: femaleLeather.atlas, pauldron: leatherPauldron.atlas,
+                leg: leatherLeg.atlas, helmet: leatherHelmet.atlas,
+            },
             leatherAtlasIndices)
         const saveModifiers = document.createElement('button')
         saveModifiers.type = 'button'
@@ -1825,7 +1836,7 @@ export async function mountAdminUtils() {
                     renderGeneratedArmorAtlas(generatedRecurveBowAtlas, recurveBowLayers, bowAtlasMaterialSettings, bowMaterialOptions)
                     renderGeneratedArmorAtlas(generatedBattleBowAtlas, battleBowLayers, bowAtlasMaterialSettings, bowMaterialOptions)
                 } else if (family === 'leather') {
-                    for (const {atlas, layers} of [maleLeather, femaleLeather, leatherPauldron, leatherLeg]) {
+                    for (const {atlas, layers} of [maleLeather, femaleLeather, leatherPauldron, leatherLeg, leatherHelmet]) {
                         renderGeneratedArmorAtlas(atlas, layers, leatherAtlasMaterialSettings, leatherMaterialOptions)
                     }
                 } else if (family === 'chain') {
@@ -1898,6 +1909,8 @@ export async function mountAdminUtils() {
                     exportAtlasAsJpeg(leatherPauldron.atlas, 'leather_pauldron.jpg')
                 } else if (modelId === MODEL_IDS.leatherLeg) {
                     exportAtlasAsJpeg(leatherLeg.atlas, 'leather_leg.jpg')
+                } else if (modelId === MODEL_IDS.leatherHelmet) {
+                    exportAtlasAsJpeg(leatherHelmet.atlas, 'leather_helmet.jpg')
                 } else if (modelId === MODEL_IDS.armorPlate) {
                     exportAtlasAsJpeg(generatedPlateArmorAtlas, 'plate_armor.jpg')
                 } else if (modelId === MODEL_IDS.helm) {
