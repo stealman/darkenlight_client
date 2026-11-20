@@ -77,7 +77,7 @@ async function main() {
                 const head = owner.equipSet.get('FACE')?.type.mesh.material
                 if (!head?.albedoTexture.name.includes('human_female_head_1.png')) throw new Error('Missing runtime female head in class preview')
                 const hair = owner.equipSet.get('HAIR')
-                if (!hair?.type.mesh.material.albedoTexture.name.includes('human_female_hair_1.png') || hair.bone.name !== 'Head') {
+                if (!hair?.type.mesh.material.albedoTexture.name.includes('human_female_hair_1_atlas.png') || hair.bone.name !== 'Head') {
                     throw new Error('Missing runtime female hair attached to Head')
                 }
                 const position = hair.attachmentLocalMatrix.getTranslation()

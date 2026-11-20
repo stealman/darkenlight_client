@@ -7,10 +7,8 @@ function validateModifiers(value) {
     const transform = v => object(v) && ['position', 'rotation', 'scale'].every(key =>
         object(v[key]) && ['x', 'y', 'z'].every(axis => typeof v[key][axis] === 'number' && Number.isFinite(v[key][axis])))
     if (!object(value) || !object(value.equipment) || !object(value.pauldrons)) return false
-    if (value.hairPreviewColor !== undefined && (typeof value.hairPreviewColor !== 'string'
-        || !/^#[\da-f]{6}$/i.test(value.hairPreviewColor))) return false
-    if (value.hairPreviewLightness !== undefined && (typeof value.hairPreviewLightness !== 'number'
-        || !Number.isFinite(value.hairPreviewLightness) || value.hairPreviewLightness < -2 || value.hairPreviewLightness > 4)) return false
+    if (value.hairPreviewColorId !== undefined && (!Number.isInteger(value.hairPreviewColorId)
+        || value.hairPreviewColorId < 1 || value.hairPreviewColorId > 16)) return false
     if (value.hair !== undefined && (!object(value.hair) || !Object.entries(value.hair).every(([id, v]) =>
         /^[1-9]\d*$/.test(id) && transform(v)))) return false
     if (value.legs !== undefined && (!object(value.legs) || !Object.entries(value.legs).every(([id, v]) =>

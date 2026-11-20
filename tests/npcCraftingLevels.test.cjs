@@ -49,7 +49,7 @@ test('GM selection, dialog editing, save and reopening retain independent levels
     }
     const models = new Proxy({}, {get: () => ({modelId: 1})})
     const editor = new Function('ref', 'computed', 'useI18n', 'GMManager', 'EquipSlotModelsCb', 'defineExpose',
-        descriptor.scriptSetup.content.replace(/^import .*$/gm, '') + '\nreturn {openDialog, saveDetails, features, createFeature, npcGender, hairTypeId, hairColor}')(
+        descriptor.scriptSetup.content.replace(/^import .*$/gm, '') + '\nreturn {openDialog, saveDetails, features, createFeature, npcGender, hairTypeId, hairColorId}')(
         ref, computed, () => ({t: key => key}), manager, models, () => {})
     const original = {id: 1, name: 'Artisan', spawn: {x: 5, z: 5}, type: 'common',
         features: [{type: 'crafting', settings: {itemCategories: ['weapons', 'potions'], categoryLevels: {weapons: 8, potions: 3}}}]}
@@ -57,10 +57,10 @@ test('GM selection, dialog editing, save and reopening retain independent levels
     editor.openDialog()
     assert.equal(editor.npcGender.value, 'M')
     assert.equal(editor.hairTypeId.value, 1)
-    assert.equal(editor.hairColor.value, '#664e0a')
+    assert.equal(editor.hairColorId.value, 1)
     editor.npcGender.value = 'F'
     editor.hairTypeId.value = 4
-    editor.hairColor.value = '#cc8844'
+    editor.hairColorId.value = 8
     const settings = editor.features.value[0].settings
     assert.equal(settings.categoryLevels.weapons, 8)
     assert.equal(settings.categoryLevels.potions, 3)
@@ -71,14 +71,14 @@ test('GM selection, dialog editing, save and reopening retain independent levels
     editor.saveDetails()
     assert.equal(saved.gender, 'F')
     assert.equal(saved.hairTypeId, 4)
-    assert.equal(saved.hairColor, '#cc8844')
+    assert.equal(saved.hairColorId, 8)
     assert.equal(saved.features[0].settings.categoryLevels.weapons, 10)
     assert.equal(saved.features[0].settings.categoryLevels.potions, 7)
     manager.selectNpcForEditing(saved)
     editor.openDialog()
     assert.equal(editor.npcGender.value, 'F')
     assert.equal(editor.hairTypeId.value, 4)
-    assert.equal(editor.hairColor.value, '#cc8844')
+    assert.equal(editor.hairColorId.value, 8)
     assert.equal(editor.features.value[0].settings.categoryLevels.weapons, 10)
     assert.equal(editor.features.value[0].settings.categoryLevels.potions, 7)
     delete original.features[0].settings.categoryLevels

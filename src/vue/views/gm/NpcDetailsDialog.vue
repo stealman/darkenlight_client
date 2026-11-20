@@ -78,7 +78,9 @@
                 </label>
                 <label class="npc-details-control">
                     <span>Hair color</span>
-                    <input v-model="hairColor" type="color" aria-label="Hair color" />
+                    <select v-model.number="hairColorId" aria-label="Hair color">
+                        <option v-for="(shade, index) in hairPalette" :key="index" :value="index + 1" :style="{backgroundColor: shade.color}">{{ shade.name }}</option>
+                    </select>
                 </label>
             </div>
             <div class="npc-details-equipment">
@@ -293,6 +295,7 @@
 </template>
 
 <script setup>
+import hairPalette from '@/babylon/character/hairPalette.json'
 import { computed, ref } from 'vue'
 import { GMManager } from '@/gm/GM'
 import GameDialog from '@/vue/views/GameDialog.vue'
@@ -506,7 +509,7 @@ const guardPatrolPoints = ref('')
 const titleCZ = ref('')
 const titleEN = ref('')
 const hairTypeId = ref(1)
-const hairColor = ref('#664e0a')
+const hairColorId = ref(1)
 const headSelection = ref('')
 const armsSelection = ref('')
 const legsSelection = ref('')
@@ -587,7 +590,7 @@ const openDialog = () => {
     guardRespawnSeconds.value = npc.guard?.respawnSeconds ?? 15
     guardPatrolPoints.value = (npc.guard?.patrolPoints ?? []).map((point) => `${point.x},${point.z}`).join('\n')
     hairTypeId.value = npc.hairTypeId ?? 1
-    hairColor.value = npc.hairColor ?? '#664e0a'
+    hairColorId.value = npc.hairColorId ?? 1
     headSelection.value = selectionFromItem(npc?.equipment?.head)
     armsSelection.value = selectionFromItem(npc?.equipment?.arms)
     legsSelection.value = selectionFromItem(npc?.equipment?.legs)
@@ -660,7 +663,7 @@ const saveDetails = () => {
         pursueRange: guardPursueRange.value,
         respawnSeconds: guardRespawnSeconds.value,
         patrolPoints,
-    }, {x: spawnX.value, z: spawnZ.value}, npcGender.value, hairTypeId.value, hairColor.value)
+    }, {x: spawnX.value, z: spawnZ.value}, npcGender.value, hairTypeId.value, hairColorId.value)
     GMManager.saveSelectedNpc()
     closeDialog()
 }

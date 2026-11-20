@@ -11,14 +11,12 @@ export function resolveCharacterHeadTypeId(headTypeId?: number): number {
 
 export interface CharacterHairAppearance {
     hairTypeId: number
-    hairColor: string
-    hairLightness: number
+    hairColorId: number
 }
 
 export function resolveCharacterHairAppearance(data: Partial<CharacterHairAppearance>): CharacterHairAppearance {
     return {
         hairTypeId: Number.isInteger(data.hairTypeId) && data.hairTypeId! >= 1 && data.hairTypeId! <= 4 ? data.hairTypeId! : 1,
-        hairColor: typeof data.hairColor === 'string' && /^#[\da-f]{6}$/i.test(data.hairColor) ? data.hairColor.toLowerCase() : '#664e0a',
-        hairLightness: Number.isFinite(data.hairLightness) && data.hairLightness! >= -2 && data.hairLightness! <= 4 ? data.hairLightness! : 0.6,
+        hairColorId: Number.isInteger(data.hairColorId) && data.hairColorId! >= 1 && data.hairColorId! <= 16 ? data.hairColorId! : 1,
     }
 }

@@ -17,6 +17,11 @@ test('game models render data-driven shared hair and retain it across equipment 
     const core = await import('@babylonjs/core/index.js')
     const {PBRCustomMaterial} = await import('@babylonjs/materials/custom/pbrCustomMaterial.js')
     await import('@babylonjs/loaders/glTF/index.js')
+    core.DracoCompression.Configuration = {decoder: {
+        wasmUrl: 'local', wasmBinaryUrl: 'local',
+        wasmBinary: readFileSync(join(__dirname, '../public/models/draco/draco_decoder_gltf.wasm')),
+        jsModule: require('../public/models/draco/draco_decoder_gltf.js'),
+    }}
     const engine = new core.NullEngine()
     const scene = new core.Scene(engine)
     const loads = new Map()
@@ -71,7 +76,7 @@ test('game models render data-driven shared hair and retain it across equipment 
         const body = await readGlb('human_male.glb')
         for (let index = 0; index < 2; index++) {
             const owner = {id: index + 1, pos: new core.Vector3(index * 3, 0, 0), logicYpos: 0, insideView: true,
-                headTypeId: 1, hairTypeId: 1, hairColor: index ? '#efdb80' : '#664e0a', hairLightness: index ? 1.5 : 0.6,
+                headTypeId: 1, hairTypeId: 1, hairColorId: index ? 12 : 1,
                 equipSet: new Map(), getModelHeight: () => 2, isMyChar: () => index === 0}
             models.push(await CharacterModel.create(owner, true, body.instantiateModelsToScene(undefined, false, {doNotInstantiate: true})))
         }
@@ -80,10 +85,7 @@ test('game models render data-driven shared hair and retain it across equipment 
         assert.equal(loads.get('/models/human/human_male_hair_1.glb'), 1)
         equipment.EquipManager.onFrame()
         assert.equal(type.mesh.thinInstanceCount, 2)
-        const firstTint = core.Color3.FromHexString('#664e0a').toLinearSpace()
-        for (let index = 0; index < 3; index++) assert.ok(Math.abs(type.tintBuffer[index] - firstTint.asArray()[index]) < 1e-6)
-        assert.ok(Math.abs(type.tintBuffer[3] - 0.6) < 1e-6)
-        assert.equal(type.tintBuffer[7], 1.5)
+        assert.deepEqual(Array.from(type.uvBuffer.slice(0, 4)), [0, 0, 0.75, 0.5])
         assert.ok(models[0].equipSet.get('HAIR').attachmentWorldMatrix.equalsWithEpsilon(
             head.characterHeadMatrix(fitting(1)).multiply(models[0].equipSet.get('FACE').bone.getTransformNode().computeWorldMatrix(true)), 1e-5))
         models[0].clearAllEquippedItems()
@@ -92,17 +94,18 @@ test('game models render data-driven shared hair and retain it across equipment 
         models[0].removeFromView()
         equipment.EquipManager.onFrame()
         assert.equal(type.mesh.thinInstanceCount, 1)
-        models[1].parent.hairColor = '#ff0000'
+        models[1].parent.hairColorId = 2
         const originalItem = models[1].equipSet.get('HAIR')
         await models[1].refreshHairAppearance()
         equipment.EquipManager.onFrame()
         assert.equal(models[1].equipSet.get('HAIR'), originalItem, 'color updates keep the same instance')
-        assert.deepEqual(Array.from(type.tintBuffer.slice(0, 3)), [1, 0, 0])
+        assert.deepEqual(Array.from(type.uvBuffer.slice(0, 2)), [0.25, 0])
         models[1].parent.hairTypeId = 2
         await models[1].refreshHairAppearance()
         equipment.EquipManager.onFrame()
         assert.equal(type.mesh.isEnabled(), false)
         assert.notEqual(models[1].equipSet.get('HAIR').type, type)
+        assert.equal(models[1].equipSet.get('HAIR').type.mesh.material, type.mesh.material)
         models[0].parent.hairTypeId = 3
         await models[0].refreshHairAppearance()
         equipment.EquipManager.onFrame()
@@ -138,8 +141,7 @@ test('game models render data-driven shared hair and retain it across equipment 
                 assert.equal(model.equipSet.has('HEAD'), false)
                 const uncovered = model.equipSet.get('HAIR')
                 assert.equal(uncovered.type.mesh.name, `character-hair-${hairTypeId}`)
-                assert.ok(uncovered.tint.equals(core.Color3.FromHexString(model.parent.hairColor).toLinearSpace()))
-                assert.equal(uncovered.tintLightness, model.parent.hairLightness)
+                assert.deepEqual(uncovered.matVector.asArray(), [0.25, 0])
             }
             model.parent.equipSet.delete('HEAD')
             model.removeEquippedItem('HEAD')

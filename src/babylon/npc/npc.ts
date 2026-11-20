@@ -116,6 +116,10 @@ export class Npc extends Character {
 }
 
 export class Guard extends Npc {
+    override get hidesHairUnderHelmet(): boolean {
+        return true
+    }
+
     definitionId: number
     alignment: 'neutral' | 'friendly'
     level: number

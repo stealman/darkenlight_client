@@ -1,0 +1,18 @@
+[
+    {"name": "Dark brown", "color": "#483124"},
+    {"name": "Soft black", "color": "#221e1d"},
+    {"name": "Blue black", "color": "#232832"},
+    {"name": "Espresso", "color": "#352622"},
+    {"name": "Chestnut", "color": "#74472f"},
+    {"name": "Warm brown", "color": "#92613b"},
+    {"name": "Auburn", "color": "#8c3d2a"},
+    {"name": "Copper", "color": "#ba673e"},
+    {"name": "Dark blond", "color": "#ab884e"},
+    {"name": "Golden blond", "color": "#d3a762"},
+    {"name": "Ash blond", "color": "#b9ad89"},
+    {"name": "Light blond", "color": "#e9cf94"},
+    {"name": "Platinum", "color": "#e8dfc8"},
+    {"name": "Salt and pepper", "color": "#777171"},
+    {"name": "Silver", "color": "#aaaab0"},
+    {"name": "White", "color": "#e1e0e3"}
+]

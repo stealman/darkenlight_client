@@ -11,8 +11,7 @@ interface Config {
     legs?: Record<string, { left: Transform, right: Transform }>
     weaponAttachment?: { correction: number[] }
     hair?: Record<string, Transform>
-    hairPreviewColor?: string
-    hairPreviewLightness?: number
+    hairPreviewColorId?: number
 }
 
 let weaponCorrection: Matrix | null = null
@@ -83,17 +82,11 @@ export async function loadEquipmentModifierConfig(
     activate()
     return {
         activate,
-        getHairColor(): string {
-            return config.hairPreviewColor ?? '#ffffff'
+        getHairColorId(): number {
+            return config.hairPreviewColorId ?? 1
         },
-        recordHairColor(hexColor: string) {
-            config.hairPreviewColor = hexColor
-        },
-        getHairLightness(): number {
-            return config.hairPreviewLightness ?? 0
-        },
-        recordHairLightness(lightness: number) {
-            config.hairPreviewLightness = lightness
+        recordHairColorId(id: number) {
+            config.hairPreviewColorId = id
         },
         getHair(typeId: number): EquipModelModifier {
             const value = config.hair?.[typeId]

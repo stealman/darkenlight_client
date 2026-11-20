@@ -17,6 +17,11 @@ test('heads share one GLB batch, follow separate animated head joints and surviv
     const core = await import('@babylonjs/core/index.js')
     const {PBRCustomMaterial} = await import('@babylonjs/materials/custom/pbrCustomMaterial.js')
     await import('@babylonjs/loaders/glTF/index.js')
+    core.DracoCompression.Configuration = {decoder: {
+        wasmUrl: 'local', wasmBinaryUrl: 'local',
+        wasmBinary: readFileSync(join(__dirname, '../public/models/draco/draco_decoder_gltf.wasm')),
+        jsModule: require('../public/models/draco/draco_decoder_gltf.js'),
+    }}
     const engine = new core.NullEngine()
     const scene = new core.Scene(engine)
     const dependencies = {
@@ -145,16 +150,14 @@ test('players, bots, NPCs and guards use final head ID 1 for default and legacy 
         for (const character of [player, bot, npc, guard]) {
             assert.equal(character.headTypeId, headTypeId === 2 ? 1 : headTypeId ?? 1)
             assert.equal(character.hairTypeId, 1)
-            assert.equal(character.hairColor, '#664e0a')
-            assert.equal(character.hairLightness, 0.6)
+            assert.equal(character.hairColorId, 1)
         }
         assert.equal(bot.isBot, true)
     }
-    const hair = {hairTypeId: 4, hairColor: '#EFDB80', hairLightness: 1.5}
+    const hair = {hairTypeId: 4, hairColorId: 12}
     const data = {id: 2, x: 0, z: 0, equipSet: {}, ...hair}
     for (const character of [new Character(data), new Npc(data), new Guard({...data, guard: hair})]) {
         assert.equal(character.hairTypeId, 4)
-        assert.equal(character.hairColor, '#efdb80')
-        assert.equal(character.hairLightness, 1.5)
+        assert.equal(character.hairColorId, 12)
     }
 })

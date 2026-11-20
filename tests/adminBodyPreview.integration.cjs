@@ -96,11 +96,10 @@ async function main() {
                             const visibleHelmet = role === 'npc' || role === 'guard'
                             if (character.model.equipSet.has('HEAD') !== visibleHelmet) throw new Error(`${gender} ${role}: wrong helmet visibility`)
                             if (!character.equipSet.has('HEAD')) throw new Error(`${role}: helmet lost from equipment`)
-                            if (gender === 'M') {
-                                const hairName = character.model.equipSet.get('HAIR')?.type.mesh.name
-                                const expected = visibleHelmet ? (modelId === 2100 ? undefined : 'character-hair-1-helmet') : 'character-hair-1'
-                                if (hairName !== expected) throw new Error(`${role}: wrong hair variant for helmet`)
-                            }
+                            const hairName = character.model.equipSet.get('HAIR')?.type.mesh.name
+                            const hideHair = visibleHelmet && (role === 'guard' || modelId === 1100 || gender === 'M')
+                            const expected = hideHair ? undefined : gender === 'F' ? 'character-female-hair-1' : 'character-hair-1'
+                            if (hairName !== expected) throw new Error(`${gender} ${role}: wrong hair visibility with helmet`)
                             if (visibleHelmet) {
                                 character.changeAppearance('steve', {})
                                 await character.model.refreshHairAppearance()
@@ -136,6 +135,10 @@ async function main() {
             }
         }, [modelId, file])
         const malePlateGeometry = await armorGeometry(1000)
+        assert.equal(male[0].hair, null, 'plate helmet hides hair in the preview')
+        await page.locator('[data-slot="head"]').selectOption('')
+        await page.waitForFunction(() => !document.querySelector('[data-hair-gender="M"] select').disabled)
+        const maleHair = (await snapshot())[0].hair
         await page.locator('[data-slot="body"]').selectOption('2000')
         const maleChain = (await snapshot())[0]
         const maleChainGeometry = await armorGeometry()
@@ -147,18 +150,20 @@ async function main() {
         assert.deepEqual(female[0].head.lights, male[0].head.lights, 'female head gets the same studio lighting as the male head')
         assert.deepEqual(female[0].head.lights, female[0].bodyLights)
         assert.ok(female[0].slots.includes('FACE') && female[0].slots.includes('HAIR'))
-        assert.match(female[0].hair.texture, /human_female_hair_1\.png/)
+        assert.match(female[0].hair.texture, /human_female_hair_1_atlas\.png/)
         assert.equal(female[0].hair.bone, 'Head')
         assert.deepEqual(female[0].hair.lights, female[0].head.lights)
         const femaleHair = page.locator('[data-hair-gender="F"]')
-        assert.equal(await femaleHair.locator('select').inputValue(), '1')
-        assert.equal(await femaleHair.locator('select option').count(), 4)
+        const femaleStyle = femaleHair.locator('select').first()
+        assert.equal(await femaleStyle.inputValue(), '1')
+        assert.equal(await femaleStyle.locator('option').count(), 4)
+        assert.equal(await femaleHair.locator('select').nth(1).locator('option').count(), 16)
         for (const id of [3, 4]) {
-            await femaleHair.locator('select').selectOption(String(id))
+            await femaleStyle.selectOption(String(id))
             await page.waitForFunction(() => !document.querySelector('[data-hair-gender="F"] select').disabled)
             assert.equal((await snapshot())[0].hair.name, `character-female-hair-${id}`)
         }
-        await femaleHair.locator('select').selectOption('2')
+        await femaleStyle.selectOption('2')
         await page.waitForFunction(() => !document.querySelector('[data-hair-gender="F"] select').disabled)
         assert.equal((await snapshot())[0].hair.name, 'character-female-hair-2')
         await femaleHair.locator('[data-modifier-component="position"][data-modifier-axis="x"]').fill('0.3456')
@@ -181,7 +186,7 @@ async function main() {
                 if (model.equipSet.get('HAIR')?.type.mesh.name !== 'character-female-hair-1') throw new Error('Runtime hair switch failed')
             } finally { model.removeFromScene() }
         })
-        await femaleHair.locator('select').selectOption('1')
+        await femaleStyle.selectOption('1')
         await page.waitForFunction(() => !document.querySelector('[data-hair-gender="F"] select').disabled)
         await femaleHair.locator('[data-modifier-component="position"][data-modifier-axis="x"]').fill('0.2345')
         assert.ok(Math.abs((await snapshot())[0].hair.x - 0.2345) < 1e-6)
@@ -209,7 +214,7 @@ async function main() {
         assert.ok(Math.abs((await snapshot())[0].bodyX - maleChain.bodyX) < 1e-6)
         assert.deepEqual(await armorGeometry(), maleChainGeometry, 'male chain geometry survives switching')
         assert.equal((await snapshot())[0].head.x, male[0].head.x, 'female head fitting preserves the male head')
-        assert.equal((await snapshot())[0].hair.x, male[0].hair.x, 'female hair fitting preserves male hair')
+        assert.equal((await snapshot())[0].hair.x, maleHair.x, 'female hair fitting preserves male hair')
         await variant.selectOption('female')
         await page.waitForFunction(() => !document.querySelector('#adminUtilsBodyVariant').disabled)
         assert.ok(Math.abs((await snapshot())[0].bodyX - 0.123) < 1e-6)

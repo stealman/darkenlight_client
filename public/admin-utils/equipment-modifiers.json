@@ -324,6 +324,5 @@
       }
     }
   },
-  "hairPreviewColor": "#b28406",
-  "hairPreviewLightness": 0.95
+  "hairPreviewColorId": 1
 }

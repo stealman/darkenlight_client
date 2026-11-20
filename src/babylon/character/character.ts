@@ -73,8 +73,7 @@ class Character implements Attackable, EffectTarget {
     gender: 'M' | 'F' = 'M'
     headTypeId: number = 1
     hairTypeId: number = 1
-    hairColor: string = '#664e0a'
-    hairLightness: number = 0.6
+    hairColorId: number = 1
     nameDisplayTime: number = 0
     gameClass: GameClass = GameClasses.FIGHTER
     className: string = GameClasses.FIGHTER.key
@@ -184,10 +183,14 @@ class Character implements Attackable, EffectTarget {
         return false
     }
 
+    get hidesHairUnderHelmet(): boolean {
+        return false
+    }
+
     async changeCharacterAppearance(data: CharacterAppearanceData) {
         const gender = resolveCharacterGender(data.gender)
         const hair = resolveCharacterHairAppearance(data)
-        const hairChanged = this.hairTypeId !== hair.hairTypeId || this.hairColor !== hair.hairColor || this.hairLightness !== hair.hairLightness
+        const hairChanged = this.hairTypeId !== hair.hairTypeId || this.hairColorId !== hair.hairColorId
         Object.assign(this, hair)
         if (this.gender !== gender) {
             this.gender = gender

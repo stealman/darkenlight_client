@@ -310,7 +310,7 @@ export const CharacterManager = {
         const char = this.characters.get(id)
         if (char) {
             char.name = name
-            await char.changeCharacterAppearance({gender, hairTypeId: char.hairTypeId, hairColor: char.hairColor, hairLightness: char.hairLightness})
+            await char.changeCharacterAppearance({gender, hairTypeId: char.hairTypeId, hairColorId: char.hairColorId})
         }
     },
 

@@ -3,8 +3,7 @@ export interface CharacterAppearanceData {
     gender?: 'M' | 'F'
     headTypeId?: number
     hairTypeId?: number
-    hairColor?: string
-    hairLightness?: number
+    hairColorId?: number
 }
 
 export interface MonsterSpawnData {

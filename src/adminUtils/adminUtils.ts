@@ -919,12 +919,10 @@ async function installHeadControls(root: HTMLElement, model: CharacterModel) {
 async function installHairControls(root: HTMLElement, model: CharacterModel, config: {
     getHair(typeId: number): EquipModelModifier
     recordHair(typeId: number, fitting: EquipModelModifier): void
-    getHairColor(): string
-    recordHairColor(hexColor: string): void
-    getHairLightness(): number
-    recordHairLightness(lightness: number): void
+    getHairColorId(): number
+    recordHairColorId(id: number): void
 }, changed: () => void) {
-    const { PREVIEW_HAIR_TYPES, FEMALE_PREVIEW_HAIR_TYPES, getPreviewHairMode, loadPreviewHair, attachPreviewHair, hidePreviewHair, setPreviewHairColor, setPreviewHairLightness } = await import('./hairPreview')
+    const { PREVIEW_HAIR_TYPES, FEMALE_PREVIEW_HAIR_TYPES, isPreviewHairHidden, loadPreviewHair, attachPreviewHair, hidePreviewHair, setPreviewHairColorId, HAIR_PALETTE } = await import('./hairPreview')
     const gender = model.parent.gender ?? 'M'
     const hairTypes = gender === 'F' ? FEMALE_PREVIEW_HAIR_TYPES : PREVIEW_HAIR_TYPES
     const { characterHeadMatrix } = await import('@/babylon/character/characterHead')
@@ -948,34 +946,23 @@ async function installHairControls(root: HTMLElement, model: CharacterModel, con
     label.append(select)
     const colorLabel = document.createElement('label')
     colorLabel.className = 'admin-utils__field'
-    colorLabel.textContent = 'Barva vlasů (RGB)'
-    const colorPicker = document.createElement('input')
-    colorPicker.type = 'color'
-    colorPicker.value = config.getHairColor()
-    colorPicker.setAttribute('aria-label', 'Barva vlasů')
-    const colorCode = document.createElement('output')
-    colorCode.value = colorPicker.value
-    colorLabel.append(colorPicker, colorCode)
-    const lightnessLabel = document.createElement('label')
-    lightnessLabel.className = 'admin-utils__field'
-    lightnessLabel.textContent = 'Světlost vlasů (0 = původní, vyšší = světlejší)'
-    const lightnessSlider = document.createElement('input')
-    lightnessSlider.type = 'range'
-    lightnessSlider.min = '-2'
-    lightnessSlider.max = '4'
-    lightnessSlider.step = '0.05'
-    lightnessSlider.value = String(config.getHairLightness())
-    lightnessSlider.setAttribute('aria-label', 'Světlost vlasů')
-    const lightnessValue = document.createElement('output')
-    lightnessValue.value = Number(lightnessSlider.value).toFixed(2)
-    lightnessLabel.append(lightnessSlider, lightnessValue)
+    colorLabel.textContent = 'Barva vlas?'
+    const colorPicker = document.createElement('select')
+    colorPicker.setAttribute('aria-label', 'Barva vlas?')
+    HAIR_PALETTE.forEach(({name, color}, index) => {
+        const option = new Option(name, String(index + 1))
+        option.style.backgroundColor = color
+        colorPicker.append(option)
+    })
+    colorPicker.value = String(config.getHairColorId())
+    colorLabel.append(colorPicker)
     const editor = document.createElement('div')
     editor.className = 'admin-utils__modifier-editor'
     appendModifierControls(editor)
     const note = document.createElement('small')
     const help = 'Rotace v radiánech. Ulož tlačítkem „Uložit proporce do souboru“; offsety se ukládají zvlášť pro každý typ účesu.'
     note.textContent = help
-    panel.append(title, label, colorLabel, lightnessLabel, editor, note)
+    panel.append(title, label, colorLabel, editor, note)
     root.querySelector('#adminUtilsEquipment')!.prepend(panel)
     let item: ReturnType<typeof attachPreviewHair> | null = null
     let activeTypeId = Number(select.value)
@@ -987,16 +974,14 @@ async function installHairControls(root: HTMLElement, model: CharacterModel, con
         try {
             const id = Number(select.value)
             const headEquipmentId = model.equipSet.get('HEAD')?.type.id
-            const mode = gender === 'F' ? 'normal' : getPreviewHairMode(headEquipmentId)
-            if (mode === 'hidden') {
+            if (isPreviewHairHidden(headEquipmentId, gender)) {
                 hidePreviewHair(model)
                 item = null
                 activeTypeId = id
-                note.textContent = 'Pod kroužkovou kuklou jsou vlasy skryté. ' + help
+                note.textContent = 'Pod touto pokrývkou hlavy jsou vlasy skryté. ' + help
                 return
             }
-            const underHelmet = mode === 'helmet'
-            const type = await loadPreviewHair(model.node.getScene(), id, underHelmet, gender)
+            const type = await loadPreviewHair(model.node.getScene(), id, gender)
             if (request !== generation || model.node.isDisposed() || !model.node.isEnabled()) return
             const headMesh = model.equipSet.get('FACE')?.type.mesh
             if (headMesh && type.mesh) {
@@ -1004,12 +989,11 @@ async function installHairControls(root: HTMLElement, model: CharacterModel, con
                 type.mesh._markSubMeshesAsLightDirty()
             }
             const fitting = config.getHair(id)
-            item = attachPreviewHair(model, type, fitting, colorPicker.value, Number(lightnessSlider.value))
+            item = attachPreviewHair(model, type, fitting, Number(colorPicker.value))
             activeTypeId = id
             populateModifierEditor(editor, fitting)
             editor.hidden = false
-            note.textContent = underHelmet && hairTypes.find(type => type.id === id)?.helmetFile
-                ? 'Náhled používá variantu účesu pod pokrývku hlavy. ' + help : help
+            note.textContent = help
         } finally {
             if (request === generation) select.disabled = false
         }
@@ -1021,17 +1005,10 @@ async function installHairControls(root: HTMLElement, model: CharacterModel, con
         config.recordHair(activeTypeId, fitting)
         changed()
     })
-    colorPicker.addEventListener('input', () => {
-        colorCode.value = colorPicker.value
-        if (item) setPreviewHairColor(item, colorPicker.value)
-        config.recordHairColor(colorPicker.value)
-        changed()
-    })
-    lightnessSlider.addEventListener('input', () => {
-        const lightness = Number(lightnessSlider.value)
-        lightnessValue.value = lightness.toFixed(2)
-        if (item) setPreviewHairLightness(item, lightness)
-        config.recordHairLightness(lightness)
+    colorPicker.addEventListener('change', () => {
+        const id = Number(colorPicker.value)
+        if (item) setPreviewHairColorId(item, id)
+        config.recordHairColorId(id)
         changed()
     })
     const refresh = () => {
@@ -1054,8 +1031,7 @@ function createPreviewCharacter(gender: 'M' | 'F' = 'M'): Character {
         gender,
         headTypeId: 1,
         hairTypeId: 1,
-        hairColor: '#664e0a',
-        hairLightness: 0.6,
+        hairColorId: 1,
         pos: Vector3.Zero(),
         logicYpos: 0,
         nameDisplayTime: 0,
