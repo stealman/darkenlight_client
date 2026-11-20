@@ -4,22 +4,33 @@ import { PBRCustomMaterial } from '@babylonjs/materials'
 import type { EquipItem, EquipItemType } from '@/babylon/item/equipManager'
 import { loadRawArmorGeometry } from '@/babylon/character/characterEquipmentFitting'
 
-// Preview-only ID below the range of runtime armor fitting sources.
+// Preview-only IDs below the range of runtime armor fitting sources.
 export const PREVIEW_LEATHER_TORSO_ID = 900
+export const PREVIEW_LEATHER_PAULDRON_ID = 901
+export const PREVIEW_LEATHER_LEG_ID = 902
 
-async function createLeatherTorsoPreview(scene: Scene, variant: 'male' | 'female', atlas: Texture, atlasIndices: Map<number, number>) {
+async function createLeatherPreview(
+    scene: Scene,
+    id: number,
+    name: string,
+    file: string,
+    atlas: Texture,
+    atlasIndices: Map<number, number>,
+) {
     const [{EquipItemType}, {EquipCbItem}, {Lights}, geometry] = await Promise.all([
         import('@/babylon/item/equipManager'),
         import('@/babylon/item/codebook/equipCbItem'),
         import('@/babylon/scene/lights'),
-        loadRawArmorGeometry(scene, `${variant}-armor-leather.glb`),
+        loadRawArmorGeometry(scene, file),
     ])
-    const name = variant === 'male' ? 'adminUtilsMaleLeatherTorso' : 'adminUtilsFemaleLeatherTorso'
     const material = new PBRCustomMaterial(name, scene)
     material.albedoTexture = atlas
     material.metallic = 0
     material.roughness = 1
-    material.twoSidedLighting = true
+    // Both legs share one thin-instance mesh, including the mirrored right leg.
+    const isLeg = id === PREVIEW_LEATHER_LEG_ID
+    material.backFaceCulling = !isLeg
+    material.twoSidedLighting = !isLeg
     material.usePhysicalLightFalloff = false
     material.AddAttribute('uvc')
     material.Vertex_Definitions('attribute vec2 uvc;')
@@ -32,7 +43,7 @@ async function createLeatherTorsoPreview(scene: Scene, variant: 'male' | 'female
     mesh.receiveShadows = true
     mesh.alwaysSelectAsActiveMesh = true
     mesh.setEnabled(false)
-    const type = new EquipItemType(new EquipCbItem(PREVIEW_LEATHER_TORSO_ID, mesh.name,
+    const type = new EquipItemType(new EquipCbItem(id, mesh.name,
         Vector3.Zero(), Vector3.One(), null, new Vector2(4, 4), atlasIndices))
     type.mesh = mesh
     Lights.registerDynamicLightMesh(mesh)
@@ -42,7 +53,7 @@ async function createLeatherTorsoPreview(scene: Scene, variant: 'male' | 'female
 export async function initializePreviewArmorSources(
     scene: Scene,
     types: Map<number, EquipItemType>,
-    leatherAtlases: {male: Texture, female: Texture},
+    leatherAtlases: {male: Texture, female: Texture, pauldron: Texture, leg: Texture},
     leatherAtlasIndices: Map<number, number>,
 ) {
     const { TEXTURED_ARMOR_ASSETS, ArmorModelsCb } = await import('@/babylon/item/codebook/armorsModelsCb')
@@ -60,11 +71,19 @@ export async function initializePreviewArmorSources(
     }))
     const { EquipItemType, EquipManager } = await import('@/babylon/item/equipManager')
     const { Lights } = await import('@/babylon/scene/lights')
-    const [maleLeather, femaleLeather] = await Promise.all([
-        createLeatherTorsoPreview(scene, 'male', leatherAtlases.male, leatherAtlasIndices),
-        createLeatherTorsoPreview(scene, 'female', leatherAtlases.female, leatherAtlasIndices),
+    const [maleLeather, femaleLeather, leatherPauldron, leatherLeg] = await Promise.all([
+        createLeatherPreview(scene, PREVIEW_LEATHER_TORSO_ID, 'adminUtilsMaleLeatherTorso',
+            'male-armor-leather.glb', leatherAtlases.male, leatherAtlasIndices),
+        createLeatherPreview(scene, PREVIEW_LEATHER_TORSO_ID, 'adminUtilsFemaleLeatherTorso',
+            'female-armor-leather.glb', leatherAtlases.female, leatherAtlasIndices),
+        createLeatherPreview(scene, PREVIEW_LEATHER_PAULDRON_ID, 'adminUtilsLeatherPauldron',
+            'pauldron-leather.glb', leatherAtlases.pauldron, leatherAtlasIndices),
+        createLeatherPreview(scene, PREVIEW_LEATHER_LEG_ID, 'adminUtilsLeatherLeg',
+            'male-leg-leather.glb', leatherAtlases.leg, leatherAtlasIndices),
     ])
     types.set(PREVIEW_LEATHER_TORSO_ID, maleLeather)
+    types.set(PREVIEW_LEATHER_PAULDRON_ID, leatherPauldron)
+    types.set(PREVIEW_LEATHER_LEG_ID, leatherLeg)
     const femaleSources = new Map<number, EquipItemType>([[PREVIEW_LEATHER_TORSO_ID, femaleLeather]])
     const femaleAssets: Array<[number, string]> = [
         [ArmorModelsCb.CHAIN_MAIL_MALE.id, 'female-armor-chain.glb'],

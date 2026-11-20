@@ -27,7 +27,7 @@ import { BOW_WEAPON_MATERIAL_NAMES } from '@/babylon/item/codebook/vertexColorPa
 import { ResourcesCodebookData } from '@game/character/items/codebook/resourcesCodebook'
 import './styles.css'
 import { bindPreviewEquipment, bindPreviewWeapon, getPreviewPairedModifiers } from './equipmentModifierConfig'
-import { initializePreviewArmorSources, PREVIEW_LEATHER_TORSO_ID } from './previewArmorSources'
+import { initializePreviewArmorSources, PREVIEW_LEATHER_LEG_ID, PREVIEW_LEATHER_PAULDRON_ID, PREVIEW_LEATHER_TORSO_ID } from './previewArmorSources'
 import { preparePreviewSkeleton } from './previewSkeleton'
 
 type PreviewSlot = 'body' | 'head' | 'pauldrons' | 'legs' | 'shield' | 'weapon'
@@ -83,6 +83,8 @@ const SHIELD_PRIMARY_TEXTURE = '/models/equip/armors/shield_primary.png?v=202610
 const SHIELD_SECONDARY_TEXTURE = '/models/equip/armors/shield_secondary.png?v=20261021-generated-atlas'
 const MALE_LEATHER_PRIMARY_TEXTURE = '/models/equip/armors/leather_armor_male_primary.png'
 const FEMALE_LEATHER_PRIMARY_TEXTURE = '/models/equip/armors/leather_armor_female_primary.png'
+const LEATHER_PAULDRON_PRIMARY_TEXTURE = '/models/equip/armors/leather_pauldron_primary.png'
+const LEATHER_LEG_PRIMARY_TEXTURE = '/models/equip/armors/leather_leg_primary.png'
 const CHAIN_MAIL_PRIMARY_TEXTURE = '/models/equip/armors/chain_mail_primary.png?v=20261020-generated-atlas'
 const CHAIN_MAIL_SECONDARY_TEXTURE = '/models/equip/armors/chain_mail_secondary.png?v=20261020-generated-atlas'
 const CHAIN_COIF_PRIMARY_TEXTURE = '/models/equip/armors/chain_coif_primary.png?v=20261020-generated-atlas'
@@ -137,6 +139,8 @@ const MODEL_IDS = {
     battleBow: 530,
     armorPlate: 1000,
     leatherTorso: PREVIEW_LEATHER_TORSO_ID,
+    leatherPauldron: PREVIEW_LEATHER_PAULDRON_ID,
+    leatherLeg: PREVIEW_LEATHER_LEG_ID,
     helm: 1100,
     pauldronsPlate: 1200,
     legsPlate: 1300,
@@ -208,8 +212,12 @@ const bowMaterialOptions = BOW_WEAPON_MATERIAL_NAMES.map((label, index) => ({
     atlasTile: index,
 }))
 
+function isLeatherModel(modelId: number | null) {
+    return modelId === MODEL_IDS.leatherTorso || modelId === MODEL_IDS.leatherPauldron || modelId === MODEL_IDS.leatherLeg
+}
+
 function getMaterialOptionsForSlot(slot: PreviewSlot, modelId = slotSelections[slot]) {
-    if (slot === 'body' && modelId === MODEL_IDS.leatherTorso) return leatherMaterialOptions
+    if (isLeatherModel(modelId)) return leatherMaterialOptions
     if (slot !== 'weapon') return materialOptions
     return modelId === MODEL_IDS.huntingBow || modelId === MODEL_IDS.recurveBow || modelId === MODEL_IDS.battleBow
         ? bowMaterialOptions
@@ -242,11 +250,13 @@ const slotOptions: Record<PreviewSlot, Array<{ label: string, value: number | nu
         { label: 'Bez nárameníků', value: null },
         { label: 'Plátové nárameníky', value: MODEL_IDS.pauldronsPlate },
         { label: 'Kroužkové nárameníky', value: MODEL_IDS.chainPauldrons },
+        { label: 'Kožené nárameníky', value: MODEL_IDS.leatherPauldron },
     ],
     legs: [
         { label: 'Bez náholenic', value: null },
         { label: 'Plátové náholenice', value: MODEL_IDS.legsPlate },
         { label: 'Kroužkové náholenice', value: MODEL_IDS.chainGreaves },
+        { label: 'Kožené náholenice', value: MODEL_IDS.leatherLeg },
     ],
     shield: [
         { label: 'Bez štítu', value: null },
@@ -1590,15 +1600,18 @@ export async function mountAdminUtils() {
             const atlas = createGeneratedArmorAtlas(scene, name, layers, leatherAtlasMaterialSettings, leatherMaterialOptions)
             return {atlas, layers}
         }
-        const [maleLeather, femaleLeather] = await Promise.all([
+        const [maleLeather, femaleLeather, leatherPauldron, leatherLeg] = await Promise.all([
             createLeatherAtlas(MALE_LEATHER_PRIMARY_TEXTURE, 'adminUtilsMaleLeatherTorsoAtlas'),
             createLeatherAtlas(FEMALE_LEATHER_PRIMARY_TEXTURE, 'adminUtilsFemaleLeatherTorsoAtlas'),
+            createLeatherAtlas(LEATHER_PAULDRON_PRIMARY_TEXTURE, 'adminUtilsLeatherPauldronAtlas'),
+            createLeatherAtlas(LEATHER_LEG_PRIMARY_TEXTURE, 'adminUtilsLeatherLegAtlas'),
         ])
         const leatherAtlasIndices = new Map(leatherMaterialOptions.map(option =>
             [option.value - 1, getEquipAtlasIndex(option.atlasTile)],
         ))
         previewArmorSources = await initializePreviewArmorSources(scene, EquipManager.itemTypes,
-            {male: maleLeather.atlas, female: femaleLeather.atlas}, leatherAtlasIndices)
+            {male: maleLeather.atlas, female: femaleLeather.atlas, pauldron: leatherPauldron.atlas, leg: leatherLeg.atlas},
+            leatherAtlasIndices)
         const saveModifiers = document.createElement('button')
         saveModifiers.type = 'button'
         saveModifiers.textContent = 'Proporce načteny ze souboru'
@@ -1711,7 +1724,7 @@ export async function mountAdminUtils() {
             toggle.title = ''
             populateMaterialSelect(materialSelect, slot)
             materialSelect.disabled = modelId == null
-            const canExportAtlas = modelId === MODEL_IDS.leatherTorso || modelId === MODEL_IDS.battleBow || modelId === MODEL_IDS.recurveBow || modelId === MODEL_IDS.huntingBow || modelId === MODEL_IDS.longsword || modelId === MODEL_IDS.broadsword || modelId === MODEL_IDS.greataxe || modelId === MODEL_IDS.halberd || modelId === MODEL_IDS.pickaxe || modelId === MODEL_IDS.handAxe || modelId === MODEL_IDS.battleAxe || modelId === MODEL_IDS.huntingSpear || modelId === MODEL_IDS.lightMace || modelId === MODEL_IDS.warhammer || modelId === MODEL_IDS.warmace || modelId === MODEL_IDS.greatsword || modelId === MODEL_IDS.largeBattleAxe || modelId === MODEL_IDS.armorPlate || modelId === MODEL_IDS.helm || modelId === MODEL_IDS.pauldronsPlate || modelId === MODEL_IDS.legsPlate || modelId === MODEL_IDS.shield || modelId === MODEL_IDS.chainMail || modelId === MODEL_IDS.chainCoif || modelId === MODEL_IDS.chainPauldrons || modelId === MODEL_IDS.chainGreaves
+            const canExportAtlas = isLeatherModel(modelId) || modelId === MODEL_IDS.battleBow || modelId === MODEL_IDS.recurveBow || modelId === MODEL_IDS.huntingBow || modelId === MODEL_IDS.longsword || modelId === MODEL_IDS.broadsword || modelId === MODEL_IDS.greataxe || modelId === MODEL_IDS.halberd || modelId === MODEL_IDS.pickaxe || modelId === MODEL_IDS.handAxe || modelId === MODEL_IDS.battleAxe || modelId === MODEL_IDS.huntingSpear || modelId === MODEL_IDS.lightMace || modelId === MODEL_IDS.warhammer || modelId === MODEL_IDS.warmace || modelId === MODEL_IDS.greatsword || modelId === MODEL_IDS.largeBattleAxe || modelId === MODEL_IDS.armorPlate || modelId === MODEL_IDS.helm || modelId === MODEL_IDS.pauldronsPlate || modelId === MODEL_IDS.legsPlate || modelId === MODEL_IDS.shield || modelId === MODEL_IDS.chainMail || modelId === MODEL_IDS.chainCoif || modelId === MODEL_IDS.chainPauldrons || modelId === MODEL_IDS.chainGreaves
             exportLink.setAttribute('aria-disabled', String(!canExportAtlas))
             exportLink.tabIndex = canExportAtlas ? 0 : -1
             exportLink.title = canExportAtlas ? '' : 'Export atlasu není pro tento typ výbavy dostupný'
@@ -1812,7 +1825,7 @@ export async function mountAdminUtils() {
                     renderGeneratedArmorAtlas(generatedRecurveBowAtlas, recurveBowLayers, bowAtlasMaterialSettings, bowMaterialOptions)
                     renderGeneratedArmorAtlas(generatedBattleBowAtlas, battleBowLayers, bowAtlasMaterialSettings, bowMaterialOptions)
                 } else if (family === 'leather') {
-                    for (const {atlas, layers} of [maleLeather, femaleLeather]) {
+                    for (const {atlas, layers} of [maleLeather, femaleLeather, leatherPauldron, leatherLeg]) {
                         renderGeneratedArmorAtlas(atlas, layers, leatherAtlasMaterialSettings, leatherMaterialOptions)
                     }
                 } else if (family === 'chain') {
@@ -1881,6 +1894,10 @@ export async function mountAdminUtils() {
                 } else if (modelId === MODEL_IDS.leatherTorso) {
                     const {atlas} = previewBodyVariant === 'female' ? femaleLeather : maleLeather
                     exportAtlasAsJpeg(atlas, `leather_armor_${previewBodyVariant}.jpg`)
+                } else if (modelId === MODEL_IDS.leatherPauldron) {
+                    exportAtlasAsJpeg(leatherPauldron.atlas, 'leather_pauldron.jpg')
+                } else if (modelId === MODEL_IDS.leatherLeg) {
+                    exportAtlasAsJpeg(leatherLeg.atlas, 'leather_leg.jpg')
                 } else if (modelId === MODEL_IDS.armorPlate) {
                     exportAtlasAsJpeg(generatedPlateArmorAtlas, 'plate_armor.jpg')
                 } else if (modelId === MODEL_IDS.helm) {
