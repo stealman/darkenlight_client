@@ -25,16 +25,16 @@
         <div class="dialog-actions guest-character-creation-actions">
             <div v-for="classKey in ['FIGHTER', 'MYSTIC'] as const" :key="classKey" class="guest-character-class-option"
                 :class="{ 'guest-character-class-option--active': activePreview === classKey }"
-                @pointerenter="event => { if (event.pointerType !== 'touch') hoveredClass = classKey }"
+                @pointerenter="hoverPreview(classKey, $event)"
                 @pointerleave="event => { if (event.pointerType !== 'touch') hoveredClass = null }"
                 @focusin="focusedClass = classKey" @focusout="focusedClass = null">
                 <div class="guest-character-preview" :aria-busy="previewsLoading">
                     <canvas :ref="element => { if (element) previewCanvases[classKey] = element as HTMLCanvasElement }" :aria-label="t(`classes.${classKey.toLowerCase()}`)"
                         role="button" tabindex="0" :aria-pressed="selectedClass === classKey" :aria-disabled="previewsLoading"
-                        @click="activatePreview(classKey)" @keydown.enter.prevent="activatePreview(classKey)" @keydown.space.prevent="activatePreview(classKey)" />
+                        @click="activatePreview(classKey, $event)" @keydown.enter.prevent="activatePreview(classKey)" @keydown.space.prevent="activatePreview(classKey)" />
                     <span v-if="previewsLoading">{{ t('common.loading') }}</span>
                 </div>
-                <button type="button" class="guest-character-class-label" :disabled="previewsLoading" :aria-pressed="selectedClass === classKey" @click="activatePreview(classKey)">
+                <button type="button" class="guest-character-class-label" :disabled="previewsLoading" :aria-pressed="selectedClass === classKey" @click="activatePreview(classKey, $event)">
                     <span :class="['ui-text-gradient', 'ui-text-gradient--accent', 'ui-text-gradient--no-shadow', `guest-character-creation-class--${classKey.toLowerCase()}`]">{{ t(`classes.${classKey.toLowerCase()}`) }}</span>
                 </button>
             </div>
@@ -69,6 +69,7 @@ type StarterClass = 'FIGHTER' | 'MYSTIC'
 const selectedClass = ref<StarterClass | null>(null)
 const hoveredClass = ref<StarterClass | null>(null)
 const focusedClass = ref<StarterClass | null>(null)
+const mysticCastRequests = ref(0)
 const activePreview = computed(() => hoveredClass.value ?? focusedClass.value ?? selectedClass.value)
 const creating = ref(false)
 const gender = ref<'M' | 'F'>('M')
@@ -77,10 +78,17 @@ function selectGender(value: 'M' | 'F') {
     AudioManager.playGuiButtonClick()
     gender.value = value
 }
-function activatePreview(classKey: 'FIGHTER' | 'MYSTIC') {
+function hoverPreview(classKey: StarterClass, event: PointerEvent) {
+    if (event.pointerType === 'touch') return
+    hoveredClass.value = classKey
+    if (classKey === 'MYSTIC') mysticCastRequests.value++
+}
+function activatePreview(classKey: StarterClass, event?: MouseEvent) {
     if (previewsLoading.value) return
     AudioManager.playGuiButtonClick()
     selectedClass.value = classKey
+    const alreadyHovered = event instanceof PointerEvent && event.pointerType === 'mouse' && hoveredClass.value === 'MYSTIC'
+    if (classKey === 'MYSTIC' && !alreadyHovered) mysticCastRequests.value++
 }
 let previewAbort = new AbortController()
 let previewJob: Promise<void> = Promise.resolve()
@@ -94,7 +102,7 @@ function refreshPreviews() {
         if (controller.signal.aborted) return
         try {
             await startStarterPreviews([previewCanvases.FIGHTER, previewCanvases.MYSTIC], controller.signal,
-                () => activePreview.value, () => hoveredClass.value === 'MYSTIC', selectedGender)
+                () => activePreview.value, () => mysticCastRequests.value, selectedGender)
         }
         catch (error) { console.error('Could not render starter previews', error) }
         finally { if (!controller.signal.aborted) previewsLoading.value = false }

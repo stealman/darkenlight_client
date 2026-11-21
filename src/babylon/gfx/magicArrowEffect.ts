@@ -19,9 +19,9 @@ export const MAGIC_ARROW_DETAILS = ['LOW', 'MEDIUM', 'HIGH'] as const
 type MagicArrowDetail = typeof MAGIC_ARROW_DETAILS[number]
 
 const detailProfiles = {
-    LOW: {ribbons: 1, segments: 16, sparkCapacity: 36, chargeSparks: 30, flightSparks: 55, impactSparks: 20, windMotes: 0},
-    MEDIUM: {ribbons: 2, segments: 24, sparkCapacity: 64, chargeSparks: 76, flightSparks: 105, impactSparks: 28, windMotes: 0},
-    HIGH: {ribbons: 3, segments: 32, sparkCapacity: 96, chargeSparks: 128, flightSparks: 170, impactSparks: 44, windMotes: 45},
+    LOW: {ribbons: 1, segments: 16, sparkCapacity: 36, chargeSparks: 30, launchSparks: 8, flightSparks: 55, impactSparks: 20, windMotes: 0},
+    MEDIUM: {ribbons: 2, segments: 24, sparkCapacity: 64, chargeSparks: 76, launchSparks: 14, flightSparks: 105, impactSparks: 28, windMotes: 0},
+    HIGH: {ribbons: 3, segments: 32, sparkCapacity: 96, chargeSparks: 128, launchSparks: 24, flightSparks: 170, impactSparks: 44, windMotes: 45},
 } as const
 
 type ReadOrigin = (feet: Vector3, crystal: Vector3) => void
@@ -357,6 +357,7 @@ export class MagicArrowEffect {
     private chargeRibbons: WindRibbons | null
     private projectileRibbons: WindRibbons | null = null
     private readonly sparks: ParticleSystem
+    private launchSparks: ParticleSystem | null = null
     private readonly windMotes: ParticleSystem | null
     private readonly profile: typeof detailProfiles[MagicArrowDetail]
     private readonly point = createSpellInstance()
@@ -448,6 +449,7 @@ export class MagicArrowEffect {
         this.releasedAt = performance.now()
         this.chargeEndedAt = this.releasedAt
         this.projectileRibbons = this.createRibbons(this.profile.ribbons)
+        this.launchSparks = this.emitLaunchSparks()
         this.sparks.emitRate = this.profile.flightSparks
         this.sparks.minEmitPower = 0.65
         this.sparks.maxEmitPower = 1.65
@@ -465,7 +467,42 @@ export class MagicArrowEffect {
         point.instances.delete(this.point)
         flash.instances.delete(this.flash)
         this.sparks.dispose(false)
+        this.launchSparks?.dispose(false)
         this.windMotes?.dispose(false)
+    }
+
+    private emitLaunchSparks() {
+        const {spark} = getResources(this.scene)
+        const count = this.profile.launchSparks
+        // The launch point stays at the wand while the flight emitter moves with the arrow.
+        const burst = createSparks(this.scene, spark, this.launch, count, this.previewSpeed)
+        burst.name = 'magicArrowLaunchSparks'
+        burst.layerMask = this.sparks.layerMask
+        burst.startDirectionFunction = (_world, direction) => {
+            const angle = Math.random() * TAU
+            const spread = 0.85 + Math.random() * 0.3
+            const sideways = Math.cos(angle) * spread
+            const vertical = Math.sin(angle) * spread
+            this.forward.scaleToRef(0.2 + Math.random() * 0.4, direction)
+            direction.addInPlaceFromFloats(
+                this.side.x * sideways + this.up.x * vertical,
+                this.side.y * sideways + this.up.y * vertical,
+                this.side.z * sideways + this.up.z * vertical,
+            )
+        }
+        burst.minEmitPower = 1.5
+        burst.maxEmitPower = 3.3
+        burst.minLifeTime = 0.12
+        burst.maxLifeTime = 0.28
+        burst.minSize = 0.108
+        burst.maxSize = 0.216
+        burst.addColorGradient(0, new Color4(0.95, 0.99, 1, 1))
+        burst.addColorGradient(0.25, new Color4(0.63, 0.9, 1, 0.82))
+        burst.addColorGradient(1, new Color4(0.22, 0.57, 0.86, 0))
+        burst.addSizeGradient(0, 1)
+        burst.addSizeGradient(1, 0.35)
+        burst.manualEmitCount = count
+        return burst
     }
 
     private createRibbons(count: number) {

@@ -197,11 +197,12 @@ export async function mountSpellPreview() {
     const {Renderer} = await import('@/babylon/scene/renderer')
     Renderer.scene = scene
     const [{CharacterModel}, {EquipManager}, {WeaponsCbManager, WeaponModelsCb}, {ArmorModelsCb},
-        {Lights}, {Materials}] = await Promise.all([
+        {Lights}, {Materials}, {AudioManager}] = await Promise.all([
         import('@/babylon/character/characterModel'), import('@/babylon/item/equipManager'),
         import('@/babylon/item/codebook/weaponModelsCb'), import('@/babylon/item/codebook/armorsModelsCb'),
-        import('@/babylon/scene/lights'), import('@/babylon/materials'),
+        import('@/babylon/scene/lights'), import('@/babylon/materials'), import('@/babylon/audio/audioManager'),
     ])
+    AudioManager.preloadSpellSounds(scene)
     const camera = new ArcRotateCamera('spellPreviewCamera', -1.69, 1.21, 7.9, new Vector3(0, 0.93, 0), scene)
     camera.lowerRadiusLimit = 3.6
     camera.upperRadiusLimit = 14
@@ -256,12 +257,17 @@ export async function mountSpellPreview() {
     let releaseAt = 0
     let recoilStartedAt = 0
     let playbackSpeed = 1
+    let stopCastingSound: (() => void) | undefined
     let lastPhase = ''
     cast.disabled = distance.disabled = speed.disabled = detail.disabled = false
     status.textContent = 'Připraveno'
     cast.addEventListener('click', () => {
         effect?.dispose()
+        stopCastingSound?.()
         playbackSpeed = Number(speed.value)
+        Engine.audioEngine?.unlock()
+        const castDuration = MagicArrow.castDuration / playbackSpeed
+        stopCastingSound = AudioManager.playSpellCastingSound(scene, castDuration)
         recoilStartedAt = 0
         lastPhase = ''
         model.finishSpellStance()
@@ -270,7 +276,7 @@ export async function mountSpellPreview() {
             feet.copyFrom(actor.pos)
             model.getSpellOriginToRef(feet, crystal)
         }, MAGIC_ARROW_DETAILS[detail.selectedIndex], playbackSpeed)
-        releaseAt = performance.now() + MagicArrow.castDuration / playbackSpeed
+        releaseAt = performance.now() + castDuration
         distance.disabled = speed.disabled = detail.disabled = true
     })
 
@@ -303,7 +309,10 @@ export async function mountSpellPreview() {
         } else if (lastPhase !== effect.phase) {
             lastPhase = effect.phase
             status.textContent = STAGE_LABELS[effect.phase]
-            if (effect.phase === 'impact') recoilStartedAt = now
+            if (effect.phase === 'impact') {
+                recoilStartedAt = now
+                AudioManager.playSpellImpactSound(scene)
+            }
         }
     })
 }

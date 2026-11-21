@@ -133,6 +133,7 @@ class Character implements Attackable, EffectTarget {
 
     activeTimedAction: CharacterTimedAction | null = null
     private magicArrowEffect: MagicArrowEffect | null = null
+    private stopMagicArrowSound?: () => void
     publiclyVisibleAffects: Map<number, PubliclyVisibleAffect> = new Map<number, PubliclyVisibleAffect>()
 
     constructor(data: CharacterAppearanceData & Record<string, any>, myChar: boolean = false, previewPosition?: Vector3) {
@@ -583,11 +584,14 @@ class Character implements Attackable, EffectTarget {
         this.breakAutoAttack()
         this.markCombatActivity()
         this.startTimedAction(CharacterActions.MAGIC_ARROW.name, {x, z, dur: MagicArrow.castDuration})
+        const scene = this.model?.node.getScene()
+        if (scene) this.stopMagicArrowSound = AudioManager.playSpellCastingSound(scene, MagicArrow.castDuration, this.isMyChar() ? undefined : this.pos)
         this.model?.updateSpellStance()
         if (this.insideView) this.magicArrowEffect = this.createMagicArrowEffect()
     }
 
     releaseMagicArrow(destination: Vector3, target: Attackable | null, flightMs: number) {
+        this.stopMagicArrowSound = undefined
         let charge = this.magicArrowEffect
         this.magicArrowEffect = null
         if (this.activeTimedAction?.type === CharacterActions.MAGIC_ARROW.name) this.activeTimedAction = null
@@ -706,6 +710,8 @@ class Character implements Attackable, EffectTarget {
     }
 
     clearTimedAction() {
+        this.stopMagicArrowSound?.()
+        this.stopMagicArrowSound = undefined
         if (this.activeTimedAction?.type === CharacterActions.MAGIC_ARROW.name) this.model?.finishSpellStance()
         this.activeTimedAction = null
         this.magicArrowEffect?.dispose()

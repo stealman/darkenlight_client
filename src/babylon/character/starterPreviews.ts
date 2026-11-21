@@ -15,7 +15,7 @@ import {MagicArrow} from '@game/game/spells/magicArrow'
 
 /** Live Babylon views share the already loaded runtime models and equipment. */
 export async function startStarterPreviews(canvases: HTMLCanvasElement[], signal: AbortSignal, activeClass: () => string | null,
-                                          mysticHovered: () => boolean, gender: 'M' | 'F' = 'M'): Promise<void> {
+                                          mysticCastRequests: () => number, gender: 'M' | 'F' = 'M'): Promise<void> {
     if (signal.aborted) return
     const classKeys = ['FIGHTER', 'MYSTIC'] as const
     const scene = Renderer.scene
@@ -100,16 +100,14 @@ export async function startStarterPreviews(canvases: HTMLCanvasElement[], signal
         shadow.addShadowCaster(foliage, false)
     })
     let previousActive: string | null = null
-    let wasMysticHovered = false
+    let lastMysticCastRequest = mysticCastRequests()
     let mysticSpell: MagicArrowEffect | null = null
     let castStartedAt: number | null = null
     const render = () => {
         if (signal.aborted) return
         const active = activeClass()
         const enteredFighter = active === 'FIGHTER' && previousActive !== active
-        const hoveringMystic = mysticHovered()
-        const enteredMystic = hoveringMystic && !wasMysticHovered
-        wasMysticHovered = hoveringMystic
+        const castRequest = mysticCastRequests()
         previousActive = active
         lights.forEach((light, index) => { light.intensity = active === classKeys[index] ? 4.2 : 3.2 })
         for (const [index, character] of characters.entries()) {
@@ -117,7 +115,8 @@ export async function startStarterPreviews(canvases: HTMLCanvasElement[], signal
             const highlighted = active === classKeys[index]
             const combatIdle = character.getWeapon()?.handsRequired === 2 ? model.combatIdleTwoHandedAnim : model.combatIdleAnim
             if (classKeys[index] === 'MYSTIC') {
-                if (enteredMystic && (!mysticSpell || mysticSpell.isDisposed)) {
+                if (castRequest !== lastMysticCastRequest && (!mysticSpell || mysticSpell.isDisposed)) {
+                    lastMysticCastRequest = castRequest
                     castStartedAt = performance.now()
                     model.updateSpellStance()
                     mysticSpell = new MagicArrowEffect(scene, (feet, crystal) => {

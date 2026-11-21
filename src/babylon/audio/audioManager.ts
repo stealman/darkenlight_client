@@ -7,6 +7,8 @@ const CAMPFIRE_VOLUME = 1.75
 const MENU_CAMPFIRE_VOLUME = CAMPFIRE_VOLUME * 0.8
 const MENU_MUSIC_VOLUME_FACTOR = 1.2
 const menuTrackVolumeFactors = new WeakMap<Sound, number>()
+const spellSounds = new WeakMap<Scene, {casting: Sound, impact: Sound}>()
+const SPELL_CASTING_REFERENCE_MS = 1000
 
 export const AudioManager = {
     globalVolume: 0.5,
@@ -65,6 +67,7 @@ export const AudioManager = {
     doorCloseSound: null as Sound | null,
 
     initialize(scene: Scene) {
+        this.preloadSpellSounds(scene)
         this.monsterIdleSounds.clear()
         this.loadMonsterIdleSound(1201, 'idle_sheep.ogg', scene, {volume: 1.2, playbackRate: 1})
         this.globalVolume = Settings.volume;
@@ -470,6 +473,42 @@ export const AudioManager = {
         if (this.campingSound!['loaded']) {
             this.campingSound!.play();
         }
+    },
+
+    preloadSpellSounds(scene: Scene) {
+        if (!spellSounds.has(scene)) {
+            spellSounds.set(scene, {
+                casting: new Sound('spellCasting', '/sounds/spells/spell_casting_1.ogg', scene),
+                impact: new Sound('spellImpact', '/sounds/spells/spell_impact_2.ogg', scene, undefined, {volume: 0.72}),
+            })
+        }
+    },
+
+    playSpellCastingSound(scene: Scene, castDurationMs: number, position?: Vector3): (() => void) | undefined {
+        return this.playSpellSound(spellSounds.get(scene)?.casting, position, SPELL_CASTING_REFERENCE_MS / castDurationMs)
+    },
+
+    playSpellImpactSound(scene: Scene, position?: Vector3) {
+        this.playSpellSound(spellSounds.get(scene)?.impact, position)
+    },
+
+    playSpellSound(source: Sound | undefined, position?: Vector3, playbackRate = 1): (() => void) | undefined {
+        if (!source?.isReady()) return
+        const volume = source.getVolume() * (position ? AudioUtils.getVolumeRatioByDistance(position) : 1)
+        if (volume <= 0) return
+        const sound = source.clone()
+        if (!sound) return
+        sound.setVolume(volume)
+        sound.setPlaybackRate(playbackRate)
+        let disposed = false
+        const dispose = () => {
+            if (disposed) return
+            disposed = true
+            sound.dispose()
+        }
+        sound.onEndedObservable.addOnce(dispose)
+        sound.play()
+        return dispose
     },
 
     playSoundByName(soundName: string) {

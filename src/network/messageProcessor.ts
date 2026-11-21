@@ -605,6 +605,7 @@ export const MessageProcessor = {
         const {res} = event
         this.logAttack({...data, res}, false, t('skills.magic.magicArrow'))
         if (!target) return
+        if (res.h === 'h') AudioManager.playSpellImpactSound(Renderer.scene, target === player ? undefined : target.pos)
         target.hpPercent = res.tgt.hpp
         if (target === player) {
             MyPlayer.setMyCharHp(res.tgt.hp)
