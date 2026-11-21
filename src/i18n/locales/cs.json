@@ -314,7 +314,6 @@
   },
   "messages": {
     "magicArrowRequiresTarget": "Vyber cíl pro Magický šíp.",
-    "magicArrowBlocked": "Cíl je mimo dosah nebo za překážkou.",
     "droppedItemProtected": "Tento p\u0159edm\u011bt lze sebrat a\u017e za {seconds} s.",
       "noBandages": "Nemáš žádné obvazy",
       "noHealthPotions": "Nemáš žádné lektvary zdraví",

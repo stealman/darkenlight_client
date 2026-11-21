@@ -394,10 +394,13 @@ export const ActionButtonsManager = {
                     this.clickOnPowerStrikeButton()
                     break
                 case CharacterActions.MAGIC_ARROW.name: {
-                    if ((MyPlayer.myChar?.skillSet?.magicArrow?.rank ?? 0) < 1 || MyPlayer.myChar.getMoveAngle() != null) break
-                    if (Date.now() < MyPlayer.magicArrowCooldownEnd) break
+                    if ((MyPlayer.myChar?.skillSet?.magicArrow?.rank ?? 0) < 1) break
                     if (!TargetingManager.selectedTarget) TargetingManager.cycleThroughClosestTargets()
                     const target = TargetingManager.selectedTarget
+                    if (target && MyPlayer.magicArrowTarget === target) {
+                        MyPlayer.stopActions()
+                        break
+                    }
                     Connector.sendMessage(new CastMagicArrow(target?.id ?? 0, target?.getObjectType() ?? ''))
                     break
                 }

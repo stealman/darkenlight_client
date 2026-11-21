@@ -733,8 +733,10 @@ export const MessageProcessor = {
         CharacterManager.startHealing(data)
     },
 
-    processCharacterActionChange(data) {
-        MyPlayer.setAction(data.type)
+    processCharacterActionChange(data: {type: string | null, tgt?: number, tp?: string}) {
+        const target = data.type === CharacterActions.MAGIC_ARROW.name && data.tp && data.tgt != null
+            ? Utils.getAttackTargetByTypeAndId(data.tp, data.tgt) : null
+        MyPlayer.setAction(data.type, target)
     },
 
     processPowerStrikeQueueState(data: PowerStrikeQueueStateMessage) {

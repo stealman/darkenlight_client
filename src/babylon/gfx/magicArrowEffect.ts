@@ -6,6 +6,7 @@ import { getMagicArrowFlightDuration, MagicArrow } from '@game/game/spells/magic
 
 const TAU = 2 * Math.PI
 const IMPACT_MS = 480
+const CHARGE_FADE_MS = 260
 const DEFAULT_IMPACT_DISTANCE_FROM_CENTER = 0.3
 const SKY = new Color3(0.24, 0.82, 1)
 const FOAM = new Color3(0.69, 0.97, 1)
@@ -30,6 +31,12 @@ const resources = new WeakMap<Scene, {
     ribbons: Set<Mesh>, glow: MagicArrowGlowLayer | null,
 }>()
 const glowEnabledScenes = new WeakSet<Scene>()
+const transparentPreviewScenes = new WeakSet<Scene>()
+
+function spellAlphaMode(scene: Scene) {
+    // Additive blending leaves destination alpha unchanged on transparent canvases.
+    return transparentPreviewScenes.has(scene) ? Constants.ALPHA_LAYER_ACCUMULATE : Constants.ALPHA_ADD
+}
 
 class MagicArrowGlowLayer extends GlowLayer {
     private declare spellMeshes: Mesh[]
@@ -38,6 +45,7 @@ class MagicArrowGlowLayer extends GlowLayer {
         super._createMainTexture()
         // Babylon creates the texture during construction and recreates it on resize.
         this._mainTexture.renderList = this.spellMeshes ??= []
+        this._mainTexture.forceLayerMaskCheck = true
     }
 
     track(mesh: Mesh) {
@@ -53,7 +61,18 @@ class MagicArrowGlowLayer extends GlowLayer {
     }
 }
 
-export function setMagicArrowGlowEnabled(scene: Scene, enabled: boolean) {
+export function setMagicArrowGlowEnabled(scene: Scene, enabled: boolean, transparentPreview = false) {
+    if (transparentPreview !== transparentPreviewScenes.has(scene)) {
+        if (transparentPreview) transparentPreviewScenes.add(scene)
+        else transparentPreviewScenes.delete(scene)
+        const spells = resources.get(scene)
+        if (spells) {
+            spells.wind.alphaMode = spellAlphaMode(scene)
+            spells.flash.mesh.material!.alphaMode = spellAlphaMode(scene)
+            spells.glow?.dispose()
+            spells.glow = null
+        }
+    }
     if (enabled) glowEnabledScenes.add(scene)
     else glowEnabledScenes.delete(scene)
     updateMagicArrowGlow(scene)
@@ -64,7 +83,12 @@ function updateMagicArrowGlow(scene: Scene) {
     if (!spells || scene.isDisposed) return
     const enabled = glowEnabledScenes.has(scene) && spells.ribbons.size > 0
     if (enabled && !spells.glow) {
-        const glow = new MagicArrowGlowLayer('magicArrowGlow', scene, {mainTextureRatio: 0.5, blurKernelSize: 32})
+        const transparentPreview = transparentPreviewScenes.has(scene)
+        const glow = new MagicArrowGlowLayer('magicArrowGlow', scene, {
+            mainTextureRatio: 0.5, blurKernelSize: 32,
+            alphaBlendingMode: transparentPreview ? Constants.ALPHA_PREMULTIPLIED_PORTERDUFF : Constants.ALPHA_ADD,
+        })
+        if (transparentPreview) glow.neutralColor.a = 0
         glow.intensity = 0.75
         glow.track(spells.point.mesh)
         glow.track(spells.flash.mesh)
@@ -104,7 +128,7 @@ function getResources(scene: Scene) {
                     vColor.a * tips * (feather * .74 + filament * .26));
             }`,
     }, {attributes: ['position', 'uv', 'color'], uniforms: ['worldViewProjection'], needAlphaBlending: true})
-    wind.alphaMode = Constants.ALPHA_ADD
+    wind.alphaMode = spellAlphaMode(scene)
     wind.backFaceCulling = false
     wind.disableDepthWrite = true
 
@@ -140,7 +164,7 @@ function getResources(scene: Scene) {
     const flash = new StandardMaterial('magicArrowFlash', scene)
     flash.disableLighting = true
     flash.disableDepthWrite = true
-    flash.alphaMode = Constants.ALPHA_ADD
+    flash.alphaMode = spellAlphaMode(scene)
     flash.diffuseTexture = spark
     flash.useAlphaFromDiffuseTexture = true
     flash.emissiveColor = FOAM
@@ -241,13 +265,6 @@ class WindRibbons {
         this.mesh.setEnabled(false)
     }
 
-    setVisibleRibbonCount(count: number) {
-        const subMesh = this.mesh.subMeshes[0]
-        subMesh.indexCount = count * this.segments * 6
-        // A partial range still needs bounds for Babylon's transparent sorting.
-        subMesh.setBoundingInfo(this.mesh.getBoundingInfo())
-    }
-
     update(ribbon: number, opacity: number, sample: (u: number, center: Vector3, across: Vector3) => void) {
         this.visible ||= opacity > 0.004
         const center = this.center
@@ -285,7 +302,7 @@ function createSparks(scene: Scene, texture: Texture, emitter: Vector3, capacity
     const sparks = new ParticleSystem('magicArrowSparks', capacity, scene)
     sparks.particleTexture = texture
     sparks.emitter = emitter
-    sparks.blendMode = ParticleSystem.BLENDMODE_ADD
+    sparks.blendMode = transparentPreviewScenes.has(scene) ? ParticleSystem.BLENDMODE_STANDARD : ParticleSystem.BLENDMODE_ADD
     sparks.minEmitBox.setAll(-0.025)
     sparks.maxEmitBox.setAll(0.025)
     sparks.direction1.set(-1, -0.55, -1)
@@ -337,7 +354,8 @@ function createArrowhead(scene: Scene, material: StandardMaterial) {
 
 /** The same charge, flight and impact are rendered in the game and in the spell preview. */
 export class MagicArrowEffect {
-    private readonly ribbons: WindRibbons
+    private chargeRibbons: WindRibbons | null
+    private projectileRibbons: WindRibbons | null = null
     private readonly sparks: ParticleSystem
     private readonly windMotes: ParticleSystem | null
     private readonly profile: typeof detailProfiles[MagicArrowDetail]
@@ -357,6 +375,7 @@ export class MagicArrowEffect {
     private readonly flightUp = Vector3.Zero()
     private readonly bornAt = performance.now()
     private releasedAt: number | null = null
+    private chargeEndedAt: number | null = null
     private flightMs: number = 0
     private impactDistance = DEFAULT_IMPACT_DISTANCE_FROM_CENTER
     private trackTarget?: (position: Vector3) => void
@@ -368,24 +387,45 @@ export class MagicArrowEffect {
     get phase() { return this.impacted ? 'impact' : this.releasedAt === null ? 'charge' : 'flight' }
 
     constructor(private readonly scene: Scene, private readonly readOrigin: ReadOrigin,
-                detail: MagicArrowDetail, private readonly previewSpeed = 1) {
+                detail: MagicArrowDetail, private readonly previewSpeed = 1, private readonly layerMask?: number) {
         const spells = getResources(scene)
-        const {wind, spark, point, flash} = spells
+        const {spark, point, flash} = spells
         this.profile = detailProfiles[detail]
-        this.ribbons = new WindRibbons(scene, wind, CHARGE_RIBBON_COUNT, this.profile.segments)
+        this.chargeRibbons = this.createRibbons(CHARGE_RIBBON_COUNT)
         this.readOrigin(this.feet, this.crystal)
         this.sparks = createSparks(scene, spark, this.crystal, this.profile.sparkCapacity, previewSpeed)
         this.windMotes = this.profile.windMotes
             ? createWindMotes(scene, spark, this.feet, this.profile.windMotes, previewSpeed)
             : null
+        if (layerMask !== undefined) {
+            this.sparks.layerMask = layerMask
+            // Draw larger particles above the character in the small preview card.
+            this.sparks.renderingGroupId = 1
+            this.sparks.minSize *= 1.5
+            this.sparks.maxSize *= 1.5
+            if (this.windMotes) {
+                this.windMotes.layerMask = layerMask
+                this.windMotes.renderingGroupId = 1
+                this.windMotes.minSize *= 1.5
+                this.windMotes.maxSize *= 1.5
+                this.windMotes.emitRate *= 1.5
+            }
+            point.mesh.layerMask |= layerMask
+            flash.mesh.layerMask |= layerMask
+        }
         this.point.scale.set(1.13, 1.13, 1.18)
         point.instances.add(this.point)
         flash.instances.add(this.flash)
-        spells.ribbons.add(this.ribbons.mesh)
-        spells.glow?.track(this.ribbons.mesh)
         updateMagicArrowGlow(scene)
         // Publish each spell's transforms before the scene batches upload them.
         this.observer = scene.onBeforeRenderObservable.add(() => this.update(performance.now()), -1, true)
+    }
+
+    finishCharge() {
+        this.chargeEndedAt = performance.now()
+        this.flash.color.a = 0
+        this.sparks.stop()
+        this.windMotes?.stop()
     }
 
     release(target: Vector3, flightMs?: number, trackTarget?: (position: Vector3) => void,
@@ -406,7 +446,8 @@ export class MagicArrowEffect {
         this.impactDistance = impactDistance
         this.updateContactPoint()
         this.releasedAt = performance.now()
-        this.ribbons.setVisibleRibbonCount(this.profile.ribbons)
+        this.chargeEndedAt = this.releasedAt
+        this.projectileRibbons = this.createRibbons(this.profile.ribbons)
         this.sparks.emitRate = this.profile.flightSparks
         this.sparks.minEmitPower = 0.65
         this.sparks.maxEmitPower = 1.65
@@ -417,15 +458,31 @@ export class MagicArrowEffect {
         if (this.disposed) return
         this.disposed = true
         this.scene.onBeforeRenderObservable.remove(this.observer)
-        const {point, flash, ribbons, glow} = getResources(this.scene)
-        ribbons.delete(this.ribbons.mesh)
-        if (!this.scene.isDisposed) glow?.untrack(this.ribbons.mesh)
+        const {point, flash} = getResources(this.scene)
+        this.disposeRibbons(this.chargeRibbons)
+        this.disposeRibbons(this.projectileRibbons)
         updateMagicArrowGlow(this.scene)
-        this.ribbons.mesh.dispose()
         point.instances.delete(this.point)
         flash.instances.delete(this.flash)
         this.sparks.dispose(false)
         this.windMotes?.dispose(false)
+    }
+
+    private createRibbons(count: number) {
+        const {wind, ribbons, glow} = getResources(this.scene)
+        const strips = new WindRibbons(this.scene, wind, count, this.profile.segments)
+        if (this.layerMask !== undefined) strips.mesh.layerMask = this.layerMask
+        ribbons.add(strips.mesh)
+        glow?.track(strips.mesh)
+        return strips
+    }
+
+    private disposeRibbons(strips: WindRibbons | null) {
+        if (!strips) return
+        const {ribbons, glow} = getResources(this.scene)
+        ribbons.delete(strips.mesh)
+        if (!this.scene.isDisposed) glow?.untrack(strips.mesh)
+        strips.mesh.dispose()
     }
 
     private drawFlash(position: Vector3, scale: number, opacity: number) {
@@ -435,6 +492,22 @@ export class MagicArrowEffect {
     }
 
     private update(time: number) {
+        if (this.chargeEndedAt !== null) {
+            const fadeElapsed = (time - this.chargeEndedAt) * this.previewSpeed
+            if (this.chargeRibbons) {
+                if (fadeElapsed < CHARGE_FADE_MS) {
+                    this.updateChargeRibbons((this.chargeEndedAt - this.bornAt) * this.previewSpeed, fadeElapsed)
+                } else {
+                    this.disposeRibbons(this.chargeRibbons)
+                    this.chargeRibbons = null
+                    updateMagicArrowGlow(this.scene)
+                }
+            }
+            if (this.releasedAt === null) {
+                if (fadeElapsed >= IMPACT_MS) this.dispose()
+                return
+            }
+        }
         if (this.releasedAt === null) {
             const elapsed = (time - this.bornAt) * this.previewSpeed
             if (elapsed > MagicArrow.castDuration + 500) {
@@ -453,19 +526,28 @@ export class MagicArrowEffect {
     private updateCharge(elapsed: number) {
         this.readOrigin(this.feet, this.crystal)
         const progress = clamp01(elapsed / MagicArrow.castDuration)
-        const strength = clamp01(elapsed / 180) * (0.55 + 0.45 * progress)
-        this.sparks.emitRate = this.profile.chargeSparks * (0.26 + 0.74 * progress * progress)
+        this.sparks.emitRate = this.profile.chargeSparks * (0.26 + 0.74 * progress * progress) * (this.layerMask === undefined ? 1 : 1.5)
         this.drawFlash(this.crystal, 0.22 + 0.41 * progress, progress ** 1.6 * (0.59 + 0.22 * Math.sin(elapsed * 0.037)))
+        this.updateChargeRibbons(elapsed)
+    }
+
+    private updateChargeRibbons(elapsed: number, fadeElapsed = 0) {
+        const ribbons = this.chargeRibbons!
+        const progress = clamp01(elapsed / MagicArrow.castDuration)
+        const fade = fadeElapsed / CHARGE_FADE_MS
+        const strength = clamp01(elapsed / 180) * (0.55 + 0.45 * progress) * (1 - fade) ** 2
+        const motionTime = elapsed + fadeElapsed * (1 - 0.5 * fade)
+        const chargeOrigin = this.releasedAt === null ? this.crystal : this.launch
         for (let index = 0; index < CHARGE_RIBBON_COUNT; index++) {
             const handSpiral = index === 2
             const counterRotating = index >= 3
             const band = counterRotating ? index - 3 : index
             const direction = counterRotating ? -1 : 1
             const spin = handSpiral ? -0.016 : direction * (0.0061 + progress * 0.0033)
-            const phase = elapsed * spin + band * 2.35 + (counterRotating ? Math.PI : 0)
-            const base = handSpiral ? this.crystal : this.feet
+            const phase = motionTime * spin + band * 2.35 + (counterRotating ? Math.PI : 0)
+            const base = handSpiral ? chargeOrigin : this.feet
             const opacity = counterRotating ? 0.62 : index === 0 ? 1 : handSpiral ? 0.56 : 0.72
-            this.ribbons.update(index, strength * opacity, (u, center, across) => {
+            ribbons.update(index, strength * opacity, (u, center, across) => {
                 const theta = phase + u * (handSpiral ? 4.9 : direction * (band === 0 ? 6.7 : 5.4))
                 const cos = Math.cos(theta)
                 const sin = Math.sin(theta)
@@ -479,10 +561,11 @@ export class MagicArrowEffect {
                 across.set(cos * width * 0.44, width, sin * width * 0.44)
             })
         }
-        this.ribbons.upload()
+        ribbons.upload()
     }
 
     private updateFlight(elapsed: number) {
+        const ribbons = this.projectileRibbons!
         if (this.trackTarget) this.updateContactPoint()
         const progress = clamp01(elapsed / this.flightMs)
         const distance = Vector3.Distance(this.launch, this.end)
@@ -503,7 +586,7 @@ export class MagicArrowEffect {
         this.point.color.a = 1
         this.drawFlash(this.tipCursor, 0.37, 0.58)
         for (let index = 0; index < this.profile.ribbons; index++) {
-            this.ribbons.update(index, index === 0 ? 1 : 0.68, (u, center, across) => {
+            ribbons.update(index, index === 0 ? 1 : 0.68, (u, center, across) => {
                 const theta = u * 6.4 + progress * TAU + index * TAU / 3
                 const radius = index === 0 ? 0 : (1 - u) * 0.22
                 this.sampleFlightPath(progress - (1 - u) * trailProgress, sway, center)
@@ -517,7 +600,7 @@ export class MagicArrowEffect {
                 edgeDirection.scaleToRef(width, across)
             })
         }
-        this.ribbons.upload()
+        ribbons.upload()
     }
 
     private sampleFlightPath(progress: number, sway: number, position: Vector3) {
@@ -535,6 +618,7 @@ export class MagicArrowEffect {
     }
 
     private updateImpact(elapsed: number) {
+        const ribbons = this.projectileRibbons!
         if (!this.impacted) {
             this.impacted = true
             this.updateContactPoint()
@@ -557,7 +641,7 @@ export class MagicArrowEffect {
         const radius = 0.12 + 0.98 * (1 - (1 - progress) ** 3)
         this.drawFlash(this.end, 0.32 + 0.52 * progress, 0.6 * (1 - progress) ** 6)
         for (let index = 0; index < this.profile.ribbons; index++) {
-            this.ribbons.update(index, (1 - progress) ** 1.7 * (1 - index * 0.24), (u, center, across) => {
+            ribbons.update(index, (1 - progress) ** 1.7 * (1 - index * 0.24), (u, center, across) => {
                 const theta = u * (index === 0 ? TAU + 0.45 : 5.1) + index * 2.25 + progress * 0.42
                 const localRadius = radius * (1 - index * 0.23)
                 const slant = index % 2 === 0 ? 0.88 : -0.75
@@ -574,6 +658,6 @@ export class MagicArrowEffect {
                 across.scaleInPlace((0.19 - index * 0.053) * (1 - progress))
             })
         }
-        this.ribbons.upload()
+        ribbons.upload()
     }
 }

@@ -177,9 +177,11 @@ export const TargetSelector = {
 
     onFrame(time: number, opacity: number) {
         if (!this.selectedMesh || !this.attackMesh) return
+        const casting = MyPlayer.activeAction === CharacterActions.MAGIC_ARROW
+        const attackTarget = casting ? MyPlayer.magicArrowTarget : MyPlayer.myChar?.autoAttackTarget
         if (this.target) {
-            const attacking = MyPlayer.activeAction === CharacterActions.AUTO_ATTACK
-                && MyPlayer.myChar.autoAttackTarget === this.target
+            const attacking = (casting || MyPlayer.activeAction === CharacterActions.AUTO_ATTACK)
+                && attackTarget === this.target
             const age = Math.max(0, time - this.markerPopTime)
             const intro = Math.pow(Math.max(0, 1 - age / INTRO_DURATION), 3)
             const scale = age < INTRO_DURATION
@@ -191,7 +193,6 @@ export const TargetSelector = {
         } else {
             this.selectedMesh.setEnabled(false)
         }
-        const attackTarget = MyPlayer.myChar?.autoAttackTarget
         if (attackTarget && attackTarget !== this.target) {
             const scale = 1 + .075 * (1 - Math.cos(time / 160))
             this.updateMarker(this.attackMesh, attackTarget, 2, time, scale, opacity)

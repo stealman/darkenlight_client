@@ -65,6 +65,7 @@ export const MyPlayer = {
     heartBeatSoundTime: 0 as number,
 
     activeAction: null as CharacterAction | null,
+    magicArrowTarget: null as Attackable | null,
 
     lastPotionUseTime: 0 as number,
     nextPotionUseTime: 0 as number,
@@ -138,6 +139,7 @@ export const MyPlayer = {
         this.myChar.autoAttackTarget = null
         this.myModel = null
         this.activeAction = null
+        this.magicArrowTarget = null
         this.affectGroups = []
         this.nearFireplace = null
         this.lastPotionUseTime = 0
@@ -271,7 +273,10 @@ export const MyPlayer = {
         this.myChar?.stopMovementLocally()
     },
 
-    setAction(type: string | null) {
+    setAction(type: string | null, target: Attackable | null = null) {
+        const isMagicArrow = type === CharacterActions.MAGIC_ARROW.name
+        this.magicArrowTarget = isMagicArrow ? target : null
+        if (isMagicArrow) this.myChar.autoAttackTarget = null
         if (type !== CharacterActions.AUTO_ATTACK.name) {
             this.powerStrikeQueued = false
             this.preciseShotQueued = false
@@ -517,6 +522,7 @@ export const MyPlayer = {
             return
         }
         MyPlayer.myChar.autoAttackTarget = null
+        if (this.activeAction === CharacterActions.MAGIC_ARROW) this.setAction(null)
         this.clearPowerStrikeQueued()
         this.clearPreciseShotQueued()
         MyPlayer.myChar.cancelCombatApproach()

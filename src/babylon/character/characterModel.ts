@@ -259,7 +259,7 @@ export class CharacterModel implements EquipBearer {
                         'LeftSlash', 'RightSlash', 'HighJab', 'Slash2', 'BowAim',
                         'GreatAxeAttack', 'OreMining', 'Death', 'TwoHandedSwordAttack',
                         'TwoHandedSwordAttack2', 'CombatIdleTwoHanded', 'Pickup', 'SittingIdle',
-                        ...(this.bodyGender === 'F' ? ['SPELL_CASTING_WAND_1', 'SPELL_RELEASE_WAND_1'] : []),
+                        'SPELL_CASTING_WAND_1', 'SPELL_RELEASE_WAND_1',
                     ].map(name => ({ name, ...getHumanAnimationRange(name) }))
 
                     let newAnimationGroups = CharacterModel.preparedAnimations.get(result)
@@ -727,11 +727,7 @@ export class CharacterModel implements EquipBearer {
             this.animTransition.forceEnd()
             this.animTransition = null
         }
-        const recoveryDuration = MagicArrow.castDuration / 18
-        const recoverySpeed = 1000 * (swing.to - WAND_RELEASE_FRAME) * playbackSpeed
-            / (swing.targetedAnimations[0].animation.framePerSecond * recoveryDuration)
-        if (swing.isStarted) swing.speedRatio = recoverySpeed
-        else swing.start(false, recoverySpeed, WAND_RELEASE_FRAME, swing.to)
+        if (!swing.isStarted) swing.start(false, swing.speedRatio, WAND_RELEASE_FRAME, swing.to)
         swing.goToFrame(WAND_RELEASE_FRAME)
         swing.setWeightForAllAnimatables(1)
         if (this.weaponEquipItem?.type.id === EquipSlotModelsCb.CRYSTALWAND.modelId) {

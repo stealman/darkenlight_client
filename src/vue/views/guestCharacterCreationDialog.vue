@@ -92,7 +92,10 @@ function refreshPreviews() {
     previewsLoading.value = true
     previewJob = previewJob.then(async () => {
         if (controller.signal.aborted) return
-        try { await startStarterPreviews([previewCanvases.FIGHTER, previewCanvases.MYSTIC], controller.signal, () => activePreview.value, selectedGender) }
+        try {
+            await startStarterPreviews([previewCanvases.FIGHTER, previewCanvases.MYSTIC], controller.signal,
+                () => activePreview.value, () => hoveredClass.value === 'MYSTIC', selectedGender)
+        }
         catch (error) { console.error('Could not render starter previews', error) }
         finally { if (!controller.signal.aborted) previewsLoading.value = false }
     })

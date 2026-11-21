@@ -4,15 +4,18 @@ import Character from './character'
 import {HUMAN_ANIMATION_SPEED} from './humanModelRig'
 import {Renderer} from '@/babylon/scene/renderer'
 import {EquipManager} from '@/babylon/item/equipManager'
+import {MagicArrowEffect, setMagicArrowGlowEnabled} from '@/babylon/gfx/magicArrowEffect'
 import {Builder} from '@/babylon/builder'
 import {Materials, TerrainEnum1} from '@/babylon/materials'
 import {FoliageManager} from '@/babylon/world/foliageManager'
 import {updateWorldInstanceBuffers} from '@/babylon/world/worldInstanceBuffers'
 import {getStarterEquipment} from '@game/character/starterEquipment'
 import {getStarterHairAppearance} from '@game/character/characterAppearance'
+import {MagicArrow} from '@game/game/spells/magicArrow'
 
 /** Live Babylon views share the already loaded runtime models and equipment. */
-export async function startStarterPreviews(canvases: HTMLCanvasElement[], signal: AbortSignal, activeClass: () => string | null, gender: 'M' | 'F' = 'M'): Promise<void> {
+export async function startStarterPreviews(canvases: HTMLCanvasElement[], signal: AbortSignal, activeClass: () => string | null,
+                                          mysticHovered: () => boolean, gender: 'M' | 'F' = 'M'): Promise<void> {
     if (signal.aborted) return
     const classKeys = ['FIGHTER', 'MYSTIC'] as const
     const scene = Renderer.scene
@@ -26,6 +29,7 @@ export async function startStarterPreviews(canvases: HTMLCanvasElement[], signal
     scene.environmentIntensity = 0.08
     const originalSize = {width: engine.getRenderWidth(), height: engine.getRenderHeight()}
     const previewMask = 0x10000000
+    const spellMask = 0x20000000
     const layers = new Map<AbstractMesh, number>()
     const shadowReceivers = new Map<AbstractMesh, boolean>()
     const characters: Character[] = []
@@ -96,16 +100,50 @@ export async function startStarterPreviews(canvases: HTMLCanvasElement[], signal
         shadow.addShadowCaster(foliage, false)
     })
     let previousActive: string | null = null
+    let wasMysticHovered = false
+    let mysticSpell: MagicArrowEffect | null = null
+    let castStartedAt: number | null = null
     const render = () => {
         if (signal.aborted) return
         const active = activeClass()
         const enteredFighter = active === 'FIGHTER' && previousActive !== active
+        const hoveringMystic = mysticHovered()
+        const enteredMystic = hoveringMystic && !wasMysticHovered
+        wasMysticHovered = hoveringMystic
         previousActive = active
         lights.forEach((light, index) => { light.intensity = active === classKeys[index] ? 4.2 : 3.2 })
         for (const [index, character] of characters.entries()) {
             const model = character.model!
             const highlighted = active === classKeys[index]
             const combatIdle = character.getWeapon()?.handsRequired === 2 ? model.combatIdleTwoHandedAnim : model.combatIdleAnim
+            if (classKeys[index] === 'MYSTIC') {
+                if (enteredMystic && (!mysticSpell || mysticSpell.isDisposed)) {
+                    castStartedAt = performance.now()
+                    model.updateSpellStance()
+                    mysticSpell = new MagicArrowEffect(scene, (feet, crystal) => {
+                        feet.copyFrom(character.pos)
+                        model.getSpellOriginToRef(feet, crystal)
+                    }, 'HIGH', 1, spellMask)
+                }
+                if (mysticSpell && !mysticSpell.isDisposed) {
+                    if (castStartedAt !== null) {
+                        const elapsed = performance.now() - castStartedAt
+                        if (elapsed >= MagicArrow.castDuration) {
+                            model.releaseSpellStance()
+                            mysticSpell.finishCharge()
+                            castStartedAt = null
+                        } else {
+                            model.updateSpellStance(elapsed)
+                        }
+                        continue
+                    }
+                    if (model.actualAnim !== combatIdle && model.actualAnim !== model.idleAnim) {
+                        if (!model.actualAnim?.isPlaying) model.finishSpellStance()
+                        continue
+                    }
+                    if (model.animTransition) continue
+                }
+            }
             if (index === 0 && enteredFighter) {
                 const attacks = [model.slashAnim, model.slashAnim2, model.rightSlashAnim, model.jabAnim, model.highJabAnim]
                     .filter(animation => animation != null)
@@ -138,6 +176,8 @@ export async function startStarterPreviews(canvases: HTMLCanvasElement[], signal
     }
     const cleanup = () => {
         engine.stopRenderLoop(render)
+        mysticSpell?.dispose()
+        Renderer.updateSpellGlow()
         for (const canvas of canvases) engine.unRegisterView(canvas)
         for (const character of characters) character.model?.removeFromScene()
         EquipManager.onFrame()
@@ -182,12 +222,14 @@ export async function startStarterPreviews(canvases: HTMLCanvasElement[], signal
             model.model!.rotation.y = Math.atan2(position.z - camera.position.z, camera.position.x - position.x)
             camera.fov = 0.6
             camera.layerMask = previewMask
+            if (classKey === 'MYSTIC') camera.layerMask |= spellMask
             cameras.push(camera)
         }
         if (signal.aborted) return
         scene.clearColor = new Color4(0, 0, 0, 0)
         scene.autoClear = true
         scene.autoClearDepthAndStencil = true
+        setMagicArrowGlowEnabled(scene, true, true)
         canvases.forEach((canvas, index) => engine.registerView(canvas, cameras[index], true))
         engine.runRenderLoop(render)
     } catch (error) {

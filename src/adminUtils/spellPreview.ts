@@ -231,7 +231,7 @@ export async function mountSpellPreview() {
     const actor = createPreviewCharacter(getEquipmentPreviewGender())
     actor.pos.set(-2, 0, 0)
     actor.getLookAngle = () => -Math.PI / 4
-    actor.isRecentlyInCombat = () => actor.gender === 'F'
+    actor.isRecentlyInCombat = () => true
     const model = await CharacterModel.create(actor, true)
     model.resolveModelRotation(1)
     model.assignWeapon(WeaponModelsCb.CRYSTALWAND.id, 0)
@@ -240,7 +240,7 @@ export async function mountSpellPreview() {
     model.assignRightPauldron(ArmorModelsCb.LEATHER_PAULDRONS.id, 0)
     model.assignLeftLeg(ArmorModelsCb.LEATHER_GREAVES.id, 0)
     model.assignRightLeg(ArmorModelsCb.LEATHER_GREAVES.id, 0)
-    if (actor.gender === 'F') model.stopAnimation()
+    model.stopAnimation()
 
     const target = new TransformNode('spellTarget', scene)
     skeleton.parent = target
@@ -286,7 +286,7 @@ export async function mountSpellPreview() {
             } else {
                 model.updateSpellStance(MagicArrow.castDuration - (releaseAt - now) * playbackSpeed, playbackSpeed)
             }
-        } else if (actor.gender === 'F') {
+        } else {
             model.stopAnimation()
         }
         if (recoilStartedAt) {
@@ -300,10 +300,6 @@ export async function mountSpellPreview() {
             lastPhase = ''
             status.textContent = 'Připraveno'
             distance.disabled = speed.disabled = detail.disabled = false
-            if (actor.gender === 'M') {
-                model.transitionToAnimation(model.idleAnim, 0.18, true)
-                model.actualAnim = model.idleAnim
-            }
         } else if (lastPhase !== effect.phase) {
             lastPhase = effect.phase
             status.textContent = STAGE_LABELS[effect.phase]
