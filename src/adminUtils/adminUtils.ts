@@ -23,7 +23,7 @@ import { modelAssetUrl } from '@/babylon/modelAssetUrl'
 import { HUMAN_ANIMATION_SPEED, HUMAN_MODEL_FILE } from '@/babylon/character/humanModelRig'
 import type { CharacterModel } from '@/babylon/character/characterModel'
 import type { EquipModelModifier } from '@/babylon/item/equipManager'
-import { BOW_WEAPON_MATERIAL_NAMES } from '@/babylon/item/codebook/vertexColorPalettes/types'
+import { BOW_WEAPON_MATERIAL_NAMES, WAND_MATERIAL_ATLAS_TILES } from '@/babylon/item/codebook/vertexColorPalettes/types'
 import { LeatherArmorMaterials, LeatherArmorModelIds, isLeatherArmorModelId } from '@game/character/items/codebook/armorsCodebook'
 import './styles.css'
 import { bindPreviewEquipment, bindPreviewWeapon, getPreviewPairedModifiers } from './equipmentModifierConfig'
@@ -137,6 +137,7 @@ const MODEL_IDS = {
     largeBattleAxe: 165,
     huntingBow: 510,
     recurveBow: 520,
+    crystalWand: 540,
     battleBow: 530,
     armorPlate: 1000,
     leatherTorso: LeatherArmorModelIds.body,
@@ -213,9 +214,15 @@ const bowMaterialOptions = BOW_WEAPON_MATERIAL_NAMES.map((label, index) => ({
     atlasTile: index,
 }))
 
+const wandMaterialOptions = WAND_MATERIAL_ATLAS_TILES.map((tile, index) => ({
+    ...bowMaterialOptions[tile],
+    value: index + 1,
+}))
+
 function getMaterialOptionsForSlot(slot: PreviewSlot, modelId = slotSelections[slot]) {
     if (isLeatherArmorModelId(modelId)) return leatherMaterialOptions
     if (slot !== 'weapon') return materialOptions
+    if (modelId === MODEL_IDS.crystalWand) return wandMaterialOptions
     return modelId === MODEL_IDS.huntingBow || modelId === MODEL_IDS.recurveBow || modelId === MODEL_IDS.battleBow
         ? bowMaterialOptions
         : weaponMaterialOptions
@@ -277,6 +284,7 @@ const slotOptions: Record<PreviewSlot, Array<{ label: string, value: number | nu
         { label: 'Hunting spear', value: MODEL_IDS.huntingSpear },
         { label: 'Hunting bow', value: MODEL_IDS.huntingBow },
         { label: 'Recurve bow', value: MODEL_IDS.recurveBow },
+        { label: 'Crystal wand', value: MODEL_IDS.crystalWand },
         { label: 'Battle bow', value: MODEL_IDS.battleBow },
     ],
 }
@@ -319,7 +327,18 @@ const plateAtlasMaterialSettings = createDefaultAtlasMaterialSettings()
 const chainAtlasMaterialSettings = createDefaultAtlasMaterialSettings()
 const leatherAtlasMaterialSettings = createDefaultLeatherAtlasMaterialSettings()
 const weaponAtlasMaterialSettings = createDefaultAtlasMaterialSettings(weaponMaterialOptions)
-const bowAtlasMaterialSettings = createDefaultAtlasMaterialSettings(bowMaterialOptions)
+function createDefaultBowAtlasMaterialSettings() {
+    // RGB offsets sampled from the shipped bow atlas in tile order.
+    const offsets = [[27, -13, -38], [38, -26, -38], [38, 26, -26], [-38, 0, -39], [51, 51, 51], [-39, -76, -102]]
+    const settings = createDefaultAtlasMaterialSettings(bowMaterialOptions)
+    bowMaterialOptions.forEach(({value, atlasTile}) => {
+        const [red, green, blue] = offsets[atlasTile]
+        Object.assign(settings[value], {hueR: red / 2.55, hueG: green / 2.55, hueB: blue / 2.55})
+    })
+    return settings
+}
+
+const bowAtlasMaterialSettings = createDefaultBowAtlasMaterialSettings()
 const atlasMaterialSettingsByFamily: Record<MaterialFamily, Record<string, GeneratedArmorMaterialParameters>> = {
     plate: plateAtlasMaterialSettings,
     chain: chainAtlasMaterialSettings,
@@ -461,7 +480,7 @@ function loadAdminUtilsSettings(): AdminUtilsSettings {
         chainAtlasMaterials: createDefaultAtlasMaterialSettings(),
         leatherAtlasMaterials: createDefaultLeatherAtlasMaterialSettings(),
         weaponAtlasMaterials: createDefaultAtlasMaterialSettings(weaponMaterialOptions),
-        bowAtlasMaterials: createDefaultAtlasMaterialSettings(bowMaterialOptions),
+        bowAtlasMaterials: createDefaultBowAtlasMaterialSettings(),
         sections: { materialAtlas: true, leatherMaterialAtlas: true, weaponMaterialAtlas: true, bowMaterialAtlas: true, equipment: true },
         animation: 'idle',
     }
@@ -617,7 +636,7 @@ function createShell(root: HTMLElement) {
                     <div id="adminUtilsWeaponMaterialAtlas" class="admin-utils__atlas-materials"></div>
                 </details>
                 <details id="adminUtilsBowMaterialAtlasSection" class="admin-utils__section" open>
-                    <summary><h2>Materiály luků</h2></summary>
+                    <summary><h2>Materiály luků a hůlek</h2></summary>
                     <div id="adminUtilsBowMaterialAtlas" class="admin-utils__atlas-materials"></div>
                 </details>
                 <details id="adminUtilsEquipmentSection" class="admin-utils__section" open>
@@ -1344,6 +1363,17 @@ export async function mountAdminUtils() {
         }
         recurveBowMaterial.albedoTexture?.dispose()
         recurveBowMaterial.albedoTexture = generatedRecurveBowAtlas
+        const crystalWandLayers = await loadArmorAtlasLayers(
+            '/models/equip/weapons/crystalwand_primary.png',
+            '/models/equip/weapons/crystalwand_secondary.png',
+        )
+        const generatedCrystalWandAtlas = createGeneratedArmorAtlas(scene, 'adminUtilsGeneratedCrystalWandAtlas', crystalWandLayers, bowAtlasMaterialSettings, bowMaterialOptions)
+        const crystalWandMaterial = EquipManager.getItemType(MODEL_IDS.crystalWand)?.mesh?.material
+        if (!(crystalWandMaterial instanceof PBRMaterial)) {
+            throw new Error('Crystal wand material is unavailable for generated atlas preview')
+        }
+        crystalWandMaterial.albedoTexture?.dispose()
+        crystalWandMaterial.albedoTexture = generatedCrystalWandAtlas
         const bowLayers = await loadArmorAtlasLayers(
             '/models/equip/weapons/huntingbow_primary.png',
             '/models/equip/weapons/huntingbow_secondary.png',
@@ -1733,7 +1763,7 @@ export async function mountAdminUtils() {
             toggle.title = ''
             populateMaterialSelect(materialSelect, slot)
             materialSelect.disabled = modelId == null
-            const canExportAtlas = isLeatherArmorModelId(modelId) || modelId === MODEL_IDS.battleBow || modelId === MODEL_IDS.recurveBow || modelId === MODEL_IDS.huntingBow || modelId === MODEL_IDS.longsword || modelId === MODEL_IDS.broadsword || modelId === MODEL_IDS.greataxe || modelId === MODEL_IDS.halberd || modelId === MODEL_IDS.pickaxe || modelId === MODEL_IDS.handAxe || modelId === MODEL_IDS.battleAxe || modelId === MODEL_IDS.huntingSpear || modelId === MODEL_IDS.lightMace || modelId === MODEL_IDS.warhammer || modelId === MODEL_IDS.warmace || modelId === MODEL_IDS.greatsword || modelId === MODEL_IDS.largeBattleAxe || modelId === MODEL_IDS.armorPlate || modelId === MODEL_IDS.helm || modelId === MODEL_IDS.pauldronsPlate || modelId === MODEL_IDS.legsPlate || modelId === MODEL_IDS.shield || modelId === MODEL_IDS.chainMail || modelId === MODEL_IDS.chainCoif || modelId === MODEL_IDS.chainPauldrons || modelId === MODEL_IDS.chainGreaves
+            const canExportAtlas = isLeatherArmorModelId(modelId) || modelId === MODEL_IDS.battleBow || modelId === MODEL_IDS.recurveBow || modelId === MODEL_IDS.crystalWand || modelId === MODEL_IDS.huntingBow || modelId === MODEL_IDS.longsword || modelId === MODEL_IDS.broadsword || modelId === MODEL_IDS.greataxe || modelId === MODEL_IDS.halberd || modelId === MODEL_IDS.pickaxe || modelId === MODEL_IDS.handAxe || modelId === MODEL_IDS.battleAxe || modelId === MODEL_IDS.huntingSpear || modelId === MODEL_IDS.lightMace || modelId === MODEL_IDS.warhammer || modelId === MODEL_IDS.warmace || modelId === MODEL_IDS.greatsword || modelId === MODEL_IDS.largeBattleAxe || modelId === MODEL_IDS.armorPlate || modelId === MODEL_IDS.helm || modelId === MODEL_IDS.pauldronsPlate || modelId === MODEL_IDS.legsPlate || modelId === MODEL_IDS.shield || modelId === MODEL_IDS.chainMail || modelId === MODEL_IDS.chainCoif || modelId === MODEL_IDS.chainPauldrons || modelId === MODEL_IDS.chainGreaves
             exportLink.setAttribute('aria-disabled', String(!canExportAtlas))
             exportLink.tabIndex = canExportAtlas ? 0 : -1
             exportLink.title = canExportAtlas ? '' : 'Export atlasu není pro tento typ výbavy dostupný'
@@ -1832,6 +1862,7 @@ export async function mountAdminUtils() {
                 } else if (family === 'bow') {
                     renderGeneratedArmorAtlas(generatedBowAtlas, bowLayers, bowAtlasMaterialSettings, bowMaterialOptions)
                     renderGeneratedArmorAtlas(generatedRecurveBowAtlas, recurveBowLayers, bowAtlasMaterialSettings, bowMaterialOptions)
+                    renderGeneratedArmorAtlas(generatedCrystalWandAtlas, crystalWandLayers, bowAtlasMaterialSettings, bowMaterialOptions)
                     renderGeneratedArmorAtlas(generatedBattleBowAtlas, battleBowLayers, bowAtlasMaterialSettings, bowMaterialOptions)
                 } else if (family === 'leather') {
                     for (const {atlas, layers} of [maleLeather, femaleLeather, leatherPauldron, leatherLeg, leatherHelmet]) {
@@ -1872,6 +1903,8 @@ export async function mountAdminUtils() {
                     exportAtlasAsJpeg(generatedBowAtlas, 'huntingbow.jpg')
                 } else if (modelId === MODEL_IDS.recurveBow) {
                     exportAtlasAsJpeg(generatedRecurveBowAtlas, 'recurvebow.jpg')
+                } else if (modelId === MODEL_IDS.crystalWand) {
+                    exportAtlasAsJpeg(generatedCrystalWandAtlas, 'crystalwand.jpg')
                 } else if (modelId === MODEL_IDS.battleBow) {
                     exportAtlasAsJpeg(generatedBattleBowAtlas, 'battlebow.jpg')
                 } else if (modelId === MODEL_IDS.longsword) {

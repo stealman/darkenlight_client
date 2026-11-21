@@ -264,7 +264,7 @@ import {getResourceDescription} from '@/data/items/resourceDescriptions'
 const emit = defineEmits(['close'])
 
 const featureLabels: Record<string, string> = {vendor: 'vendor.vendor', repairer: 'vendor.repairer', crafting: 'vendor.crafting', banker: 'vendor.banker', healer: 'vendor.healer', trainer: 'vendor.trainer'}
-const categoryLabels: Record<string, string> = {weapons: 'vendor.weapons', bows: 'vendor.bows', metalArmor: 'vendor.metalArmor', leatherArmor: 'vendor.leatherArmor', jewels: 'vendor.jewels', oreSmelting: 'vendor.oreSmelting', woodProcessing: 'vendor.woodProcessing', leatherProcessing: 'vendor.leatherProcessing', resources: 'vendor.resources', potions: 'vendor.potions', food: 'vendor.food', ingredients: 'vendor.ingredients', trinkets: 'vendor.trinkets'}
+const categoryLabels: Record<string, string> = {weapons: 'vendor.weapons', bows: 'vendor.bows', stavesAndWands: 'vendor.stavesAndWands', metalArmor: 'vendor.metalArmor', leatherArmor: 'vendor.leatherArmor', jewels: 'vendor.jewels', oreSmelting: 'vendor.oreSmelting', woodProcessing: 'vendor.woodProcessing', leatherProcessing: 'vendor.leatherProcessing', resources: 'vendor.resources', potions: 'vendor.potions', food: 'vendor.food', ingredients: 'vendor.ingredients', trinkets: 'vendor.trinkets'}
 const itemTypeLocalizationSections: Record<string, string> = {W: 'weapons', A: 'armors', J: 'jewels', T: 'trinkets', R: 'resources'}
 const damageTypeLabels: Record<string, string> = {PHYSICAL_SLASH: 'vendor.damageSlash', PHYSICAL_PIERCE: 'vendor.damagePierce', PHYSICAL_BLUNT: 'vendor.damageBlunt'}
 const IGNORE_BACKDROP_CLICK_AFTER_OPEN_MS = 350
@@ -333,9 +333,9 @@ let nextPurchaseEffectId = 0
 const features = computed(() => npcData.value?.features ?? [])
 const selectedFeature = computed<NpcUseFeatureData | null>(() => features.value[selectedFeatureIndex.value] ?? null)
 const vendorCategories = computed(() => Object.entries(selectedFeature.value?.categories ?? {}).map(([key, items]) => ({key, items})).filter((category) => category.items.length > 0))
-const craftingCategoryOrder: Record<string, number> = {weapons: 0, bows: 1, metalArmor: 2, leatherArmor: 3, jewels: 4, oreSmelting: 5, woodProcessing: 6, leatherProcessing: 7}
+const craftingCategoryOrder: Record<string, number> = {weapons: 0, bows: 1, stavesAndWands: 2, metalArmor: 3, leatherArmor: 4, jewels: 5, oreSmelting: 6, woodProcessing: 7, leatherProcessing: 8}
 const craftingDescriptions: Record<string, string> = Object.fromEntries(
-    ['weapons', 'bows', 'metalArmor', 'leatherArmor', 'potions', 'oreSmelting', 'woodProcessing', 'leatherProcessing', 'resources'].map((key) => [key, `crafting.categoryInfo.${key}`]))
+    ['weapons', 'bows', 'stavesAndWands', 'metalArmor', 'leatherArmor', 'potions', 'oreSmelting', 'woodProcessing', 'leatherProcessing', 'resources'].map((key) => [key, `crafting.categoryInfo.${key}`]))
 const craftingCategories = computed(() => [...(selectedFeature.value?.craftingCategories ?? [])]
     .sort((first, second) => (craftingCategoryOrder[first] ?? Number.MAX_SAFE_INTEGER) - (craftingCategoryOrder[second] ?? Number.MAX_SAFE_INTEGER)))
 const selectedCategoryItems = computed(() => {

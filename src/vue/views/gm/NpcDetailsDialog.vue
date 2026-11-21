@@ -176,28 +176,30 @@
                         </div>
                     </div>
 
-                    <div v-if="feature.settings.itemCategories.includes('bows')" class="npc-vendor-materials">
-                        <strong>Bows</strong>
-                        <div class="npc-feature-checkboxes npc-feature-material-checkboxes">
-                            <label v-for="material in bowFeatureMaterials" :key="material.value" class="npc-feature-checkbox" :class="{ 'npc-feature-checkbox-selected': feature.settings.bowMaterials.includes(material.value) }">
-                                <input v-model="feature.settings.bowMaterials" type="checkbox" :value="material.value" />
-                                <span>{{ material.label }}</span>
-                            </label>
-                        </div>
+                    <template v-for="group in woodenWeaponVendorGroups" :key="group.category">
+                        <div v-if="feature.settings.itemCategories.includes(group.category)" class="npc-vendor-materials">
+                            <strong>{{ group.label }}</strong>
+                            <div class="npc-feature-checkboxes npc-feature-material-checkboxes">
+                                <label v-for="material in bowFeatureMaterials" :key="material.value" class="npc-feature-checkbox" :class="{ 'npc-feature-checkbox-selected': feature.settings[group.materials].includes(material.value) }">
+                                    <input v-model="feature.settings[group.materials]" type="checkbox" :value="material.value" />
+                                    <span>{{ material.label }}</span>
+                                </label>
+                            </div>
 
-                        <div class="npc-vendor-individual-items">
-                            <div class="npc-vendor-item-add">
-                                <select v-model="vendorItemSelections.bows">
-                                    <option :value="null">Add individual bow</option>
-                                    <option v-for="option in vendorIndividualItemOptions.bows" :key="option.codebookId" :value="option.codebookId">{{ option.label }}</option>
-                                </select>
-                                <button class="dialog-button" :disabled="vendorItemSelections.bows === null" @click="addVendorIndividualItem(feature, 'bows')"><span class="ui-text-gradient--button-state">Add</span></button>
-                            </div>
-                            <div v-if="feature.settings.individualItems.bows.length" class="npc-vendor-item-list">
-                                <button v-for="itemId in feature.settings.individualItems.bows" :key="itemId" class="npc-vendor-item-chip" @click="removeVendorIndividualItem(feature, 'bows', itemId)">{{ getVendorIndividualItemLabel('bows', itemId) }} ×</button>
+                            <div class="npc-vendor-individual-items">
+                                <div class="npc-vendor-item-add">
+                                    <select v-model="vendorItemSelections[group.category]">
+                                        <option :value="null">Add individual weapon</option>
+                                        <option v-for="option in vendorIndividualItemOptions[group.category]" :key="option.codebookId" :value="option.codebookId">{{ option.label }}</option>
+                                    </select>
+                                    <button class="dialog-button" :disabled="vendorItemSelections[group.category] === null" @click="addVendorIndividualItem(feature, group.category)"><span class="ui-text-gradient--button-state">Add</span></button>
+                                </div>
+                                <div v-if="feature.settings.individualItems[group.category].length" class="npc-vendor-item-list">
+                                    <button v-for="itemId in feature.settings.individualItems[group.category]" :key="itemId" class="npc-vendor-item-chip" @click="removeVendorIndividualItem(feature, group.category, itemId)">{{ getVendorIndividualItemLabel(group.category, itemId) }} ×</button>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    </template>
 
                     <div v-if="feature.settings.itemCategories.includes('metalArmor')" class="npc-vendor-materials">
                         <strong>Metal armor</strong>
@@ -321,6 +323,7 @@ const featureLabels = Object.fromEntries(featureTypes.map((featureType) => [feat
 const vendorCategories = [
     { value: 'weapons', label: 'Weapons' },
     { value: 'bows', label: 'Bows' },
+    { value: 'stavesAndWands', label: 'Staves and Wands' },
     { value: 'metalArmor', label: 'Metal armor' },
     { value: 'leatherArmor', label: 'Leather armor' },
     { value: 'jewels', label: 'Jewels' },
@@ -331,10 +334,14 @@ const vendorCategories = [
     { value: 'trinkets', label: 'Trinkets' },
 ]
 const resourceVendorCategories = vendorCategories.filter(category => ['resources', 'potions', 'food', 'ingredients'].includes(category.value))
-const repairerCategories = vendorCategories.filter((category) => ['weapons', 'bows', 'metalArmor', 'leatherArmor'].includes(category.value))
+const woodenWeaponVendorGroups = [
+    { category: 'bows', label: 'Bows', materials: 'bowMaterials' },
+    { category: 'stavesAndWands', label: 'Staves and Wands', materials: 'wandMaterials' },
+]
+const repairerCategories = vendorCategories.filter((category) => ['weapons', 'bows', 'stavesAndWands', 'metalArmor', 'leatherArmor'].includes(category.value))
 const {t} = useI18n()
 const craftingCategories = computed(() => [
-    ...vendorCategories.filter((category) => ['weapons', 'bows', 'metalArmor', 'leatherArmor', 'jewels'].includes(category.value)),
+    ...vendorCategories.filter((category) => ['weapons', 'bows', 'stavesAndWands', 'metalArmor', 'leatherArmor', 'jewels'].includes(category.value)),
     {value: 'oreSmelting', label: t('vendor.oreSmelting')},
     {value: 'woodProcessing', label: t('vendor.woodProcessing')},
     {value: 'leatherProcessing', label: t('vendor.leatherProcessing')},
@@ -414,7 +421,7 @@ const weaponNames = {
     HAND_AXE: 'Hand axe', BATTLE_AXE: 'Battle axe', GREATAXE: 'Great axe', PICKAXE: 'Pickaxe',
     LIGHT_MACE: 'Light mace', WARMACE: 'Warmace', WARHAMMER: 'Warhammer',
     HUNTING_SPEAR: 'Hunting spear', HALBERD: 'Halberd',
-    HUNTINGBOW: 'Hunting bow', RECURVE_BOW: 'Recurve bow', BATTLEBOW: 'Battle bow',
+    HUNTINGBOW: 'Hunting bow', RECURVE_BOW: 'Recurve bow', BATTLEBOW: 'Battle bow', CRYSTALWAND: 'Crystal wand',
 }
 const metalMaterials = [[1, 'Steel'], [2, 'Pyroxide'], [3, 'Geonite'], [4, 'Mythril'], [5, 'Chaotite']]
 const bowMaterials = [[1, 'Wooden'], [2, 'Cherrywood'], [3, 'Mahogany'], [6, 'Ebony'], [4, 'Elven'], [5, 'Ethereal']]
@@ -424,7 +431,7 @@ const weaponCodebookBaseIds = {
     HAND_AXE: 200, BATTLE_AXE: 210, GREATAXE: 220,
     LIGHT_MACE: 300, WARMACE: 310, WARHAMMER: 320,
     HUNTING_SPEAR: 400, HALBERD: 420,
-    HUNTINGBOW: 600, RECURVE_BOW: 610, BATTLEBOW: 620,
+    HUNTINGBOW: 600, RECURVE_BOW: 610, BATTLEBOW: 620, CRYSTALWAND: 630,
 }
 const pickaxeCodebookIds = { 1: 3, 2: 5, 3: 6, 4: 7, 5: 8, 6: 4 }
 const resourceOptions = [
@@ -494,18 +501,22 @@ const weaponOptions = [
     { label: 'None', value: '' },
     ...Object.entries(weaponNames).flatMap(([key, name]) => {
         const modelId = EquipSlotModelsCb[key].modelId
-        const materials = key === 'PICKAXE' ? pickaxeMaterials : key.endsWith('BOW') ? bowMaterials : metalMaterials
-        return materials.map(([materialId, material]) => ({
+        const isBow = key.endsWith('BOW')
+        const isWand = key === 'CRYSTALWAND'
+        const materials = key === 'PICKAXE' ? pickaxeMaterials : (isBow || isWand) ? bowMaterials : metalMaterials
+        return materials.map(([codebookOffset, material], index) => ({
             label: `${material} ${name}`,
-            value: optionValue(modelId, materialId),
-            codebookId: key === 'PICKAXE' ? pickaxeCodebookIds[materialId] : weaponCodebookBaseIds[key] + materialId - 1,
-            isBow: key.endsWith('BOW'),
+            value: optionValue(modelId, isWand ? index + 1 : codebookOffset),
+            codebookId: key === 'PICKAXE' ? pickaxeCodebookIds[codebookOffset] : weaponCodebookBaseIds[key] + codebookOffset - 1,
+            isBow,
+            isWand,
         }))
     }),
 ]
 const vendorIndividualItemOptions = {
-    weapons: weaponOptions.filter((option) => option.codebookId && !option.isBow),
+    weapons: weaponOptions.filter((option) => option.codebookId && !option.isBow && !option.isWand),
     bows: weaponOptions.filter((option) => option.codebookId && option.isBow),
+    stavesAndWands: weaponOptions.filter((option) => option.codebookId && option.isWand),
     metalArmor: [...headOptions, ...armsOptions, ...legsOptions, ...bodyOptions].filter(option => option.codebookId && !option.isLeather),
     leatherArmor: leatherArmorOptions,
     resources: resourceOptions,
@@ -537,7 +548,7 @@ const weaponSelection = ref('')
 const shieldSelection = ref('')
 const features = ref([])
 const featureTypeToAdd = ref('')
-const vendorItemSelections = ref({weapons: null, bows: null, metalArmor: null, leatherArmor: null, resources: null, potions: null, food: null, ingredients: null})
+const vendorItemSelections = ref({weapons: null, bows: null, stavesAndWands: null, metalArmor: null, leatherArmor: null, resources: null, potions: null, food: null, ingredients: null})
 const availableFeatureTypes = computed(() => featureTypes.filter((featureType) => !features.value.some((feature) => feature.type === featureType.value)))
 
 const selectionFromItem = (item) => item ? optionValue(item.modelId, item.materialId) : ''
@@ -552,7 +563,7 @@ const itemFromSelection = (selection) => {
 const createFeature = (type) => ({
     type,
     settings: type === 'vendor' || type === 'repairer'
-        ? { itemCategories: [], weaponMaterials: [], armorMaterials: [], leatherArmorMaterials: [], bowMaterials: [], individualItems: {weapons: [], bows: [], metalArmor: [], leatherArmor: [], resources: [], potions: [], food: [], ingredients: []} }
+        ? { itemCategories: [], weaponMaterials: [], armorMaterials: [], leatherArmorMaterials: [], bowMaterials: [], wandMaterials: [], individualItems: {weapons: [], bows: [], stavesAndWands: [], metalArmor: [], leatherArmor: [], resources: [], potions: [], food: [], ingredients: []} }
         : type === 'crafting'
             ? {itemCategories: [], categoryLevels: Object.fromEntries(craftingCategories.value.map(category => [category.value, 1]))}
         : type === 'healer'
@@ -625,9 +636,11 @@ const openDialog = () => {
                 armorMaterials: [...(feature.settings?.armorMaterials ?? [])],
                 leatherArmorMaterials: [...(feature.settings?.leatherArmorMaterials ?? [])],
                 bowMaterials: [...(feature.settings?.bowMaterials ?? [])],
+                wandMaterials: [...(feature.settings?.wandMaterials ?? [])],
                 individualItems: {
                     weapons: [...(feature.settings?.individualItems?.weapons ?? [])],
                     bows: [...(feature.settings?.individualItems?.bows ?? [])],
+                    stavesAndWands: [...(feature.settings?.individualItems?.stavesAndWands ?? [])],
                     metalArmor: [...(feature.settings?.individualItems?.metalArmor ?? [])],
                     leatherArmor: [...(feature.settings?.individualItems?.leatherArmor ?? [])],
                     resources: [...(feature.settings?.individualItems?.resources ?? [])],

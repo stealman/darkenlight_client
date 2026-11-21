@@ -102,6 +102,8 @@ export interface VertexColorWeaponPalette {
 export const METAL_WEAPON_MATERIAL_NAMES = ['Steel', 'Pyroxide', 'Geonite', 'Mythril', 'Chaotite', 'Reserved', 'Silver']
 // Ebony is appended as materialId 6 to preserve existing bow material IDs 1-5.
 export const BOW_WEAPON_MATERIAL_NAMES = ['Wooden', 'Cherrywood', 'Mahogany', 'Elven', 'Ethereal', 'Ebony']
+// The wand material IDs follow crafting tiers, while the atlas keeps the bow tile order.
+export const WAND_MATERIAL_ATLAS_TILES = [0, 1, 2, 5, 3, 4] as const
 export const PICKAXE_MATERIAL_NAMES = ['Steel', 'Pyroxide', 'Geonite', 'Mythril', 'Chaotite', 'Diamond', 'Silver']
 
 /** Append Silver at materialId 7 with Steel colours until authored assets arrive. */

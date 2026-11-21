@@ -103,7 +103,7 @@ export interface AccountCharacterNameCheckData {
     className?: string
 }
 
-export type PhysicalWeaponSkillKey = 'swords' | 'axes' | 'maces' | 'polearms' | 'bows'
+export type PhysicalWeaponSkillKey = 'swords' | 'axes' | 'maces' | 'polearms' | 'bows' | 'stavesAndWands'
 export type ArmorSkillKey = 'leatherArmor' | 'chainArmor' | 'plateArmor' | 'shields'
 export type UtilitySkillKey = 'camping' | 'healing' | 'cooking'
 export type GatheringSkillKey = 'mining' | 'lumberjacking' | 'hunting'

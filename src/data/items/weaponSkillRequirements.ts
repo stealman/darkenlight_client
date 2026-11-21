@@ -8,6 +8,7 @@ const requiredSkillByWeaponCategory: Partial<Record<string, PhysicalWeaponSkillK
     MACE: 'maces',
     POLEARM: 'polearms',
     BOW: 'bows',
+    WAND: 'stavesAndWands',
 }
 
 const SteelMaterialId = 1

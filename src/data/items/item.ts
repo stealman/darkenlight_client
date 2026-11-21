@@ -76,7 +76,8 @@ export class Item {
         const tier = quality >= 98 ? 'perfect' : quality >= 95 ? 'superior' : 'fine'
         let gender = 'masculine'
         if (this.cbType === 'W') {
-            if (this.nameKey?.endsWith('axe') && !this.nameKey.endsWith('pickaxe') || this.nameKey?.endsWith('halberd')) gender = 'feminine'
+            if (this.weaponCategory === WeaponCategories.WAND ||
+                (this.nameKey?.endsWith('axe') && !this.nameKey.endsWith('pickaxe')) || this.nameKey?.endsWith('halberd')) gender = 'feminine'
             else if (this.nameKey?.endsWith('spear') || this.nameKey?.endsWith('warhammer')) gender = 'neuter'
         } else {
             if (this.nameKey?.endsWith('greaves') || this.nameKey?.endsWith('pauldrons')) gender = 'plural'
@@ -147,6 +148,7 @@ export const WeaponTypes = {
     TWO_HANDED_MACE: "TWO_HANDED_MACE",
     TWO_HANDED_SWORD: "TWO_HANDED_SWORD",
     BOW: "BOW",
+    WAND: "WAND",
 }
 
 export const WeaponCategories = {
@@ -155,6 +157,7 @@ export const WeaponCategories = {
     MACE: "MACE",
     POLEARM: "POLEARM",
     BOW: "BOW",
+    WAND: "WAND",
 }
 
 export const WeaponTags = {
@@ -185,6 +188,7 @@ export const EquipSlotModelsCb = {
     HUNTINGBOW: new EquipSlotModel(510, EquipItemSlots.R_HAND, WeaponTypes.BOW),
     RECURVE_BOW: new EquipSlotModel(520, EquipItemSlots.R_HAND, WeaponTypes.BOW),
     BATTLEBOW: new EquipSlotModel(530, EquipItemSlots.R_HAND, WeaponTypes.BOW),
+    CRYSTALWAND: new EquipSlotModel(540, EquipItemSlots.R_HAND, WeaponTypes.WAND),
 
     ARMOR_PLATE: new EquipSlotModel(1000, EquipItemSlots.BODY, null),
 

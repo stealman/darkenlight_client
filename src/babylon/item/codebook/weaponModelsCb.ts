@@ -5,7 +5,7 @@ import { PBRCustomMaterial } from '@babylonjs/materials'
 import { Materials } from '@/babylon/materials'
 import { BASE_EQUIP_MATERIAL_PATH } from '@/babylon/item/codebook/armorsModelsCb'
 import { EquipSlotModelsCb } from '@/data/items/item'
-import { BOW_WEAPON_MATERIAL_NAMES } from './vertexColorPalettes/types'
+import { BOW_WEAPON_MATERIAL_NAMES, WAND_MATERIAL_ATLAS_TILES } from './vertexColorPalettes/types'
 import { PolearmVertexColorPalettes } from './vertexColorPalettes/polearms'
 import { createVertexColorWeaponMaterial } from './vertexColorPalettes/vertexColorWeaponMaterial'
 
@@ -59,6 +59,7 @@ const bowMaterialAtlasIndices = new Map<number, number>(
         index, (matTexturedBowSize.y - 1 - Math.floor(index / matTexturedBowSize.x)) * matTexturedBowSize.x + index % matTexturedBowSize.x,
     ]),
 )
+const wandMaterialAtlasIndices = new Map(WAND_MATERIAL_ATLAS_TILES.map((tile, index) => [index, bowMaterialAtlasIndices.get(tile)!]))
 const longswordMaterialAtlasIndices = createWeaponMaterialAtlasIndices(matLongswordSize)
 const largeBattleAxeMaterialAtlasIndices = createWeaponMaterialAtlasIndices(matLargeBattleAxeSize)
 const greatswordMaterialAtlasIndices = createWeaponMaterialAtlasIndices(matGreatswordSize)
@@ -115,6 +116,7 @@ export const WeaponsCbManager = {
         await this.initHuntingBow(map, scene)
         await this.initRecurveBow(map, scene)
         await this.initBattleBow(map, scene)
+        await this.initCrystalWand(map, scene)
         await this.initPickaxe(map, scene)
         await this.initHandAxe(map, scene)
         await this.initBattleAxe(map, scene)
@@ -192,6 +194,21 @@ export const WeaponsCbManager = {
             this.battleBowMaterial,
             `battlebow.glb?v=${BATTLEBOW_ASSET_CACHE_VERSION}`,
         ))
+    },
+
+    async initCrystalWand(map: Map<number, EquipItemType>, scene: Scene) {
+        const material = Materials.getPBRCustomMaterialFrom(
+            scene,
+            'crystalWandMaterialAtlas',
+            BASE_EQUIP_MATERIAL_PATH + this.BASE_WEAPONS_PATH,
+            'crystalwand.jpg',
+            1 / matTexturedBowSize.x,
+            1 / matTexturedBowSize.y,
+            false,
+            { metallic: 0.25, roughness: 1, directIntensity: 1.5, environmentIntensity: 1 },
+            false,
+        )
+        map.set(WeaponModelsCb.CRYSTALWAND.id, await this.getItem(WeaponModelsCb.CRYSTALWAND, material))
     },
 
     async initLongsword(map: Map<number, EquipItemType>, scene: Scene) {
@@ -742,6 +759,17 @@ export const WeaponModelsCb = {
     ),
 
     HUNTINGBOW: new EquipCbItem(EquipSlotModelsCb.HUNTINGBOW.modelId, 'huntingbow', new Vector3(-0.1, 0, 0), new Vector3(0.17, 0.24, 0.2), null, matTexturedBowSize, bowMaterialAtlasIndices, bowMaterialAtlasIndices.get(0) ?? 12),
+
+    CRYSTALWAND: new EquipCbItem(
+        EquipSlotModelsCb.CRYSTALWAND.modelId,
+        'crystalwand',
+        Vector3.Zero(),
+        new Vector3(0.27, 0.27, 0.27),
+        new Vector3(0, 2, 0),
+        matTexturedBowSize,
+        wandMaterialAtlasIndices,
+        wandMaterialAtlasIndices.get(0),
+    ),
 
     RECURVE_BOW: new EquipCbItem(EquipSlotModelsCb.RECURVE_BOW.modelId, 'recurvebow', new Vector3(-0.1, 0, 0), new Vector3(0.17, 0.24, 0.2), null, matTexturedBowSize, bowMaterialAtlasIndices, bowMaterialAtlasIndices.get(0) ?? 12),
 

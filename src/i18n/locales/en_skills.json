@@ -28,6 +28,7 @@
       "maces": "Maces",
       "polearms": "Polearms",
       "bows": "Bows",
+      "stavesAndWands": "Staves and Wands",
       "powerStrike": "Power Strike",
       "preciseShot": "Precise Shot"
     },
@@ -56,6 +57,7 @@
       "maces": "Allows you to equip and effectively use Maces in combat",
       "polearms": "Allows you to equip and effectively use Polearms in combat",
       "bows": "Allows you to equip and effectively use Bows in combat",
+      "stavesAndWands": "Allows you to equip and effectively use staves and wands in combat",
       "powerStrike": "A fast, powerful weapon strike whose bonus attack increases by 15% per skill level",
       "preciseShot": "A bow shot that always lands as a perfect hit and whose bonus attack increases by 7.5% per skill level",
       "leatherArmor": "Allows you to equip and effectively use Leather Armor",
@@ -125,7 +127,8 @@
         "axes": "Axe",
         "maces": "Mace",
         "polearms": "Polearm",
-        "bows": "Bow"
+        "bows": "Bow",
+        "stavesAndWands": "Staves and Wands"
       }
     }
   }

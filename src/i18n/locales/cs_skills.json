@@ -28,6 +28,7 @@
       "maces": "Palcáty",
       "polearms": "Tyčové Zbraně",
       "bows": "Luky",
+      "stavesAndWands": "Hole a Hůlky",
       "powerStrike": "Silný úder",
       "preciseShot": "Přesný výstřel"
     },
@@ -56,6 +57,7 @@
       "maces": "Umožňuje nosit a účinně používat Palcáty v boji",
       "polearms": "Umožňuje nosit a účinně používat Tyčové zbraně v boji",
       "bows": "Umožňuje nosit a účinně používat Luky v boji",
+      "stavesAndWands": "Umožňuje nosit a účinně používat hole a hůlky v boji",
       "powerStrike": "Rychlý silný úder zbraní, jehož bonusový útok roste o 15 % za každou úroveň dovednosti",
       "preciseShot": "Výstřel z luku, který vždy zasáhne jako perfektní zásah a jehož bonusový útok roste o 7,5 % za každou úroveň dovednosti",
       "leatherArmor": "Umožňuje nosit a účinně používat Kožené brnění",
@@ -125,7 +127,8 @@
         "axes": "Sekera",
         "maces": "Palcát",
         "polearms": "Tyčová zbraň",
-        "bows": "Luk"
+        "bows": "Luk",
+        "stavesAndWands": "Hole a Hůlky"
       }
     }
   }

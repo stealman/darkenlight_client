@@ -286,6 +286,7 @@
     "categoryInfo": {
       "weapons": "Výroba kovových zbraní.",
       "bows": "Výroba luků.",
+      "stavesAndWands": "Výroba holí a hůlek.",
       "potions": "Míchání lektvarů a elixírů z bylin a dalších přísad.",
       "metalArmor": "Výroba kovového brnění.",
       "leatherArmor": "Výroba brnění ze zpracované kůže.",
@@ -346,7 +347,8 @@
         "axes": "Tato zbraň vyžaduje dovednost Sekery",
         "maces": "Tato zbraň vyžaduje dovednost Palcáty",
         "polearms": "Tato zbraň vyžaduje dovednost Tyčové zbraně",
-        "bows": "Tato zbraň vyžaduje dovednost Luky"
+        "bows": "Tato zbraň vyžaduje dovednost Luky",
+        "stavesAndWands": "Tato zbraň vyžaduje dovednost Hole a Hůlky"
       },
       "armorSkillRequired": {
         "leatherArmor": "Toto brnění vyžaduje dovednost Kožené brnění",
@@ -372,6 +374,7 @@
     "noNewSkills": "Všechny dovednosti dostupné pro tvé povolání už ovládáš.",
     "weapons": "Zbraně",
     "bows": "Luky",
+    "stavesAndWands": "Hole a Hůlky",
     "metalArmor": "Kovové Brnění",
     "oreSmelting": "Tavení Rudy",
     "woodProcessing": "Zpracování dřeva",

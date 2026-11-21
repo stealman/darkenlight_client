@@ -19,12 +19,14 @@ const powerStrikeIconSuffixByWeaponCategory: Partial<Record<string, string>> = {
     [WeaponCategories.AXE]: 'axe',
     [WeaponCategories.POLEARM]: 'spear',
     [WeaponCategories.MACE]: 'mace',
+    [WeaponCategories.WAND]: 'mace',
 }
 
 const autoAttackIconByWeaponCategory: Partial<Record<string, string>> = {
     [WeaponCategories.AXE]: 'btn_attack_axe',
     [WeaponCategories.POLEARM]: 'btn_attack_spear',
     [WeaponCategories.MACE]: 'btn_attack_mace',
+    [WeaponCategories.WAND]: 'btn_attack_mace',
     [WeaponCategories.BOW]: 'btn_attack_ranged',
 }
 

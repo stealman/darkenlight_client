@@ -286,6 +286,7 @@
     "categoryInfo": {
       "weapons": "Crafting metal weapons.",
       "bows": "Crafting bows.",
+      "stavesAndWands": "Crafting staves and wands.",
       "potions": "Brewing potions and elixirs from herbs and other ingredients.",
       "metalArmor": "Crafting metal armor.",
       "leatherArmor": "Crafting armor from processed leather.",
@@ -347,7 +348,8 @@
         "axes": "This weapon requires the Axes skill",
         "maces": "This weapon requires the Maces skill",
         "polearms": "This weapon requires the Polearms skill",
-        "bows": "This weapon requires the Bows skill"
+        "bows": "This weapon requires the Bows skill",
+        "stavesAndWands": "This weapon requires the Staves and Wands skill"
       },
       "armorSkillRequired": {
         "leatherArmor": "This armor requires the Leather Armor skill",
@@ -373,6 +375,7 @@
     "noNewSkills": "You already know every skill available to your class.",
     "weapons": "Weapons",
     "bows": "Bows",
+    "stavesAndWands": "Staves and Wands",
     "metalArmor": "Metal armor",
     "oreSmelting": "Ore Smelting",
     "woodProcessing": "Wood Processing",

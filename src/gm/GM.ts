@@ -1281,9 +1281,11 @@ export const GMManager = {
                     armorMaterials: [...(feature.settings?.armorMaterials ?? [])],
                     leatherArmorMaterials: [...(feature.settings?.leatherArmorMaterials ?? [])],
                     bowMaterials: [...(feature.settings?.bowMaterials ?? [])],
+                    wandMaterials: [...(feature.settings?.wandMaterials ?? [])],
                     individualItems: {
                         weapons: [...(feature.settings?.individualItems?.weapons ?? [])],
                         bows: [...(feature.settings?.individualItems?.bows ?? [])],
+                        stavesAndWands: [...(feature.settings?.individualItems?.stavesAndWands ?? [])],
                         metalArmor: [...(feature.settings?.individualItems?.metalArmor ?? [])],
                         leatherArmor: [...(feature.settings?.individualItems?.leatherArmor ?? [])],
                         resources: [...(feature.settings?.individualItems?.resources ?? [])],

@@ -95,7 +95,7 @@
 
 <script setup>
 import { ArcRotateCamera, Color3, Color4, CubeTexture, DirectionalLight, Engine, Mesh, Scene, SceneLoader, Texture, Vector2, Vector3 } from '@babylonjs/core'
-import { BOW_WEAPON_MATERIAL_NAMES } from '@/babylon/item/codebook/vertexColorPalettes/types'
+import { BOW_WEAPON_MATERIAL_NAMES, WAND_MATERIAL_ATLAS_TILES } from '@/babylon/item/codebook/vertexColorPalettes/types'
 import { WeaponModelsCb } from '@/babylon/item/codebook/weaponModelsCb'
 import { ArmorModelsCb, BASE_EQUIP_MATERIAL_PATH, TEXTURED_ARMOR_ASSETS, createLeatherArmorMaterial } from '@/babylon/item/codebook/armorsModelsCb'
 import { LeatherArmorMaterials } from '@game/character/items/codebook/armorsCodebook'
@@ -130,6 +130,7 @@ const WEAPON_OPTIONS = [
     { key: 'WARHAMMER', modelFile: 'warhammer.glb', atlasFile: 'warhammer.jpg', cacheVersion: '20261118-draco-atlas-v3', inventoryBaseName: 'warhammer' },
     { key: 'HUNTINGBOW', modelFile: 'huntingbow.glb', atlasFile: 'huntingbow.jpg', cacheVersion: '20261118-material-atlas-v1', inventoryBaseName: 'hunting-bow', materialOptions: BOW_MATERIAL_OPTIONS },
     { key: 'RECURVE_BOW', modelFile: 'recurvebow.glb', atlasFile: 'recurvebow.jpg', cacheVersion: '20261118-material-atlas-v1', inventoryBaseName: 'recurve-bow', materialOptions: BOW_MATERIAL_OPTIONS },
+    { key: 'CRYSTALWAND', modelFile: 'crystalwand.glb', atlasFile: 'crystalwand.jpg', inventoryBaseName: 'crystalwand', materialOptions: WAND_MATERIAL_ATLAS_TILES.map((tile, index) => ({ index, label: BOW_WEAPON_MATERIAL_NAMES[tile] })) },
     { key: 'BATTLEBOW', modelFile: 'battlebow.glb', atlasFile: 'battlebow.jpg', cacheVersion: '20261118-material-atlas-v1', inventoryBaseName: 'battle-bow', materialOptions: BOW_MATERIAL_OPTIONS },
 ].map((weapon) => {
     const item = WeaponModelsCb[weapon.key]

@@ -11,7 +11,7 @@ const getItemType = (item: ItemTooltipSource) => (item as Item).cbType ?? (item 
 const getWeaponCategory = (item: ItemTooltipSource) => (item as Item).weaponCategory ?? (item as ItemTO).wCat ?? null
 const getArmorCategory = (item: ItemTooltipSource) => (item as Item).armorCategory ?? (item as ItemTO).aCat ?? null
 const getWeaponDamageTypes = (item: ItemTooltipSource) => (item as Item).damageTypes ?? (item as ItemTO).dmgTypes ?? []
-const weaponCategoryLabels: Record<string, string> = {SWORD: 'skills.weapons.swords', AXE: 'skills.weapons.axes', MACE: 'skills.weapons.maces', POLEARM: 'skills.weapons.polearms', BOW: 'skills.weapons.bows'}
+const weaponCategoryLabels: Record<string, string> = {SWORD: 'skills.weapons.swords', AXE: 'skills.weapons.axes', MACE: 'skills.weapons.maces', POLEARM: 'skills.weapons.polearms', BOW: 'skills.weapons.bows', WAND: 'skills.weapons.stavesAndWands'}
 const armorCategoryLabels: Record<string, string> = {PLATE: 'skills.armor.plateArmor', CHAIN: 'skills.armor.chainArmor', LEATHER: 'skills.armor.leatherArmor', SHIELD: 'skills.armor.shields'}
 
 export type ItemDurabilityStatus = 'worn' | 'warning' | 'danger' | 'critical'

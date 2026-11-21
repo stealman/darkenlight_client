@@ -596,6 +596,7 @@ export class CharacterModel implements EquipBearer {
                         possibleAnims.push(this.highJabAnim)
                         break
                     }
+                    case WeaponTypes.WAND:
                     case WeaponTypes.MACE: {
                         possibleAnims.push(this.slashAnim)
                         possibleAnims.push(this.slashAnim2)
