@@ -1,4 +1,5 @@
 import {ActivityLogManager} from '@/data/activityLogManager'
+import { MagicArrow } from '@game/game/spells/magicArrow'
 import {PartyManager} from '@/data/partyManager'
 import { Vector3 } from '@babylonjs/core'
 import { Utils } from '@/utils/utils'
@@ -72,6 +73,7 @@ export const MyPlayer = {
     powerStrikeQueued: false as boolean,
     preciseShotCooldownStart: 0 as number,
     preciseShotCooldownEnd: 0 as number,
+    magicArrowCooldownEnd: 0,
     preciseShotQueued: false as boolean,
     nearFireplace: null as { x: number, z: number } | null,
 
@@ -117,6 +119,8 @@ export const MyPlayer = {
         if (Number.isFinite(charData.prsCd) && charData.prsCd > 0) {
             this.startPreciseShotCooldown(charData.prsCd)
         }
+        this.magicArrowCooldownEnd = Number.isFinite(charData.magicArrowCd) && charData.magicArrowCd > 0
+            ? Date.now() + charData.magicArrowCd : 0
 
         MyStatusPanel.setMyName(this.myChar.name)
         MyStatusPanel.refreshAffectGroups()
@@ -143,6 +147,7 @@ export const MyPlayer = {
         this.powerStrikeQueued = false
         this.preciseShotCooldownStart = 0
         this.preciseShotCooldownEnd = 0
+        this.magicArrowCooldownEnd = 0
         this.preciseShotQueued = false
         this.isDead.value = false
         this.respawnAvailableAt.value = 0
@@ -599,6 +604,9 @@ export const MyPlayer = {
                 return this.getCooldownPercent(actualTime, this.preciseShotCooldownStart, this.preciseShotCooldownEnd)
             }
             case CharacterActions.MAGIC_ARROW.name: {
+                if (actualTime < this.magicArrowCooldownEnd) {
+                    return this.getCooldownPercent(actualTime, this.magicArrowCooldownEnd - MagicArrow.cooldown, this.magicArrowCooldownEnd)
+                }
                 const cast = this.myChar.activeTimedAction
                 return cast?.type === action.name ? cast.getProgressPercent(actualTime) : 100
             }

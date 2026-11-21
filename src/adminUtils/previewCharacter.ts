@@ -1,6 +1,17 @@
 import { Vector3 } from '@babylonjs/core'
 import type Character from '@/babylon/character/character'
 
+export const ADMIN_UTILS_STORAGE_KEY = 'darkenlight.adminUtils.settings.v1'
+
+export function getEquipmentPreviewGender(): 'M' | 'F' {
+    try {
+        const settings = JSON.parse(localStorage.getItem(ADMIN_UTILS_STORAGE_KEY) ?? 'null')
+        return settings?.bodyVariant === 'female' ? 'F' : 'M'
+    } catch {
+        return 'M'
+    }
+}
+
 export function createPreviewCharacter(gender: 'M' | 'F' = 'M'): Character {
     return {
         id: -1,

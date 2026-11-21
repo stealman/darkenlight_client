@@ -160,6 +160,7 @@
     "graphicsLevel": "Úroveň detailů grafiky.",
     "foggyAreas": "Mlžné oblasti",
     "graphicsHigh": "Vysoká",
+    "glowLayer": "Záře kouzel",
     "graphicsMedium": "Střední",
     "graphicsLow": "Nízká",
     "brightness": "Jas",
@@ -241,7 +242,7 @@
     }
   },
   "actions": {
-    "magicArrowStats": "{manaCost} mana · {damage} poškození · {castTime} s · dosah {range} polí",
+    "magicArrowStats": "{manaCost} mana · {damage} poškození · sesílání {castTime} s · cooldown {cooldownTime} s · dosah {range} polí",
     "magicArrowName": "Magický šíp",
     "magicArrowDescription": "Vyšle šíp ze stlačeného vzduchu.",
     "noneTitle": "Nevybráno",

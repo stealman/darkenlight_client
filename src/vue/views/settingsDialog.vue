@@ -163,6 +163,10 @@
                                     <Checkbox input-id="foggy-areas-enabled" v-model="foggyAreasEnabled" binary />
                                 </td>
                             </tr>
+                            <tr>
+                                <td class="item-label"><label for="glow-layer-enabled">{{ t('settings.glowLayer') }}</label></td>
+                                <td><Checkbox input-id="glow-layer-enabled" v-model="glowLayerEnabled" binary /></td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -331,6 +335,14 @@ const foggyAreasEnabled = computed({
         storeSettings()
     },
 })
+const glowLayerEnabled = computed({
+    get: () => storedSettings.value.isGlowLayerEnabled(),
+    set: (enabled) => {
+        storedSettings.value.glowLayerOverride = enabled
+        Renderer.updateSpellGlow()
+        storeSettings()
+    },
+})
 const emit = defineEmits(['close', 'closeWithRestartPrompt', 'deviceTypeSelected', 'touchColtrolsChanged', 'logout', 'toggle-fullscreen', 'target-lock-settings-active'])
 const { t } = useI18n()
 
@@ -423,6 +435,7 @@ const setActionButtonsLayout = (layout) => {
 
 const setDetailsLevel = (level) => {
     storedSettings.value.setDetailLevel(level)
+    Renderer.updateSpellGlow()
     FoggyAreaManager.refreshVisibleAreas()
     graphicSettingsChanged.value = true
     storeSettings()
@@ -511,6 +524,7 @@ const restoreDefaultSettings = () => {
 
     Object.assign(storedSettings.value, defaultSettings)
     storedSettings.value.setDetailLevel(defaultSettings.detailLevelName)
+    Renderer.updateSpellGlow()
     syncSelectedDeviceType()
     Settings.setVolume(defaultSettings.volume)
     Settings.setAmbientVolume(defaultSettings.ambientVolume)

@@ -216,6 +216,21 @@ select {
 .spell-preview__stats dd { margin: 5px 0 0; color: #e4f1ed; font-size: 15px; }
 .admin-utils--spells output { float: right; color: #a9d9e0; }
 
+.spell-preview__glow-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.spell-preview__glow-toggle input {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    accent-color: #78b3b9;
+}
+
 #spellPreviewCast {
     padding: 12px;
     border: 1px solid #78b3b9;

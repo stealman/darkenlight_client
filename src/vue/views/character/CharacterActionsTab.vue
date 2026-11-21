@@ -436,6 +436,13 @@ defineExpose({
     flex: 0 0 40px;
 }
 
+/* The Magic Arrow artwork includes a four-pixel frame on each side. */
+.action-slot-icon[src$='/btn_magic_arrow.png'],
+.action-option-icon[src$='/btn_magic_arrow.png'] {
+    clip-path: inset(6.25%);
+    transform: scale(1.142857);
+}
+
 .action-option-entries {
     display: flex;
     flex-direction: column;

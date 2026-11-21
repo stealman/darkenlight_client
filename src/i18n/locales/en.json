@@ -160,6 +160,7 @@
     "graphicsLevel": "Graphics detail level.",
     "foggyAreas": "Fog areas",
     "graphicsHigh": "High",
+    "glowLayer": "Spell glow",
     "graphicsMedium": "Medium",
     "graphicsLow": "Low",
     "brightness": "Brightness",
@@ -241,7 +242,7 @@
     }
   },
   "actions": {
-    "magicArrowStats": "{manaCost} mana · {damage} damage · {castTime} s cast · {range} tiles of range",
+    "magicArrowStats": "{manaCost} mana · {damage} damage · {castTime} s cast · {cooldownTime} s cooldown · {range} tiles of range",
     "magicArrowName": "Magic Arrow",
     "magicArrowDescription": "Launches an arrow of compressed air.",
     "noneTitle": "Unassigned",

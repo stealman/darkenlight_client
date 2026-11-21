@@ -395,6 +395,7 @@ export const ActionButtonsManager = {
                     break
                 case CharacterActions.MAGIC_ARROW.name: {
                     if ((MyPlayer.myChar?.skillSet?.magicArrow?.rank ?? 0) < 1 || MyPlayer.myChar.getMoveAngle() != null) break
+                    if (Date.now() < MyPlayer.magicArrowCooldownEnd) break
                     if (!TargetingManager.selectedTarget) TargetingManager.cycleThroughClosestTargets()
                     const target = TargetingManager.selectedTarget
                     Connector.sendMessage(new CastMagicArrow(target?.id ?? 0, target?.getObjectType() ?? ''))
@@ -686,6 +687,7 @@ export const ActionButtonsManager = {
             return action.descLoc + ' ' + t('actions.magicArrowStats', {
                 ...MagicArrow,
                 castTime: (MagicArrow.castDuration / 1000).toLocaleString(document.documentElement.lang || undefined),
+                cooldownTime: (MagicArrow.cooldown / 1000).toLocaleString(document.documentElement.lang || undefined),
             })
         }
         if (actionName !== CharacterActions.POWER_STRIKE.name && actionName !== CharacterActions.PRECISE_SHOT.name) return action.descLoc

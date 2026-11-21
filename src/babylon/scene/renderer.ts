@@ -7,7 +7,7 @@ import {
     Vector3,
     FreeCamera,
     Color3, Color4, SceneInstrumentation,
-    CubeTexture, DracoCompression, Material, GlowLayer,
+    CubeTexture, DracoCompression, Material,
 } from '@babylonjs/core'
 import '@babylonjs/inspector'
 import { Controller } from '@/controlls/controller'
@@ -42,6 +42,7 @@ import { GuiButtonsManager } from '@/gui/guiButtonsManager'
 import { GroundItemsManager } from '@/babylon/world/groundItemsManager'
 import { EmeraldsManager } from '@/gui/emeraldsManager'
 import { GfxManager } from '@/babylon/gfx/gfxManager'
+import { setMagicArrowGlowEnabled } from '@/babylon/gfx/magicArrowEffect'
 import { StaticsManager } from '@/babylon/world/statics/staticsManager'
 import { TreeManager } from '@/babylon/world/treeManager'
 import { BuildingManager } from '@/babylon/world/buildings/buildingManager'
@@ -95,7 +96,6 @@ export const Renderer = {
     environmentType: 'outdoor' as 'outdoor' | 'indoor',
 
     inspectorDisplayed: false,
-    glowLayer: null as GlowLayer | null,
 
     async initialize(canvas: HTMLCanvasElement) {
         this.canvas = canvas
@@ -103,6 +103,7 @@ export const Renderer = {
         this.engine = new Engine(canvas, Settings.detailLevel.antialias)
         this.engine.setHardwareScalingLevel(1)
         this.createScene(this.engine)
+        this.updateSpellGlow()
         this.menuPreviewSceneUsed = false
 
         DracoCompression.Configuration = {
@@ -111,15 +112,6 @@ export const Renderer = {
                 fallbackUrl: window.location.origin + modelAssetUrl('/models/draco/draco_decoder_gltf.js'),
             }
         };
-
-        /**
-        if (Settings.displayGlow) {
-            this.glowLayer = new GlowLayer("glow", this.scene, {
-                mainTextureFixedSize: 1024,
-                blurKernelSize: 75
-            });
-            this.glowLayer.intensity = 5
-        }*/
 
         // Initialize game objects and managers
         this.instrumentation = new SceneInstrumentation(this.scene);
@@ -318,6 +310,10 @@ export const Renderer = {
                 // ShotMgr.pulseLaserMesh.computeWorldMatrix(true)
             }
         });
+    },
+
+    updateSpellGlow() {
+        if (this.scene) setMagicArrowGlowEnabled(this.scene, Settings.isGlowLayerEnabled())
     },
 
     createScene(engine: Engine) {

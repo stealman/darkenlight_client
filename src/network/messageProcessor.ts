@@ -1,5 +1,6 @@
 import {AffectGroups} from '@/data/affects'
 import { Vector3 } from '@babylonjs/core'
+import { MagicArrow } from '@game/game/spells/magicArrow'
 import {ActivityLogManager} from '@/data/activityLogManager'
 import {getDamageColor, getRelationColor} from '@/gui/combatColors'
 import {getDamagePositionSuffix} from '@/gui/combatText'
@@ -595,6 +596,7 @@ export const MessageProcessor = {
 
         const target = Utils.getAttackTargetByTypeAndId(data.tp, data.tgt, true)
         if (event.phase === 'release') {
+            if (caster === player) MyPlayer.magicArrowCooldownEnd = Date.now() + MagicArrow.cooldown
             const height = (target?.getModelHeight() ?? 1.8) * 0.63
             const destination = new Vector3(event.x, event.y + height, event.z)
             caster?.releaseMagicArrow(destination, target, event.flightMs)

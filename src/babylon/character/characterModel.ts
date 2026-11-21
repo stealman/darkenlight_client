@@ -19,7 +19,8 @@ import { Settings } from '@/settings/settings'
 import { ActiveMeshFreezer } from '@/babylon/scene/activeMeshFreezer'
 import { modelAssetUrl } from '@/babylon/modelAssetUrl'
 import type { CharacterGender } from './characterAppearance'
-import { HUMAN_MODEL_FILE, HUMAN_ANIMATION_SPEED, getHumanAnimationRange, prepareHumanSkeleton } from './humanModelRig'
+import { HUMAN_MODEL_FILE, HUMAN_ANIMATION_SPEED, WAND_RELEASE_FRAME, getHumanAnimationRange, prepareHumanSkeleton } from './humanModelRig'
+import { MagicArrow } from '@game/game/spells/magicArrow'
 import { applyCharacterEquipmentFitting, getCharacterHairFitting, preloadCharacterEquipmentFitting } from './characterEquipmentFitting'
 import { isLeatherArmorModelId } from '@game/character/items/codebook/armorsCodebook'
 import { StaticsManager } from '@/babylon/world/statics/staticsManager'
@@ -68,6 +69,8 @@ export class CharacterModel implements EquipBearer {
     runAnim: AnimationGroup | undefined
     idleAnim: AnimationGroup | undefined
     sittingIdleAnim: AnimationGroup | undefined
+    private spellCastingWandAnim: AnimationGroup | undefined
+    private spellReleaseWandAnim: AnimationGroup | undefined
     private cachedBench: StaticObject | null = null
     private benchCheckFrame = -Infinity
     combatIdleAnim: AnimationGroup | undefined
@@ -256,6 +259,7 @@ export class CharacterModel implements EquipBearer {
                         'LeftSlash', 'RightSlash', 'HighJab', 'Slash2', 'BowAim',
                         'GreatAxeAttack', 'OreMining', 'Death', 'TwoHandedSwordAttack',
                         'TwoHandedSwordAttack2', 'CombatIdleTwoHanded', 'Pickup', 'SittingIdle',
+                        ...(this.bodyGender === 'F' ? ['SPELL_CASTING_WAND_1', 'SPELL_RELEASE_WAND_1'] : []),
                     ].map(name => ({ name, ...getHumanAnimationRange(name) }))
 
                     let newAnimationGroups = CharacterModel.preparedAnimations.get(result)
@@ -297,6 +301,8 @@ export class CharacterModel implements EquipBearer {
                     this.combatIdleTwoHandedAnim = newAnimationGroups[16]
                     this.pickupAnim = newAnimationGroups[17]
                     this.sittingIdleAnim = newAnimationGroups[18]
+                    this.spellCastingWandAnim = newAnimationGroups[19]
+                    this.spellReleaseWandAnim = newAnimationGroups[20]
 
                     this.idleAnim?.start(true, HUMAN_ANIMATION_SPEED.idle)
                     this.actualAnim = this.idleAnim
@@ -452,7 +458,9 @@ export class CharacterModel implements EquipBearer {
     }
 
     addEquippedItem(slot: string, item: EquipItem) {
-        const fittingGender = isLeatherArmorModelId(item.type.id) ? this.bodyGender : this.gender
+        const modelId = item.type.id
+        const usesBodyFitting = isLeatherArmorModelId(modelId) || modelId === EquipSlotModelsCb.CRYSTALWAND.modelId
+        const fittingGender = usesBodyFitting ? this.bodyGender : this.gender
         applyCharacterEquipmentFitting(this.node.getScene(), slot, item, fittingGender)
         item.castsOutdoorShadow = this.parent.isMyChar() && (slot === 'WEAPON' || slot === 'SHIELD')
         this.equipSet.set(slot, item)
@@ -693,8 +701,54 @@ export class CharacterModel implements EquipBearer {
         }
     }
 
-    startSpellStance() {
-        this.transitionToAnimation(this.getCombatIdleAnimation(), 0.16, true, HUMAN_ANIMATION_SPEED.combatIdle)
+    updateSpellStance(elapsedMs = 0, playbackSpeed = 1) {
+        if (!this.isActive()) return
+        const charge = this.spellCastingWandAnim
+        const swing = this.spellReleaseWandAnim
+        const swingDuration = MagicArrow.castDuration / 5
+        const chargeDuration = MagicArrow.castDuration - swingDuration
+        const animation = (elapsedMs >= chargeDuration && swing ? swing : charge) ?? this.getCombatIdleAnimation()
+        if (!animation || this.actualAnim === animation) return
+        const swingPhase = animation === swing
+        const spellMotion = animation === charge || swingPhase
+        const speed = spellMotion
+            ? 1000 * ((swingPhase ? WAND_RELEASE_FRAME : animation.to) - animation.from)
+                / (animation.targetedAnimations[0].animation.framePerSecond * (swingPhase ? swingDuration : chargeDuration))
+            : HUMAN_ANIMATION_SPEED.combatIdle
+        this.transitionToAnimation(animation, (swingPhase ? 0.04 : 0.16) / playbackSpeed, !spellMotion, speed * playbackSpeed)
+        this.actualAnim = animation
+    }
+
+    releaseSpellStance(playbackSpeed = 1) {
+        const swing = this.spellReleaseWandAnim
+        if (!swing || !this.isActive() || (this.actualAnim !== swing && this.actualAnim !== this.spellCastingWandAnim)) return
+        this.updateSpellStance(MagicArrow.castDuration, playbackSpeed)
+        if (this.animTransition?.toAnimation === swing) {
+            this.animTransition.forceEnd()
+            this.animTransition = null
+        }
+        const recoveryDuration = MagicArrow.castDuration / 18
+        const recoverySpeed = 1000 * (swing.to - WAND_RELEASE_FRAME) * playbackSpeed
+            / (swing.targetedAnimations[0].animation.framePerSecond * recoveryDuration)
+        if (swing.isStarted) swing.speedRatio = recoverySpeed
+        else swing.start(false, recoverySpeed, WAND_RELEASE_FRAME, swing.to)
+        swing.goToFrame(WAND_RELEASE_FRAME)
+        swing.setWeightForAllAnimatables(1)
+        if (this.weaponEquipItem?.type.id === EquipSlotModelsCb.CRYSTALWAND.modelId) {
+            this.weaponEquipItem.updateAttachmentWorldMatrix()
+        }
+    }
+
+    private isSpellMotion(animation?: AnimationGroup) {
+        return animation != null && (animation === this.spellCastingWandAnim || animation === this.spellReleaseWandAnim)
+    }
+
+    finishSpellStance() {
+        if (!this.isActive() || !this.isSpellMotion(this.actualAnim)) return
+        const animation = this.getCombatIdleAnimation()
+        if (!animation) return
+        this.transitionToAnimation(animation, 0.18, true, HUMAN_ANIMATION_SPEED.combatIdle)
+        this.actualAnim = animation
     }
 
     getSpellOriginToRef(feet: Vector3, result: Vector3) {
@@ -754,6 +808,13 @@ export class CharacterModel implements EquipBearer {
         const animSpeed = inCombat ? HUMAN_ANIMATION_SPEED.combatIdle : HUMAN_ANIMATION_SPEED.idle
 
         if (!desiredAnimation) return
+
+        if (this.animTransition?.toAnimation === desiredAnimation && this.isSpellMotion(this.animTransition.fromAnimation)) return
+
+        if (this.isSpellMotion(this.actualAnim)) {
+            this.finishSpellStance()
+            return
+        }
 
         if (!this.shouldAnimateIdle()) {
             if (this.idleAnimationFrozen && this.actualAnim === desiredAnimation) return
@@ -921,8 +982,11 @@ export class CharacterModel implements EquipBearer {
                 return
             }
         }
+        const smoothPoseReturn = sittingTransition
+            || (standingPose && this.isSpellMotion(this.actualAnim))
+            || (targetAnim === this.spellReleaseWandAnim && this.actualAnim === this.spellCastingWandAnim)
         const returningFromAction = standingPose
-            && !sittingTransition && this.actualAnim != null && !this.actualAnim.loopAnimation
+            && !smoothPoseReturn && this.actualAnim != null && !this.actualAnim.loopAnimation
         if (returningFromAction) {
             // Temporary comparison: switch directly to the standing pose without blending.
             this.animTransition = null
@@ -931,7 +995,7 @@ export class CharacterModel implements EquipBearer {
             targetAnim.setWeightForAllAnimatables(1)
             return
         }
-        this.animTransition = new AnimTransition(duration, this.actualAnim, targetAnim, loop, speed, sittingTransition)
+        this.animTransition = new AnimTransition(duration, this.actualAnim, targetAnim, loop, speed, smoothPoseReturn)
     }
 
     /**

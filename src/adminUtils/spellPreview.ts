@@ -4,12 +4,13 @@ import {
     MeshBuilder, PBRMaterial, Scene, SceneLoader, StandardMaterial, Texture, TransformNode, Vector3,
 } from '@babylonjs/core'
 import { MagicArrow } from '@game/game/spells/magicArrow'
-import { MagicArrowEffect } from '@/babylon/gfx/magicArrowEffect'
+import { MAGIC_ARROW_DETAILS, MagicArrowEffect, setMagicArrowGlowEnabled } from '@/babylon/gfx/magicArrowEffect'
 import { modelAssetUrl } from '@/babylon/modelAssetUrl'
-import { createPreviewCharacter } from './previewCharacter'
+import { createPreviewCharacter, getEquipmentPreviewGender } from './previewCharacter'
 import './styles.css'
 
 const STAGE_LABELS = {charge: 'Sesílání', flight: 'Let šípu', impact: 'Dopad'}
+const SPELL_PREVIEW_STORAGE_KEY = 'darkenlight.adminUtils.spellPreview'
 
 function createArena(scene: Scene) {
     const floor = MeshBuilder.CreateGround('spellArena', {width: 36, height: 30}, scene)
@@ -118,9 +119,16 @@ export async function mountSpellPreview() {
                     <div><dt>Mana</dt><dd>${MagicArrow.manaCost}</dd></div>
                     <div><dt>Poškození</dt><dd>${MagicArrow.damage}</dd></div>
                     <div><dt>Sesílání</dt><dd>${(MagicArrow.castDuration / 1000).toLocaleString('cs')} s</dd></div>
+                    <div><dt>Cooldown</dt><dd>${(MagicArrow.cooldown / 1000).toLocaleString('cs')} s</dd></div>
                     <div><dt>Dosah</dt><dd>${MagicArrow.range} polí</dd></div>
                 </dl>
                 <div class="admin-utils__controls">
+                    <label class="admin-utils__field">
+                        <span>Grafické detaily</span>
+                        <select id="spellPreviewDetail" disabled>
+                            ${MAGIC_ARROW_DETAILS.map(detail => `<option${detail === 'MEDIUM' ? ' selected' : ''}>${detail}</option>`).join('')}
+                        </select>
+                    </label>
                     <label class="admin-utils__field">
                         <span>Vzdálenost cíle <output id="spellPreviewDistanceValue">4 pole</output></span>
                         <input id="spellPreviewDistance" type="range" min="2" max="${MagicArrow.range}" value="4" step="0.5" disabled>
@@ -130,6 +138,9 @@ export async function mountSpellPreview() {
                         <select id="spellPreviewSpeed" disabled>
                             <option value="1">1×</option><option value="0.5">½×</option><option value="0.25">¼×</option>
                         </select>
+                    </label>
+                    <label class="spell-preview__glow-toggle">
+                        <input id="spellPreviewGlow" type="checkbox" checked> Glow
                     </label>
                     <button type="button" id="spellPreviewCast" disabled>Seslat kouzlo</button>
                 </div>
@@ -143,12 +154,38 @@ export async function mountSpellPreview() {
     const distance = root.querySelector<HTMLInputElement>('#spellPreviewDistance')!
     const distanceValue = root.querySelector<HTMLOutputElement>('#spellPreviewDistanceValue')!
     const speed = root.querySelector<HTMLSelectElement>('#spellPreviewSpeed')!
+    const detail = root.querySelector<HTMLSelectElement>('#spellPreviewDetail')!
+    const glowToggle = root.querySelector<HTMLInputElement>('#spellPreviewGlow')!
+    try {
+        const saved = JSON.parse(localStorage.getItem(SPELL_PREVIEW_STORAGE_KEY) ?? 'null')
+        if (Number.isFinite(saved?.distance)) distance.valueAsNumber = saved.distance
+        if (Array.from(speed.options).some(option => option.value === saved?.speed)) speed.value = saved.speed
+        if (Array.from(detail.options).some(option => option.value === saved?.detail)) detail.value = saved.detail
+        if (typeof saved?.glow === 'boolean') glowToggle.checked = saved.glow
+    } catch {
+        // Keep the preview usable if browser storage is unavailable.
+    }
+    const saveSettings = () => {
+        try {
+            localStorage.setItem(SPELL_PREVIEW_STORAGE_KEY, JSON.stringify({
+                distance: distance.valueAsNumber, speed: speed.value, detail: detail.value, glow: glowToggle.checked,
+            }))
+        } catch {
+            // The current controls still work without storage.
+        }
+    }
+    distance.addEventListener('input', saveSettings)
+    speed.addEventListener('change', saveSettings)
+    detail.addEventListener('change', saveSettings)
     const engine = new Engine(canvas, true, {preserveDrawingBuffer: true, stencil: true})
     const scene = new Scene(engine)
+    setMagicArrowGlowEnabled(scene, glowToggle.checked)
+    let effect: MagicArrowEffect | null = null
+    glowToggle.addEventListener('change', () => {
+        setMagicArrowGlowEnabled(scene, glowToggle.checked)
+        saveSettings()
+    })
     scene.clearColor = new Color4(0.029, 0.051, 0.07, 1)
-    scene.fogMode = Scene.FOGMODE_EXP2
-    scene.fogColor = new Color3(0.037, 0.067, 0.085)
-    scene.fogDensity = 0.067
     const resize = new ResizeObserver(() => engine.resize())
     resize.observe(canvas)
     window.addEventListener('pagehide', () => {
@@ -191,9 +228,10 @@ export async function mountSpellPreview() {
         EquipManager.initializeArmors(scene),
         createSkeleton(scene),
     ])
-    const actor = createPreviewCharacter()
+    const actor = createPreviewCharacter(getEquipmentPreviewGender())
     actor.pos.set(-2, 0, 0)
     actor.getLookAngle = () => -Math.PI / 4
+    actor.isRecentlyInCombat = () => actor.gender === 'F'
     const model = await CharacterModel.create(actor, true)
     model.resolveModelRotation(1)
     model.assignWeapon(WeaponModelsCb.CRYSTALWAND.id, 0)
@@ -202,7 +240,7 @@ export async function mountSpellPreview() {
     model.assignRightPauldron(ArmorModelsCb.LEATHER_PAULDRONS.id, 0)
     model.assignLeftLeg(ArmorModelsCb.LEATHER_GREAVES.id, 0)
     model.assignRightLeg(ArmorModelsCb.LEATHER_GREAVES.id, 0)
-    model.transitionToAnimation(model.idleAnim, 0, true)
+    if (actor.gender === 'F') model.stopAnimation()
 
     const target = new TransformNode('spellTarget', scene)
     skeleton.parent = target
@@ -215,25 +253,25 @@ export async function mountSpellPreview() {
     }
     updateDistance()
     distance.addEventListener('input', updateDistance)
-    let effect: MagicArrowEffect | null = null
     let releaseAt = 0
     let recoilStartedAt = 0
     let playbackSpeed = 1
     let lastPhase = ''
-    cast.disabled = distance.disabled = speed.disabled = false
+    cast.disabled = distance.disabled = speed.disabled = detail.disabled = false
     status.textContent = 'Připraveno'
     cast.addEventListener('click', () => {
         effect?.dispose()
         playbackSpeed = Number(speed.value)
         recoilStartedAt = 0
         lastPhase = ''
-        model.startSpellStance()
+        model.finishSpellStance()
+        model.updateSpellStance(0, playbackSpeed)
         effect = new MagicArrowEffect(scene, (feet, crystal) => {
             feet.copyFrom(actor.pos)
             model.getSpellOriginToRef(feet, crystal)
-        }, playbackSpeed)
+        }, MAGIC_ARROW_DETAILS[detail.selectedIndex], playbackSpeed)
         releaseAt = performance.now() + MagicArrow.castDuration / playbackSpeed
-        distance.disabled = speed.disabled = true
+        distance.disabled = speed.disabled = detail.disabled = true
     })
 
     engine.runRenderLoop(() => {
@@ -241,7 +279,16 @@ export async function mountSpellPreview() {
         model.skeleton?.prepare()
         model.onFrame(Math.min(0.05, engine.getDeltaTime() / 1000))
         EquipManager.onFrame()
-        if (effect && effect.phase === 'charge' && now >= releaseAt) effect.release(impactAt)
+        if (effect?.phase === 'charge') {
+            if (now >= releaseAt) {
+                model.releaseSpellStance(playbackSpeed)
+                effect.release(impactAt)
+            } else {
+                model.updateSpellStance(MagicArrow.castDuration - (releaseAt - now) * playbackSpeed, playbackSpeed)
+            }
+        } else if (actor.gender === 'F') {
+            model.stopAnimation()
+        }
         if (recoilStartedAt) {
             const recoil = Math.min(1, (now - recoilStartedAt) * playbackSpeed / 350)
             target.rotation.z = -0.13 * Math.sin(Math.PI * recoil)
@@ -252,8 +299,11 @@ export async function mountSpellPreview() {
             effect = null
             lastPhase = ''
             status.textContent = 'Připraveno'
-            distance.disabled = speed.disabled = false
-            model.transitionToAnimation(model.idleAnim, 0.18, true)
+            distance.disabled = speed.disabled = detail.disabled = false
+            if (actor.gender === 'M') {
+                model.transitionToAnimation(model.idleAnim, 0.18, true)
+                model.actualAnim = model.idleAnim
+            }
         } else if (lastPhase !== effect.phase) {
             lastPhase = effect.phase
             status.textContent = STAGE_LABELS[effect.phase]

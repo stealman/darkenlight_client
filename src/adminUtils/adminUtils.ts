@@ -18,7 +18,7 @@ import {
     Texture,
     Vector3,
 } from '@babylonjs/core'
-import { createPreviewCharacter } from './previewCharacter'
+import { ADMIN_UTILS_STORAGE_KEY, createPreviewCharacter } from './previewCharacter'
 import { modelAssetUrl } from '@/babylon/modelAssetUrl'
 import { HUMAN_ANIMATION_SPEED, HUMAN_MODEL_FILE } from '@/babylon/character/humanModelRig'
 import type { CharacterModel } from '@/babylon/character/characterModel'
@@ -64,7 +64,6 @@ interface AdminUtilsSettings {
     animation: PreviewAnimation
 }
 
-const ADMIN_UTILS_STORAGE_KEY = 'darkenlight.adminUtils.settings.v1'
 const PREVIEW_ANIMATIONS: PreviewAnimation[] = ['idle', 'walk', 'run', 'combatIdle', 'combatIdleTwoHanded', 'slash', 'jab', 'leftSlash', 'rightSlash', 'highJab', 'slash2', 'bowAim', 'greatAxeAttack', 'oreMining', 'twoHandedSwordAttack', 'twoHandedSwordAttack2', 'death']
 const MODIFIER_COMPONENTS: ModifierComponent[] = ['scale', 'position', 'rotation']
 const MODIFIER_AXES: ModifierAxis[] = ['x', 'y', 'z']

@@ -2,6 +2,7 @@ import type { Skeleton } from '@babylonjs/core'
 
 export const HUMAN_MODEL_FILE = 'human_male.glb'
 export const HUMAN_ANIMATION_SPEED = { idle: 1, walk: 3, run: 3.2, combatIdle: 1 } as const
+export const WAND_RELEASE_FRAME = 2220 // Blender frame 888
 
 // Blender 24 FPS -> imported glTF 60 FPS. All unauthored actions temporarily use JAB.
 const authoredRanges: Record<string, { startFrame: number, endFrame: number }> = {
@@ -24,6 +25,8 @@ const authoredRanges: Record<string, { startFrame: number, endFrame: number }> =
     Death: { startFrame: 1850, endFrame: 1925 },
     Pickup: { startFrame: 1950, endFrame: 1975 },
     SittingIdle: { startFrame: 2000, endFrame: 2075 },
+    SPELL_CASTING_WAND_1: { startFrame: 2100, endFrame: 2175 },
+    SPELL_RELEASE_WAND_1: { startFrame: 2200, endFrame: 2237.5 },
 }
 
 export function getHumanAnimationRange(name: string) {

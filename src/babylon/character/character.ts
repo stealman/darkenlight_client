@@ -413,7 +413,11 @@ class Character implements Attackable, EffectTarget {
             if (myChar) {
                 this.pushThroughContact = null
             }
-            this.model?.stopAnimation()
+            if (this.activeTimedAction?.type === CharacterActions.MAGIC_ARROW.name) {
+                this.model?.updateSpellStance(actualTime - this.activeTimedAction.startedAt)
+            } else {
+                this.model?.stopAnimation()
+            }
         }
         this.model?.onFrame(timeRate)
     }
@@ -579,20 +583,22 @@ class Character implements Attackable, EffectTarget {
         this.breakAutoAttack()
         this.markCombatActivity()
         this.startTimedAction(CharacterActions.MAGIC_ARROW.name, {x, z, dur: MagicArrow.castDuration})
-        this.model?.startSpellStance()
+        this.model?.updateSpellStance()
         if (this.insideView) this.magicArrowEffect = this.createMagicArrowEffect()
     }
 
     releaseMagicArrow(destination: Vector3, target: Attackable | null, flightMs: number) {
         let charge = this.magicArrowEffect
         this.magicArrowEffect = null
+        if (this.activeTimedAction?.type === CharacterActions.MAGIC_ARROW.name) this.activeTimedAction = null
+        this.model?.releaseSpellStance()
         if (!charge || charge.isDisposed) {
             if (!this.insideView && !target?.insideView) return
             charge = this.createMagicArrowEffect()
         }
         charge?.release(destination, flightMs, target ? (end) => {
             end.copyFrom(target.pos).addInPlaceFromFloats(0, target.getModelHeight() * 0.63, 0)
-        } : undefined)
+        } : undefined, target ? target.getBoxSize() / 2 : undefined)
     }
 
     private createMagicArrowEffect() {
@@ -602,7 +608,7 @@ class Character implements Attackable, EffectTarget {
             feet.copyFrom(this.pos)
             if (this.model?.initialized) this.model.getSpellOriginToRef(feet, crystal)
             else crystal.copyFrom(feet).addInPlaceFromFloats(0, 1.22, 0)
-        })
+        }, Settings.isDetalLevelLow() ? 'LOW' : Settings.isDetalLevelHigh() ? 'HIGH' : 'MEDIUM')
     }
 
     startGathering(data: CharacterGatheringMessage) {
@@ -700,6 +706,7 @@ class Character implements Attackable, EffectTarget {
     }
 
     clearTimedAction() {
+        if (this.activeTimedAction?.type === CharacterActions.MAGIC_ARROW.name) this.model?.finishSpellStance()
         this.activeTimedAction = null
         this.magicArrowEffect?.dispose()
         this.magicArrowEffect = null
@@ -818,6 +825,7 @@ class Character implements Attackable, EffectTarget {
         }
 
         if (this.activeTimedAction.tryFinish(actualTime)) {
+            if (this.activeTimedAction.type === CharacterActions.MAGIC_ARROW.name) this.model?.updateSpellStance(MagicArrow.castDuration)
             this.activeTimedAction = null
         }
     }

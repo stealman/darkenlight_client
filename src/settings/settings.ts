@@ -59,7 +59,7 @@ export const Settings = {
     volume: 0.5,
     ambientVolume: 1,
     targetMarkerOpacity: 1,
-    displayGlow: true as boolean,
+    glowLayerOverride: null as boolean | null,
     foggyAreasOverride: null as boolean | null,
 
     hudSize: 1 as number,
@@ -103,7 +103,7 @@ export const Settings = {
         const storedCameraDistance = parseFloat(storedSettings.cameraDistance)
         this.cameraDistance = Number.isFinite(storedCameraDistance) ? Math.min(100, Math.max(80, storedCameraDistance)) : 100
         this.targetMarkerOpacity = Number.isFinite(parseFloat(storedSettings.targetMarkerOpacity)) ? parseFloat(storedSettings.targetMarkerOpacity) : 1
-        this.displayGlow = storedSettings.displayGlow
+        this.glowLayerOverride = typeof storedSettings.glowLayerOverride === 'boolean' ? storedSettings.glowLayerOverride : null
         this.hudSize = parseFloat(storedSettings.hudSize)
         this.joystickSize = parseInt(storedSettings.joystickSize)
         this.joystickBottom = parseInt(storedSettings.joystickBottom)
@@ -163,7 +163,7 @@ export const Settings = {
             cameraDistance: 100,
             volume: 0.5,
             ambientVolume: 1,
-            displayGlow: !Settings.touchEnabled,
+            glowLayerOverride: null as boolean | null,
             foggyAreasOverride: null as boolean | null,
             targetMarkerOpacity: 1,
             hudSize: 1,
@@ -276,8 +276,8 @@ export const Settings = {
         AudioManager.setAmbientSoundVolume(value);
     },
 
-    setDisplayGlow(value: boolean) {
-        this.displayGlow = value;
+    isGlowLayerEnabled(): boolean {
+        return this.glowLayerOverride ?? this.isDetalLevelHigh()
     },
 
     setCameraDistance(value: number) {
