@@ -1,6 +1,6 @@
 import type {SkillKey} from '@/network/messageIfs'
 
-export type SkillCategoryKey = 'weapons' | 'armor' | 'utility' | 'gathering'
+export type SkillCategoryKey = 'weapons' | 'armor' | 'utility' | 'gathering' | 'magic'
 
 export type SkillDefinition = {
     key: SkillKey
@@ -44,6 +44,7 @@ export const GatheringSkillDefinitions: SkillDefinition[] = [
 
 export const SkillDefinitions: SkillDefinition[] = [
     ...PhysicalWeaponSkillDefinitions,
+    {key: 'magicArrow', category: 'magic', translationKey: 'skills.magic.magicArrow', descriptionTranslationKey: 'skills.descriptions.magicArrow'},
     ...ArmorSkillDefinitions,
     ...UtilitySkillDefinitions,
     ...GatheringSkillDefinitions,

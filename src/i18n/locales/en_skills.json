@@ -17,6 +17,7 @@
       "categories": {"Sheeps": "Sheep", "Kobolds": "Kobolds", "Skeletons": "Skeletons", "Withers": "Withers", "Zombies": "Zombies", "Wights": "Wights", "Cats": "Cats", "Deers": "Deer", "Guards": "Guards"}
     },
     "categories": {
+      "magic": "Magic",
       "gathering": "Resource Gathering",
       "weapons": "Weapons",
       "armor": "Armor",
@@ -46,7 +47,9 @@
       "camping": "Camping",
       "healing": "Healing"
     },
+    "magic": {"magicArrow": "Magic Arrow"},
     "descriptions": {
+      "magicArrow": "Launches an arrow of compressed air.",
       "cooking": "A skill for preparing meals.",
       "hunting": "Hunting animals provides hides and material for bowstrings.",
       "lumberjacking": "Allows harvesting different types of wood based on your skill rank and the tree rarity.",

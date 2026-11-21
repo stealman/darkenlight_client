@@ -2,6 +2,7 @@
     <main class="gui-preview">
         <nav class="gui-preview-nav">
             <a href="/adminUtils">Admin utils</a>
+            <a href="/adminUtils/spells">Kouzla</a>
             <span>GUI · offline náhled</span>
             <label>Úzký panel <input v-model="narrow" type="checkbox"></label>
             <label>Náhled <select v-model="preview"><option value="controls">Ovládací prvky</option><option value="inventory">Inventář</option><option value="storage">Banka / barel</option><option value="hud">Akční panel a minimapa</option><option value="status">Postava, party a cíl</option></select></label>

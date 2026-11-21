@@ -197,6 +197,7 @@ export const WeaponsCbManager = {
     },
 
     async initCrystalWand(map: Map<number, EquipItemType>, scene: Scene) {
+        this.itemSourceParent ??= new TransformNode('mobWeaponSources', scene)
         const material = Materials.getPBRCustomMaterialFrom(
             scene,
             'crystalWandMaterialAtlas',
@@ -765,7 +766,7 @@ export const WeaponModelsCb = {
         'crystalwand',
         Vector3.Zero(),
         new Vector3(0.27, 0.27, 0.27),
-        new Vector3(0, 2, 0),
+        new Vector3(0.03, 2.37, 0),
         matTexturedBowSize,
         wandMaterialAtlasIndices,
         wandMaterialAtlasIndices.get(0),

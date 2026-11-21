@@ -25,6 +25,10 @@ async function boot() {
         import('./adminUtils/guiPreview')
             .then(({ mountGuiPreview }) => mountGuiPreview())
             .catch((error) => showBootError('GUI preview', error))
+    } else if (window.location.pathname === '/adminUtils/spells') {
+        import('./adminUtils/spellPreview')
+            .then(({ mountSpellPreview }) => mountSpellPreview())
+            .catch((error) => showBootError('Kouzla', error))
     } else if (isAdminUtilsPath) {
         import('./adminUtils/adminUtils')
             .then(({ mountAdminUtils }) => mountAdminUtils())

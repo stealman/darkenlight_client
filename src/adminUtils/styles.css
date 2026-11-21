@@ -168,6 +168,67 @@ select {
     line-height: 1.6;
 }
 
+.admin-utils__nav {
+    display: flex;
+    gap: 5px;
+    margin: 16px 0;
+}
+
+.admin-utils__nav a {
+    flex: 1;
+    padding: 9px 5px;
+    border: 1px solid #34443c;
+    color: #b9c7b9;
+    text-align: center;
+    font-size: 12px;
+    text-decoration: none;
+}
+
+.admin-utils__nav a:hover,
+.admin-utils__nav a[aria-current="page"] {
+    border-color: #789785;
+    background: #26382e;
+    color: #edf3e8;
+}
+
+.admin-utils--spells .admin-utils__panel { gap: 24px; }
+
+.spell-preview__spell {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.spell-preview__spell img { width: 52px; height: 52px; }
+.spell-preview__spell h2 { margin: 0 0 4px; color: #e7f1ef; }
+.spell-preview__spell p { margin: 0; color: #9caea9; font-size: 12px; }
+
+.spell-preview__stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 13px;
+    margin: 0;
+    padding: 15px 0;
+    border-block: 1px solid #35433c;
+}
+
+.spell-preview__stats dt { color: #adbbb0; font-size: 11px; }
+.spell-preview__stats dd { margin: 5px 0 0; color: #e4f1ed; font-size: 15px; }
+.admin-utils--spells output { float: right; color: #a9d9e0; }
+
+#spellPreviewCast {
+    padding: 12px;
+    border: 1px solid #78b3b9;
+    border-radius: 4px;
+    background: #24444b;
+    color: #edf9f9;
+    cursor: pointer;
+    font-weight: 700;
+}
+
+#spellPreviewCast:hover:not(:disabled) { background: #315961; }
+#spellPreviewCast:disabled { opacity: 0.5; cursor: default; }
+
 .admin-utils__controls {
     display: grid;
     gap: 12px;

@@ -598,6 +598,10 @@ export const MyPlayer = {
             case CharacterActions.PRECISE_SHOT.name: {
                 return this.getCooldownPercent(actualTime, this.preciseShotCooldownStart, this.preciseShotCooldownEnd)
             }
+            case CharacterActions.MAGIC_ARROW.name: {
+                const cast = this.myChar.activeTimedAction
+                return cast?.type === action.name ? cast.getProgressPercent(actualTime) : 100
+            }
         }
         return 100
     },

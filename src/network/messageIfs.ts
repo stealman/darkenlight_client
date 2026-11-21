@@ -103,12 +103,19 @@ export interface AccountCharacterNameCheckData {
     className?: string
 }
 
+export type MagicArrowCastMessage = {
+    id: number, tgt: number, tp: string, worldId: number,
+    event: {phase: 'charge', x: number, y: number, z: number}
+        | {phase: 'release', x: number, y: number, z: number, flightMs: number}
+        | {phase: 'impact', res: AutoAttackResult}
+}
+
 export type PhysicalWeaponSkillKey = 'swords' | 'axes' | 'maces' | 'polearms' | 'bows' | 'stavesAndWands'
 export type ArmorSkillKey = 'leatherArmor' | 'chainArmor' | 'plateArmor' | 'shields'
 export type UtilitySkillKey = 'camping' | 'healing' | 'cooking'
 export type GatheringSkillKey = 'mining' | 'lumberjacking' | 'hunting'
 export type CombatSkillKey = 'powerStrike' | 'preciseShot'
-export type SkillKey = PhysicalWeaponSkillKey | ArmorSkillKey | UtilitySkillKey | GatheringSkillKey | CombatSkillKey
+export type SkillKey = PhysicalWeaponSkillKey | ArmorSkillKey | UtilitySkillKey | GatheringSkillKey | CombatSkillKey | 'magicArrow'
 
 export interface SkillProgressTO {
     maxWoodResourceKey?: string

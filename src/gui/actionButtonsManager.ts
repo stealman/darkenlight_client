@@ -10,7 +10,8 @@ import { ConsumableHelper } from '@/data/items/consumableHelper'
 import { CharacterAction, CharacterActions } from '@/data/actions/characterActions'
 import { t } from '@/i18n'
 import { Connector } from '@/network/connector'
-import { PowerStrike, PreciseShot } from '@/network/messages'
+import { CastMagicArrow, PowerStrike, PreciseShot } from '@/network/messages'
+import { MagicArrow } from '@game/game/spells/magicArrow'
 import { WeaponCategories } from '@/data/items/item'
 import type { Attackable } from '@/GameManager'
 
@@ -392,6 +393,13 @@ export const ActionButtonsManager = {
                 case CharacterActions.POWER_STRIKE.name:
                     this.clickOnPowerStrikeButton()
                     break
+                case CharacterActions.MAGIC_ARROW.name: {
+                    if ((MyPlayer.myChar?.skillSet?.magicArrow?.rank ?? 0) < 1 || MyPlayer.myChar.getMoveAngle() != null) break
+                    if (!TargetingManager.selectedTarget) TargetingManager.cycleThroughClosestTargets()
+                    const target = TargetingManager.selectedTarget
+                    Connector.sendMessage(new CastMagicArrow(target?.id ?? 0, target?.getObjectType() ?? ''))
+                    break
+                }
                 case CharacterActions.PRECISE_SHOT.name:
                     this.clickOnPreciseShotButton()
                     break
@@ -674,6 +682,12 @@ export const ActionButtonsManager = {
     getActionDescription(actionName: string): string {
         const action = CharacterActions.getActionByName(actionName)
         if (!action) return ''
+        if (actionName === CharacterActions.MAGIC_ARROW.name) {
+            return action.descLoc + ' ' + t('actions.magicArrowStats', {
+                ...MagicArrow,
+                castTime: (MagicArrow.castDuration / 1000).toLocaleString(document.documentElement.lang || undefined),
+            })
+        }
         if (actionName !== CharacterActions.POWER_STRIKE.name && actionName !== CharacterActions.PRECISE_SHOT.name) return action.descLoc
 
         const preciseShot = actionName === CharacterActions.PRECISE_SHOT.name
@@ -700,6 +714,7 @@ export const ActionButtonsManager = {
         ]
         const hasPowerStrike = (MyPlayer.myChar?.skillSet?.powerStrike?.rank ?? 0) > 0
         const hasPreciseShot = (MyPlayer.myChar?.skillSet?.preciseShot?.rank ?? 0) > 0
+        if ((MyPlayer.myChar?.skillSet?.magicArrow?.rank ?? 0) > 0) actions.splice(1, 0, CharacterActions.MAGIC_ARROW)
         const options = actions.map(action => ({name: action.name, actions: [action]}))
 
         if (hasPowerStrike && hasPreciseShot) {

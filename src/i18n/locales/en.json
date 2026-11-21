@@ -241,6 +241,9 @@
     }
   },
   "actions": {
+    "magicArrowStats": "{manaCost} mana · {damage} damage · {castTime} s cast · {range} tiles of range",
+    "magicArrowName": "Magic Arrow",
+    "magicArrowDescription": "Launches an arrow of compressed air.",
     "noneTitle": "Unassigned",
     "noneDescription": "No action will be assigned to this button.",
     "autoAttackName": "Auto-Attack",
@@ -309,6 +312,8 @@
     }
   },
   "messages": {
+    "magicArrowRequiresTarget": "Select a target for Magic Arrow.",
+    "magicArrowBlocked": "The target is out of range or behind an obstacle.",
     "droppedItemProtected": "You can pick up this item in {seconds} s.",
     "noBandages": "You have no bandages",
     "noHealthPotions": "You have no health potions",

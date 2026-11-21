@@ -17,6 +17,7 @@
       "categories": {"Sheeps": "Ovce", "Kobolds": "Koboldi", "Skeletons": "Kostlivci", "Withers": "Witherové", "Zombies": "Zombie", "Wights": "Přízraky", "Cats": "Kočky", "Deers": "Jeleni", "Guards": "Stráže"}
     },
     "categories": {
+      "magic": "Magie",
       "gathering": "Získávání Surovin",
       "weapons": "Zbraně",
       "armor": "Brnění",
@@ -46,7 +47,9 @@
       "camping": "Táboření",
       "healing": "Léčba"
     },
+    "magic": {"magicArrow": "Magický šíp"},
     "descriptions": {
+      "magicArrow": "Vyšle šíp ze stlačeného vzduchu.",
       "cooking": "Dovednost pro přípravu jídel.",
       "hunting": "Lovem zvířat lze získávat kůže a materiál pro tětivy luků.",
       "lumberjacking": "Umožňuje získávat různé druhy dřeva podle úrovně dovednosti a vzácnosti stromu.",

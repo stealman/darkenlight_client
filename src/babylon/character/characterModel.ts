@@ -693,6 +693,21 @@ export class CharacterModel implements EquipBearer {
         }
     }
 
+    startSpellStance() {
+        this.transitionToAnimation(this.getCombatIdleAnimation(), 0.16, true, HUMAN_ANIMATION_SPEED.combatIdle)
+    }
+
+    getSpellOriginToRef(feet: Vector3, result: Vector3) {
+        const item = this.weaponEquipItem
+        if (item?.type.id === EquipSlotModelsCb.CRYSTALWAND.modelId) {
+            const shape = item.type.cbData
+            shape.weaponTipPosition!.multiplyToRef(shape.scale, result)
+            item.transformMeshPointToRef(result, result)
+        } else {
+            result.copyFrom(feet).addInPlaceFromFloats(0, 1.22, 0)
+        }
+    }
+
     private getCombatIdleAnimation(): AnimationGroup | undefined {
         const weapon = this.parent.getWeapon()
         const weaponType = weapon?.slotInfo?.weaponType

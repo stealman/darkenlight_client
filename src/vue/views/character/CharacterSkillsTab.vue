@@ -75,7 +75,7 @@
                                     <span class="skill-detail-label">{{ t('skills.details.classMaximumRank') }}</span>
                                     <strong class="skill-detail-value">{{ getSkillRankName(skill.cap) }}</strong>
                                 </div>
-                                <div class="skill-bonus-list">
+                                <div v-if="skill.category !== 'magic'" class="skill-bonus-list">
                                     <div v-if="skill.key === 'preciseShot'" class="skill-bonus-row">
                                         <span
                                             class="skill-bonus-label"
@@ -292,7 +292,7 @@ const skills = computed(() => {
     })
 })
 
-const skillCategoryOrder: SkillCategoryKey[] = ['weapons', 'armor', 'utility', 'gathering']
+const skillCategoryOrder: SkillCategoryKey[] = ['weapons', 'magic', 'armor', 'utility', 'gathering']
 const visibleSkillCategories = computed(() => skillCategoryOrder
     .map((key) => ({key, skills: skills.value.filter((skill) => skill.category === key)}))
     .filter((category) => category.skills.length > 0))

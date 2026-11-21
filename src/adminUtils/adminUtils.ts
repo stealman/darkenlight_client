@@ -18,7 +18,7 @@ import {
     Texture,
     Vector3,
 } from '@babylonjs/core'
-import type Character from '@/babylon/character/character'
+import { createPreviewCharacter } from './previewCharacter'
 import { modelAssetUrl } from '@/babylon/modelAssetUrl'
 import { HUMAN_ANIMATION_SPEED, HUMAN_MODEL_FILE } from '@/babylon/character/humanModelRig'
 import type { CharacterModel } from '@/babylon/character/characterModel'
@@ -613,7 +613,11 @@ function createShell(root: HTMLElement) {
                 <div>
                     <p class="admin-utils__eyebrow">Darkenlight</p>
                     <h1>Admin Utils</h1>
-                    <p><a href="/adminUtils/gui">GUI — náhled dialogů a ovládacích prvků</a></p>
+                    <nav class="admin-utils__nav" aria-label="Admin Utils">
+                        <a href="/adminUtils" aria-current="page">Výbava</a>
+                        <a href="/adminUtils/gui">GUI</a>
+                        <a href="/adminUtils/spells">Kouzla</a>
+                    </nav>
                     <p class="admin-utils__intro">Offline laboratoř modelů. Nepřipojuje se k hernímu serveru.</p>
                 </div>
                 <label class="admin-utils__field">
@@ -1096,33 +1100,6 @@ async function installHairControls(root: HTMLElement, model: CharacterModel, con
     })
     await showSelected()
     return showSelected
-}
-
-function createPreviewCharacter(gender: 'M' | 'F' = 'M'): Character {
-    return {
-        id: -1,
-        gender,
-        headTypeId: 1,
-        hairTypeId: 1,
-        hairColorId: 1,
-        pos: Vector3.Zero(),
-        logicYpos: 0,
-        nameDisplayTime: 0,
-        insideView: true,
-        equipSet: new Map(),
-        dead: false,
-        attackAnimationTime: 1000,
-        yMoveSpeed: 0,
-        getModelHeight: () => 2,
-        isMyChar: () => true,
-        getMoveAngle: () => null,
-        getLookAngle: () => null,
-        getWeapon: () => null,
-        getMoveType: () => 'W',
-        getActualSpeed: () => 0,
-        getFootStepSoundType: () => null,
-        isRecentlyInCombat: () => false,
-    } as unknown as Character
 }
 
 function setEquipmentSlot(model: CharacterModel, slot: PreviewSlot, modelId: number | null, materialIndex: number) {

@@ -402,6 +402,15 @@ export class PowerStrike implements Message {
     }
 }
 
+export class CastMagicArrow implements Message {
+    t = 77
+    d: {id: number, tp: string}
+
+    constructor(id: number, tp: string) {
+        this.d = {id, tp}
+    }
+}
+
 export class PreciseShot implements Message {
     t: number = 73
 

@@ -101,6 +101,9 @@ export const CharacterActions = {
     PRECISE_SHOT: new CharacterAction('PRECISE_SHOT', 'btn_precise_shot', false, 'actions.preciseShotName',
         'actions.preciseShotDescription'),
 
+    MAGIC_ARROW: new CharacterAction('MAGIC_ARROW', 'btn_magic_arrow', false, 'actions.magicArrowName',
+        'actions.magicArrowDescription'),
+
     WEAPON_SPECIAL_ATTACK: new CharacterAction('WEAPON_SPECIAL_ATTACK', 'btn_precise_shot', false, '', ''),
 
     HEAL: new CharacterAction('HEAL', 'btn_heal', false, 'actions.healName',
@@ -136,6 +139,7 @@ export const CharacterActions = {
             this.AUTO_ATTACK,
             this.POWER_STRIKE,
             this.PRECISE_SHOT,
+            this.MAGIC_ARROW,
             this.WEAPON_SPECIAL_ATTACK,
             this.HEAL,
             this.HEALING_POTION,

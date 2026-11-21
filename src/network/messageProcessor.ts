@@ -1,4 +1,5 @@
 import {AffectGroups} from '@/data/affects'
+import { Vector3 } from '@babylonjs/core'
 import {ActivityLogManager} from '@/data/activityLogManager'
 import {getDamageColor, getRelationColor} from '@/gui/combatColors'
 import {getDamagePositionSuffix} from '@/gui/combatText'
@@ -27,7 +28,7 @@ import {
     AttackableBasicTO,
     AttackableCombatTO,
     AutoAttackMessage,
-    AutoAttackResultMessage, CharacterCampingMessage,
+    AutoAttackResultMessage, CharacterCampingMessage, MagicArrowCastMessage,
     CombatApproachMessage,
     CharacterCraftingMessage, CharacterCraftingResultMessage,
     CharacterGatheringMessage,
@@ -94,6 +95,7 @@ export const MessageProcessor = {
         for (const element of response) {
             const msg = element
             switch (msg.t) {
+                case 104: this.processMagicArrow(msg.d); break
                 case 103: CharacterManager.receivePickup(msg.d); break
                 case 102: WorldAreaManager.receive(msg.d); break
                 case 101: ActivityLogManager.receive(msg.d); break
@@ -555,7 +557,7 @@ export const MessageProcessor = {
         return entity?.getName() || `Monster #${id}`
     },
 
-    logAttack(data: AutoAttackResultMessage, monsterAttacker: boolean) {
+    logAttack(data: AutoAttackResultMessage, monsterAttacker: boolean, spellName?: string) {
         const mine = !monsterAttacker && data.id === MyPlayer.myChar.id
         const incoming = data.tp === 'C' && data.tgt === MyPlayer.myChar.id
         if (!mine && !incoming) return
@@ -564,8 +566,8 @@ export const MessageProcessor = {
         const value = String(Math.round(data.res.d)) + direction
         const result = data.res.h === 'm' ? t('common.miss') : data.res.h === 'b' ? t('common.blocked') : value
         const baseText = t(mine ? 'activityLog.outgoing' : 'activityLog.incoming', {name: mine ? this.combatLogName(data.tgt, data.tp === 'M') : this.combatLogName(data.id, monsterAttacker), result})
-        const weapon = mine ? ActivityLogManager.lastAttackWeaponName || MyPlayer.myChar.getWeapon()?.name || t('activityLog.unarmed') : ''
-        const skill = mine ? ActivityLogManager.lastAttackSkillName : ''
+        const weapon = mine && !spellName ? ActivityLogManager.lastAttackWeaponName || MyPlayer.myChar.getWeapon()?.name || t('activityLog.unarmed') : ''
+        const skill = spellName ?? (mine ? ActivityLogManager.lastAttackSkillName : '')
         const description = [skill, weapon].filter(Boolean).join(', ')
         const text = description ? `${baseText} (${description})` : baseText
         const offset = baseText.lastIndexOf(result)
@@ -579,6 +581,36 @@ export const MessageProcessor = {
     processCharacterAttackFinished(data: AutoAttackResultMessage) {
         this.logAttack(data, false)
         CharacterManager.finishAutoAttack(data)
+    },
+
+    processMagicArrow(data: MagicArrowCastMessage) {
+        const player = MyPlayer.myChar
+        if (!player || data.worldId !== MyPlayer.worldId) return
+        const caster = player.id === data.id ? player : CharacterManager.characters.get(data.id)
+        const event = data.event
+        if (event.phase === 'charge') {
+            caster?.startMagicArrow(event.x, event.z)
+            return
+        }
+
+        const target = Utils.getAttackTargetByTypeAndId(data.tp, data.tgt, true)
+        if (event.phase === 'release') {
+            const height = (target?.getModelHeight() ?? 1.8) * 0.63
+            const destination = new Vector3(event.x, event.y + height, event.z)
+            caster?.releaseMagicArrow(destination, target, event.flightMs)
+            return
+        }
+        const {res} = event
+        this.logAttack({...data, res}, false, t('skills.magic.magicArrow'))
+        if (!target) return
+        target.hpPercent = res.tgt.hpp
+        if (target === player) {
+            MyPlayer.setMyCharHp(res.tgt.hp)
+            if (caster) OverlayManager.addMyCharDamageNumber(caster, res.d, res.h, res.q)
+        } else if (caster === player) {
+            if (data.tp === 'M') OverlayManager.addMonsterDamageNumber(data.tgt, res.d, res.h, res.q)
+            else OverlayManager.addCharacterDamageNumber(data.tgt, res.d, res.h, res.q)
+        }
     },
 
     processMonsterAttack(data: AutoAttackMessage) {

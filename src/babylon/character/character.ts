@@ -42,6 +42,8 @@ import { EffectTarget } from '@/babylon/gfx/characterEffect'
 import { GfxManager } from '@/babylon/gfx/gfxManager'
 import { PotionConsumeEffect } from '@/babylon/gfx/potionConsumeEffect'
 import { HitSparkEffect, PowerStrikeSparkFountainEffect } from '@/babylon/gfx/hitSparkEffect'
+import { MagicArrowEffect } from '@/babylon/gfx/magicArrowEffect'
+import { MagicArrow } from '@game/game/spells/magicArrow'
 import { WATER_BLOCK_TYPE } from '@/babylon/world/terrainManager'
 import { CharacterActions, CharacterTimedAction } from '@/data/actions/characterActions'
 import { PubliclyVisibleAffect } from '@/data/affects'
@@ -130,6 +132,7 @@ class Character implements Attackable, EffectTarget {
     healingEndTime: number = 0
 
     activeTimedAction: CharacterTimedAction | null = null
+    private magicArrowEffect: MagicArrowEffect | null = null
     publiclyVisibleAffects: Map<number, PubliclyVisibleAffect> = new Map<number, PubliclyVisibleAffect>()
 
     constructor(data: CharacterAppearanceData & Record<string, any>, myChar: boolean = false, previewPosition?: Vector3) {
@@ -572,6 +575,36 @@ class Character implements Attackable, EffectTarget {
         }
     }
 
+    startMagicArrow(x: number, z: number) {
+        this.breakAutoAttack()
+        this.markCombatActivity()
+        this.startTimedAction(CharacterActions.MAGIC_ARROW.name, {x, z, dur: MagicArrow.castDuration})
+        this.model?.startSpellStance()
+        if (this.insideView) this.magicArrowEffect = this.createMagicArrowEffect()
+    }
+
+    releaseMagicArrow(destination: Vector3, target: Attackable | null, flightMs: number) {
+        let charge = this.magicArrowEffect
+        this.magicArrowEffect = null
+        if (!charge || charge.isDisposed) {
+            if (!this.insideView && !target?.insideView) return
+            charge = this.createMagicArrowEffect()
+        }
+        charge?.release(destination, flightMs, target ? (end) => {
+            end.copyFrom(target.pos).addInPlaceFromFloats(0, target.getModelHeight() * 0.63, 0)
+        } : undefined)
+    }
+
+    private createMagicArrowEffect() {
+        const scene = this.model?.node.getScene()
+        if (!scene) return null
+        return new MagicArrowEffect(scene, (feet, crystal) => {
+            feet.copyFrom(this.pos)
+            if (this.model?.initialized) this.model.getSpellOriginToRef(feet, crystal)
+            else crystal.copyFrom(feet).addInPlaceFromFloats(0, 1.22, 0)
+        })
+    }
+
     startGathering(data: CharacterGatheringMessage) {
         this.attackAnimationTime = data.dur
 
@@ -668,6 +701,8 @@ class Character implements Attackable, EffectTarget {
 
     clearTimedAction() {
         this.activeTimedAction = null
+        this.magicArrowEffect?.dispose()
+        this.magicArrowEffect = null
     }
 
     die() {

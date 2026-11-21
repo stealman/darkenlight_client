@@ -153,6 +153,18 @@ export class EquipItem {
         this.updateWeaponTrailFade()
     }
 
+    transformMeshPointToRef(local: Vector3, result: Vector3) {
+        if (this.attachmentWorldMatrix) {
+            Vector3.TransformCoordinatesToRef(local, this.attachmentWorldMatrix, result)
+            return
+        }
+        result.copyFrom(local)
+        if (this.modelModifierMatrix) Vector3.TransformCoordinatesToRef(result, this.modelModifierMatrix, result)
+        result.multiplyInPlace(this.scale)
+        result.rotateByQuaternionToRef(this.quaternion, result)
+        result.addInPlace(this.position)
+    }
+
     createWeaponTrail(bone: Bone): TrailMesh {
         const scene = this.type.mesh!.getScene()
         const tip = new TransformNode('weaponTip' + this.parent?.getOwnerId(), scene)
