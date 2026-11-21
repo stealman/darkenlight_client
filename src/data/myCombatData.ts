@@ -10,7 +10,6 @@ export const MyCombatData = reactive({
     patk: 0,
     aaCd: 0,
     armor: 0,
-    armorPen: 0,
     precision: 0,
     defense: 0,
     arcaneInterference: 0,
@@ -36,9 +35,6 @@ export const MyCombatData = reactive({
         }
         if (data.armor != null) {
             this.armor = data.armor
-        }
-        if (data.armorPen != null) {
-            this.armorPen = data.armorPen
         }
         if (data.precision != null) {
             this.precision = data.precision

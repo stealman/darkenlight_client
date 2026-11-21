@@ -123,7 +123,6 @@ const attributes = computed(() => [
             },
             { key: 'damageType', label: t('vendor.attackType'), value: equippedWeaponDamageType.value ?? '-' },
             { key: 'attackSpeed', label: t('vendor.speed'), value: `${autoAttackCooldownSeconds.value}s` },
-            { key: 'armorPenetration', label: t('character.armorPenetration'), value: MyCombatData.armorPen },
         ],
     },
     {

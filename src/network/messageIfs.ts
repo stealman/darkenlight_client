@@ -48,7 +48,6 @@ export interface AttackableCombatTO {
     patk?: number
     aaCd?: number
     armor?: number
-    armorPen?: number
     precision?: number
     defense?: number
     arcaneInterference?: number
