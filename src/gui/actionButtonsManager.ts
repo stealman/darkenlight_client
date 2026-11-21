@@ -652,7 +652,7 @@ export const ActionButtonsManager = {
 
         const consumableCbId = this.getBoundConsumableCbId(binding)
         if (consumableCbId !== null) {
-            const itemName = InventoryManager.inventory.find(item => item.cbId === consumableCbId)?.name ?? ''
+            const itemName = InventoryManager.inventory.find(item => item.cbType === 'R' && item.cbId === consumableCbId)?.name ?? ''
             if (ConsumableHelper.getHealingPotionIds().includes(consumableCbId)) {
                 return [`${itemName}: ${CharacterActions.HEALING_POTION.descLoc}`]
             }
@@ -744,7 +744,7 @@ export const ActionButtonsManager = {
     },
 
     getConsumableItemImage(cbId: number): string {
-        const imageUrl = InventoryManager.inventory.find(item => item.cbId === cbId)?.imgUrl
+        const imageUrl = InventoryManager.inventory.find(item => item.cbType === 'R' && item.cbId === cbId)?.imgUrl
         if (!imageUrl) return '/images/icons/buttons/btn_heal_potion.png'
         return imageUrl.startsWith('/') ? imageUrl : `/${imageUrl}`
     },

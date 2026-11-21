@@ -227,7 +227,7 @@ const showItemInfoOverlay = (item, pointer, options = {}) => {
     itemInfoOverlay.value.showDropButton = showDropButton
     itemInfoOverlay.value.showMergeButton = showMergeButton
     itemInfoOverlay.value.showCampButton = sourceType === 'inventory' && ConsumableHelper.isItemCampWood(item)
-    itemInfoOverlay.value.showBindButton = sourceType === 'inventory' && ConsumableHelper.isItemConsumable(item)
+    itemInfoOverlay.value.showBindButton = sourceType === 'inventory' && item.isConsumable()
     itemInfoOverlay.value.inventoryIndex = inventoryIndex
     itemInfoOverlay.value.sourceType = sourceType
     itemInfoOverlay.value.sourceKey = sourceKey
@@ -380,6 +380,7 @@ const refreshItemInfoOverlayFromLiveData = (changedItemIds = null) => {
     itemInfoOverlay.value.showDropButton = liveItemInfo.showDropButton
     itemInfoOverlay.value.showMergeButton = liveItemInfo.showMergeButton
     itemInfoOverlay.value.showCampButton = liveItemInfo.sourceType === 'inventory' && ConsumableHelper.isItemCampWood(item)
+    itemInfoOverlay.value.showBindButton = liveItemInfo.sourceType === 'inventory' && item.isConsumable()
     itemInfoOverlay.value.inventoryIndex = liveItemInfo.inventoryIndex
     itemInfoOverlay.value.sourceType = liveItemInfo.sourceType
     itemInfoOverlay.value.sourceKey = liveItemInfo.sourceKey
@@ -625,12 +626,12 @@ const onCreateCampClick = () => {
 }
 
 const onBindConsumableClick = () => {
-    const cbId = Number(itemInfoOverlay.value.cbId)
-    if (!Number.isFinite(cbId)) {
+    const liveItemInfo = getLiveItemInfoForOverlay()
+    if (liveItemInfo?.sourceType !== 'inventory' || !liveItemInfo.item.isConsumable()) {
         return
     }
 
-    bindingConsumableCbId.value = cbId
+    bindingConsumableCbId.value = liveItemInfo.item.cbId
     ActionButtonsManager.startActionButtonCapture(completeConsumableBinding)
     emit('close')
 }

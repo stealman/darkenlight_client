@@ -9,8 +9,7 @@ export const ConsumablesCodebook = {
     foodIds: [351, 352, 353],
 
     isItemConsumable(item: Item): boolean {
-        return this.getHealingPotionIds().includes(item.cbId) || this.getManaPotionIds().includes(item.cbId)
-            || this.getStaminaPotionIds().includes(item.cbId) || this.getFoodIds().includes(item.cbId)
+        return item.cbType === 'R' && (this.isItemPotion(item.cbId) || this.getFoodIds().includes(item.cbId))
     },
     getHealingPotionIds(): number[] { return this.healingPotionIds },
     getManaPotionIds(): number[] { return this.manaPotionIds },

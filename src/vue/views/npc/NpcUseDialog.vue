@@ -224,7 +224,7 @@
                     <span v-if="isNonZero(detailItem.atts?.precision)">{{ t('inventory.precision') }} <strong class="ui-text-gradient">{{ formatModifier(detailItem.atts?.precision) }}%</strong></span>
                     <span v-if="isNonZero(detailItem.atts?.defense)">{{ t('inventory.defense') }} <strong class="ui-text-gradient">{{ formatModifier(detailItem.atts?.defense) }}%</strong></span>
                     <span>{{ t('inventory.armor') }} <strong class="ui-text-gradient">{{ detailItem.atts?.pdef }}</strong></span>
-                    <span>{{ t('inventory.magicInterference') }} <strong class="ui-text-gradient">{{ detailItem.atts?.arcaneInterference }}%</strong></span>
+                    <span v-if="isNonZero(detailItem.atts?.arcaneInterference ?? 0)">{{ t('inventory.magicInterference') }} <strong class="ui-text-gradient">{{ detailItem.atts?.arcaneInterference }}%</strong></span>
                     <span v-if="isNonZero(detailItem.atts?.str)">{{ t('character.strength') }} <strong class="ui-text-gradient">{{ formatModifier(detailItem.atts?.str) }}</strong></span>
                     <span v-if="isNonZero(detailItem.atts?.agi)">{{ t('character.agility') }} <strong class="ui-text-gradient">{{ formatModifier(detailItem.atts?.agi) }}</strong></span>
                     <span v-if="isNonZero(detailItem.atts?.int)">{{ t('character.intelligence') }} <strong class="ui-text-gradient">{{ formatModifier(detailItem.atts?.int) }}</strong></span>

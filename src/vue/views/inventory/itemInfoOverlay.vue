@@ -61,7 +61,7 @@
             <span
                 >{{ t('inventory.armor') }} <strong class="ui-text-gradient">{{ itemInfo.armorStats.pdef }}</strong></span
             >
-            <span
+            <span v-if="isNonZero(itemInfo.armorStats.arcaneInterference)"
                 >{{ t('inventory.magicInterference') }} <strong class="ui-text-gradient">{{ itemInfo.armorStats.arcaneInterference }}%</strong></span
             >
             <span v-if="isNonZero(itemInfo.armorStats.str)"
