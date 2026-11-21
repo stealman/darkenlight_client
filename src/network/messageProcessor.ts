@@ -31,7 +31,7 @@ import {
     AttackableBasicTO,
     AttackableCombatTO,
     AutoAttackMessage,
-    AutoAttackResultMessage, CharacterCampingMessage, HealingSpellCastMessage, MagicArrowCastMessage,
+    AutoAttackResultMessage, CharacterCampingMessage, HealerTreatmentMessage, HealingSpellCastMessage, MagicArrowCastMessage,
     CombatApproachMessage,
     CharacterCraftingMessage, CharacterCraftingResultMessage,
     CharacterGatheringMessage,
@@ -100,6 +100,7 @@ export const MessageProcessor = {
             switch (msg.t) {
                 case 104: this.processMagicArrow(msg.d); break
                 case 105: this.processHealingSpell(msg.d); break
+                case 106: this.processHealerTreatment(msg.d); break
                 case 103: CharacterManager.receivePickup(msg.d); break
                 case 102: WorldAreaManager.receive(msg.d); break
                 case 101: ActivityLogManager.receive(msg.d); break
@@ -634,14 +635,24 @@ export const MessageProcessor = {
         const target = player.id === data.targetId ? player : CharacterManager.characters.get(data.targetId)
         if (target) target.hpPercent = event.hpPercent
         if (target?.insideView || target === player || (!target && caster === player)) {
-            new HealingSpellEffect(Renderer.scene, position => {
-                if (target) position.copyFrom(target.pos)
-                else position.set(event.x, event.y, event.z)
-            }, 'bloom')
+            const position = target?.pos ?? new Vector3(event.x, event.y, event.z)
+            this.playHealingEffect(position, target === player)
         }
         if (target === player) OverlayManager.addMyCharDamageNumber(caster ?? player, -event.amount, 'h')
         else if (caster === player && target) OverlayManager.addCharacterDamageNumber(target.id, -event.amount)
         this.logHealing(data.id === data.targetId ? null : data.id, data.targetId, 'C', event.amount)
+    },
+
+    processHealerTreatment(data: HealerTreatmentMessage) {
+        const player = MyPlayer.myChar
+        if (!player || data.worldId !== MyPlayer.worldId) return
+        const target = data.id === player.id ? player : CharacterManager.characters.get(data.id)
+        if (target && (target === player || target.insideView)) this.playHealingEffect(target.pos, target === player)
+    },
+
+    playHealingEffect(position: Vector3, local: boolean) {
+        AudioManager.playSpellHealingSound(Renderer.scene, local ? undefined : position)
+        new HealingSpellEffect(Renderer.scene, feet => feet.copyFrom(position), 'bloom')
     },
 
     processMonsterAttack(data: AutoAttackMessage) {

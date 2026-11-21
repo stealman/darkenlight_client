@@ -7,8 +7,9 @@ const CAMPFIRE_VOLUME = 1.75
 const MENU_CAMPFIRE_VOLUME = CAMPFIRE_VOLUME * 0.8
 const MENU_MUSIC_VOLUME_FACTOR = 1.2
 const menuTrackVolumeFactors = new WeakMap<Sound, number>()
-const spellSounds = new WeakMap<Scene, {casting: Sound, impact: Sound}>()
+const spellSounds = new WeakMap<Scene, {casting: Sound, healingCasting: Sound, impact: Sound, healing: Sound}>()
 const SPELL_CASTING_REFERENCE_MS = 1000
+const SPELL_VOLUME_FACTOR = 0.7
 
 export const AudioManager = {
     globalVolume: 0.5,
@@ -414,6 +415,10 @@ export const AudioManager = {
         }
     },
 
+    playPreviewSwordSound(phase: 'swing' | 'hit') {
+        this.playRandomSound(phase === 'swing' ? this.swordSwingSounds : this.boneHitSounds)
+    },
+
     playWeaponHit(weaponType: string, targetType: string, position: Vector3, emphasized: boolean = false) {
         const volumeRatio = AudioUtils.getVolumeRatioByDistance(position)
         const playbackRateMultiplier = emphasized ? 0.6 : 1
@@ -479,22 +484,29 @@ export const AudioManager = {
         if (!spellSounds.has(scene)) {
             spellSounds.set(scene, {
                 casting: new Sound('spellCasting', '/sounds/spells/spell_casting_1.ogg', scene, undefined, {volume: 0.8}),
+                healingCasting: new Sound('spellHealingCasting', '/sounds/spells/spell_casting_2.ogg', scene, undefined, {volume: 0.96}),
                 impact: new Sound('spellImpact', '/sounds/spells/spell_impact_2.ogg', scene, undefined, {volume: 0.576}),
+                healing: new Sound('spellHealing', '/sounds/spells/spell_healing.ogg', scene, undefined, {volume: 0.5103}),
             })
         }
     },
 
-    playSpellCastingSound(scene: Scene, castDurationMs: number, position?: Vector3): (() => void) | undefined {
-        return this.playSpellSound(spellSounds.get(scene)?.casting, position, SPELL_CASTING_REFERENCE_MS / castDurationMs)
+    playSpellCastingSound(scene: Scene, castDurationMs: number, position?: Vector3, healing = false): (() => void) | undefined {
+        return this.playSpellSound(spellSounds.get(scene)?.[healing ? 'healingCasting' : 'casting'],
+            position, SPELL_CASTING_REFERENCE_MS / castDurationMs)
     },
 
     playSpellImpactSound(scene: Scene, position?: Vector3) {
         this.playSpellSound(spellSounds.get(scene)?.impact, position)
     },
 
+    playSpellHealingSound(scene: Scene, position?: Vector3) {
+        this.playSpellSound(spellSounds.get(scene)?.healing, position)
+    },
+
     playSpellSound(source: Sound | undefined, position?: Vector3, playbackRate = 1): (() => void) | undefined {
         if (!source?.isReady()) return
-        const volume = source.getVolume() * (position ? AudioUtils.getVolumeRatioByDistance(position) : 1)
+        const volume = source.getVolume() * SPELL_VOLUME_FACTOR * (position ? AudioUtils.getVolumeRatioByDistance(position) : 1)
         if (volume <= 0) return
         const sound = source.clone()
         if (!sound) return
@@ -544,7 +556,7 @@ export const AudioManager = {
 
     playRandomSound(soundArray: Sound[], volumeRatio: number = 1, playbackRateMultiplier: number = 1, volumeMultiplier: number = 1) {
         const sourceSound = soundArray[Utils.rollDice(soundArray.length, true)]
-        if (!sourceSound['loaded']) {
+        if (!sourceSound?.['loaded']) {
             return
         }
 

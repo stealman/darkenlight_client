@@ -4,6 +4,7 @@ import Character from './character'
 import {HUMAN_ANIMATION_SPEED} from './humanModelRig'
 import {Renderer} from '@/babylon/scene/renderer'
 import {EquipManager} from '@/babylon/item/equipManager'
+import {AudioManager} from '@/babylon/audio/audioManager'
 import {MagicArrowEffect, setSpellGlowEnabled} from '@/babylon/gfx/magicArrowEffect'
 import {Builder} from '@/babylon/builder'
 import {Materials, TerrainEnum1} from '@/babylon/materials'
@@ -30,6 +31,7 @@ export async function startStarterPreviews(canvases: HTMLCanvasElement[], signal
     const originalSize = {width: engine.getRenderWidth(), height: engine.getRenderHeight()}
     const previewMask = 0x10000000
     const spellMask = 0x20000000
+    const fighterTrailMask = 0x40000000
     const layers = new Map<AbstractMesh, number>()
     const shadowReceivers = new Map<AbstractMesh, boolean>()
     const characters: Character[] = []
@@ -103,6 +105,8 @@ export async function startStarterPreviews(canvases: HTMLCanvasElement[], signal
     let lastMysticCastRequest = mysticCastRequests()
     let mysticSpell: MagicArrowEffect | null = null
     let castStartedAt: number | null = null
+    let stopMysticCastingSound: (() => void) | undefined
+    let fighterAttackPhase: 'swing' | 'hit' | 'recovery' | null = null
     const render = () => {
         if (signal.aborted) return
         const active = activeClass()
@@ -118,6 +122,8 @@ export async function startStarterPreviews(canvases: HTMLCanvasElement[], signal
                 if (castRequest !== lastMysticCastRequest && (!mysticSpell || mysticSpell.isDisposed)) {
                     lastMysticCastRequest = castRequest
                     castStartedAt = performance.now()
+                    stopMysticCastingSound?.()
+                    stopMysticCastingSound = AudioManager.playSpellCastingSound(scene, MagicArrow.castDuration)
                     model.updateSpellStance()
                     mysticSpell = new MagicArrowEffect(scene, (feet, crystal) => {
                         feet.copyFrom(character.pos)
@@ -150,10 +156,30 @@ export async function startStarterPreviews(canvases: HTMLCanvasElement[], signal
                 if (attack) {
                     model.transitionToAnimation(attack, 0.15, false, 1)
                     model.actualAnim = attack
+                    fighterAttackPhase = 'swing'
+                    const weapon = model.weaponEquipItem
+                    weapon?.setWeaponTrailEnabled(true)
+                    if (weapon?.weaponTrail) weapon.weaponTrail.layerMask = fighterTrailMask
                 }
             }
             const playingAttack = model.actualAnim !== model.idleAnim && model.actualAnim !== combatIdle
                 && (model.actualAnim?.isPlaying || model.animTransition != null)
+            if (index === 0 && fighterAttackPhase) {
+                const attack = model.actualAnim
+                if (!highlighted || !playingAttack || !attack) {
+                    model.weaponEquipItem?.setWeaponTrailEnabled(false)
+                    fighterAttackPhase = null
+                } else {
+                    const progress = (attack.getCurrentFrame() - attack.from) / (attack.to - attack.from)
+                    if (fighterAttackPhase === 'swing' && progress >= 0.72) {
+                        AudioManager.playPreviewSwordSound('swing')
+                        fighterAttackPhase = 'hit'
+                    } else if (fighterAttackPhase === 'hit' && progress >= 0.87) {
+                        AudioManager.playPreviewSwordSound('hit')
+                        fighterAttackPhase = 'recovery'
+                    }
+                }
+            }
             if (index === 0 && highlighted && playingAttack) continue
             const animation = highlighted ? combatIdle : model.idleAnim
             if (animation && model.actualAnim !== animation) {
@@ -175,6 +201,7 @@ export async function startStarterPreviews(canvases: HTMLCanvasElement[], signal
     }
     const cleanup = () => {
         engine.stopRenderLoop(render)
+        stopMysticCastingSound?.()
         mysticSpell?.dispose()
         Renderer.updateSpellGlow()
         for (const canvas of canvases) engine.unRegisterView(canvas)
@@ -220,8 +247,7 @@ export async function startStarterPreviews(canvases: HTMLCanvasElement[], signal
             camera.setTarget(position.add(new Vector3(0, 0.55, 0)))
             model.model!.rotation.y = Math.atan2(position.z - camera.position.z, camera.position.x - position.x)
             camera.fov = 0.6
-            camera.layerMask = previewMask
-            if (classKey === 'MYSTIC') camera.layerMask |= spellMask
+            camera.layerMask = previewMask | (classKey === 'MYSTIC' ? spellMask : fighterTrailMask)
             cameras.push(camera)
         }
         if (signal.aborted) return

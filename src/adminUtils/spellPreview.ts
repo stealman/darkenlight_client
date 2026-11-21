@@ -296,7 +296,7 @@ export async function mountSpellPreview() {
         const healing = spellSelect.value === 'heal'
         const duration = (healing ? HealingSpell : MagicArrow).castDuration
         const castDuration = duration / playbackSpeed
-        stopCastingSound = AudioManager.playSpellCastingSound(scene, castDuration)
+        stopCastingSound = AudioManager.playSpellCastingSound(scene, castDuration, undefined, healing)
         recoilStartedAt = 0
         lastPhase = ''
         model.finishSpellStance()
@@ -322,6 +322,7 @@ export async function mountSpellPreview() {
                 model.releaseSpellStance(playbackSpeed, HealingSpell.castDuration)
                 healingCharge.finishCharge()
                 healingCharge = null
+                AudioManager.playSpellHealingSound(scene)
                 healingBloom = new HealingSpellEffect(scene, position => position.copyFrom(target.position),
                     'bloom', playbackSpeed)
                 status.textContent = 'Léčení'

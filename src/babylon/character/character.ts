@@ -618,7 +618,10 @@ class Character implements Attackable, EffectTarget {
         this.markCombatActivity()
         this.startTimedAction(type, data)
         const scene = this.model?.node.getScene()
-        if (scene) this.stopSpellCastingSound = AudioManager.playSpellCastingSound(scene, data.dur, this.isMyChar() ? undefined : this.pos)
+        if (scene) {
+            this.stopSpellCastingSound = AudioManager.playSpellCastingSound(scene, data.dur,
+                this.isMyChar() ? undefined : this.pos, type === CharacterActions.HEALING_SPELL.name)
+        }
         this.model?.updateSpellStance(0, 1, data.dur)
     }
 

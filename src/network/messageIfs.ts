@@ -116,6 +116,8 @@ export type HealingSpellCastMessage = {
         | {phase: 'heal', x: number, y: number, z: number, amount: number, hpPercent: number}
 }
 
+export type HealerTreatmentMessage = {id: number, worldId: number}
+
 export type PhysicalWeaponSkillKey = 'swords' | 'axes' | 'maces' | 'polearms' | 'bows' | 'stavesAndWands'
 export type ArmorSkillKey = 'leatherArmor' | 'chainArmor' | 'plateArmor' | 'shields'
 export type UtilitySkillKey = 'camping' | 'healing' | 'cooking'
