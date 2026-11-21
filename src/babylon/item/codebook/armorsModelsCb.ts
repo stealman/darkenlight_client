@@ -58,7 +58,7 @@ export const TEXTURED_ARMOR_ASSETS = new Map<number, TexturedArmorAsset>([
     [EquipSlotModelsCb.CHAIN_GREAVES.modelId, { modelFile: `male-leg-chain.glb?v=${TEXTURED_CHAIN_LEG_CACHE_VERSION}`, albedoFile: `chain_leg.jpg?v=${TEXTURED_CHAIN_LEG_CACHE_VERSION}`, normalFile: 'chain_legs_normal.png', metallic: 0.4, roughness: 1, directIntensity: 1.75, environmentIntensity: 1.4 }],
 ])
 
-function createArmorNormalTexture(scene: Scene, fileName: string): Texture {
+export function createArmorNormalTexture(scene: Scene, fileName: string): Texture {
     const texture = new Texture(
         `${BASE_EQUIP_MATERIAL_PATH}armors/${fileName}?v=${ARMOR_NORMAL_CACHE_VERSION}`,
         scene,

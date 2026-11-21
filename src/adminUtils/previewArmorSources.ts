@@ -17,15 +17,18 @@ async function createLeatherPreview(
     file: string,
     atlas: Texture,
     atlasIndices: Map<number, number>,
+    normalFile?: string,
 ) {
-    const [{EquipItemType}, {EquipCbItem}, {Lights}, geometry] = await Promise.all([
+    const [{EquipItemType}, {EquipCbItem}, {Lights}, {createArmorNormalTexture}, geometry] = await Promise.all([
         import('@/babylon/item/equipManager'),
         import('@/babylon/item/codebook/equipCbItem'),
         import('@/babylon/scene/lights'),
+        import('@/babylon/item/codebook/armorsModelsCb'),
         loadRawArmorGeometry(scene, file),
     ])
     const material = new PBRCustomMaterial(name, scene)
     material.albedoTexture = atlas
+    if (normalFile) material.bumpTexture = createArmorNormalTexture(scene, normalFile)
     material.metallic = 0
     material.roughness = 1
     // Show the inside of the helmet and the reversed faces of the mirrored leg.
@@ -35,8 +38,12 @@ async function createLeatherPreview(
     material.usePhysicalLightFalloff = false
     material.AddAttribute('uvc')
     material.Vertex_Definitions('attribute vec2 uvc;')
-    material.Vertex_Before_PositionUpdated('uvUpdated = uvUpdated + uvc;')
-    material.Vertex_After_WorldPosComputed('vAlbedoUV = uvUpdated;')
+    // Apply the per-instance tile offset only to the color atlas.
+    material.Vertex_MainEnd(`
+        #if defined(ALBEDO) && ALBEDODIRECTUV == 0
+            vAlbedoUV += vec2(albedoMatrix * vec4(uvc, 0.0, 0.0));
+        #endif
+    `)
 
     const mesh = new Mesh(name, scene)
     geometry.applyToMesh(mesh)
@@ -74,13 +81,13 @@ export async function initializePreviewArmorSources(
     const { Lights } = await import('@/babylon/scene/lights')
     const [maleLeather, femaleLeather, leatherPauldron, leatherLeg, leatherHelmet] = await Promise.all([
         createLeatherPreview(scene, PREVIEW_LEATHER_TORSO_ID, 'adminUtilsMaleLeatherTorso',
-            'male-armor-leather.glb', leatherAtlases.male, leatherAtlasIndices),
+            'male-armor-leather.glb', leatherAtlases.male, leatherAtlasIndices, 'leather_armor_male_normal.png'),
         createLeatherPreview(scene, PREVIEW_LEATHER_TORSO_ID, 'adminUtilsFemaleLeatherTorso',
-            'female-armor-leather.glb', leatherAtlases.female, leatherAtlasIndices),
+            'female-armor-leather.glb', leatherAtlases.female, leatherAtlasIndices, 'leather_armor_female_normal.png'),
         createLeatherPreview(scene, PREVIEW_LEATHER_PAULDRON_ID, 'adminUtilsLeatherPauldron',
-            'pauldron-leather.glb', leatherAtlases.pauldron, leatherAtlasIndices),
+            'pauldron-leather.glb', leatherAtlases.pauldron, leatherAtlasIndices, 'leather_pauldron_normal.png'),
         createLeatherPreview(scene, PREVIEW_LEATHER_LEG_ID, 'adminUtilsLeatherLeg',
-            'male-leg-leather.glb', leatherAtlases.leg, leatherAtlasIndices),
+            'male-leg-leather.glb', leatherAtlases.leg, leatherAtlasIndices, 'leather_leg_normal.png'),
         createLeatherPreview(scene, PREVIEW_LEATHER_HELMET_ID, 'adminUtilsLeatherHelmet',
             'helmet-leather.glb', leatherAtlases.helmet, leatherAtlasIndices),
     ])
