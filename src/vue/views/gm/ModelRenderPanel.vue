@@ -36,8 +36,8 @@
                         </select>
                     </label>
                     <label class="model-render-control">
-                        <span>Metallic: {{ materialMetallic.toFixed(2) }}</span>
-                        <input v-model.number="materialMetallic" type="range" min="0" max="1" step="0.01" @input="applyPreviewMaterialSettings">
+                        <span>Metallic: {{ materialMetallic.toFixed(isLeatherArmor ? 3 : 2) }}</span>
+                        <input v-model.number="materialMetallic" type="range" min="0" max="1" :step="isLeatherArmor ? 0.005 : 0.01" @input="applyPreviewMaterialSettings">
                     </label>
                     <label class="model-render-control">
                         <span>Roughness: {{ materialRoughness.toFixed(2) }}</span>
@@ -181,6 +181,7 @@ const selectedPreviewItem = computed(() => {
 })
 const selectedArmorAsset = computed(() => TEXTURED_ARMOR_ASSETS.get(selectedPreviewItem.value?.id ?? -1) ?? null)
 const isLeatherArmor = computed(() => selectedPreviewOption.value?.key.startsWith('LEATHER_'))
+const defaultMetallic = computed(() => isLeatherArmor.value ? 0.375 : 0.75)
 const currentMaterialOptions = computed(() => previewCategory.value === 'ARMOR'
     ? isLeatherArmor.value ? LEATHER_MATERIAL_OPTIONS : ARMOR_MATERIAL_OPTIONS
     : selectedPreviewOption.value?.materialOptions ?? WEAPON_MATERIAL_OPTIONS)
@@ -237,7 +238,7 @@ const loadSettingsForCurrentSelection = () => {
         scaleXMultiplier.value = 1
         scaleYMultiplier.value = 1
         scaleZMultiplier.value = 1
-        materialMetallic.value = 0.75
+        materialMetallic.value = defaultMetallic.value
         materialRoughness.value = 1
         materialDirectIntensity.value = 1.5
         materialEnvironmentIntensity.value = 1
@@ -250,7 +251,7 @@ const loadSettingsForCurrentSelection = () => {
     scaleXMultiplier.value = clamp(Number(settings.scaleXMultiplier ?? 1), 0, 3)
     scaleYMultiplier.value = clamp(Number(settings.scaleYMultiplier ?? 1), 0, 3)
     scaleZMultiplier.value = clamp(Number(settings.scaleZMultiplier ?? 1), 0, 3)
-    materialMetallic.value = clamp(Number(settings.materialMetallic ?? 0.75), 0, 1)
+    materialMetallic.value = clamp(Number(settings.materialMetallic ?? defaultMetallic.value), 0, 1)
     materialRoughness.value = clamp(Number(settings.materialRoughness ?? 1), 0, 1)
     materialDirectIntensity.value = clamp(Number(settings.materialDirectIntensity ?? 1.5), 0, 3)
     materialEnvironmentIntensity.value = clamp(Number(settings.materialEnvironmentIntensity ?? 1), 0, 5)
@@ -382,7 +383,7 @@ const applyCurrentMaterialIndex = () => {
 }
 
 const applyPreviewMaterialSettings = () => {
-    const safeMetallic = clamp(materialMetallic.value ?? 0.75, 0, 1)
+    const safeMetallic = clamp(materialMetallic.value ?? defaultMetallic.value, 0, 1)
     const safeRoughness = clamp(materialRoughness.value ?? 1, 0, 1)
     const safeDirectIntensity = clamp(materialDirectIntensity.value ?? 1.5, 0, 3)
     const safeEnvironmentIntensity = clamp(materialEnvironmentIntensity.value ?? 1, 0, 5)
@@ -477,8 +478,6 @@ const loadPreview = async () => {
             },
             false,
         )
-        previewMaterial.backFaceCulling = false
-        previewMaterial.twoSidedLighting = false
         previewMaterial.usePhysicalLightFalloff = false
     } else if (leatherArmor) {
         previewMaterial = createLeatherArmorMaterial(scene, `modelRenderMaterial-${previewItem.model}`, armorAsset)
@@ -503,9 +502,9 @@ const loadPreview = async () => {
         normalTexture.wrapU = Texture.WRAP_ADDRESSMODE
         normalTexture.wrapV = Texture.WRAP_ADDRESSMODE
         previewMaterial.bumpTexture = normalTexture
-        previewMaterial.backFaceCulling = false
-        previewMaterial.twoSidedLighting = false
     }
+    previewMaterial.backFaceCulling = false
+    previewMaterial.twoSidedLighting = false
     mesh.material = previewMaterial
     applyPreviewMaterialSettings()
 
@@ -529,6 +528,8 @@ const initScene = async () => {
     scene.environmentIntensity = 0.3
 
     camera = new ArcRotateCamera('modelRenderCamera', -Math.PI / 4, Math.PI / 3, 4, Vector3.Zero(), scene)
+    // Small pieces are framed less than one world unit from the camera.
+    camera.minZ = 0.01
     camera.detachControl()
 
     const light = new DirectionalLight('modelRenderSunLight', new Vector3(-0.75, -0.75, 0.3), scene)
