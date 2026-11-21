@@ -44,6 +44,8 @@ import { PotionConsumeEffect } from '@/babylon/gfx/potionConsumeEffect'
 import { HitSparkEffect, PowerStrikeSparkFountainEffect } from '@/babylon/gfx/hitSparkEffect'
 import { MagicArrowEffect } from '@/babylon/gfx/magicArrowEffect'
 import { MagicArrow } from '@game/game/spells/magicArrow'
+import { HealingSpell } from '@game/game/spells/healingSpell'
+import { HealingSpellEffect } from '@/babylon/gfx/healingSpellEffect'
 import { WATER_BLOCK_TYPE } from '@/babylon/world/terrainManager'
 import { CharacterActions, CharacterTimedAction } from '@/data/actions/characterActions'
 import { PubliclyVisibleAffect } from '@/data/affects'
@@ -133,7 +135,8 @@ class Character implements Attackable, EffectTarget {
 
     activeTimedAction: CharacterTimedAction | null = null
     private magicArrowEffect: MagicArrowEffect | null = null
-    private stopMagicArrowSound?: () => void
+    private healingSpellCharge: HealingSpellEffect | null = null
+    private stopSpellCastingSound?: () => void
     publiclyVisibleAffects: Map<number, PubliclyVisibleAffect> = new Map<number, PubliclyVisibleAffect>()
 
     constructor(data: CharacterAppearanceData & Record<string, any>, myChar: boolean = false, previewPosition?: Vector3) {
@@ -414,8 +417,9 @@ class Character implements Attackable, EffectTarget {
             if (myChar) {
                 this.pushThroughContact = null
             }
-            if (this.activeTimedAction?.type === CharacterActions.MAGIC_ARROW.name) {
-                this.model?.updateSpellStance(actualTime - this.activeTimedAction.startedAt)
+            if (this.activeTimedAction && this.isSpellCast(this.activeTimedAction.type)) {
+                this.model?.updateSpellStance(actualTime - this.activeTimedAction.startedAt, 1,
+                    this.getSpellCastDuration(this.activeTimedAction.type))
             } else {
                 this.model?.stopAnimation()
             }
@@ -581,21 +585,53 @@ class Character implements Attackable, EffectTarget {
     }
 
     startMagicArrow(x: number, z: number) {
-        this.breakAutoAttack()
-        this.markCombatActivity()
-        this.startTimedAction(CharacterActions.MAGIC_ARROW.name, {x, z, dur: MagicArrow.castDuration})
-        const scene = this.model?.node.getScene()
-        if (scene) this.stopMagicArrowSound = AudioManager.playSpellCastingSound(scene, MagicArrow.castDuration, this.isMyChar() ? undefined : this.pos)
-        this.model?.updateSpellStance()
+        this.startSpellCasting(CharacterActions.MAGIC_ARROW.name, {x, z, dur: MagicArrow.castDuration})
         if (this.insideView) this.magicArrowEffect = this.createMagicArrowEffect()
     }
 
+    startHealingSpell(x: number, z: number, self: boolean) {
+        this.startSpellCasting(CharacterActions.HEALING_SPELL.name,
+            {x: self ? undefined : x, z: self ? undefined : z, dur: HealingSpell.castDuration})
+        const scene = this.model?.node.getScene()
+        if (scene && this.insideView) {
+            this.healingSpellCharge = new HealingSpellEffect(scene, (feet, wand) => this.readSpellPosition(feet, wand),
+                'charge')
+        }
+    }
+
+    finishHealingSpell() {
+        this.finishSpellCasting(CharacterActions.HEALING_SPELL.name)
+        this.healingSpellCharge?.finishCharge()
+        this.healingSpellCharge = null
+    }
+
+    private isSpellCast(type: string) {
+        return type === CharacterActions.MAGIC_ARROW.name || type === CharacterActions.HEALING_SPELL.name
+    }
+
+    private getSpellCastDuration(type: string) {
+        return type === CharacterActions.HEALING_SPELL.name ? HealingSpell.castDuration : MagicArrow.castDuration
+    }
+
+    private startSpellCasting(type: string, data: CharacterTimedActionData & {dur: number}) {
+        this.breakAutoAttack()
+        this.markCombatActivity()
+        this.startTimedAction(type, data)
+        const scene = this.model?.node.getScene()
+        if (scene) this.stopSpellCastingSound = AudioManager.playSpellCastingSound(scene, data.dur, this.isMyChar() ? undefined : this.pos)
+        this.model?.updateSpellStance(0, 1, data.dur)
+    }
+
+    private finishSpellCasting(type: string) {
+        this.stopSpellCastingSound = undefined
+        if (this.activeTimedAction?.type === type) this.activeTimedAction = null
+        this.model?.releaseSpellStance(1, this.getSpellCastDuration(type))
+    }
+
     releaseMagicArrow(destination: Vector3, target: Attackable | null, flightMs: number) {
-        this.stopMagicArrowSound = undefined
+        this.finishSpellCasting(CharacterActions.MAGIC_ARROW.name)
         let charge = this.magicArrowEffect
         this.magicArrowEffect = null
-        if (this.activeTimedAction?.type === CharacterActions.MAGIC_ARROW.name) this.activeTimedAction = null
-        this.model?.releaseSpellStance()
         if (!charge || charge.isDisposed) {
             if (!this.insideView && !target?.insideView) return
             charge = this.createMagicArrowEffect()
@@ -608,11 +644,14 @@ class Character implements Attackable, EffectTarget {
     private createMagicArrowEffect() {
         const scene = this.model?.node.getScene()
         if (!scene) return null
-        return new MagicArrowEffect(scene, (feet, crystal) => {
-            feet.copyFrom(this.pos)
-            if (this.model?.initialized) this.model.getSpellOriginToRef(feet, crystal)
-            else crystal.copyFrom(feet).addInPlaceFromFloats(0, 1.22, 0)
-        }, Settings.isDetalLevelLow() ? 'LOW' : Settings.isDetalLevelHigh() ? 'HIGH' : 'MEDIUM')
+        return new MagicArrowEffect(scene, (feet, wand) => this.readSpellPosition(feet, wand),
+            Settings.isDetalLevelLow() ? 'LOW' : Settings.isDetalLevelHigh() ? 'HIGH' : 'MEDIUM')
+    }
+
+    private readSpellPosition(feet: Vector3, wand: Vector3) {
+        feet.copyFrom(this.pos)
+        if (this.model?.initialized) this.model.getSpellOriginToRef(feet, wand)
+        else wand.copyFrom(feet).addInPlaceFromFloats(0, 1.22, 0)
     }
 
     startGathering(data: CharacterGatheringMessage) {
@@ -710,12 +749,17 @@ class Character implements Attackable, EffectTarget {
     }
 
     clearTimedAction() {
-        this.stopMagicArrowSound?.()
-        this.stopMagicArrowSound = undefined
-        if (this.activeTimedAction?.type === CharacterActions.MAGIC_ARROW.name) this.model?.finishSpellStance()
+        if (this.stopSpellCastingSound || this.magicArrowEffect || this.healingSpellCharge ||
+            (this.activeTimedAction && this.isSpellCast(this.activeTimedAction.type))) {
+            this.model?.finishSpellStance()
+        }
+        this.stopSpellCastingSound?.()
+        this.stopSpellCastingSound = undefined
         this.activeTimedAction = null
         this.magicArrowEffect?.dispose()
         this.magicArrowEffect = null
+        this.healingSpellCharge?.dispose()
+        this.healingSpellCharge = null
     }
 
     die() {
@@ -831,7 +875,10 @@ class Character implements Attackable, EffectTarget {
         }
 
         if (this.activeTimedAction.tryFinish(actualTime)) {
-            if (this.activeTimedAction.type === CharacterActions.MAGIC_ARROW.name) this.model?.updateSpellStance(MagicArrow.castDuration)
+            if (this.isSpellCast(this.activeTimedAction.type)) {
+                const elapsed = this.getSpellCastDuration(this.activeTimedAction.type)
+                this.model?.updateSpellStance(elapsed, 1, elapsed)
+            }
             this.activeTimedAction = null
         }
     }

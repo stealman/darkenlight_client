@@ -244,6 +244,9 @@
   "actions": {
     "magicArrowStats": "{manaCost} mana · {damage} poškození · sesílání {castTime} s · cooldown {cooldownTime} s · dosah {range} polí",
     "magicArrowName": "Magický šíp",
+    "healingSpellName": "Léčivé světlo",
+    "healingSpellDescription": "Vyléčí vybranou postavu. Bez vybrané postavy vyléčí tebe.",
+    "healingSpellStats": "{manaCost} mana · obnoví až {healing} HP · sesílání {castTime} s · cooldown {cooldownTime} s · dosah {range} polí",
     "magicArrowDescription": "Vyšle šíp ze stlačeného vzduchu.",
     "noneTitle": "Nevybráno",
     "noneDescription": "Na tomto tlačítku nebude přiřazena žádná akce.",

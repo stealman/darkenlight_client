@@ -4,7 +4,9 @@ import {
     MeshBuilder, PBRMaterial, Scene, SceneLoader, StandardMaterial, Texture, TransformNode, Vector3,
 } from '@babylonjs/core'
 import { MagicArrow } from '@game/game/spells/magicArrow'
-import { MAGIC_ARROW_DETAILS, MagicArrowEffect, setMagicArrowGlowEnabled } from '@/babylon/gfx/magicArrowEffect'
+import { HealingSpell } from '@game/game/spells/healingSpell'
+import { HealingSpellEffect } from '@/babylon/gfx/healingSpellEffect'
+import { MAGIC_ARROW_DETAILS, MagicArrowEffect, setSpellGlowEnabled } from '@/babylon/gfx/magicArrowEffect'
 import { modelAssetUrl } from '@/babylon/modelAssetUrl'
 import { createPreviewCharacter, getEquipmentPreviewGender } from './previewCharacter'
 import './styles.css'
@@ -112,16 +114,16 @@ export async function mountSpellPreview() {
                     </nav>
                 </header>
                 <div class="spell-preview__spell">
-                    <img src="/images/icons/buttons/btn_magic_arrow.png" alt="">
-                    <div><h2>Magický šíp</h2><p>Magic Arrow</p></div>
+                    <img id="spellPreviewIcon" src="/images/icons/buttons/btn_magic_arrow.png" alt="">
+                    <label class="admin-utils__field">
+                        <span>Kouzlo</span>
+                        <select id="spellPreviewSpell" disabled>
+                            <option value="arrow">Magický šíp</option>
+                            <option value="heal">Léčivé světlo</option>
+                        </select>
+                    </label>
                 </div>
-                <dl class="spell-preview__stats">
-                    <div><dt>Mana</dt><dd>${MagicArrow.manaCost}</dd></div>
-                    <div><dt>Poškození</dt><dd>${MagicArrow.damage}</dd></div>
-                    <div><dt>Sesílání</dt><dd>${(MagicArrow.castDuration / 1000).toLocaleString('cs')} s</dd></div>
-                    <div><dt>Cooldown</dt><dd>${(MagicArrow.cooldown / 1000).toLocaleString('cs')} s</dd></div>
-                    <div><dt>Dosah</dt><dd>${MagicArrow.range} polí</dd></div>
-                </dl>
+                <dl class="spell-preview__stats" id="spellPreviewStats"></dl>
                 <div class="admin-utils__controls">
                     <label class="admin-utils__field">
                         <span>Grafické detaily</span>
@@ -155,6 +157,9 @@ export async function mountSpellPreview() {
     const distanceValue = root.querySelector<HTMLOutputElement>('#spellPreviewDistanceValue')!
     const speed = root.querySelector<HTMLSelectElement>('#spellPreviewSpeed')!
     const detail = root.querySelector<HTMLSelectElement>('#spellPreviewDetail')!
+    const spellSelect = root.querySelector<HTMLSelectElement>('#spellPreviewSpell')!
+    const icon = root.querySelector<HTMLImageElement>('#spellPreviewIcon')!
+    const stats = root.querySelector<HTMLElement>('#spellPreviewStats')!
     const glowToggle = root.querySelector<HTMLInputElement>('#spellPreviewGlow')!
     try {
         const saved = JSON.parse(localStorage.getItem(SPELL_PREVIEW_STORAGE_KEY) ?? 'null')
@@ -179,10 +184,12 @@ export async function mountSpellPreview() {
     detail.addEventListener('change', saveSettings)
     const engine = new Engine(canvas, true, {preserveDrawingBuffer: true, stencil: true})
     const scene = new Scene(engine)
-    setMagicArrowGlowEnabled(scene, glowToggle.checked)
+    setSpellGlowEnabled(scene, glowToggle.checked)
     let effect: MagicArrowEffect | null = null
+    let healingCharge: HealingSpellEffect | null = null
+    let healingBloom: HealingSpellEffect | null = null
     glowToggle.addEventListener('change', () => {
-        setMagicArrowGlowEnabled(scene, glowToggle.checked)
+        setSpellGlowEnabled(scene, glowToggle.checked)
         saveSettings()
     })
     scene.clearColor = new Color4(0.029, 0.051, 0.07, 1)
@@ -252,32 +259,57 @@ export async function mountSpellPreview() {
         targetContact.position.x = impactAt.x = target.position.x
         distanceValue.value = `${tiles.toLocaleString('cs')} ${Number.isInteger(tiles) && tiles >= 5 ? 'polí' : 'pole'}`
     }
-    updateDistance()
+    const updateSpell = () => {
+        const healing = spellSelect.value === 'heal'
+        const spell = healing ? HealingSpell : MagicArrow
+        icon.src = `/images/icons/buttons/btn_${healing ? 'healing_spell' : 'magic_arrow'}.png`
+        stats.innerHTML = `
+            <div><dt>Mana</dt><dd>${spell.manaCost}</dd></div>
+            <div><dt>${healing ? 'Léčení' : 'Poškození'}</dt><dd>${healing ? HealingSpell.healing : MagicArrow.damage}</dd></div>
+            <div><dt>Sesílání</dt><dd>${(spell.castDuration / 1000).toLocaleString('cs')} s</dd></div>
+            <div><dt>Cooldown</dt><dd>${(spell.cooldown / 1000).toLocaleString('cs')} s</dd></div>
+            <div><dt>Dosah</dt><dd>${spell.range} polí</dd></div>`
+        distance.max = String(spell.range)
+        updateDistance()
+    }
+    updateSpell()
+    spellSelect.addEventListener('change', updateSpell)
     distance.addEventListener('input', updateDistance)
     let releaseAt = 0
     let recoilStartedAt = 0
     let playbackSpeed = 1
     let stopCastingSound: (() => void) | undefined
     let lastPhase = ''
-    cast.disabled = distance.disabled = speed.disabled = detail.disabled = false
+    const readSpellPosition = (feet: Vector3, wand: Vector3) => {
+        feet.copyFrom(actor.pos)
+        model.getSpellOriginToRef(feet, wand)
+    }
+    cast.disabled = distance.disabled = speed.disabled = detail.disabled = spellSelect.disabled = false
     status.textContent = 'Připraveno'
     cast.addEventListener('click', () => {
         effect?.dispose()
+        healingCharge?.dispose()
+        healingBloom?.dispose()
         stopCastingSound?.()
         playbackSpeed = Number(speed.value)
         Engine.audioEngine?.unlock()
-        const castDuration = MagicArrow.castDuration / playbackSpeed
+        const healing = spellSelect.value === 'heal'
+        const duration = (healing ? HealingSpell : MagicArrow).castDuration
+        const castDuration = duration / playbackSpeed
         stopCastingSound = AudioManager.playSpellCastingSound(scene, castDuration)
         recoilStartedAt = 0
         lastPhase = ''
         model.finishSpellStance()
-        model.updateSpellStance(0, playbackSpeed)
-        effect = new MagicArrowEffect(scene, (feet, crystal) => {
-            feet.copyFrom(actor.pos)
-            model.getSpellOriginToRef(feet, crystal)
-        }, MAGIC_ARROW_DETAILS[detail.selectedIndex], playbackSpeed)
+        model.updateSpellStance(0, playbackSpeed, duration)
+        if (healing) {
+            healingBloom = null
+            healingCharge = new HealingSpellEffect(scene, readSpellPosition, 'charge', playbackSpeed)
+            status.textContent = STAGE_LABELS.charge
+        } else {
+            effect = new MagicArrowEffect(scene, readSpellPosition, MAGIC_ARROW_DETAILS[detail.selectedIndex], playbackSpeed)
+        }
         releaseAt = performance.now() + castDuration
-        distance.disabled = speed.disabled = detail.disabled = true
+        distance.disabled = speed.disabled = detail.disabled = spellSelect.disabled = true
     })
 
     engine.runRenderLoop(() => {
@@ -285,7 +317,19 @@ export async function mountSpellPreview() {
         model.skeleton?.prepare()
         model.onFrame(Math.min(0.05, engine.getDeltaTime() / 1000))
         EquipManager.onFrame()
-        if (effect?.phase === 'charge') {
+        if (healingCharge) {
+            if (now >= releaseAt) {
+                model.releaseSpellStance(playbackSpeed, HealingSpell.castDuration)
+                healingCharge.finishCharge()
+                healingCharge = null
+                healingBloom = new HealingSpellEffect(scene, position => position.copyFrom(target.position),
+                    'bloom', playbackSpeed)
+                status.textContent = 'Léčení'
+            } else {
+                model.updateSpellStance(HealingSpell.castDuration - (releaseAt - now) * playbackSpeed,
+                    playbackSpeed, HealingSpell.castDuration)
+            }
+        } else if (effect?.phase === 'charge') {
             if (now >= releaseAt) {
                 model.releaseSpellStance(playbackSpeed)
                 effect.release(impactAt)
@@ -300,12 +344,17 @@ export async function mountSpellPreview() {
             target.rotation.z = -0.13 * Math.sin(Math.PI * recoil)
         } else target.rotation.z = 0
         scene.render()
+        if (healingBloom?.isDisposed) {
+            healingBloom = null
+            status.textContent = 'Připraveno'
+            distance.disabled = speed.disabled = detail.disabled = spellSelect.disabled = false
+        }
         if (!effect) return
         if (effect.isDisposed) {
             effect = null
             lastPhase = ''
             status.textContent = 'Připraveno'
-            distance.disabled = speed.disabled = detail.disabled = false
+            distance.disabled = speed.disabled = detail.disabled = spellSelect.disabled = false
         } else if (lastPhase !== effect.phase) {
             lastPhase = effect.phase
             status.textContent = STAGE_LABELS[effect.phase]

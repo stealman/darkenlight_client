@@ -1,5 +1,6 @@
 import {ActivityLogManager} from '@/data/activityLogManager'
 import { MagicArrow } from '@game/game/spells/magicArrow'
+import { HealingSpell } from '@game/game/spells/healingSpell'
 import {PartyManager} from '@/data/partyManager'
 import { Vector3 } from '@babylonjs/core'
 import { Utils } from '@/utils/utils'
@@ -75,6 +76,7 @@ export const MyPlayer = {
     preciseShotCooldownStart: 0 as number,
     preciseShotCooldownEnd: 0 as number,
     magicArrowCooldownEnd: 0,
+    healingSpellCooldownEnd: 0,
     preciseShotQueued: false as boolean,
     nearFireplace: null as { x: number, z: number } | null,
 
@@ -122,6 +124,8 @@ export const MyPlayer = {
         }
         this.magicArrowCooldownEnd = Number.isFinite(charData.magicArrowCd) && charData.magicArrowCd > 0
             ? Date.now() + charData.magicArrowCd : 0
+        this.healingSpellCooldownEnd = Number.isFinite(charData.healingSpellCd) && charData.healingSpellCd > 0
+            ? Date.now() + charData.healingSpellCd : 0
 
         MyStatusPanel.setMyName(this.myChar.name)
         MyStatusPanel.refreshAffectGroups()
@@ -150,6 +154,7 @@ export const MyPlayer = {
         this.preciseShotCooldownStart = 0
         this.preciseShotCooldownEnd = 0
         this.magicArrowCooldownEnd = 0
+        this.healingSpellCooldownEnd = 0
         this.preciseShotQueued = false
         this.isDead.value = false
         this.respawnAvailableAt.value = 0
@@ -522,7 +527,7 @@ export const MyPlayer = {
             return
         }
         MyPlayer.myChar.autoAttackTarget = null
-        if (this.activeAction === CharacterActions.MAGIC_ARROW) this.setAction(null)
+        if (this.activeAction === CharacterActions.MAGIC_ARROW || this.activeAction === CharacterActions.HEALING_SPELL) this.setAction(null)
         this.clearPowerStrikeQueued()
         this.clearPreciseShotQueued()
         MyPlayer.myChar.cancelCombatApproach()
@@ -609,9 +614,13 @@ export const MyPlayer = {
             case CharacterActions.PRECISE_SHOT.name: {
                 return this.getCooldownPercent(actualTime, this.preciseShotCooldownStart, this.preciseShotCooldownEnd)
             }
-            case CharacterActions.MAGIC_ARROW.name: {
-                if (actualTime < this.magicArrowCooldownEnd) {
-                    return this.getCooldownPercent(actualTime, this.magicArrowCooldownEnd - MagicArrow.cooldown, this.magicArrowCooldownEnd)
+            case CharacterActions.MAGIC_ARROW.name:
+            case CharacterActions.HEALING_SPELL.name: {
+                const healing = action === CharacterActions.HEALING_SPELL
+                const end = healing ? this.healingSpellCooldownEnd : this.magicArrowCooldownEnd
+                const cooldown = healing ? HealingSpell.cooldown : MagicArrow.cooldown
+                if (actualTime < end) {
+                    return this.getCooldownPercent(actualTime, end - cooldown, end)
                 }
                 const cast = this.myChar.activeTimedAction
                 return cast?.type === action.name ? cast.getProgressPercent(actualTime) : 100

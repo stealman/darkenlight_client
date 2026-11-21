@@ -1,8 +1,10 @@
-import { Guard, Npc } from '@/babylon/npc/npc'
+import type { Guard, Npc } from '@/babylon/npc/npc'
 import { ViewportManager } from '@/utils/viewport'
 import { MyPlayer } from '@/data/myPlayer'
 import { Utils } from '@/utils/utils'
 import { TargetingManager } from '@/gui/targettingManager'
+
+let npcModels: typeof import('@/babylon/npc/npc')
 
 export const NpcManager = {
     npcs: new Map<number, Npc>(),
@@ -10,7 +12,9 @@ export const NpcManager = {
     guards: new Map<number, Guard>(),
     visibleGuards: new Set<number>(),
 
-    initialize() {
+    async initialize() {
+        // NPCs extend Character, which reaches this manager through the renderer.
+        npcModels = await import('@/babylon/npc/npc')
         this.npcs = new Map<number, Npc>()
         this.visibleNpcs = new Set<number>()
         this.guards = new Map<number, Guard>()
@@ -25,7 +29,7 @@ export const NpcManager = {
             await guard.changeCharacterAppearance(data.guard ?? {})
             return
         }
-        const guard = new Guard(data)
+        const guard = new npcModels.Guard(data)
         this.guards.set(guard.id, guard)
         this.setNpcPosition(guard, data.x, data.z)
         if (data.mv?.length >= 3) {
@@ -86,7 +90,7 @@ export const NpcManager = {
             return
         }
 
-        const npc = new Npc(data)
+        const npc = new npcModels.Npc(data)
         this.npcs.set(npc.id, npc)
         this.applyNpcData(npc, data)
         await npc.createModel(false)

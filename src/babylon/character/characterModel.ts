@@ -701,12 +701,12 @@ export class CharacterModel implements EquipBearer {
         }
     }
 
-    updateSpellStance(elapsedMs = 0, playbackSpeed = 1) {
+    updateSpellStance(elapsedMs = 0, playbackSpeed = 1, castDuration: number = MagicArrow.castDuration) {
         if (!this.isActive()) return
         const charge = this.spellCastingWandAnim
         const swing = this.spellReleaseWandAnim
-        const swingDuration = MagicArrow.castDuration / 5
-        const chargeDuration = MagicArrow.castDuration - swingDuration
+        const swingDuration = castDuration / 5
+        const chargeDuration = castDuration - swingDuration
         const animation = (elapsedMs >= chargeDuration && swing ? swing : charge) ?? this.getCombatIdleAnimation()
         if (!animation || this.actualAnim === animation) return
         const swingPhase = animation === swing
@@ -719,10 +719,10 @@ export class CharacterModel implements EquipBearer {
         this.actualAnim = animation
     }
 
-    releaseSpellStance(playbackSpeed = 1) {
+    releaseSpellStance(playbackSpeed = 1, castDuration: number = MagicArrow.castDuration) {
         const swing = this.spellReleaseWandAnim
         if (!swing || !this.isActive() || (this.actualAnim !== swing && this.actualAnim !== this.spellCastingWandAnim)) return
-        this.updateSpellStance(MagicArrow.castDuration, playbackSpeed)
+        this.updateSpellStance(castDuration, playbackSpeed, castDuration)
         if (this.animTransition?.toAnimation === swing) {
             this.animTransition.forceEnd()
             this.animTransition = null

@@ -411,6 +411,15 @@ export class CastMagicArrow implements Message {
     }
 }
 
+export class CastHealingSpell implements Message {
+    t = 78
+    d: {id: number}
+
+    constructor(id: number) {
+        this.d = {id}
+    }
+}
+
 export class PreciseShot implements Message {
     t: number = 73
 

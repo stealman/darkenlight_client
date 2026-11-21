@@ -42,7 +42,7 @@ import { GuiButtonsManager } from '@/gui/guiButtonsManager'
 import { GroundItemsManager } from '@/babylon/world/groundItemsManager'
 import { EmeraldsManager } from '@/gui/emeraldsManager'
 import { GfxManager } from '@/babylon/gfx/gfxManager'
-import { setMagicArrowGlowEnabled } from '@/babylon/gfx/magicArrowEffect'
+import { setSpellGlowEnabled } from '@/babylon/gfx/magicArrowEffect'
 import { StaticsManager } from '@/babylon/world/statics/staticsManager'
 import { TreeManager } from '@/babylon/world/treeManager'
 import { BuildingManager } from '@/babylon/world/buildings/buildingManager'
@@ -122,7 +122,7 @@ export const Renderer = {
         AudioManager.initialize(this.scene)
         MiniMap.initialize()
         CharacterManager.initialize()
-        NpcManager.initialize()
+        await NpcManager.initialize()
         await EquipManager.initialize(this.scene)
         await MonsterManager.initialize()
         GfxManager.initialize(this.scene)
@@ -313,7 +313,7 @@ export const Renderer = {
     },
 
     updateSpellGlow() {
-        if (this.scene) setMagicArrowGlowEnabled(this.scene, Settings.isGlowLayerEnabled())
+        if (this.scene) setSpellGlowEnabled(this.scene, Settings.isGlowLayerEnabled())
     },
 
     createScene(engine: Engine) {

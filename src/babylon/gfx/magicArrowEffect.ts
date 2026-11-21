@@ -1,8 +1,9 @@
 import {
-    Color3, Color4, Constants, DynamicTexture, GlowLayer, Matrix, Mesh, MeshBuilder, Observer, ParticleSystem,
+    Color3, Color4, Constants, DynamicTexture, Matrix, Mesh, MeshBuilder, Observer, ParticleSystem,
     Quaternion, Scene, ShaderMaterial, StandardMaterial, Texture, Vector3, VertexBuffer, VertexData,
 } from '@babylonjs/core'
 import { getMagicArrowFlightDuration, MagicArrow } from '@game/game/spells/magicArrow'
+import { configureSpellGlowLayer, trackSpellGlowMesh, untrackSpellGlowMesh } from '@/babylon/gfx/spellGlowLayer'
 
 const TAU = 2 * Math.PI
 const IMPACT_MS = 480
@@ -29,9 +30,7 @@ type ReadOrigin = (feet: Vector3, crystal: Vector3) => void
 
 const resources = new WeakMap<Scene, {
     wind: ShaderMaterial, spark: DynamicTexture, point: SpellMeshBatch, flash: SpellMeshBatch,
-    ribbons: Set<Mesh>, glow: MagicArrowGlowLayer | null,
 }>()
-const glowEnabledScenes = new WeakSet<Scene>()
 const transparentPreviewScenes = new WeakSet<Scene>()
 
 function spellAlphaMode(scene: Scene) {
@@ -39,30 +38,7 @@ function spellAlphaMode(scene: Scene) {
     return transparentPreviewScenes.has(scene) ? Constants.ALPHA_LAYER_ACCUMULATE : Constants.ALPHA_ADD
 }
 
-class MagicArrowGlowLayer extends GlowLayer {
-    private declare spellMeshes: Mesh[]
-
-    protected override _createMainTexture() {
-        super._createMainTexture()
-        // Babylon creates the texture during construction and recreates it on resize.
-        this._mainTexture.renderList = this.spellMeshes ??= []
-        this._mainTexture.forceLayerMaskCheck = true
-    }
-
-    track(mesh: Mesh) {
-        this.spellMeshes.push(mesh)
-        this.referenceMeshToUseItsOwnMaterial(mesh)
-    }
-
-    untrack(mesh: Mesh) {
-        const index = this.spellMeshes.indexOf(mesh)
-        if (index === -1) return
-        this.spellMeshes.splice(index, 1)
-        this.unReferenceMeshFromUsingItsOwnMaterial(mesh)
-    }
-}
-
-export function setMagicArrowGlowEnabled(scene: Scene, enabled: boolean, transparentPreview = false) {
+export function setSpellGlowEnabled(scene: Scene, enabled: boolean, transparentPreview = false) {
     if (transparentPreview !== transparentPreviewScenes.has(scene)) {
         if (transparentPreview) transparentPreviewScenes.add(scene)
         else transparentPreviewScenes.delete(scene)
@@ -70,33 +46,9 @@ export function setMagicArrowGlowEnabled(scene: Scene, enabled: boolean, transpa
         if (spells) {
             spells.wind.alphaMode = spellAlphaMode(scene)
             spells.flash.mesh.material!.alphaMode = spellAlphaMode(scene)
-            spells.glow?.dispose()
-            spells.glow = null
         }
     }
-    if (enabled) glowEnabledScenes.add(scene)
-    else glowEnabledScenes.delete(scene)
-    updateMagicArrowGlow(scene)
-}
-
-function updateMagicArrowGlow(scene: Scene) {
-    const spells = resources.get(scene)
-    if (!spells || scene.isDisposed) return
-    const enabled = glowEnabledScenes.has(scene) && spells.ribbons.size > 0
-    if (enabled && !spells.glow) {
-        const transparentPreview = transparentPreviewScenes.has(scene)
-        const glow = new MagicArrowGlowLayer('magicArrowGlow', scene, {
-            mainTextureRatio: 0.5, blurKernelSize: 32,
-            alphaBlendingMode: transparentPreview ? Constants.ALPHA_PREMULTIPLIED_PORTERDUFF : Constants.ALPHA_ADD,
-        })
-        if (transparentPreview) glow.neutralColor.a = 0
-        glow.intensity = 0.75
-        glow.track(spells.point.mesh)
-        glow.track(spells.flash.mesh)
-        for (const ribbon of spells.ribbons) glow.track(ribbon)
-        spells.glow = glow
-    }
-    if (spells.glow) spells.glow.isEnabled = enabled
+    configureSpellGlowLayer(scene, enabled, transparentPreview)
 }
 
 function getResources(scene: Scene) {
@@ -178,8 +130,6 @@ function getResources(scene: Scene) {
         wind, spark,
         point: new SpellMeshBatch(createArrowhead(scene, core)),
         flash: new SpellMeshBatch(plane, true),
-        ribbons: new Set<Mesh>(),
-        glow: null as MagicArrowGlowLayer | null,
     }
     resources.set(scene, result)
     return result
@@ -418,7 +368,8 @@ export class MagicArrowEffect {
         this.point.scale.set(1.13, 1.13, 1.18)
         point.instances.add(this.point)
         flash.instances.add(this.flash)
-        updateMagicArrowGlow(scene)
+        trackSpellGlowMesh(point.mesh)
+        trackSpellGlowMesh(flash.mesh)
         // Publish each spell's transforms before the scene batches upload them.
         this.observer = scene.onBeforeRenderObservable.add(() => this.update(performance.now()), -1, true)
     }
@@ -464,9 +415,12 @@ export class MagicArrowEffect {
         const {point, flash} = getResources(this.scene)
         this.disposeRibbons(this.chargeRibbons)
         this.disposeRibbons(this.projectileRibbons)
-        updateMagicArrowGlow(this.scene)
         point.instances.delete(this.point)
         flash.instances.delete(this.flash)
+        if (point.instances.size === 0) {
+            untrackSpellGlowMesh(point.mesh)
+            untrackSpellGlowMesh(flash.mesh)
+        }
         this.sparks.dispose(false)
         this.launchSparks?.dispose(false)
         this.windMotes?.dispose(false)
@@ -507,19 +461,16 @@ export class MagicArrowEffect {
     }
 
     private createRibbons(count: number) {
-        const {wind, ribbons, glow} = getResources(this.scene)
+        const {wind} = getResources(this.scene)
         const strips = new WindRibbons(this.scene, wind, count, this.profile.segments)
         if (this.layerMask !== undefined) strips.mesh.layerMask = this.layerMask
-        ribbons.add(strips.mesh)
-        glow?.track(strips.mesh)
+        trackSpellGlowMesh(strips.mesh)
         return strips
     }
 
     private disposeRibbons(strips: WindRibbons | null) {
         if (!strips) return
-        const {ribbons, glow} = getResources(this.scene)
-        ribbons.delete(strips.mesh)
-        if (!this.scene.isDisposed) glow?.untrack(strips.mesh)
+        untrackSpellGlowMesh(strips.mesh)
         strips.mesh.dispose()
     }
 
@@ -538,7 +489,6 @@ export class MagicArrowEffect {
                 } else {
                     this.disposeRibbons(this.chargeRibbons)
                     this.chargeRibbons = null
-                    updateMagicArrowGlow(this.scene)
                 }
             }
             if (this.releasedAt === null) {

@@ -10,8 +10,10 @@ import { ConsumableHelper } from '@/data/items/consumableHelper'
 import { CharacterAction, CharacterActions } from '@/data/actions/characterActions'
 import { t } from '@/i18n'
 import { Connector } from '@/network/connector'
-import { CastMagicArrow, PowerStrike, PreciseShot } from '@/network/messages'
+import { CastHealingSpell, CastMagicArrow, PowerStrike, PreciseShot } from '@/network/messages'
 import { MagicArrow } from '@game/game/spells/magicArrow'
+import { HealingSpell } from '@game/game/spells/healingSpell'
+import { GameClasses } from '@/data/gameClass'
 import { WeaponCategories } from '@/data/items/item'
 import type { Attackable } from '@/GameManager'
 
@@ -306,6 +308,9 @@ export const ActionButtonsManager = {
             ))
             this.bindings.set(6, new ActionButtonActionBinding(CharacterActions.CONSUMABLE_ITEM.name, {cbId: 351}))
             this.bindings.set(7, new ActionButtonActionBinding(CharacterActions.CAMPING.name, {}))
+            if (MyPlayer.myChar?.gameClass === GameClasses.MYSTIC) {
+                this.bindings.set(8, new ActionButtonActionBinding(CharacterActions.HEALING_SPELL.name, {}))
+            }
             this.storeBindings()
         } else {
             const storedBindings = JSON.parse(localStorage.getItem(this.actionBindingKey)!)
@@ -402,6 +407,16 @@ export const ActionButtonsManager = {
                         break
                     }
                     Connector.sendMessage(new CastMagicArrow(target?.id ?? 0, target?.getObjectType() ?? ''))
+                    break
+                }
+                case CharacterActions.HEALING_SPELL.name: {
+                    if (MyPlayer.myChar?.gameClass !== GameClasses.MYSTIC) break
+                    if (MyPlayer.activeAction === CharacterActions.HEALING_SPELL) {
+                        MyPlayer.stopActions()
+                        break
+                    }
+                    const target = TargetingManager.selectedTarget
+                    Connector.sendMessage(new CastHealingSpell(target?.getObjectType() === 'C' ? target.id : 0))
                     break
                 }
                 case CharacterActions.PRECISE_SHOT.name:
@@ -693,6 +708,14 @@ export const ActionButtonsManager = {
                 cooldownTime: (MagicArrow.cooldown / 1000).toLocaleString(document.documentElement.lang || undefined),
             })
         }
+        if (actionName === CharacterActions.HEALING_SPELL.name) {
+            const locale = document.documentElement.lang || undefined
+            return action.descLoc + ' ' + t('actions.healingSpellStats', {
+                ...HealingSpell,
+                castTime: (HealingSpell.castDuration / 1000).toLocaleString(locale),
+                cooldownTime: (HealingSpell.cooldown / 1000).toLocaleString(locale),
+            })
+        }
         if (actionName !== CharacterActions.POWER_STRIKE.name && actionName !== CharacterActions.PRECISE_SHOT.name) return action.descLoc
 
         const preciseShot = actionName === CharacterActions.PRECISE_SHOT.name
@@ -720,6 +743,7 @@ export const ActionButtonsManager = {
         const hasPowerStrike = (MyPlayer.myChar?.skillSet?.powerStrike?.rank ?? 0) > 0
         const hasPreciseShot = (MyPlayer.myChar?.skillSet?.preciseShot?.rank ?? 0) > 0
         if ((MyPlayer.myChar?.skillSet?.magicArrow?.rank ?? 0) > 0) actions.splice(1, 0, CharacterActions.MAGIC_ARROW)
+        if (MyPlayer.myChar?.gameClass === GameClasses.MYSTIC) actions.splice(1, 0, CharacterActions.HEALING_SPELL)
         const options = actions.map(action => ({name: action.name, actions: [action]}))
 
         if (hasPowerStrike && hasPreciseShot) {

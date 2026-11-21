@@ -1,6 +1,8 @@
 import {AffectGroups} from '@/data/affects'
 import { Vector3 } from '@babylonjs/core'
 import { MagicArrow } from '@game/game/spells/magicArrow'
+import { HealingSpell } from '@game/game/spells/healingSpell'
+import { HealingSpellEffect } from '@/babylon/gfx/healingSpellEffect'
 import {ActivityLogManager} from '@/data/activityLogManager'
 import {getDamageColor, getRelationColor} from '@/gui/combatColors'
 import {getDamagePositionSuffix} from '@/gui/combatText'
@@ -29,7 +31,7 @@ import {
     AttackableBasicTO,
     AttackableCombatTO,
     AutoAttackMessage,
-    AutoAttackResultMessage, CharacterCampingMessage, MagicArrowCastMessage,
+    AutoAttackResultMessage, CharacterCampingMessage, HealingSpellCastMessage, MagicArrowCastMessage,
     CombatApproachMessage,
     CharacterCraftingMessage, CharacterCraftingResultMessage,
     CharacterGatheringMessage,
@@ -97,6 +99,7 @@ export const MessageProcessor = {
             const msg = element
             switch (msg.t) {
                 case 104: this.processMagicArrow(msg.d); break
+                case 105: this.processHealingSpell(msg.d); break
                 case 103: CharacterManager.receivePickup(msg.d); break
                 case 102: WorldAreaManager.receive(msg.d); break
                 case 101: ActivityLogManager.receive(msg.d); break
@@ -614,6 +617,31 @@ export const MessageProcessor = {
             if (data.tp === 'M') OverlayManager.addMonsterDamageNumber(data.tgt, res.d, res.h, res.q)
             else OverlayManager.addCharacterDamageNumber(data.tgt, res.d, res.h, res.q)
         }
+    },
+
+    processHealingSpell(data: HealingSpellCastMessage) {
+        const player = MyPlayer.myChar
+        if (!player || data.worldId !== MyPlayer.worldId) return
+        const caster = player.id === data.id ? player : CharacterManager.characters.get(data.id)
+        const event = data.event
+        if (event.phase === 'charge') {
+            caster?.startHealingSpell(event.x, event.z, data.targetId === data.id)
+            return
+        }
+
+        caster?.finishHealingSpell()
+        if (caster === player) MyPlayer.healingSpellCooldownEnd = Date.now() + HealingSpell.cooldown
+        const target = player.id === data.targetId ? player : CharacterManager.characters.get(data.targetId)
+        if (target) target.hpPercent = event.hpPercent
+        if (target?.insideView || target === player || (!target && caster === player)) {
+            new HealingSpellEffect(Renderer.scene, position => {
+                if (target) position.copyFrom(target.pos)
+                else position.set(event.x, event.y, event.z)
+            }, 'bloom')
+        }
+        if (target === player) OverlayManager.addMyCharDamageNumber(caster ?? player, -event.amount, 'h')
+        else if (caster === player && target) OverlayManager.addCharacterDamageNumber(target.id, -event.amount)
+        this.logHealing(data.id === data.targetId ? null : data.id, data.targetId, 'C', event.amount)
     },
 
     processMonsterAttack(data: AutoAttackMessage) {

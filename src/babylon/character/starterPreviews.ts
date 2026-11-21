@@ -4,7 +4,7 @@ import Character from './character'
 import {HUMAN_ANIMATION_SPEED} from './humanModelRig'
 import {Renderer} from '@/babylon/scene/renderer'
 import {EquipManager} from '@/babylon/item/equipManager'
-import {MagicArrowEffect, setMagicArrowGlowEnabled} from '@/babylon/gfx/magicArrowEffect'
+import {MagicArrowEffect, setSpellGlowEnabled} from '@/babylon/gfx/magicArrowEffect'
 import {Builder} from '@/babylon/builder'
 import {Materials, TerrainEnum1} from '@/babylon/materials'
 import {FoliageManager} from '@/babylon/world/foliageManager'
@@ -228,7 +228,7 @@ export async function startStarterPreviews(canvases: HTMLCanvasElement[], signal
         scene.clearColor = new Color4(0, 0, 0, 0)
         scene.autoClear = true
         scene.autoClearDepthAndStencil = true
-        setMagicArrowGlowEnabled(scene, true, true)
+        setSpellGlowEnabled(scene, true, true)
         canvases.forEach((canvas, index) => engine.registerView(canvas, cameras[index], true))
         engine.runRenderLoop(render)
     } catch (error) {

@@ -110,6 +110,12 @@ export type MagicArrowCastMessage = {
         | {phase: 'impact', res: AutoAttackResult}
 }
 
+export type HealingSpellCastMessage = {
+    id: number, targetId: number, worldId: number,
+    event: {phase: 'charge', x: number, z: number}
+        | {phase: 'heal', x: number, y: number, z: number, amount: number, hpPercent: number}
+}
+
 export type PhysicalWeaponSkillKey = 'swords' | 'axes' | 'maces' | 'polearms' | 'bows' | 'stavesAndWands'
 export type ArmorSkillKey = 'leatherArmor' | 'chainArmor' | 'plateArmor' | 'shields'
 export type UtilitySkillKey = 'camping' | 'healing' | 'cooking'

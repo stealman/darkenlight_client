@@ -200,8 +200,6 @@ select {
 }
 
 .spell-preview__spell img { width: 52px; height: 52px; }
-.spell-preview__spell h2 { margin: 0 0 4px; color: #e7f1ef; }
-.spell-preview__spell p { margin: 0; color: #9caea9; font-size: 12px; }
 
 .spell-preview__stats {
     display: grid;

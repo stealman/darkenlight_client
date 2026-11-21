@@ -244,6 +244,9 @@
   "actions": {
     "magicArrowStats": "{manaCost} mana · {damage} damage · {castTime} s cast · {cooldownTime} s cooldown · {range} tiles of range",
     "magicArrowName": "Magic Arrow",
+    "healingSpellName": "Healing Light",
+    "healingSpellDescription": "Heals the selected character. With no character selected, heals you.",
+    "healingSpellStats": "{manaCost} mana · restores up to {healing} HP · {castTime} s cast · {cooldownTime} s cooldown · {range} tiles of range",
     "magicArrowDescription": "Launches an arrow of compressed air.",
     "noneTitle": "Unassigned",
     "noneDescription": "No action will be assigned to this button.",
