@@ -5,6 +5,11 @@ const {join} = require('node:path')
 const ts = require('typescript')
 const {ref, computed} = require('vue')
 const {parse, compileScript, compileTemplate, compileStyle} = require('@vue/compiler-sfc')
+const armorsModule = {exports: {}}
+const armorSource = readFileSync(join(__dirname, '../../../server/darkenlight_server/src/character/items/codebook/armorsCodebook.ts'), 'utf8')
+new Function('exports', ts.transpileModule(armorSource, {compilerOptions: {module: ts.ModuleKind.CommonJS}}).outputText)(armorsModule.exports)
+const {ArmorsCodebookData, ArmorCategories} = armorsModule.exports
+const hairPalette = require('../src/babylon/character/hairPalette.json')
 
 const filename = 'src/vue/views/gm/NpcDetailsDialog.vue'
 const {descriptor} = parse(readFileSync(join(__dirname, '..', filename), 'utf8'))
@@ -48,9 +53,11 @@ test('GM selection, dialog editing, save and reopening retain independent levels
         }),
     }
     const models = new Proxy({}, {get: () => ({modelId: 1})})
-    const editor = new Function('ref', 'computed', 'useI18n', 'GMManager', 'EquipSlotModelsCb', 'defineExpose',
-        descriptor.scriptSetup.content.replace(/^import .*$/gm, '') + '\nreturn {openDialog, saveDetails, features, createFeature, npcGender, hairTypeId, hairColorId}')(
-        ref, computed, () => ({t: key => key}), manager, models, () => {})
+    const editor = new Function('ref', 'computed', 'useI18n', 'GMManager', 'EquipSlotModelsCb', 'ArmorsCodebookData', 'ArmorCategories', 'hairPalette', 'defineExpose',
+        descriptor.scriptSetup.content.replace(/^import .*$/gm, '') + '\nreturn {openDialog, saveDetails, features, createFeature, npcGender, hairTypeId, hairColorId, vendorIndividualItemOptions}')(
+        ref, computed, () => ({t: key => key}), manager, models, ArmorsCodebookData, ArmorCategories, hairPalette, () => {})
+    assert.equal(editor.vendorIndividualItemOptions.leatherArmor.length, 20)
+    assert.ok(editor.vendorIndividualItemOptions.metalArmor.every(option => !option.isLeather))
     const original = {id: 1, name: 'Artisan', spawn: {x: 5, z: 5}, type: 'common',
         features: [{type: 'crafting', settings: {itemCategories: ['weapons', 'potions'], categoryLevels: {weapons: 8, potions: 3}}}]}
     manager.selectNpcForEditing(original)

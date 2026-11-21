@@ -24,13 +24,10 @@ import { HUMAN_ANIMATION_SPEED, HUMAN_MODEL_FILE } from '@/babylon/character/hum
 import type { CharacterModel } from '@/babylon/character/characterModel'
 import type { EquipModelModifier } from '@/babylon/item/equipManager'
 import { BOW_WEAPON_MATERIAL_NAMES } from '@/babylon/item/codebook/vertexColorPalettes/types'
-import { ResourcesCodebookData } from '@game/character/items/codebook/resourcesCodebook'
+import { LeatherArmorMaterials, LeatherArmorModelIds, isLeatherArmorModelId } from '@game/character/items/codebook/armorsCodebook'
 import './styles.css'
 import { bindPreviewEquipment, bindPreviewWeapon, getPreviewPairedModifiers } from './equipmentModifierConfig'
-import {
-    initializePreviewArmorSources, PREVIEW_LEATHER_HELMET_ID, PREVIEW_LEATHER_LEG_ID,
-    PREVIEW_LEATHER_PAULDRON_ID, PREVIEW_LEATHER_TORSO_ID,
-} from './previewArmorSources'
+import { initializePreviewArmorSources } from './previewArmorSources'
 import { preparePreviewSkeleton } from './previewSkeleton'
 
 type PreviewSlot = 'body' | 'head' | 'pauldrons' | 'legs' | 'shield' | 'weapon'
@@ -142,10 +139,10 @@ const MODEL_IDS = {
     recurveBow: 520,
     battleBow: 530,
     armorPlate: 1000,
-    leatherTorso: PREVIEW_LEATHER_TORSO_ID,
-    leatherPauldron: PREVIEW_LEATHER_PAULDRON_ID,
-    leatherLeg: PREVIEW_LEATHER_LEG_ID,
-    leatherHelmet: PREVIEW_LEATHER_HELMET_ID,
+    leatherTorso: LeatherArmorModelIds.body,
+    leatherPauldron: LeatherArmorModelIds.arms,
+    leatherLeg: LeatherArmorModelIds.legs,
+    leatherHelmet: LeatherArmorModelIds.head,
     helm: 1100,
     pauldronsPlate: 1200,
     legsPlate: 1300,
@@ -193,12 +190,11 @@ const materialOptions: Array<{ label: string, value: number, atlasTile: number }
     { label: 'Mythril', value: 8, atlasTile: 6 },
 ]
 
-const leatherMaterialOptions = ResourcesCodebookData
-    .filter(resource => resource.name.startsWith('processed-') && resource.name.endsWith('-leather'))
-    .map((resource, index) => ({
-        label: resource.name.slice('processed-'.length).split('-')
+const leatherMaterialOptions = LeatherArmorMaterials
+    .map((material, index) => ({
+        label: material.name.split('-')
             .map(word => word[0].toUpperCase() + word.slice(1)).join(' '),
-        value: index + 1,
+        value: material.id,
         atlasTile: index,
     }))
 
@@ -217,13 +213,8 @@ const bowMaterialOptions = BOW_WEAPON_MATERIAL_NAMES.map((label, index) => ({
     atlasTile: index,
 }))
 
-function isLeatherModel(modelId: number | null) {
-    return modelId === MODEL_IDS.leatherTorso || modelId === MODEL_IDS.leatherPauldron
-        || modelId === MODEL_IDS.leatherLeg || modelId === MODEL_IDS.leatherHelmet
-}
-
 function getMaterialOptionsForSlot(slot: PreviewSlot, modelId = slotSelections[slot]) {
-    if (isLeatherModel(modelId)) return leatherMaterialOptions
+    if (isLeatherArmorModelId(modelId)) return leatherMaterialOptions
     if (slot !== 'weapon') return materialOptions
     return modelId === MODEL_IDS.huntingBow || modelId === MODEL_IDS.recurveBow || modelId === MODEL_IDS.battleBow
         ? bowMaterialOptions
@@ -314,9 +305,19 @@ function createDefaultAtlasMaterialSettings(options = materialOptions): Record<s
     ]))
 }
 
+function createDefaultLeatherAtlasMaterialSettings() {
+    const settings = createDefaultAtlasMaterialSettings(leatherMaterialOptions)
+    Object.assign(settings[1], {brightness: 6, hueR: 15, hueG: 2, hueB: -10})
+    Object.assign(settings[2], {brightness: -12, hueR: 5})
+    Object.assign(settings[3], {brightness: 7, hueR: -6, hueB: 7})
+    Object.assign(settings[4], {hueR: -10, hueG: 14})
+    Object.assign(settings[5], {brightness: -14, hueR: 14, hueG: -5, hueB: 3})
+    return settings
+}
+
 const plateAtlasMaterialSettings = createDefaultAtlasMaterialSettings()
 const chainAtlasMaterialSettings = createDefaultAtlasMaterialSettings()
-const leatherAtlasMaterialSettings = createDefaultAtlasMaterialSettings(leatherMaterialOptions)
+const leatherAtlasMaterialSettings = createDefaultLeatherAtlasMaterialSettings()
 const weaponAtlasMaterialSettings = createDefaultAtlasMaterialSettings(weaponMaterialOptions)
 const bowAtlasMaterialSettings = createDefaultAtlasMaterialSettings(bowMaterialOptions)
 const atlasMaterialSettingsByFamily: Record<MaterialFamily, Record<string, GeneratedArmorMaterialParameters>> = {
@@ -458,7 +459,7 @@ function loadAdminUtilsSettings(): AdminUtilsSettings {
         materials: { ...defaultMaterialSelections },
         atlasMaterials: createDefaultAtlasMaterialSettings(),
         chainAtlasMaterials: createDefaultAtlasMaterialSettings(),
-        leatherAtlasMaterials: createDefaultAtlasMaterialSettings(leatherMaterialOptions),
+        leatherAtlasMaterials: createDefaultLeatherAtlasMaterialSettings(),
         weaponAtlasMaterials: createDefaultAtlasMaterialSettings(weaponMaterialOptions),
         bowAtlasMaterials: createDefaultAtlasMaterialSettings(bowMaterialOptions),
         sections: { materialAtlas: true, leatherMaterialAtlas: true, weaponMaterialAtlas: true, bowMaterialAtlas: true, equipment: true },
@@ -1027,7 +1028,7 @@ async function installHairControls(root: HTMLElement, model: CharacterModel, con
         try {
             const id = Number(select.value)
             const headEquipmentId = model.equipSet.get('HEAD')?.type.id
-            if (headEquipmentId === MODEL_IDS.leatherHelmet || isPreviewHairHidden(headEquipmentId, gender)) {
+            if (isPreviewHairHidden(headEquipmentId, gender)) {
                 hidePreviewHair(model)
                 item = null
                 activeTypeId = id
@@ -1614,15 +1615,12 @@ export async function mountAdminUtils() {
             createLeatherAtlas(LEATHER_LEG_PRIMARY_TEXTURE, 'adminUtilsLeatherLegAtlas'),
             createLeatherAtlas(LEATHER_HELMET_PRIMARY_TEXTURE, 'adminUtilsLeatherHelmetAtlas'),
         ])
-        const leatherAtlasIndices = new Map(leatherMaterialOptions.map(option =>
-            [option.value - 1, getEquipAtlasIndex(option.atlasTile)],
-        ))
         previewArmorSources = await initializePreviewArmorSources(scene, EquipManager.itemTypes,
             {
                 male: maleLeather.atlas, female: femaleLeather.atlas, pauldron: leatherPauldron.atlas,
                 leg: leatherLeg.atlas, helmet: leatherHelmet.atlas,
             },
-            leatherAtlasIndices)
+        )
         const saveModifiers = document.createElement('button')
         saveModifiers.type = 'button'
         saveModifiers.textContent = 'Proporce načteny ze souboru'
@@ -1735,7 +1733,7 @@ export async function mountAdminUtils() {
             toggle.title = ''
             populateMaterialSelect(materialSelect, slot)
             materialSelect.disabled = modelId == null
-            const canExportAtlas = isLeatherModel(modelId) || modelId === MODEL_IDS.battleBow || modelId === MODEL_IDS.recurveBow || modelId === MODEL_IDS.huntingBow || modelId === MODEL_IDS.longsword || modelId === MODEL_IDS.broadsword || modelId === MODEL_IDS.greataxe || modelId === MODEL_IDS.halberd || modelId === MODEL_IDS.pickaxe || modelId === MODEL_IDS.handAxe || modelId === MODEL_IDS.battleAxe || modelId === MODEL_IDS.huntingSpear || modelId === MODEL_IDS.lightMace || modelId === MODEL_IDS.warhammer || modelId === MODEL_IDS.warmace || modelId === MODEL_IDS.greatsword || modelId === MODEL_IDS.largeBattleAxe || modelId === MODEL_IDS.armorPlate || modelId === MODEL_IDS.helm || modelId === MODEL_IDS.pauldronsPlate || modelId === MODEL_IDS.legsPlate || modelId === MODEL_IDS.shield || modelId === MODEL_IDS.chainMail || modelId === MODEL_IDS.chainCoif || modelId === MODEL_IDS.chainPauldrons || modelId === MODEL_IDS.chainGreaves
+            const canExportAtlas = isLeatherArmorModelId(modelId) || modelId === MODEL_IDS.battleBow || modelId === MODEL_IDS.recurveBow || modelId === MODEL_IDS.huntingBow || modelId === MODEL_IDS.longsword || modelId === MODEL_IDS.broadsword || modelId === MODEL_IDS.greataxe || modelId === MODEL_IDS.halberd || modelId === MODEL_IDS.pickaxe || modelId === MODEL_IDS.handAxe || modelId === MODEL_IDS.battleAxe || modelId === MODEL_IDS.huntingSpear || modelId === MODEL_IDS.lightMace || modelId === MODEL_IDS.warhammer || modelId === MODEL_IDS.warmace || modelId === MODEL_IDS.greatsword || modelId === MODEL_IDS.largeBattleAxe || modelId === MODEL_IDS.armorPlate || modelId === MODEL_IDS.helm || modelId === MODEL_IDS.pauldronsPlate || modelId === MODEL_IDS.legsPlate || modelId === MODEL_IDS.shield || modelId === MODEL_IDS.chainMail || modelId === MODEL_IDS.chainCoif || modelId === MODEL_IDS.chainPauldrons || modelId === MODEL_IDS.chainGreaves
             exportLink.setAttribute('aria-disabled', String(!canExportAtlas))
             exportLink.tabIndex = canExportAtlas ? 0 : -1
             exportLink.title = canExportAtlas ? '' : 'Export atlasu není pro tento typ výbavy dostupný'

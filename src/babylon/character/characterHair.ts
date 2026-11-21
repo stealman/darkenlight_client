@@ -11,6 +11,7 @@ import { EquipSlotModelsCb } from '@/data/items/item'
 
 export function isHairHiddenByHeadgear(headModelId: number | undefined, gender: 'M' | 'F'): boolean {
     return headModelId === EquipSlotModelsCb.HELM.modelId
+        || headModelId === EquipSlotModelsCb.LEATHER_HELMET.modelId
         || (gender === 'M' && headModelId === EquipSlotModelsCb.CHAIN_COIF.modelId)
 }
 

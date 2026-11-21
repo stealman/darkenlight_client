@@ -341,7 +341,7 @@ const selectedFeature = computed<NpcUseFeatureData | null>(() => features.value[
 const vendorCategories = computed(() => Object.entries(selectedFeature.value?.categories ?? {}).map(([key, items]) => ({key, items})).filter((category) => category.items.length > 0))
 const craftingCategoryOrder: Record<string, number> = {weapons: 0, bows: 1, metalArmor: 2, leatherArmor: 3, jewels: 4, oreSmelting: 5, woodProcessing: 6, leatherProcessing: 7}
 const craftingDescriptions: Record<string, string> = Object.fromEntries(
-    ['weapons', 'bows', 'metalArmor', 'potions', 'oreSmelting', 'woodProcessing', 'leatherProcessing', 'resources'].map((key) => [key, `crafting.categoryInfo.${key}`]))
+    ['weapons', 'bows', 'metalArmor', 'leatherArmor', 'potions', 'oreSmelting', 'woodProcessing', 'leatherProcessing', 'resources'].map((key) => [key, `crafting.categoryInfo.${key}`]))
 const craftingCategories = computed(() => [...(selectedFeature.value?.craftingCategories ?? [])]
     .sort((first, second) => (craftingCategoryOrder[first] ?? Number.MAX_SAFE_INTEGER) - (craftingCategoryOrder[second] ?? Number.MAX_SAFE_INTEGER)))
 const selectedCategoryItems = computed(() => {

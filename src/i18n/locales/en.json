@@ -290,6 +290,7 @@
       "bows": "Crafting bows.",
       "potions": "Brewing potions and elixirs from herbs and other ingredients.",
       "metalArmor": "Crafting metal armor.",
+      "leatherArmor": "Crafting armor from processed leather.",
       "oreSmelting": "Smelting purifies ore into ingots used to craft weapons and armor. Rarer metals require special purifying additives.",
       "woodProcessing": "Process logs into planks for crafting bows, staves and wands. Rarer woods require purifying additives.",
       "leatherProcessing": "Process raw hides into leather for crafting leather armor. Rarer hides require purifying additives.",

@@ -97,7 +97,8 @@
 import { ArcRotateCamera, Color3, Color4, CubeTexture, DirectionalLight, Engine, Mesh, Scene, SceneLoader, Texture, Vector2, Vector3 } from '@babylonjs/core'
 import { BOW_WEAPON_MATERIAL_NAMES } from '@/babylon/item/codebook/vertexColorPalettes/types'
 import { WeaponModelsCb } from '@/babylon/item/codebook/weaponModelsCb'
-import { ArmorModelsCb, BASE_EQUIP_MATERIAL_PATH, TEXTURED_ARMOR_ASSETS } from '@/babylon/item/codebook/armorsModelsCb'
+import { ArmorModelsCb, BASE_EQUIP_MATERIAL_PATH, TEXTURED_ARMOR_ASSETS, createLeatherArmorMaterial } from '@/babylon/item/codebook/armorsModelsCb'
+import { LeatherArmorMaterials } from '@game/character/items/codebook/armorsCodebook'
 import { ArmorMaterialCatalog } from '@/babylon/item/codebook/armorMaterialCatalog'
 import { Materials } from '@/babylon/materials'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
@@ -135,6 +136,7 @@ const WEAPON_OPTIONS = [
 })
 const ARMOR_OPTIONS = Object.entries(ArmorModelsCb).map(([key, item]) => ({ key, item, label: `${key} (${item.model})` }))
 const ARMOR_MATERIAL_OPTIONS = ArmorMaterialCatalog.materialNames.map((label, index) => ({ index, label }))
+const LEATHER_MATERIAL_OPTIONS = LeatherArmorMaterials.map(({id, name}) => ({index: id - 1, label: name.replaceAll('-', ' ')}))
 const ARMOR_INVENTORY_BASE_NAMES = {
     PLATE_ARMOR_MALE: 'plate-armor',
     HELM_MALE: 'plate-helmet',
@@ -145,6 +147,10 @@ const ARMOR_INVENTORY_BASE_NAMES = {
     CHAIN_COIF_MALE: 'chain-coif',
     CHAIN_PAULDRONS_MALE: 'chain-pauldrons',
     CHAIN_GREAVES_MALE: 'chain-greaves',
+    LEATHER_ARMOR_MALE: 'armor',
+    LEATHER_HELMET: 'helmet',
+    LEATHER_PAULDRONS: 'pauldrons',
+    LEATHER_GREAVES: 'greaves',
 }
 
 const dialogVisible = ref(false)
@@ -173,8 +179,9 @@ const selectedPreviewItem = computed(() => {
     return selectedPreviewOption.value?.item ?? null
 })
 const selectedArmorAsset = computed(() => TEXTURED_ARMOR_ASSETS.get(selectedPreviewItem.value?.id ?? -1) ?? null)
+const isLeatherArmor = computed(() => selectedPreviewOption.value?.key.startsWith('LEATHER_'))
 const currentMaterialOptions = computed(() => previewCategory.value === 'ARMOR'
-    ? ARMOR_MATERIAL_OPTIONS
+    ? isLeatherArmor.value ? LEATHER_MATERIAL_OPTIONS : ARMOR_MATERIAL_OPTIONS
     : selectedPreviewOption.value?.materialOptions ?? WEAPON_MATERIAL_OPTIONS)
 const currentMaterialSlots = computed(() => selectedPreviewItem.value ? currentMaterialOptions.value.length : 0)
 const materialIndexOptions = computed(() => [ALL_MATERIAL_OPTION, ...currentMaterialOptions.value])
@@ -467,6 +474,8 @@ const loadPreview = async () => {
         previewMaterial.backFaceCulling = false
         previewMaterial.twoSidedLighting = false
         previewMaterial.usePhysicalLightFalloff = false
+    } else if (isLeatherArmor.value) {
+        previewMaterial = createLeatherArmorMaterial(scene, `modelRenderMaterial-${previewItem.model}`, armorAsset)
     } else {
         previewMaterial = Materials.getPBRCustomMaterialFrom(
             scene,

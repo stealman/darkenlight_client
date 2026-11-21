@@ -227,7 +227,7 @@
                         <div class="npc-vendor-individual-items">
                             <div class="npc-vendor-item-add">
                                 <select v-model="vendorItemSelections.leatherArmor">
-                                    <option :value="null">No leather armor available</option>
+                                    <option :value="null">Select leather armor</option>
                                     <option v-for="option in vendorIndividualItemOptions.leatherArmor" :key="option.codebookId" :value="option.codebookId">{{ option.label }}</option>
                                 </select>
                                 <button class="dialog-button" :disabled="vendorItemSelections.leatherArmor === null" @click="addVendorIndividualItem(feature, 'leatherArmor')"><span class="ui-text-gradient--button-state">Add</span></button>
@@ -301,6 +301,7 @@ import { GMManager } from '@/gm/GM'
 import GameDialog from '@/vue/views/GameDialog.vue'
 import {useI18n} from '@/i18n'
 import { EquipSlotModelsCb } from '@/data/items/item'
+import { ArmorsCodebookData, ArmorCategories } from '@game/character/items/codebook/armorsCodebook'
 
 const featureTypes = [
     { value: 'vendor', label: 'Vendor' },
@@ -371,21 +372,33 @@ const armorOptions = (armorName, modelId, codebookIds) =>
         codebookId: codebookIds[index],
     }))
 const armorSlotOptions = (...options) => [{ label: 'None', value: '' }, ...options.flat()]
+const leatherArmorOptions = ArmorsCodebookData.filter(armor => armor.category === ArmorCategories.LEATHER)
+    .map(armor => ({
+        slot: armor.slot,
+        label: t(`items.armors.${armor.name}`),
+        value: optionValue(armor.modelId, armor.materialId),
+        codebookId: armor.id,
+        isLeather: true,
+    }))
 const headOptions = armorSlotOptions(
     armorOptions('plate helmet', EquipSlotModelsCb.HELM.modelId, [3, 301, 302, 303, 304, 305, 306]),
     armorOptions('Chain Coif', EquipSlotModelsCb.CHAIN_COIF.modelId, [10, 801, 802, 803, 804, 805, 806]),
+    leatherArmorOptions.filter(option => option.slot === 'head'),
 )
 const armsOptions = armorSlotOptions(
     armorOptions('plate pauldrons', EquipSlotModelsCb.PAULDRONS_PLATE.modelId, [2, 201, 202, 203, 204, 205, 206]),
     armorOptions('Chain Pauldrons', EquipSlotModelsCb.CHAIN_PAULDRONS.modelId, [9, 701, 702, 703, 704, 705, 706]),
+    leatherArmorOptions.filter(option => option.slot === 'arms'),
 )
 const legsOptions = armorSlotOptions(
     armorOptions('plate greaves', EquipSlotModelsCb.LEGS_PLATE.modelId, [1, 101, 102, 103, 104, 105, 106]),
     armorOptions('Chain Greaves', EquipSlotModelsCb.CHAIN_GREAVES.modelId, [8, 601, 602, 603, 604, 605, 606]),
+    leatherArmorOptions.filter(option => option.slot === 'legs'),
 )
 const bodyOptions = armorSlotOptions(
     armorOptions('plate armor', EquipSlotModelsCb.ARMOR_PLATE.modelId, [6, 401, 402, 403, 404, 405, 406]),
     armorOptions('Chain Mail', EquipSlotModelsCb.CHAIN_MAIL.modelId, [11, 901, 902, 903, 904, 905, 906]),
+    leatherArmorOptions.filter(option => option.slot === 'body'),
 )
 const shieldOptions = armorSlotOptions(
     armorOptions('shield', EquipSlotModelsCb.SHIELD.modelId, [7, 501, 502, 503, 504, 505, 506]),
@@ -487,8 +500,8 @@ const weaponOptions = [
 const vendorIndividualItemOptions = {
     weapons: weaponOptions.filter((option) => option.codebookId && !option.isBow),
     bows: weaponOptions.filter((option) => option.codebookId && option.isBow),
-    metalArmor: [...headOptions, ...armsOptions, ...legsOptions, ...bodyOptions].filter((option) => option.codebookId),
-    leatherArmor: [],
+    metalArmor: [...headOptions, ...armsOptions, ...legsOptions, ...bodyOptions].filter(option => option.codebookId && !option.isLeather),
+    leatherArmor: leatherArmorOptions,
     resources: resourceOptions,
     potions: potionOptions,
     food: foodOptions,

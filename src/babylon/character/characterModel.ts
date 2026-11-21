@@ -21,6 +21,7 @@ import { modelAssetUrl } from '@/babylon/modelAssetUrl'
 import type { CharacterGender } from './characterAppearance'
 import { HUMAN_MODEL_FILE, HUMAN_ANIMATION_SPEED, getHumanAnimationRange, prepareHumanSkeleton } from './humanModelRig'
 import { applyCharacterEquipmentFitting, getCharacterHairFitting, preloadCharacterEquipmentFitting } from './characterEquipmentFitting'
+import { isLeatherArmorModelId } from '@game/character/items/codebook/armorsCodebook'
 import { StaticsManager } from '@/babylon/world/statics/staticsManager'
 import type { StaticObject } from '@/babylon/world/statics/objects/baseStaticObject'
 import { CharacterActions } from '@/data/actions/characterActions'
@@ -451,7 +452,8 @@ export class CharacterModel implements EquipBearer {
     }
 
     addEquippedItem(slot: string, item: EquipItem) {
-        applyCharacterEquipmentFitting(this.node.getScene(), slot, item, this.gender)
+        const fittingGender = isLeatherArmorModelId(item.type.id) ? this.bodyGender : this.gender
+        applyCharacterEquipmentFitting(this.node.getScene(), slot, item, fittingGender)
         item.castsOutdoorShadow = this.parent.isMyChar() && (slot === 'WEAPON' || slot === 'SHIELD')
         this.equipSet.set(slot, item)
         EquipManager.addEquippedItem(item)

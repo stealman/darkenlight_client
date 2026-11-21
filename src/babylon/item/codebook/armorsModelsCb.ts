@@ -4,6 +4,8 @@ import { EquipItemType} from '@/babylon/item/equipManager'
 import { EquipCbItem} from '@/babylon/item/codebook/equipCbItem'
 import { EquipSlotModelsCb } from '@/data/items/item'
 import { Materials } from '@/babylon/materials'
+import { PBRCustomMaterial } from '@babylonjs/materials'
+import { LeatherArmorMaterials } from '@game/character/items/codebook/armorsCodebook'
 
 export const BASE_EQUIP_MATERIAL_PATH = "/models/equip/"
 
@@ -34,15 +36,32 @@ const TEXTURED_CHAIN_PAULDRON_CACHE_VERSION = '20261020-material-atlas-jpg'
 const TEXTURED_PLATE_LEG_CACHE_VERSION = '20261020-material-atlas-jpg'
 const TEXTURED_CHAIN_LEG_CACHE_VERSION = '20261020-material-atlas-jpg'
 const ARMOR_NORMAL_CACHE_VERSION = '20261021-single-tile'
+const LEATHER_ARMOR_ATLAS_CACHE_VERSION = '20261121-common-leather'
 
 export interface TexturedArmorAsset {
     modelFile: string
     albedoFile: string
-    normalFile: string
+    normalFile?: string
     metallic: number
     roughness: number
     directIntensity: number
     environmentIntensity: number
+}
+
+export const leatherArmorAtlasIndices = new Map(LeatherArmorMaterials.map(({id}, index) => [
+    id - 1, 12 + index % 4 - 4 * Math.floor(index / 4),
+]))
+
+function leatherAsset(modelFile: string, albedoFile: string, normalFile?: string): TexturedArmorAsset {
+    return {modelFile, albedoFile, normalFile, metallic: 0, roughness: 1, directIntensity: 1, environmentIntensity: 1}
+}
+
+export const LeatherArmorAssets = {
+    male: leatherAsset('male-armor-leather.glb', 'leather_armor_male.jpg', 'leather_armor_male_normal.png'),
+    female: leatherAsset('female-armor-leather.glb', 'leather_armor_female.jpg', 'leather_armor_female_normal.png'),
+    head: leatherAsset('helmet-leather.glb', 'leather_helmet.jpg'),
+    arms: leatherAsset('pauldron-leather.glb', 'leather_pauldron.jpg', 'leather_pauldron_normal.png'),
+    legs: leatherAsset('male-leg-leather.glb', 'leather_leg.jpg', 'leather_leg_normal.png'),
 }
 
 /** Shared asset metadata for runtime armour and the GM model-render preview. */
@@ -56,9 +75,13 @@ export const TEXTURED_ARMOR_ASSETS = new Map<number, TexturedArmorAsset>([
     [EquipSlotModelsCb.CHAIN_COIF.modelId, { modelFile: `chain-coif.glb?v=${TEXTURED_CHAIN_COIF_CACHE_VERSION}`, albedoFile: `chain_coif.jpg?v=${TEXTURED_CHAIN_COIF_CACHE_VERSION}`, normalFile: 'chain_coif_normal.png', metallic: 0.5, roughness: 1, directIntensity: 1.75, environmentIntensity: 1.4 }],
     [EquipSlotModelsCb.CHAIN_PAULDRONS.modelId, { modelFile: `pauldron-chain.glb?v=${TEXTURED_CHAIN_PAULDRON_CACHE_VERSION}`, albedoFile: `chain_pauldron.jpg?v=${TEXTURED_CHAIN_PAULDRON_CACHE_VERSION}`, normalFile: 'chain_pauldron_normal.png', metallic: 0.5, roughness: 1, directIntensity: 1.75, environmentIntensity: 1.4 }],
     [EquipSlotModelsCb.CHAIN_GREAVES.modelId, { modelFile: `male-leg-chain.glb?v=${TEXTURED_CHAIN_LEG_CACHE_VERSION}`, albedoFile: `chain_leg.jpg?v=${TEXTURED_CHAIN_LEG_CACHE_VERSION}`, normalFile: 'chain_legs_normal.png', metallic: 0.4, roughness: 1, directIntensity: 1.75, environmentIntensity: 1.4 }],
+    [EquipSlotModelsCb.LEATHER_ARMOR.modelId, LeatherArmorAssets.male],
+    [EquipSlotModelsCb.LEATHER_HELMET.modelId, LeatherArmorAssets.head],
+    [EquipSlotModelsCb.LEATHER_PAULDRONS.modelId, LeatherArmorAssets.arms],
+    [EquipSlotModelsCb.LEATHER_GREAVES.modelId, LeatherArmorAssets.legs],
 ])
 
-export function createArmorNormalTexture(scene: Scene, fileName: string): Texture {
+function createArmorNormalTexture(scene: Scene, fileName: string): Texture {
     const texture = new Texture(
         `${BASE_EQUIP_MATERIAL_PATH}armors/${fileName}?v=${ARMOR_NORMAL_CACHE_VERSION}`,
         scene,
@@ -70,18 +93,36 @@ export function createArmorNormalTexture(scene: Scene, fileName: string): Textur
     return texture
 }
 
+export function createLeatherArmorMaterial(scene: Scene, name: string, asset: TexturedArmorAsset, atlas?: Texture) {
+    const material = new PBRCustomMaterial(name, scene)
+    material.albedoTexture = atlas ?? new Texture(
+        `${BASE_EQUIP_MATERIAL_PATH}armors/${asset.albedoFile}?v=${LEATHER_ARMOR_ATLAS_CACHE_VERSION}`,
+        scene, {invertY: false},
+    )
+    material.albedoTexture.uScale = 1 / 4
+    material.albedoTexture.vScale = 1 / 4
+    material.metallic = asset.metallic
+    material.roughness = asset.roughness
+    material.directIntensity = asset.directIntensity
+    material.environmentIntensity = asset.environmentIntensity
+    if (asset.normalFile) material.bumpTexture = createArmorNormalTexture(scene, asset.normalFile)
+    const renderBackFaces = asset === LeatherArmorAssets.head || asset === LeatherArmorAssets.legs
+    material.backFaceCulling = !renderBackFaces
+    material.twoSidedLighting = !renderBackFaces
+    material.usePhysicalLightFalloff = false
+    material.AddAttribute('uvc')
+    material.Vertex_Definitions('attribute vec2 uvc;')
+    // The normal texture is a single tile with its original model UVs.
+    material.Vertex_MainEnd(`
+        #if defined(ALBEDO) && ALBEDODIRECTUV == 0
+            vAlbedoUV += vec2(albedoMatrix * vec4(uvc, 0.0, 0.0));
+        #endif
+    `)
+    return material
+}
+
 /** Textured Tripo armour is intentionally excluded from every shadow-generator render list. */
-export const TEXTURED_ARMOR_MODEL_IDS = new Set([
-    EquipSlotModelsCb.ARMOR_PLATE.modelId,
-    EquipSlotModelsCb.HELM.modelId,
-    EquipSlotModelsCb.PAULDRONS_PLATE.modelId,
-    EquipSlotModelsCb.LEGS_PLATE.modelId,
-    EquipSlotModelsCb.SHIELD.modelId,
-    EquipSlotModelsCb.CHAIN_MAIL.modelId,
-    EquipSlotModelsCb.CHAIN_COIF.modelId,
-    EquipSlotModelsCb.CHAIN_PAULDRONS.modelId,
-    EquipSlotModelsCb.CHAIN_GREAVES.modelId,
-])
+export const TEXTURED_ARMOR_MODEL_IDS = new Set(TEXTURED_ARMOR_ASSETS.keys())
 
 export const ArmorsCbManager = {
     itemSourceParent: null as TransformNode | null,
@@ -353,6 +394,14 @@ export const ArmorsCbManager = {
                 `male-leg-chain.glb?v=${TEXTURED_CHAIN_LEG_CACHE_VERSION}`,
             ),
         )
+        await Promise.all([
+            ArmorModelsCb.LEATHER_ARMOR_MALE, ArmorModelsCb.LEATHER_HELMET,
+            ArmorModelsCb.LEATHER_PAULDRONS, ArmorModelsCb.LEATHER_GREAVES,
+        ].map(async data => {
+            const asset = TEXTURED_ARMOR_ASSETS.get(data.id)!
+            const material = createLeatherArmorMaterial(scene, data.model, asset)
+            map.set(data.id, await this.getTexturedArmor(data, material, asset.modelFile))
+        }))
     },
 
     async getTexturedArmor(data: EquipCbItem, material: PBRMaterial, fileName: string): Promise<EquipItemType> {
@@ -388,4 +437,9 @@ export const ArmorModelsCb = {
     CHAIN_PAULDRONS_MALE: new EquipCbItem(EquipSlotModelsCb.CHAIN_PAULDRONS.modelId, 'male-pauldron-chain', new Vector3(-0.06, 0, 0), new Vector3(0.26, 0.32, 0.36), null, plateArmorMaterialAtlasSize, plateArmorMaterialAtlasIndices, 12),
 
     CHAIN_GREAVES_MALE: new EquipCbItem(EquipSlotModelsCb.CHAIN_GREAVES.modelId, 'male-leg-chain', new Vector3(0.02, 0.2, 0.015), new Vector3(0.23, 0.24, 0.2), null, plateArmorMaterialAtlasSize, plateArmorMaterialAtlasIndices, 12),
+
+    LEATHER_ARMOR_MALE: new EquipCbItem(EquipSlotModelsCb.LEATHER_ARMOR.modelId, 'male-armor-leather', new Vector3(0, 0.39, 0.01), new Vector3(0.23, 0.22, 0.24), null, plateArmorMaterialAtlasSize, leatherArmorAtlasIndices, 12),
+    LEATHER_HELMET: new EquipCbItem(EquipSlotModelsCb.LEATHER_HELMET.modelId, 'helmet-leather', new Vector3(0, 0.25, 0.01), BabylonUtils.getSymVector(0.215), null, plateArmorMaterialAtlasSize, leatherArmorAtlasIndices, 12),
+    LEATHER_PAULDRONS: new EquipCbItem(EquipSlotModelsCb.LEATHER_PAULDRONS.modelId, 'pauldron-leather', new Vector3(-0.06, 0, 0), new Vector3(0.26, 0.32, 0.36), null, plateArmorMaterialAtlasSize, leatherArmorAtlasIndices, 12),
+    LEATHER_GREAVES: new EquipCbItem(EquipSlotModelsCb.LEATHER_GREAVES.modelId, 'male-leg-leather', new Vector3(0.02, 0.2, 0.015), new Vector3(0.23, 0.24, 0.2), null, plateArmorMaterialAtlasSize, leatherArmorAtlasIndices, 12),
 }

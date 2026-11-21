@@ -1,6 +1,7 @@
 import type { ItemTO } from '@/network/messageIfs'
 import { ConsumablesCodebook } from './consumablesCodebook'
 import { t } from '@/i18n'
+import { LeatherArmorModelIds } from '@game/character/items/codebook/armorsCodebook'
 
 const itemTypeLocalizationSections: Record<string, string> = {
     W: 'weapons',
@@ -202,6 +203,14 @@ export const EquipSlotModelsCb = {
     CHAIN_PAULDRONS: new EquipSlotModel(2200, EquipItemSlots.PAULDRONS, null),
 
     CHAIN_GREAVES: new EquipSlotModel(2300, EquipItemSlots.LEGS, null),
+
+    LEATHER_ARMOR: new EquipSlotModel(LeatherArmorModelIds.body, EquipItemSlots.BODY, null),
+
+    LEATHER_HELMET: new EquipSlotModel(LeatherArmorModelIds.head, EquipItemSlots.HEAD, null),
+
+    LEATHER_PAULDRONS: new EquipSlotModel(LeatherArmorModelIds.arms, EquipItemSlots.PAULDRONS, null),
+
+    LEATHER_GREAVES: new EquipSlotModel(LeatherArmorModelIds.legs, EquipItemSlots.LEGS, null),
 
     getById(id: number): EquipSlotModel | null {
         for (const key in this) {

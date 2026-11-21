@@ -134,11 +134,14 @@ async function main() {
                 throw new Error(`Preview does not use ${file}`)
             }
         }, [modelId, file])
-        const checkLeatherNormal = (modelId, file) => page.waitForFunction(async ([modelId, file]) => {
+        const checkLeatherMaterial = (modelId, file) => page.waitForFunction(async ([modelId, file]) => {
             const {EquipManager} = await import('/src/babylon/item/equipManager.ts')
             const {type: {mesh}} = [...EquipManager.equippedItems.values()].flatMap(set => [...set])
                 .find(item => item.type.id === modelId && item.parent.node?.isEnabled())
             const material = mesh.material
+            const orientation = material.sideOrientation ?? mesh.sideOrientation
+            const rawMeshOrientation = mesh.getScene().useRightHandedSystem ? 0 : 1
+            if (orientation !== rawMeshOrientation) throw new Error(`Reversed front faces on ${mesh.name}`)
             const texture = material.bumpTexture
             if (file == null ? texture != null : !texture?.url.includes('/' + file + '?') || texture.gammaSpace) {
                 throw new Error(`Unexpected normal map on ${mesh.name}: ${texture?.url}`)
@@ -280,10 +283,10 @@ async function main() {
         await helmets.selectOption(leatherHelmetId)
         const leatherHelmetGeometry = await armorGeometry(Number(leatherHelmetId))
         await checkArmorGeometry(Number(leatherHelmetId), 'helmet-leather.glb')
-        await checkLeatherNormal(leatherId, 'leather_armor_male_normal.png')
-        await checkLeatherNormal(leatherPauldronId, 'leather_pauldron_normal.png')
-        await checkLeatherNormal(leatherLegId, 'leather_leg_normal.png')
-        await checkLeatherNormal(leatherHelmetId, null)
+        await checkLeatherMaterial(leatherId, 'leather_armor_male_normal.png')
+        await checkLeatherMaterial(leatherPauldronId, 'leather_pauldron_normal.png')
+        await checkLeatherMaterial(leatherLegId, 'leather_leg_normal.png')
+        await checkLeatherMaterial(leatherHelmetId, null)
         assert.equal((await snapshot())[0].hair, null)
         await page.locator('[data-modifier-toggle="head"]').click()
         const helmetX = page.locator('[data-modifier-editor="head"] [data-modifier-component="position"][data-modifier-axis="x"]')
@@ -363,7 +366,7 @@ async function main() {
         assert.equal((await exportLegAtlas).suggestedFilename(), 'leather_leg.jpg')
         assert.equal(await leatherMaterial.locator('option:checked').textContent(), 'Dragon Leather')
         await checkArmorGeometry(Number(leatherId), 'female-armor-leather.glb')
-        await checkLeatherNormal(leatherId, 'leather_armor_female_normal.png')
+        await checkLeatherMaterial(leatherId, 'leather_armor_female_normal.png')
         const femaleLeatherGeometry = await armorGeometry(Number(leatherId))
         assert.notEqual(femaleLeatherGeometry.material, maleLeatherGeometry.material)
         assert.ok(Math.abs((await snapshot())[0].bodyX - femaleModifiers[leatherId].position.x) < 1e-6)

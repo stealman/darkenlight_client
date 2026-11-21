@@ -60,7 +60,7 @@ async function loadCharacterEquipmentFitting(scene: Scene, gender: CharacterGend
     const response = await fetch(url, { cache: 'no-store' })
     if (!response.ok) throw new Error('Could not load character equipment fitting')
     const config: EquipmentFitting = await response.json()
-    const [{ TEXTURED_ARMOR_ASSETS }, { EquipManager, EquipItemType }, { Lights }, { Settings }] = await Promise.all([
+    const [{ TEXTURED_ARMOR_ASSETS, ArmorModelsCb, LeatherArmorAssets, createLeatherArmorMaterial }, { EquipManager, EquipItemType }, { Lights }, { Settings }] = await Promise.all([
         import('@/babylon/item/codebook/armorsModelsCb'), import('@/babylon/item/equipManager'),
         import('@/babylon/scene/lights'), import('@/settings/settings'),
     ])
@@ -70,13 +70,17 @@ async function loadCharacterEquipmentFitting(scene: Scene, gender: CharacterGend
         const asset = TEXTURED_ARMOR_ASSETS.get(id)
         const base = EquipManager.getItemType(id)
         if (!asset || !base?.mesh) throw new Error(`Equipment source ${id} is unavailable`)
-        const femaleFile = id === 1000 ? 'female-armor-plate.glb' : id === 2000 ? 'female-armor-chain.glb' : undefined
+        const femaleLeather = gender === 'F' && id === ArmorModelsCb.LEATHER_ARMOR_MALE.id
+        const femaleFile = id === 1000 ? 'female-armor-plate.glb' : id === 2000 ? 'female-armor-chain.glb'
+            : femaleLeather ? LeatherArmorAssets.female.modelFile : undefined
         const data = await loadRawArmorGeometry(scene, gender === 'F' && femaleFile ? femaleFile : asset.modelFile.split('?')[0])
         // Keep the existing normalized sources for monsters and ground items.
         const type = new EquipItemType(base.cbData)
         const mesh = new Mesh(`character-equipment-${gender}-${id}`, scene)
         data.applyToMesh(mesh)
-        mesh.material = base.mesh.material
+        mesh.material = femaleLeather
+            ? createLeatherArmorMaterial(scene, 'female-armor-leather', LeatherArmorAssets.female)
+            : base.mesh.material
         mesh.parent = base.mesh.parent
         mesh.receiveShadows = true
         mesh.alwaysSelectAsActiveMesh = true
