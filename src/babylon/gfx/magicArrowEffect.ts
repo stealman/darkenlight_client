@@ -19,10 +19,11 @@ export const MAGIC_ARROW_DETAILS = ['LOW', 'MEDIUM', 'HIGH'] as const
 type MagicArrowDetail = typeof MAGIC_ARROW_DETAILS[number]
 
 const detailProfiles = {
-    LOW: {ribbons: 1, segments: 16, sparkCapacity: 36, chargeSparks: 30, launchSparks: 8, flightSparks: 55, impactSparks: 20, windMotes: 0},
-    MEDIUM: {ribbons: 2, segments: 24, sparkCapacity: 64, chargeSparks: 76, launchSparks: 14, flightSparks: 105, impactSparks: 28, windMotes: 0},
-    HIGH: {ribbons: 3, segments: 32, sparkCapacity: 96, chargeSparks: 128, launchSparks: 24, flightSparks: 170, impactSparks: 44, windMotes: 45},
+    LOW: {ribbons: 1, segments: 16},
+    MEDIUM: {ribbons: 2, segments: 24},
+    HIGH: {ribbons: 3, segments: 32},
 } as const
+const sparksProfile = {capacity: 96, chargeRate: 128, launchCount: 12, flightRate: 170, impactCount: 40, windMoteRate: 45} as const
 
 type ReadOrigin = (feet: Vector3, crystal: Vector3) => void
 
@@ -394,9 +395,9 @@ export class MagicArrowEffect {
         this.profile = detailProfiles[detail]
         this.chargeRibbons = this.createRibbons(CHARGE_RIBBON_COUNT)
         this.readOrigin(this.feet, this.crystal)
-        this.sparks = createSparks(scene, spark, this.crystal, this.profile.sparkCapacity, previewSpeed)
-        this.windMotes = this.profile.windMotes
-            ? createWindMotes(scene, spark, this.feet, this.profile.windMotes, previewSpeed)
+        this.sparks = createSparks(scene, spark, this.crystal, sparksProfile.capacity, previewSpeed)
+        this.windMotes = detail === 'HIGH'
+            ? createWindMotes(scene, spark, this.feet, sparksProfile.windMoteRate, previewSpeed)
             : null
         if (layerMask !== undefined) {
             this.sparks.layerMask = layerMask
@@ -450,7 +451,7 @@ export class MagicArrowEffect {
         this.chargeEndedAt = this.releasedAt
         this.projectileRibbons = this.createRibbons(this.profile.ribbons)
         this.launchSparks = this.emitLaunchSparks()
-        this.sparks.emitRate = this.profile.flightSparks
+        this.sparks.emitRate = sparksProfile.flightRate
         this.sparks.minEmitPower = 0.65
         this.sparks.maxEmitPower = 1.65
         this.windMotes?.stop()
@@ -473,7 +474,7 @@ export class MagicArrowEffect {
 
     private emitLaunchSparks() {
         const {spark} = getResources(this.scene)
-        const count = this.profile.launchSparks
+        const count = sparksProfile.launchCount
         // The launch point stays at the wand while the flight emitter moves with the arrow.
         const burst = createSparks(this.scene, spark, this.launch, count, this.previewSpeed)
         burst.name = 'magicArrowLaunchSparks'
@@ -563,7 +564,7 @@ export class MagicArrowEffect {
     private updateCharge(elapsed: number) {
         this.readOrigin(this.feet, this.crystal)
         const progress = clamp01(elapsed / MagicArrow.castDuration)
-        this.sparks.emitRate = this.profile.chargeSparks * (0.26 + 0.74 * progress * progress) * (this.layerMask === undefined ? 1 : 1.5)
+        this.sparks.emitRate = sparksProfile.chargeRate * (0.26 + 0.74 * progress * progress) * (this.layerMask === undefined ? 1 : 1.5)
         this.drawFlash(this.crystal, 0.22 + 0.41 * progress, progress ** 1.6 * (0.59 + 0.22 * Math.sin(elapsed * 0.037)))
         this.updateChargeRibbons(elapsed)
     }
@@ -672,7 +673,7 @@ export class MagicArrowEffect {
             this.sparks.maxEmitPower = 3.5
             this.sparks.minLifeTime = 0.22
             this.sparks.maxLifeTime = 0.42
-            this.sparks.manualEmitCount = this.profile.impactSparks
+            this.sparks.manualEmitCount = sparksProfile.impactCount
         }
         const progress = clamp01(elapsed / IMPACT_MS)
         const radius = 0.12 + 0.98 * (1 - (1 - progress) ** 3)

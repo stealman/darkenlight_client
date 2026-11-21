@@ -478,8 +478,8 @@ export const AudioManager = {
     preloadSpellSounds(scene: Scene) {
         if (!spellSounds.has(scene)) {
             spellSounds.set(scene, {
-                casting: new Sound('spellCasting', '/sounds/spells/spell_casting_1.ogg', scene),
-                impact: new Sound('spellImpact', '/sounds/spells/spell_impact_2.ogg', scene, undefined, {volume: 0.72}),
+                casting: new Sound('spellCasting', '/sounds/spells/spell_casting_1.ogg', scene, undefined, {volume: 0.8}),
+                impact: new Sound('spellImpact', '/sounds/spells/spell_impact_2.ogg', scene, undefined, {volume: 0.576}),
             })
         }
     },
