@@ -224,6 +224,12 @@
 
                     <div v-if="feature.settings.itemCategories.includes('leatherArmor')" class="npc-vendor-materials">
                         <strong>Leather armor</strong>
+                        <div class="npc-feature-checkboxes npc-feature-material-checkboxes">
+                            <label v-for="material in LeatherArmorMaterials" :key="material.name" class="npc-feature-checkbox" :class="{ 'npc-feature-checkbox-selected': feature.settings.leatherArmorMaterials.includes(material.name) }">
+                                <input v-model="feature.settings.leatherArmorMaterials" type="checkbox" :value="material.name" />
+                                <span>{{ t(`items.leatherMaterials.${material.name}`) }}</span>
+                            </label>
+                        </div>
                         <div class="npc-vendor-individual-items">
                             <div class="npc-vendor-item-add">
                                 <select v-model="vendorItemSelections.leatherArmor">
@@ -301,7 +307,7 @@ import { GMManager } from '@/gm/GM'
 import GameDialog from '@/vue/views/GameDialog.vue'
 import {useI18n} from '@/i18n'
 import { EquipSlotModelsCb } from '@/data/items/item'
-import { ArmorsCodebookData, ArmorCategories } from '@game/character/items/codebook/armorsCodebook'
+import { ArmorsCodebookData, ArmorCategories, LeatherArmorMaterials } from '@game/character/items/codebook/armorsCodebook'
 
 const featureTypes = [
     { value: 'vendor', label: 'Vendor' },
@@ -546,7 +552,7 @@ const itemFromSelection = (selection) => {
 const createFeature = (type) => ({
     type,
     settings: type === 'vendor' || type === 'repairer'
-        ? { itemCategories: [], weaponMaterials: [], armorMaterials: [], bowMaterials: [], individualItems: {weapons: [], bows: [], metalArmor: [], leatherArmor: [], resources: [], potions: [], food: [], ingredients: []} }
+        ? { itemCategories: [], weaponMaterials: [], armorMaterials: [], leatherArmorMaterials: [], bowMaterials: [], individualItems: {weapons: [], bows: [], metalArmor: [], leatherArmor: [], resources: [], potions: [], food: [], ingredients: []} }
         : type === 'crafting'
             ? {itemCategories: [], categoryLevels: Object.fromEntries(craftingCategories.value.map(category => [category.value, 1]))}
         : type === 'healer'
@@ -617,6 +623,7 @@ const openDialog = () => {
                 itemCategories: [...(feature.settings?.itemCategories ?? [])],
                 weaponMaterials: [...(feature.settings?.weaponMaterials ?? [])],
                 armorMaterials: [...(feature.settings?.armorMaterials ?? [])],
+                leatherArmorMaterials: [...(feature.settings?.leatherArmorMaterials ?? [])],
                 bowMaterials: [...(feature.settings?.bowMaterials ?? [])],
                 individualItems: {
                     weapons: [...(feature.settings?.individualItems?.weapons ?? [])],

@@ -59,7 +59,11 @@ test('GM selection, dialog editing, save and reopening retain independent levels
     assert.equal(editor.vendorIndividualItemOptions.leatherArmor.length, 20)
     assert.ok(editor.vendorIndividualItemOptions.metalArmor.every(option => !option.isLeather))
     const original = {id: 1, name: 'Artisan', spawn: {x: 5, z: 5}, type: 'common',
-        features: [{type: 'crafting', settings: {itemCategories: ['weapons', 'potions'], categoryLevels: {weapons: 8, potions: 3}}}]}
+        features: [
+            {type: 'crafting', settings: {itemCategories: ['weapons', 'potions'], categoryLevels: {weapons: 8, potions: 3}}},
+            {type: 'vendor', settings: {itemCategories: ['leatherArmor'], leatherArmorMaterials: ['wolf-leather']}},
+            {type: 'repairer', settings: {itemCategories: ['leatherArmor'], individualItems: {leatherArmor: [1001]}}},
+        ]}
     manager.selectNpcForEditing(original)
     editor.openDialog()
     assert.equal(editor.npcGender.value, 'M')
@@ -72,6 +76,10 @@ test('GM selection, dialog editing, save and reopening retain independent levels
     assert.equal(settings.categoryLevels.weapons, 8)
     assert.equal(settings.categoryLevels.potions, 3)
     assert.equal(settings.categoryLevels.bows, 1)
+    assert.deepEqual(editor.features.value[1].settings.leatherArmorMaterials, ['wolf-leather'])
+    assert.deepEqual(editor.features.value[2].settings.leatherArmorMaterials, [])
+    editor.features.value[1].settings.leatherArmorMaterials.push('common-leather')
+    editor.features.value[2].settings.leatherArmorMaterials.push('dragon-leather')
     settings.categoryLevels.weapons = 10
     settings.categoryLevels.potions = 7
     assert.equal(original.features[0].settings.categoryLevels.weapons, 8)
@@ -81,6 +89,9 @@ test('GM selection, dialog editing, save and reopening retain independent levels
     assert.equal(saved.hairColorId, 8)
     assert.equal(saved.features[0].settings.categoryLevels.weapons, 10)
     assert.equal(saved.features[0].settings.categoryLevels.potions, 7)
+    assert.deepEqual(saved.features[1].settings.leatherArmorMaterials, ['wolf-leather', 'common-leather'])
+    assert.deepEqual(saved.features[2].settings.leatherArmorMaterials, ['dragon-leather'])
+    assert.deepEqual(saved.features[2].settings.individualItems.leatherArmor, [1001])
     manager.selectNpcForEditing(saved)
     editor.openDialog()
     assert.equal(editor.npcGender.value, 'F')
@@ -88,6 +99,7 @@ test('GM selection, dialog editing, save and reopening retain independent levels
     assert.equal(editor.hairColorId.value, 8)
     assert.equal(editor.features.value[0].settings.categoryLevels.weapons, 10)
     assert.equal(editor.features.value[0].settings.categoryLevels.potions, 7)
+    assert.deepEqual(editor.features.value[2].settings.leatherArmorMaterials, ['dragon-leather'])
     delete original.features[0].settings.categoryLevels
     manager.selectNpcForEditing(original)
     editor.openDialog()

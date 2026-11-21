@@ -1,5 +1,12 @@
 {
     "items": {
+        "leatherMaterials": {
+            "common-leather": "Obyčejná kůže",
+            "hard-leather": "Tvrdá kůže",
+            "wolf-leather": "Vlčí kůže",
+            "lizard-leather": "Ještěří kůže",
+            "dragon-leather": "Dračí kůže"
+        },
         "qualityPrefixes": {
             "fine": {
                 "masculine": "Dobr\u00fd",

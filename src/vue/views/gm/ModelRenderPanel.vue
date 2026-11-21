@@ -99,6 +99,7 @@ import { BOW_WEAPON_MATERIAL_NAMES } from '@/babylon/item/codebook/vertexColorPa
 import { WeaponModelsCb } from '@/babylon/item/codebook/weaponModelsCb'
 import { ArmorModelsCb, BASE_EQUIP_MATERIAL_PATH, TEXTURED_ARMOR_ASSETS, createLeatherArmorMaterial } from '@/babylon/item/codebook/armorsModelsCb'
 import { LeatherArmorMaterials } from '@game/character/items/codebook/armorsCodebook'
+import { loadRawArmorGeometry } from '@/babylon/character/characterEquipmentFitting'
 import { ArmorMaterialCatalog } from '@/babylon/item/codebook/armorMaterialCatalog'
 import { Materials } from '@/babylon/materials'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
@@ -419,6 +420,7 @@ const loadPreview = async () => {
     previewMaterial = null
 
     const isWeapon = previewCategory.value === 'WEAPON'
+    const leatherArmor = !isWeapon && isLeatherArmor.value
     const weaponAsset = selectedPreviewOption.value
     if (isWeapon && !weaponAsset) {
         return
@@ -427,31 +429,35 @@ const loadPreview = async () => {
     if (!isWeapon && !armorAsset) {
         return
     }
-    const modelPath = isWeapon
-        ? `weapons/${weaponAsset.modelFile}?v=${weaponAsset.cacheVersion ?? TRIPO_WEAPON_CACHE_VERSION}`
-        : `armors/${armorAsset.modelFile}`
-    const importResult = await SceneLoader.ImportMeshAsync('', '/models/equip/', modelPath, scene)
-    const sourceMeshes = importResult.meshes.filter((m) => m instanceof Mesh && m.getTotalVertices() > 0)
-    if (sourceMeshes.length === 0) {
-        return
+    let mesh
+    if (leatherArmor) {
+        const geometry = await loadRawArmorGeometry(scene, armorAsset.modelFile)
+        if (loadId !== previewLoadId) return
+        mesh = new Mesh(previewItem.model, scene)
+        geometry.applyToMesh(mesh)
+    } else {
+        const modelPath = isWeapon
+            ? `weapons/${weaponAsset.modelFile}?v=${weaponAsset.cacheVersion ?? TRIPO_WEAPON_CACHE_VERSION}`
+            : `armors/${armorAsset.modelFile}`
+        const importResult = await SceneLoader.ImportMeshAsync('', '/models/equip/', modelPath, scene)
+        const sourceMeshes = importResult.meshes.filter((source) => source instanceof Mesh && source.getTotalVertices() > 0)
+        if (sourceMeshes.length === 0) return
+        mesh = Mesh.MergeMeshes(sourceMeshes, true, true)
     }
 
-    const merged = Mesh.MergeMeshes(sourceMeshes, true, true)
-    if (!merged) {
-        return
-    }
+    if (!mesh) return
     if (loadId !== previewLoadId) {
-        merged.dispose()
+        mesh.dispose()
         return
     }
 
-    merged.position.copyFrom(previewItem.pos ?? Vector3.Zero())
-    merged.rotationQuaternion = null
-    merged.rotation.copyFrom(previewItem.rot ?? Vector3.Zero())
-    merged.scaling.copyFrom(previewItem.scale)
-    previewMesh = merged
-    previewBaseRotation = merged.rotation.clone()
-    previewBaseScaling = merged.scaling.clone()
+    mesh.position.copyFrom(previewItem.pos ?? Vector3.Zero())
+    mesh.rotationQuaternion = null
+    mesh.rotation.copyFrom(previewItem.rot ?? Vector3.Zero())
+    mesh.scaling.copyFrom(previewItem.scale)
+    previewMesh = mesh
+    previewBaseRotation = mesh.rotation.clone()
+    previewBaseScaling = mesh.scaling.clone()
     loadSettingsForCurrentSelection()
 
     if (isWeapon) {
@@ -474,7 +480,7 @@ const loadPreview = async () => {
         previewMaterial.backFaceCulling = false
         previewMaterial.twoSidedLighting = false
         previewMaterial.usePhysicalLightFalloff = false
-    } else if (isLeatherArmor.value) {
+    } else if (leatherArmor) {
         previewMaterial = createLeatherArmorMaterial(scene, `modelRenderMaterial-${previewItem.model}`, armorAsset)
     } else {
         previewMaterial = Materials.getPBRCustomMaterialFrom(
@@ -500,13 +506,13 @@ const loadPreview = async () => {
         previewMaterial.backFaceCulling = false
         previewMaterial.twoSidedLighting = false
     }
-    merged.material = previewMaterial
+    mesh.material = previewMaterial
     applyPreviewMaterialSettings()
 
     applyCurrentMaterialIndex()
     applyPreviewAdjustments()
-    merged.computeWorldMatrix(true)
-    frameMesh(merged)
+    mesh.computeWorldMatrix(true)
+    frameMesh(mesh)
 }
 
 const initScene = async () => {

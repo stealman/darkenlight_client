@@ -1,5 +1,12 @@
 {
   "items": {
+    "leatherMaterials": {
+      "common-leather": "Common Leather",
+      "hard-leather": "Hard Leather",
+      "wolf-leather": "Wolf Leather",
+      "lizard-leather": "Lizard Leather",
+      "dragon-leather": "Dragon Leather"
+    },
         "qualityPrefixes": {
             "fine": {
                 "masculine": "Fine",

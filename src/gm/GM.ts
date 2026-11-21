@@ -1279,6 +1279,7 @@ export const GMManager = {
                     itemCategories: [...(feature.settings?.itemCategories ?? [])],
                     weaponMaterials: [...(feature.settings?.weaponMaterials ?? [])],
                     armorMaterials: [...(feature.settings?.armorMaterials ?? [])],
+                    leatherArmorMaterials: [...(feature.settings?.leatherArmorMaterials ?? [])],
                     bowMaterials: [...(feature.settings?.bowMaterials ?? [])],
                     individualItems: {
                         weapons: [...(feature.settings?.individualItems?.weapons ?? [])],
