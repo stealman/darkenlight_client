@@ -10,7 +10,7 @@ function loadConnector(processResponse = async () => {}, clock = Date, player = 
         ready = Promise.resolve()
         open = true
         frames = []
-        constructor() { transports.push(this) }
+        constructor(_mode, saveSlot) { this.saveSlot = saveSlot; transports.push(this) }
         send(frame) { this.frames.push(structuredClone(frame)) }
         async close() { this.open = false }
         async save() {}
@@ -32,6 +32,79 @@ function loadConnector(processResponse = async () => {}, clock = Date, player = 
     new Function('exports', 'require', 'Date', ts.transpileModule(source, {compilerOptions: {module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020}}).outputText)(exports, name => dependencies[name] || {}, clock)
     return {connector: exports.Connector, transports}
 }
+
+test('local hotkeys stay with their save and character even when game IDs are reused', async t => {
+    const savedWindow = globalThis.window
+    const savedStorage = globalThis.localStorage
+    const settings = new Map([['DARKENLIGHT_CHARACTER_1_ACTION_BUTTONS_BINDINGS', '[[1,{"name":"CAMPING","data":{}}]]']])
+    globalThis.window = {location: {search: '', hostname: 'localhost'}}
+    globalThis.localStorage = {getItem: key => settings.get(key), setItem: (key, value) => settings.set(key, value)}
+    t.after(() => { globalThis.window = savedWindow; globalThis.localStorage = savedStorage })
+
+    const {connector} = loadConnector()
+    function load(path, dependencies = {}) {
+        const exports = {}
+        const source = readFileSync(join(__dirname, '../src', path), 'utf8')
+        const {outputText} = ts.transpileModule(source, {compilerOptions: {module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020}})
+        new Function('exports', 'require', outputText)(exports, name => dependencies[name] ?? {})
+        return exports
+    }
+    const classes = load('data/gameClass.ts')
+    const inventory = []
+    const inventoryModule = {InventoryManager: {inventory,
+        getTotalResourceItemCountByType: cbId => inventory.filter(item => item.cbId === cbId).length}}
+    const consumables = load('data/items/consumableHelper.ts', {
+        './consumablesCodebook': load('data/items/consumablesCodebook.ts'),
+        '@/data/inventoryManager': inventoryModule,
+    })
+    const {ActionButtonsManager: manager} = load('gui/actionButtonsManager.ts', {
+        '@/data/actions/characterActions': load('data/actions/characterActions.ts'),
+        '@/data/gameClass': classes,
+        '@/data/inventoryManager': inventoryModule,
+        '@/data/items/consumableHelper': consumables,
+        '@/data/items/item': {WeaponCategories: {SWORD: 'SWORD', AXE: 'AXE', POLEARM: 'POLEARM', MACE: 'MACE', WAND: 'WAND'}},
+        '@/data/myPlayer': {MyPlayer: {myChar: {gameClass: classes.GameClasses.MYSTIC}}},
+        '@/network/connector': {Connector: connector},
+    })
+    manager.renderActionButtons = () => {}
+    manager.notifyBindingsChanged = () => {}
+    const profile = {id: 'char-first', name: 'První Mystic'}
+    await connector.initialize('play', profile)
+    manager.loadBindingsForCharacter(1, profile.name)
+    assert.equal(manager.bindings.get(1).name, 'MAGIC_ARROW')
+    assert.equal(manager.bindings.get(8).name, 'CONSUMABLE_ITEM')
+    assert.equal(manager.getManaPotionImage(), '/images/items/resources/potions/mana.png')
+    const small = {cbType: 'R', cbId: 1011, imgUrl: 'images/items/resources/potions/mana_small.png'}
+    const great = {cbType: 'R', cbId: 1013, imgUrl: 'images/items/resources/potions/mana_great.png'}
+    inventory.push(small, great)
+    assert.equal(manager.getManaPotionImage(), `/${great.imgUrl}`)
+    inventory.pop()
+    assert.equal(manager.getManaPotionImage(), `/${small.imgUrl}`)
+
+    assert.ok(manager.actionBindingKey.includes(encodeURIComponent(profile.name)))
+    manager.bindings.get(1).name = 'AUTO_ATTACK'
+    manager.bindings.set(8, {name: 'EQUIP_STORED_WEAPONS', data: {}})
+    manager.storeBindings()
+
+    await connector.initialize('play', {id: 'char-second', name: 'Druhý Mystic'})
+    manager.loadBindingsForCharacter(1, 'Druhý Mystic')
+    assert.equal(manager.bindings.get(1).name, 'MAGIC_ARROW')
+    manager.loadBindingsForCharacter(1, profile.name)
+    assert.equal(manager.bindings.get(1).name, 'MAGIC_ARROW')
+    manager.bindings.set(9, manager.bindings.get(8))
+    manager.bindings.set(8, {name: 'EQUIP_STORED_WEAPONS', data: {}})
+    manager.storeBindings()
+    manager.loadBindingsForCharacter(1, profile.name)
+    assert.equal(manager.bindings.has(8), false)
+    assert.equal(manager.bindings.get(9).name, 'CONSUMABLE_ITEM')
+
+    await connector.initialize('play', profile)
+    manager.loadBindingsForCharacter(1, profile.name)
+    assert.equal(manager.bindings.get(1).name, 'AUTO_ATTACK')
+    assert.equal(manager.bindings.get(8).name, 'EQUIP_STORED_WEAPONS')
+    await connector.closeConnection()
+    assert.equal(connector.localSaveSlot, undefined)
+})
 
 test('movement stays blocked throughout world loading, including deferred packets', () => {
     const player = {worldTransitionPending: false}

@@ -19,11 +19,15 @@ export const ConsumableHelper = {
         this.clickOnConsumeItem(highestId)
     },
 
-    clickOnConsumeManaPotion() {
-        const highestId = [...this.getManaPotionIds()]
-            .sort((a, b) => b - a)
-            .find(cbId => InventoryManager.getTotalResourceItemCountByType(cbId) > 0)
+    getStrongestManaPotionId(): number | undefined {
+        const ids = this.getManaPotionIds()
+        for (let index = ids.length - 1; index >= 0; index--) {
+            if (InventoryManager.getTotalResourceItemCountByType(ids[index]) > 0) return ids[index]
+        }
+    },
 
+    clickOnConsumeManaPotion() {
+        const highestId = this.getStrongestManaPotionId()
         if (!highestId) return
         this.clickOnConsumeItem(highestId)
     },

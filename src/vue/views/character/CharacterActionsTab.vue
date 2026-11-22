@@ -162,7 +162,7 @@ const getActionImage = (imageName: string) => {
         }
     }
 
-    return `/images/icons/buttons/${imageName}.png`
+    return imageName.startsWith('/') ? imageName : `/images/icons/buttons/${imageName}.png`
 }
 
 const openActionSelectionDialog = (index: number) => {

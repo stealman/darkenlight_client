@@ -1,4 +1,4 @@
-import {AbstractMesh, Color3, Color4, FreeCamera, HemisphericLight, Matrix, Quaternion, ShadowGenerator, SpotLight, TransformNode, Vector3} from '@babylonjs/core'
+import {AbstractMesh, Color3, Color4, FreeCamera, HemisphericLight, Matrix, ShadowGenerator, SpotLight, TransformNode, Vector2, Vector3} from '@babylonjs/core'
 import '@babylonjs/core/Engines/Extensions/engine.views'
 import Character from './character'
 import {HUMAN_ANIMATION_SPEED} from './humanModelRig'
@@ -47,20 +47,14 @@ export async function startStarterPreviews(canvases: HTMLCanvasElement[], signal
     foliage.material = FoliageManager.foliageMaterial
     foliage.layerMask = previewMask
     foliage.isPickable = false
-    const snowFoliage = FoliageManager.GENERATE_ON_TERRAINS.find(config => config.terrain === TerrainEnum1.TERRAIN_SNOW_GRASS)!
     const foliageMatrices: Matrix[] = []
-    const foliageUvs = []
+    const foliageUvs: Vector2[] = []
     const seed = Math.floor(Math.random() * 1000000)
     for (let block = 0; block < classKeys.length; block++) {
         for (let clump = 0; clump < 2; clump++) {
-            const x = seed + block * 2 + clump
-            const type = FoliageManager.getFoliageType(x, 0)
-            const offset = FoliageManager.getOffset(x, 0, type)
             // Keep the clumps to either side of the character's feet.
-            offset.x = block * 10 + (clump === 0 ? -0.33 : 0.33)
-            foliageMatrices.push(Matrix.Compose(FoliageManager.getScale(x, 0, type),
-                Quaternion.RotationYawPitchRoll(FoliageManager.getRotation(x, 0, type), 0, 0), offset))
-            foliageUvs.push(FoliageManager.getAtlasOffset(x, 0, snowFoliage.rowIndex))
+            const centerX = block * 10 + (clump === 0 ? -0.33 : 0.33)
+            FoliageManager.addSnowPreviewTuft(seed + block * 2 + clump, centerX, foliageMatrices, foliageUvs)
         }
     }
     updateWorldInstanceBuffers(foliage, foliageMatrices, foliageUvs)

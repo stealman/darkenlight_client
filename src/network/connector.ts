@@ -23,6 +23,10 @@ export const Connector = {
     lastSentMoveMessage: null as Message | null,
     lastMoveMessageTime: 0,
 
+    get localSaveSlot(): string | undefined {
+        return this.transport instanceof WorkerTransport ? this.transport.saveSlot : undefined
+    },
+
     async initialize(mode: LocalGameMode = 'play', profile?: CharacterProfile) {
         const generation = ++this.generation
         if (this.transport) {

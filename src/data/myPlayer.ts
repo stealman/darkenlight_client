@@ -12,6 +12,8 @@ import { TargetingManager } from '@/gui/targettingManager'
 import { Connector } from '@/network/connector'
 import {
     AutoAttackBreak,
+    CastHealingSpell,
+    CastMagicArrow,
     HealingSelfAction,
     HealingTargetAction,
     RespawnMsg,
@@ -42,6 +44,8 @@ import { ClientAffectGroup } from '@/data/affects'
 import { Controller } from '@/controlls/controller'
 import { MyCombatData } from '@/data/myCombatData'
 
+const SPELL_REQUEST_RETRY_DELAY = 1000
+
 /**
  * Controlling object for the player's character
  */
@@ -67,6 +71,7 @@ export const MyPlayer = {
 
     activeAction: null as CharacterAction | null,
     magicArrowTarget: null as Attackable | null,
+    repeatingSpell: null as {action: CharacterAction, target: Attackable, nextRequestAt: number} | null,
 
     lastPotionUseTime: 0 as number,
     nextPotionUseTime: 0 as number,
@@ -144,6 +149,7 @@ export const MyPlayer = {
         this.myModel = null
         this.activeAction = null
         this.magicArrowTarget = null
+        this.repeatingSpell = null
         this.affectGroups = []
         this.nearFireplace = null
         this.lastPotionUseTime = 0
@@ -199,6 +205,7 @@ export const MyPlayer = {
 
         // Resolve common character onFrame logic
         this.myChar.onFrame(timeRate, actualTime, true)
+        this.repeatSpell(actualTime)
 
         // Resolve heartbeat sound
         this.resolveLowHealthStatus(actualTime)
@@ -269,6 +276,7 @@ export const MyPlayer = {
     beginWorldTransition() {
         this.worldTransitionPending = true
         this.worldTransitionVersion++
+        this.clearRepeatingSpell()
         this.stopMovementForTeleport()
     },
 
@@ -294,6 +302,63 @@ export const MyPlayer = {
 
         ActionButtonsManager.setActiveAction(this.activeAction)
         GuiButtonsManager.setActiveAction(this.activeAction)
+    },
+
+    toggleRepeatingSpell(action: CharacterAction) {
+        if (this.isDead.value || this.worldTransitionPending) return
+        if (this.repeatingSpell?.action === action || this.activeAction === action) {
+            this.stopActions()
+            return
+        }
+
+        const healing = action === CharacterActions.HEALING_SPELL
+        if (!healing && !TargetingManager.selectedTarget) TargetingManager.cycleThroughClosestTargets()
+        const selected = TargetingManager.selectedTarget
+        const targetType = selected?.getObjectType() ?? ''
+        const target = healing && targetType !== 'C' ? this.myChar
+            : selected && Utils.getAttackTargetByTypeAndId(targetType, selected.id)
+        if (!target || (!healing && (target === this.myChar ||
+            (targetType === 'C' ? (target as Character).isBot || (target as Character).dead
+                : !TargetingManager.isAttackableTarget(target))))) {
+            if (!healing) Connector.sendMessage(new CastMagicArrow(selected?.id ?? 0, targetType))
+            return
+        }
+
+        if (this.repeatingSpell) this.stopActions()
+        this.repeatingSpell = {action, target, nextRequestAt: 0}
+        ActionButtonsManager.setActiveAction(this.activeAction)
+        this.repeatSpell(Date.now(), true)
+    },
+
+    repeatSpell(time: number, starting = false) {
+        const repeat = this.repeatingSpell
+        if (!repeat || this.isDead.value || this.worldTransitionPending) return
+
+        const healing = repeat.action === CharacterActions.HEALING_SPELL
+        const targetType = repeat.target.getObjectType()
+        const target = Utils.getAttackTargetByTypeAndId(targetType, repeat.target.id)
+        if (!healing && (target !== repeat.target || (targetType === 'C' && (target as Character).dead))) {
+            this.clearRepeatingSpell()
+            return
+        }
+        if (!target || this.activeAction === repeat.action || (!starting && this.activeAction) || time < repeat.nextRequestAt) return
+
+        if (healing) {
+            if (time < this.healingSpellCooldownEnd || this.myChar.mp < HealingSpell.manaCost || (target as Character).dead ||
+                (target === this.myChar ? this.myChar.hp >= this.myChar.maxHp : target.hpPercent >= 100)) return
+        } else if (time < this.magicArrowCooldownEnd || this.myChar.mp < MagicArrow.manaCost) {
+            return
+        }
+
+        // The simulation holds an accepted cast while the caster is moving or lacks range or line of sight.
+        repeat.nextRequestAt = time + SPELL_REQUEST_RETRY_DELAY
+        Connector.sendMessage(healing ? new CastHealingSpell(target.id) : new CastMagicArrow(target.id, targetType))
+    },
+
+    clearRepeatingSpell() {
+        if (!this.repeatingSpell) return
+        this.repeatingSpell = null
+        ActionButtonsManager.setActiveAction(this.activeAction)
     },
 
     startAutoAttack(data: AutoAttackMessage) {
@@ -440,6 +505,7 @@ export const MyPlayer = {
         this.isDead.value = true
         this.respawnAvailableAt.value = Date.now() + 20 * 1000
         this.autoRespawnAt.value = Date.now() + 15 * 60 * 1000
+        this.repeatingSpell = null
         this.setAction(null)
         this.myChar.die()
         TargetingManager.unselectTarget()
@@ -526,6 +592,7 @@ export const MyPlayer = {
         if (this.isDead.value) {
             return
         }
+        this.clearRepeatingSpell()
         MyPlayer.myChar.autoAttackTarget = null
         if (this.activeAction === CharacterActions.MAGIC_ARROW || this.activeAction === CharacterActions.HEALING_SPELL) this.setAction(null)
         this.clearPowerStrikeQueued()

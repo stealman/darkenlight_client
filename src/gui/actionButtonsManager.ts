@@ -10,7 +10,7 @@ import { ConsumableHelper } from '@/data/items/consumableHelper'
 import { CharacterAction, CharacterActions } from '@/data/actions/characterActions'
 import { t } from '@/i18n'
 import { Connector } from '@/network/connector'
-import { CastHealingSpell, CastMagicArrow, PowerStrike, PreciseShot } from '@/network/messages'
+import { PowerStrike, PreciseShot } from '@/network/messages'
 import { MagicArrow } from '@game/game/spells/magicArrow'
 import { HealingSpell } from '@game/game/spells/healingSpell'
 import { GameClasses } from '@/data/gameClass'
@@ -186,6 +186,10 @@ class ActionButton {
     }
 
     refreshConsumableImage() {
+        if (this.actionBinding?.name === CharacterActions.MANA_POTION.name) {
+            this.setImage(CharacterActions.MANA_POTION.image)
+            return
+        }
         const consumableCbId = ActionButtonsManager.getBoundConsumableCbId(this.actionBinding)
         if (consumableCbId !== null) {
             this.setImage(ActionButtonsManager.getConsumableItemImage(consumableCbId), true)
@@ -230,6 +234,7 @@ class ActionButton {
     }
 
     resolveImagePath(imageSrc: string) {
+        if (imageSrc === CharacterActions.MANA_POTION.image) return ActionButtonsManager.getManaPotionImage()
         if (imageSrc == CharacterActions.AUTO_ATTACK.image) {
             const categoryIcon = autoAttackIconByWeaponCategory[MyPlayer.myChar?.getWeapon()?.weaponCategory ?? '']
             if (categoryIcon) {
@@ -291,30 +296,49 @@ export const ActionButtonsManager = {
         this.renderActionButtons()
     },
 
-    loadBindingsForCharacter(characterId: number) {
-        this.actionBindingKey = `DARKENLIGHT_CHARACTER_${characterId}_ACTION_BUTTONS_BINDINGS`
+    loadBindingsForCharacter(characterId: number, characterName: string) {
+        const saveSlot = Connector.localSaveSlot
+        this.actionBindingKey = saveSlot === undefined
+            ? `DARKENLIGHT_CHARACTER_${characterId}_ACTION_BUTTONS_BINDINGS`
+            : `DARKENLIGHT_LOCAL_CHARACTER:${saveSlot}:${encodeURIComponent(characterName)}:ACTION_BUTTONS_BINDINGS`
         this.bindings.clear()
 
-        if (!localStorage.getItem(this.actionBindingKey)) {
-            this.bindings.set(1, new ActionButtonActionBinding(CharacterActions.AUTO_ATTACK.name, {}))
-            this.bindings.set(2, new ActionButtonActionBinding(CharacterActions.HEAL.name, {}))
-            this.bindings.set(3, new ActionButtonActionBinding(CharacterActions.HEALING_POTION.name, {}))
-            this.bindings.set(4, new ActionButtonActionBinding(CharacterActions.EQUIP_STORED_WEAPONS.name, {}))
-            this.bindings.set(5, new ActionButtonActionBinding(
-                MyPlayer.myChar?.gameClass?.key === 'MYSTIC'
-                    ? CharacterActions.MANA_POTION.name
-                    : CharacterActions.STAMINA_POTION.name,
-                {},
-            ))
-            this.bindings.set(6, new ActionButtonActionBinding(CharacterActions.CONSUMABLE_ITEM.name, {cbId: 351}))
-            this.bindings.set(7, new ActionButtonActionBinding(CharacterActions.CAMPING.name, {}))
-            if (MyPlayer.myChar?.gameClass === GameClasses.MYSTIC) {
-                this.bindings.set(8, new ActionButtonActionBinding(CharacterActions.HEALING_SPELL.name, {}))
-            }
+        const mystic = MyPlayer.myChar?.gameClass === GameClasses.MYSTIC
+        const actions = mystic ? [
+            CharacterActions.MAGIC_ARROW,
+            CharacterActions.AUTO_ATTACK,
+            CharacterActions.HEALING_SPELL,
+            CharacterActions.HEAL,
+            CharacterActions.HEALING_POTION,
+            CharacterActions.MANA_POTION,
+            CharacterActions.CAMPING,
+            CharacterActions.CONSUMABLE_ITEM,
+        ] : [
+            CharacterActions.AUTO_ATTACK,
+            CharacterActions.HEAL,
+            CharacterActions.HEALING_POTION,
+            CharacterActions.EQUIP_STORED_WEAPONS,
+            CharacterActions.STAMINA_POTION,
+            CharacterActions.CONSUMABLE_ITEM,
+            CharacterActions.CAMPING,
+        ]
+        const storedBindings = localStorage.getItem(this.actionBindingKey)
+        if (!storedBindings) {
+            actions.forEach((action, index) => {
+                const data = action === CharacterActions.CONSUMABLE_ITEM ? {cbId: 351} : {}
+                this.bindings.set(index + 1, new ActionButtonActionBinding(action.name, data))
+            })
             this.storeBindings()
         } else {
-            const storedBindings = JSON.parse(localStorage.getItem(this.actionBindingKey)!)
-            this.bindings = new Map<number, ActionButtonActionBinding>(storedBindings)
+            this.bindings = new Map<number, ActionButtonActionBinding>(JSON.parse(storedBindings))
+            // Update the previous Mystic defaults while keeping customized bars.
+            if (mystic && this.bindings.size === actions.length + 1
+                && this.bindings.get(8)?.name === CharacterActions.EQUIP_STORED_WEAPONS.name
+                && this.getBoundConsumableCbId(this.bindings.get(9) ?? null) === 351
+                && actions.slice(0, 7).every((action, index) => this.bindings.get(index + 1)?.name === action.name)) {
+                this.bindings.delete(8)
+                this.storeBindings()
+            }
         }
         this.renderActionButtons()
         this.notifyBindingsChanged()
@@ -400,23 +424,12 @@ export const ActionButtonsManager = {
                     break
                 case CharacterActions.MAGIC_ARROW.name: {
                     if ((MyPlayer.myChar?.skillSet?.magicArrow?.rank ?? 0) < 1) break
-                    if (!TargetingManager.selectedTarget) TargetingManager.cycleThroughClosestTargets()
-                    const target = TargetingManager.selectedTarget
-                    if (target && MyPlayer.magicArrowTarget === target) {
-                        MyPlayer.stopActions()
-                        break
-                    }
-                    Connector.sendMessage(new CastMagicArrow(target?.id ?? 0, target?.getObjectType() ?? ''))
+                    MyPlayer.toggleRepeatingSpell(CharacterActions.MAGIC_ARROW)
                     break
                 }
                 case CharacterActions.HEALING_SPELL.name: {
                     if (MyPlayer.myChar?.gameClass !== GameClasses.MYSTIC) break
-                    if (MyPlayer.activeAction === CharacterActions.HEALING_SPELL) {
-                        MyPlayer.stopActions()
-                        break
-                    }
-                    const target = TargetingManager.selectedTarget
-                    Connector.sendMessage(new CastHealingSpell(target?.getObjectType() === 'C' ? target.id : 0))
+                    MyPlayer.toggleRepeatingSpell(CharacterActions.HEALING_SPELL)
                     break
                 }
                 case CharacterActions.PRECISE_SHOT.name:
@@ -453,6 +466,7 @@ export const ActionButtonsManager = {
     setActiveAction(action: CharacterAction | null) {
         this.actionButtons.forEach((btn) => {
             if (btn.actionBinding && (btn.actionBinding.name === action?.name ||
+                btn.actionBinding.name === MyPlayer.repeatingSpell?.action.name ||
                 (action?.name === CharacterActions.AUTO_ATTACK.name && MyPlayer.powerStrikeQueued && btn.actionBinding.name === CharacterActions.POWER_STRIKE.name) ||
                 (action?.name === CharacterActions.AUTO_ATTACK.name && MyPlayer.preciseShotQueued && btn.actionBinding.name === CharacterActions.PRECISE_SHOT.name) ||
                 (action?.name === CharacterActions.AUTO_ATTACK.name && (MyPlayer.powerStrikeQueued || MyPlayer.preciseShotQueued) &&
@@ -789,10 +803,16 @@ export const ActionButtonsManager = {
         return Number.isFinite(cbId) ? cbId : null
     },
 
-    getConsumableItemImage(cbId: number): string {
+    getConsumableItemImage(cbId: number, fallback = '/images/icons/buttons/btn_heal_potion.png'): string {
         const imageUrl = InventoryManager.inventory.find(item => item.cbType === 'R' && item.cbId === cbId)?.imgUrl
-        if (!imageUrl) return '/images/icons/buttons/btn_heal_potion.png'
+        if (!imageUrl) return fallback
         return imageUrl.startsWith('/') ? imageUrl : `/${imageUrl}`
+    },
+
+    getManaPotionImage(): string {
+        const fallback = CharacterActions.MANA_POTION.image
+        const cbId = ConsumableHelper.getStrongestManaPotionId()
+        return cbId === undefined ? fallback : this.getConsumableItemImage(cbId, fallback)
     },
 
     startActionButtonCapture(handler: (index: number) => void) {
@@ -870,7 +890,7 @@ export const ActionButtonsManager = {
     },
 
     hasManaPotionAvailable(): boolean {
-        return ConsumableHelper.getManaPotionIds().some(cbId => InventoryManager.getTotalResourceItemCountByType(cbId) > 0)
+        return ConsumableHelper.getStrongestManaPotionId() !== undefined
     },
 
     hasStaminaPotionAvailable(): boolean {

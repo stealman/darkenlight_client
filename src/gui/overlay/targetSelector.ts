@@ -177,10 +177,12 @@ export const TargetSelector = {
 
     onFrame(time: number, opacity: number) {
         if (!this.selectedMesh || !this.attackMesh) return
-        const casting = MyPlayer.activeAction === CharacterActions.MAGIC_ARROW
-        const attackTarget = casting ? MyPlayer.magicArrowTarget : MyPlayer.myChar?.autoAttackTarget
+        const repeat = MyPlayer.repeatingSpell
+        const spellTarget = MyPlayer.activeAction === CharacterActions.MAGIC_ARROW ? MyPlayer.magicArrowTarget
+            : !MyPlayer.activeAction && repeat?.action === CharacterActions.MAGIC_ARROW ? repeat.target : null
+        const attackTarget = spellTarget ?? MyPlayer.myChar?.autoAttackTarget
         if (this.target) {
-            const attacking = (casting || MyPlayer.activeAction === CharacterActions.AUTO_ATTACK)
+            const attacking = (spellTarget || MyPlayer.activeAction === CharacterActions.AUTO_ATTACK)
                 && attackTarget === this.target
             const age = Math.max(0, time - this.markerPopTime)
             const intro = Math.pow(Math.max(0, 1 - age / INTRO_DURATION), 3)

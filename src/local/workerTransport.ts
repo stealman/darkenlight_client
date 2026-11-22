@@ -18,8 +18,8 @@ export class WorkerTransport implements GameTransport {
     private ioQueue = Promise.resolve()
     private readonly connectionId = 'local-player'
 
-    constructor(mode: LocalGameMode, slot = 'default', profile?: CharacterProfile) {
-        if (!/^[a-zA-Z0-9_-]{1,64}$/.test(slot)) throw new Error('Invalid save slot')
+    constructor(mode: LocalGameMode, readonly saveSlot = 'default', profile?: CharacterProfile) {
+        if (!/^[a-zA-Z0-9_-]{1,64}$/.test(saveSlot)) throw new Error('Invalid save slot')
         this.worker = new Worker(new URL('./game.worker.ts', import.meta.url), {type: 'module'})
         this.ready = new Promise((resolve, reject) => {
             const timeout = setTimeout(() => { this.fail(new Error('Local game initialization timed out')); reject(new Error('Local game initialization timed out')) }, 120000)
@@ -64,7 +64,7 @@ export class WorkerTransport implements GameTransport {
                 const bundle = mode === 'play' ? await loadWorldBundle(document.baseURI) : undefined
                 if (this.closing) return
                 for (const entry of bundle?.maps ?? []) localWorldMaps.set(entry.worldId, entry.map)
-                this.post({kind: 'start', mode, slot, profile: profile ? {...profile} : undefined, bundle,
+                this.post({kind: 'start', mode, slot: saveSlot, profile: profile ? {...profile} : undefined, bundle,
                     baseUrl: document.baseURI, authoringToken: import.meta.env.DEV ? __AUTHORING_TOKEN__ : ''})
             })().catch(error => { clearTimeout(timeout); reject(error); this.fail(error instanceof Error ? error : new Error(String(error))) })
         })

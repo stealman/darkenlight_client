@@ -19,7 +19,8 @@ export const isShrubType = (type: number) => type >= 101 && type <= 104
     || type >= 121 && type <= 124
     || type >= 141 && type <= 144
 
-const addSourceMask = (mask: Set<number>, source: SnowCoverSource, mapSize: number, salt: number, getHeight: (x: number, z: number) => number) => {
+const addSourceMask = (mask: Set<number>, vegetationMask: Set<number>, source: SnowCoverSource,
+                       mapSize: number, salt: number, getHeight: (x: number, z: number) => number) => {
     const sourceX = Math.floor(source.position.x)
     const sourceZ = Math.floor(source.position.z)
     if (sourceX < 0 || sourceZ < 0 || sourceX >= mapSize || sourceZ >= mapSize) {
@@ -27,6 +28,7 @@ const addSourceMask = (mask: Set<number>, source: SnowCoverSource, mapSize: numb
     }
     const sourceHeight = getHeight(sourceX, sourceZ)
     mask.add(sourceX * mapSize + sourceZ)
+    vegetationMask.add(sourceX * mapSize + sourceZ)
 
     const neighbors = []
     for (let offsetX = -1; offsetX <= 1; offsetX++) {
@@ -58,6 +60,7 @@ const addSourceMask = (mask: Set<number>, source: SnowCoverSource, mapSize: numb
                 continue
             }
             mask.add(neighbor.x * mapSize + neighbor.z)
+            vegetationMask.add(neighbor.x * mapSize + neighbor.z)
             pendingNeighbors.splice(index, 1)
             addedNeighbors++
             addedInPass = true
@@ -96,15 +99,16 @@ export const createSnowCoverMask = (
     getHeight: (x: number, z: number) => number,
 ) => {
     const mask = new Set<number>()
+    const vegetationMask = new Set<number>()
     for (const tree of trees) {
-        addSourceMask(mask, tree, mapSize, worldId * 101 + 11, getHeight)
+        addSourceMask(mask, vegetationMask, tree, mapSize, worldId * 101 + 11, getHeight)
     }
     for (const object of statics) {
         if (isShrubType(object.type)) {
-            addSourceMask(mask, object, mapSize, worldId * 101 + object.type, getHeight)
+            addSourceMask(mask, vegetationMask, object, mapSize, worldId * 101 + object.type, getHeight)
         } else if (object.type === 281) {
             addStoneEntranceMask(mask, object, mapSize)
         }
     }
-    return mask
+    return {mask, vegetationMask}
 }

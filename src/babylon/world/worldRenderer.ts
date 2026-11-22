@@ -107,13 +107,14 @@ export const WorldRenderer = {
         this.blockWithAlpha1!.clearMatrices()
         this.translucentPlane!.clearMatrices()
         const blockMap = WorldDataManager.getBlockMap()
-        const snowCoverMask = this.snowCoverMask = createSnowCoverMask(
+        const {mask: snowCoverMask, vegetationMask} = createSnowCoverMask(
             TreeManager.allTrees,
             StaticsManager.allStatics,
             blockMap.length,
             MyPlayer.worldId,
             (x, z) => blockMap[x][z].height,
         )
+        this.snowCoverMask = snowCoverMask
 
         // Render terrain
         TerrainManager.renderTerrain((terrainMatrices, terrainUvData) => {
@@ -137,7 +138,7 @@ export const WorldRenderer = {
         EquipmentDecorationsManager.refreshVisibility()
 
         // Render decorative foliage
-        FoliageManager.renderFoliage()
+        FoliageManager.renderFoliage(snowCoverMask, vegetationMask)
 
         // Render decorative rock debris
         RockDebrisManager.renderRockDebris(Lights.indoor)

@@ -66,7 +66,7 @@ export const GameManager = {
         GMManager.fastMode.value = MyPlayer.myChar?.className === 'GM' && (charData.gmFastMode ?? false)
         reportLoadingProgress(70, 'app.loadingWorld')
         InventoryManager.initializeWeaponSetupsForCharacter()
-        ActionButtonsManager.loadBindingsForCharacter(MyPlayer.myChar.id)
+        ActionButtonsManager.loadBindingsForCharacter(MyPlayer.myChar.id, MyPlayer.myChar.name)
         this.onResize()
         reportLoadingProgress(80, 'app.loadingLighting')
         await Renderer.gameStarted((completed, total) => {

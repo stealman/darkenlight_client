@@ -115,7 +115,7 @@ export const CharacterActions = {
         'actions.healingPotionName',
         'actions.healingPotionDescription'),
 
-    MANA_POTION: new CharacterAction('MANA_POTION', 'btn_mana_potion', false,
+    MANA_POTION: new CharacterAction('MANA_POTION', '/images/items/resources/potions/mana.png', false,
         'actions.manaPotionName',
         'actions.manaPotionDescription'),
 

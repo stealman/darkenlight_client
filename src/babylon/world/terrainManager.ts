@@ -17,6 +17,13 @@ export const DIRT_BLOCK_TYPE = 1
 const GRASS_BLOCK_TYPES = new Set([2, 5])
 export const WATER_BLOCK_TYPE = 50
 
+export function getTerrainHeightOffset(block: MapBlock, hideSnow: boolean): number {
+    if (hideSnow) return block.type === WATER_BLOCK_TYPE ? -0.1 : 0
+    if (BEVELED_TERRAIN_ENABLED && block.snowed && block.type > 0 && block.type < WATER_BLOCK_TYPE
+        && !block.stonePath && !block.beigeStonePath) return SNOW_BLOCK_HEIGHT
+    return block.heightOffset
+}
+
 export const TerrainManager = {
     waterBottomBlock: null as MapBlock | null,
     terrainBlock1: null as Mesh | null,
@@ -122,10 +129,7 @@ export const TerrainManager = {
 
                 const hideSnow = block.snowed && snowCoverMask.has(x * blockMap.length + z)
                 const renderType = hideSnow && GRASS_BLOCK_TYPES.has(block.type) ? DIRT_BLOCK_TYPE : undefined
-                const heightOffset = hideSnow
-                    ? block.type === WATER_BLOCK_TYPE ? -0.1 : 0
-                    : BEVELED_TERRAIN_ENABLED && block.snowed && block.type > 0 && block.type < WATER_BLOCK_TYPE
-                        && !block.stonePath && !block.beigeStonePath ? SNOW_BLOCK_HEIGHT : block.heightOffset
+                const heightOffset = getTerrainHeightOffset(block, hideSnow)
                 // A stone path is its own thin floor. Unlike snow it must not
                 // stretch the terrain block beneath it.
                 const terrainHeightOffset = block.stonePath || block.beigeStonePath ? 0 : heightOffset
