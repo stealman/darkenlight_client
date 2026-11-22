@@ -12,6 +12,7 @@ import {
     Quaternion,
     TrailMesh,
 } from '@babylonjs/core'
+import { trackSpellGlowMesh, untrackSpellGlowMesh } from '@/babylon/gfx/spellGlowLayer'
 import { Renderer } from '@/babylon/scene/renderer'
 import { Attackable } from '@/GameManager'
 import { Materials } from '@/babylon/materials'
@@ -194,6 +195,8 @@ function resolveArrowEffectConfig(effect: string | null | undefined): ArrowEffec
 export const ArrowsManager = {
     arrows: new Array<Arrow>(),
     mesh: null as Mesh | null,
+    preciseShotTip: null as Mesh | null,
+    preciseShotSparks: new Set<ParticleSystem>(),
 
     initialize () {
         this.clear()
@@ -207,6 +210,18 @@ export const ArrowsManager = {
         mat.alpha = 0.5
 
         this.mesh.material = mat
+
+        const tip = MeshBuilder.CreateCylinder('preciseShotTip', {
+            height: 0.62, diameterTop: 0, diameterBottom: 0.38, tessellation: 4,
+        }, Renderer.scene)
+        const tipMaterial = new StandardMaterial('preciseShotTipMat', Renderer.scene)
+        tipMaterial.disableLighting = true
+        tipMaterial.emissiveColor = new Color3(1, 0.87, 0.59)
+        tipMaterial.specularColor = Color3.Black()
+        tip.material = tipMaterial
+        tip.isPickable = false
+        tip.setEnabled(false)
+        this.preciseShotTip = tip
     },
 
     addArrow(attacker: Attackable, target: Attackable, flyStartTime: number, effect: string | null | undefined, preciseShot: boolean = false): Arrow {
@@ -218,6 +233,7 @@ export const ArrowsManager = {
     clear() {
         for (const arrow of this.arrows) arrow.dispose()
         this.arrows.length = 0
+        for (const sparks of this.preciseShotSparks) sparks.dispose()
     },
 
     onFrame(timeRate: number, time: number) {
@@ -247,8 +263,7 @@ export class Arrow {
     effectTip: TransformNode | null = null
     fireParticles: ParticleSystem | null = null
     smokeParticles: ParticleSystem | null = null
-    preciseShotRingTip: TransformNode | null = null
-    preciseShotRingParticles: ParticleSystem | null = null
+    private preciseShotTip: Mesh | null = null
     fireEffectStarted = false
     pendingEffectSystems = 0
     disposed = false
@@ -291,7 +306,7 @@ export class Arrow {
 
             this.trailTip = new TransformNode('arrowTrailTip', Renderer.scene)
             this.trailTip.parent = this.meshInstance
-            this.trailTip.position.y = -1
+            this.trailTip.position.y = preciseShot ? -0.55 : -1
 
             if (this.hasEffect) {
                 this.createArrowEffect()
@@ -352,13 +367,19 @@ export class Arrow {
 
         // Seed the trail at the flight pose, never at the cached hand pose.
         this.meshInstance.computeWorldMatrix(true)
+        if (this.preciseShot) this.trailTip.rotation.x = Math.PI / 2
         this.trailTip.computeWorldMatrix(true)
-        this.trail = new TrailMesh('arrowTrail', this.trailTip, Renderer.scene, 0.35, 75, false)
+        this.trail = new TrailMesh('arrowTrail', this.trailTip, Renderer.scene,
+            this.preciseShot ? 0.24 : 0.35, this.preciseShot ? 22 : 75, false)
         this.trail.material = this.preciseShot ? Materials.preciseShotArrowTrailMaterial : Materials.weaponTrailMaterial
         this.trail.reset()
         this.trail.start()
         this.startArrowEffect()
-        this.startPreciseShotRingEffect()
+        if (this.preciseShot) {
+            this.trail.isPickable = false
+            trackSpellGlowMesh(this.trail)
+            this.startPreciseShotEffect()
+        }
     }
 
     onFrame(time: number, timeRate: number) {
@@ -413,9 +434,14 @@ export class Arrow {
         this.disposed = true
 
         this.releaseArrowEffect()
-        this.releasePreciseShotRingEffect()
+        if (this.preciseShotTip) {
+            untrackSpellGlowMesh(this.preciseShotTip)
+            this.preciseShotTip.dispose()
+            this.preciseShotTip = null
+        }
 
         if (this.trail) {
+            if (this.preciseShot) untrackSpellGlowMesh(this.trail)
             this.trail.stop()
             this.trail.dispose()
             this.trail = null
@@ -446,43 +472,42 @@ export class Arrow {
         }
     }
 
-    private startPreciseShotRingEffect() {
-        if (!this.preciseShot || !this.meshInstance || !Renderer.scene || this.preciseShotRingParticles) return
+    private startPreciseShotEffect() {
+        const tip = ArrowsManager.preciseShotTip!.clone('preciseShotArrowhead', this.meshInstance)
+        tip.position.y = 0.60
+        tip.setEnabled(true)
+        trackSpellGlowMesh(tip)
+        this.preciseShotTip = tip
 
-        this.preciseShotRingTip = new TransformNode('preciseShotRingTip', Renderer.scene)
-        this.preciseShotRingTip.parent = this.meshInstance
-        this.preciseShotRingTip.position.y = 0.75
-
-        const particles = new ParticleSystem(`preciseShotRings_${this.creationTime}`, 40, Renderer.scene)
-        particles.particleTexture = new Texture('images/gfx/precise-shot-ring-thick.png', Renderer.scene)
-        particles.emitter = this.preciseShotRingTip
-        particles.minEmitBox = Vector3.Zero()
-        particles.maxEmitBox = Vector3.Zero()
-        particles.direction1 = Vector3.Zero()
-        particles.direction2 = Vector3.Zero()
-        particles.minEmitPower = 0
-        particles.maxEmitPower = 0
-        particles.emitRate = 20
-        particles.minLifeTime = 0.7
-        particles.maxLifeTime = 0.9
-        particles.minSize = 1
-        particles.maxSize = 1
-        particles.gravity = Vector3.Zero()
-        particles.updateSpeed = 0.016
-        particles.blendMode = ParticleSystem.BLENDMODE_ADD
-        particles.addSizeGradient(0, 0.15)
-        particles.addSizeGradient(0.25, 0.42)
-        particles.addSizeGradient(0.5, 0.78)
-        particles.addSizeGradient(0.75, 1.08)
-        particles.addSizeGradient(1, 1.35)
-        particles.addColorGradient(0, new Color4(0.82, 0.82, 0.82, 0.75))
-        particles.addColorGradient(0.25, new Color4(0.72, 0.72, 0.72, 0.48))
-        particles.addColorGradient(0.5, new Color4(0.46, 0.46, 0.46, 0.16))
-        particles.addColorGradient(0.75, new Color4(0.2, 0.2, 0.2, 0.03))
-        particles.addColorGradient(1, new Color4(0, 0, 0, 0))
-        particles.start()
-
-        this.preciseShotRingParticles = particles
+        const count = Settings.isDetalLevelLow() ? 6 : 12
+        const sparks = new ParticleSystem('preciseShotLaunch', count, Renderer.scene)
+        sparks.particleTexture = new Texture('images/gfx/flare-rect.png', Renderer.scene)
+        sparks.emitter = this.trailTip!.absolutePosition.clone()
+        sparks.minEmitBox.set(-0.06, -0.06, -0.06)
+        sparks.maxEmitBox.set(0.06, 0.06, 0.06)
+        const recoil = this.flightDirection.scale(-1)
+        sparks.direction1.set(recoil.x - 0.55, recoil.y - 0.25, recoil.z - 0.55)
+        sparks.direction2.set(recoil.x + 0.55, recoil.y + 0.65, recoil.z + 0.55)
+        sparks.minEmitPower = 1.4
+        sparks.maxEmitPower = 3
+        sparks.minLifeTime = 0.12
+        sparks.maxLifeTime = 0.28
+        sparks.gravity.y = -4
+        sparks.updateSpeed = 0.016
+        sparks.blendMode = ParticleSystem.BLENDMODE_ADD
+        sparks.billboardMode = ParticleSystem.BILLBOARDMODE_STRETCHED
+        sparks.minScaleY = 1.6
+        sparks.maxScaleY = 2.6
+        sparks.addSizeGradient(0, 0.08, 0.17)
+        sparks.addSizeGradient(1, 0.02)
+        sparks.addColorGradient(0, new Color4(1, 0.95, 0.70, 0.95))
+        sparks.addColorGradient(0.45, new Color4(1, 0.52, 0.20, 0.60))
+        sparks.addColorGradient(1, new Color4(0.65, 0.20, 0.05, 0))
+        sparks.manualEmitCount = count
+        sparks.disposeOnStop = true
+        ArrowsManager.preciseShotSparks.add(sparks)
+        sparks.onDisposeObservable.addOnce(() => ArrowsManager.preciseShotSparks.delete(sparks))
+        sparks.start()
     }
 
     private startArrowEffect() {
@@ -528,33 +553,6 @@ export class Arrow {
         this.fireParticles = null
         this.smokeParticles = null
         this.fireEffectStarted = false
-    }
-
-    private releasePreciseShotRingEffect() {
-        const particles = this.preciseShotRingParticles
-        const detachedRingTip = this.preciseShotRingTip
-
-        if (detachedRingTip) {
-            detachedRingTip.setParent(null, true)
-            if (particles) {
-                particles.emitter = detachedRingTip
-            }
-            this.preciseShotRingTip = null
-        }
-
-        if (!particles) {
-            detachedRingTip?.dispose()
-            return
-        }
-
-        particles.disposeOnStop = true
-        particles.onDisposeObservable.addOnce(() => {
-            if (detachedRingTip && !detachedRingTip.isDisposed()) {
-                detachedRingTip.dispose()
-            }
-        })
-        particles.stop()
-        this.preciseShotRingParticles = null
     }
 
     private createParticleSystem(config: ArrowParticleConfig): ParticleSystem {

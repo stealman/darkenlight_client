@@ -1,6 +1,6 @@
 import {
     Scene,
-    Color3,
+    Color3, Constants, ShaderMaterial,
     Texture, Vector2, PBRMaterial, StandardMaterial,
 } from '@babylonjs/core'
 import { PBRCustomMaterial } from '@babylonjs/materials'
@@ -31,7 +31,7 @@ export const Materials = {
     staticSurfaceMaterial: null as PBRCustomMaterial | null,
     weaponTrailMaterial: null as StandardMaterial | null,
     powerStrikeWeaponTrailMaterial: null as StandardMaterial | null,
-    preciseShotArrowTrailMaterial: null as StandardMaterial | null,
+    preciseShotArrowTrailMaterial: null as ShaderMaterial | null,
 
     initialize(scene: Scene) {
         this.terrainMaterial = this.createTerrainMaterial1(scene)
@@ -163,11 +163,31 @@ export const Materials = {
         return mat
     },
 
-    createPreciseShotArrowTrailMaterial(scene: Scene): StandardMaterial {
-        const mat = new StandardMaterial('preciseShotArrowTrailMat', scene)
-        mat.disableLighting = true
-        mat.emissiveColor = new Color3(1, 1, 1)
-        mat.alpha = 0.35
+    createPreciseShotArrowTrailMaterial(scene: Scene): ShaderMaterial {
+        const mat = new ShaderMaterial('preciseShotArrowTrailMat', scene, {
+            vertexSource: `
+                precision highp float;
+                attribute vec3 position;
+                attribute vec2 uv;
+                uniform mat4 worldViewProjection;
+                varying float vAlongTrail;
+                void main() {
+                    vAlongTrail = uv.y;
+                    gl_Position = worldViewProjection * vec4(position, 1.);
+                }`,
+            fragmentSource: `
+                precision highp float;
+                varying float vAlongTrail;
+                void main() {
+                    vec3 amber = vec3(1., .53, .20);
+                    vec3 ivory = vec3(1., .97, .80);
+                    vec3 tint = mix(amber, ivory, smoothstep(.35, .98, vAlongTrail));
+                    float opacity = smoothstep(.30, 1., vAlongTrail) * .88;
+                    gl_FragColor = vec4(tint, opacity);
+                }`,
+        }, {attributes: ['position', 'uv'], uniforms: ['worldViewProjection'], needAlphaBlending: true})
+        mat.alphaMode = Constants.ALPHA_ADD
+        mat.disableDepthWrite = true
         return mat
     },
 

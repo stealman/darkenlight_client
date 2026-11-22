@@ -220,6 +220,57 @@ test('arrow instances share their source, preserve launch transform and release 
     }
 })
 
+test('Precise Shot tracks its tip and tracer in the glow layer until the arrow is removed', async () => {
+    const core = await import('@babylonjs/core/index.js')
+    const engine = new core.NullEngine()
+    const scene = new core.Scene(engine)
+    const glow = loadModule('babylon/gfx/spellGlowLayer.ts', {'@babylonjs/core': core})
+    const {Materials} = loadModule('babylon/materials.ts', {'@babylonjs/core': core})
+    Materials.preciseShotArrowTrailMaterial = Materials.createPreciseShotArrowTrailMaterial(scene)
+    const {ArrowsManager} = loadModule('babylon/world/arrowsManager.ts', {
+        '@babylonjs/core': core,
+        '@/babylon/gfx/spellGlowLayer': glow,
+        '@/babylon/materials': {Materials},
+        '@/babylon/scene/renderer': {Renderer: {scene}},
+        '@/settings/settings': {Settings: {isDetalLevelLow: () => false}},
+    })
+    try {
+        ArrowsManager.initialize()
+        const attacker = {pos: core.Vector3.Zero()}
+        const target = {pos: new core.Vector3(8, 0, 8), getModelHeight: () => 2}
+        const now = Date.now()
+        const arrow = ArrowsManager.addArrow(attacker, target, now + 100, null, true)
+        arrow.onFrame(now, 0.016)
+        assert.equal(scene.particleSystems.length, 0)
+        assert.equal(scene.effectLayers.length, 0)
+        arrow.onFrame(now + 100, 0.016)
+        assert.equal(arrow.trail.material, Materials.preciseShotArrowTrailMaterial)
+        assert.equal(scene.particleSystems.length, 1)
+        assert.equal(scene.effectLayers.length, 0)
+
+        glow.configureSpellGlowLayer(scene, true, false)
+        const [layer] = scene.effectLayers
+        const tip = scene.getMeshByName('preciseShotArrowhead')
+        assert.ok(tip?.isEnabled())
+        assert.ok(layer.isEnabled)
+        assert.ok(layer.hasMesh(tip))
+        assert.ok(layer.hasMesh(arrow.trail))
+        glow.configureSpellGlowLayer(scene, false, false)
+        assert.equal(layer.isEnabled, false)
+        glow.configureSpellGlowLayer(scene, true, false)
+        assert.equal(layer.isEnabled, true)
+
+        arrow.onFrame(now + 700, arrow.flightDuration)
+        assert.equal(tip.isDisposed(), true)
+        assert.equal(layer.isEnabled, false)
+        ArrowsManager.clear()
+        assert.equal(scene.particleSystems.length, 0)
+    } finally {
+        scene.dispose()
+        engine.dispose()
+    }
+})
+
 test('cancelling an arrow before its particles start releases both systems and the emitter', async () => {
     const core = await import('@babylonjs/core/index.js')
     const engine = new core.NullEngine()
