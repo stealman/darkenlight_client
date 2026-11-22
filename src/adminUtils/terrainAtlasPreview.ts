@@ -13,41 +13,39 @@ export const muddyDirtPatterns = [
     {size: 1, origins: [[3.125, 5.25], [4.25, 5.25], [5.375, 5.25]]},
 ]
 
-export interface TerrainAtlas {
+type TerrainAtlas = {
+    type: number
     colorUrl: string
-    normal?: {url: string, strength: number}
+    normal: {url: string, strength: number}
     patterns: ReadonlyArray<{size: number, origins: readonly (readonly number[])[]}>
 }
 
-export function createTerrainAtlasPreview(plane: Mesh, type: number, name: string, atlas: TerrainAtlas) {
-    const scene = plane.getScene()
-    const mesh = Builder.createHorizontalPlane(scene, null, 1, 0)
+export type TerrainAtlasTileFilter = (matrix: Matrix, uv: Vector2, x: number, z: number) => boolean
+
+export function createTerrainPreviewPlane(plane: Mesh, name: string) {
+    const mesh = Builder.createHorizontalPlane(plane.getScene(), null, 1, 0)
     mesh.parent = plane.parent
     mesh.name = name
     mesh.receiveShadows = plane.receiveShadows
-    // Equal UV scales keep the normal strength consistent across quarter turns.
-    const atlasScale = 1 / ATLAS_TILES
-    const material = Materials.getPBRCustomMaterial(scene, name, '', atlas.colorUrl, atlasScale, atlasScale, false)
-    const texture = material.albedoTexture!
-    texture.wrapU = texture.wrapV = Texture.CLAMP_ADDRESSMODE
-    if (atlas.normal) {
-        const normalAtlas = new Texture(atlas.normal.url, scene)
-        normalAtlas.gammaSpace = false
-        normalAtlas.level = atlas.normal.strength
-        normalAtlas.wrapU = normalAtlas.wrapV = Texture.CLAMP_ADDRESSMODE
-        normalAtlas.uScale = normalAtlas.vScale = atlasScale
-        material.bumpTexture = normalAtlas
-    }
-    mesh.material = material
     mesh.setEnabled(false)
+    return mesh
+}
 
-    return (map: MapBlock[][]) => {
+export function createTerrainAtlasPreview(plane: Mesh, name: string, atlas: TerrainAtlas) {
+    const mesh = createTerrainPreviewPlane(plane, name)
+    const material = createAtlasMaterial(plane, name, atlas)
+    mesh.material = material
+
+    const render = (map: MapBlock[][], takeTile?: TerrainAtlasTileFilter) => {
         mesh.setEnabled(false)
+        mesh.thinInstanceCount = 0
         if (!plane.thinInstanceCount) return
 
         const remaining = new Map<number, number>()
         const otherMatrices: Matrix[] = []
         const otherUvs: Vector2[] = []
+        const atlasMatrices: Matrix[] = []
+        const atlasUvs: Vector2[] = []
         const stride = map.length
         const sourceMatrices = plane.thinInstanceGetWorldMatrices()
         const sourceUvs = plane.getVertexBuffer('uvc')!.getFloatData(plane.thinInstanceCount)!
@@ -55,17 +53,15 @@ export function createTerrainAtlasPreview(plane: Mesh, type: number, name: strin
             const matrix = sourceMatrices[i]
             const {x, y, z} = matrix.getTranslation()
             const block = map[x][z]
-            if (block.type === type && !block.snowed) {
+            if (block.type === atlas.type && !block.snowed) {
                 remaining.set(x * stride + z, y)
-            } else {
-                otherMatrices.push(matrix)
-                otherUvs.push(new Vector2(sourceUvs[i * 2], sourceUvs[i * 2 + 1]))
+                continue
             }
+            otherMatrices.push(matrix)
+            otherUvs.push(new Vector2(sourceUvs[i * 2], sourceUvs[i * 2 + 1]))
         }
-        if (!remaining.size) return
 
-        const dirtMatrices: Matrix[] = []
-        const dirtUvs: Vector2[] = []
+        if (!remaining.size) return
         for (const {size, origins} of atlas.patterns) {
             const center = (size - 1) / 2
             for (const [key, y] of remaining) {
@@ -88,10 +84,15 @@ export function createTerrainAtlasPreview(plane: Mesh, type: number, name: strin
                     for (let dz = 0; dz < size; dz++) {
                         remaining.delete(key + dx * stride + dz)
                         const offset = Vector3.TransformNormal(new Vector3(dx - center, 0, dz - center), rotation)
+                        const tileX = Math.round(x + center + offset.x)
+                        const tileZ = Math.round(z + center + offset.z)
                         const matrix = rotation.clone()
-                        matrix.setTranslationFromFloats(x + center + offset.x, y, z + center + offset.z)
-                        dirtMatrices.push(matrix)
-                        dirtUvs.push(new Vector2(atlasX + dx, ATLAS_TILES - atlasTop - size + dz))
+                        matrix.setTranslationFromFloats(tileX, y, tileZ)
+                        const uv = new Vector2(atlasX + dx, ATLAS_TILES - atlasTop - size + dz)
+                        // Let the transition reuse the same atlas placement the tile would normally have.
+                        if (takeTile?.(matrix, uv, tileX, tileZ)) continue
+                        atlasMatrices.push(matrix)
+                        atlasUvs.push(uv)
                     }
                 }
             }
@@ -99,7 +100,24 @@ export function createTerrainAtlasPreview(plane: Mesh, type: number, name: strin
 
         updateWorldInstanceBuffers(plane, otherMatrices, otherUvs)
         plane.setEnabled(otherMatrices.length > 0)
-        updateWorldInstanceBuffers(mesh, dirtMatrices, dirtUvs)
-        mesh.setEnabled(true)
+        updateWorldInstanceBuffers(mesh, atlasMatrices, atlasUvs)
+        mesh.setEnabled(atlasMatrices.length > 0)
     }
+    return {material, render}
+}
+
+function createAtlasMaterial(plane: Mesh, name: string, atlas: TerrainAtlas) {
+    const scene = plane.getScene()
+    // Equal UV scales keep the normal strength consistent across quarter turns.
+    const scale = 1 / ATLAS_TILES
+    const material = Materials.getPBRCustomMaterial(scene, name, '', atlas.colorUrl, scale, scale, false)
+    const color = material.albedoTexture!
+    color.wrapU = color.wrapV = Texture.CLAMP_ADDRESSMODE
+    const normal = new Texture(atlas.normal.url, scene)
+    normal.gammaSpace = false
+    normal.level = atlas.normal.strength
+    normal.wrapU = normal.wrapV = Texture.CLAMP_ADDRESSMODE
+    normal.uScale = normal.vScale = scale
+    material.bumpTexture = normal
+    return material
 }

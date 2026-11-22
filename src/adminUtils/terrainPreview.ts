@@ -1,13 +1,16 @@
-import { ArcRotateCamera, Mesh, Scene, TransformNode, Vector3 } from '@babylonjs/core'
-import type { ArcRotateCameraPointersInput, PBRMaterial } from '@babylonjs/core'
+import { ArcRotateCamera, Mesh, Scene, TransformNode, Vector2, Vector3 } from '@babylonjs/core'
+import type { ArcRotateCameraPointersInput, Matrix, PBRMaterial } from '@babylonjs/core'
 import { TerrainEnum1 } from '@/babylon/materials'
 import { Lights } from '@/babylon/scene/lights'
 import { Renderer } from '@/babylon/scene/renderer'
 import { FoliageManager } from '@/babylon/world/foliageManager'
 import { TerrainManager } from '@/babylon/world/terrainManager'
+import { updateWorldInstanceBuffers } from '@/babylon/world/worldInstanceBuffers'
 import { MapBlock } from '@/data/worldDataManager'
 import { Settings } from '@/settings/settings'
-import { createTerrainAtlasPreview, muddyDirtPatterns } from './terrainAtlasPreview'
+import { createTerrainAtlasPreview, createTerrainPreviewPlane, muddyDirtPatterns } from './terrainAtlasPreview'
+import type { TerrainAtlasTileFilter } from './terrainAtlasPreview'
+import { createTerrainTransitionMaterial, terrainBoundaryOffset, TERRAIN_TRANSITION_REACH } from './terrainTransitionMaterial'
 import { createMuddyDirtFoliageProfiles } from './muddyDirtFoliage'
 import muddyDirtColorUrl from './assets/muddy-dirt-atlas.png'
 import muddyDirtNormalUrl from './assets/muddy-dirt-normal-atlas.png'
@@ -32,6 +35,7 @@ const WINTER_GRASS_PATTERNS = [
     {size: 1, origins: [[6.4375, 6.3125], [7.5625, 6.3125], [8.6875, 6.3125], [9.8125, 6.3125], [10.9375, 6.3125]]},
 ]
 const CENTER = (SIZE - 1) / 2
+const BOUNDARIES = Array.from({length: SIZE}, (_, z) => CENTER + terrainBoundaryOffset(z))
 const HILLS = [
     {x: 6, z: 8, radius: 6, height: 3},
     {x: 15, z: 20, radius: 7, height: 5},
@@ -39,6 +43,15 @@ const HILLS = [
 ]
 const HEIGHTS = Array.from({length: SIZE}, (_, x) => Array.from({length: SIZE}, (_, z) =>
     Math.max(0, ...HILLS.map(hill => Math.round(hill.height * (1 - Math.hypot(x - hill.x, z - hill.z) / hill.radius))))))
+
+function selectTransitionTile(map: MapBlock[][], x: number, z: number) {
+    const boundary = BOUNDARIES[z]
+    if (Math.abs(x - boundary) > TERRAIN_TRANSITION_REACH) return false
+    // Both sides of the original boundary must meet at this tile's elevation.
+    const left = Math.floor(boundary)
+    const height = map[x][z].totalHeight
+    return map[left][z].totalHeight === height && map[left + 1][z].totalHeight === height
+}
 
 export function createTerrainPreview(
     scene: Scene,
@@ -98,18 +111,27 @@ export function createTerrainPreview(
 
     const emptyMask = new Set<number>()
     const supportsFoliage = (block: MapBlock) => !block.snowed && (block.type === MUDDY_DIRT || block.type === WINTER_GRASS)
-    const atlasRenderers: Array<ReturnType<typeof createTerrainAtlasPreview>> = []
+    const transitionBoundary = new Vector2(CENTER, 0)
+    let renderAtlases: (map: MapBlock[][]) => void
     let render: (() => void) | undefined
     const update = () => {
         const first = Number(primary.value)
         const second = Number(secondary.value)
+        const hasTransitions = (first === WINTER_GRASS && second === MUDDY_DIRT)
+            || (first === MUDDY_DIRT && second === WINTER_GRASS)
+        transitionBoundary.y = hasTransitions ? (first === WINTER_GRASS ? -1 : 1) : 0
         const map = HEIGHTS.map((row, x) => row.map((height, z) => {
-            const boundary = CENTER + 2 * Math.sin(z * 0.32)
+            const boundary = BOUNDARIES[z]
             const surface = second && x > boundary ? second : first
             const block = new MapBlock(height, surface % 100)
             block.snowed = surface >= 100 && surface < 1000
             block.setMinable(surface >= 2000 ? 'C' : surface >= 1000 ? 'M' : null)
             block.computeData()
+            // In this preview pair, both materials share the same surface at each height.
+            if (hasTransitions && surface === WINTER_GRASS) {
+                block.heightOffset = 0
+                block.totalHeight = block.walkHeight = height
+            }
             return block
         }))
         const planes = map.map((row, x) => row.map((block, z) => {
@@ -128,7 +150,7 @@ export function createTerrainPreview(
         profiles.set(WINTER_GRASS, {rows: [0, 0, 0, 5], tuftsPerTile: 0.88, groundPerTile: 0})
         render = () => {
             TerrainManager.renderTerrainArea(map, planes, emptyMask)
-            for (const renderAtlas of atlasRenderers) renderAtlas(map)
+            renderAtlases(map)
             FoliageManager.renderFoliageArea(map, emptyMask, emptyMask, supportsFoliage, {
                 profiles,
                 extraTuftPasses: 2,
@@ -137,14 +159,40 @@ export function createTerrainPreview(
         if (firstRender) {
             TerrainManager.initializeMeshes(scene, terrain, () => render?.())
             const plane = TerrainManager.terrainPlane!
-            atlasRenderers.push(createTerrainAtlasPreview(plane, MUDDY_DIRT, 'adminUtilsMuddyDirt', {
-                colorUrl: muddyDirtColorUrl, normal: {url: muddyDirtNormalUrl, strength: 3}, patterns: muddyDirtPatterns,
-            }))
-            atlasRenderers.push(createTerrainAtlasPreview(plane, WINTER_GRASS, 'adminUtilsWinterGrass', {
-                colorUrl: winterGrassColorUrl,
+            const dirtAtlas = createTerrainAtlasPreview(plane, 'adminUtilsMuddyDirt', {
+                type: MUDDY_DIRT, colorUrl: muddyDirtColorUrl,
+                normal: {url: muddyDirtNormalUrl, strength: 3}, patterns: muddyDirtPatterns,
+            })
+            const grassAtlas = createTerrainAtlasPreview(plane, 'adminUtilsWinterGrass', {
+                type: WINTER_GRASS, colorUrl: winterGrassColorUrl,
                 normal: {url: winterGrassNormalUrl, strength: 0.75},
                 patterns: WINTER_GRASS_PATTERNS,
-            }))
+            })
+            const transitionName = 'adminUtilsWinterGrassMuddyDirt'
+            const transitionMesh = createTerrainPreviewPlane(plane, transitionName)
+            transitionMesh.material = createTerrainTransitionMaterial(transitionName, grassAtlas.material, dirtAtlas.material,
+                WINTER_GRASS_PATTERNS[0].origins[0], muddyDirtPatterns[0].origins[0], transitionBoundary)
+            const surfaceFlags = new Float32Array(SIZE * SIZE)
+            transitionMesh.thinInstanceSetBuffer('terrainSurface', surfaceFlags, 1, false)
+            renderAtlases = map => {
+                const matrices: Matrix[] = []
+                const baseUvs: Vector2[] = []
+                const takeTile = (grass: boolean): TerrainAtlasTileFilter | undefined => {
+                    if (transitionBoundary.y === 0) return
+                    return (matrix, uv, x, z) => {
+                        if (!selectTransitionTile(map, x, z)) return false
+                        surfaceFlags[matrices.length] = grass ? 1 : 0
+                        matrices.push(matrix)
+                        baseUvs.push(uv)
+                        return true
+                    }
+                }
+                dirtAtlas.render(map, takeTile(false))
+                grassAtlas.render(map, takeTile(true))
+                updateWorldInstanceBuffers(transitionMesh, matrices, baseUvs)
+                if (matrices.length) transitionMesh.thinInstanceBufferUpdated('terrainSurface')
+                transitionMesh.setEnabled(matrices.length > 0)
+            }
             FoliageManager.initialize(scene, foliage, {
                 atlasUrl: foliageAtlasUrl,
                 atlasCellPixels: 64,
