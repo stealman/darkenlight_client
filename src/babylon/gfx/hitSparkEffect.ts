@@ -1,6 +1,35 @@
-import { Color4, ParticleSystem, Texture, TransformNode, Vector3 } from '@babylonjs/core'
+import { Color3, Color4, Constants, Mesh, MeshBuilder, ParticleSystem, Scene, StandardMaterial, Texture, TransformNode, Vector3 } from '@babylonjs/core'
 import { CharacterEffect, EffectTarget, MonsterEffect } from '@/babylon/gfx/characterEffect'
+import { trackSpellGlowMesh, untrackSpellGlowMesh } from '@/babylon/gfx/spellGlowLayer'
 import { Renderer } from '@/babylon/scene/renderer'
+
+const POWER_STRIKE_FLASH_MS = 190
+const powerStrikeFlashMaterials = new WeakMap<Scene, StandardMaterial>()
+
+function createPowerStrikeFlash(scene: Scene, position: Vector3) {
+    let material = powerStrikeFlashMaterials.get(scene)
+    if (!material) {
+        material = new StandardMaterial('powerStrikeFlash', scene)
+        material.disableLighting = true
+        material.disableDepthWrite = true
+        material.backFaceCulling = false
+        material.diffuseColor = Color3.Black()
+        material.specularColor = Color3.Black()
+        material.emissiveColor.set(1, 0.79, 0.46)
+        material.alphaMode = Constants.ALPHA_ADD
+        material.opacityTexture = new Texture('images/gfx/flare.png', scene)
+        material.opacityTexture.getAlphaFromRGB = true
+        powerStrikeFlashMaterials.set(scene, material)
+    }
+    const flash = MeshBuilder.CreatePlane('powerStrikeImpactFlash', {width: 2.6, height: 1.8}, scene)
+    flash.position.copyFrom(position)
+    flash.billboardMode = Mesh.BILLBOARDMODE_ALL
+    flash.isPickable = false
+    flash.material = material
+    flash.scaling.setAll(0.62)
+    trackSpellGlowMesh(flash)
+    return flash
+}
 
 export class HitSparkEffect implements CharacterEffect, MonsterEffect {
     target: EffectTarget
@@ -9,7 +38,7 @@ export class HitSparkEffect implements CharacterEffect, MonsterEffect {
     private readonly direction: Vector3
     private startTime: number = 0
     private particleSystem: ParticleSystem | null = null
-    private emitter: TransformNode | null = null
+    private flash: Mesh | null = null
 
     constructor(target: EffectTarget, attackerPosition: Vector3, private readonly style: 'sparks' | 'silverSmoke' = 'sparks',
                 private readonly powerStrike: boolean = false) {
@@ -29,15 +58,15 @@ export class HitSparkEffect implements CharacterEffect, MonsterEffect {
             return
         }
 
-        const emitter = new TransformNode(`hitSparkEmitter_${this.target.id}_${actualTime}`, Renderer.scene)
-        emitter.position.copyFrom(this.target.pos)
-        emitter.position.y += this.target.getModelHeight() * 0.45
+        const impactPosition = this.target.pos.clone()
+        impactPosition.y += this.target.getModelHeight() * 0.45
 
-        const particles = new ParticleSystem(`hitSparks_${this.target.id}_${actualTime}`, 22, Renderer.scene)
         const smoke = this.style === 'silverSmoke'
+        const heavyImpact = this.powerStrike && !smoke
+        const particles = new ParticleSystem(`hitSparks_${this.target.id}_${actualTime}`, heavyImpact ? 40 : 22, Renderer.scene)
         const smokeSpeedMultiplier = this.powerStrike ? 1.3 : 1
-        particles.particleTexture = new Texture(smoke ? 'images/gfx/dust.png' : 'images/gfx/flare-star.png', Renderer.scene)
-        particles.emitter = emitter
+        particles.particleTexture = new Texture(smoke ? 'images/gfx/dust.png' : heavyImpact ? 'images/gfx/flare.png' : 'images/gfx/flare-star.png', Renderer.scene)
+        particles.emitter = impactPosition
         particles.minEmitBox = new Vector3(-0.12, -0.18, -0.12)
         particles.maxEmitBox = new Vector3(0.12, 0.18, 0.12)
         const directionSpread = smoke ? 0.65 : 0.45
@@ -70,37 +99,67 @@ export class HitSparkEffect implements CharacterEffect, MonsterEffect {
             particles.addColorGradient(1, new Color4(0.35, 0.05, 0.01, 0))
         }
         particles.manualEmitCount = smoke ? (this.powerStrike ? Math.round(16 * 1.3) : 16) : 20
+        if (heavyImpact) {
+            impactPosition.addInPlace(this.direction.scale(-Math.max(0.38, this.target.getBoxSize() * 0.5)))
+            this.flash = createPowerStrikeFlash(Renderer.scene, impactPosition)
+            particles.direction1.set(-1, -0.55, -1)
+            particles.direction2.set(1, 1.3, 1)
+            particles.minEmitPower = 2.8
+            particles.maxEmitPower = 5.2
+            particles.minLifeTime = 0.24
+            particles.maxLifeTime = 0.46
+            particles.billboardMode = ParticleSystem.BILLBOARDMODE_STRETCHED
+            particles.minScaleY = 1.8
+            particles.maxScaleY = 3.3
+            particles.blendMode = ParticleSystem.BLENDMODE_ADD
+            particles.addSizeGradient(0, 0.09, 0.22)
+            particles.addSizeGradient(1, 0.02)
+            particles.manualEmitCount = 38
+        }
         particles.disposeOnStop = true
         particles.onDisposeObservable.addOnce(() => {
-            emitter.dispose()
             if (this.particleSystem === particles) {
                 this.particleSystem = null
-                this.emitter = null
             }
         })
         particles.start()
 
-        this.emitter = emitter
         this.particleSystem = particles
     }
 
-    onUpdate(): void {
+    onUpdate(actualTime: number): void {
+        if (!this.flash) return
+        const progress = Math.min(1, (actualTime - this.startTime) / POWER_STRIKE_FLASH_MS)
+        if (progress >= 1) {
+            this.disposeFlash()
+            return
+        }
+        this.flash.scaling.setAll(0.62 + 0.7 * progress)
+        this.flash.visibility = (1 - progress) ** 2
+    }
+
+    private disposeFlash() {
+        if (!this.flash) return
+        untrackSpellGlowMesh(this.flash)
+        this.flash.dispose()
+        this.flash = null
     }
 
     onEnd(): void {
-        this.particleSystem?.stop()
-        if (!this.particleSystem) {
-            this.emitter?.dispose()
-            this.emitter = null
+        this.disposeFlash()
+        if (this.powerStrike && this.style === 'sparks') {
+            this.particleSystem?.dispose()
+            return
         }
+        this.particleSystem?.stop()
     }
 
     isFinished(actualTime: number): boolean {
-        return this.startTime > 0 && actualTime - this.startTime >= (this.style === 'silverSmoke' ? 950 : 450)
+        return this.startTime > 0 && actualTime - this.startTime >= (this.style === 'silverSmoke' ? 950 : this.powerStrike ? 550 : 450)
     }
 }
 
-export class PowerStrikeSparkFountainEffect implements CharacterEffect, MonsterEffect {
+export class PreciseShotSparkFountainEffect implements CharacterEffect, MonsterEffect {
     target: EffectTarget
     positionOffset: Vector3 = Vector3.Zero()
 
@@ -118,11 +177,11 @@ export class PowerStrikeSparkFountainEffect implements CharacterEffect, MonsterE
             return
         }
 
-        const emitter = new TransformNode(`powerStrikeSparkFountainEmitter_${this.target.id}_${actualTime}`, Renderer.scene)
+        const emitter = new TransformNode(`preciseShotSparkFountainEmitter_${this.target.id}_${actualTime}`, Renderer.scene)
         emitter.position.copyFrom(this.target.pos)
         emitter.position.y += this.target.getModelHeight() * 0.45
 
-        const particles = new ParticleSystem(`powerStrikeSparkFountain_${this.target.id}_${actualTime}`, 32, Renderer.scene)
+        const particles = new ParticleSystem(`preciseShotSparkFountain_${this.target.id}_${actualTime}`, 32, Renderer.scene)
         particles.particleTexture = new Texture('images/gfx/flare-star.png', Renderer.scene)
         particles.emitter = emitter
         particles.minEmitBox = new Vector3(-0.08, -0.08, -0.08)

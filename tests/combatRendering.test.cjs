@@ -131,10 +131,12 @@ test('weapon trail stays stopped during delay and an interrupted swing cannot st
     const core = await import('@babylonjs/core/index.js')
     let now = 1000
     const {Settings} = loadModule('settings/settings.ts', {})
+    const glow = loadModule('babylon/gfx/spellGlowLayer.ts', {'@babylonjs/core': core})
     const {EquipItem} = loadModule('babylon/item/equipManager.ts', {
         '@babylonjs/core': core,
         '@/settings/settings': {Settings},
         '@/babylon/materials': {Materials: {}},
+        '@/babylon/gfx/spellGlowLayer': glow,
         '@/babylon/scene/activeMeshFreezer': {ActiveMeshFreezer: {invalidate() {}}},
     }, {now: () => now})
     const engine = new core.NullEngine()
@@ -144,7 +146,7 @@ test('weapon trail stays stopped during delay and an interrupted swing cannot st
         const trail = new core.TrailMesh('weapon', tip, scene, .3, 60, false)
         trail.setEnabled(false)
         const item = Object.create(EquipItem.prototype)
-        Object.assign(item, {weaponTrail: trail, powerStrikeTrailParticles: null})
+        item.weaponTrail = trail
         let updates = 0
         const update = trail.update.bind(trail)
         trail.update = () => { updates++; update() }
@@ -166,6 +168,25 @@ test('weapon trail stays stopped during delay and an interrupted swing cannot st
         scene.onBeforeRenderObservable.notifyObservers(scene)
         assert.equal(updates, 1)
         assert.equal(trail.isEnabled(), false)
+
+        glow.configureSpellGlowLayer(scene, true, false)
+        item.setWeaponTrailEnabled(true, true)
+        assert.equal(scene.effectLayers.length, 0)
+        now += 100
+        item.updateWeaponTrailFade()
+        const [layer] = scene.effectLayers
+        assert.ok(layer?._mainTexture.renderList.includes(trail))
+        assert.ok(trail.diameter > 0.3)
+        now += 80
+        item.updateWeaponTrailFade()
+        item.setWeaponTrailEnabled(false)
+        assert.equal(layer.isEnabled, true)
+        now += 180
+        item.updateWeaponTrailFade()
+        assert.equal(layer.isEnabled, false)
+        assert.equal(layer._mainTexture.renderList.includes(trail), false)
+        item.setWeaponTrailEnabled(true)
+        assert.equal(trail.diameter, 0.3)
     } finally {
         scene.dispose()
         engine.dispose()

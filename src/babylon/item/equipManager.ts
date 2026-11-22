@@ -9,6 +9,7 @@ import { WeaponsCbManager } from '@/babylon/item/codebook/weaponModelsCb'
 import { ArmorsCbManager } from '@/babylon/item/codebook/armorsModelsCb'
 import { EquipCbItem } from '@/babylon/item/codebook/equipCbItem'
 import { Materials } from '@/babylon/materials'
+import { trackSpellGlowMesh, untrackSpellGlowMesh } from '@/babylon/gfx/spellGlowLayer'
 import { Lights } from '@/babylon/scene/lights'
 import { Settings } from '@/settings/settings'
 import { BabylonUtils } from '@/babylon/utils'
@@ -17,6 +18,8 @@ import { modelAssetUrl } from '@/babylon/modelAssetUrl'
 
 const WEAPON_TRAIL_START_DELAY = 150
 const WEAPON_TRAIL_FADE_DURATION = 180
+const POWER_STRIKE_TRAIL_START_DELAY = 100
+const POWER_STRIKE_TRAIL_FADE_IN = 80
 
 export class EquipItem {
     parent: EquipBearer
@@ -44,8 +47,7 @@ export class EquipItem {
     weaponTrailFadeInEnd: number = 0
     weaponTrailFadeEnd: number = 0
     weaponTrailTip: TransformNode | null = null
-    powerStrikeTrailParticles: ParticleSystem | null = null
-    powerStrikeTrailActive: boolean = false
+    private powerStrikeTrailActive = false
     hasSwordParticles: boolean = false
     particleSystem: GPUParticleSystem | null = null
 
@@ -182,6 +184,7 @@ export class EquipItem {
         )
         const trail = new TrailMesh('swordTrail', tip, scene, 0.3, 60, false)
         trail.material = Materials.weaponTrailMaterial
+        trail.isPickable = false
         trail.setEnabled(false)
         return trail
     }
@@ -199,11 +202,12 @@ export class EquipItem {
 
     stopWeaponTrailImmediately() {
         const trail = this.weaponTrail
-        this.stopPowerStrikeTrailParticles()
         if (!trail) {
             return
         }
 
+        if (this.powerStrikeTrailActive) untrackSpellGlowMesh(trail)
+        this.powerStrikeTrailActive = false
         this.weaponTrailStartDelayEnd = 0
         this.weaponTrailFadeInEnd = 0
         this.weaponTrailFadeEnd = 0
@@ -215,7 +219,6 @@ export class EquipItem {
 
     disposeWeaponTrail() {
         this.stopWeaponTrailImmediately()
-        this.disposePowerStrikeTrailParticles()
         this.weaponTrail?.dispose()
         this.weaponTrail = null
         this.weaponTrailTip?.dispose()
@@ -228,11 +231,12 @@ export class EquipItem {
             return
         }
 
-        this.stopPowerStrikeTrailParticles()
+        if (this.powerStrikeTrailActive) untrackSpellGlowMesh(trail)
         this.powerStrikeTrailActive = powerStrike
         trail.stop()
         trail.material = powerStrike ? Materials.powerStrikeWeaponTrailMaterial : Materials.weaponTrailMaterial
-        this.weaponTrailStartDelayEnd = Date.now() + WEAPON_TRAIL_START_DELAY
+        trail.diameter = powerStrike ? 0.48 : 0.3
+        this.weaponTrailStartDelayEnd = Date.now() + (powerStrike ? POWER_STRIKE_TRAIL_START_DELAY : WEAPON_TRAIL_START_DELAY)
         this.weaponTrailFadeInEnd = 0
         this.weaponTrailFadeEnd = 0
         trail.visibility = 0
@@ -241,7 +245,6 @@ export class EquipItem {
 
     private fadeWeaponTrail() {
         const trail = this.weaponTrail
-        this.stopPowerStrikeTrailParticles()
         if (!trail || this.weaponTrailFadeEnd > 0) {
             return
         }
@@ -266,17 +269,18 @@ export class EquipItem {
         }
 
         const now = Date.now()
+        const fadeInDuration = this.powerStrikeTrailActive ? POWER_STRIKE_TRAIL_FADE_IN : WEAPON_TRAIL_FADE_DURATION
         if (this.weaponTrailStartDelayEnd > 0) {
             if (now < this.weaponTrailStartDelayEnd) {
                 return
             }
             this.weaponTrailStartDelayEnd = 0
-            this.weaponTrailFadeInEnd = now + WEAPON_TRAIL_FADE_DURATION
+            this.weaponTrailFadeInEnd = now + fadeInDuration
             trail.reset()
             trail.setEnabled(true)
             trail.start()
             if (this.powerStrikeTrailActive) {
-                this.startPowerStrikeTrailParticles()
+                trackSpellGlowMesh(trail)
             }
         }
 
@@ -289,7 +293,7 @@ export class EquipItem {
                 }
                 trail.visibility = 1
             } else {
-                const visibility = 1 - remaining / WEAPON_TRAIL_FADE_DURATION
+                const visibility = 1 - remaining / fadeInDuration
                 if (trail.visibility <= 0 && visibility > 0) {
                     ActiveMeshFreezer.invalidate()
                 }
@@ -310,52 +314,6 @@ export class EquipItem {
 
         trail.visibility = remaining / WEAPON_TRAIL_FADE_DURATION
         trail.update()
-    }
-
-    private startPowerStrikeTrailParticles() {
-        if (!this.weaponTrailTip) {
-            return
-        }
-
-        if (!this.powerStrikeTrailParticles) {
-            const scene = this.type.mesh!.getScene()
-            const particles = new ParticleSystem(`powerStrikeTrailParticles_${this.parent.getOwnerId()}`, 96, scene)
-            particles.particleTexture = new Texture('images/gfx/dust.png', scene)
-            particles.emitter = this.weaponTrailTip
-            particles.minEmitBox = Vector3.Zero()
-            particles.maxEmitBox = Vector3.Zero()
-            particles.direction1 = new Vector3(-1, -1, -1)
-            particles.direction2 = new Vector3(1, 1, 1)
-            particles.minEmitPower = 0.15
-            particles.maxEmitPower = 0.3
-            particles.minLifeTime = 0.45
-            particles.maxLifeTime = 0.75
-            particles.emitRate = 120
-            particles.minSize = 0.2
-            particles.maxSize = 0.32
-            particles.minAngularSpeed = 0
-            particles.maxAngularSpeed = 0
-            particles.gravity = Vector3.Zero()
-            particles.updateSpeed = 0.01
-            particles.blendMode = ParticleSystem.BLENDMODE_STANDARD
-            particles.addColorGradient(0, new Color4(0.72, 0.72, 0.72, 0.48))
-            particles.addColorGradient(0.55, new Color4(0.55, 0.55, 0.55, 0.32))
-            particles.addColorGradient(1, new Color4(0.35, 0.35, 0.35, 0))
-            this.powerStrikeTrailParticles = particles
-        }
-
-        this.powerStrikeTrailParticles.start()
-    }
-
-    private stopPowerStrikeTrailParticles() {
-        this.powerStrikeTrailActive = false
-        this.powerStrikeTrailParticles?.stop()
-    }
-
-    disposePowerStrikeTrailParticles() {
-        this.stopPowerStrikeTrailParticles()
-        this.powerStrikeTrailParticles?.dispose()
-        this.powerStrikeTrailParticles = null
     }
 
     createSwordParticles(handNode: TransformNode) {
@@ -620,7 +578,6 @@ export const EquipManager = {
 
     removeEquippedItem(item: EquipItem) {
         item.stopWeaponTrailImmediately()
-        item.disposePowerStrikeTrailParticles()
         if (item.particleSystem) {
             item.particleSystem.stop()
             item.particleSystem.dispose()

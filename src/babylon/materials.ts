@@ -1,6 +1,6 @@
 import {
     Scene,
-    Color3, Constants, ShaderMaterial,
+    Color3, Constants, DynamicTexture, ShaderMaterial,
     Texture, Vector2, PBRMaterial, StandardMaterial,
 } from '@babylonjs/core'
 import { PBRCustomMaterial } from '@babylonjs/materials'
@@ -156,10 +156,28 @@ export const Materials = {
     },
 
     createPowerStrikeWeaponTrailMaterial(scene: Scene): StandardMaterial {
+        const opacity = new DynamicTexture('powerStrikeTrailOpacity', {width: 2, height: 64}, scene, false)
+        const context = opacity.getContext()
+        const fade = context.createLinearGradient(0, 0, 0, 64)
+        fade.addColorStop(0, 'rgba(255,255,255,1)')
+        fade.addColorStop(0.12, 'rgba(255,255,255,0.54)')
+        fade.addColorStop(0.28, 'rgba(255,255,255,0.12)')
+        fade.addColorStop(0.55, 'rgba(255,255,255,0)')
+        context.fillStyle = fade
+        context.fillRect(0, 0, 2, 64)
+        opacity.wrapU = Texture.CLAMP_ADDRESSMODE
+        opacity.wrapV = Texture.CLAMP_ADDRESSMODE
+        opacity.update()
+
         const mat = new StandardMaterial('powerStrikeWeaponTrailMat', scene)
         mat.disableLighting = true
-        mat.emissiveColor = new Color3(1, 1, 1)
-        mat.alpha = 0.5
+        mat.diffuseColor = Color3.Black()
+        mat.emissiveColor = new Color3(1, 0.61, 0.25)
+        mat.specularColor = Color3.Black()
+        mat.alpha = 0.57
+        mat.alphaMode = Constants.ALPHA_ADD
+        mat.disableDepthWrite = true
+        mat.opacityTexture = opacity
         return mat
     },
 

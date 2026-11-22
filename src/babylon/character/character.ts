@@ -41,7 +41,7 @@ import { OverlayManager } from '@/gui/overlay/overlayManager'
 import { EffectTarget } from '@/babylon/gfx/characterEffect'
 import { GfxManager } from '@/babylon/gfx/gfxManager'
 import { PotionConsumeEffect } from '@/babylon/gfx/potionConsumeEffect'
-import { HitSparkEffect, PowerStrikeSparkFountainEffect } from '@/babylon/gfx/hitSparkEffect'
+import { HitSparkEffect, PreciseShotSparkFountainEffect } from '@/babylon/gfx/hitSparkEffect'
 import { MagicArrowEffect } from '@/babylon/gfx/magicArrowEffect'
 import { MagicArrow } from '@game/game/spells/magicArrow'
 import { HealingSpell } from '@game/game/spells/healingSpell'
@@ -575,8 +575,8 @@ class Character implements Attackable, EffectTarget {
             if (Settings.isCombatEffectEnabled(this === MyPlayer.myChar || target === MyPlayer.myChar) && target instanceof Monster) {
                 const silverUndead = data.res.fx === 'silverUndead'
                 GfxManager.addEffect(new HitSparkEffect(target, this.pos, silverUndead ? 'silverSmoke' : 'sparks', powerStrike))
-                if (!silverUndead && (powerStrike || preciseShot)) {
-                    GfxManager.addEffect(new PowerStrikeSparkFountainEffect(target))
+                if (!silverUndead && preciseShot) {
+                    GfxManager.addEffect(new PreciseShotSparkFountainEffect(target))
                 }
             }
         } else if (data.res.h === 'b' && target.getParrySoundType()) {
