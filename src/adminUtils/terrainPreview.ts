@@ -7,12 +7,30 @@ import { FoliageManager } from '@/babylon/world/foliageManager'
 import { TerrainManager } from '@/babylon/world/terrainManager'
 import { MapBlock } from '@/data/worldDataManager'
 import { Settings } from '@/settings/settings'
-import { createMuddyDirtPreview } from './muddyDirtPreview'
+import { createTerrainAtlasPreview, muddyDirtPatterns } from './terrainAtlasPreview'
 import { createMuddyDirtFoliageProfiles } from './muddyDirtFoliage'
+import muddyDirtColorUrl from './assets/muddy-dirt-atlas.png'
+import muddyDirtNormalUrl from './assets/muddy-dirt-normal-atlas.png'
+import winterGrassColorUrl from './assets/winter-grass-atlas.png'
+import winterGrassNormalUrl from './assets/winter-grass-normal-atlas.png'
 import foliageAtlasUrl from './assets/muddy-dirt-foliage.png'
 import foliageNormalAtlasUrl from './assets/muddy-dirt-foliage-normal.png'
 
 const SIZE = 30
+const MUDDY_DIRT = TerrainEnum1.TERRAIN_MUDDY_DIRT.index
+const WINTER_GRASS = TerrainEnum1.TERRAIN_GRASS_WINTER.index
+// Atlas origins in 128 px tiles from the top left.
+const WINTER_GRASS_PATTERNS = [
+    {size: 3, origins: [
+        [0.0625, 0.0625], [3.1875, 0.0625], [6.3125, 0.0625], [9.4375, 0.0625], [12.5625, 0.0625],
+        [0.0625, 3.1875], [3.1875, 3.1875], [6.3125, 3.1875],
+    ]},
+    {size: 2, origins: [
+        [9.4375, 3.1875], [11.5625, 3.1875], [13.6875, 3.1875],
+        [0.0625, 6.3125], [2.1875, 6.3125], [4.3125, 6.3125],
+    ]},
+    {size: 1, origins: [[6.4375, 6.3125], [7.5625, 6.3125], [8.6875, 6.3125], [9.8125, 6.3125], [10.9375, 6.3125]]},
+]
 const CENTER = (SIZE - 1) / 2
 const HILLS = [
     {x: 6, z: 8, radius: 6, height: 3},
@@ -45,8 +63,8 @@ export function createTerrainPreview(
         primary.add(new Option(label, String(entry.index)))
         secondary.add(new Option(label, String(entry.index)))
     }
-    primary.value = String(TerrainEnum1.TERRAIN_GRASS.index)
-    secondary.value = String(TerrainEnum1.TERRAIN_MUDDY_DIRT.index)
+    primary.value = String(WINTER_GRASS)
+    secondary.value = String(MUDDY_DIRT)
 
     const terrain = new TransformNode('adminUtilsTerrain', scene)
     terrain.parent = parent
@@ -79,9 +97,9 @@ export function createTerrainPreview(
     pointers.buttons = [2]
 
     const emptyMask = new Set<number>()
-    const isMuddyDirt = (block: MapBlock) => block.type === TerrainEnum1.TERRAIN_MUDDY_DIRT.index
+    const supportsFoliage = (block: MapBlock) => !block.snowed && (block.type === MUDDY_DIRT || block.type === WINTER_GRASS)
+    const atlasRenderers: Array<ReturnType<typeof createTerrainAtlasPreview>> = []
     let render: (() => void) | undefined
-    let renderMuddyDirt: ReturnType<typeof createMuddyDirtPreview>
     const update = () => {
         const first = Number(primary.value)
         const second = Number(secondary.value)
@@ -106,17 +124,27 @@ export function createTerrainPreview(
         }))
         const firstRender = !render
         const profiles = createMuddyDirtFoliageProfiles(map, Lights.sunLight.direction)
+        // Rows 0 and 5 of the shared preview foliage atlas contain green and dry grass.
+        profiles.set(WINTER_GRASS, {rows: [0, 0, 0, 5], tuftsPerTile: 0.88, groundPerTile: 0})
         render = () => {
             TerrainManager.renderTerrainArea(map, planes, emptyMask)
-            renderMuddyDirt(map)
-            FoliageManager.renderFoliageArea(map, emptyMask, emptyMask, isMuddyDirt, {
+            for (const renderAtlas of atlasRenderers) renderAtlas(map)
+            FoliageManager.renderFoliageArea(map, emptyMask, emptyMask, supportsFoliage, {
                 profiles,
                 extraTuftPasses: 2,
             })
         }
         if (firstRender) {
             TerrainManager.initializeMeshes(scene, terrain, () => render?.())
-            renderMuddyDirt = createMuddyDirtPreview(TerrainManager.terrainPlane!)
+            const plane = TerrainManager.terrainPlane!
+            atlasRenderers.push(createTerrainAtlasPreview(plane, MUDDY_DIRT, 'adminUtilsMuddyDirt', {
+                colorUrl: muddyDirtColorUrl, normal: {url: muddyDirtNormalUrl, strength: 3}, patterns: muddyDirtPatterns,
+            }))
+            atlasRenderers.push(createTerrainAtlasPreview(plane, WINTER_GRASS, 'adminUtilsWinterGrass', {
+                colorUrl: winterGrassColorUrl,
+                normal: {url: winterGrassNormalUrl, strength: 0.75},
+                patterns: WINTER_GRASS_PATTERNS,
+            }))
             FoliageManager.initialize(scene, foliage, {
                 atlasUrl: foliageAtlasUrl,
                 atlasCellPixels: 64,
