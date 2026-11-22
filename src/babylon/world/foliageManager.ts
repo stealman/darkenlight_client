@@ -30,7 +30,8 @@ export type TerrainFoliage = {
     scatter?: (x: number, z: number, variety: number) => {
         tuftDensity: number
         groundDensity: number
-        coreTuftChance?: number
+        extraTuftChance?: number
+        extraTuftRow?: number
         tuftRow?: number
         groundRow?: number
         groundSize?: readonly [number, number]
@@ -124,8 +125,9 @@ export const FoliageManager = {
         material.usePhysicalLightFalloff = false
         material.AddAttribute('uvc')
         material.Vertex_Definitions('attribute vec2 uvc;')
+        material.Vertex_MainBegin('vec2 foliageAtlasOffset = uvc;')
         material.Vertex_Before_PositionUpdated(
-            `uvUpdated = (uvUpdated * ${cellPixels - 1}.0 + 0.5) / ${cellPixels}.0 + uvc;`,
+            `uvUpdated = (uvUpdated * ${cellPixels - 1}.0 + 0.5) / ${cellPixels}.0 + foliageAtlasOffset;`,
         )
         return material
     },
@@ -219,7 +221,7 @@ export const FoliageManager = {
                     const tuftDensity = scatter?.tuftDensity ?? this.patchDensity(worldX, worldZ)
                     const tuftLimit = config.tuftsPerTile * tuftDensity
                     const roll = this.roll(cellX, cellZ, salt + 9) * CANDIDATES_PER_TILE
-                    const isTuft = extraTuft ? roll < (scatter?.coreTuftChance ?? 0) * CANDIDATES_PER_TILE : roll < tuftLimit
+                    const isTuft = extraTuft ? roll < (scatter?.extraTuftChance ?? 0) * CANDIDATES_PER_TILE : roll < tuftLimit
                     let groundRow = MOSS
                     let groundSize = scatter?.groundSize
                     if (!isTuft) {
@@ -241,7 +243,8 @@ export const FoliageManager = {
                     const hideSnow = block.snowed && snowCoverMask.has(x * blockMap.length + z)
                     const top = block.height + getTerrainHeightOffset(block, hideSnow)
                     if (isTuft) {
-                        const row = scatter?.tuftRow ?? config.rows[this.hashTile(cellX, cellZ, salt + 2) % config.rows.length]
+                        const extraRow = extraTuft ? scatter?.extraTuftRow : undefined
+                        const row = extraRow ?? scatter?.tuftRow ?? config.rows[this.hashTile(cellX, cellZ, salt + 2) % config.rows.length]
                         matrices.push(this.tuftMatrix(cellX, cellZ, worldX, top, worldZ, row, salt, config.tuftHeights?.[row]))
                         uvData.push(this.getAtlasOffset(cellX, cellZ, row, salt))
                         continue

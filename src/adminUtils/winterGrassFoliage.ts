@@ -1,0 +1,119 @@
+import type { PBRCustomMaterial } from '@babylonjs/materials'
+import { FoliageManager } from '@/babylon/world/foliageManager'
+import type { TerrainFoliage } from '@/babylon/world/foliageManager'
+import { findFoliagePatch } from './terrainFoliagePatches'
+
+const GRASS = 0, TWIGS = 3, SCRUB = 4, DRY_GRASS = 5, MOSS = 6, PEBBLES = 7
+// The preview shader remaps these rows to the shared sprites with a different palette.
+const MOSSY_PEBBLES = 8, WINTER_SCRUB = 9, SINGLE_MOSSY_PEBBLE = 10
+const SINGLE_PEBBLE_SIZE = [0.43, 0.68] as const
+// One stone in each pebble cell, in pixels from the cell's lower left.
+const SINGLE_PEBBLE_BOUNDS = [[25, 7, 48, 21], [37, 35, 47, 50], [36, 43, 48, 55], [31, 42, 48, 56]]
+const PLANT_PATCHES = {
+    spacing: 4.6, salt: 6210, minRadius: 1.45, radiusRange: 1.35,
+    rows: [GRASS, GRASS, GRASS, GRASS, GRASS, GRASS, DRY_GRASS, WINTER_SCRUB],
+}
+const GROUND_PATCHES = {
+    spacing: 4.9, salt: 7240, minRadius: 1.35, radiusRange: 1.2,
+    rows: [SINGLE_MOSSY_PEBBLE, SINGLE_MOSSY_PEBBLE, TWIGS, MOSS],
+    radiusBonus: {[SINGLE_MOSSY_PEBBLE]: -0.45},
+}
+
+export function createWinterGrassFoliage(transitionWeight: (x: number, z: number) => number): TerrainFoliage {
+    return {
+        rows: [GRASS, GRASS, GRASS, GRASS, DRY_GRASS],
+        tuftsPerTile: 0.92,
+        tuftHeights: {[GRASS]: 0.49, [DRY_GRASS]: 0.45, [WINTER_SCRUB]: 0.31},
+        groundRows: GROUND_PATCHES.rows,
+        groundPerTile: 0.58,
+        blendedGroundRows: [MOSS],
+        groundSizes: {
+            [SINGLE_MOSSY_PEBBLE]: SINGLE_PEBBLE_SIZE,
+            [MOSSY_PEBBLES]: [0.30, 0.53],
+            [TWIGS]: [0.38, 0.69],
+            [MOSS]: [0.38, 0.59],
+        },
+        scatter(x, z, variety) {
+            const plants = findFoliagePatch(x, z, PLANT_PATCHES)
+            const ground = findFoliagePatch(x, z, GROUND_PATCHES)
+            const coreStart = 0.58
+            const core = Math.min(1, Math.max(0, (plants.influence - coreStart) / 1.75))
+            const gapFillChance = 0.24 * Math.max(0, 1 - plants.influence / coreStart)
+            const tuftRow = plants.influence > 0.16 && variety < 0.88 ? plants.row : undefined
+            const stonePatch = ground.row === SINGLE_MOSSY_PEBBLE
+            let groundRow = ground.influence > 0.10 && variety < 0.87 ? ground.row : undefined
+            if (stonePatch && ground.influence > 0.40 && variety < 0.34) groundRow = MOSSY_PEBBLES
+            return {
+                tuftDensity: 0.34 + plants.influence,
+                extraTuftChance: gapFillChance + (tuftRow === WINTER_SCRUB ? 0.07 : 0.76) * core ** 1.5,
+                extraTuftRow: gapFillChance > 0 ? GRASS : undefined,
+                tuftRow,
+                groundDensity: 0.23 + ground.influence * (stonePatch ? 0.68 : 1.14),
+                groundRow,
+                extraGround: {
+                    row: SINGLE_MOSSY_PEBBLE,
+                    chance: 0.040 + 0.22 * transitionWeight(x, z),
+                    size: SINGLE_PEBBLE_SIZE,
+                },
+            }
+        },
+    }
+}
+
+export function styleWinterGrassFoliage(tufts: PBRCustomMaterial, ground: PBRCustomMaterial) {
+    const grassY = FoliageManager.getAtlasOffset(0, 0, GRASS).y.toFixed(1)
+    const winterScrubY = FoliageManager.getAtlasOffset(0, 0, WINTER_SCRUB).y
+    const scrubY = FoliageManager.getAtlasOffset(0, 0, SCRUB).y
+    tufts.Vertex_Definitions('attribute vec2 uvc; varying vec2 vWinterTuftStyle;')
+    tufts.Vertex_MainBegin(`
+        float winterGrass = 1.0 - step(0.5, abs(uvc.y - ${grassY}));
+        float winterScrub = 1.0 - step(0.5, abs(uvc.y - ${winterScrubY.toFixed(1)}));
+        vec2 foliageAtlasOffset = uvc + vec2(0.0, winterScrub * ${(scrubY - winterScrubY).toFixed(1)});
+        vWinterTuftStyle = vec2(winterGrass, winterScrub);
+    `)
+    tufts.Fragment_Definitions('varying vec2 vWinterTuftStyle;')
+    tufts.Fragment_Before_Lights(`
+        surfaceAlbedo *= mix(vec3(1.0), vec3(0.79, 0.53, 0.58), vWinterTuftStyle.x);
+        vec3 lightScrub = surfaceAlbedo * vec3(1.05, 1.30, 1.44) + vec3(0.009, 0.008, 0.005);
+        surfaceAlbedo = mix(surfaceAlbedo, lightScrub, vWinterTuftStyle.y);
+    `)
+    tufts.Fragment_Before_FinalColorComposition(`
+        finalEmissive *= mix(vec3(1.0), vec3(0.66, 0.40, 0.49), vWinterTuftStyle.x);
+        finalEmissive *= mix(vec3(1.0), vec3(0.89, 1.03, 1.14), vWinterTuftStyle.y);
+    `)
+
+    const mossyY = FoliageManager.getAtlasOffset(0, 0, MOSSY_PEBBLES).y
+    const singleY = FoliageManager.getAtlasOffset(0, 0, SINGLE_MOSSY_PEBBLE).y
+    const stoneY = FoliageManager.getAtlasOffset(0, 0, PEBBLES).y
+    const [firstBounds, ...otherBounds] = SINGLE_PEBBLE_BOUNDS.map(bounds =>
+        `vec4(${bounds.map(value => value.toFixed(1)).join(', ')})`)
+    ground.Vertex_Definitions('attribute vec2 uvc; varying vec2 vStoneUV; varying vec3 vStoneStyle; varying vec4 vStoneBounds;')
+    ground.Vertex_MainBegin(`
+        float cluster = 1.0 - step(0.5, abs(uvc.y - ${mossyY.toFixed(1)}));
+        float single = 1.0 - step(0.5, abs(uvc.y - ${singleY.toFixed(1)}));
+        vec2 foliageAtlasOffset = uvc + vec2(0.0,
+            cluster * ${(stoneY - mossyY).toFixed(1)} + single * ${(stoneY - singleY).toFixed(1)});
+        vStoneStyle = vec3(max(cluster, single), uvc.x, single);
+        vStoneBounds = ${firstBounds};
+        ${otherBounds.map((bounds, index) => `if (uvc.x > ${index}.5) vStoneBounds = ${bounds};`).join('\n        ')}
+    `)
+    ground.Vertex_After_WorldPosComputed('vStoneUV = uvUpdated - foliageAtlasOffset;')
+    ground.Fragment_Definitions('varying vec2 vStoneUV; varying vec3 vStoneStyle; varying vec4 vStoneBounds;')
+    ground.Fragment_Before_Lights(`
+        if (vStoneStyle.x > 0.5) {
+            vec2 pixel = vStoneUV * 64.0;
+            if (vStoneStyle.z > 0.5 && (any(lessThan(pixel, vStoneBounds.xy)) || any(greaterThanEqual(pixel, vStoneBounds.zw)))) {
+                discard;
+            }
+            // Irregular patches of olive moss on the rock silhouette.
+            vec2 p = vStoneUV * 32.0 + vec2(vStoneStyle.y * 3.2, vStoneStyle.y * 6.8);
+            float growth = sin(p.x + 0.9 * sin(p.y)) * sin(p.y * 0.84)
+                         + 0.45 * sin(p.y * 2.1 - p.x * 1.17);
+            float moss = smoothstep(-0.23, 0.70, growth);
+            vec3 stone = surfaceAlbedo * vec3(0.82, 0.89, 0.76);
+            float stoneLight = dot(stone, vec3(0.2126, 0.7152, 0.0722));
+            vec3 mossColor = vec3(0.79, 1.04, 0.48) * (stoneLight * 0.76 + 0.021);
+            surfaceAlbedo = mix(stone, mossColor, mix(0.38, 0.88, moss));
+        }
+    `)
+}

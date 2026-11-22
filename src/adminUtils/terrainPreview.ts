@@ -12,6 +12,7 @@ import { createTerrainAtlasPreview, createTerrainPreviewPlane, muddyDirtPatterns
 import type { TerrainAtlasTileFilter } from './terrainAtlasPreview'
 import { createTerrainTransitionMaterial, terrainBoundaryOffset, TERRAIN_TRANSITION_REACH } from './terrainTransitionMaterial'
 import { createMuddyDirtFoliageProfiles } from './muddyDirtFoliage'
+import { createWinterGrassFoliage, styleWinterGrassFoliage } from './winterGrassFoliage'
 import muddyDirtColorUrl from './assets/muddy-dirt-atlas.png'
 import muddyDirtNormalUrl from './assets/muddy-dirt-normal-atlas.png'
 import winterGrassColorUrl from './assets/winter-grass-atlas.png'
@@ -146,8 +147,13 @@ export function createTerrainPreview(
         }))
         const firstRender = !render
         const profiles = createMuddyDirtFoliageProfiles(map, Lights.sunLight.direction)
-        // Rows 0 and 5 of the shared preview foliage atlas contain green and dry grass.
-        profiles.set(WINTER_GRASS, {rows: [0, 0, 0, 5], tuftsPerTile: 0.88, groundPerTile: 0})
+        profiles.set(WINTER_GRASS, createWinterGrassFoliage((x, z) => {
+            const tileX = Math.round(x)
+            const tileZ = Math.round(z)
+            if (!hasTransitions || !planes[tileX][tileZ] || !selectTransitionTile(map, tileX, tileZ)) return 0
+            const distance = Math.abs(x - CENTER - terrainBoundaryOffset(z))
+            return Math.max(0, 1 - distance / TERRAIN_TRANSITION_REACH)
+        }))
         render = () => {
             TerrainManager.renderTerrainArea(map, planes, emptyMask)
             renderAtlases(map)
@@ -161,7 +167,7 @@ export function createTerrainPreview(
             const plane = TerrainManager.terrainPlane!
             const dirtAtlas = createTerrainAtlasPreview(plane, 'adminUtilsMuddyDirt', {
                 type: MUDDY_DIRT, colorUrl: muddyDirtColorUrl,
-                normal: {url: muddyDirtNormalUrl, strength: 3}, patterns: muddyDirtPatterns,
+                normal: {url: muddyDirtNormalUrl, strength: 4}, patterns: muddyDirtPatterns,
             })
             const grassAtlas = createTerrainAtlasPreview(plane, 'adminUtilsWinterGrass', {
                 type: WINTER_GRASS, colorUrl: winterGrassColorUrl,
@@ -205,11 +211,13 @@ export function createTerrainPreview(
             mossMaterial.albedoColor.set(0.82, 0.84, 0.81)
             mossMaterial.emissiveTexture = mossMaterial.albedoTexture
             mossMaterial.emissiveColor.set(0.08, 0.08, 0.08)
-            FoliageManager.groundMesh!.receiveShadows = true
+            const groundFoliage = FoliageManager.groundMesh!
+            groundFoliage.receiveShadows = true
             // Give the crossed billboards some fill on faces turned away from the sun.
             const foliageMaterial = FoliageManager.foliageMaterial!
             foliageMaterial.emissiveTexture = foliageMaterial.albedoTexture
             foliageMaterial.emissiveColor.set(0.34, 0.34, 0.34)
+            styleWinterGrassFoliage(foliageMaterial, groundFoliage.material as typeof foliageMaterial)
         }
         render()
     }
