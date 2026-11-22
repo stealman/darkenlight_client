@@ -1,5 +1,5 @@
 import { MapBlock, WorldDataManager } from '@/data/worldDataManager'
-import { Color4, Matrix, Mesh, ParticleSystem, Scene, Vector2 } from '@babylonjs/core'
+import { Color4, Matrix, Mesh, ParticleSystem, Scene, TransformNode, Vector2 } from '@babylonjs/core'
 import { updateWorldInstanceBuffers } from '@/babylon/world/worldInstanceBuffers'
 import { Builder } from '@/babylon/builder'
 import { MaterialEnum1, Materials, PlaneEnum1, TerrainEnum1 } from '@/babylon/materials'
@@ -36,18 +36,25 @@ export const TerrainManager = {
     hoverBlockMarker: null as Mesh | null,
 
     initialize (scene: Scene) {
+        this.initializeMeshes(scene, WorldRenderer.worldParentNode, () => {
+            if (ViewportManager.viewPortInitialized) WorldRenderer.renderWorld()
+        })
+        this.hoverBlockMarker = Builder.createHorizontalPlane(scene, null,1, 0)
+    },
+
+    initializeMeshes(scene: Scene, parent: TransformNode | null, onSmoothReady: () => void) {
         this.waterBottomBlock = new MapBlock(0, DIRT_BLOCK_TYPE)
 
         // Terrain and plane blocks
-        this.terrainBlock1 = Builder.createBlockWithFaces(scene, WorldRenderer.worldParentNode!)
+        this.terrainBlock1 = Builder.createBlockWithFaces(scene, parent!)
         this.terrainBlock1.material = Materials.terrainMaterial
         this.terrainBlock1.isPickable = true
         this.terrainBlock1.thinInstanceEnablePicking = true
 
-        this.terrainPlane = Builder.createHorizontalPlane(scene, WorldRenderer.worldParentNode!, 1, 0)
+        this.terrainPlane = Builder.createHorizontalPlane(scene, parent, 1, 0)
         this.terrainPlane.material = Materials.planeMaterial
 
-        this.terrainWaterPlane = Builder.createHorizontalPlane(scene, WorldRenderer.worldParentNode!, 1, 0)
+        this.terrainWaterPlane = Builder.createHorizontalPlane(scene, parent, 1, 0)
         this.terrainWaterPlane.material = Materials.planeWaterMaterial
         this.terrainWaterPlane.renderingGroupId = 0
 
@@ -58,7 +65,7 @@ export const TerrainManager = {
         }
 
         // Water planes
-        this.waterPlane = Builder.createHorizontalPlane(scene, WorldRenderer.worldParentNode,2048, 0)
+        this.waterPlane = Builder.createHorizontalPlane(scene, parent, 2048, 0)
         this.waterPlane.material = Materials.waterMaterial
         this.waterPlane.position.y = 1
         this.waterPlane.isPickable = false
@@ -67,11 +74,8 @@ export const TerrainManager = {
 
         this.applySeaWaterLevel()
 
-        this.hoverBlockMarker = Builder.createHorizontalPlane(scene, null,1, 0)
-        if (BEVELED_TERRAIN_ENABLED) BeveledTerrain.initialize(scene, WorldRenderer.worldParentNode)
-        smoothTerrainExperiment?.initialize(scene, WorldRenderer.worldParentNode, () => {
-            if (ViewportManager.viewPortInitialized) WorldRenderer.renderWorld()
-        })
+        if (BEVELED_TERRAIN_ENABLED) BeveledTerrain.initialize(scene, parent)
+        smoothTerrainExperiment?.initialize(scene, parent, onSmoothReady)
     },
 
     setSeaWaterLevel(seaWaterLevel: number | null) {
@@ -103,27 +107,39 @@ export const TerrainManager = {
     },
 
     renderTerrain(renderTerrainStatics?: (terrainMatrices: Matrix[], terrainUvData: Vector2[]) => void, snowCoverMask: Set<number> = new Set()) {
-        const myPos = MyPlayer.myChar.getPositionRounded()
-        const blockMap = WorldDataManager.getBlockMap()
-        const planeBlockMap = WorldDataManager.getPlaneBlockMap()
+        this.renderTerrainArea(WorldDataManager.getBlockMap(), WorldDataManager.getPlaneBlockMap(), snowCoverMask,
+            MyPlayer.myChar.getPositionRounded(), renderTerrainStatics)
+    },
 
-        const terrainMatrices1 = []
-        const terrainUvData1 = []
-        const planeMatrices = []
-        const planeUvData = []
-        const waterPlaneMatrices = []
-        const waterPlaneUvData = []
+    renderTerrainArea(
+        blockMap: MapBlock[][],
+        planeBlockMap: (MapBlock | false)[][],
+        snowCoverMask: Set<number>,
+        viewportCenter?: {x: number, z: number},
+        renderTerrainStatics?: (terrainMatrices: Matrix[], terrainUvData: Vector2[]) => void,
+    ) {
+        const terrainMatrices1: Matrix[] = []
+        const terrainUvData1: Vector2[] = []
+        const planeMatrices: Matrix[] = []
+        const planeUvData: Vector2[] = []
+        const waterPlaneMatrices: Matrix[] = []
+        const waterPlaneUvData: Vector2[] = []
 
         IndoorTerrainOcclusionManager.beginTerrainRender(blockMap, Lights.indoor)
         smoothTerrainExperiment?.begin()
         if (BEVELED_TERRAIN_ENABLED) BeveledTerrain.begin()
 
-        for (let x = Math.max(0, myPos.x + ViewportManager.minX); x <= Math.min(blockMap.length -1, myPos.x + ViewportManager.maxX); x++) {
-            for (let z = Math.max(0, myPos.z + ViewportManager.minZ); z <= Math.min(blockMap.length - 1, myPos.z + ViewportManager.maxZ); z++) {
+        const maxIndex = blockMap.length - 1
+        const minX = viewportCenter ? Math.max(0, viewportCenter.x + ViewportManager.minX) : 0
+        const minZ = viewportCenter ? Math.max(0, viewportCenter.z + ViewportManager.minZ) : 0
+        const maxX = viewportCenter ? Math.min(maxIndex, viewportCenter.x + ViewportManager.maxX) : maxIndex
+        const maxZ = viewportCenter ? Math.min(maxIndex, viewportCenter.z + ViewportManager.maxZ) : maxIndex
+        for (let x = minX; x <= maxX; x++) {
+            for (let z = minZ; z <= maxZ; z++) {
                 const block = blockMap[x][z]
 
                 // Check if block is in visible matrix
-                if (!ViewportManager.isPointInVisibleMatrix(x, z, 2, block.totalHeight)) {
+                if (viewportCenter && !ViewportManager.isPointInVisibleMatrix(x, z, 2, block.totalHeight)) {
                     continue
                 }
 

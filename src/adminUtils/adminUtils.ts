@@ -1270,14 +1270,13 @@ export async function mountAdminUtils() {
 
     Lights.initialize(scene)
     Materials.initialize(scene)
-    // Keep asset colours stable under the game's midday sun, rather than the
-    // default sunrise phase used before the server synchronizes the clock.
-    Lights.synchronizeDayNightCycle({
-        phase: 0.5,
+    const setPreviewTime = (phase: number) => Lights.synchronizeDayNightCycle({
+        phase,
         day: 1,
         cycleDurationMs: Lights.dayNightCycleDurationMs,
         paused: true,
     })
+    setPreviewTime(0.5)
     Lights.sunLight.intensity = 2.2
 
     const fillLight = new HemisphericLight('adminUtilsFillLight', Vector3.Up(), scene)
@@ -1290,6 +1289,26 @@ export async function mountAdminUtils() {
     backLight.diffuse = Color3.White()
     backLight.specular = new Color3(0.12, 0.12, 0.12)
     backLight.intensity = 1.4
+
+    const setTerrainLighting = (active: boolean) => {
+        setPreviewTime(active ? 17.75 / 24 : 0.5)
+        fillLight.intensity = active ? 0.55 : 0.85
+        backLight.intensity = active ? 0 : 1.4
+        const sun = Lights.sunLight
+        if (!active) {
+            sun.intensity = 2.2
+            return
+        }
+        // Keep the sunset azimuth, with grazing light for inspecting the normals.
+        const elevation = 20 * Math.PI / 180
+        const {direction, position} = sun
+        const horizontal = Math.cos(elevation) / Math.hypot(direction.x, direction.z)
+        direction.set(direction.x * horizontal, -Math.sin(elevation), direction.z * horizontal)
+        direction.scaleToRef(-position.length(), position)
+        sun.intensity *= 6.5
+        Color3.LerpToRef(sun.diffuse, Color3.White(), 0.65, sun.diffuse)
+        sun.specular.copyFrom(sun.diffuse)
+    }
 
     const ground = MeshBuilder.CreateGround('adminUtilsGrass', { width: 12, height: 12, subdivisions: 2 }, scene)
     const grassMaterial = new StandardMaterial('adminUtilsGrassMaterial', scene)
@@ -1950,7 +1969,7 @@ export async function mountAdminUtils() {
         replay.onclick = play
         loopControl.onchange = play
         const { installAssetPreview } = await import('./assetPreview')
-        await installAssetPreview(root, scene, camera, () => model)
+        await installAssetPreview(root, scene, camera, ground, () => model, setTerrainLighting)
         const bodyVariantSelect = root.querySelector<HTMLSelectElement>('#adminUtilsBodyVariant')!
         const switchBodyVariant = async (variant: PreviewBodyVariant) => {
             if (variant === previewBodyVariant) return

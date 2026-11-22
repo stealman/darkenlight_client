@@ -1,7 +1,7 @@
 import monsterNames from 'virtual:admin-monster-names'
 import { createMonsterEquipmentEditor } from './monsterEquipmentEditor'
 import { SpecimenPrefabs } from '@/babylon/world/statics/objects/specimens'
-import { ArcRotateCamera, Scene, TransformNode, Vector3 } from '@babylonjs/core'
+import { ArcRotateCamera, Mesh, Scene, TransformNode, Vector3 } from '@babylonjs/core'
 import type { CharacterModel } from '@/babylon/character/characterModel'
 import type { Monster } from '@/babylon/monsters/monster'
 import { MonsterModel } from '@/babylon/monsters/monsterModel'
@@ -22,10 +22,20 @@ import { EquipManager } from '@/babylon/item/equipManager'
 import { WeaponModelsCb } from '@/babylon/item/codebook/weaponModelsCb'
 import { Renderer } from '@/babylon/scene/renderer'
 import type { MeshAnimation } from '@/babylon/animations/animation'
+import { createTerrainPreview } from './terrainPreview'
 
 // This sandbox deliberately calls geometry factories, never the world/network loop.
-export async function installAssetPreview(root: HTMLElement, scene: Scene, camera: ArcRotateCamera, getCharacter: () => CharacterModel) {
+export async function installAssetPreview(
+    root: HTMLElement,
+    scene: Scene,
+    camera: ArcRotateCamera,
+    ground: Mesh,
+    getCharacter: () => CharacterModel,
+    setTerrainLighting: (active: boolean) => void,
+) {
     const panel = root.querySelector<HTMLElement>('.admin-utils__panel')!
+    const hint = root.querySelector<HTMLElement>('.admin-utils__hint')!
+    const assetHint = hint.textContent
     const characterControls = document.createElement('div')
     while (panel.children.length > 1) characterControls.append(panel.children[1])
     panel.append(characterControls)
@@ -69,6 +79,8 @@ export async function installAssetPreview(root: HTMLElement, scene: Scene, camer
     let clips: [string, MeshAnimation][] = []
     let generation = 0
     const parent = new TransformNode('assetPreview', scene)
+    const terrain = createTerrainPreview(scene, parent, camera, ground, setTerrainLighting)
+    panel.append(terrain.controls)
     getCharacter().node.parent = parent
     const rotatePreview = () => {
         parent.rotation.y = Number(rotationSlider.value) * Math.PI / 180
@@ -209,7 +221,7 @@ export async function installAssetPreview(root: HTMLElement, scene: Scene, camer
         if (restore && saved.tab === tab && Array.from(choice.options).some(o => o.value === saved.choice)) choice.value = saved.choice!
         void show(true)
     }
-    for (const name of ['Postava', 'Statics', 'Buildings', 'Monsters']) {
+    for (const name of ['Postava', 'Statics', 'Buildings', 'Monsters', 'Terrain']) {
         const button = document.createElement('button')
         button.textContent = name
         button.onclick = () => {
@@ -217,15 +229,18 @@ export async function installAssetPreview(root: HTMLElement, scene: Scene, camer
             const character = getCharacter()
             character.node.setEnabled(name === 'Postava')
             character.equipSet.forEach(item => { if (name !== 'Postava') EquipManager.removeEquippedItem(item); else EquipManager.addEquippedItem(item) })
-            characterControls.hidden = name !== 'Postava'; controls.hidden = name === 'Postava'
+            characterControls.hidden = name !== 'Postava'; controls.hidden = name === 'Postava' || name === 'Terrain'
             tabs.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b === button)))
             roof.parentElement!.hidden = name !== 'Buildings'
             get('assetMotion').hidden = name !== 'Monsters'
             get('assetApply').hidden = name === 'Monsters'
             parameters.readOnly = name === 'Monsters'
             search.value = ''
-            if (name !== 'Postava') list(true)
-            else localStorage.setItem(storageKey, JSON.stringify({tab: name}))
+            terrain.setActive(name === 'Terrain')
+            rotationControl.hidden = name === 'Terrain'
+            hint.textContent = name === 'Terrain' ? 'Pravým tlačítkem posouvej · kolečkem přibližuj' : assetHint
+            if (controls.hidden) localStorage.setItem(storageKey, JSON.stringify({tab: name}))
+            else list(true)
             if (name === 'Postava') {camera.target.set(0, 1.05, 0); camera.radius = 3.45; centerRotation()}
         }
         button.setAttribute('aria-pressed', String(name === tab))

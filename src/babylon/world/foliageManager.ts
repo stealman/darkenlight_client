@@ -85,18 +85,7 @@ export const FoliageManager = {
     },
 
     renderFoliage(snowCoverMask: ReadonlySet<number>, vegetationMask: ReadonlySet<number>) {
-        const mesh = this.foliageMesh
-        const mossMesh = this.mossMesh
-        if (!mesh || !mossMesh) {
-            return
-        }
-
-        const matrices: Matrix[] = []
-        const uvData: Vector2[] = []
-        const mossMatrices: Matrix[] = []
-        const mossUvs: Vector2[] = []
-        const blockMap = WorldDataManager.getBlockMap()
-        const myPos = MyPlayer.myChar.getPositionRounded()
+        if (!this.foliageMesh || !this.mossMesh) return
         const buildingBounds = Array.from(BuildingManager.buildings.values(), building => ({
             minX: building.data.x,
             maxX: building.data.x + building.getWidth(),
@@ -108,10 +97,31 @@ export const FoliageManager = {
             !block.stonePath && !block.beigeStonePath && !BuildingManager.hasFloorAtTile(x, z)
             && !buildingBounds.some(bounds => x >= bounds.minX && x < bounds.maxX && z >= bounds.minZ && z < bounds.maxZ)
 
-        const minX = Math.max(0, myPos.x + ViewportManager.minX)
-        const maxX = Math.min(blockMap.length - 1, myPos.x + ViewportManager.maxX)
-        const minZ = Math.max(0, myPos.z + ViewportManager.minZ)
-        const maxZ = Math.min(blockMap.length - 1, myPos.z + ViewportManager.maxZ)
+        this.renderFoliageArea(WorldDataManager.getBlockMap(), snowCoverMask, vegetationMask, canDecorate,
+            MyPlayer.myChar.getPositionRounded())
+    },
+
+    renderFoliageArea(
+        blockMap: MapBlock[][],
+        snowCoverMask: ReadonlySet<number>,
+        vegetationMask: ReadonlySet<number>,
+        canDecorate: (block: MapBlock, x: number, z: number) => boolean,
+        viewportCenter?: {x: number, z: number},
+    ) {
+        const mesh = this.foliageMesh!
+        const mossMesh = this.mossMesh!
+        const matrices: Matrix[] = []
+        const uvData: Vector2[] = []
+        const mossMatrices: Matrix[] = []
+        const mossUvs: Vector2[] = []
+
+        const maxIndex = blockMap.length - 1
+        const minX = viewportCenter ? Math.max(0, viewportCenter.x + ViewportManager.minX) : 0
+        const minZ = viewportCenter ? Math.max(0, viewportCenter.z + ViewportManager.minZ) : 0
+        const maxX = viewportCenter ? Math.min(maxIndex, viewportCenter.x + ViewportManager.maxX) : maxIndex
+        const maxZ = viewportCenter ? Math.min(maxIndex, viewportCenter.z + ViewportManager.maxZ) : maxIndex
+        const isVisible = (x: number, z: number, block: MapBlock) =>
+            !viewportCenter || ViewportManager.isPointInVisibleMatrix(x, z, 2, block.totalHeight)
         for (let cellX = Math.floor(minX / SCATTER_CELL_SIZE); cellX <= Math.floor(maxX / SCATTER_CELL_SIZE); cellX++) {
             for (let cellZ = Math.floor(minZ / SCATTER_CELL_SIZE); cellZ <= Math.floor(maxZ / SCATTER_CELL_SIZE); cellZ++) {
                 // Absolute world cells seed the scatter. A tile can receive any number of candidates.
@@ -134,7 +144,7 @@ export const FoliageManager = {
                     const roll = this.roll(cellX, cellZ, salt + 9) * CANDIDATES_PER_TILE
                     const isTuft = roll < config.tuftsPerTile * density
                     if (!isTuft && (block.snowed || roll >= (config.tuftsPerTile + config.mossPerTile) * density)) continue
-                    if (!ViewportManager.isPointInVisibleMatrix(x, z, 2, block.totalHeight) || !canDecorate(block, x, z)) continue
+                    if (!isVisible(x, z, block) || !canDecorate(block, x, z)) continue
 
                     const hideSnow = block.snowed && snowCoverMask.has(x * blockMap.length + z)
                     const top = block.height + getTerrainHeightOffset(block, hideSnow)
@@ -166,7 +176,7 @@ export const FoliageManager = {
             if (x < minX || x > maxX || z < minZ || z > maxZ) continue
             const block = blockMap[x][z]
             if (!block.snowed || block.type <= 0 || block.type >= WATER_BLOCK_TYPE || !canDecorate(block, x, z)
-                || !ViewportManager.isPointInVisibleMatrix(x, z, 2, block.totalHeight)) continue
+                || !isVisible(x, z, block)) continue
 
             // Every exposed patch gets one tuft with a root inside its tile.
             const salt = 750
