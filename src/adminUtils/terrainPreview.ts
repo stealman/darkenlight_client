@@ -1,12 +1,16 @@
 import { ArcRotateCamera, Mesh, Scene, TransformNode, Vector3 } from '@babylonjs/core'
-import type { ArcRotateCameraPointersInput } from '@babylonjs/core'
+import type { ArcRotateCameraPointersInput, PBRMaterial } from '@babylonjs/core'
 import { TerrainEnum1 } from '@/babylon/materials'
+import { Lights } from '@/babylon/scene/lights'
 import { Renderer } from '@/babylon/scene/renderer'
 import { FoliageManager } from '@/babylon/world/foliageManager'
 import { TerrainManager } from '@/babylon/world/terrainManager'
 import { MapBlock } from '@/data/worldDataManager'
 import { Settings } from '@/settings/settings'
 import { createMuddyDirtPreview } from './muddyDirtPreview'
+import { createMuddyDirtFoliageProfiles } from './muddyDirtFoliage'
+import foliageAtlasUrl from './assets/muddy-dirt-foliage.png'
+import foliageNormalAtlasUrl from './assets/muddy-dirt-foliage-normal.png'
 
 const SIZE = 30
 const CENTER = (SIZE - 1) / 2
@@ -101,15 +105,35 @@ export function createTerrainPreview(
             return block
         }))
         const firstRender = !render
+        const profiles = createMuddyDirtFoliageProfiles(map, Lights.sunLight.direction)
         render = () => {
             TerrainManager.renderTerrainArea(map, planes, emptyMask)
             renderMuddyDirt(map)
-            FoliageManager.renderFoliageArea(map, emptyMask, emptyMask, isMuddyDirt)
+            FoliageManager.renderFoliageArea(map, emptyMask, emptyMask, isMuddyDirt, {
+                profiles,
+                extraTuftPasses: 2,
+            })
         }
         if (firstRender) {
             TerrainManager.initializeMeshes(scene, terrain, () => render?.())
             renderMuddyDirt = createMuddyDirtPreview(TerrainManager.terrainPlane!)
-            FoliageManager.initialize(scene, foliage)
+            FoliageManager.initialize(scene, foliage, {
+                atlasUrl: foliageAtlasUrl,
+                atlasCellPixels: 64,
+                blendedGround: true,
+                groundNormals: {atlasUrl: foliageNormalAtlasUrl, opaqueStrength: 1.8, blendedStrength: 0.8},
+            })
+            const moss = FoliageManager.blendedGroundMesh!
+            moss.receiveShadows = true
+            const mossMaterial = moss.material as PBRMaterial
+            mossMaterial.albedoColor.set(0.82, 0.84, 0.81)
+            mossMaterial.emissiveTexture = mossMaterial.albedoTexture
+            mossMaterial.emissiveColor.set(0.08, 0.08, 0.08)
+            FoliageManager.groundMesh!.receiveShadows = true
+            // Give the crossed billboards some fill on faces turned away from the sun.
+            const foliageMaterial = FoliageManager.foliageMaterial!
+            foliageMaterial.emissiveTexture = foliageMaterial.albedoTexture
+            foliageMaterial.emissiveColor.set(0.34, 0.34, 0.34)
         }
         render()
     }
