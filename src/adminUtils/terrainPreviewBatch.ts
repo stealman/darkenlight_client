@@ -193,7 +193,7 @@ export function configureTerrainEdgeLighting(material: PBRCustomMaterial, covera
     `)
 }
 
-export function configureMuddyDirtWetness(material: PBRCustomMaterial, mode: 'solid' | 'mixed' | 'snow' | 'walls' | 'cover') {
+export function configureMuddyDirtWetness(material: PBRCustomMaterial, mode: 'solid' | 'mixed' | 'walls' | 'cover') {
     material.AddAttribute('terrainWetTile')
     material.Vertex_Definitions(`${material.CustomParts.Vertex_Definitions}
         attribute vec3 terrainWetTile;
@@ -232,12 +232,6 @@ export function configureMuddyDirtWetness(material: PBRCustomMaterial, mode: 'so
             float foot = wetWall ? 1.0 - smoothstep(0.025, wallReach, abs(vPositionW.y - vDirtEdges.y))
                 : terraceFootMoisture(detail);
             float wetPatches = smoothstep(0.41, 0.94, moisture + 0.19 * foot);
-            ${mode === 'snow' ? `if (!wall) {
-                // Retain a damp base along the whole melting edge, even between the wetter patches.
-                float runoff = max(1.0 - smoothstep(0.28, mix(1.10, 1.48, detail), abs(coverDistance)),
-                    smoothstep(0.015, 0.23, grassWeight));
-                wetPatches = mix(wetPatches, max(wetPatches, mix(0.58, 0.73, detail)), runoff);
-            }` : ''}
             mudWetness = wetDirt * wetPatches;
             surfaceAlbedo *= 1.0 - mudWetness * 0.22;
             // Standing moisture smooths the ground more than the vertical wall.
@@ -247,31 +241,35 @@ export function configureMuddyDirtWetness(material: PBRCustomMaterial, mode: 'so
     material.Fragment_Custom_MetallicRoughness('metallicRoughness.g = mix(metallicRoughness.g, 0.53, mudWetness);')
 }
 
-export function configureRockSnowmelt(material: PBRCustomMaterial) {
+export function configureSnowmelt(material: PBRCustomMaterial, wallsOnly = false) {
     material.Fragment_Definitions(`${material.CustomParts.Fragment_Definitions}
-        float rockWetness;
+        float snowmeltWetness;
     `)
     material.Fragment_Before_Lights(`${material.CustomParts.Fragment_Before_Lights}
-        rockWetness = 0.0;
-        if (grassWeight < 1.0) {
+        snowmeltWetness = 0.0;
+        float exposedGround = ${wallsOnly ? '1.0 - grassWeight - snowWeight' : '1.0 - grassWeight'};
+        if (${wallsOnly ? 'wall && snowWeight > 0.0 && ' : ''}exposedGround > 0.0) {
             vec2 p = vPositionW.xz + vPositionW.y * vec2(0.61, -0.47);
             float pooling = terrainNoise(p * 2.1 + vec2(3.7, 14.2));
-            float reach = mix(1.55, 2.55, pooling);
+            ${wallsOnly ? `float snowDistance = snowFringe.y >= 0.0 ? snowFringe.y / topFringeDepth : -snowFringe.y;
+            float runoff = smoothstep(0.0, 0.24, snowWeight) * (1.0 - smoothstep(0.13, 0.54, snowDistance));` : `
             float runoff;
             if (wall) {
                 float contact = max(grassAtEdges.x, grassAtEdges.y);
                 runoff = contact * (1.0 - smoothstep(0.13, 0.54, grassEdgeDistance));
             } else {
-                runoff = 1.0 - smoothstep(0.31, reach, max(0.0, -coverDistance));
-            }
-            rockWetness = runoff * mix(0.63, 1.0, pooling);
-            float exposedWetRock = rockWetness * (1.0 - grassWeight);
-            // Darken and smooth the exposed stone while retaining its larger relief.
-            surfaceAlbedo *= 1.0 - 0.21 * exposedWetRock;
-            normalW = normalize(mix(normalW, geometricNormalW, 0.20 * exposedWetRock));
+                runoff = 1.0 - smoothstep(0.31, mix(1.55, 2.55, pooling), max(0.0, -coverDistance));
+            }`}
+            snowmeltWetness = runoff * mix(0.63, 1.0, pooling);
+            float exposedWetness = snowmeltWetness * exposedGround;
+            surfaceAlbedo *= 1.0 - 0.21 * exposedWetness;
+            normalW = normalize(mix(normalW, geometricNormalW, 0.20 * exposedWetness));
+            ${wallsOnly ? 'snowmeltWetness *= (1.0 - grassWeight);' : ''}
         }
     `)
-    material.Fragment_Custom_MetallicRoughness('metallicRoughness.g = mix(metallicRoughness.g, 0.44, rockWetness);')
+    material.Fragment_Custom_MetallicRoughness(`${material.CustomParts.Fragment_Custom_MetallicRoughness ?? ''}
+        metallicRoughness.g = mix(metallicRoughness.g, 0.44, snowmeltWetness);
+    `)
 }
 
 export function configureSnowGlints(material: PBRCustomMaterial, transition?: 'standard' | 'grass') {

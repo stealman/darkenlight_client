@@ -32,6 +32,7 @@ type TerrainAtlas = {
     colorUrl: string
     normal: {url: string, strength: number}
     roundDirtEdges?: boolean
+    wetDirt?: boolean
     roundRockTop?: boolean
     varyAdjacentPatches?: boolean
     patterns: ReadonlyArray<{size: number, origins: readonly (readonly number[])[]}>
@@ -91,10 +92,10 @@ export function createTerrainAtlasPreview(plane: Mesh, name: string, atlas: Terr
     const mesh = createTerrainPreviewPlane(plane, name)
     const material = createAtlasMaterial(plane, name, atlas)
     configureTerrainPreviewBatch(mesh, material)
-    const {roundDirtEdges = false, roundRockTop = false} = atlas
+    const {roundDirtEdges = false, roundRockTop = false, wetDirt = false} = atlas
     const roundEdges = roundDirtEdges || roundRockTop
     if (roundEdges) configureTerrainEdgeLighting(material, undefined, roundRockTop)
-    if (roundDirtEdges) configureMuddyDirtWetness(material, 'solid')
+    if (wetDirt) configureMuddyDirtWetness(material, 'solid')
 
     const render = ({atlasTops, stride, roofs, wetCorners, cornerFloors}: TerrainPreviewSurfaces, takeTile?: TerrainAtlasTileFilter,
                     batch = new TerrainPreviewBatch()) => {
@@ -133,7 +134,7 @@ export function createTerrainAtlasPreview(plane: Mesh, name: string, atlas: Terr
                         const floor = cornerFloors.get(tileKey)
                         const roof = roofs.get(tileKey)
                         const footMask = wetCorners.get(tileKey) ?? 0
-                        const wetMask = roundDirtEdges ? footMask : 0
+                        const wetMask = wetDirt ? footMask : 0
                         if (floor) addTerrainPreviewRoof(batch, matrix, uv, floor, {mirrorAtTileEdge: true, roundDirtEdges: roundEdges, wetCorners: wetMask})
                         // Let the transition reuse the same atlas placement the tile would normally have.
                         if (takeTile?.(matrix, uv, tileX, tileZ, roof, footMask)) continue
@@ -143,7 +144,7 @@ export function createTerrainAtlasPreview(plane: Mesh, name: string, atlas: Terr
             }
         }
 
-        batch.apply(mesh, roundEdges, roundDirtEdges)
+        batch.apply(mesh, roundEdges, wetDirt)
     }
     return {mesh, material, render}
 }

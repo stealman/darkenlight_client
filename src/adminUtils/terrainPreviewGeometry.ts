@@ -6,7 +6,7 @@ import {
     createBeveledTerrainVertexData, TERRAIN_BEVEL_DROP, TERRAIN_VERTICAL_BEVEL_WIDTH,
     TerrainCorner, TerrainEdge, TerrainVerticalCorner,
 } from '@/babylon/world/beveledTerrainBlock'
-import { getTerrainHeightOffset } from '@/babylon/world/terrainManager'
+import { getTerrainHeightOffset, WATER_BLOCK_TYPE } from '@/babylon/world/terrainManager'
 import type { MapBlock } from '@/data/worldDataManager'
 import { createTerrainPreviewPlane, muddyDirtPatterns, terrainCoverPatterns, TERRAIN_ATLAS_TILES } from './terrainAtlasPreview'
 import { addTerrainPreviewRoof, configureTerrainPreviewBatch, TerrainPreviewBatch } from './terrainPreviewBatch'
@@ -15,15 +15,18 @@ import type { TerrainPreviewTriangle } from './terrainPreviewBatch'
 const WALL_DIRECTIONS = [[0, -1], [-1, 0], [0, 1], [1, 0]] as const
 const WALL_UNDERLAP = 0.60
 const MIN_TERRACE_STEP = 0.5
+const POND_FLOOR_DEPTH = 0.65
 const EDGE_BITS = [TerrainEdge.North, TerrainEdge.West, TerrainEdge.South, TerrainEdge.East] as const
 const EDGE_MASK = TerrainEdge.North | TerrainEdge.West | TerrainEdge.South | TerrainEdge.East
 const SNOW_DIRT = TerrainEnum1.TERRAIN_SNOW_MUDDY_DIRT.index
+const SNOW_DRY_DIRT = TerrainEnum1.TERRAIN_SNOW_DIRT.index
 const SNOW_WINTER_GRASS = TerrainEnum1.TERRAIN_SNOW_GRASS_WINTER.index
 const SNOW_ROCK = TerrainEnum1.TERRAIN_SNOW_ROCK.index
 const ROCK = TerrainEnum1.TERRAIN_ROCK.index
+const DIRT = TerrainEnum1.TERRAIN_DIRT.index
 const atlasType = (block: MapBlock) => {
     const type = block.snowed ? block.type + 100 : block.type
-    return type === SNOW_WINTER_GRASS || type === SNOW_ROCK ? SNOW_DIRT : type
+    return type === SNOW_DRY_DIRT || type === SNOW_WINTER_GRASS || type === SNOW_ROCK ? SNOW_DIRT : type
 }
 const WALL_ROTATIONS = WALL_DIRECTIONS.map((_, index) => Matrix.RotationYawPitchRoll(
     index * Math.PI / 2, -Math.PI / 2, 0,
@@ -50,6 +53,7 @@ export type TerrainPreviewSurfaces = {
     wetCorners: ReadonlyMap<number, number>
     cornerFloors: ReadonlyMap<number, TerrainPreviewTriangle[]>
     walls: TerrainPreviewBatch
+    dirtWalls: TerrainPreviewBatch
     rockWalls: TerrainPreviewBatch
 }
 
@@ -69,6 +73,7 @@ export function createTerrainPreviewGeometry(plane: Mesh, atlasTypes: readonly n
     const deposits = createTerrainPreviewPlane(plane, 'adminUtilsTerrainDeposits')
     // Ore and coal are only in the block atlas. Use the same top-face UV rectangle on a plane.
     configureTerrainPreviewBatch(deposits, Materials.createTerrainMaterial1(scene))
+
 
     const snowMask = new Set<number>()
     const templates = new Map<string, TerrainPreviewTriangle[]>()
@@ -97,14 +102,16 @@ export function createTerrainPreviewGeometry(plane: Mesh, atlasTypes: readonly n
         const tops = new TerrainPreviewBatch()
         const oreTops = new TerrainPreviewBatch()
         const walls = new TerrainPreviewBatch()
+        const dirtWalls = new TerrainPreviewBatch()
         const rockWalls = new TerrainPreviewBatch()
         const stride = map.length
         const atlasTops = new Map(atlasTypes.map(type => [type, new Map<number, number>()]))
         const roofs = new Map<number, TerrainPreviewTriangle[]>()
         const wetCorners = new Map<number, number>()
         const cornerFloors = new Map<number, TerrainPreviewTriangle[]>()
-        const heights = map.map(row => row.map(block => atlasType(block) === SNOW_DIRT
-            ? block.totalHeight : block.height + getTerrainHeightOffset(block, false)))
+        const heights = map.map(row => row.map(block => block.type === WATER_BLOCK_TYPE
+            ? block.height - POND_FLOOR_DEPTH
+            : atlasType(block) === SNOW_DIRT ? block.totalHeight : block.height + getTerrainHeightOffset(block, false)))
         const flatSnowRoofs = map.map(row => row.map(block => atlasType(block) === SNOW_DIRT))
         const cornerSteps = heights.map((row, x) => row.map((top, z) => ROOF_CORNERS.map(([dx, dz]) => {
             // Every tile sharing this corner at the same elevation computes the same height.
@@ -118,8 +125,12 @@ export function createTerrainPreviewGeometry(plane: Mesh, atlasTypes: readonly n
         for (let x = 0; x < map.length; x++) {
             for (let z = 0; z < map[x].length; z++) {
                 const block = map[x][z]
+                if (block.type === WATER_BLOCK_TYPE) {
+                    atlasTops.get(DIRT)!.set(x * stride + z, heights[x][z])
+                    continue
+                }
                 const isRock = block.type === ROCK
-                const baseWallBatch = isRock ? rockWalls : walls
+                const baseWallBatch = isRock ? rockWalls : block.type === DIRT ? dirtWalls : walls
                 const atlas = atlasTops.get(atlasType(block))
                 const deposit = block.minableCoal || block.minableOreAvailable
                 const top = heights[x][z]
@@ -236,7 +247,7 @@ export function createTerrainPreviewGeometry(plane: Mesh, atlasTypes: readonly n
         for (const [key, floors] of cornerFloors) {
             const x = Math.floor(key / stride), z = key % stride
             const block = map[x][z]
-            if (atlasTops.get(atlasType(block))?.has(key)) continue
+            if (block.type === WATER_BLOCK_TYPE || atlasTops.get(atlasType(block))?.has(key)) continue
             const placement = Matrix.Translation(x, heights[x][z], z)
             if (block.minableCoal || block.minableOreAvailable) {
                 addTerrainPreviewRoof(oreTops, placement, TerrainEnum1.getTerrainForBlock(block), floors,
@@ -247,7 +258,7 @@ export function createTerrainPreviewGeometry(plane: Mesh, atlasTypes: readonly n
         }
         tops.apply(plane)
         oreTops.apply(deposits)
-        return {stride, atlasTops, roofs, wetCorners, cornerFloors, walls, rockWalls}
+        return {stride, atlasTops, roofs, wetCorners, cornerFloors, walls, dirtWalls, rockWalls}
     }
     return {render, deposits}
 }
