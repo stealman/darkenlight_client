@@ -6,11 +6,12 @@ import { TerrainEnum1 } from '@/babylon/materials'
 import { Lights } from '@/babylon/scene/lights'
 import { Renderer } from '@/babylon/scene/renderer'
 import { SNOW_BLOCK_HEIGHT } from '@/babylon/world/beveledTerrainBlock'
+import { createSnowCoverMask } from '@/babylon/world/snowCoverMask'
 import { WATER_BLOCK_TYPE } from '@/babylon/world/terrainManager'
 import { MapBlock } from '@/data/worldDataManager'
-import { loadStarterTerrain, STARTER_TERRAIN_RADIUS } from './starterTerrainPreview'
 import { Settings } from '@/settings/settings'
 import { terrainBoundaryOffset, TERRAIN_TRANSITION_REACH } from './terrainTransitionMaterial'
+import { terrainWithoutSnow } from './terrainLocalTransitions'
 
 const TERRAIN_PREVIEW_STORAGE_KEY = 'darkenlight.adminUtils.terrainPreview'
 const SIZE = 30
@@ -84,20 +85,59 @@ function findTransitionTiles(map: MapBlock[][]) {
     return tiles
 }
 
+const snowTerraceHeight = (x: number, z: number) =>
+    Number(x >= 10 && x <= 19 && z >= 14 && z <= 20 && (x <= 16 || z >= 16))
+const snowTerraceTrees = [{position: {x: 12, z: 14}}, {position: {x: 15, z: 18}}]
+const snowTerraceShrub = {type: 121, position: {x: 18, z: 15}, getSizeX: () => 1, getSizeZ: () => 1}
+const snowTerraceProps = [...snowTerraceTrees, snowTerraceShrub].map(source => {
+    const {x, z} = source.position
+    return {x: x - CENTER, y: snowTerraceHeight(x, z), z: z - CENTER, shrub: 'type' in source}
+})
+
+function createSnowTerracePreview(hideSnow: boolean) {
+    const {mask} = createSnowCoverMask(snowTerraceTrees, [snowTerraceShrub], SIZE, 1, snowTerraceHeight)
+    const snow = [0, 1].map(level => {
+        const block = new MapBlock(level, WINTER_GRASS)
+        block.snowed = true
+        block.computeData()
+        block.heightOffset = 0
+        block.totalHeight = block.walkHeight = level
+        return block
+    })
+    const bare = snow.map(terrainWithoutSnow)
+    return Array.from({length: SIZE}, (_, x) => Array.from({length: SIZE}, (_, z) =>
+        (hideSnow && mask.has(x * SIZE + z) ? bare : snow)[snowTerraceHeight(x, z)]))
+}
+
+function createRockOverMudPreview() {
+    const mud = new MapBlock(0, MUDDY_DIRT)
+    const rock = new MapBlock(1, ROCK)
+    const snowyRock = new MapBlock(1, ROCK)
+    snowyRock.snowed = true
+    for (const block of [mud, rock, snowyRock]) block.computeData()
+    return Array.from({length: SIZE}, (_, x) => Array.from({length: SIZE}, (_, z) =>
+        snowTerraceHeight(x, z) ? (x < 15 || z < 17 ? snowyRock : rock) : mud))
+}
+
 export function createTerrainPreview(
     scene: Scene,
     parent: TransformNode,
     assetCamera: ArcRotateCamera,
     ground: Mesh,
     setLighting: (active: boolean) => void,
+    setSnowTerraceProps: (props: readonly {x: number, y: number, z: number, shrub: boolean}[]) => void,
 ) {
     const controls = document.createElement('section')
     controls.hidden = true
     controls.innerHTML = `
         <label class="admin-utils__field">Oblast <select id="terrainSource">
-            <option value="starter">Start postav</option><option value="demo">Testovací terén</option>
+            <option value="demo">Testovací terén</option>
+            <option value="snowTerrace">Sníh u stromu a keře</option>
+            <option value="rockOverMud">Zasněžená skála nad bahnem</option>
         </select></label>
-        <output id="terrainSourceStatus" role="status"></output>
+        <label class="admin-utils__field" id="terrainSnowMaskField" hidden>
+            <span><input id="terrainSnowMask" type="checkbox" checked> Potlačit sníh pod stromem a keřem</span>
+        </label>
         <label class="admin-utils__field">Povrch A<select id="terrainPrimary"></select></label>
         <label class="admin-utils__field">Povrch B<select id="terrainSecondary"><option value="">Bez druhého povrchu</option></select></label>
         <label class="admin-utils__field"><span>Intenzita slunce <output for="terrainLightIntensity">100 %</output></span>
@@ -105,7 +145,8 @@ export function createTerrainPreview(
         <div class="admin-utils__field"><label><input id="terrainFoliage" type="checkbox" checked> Zobrazit vegetaci</label></div>
         <button type="button">Vycentrovat pohled</button>`
     const source = controls.querySelector<HTMLSelectElement>('#terrainSource')!
-    const sourceStatus = controls.querySelector<HTMLOutputElement>('#terrainSourceStatus')!
+    const snowMaskField = controls.querySelector<HTMLLabelElement>('#terrainSnowMaskField')!
+    const snowMask = controls.querySelector<HTMLInputElement>('#terrainSnowMask')!
     const primary = controls.querySelector<HTMLSelectElement>('#terrainPrimary')!
     const secondary = controls.querySelector<HTMLSelectElement>('#terrainSecondary')!
     const foliageToggle = controls.querySelector<HTMLInputElement>('#terrainFoliage')!
@@ -144,7 +185,11 @@ export function createTerrainPreview(
     const foliage = new TransformNode('adminUtilsTerrainFoliage', scene)
     foliage.parent = terrain
     foliage.setEnabled(foliageToggle.checked)
-    foliageToggle.onchange = () => foliage.setEnabled(foliageToggle.checked)
+    const updateProps = () => setSnowTerraceProps(source.value === 'snowTerrace' && foliageToggle.checked ? snowTerraceProps : [])
+    foliageToggle.onchange = () => {
+        foliage.setEnabled(foliageToggle.checked)
+        updateProps()
+    }
 
     const {cameraPosition, cameraViewY} = Renderer.getCameraSetup()
     const target = new Vector3(0, cameraViewY, 0)
@@ -166,20 +211,17 @@ export function createTerrainPreview(
     const pointers = camera.inputs.attached.pointers as ArcRotateCameraPointersInput
     pointers.buttons = [2]
 
-    let starterMap: MapBlock[][] | undefined
     const transitionBoundary = new Vector3(CENTER, 0, 0)
-    let renderFoliage: ReturnType<typeof createTerrainFoliageRenderer>
-    let surfaceRenderer: ReturnType<typeof createTerrainSurfaceRenderer>
-    let render: (() => void) | undefined
+    let renderers: {
+        surface: ReturnType<typeof createTerrainSurfaceRenderer>
+        foliage: ReturnType<typeof createTerrainFoliageRenderer>
+    } | undefined
     const update = () => {
-        const starter = source.value === 'starter' && !!starterMap
-        const atPondBank = starter ? () => false : isPondBankTile
-        const center = starter ? STARTER_TERRAIN_RADIUS : CENTER
-        terrain.position.set(-center, 0, -center)
-        target.y = cameraViewY + (starter ? starterMap![center][center].height : 0)
-        camera.panningOriginTarget.copyFrom(target)
-        camera.panningDistanceLimit = (starter ? starterMap!.length : SIZE) / Math.SQRT2
-        transitionBoundary.set(center, 0, Number(starter))
+        const snowTerrace = source.value === 'snowTerrace'
+        const rockOverMud = source.value === 'rockOverMud'
+        const localBoundaries = snowTerrace || rockOverMud
+        updateProps()
+        transitionBoundary.z = Number(localBoundaries)
         const first = Number(primary.value)
         const second = Number(secondary.value)
         const snow = isPreviewSnow(first) || isPreviewSnow(second)
@@ -219,24 +261,23 @@ export function createTerrainPreview(
             }
             return block
         }))
-        const map = starter ? starterMap! : demoMap
-        const transitionTiles = !starter && hasTransitions ? findTransitionTiles(map) : undefined
-        const firstRender = !render
-        render = () => {
-            surfaceRenderer.render(map, {transitionTiles, snow, snowPartner, snowOnRock, rockPartner, dirtPartner,
-                shoreSurface: first, grassType, snowRockOnSoil, localBoundaries: starter, drawPaths: starter})
-            renderFoliage.render(map, {atPondBank, transitionWeight: (x, z) => {
+        const map = snowTerrace ? createSnowTerracePreview(snowMask.checked) : rockOverMud ? createRockOverMudPreview() : demoMap
+        const transitionTiles = !localBoundaries && hasTransitions ? findTransitionTiles(map) : undefined
+        renderers ??= {
+            surface: createTerrainSurfaceRenderer(scene, terrain, transitionBoundary,
+                {map: demoMap, center: CENTER, boundaries: BOUNDARIES, isBank: isPondBankTile}),
+            foliage: createTerrainFoliageRenderer(scene, foliage),
+        }
+        renderers.surface.render(map, {transitionTiles, snow, snowPartner, snowOnRock, rockPartner, dirtPartner,
+            shoreSurface: first, grassType, snowRockOnSoil, localBoundaries})
+        renderers.foliage.render(map, {
+            atPondBank: localBoundaries ? () => false : isPondBankTile,
+            transitionWeight: (x, z) => {
                 if (!transitionTiles?.[Math.round(x)][Math.round(z)]) return 0
                 const distance = Math.abs(x - CENTER - terrainBoundaryOffset(z))
                 return Math.max(0, 1 - distance / TERRAIN_TRANSITION_REACH)
-            }})
-        }
-        if (firstRender) {
-            surfaceRenderer = createTerrainSurfaceRenderer(scene, terrain, transitionBoundary,
-                {map: demoMap, center: CENTER, boundaries: BOUNDARIES, isBank: isPondBankTile})
-            renderFoliage = createTerrainFoliageRenderer(scene, foliage)
-        }
-        render()
+            },
+        })
     }
     const resetCamera = () => {
         camera.target.copyFrom(target)
@@ -249,30 +290,15 @@ export function createTerrainPreview(
         } catch { /* Storage may be unavailable. */ }
         update()
     }
-    const showSource = async () => {
-        const useStarter = source.value === 'starter'
-        primary.disabled = secondary.disabled = useStarter
-        if (useStarter && !starterMap) {
-            sourceStatus.value = 'Načítám výchozí oblast…'
-            try {
-                starterMap = await loadStarterTerrain()
-            } catch (error) {
-                if (source.value !== 'starter') return
-                console.error('Cannot load the starter terrain', error)
-                source.value = 'demo'
-                primary.disabled = secondary.disabled = false
-                sourceStatus.value = 'Výchozí oblast se nepodařilo načíst.'
-                update()
-                resetCamera()
-                return
-            }
-            if (source.value !== 'starter') return
-        }
-        sourceStatus.value = ''
+    const showSource = () => {
+        const snowTerrace = source.value === 'snowTerrace'
+        primary.disabled = secondary.disabled = source.value !== 'demo'
+        snowMaskField.hidden = !snowTerrace
         update()
         resetCamera()
     }
-    source.onchange = () => void showSource()
+    source.onchange = showSource
+    snowMask.onchange = update
     primary.onchange = changeSurface
     secondary.onchange = changeSurface
     controls.querySelector('button')!.onclick = resetCamera
@@ -291,7 +317,8 @@ export function createTerrainPreview(
                 resetCamera()
                 scene.activeCamera = camera
                 camera.attachControl(false, false, 2)
-                if (!render) void showSource()
+                if (renderers) updateProps()
+                else showSource()
             } else {
                 camera.detachControl()
                 scene.activeCamera = assetCamera

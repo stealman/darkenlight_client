@@ -78,6 +78,7 @@ export type { StaticLightProfile }
 
 export const Lights = {
     shadow: {} as ShadowGenerator,
+    sunShadowDarkness: 0,
     sunLight: {} as DirectionalLight,
     personalLight: {} as SpotLight,
     personalShadow: {} as ShadowGenerator,
@@ -115,7 +116,7 @@ export const Lights = {
     buildingInteriorBlend: 0,
     personalShadowLightPosition: new Vector3(Number.NaN, Number.NaN, Number.NaN),
 
-    initialize(scene: Scene) {
+    initialize(scene: Scene, {terrainSunShadows = false} = {}) {
         resetStaticLighting(this)
         resetMeshLighting(this)
         this.dayNightShadersWarmed = false
@@ -150,8 +151,6 @@ export const Lights = {
 
         if (Settings.isShadowsEnabled()) {
             this.shadow = new ShadowGenerator(Settings.detailLevel.shadowQuality == 2 ? 4096 : 2048, this.sunLight, false)
-            this.shadow.bias = 0.001
-            this.shadow.setDarkness(0)
             this.shadow.usePoissonSampling = true
             this.shadow.forceBackFacesOnly = true
             this.personalShadow = new ShadowGenerator(Settings.detailLevel.shadowQuality == 2 ? 2048 : 1024, this.personalLight, false)
@@ -163,10 +162,19 @@ export const Lights = {
             this.personalLight.shadowMaxZ = this.personalLight.range
             this.personalLight.shadowEnabled = true
         }
+        this.setTerrainSunShadows(terrainSunShadows)
 
         this.sunLight.setEnabled(true)
         this.personalLight.setEnabled(false)
         this.brightnessChanged()
+    },
+
+    setTerrainSunShadows(enabled: boolean) {
+        this.sunShadowDarkness = enabled ? 0.10 : 0
+        if (!Settings.isShadowsEnabled()) return
+        // A small negative bias keeps back-face shadows attached at the foot of the terrain.
+        this.shadow.bias = enabled ? -0.00065 : 0.001
+        this.shadow.blurScale = enabled ? 2.3 : 2
     },
 
     configureStaticLightMaterials() {

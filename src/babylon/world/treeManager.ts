@@ -623,7 +623,7 @@ class TreeBirch extends TreeOak {
     }
 }
 
-class TreeFir implements Tree {
+export class TreeFir implements Tree {
     position: Vector3
     rotation: number
     scale: number

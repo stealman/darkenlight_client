@@ -50,6 +50,7 @@ export const FOG_ENABLED = true
 
 export interface DayNightLightingHost {
     shadow: ShadowGenerator
+    sunShadowDarkness: number
     sunLight: DirectionalLight
     personalLight: SpotLight
     personalShadow: ShadowGenerator
@@ -222,7 +223,7 @@ function updateDynamicShadowMode(host: DayNightLightingHost, phase: number) {
     const personalShadowActive = host.indoor
         || phase < SUNRISE_SHADOW_SWITCH_PHASE
         || phase >= SUNSET_SHADOW_SWITCH_PHASE
-    setDynamicShadowActive(host.shadow, !personalShadowActive, 0)
+    setDynamicShadowActive(host.shadow, !personalShadowActive, host.sunShadowDarkness)
     setDynamicShadowActive(
         host.personalShadow,
         personalShadowActive,

@@ -118,7 +118,7 @@ export const Renderer = {
         this.instrumentation.captureFrameTime = true;
         this.instrumentation.captureActiveMeshesEvaluationTime = true
 
-        Lights.initialize(this.scene)
+        Lights.initialize(this.scene, {terrainSunShadows: true})
         AudioManager.initialize(this.scene)
         MiniMap.initialize()
         CharacterManager.initialize()

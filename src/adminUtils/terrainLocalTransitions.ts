@@ -1,9 +1,15 @@
 import { TerrainEnum1 } from '@/babylon/materials'
-import type { MapBlock } from '@/data/worldDataManager'
+import { MapBlock } from '@/data/worldDataManager'
 
 type Boundary<T> = {x: number, z: number, height: number, alongX: boolean, cover: number, substrate: number, material: T}
 const SNOW = TerrainEnum1.TERRAIN_SNOW_MUDDY_DIRT.index
 export const terrainSurface = (block: MapBlock) => block.snowed ? SNOW : block.type
+
+export function terrainWithoutSnow(block: MapBlock): MapBlock {
+    const type = block.type === TerrainEnum1.TERRAIN_GRASS.index || block.type === TerrainEnum1.TERRAIN_GRASS_WINTER.index
+        ? TerrainEnum1.TERRAIN_DIRT.index : block.type
+    return Object.assign(new MapBlock(block.height, type), block, {type, snowed: false, heightOffset: 0, totalHeight: block.height})
+}
 
 export function findTerrainTransitions<T>(map: MapBlock[][],
                                          materialFor: (cover: number, substrate: number) => T | undefined) {
@@ -62,6 +68,6 @@ export function findTerrainTransitions<T>(map: MapBlock[][],
         const sign = type === cover ? 1 : -1
         const field = corners.map(([dx, dz]) =>
             sign * samePair.reduce((min, edge) => Math.min(min, distance(x + dx, z + dz, edge)), range))
-        return {cover: type === cover, material, field}
+        return {cover: type === cover, coverType: cover, material, field}
     }))
 }

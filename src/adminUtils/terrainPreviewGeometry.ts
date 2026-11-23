@@ -25,6 +25,7 @@ const SNOW_WINTER_GRASS = TerrainEnum1.TERRAIN_SNOW_GRASS_WINTER.index
 const SNOW_ROCK = TerrainEnum1.TERRAIN_SNOW_ROCK.index
 const ROCK = TerrainEnum1.TERRAIN_ROCK.index
 const DIRT = TerrainEnum1.TERRAIN_DIRT.index
+const MUDDY_DIRT = TerrainEnum1.TERRAIN_MUDDY_DIRT.index
 const atlasType = (block: MapBlock) => {
     const type = block.snowed ? block.type + 100 : block.type
     return type === SNOW_DRY_DIRT || type === SNOW_GRASS || type === SNOW_WINTER_GRASS || type === SNOW_ROCK ? SNOW_DIRT : type
@@ -106,7 +107,7 @@ export function createTerrainPreviewGeometry(plane: Mesh, atlasTypes: readonly n
     const render = (map: MapBlock[][], takeWall?: (contact: TerrainWallContact, triangles: number) =>
         TerrainPreviewBatch | undefined, includeTile?: (x: number, z: number) => boolean,
                     originX = 0, originZ = 0, submit: SubmitTerrainBatch =
-                        (mesh, batch) => batch.apply(mesh), previewWater = true): TerrainPreviewSurfaces => {
+                        (mesh, batch) => batch.apply(mesh), previewWater = true, localBoundaries = false): TerrainPreviewSurfaces => {
         const tops = new TerrainPreviewBatch()
         const legacyDeposits = new TerrainPreviewBatch()
         const walls = new TerrainPreviewBatch()
@@ -120,7 +121,7 @@ export function createTerrainPreviewGeometry(plane: Mesh, atlasTypes: readonly n
         const cornerFloors = new Map<number, TerrainPreviewTriangle[]>()
         const heights = map.map(row => row.map(block => block.type <= 0 ? undefined : block.type === WATER_BLOCK_TYPE
             ? block.height - (!previewWater ? (block.deepWater ? 1 : 0.5) : POND_FLOOR_DEPTH)
-            : !previewWater ? block.height
+            : localBoundaries ? block.height
                 : atlasType(block) === SNOW_DIRT ? block.totalHeight : block.height + getTerrainHeightOffset(block, false)))
         const terrainTop = (x: number, z: number) => heights[x][z]!
         const flatSnowRoofs = map.map(row => row.map(block => atlasType(block) === SNOW_DIRT))
@@ -195,7 +196,8 @@ export function createTerrainPreviewGeometry(plane: Mesh, atlasTypes: readonly n
                             && !lowerBlock.minableCoal && !lowerBlock.minableOreAvailable
                         return {
                             top: layer === 0 && atlas && !block.snowed && !deposit ? top : undefined,
-                            foot: !isRock && lowerAtlas && foot >= base - 1e-6 ? foot : undefined,
+                            foot: (!isRock || (localBoundaries && lowerBlock.type === MUDDY_DIRT))
+                                && lowerAtlas && foot >= base - 1e-6 ? foot : undefined,
                         }
                     }
                     const wallBatch = (side: number, triangles: number) => {

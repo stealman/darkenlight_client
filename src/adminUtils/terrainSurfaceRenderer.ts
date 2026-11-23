@@ -1,13 +1,11 @@
-import { Matrix, Mesh, Vector2 } from '@babylonjs/core'
-import type { Scene, TransformNode, Vector3 } from '@babylonjs/core'
+import type { Mesh, Scene, TransformNode, Vector3 } from '@babylonjs/core'
 import type { PBRCustomMaterial } from '@babylonjs/materials'
 import type { MapBlock } from '@/data/worldDataManager'
 import { findTerrainTransitions, terrainSurface } from './terrainLocalTransitions'
 import { Builder } from '@/babylon/builder'
-import { MaterialEnum1, Materials, TerrainEnum1 } from '@/babylon/materials'
+import { TerrainEnum1 } from '@/babylon/materials'
 import { Lights } from '@/babylon/scene/lights'
 import { WATER_BLOCK_TYPE } from '@/babylon/world/terrainManager'
-import { updateWorldInstanceBuffers } from '@/babylon/world/worldInstanceBuffers'
 import { Settings } from '@/settings/settings'
 import { createTerrainAtlasPreview, createTerrainPreviewPlane, muddyDirtPatterns, terrainCoverPatterns } from './terrainAtlasPreview'
 import type { TerrainAtlasTileFilter } from './terrainAtlasPreview'
@@ -75,7 +73,6 @@ type TerrainRenderOptions = {
     grassType?: number
     snowRockOnSoil?: boolean
     localBoundaries?: boolean
-    drawPaths?: boolean
     includeTile?: (x: number, z: number) => boolean
     originX?: number
     originZ?: number
@@ -91,13 +88,6 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
     plane.receiveShadows = Settings.isShadowsEnabled()
     const geometry = createTerrainPreviewGeometry(plane, [MUDDY_DIRT, DIRT, ...GRASS_TYPES, SNOW_DIRT, ROCK])
     const pond = demo && createTerrainPreviewWater(plane, demo.map, demo.isBank, demo.center)
-    const paths = demo && Builder.createWrappedBlock(scene, parent)
-    if (paths) {
-        paths.name = 'adminUtilsStarterStonePaths'
-        paths.material = Materials.blockMat1
-        paths.receiveShadows = plane.receiveShadows
-        Lights.addShadowCaster(paths, false)
-    }
     const dirtAtlas = createTerrainAtlasPreview(plane, 'adminUtilsMuddyDirt', {
         type: MUDDY_DIRT, colorUrl: muddyDirtColorUrl,
         normal: {url: muddyDirtNormalUrl, strength: 4}, patterns: muddyDirtPatterns, roundDirtEdges: true, wetDirt: wetness,
@@ -143,7 +133,7 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
             (mudCover || dryCover ? muddyDirtPatterns : terrainCoverPatterns)[0].origins[0],
             (withDirt || drySubstrate ? muddyDirtPatterns : terrainCoverPatterns)[0].origins[0], transitionBoundary,
             withGrass ? wallSoil : undefined, withRock, atPond && pond ? {...pond, coverOnBank: mudCover} : undefined, soilRockWalls,
-            blendRockWalls ? rockAtlas.material : undefined)
+            blendRockWalls ? rockAtlas.material : undefined, cover === snowAtlas.material)
         configureTerrainPreviewBatch(mesh, material, false)
         configureTerrainEdgeLighting(material, mudCover || soilRockWalls ? 'vec2(1.0)' : 'dirtCoverage', withRock && !mudCover)
         if (wetness && (mudCover || withDirt || (withGrass && wallSoil === dirtAtlas.material))) {
@@ -196,24 +186,9 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
     const render = (map: MapBlock[][], options: TerrainRenderOptions) => {
         const {transitionTiles, snow = false, snowPartner = 0, snowOnRock = false, rockPartner = 0, dirtPartner = 0,
             shoreSurface = 0, grassType = WINTER_GRASS, snowRockOnSoil = false, localBoundaries = true,
-            drawPaths = false, includeTile, originX = 0, originZ = 0, submit} = options
+            includeTile, originX = 0, originZ = 0, submit} = options
         pond?.mesh.setEnabled(!localBoundaries)
         if (!localBoundaries) pond?.setLevel(map)
-        const pathMatrices: Matrix[] = []
-        const pathUvs: Vector2[] = []
-        if (drawPaths) {
-            map.forEach((row, x) => row.forEach((block, z) => {
-                if (!block.stonePath && !block.beigeStonePath) return
-                const matrix = Matrix.Scaling(1, 0.12, 1)
-                matrix.setTranslationFromFloats(x, block.height + 0.56, z)
-                pathMatrices.push(matrix)
-                pathUvs.push((block.beigeStonePath ? MaterialEnum1.ROCK1_BEIGE : MaterialEnum1.ROCK1).uv)
-            }))
-        }
-        if (paths) {
-            updateWorldInstanceBuffers(paths, pathMatrices, pathUvs)
-            paths.setEnabled(pathMatrices.length > 0)
-        }
         const localTransitions = localBoundaries ? findTerrainTransitions(map, (cover, substrate) => {
             const coverGrass = grassTransitions.get(cover)
             const substrateGrass = grassTransitions.get(substrate)
@@ -235,11 +210,12 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
             : rockPartner === DIRT ? dirtRockTransition : snowOnRock ? snowRockTransition : snowGrass ? grass.snow
                 : snowPartner === DIRT ? snowDirtTransition : snow ? snowTransition : dirtPartner === MUDDY_DIRT ? mudDirtTransition
                     : isGrass(dirtPartner) ? grass.dirt : grass.mud
-        const batches = new Map<Mesh, {geometry: TerrainPreviewBatch, surfaceData: number[], wallData: number[], boundaryData: number[]}>()
+        const batches = new Map<Mesh, {geometry: TerrainPreviewBatch, surfaceData: number[], wallData: number[],
+            boundaryData: number[], footBoundaryData: number[]}>()
         const batchFor = (mesh: Mesh) => {
             let batch = batches.get(mesh)
             if (!batch) {
-                batch = {geometry: new TerrainPreviewBatch(), surfaceData: [], wallData: [], boundaryData: []}
+                batch = {geometry: new TerrainPreviewBatch(), surfaceData: [], wallData: [], boundaryData: [], footBoundaryData: []}
                 batches.set(mesh, batch)
             }
             return batch
@@ -262,28 +238,45 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
             if (localBoundaries) {
                 const upper = map[x][z]
                 const lower = map[lowerX][lowerZ]
-                const snowAtEdge = upper.snowed || lower.snowed
+                const topTransition = localTransitions?.[x][z]
+                const footTransition = localTransitions?.[lowerX][lowerZ]
+                const muddyRockFoot = isRock && bottomY !== undefined && lower.type === MUDDY_DIRT
+                    && !lower.stonePath && !lower.beigeStonePath && (!lower.snowed || footTransition?.material === snowTransition)
+                const snowAtEdge = (topY !== undefined && (upper.snowed || topTransition?.coverType === SNOW_DIRT))
+                    || (bottomY !== undefined && (lower.snowed || footTransition?.coverType === SNOW_DIRT))
                 const dirtBase = type === DIRT
                 const grassEdge = grassTransitions.get(upper.type) ?? grassTransitions.get(lower.type)
-                const mesh = snowAtEdge
-                    ? (isRock ? snowRockTransition : grassEdge ? (dirtBase ? grassEdge.snowOnDirt : grassEdge.snow)
-                        : dirtBase ? snowDirtTransition : snowTransition)
+                const exposedGrass = isGrass(terrainSurface(upper)) || isGrass(terrainSurface(lower))
+                const soilSnow = isRock ? snowRockTransition : dirtBase || isGrass(type) ? snowDirtTransition : snowTransition
+                const mesh = muddyRockFoot ? snowRockMuddyWalls : snowAtEdge
+                    ? (isRock || !grassEdge || !exposedGrass || topTransition?.material === soilSnow || footTransition?.material === soilSnow
+                        ? soilSnow : dirtBase ? grassEdge.snowOnDirt : grassEdge.snow)
                     : isRock ? grassEdge?.rock : dirtBase ? grassEdge?.dirt : grassEdge?.mud
                 if (!mesh || (topY === undefined && bottomY === undefined)) return
-                const fringeAt = (block: MapBlock) => {
+                // Local snow uses the terrace field (4) or continues a solid cover (5).
+                const fringeAt = (block: MapBlock, transition: typeof topTransition) => {
                     if (block.stonePath || block.beigeStonePath) return 0
+                    if (transition?.coverType === SNOW_DIRT) {
+                        // Only continue grass when the terrace and wall share that substrate.
+                        return mesh === grassEdge?.snow || mesh === grassEdge?.snowOnDirt
+                            ? transition.material === grassEdge.snow ? 4 : 6 : 4
+                    }
                     const surface = terrainSurface(block)
-                    return surface === SNOW_DIRT ? 1 : !isGrass(surface) ? 0
+                    return surface === SNOW_DIRT ? 5 : !isGrass(surface) ? 0
                         : !snowAtEdge ? 1 : (mesh === grassEdge?.snow || mesh === grassEdge?.snowOnDirt) ? 3 : 0
                 }
-                const top = topY === undefined ? 0 : fringeAt(upper)
-                const foot = bottomY === undefined ? 0 : fringeAt(lower)
+                const top = topY === undefined ? 0 : fringeAt(upper, topTransition)
+                // Mud is a separate contact at the base of the rock and can continue emerging snow there.
+                const foot = muddyRockFoot && footTransition?.coverType !== SNOW_DIRT ? 7
+                    : bottomY === undefined ? 0 : fringeAt(lower, footTransition)
                 if (!top && !foot) return
                 const batch = batchFor(mesh)
+                const angle = Math.atan2(lowerZ - z, lowerX - x)
                 for (let i = 0; i < triangles; i++) {
-                    batch.surfaceData.push(x, z, 0, 0)
+                    batch.surfaceData.push(x, z, angle, 0)
                     batch.wallData.push(topY ?? 0, bottomY ?? 0, top, foot)
-                    batch.boundaryData.push(0, 0, 0, 0)
+                    batch.boundaryData.push(...(topTransition?.field ?? [0, 0, 0, 0]))
+                    batch.footBoundaryData.push(...(footTransition?.field ?? [0, 0, 0, 0]))
                 }
                 return batch.geometry
             }
@@ -325,7 +318,7 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
                 batch.wallData.push(topY ?? 0, bottomY ?? 0, topCover, bottomCover)
             }
             return batch.geometry
-        }, includeTile, originX, originZ, submit, !!demo)
+        }, includeTile, originX, originZ, submit, !!demo, localBoundaries)
         const islandMasks = transitionTiles || localTransitions ? grassIslandMasks(map) : undefined
         const takeTile = (type: number, cover?: boolean): TerrainAtlasTileFilter => {
             return (matrix, uv, x, z, roof, wetCorners, floor) => {
@@ -342,13 +335,17 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
                 addTerrainPreviewRoof(batch.geometry, matrix, uv, roof, options)
                 if (floor) addTerrainPreviewRoof(batch.geometry, matrix, uv, floor, {...options, mirrorAtTileEdge: true})
                 const angle = Math.atan2(matrix.m[2], matrix.m[0])
-                // The low bit identifies the placed material, followed by four corner flags and the bank bit.
-                const placedCover = pondTile ? (pondCover === ROCK || pondCover === DIRT ? bank : !bank) : localTransition?.cover ?? cover
+                // Material, four island corners and the pond bank.
+                const placedCover = pondTile ? (pondCover === ROCK || pondCover === DIRT ? bank : !bank)
+                    : localTransition?.cover ?? cover
                 const flags = ((islandMasks?.[x][z] ?? 0) << 1) | (placedCover ? 1 : 0) | (pondTile ? POND_BANK_FLAG : 0)
                 for (let i = first; i < batch.geometry.count; i++) {
                     batch.surfaceData.push(x, z, angle, flags)
                     batch.wallData.push(0, 0, 0, 0)
-                    if (localTransition) batch.boundaryData.push(...localTransition.field)
+                    if (localTransition) {
+                        batch.boundaryData.push(...localTransition.field)
+                        batch.footBoundaryData.push(0, 0, 0, 0)
+                    }
                 }
                 return true
             }
@@ -374,6 +371,8 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
                 {kind: 'terrainWallContact', stride: 4, values: batch.wallData},
                 {kind: 'terrainBoundaryCorners', stride: 4,
                     values: localBoundaries ? batch.boundaryData : new Array<number>(batch.surfaceData.length).fill(0)},
+                {kind: 'terrainFootBoundaryCorners', stride: 4,
+                    values: localBoundaries ? batch.footBoundaryData : new Array<number>(batch.surfaceData.length).fill(0)},
             ]
             if (submit) submit(mesh, batch.geometry, [...batch.geometry.attributes(true, wetTransitions.has(mesh)), ...attributes])
             else {

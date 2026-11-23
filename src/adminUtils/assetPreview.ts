@@ -10,12 +10,13 @@ import { MonsterTemplates } from '@/babylon/monsters/codebook/monsterTemplates'
 import { MonsterLoader } from '@/babylon/monsters/monsterLoader'
 import { WorldRenderer, SymmetricBlock } from '@/babylon/world/worldRenderer'
 import { Builder } from '@/babylon/builder'
-import { Materials } from '@/babylon/materials'
+import { MaterialAlphaEnum1, Materials } from '@/babylon/materials'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { StaticsManager } from '@/babylon/world/statics/staticsManager'
 import { StaticObjectsCodebook } from '@/babylon/world/statics/staticsCodebook'
 import { BuildingManager } from '@/babylon/world/buildings/buildingManager'
-import { TreeManager } from '@/babylon/world/treeManager'
+import { TreeFir, TreeManager } from '@/babylon/world/treeManager'
+import { Shrub1x1_tall } from '@/babylon/world/statics/objects/shrubs'
 import { StaticEquipPartsRenderer } from '@/babylon/world/statics/staticEquipPartsRenderer'
 import { StaticLeafPlanes } from '@/babylon/world/statics/staticLeafPlanes'
 import { EquipManager } from '@/babylon/item/equipManager'
@@ -79,8 +80,6 @@ export async function installAssetPreview(
     let clips: [string, MeshAnimation][] = []
     let generation = 0
     const parent = new TransformNode('assetPreview', scene)
-    const terrain = createTerrainPreview(scene, parent, camera, ground, setTerrainLighting)
-    panel.append(terrain.controls)
     getCharacter().node.parent = parent
     const rotatePreview = () => {
         parent.rotation.y = Number(rotationSlider.value) * Math.PI / 180
@@ -104,6 +103,28 @@ export async function installAssetPreview(
     StaticsManager.initialize(scene)
     BuildingManager.initialize(scene, parent)
     const buffers = () => [WorldRenderer.block1!, WorldRenderer.blockWithAlpha1!, WorldRenderer.translucentPlane!, StaticLeafPlanes.prefab!, ...Object.values(TreeManager.prefabs).filter(p => p != null), ...StaticEquipPartsRenderer.prefabs.values(), ...SpecimenPrefabs.all]
+    let showingSnowTerraceProps = false
+    const terrain = createTerrainPreview(scene, parent, camera, ground, setTerrainLighting, props => {
+        const show = props.length > 0
+        if (show === showingSnowTerraceProps) return
+        showingSnowTerraceProps = show
+        const batches = [WorldRenderer.block1!, WorldRenderer.blockWithAlpha1!, TreeManager.prefabs.tree2!, StaticLeafPlanes.prefab!]
+        for (const batch of batches) batch.clearMatrices()
+        for (const {x, y, z, shrub} of props) {
+            if (shrub) {
+                new Shrub1x1_tall(121, new Vector3(x, y, z), 0, MaterialAlphaEnum1.TREE_LEAF_LIGHT.uv).render()
+            } else {
+                const tree = new TreeFir(new Vector3(x, y + 0.5, z), 0, 1, MaterialAlphaEnum1.TREE_LEAF_NORTH.uv)
+                tree.renderTrunk(false)
+                tree.renderLeaves(false)
+            }
+        }
+        for (const batch of batches) {
+            batch.setThinInstanceBuffers()
+            batch.mesh.setEnabled(batch.matrices.length > 0)
+        }
+    })
+    panel.append(terrain.controls)
     const refreshBuildingBatches = () => {
         BuildingManager.rebuildOpaqueBatch()
         // Babylon renders the source box/plane when a thin-instance batch is empty.
@@ -113,6 +134,7 @@ export async function installAssetPreview(
     }
     const clear = () => {
         generation++
+        showingSnowTerraceProps = false
         parent.rotation.y = 0
         if (monster) {
             clips.forEach(([, clip]) => clip.stop())

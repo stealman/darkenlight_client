@@ -5,6 +5,7 @@ import { ViewportManager } from '@/utils/viewport'
 import { Settings } from '@/settings/settings'
 import { TERRAIN_ATLAS_REGION_SIZE } from '@/adminUtils/terrainAtlasPreview'
 import { createTerrainSurfaceRenderer } from '@/adminUtils/terrainSurfaceRenderer'
+import { terrainWithoutSnow } from '@/adminUtils/terrainLocalTransitions'
 import type { TerrainInstanceAttribute } from '@/adminUtils/terrainPreviewBatch'
 import { createTerrainFoliageRenderer } from '@/adminUtils/terrainFoliageRenderer'
 import { BuildingManager } from './buildings/buildingManager'
@@ -159,9 +160,7 @@ export function createOutdoorTerrain(parent: TransformNode) {
                     region.hiddenSnow.push(index)
                     let bare = exposed.get(block)
                     if (!bare) {
-                        bare = Object.assign(new MapBlock(block.height, block.type), block,
-                            {snowed: false, heightOffset: 0, totalHeight: block.height})
-                        if (block.type === 2 || block.type === 5) bare.type = 1
+                        bare = terrainWithoutSnow(block)
                         exposed.set(block, bare)
                     }
                     return bare
