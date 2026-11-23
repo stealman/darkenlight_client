@@ -10,7 +10,7 @@ export const CARDINAL_NEIGHBORS = [[-1, 0], [1, 0], [0, -1], [0, 1]] as const
 const DIAGONAL_NEIGHBORS = [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const
 const TILE_NEIGHBORS = [...CARDINAL_NEIGHBORS, ...DIAGONAL_NEIGHBORS]
 
-export function createWaterEdgeTufts(map: MapBlock[][], profiles: ReadonlyMap<number, TerrainFoliage>) {
+export function createWaterEdgeTufts(map: MapBlock[][], profiles: ReadonlyMap<number, TerrainFoliage>, originX = 0, originZ = 0) {
     const tufts: {matrix: Matrix, uv: Vector2}[] = []
     map.forEach((row, x) => row.forEach((block, z) => {
         const profile = profiles.get(FoliageManager.getTerrainIndex(block))
@@ -18,10 +18,10 @@ export function createWaterEdgeTufts(map: MapBlock[][], profiles: ReadonlyMap<nu
         const water = TILE_NEIGHBORS.filter(([dx, dz]) => map[x + dx]?.[z + dz]?.type === WATER_BLOCK_TYPE)
         if (!water.length) return
         const roots: [number, number][] = []
-        const count = 2 + Math.floor(FoliageManager.roll(x, z, 11020) * 3)
+        const count = 2 + Math.floor(FoliageManager.roll(x + originX, z + originZ, 11020) * 3)
         for (let attempt = 0; attempt < 12 && roots.length < count; attempt++) {
             const salt = 11100 + attempt * 16
-            const roll = (offset: number) => FoliageManager.roll(x, z, salt + offset)
+            const roll = (offset: number) => FoliageManager.roll(x + originX, z + originZ, salt + offset)
             const localX = (roll(0) - 0.5) * 0.76, localZ = (roll(1) - 0.5) * 0.76
             const clearance = Math.min(...water.map(([dx, dz]) => Math.hypot(
                 Math.max(0, Math.abs(localX - dx) - 0.5), Math.max(0, Math.abs(localZ - dz) - 0.5),
@@ -34,8 +34,8 @@ export function createWaterEdgeTufts(map: MapBlock[][], profiles: ReadonlyMap<nu
             const scatter = profile.scatter?.(rootX, rootZ, variety)
             const species = scatter?.tuftRow ?? profile.rows[Math.floor(variety * profile.rows.length)]
             tufts.push({
-                matrix: FoliageManager.tuftMatrix(x, z, rootX, block.totalHeight, rootZ, species, salt, profile.tuftHeights?.[species]),
-                uv: FoliageManager.getAtlasOffset(x, z, species, salt),
+                matrix: FoliageManager.tuftMatrix(x + originX, z + originZ, rootX, block.totalHeight, rootZ, species, salt, profile.tuftHeights?.[species]),
+                uv: FoliageManager.getAtlasOffset(x + originX, z + originZ, species, salt),
             })
         }
     }))
@@ -77,7 +77,7 @@ export function forEachFoliageWallFoot(map: MapBlock[][], terrain: number | unde
         if (terrain !== undefined && FoliageManager.getTerrainIndex(block) !== terrain) return
         CARDINAL_NEIGHBORS.forEach(([dx, dz], side) => {
             const uphill = map[x + dx]?.[z + dz]
-            if (uphill && uphill.totalHeight - block.totalHeight > 0.5) {
+            if (block.type > 0 && uphill && uphill.totalHeight - block.totalHeight > 0.5) {
                 visit(x, z, block.totalHeight, dx, dz, side, uphill)
             }
         })
@@ -85,12 +85,12 @@ export function forEachFoliageWallFoot(map: MapBlock[][], terrain: number | unde
 }
 
 export function wallFootDecal(x: number, z: number, top: number, dx: number, dz: number, salt: number,
-                             width: number, height: number) {
+                             width: number, height: number, originX = 0, originZ = 0) {
     // Fit the decal between the wall's clipped corners.
-    const slide = (FoliageManager.roll(x, z, salt + 3) * 2 - 1) * (0.49 - TERRAIN_VERTICAL_BEVEL_WIDTH - width / 2)
+    const slide = (FoliageManager.roll(x + originX, z + originZ, salt + 3) * 2 - 1) * (0.49 - TERRAIN_VERTICAL_BEVEL_WIDTH - width / 2)
     const matrix = Matrix.Scaling(width, 1, height)
         .multiply(Matrix.RotationYawPitchRoll(Math.atan2(dx, dz), -Math.PI / 2, 0))
-    const lift = 0.006 + FoliageManager.roll(x, z, salt + 4) * 0.04
+    const lift = 0.006 + FoliageManager.roll(x + originX, z + originZ, salt + 4) * 0.04
     matrix.setTranslationFromFloats(x + dx * 0.496 + dz * slide,
         top + height / 2 + lift, z + dz * 0.496 - dx * slide)
     return matrix

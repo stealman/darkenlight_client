@@ -11,7 +11,7 @@ export interface LocalWorldBundle {
 /** Main-thread map templates are independent of the simulation and save slot. */
 export const localWorldMaps = new Map<number, CompiledMap>()
 
-export async function loadWorldBundle(baseUrl: string): Promise<LocalWorldBundle> {
+async function openWorldBundle(baseUrl: string) {
     const base = new URL('./world/', baseUrl)
     const response = await fetch(new URL('manifest.json', base))
     if (!response.ok) throw new Error('World bundle is missing. Run yarn export:world.')
@@ -30,6 +30,18 @@ export async function loadWorldBundle(baseUrl: string): Promise<LocalWorldBundle
         }
         return bytes
     }
+    return {manifest, read}
+}
+
+export async function loadCompiledWorldMap(baseUrl: string, worldId: number): Promise<CompiledMap> {
+    const {manifest, read} = await openWorldBundle(baseUrl)
+    const path = manifest.terrainMaps[worldId]
+    if (typeof path !== 'string') throw new Error(`Missing terrain for world ${worldId}`)
+    return decodeCompiledMap(await read(path))
+}
+
+export async function loadWorldBundle(baseUrl: string): Promise<LocalWorldBundle> {
+    const {manifest, read} = await openWorldBundle(baseUrl)
     const worldJson = new TextDecoder().decode(await read('world.json'))
     const maps: LocalWorldBundle['maps'] = []
     // Sequential decoding bounds temporary memory on mobile devices.

@@ -70,7 +70,61 @@ export function createTerrainPreviewWater(plane: Mesh, map: MapBlock[][], isBank
     water.scaling.set(width, 1, length)
     water.position.set(minX + width / 2, 0, minZ + length / 2)
 
-    const material = new PBRCustomMaterial('adminUtilsPondWater', scene)
+    configureTerrainWater(water, 'adminUtilsPondWater', field, new Vector2(width, length))
+
+    const setLevel = (surfaceMap: MapBlock[][]) => {
+        // Match an adjacent level bank, including raised grass or snow on the preview.
+        const edge = shore.find(({bankX, bankZ, height}) => surfaceMap[bankX]?.[bankZ]?.height === height)
+        if (edge) {
+            const bank = surfaceMap[edge.bankX][edge.bankZ]
+            water.position.y = bank.snowed ? bank.totalHeight : bank.height + getTerrainHeightOffset(bank, false)
+        } else {
+            water.position.y = surfaceMap[tiles[0][0]][tiles[0][1]].height
+        }
+        shoreFrame.y = water.position.y
+    }
+
+    const applyShoreWetness = (soil: PBRCustomMaterial, transitionDirtCoverage?: string) => {
+        if (!transitionDirtCoverage) {
+            soil.AddUniform('pondBankDistance', 'sampler2D', field)
+            soil.AddUniform('pondBankBounds', 'vec4', bounds)
+        }
+        soil.AddUniform('pondShoreFrame', 'vec2', shoreFrame)
+        soil.Fragment_Definitions(`${soil.CustomParts.Fragment_Definitions ?? ''}
+            ${pondSpillShader}
+            float pondShoreWetness;
+        `)
+        soil.Fragment_Before_Lights(`${soil.CustomParts.Fragment_Before_Lights ?? ''}
+            pondShoreWetness = 0.0;
+            float shoreHeight = abs(vPositionW.y - pondShoreFrame.y);
+            ${transitionDirtCoverage ? 'if (vPlacedSurface.z > 1.5) {' : ''}
+            if (shoreHeight < 0.075 && geometricNormalW.y > 0.1) {
+                vec2 shoreUV = (vPositionW.xz + pondShoreFrame.xx - pondBankBounds.xy) / pondBankBounds.zw;
+                if (all(greaterThanEqual(shoreUV, vec2(0.0))) && all(lessThanEqual(shoreUV, vec2(1.0)))) {
+                    float fromWater = (texture2D(pondBankDistance, shoreUV).r - 0.5) * ${POND_DISTANCE_RANGE * 2}.0;
+                    vec2 spill = pondSpill(shoreUV * pondBankBounds.zw);
+                    float fromSpill = -fromWater - spill.x;
+                    float dampBand = (1.0 - smoothstep(0.025, mix(0.28, 0.47, spill.y), fromSpill))
+                        * smoothstep(-0.68, -0.20, fromSpill);
+                    pondShoreWetness = dampBand * mix(0.67, 0.95, spill.y) * (1.0 - smoothstep(0.015, 0.075, shoreHeight))
+                        * ${transitionDirtCoverage ?? '1.0'};
+                    surfaceAlbedo *= 1.0 - pondShoreWetness * 0.20;
+                    normalW = normalize(mix(normalW, geometricNormalW, pondShoreWetness * 0.24));
+                }
+            }
+            ${transitionDirtCoverage ? '}' : ''}
+        `)
+        soil.Fragment_Custom_MetallicRoughness(`${soil.CustomParts.Fragment_Custom_MetallicRoughness ?? ''}
+            metallicRoughness.g = mix(metallicRoughness.g, 0.52, pondShoreWetness);
+        `)
+    }
+
+    return {mesh: water, setLevel, field, bounds, applyShoreWetness}
+}
+
+function configureTerrainWater(water: Mesh, name: string, field: Texture, size: Vector2) {
+    const scene = water.getScene()
+    const material = new PBRCustomMaterial(name, scene)
     water.material = material
     material.metallic = 0
     material.roughness = 0.32
@@ -85,7 +139,7 @@ export function createTerrainPreviewWater(plane: Mesh, map: MapBlock[][], isBank
     material.zOffset = -2
     material.zOffsetUnits = -2
     material.AddUniform('pondDistance', 'sampler2D', field)
-    material.AddUniform('pondSize', 'vec2', new Vector2(width, length))
+    material.AddUniform('pondSize', 'vec2', size)
     const ripplePhase = new Vector2(0, 0)
     material.AddUniform('pondRipplePhase', 'vec2', ripplePhase)
     const rippleClock = scene.onBeforeRenderObservable.add(() => {
@@ -135,52 +189,4 @@ export function createTerrainPreviewWater(plane: Mesh, map: MapBlock[][], isBank
     `)
     material.Fragment_Custom_MetallicRoughness('metallicRoughness.g = mix(0.48, 0.29, pondDepth);')
 
-    const setLevel = (surfaceMap: MapBlock[][]) => {
-        // Match an adjacent level bank, including raised grass or snow on the preview.
-        const edge = shore.find(({bankX, bankZ, height}) => surfaceMap[bankX]?.[bankZ]?.height === height)
-        if (edge) {
-            const bank = surfaceMap[edge.bankX][edge.bankZ]
-            water.position.y = bank.snowed ? bank.totalHeight : bank.height + getTerrainHeightOffset(bank, false)
-        } else {
-            water.position.y = surfaceMap[tiles[0][0]][tiles[0][1]].height
-        }
-        shoreFrame.y = water.position.y
-    }
-
-    const applyShoreWetness = (soil: PBRCustomMaterial, transitionDirtCoverage?: string) => {
-        if (!transitionDirtCoverage) {
-            soil.AddUniform('pondBankDistance', 'sampler2D', field)
-            soil.AddUniform('pondBankBounds', 'vec4', bounds)
-        }
-        soil.AddUniform('pondShoreFrame', 'vec2', shoreFrame)
-        soil.Fragment_Definitions(`${soil.CustomParts.Fragment_Definitions ?? ''}
-            ${pondSpillShader}
-            float pondShoreWetness;
-        `)
-        soil.Fragment_Before_Lights(`${soil.CustomParts.Fragment_Before_Lights ?? ''}
-            pondShoreWetness = 0.0;
-            float shoreHeight = abs(vPositionW.y - pondShoreFrame.y);
-            ${transitionDirtCoverage ? 'if (vPlacedSurface.z > 1.5) {' : ''}
-            if (shoreHeight < 0.075 && geometricNormalW.y > 0.1) {
-                vec2 shoreUV = (vPositionW.xz + pondShoreFrame.xx - pondBankBounds.xy) / pondBankBounds.zw;
-                if (all(greaterThanEqual(shoreUV, vec2(0.0))) && all(lessThanEqual(shoreUV, vec2(1.0)))) {
-                    float fromWater = (texture2D(pondBankDistance, shoreUV).r - 0.5) * ${POND_DISTANCE_RANGE * 2}.0;
-                    vec2 spill = pondSpill(shoreUV * pondBankBounds.zw);
-                    float fromSpill = -fromWater - spill.x;
-                    float dampBand = (1.0 - smoothstep(0.025, mix(0.28, 0.47, spill.y), fromSpill))
-                        * smoothstep(-0.68, -0.20, fromSpill);
-                    pondShoreWetness = dampBand * mix(0.67, 0.95, spill.y) * (1.0 - smoothstep(0.015, 0.075, shoreHeight))
-                        * ${transitionDirtCoverage ?? '1.0'};
-                    surfaceAlbedo *= 1.0 - pondShoreWetness * 0.20;
-                    normalW = normalize(mix(normalW, geometricNormalW, pondShoreWetness * 0.24));
-                }
-            }
-            ${transitionDirtCoverage ? '}' : ''}
-        `)
-        soil.Fragment_Custom_MetallicRoughness(`${soil.CustomParts.Fragment_Custom_MetallicRoughness ?? ''}
-            metallicRoughness.g = mix(metallicRoughness.g, 0.52, pondShoreWetness);
-        `)
-    }
-
-    return {setLevel, field, bounds, applyShoreWetness}
 }

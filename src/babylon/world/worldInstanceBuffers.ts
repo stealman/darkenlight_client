@@ -3,7 +3,7 @@ import { Matrix, Mesh, Vector2 } from '@babylonjs/core'
 // Mesh lifetime owns the retained CPU/GPU capacity, including empty batches.
 const buffersByMesh = new WeakMap<Mesh, {matrices: Float32Array, uv: Float32Array}>()
 
-export function updateWorldInstanceBuffers(mesh: Mesh, matrices: Matrix[], uvData: Vector2[]): Float32Array {
+export function updateWorldInstanceBuffers(mesh: Mesh, matrices: Matrix[], uvData: Vector2[], refreshBounds = true): Float32Array {
     let buffers = buffersByMesh.get(mesh)
     if (!buffers) {
         buffers = {matrices: new Float32Array(0), uv: new Float32Array(0)}
@@ -36,12 +36,15 @@ export function updateWorldInstanceBuffers(mesh: Mesh, matrices: Matrix[], uvDat
     }
     mesh.thinInstanceCount = count
     if (!grow && count > 0) {
-        // Use Babylon's setter to also keep its lazy picking-matrix cache in
-        // sync. Upload once, after all matrices have been copied.
-        matrices.forEach((matrix, index) => mesh.thinInstanceSetMatrixAt(index, matrix, false))
+        if (!refreshBounds && !mesh.isPickable) {
+            // The caller supplies bounds and the mesh never needs Babylon's picking cache.
+            for (let i = 0; i < count; i++) matrices[i].copyToArray(buffers.matrices, i * 16)
+        } else {
+            matrices.forEach((matrix, index) => mesh.thinInstanceSetMatrixAt(index, matrix, false))
+        }
         mesh.thinInstanceBufferUpdated('matrix')
         mesh.thinInstanceBufferUpdated('uvc')
     }
-    if (count > 0) mesh.thinInstanceRefreshBoundingInfo(false)
+    if (count > 0 && refreshBounds) mesh.thinInstanceRefreshBoundingInfo(false)
     return buffers.matrices
 }

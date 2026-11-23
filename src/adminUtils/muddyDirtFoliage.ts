@@ -20,24 +20,25 @@ const WALL_MOSS_PATCHES = {spacing: 3.6, salt: 6200, minRadius: 1.0, radiusRange
 const SMALL_MOSS_SIZE = [0.46, 0.88] as const
 const MUDDY_DIRT = TerrainEnum1.TERRAIN_MUDDY_DIRT.index
 
-export function createMuddyDirtFootFoliage(map: MapBlock[][], sunDirection: Vector3) {
+export function createMuddyDirtFootFoliage(map: MapBlock[][], sunDirection: Vector3,
+                                          originX: number, originZ: number, wallDecals: boolean) {
     const moss: {matrix: Matrix, uv: Vector2}[] = []
     const tufts: {matrix: Matrix, uv: Vector2}[] = []
     const pebbles: {matrix: Matrix, uv: Vector2}[] = []
     forEachFoliageWallFoot(map, MUDDY_DIRT, (x, z, top, dx, dz, side, uphill) => {
-        const roll = (salt: number) => FoliageManager.roll(x, z, salt)
+        const roll = (salt: number) => FoliageManager.roll(x + originX, z + originZ, salt)
         const edgeX = x + dx * 0.5
         const edgeZ = z + dz * 0.5
         const sheltered = dx * sunDirection.x + dz * sunDirection.z < 0
-        if (FoliageManager.getTerrainIndex(uphill) === MUDDY_DIRT) {
-            const {influence} = findFoliagePatch(edgeX, edgeZ, WALL_MOSS_PATCHES)
+        if (wallDecals && FoliageManager.getTerrainIndex(uphill) === MUDDY_DIRT) {
+            const {influence} = findFoliagePatch(edgeX + originX, edgeZ + originZ, WALL_MOSS_PATCHES)
             const chance = (sheltered ? 0.51 : 0.36) + Math.min(0.29, influence * 0.19)
             const salt = 6400 + side * 12
             if (roll(salt) < chance) {
                 const width = 0.28 + 0.42 * roll(salt + 1)
                 const height = 0.13 + 0.22 * roll(salt + 2)
-                const matrix = wallFootDecal(x, z, top, dx, dz, salt, width, height)
-                moss.push({matrix, uv: FoliageManager.getAtlasOffset(x, z, MOSS, salt)})
+                const matrix = wallFootDecal(x, z, top, dx, dz, salt, width, height, originX, originZ)
+                moss.push({matrix, uv: FoliageManager.getAtlasOffset(x + originX, z + originZ, MOSS, salt)})
             }
         }
 
@@ -55,7 +56,7 @@ export function createMuddyDirtFootFoliage(map: MapBlock[][], sunDirection: Vect
             const matrix = Matrix.Scaling(size, 1, size).multiply(Matrix.RotationY(yaw))
             matrix.setTranslationFromFloats(edgeX - dx * inset + dz * slide, top + 0.008 + 0.002 * roll(pebbleSalt + 5),
                 edgeZ - dz * inset - dx * slide)
-            pebbles.push({matrix, uv: FoliageManager.getAtlasOffset(x, z, PEBBLES, pebbleSalt)})
+            pebbles.push({matrix, uv: FoliageManager.getAtlasOffset(x + originX, z + originZ, PEBBLES, pebbleSalt)})
         }
 
         if (roll(salt + 2) < (sheltered ? 0.45 : 0.30)) {
@@ -64,8 +65,8 @@ export function createMuddyDirtFootFoliage(map: MapBlock[][], sunDirection: Vect
             const rootX = edgeX - dx * inset + dz * slide
             const rootZ = edgeZ - dz * inset - dx * slide
             const height = 0.21 + roll(salt + 6) * 0.12
-            tufts.push({matrix: FoliageManager.tuftMatrix(x, z, rootX, top, rootZ, GRASS, salt, height),
-                uv: FoliageManager.getAtlasOffset(x, z, GRASS, salt)})
+            tufts.push({matrix: FoliageManager.tuftMatrix(x + originX, z + originZ, rootX, top, rootZ, GRASS, salt, height),
+                uv: FoliageManager.getAtlasOffset(x + originX, z + originZ, GRASS, salt)})
         }
     })
     return {moss, tufts, pebbles}
@@ -86,7 +87,7 @@ function levelMudCoverage(map: MapBlock[][], x: number, z: number, height: numbe
     return tiles / 25
 }
 
-export function createMuddyDirtFoliageProfiles(map: MapBlock[][], sunDirection: Vector3) {
+export function createMuddyDirtFoliageProfiles(map: MapBlock[][], sunDirection: Vector3, originX = 0, originZ = 0) {
     const horizontal = Math.hypot(sunDirection.x, sunDirection.z)
     const lightX = -sunDirection.x / horizontal
     const lightZ = -sunDirection.z / horizontal
@@ -116,13 +117,13 @@ export function createMuddyDirtFoliageProfiles(map: MapBlock[][], sunDirection: 
         groundSizes: {[PEBBLES]: [0.49, 0.77]},
         groundPerTile: 0.60,
         scatter(x, z, variety) {
-            const plants = findFoliagePatch(x, z, PLANT_PATCHES)
-            const ground = findFoliagePatch(x, z, GROUND_PATCHES)
+            const plants = findFoliagePatch(x + originX, z + originZ, PLANT_PATCHES)
+            const ground = findFoliagePatch(x + originX, z + originZ, GROUND_PATCHES)
             const {byLedge, shaded, openMud} = terrainHints[Math.round(x)][Math.round(z)]
             const mossPatch = ground.row === MOSS
             const mossCore = mossPatch ? Math.min(1, ground.influence / 2.1) ** 1.35 : 0
             const openPatch = openMud >= 0.68 && mossCore < 0.30
-                ? findFoliagePatch(x, z, OPEN_MOSS_PATCHES).influence : 0
+                ? findFoliagePatch(x + originX, z + originZ, OPEN_MOSS_PATCHES).influence : 0
             const openCore = Math.min(1, openPatch / 2.2)
             const mossChance = (shaded ? 0.34 : 0.13) + (shaded ? 0.56 : 0.62) * mossCore
             let groundRow = ground.row !== MOSS && ground.influence > 0.08 && variety < 0.8 ? ground.row : undefined

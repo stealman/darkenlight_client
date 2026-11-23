@@ -11,34 +11,34 @@ const ROCK = TerrainEnum1.TERRAIN_ROCK.index
 const PEBBLES = 7, MOSS = 6, LICHEN = 13
 const LICHEN_PATCHES = {spacing: 4.6, salt: 2310, minRadius: 1.1, radiusRange: 1.3, rows: [LICHEN]}
 
-export const rockFoliage: TerrainFoliage = {
+export const createRockFoliage = (originX: number, originZ: number): TerrainFoliage => ({
     rows: [], tuftsPerTile: 0, groundPerTile: 1.35, groundRows: [PEBBLES], groundSizes: {[PEBBLES]: [0.32, 0.62]},
     blendedGroundRows: [LICHEN],
     scatter(x, z) {
-        const influence = findFoliagePatch(x, z, LICHEN_PATCHES).influence
+        const influence = findFoliagePatch(x + originX, z + originZ, LICHEN_PATCHES).influence
         const inGap = influence === 0
         return {
             tuftDensity: 0,
-            groundDensity: FoliageManager.patchDensity(x, z),
+            groundDensity: FoliageManager.patchDensity(x + originX, z + originZ),
             extraGround: inGap
                 ? {row: LICHEN, chance: 0.014, size: [0.44, 0.82]}
                 : {row: LICHEN, chance: 0.004 + 0.05 * Math.min(1, influence), size: [1.30, 2.65]},
         }
     },
-}
+})
 
-export function createRockWallLichen(map: MapBlock[][]) {
+export function createRockWallLichen(map: MapBlock[][], originX = 0, originZ = 0) {
     const decals: {matrix: Matrix, uv: Vector2}[] = []
     forEachFoliageWallFoot(map, undefined, (x, z, top, dx, dz, side, uphill) => {
         if (uphill.type !== ROCK || uphill.snowed || map[x][z].snowed) return
         const salt = 2520 + side * 12
-        const influence = findFoliagePatch(x + dx * 0.5, z + dz * 0.5, LICHEN_PATCHES).influence
-        const roll = (offset: number) => FoliageManager.roll(x, z, salt + offset)
+        const influence = findFoliagePatch(x + originX + dx * 0.5, z + originZ + dz * 0.5, LICHEN_PATCHES).influence
+        const roll = (offset: number) => FoliageManager.roll(x + originX, z + originZ, salt + offset)
         if (roll(0) >= 0.23 + Math.min(0.37, influence * 0.25)) return
         const width = 0.57 + 0.24 * roll(1)
         const height = 0.26 + 0.32 * roll(2)
-        decals.push({matrix: wallFootDecal(x, z, top, dx, dz, salt, width, height),
-            uv: FoliageManager.getAtlasOffset(x, z, LICHEN, salt)})
+        decals.push({matrix: wallFootDecal(x, z, top, dx, dz, salt, width, height, originX, originZ),
+            uv: FoliageManager.getAtlasOffset(x + originX, z + originZ, LICHEN, salt)})
     })
     return decals
 }
@@ -95,13 +95,6 @@ export function styleRockLichen(material: PBRCustomMaterial) {
             }
         } else if (abs(geometricNormalW.y) < 0.01) {
             surfaceAlbedo *= vec3(0.95, 1.18, 0.82);
-        }
-    `)
-    material.Fragment_Before_FinalColorComposition(`
-        if (vLichen > 0.5) {
-            float fill = dot(finalEmissive, vec3(0.2126, 0.7152, 0.0722));
-            finalEmissive = vec3(fill) + (abs(geometricNormalW.y) < 0.01
-                ? vec3(0.029, 0.032, 0.027) : vec3(0.035, 0.044, 0.029));
         }
     `)
 }

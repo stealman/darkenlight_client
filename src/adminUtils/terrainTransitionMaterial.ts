@@ -1,4 +1,4 @@
-import { Vector2 } from '@babylonjs/core'
+import { Vector2, Vector3 } from '@babylonjs/core'
 import type { Texture } from '@babylonjs/core'
 import { PBRCustomMaterial } from '@babylonjs/materials'
 import { terrainNoiseShader } from './terrainPreviewBatch'
@@ -22,7 +22,7 @@ export function createTerrainTransitionMaterial(
     dirt: PBRCustomMaterial,
     grassOrigin: readonly number[],
     dirtOrigin: readonly number[],
-    boundary: Vector2,
+    boundary: Vector3,
     wallDirt?: PBRCustomMaterial,
     rockSubstrate = false,
     pondBank?: Pick<ReturnType<typeof createTerrainPreviewWater>, 'field' | 'bounds'> & {coverOnBank: boolean},
@@ -52,8 +52,8 @@ export function createTerrainTransitionMaterial(
     // In the snow/grass pair, the horizontal substrate supplies the grass on muddy walls.
     if (wallDirt) addSurface('wallDirt', wallDirt)
     if (snowWallRock) addSurface('snowWallRock', snowWallRock, terrainCoverPatterns[0].origins[0])
-    // X is the preview's center in map coordinates. Y is the direction from dirt to grass.
-    material.AddUniform('transitionBoundary', 'vec2', boundary)
+    // X is the map center, Y is the demo boundary direction, Z enables map-derived distances.
+    material.AddUniform('transitionBoundary', 'vec3', boundary)
     if (pondBank) {
         material.AddUniform('pondBankDistance', 'sampler2D', pondBank.field)
         material.AddUniform('pondBankBounds', 'vec4', pondBank.bounds)
@@ -62,10 +62,14 @@ export function createTerrainTransitionMaterial(
     material.AddAttribute('uvc')
     material.AddAttribute('terrainSurface')
     material.AddAttribute('terrainWallContact')
+    material.AddAttribute('terrainBoundaryCorners')
     material.Vertex_Definitions(`
         attribute vec2 uvc;
         attribute vec4 terrainSurface;
         attribute vec4 terrainWallContact;
+        attribute vec4 terrainBoundaryCorners;
+        varying vec4 vTerrainBoundaryCorners;
+        varying vec2 vTerrainTileUV;
         varying vec2 vSurfacePatchUV;
         varying vec2 vPlacedSurfaceUV;
         varying vec4 vPlacedSurface;
@@ -74,6 +78,8 @@ export function createTerrainTransitionMaterial(
     material.Vertex_After_WorldPosComputed(`
         vec2 tileCenter = (world * vec4(terrainSurface.x, 0.0, terrainSurface.y, 1.0)).xz;
         vec2 tileUV = worldPos.xz - tileCenter + 0.5;
+        vTerrainTileUV = tileUV;
+        vTerrainBoundaryCorners = terrainBoundaryCorners;
         vSurfacePatchUV = mod(floor(tileCenter + 0.5), ${PATCH_SIZE.toFixed(1)}) + tileUV;
         vPlacedSurfaceUV = terrainAtlasUV(positionUpdated);
         vec2 axis = (world * vec4(cos(terrainSurface.z), 0.0, sin(terrainSurface.z), 0.0)).xz;
@@ -89,6 +95,8 @@ export function createTerrainTransitionMaterial(
         varying vec2 vPlacedSurfaceUV;
         varying vec4 vPlacedSurface;
         varying vec4 vWallContact;
+        varying vec4 vTerrainBoundaryCorners;
+        varying vec2 vTerrainTileUV;
 
         ${terrainNoiseShader}
 
@@ -124,6 +132,11 @@ export function createTerrainTransitionMaterial(
         float transitionGrassWeight(vec2 p, float grassIslandSupport, bool bank, out float coverDistance) {
             float line = ${BOUNDARY_AMPLITUDE.toFixed(1)} * sin(p.y * ${BOUNDARY_FREQUENCY});
             float towardGrass = (p.x - line) * transitionBoundary.y;
+            if (transitionBoundary.z > 0.5) {
+                vec2 uv = clamp(vTerrainTileUV, 0.0, 1.0);
+                towardGrass = mix(mix(vTerrainBoundaryCorners.x, vTerrainBoundaryCorners.y, uv.x),
+                    mix(vTerrainBoundaryCorners.z, vTerrainBoundaryCorners.w, uv.x), uv.y);
+            }
             ${pondBank ? `if (bank) {
                 vec2 bankUV = (p + vec2(transitionBoundary.x, 0.0) - pondBankBounds.xy) / pondBankBounds.zw;
                 float bankDistance = (texture2D(pondBankDistance, bankUV).g - 0.5) * ${POND_DISTANCE_RANGE * 2}.0;

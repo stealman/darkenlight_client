@@ -168,6 +168,9 @@ export const FoliageManager = {
         canDecorate: (block: MapBlock, x: number, z: number) => boolean,
         options?: {
             viewportCenter?: {x: number, z: number}
+            originX?: number
+            originZ?: number
+            visibleTile?: (x: number, z: number) => boolean
             profiles?: ReadonlyMap<number, TerrainFoliage>
             extraTuftPasses?: number
             extraTufts?: readonly {matrix: Matrix, uv: Vector2}[]
@@ -175,6 +178,7 @@ export const FoliageManager = {
             groundDecals?: readonly {matrix: Matrix, uv: Vector2}[]
             blendedDecals?: readonly {matrix: Matrix, uv: Vector2}[]
             mapAtlasOffset?: (uv: Vector2, matrix: Matrix, layer: FoliageLayer) => Vector2 | undefined
+            submit?: (mesh: Mesh, matrices: Matrix[], uv: Vector2[]) => void
         },
     ) {
         const mesh = this.foliageMesh!
@@ -189,6 +193,8 @@ export const FoliageManager = {
             uvs: [] as Vector2[],
         }
         const viewportCenter = options?.viewportCenter
+        const originX = options?.originX ?? 0
+        const originZ = options?.originZ ?? 0
         const extraTuftPasses = options?.extraTuftPasses ?? 0
         const getProfile = (block: MapBlock) => {
             const index = this.getTerrainIndex(block)
@@ -198,14 +204,15 @@ export const FoliageManager = {
             !!getProfile(block)?.groundPerTile && canDecorate(block, x, z)
 
         const maxIndex = blockMap.length - 1
+        const depth = blockMap[0]?.length ?? 0
         const minX = viewportCenter ? Math.max(0, viewportCenter.x + ViewportManager.minX) : 0
         const minZ = viewportCenter ? Math.max(0, viewportCenter.z + ViewportManager.minZ) : 0
         const maxX = viewportCenter ? Math.min(maxIndex, viewportCenter.x + ViewportManager.maxX) : maxIndex
-        const maxZ = viewportCenter ? Math.min(maxIndex, viewportCenter.z + ViewportManager.maxZ) : maxIndex
+        const maxZ = viewportCenter ? Math.min(depth - 1, viewportCenter.z + ViewportManager.maxZ) : depth - 1
         const isVisible = (x: number, z: number, block: MapBlock) =>
             !viewportCenter || ViewportManager.isPointInVisibleMatrix(x, z, 2, block.totalHeight)
-        for (let cellX = Math.floor(minX / SCATTER_CELL_SIZE); cellX <= Math.floor(maxX / SCATTER_CELL_SIZE); cellX++) {
-            for (let cellZ = Math.floor(minZ / SCATTER_CELL_SIZE); cellZ <= Math.floor(maxZ / SCATTER_CELL_SIZE); cellZ++) {
+        for (let cellX = Math.floor((minX + originX) / SCATTER_CELL_SIZE); cellX <= Math.floor((maxX + originX) / SCATTER_CELL_SIZE); cellX++) {
+            for (let cellZ = Math.floor((minZ + originZ) / SCATTER_CELL_SIZE); cellZ <= Math.floor((maxZ + originZ) / SCATTER_CELL_SIZE); cellZ++) {
                 // Absolute world cells seed the scatter. A tile can receive any number of candidates.
                 const candidateCount = 24 + this.hashTile(cellX, cellZ, 70) % 17
                 const totalCandidates = candidateCount * (1 + extraTuftPasses)
@@ -213,14 +220,15 @@ export const FoliageManager = {
                     const extraTuft = index >= candidateCount
                     const salt = extraTuft ? 3000 + (index - candidateCount) * 16 : 100 + index * 16
                     // Use the same precision as the instance buffer for tile boundary checks.
-                    const worldX = Math.fround((cellX + this.roll(cellX, cellZ, salt)) * SCATTER_CELL_SIZE - 0.5)
-                    const worldZ = Math.fround((cellZ + this.roll(cellX, cellZ, salt + 1)) * SCATTER_CELL_SIZE - 0.5)
+                    const worldX = Math.fround((cellX + this.roll(cellX, cellZ, salt)) * SCATTER_CELL_SIZE - 0.5) - originX
+                    const worldZ = Math.fround((cellZ + this.roll(cellX, cellZ, salt + 1)) * SCATTER_CELL_SIZE - 0.5) - originZ
                     const x = Math.round(worldX)
                     const z = Math.round(worldZ)
                     if (x < minX || x > maxX || z < minZ || z > maxZ) continue
+                    if (options?.visibleTile && !options.visibleTile(x, z)) continue
 
                     const block = blockMap[x][z]
-                    if (block.snowed && vegetationMask.has(x * blockMap.length + z)) continue
+                    if (block.snowed && vegetationMask.has(x * depth + z)) continue
                     const config = getProfile(block)
                     if (!config) continue
 
@@ -247,7 +255,7 @@ export const FoliageManager = {
                     }
                     if (!isVisible(x, z, block) || !canDecorate(block, x, z)) continue
 
-                    const hideSnow = block.snowed && snowCoverMask.has(x * blockMap.length + z)
+                    const hideSnow = block.snowed && snowCoverMask.has(x * depth + z)
                     const top = block.height + getTerrainHeightOffset(block, hideSnow)
                     if (isTuft) {
                         const extraRow = extraTuft ? scatter?.extraTuftRow : undefined
@@ -288,8 +296,8 @@ export const FoliageManager = {
         }
 
         for (const tile of vegetationMask) {
-            const x = Math.floor(tile / blockMap.length)
-            const z = tile % blockMap.length
+            const x = Math.floor(tile / depth)
+            const z = tile % depth
             if (x < minX || x > maxX || z < minZ || z > maxZ) continue
             const block = blockMap[x][z]
             if (!block.snowed || block.type <= 0 || block.type >= WATER_BLOCK_TYPE || !canDecorate(block, x, z)
@@ -326,8 +334,11 @@ export const FoliageManager = {
                 }
                 placements.length = offsets.length = count
             }
-            updateWorldInstanceBuffers(target, placements, offsets)
-            target.setEnabled(placements.length > 0)
+            if (options?.submit) options.submit(target, placements, offsets)
+            else {
+                updateWorldInstanceBuffers(target, placements, offsets)
+                target.setEnabled(placements.length > 0)
+            }
         }
         updateBatch(mesh, matrices, uvData, 'tufts')
         updateBatch(groundMesh, groundMatrices, groundUvs, 'ground')

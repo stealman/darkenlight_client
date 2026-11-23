@@ -6,7 +6,7 @@ import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { StaticsManager } from '@/babylon/world/statics/staticsManager'
 import { MyPlayer } from '@/data/myPlayer'
 import {localWorldMaps} from '@/local/worldBundle'
-import {TileFlags, type CompiledMap} from '@game/runtime/compiledMap'
+import {TileFlags, type CompiledMap, type CompiledTile} from '@game/runtime/compiledMap'
 
 export const WorldDataManager = {
     MAP_CHUNK_SIZE: 128 as number,
@@ -127,16 +127,7 @@ export class WorldData {
         this.worldSize = size
         if (compiled) {
             if (compiled.width < size || compiled.depth < size) throw new Error('Compiled terrain is smaller than its world')
-            const palette = compiled.palette.map(tile => {
-                const block = new MapBlock(tile.height, tile.flags & TileFlags.deep ? 51 : tile.type)
-                block.snowed = !!(tile.flags & TileFlags.snow)
-                block.stonePath = !!(tile.flags & TileFlags.stone)
-                block.beigeStonePath = !!(tile.flags & TileFlags.beige)
-                block.setMinable(tile.flags & TileFlags.coal ? 'C' : tile.ore > 0
-                    ? `M${tile.ore}` : null)
-                block.computeData()
-                return block
-            })
+            const palette = compiled.palette.map(MapBlock.fromCompiledTile)
             this.blockMap = Array.from({length: size}, (_, x) =>
                 Array.from({length: size}, (_, z) => palette[compiled.indices[x * compiled.depth + z]]))
             this.planeBlockMap = this.blockMap.map((row, x) => row.map((block, z) =>
@@ -245,6 +236,16 @@ export class MapBlock {
     minableCoal: boolean
     minableOre: number | null
     minableOreAvailable: boolean = false
+
+    static fromCompiledTile(tile: CompiledTile): MapBlock {
+        const block = new MapBlock(tile.height, tile.flags & TileFlags.deep ? 51 : tile.type)
+        block.snowed = !!(tile.flags & TileFlags.snow)
+        block.stonePath = !!(tile.flags & TileFlags.stone)
+        block.beigeStonePath = !!(tile.flags & TileFlags.beige)
+        block.setMinable(tile.flags & TileFlags.coal ? 'C' : tile.ore > 0 ? `M${tile.ore}` : null)
+        block.computeData()
+        return block
+    }
 
     constructor(height: number, type: number) {
         this.height = height

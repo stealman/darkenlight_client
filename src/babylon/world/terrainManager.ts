@@ -12,6 +12,7 @@ import { Lights } from '@/babylon/scene/lights'
 import { smoothTerrainExperiment } from '@/babylon/world/terrainExperiment'
 import { BEVELED_TERRAIN_ENABLED, terrainBevelMask, terrainVerticalBevelMask, BeveledTerrain } from '@/babylon/world/beveledTerrain'
 import { SNOW_BLOCK_HEIGHT } from '@/babylon/world/beveledTerrainBlock'
+import type { createOutdoorTerrain } from './outdoorTerrain'
 
 export const DIRT_BLOCK_TYPE = 1
 const GRASS_BLOCK_TYPES = new Set([2, 5])
@@ -34,8 +35,17 @@ export const TerrainManager = {
     seaWaterLevel: null as number | null,
 
     hoverBlockMarker: null as Mesh | null,
+    outdoorTerrain: null as ReturnType<typeof createOutdoorTerrain> | null,
+    outdoorFactory: null as typeof createOutdoorTerrain | null,
 
     initialize (scene: Scene) {
+        this.outdoorTerrain = null
+        if (!smoothTerrainExperiment && !this.outdoorFactory) {
+            void import('./outdoorTerrain').then(({createOutdoorTerrain}) => {
+                this.outdoorFactory = createOutdoorTerrain
+                if (!scene.isDisposed && ViewportManager.viewPortInitialized) WorldRenderer.renderWorld()
+            }).catch(error => console.error('Unable to load outdoor terrain', error))
+        }
         this.initializeMeshes(scene, WorldRenderer.worldParentNode, () => {
             if (ViewportManager.viewPortInitialized) WorldRenderer.renderWorld()
         })
@@ -58,7 +68,7 @@ export const TerrainManager = {
         this.terrainWaterPlane.material = Materials.planeWaterMaterial
         this.terrainWaterPlane.renderingGroupId = 0
 
-        if (Settings.isShadowsEnabled) {
+        if (Settings.isShadowsEnabled()) {
             this.terrainBlock1.receiveShadows = true
             this.terrainPlane.receiveShadows = true
             this.terrainWaterPlane.receiveShadows = true
@@ -107,8 +117,17 @@ export const TerrainManager = {
     },
 
     renderTerrain(renderTerrainStatics?: (terrainMatrices: Matrix[], terrainUvData: Vector2[]) => void, snowCoverMask: Set<number> = new Set()) {
-        this.renderTerrainArea(WorldDataManager.getBlockMap(), WorldDataManager.getPlaneBlockMap(), snowCoverMask,
-            MyPlayer.myChar.getPositionRounded(), renderTerrainStatics)
+        const map = WorldDataManager.getBlockMap()
+        const center = MyPlayer.myChar.getPositionRounded()
+        const outdoor = !Lights.indoor && !smoothTerrainExperiment && !!this.outdoorFactory
+        if (outdoor && this.outdoorFactory) {
+            this.outdoorTerrain ??= this.outdoorFactory(WorldRenderer.worldParentNode!)
+            this.outdoorTerrain.render(map, center, snowCoverMask)
+        } else {
+            this.outdoorTerrain?.setEnabled(false)
+        }
+        this.renderTerrainArea(map, WorldDataManager.getPlaneBlockMap(), snowCoverMask, center, renderTerrainStatics, outdoor)
+        return outdoor
     },
 
     renderTerrainArea(
@@ -117,6 +136,7 @@ export const TerrainManager = {
         snowCoverMask: Set<number>,
         viewportCenter?: {x: number, z: number},
         renderTerrainStatics?: (terrainMatrices: Matrix[], terrainUvData: Vector2[]) => void,
+        outdoor = false,
     ) {
         const terrainMatrices1: Matrix[] = []
         const terrainUvData1: Vector2[] = []
@@ -140,6 +160,20 @@ export const TerrainManager = {
 
                 // Check if block is in visible matrix
                 if (viewportCenter && !ViewportManager.isPointInVisibleMatrix(x, z, 2, block.totalHeight)) {
+                    continue
+                }
+
+                if (block.type > 0 && (block.stonePath || block.beigeStonePath)) {
+                    const pathMatrix = Matrix.Scaling(1, 0.12, 1)
+                    pathMatrix.setTranslationFromFloats(x, block.height + 0.56, z)
+                    WorldRenderer.block1!.matrices.push(pathMatrix)
+                    WorldRenderer.block1!.uvData.push(block.beigeStonePath ? MaterialEnum1.ROCK1_BEIGE.uv : MaterialEnum1.ROCK1.uv)
+                }
+                if (outdoor) {
+                    if (block.type === WATER_BLOCK_TYPE) {
+                        this.addWaterTerrainLayer(x, z, block.height, getTerrainHeightOffset(block, false), block,
+                            terrainMatrices1, terrainUvData1, waterPlaneMatrices, waterPlaneUvData)
+                    }
                     continue
                 }
 
@@ -231,12 +265,6 @@ export const TerrainManager = {
                         }
                     }
 
-                    if (block.stonePath || block.beigeStonePath) {
-                        const pathMatrix = Matrix.Scaling(1, 0.12, 1)
-                        pathMatrix.setTranslationFromFloats(x, block.height + 0.56, z)
-                        WorldRenderer.block1!.matrices.push(pathMatrix)
-                        WorldRenderer.block1!.uvData.push(block.beigeStonePath ? MaterialEnum1.ROCK1_BEIGE.uv : MaterialEnum1.ROCK1.uv)
-                    }
                 }
             }
         }

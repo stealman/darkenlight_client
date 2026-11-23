@@ -84,15 +84,16 @@ function renderedTop(tile: MapBlock, x: number, z: number, snowMask: Set<number>
     return tile.totalHeight
 }
 
-export function terrainBevelMask(map: MapBlock[][], x: number, z: number, snowMask: Set<number>): number {
+export function terrainBevelMask(map: MapBlock[][], x: number, z: number, snowMask: Set<number>,
+                                 topAt = (tx: number, tz: number) => renderedTop(map[tx][tz], tx, tz, snowMask, map.length)): number {
     const block = map[x]?.[z]
     if (!block || block.type <= 0 || block.type >= 50 || block.stonePath || block.beigeStonePath) return 0
-    const height = renderedTop(block, x, z, snowMask, map.length)
+    const height = topAt(x, z)
     let mask = 0
     for (const [dx, dz, bit] of EDGE_NEIGHBORS) {
         const nx = x + dx, nz = z + dz, neighbor = map[nx]?.[nz]
         if (!neighbor || neighbor.type <= 0) continue
-        const neighborHeight = renderedTop(neighbor, nx, nz, snowMask, map.length)
+        const neighborHeight = topAt(nx, nz)
         if (height > neighborHeight + 1e-6) mask |= bit
     }
     // In a concave 3-high/1-low tile corner, the diagonally opposite high tile
@@ -101,10 +102,10 @@ export function terrainBevelMask(map: MapBlock[][], x: number, z: number, snowMa
     for (const [dx, dz, edges, corner] of CORNER_NEIGHBORS) {
         if (mask & edges) continue
         const diagonal = map[x + dx]?.[z + dz], sideX = map[x + dx]?.[z], sideZ = map[x]?.[z + dz]
-        if (!diagonal || diagonal.type <= 0 || !sideX || !sideZ) continue
-        if (Math.abs(renderedTop(sideX, x + dx, z, snowMask, map.length) - height) > 1e-6
-            || Math.abs(renderedTop(sideZ, x, z + dz, snowMask, map.length) - height) > 1e-6) continue
-        if (height > renderedTop(diagonal, x + dx, z + dz, snowMask, map.length) + 1e-6) mask |= corner
+        if (!diagonal || diagonal.type <= 0 || !sideX || sideX.type <= 0 || !sideZ || sideZ.type <= 0) continue
+        if (Math.abs(topAt(x + dx, z) - height) > 1e-6
+            || Math.abs(topAt(x, z + dz) - height) > 1e-6) continue
+        if (height > topAt(x + dx, z + dz) + 1e-6) mask |= corner
     }
     return mask
 }

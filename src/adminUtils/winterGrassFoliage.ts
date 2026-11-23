@@ -40,18 +40,18 @@ export function greenGrassFoliageOffset(uv: Vector2, layer: FoliageLayer) {
     return layer === 'tufts' && uv.y === GRASS_ATLAS_Y ? new Vector2(uv.x, GREEN_GRASS_ATLAS_Y) : uv
 }
 
-export function rockPebbleOffset(uv: Vector2, matrix: Matrix, layer: FoliageLayer) {
+export function rockPebbleOffset(uv: Vector2, matrix: Matrix, layer: FoliageLayer, originX = 0, originZ = 0) {
     if (layer !== 'ground') return uv
-    const x = Math.round(matrix.m[12] * 128), z = Math.round(matrix.m[14] * 128)
+    const x = Math.round((matrix.m[12] + originX) * 128), z = Math.round((matrix.m[14] + originZ) * 128)
     const row = FoliageManager.roll(x, z, 9541) < 0.13 ? LIGHT_ROCK_PEBBLE : ROCK_PEBBLES
     return new Vector2(uv.x, FoliageManager.getAtlasOffset(0, 0, row).y)
 }
 
-export function createGrassFootTufts(map: MapBlock[][], terrainType: number) {
+export function createGrassFootTufts(map: MapBlock[][], terrainType: number, originX = 0, originZ = 0) {
     const tufts: {matrix: Matrix, uv: Vector2}[] = []
     forEachFoliageWallFoot(map, terrainType, (x, z, top, dx, dz, side) => {
         const salt = 8200 + side * 100
-        const roll = (offset: number) => FoliageManager.roll(x, z, salt + offset)
+        const roll = (offset: number) => FoliageManager.roll(x + originX, z + originZ, salt + offset)
         const growth = roll(0)
         if (growth < 0.20) return
         const count = growth < 0.57 ? 1 : growth < 0.87 ? 2 : 3
@@ -67,15 +67,15 @@ export function createGrassFootTufts(map: MapBlock[][], terrainType: number) {
             const rootZ = z + dz * advance - dx * slide
             const height = GRASS_HEIGHT * (0.80 + 0.33 * roll(6 + i))
             tufts.push({
-                matrix: FoliageManager.tuftMatrix(x, z, rootX, top, rootZ, GRASS, tuftSalt, height),
-                uv: FoliageManager.getAtlasOffset(x, z, GRASS, tuftSalt),
+                matrix: FoliageManager.tuftMatrix(x + originX, z + originZ, rootX, top, rootZ, GRASS, tuftSalt, height),
+                uv: FoliageManager.getAtlasOffset(x + originX, z + originZ, GRASS, tuftSalt),
             })
         }
     })
     return tufts
 }
 
-export function createWinterGrassFoliage(transitionWeight: (x: number, z: number) => number): TerrainFoliage {
+export function createWinterGrassFoliage(transitionWeight: (x: number, z: number) => number, originX = 0, originZ = 0): TerrainFoliage {
     return {
         rows: [GRASS, GRASS, GRASS, GRASS, DRY_GRASS],
         tuftsPerTile: 0.92,
@@ -90,8 +90,8 @@ export function createWinterGrassFoliage(transitionWeight: (x: number, z: number
             [MOSS]: [0.38, 0.59],
         },
         scatter(x, z, variety) {
-            const plants = findFoliagePatch(x, z, PLANT_PATCHES)
-            const ground = findFoliagePatch(x, z, GROUND_PATCHES)
+            const plants = findFoliagePatch(x + originX, z + originZ, PLANT_PATCHES)
+            const ground = findFoliagePatch(x + originX, z + originZ, GROUND_PATCHES)
             const coreStart = 0.58
             const core = Math.min(1, Math.max(0, (plants.influence - coreStart) / 1.75))
             const gapFillChance = 0.24 * Math.max(0, 1 - plants.influence / coreStart)
@@ -150,13 +150,11 @@ export function styleTerrainFoliage(tufts: PBRCustomMaterial, ground: PBRCustomM
         vec3 lightScrub = surfaceAlbedo * vec3(1.05, 1.30, 1.44) + vec3(0.009, 0.008, 0.005);
         surfaceAlbedo = mix(surfaceAlbedo, lightScrub, vTerrainTuftStyle.y);
         surfaceAlbedo *= mix(vec3(1.0), vec3(0.79, 1.08, 1.02), vTerrainTuftStyle.z);
-        float snowDust = 0.0;
-        vec3 strawEmissiveTint = vec3(1.0);
         if (vSnowTuft.x > 0.5) {
             vec3 paleBrown = surfaceAlbedo * vec3(1.16, 1.29, 1.42) + vec3(0.15, 0.125, 0.095);
             float uneven = 0.06 * sin(dot(vPositionW.xz, vec2(29.0, 19.0)));
             float bladeHeight = vSnowTuft.z + uneven;
-            snowDust = 1.0 - smoothstep(0.07, 0.34, bladeHeight);
+            float snowDust = 1.0 - smoothstep(0.07, 0.34, bladeHeight);
             vec3 plantColor = paleBrown;
             if (vSnowTuft.y > 0.5) {
                 float straw = smoothstep(0.22, 0.58, bladeHeight);
@@ -165,20 +163,8 @@ export function styleTerrainFoliage(tufts: PBRCustomMaterial, ground: PBRCustomM
                 vec3 strawMiddle = surfaceAlbedo * vec3(1.70, 1.25, 0.50) + vec3(0.14, 0.105, 0.053);
                 vec3 softGreen = surfaceAlbedo * vec3(1.10, 1.38, 0.66) + vec3(0.093, 0.112, 0.062);
                 plantColor = mix(mix(lowerStem, strawMiddle, straw), softGreen, greenTip);
-                strawEmissiveTint = mix(mix(vec3(0.88, 0.76, 0.70), vec3(1.0), straw), vec3(0.84, 1.12, 1.10), greenTip);
             }
             surfaceAlbedo = mix(plantColor, vec3(0.80, 0.85, 0.92), snowDust * 0.87);
-        }
-    `)
-    tufts.Fragment_Before_FinalColorComposition(`
-        finalEmissive *= mix(vec3(1.0), vec3(0.66, 0.40, 0.49), vTerrainTuftStyle.x);
-        finalEmissive = mix(finalEmissive, muteGreenGrass(finalEmissive * vec3(0.51, 0.66, 0.51) * 0.56), vTerrainTuftStyle.w);
-        finalEmissive *= mix(vec3(1.0), vec3(0.89, 1.03, 1.14), vTerrainTuftStyle.y);
-        finalEmissive *= mix(vec3(1.0), vec3(0.79, 1.08, 1.02), vTerrainTuftStyle.z);
-        if (vSnowTuft.x > 0.5) {
-            vec3 snowPlantTone = mix(vec3(1.18, 1.24, 1.29), vec3(1.55, 1.22, 0.55), vSnowTuft.y);
-            vec3 litPlant = (finalEmissive * snowPlantTone + vec3(0.051, 0.041, 0.029)) * strawEmissiveTint;
-            finalEmissive = mix(litPlant, vec3(0.10, 0.12, 0.15), snowDust);
         }
     `)
 
@@ -228,10 +214,10 @@ export function styleTerrainFoliage(tufts: PBRCustomMaterial, ground: PBRCustomM
             float growth = sin(p.x + 0.9 * sin(p.y)) * sin(p.y * 0.84)
                          + 0.45 * sin(p.y * 2.1 - p.x * 1.17);
             if (vStoneStyle.w > 0.5) {
-                // Use a pale grey base across the whole stone and let the normals describe the relief.
+                // Keep the snow coating muted and let the normals describe the relief.
                 float upward = dot(normalW, geometricNormalW);
                 float cap = smoothstep(0.60, 0.95, upward + growth * 0.14);
-                surfaceAlbedo = mix(vec3(0.69, 0.73, 0.79), vec3(0.88, 0.91, 0.95), cap);
+                surfaceAlbedo = mix(vec3(0.44, 0.47, 0.52), vec3(0.58, 0.61, 0.66), cap);
                 normalW = normalize(mix(geometricNormalW, normalW, 0.57));
             } else {
                 float moss = smoothstep(-0.23, 0.70, growth);

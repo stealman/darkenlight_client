@@ -117,7 +117,7 @@ export const WorldRenderer = {
         this.snowCoverMask = snowCoverMask
 
         // Render terrain
-        TerrainManager.renderTerrain((terrainMatrices, terrainUvData) => {
+        const outdoorTerrain = TerrainManager.renderTerrain((terrainMatrices, terrainUvData) => {
             StaticsManager.renderTerrainBlocks(terrainMatrices, terrainUvData)
             TerrainDebrisManager.render(terrainMatrices, terrainUvData)
         }, snowCoverMask)
@@ -138,10 +138,14 @@ export const WorldRenderer = {
         EquipmentDecorationsManager.refreshVisibility()
 
         // Render decorative foliage
-        FoliageManager.renderFoliage(snowCoverMask, vegetationMask)
-
-        // Render decorative rock debris
-        RockDebrisManager.renderRockDebris(Lights.indoor)
+        if (outdoorTerrain) {
+            FoliageManager.foliageMesh?.setEnabled(false)
+            FoliageManager.groundMesh?.setEnabled(false)
+            RockDebrisManager.mesh?.setEnabled(false)
+        } else {
+            FoliageManager.renderFoliage(snowCoverMask, vegetationMask)
+            RockDebrisManager.renderRockDebris(Lights.indoor)
+        }
         FoggyAreaManager.refreshVisibleAreas()
 
         if (GMManager.gmPanelVisible.value && GMManager.tab === GmTabs.SPAWNS_EDIT) {

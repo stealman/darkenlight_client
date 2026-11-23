@@ -17,6 +17,8 @@ const BLOCK_TOP_UVS = PLANE_UVS.map(uv => new Vector2(0.25 + 0.25 * uv.x, (1 + u
 const NO_DIRT_EDGE = 10000
 export const COAL_DEPOSIT = -1
 type TerrainSurfaceDetails = {top?: number, foot?: number, wetTile?: readonly [x: number, z: number, corners: number], depositKind?: number}
+export type TerrainInstanceAttribute = {kind: string, stride: number, values: number[]}
+export type SubmitTerrainBatch = (mesh: Mesh, batch: TerrainPreviewBatch, attributes: TerrainInstanceAttribute[]) => void
 
 export const terrainNoiseShader = `
     float terrainHash(vec2 p) {
@@ -45,6 +47,25 @@ export class TerrainPreviewBatch {
     private readonly dirtEdges: number[] = []
     private readonly wetTiles: number[] = []
     private readonly rockDeposits: number[] = []
+    private readonly tiles: number[] = []
+    tile = -1
+
+    forEachInstance(visit: (tile: number, matrix: Matrix, uv: Vector2, index: number) => void) {
+        for (let i = 0; i < this.matrices.length; i++) {
+            visit(this.tiles[i], this.matrices[i], this.origins[i], i)
+        }
+    }
+
+    attributes(roundDirtEdges = false, wetness = roundDirtEdges, showRockDeposits = false) {
+        const attributes: TerrainInstanceAttribute[] = [
+            {kind: 'terrainTriangleU', stride: 3, values: this.uValues},
+            {kind: 'terrainTriangleV', stride: 3, values: this.vValues},
+        ]
+        if (roundDirtEdges) attributes.push({kind: 'terrainDirtEdges', stride: 2, values: this.dirtEdges})
+        if (wetness) attributes.push({kind: 'terrainWetTile', stride: 3, values: this.wetTiles})
+        if (showRockDeposits) attributes.push({kind: 'terrainDeposit', stride: 1, values: this.rockDeposits})
+        return attributes
+    }
 
     get count() {
         return this.matrices.length
@@ -75,15 +96,9 @@ export class TerrainPreviewBatch {
     apply(mesh: Mesh, roundDirtEdges = false, wetness = roundDirtEdges, showRockDeposits = false) {
         const count = this.matrices.length
         if (count) {
-            mesh.thinInstanceSetBuffer('terrainTriangleU', new Float32Array(this.uValues), 3)
-            mesh.thinInstanceSetBuffer('terrainTriangleV', new Float32Array(this.vValues), 3)
-            if (roundDirtEdges) {
-                mesh.thinInstanceSetBuffer('terrainDirtEdges', new Float32Array(this.dirtEdges), 2)
+            for (const {kind, stride, values} of this.attributes(roundDirtEdges, wetness, showRockDeposits)) {
+                mesh.thinInstanceSetBuffer(kind, new Float32Array(values), stride)
             }
-            if (wetness) {
-                mesh.thinInstanceSetBuffer('terrainWetTile', new Float32Array(this.wetTiles), 3)
-            }
-            if (showRockDeposits) mesh.thinInstanceSetBuffer('terrainDeposit', new Float32Array(this.rockDeposits), 1)
         }
         updateWorldInstanceBuffers(mesh, this.matrices, this.origins)
         mesh.setEnabled(count > 0)
@@ -91,6 +106,7 @@ export class TerrainPreviewBatch {
 
     private addInstance(matrix: Matrix, origin: Vector2, [a, b, c]: TriangleUV, dirtEdges?: TerrainSurfaceDetails) {
         this.matrices.push(matrix)
+        this.tiles.push(this.tile)
         this.origins.push(origin)
         this.uValues.push(a.x, b.x, c.x)
         this.vValues.push(a.y, b.y, c.y)
