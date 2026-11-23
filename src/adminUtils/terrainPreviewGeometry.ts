@@ -8,7 +8,7 @@ import {
 } from '@/babylon/world/beveledTerrainBlock'
 import { getTerrainHeightOffset } from '@/babylon/world/terrainManager'
 import type { MapBlock } from '@/data/worldDataManager'
-import { createTerrainPreviewPlane, muddyDirtPatterns, TERRAIN_ATLAS_TILES } from './terrainAtlasPreview'
+import { createTerrainPreviewPlane, muddyDirtPatterns, terrainCoverPatterns, TERRAIN_ATLAS_TILES } from './terrainAtlasPreview'
 import { addTerrainPreviewRoof, configureTerrainPreviewBatch, TerrainPreviewBatch } from './terrainPreviewBatch'
 import type { TerrainPreviewTriangle } from './terrainPreviewBatch'
 
@@ -19,15 +19,19 @@ const EDGE_BITS = [TerrainEdge.North, TerrainEdge.West, TerrainEdge.South, Terra
 const EDGE_MASK = TerrainEdge.North | TerrainEdge.West | TerrainEdge.South | TerrainEdge.East
 const SNOW_DIRT = TerrainEnum1.TERRAIN_SNOW_MUDDY_DIRT.index
 const SNOW_WINTER_GRASS = TerrainEnum1.TERRAIN_SNOW_GRASS_WINTER.index
+const SNOW_ROCK = TerrainEnum1.TERRAIN_SNOW_ROCK.index
+const ROCK = TerrainEnum1.TERRAIN_ROCK.index
 const atlasType = (block: MapBlock) => {
     const type = block.snowed ? block.type + 100 : block.type
-    return type === SNOW_WINTER_GRASS ? SNOW_DIRT : type
+    return type === SNOW_WINTER_GRASS || type === SNOW_ROCK ? SNOW_DIRT : type
 }
 const WALL_ROTATIONS = WALL_DIRECTIONS.map((_, index) => Matrix.RotationYawPitchRoll(
     index * Math.PI / 2, -Math.PI / 2, 0,
 ))
-const WALL_UVS = muddyDirtPatterns.find(pattern => pattern.size === 1)!.origins.map(([left, top]) =>
-    new Vector2(left, TERRAIN_ATLAS_TILES - top - 1))
+const wallUvs = (patterns: typeof muddyDirtPatterns) => patterns.find(pattern => pattern.size === 1)!
+    .origins.map(([left, top]) => new Vector2(left, TERRAIN_ATLAS_TILES - top - 1))
+const MUD_WALL_UVS = wallUvs(muddyDirtPatterns)
+const ROCK_WALL_UVS = wallUvs(terrainCoverPatterns)
 const VERTICAL_CORNERS = [
     [-1, -1, TerrainVerticalCorner.NorthWest], [1, -1, TerrainVerticalCorner.NorthEast],
     [1, 1, TerrainVerticalCorner.SouthEast], [-1, 1, TerrainVerticalCorner.SouthWest],
@@ -43,8 +47,10 @@ export type TerrainPreviewSurfaces = {
     stride: number
     atlasTops: ReadonlyMap<number, Map<number, number>>
     roofs: ReadonlyMap<number, TerrainPreviewTriangle[]>
+    wetCorners: ReadonlyMap<number, number>
     cornerFloors: ReadonlyMap<number, TerrainPreviewTriangle[]>
     walls: TerrainPreviewBatch
+    rockWalls: TerrainPreviewBatch
 }
 
 export type TerrainWallContact = {
@@ -91,9 +97,11 @@ export function createTerrainPreviewGeometry(plane: Mesh, atlasTypes: readonly n
         const tops = new TerrainPreviewBatch()
         const oreTops = new TerrainPreviewBatch()
         const walls = new TerrainPreviewBatch()
+        const rockWalls = new TerrainPreviewBatch()
         const stride = map.length
         const atlasTops = new Map(atlasTypes.map(type => [type, new Map<number, number>()]))
         const roofs = new Map<number, TerrainPreviewTriangle[]>()
+        const wetCorners = new Map<number, number>()
         const cornerFloors = new Map<number, TerrainPreviewTriangle[]>()
         const heights = map.map(row => row.map(block => atlasType(block) === SNOW_DIRT
             ? block.totalHeight : block.height + getTerrainHeightOffset(block, false)))
@@ -110,6 +118,8 @@ export function createTerrainPreviewGeometry(plane: Mesh, atlasTypes: readonly n
         for (let x = 0; x < map.length; x++) {
             for (let z = 0; z < map[x].length; z++) {
                 const block = map[x][z]
+                const isRock = block.type === ROCK
+                const baseWallBatch = isRock ? rockWalls : walls
                 const atlas = atlasTops.get(atlasType(block))
                 const deposit = block.minableCoal || block.minableOreAvailable
                 const top = heights[x][z]
@@ -122,8 +132,11 @@ export function createTerrainPreviewGeometry(plane: Mesh, atlasTypes: readonly n
                 })
                 const steps = cornerSteps[x][z]
                 let bevel = edges
-                ROOF_CORNERS.forEach(([, , corner, sides], index) => {
+                let wetMask = 0
+                ROOF_CORNERS.forEach(([dx, dz, corner, sides], index) => {
                     if (steps[index] && !(edges & sides)) bevel |= corner
+                    if (!isRock && [heights[x + dx]?.[z], heights[x]?.[z + dz], heights[x + dx]?.[z + dz]]
+                        .some(height => height !== undefined && height > top + MIN_TERRACE_STEP)) wetMask |= 1 << index
                 })
                 const bottom = Math.min(...lower)
                 const tileRoof: TerrainPreviewTriangle[] = []
@@ -140,21 +153,21 @@ export function createTerrainPreviewGeometry(plane: Mesh, atlasTypes: readonly n
                         if (foot === undefined || top - foot <= MIN_TERRACE_STEP) return undefined
                         const [dx, dz] = WALL_DIRECTIONS[side]
                         const lowerBlock = map[x + dx][z + dz]
-                        const lowerAtlas = atlasTops.has(lowerBlock.type) && !lowerBlock.snowed
+                        const lowerAtlas = lowerBlock.type !== ROCK && atlasTops.has(lowerBlock.type) && !lowerBlock.snowed
                             && !lowerBlock.minableCoal && !lowerBlock.minableOreAvailable
                         return {
                             top: layer === 0 && atlas && !block.snowed && !deposit ? top : undefined,
-                            foot: lowerAtlas && foot >= base - 1e-6 ? foot : undefined,
+                            foot: !isRock && lowerAtlas && foot >= base - 1e-6 ? foot : undefined,
                         }
                     }
                     const wallBatch = (side: number, triangles: number) => {
                         const foot = adjacent[side]
-                        if (!takeWall || foot === undefined || top - foot <= MIN_TERRACE_STEP) return walls
+                        if (!takeWall || foot === undefined || top - foot <= MIN_TERRACE_STEP) return baseWallBatch
                         const topY = layer === 0 ? top - (flatSnowRoof ? 0 : TERRAIN_BEVEL_DROP) : undefined
                         const bottomY = foot >= base - 1e-6 ? foot : undefined
-                        if (topY === undefined && bottomY === undefined) return walls
+                        if (topY === undefined && bottomY === undefined) return baseWallBatch
                         const [dx, dz] = WALL_DIRECTIONS[side]
-                        return takeWall({x, z, lowerX: x + dx, lowerZ: z + dz, topY, bottomY}, triangles) ?? walls
+                        return takeWall({x, z, lowerX: x + dx, lowerZ: z + dz, topY, bottomY}, triangles) ?? baseWallBatch
                     }
                     if (!mask) {
                         for (let side = 0; side < WALL_DIRECTIONS.length; side++) {
@@ -165,7 +178,7 @@ export function createTerrainPreviewGeometry(plane: Mesh, atlasTypes: readonly n
                             const wallHeight = height + overlap
                             const matrix = Matrix.Scaling(1, 1, wallHeight).multiply(WALL_ROTATIONS[side])
                             matrix.setTranslationFromFloats(x + dx * 0.5, upper - wallHeight / 2, z + dz * 0.5)
-                            wallBatch(side, 2).addPlane(matrix, wallUv(x, z, side, layer), {
+                            wallBatch(side, 2).addPlane(matrix, wallUv(x, z, side, layer, isRock), {
                                 bottomV: -overlap / height, dirtEdges: dirtEdgesAt(side),
                             })
                         }
@@ -200,7 +213,7 @@ export function createTerrainPreviewGeometry(plane: Mesh, atlasTypes: readonly n
                             const project = (point: Vector3) =>
                                 new Vector2(-normal.z * point.x + normal.x * point.z + 0.5,
                                     point.y + 0.5 - lowerBy(point) / (1 + heightOffset))
-                            wallBatch(contactSide, 1).addTriangle(triangle, wallUv(x, z, side, layer),
+                            wallBatch(contactSide, 1).addTriangle(triangle, wallUv(x, z, side, layer, isRock),
                                 [project(a), project(b), project(c)], dirtEdgesAt(contactSide))
                         }
                     }
@@ -214,6 +227,7 @@ export function createTerrainPreviewGeometry(plane: Mesh, atlasTypes: readonly n
                     const key = x * stride + z
                     atlas.set(key, top)
                     if (roof) roofs.set(key, roof)
+                    if (wetMask) wetCorners.set(key, wetMask)
                 } else {
                     addTerrainPreviewRoof(tops, Matrix.Translation(x, top, z), PlaneEnum1.getPlaneForBlock(block), roof)
                 }
@@ -233,7 +247,7 @@ export function createTerrainPreviewGeometry(plane: Mesh, atlasTypes: readonly n
         }
         tops.apply(plane)
         oreTops.apply(deposits)
-        return {stride, atlasTops, roofs, cornerFloors, walls}
+        return {stride, atlasTops, roofs, wetCorners, cornerFloors, walls, rockWalls}
     }
     return {render, deposits}
 }
@@ -275,8 +289,9 @@ function addCornerFloors(
     }
 }
 
-function wallUv(x: number, z: number, side: number, layer: number) {
+function wallUv(x: number, z: number, side: number, layer: number, isRock: boolean) {
     const hash = Math.imul(x + 1, 73856093) ^ Math.imul(z + 1, 19349663)
         ^ Math.imul(side + layer * WALL_DIRECTIONS.length, 83492791)
-    return WALL_UVS[(hash >>> 0) % WALL_UVS.length]
+    const variants = isRock ? ROCK_WALL_UVS : MUD_WALL_UVS
+    return variants[(hash >>> 0) % variants.length]
 }

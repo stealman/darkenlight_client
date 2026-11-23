@@ -1,5 +1,5 @@
-import type { Matrix } from '@babylonjs/core'
-import { TERRAIN_BEVEL_WIDTH } from '@/babylon/world/beveledTerrainBlock'
+import { Matrix } from '@babylonjs/core'
+import { TERRAIN_BEVEL_WIDTH, TERRAIN_VERTICAL_BEVEL_WIDTH } from '@/babylon/world/beveledTerrainBlock'
 import { FoliageManager } from '@/babylon/world/foliageManager'
 import type { MapBlock } from '@/data/worldDataManager'
 
@@ -34,11 +34,11 @@ export function insetTuftFromLedges(map: MapBlock[][], matrix: Matrix) {
     matrix.setTranslationFromFloats(x + localX * cornerScale, rootY, z + localZ * cornerScale)
 }
 
-export function forEachFoliageWallFoot(map: MapBlock[][], terrain: number, visit: (
+export function forEachFoliageWallFoot(map: MapBlock[][], terrain: number | undefined, visit: (
     x: number, z: number, height: number, dx: number, dz: number, side: number, uphill: MapBlock,
 ) => void) {
     map.forEach((row, x) => row.forEach((block, z) => {
-        if (FoliageManager.getTerrainIndex(block) !== terrain) return
+        if (terrain !== undefined && FoliageManager.getTerrainIndex(block) !== terrain) return
         CARDINAL_NEIGHBORS.forEach(([dx, dz], side) => {
             const uphill = map[x + dx]?.[z + dz]
             if (uphill && uphill.totalHeight - block.totalHeight > 0.5) {
@@ -46,6 +46,18 @@ export function forEachFoliageWallFoot(map: MapBlock[][], terrain: number, visit
             }
         })
     }))
+}
+
+export function wallFootDecal(x: number, z: number, top: number, dx: number, dz: number, salt: number,
+                             width: number, height: number) {
+    // Fit the decal between the wall's clipped corners.
+    const slide = (FoliageManager.roll(x, z, salt + 3) * 2 - 1) * (0.49 - TERRAIN_VERTICAL_BEVEL_WIDTH - width / 2)
+    const matrix = Matrix.Scaling(width, 1, height)
+        .multiply(Matrix.RotationYawPitchRoll(Math.atan2(dx, dz), -Math.PI / 2, 0))
+    const lift = 0.006 + FoliageManager.roll(x, z, salt + 4) * 0.04
+    matrix.setTranslationFromFloats(x + dx * 0.496 + dz * slide,
+        top + height / 2 + lift, z + dz * 0.496 - dx * slide)
+    return matrix
 }
 
 type FoliagePatches = {

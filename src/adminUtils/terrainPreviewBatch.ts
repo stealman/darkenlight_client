@@ -15,7 +15,7 @@ const PLANE_UVS = [new Vector2(0, 0), new Vector2(1, 0), new Vector2(1, 1), new 
 const BLOCK_TOP_UVS = PLANE_UVS.map(uv => new Vector2(0.25 + 0.25 * uv.x, (1 + uv.y) / 3))
 // Preview heights stay inside these bounds. The sentinels put absent edges out of shader range.
 const NO_DIRT_EDGE = 10000
-type DirtEdges = {top?: number, foot?: number}
+type DirtEdges = {top?: number, foot?: number, wetTile?: readonly [x: number, z: number, corners: number]}
 
 export const terrainNoiseShader = `
     float terrainHash(vec2 p) {
@@ -42,6 +42,7 @@ export class TerrainPreviewBatch {
     private readonly uValues: number[] = []
     private readonly vValues: number[] = []
     private readonly dirtEdges: number[] = []
+    private readonly wetTiles: number[] = []
 
     get count() {
         return this.matrices.length
@@ -69,12 +70,17 @@ export class TerrainPreviewBatch {
         this.addInstance(matrix, origin, uv, dirtEdges)
     }
 
-    apply(mesh: Mesh, roundDirtEdges = false) {
+    apply(mesh: Mesh, roundDirtEdges = false, wetness = roundDirtEdges) {
         const count = this.matrices.length
         if (count) {
             mesh.thinInstanceSetBuffer('terrainTriangleU', new Float32Array(this.uValues), 3)
             mesh.thinInstanceSetBuffer('terrainTriangleV', new Float32Array(this.vValues), 3)
-            if (roundDirtEdges) mesh.thinInstanceSetBuffer('terrainDirtEdges', new Float32Array(this.dirtEdges), 2)
+            if (roundDirtEdges) {
+                mesh.thinInstanceSetBuffer('terrainDirtEdges', new Float32Array(this.dirtEdges), 2)
+            }
+            if (wetness) {
+                mesh.thinInstanceSetBuffer('terrainWetTile', new Float32Array(this.wetTiles), 3)
+            }
         }
         updateWorldInstanceBuffers(mesh, this.matrices, this.origins)
         mesh.setEnabled(count > 0)
@@ -86,20 +92,22 @@ export class TerrainPreviewBatch {
         this.uValues.push(a.x, b.x, c.x)
         this.vValues.push(a.y, b.y, c.y)
         this.dirtEdges.push(dirtEdges?.top ?? -NO_DIRT_EDGE, dirtEdges?.foot ?? NO_DIRT_EDGE)
+        this.wetTiles.push(dirtEdges?.wetTile?.[0] ?? 0, dirtEdges?.wetTile?.[1] ?? 0, dirtEdges?.wetTile?.[2] ?? 0)
     }
 }
 
 export function addTerrainPreviewRoof(
     batch: TerrainPreviewBatch, placement: Matrix, origin: Vector2,
     triangles?: readonly TerrainPreviewTriangle[],
-    options?: {blockAtlas?: boolean, mirrorAtTileEdge?: boolean, roundDirtEdges?: boolean},
+    options?: {blockAtlas?: boolean, mirrorAtTileEdge?: boolean, roundDirtEdges?: boolean, wetCorners?: number},
 ) {
-    const {blockAtlas = false, mirrorAtTileEdge = false, roundDirtEdges = false} = options ?? {}
+    const {blockAtlas = false, mirrorAtTileEdge = false, roundDirtEdges = false, wetCorners = 0} = options ?? {}
+    const center = placement.getTranslation()
+    const wetTile: DirtEdges['wetTile'] = wetCorners ? [center.x, center.z, wetCorners] : undefined
     if (!triangles) {
-        batch.addPlane(placement, origin, {blockAtlas})
+        batch.addPlane(placement, origin, {blockAtlas, dirtEdges: wetTile && {wetTile}})
         return
     }
-    const center = placement.getTranslation()
     const axis = placement.m
     const project = (point: Vector3) => {
         const x = point.x - center.x, z = point.z - center.z
@@ -113,8 +121,9 @@ export function addTerrainPreviewRoof(
     }
     for (const triangle of triangles) {
         const [a, b, c] = triangle.points
-        const dirtEdges = roundDirtEdges ? {
-            top: Math.min(a.y, b.y, c.y) < center.y - 1e-6 ? center.y : undefined,
+        const dirtEdges = roundDirtEdges || wetTile ? {
+            top: roundDirtEdges && Math.min(a.y, b.y, c.y) < center.y - 1e-6 ? center.y : undefined,
+            wetTile,
         } : undefined
         batch.addTriangle(triangle, origin, [project(a), project(b), project(c)], dirtEdges)
     }
@@ -138,7 +147,7 @@ export function configureTerrainPreviewBatch(mesh: Mesh, material: PBRCustomMate
     if (useDefaultAtlasUv) material.Vertex_Before_PositionUpdated('uvUpdated = terrainAtlasUV(positionUpdated);')
 }
 
-export function configureDirtEdgeLighting(material: PBRCustomMaterial, mixedCoverage = false) {
+export function configureTerrainEdgeLighting(material: PBRCustomMaterial, coverage?: string, topOnly = false) {
     material.AddAttribute('terrainDirtEdges')
     material.Vertex_Definitions(`${material.CustomParts.Vertex_Definitions}
         attribute vec2 terrainDirtEdges;
@@ -148,7 +157,7 @@ export function configureDirtEdgeLighting(material: PBRCustomMaterial, mixedCove
         vDirtEdges = world[1].y * terrainDirtEdges + world[3].y;
     `)
     material.Fragment_Definitions(`${material.CustomParts.Fragment_Definitions ?? ''}
-        ${mixedCoverage ? '' : terrainNoiseShader}
+        ${coverage ? '' : terrainNoiseShader}
         varying vec2 vDirtEdges;
 
         vec3 roundDirtEdge(vec3 bumped, vec3 surface, float depth, float edgeY, float dirt, vec2 widths, bool foot) {
@@ -178,8 +187,112 @@ export function configureDirtEdgeLighting(material: PBRCustomMaterial, mixedCove
         }
     `)
     material.Fragment_Before_Lights(`${material.CustomParts.Fragment_Before_Lights ?? ''}
-        vec2 edgeDirt = ${mixedCoverage ? 'dirtCoverage' : 'vec2(1.0)'};
+        vec2 edgeDirt = ${coverage ?? 'vec2(1.0)'};
         normalW = roundDirtEdge(normalW, geometricNormalW, vDirtEdges.x - vPositionW.y, vDirtEdges.x, edgeDirt.x, vec2(0.13, 0.33), false);
-        normalW = roundDirtEdge(normalW, geometricNormalW, vPositionW.y - vDirtEdges.y, vDirtEdges.y, edgeDirt.y, vec2(0.09, 0.26), true);
+        ${topOnly ? '' : 'normalW = roundDirtEdge(normalW, geometricNormalW, vPositionW.y - vDirtEdges.y, vDirtEdges.y, edgeDirt.y, vec2(0.09, 0.26), true);'}
+    `)
+}
+
+export function configureMuddyDirtWetness(material: PBRCustomMaterial, mode: 'solid' | 'mixed' | 'snow' | 'walls' | 'cover') {
+    material.AddAttribute('terrainWetTile')
+    material.Vertex_Definitions(`${material.CustomParts.Vertex_Definitions}
+        attribute vec3 terrainWetTile;
+        varying vec3 vWetTile;
+    `)
+    material.Vertex_After_WorldPosComputed(`${material.CustomParts.Vertex_After_WorldPosComputed}
+        vec2 wetTileCenter = (world * vec4(terrainWetTile.x, 0.0, terrainWetTile.y, 1.0)).xz;
+        vWetTile = vec3(worldPos.xz - wetTileCenter + 0.5, terrainWetTile.z);
+    `)
+    material.Fragment_Definitions(`${material.CustomParts.Fragment_Definitions}
+        varying vec3 vWetTile;
+        float mudWetness;
+
+        float terraceFootMoisture(float detail) {
+            float mask = floor(vWetTile.z + 0.5);
+            if (mask < 1.0) return 0.0;
+            vec2 uv = clamp(vWetTile.xy, 0.0, 1.0);
+            vec4 corners = mod(floor(mask / vec4(1.0, 2.0, 4.0, 8.0)), 2.0);
+            // Evaluate the falloff across the tile, including across its triangle diagonal.
+            float foot = mix(mix(corners.x, corners.y, uv.x), mix(corners.w, corners.z, uv.x), uv.y);
+            float staggered = foot + (detail - 0.5) * 0.62;
+            return smoothstep(0.0, 0.26, foot) * smoothstep(0.12, 0.94, staggered) * mix(0.44, 1.0, detail);
+        }
+    `)
+    const dirt = mode === 'solid' ? '1.0' : mode === 'walls' ? '(wall ? 1.0 - grassWeight - snowWeight : 0.0)'
+        : mode === 'cover' ? 'grassWeight' : '1.0 - grassWeight'
+    material.Fragment_Before_Lights(`${material.CustomParts.Fragment_Before_Lights}
+        mudWetness = 0.0;
+        float wetDirt = ${dirt};
+        if (wetDirt > 0.0) {
+            vec2 moistureUV = vPositionW.xz + vPositionW.y * vec2(0.73, -0.51);
+            float detail = terrainNoise(moistureUV * 3.1 + vec2(7.9, 4.2));
+            float moisture = 0.74 * terrainNoise(moistureUV * 0.83) + 0.26 * detail;
+            bool wetWall = geometricNormalW.y < 0.01;
+            float wallReach = mix(0.18, 0.43, detail);
+            float foot = wetWall ? 1.0 - smoothstep(0.025, wallReach, abs(vPositionW.y - vDirtEdges.y))
+                : terraceFootMoisture(detail);
+            float wetPatches = smoothstep(0.41, 0.94, moisture + 0.19 * foot);
+            ${mode === 'snow' ? `if (!wall) {
+                // Retain a damp base along the whole melting edge, even between the wetter patches.
+                float runoff = max(1.0 - smoothstep(0.28, mix(1.10, 1.48, detail), abs(coverDistance)),
+                    smoothstep(0.015, 0.23, grassWeight));
+                wetPatches = mix(wetPatches, max(wetPatches, mix(0.58, 0.73, detail)), runoff);
+            }` : ''}
+            mudWetness = wetDirt * wetPatches;
+            surfaceAlbedo *= 1.0 - mudWetness * 0.22;
+            // Standing moisture smooths the ground more than the vertical wall.
+            normalW = normalize(mix(normalW, geometricNormalW, mudWetness * (wetWall ? 0.16 : 0.72)));
+        }
+    `)
+    material.Fragment_Custom_MetallicRoughness('metallicRoughness.g = mix(metallicRoughness.g, 0.53, mudWetness);')
+}
+
+export function configureRockSnowmelt(material: PBRCustomMaterial) {
+    material.Fragment_Definitions(`${material.CustomParts.Fragment_Definitions}
+        float rockWetness;
+    `)
+    material.Fragment_Before_Lights(`${material.CustomParts.Fragment_Before_Lights}
+        rockWetness = 0.0;
+        if (grassWeight < 1.0) {
+            vec2 p = vPositionW.xz + vPositionW.y * vec2(0.61, -0.47);
+            float pooling = terrainNoise(p * 2.1 + vec2(3.7, 14.2));
+            float reach = mix(1.55, 2.55, pooling);
+            float runoff;
+            if (wall) {
+                float contact = max(grassAtEdges.x, grassAtEdges.y);
+                runoff = contact * (1.0 - smoothstep(0.13, 0.54, grassEdgeDistance));
+            } else {
+                runoff = 1.0 - smoothstep(0.31, reach, max(0.0, -coverDistance));
+            }
+            rockWetness = runoff * mix(0.63, 1.0, pooling);
+            float exposedWetRock = rockWetness * (1.0 - grassWeight);
+            // Darken and smooth the exposed stone while retaining its larger relief.
+            surfaceAlbedo *= 1.0 - 0.21 * exposedWetRock;
+            normalW = normalize(mix(normalW, geometricNormalW, 0.20 * exposedWetRock));
+        }
+    `)
+    material.Fragment_Custom_MetallicRoughness('metallicRoughness.g = mix(metallicRoughness.g, 0.44, rockWetness);')
+}
+
+export function configureSnowGlints(material: PBRCustomMaterial, transition?: 'standard' | 'grass') {
+    material.Fragment_Definitions(`${material.CustomParts.Fragment_Definitions ?? ''}
+        ${transition ? '' : terrainNoiseShader}
+        float snowGlintCoverage;
+        float snowGlintRoughness;
+    `)
+    const coverage = transition === 'grass' ? 'wall ? snowWeight : grassWeight' : transition ? 'grassWeight' : '1.0'
+    material.Fragment_Before_Lights(`${material.CustomParts.Fragment_Before_Lights ?? ''}
+        snowGlintCoverage = ${coverage};
+        if (snowGlintCoverage > 0.0) {
+            vec2 p = vPositionW.xz + vPositionW.y * vec2(0.61, -0.47);
+            float variation = terrainNoise(p * 1.25 + vec2(13.2, 7.1));
+            snowGlintRoughness = mix(0.64, 0.38, variation);
+        }
+    `)
+    material.Fragment_Custom_MetallicRoughness(`${material.CustomParts.Fragment_Custom_MetallicRoughness ?? ''}
+        if (snowGlintCoverage > 0.0) {
+            // The existing bumped normal shapes the highlight on the slopes of each depression.
+            metallicRoughness.g = mix(metallicRoughness.g, snowGlintRoughness, snowGlintCoverage);
+        }
     `)
 }

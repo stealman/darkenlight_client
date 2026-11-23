@@ -1,7 +1,7 @@
 import { Matrix, Mesh, Texture, Vector2, Vector3 } from '@babylonjs/core'
 import { Builder } from '@/babylon/builder'
 import { Materials } from '@/babylon/materials'
-import { addTerrainPreviewRoof, configureDirtEdgeLighting, configureTerrainPreviewBatch, TerrainPreviewBatch } from './terrainPreviewBatch'
+import { addTerrainPreviewRoof, configureTerrainEdgeLighting, configureMuddyDirtWetness, configureTerrainPreviewBatch, TerrainPreviewBatch } from './terrainPreviewBatch'
 import type { TerrainPreviewTriangle } from './terrainPreviewBatch'
 import type { TerrainPreviewSurfaces } from './terrainPreviewGeometry'
 
@@ -14,11 +14,25 @@ export const muddyDirtPatterns = [
     {size: 1, origins: [[3.125, 5.25], [4.25, 5.25], [5.375, 5.25]]},
 ]
 
+// Shared 128 px atlas layout, measured from the top left.
+export const terrainCoverPatterns = [
+    {size: 3, origins: [
+        [0.0625, 0.0625], [3.1875, 0.0625], [6.3125, 0.0625], [9.4375, 0.0625], [12.5625, 0.0625],
+        [0.0625, 3.1875], [3.1875, 3.1875], [6.3125, 3.1875],
+    ]},
+    {size: 2, origins: [
+        [9.4375, 3.1875], [11.5625, 3.1875], [13.6875, 3.1875],
+        [0.0625, 6.3125], [2.1875, 6.3125], [4.3125, 6.3125],
+    ]},
+    {size: 1, origins: [[6.4375, 6.3125], [7.5625, 6.3125], [8.6875, 6.3125], [9.8125, 6.3125], [10.9375, 6.3125]]},
+]
+
 type TerrainAtlas = {
     type: number
     colorUrl: string
     normal: {url: string, strength: number}
     roundDirtEdges?: boolean
+    roundRockTop?: boolean
     varyAdjacentPatches?: boolean
     patterns: ReadonlyArray<{size: number, origins: readonly (readonly number[])[]}>
 }
@@ -61,7 +75,7 @@ function variedPatchPlacement(placed: ReadonlyMap<number, AtlasPlacement>, strid
 }
 
 export type TerrainAtlasTileFilter = (
-    matrix: Matrix, uv: Vector2, x: number, z: number, roof: readonly TerrainPreviewTriangle[] | undefined,
+    matrix: Matrix, uv: Vector2, x: number, z: number, roof: readonly TerrainPreviewTriangle[] | undefined, wetCorners: number,
 ) => boolean
 
 export function createTerrainPreviewPlane(plane: Mesh, name: string) {
@@ -77,10 +91,12 @@ export function createTerrainAtlasPreview(plane: Mesh, name: string, atlas: Terr
     const mesh = createTerrainPreviewPlane(plane, name)
     const material = createAtlasMaterial(plane, name, atlas)
     configureTerrainPreviewBatch(mesh, material)
-    const {roundDirtEdges = false} = atlas
-    if (roundDirtEdges) configureDirtEdgeLighting(material)
+    const {roundDirtEdges = false, roundRockTop = false} = atlas
+    const roundEdges = roundDirtEdges || roundRockTop
+    if (roundEdges) configureTerrainEdgeLighting(material, undefined, roundRockTop)
+    if (roundDirtEdges) configureMuddyDirtWetness(material, 'solid')
 
-    const render = ({atlasTops, stride, roofs, cornerFloors}: TerrainPreviewSurfaces, takeTile?: TerrainAtlasTileFilter,
+    const render = ({atlasTops, stride, roofs, wetCorners, cornerFloors}: TerrainPreviewSurfaces, takeTile?: TerrainAtlasTileFilter,
                     batch = new TerrainPreviewBatch()) => {
         const remaining = atlasTops.get(atlas.type)!
         const placed = atlas.varyAdjacentPatches ? new Map<number, AtlasPlacement>() : undefined
@@ -116,16 +132,18 @@ export function createTerrainAtlasPreview(plane: Mesh, name: string, atlas: Terr
                         if (appearance) placed!.set(tileKey, appearance)
                         const floor = cornerFloors.get(tileKey)
                         const roof = roofs.get(tileKey)
-                        if (floor) addTerrainPreviewRoof(batch, matrix, uv, floor, {mirrorAtTileEdge: true, roundDirtEdges})
+                        const footMask = wetCorners.get(tileKey) ?? 0
+                        const wetMask = roundDirtEdges ? footMask : 0
+                        if (floor) addTerrainPreviewRoof(batch, matrix, uv, floor, {mirrorAtTileEdge: true, roundDirtEdges: roundEdges, wetCorners: wetMask})
                         // Let the transition reuse the same atlas placement the tile would normally have.
-                        if (takeTile?.(matrix, uv, tileX, tileZ, roof)) continue
-                        addTerrainPreviewRoof(batch, matrix, uv, roof, {roundDirtEdges})
+                        if (takeTile?.(matrix, uv, tileX, tileZ, roof, footMask)) continue
+                        addTerrainPreviewRoof(batch, matrix, uv, roof, {roundDirtEdges: roundEdges, wetCorners: wetMask})
                     }
                 }
             }
         }
 
-        batch.apply(mesh, roundDirtEdges)
+        batch.apply(mesh, roundEdges, roundDirtEdges)
     }
     return {mesh, material, render}
 }

@@ -20,6 +20,7 @@ export function createTerrainTransitionMaterial(
     dirtOrigin: readonly number[],
     boundary: Vector2,
     wallDirt?: PBRCustomMaterial,
+    rockSubstrate = false,
 ) {
     const material = new PBRCustomMaterial(name, grass.getScene())
     material.metallic = grass.metallic
@@ -117,8 +118,9 @@ export function createTerrainTransitionMaterial(
             shape -= sign(shape) * max(abs(shape) - 0.65, 0.0) * 0.32;
             float grain = (terrainNoise(p * 6.8) - 0.5) * 0.58;
             float halfWidth = mix(0.26, 0.68, clumps);
-            coverDistance = towardGrass + shape + grain;
+            coverDistance = towardGrass + ${rockSubstrate ? 'shape * 0.64 + grain * 0.78' : 'shape + grain'};
             float grass = smoothstep(-halfWidth, halfWidth, coverDistance);
+            ${rockSubstrate ? 'return grass;' : `
             // The continuous boundary and dirt islands are independent of the height-step mask.
             bool dirtIsland = towardGrass > 0.0;
             if (!dirtIsland && grassIslandSupport <= 0.0) return grass;
@@ -133,7 +135,7 @@ export function createTerrainTransitionMaterial(
                 transitionIsland(section, p.y, inward, grain, dirtIsland),
                 transitionIsland(neighbor, p.y, inward, grain, dirtIsland)
             );
-            return dirtIsland ? min(grass, 1.0 - islands) : max(grass, islands * grassIslandSupport);
+            return dirtIsland ? min(grass, 1.0 - islands) : max(grass, islands * grassIslandSupport);`}
         }
 
         float wallGrassCoverage(vec2 terrainXZ, float fromEdge, float edgeHeight, float maxReach) {
@@ -171,8 +173,8 @@ export function createTerrainTransitionMaterial(
                 ? transitionGrassWeight(terrainXZ, 0.0, coverDistance) : 0.0;
             vec2 coverAtContact = step(0.5, modes) * (1.0 - step(1.5, modes)) + mixedContact * horizontalCover;
             vec2 fringe = vec2(
-                byTop ? wallGrassCoverage(terrainXZ, topDistance, vWallContact.x, 0.50) : 0.0,
-                byBottom ? wallGrassCoverage(terrainXZ + vec2(3.31, 2.17), fromEdge.y, vWallContact.y, 0.38) : 0.0
+                byTop ? wallGrassCoverage(terrainXZ, topDistance, vWallContact.x, ${rockSubstrate ? '0.34' : '0.50'}) : 0.0,
+                byBottom ? wallGrassCoverage(terrainXZ + vec2(3.31, 2.17), fromEdge.y, vWallContact.y, ${rockSubstrate ? '0.26' : '0.38'}) : 0.0
             );
             ${wallDirt ? `vec2 grassAtContact = step(2.5, modes) + mixedContact * (1.0 - horizontalCover);
             snowFringe = wallFringeSample(fringe * coverAtContact, fromEdge);` : 'vec2 grassAtContact = coverAtContact;'}

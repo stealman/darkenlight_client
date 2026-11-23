@@ -11,6 +11,7 @@ import { findFoliagePatch, forEachFoliageWallFoot } from './terrainFoliagePatche
 const GRASS = 0, TWIGS = 3, SCRUB = 4, DRY_GRASS = 5, MOSS = 6, PEBBLES = 7
 // The preview shader remaps these rows to the shared sprites with a different palette.
 const MOSSY_PEBBLES = 8, WINTER_SCRUB = 9, SINGLE_MOSSY_PEBBLE = 10
+const ROCK_PEBBLES = 11, LIGHT_ROCK_PEBBLE = 12
 const SNOW_COLUMN_OFFSET = 8
 const PEBBLE_ATLAS_Y = new Set([PEBBLES, MOSSY_PEBBLES, SINGLE_MOSSY_PEBBLE]
     .map(row => FoliageManager.getAtlasOffset(0, 0, row).y))
@@ -31,6 +32,13 @@ const GRASS_HEIGHT = 0.49
 export function snowFoliageOffset(uv: Vector2, layer: FoliageLayer) {
     if (layer === 'blended' || (layer === 'ground' && !PEBBLE_ATLAS_Y.has(uv.y))) return undefined
     return new Vector2(uv.x + SNOW_COLUMN_OFFSET, uv.y)
+}
+
+export function rockPebbleOffset(uv: Vector2, matrix: Matrix, layer: FoliageLayer) {
+    if (layer !== 'ground') return uv
+    const x = Math.round(matrix.m[12] * 128), z = Math.round(matrix.m[14] * 128)
+    const row = FoliageManager.roll(x, z, 9541) < 0.13 ? LIGHT_ROCK_PEBBLE : ROCK_PEBBLES
+    return new Vector2(uv.x, FoliageManager.getAtlasOffset(0, 0, row).y)
 }
 
 export function createWinterGrassFootTufts(map: MapBlock[][]) {
@@ -161,6 +169,8 @@ export function styleTerrainFoliage(tufts: PBRCustomMaterial, ground: PBRCustomM
     const mossyY = FoliageManager.getAtlasOffset(0, 0, MOSSY_PEBBLES).y
     const singleY = FoliageManager.getAtlasOffset(0, 0, SINGLE_MOSSY_PEBBLE).y
     const stoneY = FoliageManager.getAtlasOffset(0, 0, PEBBLES).y
+    const rockY = FoliageManager.getAtlasOffset(0, 0, ROCK_PEBBLES).y
+    const lightRockY = FoliageManager.getAtlasOffset(0, 0, LIGHT_ROCK_PEBBLE).y
     const [firstBounds, ...otherBounds] = SINGLE_PEBBLE_BOUNDS.map(bounds =>
         `vec4(${bounds.map(value => value.toFixed(1)).join(', ')})`)
     ground.Vertex_Definitions('attribute vec2 uvc; varying vec2 vStoneUV; varying vec4 vStoneStyle; varying vec4 vStoneBounds;')
@@ -168,11 +178,14 @@ export function styleTerrainFoliage(tufts: PBRCustomMaterial, ground: PBRCustomM
         float cluster = 1.0 - step(0.5, abs(uvc.y - ${mossyY.toFixed(1)}));
         float single = 1.0 - step(0.5, abs(uvc.y - ${singleY.toFixed(1)}));
         float bareStone = 1.0 - step(0.5, abs(uvc.y - ${stoneY.toFixed(1)}));
+        float rock = 1.0 - step(0.5, abs(uvc.y - ${rockY.toFixed(1)}));
+        float lightRock = 1.0 - step(0.5, abs(uvc.y - ${lightRockY.toFixed(1)}));
         float snow = step(${snowColumn}, uvc.x);
         float column = uvc.x - snow * ${snowColumn};
         vec2 foliageAtlasOffset = vec2(column, uvc.y) + vec2(0.0,
-            cluster * ${(stoneY - mossyY).toFixed(1)} + single * ${(stoneY - singleY).toFixed(1)});
-        vStoneStyle = vec4(max(cluster, single) - bareStone, column, single, snow);
+            cluster * ${(stoneY - mossyY).toFixed(1)} + single * ${(stoneY - singleY).toFixed(1)}
+            + rock * ${(stoneY - rockY).toFixed(1)} + lightRock * ${(stoneY - lightRockY).toFixed(1)});
+        vStoneStyle = vec4(max(cluster, single) - bareStone - 2.0 * rock - 3.0 * lightRock, column, max(single, lightRock), snow);
         vStoneBounds = ${firstBounds};
         ${otherBounds.map((bounds, index) => `if (column > ${index}.5) vStoneBounds = ${bounds};`).join('\n        ')}
     `)
@@ -183,11 +196,18 @@ export function styleTerrainFoliage(tufts: PBRCustomMaterial, ground: PBRCustomM
             // Reflect the tangent components while retaining the upward component of the stone normal.
             normalW = 2.0 * geometricNormalW * dot(normalW, geometricNormalW) - normalW;
         }
-        if (vStoneStyle.x > 0.5 || vStoneStyle.w > 0.5) {
+        if (vStoneStyle.z > 0.5) {
             vec2 pixel = vStoneUV * 64.0;
-            if (vStoneStyle.z > 0.5 && (any(lessThan(pixel, vStoneBounds.xy)) || any(greaterThanEqual(pixel, vStoneBounds.zw)))) {
+            if (any(lessThan(pixel, vStoneBounds.xy)) || any(greaterThanEqual(pixel, vStoneBounds.zw))) {
                 discard;
             }
+        }
+        if (vStoneStyle.x < -1.5) {
+            float sourceLight = dot(surfaceAlbedo, vec3(0.2126, 0.7152, 0.0722));
+            float shade = mix(0.038, 0.093, smoothstep(0.015, 0.28, sourceLight));
+            shade += 0.060 * step(2.5, -vStoneStyle.x);
+            surfaceAlbedo = vec3(0.96, 1.0, 1.05) * shade;
+        } else if (vStoneStyle.x > 0.5 || vStoneStyle.w > 0.5) {
             vec2 p = vStoneUV * 32.0 + vec2(vStoneStyle.y * 3.2, vStoneStyle.y * 6.8);
             float growth = sin(p.x + 0.9 * sin(p.y)) * sin(p.y * 0.84)
                          + 0.45 * sin(p.y * 2.1 - p.x * 1.17);

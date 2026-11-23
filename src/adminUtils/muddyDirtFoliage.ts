@@ -3,9 +3,8 @@ import type { Vector2, Vector3 } from '@babylonjs/core'
 import { TerrainEnum1 } from '@/babylon/materials'
 import { FoliageManager } from '@/babylon/world/foliageManager'
 import type { TerrainFoliage } from '@/babylon/world/foliageManager'
-import { TERRAIN_VERTICAL_BEVEL_WIDTH } from '@/babylon/world/beveledTerrainBlock'
 import type { MapBlock } from '@/data/worldDataManager'
-import { CARDINAL_NEIGHBORS, findFoliagePatch, forEachFoliageWallFoot } from './terrainFoliagePatches'
+import { CARDINAL_NEIGHBORS, findFoliagePatch, forEachFoliageWallFoot, wallFootDecal } from './terrainFoliagePatches'
 
 // Rows in the preview atlas, counted from the top.
 const GRASS = 0, LOW_GRASS = 1, TWIGS = 3, SCRUB = 4, MOSS = 6, PEBBLES = 7
@@ -37,13 +36,7 @@ export function createMuddyDirtFootFoliage(map: MapBlock[][], sunDirection: Vect
             if (roll(salt) < chance) {
                 const width = 0.28 + 0.42 * roll(salt + 1)
                 const height = 0.13 + 0.22 * roll(salt + 2)
-                // Fit the decal on the straight part of the wall between the clipped corners.
-                const slide = (roll(salt + 3) * 2 - 1) * (0.49 - TERRAIN_VERTICAL_BEVEL_WIDTH - width / 2)
-                const matrix = Matrix.Scaling(width, 1, height)
-                    .multiply(Matrix.RotationYawPitchRoll(Math.atan2(dx, dz), -Math.PI / 2, 0))
-                const lift = 0.006 + roll(salt + 4) * 0.04
-                matrix.setTranslationFromFloats(edgeX - dx * 0.004 + dz * slide,
-                    top + height / 2 + lift, edgeZ - dz * 0.004 - dx * slide)
+                const matrix = wallFootDecal(x, z, top, dx, dz, salt, width, height)
                 moss.push({matrix, uv: FoliageManager.getAtlasOffset(x, z, MOSS, salt)})
             }
         }
