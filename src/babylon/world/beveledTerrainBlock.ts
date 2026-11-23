@@ -52,7 +52,9 @@ function clipVerticalCorners(faces: Face[], mask: number): Face[] {
 // Edge masks, including adjacent/opposite pairs, and diagonal corner cuts use
 // one builder. Top-only tiles retain their plane atlas; solid blocks use the
 // existing cross-shaped block UV layout.
-export function createBeveledTerrainVertexData(mask: number, topOnly: boolean, heightOffset = SNOW_BLOCK_HEIGHT): VertexData {
+export function createBeveledTerrainVertexData(
+    mask: number, topOnly: boolean, heightOffset = SNOW_BLOCK_HEIGHT, cornerSteps?: readonly number[],
+): VertexData {
     const top = topOnly ? 0 : 0.5
     // Keep the world-space chamfer depth constant for bare, grassy and snowy
     // blocks, despite their different thin-instance vertical scales.
@@ -66,7 +68,10 @@ export function createBeveledTerrainVertexData(mask: number, topOnly: boolean, h
     const cornerEdges = [TerrainEdge.West | TerrainEdge.North, TerrainEdge.East | TerrainEdge.North,
         TerrainEdge.East | TerrainEdge.South, TerrainEdge.West | TerrainEdge.South]
     const cornerBits = [TerrainCorner.NorthWest, TerrainCorner.NorthEast, TerrainCorner.SouthEast, TerrainCorner.SouthWest]
-    outer.forEach((point, i) => { if (mask & (cornerEdges[i] | cornerBits[i])) point[1] -= drop })
+    outer.forEach((point, i) => {
+        if (cornerSteps) point[1] += cornerSteps[i] * drop
+        else if (mask & (cornerEdges[i] | cornerBits[i])) point[1] -= drop
+    })
     const entry = inner.map(point => [...point] as Point), exit = inner.map(point => [...point] as Point)
     for (let i = 0; i < 4; i++) if (mask & cornerBits[i]) {
         const previous = inner[(i + 3) % 4], next = inner[(i + 1) % 4]
@@ -95,7 +100,8 @@ export function createBeveledTerrainVertexData(mask: number, topOnly: boolean, h
     ]
     for (let i = 0; i < 4; i++) {
         const next = (i + 1) % 4, side = sides[i]
-        polygon([outer[i], outer[next], entry[next], exit[i]], topUv, [side.normal[0], mask & side.bit ? 1 : 0, side.normal[2]])
+        const upward: Point = cornerSteps ? [0, 1, 0] : [side.normal[0], mask & side.bit ? 1 : 0, side.normal[2]]
+        polygon([outer[i], outer[next], entry[next], exit[i]], topUv, upward)
         if (mask & cornerBits[i]) polygon([outer[i], entry[i], exit[i]], topUv, [0, 1, 0])
         if (!topOnly) {
             polygon([[outer[i][0], -0.5, outer[i][2]], [outer[next][0], -0.5, outer[next][2]], outer[next], outer[i]], side.uv, side.normal)
@@ -110,6 +116,8 @@ export function createBeveledTerrainVertexData(mask: number, topOnly: boolean, h
     const emit = (a: ClipVertex, b: ClipVertex, c: ClipVertex, outward: Point) => {
         const normal = cross(a.point, b.point, c.point)
         if (Math.hypot(...normal) < 1e-9) return
+        // At a raised corner a zero-width roof strip can fold into a vertical sliver.
+        if (cornerSteps && outward[1] > 0 && Math.abs(normal[1]) < 1e-9) return
         const start = positions.length / 3
         for (const vertex of [a, b, c]) { positions.push(...vertex.point); uvs.push(...vertex.uv) }
         if (normal.reduce((sum, n, axis) => sum + n * outward[axis], 0) > 0) indices.push(start, start + 2, start + 1)

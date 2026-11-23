@@ -1299,8 +1299,8 @@ export async function mountAdminUtils() {
             sun.intensity = 2.2
             return
         }
-        // Keep the sunset azimuth, with grazing light for inspecting the normals.
-        const elevation = 20 * Math.PI / 180
+        // Keep the sunset azimuth with oblique light for inspecting the normals.
+        const elevation = 28 * Math.PI / 180
         const {direction, position} = sun
         const horizontal = Math.cos(elevation) / Math.hypot(direction.x, direction.z)
         direction.set(direction.x * horizontal, -Math.sin(elevation), direction.z * horizontal)
