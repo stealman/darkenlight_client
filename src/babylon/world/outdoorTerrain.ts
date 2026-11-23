@@ -1,6 +1,7 @@
 import { BoundingInfo, TransformNode, Vector3 } from '@babylonjs/core'
 import type { Matrix, Mesh, Vector2 } from '@babylonjs/core'
 import { MapBlock } from '@/data/worldDataManager'
+import { Lights } from '@/babylon/scene/lights'
 import { ViewportManager } from '@/utils/viewport'
 import { Settings } from '@/settings/settings'
 import { TERRAIN_ATLAS_REGION_SIZE } from '@/adminUtils/terrainAtlasPreview'
@@ -61,6 +62,11 @@ export function createOutdoorTerrain(parent: TransformNode) {
         mesh, matrices: [], uv: [], attributes: [], capacity: 0,
     } satisfies Batch]))
     const foliage = createTerrainFoliageRenderer(parent.getScene(), terrain, Settings.isDetalLevelHigh())
+    for (const mesh of foliage.meshes) {
+        mesh.receiveShadows = Settings.isShadowsEnabled()
+        Lights.registerSharedLightMesh(mesh)
+        mesh.onDisposeObservable.addOnce(() => Lights.unregisterSharedLightMesh(mesh))
+    }
     const foliageBatches = new Map(foliage.meshes.map(mesh => [mesh, {mesh, matrices: [], uv: []} as FoliageBatch]))
     const minimumFoliage = new Vector3()
     const maximumFoliage = new Vector3()

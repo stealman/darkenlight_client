@@ -198,7 +198,7 @@ export class OverlayLabels {
             }
             const pos = npc.getNameTextNodeScreenPosition()
             if (pos) {
-                this.renderNpcLabel(pos, npc.name, npc.getTitle(), tightText)
+                this.renderNpcLabel(pos, npc.name, npc.getTitle(), tightText, TargetSelector.target === npc)
             }
         })
 
@@ -207,7 +207,7 @@ export class OverlayLabels {
             if (!guard) return
             const pos = guard.getNameTextNodeScreenPosition()
             if (pos) {
-                this.renderNpcLabel(pos, guard.getName(), guard.getTitle(), tightText)
+                this.renderNpcLabel(pos, guard.getName(), guard.getTitle(), tightText, TargetSelector.target === guard)
             }
         })
 
@@ -345,12 +345,13 @@ export class OverlayLabels {
         ctx.restore()
     }
 
-    renderNpcLabel(pos: Vector3, name: string, title: string, tightText: boolean) {
+    renderNpcLabel(pos: Vector3, name: string, title: string, tightText: boolean, selected: boolean) {
         if (!Number.isFinite(pos.x) || !Number.isFinite(pos.y)) {
             return
         }
+        const alpha = selected ? 1 : 0.6
         if (!title) {
-            this.renderName(pos, name, tightText, 'NEUTRAL', true)
+            this.renderOutlinedText(pos.x, pos.y - 6, name, tightText, 'NEUTRAL', this.view.fontSize, pos, alpha, null, true)
             return
         }
 
@@ -367,8 +368,8 @@ export class OverlayLabels {
         ViewportManager.movePositionToScreen(pos, Math.max(nameWidth, titleWidth) / 2, totalHeight + 10)
 
         const nameY = pos.y - totalHeight + this.view.fontSize / 2
-        this.renderOutlinedText(pos.x, nameY, name, tightText, 'NEUTRAL', this.view.fontSize, undefined, 1, null, true)
-        this.renderOutlinedText(pos.x, nameY + this.view.fontSize / 2 + titleFontSize / 2 + 6, titleText, tightText, 'NEUTRAL', titleFontSize, undefined, 1, '#e9dabe', true)
+        this.renderOutlinedText(pos.x, nameY, name, tightText, 'NEUTRAL', this.view.fontSize, undefined, alpha, null, true)
+        this.renderOutlinedText(pos.x, nameY + this.view.fontSize / 2 + titleFontSize / 2 + 6, titleText, tightText, 'NEUTRAL', titleFontSize, undefined, alpha, '#e9dabe', true)
     }
 
     renderOutlinedText(

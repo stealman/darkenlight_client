@@ -20,10 +20,10 @@ export function createCharacterMaterial(scene: Scene, name: string, albedoPath?:
     }
     material.metallic = 0
     material.roughness = 1
-    material.directIntensity = 1
-    material.environmentIntensity = 1
+    material.directIntensity = 0.5
+    material.environmentIntensity = 0.75
     material.emissiveTexture = material.albedoTexture
-    material.emissiveColor = new Color3(0.15, 0.15, 0.15)
+    material.emissiveColor = new Color3(0.075, 0.075, 0.075)
     material.backFaceCulling = false
     material.twoSidedLighting = true
     material.usePhysicalLightFalloff = false

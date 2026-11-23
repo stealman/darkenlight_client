@@ -145,6 +145,8 @@ export function styleTerrainFoliage(tufts: PBRCustomMaterial, ground: PBRCustomM
         }
     `)
     tufts.Fragment_Before_Lights(`
+        // Crossed cards represent a tuft, whose blades also catch light from above.
+        normalW = normalize(normalW + vec3(0.0, 0.75, 0.0));
         surfaceAlbedo *= mix(vec3(1.0), vec3(0.79, 0.53, 0.58), vTerrainTuftStyle.x);
         surfaceAlbedo = mix(surfaceAlbedo, muteGreenGrass(surfaceAlbedo * vec3(0.60, 0.82, 0.61) * 0.78), vTerrainTuftStyle.w);
         vec3 lightScrub = surfaceAlbedo * vec3(1.05, 1.30, 1.44) + vec3(0.009, 0.008, 0.005);
