@@ -1291,12 +1291,13 @@ export async function mountAdminUtils() {
     backLight.intensity = 1.4
 
     const previewShadow = Lights.sunLight.getShadowGenerator() ? Lights.shadow : undefined
-    const assetShadowBias = previewShadow?.bias
+    const assetShadowSettings = previewShadow && {bias: previewShadow.bias, blurScale: previewShadow.blurScale}
     const setTerrainLighting = (active: boolean) => {
         setPreviewTime(active ? 17.75 / 24 : 0.5)
-        if (previewShadow && assetShadowBias !== undefined) {
+        if (previewShadow && assetShadowSettings) {
             // With back-face casters, a small negative bias closes gaps at the terrain contact.
-            previewShadow.bias = active ? -0.00065 : assetShadowBias
+            previewShadow.bias = active ? -0.00065 : assetShadowSettings.bias
+            previewShadow.blurScale = assetShadowSettings.blurScale * (active ? 1.15 : 1)
             if (active) previewShadow.setDarkness(0.10)
         }
         fillLight.intensity = active ? 0.55 : 0.85

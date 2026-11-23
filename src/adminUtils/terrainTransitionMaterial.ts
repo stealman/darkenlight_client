@@ -19,6 +19,7 @@ export function createTerrainTransitionMaterial(
     grassOrigin: readonly number[],
     dirtOrigin: readonly number[],
     boundary: Vector2,
+    wallDirt?: PBRCustomMaterial,
 ) {
     const material = new PBRCustomMaterial(name, grass.getScene())
     material.metallic = grass.metallic
@@ -27,19 +28,21 @@ export function createTerrainTransitionMaterial(
     material.directIntensity = grass.directIntensity
     material.environmentIntensity = grass.environmentIntensity
     material.usePhysicalLightFalloff = grass.usePhysicalLightFalloff
-    const addSurface = (name: string, surface: PBRCustomMaterial, [left, top]: readonly number[]) => {
+    const addSurface = (name: string, surface: PBRCustomMaterial, origin?: readonly number[]) => {
         const color = surface.albedoTexture as Texture
         const normal = surface.bumpTexture!
         material.AddUniform(name + 'Color', 'sampler2D', color)
         material.AddUniform(name + 'Normal', 'sampler2D', normal)
-        material.AddUniform(name + 'Origin', 'vec2', new Vector2(
-            left * color.uScale, 1 - (top + PATCH_SIZE) * color.vScale,
+        if (origin) material.AddUniform(name + 'Origin', 'vec2', new Vector2(
+            origin[0] * color.uScale, 1 - (origin[1] + PATCH_SIZE) * color.vScale,
         ))
         material.AddUniform(name + 'Scale', 'float', color.uScale)
         material.AddUniform(name + 'Strength', 'float', normal.level)
     }
     addSurface('grass', grass, grassOrigin)
     addSurface('dirt', dirt, dirtOrigin)
+    // In the snow/grass pair, the horizontal substrate supplies the grass on muddy walls.
+    if (wallDirt) addSurface('wallDirt', wallDirt)
     // X is the preview's center in map coordinates. Y is the direction from dirt to grass.
     material.AddUniform('transitionBoundary', 'vec2', boundary)
 
@@ -105,7 +108,7 @@ export function createTerrainTransitionMaterial(
             return edge * mix(0.68, 1.0, depth) * step(0.19, seed);
         }
 
-        float transitionGrassWeight(vec2 p, float grassIslandSupport) {
+        float transitionGrassWeight(vec2 p, float grassIslandSupport, out float coverDistance) {
             float line = ${BOUNDARY_AMPLITUDE.toFixed(1)} * sin(p.y * ${BOUNDARY_FREQUENCY});
             float towardGrass = (p.x - line) * transitionBoundary.y;
             float clumps = terrainNoise(p * vec2(1.35, 1.95));
@@ -114,7 +117,8 @@ export function createTerrainTransitionMaterial(
             shape -= sign(shape) * max(abs(shape) - 0.65, 0.0) * 0.32;
             float grain = (terrainNoise(p * 6.8) - 0.5) * 0.58;
             float halfWidth = mix(0.26, 0.68, clumps);
-            float grass = smoothstep(-halfWidth, halfWidth, towardGrass + shape + grain);
+            coverDistance = towardGrass + shape + grain;
+            float grass = smoothstep(-halfWidth, halfWidth, coverDistance);
             // The continuous boundary and dirt islands are independent of the height-step mask.
             bool dirtIsland = towardGrass > 0.0;
             if (!dirtIsland && grassIslandSupport <= 0.0) return grass;
@@ -148,22 +152,40 @@ export function createTerrainTransitionMaterial(
 
         const float topFringeDepth = 0.62;
 
-        vec4 wallGrassFringe(vec3 position, vec2 terrainXZ) {
+        vec2 wallFringeSample(vec2 fringe, vec2 fromEdge) {
+            return vec2(max(fringe.x, fringe.y), fringe.x >= fringe.y ? fromEdge.x : -fromEdge.y);
+        }
+
+        vec4 wallGrassFringe(vec3 position, vec2 terrainXZ${wallDirt ? ', out vec2 snowFringe' : ''}) {
+            ${wallDirt ? 'snowFringe = vec2(0.0);' : ''}
             vec2 fromEdge = max(vec2(vWallContact.x - position.y, position.y - vWallContact.y), vec2(0.0));
             // Keep the grass connected at the lip while shortening how far it hangs down.
             float topDistance = fromEdge.x / topFringeDepth;
             bool byTop = vWallContact.z > 0.5 && topDistance < 0.70;
             bool byBottom = vWallContact.w > 0.5 && fromEdge.y < 0.58;
             if (!byTop && !byBottom) return vec4(0.0);
-            float horizontalGrass = ((byTop && vWallContact.z > 1.5) || (byBottom && vWallContact.w > 1.5))
-                ? transitionGrassWeight(terrainXZ, 0.0) : 0.0;
-            vec2 grassAtContact = mix(vWallContact.zw, vec2(horizontalGrass), step(1.5, vWallContact.zw));
+            vec2 modes = vWallContact.zw;
+            vec2 mixedContact = step(1.5, modes) * (1.0 - step(2.5, modes));
+            float coverDistance;
+            float horizontalCover = ((byTop && mixedContact.x > 0.0) || (byBottom && mixedContact.y > 0.0))
+                ? transitionGrassWeight(terrainXZ, 0.0, coverDistance) : 0.0;
+            vec2 coverAtContact = step(0.5, modes) * (1.0 - step(1.5, modes)) + mixedContact * horizontalCover;
             vec2 fringe = vec2(
-                byTop ? grassAtContact.x * wallGrassCoverage(terrainXZ, topDistance, vWallContact.x, 0.50) : 0.0,
-                byBottom ? grassAtContact.y * wallGrassCoverage(terrainXZ + vec2(3.31, 2.17), fromEdge.y, vWallContact.y, 0.38) : 0.0
+                byTop ? wallGrassCoverage(terrainXZ, topDistance, vWallContact.x, 0.50) : 0.0,
+                byBottom ? wallGrassCoverage(terrainXZ + vec2(3.31, 2.17), fromEdge.y, vWallContact.y, 0.38) : 0.0
             );
-            return vec4(max(fringe.x, fringe.y), fringe.x >= fringe.y ? fromEdge.x : -fromEdge.y,
-                byTop ? grassAtContact.x : 0.0, byBottom ? grassAtContact.y : 0.0);
+            ${wallDirt ? `vec2 grassAtContact = step(2.5, modes) + mixedContact * (1.0 - horizontalCover);
+            snowFringe = wallFringeSample(fringe * coverAtContact, fromEdge);` : 'vec2 grassAtContact = coverAtContact;'}
+            vec2 contactCover = ${wallDirt ? 'grassAtContact + coverAtContact' : 'coverAtContact'};
+            return vec4(wallFringeSample(fringe * grassAtContact, fromEdge),
+                byTop ? contactCover.x : 0.0, byBottom ? contactCover.y : 0.0);
+        }
+
+        vec2 wallFringeUV(vec2 tilePatch, vec2 normalXZ, float offset) {
+            vec2 uv = tilePatch + normalXZ * offset;
+            // Mirror at the borders of the atlas patch so steep fringes retain texture detail.
+            uv = ${PATCH_SIZE.toFixed(1)} - abs(mod(uv, ${(2 * PATCH_SIZE).toFixed(1)}) - ${PATCH_SIZE.toFixed(1)});
+            return clamp(uv, 0.004, ${(PATCH_SIZE - .004).toFixed(3)});
         }
 
         vec3 wallBumpNormal(vec3 normal, vec3 position, vec2 uv, vec3 bump) {
@@ -183,43 +205,82 @@ export function createTerrainTransitionMaterial(
         vec2 grassUV = mix(grassOrigin + vSurfacePatchUV * grassScale, vPlacedSurfaceUV * grassScale, placedGrass);
         vec2 dirtUV = mix(vPlacedSurfaceUV * dirtScale, dirtOrigin + vSurfacePatchUV * dirtScale, placedGrass);
         float grassWeight;
+        float coverDistance;
         vec2 grassAtEdges = vec2(0.0);
         float grassEdgeDistance = 0.0;
+        ${wallDirt ? 'vec2 snowFringe = vec2(0.0);' : ''}
         if (wall) {
-            vec4 fringe = wallGrassFringe(vPositionW, terrainXZ);
+            vec4 fringe = wallGrassFringe(vPositionW, terrainXZ${wallDirt ? ', snowFringe' : ''});
             grassWeight = fringe.x;
             grassAtEdges = fringe.zw;
             grassEdgeDistance = fringe.y >= 0.0 ? fringe.y / topFringeDepth : -fringe.y;
-            vec2 grassPatch = vSurfacePatchUV + geometricNormalW.xz * fringe.y;
-            // Mirror at the borders of the atlas patch so steep fringes keep their texture detail.
-            grassPatch = ${PATCH_SIZE.toFixed(1)} - abs(mod(grassPatch, ${(2 * PATCH_SIZE).toFixed(1)}) - ${PATCH_SIZE.toFixed(1)});
-            grassUV = grassOrigin + clamp(grassPatch, 0.004, ${(PATCH_SIZE - .004).toFixed(3)}) * grassScale;
+            vec2 grassPatch = wallFringeUV(vSurfacePatchUV, geometricNormalW.xz, fringe.y);
+            grassUV = ${wallDirt ? 'dirtOrigin' : 'grassOrigin'}
+                + grassPatch * ${wallDirt ? 'dirtScale' : 'grassScale'};
+            ${wallDirt ? 'dirtUV = vPlacedSurfaceUV * wallDirtScale;' : ''}
         } else {
             float grassIslandSupport = smoothstep(0.2, 0.85, vPlacedSurface.w);
-            grassWeight = transitionGrassWeight(terrainXZ, grassIslandSupport);
+            grassWeight = transitionGrassWeight(terrainXZ, grassIslandSupport, coverDistance);
         }
-        vec2 dirtCoverage = 1.0 - max(vec2(grassWeight), grassAtEdges);
-        surfaceAlbedo = mix(
-            toLinearSpace(texture2D(dirtColor, dirtUV).rgb),
-            toLinearSpace(texture2D(grassColor, grassUV).rgb),
-            grassWeight
-        );
-        vec3 grassBump = texture2D(grassNormal, grassUV).xyz * 2.0 - 1.0;
-        vec3 dirtBump = texture2D(dirtNormal, dirtUV).xyz * 2.0 - 1.0;
+        ${wallDirt ? 'float snowWeight = min(snowFringe.x, 1.0 - grassWeight);' : ''}
+        vec2 dirtCoverage = 1.0 - max(vec2(grassWeight${wallDirt ? ' + snowWeight' : ''}), grassAtEdges);
+        vec3 grassSample;
+        vec3 dirtSample;
+        vec3 grassBump;
+        vec3 dirtBump;
+        float grassRelief = grassStrength;
+        float dirtRelief = dirtStrength;
+        ${wallDirt ? `if (wall) {
+            grassSample = texture2D(dirtColor, grassUV).rgb;
+            dirtSample = texture2D(wallDirtColor, dirtUV).rgb;
+            grassBump = texture2D(dirtNormal, grassUV).xyz;
+            dirtBump = texture2D(wallDirtNormal, dirtUV).xyz;
+            grassRelief = dirtStrength;
+            dirtRelief = wallDirtStrength;
+        } else` : ''} {
+            grassSample = texture2D(grassColor, grassUV).rgb;
+            dirtSample = texture2D(dirtColor, dirtUV).rgb;
+            grassBump = texture2D(grassNormal, grassUV).xyz;
+            dirtBump = texture2D(dirtNormal, dirtUV).xyz;
+        }
+        vec3 substrateAlbedo = toLinearSpace(dirtSample);
+        ${wallDirt ? `if (!wall) {
+            // Carry the tint onto uncovered grass, and use coverage to catch isolated snow patches.
+            float grassward = -coverDistance;
+            float edgeTint = smoothstep(-0.25, 0.20, grassward) * (1.0 - smoothstep(0.32, 1.12, grassward));
+            float patchTint = smoothstep(0.005, 0.15, grassWeight) * (1.0 - smoothstep(0.38, 0.82, grassWeight));
+            substrateAlbedo *= mix(vec3(1.0), vec3(1.62, 1.21, 0.43), max(edgeTint, patchTint));
+        }` : ''}
+        surfaceAlbedo = mix(substrateAlbedo, toLinearSpace(grassSample), grassWeight);
+        grassBump = grassBump * 2.0 - 1.0;
+        dirtBump = dirtBump * 2.0 - 1.0;
         vec2 axis = vPlacedSurface.xy;
         mat2 placedRotation = mat2(axis, vec2(-axis.y, axis.x));
         grassBump.xy = mix(grassBump.xy, placedRotation * grassBump.xy, placedGrass);
         dirtBump.xy = mix(placedRotation * dirtBump.xy, dirtBump.xy, placedGrass);
-        grassBump = normalize(vec3(grassBump.xy * grassStrength, grassBump.z));
-        dirtBump = normalize(vec3(dirtBump.xy * dirtStrength, dirtBump.z));
+        grassBump = normalize(vec3(grassBump.xy * grassRelief, grassBump.z));
+        dirtBump = normalize(vec3(dirtBump.xy * dirtRelief, dirtBump.z));
         vec3 blendedBump = mix(dirtBump, grassBump, grassWeight);
         if (wall) {
+            ${wallDirt ? `vec3 snowBump = vec3(0.0, 0.0, 1.0);
+            if (snowWeight > 0.0) {
+                vec2 snowUV = grassOrigin + wallFringeUV(vSurfacePatchUV, geometricNormalW.xz, snowFringe.y) * grassScale;
+                vec3 snowColor = toLinearSpace(texture2D(grassColor, snowUV).rgb);
+                surfaceAlbedo += (snowColor - substrateAlbedo) * snowWeight;
+                snowBump = texture2D(grassNormal, snowUV).xyz * 2.0 - 1.0;
+                snowBump = normalize(vec3(snowBump.xy * grassStrength, snowBump.z));
+                blendedBump += (snowBump - dirtBump) * snowWeight;
+            }` : ''}
             vec2 uv = gl_FrontFacing ? vPlacedSurfaceUV : -vPlacedSurfaceUV;
             vec3 wallNormal = wallBumpNormal(geometricNormalW, vPositionW, uv, blendedBump);
             // Grass near each contact catches light like the terrace it grows from.
             vec3 terraceNormal = vec3(-grassBump.x, grassBump.z, -grassBump.y);
             float wrapLighting = 0.84 * grassWeight * (1.0 - smoothstep(0.025, 0.26, grassEdgeDistance));
-            normalW = normalize(mix(wallNormal, terraceNormal, wrapLighting));
+            ${wallDirt ? `float snowDistance = snowFringe.y >= 0.0 ? snowFringe.y / topFringeDepth : -snowFringe.y;
+            float snowWrap = 0.84 * snowWeight * (1.0 - smoothstep(0.025, 0.26, snowDistance));
+            vec3 snowTerraceNormal = vec3(-snowBump.x, snowBump.z, -snowBump.y);
+            normalW = normalize(wallNormal * (1.0 - wrapLighting - snowWrap)
+                + terraceNormal * wrapLighting + snowTerraceNormal * snowWrap);` : 'normalW = normalize(mix(wallNormal, terraceNormal, wrapLighting));'}
         } else {
             // Project the planar UV axes onto the roof, including its sloped bevels.
             vec3 roofNormal = geometricNormalW;

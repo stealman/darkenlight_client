@@ -39,6 +39,8 @@ export type TerrainFoliage = {
     }
 }
 
+export type FoliageLayer = 'tufts' | 'ground' | 'blended'
+
 const SNOW_FOLIAGE: TerrainFoliage = {rows: [SNOW_GRASS, DRY_GRASS], tuftsPerTile: 0.14, groundPerTile: 0}
 const TERRAIN_FOLIAGE = new Map<number, TerrainFoliage>([
     [TerrainEnum1.TERRAIN_DIRT.index, {rows: [], tuftsPerTile: 0, groundPerTile: 0.17}],
@@ -172,6 +174,7 @@ export const FoliageManager = {
             adjustTuftPlacement?: (matrix: Matrix) => void
             groundDecals?: readonly {matrix: Matrix, uv: Vector2}[]
             blendedDecals?: readonly {matrix: Matrix, uv: Vector2}[]
+            mapAtlasOffset?: (uv: Vector2, matrix: Matrix, layer: FoliageLayer) => Vector2 | undefined
         },
     ) {
         const mesh = this.foliageMesh!
@@ -311,17 +314,29 @@ export const FoliageManager = {
             groundMatrices.push(matrix)
             groundUvs.push(uv)
         }
-        updateWorldInstanceBuffers(mesh, matrices, uvData)
-        updateWorldInstanceBuffers(groundMesh, groundMatrices, groundUvs)
-        mesh.setEnabled(matrices.length > 0)
-        groundMesh.setEnabled(groundMatrices.length > 0)
+        const updateBatch = (target: Mesh, placements: Matrix[], offsets: Vector2[], layer: FoliageLayer) => {
+            if (options?.mapAtlasOffset) {
+                let count = 0
+                for (let i = 0; i < placements.length; i++) {
+                    const offset = options.mapAtlasOffset(offsets[i], placements[i], layer)
+                    if (!offset) continue
+                    placements[count] = placements[i]
+                    offsets[count] = offset
+                    count++
+                }
+                placements.length = offsets.length = count
+            }
+            updateWorldInstanceBuffers(target, placements, offsets)
+            target.setEnabled(placements.length > 0)
+        }
+        updateBatch(mesh, matrices, uvData, 'tufts')
+        updateBatch(groundMesh, groundMatrices, groundUvs, 'ground')
         if (blended) {
             for (const {matrix, uv} of options?.blendedDecals ?? []) {
                 blended.matrices.push(matrix)
                 blended.uvs.push(uv)
             }
-            updateWorldInstanceBuffers(blended.mesh, blended.matrices, blended.uvs)
-            blended.mesh.setEnabled(blended.matrices.length > 0)
+            updateBatch(blended.mesh, blended.matrices, blended.uvs, 'blended')
         }
     },
 

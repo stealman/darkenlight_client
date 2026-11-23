@@ -19,7 +19,45 @@ type TerrainAtlas = {
     colorUrl: string
     normal: {url: string, strength: number}
     roundDirtEdges?: boolean
+    varyAdjacentPatches?: boolean
     patterns: ReadonlyArray<{size: number, origins: readonly (readonly number[])[]}>
+}
+
+type AtlasPlacement = {size: number, height: number, variant: number, turn: number}
+
+function firstAvailableChoice(start: number, count: number, used: ReadonlySet<number>) {
+    for (let offset = 0; offset < count; offset++) {
+        const choice = (start + offset) % count
+        if (!used.has(choice)) return choice
+    }
+    return start
+}
+
+function variedPatchPlacement(placed: ReadonlyMap<number, AtlasPlacement>, stride: number,
+                              x: number, z: number, size: number, height: number, variants: number, hash: number) {
+    // Mix the grid hash before choosing a variant and a quarter-turn from different bits.
+    const mixed = Math.imul(hash ^ (hash >>> 16), 0x7feb352d)
+    const seed = (mixed ^ (mixed >>> 15)) >>> 0
+    const usedVariants = new Set<number>()
+    const usedTurns = new Set<number>()
+    const visit = (nx: number, nz: number) => {
+        if (nx < 0 || nz < 0 || nx >= stride || nz >= stride) return
+        const neighbor = placed.get(nx * stride + nz)
+        if (neighbor?.height !== height) return
+        if (neighbor.size === size) usedVariants.add(neighbor.variant)
+        usedTurns.add(neighbor.turn)
+    }
+    for (let i = 0; i < size; i++) {
+        visit(x - 1, z + i)
+        visit(x + size, z + i)
+        visit(x + i, z - 1)
+        visit(x + i, z + size)
+    }
+    return {
+        size, height,
+        variant: firstAvailableChoice((seed >>> 2) % variants, variants, usedVariants),
+        turn: firstAvailableChoice(seed & 3, 4, usedTurns),
+    }
 }
 
 export type TerrainAtlasTileFilter = (
@@ -45,6 +83,7 @@ export function createTerrainAtlasPreview(plane: Mesh, name: string, atlas: Terr
     const render = ({atlasTops, stride, roofs, cornerFloors}: TerrainPreviewSurfaces, takeTile?: TerrainAtlasTileFilter,
                     batch = new TerrainPreviewBatch()) => {
         const remaining = atlasTops.get(atlas.type)!
+        const placed = atlas.varyAdjacentPatches ? new Map<number, AtlasPlacement>() : undefined
         for (const {size, origins} of atlas.patterns) {
             const center = (size - 1) / 2
             for (const [key, y] of remaining) {
@@ -61,8 +100,9 @@ export function createTerrainAtlasPreview(plane: Mesh, name: string, atlas: Terr
 
                 // Stable choices keep textures in place when the preview is refreshed.
                 const hash = Math.imul(x + 1, 73856093) ^ Math.imul(z + 1, 19349663)
-                const [atlasX, atlasTop] = origins[(hash >>> 5) % origins.length]
-                const rotation = Matrix.RotationY(((hash >>> 12) & 3) * Math.PI / 2)
+                const appearance = placed && variedPatchPlacement(placed, stride, x, z, size, y, origins.length, hash)
+                const [atlasX, atlasTop] = origins[appearance?.variant ?? (hash >>> 5) % origins.length]
+                const rotation = Matrix.RotationY((appearance?.turn ?? ((hash >>> 12) & 3)) * Math.PI / 2)
                 for (let dx = 0; dx < size; dx++) {
                     for (let dz = 0; dz < size; dz++) {
                         remaining.delete(key + dx * stride + dz)
@@ -73,6 +113,7 @@ export function createTerrainAtlasPreview(plane: Mesh, name: string, atlas: Terr
                         matrix.setTranslationFromFloats(tileX, y, tileZ)
                         const uv = new Vector2(atlasX + dx, TERRAIN_ATLAS_TILES - atlasTop - size + dz)
                         const tileKey = tileX * stride + tileZ
+                        if (appearance) placed!.set(tileKey, appearance)
                         const floor = cornerFloors.get(tileKey)
                         const roof = roofs.get(tileKey)
                         if (floor) addTerrainPreviewRoof(batch, matrix, uv, floor, {mirrorAtTileEdge: true, roundDirtEdges})

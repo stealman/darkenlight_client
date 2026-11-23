@@ -17,6 +17,12 @@ const WALL_UNDERLAP = 0.60
 const MIN_TERRACE_STEP = 0.5
 const EDGE_BITS = [TerrainEdge.North, TerrainEdge.West, TerrainEdge.South, TerrainEdge.East] as const
 const EDGE_MASK = TerrainEdge.North | TerrainEdge.West | TerrainEdge.South | TerrainEdge.East
+const SNOW_DIRT = TerrainEnum1.TERRAIN_SNOW_MUDDY_DIRT.index
+const SNOW_WINTER_GRASS = TerrainEnum1.TERRAIN_SNOW_GRASS_WINTER.index
+const atlasType = (block: MapBlock) => {
+    const type = block.snowed ? block.type + 100 : block.type
+    return type === SNOW_WINTER_GRASS ? SNOW_DIRT : type
+}
 const WALL_ROTATIONS = WALL_DIRECTIONS.map((_, index) => Matrix.RotationYawPitchRoll(
     index * Math.PI / 2, -Math.PI / 2, 0,
 ))
@@ -89,22 +95,31 @@ export function createTerrainPreviewGeometry(plane: Mesh, atlasTypes: readonly n
         const atlasTops = new Map(atlasTypes.map(type => [type, new Map<number, number>()]))
         const roofs = new Map<number, TerrainPreviewTriangle[]>()
         const cornerFloors = new Map<number, TerrainPreviewTriangle[]>()
-        const heights = map.map(row => row.map(block => block.height + getTerrainHeightOffset(block, false)))
+        const heights = map.map(row => row.map(block => atlasType(block) === SNOW_DIRT
+            ? block.totalHeight : block.height + getTerrainHeightOffset(block, false)))
+        const flatSnowRoofs = map.map(row => row.map(block => atlasType(block) === SNOW_DIRT))
         const cornerSteps = heights.map((row, x) => row.map((top, z) => ROOF_CORNERS.map(([dx, dz]) => {
             // Every tile sharing this corner at the same elevation computes the same height.
-            const neighbors = [heights[x + dx]?.[z], heights[x]?.[z + dz], heights[x + dx]?.[z + dz]]
-            const drops = neighbors.some(height => height !== undefined && top - height > 1e-6)
+            if (flatSnowRoofs[x][z]) return 0
+            const neighbors = [[x + dx, z], [x, z + dz], [x + dx, z + dz]]
+            const meetsSnow = neighbors.some(([nx, nz]) => flatSnowRoofs[nx]?.[nz] && Math.abs(heights[nx][nz] - top) < 1e-6)
+            if (meetsSnow) return 0
+            const drops = neighbors.some(([nx, nz]) => (heights[nx]?.[nz] ?? top) < top - 1e-6)
             return drops ? -1 : 0
         })))
         for (let x = 0; x < map.length; x++) {
             for (let z = 0; z < map[x].length; z++) {
                 const block = map[x][z]
-                const atlas = !block.snowed && atlasTops.get(block.type)
+                const atlas = atlasTops.get(atlasType(block))
                 const deposit = block.minableCoal || block.minableOreAvailable
                 const top = heights[x][z]
+                const flatSnowRoof = flatSnowRoofs[x][z]
                 const adjacent = WALL_DIRECTIONS.map(([dx, dz]) => heights[x + dx]?.[z + dz])
                 const lower = adjacent.map(height => height ?? -1)
-                const edges = terrainBevelMask(map, x, z, snowMask) & EDGE_MASK
+                let edges = flatSnowRoof ? 0 : terrainBevelMask(map, x, z, snowMask) & EDGE_MASK
+                adjacent.forEach((height, side) => {
+                    if (height !== undefined && top <= height + 1e-6) edges &= ~EDGE_BITS[side]
+                })
                 const steps = cornerSteps[x][z]
                 let bevel = edges
                 ROOF_CORNERS.forEach(([, , corner, sides], index) => {
@@ -128,14 +143,14 @@ export function createTerrainPreviewGeometry(plane: Mesh, atlasTypes: readonly n
                         const lowerAtlas = atlasTops.has(lowerBlock.type) && !lowerBlock.snowed
                             && !lowerBlock.minableCoal && !lowerBlock.minableOreAvailable
                         return {
-                            top: layer === 0 && atlas && !deposit ? top : undefined,
+                            top: layer === 0 && atlas && !block.snowed && !deposit ? top : undefined,
                             foot: lowerAtlas && foot >= base - 1e-6 ? foot : undefined,
                         }
                     }
                     const wallBatch = (side: number, triangles: number) => {
                         const foot = adjacent[side]
                         if (!takeWall || foot === undefined || top - foot <= MIN_TERRACE_STEP) return walls
-                        const topY = layer === 0 ? top - TERRAIN_BEVEL_DROP : undefined
+                        const topY = layer === 0 ? top - (flatSnowRoof ? 0 : TERRAIN_BEVEL_DROP) : undefined
                         const bottomY = foot >= base - 1e-6 ? foot : undefined
                         if (topY === undefined && bottomY === undefined) return walls
                         const [dx, dz] = WALL_DIRECTIONS[side]
@@ -207,7 +222,7 @@ export function createTerrainPreviewGeometry(plane: Mesh, atlasTypes: readonly n
         for (const [key, floors] of cornerFloors) {
             const x = Math.floor(key / stride), z = key % stride
             const block = map[x][z]
-            if (atlasTops.get(block.type)?.has(key)) continue
+            if (atlasTops.get(atlasType(block))?.has(key)) continue
             const placement = Matrix.Translation(x, heights[x][z], z)
             if (block.minableCoal || block.minableOreAvailable) {
                 addTerrainPreviewRoof(oreTops, placement, TerrainEnum1.getTerrainForBlock(block), floors,
