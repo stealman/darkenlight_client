@@ -17,13 +17,14 @@ import { createTerrainPreviewGeometry } from './terrainPreviewGeometry'
 import { createTerrainPreviewWater } from './terrainPreviewWater'
 import { createTerrainTransitionMaterial, terrainBoundaryOffset, POND_BANK_FLAG, TERRAIN_TRANSITION_REACH } from './terrainTransitionMaterial'
 import { createMuddyDirtFoliageProfiles, createMuddyDirtFootFoliage } from './muddyDirtFoliage'
-import { createWinterGrassFoliage, createWinterGrassFootTufts, rockPebbleOffset, snowFoliageOffset, styleTerrainFoliage } from './winterGrassFoliage'
-import { insetTuftFromLedges } from './terrainFoliagePatches'
+import { createWinterGrassFoliage, createGrassFootTufts, greenGrassFoliageOffset, rockPebbleOffset, snowFoliageOffset, styleTerrainFoliage } from './winterGrassFoliage'
+import { createWaterEdgeTufts, insetTuftFromLedges } from './terrainFoliagePatches'
 import { createRockWallLichen, rockFoliage, styleRockLichen } from './rockFoliage'
 import muddyDirtColorUrl from './assets/muddy-dirt-atlas.png'
 import dirtColorUrl from './assets/dirt-atlas.png'
 import muddyDirtNormalUrl from './assets/muddy-dirt-normal-atlas.png'
 import winterGrassColorUrl from './assets/winter-grass-atlas.png'
+import grassColorUrl from './assets/grass-atlas.png'
 import winterGrassNormalUrl from './assets/winter-grass-normal-atlas.png'
 import snowColorUrl from './assets/snow-atlas.png'
 import snowNormalUrl from './assets/snow-normal-atlas.png'
@@ -32,11 +33,14 @@ import rockNormalUrl from './assets/rock-normal-atlas.png'
 import foliageAtlasUrl from './assets/muddy-dirt-foliage.png'
 import foliageNormalAtlasUrl from './assets/muddy-dirt-foliage-normal.png'
 
+const TERRAIN_PREVIEW_STORAGE_KEY = 'darkenlight.adminUtils.terrainPreview'
 const SIZE = 30
 const MUDDY_DIRT = TerrainEnum1.TERRAIN_MUDDY_DIRT.index
 const DIRT = TerrainEnum1.TERRAIN_DIRT.index
 const GRASS = TerrainEnum1.TERRAIN_GRASS.index
 const WINTER_GRASS = TerrainEnum1.TERRAIN_GRASS_WINTER.index
+const GRASS_TYPES = [WINTER_GRASS, GRASS] as const
+const isGrass = (type: number) => type === WINTER_GRASS || type === GRASS
 const SNOW_DIRT = TerrainEnum1.TERRAIN_SNOW_MUDDY_DIRT.index
 const SNOW_DRY_DIRT = TerrainEnum1.TERRAIN_SNOW_DIRT.index
 const SNOW_WINTER_GRASS = TerrainEnum1.TERRAIN_SNOW_GRASS_WINTER.index
@@ -134,11 +138,22 @@ export function createTerrainPreview(
     controls.innerHTML = `
         <label class="admin-utils__field">Povrch A<select id="terrainPrimary"></select></label>
         <label class="admin-utils__field">Povrch B<select id="terrainSecondary"><option value="">Bez druhého povrchu</option></select></label>
+        <label class="admin-utils__field"><span>Intenzita slunce <output for="terrainLightIntensity">100 %</output></span>
+            <input id="terrainLightIntensity" type="range" min="0" max="200" value="100"></label>
         <div class="admin-utils__field"><label><input id="terrainFoliage" type="checkbox" checked> Zobrazit vegetaci</label></div>
         <button type="button">Vycentrovat pohled</button>`
     const primary = controls.querySelector<HTMLSelectElement>('#terrainPrimary')!
     const secondary = controls.querySelector<HTMLSelectElement>('#terrainSecondary')!
     const foliageToggle = controls.querySelector<HTMLInputElement>('#terrainFoliage')!
+    const lightIntensity = controls.querySelector<HTMLInputElement>('#terrainLightIntensity')!
+    const lightIntensityOutput = controls.querySelector<HTMLOutputElement>('output[for="terrainLightIntensity"]')!
+    let baseSunIntensity = 0
+    const updateLightIntensity = () => {
+        const percent = lightIntensity.valueAsNumber
+        lightIntensityOutput.value = `${percent} %`
+        if (!controls.hidden) Lights.sunLight.intensity = baseSunIntensity * percent / 100
+    }
+    lightIntensity.oninput = updateLightIntensity
     for (const [name, entry] of Object.entries(TerrainEnum1)) {
         if (typeof entry === 'function' || (name.startsWith('TERRAIN_SNOW_') && !isPreviewSnow(entry.index))) continue
         const label = entry.index === SNOW_DIRT ? 'snow-muddy-dirt' : entry.index === SNOW_DRY_DIRT ? 'snow-dirt' : entry.index === SNOW_WINTER_GRASS ? 'snow-grass-winter'
@@ -149,6 +164,13 @@ export function createTerrainPreview(
     }
     primary.value = String(WINTER_GRASS)
     secondary.value = String(MUDDY_DIRT)
+    try {
+        const saved: {primary?: string, secondary?: string} | null = JSON.parse(localStorage.getItem(TERRAIN_PREVIEW_STORAGE_KEY) ?? 'null')
+        const savedPrimary = saved?.primary
+        const savedSecondary = saved?.secondary
+        if (savedPrimary !== undefined && Array.from(primary.options).some(option => option.value === savedPrimary)) primary.value = savedPrimary
+        if (savedSecondary !== undefined && Array.from(secondary.options).some(option => option.value === savedSecondary)) secondary.value = savedSecondary
+    } catch { /* The preview also works without stored settings. */ }
 
     const terrain = new TransformNode('adminUtilsTerrain', scene)
     terrain.parent = parent
@@ -182,25 +204,28 @@ export function createTerrainPreview(
 
     const emptyMask = new Set<number>()
     const supportsFoliage = (block: MapBlock, x: number, z: number) => !block.snowed && !isPondBankTile(x, z)
-        && (block.type === MUDDY_DIRT || block.type === WINTER_GRASS || block.type === ROCK)
+        && (block.type === MUDDY_DIRT || isGrass(block.type) || block.type === ROCK)
     const transitionBoundary = new Vector2(CENTER, 0)
     let renderAtlases: (map: MapBlock[][], transitionTiles: boolean[][] | undefined,
-                        snow: boolean, snowPartner: number, snowOnRock: boolean, rockPartner: number, dirtPartner: number, shoreSurface: number) => void
+                        snow: boolean, snowPartner: number, snowOnRock: boolean, rockPartner: number, dirtPartner: number,
+                        shoreSurface: number, grassType: number, snowRockOnSoil: boolean) => void
     let render: (() => void) | undefined
     const update = () => {
         const first = Number(primary.value)
         const second = Number(secondary.value)
         const snow = isPreviewSnow(first) || isPreviewSnow(second)
         const besideSnow = isPreviewSnow(first) ? second : isPreviewSnow(second) ? first : 0
-        const snowPartner = besideSnow === WINTER_GRASS || besideSnow === MUDDY_DIRT || besideSnow === DIRT || besideSnow === ROCK ? besideSnow : 0
+        const snowPartner = isGrass(besideSnow) || besideSnow === MUDDY_DIRT || besideSnow === DIRT || besideSnow === ROCK ? besideSnow : 0
         const snowOnRock = snowPartner === ROCK || (!snowPartner && (first === SNOW_ROCK || second === SNOW_ROCK))
+        const snowRockOnSoil = (first === SNOW_ROCK || second === SNOW_ROCK) && (snowPartner === DIRT || snowPartner === MUDDY_DIRT)
         const besideRock = first === ROCK ? second : second === ROCK ? first : 0
-        const rockPartner = besideRock === MUDDY_DIRT || besideRock === DIRT || besideRock === WINTER_GRASS ? besideRock : 0
+        const rockPartner = besideRock === MUDDY_DIRT || besideRock === DIRT || isGrass(besideRock) ? besideRock : 0
         const besideDirt = first === DIRT ? second : second === DIRT ? first : 0
-        const dirtPartner = besideDirt === MUDDY_DIRT || besideDirt === WINTER_GRASS ? besideDirt : 0
-        const hasTransitions = !!snowPartner || !!rockPartner || !!dirtPartner || (first === MUDDY_DIRT && second === WINTER_GRASS)
-            || (first === WINTER_GRASS && second === MUDDY_DIRT)
-        const coverFirst = snowPartner ? isPreviewSnow(first) : first === (rockPartner || dirtPartner || WINTER_GRASS)
+        const dirtPartner = besideDirt === MUDDY_DIRT || isGrass(besideDirt) ? besideDirt : 0
+        const grassType = isGrass(first) ? first : isGrass(second) ? second : WINTER_GRASS
+        const hasTransitions = !!snowPartner || !!rockPartner || !!dirtPartner || (first === MUDDY_DIRT && isGrass(second))
+            || (isGrass(first) && second === MUDDY_DIRT)
+        const coverFirst = snowPartner ? isPreviewSnow(first) : first === (rockPartner || dirtPartner || grassType)
         transitionBoundary.y = hasTransitions ? (coverFirst ? -1 : 1) : 0
         const map = HEIGHTS.map((row, x) => row.map((height, z) => {
             if (isPondTile(x, z)) {
@@ -216,10 +241,10 @@ export function createTerrainPreview(
             block.setMinable(!bank && surface >= 2000 ? 'C' : !bank && surface >= 1000 ? 'M' : null)
             block.computeData()
             // Blend level surfaces in the preview while retaining a thin snow cap when shown alone.
-            if (isPreviewSnow(surface) || (hasTransitions && surface === WINTER_GRASS)) {
+            if (isPreviewSnow(surface) || (hasTransitions && isGrass(surface))) {
                 block.heightOffset = isPreviewSnow(surface) && !snowPartner ? SNOW_BLOCK_HEIGHT : 0
                 block.totalHeight = block.walkHeight = height + block.heightOffset
-            } else if (bank && (surface === GRASS || surface === WINTER_GRASS)) {
+            } else if (bank && isGrass(surface)) {
                 block.heightOffset = 0.1
                 block.totalHeight = block.walkHeight = height + block.heightOffset
             }
@@ -230,7 +255,7 @@ export function createTerrainPreview(
         // Plain dirt and snowy winter grass share the muddy-dirt foliage profile.
         const foliageMap = map.map((row, x) => row.map((block, z) => {
             if (isPondBankTile(x, z)) return block
-            const type = block.type === DIRT || (block.snowed && block.type === WINTER_GRASS) ? MUDDY_DIRT : block.type
+            const type = block.type === DIRT || (block.snowed && isGrass(block.type)) ? MUDDY_DIRT : block.type
             if (!block.snowed && type === block.type) return block
             return Object.assign(new MapBlock(block.height, type), block, {type, snowed: false})
         }))
@@ -238,26 +263,29 @@ export function createTerrainPreview(
         profiles.set(ROCK, rockFoliage)
         const muddyFoot = createMuddyDirtFootFoliage(foliageMap, Lights.sunLight.direction)
         const blendedDecals = [...muddyFoot.moss, ...createRockWallLichen(map)]
-        const footTufts = [...createWinterGrassFootTufts(foliageMap), ...muddyFoot.tufts]
-        profiles.set(WINTER_GRASS, createWinterGrassFoliage((x, z) => {
+        const footTufts = [...GRASS_TYPES.flatMap(type => createGrassFootTufts(foliageMap, type)), ...muddyFoot.tufts]
+        const grassFoliage = createWinterGrassFoliage((x, z) => {
             const tileX = Math.round(x)
             const tileZ = Math.round(z)
             if (!transitionTiles?.[tileX][tileZ]) return 0
             const distance = Math.abs(x - CENTER - terrainBoundaryOffset(z))
             return Math.max(0, 1 - distance / TERRAIN_TRANSITION_REACH)
-        }))
+        })
+        for (const type of GRASS_TYPES) profiles.set(type, grassFoliage)
+        const shoreTufts = createWaterEdgeTufts(foliageMap, profiles)
         render = () => {
-            renderAtlases(map, transitionTiles, snow, snowPartner, snowOnRock, rockPartner, dirtPartner, first)
+            renderAtlases(map, transitionTiles, snow, snowPartner, snowOnRock, rockPartner, dirtPartner, first, grassType, snowRockOnSoil)
             FoliageManager.renderFoliageArea(foliageMap, emptyMask, emptyMask, supportsFoliage, {
                 profiles,
                 extraTuftPasses: 2,
-                extraTufts: footTufts,
+                extraTufts: [...footTufts, ...shoreTufts],
                 adjustTuftPlacement: matrix => insetTuftFromLedges(foliageMap, matrix),
                 groundDecals: muddyFoot.pebbles,
                 blendedDecals,
                 mapAtlasOffset: (uv, matrix, layer) => {
                     const block = map[Math.round(matrix.m[12])]?.[Math.round(matrix.m[14])]
                     if (block?.snowed) return snowFoliageOffset(uv, layer)
+                    if (block?.type === GRASS) return greenGrassFoliageOffset(uv, layer)
                     return block?.type === ROCK ? rockPebbleOffset(uv, matrix, layer) : uv
                 },
             })
@@ -266,7 +294,7 @@ export function createTerrainPreview(
             const plane = Builder.createHorizontalPlane(scene, terrain, 1, 0)
             plane.name = 'adminUtilsTerrainTops'
             plane.receiveShadows = Settings.isShadowsEnabled()
-            const geometry = createTerrainPreviewGeometry(plane, [MUDDY_DIRT, DIRT, WINTER_GRASS, SNOW_DIRT, ROCK])
+            const geometry = createTerrainPreviewGeometry(plane, [MUDDY_DIRT, DIRT, ...GRASS_TYPES, SNOW_DIRT, ROCK])
             const pond = createTerrainPreviewWater(plane, map, isPondBankTile, CENTER)
             const dirtAtlas = createTerrainAtlasPreview(plane, 'adminUtilsMuddyDirt', {
                 type: MUDDY_DIRT, colorUrl: muddyDirtColorUrl,
@@ -277,11 +305,15 @@ export function createTerrainPreview(
                 type: DIRT, colorUrl: dirtColorUrl,
                 normal: {url: muddyDirtNormalUrl, strength: 4}, patterns: muddyDirtPatterns, roundDirtEdges: true,
             })
-            const grassAtlas = createTerrainAtlasPreview(plane, 'adminUtilsWinterGrass', {
-                type: WINTER_GRASS, colorUrl: winterGrassColorUrl,
-                normal: {url: winterGrassNormalUrl, strength: 0.75},
-                patterns: terrainCoverPatterns,
+            const grassAtlases = GRASS_TYPES.map(type => {
+                const name = type === GRASS ? 'Grass' : 'WinterGrass'
+                const atlas = createTerrainAtlasPreview(plane, type === GRASS ? 'adminUtilsGrassTerrain' : 'adminUtilsWinterGrass', {
+                    type, colorUrl: type === GRASS ? grassColorUrl : winterGrassColorUrl,
+                    normal: {url: winterGrassNormalUrl, strength: 0.75}, patterns: terrainCoverPatterns,
+                })
+                return {type, name, atlas}
             })
+            const grassMaterials = new Set(grassAtlases.map(({atlas}) => atlas.material))
             const snowAtlas = createTerrainAtlasPreview(plane, 'adminUtilsSnowDirt', {
                 type: SNOW_DIRT, colorUrl: snowColorUrl,
                 normal: {url: snowNormalUrl, strength: 1}, patterns: terrainCoverPatterns, varyAdjacentPatches: true,
@@ -290,27 +322,31 @@ export function createTerrainPreview(
             const rockAtlas = createTerrainAtlasPreview(plane, 'adminUtilsRock', {
                 type: ROCK, colorUrl: rockColorUrl,
                 normal: {url: rockNormalUrl, strength: 1},
-                patterns: terrainCoverPatterns, varyAdjacentPatches: true, roundRockTop: true,
+                patterns: terrainCoverPatterns, varyAdjacentPatches: true, roundRockTop: true, showRockDeposits: true,
             })
             const wetTransitions = new Set<Mesh>()
-            const createTransition = (name: string, cover: PBRCustomMaterial, substrate = dirtAtlas.material, wallSoil = dirtAtlas.material) => {
+            const createTransition = (name: string, cover: PBRCustomMaterial, substrate = dirtAtlas.material,
+                                      wallSoil = dirtAtlas.material, blendRockWalls = false) => {
                 const mesh = createTerrainPreviewPlane(plane, name)
                 const withDirt = substrate === dirtAtlas.material
-                const withGrass = substrate === grassAtlas.material
+                const withGrass = grassMaterials.has(substrate)
                 const withRock = substrate === rockAtlas.material
                 const mudCover = cover === dirtAtlas.material
                 const dryCover = cover === dryDirtAtlas.material
                 const drySubstrate = substrate === dryDirtAtlas.material
-                const atPond = (withDirt && (cover === grassAtlas.material || cover === snowAtlas.material))
-                    || (mudCover && (withRock || drySubstrate))
+                const soilRockWalls = withRock && (mudCover || dryCover)
+                const atPond = !blendRockWalls && ((withDirt && (grassMaterials.has(cover) || cover === snowAtlas.material))
+                    || (mudCover && (withRock || drySubstrate)))
                 const material = createTerrainTransitionMaterial(name, cover, substrate,
                     (mudCover || dryCover ? muddyDirtPatterns : terrainCoverPatterns)[0].origins[0],
                     (withDirt || drySubstrate ? muddyDirtPatterns : terrainCoverPatterns)[0].origins[0], transitionBoundary,
-                    withGrass ? wallSoil : undefined, withRock, atPond ? {...pond, coverOnBank: mudCover} : undefined)
+                    withGrass ? wallSoil : undefined, withRock, atPond ? {...pond, coverOnBank: mudCover} : undefined, soilRockWalls,
+                    blendRockWalls ? rockAtlas.material : undefined)
                 configureTerrainPreviewBatch(mesh, material, false)
-                configureTerrainEdgeLighting(material, mudCover ? 'vec2(1.0)' : 'dirtCoverage', withRock && !mudCover)
+                configureTerrainEdgeLighting(material, mudCover || soilRockWalls ? 'vec2(1.0)' : 'dirtCoverage', withRock && !mudCover)
                 if (mudCover || withDirt || (withGrass && wallSoil === dirtAtlas.material)) {
-                    configureMuddyDirtWetness(material, mudCover ? 'cover' : withGrass ? 'walls' : 'mixed')
+                    configureMuddyDirtWetness(material, mudCover ? 'cover' : withGrass ? 'walls' : 'mixed',
+                        blendRockWalls ? '(1.0 - wallRockWeight)' : undefined)
                     wetTransitions.add(mesh)
                 }
                 if (cover === snowAtlas.material) {
@@ -322,36 +358,44 @@ export function createTerrainPreview(
                 }
                 return mesh
             }
-            const grassTransition = createTransition('adminUtilsWinterGrassMuddyDirt', grassAtlas.material)
             const snowTransition = createTransition('adminUtilsSnowMuddyDirt', snowAtlas.material)
-            const snowGrassTransition = createTransition('adminUtilsSnowWinterGrass', snowAtlas.material, grassAtlas.material)
-            const snowGrassDirtWalls = createTransition('adminUtilsSnowWinterGrassDirtWalls', snowAtlas.material, grassAtlas.material, dryDirtAtlas.material)
             const snowRockTransition = createTransition('adminUtilsSnowRock', snowAtlas.material, rockAtlas.material)
-            const grassRockTransition = createTransition('adminUtilsWinterGrassRock', grassAtlas.material, rockAtlas.material)
+            const snowRockMuddyWalls = createTransition('adminUtilsSnowRockMuddyWalls', snowAtlas.material, dirtAtlas.material, dirtAtlas.material, true)
+            const snowRockDirtWalls = createTransition('adminUtilsSnowRockDirtWalls', snowAtlas.material, dryDirtAtlas.material, dirtAtlas.material, true)
             const mudRockTransition = createTransition('adminUtilsMuddyDirtRock', dirtAtlas.material, rockAtlas.material)
-            const grassDirtTransition = createTransition('adminUtilsWinterGrassDirt', grassAtlas.material, dryDirtAtlas.material)
             const snowDirtTransition = createTransition('adminUtilsSnowDirtTransition', snowAtlas.material, dryDirtAtlas.material)
             const dirtRockTransition = createTransition('adminUtilsDirtRock', dryDirtAtlas.material, rockAtlas.material)
             const mudDirtTransition = createTransition('adminUtilsMuddyDirtDirt', dirtAtlas.material, dryDirtAtlas.material)
+            const grassTransitions = new Map(grassAtlases.map(({type, name, atlas}) => [type, {
+                mud: createTransition(`adminUtils${name}MuddyDirt`, atlas.material),
+                rock: createTransition(`adminUtils${name}Rock`, atlas.material, rockAtlas.material),
+                dirt: createTransition(`adminUtils${name}Dirt`, atlas.material, dryDirtAtlas.material),
+                snow: createTransition(`adminUtilsSnow${name}`, snowAtlas.material, atlas.material),
+                snowOnDirt: createTransition(`adminUtilsSnow${name}DirtWalls`, snowAtlas.material, atlas.material, dryDirtAtlas.material),
+            }]))
             const pondTransitions = new Map([
-                [WINTER_GRASS, grassTransition], [DIRT, mudDirtTransition],
+                ...Array.from(grassTransitions, ([type, transitions]) => [type, transitions.mud] as const), [DIRT, mudDirtTransition],
                 [ROCK, mudRockTransition], [SNOW_DIRT, snowTransition],
             ])
-            const transitionMeshes = [grassTransition, snowTransition, snowGrassTransition, snowGrassDirtWalls, snowRockTransition, grassRockTransition,
-                mudRockTransition, grassDirtTransition, snowDirtTransition, dirtRockTransition, mudDirtTransition]
-            for (const mesh of [plane, geometry.deposits, dirtAtlas.mesh, dryDirtAtlas.mesh, grassAtlas.mesh, snowAtlas.mesh, rockAtlas.mesh, ...transitionMeshes]) {
+            const transitionMeshes = [snowTransition, snowRockTransition, snowRockMuddyWalls, snowRockDirtWalls,
+                mudRockTransition, snowDirtTransition, dirtRockTransition, mudDirtTransition,
+                ...Array.from(grassTransitions.values()).flatMap(transitions => Object.values(transitions))]
+            for (const mesh of [plane, geometry.deposits, dirtAtlas.mesh, dryDirtAtlas.mesh, snowAtlas.mesh, rockAtlas.mesh,
+                ...grassAtlases.map(({atlas}) => atlas.mesh), ...transitionMeshes]) {
                 Lights.addShadowCaster(mesh, false)
             }
-            renderAtlases = (map, transitionTiles, snow, snowPartner, snowOnRock, rockPartner, dirtPartner, shoreSurface) => {
+            renderAtlases = (map, transitionTiles, snow, snowPartner, snowOnRock, rockPartner, dirtPartner, shoreSurface, grassType, snowRockOnSoil) => {
                 pond.setLevel(map)
                 const pondCover = isPreviewSnow(shoreSurface) ? SNOW_DIRT : shoreSurface
                 const pondTransition = pondTransitions.get(pondCover)
                 const withRock = snowOnRock || !!rockPartner
-                const snowGrass = snowPartner === WINTER_GRASS
-                const transitionMesh = rockPartner === MUDDY_DIRT ? mudRockTransition : rockPartner === WINTER_GRASS ? grassRockTransition
-                    : rockPartner === DIRT ? dirtRockTransition : snowOnRock ? snowRockTransition : snowGrass ? snowGrassTransition
+                const soilRockWalls = rockPartner === DIRT || rockPartner === MUDDY_DIRT
+                const snowGrass = isGrass(snowPartner)
+                const grass = grassTransitions.get(grassType)!
+                const transitionMesh = rockPartner === MUDDY_DIRT ? mudRockTransition : isGrass(rockPartner) ? grass.rock
+                    : rockPartner === DIRT ? dirtRockTransition : snowOnRock ? snowRockTransition : snowGrass ? grass.snow
                         : snowPartner === DIRT ? snowDirtTransition : snow ? snowTransition : dirtPartner === MUDDY_DIRT ? mudDirtTransition
-                            : dirtPartner === WINTER_GRASS ? grassDirtTransition : grassTransition
+                            : isGrass(dirtPartner) ? grass.dirt : grass.mud
                 const batches = new Map<Mesh, {geometry: TerrainPreviewBatch, surfaceData: number[], wallData: number[]}>()
                 const batchFor = (mesh: Mesh) => {
                     let batch = batches.get(mesh)
@@ -368,20 +412,43 @@ export function createTerrainPreview(
                     if (snow && block.snowed) return 1
                     if (rockPartner) return block.type === rockPartner ? 1 : 0
                     if (dirtPartner) return block.type === dirtPartner ? 1 : 0
-                    if (block.type === WINTER_GRASS && !block.snowed) {
-                        return mesh === snowGrassTransition || mesh === snowGrassDirtWalls ? 3 : snow ? 0 : 1
+                    if (isGrass(block.type) && !block.snowed) {
+                        return mesh === grass.snow || mesh === grass.snowOnDirt ? 3 : snow ? 0 : 1
                     }
                     return 0
                 }
                 const surfaces = geometry.render(map, ({x, z, lowerX, lowerZ, topY, bottomY}, triangles) => {
                     const type = map[x][z].type
                     const isRock = type === ROCK
+                    if (soilRockWalls) {
+                        if ((!isRock && type !== rockPartner) || Math.abs(x - BOUNDARIES[z]) > TERRAIN_TRANSITION_REACH) return
+                        const batch = batchFor(transitionMesh)
+                        for (let i = 0; i < triangles; i++) {
+                            batch.surfaceData.push(x, z, 0, isRock ? 0 : 1)
+                            batch.wallData.push(0, 0, 1, 0)
+                        }
+                        return batch.geometry
+                    }
+                    if (snowRockOnSoil && (isRock || type === snowPartner) && Math.abs(x - BOUNDARIES[z]) <= TERRAIN_TRANSITION_REACH) {
+                        const mesh = snowPartner === DIRT ? snowRockDirtWalls : snowRockMuddyWalls
+                        const topCover = topY === undefined ? 0 : wallCoverAt(x, z, mesh)
+                        const bottomCover = bottomY === undefined ? 0 : wallCoverAt(lowerX, lowerZ, mesh)
+                        const batch = batchFor(mesh)
+                        for (let i = 0; i < triangles; i++) {
+                            batch.surfaceData.push(x, z, 0, isRock ? 1 : 0)
+                            batch.wallData.push(topY ?? 0, bottomY ?? 0, topCover, bottomCover)
+                        }
+                        return batch.geometry
+                    }
+                    if (topY === undefined && bottomY === undefined) return
                     if (!snow && isRock !== withRock) return
                     if (!snow && dirtPartner && type !== DIRT) return
                     // Match the wall's own atlas even when the horizontal snow boundary uses a different pair.
+                    const wallGrass = grassTransitions.get(type) ?? grassTransitions.get(map[lowerX][lowerZ].type)
                     const mesh = snow ? (isRock ? snowRockTransition
-                        : snowGrass ? (type === DIRT ? snowGrassDirtWalls : snowGrassTransition)
-                            : type === DIRT ? snowDirtTransition : snowTransition) : transitionMesh
+                        : snowGrass ? (type === DIRT ? grass.snowOnDirt : grass.snow)
+                            : type === DIRT ? snowDirtTransition : snowTransition)
+                        : !transitionTiles && wallGrass ? wallGrass.mud : transitionMesh
                     const topCover = topY === undefined ? 0 : wallCoverAt(x, z, mesh)
                     const bottomCover = bottomY === undefined ? 0 : wallCoverAt(lowerX, lowerZ, mesh)
                     if (!topCover && !bottomCover) return
@@ -394,7 +461,7 @@ export function createTerrainPreview(
                 })
                 const islandMasks = transitionTiles ? grassIslandMasks(map) : undefined
                 const takeTile = (type: number, cover?: boolean): TerrainAtlasTileFilter => {
-                    return (matrix, uv, x, z, roof, wetCorners) => {
+                    return (matrix, uv, x, z, roof, wetCorners, floor) => {
                         const bank = isPondBankTile(x, z)
                         const pondTile = pondTransition && (type === MUDDY_DIRT ? bank
                             : type === pondCover && map[x][z].type !== WATER_BLOCK_TYPE && map[x][z].height === 0
@@ -402,7 +469,9 @@ export function createTerrainPreview(
                         if (!pondTile && (cover === undefined || !transitionTiles?.[x][z])) return false
                         const batch = batchFor(pondTile ? pondTransition : transitionMesh)
                         const first = batch.geometry.count
-                        addTerrainPreviewRoof(batch.geometry, matrix, uv, roof, {roundDirtEdges: !!pondTile || !snowGrass, wetCorners})
+                        const options = {roundDirtEdges: !!pondTile || !snowGrass, wetCorners}
+                        addTerrainPreviewRoof(batch.geometry, matrix, uv, roof, options)
+                        if (floor) addTerrainPreviewRoof(batch.geometry, matrix, uv, floor, {...options, mirrorAtTileEdge: true})
                         const angle = Math.atan2(matrix.m[2], matrix.m[0])
                         // The low bit identifies the placed material, followed by four corner flags and the bank bit.
                         const placedCover = pondTile ? (pondCover === ROCK || pondCover === DIRT ? bank : !bank) : cover
@@ -418,8 +487,10 @@ export function createTerrainPreview(
                     : snowGrass || withRock || dirtPartner || snowPartner === DIRT ? undefined : false), surfaces.walls)
                 dryDirtAtlas.render(surfaces, takeTile(DIRT, rockPartner === DIRT ? true
                     : dirtPartner || snowPartner === DIRT ? false : undefined), surfaces.dirtWalls)
-                grassAtlas.render(surfaces, takeTile(WINTER_GRASS, snowGrass ? false
-                    : rockPartner === WINTER_GRASS || (!withRock && !snow) ? true : undefined))
+                for (const {type, atlas} of grassAtlases) {
+                    atlas.render(surfaces, takeTile(type, type !== grassType ? undefined : snowGrass ? false
+                        : rockPartner === type || (!withRock && !snow) ? true : undefined))
+                }
                 snowAtlas.render(surfaces, takeTile(SNOW_DIRT, snow ? true : undefined))
                 rockAtlas.render(surfaces, takeTile(ROCK, withRock ? false : undefined), surfaces.rockWalls)
                 for (const mesh of transitionMeshes) {
@@ -461,8 +532,14 @@ export function createTerrainPreview(
         camera.radius = radius
         camera.inertialPanningX = camera.inertialPanningY = camera.inertialRadiusOffset = 0
     }
-    primary.onchange = update
-    secondary.onchange = update
+    const changeSurface = () => {
+        try {
+            localStorage.setItem(TERRAIN_PREVIEW_STORAGE_KEY, JSON.stringify({primary: primary.value, secondary: secondary.value}))
+        } catch { /* Storage may be unavailable. */ }
+        update()
+    }
+    primary.onchange = changeSurface
+    secondary.onchange = changeSurface
     controls.querySelector('button')!.onclick = resetCamera
     return {
         controls,
@@ -473,6 +550,8 @@ export function createTerrainPreview(
             ground.setEnabled(!active)
             setLighting(active)
             if (active) {
+                baseSunIntensity = Lights.sunLight.intensity
+                updateLightIntensity()
                 assetCamera.detachControl()
                 resetCamera()
                 scene.activeCamera = camera

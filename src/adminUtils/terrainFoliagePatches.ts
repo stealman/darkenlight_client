@@ -1,10 +1,46 @@
 import { Matrix } from '@babylonjs/core'
+import type { Vector2 } from '@babylonjs/core'
 import { TERRAIN_BEVEL_WIDTH, TERRAIN_VERTICAL_BEVEL_WIDTH } from '@/babylon/world/beveledTerrainBlock'
 import { FoliageManager } from '@/babylon/world/foliageManager'
+import type { TerrainFoliage } from '@/babylon/world/foliageManager'
+import { WATER_BLOCK_TYPE } from '@/babylon/world/terrainManager'
 import type { MapBlock } from '@/data/worldDataManager'
 
 export const CARDINAL_NEIGHBORS = [[-1, 0], [1, 0], [0, -1], [0, 1]] as const
 const DIAGONAL_NEIGHBORS = [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const
+const TILE_NEIGHBORS = [...CARDINAL_NEIGHBORS, ...DIAGONAL_NEIGHBORS]
+
+export function createWaterEdgeTufts(map: MapBlock[][], profiles: ReadonlyMap<number, TerrainFoliage>) {
+    const tufts: {matrix: Matrix, uv: Vector2}[] = []
+    map.forEach((row, x) => row.forEach((block, z) => {
+        const profile = profiles.get(FoliageManager.getTerrainIndex(block))
+        if (!profile?.tuftsPerTile || !profile.rows.length) return
+        const water = TILE_NEIGHBORS.filter(([dx, dz]) => map[x + dx]?.[z + dz]?.type === WATER_BLOCK_TYPE)
+        if (!water.length) return
+        const roots: [number, number][] = []
+        const count = 2 + Math.floor(FoliageManager.roll(x, z, 11020) * 3)
+        for (let attempt = 0; attempt < 12 && roots.length < count; attempt++) {
+            const salt = 11100 + attempt * 16
+            const roll = (offset: number) => FoliageManager.roll(x, z, salt + offset)
+            const localX = (roll(0) - 0.5) * 0.76, localZ = (roll(1) - 0.5) * 0.76
+            const clearance = Math.min(...water.map(([dx, dz]) => Math.hypot(
+                Math.max(0, Math.abs(localX - dx) - 0.5), Math.max(0, Math.abs(localZ - dz) - 0.5),
+            )))
+            // Keep the roots on the outer side of the bank, clear of most of the spill.
+            if (clearance < 0.62 || clearance > 1.0 || roots.some(([px, pz]) => Math.hypot(px - localX, pz - localZ) < 0.17)) continue
+            roots.push([localX, localZ])
+            const rootX = x + localX, rootZ = z + localZ
+            const variety = roll(2)
+            const scatter = profile.scatter?.(rootX, rootZ, variety)
+            const species = scatter?.tuftRow ?? profile.rows[Math.floor(variety * profile.rows.length)]
+            tufts.push({
+                matrix: FoliageManager.tuftMatrix(x, z, rootX, block.totalHeight, rootZ, species, salt, profile.tuftHeights?.[species]),
+                uv: FoliageManager.getAtlasOffset(x, z, species, salt),
+            })
+        }
+    }))
+    return tufts
+}
 
 export function insetTuftFromLedges(map: MapBlock[][], matrix: Matrix) {
     const [rootX, rootY, rootZ] = [matrix.m[12], matrix.m[13], matrix.m[14]]

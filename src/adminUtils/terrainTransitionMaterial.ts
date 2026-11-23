@@ -2,6 +2,7 @@ import { Vector2 } from '@babylonjs/core'
 import type { Texture } from '@babylonjs/core'
 import { PBRCustomMaterial } from '@babylonjs/materials'
 import { terrainNoiseShader } from './terrainPreviewBatch'
+import { terrainCoverPatterns } from './terrainAtlasPreview'
 import { POND_DISTANCE_RANGE } from './terrainPreviewWater'
 import type { createTerrainPreviewWater } from './terrainPreviewWater'
 
@@ -25,6 +26,8 @@ export function createTerrainTransitionMaterial(
     wallDirt?: PBRCustomMaterial,
     rockSubstrate = false,
     pondBank?: Pick<ReturnType<typeof createTerrainPreviewWater>, 'field' | 'bounds'> & {coverOnBank: boolean},
+    soilRockWalls = false,
+    snowWallRock?: PBRCustomMaterial,
 ) {
     const material = new PBRCustomMaterial(name, grass.getScene())
     material.metallic = grass.metallic
@@ -48,6 +51,7 @@ export function createTerrainTransitionMaterial(
     addSurface('dirt', dirt, dirtOrigin)
     // In the snow/grass pair, the horizontal substrate supplies the grass on muddy walls.
     if (wallDirt) addSurface('wallDirt', wallDirt)
+    if (snowWallRock) addSurface('snowWallRock', snowWallRock, terrainCoverPatterns[0].origins[0])
     // X is the preview's center in map coordinates. Y is the direction from dirt to grass.
     material.AddUniform('transitionBoundary', 'vec2', boundary)
     if (pondBank) {
@@ -217,7 +221,7 @@ export function createTerrainTransitionMaterial(
     `)
     material.Fragment_Before_Lights(`
         vec2 terrainXZ = vPositionW.xz + vec2(0.0, transitionBoundary.x);
-        bool wall = max(vWallContact.z, vWallContact.w) > 0.5;
+        bool wall = ${snowWallRock ? 'true' : 'max(vWallContact.z, vWallContact.w) > 0.5'};
         // Recover the integer flags before decoding. Interpolation can put an encoded 2 just below 2.
         float placedGrass = ${pondBank ? 'mod(floor(vPlacedSurface.z + 0.5), 2.0)' : 'vPlacedSurface.z'};
         vec2 grassUV = mix(grassOrigin + vSurfacePatchUV * grassScale, vPlacedSurfaceUV * grassScale, placedGrass);
@@ -226,8 +230,15 @@ export function createTerrainTransitionMaterial(
         float coverDistance;
         vec2 grassAtEdges = vec2(0.0);
         float grassEdgeDistance = 0.0;
+        ${snowWallRock ? 'float wallRockWeight = 0.0; vec2 snowWallRockUV = vec2(0.0);' : ''}
         ${wallDirt ? 'vec2 snowFringe = vec2(0.0);' : ''}
         if (wall) {
+            ${soilRockWalls ? `grassWeight = transitionGrassWeight(terrainXZ, 0.0, false, coverDistance);
+            // Sample the original wall tile on its own side, projecting only the second material onto it.
+            vec2 alongWall = vec2(-geometricNormalW.z, geometricNormalW.x);
+            vec2 wallPatch = wallFringeUV(vec2(dot(vPositionW.xz, alongWall), vPositionW.y + 0.5), vec2(0.0), 0.0);
+            grassUV = mix(grassOrigin + wallPatch * grassScale, vPlacedSurfaceUV * grassScale, placedGrass);
+            dirtUV = mix(vPlacedSurfaceUV * dirtScale, dirtOrigin + wallPatch * dirtScale, placedGrass);` : `
             vec4 fringe = wallGrassFringe(vPositionW, terrainXZ${wallDirt ? ', snowFringe' : ''});
             grassWeight = fringe.x;
             grassAtEdges = fringe.zw;
@@ -235,7 +246,13 @@ export function createTerrainTransitionMaterial(
             vec2 grassPatch = wallFringeUV(vSurfacePatchUV, geometricNormalW.xz, fringe.y);
             grassUV = ${wallDirt ? 'dirtOrigin' : 'grassOrigin'}
                 + grassPatch * ${wallDirt ? 'dirtScale' : 'grassScale'};
-            ${wallDirt ? 'dirtUV = vPlacedSurfaceUV * wallDirtScale;' : ''}
+            ${snowWallRock ? `wallRockWeight = transitionGrassWeight(terrainXZ, 0.0, false, coverDistance);
+            vec2 alongWall = vec2(-geometricNormalW.z, geometricNormalW.x);
+            vec2 wallPatch = wallFringeUV(vec2(dot(vPositionW.xz, alongWall), vPositionW.y + 0.5), vec2(0.0), 0.0);
+            // The placed bit identifies which of the two substrates owns the wall UV.
+            dirtUV = mix(vPlacedSurfaceUV, dirtOrigin / dirtScale + wallPatch, placedGrass) * dirtScale;
+            snowWallRockUV = mix(snowWallRockOrigin / snowWallRockScale + wallPatch, vPlacedSurfaceUV, placedGrass) * snowWallRockScale;` : ''}
+            ${wallDirt ? 'dirtUV = vPlacedSurfaceUV * wallDirtScale;' : ''}`}
         } else {
             float grassIslandSupport = smoothstep(0.2, 0.85, vPlacedSurface.w);
             grassWeight = transitionGrassWeight(terrainXZ, grassIslandSupport, ${pondBank ? 'vPlacedSurface.z > 1.5' : 'false'}, coverDistance);
@@ -262,6 +279,7 @@ export function createTerrainTransitionMaterial(
             dirtBump = texture2D(dirtNormal, dirtUV).xyz;
         }
         vec3 substrateAlbedo = toLinearSpace(dirtSample);
+        ${snowWallRock ? 'substrateAlbedo = mix(substrateAlbedo, toLinearSpace(texture2D(snowWallRockColor, snowWallRockUV).rgb), wallRockWeight);' : ''}
         ${wallDirt ? `if (!wall) {
             // Carry the tint onto uncovered grass, and use coverage to catch isolated snow patches.
             float grassward = -coverDistance;
@@ -278,6 +296,9 @@ export function createTerrainTransitionMaterial(
         dirtBump.xy = mix(placedRotation * dirtBump.xy, dirtBump.xy, placedGrass);
         grassBump = normalize(vec3(grassBump.xy * grassRelief, grassBump.z));
         dirtBump = normalize(vec3(dirtBump.xy * dirtRelief, dirtBump.z));
+        ${snowWallRock ? `vec3 rockBump = texture2D(snowWallRockNormal, snowWallRockUV).xyz * 2.0 - 1.0;
+        rockBump = normalize(vec3(rockBump.xy * snowWallRockStrength, rockBump.z));
+        dirtBump = mix(dirtBump, rockBump, wallRockWeight);` : ''}
         vec3 blendedBump = mix(dirtBump, grassBump, grassWeight);
         if (wall) {
             ${wallDirt ? `vec3 snowBump = vec3(0.0, 0.0, 1.0);
@@ -291,6 +312,7 @@ export function createTerrainTransitionMaterial(
             }` : ''}
             vec2 uv = gl_FrontFacing ? vPlacedSurfaceUV : -vPlacedSurfaceUV;
             vec3 wallNormal = wallBumpNormal(geometricNormalW, vPositionW, uv, blendedBump);
+            ${soilRockWalls ? 'normalW = wallNormal;' : `
             // Grass near each contact catches light like the terrace it grows from.
             vec3 terraceNormal = vec3(-grassBump.x, grassBump.z, -grassBump.y);
             float wrapLighting = 0.84 * grassWeight * (1.0 - smoothstep(0.025, 0.26, grassEdgeDistance));
@@ -298,7 +320,7 @@ export function createTerrainTransitionMaterial(
             float snowWrap = 0.84 * snowWeight * (1.0 - smoothstep(0.025, 0.26, snowDistance));
             vec3 snowTerraceNormal = vec3(-snowBump.x, snowBump.z, -snowBump.y);
             normalW = normalize(wallNormal * (1.0 - wrapLighting - snowWrap)
-                + terraceNormal * wrapLighting + snowTerraceNormal * snowWrap);` : 'normalW = normalize(mix(wallNormal, terraceNormal, wrapLighting));'}
+                + terraceNormal * wrapLighting + snowTerraceNormal * snowWrap);` : 'normalW = normalize(mix(wallNormal, terraceNormal, wrapLighting));'}`}
         } else {
             // Project the planar UV axes onto the roof, including its sloped bevels.
             vec3 roofNormal = geometricNormalW;

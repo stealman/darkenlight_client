@@ -9,7 +9,7 @@ import {
 import { getTerrainHeightOffset, WATER_BLOCK_TYPE } from '@/babylon/world/terrainManager'
 import type { MapBlock } from '@/data/worldDataManager'
 import { createTerrainPreviewPlane, muddyDirtPatterns, terrainCoverPatterns, TERRAIN_ATLAS_TILES } from './terrainAtlasPreview'
-import { addTerrainPreviewRoof, configureTerrainPreviewBatch, TerrainPreviewBatch } from './terrainPreviewBatch'
+import { addTerrainPreviewRoof, COAL_DEPOSIT, configureTerrainPreviewBatch, TerrainPreviewBatch } from './terrainPreviewBatch'
 import type { TerrainPreviewTriangle } from './terrainPreviewBatch'
 
 const WALL_DIRECTIONS = [[0, -1], [-1, 0], [0, 1], [1, 0]] as const
@@ -51,6 +51,7 @@ export type TerrainPreviewSurfaces = {
     atlasTops: ReadonlyMap<number, Map<number, number>>
     roofs: ReadonlyMap<number, TerrainPreviewTriangle[]>
     wetCorners: ReadonlyMap<number, number>
+    rockDeposits: ReadonlyMap<number, number>
     cornerFloors: ReadonlyMap<number, TerrainPreviewTriangle[]>
     walls: TerrainPreviewBatch
     dirtWalls: TerrainPreviewBatch
@@ -71,7 +72,7 @@ export function createTerrainPreviewGeometry(plane: Mesh, atlasTypes: readonly n
     configureTerrainPreviewBatch(plane, Materials.createPlaneMaterial(scene))
 
     const deposits = createTerrainPreviewPlane(plane, 'adminUtilsTerrainDeposits')
-    // Ore and coal are only in the block atlas. Use the same top-face UV rectangle on a plane.
+    // Preserve the block-atlas fallback for deposits outside exposed rock.
     configureTerrainPreviewBatch(deposits, Materials.createTerrainMaterial1(scene))
 
 
@@ -100,7 +101,7 @@ export function createTerrainPreviewGeometry(plane: Mesh, atlasTypes: readonly n
     const render = (map: MapBlock[][], takeWall?: (contact: TerrainWallContact, triangles: number) =>
         TerrainPreviewBatch | undefined): TerrainPreviewSurfaces => {
         const tops = new TerrainPreviewBatch()
-        const oreTops = new TerrainPreviewBatch()
+        const legacyDeposits = new TerrainPreviewBatch()
         const walls = new TerrainPreviewBatch()
         const dirtWalls = new TerrainPreviewBatch()
         const rockWalls = new TerrainPreviewBatch()
@@ -108,6 +109,7 @@ export function createTerrainPreviewGeometry(plane: Mesh, atlasTypes: readonly n
         const atlasTops = new Map(atlasTypes.map(type => [type, new Map<number, number>()]))
         const roofs = new Map<number, TerrainPreviewTriangle[]>()
         const wetCorners = new Map<number, number>()
+        const rockDeposits = new Map<number, number>()
         const cornerFloors = new Map<number, TerrainPreviewTriangle[]>()
         const heights = map.map(row => row.map(block => block.type === WATER_BLOCK_TYPE
             ? block.height - POND_FLOOR_DEPTH
@@ -132,7 +134,8 @@ export function createTerrainPreviewGeometry(plane: Mesh, atlasTypes: readonly n
                 const isRock = block.type === ROCK
                 const baseWallBatch = isRock ? rockWalls : block.type === DIRT ? dirtWalls : walls
                 const atlas = atlasTops.get(atlasType(block))
-                const deposit = block.minableCoal || block.minableOreAvailable
+                const useRockDeposit = isRock && !block.snowed
+                const deposit = !useRockDeposit && (block.minableCoal || block.minableOreAvailable)
                 const top = heights[x][z]
                 const flatSnowRoof = flatSnowRoofs[x][z]
                 const adjacent = WALL_DIRECTIONS.map(([dx, dz]) => heights[x + dx]?.[z + dz])
@@ -176,7 +179,6 @@ export function createTerrainPreviewGeometry(plane: Mesh, atlasTypes: readonly n
                         if (!takeWall || foot === undefined || top - foot <= MIN_TERRACE_STEP) return baseWallBatch
                         const topY = layer === 0 ? top - (flatSnowRoof ? 0 : TERRAIN_BEVEL_DROP) : undefined
                         const bottomY = foot >= base - 1e-6 ? foot : undefined
-                        if (topY === undefined && bottomY === undefined) return baseWallBatch
                         const [dx, dz] = WALL_DIRECTIONS[side]
                         return takeWall({x, z, lowerX: x + dx, lowerZ: z + dz, topY, bottomY}, triangles) ?? baseWallBatch
                     }
@@ -232,11 +234,17 @@ export function createTerrainPreviewGeometry(plane: Mesh, atlasTypes: readonly n
 
                 const roof = tileRoof.length ? tileRoof : undefined
                 if (deposit) {
-                    addTerrainPreviewRoof(oreTops, Matrix.Translation(x, top, z), TerrainEnum1.getTerrainForBlock(block),
+                    addTerrainPreviewRoof(legacyDeposits, Matrix.Translation(x, top, z), TerrainEnum1.getTerrainForBlock(block),
                         roof, {blockAtlas: true})
                 } else if (atlas) {
                     const key = x * stride + z
                     atlas.set(key, top)
+                    if (useRockDeposit && block.minableCoal) {
+                        rockDeposits.set(key, COAL_DEPOSIT)
+                    } else if (useRockDeposit && block.minableOreAvailable) {
+                        const tier = block.minableOre ?? 3
+                        rockDeposits.set(key, tier >= 1 && tier <= 5 ? tier : 3)
+                    }
                     if (roof) roofs.set(key, roof)
                     if (wetMask) wetCorners.set(key, wetMask)
                 } else {
@@ -250,15 +258,15 @@ export function createTerrainPreviewGeometry(plane: Mesh, atlasTypes: readonly n
             if (block.type === WATER_BLOCK_TYPE || atlasTops.get(atlasType(block))?.has(key)) continue
             const placement = Matrix.Translation(x, heights[x][z], z)
             if (block.minableCoal || block.minableOreAvailable) {
-                addTerrainPreviewRoof(oreTops, placement, TerrainEnum1.getTerrainForBlock(block), floors,
+                addTerrainPreviewRoof(legacyDeposits, placement, TerrainEnum1.getTerrainForBlock(block), floors,
                     {blockAtlas: true, mirrorAtTileEdge: true})
             } else {
                 addTerrainPreviewRoof(tops, placement, PlaneEnum1.getPlaneForBlock(block), floors, {mirrorAtTileEdge: true})
             }
         }
         tops.apply(plane)
-        oreTops.apply(deposits)
-        return {stride, atlasTops, roofs, wetCorners, cornerFloors, walls, dirtWalls, rockWalls}
+        legacyDeposits.apply(deposits)
+        return {stride, atlasTops, roofs, wetCorners, rockDeposits, cornerFloors, walls, dirtWalls, rockWalls}
     }
     return {render, deposits}
 }

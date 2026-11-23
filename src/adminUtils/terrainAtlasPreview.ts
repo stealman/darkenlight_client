@@ -1,7 +1,7 @@
 import { Matrix, Mesh, Texture, Vector2, Vector3 } from '@babylonjs/core'
 import { Builder } from '@/babylon/builder'
 import { Materials } from '@/babylon/materials'
-import { addTerrainPreviewRoof, configureTerrainEdgeLighting, configureMuddyDirtWetness, configureTerrainPreviewBatch, TerrainPreviewBatch } from './terrainPreviewBatch'
+import { addTerrainPreviewRoof, configureTerrainEdgeLighting, configureMuddyDirtWetness, configureRockDeposits, configureTerrainPreviewBatch, TerrainPreviewBatch } from './terrainPreviewBatch'
 import type { TerrainPreviewTriangle } from './terrainPreviewBatch'
 import type { TerrainPreviewSurfaces } from './terrainPreviewGeometry'
 
@@ -34,6 +34,7 @@ type TerrainAtlas = {
     roundDirtEdges?: boolean
     wetDirt?: boolean
     roundRockTop?: boolean
+    showRockDeposits?: boolean
     varyAdjacentPatches?: boolean
     patterns: ReadonlyArray<{size: number, origins: readonly (readonly number[])[]}>
 }
@@ -77,6 +78,7 @@ function variedPatchPlacement(placed: ReadonlyMap<number, AtlasPlacement>, strid
 
 export type TerrainAtlasTileFilter = (
     matrix: Matrix, uv: Vector2, x: number, z: number, roof: readonly TerrainPreviewTriangle[] | undefined, wetCorners: number,
+    floor?: readonly TerrainPreviewTriangle[],
 ) => boolean
 
 export function createTerrainPreviewPlane(plane: Mesh, name: string) {
@@ -92,12 +94,13 @@ export function createTerrainAtlasPreview(plane: Mesh, name: string, atlas: Terr
     const mesh = createTerrainPreviewPlane(plane, name)
     const material = createAtlasMaterial(plane, name, atlas)
     configureTerrainPreviewBatch(mesh, material)
-    const {roundDirtEdges = false, roundRockTop = false, wetDirt = false} = atlas
+    const {roundDirtEdges = false, roundRockTop = false, wetDirt = false, showRockDeposits = false} = atlas
     const roundEdges = roundDirtEdges || roundRockTop
     if (roundEdges) configureTerrainEdgeLighting(material, undefined, roundRockTop)
     if (wetDirt) configureMuddyDirtWetness(material, 'solid')
+    if (showRockDeposits) configureRockDeposits(material)
 
-    const render = ({atlasTops, stride, roofs, wetCorners, cornerFloors}: TerrainPreviewSurfaces, takeTile?: TerrainAtlasTileFilter,
+    const render = ({atlasTops, stride, roofs, wetCorners, rockDeposits, cornerFloors}: TerrainPreviewSurfaces, takeTile?: TerrainAtlasTileFilter,
                     batch = new TerrainPreviewBatch()) => {
         const remaining = atlasTops.get(atlas.type)!
         const placed = atlas.varyAdjacentPatches ? new Map<number, AtlasPlacement>() : undefined
@@ -135,16 +138,18 @@ export function createTerrainAtlasPreview(plane: Mesh, name: string, atlas: Terr
                         const roof = roofs.get(tileKey)
                         const footMask = wetCorners.get(tileKey) ?? 0
                         const wetMask = wetDirt ? footMask : 0
-                        if (floor) addTerrainPreviewRoof(batch, matrix, uv, floor, {mirrorAtTileEdge: true, roundDirtEdges: roundEdges, wetCorners: wetMask})
-                        // Let the transition reuse the same atlas placement the tile would normally have.
-                        if (takeTile?.(matrix, uv, tileX, tileZ, roof, footMask)) continue
-                        addTerrainPreviewRoof(batch, matrix, uv, roof, {roundDirtEdges: roundEdges, wetCorners: wetMask})
+                        const depositKind = showRockDeposits ? rockDeposits.get(tileKey) ?? 0 : 0
+                        const options = {roundDirtEdges: roundEdges, wetCorners: wetMask, depositKind}
+                        // The corner extension and its roof must use the same material blend.
+                        if (!depositKind && takeTile?.(matrix, uv, tileX, tileZ, roof, footMask, floor)) continue
+                        if (floor) addTerrainPreviewRoof(batch, matrix, uv, floor, {...options, mirrorAtTileEdge: true})
+                        addTerrainPreviewRoof(batch, matrix, uv, roof, options)
                     }
                 }
             }
         }
 
-        batch.apply(mesh, roundEdges, wetDirt)
+        batch.apply(mesh, roundEdges, wetDirt, showRockDeposits)
     }
     return {mesh, material, render}
 }
