@@ -1,19 +1,82 @@
-import type { Vector3 } from '@babylonjs/core'
+import { Matrix } from '@babylonjs/core'
+import type { Vector2, Vector3 } from '@babylonjs/core'
 import { TerrainEnum1 } from '@/babylon/materials'
+import { FoliageManager } from '@/babylon/world/foliageManager'
 import type { TerrainFoliage } from '@/babylon/world/foliageManager'
+import { TERRAIN_VERTICAL_BEVEL_WIDTH } from '@/babylon/world/beveledTerrainBlock'
 import type { MapBlock } from '@/data/worldDataManager'
-import { findFoliagePatch } from './terrainFoliagePatches'
+import { CARDINAL_NEIGHBORS, findFoliagePatch, forEachFoliageWallFoot } from './terrainFoliagePatches'
 
 // Rows in the preview atlas, counted from the top.
-const LOW_GRASS = 1, TWIGS = 3, SCRUB = 4, DRY_GRASS = 5, MOSS = 6, PEBBLES = 7
-const PLANT_PATCHES = {spacing: 5, salt: 1010, minRadius: 1.35, radiusRange: 1.55, rows: [LOW_GRASS, DRY_GRASS, DRY_GRASS, SCRUB, SCRUB, SCRUB]}
+const GRASS = 0, LOW_GRASS = 1, TWIGS = 3, SCRUB = 4, MOSS = 6, PEBBLES = 7
+// Virtual row so the preview can tint dry grass specifically on muddy dirt.
+export const MUDDY_DRY_GRASS = 11
+const PLANT_PATCHES = {spacing: 5, salt: 1010, minRadius: 1.35, radiusRange: 1.55,
+    rows: [LOW_GRASS, MUDDY_DRY_GRASS, MUDDY_DRY_GRASS, SCRUB, SCRUB, SCRUB]}
 const GROUND_PATCHES = {spacing: 6.5, salt: 2020, minRadius: 1.75, radiusRange: 1.5,
     rows: [MOSS, MOSS, TWIGS, PEBBLES], radiusBonus: {[MOSS]: 0.25}}
 const OPEN_MOSS_PATCHES = {spacing: 4.5, salt: 5100, minRadius: 1.45, radiusRange: 0.65,
     rows: [MOSS], radiusBonus: {[MOSS]: 0.25}}
-const CARDINAL_NEIGHBORS = [[-1, 0], [1, 0], [0, -1], [0, 1]] as const
+const WALL_MOSS_PATCHES = {spacing: 3.6, salt: 6200, minRadius: 1.0, radiusRange: 1.3, rows: [MOSS]}
 const SMALL_MOSS_SIZE = [0.46, 0.88] as const
 const MUDDY_DIRT = TerrainEnum1.TERRAIN_MUDDY_DIRT.index
+
+export function createMuddyDirtFootFoliage(map: MapBlock[][], sunDirection: Vector3) {
+    const moss: {matrix: Matrix, uv: Vector2}[] = []
+    const tufts: {matrix: Matrix, uv: Vector2}[] = []
+    const pebbles: {matrix: Matrix, uv: Vector2}[] = []
+    forEachFoliageWallFoot(map, MUDDY_DIRT, (x, z, top, dx, dz, side, uphill) => {
+        const roll = (salt: number) => FoliageManager.roll(x, z, salt)
+        const edgeX = x + dx * 0.5
+        const edgeZ = z + dz * 0.5
+        const sheltered = dx * sunDirection.x + dz * sunDirection.z < 0
+        if (FoliageManager.getTerrainIndex(uphill) === MUDDY_DIRT) {
+            const {influence} = findFoliagePatch(edgeX, edgeZ, WALL_MOSS_PATCHES)
+            const chance = (sheltered ? 0.51 : 0.36) + Math.min(0.29, influence * 0.19)
+            const salt = 6400 + side * 12
+            if (roll(salt) < chance) {
+                const width = 0.28 + 0.42 * roll(salt + 1)
+                const height = 0.13 + 0.22 * roll(salt + 2)
+                // Fit the decal on the straight part of the wall between the clipped corners.
+                const slide = (roll(salt + 3) * 2 - 1) * (0.49 - TERRAIN_VERTICAL_BEVEL_WIDTH - width / 2)
+                const matrix = Matrix.Scaling(width, 1, height)
+                    .multiply(Matrix.RotationYawPitchRoll(Math.atan2(dx, dz), -Math.PI / 2, 0))
+                const lift = 0.006 + roll(salt + 4) * 0.04
+                matrix.setTranslationFromFloats(edgeX - dx * 0.004 + dz * slide,
+                    top + height / 2 + lift, edgeZ - dz * 0.004 - dx * slide)
+                moss.push({matrix, uv: FoliageManager.getAtlasOffset(x, z, MOSS, salt)})
+            }
+        }
+
+        const salt = 9400 + side * 100
+        const scatter = roll(salt)
+        const pebbleCount = scatter < 0.16 ? 0 : scatter < 0.76 ? 1 : 2
+        for (let i = 0; i < pebbleCount; i++) {
+            const pebbleSalt = salt + 12 + i * 12
+            const slide = (i - (pebbleCount - 1) / 2) * 0.36 + (roll(pebbleSalt) - 0.5) * 0.24
+            const inset = 0.19 + 0.12 * roll(pebbleSalt + 1)
+            const yaw = roll(pebbleSalt + 2) * 2 * Math.PI
+            const radiusPerUnit = 0.5 * (Math.abs(Math.cos(yaw)) + Math.abs(Math.sin(yaw)))
+            const size = Math.min(0.35 + 0.22 * roll(pebbleSalt + 4),
+                (Math.min(inset, 0.5 - Math.abs(slide)) - 0.01) / radiusPerUnit)
+            const matrix = Matrix.Scaling(size, 1, size).multiply(Matrix.RotationY(yaw))
+            matrix.setTranslationFromFloats(edgeX - dx * inset + dz * slide, top + 0.008 + 0.002 * roll(pebbleSalt + 5),
+                edgeZ - dz * inset - dx * slide)
+            pebbles.push({matrix, uv: FoliageManager.getAtlasOffset(x, z, PEBBLES, pebbleSalt)})
+        }
+
+        if (roll(salt + 2) < (sheltered ? 0.45 : 0.30)) {
+            const slide = (roll(salt + 4) - 0.5) * 0.62
+            const inset = 0.06 + roll(salt + 5) * 0.12
+            const rootX = edgeX - dx * inset + dz * slide
+            const rootZ = edgeZ - dz * inset - dx * slide
+            const height = 0.21 + roll(salt + 6) * 0.12
+            tufts.push({matrix: FoliageManager.tuftMatrix(x, z, rootX, top, rootZ, GRASS, salt, height),
+                uv: FoliageManager.getAtlasOffset(x, z, GRASS, salt)})
+        }
+    })
+    return {moss, tufts, pebbles}
+}
 
 function levelMudCoverage(map: MapBlock[][], x: number, z: number, height: number): number {
     let tiles = 0
@@ -52,7 +115,7 @@ export function createMuddyDirtFoliageProfiles(map: MapBlock[][], sunDirection: 
 
     const profile: TerrainFoliage = {
         rows: PLANT_PATCHES.rows,
-        tuftHeights: {[LOW_GRASS]: 0.50, [DRY_GRASS]: 0.55, [SCRUB]: 0.41},
+        tuftHeights: {[LOW_GRASS]: 0.50, [MUDDY_DRY_GRASS]: 0.55, [SCRUB]: 0.41},
         tuftsPerTile: 0.62,
         groundRows: [TWIGS, ...Array<number>(7).fill(PEBBLES)],
         groundDensityMultipliers: {[TWIGS]: 3.6},

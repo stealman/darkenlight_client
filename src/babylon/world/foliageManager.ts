@@ -168,6 +168,10 @@ export const FoliageManager = {
             viewportCenter?: {x: number, z: number}
             profiles?: ReadonlyMap<number, TerrainFoliage>
             extraTuftPasses?: number
+            extraTufts?: readonly {matrix: Matrix, uv: Vector2}[]
+            adjustTuftPlacement?: (matrix: Matrix) => void
+            groundDecals?: readonly {matrix: Matrix, uv: Vector2}[]
+            blendedDecals?: readonly {matrix: Matrix, uv: Vector2}[]
         },
     ) {
         const mesh = this.foliageMesh!
@@ -298,11 +302,24 @@ export const FoliageManager = {
             uvData.push(this.getAtlasOffset(x, z, row, salt))
         }
 
+        for (const {matrix, uv} of options?.extraTufts ?? []) {
+            matrices.push(options?.adjustTuftPlacement ? matrix.clone() : matrix)
+            uvData.push(uv)
+        }
+        if (options?.adjustTuftPlacement) matrices.forEach(options.adjustTuftPlacement)
+        for (const {matrix, uv} of options?.groundDecals ?? []) {
+            groundMatrices.push(matrix)
+            groundUvs.push(uv)
+        }
         updateWorldInstanceBuffers(mesh, matrices, uvData)
         updateWorldInstanceBuffers(groundMesh, groundMatrices, groundUvs)
         mesh.setEnabled(matrices.length > 0)
         groundMesh.setEnabled(groundMatrices.length > 0)
         if (blended) {
+            for (const {matrix, uv} of options?.blendedDecals ?? []) {
+                blended.matrices.push(matrix)
+                blended.uvs.push(uv)
+            }
             updateWorldInstanceBuffers(blended.mesh, blended.matrices, blended.uvs)
             blended.mesh.setEnabled(blended.matrices.length > 0)
         }

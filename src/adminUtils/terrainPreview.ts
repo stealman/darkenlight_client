@@ -1,5 +1,6 @@
 import { ArcRotateCamera, Mesh, Scene, TransformNode, Vector2, Vector3 } from '@babylonjs/core'
-import type { ArcRotateCameraPointersInput, PBRMaterial } from '@babylonjs/core'
+import type { ArcRotateCameraPointersInput } from '@babylonjs/core'
+import type { PBRCustomMaterial } from '@babylonjs/materials'
 import { Builder } from '@/babylon/builder'
 import { TerrainEnum1 } from '@/babylon/materials'
 import { Lights } from '@/babylon/scene/lights'
@@ -12,8 +13,9 @@ import type { TerrainAtlasTileFilter } from './terrainAtlasPreview'
 import { addTerrainPreviewRoof, configureDirtEdgeLighting, configureTerrainPreviewBatch, TerrainPreviewBatch } from './terrainPreviewBatch'
 import { createTerrainPreviewGeometry } from './terrainPreviewGeometry'
 import { createTerrainTransitionMaterial, terrainBoundaryOffset, TERRAIN_TRANSITION_REACH } from './terrainTransitionMaterial'
-import { createMuddyDirtFoliageProfiles } from './muddyDirtFoliage'
-import { createWinterGrassFoliage, styleWinterGrassFoliage } from './winterGrassFoliage'
+import { createMuddyDirtFoliageProfiles, createMuddyDirtFootFoliage } from './muddyDirtFoliage'
+import { createWinterGrassFoliage, createWinterGrassFootTufts, styleTerrainFoliage } from './winterGrassFoliage'
+import { insetTuftFromLedges } from './terrainFoliagePatches'
 import muddyDirtColorUrl from './assets/muddy-dirt-atlas.png'
 import muddyDirtNormalUrl from './assets/muddy-dirt-normal-atlas.png'
 import winterGrassColorUrl from './assets/winter-grass-atlas.png'
@@ -180,6 +182,8 @@ export function createTerrainPreview(
         const transitionTiles = hasTransitions ? findTransitionTiles(map) : undefined
         const firstRender = !render
         const profiles = createMuddyDirtFoliageProfiles(map, Lights.sunLight.direction)
+        const muddyFoot = createMuddyDirtFootFoliage(map, Lights.sunLight.direction)
+        const footTufts = [...createWinterGrassFootTufts(map), ...muddyFoot.tufts]
         profiles.set(WINTER_GRASS, createWinterGrassFoliage((x, z) => {
             const tileX = Math.round(x)
             const tileZ = Math.round(z)
@@ -192,6 +196,10 @@ export function createTerrainPreview(
             FoliageManager.renderFoliageArea(map, emptyMask, emptyMask, supportsFoliage, {
                 profiles,
                 extraTuftPasses: 2,
+                extraTufts: footTufts,
+                adjustTuftPlacement: matrix => insetTuftFromLedges(map, matrix),
+                groundDecals: muddyFoot.pebbles,
+                blendedDecals: muddyFoot.moss,
             })
         }
         if (firstRender) {
@@ -270,17 +278,23 @@ export function createTerrainPreview(
             })
             const moss = FoliageManager.blendedGroundMesh!
             moss.receiveShadows = true
-            const mossMaterial = moss.material as PBRMaterial
+            const mossMaterial = moss.material as PBRCustomMaterial
             mossMaterial.albedoColor.set(0.82, 0.84, 0.81)
             mossMaterial.emissiveTexture = mossMaterial.albedoTexture
             mossMaterial.emissiveColor.set(0.08, 0.08, 0.08)
+            mossMaterial.Fragment_Custom_Alpha(`
+                if (abs(geometricNormalW.y) < 0.01) alpha *= 0.72 * (2.0 - alpha);
+            `)
+            mossMaterial.Fragment_Before_Lights(`
+                if (abs(geometricNormalW.y) < 0.01) surfaceAlbedo *= vec3(0.95, 1.18, 0.82);
+            `)
             const groundFoliage = FoliageManager.groundMesh!
             groundFoliage.receiveShadows = true
             // Give the crossed billboards some fill on faces turned away from the sun.
             const foliageMaterial = FoliageManager.foliageMaterial!
             foliageMaterial.emissiveTexture = foliageMaterial.albedoTexture
             foliageMaterial.emissiveColor.set(0.34, 0.34, 0.34)
-            styleWinterGrassFoliage(foliageMaterial, groundFoliage.material as typeof foliageMaterial)
+            styleTerrainFoliage(foliageMaterial, groundFoliage.material as typeof foliageMaterial)
         }
         render()
     }
