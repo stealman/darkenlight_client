@@ -1,7 +1,7 @@
 import { Matrix, Mesh, Texture, Vector2, Vector3 } from '@babylonjs/core'
 import { Builder } from '@/babylon/builder'
 import { Materials } from '@/babylon/materials'
-import { addTerrainPreviewRoof, configureTerrainPreviewBatch, TerrainPreviewBatch } from './terrainPreviewBatch'
+import { addTerrainPreviewRoof, configureDirtEdgeLighting, configureTerrainPreviewBatch, TerrainPreviewBatch } from './terrainPreviewBatch'
 import type { TerrainPreviewTriangle } from './terrainPreviewBatch'
 import type { TerrainPreviewSurfaces } from './terrainPreviewGeometry'
 
@@ -18,6 +18,7 @@ type TerrainAtlas = {
     type: number
     colorUrl: string
     normal: {url: string, strength: number}
+    roundDirtEdges?: boolean
     patterns: ReadonlyArray<{size: number, origins: readonly (readonly number[])[]}>
 }
 
@@ -38,6 +39,8 @@ export function createTerrainAtlasPreview(plane: Mesh, name: string, atlas: Terr
     const mesh = createTerrainPreviewPlane(plane, name)
     const material = createAtlasMaterial(plane, name, atlas)
     configureTerrainPreviewBatch(mesh, material)
+    const {roundDirtEdges = false} = atlas
+    if (roundDirtEdges) configureDirtEdgeLighting(material)
 
     const render = ({atlasTops, stride, roofs, cornerFloors}: TerrainPreviewSurfaces, takeTile?: TerrainAtlasTileFilter,
                     batch = new TerrainPreviewBatch()) => {
@@ -72,16 +75,16 @@ export function createTerrainAtlasPreview(plane: Mesh, name: string, atlas: Terr
                         const tileKey = tileX * stride + tileZ
                         const floor = cornerFloors.get(tileKey)
                         const roof = roofs.get(tileKey)
-                        if (floor) addTerrainPreviewRoof(batch, matrix, uv, floor, {mirrorAtTileEdge: true})
+                        if (floor) addTerrainPreviewRoof(batch, matrix, uv, floor, {mirrorAtTileEdge: true, roundDirtEdges})
                         // Let the transition reuse the same atlas placement the tile would normally have.
                         if (takeTile?.(matrix, uv, tileX, tileZ, roof)) continue
-                        addTerrainPreviewRoof(batch, matrix, uv, roof)
+                        addTerrainPreviewRoof(batch, matrix, uv, roof, {roundDirtEdges})
                     }
                 }
             }
         }
 
-        batch.apply(mesh)
+        batch.apply(mesh, roundDirtEdges)
     }
     return {mesh, material, render}
 }

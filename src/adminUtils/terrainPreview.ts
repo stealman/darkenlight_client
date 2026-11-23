@@ -9,7 +9,7 @@ import { MapBlock } from '@/data/worldDataManager'
 import { Settings } from '@/settings/settings'
 import { createTerrainAtlasPreview, createTerrainPreviewPlane, muddyDirtPatterns } from './terrainAtlasPreview'
 import type { TerrainAtlasTileFilter } from './terrainAtlasPreview'
-import { addTerrainPreviewRoof, configureTerrainPreviewBatch, TerrainPreviewBatch } from './terrainPreviewBatch'
+import { addTerrainPreviewRoof, configureDirtEdgeLighting, configureTerrainPreviewBatch, TerrainPreviewBatch } from './terrainPreviewBatch'
 import { createTerrainPreviewGeometry } from './terrainPreviewGeometry'
 import { createTerrainTransitionMaterial, terrainBoundaryOffset, TERRAIN_TRANSITION_REACH } from './terrainTransitionMaterial'
 import { createMuddyDirtFoliageProfiles } from './muddyDirtFoliage'
@@ -201,7 +201,7 @@ export function createTerrainPreview(
             const geometry = createTerrainPreviewGeometry(plane, [MUDDY_DIRT, WINTER_GRASS])
             const dirtAtlas = createTerrainAtlasPreview(plane, 'adminUtilsMuddyDirt', {
                 type: MUDDY_DIRT, colorUrl: muddyDirtColorUrl,
-                normal: {url: muddyDirtNormalUrl, strength: 4}, patterns: muddyDirtPatterns,
+                normal: {url: muddyDirtNormalUrl, strength: 4}, patterns: muddyDirtPatterns, roundDirtEdges: true,
             })
             const grassAtlas = createTerrainAtlasPreview(plane, 'adminUtilsWinterGrass', {
                 type: WINTER_GRASS, colorUrl: winterGrassColorUrl,
@@ -213,6 +213,7 @@ export function createTerrainPreview(
             const transitionMaterial = createTerrainTransitionMaterial(transitionName, grassAtlas.material, dirtAtlas.material,
                 WINTER_GRASS_PATTERNS[0].origins[0], muddyDirtPatterns[0].origins[0], transitionBoundary)
             configureTerrainPreviewBatch(transitionMesh, transitionMaterial, false)
+            configureDirtEdgeLighting(transitionMaterial, true)
             for (const mesh of [plane, geometry.deposits, dirtAtlas.mesh, grassAtlas.mesh, transitionMesh]) {
                 Lights.addShadowCaster(mesh, false)
             }
@@ -242,7 +243,7 @@ export function createTerrainPreview(
                     return (matrix, uv, x, z, roof) => {
                         if (!transitionTiles[x][z]) return false
                         const first = transitions.count
-                        addTerrainPreviewRoof(transitions, matrix, uv, roof)
+                        addTerrainPreviewRoof(transitions, matrix, uv, roof, {roundDirtEdges: true})
                         const angle = Math.atan2(matrix.m[2], matrix.m[0])
                         // The low bit identifies the base material; the next four hold the corner flags.
                         const flags = (islandMasks[x][z] << 1) | (grass ? 1 : 0)
@@ -259,7 +260,7 @@ export function createTerrainPreview(
                     transitionMesh.thinInstanceSetBuffer('terrainSurface', new Float32Array(surfaceData), 4)
                     transitionMesh.thinInstanceSetBuffer('terrainWallContact', new Float32Array(wallData), 4)
                 }
-                transitions.apply(transitionMesh)
+                transitions.apply(transitionMesh, true)
             }
             FoliageManager.initialize(scene, foliage, {
                 atlasUrl: foliageAtlasUrl,

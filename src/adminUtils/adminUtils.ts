@@ -1290,8 +1290,15 @@ export async function mountAdminUtils() {
     backLight.specular = new Color3(0.12, 0.12, 0.12)
     backLight.intensity = 1.4
 
+    const previewShadow = Lights.sunLight.getShadowGenerator() ? Lights.shadow : undefined
+    const assetShadowBias = previewShadow?.bias
     const setTerrainLighting = (active: boolean) => {
         setPreviewTime(active ? 17.75 / 24 : 0.5)
+        if (previewShadow && assetShadowBias !== undefined) {
+            // With back-face casters, a small negative bias closes gaps at the terrain contact.
+            previewShadow.bias = active ? -0.00065 : assetShadowBias
+            if (active) previewShadow.setDarkness(0.10)
+        }
         fillLight.intensity = active ? 0.55 : 0.85
         backLight.intensity = active ? 0 : 1.4
         const sun = Lights.sunLight

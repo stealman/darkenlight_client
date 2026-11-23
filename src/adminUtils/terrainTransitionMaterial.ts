@@ -1,6 +1,7 @@
 import { Vector2 } from '@babylonjs/core'
 import type { Texture } from '@babylonjs/core'
 import { PBRCustomMaterial } from '@babylonjs/materials'
+import { terrainNoiseShader } from './terrainPreviewBatch'
 
 const PATCH_SIZE = 3
 const BOUNDARY_AMPLITUDE = 2
@@ -73,35 +74,20 @@ export function createTerrainTransitionMaterial(
         varying vec4 vPlacedSurface;
         varying vec4 vWallContact;
 
-        float transitionHash(vec2 p) {
-            vec3 h = fract(vec3(p.xyx) * 0.1031);
-            h += dot(h, h.yzx + 33.33);
-            return fract((h.x + h.y) * h.z);
-        }
-
-        float transitionNoise(vec2 p) {
-            vec2 cell = floor(p);
-            vec2 f = fract(p);
-            vec2 t = f * f * (3.0 - 2.0 * f);
-            return mix(
-                mix(transitionHash(cell), transitionHash(cell + vec2(1.0, 0.0)), t.x),
-                mix(transitionHash(cell + vec2(0.0, 1.0)), transitionHash(cell + 1.0), t.x),
-                t.y
-            );
-        }
+        ${terrainNoiseShader}
 
         const float islandSpacing = 1.28;
 
         float transitionIsland(float section, float z, float inward, float grain, bool dirtIsland) {
             float seedSection = section + (dirtIsland ? 37.0 : 0.0);
-            float seed = transitionHash(vec2(seedSection, 17.0));
-            float depth = transitionHash(vec2(seedSection, 29.0));
-            float centerZ = (section + transitionHash(vec2(seedSection, 43.0))) * islandSpacing;
+            float seed = terrainHash(vec2(seedSection, 17.0));
+            float depth = terrainHash(vec2(seedSection, 29.0));
+            float centerZ = (section + terrainHash(vec2(seedSection, 43.0))) * islandSpacing;
             float along = z - centerZ;
             float across = mix(0.83, 1.97, depth) - inward;
             if (dirtIsland) {
-                float size = transitionHash(vec2(seedSection, 61.0));
-                float shape = transitionHash(vec2(seedSection, 73.0));
+                float size = terrainHash(vec2(seedSection, 61.0));
+                float shape = terrainHash(vec2(seedSection, 73.0));
                 float radius = mix(0.16, 0.43, size);
                 vec2 local = vec2(across + along * (shape - 0.5), along);
                 float core = length(local * vec2(mix(0.80, 1.24, shape), 1.16)) - radius;
@@ -122,11 +108,11 @@ export function createTerrainTransitionMaterial(
         float transitionGrassWeight(vec2 p, float grassIslandSupport) {
             float line = ${BOUNDARY_AMPLITUDE.toFixed(1)} * sin(p.y * ${BOUNDARY_FREQUENCY});
             float towardGrass = (p.x - line) * transitionBoundary.y;
-            float clumps = transitionNoise(p * vec2(1.35, 1.95));
+            float clumps = terrainNoise(p * vec2(1.35, 1.95));
             float shape = sin(p.y * 1.45 + 0.4) * 0.58 + sin(p.y * 3.1) * 0.24 + (clumps - 0.5) * 1.65;
             // Compress only the longest excursions, leaving the small contours and grain intact.
             shape -= sign(shape) * max(abs(shape) - 0.65, 0.0) * 0.32;
-            float grain = (transitionNoise(p * 6.8) - 0.5) * 0.58;
+            float grain = (terrainNoise(p * 6.8) - 0.5) * 0.58;
             float halfWidth = mix(0.26, 0.68, clumps);
             float grass = smoothstep(-halfWidth, halfWidth, towardGrass + shape + grain);
             // The continuous boundary and dirt islands are independent of the height-step mask.
@@ -149,11 +135,11 @@ export function createTerrainTransitionMaterial(
         float wallGrassCoverage(vec2 terrainXZ, float fromEdge, float edgeHeight, float maxReach) {
             // Anchor the fringe to the world so it crosses wall joins.
             vec2 noisePosition = terrainXZ + vec2(edgeHeight * 1.17, -edgeHeight * 0.79);
-            float clusters = transitionNoise(noisePosition * 2.55);
-            float lobes = transitionNoise(noisePosition * 8.2 + vec2(4.7, 9.3));
+            float clusters = terrainNoise(noisePosition * 2.55);
+            float lobes = terrainNoise(noisePosition * 8.2 + vec2(4.7, 9.3));
             float shape = smoothstep(0.17, 0.86, clusters) * 0.78 + lobes * 0.22;
             float reach = mix(0.09, maxReach, shape);
-            float grain = transitionNoise(noisePosition * 19.0 + vec2(fromEdge * 11.0, -fromEdge * 13.0)) - 0.5;
+            float grain = terrainNoise(noisePosition * 19.0 + vec2(fromEdge * 11.0, -fromEdge * 13.0)) - 0.5;
             float edge = fromEdge + grain * 0.10;
             float feather = mix(0.085, 0.15, lobes);
             float thickness = mix(0.68, 1.0, smoothstep(0.18, 0.62, clusters));
@@ -162,13 +148,13 @@ export function createTerrainTransitionMaterial(
 
         const float topFringeDepth = 0.62;
 
-        vec2 wallGrassFringe(vec3 position, vec2 terrainXZ) {
+        vec4 wallGrassFringe(vec3 position, vec2 terrainXZ) {
             vec2 fromEdge = max(vec2(vWallContact.x - position.y, position.y - vWallContact.y), vec2(0.0));
             // Keep the grass connected at the lip while shortening how far it hangs down.
             float topDistance = fromEdge.x / topFringeDepth;
             bool byTop = vWallContact.z > 0.5 && topDistance < 0.70;
             bool byBottom = vWallContact.w > 0.5 && fromEdge.y < 0.58;
-            if (!byTop && !byBottom) return vec2(0.0);
+            if (!byTop && !byBottom) return vec4(0.0);
             float horizontalGrass = ((byTop && vWallContact.z > 1.5) || (byBottom && vWallContact.w > 1.5))
                 ? transitionGrassWeight(terrainXZ, 0.0) : 0.0;
             vec2 grassAtContact = mix(vWallContact.zw, vec2(horizontalGrass), step(1.5, vWallContact.zw));
@@ -176,7 +162,8 @@ export function createTerrainTransitionMaterial(
                 byTop ? grassAtContact.x * wallGrassCoverage(terrainXZ, topDistance, vWallContact.x, 0.50) : 0.0,
                 byBottom ? grassAtContact.y * wallGrassCoverage(terrainXZ + vec2(3.31, 2.17), fromEdge.y, vWallContact.y, 0.38) : 0.0
             );
-            return vec2(max(fringe.x, fringe.y), fringe.x >= fringe.y ? fromEdge.x : -fromEdge.y);
+            return vec4(max(fringe.x, fringe.y), fringe.x >= fringe.y ? fromEdge.x : -fromEdge.y,
+                byTop ? grassAtContact.x : 0.0, byBottom ? grassAtContact.y : 0.0);
         }
 
         vec3 wallBumpNormal(vec3 normal, vec3 position, vec2 uv, vec3 bump) {
@@ -196,10 +183,12 @@ export function createTerrainTransitionMaterial(
         vec2 grassUV = mix(grassOrigin + vSurfacePatchUV * grassScale, vPlacedSurfaceUV * grassScale, placedGrass);
         vec2 dirtUV = mix(vPlacedSurfaceUV * dirtScale, dirtOrigin + vSurfacePatchUV * dirtScale, placedGrass);
         float grassWeight;
+        vec2 grassAtEdges = vec2(0.0);
         float grassEdgeDistance = 0.0;
         if (wall) {
-            vec2 fringe = wallGrassFringe(vPositionW, terrainXZ);
+            vec4 fringe = wallGrassFringe(vPositionW, terrainXZ);
             grassWeight = fringe.x;
+            grassAtEdges = fringe.zw;
             grassEdgeDistance = fringe.y >= 0.0 ? fringe.y / topFringeDepth : -fringe.y;
             vec2 grassPatch = vSurfacePatchUV + geometricNormalW.xz * fringe.y;
             // Mirror at the borders of the atlas patch so steep fringes keep their texture detail.
@@ -209,6 +198,7 @@ export function createTerrainTransitionMaterial(
             float grassIslandSupport = smoothstep(0.2, 0.85, vPlacedSurface.w);
             grassWeight = transitionGrassWeight(terrainXZ, grassIslandSupport);
         }
+        vec2 dirtCoverage = 1.0 - max(vec2(grassWeight), grassAtEdges);
         surfaceAlbedo = mix(
             toLinearSpace(texture2D(dirtColor, dirtUV).rgb),
             toLinearSpace(texture2D(grassColor, grassUV).rgb),
