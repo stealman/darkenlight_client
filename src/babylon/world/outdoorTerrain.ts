@@ -55,14 +55,10 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
     const terrain = new TransformNode('outdoorTerrain', parent.getScene())
     terrain.parent = parent
     const renderer = createTerrainSurfaceRenderer(parent.getScene(), terrain, new Vector3(0, 0, 1))
-    if (terrainSteps) {
-        for (const [material, coverage] of renderer.stepMaterials) terrainSteps.configure(material, coverage)
-    }
-    if (contactShadow) {
-        for (const material of new Set(renderer.meshes.map(mesh => mesh.material))) {
-            if (material instanceof PBRCustomMaterial) {
-                contactShadow.configure(material, false, !!terrainSteps && renderer.stepMaterials.has(material))
-            }
+    for (const material of new Set(renderer.meshes.map(mesh => mesh.material))) {
+        if (material instanceof PBRCustomMaterial) {
+            terrainSteps?.configure(material, renderer.stepMaterials.get(material))
+            contactShadow?.configure(material, false, !!terrainSteps)
         }
     }
     for (const mesh of renderer.meshes) {
@@ -77,7 +73,8 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
         if (pavingBatch) return pavingBatch
         paving = createStonePathRenderer(terrain.getScene(), terrain)
         const {mesh, material} = paving
-        contactShadow?.configure(material)
+        terrainSteps?.configure(material)
+        contactShadow?.configure(material, false, !!terrainSteps)
         pavingBatch = new OutdoorInstanceBatch(mesh)
         batches.set(mesh, pavingBatch)
         Lights.registerSharedLightMesh(mesh)

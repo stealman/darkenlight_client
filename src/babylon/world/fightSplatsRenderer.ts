@@ -1,255 +1,82 @@
-import { Matrix, Mesh, Quaternion, Scene, Vector2, Vector3 } from '@babylonjs/core'
-import { Builder } from '@/babylon/builder'
-import { Materials } from '@/babylon/materials'
+import { Vector3 } from '@babylonjs/core'
 import { WorldDataManager } from '@/data/worldDataManager'
-import { ViewportManager } from '@/utils/viewport'
 import { Settings } from '@/settings/settings'
+import { BuildingManager } from './buildings/buildingManager'
+import { StepMarksRenderer } from './stepMarksRenderer'
+import { FIGHT_SPLAT_TTL, MAX_FIGHT_SPLATS } from './fightSplatShader'
+import type { TerrainSplat } from './fightSplatShader'
+
+type SplatMessage = {lp: number, x: number | string, z: number | string, tp: number, s: number}
 
 export const FightSplatsRenderer = {
-    splats: new Array<Splat>(),
-    visibleSplats: new Array<Splat>(),
-    maxSplats: 1000,
-    ttl: 900000,
-    splatPlane: null as Mesh | null,
-    matrixBuffer: new Float32Array(0),
-    uvBuffer: new Float32Array(0),
-    matricesDirty: true,
-    tmpPosition: new Matrix(),
-    tmpRotation: new Matrix(),
-    tmpWorld: new Matrix(),
-    tmpQuaternion: new Quaternion(),
+    splats: new Array<TerrainSplat>(),
+    maxSplats: MAX_FIGHT_SPLATS,
+    stainsDirty: true,
 
-    initialize (scene: Scene) {
-        this.splatPlane = Builder.createHorizontalPlane(scene, null, 1, 0)
-        this.splatPlane.material = Materials.fightSplatsMaterial
-        this.maxSplats = Settings.isDetalLevelHigh() ? 1000 : 250
+    initialize() {
+        this.maxSplats = Settings.isDetalLevelHigh() ? MAX_FIGHT_SPLATS : 250
+        this.splats = []
+        this.stainsDirty = true
     },
-
-    consumeSplats(data: [{ lp: number, x: number, z: number, tp: number, s: number }]) {
-        let changed = false
-        for (const dt of data) {
-            const block = WorldDataManager.getBlockOnPosition(new Vector3(dt.x, 0, dt.z))
-            if (!block || block.shallowWater || block.deepWater) {
-                continue
-            }
-            const pos = new Vector3(dt.x, block?.totalHeight + 0.011, dt.z)
-
-            const splat = new Splat(FightSplatTypes.getSplatById(dt.tp), pos, dt.lp, dt.s)
-            this.splats.push(splat)
-            changed = true
-
-            // If over max, remove oldest
-            if (this.splats.length > this.maxSplats) {
-                this.splats.shift()
-            }
-        }
-        if (changed) {
-            this.matricesDirty = true
+    consumeSplats(data: readonly SplatMessage[]) {
+        if (!data.length) return
+        const map = WorldDataManager.getBlockMap()
+        const now = Date.now()
+        for (const {lp, x, z, tp, s} of data) {
+            if ((tp !== 1 && tp !== 2 && tp !== 3 && tp !== 4 && tp !== 8) || lp >= 100) continue
+            const worldX = Number(x), worldZ = Number(z)
+            const tileX = Math.round(worldX), tileZ = Math.round(worldZ)
+            const block = map[tileX]?.[tileZ]
+            if (!block || block.shallowWater || block.deepWater) continue
+            const y = block.totalHeight + BuildingManager.getFloorHeightAtTile(tileX, tileZ)
+            const creationTime = now - lp / 100 * FIGHT_SPLAT_TTL
+            const size = Math.max(1, Math.min(4, s))
+            const seed = Math.random()
+            const width = 0.32 + size * 0.04 + Math.random() * 0.09
+            this.splats.push({
+                pos: new Vector3(worldX, y, worldZ),
+                type: tp,
+                rot: Math.random() * Math.PI * 2,
+                scaleX: width * (1.0 - seed * 0.19),
+                scaleZ: width * (0.53 + seed * 0.36),
+                creationTime,
+                deadTime: creationTime + FIGHT_SPLAT_TTL,
+                seed,
+            })
+            this.stainsDirty = true
+            if (this.splats.length > this.maxSplats) this.removeAt(0)
         }
     },
 
-    removeSplats(data: [{ lp: number, x: number, z: number, tp: number, s: number }]) {
-        let changed = false
-        for (const dt of data) {
+    removeSplats(data: readonly SplatMessage[]) {
+        for (const {x, z} of data) {
+            const worldX = Number(x), worldZ = Number(z)
             for (let index = this.splats.length - 1; index >= 0; index--) {
-                const splat = this.splats[index]
-                if (splat.pos.x === dt.x && splat.pos.z === dt.z) {
-                    this.splats.splice(index, 1)
-                    changed = true
-                }
+                const {pos} = this.splats[index]
+                if (pos.x === worldX && pos.z === worldZ) this.removeAt(index)
             }
         }
-        if (changed) {
-            this.matricesDirty = true
-        }
+    },
+
+    removeAt(index: number) {
+        this.stainsDirty = true
+        this.splats.splice(index, 1)
     },
 
     clearWorld() {
         this.splats = []
-        this.visibleSplats = []
-        this.matricesDirty = true
-        this.renderStepMarks(Date.now())
+        this.stainsDirty = false
+        StepMarksRenderer.field?.updateSplats([])
     },
 
-    update(timeRate: number, time: number) {
-        void timeRate
-        if (this.removeExpiredSplats(time)) {
-            this.matricesDirty = true
-        }
-        this.updateVisibleSplats()
-        this.renderStepMarks(time)
-    },
-
-    updateVisibleSplats() {
-        let visibleCount = 0
-        for (const splat of this.splats) {
-            if (this.isSplatVisible(splat)) {
-                if (this.visibleSplats[visibleCount] !== splat) {
-                    this.matricesDirty = true
-                }
-                this.visibleSplats[visibleCount] = splat
-                visibleCount++
-            }
-        }
-        if (this.visibleSplats.length !== visibleCount) {
-            this.visibleSplats.length = visibleCount
-            this.matricesDirty = true
-        }
-    },
-
-    renderStepMarks(time: number) {
-        if (!this.splatPlane) return
-
-        const splatCount = this.visibleSplats.length
-        if (this.matricesDirty) {
-            this.matrixBuffer = new Float32Array(splatCount * 16)
-            this.uvBuffer = new Float32Array(splatCount * 2)
-            for (let index = 0; index < splatCount; index++) {
-                const splat = this.visibleSplats[index]
-                this.writeSplatMatrix(splat, index)
-                this.writeSplatUvc(splat, index, time)
-            }
-            this.splatPlane.thinInstanceSetBuffer('matrix', this.matrixBuffer, 16, false)
-            this.splatPlane.thinInstanceSetBuffer('uvc', this.uvBuffer, 2, false)
-            this.splatPlane.thinInstanceCount = splatCount
-            this.splatPlane.setEnabled(splatCount > 0)
-            if (splatCount > 0) {
-                this.splatPlane.thinInstanceRefreshBoundingInfo()
-            }
-            this.matricesDirty = false
-            return
-        }
-
-        let uvChanged = false
-        for (let index = 0; index < splatCount; index++) {
-            uvChanged = this.updateSplatUvc(this.visibleSplats[index], index, time) || uvChanged
-        }
-        if (uvChanged) {
-            this.splatPlane.thinInstanceBufferUpdated('uvc')
-        }
-    },
-
-    removeExpiredSplats(time: number): boolean {
-        let changed = false
+    update(time: number) {
         for (let index = this.splats.length - 1; index >= 0; index--) {
-            if (time >= this.splats[index].deadTime) {
-                this.splats.splice(index, 1)
-                changed = true
-            }
+            if (time >= this.splats[index].deadTime) this.removeAt(index)
         }
-        return changed
+        if (this.stainsDirty) {
+            StepMarksRenderer.field?.updateSplats(this.splats)
+            this.stainsDirty = false
+        }
     },
 
-    isSplatVisible(splat: Splat): boolean {
-        return ViewportManager.isPointInVisibleMatrix(
-            Math.floor(splat.pos.x),
-            Math.floor(splat.pos.z),
-            2,
-            splat.pos.y,
-        )
-    },
-
-    writeSplatMatrix(splat: Splat, index: number) {
-        Matrix.TranslationToRef(splat.pos.x, splat.pos.y, splat.pos.z, this.tmpPosition)
-        Quaternion.FromEulerAnglesToRef(0, splat.rot, 0, this.tmpQuaternion)
-        Matrix.FromQuaternionToRef(this.tmpQuaternion, this.tmpRotation)
-        this.tmpRotation.multiplyToRef(this.tmpPosition, this.tmpWorld)
-        Matrix.ScalingToRef(splat.scale.x, 1, splat.scale.y, this.tmpPosition)
-        this.tmpPosition.multiplyToRef(this.tmpWorld, this.tmpWorld)
-        this.tmpWorld.copyToArray(this.matrixBuffer, index * 16)
-    },
-
-    writeSplatUvc(splat: Splat, index: number, time: number) {
-        const uvc = splat.getUvcIndex(time)
-        const offset = index * 2
-        this.uvBuffer[offset] = uvc.x
-        this.uvBuffer[offset + 1] = uvc.y
-    },
-
-    updateSplatUvc(splat: Splat, index: number, time: number): boolean {
-        const uvc = splat.getUvcIndex(time)
-        const offset = index * 2
-        if (this.uvBuffer[offset] === uvc.x && this.uvBuffer[offset + 1] === uvc.y) {
-            return false
-        }
-        this.uvBuffer[offset] = uvc.x
-        this.uvBuffer[offset + 1] = uvc.y
-        return true
-    }
 }
-
-export class SplatType {
-    id: number
-    textureRow: number
-    indices: Vector2[]
-    constructor(id: number, textureRow: number) {
-        this.id = id
-        this.textureRow = textureRow
-        for (let i = 0; i < 16; i++) {
-            if (!this.indices) {
-                this.indices = []
-            }
-            this.indices.push(new Vector2(i, textureRow))
-        }
-    }
-}
-
-class Splat {
-    pos: Vector3
-    rot: number = 0
-    creationTime: number
-    deadTime: number = 0
-    splatType: SplatType = FightSplatTypes.BLOOD
-    indexOffset: number = 0
-    scale: Vector2 = new Vector2(1, 1)
-
-    constructor(type: SplatType, pos: Vector3, lifeProgress: number, scaleLevel: number) {
-        this.scale = new Vector2(0.4 + Math.random() * scaleLevel * 0.1, 0.4 + Math.random() * 0.1 + scaleLevel * 0.1)
-        this.splatType = type
-        this.pos = pos
-        this.rot = Math.random() * Math.PI * 2
-
-        // count creation time back from life progress
-        this.creationTime = Date.now() - ((lifeProgress / 100) * FightSplatsRenderer.ttl)
-        this.deadTime = this.creationTime + FightSplatsRenderer.ttl
-        this.indexOffset = Math.random() < 0.5 ? 0 : 8
-    }
-
-    getUvcIndex(time: number): Vector2 {
-        const lifeProgress = (time - this.creationTime) / (this.deadTime - this.creationTime)
-        if (lifeProgress < 0.12) {
-            return this.splatType.indices[this.indexOffset]
-        } else if (lifeProgress < 0.25) {
-            return this.splatType.indices[this.indexOffset + 1]
-        } else if (lifeProgress < 0.37) {
-            return this.splatType.indices[this.indexOffset + 2]
-        } else if (lifeProgress < 0.50) {
-            return this.splatType.indices[this.indexOffset + 3]
-        } else if (lifeProgress < 0.62) {
-            return this.splatType.indices[this.indexOffset + 4]
-        } else if (lifeProgress < 0.75) {
-            return this.splatType.indices[this.indexOffset + 5]
-        } else if (lifeProgress < 0.87) {
-            return this.splatType.indices[this.indexOffset + 6]
-        } else {
-            return this.splatType.indices[this.indexOffset + 7]
-        }
-    }
-}
-
-export const FightSplatTypes = {
-    BLOOD: new SplatType(1, 0),
-    GREEN_BLOOD: new SplatType(2, 3),
-    FLESH: new SplatType(3, 2),
-    ICHOR: new SplatType(4, 3),
-    BONE: new SplatType(5, 1),
-    DARK_BONE: new SplatType(6, 2),
-    RED_BONE: new SplatType(7, 6),
-    STONE_FRAGMENTS: new SplatType(8, 7),
-
-    getSplatById(id: number): SplatType {
-        return Object.values(FightSplatTypes).find(item => typeof item !== 'function' && item.id === id) as SplatType;
-    }
-}
-
-

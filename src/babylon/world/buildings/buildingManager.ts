@@ -23,6 +23,7 @@ import type { ContactShadowFootprint } from '../terrainContactShadow'
 import { OutdoorInstanceBatch } from '../outdoorInstanceBatch'
 import type { OutdoorInstance } from '../outdoorInstanceBatch'
 import { appendPavingAttributes, createStonePathRenderer, pavingStoneMatrix, PAVING_INSTANCE_ATTRIBUTE } from '../stonePathRenderer'
+import { StepMarksRenderer } from '../stepMarksRenderer'
 import { visitHouseFloorStones } from '../stonePathLayout'
 import type { PavingStone } from '../stonePathLayout'
 
@@ -1974,7 +1975,9 @@ export const BuildingManager = {
                 || !building.visible || this.floorViews.has(building)) continue
             if (!this.floorBatch && this.parent) {
                 const {mesh, material} = createStonePathRenderer(this.parent.getScene(), this.parent, true)
-                TerrainManager.contactShadow?.configure(material)
+                const terrainMarks = StepMarksRenderer.field
+                terrainMarks?.configure(material)
+                TerrainManager.contactShadow?.configure(material, false, !!terrainMarks)
                 mesh.alwaysSelectAsActiveMesh = true
                 Lights.registerSharedLightMesh(mesh)
                 mesh.onDisposeObservable.addOnce(() => Lights.unregisterSharedLightMesh(mesh))

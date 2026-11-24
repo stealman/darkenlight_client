@@ -134,7 +134,7 @@ export const Renderer = {
         StepMarksRenderer.initialize(this.scene)
         WorldRenderer.initialize(this.scene)
         WeatherManager.initialize()
-        FightSplatsRenderer.initialize(this.scene)
+        FightSplatsRenderer.initialize()
         GroundItemsManager.initialize(this.scene)
         ArrowsManager.initialize()
         SelectedTargetPanel.initialize()
@@ -270,7 +270,7 @@ export const Renderer = {
 
         if (this.frame % 10 === 2) {
             StepMarksRenderer.update(actualTime)
-            FightSplatsRenderer.update(timeRate, actualTime)
+            FightSplatsRenderer.update(actualTime)
         }
 
         if (this.frame % 10 === 7) {

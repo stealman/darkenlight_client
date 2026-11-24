@@ -1,6 +1,8 @@
 import { Constants, Engine, RawTexture, Scene, Texture } from '@babylonjs/core'
 import type { Vector2, Vector3 } from '@babylonjs/core'
 import type { PBRCustomMaterial } from '@babylonjs/materials'
+import { fightSplatShader, MAX_FIGHT_SPLATS } from './fightSplatShader'
+import type { TerrainSplat } from './fightSplatShader'
 
 export const MAX_STEP_MARKS = 500
 export const MAX_SOIL_STEPS = 50
@@ -10,15 +12,16 @@ const SOIL_HALF_LENGTH = 0.1933
 const SOIL_HALF_WIDTH = 0.0725
 const BUCKET_COUNT = 2048
 const TEXTURE_WIDTH = 128
+const ROW_SIZE = TEXTURE_WIDTH * 4
 // Each oval touches at most four unit cells. Each entry uses two groups of four floats.
-const TEXTURE_HEIGHT = Math.ceil((BUCKET_COUNT + (MAX_STEP_MARKS * 2 + MAX_SOIL_STEPS) * 4 * 2) / TEXTURE_WIDTH)
+const STEP_ROWS = Math.ceil((BUCKET_COUNT + (MAX_STEP_MARKS * 2 + MAX_SOIL_STEPS) * 4 * 2) / TEXTURE_WIDTH)
+const SPLAT_ROWS = Math.ceil((BUCKET_COUNT + MAX_FIGHT_SPLATS * 4 * 3) / TEXTURE_WIDTH)
+const MARK_ROWS = STEP_ROWS + SPLAT_ROWS
 
 export type TerrainStep = {pos: Vector3, rot: number, creationTime: number, deadTime: number, soil: boolean}
 export type StepCoverage = {snow?: string, soil?: string}
 
-function visitStepBuckets(step: TerrainStep, visit: (bucket: number) => void) {
-    const {x, z} = step.pos
-    const reach = step.soil ? SOIL_HALF_LENGTH : HALF_LENGTH
+function visitMarkBuckets({x, z}: Vector3, reach: number, visit: (bucket: number) => void) {
     for (let cellZ = Math.floor(z - reach); cellZ <= Math.floor(z + reach); cellZ++) {
         for (let cellX = Math.floor(x - reach); cellX <= Math.floor(x + reach); cellX++) {
             visit((cellX * 73 + cellZ * 151) & (BUCKET_COUNT - 1))
@@ -27,11 +30,12 @@ function visitStepBuckets(step: TerrainStep, visit: (bucket: number) => void) {
 }
 
 export class TerrainStepField {
-    private readonly data = new Float32Array(TEXTURE_WIDTH * TEXTURE_HEIGHT * 4)
+    private readonly data = new Float32Array(ROW_SIZE * STEP_ROWS)
+    private readonly splatData = new Float32Array(ROW_SIZE * SPLAT_ROWS)
     private readonly counts = new Uint16Array(BUCKET_COUNT)
     private readonly cursor = new Uint16Array(BUCKET_COUNT)
     private texture: RawTexture
-    private textureData = this.data
+    private textureData = new Float32Array(ROW_SIZE * MARK_ROWS)
     private shadowWidth = 0
     private shadowHeight = 0
     // Upload seconds relative to scene startup to keep the fade precise in a float.
@@ -40,9 +44,10 @@ export class TerrainStepField {
     private wetSteps = false
     private snowActive = false
     private soilActive = false
+    private splatsActive = false
 
     constructor(private readonly scene: Scene, private readonly engine: Engine) {
-        this.texture = this.createTexture(TEXTURE_WIDTH * 4, TEXTURE_HEIGHT)
+        this.texture = this.createTexture(ROW_SIZE, MARK_ROWS)
     }
 
     private createTexture(width: number, height: number) {
@@ -54,38 +59,43 @@ export class TerrainStepField {
     }
 
     get maxShadowHeight() {
-        return this.engine.getCaps().maxTextureSize - TEXTURE_HEIGHT
+        return this.engine.getCaps().maxTextureSize - MARK_ROWS
     }
 
     updateContactShadow(mask: Uint8Array, width: number, height: number) {
         // Use one fragment sampler for both effects on terrain with many light textures.
-        const rowSize = TEXTURE_WIDTH * 4
-        const textureWidth = Math.max(rowSize, width)
+        const textureWidth = Math.max(ROW_SIZE, width)
         const size = this.texture.getSize()
-        const resize = size.width !== textureWidth || size.height !== height + TEXTURE_HEIGHT
+        const resize = size.width !== textureWidth || size.height !== height + MARK_ROWS
         if (resize) {
-            this.textureData = new Float32Array(textureWidth * (height + TEXTURE_HEIGHT))
-            this.copyStepsToTexture(textureWidth)
+            this.textureData = new Float32Array(textureWidth * (height + MARK_ROWS))
+            this.copyMarkRows(this.data, 0, STEP_ROWS, textureWidth)
+            this.copyMarkRows(this.splatData, STEP_ROWS, SPLAT_ROWS, textureWidth)
         }
         this.shadowWidth = width
         this.shadowHeight = height
         for (let z = 0; z < height; z++) {
-            const row = (TEXTURE_HEIGHT + z) * textureWidth
+            const row = (MARK_ROWS + z) * textureWidth
             for (let x = 0; x < width; x++) this.textureData[row + x] = mask[z * width + x] / 255
         }
         if (resize) {
             this.texture.dispose()
-            this.texture = this.createTexture(textureWidth, height + TEXTURE_HEIGHT)
+            this.texture = this.createTexture(textureWidth, height + MARK_ROWS)
         } else {
-            this.upload(this.textureData.subarray(TEXTURE_HEIGHT * textureWidth), TEXTURE_HEIGHT, textureWidth, height)
+            this.upload(this.textureData.subarray(MARK_ROWS * textureWidth), MARK_ROWS, textureWidth, height)
         }
     }
 
-    private copyStepsToTexture(textureWidth: number, rows = TEXTURE_HEIGHT) {
-        const rowSize = TEXTURE_WIDTH * 4
+    private copyMarkRows(data: Float32Array, start: number, rows: number, textureWidth: number) {
         for (let z = 0; z < rows; z++) {
-            this.textureData.set(this.data.subarray(z * rowSize, (z + 1) * rowSize), z * textureWidth)
+            this.textureData.set(data.subarray(z * ROW_SIZE, (z + 1) * ROW_SIZE), (z + start) * textureWidth)
         }
+    }
+
+    private uploadMarkRows(data: Float32Array, start: number, end: number) {
+        const rows = Math.ceil(end / TEXTURE_WIDTH)
+        this.copyMarkRows(data, start, rows, this.texture.getSize().width)
+        this.upload(data.subarray(0, rows * ROW_SIZE), start, ROW_SIZE, rows)
     }
 
     private upload(data: Float32Array, z: number, width: number, height: number) {
@@ -118,21 +128,14 @@ export class TerrainStepField {
         const stepGroups = [ownSteps, otherSteps, soilSteps]
         this.counts.fill(0)
         for (const steps of stepGroups) {
-            for (const step of steps) visitStepBuckets(step, bucket => this.counts[bucket]++)
+            for (const step of steps) visitMarkBuckets(step.pos, step.soil ? SOIL_HALF_LENGTH : HALF_LENGTH, bucket => this.counts[bucket]++)
         }
-        let next = BUCKET_COUNT
-        // The first texels map hashed cells to ranges of candidate stamps.
-        for (let bucket = 0; bucket < BUCKET_COUNT; bucket++) {
-            this.cursor[bucket] = next
-            this.data[bucket * 4] = next
-            next += this.counts[bucket] * 2
-            this.data[bucket * 4 + 1] = next
-        }
+        const end = this.writeBucketRanges(this.data, 2)
         for (const steps of stepGroups) {
             for (const step of steps) {
                 const cos = Math.cos(step.rot)
                 const sin = Math.sin(step.rot)
-                visitStepBuckets(step, bucket => {
+                visitMarkBuckets(step.pos, step.soil ? SOIL_HALF_LENGTH : HALF_LENGTH, bucket => {
                     const offset = this.cursor[bucket] * 4
                     this.cursor[bucket] += 2
                     this.data[offset] = step.pos.x
@@ -146,18 +149,57 @@ export class TerrainStepField {
                 })
             }
         }
-        const rows = Math.ceil(next / TEXTURE_WIDTH)
-        const rowSize = TEXTURE_WIDTH * 4
-        if (this.textureData !== this.data) this.copyStepsToTexture(this.texture.getSize().width, rows)
-        this.upload(this.data.subarray(0, rows * rowSize), 0, rowSize, rows)
+        this.uploadMarkRows(this.data, 0, end)
     }
 
-    configure(material: PBRCustomMaterial, {snow = '0.0', soil = '0.0'}: StepCoverage) {
+    updateSplats(splats: readonly TerrainSplat[]) {
+        this.splatsActive = splats.length > 0
+        if (!this.splatsActive) return
+        this.counts.fill(0)
+        for (const splat of splats) {
+            visitMarkBuckets(splat.pos, Math.max(splat.scaleX, splat.scaleZ) * 0.5, bucket => this.counts[bucket]++)
+        }
+        const end = this.writeBucketRanges(this.splatData, 3)
+        for (const splat of splats) {
+            const cos = Math.cos(splat.rot)
+            const sin = Math.sin(splat.rot)
+            visitMarkBuckets(splat.pos, Math.max(splat.scaleX, splat.scaleZ) * 0.5, bucket => {
+                const offset = this.cursor[bucket] * 4
+                this.cursor[bucket] += 3
+                this.splatData[offset] = splat.pos.x
+                this.splatData[offset + 1] = splat.pos.y
+                this.splatData[offset + 2] = splat.pos.z
+                this.splatData[offset + 3] = cos
+                this.splatData[offset + 4] = sin
+                this.splatData[offset + 5] = splat.scaleX * 0.5
+                this.splatData[offset + 6] = splat.scaleZ * 0.5
+                this.splatData[offset + 7] = (splat.creationTime - this.timeOrigin) / 1000
+                this.splatData[offset + 8] = splat.type
+                this.splatData[offset + 9] = splat.seed
+            })
+        }
+        this.uploadMarkRows(this.splatData, STEP_ROWS, end)
+    }
+
+    private writeBucketRanges(data: Float32Array, recordSize: number) {
+        let next = BUCKET_COUNT
+        // The first texels map hashed cells to ranges of candidate stamps.
+        for (let bucket = 0; bucket < BUCKET_COUNT; bucket++) {
+            this.cursor[bucket] = next
+            data[bucket * 4] = next
+            next += this.counts[bucket] * recordSize
+            data[bucket * 4 + 1] = next
+        }
+        return next
+    }
+
+    configure(material: PBRCustomMaterial, {snow = '0.0', soil = '0.0'}: StepCoverage = {}) {
         material.AddUniform('terrainStepData', 'sampler2D', null)
         material.AddUniform('terrainStepTime', 'float', null)
         material.AddUniform('terrainStepsActive', 'vec2', null)
         material.AddUniform('terrainStepShadowSize', 'vec2', null)
         material.AddUniform('terrainStepWetnessEnabled', 'float', null)
+        material.AddUniform('terrainSplatsActive', 'float', null)
         const attach = material.AttachAfterBind.bind(material)
         material.AttachAfterBind = (mesh, effect) => {
             attach(mesh, effect)
@@ -166,20 +208,31 @@ export class TerrainStepField {
             effect.setFloat2('terrainStepsActive', Number(this.snowActive), Number(this.soilActive))
             effect.setFloat2('terrainStepShadowSize', this.shadowWidth, this.shadowHeight)
             effect.setFloat('terrainStepWetnessEnabled', Number(this.wetSteps))
+            effect.setFloat('terrainSplatsActive', Number(this.splatsActive))
         }
         material.Fragment_Definitions(`
             ${material.CustomParts.Fragment_Definitions ?? ''}
-            vec4 terrainStepTexel(int index) {
-                ivec2 p = ivec2((index % ${TEXTURE_WIDTH}) * 4, index / ${TEXTURE_WIDTH});
+            vec4 terrainMarkTexel(int index, int row) {
+                ivec2 p = ivec2((index % ${TEXTURE_WIDTH}) * 4, row + index / ${TEXTURE_WIDTH});
                 return vec4(texelFetch(terrainStepData, p, 0).r,
                     texelFetch(terrainStepData, p + ivec2(1, 0), 0).r,
                     texelFetch(terrainStepData, p + ivec2(2, 0), 0).r,
                     texelFetch(terrainStepData, p + ivec2(3, 0), 0).r);
             }
 
+            int terrainMarkBucket(vec2 position) {
+                ivec2 cell = ivec2(floor(position));
+                return (cell.x * 73 + cell.y * 151) & ${BUCKET_COUNT - 1};
+            }
+
+            vec4 terrainSplatTexel(int index) {
+                return terrainMarkTexel(index, ${STEP_ROWS});
+            }
+            ${fightSplatShader}
+
             float stepContactShadowTexel(ivec2 p) {
                 p = clamp(p, ivec2(0), ivec2(terrainStepShadowSize) - 1);
-                return texelFetch(terrainStepData, p + ivec2(0, ${TEXTURE_HEIGHT}), 0).r;
+                return texelFetch(terrainStepData, p + ivec2(0, ${MARK_ROWS}), 0).r;
             }
 
             float stepContactShadow(vec2 uv) {
@@ -192,15 +245,13 @@ export class TerrainStepField {
             }
 
             vec4 terrainStepImpression(vec3 positionW, vec2 coverage) {
-                ivec2 cell = ivec2(floor(positionW.xz));
-                int bucket = (cell.x * 73 + cell.y * 151) & ${BUCKET_COUNT - 1};
-                vec2 range = terrainStepTexel(bucket).xy;
+                vec2 range = terrainMarkTexel(terrainMarkBucket(positionW.xz), 0).xy;
                 vec4 impression = vec4(0.0);
                 for (int i = int(range.x); i < int(range.y); i += 2) {
-                    vec4 stamp = terrainStepTexel(i);
+                    vec4 stamp = terrainMarkTexel(i, 0);
                     vec3 delta = positionW - stamp.xyz;
                     if (any(greaterThan(abs(delta.xz), vec2(${Math.max(HALF_LENGTH, SOIL_HALF_LENGTH)}))) || abs(delta.y) >= 0.22) continue;
-                    vec4 directionLife = terrainStepTexel(i + 1);
+                    vec4 directionLife = terrainMarkTexel(i + 1, 0);
                     bool soil = directionLife.w > 0.5;
                     float stepCoverage = soil ? coverage.y : coverage.x;
                     if (stepCoverage <= 0.0) continue;
@@ -227,6 +278,9 @@ export class TerrainStepField {
         `)
         material.Fragment_Before_Lights(`
             ${material.CustomParts.Fragment_Before_Lights ?? ''}
+            if (terrainSplatsActive > 0.0 && geometricNormalW.y > 0.46) {
+                surfaceAlbedo = blendTerrainSplats(surfaceAlbedo, vPositionW, smoothstep(0.46, 0.90, geometricNormalW.y));
+            }
             vec2 stepWetness = vec2(0.0);
             if (any(greaterThan(terrainStepsActive * vec2(${snow === '0.0' ? '0.0' : '1.0'}, ${soil === '0.0' ? '0.0' : '1.0'}), vec2(0.0)))
                 && geometricNormalW.y > 0.65) {
