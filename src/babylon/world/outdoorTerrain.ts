@@ -54,7 +54,9 @@ export function createOutdoorTerrain(parent: TransformNode) {
         mesh.rawBoundingInfo = new BoundingInfo(minimum, maximum)
     }
     const batches = new Map(renderer.meshes.map(mesh => [mesh, new OutdoorInstanceBatch(mesh)]))
-    const foliage = createTerrainFoliageRenderer(parent.getScene(), terrain, Settings.isDetalLevelHigh())
+    const highDetail = Settings.isDetalLevelHigh()
+    const foliageDensity = highDetail ? 1 : Settings.isDetailLevelMedium() ? 2 / 3 : 1 / 3
+    const foliage = createTerrainFoliageRenderer(parent.getScene(), terrain, highDetail, foliageDensity)
     for (const mesh of foliage.meshes) {
         mesh.receiveShadows = Settings.isShadowsEnabled()
         Lights.registerSharedLightMesh(mesh)

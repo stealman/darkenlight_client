@@ -70,9 +70,7 @@ export class TerrainDebris extends BaseStaticObject {
     }
 
     private appendPieces(matrices: Matrix[], uvData: Vector2[], material: Vector2) {
-        const block = this.getTerrain()!
-        const y = this.renderPosition.y - (this.isSnowSuppressed(block) ? block.heightOffset : 0)
-        const world = Matrix.Translation(this.renderPosition.x, y, this.renderPosition.z)
+        const world = Matrix.Translation(this.renderPosition.x, this.renderPosition.y, this.renderPosition.z)
         for (const piece of this.pieces) {
             matrices.push(piece.multiply(world))
             uvData.push(material)

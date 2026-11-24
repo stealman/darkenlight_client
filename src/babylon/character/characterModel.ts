@@ -9,6 +9,7 @@ import { AnimTransition } from '@/babylon/animations/animation'
 import { Lights } from '@/babylon/scene/lights'
 import type Character from '@/babylon/character/character'
 import { MyPlayer } from '@/data/myPlayer'
+import { WorldDataManager } from '@/data/worldDataManager'
 import { EquipBearer, EquipItem, EquipManager } from '@/babylon/item/equipManager'
 import { BabylonUtils } from '@/babylon/utils'
 import { EquipItemSlots, EquipSlotModelsCb, WeaponCategories, WeaponTypes } from '@/data/items/item'
@@ -24,6 +25,8 @@ import { MagicArrow } from '@game/game/spells/magicArrow'
 import { applyCharacterEquipmentFitting, getCharacterHairFitting, preloadCharacterEquipmentFitting } from './characterEquipmentFitting'
 import { isLeatherArmorModelId } from '@game/character/items/codebook/armorsCodebook'
 import { StaticsManager } from '@/babylon/world/statics/staticsManager'
+import { BuildingManager } from '@/babylon/world/buildings/buildingManager'
+import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import type { StaticObject } from '@/babylon/world/statics/objects/baseStaticObject'
 import { CharacterActions } from '@/data/actions/characterActions'
 import { characterHeadMatrix, getCharacterHeadType, loadCharacterHead } from './characterHead'
@@ -536,7 +539,7 @@ export class CharacterModel implements EquipBearer {
         if (this.parent.getLookAngle() != null || this.actualAnim === this.sittingIdleAnim) {
             this.resolveModelRotation(timeRate)
         }
-        this.resolveDeathSink(timeRate)
+        this.resolveModelHeight(timeRate)
 
         if (this.model) {
             this.worldMatrix = this.model!.getWorldMatrix()
@@ -863,7 +866,7 @@ export class CharacterModel implements EquipBearer {
         this.actualAnim?.stop()
         this.deathSink = 0
         this.deathSinkTarget = 0
-        this.model!.position.y = 0
+        this.resolveModelHeight(0)
         this.deathAnim.stop()
         this.deathAnim.start(false, 1, this.deathAnim.from, this.deathAnim.to)
         this.deathAnim.onAnimationEndObservable.addOnce(() => {
@@ -879,17 +882,25 @@ export class CharacterModel implements EquipBearer {
     clearDeathPose() {
         this.deathSink = 0
         this.deathSinkTarget = 0
-        if (this.model) {
-            this.model.position.y = 0
-        }
+        this.resolveModelHeight(0)
     }
 
-    private resolveDeathSink(timeRate: number) {
-        if (!this.model || this.deathSink >= this.deathSinkTarget) {
-            return
+    private resolveModelHeight(timeRate: number) {
+        if (!this.model) return
+
+        if (this.deathSink < this.deathSinkTarget) {
+            this.deathSink = Math.min(this.deathSinkTarget, this.deathSink + timeRate * 0.4)
         }
-        this.deathSink = Math.min(this.deathSinkTarget, this.deathSink + timeRate * 0.4)
-        this.model.position.y = -this.deathSink
+        const x = Math.round(this.node.position.x)
+        const z = Math.round(this.node.position.z)
+        const map = MyPlayer.worldId ? WorldDataManager.worldDataMap.get(MyPlayer.worldId)?.blockMap : undefined
+        const block = map?.[x]?.[z]
+        const onSnow = map && block?.snowed && !block.shallowWater && !block.deepWater
+            && !WorldRenderer.snowCoverMask.has(x * map.length + z)
+            && !BuildingManager.getFloorHeightAtTile(x, z)
+            && !StaticsManager.getWalkableHeightAtTile(x, z)
+        const y = (onSnow ? -0.025 : 0) - this.deathSink
+        if (this.model.position.y !== y) this.model.position.y = y
     }
 
     checkActiveStepSound() {
@@ -1021,6 +1032,7 @@ export class CharacterModel implements EquipBearer {
         this.node.position.x = this.parent.pos.x
         this.node.position.y = this.parent.logicYpos
         this.node.position.z = this.parent.pos.z
+        this.resolveModelHeight(0)
         this.node.markAsDirty('position')
         this.node.computeWorldMatrix(true)
         this.model?.computeWorldMatrix(true)

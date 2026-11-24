@@ -20,7 +20,7 @@ const isGrass = (type: number) => type === WINTER_GRASS || type === GRASS
 const ROCK = TerrainEnum1.TERRAIN_ROCK.index
 const emptyMask = new Set<number>()
 
-export function createTerrainFoliageRenderer(scene: Scene, parent: TransformNode, wallDecals = true) {
+export function createTerrainFoliageRenderer(scene: Scene, parent: TransformNode, wallDecals = true, density = 1) {
     const renderer = {...FoliageManager}
     renderer.initialize(scene, parent, {
         atlasUrl: foliageAtlasUrl,
@@ -84,6 +84,11 @@ export function createTerrainFoliageRenderer(scene: Scene, parent: TransformNode
                 const x = Math.round(matrix.m[12]), z = Math.round(matrix.m[14])
                 const block = map[x]?.[z]
                 if (!block || !supportsFoliage(foliageMap[x][z], x, z) || !visible(x, z)) return undefined
+                // Keep the same spatial subset whenever a region is rebuilt.
+                if (density < 1 && FoliageManager.roll(
+                    Math.round((originX + matrix.m[12]) * 1024),
+                    Math.round((originZ + matrix.m[14]) * 1024), 6120,
+                ) >= density) return undefined
                 if (block.snowed) return snowFoliageOffset(uv, layer)
                 if (block.type === GRASS) return greenGrassFoliageOffset(uv, layer)
                 return block.type === ROCK ? rockPebbleOffset(uv, matrix, layer, originX, originZ) : uv

@@ -288,16 +288,11 @@ export class MapBlock {
 
     getRenderedHeightOffset() {
         if (this.snowed) {
-            return  0.1
+            return 0
         }
 
         if (this.stonePath || this.beigeStonePath) {
             return 0.12
-        }
-
-        // Grass blocks are rendered slightly higher
-        if (this.type === 2 || this.type === 5) {
-            return  0.1
         }
 
         // Water blocks are rendered slightly lower
