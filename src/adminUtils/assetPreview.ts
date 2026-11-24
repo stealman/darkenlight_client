@@ -22,6 +22,7 @@ import { StaticLeafPlanes } from '@/babylon/world/statics/staticLeafPlanes'
 import { EquipManager } from '@/babylon/item/equipManager'
 import { WeaponModelsCb } from '@/babylon/item/codebook/weaponModelsCb'
 import { Renderer } from '@/babylon/scene/renderer'
+import { Lights } from '@/babylon/scene/lights'
 import type { MeshAnimation } from '@/babylon/animations/animation'
 import { createTerrainPreview } from './terrainPreview'
 
@@ -112,6 +113,12 @@ export async function installAssetPreview(
         // Babylon renders the source box/plane when a thin-instance batch is empty.
         for (const mesh of [BuildingManager.opaqueBatchMesh, BuildingManager.glassBatchMesh]) {
             mesh?.setEnabled(mesh.thinInstanceCount > 0)
+        }
+        const floor = BuildingManager.floorBatch?.mesh
+        if (floor) {
+            // The asset viewer uses its own fill and back lights.
+            Lights.unregisterSharedLightMesh(floor)
+            floor._resyncLightSources()
         }
     }
     const clear = () => {

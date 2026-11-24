@@ -20,6 +20,11 @@ import {
 } from './buildingRoofSnow'
 import { configureBuildingWallDamp, encodeWallDampUv } from './buildingWallDamp'
 import type { ContactShadowFootprint } from '../terrainContactShadow'
+import { OutdoorInstanceBatch } from '../outdoorInstanceBatch'
+import type { OutdoorInstance } from '../outdoorInstanceBatch'
+import { appendPavingAttributes, createStonePathRenderer, pavingStoneMatrix, PAVING_INSTANCE_ATTRIBUTE } from '../stonePathRenderer'
+import { visitHouseFloorStones } from '../stonePathLayout'
+import type { PavingStone } from '../stonePathLayout'
 
 export interface BuildingData {
     id: number
@@ -62,6 +67,7 @@ const MAUSOLEUM_GATE_BAR_SIZE = 0.05
 const MAUSOLEUM_GATE_DEPTH = 0.07
 const FLOOR_HEIGHT = 0.12
 const FLOOR_OVERHANG = 0.4
+const FLOOR_PAVING_ORIGIN = FLOOR_HEIGHT - 0.026
 const WALL_HEIGHT = 1
 const WALL_THICKNESS = 0.2
 const PILLAR_SIZE = 0.4
@@ -120,6 +126,7 @@ interface BuildingPrefabs {
     glass: Mesh
     blocks: Record<OpaquePartGroup, BuildingBlockPart[]>
     glassPanes: Matrix[]
+    paving: {stone: PavingStone, matrix: Matrix}[]
 }
 
 class BuildingView {
@@ -525,6 +532,19 @@ class BuildingView {
             matrices.push(pane.multiply(world))
             uvData.push(MaterialEnumTrans.GLASS.uv)
         }
+    }
+
+    pavingInstances(batch: OutdoorInstanceBatch, world: WorldData | undefined): OutdoorInstance[] {
+        const position = this.mesh.position
+        const transform = Matrix.RotationY(this.mesh.rotation.y).multiply(Matrix.Translation(position.x, position.y, position.z))
+        const uv = Vector2.Zero()
+        const attributes = [{kind: PAVING_INSTANCE_ATTRIBUTE, stride: 4, values: [] as number[]}]
+        return this.prefabs.paving.map(({stone, matrix}, index) => {
+            const placed = matrix.multiply(transform)
+            const terrain = world?.blockMap[Math.round(placed.m[12])]?.[Math.round(placed.m[14])]?.type ?? 0
+            appendPavingAttributes(attributes[0].values, stone, terrain)
+            return {batch, matrix: placed, uv, attributes, index, slot: -1}
+        })
     }
 
     updateFade(timeRate: number, playerInside: boolean, selectedTargetInside: boolean) {
@@ -1569,6 +1589,8 @@ export const BuildingManager = {
     groundContactRevision: 0,
     groundContactTerrain: null as {world: WorldData, revision: number, snowMask: ReadonlySet<number>, outdoor: boolean, indoor: boolean} | null,
     glassBatchMesh: null as Mesh | null,
+    floorBatch: null as OutdoorInstanceBatch | null,
+    floorViews: new Map<BuildingView, {world?: WorldData, revision?: number, height: number, instances: OutdoorInstance[]}>(),
     fadeMaterial: null as PBRMaterial | null,
     parent: null as TransformNode | null,
     occlusionCheckIntervalFrames: 10,
@@ -1579,6 +1601,8 @@ export const BuildingManager = {
     initialize(scene: Scene, parent: TransformNode) {
         this.cachedBuildings.clear()
         this.groundContactTerrain = null
+        this.floorViews.clear()
+        this.floorBatch = null
         this.parent = parent
         // Offset building occlusion from entity and tree visibility passes.
         this.occlusionCheckFrame = 5
@@ -1934,6 +1958,33 @@ export const BuildingManager = {
         updateWorldInstanceBuffers(this.opaqueBatchMesh, matrices, uvData)
         groundContact.upload(this.opaqueBatchMesh, matrices.length)
         updateWorldInstanceBuffers(this.glassBatchMesh, glassMatrices, glassUvData)
+        this.updateFloorBatch()
+    },
+
+    updateFloorBatch() {
+        const world = WorldDataManager.worldDataMap.get(MyPlayer.worldId)
+        for (const [building, view] of this.floorViews) {
+            if (building.visible && this.buildings.get(building.data.id) === building
+                && view.world === world && view.revision === world?.renderRevision && view.height === building.mesh.position.y) continue
+            for (const instance of view.instances) instance.batch.remove(instance)
+            this.floorViews.delete(building)
+        }
+        for (const building of this.buildings.values()) {
+            if (!(building instanceof BuildingView) || building.data.tp !== HUMAN_HOUSE_TYPE
+                || !building.visible || this.floorViews.has(building)) continue
+            if (!this.floorBatch && this.parent) {
+                const {mesh} = createStonePathRenderer(this.parent.getScene(), this.parent, true)
+                mesh.alwaysSelectAsActiveMesh = true
+                Lights.registerSharedLightMesh(mesh)
+                mesh.onDisposeObservable.addOnce(() => Lights.unregisterSharedLightMesh(mesh))
+                this.floorBatch = new OutdoorInstanceBatch(mesh)
+            }
+            if (!this.floorBatch) continue
+            const instances = building.pavingInstances(this.floorBatch, world)
+            for (const instance of instances) this.floorBatch.add(instance)
+            this.floorViews.set(building, {world, revision: world?.renderRevision, height: building.mesh.position.y, instances})
+        }
+        this.floorBatch?.flush()
     },
 
     clearWorld() {
@@ -1952,8 +2003,6 @@ export const BuildingManager = {
         const HOUSE_WIDTH = cabin ? CABIN_WIDTH : HUMAN_HOUSE_WIDTH
         const DOOR_CENTER_X = (HOUSE_WIDTH - 1) / 2
         const WALL_THICKNESS = cabin ? CABIN_WALL_THICKNESS : 0.2
-        const FLOOR_OVERHANG = cabin ? 0 : 0.4
-        const floorMaterial = MaterialEnum1.ROCK1.uv
         type PartGroup = 'base' | 'wallMinX' | 'wallMaxX' | 'wallMinZ' | 'wallMaxZ' | 'roof' | 'door' | 'glass'
         const groups = {} as Record<PartGroup, {parts: Mesh[], uvData: number[]}>
         const blockParts = {} as Record<OpaquePartGroup, BuildingBlockPart[]>
@@ -2063,36 +2112,10 @@ export const BuildingManager = {
             )
         }
 
-        for (let x = 0; x < HOUSE_WIDTH; x++) {
+        if (cabin) for (let x = 0; x < HOUSE_WIDTH; x++) {
             for (let z = 0; z < HOUSE_DEPTH; z++) {
-                const minXEdge = x === 0
-                const maxXEdge = x === HOUSE_WIDTH - 1
-                const minZEdge = z === 0
-                const hasFrontFloor = x >= DOOR_CENTER_X - 1 && x <= DOOR_CENTER_X + 1
-                const maxZEdge = z === HOUSE_DEPTH - 1 && !hasFrontFloor
-                addBox(
-                    'buildingFloor',
-                    1 + (minXEdge ? FLOOR_OVERHANG : 0) + (maxXEdge ? FLOOR_OVERHANG : 0),
-                    FLOOR_HEIGHT,
-                    1 + (minZEdge ? FLOOR_OVERHANG : 0) + (maxZEdge ? FLOOR_OVERHANG : 0),
-                    x + (maxXEdge ? FLOOR_OVERHANG / 2 : 0) - (minXEdge ? FLOOR_OVERHANG / 2 : 0),
-                    FLOOR_HEIGHT / 2,
-                    z + (maxZEdge ? FLOOR_OVERHANG / 2 : 0) - (minZEdge ? FLOOR_OVERHANG / 2 : 0),
-                    floorMaterial,
-                )
+                addBox('buildingFloor', 1, FLOOR_HEIGHT, 1, x, FLOOR_HEIGHT / 2, z, MaterialEnum1.ROCK1.uv)
             }
-        }
-        if (!cabin) for (const x of [DOOR_CENTER_X - 1, DOOR_CENTER_X, DOOR_CENTER_X + 1]) {
-            addBox(
-                'buildingFrontFloor',
-                1,
-                FLOOR_HEIGHT,
-                1,
-                x,
-                FLOOR_HEIGHT / 2,
-                HOUSE_DEPTH,
-                floorMaterial,
-            )
         }
 
         if (!cabin) for (const x of [-0.5, HOUSE_WIDTH - 0.5]) {
@@ -2423,6 +2446,10 @@ export const BuildingManager = {
             }
         }
         Object.values(source).forEach((mesh) => mesh.dispose())
+        const paving: BuildingPrefabs['paving'] = []
+        if (!cabin) visitHouseFloorStones({left: -0.5, right: HOUSE_WIDTH - 0.5, front: -0.5, back: HOUSE_DEPTH - 0.5},
+            {left: DOOR_CENTER_X - 1.5, right: DOOR_CENTER_X + 1.5, back: HOUSE_DEPTH + 0.5}, FLOOR_OVERHANG, FLOOR_PAVING_ORIGIN,
+            stone => paving.push({stone, matrix: pavingStoneMatrix(stone, true)}))
         return {
             variants,
             roof: mergeParts(groups.roof.parts, groups.roof.uvData, 'humanHouseRoof5x3Prefab', this.fadeMaterial!),
@@ -2430,6 +2457,7 @@ export const BuildingManager = {
             glass: mergeParts(groups.glass.parts, groups.glass.uvData, 'humanHouseGlass5x3Prefab', Materials.blockMatTrans!),
             blocks: blockParts,
             glassPanes,
+            paving,
         }
     },
 }
