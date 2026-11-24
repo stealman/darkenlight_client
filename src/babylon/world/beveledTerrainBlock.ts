@@ -1,7 +1,7 @@
 import { Mesh, Scene, TransformNode, VertexData } from '@babylonjs/core'
 
-export const TerrainEdge = { West: 1, East: 2, North: 4, South: 8 } as const
-export const TerrainCorner = { NorthWest: 16, NorthEast: 32, SouthEast: 64, SouthWest: 128 } as const
+import { TerrainCorner, TerrainEdge } from './terrainRoofShape'
+export { TerrainCorner, TerrainEdge } from './terrainRoofShape'
 export const TerrainVerticalCorner = { NorthWest: 256, NorthEast: 512, SouthEast: 1024, SouthWest: 2048 } as const
 export const TERRAIN_BEVEL_WIDTH = 0.1
 export const TERRAIN_VERTICAL_BEVEL_WIDTH = 0.08

@@ -46,12 +46,13 @@ export const ViewportManager = {
         this.viewportHeight = canvasBounds?.height || window.innerHeight
     },
 
-    isPointInVisibleMatrix(x, z, tolerance = 0, worldY: number | null = null, positiveXInset = 0) {
+    isPointInVisibleMatrix(x, z, tolerance = 0, worldY: number | null = null, positiveXInset = 0,
+        center?: {x: number, y: number, z: number}) {
         if (!this.viewPortInitialized) {
             return false
         }
 
-        const myPos = MyPlayer.myChar.getPositionRounded()
+        const myPos = center ?? MyPlayer.myChar.getPositionRounded()
         const heightLayer = worldY == null
             ? 0
             : Math.min(this.downwardHeightLayers, Math.max(0, Math.round(myPos.y - worldY)))

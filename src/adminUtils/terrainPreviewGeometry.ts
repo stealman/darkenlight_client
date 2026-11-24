@@ -1,11 +1,14 @@
 import { Matrix, Vector2, Vector3 } from '@babylonjs/core'
 import type { Mesh } from '@babylonjs/core'
 import { Materials, PlaneEnum1, TerrainEnum1 } from '@/babylon/materials'
-import { terrainBevelMask, terrainVerticalBevelMask } from '@/babylon/world/beveledTerrain'
+import { terrainVerticalBevelMask } from '@/babylon/world/beveledTerrain'
 import {
     createBeveledTerrainVertexData, TERRAIN_BEVEL_DROP, TERRAIN_VERTICAL_BEVEL_WIDTH,
-    TerrainCorner, TerrainEdge, TerrainVerticalCorner,
+    TerrainVerticalCorner,
 } from '@/babylon/world/beveledTerrainBlock'
+import { isSnowRoof, outdoorSurfaceHeight, terrainRoofCornerSteps, terrainRoofShape, terrainSurfaceAtlasType as atlasType,
+    TERRAIN_ROOF_CORNERS as ROOF_CORNERS, TERRAIN_STEP_HEIGHT as MIN_TERRACE_STEP } from '@/babylon/world/terrainRoofShape'
+import type { TerrainRenderData } from '@/babylon/world/terrainRenderData'
 import { getTerrainHeightOffset, WATER_BLOCK_TYPE } from '@/babylon/world/terrainManager'
 import type { MapBlock } from '@/data/worldDataManager'
 import { createTerrainPreviewPlane, muddyDirtPatterns, terrainCoverPatterns, TERRAIN_ATLAS_TILES } from './terrainAtlasPreview'
@@ -14,22 +17,11 @@ import type { SubmitTerrainBatch, TerrainPreviewTriangle } from './terrainPrevie
 
 const WALL_DIRECTIONS = [[0, -1], [-1, 0], [0, 1], [1, 0]] as const
 const WALL_UNDERLAP = 0.60
-const MIN_TERRACE_STEP = 0.5
 const POND_FLOOR_DEPTH = 0.65
-const EDGE_BITS = [TerrainEdge.North, TerrainEdge.West, TerrainEdge.South, TerrainEdge.East] as const
-const EDGE_MASK = TerrainEdge.North | TerrainEdge.West | TerrainEdge.South | TerrainEdge.East
 const SNOW_DIRT = TerrainEnum1.TERRAIN_SNOW_MUDDY_DIRT.index
-const SNOW_DRY_DIRT = TerrainEnum1.TERRAIN_SNOW_DIRT.index
-const SNOW_GRASS = TerrainEnum1.TERRAIN_SNOW_GRASS.index
-const SNOW_WINTER_GRASS = TerrainEnum1.TERRAIN_SNOW_GRASS_WINTER.index
-const SNOW_ROCK = TerrainEnum1.TERRAIN_SNOW_ROCK.index
 const ROCK = TerrainEnum1.TERRAIN_ROCK.index
 const DIRT = TerrainEnum1.TERRAIN_DIRT.index
 const MUDDY_DIRT = TerrainEnum1.TERRAIN_MUDDY_DIRT.index
-const atlasType = (block: MapBlock) => {
-    const type = block.snowed ? block.type + 100 : block.type
-    return type === SNOW_DRY_DIRT || type === SNOW_GRASS || type === SNOW_WINTER_GRASS || type === SNOW_ROCK ? SNOW_DIRT : type
-}
 const WALL_ROTATIONS = WALL_DIRECTIONS.map((_, index) => Matrix.RotationYawPitchRoll(
     index * Math.PI / 2, -Math.PI / 2, 0,
 ))
@@ -41,12 +33,6 @@ const VERTICAL_CORNERS = [
     [-1, -1, TerrainVerticalCorner.NorthWest], [1, -1, TerrainVerticalCorner.NorthEast],
     [1, 1, TerrainVerticalCorner.SouthEast], [-1, 1, TerrainVerticalCorner.SouthWest],
 ] as const
-const ROOF_CORNERS = [
-    [-1, -1, TerrainCorner.NorthWest, TerrainEdge.North | TerrainEdge.West],
-    [1, -1, TerrainCorner.NorthEast, TerrainEdge.North | TerrainEdge.East],
-    [1, 1, TerrainCorner.SouthEast, TerrainEdge.South | TerrainEdge.East],
-    [-1, 1, TerrainCorner.SouthWest, TerrainEdge.South | TerrainEdge.West],
-] as const
 
 export type TerrainPreviewSurfaces = {
     stride: number
@@ -54,6 +40,7 @@ export type TerrainPreviewSurfaces = {
     originX: number
     originZ: number
     includeTile?: (x: number, z: number) => boolean
+    compiled?: TerrainRenderData
     atlasTops: ReadonlyMap<number, Map<number, number>>
     roofs: ReadonlyMap<number, TerrainPreviewTriangle[]>
     wetCorners: ReadonlyMap<number, number>
@@ -107,7 +94,8 @@ export function createTerrainPreviewGeometry(plane: Mesh, atlasTypes: readonly n
     const render = (map: MapBlock[][], takeWall?: (contact: TerrainWallContact, triangles: number) =>
         TerrainPreviewBatch | undefined, includeTile?: (x: number, z: number) => boolean,
                     originX = 0, originZ = 0, submit: SubmitTerrainBatch =
-                        (mesh, batch) => batch.apply(mesh), previewWater = true, localBoundaries = false): TerrainPreviewSurfaces => {
+                        (mesh, batch) => batch.apply(mesh), previewWater = true, localBoundaries = false,
+                    compiled?: TerrainRenderData): TerrainPreviewSurfaces => {
         const tops = new TerrainPreviewBatch()
         const legacyDeposits = new TerrainPreviewBatch()
         const walls = new TerrainPreviewBatch()
@@ -119,21 +107,18 @@ export function createTerrainPreviewGeometry(plane: Mesh, atlasTypes: readonly n
         const wetCorners = new Map<number, number>()
         const rockDeposits = new Map<number, number>()
         const cornerFloors = new Map<number, TerrainPreviewTriangle[]>()
-        const heights = map.map(row => row.map(block => block.type <= 0 ? undefined : block.type === WATER_BLOCK_TYPE
-            ? block.height - (!previewWater ? (block.deepWater ? 1 : 0.5) : POND_FLOOR_DEPTH)
+        const heights = map.map(row => row.map(block => !previewWater ? outdoorSurfaceHeight(block)
+            : block.type <= 0 ? undefined : block.type === WATER_BLOCK_TYPE
+                ? block.height - POND_FLOOR_DEPTH
             : localBoundaries ? block.height
                 : atlasType(block) === SNOW_DIRT ? block.totalHeight : block.height + getTerrainHeightOffset(block, false)))
-        const terrainTop = (x: number, z: number) => heights[x][z]!
-        const flatSnowRoofs = map.map(row => row.map(block => atlasType(block) === SNOW_DIRT))
-        const cornerSteps = heights.map((row, x) => row.map((top, z) => ROOF_CORNERS.map(([dx, dz]) => {
-            // Every tile sharing this corner at the same elevation computes the same height.
-            if (top === undefined || flatSnowRoofs[x][z]) return 0
-            const neighbors = [[x + dx, z], [x, z + dz], [x + dx, z + dz]]
-            const meetsSnow = neighbors.some(([nx, nz]) => flatSnowRoofs[nx]?.[nz] && Math.abs((heights[nx][nz] ?? -1) - top) < 1e-6)
-            if (meetsSnow) return 0
-            const drops = neighbors.some(([nx, nz]) => (heights[nx]?.[nz] ?? top) < top - 1e-6)
-            return drops ? -1 : 0
-        })))
+        const heightAt = (x: number, z: number) => heights[x]?.[z]
+        const snowAt = (x: number, z: number) => isSnowRoof(map[x]?.[z])
+        const shapes = compiled ? (x: number, z: number) => compiled.shapes[(x + originX) * compiled.depth + z + originZ]
+            : (x: number, z: number) => {
+                const top = heightAt(x, z)
+                return top === undefined ? 0 : terrainRoofShape(x, z, map[x][z], top, heightAt, snowAt)
+            }
         for (let x = 0; x < map.length; x++) {
             for (let z = 0; z < map[x].length; z++) {
                 const block = map[x][z]
@@ -156,26 +141,18 @@ export function createTerrainPreviewGeometry(plane: Mesh, atlasTypes: readonly n
                         const bottom = Math.min(...WALL_DIRECTIONS.map(([dx, dz]) => heights[x + dx]?.[z + dz] ?? -1))
                         for (let level = block.height; level > bottom + 1e-6; level--) {
                             const vertical = terrainVerticalBevelMask(map, x, z, level, snowMask)
-                            if (vertical) addCornerFloors(cornerFloors, heights, cornerSteps, x, z, level, vertical)
+                            if (vertical) addCornerFloors(cornerFloors, heights, shapes, x, z, level, vertical)
                         }
                     }
                     continue
                 }
-                const flatSnowRoof = flatSnowRoofs[x][z]
+                const flatSnowRoof = isSnowRoof(block)
                 const adjacent = WALL_DIRECTIONS.map(([dx, dz]) => heights[x + dx]?.[z + dz])
                 const lower = adjacent.map(height => height ?? -1)
-                let edges = flatSnowRoof ? 0 : terrainBevelMask(map, x, z, snowMask, terrainTop) & EDGE_MASK
-                adjacent.forEach((height, side) => {
-                    if (height !== undefined && top <= height + 1e-6) edges &= ~EDGE_BITS[side]
-                })
-                const steps = cornerSteps[x][z]
-                let bevel = edges
-                let wetMask = 0
-                ROOF_CORNERS.forEach(([dx, dz, corner, sides], index) => {
-                    if (steps[index] && !(edges & sides)) bevel |= corner
-                    if (!isRock && [heights[x + dx]?.[z], heights[x]?.[z + dz], heights[x + dx]?.[z + dz]]
-                        .some(height => height !== undefined && height > top + MIN_TERRACE_STEP)) wetMask |= 1 << index
-                })
+                const shape = shapes(x, z)
+                const steps = terrainRoofCornerSteps(shape)
+                const bevel = shape & 255
+                const wetMask = shape >> 12
                 const bottom = Math.min(...lower)
                 const tileRoof: TerrainPreviewTriangle[] = []
                 baseWallBatch.tile = tops.tile = legacyDeposits.tile = key
@@ -186,7 +163,7 @@ export function createTerrainPreviewGeometry(plane: Mesh, atlasTypes: readonly n
                     const base = level - 1
                     const vertical = terrainVerticalBevelMask(map, x, z, level, snowMask)
                     const mask = (layer === 0 ? bevel : 0) | vertical
-                    if (vertical) addCornerFloors(cornerFloors, heights, cornerSteps, x, z, level, vertical)
+                    if (vertical) addCornerFloors(cornerFloors, heights, shapes, x, z, level, vertical)
                     const dirtEdgesAt = (side: number) => {
                         const foot = adjacent[side]
                         if (foot === undefined || top - foot <= MIN_TERRACE_STEP) return undefined
@@ -294,14 +271,14 @@ export function createTerrainPreviewGeometry(plane: Mesh, atlasTypes: readonly n
         }
         submit(plane, tops, tops.attributes())
         submit(deposits, legacyDeposits, legacyDeposits.attributes())
-        return {stride, width: map.length, originX, originZ, includeTile,
+        return {stride, width: map.length, originX, originZ, includeTile, compiled,
             atlasTops, roofs, wetCorners, rockDeposits, cornerFloors, walls, dirtWalls, rockWalls}
     }
     return {render, deposits}
 }
 
 function addCornerFloors(
-    floors: Map<number, TerrainPreviewTriangle[]>, heights: (number | undefined)[][], cornerSteps: number[][][],
+    floors: Map<number, TerrainPreviewTriangle[]>, heights: (number | undefined)[][], shapes: (x: number, z: number) => number,
     x: number, z: number, level: number, vertical: number,
 ) {
     for (const [dx, dz, bit] of VERTICAL_CORNERS) {
@@ -319,7 +296,7 @@ function addCornerFloors(
         const heightAt = (tileX: number, tileZ: number, px: number, pz: number) => {
             const index = ROOF_CORNERS.findIndex(([sx, sz]) =>
                 sx === Math.sign(px - tileX) && sz === Math.sign(pz - tileZ))
-            return heights[tileX][tileZ]! + cornerSteps[tileX][tileZ][index] * TERRAIN_BEVEL_DROP
+            return heights[tileX][tileZ]! + terrainRoofCornerSteps(shapes(tileX, tileZ))[index] * TERRAIN_BEVEL_DROP
         }
         const y = heightAt(donorX, donorZ, cornerX, cornerZ)
         const edgeX = sideZ === floorHeight ? heightAt(x, z + dz, cornerX - dx, cornerZ) : y

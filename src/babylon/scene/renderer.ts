@@ -154,6 +154,8 @@ export const Renderer = {
         Lights.attachPersonalLight(MyPlayer.myModel!.node)
         MyStatusPanel.panel!.style.display = 'flex'
         await Tester.runTest()
+        const { WorldDataManager } = await import('@/data/worldDataManager')
+        await WorldDataManager.terrainRenderLoad?.ready
 
         // Build the first visible world while the loading overlay is still up.
         // One hidden render compiles the fixed outdoor light layout before the

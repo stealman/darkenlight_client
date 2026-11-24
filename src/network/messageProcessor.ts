@@ -371,6 +371,7 @@ export const MessageProcessor = {
         WeatherManager.setEnabled(environmentType !== 'indoor')
         if (worldChanged) {
             WorldDataManager.replaceWorldData(data.id, data.size)
+            WorldDataManager.prepareTerrainRenderData(data.id, environmentType !== 'indoor')
             TerrainManager.setSeaWaterLevel(data.seaWaterLevel ?? null)
         }
         if (worldChanged && MyPlayer.myChar && MyPlayer.worldName) {

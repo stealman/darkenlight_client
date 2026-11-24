@@ -117,16 +117,19 @@ export const TerrainManager = {
     },
 
     renderTerrain(renderTerrainStatics?: (terrainMatrices: Matrix[], terrainUvData: Vector2[]) => void, snowCoverMask: Set<number> = new Set()) {
-        const map = WorldDataManager.getBlockMap()
+        const world = WorldDataManager.worldDataMap.get(MyPlayer.worldId)!
+        const map = world.blockMap
         const center = MyPlayer.myChar.getPositionRounded()
         const outdoor = !Lights.indoor && !smoothTerrainExperiment && !!this.outdoorFactory
         if (outdoor && this.outdoorFactory) {
             this.outdoorTerrain ??= this.outdoorFactory(WorldRenderer.worldParentNode!)
-            this.outdoorTerrain.render(map, center, snowCoverMask)
+            const load = WorldDataManager.terrainRenderLoad
+            this.outdoorTerrain.render(map, center, snowCoverMask, world.renderRevision,
+                load?.worldId === MyPlayer.worldId ? load.data : undefined, world.originalBlocks)
         } else {
             this.outdoorTerrain?.setEnabled(false)
         }
-        this.renderTerrainArea(map, WorldDataManager.getPlaneBlockMap(), snowCoverMask, center, renderTerrainStatics, outdoor)
+        this.renderTerrainArea(map, world.planeBlockMap, snowCoverMask, center, renderTerrainStatics, outdoor)
         return outdoor
     },
 
@@ -134,7 +137,7 @@ export const TerrainManager = {
         blockMap: MapBlock[][],
         planeBlockMap: (MapBlock | false)[][],
         snowCoverMask: Set<number>,
-        viewportCenter?: {x: number, z: number},
+        viewportCenter?: {x: number, y: number, z: number},
         renderTerrainStatics?: (terrainMatrices: Matrix[], terrainUvData: Vector2[]) => void,
         outdoor = false,
     ) {
@@ -159,7 +162,7 @@ export const TerrainManager = {
                 const block = blockMap[x][z]
 
                 // Check if block is in visible matrix
-                if (viewportCenter && !ViewportManager.isPointInVisibleMatrix(x, z, 2, block.totalHeight)) {
+                if (viewportCenter && !ViewportManager.isPointInVisibleMatrix(x, z, 2, block.totalHeight, 0, viewportCenter)) {
                     continue
                 }
 

@@ -9,9 +9,9 @@ async function main() {
     let browser
     try {
         browser = await chromium.launch({channel: 'chrome', headless: true, args: ['--enable-unsafe-swiftshader']})
-        const page = await browser.newPage({viewport: {width: 1280, height: 800}})
+        const page = await browser.newPage({serviceWorkers: 'block', viewport: {width: 1280, height: 800}})
         page.setDefaultTimeout(90000)
-        const errors = [], terrain = [], png = [], sockets = []
+        const errors = [], terrain = [], renderAssets = [], png = [], sockets = []
         page.on('pageerror', error => errors.push(error.stack))
         page.on('console', message => {
             if (message.text().startsWith('[POI world=')) errors.push('Production rebuilt navigation: ' + message.text())
@@ -21,12 +21,16 @@ async function main() {
             if (/\/world\/assets\/terrain\/.*\.dlm/.test(request.url())) terrain.push(request.url())
             if (/\/world\/assets\/maps\/.*\.png/.test(request.url())) png.push(request.url())
         })
+        page.on('response', response => {
+            if (response.ok() && new URL(response.url()).pathname.endsWith('.dlr')) renderAssets.push(response.url())
+        })
         page.on('websocket', socket => sockets.push(socket.url()))
         await page.goto(`http://127.0.0.1:${server.httpServer.address().port}/`)
         await page.locator('#local-character-name').fill('PackagedHero')
         assert.equal(await page.locator('#local-character-gm').count(), 0)
         await page.locator('form button').click()
-        await page.getByRole('button', {name: 'FIGHTER', exact: true}).click()
+        await page.locator('.guest-character-class-label').filter({has: page.locator('.guest-character-creation-class--fighter')}).click()
+        await page.locator('.guest-character-creation-continue-action').click()
         const rendered = async () => {
             await page.locator('#renderCanvas.game-session-canvas--visible').waitFor()
             await page.evaluate(() => new Promise(resolve => {
@@ -56,10 +60,11 @@ async function main() {
         await page.evaluate(() => window.dispatchEvent(new Event('game:session-ended')))
         await page.locator('#local-character-name').waitFor()
         assert.equal(new Set(terrain).size, 2)
+        assert.ok(renderAssets.length > 0, 'The release client should fetch precomputed terrain')
         assert.deepEqual(png, [])
         assert.deepEqual(sockets, [])
         assert.deepEqual(errors, [])
-        console.log('PASS: production web build loads two binary terrains without map PNGs or WebSockets, renders, saves, logs out and restores a profile')
+        console.log('PASS: production web build loads binary maps and precomputed terrain, renders, saves, logs out and restores a profile without map PNGs or WebSockets')
     } finally {
         await browser?.close()
         await new Promise((resolve, reject) => server.httpServer.close(error => error ? reject(error) : resolve()))

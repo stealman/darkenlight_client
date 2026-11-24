@@ -1,5 +1,6 @@
 import {decodeCompiledMap, type CompiledMap} from '@game/runtime/compiledMap'
 import type {CompiledNavigation} from '@game/bot/poiNavigation'
+import {decodeTerrainRenderData, terrainRenderAssetName} from '@/babylon/world/terrainRenderData'
 
 export interface LocalWorldBundle {
     contentId: string
@@ -30,7 +31,18 @@ async function openWorldBundle(baseUrl: string) {
         }
         return bytes
     }
-    return {manifest, read}
+    return {base, manifest, read}
+}
+
+export async function loadLocalTerrainRenderData(baseUrl: string, worldId: number, width: number, depth: number) {
+    if (!import.meta.env.PROD) return undefined
+    const {base, manifest} = await openWorldBundle(baseUrl)
+    const asset = manifest.terrainMaps[worldId]
+    const mapHash = manifest.files[asset]
+    if (typeof mapHash !== 'string' || !/^[a-f0-9]{64}$/.test(mapHash)) throw new Error('Missing terrain render source')
+    const response = await fetch(new URL(terrainRenderAssetName(mapHash), base))
+    if (!response.ok) throw new Error('Missing compiled terrain render data')
+    return decodeTerrainRenderData(await response.arrayBuffer(), width, depth)
 }
 
 export async function loadCompiledWorldMap(baseUrl: string, worldId: number): Promise<CompiledMap> {

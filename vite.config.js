@@ -8,6 +8,7 @@ import { adminMonsterNamesPlugin } from './build/adminMonsterNames.cjs'
 import { adminEquipmentModifiersPlugin } from './build/adminEquipmentModifiers.cjs'
 import { collectUiImages } from './build/uiImages.cjs'
 import { localGamePlugin } from './build/localGame.cjs'
+import { terrainRenderAssets } from './build/terrainRenderAssets'
 
 function collectPngEntries(directory, publicPath) {
     return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -58,6 +59,7 @@ export default defineConfig(async ({ mode, command }) => {
     },
     plugins: [
         localGamePlugin(path.resolve(__dirname, '../../server/darkenlight_server'), gmAuthoring),
+        terrainRenderAssets(path.resolve(__dirname, 'public/world')),
         adminEquipmentModifiersPlugin(path.resolve(__dirname, 'public/admin-utils/equipment-modifiers.json')),
         adminMonsterNamesPlugin(path.resolve(__dirname, '../../server/darkenlight_server/src/monster/monstersCb.ts')),
         vue(),
@@ -101,7 +103,7 @@ export default defineConfig(async ({ mode, command }) => {
                 ],
             },
             injectManifest: {
-                globPatterns: ['**/*.{js,css,html,json,woff,woff2,ttf,eot}', 'world/**/*.{png,dlm}'],
+                globPatterns: ['**/*.{js,css,html,json,woff,woff2,ttf,eot}', 'world/**/*.{png,dlm,dlr}'],
                 globIgnores: ['assets/adminUtils-*', 'model-assets/**', 'models/**'],
                 maximumFileSizeToCacheInBytes: 12 * 1024 * 1024,
             },

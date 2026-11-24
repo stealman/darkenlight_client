@@ -1,32 +1,13 @@
-import { Matrix, Mesh, Texture, Vector2, Vector3 } from '@babylonjs/core'
+import { Matrix, Mesh, Texture, Vector2 } from '@babylonjs/core'
 import { Builder } from '@/babylon/builder'
 import { Materials } from '@/babylon/materials'
 import { addTerrainPreviewRoof, configureTerrainEdgeLighting, configureMuddyDirtWetness, configureRockDeposits, configureTerrainPreviewBatch, TerrainPreviewBatch } from './terrainPreviewBatch'
 import type { SubmitTerrainBatch, TerrainPreviewTriangle } from './terrainPreviewBatch'
 import type { TerrainPreviewSurfaces } from './terrainPreviewGeometry'
+import { muddyDirtLayout, muddyDirtPatterns, terrainCoverLayout, TERRAIN_ATLAS_TILES,
+    visitTerrainAtlasPlacements } from '@/babylon/world/terrainAtlasPlacement'
+export { muddyDirtPatterns, terrainCoverPatterns, TERRAIN_ATLAS_TILES } from '@/babylon/world/terrainAtlasPlacement'
 
-export const TERRAIN_ATLAS_TILES = 16
-export const TERRAIN_ATLAS_REGION_SIZE = 12
-// Origins use 128 px tiles from the top left of both square atlases.
-// Fractions leave padding between the source images for texture filtering.
-export const muddyDirtPatterns = [
-    {size: 3, origins: [[0, 0], [3.125, 0], [6.25, 0], [9.375, 0], [12.5, 0], [0, 3.125]]},
-    {size: 2, origins: [[3.125, 3.125], [5.25, 3.125], [7.375, 3.125], [9.5, 3.125], [11.625, 3.125]]},
-    {size: 1, origins: [[3.125, 5.25], [4.25, 5.25], [5.375, 5.25]]},
-]
-
-// Shared 128 px atlas layout, measured from the top left.
-export const terrainCoverPatterns = [
-    {size: 3, origins: [
-        [0.0625, 0.0625], [3.1875, 0.0625], [6.3125, 0.0625], [9.4375, 0.0625], [12.5625, 0.0625],
-        [0.0625, 3.1875], [3.1875, 3.1875], [6.3125, 3.1875],
-    ]},
-    {size: 2, origins: [
-        [9.4375, 3.1875], [11.5625, 3.1875], [13.6875, 3.1875],
-        [0.0625, 6.3125], [2.1875, 6.3125], [4.3125, 6.3125],
-    ]},
-    {size: 1, origins: [[6.4375, 6.3125], [7.5625, 6.3125], [8.6875, 6.3125], [9.8125, 6.3125], [10.9375, 6.3125]]},
-]
 
 type TerrainAtlas = {
     type: number
@@ -40,43 +21,6 @@ type TerrainAtlas = {
     patterns: ReadonlyArray<{size: number, origins: readonly (readonly number[])[]}>
 }
 
-type AtlasPlacement = {size: number, height: number, variant: number, turn: number}
-
-function firstAvailableChoice(start: number, count: number, used: ReadonlySet<number>) {
-    for (let offset = 0; offset < count; offset++) {
-        const choice = (start + offset) % count
-        if (!used.has(choice)) return choice
-    }
-    return start
-}
-
-function variedPatchPlacement(placed: ReadonlyMap<number, AtlasPlacement>, stride: number, width: number,
-                              x: number, z: number, size: number, height: number, variants: number, hash: number,
-                              sameRegion: (x: number, z: number, nx: number, nz: number) => boolean) {
-    // Mix the grid hash before choosing a variant and a quarter-turn from different bits.
-    const mixed = Math.imul(hash ^ (hash >>> 16), 0x7feb352d)
-    const seed = (mixed ^ (mixed >>> 15)) >>> 0
-    const usedVariants = new Set<number>()
-    const usedTurns = new Set<number>()
-    const visit = (nx: number, nz: number) => {
-        if (nx < 0 || nz < 0 || nx >= width || nz >= stride || !sameRegion(x, z, nx, nz)) return
-        const neighbor = placed.get(nx * stride + nz)
-        if (neighbor?.height !== height) return
-        if (neighbor.size === size) usedVariants.add(neighbor.variant)
-        usedTurns.add(neighbor.turn)
-    }
-    for (let i = 0; i < size; i++) {
-        visit(x - 1, z + i)
-        visit(x + size, z + i)
-        visit(x + i, z - 1)
-        visit(x + i, z + size)
-    }
-    return {
-        size, height,
-        variant: firstAvailableChoice((seed >>> 2) % variants, variants, usedVariants),
-        turn: firstAvailableChoice(seed & 3, 4, usedTurns),
-    }
-}
 
 export type TerrainAtlasTileFilter = (
     matrix: Matrix, uv: Vector2, x: number, z: number, roof: readonly TerrainPreviewTriangle[] | undefined, wetCorners: number,
@@ -98,63 +42,43 @@ export function createTerrainAtlasPreview(plane: Mesh, name: string, atlas: Terr
     configureTerrainPreviewBatch(mesh, material)
     const {roundDirtEdges = false, roundRockTop = false, wetDirt = false, showRockDeposits = false} = atlas
     const roundEdges = roundDirtEdges || roundRockTop
+    const layout = atlas.patterns === muddyDirtPatterns ? muddyDirtLayout : terrainCoverLayout
     if (roundEdges) configureTerrainEdgeLighting(material, undefined, roundRockTop)
     if (wetDirt) configureMuddyDirtWetness(material, 'solid')
     if (showRockDeposits) configureRockDeposits(material)
 
     const render = ({atlasTops, stride, width, originX, originZ, includeTile, roofs, wetCorners,
-                        rockDeposits, cornerFloors}: TerrainPreviewSurfaces, takeTile?: TerrainAtlasTileFilter,
+                        rockDeposits, cornerFloors, compiled}: TerrainPreviewSurfaces, takeTile?: TerrainAtlasTileFilter,
                     batch = new TerrainPreviewBatch(), submit?: SubmitTerrainBatch) => {
         const remaining = atlasTops.get(atlas.type)!
-        const placed = atlas.varyAdjacentPatches ? new Map<number, AtlasPlacement>() : undefined
-        const sameRegion = (x: number, z: number, nx: number, nz: number) => !includeTile ||
-            (Math.floor((x + originX) / TERRAIN_ATLAS_REGION_SIZE) === Math.floor((nx + originX) / TERRAIN_ATLAS_REGION_SIZE)
-                && Math.floor((z + originZ) / TERRAIN_ATLAS_REGION_SIZE) === Math.floor((nz + originZ) / TERRAIN_ATLAS_REGION_SIZE))
-        for (const {size, origins} of atlas.patterns) {
-            const center = (size - 1) / 2
-            for (const [key, y] of remaining) {
-                const x = Math.floor(key / stride)
-                const z = key % stride
-                if (x + size > width || z + size > stride || !sameRegion(x, z, x + size - 1, z + size - 1)) continue
-                let fits = true
-                for (let dx = 0; dx < size && fits; dx++) {
-                    for (let dz = 0; dz < size && fits; dz++) {
-                        fits = remaining.get(key + dx * stride + dz) === y
-                    }
-                }
-                if (!fits) continue
-
-                // Stable choices keep textures in place when the preview is refreshed.
-                const hash = Math.imul(x + originX + 1, 73856093) ^ Math.imul(z + originZ + 1, 19349663)
-                const appearance = placed && variedPatchPlacement(placed, stride, width, x, z, size, y, origins.length, hash, sameRegion)
-                const [atlasX, atlasTop] = origins[appearance?.variant ?? (hash >>> 5) % origins.length]
-                const rotation = Matrix.RotationY((appearance?.turn ?? ((hash >>> 12) & 3)) * Math.PI / 2)
-                for (let dx = 0; dx < size; dx++) {
-                    for (let dz = 0; dz < size; dz++) {
-                        remaining.delete(key + dx * stride + dz)
-                        const offset = Vector3.TransformNormal(new Vector3(dx - center, 0, dz - center), rotation)
-                        const tileX = Math.round(x + center + offset.x)
-                        const tileZ = Math.round(z + center + offset.z)
-                        const matrix = rotation.clone()
-                        matrix.setTranslationFromFloats(tileX, y, tileZ)
-                        const uv = new Vector2(atlasX + dx, TERRAIN_ATLAS_TILES - atlasTop - size + dz)
-                        const tileKey = tileX * stride + tileZ
-                        if (appearance) placed!.set(tileKey, appearance)
-                        if (includeTile && !includeTile(tileX, tileZ)) continue
-                        const floor = cornerFloors.get(tileKey)
-                        const roof = roofs.get(tileKey)
-                        const footMask = wetCorners.get(tileKey) ?? 0
-                        const wetMask = wetDirt ? footMask : 0
-                        const depositKind = showRockDeposits ? rockDeposits.get(tileKey) ?? 0 : 0
-                        const options = {roundDirtEdges: roundEdges, wetCorners: wetMask, depositKind}
-                        // The corner extension and its roof must use the same material blend.
-                        if (!depositKind && takeTile?.(matrix, uv, tileX, tileZ, roof, footMask, floor)) continue
-                        batch.tile = tileKey
-                        if (floor) addTerrainPreviewRoof(batch, matrix, uv, floor, {...options, mirrorAtTileEdge: true})
-                        addTerrainPreviewRoof(batch, matrix, uv, roof, options)
-                    }
-                }
+        const submitTile = (tileKey: number, tileX: number, tileZ: number, y: number, code: number) => {
+            if (includeTile && !includeTile(tileX, tileZ)) return
+            const turn = code & 3
+            const matrix = Matrix.RotationY(turn * Math.PI / 2)
+            matrix.setTranslationFromFloats(tileX, y, tileZ)
+            const [u, v] = layout.cells[code >> 2]
+            const uv = new Vector2(u, v)
+            const floor = cornerFloors.get(tileKey)
+            const roof = roofs.get(tileKey)
+            const footMask = wetCorners.get(tileKey) ?? 0
+            const wetMask = wetDirt ? footMask : 0
+            const depositKind = showRockDeposits ? rockDeposits.get(tileKey) ?? 0 : 0
+            const options = {roundDirtEdges: roundEdges, wetCorners: wetMask, depositKind}
+            // The corner extension and its roof must use the same material blend.
+            if (!depositKind && takeTile?.(matrix, uv, tileX, tileZ, roof, footMask, floor)) return
+            batch.tile = tileKey
+            if (floor) addTerrainPreviewRoof(batch, matrix, uv, floor, {...options, mirrorAtTileEdge: true})
+            addTerrainPreviewRoof(batch, matrix, uv, roof, options)
+        }
+        if (compiled) {
+            for (const [key, height] of remaining) {
+                const x = Math.floor(key / stride), z = key % stride
+                if (!includeTile?.(x, z)) continue
+                submitTile(key, x, z, height, compiled.atlas[(x + originX) * compiled.depth + z + originZ])
             }
+        } else {
+            visitTerrainAtlasPlacements(remaining, stride, width, originX, originZ, layout, !!atlas.varyAdjacentPatches,
+                !!includeTile, submitTile)
         }
 
         if (submit) submit(mesh, batch, batch.attributes(roundEdges, wetDirt, showRockDeposits))

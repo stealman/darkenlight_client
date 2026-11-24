@@ -1,53 +1,48 @@
 import { BoundingInfo, TransformNode, Vector3 } from '@babylonjs/core'
-import type { Matrix, Mesh, Vector2 } from '@babylonjs/core'
 import { MapBlock } from '@/data/worldDataManager'
 import { Lights } from '@/babylon/scene/lights'
 import { ViewportManager } from '@/utils/viewport'
 import { Settings } from '@/settings/settings'
-import { TERRAIN_ATLAS_REGION_SIZE } from '@/adminUtils/terrainAtlasPreview'
+import { TERRAIN_ATLAS_REGION_SIZE } from './terrainAtlasPlacement'
+import { TERRAIN_RENDER_BORDER } from './terrainRenderData'
+import type { TerrainRenderData } from './terrainRenderData'
 import { createTerrainSurfaceRenderer } from '@/adminUtils/terrainSurfaceRenderer'
 import { terrainWithoutSnow } from '@/adminUtils/terrainLocalTransitions'
-import type { TerrainInstanceAttribute } from '@/adminUtils/terrainPreviewBatch'
 import { createTerrainFoliageRenderer } from '@/adminUtils/terrainFoliageRenderer'
 import { BuildingManager } from './buildings/buildingManager'
 import { WATER_BLOCK_TYPE } from './terrainManager'
-import { updateWorldInstanceBuffers } from './worldInstanceBuffers'
+import { OutdoorInstanceBatch } from './outdoorInstanceBatch'
+import type { OutdoorInstance } from './outdoorInstanceBatch'
 
 const REGION_SIZE = TERRAIN_ATLAS_REGION_SIZE
-const BORDER = 5
 
-type Batch = {
-    mesh: Mesh
-    matrices: Matrix[]
-    uv: Vector2[]
-    attributes: {kind: string, data: Float32Array}[]
-    capacity: number
-}
-type Face = {batch: Batch, matrix: Matrix, uv: Vector2, attributes: TerrainInstanceAttribute[], index: number}
-type FoliageBatch = Pick<Batch, 'mesh' | 'matrices' | 'uv'>
-type FoliageInstance = {batch: FoliageBatch, matrix: Matrix, uv: Vector2}
+type VisibleTile = {seen: number, faces?: OutdoorInstance[], foliage?: OutdoorInstance[]}
 type Region = {
     blocks: MapBlock[]
     hiddenSnow: number[]
-    faces: (Face[] | undefined)[]
+    faces: (OutdoorInstance[] | undefined)[]
     used: number
     map: MapBlock[][]
     left: number
     top: number
     visible: number[]
-    foliage?: (FoliageInstance[] | undefined)[]
+    foliage?: (OutdoorInstance[] | undefined)[]
     buildingKey?: string
+    buildingRevision?: number
+    revision?: number
+    snowRevision: number
 }
 
-function growAttributes(batch: Batch, attributes: TerrainInstanceAttribute[], required: number) {
-    batch.capacity = Math.max(32, required, batch.capacity * 2)
-    attributes.forEach(({kind, stride}, index) => {
-        const previous = batch.attributes[index]
-        const data = new Float32Array(batch.capacity * stride)
-        if (previous) data.set(previous.data)
-        batch.attributes[index] = {kind, data}
-        batch.mesh.thinInstanceSetBuffer(kind, data, stride, false)
-    })
+function replaceInstances(previous?: OutdoorInstance[], next?: OutdoorInstance[]) {
+    if (previous === next) return
+    if (previous) for (const instance of previous) instance.batch.remove(instance)
+    if (next) for (const instance of next) instance.batch.add(instance)
+}
+
+function sameSnowMask(previous: ReadonlySet<number>, next: ReadonlySet<number>) {
+    if (previous.size !== next.size) return false
+    for (const tile of next) if (!previous.has(tile)) return false
+    return true
 }
 
 export function createOutdoorTerrain(parent: TransformNode) {
@@ -58,68 +53,55 @@ export function createOutdoorTerrain(parent: TransformNode) {
         const {minimum, maximum} = mesh.getBoundingInfo()
         mesh.rawBoundingInfo = new BoundingInfo(minimum, maximum)
     }
-    const batches = new Map<Mesh, Batch>(renderer.meshes.map(mesh => [mesh, {
-        mesh, matrices: [], uv: [], attributes: [], capacity: 0,
-    } satisfies Batch]))
+    const batches = new Map(renderer.meshes.map(mesh => [mesh, new OutdoorInstanceBatch(mesh)]))
     const foliage = createTerrainFoliageRenderer(parent.getScene(), terrain, Settings.isDetalLevelHigh())
     for (const mesh of foliage.meshes) {
         mesh.receiveShadows = Settings.isShadowsEnabled()
         Lights.registerSharedLightMesh(mesh)
         mesh.onDisposeObservable.addOnce(() => Lights.unregisterSharedLightMesh(mesh))
     }
-    const foliageBatches = new Map(foliage.meshes.map(mesh => [mesh, {mesh, matrices: [], uv: []} as FoliageBatch]))
-    const minimumFoliage = new Vector3()
+    const foliageBatches = new Map(foliage.meshes.map(mesh => [mesh, new OutdoorInstanceBatch(mesh)]))
+    const visibleTiles = new Map<number, VisibleTile>()
+    const minimum = new Vector3()
+    const maximum = new Vector3()
     const maximumFoliage = new Vector3()
-    const visibleRegions: Region[] = []
     let foliageJobs: (() => void)[] = []
-    const uploadFoliage = () => {
-        for (const batch of foliageBatches.values()) {
-            batch.matrices.length = 0
-            batch.uv.length = 0
-        }
-        for (const region of visibleRegions) {
-            const foliage = region.foliage
-            if (!foliage) continue
-            for (const index of region.visible) {
-                const instances = foliage[index]
-                if (!instances) continue
-                for (const {batch, matrix, uv} of instances) {
-                    batch.matrices.push(matrix)
-                    batch.uv.push(uv)
-                }
-            }
-        }
-        for (const {mesh, matrices, uv} of foliageBatches.values()) {
-            updateWorldInstanceBuffers(mesh, matrices, uv, false)
-            if (matrices.length) mesh.getBoundingInfo().reConstruct(minimumFoliage, maximumFoliage, mesh.getWorldMatrix())
-            mesh.setEnabled(matrices.length > 0)
+    const flushBatches = (list: Iterable<OutdoorInstanceBatch>, upper: Vector3) => {
+        for (const batch of list) {
+            batch.flush()
+            const mesh = batch.mesh
+            if (mesh.thinInstanceCount) mesh.getBoundingInfo().reConstruct(minimum, upper, mesh.getWorldMatrix())
         }
     }
     const observer = terrain.getScene().onBeforeRenderObservable.add(() => {
         if (!terrain.isEnabled() || !foliageJobs.length) return
         foliageJobs.shift()!()
-        uploadFoliage()
+        flushBatches(foliageBatches.values(), maximumFoliage)
     })
     terrain.onDisposeObservable.addOnce(() => terrain.getScene().onBeforeRenderObservable.remove(observer))
     const regions = new Map<number, Region>()
     let currentMap: MapBlock[][] | undefined
     let generation = 0
+    let previousSnow = new Set<number>()
+    let snowRevision = 0
+    let previousBuildings = ''
+    let buildingRevision = 0
 
     return {
         setEnabled(enabled: boolean) { terrain.setEnabled(enabled) },
-        render(blockMap: MapBlock[][], center: {x: number, z: number}, snowCoverMask: ReadonlySet<number>) {
+        render(blockMap: MapBlock[][], center: {x: number, y: number, z: number}, snowCoverMask: ReadonlySet<number>,
+            revision?: number, compiled?: TerrainRenderData, originalBlocks?: WeakSet<MapBlock>) {
             if (currentMap !== blockMap) {
                 currentMap = blockMap
                 regions.clear()
             }
+            if (!sameSnowMask(previousSnow, snowCoverMask)) {
+                previousSnow = new Set(snowCoverMask)
+                snowRevision++
+            }
             terrain.setEnabled(true)
             foliageJobs = []
-            visibleRegions.length = 0
             generation++
-            for (const batch of batches.values()) {
-                batch.matrices.length = 0
-                batch.uv.length = 0
-            }
             const depth = blockMap[0]?.length ?? 0
             const minX = Math.max(0, center.x + ViewportManager.minX)
             const minZ = Math.max(0, center.z + ViewportManager.minZ)
@@ -129,40 +111,60 @@ export function createOutdoorTerrain(parent: TransformNode) {
             const firstZ = Math.floor(minZ / REGION_SIZE) * REGION_SIZE
             let maxHeight = 0
             const isVisible = (x: number, z: number) =>
-                ViewportManager.isPointInVisibleMatrix(x, z, 2, blockMap[x][z].totalHeight)
+                ViewportManager.isPointInVisibleMatrix(x, z, 2, blockMap[x][z].totalHeight, 0, center)
             const containsSnow = (x: number, z: number, block: MapBlock) =>
                 block.snowed && snowCoverMask.has(x * blockMap.length + z)
             const buildings = Array.from(BuildingManager.buildings.values(), building => ({
                 minX: building.data.x, minZ: building.data.z,
                 maxX: building.data.x + building.getWidth(), maxZ: building.data.z + building.getDepth(),
             }))
+            const buildingsKey = JSON.stringify(buildings)
+            if (previousBuildings !== buildingsKey) {
+                previousBuildings = buildingsKey
+                buildingRevision++
+            }
 
             const prepareRegion = (x: number, z: number) => {
                 const key = x * depth + z
-                const left = Math.max(0, x - BORDER), top = Math.max(0, z - BORDER)
-                const right = Math.min(blockMap.length, x + REGION_SIZE + BORDER)
-                const bottom = Math.min(depth, z + REGION_SIZE + BORDER)
                 const previous = regions.get(key)
-                let dirty = !previous
-                let index = 0
-                let hiddenCount = 0
-                for (let tx = left; tx < right; tx++) {
-                    const row = blockMap[tx]
-                    for (let tz = top; tz < bottom; tz++, index++) {
-                        const block = row[tz]
-                        if (previous?.blocks[index] !== block) dirty = true
-                        if (containsSnow(tx, tz, block) && previous?.hiddenSnow[hiddenCount++] !== index) dirty = true
-                    }
-                }
-                if (previous && !dirty && previous.hiddenSnow.length === hiddenCount) {
+                if (previous && revision !== undefined && previous.revision === revision && previous.snowRevision === snowRevision) {
                     previous.used = generation
                     return previous
                 }
-                const region: Region = {blocks: [], hiddenSnow: [], faces: [], used: generation, map: [], left, top, visible: []}
+                const left = Math.max(0, x - TERRAIN_RENDER_BORDER), top = Math.max(0, z - TERRAIN_RENDER_BORDER)
+                const right = Math.min(blockMap.length, x + REGION_SIZE + TERRAIN_RENDER_BORDER)
+                const bottom = Math.min(depth, z + REGION_SIZE + TERRAIN_RENDER_BORDER)
+                if (previous) {
+                    let dirty = false
+                    let index = 0
+                    let hiddenCount = 0
+                    scan: for (let tx = left; tx < right; tx++) {
+                        const row = blockMap[tx]
+                        for (let tz = top; tz < bottom; tz++, index++) {
+                            const block = row[tz]
+                            if (previous.blocks[index] !== block
+                                || (containsSnow(tx, tz, block) && previous.hiddenSnow[hiddenCount++] !== index)) {
+                                dirty = true
+                                break scan
+                            }
+                        }
+                    }
+                    if (!dirty && previous.hiddenSnow.length === hiddenCount) {
+                        previous.used = generation
+                        previous.revision = revision
+                        previous.snowRevision = snowRevision
+                        return previous
+                    }
+                }
+                const region: Region = {blocks: [], hiddenSnow: [], faces: [], used: generation, map: [], left, top, visible: [],
+                    revision, snowRevision}
                 const exposed = new Map<MapBlock, MapBlock>()
+                let useCompiled = !!compiled && compiled.width === blockMap.length && compiled.depth === depth
                 const map = region.map = blockMap.slice(left, right).map((row, dx) => row.slice(top, bottom).map((block, dz) => {
                     const index = region.blocks.push(block) - 1
+                    if (useCompiled && !originalBlocks?.has(block)) useCompiled = false
                     if (!containsSnow(left + dx, top + dz, block)) return block
+                    useCompiled = false
                     region.hiddenSnow.push(index)
                     let bare = exposed.get(block)
                     if (!bare) {
@@ -171,11 +173,14 @@ export function createOutdoorTerrain(parent: TransformNode) {
                     }
                     return bare
                 }))
+                const baked = useCompiled ? compiled : undefined
                 renderer.render(map, {
                     includeTile: (tx, tz) => tx + left >= x && tx + left < x + REGION_SIZE
                         && tz + top >= z && tz + top < z + REGION_SIZE,
                     originX: left,
                     originZ: top,
+                    compiled: baked,
+                    compiledRegion: baked ? {x, z} : undefined,
                     submit(mesh, source, attributes) {
                         const batch = batches.get(mesh)!
                         for (const {kind, stride, values} of attributes) {
@@ -192,7 +197,7 @@ export function createOutdoorTerrain(parent: TransformNode) {
                             const translation = matrix.getTranslation()
                             matrix.setTranslationFromFloats(translation.x + left, translation.y, translation.z + top)
                             const faces = region.faces[index] ??= []
-                            faces.push({batch, matrix, uv, attributes, index: sourceIndex})
+                            faces.push({batch, matrix, uv, attributes, index: sourceIndex, slot: -1})
                         })
                     },
                 })
@@ -202,11 +207,12 @@ export function createOutdoorTerrain(parent: TransformNode) {
 
             const prepareFoliage = (region: Region, x: number, z: number) => {
                 region.visible.length = 0
-                visibleRegions.push(region)
+                if (region.foliage && region.buildingRevision === buildingRevision) return
                 const {left, top, map} = region
                 const nearby = buildings.filter(bounds => bounds.maxX >= left && bounds.maxZ >= top
                     && bounds.minX < left + map.length && bounds.minZ < top + map[0].length)
                 const buildingKey = JSON.stringify(nearby)
+                region.buildingRevision = buildingRevision
                 if (region.foliage && region.buildingKey === buildingKey) return
                 // Keep scattering out of the movement update. A new region is prepared in one frame.
                 region.foliage = undefined
@@ -250,12 +256,18 @@ export function createOutdoorTerrain(parent: TransformNode) {
                                 const index = (Math.round(tx) + left - x) * REGION_SIZE + Math.round(tz) + top - z
                                 matrix.setTranslationFromFloats(tx + left, y, tz + top)
                                 const instances = placed[index] ??= []
-                                instances.push({batch, matrix, uv: uv[i]})
+                                instances.push({batch, matrix, uv: uv[i], slot: -1})
                             }
                         },
                     })
                     region.foliage = placed
                     region.buildingKey = buildingKey
+                    for (const index of region.visible) {
+                        const key = (x + Math.floor(index / REGION_SIZE)) * depth + z + index % REGION_SIZE
+                        const visible = visibleTiles.get(key)!
+                        replaceInstances(visible.foliage, placed[index])
+                        visible.foliage = placed[index]
+                    }
                 })
             }
 
@@ -274,20 +286,19 @@ export function createOutdoorTerrain(parent: TransformNode) {
                             }
                             const tile = (tx - x) * REGION_SIZE + tz - z
                             region.visible.push(tile)
-                            const faces = region.faces[tile]
-                            if (!faces) continue
-                            for (const {batch, matrix, uv, attributes, index} of faces) {
-                                const dst = batch.matrices.length
-                                if (dst >= batch.capacity) growAttributes(batch, attributes, dst + 1)
-                                batch.matrices.push(matrix)
-                                batch.uv.push(uv)
-                                for (let i = 0; i < attributes.length; i++) {
-                                    const {stride, values} = attributes[i]
-                                    const {data} = batch.attributes[i]
-                                    const from = index * stride, to = dst * stride
-                                    for (let j = 0; j < stride; j++) data[to + j] = values[from + j]
-                                }
+                            const key = tx * depth + tz
+                            let visible = visibleTiles.get(key)
+                            if (!visible) {
+                                visible = {seen: generation}
+                                visibleTiles.set(key, visible)
                             }
+                            const faces = region.faces[tile]
+                            const foliage = region.foliage?.[tile]
+                            replaceInstances(visible.faces, faces)
+                            replaceInstances(visible.foliage, foliage)
+                            visible.seen = generation
+                            visible.faces = faces
+                            visible.foliage = foliage
                         }
                     }
                 }
@@ -295,22 +306,19 @@ export function createOutdoorTerrain(parent: TransformNode) {
             for (const [key, region] of regions) {
                 if (region.used < generation - 12) regions.delete(key)
             }
+            for (const [key, visible] of visibleTiles) {
+                if (visible.seen === generation) continue
+                replaceInstances(visible.faces)
+                replaceInstances(visible.foliage)
+                visibleTiles.delete(key)
+            }
             // Tile geometry fits inside its cell and its cliff only extends downward.
             // Reuse that envelope rather than transforming eight corners per thin instance.
-            const minimum = new Vector3(minX - 1, -2, minZ - 1)
-            const maximum = new Vector3(maxX + 1, maxHeight + 1, maxZ + 1)
-            minimumFoliage.copyFrom(minimum)
+            minimum.set(minX - 1, -2, minZ - 1)
+            maximum.set(maxX + 1, maxHeight + 1, maxZ + 1)
             maximumFoliage.copyFrom(maximum).y += 1
-            uploadFoliage()
-            for (const batch of batches.values()) {
-                const count = batch.matrices.length
-                updateWorldInstanceBuffers(batch.mesh, batch.matrices, batch.uv, false)
-                if (count) {
-                    batch.mesh.getBoundingInfo().reConstruct(minimum, maximum, batch.mesh.getWorldMatrix())
-                    for (const {kind} of batch.attributes) batch.mesh.thinInstanceBufferUpdated(kind)
-                }
-                batch.mesh.setEnabled(count > 0)
-            }
+            flushBatches(foliageBatches.values(), maximumFoliage)
+            flushBatches(batches.values(), maximum)
         },
     }
 }

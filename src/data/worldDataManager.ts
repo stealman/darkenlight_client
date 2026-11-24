@@ -5,19 +5,35 @@ import { TreeManager } from '@/babylon/world/treeManager'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { StaticsManager } from '@/babylon/world/statics/staticsManager'
 import { MyPlayer } from '@/data/myPlayer'
-import {localWorldMaps} from '@/local/worldBundle'
+import {loadLocalTerrainRenderData, localWorldMaps} from '@/local/worldBundle'
+import type {TerrainRenderData} from '@/babylon/world/terrainRenderData'
 import {TileFlags, type CompiledMap, type CompiledTile} from '@game/runtime/compiledMap'
+
+type TerrainRenderLoad = {worldId: number, ready: Promise<void>, data?: TerrainRenderData}
 
 export const WorldDataManager = {
     MAP_CHUNK_SIZE: 128 as number,
     worldDataMap: new Map<number, WorldData>(),
+    terrainRenderLoad: undefined as TerrainRenderLoad | undefined,
 
     reset() {
         this.worldDataMap.clear()
+        this.terrainRenderLoad = undefined
     },
 
     replaceWorldData(worldId: number, size: number) {
         this.worldDataMap.set(worldId, new WorldData(size, localWorldMaps.get(worldId)))
+    },
+
+    prepareTerrainRenderData(worldId: number, outdoor: boolean) {
+        this.terrainRenderLoad = undefined
+        const map = localWorldMaps.get(worldId)
+        if (!outdoor || !map) return
+        const loading: TerrainRenderLoad = {worldId, ready: Promise.resolve()}
+        this.terrainRenderLoad = loading
+        loading.ready = loadLocalTerrainRenderData(document.baseURI, worldId, map.width, map.depth).then(data => {
+            if (this.terrainRenderLoad === loading) loading.data = data
+        }).catch(error => { console.warn('Could not load precomputed terrain for world', worldId, error) })
     },
 
     fetchWorldDataIfNeeded() {
@@ -122,12 +138,15 @@ export class WorldData {
     blockMap: MapBlock[][] = [] as MapBlock[][]
     planeBlockMap: (MapBlock | false)[][] = []
     loadedChunkCoords: Vector3[] = []
+    renderRevision = 0
+    readonly originalBlocks?: WeakSet<MapBlock>
 
     constructor(size: number, compiled?: CompiledMap) {
         this.worldSize = size
         if (compiled) {
             if (compiled.width < size || compiled.depth < size) throw new Error('Compiled terrain is smaller than its world')
             const palette = compiled.palette.map(MapBlock.fromCompiledTile)
+            this.originalBlocks = new WeakSet(palette)
             this.blockMap = Array.from({length: size}, (_, x) =>
                 Array.from({length: size}, (_, z) => palette[compiled.indices[x * compiled.depth + z]]))
             this.planeBlockMap = this.blockMap.map((row, x) => row.map((block, z) =>
@@ -140,6 +159,7 @@ export class WorldData {
     }
 
     consumeMapChunk(mapChunk) {
+        this.renderRevision++
         for (let i = 0; i < mapChunk.blockMap.length; i++) {
             for (let j = 0; j < mapChunk.blockMap[i].length; j++) {
                 const data = (mapChunk.blockMap[i][j] as string).split(":")
@@ -169,6 +189,7 @@ export class WorldData {
     }
 
     consumeMapUpdate(changes) {
+        this.renderRevision++
         for (const change of changes) {
             const data = change.data.split(":")
             // Keep live map updates identical to the initial chunk load. In

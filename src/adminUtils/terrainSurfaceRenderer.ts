@@ -1,7 +1,9 @@
 import type { Mesh, Scene, TransformNode, Vector3 } from '@babylonjs/core'
 import type { PBRCustomMaterial } from '@babylonjs/materials'
 import type { MapBlock } from '@/data/worldDataManager'
-import { findTerrainTransitions, terrainSurface } from './terrainLocalTransitions'
+import { visitBakedTerrainTransitions } from '@/babylon/world/terrainRenderData'
+import type { TerrainRenderData } from '@/babylon/world/terrainRenderData'
+import { findTerrainTransitions, hasTerrainTransition, terrainSurface } from '@/babylon/world/terrainTransitionField'
 import { Builder } from '@/babylon/builder'
 import { TerrainEnum1 } from '@/babylon/materials'
 import { Lights } from '@/babylon/scene/lights'
@@ -77,6 +79,8 @@ type TerrainRenderOptions = {
     originX?: number
     originZ?: number
     submit?: SubmitTerrainBatch
+    compiled?: TerrainRenderData
+    compiledRegion?: {x: number, z: number}
 }
 
 type TerrainDemo = {map: MapBlock[][], center: number, boundaries: number[], isBank: (x: number, z: number) => boolean}
@@ -186,10 +190,11 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
     const render = (map: MapBlock[][], options: TerrainRenderOptions) => {
         const {transitionTiles, snow = false, snowPartner = 0, snowOnRock = false, rockPartner = 0, dirtPartner = 0,
             shoreSurface = 0, grassType = WINTER_GRASS, snowRockOnSoil = false, localBoundaries = true,
-            includeTile, originX = 0, originZ = 0, submit} = options
+            includeTile, originX = 0, originZ = 0, submit, compiled, compiledRegion} = options
         pond?.mesh.setEnabled(!localBoundaries)
         if (!localBoundaries) pond?.setLevel(map)
-        const localTransitions = localBoundaries ? findTerrainTransitions(map, (cover, substrate) => {
+        const materialFor = (cover: number, substrate: number) => {
+            if (!hasTerrainTransition(cover, substrate)) return undefined
             const coverGrass = grassTransitions.get(cover)
             const substrateGrass = grassTransitions.get(substrate)
             if (cover === SNOW_DIRT) return substrateGrass?.snow
@@ -199,7 +204,19 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
                 : substrate === ROCK ? coverGrass.rock : substrate === DIRT ? coverGrass.dirt : undefined
             if (cover === MUDDY_DIRT) return substrate === ROCK ? mudRockTransition : substrate === DIRT ? mudDirtTransition : undefined
             return cover === DIRT && substrate === ROCK ? dirtRockTransition : undefined
-        }) : undefined
+        }
+        let localTransitions: ReturnType<typeof findTerrainTransitions<Mesh>> | undefined
+        if (localBoundaries) {
+            const read = compiled && compiledRegion && visitBakedTerrainTransitions(compiled, compiledRegion.x, compiledRegion.z,
+                (worldX, worldZ, coverType, substrateType, field) => {
+                    const x = worldX - originX, z = worldZ - originZ
+                    const material = materialFor(coverType, substrateType)
+                    if (!material || !map[x]?.[z]) return
+                    localTransitions ??= map.map(() => [])
+                    localTransitions[x][z] = {cover: terrainSurface(map[x][z]) === coverType, coverType, substrateType, material, field}
+                })
+            if (!read) localTransitions = findTerrainTransitions(map, materialFor)
+        }
         const pondCover = shoreSurface >= 100 && shoreSurface < 200 ? SNOW_DIRT : shoreSurface
         const pondTransition = pondTransitions.get(pondCover)
         const withRock = snowOnRock || !!rockPartner
@@ -318,7 +335,7 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
                 batch.wallData.push(topY ?? 0, bottomY ?? 0, topCover, bottomCover)
             }
             return batch.geometry
-        }, includeTile, originX, originZ, submit, !!demo, localBoundaries)
+        }, includeTile, originX, originZ, submit, !!demo, localBoundaries, compiled)
         const islandMasks = transitionTiles || localTransitions ? grassIslandMasks(map) : undefined
         const takeTile = (type: number, cover?: boolean): TerrainAtlasTileFilter => {
             return (matrix, uv, x, z, roof, wetCorners, floor) => {
