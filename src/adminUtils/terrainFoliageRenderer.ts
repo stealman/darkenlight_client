@@ -4,7 +4,7 @@ import { TerrainEnum1 } from '@/babylon/materials'
 import { Lights } from '@/babylon/scene/lights'
 import { FoliageManager } from '@/babylon/world/foliageManager'
 import { MapBlock } from '@/data/worldDataManager'
-import { createMuddyDirtFoliageProfiles, createMuddyDirtFootFoliage } from './muddyDirtFoliage'
+import { createMuddyDirtFoliageProfiles, createMuddyDirtFootFoliage, createPavingMoss } from './muddyDirtFoliage'
 import { createWinterGrassFoliage, createGrassFootTufts, greenGrassFoliageOffset, rockPebbleOffset, snowFoliageOffset, styleTerrainFoliage } from './winterGrassFoliage'
 import { createWaterEdgeTufts, insetTuftFromLedges } from './terrainFoliagePatches'
 import { createRockWallLichen, createRockFoliage, styleRockLichen } from './rockFoliage'
@@ -40,7 +40,7 @@ export function createTerrainFoliageRenderer(scene: Scene, parent: TransformNode
 
     const render = (map: MapBlock[][], {
         atPondBank = () => false, transitionWeight = () => 0, canDecorate = () => true,
-        visible = () => true, originX = 0, originZ = 0, submit,
+        visible = () => true, originX = 0, originZ = 0, pavingMoss = false, submit,
     }: {
         atPondBank?: (x: number, z: number) => boolean
         transitionWeight?: (x: number, z: number) => number
@@ -48,6 +48,7 @@ export function createTerrainFoliageRenderer(scene: Scene, parent: TransformNode
         visible?: (x: number, z: number) => boolean
         originX?: number
         originZ?: number
+        pavingMoss?: boolean
         submit?: (mesh: Mesh, matrices: Matrix[], uv: Vector2[]) => void
     } = {}) => {
         const supportsFoliage = (block: MapBlock, x: number, z: number) => !block.snowed && !atPondBank(x, z)
@@ -64,7 +65,10 @@ export function createTerrainFoliageRenderer(scene: Scene, parent: TransformNode
         const profiles = createMuddyDirtFoliageProfiles(foliageMap, Lights.sunLight.direction, originX, originZ)
         profiles.set(ROCK, createRockFoliage(originX, originZ))
         const muddyFoot = createMuddyDirtFootFoliage(foliageMap, Lights.sunLight.direction, originX, originZ, wallDecals)
-        const blendedDecals = wallDecals ? [...muddyFoot.moss, ...createRockWallLichen(map, originX, originZ)] : undefined
+        const pavingDecals = pavingMoss ? createPavingMoss(map, visible, canDecorate, originX, originZ) : []
+        const pavingMatrices = pavingMoss ? new Set(pavingDecals.map(({matrix}) => matrix)) : undefined
+        const blendedDecals = wallDecals
+            ? [...muddyFoot.moss, ...createRockWallLichen(map, originX, originZ), ...pavingDecals] : pavingDecals
         const footTufts = [...GRASS_TYPES.flatMap(type => createGrassFootTufts(foliageMap, type, originX, originZ)), ...muddyFoot.tufts]
         const grassFoliage = createWinterGrassFoliage(transitionWeight, originX, originZ)
         for (const type of GRASS_TYPES) profiles.set(type, grassFoliage)
@@ -81,6 +85,7 @@ export function createTerrainFoliageRenderer(scene: Scene, parent: TransformNode
             groundDecals: muddyFoot.pebbles,
             blendedDecals,
             mapAtlasOffset: (uv, matrix, layer) => {
+                if (layer === 'blended' && pavingMatrices?.has(matrix)) return uv
                 const x = Math.round(matrix.m[12]), z = Math.round(matrix.m[14])
                 const block = map[x]?.[z]
                 if (!block || !supportsFoliage(foliageMap[x][z], x, z) || !visible(x, z)) return undefined

@@ -10,14 +10,13 @@ import { MonsterTemplates } from '@/babylon/monsters/codebook/monsterTemplates'
 import { MonsterLoader } from '@/babylon/monsters/monsterLoader'
 import { WorldRenderer, SymmetricBlock } from '@/babylon/world/worldRenderer'
 import { Builder } from '@/babylon/builder'
-import { MaterialAlphaEnum1, Materials, TerrainEnum1 } from '@/babylon/materials'
+import { Materials, TerrainEnum1 } from '@/babylon/materials'
 import { MapBlock, WorldDataManager } from '@/data/worldDataManager'
 import { StoneBatch } from '@/babylon/world/stoneBatch'
 import { StaticsManager } from '@/babylon/world/statics/staticsManager'
 import { StaticObjectsCodebook } from '@/babylon/world/statics/staticsCodebook'
 import { BuildingManager } from '@/babylon/world/buildings/buildingManager'
-import { TreeFir, TreeManager } from '@/babylon/world/treeManager'
-import { Shrub1x1_tall } from '@/babylon/world/statics/objects/shrubs'
+import { TreeManager } from '@/babylon/world/treeManager'
 import { StaticEquipPartsRenderer } from '@/babylon/world/statics/staticEquipPartsRenderer'
 import { StaticLeafPlanes } from '@/babylon/world/statics/staticLeafPlanes'
 import { EquipManager } from '@/babylon/item/equipManager'
@@ -106,27 +105,7 @@ export async function installAssetPreview(
     StaticsManager.initialize(scene)
     BuildingManager.initialize(scene, parent)
     const buffers = () => [WorldRenderer.block1!, WorldRenderer.blockWithAlpha1!, WorldRenderer.translucentPlane!, StoneBatch.prefab!, StaticLeafPlanes.prefab!, ...Object.values(TreeManager.prefabs).filter(p => p != null), ...StaticEquipPartsRenderer.prefabs.values(), ...SpecimenPrefabs.all]
-    let currentSnowTerraceProps: readonly object[] | undefined
-    const terrain = createTerrainPreview(scene, parent, camera, ground, setTerrainLighting, props => {
-        const visibleProps = props.length ? props : undefined
-        if (visibleProps === currentSnowTerraceProps) return
-        currentSnowTerraceProps = visibleProps
-        const batches = [WorldRenderer.block1!, WorldRenderer.blockWithAlpha1!, TreeManager.prefabs.tree2!, StaticLeafPlanes.prefab!]
-        for (const batch of batches) batch.clearMatrices()
-        for (const {x, y, z, shrub} of props) {
-            if (shrub) {
-                new Shrub1x1_tall(121, new Vector3(x, y, z), 0, MaterialAlphaEnum1.TREE_LEAF_LIGHT.uv).render()
-            } else {
-                const tree = new TreeFir(new Vector3(x, y + 0.5, z), 0, 1, MaterialAlphaEnum1.TREE_LEAF_NORTH.uv)
-                tree.renderTrunk(false)
-                tree.renderLeaves(false)
-            }
-        }
-        for (const batch of batches) {
-            batch.setThinInstanceBuffers()
-            batch.mesh.setEnabled(batch.matrices.length > 0)
-        }
-    })
+    const terrain = createTerrainPreview(scene, parent, camera, ground, setTerrainLighting)
     panel.append(terrain.controls)
     const refreshBuildingBatches = () => {
         BuildingManager.rebuildOpaqueBatch()
@@ -137,7 +116,6 @@ export async function installAssetPreview(
     }
     const clear = () => {
         generation++
-        currentSnowTerraceProps = undefined
         parent.rotation.y = 0
         if (monster) {
             clips.forEach(([, clip]) => clip.stop())

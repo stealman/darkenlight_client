@@ -20,6 +20,46 @@ const WALL_MOSS_PATCHES = {spacing: 3.6, salt: 6200, minRadius: 1.0, radiusRange
 const SMALL_MOSS_SIZE = [0.46, 0.88] as const
 const MUDDY_DIRT = TerrainEnum1.TERRAIN_MUDDY_DIRT.index
 
+export function createPavingMoss(map: MapBlock[][], visible: (x: number, z: number) => boolean,
+    canDecorate: (x: number, z: number) => boolean, originX: number, originZ: number) {
+    const moss: {matrix: Matrix, uv: Vector2}[] = []
+    const supportsMoss = (block: MapBlock, x: number, z: number) => !block.snowed && canDecorate(x, z)
+        && (block.type === MUDDY_DIRT || block.type === TerrainEnum1.TERRAIN_DIRT.index
+            || block.type === TerrainEnum1.TERRAIN_GRASS.index || block.type === TerrainEnum1.TERRAIN_GRASS_WINTER.index)
+    map.forEach((row, x) => row.forEach((block, z) => {
+        if ((!block.stonePath && !block.beigeStonePath) || !visible(x, z) || !supportsMoss(block, x, z)) return
+        const worldX = x + originX, worldZ = z + originZ
+        const roll = (salt: number) => FoliageManager.roll(worldX, worldZ, salt)
+        const place = (centerX: number, centerZ: number, salt: number, lift: number) => {
+            const yaw = roll(salt + 3) * 2 * Math.PI
+            let size = 0.48 + roll(salt + 4) * 0.50
+            const radius = 0.5 * (Math.abs(Math.cos(yaw)) + Math.abs(Math.sin(yaw)))
+            if (!FoliageManager.canPlaceGroundCover(map, centerX, centerZ, block.totalHeight, size * radius, supportsMoss)) {
+                size *= 0.60
+                if (!FoliageManager.canPlaceGroundCover(map, centerX, centerZ, block.totalHeight, size * radius, supportsMoss)) return
+            }
+            const matrix = Matrix.Scaling(size, 1, size).multiply(Matrix.RotationY(yaw))
+            matrix.setTranslationFromFloats(centerX, block.totalHeight + lift, centerZ)
+            moss.push({matrix, uv: FoliageManager.getAtlasOffset(worldX, worldZ, MOSS, salt)})
+        }
+        for (let patch = 0; patch < 3; patch++) {
+            const salt = 7520 + patch * 16
+            if (roll(salt) < (patch === 0 ? 0.08 : 0.35)) continue
+            place(x + (roll(salt + 1) - 0.5) * 0.70, z + (roll(salt + 2) - 0.5) * 0.70, salt, 0.005 + patch * 0.001)
+        }
+        CARDINAL_NEIGHBORS.forEach(([dx, dz], side) => {
+            const adjacent = map[x + dx]?.[z + dz]
+            const salt = 7860 + side * 16
+            if (!adjacent || adjacent.stonePath || adjacent.beigeStonePath || !supportsMoss(adjacent, x + dx, z + dz)
+                || adjacent.totalHeight !== block.totalHeight || roll(salt) < 0.25) return
+            const along = (roll(salt + 1) - 0.5) * 0.58
+            const towardEdge = 0.32 + roll(salt + 2) * 0.16
+            place(x + dx * towardEdge - dz * along, z + dz * towardEdge + dx * along, salt, 0.008 + side * 0.0004)
+        })
+    }))
+    return moss
+}
+
 export function createMuddyDirtFootFoliage(map: MapBlock[][], sunDirection: Vector3,
                                           originX: number, originZ: number, wallDecals: boolean) {
     const moss: {matrix: Matrix, uv: Vector2}[] = []

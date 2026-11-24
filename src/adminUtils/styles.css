@@ -370,6 +370,17 @@ select {
     color: #e7eee4;
 }
 
+.admin-utils__terrain-options label:has(> input[type="checkbox"]) {
+    grid-template-columns: auto 1fr;
+    align-items: center;
+}
+
+.admin-utils__terrain-options input[type="checkbox"] {
+    width: 16px;
+    min-height: 16px;
+    padding: 0;
+}
+
 .admin-utils select:focus,
 .admin-utils input:focus {
     border-color: #769d60;
