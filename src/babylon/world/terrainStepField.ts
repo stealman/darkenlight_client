@@ -1,10 +1,11 @@
 import { Constants, Engine, RawTexture, Scene, Texture } from '@babylonjs/core'
 import type { Vector2, Vector3 } from '@babylonjs/core'
 import type { PBRCustomMaterial } from '@babylonjs/materials'
+import { Settings } from '@/settings/settings'
 import { fightSplatShader, MAX_FIGHT_SPLATS } from './fightSplatShader'
 import type { TerrainSplat } from './fightSplatShader'
 
-export const MAX_STEP_MARKS = 500
+export const MAX_STEP_MARKS = 250
 export const MAX_SOIL_STEPS = 50
 const HALF_LENGTH = 0.2533
 const HALF_WIDTH = 0.10
@@ -203,12 +204,13 @@ export class TerrainStepField {
         const attach = material.AttachAfterBind.bind(material)
         material.AttachAfterBind = (mesh, effect) => {
             attach(mesh, effect)
+            const marksEnabled = !Settings.isDetalLevelLow()
             effect.setTexture('terrainStepData', this.texture)
             effect.setFloat('terrainStepTime', this.time)
-            effect.setFloat2('terrainStepsActive', Number(this.snowActive), Number(this.soilActive))
+            effect.setFloat2('terrainStepsActive', Number(marksEnabled && this.snowActive), Number(marksEnabled && this.soilActive))
             effect.setFloat2('terrainStepShadowSize', this.shadowWidth, this.shadowHeight)
             effect.setFloat('terrainStepWetnessEnabled', Number(this.wetSteps))
-            effect.setFloat('terrainSplatsActive', Number(this.splatsActive))
+            effect.setFloat('terrainSplatsActive', Number(marksEnabled && this.splatsActive))
         }
         material.Fragment_Definitions(`
             ${material.CustomParts.Fragment_Definitions ?? ''}

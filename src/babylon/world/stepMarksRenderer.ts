@@ -15,12 +15,18 @@ export const StepMarksRenderer = {
     myStepMarks: new Array<TerrainStep>(),
     otherStepMarks: new Array<TerrainStep>(),
     soilStepMarks: new Array<TerrainStep & {priority: boolean}>(),
-    maxMarks: 250,
     field: null as TerrainStepField | null,
     dirty: true,
 
+    get maxOwnMarks() {
+        return Settings.isDetalLevelHigh() ? MAX_STEP_MARKS : 200
+    },
+
+    get maxOtherMarks() {
+        return Settings.isDetalLevelHigh() ? MAX_STEP_MARKS : 100
+    },
+
     initialize (scene: Scene) {
-        this.maxMarks = Settings.isDetalLevelHigh() ? MAX_STEP_MARKS : 250
         const engine = scene.getEngine()
         this.field = engine instanceof Engine && engine.webGLVersion >= 2 && engine.getCaps().textureFloat
             ? new TerrainStepField(scene, engine) : null
@@ -40,6 +46,7 @@ export const StepMarksRenderer = {
     },
 
     addStepMark(side: string, object: Targetable, yPos: number, rot: number, time: number, inCombat: boolean, visible: boolean): boolean {
+        if (Settings.isDetalLevelLow()) return false
         const own = object === MyPlayer.myChar
         const map = WorldDataManager.getBlockMap()
         const {x, z} = object.pos
@@ -73,7 +80,8 @@ export const StepMarksRenderer = {
             this.soilStepMarks.push({...mark, priority})
         } else {
             const steps = own ? this.myStepMarks : this.otherStepMarks
-            if (steps.length >= this.maxMarks) steps.shift()
+            const limit = own ? this.maxOwnMarks : this.maxOtherMarks
+            if (steps.length >= limit) steps.splice(0, steps.length - limit + 1)
             steps.push(mark)
         }
         this.dirty = true
@@ -81,11 +89,12 @@ export const StepMarksRenderer = {
     },
 
     update(time: number) {
-        const ownExpired = this.removeExpiredMarks(this.myStepMarks, time)
-        const otherExpired = this.removeExpiredMarks(this.otherStepMarks, time)
-        const soilExpired = this.removeExpiredMarks(this.soilStepMarks, time)
+        if (Settings.isDetalLevelLow()) return
+        const ownChanged = this.pruneMarks(this.myStepMarks, time, this.maxOwnMarks)
+        const otherChanged = this.pruneMarks(this.otherStepMarks, time, this.maxOtherMarks)
+        const soilChanged = this.pruneMarks(this.soilStepMarks, time, MAX_SOIL_STEPS)
         this.field?.setTime(time, Settings.isDetalLevelHigh())
-        if (this.dirty || ownExpired || otherExpired || soilExpired) {
+        if (this.dirty || ownChanged || otherChanged || soilChanged) {
             this.field?.update(this.myStepMarks, this.otherStepMarks, this.soilStepMarks)
             this.dirty = false
         }
@@ -101,13 +110,17 @@ export const StepMarksRenderer = {
         this.field?.update(this.myStepMarks, this.otherStepMarks, this.soilStepMarks)
     },
 
-    removeExpiredMarks(marks: TerrainStep[], time: number): boolean {
+    pruneMarks(marks: TerrainStep[], time: number, limit: number): boolean {
         let changed = false
         for (let index = marks.length - 1; index >= 0; index--) {
             if (time >= marks[index].deadTime) {
                 marks.splice(index, 1)
                 changed = true
             }
+        }
+        if (marks.length > limit) {
+            marks.splice(0, marks.length - limit)
+            changed = true
         }
         return changed
     },

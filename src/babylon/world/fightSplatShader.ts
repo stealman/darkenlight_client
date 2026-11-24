@@ -1,6 +1,6 @@
 import type { Vector3 } from '@babylonjs/core'
 
-export const MAX_FIGHT_SPLATS = 1000
+export const MAX_FIGHT_SPLATS = 250
 export const FIGHT_SPLAT_TTL = 900000
 
 export type TerrainSplat = {

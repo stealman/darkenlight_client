@@ -10,18 +10,21 @@ type SplatMessage = {lp: number, x: number | string, z: number | string, tp: num
 
 export const FightSplatsRenderer = {
     splats: new Array<TerrainSplat>(),
-    maxSplats: MAX_FIGHT_SPLATS,
     stainsDirty: true,
 
+    get maxSplats() {
+        return Settings.isDetalLevelHigh() ? MAX_FIGHT_SPLATS : 100
+    },
+
     initialize() {
-        this.maxSplats = Settings.isDetalLevelHigh() ? MAX_FIGHT_SPLATS : 250
         this.splats = []
         this.stainsDirty = true
     },
     consumeSplats(data: readonly SplatMessage[]) {
-        if (!data.length) return
+        if (Settings.isDetalLevelLow() || !data.length) return
         const map = WorldDataManager.getBlockMap()
         const now = Date.now()
+        const maxSplats = this.maxSplats
         for (const {lp, x, z, tp, s} of data) {
             if ((tp !== 1 && tp !== 2 && tp !== 3 && tp !== 4 && tp !== 8) || lp >= 100) continue
             const worldX = Number(x), worldZ = Number(z)
@@ -44,7 +47,7 @@ export const FightSplatsRenderer = {
                 seed,
             })
             this.stainsDirty = true
-            if (this.splats.length > this.maxSplats) this.removeAt(0)
+            if (this.splats.length > maxSplats) this.splats.splice(0, this.splats.length - maxSplats)
         }
     },
 
@@ -70,8 +73,14 @@ export const FightSplatsRenderer = {
     },
 
     update(time: number) {
+        if (Settings.isDetalLevelLow()) return
         for (let index = this.splats.length - 1; index >= 0; index--) {
             if (time >= this.splats[index].deadTime) this.removeAt(index)
+        }
+        const maxSplats = this.maxSplats
+        if (this.splats.length > maxSplats) {
+            this.splats.splice(0, this.splats.length - maxSplats)
+            this.stainsDirty = true
         }
         if (this.stainsDirty) {
             StepMarksRenderer.field?.updateSplats(this.splats)
