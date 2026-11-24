@@ -72,15 +72,16 @@ export class TerrainDebris extends BaseStaticObject {
         const block = this.getTerrain()
         if (!block || block.type <= 0) return
         const hideSnow = this.isSnowSuppressed(block)
-        const snow = block.snowed && !hideSnow
-        const useBlockAtlas = snow || block.type === TerrainEnum1.TERRAIN_ROCK.index
+        const snowHeight = block.snowed ? WorldRenderer.getSnowSurfaceHeight(this.position.x, this.position.z) : undefined
+        const useBlockAtlas = block.type === TerrainEnum1.TERRAIN_ROCK.index
         const renderType = hideSnow && (block.type === 2 || block.type === 5) ? TerrainEnum1.TERRAIN_DIRT.index : undefined
         const uv = useBlockAtlas
-            ? (snow ? MaterialEnum1.SNOW : MaterialEnum1.ROCK1).uv
-            : TerrainEnum1.getTerrainForBlock(block, hideSnow, renderType)
-        const world = Matrix.Translation(this.renderPosition.x, this.renderPosition.y, this.renderPosition.z)
+            ? MaterialEnum1.ROCK1.uv
+            : TerrainEnum1.getTerrainForBlock(block, true, renderType)
+        const y = snowHeight === undefined ? this.renderPosition.y : Math.max(this.renderPosition.y, snowHeight)
+        const world = Matrix.Translation(this.renderPosition.x, y, this.renderPosition.z)
         for (const {matrix, shape} of this.pieces) {
-            StoneBatch.add(matrix.multiply(world), shape, uv, useBlockAtlas ? 'block' : 'terrain')
+            StoneBatch.add(matrix.multiply(world), shape, uv, useBlockAtlas ? 'block' : 'terrain', snowHeight)
         }
     }
 }

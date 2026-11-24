@@ -368,7 +368,7 @@ export const StaticsManager = {
 
     clearWorld() {
         Lights.clearStaticLights()
-        StoneBatch.prefab!.clearMatrices()
+        StoneBatch.clear()
         StoneBatch.flush()
         this.allStatics.forEach((obj) => obj.dispose())
         this.allStatics = []

@@ -2,6 +2,9 @@ import { Matrix, Mesh, Scene, ShadowDepthWrapper, Texture, TransformNode, Vector
 import { PBRCustomMaterial } from '@babylonjs/materials'
 import { Materials } from '@/babylon/materials'
 import { Prefab } from './worldRenderer'
+import { StaticTerrainContact } from './statics/staticTerrainContact'
+
+const STONE_SNOW_REACH_PER_HEIGHT = 3.25
 
 // Each profile uses the same triangle layout. The lopsided shoulder and
 // off-center crown give the stones different silhouettes as they rotate.
@@ -119,11 +122,14 @@ function createMaterial(scene: Scene) {
 
 export const StoneBatch = {
     prefab: null as Prefab | null,
+    snowContact: null as StaticTerrainContact | null,
 
-    initialize(scene: Scene, parent: TransformNode) {
+    initialize(scene: Scene, parent: TransformNode, useSnowContact = false) {
         const mesh = new Mesh('stoneFragments', scene)
         createGeometry(mesh)
-        mesh.material = createMaterial(scene)
+        const material = createMaterial(scene)
+        mesh.material = material
+        this.snowContact = useSnowContact ? new StaticTerrainContact(material, true) : null
         mesh.parent = parent
         mesh.isPickable = false
         mesh.alwaysSelectAsActiveMesh = true
@@ -132,9 +138,18 @@ export const StoneBatch = {
         this.prefab = new Prefab(mesh)
     },
 
-    add(matrix: Matrix, shape: number, uv: Vector2, atlas: 'block' | 'terrain' | 'smallBlock') {
+    clear() {
+        this.prefab!.clearMatrices()
+        this.snowContact?.clear()
+    },
+
+    add(matrix: Matrix, shape: number, uv: Vector2, atlas: 'block' | 'terrain' | 'smallBlock', snowHeight?: number) {
         const batch = this.prefab!
         const atlasIndex = atlas === 'terrain' ? 1 : atlas === 'smallBlock' ? 2 : 0
+        if (snowHeight !== undefined) {
+            const stoneHeight = Math.hypot(matrix.m[4], matrix.m[5], matrix.m[6]) * PROFILES[shape].crown[1]
+            this.snowContact?.addSnow(batch.matrices.length, snowHeight, stoneHeight * STONE_SNOW_REACH_PER_HEIGHT, true)
+        }
         batch.matrices.push(matrix)
         // Atlas cells occupy less than 16 units per axis. Pack the selectors
         // in multiples of 16 so the existing matrix and uvc buffers can be reused.
@@ -144,6 +159,7 @@ export const StoneBatch = {
     flush() {
         const batch = this.prefab!
         batch.setThinInstanceBuffers()
+        this.snowContact?.upload(batch.mesh, batch.matrices.length)
         batch.mesh.setEnabled(batch.matrices.length > 0)
     },
 }

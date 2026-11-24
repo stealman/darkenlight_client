@@ -116,11 +116,15 @@ export const TerrainManager = {
         }
     },
 
+    usesOutdoorTerrain() {
+        return !Lights.indoor && !smoothTerrainExperiment && !!this.outdoorFactory
+    },
+
     renderTerrain(renderTerrainStatics?: (terrainMatrices: Matrix[], terrainUvData: Vector2[]) => void, snowCoverMask: Set<number> = new Set()) {
         const world = WorldDataManager.worldDataMap.get(MyPlayer.worldId)!
         const map = world.blockMap
         const center = MyPlayer.myChar.getPositionRounded()
-        const outdoor = !Lights.indoor && !smoothTerrainExperiment && !!this.outdoorFactory
+        const outdoor = this.usesOutdoorTerrain()
         if (outdoor && this.outdoorFactory) {
             this.outdoorTerrain ??= this.outdoorFactory(WorldRenderer.worldParentNode!)
             const load = WorldDataManager.terrainRenderLoad

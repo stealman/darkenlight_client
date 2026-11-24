@@ -8,7 +8,7 @@ import { Builder } from '@/babylon/builder'
 import { Materials } from '@/babylon/materials'
 import { TreeManager } from '@/babylon/world/treeManager'
 import { updateWorldInstanceBuffers } from '@/babylon/world/worldInstanceBuffers'
-import { TerrainManager } from '@/babylon/world/terrainManager'
+import { getTerrainHeightOffset, TerrainManager } from '@/babylon/world/terrainManager'
 import { PBRCustomMaterial } from '@babylonjs/materials'
 import { StaticsManager } from '@/babylon/world/statics/staticsManager'
 import { FoliageManager } from '@/babylon/world/foliageManager'
@@ -29,7 +29,7 @@ import { Settings } from '@/settings/settings'
 import { IndoorTerrainOcclusionManager } from '@/babylon/world/indoorTerrainOcclusionManager'
 import { TerrainDebrisManager } from '@/babylon/world/terrainDebrisManager'
 import { StoneBatch } from '@/babylon/world/stoneBatch'
-import { isSnowRoof } from '@/babylon/world/terrainRoofShape'
+import { isSnowRoof, outdoorSurfaceHeight } from '@/babylon/world/terrainRoofShape'
 import { StaticTerrainContact } from '@/babylon/world/statics/staticTerrainContact'
 
 // The viewport already renders a four-tile reserve. On touch devices, keep one
@@ -70,7 +70,7 @@ export const WorldRenderer = {
         this.translucentPlane = new SymmetricBlock(Builder.createHorizontalPlane(scene, this.worldParentNode, 1, 0), Materials.blockMatTrans!)
         this.translucentPlane.mesh.doNotSyncBoundingInfo = true
         this.translucentPlane.mesh.receiveShadows = true
-        StoneBatch.initialize(scene, this.worldParentNode)
+        StoneBatch.initialize(scene, this.worldParentNode, true)
 
         // Initialize managers
         TerrainManager.initialize(scene)
@@ -120,7 +120,7 @@ export const WorldRenderer = {
         this.staticTerrainContact?.clear()
         this.blockWithAlpha1!.clearMatrices()
         this.translucentPlane!.clearMatrices()
-        StoneBatch.prefab!.clearMatrices()
+        StoneBatch.clear()
         const blockMap = WorldDataManager.getBlockMap()
         const {mask: snowCoverMask, vegetationMask} = createSnowCoverMask(
             TreeManager.allTrees,
@@ -212,12 +212,16 @@ export const WorldRenderer = {
     },
 
     getSnowContactHeight(x: number, z: number) {
-        if (!this.staticTerrainContact || Lights.indoor) return
+        if (this.staticTerrainContact) return this.getSnowSurfaceHeight(x, z)
+    },
+
+    getSnowSurfaceHeight(x: number, z: number) {
+        if (Lights.indoor) return
         const map = WorldDataManager.getBlockMap()
         const tile = map[x]?.[z]
         if (!tile || !isSnowRoof(tile) || tile.stonePath || tile.beigeStonePath
             || this.snowCoverMask.has(x * map.length + z) || BuildingManager.hasFloorAtTile(x, z)) return
-        return tile.totalHeight
+        return TerrainManager.usesOutdoorTerrain() ? outdoorSurfaceHeight(tile) : tile.height + getTerrainHeightOffset(tile, false)
     },
 
     async warmUpOcclusionFadeShaders() {
