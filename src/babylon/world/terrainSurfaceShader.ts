@@ -38,6 +38,12 @@ const snowPatch = terrainCoverPatterns[0]
 const [snowU, snowV] = snowPatch.origins[0]
 const snowPatchBottom = TERRAIN_ATLAS_TILES - snowV - snowPatch.size
 
+export const terrainContactMossShader = `
+    vec3 terrainContactMossColor(float grain) {
+        return toLinearSpace(mix(vec3(0.20, 0.25, 0.14), vec3(0.34, 0.41, 0.24), grain));
+    }
+`
+
 export const terrainContactSnowShader = `
     vec2 terrainContactSnowUV(vec2 worldXZ, float aboveSnow) {
         // Project the atlas patch up the face so the grain stays visible on vertical surfaces.

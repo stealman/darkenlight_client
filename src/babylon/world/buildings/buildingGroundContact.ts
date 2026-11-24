@@ -56,7 +56,7 @@ export class BuildingGroundContact {
                     surfaceAlbedo = mix(surfaceAlbedo, toLinearSpace(texture2D(buildingSnowColor, snowUV).rgb), coverage);
                 } else if (coverage > 0.0) {
                     float grain = terrainNoise(contactXZ * 61.0 + vec2(0.0, vPositionW.y * 47.0));
-                    surfaceAlbedo = mix(surfaceAlbedo, buildingMossColor(grain), coverage * mix(0.55, 0.88, grain));
+                    surfaceAlbedo = mix(surfaceAlbedo, terrainContactMossColor(grain), coverage * mix(0.55, 0.88, grain));
                 }
             }
         `)

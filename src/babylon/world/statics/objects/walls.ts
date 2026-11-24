@@ -137,6 +137,8 @@ export class PalisadeWall2 extends BaseStaticObject {
                     .multiply(Matrix.Translation(x, this.renderPosition.y + height / 2 + 0.5, z)),
                 this.material,
                 true,
+                undefined,
+                'moss',
             )
         }
         if (this.cornerDirections) {

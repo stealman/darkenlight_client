@@ -91,6 +91,7 @@ export class SpikedPalisade extends BaseStaticObject {
             this.material,
             true,
             SpikedPalisade.SNOW_REACH,
+            'moss',
         )
     }
 

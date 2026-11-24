@@ -3,7 +3,7 @@ import { StandingBanner, BannerMetadata, SpecimenPrefabs } from './objects/speci
 import { Matrix, Scene, Vector2, Vector3 } from '@babylonjs/core'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { MaterialAlphaEnum1, MaterialEnum1, MaterialEnumTrans } from '@/babylon/materials'
-import { WorldDataManager } from '@/data/worldDataManager'
+import { MapBlock, WorldDataManager } from '@/data/worldDataManager'
 import { BuildingManager } from '@/babylon/world/buildings/buildingManager'
 import { ViewportManager } from '@/utils/viewport'
 import { Lights } from '@/babylon/scene/lights'
@@ -63,6 +63,7 @@ import {
 } from '@/babylon/world/statics/objects/cemeteryObjects'
 import { TerrainDebris } from './objects/terrainDebris'
 import { StoneBatch } from '../stoneBatch'
+import type { ContactShadowFootprint } from '../terrainContactShadow'
 
 const isEmbeddedInSnow = (type: number) => isShrubType(type) || type === 281
 
@@ -526,6 +527,23 @@ export const StaticsManager = {
             element.renderTerrain?.(terrainMatrices, terrainUvData)
             element.captureTerrainMatrices(start, terrainMatrices)
         }
+    },
+
+    getContactShadowFootprints(map: MapBlock[][]): ContactShadowFootprint[] {
+        const footprints: ContactShadowFootprint[] = []
+        for (const object of this.visibleStatics) {
+            const size = object.getContactShadowSize?.()
+            if (!size) continue
+            const {x, y, z} = object.renderPosition
+            const tile = map[object.position.x]?.[object.position.z]
+            if (!tile || Math.abs(y - tile.totalHeight) > 0.15) continue
+            footprints.push({
+                minX: x - size.width / 2, maxX: x + size.width / 2,
+                minZ: z - size.depth / 2, maxZ: z + size.depth / 2,
+                height: tile.height, reach: 0.4,
+            })
+        }
+        return footprints
     },
 
     updateVisibleObjects() {

@@ -10,6 +10,7 @@ export interface StaticObject {
     prefab: Prefab | null
 
     render(): void
+    getContactShadowSize?(): {width: number, depth: number}
     renderTerrain?(terrainMatrices: Matrix[], terrainUvData: Vector2[]): void
     onVisible(): void
     onHidden(): void

@@ -16,9 +16,10 @@ import { sameSnowMask } from '../snowCoverMask'
 import { BuildingGroundContact } from './buildingGroundContact'
 import {
     configureBuildingRoofSnow, encodeHouseRoofSnowUv, encodeRoofSnowUv, HOUSE_ROOF_ANGLE,
-    HOUSE_ROOF_EAVE_OVERHANG, HOUSE_ROOF_END_OVERHANG, HUMAN_HOUSE_WIDTH, SHED_ROOF_OVERHANG,
+    HOUSE_ROOF_EAVE_OVERHANG, HOUSE_ROOF_END_OVERHANG, HOUSE_ROOF_THICKNESS, HUMAN_HOUSE_WIDTH, SHED_ROOF_OVERHANG,
 } from './buildingRoofSnow'
 import { configureBuildingWallDamp, encodeWallDampUv } from './buildingWallDamp'
+import type { ContactShadowFootprint } from '../terrainContactShadow'
 
 export interface BuildingData {
     id: number
@@ -79,7 +80,7 @@ const ROOF_STEP_DEPTH = 0.5
 const ROOF_STEP_HEIGHT = 0.3
 const ROOF_ANGLE = HOUSE_ROOF_ANGLE
 const ROOF_EAVE_OVERHANG = HOUSE_ROOF_EAVE_OVERHANG
-const ROOF_THICKNESS = 0.2
+const ROOF_THICKNESS = HOUSE_ROOF_THICKNESS
 const ROOF_END_OVERHANG = HOUSE_ROOF_END_OVERHANG
 const ROOF_RUN = HOUSE_DEPTH / 2 + ROOF_EAVE_OVERHANG
 const ROOF_RISE = Math.tan(ROOF_ANGLE) * ROOF_RUN
@@ -1595,6 +1596,7 @@ export const BuildingManager = {
         this.opaqueBatchMesh.parent = parent
         this.opaqueBatchMesh.position.y = -0.5
         this.groundContact = new BuildingGroundContact(scene)
+        TerrainManager.contactShadow?.configure(this.groundContact.material, true)
         this.opaqueBatchMesh.material = this.groundContact.material
         this.opaqueBatchMesh.isPickable = false
         this.opaqueBatchMesh.alwaysSelectAsActiveMesh = true
@@ -1866,6 +1868,38 @@ export const BuildingManager = {
         })
     },
 
+    getHouseShadowFootprints(center: Vector3): ContactShadowFootprint[] {
+        const footprints: ContactShadowFootprint[] = []
+        const map = WorldDataManager.getBlockMap()
+        for (const building of this.buildings.values()) {
+            if (!(building instanceof BuildingView) || building.data.tp !== HUMAN_HOUSE_TYPE) continue
+            const {x, z} = building.data
+            const height = map[x]?.[z]?.height
+            if (height === undefined || x > center.x + ViewportManager.maxX + 2 || z > center.z + ViewportManager.maxZ + 2
+                || x + building.getWidth() < center.x + ViewportManager.minX - 2
+                || z + building.getDepth() < center.z + ViewportManager.minZ - 2) continue
+
+            const addFootprint = (x0: number, z0: number, x1: number, z1: number) => {
+                const a = building.localTileToWorld(x0, z0)
+                const b = building.localTileToWorld(x1, z1)
+                footprints.push({minX: Math.min(a.x, b.x), maxX: Math.max(a.x, b.x),
+                    minZ: Math.min(a.z, b.z), maxZ: Math.max(a.z, b.z), height, reach: 0.60})
+            }
+            const left = -0.5
+            const right = HOUSE_WIDTH - 0.5
+            const back = -0.5
+            const front = HOUSE_DEPTH - 0.5
+            const wall = WALL_THICKNESS / 2
+            const pillar = PILLAR_SIZE / 2
+            for (const side of [left, right]) {
+                addFootprint(side - wall, back, side + wall, front)
+                for (const z of [back, front]) addFootprint(side - pillar, z - pillar, side + pillar, z + pillar)
+            }
+            for (const side of [back, front]) addFootprint(left, side - wall, right, side + wall)
+        }
+        return footprints
+    },
+
     renderBuildings() {
         const world = WorldDataManager.worldDataMap.get(MyPlayer.worldId)
         const outdoor = TerrainManager.usesOutdoorTerrain()
@@ -1949,7 +1983,7 @@ export const BuildingManager = {
             const uvData = groups[group].uvData
             const wood = group.startsWith('wall') || group === 'door'
             const surfaceUv = !cabin && group !== 'roof' && group !== 'glass'
-                ? encodeWallDampUv(material, y, wood ? 'wood' : material === MaterialEnum1.BRICK_GRAY.uv ? 'corner' : 'wall')
+                ? encodeWallDampUv(material, y, wood ? 'wood' : material === MaterialEnum1.BRICK_GRAY.uv ? 'corner' : 'foundation')
                 : material
             for (let i = 0; i < box.getTotalVertices(); i++) {
                 uvData.push(surfaceUv.x, surfaceUv.y)

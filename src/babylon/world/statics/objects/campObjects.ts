@@ -22,12 +22,16 @@ interface Direction {
     z: number
 }
 
-function addPart(width: number, height: number, depth: number, x: number, y: number, z: number, material: Vector2, yaw = 0, roll = 0, snowContact = false) {
+type PartContact = boolean | 'dampWood' | 'dampOnly' | 'snowAndDamp' | 'snowAndDampHay'
+
+function addPart(width: number, height: number, depth: number, x: number, y: number, z: number, material: Vector2, yaw = 0, roll = 0, contact: PartContact = false) {
     const matrix = Matrix.Scaling(width, height, depth)
         .multiply(Matrix.RotationYawPitchRoll(yaw, 0, roll))
         .multiply(Matrix.Translation(x, y, z))
-    if (snowContact) {
-        WorldRenderer.addTerrainContactBlock(matrix, material)
+    if (contact) {
+        const damp = contact === 'dampWood' ? 'moss' : contact === 'snowAndDampHay' ? 'hay'
+            : contact === true ? undefined : 'plain'
+        WorldRenderer.addTerrainContactBlock(matrix, material, false, contact === 'dampOnly' ? 0 : undefined, damp)
         return
     }
     WorldRenderer.block1!.matrices.push(matrix)
@@ -64,7 +68,7 @@ abstract class CampObject extends BaseStaticObject {
         return {x, z}
     }
 
-    protected part(width: number, height: number, depth: number, x: number, y: number, z: number, material = this.material, roll = 0, snowContact = false) {
+    protected part(width: number, height: number, depth: number, x: number, y: number, z: number, material = this.material, roll = 0, contact: PartContact = false) {
         const offset = this.rotateOffset(x, z)
         addPart(
             width,
@@ -76,7 +80,7 @@ abstract class CampObject extends BaseStaticObject {
             material,
             this.yaw,
             roll,
-            snowContact,
+            contact,
         )
     }
 }
@@ -102,14 +106,22 @@ export class WaterTrough extends CampObject {
         this.waterMaterial = waterMaterial
     }
 
+    private get length() { return this.getSizeX() > 1 || this.getSizeZ() > 1 ? 1.82 : 0.82 }
+    private static readonly WIDTH = 0.64
+
+    getContactShadowSize() {
+        return this.yaw ? {width: WaterTrough.WIDTH, depth: this.length} : {width: this.length, depth: WaterTrough.WIDTH}
+    }
+
     render() {
-        const length = this.getSizeX() > 1 || this.getSizeZ() > 1 ? 1.82 : 0.82
+        const length = this.length
+        const wallCenter = (WaterTrough.WIDTH - 0.1) / 2
         const endOffset = length / 2 - 0.07
-        this.part(length, 0.1, 0.54, 0, 0.08, 0)
-        this.part(length, 0.38, 0.1, 0, 0.24, -0.27)
-        this.part(length, 0.38, 0.1, 0, 0.24, 0.27)
-        this.part(0.14, 0.38, 0.44, -endOffset, 0.24, 0)
-        this.part(0.14, 0.38, 0.44, endOffset, 0.24, 0)
+        this.part(length, 0.1, 0.54, 0, 0.08, 0, this.material, 0, 'dampOnly')
+        this.part(length, 0.38, 0.1, 0, 0.24, -wallCenter, this.material, 0, 'dampOnly')
+        this.part(length, 0.38, 0.1, 0, 0.24, wallCenter, this.material, 0, 'dampOnly')
+        this.part(0.14, 0.38, 0.44, -endOffset, 0.24, 0, this.material, 0, 'dampOnly')
+        this.part(0.14, 0.38, 0.44, endOffset, 0.24, 0, this.material, 0, 'dampOnly')
 
         WorldRenderer.translucentPlane!.matrices.push(
             Matrix.Scaling(length - 0.24, 1, 0.36)
@@ -129,6 +141,7 @@ export class WaterTrough extends CampObject {
 }
 
 export class StoneWell extends BaseStaticObject {
+    private static readonly BASE_WIDTH = 0.9
     private readonly rimMaterial: Vector2
     private readonly woodMaterial: Vector2
     private readonly roofMaterial: Vector2
@@ -142,15 +155,19 @@ export class StoneWell extends BaseStaticObject {
         this.steelMaterial = steelMaterial
     }
 
+    getContactShadowSize() {
+        return {width: StoneWell.BASE_WIDTH, depth: StoneWell.BASE_WIDTH}
+    }
+
     render() {
         const x = this.renderPosition.x
         const groundY = this.renderPosition.y + 0.5
         const z = this.renderPosition.z
 
-        addPart(0.9, 0.75, 0.18, x, groundY + 0.375, z - 0.36, this.material)
-        addPart(0.9, 0.75, 0.18, x, groundY + 0.375, z + 0.36, this.material)
-        addPart(0.18, 0.75, 0.54, x - 0.36, groundY + 0.375, z, this.material)
-        addPart(0.18, 0.75, 0.54, x + 0.36, groundY + 0.375, z, this.material)
+        addPart(StoneWell.BASE_WIDTH, 0.75, 0.18, x, groundY + 0.375, z - 0.36, this.material, 0, 0, 'dampOnly')
+        addPart(StoneWell.BASE_WIDTH, 0.75, 0.18, x, groundY + 0.375, z + 0.36, this.material, 0, 0, 'dampOnly')
+        addPart(0.18, 0.75, 0.54, x - 0.36, groundY + 0.375, z, this.material, 0, 0, 'dampOnly')
+        addPart(0.18, 0.75, 0.54, x + 0.36, groundY + 0.375, z, this.material, 0, 0, 'dampOnly')
 
         addPart(0.96, 0.1, 0.2, x, groundY + 0.75, z - 0.38, this.rimMaterial)
         addPart(0.96, 0.1, 0.2, x, groundY + 0.75, z + 0.38, this.rimMaterial)
@@ -231,27 +248,38 @@ export class SupplyCrate extends CampObject {
 }
 
 export class HayStack extends BaseStaticObject {
+    private static readonly WIDTH = 0.6
+
     constructor(type: number, position: Vector3, material: Vector2) {
         super(type, position, 0, material, null)
     }
 
+    getContactShadowSize() {
+        return {width: HayStack.WIDTH, depth: HayStack.WIDTH}
+    }
+
     render() {
-        addPart(0.6, 0.8, 0.6,
+        addPart(HayStack.WIDTH, 0.8, HayStack.WIDTH,
             this.renderPosition.x, this.renderPosition.y + 0.9,
-            this.renderPosition.z, this.material, 0, 0, true)
+            this.renderPosition.z, this.material, 0, 0, 'snowAndDampHay')
     }
 }
 
 export class Stump extends CampObject {
     private readonly cutMaterial: Vector2
+    private static readonly DIAMETER = 0.66
 
     constructor(type: number, position: Vector3, woodMaterial: Vector2, cutMaterial: Vector2, axePrefab: Prefab | null = null, metadata?: CampObjectMetadata) {
         super(type, position, woodMaterial, cutMaterial, metadata, axePrefab)
         this.cutMaterial = cutMaterial
     }
 
+    getContactShadowSize() {
+        return {width: Stump.DIAMETER, depth: Stump.DIAMETER}
+    }
+
     render() {
-        this.part(0.66, 0.54, 0.66, 0, 0.27, 0, this.material, 0, true)
+        this.part(Stump.DIAMETER, 0.54, Stump.DIAMETER, 0, 0.27, 0, this.material, 0, true)
         this.part(0.62, 0.04, 0.62, 0, 0.56, 0, this.cutMaterial)
     }
 }
@@ -286,6 +314,7 @@ export class CampBarrel extends CampObject {
     static readonly BOUNCE_HEIGHT = 0.0875
     static readonly BOUNCE_SPEED = 0.008
     static readonly RETURN_TO_GROUND_SPEED = 0.8
+    private static readonly BASE_WIDTH = 0.62
 
     private readonly lidMaterial: Vector2
     private renderMatrixIndices: number[] = []
@@ -300,10 +329,14 @@ export class CampBarrel extends CampObject {
         this.lidMaterial = lidMaterial
     }
 
+    getContactShadowSize() {
+        return {width: CampBarrel.BASE_WIDTH, depth: CampBarrel.BASE_WIDTH}
+    }
+
     render() {
         const firstMatrixIndex = WorldRenderer.block1!.matrices.length
-        this.part(0.62, 0.82, 0.62, 0, 0.41, 0, this.material, 0, true)
-        this.part(0.7, 0.09, 0.7, 0, 0.14, 0, this.accentMaterial, 0, true)
+        this.part(CampBarrel.BASE_WIDTH, 0.82, CampBarrel.BASE_WIDTH, 0, 0.41, 0, this.material, 0, 'snowAndDamp')
+        this.part(0.7, 0.09, 0.7, 0, 0.14, 0, this.accentMaterial, 0, 'snowAndDamp')
         this.part(0.7, 0.09, 0.7, 0, 0.68, 0, this.accentMaterial)
         this.part(0.56, 0.08, 0.56, 0, 0.86, 0, this.lidMaterial)
         this.renderMatrixIndices = [firstMatrixIndex, firstMatrixIndex + 1, firstMatrixIndex + 2, firstMatrixIndex + 3]
@@ -384,7 +417,7 @@ export class CampFence extends BaseStaticObject {
         for (const offset of [-0.42, 0, 0.42]) {
             addPart(0.1, 0.95, 0.1,
                 this.renderPosition.x + (alongX ? offset : 0), this.renderPosition.y + 0.975,
-                this.renderPosition.z + (alongX ? 0 : offset), this.material, 0, 0, true)
+                this.renderPosition.z + (alongX ? 0 : offset), this.material, 0, 0, 'dampWood')
         }
         for (const y of CampFence.railHeights) {
             addPart(alongX ? 0.94 : 0.09, 0.1, alongX ? 0.09 : 0.94,
@@ -393,11 +426,11 @@ export class CampFence extends BaseStaticObject {
     }
 
     private renderCorner() {
-        addPart(0.1, 0.95, 0.1, this.renderPosition.x, this.renderPosition.y + 0.975, this.renderPosition.z, this.material, 0, 0, true)
+        addPart(0.1, 0.95, 0.1, this.renderPosition.x, this.renderPosition.y + 0.975, this.renderPosition.z, this.material, 0, 0, 'dampWood')
         for (const direction of this.cornerDirections!) {
             addPart(0.1, 0.95, 0.1,
                 this.renderPosition.x + direction.x * 0.42, this.renderPosition.y + 0.975,
-                this.renderPosition.z + direction.z * 0.42, this.material, 0, 0, true)
+                this.renderPosition.z + direction.z * 0.42, this.material, 0, 0, 'dampWood')
             for (const y of CampFence.railHeights) {
                 addPart(direction.x === 0 ? 0.09 : 0.48, 0.1, direction.z === 0 ? 0.09 : 0.48,
                     this.renderPosition.x + direction.x * 0.22, this.renderPosition.y + y,

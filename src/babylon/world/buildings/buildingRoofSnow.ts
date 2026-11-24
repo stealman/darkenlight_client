@@ -8,6 +8,7 @@ export const ATLAS_SIZE = 16
 export const SHED_ROOF_OVERHANG = 0.1
 export const HOUSE_ROOF_EAVE_OVERHANG = 0.3
 export const HOUSE_ROOF_ANGLE = Math.PI / 6
+export const HOUSE_ROOF_THICKNESS = 0.2
 export const HUMAN_HOUSE_WIDTH = 5
 export const HOUSE_ROOF_END_OVERHANG = 0.5
 
@@ -34,24 +35,24 @@ export function configureBuildingRoofSnow(material: PBRCustomMaterial) {
     material.Vertex_Definitions(`
         ${parts.Vertex_Definitions}
         varying vec2 vBuildingSurface;
-        varying float vHouseThatch;
+        varying vec2 vHouseThatch;
     `)
     material.Vertex_Before_PositionUpdated(`
         ${parts.Vertex_Before_PositionUpdated}
         vBuildingSurface = floor(uvc / ${ATLAS_SIZE}.0);
         uvUpdated -= ${ATLAS_SIZE}.0 * vBuildingSurface;
-        vHouseThatch = 1.0 - step(0.01, distance(mod(uvc, ${ATLAS_SIZE}.0), vec2(${hay.x}, ${hay.y})));
+        vHouseThatch = vec2(1.0 - step(0.01, distance(mod(uvc, ${ATLAS_SIZE}.0), vec2(${hay.x}, ${hay.y}))), uv.y);
     `)
     material.Fragment_Definitions(`
         ${parts.Fragment_Definitions}
         varying vec2 vBuildingSurface;
-        varying float vHouseThatch;
+        varying vec2 vHouseThatch;
         ${terrainNoiseShader}
         ${terrainContactSnowShader}
 
         vec2 houseThatchUV(vec2 atlasUV) {
             #ifdef NORMAL
-                if (vHouseThatch > 0.5 && abs(vNormalW.y) > 0.45) {
+                if (vHouseThatch.x > 0.5 && abs(vNormalW.y) > 0.45) {
                     float across = (atlasUV.x * ${ATLAS_SIZE}.0 - ${hay.x}) * ${roofSpan}.0;
                     // Mirror repeats to keep sampling continuous across the one-piece roof.
                     atlasUV.x = (${hay.x} + 1.0 - abs(mod(across, 2.0) - 1.0)) / ${ATLAS_SIZE}.0;
@@ -88,11 +89,21 @@ export function configureBuildingRoofSnow(material: PBRCustomMaterial) {
             float uphill = mod(slope, 2.0) > 0.5 ? 1.0 : -1.0;
             float uphillCoord = alongX ? vPositionW.x : vPositionW.z;
             float alongEave = alongX ? vPositionW.z : vPositionW.x;
-            if (geometricNormalW.y > 0.45) {
+            float outward = -uphill * (alongX ? geometricNormalW.x : geometricNormalW.z);
+            bool houseEave = house && outward > 0.75;
+            if (geometricNormalW.y > 0.45 || houseEave) {
                 // The low edge sits half a tile plus the roof overhang beyond its tile center.
                 float fromEave = (uphillCoord - roof.y) * uphill
                     + (house ? ${0.5 + HOUSE_ROOF_EAVE_OVERHANG} : ${0.5 + SHED_ROOF_OVERHANG});
-                vec2 roofXZ = mod(vPositionW.xz, 48.0);
+                float edgeDepth = 1.0 - vHouseThatch.y;
+                vec2 snowXZ = vPositionW.xz;
+                if (houseEave) {
+                    // Project the cut face onto the top lip so both faces use the same snow mask.
+                    float lipOffset = edgeDepth * ${(HOUSE_ROOF_THICKNESS * Math.sin(HOUSE_ROOF_ANGLE)).toFixed(4)};
+                    fromEave -= lipOffset;
+                    snowXZ -= (alongX ? vec2(uphill, 0.0) : vec2(0.0, uphill)) * lipOffset;
+                }
+                vec2 roofXZ = mod(snowXZ, 48.0);
                 vec2 snowNoise = vec2(alongEave, roof.y);
                 float drift = terrainNoise(snowNoise * 1.9);
                 float detail = terrainNoise(roofXZ * 8.0);
@@ -105,6 +116,11 @@ export function configureBuildingRoofSnow(material: PBRCustomMaterial) {
                 if (house) {
                     float banks = terrainNoise(snowNoise * 1.24 + vec2(5.5, 12.1));
                     cover *= smoothstep(0.28, 0.52, banks + (detail - 0.5) * 0.12);
+                }
+                if (houseEave) {
+                    float edgeNoise = terrainNoise(snowNoise * 8.4 + vec2(3.6, 7.1));
+                    float hang = mix(0.24, 0.73, edgeNoise * 0.78 + drift * 0.22);
+                    cover *= 1.0 - smoothstep(hang - 0.09, hang + 0.08, edgeDepth);
                 }
 
                 // Wet wood starts at the snowline and dries out at a varying distance uphill.
@@ -121,9 +137,9 @@ export function configureBuildingRoofSnow(material: PBRCustomMaterial) {
                         + terrainNoise(roofXZ * 4.5 + vec2(3.4, 9.7)) * 0.28;
                     dampStrength = mix(0.24, 0.76, smoothstep(0.17, 0.80, wetPatches));
                 }
-                surfaceAlbedo *= 1.0 - damp * dampStrength;
+                if (!houseEave) surfaceAlbedo *= 1.0 - damp * dampStrength;
                 if (cover > 0.0) {
-                    vec2 snowUV = terrainContactSnowUV(vPositionW.xz, 0.0);
+                    vec2 snowUV = terrainContactSnowUV(snowXZ, 0.0);
                     vec3 roofSnow = toLinearSpace(texture2D(buildingSnowColor, snowUV).rgb);
                     surfaceAlbedo = mix(surfaceAlbedo, roofSnow, cover);
                     // Thick snow on the house hides the ribbed thatch underneath.

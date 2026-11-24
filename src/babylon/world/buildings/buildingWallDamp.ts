@@ -1,15 +1,16 @@
 import { Vector2 } from '@babylonjs/core'
 import type { PBRCustomMaterial } from '@babylonjs/materials'
 import { ATLAS_SIZE } from './buildingRoofSnow'
+import { terrainContactMossShader } from '../terrainSurfaceShader'
 
-const WALL = 13
+export const HOUSE_FOUNDATION_SURFACE = 13
 const CORNER = 14
 const WOOD = 15
 const HEIGHT_UNITS = 256
 
-export function encodeWallDampUv(uv: Vector2, centerY: number, surface: 'wall' | 'corner' | 'wood') {
+export function encodeWallDampUv(uv: Vector2, centerY: number, surface: 'foundation' | 'corner' | 'wood') {
     // Preserve the atlas cell. Thin instances also need the block's height above the house base.
-    const flag = {wall: WALL, corner: CORNER, wood: WOOD}[surface]
+    const flag = {foundation: HOUSE_FOUNDATION_SURFACE, corner: CORNER, wood: WOOD}[surface]
     return new Vector2(
         uv.x + ATLAS_SIZE * flag,
         uv.y + ATLAS_SIZE * Math.round(centerY * HEIGHT_UNITS),
@@ -21,25 +22,34 @@ export function configureBuildingWallDamp(material: PBRCustomMaterial) {
     material.Vertex_Definitions(`
         ${parts.Vertex_Definitions}
         varying float vBuildingDampHeight;
+        #ifdef THIN_INSTANCES
+            varying vec2 vBuildingPillarOffset;
+        #endif
     `)
     material.Vertex_After_WorldPosComputed(`
         ${parts.Vertex_After_WorldPosComputed ?? ''}
         vBuildingDampHeight = positionUpdated.y;
         #ifdef THIN_INSTANCES
             vBuildingDampHeight = positionUpdated.y * length(finalWorld[1].xyz) + vBuildingSurface.y / ${HEIGHT_UNITS}.0;
+            vBuildingPillarOffset = vec2(0.0);
+            if (vBuildingSurface.x == ${CORNER}.0) {
+                vBuildingPillarOffset = normalize(finalWorld[0].xyz).xz * positionUpdated.x
+                    + normalize(finalWorld[2].xyz).xz * positionUpdated.z;
+            }
         #endif
     `)
     material.Fragment_Definitions(`
         ${parts.Fragment_Definitions}
         varying float vBuildingDampHeight;
+        #ifdef THIN_INSTANCES
+            varying vec2 vBuildingPillarOffset;
+        #endif
 
-        vec3 buildingMossColor(float grain) {
-            return toLinearSpace(mix(vec3(0.20, 0.25, 0.14), vec3(0.34, 0.41, 0.24), grain));
-        }
+        ${terrainContactMossShader}
     `)
     material.Fragment_Before_Lights(`
         ${parts.Fragment_Before_Lights}
-        if (buildingSurface.x >= ${WALL}.0 && buildingSurface.x <= ${WOOD}.0 && abs(geometricNormalW.y) < 0.35) {
+        if (buildingSurface.x >= ${HOUSE_FOUNDATION_SURFACE}.0 && buildingSurface.x <= ${WOOD}.0 && abs(geometricNormalW.y) < 0.35) {
             bool wetCorner = buildingSurface.x == ${CORNER}.0;
             vec2 wallXZ = mod(vPositionW.xz, 48.0);
             float dampEdge = terrainNoise(wallXZ * 3.3 + vec2(4.1, 9.7));
@@ -49,11 +59,26 @@ export function configureBuildingWallDamp(material: PBRCustomMaterial) {
             float risingDamp = 1.0 - smoothstep(height * 0.20, height, vBuildingDampHeight);
             float dampStrength = wetCorner ? mix(0.67, 0.82, dampGrain) : mix(0.48, 0.65, dampGrain);
             surfaceAlbedo *= 1.0 - dampStrength * risingDamp;
+            #ifdef THIN_INSTANCES
+                if (wetCorner) {
+                    // World-space noise carries the worn edge across courses.
+                    vec2 pillarOffset = abs(vBuildingPillarOffset);
+                    float edgeDistance = 0.5 - min(pillarOffset.x, pillarOffset.y);
+                    float chips = terrainNoise(wallXZ * 14.0 + mod(vPositionW.y, 48.0) * vec2(9.7, 13.1));
+                    float bevelWidth = mix(0.018, 0.13, smoothstep(0.27, 0.76, chips));
+                    float bevel = 1.0 - smoothstep(bevelWidth * 0.22, bevelWidth, edgeDistance);
+                    if (bevel > 0.0) {
+                        vec3 edgeNormal = normalize(vec3(vBuildingPillarOffset.x, 0.0, vBuildingPillarOffset.y));
+                        normalW = normalize(mix(normalW, edgeNormal, bevel * 0.88));
+                        surfaceAlbedo *= 1.0 - bevel * mix(0.05, 0.20, chips);
+                    }
+                }
+            #endif
             if (buildingSurface.x == ${WOOD}.0 && vBuildingDampHeight < height * 0.5) {
                 float mossGrain = terrainNoise(wallXZ * 23.0 + vec2(7.2, vBuildingDampHeight * 19.0));
                 float moss = 1.0 - smoothstep(height * 0.12, height * 0.5, vBuildingDampHeight);
                 moss *= mix(0.55, 1.0, smoothstep(0.22, 0.72, mossGrain));
-                surfaceAlbedo = mix(surfaceAlbedo, buildingMossColor(mossGrain), moss * 0.48);
+                surfaceAlbedo = mix(surfaceAlbedo, terrainContactMossColor(mossGrain), moss * 0.48);
             }
         }
     `)

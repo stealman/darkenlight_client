@@ -10,6 +10,7 @@ export interface WalkableBlockMetadata {
 }
 
 export class WalkableBlock extends BaseStaticObject {
+    private static readonly WIDTH = 1
     private readonly surfaceHeight: number
 
     constructor(type: number, position: Vector3, material: Vector2, metadata?: WalkableBlockMetadata) {
@@ -22,8 +23,9 @@ export class WalkableBlock extends BaseStaticObject {
     }
 
     render() {
+        const width = WalkableBlock.WIDTH
         WorldRenderer.addTerrainContactBlock(
-            Matrix.Scaling(1, this.surfaceHeight, 1).multiply(Matrix.Translation(
+            Matrix.Scaling(width, this.surfaceHeight, width).multiply(Matrix.Translation(
                 this.renderPosition.x,
                 this.renderPosition.y + 0.5 + this.surfaceHeight / 2,
                 this.renderPosition.z,
@@ -31,6 +33,10 @@ export class WalkableBlock extends BaseStaticObject {
             this.material,
             true,
         )
+    }
+
+    getContactShadowSize() {
+        return {width: WalkableBlock.WIDTH, depth: WalkableBlock.WIDTH}
     }
 
     getWalkableHeight(): number {

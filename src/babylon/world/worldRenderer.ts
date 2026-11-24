@@ -5,10 +5,10 @@ import {
     TransformNode, Vector2, Vector3,
 } from '@babylonjs/core'
 import { Builder } from '@/babylon/builder'
-import { Materials } from '@/babylon/materials'
+import { Materials, TerrainEnum1 } from '@/babylon/materials'
 import { TreeManager } from '@/babylon/world/treeManager'
 import { updateWorldInstanceBuffers } from '@/babylon/world/worldInstanceBuffers'
-import { getTerrainHeightOffset, TerrainManager } from '@/babylon/world/terrainManager'
+import { getTerrainHeightOffset, TerrainManager, WATER_BLOCK_TYPE } from '@/babylon/world/terrainManager'
 import { PBRCustomMaterial } from '@babylonjs/materials'
 import { StaticsManager } from '@/babylon/world/statics/staticsManager'
 import { FoliageManager } from '@/babylon/world/foliageManager'
@@ -31,6 +31,7 @@ import { TerrainDebrisManager } from '@/babylon/world/terrainDebrisManager'
 import { StoneBatch } from '@/babylon/world/stoneBatch'
 import { isSnowRoof, outdoorSurfaceHeight } from '@/babylon/world/terrainRoofShape'
 import { StaticTerrainContact } from '@/babylon/world/statics/staticTerrainContact'
+import type { DampContact } from '@/babylon/world/statics/staticTerrainContact'
 
 // The viewport already renders a four-tile reserve. On touch devices, keep one
 // tile of that reserve instead of rebuilding every world buffer on every tile.
@@ -193,7 +194,7 @@ export const WorldRenderer = {
         Lights.registerSharedLightMesh(StoneBatch.prefab!.mesh)
     },
 
-    addTerrainContactBlock(matrix: Matrix, uv: Vector2, blendGroundLighting = false, snowReach = 4 / 3) {
+    addTerrainContactBlock(matrix: Matrix, uv: Vector2, blendGroundLighting = false, snowReach = 4 / 3, damp?: DampContact) {
         const batch = this.block1!
         const index = batch.matrices.length
         batch.matrices.push(matrix)
@@ -206,8 +207,20 @@ export const WorldRenderer = {
         const z = Math.round(m[14] - m[6] * 0.5)
         const foot = m[13] - m[5] * 0.5 - 0.5 // The wrapped cube prefab sits half a unit lower.
         const snowHeight = this.getSnowContactHeight(x, z)
-        if (snowHeight !== undefined && Math.abs(foot - snowHeight) <= 0.15) {
+        if (snowReach > 0 && snowHeight !== undefined && Math.abs(foot - snowHeight) <= 0.15) {
             this.staticTerrainContact.addSnow(index, snowHeight, snowReach, blendGroundLighting)
+        } else if (damp && snowHeight === undefined && !Lights.indoor) {
+            const tile = WorldDataManager.getBlockMap()[x]?.[z]
+            if (!tile || tile.type <= 0 || tile.type >= WATER_BLOCK_TYPE) return
+            const type = tile.type
+            const floor = BuildingManager.getFloorHeightAtTile(x, z)
+            if (damp === 'moss' && (tile.stonePath || tile.beigeStonePath || floor > 0
+                || (type !== TerrainEnum1.TERRAIN_GRASS.index && type !== TerrainEnum1.TERRAIN_GRASS_WINTER.index
+                    && type !== TerrainEnum1.TERRAIN_DIRT.index && type !== TerrainEnum1.TERRAIN_MUDDY_DIRT.index))) return
+            const terrainHeight = TerrainManager.usesOutdoorTerrain() ? outdoorSurfaceHeight(tile) : tile.height + getTerrainHeightOffset(tile, tile.snowed)
+            if (terrainHeight !== undefined && Math.abs(foot - (terrainHeight + floor)) <= 0.15) {
+                this.staticTerrainContact.addDamp(index, terrainHeight + floor, damp)
+            }
         }
     },
 

@@ -14,6 +14,8 @@ import { WATER_BLOCK_TYPE } from './terrainManager'
 import { sameSnowMask } from './snowCoverMask'
 import { OutdoorInstanceBatch } from './outdoorInstanceBatch'
 import type { OutdoorInstance } from './outdoorInstanceBatch'
+import { PBRCustomMaterial } from '@babylonjs/materials'
+import type { TerrainContactShadow } from './terrainContactShadow'
 
 const REGION_SIZE = TERRAIN_ATLAS_REGION_SIZE
 
@@ -42,10 +44,15 @@ function replaceInstances(previous?: OutdoorInstance[], next?: OutdoorInstance[]
 
 type TerrainView = {minX: number, minZ: number, maxX: number, maxZ: number}
 
-export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainView) {
+export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainView, contactShadow?: TerrainContactShadow) {
     const terrain = new TransformNode('outdoorTerrain', parent.getScene())
     terrain.parent = parent
     const renderer = createTerrainSurfaceRenderer(parent.getScene(), terrain, new Vector3(0, 0, 1))
+    if (contactShadow) {
+        for (const material of new Set(renderer.meshes.map(mesh => mesh.material))) {
+            if (material instanceof PBRCustomMaterial) contactShadow.configure(material)
+        }
+    }
     for (const mesh of renderer.meshes) {
         const {minimum, maximum} = mesh.getBoundingInfo()
         mesh.rawBoundingInfo = new BoundingInfo(minimum, maximum)

@@ -13,6 +13,9 @@ import { smoothTerrainExperiment } from '@/babylon/world/terrainExperiment'
 import { BEVELED_TERRAIN_ENABLED, terrainBevelMask, terrainVerticalBevelMask, BeveledTerrain } from '@/babylon/world/beveledTerrain'
 import { SNOW_BLOCK_HEIGHT } from '@/babylon/world/beveledTerrainBlock'
 import type { createOutdoorTerrain } from './outdoorTerrain'
+import { BuildingManager } from './buildings/buildingManager'
+import { TerrainContactShadow } from './terrainContactShadow'
+import { StaticsManager } from './statics/staticsManager'
 
 export const DIRT_BLOCK_TYPE = 1
 const GRASS_BLOCK_TYPES = new Set([2, 5])
@@ -37,9 +40,14 @@ export const TerrainManager = {
     hoverBlockMarker: null as Mesh | null,
     outdoorTerrain: null as ReturnType<typeof createOutdoorTerrain> | null,
     outdoorFactory: null as typeof createOutdoorTerrain | null,
+    contactShadow: null as TerrainContactShadow | null,
 
     initialize (scene: Scene) {
         this.outdoorTerrain = null
+        const contactShadow = new TerrainContactShadow(scene)
+        this.contactShadow = contactShadow
+        contactShadow.configure(Materials.terrainMaterial!)
+        contactShadow.configure(Materials.planeMaterial!)
         if (!smoothTerrainExperiment && !this.outdoorFactory) {
             void import('./outdoorTerrain').then(({createOutdoorTerrain}) => {
                 this.outdoorFactory = createOutdoorTerrain
@@ -126,7 +134,7 @@ export const TerrainManager = {
         const center = MyPlayer.myChar.getPositionRounded()
         const outdoor = this.usesOutdoorTerrain()
         if (outdoor && this.outdoorFactory) {
-            this.outdoorTerrain ??= this.outdoorFactory(WorldRenderer.worldParentNode!)
+            this.outdoorTerrain ??= this.outdoorFactory(WorldRenderer.worldParentNode!, undefined, this.contactShadow ?? undefined)
             const load = WorldDataManager.terrainRenderLoad
             this.outdoorTerrain.render(map, center, snowCoverMask, world.renderRevision,
                 load?.worldId === MyPlayer.worldId ? load.data : undefined, world.originalBlocks)
@@ -134,6 +142,10 @@ export const TerrainManager = {
             this.outdoorTerrain?.setEnabled(false)
         }
         this.renderTerrainArea(map, world.planeBlockMap, snowCoverMask, center, renderTerrainStatics, outdoor)
+        this.contactShadow?.update(map, world.renderRevision, Lights.indoor ? [] : [
+            ...BuildingManager.getHouseShadowFootprints(center),
+            ...StaticsManager.getContactShadowFootprints(map),
+        ])
         return outdoor
     },
 
