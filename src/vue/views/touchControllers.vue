@@ -1,6 +1,12 @@
 <template>
     <div id="touchControllsLayer">
-        <div id="joystick-zone" :class="{ 'touch-controls--settings-active': settingsActive }" style="position:absolute;left:20px;bottom:20px;width:150px;height:150px;"></div>
+        <div
+            id="joystick-zone"
+            class="noselect"
+            :class="{ 'touch-controls--settings-active': settingsActive }"
+            style="position:absolute;left:20px;bottom:20px;width:150px;height:150px;"
+            @contextmenu.prevent
+        ></div>
     </div>
 </template>
 
