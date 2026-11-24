@@ -1,9 +1,10 @@
-import { Matrix, Vector2, Vector3 } from '@babylonjs/core'
+import { Matrix, Vector3 } from '@babylonjs/core'
 import { BaseStaticObject } from './baseStaticObject'
 import { MaterialEnum1, TerrainEnum1 } from '@/babylon/materials'
 import { MapBlock, WorldDataManager } from '@/data/worldDataManager'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { MyPlayer } from '@/data/myPlayer'
+import { StoneBatch, STONE_SHAPE_COUNT } from '../../stoneBatch'
 
 // Pile variation is seeded by world, tile and variant; piece sizes stay fixed.
 const PIECES = [
@@ -20,10 +21,10 @@ const PIECES = [
 ]
 
 export class TerrainDebris extends BaseStaticObject {
-    private readonly pieces: Matrix[]
+    private readonly pieces: {matrix: Matrix, shape: number}[]
 
     constructor(type: number, position: Vector3) {
-        super(type, position, 0, MaterialEnum1.ROCK1.uv, null)
+        super(type, position, 0, MaterialEnum1.ROCK1.uv, StoneBatch.prefab)
         const variant = type - 151
         // Persisted type 153 retains the original large pile (now UI variant 4).
         const scale = [0.55, 0.8, 1.1, 0.95, 1.35][variant]
@@ -36,23 +37,25 @@ export class TerrainDebris extends BaseStaticObject {
             return ((value ^ (value >>> 14)) >>> 0) / 0x100000000
         }
         const count = variant === 0 ? 2 + Math.floor(random() * 3) : [3, 5, 8, 6, 10][variant]
-        const angle = random() * Math.PI * 2
+        const orientation = random()
+        const angle = orientation * Math.PI * 2
+        const firstShape = Math.floor(orientation * STONE_SHAPE_COUNT)
         const cos = Math.cos(angle), sin = Math.sin(angle)
-        this.pieces = PIECES.slice(0, count).map(([x, z, width, height, depth]) => {
+        this.pieces = PIECES.slice(0, count).map(([x, z, width, height, depth], index) => {
             const yaw = random() * Math.PI * 2
             // Keep the rotated fragment inside its tile even after position jitter.
             const halfX = (Math.abs(Math.cos(yaw)) * width + Math.abs(Math.sin(yaw)) * depth) * scale / 2
             const halfZ = (Math.abs(Math.sin(yaw)) * width + Math.abs(Math.cos(yaw)) * depth) * scale / 2
             const offsetX = x * cos - z * sin + (random() - 0.5) * 0.14
             const offsetZ = x * sin + z * cos + (random() - 0.5) * 0.14
-            return Matrix.Scaling(width * scale, height * scale, depth * scale)
+            const matrix = Matrix.Scaling(width * scale, height * scale, depth * scale)
                 .multiply(Matrix.RotationY(yaw))
-                // Both shared block meshes have a fixed -0.5 Y offset.
                 .multiply(Matrix.Translation(
                     Math.max(-0.48 + halfX, Math.min(0.48 - halfX, offsetX)),
-                    height * scale / 2 + 0.5,
+                    0,
                     Math.max(-0.48 + halfZ, Math.min(0.48 - halfZ, offsetZ)),
                 ))
+            return {matrix, shape: (firstShape + index) % STONE_SHAPE_COUNT}
         })
     }
 
@@ -65,30 +68,19 @@ export class TerrainDebris extends BaseStaticObject {
         return block.snowed && WorldRenderer.snowCoverMask.has(this.position.x * mapSize + this.position.z)
     }
 
-    private usesBlockMaterial(block: MapBlock): boolean {
-        return (block.snowed && !this.isSnowSuppressed(block)) || block.type === TerrainEnum1.TERRAIN_ROCK.index
-    }
-
-    private appendPieces(matrices: Matrix[], uvData: Vector2[], material: Vector2) {
-        const world = Matrix.Translation(this.renderPosition.x, this.renderPosition.y, this.renderPosition.z)
-        for (const piece of this.pieces) {
-            matrices.push(piece.multiply(world))
-            uvData.push(material)
-        }
-    }
-
     render() {
         const block = this.getTerrain()
-        if (!block || block.type <= 0 || !this.usesBlockMaterial(block)) return
-        const material = block.snowed && !this.isSnowSuppressed(block) ? MaterialEnum1.SNOW : MaterialEnum1.ROCK1
-        this.appendPieces(WorldRenderer.block1!.matrices, WorldRenderer.block1!.uvData, material.uv)
-    }
-
-    renderTerrain(matrices: Matrix[], uvData: Vector2[]) {
-        const block = this.getTerrain()
-        if (!block || block.type <= 0 || this.usesBlockMaterial(block)) return
+        if (!block || block.type <= 0) return
         const hideSnow = this.isSnowSuppressed(block)
+        const snow = block.snowed && !hideSnow
+        const useBlockAtlas = snow || block.type === TerrainEnum1.TERRAIN_ROCK.index
         const renderType = hideSnow && (block.type === 2 || block.type === 5) ? TerrainEnum1.TERRAIN_DIRT.index : undefined
-        this.appendPieces(matrices, uvData, TerrainEnum1.getTerrainForBlock(block, hideSnow, renderType))
+        const uv = useBlockAtlas
+            ? (snow ? MaterialEnum1.SNOW : MaterialEnum1.ROCK1).uv
+            : TerrainEnum1.getTerrainForBlock(block, hideSnow, renderType)
+        const world = Matrix.Translation(this.renderPosition.x, this.renderPosition.y, this.renderPosition.z)
+        for (const {matrix, shape} of this.pieces) {
+            StoneBatch.add(matrix.multiply(world), shape, uv, useBlockAtlas ? 'block' : 'terrain')
+        }
     }
 }

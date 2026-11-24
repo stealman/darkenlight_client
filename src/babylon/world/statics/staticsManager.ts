@@ -62,6 +62,7 @@ import {
     StoneTomb,
 } from '@/babylon/world/statics/objects/cemeteryObjects'
 import { TerrainDebris } from './objects/terrainDebris'
+import { StoneBatch } from '../stoneBatch'
 
 const isEmbeddedInSnow = (type: number) => isShrubType(type) || type === 281
 
@@ -367,6 +368,8 @@ export const StaticsManager = {
 
     clearWorld() {
         Lights.clearStaticLights()
+        StoneBatch.prefab!.clearMatrices()
+        StoneBatch.flush()
         this.allStatics.forEach((obj) => obj.dispose())
         this.allStatics = []
         this.staticsByType.clear()

@@ -28,6 +28,7 @@ import { EquipmentDecorationsManager } from '@/babylon/world/equipmentDecoration
 import { Settings } from '@/settings/settings'
 import { IndoorTerrainOcclusionManager } from '@/babylon/world/indoorTerrainOcclusionManager'
 import { TerrainDebrisManager } from '@/babylon/world/terrainDebrisManager'
+import { StoneBatch } from '@/babylon/world/stoneBatch'
 import { isSnowRoof } from '@/babylon/world/terrainRoofShape'
 import { StaticTerrainContact } from '@/babylon/world/statics/staticTerrainContact'
 
@@ -69,6 +70,7 @@ export const WorldRenderer = {
         this.translucentPlane = new SymmetricBlock(Builder.createHorizontalPlane(scene, this.worldParentNode, 1, 0), Materials.blockMatTrans!)
         this.translucentPlane.mesh.doNotSyncBoundingInfo = true
         this.translucentPlane.mesh.receiveShadows = true
+        StoneBatch.initialize(scene, this.worldParentNode)
 
         // Initialize managers
         TerrainManager.initialize(scene)
@@ -77,7 +79,6 @@ export const WorldRenderer = {
         StaticsManager.initialize(scene)
         BuildingManager.initialize(scene, this.worldParentNode)
         FoliageManager.initialize(scene, this.worldParentNode)
-        RockDebrisManager.initialize(scene, this.worldParentNode)
         FoggyAreaManager.initialize(scene)
 
         // Terrain receives local-light shadows, but does not need to cast into
@@ -89,6 +90,7 @@ export const WorldRenderer = {
         Lights.addShadowCaster(TerrainManager.terrainPlane!, false)
         Lights.addShadowCaster(TerrainManager.terrainWaterPlane!, false)
         Lights.addShadowCaster(this.block1.mesh, true, true)
+        Lights.addShadowCaster(StoneBatch.prefab!.mesh, true, true)
         // Transparent/alpha world geometry is not a local static-light caster.
         Lights.addShadowCaster(this.blockWithAlpha1.mesh, true)
         TreeManager.addAllShadowCasters()
@@ -118,6 +120,7 @@ export const WorldRenderer = {
         this.staticTerrainContact?.clear()
         this.blockWithAlpha1!.clearMatrices()
         this.translucentPlane!.clearMatrices()
+        StoneBatch.prefab!.clearMatrices()
         const blockMap = WorldDataManager.getBlockMap()
         const {mask: snowCoverMask, vegetationMask} = createSnowCoverMask(
             TreeManager.allTrees,
@@ -131,7 +134,6 @@ export const WorldRenderer = {
         // Render terrain
         const outdoorTerrain = TerrainManager.renderTerrain((terrainMatrices, terrainUvData) => {
             StaticsManager.renderTerrainBlocks(terrainMatrices, terrainUvData)
-            TerrainDebrisManager.render(terrainMatrices, terrainUvData)
         }, snowCoverMask)
 
         // Render trees
@@ -140,6 +142,7 @@ export const WorldRenderer = {
         // Render statics
         // renderTerrainBlocks already updated visibility for this same pass.
         StaticsManager.renderObjects(true)
+        TerrainDebrisManager.render()
 
         // Buildings own their meshes so they can later fade independently.
         BuildingManager.renderBuildings()
@@ -153,11 +156,11 @@ export const WorldRenderer = {
         if (outdoorTerrain) {
             FoliageManager.foliageMesh?.setEnabled(false)
             FoliageManager.groundMesh?.setEnabled(false)
-            RockDebrisManager.mesh?.setEnabled(false)
         } else {
             FoliageManager.renderFoliage(snowCoverMask, vegetationMask)
             RockDebrisManager.renderRockDebris(Lights.indoor)
         }
+        StoneBatch.flush()
         FoggyAreaManager.refreshVisibleAreas()
 
         if (GMManager.gmPanelVisible.value && GMManager.tab === GmTabs.SPAWNS_EDIT) {
@@ -187,7 +190,7 @@ export const WorldRenderer = {
         Lights.registerSharedLightMesh(this.block1!.mesh)
         Lights.registerSharedLightMesh(this.blockWithAlpha1!.mesh)
         Lights.registerSharedLightMesh(this.translucentPlane!.mesh)
-        Lights.registerSharedLightMesh(RockDebrisManager.mesh!)
+        Lights.registerSharedLightMesh(StoneBatch.prefab!.mesh)
     },
 
     addTerrainContactBlock(matrix: Matrix, uv: Vector2, blendGroundLighting = false, snowReach = 4 / 3) {

@@ -10,8 +10,9 @@ import { MonsterTemplates } from '@/babylon/monsters/codebook/monsterTemplates'
 import { MonsterLoader } from '@/babylon/monsters/monsterLoader'
 import { WorldRenderer, SymmetricBlock } from '@/babylon/world/worldRenderer'
 import { Builder } from '@/babylon/builder'
-import { MaterialAlphaEnum1, Materials } from '@/babylon/materials'
-import { WorldDataManager } from '@/data/worldDataManager'
+import { MaterialAlphaEnum1, Materials, TerrainEnum1 } from '@/babylon/materials'
+import { MapBlock, WorldDataManager } from '@/data/worldDataManager'
+import { StoneBatch } from '@/babylon/world/stoneBatch'
 import { StaticsManager } from '@/babylon/world/statics/staticsManager'
 import { StaticObjectsCodebook } from '@/babylon/world/statics/staticsCodebook'
 import { BuildingManager } from '@/babylon/world/buildings/buildingManager'
@@ -94,15 +95,17 @@ export async function installAssetPreview(
     WorldRenderer.block1 = new SymmetricBlock(Builder.createWrappedBlock(scene, parent), Materials.blockMat1!)
     WorldRenderer.blockWithAlpha1 = new SymmetricBlock(Builder.createBlock(scene, parent), Materials.blockMatAlpha1!)
     WorldRenderer.translucentPlane = new SymmetricBlock(Builder.createHorizontalPlane(scene, parent, 1, 0), Materials.blockMatTrans!)
+    StoneBatch.initialize(scene, parent)
     WorldDataManager.replaceWorldData(0, 32)
     // MyPlayer.worldId defaults to zero in the offline bootstrap.
     const { MyPlayer } = await import('@/data/myPlayer')
     WorldDataManager.replaceWorldData(MyPlayer.worldId, 32)
+    WorldDataManager.getBlockMap()[0][0] = new MapBlock(0, TerrainEnum1.TERRAIN_ROCK.index)
     TreeManager.initialize(scene)
     Object.values(TreeManager.prefabs).forEach(prefab => { if (prefab) prefab.mesh.parent = parent })
     StaticsManager.initialize(scene)
     BuildingManager.initialize(scene, parent)
-    const buffers = () => [WorldRenderer.block1!, WorldRenderer.blockWithAlpha1!, WorldRenderer.translucentPlane!, StaticLeafPlanes.prefab!, ...Object.values(TreeManager.prefabs).filter(p => p != null), ...StaticEquipPartsRenderer.prefabs.values(), ...SpecimenPrefabs.all]
+    const buffers = () => [WorldRenderer.block1!, WorldRenderer.blockWithAlpha1!, WorldRenderer.translucentPlane!, StoneBatch.prefab!, StaticLeafPlanes.prefab!, ...Object.values(TreeManager.prefabs).filter(p => p != null), ...StaticEquipPartsRenderer.prefabs.values(), ...SpecimenPrefabs.all]
     let currentSnowTerraceProps: readonly object[] | undefined
     const terrain = createTerrainPreview(scene, parent, camera, ground, setTerrainLighting, props => {
         const visibleProps = props.length ? props : undefined

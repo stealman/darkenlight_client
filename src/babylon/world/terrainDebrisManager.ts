@@ -1,4 +1,4 @@
-import { Matrix, Vector2, Vector3 } from '@babylonjs/core'
+import { Vector3 } from '@babylonjs/core'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { MyPlayer } from '@/data/myPlayer'
 import { ViewportManager } from '@/utils/viewport'
@@ -20,7 +20,7 @@ export const TerrainDebrisManager = {
         return ((value ^ (value >>> 16)) >>> 0) / 0x100000000
     },
 
-    render(terrainMatrices: Matrix[], terrainUvData: Vector2[]) {
+    render() {
         if (this.worldId !== MyPlayer.worldId) {
             this.piles.clear()
             this.worldId = MyPlayer.worldId
@@ -56,7 +56,6 @@ export const TerrainDebrisManager = {
                 pile.position.y = pile.renderPosition.y = block.totalHeight
                 next.set(key, pile)
                 pile.render()
-                pile.renderTerrain(terrainMatrices, terrainUvData)
             }
         }
         this.piles = next
