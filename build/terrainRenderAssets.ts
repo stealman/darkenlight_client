@@ -7,7 +7,7 @@ import { muddyDirtLayout, terrainCoverLayout, TERRAIN_ATLAS_REGION_SIZE, visitTe
 import {
     createTerrainRenderBuffer, decodeTerrainRenderData, terrainRenderAssetName,
     terrainRenderBaseBytes, terrainTransitionArea, TERRAIN_RENDER_BORDER, TERRAIN_RENDER_WORLD_BUDGET,
-    TERRAIN_TRANSITION_FALLBACK, TERRAIN_TRANSITION_RECORD_BYTES,
+    TERRAIN_TRANSITION_FALLBACK, TERRAIN_TRANSITION_RECORD_BYTES, TERRAIN_TRANSITION_SNOWMELT_FLAG,
 } from '../src/babylon/world/terrainRenderData'
 import { isSnowRoof, outdoorSurfaceHeight, terrainRoofShape, terrainSurfaceAtlasType } from '../src/babylon/world/terrainRoofShape'
 import { findTerrainTransitions, hasTerrainTransition, terrainSurface } from '../src/babylon/world/terrainTransitionField'
@@ -102,7 +102,8 @@ export function compileTerrainRenderData(bytes: Uint8Array) {
                         break write
                     }
                     result.transitionBytes.setUint8(used, (tx - area.left) * stride + tz - area.top)
-                    result.transitionBytes.setUint8(used + 1, tile.coverType)
+                    const packedCover = tile.coverType | (tile.snowmeltOnly ? TERRAIN_TRANSITION_SNOWMELT_FLAG : 0)
+                    result.transitionBytes.setUint8(used + 1, packedCover)
                     result.transitionBytes.setUint8(used + 2, tile.substrateType)
                     tile.field.forEach((value, index) => result.transitionBytes.setFloat32(used + 3 + index * 4, value, true))
                     used += TERRAIN_TRANSITION_RECORD_BYTES

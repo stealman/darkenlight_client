@@ -103,11 +103,11 @@ export async function installAssetPreview(
     StaticsManager.initialize(scene)
     BuildingManager.initialize(scene, parent)
     const buffers = () => [WorldRenderer.block1!, WorldRenderer.blockWithAlpha1!, WorldRenderer.translucentPlane!, StaticLeafPlanes.prefab!, ...Object.values(TreeManager.prefabs).filter(p => p != null), ...StaticEquipPartsRenderer.prefabs.values(), ...SpecimenPrefabs.all]
-    let showingSnowTerraceProps = false
+    let currentSnowTerraceProps: readonly object[] | undefined
     const terrain = createTerrainPreview(scene, parent, camera, ground, setTerrainLighting, props => {
-        const show = props.length > 0
-        if (show === showingSnowTerraceProps) return
-        showingSnowTerraceProps = show
+        const visibleProps = props.length ? props : undefined
+        if (visibleProps === currentSnowTerraceProps) return
+        currentSnowTerraceProps = visibleProps
         const batches = [WorldRenderer.block1!, WorldRenderer.blockWithAlpha1!, TreeManager.prefabs.tree2!, StaticLeafPlanes.prefab!]
         for (const batch of batches) batch.clearMatrices()
         for (const {x, y, z, shrub} of props) {
@@ -134,7 +134,7 @@ export async function installAssetPreview(
     }
     const clear = () => {
         generation++
-        showingSnowTerraceProps = false
+        currentSnowTerraceProps = undefined
         parent.rotation.y = 0
         if (monster) {
             clips.forEach(([, clip]) => clip.stop())

@@ -7,6 +7,8 @@ import { POND_DISTANCE_RANGE } from './terrainPreviewWater'
 import type { createTerrainPreviewWater } from './terrainPreviewWater'
 
 const PATCH_SIZE = 3
+export const LOCAL_TRANSITION_NOISE_PERIOD = 48
+const NOISE_QUARTER_PERIOD = LOCAL_TRANSITION_NOISE_PERIOD / 4
 const BOUNDARY_AMPLITUDE = 2
 const BOUNDARY_FREQUENCY = 0.32
 export const TERRAIN_TRANSITION_REACH = 4
@@ -29,6 +31,7 @@ export function createTerrainTransitionMaterial(
     soilRockWalls = false,
     snowWallRock?: PBRCustomMaterial,
     snowCover = false,
+    grassCover = false,
 ) {
     const material = new PBRCustomMaterial(name, grass.getScene())
     material.metallic = grass.metallic
@@ -73,7 +76,7 @@ export function createTerrainTransitionMaterial(
         attribute vec4 terrainFootBoundaryCorners;
         varying vec4 vTerrainBoundaryCorners;
         varying vec4 vTerrainFootBoundaryCorners;
-        varying vec2 vTerrainTileUV;
+        varying vec4 vTerrainTile;
         varying vec2 vSurfacePatchUV;
         varying vec2 vPlacedSurfaceUV;
         varying vec4 vPlacedSurface;
@@ -82,7 +85,9 @@ export function createTerrainTransitionMaterial(
     material.Vertex_After_WorldPosComputed(`
         vec2 tileCenter = (world * vec4(terrainSurface.x, 0.0, terrainSurface.y, 1.0)).xz;
         vec2 tileUV = worldPos.xz - tileCenter + 0.5;
-        vTerrainTileUV = tileUV;
+        // Wrap the tile center before interpolating its local offset. All interpolated values stay small.
+        vec2 noiseTile = mod(tileCenter + ${NOISE_QUARTER_PERIOD}.0, ${LOCAL_TRANSITION_NOISE_PERIOD}.0);
+        vTerrainTile = vec4(tileUV, noiseTile + tileUV - 0.5);
         vTerrainBoundaryCorners = terrainBoundaryCorners;
         vTerrainFootBoundaryCorners = terrainFootBoundaryCorners;
         vSurfacePatchUV = mod(floor(tileCenter + 0.5), ${PATCH_SIZE.toFixed(1)}) + tileUV;
@@ -102,7 +107,7 @@ export function createTerrainTransitionMaterial(
         varying vec4 vWallContact;
         varying vec4 vTerrainBoundaryCorners;
         varying vec4 vTerrainFootBoundaryCorners;
-        varying vec2 vTerrainTileUV;
+        varying vec4 vTerrainTile;
 
         ${terrainNoiseShader}
 
@@ -153,16 +158,22 @@ export function createTerrainTransitionMaterial(
                 towardGrass = bankDistance * ${pondBank.coverOnBank ? '2.35' : '-2.35'};
             }` : ''}
             float clumps = terrainNoise(p * vec2(1.35, 1.95));
-            float shape = sin(p.y * 1.45 + 0.4) * 0.58 + sin(p.y * 3.1) * 0.24 + (clumps - 0.5) * 1.65;
+            float shape = (clumps - 0.5) * 1.65;
+            ${grassCover ? `if (transitionBoundary.z > 0.5) {
+                // Map edges can face any direction. Use patches that vary along both world axes.
+                shape += (terrainNoise(p * vec2(2.8, 2.3) + vec2(3.0, 7.0)) - 0.5) * 1.5;
+            } else` : ''} {
+                shape += sin(p.y * 1.45 + 0.4) * 0.58 + sin(p.y * 3.1) * 0.24;
+            }
             // Compress only the longest excursions, leaving the small contours and grain intact.
             shape -= sign(shape) * max(abs(shape) - 0.65, 0.0) * 0.32;
             float grain = (terrainNoise(p * 6.8) - 0.5) * 0.58;
             float halfWidth = mix(0.26, 0.68, clumps);
             coverDistance = towardGrass + ${rockSubstrate ? 'shape * 0.64 + grain * 0.78' : 'shape + grain'};
-            ${snowCover ? `if (transitionBoundary.z > 0.5) {
+            ${snowCover || grassCover ? `if (transitionBoundary.z > 0.5) {
                 // Fade contour noise before the last tiles of the local blend.
                 float noiseWeight = 1.0 - smoothstep(0.75, 1.75, abs(towardGrass));
-                coverDistance = towardGrass + (shape + grain) * noiseWeight;
+                coverDistance = towardGrass + (${grassCover && rockSubstrate ? 'shape * 0.64 + grain * 0.78' : 'shape + grain'}) * noiseWeight;
                 return smoothstep(-halfWidth, halfWidth, coverDistance);
             }` : ''}
             float grass = smoothstep(-halfWidth, halfWidth, coverDistance);
@@ -224,11 +235,11 @@ export function createTerrainTransitionMaterial(
             vec2 localCover = vec2(1.0);
             if (byTop && (modes.x == 4.0 || modes.x == 6.0)) {
                 localCover.x = transitionGrassWeight(terrainXZ, 0.0, false, coverDistance,
-                    boundaryDistance(vTerrainBoundaryCorners, vTerrainTileUV));
+                    boundaryDistance(vTerrainBoundaryCorners, vTerrainTile.xy));
             }
             if (byBottom && (modes.y == 4.0 || modes.y == 6.0)) {
                 localCover.y = transitionGrassWeight(terrainXZ, 0.0, false, coverDistance,
-                    boundaryDistance(vTerrainFootBoundaryCorners, vTerrainTileUV - vPlacedSurface.xy));
+                    boundaryDistance(vTerrainFootBoundaryCorners, vTerrainTile.xy - vPlacedSurface.xy));
             }
             vec2 localContact = step(3.5, modes) * (1.0 - step(6.5, modes));
             coverAtContact += localContact * localCover;
@@ -265,7 +276,11 @@ export function createTerrainTransitionMaterial(
         }
     `)
     material.Fragment_Before_Lights(`
-        vec2 terrainXZ = vPositionW.xz + vec2(0.0, transitionBoundary.x);
+        // Mirror the periodic coordinate so both sides of each fold sample the same noise at the join.
+        vec2 noisePhase = vTerrainTile.zw;
+        vec2 terrainXZ = transitionBoundary.z > 0.5
+            ? min(abs(noisePhase), abs(${LOCAL_TRANSITION_NOISE_PERIOD}.0 - noisePhase)) - ${NOISE_QUARTER_PERIOD}.0
+            : vPositionW.xz + vec2(0.0, transitionBoundary.x);
         bool wall = ${snowWallRock ? 'true' : 'max(vWallContact.z, vWallContact.w) > 0.5'};
         // Recover the integer flags before decoding. Interpolation can put an encoded 2 just below 2.
         float placedGrass = ${pondBank ? 'mod(floor(vPlacedSurface.z + 0.5), 2.0)' : 'vPlacedSurface.z'};
@@ -311,7 +326,7 @@ export function createTerrainTransitionMaterial(
         } else {
             float grassIslandSupport = smoothstep(0.2, 0.85, vPlacedSurface.w);
             grassWeight = transitionGrassWeight(terrainXZ, grassIslandSupport, ${pondBank ? 'vPlacedSurface.z > 1.5' : 'false'},
-                coverDistance, boundaryDistance(vTerrainBoundaryCorners, vTerrainTileUV));
+                coverDistance, boundaryDistance(vTerrainBoundaryCorners, vTerrainTile.xy));
         }
         ${wallDirt ? 'float snowWeight = min(snowFringe.x, 1.0 - grassWeight);' : ''}
         vec2 dirtCoverage = 1.0 - max(vec2(grassWeight${wallDirt ? ' + snowWeight' : ''}), grassAtEdges);

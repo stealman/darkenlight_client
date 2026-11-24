@@ -1,15 +1,16 @@
 import { TERRAIN_ATLAS_REGION_SIZE } from './terrainAtlasPlacement'
 
-const MAGIC = 0x31524c44 // DLR1
+const MAGIC = 0x32524c44 // DLR2
 const HEADER_BYTES = 12
 export const TERRAIN_RENDER_WORLD_BUDGET = 10_000_000
 export const TERRAIN_RENDER_BORDER = 5
 export const TERRAIN_TRANSITION_RECORD_BYTES = 19
+export const TERRAIN_TRANSITION_SNOWMELT_FLAG = 128
 export const TERRAIN_TRANSITION_FALLBACK = 0xffffffff
 
 // Bump the asset version when the format or precomputation rules change.
 export function terrainRenderAssetName(mapHash: string) {
-    return `assets/render/v1-${mapHash}.dlr`
+    return `assets/render/v2-${mapHash}.dlr`
 }
 
 export function terrainRenderBaseBytes(width: number, depth: number) {
@@ -56,7 +57,7 @@ export function terrainTransitionArea(width: number, depth: number, x: number, z
 }
 
 export function visitBakedTerrainTransitions(data: TerrainRenderData, x: number, z: number,
-    visit: (x: number, z: number, cover: number, substrate: number, field: number[]) => void) {
+    visit: (x: number, z: number, cover: number, substrate: number, field: number[], snowmeltOnly: boolean) => void) {
     const region = x / TERRAIN_ATLAS_REGION_SIZE * data.columns + z / TERRAIN_ATLAS_REGION_SIZE
     const start = data.transitionOffsets[region]
     if (!start) return true
@@ -68,10 +69,11 @@ export function visitBakedTerrainTransitions(data: TerrainRenderData, x: number,
     const stride = bottom - top
     for (let offset = start; offset < end; offset += TERRAIN_TRANSITION_RECORD_BYTES) {
         const tile = data.transitionBytes.getUint8(offset)
-        const cover = data.transitionBytes.getUint8(offset + 1)
+        const packedCover = data.transitionBytes.getUint8(offset + 1)
+        const cover = packedCover & ~TERRAIN_TRANSITION_SNOWMELT_FLAG
         const substrate = data.transitionBytes.getUint8(offset + 2)
         const field = Array.from({length: 4}, (_, i) => data.transitionBytes.getFloat32(offset + 3 + i * 4, true))
-        visit(left + Math.floor(tile / stride), top + tile % stride, cover, substrate, field)
+        visit(left + Math.floor(tile / stride), top + tile % stride, cover, substrate, field, !!(packedCover & TERRAIN_TRANSITION_SNOWMELT_FLAG))
     }
     return true
 }

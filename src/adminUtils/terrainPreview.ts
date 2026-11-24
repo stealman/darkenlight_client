@@ -6,11 +6,12 @@ import { TerrainEnum1 } from '@/babylon/materials'
 import { Lights } from '@/babylon/scene/lights'
 import { Renderer } from '@/babylon/scene/renderer'
 import { SNOW_BLOCK_HEIGHT } from '@/babylon/world/beveledTerrainBlock'
+import { createOutdoorTerrain } from '@/babylon/world/outdoorTerrain'
 import { createSnowCoverMask } from '@/babylon/world/snowCoverMask'
 import { WATER_BLOCK_TYPE } from '@/babylon/world/terrainManager'
 import { MapBlock } from '@/data/worldDataManager'
 import { Settings } from '@/settings/settings'
-import { terrainBoundaryOffset, TERRAIN_TRANSITION_REACH } from './terrainTransitionMaterial'
+import { LOCAL_TRANSITION_NOISE_PERIOD, terrainBoundaryOffset, TERRAIN_TRANSITION_REACH } from './terrainTransitionMaterial'
 import { terrainWithoutSnow } from './terrainLocalTransitions'
 
 const TERRAIN_PREVIEW_STORAGE_KEY = 'darkenlight.adminUtils.terrainPreview'
@@ -27,6 +28,11 @@ const ROCK = TerrainEnum1.TERRAIN_ROCK.index
 const SNOW_ROCK = TerrainEnum1.TERRAIN_SNOW_ROCK.index
 const isPreviewSnow = (type: number) => type === SNOW_DIRT || type === SNOW_DRY_DIRT || type === SNOW_WINTER_GRASS || type === SNOW_ROCK
 const CENTER = (SIZE - 1) / 2
+// Keep both the region grid and world-space shader coordinates close to Greyvein Camp.
+const SNOW_MUD_X = 936, SNOW_MUD_Z = 984
+// Preserve the transition noise phase and the three-tile atlas phase when translating the preview.
+const snowMudShift = (origin: number) => Math.round((origin + CENTER) / LOCAL_TRANSITION_NOISE_PERIOD) * LOCAL_TRANSITION_NOISE_PERIOD
+const SNOW_MUD_SHIFT_X = snowMudShift(SNOW_MUD_X), SNOW_MUD_SHIFT_Z = snowMudShift(SNOW_MUD_Z)
 const BOUNDARIES = Array.from({length: SIZE}, (_, z) => CENTER + terrainBoundaryOffset(z))
 const ADJACENT_TILES = [[-1, 0], [1, 0], [0, -1], [0, 1]] as const
 // Match the shader's corner order: -X/-Z, +X/-Z, -X/+Z, +X/+Z.
@@ -109,6 +115,53 @@ function createSnowTerracePreview(hideSnow: boolean) {
         (hideSnow && mask.has(x * SIZE + z) ? bare : snow)[snowTerraceHeight(x, z)]))
 }
 
+const snowMudProps = snowTerraceProps.map(prop => ({
+    ...prop, x: prop.x + CENTER + SNOW_MUD_X, z: prop.z + CENTER + SNOW_MUD_Z,
+}))
+
+const snowMudCenteredProps = snowMudProps.map(prop => ({
+    ...prop, x: prop.x - SNOW_MUD_SHIFT_X, z: prop.z - SNOW_MUD_SHIFT_Z,
+}))
+
+function createSnowMudPreview() {
+    const {mask} = createSnowCoverMask(snowTerraceTrees, [snowTerraceShrub], SIZE, 1, snowTerraceHeight)
+    const layers = [0, 1].map(height => {
+        const mud = new MapBlock(height, MUDDY_DIRT)
+        const snow = new MapBlock(height, MUDDY_DIRT)
+        const grass = new MapBlock(height, WINTER_GRASS)
+        snow.snowed = true
+        for (const block of [mud, snow, grass]) {
+            block.computeData()
+            block.heightOffset = 0
+            block.totalHeight = block.walkHeight = height
+        }
+        return {mud, snow, grass}
+    })
+    const patch = Array.from({length: SIZE}, (_, x) => Array.from({length: SIZE}, (_, z) => {
+        const {mud, snow, grass} = layers[snowTerraceHeight(x, z)]
+        // A straight edge, a diagonal crossing the terrace, and a stepped edge.
+        const edge = z < 12 ? 14 : z < 20 ? 19 - Math.abs(z - 15) : z < 24 ? 12 : 17
+        if (x <= edge) return snow
+        // Let a third surface touch the blend, with isolated snow beyond the main edge.
+        if (x >= 20 && z >= 13 && z <= 17) return grass
+        return x >= 17 && x <= 18 && z >= 21 && z <= 22 ? snow : mud
+    }))
+    // Supply the normal world indices while sharing the empty padding outside the fixture.
+    const depth = SNOW_MUD_Z + SIZE + 5
+    const empty = new MapBlock(0, 0)
+    empty.computeData()
+    const emptyRow = new Array<MapBlock>(depth).fill(empty)
+    const map = new Array<MapBlock[]>(depth).fill(emptyRow)
+    patch.forEach((row, x) => {
+        const padded = emptyRow.slice()
+        row.forEach((block, z) => { padded[SNOW_MUD_Z + z] = block })
+        map[SNOW_MUD_X + x] = padded
+    })
+    const snowMask = new Set(Array.from(mask, tile =>
+        (SNOW_MUD_X + Math.floor(tile / SIZE)) * depth + SNOW_MUD_Z + tile % SIZE))
+    return {map, snowMask}
+}
+
 function createRockOverMudPreview() {
     const mud = new MapBlock(0, MUDDY_DIRT)
     const rock = new MapBlock(1, ROCK)
@@ -133,10 +186,14 @@ export function createTerrainPreview(
         <label class="admin-utils__field">Oblast <select id="terrainSource">
             <option value="demo">Testovací terén</option>
             <option value="snowTerrace">Sníh u stromu a keře</option>
+            <option value="snowMud">Přechody sněhu a bahna</option>
             <option value="rockOverMud">Zasněžená skála nad bahnem</option>
         </select></label>
         <label class="admin-utils__field" id="terrainSnowMaskField" hidden>
             <span><input id="terrainSnowMask" type="checkbox" checked> Potlačit sníh pod stromem a keřem</span>
+        </label>
+        <label class="admin-utils__field" id="terrainWorldCoordinatesField" hidden>
+            <span><input id="terrainWorldCoordinates" type="checkbox" checked> Použít světové souřadnice</span>
         </label>
         <label class="admin-utils__field">Povrch A<select id="terrainPrimary"></select></label>
         <label class="admin-utils__field">Povrch B<select id="terrainSecondary"><option value="">Bez druhého povrchu</option></select></label>
@@ -147,6 +204,8 @@ export function createTerrainPreview(
     const source = controls.querySelector<HTMLSelectElement>('#terrainSource')!
     const snowMaskField = controls.querySelector<HTMLLabelElement>('#terrainSnowMaskField')!
     const snowMask = controls.querySelector<HTMLInputElement>('#terrainSnowMask')!
+    const coordinatesField = controls.querySelector<HTMLLabelElement>('#terrainWorldCoordinatesField')!
+    const worldCoordinates = controls.querySelector<HTMLInputElement>('#terrainWorldCoordinates')!
     const primary = controls.querySelector<HTMLSelectElement>('#terrainPrimary')!
     const secondary = controls.querySelector<HTMLSelectElement>('#terrainSecondary')!
     const foliageToggle = controls.querySelector<HTMLInputElement>('#terrainFoliage')!
@@ -185,9 +244,17 @@ export function createTerrainPreview(
     const foliage = new TransformNode('adminUtilsTerrainFoliage', scene)
     foliage.parent = terrain
     foliage.setEnabled(foliageToggle.checked)
-    const updateProps = () => setSnowTerraceProps(source.value === 'snowTerrace' && foliageToggle.checked ? snowTerraceProps : [])
+    const hasSnowProps = () => source.value === 'snowTerrace' || source.value === 'snowMud'
+    let worldTerrainRoot: TransformNode | undefined
+    let worldTerrain: ReturnType<typeof createOutdoorTerrain> | undefined
+    let snowMudPreview: ReturnType<typeof createSnowMudPreview> | undefined
+    const emptySnowMask = new Set<number>()
+    const updateProps = () => setSnowTerraceProps(hasSnowProps() && foliageToggle.checked
+        ? source.value === 'snowMud' ? (worldCoordinates.checked ? snowMudProps : snowMudCenteredProps) : snowTerraceProps
+        : [])
     foliageToggle.onchange = () => {
         foliage.setEnabled(foliageToggle.checked)
+        worldTerrain?.setFoliageVisible(foliageToggle.checked)
         updateProps()
     }
 
@@ -209,8 +276,32 @@ export function createTerrainPreview(
     camera.panningDistanceLimit = SIZE / Math.SQRT2
     camera.inputs.removeByType('ArcRotateCameraKeyboardMoveInput')
     const pointers = camera.inputs.attached.pointers as ArcRotateCameraPointersInput
-    pointers.buttons = [2]
+    pointers.buttons = [0, 2]
+    const onPointerMove = pointers.onTouch.bind(pointers)
+    pointers.onTouch = (point, offsetX, offsetY) => {
+        if (point?.type === 'touch') {
+            camera.inertialPanningX -= offsetX / camera.panningSensibility
+            camera.inertialPanningY += offsetY / camera.panningSensibility
+            return
+        }
+        onPointerMove(point, offsetX, offsetY)
+    }
 
+    const worldOffset = new Vector3(SNOW_MUD_X + CENTER, 0, SNOW_MUD_Z + CENTER)
+    const sunOffset = Vector3.Zero()
+    const placeSun = (worldPreview: boolean) => {
+        const x = worldPreview ? worldOffset.x - (worldCoordinates.checked ? 0 : SNOW_MUD_SHIFT_X) : 0
+        const z = worldPreview ? worldOffset.z - (worldCoordinates.checked ? 0 : SNOW_MUD_SHIFT_Z) : 0
+        Lights.sunLight.position.x += x - sunOffset.x
+        Lights.sunLight.position.z += z - sunOffset.z
+        sunOffset.set(x, 0, z)
+    }
+    const placeWorldPreview = () => {
+        worldTerrainRoot?.position.set(
+            worldCoordinates.checked ? 0 : -SNOW_MUD_SHIFT_X, 0,
+            worldCoordinates.checked ? 0 : -SNOW_MUD_SHIFT_Z,
+        )
+    }
     const transitionBoundary = new Vector3(CENTER, 0, 0)
     let renderers: {
         surface: ReturnType<typeof createTerrainSurfaceRenderer>
@@ -219,8 +310,28 @@ export function createTerrainPreview(
     const update = () => {
         const snowTerrace = source.value === 'snowTerrace'
         const rockOverMud = source.value === 'rockOverMud'
-        const localBoundaries = snowTerrace || rockOverMud
+        const snowMud = source.value === 'snowMud'
+        const localBoundaries = source.value !== 'demo'
         updateProps()
+        terrain.setEnabled(!snowMud)
+        placeSun(snowMud)
+        if (snowMud) {
+            snowMudPreview ??= createSnowMudPreview()
+            if (!worldTerrainRoot) {
+                worldTerrainRoot = new TransformNode('adminUtilsWorldTerrainOrigin', scene)
+                worldTerrainRoot.parent = parent
+            }
+            placeWorldPreview()
+            worldTerrain ??= createOutdoorTerrain(worldTerrainRoot, {
+                minX: SNOW_MUD_X, minZ: SNOW_MUD_Z,
+                maxX: SNOW_MUD_X + SIZE - 1, maxZ: SNOW_MUD_Z + SIZE - 1,
+            })
+            worldTerrain.render(snowMudPreview.map, worldOffset,
+                snowMask.checked ? snowMudPreview.snowMask : emptySnowMask, 0)
+            worldTerrain.setFoliageVisible(foliageToggle.checked)
+            return
+        }
+        worldTerrain?.setEnabled(false)
         transitionBoundary.z = Number(localBoundaries)
         const first = Number(primary.value)
         const second = Number(secondary.value)
@@ -261,7 +372,8 @@ export function createTerrainPreview(
             }
             return block
         }))
-        const map = snowTerrace ? createSnowTerracePreview(snowMask.checked) : rockOverMud ? createRockOverMudPreview() : demoMap
+        const map = snowTerrace ? createSnowTerracePreview(snowMask.checked)
+            : rockOverMud ? createRockOverMudPreview() : demoMap
         const transitionTiles = !localBoundaries && hasTransitions ? findTransitionTiles(map) : undefined
         renderers ??= {
             surface: createTerrainSurfaceRenderer(scene, terrain, transitionBoundary,
@@ -281,6 +393,14 @@ export function createTerrainPreview(
     }
     const resetCamera = () => {
         camera.target.copyFrom(target)
+        if (source.value === 'snowMud') {
+            camera.target.addInPlace(worldOffset)
+            if (!worldCoordinates.checked) {
+                camera.target.x -= SNOW_MUD_SHIFT_X
+                camera.target.z -= SNOW_MUD_SHIFT_Z
+            }
+        }
+        camera.panningOriginTarget.copyFrom(camera.target)
         camera.radius = radius
         camera.inertialPanningX = camera.inertialPanningY = camera.inertialRadiusOffset = 0
     }
@@ -291,14 +411,25 @@ export function createTerrainPreview(
         update()
     }
     const showSource = () => {
-        const snowTerrace = source.value === 'snowTerrace'
         primary.disabled = secondary.disabled = source.value !== 'demo'
-        snowMaskField.hidden = !snowTerrace
+        snowMaskField.hidden = !hasSnowProps()
+        coordinatesField.hidden = source.value !== 'snowMud'
         update()
         resetCamera()
     }
     source.onchange = showSource
     snowMask.onchange = update
+    worldCoordinates.onchange = () => {
+        const direction = worldCoordinates.checked ? 1 : -1
+        const dx = direction * SNOW_MUD_SHIFT_X, dz = direction * SNOW_MUD_SHIFT_Z
+        camera.target.x += dx
+        camera.target.z += dz
+        camera.panningOriginTarget.x += dx
+        camera.panningOriginTarget.z += dz
+        placeWorldPreview()
+        placeSun(true)
+        updateProps()
+    }
     primary.onchange = changeSurface
     secondary.onchange = changeSurface
     controls.querySelector('button')!.onclick = resetCamera
@@ -307,7 +438,10 @@ export function createTerrainPreview(
         setActive(active: boolean) {
             if (active === !controls.hidden) return
             controls.hidden = !active
-            terrain.setEnabled(active)
+            const worldPreview = source.value === 'snowMud'
+            terrain.setEnabled(active && !worldPreview)
+            worldTerrain?.setEnabled(active && worldPreview)
+            if (!active) placeSun(false)
             ground.setEnabled(!active)
             setLighting(active)
             if (active) {
@@ -317,7 +451,8 @@ export function createTerrainPreview(
                 resetCamera()
                 scene.activeCamera = camera
                 camera.attachControl(false, false, 2)
-                if (renderers) updateProps()
+                placeSun(worldPreview)
+                if (renderers || worldTerrain) updateProps()
                 else showSource()
             } else {
                 camera.detachControl()

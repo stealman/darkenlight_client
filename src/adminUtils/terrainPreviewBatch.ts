@@ -3,6 +3,7 @@ import type { Mesh } from '@babylonjs/core'
 import type { PBRCustomMaterial } from '@babylonjs/materials'
 import { TERRAIN_BEVEL_DROP, TERRAIN_BEVEL_WIDTH } from '@/babylon/world/beveledTerrainBlock'
 import { updateWorldInstanceBuffers } from '@/babylon/world/worldInstanceBuffers'
+import { SNOWMELT_MAX_DISTANCE } from '@/babylon/world/terrainTransitionField'
 
 type TriangleUV = readonly [Vector2, Vector2, Vector2]
 export type TerrainPreviewTriangle = {
@@ -436,7 +437,7 @@ export function configureSnowmelt(material: PBRCustomMaterial, wallsOnly = false
                 float contact = max(grassAtEdges.x, grassAtEdges.y);
                 runoff = contact * (1.0 - smoothstep(0.13, 0.54, grassEdgeDistance));
             } else {
-                runoff = 1.0 - smoothstep(0.31, mix(1.55, 2.55, pooling), max(0.0, -coverDistance));
+                runoff = 1.0 - smoothstep(0.31, mix(1.55, ${SNOWMELT_MAX_DISTANCE}, pooling), max(0.0, -coverDistance));
             }`}
             snowmeltWetness = runoff * mix(0.63, 1.0, pooling);
             float exposedWetness = snowmeltWetness * exposedGround;

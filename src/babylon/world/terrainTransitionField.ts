@@ -1,6 +1,8 @@
 import type { RoofTile } from './terrainRoofShape'
 
 export const TERRAIN_SNOW_SURFACE = 104
+export const SNOWMELT_MAX_DISTANCE = 2.55
+const SNOWMELT_TILE_REACH = SNOWMELT_MAX_DISTANCE + Math.SQRT1_2
 export const terrainSurface = (tile: RoofTile) => tile.snowed ? TERRAIN_SNOW_SURFACE : tile.type
 export function hasTerrainTransition(cover: number, substrate: number) {
     if (cover === TERRAIN_SNOW_SURFACE) return substrate >= 1 && substrate <= 5
@@ -13,7 +15,7 @@ type Boundary<T> = {x: number, z: number, height: number, alongX: boolean, cover
 type TransitionTile = RoofTile & {height: number}
 
 export function findTerrainTransitions<T>(map: TransitionTile[][],
-                                         materialFor: (cover: number, substrate: number) => T | undefined) {
+                                         materialFor: (cover: number, substrate: number) => T | undefined, extendSnowmelt = true) {
     const bucketSize = 4
     const columns = Math.ceil((map[0]?.length ?? 0) / bucketSize)
     const edges = new Map<number, Boundary<T>[]>()
@@ -57,18 +59,28 @@ export function findTerrainTransitions<T>(map: TransitionTile[][],
         }
         let nearest: Boundary<T> | undefined
         let reach = 2.5
+        let snowmeltEdge: Boundary<T> | undefined
+        let snowmeltReach = SNOWMELT_TILE_REACH
+        const canExtendSnowmelt = extendSnowmelt && (type === 1 || type === 3 || type === 4)
         for (const edge of candidates) {
             const length = distance(x, z, edge)
-            if (length >= reach) continue
-            nearest = edge
-            reach = length
+            if (length < reach) {
+                nearest = edge
+                reach = length
+            } else if (canExtendSnowmelt && edge.cover === TERRAIN_SNOW_SURFACE && length < snowmeltReach) {
+                snowmeltEdge = edge
+                snowmeltReach = length
+            }
         }
+        // Keep normal material transitions ahead of the optional meltwater extension.
+        const snowmeltOnly = !nearest
+        nearest ??= snowmeltEdge
         if (!nearest) return undefined
         const {cover, substrate, material} = nearest
         const samePair = candidates.filter(edge => edge.cover === cover && edge.substrate === substrate)
         const sign = type === cover ? 1 : -1
         const field = corners.map(([dx, dz]) =>
             sign * samePair.reduce((min, edge) => Math.min(min, distance(x + dx, z + dz, edge)), range))
-        return {cover: type === cover, coverType: cover, substrateType: substrate, material, field}
+        return {cover: type === cover, coverType: cover, substrateType: substrate, material, field, snowmeltOnly}
     }))
 }

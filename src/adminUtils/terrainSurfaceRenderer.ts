@@ -137,7 +137,7 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
             (mudCover || dryCover ? muddyDirtPatterns : terrainCoverPatterns)[0].origins[0],
             (withDirt || drySubstrate ? muddyDirtPatterns : terrainCoverPatterns)[0].origins[0], transitionBoundary,
             withGrass ? wallSoil : undefined, withRock, atPond && pond ? {...pond, coverOnBank: mudCover} : undefined, soilRockWalls,
-            blendRockWalls ? rockAtlas.material : undefined, cover === snowAtlas.material)
+            blendRockWalls ? rockAtlas.material : undefined, cover === snowAtlas.material, grassMaterials.has(cover))
         configureTerrainPreviewBatch(mesh, material, false)
         configureTerrainEdgeLighting(material, mudCover || soilRockWalls ? 'vec2(1.0)' : 'dirtCoverage', withRock && !mudCover)
         if (wetness && (mudCover || withDirt || (withGrass && wallSoil === dirtAtlas.material))) {
@@ -208,14 +208,15 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
         let localTransitions: ReturnType<typeof findTerrainTransitions<Mesh>> | undefined
         if (localBoundaries) {
             const read = compiled && compiledRegion && visitBakedTerrainTransitions(compiled, compiledRegion.x, compiledRegion.z,
-                (worldX, worldZ, coverType, substrateType, field) => {
+                (worldX, worldZ, coverType, substrateType, field, snowmeltOnly) => {
+                    if (snowmeltOnly && !wetness) return
                     const x = worldX - originX, z = worldZ - originZ
                     const material = materialFor(coverType, substrateType)
                     if (!material || !map[x]?.[z]) return
                     localTransitions ??= map.map(() => [])
-                    localTransitions[x][z] = {cover: terrainSurface(map[x][z]) === coverType, coverType, substrateType, material, field}
+                    localTransitions[x][z] = {cover: terrainSurface(map[x][z]) === coverType, coverType, substrateType, material, field, snowmeltOnly}
                 })
-            if (!read) localTransitions = findTerrainTransitions(map, materialFor)
+            if (!read) localTransitions = findTerrainTransitions(map, materialFor, wetness)
         }
         const pondCover = shoreSurface >= 100 && shoreSurface < 200 ? SNOW_DIRT : shoreSurface
         const pondTransition = pondTransitions.get(pondCover)
@@ -255,8 +256,10 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
             if (localBoundaries) {
                 const upper = map[x][z]
                 const lower = map[lowerX][lowerZ]
-                const topTransition = localTransitions?.[x][z]
-                const footTransition = localTransitions?.[lowerX][lowerZ]
+                const upperField = localTransitions?.[x][z]
+                const lowerField = localTransitions?.[lowerX][lowerZ]
+                const topTransition = upperField?.snowmeltOnly ? undefined : upperField
+                const footTransition = lowerField?.snowmeltOnly ? undefined : lowerField
                 const muddyRockFoot = isRock && bottomY !== undefined && lower.type === MUDDY_DIRT
                     && !lower.stonePath && !lower.beigeStonePath && (!lower.snowed || footTransition?.material === snowTransition)
                 const snowAtEdge = (topY !== undefined && (upper.snowed || topTransition?.coverType === SNOW_DIRT))

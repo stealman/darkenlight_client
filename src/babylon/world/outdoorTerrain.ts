@@ -45,7 +45,9 @@ function sameSnowMask(previous: ReadonlySet<number>, next: ReadonlySet<number>) 
     return true
 }
 
-export function createOutdoorTerrain(parent: TransformNode) {
+type TerrainView = {minX: number, minZ: number, maxX: number, maxZ: number}
+
+export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainView) {
     const terrain = new TransformNode('outdoorTerrain', parent.getScene())
     terrain.parent = parent
     const renderer = createTerrainSurfaceRenderer(parent.getScene(), terrain, new Vector3(0, 0, 1))
@@ -91,6 +93,9 @@ export function createOutdoorTerrain(parent: TransformNode) {
 
     return {
         setEnabled(enabled: boolean) { terrain.setEnabled(enabled) },
+        setFoliageVisible(visible: boolean) {
+            for (const mesh of foliage.meshes) mesh.isVisible = visible
+        },
         render(blockMap: MapBlock[][], center: {x: number, y: number, z: number}, snowCoverMask: ReadonlySet<number>,
             revision?: number, compiled?: TerrainRenderData, originalBlocks?: WeakSet<MapBlock>) {
             if (currentMap !== blockMap) {
@@ -105,15 +110,15 @@ export function createOutdoorTerrain(parent: TransformNode) {
             foliageJobs = []
             generation++
             const depth = blockMap[0]?.length ?? 0
-            const minX = Math.max(0, center.x + ViewportManager.minX)
-            const minZ = Math.max(0, center.z + ViewportManager.minZ)
-            const maxX = Math.min(blockMap.length - 1, center.x + ViewportManager.maxX)
-            const maxZ = Math.min(depth - 1, center.z + ViewportManager.maxZ)
+            const minX = fixedView?.minX ?? Math.max(0, center.x + ViewportManager.minX)
+            const minZ = fixedView?.minZ ?? Math.max(0, center.z + ViewportManager.minZ)
+            const maxX = fixedView?.maxX ?? Math.min(blockMap.length - 1, center.x + ViewportManager.maxX)
+            const maxZ = fixedView?.maxZ ?? Math.min(depth - 1, center.z + ViewportManager.maxZ)
             const firstX = Math.floor(minX / REGION_SIZE) * REGION_SIZE
             const firstZ = Math.floor(minZ / REGION_SIZE) * REGION_SIZE
             let maxHeight = 0
             const isVisible = (x: number, z: number) =>
-                ViewportManager.isPointInVisibleMatrix(x, z, 2, blockMap[x][z].totalHeight, 0, center)
+                !!fixedView || ViewportManager.isPointInVisibleMatrix(x, z, 2, blockMap[x][z].totalHeight, 0, center)
             const containsSnow = (x: number, z: number, block: MapBlock) =>
                 block.snowed && snowCoverMask.has(x * blockMap.length + z)
             const buildings = Array.from(BuildingManager.buildings.values(), building => ({
