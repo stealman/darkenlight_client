@@ -1,15 +1,11 @@
 import { Texture } from '@babylonjs/core'
 import type { Mesh } from '@babylonjs/core'
 import type { PBRCustomMaterial } from '@babylonjs/materials'
-import { TERRAIN_ATLAS_TILES, terrainCoverPatterns } from '@/babylon/world/terrainAtlasPlacement'
-import { terrainFringeShader, terrainNoiseShader } from '@/babylon/world/terrainSurfaceShader'
+import { terrainContactSnowShader, terrainFringeShader, terrainNoiseShader } from '@/babylon/world/terrainSurfaceShader'
 import snowColorUrl from '@/adminUtils/assets/snow-atlas.png'
 
 const ATTRIBUTE = 'staticSnowContact'
 export const SNOW_CONTACT_MAX_HEIGHT = 0.24
-const snowPatch = terrainCoverPatterns[0]
-const [snowU, snowV] = snowPatch.origins[0]
-const snowPatchBottom = TERRAIN_ATLAS_TILES - snowV - snowPatch.size
 
 export class StaticTerrainContact {
     private readonly snowContacts = new Map<number, {height: number, reach: number}>()
@@ -50,6 +46,7 @@ export class StaticTerrainContact {
             varying vec2 vStaticSnowContact;
             ${terrainNoiseShader}
             ${terrainFringeShader}
+            ${terrainContactSnowShader}
         `)
         material.Fragment_Before_Lights(`
             ${material.CustomParts.Fragment_Before_Lights ?? ''}
@@ -77,11 +74,7 @@ export class StaticTerrainContact {
                     }
                 ` : ''}
                 if (snowCoverage > 0.0) {
-                    // Project the terrain atlas patch up the face so the grain does not stretch vertically.
-                    vec2 snowPatchUV = vPositionW.xz + vec2(0.73, 0.89) * aboveSnow;
-                    snowPatchUV = ${snowPatch.size}.0 - abs(mod(snowPatchUV, ${2 * snowPatch.size}.0) - ${snowPatch.size}.0);
-                    vec2 snowUV = (vec2(${snowU}, ${snowPatchBottom}) + clamp(snowPatchUV, 0.004, ${snowPatch.size - 0.004}))
-                        / ${TERRAIN_ATLAS_TILES}.0;
+                    vec2 snowUV = terrainContactSnowUV(vPositionW.xz, aboveSnow);
                     surfaceAlbedo = mix(surfaceAlbedo, toLinearSpace(texture2D(staticSnowColor, snowUV).rgb), snowCoverage);
                     // A negative reach lets the snow at the base catch light like the ground.
                     const float groundLightHeight = 0.22;

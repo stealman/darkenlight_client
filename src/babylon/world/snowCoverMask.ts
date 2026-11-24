@@ -89,6 +89,13 @@ const addStoneEntranceMask = (mask: Set<number>, entrance: SnowCoverStaticSource
     }
 }
 
+export function sameSnowMask(previous: ReadonlySet<number>, next: ReadonlySet<number>) {
+    if (previous === next) return true
+    if (previous.size !== next.size) return false
+    for (const tile of next) if (!previous.has(tile)) return false
+    return true
+}
+
 export const createSnowCoverMask = (
     trees: SnowCoverSource[],
     statics: SnowCoverStaticSource[],

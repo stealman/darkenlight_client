@@ -11,6 +11,7 @@ import { terrainWithoutSnow } from '@/adminUtils/terrainLocalTransitions'
 import { createTerrainFoliageRenderer } from '@/adminUtils/terrainFoliageRenderer'
 import { BuildingManager } from './buildings/buildingManager'
 import { WATER_BLOCK_TYPE } from './terrainManager'
+import { sameSnowMask } from './snowCoverMask'
 import { OutdoorInstanceBatch } from './outdoorInstanceBatch'
 import type { OutdoorInstance } from './outdoorInstanceBatch'
 
@@ -37,12 +38,6 @@ function replaceInstances(previous?: OutdoorInstance[], next?: OutdoorInstance[]
     if (previous === next) return
     if (previous) for (const instance of previous) instance.batch.remove(instance)
     if (next) for (const instance of next) instance.batch.add(instance)
-}
-
-function sameSnowMask(previous: ReadonlySet<number>, next: ReadonlySet<number>) {
-    if (previous.size !== next.size) return false
-    for (const tile of next) if (!previous.has(tile)) return false
-    return true
 }
 
 type TerrainView = {minX: number, minZ: number, maxX: number, maxZ: number}

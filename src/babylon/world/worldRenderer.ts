@@ -70,7 +70,7 @@ export const WorldRenderer = {
         this.translucentPlane = new SymmetricBlock(Builder.createHorizontalPlane(scene, this.worldParentNode, 1, 0), Materials.blockMatTrans!)
         this.translucentPlane.mesh.doNotSyncBoundingInfo = true
         this.translucentPlane.mesh.receiveShadows = true
-        StoneBatch.initialize(scene, this.worldParentNode, true)
+        StoneBatch.initialize(scene, this.worldParentNode, Settings.isDetalLevelHigh())
 
         // Initialize managers
         TerrainManager.initialize(scene)

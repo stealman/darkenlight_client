@@ -1,3 +1,5 @@
+import { TERRAIN_ATLAS_TILES, terrainCoverPatterns } from './terrainAtlasPlacement'
+
 export const terrainNoiseShader = `
     float terrainHash(vec2 p) {
         vec3 h = fract(vec3(p.xyx) * 0.1031);
@@ -30,5 +32,18 @@ export const terrainFringeShader = `
         float feather = mix(0.085, 0.15, lobes);
         float thickness = mix(0.68, 1.0, smoothstep(0.18, 0.62, clusters));
         return thickness * (1.0 - smoothstep(max(0.015, reach - feather), reach + feather, edge));
+    }
+`
+const snowPatch = terrainCoverPatterns[0]
+const [snowU, snowV] = snowPatch.origins[0]
+const snowPatchBottom = TERRAIN_ATLAS_TILES - snowV - snowPatch.size
+
+export const terrainContactSnowShader = `
+    vec2 terrainContactSnowUV(vec2 worldXZ, float aboveSnow) {
+        // Project the atlas patch up the face so the grain stays visible on vertical surfaces.
+        vec2 patchUV = worldXZ + vec2(0.73, 0.89) * aboveSnow;
+        patchUV = ${snowPatch.size}.0 - abs(mod(patchUV, ${2 * snowPatch.size}.0) - ${snowPatch.size}.0);
+        return (vec2(${snowU}, ${snowPatchBottom}) + clamp(patchUV, 0.004, ${snowPatch.size - 0.004}))
+            / ${TERRAIN_ATLAS_TILES}.0;
     }
 `

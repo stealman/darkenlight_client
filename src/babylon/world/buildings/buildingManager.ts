@@ -1,6 +1,6 @@
 import { Camera, Matrix, Mesh, MeshBuilder, PBRMaterial, Quaternion, Scene, TransformNode, Vector2, Vector3 } from '@babylonjs/core'
 import { MaterialEnum1, MaterialEnumTrans, Materials } from '@/babylon/materials'
-import { WorldDataManager } from '@/data/worldDataManager'
+import { WorldData, WorldDataManager } from '@/data/worldDataManager'
 import { ViewportManager } from '@/utils/viewport'
 import { Lights } from '@/babylon/scene/lights'
 import { MyPlayer } from '@/data/myPlayer'
@@ -9,6 +9,12 @@ import { AudioManager } from '@/babylon/audio/audioManager'
 import { BabylonUtils } from '@/babylon/utils'
 import { TargetingManager } from '@/gui/targettingManager'
 import { updateWorldInstanceBuffers } from '@/babylon/world/worldInstanceBuffers'
+import { WorldRenderer } from '../worldRenderer'
+import { TerrainManager, getTerrainHeightOffset, WATER_BLOCK_TYPE } from '../terrainManager'
+import { outdoorSurfaceHeight } from '../terrainRoofShape'
+import { sameSnowMask } from '../snowCoverMask'
+import { BuildingGroundContact } from './buildingGroundContact'
+import { configureBuildingRoofSnow, encodeRoofSnowUv, SHED_ROOF_OVERHANG } from './buildingRoofSnow'
 
 export interface BuildingData {
     id: number
@@ -90,7 +96,6 @@ const SHED_FENCE_THICKNESS = 0.1
 const SHED_POST_HEIGHT = 1.65
 const SHED_ROOF_RISE_PER_TILE = 0.15
 const SHED_ROOF_THICKNESS = 0.12
-const SHED_ROOF_OVERHANG = 0.1
 const SHED_PLANK_SIZE = 0.5
 const SHED_ROOF_STRIP_SIDE_OFFSET = 0.08
 const SHED_ROOF_STRIP_HEIGHT_OFFSET = 0.02
@@ -532,18 +537,31 @@ class BuildingView {
 
 class ShedView {
     readonly roofMesh: Mesh
-    readonly blockParts: BuildingBlockPart[] = []
+    readonly blockParts: (BuildingBlockPart & {snowyMaterial?: Vector2})[] = []
     roofVisibility = 1
     shouldOcclusionFade = false
     visible = false
     roofInBatch = true
+    private readonly postFootprints = new Map<number, {minX: number, maxX: number, minZ: number, maxZ: number}>()
+    private readonly postContacts = new Map<number, {height: number, snowy: boolean}>()
+    private groundContactRevision = -1
+    private roofSnow = false
+    private readonly roofUvData: number[] = []
+    private readonly snowyRoofUvData: number[] = []
     private roofPartStart = 0
     private previewYOffset = 0
 
     constructor(readonly data: BuildingData, parent: TransformNode, fadeMaterial: PBRMaterial) {
         const scene = parent.getScene()
         const roofParts: Mesh[] = []
-        const roofUvData: number[] = []
+        const plankUv = MaterialEnum1.WOOD_PLANKS_DARK.uv
+        const highSide = this.getHighSide()
+        const slopesAlongX = highSide === '-X' || highSide === '+X'
+        const lowTile = highSide === '+X' ? data.x
+            : highSide === '-X' ? data.x + this.getWidth() - 1
+                : highSide === '+Z' ? data.z : data.z + this.getDepth() - 1
+        const snowyPlankUv = encodeRoofSnowUv(plankUv, highSide, lowTile)
+        const snowyBattenUv = encodeRoofSnowUv(plankUv, highSide, lowTile, true)
         const addBlock = (
             width: number,
             height: number,
@@ -556,6 +574,7 @@ class ShedView {
             pitch = 0,
             roll = 0,
             yaw = 0,
+            snowyMaterial?: Vector2,
         ) => {
             const rotation = Matrix.RotationY(yaw).multiply(Matrix.RotationYawPitchRoll(0, pitch, roll))
             this.blockParts.push({
@@ -563,21 +582,35 @@ class ShedView {
                     .multiply(rotation)
                     .multiply(Matrix.Translation(x, y + 0.5, z)),
                 material,
+                snowyMaterial,
             })
             if (!roof) return
             const block = MeshBuilder.CreateBox('shedRoofPlank', {width, height, depth, wrap: true}, scene)
             block.position.set(x, y, z)
             block.rotationQuaternion = Quaternion.FromRotationMatrix(rotation)
+            const snowyUv = snowyMaterial ?? material
             for (let i = 0; i < block.getTotalVertices(); i++) {
-                roofUvData.push(material.x, material.y)
+                this.roofUvData.push(material.x, material.y)
+                this.snowyRoofUvData.push(snowyUv.x, snowyUv.y)
             }
             roofParts.push(block)
         }
 
+        const addPost = (size: number, height: number, x: number, z: number) => {
+            const half = size / 2
+            // Tiles are centered at integer coordinates. Include both sides of every boundary the foot crosses.
+            this.postFootprints.set(this.blockParts.length, {
+                minX: data.x + Math.floor(x + 0.5 - half),
+                maxX: data.x + Math.floor(x + 0.5 + half),
+                minZ: data.z + Math.floor(z + 0.5 - half),
+                maxZ: data.z + Math.floor(z + 0.5 + half),
+            })
+            addBlock(size, height, size, x, height / 2, z, MaterialEnum1.WOOD_3.uv)
+        }
         for (const x of [-0.5, this.getWidth() - 0.5]) {
             for (const z of [-0.5, this.getDepth() - 0.5]) {
                 const height = SHED_POST_HEIGHT + (this.isHighSide(x, z) ? this.getRoofRise() : 0)
-                addBlock(SHED_POST_SIZE, height, SHED_POST_SIZE, x, height / 2, z, MaterialEnum1.WOOD_3.uv)
+                addPost(SHED_POST_SIZE, height, x, z)
             }
         }
 
@@ -590,14 +623,11 @@ class ShedView {
                     : side === '-Z' ? -0.5 : this.getDepth() - 0.5
             for (let offset = 0; offset < length; offset++) {
                 for (const postOffset of [-0.42, 0, 0.42]) {
-                    addBlock(
+                    addPost(
                         0.1,
                         0.95,
-                        0.1,
                         alongX ? offset + postOffset : fixed,
-                        0.475,
                         alongX ? fixed : offset + postOffset,
-                        MaterialEnum1.WOOD_3.uv,
                     )
                 }
                 for (const y of [0.475, 0.85]) {
@@ -621,7 +651,6 @@ class ShedView {
         const roofDepth = this.getDepth() + SHED_ROOF_OVERHANG * 2
         const roofPitch = this.getRoofPitch()
         const roofRoll = this.getRoofRoll()
-        const slopesAlongX = this.getHighSide() === '-X' || this.getHighSide() === '+X'
         const slopeLength = slopesAlongX ? roofWidth : roofDepth
         const perpendicularLength = slopesAlongX ? roofDepth : roofWidth
         const roofYaw = slopesAlongX ? Math.PI / 2 : 0
@@ -646,11 +675,12 @@ class ShedView {
                     x,
                     this.getRoofY(x, z) + heightOffset,
                     z,
-                    MaterialEnum1.WOOD_PLANKS_DARK.uv,
+                    plankUv,
                     true,
                     roofPitch,
                     roofRoll,
                     roofYaw,
+                    snowyPlankUv,
                 )
             }
         }
@@ -669,10 +699,12 @@ class ShedView {
                 x,
                 this.getRoofY(x, z) + SHED_ROOF_THICKNESS / 2 + SHED_ROOF_BATTEN_HEIGHT / 2,
                 z,
-                MaterialEnum1.WOOD_PLANKS_DARK.uv,
+                plankUv,
                 true,
                 roofPitch,
                 roofRoll,
+                0,
+                snowyBattenUv,
             )
         }
 
@@ -719,7 +751,7 @@ class ShedView {
         this.roofMesh.name = `shed_${data.id}_roof`
         this.roofMesh.parent = parent
         this.roofMesh.material = fadeMaterial
-        this.roofMesh.setVerticesData('uvc', roofUvData, false, 2)
+        this.roofMesh.setVerticesData('uvc', this.roofUvData, true, 2)
         this.roofMesh.isPickable = false
         this.roofMesh.setEnabled(false)
         this.recountYPosition()
@@ -869,15 +901,49 @@ class ShedView {
         return this.roofVisibility === 1 && !this.shouldOcclusionFade
     }
 
-    appendBatchedBlocks(matrices: Matrix[], uvData: Vector2[]) {
+    appendBatchedBlocks(matrices: Matrix[], uvData: Vector2[], groundContact: BuildingGroundContact) {
         if (!this.visible) return
         this.roofInBatch = this.isRoofBatched()
         const world = Matrix.Translation(this.roofMesh.position.x, this.roofMesh.position.y, this.roofMesh.position.z)
         this.blockParts.forEach((part, index) => {
             if (!this.roofInBatch && index >= this.roofPartStart) return
+            const contact = this.postContacts.get(index)
+            if (contact) groundContact.add(matrices.length, contact.height, contact.snowy)
             matrices.push(part.matrix.multiply(world))
-            uvData.push(part.material)
+            uvData.push(this.roofSnow && part.snowyMaterial ? part.snowyMaterial : part.material)
         })
+    }
+
+    refreshGroundContact(revision: number, outdoor: boolean) {
+        if (this.groundContactRevision === revision) return
+        this.groundContactRevision = revision
+        this.postContacts.clear()
+        const map = WorldDataManager.getBlockMap()
+        const minimumHeight = this.roofMesh.position.y - this.previewYOffset - 0.08
+        let roofSnow = false
+        for (const [index, {minX, maxX, minZ, maxZ}] of this.postFootprints) {
+            let highestSnow = -Infinity
+            let highestGround = -Infinity
+            for (let x = minX; x <= maxX; x++) {
+                for (let z = minZ; z <= maxZ; z++) {
+                    const block = map[x]?.[z]
+                    if (!block || block.type <= 0 || block.type >= WATER_BLOCK_TYPE) continue
+                    const snow = WorldRenderer.getSnowSurfaceHeight(x, z)
+                    if (snow !== undefined && snow >= minimumHeight) highestSnow = Math.max(highestSnow, snow)
+                    const ground = outdoor ? outdoorSurfaceHeight(block) : block.height + getTerrainHeightOffset(block, block.snowed)
+                    if (ground !== undefined && ground >= minimumHeight) highestGround = Math.max(highestGround, ground)
+                }
+            }
+            if (highestSnow !== -Infinity) {
+                this.postContacts.set(index, {height: highestSnow, snowy: true})
+                roofSnow = true
+            }
+            else if (highestGround !== -Infinity) this.postContacts.set(index, {height: highestGround, snowy: false})
+        }
+        if (this.roofSnow !== roofSnow) {
+            this.roofSnow = roofSnow
+            this.roofMesh.updateVerticesData('uvc', roofSnow ? this.snowyRoofUvData : this.roofUvData)
+        }
     }
 
     appendBatchedGlass(_matrices: Matrix[], _uvData: Vector2[], _prefabs: BuildingPrefabs) {}
@@ -1449,6 +1515,9 @@ export const BuildingManager = {
     housePrefabs: null as BuildingPrefabs | null,
     cabinPrefabs: null as BuildingPrefabs | null,
     opaqueBatchMesh: null as Mesh | null,
+    groundContact: null as BuildingGroundContact | null,
+    groundContactRevision: 0,
+    groundContactTerrain: null as {world: WorldData, revision: number, snowMask: ReadonlySet<number>, outdoor: boolean, indoor: boolean} | null,
     glassBatchMesh: null as Mesh | null,
     fadeMaterial: null as PBRMaterial | null,
     parent: null as TransformNode | null,
@@ -1459,20 +1528,24 @@ export const BuildingManager = {
 
     initialize(scene: Scene, parent: TransformNode) {
         this.cachedBuildings.clear()
+        this.groundContactTerrain = null
         this.parent = parent
         // Offset building occlusion from entity and tree visibility passes.
         this.occlusionCheckFrame = 5
         Lights.enableTransparentShadowCasters()
-        this.fadeMaterial = Materials.createBlockMat1(scene)
-        this.fadeMaterial.name = 'building_faded_material'
-        this.fadeMaterial.alpha = 1
-        this.fadeMaterial.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHABLEND
+        const fadeMaterial = Materials.createBlockMat1(scene)
+        configureBuildingRoofSnow(fadeMaterial)
+        fadeMaterial.name = 'building_faded_material'
+        fadeMaterial.alpha = 1
+        fadeMaterial.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHABLEND
+        this.fadeMaterial = fadeMaterial
         this.housePrefabs = this.createHousePrefab(scene)
         this.cabinPrefabs = this.createHousePrefab(scene, true)
         this.opaqueBatchMesh = MeshBuilder.CreateBox('buildingOpaqueBlockBatch', {width: 1, height: 1, depth: 1, wrap: true}, scene)
         this.opaqueBatchMesh.parent = parent
         this.opaqueBatchMesh.position.y = -0.5
-        this.opaqueBatchMesh.material = Materials.blockMat1!
+        this.groundContact = new BuildingGroundContact(scene)
+        this.opaqueBatchMesh.material = this.groundContact.material
         this.opaqueBatchMesh.isPickable = false
         this.opaqueBatchMesh.alwaysSelectAsActiveMesh = true
         this.opaqueBatchMesh.doNotSyncBoundingInfo = true
@@ -1549,7 +1622,9 @@ export const BuildingManager = {
                 ? new MausoleumView(data, this.parent, this.fadeMaterial)
                 : new BuildingView(data, data.tp === CABIN_TYPE ? this.cabinPrefabs! : this.housePrefabs, this.parent, this.fadeMaterial)
         this.buildings.set(data.id, building)
-        building.getFloorTiles().forEach((tile) => this.floorTiles.set(`${tile.x};${tile.z}`, building))
+        const floorTiles = building.getFloorTiles()
+        if (floorTiles.length > 0) this.groundContactRevision++
+        floorTiles.forEach((tile) => this.floorTiles.set(`${tile.x};${tile.z}`, building))
         building.getCollisionIndexTiles().forEach((tile) => {
             const key = `${tile.x};${tile.z}`
             if (!this.collisionTiles.has(key)) this.collisionTiles.set(key, new Set())
@@ -1574,7 +1649,10 @@ export const BuildingManager = {
         if (this.selectionPreviewBuilding === building) this.selectionPreviewBuilding = null
         building.getFloorTiles().forEach((tile) => {
             const key = `${tile.x};${tile.z}`
-            if (this.floorTiles.get(key) === building) this.floorTiles.delete(key)
+            if (this.floorTiles.get(key) === building) {
+                this.floorTiles.delete(key)
+                this.groundContactRevision++
+            }
         })
         building.getCollisionIndexTiles().forEach((tile) => {
             const key = `${tile.x};${tile.z}`
@@ -1739,19 +1817,37 @@ export const BuildingManager = {
     },
 
     renderBuildings() {
-        this.buildings.forEach((building) => building.setVisible(building.isVisible()))
+        const world = WorldDataManager.worldDataMap.get(MyPlayer.worldId)
+        const outdoor = TerrainManager.usesOutdoorTerrain()
+        const snowMask = WorldRenderer.snowCoverMask
+        const previous = this.groundContactTerrain
+        if (world && (previous?.world !== world || previous.revision !== world.renderRevision
+            || previous.outdoor !== outdoor || previous.indoor !== Lights.indoor || !sameSnowMask(previous.snowMask, snowMask))) {
+            this.groundContactRevision++
+            this.groundContactTerrain = {world, revision: world.renderRevision, snowMask, outdoor, indoor: Lights.indoor}
+        }
+        this.buildings.forEach((building) => {
+            building.setVisible(building.isVisible())
+            if (building instanceof ShedView && building.visible) building.refreshGroundContact(this.groundContactRevision, outdoor)
+        })
         this.rebuildOpaqueBatch()
     },
 
     rebuildOpaqueBatch() {
-        if (!this.opaqueBatchMesh || !this.glassBatchMesh || !this.housePrefabs) return
+        if (!this.opaqueBatchMesh || !this.glassBatchMesh || !this.housePrefabs || !this.groundContact) return
         const matrices: Matrix[] = []
         const uvData: Vector2[] = []
         const glassMatrices: Matrix[] = []
         const glassUvData: Vector2[] = []
-        this.buildings.forEach((building) => building.appendBatchedBlocks(matrices, uvData, this.housePrefabs!))
+        const groundContact = this.groundContact
+        groundContact.clear()
+        this.buildings.forEach((building) => {
+            if (building instanceof ShedView) building.appendBatchedBlocks(matrices, uvData, groundContact)
+            else building.appendBatchedBlocks(matrices, uvData, this.housePrefabs!)
+        })
         this.buildings.forEach((building) => building.appendBatchedGlass(glassMatrices, glassUvData, this.housePrefabs!))
         updateWorldInstanceBuffers(this.opaqueBatchMesh, matrices, uvData)
+        groundContact.upload(this.opaqueBatchMesh, matrices.length)
         updateWorldInstanceBuffers(this.glassBatchMesh, glassMatrices, glassUvData)
     },
 
