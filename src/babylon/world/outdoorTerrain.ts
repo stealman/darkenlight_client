@@ -1,10 +1,10 @@
-import { BoundingInfo, TransformNode, Vector3 } from '@babylonjs/core'
+import { BoundingInfo, TransformNode, Vector2, Vector3 } from '@babylonjs/core'
 import { MapBlock } from '@/data/worldDataManager'
 import { Lights } from '@/babylon/scene/lights'
 import { ViewportManager } from '@/utils/viewport'
 import { Settings } from '@/settings/settings'
 import { TERRAIN_ATLAS_REGION_SIZE } from './terrainAtlasPlacement'
-import { TERRAIN_RENDER_BORDER } from './terrainRenderData'
+import { TERRAIN_RENDER_BORDER, visitBakedPaving } from './terrainRenderData'
 import type { TerrainRenderData } from './terrainRenderData'
 import { createTerrainSurfaceRenderer } from '@/adminUtils/terrainSurfaceRenderer'
 import { terrainWithoutSnow } from '@/adminUtils/terrainLocalTransitions'
@@ -16,6 +16,10 @@ import { OutdoorInstanceBatch } from './outdoorInstanceBatch'
 import type { OutdoorInstance } from './outdoorInstanceBatch'
 import { PBRCustomMaterial } from '@babylonjs/materials'
 import type { TerrainContactShadow } from './terrainContactShadow'
+import { appendPavingAttributes, createStonePathRenderer, pavingStoneMatrix, PAVING_INSTANCE_ATTRIBUTE } from './stonePathRenderer'
+import { visitPavingStones } from './stonePathLayout'
+import type { PavingStone } from './stonePathLayout'
+import { outdoorSurfaceHeight } from './terrainRoofShape'
 
 const REGION_SIZE = TERRAIN_ATLAS_REGION_SIZE
 
@@ -34,6 +38,7 @@ type Region = {
     buildingRevision?: number
     revision?: number
     snowRevision: number
+    hasPaving: boolean
 }
 
 function replaceInstances(previous?: OutdoorInstance[], next?: OutdoorInstance[]) {
@@ -58,6 +63,19 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
         mesh.rawBoundingInfo = new BoundingInfo(minimum, maximum)
     }
     const batches = new Map(renderer.meshes.map(mesh => [mesh, new OutdoorInstanceBatch(mesh)]))
+    const pavingUV = Vector2.Zero()
+    let paving: ReturnType<typeof createStonePathRenderer> | undefined
+    let pavingBatch: OutdoorInstanceBatch | undefined
+    const getPavingBatch = () => {
+        if (pavingBatch) return pavingBatch
+        paving = createStonePathRenderer(terrain.getScene(), terrain)
+        const {mesh} = paving
+        pavingBatch = new OutdoorInstanceBatch(mesh)
+        batches.set(mesh, pavingBatch)
+        Lights.registerSharedLightMesh(mesh)
+        mesh.onDisposeObservable.addOnce(() => Lights.unregisterSharedLightMesh(mesh))
+        return pavingBatch
+    }
     const highDetail = Settings.isDetalLevelHigh()
     const foliageDensity = highDetail ? 1 : Settings.isDetailLevelMedium() ? 2 / 3 : 1 / 3
     const foliage = createTerrainFoliageRenderer(parent.getScene(), terrain, highDetail, foliageDensity)
@@ -87,6 +105,8 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
     terrain.onDisposeObservable.addOnce(() => terrain.getScene().onBeforeRenderObservable.remove(observer))
     const regions = new Map<number, Region>()
     let currentMap: MapBlock[][] | undefined
+    let currentCompiled: TerrainRenderData | undefined
+    let pavingSurfaceKey = ''
     let generation = 0
     let previousSnow = new Set<number>()
     let snowRevision = 0
@@ -100,9 +120,11 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
         },
         render(blockMap: MapBlock[][], center: {x: number, y: number, z: number}, snowCoverMask: ReadonlySet<number>,
             revision?: number, compiled?: TerrainRenderData, originalBlocks?: WeakSet<MapBlock>) {
-            if (currentMap !== blockMap) {
+            if (currentMap !== blockMap || currentCompiled !== compiled) {
                 currentMap = blockMap
+                currentCompiled = compiled
                 regions.clear()
+                pavingSurfaceKey = ''
             }
             if (!sameSnowMask(previousSnow, snowCoverMask)) {
                 previousSnow = new Set(snowCoverMask)
@@ -166,14 +188,15 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
                     }
                 }
                 const region: Region = {blocks: [], hiddenSnow: [], faces: [], used: generation, map: [], left, top, visible: [],
-                    revision, snowRevision}
+                    revision, snowRevision, hasPaving: false}
                 const exposed = new Map<MapBlock, MapBlock>()
-                let useCompiled = !!compiled && compiled.width === blockMap.length && compiled.depth === depth
+                let useBakedPaving = !!compiled && compiled.width === blockMap.length && compiled.depth === depth
                 const map = region.map = blockMap.slice(left, right).map((row, dx) => row.slice(top, bottom).map((block, dz) => {
                     const index = region.blocks.push(block) - 1
-                    if (useCompiled && !originalBlocks?.has(block)) useCompiled = false
+                    if (useBakedPaving && !originalBlocks?.has(block)) useBakedPaving = false
+                    if ((block.stonePath || block.beigeStonePath) && left + dx >= x && left + dx < x + REGION_SIZE
+                        && top + dz >= z && top + dz < z + REGION_SIZE) region.hasPaving = true
                     if (!containsSnow(left + dx, top + dz, block)) return block
-                    useCompiled = false
                     region.hiddenSnow.push(index)
                     let bare = exposed.get(block)
                     if (!bare) {
@@ -182,7 +205,7 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
                     }
                     return bare
                 }))
-                const baked = useCompiled ? compiled : undefined
+                const baked = useBakedPaving && !region.hiddenSnow.length ? compiled : undefined
                 renderer.render(map, {
                     includeTile: (tx, tz) => tx + left >= x && tx + left < x + REGION_SIZE
                         && tz + top >= z && tz + top < z + REGION_SIZE,
@@ -210,6 +233,25 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
                         })
                     },
                 })
+                if (region.hasPaving) {
+                    const bounds = {minX: x, minZ: z, maxX: Math.min(x + REGION_SIZE, blockMap.length) - 1,
+                        maxZ: Math.min(z + REGION_SIZE, depth) - 1}
+                    const attributes = [{kind: PAVING_INSTANCE_ATTRIBUTE, stride: 4, values: [] as number[]}]
+                    const addStone = (stone: PavingStone, tx: number, tz: number) => {
+                        if (tx < bounds.minX || tx > bounds.maxX || tz < bounds.minZ || tz > bounds.maxZ) return
+                        const tile = (tx - x) * REGION_SIZE + tz - z
+                        const faces = region.faces[tile] ??= []
+                        const index = attributes[0].values.length / 4
+                        appendPavingAttributes(attributes[0].values, stone)
+                        faces.push({batch: getPavingBatch(), matrix: pavingStoneMatrix(stone), uv: pavingUV, attributes, index, slot: -1})
+                    }
+                    if (useBakedPaving && compiled) visitBakedPaving(compiled, bounds, addStone)
+                    else {
+                        const tileAt = (tx: number, tz: number) => blockMap[tx]?.[tz]
+                        visitPavingStones(tileAt, (tx, tz) => outdoorSurfaceHeight(tileAt(tx, tz)), stone =>
+                            addStone(stone, Math.round((stone.left + stone.right) / 2), Math.round((stone.front + stone.back) / 2)), bounds)
+                    }
+                }
                 regions.set(key, region)
                 return region
             }
@@ -233,6 +275,7 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
                             {heightOffset: 0, totalHeight: block.height})
                     }))
                     foliage.render(foliageMap, {
+                        pavingMoss: region.hasPaving,
                         originX: left, originZ: top,
                         transitionWeight(tx, tz) {
                             const tileX = Math.round(tx), tileZ = Math.round(tz)
@@ -328,6 +371,15 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
             maximumFoliage.copyFrom(maximum).y += 1
             flushBatches(foliageBatches.values(), maximumFoliage)
             flushBatches(batches.values(), maximum)
+            if (paving?.mesh.thinInstanceCount) {
+                const bounds = {minX: Math.max(0, minX - 1), minZ: Math.max(0, minZ - 1),
+                    maxX: Math.min(blockMap.length - 1, maxX + 1), maxZ: Math.min(depth - 1, maxZ + 1)}
+                const key = `${bounds.minX}:${bounds.minZ}:${bounds.maxX}:${bounds.maxZ}:${revision}:${snowRevision}`
+                if (revision === undefined || pavingSurfaceKey !== key) {
+                    paving.updateSurfaceField(blockMap, bounds, (x, z) => snowCoverMask.has(x * blockMap.length + z))
+                    pavingSurfaceKey = key
+                }
+            }
         },
     }
 }

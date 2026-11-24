@@ -7,10 +7,12 @@ import { muddyDirtLayout, terrainCoverLayout, TERRAIN_ATLAS_REGION_SIZE, visitTe
 import {
     createTerrainRenderBuffer, decodeTerrainRenderData, terrainRenderAssetName,
     terrainRenderBaseBytes, terrainTransitionArea, TERRAIN_RENDER_BORDER, TERRAIN_RENDER_WORLD_BUDGET,
-    TERRAIN_TRANSITION_FALLBACK, TERRAIN_TRANSITION_RECORD_BYTES, TERRAIN_TRANSITION_SNOWMELT_FLAG,
+    TERRAIN_TRANSITION_FALLBACK, TERRAIN_TRANSITION_RECORD_BYTES, TERRAIN_TRANSITION_SNOWMELT_FLAG, PAVING_RECORD_BYTES,
 } from '../src/babylon/world/terrainRenderData'
 import { isSnowRoof, outdoorSurfaceHeight, terrainRoofShape, terrainSurfaceAtlasType } from '../src/babylon/world/terrainRoofShape'
 import { findTerrainTransitions, hasTerrainTransition, terrainSurface } from '../src/babylon/world/terrainTransitionField'
+import { visitPavingStones } from '../src/babylon/world/stonePathLayout'
+import type { PavingStone } from '../src/babylon/world/stonePathLayout'
 
 const size = TERRAIN_ATLAS_REGION_SIZE
 
@@ -27,11 +29,30 @@ export function compileTerrainRenderData(bytes: Uint8Array) {
     }))
     const heights = tiles.map(outdoorSurfaceHeight)
     const inMap = (x: number, z: number) => x >= 0 && x < width && z >= 0 && z < depth
+    const tileAt = (x: number, z: number) => inMap(x, z) ? tiles[indices[x * depth + z]] : undefined
     const heightAt = (x: number, z: number) => inMap(x, z) ? heights[indices[x * depth + z]] : undefined
     const snowAt = (x: number, z: number) => inMap(x, z) && isSnowRoof(tiles[indices[x * depth + z]])
     const baseBytes = terrainRenderBaseBytes(width, depth)
-    const extraBudget = TERRAIN_RENDER_WORLD_BUDGET - bytes.byteLength - baseBytes
-    if (extraBudget < 0) throw new Error(`Terrain needs ${bytes.byteLength + baseBytes} B before transitions`)
+    const pathRegions = new Map<number, {x: number, z: number}>()
+    for (let x = 0; x < width; x++) for (let z = 0; z < depth; z++) {
+        const tile = tiles[indices[x * depth + z]]
+        if ((!tile.stonePath && !tile.beigeStonePath) || tile.type <= 0 || tile.type >= 50) continue
+        const rx = Math.floor(x / size) * size, rz = Math.floor(z / size) * size
+        const key = rx * depth + rz
+        if (!pathRegions.has(key)) pathRegions.set(key, {x: rx, z: rz})
+    }
+    const paving: {key: number, stone: PavingStone}[] = []
+    for (const {x, z} of pathRegions.values()) {
+        const maxX = Math.min(x + size, width) - 1, maxZ = Math.min(z + size, depth) - 1
+        visitPavingStones(tileAt, heightAt, stone => {
+            const tx = Math.round((stone.left + stone.right) / 2), tz = Math.round((stone.front + stone.back) / 2)
+            if (tx >= x && tx <= maxX && tz >= z && tz <= maxZ) paving.push({key: tx * depth + tz, stone})
+        }, {minX: x, minZ: z, maxX, maxZ})
+    }
+    paving.sort((a, b) => a.key - b.key)
+    const requiredBytes = bytes.byteLength + baseBytes + paving.length * PAVING_RECORD_BYTES
+    const extraBudget = TERRAIN_RENDER_WORLD_BUDGET - requiredBytes
+    if (extraBudget < 0) throw new Error(`Terrain and paving need ${requiredBytes} B before transitions`)
     const buffer = createTerrainRenderBuffer(width, depth, extraBudget)
     const result = decodeTerrainRenderData(buffer, width, depth)
     let used = 0
@@ -117,7 +138,10 @@ export function compileTerrainRenderData(bytes: Uint8Array) {
             }
         }
     }
-    return buffer.slice(0, baseBytes + used)
+    const output = createTerrainRenderBuffer(width, depth, used, paving)
+    const headerBytes = result.shapes.byteOffset
+    new Uint8Array(output, headerBytes).set(new Uint8Array(buffer, headerBytes, baseBytes + used - headerBytes))
+    return output
 }
 
 export function terrainRenderAssets(worldDir: string): Plugin {

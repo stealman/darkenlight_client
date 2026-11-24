@@ -1,5 +1,3 @@
-import type { MapBlock } from '@/data/worldDataManager'
-
 export type StonePathBounds = {minX: number, maxX: number, minZ: number, maxZ: number}
 type Rectangle = {left: number, right: number, front: number, back: number}
 type Surface = {height: number, beige: boolean}
@@ -12,13 +10,14 @@ function random(x: number, z: number, salt: number) {
     return ((hash ^ (hash >>> 16)) >>> 0) / 0x100000000
 }
 
-const CELL_SIZE = 0.225
-const MIN_PAVING_SIZE = 0.105
-const MIN_VERGE_SIZE = 0.115
+const CELL_SIZE = 0.3375
+const MIN_PAVING_SIZE = 0.14
+const MIN_VERGE_SIZE = 0.15
+const VERGE_SKIP_CHANCE = 0.40
 
 function visitFootprints(bounds: Rectangle,
     visit: (x0: number, x1: number, z0: number, z1: number, stoneX: number, stoneZ: number) => void) {
-    const joint = (cell: number, salt: number) => cell * CELL_SIZE + (random(cell, 0, salt) - 0.5) * 0.083
+    const joint = (cell: number, salt: number) => cell * CELL_SIZE + (random(cell, 0, salt) - 0.5) * CELL_SIZE * 0.37
     const emitSingle = (x: number, z: number, alongX: boolean) => {
         const left = joint(x, 11), right = joint(x + (alongX ? 2 : 1), 11)
         const front = joint(z, 19), back = joint(z + (alongX ? 1 : 2), 19)
@@ -44,7 +43,7 @@ function visitFootprints(bounds: Rectangle,
         const front = joint(z, 19), back = joint(z + 2, 19)
         const length = alongX ? right - left : back - front
         const width = alongX ? back - front : right - left
-        const wide = Math.min(0.28, width * (0.55 + random(x, z, 107) * 0.08))
+        const wide = Math.min(CELL_SIZE * 1.24, width * (0.55 + random(x, z, 107) * 0.08))
         const wideFirst = random(x, z, 109) < 0.5
         const split = length * (0.43 + random(x, z, 113) * 0.14)
         // One broad stone still crosses the old seam. Two squarer stones fill the other side.
@@ -93,11 +92,13 @@ function visitFootprints(bounds: Rectangle,
     }
 }
 
-export function visitPavingStones(map: readonly (readonly MapBlock[])[],
+type PathTile = {type: number, stonePath: boolean, beigeStonePath: boolean}
+
+export function visitPavingStones(tileAt: (x: number, z: number) => PathTile | undefined,
     heightAt: (x: number, z: number) => number | undefined, visit: (stone: PavingStone) => void,
-    bounds: StonePathBounds = {minX: 0, maxX: map.length - 1, minZ: 0, maxZ: (map[0]?.length ?? 0) - 1}) {
+    bounds: StonePathBounds) {
     const surfaceAt = (x: number, z: number): Surface | undefined => {
-        const tile = map[x]?.[z]
+        const tile = tileAt(x, z)
         if (!tile || tile.type <= 0 || tile.type >= 50 || (!tile.stonePath && !tile.beigeStonePath)) return
         const height = heightAt(x, z)
         if (height !== undefined) return {height, beige: tile.beigeStonePath}
@@ -124,13 +125,14 @@ export function visitPavingStones(map: readonly (readonly MapBlock[])[],
                     Math.max(0, Math.abs(tileZ + dz - z) - 0.5)) / 0.51)
             }
             const seed = random(stoneX, stoneZ, 39 + tileX * 3 + tileZ * 7)
-            const gap = 0.0045 + seed * 0.0035
+            const baseGap = 0.0045 + seed * 0.0035
+            const gap = baseGap * (2 / 3)
             // Recess individual exposed faces so the paving breaks up along the
             // verge while joints between stones stay tight.
             const exposed = (x: number, z: number) =>
                 surfaceAt(Math.floor(x + 0.5), Math.floor(z + 0.5))?.height !== surface.height
             // A discarded sliver should leave the next stone's edge exposed.
-            const probe = MIN_VERGE_SIZE + 2 * gap
+            const probe = MIN_VERGE_SIZE + 2 * baseGap
             const openLeft = exposed(x0 - probe, z), openRight = exposed(x1 + probe, z)
             const openFront = exposed(x, z0 - probe), openBack = exposed(x, z1 + probe)
             const verge = (exterior: boolean, span: number, salt: number) => {
@@ -148,9 +150,13 @@ export function visitPavingStones(map: readonly (readonly MapBlock[])[],
             const onVerge = openLeft || openRight || openFront || openBack
             const minimum = onVerge ? Math.max(MIN_VERGE_SIZE, Math.max(width, depth) * 0.28) : MIN_PAVING_SIZE
             if (Math.min(width, depth) < minimum) return
-            if (onVerge) edge = Math.min(edge, 0.42)
+            if (onVerge) {
+                if (random(stoneX, stoneZ, 127 + tileX * 17 + tileZ * 31) < VERGE_SKIP_CHANCE) return
+                edge = Math.min(edge, 0.42)
+            }
             const variant = Math.floor(random(stoneX, stoneZ, 47) * 8)
-            visit({...footprint, ...surface, seed, edge, rise: 0.018 + edge * 0.020 + seed * 0.031, variant})
+            const rise = (0.018 + edge * 0.020 + seed * 0.031) * (2 / 3)
+            visit({...footprint, ...surface, seed, edge, rise, variant})
         }
 
         // A candidate overlaps at most four tiles. Merge matching pieces before

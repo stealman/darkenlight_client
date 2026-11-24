@@ -8,7 +8,7 @@ import { Renderer } from '@/babylon/scene/renderer'
 import { SNOW_BLOCK_HEIGHT } from '@/babylon/world/beveledTerrainBlock'
 import { WATER_BLOCK_TYPE } from '@/babylon/world/terrainManager'
 import { MapBlock } from '@/data/worldDataManager'
-import { createStonePathRenderer } from './stonePathRenderer'
+import { createStonePathRenderer } from '@/babylon/world/stonePathRenderer'
 import { Settings } from '@/settings/settings'
 import { terrainBoundaryOffset, TERRAIN_TRANSITION_REACH } from './terrainTransitionMaterial'
 

@@ -97,7 +97,7 @@ export function createTerrainTransitionMaterial(
         vec4 open = mod(floor(corners / vec4(1.0, 2.0, 4.0, 8.0)), 2.0);
         vec2 withinTile = clamp(tileUV, 0.0, 1.0);
         float islandSupport = mix(mix(open.x, open.y, withinTile.x), mix(open.z, open.w, withinTile.x), withinTile.y);
-        vPlacedSurface = vec4(axis, mod(terrainSurface.w, 2.0)${pondBank ? ` + 2.0 * floor(terrainSurface.w / ${POND_BANK_FLAG}.0)` : ''}, islandSupport);
+        vPlacedSurface = vec4(axis, mod(terrainSurface.w, 2.0)${pondBank ? ` + 2.0 * mod(floor(terrainSurface.w / ${POND_BANK_FLAG}.0), 2.0)` : ''}, islandSupport);
         vWallContact = terrainWallContact;
     `)
     material.Fragment_Definitions(`

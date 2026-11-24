@@ -13,6 +13,7 @@ import { createTerrainAtlasPreview, createTerrainPreviewPlane, muddyDirtPatterns
 import type { TerrainAtlasTileFilter } from './terrainAtlasPreview'
 import { addTerrainPreviewRoof, configureTerrainEdgeLighting, configureMuddyDirtWetness, configureSnowmelt, configureSnowGlints, configureTerrainPreviewBatch, TerrainPreviewBatch } from './terrainPreviewBatch'
 import type { SubmitTerrainBatch } from './terrainPreviewBatch'
+import { PAVING_SNOW_ATTRIBUTE, PAVING_SNOW_FLAG_SHIFT } from './terrainPreviewBatch'
 import { createTerrainPreviewGeometry } from './terrainPreviewGeometry'
 import { createTerrainPreviewWater } from './terrainPreviewWater'
 import { createTerrainTransitionMaterial, POND_BANK_FLAG, TERRAIN_TRANSITION_REACH } from './terrainTransitionMaterial'
@@ -121,6 +122,7 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
         patterns: terrainCoverPatterns, varyAdjacentPatches: true, roundRockTop: true, showRockDeposits: true,
     })
     const wetTransitions = new Set<Mesh>()
+    const snowTransitions = new Set<Mesh>()
     const createTransition = (name: string, cover: PBRCustomMaterial, substrate = dirtAtlas.material,
                               wallSoil = dirtAtlas.material, blendRockWalls = false) => {
         const mesh = createTerrainPreviewPlane(plane, name)
@@ -148,6 +150,7 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
         if (cover === snowAtlas.material) {
             if (wetness) configureSnowmelt(material, withGrass)
             configureSnowGlints(material, withGrass ? 'grass' : 'standard')
+            snowTransitions.add(mesh)
         }
         if (atPond) {
             pond?.applyShoreWetness(material, mudCover ? 'grassWeight' : '(1.0 - grassWeight)')
@@ -340,6 +343,19 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
             return batch.geometry
         }, includeTile, originX, originZ, submit, !!demo, localBoundaries, compiled)
         const islandMasks = transitionTiles || localTransitions ? grassIslandMasks(map) : undefined
+        const pavingAt = (x: number, z: number) => {
+            const tile = map[x]?.[z]
+            if (tile && tile.type > 0 && tile.type < WATER_BLOCK_TYPE && (tile.stonePath || tile.beigeStonePath)) return tile
+        }
+        const pavingFlags = (x: number, z: number) => {
+            const tile = pavingAt(x, z)
+            if (!tile) return 0
+            const paved = (dx: number, dz: number) => pavingAt(x + dx, z + dz)?.height === tile.height
+            return 16 | (paved(-1, 0) ? 0 : 1) | (paved(1, 0) ? 0 : 2)
+                | (paved(0, -1) ? 0 : 4) | (paved(0, 1) ? 0 : 8)
+                | (paved(-1, -1) ? 0 : 32) | (paved(1, -1) ? 0 : 64)
+                | (paved(-1, 1) ? 0 : 128) | (paved(1, 1) ? 0 : 256)
+        }
         const takeTile = (type: number, cover?: boolean): TerrainAtlasTileFilter => {
             return (matrix, uv, x, z, roof, wetCorners, floor) => {
                 const localTransition = localTransitions?.[x]?.[z]
@@ -348,17 +364,19 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
                     : type === pondCover && map[x][z].type !== WATER_BLOCK_TYPE && map[x][z].height === 0
                         && touchesTile(x, z, demo.isBank))
                 if (!localTransition && !pondTile && (cover === undefined || !transitionTiles?.[x][z])) return false
-                const batch = batchFor(localTransition?.material ?? (pondTile ? pondTransition : transitionMesh))
+                const mesh = localTransition?.material ?? (pondTile ? pondTransition : transitionMesh)
+                const batch = batchFor(mesh)
                 const first = batch.geometry.count
                 batch.geometry.tile = x * surfaces.stride + z
                 const options = {roundDirtEdges: !!pondTile || !snowGrass, wetCorners}
                 addTerrainPreviewRoof(batch.geometry, matrix, uv, roof, options)
                 if (floor) addTerrainPreviewRoof(batch.geometry, matrix, uv, floor, {...options, mirrorAtTileEdge: true})
                 const angle = Math.atan2(matrix.m[2], matrix.m[0])
-                // Material, four island corners and the pond bank.
+                // Material, four island corners, the pond bank and the paved snow edges.
                 const placedCover = pondTile ? (pondCover === ROCK || pondCover === DIRT ? bank : !bank)
                     : localTransition?.cover ?? cover
-                const flags = ((islandMasks?.[x][z] ?? 0) << 1) | (placedCover ? 1 : 0) | (pondTile ? POND_BANK_FLAG : 0)
+                const paving = snowTransitions.has(mesh) ? pavingFlags(x, z) * PAVING_SNOW_FLAG_SHIFT : 0
+                const flags = ((islandMasks?.[x][z] ?? 0) << 1) | (placedCover ? 1 : 0) | (pondTile ? POND_BANK_FLAG : 0) | paving
                 for (let i = first; i < batch.geometry.count; i++) {
                     batch.surfaceData.push(x, z, angle, flags)
                     batch.wallData.push(0, 0, 0, 0)
@@ -378,7 +396,19 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
             atlas.render(surfaces, takeTile(type, type !== grassType ? undefined : snowGrass ? false
                 : rockPartner === type || (!withRock && !snow) ? true : undefined), undefined, submit)
         }
-        snowAtlas.render(surfaces, takeTile(SNOW_DIRT, snow ? true : undefined), undefined, submit)
+        snowAtlas.render(surfaces, takeTile(SNOW_DIRT, snow ? true : undefined), undefined, (mesh, batch, attributes) => {
+            const values: number[] = []
+            batch.forEachInstance(tile => {
+                const x = Math.floor(tile / surfaces.stride), z = tile % surfaces.stride
+                values.push(x + originX, z + originZ, pavingFlags(x, z))
+            })
+            const paving = {kind: PAVING_SNOW_ATTRIBUTE, stride: 3, values}
+            if (submit) submit(mesh, batch, [...attributes, paving])
+            else {
+                if (values.length) mesh.thinInstanceSetBuffer(paving.kind, new Float32Array(values), paving.stride)
+                batch.apply(mesh)
+            }
+        })
         rockAtlas.render(surfaces, takeTile(ROCK, withRock ? false : undefined), surfaces.rockWalls, submit)
         for (const mesh of transitionMeshes) {
             const batch = batches.get(mesh)

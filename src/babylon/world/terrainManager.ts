@@ -182,7 +182,7 @@ export const TerrainManager = {
                     continue
                 }
 
-                if (block.type > 0 && (block.stonePath || block.beigeStonePath)) {
+                if (!outdoor && block.type > 0 && (block.stonePath || block.beigeStonePath)) {
                     const pathMatrix = Matrix.Scaling(1, 0.12, 1)
                     pathMatrix.setTranslationFromFloats(x, block.height + 0.56, z)
                     WorldRenderer.block1!.matrices.push(pathMatrix)

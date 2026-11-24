@@ -21,6 +21,8 @@ export const COAL_DEPOSIT = -1
 type TerrainSurfaceDetails = {top?: number, foot?: number, wetTile?: readonly [x: number, z: number, corners: number], depositKind?: number}
 export type TerrainInstanceAttribute = {kind: string, stride: number, values: number[]}
 export type SubmitTerrainBatch = (mesh: Mesh, batch: TerrainPreviewBatch, attributes: TerrainInstanceAttribute[]) => void
+export const PAVING_SNOW_FLAG_SHIFT = 64
+export const PAVING_SNOW_ATTRIBUTE = 'terrainPavingSnow'
 
 export class TerrainPreviewBatch {
     private readonly matrices: Matrix[] = []
@@ -434,14 +436,47 @@ export function configureSnowmelt(material: PBRCustomMaterial, wallsOnly = false
 }
 
 export function configureSnowGlints(material: PBRCustomMaterial, transition?: 'standard' | 'grass') {
+    if (!transition) material.AddAttribute(PAVING_SNOW_ATTRIBUTE)
+    material.Vertex_Definitions(`${material.CustomParts.Vertex_Definitions ?? ''}
+        ${transition ? '' : 'attribute vec3 terrainPavingSnow;'}
+        varying vec3 vPavingSnow;
+    `)
+    material.Vertex_After_WorldPosComputed(`${material.CustomParts.Vertex_After_WorldPosComputed ?? ''}
+        ${transition ? `vPavingSnow = vec3(vTerrainTile.xy, floor(terrainSurface.w / ${PAVING_SNOW_FLAG_SHIFT}.0));` : `
+        vec2 pavingCenter = (world * vec4(terrainPavingSnow.x, 0.0, terrainPavingSnow.y, 1.0)).xz;
+        vPavingSnow = vec3(worldPos.xz - pavingCenter + 0.5, terrainPavingSnow.z);`}
+    `)
     material.Fragment_Definitions(`${material.CustomParts.Fragment_Definitions ?? ''}
         ${transition ? '' : terrainNoiseShader}
+        varying vec3 vPavingSnow;
         float snowGlintCoverage;
         float snowGlintRoughness;
     `)
     const coverage = transition === 'grass' ? 'wall ? snowWeight : grassWeight' : transition ? 'grassWeight' : '1.0'
     material.Fragment_Before_Lights(`${material.CustomParts.Fragment_Before_Lights ?? ''}
         snowGlintCoverage = ${coverage};
+        float pavingSnowFlags = floor(vPavingSnow.z + 0.5);
+        if (${transition ? '!wall && ' : ''}pavingSnowFlags >= 16.0 && snowGlintCoverage > 0.0) {
+            vec2 p = vPositionW.xz;
+            float chunks = terrainNoise(p * 5.8 + vec2(4.9, 13.5));
+            float grains = terrainNoise(p * 27.0 - vec2(1.7, 5.4));
+            vec4 open = mod(floor(pavingSnowFlags / vec4(1.0, 2.0, 4.0, 8.0)), 2.0);
+            vec2 uv = clamp(vPavingSnow.xy, 0.0, 1.0);
+            vec4 distances = mix(vec4(1.0), vec4(uv.x, 1.0 - uv.x, uv.y, 1.0 - uv.y), open);
+            float edgeDistance = min(min(distances.x, distances.y), min(distances.z, distances.w));
+            // Also leave snow untouched around the inside corners of bends in the path.
+            vec4 corners = mod(floor(pavingSnowFlags / vec4(32.0, 64.0, 128.0, 256.0)), 2.0);
+            vec4 cornerX = vec4(uv.x, 1.0 - uv.x, uv.x, 1.0 - uv.x);
+            vec4 cornerZ = vec4(uv.y, uv.y, 1.0 - uv.y, 1.0 - uv.y);
+            vec4 cornerSquared = mix(vec4(1.0), cornerX * cornerX + cornerZ * cornerZ, corners);
+            float distanceSquared = min(edgeDistance * edgeDistance,
+                min(min(cornerSquared.x, cornerSquared.y), min(cornerSquared.z, cornerSquared.w)));
+            float interior = smoothstep(0.42, mix(0.50, 0.61, chunks), sqrt(distanceSquared));
+            float dirt = smoothstep(0.20, 0.80, chunks * 0.68 + grains * 0.32);
+            float tracked = interior * snowGlintCoverage;
+            surfaceAlbedo *= mix(vec3(1.0), vec3(0.46, 0.35, 0.25), tracked * mix(0.34, 0.70, dirt));
+            snowGlintCoverage *= 1.0 - tracked * mix(0.70, 0.95, dirt);
+        }
         if (snowGlintCoverage > 0.0) {
             vec2 p = vPositionW.xz + vPositionW.y * vec2(0.61, -0.47);
             float variation = terrainNoise(p * 1.25 + vec2(13.2, 7.1));

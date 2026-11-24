@@ -3,35 +3,30 @@ import type { Scene, TransformNode } from '@babylonjs/core'
 import { PBRCustomMaterial } from '@babylonjs/materials'
 import { TerrainEnum1 } from '@/babylon/materials'
 import { terrainNoiseShader } from '@/babylon/world/terrainSurfaceShader'
-import { visitPavingStones } from '@/babylon/world/stonePathLayout'
+import { visitPavingStones } from './stonePathLayout'
+import type { PavingStone, StonePathBounds } from './stonePathLayout'
 import type { MapBlock } from '@/data/worldDataManager'
-import colorUrl from './assets/stone-path-atlas.png'
-import reliefUrl from './assets/stone-path-relief.png'
-import dirtUrl from './assets/dirt-atlas.png'
-import mudUrl from './assets/muddy-dirt-atlas.png'
-import grassUrl from './assets/grass-atlas.png'
-import winterGrassUrl from './assets/winter-grass-atlas.png'
-import snowUrl from './assets/snow-atlas.png'
-import snowNormalUrl from './assets/snow-normal-atlas.png'
+import { Settings } from '@/settings/settings'
+import colorUrl from '@/adminUtils/assets/stone-path-atlas.png'
+import reliefUrl from '@/adminUtils/assets/stone-path-relief.png'
+import coverUrl from '@/adminUtils/assets/stone-path-cover-atlas.png'
 
 function createPavingMesh(scene: Scene) {
     const mesh = new Mesh('terrainPavingStones', scene)
     const outline = [[-0.5, -0.38], [-0.39, -0.5], [0.37, -0.5], [0.5, -0.4],
         [0.5, 0.36], [0.37, 0.5], [-0.40, 0.5], [-0.5, 0.38]]
     const positions = [0, 1, 0], indices: number[] = [], normals: number[] = []
-    const rings = [[0.81, 1], [0.94, 0.87], [1, 0.53], [0.94, -0.48]]
+    // One sloped face joins the top to the buried rim on each side.
+    const rings = [[0.89, 1], [1, -0.48]]
     for (const [size, height] of rings) {
         for (const [x, z] of outline) positions.push(x * size, height, z * size)
     }
     const sides = outline.length
     for (let i = 0; i < sides; i++) {
         const next = (i + 1) % sides
-        indices.push(0, 1 + i, 1 + next)
-        for (let ring = 1; ring < rings.length; ring++) {
-            const a = 1 + (ring - 1) * sides
-            const b = a + sides
-            indices.push(a + i, b + i, a + next, a + next, b + i, b + next)
-        }
+        const top = 1 + i, topNext = 1 + next
+        const base = top + sides, baseNext = topNext + sides
+        indices.push(0, top, topNext, top, base, topNext, topNext, base, baseNext)
     }
     VertexData.ComputeNormals(positions, indices, normals)
     const data = new VertexData()
@@ -44,12 +39,13 @@ function createPavingMesh(scene: Scene) {
     return mesh
 }
 
-function createPavingMaterial(scene: Scene, surfaceSize: Vector2) {
+function createPavingMaterial(scene: Scene, surfaceSize: Vector2, surfaceOrigin: Vector2) {
     const material = new PBRCustomMaterial('terrainPaving', scene)
     material.metallic = 0
     material.roughness = 1
     material.metallicF0Factor = 0
     material.specularIntensity = 0
+    material.usePhysicalLightFalloff = false
     const load = (url: string, noMipMaps = false) => {
         const texture = new Texture(url, scene, noMipMaps, false, noMipMaps ? Texture.BILINEAR_SAMPLINGMODE : Texture.TRILINEAR_SAMPLINGMODE)
         texture.wrapU = texture.wrapV = Texture.CLAMP_ADDRESSMODE
@@ -58,15 +54,11 @@ function createPavingMaterial(scene: Scene, surfaceSize: Vector2) {
     }
     material.AddUniform('pavingColor', 'sampler2D', load(colorUrl, true))
     material.AddUniform('pavingRelief', 'sampler2D', load(reliefUrl, true))
-    material.AddUniform('pavingDirt', 'sampler2D', load(dirtUrl))
-    material.AddUniform('pavingMud', 'sampler2D', load(mudUrl))
-    material.AddUniform('pavingGrass', 'sampler2D', load(grassUrl))
-    material.AddUniform('pavingWinterGrass', 'sampler2D', load(winterGrassUrl))
-    material.AddUniform('pavingSnow', 'sampler2D', load(snowUrl))
-    material.AddUniform('pavingSnowNormal', 'sampler2D', load(snowNormalUrl))
+    material.AddUniform('pavingCover', 'sampler2D', load(coverUrl))
     material.AddUniform('pavingSurfaces', 'sampler2D', null)
     material.AddUniform('pavingSurfaceSize', 'vec2', surfaceSize)
-    material.AddAttribute('pavingInstance')
+    material.AddUniform('pavingSurfaceOrigin', 'vec2', surfaceOrigin)
+    material.AddAttribute(PAVING_INSTANCE_ATTRIBUTE)
 
     const varyings = `
         varying vec4 vPaving;
@@ -101,9 +93,10 @@ function createPavingMaterial(scene: Scene, surfaceSize: Vector2) {
     material.Fragment_Definitions(`
         ${varyings}
         ${terrainNoiseShader}
-        vec2 pavingProjection(vec2 p, vec2 origin) {
+        vec2 pavingProjection(vec2 p, vec2 cell) {
             vec2 mirrored = 3.0 - abs(mod(p, 6.0) - 3.0);
-            return (origin + clamp(mirrored, 0.012, 2.988)) / 16.0;
+            // Each 384-pixel terrain patch has a 64-pixel extruded border for filtering.
+            return (cell * 512.0 + 64.0 + clamp(mirrored, 0.012, 2.988) * 128.0) / vec2(2048.0, 1024.0);
         }
     `)
     material.Fragment_Before_Lights(`
@@ -118,7 +111,7 @@ function createPavingMaterial(scene: Scene, surfaceSize: Vector2) {
         float shoulder = 1.0 - smoothstep(0.29, 0.92, vStone.y);
         float rim = max(joint, shoulder);
         vec2 groundUV = vPavingGround + 0.5;
-        vec4 terrain = texture2D(pavingSurfaces, groundUV / pavingSurfaceSize);
+        vec4 terrain = texture2D(pavingSurfaces, (groundUV - pavingSurfaceOrigin) / pavingSurfaceSize);
         float breakup = terrainNoise(vPavingGround * 5.3 + 14.2);
         float scatter = terrainNoise(vPavingGround * 19.7 - 8.1);
         float flecks = terrainNoise(vPavingGround * 67.0 + 3.2);
@@ -143,14 +136,13 @@ function createPavingMaterial(scene: Scene, surfaceSize: Vector2) {
             + scatter * 0.16 + flecks * 0.12 + outside * 0.20 + rim * (0.08 + drift * 0.15) + vergeDeposits * 0.12)
             * smoothstep(0.02, 0.47, vStone.y);
         vec2 projection = groundUV + vStone.y * vec2(0.018, 0.024);
-        vec2 coverUV = pavingProjection(projection, vec2(0.0625));
-        vec3 wetSoil = toLinearSpace(texture2D(pavingMud, pavingProjection(groundUV, vec2(0.0))).rgb);
-        vec3 soil = mix(toLinearSpace(texture2D(pavingDirt, coverUV).rgb), wetSoil, terrain.a);
-        vec3 grass = mix(toLinearSpace(texture2D(pavingGrass, coverUV).rgb),
-            toLinearSpace(texture2D(pavingWinterGrass, coverUV).rgb), terrain.b);
+        vec3 wetSoil = toLinearSpace(texture2D(pavingCover, pavingProjection(groundUV, vec2(1.0, 0.0))).rgb);
+        vec3 soil = mix(toLinearSpace(texture2D(pavingCover, pavingProjection(projection, vec2(0.0, 0.0))).rgb), wetSoil, terrain.a);
+        vec3 grass = mix(toLinearSpace(texture2D(pavingCover, pavingProjection(projection, vec2(2.0, 0.0))).rgb),
+            toLinearSpace(texture2D(pavingCover, pavingProjection(projection, vec2(3.0, 0.0))).rgb), terrain.b);
         soil = mix(soil, grass, max(terrain.g, terrain.b) * vergeDeposits * 0.43);
         vec3 mossColor = grass * vec3(0.65, 0.98, 0.47) + vec3(0.015, 0.030, 0.006);
-        vec3 snowTexel = texture2D(pavingSnow, coverUV).rgb;
+        vec3 snowTexel = texture2D(pavingCover, pavingProjection(projection, vec2(0.0, 1.0))).rgb;
         float snowGray = dot(snowTexel, vec3(0.2126, 0.7152, 0.0722));
         float snowShade = mix(0.74, 0.87, drift * 0.45 + scatter * 0.40 + flecks * 0.15);
         vec3 snowColor = toLinearSpace(mix(vec3(snowGray), snowTexel, 0.28) * snowShade * vec3(0.97, 0.985, 1.0));
@@ -163,17 +155,49 @@ function createPavingMaterial(scene: Scene, surfaceSize: Vector2) {
         vec2 bump = gritNormal * (1.0 - snow * 0.88) * (0.92 - dirtCover * 0.41) * (1.0 - mud * 0.58)
             + wornRim * (1.0 - snow * 0.68);
         // The snow atlas is projected along the terrain axes, even on rotated stones.
-        vec2 snowBump = (texture2D(pavingSnowNormal, coverUV).rg * 2.0 - 1.0) * (snow * 0.60);
+        vec2 snowBump = (texture2D(pavingCover, pavingProjection(projection, vec2(1.0, 1.0))).rg * 2.0 - 1.0) * (snow * 0.60);
         normalW = normalize(normalW + vPavingX * bump.x + vPavingZ * bump.y - vec3(snowBump.x, 0.0, snowBump.y));
     `)
     return material
 }
 
+export const PAVING_INSTANCE_ATTRIBUTE = 'pavingInstance'
+
+export function pavingStoneMatrix(stone: PavingStone) {
+    const width = stone.right - stone.left, depth = stone.back - stone.front
+    const verge = Math.max(0, 1 - stone.edge / 0.64)
+    const maxTurn = Math.min(0.075 + verge * 0.060, 0.36 * Math.min(width, depth) / Math.max(width, depth))
+    const heading = width < depth ? Math.PI / 2 : 0
+    const turn = heading + Math.sin(stone.seed * 46) * maxTurn
+    const tilt = 0.027 + verge * 0.021
+    const pitch = Math.sin(stone.seed * 119 + 0.4) * tilt
+    const roll = Math.sin(stone.seed * 193 + 1.8) * tilt
+    const rotation = Matrix.RotationYawPitchRoll(turn, pitch, roll)
+    // Fit the horizontal projections of all three axes inside the stone's footprint.
+    const xWidth = Math.abs(rotation.m[0]), xDepth = Math.abs(rotation.m[2])
+    const zWidth = Math.abs(rotation.m[8]), zDepth = Math.abs(rotation.m[10])
+    const availableWidth = width - 2 * stone.rise * Math.abs(rotation.m[4])
+    const availableDepth = depth - 2 * stone.rise * Math.abs(rotation.m[6])
+    const fit = xWidth * zDepth - xDepth * zWidth
+    const stoneWidth = (availableWidth * zDepth - availableDepth * zWidth) / fit
+    const stoneDepth = (availableDepth * xWidth - availableWidth * xDepth) / fit
+    const matrix = Matrix.Scaling(stoneWidth, stone.rise, stoneDepth).multiply(rotation)
+    const embeddedHeight = stone.height - stone.rise * 0.26
+    matrix.setTranslationFromFloats((stone.left + stone.right) / 2, embeddedHeight, (stone.front + stone.back) / 2)
+    return matrix
+}
+
+export function appendPavingAttributes(values: number[], stone: PavingStone) {
+    values.push(stone.variant, Number(stone.beige), stone.seed, stone.edge)
+}
+
 export function createStonePathRenderer(scene: Scene, parent: TransformNode) {
     const mesh = createPavingMesh(scene)
     mesh.parent = parent
+    mesh.receiveShadows = Settings.isShadowsEnabled()
     const surfaceSize = Vector2.One()
-    const material = createPavingMaterial(scene, surfaceSize)
+    const surfaceOrigin = Vector2.Zero()
+    const material = createPavingMaterial(scene, surfaceSize, surfaceOrigin)
     mesh.material = material
     let surfaceField: RawTexture | undefined
     material.onBindObservable.add(() => {
@@ -183,57 +207,48 @@ export function createStonePathRenderer(scene: Scene, parent: TransformNode) {
         surfaceField?.dispose()
         material.dispose()
     })
+    const updateSurfaceField = (map: MapBlock[][], bounds: StonePathBounds,
+        snowHidden: (x: number, z: number) => boolean = () => false) => {
+        const width = bounds.maxX - bounds.minX + 1, depth = bounds.maxZ - bounds.minZ + 1
+        const surfaces = new Uint8Array(width * depth * 4)
+        for (let x = 0; x < width; x++) for (let z = 0; z < depth; z++) {
+            const tile = map[x + bounds.minX][z + bounds.minZ]
+            const i = (z * width + x) * 4
+            surfaces[i] = tile.snowed && !snowHidden(x + bounds.minX, z + bounds.minZ) ? 255 : 0
+            surfaces[i + 1] = tile.type === TerrainEnum1.TERRAIN_GRASS.index ? 255 : 0
+            surfaces[i + 2] = tile.type === TerrainEnum1.TERRAIN_GRASS_WINTER.index ? 255 : 0
+            surfaces[i + 3] = tile.type === TerrainEnum1.TERRAIN_MUDDY_DIRT.index ? 255 : 0
+        }
+        if (surfaceField && surfaceSize.x === width && surfaceSize.y === depth) {
+            surfaceField.update(surfaces)
+        } else {
+            surfaceField?.dispose()
+            surfaceField = RawTexture.CreateRGBATexture(surfaces, width, depth, scene, false, false, Texture.BILINEAR_SAMPLINGMODE)
+            surfaceField.wrapU = surfaceField.wrapV = Texture.CLAMP_ADDRESSMODE
+        }
+        surfaceSize.set(width, depth)
+        surfaceOrigin.set(bounds.minX, bounds.minZ)
+    }
     return {
+        mesh, updateSurfaceField,
         render(map: MapBlock[][], heightAt: (x: number, z: number) => number | undefined) {
             const width = map.length, depth = map[0]?.length ?? 0
             const matrices: number[] = [], attributes: number[] = []
-            visitPavingStones(map, heightAt, stone => {
-                const width = stone.right - stone.left, depth = stone.back - stone.front
-                const maxTurn = Math.min(0.075, 0.36 * Math.min(width, depth) / Math.max(width, depth))
-                const heading = width < depth ? Math.PI / 2 : 0
-                const turn = heading + Math.sin(stone.seed * 46) * maxTurn
-                const pitch = Math.sin(stone.seed * 119 + 0.4) * 0.027
-                const roll = Math.sin(stone.seed * 193 + 1.8) * 0.027
-                const rotation = Matrix.RotationYawPitchRoll(turn, pitch, roll)
-                // Fit the horizontal projections of all three axes inside the stone's footprint.
-                const xWidth = Math.abs(rotation.m[0]), xDepth = Math.abs(rotation.m[2])
-                const zWidth = Math.abs(rotation.m[8]), zDepth = Math.abs(rotation.m[10])
-                const availableWidth = width - 2 * stone.rise * Math.abs(rotation.m[4])
-                const availableDepth = depth - 2 * stone.rise * Math.abs(rotation.m[6])
-                const fit = xWidth * zDepth - xDepth * zWidth
-                const stoneWidth = (availableWidth * zDepth - availableDepth * zWidth) / fit
-                const stoneDepth = (availableDepth * xWidth - availableWidth * xDepth) / fit
-                const matrix = Matrix.Scaling(stoneWidth, stone.rise, stoneDepth).multiply(rotation)
-                const embeddedHeight = stone.height - stone.rise * 0.26
-                matrix.setTranslationFromFloats((stone.left + stone.right) / 2, embeddedHeight, (stone.front + stone.back) / 2)
+            const bounds = {minX: 0, minZ: 0, maxX: width - 1, maxZ: depth - 1}
+            visitPavingStones((x, z) => map[x]?.[z], heightAt, stone => {
+                const matrix = pavingStoneMatrix(stone)
                 matrices.push(...matrix.m)
-                attributes.push(stone.variant, Number(stone.beige), stone.seed, stone.edge)
-            })
+                appendPavingAttributes(attributes, stone)
+            }, bounds)
             mesh.setEnabled(matrices.length > 0)
             if (!matrices.length) {
                 mesh.thinInstanceCount = 0
                 return
             }
 
-            const surfaces = new Uint8Array(width * depth * 4)
-            for (let x = 0; x < width; x++) for (let z = 0; z < depth; z++) {
-                const tile = map[x][z]
-                const i = (z * width + x) * 4
-                surfaces[i] = tile.snowed ? 255 : 0
-                surfaces[i + 1] = tile.type === TerrainEnum1.TERRAIN_GRASS.index ? 255 : 0
-                surfaces[i + 2] = tile.type === TerrainEnum1.TERRAIN_GRASS_WINTER.index ? 255 : 0
-                surfaces[i + 3] = tile.type === TerrainEnum1.TERRAIN_MUDDY_DIRT.index ? 255 : 0
-            }
-            if (surfaceField && surfaceSize.x === width && surfaceSize.y === depth) {
-                surfaceField.update(surfaces)
-            } else {
-                surfaceField?.dispose()
-                surfaceField = RawTexture.CreateRGBATexture(surfaces, width, depth, scene, false, false, Texture.BILINEAR_SAMPLINGMODE)
-                surfaceField.wrapU = surfaceField.wrapV = Texture.CLAMP_ADDRESSMODE
-            }
-            surfaceSize.set(width, depth)
+            updateSurfaceField(map, bounds)
             mesh.thinInstanceSetBuffer('matrix', new Float32Array(matrices), 16)
-            mesh.thinInstanceSetBuffer('pavingInstance', new Float32Array(attributes), 4)
+            mesh.thinInstanceSetBuffer(PAVING_INSTANCE_ATTRIBUTE, new Float32Array(attributes), 4)
         },
     }
 }
