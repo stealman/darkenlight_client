@@ -8,7 +8,6 @@ import {
 } from '@/babylon/audio/audioManager'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { StepMarksRenderer } from '@/babylon/world/stepMarksRenderer'
-import { FightSplatsRenderer } from '@/babylon/world/fightSplatsRenderer'
 import { ViewportManager } from '@/utils/viewport'
 import { CharacterModel } from '@/babylon/character/characterModel'
 import { Utils } from '@/utils/utils'
@@ -116,7 +115,6 @@ class Character implements Attackable, EffectTarget {
     parrySoundType: string = WeaponSoundTypes.SWORD
 
     lastStepMarkTime: number = 0
-    private nextRunBloodSplatTime = 0
     stepMarkSide: 'L' | 'R' = 'R'
 
     autoAttackMessage: AutoAttackMessage | null = null
@@ -389,13 +387,6 @@ class Character implements Attackable, EffectTarget {
                 this.pos.x = tgtPos.x
                 this.pos.z = tgtPos.z
                 this.logicYpos = Utils.calculateWalkYPos(this.pos.x, this.pos.z, this.getBoxSize())
-
-                // Local test effect for the terrain stain shader.
-                if (movementOrigin && this.movementType === 'R' && actualTime >= this.nextRunBloodSplatTime
-                    && (this.pos.x !== movementOrigin.x || this.pos.z !== movementOrigin.z)) {
-                    FightSplatsRenderer.consumeSplats([{lp: 0, x: this.pos.x, z: this.pos.z, tp: 1, s: 2}])
-                    this.nextRunBloodSplatTime = actualTime + 1000
-                }
             }
 
             if (reachedServerMoveTarget) {

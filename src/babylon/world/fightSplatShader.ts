@@ -29,11 +29,11 @@ export const fightSplatShader = `
     }
 
     vec3 splatPigment(float type) {
-        if (type < 1.5) return vec3(0.27, 0.025, 0.032);
-        if (type < 2.5) return vec3(0.20, 0.34, 0.047);
-        if (type < 3.5) return vec3(0.37, 0.065, 0.085);
-        if (type < 5.0) return vec3(0.23, 0.052, 0.37);
-        return vec3(0.41, 0.39, 0.36);
+        if (type < 1.5) return vec3(0.2892, 0.0197, 0.0274);
+        if (type < 2.5) return vec3(0.1911, 0.3451, 0.0228);
+        if (type < 3.5) return vec3(0.3939, 0.0584, 0.0804);
+        if (type < 5.0) return vec3(0.2417, 0.0459, 0.3957);
+        return vec3(0.4118, 0.3898, 0.3568);
     }
 
     vec3 blendTerrainSplats(vec3 albedo, vec3 positionW, float facing) {
