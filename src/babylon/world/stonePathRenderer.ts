@@ -4,6 +4,7 @@ import { PBRCustomMaterial } from '@babylonjs/materials'
 import { TerrainEnum1 } from '@/babylon/materials'
 import { terrainNoiseShader } from '@/babylon/world/terrainSurfaceShader'
 import { visitPavingStones } from './stonePathLayout'
+import { buildPavingSurfaceField } from './pavingSurfaceField'
 import type { PavingStone, StonePathBounds } from './stonePathLayout'
 import type { MapBlock } from '@/data/worldDataManager'
 import { Settings } from '@/settings/settings'
@@ -158,9 +159,10 @@ function createPavingMaterial(scene: Scene, surfaceSize: Vector2, surfaceOrigin:
         vec2 projection = groundUV + vStone.y * vec2(0.018, 0.024);
         vec3 wetSoil = toLinearSpace(texture2D(pavingCover, pavingProjection(groundUV, vec2(1.0, 0.0))).rgb);
         vec3 soil = mix(toLinearSpace(texture2D(pavingCover, pavingProjection(projection, vec2(0.0, 0.0))).rgb), wetSoil, terrain.a);
+        float grassCover = min(1.0, terrain.g + terrain.b);
         vec3 grass = mix(toLinearSpace(texture2D(pavingCover, pavingProjection(projection, vec2(2.0, 0.0))).rgb),
-            toLinearSpace(texture2D(pavingCover, pavingProjection(projection, vec2(3.0, 0.0))).rgb), terrain.b);
-        soil = mix(soil, grass, max(terrain.g, terrain.b) * vergeDeposits * 0.43);
+            toLinearSpace(texture2D(pavingCover, pavingProjection(projection, vec2(3.0, 0.0))).rgb), terrain.b / max(grassCover, 0.001));
+        soil = mix(soil, grass, grassCover * vergeDeposits * ${floor ? '0.43' : '0.72'});
         vec3 mossColor = grass * vec3(0.65, 0.98, 0.47) + vec3(0.015, 0.030, 0.006);
         vec3 snowTexel = texture2D(pavingCover, pavingProjection(projection, vec2(0.0, 1.0))).rgb;
         float snowGray = dot(snowTexel, vec3(0.2126, 0.7152, 0.0722));
@@ -232,28 +234,19 @@ export function createStonePathRenderer(scene: Scene, parent: TransformNode, flo
     })
     const updateSurfaceField = (map: MapBlock[][], bounds: StonePathBounds,
         snowHidden: (x: number, z: number) => boolean = () => false) => {
-        const width = bounds.maxX - bounds.minX + 1, depth = bounds.maxZ - bounds.minZ + 1
-        const surfaces = new Uint8Array(width * depth * 4)
-        for (let x = 0; x < width; x++) for (let z = 0; z < depth; z++) {
-            const tile = map[x + bounds.minX][z + bounds.minZ]
-            const i = (z * width + x) * 4
-            surfaces[i] = tile.snowed && !snowHidden(x + bounds.minX, z + bounds.minZ) ? 255 : 0
-            surfaces[i + 1] = tile.type === TerrainEnum1.TERRAIN_GRASS.index ? 255 : 0
-            surfaces[i + 2] = tile.type === TerrainEnum1.TERRAIN_GRASS_WINTER.index ? 255 : 0
-            surfaces[i + 3] = tile.type === TerrainEnum1.TERRAIN_MUDDY_DIRT.index ? 255 : 0
-        }
-        if (surfaceField && surfaceSize.x === width && surfaceSize.y === depth) {
-            surfaceField.update(surfaces)
+        const {pixels, width, depth} = buildPavingSurfaceField(map, bounds, snowHidden)
+        if (surfaceField && surfaceField.getSize().width === width && surfaceField.getSize().height === depth) {
+            surfaceField.update(pixels)
         } else {
             surfaceField?.dispose()
-            surfaceField = RawTexture.CreateRGBATexture(surfaces, width, depth, scene, false, false, Texture.BILINEAR_SAMPLINGMODE)
+            surfaceField = RawTexture.CreateRGBATexture(pixels, width, depth, scene, false, false, Texture.BILINEAR_SAMPLINGMODE)
             surfaceField.wrapU = surfaceField.wrapV = Texture.CLAMP_ADDRESSMODE
         }
-        surfaceSize.set(width, depth)
+        surfaceSize.set(bounds.maxX - bounds.minX + 1, bounds.maxZ - bounds.minZ + 1)
         surfaceOrigin.set(bounds.minX, bounds.minZ)
     }
     return {
-        mesh, updateSurfaceField,
+        mesh, material, updateSurfaceField,
         render(map: MapBlock[][], heightAt: (x: number, z: number) => number | undefined) {
             const width = map.length, depth = map[0]?.length ?? 0
             const matrices: number[] = [], attributes: number[] = []

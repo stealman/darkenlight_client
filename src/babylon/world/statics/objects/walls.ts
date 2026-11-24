@@ -138,7 +138,7 @@ export class PalisadeWall2 extends BaseStaticObject {
                 this.material,
                 true,
                 undefined,
-                'moss',
+                'woodTopAndGroundMoss',
             )
         }
         if (this.cornerDirections) {

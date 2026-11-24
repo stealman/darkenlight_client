@@ -1973,7 +1973,8 @@ export const BuildingManager = {
             if (!(building instanceof BuildingView) || building.data.tp !== HUMAN_HOUSE_TYPE
                 || !building.visible || this.floorViews.has(building)) continue
             if (!this.floorBatch && this.parent) {
-                const {mesh} = createStonePathRenderer(this.parent.getScene(), this.parent, true)
+                const {mesh, material} = createStonePathRenderer(this.parent.getScene(), this.parent, true)
+                TerrainManager.contactShadow?.configure(material)
                 mesh.alwaysSelectAsActiveMesh = true
                 Lights.registerSharedLightMesh(mesh)
                 mesh.onDisposeObservable.addOnce(() => Lights.unregisterSharedLightMesh(mesh))

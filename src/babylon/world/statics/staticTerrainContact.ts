@@ -6,7 +6,10 @@ import snowColorUrl from '@/adminUtils/assets/snow-atlas.png'
 
 const ATTRIBUTE = 'staticSnowContact'
 export const SNOW_CONTACT_MAX_HEIGHT = 0.24
-const DAMP_CONTACT = {moss: 1, plain: 2, hay: 3, wellBase: 4, wellRim: 5, wellRoofMoss: 7, walkableEdges: 8} as const
+const DAMP_CONTACT = {
+    moss: 1, hay: 3, wellBase: 4, wellRim: 5, wellRoofMoss: 7, walkableEdges: 8, mossyWood: 9,
+    woodTopWithMoss: 10, woodTopAndGroundMoss: 11, stumpCut: 12,
+} as const
 export type DampContact = keyof typeof DAMP_CONTACT
 
 export class StaticTerrainContact {
@@ -76,6 +79,32 @@ export class StaticTerrainContact {
                         surfaceAlbedo *= 1.0 - wet * mix(0.48, 0.73, grain);
                     }
                 }
+                bool woodTopMoss = dampProfile == ${DAMP_CONTACT.woodTopWithMoss}.0
+                    || dampProfile == ${DAMP_CONTACT.woodTopAndGroundMoss}.0;
+                bool stumpCut = dampProfile == ${DAMP_CONTACT.stumpCut}.0;
+                if (woodTopMoss || stumpCut) {
+                    float fromTop = max(0.0, 0.5 - vStaticBlockPosition.y);
+                    if (fromTop < 0.44) {
+                        vec2 woodPosition = mod(vPositionW.xz, 48.0);
+                        float runoff = terrainNoise(woodPosition * 8.0 + vec2(6.7, 3.2));
+                        float grain = terrainNoise(woodPosition * 31.0 + vec2(2.3, fromTop * 3.0));
+                        float reach = mix(0.12, 0.44, runoff);
+                        float wet = 1.0 - smoothstep(0.0, reach, fromTop);
+                        if (stumpCut) {
+                            vec2 localXZ = abs(vStaticBlockPosition.xz);
+                            float fromEdge = 0.5 - max(localXZ.x, localXZ.y);
+                            wet *= 1.0 - smoothstep(0.02, mix(0.07, 0.19, runoff), fromEdge);
+                        }
+                        surfaceAlbedo *= 1.0 - wet * mix(0.33, 0.66, runoff * 0.7 + grain * 0.3);
+
+                        if (woodTopMoss && geometricNormalW.x < -0.55) {
+                            float mossReach = mix(0.08, 0.34, runoff);
+                            float moss = 1.0 - smoothstep(0.01, mossReach, fromTop);
+                            moss *= smoothstep(0.29, 0.65, runoff * 0.76 + grain * 0.24);
+                            surfaceAlbedo = mix(surfaceAlbedo, terrainContactMossColor(grain), moss * 0.78);
+                        }
+                    }
+                }
             `}
             if (snowReach > 0.0) {
                 float aboveSnow = max(snowDistance, 0.0);
@@ -112,34 +141,41 @@ export class StaticTerrainContact {
             }
             bool wellBase = dampProfile == ${DAMP_CONTACT.wellBase}.0;
             bool wellRim = dampProfile == ${DAMP_CONTACT.wellRim}.0;
-            if (dampProfile > 0.0 && dampProfile < ${DAMP_CONTACT.wellRim}.0 && snowDistance < (wellBase ? 0.64 : 0.48)) {
+            bool mossyWood = dampProfile == ${DAMP_CONTACT.mossyWood}.0;
+            bool withMoss = dampProfile == ${DAMP_CONTACT.moss}.0 || dampProfile == ${DAMP_CONTACT.woodTopAndGroundMoss}.0;
+            bool dampHay = dampProfile == ${DAMP_CONTACT.hay}.0;
+            if ((mossyWood || wellBase || withMoss || dampHay)
+                && snowDistance < (mossyWood ? 0.80 : wellBase ? 0.64 : 0.48)) {
                 float aboveGround = max(snowDistance, 0.0);
                 vec2 woodXZ = mod(vPositionW.xz, 48.0);
                 float edge = terrainNoise(woodXZ * 6.0 + vec2(4.1, 9.7));
                 float grain = terrainNoise(woodXZ * 23.0 + vec2(7.2, aboveGround * 19.0));
-                bool withMoss = dampProfile < 1.5;
-                bool dampHay = dampProfile == ${DAMP_CONTACT.hay}.0;
                 float height = (withMoss ? mix(0.19, 0.34, edge) : mix(0.18, 0.36, edge)) + (grain - 0.5) * 0.08;
                 if (dampHay) height += 0.08;
                 if (wellBase) height = mix(0.36, 0.60, edge) + (grain - 0.5) * 0.08;
+                if (mossyWood) height *= 2.0;
                 float damp = 1.0 - smoothstep(height * 0.20, height, aboveGround);
                 float dampStrength = withMoss ? mix(0.32, 0.50, grain) : mix(0.08, 0.34, grain);
                 if (dampHay) dampStrength = mix(0.48, 0.74, grain);
                 if (wellBase) dampStrength = mix(0.48, 0.66, grain);
+                if (mossyWood) dampStrength += 0.10;
                 surfaceAlbedo *= 1.0 - damp * dampStrength;
                 if (withMoss) {
                     float moss = (1.0 - smoothstep(height * 0.10, height * 0.65, aboveGround)) * mix(0.10, 0.34, grain);
                     surfaceAlbedo = mix(surfaceAlbedo, terrainContactMossColor(grain), moss);
                 }
             }
-            if (wellRim || (wellBase && snowDistance < 0.23)) {
+            float baseMossReach = mossyWood ? 0.27 : 0.23;
+            if (wellRim || ((wellBase || mossyWood) && snowDistance < baseMossReach)) {
                 vec2 mossPosition = mod(vPositionW.xz, 48.0) + vec2(0.73, 0.89) * snowDistance;
                 float patches = terrainNoise(mossPosition * 8.0 + vec2(5.1, 13.7));
                 float grain = terrainNoise(mossPosition * 42.0 + vec2(9.3, 2.7));
-                float coverage = smoothstep(0.52, 0.75, patches * 0.76 + grain * 0.24);
+                float coverage = smoothstep(mossyWood ? 0.36 : 0.52, mossyWood ? 0.65 : 0.75,
+                    patches * 0.76 + grain * 0.24);
                 float exposure = wellRim ? mix(0.65, 1.0, max(geometricNormalW.y, 0.0))
-                    : 1.0 - smoothstep(0.03, 0.23, snowDistance);
-                surfaceAlbedo = mix(surfaceAlbedo, terrainContactMossColor(grain), coverage * exposure * 0.52);
+                    : 1.0 - smoothstep(mossyWood ? 0.07 : 0.03, baseMossReach, snowDistance);
+                surfaceAlbedo = mix(surfaceAlbedo, terrainContactMossColor(grain),
+                    coverage * exposure * (mossyWood ? 0.78 : 0.52));
             }
             const float roofDampMaxHeight = 0.35;
             if (dampProfile == ${DAMP_CONTACT.wellRoofMoss}.0 && snowDistance < roofDampMaxHeight) {

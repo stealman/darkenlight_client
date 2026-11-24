@@ -69,7 +69,8 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
     const getPavingBatch = () => {
         if (pavingBatch) return pavingBatch
         paving = createStonePathRenderer(terrain.getScene(), terrain)
-        const {mesh} = paving
+        const {mesh, material} = paving
+        contactShadow?.configure(material)
         pavingBatch = new OutdoorInstanceBatch(mesh)
         batches.set(mesh, pavingBatch)
         Lights.registerSharedLightMesh(mesh)

@@ -38,6 +38,11 @@ import type { DampContact } from '@/babylon/world/statics/staticTerrainContact'
 const TOUCH_WORLD_RENDER_STEP_TILES = 2
 const STATIC_TERRAIN_CONTACT_ENABLED = true
 
+export interface StaticBaseContact {
+    height: number
+    snowHeight: number | undefined
+}
+
 export const WorldRenderer = {
     snowCoverMask: new Set<number>(),
     block1: null as SymmetricBlock | null,
@@ -194,15 +199,33 @@ export const WorldRenderer = {
         Lights.registerSharedLightMesh(StoneBatch.prefab!.mesh)
     },
 
-    addTerrainContactBlock(matrix: Matrix, uv: Vector2, blendGroundLighting = false, snowReach = 4 / 3, damp?: DampContact) {
+    addTerrainContactBlock(matrix: Matrix, uv: Vector2, blendGroundLighting = false, snowReach = 4 / 3,
+        damp?: DampContact, baseContact?: StaticBaseContact) {
         const batch = this.block1!
         const index = batch.matrices.length
         batch.matrices.push(matrix)
         batch.uvData.push(uv)
         if (!this.staticTerrainContact) return
 
+        if (baseContact) {
+            if (baseContact.snowHeight !== undefined) {
+                this.staticTerrainContact.addSnow(index, baseContact.snowHeight, snowReach, blendGroundLighting)
+            } else if (damp) {
+                this.staticTerrainContact.addDamp(index, baseContact.height, damp)
+            }
+            return
+        }
+
         const m = matrix.m
         const foot = m[13] - m[5] * 0.5 - 0.5 // The wrapped cube prefab sits half a unit lower.
+        const groundMossWithTop = damp === 'woodTopAndGroundMoss'
+        const woodTop = groundMossWithTop ? 'woodTopWithMoss'
+            : damp === 'woodTopWithMoss' || damp === 'stumpCut' ? damp : undefined
+        // The top weathers even when the foot has no contact with soil or snow.
+        if (woodTop) {
+            this.staticTerrainContact.addDamp(index, foot, woodTop)
+            if (snowReach <= 0 && !groundMossWithTop) return
+        }
         if (damp === 'wellRoofMoss') {
             // The eave is the low end of the panel's local X axis on its upper face.
             const eaveHeight = foot + m[5] - Math.abs(m[1]) * 0.5
@@ -219,15 +242,16 @@ export const WorldRenderer = {
         const snowHeight = this.getSnowContactHeight(x, z)
         const edgeDamp = damp === 'walkableEdges' ? damp : undefined
         if (snowReach > 0 && snowHeight !== undefined && Math.abs(foot - snowHeight) <= 0.15) {
-            this.staticTerrainContact.addSnow(index, snowHeight, snowReach, blendGroundLighting, edgeDamp)
+            this.staticTerrainContact.addSnow(index, snowHeight, snowReach, blendGroundLighting,
+                woodTop ?? edgeDamp)
         } else if (edgeDamp) {
             this.staticTerrainContact.addDamp(index, foot, edgeDamp)
-        } else if (damp && snowHeight === undefined && !Lights.indoor) {
+        } else if (damp && (!woodTop || groundMossWithTop) && snowHeight === undefined && !Lights.indoor) {
             const tile = WorldDataManager.getBlockMap()[x]?.[z]
             if (!tile || tile.type <= 0 || tile.type >= WATER_BLOCK_TYPE) return
             const type = tile.type
             const floor = BuildingManager.getFloorHeightAtTile(x, z)
-            if (damp === 'moss' && (tile.stonePath || tile.beigeStonePath || floor > 0
+            if ((damp === 'moss' || groundMossWithTop) && (tile.stonePath || tile.beigeStonePath || floor > 0
                 || (type !== TerrainEnum1.TERRAIN_GRASS.index && type !== TerrainEnum1.TERRAIN_GRASS_WINTER.index
                     && type !== TerrainEnum1.TERRAIN_DIRT.index && type !== TerrainEnum1.TERRAIN_MUDDY_DIRT.index))) return
             const terrainHeight = TerrainManager.usesOutdoorTerrain() ? outdoorSurfaceHeight(tile) : tile.height + getTerrainHeightOffset(tile, tile.snowed)

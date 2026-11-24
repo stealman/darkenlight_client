@@ -1,6 +1,7 @@
 import { Matrix, Vector2, Vector3 } from '@babylonjs/core'
 import { BaseStaticObject } from '@/babylon/world/statics/objects/baseStaticObject'
 import { Prefab, WorldRenderer } from '@/babylon/world/worldRenderer'
+import type { StaticBaseContact } from '@/babylon/world/worldRenderer'
 import { StaticEquipPartsRenderer } from '@/babylon/world/statics/staticEquipPartsRenderer'
 import { WeaponModelsCb } from '@/babylon/item/codebook/weaponModelsCb'
 
@@ -22,21 +23,25 @@ interface Direction {
     z: number
 }
 
-type PartContact = boolean | 'dampWood' | 'dampOnly' | 'snowAndDamp' | 'snowAndDampHay'
-    | 'wellBase' | 'wellRim' | 'wellRoofMoss'
+type PartContact = boolean | StaticBaseContact | 'dampWood' | 'snowAndDampHay'
+    | 'wellBase' | 'wellRim' | 'wellRoofMoss' | 'stumpCut' | 'woodTopWithMoss'
 
 function addPart(width: number, height: number, depth: number, x: number, y: number, z: number, material: Vector2, yaw = 0, roll = 0, contact: PartContact = false) {
     const matrix = Matrix.Scaling(width, height, depth)
         .multiply(Matrix.RotationYawPitchRoll(yaw, 0, roll))
         .multiply(Matrix.Translation(x, y, z))
     if (contact) {
-        if (contact === 'wellBase' || contact === 'wellRim' || contact === 'wellRoofMoss') {
+        if (typeof contact === 'object') {
+            WorldRenderer.addTerrainContactBlock(matrix, material, false, undefined, 'mossyWood', contact)
+            return
+        }
+        if (contact === 'wellBase' || contact === 'wellRim' || contact === 'wellRoofMoss' || contact === 'stumpCut') {
             WorldRenderer.addTerrainContactBlock(matrix, material, false, 0, contact)
             return
         }
         const damp = contact === 'dampWood' ? 'moss' : contact === 'snowAndDampHay' ? 'hay'
-            : contact === true ? undefined : 'plain'
-        WorldRenderer.addTerrainContactBlock(matrix, material, false, contact === 'dampOnly' ? 0 : undefined, damp)
+            : contact === 'woodTopWithMoss' ? contact : undefined
+        WorldRenderer.addTerrainContactBlock(matrix, material, false, undefined, damp)
         return
     }
     WorldRenderer.block1!.matrices.push(matrix)
@@ -64,6 +69,22 @@ abstract class CampObject extends BaseStaticObject {
 
     protected get yaw(): number {
         return this.facing === '-X' || this.facing === '+X' ? Math.PI / 2 : 0
+    }
+
+    protected getBaseContact(): StaticBaseContact {
+        const height = this.renderPosition.y
+        let snowHeight: number | undefined
+        const endX = this.position.x + this.getSizeX()
+        const endZ = this.position.z + this.getSizeZ()
+        for (let x = this.position.x; x < endX; x++) {
+            for (let z = this.position.z; z < endZ; z++) {
+                const snow = WorldRenderer.getSnowContactHeight(x, z)
+                if (snow !== undefined && Math.abs(snow - height) <= 0.15 && (snowHeight === undefined || snow > snowHeight)) {
+                    snowHeight = snow
+                }
+            }
+        }
+        return {height, snowHeight}
     }
 
     protected rotateOffset(x: number, z: number): {x: number, z: number} {
@@ -122,11 +143,12 @@ export class WaterTrough extends CampObject {
         const length = this.length
         const wallCenter = (WaterTrough.WIDTH - 0.1) / 2
         const endOffset = length / 2 - 0.07
-        this.part(length, 0.1, 0.54, 0, 0.08, 0, this.material, 0, 'dampOnly')
-        this.part(length, 0.38, 0.1, 0, 0.24, -wallCenter, this.material, 0, 'dampOnly')
-        this.part(length, 0.38, 0.1, 0, 0.24, wallCenter, this.material, 0, 'dampOnly')
-        this.part(0.14, 0.38, 0.44, -endOffset, 0.24, 0, this.material, 0, 'dampOnly')
-        this.part(0.14, 0.38, 0.44, endOffset, 0.24, 0, this.material, 0, 'dampOnly')
+        const contact = this.getBaseContact()
+        this.part(length, 0.1, 0.54, 0, 0.08, 0, this.material, 0, contact)
+        this.part(length, 0.38, 0.1, 0, 0.24, -wallCenter, this.material, 0, contact)
+        this.part(length, 0.38, 0.1, 0, 0.24, wallCenter, this.material, 0, contact)
+        this.part(0.14, 0.38, 0.44, -endOffset, 0.24, 0, this.material, 0, contact)
+        this.part(0.14, 0.38, 0.44, endOffset, 0.24, 0, this.material, 0, contact)
 
         WorldRenderer.translucentPlane!.matrices.push(
             Matrix.Scaling(length - 0.24, 1, 0.36)
@@ -284,14 +306,18 @@ export class Stump extends CampObject {
     }
 
     render() {
-        this.part(Stump.DIAMETER, 0.54, Stump.DIAMETER, 0, 0.27, 0, this.material, 0, true)
-        this.part(0.62, 0.04, 0.62, 0, 0.56, 0, this.cutMaterial)
+        this.renderStump(false)
+    }
+
+    protected renderStump(weathered: boolean) {
+        this.part(Stump.DIAMETER, 0.54, Stump.DIAMETER, 0, 0.27, 0, this.material, 0, weathered ? 'woodTopWithMoss' : true)
+        this.part(0.62, 0.04, 0.62, 0, 0.56, 0, this.cutMaterial, 0, weathered ? 'stumpCut' : false)
     }
 }
 
 export class StumpWithAxe extends Stump {
     render() {
-        super.render()
+        this.renderStump(true)
         const facingYaw = this.facing === '+X' ? Math.PI / 2
             : this.facing === '-Z' ? Math.PI
                 : this.facing === '-X' ? -Math.PI / 2 : 0
@@ -340,8 +366,9 @@ export class CampBarrel extends CampObject {
 
     render() {
         const firstMatrixIndex = WorldRenderer.block1!.matrices.length
-        this.part(CampBarrel.BASE_WIDTH, 0.82, CampBarrel.BASE_WIDTH, 0, 0.41, 0, this.material, 0, 'snowAndDamp')
-        this.part(0.7, 0.09, 0.7, 0, 0.14, 0, this.accentMaterial, 0, 'snowAndDamp')
+        const contact = this.getBaseContact()
+        this.part(CampBarrel.BASE_WIDTH, 0.82, CampBarrel.BASE_WIDTH, 0, 0.41, 0, this.material, 0, contact)
+        this.part(0.7, 0.09, 0.7, 0, 0.14, 0, this.accentMaterial, 0, contact)
         this.part(0.7, 0.09, 0.7, 0, 0.68, 0, this.accentMaterial)
         this.part(0.56, 0.08, 0.56, 0, 0.86, 0, this.lidMaterial)
         this.renderMatrixIndices = [firstMatrixIndex, firstMatrixIndex + 1, firstMatrixIndex + 2, firstMatrixIndex + 3]
