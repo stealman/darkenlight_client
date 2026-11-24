@@ -20,6 +20,7 @@ import { appendPavingAttributes, createStonePathRenderer, pavingStoneMatrix, PAV
 import { visitPavingStones } from './stonePathLayout'
 import type { PavingStone } from './stonePathLayout'
 import { outdoorSurfaceHeight } from './terrainRoofShape'
+import type { TerrainStepField } from './terrainStepField'
 
 const REGION_SIZE = TERRAIN_ATLAS_REGION_SIZE
 
@@ -49,13 +50,19 @@ function replaceInstances(previous?: OutdoorInstance[], next?: OutdoorInstance[]
 
 type TerrainView = {minX: number, minZ: number, maxX: number, maxZ: number}
 
-export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainView, contactShadow?: TerrainContactShadow) {
+export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainView, contactShadow?: TerrainContactShadow,
+    terrainSteps?: TerrainStepField) {
     const terrain = new TransformNode('outdoorTerrain', parent.getScene())
     terrain.parent = parent
     const renderer = createTerrainSurfaceRenderer(parent.getScene(), terrain, new Vector3(0, 0, 1))
+    if (terrainSteps) {
+        for (const [material, coverage] of renderer.stepMaterials) terrainSteps.configure(material, coverage)
+    }
     if (contactShadow) {
         for (const material of new Set(renderer.meshes.map(mesh => mesh.material))) {
-            if (material instanceof PBRCustomMaterial) contactShadow.configure(material)
+            if (material instanceof PBRCustomMaterial) {
+                contactShadow.configure(material, false, !!terrainSteps && renderer.stepMaterials.has(material))
+            }
         }
     }
     for (const mesh of renderer.meshes) {

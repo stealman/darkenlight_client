@@ -16,6 +16,7 @@ import type { createOutdoorTerrain } from './outdoorTerrain'
 import { BuildingManager } from './buildings/buildingManager'
 import { TerrainContactShadow } from './terrainContactShadow'
 import { StaticsManager } from './statics/staticsManager'
+import { StepMarksRenderer } from './stepMarksRenderer'
 
 export const DIRT_BLOCK_TYPE = 1
 const GRASS_BLOCK_TYPES = new Set([2, 5])
@@ -44,10 +45,16 @@ export const TerrainManager = {
 
     initialize (scene: Scene) {
         this.outdoorTerrain = null
-        const contactShadow = new TerrainContactShadow(scene)
+        const terrainSteps = StepMarksRenderer.field
+        const contactShadow = new TerrainContactShadow(scene, terrainSteps ?? undefined)
         this.contactShadow = contactShadow
-        contactShadow.configure(Materials.terrainMaterial!)
-        contactShadow.configure(Materials.planeMaterial!)
+        terrainSteps?.configureAtlas(Materials.terrainMaterial!,
+            [TerrainEnum1.TERRAIN_SNOW_DIRT.uv, TerrainEnum1.TERRAIN_SNOW_ROCK.uv],
+            [TerrainEnum1.TERRAIN_DIRT.uv, TerrainEnum1.TERRAIN_MUDDY_DIRT.uv])
+        terrainSteps?.configureAtlas(Materials.planeMaterial!, [PlaneEnum1.PLANE_SNOW_DIRT.uv],
+            [PlaneEnum1.PLANE_DIRT.uv, PlaneEnum1.PLANE_MUDDY_DIRT.uv])
+        contactShadow.configure(Materials.terrainMaterial!, false, !!terrainSteps)
+        contactShadow.configure(Materials.planeMaterial!, false, !!terrainSteps)
         if (!smoothTerrainExperiment && !this.outdoorFactory) {
             void import('./outdoorTerrain').then(({createOutdoorTerrain}) => {
                 this.outdoorFactory = createOutdoorTerrain
@@ -134,7 +141,8 @@ export const TerrainManager = {
         const center = MyPlayer.myChar.getPositionRounded()
         const outdoor = this.usesOutdoorTerrain()
         if (outdoor && this.outdoorFactory) {
-            this.outdoorTerrain ??= this.outdoorFactory(WorldRenderer.worldParentNode!, undefined, this.contactShadow ?? undefined)
+            this.outdoorTerrain ??= this.outdoorFactory(WorldRenderer.worldParentNode!, undefined,
+                this.contactShadow ?? undefined, StepMarksRenderer.field ?? undefined)
             const load = WorldDataManager.terrainRenderLoad
             this.outdoorTerrain.render(map, center, snowCoverMask, world.renderRevision,
                 load?.worldId === MyPlayer.worldId ? load.data : undefined, world.originalBlocks)

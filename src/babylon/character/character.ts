@@ -896,14 +896,12 @@ class Character implements Attackable, EffectTarget {
     }
 
     resolveStepMark(time: number, inCombat: boolean = false) {
-        const block = WorldDataManager.getBlockOnPosition(this.pos)
-        if (!block?.snowed) {
-            return
-        }
-        if (this.lastStepMarkTime < time - 250) {
-            this.lastStepMarkTime = time
-            this.stepMarkSide = this.stepMarkSide === 'L' ? 'R' : 'L'
-            StepMarksRenderer.addStepMark(this.stepMarkSide, this, this.logicYpos, this.model!.modelRotation, time, inCombat)
+        if (this.lastStepMarkTime >= time - 250 || !this.model) return
+        const visible = this.model.initialized && (this.insideView || this === MyPlayer.myChar)
+        this.lastStepMarkTime = time
+        const side = this.stepMarkSide === 'L' ? 'R' : 'L'
+        if (StepMarksRenderer.addStepMark(side, this, this.logicYpos, this.model.modelRotation, time, inCombat, visible)) {
+            this.stepMarkSide = side
         }
     }
 

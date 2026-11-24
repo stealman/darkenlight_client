@@ -5,7 +5,6 @@ import { TransformNode, Vector3 } from '@babylonjs/core'
 import { ViewportManager } from '@/utils/viewport'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { Attackable } from '@/GameManager'
-import { WorldDataManager } from '@/data/worldDataManager'
 import { StepMarksRenderer } from '@/babylon/world/stepMarksRenderer'
 import { MyPlayer } from '@/data/myPlayer'
 import { Arrow, ArrowsManager } from '@/babylon/world/arrowsManager'
@@ -197,14 +196,12 @@ export class Monster implements Attackable, EffectTarget {
     }
 
     resolveStepMark(time: number, inCombat: boolean = false) {
-        const block = WorldDataManager.getBlockOnPosition(this.pos)
-        if (!block?.snowed) {
-            return
-        }
-        if (this.lastStepMarkTime < time - 400) {
-            this.lastStepMarkTime = time
-            this.stepMarkSide = this.stepMarkSide === 'L' ? 'R' : 'L'
-            StepMarksRenderer.addStepMark(this.stepMarkSide, this, this.logicYpos, this.model.modelRotation, time, inCombat)
+        if (this.lastStepMarkTime >= time - 400) return
+        const visible = this.insideView && this.model.initialized
+        this.lastStepMarkTime = time
+        const side = this.stepMarkSide === 'L' ? 'R' : 'L'
+        if (StepMarksRenderer.addStepMark(side, this, this.logicYpos, this.model.modelRotation, time, inCombat, visible)) {
+            this.stepMarkSide = side
         }
     }
 

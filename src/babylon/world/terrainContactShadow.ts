@@ -3,6 +3,7 @@ import type { PBRCustomMaterial } from '@babylonjs/materials'
 import type { MapBlock } from '@/data/worldDataManager'
 import { WATER_BLOCK_TYPE } from './terrainManager'
 import { HOUSE_FOUNDATION_SURFACE } from './buildings/buildingWallDamp'
+import type { TerrainStepField } from './terrainStepField'
 
 const SAMPLES_PER_TILE = 16
 
@@ -23,17 +24,19 @@ export class TerrainContactShadow {
     private revision?: number
     private key?: string
 
-    constructor(private readonly scene: Scene) {
+    constructor(private readonly scene: Scene, private readonly terrainSteps?: TerrainStepField) {
         this.texture = this.createTexture(1, 1)
     }
 
-    configure(material: PBRCustomMaterial, foundationOnly = false) {
-        material.AddUniform('terrainContactShadowMask', 'sampler2D', null)
+    configure(material: PBRCustomMaterial, foundationOnly = false, shareStepTexture = false) {
         material.AddUniform('terrainContactShadowBounds', 'vec4', this.bounds)
-        const attach = material.AttachAfterBind.bind(material)
-        material.AttachAfterBind = (mesh, effect) => {
-            attach(mesh, effect)
-            effect.setTexture('terrainContactShadowMask', this.texture)
+        if (!shareStepTexture) {
+            material.AddUniform('terrainContactShadowMask', 'sampler2D', null)
+            const attach = material.AttachAfterBind.bind(material)
+            material.AttachAfterBind = (mesh, effect) => {
+                attach(mesh, effect)
+                effect.setTexture('terrainContactShadowMask', this.texture)
+            }
         }
         material.Fragment_Before_Lights(`
             ${material.CustomParts.Fragment_Before_Lights ?? ''}
@@ -41,7 +44,7 @@ export class TerrainContactShadow {
                 ${foundationOnly ? `&& buildingSurface.x == ${HOUSE_FOUNDATION_SURFACE}.0` : ''}) {
                 vec2 contactUV = (vPositionW.xz - terrainContactShadowBounds.xy) * terrainContactShadowBounds.zw;
                 if (all(greaterThanEqual(contactUV, vec2(0.0))) && all(lessThan(contactUV, vec2(1.0)))) {
-                    float contactShade = texture2D(terrainContactShadowMask, contactUV).r;
+                    float contactShade = ${shareStepTexture ? 'stepContactShadow(contactUV)' : 'texture2D(terrainContactShadowMask, contactUV).r'};
                     surfaceAlbedo *= 1.0 - contactShade * 0.42 * smoothstep(0.65, 0.95, geometricNormalW.y);
                 }
             }
@@ -64,7 +67,8 @@ export class TerrainContactShadow {
         const minZ = Math.floor(Math.min(...footprints.map(foot => foot.minZ - foot.reach))) - 1
         const spanX = Math.ceil(Math.max(...footprints.map(foot => foot.maxX + foot.reach))) + 1 - minX
         const spanZ = Math.ceil(Math.max(...footprints.map(foot => foot.maxZ + foot.reach))) + 1 - minZ
-        const resolution = Math.min(SAMPLES_PER_TILE, this.scene.getEngine().getCaps().maxTextureSize / Math.max(spanX, spanZ))
+        const maxSize = this.scene.getEngine().getCaps().maxTextureSize
+        const resolution = Math.min(SAMPLES_PER_TILE, maxSize / spanX, (this.terrainSteps?.maxShadowHeight ?? maxSize) / spanZ)
         const width = Math.ceil(spanX * resolution)
         const depth = Math.ceil(spanZ * resolution)
         const size = this.texture.getSize()
@@ -97,6 +101,7 @@ export class TerrainContactShadow {
             }
         }
         this.texture.update(this.mask)
+        this.terrainSteps?.updateContactShadow(this.mask, width, depth)
         this.bounds.set(minX, minZ, resolution / width, resolution / depth)
     }
 

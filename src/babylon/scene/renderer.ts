@@ -131,9 +131,9 @@ export const Renderer = {
         Materials.initialize(this.scene)
         Lights.configureStaticLightMaterials()
         await CharacterManager.preloadModels(this.scene)
+        StepMarksRenderer.initialize(this.scene)
         WorldRenderer.initialize(this.scene)
         WeatherManager.initialize()
-        StepMarksRenderer.initialize(this.scene)
         FightSplatsRenderer.initialize(this.scene)
         GroundItemsManager.initialize(this.scene)
         ArrowsManager.initialize()
@@ -269,7 +269,7 @@ export const Renderer = {
         }
 
         if (this.frame % 10 === 2) {
-            StepMarksRenderer.update(timeRate, actualTime)
+            StepMarksRenderer.update(actualTime)
             FightSplatsRenderer.update(timeRate, actualTime)
         }
 

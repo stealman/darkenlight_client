@@ -19,7 +19,6 @@ export const Materials = {
     terrainMaterial: null as PBRCustomMaterial | null,
     planeMaterial: null as PBRCustomMaterial | null,
     planeWaterMaterial: null as PBRCustomMaterial | null,
-    stepMarksMaterial: null as PBRCustomMaterial | null,
     fightSplatsMaterial: null as PBRCustomMaterial | null,
 
     blockMatAlpha1: null as PBRCustomMaterial | null,
@@ -45,7 +44,6 @@ export const Materials = {
         this.staticSurfaceMaterial = this.getPBRCustomMaterial(scene, "staticSurfaces", "/textures/statics/", "static-surfaces.svg", 1 / 16, 1 / 4, true)
         this.staticSurfaceMaterial.albedoTexture!.hasAlpha = true
         this.entrancePortalMaterial = this.createEntrancePortalMaterial(scene)
-        this.stepMarksMaterial = this.createStepMarksMaterial(scene)
         this.fightSplatsMaterial = this.createFightSplatsMaterial(scene)
         this.weaponTrailMaterial = this.createWeaponTrailMaterial(scene)
         this.powerStrikeWeaponTrailMaterial = this.createPowerStrikeWeaponTrailMaterial(scene)
@@ -79,19 +77,6 @@ export const Materials = {
         material.alpha = 1
         material.forceAlphaTest = false
         return material
-    },
-
-    createStepMarksMaterial(scene: Scene): PBRCustomMaterial {
-        const mat = this.getPBRCustomMaterial(scene, "step_marks_mats", this.BASE_PATH, 'stepmarks.png', 1 / 2, 1 / 2, false)
-        const texture = mat.albedoTexture as Texture
-        texture.hasAlpha = true
-        texture.getAlphaFromRGB = false
-        texture.updateSamplingMode(Texture.NEAREST_NEAREST)
-        mat.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHABLEND
-        mat.useAlphaFromAlbedoTexture = true
-        mat.alpha = 0.4
-        mat.forceAlphaTest = false
-        return mat
     },
 
     createFightSplatsMaterial(scene: Scene): PBRCustomMaterial {

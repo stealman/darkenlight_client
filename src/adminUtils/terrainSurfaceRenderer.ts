@@ -1,5 +1,6 @@
 import type { Mesh, Scene, TransformNode, Vector3 } from '@babylonjs/core'
 import type { PBRCustomMaterial } from '@babylonjs/materials'
+import type { StepCoverage } from '@/babylon/world/terrainStepField'
 import type { MapBlock } from '@/data/worldDataManager'
 import { visitBakedTerrainTransitions } from '@/babylon/world/terrainRenderData'
 import type { TerrainRenderData } from '@/babylon/world/terrainRenderData'
@@ -123,6 +124,11 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
     })
     const wetTransitions = new Set<Mesh>()
     const snowTransitions = new Set<Mesh>()
+    const stepMaterials = new Map<PBRCustomMaterial, StepCoverage>([
+        [snowAtlas.material, {snow: 'snowGlintCoverage'}],
+        [dirtAtlas.material, {soil: '1.0'}],
+        [dryDirtAtlas.material, {soil: '1.0'}],
+    ])
     const createTransition = (name: string, cover: PBRCustomMaterial, substrate = dirtAtlas.material,
                               wallSoil = dirtAtlas.material, blendRockWalls = false) => {
         const mesh = createTerrainPreviewPlane(plane, name)
@@ -147,10 +153,21 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
                 blendRockWalls ? '(1.0 - wallRockWeight)' : undefined)
             wetTransitions.add(mesh)
         }
-        if (cover === snowAtlas.material) {
+        const snowCover = cover === snowAtlas.material
+        if (snowCover) {
             if (wetness) configureSnowmelt(material, withGrass)
             configureSnowGlints(material, withGrass ? 'grass' : 'standard')
             snowTransitions.add(mesh)
+        }
+        const soilCover = mudCover || dryCover
+        const soilSubstrate = withDirt || drySubstrate
+        if (snowCover || soilCover || soilSubstrate) {
+            stepMaterials.set(material, {
+                snow: snowCover ? 'snowGlintCoverage' : undefined,
+                soil: soilCover || soilSubstrate
+                    ? `(wall ? 0.0 : ${soilCover ? soilSubstrate ? '1.0' : 'grassWeight' : '1.0 - grassWeight'})`
+                    : undefined,
+            })
         }
         if (atPond) {
             pond?.applyShoreWetness(material, mudCover ? 'grassWeight' : '(1.0 - grassWeight)')
@@ -431,5 +448,5 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
             }
         }
     }
-    return {render, meshes}
+    return {render, meshes, stepMaterials}
 }
