@@ -43,7 +43,7 @@ const NIGHT_FOG_END = 60
 const SUN_BASE_AZIMUTH = Math.atan2(0.3, -0.75)
 const SUN_AZIMUTH_RANGE = 20 * Math.PI / 180
 const SUN_MIN_ELEVATION = 28 * Math.PI / 180
-const SUN_MAX_ELEVATION = 38 * Math.PI / 180
+const SUN_MAX_ELEVATION = 34 * Math.PI / 180
 const SUN_SHADOW_DISTANCE = 64
 
 export const FOG_ENABLED = true
