@@ -23,6 +23,7 @@ export class SpikedPalisade extends BaseStaticObject {
     private static readonly SUPPORT_SIZE = 0.075
     private static readonly BASE_ANGLE = Math.PI / 4
     private static readonly MAX_ANGLE_VARIATION = Math.PI / 60
+    private static readonly SNOW_REACH = 1.85
     private static readonly CONNECTOR_LENGTH = 0.95
     private static readonly CONNECTOR_HEIGHT = 0.09
     private static readonly CONNECTOR_DEPTH = 0.09
@@ -83,12 +84,14 @@ export class SpikedPalisade extends BaseStaticObject {
         const x = this.renderPosition.x + axis.x * axisOffset
         const z = this.renderPosition.z + axis.z * axisOffset
         const verticalHeight = Math.cos(angle) * length
-        WorldRenderer.block1!.matrices.push(
+        WorldRenderer.addTerrainContactBlock(
             Matrix.Scaling(width, length, depth)
                 .multiply(Matrix.RotationAxis(axis, angle))
                 .multiply(Matrix.Translation(x, this.renderPosition.y + verticalHeight / 2 + 0.5, z)),
+            this.material,
+            true,
+            SpikedPalisade.SNOW_REACH,
         )
-        WorldRenderer.block1!.uvData.push(this.material)
     }
 
     private renderConnector() {

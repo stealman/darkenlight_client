@@ -12,6 +12,9 @@ import { MyPlayer } from '@/data/myPlayer'
 import { TargetingManager } from '@/gui/targettingManager'
 import { segmentIntersectsAabb } from '@/babylon/geometryUtils'
 import { CollisionGrid } from '@/babylon/world/collisionGrid'
+import { SNOW_CONTACT_MAX_HEIGHT } from '@/babylon/world/statics/staticTerrainContact'
+
+const TREE_SNOW_REACH = 2.25
 
 export const TreeManager = {
     fadedAlpha: 0.35,
@@ -34,6 +37,7 @@ export const TreeManager = {
     deletePreviewStartTime: 0,
     renderCaptures: new WeakMap<Tree, {
         blockIndices: number[], blockBaseY: number[], leafIndices: number[], leafBaseY: number[], fadedBaseY: number[]
+        snowHeight?: number
     }>(),
 
     initialize(scene: Scene) {
@@ -48,8 +52,10 @@ export const TreeManager = {
         this.prefabs.willow = PrefabWillow.getPrefab(scene)
         this.fadedLeafMaterial = Materials.createBlockMatAlpha1(scene)
         this.configureFadedMaterial(this.fadedLeafMaterial, 'tree_leaves_faded_material', true)
-        this.fadedTrunkMaterial = Materials.createBlockMat1(scene)
-        this.configureFadedMaterial(this.fadedTrunkMaterial, 'tree_trunk_faded_material', false)
+        const trunkMaterial = Materials.createBlockMat1(scene)
+        WorldRenderer.staticTerrainContact?.configureMaterial(trunkMaterial, true)
+        this.configureFadedMaterial(trunkMaterial, 'tree_trunk_faded_material', false)
+        this.fadedTrunkMaterial = trunkMaterial
     },
 
     configureFadedMaterial(material: PBRMaterial, name: string, alphaCutout: boolean) {
@@ -104,6 +110,23 @@ export const TreeManager = {
         return mesh
     },
 
+    addTrunkBlock(matrix: Matrix, uv: Vector2, snowHeight?: number) {
+        const batch = WorldRenderer.block1!
+        if (snowHeight !== undefined
+            && matrix.m[13] - 0.5 - matrix.m[5] * 0.5 < snowHeight + SNOW_CONTACT_MAX_HEIGHT * TREE_SNOW_REACH) {
+            WorldRenderer.staticTerrainContact?.addSnow(batch.matrices.length, snowHeight, TREE_SNOW_REACH, true)
+        }
+        batch.matrices.push(matrix)
+        batch.uvData.push(uv)
+    },
+
+    setTrunkMeshSnow(mesh: Mesh, snowHeight?: number) {
+        const bottom = mesh.position.y - mesh.scaling.y * 0.5
+        const contactHeight = snowHeight !== undefined && bottom < snowHeight + SNOW_CONTACT_MAX_HEIGHT * TREE_SNOW_REACH
+            ? snowHeight : undefined
+        WorldRenderer.staticTerrainContact?.setMeshSnow(mesh, contactHeight, TREE_SNOW_REACH, true)
+    },
+
     async warmUpFadeShaders() {
         const leafSource = this.prefabs.tree1?.mesh
         const trunkSource = WorldRenderer.block1?.mesh
@@ -125,6 +148,7 @@ export const TreeManager = {
             MaterialEnum1.WOOD_1.uv,
             true,
         )
+        this.setTrunkMeshSnow(trunkMesh)
         const meshes = [leafMesh, trunkMesh]
         meshes.forEach(mesh => {
             mesh.visibility = this.fadedAlpha
@@ -328,6 +352,7 @@ export const TreeManager = {
         for (const element of this.visibleTrees) {
             const blockStart = WorldRenderer.block1!.matrices.length
             const leafStart = element.leavesPrefab.matrices.length
+            const snowHeight = WorldRenderer.getSnowContactHeight(Math.floor(element.position.x), Math.floor(element.position.z))
             const faded = element.shouldFade
             if (faded) {
                 element.fadeTarget = this.fadedAlpha
@@ -338,11 +363,15 @@ export const TreeManager = {
             if (faded || element.fadedMeshes.length > 0) {
                 if (element.fadedMeshes.length === 0) {
                     element.renderLeaves(true)
-                    element.renderTrunk(true)
+                    element.renderTrunk(true, snowHeight)
+                } else if (this.renderCaptures.get(element)?.snowHeight !== snowHeight) {
+                    for (const mesh of element.fadedMeshes) {
+                        if (mesh.material === this.fadedTrunkMaterial) this.setTrunkMeshSnow(mesh, snowHeight)
+                    }
                 }
             } else {
                 element.renderLeaves(false)
-                element.renderTrunk(false)
+                element.renderTrunk(false, snowHeight)
             }
             const blockIndices = Array.from(
                 {length: WorldRenderer.block1!.matrices.length - blockStart},
@@ -358,6 +387,7 @@ export const TreeManager = {
                 leafIndices,
                 leafBaseY: leafIndices.map((index) => element.leavesPrefab.matrices[index].m[13]),
                 fadedBaseY: element.fadedMeshes.map((mesh) => mesh.position.y),
+                snowHeight,
             })
         }
 
@@ -484,7 +514,7 @@ class TreeOak implements Tree {
         this.leavesPrefab.uvData.push(this.leafMaterial)
     }
 
-    renderTrunk(faded: boolean) {
+    renderTrunk(faded: boolean, snowHeight?: number) {
         const cos = Math.cos(this.rotation)
         const sin = Math.sin(this.rotation)
         const rotation = Matrix.RotationY(this.rotation)
@@ -506,12 +536,12 @@ class TreeOak implements Tree {
                 mesh.rotation.y = this.rotation
                 mesh.scaling.set(width, blockHeight, width)
                 mesh.visibility = this.fadeVisibility
+                TreeManager.setTrunkMeshSnow(mesh, snowHeight)
                 this.fadedMeshes.push(mesh)
                 return
             }
-            WorldRenderer.block1!.matrices.push(Matrix.Scaling(width, blockHeight, width)
-                .multiply(rotation).multiply(Matrix.Translation(px, py, pz)))
-            WorldRenderer.block1!.uvData.push(this.woodMaterial)
+            TreeManager.addTrunkBlock(Matrix.Scaling(width, blockHeight, width)
+                .multiply(rotation).multiply(Matrix.Translation(px, py, pz)), this.woodMaterial, snowHeight)
         }
         for (let i = 0; i <= 4; i++) block(0, i * 0.5, 0, 0.5 * 0.85, 0.5)
         for (const [x, y, z] of [
@@ -549,7 +579,7 @@ class TreeWillow extends TreeOak {
         this.leafHeightOffset = 0
     }
 
-    renderTrunk(faded: boolean) {
+    renderTrunk(faded: boolean, snowHeight?: number) {
         const cos = Math.cos(this.rotation)
         const sin = Math.sin(this.rotation)
         const rotation = Matrix.RotationY(this.rotation)
@@ -564,11 +594,11 @@ class TreeWillow extends TreeOak {
                 mesh.rotation.y = this.rotation
                 mesh.scaling.set(width * this.scale, height * this.scale, width * this.scale)
                 mesh.visibility = this.fadeVisibility
+                TreeManager.setTrunkMeshSnow(mesh, snowHeight)
                 this.fadedMeshes.push(mesh)
             } else {
-                WorldRenderer.block1!.matrices.push(Matrix.Scaling(width * this.scale, height * this.scale, width * this.scale)
-                    .multiply(rotation).multiply(Matrix.Translation(px, py, pz)))
-                WorldRenderer.block1!.uvData.push(this.woodMaterial)
+                TreeManager.addTrunkBlock(Matrix.Scaling(width * this.scale, height * this.scale, width * this.scale)
+                    .multiply(rotation).multiply(Matrix.Translation(px, py, pz)), this.woodMaterial, snowHeight)
             }
         }
     }
@@ -588,7 +618,7 @@ class TreeBirch extends TreeOak {
         this.leafHeightOffset = 1
     }
 
-    renderTrunk(faded: boolean) {
+    renderTrunk(faded: boolean, snowHeight?: number) {
         const cos = Math.cos(this.rotation)
         const sin = Math.sin(this.rotation)
         const rotation = Matrix.RotationY(this.rotation)
@@ -603,11 +633,11 @@ class TreeBirch extends TreeOak {
                 mesh.rotation.y = this.rotation
                 mesh.scaling.set(width * this.scale, height * this.scale, width * this.scale)
                 mesh.visibility = this.fadeVisibility
+                TreeManager.setTrunkMeshSnow(mesh, snowHeight)
                 this.fadedMeshes.push(mesh)
             } else {
-                WorldRenderer.block1!.matrices.push(Matrix.Scaling(width * this.scale, height * this.scale, width * this.scale)
-                    .multiply(rotation).multiply(Matrix.Translation(px, py, pz)))
-                WorldRenderer.block1!.uvData.push(this.woodMaterial)
+                TreeManager.addTrunkBlock(Matrix.Scaling(width * this.scale, height * this.scale, width * this.scale)
+                    .multiply(rotation).multiply(Matrix.Translation(px, py, pz)), this.woodMaterial, snowHeight)
             }
         }
         for (let i = 0; i < 5; i++) block(0, 0.2 + i * 0.4, 0.32, 0.4)
@@ -669,7 +699,7 @@ export class TreeFir implements Tree {
         this.leavesPrefab.uvData.push(this.leafMaterial)
     }
 
-    renderTrunk(faded: boolean) {
+    renderTrunk(faded: boolean, snowHeight?: number) {
         const scaleMatrix = Matrix.Scaling(this.scale / 2, this.scale / 2, this.scale / 2)
 
         // Blocks for trunk
@@ -685,13 +715,13 @@ export class TreeFir implements Tree {
                 mesh.position.set(this.position.x, this.position.y + i - 0.5, this.position.z)
                 mesh.scaling.setAll(this.scale / 2)
                 mesh.visibility = this.fadeVisibility
+                TreeManager.setTrunkMeshSnow(mesh, snowHeight)
                 this.fadedMeshes.push(mesh)
                 continue
             }
             const positionMatrix = Matrix.Translation(this.position.x, this.position.y + i, this.position.z)
 
-            WorldRenderer.block1!.matrices.push(scaleMatrix.multiply(positionMatrix))
-            WorldRenderer.block1!.uvData.push(this.woodMaterial)
+            TreeManager.addTrunkBlock(scaleMatrix.multiply(positionMatrix), this.woodMaterial, snowHeight)
         }
     }
 
@@ -733,7 +763,7 @@ interface Tree {
     shouldFade: boolean
 
     renderLeaves(faded: boolean): void
-    renderTrunk(faded: boolean): void
+    renderTrunk(faded: boolean, snowHeight?: number): void
     intersectsLeafOcclusionSegment(origin: Vector3, direction: Vector3, maxDistance: number): boolean
 }
 

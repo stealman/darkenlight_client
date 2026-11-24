@@ -28,14 +28,18 @@ import { EquipmentDecorationsManager } from '@/babylon/world/equipmentDecoration
 import { Settings } from '@/settings/settings'
 import { IndoorTerrainOcclusionManager } from '@/babylon/world/indoorTerrainOcclusionManager'
 import { TerrainDebrisManager } from '@/babylon/world/terrainDebrisManager'
+import { isSnowRoof } from '@/babylon/world/terrainRoofShape'
+import { StaticTerrainContact } from '@/babylon/world/statics/staticTerrainContact'
 
 // The viewport already renders a four-tile reserve. On touch devices, keep one
 // tile of that reserve instead of rebuilding every world buffer on every tile.
 const TOUCH_WORLD_RENDER_STEP_TILES = 2
+const STATIC_TERRAIN_CONTACT_ENABLED = true
 
 export const WorldRenderer = {
     snowCoverMask: new Set<number>(),
     block1: null as SymmetricBlock | null,
+    staticTerrainContact: null as StaticTerrainContact | null,
     blockWithAlpha1: null as SymmetricBlock | null,
     translucentPlane: null as SymmetricBlock | null,
     worldParentNode: null as TransformNode | null,
@@ -47,7 +51,14 @@ export const WorldRenderer = {
         this.worldParentNode = new TransformNode("worldNode", scene)
 
         // Global blocks
-        this.block1 = new SymmetricBlock(Builder.createWrappedBlock(scene, this.worldParentNode), Materials.blockMat1!)
+        let blockMaterial = Materials.blockMat1!
+        this.staticTerrainContact = null
+        if (STATIC_TERRAIN_CONTACT_ENABLED && !Settings.isDetalLevelLow()) {
+            blockMaterial = Materials.createBlockMat1(scene)
+            blockMaterial.maxSimultaneousLights = Materials.blockMat1!.maxSimultaneousLights
+            this.staticTerrainContact = new StaticTerrainContact(blockMaterial)
+        }
+        this.block1 = new SymmetricBlock(Builder.createWrappedBlock(scene, this.worldParentNode), blockMaterial)
         this.block1.mesh.doNotSyncBoundingInfo = true
         this.block1.mesh.receiveShadows = true
 
@@ -104,6 +115,7 @@ export const WorldRenderer = {
      */
     renderWorld() {
         this.block1!.clearMatrices()
+        this.staticTerrainContact?.clear()
         this.blockWithAlpha1!.clearMatrices()
         this.translucentPlane!.clearMatrices()
         const blockMap = WorldDataManager.getBlockMap()
@@ -156,6 +168,7 @@ export const WorldRenderer = {
         }
 
         this.block1!.setThinInstanceBuffers()
+        this.staticTerrainContact?.upload(this.block1!.mesh, this.block1!.matrices.length)
 
         this.blockWithAlpha1!.setThinInstanceBuffers()
 
@@ -175,6 +188,33 @@ export const WorldRenderer = {
         Lights.registerSharedLightMesh(this.blockWithAlpha1!.mesh)
         Lights.registerSharedLightMesh(this.translucentPlane!.mesh)
         Lights.registerSharedLightMesh(RockDebrisManager.mesh!)
+    },
+
+    addTerrainContactBlock(matrix: Matrix, uv: Vector2, blendGroundLighting = false, snowReach = 4 / 3) {
+        const batch = this.block1!
+        const index = batch.matrices.length
+        batch.matrices.push(matrix)
+        batch.uvData.push(uv)
+        if (!this.staticTerrainContact) return
+
+        // Sample the tile under the bottom center, accounting for tilted parts.
+        const m = matrix.m
+        const x = Math.round(m[12] - m[4] * 0.5)
+        const z = Math.round(m[14] - m[6] * 0.5)
+        const foot = m[13] - m[5] * 0.5 - 0.5 // The wrapped cube prefab sits half a unit lower.
+        const snowHeight = this.getSnowContactHeight(x, z)
+        if (snowHeight !== undefined && Math.abs(foot - snowHeight) <= 0.15) {
+            this.staticTerrainContact.addSnow(index, snowHeight, snowReach, blendGroundLighting)
+        }
+    },
+
+    getSnowContactHeight(x: number, z: number) {
+        if (!this.staticTerrainContact || Lights.indoor) return
+        const map = WorldDataManager.getBlockMap()
+        const tile = map[x]?.[z]
+        if (!tile || !isSnowRoof(tile) || tile.stonePath || tile.beigeStonePath
+            || this.snowCoverMask.has(x * map.length + z) || BuildingManager.hasFloorAtTile(x, z)) return
+        return tile.totalHeight
     },
 
     async warmUpOcclusionFadeShaders() {

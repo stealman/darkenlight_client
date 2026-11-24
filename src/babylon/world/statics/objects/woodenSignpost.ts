@@ -91,13 +91,17 @@ export class WoodenSignpost extends BaseStaticObject {
 
     render() {
         const p = this.renderPosition
-        const add = (w: number, h: number, d: number, x: number, y: number, z: number, yaw = 0, roll = 0, material = MaterialEnum1.WOOD_PLANKS.uv) => {
+        const add = (w: number, h: number, d: number, x: number, y: number, z: number, yaw: number, roll = 0) => {
             WorldRenderer.block1!.matrices.push(Matrix.Scaling(w, h, d)
                 .multiply(Matrix.RotationYawPitchRoll(yaw, 0, roll))
                 .multiply(Matrix.Translation(p.x + x, p.y + 0.5 + y, p.z + z)))
-            WorldRenderer.block1!.uvData.push(material)
+            WorldRenderer.block1!.uvData.push(MaterialEnum1.WOOD_PLANKS.uv)
         }
-        add(0.18, POLE_HEIGHT, 0.18, 0, POLE_HEIGHT / 2, 0, 0, 0, this.material)
+        WorldRenderer.addTerrainContactBlock(
+            Matrix.Scaling(0.18, POLE_HEIGHT, 0.18)
+                .multiply(Matrix.Translation(p.x, p.y + 0.5 + POLE_HEIGHT / 2, p.z)),
+            this.material,
+        )
         for (let i = 0; i < this.status.signCount; i++) {
             const direction = this.status[`sign${i + 1}`] as Direction
             const yaw = SIGNPOST_DIRECTIONS[direction].yaw

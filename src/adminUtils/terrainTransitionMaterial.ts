@@ -1,7 +1,7 @@
 import { Vector2, Vector3 } from '@babylonjs/core'
 import type { Texture } from '@babylonjs/core'
 import { PBRCustomMaterial } from '@babylonjs/materials'
-import { terrainNoiseShader } from './terrainPreviewBatch'
+import { terrainFringeShader, terrainNoiseShader } from '@/babylon/world/terrainSurfaceShader'
 import { terrainCoverPatterns } from './terrainAtlasPreview'
 import { POND_DISTANCE_RANGE } from './terrainPreviewWater'
 import type { createTerrainPreviewWater } from './terrainPreviewWater'
@@ -196,19 +196,7 @@ export function createTerrainTransitionMaterial(
             return dirtIsland ? min(grass, 1.0 - islands) : max(grass, islands * grassIslandSupport);`}
         }
 
-        float wallGrassCoverage(vec2 terrainXZ, float fromEdge, float edgeHeight, float minReach, float maxReach) {
-            // Anchor the fringe to the world so it crosses wall joins.
-            vec2 noisePosition = terrainXZ + vec2(edgeHeight * 1.17, -edgeHeight * 0.79);
-            float clusters = terrainNoise(noisePosition * 2.55);
-            float lobes = terrainNoise(noisePosition * 8.2 + vec2(4.7, 9.3));
-            float shape = smoothstep(0.17, 0.86, clusters) * 0.78 + lobes * 0.22;
-            float reach = mix(minReach, maxReach, shape);
-            float grain = terrainNoise(noisePosition * 19.0 + vec2(fromEdge * 11.0, -fromEdge * 13.0)) - 0.5;
-            float edge = fromEdge + grain * 0.10;
-            float feather = mix(0.085, 0.15, lobes);
-            float thickness = mix(0.68, 1.0, smoothstep(0.18, 0.62, clusters));
-            return thickness * (1.0 - smoothstep(max(0.015, reach - feather), reach + feather, edge));
-        }
+        ${terrainFringeShader}
 
         const float topFringeDepth = 0.62;
 
@@ -244,9 +232,9 @@ export function createTerrainTransitionMaterial(
             vec2 localContact = step(3.5, modes) * (1.0 - step(6.5, modes));
             coverAtContact += localContact * localCover;
             vec2 fringe = vec2(
-                byTop ? wallGrassCoverage(terrainXZ, topDistance, vWallContact.x, ${snowCover ? '0.23' : '0.09'},
+                byTop ? terrainFringeCoverage(terrainXZ, topDistance, vWallContact.x, ${snowCover ? '0.23' : '0.09'},
                     ${rockSubstrate ? '0.34' : snowWallRock ? '(transitionBoundary.z > 0.5 ? 0.34 : 0.50)' : '0.50'}) : 0.0,
-                byBottom ? wallGrassCoverage(terrainXZ + vec2(3.31, 2.17), fromEdge.y, vWallContact.y, 0.09,
+                byBottom ? terrainFringeCoverage(terrainXZ + vec2(3.31, 2.17), fromEdge.y, vWallContact.y, 0.09,
                     ${rockSubstrate ? '0.26' : snowWallRock ? '(transitionBoundary.z > 0.5 ? 0.26 : 0.38)' : '0.38'}) : 0.0
             );
             fringe = mix(fringe, vec2(1.0), localContact * (1.0 - smoothstep(vec2(0.0), vec2(0.13), fromEdge)));
@@ -308,7 +296,7 @@ export function createTerrainTransitionMaterial(
                 + grassPatch * ${wallDirt ? 'dirtScale' : 'grassScale'};
             ${snowWallRock ? `if (transitionBoundary.z > 0.5) {
                 float aboveFoot = max(0.0, vPositionW.y - vWallContact.y);
-                float mud = wallGrassCoverage(terrainXZ + vec2(3.31, 2.17), aboveFoot, vWallContact.y, 0.09, 0.39);
+                float mud = terrainFringeCoverage(terrainXZ + vec2(3.31, 2.17), aboveFoot, vWallContact.y, 0.09, 0.39);
                 mud = mix(mud, 1.0, 1.0 - smoothstep(0.0, 0.13, aboveFoot));
                 wallRockWeight = 1.0 - mud * (1.0 - grassAtEdges.y);
                 mudFootLighting = (1.0 - wallRockWeight) * (1.0 - smoothstep(0.02, 0.23, aboveFoot));

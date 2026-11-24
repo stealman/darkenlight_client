@@ -18,12 +18,16 @@ export interface CemeteryWallDirection {
     z: number
 }
 
-function addPart(width: number, height: number, depth: number, x: number, y: number, z: number, material: Vector2, yaw = 0, roll = 0) {
-    WorldRenderer.block1!.matrices.push(
-        Matrix.Scaling(width, height, depth)
-            .multiply(Matrix.RotationYawPitchRoll(yaw, 0, roll))
-            .multiply(Matrix.Translation(x, y, z)),
-    )
+function addPart(width: number, height: number, depth: number, x: number, y: number, z: number, material: Vector2,
+    yaw = 0, roll = 0, snowContact?: 'fringe' | 'groundLighting') {
+    const matrix = Matrix.Scaling(width, height, depth)
+        .multiply(Matrix.RotationYawPitchRoll(yaw, 0, roll))
+        .multiply(Matrix.Translation(x, y, z))
+    if (snowContact) {
+        WorldRenderer.addTerrainContactBlock(matrix, material, snowContact === 'groundLighting')
+        return
+    }
+    WorldRenderer.block1!.matrices.push(matrix)
     WorldRenderer.block1!.uvData.push(material)
 }
 
@@ -289,6 +293,7 @@ export class StoneFrameGrave extends CemeteryObject {
 abstract class CemeteryWall extends BaseStaticObject {
     protected readonly orientation: CemeteryWallOrientation
     protected readonly accentMaterial: Vector2
+    protected readonly snowContact: 'fringe' | 'groundLighting' = 'groundLighting'
     protected cornerDirections: [CemeteryWallDirection, CemeteryWallDirection] | null = null
 
     constructor(type: number, position: Vector3, material: Vector2, accentMaterial: Vector2, metadata?: CemeteryWallMetadata) {
@@ -308,16 +313,16 @@ abstract class CemeteryWall extends BaseStaticObject {
 
     protected part(length: number, height: number, thickness: number, along: number, y: number, across: number, material = this.material, roll = 0) {
         const alongX = this.orientation === 'X'
-        addPart(
+        this.worldPart(
             length,
             height,
             thickness,
-            this.renderPosition.x + (alongX ? along : across),
-            this.renderPosition.y + y + 0.5,
-            this.renderPosition.z + (alongX ? across : along),
+            alongX ? along : across,
+            y,
+            alongX ? across : along,
             material,
-            alongX ? 0 : Math.PI / 2,
             roll,
+            alongX ? 0 : Math.PI / 2,
         )
     }
 
@@ -332,6 +337,7 @@ abstract class CemeteryWall extends BaseStaticObject {
             material,
             yaw,
             roll,
+            this.snowContact,
         )
     }
 
@@ -347,6 +353,8 @@ abstract class CemeteryWall extends BaseStaticObject {
 }
 
 export class CemeteryIronFence extends CemeteryWall {
+    protected override readonly snowContact = 'fringe'
+
     render() {
         if (this.cornerDirections) {
             this.renderCorner()

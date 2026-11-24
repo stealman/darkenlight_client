@@ -5,7 +5,7 @@ import { FoliageManager } from '@/babylon/world/foliageManager'
 import type { TerrainFoliage } from '@/babylon/world/foliageManager'
 import type { MapBlock } from '@/data/worldDataManager'
 import { findFoliagePatch, forEachFoliageWallFoot, wallFootDecal } from './terrainFoliagePatches'
-import { terrainNoiseShader } from './terrainPreviewBatch'
+import { terrainNoiseShader } from '@/babylon/world/terrainSurfaceShader'
 
 const ROCK = TerrainEnum1.TERRAIN_ROCK.index
 const PEBBLES = 7, MOSS = 6, LICHEN = 13

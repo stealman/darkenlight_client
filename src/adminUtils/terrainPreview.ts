@@ -101,7 +101,7 @@ const snowTerraceProps = [...snowTerraceTrees, snowTerraceShrub].map(source => {
 })
 
 function createSnowTerracePreview(hideSnow: boolean) {
-    const {mask} = createSnowCoverMask(snowTerraceTrees, [snowTerraceShrub], SIZE, 1, snowTerraceHeight)
+    const {mask} = createSnowCoverMask([], [snowTerraceShrub], SIZE, 1, snowTerraceHeight)
     const snow = [0, 1].map(level => {
         const block = new MapBlock(level, WINTER_GRASS)
         block.snowed = true
@@ -124,7 +124,7 @@ const snowMudCenteredProps = snowMudProps.map(prop => ({
 }))
 
 function createSnowMudPreview() {
-    const {mask} = createSnowCoverMask(snowTerraceTrees, [snowTerraceShrub], SIZE, 1, snowTerraceHeight)
+    const {mask} = createSnowCoverMask([], [snowTerraceShrub], SIZE, 1, snowTerraceHeight)
     const layers = [0, 1].map(height => {
         const mud = new MapBlock(height, MUDDY_DIRT)
         const snow = new MapBlock(height, MUDDY_DIRT)

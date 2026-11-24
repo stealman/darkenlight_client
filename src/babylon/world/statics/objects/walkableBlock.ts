@@ -22,14 +22,15 @@ export class WalkableBlock extends BaseStaticObject {
     }
 
     render() {
-        WorldRenderer.block1!.matrices.push(
+        WorldRenderer.addTerrainContactBlock(
             Matrix.Scaling(1, this.surfaceHeight, 1).multiply(Matrix.Translation(
                 this.renderPosition.x,
                 this.renderPosition.y + 0.5 + this.surfaceHeight / 2,
                 this.renderPosition.z,
             )),
+            this.material,
+            true,
         )
-        WorldRenderer.block1!.uvData.push(this.material)
     }
 
     getWalkableHeight(): number {

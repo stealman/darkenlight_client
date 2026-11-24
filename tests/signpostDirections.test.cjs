@@ -7,7 +7,13 @@ test('all eight sign directions render, can be picked and produce the correct re
     const core = await import('@babylonjs/core')
     const {Vector2, Vector3, Matrix, Ray} = core
     const source = fs.readFileSync('src/babylon/world/statics/objects/woodenSignpost.ts', 'utf8')
-    const world = {block1:{matrices:[],uvData:[]}}
+    const world = {
+        block1: {matrices: [], uvData: []},
+        addTerrainContactBlock(matrix, uv) {
+            this.block1.matrices.push(matrix)
+            this.block1.uvData.push(uv)
+        },
+    }
     const prefab = {matrices:[],uvData:[]}
     class BaseStaticObject {
         constructor(type, position, rotation, material) {this.renderPosition=position;this.material=material;this.prefab=prefab}

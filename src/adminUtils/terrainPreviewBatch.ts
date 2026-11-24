@@ -3,6 +3,7 @@ import type { Mesh } from '@babylonjs/core'
 import type { PBRCustomMaterial } from '@babylonjs/materials'
 import { TERRAIN_BEVEL_DROP, TERRAIN_BEVEL_WIDTH } from '@/babylon/world/beveledTerrainBlock'
 import { updateWorldInstanceBuffers } from '@/babylon/world/worldInstanceBuffers'
+import { terrainNoiseShader } from '@/babylon/world/terrainSurfaceShader'
 import { SNOWMELT_MAX_DISTANCE } from '@/babylon/world/terrainTransitionField'
 
 type TriangleUV = readonly [Vector2, Vector2, Vector2]
@@ -20,25 +21,6 @@ export const COAL_DEPOSIT = -1
 type TerrainSurfaceDetails = {top?: number, foot?: number, wetTile?: readonly [x: number, z: number, corners: number], depositKind?: number}
 export type TerrainInstanceAttribute = {kind: string, stride: number, values: number[]}
 export type SubmitTerrainBatch = (mesh: Mesh, batch: TerrainPreviewBatch, attributes: TerrainInstanceAttribute[]) => void
-
-export const terrainNoiseShader = `
-    float terrainHash(vec2 p) {
-        vec3 h = fract(vec3(p.xyx) * 0.1031);
-        h += dot(h, h.yzx + 33.33);
-        return fract((h.x + h.y) * h.z);
-    }
-
-    float terrainNoise(vec2 p) {
-        vec2 cell = floor(p);
-        vec2 f = fract(p);
-        vec2 t = f * f * (3.0 - 2.0 * f);
-        return mix(
-            mix(terrainHash(cell), terrainHash(cell + vec2(1.0, 0.0)), t.x),
-            mix(terrainHash(cell + vec2(0.0, 1.0)), terrainHash(cell + 1.0), t.x),
-            t.y
-        );
-    }
-`
 
 export class TerrainPreviewBatch {
     private readonly matrices: Matrix[] = []

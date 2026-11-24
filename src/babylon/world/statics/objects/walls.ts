@@ -15,10 +15,10 @@ export class Wall2 extends BaseStaticObject {
     }
 
     render() {
-        for (let i = 1; i <= 2; i++) {
-            WorldRenderer.block1!.matrices.push(Matrix.Translation(this.renderPosition.x, this.renderPosition.y + i, this.renderPosition.z))
-            WorldRenderer.block1!.uvData.push(this.material)
-        }
+        const {x, y, z} = this.renderPosition
+        WorldRenderer.addTerrainContactBlock(Matrix.Translation(x, y + 1, z), this.material, true)
+        WorldRenderer.block1!.matrices.push(Matrix.Translation(x, y + 2, z))
+        WorldRenderer.block1!.uvData.push(this.material)
     }
 }
 
@@ -131,12 +131,13 @@ export class PalisadeWall2 extends BaseStaticObject {
                 + (this.cornerDirections || this.orientation === 'Z' ? depthOffset : 0)
             const z = this.renderPosition.z + beamOffsets[i].z
                 + (this.cornerDirections || this.orientation === 'X' ? depthOffset : 0)
-            WorldRenderer.block1!.matrices.push(
+            WorldRenderer.addTerrainContactBlock(
                 Matrix.Scaling(width, height, depth)
                     .multiply(Matrix.RotationYawPitchRoll(yaw, pitch, roll))
                     .multiply(Matrix.Translation(x, this.renderPosition.y + height / 2 + 0.5, z)),
+                this.material,
+                true,
             )
-            WorldRenderer.block1!.uvData.push(this.material)
         }
         if (this.cornerDirections) {
             this.renderCornerBraces()
@@ -267,8 +268,10 @@ export class Wall3 extends BaseStaticObject {
     }
 
     render() {
-        for (let i = 1; i <= 3; i++) {
-            WorldRenderer.block1!.matrices.push(Matrix.Translation(this.renderPosition.x, this.renderPosition.y + i, this.renderPosition.z))
+        const {x, y, z} = this.renderPosition
+        WorldRenderer.addTerrainContactBlock(Matrix.Translation(x, y + 1, z), this.material, true)
+        for (let i = 2; i <= 3; i++) {
+            WorldRenderer.block1!.matrices.push(Matrix.Translation(x, y + i, z))
             WorldRenderer.block1!.uvData.push(this.material)
         }
     }

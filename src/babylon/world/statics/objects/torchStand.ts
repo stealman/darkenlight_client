@@ -76,11 +76,11 @@ export class TorchStand extends BaseStaticObject {
     }
 
     private renderPart(width: number, height: number, depth: number, y: number, material: Vector2) {
-        WorldRenderer.block1!.matrices.push(
+        WorldRenderer.addTerrainContactBlock(
             Matrix.Scaling(width, height, depth)
                 .multiply(Matrix.Translation(this.renderPosition.x, y, this.renderPosition.z)),
+            material,
         )
-        WorldRenderer.block1!.uvData.push(material)
     }
 
     private renderTorch() {

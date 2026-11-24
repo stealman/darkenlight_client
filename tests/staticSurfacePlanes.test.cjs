@@ -13,7 +13,14 @@ test('banner UV variants and sign faces share one batch; portals share their ble
         staticSurfaceMaterial: new core.PBRMaterial('surfaces', scene),
         entrancePortalMaterial: new core.PBRMaterial('portals', scene),
     }
-    const world = {worldParentNode: parent, block1: {matrices: [], uvData: []}}
+    const world = {
+        worldParentNode: parent,
+        block1: {matrices: [], uvData: []},
+        addTerrainContactBlock(matrix, uv) {
+            this.block1.matrices.push(matrix)
+            this.block1.uvData.push(uv)
+        },
+    }
     class Prefab {
         matrices = []; uvData = []
         constructor(mesh) { this.mesh = mesh }

@@ -19,8 +19,8 @@ export const isShrubType = (type: number) => type >= 101 && type <= 104
     || type >= 121 && type <= 124
     || type >= 141 && type <= 144
 
-const addSourceMask = (mask: Set<number>, vegetationMask: Set<number>, source: SnowCoverSource,
-                       mapSize: number, salt: number, getHeight: (x: number, z: number) => number) => {
+const addTreeVegetationMask = (mask: Set<number>, source: SnowCoverSource, mapSize: number, salt: number,
+                               getHeight: (x: number, z: number) => number) => {
     const sourceX = Math.floor(source.position.x)
     const sourceZ = Math.floor(source.position.z)
     if (sourceX < 0 || sourceZ < 0 || sourceX >= mapSize || sourceZ >= mapSize) {
@@ -28,7 +28,6 @@ const addSourceMask = (mask: Set<number>, vegetationMask: Set<number>, source: S
     }
     const sourceHeight = getHeight(sourceX, sourceZ)
     mask.add(sourceX * mapSize + sourceZ)
-    vegetationMask.add(sourceX * mapSize + sourceZ)
 
     const neighbors = []
     for (let offsetX = -1; offsetX <= 1; offsetX++) {
@@ -60,7 +59,6 @@ const addSourceMask = (mask: Set<number>, vegetationMask: Set<number>, source: S
                 continue
             }
             mask.add(neighbor.x * mapSize + neighbor.z)
-            vegetationMask.add(neighbor.x * mapSize + neighbor.z)
             pendingNeighbors.splice(index, 1)
             addedNeighbors++
             addedInPass = true
@@ -101,11 +99,21 @@ export const createSnowCoverMask = (
     const mask = new Set<number>()
     const vegetationMask = new Set<number>()
     for (const tree of trees) {
-        addSourceMask(mask, vegetationMask, tree, mapSize, worldId * 101 + 11, getHeight)
+        addTreeVegetationMask(vegetationMask, tree, mapSize, worldId * 101 + 11, getHeight)
     }
     for (const object of statics) {
         if (isShrubType(object.type)) {
-            addSourceMask(mask, vegetationMask, object, mapSize, worldId * 101 + object.type, getHeight)
+            const startX = Math.floor(object.position.x)
+            const startZ = Math.floor(object.position.z)
+            const endX = Math.min(mapSize, startX + object.getSizeX())
+            const endZ = Math.min(mapSize, startZ + object.getSizeZ())
+            for (let x = Math.max(0, startX); x < endX; x++) {
+                for (let z = Math.max(0, startZ); z < endZ; z++) {
+                    const tile = x * mapSize + z
+                    mask.add(tile)
+                    vegetationMask.add(tile)
+                }
+            }
         } else if (object.type === 281) {
             addStoneEntranceMask(mask, object, mapSize)
         }

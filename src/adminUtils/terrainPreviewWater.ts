@@ -5,7 +5,7 @@ import { getTerrainHeightOffset, WATER_BLOCK_TYPE } from '@/babylon/world/terrai
 import type { MapBlock } from '@/data/worldDataManager'
 import { createTerrainPreviewPlane } from './terrainAtlasPreview'
 import { CARDINAL_NEIGHBORS } from './terrainFoliagePatches'
-import { terrainNoiseShader } from './terrainPreviewBatch'
+import { terrainNoiseShader } from '@/babylon/world/terrainSurfaceShader'
 
 const FIELD_SIZE = 128
 export const POND_DISTANCE_RANGE = 3
