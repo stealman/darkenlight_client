@@ -92,6 +92,9 @@ export function configureBuildingRoofSnow(material: PBRCustomMaterial) {
             float outward = -uphill * (alongX ? geometricNormalW.x : geometricNormalW.z);
             bool houseEave = house && outward > 0.75;
             if (geometricNormalW.y > 0.45 || houseEave) {
+                // Uphill toward +X puts the cold eave on -X. The Z slopes keep full baseline coverage.
+                float snowExposure = alongX ? 1.0 + 0.30 * uphill : 1.0;
+                float dampExposure = mix(1.0, snowExposure, 0.65);
                 // The low edge sits half a tile plus the roof overhang beyond its tile center.
                 float fromEave = (uphillCoord - roof.y) * uphill
                     + (house ? ${0.5 + HOUSE_ROOF_EAVE_OVERHANG} : ${0.5 + SHED_ROOF_OVERHANG});
@@ -110,8 +113,9 @@ export function configureBuildingRoofSnow(material: PBRCustomMaterial) {
                 float reach = house
                     ? mix(0.22, 0.52, drift) + (detail - 0.5) * 0.14
                     : mix(0.31, 0.93, drift) + (detail - 0.5) * 0.21;
+                reach *= snowExposure;
                 float cover = raised
-                    ? smoothstep(0.48, 0.72, reach) * (1.0 - smoothstep(0.23, 0.38, fromEave))
+                    ? smoothstep(0.48, 0.72, reach) * (1.0 - smoothstep(0.23 * snowExposure, 0.38 * snowExposure, fromEave))
                     : 1.0 - smoothstep(reach - 0.16, reach + 0.09, fromEave);
                 if (house) {
                     float banks = terrainNoise(snowNoise * 1.24 + vec2(5.5, 12.1));
@@ -119,7 +123,7 @@ export function configureBuildingRoofSnow(material: PBRCustomMaterial) {
                 }
                 if (houseEave) {
                     float edgeNoise = terrainNoise(snowNoise * 8.4 + vec2(3.6, 7.1));
-                    float hang = mix(0.24, 0.73, edgeNoise * 0.78 + drift * 0.22);
+                    float hang = mix(0.24, 0.73, edgeNoise * 0.78 + drift * 0.22) * snowExposure;
                     cover *= 1.0 - smoothstep(hang - 0.09, hang + 0.08, edgeDepth);
                 }
 
@@ -127,17 +131,18 @@ export function configureBuildingRoofSnow(material: PBRCustomMaterial) {
                 float fromSnow = fromEave - reach;
                 float dampWidth = mix(0.22, 0.72, terrainNoise(snowNoise * 2.6 + vec2(8.2, 4.1)));
                 dampWidth += (detail - 0.5) * 0.16;
+                dampWidth *= dampExposure;
                 float damp = smoothstep(-0.20, 0.02, fromSnow) * (1.0 - smoothstep(dampWidth * 0.28, dampWidth, fromSnow));
                 float dampStrength = mix(0.34, 0.51, detail) * (raised ? 0.72 : 1.0);
                 if (house) {
                     // Damp thatch extends uphill from the eave and dries gradually near the ridge.
                     float dryLine = mix(1.42, 1.78, terrainNoise(snowNoise * 1.15 + vec2(8.2, 4.1)));
-                    damp = 1.0 - smoothstep(0.72, dryLine, fromEave);
+                    damp = 1.0 - smoothstep(0.72 * dampExposure, dryLine * dampExposure, fromEave);
                     float wetPatches = terrainNoise(roofXZ * 1.8 + vec2(13.5, 3.2)) * 0.72
                         + terrainNoise(roofXZ * 4.5 + vec2(3.4, 9.7)) * 0.28;
                     dampStrength = mix(0.24, 0.76, smoothstep(0.17, 0.80, wetPatches));
                 }
-                if (!houseEave) surfaceAlbedo *= 1.0 - damp * dampStrength;
+                if (!houseEave) surfaceAlbedo *= 1.0 - damp * dampStrength * dampExposure;
                 if (cover > 0.0) {
                     vec2 snowUV = terrainContactSnowUV(snowXZ, 0.0);
                     vec3 roofSnow = toLinearSpace(texture2D(buildingSnowColor, snowUV).rgb);

@@ -32,6 +32,8 @@ export class WalkableBlock extends BaseStaticObject {
             )),
             this.material,
             true,
+            undefined,
+            'walkableEdges',
         )
     }
 

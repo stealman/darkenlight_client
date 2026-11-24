@@ -23,12 +23,17 @@ interface Direction {
 }
 
 type PartContact = boolean | 'dampWood' | 'dampOnly' | 'snowAndDamp' | 'snowAndDampHay'
+    | 'wellBase' | 'wellRim' | 'wellRoofMoss'
 
 function addPart(width: number, height: number, depth: number, x: number, y: number, z: number, material: Vector2, yaw = 0, roll = 0, contact: PartContact = false) {
     const matrix = Matrix.Scaling(width, height, depth)
         .multiply(Matrix.RotationYawPitchRoll(yaw, 0, roll))
         .multiply(Matrix.Translation(x, y, z))
     if (contact) {
+        if (contact === 'wellBase' || contact === 'wellRim' || contact === 'wellRoofMoss') {
+            WorldRenderer.addTerrainContactBlock(matrix, material, false, 0, contact)
+            return
+        }
         const damp = contact === 'dampWood' ? 'moss' : contact === 'snowAndDampHay' ? 'hay'
             : contact === true ? undefined : 'plain'
         WorldRenderer.addTerrainContactBlock(matrix, material, false, contact === 'dampOnly' ? 0 : undefined, damp)
@@ -164,15 +169,15 @@ export class StoneWell extends BaseStaticObject {
         const groundY = this.renderPosition.y + 0.5
         const z = this.renderPosition.z
 
-        addPart(StoneWell.BASE_WIDTH, 0.75, 0.18, x, groundY + 0.375, z - 0.36, this.material, 0, 0, 'dampOnly')
-        addPart(StoneWell.BASE_WIDTH, 0.75, 0.18, x, groundY + 0.375, z + 0.36, this.material, 0, 0, 'dampOnly')
-        addPart(0.18, 0.75, 0.54, x - 0.36, groundY + 0.375, z, this.material, 0, 0, 'dampOnly')
-        addPart(0.18, 0.75, 0.54, x + 0.36, groundY + 0.375, z, this.material, 0, 0, 'dampOnly')
+        addPart(StoneWell.BASE_WIDTH, 0.75, 0.18, x, groundY + 0.375, z - 0.36, this.material, 0, 0, 'wellBase')
+        addPart(StoneWell.BASE_WIDTH, 0.75, 0.18, x, groundY + 0.375, z + 0.36, this.material, 0, 0, 'wellBase')
+        addPart(0.18, 0.75, 0.54, x - 0.36, groundY + 0.375, z, this.material, 0, 0, 'wellBase')
+        addPart(0.18, 0.75, 0.54, x + 0.36, groundY + 0.375, z, this.material, 0, 0, 'wellBase')
 
-        addPart(0.96, 0.1, 0.2, x, groundY + 0.75, z - 0.38, this.rimMaterial)
-        addPart(0.96, 0.1, 0.2, x, groundY + 0.75, z + 0.38, this.rimMaterial)
-        addPart(0.2, 0.1, 0.56, x - 0.38, groundY + 0.75, z, this.rimMaterial)
-        addPart(0.2, 0.1, 0.56, x + 0.38, groundY + 0.75, z, this.rimMaterial)
+        addPart(0.96, 0.1, 0.2, x, groundY + 0.75, z - 0.38, this.rimMaterial, 0, 0, 'wellRim')
+        addPart(0.96, 0.1, 0.2, x, groundY + 0.75, z + 0.38, this.rimMaterial, 0, 0, 'wellRim')
+        addPart(0.2, 0.1, 0.56, x - 0.38, groundY + 0.75, z, this.rimMaterial, 0, 0, 'wellRim')
+        addPart(0.2, 0.1, 0.56, x + 0.38, groundY + 0.75, z, this.rimMaterial, 0, 0, 'wellRim')
 
         for (const postX of [-0.36, 0.36]) {
             addPart(0.1, 1.15, 0.1, x + postX, groundY + 1.325, z, this.woodMaterial)
@@ -183,7 +188,7 @@ export class StoneWell extends BaseStaticObject {
         addPart(1.02, 0.06, 0.06, x - 0.15, axleY, z, this.steelMaterial)
         addPart(0.06, 0.24, 0.06, x - 0.66, axleY - 0.09, z, this.steelMaterial)
 
-        addPart(0.62, 0.08, 1.02, x - 0.22, groundY + 1.93, z, this.roofMaterial, 0, 0.42)
+        addPart(0.62, 0.08, 1.02, x - 0.22, groundY + 1.93, z, this.roofMaterial, 0, 0.42, 'wellRoofMoss')
         addPart(0.62, 0.08, 1.02, x + 0.22, groundY + 1.93, z, this.roofMaterial, 0, -0.42)
     }
 }

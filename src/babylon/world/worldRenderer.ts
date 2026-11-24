@@ -201,14 +201,27 @@ export const WorldRenderer = {
         batch.uvData.push(uv)
         if (!this.staticTerrainContact) return
 
-        // Sample the tile under the bottom center, accounting for tilted parts.
         const m = matrix.m
+        const foot = m[13] - m[5] * 0.5 - 0.5 // The wrapped cube prefab sits half a unit lower.
+        if (damp === 'wellRoofMoss') {
+            // The eave is the low end of the panel's local X axis on its upper face.
+            const eaveHeight = foot + m[5] - Math.abs(m[1]) * 0.5
+            this.staticTerrainContact.addDamp(index, eaveHeight, damp)
+            return
+        }
+        if (damp === 'wellRim') {
+            this.staticTerrainContact.addDamp(index, foot, damp)
+            return
+        }
+        // Sample the tile under the bottom center, accounting for tilted parts.
         const x = Math.round(m[12] - m[4] * 0.5)
         const z = Math.round(m[14] - m[6] * 0.5)
-        const foot = m[13] - m[5] * 0.5 - 0.5 // The wrapped cube prefab sits half a unit lower.
         const snowHeight = this.getSnowContactHeight(x, z)
+        const edgeDamp = damp === 'walkableEdges' ? damp : undefined
         if (snowReach > 0 && snowHeight !== undefined && Math.abs(foot - snowHeight) <= 0.15) {
-            this.staticTerrainContact.addSnow(index, snowHeight, snowReach, blendGroundLighting)
+            this.staticTerrainContact.addSnow(index, snowHeight, snowReach, blendGroundLighting, edgeDamp)
+        } else if (edgeDamp) {
+            this.staticTerrainContact.addDamp(index, foot, edgeDamp)
         } else if (damp && snowHeight === undefined && !Lights.indoor) {
             const tile = WorldDataManager.getBlockMap()[x]?.[z]
             if (!tile || tile.type <= 0 || tile.type >= WATER_BLOCK_TYPE) return

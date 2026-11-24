@@ -6,7 +6,7 @@ import snowColorUrl from '@/adminUtils/assets/snow-atlas.png'
 
 const ATTRIBUTE = 'staticSnowContact'
 export const SNOW_CONTACT_MAX_HEIGHT = 0.24
-const DAMP_CONTACT = {moss: 1, plain: 2, hay: 3} as const
+const DAMP_CONTACT = {moss: 1, plain: 2, hay: 3, wellBase: 4, wellRim: 5, wellRoofMoss: 7, walkableEdges: 8} as const
 export type DampContact = keyof typeof DAMP_CONTACT
 
 export class StaticTerrainContact {
@@ -29,12 +29,14 @@ export class StaticTerrainContact {
                 ${fallback}
             #endif
         `
+        const blockPosition = meshVertices ? '' : 'varying vec3 vStaticBlockPosition;'
         material.AddUniform('staticSnowColor', 'sampler2D', this.snow)
         material.AddAttribute(ATTRIBUTE)
         material.Vertex_Definitions(`
             ${material.CustomParts.Vertex_Definitions}
             ${contactCode(`attribute vec3 ${ATTRIBUTE};`)}
             varying vec3 vStaticSnowContact;
+            ${blockPosition}
         `)
         material.Vertex_After_WorldPosComputed(`
             ${material.CustomParts.Vertex_After_WorldPosComputed ?? ''}
@@ -42,10 +44,12 @@ export class StaticTerrainContact {
                 'vStaticSnowContact = vec3(worldPos.y - staticSnowContact.x, staticSnowContact.yz);',
                 'vStaticSnowContact = vec3(0.0);',
             )}
+            ${meshVertices ? '' : 'vStaticBlockPosition = positionUpdated;'}
         `)
         material.Fragment_Definitions(`
             ${material.CustomParts.Fragment_Definitions}
             varying vec3 vStaticSnowContact;
+            ${blockPosition}
             ${terrainNoiseShader}
             ${terrainFringeShader}
             ${terrainContactSnowShader}
@@ -55,6 +59,24 @@ export class StaticTerrainContact {
             ${material.CustomParts.Fragment_Before_Lights ?? ''}
             float snowDistance = vStaticSnowContact.x;
             float snowReach = abs(vStaticSnowContact.y);
+            float dampProfile = floor(vStaticSnowContact.z + 0.5);
+            ${meshVertices ? '' : `
+                if (dampProfile == ${DAMP_CONTACT.walkableEdges}.0) {
+                    // Two adjacent face planes meet at each edge. The same distance and noise apply on both faces.
+                    vec3 faceDistance = max(vec3(0.0), vec3(0.5) - abs(vStaticBlockPosition));
+                    float edgeDistance = min(max(faceDistance.x, faceDistance.y),
+                        min(max(faceDistance.x, faceDistance.z), max(faceDistance.y, faceDistance.z)));
+                    if (edgeDistance < 0.24) {
+                        vec2 surfacePosition = mod(vPositionW.xz, 48.0) + vec2(0.61, 0.83) * vStaticBlockPosition.y;
+                        float patches = terrainNoise(surfacePosition * 5.5 + vec2(3.1, 11.7));
+                        float grain = terrainNoise(surfacePosition * 26.0 + vec2(8.2, 2.6));
+                        float reach = mix(0.07, 0.24, patches);
+                        float wet = (1.0 - smoothstep(reach * 0.18, reach, edgeDistance))
+                            * smoothstep(0.25, 0.67, patches * 0.82 + grain * 0.18);
+                        surfaceAlbedo *= 1.0 - wet * mix(0.48, 0.73, grain);
+                    }
+                }
+            `}
             if (snowReach > 0.0) {
                 float aboveSnow = max(snowDistance, 0.0);
                 vec2 noiseXZ = mod(vPositionW.xz, 48.0) + vec2(3.31, 2.17);
@@ -88,23 +110,55 @@ export class StaticTerrainContact {
                     }
                 }
             }
-            if (vStaticSnowContact.z > 0.0 && snowDistance < 0.48) {
+            bool wellBase = dampProfile == ${DAMP_CONTACT.wellBase}.0;
+            bool wellRim = dampProfile == ${DAMP_CONTACT.wellRim}.0;
+            if (dampProfile > 0.0 && dampProfile < ${DAMP_CONTACT.wellRim}.0 && snowDistance < (wellBase ? 0.64 : 0.48)) {
                 float aboveGround = max(snowDistance, 0.0);
                 vec2 woodXZ = mod(vPositionW.xz, 48.0);
                 float edge = terrainNoise(woodXZ * 6.0 + vec2(4.1, 9.7));
                 float grain = terrainNoise(woodXZ * 23.0 + vec2(7.2, aboveGround * 19.0));
-                bool withMoss = vStaticSnowContact.z < 1.5;
-                bool dampHay = vStaticSnowContact.z > 2.5;
+                bool withMoss = dampProfile < 1.5;
+                bool dampHay = dampProfile == ${DAMP_CONTACT.hay}.0;
                 float height = (withMoss ? mix(0.19, 0.34, edge) : mix(0.18, 0.36, edge)) + (grain - 0.5) * 0.08;
                 if (dampHay) height += 0.08;
+                if (wellBase) height = mix(0.36, 0.60, edge) + (grain - 0.5) * 0.08;
                 float damp = 1.0 - smoothstep(height * 0.20, height, aboveGround);
                 float dampStrength = withMoss ? mix(0.32, 0.50, grain) : mix(0.08, 0.34, grain);
                 if (dampHay) dampStrength = mix(0.48, 0.74, grain);
+                if (wellBase) dampStrength = mix(0.48, 0.66, grain);
                 surfaceAlbedo *= 1.0 - damp * dampStrength;
                 if (withMoss) {
                     float moss = (1.0 - smoothstep(height * 0.10, height * 0.65, aboveGround)) * mix(0.10, 0.34, grain);
                     surfaceAlbedo = mix(surfaceAlbedo, terrainContactMossColor(grain), moss);
                 }
+            }
+            if (wellRim || (wellBase && snowDistance < 0.23)) {
+                vec2 mossPosition = mod(vPositionW.xz, 48.0) + vec2(0.73, 0.89) * snowDistance;
+                float patches = terrainNoise(mossPosition * 8.0 + vec2(5.1, 13.7));
+                float grain = terrainNoise(mossPosition * 42.0 + vec2(9.3, 2.7));
+                float coverage = smoothstep(0.52, 0.75, patches * 0.76 + grain * 0.24);
+                float exposure = wellRim ? mix(0.65, 1.0, max(geometricNormalW.y, 0.0))
+                    : 1.0 - smoothstep(0.03, 0.23, snowDistance);
+                surfaceAlbedo = mix(surfaceAlbedo, terrainContactMossColor(grain), coverage * exposure * 0.52);
+            }
+            const float roofDampMaxHeight = 0.35;
+            if (dampProfile == ${DAMP_CONTACT.wellRoofMoss}.0 && snowDistance < roofDampMaxHeight) {
+                float aboveEave = max(snowDistance, 0.0);
+                vec2 roofPosition = mod(vPositionW.xz, 48.0);
+                float patches = terrainNoise(roofPosition * vec2(1.8, 7.0) + vec2(8.4, 2.1));
+                float grain = terrainNoise(roofPosition * 41.0 + vec2(2.9, 6.7));
+                float wetShape = smoothstep(0.16, 0.84, patches * 0.88 + grain * 0.12);
+                float reach = mix(0.215, roofDampMaxHeight, wetShape);
+                float wet = 1.0 - smoothstep(0.0, reach, aboveEave);
+                surfaceAlbedo *= mix(vec3(1.0), vec3(0.08, 0.13, 0.16), wet * mix(0.92, 1.0, grain));
+
+                float mossReach = mix(0.08, 0.19, patches);
+                float mossEdge = 1.0 - smoothstep(mossReach * 0.18, mossReach, aboveEave);
+                float mossFacing = 1.0 - 0.22 * smoothstep(-0.25, 0.65, geometricNormalW.y);
+                float mossPatches = smoothstep(0.26, 0.58, patches * 0.78 + grain * 0.22);
+                float moss = mossEdge * mossFacing * mossPatches;
+                vec3 mossColor = terrainContactMossColor(grain) * vec3(0.73, 0.96, 0.70);
+                surfaceAlbedo = mix(surfaceAlbedo, mossColor, moss * 0.84);
             }
         `)
     }
@@ -113,8 +167,8 @@ export class StaticTerrainContact {
         this.contacts.clear()
     }
 
-    addSnow(index: number, height: number, reach: number, blendGroundLighting = false) {
-        this.contacts.set(index, {height, snowReach: blendGroundLighting ? -reach : reach, damp: 0})
+    addSnow(index: number, height: number, reach: number, blendGroundLighting = false, damp?: DampContact) {
+        this.contacts.set(index, {height, snowReach: blendGroundLighting ? -reach : reach, damp: damp ? DAMP_CONTACT[damp] : 0})
     }
 
     addDamp(index: number, height: number, damp: DampContact) {
