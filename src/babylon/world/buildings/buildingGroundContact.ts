@@ -2,6 +2,7 @@ import { Mesh, Scene } from '@babylonjs/core'
 import { Materials } from '@/babylon/materials'
 import { terrainFringeShader } from '../terrainSurfaceShader'
 import { configureBuildingRoofSnow } from './buildingRoofSnow'
+import { configureBuildingWallDamp } from './buildingWallDamp'
 
 const ATTRIBUTE = 'buildingGroundContact'
 
@@ -16,6 +17,7 @@ export class BuildingGroundContact {
         material.name = 'building_opaque_material'
         material.maxSimultaneousLights = Materials.blockMat1!.maxSimultaneousLights
         configureBuildingRoofSnow(material)
+        configureBuildingWallDamp(material)
         material.AddAttribute(ATTRIBUTE)
         material.Vertex_Definitions(`
             ${material.CustomParts.Vertex_Definitions}
@@ -54,8 +56,7 @@ export class BuildingGroundContact {
                     surfaceAlbedo = mix(surfaceAlbedo, toLinearSpace(texture2D(buildingSnowColor, snowUV).rgb), coverage);
                 } else if (coverage > 0.0) {
                     float grain = terrainNoise(contactXZ * 61.0 + vec2(0.0, vPositionW.y * 47.0));
-                    vec3 moss = mix(vec3(0.20, 0.25, 0.14), vec3(0.34, 0.41, 0.24), grain);
-                    surfaceAlbedo = mix(surfaceAlbedo, toLinearSpace(moss), coverage * mix(0.55, 0.88, grain));
+                    surfaceAlbedo = mix(surfaceAlbedo, buildingMossColor(grain), coverage * mix(0.55, 0.88, grain));
                 }
             }
         `)

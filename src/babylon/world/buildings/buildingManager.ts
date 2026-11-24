@@ -14,7 +14,11 @@ import { TerrainManager, getTerrainHeightOffset, WATER_BLOCK_TYPE } from '../ter
 import { outdoorSurfaceHeight } from '../terrainRoofShape'
 import { sameSnowMask } from '../snowCoverMask'
 import { BuildingGroundContact } from './buildingGroundContact'
-import { configureBuildingRoofSnow, encodeRoofSnowUv, SHED_ROOF_OVERHANG } from './buildingRoofSnow'
+import {
+    configureBuildingRoofSnow, encodeHouseRoofSnowUv, encodeRoofSnowUv, HOUSE_ROOF_ANGLE,
+    HOUSE_ROOF_EAVE_OVERHANG, HOUSE_ROOF_END_OVERHANG, HUMAN_HOUSE_WIDTH, SHED_ROOF_OVERHANG,
+} from './buildingRoofSnow'
+import { configureBuildingWallDamp, encodeWallDampUv } from './buildingWallDamp'
 
 export interface BuildingData {
     id: number
@@ -37,7 +41,7 @@ interface BuildingBlockPart {
     material: Vector2
 }
 
-const HOUSE_WIDTH = 5
+const HOUSE_WIDTH = HUMAN_HOUSE_WIDTH
 const HOUSE_DEPTH = 3
 const HUMAN_HOUSE_TYPE = 1
 const SHED_TYPE = 2
@@ -73,10 +77,10 @@ const WINDOW_HEIGHT = 0.5
 const WINDOW_BOTTOM = FLOOR_HEIGHT + 1.1
 const ROOF_STEP_DEPTH = 0.5
 const ROOF_STEP_HEIGHT = 0.3
-const ROOF_ANGLE = Math.PI / 6
-const ROOF_EAVE_OVERHANG = 0.3
+const ROOF_ANGLE = HOUSE_ROOF_ANGLE
+const ROOF_EAVE_OVERHANG = HOUSE_ROOF_EAVE_OVERHANG
 const ROOF_THICKNESS = 0.2
-const ROOF_END_OVERHANG = 0.5
+const ROOF_END_OVERHANG = HOUSE_ROOF_END_OVERHANG
 const ROOF_RUN = HOUSE_DEPTH / 2 + ROOF_EAVE_OVERHANG
 const ROOF_RISE = Math.tan(ROOF_ANGLE) * ROOF_RUN
 const ROOF_SLOPE_LENGTH = ROOF_RUN / Math.cos(ROOF_ANGLE)
@@ -138,6 +142,9 @@ class BuildingView {
     frontWallsInBatch = true
     doorInBatch = true
     private previewYOffset = 0
+    private roofSnowRevision = -1
+    private roofSnow = false
+    private snowyRoofUvs: Vector2[] = []
 
     private get localWidth() { return this.data.tp === CABIN_TYPE ? CABIN_WIDTH : HOUSE_WIDTH }
     private get doorCenterX() { return this.data.tp === CABIN_TYPE ? (CABIN_WIDTH - 1) / 2 : DOOR_CENTER_X }
@@ -434,6 +441,48 @@ class BuildingView {
         return this.doorVisibility === 1 && this.doorProgress === 0 && this.data.doorOpen !== true
     }
 
+    refreshRoofSnow(revision: number) {
+        if (this.data.tp !== HUMAN_HOUSE_TYPE || this.roofSnowRevision === revision) return
+        this.roofSnowRevision = revision
+        let snowy = false
+        for (let x = 0; x < HOUSE_WIDTH && !snowy; x++) {
+            for (const z of [-1, HOUSE_DEPTH]) {
+                const tile = this.localTileToWorld(x, z)
+                if (WorldRenderer.getSnowSurfaceHeight(tile.x, tile.z) !== undefined) {
+                    snowy = true
+                    break
+                }
+            }
+        }
+        if (this.roofSnow === snowy) return
+        this.roofSnow = snowy
+        if (this.snowyRoofUvs.length === 0) {
+            const opposite: Record<BuildingFacing, BuildingFacing> = {'+X': '-X', '-X': '+X', '+Z': '-Z', '-Z': '+Z'}
+            const centerZ = (HOUSE_DEPTH - 1) / 2
+            this.snowyRoofUvs = this.prefabs.blocks.roof.map(({matrix, material}) => {
+                if (material !== MaterialEnum1.HAY.uv) return material
+                const rear = matrix.m[14] < centerZ
+                const uphill = rear ? this.facing : opposite[this.facing]
+                const lowTile = this.localTileToWorld(0, rear ? 0 : HOUSE_DEPTH - 1)
+                return encodeHouseRoofSnowUv(material, uphill, uphill.endsWith('X') ? lowTile.x : lowTile.z)
+            })
+            this.roofMesh.makeGeometryUnique()
+        }
+        const dryUvs = this.prefabs.roof.getVerticesData('uvc')!
+        const uvData = Array.from(dryUvs)
+        if (snowy) {
+            // Each roof part is one box, in the same order in the merged mesh and the batch.
+            const stride = uvData.length / this.snowyRoofUvs.length
+            this.snowyRoofUvs.forEach((uv, part) => {
+                for (let i = part * stride; i < (part + 1) * stride; i += 2) {
+                    uvData[i] = uv.x
+                    uvData[i + 1] = uv.y
+                }
+            })
+        }
+        this.roofMesh.setVerticesData('uvc', uvData, false, 2)
+    }
+
     appendBatchedBlocks(matrices: Matrix[], uvData: Vector2[], _prefabs: BuildingPrefabs) {
         const prefabs = this.prefabs
         if (!this.visible) return
@@ -459,9 +508,9 @@ class BuildingView {
         const world = Matrix.RotationY(this.mesh.rotation.y)
             .multiply(Matrix.Translation(this.mesh.position.x, this.mesh.position.y, this.mesh.position.z))
         for (const group of groups) {
-            for (const part of prefabs.blocks[group]) {
+            for (const [index, part] of prefabs.blocks[group].entries()) {
                 matrices.push(part.matrix.multiply(world))
-                uvData.push(part.material)
+                uvData.push(group === 'roof' && this.roofSnow ? this.snowyRoofUvs[index] : part.material)
             }
         }
     }
@@ -1535,6 +1584,7 @@ export const BuildingManager = {
         Lights.enableTransparentShadowCasters()
         const fadeMaterial = Materials.createBlockMat1(scene)
         configureBuildingRoofSnow(fadeMaterial)
+        configureBuildingWallDamp(fadeMaterial)
         fadeMaterial.name = 'building_faded_material'
         fadeMaterial.alpha = 1
         fadeMaterial.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHABLEND
@@ -1829,6 +1879,7 @@ export const BuildingManager = {
         this.buildings.forEach((building) => {
             building.setVisible(building.isVisible())
             if (building instanceof ShedView && building.visible) building.refreshGroundContact(this.groundContactRevision, outdoor)
+            if (building instanceof BuildingView && building.visible) building.refreshRoofSnow(this.groundContactRevision)
         })
         this.rebuildOpaqueBatch()
     },
@@ -1864,7 +1915,7 @@ export const BuildingManager = {
     },
 
     createHousePrefab(scene: Scene, cabin = false) {
-        const HOUSE_WIDTH = cabin ? CABIN_WIDTH : 5
+        const HOUSE_WIDTH = cabin ? CABIN_WIDTH : HUMAN_HOUSE_WIDTH
         const DOOR_CENTER_X = (HOUSE_WIDTH - 1) / 2
         const WALL_THICKNESS = cabin ? CABIN_WALL_THICKNESS : 0.2
         const FLOOR_OVERHANG = cabin ? 0 : 0.4
@@ -1896,8 +1947,12 @@ export const BuildingManager = {
             box.position.set(x, y, z)
             box.rotation.set(rotationX, 0, rotationZ)
             const uvData = groups[group].uvData
+            const wood = group.startsWith('wall') || group === 'door'
+            const surfaceUv = !cabin && group !== 'roof' && group !== 'glass'
+                ? encodeWallDampUv(material, y, wood ? 'wood' : material === MaterialEnum1.BRICK_GRAY.uv ? 'corner' : 'wall')
+                : material
             for (let i = 0; i < box.getTotalVertices(); i++) {
-                uvData.push(material.x, material.y)
+                uvData.push(surfaceUv.x, surfaceUv.y)
             }
             groups[group].parts.push(box)
             if (group !== 'glass') {
@@ -1905,7 +1960,7 @@ export const BuildingManager = {
                     matrix: Matrix.Scaling(width, height, depth)
                         .multiply(Matrix.RotationYawPitchRoll(0, rotationX, rotationZ))
                         .multiply(Matrix.Translation(x, y + 0.5, z)),
-                    material,
+                    material: surfaceUv,
                 })
             }
         }
@@ -2270,21 +2325,18 @@ export const BuildingManager = {
             }
         } else {
             for (const side of [-1, 1]) {
-                for (let x = 0; x < HOUSE_WIDTH; x++) {
-                    const endDirection = x === 0 ? -1 : x === HOUSE_WIDTH - 1 ? 1 : 0
-                    addBox(
-                        'buildingRoofSlope',
-                        1 + (endDirection === 0 ? 0 : ROOF_END_OVERHANG),
-                        ROOF_THICKNESS,
-                        ROOF_SLOPE_LENGTH,
-                        x + endDirection * ROOF_END_OVERHANG / 2,
-                        roofCenterY,
-                        roofCenterZ + side * ROOF_RUN / 2,
-                        MaterialEnum1.HAY.uv,
-                        side * ROOF_ANGLE,
-                        'roof',
-                    )
-                }
+                addBox(
+                    'buildingRoofSlope',
+                    HOUSE_WIDTH + 2 * ROOF_END_OVERHANG,
+                    ROOF_THICKNESS,
+                    ROOF_SLOPE_LENGTH,
+                    (HOUSE_WIDTH - 1) / 2,
+                    roofCenterY,
+                    roofCenterZ + side * ROOF_RUN / 2,
+                    MaterialEnum1.HAY.uv,
+                    side * ROOF_ANGLE,
+                    'roof',
+                )
             }
 
         }
