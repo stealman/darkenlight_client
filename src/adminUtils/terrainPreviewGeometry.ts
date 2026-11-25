@@ -101,7 +101,6 @@ export function createIndoorWaterFloor(plane: Mesh) {
 }
 
 export function createTerrainPreviewGeometry(atlasTypes: readonly number[]) {
-    const snowMask = new Set<number>()
     const templates = new Map<string, TerrainPreviewTriangle[]>()
     const getTemplate = (mask: number, heightOffset: number, cornerSteps?: readonly number[]) => {
         const key = `${mask}:${heightOffset}:${cornerSteps?.join(',') ?? ''}`
@@ -186,7 +185,7 @@ export function createTerrainPreviewGeometry(atlasTypes: readonly number[]) {
                     if (WALL_DIRECTIONS.some(([dx, dz]) => includeTile(x + dx, z + dz))) {
                         const bottom = Math.min(...WALL_DIRECTIONS.map(([dx, dz]) => heights[x + dx]?.[z + dz] ?? -1))
                         for (let level = block.height; level > bottom + 1e-6; level--) {
-                            const vertical = terrainVerticalBevelMask(map, x, z, level, snowMask)
+                            const vertical = terrainVerticalBevelMask(map, x, z, level)
                             if (vertical) addCornerFloors(cornerFloors, heights, shapes, x, z, level, vertical)
                         }
                     }
@@ -207,7 +206,7 @@ export function createTerrainPreviewGeometry(atlasTypes: readonly number[]) {
                     const upper = layer === 0 ? top : level
                     const heightOffset = upper - level
                     const base = level - 1
-                    const vertical = terrainVerticalBevelMask(map, x, z, level, snowMask)
+                    const vertical = terrainVerticalBevelMask(map, x, z, level)
                     const mask = (layer === 0 ? bevel : 0) | vertical
                     if (vertical) addCornerFloors(cornerFloors, heights, shapes, x, z, level, vertical)
                     const dirtEdgesAt = (side: number) => {

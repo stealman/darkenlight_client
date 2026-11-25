@@ -313,7 +313,6 @@ export const TerrainEnum1 = {
     TERRAIN_GRASS: {index: 2},
     TERRAIN_ROCK: {index: 3},
     TERRAIN_MUDDY_DIRT: {index: 4},
-    // This block atlas cross sits about 14 px above the regular row alignment.
     TERRAIN_GRASS_WINTER: {index: 5},
 
     TERRAIN_SNOW_DIRT: {index: 101},
