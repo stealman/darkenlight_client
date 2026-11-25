@@ -1,8 +1,11 @@
 <template>
     <div>
-        <label class="tree-item" :class="{ selected: selectedTree === 0 && selectedShrub === 0 }" @click="selectNone()">
+        <label class="tree-item" :class="{ selected: !noGrassTool && selectedTree === 0 && selectedShrub === 0 }" @click="selectNone()">
             None
         </label>
+        <button type="button" class="tree-item" :class="{ selected: noGrassTool }"
+                :aria-pressed="noGrassTool" @click="toggleNoGrassTool">No grass</button>
+        <div v-if="noGrassTool">Click a ground tile to mark it or clear its mark.</div>
         <label style='color: red; font-weight: bold' class="tree-item" :class="{ selected: selectedTree === -1 && selectedShrub === -1 }" @click="selectDelete()">
             Delete
         </label>
@@ -119,6 +122,7 @@ const selectedTreeType = ref("")
 const selectedTree = GMManager.selectedTree
 const selectedShrubType = ref("")
 const selectedShrub = GMManager.selectedShrub
+const noGrassTool = GMManager.noGrassTool
 
 const trees = [
     { type: "OAK", name: "Oak_1", id: 1 },
@@ -157,6 +161,7 @@ const shrubs = [
 ]
 
 const selectTreeType = (type) => {
+    noGrassTool.value = false
     selectedShrub.value = 0
     GMManager.editingTree.value = null
     selectedTreeType.value = type
@@ -176,6 +181,7 @@ const selectTree = (id) => {
 }
 
 const selectShrubType = (type) => {
+    noGrassTool.value = false
     selectedTree.value = 0
     GMManager.editingTree.value = null
     selectedShrubType.value = type
@@ -195,11 +201,18 @@ const selectShrub = (id) => {
 }
 
 const selectNone = () => {
+    noGrassTool.value = false
     GMManager.editingTree.value = null
     selectedTree.value = 0
     selectedShrub.value = 0
     selectedTreeType.value = ""
     selectedShrubType.value = ""
+}
+
+const toggleNoGrassTool = () => {
+    const active = !noGrassTool.value
+    selectNone()
+    noGrassTool.value = active
 }
 
 const selectDebris = (type) => {
@@ -208,6 +221,7 @@ const selectDebris = (type) => {
 }
 
 const selectDelete = () => {
+    noGrassTool.value = false
     GMManager.editingTree.value = null
     selectedTree.value = -1
     selectedShrub.value = -1

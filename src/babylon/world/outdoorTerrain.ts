@@ -1,4 +1,4 @@
-import { BoundingInfo, Frustum, Matrix, TransformNode, Vector3, type Mesh } from '@babylonjs/core'
+import { BoundingInfo, Frustum, Matrix, TransformNode, Vector3, type AbstractMesh, type Mesh } from '@babylonjs/core'
 import type { Plane } from '@babylonjs/core'
 import { MapBlock } from '@/data/worldDataManager'
 import { Lights } from '@/babylon/scene/lights'
@@ -123,6 +123,7 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
     const grassDetail = lowDetail ? 'low' : highDetail ? 'high' : 'medium'
     let grassStats: ReturnType<ReturnType<typeof createGrassRenderer>['render']> | undefined
     let grassCenterX = 0, grassCenterZ = 0
+    let grassExclusions: ReadonlySet<number> | undefined
     const refreshGrass = () => {
         if (!grass) return
         grassTufts.length = 0
@@ -136,10 +137,13 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
         // Leave room for sub-tile camera motion between terrain refreshes.
         const travelPadding = Settings.isPhoneOrTablet() ? 0.75 : 0.35
         const reach = grass.interactionRadius
+        const exclusions = grassExclusions?.size ? grassExclusions : undefined
+        const depth = currentMap?.[0]?.length ?? 0
         for (const tile of visibleTiles.values()) {
             const placed = tile.grass
             if (!placed || Math.abs(placed.x - grassCenterX) > GRASS_TILE_RANGE
-                || Math.abs(placed.z - grassCenterZ) > GRASS_TILE_RANGE) continue
+                || Math.abs(placed.z - grassCenterZ) > GRASS_TILE_RANGE
+                || exclusions?.has(placed.x * depth + placed.z)) continue
             const couldBend = reach > 0 && placed.minimum.x <= grassCenterX + reach && placed.maximum.x >= grassCenterX - reach
                 && placed.minimum.z <= grassCenterZ + reach && placed.maximum.z >= grassCenterZ - reach
             if (!filterToCamera || grassTileInView(placed, grassFrustum, travelPadding + (couldBend ? GRASS_MAX_BEND : 0))) {
@@ -177,10 +181,16 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
 
     return {
         grass,
+        isSurfaceMesh(mesh: AbstractMesh) { return batches.has(mesh as Mesh) },
         getGrassStats() { return terrain.isEnabled() ? grassStats : undefined },
         setEnabled(enabled: boolean) { terrain.setEnabled(enabled) },
+        refreshGrassExclusions(exclusions: ReadonlySet<number>) {
+            grassExclusions = exclusions
+            if (terrain.isEnabled()) refreshGrass()
+        },
         render(blockMap: MapBlock[][], center: {x: number, y: number, z: number}, snowCoverMask: ReadonlySet<number>,
-            revision?: number, compiled?: TerrainRenderData, originalBlocks?: WeakSet<MapBlock>) {
+            revision?: number, compiled?: TerrainRenderData, originalBlocks?: WeakSet<MapBlock>, exclusions?: ReadonlySet<number>) {
+            grassExclusions = exclusions
             if (currentMap !== blockMap || currentCompiled !== compiled) {
                 currentMap = blockMap
                 currentCompiled = compiled

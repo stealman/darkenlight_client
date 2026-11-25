@@ -56,8 +56,22 @@ async function main() {
             }
         })
         const renderedFrames = async () => {
-            const start = await page.evaluate(async () => (await import('/src/babylon/scene/renderer.ts')).Renderer.frame)
-            await page.waitForFunction(async start => (await import('/src/babylon/scene/renderer.ts')).Renderer.frame >= start + 30, start)
+            const start = await page.evaluate(async () => {
+                const {Renderer} = await import('/src/babylon/scene/renderer.ts')
+                window.__renderer = Renderer
+                return Renderer.frame
+            })
+            await page.waitForFunction(start => window.__renderer.frame >= start + 30, start)
+            // Menu music still fades out after gameplay starts. The menu
+            // render loop must already be stopped while its context drains.
+            assert.equal(await page.evaluate(async () => {
+                const {Renderer} = await import('/src/babylon/scene/renderer.ts')
+                return Renderer.engine.constructor.Instances.every(engine => engine === Renderer.engine || !engine.activeRenderLoops.length)
+            }), true)
+            await page.waitForFunction(() => {
+                return window.__renderer.engine.constructor.Instances.length === 1
+                    && window.__webglContexts.filter(context => !context.isContextLost()).length === 1
+            })
             const resources = await page.evaluate(async () => {
                 const {Renderer} = await import('/src/babylon/scene/renderer.ts')
                 const engines = Renderer.engine.constructor.Instances
@@ -105,6 +119,7 @@ async function main() {
             window.__previewEngine = Renderer.engine
         })
         await page.locator('.guest-character-class-option button').first().click()
+        await page.locator('.guest-character-creation-continue-action').click()
         await Promise.race([
             page.locator('#renderCanvas.game-session-canvas--visible').waitFor(),
             page.waitForEvent('framenavigated', {predicate: frame => frame === page.mainFrame()}).then(() => {
@@ -161,6 +176,7 @@ async function main() {
         await page.locator('#local-character-name').fill('SecondHero')
         await page.locator('form button').click()
         await page.locator('.guest-character-class-option button').nth(1).click()
+        await page.locator('.guest-character-creation-continue-action').click()
         await page.locator('#renderCanvas.game-session-canvas--visible').waitFor()
         await renderedFrames()
         await logout()

@@ -1,7 +1,10 @@
 import {
+    Color3,
     Matrix,
     Mesh,
+    MeshBuilder,
     Scene,
+    StandardMaterial,
     TransformNode, Vector2, Vector3,
 } from '@babylonjs/core'
 import { Builder } from '@/babylon/builder'
@@ -49,11 +52,14 @@ export const WorldRenderer = {
     blockWithAlpha1: null as SymmetricBlock | null,
     translucentPlane: null as SymmetricBlock | null,
     worldParentNode: null as TransformNode | null,
+    grassExclusionMarkers: null as Mesh | null,
 
     lastPos: null as Vector3 | null,
 
     async initialize(scene: Scene) {
         this.lastPos = null
+        this.grassExclusionMarkers?.dispose(false, true)
+        this.grassExclusionMarkers = null
         this.worldParentNode = new TransformNode("worldNode", scene)
 
         // Global blocks
@@ -154,6 +160,7 @@ export const WorldRenderer = {
         if (GMManager.gmPanelVisible.value && GMManager.tab === GmTabs.FOG_EDIT) {
             GMFoggyAreas.renderMarkers()
         }
+        this.refreshGrassExclusionMarkers()
 
         this.block1!.setThinInstanceBuffers()
         this.staticTerrainContact?.upload(this.block1!.mesh, this.block1!.matrices.length)
@@ -175,6 +182,46 @@ export const WorldRenderer = {
         Lights.registerSharedLightMesh(this.blockWithAlpha1!.mesh)
         Lights.registerSharedLightMesh(this.translucentPlane!.mesh)
         Lights.registerSharedLightMesh(StoneBatch.prefab!.mesh)
+    },
+
+    refreshGrassExclusionMarkers() {
+        const parent = this.worldParentNode
+        if (!parent || !MyPlayer.myChar || Lights.indoor || !GMManager.gmPanelVisible.value || GMManager.tab !== GmTabs.BIOME_EDIT) {
+            this.grassExclusionMarkers?.setEnabled(false)
+            return
+        }
+        const world = WorldDataManager.worldDataMap.get(MyPlayer.worldId)
+        if (!world?.noGrassTiles.size) {
+            this.grassExclusionMarkers?.setEnabled(false)
+            return
+        }
+        const center = MyPlayer.myChar.getPositionRounded()
+        const matrices: Matrix[] = []
+        for (const tile of world.noGrassTiles) {
+            const x = Math.floor(tile / world.worldSize), z = tile % world.worldSize
+            const block = world.blockMap[x]?.[z]
+            if (!block || block.type <= 0 || block.type >= WATER_BLOCK_TYPE
+                || !ViewportManager.isPointInVisibleMatrix(x, z, 2, block.totalHeight, 0, center)) continue
+            matrices.push(Matrix.Translation(x, block.height + 0.065, z))
+        }
+        if (!matrices.length) {
+            this.grassExclusionMarkers?.setEnabled(false)
+            return
+        }
+        if (!this.grassExclusionMarkers) {
+            const scene = parent.getScene()
+            const mesh = MeshBuilder.CreateGround('grassExclusionMarkers', {width: 0.96, height: 0.96}, scene)
+            mesh.parent = parent
+            mesh.isPickable = false
+            const material = new StandardMaterial('grassExclusionMarkerMaterial', scene)
+            material.disableLighting = true
+            material.emissiveColor = new Color3(0.9, 0.16, 0.22)
+            material.alpha = 0.26
+            mesh.material = material
+            this.grassExclusionMarkers = mesh
+        }
+        updateWorldInstanceBuffers(this.grassExclusionMarkers, matrices, [])
+        this.grassExclusionMarkers.setEnabled(true)
     },
 
     addTerrainContactBlock(matrix: Matrix, uv: Vector2, blendGroundLighting = false, snowReach = 4 / 3,

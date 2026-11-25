@@ -63,6 +63,7 @@ export interface DayNightCycleSync {
 export interface WorldMapDataMessage {
     areas?: import('../data/worldAreas').WorldArea[]
     areasRevision?: number
+    noGrassTiles?: number[]
     id: number
     name: string
     size: number
@@ -73,6 +74,8 @@ export interface WorldMapDataMessage {
     mapChunk?: any
     foggyAreas?: FoggyAreaData[]
 }
+
+export type GrassExclusionChange = {worldId: number, tile: number, excluded: boolean} | {error: true}
 
 export interface FoggyAreaData {
     id: number

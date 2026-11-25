@@ -24,7 +24,7 @@
                 </div>
             </div>
 
-            <TouchControllers v-if="gameSessionActive && touchControlsReady" ref="touchControls" :settings-active="targetLockSettingsActive" />
+            <TouchControllers v-if="gameSessionActive" ref="touchControls" :settings-active="targetLockSettingsActive" />
 
             <label id="btn-target-lock" :class="{ 'target-lock--settings-active': targetLockSettingsActive }" style="display: none; position: absolute; width: 64px; height: 64px;" v-html="getTargetLockSvg('touch-target-icon', 'icon-target-lock')" @pointerdown="TargetingManager.onPointerDown()" @pointerup="TargetingManager.onPointerUp()"></label>
 
@@ -239,7 +239,6 @@ const respawnDelayRemaining = computed(() => Math.max(0, Math.ceil((MyPlayer.res
 const autoRespawnRemaining = computed(() => Math.max(0, Math.ceil((MyPlayer.autoRespawnAt.value - deathDialogTime.value) / 1000)))
 let deathDialogTimer: number | null = null
 let touchControlsLayoutTimeout: number | null = null
-let touchControlsActivationTimeout: number | null = null
 
 const gameLoading = ref(true)
 const displayLoginDialog = ref(false)
@@ -254,7 +253,6 @@ const errorDialogMessage = ref('')
 const errorDialogCanRestart = ref(false)
 const loginRequestSentFlag = ref(false)
 const gameSessionActive = ref(false)
-const touchControlsReady = ref(false)
 const loadingPhaseKey = ref('app.loadingPreparing')
 const loadingProgress = ref(5)
 
@@ -303,23 +301,12 @@ const onGameStarted = async () => {
     displayAccountCharacterNameDialog.value = false
     accountCharacterNameClaimClass.value = null
     loadingProgress.value = 100
-    await nextTick()
-    await new Promise<void>((resolve) => window.setTimeout(resolve, 450))
     gameLoading.value = false
-    await nextTick()
-    await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()))
     gameSessionActive.value = true
     loginRequestSentFlag.value = true
     await nextTick()
     GameManager.onResize()
     WorldRenderer.lastPos = null
-    if (touchControlsActivationTimeout !== null) {
-        window.clearTimeout(touchControlsActivationTimeout)
-    }
-    touchControlsActivationTimeout = window.setTimeout(() => {
-        touchControlsActivationTimeout = null
-        touchControlsReady.value = true
-    }, 500)
 }
 
 const onLoginFailed = () => {
@@ -359,10 +346,21 @@ const closeErrorDialog = () => {
 const startLocalCharacter = async (profile: CharacterProfile) => {
     loginRequestStarted()
     try {
-        // Unmount previews first so their cleanup cannot touch the new renderer.
+        // Unmount previews before disposing their scene.
         await nextTick()
-        if (Renderer.menuPreviewSceneUsed) await Renderer.gameStopped()
-        await Connector.initialize(profile.gm ? 'authoring' : 'play', profile)
+        const connection = Connector.initialize(profile.gm ? 'authoring' : 'play', profile)
+        if (Renderer.menuPreviewSceneUsed) {
+            // The worker only sends world data after the login request. Build
+            // the clean gameplay scene while it prepares the simulation.
+            const [runtime, renderer] = await Promise.allSettled([connection, Renderer.gameStopped()])
+            if (renderer.status === 'rejected') {
+                await Connector.closeConnection().catch(console.error)
+                throw renderer.reason
+            }
+            if (runtime.status === 'rejected') throw runtime.reason
+        } else {
+            await connection
+        }
         Connector.sendLoginRequest('', '', profile.name)
     } catch (error) {
         onLoginFailed()
@@ -637,8 +635,6 @@ onMounted(async () => {
         }
         console.log('GAME INITIALIZED', Date.now())
 
-        await nextTick()
-        await new Promise<void>((resolve) => window.setTimeout(resolve, 180))
         gameLoading.value = false
         displayLoginDialog.value = true
 
@@ -649,7 +645,6 @@ onMounted(async () => {
 onUnmounted(() => {
     if (deathDialogTimer !== null) window.clearInterval(deathDialogTimer)
     if (touchControlsLayoutTimeout !== null) window.clearTimeout(touchControlsLayoutTimeout)
-    if (touchControlsActivationTimeout !== null) window.clearTimeout(touchControlsActivationTimeout)
     window.removeEventListener('resize', resizeEventHandler)
     window.removeEventListener('orientationchange', scheduleTouchControlsLayout)
     document.removeEventListener('fullscreenchange', scheduleTouchControlsLayout)
@@ -889,11 +884,6 @@ const reloadPage = async () => {
 
 const logout = async (notifyServer: boolean = true) => {
     closeGameplayDialogs()
-    if (touchControlsActivationTimeout !== null) {
-        window.clearTimeout(touchControlsActivationTimeout)
-        touchControlsActivationTimeout = null
-    }
-    touchControlsReady.value = false
     gameSessionActive.value = false
     loginRequestSentFlag.value = false
     displayLoginDialog.value = false

@@ -1,6 +1,6 @@
 import {
     Bone, Color3, Color4, GPUParticleSystem, Matrix,
-    Mesh, ParticleSystem, PBRMaterial,
+    Material, Mesh, ParticleSystem, PBRMaterial,
     Quaternion,
     Scene,
     SceneLoader, Texture, TrailMesh, TransformNode, Vector2, Vector3
@@ -380,10 +380,16 @@ export interface EquipModelModifier {
     scale: Vector3
 }
 
-/**
- * One mesh-type for each equipable item
- * The mesh contains thin instances for each equipped item of this type
- */
+class EquipBatchMesh extends Mesh {
+    override isReady(completeCheck = false, forceInstanceSupport = false): boolean {
+        // An empty batch has no draw call. The scene-wide readiness check
+        // would otherwise compile a non-instanced variant that we never draw.
+        if (completeCheck && !forceInstanceSupport && !this.isEnabled()) return true
+        return super.isReady(completeCheck, forceInstanceSupport)
+    }
+}
+
+/** The shared thin-instance batch for one equipment model. */
 export class EquipItemType {
     id: number
     name: string = ""
@@ -412,7 +418,7 @@ export class EquipItemType {
         source.rotation = rotation
         source.scaling = scale
 
-        this.mesh = Mesh.MergeMeshes([source], true)!
+        this.mesh = Mesh.MergeMeshes([source], true, undefined, new EquipBatchMesh(source.name + '_merged', scene))!
         if (material != null) {
             this.mesh.material = material
         }
@@ -646,18 +652,32 @@ export const EquipManager = {
     },
 
     async warmUpShaders() {
-        // Source meshes and textures are loaded during initialize(). Compile
-        // their instanced material variants while the loading overlay is up.
+        const batches = new Map<Material, EquipItemType[]>()
         for (const type of this.itemTypes.values()) {
             const mesh = type.mesh
             if (mesh?.material == null || mesh.isDisposed()) continue
-            try {
-                type.ensureThinBuffers(type)
-                await mesh.material.forceCompilationAsync(mesh, {useInstances: true})
-            } catch (error) {
-                console.warn(`Equipment shader warm-up failed for model ${type.id}`, error)
-            }
+            let batch = batches.get(mesh.material)
+            if (!batch) batches.set(mesh.material, batch = [])
+            batch.push(type)
         }
+
+        // Babylon changes shader hot-swapping state on the material during
+        // compilation. Only warm up distinct materials at the same time.
+        const pending = batches.values()
+        const concurrency = Math.min(batches.size, Lights.supportsParallelShaderCompilation() ? 4 : 1)
+        await Promise.all(Array.from({length: concurrency}, async () => {
+            for (const batch of pending) {
+                for (const type of batch) {
+                    const mesh = type.mesh!
+                    try {
+                        type.ensureThinBuffers(type)
+                        await mesh.material!.forceCompilationAsync(mesh, {useInstances: true})
+                    } catch (error) {
+                        console.warn(`Equipment shader warm-up failed for model ${type.id}`, error)
+                    }
+                }
+            }
+        }))
     }
 }
 

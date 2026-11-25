@@ -681,3 +681,9 @@ export class GMWorldAreasRequest implements Message {
         revision?: number, areas?: import('../data/worldAreas').WorldArea[],
     }) {}
 }
+
+export class GMToggleGrassExclusion implements Message {
+    t = 1028
+
+    constructor(public d: {worldId: number, x: number, z: number}) {}
+}

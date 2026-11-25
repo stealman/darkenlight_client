@@ -64,6 +64,7 @@ import { GroundItemsManager } from '@/babylon/world/groundItemsManager'
 import { InventoryManager } from '@/data/inventoryManager'
 import { EmeraldsManager } from '@/gui/emeraldsManager'
 import { OnScreenMessageManager } from '@/gui/onScreenMessageManager'
+import type { GrassExclusionChange } from '@/network/messageIfs'
 import { t } from '@/i18n'
 import { CraftingManager } from '@/data/crafting/craftingManager'
 import { AudioManager } from '@/babylon/audio/audioManager'
@@ -101,6 +102,7 @@ export const MessageProcessor = {
                 case 104: this.processMagicArrow(msg.d); break
                 case 105: this.processHealingSpell(msg.d); break
                 case 106: this.processHealerTreatment(msg.d); break
+                case 107: this.processGrassExclusionChange(msg.d); break
                 case 103: CharacterManager.receivePickup(msg.d); break
                 case 102: WorldAreaManager.receive(msg.d); break
                 case 101: ActivityLogManager.receive(msg.d); break
@@ -379,6 +381,9 @@ export const MessageProcessor = {
         }
         MyPlayer.worldId = data.id
         MyPlayer.worldName = data.name
+        if (data.noGrassTiles) {
+            WorldDataManager.worldDataMap.get(data.id)!.noGrassTiles = new Set(data.noGrassTiles)
+        }
         if (worldChanged && WorldDataManager.worldDataMap.get(data.id)?.allChunksLoaded) MiniMap.redrawLocalWorld()
         if (worldChanged || data.areas) WorldAreaManager.setWorld(data.id, data.areas ?? [], data.areasRevision ?? 0, data.name)
         FoggyAreaManager.setAreas(data.foggyAreas ?? [])
@@ -396,6 +401,20 @@ export const MessageProcessor = {
                 WorldRenderer.renderWorld()
             }
         }
+    },
+
+    processGrassExclusionChange(data: GrassExclusionChange) {
+        if ('error' in data) {
+            OnScreenMessageManager.addMessage('Could not save the grass exclusion.', 'ERROR')
+            return
+        }
+        const world = WorldDataManager.worldDataMap.get(data.worldId)
+        if (!world) return
+        if (data.excluded) world.noGrassTiles.add(data.tile)
+        else world.noGrassTiles.delete(data.tile)
+        if (data.worldId !== MyPlayer.worldId) return
+        TerrainManager.refreshGrassExclusions()
+        WorldRenderer.refreshGrassExclusionMarkers()
     },
 
     removeMonster(data) {
@@ -743,6 +762,7 @@ export const MessageProcessor = {
         FoggyAreaManager.clearWorld()
         GMSpawns.removeAllMarkers()
         GMFoggyAreas.removeMarkers()
+        WorldRenderer.grassExclusionMarkers?.setEnabled(false)
         Lights.pruneDisposedMeshReferences()
     },
 

@@ -35,7 +35,6 @@ import { FightSplatsRenderer } from '@/babylon/world/fightSplatsRenderer'
 import { OnScreenMessageManager } from '@/gui/onScreenMessageManager'
 import { CharacterManager } from '@/babylon/character/characterManager'
 import { SelectedTargetPanel } from '@/gui/selectedTargetPanel'
-import { Tester } from '@/babylon/tester'
 import { ArrowsManager } from '@/babylon/world/arrowsManager'
 import { MyStatusPanel } from '@/gui/myStatusPanel'
 import { Inspector } from '@babylonjs/inspector'
@@ -158,7 +157,6 @@ export const Renderer = {
         Lights.sunLight.parent = MyPlayer.myModel!.node
         Lights.attachPersonalLight(MyPlayer.myModel!.node)
         MyStatusPanel.panel!.style.display = 'flex'
-        await Tester.runTest()
         const { WorldDataManager } = await import('@/data/worldDataManager')
         await WorldDataManager.terrainRenderLoad?.ready
 
@@ -172,6 +170,7 @@ export const Renderer = {
             ViewportManager.calculateViewport(this.camera)
         }
         WorldRenderer.renderWorld()
+        EquipManager.onFrame()
 
         onWarmupProgress?.(0, 4)
         await WorldRenderer.warmUpOcclusionFadeShaders()
@@ -186,8 +185,10 @@ export const Renderer = {
 
         ActiveMeshFreezer.start()
 
-        this.engine!.runRenderLoop(() => {
-            this.onFrame(this.scene)
+        const engine = this.engine!
+        await new Promise<void>(resolve => {
+            engine.onEndFrameObservable.addOnce(() => resolve())
+            engine.runRenderLoop(() => this.onFrame(this.scene))
         })
     },
 

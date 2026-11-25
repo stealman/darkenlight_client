@@ -5,6 +5,7 @@ import { ViewportManager } from '@/utils/viewport'
 import { WorldAreaPreview } from '@/gm/worldAreaPreview'
 import { GMSceneManager } from '@/babylon/gm/GmSceneManager'
 import { GMManager } from '@/gm/GM'
+import { TerrainManager } from '@/babylon/world/terrainManager'
 import { TargetingManager } from '@/gui/targettingManager'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { ActionButtonsManager } from '@/gui/actionButtonsManager'
@@ -67,7 +68,9 @@ export const Controller = {
                 if (pointerInfo.event.buttons === 1) {
                     if (pointerInfo.type === PointerEventTypes.POINTERDOWN) {
                         if (GMManager.consumeLeftClickEvents) {
-                            GMManager.onLeftClickEvent()
+                            if (!GMManager.noGrassTool.value || this.resolvePointerMove(pointerInfo, scene, true)) {
+                                GMManager.onLeftClickEvent()
+                            }
                         } else {
                             this.resolveLeftPressed(pointerInfo, scene)
                         }
@@ -306,24 +309,28 @@ export const Controller = {
         this.resolveRightPresssed(pointerInfo)
     },
 
-    resolvePointerMove(pointerInfo, scene) {
+    resolvePointerMove(pointerInfo: PointerInfo, scene: Scene, pickClick = false) {
         const { clientX, clientY } = pointerInfo.event
 
         // if distance from last pointer move is less than 10px, ignore
         const dx = clientX - this.lastPointerMove.x
         const dy = clientY - this.lastPointerMove.y
-        if (Math.sqrt(dx * dx + dy * dy) < 10) {
+        if (!pickClick && Math.sqrt(dx * dx + dy * dy) < 10) {
             return
         }
 
-        const pickResult = scene.pick(clientX, clientY)
+        const pickResult = scene.pick(clientX, clientY, GMManager.noGrassTool.value
+            ? mesh => mesh.isEnabled() && mesh.isPickable && mesh.isVisible
+                && TerrainManager.outdoorTerrain?.isSurfaceMesh(mesh) === true
+            : undefined)
         if (pickResult && pickResult.hit && pickResult.pickedPoint) {
             GMSceneManager.updateHoverBlockMarker(pickResult.pickedPoint.x, pickResult.pickedPoint.z)
-        } else if (pickResult?.ray) {
+        } else if (!pickClick && pickResult?.ray) {
             GMSceneManager.updateHoverBlockMarkerFromRay(pickResult.ray)
         }
 
         this.lastPointerMove = { x: clientX, y: clientY }
+        return !!pickResult?.pickedPoint
     },
 
     processJoystick(dx: number, dy: number) {

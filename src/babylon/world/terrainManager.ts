@@ -90,6 +90,11 @@ export const TerrainManager = {
         return !Lights.indoor
     },
 
+    refreshGrassExclusions() {
+        const world = WorldDataManager.worldDataMap.get(MyPlayer.worldId)
+        if (world && this.usesOutdoorTerrain()) this.outdoorTerrain?.refreshGrassExclusions(world.noGrassTiles)
+    },
+
     initializeDungeonBlock() {
         const plane = this.terrainPlane!
         const scene = plane.getScene()
@@ -114,7 +119,7 @@ export const TerrainManager = {
                 this.contactShadow ?? undefined, StepMarksRenderer.field ?? undefined)
             const load = WorldDataManager.terrainRenderLoad
             this.outdoorTerrain.render(map, center, snowCoverMask, world.renderRevision,
-                load?.worldId === MyPlayer.worldId ? load.data : undefined, world.originalBlocks)
+                load?.worldId === MyPlayer.worldId ? load.data : undefined, world.originalBlocks, world.noGrassTiles)
         } else {
             this.outdoorTerrain?.setEnabled(false)
         }
