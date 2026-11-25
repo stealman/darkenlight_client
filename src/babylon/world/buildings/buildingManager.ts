@@ -1,4 +1,4 @@
-import { Camera, Matrix, Mesh, MeshBuilder, PBRMaterial, Quaternion, Scene, TransformNode, Vector2, Vector3 } from '@babylonjs/core'
+import { Camera, Matrix, Mesh, MeshBuilder, PBRMaterial, Quaternion, Scene, TransformNode, Vector2, Vector3, VertexBuffer } from '@babylonjs/core'
 import { MaterialEnum1, MaterialEnumTrans, Materials } from '@/babylon/materials'
 import { WorldData, WorldDataManager } from '@/data/worldDataManager'
 import { ViewportManager } from '@/utils/viewport'
@@ -8,6 +8,7 @@ import { segmentIntersectsAabb } from '@/babylon/geometryUtils'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { BabylonUtils } from '@/babylon/utils'
 import { TargetingManager } from '@/gui/targettingManager'
+import { Settings } from '@/settings/settings'
 import { updateWorldInstanceBuffers } from '@/babylon/world/worldInstanceBuffers'
 import { WorldRenderer } from '../worldRenderer'
 import { TerrainManager, getTerrainHeightOffset, WATER_BLOCK_TYPE } from '../terrainManager'
@@ -19,10 +20,11 @@ import {
     HOUSE_ROOF_EAVE_OVERHANG, HOUSE_ROOF_END_OVERHANG, HOUSE_ROOF_THICKNESS, HUMAN_HOUSE_WIDTH, SHED_ROOF_OVERHANG,
 } from './buildingRoofSnow'
 import { configureBuildingWallDamp, encodeWallDampUv } from './buildingWallDamp'
+import { CONTACT_SHADOW_STRENGTH, contactShadowFalloff } from '../terrainContactShadow'
 import type { ContactShadowFootprint } from '../terrainContactShadow'
 import { OutdoorInstanceBatch } from '../outdoorInstanceBatch'
 import type { OutdoorInstance } from '../outdoorInstanceBatch'
-import { appendPavingAttributes, createStonePathRenderer, pavingStoneMatrix, PAVING_INSTANCE_ATTRIBUTE } from '../stonePathRenderer'
+import { appendPavingAttributes, createSimpleStonePathMesh, createStonePathRenderer, pavingStoneMatrix, PAVING_INSTANCE_ATTRIBUTE } from '../stonePathRenderer'
 import { StepMarksRenderer } from '../stepMarksRenderer'
 import { visitHouseFloorStones } from '../stonePathLayout'
 import type { PavingStone } from '../stonePathLayout'
@@ -72,6 +74,21 @@ const FLOOR_PAVING_ORIGIN = FLOOR_HEIGHT - 0.026
 const WALL_HEIGHT = 1
 const WALL_THICKNESS = 0.2
 const PILLAR_SIZE = 0.4
+
+const houseShadowFootprints: Omit<ContactShadowFootprint, 'height'>[] = []
+{
+    const left = -0.5, right = HOUSE_WIDTH - 0.5
+    const back = -0.5, front = HOUSE_DEPTH - 0.5
+    const wall = WALL_THICKNESS / 2, pillar = PILLAR_SIZE / 2
+    const add = (minX: number, minZ: number, maxX: number, maxZ: number) =>
+        houseShadowFootprints.push({minX, minZ, maxX, maxZ, reach: 0.60})
+    for (const side of [left, right]) {
+        add(side - wall, back, side + wall, front)
+        for (const z of [back, front]) add(side - pillar, z - pillar, side + pillar, z + pillar)
+    }
+    for (const side of [back, front]) add(left, side - wall, right, side + wall)
+}
+
 const DOOR_CENTER_X = 2
 const DOOR_OPENING_WIDTH = 1
 const DOOR_WIDTH = DOOR_OPENING_WIDTH - 0.1
@@ -128,6 +145,7 @@ interface BuildingPrefabs {
     blocks: Record<OpaquePartGroup, BuildingBlockPart[]>
     glassPanes: Matrix[]
     paving: {stone: PavingStone, matrix: Matrix}[]
+    pavingColors: {kind: string, stride: number, values: number[]}[]
 }
 
 class BuildingView {
@@ -535,10 +553,14 @@ class BuildingView {
         }
     }
 
-    pavingInstances(batch: OutdoorInstanceBatch, world: WorldData | undefined): OutdoorInstance[] {
+    pavingInstances(batch: OutdoorInstanceBatch, detailed: boolean, world: WorldData | undefined): OutdoorInstance[] {
         const position = this.mesh.position
         const transform = Matrix.RotationY(this.mesh.rotation.y).multiply(Matrix.Translation(position.x, position.y, position.z))
         const uv = Vector2.Zero()
+        if (!detailed) {
+            const attributes = this.prefabs.pavingColors
+            return this.prefabs.paving.map(({matrix}, index) => ({batch, matrix: matrix.multiply(transform), uv, attributes, index, slot: -1}))
+        }
         const attributes = [{kind: PAVING_INSTANCE_ATTRIBUTE, stride: 4, values: [] as number[]}]
         return this.prefabs.paving.map(({stone, matrix}, index) => {
             const placed = matrix.multiply(transform)
@@ -1591,6 +1613,7 @@ export const BuildingManager = {
     groundContactTerrain: null as {world: WorldData, revision: number, snowMask: ReadonlySet<number>, outdoor: boolean, indoor: boolean} | null,
     glassBatchMesh: null as Mesh | null,
     floorBatch: null as OutdoorInstanceBatch | null,
+    detailedFloor: true,
     floorViews: new Map<BuildingView, {world?: WorldData, revision?: number, height: number, instances: OutdoorInstance[]}>(),
     fadeMaterial: null as PBRMaterial | null,
     parent: null as TransformNode | null,
@@ -1604,6 +1627,7 @@ export const BuildingManager = {
         this.groundContactTerrain = null
         this.floorViews.clear()
         this.floorBatch = null
+        this.detailedFloor = !Settings.isDetalLevelLow()
         this.parent = parent
         // Offset building occlusion from entity and tree visibility passes.
         this.occlusionCheckFrame = 5
@@ -1904,23 +1928,12 @@ export const BuildingManager = {
                 || x + building.getWidth() < center.x + ViewportManager.minX - 2
                 || z + building.getDepth() < center.z + ViewportManager.minZ - 2) continue
 
-            const addFootprint = (x0: number, z0: number, x1: number, z1: number) => {
-                const a = building.localTileToWorld(x0, z0)
-                const b = building.localTileToWorld(x1, z1)
+            for (const footprint of houseShadowFootprints) {
+                const a = building.localTileToWorld(footprint.minX, footprint.minZ)
+                const b = building.localTileToWorld(footprint.maxX, footprint.maxZ)
                 footprints.push({minX: Math.min(a.x, b.x), maxX: Math.max(a.x, b.x),
-                    minZ: Math.min(a.z, b.z), maxZ: Math.max(a.z, b.z), height, reach: 0.60})
+                    minZ: Math.min(a.z, b.z), maxZ: Math.max(a.z, b.z), height, reach: footprint.reach})
             }
-            const left = -0.5
-            const right = HOUSE_WIDTH - 0.5
-            const back = -0.5
-            const front = HOUSE_DEPTH - 0.5
-            const wall = WALL_THICKNESS / 2
-            const pillar = PILLAR_SIZE / 2
-            for (const side of [left, right]) {
-                addFootprint(side - wall, back, side + wall, front)
-                for (const z of [back, front]) addFootprint(side - pillar, z - pillar, side + pillar, z + pillar)
-            }
-            for (const side of [back, front]) addFootprint(left, side - wall, right, side + wall)
         }
         return footprints
     },
@@ -1964,9 +1977,10 @@ export const BuildingManager = {
 
     updateFloorBatch() {
         const world = WorldDataManager.worldDataMap.get(MyPlayer.worldId)
+        const revision = this.detailedFloor ? world?.renderRevision : undefined
         for (const [building, view] of this.floorViews) {
             if (building.visible && this.buildings.get(building.data.id) === building
-                && view.world === world && view.revision === world?.renderRevision && view.height === building.mesh.position.y) continue
+                && view.world === world && view.revision === revision && view.height === building.mesh.position.y) continue
             for (const instance of view.instances) instance.batch.remove(instance)
             this.floorViews.delete(building)
         }
@@ -1974,19 +1988,26 @@ export const BuildingManager = {
             if (!(building instanceof BuildingView) || building.data.tp !== HUMAN_HOUSE_TYPE
                 || !building.visible || this.floorViews.has(building)) continue
             if (!this.floorBatch && this.parent) {
-                const {mesh, material} = createStonePathRenderer(this.parent.getScene(), this.parent, true)
-                const terrainMarks = StepMarksRenderer.field
-                terrainMarks?.configure(material)
-                TerrainManager.contactShadow?.configure(material, false, !!terrainMarks)
+                const scene = this.parent.getScene()
+                let mesh: Mesh
+                if (this.detailedFloor) {
+                    const floor = createStonePathRenderer(scene, this.parent, true)
+                    const terrainMarks = StepMarksRenderer.field
+                    terrainMarks?.configure(floor.material)
+                    TerrainManager.contactShadow?.configure(floor.material, false, !!terrainMarks)
+                    mesh = floor.mesh
+                } else {
+                    mesh = createSimpleStonePathMesh(scene, this.parent, true)
+                }
                 mesh.alwaysSelectAsActiveMesh = true
                 Lights.registerSharedLightMesh(mesh)
                 mesh.onDisposeObservable.addOnce(() => Lights.unregisterSharedLightMesh(mesh))
                 this.floorBatch = new OutdoorInstanceBatch(mesh)
             }
             if (!this.floorBatch) continue
-            const instances = building.pavingInstances(this.floorBatch, world)
+            const instances = building.pavingInstances(this.floorBatch, this.detailedFloor, world)
             for (const instance of instances) this.floorBatch.add(instance)
-            this.floorViews.set(building, {world, revision: world?.renderRevision, height: building.mesh.position.y, instances})
+            this.floorViews.set(building, {world, revision, height: building.mesh.position.y, instances})
         }
         this.floorBatch?.flush()
     },
@@ -2451,9 +2472,24 @@ export const BuildingManager = {
         }
         Object.values(source).forEach((mesh) => mesh.dispose())
         const paving: BuildingPrefabs['paving'] = []
+        const colors: number[] = []
         if (!cabin) visitHouseFloorStones({left: -0.5, right: HOUSE_WIDTH - 0.5, front: -0.5, back: HOUSE_DEPTH - 0.5},
             {left: DOOR_CENTER_X - 1.5, right: DOOR_CENTER_X + 1.5, back: HOUSE_DEPTH + 0.5}, FLOOR_OVERHANG, FLOOR_PAVING_ORIGIN,
-            stone => paving.push({stone, matrix: pavingStoneMatrix(stone, true)}))
+            stone => {
+                const matrix = pavingStoneMatrix(stone, true)
+                paving.push({stone, matrix})
+                if (this.detailedFloor) return
+                // Bake the wall contact shadow into Babylon's instance color once per prefab.
+                const x = matrix.m[12], z = matrix.m[14]
+                let shade = 0
+                for (const footprint of houseShadowFootprints) {
+                    const dx = Math.max(footprint.minX - x, 0, x - footprint.maxX)
+                    const dz = Math.max(footprint.minZ - z, 0, z - footprint.maxZ)
+                    shade = Math.max(shade, contactShadowFalloff(Math.hypot(dx, dz), footprint.reach))
+                }
+                const light = 1 - shade * CONTACT_SHADOW_STRENGTH
+                colors.push(light, light, light, 1)
+            })
         return {
             variants,
             roof: mergeParts(groups.roof.parts, groups.roof.uvData, 'humanHouseRoof5x3Prefab', this.fadeMaterial!),
@@ -2462,6 +2498,7 @@ export const BuildingManager = {
             blocks: blockParts,
             glassPanes,
             paving,
+            pavingColors: [{kind: VertexBuffer.ColorInstanceKind, stride: 4, values: colors}],
         }
     },
 }

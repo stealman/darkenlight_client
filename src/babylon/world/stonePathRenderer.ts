@@ -1,4 +1,4 @@
-import { Matrix, Mesh, RawTexture, Texture, Vector2, VertexData } from '@babylonjs/core'
+import { Matrix, Mesh, PBRMaterial, RawTexture, Texture, Vector2, VertexBuffer, VertexData } from '@babylonjs/core'
 import type { Scene, TransformNode } from '@babylonjs/core'
 import { PBRCustomMaterial } from '@babylonjs/materials'
 import { TerrainEnum1 } from '@/babylon/materials'
@@ -15,7 +15,7 @@ import coverUrl from '@/adminUtils/assets/stone-path-cover-atlas.png'
 const HOUSE_FLOOR_STONE_BASE = -3.6
 
 function createPavingMesh(scene: Scene, floor: boolean) {
-    const mesh = new Mesh('terrainPavingStones', scene)
+    const mesh = new Mesh(floor ? 'houseFloorPavingStones' : 'terrainPavingStones', scene)
     const outline = [[-0.5, -0.38], [-0.39, -0.5], [0.37, -0.5], [0.5, -0.4],
         [0.5, 0.36], [0.37, 0.5], [-0.40, 0.5], [-0.5, 0.38]]
     const positions = [0, 1, 0], indices: number[] = [], normals: number[] = []
@@ -47,7 +47,8 @@ function createPavingMesh(scene: Scene, floor: boolean) {
     return mesh
 }
 
-function createPavingMaterial(scene: Scene, surfaceSize: Vector2, surfaceOrigin: Vector2, floor: boolean) {
+function createPavingMaterial(scene: Scene, surfaceSize: Vector2, surfaceOrigin: Vector2, floor: boolean,
+    simplifiedEffects: boolean) {
     const material = new PBRCustomMaterial(floor ? 'houseFloorPaving' : 'terrainPaving', scene)
     material.metallic = 0
     material.roughness = 1
@@ -127,7 +128,7 @@ function createPavingMaterial(scene: Scene, surfaceSize: Vector2, surfaceOrigin:
             1.0 - step(0.5, abs(floorTerrain - ${TerrainEnum1.TERRAIN_GRASS_WINTER.index}.0)),
             1.0 - step(0.5, abs(floorTerrain - ${TerrainEnum1.TERRAIN_MUDDY_DIRT.index}.0)));`
             : 'vec4 terrain = texture2D(pavingSurfaces, (groundUV - pavingSurfaceOrigin) / pavingSurfaceSize);'}
-        float breakup = terrainNoise(vPavingGround * 5.3 + 14.2);
+        float breakup = terrainNoise(vPavingGround * ${simplifiedEffects ? '3.1' : '5.3'} + 14.2);
         float scatter = terrainNoise(vPavingGround * 19.7 - 8.1);
         float flecks = terrainNoise(vPavingGround * 67.0 + 3.2);
         float outside = 1.0 - vPaving.w;
@@ -135,14 +136,14 @@ function createPavingMaterial(scene: Scene, surfaceSize: Vector2, surfaceOrigin:
         float vergeDeposits = smoothstep(0.42, 1.0, outside) * smoothstep(0.24, 0.66,
             breakup * 0.50 + scatter * 0.32 + flecks * 0.18 + rim * 0.20);
         // Let wet ground lap over several stones in patches anchored to the terrain.
-        float mudPools = terrainNoise(vPavingGround * 3.1 + vec2(8.3, 5.2));
+        float mudPools = ${simplifiedEffects ? 'mix(breakup, scatter, 0.25)' : 'terrainNoise(vPavingGround * 3.1 + vec2(8.3, 5.2))'};
         float mud = terrain.a * smoothstep(0.34, 0.72, mudPools * 0.55 + breakup * 0.26
             + scatter * 0.19 + outside * 0.18 + rim * 0.19 + shoulder * 0.13);
         float dust = mix(0.18, 0.51, terrain.a);
         float dirtCover = clamp(soilFilm * dust + shoulder * (0.31 + outside * 0.24)
             + vergeDeposits * mix(0.45, 0.61, terrain.a), 0.0, 0.91);
         float mossHabitat = max(max(terrain.g, terrain.b * 0.93), mix(0.32, 0.27, terrain.a));
-        float mossClusters = terrainNoise(vPavingGround * 3.8 - 21.0);
+        float mossClusters = ${simplifiedEffects ? '1.0 - breakup' : 'terrainNoise(vPavingGround * 3.8 - 21.0)'};
         float moss = mossHabitat * (1.0 - smoothstep(0.14, 0.80, terrain.r))
             * smoothstep(0.34, 0.72, mossClusters * 0.46 + scatter * 0.32 + flecks * 0.10
                 + rim * 0.21 + outside * 0.15) * (0.28 + rim * 0.48 + vergeDeposits * 0.24);
@@ -152,7 +153,7 @@ function createPavingMaterial(scene: Scene, surfaceSize: Vector2, surfaceOrigin:
             mud *= outside * 0.38 + stain * 0.12;
             moss *= outside * 0.32;
         ` : ''}
-        float drift = terrainNoise(vPavingGround * 2.4 + 23.0);
+        float drift = ${simplifiedEffects ? 'mix(breakup, 1.0 - scatter, 0.25)' : 'terrainNoise(vPavingGround * 2.4 + 23.0)'};
         float snow = terrain.r * smoothstep(0.41, 0.75, drift * 0.45 + breakup * 0.27
             + scatter * 0.16 + flecks * 0.12 + outside * 0.20 + rim * (0.08 + drift * 0.15) + vergeDeposits * 0.12)
             * smoothstep(0.02, 0.47, vStone.y);
@@ -176,9 +177,11 @@ function createPavingMaterial(scene: Scene, surfaceSize: Vector2, surfaceOrigin:
         vec2 wornRim = (vStone.xz + vec2(scatter - 0.5, flecks - 0.5) * 0.15) * rim * 0.30;
         vec2 bump = gritNormal * (1.0 - snow * 0.88) * (0.92 - dirtCover * 0.41) * (1.0 - mud * 0.58)
             + wornRim * (1.0 - snow * 0.68);
-        // The snow atlas is projected along the terrain axes, even on rotated stones.
-        vec2 snowBump = (texture2D(pavingCover, pavingProjection(projection, vec2(1.0, 1.0))).rg * 2.0 - 1.0) * (snow * 0.60);
-        normalW = normalize(normalW + vPavingX * bump.x + vPavingZ * bump.y - vec3(snowBump.x, 0.0, snowBump.y));
+        ${!simplifiedEffects ? `
+            // The snow atlas is projected along the terrain axes, even on rotated stones.
+            vec2 snowBump = (texture2D(pavingCover, pavingProjection(projection, vec2(1.0, 1.0))).rg * 2.0 - 1.0) * (snow * 0.60);
+        ` : ''}
+        normalW = normalize(normalW + vPavingX * bump.x + vPavingZ * bump.y${!simplifiedEffects ? ' - vec3(snowBump.x, 0.0, snowBump.y)' : ''});
     `)
     return material
 }
@@ -215,14 +218,41 @@ export function appendPavingAttributes(values: number[], stone: PavingStone, flo
     values.push(stone.variant + floorTerrain * 8, Number(stone.beige), stone.seed, stone.edge)
 }
 
-export function createStonePathRenderer(scene: Scene, parent: TransformNode, floor = false) {
+export function createSimpleStonePathMesh(scene: Scene, parent: TransformNode, floor = false) {
     const mesh = createPavingMesh(scene, floor)
-    if (floor) mesh.name = 'houseFloorPavingStones'
+    mesh.parent = parent
+
+    // Use the first gray cell of the 1024 px atlas. Keep UVs inside its texel centers.
+    const positions = mesh.getVerticesData(VertexBuffer.PositionKind)!
+    const uvs: number[] = []
+    for (let i = 0; i < positions.length; i += 3) {
+        const u = (0.5 + (positions[i] + 0.5) * 127) / 1024
+        const v = (0.5 + (positions[i + 2] + 0.5) * 127) / 1024
+        uvs.push(u, v)
+    }
+    mesh.setVerticesData(VertexBuffer.UVKind, uvs)
+
+    const material = new PBRMaterial(floor ? 'houseFloorPavingSimple' : 'terrainPavingSimple', scene)
+    material.metallic = 0
+    material.roughness = 1
+    material.metallicF0Factor = 0
+    material.specularIntensity = 0
+    material.usePhysicalLightFalloff = false
+    const atlas = new Texture(colorUrl, scene, true, false, Texture.BILINEAR_SAMPLINGMODE)
+    atlas.wrapU = atlas.wrapV = Texture.CLAMP_ADDRESSMODE
+    material.albedoTexture = atlas
+    mesh.material = material
+    mesh.onDisposeObservable.addOnce(() => material.dispose(false, true))
+    return mesh
+}
+
+export function createStonePathRenderer(scene: Scene, parent: TransformNode, floor = false, simplifiedEffects = false) {
+    const mesh = createPavingMesh(scene, floor)
     mesh.parent = parent
     mesh.receiveShadows = Settings.isShadowsEnabled()
     const surfaceSize = Vector2.One()
     const surfaceOrigin = Vector2.Zero()
-    const material = createPavingMaterial(scene, surfaceSize, surfaceOrigin, floor)
+    const material = createPavingMaterial(scene, surfaceSize, surfaceOrigin, floor, simplifiedEffects)
     mesh.material = material
     let surfaceField: RawTexture | undefined
     if (!floor) material.onBindObservable.add(() => {

@@ -6,6 +6,12 @@ import { HOUSE_FOUNDATION_SURFACE } from './buildings/buildingWallDamp'
 import type { TerrainStepField } from './terrainStepField'
 
 const SAMPLES_PER_TILE = 16
+export const CONTACT_SHADOW_STRENGTH = 0.42
+
+export function contactShadowFalloff(distance: number, reach: number): number {
+    const t = Math.min(1, distance / reach)
+    return 1 - t * t * (3 - 2 * t)
+}
 
 export interface ContactShadowFootprint {
     minX: number
@@ -45,7 +51,7 @@ export class TerrainContactShadow {
                 vec2 contactUV = (vPositionW.xz - terrainContactShadowBounds.xy) * terrainContactShadowBounds.zw;
                 if (all(greaterThanEqual(contactUV, vec2(0.0))) && all(lessThan(contactUV, vec2(1.0)))) {
                     float contactShade = ${shareStepTexture ? 'stepContactShadow(contactUV)' : 'texture2D(terrainContactShadowMask, contactUV).r'};
-                    surfaceAlbedo *= 1.0 - contactShade * 0.42 * smoothstep(0.65, 0.95, geometricNormalW.y);
+                    surfaceAlbedo *= 1.0 - contactShade * ${CONTACT_SHADOW_STRENGTH} * smoothstep(0.65, 0.95, geometricNormalW.y);
                 }
             }
         `)
@@ -94,9 +100,8 @@ export class TerrainContactShadow {
                     const tile = map[Math.floor(wx + 0.5)]?.[tileZ]
                     if (!tile || tile.type <= 0 || tile.type >= WATER_BLOCK_TYPE || Math.abs(tile.height - foot.height) > 0.15) continue
                     const dx = Math.max(foot.minX - wx, 0, wx - foot.maxX)
-                    const t = Math.min(1, Math.hypot(dx, dz) / reach)
                     const index = z * width + x
-                    this.mask[index] = Math.max(this.mask[index], Math.round(255 * (1 - t * t * (3 - 2 * t))))
+                    this.mask[index] = Math.max(this.mask[index], Math.round(255 * contactShadowFalloff(Math.hypot(dx, dz), reach)))
                 }
             }
         }

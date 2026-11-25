@@ -435,26 +435,30 @@ export function configureSnowmelt(material: PBRCustomMaterial, wallsOnly = false
     `)
 }
 
-export function configureSnowGlints(material: PBRCustomMaterial, transition?: 'standard' | 'grass') {
-    if (!transition) material.AddAttribute(PAVING_SNOW_ATTRIBUTE)
-    material.Vertex_Definitions(`${material.CustomParts.Vertex_Definitions ?? ''}
-        ${transition ? '' : 'attribute vec3 terrainPavingSnow;'}
-        varying vec3 vPavingSnow;
-    `)
-    material.Vertex_After_WorldPosComputed(`${material.CustomParts.Vertex_After_WorldPosComputed ?? ''}
-        ${transition ? `vPavingSnow = vec3(vTerrainTile.xy, floor(terrainSurface.w / ${PAVING_SNOW_FLAG_SHIFT}.0));` : `
-        vec2 pavingCenter = (world * vec4(terrainPavingSnow.x, 0.0, terrainPavingSnow.y, 1.0)).xz;
-        vPavingSnow = vec3(worldPos.xz - pavingCenter + 0.5, terrainPavingSnow.z);`}
-    `)
+export function configureSnowGlints(material: PBRCustomMaterial, transition: 'standard' | 'grass' | undefined,
+    renderPavingSnow: boolean, varyRoughness: boolean) {
+    if (renderPavingSnow) {
+        if (!transition) material.AddAttribute(PAVING_SNOW_ATTRIBUTE)
+        material.Vertex_Definitions(`${material.CustomParts.Vertex_Definitions ?? ''}
+            ${transition ? '' : 'attribute vec3 terrainPavingSnow;'}
+            varying vec3 vPavingSnow;
+        `)
+        material.Vertex_After_WorldPosComputed(`${material.CustomParts.Vertex_After_WorldPosComputed ?? ''}
+            ${transition ? `vPavingSnow = vec3(vTerrainTile.xy, floor(terrainSurface.w / ${PAVING_SNOW_FLAG_SHIFT}.0));` : `
+            vec2 pavingCenter = (world * vec4(terrainPavingSnow.x, 0.0, terrainPavingSnow.y, 1.0)).xz;
+            vPavingSnow = vec3(worldPos.xz - pavingCenter + 0.5, terrainPavingSnow.z);`}
+        `)
+    }
     material.Fragment_Definitions(`${material.CustomParts.Fragment_Definitions ?? ''}
-        ${transition ? '' : terrainNoiseShader}
-        varying vec3 vPavingSnow;
+        ${!transition && (renderPavingSnow || varyRoughness) ? terrainNoiseShader : ''}
+        ${renderPavingSnow ? 'varying vec3 vPavingSnow;' : ''}
         float snowGlintCoverage;
-        float snowGlintRoughness;
+        ${varyRoughness ? 'float snowGlintRoughness;' : ''}
     `)
     const coverage = transition === 'grass' ? 'wall ? snowWeight : grassWeight' : transition ? 'grassWeight' : '1.0'
     material.Fragment_Before_Lights(`${material.CustomParts.Fragment_Before_Lights ?? ''}
         snowGlintCoverage = ${coverage};
+        ${renderPavingSnow ? `
         float pavingSnowFlags = floor(vPavingSnow.z + 0.5);
         if (${transition ? '!wall && ' : ''}pavingSnowFlags >= 16.0 && snowGlintCoverage > 0.0) {
             vec2 p = vPositionW.xz;
@@ -477,13 +481,14 @@ export function configureSnowGlints(material: PBRCustomMaterial, transition?: 's
             surfaceAlbedo *= mix(vec3(1.0), vec3(0.46, 0.35, 0.25), tracked * mix(0.34, 0.70, dirt));
             snowGlintCoverage *= 1.0 - tracked * mix(0.70, 0.95, dirt);
         }
-        if (snowGlintCoverage > 0.0) {
+        ` : ''}
+        ${varyRoughness ? `if (snowGlintCoverage > 0.0) {
             vec2 p = vPositionW.xz + vPositionW.y * vec2(0.61, -0.47);
             float variation = terrainNoise(p * 1.25 + vec2(13.2, 7.1));
             snowGlintRoughness = mix(0.64, 0.38, variation);
-        }
+        }` : ''}
     `)
-    material.Fragment_Custom_MetallicRoughness(`${material.CustomParts.Fragment_Custom_MetallicRoughness ?? ''}
+    if (varyRoughness) material.Fragment_Custom_MetallicRoughness(`${material.CustomParts.Fragment_Custom_MetallicRoughness ?? ''}
         if (snowGlintCoverage > 0.0) {
             // The existing bumped normal shapes the highlight on the slopes of each depression.
             metallicRoughness.g = mix(metallicRoughness.g, snowGlintRoughness, snowGlintCoverage);

@@ -87,8 +87,10 @@ type TerrainRenderOptions = {
 
 type TerrainDemo = {map: MapBlock[][], center: number, boundaries: number[], isBank: (x: number, z: number) => boolean}
 
-export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode, transitionBoundary: Vector3, demo?: TerrainDemo) {
+export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode, transitionBoundary: Vector3, demo?: TerrainDemo,
+    renderPavingSnow = true) {
     const wetness = !!demo || Settings.isDetalLevelHigh()
+    const snowGlints = !!demo || !Settings.isDetalLevelLow()
     const plane = Builder.createHorizontalPlane(scene, parent, 1, 0)
     plane.name = 'adminUtilsTerrainTops'
     plane.receiveShadows = Settings.isShadowsEnabled()
@@ -116,7 +118,7 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
         type: SNOW_DIRT, colorUrl: snowColorUrl,
         normal: {url: snowNormalUrl, strength: 1.5}, patterns: terrainCoverPatterns, varyAdjacentPatches: true,
     })
-    configureSnowGlints(snowAtlas.material)
+    configureSnowGlints(snowAtlas.material, undefined, renderPavingSnow, snowGlints)
     const rockAtlas = createTerrainAtlasPreview(plane, 'adminUtilsRock', {
         type: ROCK, colorUrl: rockColorUrl,
         normal: {url: rockNormalUrl, strength: 1.5},
@@ -156,8 +158,8 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
         const snowCover = cover === snowAtlas.material
         if (snowCover) {
             if (wetness) configureSnowmelt(material, withGrass)
-            configureSnowGlints(material, withGrass ? 'grass' : 'standard')
-            snowTransitions.add(mesh)
+            configureSnowGlints(material, withGrass ? 'grass' : 'standard', renderPavingSnow, snowGlints)
+            if (renderPavingSnow) snowTransitions.add(mesh)
         }
         const soilCover = mudCover || dryCover
         const soilSubstrate = withDirt || drySubstrate
@@ -413,7 +415,7 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
             atlas.render(surfaces, takeTile(type, type !== grassType ? undefined : snowGrass ? false
                 : rockPartner === type || (!withRock && !snow) ? true : undefined), undefined, submit)
         }
-        snowAtlas.render(surfaces, takeTile(SNOW_DIRT, snow ? true : undefined), undefined, (mesh, batch, attributes) => {
+        snowAtlas.render(surfaces, takeTile(SNOW_DIRT, snow ? true : undefined), undefined, renderPavingSnow ? (mesh, batch, attributes) => {
             const values: number[] = []
             batch.forEachInstance(tile => {
                 const x = Math.floor(tile / surfaces.stride), z = tile % surfaces.stride
@@ -425,7 +427,7 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
                 if (values.length) mesh.thinInstanceSetBuffer(paving.kind, new Float32Array(values), paving.stride)
                 batch.apply(mesh)
             }
-        })
+        } : submit)
         rockAtlas.render(surfaces, takeTile(ROCK, withRock ? false : undefined), surfaces.rockWalls, submit)
         for (const mesh of transitionMeshes) {
             const batch = batches.get(mesh)

@@ -181,6 +181,7 @@ export const TerrainManager = {
         const minZ = viewportCenter ? Math.max(0, viewportCenter.z + ViewportManager.minZ) : 0
         const maxX = viewportCenter ? Math.min(maxIndex, viewportCenter.x + ViewportManager.maxX) : maxIndex
         const maxZ = viewportCenter ? Math.min(maxIndex, viewportCenter.z + ViewportManager.maxZ) : maxIndex
+        const renderPaving = !outdoor && Settings.detailLevel.paving === 'detailed'
         for (let x = minX; x <= maxX; x++) {
             for (let z = minZ; z <= maxZ; z++) {
                 const block = blockMap[x][z]
@@ -190,7 +191,7 @@ export const TerrainManager = {
                     continue
                 }
 
-                if (!outdoor && block.type > 0 && (block.stonePath || block.beigeStonePath)) {
+                if (renderPaving && block.type > 0 && (block.stonePath || block.beigeStonePath)) {
                     const pathMatrix = Matrix.Scaling(1, 0.12, 1)
                     pathMatrix.setTranslationFromFloats(x, block.height + 0.56, z)
                     WorldRenderer.block1!.matrices.push(pathMatrix)
