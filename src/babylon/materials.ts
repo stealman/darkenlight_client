@@ -6,6 +6,9 @@ import {
 import { PBRCustomMaterial } from '@babylonjs/materials'
 import { MapBlock } from '@/data/worldDataManager'
 
+// The shared block atlas has 16 columns. An extra atlas width flags an emissive top face.
+export const BLOCK_TOP_GLOW_U_OFFSET = 16
+
 export interface PBRBasicAtts {
     metallic: number
     roughness: number
@@ -81,11 +84,22 @@ export const Materials = {
         const material = this.getPBRCustomMaterial(scene, "sym_block_mats1", this.BASE_PATH, 'block_materials1.png', 1 / 16, 1 / 16, false)
         // Tint only birch bark; keep the shared atlas and instance batches intact.
         const bark = MaterialEnum1.BIRCH_BARK.uv
-        material.Vertex_Definitions(`${material.CustomParts.Vertex_Definitions}\nvarying float vBirchBarkTint;`)
-        material.Vertex_MainEnd(`vBirchBarkTint = distance(uvc, vec2(${bark.x}, ${bark.y})) < 0.01 ? 0.6 : 1.0;`)
-        material.Fragment_Definitions('varying float vBirchBarkTint;')
+        const varyings = 'varying float vBirchBarkTint; varying float vBlockTopGlow;'
+        material.Vertex_Definitions(`${material.CustomParts.Vertex_Definitions}\n${varyings}`)
+        material.Vertex_Before_PositionUpdated(`
+            vBlockTopGlow = step(${BLOCK_TOP_GLOW_U_OFFSET}.0, uvc.x);
+            vec2 blockAtlasOffset = vec2(uvc.x - vBlockTopGlow * ${BLOCK_TOP_GLOW_U_OFFSET}.0, uvc.y);
+            uvUpdated += blockAtlasOffset;
+        `)
+        material.Vertex_MainEnd(`vBirchBarkTint = distance(blockAtlasOffset, vec2(${bark.x}, ${bark.y})) < 0.01 ? 0.6 : 1.0;`)
+        material.Fragment_Definitions(varyings)
         material.Fragment_Custom_Albedo('result *= vBirchBarkTint;')
+        material.Fragment_Before_FinalColorComposition(`
+            float blockTopGlow = vBlockTopGlow * smoothstep(0.75, 0.95, geometricNormalW.y);
+            finalEmissive += vec3(0.55, 0.18, 0.045) * (vec3(0.035) + surfaceAlbedo) * blockTopGlow;
+        `)
         material.bumpTexture = new Texture(this.BASE_PATH + 'block_materials1_norm.png', scene)
+        material.bumpTexture.level = 1.5
         material.bumpTexture.uScale = 1 / 16
         material.bumpTexture.vScale = 1 / 16
 

@@ -1,5 +1,6 @@
 import { Matrix, Vector2, Vector3 } from '@babylonjs/core'
 import { BaseStaticObject } from '@/babylon/world/statics/objects/baseStaticObject'
+import { BLOCK_TOP_GLOW_U_OFFSET } from '@/babylon/materials'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
 
 export type CemeteryFacing = '-X' | '+X' | '-Z' | '+Z'
@@ -244,10 +245,13 @@ export class GargoyleOnPedestal extends StoneGargoyle {
 }
 
 export class CemeteryPedestal extends CemeteryObject {
+    hasEmberBowl = false
+    private readonly litTopMaterial = new Vector2(this.material.x + BLOCK_TOP_GLOW_U_OFFSET, this.material.y)
+
     render() {
         this.part(0.92, 0.18, 0.92, 0, 0.09, 0, this.material)
         this.part(0.72, 0.78, 0.72, 0, 0.57, 0, this.accentMaterial)
-        this.part(0.86, 0.16, 0.86, 0, 1.04, 0, this.material)
+        this.part(0.86, 0.16, 0.86, 0, 1.04, 0, this.hasEmberBowl ? this.litTopMaterial : this.material)
     }
 
     getPlacementSurfaceHeight(): number {

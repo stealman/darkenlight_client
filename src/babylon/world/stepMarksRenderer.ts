@@ -67,7 +67,7 @@ export const StepMarksRenderer = {
             pos: new Vector3(footX, (soilHeight ?? yPos) + 0.01, footZ),
             rot: -randomize + Math.random() * randomize * 2 + rot + Math.PI / 2,
             creationTime: time,
-            deadTime: time + (soil ? 3000 : own ? 300000 : 60000),
+            deadTime: time + (soil ? 20000 : own ? 300000 : 60000),
             soil
         }
         if (soil) {
@@ -93,7 +93,6 @@ export const StepMarksRenderer = {
         const ownChanged = this.pruneMarks(this.myStepMarks, time, this.maxOwnMarks)
         const otherChanged = this.pruneMarks(this.otherStepMarks, time, this.maxOtherMarks)
         const soilChanged = this.pruneMarks(this.soilStepMarks, time, MAX_SOIL_STEPS)
-        this.field?.setTime(time, Settings.isDetalLevelHigh())
         if (this.dirty || ownChanged || otherChanged || soilChanged) {
             this.field?.update(this.myStepMarks, this.otherStepMarks, this.soilStepMarks)
             this.dirty = false

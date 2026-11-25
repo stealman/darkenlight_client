@@ -1,12 +1,12 @@
 import { Constants, Engine, RawTexture, Scene, Texture } from '@babylonjs/core'
-import type { Vector2, Vector3 } from '@babylonjs/core'
+import type { Color3, Vector2, Vector3 } from '@babylonjs/core'
 import type { PBRCustomMaterial } from '@babylonjs/materials'
 import { Settings } from '@/settings/settings'
 import { fightSplatShader, MAX_FIGHT_SPLATS } from './fightSplatShader'
 import type { TerrainSplat } from './fightSplatShader'
 
 export const MAX_STEP_MARKS = 250
-export const MAX_SOIL_STEPS = 50
+export const MAX_SOIL_STEPS = 100
 const HALF_LENGTH = 0.2533
 const HALF_WIDTH = 0.10
 const SOIL_HALF_LENGTH = 0.1933
@@ -17,14 +17,20 @@ const ROW_SIZE = TEXTURE_WIDTH * 4
 // Each oval touches at most four unit cells. Each entry uses two groups of four floats.
 const STEP_ROWS = Math.ceil((BUCKET_COUNT + (MAX_STEP_MARKS * 2 + MAX_SOIL_STEPS) * 4 * 2) / TEXTURE_WIDTH)
 const SPLAT_ROWS = Math.ceil((BUCKET_COUNT + MAX_FIGHT_SPLATS * 4 * 3) / TEXTURE_WIDTH)
-const MARK_ROWS = STEP_ROWS + SPLAT_ROWS
+const GLOW_CELL_SIZE = 8
+const MAX_TERRAIN_GLOWS = 256
+const GLOW_START_ROW = STEP_ROWS + SPLAT_ROWS
+// A glow spans at most four cells and stores two texels per cell.
+const GLOW_ROWS = Math.ceil((BUCKET_COUNT + MAX_TERRAIN_GLOWS * 4 * 2) / TEXTURE_WIDTH)
+const MARK_ROWS = GLOW_START_ROW + GLOW_ROWS
 
 export type TerrainStep = {pos: Vector3, rot: number, creationTime: number, deadTime: number, soil: boolean}
 export type StepCoverage = {snow?: string, soil?: string}
+type TerrainGlow = {x: number, y: number, z: number, radius: number, color: Color3, intensity: number}
 
-function visitMarkBuckets({x, z}: Vector3, reach: number, visit: (bucket: number) => void) {
-    for (let cellZ = Math.floor(z - reach); cellZ <= Math.floor(z + reach); cellZ++) {
-        for (let cellX = Math.floor(x - reach); cellX <= Math.floor(x + reach); cellX++) {
+function visitMarkBuckets({x, z}: Pick<Vector3, 'x' | 'z'>, reach: number, visit: (bucket: number) => void, cellSize = 1) {
+    for (let cellZ = Math.floor((z - reach) / cellSize); cellZ <= Math.floor((z + reach) / cellSize); cellZ++) {
+        for (let cellX = Math.floor((x - reach) / cellSize); cellX <= Math.floor((x + reach) / cellSize); cellX++) {
             visit((cellX * 73 + cellZ * 151) & (BUCKET_COUNT - 1))
         }
     }
@@ -33,6 +39,10 @@ function visitMarkBuckets({x, z}: Vector3, reach: number, visit: (bucket: number
 export class TerrainStepField {
     private readonly data = new Float32Array(ROW_SIZE * STEP_ROWS)
     private readonly splatData = new Float32Array(ROW_SIZE * SPLAT_ROWS)
+    private readonly glowData = new Float32Array(ROW_SIZE * GLOW_ROWS)
+    private readonly glows = new Map<string, TerrainGlow>()
+    private glowsDirty = false
+    private glowLightFactor = 0
     private readonly counts = new Uint16Array(BUCKET_COUNT)
     private readonly cursor = new Uint16Array(BUCKET_COUNT)
     private texture: RawTexture
@@ -72,6 +82,7 @@ export class TerrainStepField {
             this.textureData = new Float32Array(textureWidth * (height + MARK_ROWS))
             this.copyMarkRows(this.data, 0, STEP_ROWS, textureWidth)
             this.copyMarkRows(this.splatData, STEP_ROWS, SPLAT_ROWS, textureWidth)
+            this.copyMarkRows(this.glowData, GLOW_START_ROW, GLOW_ROWS, textureWidth)
         }
         this.shadowWidth = width
         this.shadowHeight = height
@@ -103,9 +114,14 @@ export class TerrainStepField {
         this.engine.updateTextureData(this.texture.getInternalTexture()!, data, 0, z, width, height)
     }
 
-    setTime(time: number, wetSteps: boolean) {
+    onFrame(time: number, glowLightFactor: number) {
         this.time = (time - this.timeOrigin) / 1000
-        this.wetSteps = wetSteps
+        this.wetSteps = Settings.isDetalLevelHigh()
+        this.glowLightFactor = glowLightFactor
+        if (this.glowsDirty) {
+            this.glowsDirty = false
+            this.uploadGlows()
+        }
     }
 
     configureAtlas(material: PBRCustomMaterial, snowOffsets: Vector2[], soilOffsets: Vector2[]) {
@@ -120,6 +136,86 @@ export class TerrainStepField {
             varying vec2 vStepAtlas;
         `)
         this.configure(material, {snow: 'vStepAtlas.x', soil: 'vStepAtlas.y'})
+        this.configureGlow(material)
+    }
+
+    setGlow(id: string, x: number, y: number, z: number, radius: number, color: Color3, intensity: number) {
+        radius = Math.min(radius, GLOW_CELL_SIZE / 2)
+        const current = this.glows.get(id)
+        if (current?.x === x && current.y === y && current.z === z && current.radius === radius
+            && current.color === color && current.intensity === intensity) return
+        this.glows.set(id, {x, y, z, radius, color, intensity})
+        this.glowsDirty = true
+    }
+
+    removeGlow(id: string) {
+        if (this.glows.delete(id)) this.glowsDirty = true
+    }
+
+    private uploadGlows() {
+        if (this.glows.size === 0) return
+        const visibleGlows = Array.from(this.glows.values()).slice(0, MAX_TERRAIN_GLOWS)
+        this.counts.fill(0)
+        for (const glow of visibleGlows) {
+            visitMarkBuckets(glow, glow.radius, bucket => this.counts[bucket]++, GLOW_CELL_SIZE)
+        }
+        const end = this.writeBucketRanges(this.glowData, 2)
+        for (const glow of visibleGlows) {
+            visitMarkBuckets(glow, glow.radius, bucket => {
+                const offset = this.cursor[bucket] * 4
+                this.cursor[bucket] += 2
+                this.glowData[offset] = glow.x
+                this.glowData[offset + 1] = glow.y
+                this.glowData[offset + 2] = glow.z
+                this.glowData[offset + 3] = glow.radius
+                this.glowData[offset + 4] = glow.color.r * glow.intensity
+                this.glowData[offset + 5] = glow.color.g * glow.intensity
+                this.glowData[offset + 6] = glow.color.b * glow.intensity
+                this.glowData[offset + 7] = (glow.x * 0.73 + glow.z * 1.51) % (2 * Math.PI)
+            }, GLOW_CELL_SIZE)
+        }
+        this.uploadMarkRows(this.glowData, GLOW_START_ROW, end)
+    }
+
+    configureGlow(material: PBRCustomMaterial) {
+        material.AddUniform('terrainGlowLightFactor', 'float', null)
+        const attach = material.AttachAfterBind.bind(material)
+        material.AttachAfterBind = (mesh, effect) => {
+            attach(mesh, effect)
+            effect.setFloat('terrainGlowLightFactor', this.glows.size > 0 ? this.glowLightFactor : 0)
+        }
+        material.Fragment_Definitions(`
+            ${material.CustomParts.Fragment_Definitions ?? ''}
+            vec3 terrainGlowAt(vec3 positionW, vec3 surfaceNormal) {
+                int bucket = terrainMarkBucket(positionW.xz / ${GLOW_CELL_SIZE}.0);
+                vec2 range = terrainMarkTexel(bucket, ${GLOW_START_ROW}).xy;
+                vec3 glow = vec3(0.0);
+                float upwardWeight = smoothstep(0.45, 0.9, surfaceNormal.y);
+                for (int i = int(range.x); i < int(range.y); i += 2) {
+                    vec4 stamp = terrainMarkTexel(i, ${GLOW_START_ROW});
+                    vec3 delta = stamp.xyz - positionW;
+                    float distanceToGlow = length(delta.xz);
+                    float verticalReach = delta.y > 0.0 ? 2.8 : 1.7;
+                    if (distanceToGlow >= stamp.w || abs(delta.y) >= verticalReach) continue;
+                    float falloff = 1.0 - smoothstep(0.0, stamp.w, distanceToGlow);
+                    falloff *= mix(0.75, 1.0, falloff);
+                    falloff *= 1.0 - smoothstep(0.65, verticalReach, abs(delta.y));
+                    vec3 towardGlow = delta * inversesqrt(max(dot(delta, delta), 0.0001));
+                    float facingWeight = max(0.0, dot(surfaceNormal, towardGlow));
+                    float surfaceWeight = max(upwardWeight, facingWeight);
+                    vec4 colorPhase = terrainMarkTexel(i + 1, ${GLOW_START_ROW});
+                    float flicker = 0.94 + 0.06 * sin(terrainStepTime * 5.0 + colorPhase.w);
+                    glow += colorPhase.rgb * (falloff * surfaceWeight * flicker);
+                }
+                return min(glow, vec3(0.7));
+            }
+        `)
+        material.Fragment_Before_FinalColorComposition(`
+            ${material.CustomParts.Fragment_Before_FinalColorComposition ?? ''}
+            if (terrainGlowLightFactor > 0.0) {
+                finalEmissive += surfaceAlbedo * terrainGlowAt(vPositionW, geometricNormalW) * terrainGlowLightFactor;
+            }
+        `)
     }
 
     update(ownSteps: TerrainStep[], otherSteps: TerrainStep[], soilSteps: TerrainStep[]) {
@@ -291,7 +387,7 @@ export class TerrainStepField {
                 if (any(greaterThan(stepCoverage, vec2(0.0)))) {
                     vec4 stepImpression = terrainStepImpression(vPositionW, stepCoverage);
                     vec2 stepStrength = stepImpression.zw * stepCoverage;
-                    stepWetness = stepStrength * terrainStepWetnessEnabled * 0.75;
+                    stepWetness = stepStrength * terrainStepWetnessEnabled * vec2(0.5625, 0.375);
                     surfaceAlbedo *= mix(vec3(1.0), vec3(0.73, 0.79, 0.85), stepStrength.x);
                     surfaceAlbedo *= mix(vec3(1.0), vec3(0.70, 0.66, 0.63), stepStrength.y);
                     vec3 stepSlope = vec3(stepImpression.x, 0.0, stepImpression.y);

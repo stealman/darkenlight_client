@@ -325,12 +325,19 @@ export const StaticsManager = {
             const stack = this.staticsByTile.get(tile)
             if (!stack) continue
             let surfaceHeight = 0
+            let support: StaticObject | undefined
+            let hasEmberBowl = false
             for (const obj of stack) {
+                hasEmberBowl ||= obj instanceof CemeteryEmberBowl
                 const height = obj.getPlacementSurfaceHeight()
-                if (height != null && !obj.shouldPlaceOnStatic()) surfaceHeight = Math.max(surfaceHeight, height)
+                if (height != null && height > surfaceHeight && !obj.shouldPlaceOnStatic()) {
+                    surfaceHeight = height
+                    support = obj
+                }
             }
             for (const obj of stack) {
                 obj.renderPosition.y = obj.position.y + (obj.shouldPlaceOnStatic() ? surfaceHeight : 0)
+                if (obj instanceof CemeteryPedestal) obj.hasEmberBowl = obj === support && hasEmberBowl
             }
         }
         this.dirtyStaticTiles.clear()
@@ -605,12 +612,16 @@ export const StaticsManager = {
             }
 
             if (obj instanceof FireplaceSmall || obj instanceof FireplaceLarge || obj instanceof WallTorch
-                || obj instanceof TorchStand || obj instanceof LanternStand || obj instanceof CemeteryEmberBowl
+                || obj instanceof TorchStand || obj instanceof LanternStand
                 || obj instanceof StoneEntrance) {
                 obj.setLightVisible(ViewportManager.isPointNearVisibleBounds(
                     obj.renderPosition.x,
                     obj.renderPosition.z,
                     obj.getLightVisibilityRadius(),
+                ))
+            } else if (obj instanceof CemeteryEmberBowl) {
+                obj.setTerrainGlowVisible(ViewportManager.isPointNearVisibleBounds(
+                    obj.renderPosition.x, obj.renderPosition.z, obj.glowRadius,
                 ))
             }
         }

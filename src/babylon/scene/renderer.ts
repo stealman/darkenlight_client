@@ -237,6 +237,7 @@ export const Renderer = {
             TreeManager.onFrame(timeRate, this.camera)
             BuildingManager.onFrame(timeRate, this.camera)
             Lights.onFrame(timeRate)
+            StepMarksRenderer.field?.onFrame(actualTime, Lights.indoor ? 1 : Lights.localLightFactor)
             FoggyAreaManager.onFrame()
             CharacterManager.onFrame(timeRate, actualTime, this.frame)
             NpcManager.onFrame(timeRate, actualTime, this.frame)

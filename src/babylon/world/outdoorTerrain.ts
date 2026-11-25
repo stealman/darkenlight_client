@@ -61,6 +61,7 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
     for (const material of new Set(renderer.meshes.map(mesh => mesh.material))) {
         if (material instanceof PBRCustomMaterial) {
             terrainSteps?.configure(material, renderer.stepMaterials.get(material))
+            terrainSteps?.configureGlow(material)
             contactShadow?.configure(material, false, !!terrainSteps)
         }
     }
