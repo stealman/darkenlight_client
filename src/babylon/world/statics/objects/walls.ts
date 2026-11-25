@@ -16,7 +16,7 @@ export class Wall2 extends BaseStaticObject {
 
     render() {
         const {x, y, z} = this.renderPosition
-        WorldRenderer.addTerrainContactBlock(Matrix.Translation(x, y + 1, z), this.material, true)
+        WorldRenderer.addWeatheredBlock(Matrix.Translation(x, y + 1, z), this.material, this.position, 0.83)
         WorldRenderer.block1!.matrices.push(Matrix.Translation(x, y + 2, z))
         WorldRenderer.block1!.uvData.push(this.material)
     }
@@ -271,7 +271,7 @@ export class Wall3 extends BaseStaticObject {
 
     render() {
         const {x, y, z} = this.renderPosition
-        WorldRenderer.addTerrainContactBlock(Matrix.Translation(x, y + 1, z), this.material, true)
+        WorldRenderer.addWeatheredBlock(Matrix.Translation(x, y + 1, z), this.material, this.position, 0.83)
         for (let i = 2; i <= 3; i++) {
             WorldRenderer.block1!.matrices.push(Matrix.Translation(x, y + i, z))
             WorldRenderer.block1!.uvData.push(this.material)
@@ -398,13 +398,12 @@ export class StoneEntrance extends BaseStaticObject {
             return
         }
 
-        const batch = WorldRenderer.block1!
         const runsAlongX = this.getSizeX() > this.getSizeZ()
         const addBlock = (widthOffset: number, depthOffset: number, height: number) => {
             const x = this.position.x + (runsAlongX ? widthOffset : depthOffset)
             const z = this.position.z + (runsAlongX ? depthOffset : widthOffset)
-            batch.matrices.push(Matrix.Translation(x, this.position.y + height, z))
-            batch.uvData.push(MaterialEnum1.TERRAIN_ROCK.uv)
+            const matrix = Matrix.Translation(x, this.position.y + height, z)
+            WorldRenderer.addWeatheredBlock(matrix, MaterialEnum1.TERRAIN_ROCK.uv, this.position, 0.75)
         }
 
         for (let depth = 0; depth < 2; depth++) {

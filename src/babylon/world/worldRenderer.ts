@@ -32,7 +32,7 @@ import { IndoorTerrainOcclusionManager } from '@/babylon/world/indoorTerrainOccl
 import { TerrainDebrisManager } from '@/babylon/world/terrainDebrisManager'
 import { StoneBatch } from '@/babylon/world/stoneBatch'
 import { isSnowRoof, outdoorSurfaceHeight } from '@/babylon/world/terrainRoofShape'
-import { StaticTerrainContact } from '@/babylon/world/statics/staticTerrainContact'
+import { SNOW_CONTACT_MAX_HEIGHT, StaticTerrainContact } from '@/babylon/world/statics/staticTerrainContact'
 import type { DampContact } from '@/babylon/world/statics/staticTerrainContact'
 
 // The viewport already renders a four-tile reserve. On touch devices, keep one
@@ -87,13 +87,7 @@ export const WorldRenderer = {
         this.worldParentNode = new TransformNode("worldNode", scene)
 
         // Global blocks
-        let blockMaterial = Materials.blockMat1!
-        this.staticTerrainContact = null
-        if (STATIC_TERRAIN_CONTACT_ENABLED && !Settings.isDetalLevelLow()) {
-            blockMaterial = Materials.createBlockMat1(scene)
-            blockMaterial.maxSimultaneousLights = Materials.blockMat1!.maxSimultaneousLights
-            this.staticTerrainContact = new StaticTerrainContact(blockMaterial)
-        }
+        const blockMaterial = this.createStaticBlockMaterial(scene, !Settings.isDetalLevelLow())
         this.block1 = new SymmetricBlock(Builder.createWrappedBlock(scene, this.worldParentNode), blockMaterial)
         this.block1.mesh.doNotSyncBoundingInfo = true
         this.block1.mesh.receiveShadows = true
@@ -245,6 +239,15 @@ export const WorldRenderer = {
         this.forcedGrassMarkers = updateGrassMarkers(parent, this.forcedGrassMarkers, 'forcedGrassMarkers', '#277EF0', blue)
     },
 
+    createStaticBlockMaterial(scene: Scene, terrainContact: boolean) {
+        this.staticTerrainContact = null
+        if (!terrainContact || !STATIC_TERRAIN_CONTACT_ENABLED) return Materials.blockMat1!
+        const material = Materials.createBlockMat1(scene)
+        material.maxSimultaneousLights = Materials.blockMat1!.maxSimultaneousLights
+        this.staticTerrainContact = new StaticTerrainContact(material)
+        return material
+    },
+
     addTerrainContactBlock(matrix: Matrix, uv: Vector2, blendGroundLighting = false, snowReach = 4 / 3,
         damp?: DampContact, baseContact?: StaticBaseContact) {
         const batch = this.block1!
@@ -303,6 +306,42 @@ export const WorldRenderer = {
             const terrainHeight = TerrainManager.usesOutdoorTerrain() ? outdoorSurfaceHeight(tile) : tile.height + getTerrainHeightOffset(tile, tile.snowed)
             if (terrainHeight !== undefined && Math.abs(foot - (terrainHeight + floor)) <= 0.15) {
                 this.staticTerrainContact.addDamp(index, terrainHeight + floor, damp)
+            }
+        }
+    },
+
+    addWeatheredBlock(matrix: Matrix, uv: Vector2, anchor: Vector3, wear: number, snowReach = 1.4,
+        blendGroundLighting = true) {
+        const batch = this.block1!
+        const index = batch.matrices.length
+        batch.matrices.push(matrix)
+        batch.uvData.push(uv)
+        const contact = this.staticTerrainContact
+        if (!contact || Lights.indoor) return
+
+        const m = matrix.m
+        const x = Math.round(m[12] - m[4] * 0.5)
+        const z = Math.round(m[14] - m[6] * 0.5)
+        const tile = WorldDataManager.getBlockMap()[x]?.[z]
+        if (!tile || tile.type <= 0 || tile.type >= WATER_BLOCK_TYPE || tile.stonePath || tile.beigeStonePath
+            || BuildingManager.hasFloorAtTile(x, z)) return
+        const height = outdoorSurfaceHeight(tile)!
+        if (Math.abs(anchor.y - height) > 0.15) return
+
+        const bottom = m[13] - 0.5 - (Math.abs(m[1]) + Math.abs(m[5]) + Math.abs(m[9])) * 0.5
+        if (tile.snowed) {
+            if (snowReach > 0 && bottom < height + SNOW_CONTACT_MAX_HEIGHT * snowReach
+                && this.getSnowSurfaceHeight(x, z) !== undefined) {
+                contact.addSnow(index, height, snowReach, blendGroundLighting)
+            }
+        } else if (wear > 0) {
+            const damp = tile.type === TerrainEnum1.TERRAIN_MUDDY_DIRT.index ? 1
+                : tile.type === TerrainEnum1.TERRAIN_GRASS_WINTER.index ? 0.38 : 0
+            const high = Settings.isDetalLevelHigh()
+            if (damp && bottom < height + (high ? 1 : 0.48)) {
+                const seed = Math.sin(anchor.x * 91.7 + anchor.z * 37.3) * 43758.5453
+                const variation = 0.38 + (seed - Math.floor(seed)) * 0.83
+                contact.addDamp(index, height, high ? 'groundWearHigh' : 'groundWear', Math.min(1.5, wear * damp * variation))
             }
         }
     },

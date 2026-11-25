@@ -20,19 +20,15 @@ export interface CemeteryWallDirection {
 }
 
 function addPart(width: number, height: number, depth: number, x: number, y: number, z: number, material: Vector2,
-    yaw = 0, roll = 0, snowContact?: 'fringe' | 'groundLighting') {
+    anchor: Vector3, wear: number, yaw = 0, roll = 0, blendGroundLighting = true) {
     const matrix = Matrix.Scaling(width, height, depth)
         .multiply(Matrix.RotationYawPitchRoll(yaw, 0, roll))
         .multiply(Matrix.Translation(x, y, z))
-    if (snowContact) {
-        WorldRenderer.addTerrainContactBlock(matrix, material, snowContact === 'groundLighting')
-        return
-    }
-    WorldRenderer.block1!.matrices.push(matrix)
-    WorldRenderer.block1!.uvData.push(material)
+    WorldRenderer.addWeatheredBlock(matrix, material, anchor, wear, 1.4, blendGroundLighting)
 }
 
 abstract class CemeteryObject extends BaseStaticObject {
+    protected readonly wear: number = 1
     protected readonly facing: CemeteryFacing
     protected readonly accentMaterial: Vector2
 
@@ -69,6 +65,8 @@ abstract class CemeteryObject extends BaseStaticObject {
             this.renderPosition.y + y + 0.5,
             this.renderPosition.z - x * sin + z * cos,
             material,
+            this.position,
+            this.wear,
             this.yaw + localYaw,
             roll,
         )
@@ -137,6 +135,8 @@ export class FallenCemeteryCross extends BaseStaticObject {
             this.renderPosition.y + 0.62,
             this.renderPosition.z,
             this.material,
+            this.position,
+            1.3,
             yaw,
         )
         addPart(
@@ -147,6 +147,8 @@ export class FallenCemeteryCross extends BaseStaticObject {
             this.renderPosition.y + 0.62,
             this.renderPosition.z + Math.cos(yaw) * 0.18,
             this.material,
+            this.position,
+            1.3,
             yaw,
         )
     }
@@ -175,6 +177,8 @@ export class FallenCemeteryHeadstone extends BaseStaticObject {
             this.renderPosition.y + 0.62,
             this.renderPosition.z,
             this.material,
+            this.position,
+            1.3,
             yaw,
             (this.random(2) - 0.5) * 0.12,
         )
@@ -191,6 +195,8 @@ export class FallenCemeteryHeadstone extends BaseStaticObject {
             this.renderPosition.y + 0.61,
             capZ,
             this.capMaterial,
+            this.position,
+            1.3,
             yaw + (this.random(5) - 0.5) * 0.9,
             (this.random(6) - 0.5) * 0.2,
         )
@@ -208,6 +214,8 @@ export class StoneTomb extends CemeteryObject {
 }
 
 export class CemeteryObelisk extends CemeteryObject {
+    protected override readonly wear = 0.62
+
     render() {
         this.part(0.86, 0.2, 0.86, 0, 0.1, 0)
         this.part(0.65, 0.28, 0.65, 0, 0.34, 0, this.accentMaterial)
@@ -265,7 +273,10 @@ export class StoneFrameGrave extends CemeteryObject {
     constructor(type: number, position: Vector3, material: Vector2, accentMaterial: Vector2, cavityMaterial: Vector2, metadata?: CemeteryObjectMetadata) {
         super(type, position, material, accentMaterial, metadata)
         this.cavityMaterial = cavityMaterial
+        this.wear = type === 330 ? 1.28 : 1
     }
+
+    protected override readonly wear: number
 
     render() {
         const displaced = this.type === 330
@@ -295,9 +306,10 @@ export class StoneFrameGrave extends CemeteryObject {
 }
 
 abstract class CemeteryWall extends BaseStaticObject {
+    protected readonly wear: number = 0.82
+    protected readonly blendGroundLighting: boolean = true
     protected readonly orientation: CemeteryWallOrientation
     protected readonly accentMaterial: Vector2
-    protected readonly snowContact: 'fringe' | 'groundLighting' = 'groundLighting'
     protected cornerDirections: [CemeteryWallDirection, CemeteryWallDirection] | null = null
 
     constructor(type: number, position: Vector3, material: Vector2, accentMaterial: Vector2, metadata?: CemeteryWallMetadata) {
@@ -339,9 +351,11 @@ abstract class CemeteryWall extends BaseStaticObject {
             this.renderPosition.y + y + 0.5,
             this.renderPosition.z + z,
             material,
+            this.position,
+            this.wear,
             yaw,
             roll,
-            this.snowContact,
+            this.blendGroundLighting,
         )
     }
 
@@ -357,7 +371,7 @@ abstract class CemeteryWall extends BaseStaticObject {
 }
 
 export class CemeteryIronFence extends CemeteryWall {
-    protected override readonly snowContact = 'fringe'
+    protected override readonly blendGroundLighting = false
 
     render() {
         if (this.cornerDirections) {
@@ -443,6 +457,8 @@ export class CemeteryStoneWall extends CemeteryWall {
 }
 
 export class RuinedCemeteryWall extends CemeteryWall {
+    protected override readonly wear = 1.3
+
     private random(salt: number): number {
         const value = Math.sin((this.position.x * 91.7) + (this.position.z * 37.3) + salt * 17.1) * 43758.5453
         return value - Math.floor(value)

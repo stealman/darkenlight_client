@@ -93,12 +93,15 @@ export class CemeteryEmberBowl extends BaseStaticObject {
     }
 
     private renderWorldPart(width: number, height: number, depth: number, x: number, y: number, z: number, material: Vector2, yaw = 0) {
-        WorldRenderer.block1!.matrices.push(
-            Matrix.Scaling(width, height, depth)
-                .multiply(Matrix.RotationY(yaw))
-                .multiply(Matrix.Translation(x, y, z)),
-        )
-        WorldRenderer.block1!.uvData.push(material)
+        const matrix = Matrix.Scaling(width, height, depth)
+            .multiply(Matrix.RotationY(yaw))
+            .multiply(Matrix.Translation(x, y, z))
+        if (material === this.material && this.renderPosition.y === this.position.y) {
+            WorldRenderer.addWeatheredBlock(matrix, material, this.position, 0.65, 0)
+        } else {
+            WorldRenderer.block1!.matrices.push(matrix)
+            WorldRenderer.block1!.uvData.push(material)
+        }
     }
 
     private registerParticles() {

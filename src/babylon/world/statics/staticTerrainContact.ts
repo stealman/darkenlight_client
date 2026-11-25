@@ -10,7 +10,7 @@ export const SNOW_CONTACT_MAX_HEIGHT = 0.24
 export const TREE_DAMP_MAX_HEIGHT = 1.0
 const DAMP_CONTACT = {
     moss: 1, hay: 3, wellBase: 4, wellRim: 5, wellRoofMoss: 7, walkableEdges: 8, mossyWood: 9,
-    woodTopWithMoss: 10, woodTopAndGroundMoss: 11, stumpCut: 12, treeBark: 13,
+    woodTopWithMoss: 10, woodTopAndGroundMoss: 11, stumpCut: 12, treeBark: 13, groundWear: 14, groundWearHigh: 15,
 } as const
 export type DampContact = keyof typeof DAMP_CONTACT
 
@@ -226,6 +226,29 @@ export class StaticTerrainContact {
                 vec3 mossColor = terrainContactMossColor(grain) * vec3(0.73, 0.96, 0.70);
                 surfaceAlbedo = mix(surfaceAlbedo, mossColor, moss * 0.84);
             }
+            if (dampProfile == ${DAMP_CONTACT.groundWear}.0 || dampProfile == ${DAMP_CONTACT.groundWearHigh}.0) {
+                float aboveGround = max(snowDistance, 0.0);
+                float wear = (vStaticSnowContact.z - dampProfile) * 4.0;
+                bool high = dampProfile == ${DAMP_CONTACT.groundWearHigh}.0;
+                if (aboveGround < (high ? 1.0 : 0.48)) {
+                    vec2 p = mod(vPositionW.xz, 48.0) + aboveGround * vec2(0.67, -0.51);
+                    float patches = terrainNoise(p * 5.8 + vec2(3.7, 5.2));
+                    float reach = mix(0.18, 0.48, patches) * min(wear + 0.25, 1.0);
+                    float damp = (1.0 - smoothstep(0.025, reach, aboveGround)) * wear;
+                    surfaceAlbedo *= 1.0 - damp * mix(0.22, 0.48, patches);
+
+                    float moss = damp * smoothstep(0.32, 0.70, patches) * 0.78;
+                    float grain = patches;
+                    if (high) {
+                        grain = terrainNoise(p * 36.0 + vec2(7.3, 1.2));
+                        float climb = max(0.15, mix(0.34, 0.95, patches) * min(wear + 0.25, 1.0));
+                        float shelter = mix(0.42, 1.0, smoothstep(-0.25, 0.72, -geometricNormalW.x));
+                        float colonies = smoothstep(0.46, 0.78, patches * 0.78 + grain * 0.22);
+                        moss = max(moss, colonies * (1.0 - smoothstep(0.12, climb, aboveGround)) * shelter * wear);
+                    }
+                    surfaceAlbedo = mix(surfaceAlbedo, terrainContactMossColor(grain), min(0.86, moss));
+                }
+            }
         `)
     }
 
@@ -237,8 +260,9 @@ export class StaticTerrainContact {
         this.contacts.set(index, {height, snowReach: blendGroundLighting ? -reach : reach, damp: damp ? DAMP_CONTACT[damp] : 0})
     }
 
-    addDamp(index: number, height: number, damp: DampContact) {
-        this.contacts.set(index, {height, snowReach: 0, damp: DAMP_CONTACT[damp]})
+    addDamp(index: number, height: number, damp: DampContact, wear = 0) {
+        // The integer selects the profile; the fraction carries wear without another instance attribute.
+        this.contacts.set(index, {height, snowReach: 0, damp: DAMP_CONTACT[damp] + wear * 0.25})
     }
 
     setMeshContact(mesh: Mesh, height: number | undefined, reach = 0, blendGroundLighting = false, damp?: DampContact) {

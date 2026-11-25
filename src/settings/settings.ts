@@ -37,7 +37,7 @@ class DetailLevel {
     }
 }
 
-const DetailLevels= {
+export const DetailLevels = {
     LOW: new DetailLevel(1, 'LOW', 0, true, 'simple'),
     MEDIUM: new DetailLevel(2, 'MEDIUM', 1, true, 'detailed'),
     HIGH: new DetailLevel(3, 'HIGH', 2, true, 'detailed'),

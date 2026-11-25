@@ -23,7 +23,7 @@ interface Direction {
     z: number
 }
 
-type PartContact = boolean | StaticBaseContact | 'dampWood' | 'snowAndDampHay'
+type PartContact = boolean | Vector3 | StaticBaseContact | 'dampWood' | 'snowAndDampHay'
     | 'wellBase' | 'wellRim' | 'wellRoofMoss' | 'stumpCut' | 'woodTopWithMoss'
 
 function addPart(width: number, height: number, depth: number, x: number, y: number, z: number, material: Vector2, yaw = 0, roll = 0, contact: PartContact = false) {
@@ -31,6 +31,10 @@ function addPart(width: number, height: number, depth: number, x: number, y: num
         .multiply(Matrix.RotationYawPitchRoll(yaw, 0, roll))
         .multiply(Matrix.Translation(x, y, z))
     if (contact) {
+        if (contact instanceof Vector3) {
+            WorldRenderer.addWeatheredBlock(matrix, material, contact, 0.64)
+            return
+        }
         if (typeof contact === 'object') {
             WorldRenderer.addTerrainContactBlock(matrix, material, false, undefined, 'mossyWood', contact)
             return
@@ -119,7 +123,7 @@ export class CampBench extends CampObject {
             }
         }
         for (const x of [-0.68, 0.68]) {
-            this.part(0.2, 0.32, 0.34, x, 0.16, 0, this.accentMaterial)
+            this.part(0.2, 0.32, 0.34, x, 0.16, 0, this.accentMaterial, 0, this.position)
         }
     }
 }
@@ -225,7 +229,7 @@ export class PlankPile extends CampObject {
             [0.13, 0.36, -0.08, -0.045],
         ]
         for (const [x, y, z, roll] of rows) {
-            this.part(0.82, 0.1, 0.16, x, y, z, this.material, roll, y === bottomRowHeight)
+            this.part(0.82, 0.1, 0.16, x, y, z, this.material, roll, this.position)
         }
     }
 }
@@ -251,7 +255,7 @@ export class LogPile extends CampObject {
             [-0.24, bottomRowHeight, -0.14], [0.24, bottomRowHeight, -0.14], [0, bottomRowHeight, 0.18],
             [-0.14, 0.36, 0], [0.2, 0.36, 0.04], [0.02, 0.59, 0.01],
         ]) {
-            this.part(0.18, 0.18, logLength, x, y, z, this.material, 0, y === bottomRowHeight)
+            this.part(0.18, 0.18, logLength, x, y, z, this.material, 0, this.position)
         }
     }
 
@@ -266,11 +270,11 @@ export class LogPile extends CampObject {
 
 export class SupplyCrate extends CampObject {
     render() {
-        this.part(0.78, 0.7, 0.78, 0, 0.35, 0)
+        this.part(0.78, 0.7, 0.78, 0, 0.35, 0, this.material, 0, this.position)
         for (const y of [0.08, 0.62]) {
-            this.part(0.86, 0.09, 0.86, 0, y, 0, this.accentMaterial)
+            this.part(0.86, 0.09, 0.86, 0, y, 0, this.accentMaterial, 0, this.position)
         }
-        this.part(0.1, 0.76, 0.86, 0, 0.37, 0, this.accentMaterial, Math.PI / 4)
+        this.part(0.1, 0.76, 0.86, 0, 0.37, 0, this.accentMaterial, Math.PI / 4, this.position)
     }
 }
 

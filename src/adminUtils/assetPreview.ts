@@ -25,6 +25,9 @@ import { Renderer } from '@/babylon/scene/renderer'
 import { Lights } from '@/babylon/scene/lights'
 import type { MeshAnimation } from '@/babylon/animations/animation'
 import { createTerrainPreview } from './terrainPreview'
+import { createStaticBiomePreview } from './staticBiomePreview'
+import { createSnowCoverMask } from '@/babylon/world/snowCoverMask'
+import { Settings } from '@/settings/settings'
 
 // This sandbox deliberately calls geometry factories, never the world/network loop.
 export async function installAssetPreview(
@@ -34,6 +37,7 @@ export async function installAssetPreview(
     ground: Mesh,
     getCharacter: () => CharacterModel,
     setTerrainLighting: (active: boolean) => void,
+    setStaticLighting: (phase?: number) => void,
 ) {
     const panel = root.querySelector<HTMLElement>('.admin-utils__panel')!
     const hint = root.querySelector<HTMLElement>('.admin-utils__hint')!
@@ -92,15 +96,20 @@ export async function installAssetPreview(
     }
     rotationSlider.addEventListener('input', rotatePreview)
     WorldRenderer.worldParentNode = parent
-    WorldRenderer.block1 = new SymmetricBlock(Builder.createWrappedBlock(scene, parent), Materials.blockMat1!)
+    const contactMaterial = WorldRenderer.createStaticBlockMaterial(scene, true)
+    const staticContact = WorldRenderer.staticTerrainContact
+    WorldRenderer.block1 = new SymmetricBlock(Builder.createWrappedBlock(scene, parent), contactMaterial)
+    WorldRenderer.block1.mesh.receiveShadows = true
+    Lights.addShadowCaster(WorldRenderer.block1.mesh, false)
     WorldRenderer.blockWithAlpha1 = new SymmetricBlock(Builder.createBlock(scene, parent), Materials.blockMatAlpha1!)
     WorldRenderer.translucentPlane = new SymmetricBlock(Builder.createHorizontalPlane(scene, parent, 1, 0), Materials.blockMatTrans!)
     StoneBatch.initialize(scene, parent)
-    WorldDataManager.replaceWorldData(0, 32)
     // MyPlayer.worldId defaults to zero in the offline bootstrap.
     const { MyPlayer } = await import('@/data/myPlayer')
-    WorldDataManager.replaceWorldData(MyPlayer.worldId, 32)
-    WorldDataManager.getBlockMap()[0][0] = new MapBlock(0, TerrainEnum1.TERRAIN_ROCK.index)
+    WorldDataManager.replaceWorldData(MyPlayer.worldId, 64)
+    const origin = new MapBlock(0, TerrainEnum1.TERRAIN_ROCK.index)
+    origin.computeData()
+    WorldDataManager.getBlockMap()[0][0] = origin
     TreeManager.initialize(scene)
     Object.values(TreeManager.prefabs).forEach(prefab => { if (prefab) prefab.mesh.parent = parent })
     StaticsManager.initialize(scene)
@@ -108,6 +117,12 @@ export async function installAssetPreview(
     const buffers = () => [WorldRenderer.block1!, WorldRenderer.blockWithAlpha1!, WorldRenderer.translucentPlane!, StoneBatch.prefab!, StaticLeafPlanes.prefab!, ...Object.values(TreeManager.prefabs).filter(p => p != null), ...StaticEquipPartsRenderer.prefabs.values(), ...SpecimenPrefabs.all]
     const terrain = createTerrainPreview(scene, parent, camera, ground, setTerrainLighting)
     panel.append(terrain.controls)
+    const biomes = createStaticBiomePreview(scene, camera, ground, setStaticLighting, () => void show(false))
+    controls.prepend(biomes.controls)
+    biomes.setActive(false)
+    for (const batch of [StoneBatch.prefab!, ...Object.values(TreeManager.prefabs)]) {
+        if (batch) Lights.addShadowCaster(batch.mesh, false)
+    }
     const refreshBuildingBatches = () => {
         BuildingManager.rebuildOpaqueBatch()
         // Babylon renders the source box/plane when a thin-instance batch is empty.
@@ -134,15 +149,21 @@ export async function installAssetPreview(
         }
         clips = []
         equipmentEditor.refresh(null)
+        staticContact?.clear()
+        StoneBatch.clear()
+        WorldRenderer.snowCoverMask.clear()
         StaticsManager.allStatics.forEach(obj => { obj.onHidden(); obj.prefab?.clearMatrices(); obj.dispose() })
         StaticsManager.allStatics = []
         StaticsManager.staticsByTile.clear()
         StaticsManager.dirtyStaticTiles.clear()
         StaticsManager.staticsByType.clear()
+        StaticsManager.visibleStatics = []
+        StaticsManager.collisionGrid.clear()
         StaticsManager.walkableObjectsByTile.clear()
         StaticsManager.benchesByTile.clear()
         StaticsManager.dungeonEntrances.clear()
         TreeManager.allTrees = []
+        TreeManager.collisionGrid.clear()
         BuildingManager.buildings.forEach(b => b.dispose())
         BuildingManager.buildings.clear()
         BuildingManager.floorTiles.clear()
@@ -184,23 +205,44 @@ export async function installAssetPreview(
             if (reset) parameters.value = JSON.stringify(tab === 'Statics' ? choice.value.startsWith('tree:') ? { size: 1 } : { ...StaticObjectsCodebook.get(id), meta: id === 403 ? { bannerIndex: 0 } : { facing: '+Z' } } : tab === 'Buildings' ? { facing: '+Z', ...(id === 2 ? {width: 5, depth: 3} : {}), doorOpen: false } : { ...Object.values(MonsterTypes).find(v => v.id === id) }, null, 2)
             const data = JSON.parse(parameters.value)
             if (tab === 'Statics') {
-                if (choice.value.startsWith('tree:')) {
-                    TreeManager.addTree({type: Number(choice.value.split(':')[1]), x: 8, z: 8, size: Number(data.size) || 1})
-                    const tree = TreeManager.allTrees[0]
-                    tree.position.set(0, 0, 0)
-                    // Compare variants in one orientation; the preview slider handles rotation.
-                    tree.rotation = 0
-                    tree.renderTrunk(false); tree.renderLeaves(false)
-                } else {
-                    StaticsManager.addObject({tp: id, x: 8, z: 8, meta: data.meta, tmp: true}, false)
-                    const obj = StaticsManager.allStatics[0]
-                    obj.position.set(0, 0, 0); obj.renderPosition.set(0, 0, 0)
-                    if (reset && 'status' in obj) { data.meta = obj.status ?? data.meta; parameters.value = JSON.stringify(data, null, 2) }
-                    obj.render()
-                    if (obj.prefab) { obj.prefab.setThinInstanceBuffers(); obj.prefab.mesh.setEnabled(true) }
+                const useContact = !Settings.isDetalLevelLow()
+                WorldRenderer.staticTerrainContact = useContact ? staticContact : null
+                WorldRenderer.block1!.mesh.material = useContact ? contactMaterial : Materials.blockMat1!
+                StoneBatch.setSnowContactEnabled(Settings.isDetalLevelHigh())
+                biomes.prepareTerrain()
+                const isTree = choice.value.startsWith('tree:')
+                for (const {x, z} of biomes.slots) {
+                    if (isTree) {
+                        TreeManager.addTree({type: Number(choice.value.split(':')[1]), x, z, size: Math.max(0.1, Number(data.size) || 1)})
+                        const tree = TreeManager.allTrees.at(-1)!
+                        tree.rotation = 0
+                        tree.renderTrunk(false, TreeManager.getTrunkContact(tree.position))
+                        tree.renderLeaves(false)
+                    } else {
+                        StaticsManager.addObject({tp: id, x, z, meta: data.meta, tmp: true}, false)
+                    }
                 }
-                buffers().forEach(b => { b.setThinInstanceBuffers(); b.mesh.setEnabled(b.matrices.length > 0) })
-                camera.target.set(0, 1.5, 0); camera.radius = 9
+                WorldRenderer.snowCoverMask = createSnowCoverMask(StaticsManager.allStatics, WorldDataManager.getBlockMap().length)
+                StaticsManager.resolveStackedStaticPositions()
+                StaticsManager.visibleStatics = StaticsManager.allStatics
+                StaticsManager.renderObjects(true)
+                const obj = StaticsManager.allStatics[0]
+                if (reset && obj && 'status' in obj) {
+                    data.meta = obj.status ?? data.meta
+                    parameters.value = JSON.stringify(data, null, 2)
+                }
+                const batches = new Set(buffers())
+                for (const staticObject of StaticsManager.allStatics) {
+                    if (staticObject.prefab) batches.add(staticObject.prefab)
+                }
+                batches.forEach(batch => {
+                    batch.setThinInstanceBuffers()
+                    batch.mesh.setEnabled(batch.matrices.length > 0)
+                })
+                WorldRenderer.staticTerrainContact?.upload(WorldRenderer.block1!.mesh, WorldRenderer.block1!.matrices.length)
+                StoneBatch.flush()
+                biomes.renderTerrain()
+                biomes.frame(isTree ? 2.4 : 0.65, isTree ? 13 : 7, reset)
             } else if (tab === 'Buildings') {
                 BuildingManager.addBuilding({...data, id: 1, tp: id, x: 0, z: 0})
                 const b = BuildingManager.buildings.get(1)!
@@ -225,7 +267,7 @@ export async function installAssetPreview(
                 play()
                 camera.target.set(0, 1, 0); camera.radius = 5
             }
-            centerRotation(tab === 'Buildings' ? camera.target.x : 0, tab === 'Buildings' ? camera.target.z : 0)
+            if (tab !== 'Statics') centerRotation(tab === 'Buildings' ? camera.target.x : 0, tab === 'Buildings' ? camera.target.z : 0)
         } catch (e) { error.textContent = String(e); console.error(e) }
     }
     const list = (restore = false) => {
@@ -248,8 +290,10 @@ export async function installAssetPreview(
             get('assetApply').hidden = name === 'Monsters'
             parameters.readOnly = name === 'Monsters'
             search.value = ''
+            if (name !== 'Statics') biomes.setActive(false)
             terrain.setActive(name === 'Terrain')
-            rotationControl.hidden = name === 'Terrain'
+            if (name === 'Statics') biomes.setActive(true)
+            rotationControl.hidden = name === 'Terrain' || name === 'Statics'
             hint.textContent = name === 'Terrain' ? 'Pravým tlačítkem posouvej · kolečkem přibližuj' : assetHint
             if (controls.hidden) localStorage.setItem(storageKey, JSON.stringify({tab: name}))
             else list(true)

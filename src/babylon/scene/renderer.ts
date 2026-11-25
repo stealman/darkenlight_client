@@ -348,11 +348,12 @@ export const Renderer = {
         this.scene.fogColor = new Color3(0.2, 0.22, 0.24)
         this.scene.fogEnabled = FOG_ENABLED
 
-        this.scene.environmentTexture = CubeTexture.CreateFromPrefilteredData(
-            "environment_specular.env",
-            this.scene
-        )
+        this.scene.environmentTexture = this.createEnvironmentTexture(this.scene)
         this.brightnessChanged()
+    },
+
+    createEnvironmentTexture(scene: Scene) {
+        return CubeTexture.CreateFromPrefilteredData('environment_specular.env', scene)
     },
 
     brightnessChanged() {

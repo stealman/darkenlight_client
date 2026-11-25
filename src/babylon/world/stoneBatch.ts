@@ -102,19 +102,32 @@ function createMaterial(scene: Scene) {
 export const StoneBatch = {
     prefab: null as Prefab | null,
     snowContact: null as StaticTerrainContact | null,
+    materials: new Map<boolean, {material: ReturnType<typeof createMaterial>, contact: StaticTerrainContact | null}>(),
 
     initialize(scene: Scene, parent: TransformNode, useSnowContact = false) {
         const mesh = new Mesh('stoneFragments', scene)
         createGeometry(mesh)
-        const material = createMaterial(scene)
-        mesh.material = material
-        this.snowContact = useSnowContact ? new StaticTerrainContact(material, true) : null
         mesh.parent = parent
         mesh.isPickable = false
         mesh.alwaysSelectAsActiveMesh = true
         mesh.receiveShadows = true
         mesh.setEnabled(false)
         this.prefab = new Prefab(mesh)
+        this.snowContact = null
+        this.materials.clear()
+        this.setSnowContactEnabled(useSnowContact)
+    },
+
+    setSnowContactEnabled(enabled: boolean) {
+        const mesh = this.prefab!.mesh
+        let variant = this.materials.get(enabled)
+        if (!variant) {
+            const material = createMaterial(mesh.getScene())
+            variant = {material, contact: enabled ? new StaticTerrainContact(material, true) : null}
+            this.materials.set(enabled, variant)
+        }
+        mesh.material = variant.material
+        this.snowContact = variant.contact
     },
 
     clear() {
@@ -124,9 +137,9 @@ export const StoneBatch = {
 
     add(matrix: Matrix, shape: number, uv: Vector2, snowHeight?: number, smallCell = false) {
         const batch = this.prefab!
-        if (snowHeight !== undefined) {
+        if (snowHeight !== undefined && this.snowContact) {
             const stoneHeight = Math.hypot(matrix.m[4], matrix.m[5], matrix.m[6]) * PROFILES[shape].crown[1]
-            this.snowContact?.addSnow(batch.matrices.length, snowHeight, stoneHeight * STONE_SNOW_REACH_PER_HEIGHT, true)
+            this.snowContact.addSnow(batch.matrices.length, snowHeight, stoneHeight * STONE_SNOW_REACH_PER_HEIGHT, true)
         }
         batch.matrices.push(matrix)
         // Atlas cells occupy less than 16 units per axis. Pack the selectors

@@ -1311,6 +1311,25 @@ export async function mountAdminUtils() {
         sun.specular.copyFrom(sun.diffuse)
     }
 
+    let staticEnvironment: ReturnType<typeof Renderer.createEnvironmentTexture> | undefined
+    const setStaticLighting = (phase?: number) => {
+        if (phase === undefined) {
+            scene.environmentTexture = null
+            scene.fogMode = Scene.FOGMODE_NONE
+            scene.imageProcessingConfiguration.exposure = 1
+            setTerrainLighting(false)
+            return
+        }
+        scene.environmentTexture = staticEnvironment ??= Renderer.createEnvironmentTexture(scene)
+        scene.fogMode = Scene.FOGMODE_LINEAR
+        scene.imageProcessingConfiguration.exposure = 1.2
+        fillLight.intensity = backLight.intensity = 0
+        Lights.setTerrainSunShadows(true)
+        setPreviewTime(phase)
+        // Center the directional shadow volume on the four preview plots.
+        Lights.sunLight.position.addInPlaceFromFloats(31.5, 0, 31.5)
+    }
+
     const ground = MeshBuilder.CreateGround('adminUtilsGrass', { width: 12, height: 12, subdivisions: 2 }, scene)
     const grassMaterial = new StandardMaterial('adminUtilsGrassMaterial', scene)
     const grassTexture = new DynamicTexture('adminUtilsGrassTexture', 64, scene, false, Texture.NEAREST_SAMPLINGMODE)
@@ -1970,7 +1989,7 @@ export async function mountAdminUtils() {
         replay.onclick = play
         loopControl.onchange = play
         const { installAssetPreview } = await import('./assetPreview')
-        await installAssetPreview(root, scene, camera, ground, () => model, setTerrainLighting)
+        await installAssetPreview(root, scene, camera, ground, () => model, setTerrainLighting, setStaticLighting)
         const bodyVariantSelect = root.querySelector<HTMLSelectElement>('#adminUtilsBodyVariant')!
         const switchBodyVariant = async (variant: PreviewBodyVariant) => {
             if (variant === previewBodyVariant) return

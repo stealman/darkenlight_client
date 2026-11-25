@@ -20,6 +20,9 @@ test('banner UV variants and sign faces share one batch; portals share their ble
             this.block1.matrices.push(matrix)
             this.block1.uvData.push(uv)
         },
+        addWeatheredBlock(matrix, uv) {
+            this.addTerrainContactBlock(matrix, uv)
+        },
     }
     class Prefab {
         matrices = []; uvData = []

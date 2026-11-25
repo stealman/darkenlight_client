@@ -47,6 +47,39 @@ select {
     touch-action: none;
 }
 
+.admin-utils__static-biomes {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    grid-template: repeat(2, 1fr) / repeat(2, 1fr);
+    pointer-events: none;
+}
+
+.admin-utils__static-biomes[hidden],
+.admin-utils__static-controls[hidden] {
+    display: none;
+}
+
+.admin-utils__static-biomes span {
+    align-self: start;
+    justify-self: start;
+    padding: 0.4rem 0.65rem;
+    background: rgba(var(--ui-menu-backdrop, 5, 7, 9), 0.75);
+    font-size: 0.75rem;
+}
+
+.admin-utils__static-controls {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.4rem 0.7rem;
+    margin: 0 0 0.75rem;
+}
+
+.admin-utils__static-controls button {
+    grid-column: 1 / -1;
+    justify-self: start;
+}
+
 .admin-utils__hint,
 .admin-utils__status {
     position: absolute;

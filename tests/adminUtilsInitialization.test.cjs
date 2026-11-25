@@ -10,7 +10,10 @@ test('adminUtils imports before mounting without entering the runtime equipment/
     const server = await createServer({
         configFile: false,
         root: resolve(__dirname, '..'),
-        resolve: {alias: {'@': resolve(__dirname, '../src')}},
+        resolve: {alias: {
+            '@': resolve(__dirname, '../src'),
+            '@game': resolve(__dirname, '../../../server/darkenlight_server/src'),
+        }},
         cacheDir,
         optimizeDeps: {noDiscovery: true, include: []},
         server: {middlewareMode: true}, appType: 'custom', logLevel: 'silent',

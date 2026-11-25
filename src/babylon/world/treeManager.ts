@@ -117,6 +117,14 @@ export const TreeManager = {
         return mesh
     },
 
+    getTrunkContact(position: Vector3): TrunkContact | undefined {
+        const x = Math.floor(position.x)
+        const z = Math.floor(position.z)
+        const snow = WorldRenderer.getSnowContactHeight(x, z)
+        const height = snow ?? WorldRenderer.getMuddyDirtContactHeight(x, z)
+        return height === undefined ? undefined : {height, snow: snow !== undefined}
+    },
+
     addTrunkBlock(matrix: Matrix, uv: Vector2, contact?: TrunkContact) {
         const batch = WorldRenderer.block1!
         if (contact && touchesTrunkContact(matrix.m[13] - 0.5 - matrix.m[5] * 0.5, contact)) {
@@ -362,11 +370,7 @@ export const TreeManager = {
         for (const element of this.visibleTrees) {
             const blockStart = WorldRenderer.block1!.matrices.length
             const leafStart = element.leavesPrefab.matrices.length
-            const x = Math.floor(element.position.x)
-            const z = Math.floor(element.position.z)
-            const snowHeight = WorldRenderer.getSnowContactHeight(x, z)
-            const height = snowHeight ?? WorldRenderer.getMuddyDirtContactHeight(x, z)
-            const contact = height === undefined ? undefined : {height, snow: snowHeight !== undefined}
+            const contact = this.getTrunkContact(element.position)
             const faded = element.shouldFade
             if (faded) {
                 element.fadeTarget = this.fadedAlpha

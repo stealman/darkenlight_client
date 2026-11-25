@@ -163,10 +163,13 @@ export class LanternStand extends BaseStaticObject {
     }
 
     private renderPart(width: number, height: number, depth: number, x: number, y: number, z: number, material: Vector2) {
-        WorldRenderer.block1!.matrices.push(
-            Matrix.Scaling(width, height, depth).multiply(Matrix.Translation(x, y, z)),
-        )
-        WorldRenderer.block1!.uvData.push(material)
+        const matrix = Matrix.Scaling(width, height, depth).multiply(Matrix.Translation(x, y, z))
+        if (material === this.baseMaterial) {
+            WorldRenderer.addWeatheredBlock(matrix, material, this.position, 0.7)
+        } else {
+            WorldRenderer.block1!.matrices.push(matrix)
+            WorldRenderer.block1!.uvData.push(material)
+        }
     }
 
     private registerFire() {

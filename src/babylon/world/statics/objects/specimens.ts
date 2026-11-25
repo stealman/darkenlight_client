@@ -16,8 +16,8 @@ export class StandingBanner extends BaseStaticObject {
     render() {
         const p = this.renderPosition
         for (const [w,h,d,x,y] of [[0.7,0.15,0.7,0,0.075],[0.12,3.3,0.12,0,1.65],[1.5,0.1,0.12,0,3.15]]) {
-            WorldRenderer.block1!.matrices.push(Matrix.Scaling(w,h,d).multiply(Matrix.Translation(p.x+x,p.y+y+0.5,p.z)))
-            WorldRenderer.block1!.uvData.push(this.material)
+            const matrix = Matrix.Scaling(w, h, d).multiply(Matrix.Translation(p.x + x, p.y + y + 0.5, p.z))
+            WorldRenderer.addWeatheredBlock(matrix, this.material, this.position, 0.58)
         }
         this.prefab!.matrices.push(Matrix.Scaling(1.2, 2.2, 1).multiply(Matrix.Translation(p.x,p.y+2,p.z-0.09)))
         this.prefab!.uvData.push(this.bannerUV)
