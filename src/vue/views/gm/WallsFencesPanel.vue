@@ -77,6 +77,10 @@
                     <option value="Z">Z</option>
                 </select>
             </label>
+            <label v-if="selectedObjectType === 'CAMP_FENCE'">
+                <input v-model="campFenceDamaged" type="checkbox">
+                Poškozené prkno
+            </label>
         </div>
 
         <div style="margin-top: 1vh">
@@ -144,6 +148,7 @@ import { computed, ref, watch } from 'vue'
 const selectedObjectType = ref("")
 const selectedObject = GMManager.selectedWallFence
 const palisadeOrientation = GMManager.palisadeOrientation
+const campFenceDamaged = GMManager.campFenceDamaged
 const spikedPalisadeFacing = GMManager.spikedPalisadeFacing
 const walkableBlockHeight = GMManager.walkableBlockHeight
 const walkableBlockMaterial = GMManager.walkableBlockMaterial

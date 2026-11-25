@@ -161,6 +161,7 @@ export const GMManager = {
 
     selectedWallFence: ref (0),
     palisadeOrientation: ref('Z'),
+    campFenceDamaged: ref(false),
     spikedPalisadeFacing: ref('+Z'),
     walkableBlockHeight: ref(1),
     walkableBlockMaterial: ref('WOOD'),
@@ -541,11 +542,12 @@ export const GMManager = {
     },
 
     createWallFenceData(x: number, z: number, type: number) {
-        const data: {x: number, z: number, type: number, meta?: Record<string, number | string>} = {x, z, type}
+        const data: {x: number, z: number, type: number, meta?: Record<string, number | string | boolean>} = {x, z, type}
         if (type === PALISADE_WALL_2_STATIC_ID || type === PALISADE_SMALL_STATIC_ID || type === CAMP_FENCE_STATIC_ID
             || type === CEMETERY_IRON_FENCE_STATIC_ID || type === RUINED_CEMETERY_WALL_STATIC_ID
             || type === CEMETERY_STONE_WALL_STATIC_ID) {
             data.meta = {orientation: this.palisadeOrientation.value}
+            if (type === CAMP_FENCE_STATIC_ID) data.meta.damaged = this.campFenceDamaged.value
         } else if (type === PALISADE_SPIKED_STATIC_ID) {
             data.meta = {facing: this.spikedPalisadeFacing.value}
         } else if (type === WALKABLE_BLOCK_STATIC_ID) {
@@ -613,6 +615,7 @@ export const GMManager = {
             || object.type === CEMETERY_IRON_FENCE_STATIC_ID || object.type === RUINED_CEMETERY_WALL_STATIC_ID
             || object.type === CEMETERY_STONE_WALL_STATIC_ID) {
             this.palisadeOrientation.value = status.orientation === 'X' ? 'X' : 'Z'
+            if (object.type === CAMP_FENCE_STATIC_ID) this.campFenceDamaged.value = status.damaged === true
         } else if (object.type === PALISADE_SPIKED_STATIC_ID) {
             this.spikedPalisadeFacing.value = status.facing ?? '+Z'
         } else if (object.type === WALKABLE_BLOCK_STATIC_ID) {
@@ -650,6 +653,7 @@ export const GMManager = {
     },
 
     cancelStaticEdit() {
+        if (this.editingStatic.value?.type === CAMP_FENCE_STATIC_ID) this.campFenceDamaged.value = false
         this.editingStatic.value = null
         if (this.tab === GmTabs.WALLS_AND_FENCES_EDIT) this.selectedWallFence.value = 0
         if (this.tab === GmTabs.STATICS_EDIT) this.selectedStatic.value = 0
