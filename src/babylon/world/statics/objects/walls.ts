@@ -279,6 +279,8 @@ export class Wall3 extends BaseStaticObject {
     }
 }
 
+const STONE_ENTRANCE_SNOW_CONTACT = {snowReach: 1.65, includeMaskedSnow: true}
+
 export type StoneEntranceFacing = '-X' | '+X' | '-Z' | '+Z'
 
 export interface StoneEntranceMetadata extends StaticLightMetadata {
@@ -403,7 +405,9 @@ export class StoneEntrance extends BaseStaticObject {
             const x = this.position.x + (runsAlongX ? widthOffset : depthOffset)
             const z = this.position.z + (runsAlongX ? depthOffset : widthOffset)
             const matrix = Matrix.Translation(x, this.position.y + height, z)
-            WorldRenderer.addWeatheredBlock(matrix, MaterialEnum1.TERRAIN_ROCK.uv, this.position, 0.75)
+            // The pillars mask the terrain's snow under their footprint, while their exposed faces still meet snow.
+            WorldRenderer.addWeatheredBlock(matrix, MaterialEnum1.TERRAIN_ROCK.uv, this.position, 0.75,
+                STONE_ENTRANCE_SNOW_CONTACT)
         }
 
         for (let depth = 0; depth < 2; depth++) {

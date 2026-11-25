@@ -23,6 +23,7 @@ const COAL_HEIGHT = 0.055
 const GLOW_INTENSITY = 0.35
 const GLOW_RADIUS = 1.6
 const FIRE_HEIGHT = BASE_HEIGHT + WALL_HEIGHT / 2
+const EMBER_BOWL_CONTACT = {snowReach: 0}
 
 export class CemeteryEmberBowl extends BaseStaticObject {
     private readonly coalMaterial: Vector2
@@ -97,7 +98,7 @@ export class CemeteryEmberBowl extends BaseStaticObject {
             .multiply(Matrix.RotationY(yaw))
             .multiply(Matrix.Translation(x, y, z))
         if (material === this.material && this.renderPosition.y === this.position.y) {
-            WorldRenderer.addWeatheredBlock(matrix, material, this.position, 0.65, 0)
+            WorldRenderer.addWeatheredBlock(matrix, material, this.position, 0.65, EMBER_BOWL_CONTACT)
         } else {
             WorldRenderer.block1!.matrices.push(matrix)
             WorldRenderer.block1!.uvData.push(material)

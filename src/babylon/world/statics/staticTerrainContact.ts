@@ -8,6 +8,8 @@ import { terrainTextureUrls } from '@/babylon/world/terrainTextureUrls'
 const ATTRIBUTE = 'staticSnowContact'
 export const SNOW_CONTACT_MAX_HEIGHT = 0.24
 export const TREE_DAMP_MAX_HEIGHT = 1.0
+export const GROUND_WEAR_MEDIUM_HEIGHT = 0.68
+export const GROUND_WEAR_HIGH_HEIGHT = 1.0
 const DAMP_CONTACT = {
     moss: 1, hay: 3, wellBase: 4, wellRim: 5, wellRoofMoss: 7, walkableEdges: 8, mossyWood: 9,
     woodTopWithMoss: 10, woodTopAndGroundMoss: 11, stumpCut: 12, treeBark: 13, groundWear: 14, groundWearHigh: 15,
@@ -59,6 +61,7 @@ export class StaticTerrainContact {
             ${terrainFringeShader}
             ${terrainContactSnowShader}
             ${terrainContactMossShader}
+            float staticGroundWetness;
         `)
         configureTerrainNoiseTexture(material, 4)
         material.Fragment_Before_Lights(`
@@ -66,6 +69,7 @@ export class StaticTerrainContact {
             float snowDistance = vStaticSnowContact.x;
             float snowReach = abs(vStaticSnowContact.y);
             float dampProfile = floor(vStaticSnowContact.z + 0.5);
+            staticGroundWetness = 0.0;
             ${meshVertices ? '' : `
                 if (dampProfile == ${DAMP_CONTACT.walkableEdges}.0) {
                     // Two adjacent face planes meet at each edge. The same distance and noise apply on both faces.
@@ -230,14 +234,22 @@ export class StaticTerrainContact {
                 float aboveGround = max(snowDistance, 0.0);
                 float wear = (vStaticSnowContact.z - dampProfile) * 4.0;
                 bool high = dampProfile == ${DAMP_CONTACT.groundWearHigh}.0;
-                if (aboveGround < (high ? 1.0 : 0.48)) {
-                    vec2 p = mod(vPositionW.xz, 48.0) + aboveGround * vec2(0.67, -0.51);
+                if (aboveGround < (high ? ${GROUND_WEAR_HIGH_HEIGHT.toFixed(1)} : ${GROUND_WEAR_MEDIUM_HEIGHT})) {
+                    vec2 base = mod(vPositionW.xz, 48.0);
+                    vec2 p = base + aboveGround * vec2(0.67, -0.51);
                     float patches = terrainNoise(p * 5.8 + vec2(3.7, 5.2));
-                    float reach = mix(0.18, 0.48, patches) * min(wear + 0.25, 1.0);
-                    float damp = (1.0 - smoothstep(0.025, reach, aboveGround)) * wear;
-                    surfaceAlbedo *= 1.0 - damp * mix(0.22, 0.48, patches);
+                    // Broad wet spots carry up from the soil, with broken edges and drier gaps.
+                    float pockets = terrainNoise((base + aboveGround * vec2(0.18, -0.12)) * 4.6 + vec2(8.2, 2.6));
+                    float blotches = smoothstep(0.25, 0.72, pockets * 0.74 + patches * 0.26);
+                    float reach = mix(0.16, high ? 0.86 : ${GROUND_WEAR_MEDIUM_HEIGHT}, blotches)
+                        * mix(0.68, 1.0, min(wear, 1.0));
+                    float wetEdge = 1.0 - smoothstep(reach * 0.30, reach, aboveGround);
+                    staticGroundWetness = min(0.9, wetEdge * mix(0.26, 1.0, blotches) * wear * 1.3);
+                    surfaceAlbedo *= mix(vec3(1.0), vec3(0.32, 0.36, 0.38), staticGroundWetness);
 
-                    float moss = damp * smoothstep(0.32, 0.70, patches) * 0.78;
+                    float mossReach = mix(0.18, 0.48, patches) * min(wear + 0.25, 1.0);
+                    float moss = (1.0 - smoothstep(0.025, mossReach, aboveGround))
+                        * wear * smoothstep(0.32, 0.70, patches) * 0.78;
                     float grain = patches;
                     if (high) {
                         grain = terrainNoise(p * 36.0 + vec2(7.3, 1.2));
@@ -249,6 +261,10 @@ export class StaticTerrainContact {
                     surfaceAlbedo = mix(surfaceAlbedo, terrainContactMossColor(grain), min(0.86, moss));
                 }
             }
+        `)
+        material.Fragment_Custom_MetallicRoughness(`
+            ${material.CustomParts.Fragment_Custom_MetallicRoughness ?? ''}
+            metallicRoughness.g = mix(metallicRoughness.g, metallicRoughness.g * 0.56, staticGroundWetness);
         `)
     }
 

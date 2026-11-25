@@ -32,7 +32,9 @@ import { IndoorTerrainOcclusionManager } from '@/babylon/world/indoorTerrainOccl
 import { TerrainDebrisManager } from '@/babylon/world/terrainDebrisManager'
 import { StoneBatch } from '@/babylon/world/stoneBatch'
 import { isSnowRoof, outdoorSurfaceHeight } from '@/babylon/world/terrainRoofShape'
-import { SNOW_CONTACT_MAX_HEIGHT, StaticTerrainContact } from '@/babylon/world/statics/staticTerrainContact'
+import {
+    GROUND_WEAR_HIGH_HEIGHT, GROUND_WEAR_MEDIUM_HEIGHT, SNOW_CONTACT_MAX_HEIGHT, StaticTerrainContact,
+} from '@/babylon/world/statics/staticTerrainContact'
 import type { DampContact } from '@/babylon/world/statics/staticTerrainContact'
 
 // The viewport already renders a four-tile reserve. On touch devices, keep one
@@ -310,8 +312,8 @@ export const WorldRenderer = {
         }
     },
 
-    addWeatheredBlock(matrix: Matrix, uv: Vector2, anchor: Vector3, wear: number, snowReach = 1.4,
-        blendGroundLighting = true) {
+    addWeatheredBlock(matrix: Matrix, uv: Vector2, anchor: Vector3, wear: number,
+        options?: {snowReach?: number, blendGroundLighting?: boolean, includeMaskedSnow?: boolean}) {
         const batch = this.block1!
         const index = batch.matrices.length
         batch.matrices.push(matrix)
@@ -330,15 +332,17 @@ export const WorldRenderer = {
 
         const bottom = m[13] - 0.5 - (Math.abs(m[1]) + Math.abs(m[5]) + Math.abs(m[9])) * 0.5
         if (tile.snowed) {
+            const snowReach = options?.snowReach ?? 1.4
             if (snowReach > 0 && bottom < height + SNOW_CONTACT_MAX_HEIGHT * snowReach
-                && this.getSnowSurfaceHeight(x, z) !== undefined) {
-                contact.addSnow(index, height, snowReach, blendGroundLighting)
+                && (options?.includeMaskedSnow ? isSnowRoof(tile) : this.getSnowSurfaceHeight(x, z) !== undefined)) {
+                contact.addSnow(index, height, snowReach, options?.blendGroundLighting ?? true)
             }
         } else if (wear > 0) {
             const damp = tile.type === TerrainEnum1.TERRAIN_MUDDY_DIRT.index ? 1
-                : tile.type === TerrainEnum1.TERRAIN_GRASS_WINTER.index ? 0.38 : 0
+                : tile.type === TerrainEnum1.TERRAIN_GRASS_WINTER.index ? 0.63 : 0
             const high = Settings.isDetalLevelHigh()
-            if (damp && bottom < height + (high ? 1 : 0.48)) {
+            const reach = high ? GROUND_WEAR_HIGH_HEIGHT : GROUND_WEAR_MEDIUM_HEIGHT
+            if (damp && bottom < height + reach) {
                 const seed = Math.sin(anchor.x * 91.7 + anchor.z * 37.3) * 43758.5453
                 const variation = 0.38 + (seed - Math.floor(seed)) * 0.83
                 contact.addDamp(index, height, high ? 'groundWearHigh' : 'groundWear', Math.min(1.5, wear * damp * variation))

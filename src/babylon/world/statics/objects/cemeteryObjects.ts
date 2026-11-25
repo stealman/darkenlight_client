@@ -19,12 +19,15 @@ export interface CemeteryWallDirection {
     z: number
 }
 
+const CEMETERY_FRINGE_SNOW_CONTACT = {blendGroundLighting: false}
+
 function addPart(width: number, height: number, depth: number, x: number, y: number, z: number, material: Vector2,
     anchor: Vector3, wear: number, yaw = 0, roll = 0, blendGroundLighting = true) {
     const matrix = Matrix.Scaling(width, height, depth)
         .multiply(Matrix.RotationYawPitchRoll(yaw, 0, roll))
         .multiply(Matrix.Translation(x, y, z))
-    WorldRenderer.addWeatheredBlock(matrix, material, anchor, wear, 1.4, blendGroundLighting)
+    WorldRenderer.addWeatheredBlock(matrix, material, anchor, wear,
+        blendGroundLighting ? undefined : CEMETERY_FRINGE_SNOW_CONTACT)
 }
 
 abstract class CemeteryObject extends BaseStaticObject {
