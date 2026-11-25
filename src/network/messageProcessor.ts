@@ -64,7 +64,7 @@ import { GroundItemsManager } from '@/babylon/world/groundItemsManager'
 import { InventoryManager } from '@/data/inventoryManager'
 import { EmeraldsManager } from '@/gui/emeraldsManager'
 import { OnScreenMessageManager } from '@/gui/onScreenMessageManager'
-import type { GrassExclusionChange } from '@/network/messageIfs'
+import type { GrassOverrideChange } from '@/network/messageIfs'
 import { t } from '@/i18n'
 import { CraftingManager } from '@/data/crafting/craftingManager'
 import { AudioManager } from '@/babylon/audio/audioManager'
@@ -96,13 +96,14 @@ type WorldChunkVisibilityData = {
 export const MessageProcessor = {
 
     async processResponse(response) {
+        let starting = false
         for (const element of response) {
             const msg = element
             switch (msg.t) {
                 case 104: this.processMagicArrow(msg.d); break
                 case 105: this.processHealingSpell(msg.d); break
                 case 106: this.processHealerTreatment(msg.d); break
-                case 107: this.processGrassExclusionChange(msg.d); break
+                case 107: this.processGrassOverrideChange(msg.d); break
                 case 103: CharacterManager.receivePickup(msg.d); break
                 case 102: WorldAreaManager.receive(msg.d); break
                 case 101: ActivityLogManager.receive(msg.d); break
@@ -130,14 +131,22 @@ export const MessageProcessor = {
                     if (sheep) sheep.woolReadyAt = Date.now() + msg.d.cooldown
                     break
                 }
-                case 2: await this.loginResponse(msg.d); break
-                case 3: this.addMonster(msg.d); break
+                case 2: starting = await this.loginResponse(msg.d) || starting; break
+                case 3: {
+                    const added = this.addMonster(msg.d)
+                    if (starting && added) await added
+                    break
+                }
                 case 4: this.monsterMove(msg.d); break
-                case 5: this.addCharacter(msg.d); break
+                case 5: {
+                    const added = this.addCharacter(msg.d)
+                    if (starting) await added
+                    break
+                }
                 case 6: this.charMove(msg.d); break
                 case 7: this.processWorldData(msg.d); break
                 case 8: this.removeMonster(msg.d); break
-                case 9: this.processWorldChunkData(msg.d); break
+                case 9: this.processWorldChunkData(msg.d, !starting); break
                 case 10: this.monsterMoveStop(msg.d); break
                 case 11: this.processWorldChangedData(msg.d); break
                 case 12: this.charMoveDesynced(msg.d); break
@@ -225,6 +234,11 @@ export const MessageProcessor = {
                     break
             }
         }
+        if (starting) {
+            await GameManager.startGame()
+            window.dispatchEvent(new Event('game:started'))
+            console.log('Game started')
+        }
     },
 
     async loginResponse(data) {
@@ -232,20 +246,21 @@ export const MessageProcessor = {
             window.dispatchEvent(new CustomEvent('game:login-error', {detail: {message: data.message}}))
             window.dispatchEvent(new Event('game:login-failed'))
         } else if (data.char) {
-            await GameManager.startGame(data.char)
-            window.dispatchEvent(new Event('game:started'))
-            console.log('Game started')
+            await GameManager.initializeCharacter(data.char)
+            return true
         }
+        return false
     },
 
     addMonster(data: MonsterSpawnData) {
         MonsterCatalog.get(data.tp)
-        MonsterManager.addMonster(data.id, data.tp, { x: data.x, z: data.z }, Number(data.hpp), data.mv, data.paf, data.role, data.alignment, data.guard, data.huntable === true)
+        const added = MonsterManager.addMonster(data.id, data.tp, { x: data.x, z: data.z }, Number(data.hpp), data.mv, data.paf, data.role, data.alignment, data.guard, data.huntable === true)
         const sheep = MonsterManager.monsters.get(data.id)
         if (sheep) {
             sheep.woolReadyAt = Date.now() + (data.woolCooldown ?? 0)
             sheep.skulls = data.skulls ?? 0
         }
+        return added
     },
 
     processMonsterDangerChanged(data: MonsterDangerChangedData) {
@@ -384,6 +399,9 @@ export const MessageProcessor = {
         if (data.noGrassTiles) {
             WorldDataManager.worldDataMap.get(data.id)!.noGrassTiles = new Set(data.noGrassTiles)
         }
+        if (data.forcedGrassTiles) {
+            WorldDataManager.worldDataMap.get(data.id)!.forcedGrassTiles = new Map(data.forcedGrassTiles)
+        }
         if (worldChanged && WorldDataManager.worldDataMap.get(data.id)?.allChunksLoaded) MiniMap.redrawLocalWorld()
         if (worldChanged || data.areas) WorldAreaManager.setWorld(data.id, data.areas ?? [], data.areasRevision ?? 0, data.name)
         FoggyAreaManager.setAreas(data.foggyAreas ?? [])
@@ -403,18 +421,20 @@ export const MessageProcessor = {
         }
     },
 
-    processGrassExclusionChange(data: GrassExclusionChange) {
+    processGrassOverrideChange(data: GrassOverrideChange) {
         if ('error' in data) {
-            OnScreenMessageManager.addMessage('Could not save the grass exclusion.', 'ERROR')
+            OnScreenMessageManager.addMessage('Could not save the grass edit.', 'ERROR')
             return
         }
         const world = WorldDataManager.worldDataMap.get(data.worldId)
         if (!world) return
         if (data.excluded) world.noGrassTiles.add(data.tile)
         else world.noGrassTiles.delete(data.tile)
+        if (data.level) world.forcedGrassTiles.set(data.tile, data.level)
+        else world.forcedGrassTiles.delete(data.tile)
         if (data.worldId !== MyPlayer.worldId) return
-        TerrainManager.refreshGrassExclusions()
-        WorldRenderer.refreshGrassExclusionMarkers()
+        TerrainManager.refreshGrassOverrides(data.tile)
+        WorldRenderer.refreshGrassOverrideMarkers()
     },
 
     removeMonster(data) {
@@ -435,7 +455,7 @@ export const MessageProcessor = {
         CharacterManager.pushThrough(data)
     },
 
-    processWorldChunkData(data) {
+    processWorldChunkData(data, render = true) {
         let staticsChanged = false
         data.a.forEach(chunk => {
             TreeManager.consumeTrees(chunk.trees)
@@ -460,7 +480,7 @@ export const MessageProcessor = {
         // WorldRenderer may already have recorded the teleport destination
         // before this asynchronous entity payload arrived, so movement alone
         // will not necessarily trigger another rebuild.
-        if (MyPlayer.myChar != null && WorldRenderer.block1 != null) {
+        if (render && MyPlayer.myChar != null && WorldRenderer.block1 != null) {
             const rebuild = WorldRenderer.lastPos == null || !ViewportManager.viewPortInitialized
                 || data.a.some((chunk: WorldChunkVisibilityData) => this.chunkAffectsVisibleWorld(chunk))
                 || data.r.some((chunk: WorldChunkVisibilityData) => this.chunkAffectsVisibleWorld(chunk))
@@ -762,7 +782,7 @@ export const MessageProcessor = {
         FoggyAreaManager.clearWorld()
         GMSpawns.removeAllMarkers()
         GMFoggyAreas.removeMarkers()
-        WorldRenderer.grassExclusionMarkers?.setEnabled(false)
+        WorldRenderer.hideGrassOverrideMarkers()
         Lights.pruneDisposedMeshReferences()
     },
 

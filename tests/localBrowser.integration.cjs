@@ -40,7 +40,8 @@ async function main() {
         process.env.VITE_GM_MODE = 'true'
         const {createServer} = await import('vite')
         const testHost = process.env.DARKENLIGHT_TEST_HOST || '127.0.0.1'
-        vite = await createServer({root, cacheDir: join(fixture, '.vite'), configFile: join(root, 'vite.config.js'), server: {host: testHost, port: 0}, logLevel: 'warn'})
+        vite = await createServer({root, cacheDir: join(fixture, '.vite'), configFile: join(root, 'vite.config.js'),
+            server: {host: testHost, port: 0, hmr: false}, logLevel: 'warn'})
         await vite.listen()
         const url = `http://${testHost}:${vite.httpServer.address().port}/`
         browser = await chromium.launch({channel: 'chrome', headless: true, args: ['--enable-unsafe-swiftshader']})
@@ -86,7 +87,7 @@ async function main() {
             const {TerrainManager} = await import('/src/babylon/world/terrainManager.ts')
             return TerrainManager.outdoorTerrain?.getGrassStats()?.count > 0
         }, undefined, {timeout: 10000})
-        const grassTile = await page.evaluate(async () => {
+        const [grassTile, forcedTile] = await page.evaluate(async () => {
             const {Renderer} = await import('/src/babylon/scene/renderer.ts')
             const {TerrainManager} = await import('/src/babylon/world/terrainManager.ts')
             const {WorldDataManager} = await import('/src/data/worldDataManager.ts')
@@ -97,22 +98,27 @@ async function main() {
             const canvas = engine.getRenderingCanvas()
             const viewport = scene.activeCamera.viewport.toGlobal(engine.getRenderWidth(), engine.getRenderHeight())
             const outdoor = TerrainManager.outdoorTerrain
+            const tiles = []
             for (const mesh of outdoor.grass.meshes) {
                 for (const matrix of mesh.thinInstanceGetWorldMatrices().slice(0, mesh.thinInstanceCount)) {
                     const pos = matrix.getTranslation()
                     const x = Math.round(pos.x), z = Math.round(pos.z)
                     const tile = x * world.worldSize + z
-                    if (world.noGrassTiles.has(tile)) continue
+                    if (world.noGrassTiles.has(tile) || world.forcedGrassTiles.has(tile)
+                        || tiles.some(other => Math.hypot(other.x - x, other.z - z) < 2)) continue
                     pos.set(x, world.blockMap[x][z].height, z)
                     const screen = pos.constructor.Project(pos, mesh.getWorldMatrix(), scene.getTransformMatrix(), viewport)
                     const px = screen.x * canvas.clientWidth / engine.getRenderWidth()
                     const py = screen.y * canvas.clientHeight / engine.getRenderHeight()
                     if (document.elementFromPoint(px, py) !== canvas) continue
                     const hit = scene.pick(px, py, candidate => candidate.isEnabled() && outdoor.isSurfaceMesh(candidate)).pickedPoint
-                    if (hit && Math.round(hit.x) === x && Math.round(hit.z) === z) return {tile, x, z, px, py}
+                    if (hit && Math.round(hit.x) === x && Math.round(hit.z) === z) {
+                        tiles.push({tile, x, z, px, py})
+                        if (tiles.length === 2) return tiles
+                    }
                 }
             }
-            throw new Error('No clickable rendered grass tile found')
+            throw new Error('Could not find two clickable rendered grass tiles')
         })
         const exclusions = database.collection('worlds')
         const isGrassExcluded = async () => (await exclusions.findOne({id: 1})).noGrassTiles?.includes(grassTile.tile) ?? false
@@ -135,6 +141,28 @@ async function main() {
         await waitFor(async () => !await isGrassExcluded(), 'grass exclusion removed from Mongo')
         await page.mouse.click(grassTile.px, grassTile.py)
         await waitFor(isGrassExcluded, 'grass exclusion marked again')
+        await page.mouse.click(forcedTile.px, forcedTile.py)
+        await waitFor(async () => (await exclusions.findOne({id: 1})).noGrassTiles.includes(forcedTile.tile), 'second grass exclusion saved')
+        await page.getByRole('button', {name: 'Force grass', exact: true}).click()
+        const readForcedLevel = async () => {
+            const world = await exclusions.findOne({id: 1})
+            assert.ok(!world.noGrassTiles.includes(forcedTile.tile))
+            return new Map(world.forcedGrassTiles).get(forcedTile.tile) ?? 0
+        }
+        for (const level of [1, 2, 3, 4, 5, 0, 1]) {
+            await page.mouse.click(forcedTile.px, forcedTile.py)
+            await page.waitForFunction(async ({tile, level}) => {
+                const {WorldDataManager} = await import('/src/data/worldDataManager.ts')
+                const {WorldRenderer} = await import('/src/babylon/world/worldRenderer.ts')
+                const world = WorldDataManager.worldDataMap.get(1)
+                return !world.noGrassTiles.has(tile) && (world.forcedGrassTiles.get(tile) ?? 0) === level
+                    && WorldRenderer.forcedGrassMarkers?.isEnabled() === Boolean(level)
+            }, {tile: forcedTile.tile, level})
+            assert.equal(await readForcedLevel(), level)
+        }
+        await page.getByRole('button', {name: 'Overview', exact: true}).click()
+        assert.equal(await page.evaluate(async () =>
+            (await import('/src/babylon/world/worldRenderer.ts')).WorldRenderer.forcedGrassMarkers.isEnabled()), false)
         const areas = mainWorld.areas?.length ? structuredClone(mainWorld.areas)
             : [{id: 1, name: 'Runtime area', points: [1, 1, 11, 1, 11, 11, 1, 11]}]
         areas[0].name = 'Runtime GM area edit'
@@ -161,6 +189,10 @@ async function main() {
             const {WorldDataManager} = await import('/src/data/worldDataManager.ts')
             return WorldDataManager.worldDataMap.get(1)?.noGrassTiles.has(tile)
         }, grassTile.tile), true, 'GM grass exclusion was not restored')
+        assert.equal(await page.evaluate(async tile => {
+            const {WorldDataManager} = await import('/src/data/worldDataManager.ts')
+            return WorldDataManager.worldDataMap.get(1)?.forcedGrassTiles.get(tile)
+        }, forcedTile.tile), 1, 'GM forced grass was not restored')
         assert.equal(await database.collection('characters').countDocuments(), 0)
         const resumedGM = EJSON.parse(await page.evaluate(async id => {
             const {Connector} = await import('/src/network/connector.ts'); await Connector.save()
@@ -178,6 +210,7 @@ async function main() {
         assert.equal(Object.keys(manifest.navigationMaps).length, exported.worlds.length)
         assert.equal(exported.worlds.find(world => world.id === 1).areas[0].name, areas[0].name)
         assert.ok(exported.worlds.find(world => world.id === 1).noGrassTiles.includes(grassTile.tile))
+        assert.equal(new Map(exported.worlds.find(world => world.id === 1).forcedGrassTiles).get(forcedTile.tile), 1)
         assert.equal(exported.players.length, 0)
         assert.equal(exported.characters.length, 0)
         // Ordinary characters use the bundle even when GM authoring is enabled in env.
@@ -211,7 +244,7 @@ async function main() {
         assert.equal(createHash('sha256').update(readFileSync(join(serverRoot, mapRelative))).digest('hex'), originalSourceHash, 'Test changed an actual authoring PNG')
         assert.deepEqual(gameSockets, [], 'Local game opened a gameplay WebSocket')
         assert.deepEqual(browserErrors, [], 'Browser runtime errors')
-        console.log('PASS: real renderer/login, local GM profile, grass exclusions, Mongo world edit, PNG edit and export without characters; source data untouched')
+        console.log('PASS: real renderer/login, local GM profile, grass overrides, Mongo world edit, PNG edit and export without characters; source data untouched')
     } catch (error) {
         if (page) {
             console.error('Browser errors:', browserErrors)

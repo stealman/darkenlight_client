@@ -1,6 +1,7 @@
 import { BoundingInfo, Frustum, Matrix, TransformNode, Vector3, type AbstractMesh, type Mesh } from '@babylonjs/core'
 import type { Plane } from '@babylonjs/core'
 import { MapBlock } from '@/data/worldDataManager'
+import type { WorldData } from '@/data/worldDataManager'
 import { Lights } from '@/babylon/scene/lights'
 import { ViewportManager } from '@/utils/viewport'
 import { Settings } from '@/settings/settings'
@@ -12,7 +13,7 @@ import { terrainWithoutSnow } from '@/adminUtils/terrainLocalTransitions'
 import { createTerrainFoliageRenderer } from '@/adminUtils/terrainFoliageRenderer'
 import { createGrassRenderer, GAME_GRASS_ENABLED, GRASS_CONTACT_LIMIT, GRASS_MAX_BEND } from './grassRenderer'
 import type { GrassTuft } from './grassRenderer'
-import { getGrassSources } from './grassPlacement'
+import { createForcedGrassTufts, getGrassSources } from './grassPlacement'
 import { BuildingManager } from './buildings/buildingManager'
 import { StaticsManager } from './statics/staticsManager'
 import { TreeManager } from './treeManager'
@@ -35,6 +36,7 @@ const REGION_SIZE = TERRAIN_ATLAS_REGION_SIZE
 const GRASS_TILE_RANGE = 20
 
 type GrassTile = {x: number, z: number, tufts: GrassTuft[], minimum: Vector3, maximum: Vector3}
+type GrassOverrides = Pick<WorldData, 'noGrassTiles' | 'forcedGrassTiles'>
 type VisibleTile = {seen: number, faces?: OutdoorInstance[], foliage?: OutdoorInstance[], grass?: GrassTile}
 type TerrainPatch = {key: number, span: number, faces: OutdoorInstance[]}
 type Region = {
@@ -73,6 +75,20 @@ function grassTileInView({minimum, maximum}: GrassTile, planes: Plane[], padding
         if (x * normal.x + y * normal.y + z * normal.z + d < 0) return false
     }
     return true
+}
+
+function addGrassTuft(tile: GrassTile | undefined, x: number, z: number, tuft: GrassTuft,
+    footprintRadius: number, bladeHeight: number): GrassTile {
+    tile ??= {x, z, tufts: [], minimum: new Vector3(Infinity, Infinity, Infinity),
+        maximum: new Vector3(-Infinity, -Infinity, -Infinity)}
+    const m = tuft.matrix.m
+    const radius = footprintRadius * Math.hypot(m[0], m[2])
+    tile.minimum.set(Math.min(tile.minimum.x, m[12] - radius), Math.min(tile.minimum.y, m[13]),
+        Math.min(tile.minimum.z, m[14] - radius))
+    tile.maximum.set(Math.max(tile.maximum.x, m[12] + radius), Math.max(tile.maximum.y, m[13] + bladeHeight * m[5]),
+        Math.max(tile.maximum.z, m[14] + radius))
+    tile.tufts.push(tuft)
+    return tile
 }
 
 type TerrainView = {minX: number, minZ: number, maxX: number, maxZ: number}
@@ -123,7 +139,9 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
     const grassDetail = lowDetail ? 'low' : highDetail ? 'high' : 'medium'
     let grassStats: ReturnType<ReturnType<typeof createGrassRenderer>['render']> | undefined
     let grassCenterX = 0, grassCenterZ = 0
-    let grassExclusions: ReadonlySet<number> | undefined
+    let grassOverrides: GrassOverrides | undefined
+    let forcedGrassTerrainRevision: number | undefined
+    const forcedGrassCache = new Map<number, GrassTile | undefined>()
     const refreshGrass = () => {
         if (!grass) return
         grassTufts.length = 0
@@ -137,18 +155,33 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
         // Leave room for sub-tile camera motion between terrain refreshes.
         const travelPadding = Settings.isPhoneOrTablet() ? 0.75 : 0.35
         const reach = grass.interactionRadius
-        const exclusions = grassExclusions?.size ? grassExclusions : undefined
+        const exclusions = grassOverrides?.noGrassTiles
+        const hasExclusions = !!exclusions?.size
+        const forced = grassOverrides?.forcedGrassTiles.size ? grassOverrides.forcedGrassTiles : undefined
         const depth = currentMap?.[0]?.length ?? 0
-        for (const tile of visibleTiles.values()) {
-            const placed = tile.grass
-            if (!placed || Math.abs(placed.x - grassCenterX) > GRASS_TILE_RANGE
-                || Math.abs(placed.z - grassCenterZ) > GRASS_TILE_RANGE
-                || exclusions?.has(placed.x * depth + placed.z)) continue
+        const collect = (placed: GrassTile) => {
             const couldBend = reach > 0 && placed.minimum.x <= grassCenterX + reach && placed.maximum.x >= grassCenterX - reach
                 && placed.minimum.z <= grassCenterZ + reach && placed.maximum.z >= grassCenterZ - reach
             if (!filterToCamera || grassTileInView(placed, grassFrustum, travelPadding + (couldBend ? GRASS_MAX_BEND : 0))) {
                 grassTufts.push(...placed.tufts)
             }
+        }
+        for (const [key, {grass: placed}] of visibleTiles) {
+            const level = forced?.get(key)
+            if ((!placed && !level) || (hasExclusions && exclusions!.has(key))) continue
+            const x = placed?.x ?? Math.floor(key / depth), z = placed?.z ?? key % depth
+            if (Math.abs(x - grassCenterX) > GRASS_TILE_RANGE || Math.abs(z - grassCenterZ) > GRASS_TILE_RANGE) continue
+            if (level && currentMap && exclusions) {
+                if (!forcedGrassCache.has(key)) {
+                    let tile: GrassTile | undefined
+                    for (const tuft of createForcedGrassTufts(currentMap, x, z, level, exclusions, previousSnow)) {
+                        tile = addGrassTuft(tile, x, z, tuft, grass.footprintRadius, grass.bladeHeight)
+                    }
+                    forcedGrassCache.set(key, tile)
+                }
+                const tile = forcedGrassCache.get(key)
+                if (tile) collect(tile)
+            } else if (placed) collect(placed)
         }
         grass.setTufts(grassTufts)
         grassStats = grass.render(grassCenterX, grassCenterZ, grassDetail, 1, camera)
@@ -184,22 +217,33 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
         isSurfaceMesh(mesh: AbstractMesh) { return batches.has(mesh as Mesh) },
         getGrassStats() { return terrain.isEnabled() ? grassStats : undefined },
         setEnabled(enabled: boolean) { terrain.setEnabled(enabled) },
-        refreshGrassExclusions(exclusions: ReadonlySet<number>) {
-            grassExclusions = exclusions
+        refreshGrassOverrides(overrides: GrassOverrides, tile: number) {
+            grassOverrides = overrides
+            const depth = currentMap?.[0]?.length ?? 0
+            // Level five can spill into one of the four side neighbors.
+            forcedGrassCache.delete(tile)
+            forcedGrassCache.delete(tile - depth)
+            forcedGrassCache.delete(tile + depth)
+            if (tile % depth > 0) forcedGrassCache.delete(tile - 1)
+            if (tile % depth < depth - 1) forcedGrassCache.delete(tile + 1)
             if (terrain.isEnabled()) refreshGrass()
         },
         render(blockMap: MapBlock[][], center: {x: number, y: number, z: number}, snowCoverMask: ReadonlySet<number>,
-            revision?: number, compiled?: TerrainRenderData, originalBlocks?: WeakSet<MapBlock>, exclusions?: ReadonlySet<number>) {
-            grassExclusions = exclusions
+            revision?: number, compiled?: TerrainRenderData, originalBlocks?: WeakSet<MapBlock>, overrides?: GrassOverrides) {
+            if (grassOverrides !== overrides || forcedGrassTerrainRevision !== revision) forcedGrassCache.clear()
+            grassOverrides = overrides
+            forcedGrassTerrainRevision = revision
             if (currentMap !== blockMap || currentCompiled !== compiled) {
                 currentMap = blockMap
                 currentCompiled = compiled
                 regions.clear()
+                forcedGrassCache.clear()
                 paving.resetSurface()
             }
             if (!sameSnowMask(previousSnow, snowCoverMask)) {
                 previousSnow = new Set(snowCoverMask)
                 snowRevision++
+                forcedGrassCache.clear()
             }
             terrain.setEnabled(true)
             grassCenterX = center.x
@@ -375,15 +419,7 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
                             const m = tuft.matrix.m
                             const tileX = Math.round(m[12]), tileZ = Math.round(m[14])
                             const index = (tileX - x) * REGION_SIZE + tileZ - z
-                            const radius = grass.footprintRadius * Math.hypot(m[0], m[2])
-                            const maxY = m[13] + grass.bladeHeight * m[5]
-                            const tile = placedGrass[index] ??= {x: tileX, z: tileZ, tufts: [], minimum: new Vector3(Infinity, Infinity, Infinity),
-                                maximum: new Vector3(-Infinity, -Infinity, -Infinity)}
-                            tile.minimum.set(Math.min(tile.minimum.x, m[12] - radius), Math.min(tile.minimum.y, m[13]),
-                                Math.min(tile.minimum.z, m[14] - radius))
-                            tile.maximum.set(Math.max(tile.maximum.x, m[12] + radius), Math.max(tile.maximum.y, maxY),
-                                Math.max(tile.maximum.z, m[14] + radius))
-                            tile.tufts.push(tuft)
+                            placedGrass[index] = addGrassTuft(placedGrass[index], tileX, tileZ, tuft, grass.footprintRadius, grass.bladeHeight)
                         } : undefined,
                         transitionWeight(tx, tz) {
                             const tileX = Math.round(tx), tileZ = Math.round(tz)

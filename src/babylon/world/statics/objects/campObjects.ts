@@ -1,6 +1,6 @@
 import { Matrix, Vector2, Vector3 } from '@babylonjs/core'
 import { BaseStaticObject } from '@/babylon/world/statics/objects/baseStaticObject'
-import { Prefab, WorldRenderer } from '@/babylon/world/worldRenderer'
+import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import type { StaticBaseContact } from '@/babylon/world/worldRenderer'
 import { StaticEquipPartsRenderer } from '@/babylon/world/statics/staticEquipPartsRenderer'
 import { WeaponModelsCb } from '@/babylon/item/codebook/weaponModelsCb'
@@ -52,8 +52,8 @@ abstract class CampObject extends BaseStaticObject {
     protected readonly facing: CampObjectFacing
     protected readonly accentMaterial: Vector2
 
-    protected constructor(type: number, position: Vector3, material: Vector2, accentMaterial: Vector2, metadata?: CampObjectMetadata, prefab: Prefab | null = null) {
-        super(type, position, 0, material, prefab)
+    protected constructor(type: number, position: Vector3, material: Vector2, accentMaterial: Vector2, metadata?: CampObjectMetadata) {
+        super(type, position, 0, material, null)
         this.facing = metadata?.facing === '-X' || metadata?.facing === '+X'
             || metadata?.facing === '-Z' || metadata?.facing === '+Z'
             ? metadata.facing
@@ -296,8 +296,8 @@ export class Stump extends CampObject {
     private readonly cutMaterial: Vector2
     private static readonly DIAMETER = 0.66
 
-    constructor(type: number, position: Vector3, woodMaterial: Vector2, cutMaterial: Vector2, axePrefab: Prefab | null = null, metadata?: CampObjectMetadata) {
-        super(type, position, woodMaterial, cutMaterial, metadata, axePrefab)
+    constructor(type: number, position: Vector3, woodMaterial: Vector2, cutMaterial: Vector2, metadata?: CampObjectMetadata) {
+        super(type, position, woodMaterial, cutMaterial, metadata)
         this.cutMaterial = cutMaterial
     }
 
@@ -316,8 +316,13 @@ export class Stump extends CampObject {
 }
 
 export class StumpWithAxe extends Stump {
+    prepareAxe() {
+        this.prefab ??= StaticEquipPartsRenderer.getPrefab(WeaponModelsCb.HAND_AXE.id) ?? null
+    }
+
     render() {
         this.renderStump(true)
+        if (!this.prefab) return
         const facingYaw = this.facing === '+X' ? Math.PI / 2
             : this.facing === '-Z' ? Math.PI
                 : this.facing === '-X' ? -Math.PI / 2 : 0
@@ -334,7 +339,7 @@ export class StumpWithAxe extends Stump {
             .multiply(Matrix.RotationY(facingYaw))
             .multiply(Matrix.Translation(x, this.renderPosition.y + localY, z))
         StaticEquipPartsRenderer.addPart(
-            this.prefab!,
+            this.prefab,
             WeaponModelsCb.HAND_AXE.resolveMaterialAtlasIndex(0),
             axeMatrix,
         )

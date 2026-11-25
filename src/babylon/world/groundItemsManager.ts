@@ -16,8 +16,7 @@ import {
 import { ViewportManager } from '@/utils/viewport'
 import { Item } from '@/data/items/item'
 import { Utils } from '@/utils/utils'
-import { EquipManager } from '@/babylon/item/equipManager'
-import { EquipCbItem } from '@/babylon/item/codebook/equipCbItem'
+import { EquipBatchMesh, EquipManager } from '@/babylon/item/equipManager'
 import { Lights } from '@/babylon/scene/lights'
 import { MyPlayer } from '@/data/myPlayer'
 import { GroundItemTO } from '@/network/messageIfs'
@@ -33,6 +32,7 @@ import { CharacterManager } from '@/babylon/character/characterManager'
 export const GroundItemsManager = {
     scene: null as Scene | null,
     itemTypes: new Map<number, GroundItemType>(),
+    pendingTypes: new Set<number>(),
     flatItemTypes: new Map<string, GroundFlatItemType>(),
     items: new Array<GroundItem>(),
     visibleItems: new Array<GroundItem>(),
@@ -84,6 +84,7 @@ export const GroundItemsManager = {
         this.scene = scene
         this.flatItemTypes.forEach(type => type.dispose())
         this.itemTypes.clear()
+        this.pendingTypes.clear()
         this.flatItemTypes.clear()
         this.fxParticles = []
         this.lastFxUpdateTime = 0
@@ -97,42 +98,55 @@ export const GroundItemsManager = {
         this.visibleFxItemsById.clear()
         this.activeFxCountByItemId.clear()
 
-        EquipManager.itemTypes.forEach((equipType, modelId) => {
-            if (!equipType.mesh) {
-                return
-            }
-
-            const sourceMesh = equipType.mesh
-            const groundMesh = new Mesh(`ground-item-${modelId}`, scene)
-            const groundGeometry = sourceMesh.geometry?.copy(`ground-item-geo-${modelId}`)
-            groundGeometry?.applyToMesh(groundMesh)
-            groundMesh.material = sourceMesh.material
-            groundMesh.position.copyFrom(sourceMesh.position)
-            groundMesh.rotation.copyFrom(sourceMesh.rotation)
-            groundMesh.scaling.copyFrom(sourceMesh.scaling)
-            if (sourceMesh.rotationQuaternion) {
-                groundMesh.rotationQuaternion = sourceMesh.rotationQuaternion.clone()
-            }
-
-            groundMesh.setEnabled(false)
-            groundMesh.alwaysSelectAsActiveMesh = true
-            groundMesh.isPickable = false
-            groundMesh.receiveShadows = true
-            groundMesh.thinInstanceCount = 0
-
-            if (!TEXTURED_ARMOR_MODEL_IDS.has(modelId)) {
-                Lights.addShadowCaster(groundMesh)
-            }
-            Lights.registerDynamicLightMesh(groundMesh, () => MyPlayer.myChar?.pos || null)
-            this.itemTypes.set(modelId, new GroundItemType(
-                modelId,
-                equipType.cbData,
-                groundMesh,
-                getArmorEquipScale(modelId) ?? Vector3.One(),
-            ))
-        })
-
         this.initializeItemFx(scene)
+    },
+
+    getOrCreate3DType(modelId: number): GroundItemType | undefined {
+        const existing = this.itemTypes.get(modelId)
+        if (existing) return existing
+        const scene = this.scene!
+        const equipType = EquipManager.getItemType(modelId)
+        if (!equipType) return
+        if (!equipType.mesh) {
+            if (!this.pendingTypes.has(modelId)) {
+                const pending = EquipManager.requestModel(modelId)
+                if (pending) {
+                    this.pendingTypes.add(modelId)
+                    void pending.then(() => {
+                        if (this.scene !== scene || scene.isDisposed) return
+                        this.pendingTypes.delete(modelId)
+                        if (equipType.mesh) this.itemBuffersDirty = true
+                    })
+                }
+            }
+            return
+        }
+
+        const sourceMesh = equipType.mesh
+        const groundMesh = new EquipBatchMesh(`ground-item-${modelId}`, scene)
+        const groundGeometry = sourceMesh.geometry?.copy(`ground-item-geo-${modelId}`)
+        groundGeometry?.applyToMesh(groundMesh)
+        groundMesh.material = sourceMesh.material
+        groundMesh.position.copyFrom(sourceMesh.position)
+        groundMesh.rotation.copyFrom(sourceMesh.rotation)
+        groundMesh.scaling.copyFrom(sourceMesh.scaling)
+        if (sourceMesh.rotationQuaternion) {
+            groundMesh.rotationQuaternion = sourceMesh.rotationQuaternion.clone()
+        }
+
+        groundMesh.setEnabled(false)
+        groundMesh.alwaysSelectAsActiveMesh = true
+        groundMesh.isPickable = false
+        groundMesh.receiveShadows = true
+        groundMesh.thinInstanceCount = 0
+
+        if (!TEXTURED_ARMOR_MODEL_IDS.has(modelId)) {
+            Lights.addShadowCaster(groundMesh)
+        }
+        Lights.registerDynamicLightMesh(groundMesh, () => MyPlayer.myChar?.pos || null)
+        const type = new GroundItemType(modelId, groundMesh, getArmorEquipScale(modelId) ?? Vector3.One())
+        this.itemTypes.set(modelId, type)
+        return type
     },
 
     addItems(data: GroundItemTO[]) {
@@ -266,7 +280,7 @@ export const GroundItemsManager = {
                 continue
             }
 
-            const type = this.itemTypes.get(item.item.modelId)
+            const type = this.getOrCreate3DType(item.item.modelId)
             if (!type) {
                 continue
             }
@@ -644,7 +658,7 @@ class GroundItem {
         this.item = item
         this.pos = pos
 
-        const type = GroundItemsManager.itemTypes.get(item.modelId)
+        const type = EquipManager.getItemType(item.modelId)
         const matIndex = Math.max((item.materialId || 1) - 1, 0)
         const atlasMatIndex = type?.cbData.resolveMaterialAtlasIndex(matIndex) ?? matIndex
         this.matVector = this.getAtlasUvcOffsets(type?.cbData.matCols || 1, type?.cbData.matRows || 1, atlasMatIndex)
@@ -723,13 +737,11 @@ class GroundItemType {
 
     instanceBuffer: Float32Array = new Float32Array(0)
     uvBuffer: Float32Array = new Float32Array(0)
-    cbData: EquipCbItem
     scale: Vector3
     thinReady: boolean = false
 
-    constructor(id: number, cbData: EquipCbItem, mesh: Mesh, scale: Vector3) {
+    constructor(id: number, mesh: Mesh, scale: Vector3) {
         this.id = id
-        this.cbData = cbData
         this.mesh = mesh
         this.scale = scale
     }

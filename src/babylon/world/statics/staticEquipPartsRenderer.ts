@@ -1,30 +1,46 @@
-import { Matrix, Mesh, TransformNode, Vector2, VertexData } from '@babylonjs/core'
-import { EquipManager } from '@/babylon/item/equipManager'
+import { Matrix, TransformNode, Vector2, VertexData } from '@babylonjs/core'
+import { EquipBatchMesh, EquipManager } from '@/babylon/item/equipManager'
 import { Lights } from '@/babylon/scene/lights'
-import { Prefab } from '@/babylon/world/worldRenderer'
+import { Prefab, WorldRenderer } from '@/babylon/world/worldRenderer'
 import { TEXTURED_ARMOR_MODEL_IDS } from '@/babylon/item/codebook/armorsModelsCb'
 
 export const StaticEquipPartsRenderer = {
     parent: null as TransformNode | null,
     prefabs: new Map<number, Prefab>(),
+    pendingPrefabs: new Set<number>(),
 
     initialize(parent: TransformNode) {
         this.parent = parent
         this.prefabs.clear()
+        this.pendingPrefabs.clear()
     },
 
-    getPrefab(modelId: number): Prefab {
+    getPrefab(modelId: number): Prefab | undefined {
         const existing = this.prefabs.get(modelId)
         if (existing) return existing
 
         const source = EquipManager.itemTypes.get(modelId)?.mesh
-        if (!source) throw new Error(`Missing equip model ${modelId} for static object part`)
+        if (!source) {
+            if (!this.pendingPrefabs.has(modelId)) {
+                const parent = this.parent
+                const pending = EquipManager.requestModel(modelId)
+                if (pending) {
+                    this.pendingPrefabs.add(modelId)
+                    void pending.then(() => {
+                        if (this.parent !== parent || parent?.isDisposed()) return
+                        this.pendingPrefabs.delete(modelId)
+                        if (EquipManager.getItemType(modelId)?.mesh) WorldRenderer.lastPos = null
+                    })
+                }
+            }
+            return
+        }
 
         // Do not clone the source mesh here. Babylon clones share Geometry,
         // including its VAO cache, while the equipped item and this static
         // prefab use different thin-instance buffers. A viewport rebuild can
         // then bind the static buffers to the equipped mesh (or vice versa).
-        const mesh = new Mesh(`staticEquipPart_${modelId}`, source.getScene())
+        const mesh = new EquipBatchMesh(`staticEquipPart_${modelId}`, source.getScene())
         const vertexData = VertexData.ExtractFromMesh(source, true, true)
         vertexData.applyToMesh(mesh, false)
         mesh.parent = this.parent

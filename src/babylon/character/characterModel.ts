@@ -467,7 +467,7 @@ export class CharacterModel implements EquipBearer {
         applyCharacterEquipmentFitting(this.node.getScene(), slot, item, fittingGender)
         item.castsOutdoorShadow = this.parent.isMyChar() && (slot === 'WEAPON' || slot === 'SHIELD')
         this.equipSet.set(slot, item)
-        EquipManager.addEquippedItem(item)
+        if (item.type.mesh || this.parent.insideView || this.viewRequested) EquipManager.addEquippedItem(item)
         if (slot === 'HEAD') this.requestHairRefresh()
     }
 

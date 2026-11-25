@@ -1,5 +1,8 @@
 import type { MapBlock } from '@/data/worldDataManager'
-import { FoliageManager } from './foliageManager'
+import { Matrix } from '@babylonjs/core'
+import { TerrainEnum1 } from '@/babylon/materials'
+import { FoliageManager, GRASS_ROOT_INSET } from './foliageManager'
+import type { GrassTuft } from './grassRenderer'
 import { isShrubType } from './snowCoverMask'
 import { StaticsManager } from './statics/staticsManager'
 import { WATER_BLOCK_TYPE } from './terrainRoofShape'
@@ -7,6 +10,39 @@ import { TreeManager } from './treeManager'
 
 export type GrassSource = {x: number, z: number, radius: number, kind: 'fire' | 'vegetation'}
 const VEGETATION_DENSITY_BOOST = 1.45
+
+// Each entry contains local X/Z, width and height for the tufts of one level.
+const FORCED_GRASS_LAYOUTS = [
+    [],
+    [[0, 0, 0.39, 0.40]],
+    [[0, 0, 0.55, 0.67]],
+    [[0, 0, 0.72, 0.94]],
+    [[0, 0.23, 0.49, 0.65], [-0.23, -0.15, 0.47, 0.55], [0.23, -0.13, 0.44, 0.58]],
+    [[0, 0, 0.61, 0.82], [-0.53, -0.09, 0.46, 0.56], [0.53, 0.08, 0.49, 0.65],
+        [0.09, -0.53, 0.48, 0.61], [-0.08, 0.53, 0.44, 0.54]],
+] as const
+
+export function createForcedGrassTufts(map: MapBlock[][], x: number, z: number, level: number,
+    exclusions: ReadonlySet<number>, hiddenSnow: ReadonlySet<number>): GrassTuft[] {
+    const ground = map[x]?.[z]
+    const canGrow = (block?: MapBlock) => block && block.type > 0 && block.type < WATER_BLOCK_TYPE
+        && block.type !== TerrainEnum1.TERRAIN_ROCK.index
+    if (!ground || !canGrow(ground)) return []
+
+    const depth = map[0].length
+    return (FORCED_GRASS_LAYOUTS[level] ?? []).map(([dx, dz, width, height], index) => {
+        const nextX = Math.round(x + dx), nextZ = Math.round(z + dz)
+        const next = map[nextX]?.[nextZ]
+        const spill = canGrow(next) && next.height === ground.height && !exclusions.has(nextX * depth + nextZ)
+        const block = spill ? next : ground
+        const yaw = FoliageManager.roll(x, z, 17501 + index) * Math.PI * 2
+        const matrix = Matrix.Scaling(width, height, width).multiply(Matrix.RotationY(yaw))
+        const inset = spill ? 1 : 0.52
+        matrix.setTranslationFromFloats(x + dx * inset, block.height - GRASS_ROOT_INSET, z + dz * inset)
+        return {matrix, forced: true, tone: block.type === TerrainEnum1.TERRAIN_GRASS.index ? 0 : 1,
+            snowed: block.snowed && !hiddenSnow.has(spill ? nextX * depth + nextZ : x * depth + z)}
+    })
+}
 
 export function getGrassSources(minX: number, minZ: number, maxX: number, maxZ: number): GrassSource[] {
     const sources: GrassSource[] = []

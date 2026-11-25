@@ -40,7 +40,6 @@ import {
 } from '@/babylon/world/statics/objects/campObjects'
 import { StaticEquipPartsRenderer } from '@/babylon/world/statics/staticEquipPartsRenderer'
 import { StaticLeafPlanes } from '@/babylon/world/statics/staticLeafPlanes'
-import { WeaponModelsCb } from '@/babylon/item/codebook/weaponModelsCb'
 import {
     CemeteryCross,
     CemeteryCrossPedestal,
@@ -205,7 +204,6 @@ export const StaticsManager = {
                 pos,
                 MaterialEnum1.WOOD_3.uv,
                 MaterialEnum1.WOOD_CUT.uv,
-                StaticEquipPartsRenderer.getPrefab(WeaponModelsCb.HAND_AXE.id),
                 obj.meta as CampObjectMetadata,
             )); break
             case 311: this.allStatics.push(new Stump(obj.tp, pos, MaterialEnum1.WOOD_3.uv, MaterialEnum1.WOOD_CUT.uv)); break
@@ -511,6 +509,7 @@ export const StaticsManager = {
         this.resolveConnectingCorners()
         if (!visibilityReady) this.prepareRender()
         for (const element of this.visibleStatics) {
+            if (element instanceof StumpWithAxe) element.prepareAxe()
             const blockStart = WorldRenderer.block1!.matrices.length
             const prefabStart = element.prefab?.matrices.length ?? 0
             const translucentStart = WorldRenderer.translucentPlane!.matrices.length

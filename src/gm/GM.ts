@@ -1,5 +1,5 @@
 import { Connector } from '@/network/connector'
-import { GMToggleGrassExclusion } from '@/network/messages'
+import { GMEditGrass } from '@/network/messages'
 import { GMFastModeMsg, GMNoAggroMsg, GMBotAction, GMBuildingChange, GMCreateItemMsg, GMDayNightCycleMsg, GMEquipmentDecorationChange, GMForceSaveDataMsg, GMGenerateBiomeMsg, GMLoadItemCodebookMsg, GMLoadWorldMapImageMsg, GMLoadWorldSettingsMsg, GMLoadWorldsMsg, GMNpcAction, GMSaveMapDataMsg, GMSaveWorldMapHeightChangesMsg, GMSaveWorldMapSurfaceChangesMsg, GMSaveWorldMapTerrainChangesMsg, GMSaveWorldSettingsMsg, GMStaticDeleteInfoRequest, GMStaticObjectChange, GMTeleportMsg, GMTerrainChange } from '@/network/messages'
 import { GMBotStatusData, GMExistingBotsData, GMItemCodebookItem, GMStaticDeleteInfoData, GMWorldBiomeTreesChangedData, GMWorldMapImageData, GMWorldSettingsData, GMWorldsData } from '@/network/messageIfs'
 import { WorldAreaPreview } from '@/gm/worldAreaPreview'
@@ -7,6 +7,7 @@ import { GMSceneManager } from '@/babylon/gm/GmSceneManager'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { WATER_BLOCK_TYPE } from '@/babylon/world/terrainRoofShape'
+import { TerrainEnum1 } from '@/babylon/materials'
 import { ref, watch } from 'vue'
 import { Vector3 } from '@babylonjs/core'
 import { Utils } from '@/utils/utils'
@@ -153,7 +154,7 @@ export const GMManager = {
     terrainEditMode: ref('terrain'),
     selectedMinable: ref('M1'),
     selectedTree: ref (0),
-    noGrassTool: ref(false),
+    grassTool: ref<'exclude' | 'force' | null>(null),
     treeLevel: ref(1),
     editingTree: ref<{x: number, z: number} | null>(null),
     selectedShrub: ref (0),
@@ -346,12 +347,13 @@ export const GMManager = {
 
         if (this.tab === GmTabs.BIOME_EDIT) {
             const markerPos = new Vector3(GMSceneManager.hoverBlockMarker!.position.x, 0, GMSceneManager.hoverBlockMarker!.position.z)
-            if (this.noGrassTool.value) {
+            if (this.grassTool.value) {
                 const {x, z} = markerPos
                 const block = WorldDataManager.worldDataMap.get(MyPlayer.worldId)?.blockMap[x]?.[z]
-                if (Renderer.environmentType === 'outdoor' && block && block.type > 0 && block.type < WATER_BLOCK_TYPE) {
-                    Connector.sendMessage(new GMToggleGrassExclusion({worldId: MyPlayer.worldId, x, z}))
-                }
+                if (Renderer.environmentType !== 'outdoor' || !block || block.type <= 0 || block.type >= WATER_BLOCK_TYPE) return
+                const force = this.grassTool.value === 'force'
+                if (force && block.type === TerrainEnum1.TERRAIN_ROCK.index) return
+                Connector.sendMessage(new GMEditGrass({worldId: MyPlayer.worldId, x, z, mode: force ? 'force' : undefined}))
                 return
             }
             const tree = TreeManager.allTrees.find(t => t.position.x === markerPos.x && t.position.z === markerPos.z)
@@ -929,7 +931,7 @@ export const GMManager = {
         this.selectedShrub.value = 0
         GMSceneManager.setHoverBlockMarkerSize(1)
         GMSceneManager.hoverBlockMarker?.setEnabled(true)
-        WorldRenderer.refreshGrassExclusionMarkers()
+        WorldRenderer.refreshGrassOverrideMarkers()
     },
 
     openTabWallsAndFencesEdit() {
@@ -1099,8 +1101,8 @@ export const GMManager = {
 
     closeTabBiomeEdit() {
         this.editingTree.value = null
-        this.noGrassTool.value = false
-        WorldRenderer.grassExclusionMarkers?.setEnabled(false)
+        this.grassTool.value = null
+        WorldRenderer.hideGrassOverrideMarkers()
         this.consumePointerMoveEvents = false
         this.consumeLeftClickEvents = false
         GMSceneManager.hoverBlockMarker?.setEnabled(false)
@@ -1398,8 +1400,8 @@ export const GMManager = {
 
 watch(GMManager.gmPanelVisible, visible => {
     if (!visible) {
-        GMManager.noGrassTool.value = false
-        WorldRenderer.grassExclusionMarkers?.setEnabled(false)
+        GMManager.grassTool.value = null
+        WorldRenderer.hideGrassOverrideMarkers()
     }
 })
 

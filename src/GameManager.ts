@@ -59,7 +59,7 @@ export const GameManager = {
         reportLoadingProgress(100, 'app.loadingReady')
     },
 
-    async startGame(charData) {
+    async initializeCharacter(charData) {
         reportLoadingProgress(35, 'app.loadingCharacter')
         await MyPlayer.initialize(charData)
         GMManager.restoreNoAggro(charData.gmNoAggro ?? true)
@@ -68,6 +68,10 @@ export const GameManager = {
         InventoryManager.initializeWeaponSetupsForCharacter()
         ActionButtonsManager.loadBindingsForCharacter(MyPlayer.myChar.id, MyPlayer.myChar.name)
         this.onResize()
+        Renderer.prepareGameView()
+    },
+
+    async startGame() {
         reportLoadingProgress(80, 'app.loadingLighting')
         await Renderer.gameStarted((completed, total) => {
             const ratio = total > 0 ? completed / total : 1

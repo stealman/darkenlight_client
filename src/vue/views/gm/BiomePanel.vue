@@ -1,14 +1,17 @@
 <template>
     <div>
-        <label class="tree-item" :class="{ selected: !noGrassTool && selectedTree === 0 && selectedShrub === 0 }" @click="selectNone()">
+        <label class="tree-item" :class="{ selected: !grassTool && selectedTree === 0 && selectedShrub === 0 }" @click="selectNone()">
             None
         </label>
-        <button type="button" class="tree-item" :class="{ selected: noGrassTool }"
-                :aria-pressed="noGrassTool" @click="toggleNoGrassTool">No grass</button>
-        <div v-if="noGrassTool">Click a ground tile to mark it or clear its mark.</div>
+        <button type="button" class="tree-item" :class="{ selected: grassTool === 'exclude' }"
+                :aria-pressed="grassTool === 'exclude'" @click="toggleGrassTool('exclude')">No grass</button>
+        <button type="button" class="tree-item" :class="{ selected: grassTool === 'force' }"
+                :aria-pressed="grassTool === 'force'" @click="toggleGrassTool('force')">Force grass</button>
         <label style='color: red; font-weight: bold' class="tree-item" :class="{ selected: selectedTree === -1 && selectedShrub === -1 }" @click="selectDelete()">
             Delete
         </label>
+        <div v-if="grassTool === 'exclude'">Click a ground tile to mark it or clear its mark.</div>
+        <div v-if="grassTool === 'force'">Click a tile to cycle through small, medium, large, 3 tufts, 5 tufts, and back to automatic.</div>
     </div>
 
     <div>
@@ -122,7 +125,7 @@ const selectedTreeType = ref("")
 const selectedTree = GMManager.selectedTree
 const selectedShrubType = ref("")
 const selectedShrub = GMManager.selectedShrub
-const noGrassTool = GMManager.noGrassTool
+const grassTool = GMManager.grassTool
 
 const trees = [
     { type: "OAK", name: "Oak_1", id: 1 },
@@ -161,7 +164,7 @@ const shrubs = [
 ]
 
 const selectTreeType = (type) => {
-    noGrassTool.value = false
+    grassTool.value = null
     selectedShrub.value = 0
     GMManager.editingTree.value = null
     selectedTreeType.value = type
@@ -181,7 +184,7 @@ const selectTree = (id) => {
 }
 
 const selectShrubType = (type) => {
-    noGrassTool.value = false
+    grassTool.value = null
     selectedTree.value = 0
     GMManager.editingTree.value = null
     selectedShrubType.value = type
@@ -201,7 +204,7 @@ const selectShrub = (id) => {
 }
 
 const selectNone = () => {
-    noGrassTool.value = false
+    grassTool.value = null
     GMManager.editingTree.value = null
     selectedTree.value = 0
     selectedShrub.value = 0
@@ -209,10 +212,10 @@ const selectNone = () => {
     selectedShrubType.value = ""
 }
 
-const toggleNoGrassTool = () => {
-    const active = !noGrassTool.value
+const toggleGrassTool = (tool) => {
+    const next = grassTool.value === tool ? null : tool
     selectNone()
-    noGrassTool.value = active
+    grassTool.value = next
 }
 
 const selectDebris = (type) => {
@@ -221,7 +224,7 @@ const selectDebris = (type) => {
 }
 
 const selectDelete = () => {
-    noGrassTool.value = false
+    grassTool.value = null
     GMManager.editingTree.value = null
     selectedTree.value = -1
     selectedShrub.value = -1

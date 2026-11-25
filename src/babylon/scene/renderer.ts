@@ -153,6 +153,11 @@ export const Renderer = {
         await TargetingManager.initialize()
     },
 
+    prepareGameView() {
+        if (this.camera == null) this.createCamera()
+        if (!ViewportManager.viewPortInitialized) ViewportManager.calculateViewport(this.camera!)
+    },
+
     async gameStarted(onWarmupProgress?: (completed: number, total: number) => void) {
         Lights.sunLight.parent = MyPlayer.myModel!.node
         Lights.attachPersonalLight(MyPlayer.myModel!.node)
@@ -160,16 +165,16 @@ export const Renderer = {
         const { WorldDataManager } = await import('@/data/worldDataManager')
         await WorldDataManager.terrainRenderLoad?.ready
 
-        // Build the first visible world while the loading overlay is still up.
-        // One hidden render compiles the fixed outdoor light layout before the
-        // live render loop starts.
-        if (this.camera == null) {
-            this.createCamera()
-        }
-        if (!ViewportManager.viewPortInitialized) {
-            ViewportManager.calculateViewport(this.camera)
-        }
+        // The first scene uses the player and the nearby entities from the login frame.
+        this.prepareGameView()
         WorldRenderer.renderWorld()
+        GroundItemsManager.updateVisibleItems()
+        GroundItemsManager.renderItems()
+        if (EquipManager.pendingModels.size > 0) {
+            await Promise.all(EquipManager.pendingModels.values())
+            WorldRenderer.renderWorld()
+            GroundItemsManager.renderItems()
+        }
         EquipManager.onFrame()
 
         onWarmupProgress?.(0, 4)

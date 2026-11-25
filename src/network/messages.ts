@@ -682,8 +682,8 @@ export class GMWorldAreasRequest implements Message {
     }) {}
 }
 
-export class GMToggleGrassExclusion implements Message {
+export class GMEditGrass implements Message {
     t = 1028
 
-    constructor(public d: {worldId: number, x: number, z: number}) {}
+    constructor(public d: {worldId: number, x: number, z: number, mode?: 'force'}) {}
 }

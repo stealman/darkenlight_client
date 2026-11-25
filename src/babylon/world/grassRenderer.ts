@@ -5,7 +5,7 @@ import { FoliageManager, GRASS_ROOT_INSET } from '@/babylon/world/foliageManager
 import { updateWorldInstanceBuffers } from '@/babylon/world/worldInstanceBuffers'
 import { createGrassContactShade, GRASS_CONTACT_TRIANGLES } from './grassContactShade'
 
-export type GrassTuft = {matrix: Matrix, tone: 0 | 1 | 2, snowed?: boolean}
+export type GrassTuft = {matrix: Matrix, tone: 0 | 1 | 2, snowed?: boolean, forced?: boolean}
 export type GrassDetail = 'high' | 'medium' | 'low'
 export const GAME_GRASS_ENABLED = true // Toggle for the FPS comparison.
 export const GRASS_CONTACT_LIMIT = 4
@@ -223,7 +223,7 @@ export function createGrassRenderer(scene: Scene, parent: TransformNode, contact
     const shadeStylesByVariant = shade ? SHAPES.map((_, variant) => [new Vector2(variant, 0.155), new Vector2(variant, 0.19)]) : undefined
     type Candidate = {
         matrix: Matrix, style: Vector2, snowStyles?: {high: Vector2, medium: Vector2}, shadeStyle?: Vector2,
-        variant: number, rank: number, distance: number, priority: number, lod: number
+        forced: number, variant: number, rank: number, distance: number, priority: number, lod: number
     }
     const candidateByTuft = new WeakMap<GrassTuft, Candidate>()
     const parentToView = Matrix.Identity()
@@ -263,7 +263,7 @@ export function createGrassRenderer(scene: Scene, parent: TransformNode, contact
             candidates = tufts.map(tuft => {
                 const cached = candidateByTuft.get(tuft)
                 if (cached) return cached
-                const {matrix, tone, snowed} = tuft
+                const {matrix, tone, snowed, forced} = tuft
                 const x = Math.round(matrix.m[12] * 1024), z = Math.round(matrix.m[14] * 1024)
                 const variant = FoliageManager.hashTile(x, z, 12201) % SHAPES.length
                 const colorVariation = FoliageManager.roll(x, z, 12200)
@@ -271,7 +271,7 @@ export function createGrassRenderer(scene: Scene, parent: TransformNode, contact
                     matrix, style: new Vector2(tone, colorVariation),
                     snowStyles: snowed ? {high: new Vector2(4, colorVariation), medium: new Vector2(3, colorVariation)} : undefined,
                     shadeStyle: shadeStylesByVariant?.[variant][snowed ? 1 : 0],
-                    variant,
+                    variant, forced: Number(forced === true),
                     rank: FoliageManager.roll(x, z, 12202), distance: 0, priority: 0, lod: 0,
                 }
                 candidateByTuft.set(tuft, candidate)
@@ -304,7 +304,7 @@ export function createGrassRenderer(scene: Scene, parent: TransformNode, contact
                 eligible.push(tuft)
             }
             if (requestedTriangles > budget) {
-                eligible.sort((a, b) => a.priority - b.priority || a.distance - b.distance || a.rank - b.rank)
+                eligible.sort((a, b) => b.forced - a.forced || a.priority - b.priority || a.distance - b.distance || a.rank - b.rank)
             }
             let triangles = 0, count = 0
             for (const tuft of eligible) {

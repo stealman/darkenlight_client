@@ -88,53 +88,40 @@ function createWeaponNormalTexture(scene: Scene, fileName: string, cacheVersion:
 
 export const WeaponsCbManager = {
     BASE_WEAPONS_PATH: 'weapons/',
-    itemSourceParent: null as TransformNode | null,
+    sourceParents: new WeakMap<Scene, TransformNode>(),
 
-    bowMaterial: null as PBRCustomMaterial | null,
-    recurveBowMaterial: null as PBRCustomMaterial | null,
-    battleBowMaterial: null as PBRCustomMaterial | null,
-    longSwordMaterial: null as PBRCustomMaterial | null,
-    broadSwordMaterial: null as PBRCustomMaterial | null,
-    greatSwordMaterial: null as PBRCustomMaterial | null,
-    pickAxeMaterial: null as PBRCustomMaterial | null,
-    handAxeMaterial: null as PBRCustomMaterial | null,
-    battleAxeMaterial: null as PBRCustomMaterial | null,
-    greatAxeMaterial: null as PBRCustomMaterial | null,
-    largeBattleAxeMaterial: null as PBRCustomMaterial | null,
-    lightMaceMaterial: null as PBRCustomMaterial | null,
-    warmaceMaterial: null as PBRCustomMaterial | null,
-    warhammerMaterial: null as PBRCustomMaterial | null,
-    huntingSpearMaterial: null as PBRCustomMaterial | null,
-    halberdMaterial: null as PBRCustomMaterial | null,
+    registerModels(map: Map<number, EquipItemType>, scene: Scene) {
+        const loaders = [
+            [WeaponModelsCb.HUNTINGBOW, this.initHuntingBow],
+            [WeaponModelsCb.RECURVE_BOW, this.initRecurveBow],
+            [WeaponModelsCb.BATTLEBOW, this.initBattleBow],
+            [WeaponModelsCb.CRYSTALWAND, this.initCrystalWand],
+            [WeaponModelsCb.LONGSWORD, this.initLongsword],
+            [WeaponModelsCb.BROADSWORD, this.initBroadsword],
+            [WeaponModelsCb.GREATSWORD, this.initGreatsword],
+            [WeaponModelsCb.LARGE_BATTLE_AXE, this.initLargeBattleAxe],
+            [WeaponModelsCb.GREATAXE, this.initGreatAxe],
+            [WeaponModelsCb.HALBERD, this.initHalberd],
+            [WeaponModelsCb.PICKAXE, this.initPickaxe],
+            [WeaponModelsCb.HAND_AXE, this.initHandAxe],
+            [WeaponModelsCb.BATTLE_AXE, this.initBattleAxe],
+            [WeaponModelsCb.HUNTING_SPEAR, this.initHuntingSpear],
+            [WeaponModelsCb.LIGHT_MACE, this.initLightMace],
+            [WeaponModelsCb.WARMACE, this.initWarmace],
+            [WeaponModelsCb.WARHAMMER, this.initWarhammer],
+        ] as const
+        for (const [data, load] of loaders) {
+            map.set(data.id, new EquipItemType(data, () => load.call(this, map, scene)))
+        }
+        return loaders
+    },
 
     async initMelee(map: Map<number, EquipItemType>, scene: Scene) {
-        this.itemSourceParent = new TransformNode("mobWeaponSources", scene)
-
-        await this.initLongsword(map, scene)
-        await this.initBroadsword(map, scene)
-        await this.initGreatsword(map, scene)
-        await this.initHuntingBow(map, scene)
-        await this.initRecurveBow(map, scene)
-        await this.initBattleBow(map, scene)
-        await this.initCrystalWand(map, scene)
-        await this.initPickaxe(map, scene)
-        await this.initHandAxe(map, scene)
-        await this.initBattleAxe(map, scene)
-        await this.initGreatAxe(map, scene)
-        await this.initLargeBattleAxe(map, scene)
-        await this.initLightMace(map, scene)
-        await this.initWarmace(map, scene)
-        await this.initWarhammer(map, scene)
-        await this.initHuntingSpear(map, scene)
-        await this.initHalberd(map, scene)
-
+        for (const [, load] of this.registerModels(map, scene)) await load.call(this, map, scene)
     },
 
     async initHuntingBow(map: Map<number, EquipItemType>, scene: Scene) {
-        if (this.itemSourceParent == null) {
-            this.itemSourceParent = new TransformNode('mobWeaponSources', scene)
-        }
-        this.bowMaterial = Materials.getPBRCustomMaterialFrom(
+        const material = Materials.getPBRCustomMaterialFrom(
             scene,
             'huntingBowMaterialAtlas',
             BASE_EQUIP_MATERIAL_PATH + this.BASE_WEAPONS_PATH,
@@ -146,17 +133,15 @@ export const WeaponsCbManager = {
             false,
         )
         map.set(WeaponModelsCb.HUNTINGBOW.id, await this.getItem(
+            map, scene,
             WeaponModelsCb.HUNTINGBOW,
-            this.bowMaterial,
+            material,
             `huntingbow.glb?v=${HUNTINGBOW_ASSET_CACHE_VERSION}`,
         ))
     },
 
     async initRecurveBow(map: Map<number, EquipItemType>, scene: Scene) {
-        if (this.itemSourceParent == null) {
-            this.itemSourceParent = new TransformNode('mobWeaponSources', scene)
-        }
-        this.recurveBowMaterial = Materials.getPBRCustomMaterialFrom(
+        const material = Materials.getPBRCustomMaterialFrom(
             scene,
             'recurveBowMaterialAtlas',
             BASE_EQUIP_MATERIAL_PATH + this.BASE_WEAPONS_PATH,
@@ -168,17 +153,15 @@ export const WeaponsCbManager = {
             false,
         )
         map.set(WeaponModelsCb.RECURVE_BOW.id, await this.getItem(
+            map, scene,
             WeaponModelsCb.RECURVE_BOW,
-            this.recurveBowMaterial,
+            material,
             `recurvebow.glb?v=${RECURVEBOW_ASSET_CACHE_VERSION}`,
         ))
     },
 
     async initBattleBow(map: Map<number, EquipItemType>, scene: Scene) {
-        if (this.itemSourceParent == null) {
-            this.itemSourceParent = new TransformNode('mobWeaponSources', scene)
-        }
-        this.battleBowMaterial = Materials.getPBRCustomMaterialFrom(
+        const material = Materials.getPBRCustomMaterialFrom(
             scene,
             'battleBowMaterialAtlas',
             BASE_EQUIP_MATERIAL_PATH + this.BASE_WEAPONS_PATH,
@@ -190,14 +173,14 @@ export const WeaponsCbManager = {
             false,
         )
         map.set(WeaponModelsCb.BATTLEBOW.id, await this.getItem(
+            map, scene,
             WeaponModelsCb.BATTLEBOW,
-            this.battleBowMaterial,
+            material,
             `battlebow.glb?v=${BATTLEBOW_ASSET_CACHE_VERSION}`,
         ))
     },
 
     async initCrystalWand(map: Map<number, EquipItemType>, scene: Scene) {
-        this.itemSourceParent ??= new TransformNode('mobWeaponSources', scene)
         const material = Materials.getPBRCustomMaterialFrom(
             scene,
             'crystalWandMaterialAtlas',
@@ -209,14 +192,11 @@ export const WeaponsCbManager = {
             { metallic: 0.25, roughness: 1, directIntensity: 1.5, environmentIntensity: 1 },
             false,
         )
-        map.set(WeaponModelsCb.CRYSTALWAND.id, await this.getItem(WeaponModelsCb.CRYSTALWAND, material))
+        map.set(WeaponModelsCb.CRYSTALWAND.id, await this.getItem(map, scene, WeaponModelsCb.CRYSTALWAND, material))
     },
 
     async initLongsword(map: Map<number, EquipItemType>, scene: Scene) {
-        if (this.itemSourceParent == null) {
-            this.itemSourceParent = new TransformNode('mobWeaponSources', scene)
-        }
-        this.longSwordMaterial = Materials.getPBRCustomMaterialFrom(
+        const material = Materials.getPBRCustomMaterialFrom(
             scene,
             'longswordMaterialAtlas',
             BASE_EQUIP_MATERIAL_PATH + this.BASE_WEAPONS_PATH,
@@ -232,21 +212,19 @@ export const WeaponsCbManager = {
             },
             false,
         )
-        this.longSwordMaterial.backFaceCulling = false
-        this.longSwordMaterial.twoSidedLighting = false
-        this.longSwordMaterial.usePhysicalLightFalloff = false
+        material.backFaceCulling = false
+        material.twoSidedLighting = false
+        material.usePhysicalLightFalloff = false
         map.set(WeaponModelsCb.LONGSWORD.id, await this.getItem(
+            map, scene,
             WeaponModelsCb.LONGSWORD,
-            this.longSwordMaterial,
+            material,
             `longsword.glb?v=${LONGSWORD_ASSET_CACHE_VERSION}`,
         ))
     },
 
     async initBroadsword(map: Map<number, EquipItemType>, scene: Scene) {
-        if (this.itemSourceParent == null) {
-            this.itemSourceParent = new TransformNode('mobWeaponSources', scene)
-        }
-        this.broadSwordMaterial = Materials.getPBRCustomMaterialFrom(
+        const material = Materials.getPBRCustomMaterialFrom(
             scene,
             'broadswordMaterialAtlas',
             BASE_EQUIP_MATERIAL_PATH + this.BASE_WEAPONS_PATH,
@@ -262,21 +240,19 @@ export const WeaponsCbManager = {
             },
             false,
         )
-        this.broadSwordMaterial.backFaceCulling = false
-        this.broadSwordMaterial.twoSidedLighting = false
-        this.broadSwordMaterial.usePhysicalLightFalloff = false
+        material.backFaceCulling = false
+        material.twoSidedLighting = false
+        material.usePhysicalLightFalloff = false
         map.set(WeaponModelsCb.BROADSWORD.id, await this.getItem(
+            map, scene,
             WeaponModelsCb.BROADSWORD,
-            this.broadSwordMaterial,
+            material,
             `broadsword.glb?v=${BROADSWORD_ASSET_CACHE_VERSION}`,
         ))
     },
 
     async initGreatsword(map: Map<number, EquipItemType>, scene: Scene) {
-        if (this.itemSourceParent == null) {
-            this.itemSourceParent = new TransformNode('mobWeaponSources', scene)
-        }
-        this.greatSwordMaterial = Materials.getPBRCustomMaterialFrom(
+        const material = Materials.getPBRCustomMaterialFrom(
             scene,
             'greatswordMaterialAtlas',
             BASE_EQUIP_MATERIAL_PATH + this.BASE_WEAPONS_PATH,
@@ -292,21 +268,19 @@ export const WeaponsCbManager = {
             },
             false,
         )
-        this.greatSwordMaterial.backFaceCulling = false
-        this.greatSwordMaterial.twoSidedLighting = false
-        this.greatSwordMaterial.usePhysicalLightFalloff = false
+        material.backFaceCulling = false
+        material.twoSidedLighting = false
+        material.usePhysicalLightFalloff = false
         map.set(WeaponModelsCb.GREATSWORD.id, await this.getItem(
+            map, scene,
             WeaponModelsCb.GREATSWORD,
-            this.greatSwordMaterial,
+            material,
             `greatsword.glb?v=${GREATSWORD_ASSET_CACHE_VERSION}`,
         ))
     },
 
     async initLargeBattleAxe(map: Map<number, EquipItemType>, scene: Scene) {
-        if (this.itemSourceParent == null) {
-            this.itemSourceParent = new TransformNode('mobWeaponSources', scene)
-        }
-        this.largeBattleAxeMaterial = Materials.getPBRCustomMaterialFrom(
+        const material = Materials.getPBRCustomMaterialFrom(
             scene,
             'largeBattleAxeMaterialAtlas',
             BASE_EQUIP_MATERIAL_PATH + this.BASE_WEAPONS_PATH,
@@ -322,21 +296,19 @@ export const WeaponsCbManager = {
             },
             false,
         )
-        this.largeBattleAxeMaterial.backFaceCulling = false
-        this.largeBattleAxeMaterial.twoSidedLighting = false
-        this.largeBattleAxeMaterial.usePhysicalLightFalloff = false
+        material.backFaceCulling = false
+        material.twoSidedLighting = false
+        material.usePhysicalLightFalloff = false
         map.set(WeaponModelsCb.LARGE_BATTLE_AXE.id, await this.getItem(
+            map, scene,
             WeaponModelsCb.LARGE_BATTLE_AXE,
-            this.largeBattleAxeMaterial,
+            material,
             `large-battleaxe.glb?v=${LARGE_BATTLE_AXE_ASSET_CACHE_VERSION}`,
         ))
     },
 
     async initGreatAxe(map: Map<number, EquipItemType>, scene: Scene) {
-        if (this.itemSourceParent == null) {
-            this.itemSourceParent = new TransformNode('mobWeaponSources', scene)
-        }
-        this.greatAxeMaterial = Materials.getPBRCustomMaterialFrom(
+        const material = Materials.getPBRCustomMaterialFrom(
             scene,
             'greataxeMaterialAtlas',
             BASE_EQUIP_MATERIAL_PATH + this.BASE_WEAPONS_PATH,
@@ -352,22 +324,20 @@ export const WeaponsCbManager = {
             },
             false,
         )
-        this.greatAxeMaterial.backFaceCulling = false
-        this.greatAxeMaterial.twoSidedLighting = false
-        this.greatAxeMaterial.usePhysicalLightFalloff = false
-        this.greatAxeMaterial.bumpTexture = createWeaponNormalTexture(scene, 'greataxe_normal.png', GREATAXE_NORMAL_CACHE_VERSION)
+        material.backFaceCulling = false
+        material.twoSidedLighting = false
+        material.usePhysicalLightFalloff = false
+        material.bumpTexture = createWeaponNormalTexture(scene, 'greataxe_normal.png', GREATAXE_NORMAL_CACHE_VERSION)
         map.set(WeaponModelsCb.GREATAXE.id, await this.getItem(
+            map, scene,
             WeaponModelsCb.GREATAXE,
-            this.greatAxeMaterial,
+            material,
             `greataxe.glb?v=${GREATAXE_ASSET_CACHE_VERSION}`,
         ))
     },
 
     async initHalberd(map: Map<number, EquipItemType>, scene: Scene) {
-        if (this.itemSourceParent == null) {
-            this.itemSourceParent = new TransformNode('mobWeaponSources', scene)
-        }
-        this.halberdMaterial = Materials.getPBRCustomMaterialFrom(
+        const material = Materials.getPBRCustomMaterialFrom(
             scene,
             'halberdMaterialAtlas',
             BASE_EQUIP_MATERIAL_PATH + this.BASE_WEAPONS_PATH,
@@ -383,21 +353,19 @@ export const WeaponsCbManager = {
             },
             false,
         )
-        this.halberdMaterial.backFaceCulling = false
-        this.halberdMaterial.twoSidedLighting = false
-        this.halberdMaterial.usePhysicalLightFalloff = false
+        material.backFaceCulling = false
+        material.twoSidedLighting = false
+        material.usePhysicalLightFalloff = false
         map.set(WeaponModelsCb.HALBERD.id, await this.getItem(
+            map, scene,
             WeaponModelsCb.HALBERD,
-            this.halberdMaterial,
+            material,
             `halberd.glb?v=${HALBERD_ASSET_CACHE_VERSION}`,
         ))
     },
 
     async initPickaxe(map: Map<number, EquipItemType>, scene: Scene) {
-        if (this.itemSourceParent == null) {
-            this.itemSourceParent = new TransformNode('mobWeaponSources', scene)
-        }
-        this.pickAxeMaterial = Materials.getPBRCustomMaterialFrom(
+        const material = Materials.getPBRCustomMaterialFrom(
             scene,
             'pickaxeMaterialAtlas',
             BASE_EQUIP_MATERIAL_PATH + this.BASE_WEAPONS_PATH,
@@ -413,21 +381,19 @@ export const WeaponsCbManager = {
             },
             false,
         )
-        this.pickAxeMaterial.backFaceCulling = false
-        this.pickAxeMaterial.twoSidedLighting = false
-        this.pickAxeMaterial.usePhysicalLightFalloff = false
+        material.backFaceCulling = false
+        material.twoSidedLighting = false
+        material.usePhysicalLightFalloff = false
         map.set(WeaponModelsCb.PICKAXE.id, await this.getItem(
+            map, scene,
             WeaponModelsCb.PICKAXE,
-            this.pickAxeMaterial,
+            material,
             `pickaxe.glb?v=${PICKAXE_ASSET_CACHE_VERSION}`,
         ))
     },
 
     async initHandAxe(map: Map<number, EquipItemType>, scene: Scene) {
-        if (this.itemSourceParent == null) {
-            this.itemSourceParent = new TransformNode('mobWeaponSources', scene)
-        }
-        this.handAxeMaterial = Materials.getPBRCustomMaterialFrom(
+        const material = Materials.getPBRCustomMaterialFrom(
             scene,
             'handaxeMaterialAtlas',
             BASE_EQUIP_MATERIAL_PATH + this.BASE_WEAPONS_PATH,
@@ -443,21 +409,19 @@ export const WeaponsCbManager = {
             },
             false,
         )
-        this.handAxeMaterial.backFaceCulling = false
-        this.handAxeMaterial.twoSidedLighting = false
-        this.handAxeMaterial.usePhysicalLightFalloff = false
+        material.backFaceCulling = false
+        material.twoSidedLighting = false
+        material.usePhysicalLightFalloff = false
         map.set(WeaponModelsCb.HAND_AXE.id, await this.getItem(
+            map, scene,
             WeaponModelsCb.HAND_AXE,
-            this.handAxeMaterial,
+            material,
             `handaxe.glb?v=${HANDAXE_ASSET_CACHE_VERSION}`,
         ))
     },
 
     async initBattleAxe(map: Map<number, EquipItemType>, scene: Scene) {
-        if (this.itemSourceParent == null) {
-            this.itemSourceParent = new TransformNode('mobWeaponSources', scene)
-        }
-        this.battleAxeMaterial = Materials.getPBRCustomMaterialFrom(
+        const material = Materials.getPBRCustomMaterialFrom(
             scene,
             'battleaxeMaterialAtlas',
             BASE_EQUIP_MATERIAL_PATH + this.BASE_WEAPONS_PATH,
@@ -473,21 +437,19 @@ export const WeaponsCbManager = {
             },
             false,
         )
-        this.battleAxeMaterial.backFaceCulling = false
-        this.battleAxeMaterial.twoSidedLighting = false
-        this.battleAxeMaterial.usePhysicalLightFalloff = false
+        material.backFaceCulling = false
+        material.twoSidedLighting = false
+        material.usePhysicalLightFalloff = false
         map.set(WeaponModelsCb.BATTLE_AXE.id, await this.getItem(
+            map, scene,
             WeaponModelsCb.BATTLE_AXE,
-            this.battleAxeMaterial,
+            material,
             `battleaxe.glb?v=${BATTLEAXE_ASSET_CACHE_VERSION}`,
         ))
     },
 
     async initHuntingSpear(map: Map<number, EquipItemType>, scene: Scene) {
-        if (this.itemSourceParent == null) {
-            this.itemSourceParent = new TransformNode('mobWeaponSources', scene)
-        }
-        this.huntingSpearMaterial = Materials.getPBRCustomMaterialFrom(
+        const material = Materials.getPBRCustomMaterialFrom(
             scene,
             'huntingspearMaterialAtlas',
             BASE_EQUIP_MATERIAL_PATH + this.BASE_WEAPONS_PATH,
@@ -503,21 +465,19 @@ export const WeaponsCbManager = {
             },
             false,
         )
-        this.huntingSpearMaterial.backFaceCulling = false
-        this.huntingSpearMaterial.twoSidedLighting = false
-        this.huntingSpearMaterial.usePhysicalLightFalloff = false
+        material.backFaceCulling = false
+        material.twoSidedLighting = false
+        material.usePhysicalLightFalloff = false
         map.set(WeaponModelsCb.HUNTING_SPEAR.id, await this.getItem(
+            map, scene,
             WeaponModelsCb.HUNTING_SPEAR,
-            this.huntingSpearMaterial,
+            material,
             `huntingspear.glb?v=${HUNTINGSPEAR_ASSET_CACHE_VERSION}`,
         ))
     },
 
     async initLightMace(map: Map<number, EquipItemType>, scene: Scene) {
-        if (this.itemSourceParent == null) {
-            this.itemSourceParent = new TransformNode('mobWeaponSources', scene)
-        }
-        this.lightMaceMaterial = Materials.getPBRCustomMaterialFrom(
+        const material = Materials.getPBRCustomMaterialFrom(
             scene,
             'lightmaceMaterialAtlas',
             BASE_EQUIP_MATERIAL_PATH + this.BASE_WEAPONS_PATH,
@@ -533,21 +493,19 @@ export const WeaponsCbManager = {
             },
             false,
         )
-        this.lightMaceMaterial.backFaceCulling = false
-        this.lightMaceMaterial.twoSidedLighting = false
-        this.lightMaceMaterial.usePhysicalLightFalloff = false
+        material.backFaceCulling = false
+        material.twoSidedLighting = false
+        material.usePhysicalLightFalloff = false
         map.set(WeaponModelsCb.LIGHT_MACE.id, await this.getItem(
+            map, scene,
             WeaponModelsCb.LIGHT_MACE,
-            this.lightMaceMaterial,
+            material,
             `lightmace.glb?v=${LIGHTMACE_ASSET_CACHE_VERSION}`,
         ))
     },
 
     async initWarmace(map: Map<number, EquipItemType>, scene: Scene) {
-        if (this.itemSourceParent == null) {
-            this.itemSourceParent = new TransformNode('mobWeaponSources', scene)
-        }
-        this.warmaceMaterial = Materials.getPBRCustomMaterialFrom(
+        const material = Materials.getPBRCustomMaterialFrom(
             scene,
             'warmaceMaterialAtlas',
             BASE_EQUIP_MATERIAL_PATH + this.BASE_WEAPONS_PATH,
@@ -563,21 +521,19 @@ export const WeaponsCbManager = {
             },
             false,
         )
-        this.warmaceMaterial.backFaceCulling = false
-        this.warmaceMaterial.twoSidedLighting = false
-        this.warmaceMaterial.usePhysicalLightFalloff = false
+        material.backFaceCulling = false
+        material.twoSidedLighting = false
+        material.usePhysicalLightFalloff = false
         map.set(WeaponModelsCb.WARMACE.id, await this.getItem(
+            map, scene,
             WeaponModelsCb.WARMACE,
-            this.warmaceMaterial,
+            material,
             `warmace.glb?v=${WARMACE_ASSET_CACHE_VERSION}`,
         ))
     },
 
     async initWarhammer(map: Map<number, EquipItemType>, scene: Scene) {
-        if (this.itemSourceParent == null) {
-            this.itemSourceParent = new TransformNode('mobWeaponSources', scene)
-        }
-        this.warhammerMaterial = Materials.getPBRCustomMaterialFrom(
+        const material = Materials.getPBRCustomMaterialFrom(
             scene,
             'warhammerMaterialAtlas',
             BASE_EQUIP_MATERIAL_PATH + this.BASE_WEAPONS_PATH,
@@ -593,41 +549,26 @@ export const WeaponsCbManager = {
             },
             false,
         )
-        this.warhammerMaterial.backFaceCulling = false
-        this.warhammerMaterial.twoSidedLighting = false
-        this.warhammerMaterial.usePhysicalLightFalloff = false
+        material.backFaceCulling = false
+        material.twoSidedLighting = false
+        material.usePhysicalLightFalloff = false
         map.set(WeaponModelsCb.WARHAMMER.id, await this.getItem(
+            map, scene,
             WeaponModelsCb.WARHAMMER,
-            this.warhammerMaterial,
+            material,
             `warhammer.glb?v=${WARHAMMER_ASSET_CACHE_VERSION}`,
         ))
     },
 
-    async getItem(data: EquipCbItem, material: PBRCustomMaterial | null = null, fileName = `${data.model}.glb?v=${WEAPON_MODEL_CACHE_VERSION}`): Promise<EquipItemType> {
-        const item = new EquipItemType(data)
-        await item.initializeMeshGlb(this.itemSourceParent!, this.itemSourceParent!.getScene(), `${this.BASE_WEAPONS_PATH}${fileName}`, material, data.pos, data.rot, data.scale)
-        return item
-    },
-
-    async getItemOrFallback(data: EquipCbItem): Promise<EquipItemType> {
-        const material = this.getMaterial(data.model, new Vector2(data.matCols, data.matRows))
-        try {
-            return await this.getItem(data, material)
-        } catch (error) {
-            console.warn(`Weapon model '${data.model}' is unavailable; using longsword fallback.`, error)
-            return this.getItem(WeaponModelsCb.LONGSWORD, this.longSwordMaterial)
+    async getItem(map: Map<number, EquipItemType>, scene: Scene, data: EquipCbItem, material: PBRCustomMaterial, fileName = data.model + ".glb?v=" + WEAPON_MODEL_CACHE_VERSION): Promise<EquipItemType> {
+        let parent = this.sourceParents.get(scene)
+        if (!parent) {
+            parent = new TransformNode("mobWeaponSources", scene)
+            this.sourceParents.set(scene, parent)
         }
-    },
-
-    getMaterial(texture: string, matSize: Vector2, invertV: boolean = true) {
-        const mat = Materials.getPBRCustomMaterialFrom(this.itemSourceParent!.getScene(), texture, BASE_EQUIP_MATERIAL_PATH + "weapons/", texture + ".png", 1 / matSize.x, 1 / matSize.y, false, {
-            metallic: 0.25,
-            roughness: 1,
-            directIntensity: 1.5,
-            environmentIntensity: 1,
-        })
-        if (invertV) mat.albedoTexture.vScale = - mat.albedoTexture.vScale
-        return mat
+        const item = map.get(data.id) ?? new EquipItemType(data)
+        await item.initializeMeshGlb(parent, scene, this.BASE_WEAPONS_PATH + fileName, material, data.pos, data.rot, data.scale)
+        return item
     },
 
 }

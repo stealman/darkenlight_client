@@ -136,6 +136,7 @@ export class WorldData {
     loadedChunkCoords: Vector3[] = []
     renderRevision = 0
     noGrassTiles = new Set<number>()
+    forcedGrassTiles = new Map<number, number>()
     readonly originalBlocks?: WeakSet<MapBlock>
 
     constructor(size: number, compiled?: CompiledMap) {

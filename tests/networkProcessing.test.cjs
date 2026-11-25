@@ -72,6 +72,28 @@ test('map-before-login ordering and the asynchronous login barrier remain intact
     assert.deepEqual(calls, ['map', 'login', 'move'])
 })
 
+test('initial nearby equipment data is processed before the first render', async (t) => {
+    const calls = []
+    const previousWindow = globalThis.window
+    globalThis.window = {dispatchEvent: event => calls.push(event.type)}
+    t.after(() => {
+        if (previousWindow === undefined) delete globalThis.window
+        else globalThis.window = previousWindow
+    })
+    const {MessageProcessor: processor} = loadModule('network/messageProcessor.ts', {
+        '@/GameManager': {GameManager: {
+            async initializeCharacter() { calls.push('character') },
+            async startGame() { calls.push('render') },
+        }},
+    })
+    processor.processWorldData = () => calls.push('map')
+    processor.processWorldChunkData = (_, render) => calls.push(render ? 'live chunk' : 'initial chunk')
+    processor.addCharacter = async () => { await Promise.resolve(); calls.push('nearby character') }
+    processor.processAddGroundItem = () => calls.push('ground items')
+    await processor.processResponse([{t: 7}, {t: 2, d: {char: {}}}, {t: 9}, {t: 5}, {t: 31}])
+    assert.deepEqual(calls, ['map', 'character', 'initial chunk', 'nearby character', 'ground items', 'render', 'game:started'])
+})
+
 test('a character removed before its asynchronous model assignment does not leave a model behind', async () => {
     let releaseModel, disposals = 0, initializations = 0
     class Character {

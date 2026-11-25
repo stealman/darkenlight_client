@@ -35,8 +35,7 @@ export const MonsterManager = {
 
     addMonster (id: number, type: number, position: { x: number, z: number }, hpp: number, mv: number[] | undefined, ef: [{tp: number, p: number}] | undefined, role?: string, alignment?: string, guard?: any, huntable: boolean = false) {
         if (role === 'guard' && guard) {
-            void NpcManager.addGuard({id, tp: type, x: position.x, z: position.z, hpp, mv, paf: ef, role, alignment, guard})
-            return
+            return NpcManager.addGuard({id, tp: type, x: position.x, z: position.z, hpp, mv, paf: ef, role, alignment, guard})
         }
         if (this.monsters.has(id)) {
             const mob = this.monsters.get(id)

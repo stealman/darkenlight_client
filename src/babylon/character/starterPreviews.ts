@@ -23,6 +23,8 @@ export async function startStarterPreviews(canvases: HTMLCanvasElement[], signal
     const {createSnowBlockMaterial, terrainBlockAtlasUv} = await import('@/adminUtils/terrainAtlasPreview')
     if (signal.aborted) return
     const classKeys = ['FIGHTER', 'MYSTIC'] as const
+    await Promise.all(classKeys.flatMap(classKey => getStarterEquipment(classKey).map(({cb}) => EquipManager.requestModel(cb.modelId))))
+    if (signal.aborted) return
     const scene = Renderer.scene
     Renderer.menuPreviewSceneUsed = true
     const engine = Renderer.engine!

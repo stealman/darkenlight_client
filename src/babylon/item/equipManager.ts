@@ -168,7 +168,7 @@ export class EquipItem {
     }
 
     createWeaponTrail(bone: Bone): TrailMesh {
-        const scene = this.type.mesh!.getScene()
+        const scene = this.parent.getMasterNode()!.getScene()
         const tip = new TransformNode('weaponTip' + this.parent?.getOwnerId(), scene)
         tip.attachToBone(bone, this.parent!.getMasterNode())
         this.weaponTrailTip = tip
@@ -317,7 +317,7 @@ export class EquipItem {
     }
 
     createSwordParticles(handNode: TransformNode) {
-        const scene = this.type.mesh!.getScene()
+        const scene = handNode.getScene()
         const emitter = new TransformNode('swordSmearEmitter', scene)
         emitter.parent = handNode
         emitter.position = new Vector3(0, 2.8, 0)
@@ -380,7 +380,7 @@ export interface EquipModelModifier {
     scale: Vector3
 }
 
-class EquipBatchMesh extends Mesh {
+export class EquipBatchMesh extends Mesh {
     override isReady(completeCheck = false, forceInstanceSupport = false): boolean {
         // An empty batch has no draw call. The scene-wide readiness check
         // would otherwise compile a non-instanced variant that we never draw.
@@ -404,7 +404,7 @@ export class EquipItemType {
     castsShadows: boolean = false
     sunShadowEnabled: boolean = false
 
-    constructor(data: EquipCbItem) {
+    constructor(data: EquipCbItem, readonly loadMesh?: () => Promise<void>) {
         this.id = data.id
         this.cbData = data
         this.ensureThinBuffers(this)
@@ -413,6 +413,7 @@ export class EquipItemType {
     /** Loads a GLB source mesh for weapons and vertex-colour armour. */
     async initializeMeshGlb(parentNode: TransformNode, scene: Scene, fileName: string, material: PBRMaterial | null, position: Vector3 = Vector3.Zero(), rotation: Vector3 = Vector3.Zero(), scale: Vector3 = Vector3.One(), castsShadows = true) {
         const result = await SceneLoader.ImportMeshAsync('', '', modelAssetUrl('/models/equip/' + fileName), scene)
+        if (scene.isDisposed) return
         const source = result.meshes[0].getChildMeshes()[0] as Mesh
         source.position = position
         source.rotation = rotation
@@ -535,6 +536,7 @@ export class EquipItemType {
  */
 export const EquipManager = {
     itemTypes: new Map<number, EquipItemType>(),
+    pendingModels: new Map<EquipItemType, Promise<void>>(),
     equippedItems: new Map<EquipItemType, Set<EquipThinInstance>>(),
     dirtyItemTypes: new Set<EquipItemType>(),
 
@@ -547,9 +549,10 @@ export const EquipManager = {
         // Equipment and its source meshes belong to one scene. A new session
         // must not update attachments whose skeleton textures were disposed.
         this.equippedItems.clear()
-        this.itemTypes.clear()
+        this.itemTypes = new Map()
+        this.pendingModels = new Map()
         this.dirtyItemTypes.clear()
-        await WeaponsCbManager.initMelee(this.itemTypes, scene)
+        WeaponsCbManager.registerModels(this.itemTypes, scene)
         await this.initializeArmors(scene)
     },
 
@@ -557,12 +560,28 @@ export const EquipManager = {
         await ArmorsCbManager.initArmors(this.itemTypes, scene)
     },
 
-    async initializeBroadsword(scene: Scene) {
-        await WeaponsCbManager.initBroadsword(this.itemTypes, scene)
-    },
-
     getItemType(modelId: number): EquipItemType | undefined {
         return this.itemTypes.get(modelId)
+    },
+
+    requestModel(modelId: number): Promise<void> | undefined {
+        const type = this.itemTypes.get(modelId)
+        if (!type?.loadMesh) return
+        const pending = this.pendingModels
+        const existing = pending.get(type)
+        if (existing || type.mesh) return existing
+
+        const request = type.loadMesh().then(() => {
+            if (this.pendingModels !== pending || !type.mesh || type.mesh.isDisposed()) return
+            if (this.equippedItems.get(type)?.size) {
+                this.dirtyItemTypes.add(type)
+                type.updateOutdoorShadows()
+            }
+        }).catch(error => {
+            if (this.pendingModels === pending) console.warn(`Could not load equipment model ${modelId}`, error)
+        }).finally(() => pending.delete(type))
+        pending.set(type, request)
+        return request
     },
 
     addEquippedItem(item: EquipItem) {
@@ -579,6 +598,7 @@ export const EquipManager = {
         if (items.size !== previousSize) {
             this.dirtyItemTypes.add(item.type)
             item.type.updateOutdoorShadows()
+            if (previousSize === 0 && !item.type.mesh) void this.requestModel(item.type.id)
         }
     },
 
@@ -603,7 +623,7 @@ export const EquipManager = {
         // Several characters can enter or leave the viewport in one visibility
         // pass. Resize each affected thin-instance buffer only once per frame.
         this.dirtyItemTypes.forEach(type => {
-            type.updateCount(this.equippedItems.get(type)?.size ?? 0)
+            if (type.mesh) type.updateCount(this.equippedItems.get(type)?.size ?? 0)
         })
         this.dirtyItemTypes.clear()
 

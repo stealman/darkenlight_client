@@ -68,7 +68,7 @@ export const Controller = {
                 if (pointerInfo.event.buttons === 1) {
                     if (pointerInfo.type === PointerEventTypes.POINTERDOWN) {
                         if (GMManager.consumeLeftClickEvents) {
-                            if (!GMManager.noGrassTool.value || this.resolvePointerMove(pointerInfo, scene, true)) {
+                            if (!GMManager.grassTool.value || this.resolvePointerMove(pointerInfo, scene, true)) {
                                 GMManager.onLeftClickEvent()
                             }
                         } else {
@@ -319,7 +319,7 @@ export const Controller = {
             return
         }
 
-        const pickResult = scene.pick(clientX, clientY, GMManager.noGrassTool.value
+        const pickResult = scene.pick(clientX, clientY, GMManager.grassTool.value
             ? mesh => mesh.isEnabled() && mesh.isPickable && mesh.isVisible
                 && TerrainManager.outdoorTerrain?.isSurfaceMesh(mesh) === true
             : undefined)

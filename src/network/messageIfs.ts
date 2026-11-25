@@ -64,6 +64,7 @@ export interface WorldMapDataMessage {
     areas?: import('../data/worldAreas').WorldArea[]
     areasRevision?: number
     noGrassTiles?: number[]
+    forcedGrassTiles?: [tile: number, level: number][]
     id: number
     name: string
     size: number
@@ -75,7 +76,7 @@ export interface WorldMapDataMessage {
     foggyAreas?: FoggyAreaData[]
 }
 
-export type GrassExclusionChange = {worldId: number, tile: number, excluded: boolean} | {error: true}
+export type GrassOverrideChange = {worldId: number, tile: number, excluded: boolean, level?: number} | {error: true}
 
 export interface FoggyAreaData {
     id: number
