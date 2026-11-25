@@ -1,23 +1,13 @@
-import { PBRMaterial, RawTexture, Texture, Vector2, Vector4 } from '@babylonjs/core'
+import { RawTexture, Texture, Vector2, Vector4 } from '@babylonjs/core'
 import type { Mesh } from '@babylonjs/core'
 import { PBRCustomMaterial } from '@babylonjs/materials'
 import { getTerrainHeightOffset, WATER_BLOCK_TYPE } from '@/babylon/world/terrainManager'
 import type { MapBlock } from '@/data/worldDataManager'
 import { createTerrainPreviewPlane } from './terrainAtlasPreview'
 import { TERRAIN_CARDINAL_EDGES } from '@/babylon/world/terrainRoofShape'
-import { terrainNoiseShader } from '@/babylon/world/terrainSurfaceShader'
+import { configureTerrainWater, POND_DISTANCE_RANGE, pondSpillShader } from '@/babylon/world/terrainWaterMaterial'
 
 const FIELD_SIZE = 128
-export const POND_DISTANCE_RANGE = 3
-
-const pondSpillShader = `
-    vec2 pondSpill(vec2 p) {
-        float outerShape = terrainNoise(p * 1.74 + vec2(2.4, 6.1));
-        float details = terrainNoise(p * 7.1 + vec2(9.4, 3.2));
-        return vec2(mix(0.34, 0.79, outerShape) + (details - 0.5) * 0.14, details);
-    }
-`
-
 export function createTerrainPreviewWater(plane: Mesh, map: MapBlock[][], isBank: (x: number, z: number) => boolean, center: number) {
     const tiles: [number, number][] = []
     const bankTiles: [number, number][] = []
@@ -70,7 +60,7 @@ export function createTerrainPreviewWater(plane: Mesh, map: MapBlock[][], isBank
     water.scaling.set(width, 1, length)
     water.position.set(minX + width / 2, 0, minZ + length / 2)
 
-    configureTerrainWater(water, 'adminUtilsPondWater', field, new Vector2(width, length))
+    configureTerrainWater(water, 'adminUtilsPondWater', {field, size: new Vector2(width, length)})
 
     const setLevel = (surfaceMap: MapBlock[][]) => {
         // Match an adjacent level bank, including raised grass or snow on the preview.
@@ -120,73 +110,4 @@ export function createTerrainPreviewWater(plane: Mesh, map: MapBlock[][], isBank
     }
 
     return {mesh: water, setLevel, field, bounds, applyShoreWetness}
-}
-
-function configureTerrainWater(water: Mesh, name: string, field: Texture, size: Vector2) {
-    const scene = water.getScene()
-    const material = new PBRCustomMaterial(name, scene)
-    water.material = material
-    material.metallic = 0
-    material.roughness = 0.32
-    material.directIntensity = 0.75
-    material.usePhysicalLightFalloff = false
-    material.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHABLEND
-    // Enable Babylon's blend pass. The shader supplies the per-pixel alpha.
-    material.alpha = 0.99
-    material.useSpecularOverAlpha = false
-    material.useRadianceOverAlpha = false
-    // The shoreline overlay is coplanar with the ground it spills onto.
-    material.zOffset = -2
-    material.zOffsetUnits = -2
-    material.AddUniform('pondDistance', 'sampler2D', field)
-    material.AddUniform('pondSize', 'vec2', size)
-    const ripplePhase = new Vector2(0, 0)
-    material.AddUniform('pondRipplePhase', 'vec2', ripplePhase)
-    const rippleClock = scene.onBeforeRenderObservable.add(() => {
-        if (!water.isEnabled()) return
-        const seconds = Math.min(scene.getEngine().getDeltaTime(), 50) / 1000
-        ripplePhase.x = (ripplePhase.x + seconds * 1.08) % (2 * Math.PI)
-        ripplePhase.y = (ripplePhase.y + seconds * 1.57) % (2 * Math.PI)
-    })
-    water.onDisposeObservable.addOnce(() => scene.onBeforeRenderObservable.remove(rippleClock))
-    material.Vertex_Definitions('varying vec2 vPondUV;')
-    material.Vertex_MainBegin('vPondUV = position.xz + 0.5;')
-    material.Fragment_Definitions(`
-        varying vec2 vPondUV;
-        float pondDepth;
-        ${terrainNoiseShader}
-        ${pondSpillShader}
-    `)
-    material.Fragment_Custom_Alpha(`
-        vec2 p = vPondUV * pondSize;
-        float fromShore = (texture2D(pondDistance, vPondUV).r - 0.5) * ${POND_DISTANCE_RANGE * 2}.0;
-        vec2 spill = pondSpill(p);
-        float shoreline = fromShore + spill.x;
-        if (shoreline <= 0.0) discard;
-        float variation = terrainNoise(p * 1.2 + vec2(3.2, 17.1));
-        float shallows = mix(1.28, 1.82, variation);
-        pondDepth = smoothstep(-0.13, shallows, fromShore + (spill.y - 0.5) * 0.18);
-        float bodyOpacity = mix(0.73, 0.95, pondDepth);
-        alpha = smoothstep(0.0, 0.33, shoreline) * bodyOpacity;
-    `)
-    material.Fragment_Before_Lights(`
-        vec3 shallowsColor = vec3(0.082, 0.129, 0.113);
-        vec3 deepColor = vec3(0.042, 0.085, 0.084);
-        surfaceAlbedo = mix(shallowsColor, deepColor, pondDepth);
-        float rippleFade = smoothstep(0.05, 0.60, shoreline) * mix(0.62, 1.0, pondDepth);
-        vec2 along = vec2(0.87, 0.49);
-        vec2 across = vec2(-0.25, 0.97);
-        vec2 crosswind = vec2(0.96, -0.28);
-        // Warp the phase independently in each direction to break up repeated highlight rows.
-        float drift = terrainNoise(p * 2.8 + vec2(12.7, 4.1));
-        float first = dot(p, along) * 17.9 + (drift - 0.5) * 6.2 - pondRipplePhase.x;
-        float second = dot(p, across) * 24.8 + (variation - 0.5) * 7.1 - pondRipplePhase.y;
-        float third = dot(p, crosswind) * 31.3 + (spill.y - 0.5) * 4.5 - (pondRipplePhase.x + pondRipplePhase.y);
-        vec2 slope = along * (mix(0.024, 0.048, variation) * cos(first))
-            + across * (mix(0.016, 0.034, drift) * cos(second)) + crosswind * (0.018 * cos(third));
-        normalW = normalize(normalW + vec3(slope.x, 0.0, slope.y) * rippleFade);
-        surfaceAlbedo *= 1.0 + rippleFade * (0.030 * sin(first) + 0.018 * sin(second) + 0.012 * sin(third));
-    `)
-    material.Fragment_Custom_MetallicRoughness('metallicRoughness.g = mix(0.48, 0.29, pondDepth);')
-
 }

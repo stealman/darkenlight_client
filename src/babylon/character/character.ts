@@ -170,7 +170,7 @@ class Character implements Attackable, EffectTarget {
         this.gameClass = GameClasses.getByKey(gameClassKey) || GameClasses.FIGHTER
         this.className = this.gameClass.key
         this.boxSize = data.bsz
-        this.pos.y = previewPosition?.y ?? Utils.calculateWalkYPos(this.pos.x, this.pos.z, this.getBoxSize())
+        this.pos.y = previewPosition?.y ?? Utils.calculateCharacterYPos(this.pos.x, this.pos.z, this.getBoxSize())
         this.logicYpos = this.pos.y
 
         if (myChar && data.skillSet) {
@@ -386,7 +386,7 @@ class Character implements Attackable, EffectTarget {
             } else {
                 this.pos.x = tgtPos.x
                 this.pos.z = tgtPos.z
-                this.logicYpos = Utils.calculateWalkYPos(this.pos.x, this.pos.z, this.getBoxSize())
+                this.logicYpos = Utils.calculateCharacterYPos(this.pos.x, this.pos.z, this.getBoxSize())
             }
 
             if (reachedServerMoveTarget) {
@@ -503,7 +503,7 @@ class Character implements Attackable, EffectTarget {
             const finalTarget = this.serverMoveTargets[this.serverMoveTargets.length - 1]
             this.pos.x = finalTarget.x
             this.pos.z = finalTarget.z
-            this.logicYpos = Utils.calculateWalkYPos(this.pos.x, this.pos.z, this.getBoxSize())
+            this.logicYpos = Utils.calculateCharacterYPos(this.pos.x, this.pos.z, this.getBoxSize())
             this.stopMovementLocally()
         }
         this.markCombatActivity()
@@ -944,7 +944,7 @@ class Character implements Attackable, EffectTarget {
     startCombatApproach(data: CombatApproachMessage) {
         this.pos.x = data.x
         this.pos.z = data.z
-        this.logicYpos = Utils.calculateWalkYPos(this.pos.x, this.pos.z, this.getBoxSize())
+        this.logicYpos = Utils.calculateCharacterYPos(this.pos.x, this.pos.z, this.getBoxSize())
         this.combatApproachTarget = new Vector3(
             data.x + Math.cos(data.a) * data.d,
             0,
@@ -988,7 +988,7 @@ class Character implements Attackable, EffectTarget {
         if (this === MyPlayer.myChar && this.model?.initialized) {
             this.pos.x = this.model.node.position.x
             this.pos.z = this.model.node.position.z
-            this.logicYpos = Utils.calculateWalkYPos(this.pos.x, this.pos.z, this.getBoxSize())
+            this.logicYpos = Utils.calculateCharacterYPos(this.pos.x, this.pos.z, this.getBoxSize())
             this.pos.y = this.model.node.position.y
         }
 

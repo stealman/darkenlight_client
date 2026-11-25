@@ -340,7 +340,7 @@ export const MessageProcessor = {
             console.log('Desync')
             MyPlayer.myChar.pos.x = data[1]
             MyPlayer.myChar.pos.z = data[2]
-            MyPlayer.myChar.logicYpos = Utils.calculateWalkYPos(data[1], data[2], MyPlayer.myChar.getBoxSize())
+            MyPlayer.myChar.logicYpos = Utils.calculateCharacterYPos(data[1], data[2], MyPlayer.myChar.getBoxSize())
             MyPlayer.myChar.setMoveAngle(data[3])
             MyPlayer.myChar.setActualSpeed(data[4])
         }

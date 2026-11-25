@@ -136,7 +136,7 @@ test('players, bots, NPCs and guards use final head ID 1 for default and legacy 
         '@babylonjs/core': core,
         '@/babylon/audio/audioManager': {WeaponSoundTypes: {SWORD: 'sword'}, BodySoundTypes: {HARD: 'hard'}},
         '@/data/gameClass': {GameClasses: {FIGHTER: {key: 'FIGHTER'}, getByKey: () => ({key: 'FIGHTER'})}},
-        '@/utils/utils': {Utils: {calculateWalkYPos: () => 0}},
+        '@/utils/utils': {Utils: {calculateCharacterYPos: () => 0}},
         './characterAppearance': load('babylon/character/characterAppearance.ts', {}),
     }
     const Character = load('babylon/character/character.ts', dependencies).default

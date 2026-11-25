@@ -7,11 +7,13 @@ import {
     TerrainVerticalCorner,
 } from '@/babylon/world/beveledTerrainBlock'
 import { isSnowRoof, outdoorSurfaceHeight, terrainRoofCornerSteps, terrainRoofShape, terrainSurfaceAtlasType as atlasType,
-    TERRAIN_ROOF_CORNERS as ROOF_CORNERS, TERRAIN_STEP_HEIGHT as MIN_TERRACE_STEP } from '@/babylon/world/terrainRoofShape'
+    TERRAIN_CARDINAL_EDGES, TERRAIN_ROOF_CORNERS as ROOF_CORNERS,
+    TERRAIN_STEP_HEIGHT as MIN_TERRACE_STEP } from '@/babylon/world/terrainRoofShape'
 import type { TerrainRenderData } from '@/babylon/world/terrainRenderData'
+import { createWaterBedSlope } from '@/babylon/world/terrainWaterBed'
 import { getTerrainHeightOffset, WATER_BLOCK_TYPE } from '@/babylon/world/terrainManager'
 import type { MapBlock } from '@/data/worldDataManager'
-import { createTerrainPreviewPlane, muddyDirtPatterns, terrainCoverPatterns, TERRAIN_ATLAS_TILES } from './terrainAtlasPreview'
+import { createDirtAtlas, createTerrainPreviewPlane, muddyDirtPatterns, terrainCoverPatterns, TERRAIN_ATLAS_TILES } from './terrainAtlasPreview'
 import { addTerrainPreviewRoof, COAL_DEPOSIT, configureTerrainPreviewBatch, TerrainPreviewBatch } from './terrainPreviewBatch'
 import type { SubmitTerrainBatch, TerrainPreviewTriangle } from './terrainPreviewBatch'
 
@@ -58,6 +60,44 @@ export type TerrainWallContact = {
     lowerZ: number
     topY: number | undefined
     bottomY: number | undefined
+}
+
+function addWaterFloorWalls(batch: TerrainPreviewBatch, x: number, z: number, floor: number, originX: number, originZ: number,
+    heightAt: (x: number, z: number) => number | undefined) {
+    WALL_DIRECTIONS.forEach(([dx, dz], side) => {
+        const bottom = heightAt(x + dx, z + dz)
+        if (bottom === undefined || bottom >= floor) return
+        const height = floor - bottom
+        const matrix = Matrix.Scaling(1, 1, height).multiply(WALL_ROTATIONS[side])
+        matrix.setTranslationFromFloats(x + dx * 0.5, floor - height / 2, z + dz * 0.5)
+        batch.addPlane(matrix, wallUv(x + originX, z + originZ, side, 0, false))
+    })
+}
+
+export function createFallbackWaterFloor(plane: Mesh) {
+    const atlas = createDirtAtlas(plane, 'worldWaterFloor', true)
+    atlas.mesh.isPickable = atlas.mesh.thinInstanceEnablePicking = true
+    const empty = new Map<number, never>()
+    return {
+        mesh: atlas.mesh,
+        render(map: MapBlock[][], floors: Map<number, number>) {
+            const stride = map[0].length
+            const dirtWalls = new TerrainPreviewBatch()
+            const roofs = new Map<number, TerrainPreviewTriangle[]>()
+            const heightAt = (x: number, z: number) => outdoorSurfaceHeight(map[x]?.[z])
+            for (const [key, height] of floors) {
+                dirtWalls.tile = key
+                const x = Math.floor(key / stride), z = key % stride
+                const slope = createWaterBedSlope(x, z, height, map[x][z].height, heightAt)
+                if (slope) roofs.set(key, slope)
+                addWaterFloorWalls(dirtWalls, x, z, height, 0, 0, heightAt)
+            }
+            atlas.render({
+                stride, width: map.length, originX: 0, originZ: 0, atlasTops: new Map([[MUDDY_DIRT, floors]]),
+                roofs, wetCorners: empty, rockDeposits: empty, cornerFloors: empty,
+            }, undefined, dirtWalls)
+        },
+    }
 }
 
 export function createTerrainPreviewGeometry(plane: Mesh, atlasTypes: readonly number[]) {
@@ -114,17 +154,35 @@ export function createTerrainPreviewGeometry(plane: Mesh, atlasTypes: readonly n
                 : atlasType(block) === SNOW_DIRT ? block.totalHeight : block.height + getTerrainHeightOffset(block, false)))
         const heightAt = (x: number, z: number) => heights[x]?.[z]
         const snowAt = (x: number, z: number) => isSnowRoof(map[x]?.[z])
-        const shapes = compiled ? (x: number, z: number) => compiled.shapes[(x + originX) * compiled.depth + z + originZ]
-            : (x: number, z: number) => {
-                const top = heightAt(x, z)
-                return top === undefined ? 0 : terrainRoofShape(x, z, map[x][z], top, heightAt, snowAt)
+        const shapes = (x: number, z: number) => {
+            const top = heightAt(x, z)
+            if (top === undefined) return 0
+            const tile = map[x][z]
+            const isLevelWater = (tx: number, tz: number) => {
+                const neighbor = map[tx]?.[tz]
+                return neighbor?.type === WATER_BLOCK_TYPE && neighbor.height === tile.height
             }
+            // A level bank meets the rounded water bed at the full height of its roof.
+            if (TERRAIN_CARDINAL_EDGES.some(([dx, dz]) => isLevelWater(x + dx, z + dz))
+                || ROOF_CORNERS.some(([dx, dz]) => isLevelWater(x + dx, z + dz))) {
+                return terrainRoofShape(x, z, tile, top, (tx, tz) => isLevelWater(tx, tz) ? tile.height : heightAt(tx, tz), snowAt)
+            }
+            return compiled ? compiled.shapes[(x + originX) * compiled.depth + z + originZ]
+                : terrainRoofShape(x, z, tile, top, heightAt, snowAt)
+        }
         for (let x = 0; x < map.length; x++) {
             for (let z = 0; z < map[x].length; z++) {
                 const block = map[x][z]
                 if (block.type <= 0) continue
                 if (block.type === WATER_BLOCK_TYPE) {
-                    if (previewWater) atlasTops.get(DIRT)!.set(x * stride + z, heights[x][z]!)
+                    const floor = heights[x][z]!
+                    walls.tile = x * stride + z
+                    atlasTops.get(MUDDY_DIRT)!.set(walls.tile, floor)
+                    if (!includeTile || includeTile(x, z)) {
+                        const slope = createWaterBedSlope(x, z, floor, block.height, heightAt, originX, originZ)
+                        if (slope) roofs.set(walls.tile, slope)
+                        if (!previewWater) addWaterFloorWalls(walls, x, z, floor, originX, originZ, heightAt)
+                    }
                     continue
                 }
                 const isRock = block.type === ROCK

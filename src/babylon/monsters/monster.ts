@@ -57,7 +57,7 @@ export class Monster implements Attackable, EffectTarget {
         this.hpPercent = hpp
         this.alignment = alignment
         this.pos = new Vector3(xPos, 0, zPos)
-        this.logicYpos = Utils.calculateWalkYPos(this.pos.x, this.pos.z, 0.4)
+        this.logicYpos = Utils.calculateCharacterYPos(this.pos.x, this.pos.z, 0.4)
         this.pos.y = this.logicYpos
     }
 
@@ -192,7 +192,7 @@ export class Monster implements Attackable, EffectTarget {
             }
         }
 
-        this.logicYpos = Utils.calculateWalkYPos(this.pos.x, this.pos.z, 0.4)
+        this.logicYpos = Utils.calculateCharacterYPos(this.pos.x, this.pos.z, 0.4)
     }
 
     resolveStepMark(time: number, inCombat: boolean = false) {

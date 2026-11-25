@@ -84,7 +84,7 @@ export class Npc extends Character {
             if (remainingDistance <= this.getActualSpeed() * timeRate) {
                 this.pos.x = this.movementTarget.x
                 this.pos.z = this.movementTarget.z
-                this.logicYpos = Utils.calculateWalkYPos(this.pos.x, this.pos.z, this.getBoxSize())
+                this.logicYpos = Utils.calculateCharacterYPos(this.pos.x, this.pos.z, this.getBoxSize())
                 this.pos.y = this.logicYpos
                 this.clearMovementTarget()
                 this.stopMovementLocally()

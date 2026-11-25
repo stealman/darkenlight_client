@@ -168,7 +168,7 @@ export const NpcManager = {
     setNpcPosition(npc: Npc, x: number, z: number) {
         npc.pos.x = x
         npc.pos.z = z
-        npc.logicYpos = Utils.calculateWalkYPos(npc.pos.x, npc.pos.z, npc.getBoxSize())
+        npc.logicYpos = Utils.calculateCharacterYPos(npc.pos.x, npc.pos.z, npc.getBoxSize())
         npc.pos.y = npc.logicYpos
     },
 

@@ -4,9 +4,11 @@ import type { PBRCustomMaterial } from '@babylonjs/materials'
 import { STATIC_LIGHT_LIMITS, STATIC_SHADOW_LIGHT_LIMITS } from '@/babylon/scene/lighting/lightConfig'
 import { Settings } from '@/settings/settings'
 import { TERRAIN_ATLAS_TILES, terrainCoverPatterns } from './terrainAtlasPlacement'
+import { TERRAIN_NOISE_SIZE } from './terrainNoiseShader'
+
+export { terrainNoiseShader } from './terrainNoiseShader'
 
 const USE_TERRAIN_NOISE_TEXTURE = true
-const TERRAIN_NOISE_SIZE = 512
 const noiseTextures = new WeakMap<Scene, RawTexture>()
 
 function createTerrainNoiseTexture(scene: Scene) {
@@ -43,37 +45,6 @@ export function configureTerrainNoiseTexture(material: PBRCustomMaterial, surfac
     material.AddUniform('terrainNoiseTexture', 'sampler2D', texture)
     material.Fragment_Definitions(`\n#define TERRAIN_NOISE_TEXTURE\n${material.CustomParts.Fragment_Definitions ?? ''}`)
 }
-
-export const terrainNoiseShader = `
-    float terrainHash(vec2 p) {
-        vec3 h = fract(vec3(p.xyx) * 0.1031);
-        h += dot(h, h.yzx + 33.33);
-        return fract((h.x + h.y) * h.z);
-    }
-
-    float terrainProceduralNoise(vec2 p) {
-        vec2 cell = floor(p);
-        vec2 f = fract(p);
-        vec2 t = f * f * (3.0 - 2.0 * f);
-        return mix(
-            mix(terrainHash(cell), terrainHash(cell + vec2(1.0, 0.0)), t.x),
-            mix(terrainHash(cell + vec2(0.0, 1.0)), terrainHash(cell + 1.0), t.x),
-            t.y
-        );
-    }
-
-    float terrainNoise(vec2 p) {
-        #ifdef TERRAIN_NOISE_TEXTURE
-        vec2 f = fract(p);
-        // Preserve the cubic fade between lattice points and let the sampler interpolate.
-        vec2 fade = f * f * (3.0 - 2.0 * f);
-        vec2 uv = (floor(p) + fade + 0.5) / ${TERRAIN_NOISE_SIZE}.0;
-        return texture2D(terrainNoiseTexture, uv).r;
-        #else
-        return terrainProceduralNoise(p);
-        #endif
-    }
-`
 
 export const terrainFringeShader = `
     float terrainFringeCoverage(vec2 terrainXZ, float fromEdge, float edgeHeight, float minReach, float maxReach) {

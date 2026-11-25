@@ -15,7 +15,8 @@ type Boundary<T> = {x: number, z: number, height: number, alongX: boolean, cover
 type TransitionTile = RoofTile & {height: number}
 
 export function findTerrainTransitions<T>(map: TransitionTile[][],
-                                         materialFor: (cover: number, substrate: number) => T | undefined, extendSnowmelt = true) {
+                                         materialFor: (cover: number, substrate: number) => T | undefined, extendSnowmelt = true,
+                                         surfaceOf: (tile: TransitionTile) => number = terrainSurface) {
     const bucketSize = 4
     const columns = Math.ceil((map[0]?.length ?? 0) / bucketSize)
     const edges = new Map<number, Boundary<T>[]>()
@@ -31,7 +32,7 @@ export function findTerrainTransitions<T>(map: TransitionTile[][],
         for (const [dx, dz] of directions) {
             const neighbor = map[x + dx]?.[z + dz]
             if (!neighbor || isPath(neighbor) || neighbor.height !== tile.height) continue
-            let cover = terrainSurface(tile), substrate = terrainSurface(neighbor)
+            let cover = surfaceOf(tile), substrate = surfaceOf(neighbor)
             let material = materialFor(cover, substrate)
             if (!material) {
                 [cover, substrate] = [substrate, cover]
@@ -47,7 +48,7 @@ export function findTerrainTransitions<T>(map: TransitionTile[][],
     }))
     return map.map((row, x) => row.map((tile, z) => {
         if (isPath(tile)) return undefined
-        const type = terrainSurface(tile)
+        const type = surfaceOf(tile)
         const candidates: Boundary<T>[] = []
         const range = 4
         for (let bx = Math.floor(Math.max(0, x - range) / bucketSize); bx <= Math.floor((x + range) / bucketSize); bx++) {

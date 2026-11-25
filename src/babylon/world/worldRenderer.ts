@@ -97,10 +97,9 @@ export const WorldRenderer = {
         // every static-light shadow map. Keep the block terrain as a
         // sun/personal-light caster for raised terrain edges.
         Lights.addShadowCaster(TerrainManager.terrainBlock1!, true)
-        // Flat terrain and water cannot create a useful nearby personal-light
+        // Flat terrain cannot create a useful nearby personal-light
         // silhouette, but would otherwise be redrawn into its map every frame.
         Lights.addShadowCaster(TerrainManager.terrainPlane!, false)
-        Lights.addShadowCaster(TerrainManager.terrainWaterPlane!, false)
         Lights.addShadowCaster(this.block1.mesh, true, true)
         Lights.addShadowCaster(StoneBatch.prefab!.mesh, true, true)
         // Transparent/alpha world geometry is not a local static-light caster.

@@ -22,6 +22,8 @@ import type { PavingStone } from './stonePathLayout'
 import { outdoorSurfaceHeight } from './terrainRoofShape'
 import type { TerrainStepField } from './terrainStepField'
 
+export { createFallbackWaterFloor } from '@/adminUtils/terrainPreviewGeometry'
+
 const REGION_SIZE = TERRAIN_ATLAS_REGION_SIZE
 
 type VisibleTile = {seen: number, faces?: OutdoorInstance[], foliage?: OutdoorInstance[]}

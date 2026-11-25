@@ -3,7 +3,7 @@ import type { Texture } from '@babylonjs/core'
 import { PBRCustomMaterial } from '@babylonjs/materials'
 import { terrainFringeShader, terrainNoiseShader } from '@/babylon/world/terrainSurfaceShader'
 import { terrainCoverPatterns } from './terrainAtlasPreview'
-import { POND_DISTANCE_RANGE } from './terrainPreviewWater'
+import { POND_DISTANCE_RANGE } from '@/babylon/world/terrainWaterMaterial'
 import type { createTerrainPreviewWater } from './terrainPreviewWater'
 
 const PATCH_SIZE = 3

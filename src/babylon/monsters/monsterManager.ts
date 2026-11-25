@@ -42,7 +42,7 @@ export const MonsterManager = {
             const mob = this.monsters.get(id)
             mob!.pos.x = position.x
             mob!.pos.z = position.z
-            mob!.logicYpos = Utils.calculateWalkYPos(mob!.pos.x, mob!.pos.z, mob!.getBoxSize())
+            mob!.logicYpos = Utils.calculateCharacterYPos(mob!.pos.x, mob!.pos.z, mob!.getBoxSize())
             mob!.pos.y = mob!.logicYpos
             mob!.hpPercent = hpp
             mob!.alignment = alignment === 'neutral' || alignment === 'friendly' ? alignment : 'evil'
@@ -112,7 +112,7 @@ export const MonsterManager = {
                 mob.pos.x = data[1]
                 mob.pos.z = data[2]
             }
-            mob.logicYpos = Utils.calculateWalkYPos(mob.pos.x, mob.pos.z, mob.getBoxSize())
+            mob.logicYpos = Utils.calculateCharacterYPos(mob.pos.x, mob.pos.z, mob.getBoxSize())
             mob.setTargetPoint(data[3], data[4], data.length >= 8 ? data[6] : undefined, data.length >= 8 ? data[7] : undefined)
         }
     },
@@ -172,7 +172,7 @@ export const MonsterManager = {
         if (mob) {
             mob.pos.x = data[1]
             mob.pos.z = data[2]
-            mob.logicYpos = Utils.calculateWalkYPos(mob.pos.x, mob.pos.z, mob.getBoxSize())
+            mob.logicYpos = Utils.calculateCharacterYPos(mob.pos.x, mob.pos.z, mob.getBoxSize())
             mob.pos.y = mob.logicYpos
             mob.resetTargetPoint()
             if (data[3] === true && mob.model.initialized) {

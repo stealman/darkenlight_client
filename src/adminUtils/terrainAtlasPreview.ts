@@ -1,11 +1,14 @@
 import { Matrix, Mesh, Texture, Vector2 } from '@babylonjs/core'
 import { Builder } from '@/babylon/builder'
-import { Materials } from '@/babylon/materials'
+import { Materials, TerrainEnum1 } from '@/babylon/materials'
 import { addTerrainPreviewRoof, configureTerrainEdgeLighting, configureMuddyDirtWetness, configureRockDeposits, configureTerrainPreviewBatch, TerrainPreviewBatch } from './terrainPreviewBatch'
 import type { SubmitTerrainBatch, TerrainPreviewTriangle } from './terrainPreviewBatch'
 import type { TerrainPreviewSurfaces } from './terrainPreviewGeometry'
 import { muddyDirtLayout, muddyDirtPatterns, terrainCoverLayout, TERRAIN_ATLAS_TILES,
     visitBakedTerrainAtlasPatches, visitTerrainAtlasPlacements } from '@/babylon/world/terrainAtlasPlacement'
+import dirtColorUrl from './assets/dirt-atlas.png'
+import muddyDirtColorUrl from './assets/muddy-dirt-atlas.png'
+import dirtNormalUrl from './assets/muddy-dirt-normal-atlas.png'
 export { muddyDirtPatterns, terrainCoverPatterns, TERRAIN_ATLAS_TILES } from '@/babylon/world/terrainAtlasPlacement'
 
 
@@ -36,6 +39,14 @@ export function createTerrainPreviewPlane(plane: Mesh, name: string) {
     return mesh
 }
 
+export function createDirtAtlas(plane: Mesh, name: string, muddy: boolean, wetDirt = false) {
+    return createTerrainAtlasPreview(plane, name, {
+        type: (muddy ? TerrainEnum1.TERRAIN_MUDDY_DIRT : TerrainEnum1.TERRAIN_DIRT).index,
+        colorUrl: muddy ? muddyDirtColorUrl : dirtColorUrl,
+        normal: {url: dirtNormalUrl, strength: 4}, patterns: muddyDirtPatterns, roundDirtEdges: true, wetDirt,
+    })
+}
+
 export function createTerrainAtlasPreview(plane: Mesh, name: string, atlas: TerrainAtlas) {
     const mesh = createTerrainPreviewPlane(plane, name)
     const material = createAtlasMaterial(plane, name, atlas)
@@ -48,7 +59,8 @@ export function createTerrainAtlasPreview(plane: Mesh, name: string, atlas: Terr
     if (showRockDeposits) configureRockDeposits(material)
 
     const render = ({atlasTops, stride, width, originX, originZ, includeTile, roofs, wetCorners,
-                        rockDeposits, cornerFloors, compiled}: TerrainPreviewSurfaces, takeTile?: TerrainAtlasTileFilter,
+                        rockDeposits, cornerFloors, compiled}: Omit<TerrainPreviewSurfaces, 'walls' | 'dirtWalls' | 'rockWalls'>,
+                    takeTile?: TerrainAtlasTileFilter,
                     batch = new TerrainPreviewBatch(), submit?: SubmitTerrainBatch,
                     canMergeTile?: (x: number, z: number) => boolean) => {
         const remaining = atlasTops.get(atlas.type)!
@@ -97,11 +109,16 @@ export function createTerrainAtlasPreview(plane: Mesh, name: string, atlas: Terr
             if (canMergeTile && includeTile) {
                 visitBakedTerrainAtlasPatches(remaining, stride, width, layout, includeTile, readCode, submitTile, finishPatch)
             }
+            const unbaked = new Map<number, number>()
             for (const [key, height] of remaining) {
                 const x = Math.floor(key / stride), z = key % stride
-                if (includeTile && !includeTile(x, z)) continue
-                submitTile(key, x, z, height, readCode(x, z), false)
+                const code = readCode(x, z)
+                if (!code) unbaked.set(key, height)
+                else submitTile(key, x, z, height, code, false)
             }
+            // Existing compiled maps have no atlas placements for pond floors.
+            visitTerrainAtlasPlacements(unbaked, stride, width, originX, originZ, layout, !!atlas.varyAdjacentPatches,
+                !!includeTile, submitTile, canMergeTile ? finishPatch : undefined)
         } else {
             visitTerrainAtlasPlacements(remaining, stride, width, originX, originZ, layout, !!atlas.varyAdjacentPatches,
                 !!includeTile, submitTile, canMergeTile ? finishPatch : undefined)

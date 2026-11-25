@@ -9,6 +9,8 @@ import { MyPlayer } from '@/data/myPlayer'
 import { CharacterManager } from '@/babylon/character/characterManager'
 import { NpcManager } from '@/babylon/npc/npcManager'
 import { BuildingManager } from '@/babylon/world/buildings/buildingManager'
+import { outdoorSurfaceHeight } from '@/babylon/world/terrainRoofShape'
+import { sampleWaterBedHeight } from '@/babylon/world/terrainWaterBed'
 
 // Keep local terrain collision slightly inside the server-valid movement area.
 // This absorbs the client/server movement tick offset when sliding along cliffs.
@@ -60,6 +62,17 @@ export const Utils = {
         })
 
         return highest
+    },
+
+    calculateCharacterYPos(x: number, z: number, boxSize: number): number {
+        const support = Utils.calculateWalkYPos(x, z, boxSize)
+        const map = WorldDataManager.getBlockMap()
+        const tx = Math.round(x), tz = Math.round(z)
+        const block = map[tx]?.[tz]
+        // Bridges, cliffs and deep-water collision keep their normal tile support.
+        if (!block?.shallowWater || support > block.height || Utils.getWalkHeightAtTile(tx, tz) !== block.walkHeight) return support
+        return Math.max(0, sampleWaterBedHeight(x, z, block.walkHeight, block.height,
+            (nx, nz) => outdoorSurfaceHeight(map[nx]?.[nz])))
     },
 
     getWalkHeightAtTile(x: number, z: number, useWaterWalkHeight: boolean = true): number {

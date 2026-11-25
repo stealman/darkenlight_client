@@ -26,7 +26,7 @@ test('monster move/stop packets pass through dispatch and guard forwarding witho
 
 test('monster confirmations reuse points, preserve progress and handle look-ahead and teleport stops', async () => {
     const core = await import('@babylonjs/core/index.js')
-    const Utils = {calculateWalkYPos: x => x / 2,
+    const Utils = {calculateCharacterYPos: x => x / 2,
         getAngleBetweenPoints: (a, b) => Math.atan2(-(b.z - a.z), b.x - a.x)}
     const {Monster} = loadModule('babylon/monsters/monster.ts', {'@babylonjs/core': core, '@/utils/utils': {Utils}})
     const {MonsterManager: manager} = loadModule('babylon/monsters/monsterManager.ts', {
@@ -73,7 +73,7 @@ test('NPC movement reuses its target and guard teleports snap the model', async 
     const {Npc} = loadModule('babylon/npc/npc.ts', {'@babylonjs/core': core,
         '@/babylon/character/character': {default: Character}})
     const {NpcManager: manager} = loadModule('babylon/npc/npcManager.ts', {
-        '@/utils/utils': {Utils: {calculateWalkYPos: () => 3}},
+        '@/utils/utils': {Utils: {calculateCharacterYPos: () => 3}},
     })
     const npc = Object.create(Npc.prototype)
     npc.pos = core.Vector3.Zero()
@@ -97,7 +97,7 @@ test('authoritative corrections refresh local terrain height while small moving 
     const char = {id: 1, pos: {x: 0, y: 0, z: 0}, logicYpos: 0, getBoxSize: () => .8,
         stopMovementLocally() {stops++}, setMoveAngle() {}, setActualSpeed() {}, setMoveType() {}}
     const MyPlayer = {myChar: char}
-    const Utils = {calculateWalkYPos: (x, z) => {heights++; return x + z}}
+    const Utils = {calculateCharacterYPos: (x, z) => {heights++; return x + z}}
     const {CharacterManager: manager} = loadModule('babylon/character/characterManager.ts', {
         '@/data/myPlayer': {MyPlayer}, '@/utils/utils': {Utils},
     })

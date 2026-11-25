@@ -21,13 +21,11 @@ export const Materials = {
 
     terrainMaterial: null as PBRCustomMaterial | null,
     planeMaterial: null as PBRCustomMaterial | null,
-    planeWaterMaterial: null as PBRCustomMaterial | null,
 
     blockMatAlpha1: null as PBRCustomMaterial | null,
     blockMat1: null as PBRCustomMaterial | null,
     blockMatTrans: null as PBRCustomMaterial | null,
 
-    waterMaterial: null as PBRMaterial | null,
     entrancePortalMaterial: null as PBRCustomMaterial | null,
     staticSurfaceMaterial: null as PBRCustomMaterial | null,
     weaponTrailMaterial: null as StandardMaterial | null,
@@ -37,12 +35,10 @@ export const Materials = {
     initialize(scene: Scene) {
         this.terrainMaterial = this.createTerrainMaterial1(scene)
         this.planeMaterial = this.createPlaneMaterial(scene)
-        this.planeWaterMaterial = this.createPlaneWaterMaterial(scene)
 
         this.blockMat1 = this.createBlockMat1(scene)
         this.blockMatAlpha1 = this.createBlockMatAlpha1(scene)
         this.blockMatTrans = this.createBlockMatTrans(scene)
-        this.waterMaterial = this.createWaterMaterial(scene)
         this.staticSurfaceMaterial = this.getPBRCustomMaterial(scene, "staticSurfaces", "/textures/statics/", "static-surfaces.svg", 1 / 16, 1 / 4, true)
         this.staticSurfaceMaterial.albedoTexture!.hasAlpha = true
         this.entrancePortalMaterial = this.createEntrancePortalMaterial(scene)
@@ -64,19 +60,6 @@ export const Materials = {
     createPlaneMaterial(scene: Scene): PBRCustomMaterial {
         const material = this.getPBRCustomMaterial(scene, "plane_mats", this.BASE_PATH, 'plane_materials1.png', 1 / 8, 1 / 8, true)
         material.alphaCutOff = 0.01
-        return material
-    },
-
-    createPlaneWaterMaterial(scene: Scene): PBRCustomMaterial {
-        const material = this.getPBRCustomMaterial(scene, "plane_mats_water", this.BASE_PATH, 'plane_materials1.png', 1 / 8, 1 / 8, false)
-        const texture = material.albedoTexture as Texture
-        texture.hasAlpha = true
-        texture.getAlphaFromRGB = false
-        texture.updateSamplingMode(Texture.NEAREST_NEAREST)
-        material.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHABLEND
-        material.useAlphaFromAlbedoTexture = true
-        material.alpha = 1
-        material.forceAlphaTest = false
         return material
     },
 
@@ -262,25 +245,6 @@ export const Materials = {
         return mat
     },
 
-    createWaterMaterial(scene: Scene): PBRMaterial {
-        const albedoTexture = new Texture(this.BASE_PATH + 'water.png', scene)
-        albedoTexture.uScale = 64
-        albedoTexture.vScale = 64
-        albedoTexture.gammaSpace = true;
-
-        const mat = new PBRMaterial("waterMaterial", scene)
-        mat.albedoTexture = albedoTexture
-        mat.metallic = 0.6
-        mat.roughness = 0.4
-        mat.backFaceCulling = false;
-        mat.directIntensity = 1
-        mat.environmentIntensity = 0.5
-        mat.usePhysicalLightFalloff = false
-        mat.alpha = 0.5
-
-        return mat
-    },
-
     createEntrancePortalMaterial(scene: Scene): PBRCustomMaterial {
         const mat = this.getPBRCustomMaterialFrom(scene, 'staticPortals', '/textures/statics/', 'static-surfaces.svg', 1 / 16, 1 / 4, false,
             {metallic: 0.6, roughness: 0.4, directIntensity: 1, environmentIntensity: 0.5})
@@ -415,7 +379,6 @@ export const PlaneEnum1 = {
     PLANE_MUDDY_DIRT: new MaterialEnum(4, new Vector2(0.5, 4.5)),
     PLANE_GRASS_WINTER: new MaterialEnum(5, new Vector2(4.5, 4.5)),
 
-    PLANE_WATER: new MaterialEnum(50, new Vector2(2.5, 4.5)),
 
     PLANE_SNOW_DIRT: new MaterialEnum(101, new Vector2(4.5, 6.5)),
     PLANE_SNOW_GRASS: new MaterialEnum(102, new Vector2(4.5, 6.5)),

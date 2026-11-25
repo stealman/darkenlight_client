@@ -1,4 +1,5 @@
-import { MapBlock, WorldDataManager } from '@/data/worldDataManager'
+import { WorldDataManager } from '@/data/worldDataManager'
+import type { MapBlock } from '@/data/worldDataManager'
 import { Color4, Matrix, Mesh, ParticleSystem, Scene, TransformNode, Vector2 } from '@babylonjs/core'
 import { updateWorldInstanceBuffers } from '@/babylon/world/worldInstanceBuffers'
 import { Builder } from '@/babylon/builder'
@@ -12,16 +13,19 @@ import { Lights } from '@/babylon/scene/lights'
 import { smoothTerrainExperiment } from '@/babylon/world/terrainExperiment'
 import { BEVELED_TERRAIN_ENABLED, terrainBevelMask, terrainVerticalBevelMask, BeveledTerrain } from '@/babylon/world/beveledTerrain'
 import { SNOW_BLOCK_HEIGHT } from '@/babylon/world/beveledTerrainBlock'
-import type { createOutdoorTerrain } from './outdoorTerrain'
+import type { createOutdoorTerrain, createFallbackWaterFloor } from './outdoorTerrain'
 import type { createTerrainFoliageRenderer } from '@/adminUtils/terrainFoliageRenderer'
 import { BuildingManager } from './buildings/buildingManager'
 import { TerrainContactShadow } from './terrainContactShadow'
 import { StaticsManager } from './statics/staticsManager'
 import { StepMarksRenderer } from './stepMarksRenderer'
+import { TerrainWaterSurface } from './terrainWaterSurface'
+import { configureTerrainWater } from './terrainWaterMaterial'
+import { outdoorSurfaceHeight, WATER_BLOCK_TYPE } from './terrainRoofShape'
 
+export { WATER_BLOCK_TYPE } from './terrainRoofShape'
 export const DIRT_BLOCK_TYPE = 1
 const GRASS_BLOCK_TYPES = new Set([2, 5])
-export const WATER_BLOCK_TYPE = 50
 
 export function getTerrainHeightOffset(block: MapBlock, hideSnow: boolean): number {
     if (hideSnow) return block.type === WATER_BLOCK_TYPE ? -0.1 : 0
@@ -31,10 +35,9 @@ export function getTerrainHeightOffset(block: MapBlock, hideSnow: boolean): numb
 }
 
 export const TerrainManager = {
-    waterBottomBlock: null as MapBlock | null,
     terrainBlock1: null as Mesh | null,
     terrainPlane: null as Mesh | null,
-    terrainWaterPlane: null as Mesh | null,
+    terrainWater: null as TerrainWaterSurface | null,
     terrainBlockMatrixBuffer: new Float32Array(0),
     waterPlane: null as Mesh | null,
     seaWaterLevel: null as number | null,
@@ -42,11 +45,14 @@ export const TerrainManager = {
     hoverBlockMarker: null as Mesh | null,
     outdoorTerrain: null as ReturnType<typeof createOutdoorTerrain> | null,
     outdoorFactory: null as typeof createOutdoorTerrain | null,
+    waterFloor: null as ReturnType<typeof createFallbackWaterFloor> | null,
+    waterFloorFactory: null as typeof createFallbackWaterFloor | null,
     outdoorFoliageFactory: undefined as typeof createTerrainFoliageRenderer | undefined,
     contactShadow: null as TerrainContactShadow | null,
 
     initialize (scene: Scene, foliageFactory?: typeof createTerrainFoliageRenderer) {
         this.outdoorTerrain = null
+        this.waterFloor = null
         this.outdoorFoliageFactory = foliageFactory
         const terrainSteps = StepMarksRenderer.field
         const contactShadow = new TerrainContactShadow(scene, terrainSteps ?? undefined)
@@ -58,9 +64,10 @@ export const TerrainManager = {
             [PlaneEnum1.PLANE_DIRT.uv, PlaneEnum1.PLANE_MUDDY_DIRT.uv])
         contactShadow.configure(Materials.terrainMaterial!, false, !!terrainSteps)
         contactShadow.configure(Materials.planeMaterial!, false, !!terrainSteps)
-        if (!smoothTerrainExperiment && !this.outdoorFactory) {
-            void import('./outdoorTerrain').then(({createOutdoorTerrain}) => {
+        if (!this.outdoorFactory) {
+            void import('./outdoorTerrain').then(({createOutdoorTerrain, createFallbackWaterFloor}) => {
                 this.outdoorFactory = createOutdoorTerrain
+                this.waterFloorFactory = createFallbackWaterFloor
                 if (!scene.isDisposed && ViewportManager.viewPortInitialized) WorldRenderer.renderWorld()
             }).catch(error => console.error('Unable to load outdoor terrain', error))
         }
@@ -71,8 +78,6 @@ export const TerrainManager = {
     },
 
     initializeMeshes(scene: Scene, parent: TransformNode | null, onSmoothReady: () => void) {
-        this.waterBottomBlock = new MapBlock(0, DIRT_BLOCK_TYPE)
-
         // Terrain and plane blocks
         this.terrainBlock1 = Builder.createBlockWithFaces(scene, parent!)
         this.terrainBlock1.material = Materials.terrainMaterial
@@ -82,19 +87,15 @@ export const TerrainManager = {
         this.terrainPlane = Builder.createHorizontalPlane(scene, parent, 1, 0)
         this.terrainPlane.material = Materials.planeMaterial
 
-        this.terrainWaterPlane = Builder.createHorizontalPlane(scene, parent, 1, 0)
-        this.terrainWaterPlane.material = Materials.planeWaterMaterial
-        this.terrainWaterPlane.renderingGroupId = 0
-
+        this.terrainWater = new TerrainWaterSurface(scene, parent)
         if (Settings.isShadowsEnabled()) {
             this.terrainBlock1.receiveShadows = true
             this.terrainPlane.receiveShadows = true
-            this.terrainWaterPlane.receiveShadows = true
+            this.terrainWater.mesh.receiveShadows = true
         }
 
-        // Water planes
         this.waterPlane = Builder.createHorizontalPlane(scene, parent, 2048, 0)
-        this.waterPlane.material = Materials.waterMaterial
+        configureTerrainWater(this.waterPlane, 'seaWater')
         this.waterPlane.position.y = 1
         this.waterPlane.isPickable = false
         this.waterPlane.alwaysSelectAsActiveMesh = true
@@ -116,21 +117,6 @@ export const TerrainManager = {
         this.waterPlane?.setEnabled(hasSea)
         if (hasSea && this.waterPlane) {
             this.waterPlane.position.y = this.seaWaterLevel!
-        }
-    },
-
-    addWaterTerrainLayer(
-        x: number, z: number, blockHeight: number, planeHeightOffset: number, block: MapBlock, terrainMatrices1: Matrix[], terrainUvData1: Vector2[], waterPlaneMatrices: Matrix[], waterPlaneUvData: Vector2[]) {
-        const bottomY = block.deepWater ? blockHeight - 1 : blockHeight - 0.5
-        terrainMatrices1.push(Matrix.Translation(x, bottomY, z))
-        terrainUvData1.push(TerrainEnum1.getTerrainForBlock(this.waterBottomBlock!))
-
-        waterPlaneMatrices.push(Matrix.Translation(x, blockHeight + planeHeightOffset, z))
-        waterPlaneUvData.push(PlaneEnum1.PLANE_WATER.uv)
-
-        if (block.deepWater) {
-            waterPlaneMatrices.push(Matrix.Translation(x, blockHeight - 0.5 + planeHeightOffset, z))
-            waterPlaneUvData.push(PlaneEnum1.PLANE_WATER.uv)
         }
     },
 
@@ -172,8 +158,8 @@ export const TerrainManager = {
         const terrainUvData1: Vector2[] = []
         const planeMatrices: Matrix[] = []
         const planeUvData: Vector2[] = []
-        const waterPlaneMatrices: Matrix[] = []
-        const waterPlaneUvData: Vector2[] = []
+        const waterTiles: {x: number, z: number, height: number}[] = []
+        const waterFloors = outdoor ? undefined : new Map<number, number>()
 
         IndoorTerrainOcclusionManager.beginTerrainRender(blockMap, Lights.indoor)
         smoothTerrainExperiment?.begin()
@@ -202,13 +188,15 @@ export const TerrainManager = {
                     WorldRenderer.block1!.matrices.push(pathMatrix)
                     WorldRenderer.block1!.uvData.push(block.beigeStonePath ? MaterialEnum1.ROCK1_BEIGE.uv : MaterialEnum1.ROCK1.uv)
                 }
-                if (outdoor) {
-                    this.addWaterTerrainLayer(x, z, block.height, getTerrainHeightOffset(block, false), block,
-                        terrainMatrices1, terrainUvData1, waterPlaneMatrices, waterPlaneUvData)
+                const hideSnow = !outdoor && block.snowed && snowCoverMask.has(x * blockMap.length + z)
+                if (block.type === WATER_BLOCK_TYPE) {
+                    waterFloors?.set(x * blockMap[0].length + z, outdoorSurfaceHeight(block)!)
+                    if (this.seaWaterLevel === null || block.height > this.seaWaterLevel) {
+                        waterTiles.push({x, z, height: block.height})
+                    }
                     continue
                 }
 
-                const hideSnow = block.snowed && snowCoverMask.has(x * blockMap.length + z)
                 const renderType = hideSnow && GRASS_BLOCK_TYPES.has(block.type) ? DIRT_BLOCK_TYPE : undefined
                 const heightOffset = getTerrainHeightOffset(block, hideSnow)
                 // A stone path is its own thin floor. Unlike snow it must not
@@ -228,13 +216,9 @@ export const TerrainManager = {
                         BeveledTerrain.add(bevelMask, true, x, z, block.height, terrainHeightOffset,
                             PlaneEnum1.getPlaneForBlock(block, hideSnow, renderType))
                     } else if (planeBlockMap[x][z]) {
-                        if (block.type === WATER_BLOCK_TYPE) {
-                            this.addWaterTerrainLayer(x, z, block.height, heightOffset, block, terrainMatrices1, terrainUvData1, waterPlaneMatrices, waterPlaneUvData)
-                        } else {
-                            const matrix = Matrix.Translation(x, block.height + terrainHeightOffset, z)
-                            planeMatrices.push(matrix)
-                            planeUvData.push(PlaneEnum1.getPlaneForBlock(planeBlockMap[x][z] as MapBlock, hideSnow, renderType))
-                        }
+                        const matrix = Matrix.Translation(x, block.height + terrainHeightOffset, z)
+                        planeMatrices.push(matrix)
+                        planeUvData.push(PlaneEnum1.getPlaneForBlock(planeBlockMap[x][z] as MapBlock, hideSnow, renderType))
                     } else {
 
                         // Find lowest height for surrounding blocks to avoid gaps
@@ -308,12 +292,15 @@ export const TerrainManager = {
         // Apply buffers for instances
         this.terrainBlockMatrixBuffer = updateWorldInstanceBuffers(this.terrainBlock1!, terrainMatrices1, terrainUvData1)
         updateWorldInstanceBuffers(this.terrainPlane!, planeMatrices, planeUvData)
-        updateWorldInstanceBuffers(this.terrainWaterPlane!, waterPlaneMatrices, waterPlaneUvData)
+        this.terrainWater!.render(waterTiles, blockMap)
+        if (waterFloors?.size && this.waterFloorFactory) {
+            this.waterFloor ??= this.waterFloorFactory(this.terrainPlane!)
+            this.waterFloor.render(blockMap, waterFloors)
+        } else this.waterFloor?.mesh.setEnabled(false)
 
         // Set enabled based on if there are instances to show
         this.terrainBlock1!.setEnabled(terrainMatrices1.length > 0)
         this.terrainPlane!.setEnabled(planeMatrices.length > 0)
-        this.terrainWaterPlane!.setEnabled(waterPlaneMatrices.length > 0)
     },
 
     setParticleSplashColorByTerrainType(ps: ParticleSystem, block: MapBlock) {

@@ -1,6 +1,7 @@
 export const TerrainEdge = { West: 1, East: 2, North: 4, South: 8 } as const
 export const TerrainCorner = { NorthWest: 16, NorthEast: 32, SouthEast: 64, SouthWest: 128 } as const
 export const TERRAIN_STEP_HEIGHT = 0.5
+export const WATER_BLOCK_TYPE = 50
 export const TERRAIN_ROOF_CORNERS = [
     [-1, -1, TerrainCorner.NorthWest, TerrainEdge.North | TerrainEdge.West],
     [1, -1, TerrainCorner.NorthEast, TerrainEdge.North | TerrainEdge.East],
@@ -20,14 +21,14 @@ export const isSnowRoof = (tile?: RoofTile) => !!tile && terrainSurfaceAtlasType
 
 export function outdoorSurfaceHeight(tile?: TerrainColumn) {
     if (!tile || tile.type <= 0) return undefined
-    return tile.type === 50 ? tile.height - (tile.deepWater ? 1 : 0.5) : tile.height
+    return tile.type === WATER_BLOCK_TYPE ? tile.height - (tile.deepWater ? 1 : 0.5) : tile.height
 }
 
 export function terrainRoofShape(x: number, z: number, tile: RoofTile, top: number,
     heightAt: (x: number, z: number) => number | undefined, snowAt: (x: number, z: number) => boolean) {
     const snowy = isSnowRoof(tile)
     let bevel = 0
-    if (!snowy && tile.type < 50 && !tile.stonePath && !tile.beigeStonePath) {
+    if (!snowy && tile.type < WATER_BLOCK_TYPE && !tile.stonePath && !tile.beigeStonePath) {
         for (const [dx, dz, bit] of TERRAIN_CARDINAL_EDGES) {
             if (top > (heightAt(x + dx, z + dz) ?? top) + 1e-6) bevel |= bit
         }

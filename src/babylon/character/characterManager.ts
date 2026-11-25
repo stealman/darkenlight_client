@@ -67,7 +67,7 @@ export const CharacterManager = {
             char.name = data.name
             char.isBot = data.bot === true
             await char.changeCharacterAppearance(data)
-            char.pos.y = Utils.calculateWalkYPos(char.pos.x, char.pos.z, char.getBoxSize())
+            char.pos.y = Utils.calculateCharacterYPos(char.pos.x, char.pos.z, char.getBoxSize())
             char.logicYpos = char.pos.y
             if (data.dead === true) {
                 char.die()
@@ -140,7 +140,7 @@ export const CharacterManager = {
             if (dx * dx + dz * dz > 1 || serverStopped) {
                 MyPlayer.myChar.pos.x = data[1]
                 MyPlayer.myChar.pos.z = data[2]
-                MyPlayer.myChar.logicYpos = Utils.calculateWalkYPos(data[1], data[2], MyPlayer.myChar.getBoxSize())
+                MyPlayer.myChar.logicYpos = Utils.calculateCharacterYPos(data[1], data[2], MyPlayer.myChar.getBoxSize())
                 if (serverStopped) {
                     MyPlayer.myChar.stopMovementLocally()
                 } else {
@@ -160,7 +160,7 @@ export const CharacterManager = {
                         data.length >= 10 ? data[8] : undefined,
                         data.length >= 10 ? data[9] : undefined,
                     )
-                    char.pos.y = Utils.calculateWalkYPos(char.pos.x, char.pos.z, char.getBoxSize())
+                    char.pos.y = Utils.calculateCharacterYPos(char.pos.x, char.pos.z, char.getBoxSize())
                     char.logicYpos = char.pos.y
                     char.setActualSpeed(data[4])
                     char.setMoveType(data[5])
@@ -172,7 +172,7 @@ export const CharacterManager = {
                 char.clearServerMovementTargets()
                 char.pos.x = data[1]
                 char.pos.z = data[2]
-                char.pos.y = Utils.calculateWalkYPos(char.pos.x, char.pos.z, char.getBoxSize())
+                char.pos.y = Utils.calculateCharacterYPos(char.pos.x, char.pos.z, char.getBoxSize())
                 char.logicYpos = char.pos.y
                 char.setMoveAngle(data[3])
                 char.setActualSpeed(data[4])

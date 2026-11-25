@@ -11,7 +11,7 @@ import { Lights } from '@/babylon/scene/lights'
 import { WATER_BLOCK_TYPE } from '@/babylon/world/terrainManager'
 import { configureTerrainNoiseTexture } from '@/babylon/world/terrainSurfaceShader'
 import { Settings } from '@/settings/settings'
-import { createTerrainAtlasPreview, createTerrainPreviewPlane, muddyDirtPatterns, terrainCoverPatterns } from './terrainAtlasPreview'
+import { createDirtAtlas, createTerrainAtlasPreview, createTerrainPreviewPlane, muddyDirtPatterns, terrainCoverPatterns } from './terrainAtlasPreview'
 import type { TerrainAtlasTileFilter } from './terrainAtlasPreview'
 import { addTerrainPreviewRoof, configureTerrainEdgeLighting, configureMuddyDirtWetness, configureSnowmelt, configureSnowGlints, configureTerrainPreviewBatch, TerrainPreviewBatch } from './terrainPreviewBatch'
 import type { SubmitTerrainBatch } from './terrainPreviewBatch'
@@ -19,9 +19,6 @@ import { PAVING_SNOW_ATTRIBUTE, PAVING_SNOW_FLAG_SHIFT } from './terrainPreviewB
 import { createTerrainPreviewGeometry } from './terrainPreviewGeometry'
 import { createTerrainPreviewWater } from './terrainPreviewWater'
 import { createTerrainTransitionMaterial, POND_BANK_FLAG, TERRAIN_TRANSITION_REACH } from './terrainTransitionMaterial'
-import muddyDirtColorUrl from './assets/muddy-dirt-atlas.png'
-import dirtColorUrl from './assets/dirt-atlas.png'
-import muddyDirtNormalUrl from './assets/muddy-dirt-normal-atlas.png'
 import winterGrassColorUrl from './assets/winter-grass-atlas.png'
 import grassColorUrl from './assets/grass-atlas.png'
 import winterGrassNormalUrl from './assets/winter-grass-normal-atlas.png'
@@ -101,15 +98,9 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
     plane.receiveShadows = Settings.isShadowsEnabled()
     const geometry = createTerrainPreviewGeometry(plane, [MUDDY_DIRT, DIRT, ...GRASS_TYPES, SNOW_DIRT, ROCK])
     const pond = demo && createTerrainPreviewWater(plane, demo.map, demo.isBank, demo.center)
-    const dirtAtlas = createTerrainAtlasPreview(plane, 'adminUtilsMuddyDirt', {
-        type: MUDDY_DIRT, colorUrl: muddyDirtColorUrl,
-        normal: {url: muddyDirtNormalUrl, strength: 4}, patterns: muddyDirtPatterns, roundDirtEdges: true, wetDirt: wetness,
-    })
+    const dirtAtlas = createDirtAtlas(plane, 'adminUtilsMuddyDirt', true, wetness)
     pond?.applyShoreWetness(dirtAtlas.material)
-    const dryDirtAtlas = createTerrainAtlasPreview(plane, 'adminUtilsDirt', {
-        type: DIRT, colorUrl: dirtColorUrl,
-        normal: {url: muddyDirtNormalUrl, strength: 4}, patterns: muddyDirtPatterns, roundDirtEdges: true,
-    })
+    const dryDirtAtlas = createDirtAtlas(plane, 'adminUtilsDirt', false)
     const grassAtlases = GRASS_TYPES.map(type => {
         const name = type === GRASS ? 'Grass' : 'WinterGrass'
         const atlas = createTerrainAtlasPreview(plane, type === GRASS ? 'adminUtilsGrassTerrain' : 'adminUtilsWinterGrass', {
@@ -240,7 +231,9 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
         }
         let localTransitions: ReturnType<typeof findTerrainTransitions<Mesh>> | undefined
         if (localBoundaries) {
-            const read = compiled && compiledRegion && visitBakedTerrainTransitions(compiled, compiledRegion.x, compiledRegion.z,
+            const hasWater = map.some(row => row.some(tile => tile.type === WATER_BLOCK_TYPE))
+            // Let the neighboring ground material carry across the rim onto the dirt bed.
+            const read = !hasWater && compiled && compiledRegion && visitBakedTerrainTransitions(compiled, compiledRegion.x, compiledRegion.z,
                 (worldX, worldZ, coverType, substrateType, field, snowmeltOnly) => {
                     if (snowmeltOnly && !wetness) return
                     const x = worldX - originX, z = worldZ - originZ
@@ -249,7 +242,8 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
                     localTransitions ??= map.map(() => [])
                     localTransitions[x][z] = {cover: terrainSurface(map[x][z]) === coverType, coverType, substrateType, material, field, snowmeltOnly}
                 })
-            if (!read) localTransitions = findTerrainTransitions(map, materialFor, wetness)
+            if (!read) localTransitions = findTerrainTransitions(map, materialFor, wetness,
+                tile => tile.type === WATER_BLOCK_TYPE ? MUDDY_DIRT : terrainSurface(tile))
         }
         const pondCover = shoreSurface >= 100 && shoreSurface < 200 ? SNOW_DIRT : shoreSurface
         const pondTransition = pondTransitions.get(pondCover)
