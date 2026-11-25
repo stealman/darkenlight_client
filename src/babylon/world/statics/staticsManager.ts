@@ -515,6 +515,9 @@ export const StaticsManager = {
             const translucentStart = WorldRenderer.translucentPlane!.matrices.length
             const alphaStart = WorldRenderer.blockWithAlpha1!.matrices.length
             element.render()
+            const suppressDamage = element instanceof CemeteryStoneWall
+                || element instanceof PalisadeWall2 || element instanceof SpikedPalisade
+            WorldRenderer.prepareStaticBlockDamage(blockStart, suppressDamage)
             element.captureRenderMatrices(blockStart, prefabStart, translucentStart, alphaStart)
         }
         StaticFireParticleManager.flush()

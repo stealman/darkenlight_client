@@ -242,7 +242,11 @@ export async function installAssetPreview(
                 WorldRenderer.staticTerrainContact?.upload(WorldRenderer.block1!.mesh, WorldRenderer.block1!.matrices.length)
                 StoneBatch.flush()
                 biomes.renderTerrain()
-                biomes.frame(isTree ? 2.4 : 0.65, isTree ? 13 : 7, reset)
+                if (obj?.type === 281) {
+                    biomes.frame(1.6, 9, reset, obj.renderPosition.x - obj.position.x, obj.renderPosition.z - obj.position.z)
+                } else {
+                    biomes.frame(isTree ? 2.4 : 0.65, isTree ? 13 : 7, reset)
+                }
             } else if (tab === 'Buildings') {
                 BuildingManager.addBuilding({...data, id: 1, tp: id, x: 0, z: 0})
                 const b = BuildingManager.buildings.get(1)!

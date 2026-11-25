@@ -6,6 +6,8 @@ import { configureTerrainNoiseTexture, terrainContactMossShader, terrainContactS
 import { terrainTextureUrls } from '@/babylon/world/terrainTextureUrls'
 
 const ATTRIBUTE = 'staticSnowContact'
+const ROOF_SNOW_PROFILE = -1
+const JOINED_EDGE_STRIDE = 32
 export const SNOW_CONTACT_MAX_HEIGHT = 0.24
 export const TREE_DAMP_MAX_HEIGHT = 1.0
 export const GROUND_WEAR_MEDIUM_HEIGHT = 0.68
@@ -17,7 +19,7 @@ const DAMP_CONTACT = {
 export type DampContact = keyof typeof DAMP_CONTACT
 
 export class StaticTerrainContact {
-    private readonly contacts = new Map<number, {height: number, snowReach: number, damp: number}>()
+    private readonly contacts = new Map<number, {height: number, snowReach: number, damp: number, joinedEdges?: number}>()
     private readonly snow: Texture
     private buffer = new Float32Array(0)
 
@@ -47,8 +49,12 @@ export class StaticTerrainContact {
         `)
         material.Vertex_After_WorldPosComputed(`
             ${material.CustomParts.Vertex_After_WorldPosComputed ?? ''}
+            float staticJoinedEdges = 0.0;
             ${contactCode(
-                'vStaticSnowContact = vec3(worldPos.y - staticSnowContact.x, staticSnowContact.yz);',
+                `// The roof profile is signed, so allow for -1 when unpacking the edge bits.
+                staticJoinedEdges = floor((staticSnowContact.z + 1.0) / ${JOINED_EDGE_STRIDE}.0);
+                vStaticSnowContact = vec3(worldPos.y - staticSnowContact.x, staticSnowContact.y,
+                    staticSnowContact.z - staticJoinedEdges * ${JOINED_EDGE_STRIDE}.0);`,
                 'vStaticSnowContact = vec3(0.0);',
             )}
             ${meshVertices ? '' : 'vStaticBlockPosition = positionUpdated;'}
@@ -69,7 +75,30 @@ export class StaticTerrainContact {
             float snowDistance = vStaticSnowContact.x;
             float snowReach = abs(vStaticSnowContact.y);
             float dampProfile = floor(vStaticSnowContact.z + 0.5);
+            float staticSnowCover = 0.0;
             staticGroundWetness = 0.0;
+            if (dampProfile == ${ROOF_SNOW_PROFILE}.0) {
+                float belowLip = max(-snowDistance, 0.0);
+                if (belowLip < 0.28 && geometricNormalW.y > -0.25) {
+                    vec2 roofXZ = mod(vPositionW.xz, 48.0);
+                    float top = smoothstep(0.35, 0.85, geometricNormalW.y);
+                    // Use the terrain's fringe so the snow curls over the stone like it does on nearby cliffs.
+                    float fringe = terrainFringeCoverage(roofXZ, belowLip * 2.0, vPositionW.y - snowDistance, 0.12, 0.44);
+                    float cover = max(top, max(fringe, 1.0 - smoothstep(0.0, 0.065, belowLip)));
+                    staticSnowCover = cover;
+                    if (cover > 0.0) {
+                        vec2 snowUV = terrainContactSnowUV(vPositionW.xz, belowLip);
+                        vec3 snow = toLinearSpace(texture2D(staticSnowColor, snowUV).rgb);
+                        vec2 grainUV = roofXZ * 16.0 + belowLip * vec2(9.2, 6.1);
+                        float grain = terrainNoise(grainUV);
+                        vec2 slope = vec2(terrainNoise(grainUV + vec2(0.28, 0.0)),
+                            terrainNoise(grainUV + vec2(0.0, 0.28))) - grain;
+                        vec3 rounded = normalize(geometricNormalW + vec3(slope.x * 0.23, 2.7, slope.y * 0.23));
+                        surfaceAlbedo = mix(surfaceAlbedo, snow * mix(0.88, 0.96, grain), cover);
+                        normalW = normalize(mix(normalW, rounded, cover));
+                    }
+                }
+            }
             ${meshVertices ? '' : `
                 if (dampProfile == ${DAMP_CONTACT.walkableEdges}.0) {
                     // Two adjacent face planes meet at each edge. The same distance and noise apply on both faces.
@@ -134,6 +163,10 @@ export class StaticTerrainContact {
                         snowCoverage = max(snowCoverage, mix(0.30, 0.96, dusting) * upward);
                     }
                 ` : ''}
+                // Keep cracks out of the snow and soften them just beyond its feathered edge.
+                float snowHeightReach = ${SNOW_CONTACT_MAX_HEIGHT} * snowReach;
+                staticSnowCover = max(snowCoverage,
+                    1.0 - smoothstep(snowHeightReach * 0.42, snowHeightReach + 0.035, aboveSnow));
                 if (snowCoverage > 0.0) {
                     vec2 snowUV = terrainContactSnowUV(vPositionW.xz, aboveSnow);
                     surfaceAlbedo = mix(surfaceAlbedo, toLinearSpace(texture2D(staticSnowColor, snowUV).rgb), snowCoverage);
@@ -276,9 +309,19 @@ export class StaticTerrainContact {
         this.contacts.set(index, {height, snowReach: blendGroundLighting ? -reach : reach, damp: damp ? DAMP_CONTACT[damp] : 0})
     }
 
+    addRoofSnow(index: number, height: number) {
+        this.contacts.set(index, {height, snowReach: 0, damp: ROOF_SNOW_PROFILE})
+    }
+
     addDamp(index: number, height: number, damp: DampContact, wear = 0) {
         // The integer selects the profile; the fraction carries wear without another instance attribute.
         this.contacts.set(index, {height, snowReach: 0, damp: DAMP_CONTACT[damp] + wear * 0.25})
+    }
+
+    markJoinedEdges(index: number, joinedEdges: number) {
+        const contact = this.contacts.get(index)
+        if (contact) contact.joinedEdges = joinedEdges
+        else this.contacts.set(index, {height: 0, snowReach: 0, damp: 0, joinedEdges})
     }
 
     setMeshContact(mesh: Mesh, height: number | undefined, reach = 0, blendGroundLighting = false, damp?: DampContact) {
@@ -300,10 +343,10 @@ export class StaticTerrainContact {
         const grow = count * 3 > this.buffer.length
         if (grow) this.buffer = new Float32Array(Math.max(48, count * 3, this.buffer.length * 2))
         else this.buffer.fill(0, 0, count * 3)
-        for (const [index, {height, snowReach, damp}] of this.contacts) {
+        for (const [index, {height, snowReach, damp, joinedEdges}] of this.contacts) {
             this.buffer[index * 3] = height
             this.buffer[index * 3 + 1] = snowReach
-            this.buffer[index * 3 + 2] = damp
+            this.buffer[index * 3 + 2] = damp + (joinedEdges ?? 0) * JOINED_EDGE_STRIDE
         }
         if (grow) mesh.thinInstanceSetBuffer(ATTRIBUTE, this.buffer, 3, false)
         else mesh.thinInstanceBufferUpdated(ATTRIBUTE)

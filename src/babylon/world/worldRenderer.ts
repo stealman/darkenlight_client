@@ -36,6 +36,7 @@ import {
     GROUND_WEAR_HIGH_HEIGHT, GROUND_WEAR_MEDIUM_HEIGHT, SNOW_CONTACT_MAX_HEIGHT, StaticTerrainContact,
 } from '@/babylon/world/statics/staticTerrainContact'
 import type { DampContact } from '@/babylon/world/statics/staticTerrainContact'
+import { ALL_STONE_EDGES, configureStaticBlockDamage, markJoinedStoneEdges } from '@/babylon/world/statics/staticBlockDamage'
 
 // The viewport already renders a four-tile reserve. On touch devices, keep one
 // tile of that reserve instead of rebuilding every world buffer on every tile.
@@ -247,7 +248,19 @@ export const WorldRenderer = {
         const material = Materials.createBlockMat1(scene)
         material.maxSimultaneousLights = Materials.blockMat1!.maxSimultaneousLights
         this.staticTerrainContact = new StaticTerrainContact(material)
+        configureStaticBlockDamage(material)
         return material
+    },
+
+    prepareStaticBlockDamage(start: number, suppressDamage: boolean) {
+        const contact = this.staticTerrainContact
+        const batch = this.block1!
+        if (!contact) return
+        if (suppressDamage) {
+            for (let index = start; index < batch.matrices.length; index++) contact.markJoinedEdges(index, ALL_STONE_EDGES)
+        } else if (batch.matrices.length - start >= 2) {
+            markJoinedStoneEdges(batch.matrices, batch.uvData, start, (index, mask) => contact.markJoinedEdges(index, mask))
+        }
     },
 
     addTerrainContactBlock(matrix: Matrix, uv: Vector2, blendGroundLighting = false, snowReach = 4 / 3,

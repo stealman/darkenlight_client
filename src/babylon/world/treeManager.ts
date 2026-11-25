@@ -13,6 +13,7 @@ import { TargetingManager } from '@/gui/targettingManager'
 import { segmentIntersectsAabb } from '@/babylon/geometryUtils'
 import { CollisionGrid } from '@/babylon/world/collisionGrid'
 import { SNOW_CONTACT_MAX_HEIGHT, TREE_DAMP_MAX_HEIGHT } from '@/babylon/world/statics/staticTerrainContact'
+import { configureStaticBlockDamage } from '@/babylon/world/statics/staticBlockDamage'
 
 const TREE_SNOW_REACH = 2.25
 
@@ -60,7 +61,10 @@ export const TreeManager = {
         this.fadedLeafMaterial = Materials.createBlockMatAlpha1(scene)
         this.configureFadedMaterial(this.fadedLeafMaterial, 'tree_leaves_faded_material', true)
         const trunkMaterial = Materials.createBlockMat1(scene)
-        WorldRenderer.staticTerrainContact?.configureMaterial(trunkMaterial, true)
+        if (WorldRenderer.staticTerrainContact) {
+            WorldRenderer.staticTerrainContact.configureMaterial(trunkMaterial, true)
+            configureStaticBlockDamage(trunkMaterial)
+        }
         this.configureFadedMaterial(trunkMaterial, 'tree_trunk_faded_material', false)
         this.fadedTrunkMaterial = trunkMaterial
     },

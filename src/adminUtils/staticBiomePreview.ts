@@ -194,8 +194,8 @@ export function createStaticBiomePreview(
             surfaces.render(surface, {localBoundaries: false, includeTile: (x, z) => surface[x][z].type > 0})
             renderedTerrain = key
         },
-        frame(height: number, radius: number, recenter: boolean) {
-            for (const {view, x, z} of slots) view.target.set(x, height, z)
+        frame(height: number, radius: number, recenter: boolean, offsetX = 0, offsetZ = 0) {
+            for (const {view, x, z} of slots) view.target.set(x + offsetX, height, z + offsetZ)
             if (recenter) camera.radius = radius
         },
     }

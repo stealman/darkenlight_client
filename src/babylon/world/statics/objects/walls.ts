@@ -3,6 +3,7 @@ import { MaterialEnum1 } from '@/babylon/materials'
 import { Lights } from '@/babylon/scene/lights'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
+import { isSnowRoof } from '@/babylon/world/terrainRoofShape'
 import { BaseStaticObject } from '@/babylon/world/statics/objects/baseStaticObject'
 import { getPalisadeRandom } from '@/babylon/world/statics/palisadeRandom'
 import { getStaticLightIntensityLevelFactor, getStaticLightLevel, getStaticLightRangeLevelFactor, type StaticLightMetadata } from '@/babylon/scene/lighting/lightConfig'
@@ -280,6 +281,8 @@ export class Wall3 extends BaseStaticObject {
 }
 
 const STONE_ENTRANCE_SNOW_CONTACT = {snowReach: 1.65, includeMaskedSnow: true}
+const STONE_ENTRANCE_ROOF_HEIGHT = 3
+const STONE_ENTRANCE_SNOW_LIP = 0.28
 
 export type StoneEntranceFacing = '-X' | '+X' | '-Z' | '+Z'
 
@@ -395,16 +398,25 @@ export class StoneEntrance extends BaseStaticObject {
     }
 
     private renderArch() {
-        const terrainBlock = WorldDataManager.getBlockMap()[Math.floor(this.position.x)]?.[Math.floor(this.position.z)]
+        const map = WorldDataManager.getBlockMap()
+        const terrainBlock = map[Math.floor(this.position.x)]?.[Math.floor(this.position.z)]
         if (!terrainBlock || terrainBlock.type <= 0) {
             return
         }
 
         const runsAlongX = this.getSizeX() > this.getSizeZ()
+        const snowy = !Lights.indoor && this.hasSnowInFootprint(map)
+        const batch = WorldRenderer.block1!
+        const contact = WorldRenderer.staticTerrainContact
+        const useRoofShader = snowy && contact
+        const roofY = this.position.y + STONE_ENTRANCE_ROOF_HEIGHT
         const addBlock = (widthOffset: number, depthOffset: number, height: number) => {
             const x = this.position.x + (runsAlongX ? widthOffset : depthOffset)
             const z = this.position.z + (runsAlongX ? depthOffset : widthOffset)
-            const matrix = Matrix.Translation(x, this.position.y + height, z)
+            const matrix = useRoofShader && height === STONE_ENTRANCE_ROOF_HEIGHT
+                ? Matrix.Scaling(1, 1 - STONE_ENTRANCE_SNOW_LIP, 1)
+                    .multiply(Matrix.Translation(x, roofY - STONE_ENTRANCE_SNOW_LIP / 2, z))
+                : Matrix.Translation(x, this.position.y + height, z)
             // The pillars mask the terrain's snow under their footprint, while their exposed faces still meet snow.
             WorldRenderer.addWeatheredBlock(matrix, MaterialEnum1.TERRAIN_ROCK.uv, this.position, 0.75,
                 STONE_ENTRANCE_SNOW_CONTACT)
@@ -412,13 +424,39 @@ export class StoneEntrance extends BaseStaticObject {
 
         for (let depth = 0; depth < 2; depth++) {
             for (const width of [0, 3]) {
-                for (let height = 1; height <= 3; height++) {
+                for (let height = 1; height <= STONE_ENTRANCE_ROOF_HEIGHT; height++) {
                     addBlock(width, depth, height)
                 }
             }
-            addBlock(1, depth, 3)
-            addBlock(2, depth, 3)
+            addBlock(1, depth, STONE_ENTRANCE_ROOF_HEIGHT)
+            addBlock(2, depth, STONE_ENTRANCE_ROOF_HEIGHT)
         }
+        if (useRoofShader) {
+            // One continuous strip replaces the top ends of the stone cubes and their internal shadow seams.
+            useRoofShader.addRoofSnow(batch.matrices.length, roofY)
+            batch.matrices.push(Matrix.Scaling(this.getSizeX(), STONE_ENTRANCE_SNOW_LIP, this.getSizeZ())
+                .multiply(Matrix.Translation(this.renderPosition.x, roofY + 0.5 - STONE_ENTRANCE_SNOW_LIP / 2,
+                    this.renderPosition.z)))
+            batch.uvData.push(MaterialEnum1.TERRAIN_ROCK.uv)
+        } else if (snowy) {
+            // LOW uses a single thin atlas surface on the roof.
+            const thickness = 0.025
+            batch.matrices.push(Matrix.Scaling(this.getSizeX(), thickness, this.getSizeZ())
+                .multiply(Matrix.Translation(this.renderPosition.x, roofY + 0.5 + thickness / 2, this.renderPosition.z)))
+            batch.uvData.push(MaterialEnum1.SNOW.uv)
+        }
+    }
+
+    private hasSnowInFootprint(map: ReturnType<typeof WorldDataManager.getBlockMap>) {
+        const tileX = Math.floor(this.position.x), tileZ = Math.floor(this.position.z)
+        const sizeX = this.getSizeX(), sizeZ = this.getSizeZ()
+        for (let dx = 0; dx < sizeX; dx++) {
+            for (let dz = 0; dz < sizeZ; dz++) {
+                const tile = map[tileX + dx]?.[tileZ + dz]
+                if (tile && isSnowRoof(tile) && !tile.stonePath && !tile.beigeStonePath) return true
+            }
+        }
+        return false
     }
 
     isObjectInCollision(tgtX: number, tgtZ: number, size: number): boolean {

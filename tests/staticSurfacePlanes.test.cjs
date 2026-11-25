@@ -39,12 +39,18 @@ test('banner UV variants and sign faces share one batch; portals share their ble
     }
     const cache = new Map()
     const entranceRockUv = new core.Vector2(6.5, 4.5)
+    const snowUv = new core.Vector2(4.5, 4.5)
+    let entranceTerrain = [[{type: 3}]]
+    const otherStone = {uv: new core.Vector2(0.5, 4.5)}
     const dependencies = {
         '@babylonjs/core': core,
-        '@/babylon/materials': {Materials: materials, MaterialEnum1: {
+        '@/babylon/materials': {Materials: materials, BLOCK_TOP_GLOW_U_OFFSET: 16, MaterialEnum1: {
             WOOD_3: {uv: new core.Vector2()}, WOOD_PLANKS: {uv: new core.Vector2()}, TERRAIN_ROCK: {uv: entranceRockUv},
+            SNOW: {uv: snowUv},
+            ROCK1: otherStone, ROCK1_BEIGE: otherStone, BRICK_RED: otherStone, BRICK_GRAY: otherStone,
+            BRICK_BLACK: otherStone, BRICK_DARK_GRAY: otherStone,
         }},
-        '@/data/worldDataManager': {WorldDataManager: {getBlockMap: () => [[{type: 3}]]}},
+        '@/data/worldDataManager': {WorldDataManager: {getBlockMap: () => entranceTerrain}},
         '@/babylon/scene/lights': {Lights: {addShadowCaster() {}, registerSharedLightMesh() {}, registerStaticLight() {}, unregisterStaticLight() {}}},
         '@/babylon/world/worldRenderer': {WorldRenderer: world, Prefab},
         '@/babylon/world/statics/objects/baseStaticObject': {BaseStaticObject},
@@ -61,7 +67,7 @@ test('banner UV variants and sign faces share one batch; portals share their ble
             const resolved = name.startsWith('.') ? posix.normalize(posix.join(posix.dirname(path), name)) : name.replace(/^@\//, '')
             if (resolved.endsWith('worldRenderer')) return {WorldRenderer: world, Prefab}
             if (resolved.endsWith('baseStaticObject')) return {BaseStaticObject}
-            if (/staticSurfacePlanes|objects\/(specimens|woodenSignpost|walls)/.test(resolved)) return load(resolved)
+            if (/staticSurfacePlanes|staticBlockDamage|terrainRoofShape|objects\/(specimens|woodenSignpost|walls)/.test(resolved)) return load(resolved)
             return {}
         })
         return exports
@@ -74,6 +80,7 @@ test('banner UV variants and sign faces share one batch; portals share their ble
     const {StandingBanner} = load('babylon/world/statics/objects/specimens')
     const {WoodenSignpost} = load('babylon/world/statics/objects/woodenSignpost')
     const {StoneEntrance} = load('babylon/world/statics/objects/walls')
+    const {markJoinedStoneEdges} = load('babylon/world/statics/staticBlockDamage')
     try {
         const banners = Array.from({length: 10}, (_, bannerIndex) => new StandingBanner(403, new core.Vector3(bannerIndex, 0, 0), {bannerIndex}))
         banners.forEach(banner => banner.render())
@@ -128,6 +135,41 @@ test('banner UV variants and sign faces share one batch; portals share their ble
         StaticSurfacePlanes.flush()
         assert.equal(signs.prefab.mesh.isEnabled(), false)
         assert.equal(portals[0].prefab.mesh.isEnabled(), false)
+        for (const portal of portals) {
+            const sizeX = portal.getSizeX(), sizeZ = portal.getSizeZ()
+            entranceTerrain = Array.from({length: sizeX}, () => Array.from({length: sizeZ}, () => ({type: 3})))
+            // A single patch at the opposite corner covers the whole roof.
+            entranceTerrain[sizeX - 1][sizeZ - 1] = {type: 3, snowed: true}
+            const before = world.block1.matrices.length
+            const snowyBlocks = new Map()
+            world.staticTerrainContact = {addRoofSnow: (index, height) => snowyBlocks.set(index, height)}
+            portal.render()
+            assert.equal(world.block1.matrices.length - before, 17)
+            assert.deepEqual([...snowyBlocks], [[before + 16, 3]])
+            const {m} = world.block1.matrices[before + 16]
+            assert.equal(m[0], sizeX)
+            assert.equal(m[10], sizeZ)
+            assert.ok(Math.abs(m[13] + m[5] / 2 - 3.5) < 1e-5)
+            assert.equal(world.block1.uvData[before + 16], entranceRockUv)
+            const joins = new Map()
+            markJoinedStoneEdges(world.block1.matrices, world.block1.uvData, before, (index, mask) => joins.set(index, mask))
+            // All four lower roof edges are backed by masonry. The four upper edges remain exposed.
+            assert.equal(joins.get(before + 16), (1 << 0) | (1 << 1) | (1 << 8) | (1 << 10))
+            world.staticTerrainContact = null
+            const beforeLow = world.block1.matrices.length
+            portal.render()
+            assert.equal(world.block1.matrices.length - beforeLow, 17)
+            assert.equal(world.block1.uvData.at(-1), snowUv)
+        }
+        const joinedWall = new Map()
+        markJoinedStoneEdges([core.Matrix.Identity(), core.Matrix.Translation(0, 1, 0),
+            core.Matrix.Translation(0, 2.05, 0)], Array(3).fill(entranceRockUv), 0,
+            (index, mask) => joinedWall.set(index, mask))
+        assert.deepEqual([...joinedWall], [
+            [0, (1 << 2) | (1 << 3) | (1 << 9) | (1 << 11)],
+            [1, (1 << 0) | (1 << 1) | (1 << 8) | (1 << 10)],
+        ])
+        StaticSurfacePlanes.clear()
         banners[0].render()
         StaticSurfacePlanes.flush()
         assert.equal(signs.prefab.mesh.thinInstanceCount, 1)
@@ -156,7 +198,7 @@ test('snow contact composes the stone shader without pre-existing fragment defin
     try {
         const exports = {}
         const source = readFileSync(join(__dirname, '../src/babylon/world/statics/staticTerrainContact.ts'), 'utf8')
-        const code = ts.transpileModule(source, {compilerOptions: {module: ts.ModuleKind.CommonJS}}).outputText
+        const code = ts.transpileModule(source, {compilerOptions: {module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020}}).outputText
         const dependencies = {
             '@babylonjs/core': core,
             '@/babylon/world/terrainTextureUrls': {terrainTextureUrls: {snow: '/images/terrain/snow-atlas.png'}},
@@ -169,9 +211,14 @@ test('snow contact composes the stone shader without pre-existing fragment defin
         const material = new PBRCustomMaterial('stoneAtlas', scene)
         material.Vertex_Definitions('attribute vec3 stonePosition1;')
         assert.equal(material.CustomParts.Fragment_Definitions, undefined)
-        new exports.StaticTerrainContact(material, true)
+        const contact = new exports.StaticTerrainContact(material, true)
         assert.match(material.CustomParts.Vertex_Definitions, /attribute vec3 stonePosition1;/)
         assert.match(material.CustomParts.Fragment_Definitions, /varying vec3 vStaticSnowContact;/)
         assert.doesNotMatch(material.CustomParts.Fragment_Definitions, /\bundefined\b/)
+        contact.addRoofSnow(0, 3)
+        contact.markJoinedEdges(0, 1283)
+        contact.upload({thinInstanceSetBuffer: (_name, data) => {
+            assert.deepEqual(Array.from(data.slice(0, 3)), [3, 0, 1283 * 32 - 1])
+        }}, 1)
     } finally { scene.dispose(); engine.dispose() }
 })
