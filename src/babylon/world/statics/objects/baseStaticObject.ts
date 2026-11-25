@@ -1,6 +1,7 @@
 import { Matrix, Mesh, Vector2, Vector3 } from '@babylonjs/core'
 import { Prefab, WorldRenderer } from '@/babylon/world/worldRenderer'
 import { StaticObjectInfo, StaticObjectsCodebook } from '@/babylon/world/statics/staticsCodebook'
+import type { ContactShadowFootprint } from '@/babylon/world/terrainContactShadow'
 
 function captureMatrixHeights(start: number, matrices: Matrix[], baseY: number[], indices: number[]) {
     const count = matrices.length - start
@@ -20,6 +21,7 @@ export interface StaticObject {
 
     render(): void
     getContactShadowSize?(): {width: number, depth: number}
+    appendContactShadowFootprints?(footprints: ContactShadowFootprint[], height: number): void
     onVisible(): void
     onHidden(): void
     dispose(): void

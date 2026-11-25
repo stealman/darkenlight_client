@@ -2,6 +2,7 @@ import { Matrix, Vector2, Vector3 } from '@babylonjs/core'
 import { BaseStaticObject } from '@/babylon/world/statics/objects/baseStaticObject'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import type { StaticBaseContact } from '@/babylon/world/worldRenderer'
+import type { ContactShadowFootprint } from '@/babylon/world/terrainContactShadow'
 import { StaticEquipPartsRenderer } from '@/babylon/world/statics/staticEquipPartsRenderer'
 import { createOrientedStaticVariation, createStaticVariation, placeStaticPart } from '@/babylon/world/statics/staticVariation'
 import { MyPlayer } from '@/data/myPlayer'
@@ -453,12 +454,14 @@ export class CampFence extends BaseStaticObject {
     private static readonly postHeight = 0.8
     private static readonly postOffset = 0.32
     private static readonly maxPostLean = Math.PI / 53
-    private static readonly maxPostTwist = Math.PI / 24
+    private static readonly maxPostTwist = Math.PI / 6
     private static readonly maxPostShortening = 0.064
     private static readonly maxPostAlongShift = 0.024
     private static readonly maxPostCrossShift = 0.014
     private readonly orientation: CampFenceOrientation
     private readonly railMaterial: Vector2
+    private readonly replacementMaterial: Vector2
+    private readonly replacementPick: number | null
     private readonly worldId: number
     private readonly section: Matrix
     private readonly heightScale: number
@@ -468,12 +471,14 @@ export class CampFence extends BaseStaticObject {
     private readonly damage: CampFenceDamage | null
     private cornerDirections: [Direction, Direction] | null = null
     private postMatrices: Matrix[] | null = null
-    private railMatrices: Matrix[] | null = null
+    private railParts: {matrix: Matrix, material: Vector2}[] | null = null
 
-    constructor(type: number, position: Vector3, postMaterial: Vector2, railMaterial: Vector2, metadata?: CampFenceMetadata) {
+    constructor(type: number, position: Vector3, postMaterial: Vector2, railMaterial: Vector2, replacementMaterial: Vector2,
+        metadata?: CampFenceMetadata) {
         super(type, position, 0, postMaterial, null)
         this.orientation = metadata?.orientation === 'X' ? 'X' : 'Z'
         this.railMaterial = railMaterial
+        this.replacementMaterial = replacementMaterial
         this.worldId = MyPlayer.worldId
         const variation = createOrientedStaticVariation(this.worldId, position, this.orientation)
         const heightScale = 1 + variation.signed(0, 70) * CampFence.sectionHeightVariation
@@ -504,16 +509,17 @@ export class CampFence extends BaseStaticObject {
             }
         })
         const damaged = metadata?.damaged === true
+        const details = createStaticVariation(this.worldId, position, type)
+        this.replacementPick = details.unit(0, 5) < 0.25 ? details.unit(0, 6) : null
         this.damage = null
         if (damaged) {
-            const damage = createStaticVariation(this.worldId, position, type)
             this.damage = {
-                level: Math.floor(damage.unit(0, 0) * this.rails.length),
-                side: damage.unit(0, 2) < 0.5 ? -1 : 1,
-                fallen: damage.unit(0, 4) < 0.5,
-                splitOffset: damage.unit(0, 3) / 6,
-                bends: [damage.signed(1, 0), damage.signed(2, 0)],
-                drops: [damage.unit(1, 1), damage.unit(2, 1)],
+                level: Math.floor(details.unit(0, 0) * this.rails.length),
+                side: details.unit(0, 2) < 0.5 ? -1 : 1,
+                fallen: details.unit(0, 4) < 0.5,
+                splitOffset: details.unit(0, 3) / 6,
+                bends: [details.signed(1, 0), details.signed(2, 0)],
+                drops: [details.unit(1, 1), details.unit(2, 1)],
             }
         }
         this.status = {orientation: this.orientation, damaged}
@@ -526,23 +532,37 @@ export class CampFence extends BaseStaticObject {
     setCornerDirections(directions: [Direction, Direction] | null) {
         if (this.cornerDirections || directions) {
             this.postMatrices = null
-            this.railMatrices = null
+            this.railParts = null
         }
         this.cornerDirections = directions
     }
 
     render() {
-        const posts = this.postMatrices ??= this.buildPosts()
+        const posts = this.getPostMatrices()
         for (const post of posts) {
             WorldRenderer.addTerrainContactBlock(placeStaticPart(post, this.renderPosition),
                 this.material, false, undefined, 'moss')
         }
         const batch = WorldRenderer.block1!
-        this.railMatrices ??= this.buildRails(posts)
-        for (const rail of this.railMatrices) {
-            batch.matrices.push(placeStaticPart(rail, this.renderPosition))
-            batch.uvData.push(this.railMaterial)
+        this.railParts ??= this.buildRails(posts)
+        for (const {matrix, material} of this.railParts) {
+            batch.matrices.push(placeStaticPart(matrix, this.renderPosition))
+            batch.uvData.push(material)
         }
+    }
+
+    appendContactShadowFootprints(footprints: ContactShadowFootprint[], height: number) {
+        for (const {m} of this.getPostMatrices()) {
+            const x = this.renderPosition.x + m[12] - m[4] / 2
+            const z = this.renderPosition.z + m[14] - m[6] / 2
+            const halfX = (Math.abs(m[0]) + Math.abs(m[8])) / 2
+            const halfZ = (Math.abs(m[2]) + Math.abs(m[10])) / 2
+            footprints.push({minX: x - halfX, maxX: x + halfX, minZ: z - halfZ, maxZ: z + halfZ, height, reach: 0.15})
+        }
+    }
+
+    private getPostMatrices() {
+        return this.postMatrices ??= this.buildPosts()
     }
 
     private buildPosts() {
@@ -560,6 +580,7 @@ export class CampFence extends BaseStaticObject {
         const directions = this.cornerDirections
         const matrices: Matrix[] = []
         const damage = this.damage
+        let damageStart = -1
         // A dropped corner arm is short, so only the bottom rail can reach the ground from its post.
         const damagedLevel = directions && damage?.fallen ? 0 : damage?.level
         for (const [level, {frame, thickness, turnThickness, height, firstEnd, secondEnd}] of this.rails.entries()) {
@@ -570,6 +591,7 @@ export class CampFence extends BaseStaticObject {
                 const rail = this.createRail(alongX, firstEnd + secondEnd, thickness, height,
                     alongX ? railCenter : 0, alongX ? 0 : railCenter, frame)
                 if (damage && level === damagedLevel) {
+                    damageStart = matrices.length
                     this.addDamagedRail(matrices, rail, thickness, height, damage, posts)
                 } else matrices.push(rail)
                 continue
@@ -584,13 +606,21 @@ export class CampFence extends BaseStaticObject {
                 const rail = this.createRail(direction.x !== 0, outerEnd - innerEnd, armThickness, height,
                     direction.x * railCenter, direction.z * railCenter, frame)
                 if (damage && level === damagedLevel && arm === (damage.side > 0 ? 1 : 0)) {
+                    damageStart = matrices.length
                     const outerSide = direction.x || direction.z
                     const armPosts = outerSide < 0 ? [posts[arm], posts[2]] : [posts[2], posts[arm]]
                     this.addDamagedRail(matrices, rail, armThickness, height, damage, armPosts, outerSide)
                 } else matrices.push(rail)
             }
         }
-        return matrices
+        const damageParts = damage ? (damage.fallen ? 1 : 2) : 0
+        let replacement = this.replacementPick === null
+            ? -1 : Math.floor(this.replacementPick * (matrices.length - damageParts))
+        // A replaced board is intact, so skip all pieces of the damaged board.
+        if (damageStart >= 0 && replacement >= damageStart) replacement += damageParts
+        return matrices.map((matrix, index) => ({
+            matrix, material: index === replacement ? this.replacementMaterial : this.railMaterial,
+        }))
     }
 
     private createRail(alongX: boolean, length: number, thickness: number, height: number,

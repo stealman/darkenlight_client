@@ -161,6 +161,7 @@ export const StaticsManager = {
                 pos,
                 MaterialEnum1.WOOD_3.uv,
                 MaterialEnum1.WOOD_1.uv,
+                MaterialEnum1.WOOD_2.uv,
                 obj.meta as CampFenceMetadata,
             )); break
             case 208: this.allStatics.push(new CemeteryIronFence(obj.tp, pos, MaterialEnum1.BRICK_DARK_GRAY.uv, MaterialEnum1.STEEL_1.uv, obj.meta as CemeteryWallMetadata)); break
@@ -577,18 +578,20 @@ export const StaticsManager = {
     },
 
     getContactShadowFootprints(map: MapBlock[][]): ContactShadowFootprint[] {
+        this.resolveConnectingCorners()
         const footprints: ContactShadowFootprint[] = []
         for (const object of this.visibleStatics) {
             const size = object.getContactShadowSize?.()
-            if (!size) continue
+            if (!size && !object.appendContactShadowFootprints) continue
             const {x, y, z} = object.renderPosition
             const tile = map[object.position.x]?.[object.position.z]
             if (!tile || Math.abs(y - tile.totalHeight) > 0.15) continue
-            footprints.push({
+            if (size) footprints.push({
                 minX: x - size.width / 2, maxX: x + size.width / 2,
                 minZ: z - size.depth / 2, maxZ: z + size.depth / 2,
                 height: tile.height, reach: 0.4,
             })
+            object.appendContactShadowFootprints?.(footprints, tile.height)
         }
         return footprints
     },

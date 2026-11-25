@@ -1,4 +1,5 @@
 import { ArcRotateCamera, Mesh, Scene, TransformNode, Vector3, Viewport } from '@babylonjs/core'
+import { PBRCustomMaterial } from '@babylonjs/materials'
 import { TerrainEnum1 } from '@/babylon/materials'
 import { Renderer } from '@/babylon/scene/renderer'
 import { Lights } from '@/babylon/scene/lights'
@@ -8,6 +9,8 @@ import { MapBlock, WorldDataManager } from '@/data/worldDataManager'
 import { terrainWithoutSnow } from './terrainLocalTransitions'
 import { DetailLevels, Settings } from '@/settings/settings'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
+import { StaticsManager } from '@/babylon/world/statics/staticsManager'
+import { TerrainContactShadow } from '@/babylon/world/terrainContactShadow'
 import { createTerrainSurfaceRenderer } from './terrainSurfaceRenderer'
 
 const STORAGE_KEY = 'darkenlight.adminUtils.staticBiomes'
@@ -71,6 +74,7 @@ export function createStaticBiomePreview(
     const terrainNode = new TransformNode('staticBiomeTerrain', scene)
     terrainNode.setEnabled(false)
     let surfaces: ReturnType<typeof createTerrainSurfaceRenderer> | undefined
+    let contactShadow: TerrainContactShadow | undefined
     let previous: typeof Settings.detailLevel
     let previousFar: number
     let previousAlpha: number
@@ -80,6 +84,7 @@ export function createStaticBiomePreview(
     let active = false
     let renderedTerrain = ''
     let terrainKey = ''
+    let terrainRevision = 0
     const updateLight = () => setLighting(TIMES[time.value as keyof typeof TIMES])
     const applyDetail = () => {
         Settings.detailLevel = DetailLevels[detail.value as keyof typeof DetailLevels]
@@ -164,6 +169,7 @@ export function createStaticBiomePreview(
             const next = slots.map(({input}) => input.value).join(',')
             if (next === terrainKey) return
             terrainKey = next
+            terrainRevision++
             const map = WorldDataManager.getBlockMap()
             for (const {x, z, input, label} of slots) {
                 const type = Number(input.value)
@@ -178,6 +184,8 @@ export function createStaticBiomePreview(
         },
         renderTerrain() {
             const map = WorldDataManager.getBlockMap()
+            contactShadow ??= new TerrainContactShadow(scene)
+            contactShadow.update(map, terrainRevision, StaticsManager.getContactShadowFootprints(map))
             const exposed = [...WorldRenderer.snowCoverMask].filter(tile => map[Math.floor(tile / map.length)][tile % map.length].snowed)
             const key = terrainKey + ':' + exposed.join(',')
             if (renderedTerrain === key) return
@@ -190,6 +198,9 @@ export function createStaticBiomePreview(
             if (!surfaces) {
                 surfaces = createTerrainSurfaceRenderer(scene, terrainNode, Vector3.Zero())
                 for (const mesh of surfaces.meshes) mesh.receiveShadows = true
+                for (const material of new Set(surfaces.meshes.map(mesh => mesh.material))) {
+                    if (material instanceof PBRCustomMaterial) contactShadow.configure(material)
+                }
             }
             surfaces.render(surface, {localBoundaries: false, includeTile: (x, z) => surface[x][z].type > 0})
             renderedTerrain = key
