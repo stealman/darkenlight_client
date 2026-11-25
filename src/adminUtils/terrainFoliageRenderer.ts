@@ -48,8 +48,9 @@ export function createTerrainFoliageRenderer(scene: Scene, parent: TransformNode
         originX?: number
         originZ?: number
         submit?: (mesh: Mesh, matrices: Matrix[], uv: Vector2[]) => void
-        placeGrass: (tuft: GrassTuft) => void
+        placeGrass?: (tuft: GrassTuft) => void
     }) => {
+        if (!ground && !placeGrass) return
         const supportsFoliage = (block: MapBlock, x: number, z: number) => !block.snowed && !atPondBank(x, z)
             && !block.stonePath && !block.beigeStonePath
             && canDecorate(x, z)
@@ -63,12 +64,13 @@ export function createTerrainFoliageRenderer(scene: Scene, parent: TransformNode
         }))
         const profiles = createMuddyDirtFoliageProfiles(foliageMap, Lights.sunLight.direction, originX, originZ, ground)
         if (ground) profiles.set(ROCK, createRockFoliage(originX, originZ))
-        const muddyFoot = createMuddyDirtFootFoliage(foliageMap, Lights.sunLight.direction, originX, originZ, ground)
+        const muddyFoot = createMuddyDirtFootFoliage(foliageMap, Lights.sunLight.direction, originX, originZ, ground, !!placeGrass)
         const blendedDecals = ground && wallDecals ? createRockWallLichen(map, originX, originZ) : []
-        const footTufts = [...GRASS_TYPES.flatMap(type => createGrassFootTufts(foliageMap, type, originX, originZ)), ...muddyFoot.tufts]
+        const footTufts = placeGrass ? [...GRASS_TYPES.flatMap(type => createGrassFootTufts(foliageMap, type, originX, originZ)),
+            ...muddyFoot.tufts] : []
         const grassFoliage = createWinterGrassFoliage(transitionWeight, originX, originZ)
         for (const type of GRASS_TYPES) profiles.set(type, grassFoliage)
-        const shoreTufts = createWaterEdgeTufts(foliageMap, profiles, originX, originZ)
+        const shoreTufts = placeGrass ? createWaterEdgeTufts(foliageMap, profiles, originX, originZ) : []
         renderer.renderFoliageArea(foliageMap, supportsFoliage, {
             profiles,
             originX,
@@ -77,7 +79,7 @@ export function createTerrainFoliageRenderer(scene: Scene, parent: TransformNode
             submit,
             extraTufts: [...footTufts, ...shoreTufts],
             grassRows,
-            placeTuft(matrix, row) {
+            placeTuft: placeGrass ? (matrix, row) => {
                 const dry = row === DRY_GRASS || row === MUDDY_DRY_GRASS
                 insetTuftFromLedges(foliageMap, matrix)
                 const x = Math.round(matrix.m[12]), z = Math.round(matrix.m[14])
@@ -85,7 +87,7 @@ export function createTerrainFoliageRenderer(scene: Scene, parent: TransformNode
                 if (!block || !supportsFoliage(foliageMap[x][z], x, z) || !visible(x, z)) return
                 matrix.setTranslationFromFloats(matrix.m[12] + originX, block.totalHeight - GRASS_ROOT_INSET, matrix.m[14] + originZ)
                 placeGrass({matrix, tone: block.snowed ? 3 : dry ? 2 : block.type === GRASS ? 0 : 1})
-            },
+            } : undefined,
             groundDecals: muddyFoot.pebbles,
             blendedDecals,
             mapAtlasOffset: (uv, matrix, layer) => {

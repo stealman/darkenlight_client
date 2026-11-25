@@ -2,10 +2,13 @@ import { WorldDataManager } from '@/data/worldDataManager'
 import { MyPlayer } from '@/data/myPlayer'
 import { WorldAreaManager } from '@/data/worldAreaManager'
 import { TooltipOverlayContent, TooltipOverlayManager } from '@/gui/tooltipOverlayManager'
-import { t } from '@/i18n'
+import { getLocale, t } from '@/i18n'
 import { StaticsManager } from '@/babylon/world/statics/staticsManager'
+import { TerrainManager } from '@/babylon/world/terrainManager'
 import { Lights } from '@/babylon/scene/lights'
 import {PartyManager} from '@/data/partyManager'
+
+const countFormat = {cs: new Intl.NumberFormat('cs'), en: new Intl.NumberFormat('en')}
 
 export const MiniMap = {
     tooltipOwnerKey: 'mini-map' as string,
@@ -89,6 +92,8 @@ export const MiniMap = {
 
     buildTooltipContent(): TooltipOverlayContent {
         const gameTime = Lights.getGameTimeInfo()
+        const grass = TerrainManager.outdoorTerrain?.getGrassStats()
+        const format = countFormat[getLocale()]
         return {
             title: (MyPlayer.myChar && WorldAreaManager.index.getAt(MyPlayer.myChar.pos.x, MyPlayer.myChar.pos.z)?.name) || MyPlayer.worldName || t('settings.miniMapSize'),
             topRightText: t('dayNight.dateTime', {day: gameTime.day, time: gameTime.time}),
@@ -96,6 +101,9 @@ export const MiniMap = {
             rows: [
                 { label: 'FPS', value: this.fpsInfo },
                 { label: t('common.position'), value: this.positionInfo },
+                { label: t('minimap.grassTufts'), value: format.format(grass?.count ?? 0) },
+                { label: t('minimap.grassBlades'), value: format.format(grass?.blades ?? 0) },
+                { label: t('minimap.grassTriangles'), value: grass ? `${format.format(grass.triangles)} / ${format.format(grass.budget)}` : '0' },
             ],
         }
     },

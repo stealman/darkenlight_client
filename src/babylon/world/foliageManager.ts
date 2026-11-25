@@ -113,7 +113,7 @@ export const FoliageManager = {
             profiles: ReadonlyMap<number, TerrainFoliage>
             extraTufts: readonly {matrix: Matrix, row: number}[]
             grassRows: ReadonlySet<number>
-            placeTuft: (matrix: Matrix, row: number) => void
+            placeTuft?: (matrix: Matrix, row: number) => void
             groundDecals: readonly {matrix: Matrix, uv: Vector2}[]
             blendedDecals: readonly {matrix: Matrix, uv: Vector2}[]
             mapAtlasOffset: (uv: Vector2, matrix: Matrix, layer: GroundLayer) => Vector2 | undefined
@@ -128,7 +128,7 @@ export const FoliageManager = {
             matrices: [] as Matrix[],
             uvs: [] as Vector2[],
         }
-        const {originX, originZ} = options
+        const {originX, originZ, placeTuft} = options
         const getProfile = (block: MapBlock) => options.profiles.get(this.getTerrainIndex(block))
         const supportsGround = (block: MapBlock, x: number, z: number) =>
             !!getProfile(block)?.groundPerTile && canDecorate(block, x, z)
@@ -139,7 +139,7 @@ export const FoliageManager = {
             for (let cellZ = Math.floor(originZ / SCATTER_CELL_SIZE); cellZ <= Math.floor((maxZ + originZ) / SCATTER_CELL_SIZE); cellZ++) {
                 // Absolute world cells seed the scatter. A tile can receive any number of candidates.
                 const candidateCount = 24 + this.hashTile(cellX, cellZ, 70) % 17
-                const totalCandidates = candidateCount * 3
+                const totalCandidates = placeTuft ? candidateCount * 3 : candidateCount
                 for (let index = 0; index < totalCandidates; index++) {
                     const extraTuft = index >= candidateCount
                     const salt = extraTuft ? 3000 + (index - candidateCount) * 16 : 100 + index * 16
@@ -160,6 +160,7 @@ export const FoliageManager = {
                     const tuftLimit = config.tuftsPerTile * tuftDensity
                     const roll = this.roll(cellX, cellZ, salt + 9) * CANDIDATES_PER_TILE
                     const isTuft = extraTuft ? roll < (scatter?.extraTuftChance ?? 0) * CANDIDATES_PER_TILE : roll < tuftLimit
+                    if (isTuft && !placeTuft) continue // Reserve the same spots when scattering ground debris.
                     let groundRow = UNUSED_GROUND_ROW
                     let groundSize: readonly [number, number] | undefined
                     if (!isTuft) {
@@ -181,8 +182,8 @@ export const FoliageManager = {
                     if (isTuft) {
                         const extraRow = extraTuft ? scatter?.extraTuftRow : undefined
                         const row = extraRow ?? scatter?.tuftRow ?? config.rows[this.hashTile(cellX, cellZ, salt + 2) % config.rows.length]
-                        if (options.grassRows.has(row)) {
-                            options.placeTuft(this.tuftMatrix(cellX, cellZ, worldX, top, worldZ, salt, config.tuftHeights?.[row]), row)
+                        if (placeTuft && options.grassRows.has(row)) {
+                            placeTuft(this.tuftMatrix(cellX, cellZ, worldX, top, worldZ, salt, config.tuftHeights?.[row]), row)
                         }
                         continue
                     }
@@ -218,8 +219,8 @@ export const FoliageManager = {
             }
         }
 
-        for (const {matrix, row} of options.extraTufts) {
-            if (options.grassRows.has(row)) options.placeTuft(matrix, row)
+        if (placeTuft) for (const {matrix, row} of options.extraTufts) {
+            if (options.grassRows.has(row)) placeTuft(matrix, row)
         }
         const updateBatch = (target: Mesh, placements: Matrix[], offsets: Vector2[], layer: GroundLayer) => {
             let count = 0

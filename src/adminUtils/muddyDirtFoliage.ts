@@ -17,14 +17,13 @@ const GROUND_PATCHES = {spacing: 6.5, salt: 2020, minRadius: 1.75, radiusRange: 
 const MUDDY_DIRT = TerrainEnum1.TERRAIN_MUDDY_DIRT.index
 
 export function createMuddyDirtFootFoliage(map: MapBlock[][], sunDirection: Vector3,
-                                          originX: number, originZ: number, ground: boolean) {
+                                          originX: number, originZ: number, ground: boolean, includeTufts: boolean) {
     const tufts: {matrix: Matrix, row: number}[] = []
     const pebbles: {matrix: Matrix, uv: Vector2}[] = []
     forEachFoliageWallFoot(map, MUDDY_DIRT, (x, z, top, dx, dz, side) => {
         const roll = (salt: number) => FoliageManager.roll(x + originX, z + originZ, salt)
         const edgeX = x + dx * 0.5
         const edgeZ = z + dz * 0.5
-        const sheltered = dx * sunDirection.x + dz * sunDirection.z < 0
         const salt = 9400 + side * 100
         const scatter = roll(salt)
         const pebbleCount = !ground || scatter < 0.16 ? 0 : scatter < 0.76 ? 1 : 2
@@ -42,6 +41,8 @@ export function createMuddyDirtFootFoliage(map: MapBlock[][], sunDirection: Vect
             pebbles.push({matrix, uv: FoliageManager.getAtlasOffset(x + originX, z + originZ, PEBBLES, pebbleSalt)})
         }
 
+        if (!includeTufts) return
+        const sheltered = dx * sunDirection.x + dz * sunDirection.z < 0
         if (roll(salt + 2) < (sheltered ? 0.45 : 0.30)) {
             const slide = (roll(salt + 4) - 0.5) * 0.62
             const inset = 0.06 + roll(salt + 5) * 0.12

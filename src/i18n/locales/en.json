@@ -60,6 +60,11 @@
     "stamina": "Stamina",
     "position": "Position"
   },
+  "minimap": {
+    "grassTufts": "Grass tufts",
+    "grassBlades": "Blades",
+    "grassTriangles": "Grass triangles"
+  },
   "dayNight": {
     "dateTime": "Day {day}, {time}",
     "sunrise": "Sunrise",

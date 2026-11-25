@@ -1,6 +1,5 @@
-import { Mesh, Vector2, Vector4, VertexData } from '@babylonjs/core'
-import type { Vector3 } from '@babylonjs/core'
-import type { Matrix, Scene, TransformNode } from '@babylonjs/core'
+import { Matrix, Mesh, Vector2, Vector4, VertexData } from '@babylonjs/core'
+import type { Camera, Scene, TransformNode, Vector3 } from '@babylonjs/core'
 import { PBRCustomMaterial } from '@babylonjs/materials'
 import { FoliageManager, GRASS_ROOT_INSET } from '@/babylon/world/foliageManager'
 import { updateWorldInstanceBuffers } from '@/babylon/world/worldInstanceBuffers'
@@ -8,7 +7,9 @@ import { createGrassContactShade, GRASS_CONTACT_TRIANGLES } from './grassContact
 
 export type GrassTuft = {matrix: Matrix, tone: 0 | 1 | 2 | 3}
 export type GrassDetail = 'high' | 'medium' | 'low'
+export const GAME_GRASS_ENABLED = false // Toggle for the FPS comparison.
 export const GRASS_CONTACT_LIMIT = 4
+export const GRASS_MAX_BEND = 0.45
 const GRASS_BEND_IN_SECONDS = 0.079
 const GRASS_RELEASE_SECONDS = 0.245
 export const GRASS_TRAIL_SECONDS = GRASS_BEND_IN_SECONDS + GRASS_RELEASE_SECONDS
@@ -16,6 +17,8 @@ export const GRASS_TRAIL_SECONDS = GRASS_BEND_IN_SECONDS + GRASS_RELEASE_SECONDS
 const BUDGETS = {high: 25_000, medium: 15_000, low: 5_000}
 const DISTANCE_DETAIL = {high: 0, medium: 1, low: 2}
 const BLADE_ROWS = [[0, 0.36, 0.72], [0, 0.36, 0.72], [0, 0.56]] as const
+const BLADES_PER_TUFT = 6
+const TALLEST_BLADE_SCALE = 1.24
 const SHAPES = [
     {height: 1, width: 0.105, bend: 0.25, spread: 0.22},
     {height: 0.81, width: 0.125, bend: 0.42, spread: 0.26},
@@ -30,13 +33,16 @@ function createGrassMesh(scene: Scene, parent: TransformNode, material: PBRCusto
     const hasRidge = lod === 0
     const columns = hasRidge ? 3 : 2
     const rows = BLADE_ROWS[lod]
-    for (let blade = 0; blade < 6; blade++) {
+    const heightRolls = Array.from({length: BLADES_PER_TUFT}, (_, blade) => FoliageManager.roll(1700 + variant, blade, 3))
+    const tallestBlade = heightRolls.indexOf(Math.max(...heightRolls))
+    for (let blade = 0; blade < heightRolls.length; blade++) {
         const roll = (salt: number) => FoliageManager.roll(1700 + variant, blade, salt)
         const angle = (blade + roll(1) * 0.75) * Math.PI / 3
         const dx = Math.cos(angle), dz = Math.sin(angle)
         const root = shape.spread * (0.25 + 0.75 * roll(2))
         roots?.push(new Vector2(dx * root, dz * root))
-        const height = shape.height * (0.57 + 0.43 * roll(3))
+        const baseHeight = shape.height * (0.57 + 0.43 * heightRolls[blade])
+        const height = blade === tallestBlade ? baseHeight * TALLEST_BLADE_SCALE : baseHeight
         const width = shape.width * (0.65 + 0.7 * roll(4))
         const bend = shape.bend * (0.48 + 0.52 * roll(5))
         const start = positions.length / 3
@@ -155,7 +161,7 @@ export function createGrassRenderer(scene: Scene, parent: TransformNode, contact
                     ? `displacement += grassMovementContact(rootW, grassPreviousStart${index}, grassContactStart${index}, grassContactEnd${index});`
                     : `displacement += grassContact(rootW, grassContactStart${index}, grassContactEnd${index});`).join('\n                ')}
                 float h = grassBladeUV.y;
-                displacement *= rangeWeight * h * h * min(1.0, 0.45 / max(displacement.z, 0.0001));
+                displacement *= rangeWeight * h * h * min(1.0, ${GRASS_MAX_BEND} / max(displacement.z, 0.0001));
                 worldPos.xz += displacement.xy;
                 worldPos.y -= min(worldPos.y - rootW.y, displacement.z * 0.28);
                 vPositionW = worldPos.xyz;
@@ -204,18 +210,31 @@ export function createGrassRenderer(scene: Scene, parent: TransformNode, contact
         createGrassMesh(scene, parent, material, variant, lod, lod === 0 ? roots?.[variant] : undefined)))
     const allBatches = batches.flat()
     const shade = roots ? createGrassContactShade(scene, parent, roots, GRASS_ROOT_INSET + 0.006) : undefined
+    let footprintRadius = shade ? Math.SQRT1_2 : 0
+    let bladeHeight = 0
+    for (const {mesh} of allBatches) {
+        const {minimum, maximum} = mesh.getBoundingInfo().boundingBox
+        footprintRadius = Math.max(footprintRadius, Math.hypot(
+            Math.max(-minimum.x, maximum.x), Math.max(-minimum.z, maximum.z),
+        ))
+        bladeHeight = Math.max(bladeHeight, maximum.y)
+    }
     const shadeMatrices: Matrix[] = [], shadeStyles: Vector2[] = []
     const shadeTriangles = shade ? GRASS_CONTACT_TRIANGLES : 0
     const shadeStylesByVariant = shade ? SHAPES.map((_, variant) => [new Vector2(variant, 0.155), new Vector2(variant, 0.19)]) : undefined
     type Candidate = {
         matrix: Matrix, style: Vector2, coatedStyle?: Vector2, shadeStyle?: Vector2,
-        variant: number, rank: number, distance: number
+        variant: number, rank: number, distance: number, priority: number, lod: number
     }
     const candidateByTuft = new WeakMap<GrassTuft, Candidate>()
+    const parentToView = Matrix.Identity()
+    const eligible: Candidate[] = []
     let candidates: Candidate[] = []
     return {
         meshes: allBatches.map(batch => batch.mesh),
         interactionRadius,
+        footprintRadius,
+        bladeHeight,
         setInteractionCenter(center: Vector3) {
             interactionArea.x = center.x
             interactionArea.y = center.z
@@ -254,29 +273,44 @@ export function createGrassRenderer(scene: Scene, parent: TransformNode, contact
                     coatedStyle: tone === 3 ? new Vector2(4, colorVariation) : undefined,
                     shadeStyle: shadeStylesByVariant?.[variant][tone === 3 ? 1 : 0],
                     variant,
-                    rank: FoliageManager.roll(x, z, 12202), distance: 0,
+                    rank: FoliageManager.roll(x, z, 12202), distance: 0, priority: 0, lod: 0,
                 }
                 candidateByTuft.set(tuft, candidate)
                 return candidate
             })
         },
-        render(centerX: number, centerZ: number, detail: GrassDetail, density: number) {
+        render(centerX: number, centerZ: number, detail: GrassDetail, density: number, camera?: Camera | null) {
             for (const batch of allBatches) batch.matrices.length = batch.styles.length = 0
             shadeMatrices.length = shadeStyles.length = 0
-            for (const tuft of candidates) {
-                const dx = tuft.matrix.m[12] - centerX, dz = tuft.matrix.m[14] - centerZ
-                tuft.distance = dx * dx + dz * dz
-            }
-            candidates.sort((a, b) => a.distance - b.distance || a.rank - b.rank)
-            let triangles = 0, count = 0
+            eligible.length = 0
             const budget = BUDGETS[detail]
-            const snowCoating = detail === 'high'
+            const minimumLod = DISTANCE_DETAIL[detail]
+            if (camera) parent.computeWorldMatrix().multiplyToRef(camera.getViewMatrix(), parentToView)
+            const view = parentToView.m
+            const depthSign = scene.useRightHandedSystem ? -1 : 1
+            let requestedTriangles = 0
             for (const tuft of candidates) {
                 if (tuft.rank >= density) continue
-                const lod = Math.max(DISTANCE_DETAIL[detail], tuft.distance < 25 ? 0 : tuft.distance < 100 ? 1 : 2)
+                const m = tuft.matrix.m
+                const dx = m[12] - centerX, dz = m[14] - centerZ
+                tuft.distance = dx * dx + dz * dz
+                // Perspective size follows depth along the view axis, including height above the player.
+                const depth = camera ? depthSign * (m[12] * view[2] + m[13] * view[6] + m[14] * view[10] + view[14]) : tuft.distance
+                if (depth < 0) continue
+                tuft.priority = depth
+                tuft.lod = Math.max(minimumLod, tuft.distance < 25 ? 0 : tuft.distance < 100 ? 1 : 2)
+                requestedTriangles += batches[tuft.variant][tuft.lod].triangles + shadeTriangles
+                eligible.push(tuft)
+            }
+            if (requestedTriangles > budget) {
+                eligible.sort((a, b) => a.priority - b.priority || a.distance - b.distance || a.rank - b.rank)
+            }
+            let triangles = 0, count = 0
+            const snowCoating = detail === 'high'
+            for (const tuft of eligible) {
                 const variants = batches[tuft.variant]
                 const available = budget - triangles - shadeTriangles
-                const batch = variants[lod].triangles <= available ? variants[lod] : variants[2]
+                const batch = variants[tuft.lod].triangles <= available ? variants[tuft.lod] : variants[2]
                 if (batch.triangles > available) break
                 batch.matrices.push(tuft.matrix)
                 batch.styles.push(snowCoating && tuft.coatedStyle ? tuft.coatedStyle : tuft.style)
@@ -292,7 +326,7 @@ export function createGrassRenderer(scene: Scene, parent: TransformNode, contact
                 batch.mesh.setEnabled(batch.matrices.length > 0)
             }
             shade?.render(shadeMatrices, shadeStyles)
-            return {triangles, count, budget}
+            return {triangles, count, blades: count * BLADES_PER_TUFT, budget}
         },
     }
 }

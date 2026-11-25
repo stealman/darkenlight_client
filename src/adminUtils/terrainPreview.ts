@@ -251,7 +251,7 @@ export function createTerrainPreview(
         grassZ = z
         const density = grassDensity.valueAsNumber
         const {count, triangles, budget} = renderers.grass.render(x, z, grassDetail.value as GrassDetail,
-            foliageToggle.checked ? density / 100 : 0)
+            foliageToggle.checked ? density / 100 : 0, camera)
         grassDensityOutput.value = `${density} %`
         grassStats.value = `Trsy: ${formatCount.format(count)} · Trojúhelníky: ${formatCount.format(triangles)} / ${formatCount.format(budget)}`
     }

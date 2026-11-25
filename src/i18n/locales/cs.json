@@ -60,6 +60,11 @@
     "stamina": "Výdrž",
     "position": "Pozice"
   },
+  "minimap": {
+    "grassTufts": "Trsy trávy",
+    "grassBlades": "Stébla",
+    "grassTriangles": "Trojúhelníky trávy"
+  },
   "dayNight": {
     "dateTime": "{day}. den, {time}",
     "sunrise": "Sv\u00edt\u00e1n\u00ed",
