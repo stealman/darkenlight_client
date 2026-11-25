@@ -435,16 +435,24 @@ export class CampFence extends BaseStaticObject {
     private static readonly railHeight = 0.1 * 4 / 3
     private static readonly railTurnX = Matrix.RotationZ(-Math.PI / 2)
     private static readonly railTurnZ = Matrix.RotationX(Math.PI / 2)
-    private static readonly maxRailYaw = Math.PI / 110
-    private static readonly maxRailLean = Math.PI / 75
+    private static readonly maxRailYaw = Math.PI / 82
+    private static readonly maxRailLean = Math.PI / 72
+    private static readonly maxSectionYaw = Math.PI / 42
+    private static readonly maxSectionShift = 0.036
+    private static readonly sectionHeightVariation = 0.13
     private static readonly postHeight = 0.8
-    private static readonly postOffset = 0.42
-    private static readonly maxPostLean = Math.PI / 60
-    private static readonly maxPostShortening = 0.055
+    private static readonly postOffset = 0.32
+    private static readonly maxPostLean = Math.PI / 53
+    private static readonly maxPostTwist = Math.PI / 24
+    private static readonly maxPostShortening = 0.064
+    private static readonly maxPostAlongShift = 0.024
+    private static readonly maxPostCrossShift = 0.014
     private readonly orientation: CampFenceOrientation
     private readonly railMaterial: Vector2
     private readonly posts: Readonly<Record<CampObjectFacing, Matrix>>
-    private readonly rails: readonly {frame: Matrix, thickness: number, turnThickness: number, height: number}[]
+    private readonly rails: readonly {
+        frame: Matrix, thickness: number, turnThickness: number, height: number, firstEnd: number, secondEnd: number
+    }[]
     private cornerDirections: [Direction, Direction] | null = null
 
     constructor(type: number, position: Vector3, postMaterial: Vector2, railMaterial: Vector2, metadata?: CampFenceMetadata) {
@@ -452,24 +460,36 @@ export class CampFence extends BaseStaticObject {
         this.orientation = metadata?.orientation === 'X' ? 'X' : 'Z'
         this.railMaterial = railMaterial
         const variation = createOrientedStaticVariation(MyPlayer.worldId, position, this.orientation)
-        const railBase = 0.5 + variation.signed(0, 7) * 0.025
+        const heightScale = 1 + variation.signed(0, 70) * CampFence.sectionHeightVariation
+        const section = Matrix.RotationY(variation.signed(0, 71) * CampFence.maxSectionYaw)
+            .setTranslationFromFloats(variation.signed(0, 72) * CampFence.maxSectionShift, 0,
+                variation.signed(0, 73) * CampFence.maxSectionShift)
+        const railBase = variation.signed(0, 7) * 0.029
+        // Share part of the lean between levels so larger tilts keep the rails apart.
+        const sectionPitch = variation.signed(0, 8)
+        const sectionRoll = variation.signed(0, 9)
         this.rails = CampFence.railCenters.map((center, index) => {
             const frame = Matrix.RotationYawPitchRoll(
                 variation.signed(index, 0) * CampFence.maxRailYaw,
-                variation.signed(index, 1) * CampFence.maxRailLean,
-                variation.signed(index, 2) * CampFence.maxRailLean,
-            ).setTranslationFromFloats(0, railBase + center + variation.signed(index, 6) * 0.021, 0)
+                (sectionPitch + variation.signed(index, 1)) * CampFence.maxRailLean,
+                (sectionRoll + variation.signed(index, 2)) * CampFence.maxRailLean,
+            ).setTranslationFromFloats(0, 0.5 + (railBase + center + variation.signed(index, 6) * 0.021) * heightScale, 0)
+                .multiply(section)
             const heightVariation = variation.signed(index, 5)
             return {
                 frame,
-                thickness: CampFence.railThickness * (1 + variation.signed(index, 3) * 0.22),
-                turnThickness: CampFence.railThickness * (1 + variation.signed(index, 4) * 0.22),
-                height: CampFence.railHeight + heightVariation * (heightVariation < 0 ? 0.04 : 0.016),
+                thickness: CampFence.railThickness * (1 + variation.signed(index, 3) * 0.28),
+                turnThickness: CampFence.railThickness * (1 + variation.signed(index, 4) * 0.28),
+                height: (CampFence.railHeight + heightVariation * (heightVariation < 0 ? 0.047 : 0.017)) * heightScale,
+                firstEnd: 0.48 + variation.signed(index, 30) * 0.01,
+                secondEnd: 0.48 + variation.signed(index, 31) * 0.01,
             }
         })
         this.posts = {
-            '-X': this.createPost('-X', -1, 0), '+X': this.createPost('+X', 1, 0),
-            '-Z': this.createPost('-Z', 0, -1), '+Z': this.createPost('+Z', 0, 1),
+            '-X': this.createPost('-X', -1, 0, heightScale, section),
+            '+X': this.createPost('+X', 1, 0, heightScale, section),
+            '-Z': this.createPost('-Z', 0, -1, heightScale, section),
+            '+Z': this.createPost('+Z', 0, 1, heightScale, section),
         }
         this.status = {orientation: this.orientation}
     }
@@ -495,16 +515,20 @@ export class CampFence extends BaseStaticObject {
 
     private renderRails() {
         const directions = this.cornerDirections
-        for (const {frame, thickness, turnThickness, height} of this.rails) {
+        for (const {frame, thickness, turnThickness, height, firstEnd, secondEnd} of this.rails) {
             if (!directions) {
-                this.addRail(this.orientation === 'X', 0.94, thickness, height, 0, 0, frame)
+                const alongX = this.orientation === 'X'
+                // Keep the ends near their tile edges when the whole fence shifts along its length.
+                const railCenter = (secondEnd - firstEnd) / 2 - frame.m[alongX ? 12 : 14]
+                this.addRail(alongX, firstEnd + secondEnd, thickness, height,
+                    alongX ? railCenter : 0, alongX ? 0 : railCenter, frame)
                 continue
             }
 
             // Rotate both arms about their shared joint, with only one rail crossing the turn.
-            const outerEnd = 0.46
             for (const [arm, direction] of directions.entries()) {
                 const innerEnd = arm === 0 ? -turnThickness / 2 : thickness / 2
+                const outerEnd = (arm === 0 ? firstEnd : secondEnd) - direction.x * frame.m[12] - direction.z * frame.m[14]
                 const railCenter = (outerEnd + innerEnd) / 2
                 this.addRail(direction.x !== 0, outerEnd - innerEnd, arm === 0 ? thickness : turnThickness, height,
                     direction.x * railCenter, direction.z * railCenter, frame)
@@ -525,19 +549,22 @@ export class CampFence extends BaseStaticObject {
         batch.uvData.push(this.railMaterial)
     }
 
-    private createPost(direction: CampObjectFacing, dx: number, dz: number) {
+    private createPost(direction: CampObjectFacing, dx: number, dz: number, heightScale: number, section: Matrix) {
         const variation = createOrientedStaticVariation(MyPlayer.worldId, this.position, direction)
-        const height = CampFence.postHeight - variation.unit(0, 1) * CampFence.maxPostShortening
+        const height = (CampFence.postHeight - variation.unit(0, 1) * CampFence.maxPostShortening) * heightScale
         const pitch = variation.signed(0, 2) * CampFence.maxPostLean
         const roll = variation.signed(0, 3) * CampFence.maxPostLean
-        const width = 0.086 + variation.unit(0, 4) * 0.028
-        const depth = 0.086 + variation.unit(0, 5) * 0.028
-        const yaw = variation.signed(0, 6) * CampFence.maxPostLean
-        const matrix = Matrix.Scaling(width, height, depth).multiply(Matrix.RotationYawPitchRoll(yaw, pitch, roll))
-        // Offset by half the rotated post axis to keep its foot at the original ground position.
+        const width = 0.082 + variation.unit(0, 4) * 0.036
+        const depth = 0.082 + variation.unit(0, 5) * 0.036
+        const twist = variation.signed(0, 6) * CampFence.maxPostTwist
+        const along = CampFence.postOffset + variation.signed(0, 7) * CampFence.maxPostAlongShift
+        const cross = variation.signed(0, 8) * CampFence.maxPostCrossShift
+        const matrix = Matrix.Scaling(width, height, depth).multiply(Matrix.RotationY(twist))
+            .multiply(Matrix.RotationYawPitchRoll(0, pitch, roll))
+        // Pivot the lean around the sampled foot position on the ground.
         const m = matrix.m
-        return matrix.setTranslationFromFloats(dx * CampFence.postOffset + m[4] / 2,
-            0.5 + m[5] / 2, dz * CampFence.postOffset + m[6] / 2)
+        return matrix.setTranslationFromFloats(dx * along - dz * cross + m[4] / 2,
+            0.5 + m[5] / 2, dz * along + dx * cross + m[6] / 2).multiply(section)
     }
 
     private renderPost(dx: number, dz: number) {
