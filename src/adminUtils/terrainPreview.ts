@@ -334,7 +334,7 @@ export function createTerrainPreview(
             surface: createTerrainSurfaceRenderer(scene, terrain, transitionBoundary,
                 {map: demoMap, center: CENTER, boundaries: BOUNDARIES, isBank: isPondBankTile}),
             foliage: createTerrainFoliageRenderer(scene, foliage),
-            grass: createGrassRenderer(scene, foliage),
+            grass: createGrassRenderer(scene, foliage, 1, 0, true),
             paths: createStonePathRenderer(scene, terrain),
         }
         renderers.surface.render(demoMap, {transitionTiles, snow, snowPartner, snowOnRock, rockPartner, dirtPartner,

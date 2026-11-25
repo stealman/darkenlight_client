@@ -2,7 +2,7 @@ import type { Matrix, Mesh, Scene, TransformNode, Vector2 } from '@babylonjs/cor
 import type { PBRCustomMaterial } from '@babylonjs/materials'
 import { TerrainEnum1 } from '@/babylon/materials'
 import { Lights } from '@/babylon/scene/lights'
-import { FoliageManager } from '@/babylon/world/foliageManager'
+import { FoliageManager, GRASS_ROOT_INSET } from '@/babylon/world/foliageManager'
 import { MapBlock } from '@/data/worldDataManager'
 import { createMuddyDirtFoliageProfiles, createMuddyDirtFootFoliage, LOW_GRASS, MUDDY_DRY_GRASS } from './muddyDirtFoliage'
 import { createWinterGrassFoliage, createGrassFootTufts, DRY_GRASS, GRASS_ROW, rockPebbleOffset, snowFoliageOffset, styleGroundFoliage } from './winterGrassFoliage'
@@ -83,7 +83,7 @@ export function createTerrainFoliageRenderer(scene: Scene, parent: TransformNode
                 const x = Math.round(matrix.m[12]), z = Math.round(matrix.m[14])
                 const block = map[x]?.[z]
                 if (!block || !supportsFoliage(foliageMap[x][z], x, z) || !visible(x, z)) return
-                matrix.setTranslationFromFloats(matrix.m[12] + originX, block.totalHeight - 0.015, matrix.m[14] + originZ)
+                matrix.setTranslationFromFloats(matrix.m[12] + originX, block.totalHeight - GRASS_ROOT_INSET, matrix.m[14] + originZ)
                 placeGrass({matrix, tone: block.snowed ? 3 : dry ? 2 : block.type === GRASS ? 0 : 1})
             },
             groundDecals: muddyFoot.pebbles,

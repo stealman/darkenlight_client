@@ -12,7 +12,10 @@ const TRAIL_MS = GRASS_TRAIL_SECONDS * 1000
 const CLOCK_ORIGIN = Date.now()
 
 type Actor = {pos: Vector3, hpPercent: number}
-type Track = {position: Vector3, start: Vector3, end: Vector3, seenAt: number, movedAt: number, distance: number}
+type Track = {
+    position: Vector3, start: Vector3, end: Vector3, previousStart: Vector3,
+    seenAt: number, movedAt: number, previousMovedAt: number, distance: number
+}
 type Grass = NonNullable<typeof TerrainManager.outdoorTerrain>['grass']
 
 let tracks = new WeakMap<Actor, Track>()
@@ -31,8 +34,8 @@ function sampleActor(actor: Actor | undefined, center: Vector3, maxDistanceSquar
 
     let track = tracks.get(actor)
     if (!track) {
-        track = {position: actor.pos.clone(), start: Vector3.Zero(), end: Vector3.Zero(),
-            seenAt: now, movedAt: -Infinity, distance}
+        track = {position: actor.pos.clone(), start: Vector3.Zero(), end: Vector3.Zero(), previousStart: Vector3.Zero(),
+            seenAt: now, movedAt: -Infinity, previousMovedAt: -Infinity, distance}
         tracks.set(actor, track)
         return
     }
@@ -43,8 +46,11 @@ function sampleActor(actor: Actor | undefined, center: Vector3, maxDistanceSquar
         || movementSquared > 4 || Math.abs(actor.pos.y - track.position.y) > 1.5) {
         // A newly visible actor, a teleport or a missed sample has no continuous path.
         track.movedAt = -Infinity
+        track.previousMovedAt = -Infinity
         track.position.copyFrom(actor.pos)
     } else if (movementSquared >= 0.02 ** 2) {
+        track.previousStart.copyFrom(track.start)
+        track.previousMovedAt = track.movedAt
         track.start.copyFrom(track.position)
         track.end.copyFrom(actor.pos)
         track.position.copyFrom(actor.pos)
@@ -105,8 +111,9 @@ export function updateGrassInteractions(now: number) {
     activeUntil = 0
     if (nearest.length) grass.setInteractionCenter(center)
     for (let index = 0; index < nearest.length; index++) {
-        const {start, end, movedAt} = nearest[index]
-        grass.setMovementContact(index, start, end, (movedAt - CLOCK_ORIGIN) * 0.001)
+        const {start, end, movedAt, previousStart, previousMovedAt} = nearest[index]
+        grass.setMovementContact(index, start, end, (movedAt - CLOCK_ORIGIN) * 0.001,
+            previousStart, now - previousMovedAt < TRAIL_MS ? (previousMovedAt - CLOCK_ORIGIN) * 0.001 : undefined)
         activeUntil = Math.max(activeUntil, movedAt + TRAIL_MS)
     }
     grass.clearInteractions(nearest.length)

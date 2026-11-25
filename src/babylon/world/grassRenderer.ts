@@ -2,13 +2,16 @@ import { Mesh, Vector2, Vector4, VertexData } from '@babylonjs/core'
 import type { Vector3 } from '@babylonjs/core'
 import type { Matrix, Scene, TransformNode } from '@babylonjs/core'
 import { PBRCustomMaterial } from '@babylonjs/materials'
-import { FoliageManager } from '@/babylon/world/foliageManager'
+import { FoliageManager, GRASS_ROOT_INSET } from '@/babylon/world/foliageManager'
 import { updateWorldInstanceBuffers } from '@/babylon/world/worldInstanceBuffers'
+import { createGrassContactShade, GRASS_CONTACT_TRIANGLES } from './grassContactShade'
 
 export type GrassTuft = {matrix: Matrix, tone: 0 | 1 | 2 | 3}
 export type GrassDetail = 'high' | 'medium' | 'low'
 export const GRASS_CONTACT_LIMIT = 4
-export const GRASS_TRAIL_SECONDS = 0.30
+const GRASS_BEND_IN_SECONDS = 0.079
+const GRASS_RELEASE_SECONDS = 0.245
+export const GRASS_TRAIL_SECONDS = GRASS_BEND_IN_SECONDS + GRASS_RELEASE_SECONDS
 
 const BUDGETS = {high: 25_000, medium: 15_000, low: 5_000}
 const DISTANCE_DETAIL = {high: 0, medium: 1, low: 2}
@@ -19,7 +22,8 @@ const SHAPES = [
     {height: 1.07, width: 0.079, bend: 0.34, spread: 0.29},
 ]
 
-function createGrassMesh(scene: Scene, parent: TransformNode, material: PBRCustomMaterial, variant: number, lod: number) {
+function createGrassMesh(scene: Scene, parent: TransformNode, material: PBRCustomMaterial, variant: number, lod: number,
+    roots?: Vector2[]) {
     const shape = SHAPES[variant]
     const mesh = new Mesh(`grass-${variant}-${lod}`, scene, parent)
     const positions: number[] = [], indices: number[] = [], normals: number[] = [], bladeUV: number[] = []
@@ -31,6 +35,7 @@ function createGrassMesh(scene: Scene, parent: TransformNode, material: PBRCusto
         const angle = (blade + roll(1) * 0.75) * Math.PI / 3
         const dx = Math.cos(angle), dz = Math.sin(angle)
         const root = shape.spread * (0.25 + 0.75 * roll(2))
+        roots?.push(new Vector2(dx * root, dz * root))
         const height = shape.height * (0.57 + 0.43 * roll(3))
         const width = shape.width * (0.65 + 0.7 * roll(4))
         const bend = shape.bend * (0.48 + 0.52 * roll(5))
@@ -72,21 +77,25 @@ function createGrassMesh(scene: Scene, parent: TransformNode, material: PBRCusto
     return {mesh, triangles: indices.length / 3, matrices: [] as Matrix[], styles: [] as Vector2[]}
 }
 
-export function createGrassRenderer(scene: Scene, parent: TransformNode, contactCount = 1, interactionRadius = 0) {
+export function createGrassRenderer(scene: Scene, parent: TransformNode, contactCount = 1, interactionRadius = 0, rootShade = false) {
     const material = new PBRCustomMaterial('grassMaterial', scene)
     material.backFaceCulling = false
     material.twoSidedLighting = true
     material.metallic = 0
     material.roughness = 0.89
+    // Match terrain attenuation for player and campfire spotlights.
+    material.usePhysicalLightFalloff = false
+    const usesTimedContacts = interactionRadius > 0
     const contacts = Array.from({length: contactCount}, (_, index) => {
         const start = new Vector4(), end = new Vector4()
         material.AddUniform(`grassContactStart${index}`, 'vec4', start)
         material.AddUniform(`grassContactEnd${index}`, 'vec4', end)
-        return {start, end}
+        const previousStart = usesTimedContacts ? new Vector4() : undefined
+        if (previousStart) material.AddUniform(`grassPreviousStart${index}`, 'vec4', previousStart)
+        return {start, end, previousStart}
     })
     const interactionArea = new Vector4(0, 0, Math.max(0, interactionRadius - 1.5) ** 2, interactionRadius ** 2)
     const interactionClock = Vector2.Zero()
-    const usesTimedContacts = interactionRadius > 0
     if (usesTimedContacts) {
         material.AddUniform('grassInteractionArea', 'vec4', interactionArea)
         material.AddUniform('grassInteractionClock', 'vec2', interactionClock)
@@ -96,11 +105,14 @@ export function createGrassRenderer(scene: Scene, parent: TransformNode, contact
         attribute vec4 grassBladeUV;
         attribute vec2 uvc;
         varying vec4 vGrassStyle;
+        varying float vGrassSnowRim;
         ${contacts.length ? `vec3 grassContact(vec3 root, vec4 start, vec4 end) {
             if (end.w <= 0.0) return vec3(0.0);
             ${usesTimedContacts ? `float age = grassInteractionClock.x - start.w;
-            if (age >= ${GRASS_TRAIL_SECONDS.toFixed(2)}) return vec3(0.0);
-            float strength = end.w * (1.0 - smoothstep(0.0, ${GRASS_TRAIL_SECONDS.toFixed(2)}, age));
+            if (age <= 0.0 || age >= ${GRASS_TRAIL_SECONDS.toFixed(3)}) return vec3(0.0);
+            float attack = smoothstep(0.0, ${GRASS_BEND_IN_SECONDS}, age);
+            float release = 1.0 - smoothstep(${GRASS_BEND_IN_SECONDS}, ${GRASS_TRAIL_SECONDS.toFixed(3)}, age);
+            float strength = end.w * attack * release;
             float radiusSq = 0.49;` : `float strength = end.w;
             float radiusSq = start.w * start.w;`}
             vec2 travel = end.xz - start.xz;
@@ -120,16 +132,28 @@ export function createGrassRenderer(scene: Scene, parent: TransformNode, contact
         ${interactionRadius > 0 ? `float grassRangeWeight(vec2 root) {
             vec2 offset = root - grassInteractionArea.xy;
             return 1.0 - smoothstep(grassInteractionArea.z, grassInteractionArea.w, dot(offset, offset));
+        }
+        vec3 grassMovementContact(vec3 root, vec4 previousStart, vec4 start, vec4 end) {
+            vec3 current = grassContact(root, start, end);
+            vec3 previous = grassContact(root, previousStart, vec4(start.xyz, end.w));
+            // Cross over between segments without flattening the same blade twice.
+            vec3 combined = current + previous;
+            return combined * (max(current.z, previous.z) / max(0.0001, combined.z));
         }` : ''}
     `)
-    material.Vertex_MainBegin('vGrassStyle = vec4(grassBladeUV.xy, uvc);')
+    material.Vertex_MainBegin(`
+        vGrassStyle = vec4(grassBladeUV.xy, uvc);
+        vGrassSnowRim = uvc.x > 3.5 ? 0.14 + 0.10 * fract(dot(grassBladeUV.zw, vec2(7.7, 13.1)) + uvc.y) : 0.0;
+    `)
     if (contacts.length) material.Vertex_After_WorldPosComputed(`
         if (grassBladeUV.y > 0.0${usesTimedContacts ? ' && grassInteractionClock.x < grassInteractionClock.y' : ''}) {
             vec3 rootW = (finalWorld * vec4(grassBladeUV.z, 0.0, grassBladeUV.w, 1.0)).xyz;
             float rangeWeight = ${interactionRadius > 0 ? 'grassRangeWeight(rootW.xz)' : '1.0'};
             if (rangeWeight > 0.0) {
                 vec3 displacement = vec3(0.0);
-                ${contacts.map((_, index) => `displacement += grassContact(rootW, grassContactStart${index}, grassContactEnd${index});`).join('\n                ')}
+                ${contacts.map((_, index) => usesTimedContacts
+                    ? `displacement += grassMovementContact(rootW, grassPreviousStart${index}, grassContactStart${index}, grassContactEnd${index});`
+                    : `displacement += grassContact(rootW, grassContactStart${index}, grassContactEnd${index});`).join('\n                ')}
                 float h = grassBladeUV.y;
                 displacement *= rangeWeight * h * h * min(1.0, 0.45 / max(displacement.z, 0.0001));
                 worldPos.xz += displacement.xy;
@@ -142,7 +166,7 @@ export function createGrassRenderer(scene: Scene, parent: TransformNode, contact
             }
         }
     `)
-    material.Fragment_Definitions('varying vec4 vGrassStyle;')
+    material.Fragment_Definitions('varying vec4 vGrassStyle; varying float vGrassSnowRim;')
     material.Fragment_Before_Lights(`
         float bladeHeight = vGrassStyle.y;
         float tone = vGrassStyle.z;
@@ -165,12 +189,28 @@ export function createGrassRenderer(scene: Scene, parent: TransformNode, contact
         float contrast = 1.0 - smoothstep(0.2, 0.95, fwidth(vGrassStyle.x) * 9.0);
         surfaceAlbedo *= mix(root, tip, smoothstep(0.0, 1.0, bladeHeight)) *
             (0.85 + vGrassStyle.w * 0.30 + contrast * (0.05 * fiber + 0.09 * vein));
+        if (tone > 3.5 && bladeHeight < 0.30) {
+            // Use blade-local coordinates so the coating bends with the blade.
+            float rim = vGrassSnowRim + 0.022 * sin(vGrassStyle.x * 15.0 + vGrassSnowRim * 33.0);
+            float cover = (1.0 - smoothstep(rim - 0.055, rim + 0.035, bladeHeight)) * 0.88;
+            vec3 snow = vec3(0.66, 0.72, 0.80) * (0.96 + 0.04 * fiber * contrast);
+            surfaceAlbedo = mix(surfaceAlbedo, snow, cover);
+        }
         normalW = normalize(normalW + vec3(0.0, 0.45, 0.0));
     `)
 
-    const batches = SHAPES.map((_, variant) => BLADE_ROWS.map((_, lod) => createGrassMesh(scene, parent, material, variant, lod)))
+    const roots = rootShade ? SHAPES.map(() => [] as Vector2[]) : undefined
+    const batches = SHAPES.map((_, variant) => BLADE_ROWS.map((_, lod) =>
+        createGrassMesh(scene, parent, material, variant, lod, lod === 0 ? roots?.[variant] : undefined)))
     const allBatches = batches.flat()
-    type Candidate = {matrix: Matrix, style: Vector2, variant: number, rank: number, distance: number}
+    const shade = roots ? createGrassContactShade(scene, parent, roots, GRASS_ROOT_INSET + 0.006) : undefined
+    const shadeMatrices: Matrix[] = [], shadeStyles: Vector2[] = []
+    const shadeTriangles = shade ? GRASS_CONTACT_TRIANGLES : 0
+    const shadeStylesByVariant = shade ? SHAPES.map((_, variant) => [new Vector2(variant, 0.155), new Vector2(variant, 0.19)]) : undefined
+    type Candidate = {
+        matrix: Matrix, style: Vector2, coatedStyle?: Vector2, shadeStyle?: Vector2,
+        variant: number, rank: number, distance: number
+    }
     const candidateByTuft = new WeakMap<GrassTuft, Candidate>()
     let candidates: Candidate[] = []
     return {
@@ -184,9 +224,11 @@ export function createGrassRenderer(scene: Scene, parent: TransformNode, contact
             interactionClock.x = seconds
             if (expiresAt !== undefined) interactionClock.y = expiresAt
         },
-        setMovementContact(index: number, start: Vector3, end: Vector3, sampledAt: number) {
+        setMovementContact(index: number, start: Vector3, end: Vector3, sampledAt: number,
+            previousStart: Vector3, previousSampledAt?: number) {
             contacts[index].start.set(start.x, start.y, start.z, sampledAt)
             contacts[index].end.set(end.x, end.y, end.z, 0.3)
+            contacts[index].previousStart!.set(previousStart.x, previousStart.y, previousStart.z, previousSampledAt ?? -1)
         },
         setInteraction(index: number, start: Vector3, end: Vector3, radius: number, strength: number) {
             contacts[index].start.set(start.x, start.y, start.z, radius)
@@ -195,16 +237,23 @@ export function createGrassRenderer(scene: Scene, parent: TransformNode, contact
         clearInteractions(from = 0) {
             for (let index = from; index < contacts.length; index++) contacts[index].end.w = 0
         },
-        dispose() { material.dispose() },
+        dispose() {
+            shade?.dispose()
+            material.dispose()
+        },
         setTufts(tufts: GrassTuft[]) {
             candidates = tufts.map(tuft => {
                 const cached = candidateByTuft.get(tuft)
                 if (cached) return cached
                 const {matrix, tone} = tuft
                 const x = Math.round(matrix.m[12] * 1024), z = Math.round(matrix.m[14] * 1024)
+                const variant = FoliageManager.hashTile(x, z, 12201) % SHAPES.length
+                const colorVariation = FoliageManager.roll(x, z, 12200)
                 const candidate = {
-                    matrix, style: new Vector2(tone, FoliageManager.roll(x, z, 12200)),
-                    variant: FoliageManager.hashTile(x, z, 12201) % SHAPES.length,
+                    matrix, style: new Vector2(tone, colorVariation),
+                    coatedStyle: tone === 3 ? new Vector2(4, colorVariation) : undefined,
+                    shadeStyle: shadeStylesByVariant?.[variant][tone === 3 ? 1 : 0],
+                    variant,
                     rank: FoliageManager.roll(x, z, 12202), distance: 0,
                 }
                 candidateByTuft.set(tuft, candidate)
@@ -213,6 +262,7 @@ export function createGrassRenderer(scene: Scene, parent: TransformNode, contact
         },
         render(centerX: number, centerZ: number, detail: GrassDetail, density: number) {
             for (const batch of allBatches) batch.matrices.length = batch.styles.length = 0
+            shadeMatrices.length = shadeStyles.length = 0
             for (const tuft of candidates) {
                 const dx = tuft.matrix.m[12] - centerX, dz = tuft.matrix.m[14] - centerZ
                 tuft.distance = dx * dx + dz * dz
@@ -220,21 +270,28 @@ export function createGrassRenderer(scene: Scene, parent: TransformNode, contact
             candidates.sort((a, b) => a.distance - b.distance || a.rank - b.rank)
             let triangles = 0, count = 0
             const budget = BUDGETS[detail]
+            const snowCoating = detail === 'high'
             for (const tuft of candidates) {
                 if (tuft.rank >= density) continue
                 const lod = Math.max(DISTANCE_DETAIL[detail], tuft.distance < 25 ? 0 : tuft.distance < 100 ? 1 : 2)
                 const variants = batches[tuft.variant]
-                const batch = variants[lod].triangles <= budget - triangles ? variants[lod] : variants[2]
-                if (batch.triangles > budget - triangles) break
+                const available = budget - triangles - shadeTriangles
+                const batch = variants[lod].triangles <= available ? variants[lod] : variants[2]
+                if (batch.triangles > available) break
                 batch.matrices.push(tuft.matrix)
-                batch.styles.push(tuft.style)
-                triangles += batch.triangles
+                batch.styles.push(snowCoating && tuft.coatedStyle ? tuft.coatedStyle : tuft.style)
+                if (tuft.shadeStyle) {
+                    shadeMatrices.push(tuft.matrix)
+                    shadeStyles.push(tuft.shadeStyle)
+                }
+                triangles += batch.triangles + shadeTriangles
                 count++
             }
             for (const batch of allBatches) {
                 updateWorldInstanceBuffers(batch.mesh, batch.matrices, batch.styles)
                 batch.mesh.setEnabled(batch.matrices.length > 0)
             }
+            shade?.render(shadeMatrices, shadeStyles)
             return {triangles, count, budget}
         },
     }

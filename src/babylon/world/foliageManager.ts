@@ -9,6 +9,7 @@ const ATLAS_SIZE = 8
 const ATLAS_CELL_PIXELS = 64
 const SCATTER_CELL_SIZE = 4
 const CANDIDATES_PER_TILE = 2
+export const GRASS_ROOT_INSET = 0.015
 const UNUSED_GROUND_ROW = 6
 
 export type TerrainFoliage = {
@@ -295,7 +296,7 @@ export const FoliageManager = {
         const width = 0.42 + this.roll(x, z, salt + 4) * 0.31
         const tuftHeight = height * (0.73 + this.roll(x, z, salt + 5) * 0.55)
         this.instanceScale.set(width, tuftHeight, width)
-        this.instancePosition.set(centerX, top - 0.015, centerZ)
+        this.instancePosition.set(centerX, top - GRASS_ROOT_INSET, centerZ)
         Quaternion.RotationYawPitchRollToRef(this.roll(x, z, salt + 8) * 2 * Math.PI, 0, 0, this.instanceRotation)
         return Matrix.Compose(this.instanceScale, this.instanceRotation, this.instancePosition)
     },
