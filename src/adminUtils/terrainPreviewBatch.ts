@@ -241,7 +241,7 @@ export function configureRockDeposits(material: PBRCustomMaterial) {
             vec2 q = p - center;
             if (max(abs(q.x), abs(q.y)) > 0.56) return vec3(0.0);
 
-            float density = terrainNoise(center * 0.42 + vec2(6.7, 29.1));
+        float density = terrainProceduralNoise(center * 0.42 + vec2(6.7, 29.1));
             float chance = mix(0.16, 0.88, smoothstep(0.28, 0.72, density));
             if (terrainHash(cell + vec2(19.1, 2.3)) > chance) return vec3(0.0);
 
@@ -291,7 +291,7 @@ export function configureRockDeposits(material: PBRCustomMaterial) {
             vec2 p = vPositionW.xz + 0.5;
             vec3 shard = coalShards(p * 4.0);
             coalCoverage = shard.x;
-            float grain = terrainNoise(p * 52.0);
+            float grain = terrainProceduralNoise(p * 52.0);
             coalRoughness = mix(0.31, 0.49, shard.z * 0.7 + grain * 0.3);
             vec3 coalColor = mix(vec3(0.009, 0.009, 0.011), vec3(0.032, 0.031, 0.035), shard.z * 0.85 + grain * 0.15);
             surfaceAlbedo = mix(surfaceAlbedo, coalColor, coalCoverage);
@@ -304,9 +304,9 @@ export function configureRockDeposits(material: PBRCustomMaterial) {
         } else if (vTerrainDeposit > 0.5) {
             vec2 p = vPositionW.xz + vPositionW.y * vec2(0.31, -0.18);
             vec2 seamUV = mat2(0.87, -0.49, 0.49, 0.87) * p;
-            float warp = terrainNoise(seamUV * 2.7 + vec2(3.0, 9.4));
-            float mineral = terrainNoise(seamUV * 1.9 + vec2(17.8, 3.2));
-            oreGrain = terrainNoise(p * 41.0);
+            float warp = terrainProceduralNoise(seamUV * 2.7 + vec2(3.0, 9.4));
+            float mineral = terrainProceduralNoise(seamUV * 1.9 + vec2(17.8, 3.2));
+            oreGrain = terrainProceduralNoise(p * 41.0);
             float seam = abs(oreFractureNoise(seamUV * vec2(2.4, 5.1) + vec2(warp * 0.36, 7.2)) - 0.53);
             float seamWidth = mix(0.021, 0.075, mineral);
             float width = seamWidth * mix(0.65, 1.2, oreGrain);

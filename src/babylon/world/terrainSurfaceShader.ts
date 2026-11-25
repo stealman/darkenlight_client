@@ -1,4 +1,31 @@
+import { RawTexture, Texture } from '@babylonjs/core'
+import type { Scene } from '@babylonjs/core'
+import type { PBRCustomMaterial } from '@babylonjs/materials'
 import { TERRAIN_ATLAS_TILES, terrainCoverPatterns } from './terrainAtlasPlacement'
+
+const TERRAIN_NOISE_SIZE = 512
+
+export function createTerrainNoiseTexture(scene: Scene) {
+    const values = new Uint8Array(TERRAIN_NOISE_SIZE ** 2)
+    let seed = 0x6b842af1
+    for (let i = 0; i < values.length; i++) {
+        seed ^= seed << 13
+        seed ^= seed >>> 17
+        seed ^= seed << 5
+        values[i] = seed >>> 24
+    }
+    const texture = RawTexture.CreateLuminanceTexture(values, TERRAIN_NOISE_SIZE, TERRAIN_NOISE_SIZE, scene,
+        false, false, Texture.BILINEAR_SAMPLINGMODE)
+    texture.name = 'terrainNoise'
+    texture.gammaSpace = false
+    texture.wrapU = texture.wrapV = Texture.WRAP_ADDRESSMODE
+    return texture
+}
+
+export function configureTerrainNoiseTexture(material: PBRCustomMaterial, texture: RawTexture) {
+    material.AddUniform('terrainNoiseTexture', 'sampler2D', texture)
+    material.Fragment_Definitions(`\n#define TERRAIN_NOISE_TEXTURE\n${material.CustomParts.Fragment_Definitions ?? ''}`)
+}
 
 export const terrainNoiseShader = `
     float terrainHash(vec2 p) {
@@ -7,7 +34,7 @@ export const terrainNoiseShader = `
         return fract((h.x + h.y) * h.z);
     }
 
-    float terrainNoise(vec2 p) {
+    float terrainProceduralNoise(vec2 p) {
         vec2 cell = floor(p);
         vec2 f = fract(p);
         vec2 t = f * f * (3.0 - 2.0 * f);
@@ -17,6 +44,18 @@ export const terrainNoiseShader = `
             t.y
         );
     }
+
+    float terrainNoise(vec2 p) {
+        #ifdef TERRAIN_NOISE_TEXTURE
+        vec2 f = fract(p);
+        // Preserve the cubic fade between lattice points and let the sampler interpolate.
+        vec2 fade = f * f * (3.0 - 2.0 * f);
+        vec2 uv = (floor(p) + fade + 0.5) / ${TERRAIN_NOISE_SIZE}.0;
+        return texture2D(terrainNoiseTexture, uv).r;
+        #else
+        return terrainProceduralNoise(p);
+        #endif
+    }
 `
 
 export const terrainFringeShader = `
@@ -24,7 +63,7 @@ export const terrainFringeShader = `
         // Anchor the fringe to the world so it crosses wall joins.
         vec2 noisePosition = terrainXZ + vec2(edgeHeight * 1.17, -edgeHeight * 0.79);
         float clusters = terrainNoise(noisePosition * 2.55);
-        #ifdef TERRAIN_LOW_DETAIL_TRANSITIONS
+        #ifdef TERRAIN_SIMPLIFIED_WALL_FRINGE
         float lobes = 0.5;
         float edge = fromEdge;
         #else

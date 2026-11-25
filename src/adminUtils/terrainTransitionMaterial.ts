@@ -33,6 +33,7 @@ export function createTerrainTransitionMaterial(
     snowCover = false,
     grassCover = false,
     lowDetail = false,
+    simplifiedWallFringe = lowDetail,
 ) {
     const material = new PBRCustomMaterial(name, grass.getScene())
     material.metallic = grass.metallic
@@ -103,6 +104,7 @@ export function createTerrainTransitionMaterial(
     `)
     material.Fragment_Definitions(`
         ${lowDetail ? '#define TERRAIN_LOW_DETAIL_TRANSITIONS' : ''}
+        ${simplifiedWallFringe ? '#define TERRAIN_SIMPLIFIED_WALL_FRINGE' : ''}
         varying vec2 vSurfacePatchUV;
         varying vec2 vPlacedSurfaceUV;
         varying vec4 vPlacedSurface;

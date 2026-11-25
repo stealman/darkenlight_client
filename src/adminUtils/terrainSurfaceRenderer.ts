@@ -8,7 +8,9 @@ import { findTerrainTransitions, hasTerrainTransition, terrainSurface } from '@/
 import { Builder } from '@/babylon/builder'
 import { TerrainEnum1 } from '@/babylon/materials'
 import { Lights } from '@/babylon/scene/lights'
+import { STATIC_LIGHT_LIMITS, STATIC_SHADOW_LIGHT_LIMITS } from '@/babylon/scene/lighting/lightConfig'
 import { WATER_BLOCK_TYPE } from '@/babylon/world/terrainManager'
+import { configureTerrainNoiseTexture, createTerrainNoiseTexture } from '@/babylon/world/terrainSurfaceShader'
 import { Settings } from '@/settings/settings'
 import { createTerrainAtlasPreview, createTerrainPreviewPlane, muddyDirtPatterns, terrainCoverPatterns } from './terrainAtlasPreview'
 import type { TerrainAtlasTileFilter } from './terrainAtlasPreview'
@@ -91,7 +93,15 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
     renderPavingSnow = true) {
     const wetness = !!demo || Settings.isDetalLevelHigh()
     const snowGlints = !!demo || !Settings.isDetalLevelLow()
+    const caps = scene.getEngine().getCaps()
+    const detailIndex = Settings.detailLevel.level - 1
+    const staticShadowSamplers = STATIC_SHADOW_LIGHT_LIMITS[detailIndex] ? STATIC_LIGHT_LIMITS[detailIndex] : 0
+    // Reserve six surface maps, one marks/shadow mask, environment maps, and both scene shadow maps.
+    const requiredSamplers = 6 + 1 + (caps.textureLOD ? 3 : 5) + 2 + staticShadowSamplers + 1
+    const noiseTexture = !demo && caps.maxTexturesImageUnits >= requiredSamplers ? createTerrainNoiseTexture(scene) : undefined
+    if (noiseTexture) parent.onDisposeObservable.addOnce(() => noiseTexture.dispose())
     const lowDetailTransitions = !demo && Settings.isDetalLevelLow()
+    const simplifiedWallFringe = !demo && (Settings.isDetalLevelLow() || Settings.isDetailLevelMedium())
     const plane = Builder.createHorizontalPlane(scene, parent, 1, 0)
     plane.name = 'adminUtilsTerrainTops'
     plane.receiveShadows = Settings.isShadowsEnabled()
@@ -125,6 +135,10 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
         normal: {url: rockNormalUrl, strength: 1.5},
         patterns: terrainCoverPatterns, varyAdjacentPatches: true, roundRockTop: true, showRockDeposits: true,
     })
+    if (noiseTexture) {
+        for (const {material} of [dirtAtlas, dryDirtAtlas, rockAtlas]) configureTerrainNoiseTexture(material, noiseTexture)
+        if (renderPavingSnow || snowGlints) configureTerrainNoiseTexture(snowAtlas.material, noiseTexture)
+    }
     const wetTransitions = new Set<Mesh>()
     const snowTransitions = new Set<Mesh>()
     const stepMaterials = new Map<PBRCustomMaterial, StepCoverage>([
@@ -149,7 +163,7 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
             (withDirt || drySubstrate ? muddyDirtPatterns : terrainCoverPatterns)[0].origins[0], transitionBoundary,
             withGrass ? wallSoil : undefined, withRock, atPond && pond ? {...pond, coverOnBank: mudCover} : undefined, soilRockWalls,
             blendRockWalls ? rockAtlas.material : undefined, cover === snowAtlas.material, grassMaterials.has(cover),
-            lowDetailTransitions)
+            lowDetailTransitions, simplifiedWallFringe)
         configureTerrainPreviewBatch(mesh, material, false)
         configureTerrainEdgeLighting(material, mudCover || soilRockWalls ? 'vec2(1.0)' : 'dirtCoverage', withRock && !mudCover)
         if (wetness && (mudCover || withDirt || (withGrass && wallSoil === dirtAtlas.material))) {
@@ -176,6 +190,7 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
         if (atPond) {
             pond?.applyShoreWetness(material, mudCover ? 'grassWeight' : '(1.0 - grassWeight)')
         }
+        if (noiseTexture) configureTerrainNoiseTexture(material, noiseTexture)
         return mesh
     }
     const snowTransition = createTransition('adminUtilsSnowMuddyDirt', snowAtlas.material)
