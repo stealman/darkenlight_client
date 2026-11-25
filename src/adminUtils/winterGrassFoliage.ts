@@ -2,18 +2,15 @@ import { Vector2 } from '@babylonjs/core'
 import type { Matrix } from '@babylonjs/core'
 import type { PBRCustomMaterial } from '@babylonjs/materials'
 import { FoliageManager } from '@/babylon/world/foliageManager'
-import type { FoliageLayer, TerrainFoliage } from '@/babylon/world/foliageManager'
+import type { TerrainFoliage } from '@/babylon/world/foliageManager'
 import type { MapBlock } from '@/data/worldDataManager'
-import { MUDDY_DRY_GRASS } from './muddyDirtFoliage'
 import { findFoliagePatch, forEachFoliageWallFoot } from './terrainFoliagePatches'
 
-const GRASS = 0, TWIGS = 3, SCRUB = 4, MOSS = 6, PEBBLES = 7
+export const GRASS_ROW = 0
+const TWIGS = 3, MOSS = 6, PEBBLES = 7
 export const DRY_GRASS = 5
 // The preview shader remaps these rows to the shared sprites with a different palette.
-const MOSSY_PEBBLES = 8, WINTER_SCRUB = 9, SINGLE_MOSSY_PEBBLE = 10
-const GREEN_GRASS = 14
-export const GRASS_ATLAS_Y = FoliageManager.getAtlasOffset(0, 0, GRASS).y
-const GREEN_GRASS_ATLAS_Y = FoliageManager.getAtlasOffset(0, 0, GREEN_GRASS).y
+const MOSSY_PEBBLES = 8, EMPTY_TUFT = 9, SINGLE_MOSSY_PEBBLE = 10
 const ROCK_PEBBLES = 11, LIGHT_ROCK_PEBBLE = 12
 const SNOW_COLUMN_OFFSET = 8
 const PEBBLE_ATLAS_Y = new Set([PEBBLES, MOSSY_PEBBLES, SINGLE_MOSSY_PEBBLE]
@@ -23,7 +20,7 @@ const SINGLE_PEBBLE_SIZE = [0.43, 0.68] as const
 const SINGLE_PEBBLE_BOUNDS = [[25, 7, 48, 21], [37, 35, 47, 50], [36, 43, 48, 55], [31, 42, 48, 56]]
 const PLANT_PATCHES = {
     spacing: 4.6, salt: 6210, minRadius: 1.45, radiusRange: 1.35,
-    rows: [GRASS, GRASS, GRASS, GRASS, GRASS, GRASS, DRY_GRASS, WINTER_SCRUB],
+    rows: [GRASS_ROW, GRASS_ROW, GRASS_ROW, GRASS_ROW, GRASS_ROW, GRASS_ROW, DRY_GRASS, EMPTY_TUFT],
 }
 const GROUND_PATCHES = {
     spacing: 4.9, salt: 7240, minRadius: 1.35, radiusRange: 1.2,
@@ -32,16 +29,12 @@ const GROUND_PATCHES = {
 }
 const GRASS_HEIGHT = 0.49
 
-export function snowFoliageOffset(uv: Vector2, layer: FoliageLayer) {
+export function snowFoliageOffset(uv: Vector2, layer: 'ground' | 'blended') {
     if (layer === 'blended' || (layer === 'ground' && !PEBBLE_ATLAS_Y.has(uv.y))) return undefined
     return new Vector2(uv.x + SNOW_COLUMN_OFFSET, uv.y)
 }
 
-export function greenGrassFoliageOffset(uv: Vector2, layer: FoliageLayer) {
-    return layer === 'tufts' && uv.y === GRASS_ATLAS_Y ? new Vector2(uv.x, GREEN_GRASS_ATLAS_Y) : uv
-}
-
-export function rockPebbleOffset(uv: Vector2, matrix: Matrix, layer: FoliageLayer, originX = 0, originZ = 0) {
+export function rockPebbleOffset(uv: Vector2, matrix: Matrix, layer: 'ground' | 'blended', originX = 0, originZ = 0) {
     if (layer !== 'ground') return uv
     const x = Math.round((matrix.m[12] + originX) * 128), z = Math.round((matrix.m[14] + originZ) * 128)
     const row = FoliageManager.roll(x, z, 9541) < 0.13 ? LIGHT_ROCK_PEBBLE : ROCK_PEBBLES
@@ -49,7 +42,7 @@ export function rockPebbleOffset(uv: Vector2, matrix: Matrix, layer: FoliageLaye
 }
 
 export function createGrassFootTufts(map: MapBlock[][], terrainType: number, originX = 0, originZ = 0) {
-    const tufts: {matrix: Matrix, uv: Vector2}[] = []
+    const tufts: {matrix: Matrix, row: number}[] = []
     forEachFoliageWallFoot(map, terrainType, (x, z, top, dx, dz, side) => {
         const salt = 8200 + side * 100
         const roll = (offset: number) => FoliageManager.roll(x + originX, z + originZ, salt + offset)
@@ -68,8 +61,8 @@ export function createGrassFootTufts(map: MapBlock[][], terrainType: number, ori
             const rootZ = z + dz * advance - dx * slide
             const height = GRASS_HEIGHT * (0.80 + 0.33 * roll(6 + i))
             tufts.push({
-                matrix: FoliageManager.tuftMatrix(x + originX, z + originZ, rootX, top, rootZ, GRASS, tuftSalt, height),
-                uv: FoliageManager.getAtlasOffset(x + originX, z + originZ, GRASS, tuftSalt),
+                matrix: FoliageManager.tuftMatrix(x + originX, z + originZ, rootX, top, rootZ, tuftSalt, height),
+                row: GRASS_ROW,
             })
         }
     })
@@ -78,12 +71,11 @@ export function createGrassFootTufts(map: MapBlock[][], terrainType: number, ori
 
 export function createWinterGrassFoliage(transitionWeight: (x: number, z: number) => number, originX = 0, originZ = 0): TerrainFoliage {
     return {
-        rows: [GRASS, GRASS, GRASS, GRASS, DRY_GRASS],
+        rows: [GRASS_ROW, GRASS_ROW, GRASS_ROW, GRASS_ROW, DRY_GRASS],
         tuftsPerTile: 0.92,
-        tuftHeights: {[GRASS]: GRASS_HEIGHT, [DRY_GRASS]: 0.45, [WINTER_SCRUB]: 0.31},
+        tuftHeights: {[GRASS_ROW]: GRASS_HEIGHT, [DRY_GRASS]: 0.45},
         groundRows: GROUND_PATCHES.rows,
         groundPerTile: 0.58,
-        blendedGroundRows: [MOSS],
         groundSizes: {
             [SINGLE_MOSSY_PEBBLE]: SINGLE_PEBBLE_SIZE,
             [MOSSY_PEBBLES]: [0.30, 0.53],
@@ -102,8 +94,8 @@ export function createWinterGrassFoliage(transitionWeight: (x: number, z: number
             if (stonePatch && ground.influence > 0.40 && variety < 0.34) groundRow = MOSSY_PEBBLES
             return {
                 tuftDensity: 0.34 + plants.influence,
-                extraTuftChance: gapFillChance + (tuftRow === WINTER_SCRUB ? 0.07 : 0.76) * core ** 1.5,
-                extraTuftRow: gapFillChance > 0 ? GRASS : undefined,
+                extraTuftChance: gapFillChance + (tuftRow === EMPTY_TUFT ? 0.07 : 0.76) * core ** 1.5,
+                extraTuftRow: gapFillChance > 0 ? GRASS_ROW : undefined,
                 tuftRow,
                 groundDensity: 0.23 + ground.influence * (stonePatch ? 0.68 : 1.14),
                 groundRow,
@@ -117,60 +109,8 @@ export function createWinterGrassFoliage(transitionWeight: (x: number, z: number
     }
 }
 
-export function styleTerrainFoliage(tufts: PBRCustomMaterial, ground: PBRCustomMaterial) {
+export function styleGroundFoliage(ground: PBRCustomMaterial) {
     const snowColumn = SNOW_COLUMN_OFFSET.toFixed(1)
-    const grassY = GRASS_ATLAS_Y.toFixed(1)
-    const winterScrubY = FoliageManager.getAtlasOffset(0, 0, WINTER_SCRUB).y
-    const scrubY = FoliageManager.getAtlasOffset(0, 0, SCRUB).y
-    const muddyDryY = FoliageManager.getAtlasOffset(0, 0, MUDDY_DRY_GRASS).y
-    const dryY = FoliageManager.getAtlasOffset(0, 0, DRY_GRASS).y
-    tufts.Vertex_Definitions('attribute vec2 uvc; varying vec4 vTerrainTuftStyle; varying vec3 vSnowTuft;')
-    tufts.Vertex_MainBegin(`
-        float winterGrass = 1.0 - step(0.5, abs(uvc.y - ${grassY}));
-        float greenGrass = 1.0 - step(0.5, abs(uvc.y - (${GREEN_GRASS_ATLAS_Y.toFixed(1)})));
-        float winterScrub = 1.0 - step(0.5, abs(uvc.y - ${winterScrubY.toFixed(1)}));
-        float muddyDry = 1.0 - step(0.5, abs(uvc.y - (${muddyDryY.toFixed(1)})));
-        float muddyScrub = 1.0 - step(0.5, abs(uvc.y - ${scrubY.toFixed(1)}));
-        float snow = step(${snowColumn}, uvc.x);
-        vec2 foliageAtlasOffset = vec2(uvc.x - snow * ${snowColumn}, uvc.y) + vec2(0.0, winterScrub * ${(scrubY - winterScrubY).toFixed(1)}
-            + muddyDry * ${(dryY - muddyDryY).toFixed(1)} + greenGrass * ${(GRASS_ATLAS_Y - GREEN_GRASS_ATLAS_Y).toFixed(1)});
-        vTerrainTuftStyle = vec4(winterGrass, winterScrub, max(muddyDry, muddyScrub), greenGrass);
-        vSnowTuft = vec3(snow, step(5.5, uvc.y), position.y);
-    `)
-    tufts.Fragment_Definitions(`
-        varying vec4 vTerrainTuftStyle;
-        varying vec3 vSnowTuft;
-        vec3 muteGreenGrass(vec3 color) {
-            float shade = dot(color, vec3(0.2126, 0.7152, 0.0722));
-            return mix(vec3(1.02, 1.0, 0.93) * shade, color, 0.78);
-        }
-    `)
-    tufts.Fragment_Before_Lights(`
-        // Crossed cards represent a tuft, whose blades also catch light from above.
-        normalW = normalize(normalW + vec3(0.0, 0.75, 0.0));
-        surfaceAlbedo *= mix(vec3(1.0), vec3(0.79, 0.53, 0.58), vTerrainTuftStyle.x);
-        surfaceAlbedo = mix(surfaceAlbedo, muteGreenGrass(surfaceAlbedo * vec3(0.60, 0.82, 0.61) * 0.78), vTerrainTuftStyle.w);
-        vec3 lightScrub = surfaceAlbedo * vec3(1.05, 1.30, 1.44) + vec3(0.009, 0.008, 0.005);
-        surfaceAlbedo = mix(surfaceAlbedo, lightScrub, vTerrainTuftStyle.y);
-        surfaceAlbedo *= mix(vec3(1.0), vec3(0.79, 1.08, 1.02), vTerrainTuftStyle.z);
-        if (vSnowTuft.x > 0.5) {
-            vec3 paleBrown = surfaceAlbedo * vec3(1.16, 1.29, 1.42) + vec3(0.15, 0.125, 0.095);
-            float uneven = 0.06 * sin(dot(vPositionW.xz, vec2(29.0, 19.0)));
-            float bladeHeight = vSnowTuft.z + uneven;
-            float snowDust = 1.0 - smoothstep(0.07, 0.34, bladeHeight);
-            vec3 plantColor = paleBrown;
-            if (vSnowTuft.y > 0.5) {
-                float straw = smoothstep(0.22, 0.58, bladeHeight);
-                float greenTip = smoothstep(0.58, 0.98, bladeHeight);
-                vec3 lowerStem = surfaceAlbedo * vec3(1.32, 0.91, 0.51) + vec3(0.105, 0.061, 0.030);
-                vec3 strawMiddle = surfaceAlbedo * vec3(1.70, 1.25, 0.50) + vec3(0.14, 0.105, 0.053);
-                vec3 softGreen = surfaceAlbedo * vec3(1.10, 1.38, 0.66) + vec3(0.093, 0.112, 0.062);
-                plantColor = mix(mix(lowerStem, strawMiddle, straw), softGreen, greenTip);
-            }
-            surfaceAlbedo = mix(plantColor, vec3(0.80, 0.85, 0.92), snowDust * 0.87);
-        }
-    `)
-
     const mossyY = FoliageManager.getAtlasOffset(0, 0, MOSSY_PEBBLES).y
     const singleY = FoliageManager.getAtlasOffset(0, 0, SINGLE_MOSSY_PEBBLE).y
     const stoneY = FoliageManager.getAtlasOffset(0, 0, PEBBLES).y

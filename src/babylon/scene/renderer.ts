@@ -20,6 +20,7 @@ import { Materials } from '@/babylon/materials'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { ViewportManager } from '@/utils/viewport'
 import { MonsterManager } from '@/babylon/monsters/monsterManager'
+import { updateGrassInteractions } from '@/babylon/world/grassInteractions'
 import { NpcManager } from '@/babylon/npc/npcManager'
 import { Connector } from '@/network/connector'
 import { EquipManager } from '@/babylon/item/equipManager'
@@ -242,6 +243,7 @@ export const Renderer = {
             CharacterManager.onFrame(timeRate, actualTime, this.frame)
             NpcManager.onFrame(timeRate, actualTime, this.frame)
             MonsterManager.onFrame(timeRate, actualTime, this.frame)
+            updateGrassInteractions(actualTime)
             GroundItemsManager.onFrame(timeRate, actualTime)
             Controller.updateHoverNames(scene, actualTime)
 

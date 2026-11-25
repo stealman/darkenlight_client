@@ -12,7 +12,6 @@ import { IndoorTerrainOcclusionManager } from '@/babylon/world/indoorTerrainOccl
 import { Lights } from '@/babylon/scene/lights'
 import { SNOW_BLOCK_HEIGHT } from '@/babylon/world/beveledTerrainBlock'
 import type { createOutdoorTerrain, createIndoorWaterFloor } from './outdoorTerrain'
-import type { createTerrainFoliageRenderer } from '@/adminUtils/terrainFoliageRenderer'
 import { BuildingManager } from './buildings/buildingManager'
 import { TerrainContactShadow } from './terrainContactShadow'
 import { StaticsManager } from './statics/staticsManager'
@@ -41,16 +40,14 @@ export const TerrainManager = {
     outdoorTerrain: null as ReturnType<typeof createOutdoorTerrain> | null,
     renderers: null as typeof import('./outdoorTerrain') | null,
     waterFloor: null as ReturnType<typeof createIndoorWaterFloor> | null,
-    outdoorFoliageFactory: undefined as typeof createTerrainFoliageRenderer | undefined,
     contactShadow: null as TerrainContactShadow | null,
 
-    async initialize(scene: Scene, foliageFactory?: typeof createTerrainFoliageRenderer) {
+    async initialize(scene: Scene) {
         this.renderers ??= await import('./outdoorTerrain')
         const parent = WorldRenderer.worldParentNode!
         this.outdoorTerrain = null
         this.waterFloor = null
         this.dungeonBlock = null
-        this.outdoorFoliageFactory = foliageFactory
         const terrainSteps = StepMarksRenderer.field
         const contactShadow = new TerrainContactShadow(scene, terrainSteps ?? undefined)
         this.contactShadow = contactShadow
@@ -114,7 +111,7 @@ export const TerrainManager = {
         const outdoor = this.usesOutdoorTerrain()
         if (outdoor) {
             this.outdoorTerrain ??= this.renderers!.createOutdoorTerrain(WorldRenderer.worldParentNode!, undefined,
-                this.contactShadow ?? undefined, StepMarksRenderer.field ?? undefined, this.outdoorFoliageFactory)
+                this.contactShadow ?? undefined, StepMarksRenderer.field ?? undefined)
             const load = WorldDataManager.terrainRenderLoad
             this.outdoorTerrain.render(map, center, snowCoverMask, world.renderRevision,
                 load?.worldId === MyPlayer.worldId ? load.data : undefined, world.originalBlocks)

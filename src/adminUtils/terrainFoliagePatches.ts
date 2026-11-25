@@ -1,5 +1,4 @@
 import { Matrix } from '@babylonjs/core'
-import type { Vector2 } from '@babylonjs/core'
 import { TERRAIN_BEVEL_WIDTH, TERRAIN_VERTICAL_BEVEL_WIDTH } from '@/babylon/world/beveledTerrainBlock'
 import { FoliageManager } from '@/babylon/world/foliageManager'
 import type { TerrainFoliage } from '@/babylon/world/foliageManager'
@@ -11,7 +10,7 @@ const DIAGONAL_NEIGHBORS = [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const
 const TILE_NEIGHBORS = [...TERRAIN_CARDINAL_EDGES, ...DIAGONAL_NEIGHBORS]
 
 export function createWaterEdgeTufts(map: MapBlock[][], profiles: ReadonlyMap<number, TerrainFoliage>, originX = 0, originZ = 0) {
-    const tufts: {matrix: Matrix, uv: Vector2}[] = []
+    const tufts: {matrix: Matrix, row: number}[] = []
     map.forEach((row, x) => row.forEach((block, z) => {
         const profile = profiles.get(FoliageManager.getTerrainIndex(block))
         if (!profile?.tuftsPerTile || !profile.rows.length) return
@@ -34,8 +33,8 @@ export function createWaterEdgeTufts(map: MapBlock[][], profiles: ReadonlyMap<nu
             const scatter = profile.scatter?.(rootX, rootZ, variety)
             const species = scatter?.tuftRow ?? profile.rows[Math.floor(variety * profile.rows.length)]
             tufts.push({
-                matrix: FoliageManager.tuftMatrix(x + originX, z + originZ, rootX, block.totalHeight, rootZ, species, salt, profile.tuftHeights?.[species]),
-                uv: FoliageManager.getAtlasOffset(x + originX, z + originZ, species, salt),
+                matrix: FoliageManager.tuftMatrix(x + originX, z + originZ, rootX, block.totalHeight, rootZ, salt, profile.tuftHeights?.[species]),
+                row: species,
             })
         }
     }))

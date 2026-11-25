@@ -1,8 +1,8 @@
 import { createTerrainFoliageRenderer } from "./terrainFoliageRenderer"
-import { createTerrainPreviewGrass } from './terrainPreviewGrass'
-import type { PreviewGrassDetail, PreviewGrassTuft } from './terrainPreviewGrass'
+import { createGrassRenderer } from '@/babylon/world/grassRenderer'
+import type { GrassDetail, GrassTuft } from '@/babylon/world/grassRenderer'
 import { createTerrainSurfaceRenderer } from './terrainSurfaceRenderer'
-import { ArcRotateCamera, Mesh, Scene, TransformNode, Vector3 } from '@babylonjs/core'
+import { ArcRotateCamera, Mesh, MeshBuilder, Scene, StandardMaterial, TransformNode, Vector3 } from '@babylonjs/core'
 import type { ArcRotateCameraPointersInput } from '@babylonjs/core'
 import { TerrainEnum1 } from '@/babylon/materials'
 import { Lights } from '@/babylon/scene/lights'
@@ -16,6 +16,7 @@ import { terrainBoundaryOffset, TERRAIN_TRANSITION_REACH } from './terrainTransi
 
 const TERRAIN_PREVIEW_STORAGE_KEY = 'darkenlight.adminUtils.terrainPreview'
 const SIZE = 30
+const GRASS_TRAIL_SECONDS = 0.42
 const MUDDY_DIRT = TerrainEnum1.TERRAIN_MUDDY_DIRT.index
 const DIRT = TerrainEnum1.TERRAIN_DIRT.index
 const GRASS = TerrainEnum1.TERRAIN_GRASS.index
@@ -109,6 +110,11 @@ export function createTerrainPreview(
         <label class="admin-utils__field"><span>Hustota trávy <output for="terrainGrassDensity">100 %</output></span>
             <input id="terrainGrassDensity" type="range" min="0" max="100" value="100"></label>
         <output id="terrainGrassStats" class="admin-utils__field"></output>
+        <label class="admin-utils__field"><input id="terrainGrassWalk" type="checkbox"> Simulovat průchod trávou</label>
+        <label class="admin-utils__field"><span>Dosah ohybu <output for="terrainGrassReach">0,7</output></span>
+            <input id="terrainGrassReach" type="range" min="0.25" max="1.5" step="0.05" value="0.7"></label>
+        <label class="admin-utils__field"><span>Síla ohybu <output for="terrainGrassBend">60 %</output></span>
+            <input id="terrainGrassBend" type="range" min="0" max="100" value="60"></label>
         <button type="button">Vycentrovat pohled</button>`
     const primary = controls.querySelector<HTMLSelectElement>('#terrainPrimary')!
     const secondary = controls.querySelector<HTMLSelectElement>('#terrainSecondary')!
@@ -117,7 +123,14 @@ export function createTerrainPreview(
     const grassDensity = controls.querySelector<HTMLInputElement>('#terrainGrassDensity')!
     const grassDensityOutput = controls.querySelector<HTMLOutputElement>('output[for="terrainGrassDensity"]')!
     const grassStats = controls.querySelector<HTMLOutputElement>('#terrainGrassStats')!
+    const grassWalk = controls.querySelector<HTMLInputElement>('#terrainGrassWalk')!
+    const grassReach = controls.querySelector<HTMLInputElement>('#terrainGrassReach')!
+    const grassBend = controls.querySelector<HTMLInputElement>('#terrainGrassBend')!
+    const grassReachOutput = controls.querySelector<HTMLOutputElement>('output[for="terrainGrassReach"]')!
+    const grassBendOutput = controls.querySelector<HTMLOutputElement>('output[for="terrainGrassBend"]')!
     const formatCount = new Intl.NumberFormat('cs-CZ')
+    grassReach.oninput = () => { grassReachOutput.value = formatCount.format(grassReach.valueAsNumber) }
+    grassBend.oninput = () => { grassBendOutput.value = `${grassBend.valueAsNumber} %` }
     const lightIntensity = controls.querySelector<HTMLInputElement>('#terrainLightIntensity')!
     const lightIntensityOutput = controls.querySelector<HTMLOutputElement>('output[for="terrainLightIntensity"]')!
     let baseSunIntensity = 0
@@ -188,9 +201,47 @@ export function createTerrainPreview(
     let renderers: {
         surface: ReturnType<typeof createTerrainSurfaceRenderer>
         foliage: ReturnType<typeof createTerrainFoliageRenderer>
-        grass: ReturnType<typeof createTerrainPreviewGrass>
+        grass: ReturnType<typeof createGrassRenderer>
         paths: ReturnType<typeof createStonePathRenderer>
     } | undefined
+    let walkMap: MapBlock[][] = []
+    let walkMarker: Mesh | undefined
+    let walkTime = 0
+    const walkStart = Vector3.Zero(), walkEnd = Vector3.Zero()
+    const sampleWalk = (seconds: number, point: Vector3) => {
+        const angle = seconds * 1.3
+        const x = 9.8 + 2.4 * Math.sin(angle)
+        const z = 12.9 + 2.3 * Math.cos(angle)
+        point.set(x, walkMap[Math.round(x)][Math.round(z)].totalHeight, z)
+    }
+    const stopWalk = () => {
+        walkMarker?.setEnabled(false)
+        renderers?.grass.clearInteractions()
+        walkTime = 0
+    }
+    const updateWalk = () => {
+        if (!renderers || controls.hidden || !foliageToggle.checked || !grassWalk.checked || grassWalk.disabled) return
+        if (!walkMarker) {
+            const markerMaterial = new StandardMaterial('adminUtilsGrassWalkerMaterial', scene)
+            markerMaterial.disableLighting = true
+            markerMaterial.emissiveColor.set(1, 0.59, 0.12)
+            walkMarker = MeshBuilder.CreateSphere('adminUtilsGrassWalker', {diameter: 0.23, segments: 8}, scene)
+            walkMarker.parent = foliage
+            walkMarker.material = markerMaterial
+            walkMarker.isPickable = false
+        }
+        walkTime += Math.min(scene.getEngine().getDeltaTime() / 1000, 0.05)
+        sampleWalk(Math.max(0, walkTime - GRASS_TRAIL_SECONDS), walkStart)
+        sampleWalk(walkTime, walkEnd)
+        walkMarker.position.copyFrom(walkEnd)
+        walkMarker.position.y += 0.115
+        walkMarker.setEnabled(true)
+        const world = foliage.computeWorldMatrix()
+        Vector3.TransformCoordinatesToRef(walkStart, world, walkStart)
+        Vector3.TransformCoordinatesToRef(walkEnd, world, walkEnd)
+        renderers.grass.setInteraction(0, walkStart, walkEnd, grassReach.valueAsNumber, grassBend.valueAsNumber * 0.005)
+    }
+    grassWalk.onchange = () => { if (!grassWalk.checked) stopWalk() }
     let grassX = NaN, grassZ = NaN
     const updateGrass = (force = false) => {
         if (!renderers) return
@@ -199,20 +250,33 @@ export function createTerrainPreview(
         grassX = x
         grassZ = z
         const density = grassDensity.valueAsNumber
-        const {count, triangles, budget} = renderers.grass.render(x, z, grassDetail.value as PreviewGrassDetail,
+        const {count, triangles, budget} = renderers.grass.render(x, z, grassDetail.value as GrassDetail,
             foliageToggle.checked ? density / 100 : 0)
         grassDensityOutput.value = `${density} %`
         grassStats.value = `Trsy: ${formatCount.format(count)} · Trojúhelníky: ${formatCount.format(triangles)} / ${formatCount.format(budget)}`
     }
-    grassDetail.onchange = grassDensity.oninput = () => updateGrass(true)
+    grassDetail.onchange = () => {
+        const low = grassDetail.value === 'low'
+        grassWalk.disabled = grassReach.disabled = grassBend.disabled = low
+        if (low) stopWalk()
+        updateGrass(true)
+    }
+    grassDensity.oninput = () => updateGrass(true)
     foliageToggle.onchange = () => {
         foliage.setEnabled(foliageToggle.checked)
+        if (!foliageToggle.checked) stopWalk()
         updateGrass(true)
     }
     const grassObserver = camera.onViewMatrixChangedObservable.add(() => {
         if (!controls.hidden && foliageToggle.checked) updateGrass()
     })
-    terrain.onDisposeObservable.addOnce(() => camera.onViewMatrixChangedObservable.remove(grassObserver))
+    const walkObserver = scene.onBeforeRenderObservable.add(updateWalk)
+    terrain.onDisposeObservable.addOnce(() => {
+        camera.onViewMatrixChangedObservable.remove(grassObserver)
+        scene.onBeforeRenderObservable.remove(walkObserver)
+        walkMarker?.material?.dispose()
+        renderers?.grass.dispose()
+    })
     const update = () => {
         const first = Number(primary.value)
         const second = Number(secondary.value)
@@ -264,21 +328,21 @@ export function createTerrainPreview(
             }
             return block
         }))
+        walkMap = demoMap
         const transitionTiles = hasTransitions ? findTransitionTiles(demoMap) : undefined
         renderers ??= {
             surface: createTerrainSurfaceRenderer(scene, terrain, transitionBoundary,
                 {map: demoMap, center: CENTER, boundaries: BOUNDARIES, isBank: isPondBankTile}),
             foliage: createTerrainFoliageRenderer(scene, foliage),
-            grass: createTerrainPreviewGrass(scene, foliage),
+            grass: createGrassRenderer(scene, foliage),
             paths: createStonePathRenderer(scene, terrain),
         }
         renderers.surface.render(demoMap, {transitionTiles, snow, snowPartner, snowOnRock, rockPartner, dirtPartner,
             shoreSurface: first, grassType, snowRockOnSoil, localBoundaries: false})
-        const grassTufts: PreviewGrassTuft[] = []
+        const grassTufts: GrassTuft[] = []
         renderers.foliage.render(demoMap, {
             atPondBank: isPondBankTile,
-            pavingMoss: true,
-            replaceGrass: tuft => grassTufts.push(tuft),
+            placeGrass: tuft => grassTufts.push(tuft),
             transitionWeight: (x, z) => {
                 if (!transitionTiles?.[Math.round(x)][Math.round(z)]) return 0
                 const distance = Math.abs(x - CENTER - terrainBoundaryOffset(z))
@@ -321,6 +385,7 @@ export function createTerrainPreview(
                 camera.attachControl(false, false, 2)
                 if (!renderers) update()
             } else {
+                stopWalk()
                 camera.detachControl()
                 scene.activeCamera = assetCamera
                 assetCamera.attachControl(true)

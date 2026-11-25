@@ -1,21 +1,15 @@
-import { Color3, Matrix, Mesh, MeshBuilder, PBRMaterial, Quaternion, Scene, Texture, TransformNode, Vector2, Vector3 } from '@babylonjs/core'
+import { Color3, Matrix, Mesh, PBRMaterial, Quaternion, Scene, Texture, TransformNode, Vector2, Vector3 } from '@babylonjs/core'
 import { PBRCustomMaterial } from '@babylonjs/materials'
 import { updateWorldInstanceBuffers } from '@/babylon/world/worldInstanceBuffers'
-import { MapBlock, WorldDataManager } from '@/data/worldDataManager'
-import { TerrainEnum1 } from '@/babylon/materials'
-import { ViewportManager } from '@/utils/viewport'
+import type { MapBlock } from '@/data/worldDataManager'
 import { MyPlayer } from '@/data/myPlayer'
-import { BuildingManager } from '@/babylon/world/buildings/buildingManager'
 import { Builder } from '@/babylon/builder'
-import { getTerrainHeightOffset, WATER_BLOCK_TYPE } from '@/babylon/world/terrainManager'
 
 const ATLAS_SIZE = 8
-const ATLAS_CELL_PIXELS = 32
+const ATLAS_CELL_PIXELS = 64
 const SCATTER_CELL_SIZE = 4
 const CANDIDATES_PER_TILE = 2
-// Rows are numbered from the top of foliage.png.
-const GRASS = 0, MUD_GRASS = 1, SNOW_GRASS = 2, MEADOW = 3, FLOWERS = 4, DRY_GRASS = 5, MOSS = 6
-const EXPOSED_GROUND_ROWS = [DRY_GRASS, MUD_GRASS, MEADOW]
+const UNUSED_GROUND_ROW = 6
 
 export type TerrainFoliage = {
     rows: readonly number[]
@@ -33,40 +27,21 @@ export type TerrainFoliage = {
         extraTuftRow?: number
         tuftRow?: number
         groundRow?: number
-        groundSize?: readonly [number, number]
         extraGround?: {row: number, chance: number, size: readonly [number, number]}
     }
 }
 
-export type FoliageLayer = 'tufts' | 'ground' | 'blended'
-
-const SNOW_FOLIAGE: TerrainFoliage = {rows: [SNOW_GRASS, DRY_GRASS], tuftsPerTile: 0.14, groundPerTile: 0}
-const TERRAIN_FOLIAGE = new Map<number, TerrainFoliage>([
-    [TerrainEnum1.TERRAIN_DIRT.index, {rows: [], tuftsPerTile: 0, groundPerTile: 0.17}],
-    [TerrainEnum1.TERRAIN_GRASS.index, {rows: [GRASS, MEADOW, MEADOW, FLOWERS], tuftsPerTile: 0.85, groundPerTile: 0.18}],
-    [TerrainEnum1.TERRAIN_GRASS_WINTER.index, {rows: [GRASS, MEADOW, DRY_GRASS, DRY_GRASS], tuftsPerTile: 0.76, groundPerTile: 0.15}],
-    [TerrainEnum1.TERRAIN_MUDDY_DIRT.index, {rows: [MUD_GRASS, MUD_GRASS, DRY_GRASS, FLOWERS], tuftsPerTile: 0.31, groundPerTile: 0.22}],
-    [TerrainEnum1.TERRAIN_SNOW_GRASS.index, SNOW_FOLIAGE],
-    [TerrainEnum1.TERRAIN_SNOW_GRASS_WINTER.index, SNOW_FOLIAGE],
-    [TerrainEnum1.TERRAIN_SNOW_MUDDY_DIRT.index, {...SNOW_FOLIAGE, tuftsPerTile: 0.2}],
-])
+type GroundLayer = 'ground' | 'blended'
 
 export const FoliageManager = {
-    foliageMesh: null as Mesh | null,
     groundMesh: null as Mesh | null,
     blendedGroundMesh: null as Mesh | null,
-    foliageMaterial: null as PBRCustomMaterial | null,
     instancePosition: Vector3.Zero(),
     instanceRotation: Quaternion.Identity(),
     instanceScale: Vector3.One(),
 
-    initialize(scene: Scene, parent: TransformNode | null, options?: {
-        atlasUrl: string
-        atlasCellPixels?: number
-        blendedGround?: boolean
-        groundNormals?: {atlasUrl: string, opaqueStrength: number, blendedStrength: number}
-    }) {
-        const foliageTexture = new Texture(options?.atlasUrl ?? '/images/materials/foliage.png', scene)
+    initialize(scene: Scene, parent: TransformNode | null, options: {atlasUrl: string, normalAtlasUrl: string}) {
+        const foliageTexture = new Texture(options.atlasUrl, scene)
         foliageTexture.hasAlpha = true
         foliageTexture.getAlphaFromRGB = false
         foliageTexture.wrapU = Texture.CLAMP_ADDRESSMODE
@@ -75,35 +50,19 @@ export const FoliageManager = {
         foliageTexture.uScale = 1 / ATLAS_SIZE
         foliageTexture.vScale = 1 / ATLAS_SIZE
 
-        const cellPixels = options?.atlasCellPixels ?? ATLAS_CELL_PIXELS
-        this.foliageMaterial = this.createMaterial(scene, 'foliageMaterial', foliageTexture, cellPixels)
-        this.foliageMesh = this.createFoliageMesh(scene, parent)
-        const normals = options?.groundNormals
-        const groundMaterial = normals
-            ? this.createMaterial(scene, 'groundFoliageMaterial', foliageTexture, cellPixels)
-            : this.foliageMaterial
-        const blendedMaterial = options?.blendedGround
-            ? this.createMaterial(scene, 'blendedFoliageMaterial', foliageTexture, cellPixels, true)
-            : null
-        if (normals) {
-            const normalAtlas = new Texture(normals.atlasUrl, scene, {samplingMode: Texture.TRILINEAR_SAMPLINGMODE})
-            normalAtlas.gammaSpace = false
-            normalAtlas.wrapU = normalAtlas.wrapV = Texture.CLAMP_ADDRESSMODE
-            normalAtlas.uScale = normalAtlas.vScale = 1 / ATLAS_SIZE
-            normalAtlas.level = normals.opaqueStrength
-            groundMaterial.bumpTexture = normalAtlas
-            if (blendedMaterial) {
-                const blendedNormals = normalAtlas.clone()
-                blendedNormals.level = normals.blendedStrength
-                blendedMaterial.bumpTexture = blendedNormals
-            }
-        }
+        const groundMaterial = this.createMaterial(scene, 'groundFoliageMaterial', foliageTexture, ATLAS_CELL_PIXELS)
+        const normalAtlas = new Texture(options.normalAtlasUrl, scene, {samplingMode: Texture.TRILINEAR_SAMPLINGMODE})
+        normalAtlas.gammaSpace = false
+        normalAtlas.wrapU = normalAtlas.wrapV = Texture.CLAMP_ADDRESSMODE
+        normalAtlas.uScale = normalAtlas.vScale = 1 / ATLAS_SIZE
+        normalAtlas.level = 1.8
+        groundMaterial.bumpTexture = normalAtlas
         this.groundMesh = this.createGroundMesh(scene, parent, 'groundFoliage', groundMaterial)
-        this.blendedGroundMesh = blendedMaterial
-            ? this.createGroundMesh(scene, parent, 'blendedGroundFoliage', blendedMaterial)
-            : null
-        this.foliageMesh.material = this.foliageMaterial
-        this.foliageMesh.setEnabled(false)
+        const material = this.createMaterial(scene, 'blendedFoliageMaterial', foliageTexture, ATLAS_CELL_PIXELS, true)
+        const blendedNormals = normalAtlas.clone()
+        blendedNormals.level = 0.8
+        material.bumpTexture = blendedNormals
+        this.blendedGroundMesh = this.createGroundMesh(scene, parent, 'blendedGroundFoliage', material)
     },
 
     createMaterial(scene: Scene, name: string, texture: Texture, cellPixels: number, blend = false) {
@@ -143,47 +102,24 @@ export const FoliageManager = {
         return mesh
     },
 
-    renderFoliage(snowCoverMask: ReadonlySet<number>, vegetationMask: ReadonlySet<number>) {
-        if (!this.foliageMesh || !this.groundMesh) return
-        const buildingBounds = Array.from(BuildingManager.buildings.values(), building => ({
-            minX: building.data.x,
-            maxX: building.data.x + building.getWidth(),
-            minZ: building.data.z,
-            maxZ: building.data.z + building.getDepth(),
-        }))
-
-        const canDecorate = (block: MapBlock, x: number, z: number) =>
-            !block.stonePath && !block.beigeStonePath && !BuildingManager.hasFloorAtTile(x, z)
-            && !buildingBounds.some(bounds => x >= bounds.minX && x < bounds.maxX && z >= bounds.minZ && z < bounds.maxZ)
-
-        this.renderFoliageArea(WorldDataManager.getBlockMap(), snowCoverMask, vegetationMask, canDecorate,
-            {viewportCenter: MyPlayer.myChar.getPositionRounded()})
-    },
-
     renderFoliageArea(
         blockMap: MapBlock[][],
-        snowCoverMask: ReadonlySet<number>,
-        vegetationMask: ReadonlySet<number>,
         canDecorate: (block: MapBlock, x: number, z: number) => boolean,
-        options?: {
-            viewportCenter?: {x: number, z: number}
-            originX?: number
-            originZ?: number
-            visibleTile?: (x: number, z: number) => boolean
-            profiles?: ReadonlyMap<number, TerrainFoliage>
-            extraTuftPasses?: number
-            extraTufts?: readonly {matrix: Matrix, uv: Vector2}[]
-            adjustTuftPlacement?: (matrix: Matrix) => void
-            groundDecals?: readonly {matrix: Matrix, uv: Vector2}[]
-            blendedDecals?: readonly {matrix: Matrix, uv: Vector2}[]
-            mapAtlasOffset?: (uv: Vector2, matrix: Matrix, layer: FoliageLayer) => Vector2 | undefined
+        options: {
+            originX: number
+            originZ: number
+            visibleTile: (x: number, z: number) => boolean
+            profiles: ReadonlyMap<number, TerrainFoliage>
+            extraTufts: readonly {matrix: Matrix, row: number}[]
+            grassRows: ReadonlySet<number>
+            placeTuft: (matrix: Matrix, row: number) => void
+            groundDecals: readonly {matrix: Matrix, uv: Vector2}[]
+            blendedDecals: readonly {matrix: Matrix, uv: Vector2}[]
+            mapAtlasOffset: (uv: Vector2, matrix: Matrix, layer: GroundLayer) => Vector2 | undefined
             submit?: (mesh: Mesh, matrices: Matrix[], uv: Vector2[]) => void
         },
     ) {
-        const mesh = this.foliageMesh!
-        const groundMesh = this.groundMesh!
-        const matrices: Matrix[] = []
-        const uvData: Vector2[] = []
+        const groundMesh = this.groundMesh
         const groundMatrices: Matrix[] = []
         const groundUvs: Vector2[] = []
         const blended = this.blendedGroundMesh && {
@@ -191,30 +127,18 @@ export const FoliageManager = {
             matrices: [] as Matrix[],
             uvs: [] as Vector2[],
         }
-        const viewportCenter = options?.viewportCenter
-        const originX = options?.originX ?? 0
-        const originZ = options?.originZ ?? 0
-        const extraTuftPasses = options?.extraTuftPasses ?? 0
-        const getProfile = (block: MapBlock) => {
-            const index = this.getTerrainIndex(block)
-            return options?.profiles?.get(index) ?? TERRAIN_FOLIAGE.get(index)
-        }
+        const {originX, originZ} = options
+        const getProfile = (block: MapBlock) => options.profiles.get(this.getTerrainIndex(block))
         const supportsGround = (block: MapBlock, x: number, z: number) =>
             !!getProfile(block)?.groundPerTile && canDecorate(block, x, z)
-
-        const maxIndex = blockMap.length - 1
-        const depth = blockMap[0]?.length ?? 0
-        const minX = viewportCenter ? Math.max(0, viewportCenter.x + ViewportManager.minX) : 0
-        const minZ = viewportCenter ? Math.max(0, viewportCenter.z + ViewportManager.minZ) : 0
-        const maxX = viewportCenter ? Math.min(maxIndex, viewportCenter.x + ViewportManager.maxX) : maxIndex
-        const maxZ = viewportCenter ? Math.min(depth - 1, viewportCenter.z + ViewportManager.maxZ) : depth - 1
-        const isVisible = (x: number, z: number, block: MapBlock) =>
-            !viewportCenter || ViewportManager.isPointInVisibleMatrix(x, z, 2, block.totalHeight)
-        for (let cellX = Math.floor((minX + originX) / SCATTER_CELL_SIZE); cellX <= Math.floor((maxX + originX) / SCATTER_CELL_SIZE); cellX++) {
-            for (let cellZ = Math.floor((minZ + originZ) / SCATTER_CELL_SIZE); cellZ <= Math.floor((maxZ + originZ) / SCATTER_CELL_SIZE); cellZ++) {
+        const maxX = blockMap.length - 1
+        const maxZ = (blockMap[0]?.length ?? 0) - 1
+        if (maxX < 0 || maxZ < 0) return
+        for (let cellX = Math.floor(originX / SCATTER_CELL_SIZE); cellX <= Math.floor((maxX + originX) / SCATTER_CELL_SIZE); cellX++) {
+            for (let cellZ = Math.floor(originZ / SCATTER_CELL_SIZE); cellZ <= Math.floor((maxZ + originZ) / SCATTER_CELL_SIZE); cellZ++) {
                 // Absolute world cells seed the scatter. A tile can receive any number of candidates.
                 const candidateCount = 24 + this.hashTile(cellX, cellZ, 70) % 17
-                const totalCandidates = candidateCount * (1 + extraTuftPasses)
+                const totalCandidates = candidateCount * 3
                 for (let index = 0; index < totalCandidates; index++) {
                     const extraTuft = index >= candidateCount
                     const salt = extraTuft ? 3000 + (index - candidateCount) * 16 : 100 + index * 16
@@ -223,25 +147,24 @@ export const FoliageManager = {
                     const worldZ = Math.fround((cellZ + this.roll(cellX, cellZ, salt + 1)) * SCATTER_CELL_SIZE - 0.5) - originZ
                     const x = Math.round(worldX)
                     const z = Math.round(worldZ)
-                    if (x < minX || x > maxX || z < minZ || z > maxZ) continue
-                    if (options?.visibleTile && !options.visibleTile(x, z)) continue
+                    if (x < 0 || x > maxX || z < 0 || z > maxZ) continue
+                    if (!options.visibleTile(x, z)) continue
 
                     const block = blockMap[x][z]
-                    if (block.snowed && vegetationMask.has(x * depth + z)) continue
                     const config = getProfile(block)
                     if (!config) continue
 
                     const scatter = config.scatter?.(worldX, worldZ, this.roll(cellX, cellZ, salt + 2))
-                    const tuftDensity = scatter?.tuftDensity ?? this.patchDensity(worldX, worldZ)
+                    const tuftDensity = scatter?.tuftDensity ?? 0
                     const tuftLimit = config.tuftsPerTile * tuftDensity
                     const roll = this.roll(cellX, cellZ, salt + 9) * CANDIDATES_PER_TILE
                     const isTuft = extraTuft ? roll < (scatter?.extraTuftChance ?? 0) * CANDIDATES_PER_TILE : roll < tuftLimit
-                    let groundRow = MOSS
-                    let groundSize = scatter?.groundSize
+                    let groundRow = UNUSED_GROUND_ROW
+                    let groundSize: readonly [number, number] | undefined
                     if (!isTuft) {
-                        if (extraTuft || block.snowed) continue
+                        if (!groundMesh || extraTuft || block.snowed) continue
                         const rows = config.groundRows
-                        groundRow = scatter?.groundRow ?? (rows ? rows[this.hashTile(cellX, cellZ, salt + 2) % rows.length] : MOSS)
+                        groundRow = scatter?.groundRow ?? (rows ? rows[this.hashTile(cellX, cellZ, salt + 2) % rows.length] : UNUSED_GROUND_ROW)
                         const density = scatter?.groundDensity ?? tuftDensity
                         const multiplier = config.groundDensityMultipliers?.[groundRow] ?? 1
                         const groundLimit = tuftLimit + config.groundPerTile * density * multiplier
@@ -252,18 +175,18 @@ export const FoliageManager = {
                             groundSize = extra.size
                         }
                     }
-                    if (!isVisible(x, z, block) || !canDecorate(block, x, z)) continue
-
-                    const hideSnow = block.snowed && snowCoverMask.has(x * depth + z)
-                    const top = block.height + getTerrainHeightOffset(block, hideSnow)
+                    if (!canDecorate(block, x, z)) continue
+                    const top = block.totalHeight
                     if (isTuft) {
                         const extraRow = extraTuft ? scatter?.extraTuftRow : undefined
                         const row = extraRow ?? scatter?.tuftRow ?? config.rows[this.hashTile(cellX, cellZ, salt + 2) % config.rows.length]
-                        matrices.push(this.tuftMatrix(cellX, cellZ, worldX, top, worldZ, row, salt, config.tuftHeights?.[row]))
-                        uvData.push(this.getAtlasOffset(cellX, cellZ, row, salt))
+                        if (options.grassRows.has(row)) {
+                            options.placeTuft(this.tuftMatrix(cellX, cellZ, worldX, top, worldZ, salt, config.tuftHeights?.[row]), row)
+                        }
                         continue
                     }
 
+                    if (groundRow === UNUSED_GROUND_ROW) continue
                     const sizeRange = groundSize ?? config.groundSizes?.[groundRow]
                     const sizeRoll = this.roll(cellX, cellZ, salt + 10)
                     let size = sizeRange ? sizeRange[0] + sizeRoll * (sizeRange[1] - sizeRange[0]) : 0.38 + sizeRoll * 0.18
@@ -294,55 +217,34 @@ export const FoliageManager = {
             }
         }
 
-        for (const tile of vegetationMask) {
-            const x = Math.floor(tile / depth)
-            const z = tile % depth
-            if (x < minX || x > maxX || z < minZ || z > maxZ) continue
-            const block = blockMap[x][z]
-            if (!block.snowed || block.type <= 0 || block.type >= WATER_BLOCK_TYPE || !canDecorate(block, x, z)
-                || !isVisible(x, z, block)) continue
-
-            // Every exposed patch gets one tuft with a root inside its tile.
-            const salt = 750
-            const rootX = x + (this.roll(x, z, salt) - 0.5) * 0.8
-            const rootZ = z + (this.roll(x, z, salt + 1) - 0.5) * 0.8
-            const row = EXPOSED_GROUND_ROWS[this.hashTile(x, z, salt + 2) % EXPOSED_GROUND_ROWS.length]
-            const top = block.height + getTerrainHeightOffset(block, true)
-            matrices.push(this.tuftMatrix(x, z, rootX, top, rootZ, row, salt))
-            uvData.push(this.getAtlasOffset(x, z, row, salt))
+        for (const {matrix, row} of options.extraTufts) {
+            if (options.grassRows.has(row)) options.placeTuft(matrix, row)
         }
-
-        for (const {matrix, uv} of options?.extraTufts ?? []) {
-            matrices.push(options?.adjustTuftPlacement ? matrix.clone() : matrix)
-            uvData.push(uv)
-        }
-        if (options?.adjustTuftPlacement) matrices.forEach(options.adjustTuftPlacement)
-        for (const {matrix, uv} of options?.groundDecals ?? []) {
-            groundMatrices.push(matrix)
-            groundUvs.push(uv)
-        }
-        const updateBatch = (target: Mesh, placements: Matrix[], offsets: Vector2[], layer: FoliageLayer) => {
-            if (options?.mapAtlasOffset) {
-                let count = 0
-                for (let i = 0; i < placements.length; i++) {
-                    const offset = options.mapAtlasOffset(offsets[i], placements[i], layer)
-                    if (!offset) continue
-                    placements[count] = placements[i]
-                    offsets[count] = offset
-                    count++
-                }
-                placements.length = offsets.length = count
+        const updateBatch = (target: Mesh, placements: Matrix[], offsets: Vector2[], layer: GroundLayer) => {
+            let count = 0
+            for (let i = 0; i < placements.length; i++) {
+                const offset = options.mapAtlasOffset(offsets[i], placements[i], layer)
+                if (!offset) continue
+                placements[count] = placements[i]
+                offsets[count] = offset
+                count++
             }
-            if (options?.submit) options.submit(target, placements, offsets)
+            placements.length = offsets.length = count
+            if (options.submit) options.submit(target, placements, offsets)
             else {
                 updateWorldInstanceBuffers(target, placements, offsets)
                 target.setEnabled(placements.length > 0)
             }
         }
-        updateBatch(mesh, matrices, uvData, 'tufts')
-        updateBatch(groundMesh, groundMatrices, groundUvs, 'ground')
+        if (groundMesh) {
+            for (const {matrix, uv} of options.groundDecals) {
+                groundMatrices.push(matrix)
+                groundUvs.push(uv)
+            }
+            updateBatch(groundMesh, groundMatrices, groundUvs, 'ground')
+        }
         if (blended) {
-            for (const {matrix, uv} of options?.blendedDecals ?? []) {
+            for (const {matrix, uv} of options.blendedDecals) {
                 blended.matrices.push(matrix)
                 blended.uvs.push(uv)
             }
@@ -364,10 +266,8 @@ export const FoliageManager = {
 
     patchDensity(x: number, z: number): number {
         const patchSize = 5
-        const cellX = Math.floor(x / patchSize)
-        const cellZ = Math.floor(z / patchSize)
-        const u = x / patchSize - cellX
-        const v = z / patchSize - cellZ
+        const cellX = Math.floor(x / patchSize), cellZ = Math.floor(z / patchSize)
+        const u = x / patchSize - cellX, v = z / patchSize - cellZ
         const near = this.roll(cellX, cellZ, 60) * (1 - u) + this.roll(cellX + 1, cellZ, 60) * u
         const far = this.roll(cellX, cellZ + 1, 60) * (1 - u) + this.roll(cellX + 1, cellZ + 1, 60) * u
         return 0.25 + (near * (1 - v) + far * v) * 1.6
@@ -387,27 +287,17 @@ export const FoliageManager = {
     },
 
     getAtlasOffset(x: number, z: number, row: number, salt = 0): Vector2 {
-        const columns = row < MEADOW ? ATLAS_SIZE : 4
+        const columns = row < 3 ? ATLAS_SIZE : 4
         return new Vector2(this.hashTile(x, z, salt + 3) % columns, ATLAS_SIZE - 1 - row)
     },
 
-    tuftMatrix(x: number, z: number, centerX: number, top: number, centerZ: number, row: number, salt: number,
-               height = row === FLOWERS ? 0.44 : row === DRY_GRASS || row === SNOW_GRASS ? 0.55 : 0.65): Matrix {
+    tuftMatrix(x: number, z: number, centerX: number, top: number, centerZ: number, salt: number, height = 0.65): Matrix {
         const width = 0.42 + this.roll(x, z, salt + 4) * 0.31
         const tuftHeight = height * (0.73 + this.roll(x, z, salt + 5) * 0.55)
-        const rootInset = row === SNOW_GRASS ? 0.13 : 0.04
         this.instanceScale.set(width, tuftHeight, width)
-        this.instancePosition.set(centerX, top - tuftHeight * rootInset, centerZ)
+        this.instancePosition.set(centerX, top - 0.015, centerZ)
         Quaternion.RotationYawPitchRollToRef(this.roll(x, z, salt + 8) * 2 * Math.PI, 0, 0, this.instanceRotation)
         return Matrix.Compose(this.instanceScale, this.instanceRotation, this.instancePosition)
-    },
-
-    addSnowPreviewTuft(seed: number, centerX: number, matrices: Matrix[], uvData: Vector2[]) {
-        const row = SNOW_FOLIAGE.rows[this.hashTile(seed, 0, 2) % SNOW_FOLIAGE.rows.length]
-        const x = centerX + (this.roll(seed, 0, 6) - 0.5) * 0.32
-        const z = (this.roll(seed, 0, 7) - 0.5) * 0.44
-        matrices.push(this.tuftMatrix(seed, 0, x, 0, z, row, 0))
-        uvData.push(this.getAtlasOffset(seed, 0, row))
     },
 
     roll(x: number, z: number, salt: number): number {
@@ -422,20 +312,4 @@ export const FoliageManager = {
         return hash >>> 0
     },
 
-    createFoliageMesh(scene: Scene, parent: TransformNode | null): Mesh {
-        const planes: Mesh[] = []
-        for (let i = 0; i < 3; i++) {
-            const plane = MeshBuilder.CreatePlane(`foliagePlane${i}`, { width: 1, height: 1 }, scene)
-            plane.position.y = 0.5
-            plane.rotation.y = i * (Math.PI / 3)
-            planes.push(plane)
-        }
-
-        const mesh = Mesh.MergeMeshes(planes, true) as Mesh
-        mesh.parent = parent
-        mesh.alwaysSelectAsActiveMesh = true
-        mesh.doNotSyncBoundingInfo = true
-        mesh.isPickable = false
-        return mesh
-    },
 }

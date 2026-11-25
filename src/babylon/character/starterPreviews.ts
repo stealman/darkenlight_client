@@ -1,4 +1,4 @@
-import {AbstractMesh, Color3, Color4, FreeCamera, HemisphericLight, Matrix, ShadowGenerator, SpotLight, TransformNode, Vector2, Vector3} from '@babylonjs/core'
+import {AbstractMesh, Color3, Color4, FreeCamera, HemisphericLight, Matrix, ShadowGenerator, SpotLight, TransformNode, Vector3} from '@babylonjs/core'
 import '@babylonjs/core/Engines/Extensions/engine.views'
 import Character from './character'
 import {HUMAN_ANIMATION_SPEED} from './humanModelRig'
@@ -7,7 +7,9 @@ import {EquipManager} from '@/babylon/item/equipManager'
 import {AudioManager} from '@/babylon/audio/audioManager'
 import {MagicArrowEffect, setSpellGlowEnabled} from '@/babylon/gfx/magicArrowEffect'
 import {Builder} from '@/babylon/builder'
-import {WorldRenderer} from '@/babylon/world/worldRenderer'
+import {FoliageManager} from '@/babylon/world/foliageManager'
+import {createGrassRenderer} from '@/babylon/world/grassRenderer'
+import {Settings} from '@/settings/settings'
 import {updateWorldInstanceBuffers} from '@/babylon/world/worldInstanceBuffers'
 import {getStarterEquipment} from '@game/character/starterEquipment'
 import {getStarterHairAppearance} from '@game/character/characterAppearance'
@@ -46,25 +48,15 @@ export async function startStarterPreviews(canvases: HTMLCanvasElement[], signal
     platforms.isPickable = false
     updateWorldInstanceBuffers(platforms, [Matrix.Identity(), Matrix.Translation(10, 0, 0)],
         [terrainBlockAtlasUv(0, 0, 0), terrainBlockAtlasUv(10, 0, 0)])
-    const foliage = WorldRenderer.foliage
-    const foliageMesh = foliage?.createFoliageMesh(scene, platformRoot)
-    if (foliage && foliageMesh) {
-        foliageMesh.material = foliage.foliageMaterial
-        foliageMesh.layerMask = previewMask
-        foliageMesh.isPickable = false
-        foliageMesh.receiveShadows = true
-        const foliageMatrices: Matrix[] = []
-        const foliageUvs: Vector2[] = []
-        const seed = Math.floor(Math.random() * 1000000)
-        for (let block = 0; block < classKeys.length; block++) {
-            for (let clump = 0; clump < 2; clump++) {
-                // Keep the clumps to either side of the character's feet.
-                const centerX = block * 10 + (clump === 0 ? -0.33 : 0.33)
-                foliage.addSnowPreviewTuft(seed + block * 2 + clump, centerX, foliageMatrices, foliageUvs)
-            }
-        }
-        updateWorldInstanceBuffers(foliageMesh, foliageMatrices, foliageUvs)
-    }
+    const grass = createGrassRenderer(scene, platformRoot, 0)
+    const tufts = classKeys.flatMap((_, block) => [-0.33, 0.33].map((side, clump) => {
+        const seed = block * 2 + clump
+        return {matrix: FoliageManager.tuftMatrix(seed, 0, block * 10 + side, 0,
+            (FoliageManager.roll(seed, 0, 7) - 0.5) * 0.44, 0, 0.55), tone: 3 as const}
+    }))
+    grass.setTufts(tufts)
+    grass.render(5, 0, Settings.isDetalLevelLow() ? 'low' : 'high', 1)
+    for (const mesh of grass.meshes) mesh.layerMask = previewMask
     const originalLights = scene.lights.map(light => ({light, enabled: light.isEnabled()}))
     originalLights.forEach(({light}) => light.setEnabled(false))
     const fill = new HemisphericLight('starterPreviewFill', Vector3.Up(), scene)
@@ -99,7 +91,7 @@ export async function startStarterPreviews(canvases: HTMLCanvasElement[], signal
     platforms.receiveShadows = true
     shadows.forEach(shadow => {
         shadow.addShadowCaster(platforms, false)
-        if (foliageMesh) shadow.addShadowCaster(foliageMesh, false)
+        for (const mesh of grass.meshes) if (mesh.isEnabled()) shadow.addShadowCaster(mesh, false)
     })
     let previousActive: string | null = null
     let lastMysticCastRequest = mysticCastRequests()
@@ -211,6 +203,7 @@ export async function startStarterPreviews(canvases: HTMLCanvasElement[], signal
         shadowReceivers.forEach((receive, mesh) => { if (!mesh.isDisposed()) mesh.receiveShadows = receive })
         cameras.forEach(camera => camera.dispose())
         platformRoot.dispose()
+        grass.dispose()
         platformMaterial.dispose(false, true)
         shadows.forEach(shadow => shadow.dispose())
         lights.forEach(light => light.dispose())
