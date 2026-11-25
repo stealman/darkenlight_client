@@ -6,16 +6,20 @@ import { Settings } from '@/settings/settings'
 import { OutdoorInstanceBatch } from './outdoorInstanceBatch'
 import type { OutdoorInstance } from './outdoorInstanceBatch'
 import { appendPavingAttributes, createSimpleStonePathMesh, createStonePathRenderer, pavingStoneMatrix, PAVING_INSTANCE_ATTRIBUTE } from './stonePathRenderer'
-import type { PavingStone } from './stonePathLayout'
+import type { PavingStone, StonePathBounds } from './stonePathLayout'
 import type { TerrainContactShadow } from './terrainContactShadow'
 import type { TerrainStepField } from './terrainStepField'
+
+const SURFACE_RESERVE_TILES = 4
 
 export function createOutdoorPaving(terrain: TransformNode, detailed: boolean,
     registerBatch: (batch: OutdoorInstanceBatch) => void, contactShadow?: TerrainContactShadow, terrainSteps?: TerrainStepField) {
     const uv = Vector2.Zero()
     let batch: OutdoorInstanceBatch | undefined
     let detailedRenderer: ReturnType<typeof createStonePathRenderer> | undefined
-    let surfaceKey = ''
+    let surfaceBounds: StonePathBounds | undefined
+    let surfaceRevision: number | undefined
+    let surfaceSnowRevision: number | undefined
 
     const getBatch = () => {
         if (batch) return batch
@@ -47,16 +51,27 @@ export function createOutdoorPaving(terrain: TransformNode, detailed: boolean,
                 return {batch: getBatch(), matrix: pavingStoneMatrix(stone), uv, attributes, index, slot: -1}
             }
         },
-        resetSurface() { surfaceKey = '' },
+        resetSurface() { surfaceBounds = undefined },
         updateSurface(map: MapBlock[][], minX: number, minZ: number, maxX: number, maxZ: number,
             snowCoverMask: ReadonlySet<number>, snowRevision: number, revision?: number) {
             if (!detailedRenderer?.mesh.thinInstanceCount) return
             const bounds = {minX: Math.max(0, minX - 1), minZ: Math.max(0, minZ - 1),
                 maxX: Math.min(map.length - 1, maxX + 1), maxZ: Math.min((map[0]?.length ?? 0) - 1, maxZ + 1)}
-            const key = `${bounds.minX}:${bounds.minZ}:${bounds.maxX}:${bounds.maxZ}:${revision}:${snowRevision}`
-            if (revision !== undefined && surfaceKey === key) return
+            if (revision !== undefined) {
+                if (surfaceBounds && surfaceRevision === revision && surfaceSnowRevision === snowRevision
+                    && bounds.minX >= surfaceBounds.minX && bounds.minZ >= surfaceBounds.minZ
+                    && bounds.maxX <= surfaceBounds.maxX && bounds.maxZ <= surfaceBounds.maxZ) return
+
+                // Preserve the sampling border and keep the field stationary for several tile crossings.
+                bounds.minX = Math.max(0, bounds.minX - SURFACE_RESERVE_TILES)
+                bounds.minZ = Math.max(0, bounds.minZ - SURFACE_RESERVE_TILES)
+                bounds.maxX = Math.min(map.length - 1, bounds.maxX + SURFACE_RESERVE_TILES)
+                bounds.maxZ = Math.min((map[0]?.length ?? 0) - 1, bounds.maxZ + SURFACE_RESERVE_TILES)
+            }
             detailedRenderer.updateSurfaceField(map, bounds, (x, z) => snowCoverMask.has(x * map.length + z))
-            surfaceKey = key
+            surfaceBounds = bounds
+            surfaceRevision = revision
+            surfaceSnowRevision = snowRevision
         },
     }
 }

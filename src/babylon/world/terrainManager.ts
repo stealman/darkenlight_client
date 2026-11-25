@@ -185,6 +185,8 @@ export const TerrainManager = {
         for (let x = minX; x <= maxX; x++) {
             for (let z = minZ; z <= maxZ; z++) {
                 const block = blockMap[x][z]
+                // The outdoor batches already evaluated visibility for solid surfaces.
+                if (outdoor && block.type !== WATER_BLOCK_TYPE) continue
 
                 // Check if block is in visible matrix
                 if (viewportCenter && !ViewportManager.isPointInVisibleMatrix(x, z, 2, block.totalHeight, 0, viewportCenter)) {
@@ -198,10 +200,8 @@ export const TerrainManager = {
                     WorldRenderer.block1!.uvData.push(block.beigeStonePath ? MaterialEnum1.ROCK1_BEIGE.uv : MaterialEnum1.ROCK1.uv)
                 }
                 if (outdoor) {
-                    if (block.type === WATER_BLOCK_TYPE) {
-                        this.addWaterTerrainLayer(x, z, block.height, getTerrainHeightOffset(block, false), block,
-                            terrainMatrices1, terrainUvData1, waterPlaneMatrices, waterPlaneUvData)
-                    }
+                    this.addWaterTerrainLayer(x, z, block.height, getTerrainHeightOffset(block, false), block,
+                        terrainMatrices1, terrainUvData1, waterPlaneMatrices, waterPlaneUvData)
                     continue
                 }
 

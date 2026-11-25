@@ -52,6 +52,7 @@ import { FoggyAreaManager } from '@/babylon/world/foggyAreaManager'
 import { ActiveMeshFreezer } from '@/babylon/scene/activeMeshFreezer'
 import { IndoorTerrainOcclusionManager } from '@/babylon/world/indoorTerrainOcclusionManager'
 import { modelAssetUrl } from '@/babylon/modelAssetUrl'
+import { ActorContactShadows } from '@/babylon/world/actorContactShadows'
 
 function isTauriDesktop(): boolean {
     return '__TAURI_INTERNALS__' in window
@@ -87,6 +88,7 @@ export const Renderer = {
     instrumentation: null as SceneInstrumentation | null,
     engine: null as Engine | null,
     camera: null as FreeCamera | null,
+    actorContactShadows: null as ActorContactShadows | null,
 
     menuPreviewSceneUsed: false,
 
@@ -119,6 +121,7 @@ export const Renderer = {
         this.instrumentation.captureActiveMeshesEvaluationTime = true
 
         Lights.initialize(this.scene, {terrainSunShadows: true})
+        this.actorContactShadows = Settings.isDetalLevelLow() ? new ActorContactShadows(this.scene) : null
         AudioManager.initialize(this.scene)
         MiniMap.initialize()
         CharacterManager.initialize()
@@ -294,6 +297,7 @@ export const Renderer = {
         }
 
         Connector.processMessages(actualTime)
+        this.actorContactShadows?.update()
         scene.render()
 
         if (!ViewportManager.viewPortInitialized) ViewportManager.calculateViewport(this.camera)

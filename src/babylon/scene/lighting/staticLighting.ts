@@ -1,7 +1,6 @@
 import {
     AbstractMesh,
     DirectionalLight,
-    Mesh,
     RenderTargetTexture,
     ShadowGenerator,
     SpotLight,
@@ -40,8 +39,6 @@ export interface StaticLightingHost {
     staticShadowGenerators: ShadowGenerator[]
     staticLights: Map<string, StaticLightSource>
     staticLightSlots: StaticLightSlot[]
-    staticLightShadersWarmed: boolean
-    staticLightShadersWarming: boolean
     staticLightFlickerTime: number
     actorStaticShadowCasterUpdateTime: number
     staticLightAssignmentUpdateTime: number
@@ -52,8 +49,6 @@ export interface StaticLightingHost {
     updateSharedLightMeshes(): void
     updateActorLightMeshes(): void
     updateActorStaticShadowCasters(): void
-    registerSharedLightMesh(mesh: AbstractMesh): void
-    warmUpStaticLightShaderVariant(meshes: Array<Mesh | AbstractMesh>, selectedLights: Array<DirectionalLight | SpotLight>): Promise<void>
 }
 
 const DEFAULT_STATIC_LIGHT_DIRECTION = new Vector3(0, -1, 0)
@@ -64,8 +59,6 @@ export function resetStaticLighting(host: StaticLightingHost) {
     host.staticLights.clear()
     host.staticLightSlots = []
     host.staticShadowGenerators = []
-    host.staticLightShadersWarmed = false
-    host.staticLightShadersWarming = false
     host.staticLightFlickerTime = 0
     host.actorStaticShadowCasterUpdateTime = ACTOR_STATIC_SHADOW_CASTER_UPDATE_SECONDS
     host.staticLightAssignmentUpdateTime = STATIC_LIGHT_ASSIGNMENT_UPDATE_SECONDS
@@ -182,6 +175,7 @@ export function clearStaticLights(host: StaticLightingHost) {
         slot.currentIntensity = 0
         slot.targetIntensity = 0
         slot.light.intensity = 0
+        if (slot.shadow != null) setStaticShadowGeneratorActive(slot.shadow, false)
     })
     host.updateActorStaticShadowCasters()
     host.updateSharedLightMeshes()
@@ -199,7 +193,7 @@ export function onLightsFrame(host: StaticLightingHost, timeRate: number) {
     }
     host.staticLightFlickerTime += timeRate
     host.updateDayNightLighting()
-    if (host.staticLights.size === 0 || host.staticLightShadersWarming) {
+    if (host.staticLights.size === 0) {
         return
     }
 
@@ -239,9 +233,10 @@ export function onLightsFrame(host: StaticLightingHost, timeRate: number) {
                 slot.source.position.z + flickerPosition.z,
             )
             slot.light.direction.copyFrom(slot.source.profile.direction ?? DEFAULT_STATIC_LIGHT_DIRECTION)
-            slot.light.angle = slot.source.profile.angle ?? DEFAULT_STATIC_LIGHT_ANGLE
+            const angle = slot.source.profile.angle ?? DEFAULT_STATIC_LIGHT_ANGLE
+            if (slot.light.angle !== angle) slot.light.angle = angle
             slot.light.range = getStaticLightRange(host, slot.source)
-            if (slot.shadow != null) {
+            if (slot.shadow != null && slot.light.shadowMaxZ !== slot.light.range) {
                 slot.light.shadowMaxZ = slot.light.range
             }
         }
@@ -310,31 +305,6 @@ function updateStaticLightAssignments(host: StaticLightingHost) {
     host.staticLightAssignmentsDirty = false
 }
 
-export async function warmUpStaticLightShaders(host: StaticLightingHost, meshes: Array<Mesh | AbstractMesh>) {
-    if (host.staticLightShadersWarmed || host.staticLightShadersWarming) {
-        return
-    }
-
-    meshes.forEach(mesh => host.registerSharedLightMesh(mesh))
-    host.staticLightShadersWarming = true
-    try {
-        const staticLights = host.staticLightSlots.slice(0, getStaticLightLimit(host)).map(slot => slot.light)
-        const variants: Array<Array<DirectionalLight | SpotLight>> = [host.indoor
-            ? [host.personalLight, ...staticLights]
-            : [host.sunLight, host.personalLight, ...staticLights]]
-        for (const variant of variants) {
-            await host.warmUpStaticLightShaderVariant(meshes, variant)
-        }
-
-        host.staticLightShadersWarmed = true
-    } catch (error) {
-        console.warn('Static light shader warm-up failed', error)
-    } finally {
-        host.updateSharedLightMeshes()
-        host.staticLightShadersWarming = false
-    }
-}
-
 export function getStaticLightLimit(host: Pick<StaticLightingHost, 'indoor'>): number {
     const limits = host.indoor ? STATIC_LIGHT_LIMITS : OUTDOOR_STATIC_LIGHT_LIMITS
     return limits[Settings.detailLevel.level - 1]
@@ -359,13 +329,12 @@ export function warmUpStaticShadowMaps(host: StaticLightingHost) {
         }
     })
 
-    if (hasAlternateShadow) {
-        host.sunLight.getScene().render()
+    try {
+        if (hasAlternateShadow) host.sunLight.getScene().render()
+    } finally {
+        host.staticLightSlots.forEach((slot, index) => selectStaticShadowGenerator(slot, originalShadows[index]))
+        updateStaticLightShadowMode(host)
     }
-
-    host.staticLightSlots.forEach((slot, index) => {
-        selectStaticShadowGenerator(slot, originalShadows[index])
-    })
 }
 
 export function updateStaticLightShadowMode(host: StaticLightingHost) {
@@ -376,9 +345,7 @@ export function updateStaticLightShadowMode(host: StaticLightingHost) {
 
 export function invalidateStaticShadowMaps(host: StaticLightingHost) {
     host.staticLightSlots.forEach(slot => {
-        if (slot.active || slot.currentIntensity > 0.001) {
-            invalidateStaticShadowSlot(slot)
-        }
+        invalidateStaticShadowSlot(slot)
     })
 }
 
@@ -513,20 +480,24 @@ function createStaticShadowGenerator(host: StaticLightingHost, light: SpotLight,
 
 function setStaticShadowGeneratorActive(shadow: ShadowGenerator, active: boolean, hasDynamicCasters: boolean = false) {
     const darkness = active ? 0 : 1
-    if (shadow.getDarkness() !== darkness) {
+    const previousDarkness = shadow.getDarkness()
+    if (previousDarkness !== darkness) {
         shadow.setDarkness(darkness)
     }
     const shadowMap = shadow.getShadowMap()
     const refreshRate = active && hasDynamicCasters
         ? RenderTargetTexture.REFRESHRATE_RENDER_ONEVERYTWOFRAMES
         : RenderTargetTexture.REFRESHRATE_RENDER_ONCE
-    if (shadowMap != null && shadowMap.refreshRate !== refreshRate) {
+    if (shadowMap && shadowMap.refreshRate !== refreshRate) {
         shadowMap.refreshRate = refreshRate
+    } else if (active && previousDarkness === 1) {
+        shadowMap?.resetRefreshCounter()
     }
 }
 
-function invalidateStaticShadowSlot(slot: StaticLightSlot) {
-    slot.shadow?.getShadowMap()?.resetRefreshCounter()
+export function invalidateStaticShadowSlot(slot: StaticLightSlot) {
+    const shadow = slot.shadow
+    if (shadow && shadow.getDarkness() < 1) shadow.getShadowMap()?.resetRefreshCounter()
 }
 
 function moveTowards(current: number, target: number, amount: number): number {

@@ -4,6 +4,7 @@ import {
     RenderTargetTexture,
     ShadowGenerator,
     SpotLight,
+    Vector3,
 } from '@babylonjs/core'
 import { getBrightnessIntensityFactor, Settings } from '@/settings/settings'
 import type { DayNightCycleSync } from '@/network/messageIfs'
@@ -54,6 +55,7 @@ export interface DayNightLightingHost {
     sunLight: DirectionalLight
     personalLight: SpotLight
     personalShadow: ShadowGenerator
+    personalShadowLightPosition: Vector3
     dayNightDayAtSync: number
     dayNightPhaseAtSync: number
     dayNightCycleDurationMs: number
@@ -228,22 +230,35 @@ function updateDynamicShadowMode(host: DayNightLightingHost, phase: number) {
         host.personalShadow,
         personalShadowActive,
         host.indoor ? INDOOR_PERSONAL_SHADOW_DARKNESS : OUTDOOR_PERSONAL_SHADOW_DARKNESS,
+        personalShadowActive ? getPersonalShadowRefreshRate(host) : undefined,
     )
 }
 
-function setDynamicShadowActive(shadow: ShadowGenerator, active: boolean, activeDarkness: number) {
+function getPersonalShadowRefreshRate(host: DayNightLightingHost) {
+    host.personalLight.computeTransformedInformation()
+    const lightPosition = host.personalLight.getAbsolutePosition()
+    const previous = host.personalShadowLightPosition
+    const moved = !Number.isFinite(previous.x) || Vector3.DistanceSquared(lightPosition, previous) > 0.000001
+    previous.copyFrom(lightPosition)
+    return moved ? RenderTargetTexture.REFRESHRATE_RENDER_ONEVERYFRAME : RenderTargetTexture.REFRESHRATE_RENDER_ONEVERYTWOFRAMES
+}
+
+function setDynamicShadowActive(shadow: ShadowGenerator, active: boolean, activeDarkness: number,
+    activeRefreshRate = RenderTargetTexture.REFRESHRATE_RENDER_ONEVERYFRAME) {
     const darkness = active ? activeDarkness : 1
+    const activated = active && shadow.getDarkness() === 1
     if (shadow.getDarkness() !== darkness) {
         shadow.setDarkness(darkness)
     }
 
     const shadowMap = shadow.getShadowMap()
     const refreshRate = active
-        ? RenderTargetTexture.REFRESHRATE_RENDER_ONEVERYFRAME
+        ? activeRefreshRate
         : RenderTargetTexture.REFRESHRATE_RENDER_ONCE
-    if (shadowMap != null && shadowMap.refreshRate !== refreshRate) {
+    if (shadowMap && shadowMap.refreshRate !== refreshRate) {
         shadowMap.refreshRate = refreshRate
-        if (active) shadowMap.resetRefreshCounter()
+    } else if (activated) {
+        shadowMap?.resetRefreshCounter()
     }
 }
 

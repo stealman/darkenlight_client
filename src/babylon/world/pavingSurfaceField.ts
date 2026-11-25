@@ -34,14 +34,25 @@ export function buildPavingSurfaceField(map: MapBlock[][], bounds: StonePathBoun
         const x = tx + bounds.minX, z = tz + bounds.minZ
         const tile = map[x][z]
         const base = sample(tile, x, z)
-        const neighbors = []
-        if (tile.stonePath || tile.beigeStonePath) {
-            for (const [index, [dx, dz]] of NEIGHBORS.entries()) {
-                const neighbor = map[x + dx]?.[z + dz]
-                if (!neighbor || neighbor.stonePath || neighbor.beigeStonePath || neighbor.height !== tile.height
-                    || neighbor.type <= 0 || neighbor.type >= 50) continue
-                neighbors.push({index, surface: sample(neighbor, x + dx, z + dz)})
+        if (!tile.stonePath && !tile.beigeStonePath) {
+            const snow = base[0] * 255, grass = base[1] * 255, winter = base[2] * 255, mud = base[3] * 255
+            for (let sz = 0; sz < SAMPLES; sz++) {
+                const start = ((tz * SAMPLES + sz) * width + tx * SAMPLES) * 4
+                for (let offset = start; offset < start + SAMPLES * 4; offset += 4) {
+                    pixels[offset] = snow
+                    pixels[offset + 1] = grass
+                    pixels[offset + 2] = winter
+                    pixels[offset + 3] = mud
+                }
             }
+            continue
+        }
+        const neighbors = []
+        for (const [index, [dx, dz]] of NEIGHBORS.entries()) {
+            const neighbor = map[x + dx]?.[z + dz]
+            if (!neighbor || neighbor.stonePath || neighbor.beigeStonePath || neighbor.height !== tile.height
+                || neighbor.type <= 0 || neighbor.type >= 50) continue
+            neighbors.push({index, surface: sample(neighbor, x + dx, z + dz)})
         }
         for (let sz = 0; sz < SAMPLES; sz++) for (let sx = 0; sx < SAMPLES; sx++) {
             const offset = ((tz * SAMPLES + sz) * width + tx * SAMPLES + sx) * 4

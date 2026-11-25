@@ -103,17 +103,18 @@ export const WorldRenderer = {
     },
 
     checkRenderWorld() {
-        const pos = MyPlayer.myChar.getPositionRounded()
+        const {x, y, z} = MyPlayer.myChar.pos
         const renderStep = Settings.isPhoneOrTablet() ? TOUCH_WORLD_RENDER_STEP_TILES : 1
         const renderDue = this.lastPos == null
-            || Math.abs(pos.x - this.lastPos.x) >= renderStep
-            || Math.abs(pos.z - this.lastPos.z) >= renderStep
+            || Math.abs(Math.round(x) - this.lastPos.x) >= renderStep
+            || Math.abs(Math.round(z) - this.lastPos.z) >= renderStep
         if (renderDue) {
             if (ViewportManager.viewPortInitialized) {
                 WorldDataManager.fetchWorldDataIfNeeded()
                 WorldRenderer.renderWorld()
                 TargetingManager.resetCycleIndex()
-                this.lastPos = pos
+                this.lastPos ??= new Vector3()
+                this.lastPos.set(Math.round(x), Math.round(y), Math.round(z))
             }
         }
     },

@@ -4,7 +4,6 @@ import {
     DirectionalLight,
     Material,
     Mesh,
-    RenderTargetTexture,
     Scene,
     ShadowGenerator,
     SpotLight,
@@ -20,10 +19,8 @@ import {
     DEFAULT_DAY_NIGHT_CYCLE_DURATION_MS,
     DEFAULT_ENVIRONMENT_INTENSITY,
     INDOOR_PERSONAL_LIGHT_HEIGHT,
-    INDOOR_PERSONAL_SHADOW_DARKNESS,
     INITIAL_DAY_NIGHT_PHASE,
     OUTDOOR_PERSONAL_LIGHT_HEIGHT,
-    OUTDOOR_PERSONAL_SHADOW_DARKNESS,
     PERSONAL_LIGHT_DIRECTION,
     PERSONAL_LIGHT_POSITION,
     PERSONAL_LIGHT_X_OFFSET,
@@ -49,7 +46,6 @@ import {
     unregisterStaticLight,
     updateStaticLightShadowMode,
     warmUpStaticShadowMaps,
-    warmUpStaticLightShaders,
 } from '@/babylon/scene/lighting/staticLighting'
 import {
     ActorStaticShadowRangeTest,
@@ -70,7 +66,7 @@ import {
     updateSharedLightMeshes,
     warmActorMaterial,
     warmLocalPlayerLightMaterial,
-    warmUpStaticLightShaderVariant,
+    warmUpShadowCasterShaders,
 } from '@/babylon/scene/lighting/meshLighting'
 
 export { FOG_ENABLED }
@@ -97,8 +93,6 @@ export const Lights = {
     actorMaterialWarmups: new WeakMap<Material, Promise<void>>(),
     localPlayerLightWarmups: new WeakMap<Material, Promise<void>>(),
     localPlayerLightWarmingMeshes: new Set<AbstractMesh>(),
-    staticLightShadersWarmed: false,
-    staticLightShadersWarming: false,
     dayNightShadersWarmed: false,
     staticLightFlickerTime: 0,
     actorStaticShadowCasterUpdateTime: 0,
@@ -155,7 +149,6 @@ export const Lights = {
             this.shadow.forceBackFacesOnly = true
             this.personalShadow = new ShadowGenerator(Settings.detailLevel.shadowQuality == 2 ? 2048 : 1024, this.personalLight, false)
             this.personalShadow.bias = 0.005
-            this.personalShadow.setDarkness(OUTDOOR_PERSONAL_SHADOW_DARKNESS)
             this.personalShadow.usePoissonSampling = true
             this.personalShadow.frustumEdgeFalloff = 0.3
             this.personalLight.shadowMinZ = 0.05
@@ -221,7 +214,6 @@ export const Lights = {
                 : Math.max(this.buildingInteriorBlend - step, targetBlend)
             this.updatePersonalLightPosition()
         }
-        this.updatePersonalShadowRefreshRate()
         onLightsFrame(this, timeRate)
     },
 
@@ -289,16 +281,8 @@ export const Lights = {
         return DEFAULT_ENVIRONMENT_INTENSITY * getBrightnessIntensityFactor(Settings.brightness)
     },
 
-    async warmUpStaticLightShaders(meshes: Array<Mesh | AbstractMesh>) {
-        await warmUpStaticLightShaders(this, meshes)
-    },
-
-    async warmUpStaticLightShaderVariant(meshes: Array<Mesh | AbstractMesh>, selectedLights: Array<DirectionalLight | SpotLight>) {
-        await warmUpStaticLightShaderVariant(meshes, selectedLights)
-    },
-
     async warmUpDayNightCycle(onProgress?: (completed: number, total: number) => void) {
-        if (this.dayNightShadersWarmed || this.indoor) {
+        if (this.dayNightShadersWarmed) {
             onProgress?.(1, 1)
             return
         }
@@ -306,13 +290,13 @@ export const Lights = {
         const scene = this.sunLight.getScene()
         onProgress?.(0, 1)
         try {
-            // There is now only one topology for the entire outdoor cycle.
-            // Compile its first visible frame behind the loading overlay; no
-            // artificial day/transition/night passes are needed anymore.
-            this.updateDayNightLighting()
+            this.onFrame(0)
             scene.markAllMaterialsAsDirty(Material.LightDirtyFlag)
             await scene.whenReadyAsync()
-            warmUpStaticShadowMaps(this)
+            if (Settings.isShadowsEnabled()) {
+                await warmUpShadowCasterShaders(this)
+                warmUpStaticShadowMaps(this)
+            }
             scene.render()
 
             onProgress?.(1, 1)
@@ -340,27 +324,6 @@ export const Lights = {
         )
     },
 
-    updatePersonalShadowRefreshRate() {
-        if (!Settings.isShadowsEnabled()) {
-            return
-        }
-        const shadowMap = this.personalShadow.getShadowMap()
-        if (shadowMap == null) {
-            return
-        }
-
-        const lightPosition = this.personalLight.getAbsolutePosition()
-        const lightMoved = !Number.isFinite(this.personalShadowLightPosition.x)
-            || Vector3.DistanceSquared(lightPosition, this.personalShadowLightPosition) > 0.000001
-        const refreshRate = lightMoved
-            ? RenderTargetTexture.REFRESHRATE_RENDER_ONEVERYFRAME
-            : RenderTargetTexture.REFRESHRATE_RENDER_ONEVERYTWOFRAMES
-        if (shadowMap.refreshRate !== refreshRate) {
-            shadowMap.refreshRate = refreshRate
-        }
-        this.personalShadowLightPosition.copyFrom(lightPosition)
-    },
-
     addShadowCaster(mesh: Mesh | AbstractMesh, castPersonalShadow: boolean = true, castStaticShadow: boolean = false, castOutdoorStaticShadow: boolean = false, filterActorStaticShadowByDistance: boolean = true, actorStaticShadowRangeTest?: ActorStaticShadowRangeTest, filterPersonalShadowByDistance: boolean = castOutdoorStaticShadow, castSunShadow: boolean = true) {
         addMeshShadowCaster(this, mesh, castPersonalShadow, castStaticShadow, castOutdoorStaticShadow, filterActorStaticShadowByDistance, actorStaticShadowRangeTest, filterPersonalShadowByDistance, castSunShadow)
     },
@@ -381,11 +344,6 @@ export const Lights = {
         this.indoor = indoor
         this.staticLightAssignmentsDirty = true
         this.updatePersonalLightPosition()
-        if (Settings.isShadowsEnabled()) {
-            this.personalShadow.setDarkness(
-                indoor ? INDOOR_PERSONAL_SHADOW_DARKNESS : OUTDOOR_PERSONAL_SHADOW_DARKNESS,
-            )
-        }
         updateActorStaticShadowCasters(this)
         updateStaticLightShadowMode(this)
         this.brightnessChanged()

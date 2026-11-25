@@ -52,13 +52,16 @@ export const ViewportManager = {
             return false
         }
 
-        const myPos = center ?? MyPlayer.myChar.getPositionRounded()
-        const heightLayer = worldY == null
-            ? 0
-            : Math.min(this.downwardHeightLayers, Math.max(0, Math.round(myPos.y - worldY)))
+        const originX = center?.x ?? Math.round(MyPlayer.myChar.pos.x)
+        const originZ = center?.z ?? Math.round(MyPlayer.myChar.pos.z)
+        let heightLayer = 0
+        if (worldY != null) {
+            const originY = center?.y ?? Math.round(MyPlayer.myChar.pos.y)
+            heightLayer = Math.min(this.downwardHeightLayers, Math.max(0, Math.round(originY - worldY)))
+        }
         const visibilityMatrix = this.visibilityMatricesByHeight[heightLayer] || this.visibilityMatrix
-        x -= myPos.x
-        z -= myPos.z
+        x -= originX
+        z -= originZ
 
         // Positive world X projects towards the fog-heavy upper-right part of
         // the isometric view. Selected expensive renderers can move their
@@ -92,9 +95,9 @@ export const ViewportManager = {
             return false
         }
 
-        const myPos = MyPlayer.myChar.getPositionRounded()
-        const relativeX = x - myPos.x
-        const relativeZ = z - myPos.z
+        const pos = MyPlayer.myChar.pos
+        const relativeX = x - Math.round(pos.x)
+        const relativeZ = z - Math.round(pos.z)
         const distanceX = relativeX < this.minX
             ? this.minX - relativeX
             : Math.max(0, relativeX - this.maxX)

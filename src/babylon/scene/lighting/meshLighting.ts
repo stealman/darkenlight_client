@@ -15,7 +15,7 @@ import {
     STATIC_LIGHT_LIMITS,
 } from '@/babylon/scene/lighting/lightConfig'
 import type { StaticLightSlot } from '@/babylon/scene/lighting/lightTypes'
-import { getActorStaticLightLimit, getStaticLightLimit } from '@/babylon/scene/lighting/staticLighting'
+import { getActorStaticLightLimit, getStaticLightLimit, invalidateStaticShadowSlot } from '@/babylon/scene/lighting/staticLighting'
 
 export type ActorStaticShadowRangeTest = (lightPosition: Vector3, lightRangeSquared: number) => boolean
 
@@ -237,12 +237,63 @@ export async function compileActorLightVariants(host: MeshLightingHost, mesh: Ab
     }
 }
 
-export async function warmUpStaticLightShaderVariant(meshes: Array<Mesh | AbstractMesh>, selectedLights: Array<DirectionalLight | SpotLight>) {
-    meshes.forEach(mesh => {
-        mesh._lightSources = selectedLights
-        mesh._markSubMeshesAsLightDirty()
-    })
-    await Promise.all(meshes.map(mesh => mesh.material?.forceCompilationAsync(mesh, {useInstances: true})))
+export async function warmUpShadowCasterShaders(host: MeshLightingHost) {
+    const engine = host.sunLight.getScene().getEngine()
+    const staticCasters = [...host.filteredStaticShadowCasters, ...host.actorStaticShadowCasters,
+        ...host.unfilteredActorStaticShadowCasters]
+    const targets = [
+        {generator: host.shadow, candidates: []},
+        {generator: host.personalShadow, candidates: host.filteredPersonalShadowCasters},
+        ...host.staticShadowGenerators.map(generator => ({generator, candidates: staticCasters})),
+    ]
+    const pending: (() => boolean)[] = []
+    for (const {generator, candidates} of targets) {
+        const map = generator.getShadowMap()
+        if (!map) continue
+        const meshes = new Set(map.renderList)
+        for (const mesh of candidates) {
+            meshes.add(mesh)
+            for (const child of mesh.getChildMeshes()) meshes.add(child)
+        }
+        for (const mesh of meshes) {
+            if (!(mesh instanceof Mesh) || !mesh.geometry || mesh.isDisposed()) continue
+            for (const subMesh of mesh.subMeshes) {
+                const material = subMesh.getMaterial()
+                if (!material) continue
+                const transparent = material.needAlphaBlendingForMesh(mesh)
+                if (transparent && !generator.transparencyShadow) continue
+                pending.push(() => {
+                    if (mesh.isDisposed()) return true
+                    // A retained thin-instance buffer can be empty at the spawn point.
+                    // Compile with the draw layout it uses when populated.
+                    const count = mesh.thinInstanceCount
+                    if (count === 0 && mesh.getVertexBuffer('world0') && engine.getCaps().instancedArrays) {
+                        mesh.thinInstanceCount = 1
+                    }
+                    const previousPass = engine.currentRenderPassId
+                    engine.currentRenderPassId = map.renderPassId
+                    try {
+                        const instanced = engine.getCaps().instancedArrays && (mesh.hasThinInstances || mesh.instances.length > 0)
+                        return generator.isReady(subMesh, instanced, transparent)
+                    } finally {
+                        engine.currentRenderPassId = previousPass
+                        if (mesh.thinInstanceCount !== count) mesh.thinInstanceCount = count
+                    }
+                })
+            }
+        }
+    }
+    const deadline = performance.now() + 10_000
+    let waiting = pending
+    while (waiting.length > 0) {
+        waiting = waiting.filter(check => !check())
+        if (!waiting.length) return
+        if (performance.now() >= deadline) {
+            console.warn(`Timed out warming ${waiting.length} shadow caster shader passes`)
+            return
+        }
+        await new Promise(resolve => setTimeout(resolve, 16))
+    }
 }
 
 export function addShadowCaster(host: MeshLightingHost, mesh: Mesh | AbstractMesh, castPersonalShadow: boolean = true, castStaticShadow: boolean = false, castOutdoorStaticShadow: boolean = false, filterActorStaticShadowByDistance: boolean = true, actorStaticShadowRangeTest?: ActorStaticShadowRangeTest, filterPersonalShadowByDistance: boolean = castOutdoorStaticShadow, castSunShadow: boolean = true) {
@@ -407,7 +458,7 @@ function setPersonalShadowCaster(host: MeshLightingHost, mesh: AbstractMesh, ena
         host.activePersonalShadowCasters.delete(mesh)
         host.personalShadow.removeShadowCaster(mesh)
     }
-    host.personalShadow.getShadowMap()?.resetRefreshCounter()
+    if (host.personalShadow.getDarkness() < 1) host.personalShadow.getShadowMap()?.resetRefreshCounter()
 }
 
 function setStaticShadowCaster(slot: StaticLightSlot, mesh: AbstractMesh, enabled: boolean) {
@@ -423,7 +474,7 @@ function setStaticShadowCaster(slot: StaticLightSlot, mesh: AbstractMesh, enable
         slot.standardShadow?.removeShadowCaster(mesh)
         slot.largeCampfireShadow?.removeShadowCaster(mesh)
     }
-    slot.shadow?.getShadowMap()?.resetRefreshCounter()
+    invalidateStaticShadowSlot(slot)
 }
 
 function setActorStaticShadowCaster(slot: StaticLightSlot, mesh: AbstractMesh, enabled: boolean) {
@@ -442,7 +493,7 @@ function setActorStaticShadowCaster(slot: StaticLightSlot, mesh: AbstractMesh, e
     // Both generator render lists stay synchronized, but only the currently
     // selected map needs rendering. A later generator switch invalidates its
     // newly selected map separately.
-    slot.shadow?.getShadowMap()?.resetRefreshCounter()
+    invalidateStaticShadowSlot(slot)
 }
 
 function staticLightSlotCastsActorShadows(host: MeshLightingHost, slot: StaticLightSlot): boolean {
