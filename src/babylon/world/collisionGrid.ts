@@ -15,11 +15,15 @@ export class CollisionGrid<T> {
     private readonly entries = new Map<T, GridEntry<T>>()
     private nextOrder = 0
     private queryId = 0
+    private version = 0
+
+    get revision() { return this.version }
 
     constructor(private readonly cellSize = 4) {}
 
     add(value: T, minX: number, minZ: number, maxX: number, maxZ: number) {
         this.remove(value)
+        this.version++
         const entry: GridEntry<T> = {
             value, order: this.nextOrder++, visited: 0,
             minX: Math.floor(minX / this.cellSize), minZ: Math.floor(minZ / this.cellSize),
@@ -42,6 +46,7 @@ export class CollisionGrid<T> {
     remove(value: T) {
         const entry = this.entries.get(value)
         if (!entry) return
+        this.version++
         for (let x = entry.minX; x <= entry.maxX; x++) {
             for (let z = entry.minZ; z <= entry.maxZ; z++) {
                 const key = `${x};${z}`
@@ -54,10 +59,26 @@ export class CollisionGrid<T> {
     }
 
     clear() {
+        this.version++
         this.cells.clear()
         this.entries.clear()
         this.nextOrder = 0
         this.queryId = 0
+    }
+
+    forEachInBounds(minX: number, minZ: number, maxX: number, maxZ: number, visit: (value: T) => void) {
+        const query = ++this.queryId
+        for (let x = Math.floor(minX / this.cellSize); x <= Math.floor(maxX / this.cellSize); x++) {
+            for (let z = Math.floor(minZ / this.cellSize); z <= Math.floor(maxZ / this.cellSize); z++) {
+                const cell = this.cells.get(`${x};${z}`)
+                if (!cell) continue
+                for (const entry of cell) {
+                    if (entry.visited === query) continue
+                    entry.visited = query
+                    visit(entry.value)
+                }
+            }
+        }
     }
 
     findFirst(x: number, z: number, size: number, collides: (value: T) => boolean): T | null {

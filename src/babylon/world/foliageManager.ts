@@ -113,6 +113,7 @@ export const FoliageManager = {
             profiles: ReadonlyMap<number, TerrainFoliage>
             extraTufts: readonly {matrix: Matrix, row: number}[]
             grassRows: ReadonlySet<number>
+            grassDensity?: (x: number, z: number) => number
             placeTuft?: (matrix: Matrix, row: number) => void
             groundDecals: readonly {matrix: Matrix, uv: Vector2}[]
             blendedDecals: readonly {matrix: Matrix, uv: Vector2}[]
@@ -159,36 +160,34 @@ export const FoliageManager = {
                     const tuftDensity = scatter?.tuftDensity ?? 0
                     const tuftLimit = config.tuftsPerTile * tuftDensity
                     const roll = this.roll(cellX, cellZ, salt + 9) * CANDIDATES_PER_TILE
-                    const isTuft = extraTuft ? roll < (scatter?.extraTuftChance ?? 0) * CANDIDATES_PER_TILE : roll < tuftLimit
-                    if (isTuft && !placeTuft) continue // Reserve the same spots when scattering ground debris.
-                    let groundRow = UNUSED_GROUND_ROW
-                    let groundSize: readonly [number, number] | undefined
-                    if (!isTuft) {
-                        if (!groundMesh || extraTuft || block.snowed) continue
-                        const rows = config.groundRows
-                        groundRow = scatter?.groundRow ?? (rows ? rows[this.hashTile(cellX, cellZ, salt + 2) % rows.length] : UNUSED_GROUND_ROW)
-                        const density = scatter?.groundDensity ?? tuftDensity
-                        const multiplier = config.groundDensityMultipliers?.[groundRow] ?? 1
-                        const groundLimit = tuftLimit + config.groundPerTile * density * multiplier
-                        if (roll >= groundLimit) {
-                            const extra = scatter?.extraGround
-                            if (!extra || roll >= groundLimit + extra.chance * CANDIDATES_PER_TILE) continue
-                            groundRow = extra.row
-                            groundSize = extra.size
+                    if (placeTuft) {
+                        const passLimit = extraTuft ? (scatter?.extraTuftChance ?? 0) * CANDIDATES_PER_TILE : tuftLimit
+                        if (passLimit > 0 && roll < passLimit * (options.grassDensity?.(x, z) ?? 1)) {
+                            const extraRow = extraTuft ? scatter?.extraTuftRow : undefined
+                            const row = extraRow ?? scatter?.tuftRow
+                                ?? config.rows[this.hashTile(cellX, cellZ, salt + 2) % config.rows.length]
+                            if (options.grassRows.has(row) && canDecorate(block, x, z)) {
+                                placeTuft(this.tuftMatrix(cellX, cellZ, worldX, block.totalHeight, worldZ, salt, config.tuftHeights?.[row]), row)
+                            }
                         }
-                    }
-                    if (!canDecorate(block, x, z)) continue
-                    const top = block.totalHeight
-                    if (isTuft) {
-                        const extraRow = extraTuft ? scatter?.extraTuftRow : undefined
-                        const row = extraRow ?? scatter?.tuftRow ?? config.rows[this.hashTile(cellX, cellZ, salt + 2) % config.rows.length]
-                        if (placeTuft && options.grassRows.has(row)) {
-                            placeTuft(this.tuftMatrix(cellX, cellZ, worldX, top, worldZ, salt, config.tuftHeights?.[row]), row)
-                        }
-                        continue
                     }
 
-                    if (groundRow === UNUSED_GROUND_ROW) continue
+                    // Keep the old ground scatter thresholds independent of grass density and masks.
+                    if (!groundMesh || extraTuft || block.snowed || roll < tuftLimit) continue
+                    const rows = config.groundRows
+                    let groundRow = scatter?.groundRow ?? (rows ? rows[this.hashTile(cellX, cellZ, salt + 2) % rows.length] : UNUSED_GROUND_ROW)
+                    let groundSize: readonly [number, number] | undefined
+                    const density = scatter?.groundDensity ?? tuftDensity
+                    const multiplier = config.groundDensityMultipliers?.[groundRow] ?? 1
+                    const groundLimit = tuftLimit + config.groundPerTile * density * multiplier
+                    if (roll >= groundLimit) {
+                        const extra = scatter?.extraGround
+                        if (!extra || roll >= groundLimit + extra.chance * CANDIDATES_PER_TILE) continue
+                        groundRow = extra.row
+                        groundSize = extra.size
+                    }
+                    if (groundRow === UNUSED_GROUND_ROW || !canDecorate(block, x, z)) continue
+                    const top = block.totalHeight
                     const sizeRange = groundSize ?? config.groundSizes?.[groundRow]
                     const sizeRoll = this.roll(cellX, cellZ, salt + 10)
                     let size = sizeRange ? sizeRange[0] + sizeRoll * (sizeRange[1] - sizeRange[0]) : 0.38 + sizeRoll * 0.18

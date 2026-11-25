@@ -12,7 +12,10 @@ import { terrainWithoutSnow } from '@/adminUtils/terrainLocalTransitions'
 import { createTerrainFoliageRenderer } from '@/adminUtils/terrainFoliageRenderer'
 import { createGrassRenderer, GAME_GRASS_ENABLED, GRASS_CONTACT_LIMIT, GRASS_MAX_BEND } from './grassRenderer'
 import type { GrassTuft } from './grassRenderer'
+import { getGrassSources } from './grassPlacement'
 import { BuildingManager } from './buildings/buildingManager'
+import { StaticsManager } from './statics/staticsManager'
+import { TreeManager } from './treeManager'
 import { WATER_BLOCK_TYPE } from './terrainManager'
 import { sameSnowMask } from './snowCoverMask'
 import { OutdoorInstanceBatch } from './outdoorInstanceBatch'
@@ -46,8 +49,10 @@ type Region = {
     visible: number[]
     foliage?: (OutdoorInstance[] | undefined)[]
     grass?: (GrassTile | undefined)[]
-    buildingKey?: string
+    foliageKey?: string
     buildingRevision?: number
+    treeRevision?: number
+    staticRevision?: number
     revision?: number
     snowRevision: number
     hasPaving: boolean
@@ -213,6 +218,8 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
                 previousBuildings = buildingsKey
                 buildingRevision++
             }
+            const treeRevision = grass ? TreeManager.collisionGrid.revision : 0
+            const staticRevision = grass ? StaticsManager.collisionGrid.revision : 0
 
             const prepareRegion = (x: number, z: number) => {
                 const key = x * depth + z
@@ -329,13 +336,17 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
             const prepareFoliage = (region: Region, x: number, z: number) => {
                 region.visible.length = 0
                 if (!grass && !foliageBatches.size) return
-                if (region.foliage && region.buildingRevision === buildingRevision) return
+                if (region.foliage && region.buildingRevision === buildingRevision
+                    && region.treeRevision === treeRevision && region.staticRevision === staticRevision) return
                 const {left, top, map} = region
                 const nearby = buildings.filter(bounds => bounds.maxX >= left && bounds.maxZ >= top
                     && bounds.minX < left + map.length && bounds.minZ < top + map[0].length)
-                const buildingKey = JSON.stringify(nearby)
+                const grassSources = grass ? getGrassSources(x - 0.5, z - 0.5, x + REGION_SIZE - 0.5, z + REGION_SIZE - 0.5) : []
+                const foliageKey = JSON.stringify([nearby, grassSources])
                 region.buildingRevision = buildingRevision
-                if (region.foliage && region.buildingKey === buildingKey) return
+                region.treeRevision = treeRevision
+                region.staticRevision = staticRevision
+                if (region.foliage && region.foliageKey === foliageKey) return
                 // Keep scattering out of the movement update. A new region is prepared in one frame.
                 region.foliage = undefined
                 region.grass = undefined
@@ -349,6 +360,7 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
                     }))
                     foliage.render(foliageMap, {
                         originX: left, originZ: top,
+                        grassSources,
                         placeGrass: grass ? tuft => {
                             const m = tuft.matrix.m
                             const tileX = Math.round(m[12]), tileZ = Math.round(m[14])
@@ -400,7 +412,7 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
                     })
                     region.foliage = placed
                     region.grass = placedGrass
-                    region.buildingKey = buildingKey
+                    region.foliageKey = foliageKey
                     for (const index of region.visible) {
                         const key = (x + Math.floor(index / REGION_SIZE)) * depth + z + index % REGION_SIZE
                         const visible = visibleTiles.get(key)!
