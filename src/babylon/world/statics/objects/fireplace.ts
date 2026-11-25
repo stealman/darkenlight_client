@@ -16,6 +16,7 @@ import { Renderer } from '@/babylon/scene/renderer'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { BaseStaticObject } from '@/babylon/world/statics/objects/baseStaticObject'
 import { StaticFireParticleManager } from '@/babylon/world/statics/staticFireParticleManager'
+import { createSineStaticVariation, placeStaticPart } from '@/babylon/world/statics/staticVariation'
 
 const FULL_CIRCLE = Math.PI * 2
 const FIREPLACE_LOG_COUNT = 7
@@ -26,13 +27,7 @@ export type FireplaceMetadata = StaticLightMetadata
 abstract class BaseFireplace extends BaseStaticObject {
     fireplaceScale: number
     fireplaceScaleReduced: number
-    logWidth: number
-    logHeight: number
-    logLength: number
-    logInnerOffset: number
-    logCenterShift: number
-    logTilt: number
-    logVariation: number
+    private readonly parts: readonly {matrix: Matrix, material: Vector2}[]
     fireParticles: ParticleSystem | null
     smokeParticles: ParticleSystem | null
     particleEmitter: TransformNode | null
@@ -45,13 +40,7 @@ abstract class BaseFireplace extends BaseStaticObject {
         super(type, position, rotation, material, null)
         this.fireplaceScale = fireplaceScale
         this.fireplaceScaleReduced = 1 + ((fireplaceScale - 1) * 0.5)
-        this.logWidth = 0.08 * fireplaceScale
-        this.logHeight = 0.08 * fireplaceScale
-        this.logLength = logLength
-        this.logInnerOffset = logInnerOffset
-        this.logCenterShift = 0.08 * fireplaceScale
-        this.logTilt = logTilt
-        this.logVariation = 0.1
+        this.parts = this.createParts(logLength, logInnerOffset, logTilt)
         this.fireParticles = null
         this.smokeParticles = null
         this.particleEmitter = null
@@ -60,17 +49,6 @@ abstract class BaseFireplace extends BaseStaticObject {
         this.lightIntensity = getStaticLightLevel(metadata?.lightIntensity)
         this.lightRange = getStaticLightLevel(metadata?.lightRange)
         this.status = {lightIntensity: this.lightIntensity, lightRange: this.lightRange}
-    }
-
-    private getLogNoise(logIndex: number, channel: number): number {
-        const seed = (this.type * 97.13)
-            + (this.position.x * 53.71)
-            + (this.position.z * 31.37)
-            + (logIndex * 19.19)
-            + (channel * 7.73)
-
-        const value = Math.sin(seed) * 43758.5453123
-        return value - Math.floor(value)
     }
 
     private updateParticleEmitterPosition() {
@@ -244,56 +222,57 @@ abstract class BaseFireplace extends BaseStaticObject {
         this.particleEmitter = null
     }
 
-    render() {
-        this.updateParticleEmitterPosition()
-
+    private createParts(logLength: number, logInnerOffset: number, logTilt: number) {
+        const variation = createSineStaticVariation(
+            this.type * 97.13 + this.position.x * 53.71 + this.position.z * 31.37, 19.19, 7.73, 43758.5453123,
+        )
+        const parts: {matrix: Matrix, material: Vector2}[] = []
         const angleStep = FULL_CIRCLE / FIREPLACE_LOG_COUNT
-        const emberY = this.renderPosition.y + 0.55
         const emberSize = 0.3 * this.fireplaceScale
         const emberRadius = 0.12 * this.fireplaceScale
         const emberHeight = 0.05 * this.fireplaceScale
 
         for (let i = 0; i < 3; i++) {
-            const emberAngle = this.rotation + ((i / 3) * FULL_CIRCLE) + (Math.PI / 6)
-            const emberRotation = Matrix.RotationY(emberAngle + (((this.getLogNoise(i, 20) * 2) - 1) * 0.18))
-            const emberX = this.renderPosition.x + (Math.cos(emberAngle) * emberRadius)
-            const emberZ = this.renderPosition.z + (Math.sin(emberAngle) * emberRadius)
-            const emberHeightOffset = ((this.getLogNoise(i, 21) * 2) - 1) * (0.01 * this.fireplaceScale)
-            const currentEmberHeight = emberHeight + emberHeightOffset
-            const emberScaleMatrix = Matrix.Scaling(emberSize, currentEmberHeight, emberSize)
-            const emberStoneScaleMatrix = Matrix.Scaling(emberSize * 1.5, 0.03, emberSize * 1.5)
-            const emberPositionMatrix = Matrix.Translation(emberX, emberY + emberHeightOffset, emberZ)
-
-            WorldRenderer.block1!.matrices.push(emberStoneScaleMatrix.multiply(emberRotation).multiply(emberPositionMatrix))
-            WorldRenderer.block1!.uvData.push(MaterialEnum1.BRICK_BLACK.uv)
-            WorldRenderer.block1!.matrices.push(emberScaleMatrix.multiply(emberRotation).multiply(emberPositionMatrix))
-            WorldRenderer.block1!.uvData.push(MaterialEnum1.EMBERS.uv)
+            const angle = this.rotation + ((i / 3) * FULL_CIRCLE) + (Math.PI / 6)
+            const rotation = Matrix.RotationY(angle + variation.signed(i, 20) * 0.18)
+            const heightOffset = variation.signed(i, 21) * (0.01 * this.fireplaceScale)
+            const x = Math.cos(angle) * emberRadius, z = Math.sin(angle) * emberRadius
+            parts.push({
+                matrix: Matrix.Scaling(emberSize * 1.5, 0.03, emberSize * 1.5).multiply(rotation)
+                    .setTranslationFromFloats(x, 0.55 + heightOffset, z),
+                material: MaterialEnum1.BRICK_BLACK.uv,
+            }, {
+                matrix: Matrix.Scaling(emberSize, emberHeight + heightOffset, emberSize).multiply(rotation)
+                    .setTranslationFromFloats(x, 0.55 + heightOffset, z),
+                material: MaterialEnum1.EMBERS.uv,
+            })
         }
 
+        const logSize = 0.08 * this.fireplaceScale
+        const logVariation = 0.1
         for (let i = 0; i < FIREPLACE_LOG_COUNT; i++) {
-            const angleOffset = ((this.getLogNoise(i, 1) * 2) - 1) * angleStep * this.logVariation
-            const widthScale = 1 + (((this.getLogNoise(i, 2) * 2) - 1) * this.logVariation)
-            const heightScale = 1 + (((this.getLogNoise(i, 3) * 2) - 1) * this.logVariation)
-            const lengthScale = 1 + (((this.getLogNoise(i, 4) * 2) - 1) * this.logVariation)
-            const tiltOffset = (((this.getLogNoise(i, 5) * 2) - 1) * this.logVariation * 0.5)
-            const angle = this.rotation + (i * angleStep) + angleOffset
-            const logWidth = this.logWidth * widthScale
-            const logHeight = this.logHeight * heightScale
-            const logLength = this.logLength * lengthScale
-            const logTilt = this.logTilt + tiltOffset
-            const directionX = Math.cos(angle)
-            const directionZ = Math.sin(angle)
-            const centerOffset = this.logInnerOffset + (logLength / 2) - this.logCenterShift
-            const x = this.renderPosition.x + (directionX * centerOffset)
-            const z = this.renderPosition.z + (directionZ * centerOffset)
-            const scaleMatrix = Matrix.Scaling(logWidth, logHeight, logLength)
-            const tiltMatrix = Matrix.RotationX(logTilt)
-            const rotationMatrix = Matrix.RotationY((Math.PI / 2) - angle)
-            const verticalOffset = Math.sin(logTilt) * (logLength / 2)
-            const positionMatrix = Matrix.Translation(x, this.renderPosition.y + logHeight + 0.5 + verticalOffset, z)
+            const angle = this.rotation + i * angleStep + variation.signed(i, 1) * angleStep * logVariation
+            const width = logSize * (1 + variation.signed(i, 2) * logVariation)
+            const height = logSize * (1 + variation.signed(i, 3) * logVariation)
+            const length = logLength * (1 + variation.signed(i, 4) * logVariation)
+            const tilt = logTilt + variation.signed(i, 5) * logVariation * 0.5
+            const centerOffset = logInnerOffset + length / 2 - logSize
+            const verticalOffset = Math.sin(tilt) * length / 2
+            const matrix = Matrix.Scaling(width, height, length)
+                .multiply(Matrix.RotationX(tilt))
+                .multiply(Matrix.RotationY(Math.PI / 2 - angle))
+                .setTranslationFromFloats(Math.cos(angle) * centerOffset, height + 0.5 + verticalOffset, Math.sin(angle) * centerOffset)
+            parts.push({matrix, material: this.material})
+        }
+        return parts
+    }
 
-            WorldRenderer.block1!.matrices.push(scaleMatrix.multiply(tiltMatrix).multiply(rotationMatrix).multiply(positionMatrix))
-            WorldRenderer.block1!.uvData.push(this.material)
+    render() {
+        this.updateParticleEmitterPosition()
+        const batch = WorldRenderer.block1!
+        for (const {matrix, material} of this.parts) {
+            batch.matrices.push(placeStaticPart(matrix, this.renderPosition))
+            batch.uvData.push(material)
         }
     }
 }

@@ -1,3 +1,4 @@
+import { createStaticVariation } from './staticVariation'
 import { WoodenSignpost, SignpostMetadata } from './objects/woodenSignpost'
 import { StandingBanner, BannerMetadata, SpecimenPrefabs } from './objects/specimens'
 import { Matrix, Scene, Vector3 } from '@babylonjs/core'
@@ -103,7 +104,7 @@ export const StaticsManager = {
         if (this.allStatics.length === 0) this.resolveStackedStaticPositions()
         const y = this.getBaseHeight(obj.x, obj.z, obj.tp)
         const pos = new Vector3(obj.x, y, obj.z)
-        const rotation = Math.floor(Math.random() * 4) * Math.PI / 2
+        const rotation = Math.floor(createStaticVariation(MyPlayer.worldId, pos, obj.tp).unit(0) * 4) * Math.PI / 2
         const previousCount = this.allStatics.length
 
         switch (obj.tp) {

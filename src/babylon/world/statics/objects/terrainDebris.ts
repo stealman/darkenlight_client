@@ -6,6 +6,7 @@ import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { MyPlayer } from '@/data/myPlayer'
 import { Settings } from '@/settings/settings'
 import { StoneBatch, STONE_SHAPE_COUNT } from '../../stoneBatch'
+import { createStaticVariationSequence } from '../staticVariation'
 
 const debrisMaterials = new Map([
     [TerrainEnum1.TERRAIN_DIRT.index, MaterialEnum1.TERRAIN_DIRT.uv],
@@ -38,14 +39,7 @@ export class TerrainDebris extends BaseStaticObject {
         const lowDetail = Settings.isDetalLevelLow()
         // Persisted type 153 retains the original large pile (now UI variant 4).
         const scale = [0.55, 0.8, 1.1, 0.95, 1.35][variant] * (lowDetail ? 1.2 : 1)
-        let seed = Math.imul(MyPlayer.worldId, 73856093) ^ Math.imul(position.x, 19349663)
-            ^ Math.imul(position.z, 83492791) ^ Math.imul(type, 2654435761)
-        const random = () => {
-            seed = (seed + 0x6D2B79F5) | 0
-            let value = Math.imul(seed ^ (seed >>> 15), 1 | seed)
-            value ^= value + Math.imul(value ^ (value >>> 7), 61 | value)
-            return ((value ^ (value >>> 14)) >>> 0) / 0x100000000
-        }
+        const random = createStaticVariationSequence(MyPlayer.worldId, position, type)
         const count = variant === 0 ? 2 + Math.floor(random() * 3) : [3, 5, 8, 6, 10][variant]
         const visibleCount = lowDetail ? Math.ceil(count / 2) : count
         const orientation = random()

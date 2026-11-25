@@ -3,6 +3,8 @@ import { BaseStaticObject } from '@/babylon/world/statics/objects/baseStaticObje
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import type { StaticBaseContact } from '@/babylon/world/worldRenderer'
 import { StaticEquipPartsRenderer } from '@/babylon/world/statics/staticEquipPartsRenderer'
+import { createOrientedStaticVariation, placeStaticPart } from '@/babylon/world/statics/staticVariation'
+import { MyPlayer } from '@/data/myPlayer'
 import { WeaponModelsCb } from '@/babylon/item/codebook/weaponModelsCb'
 
 export type CampObjectFacing = '-X' | '+X' | '-Z' | '+Z'
@@ -23,7 +25,7 @@ interface Direction {
     z: number
 }
 
-type PartContact = boolean | Vector3 | StaticBaseContact | 'dampWood' | 'snowAndDampHay'
+type PartContact = boolean | Vector3 | StaticBaseContact | 'snowAndDampHay'
     | 'wellBase' | 'wellRim' | 'wellRoofMoss' | 'stumpCut' | 'woodTopWithMoss'
 
 function addPart(width: number, height: number, depth: number, x: number, y: number, z: number, material: Vector2, yaw = 0, roll = 0, contact: PartContact = false) {
@@ -43,7 +45,7 @@ function addPart(width: number, height: number, depth: number, x: number, y: num
             WorldRenderer.addTerrainContactBlock(matrix, material, false, 0, contact)
             return
         }
-        const damp = contact === 'dampWood' ? 'moss' : contact === 'snowAndDampHay' ? 'hay'
+        const damp = contact === 'snowAndDampHay' ? 'hay'
             : contact === 'woodTopWithMoss' ? contact : undefined
         WorldRenderer.addTerrainContactBlock(matrix, material, false, undefined, damp)
         return
@@ -428,15 +430,47 @@ export class CampBarrel extends CampObject {
 }
 
 export class CampFence extends BaseStaticObject {
-    private static readonly railHeights = [0.975, 1.35]
+    private static readonly railCenters = [0.185, 0.42, 0.655]
+    private static readonly railThickness = 0.045
+    private static readonly railHeight = 0.1 * 4 / 3
+    private static readonly railTurnX = Matrix.RotationZ(-Math.PI / 2)
+    private static readonly railTurnZ = Matrix.RotationX(Math.PI / 2)
+    private static readonly maxRailYaw = Math.PI / 110
+    private static readonly maxRailLean = Math.PI / 75
+    private static readonly postHeight = 0.8
+    private static readonly postOffset = 0.42
+    private static readonly maxPostLean = Math.PI / 60
+    private static readonly maxPostShortening = 0.055
     private readonly orientation: CampFenceOrientation
     private readonly railMaterial: Vector2
+    private readonly posts: Readonly<Record<CampObjectFacing, Matrix>>
+    private readonly rails: readonly {frame: Matrix, thickness: number, turnThickness: number, height: number}[]
     private cornerDirections: [Direction, Direction] | null = null
 
     constructor(type: number, position: Vector3, postMaterial: Vector2, railMaterial: Vector2, metadata?: CampFenceMetadata) {
         super(type, position, 0, postMaterial, null)
         this.orientation = metadata?.orientation === 'X' ? 'X' : 'Z'
         this.railMaterial = railMaterial
+        const variation = createOrientedStaticVariation(MyPlayer.worldId, position, this.orientation)
+        const railBase = 0.5 + variation.signed(0, 7) * 0.025
+        this.rails = CampFence.railCenters.map((center, index) => {
+            const frame = Matrix.RotationYawPitchRoll(
+                variation.signed(index, 0) * CampFence.maxRailYaw,
+                variation.signed(index, 1) * CampFence.maxRailLean,
+                variation.signed(index, 2) * CampFence.maxRailLean,
+            ).setTranslationFromFloats(0, railBase + center + variation.signed(index, 6) * 0.021, 0)
+            const heightVariation = variation.signed(index, 5)
+            return {
+                frame,
+                thickness: CampFence.railThickness * (1 + variation.signed(index, 3) * 0.22),
+                turnThickness: CampFence.railThickness * (1 + variation.signed(index, 4) * 0.22),
+                height: CampFence.railHeight + heightVariation * (heightVariation < 0 ? 0.04 : 0.016),
+            }
+        })
+        this.posts = {
+            '-X': this.createPost('-X', -1, 0), '+X': this.createPost('+X', 1, 0),
+            '-Z': this.createPost('-Z', 0, -1), '+Z': this.createPost('+Z', 0, 1),
+        }
         this.status = {orientation: this.orientation}
     }
 
@@ -450,34 +484,66 @@ export class CampFence extends BaseStaticObject {
 
     render() {
         if (this.cornerDirections) {
-            this.renderCorner()
-            return
+            for (const {x, z} of this.cornerDirections) this.renderPost(x, z)
+        } else {
+            const alongX = this.orientation === 'X'
+            this.renderPost(alongX ? -1 : 0, alongX ? 0 : -1)
+            this.renderPost(alongX ? 1 : 0, alongX ? 0 : 1)
         }
+        this.renderRails()
+    }
 
-        const alongX = this.orientation === 'X'
-        for (const offset of [-0.42, 0, 0.42]) {
-            addPart(0.1, 0.95, 0.1,
-                this.renderPosition.x + (alongX ? offset : 0), this.renderPosition.y + 0.975,
-                this.renderPosition.z + (alongX ? 0 : offset), this.material, 0, 0, 'dampWood')
-        }
-        for (const y of CampFence.railHeights) {
-            addPart(alongX ? 0.94 : 0.09, 0.1, alongX ? 0.09 : 0.94,
-                this.renderPosition.x, this.renderPosition.y + y, this.renderPosition.z, this.railMaterial)
+    private renderRails() {
+        const directions = this.cornerDirections
+        for (const {frame, thickness, turnThickness, height} of this.rails) {
+            if (!directions) {
+                this.addRail(this.orientation === 'X', 0.94, thickness, height, 0, 0, frame)
+                continue
+            }
+
+            // Rotate both arms about their shared joint, with only one rail crossing the turn.
+            const outerEnd = 0.46
+            for (const [arm, direction] of directions.entries()) {
+                const innerEnd = arm === 0 ? -turnThickness / 2 : thickness / 2
+                const railCenter = (outerEnd + innerEnd) / 2
+                this.addRail(direction.x !== 0, outerEnd - innerEnd, arm === 0 ? thickness : turnThickness, height,
+                    direction.x * railCenter, direction.z * railCenter, frame)
+            }
         }
     }
 
-    private renderCorner() {
-        addPart(0.1, 0.95, 0.1, this.renderPosition.x, this.renderPosition.y + 0.975, this.renderPosition.z, this.material, 0, 0, 'dampWood')
-        for (const direction of this.cornerDirections!) {
-            addPart(0.1, 0.95, 0.1,
-                this.renderPosition.x + direction.x * 0.42, this.renderPosition.y + 0.975,
-                this.renderPosition.z + direction.z * 0.42, this.material, 0, 0, 'dampWood')
-            for (const y of CampFence.railHeights) {
-                addPart(direction.x === 0 ? 0.09 : 0.48, 0.1, direction.z === 0 ? 0.09 : 0.48,
-                    this.renderPosition.x + direction.x * 0.22, this.renderPosition.y + y,
-                    this.renderPosition.z + direction.z * 0.22, this.railMaterial)
-            }
-        }
+    private addRail(alongX: boolean, length: number, thickness: number, height: number,
+        offsetX: number, offsetZ: number, frame: Matrix) {
+        const {railTurnX, railTurnZ} = CampFence
+        // The atlas grain follows the box's local Y axis. Rotate it along the rail.
+        const rail = Matrix.Scaling(alongX ? height : thickness, length, alongX ? thickness : height)
+            .multiply(alongX ? railTurnX : railTurnZ)
+            .setTranslationFromFloats(offsetX, 0, offsetZ)
+            .multiply(frame)
+        const batch = WorldRenderer.block1!
+        batch.matrices.push(placeStaticPart(rail, this.renderPosition))
+        batch.uvData.push(this.railMaterial)
+    }
+
+    private createPost(direction: CampObjectFacing, dx: number, dz: number) {
+        const variation = createOrientedStaticVariation(MyPlayer.worldId, this.position, direction)
+        const height = CampFence.postHeight - variation.unit(0, 1) * CampFence.maxPostShortening
+        const pitch = variation.signed(0, 2) * CampFence.maxPostLean
+        const roll = variation.signed(0, 3) * CampFence.maxPostLean
+        const width = 0.086 + variation.unit(0, 4) * 0.028
+        const depth = 0.086 + variation.unit(0, 5) * 0.028
+        const yaw = variation.signed(0, 6) * CampFence.maxPostLean
+        const matrix = Matrix.Scaling(width, height, depth).multiply(Matrix.RotationYawPitchRoll(yaw, pitch, roll))
+        // Offset by half the rotated post axis to keep its foot at the original ground position.
+        const m = matrix.m
+        return matrix.setTranslationFromFloats(dx * CampFence.postOffset + m[4] / 2,
+            0.5 + m[5] / 2, dz * CampFence.postOffset + m[6] / 2)
+    }
+
+    private renderPost(dx: number, dz: number) {
+        const direction = dx < 0 ? '-X' : dx > 0 ? '+X' : dz < 0 ? '-Z' : '+Z'
+        WorldRenderer.addTerrainContactBlock(placeStaticPart(this.posts[direction], this.renderPosition),
+            this.material, false, undefined, 'moss')
     }
 
     isObjectInCollision(tgtX: number, tgtZ: number, size: number): boolean {

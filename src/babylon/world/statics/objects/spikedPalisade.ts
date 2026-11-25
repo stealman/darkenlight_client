@@ -1,7 +1,8 @@
 import { Matrix, Vector2, Vector3 } from '@babylonjs/core'
 import { BaseStaticObject } from '@/babylon/world/statics/objects/baseStaticObject'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
-import { getPalisadeRandom } from '@/babylon/world/statics/palisadeRandom'
+import { createOrientedStaticVariation, placeStaticPart } from '@/babylon/world/statics/staticVariation'
+import { MyPlayer } from '@/data/myPlayer'
 
 export type SpikedPalisadeFacing = '-X' | '+X' | '-Z' | '+Z'
 
@@ -12,6 +13,9 @@ export interface SpikedPalisadeMetadata {
 
 export class SpikedPalisade extends BaseStaticObject {
     private readonly facing: SpikedPalisadeFacing
+    private readonly mainStakes: readonly Matrix[]
+    private readonly supports: readonly Matrix[]
+    private readonly connector: Matrix
 
     private static readonly MAIN_STAKE_COUNT = 5
     private static readonly MAIN_STAKE_SPACING = 0.2
@@ -37,82 +41,51 @@ export class SpikedPalisade extends BaseStaticObject {
             ? metadata.facing
             : metadata?.orientation === 'X' ? '+Z' : '+X'
         this.status = {facing: this.facing}
+        const variation = createOrientedStaticVariation(MyPlayer.worldId, position, this.facing)
+        const axis = this.getAxis()
+        const tiltSign = this.getTiltSign()
+        this.mainStakes = Array.from({length: SpikedPalisade.MAIN_STAKE_COUNT}, (_, index) => {
+            const offset = (index - 2) * SpikedPalisade.MAIN_STAKE_SPACING + variation.signed(index, 201) * 0.012
+            const length = SpikedPalisade.MAIN_STAKE_LENGTH - variation.unit(index, 202) * 0.12
+            const width = SpikedPalisade.MAIN_STAKE_SIZE + variation.signed(index, 203) * 0.008
+            const depth = SpikedPalisade.MAIN_STAKE_SIZE + variation.signed(index, 204) * 0.008
+            const angle = tiltSign * (SpikedPalisade.BASE_ANGLE
+                + variation.signed(index, 205) * SpikedPalisade.MAX_ANGLE_VARIATION)
+            return this.createStake(axis, offset, length, width, depth, angle)
+        })
+        this.supports = Array.from({length: SpikedPalisade.SUPPORT_COUNT}, (_, index) => {
+            const offset = (index - 1) * SpikedPalisade.SUPPORT_SPACING + variation.signed(index, 220) * 0.012
+            const length = SpikedPalisade.SUPPORT_LENGTH - variation.unit(index, 221) * 0.08
+            const angle = -tiltSign * (SpikedPalisade.BASE_ANGLE
+                + variation.signed(index, 222) * SpikedPalisade.MAX_ANGLE_VARIATION)
+            return this.createStake(axis, offset, length, SpikedPalisade.SUPPORT_SIZE, SpikedPalisade.SUPPORT_SIZE, angle)
+        })
+        const forward = this.getForwardNormal()
+        const yaw = this.facing === '-X' || this.facing === '+X' ? Math.PI / 2 : 0
+        this.connector = Matrix.Scaling(SpikedPalisade.CONNECTOR_LENGTH, SpikedPalisade.CONNECTOR_HEIGHT, SpikedPalisade.CONNECTOR_DEPTH)
+            .multiply(Matrix.RotationYawPitchRoll(yaw, 0, variation.signed(0, 240) * Math.PI / 90))
+            .setTranslationFromFloats(forward.x * SpikedPalisade.CONNECTOR_FORWARD_OFFSET,
+                SpikedPalisade.CONNECTOR_HEIGHT_POSITION + 0.5, forward.z * SpikedPalisade.CONNECTOR_FORWARD_OFFSET)
     }
 
     render() {
-        this.renderMainStakes()
-        this.renderConnector()
-        this.renderSupports()
+        this.renderStakes(this.mainStakes)
+        const batch = WorldRenderer.block1!
+        batch.matrices.push(placeStaticPart(this.connector, this.renderPosition))
+        batch.uvData.push(this.material)
+        this.renderStakes(this.supports)
     }
 
-    private renderMainStakes() {
-        const axis = this.getAxis()
-        for (let i = 0; i < SpikedPalisade.MAIN_STAKE_COUNT; i++) {
-            const axisOffset = (i - 2) * SpikedPalisade.MAIN_STAKE_SPACING
-                + (this.random(i, 1) * 2 - 1) * 0.012
-            const length = SpikedPalisade.MAIN_STAKE_LENGTH - this.random(i, 2) * 0.12
-            const width = SpikedPalisade.MAIN_STAKE_SIZE + (this.random(i, 3) * 2 - 1) * 0.008
-            const depth = SpikedPalisade.MAIN_STAKE_SIZE + (this.random(i, 4) * 2 - 1) * 0.008
-            const angle = this.getTiltSign() * (SpikedPalisade.BASE_ANGLE
-                + (this.random(i, 5) * 2 - 1) * SpikedPalisade.MAX_ANGLE_VARIATION
-            )
-            this.addTiltedStake(axisOffset, length, width, depth, angle)
+    private createStake(axis: Vector3, offset: number, length: number, width: number, depth: number, angle: number) {
+        return Matrix.Scaling(width, length, depth).multiply(Matrix.RotationAxis(axis, angle))
+            .setTranslationFromFloats(axis.x * offset, Math.cos(angle) * length / 2 + 0.5, axis.z * offset)
+    }
+
+    private renderStakes(stakes: readonly Matrix[]) {
+        for (const stake of stakes) {
+            WorldRenderer.addTerrainContactBlock(placeStaticPart(stake, this.renderPosition),
+                this.material, true, SpikedPalisade.SNOW_REACH, 'moss')
         }
-    }
-
-    private renderSupports() {
-        const axis = this.getAxis()
-        for (let i = 0; i < SpikedPalisade.SUPPORT_COUNT; i++) {
-            const axisOffset = (i - 1) * SpikedPalisade.SUPPORT_SPACING
-                + (this.random(i, 20) * 2 - 1) * 0.012
-            const length = SpikedPalisade.SUPPORT_LENGTH - this.random(i, 21) * 0.08
-            const angle = -this.getTiltSign() * (SpikedPalisade.BASE_ANGLE
-                + (this.random(i, 22) * 2 - 1) * SpikedPalisade.MAX_ANGLE_VARIATION
-            )
-            this.addTiltedStake(
-                axisOffset,
-                length,
-                SpikedPalisade.SUPPORT_SIZE,
-                SpikedPalisade.SUPPORT_SIZE,
-                angle,
-            )
-        }
-    }
-
-    private addTiltedStake(axisOffset: number, length: number, width: number, depth: number, angle: number) {
-        const axis = this.getAxis()
-        const x = this.renderPosition.x + axis.x * axisOffset
-        const z = this.renderPosition.z + axis.z * axisOffset
-        const verticalHeight = Math.cos(angle) * length
-        WorldRenderer.addTerrainContactBlock(
-            Matrix.Scaling(width, length, depth)
-                .multiply(Matrix.RotationAxis(axis, angle))
-                .multiply(Matrix.Translation(x, this.renderPosition.y + verticalHeight / 2 + 0.5, z)),
-            this.material,
-            true,
-            SpikedPalisade.SNOW_REACH,
-            'moss',
-        )
-    }
-
-    private renderConnector() {
-        const normal = this.getForwardNormal()
-        const angle = (this.random(0, 40) * 2 - 1) * Math.PI / 90
-        const yaw = this.facing === '-X' || this.facing === '+X' ? Math.PI / 2 : 0
-        WorldRenderer.block1!.matrices.push(
-            Matrix.Scaling(
-                SpikedPalisade.CONNECTOR_LENGTH,
-                SpikedPalisade.CONNECTOR_HEIGHT,
-                SpikedPalisade.CONNECTOR_DEPTH,
-            )
-                .multiply(Matrix.RotationYawPitchRoll(yaw, 0, angle))
-                .multiply(Matrix.Translation(
-                    this.renderPosition.x + normal.x * SpikedPalisade.CONNECTOR_FORWARD_OFFSET,
-                    this.renderPosition.y + SpikedPalisade.CONNECTOR_HEIGHT_POSITION + 0.5,
-                    this.renderPosition.z + normal.z * SpikedPalisade.CONNECTOR_FORWARD_OFFSET,
-                )),
-        )
-        WorldRenderer.block1!.uvData.push(this.material)
     }
 
     private getAxis(): Vector3 {
@@ -134,7 +107,4 @@ export class SpikedPalisade extends BaseStaticObject {
         return this.facing === '+Z' || this.facing === '-X' ? 1 : -1
     }
 
-    private random(elementIndex: number, salt: number): number {
-        return getPalisadeRandom(this.position.x, this.position.z, this.facing, elementIndex, 200 + salt)
-    }
 }

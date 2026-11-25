@@ -2,9 +2,14 @@ import { Matrix, Vector2, Vector3 } from '@babylonjs/core'
 import { BaseStaticObject } from '@/babylon/world/statics/objects/baseStaticObject'
 import { BLOCK_TOP_GLOW_U_OFFSET } from '@/babylon/materials'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
+import { createSineStaticVariation } from '@/babylon/world/statics/staticVariation'
 
 export type CemeteryFacing = '-X' | '+X' | '-Z' | '+Z'
 export type CemeteryWallOrientation = 'X' | 'Z'
+
+function createCemeteryVariation(position: Vector3, offset = 0) {
+    return createSineStaticVariation(position.x * 91.7 + position.z * 37.3 + offset, 17.1)
+}
 
 export interface CemeteryObjectMetadata {
     facing?: CemeteryFacing
@@ -123,13 +128,18 @@ export class CemeteryCrossPedestal extends CemeteryObject {
 }
 
 export class FallenCemeteryCross extends BaseStaticObject {
+    private readonly yaw: number
+    private readonly armX: number
+    private readonly armZ: number
+
     constructor(type: number, position: Vector3, material: Vector2) {
         super(type, position, 0, material, null)
+        this.yaw = createCemeteryVariation(position, 74.1).unit(0) * Math.PI * 2
+        this.armX = Math.sin(this.yaw) * 0.18
+        this.armZ = Math.cos(this.yaw) * 0.18
     }
 
     render() {
-        const random = Math.sin((this.position.x * 91.7) + (this.position.z * 37.3) + 74.1) * 43758.5453
-        const yaw = (random - Math.floor(random)) * Math.PI * 2
         addPart(
             0.18,
             0.12,
@@ -140,38 +150,46 @@ export class FallenCemeteryCross extends BaseStaticObject {
             this.material,
             this.position,
             1.3,
-            yaw,
+            this.yaw,
         )
         addPart(
             0.72,
             0.12,
             0.18,
-            this.renderPosition.x + Math.sin(yaw) * 0.18,
+            this.renderPosition.x + this.armX,
             this.renderPosition.y + 0.62,
-            this.renderPosition.z + Math.cos(yaw) * 0.18,
+            this.renderPosition.z + this.armZ,
             this.material,
             this.position,
             1.3,
-            yaw,
+            this.yaw,
         )
     }
 }
 
 export class FallenCemeteryHeadstone extends BaseStaticObject {
     private readonly capMaterial: Vector2
+    private readonly yaw: number
+    private readonly roll: number
+    private readonly cap: {x: number, z: number, yaw: number, roll: number}
 
     constructor(type: number, position: Vector3, material: Vector2, capMaterial: Vector2) {
         super(type, position, 0, material, null)
         this.capMaterial = capMaterial
-    }
-
-    private random(salt: number): number {
-        const value = Math.sin((this.position.x * 91.7) + (this.position.z * 37.3) + salt * 17.1) * 43758.5453
-        return value - Math.floor(value)
+        const variation = createCemeteryVariation(position)
+        this.yaw = variation.unit(1) * Math.PI * 2
+        this.roll = variation.signed(2) * 0.06
+        const localX = variation.signed(3) * 0.12
+        const localZ = 0.52 + variation.unit(4) * 0.14
+        this.cap = {
+            x: localX * Math.cos(this.yaw) + localZ * Math.sin(this.yaw),
+            z: -localX * Math.sin(this.yaw) + localZ * Math.cos(this.yaw),
+            yaw: this.yaw + variation.signed(5) * 0.45,
+            roll: variation.signed(6) * 0.1,
+        }
     }
 
     render() {
-        const yaw = this.random(1) * Math.PI * 2
         addPart(
             0.62,
             0.12,
@@ -182,26 +200,22 @@ export class FallenCemeteryHeadstone extends BaseStaticObject {
             this.material,
             this.position,
             1.3,
-            yaw,
-            (this.random(2) - 0.5) * 0.12,
+            this.yaw,
+            this.roll,
         )
 
-        const localX = (this.random(3) - 0.5) * 0.24
-        const localZ = 0.52 + this.random(4) * 0.14
-        const capX = this.renderPosition.x + localX * Math.cos(yaw) + localZ * Math.sin(yaw)
-        const capZ = this.renderPosition.z - localX * Math.sin(yaw) + localZ * Math.cos(yaw)
         addPart(
             0.44,
             0.11,
             0.22,
-            capX,
+            this.renderPosition.x + this.cap.x,
             this.renderPosition.y + 0.61,
-            capZ,
+            this.renderPosition.z + this.cap.z,
             this.capMaterial,
             this.position,
             1.3,
-            yaw + (this.random(5) - 0.5) * 0.9,
-            (this.random(6) - 0.5) * 0.2,
+            this.cap.yaw,
+            this.cap.roll,
         )
     }
 }
@@ -459,12 +473,29 @@ export class CemeteryStoneWall extends CemeteryWall {
     }
 }
 
+type FallenStone = {width: number, height: number, depth: number, x: number, z: number, roll: number, yaw: number}
+
 export class RuinedCemeteryWall extends CemeteryWall {
     protected override readonly wear = 1.3
 
-    private random(salt: number): number {
-        const value = Math.sin((this.position.x * 91.7) + (this.position.z * 37.3) + salt * 17.1) * 43758.5453
-        return value - Math.floor(value)
+    private readonly straightCap: readonly {height: number, lean: number}[]
+    private readonly cornerCap: readonly {height: number, lean: number}[]
+    private readonly straightDebris: readonly FallenStone[]
+    private readonly cornerDebris: readonly FallenStone[]
+
+    constructor(type: number, position: Vector3, material: Vector2, accentMaterial: Vector2, metadata?: CemeteryWallMetadata) {
+        super(type, position, material, accentMaterial, metadata)
+        const variation = createCemeteryVariation(position)
+        this.straightCap = Array.from({length: 3}, (_, index) => ({
+            height: 0.34 + variation.unit(index) * 0.48,
+            lean: variation.signed(index + 4) * 0.08,
+        }))
+        this.cornerCap = Array.from({length: 4}, (_, index) => {
+            const part = 20 + Math.floor(index / 2) * 4 + index % 2
+            return {height: 0.3 + variation.unit(part) * 0.42, lean: variation.signed(part + 8) * 0.06}
+        })
+        this.straightDebris = this.createFallenStones(false, variation)
+        this.cornerDebris = this.createFallenStones(true, variation)
     }
 
     render() {
@@ -474,11 +505,10 @@ export class RuinedCemeteryWall extends CemeteryWall {
         }
         this.part(0.98, 0.65, 0.48, 0, 0.325, 0)
         for (const [index, along] of [-0.33, 0, 0.33].entries()) {
-            const height = 0.34 + this.random(index) * 0.48
-            const lean = (this.random(index + 4) - 0.5) * 0.16
+            const {height, lean} = this.straightCap[index]
             this.part(0.3, height, 0.44, along, 0.65 + height / 2, 0, index === 1 ? this.accentMaterial : this.material, lean)
         }
-        this.renderFallenStones(false)
+        this.renderFallenStones(this.straightDebris)
     }
 
     private renderCorner() {
@@ -494,8 +524,7 @@ export class RuinedCemeteryWall extends CemeteryWall {
                 direction.z * 0.29,
             )
             for (const [pieceIndex, distance] of [0.16, 0.4].entries()) {
-                const randomIndex = 20 + armIndex * 4 + pieceIndex
-                const height = 0.3 + this.random(randomIndex) * 0.42
+                const {height, lean} = this.cornerCap[armIndex * 2 + pieceIndex]
                 this.worldPart(
                     alongX ? 0.26 : 0.42,
                     height,
@@ -504,39 +533,45 @@ export class RuinedCemeteryWall extends CemeteryWall {
                     0.65 + height / 2,
                     direction.z * distance,
                     pieceIndex === 0 ? this.accentMaterial : this.material,
-                    (this.random(randomIndex + 8) - 0.5) * 0.12,
+                    lean,
                 )
             }
         }
-        this.renderFallenStones(true)
+        this.renderFallenStones(this.cornerDebris)
     }
 
-    private renderFallenStones(corner: boolean) {
+    private createFallenStones(corner: boolean, variation: ReturnType<typeof createCemeteryVariation>): FallenStone[] {
         const salt = corner ? 60 : 40
-        const count = 1 + Math.floor(this.random(salt) * 3)
-        for (let i = 0; i < count; i++) {
+        const count = 1 + Math.floor(variation.unit(salt) * 3)
+        return Array.from({length: count}, (_, i) => {
             const randomSalt = salt + 1 + i * 9
-            const width = 0.16 + this.random(randomSalt) * 0.25
-            const height = 0.11 + this.random(randomSalt + 1) * 0.16
-            const depth = 0.15 + this.random(randomSalt + 2) * 0.24
+            const width = 0.16 + variation.unit(randomSalt) * 0.25
+            const height = 0.11 + variation.unit(randomSalt + 1) * 0.16
+            const depth = 0.15 + variation.unit(randomSalt + 2) * 0.24
             let x: number
             let z: number
 
             if (corner) {
-                const angle = this.random(randomSalt + 3) * Math.PI * 2
-                const distance = 0.28 + this.random(randomSalt + 4) * 0.25
+                const angle = variation.unit(randomSalt + 3) * Math.PI * 2
+                const distance = 0.28 + variation.unit(randomSalt + 4) * 0.25
                 x = Math.cos(angle) * distance
                 z = Math.sin(angle) * distance
             } else {
-                const along = (this.random(randomSalt + 3) - 0.5) * 0.88
-                const across = (this.random(randomSalt + 4) > 0.5 ? -1 : 1)
-                    * (0.3 + this.random(randomSalt + 5) * 0.2)
+                const along = (variation.unit(randomSalt + 3) - 0.5) * 0.88
+                const across = (variation.unit(randomSalt + 4) > 0.5 ? -1 : 1)
+                    * (0.3 + variation.unit(randomSalt + 5) * 0.2)
                 x = this.orientation === 'X' ? along : across
                 z = this.orientation === 'X' ? across : along
             }
 
-            const roll = (this.random(randomSalt + 6) - 0.5) * 0.5
-            const yaw = this.random(randomSalt + 7) * Math.PI
+            const roll = (variation.unit(randomSalt + 6) - 0.5) * 0.5
+            const yaw = variation.unit(randomSalt + 7) * Math.PI
+            return {width, height, depth, x, z, roll, yaw}
+        })
+    }
+
+    private renderFallenStones(stones: readonly FallenStone[]) {
+        for (const {width, height, depth, x, z, roll, yaw} of stones) {
             this.worldPart(width, height, depth, x, height / 2, z, this.material, roll, yaw)
         }
     }
