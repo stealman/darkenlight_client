@@ -4,8 +4,9 @@ import { TerrainEnum1 } from '@/babylon/materials'
 import { Lights } from '@/babylon/scene/lights'
 import { FoliageManager } from '@/babylon/world/foliageManager'
 import { MapBlock } from '@/data/worldDataManager'
-import { createMuddyDirtFoliageProfiles, createMuddyDirtFootFoliage, createPavingMoss } from './muddyDirtFoliage'
-import { createWinterGrassFoliage, createGrassFootTufts, greenGrassFoliageOffset, rockPebbleOffset, snowFoliageOffset, styleTerrainFoliage } from './winterGrassFoliage'
+import { createMuddyDirtFoliageProfiles, createMuddyDirtFootFoliage, createPavingMoss, LOW_GRASS, MUDDY_DRY_GRASS } from './muddyDirtFoliage'
+import { createWinterGrassFoliage, createGrassFootTufts, DRY_GRASS, GRASS_ATLAS_Y, greenGrassFoliageOffset, rockPebbleOffset, snowFoliageOffset, styleTerrainFoliage } from './winterGrassFoliage'
+import type { PreviewGrassTuft } from './terrainPreviewGrass'
 import { createWaterEdgeTufts, insetTuftFromLedges } from './terrainFoliagePatches'
 import { createRockWallLichen, createRockFoliage, styleRockLichen } from './rockFoliage'
 import foliageAtlasUrl from './assets/muddy-dirt-foliage.png'
@@ -19,6 +20,8 @@ const GRASS_TYPES = [WINTER_GRASS, GRASS] as const
 const isGrass = (type: number) => type === WINTER_GRASS || type === GRASS
 const ROCK = TerrainEnum1.TERRAIN_ROCK.index
 const emptyMask = new Set<number>()
+const lowGrassY = FoliageManager.getAtlasOffset(0, 0, LOW_GRASS).y
+const dryGrassYs = [DRY_GRASS, MUDDY_DRY_GRASS].map(row => FoliageManager.getAtlasOffset(0, 0, row).y)
 
 export function createTerrainFoliageRenderer(scene: Scene, parent: TransformNode, wallDecals = true, density = 1) {
     const renderer = {...FoliageManager}
@@ -40,7 +43,7 @@ export function createTerrainFoliageRenderer(scene: Scene, parent: TransformNode
 
     const render = (map: MapBlock[][], {
         atPondBank = () => false, transitionWeight = () => 0, canDecorate = () => true,
-        visible = () => true, originX = 0, originZ = 0, pavingMoss = false, submit,
+        visible = () => true, originX = 0, originZ = 0, pavingMoss = false, submit, replaceGrass,
     }: {
         atPondBank?: (x: number, z: number) => boolean
         transitionWeight?: (x: number, z: number) => number
@@ -50,6 +53,7 @@ export function createTerrainFoliageRenderer(scene: Scene, parent: TransformNode
         originZ?: number
         pavingMoss?: boolean
         submit?: (mesh: Mesh, matrices: Matrix[], uv: Vector2[]) => void
+        replaceGrass?: (tuft: PreviewGrassTuft) => void
     } = {}) => {
         const supportsFoliage = (block: MapBlock, x: number, z: number) => !block.snowed && !atPondBank(x, z)
             && !block.stonePath && !block.beigeStonePath
@@ -94,6 +98,15 @@ export function createTerrainFoliageRenderer(scene: Scene, parent: TransformNode
                     Math.round((originX + matrix.m[12]) * 1024),
                     Math.round((originZ + matrix.m[14]) * 1024), 6120,
                 ) >= density) return undefined
+                if (replaceGrass && layer === 'tufts') {
+                    const dry = dryGrassYs.includes(uv.y)
+                    if (dry || uv.y === GRASS_ATLAS_Y || uv.y === lowGrassY) {
+                        const placement = matrix.clone()
+                        placement.setTranslationFromFloats(matrix.m[12], block.totalHeight - 0.015, matrix.m[14])
+                        replaceGrass({matrix: placement, tone: block.snowed ? 3 : dry ? 2 : block.type === GRASS ? 0 : 1})
+                        return undefined
+                    }
+                }
                 if (block.snowed) return snowFoliageOffset(uv, layer)
                 if (block.type === GRASS) return greenGrassFoliageOffset(uv, layer)
                 return block.type === ROCK ? rockPebbleOffset(uv, matrix, layer, originX, originZ) : uv

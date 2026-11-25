@@ -38,7 +38,7 @@ export class StaticTerrainContact {
         material.AddUniform('staticSnowColor', 'sampler2D', this.snow)
         material.AddAttribute(ATTRIBUTE)
         material.Vertex_Definitions(`
-            ${material.CustomParts.Vertex_Definitions}
+            ${material.CustomParts.Vertex_Definitions ?? ''}
             ${contactCode(`attribute vec3 ${ATTRIBUTE};`)}
             varying vec3 vStaticSnowContact;
             ${blockPosition}
@@ -52,7 +52,7 @@ export class StaticTerrainContact {
             ${meshVertices ? '' : 'vStaticBlockPosition = positionUpdated;'}
         `)
         material.Fragment_Definitions(`
-            ${material.CustomParts.Fragment_Definitions}
+            ${material.CustomParts.Fragment_Definitions ?? ''}
             varying vec3 vStaticSnowContact;
             ${blockPosition}
             ${terrainNoiseShader}
@@ -60,8 +60,7 @@ export class StaticTerrainContact {
             ${terrainContactSnowShader}
             ${terrainContactMossShader}
         `)
-        // Stone batches also use two terrain maps in addition to the block maps and snow.
-        configureTerrainNoiseTexture(material, scatterOnTop ? 6 : 4)
+        configureTerrainNoiseTexture(material, 4)
         material.Fragment_Before_Lights(`
             ${material.CustomParts.Fragment_Before_Lights ?? ''}
             float snowDistance = vStaticSnowContact.x;

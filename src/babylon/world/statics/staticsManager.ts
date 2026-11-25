@@ -1,6 +1,6 @@
 import { WoodenSignpost, SignpostMetadata } from './objects/woodenSignpost'
 import { StandingBanner, BannerMetadata, SpecimenPrefabs } from './objects/specimens'
-import { Matrix, Scene, Vector2, Vector3 } from '@babylonjs/core'
+import { Matrix, Scene, Vector3 } from '@babylonjs/core'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { MaterialAlphaEnum1, MaterialEnum1, MaterialEnumTrans } from '@/babylon/materials'
 import { MapBlock, WorldDataManager } from '@/data/worldDataManager'
@@ -509,7 +509,7 @@ export const StaticsManager = {
             if (object instanceof CampBarrel) object.clearRenderMatrices()
         }
         this.resolveConnectingCorners()
-        if (!visibilityReady) this.updateVisibleObjects()
+        if (!visibilityReady) this.prepareRender()
         for (const element of this.visibleStatics) {
             const blockStart = WorldRenderer.block1!.matrices.length
             const prefabStart = element.prefab?.matrices.length ?? 0
@@ -567,15 +567,10 @@ export const StaticsManager = {
         }
     },
 
-    renderTerrainBlocks(terrainMatrices: Matrix[], terrainUvData: Vector2[]) {
+    prepareRender() {
         this.resolveStackedStaticPositions()
-        this.allStatics.forEach((obj) => obj.clearRenderMatrixCapture())
+        this.allStatics.forEach(object => object.clearRenderMatrixCapture())
         this.updateVisibleObjects()
-        for (const element of this.visibleStatics) {
-            const start = terrainMatrices.length
-            element.renderTerrain?.(terrainMatrices, terrainUvData)
-            element.captureTerrainMatrices(start, terrainMatrices)
-        }
     },
 
     getContactShadowFootprints(map: MapBlock[][]): ContactShadowFootprint[] {

@@ -1,7 +1,6 @@
 import { Matrix, Mesh, Vector2, Vector3 } from '@babylonjs/core'
 import { Prefab, WorldRenderer } from '@/babylon/world/worldRenderer'
 import { StaticObjectInfo, StaticObjectsCodebook } from '@/babylon/world/statics/staticsCodebook'
-import { TerrainManager } from '@/babylon/world/terrainManager'
 
 function captureMatrixHeights(start: number, matrices: Matrix[], baseY: number[], indices: number[]) {
     const count = matrices.length - start
@@ -21,7 +20,6 @@ export interface StaticObject {
 
     render(): void
     getContactShadowSize?(): {width: number, depth: number}
-    renderTerrain?(terrainMatrices: Matrix[], terrainUvData: Vector2[]): void
     onVisible(): void
     onHidden(): void
     dispose(): void
@@ -37,7 +35,6 @@ export interface StaticObject {
     clearRenderMatrixCapture(): void
     captureRenderMatrices(blockStart: number, prefabStart: number, translucentStart: number, alphaStart: number): void
     applyDeleteBounceOffset(offset: number): Mesh[]
-    captureTerrainMatrices(start: number, matrices: Matrix[]): void
 }
 
 export abstract class BaseStaticObject implements StaticObject {
@@ -57,8 +54,6 @@ export abstract class BaseStaticObject implements StaticObject {
     private prefabMatrixBaseY: number[] = []
     private translucentMatrixIndices: number[] = []
     private translucentMatrixBaseY: number[] = []
-    private terrainMatrixIndices: number[] = []
-    private terrainMatrixBaseY: number[] = []
 
     protected constructor(type: number, position: Vector3, rotation: number, material: Vector2, prefab: Prefab | null) {
         this.type = type
@@ -111,7 +106,6 @@ export abstract class BaseStaticObject implements StaticObject {
         this.alphaMatrixIndices.length = this.alphaMatrixBaseY.length = 0
         this.prefabMatrixIndices.length = this.prefabMatrixBaseY.length = 0
         this.translucentMatrixIndices.length = this.translucentMatrixBaseY.length = 0
-        this.terrainMatrixIndices.length = this.terrainMatrixBaseY.length = 0
     }
 
     captureRenderMatrices(blockStart: number, prefabStart: number, translucentStart: number, alphaStart: number) {
@@ -122,10 +116,6 @@ export abstract class BaseStaticObject implements StaticObject {
         }
         captureMatrixHeights(translucentStart, WorldRenderer.translucentPlane!.matrices,
             this.translucentMatrixBaseY, this.translucentMatrixIndices)
-    }
-
-    captureTerrainMatrices(start: number, matrices: Matrix[]) {
-        captureMatrixHeights(start, matrices, this.terrainMatrixBaseY, this.terrainMatrixIndices)
     }
 
     applyDeleteBounceOffset(offset: number): Mesh[] {
@@ -156,12 +146,6 @@ export abstract class BaseStaticObject implements StaticObject {
                 translucentBuffer[(index * 16) + 13] = this.translucentMatrixBaseY[i] + offset
             })
             changedMeshes.push(WorldRenderer.translucentPlane!.mesh)
-        }
-        if (this.terrainMatrixIndices.length > 0 && TerrainManager.terrainBlockMatrixBuffer.length > 0) {
-            this.terrainMatrixIndices.forEach((index, i) => {
-                TerrainManager.terrainBlockMatrixBuffer[(index * 16) + 13] = this.terrainMatrixBaseY[i] + offset
-            })
-            changedMeshes.push(TerrainManager.terrainBlock1!)
         }
         this.onDeleteBounceOffset(offset)
         return changedMeshes

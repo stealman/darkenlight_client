@@ -1,5 +1,5 @@
 import { Color3, Matrix, Vector2, Vector3 } from '@babylonjs/core'
-import { TerrainEnum1 } from '@/babylon/materials'
+import { MaterialEnum1 } from '@/babylon/materials'
 import { Lights } from '@/babylon/scene/lights'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
@@ -319,6 +319,7 @@ export class StoneEntrance extends BaseStaticObject {
     }
 
     render() {
+        this.renderArch()
         const facingX = this.facing === '+X' ? 1 : this.facing === '-X' ? -1 : 0
         const facingZ = this.facing === '+Z' ? 1 : this.facing === '-Z' ? -1 : 0
         this.prefab!.matrices.push(Matrix.Scaling(2, 2, 1)
@@ -391,18 +392,19 @@ export class StoneEntrance extends BaseStaticObject {
         this.updatePortalLightTransform()
     }
 
-    renderTerrain(terrainMatrices: Matrix[], terrainUvData: Vector2[]) {
+    private renderArch() {
         const terrainBlock = WorldDataManager.getBlockMap()[Math.floor(this.position.x)]?.[Math.floor(this.position.z)]
         if (!terrainBlock || terrainBlock.type <= 0) {
             return
         }
 
+        const batch = WorldRenderer.block1!
         const runsAlongX = this.getSizeX() > this.getSizeZ()
         const addBlock = (widthOffset: number, depthOffset: number, height: number) => {
             const x = this.position.x + (runsAlongX ? widthOffset : depthOffset)
             const z = this.position.z + (runsAlongX ? depthOffset : widthOffset)
-            terrainMatrices.push(Matrix.Translation(x, this.position.y + height, z))
-            terrainUvData.push(TerrainEnum1.getTerrainForBlock(terrainBlock, height < 3))
+            batch.matrices.push(Matrix.Translation(x, this.position.y + height, z))
+            batch.uvData.push(MaterialEnum1.TERRAIN_ROCK.uv)
         }
 
         for (let depth = 0; depth < 2; depth++) {

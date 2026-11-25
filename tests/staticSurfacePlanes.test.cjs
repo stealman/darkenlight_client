@@ -35,9 +35,13 @@ test('banner UV variants and sign faces share one batch; portals share their ble
         getSizeZ() { return 2 }
     }
     const cache = new Map()
+    const entranceRockUv = new core.Vector2(6.5, 4.5)
     const dependencies = {
         '@babylonjs/core': core,
-        '@/babylon/materials': {Materials: materials, MaterialEnum1: {WOOD_3: {uv: new core.Vector2()}, WOOD_PLANKS: {uv: new core.Vector2()}}, TerrainEnum1: {}},
+        '@/babylon/materials': {Materials: materials, MaterialEnum1: {
+            WOOD_3: {uv: new core.Vector2()}, WOOD_PLANKS: {uv: new core.Vector2()}, TERRAIN_ROCK: {uv: entranceRockUv},
+        }},
+        '@/data/worldDataManager': {WorldDataManager: {getBlockMap: () => [[{type: 3}]]}},
         '@/babylon/scene/lights': {Lights: {addShadowCaster() {}, registerSharedLightMesh() {}, registerStaticLight() {}, unregisterStaticLight() {}}},
         '@/babylon/world/worldRenderer': {WorldRenderer: world, Prefab},
         '@/babylon/world/statics/objects/baseStaticObject': {BaseStaticObject},
@@ -105,7 +109,10 @@ test('banner UV variants and sign faces share one batch; portals share their ble
             assert.deepEqual(originalSignUVs[index * 2], originalSignUVs[index * 2 + 1], 'same layout on both sides')
         }
         const portals = ['+X', '-X', '+Z', '-Z'].map(facing => new StoneEntrance(281, core.Vector3.Zero(), core.Vector2.Zero(), {facing}))
+        const beforePortals = world.block1.matrices.length
         portals.forEach(portal => portal.render())
+        assert.equal(world.block1.matrices.length - beforePortals, 4 * 16)
+        assert.ok(world.block1.uvData.slice(beforePortals).every(uv => uv === entranceRockUv))
         assert.equal(new Set(portals.map(portal => portal.prefab)).size, 1)
         assert.notEqual(portals[0].prefab, signs.prefab)
         assert.equal(StaticSurfacePlanes.all.size, 2)
@@ -136,4 +143,32 @@ test('banner UV variants and sign faces share one batch; portals share their ble
         assert.ok(arrangements.size > 1, 'different positions vary the arrangement')
     } finally { scene.dispose(); engine.dispose() }
     assert.equal(StaticSurfacePlanes.all.size, 0)
+})
+
+test('snow contact composes the stone shader without pre-existing fragment definitions', async () => {
+    const core = await import('@babylonjs/core/index.js')
+    const {PBRCustomMaterial} = await import('@babylonjs/materials/custom/pbrCustomMaterial.js')
+    const engine = new core.NullEngine()
+    const scene = new core.Scene(engine)
+    try {
+        const exports = {}
+        const source = readFileSync(join(__dirname, '../src/babylon/world/statics/staticTerrainContact.ts'), 'utf8')
+        const code = ts.transpileModule(source, {compilerOptions: {module: ts.ModuleKind.CommonJS}}).outputText
+        const dependencies = {
+            '@babylonjs/core': core,
+            '@/adminUtils/assets/snow-atlas.png': {default: ''},
+            '@/babylon/world/terrainSurfaceShader': {
+                configureTerrainNoiseTexture() {},
+                terrainNoiseShader: '', terrainFringeShader: '', terrainContactSnowShader: '', terrainContactMossShader: '',
+            },
+        }
+        new Function('exports', 'require', code)(exports, name => dependencies[name])
+        const material = new PBRCustomMaterial('stoneAtlas', scene)
+        material.Vertex_Definitions('attribute vec3 stonePosition1;')
+        assert.equal(material.CustomParts.Fragment_Definitions, undefined)
+        new exports.StaticTerrainContact(material, true)
+        assert.match(material.CustomParts.Vertex_Definitions, /attribute vec3 stonePosition1;/)
+        assert.match(material.CustomParts.Fragment_Definitions, /varying vec3 vStaticSnowContact;/)
+        assert.doesNotMatch(material.CustomParts.Fragment_Definitions, /\bundefined\b/)
+    } finally { scene.dispose(); engine.dispose() }
 })

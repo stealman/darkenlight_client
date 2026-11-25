@@ -92,10 +92,6 @@ export const WorldRenderer = {
         this.foliage?.initialize(scene, this.worldParentNode)
         FoggyAreaManager.initialize(scene)
 
-        // Terrain receives local-light shadows, but does not need to cast into
-        // every static-light shadow map. Keep the block terrain as a
-        // sun/personal-light caster for raised terrain edges.
-        Lights.addShadowCaster(TerrainManager.terrainBlock1!, true)
         // Flat terrain cannot create a useful nearby personal-light
         // silhouette, but would otherwise be redrawn into its map every frame.
         Lights.addShadowCaster(TerrainManager.terrainPlane!, false)
@@ -143,15 +139,14 @@ export const WorldRenderer = {
         this.snowCoverMask = snowCoverMask
 
         // Render terrain
-        const outdoorTerrain = TerrainManager.renderTerrain((terrainMatrices, terrainUvData) => {
-            StaticsManager.renderTerrainBlocks(terrainMatrices, terrainUvData)
-        }, snowCoverMask)
+        StaticsManager.prepareRender()
+        const outdoorTerrain = TerrainManager.renderTerrain(snowCoverMask)
 
         // Render trees
         TreeManager.renderTrees()
 
         // Render statics
-        // renderTerrainBlocks already updated visibility for this same pass.
+        // Visibility and render captures were prepared before terrain contact shadows.
         StaticsManager.renderObjects(true)
         TerrainDebrisManager.render()
 
@@ -196,7 +191,6 @@ export const WorldRenderer = {
         // Static light slots are excluded from ordinary scene meshes and are
         // attached explicitly. Keep this registration separate from shader
         // warm-up so fireplaces and torches continue to illuminate terrain.
-        Lights.registerSharedLightMesh(TerrainManager.terrainBlock1!)
         Lights.registerSharedLightMesh(TerrainManager.terrainPlane!)
         Lights.registerSharedLightMesh(this.block1!.mesh)
         Lights.registerSharedLightMesh(this.blockWithAlpha1!.mesh)

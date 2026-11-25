@@ -73,7 +73,6 @@ export function configureStaticLightMaterials(host: StaticLightingHost) {
     // This is a material capacity, not the number of lights in the current
     // day/night phase. Keep it stable to avoid mismatched light UBO layouts.
     const maxLights = staticLightLimit + 2
-    Materials.terrainMaterial!.maxSimultaneousLights = maxLights
     Materials.blockMat1!.maxSimultaneousLights = maxLights
     Materials.blockMatAlpha1!.maxSimultaneousLights = maxLights
 

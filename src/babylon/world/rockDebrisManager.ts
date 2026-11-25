@@ -11,7 +11,7 @@ export const RockDebrisManager = {
     BASE_DENSITY: 1 / 8,
     OUTDOOR_DENSITY_MULTIPLIER: 0.75,
     INDOOR_DENSITY_MULTIPLIER: 1.25,
-    MATERIAL: MaterialEnum1.ROCK1_SMALL,
+    MATERIAL: MaterialEnum1.TERRAIN_ROCK,
 
     renderRockDebris(indoor: boolean) {
         const blockMap = WorldDataManager.getBlockMap()
@@ -35,7 +35,7 @@ export const RockDebrisManager = {
                 const stoneCount = 1 + this.hashTile(x, z, 1) % 5
                 for (let index = 0; index < stoneCount; index++) {
                     const shape = this.hashTile(x, z, 90 + index) % STONE_SHAPE_COUNT
-                    StoneBatch.add(this.getStoneMatrix(x, z, block.totalHeight, index), shape, this.MATERIAL.uv, 'smallBlock')
+                    StoneBatch.add(this.getStoneMatrix(x, z, block.totalHeight, index), shape, this.MATERIAL.uv, undefined, true)
                 }
             }
         }

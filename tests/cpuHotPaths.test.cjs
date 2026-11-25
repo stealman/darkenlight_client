@@ -118,6 +118,8 @@ test('static stacking is reused until terrain, floors, or scenery change', () =>
         '@/babylon/world/buildings/buildingManager': {BuildingManager: floors},
         '@/babylon/world/snowCoverMask': {isShrubType: () => false},
         '@/babylon/world/statics/objects/campObjects': {CampBarrel: class {}},
+        '@/babylon/world/statics/objects/cemeteryEmberBowl': {CemeteryEmberBowl: class {}},
+        '@/babylon/world/statics/objects/cemeteryObjects': {CemeteryPedestal: class {}},
     })
     let reads = 0
     const prop = (type, surface, onStatic) => ({

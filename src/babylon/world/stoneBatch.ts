@@ -1,4 +1,4 @@
-import { Matrix, Mesh, Scene, ShadowDepthWrapper, Texture, TransformNode, Vector2, Vector3, VertexData } from '@babylonjs/core'
+import { Matrix, Mesh, Scene, ShadowDepthWrapper, TransformNode, Vector2, Vector3, VertexData } from '@babylonjs/core'
 import { PBRCustomMaterial } from '@babylonjs/materials'
 import { Materials } from '@/babylon/materials'
 import { Prefab } from './worldRenderer'
@@ -65,7 +65,6 @@ function createGeometry(mesh: Mesh) {
 
 function createMaterial(scene: Scene) {
     const block = Materials.blockMat1!
-    const terrain = Materials.terrainMaterial!
     const material = new PBRCustomMaterial('stoneAtlas', scene)
     material.albedoTexture = block.albedoTexture
     material.bumpTexture = block.bumpTexture
@@ -77,43 +76,24 @@ function createMaterial(scene: Scene) {
     material.environmentIntensity = block.environmentIntensity
     material.usePhysicalLightFalloff = block.usePhysicalLightFalloff
     material.maxSimultaneousLights = block.maxSimultaneousLights
-    material.AddUniform('stoneTerrainColor', 'sampler2D', terrain.albedoTexture)
     for (const attribute of ['uvc', 'stonePosition1', 'stonePosition2', 'stoneNormal1', 'stoneNormal2']) {
         material.AddAttribute(attribute)
     }
-    const varyings = 'varying vec2 vStoneTerrainUV; varying float vStoneAtlas;'
     material.Vertex_Definitions(`
         attribute vec2 uvc;
         attribute vec3 stonePosition1, stonePosition2, stoneNormal1, stoneNormal2;
-        ${varyings}
     `)
     material.Vertex_Before_PositionUpdated(`
         float stoneShape = floor(uvc.x / 16.0);
         positionUpdated = stoneShape < 0.5 ? position : (stoneShape < 1.5 ? stonePosition1 : stonePosition2);
-        vStoneAtlas = floor(uvc.y / 16.0);
+        float smallCell = step(16.0, uvc.y);
         vec2 stoneCell = mod(uvc, 16.0);
-        // Keep the terrain sample within the atlas patch used by tile tops.
-        vStoneTerrainUV = (stoneCell + vec2(0.25, 0.3333333) + mix(vec2(0.05), vec2(0.95), uv) * vec2(0.25, 0.3333333))
-            * vec2(${(terrain.albedoTexture as Texture).uScale}, ${(terrain.albedoTexture as Texture).vScale});
-        uvUpdated = stoneCell + mix(vec2(0.06), vec2(0.94), uv) *
-            (vStoneAtlas > 1.5 ? 0.5 : 1.0) + (vStoneAtlas > 1.5 ? 0.25 : 0.0);
+        uvUpdated = stoneCell + mix(vec2(0.06), vec2(0.94), uv) * mix(1.0, 0.5, smallCell) + smallCell * 0.25;
     `)
     material.Vertex_Before_NormalUpdated(`
         #ifdef NORMAL
         normalUpdated = stoneShape < 0.5 ? normal : (stoneShape < 1.5 ? stoneNormal1 : stoneNormal2);
         #endif
-    `)
-    material.Fragment_Definitions(varyings)
-    material.Fragment_Before_Lights(`
-        if (vStoneAtlas > 0.5 && vStoneAtlas < 1.5) {
-            surfaceAlbedo = toLinearSpace(texture2D(stoneTerrainColor, vStoneTerrainUV).rgb);
-            normalW = geometricNormalW;
-        }
-    `)
-    material.Fragment_Before_FinalColorComposition(`
-        if (vStoneAtlas > 0.5 && vStoneAtlas < 1.5) {
-            finalEmissive = vec3(0.0);
-        }
     `)
     material.shadowDepthWrapper = new ShadowDepthWrapper(material, scene, { standalone: true })
     return material
@@ -142,9 +122,8 @@ export const StoneBatch = {
         this.snowContact?.clear()
     },
 
-    add(matrix: Matrix, shape: number, uv: Vector2, atlas: 'block' | 'terrain' | 'smallBlock', snowHeight?: number) {
+    add(matrix: Matrix, shape: number, uv: Vector2, snowHeight?: number, smallCell = false) {
         const batch = this.prefab!
-        const atlasIndex = atlas === 'terrain' ? 1 : atlas === 'smallBlock' ? 2 : 0
         if (snowHeight !== undefined) {
             const stoneHeight = Math.hypot(matrix.m[4], matrix.m[5], matrix.m[6]) * PROFILES[shape].crown[1]
             this.snowContact?.addSnow(batch.matrices.length, snowHeight, stoneHeight * STONE_SNOW_REACH_PER_HEIGHT, true)
@@ -152,7 +131,7 @@ export const StoneBatch = {
         batch.matrices.push(matrix)
         // Atlas cells occupy less than 16 units per axis. Pack the selectors
         // in multiples of 16 so the existing matrix and uvc buffers can be reused.
-        batch.uvData.push(new Vector2(uv.x + 16 * shape, uv.y + 16 * atlasIndex))
+        batch.uvData.push(new Vector2(uv.x + 16 * shape, uv.y + (smallCell ? 16 : 0)))
     },
 
     flush() {

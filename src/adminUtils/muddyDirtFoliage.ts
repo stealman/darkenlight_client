@@ -8,7 +8,8 @@ import { TERRAIN_CARDINAL_EDGES } from '@/babylon/world/terrainRoofShape'
 import { findFoliagePatch, forEachFoliageWallFoot, wallFootDecal } from './terrainFoliagePatches'
 
 // Rows in the preview atlas, counted from the top.
-const GRASS = 0, LOW_GRASS = 1, TWIGS = 3, SCRUB = 4, MOSS = 6, PEBBLES = 7
+const GRASS = 0, TWIGS = 3, SCRUB = 4, MOSS = 6, PEBBLES = 7
+export const LOW_GRASS = 1
 // Virtual row so the preview can tint dry grass specifically on muddy dirt.
 export const MUDDY_DRY_GRASS = 11
 const PLANT_PATCHES = {spacing: 5, salt: 1010, minRadius: 1.35, radiusRange: 1.55,

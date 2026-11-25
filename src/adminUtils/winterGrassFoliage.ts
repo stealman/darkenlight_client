@@ -7,11 +7,12 @@ import type { MapBlock } from '@/data/worldDataManager'
 import { MUDDY_DRY_GRASS } from './muddyDirtFoliage'
 import { findFoliagePatch, forEachFoliageWallFoot } from './terrainFoliagePatches'
 
-const GRASS = 0, TWIGS = 3, SCRUB = 4, DRY_GRASS = 5, MOSS = 6, PEBBLES = 7
+const GRASS = 0, TWIGS = 3, SCRUB = 4, MOSS = 6, PEBBLES = 7
+export const DRY_GRASS = 5
 // The preview shader remaps these rows to the shared sprites with a different palette.
 const MOSSY_PEBBLES = 8, WINTER_SCRUB = 9, SINGLE_MOSSY_PEBBLE = 10
 const GREEN_GRASS = 14
-const GRASS_ATLAS_Y = FoliageManager.getAtlasOffset(0, 0, GRASS).y
+export const GRASS_ATLAS_Y = FoliageManager.getAtlasOffset(0, 0, GRASS).y
 const GREEN_GRASS_ATLAS_Y = FoliageManager.getAtlasOffset(0, 0, GREEN_GRASS).y
 const ROCK_PEBBLES = 11, LIGHT_ROCK_PEBBLE = 12
 const SNOW_COLUMN_OFFSET = 8

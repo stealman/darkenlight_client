@@ -4,7 +4,6 @@ import {
     Texture, Vector2, PBRMaterial, StandardMaterial,
 } from '@babylonjs/core'
 import { PBRCustomMaterial } from '@babylonjs/materials'
-import { MapBlock } from '@/data/worldDataManager'
 
 // The shared block atlas has 16 columns. An extra atlas width flags an emissive top face.
 export const BLOCK_TOP_GLOW_U_OFFSET = 16
@@ -19,7 +18,6 @@ export interface PBRBasicAtts {
 export const Materials = {
     BASE_PATH: './images/materials/',
 
-    terrainMaterial: null as PBRCustomMaterial | null,
 
     blockMatAlpha1: null as PBRCustomMaterial | null,
     blockMat1: null as PBRCustomMaterial | null,
@@ -32,7 +30,6 @@ export const Materials = {
     preciseShotArrowTrailMaterial: null as ShaderMaterial | null,
 
     initialize(scene: Scene) {
-        this.terrainMaterial = this.createTerrainMaterial1(scene)
 
         this.blockMat1 = this.createBlockMat1(scene)
         this.blockMatAlpha1 = this.createBlockMatAlpha1(scene)
@@ -43,16 +40,6 @@ export const Materials = {
         this.weaponTrailMaterial = this.createWeaponTrailMaterial(scene)
         this.powerStrikeWeaponTrailMaterial = this.createPowerStrikeWeaponTrailMaterial(scene)
         this.preciseShotArrowTrailMaterial = this.createPreciseShotArrowTrailMaterial(scene)
-    },
-
-    createTerrainMaterial1(scene: Scene): PBRCustomMaterial {
-        const material = this.getPBRCustomMaterial(scene, "terrain_mats1", this.BASE_PATH, 'terrain_materials1.png', 1 / 8, 1 / 8, false)
-        material.emissiveTexture = new Texture(this.BASE_PATH + 'terrain_materials1_emissive.png', scene)
-        material.emissiveTexture.uScale = 1 / 8
-        material.emissiveTexture.vScale = 1 / 8
-        material.emissiveColor = new Color3(1, 1, 1)
-
-        return material
     },
 
     createBlockMat1(scene: Scene): PBRCustomMaterial {
@@ -296,7 +283,6 @@ export const MaterialEnum1 = {
     BRICK_BLACK: new MaterialEnum(3, new Vector2(4.5, 14.5)),
     BRICK_DARK_GRAY: new MaterialEnum(7, new Vector2(6.5, 14.5)),
     ROCK1: new MaterialEnum(4, new Vector2(0.5, 4.5)),
-    ROCK1_SMALL: new MaterialEnum(5, new Vector2(0.5, 4.5), new Vector2(0.5, 0.5)),
     ROCK1_BEIGE: new MaterialEnum(6, new Vector2(2.5, 4.5)),
     SNOW: new MaterialEnum(8, new Vector2(4.5, 4.5)),
     SNOW_SMALL: new MaterialEnum(18, new Vector2(4.5, 4.5), new Vector2(0.5, 0.5)),
@@ -309,6 +295,11 @@ export const MaterialEnum1 = {
     BIRCH_BARK: new MaterialEnum(15, new Vector2(12.5, 12.5)),
     WILLOW_BARK: new MaterialEnum(16, new Vector2(14.5, 12.5)),
     EMBERS: new MaterialEnum(17, new Vector2(0.5, 10.5)),
+    TERRAIN_ROCK: new MaterialEnum(19, new Vector2(6.5, 4.5)),
+    TERRAIN_DIRT: new MaterialEnum(20, new Vector2(0.5, 2.5)),
+    TERRAIN_MUD: new MaterialEnum(21, new Vector2(2.5, 2.5)),
+    TERRAIN_GRASS: new MaterialEnum(22, new Vector2(4.5, 2.5)),
+    TERRAIN_WINTER_GRASS: new MaterialEnum(23, new Vector2(6.5, 2.5)),
     STEEL_1: new MaterialEnum(25, new Vector2(0.5, 8.5)),
     HAY: new MaterialEnum(33, new Vector2(0.5, 6.5)),
 
@@ -318,45 +309,18 @@ export const MaterialEnum1 = {
 }
 
 export const TerrainEnum1 = {
-    TERRAIN_DIRT: new MaterialEnum(1, new Vector2(2.5, 6.5)),
-    TERRAIN_GRASS: new MaterialEnum(2, new Vector2(0.5, 6.5)),
-    TERRAIN_ROCK: new MaterialEnum(3, new Vector2(6.5, 6.5)),
-    TERRAIN_MUDDY_DIRT: new MaterialEnum(4, new Vector2(0.5, 4.5)),
+    TERRAIN_DIRT: {index: 1},
+    TERRAIN_GRASS: {index: 2},
+    TERRAIN_ROCK: {index: 3},
+    TERRAIN_MUDDY_DIRT: {index: 4},
     // This block atlas cross sits about 14 px above the regular row alignment.
-    TERRAIN_GRASS_WINTER: new MaterialEnum(5, new Vector2(2.5, 4.65)),
+    TERRAIN_GRASS_WINTER: {index: 5},
 
-    TERRAIN_SNOW_DIRT: new MaterialEnum(101, new Vector2(4.5, 6.5)),
-    TERRAIN_SNOW_GRASS: new MaterialEnum(102, new Vector2(4.5, 6.5)),
-    TERRAIN_SNOW_ROCK: new MaterialEnum(103, new Vector2(6.5, 4.5)),
-    TERRAIN_SNOW_MUDDY_DIRT: new MaterialEnum(104, new Vector2(4.5, 6.5)),
-    TERRAIN_SNOW_GRASS_WINTER: new MaterialEnum(105, new Vector2(4.5, 6.5)),
-
-    TERRAIN_ORE_ROCK: new MaterialEnum(1003, new Vector2(6.5, 2.5)),
-    TERRAIN_COAL_ROCK: new MaterialEnum(2003, new Vector2(4.5, 2.5)),
-
-    getTerrainForBlock(block: MapBlock, ignoreSnow: boolean = false, overrideType?: number): Vector2 {
-        let type = overrideType ?? block.type;
-        if (block.minableCoal) {
-            type += 2000;
-        } else if (block.minableOreAvailable) {
-            type += 1000;
-        }
-        if (block.snowed && !ignoreSnow) {
-            type += 100;
-        }
-
-        const terrain = Object.values(TerrainEnum1).find(item => item.index === type)
-        if (terrain?.uv) {
-            return terrain.uv
-        }
-
-        // Ore/coal can be assigned to a non-rock tile by the GM editor, and a
-        // snowed deposit tile has no dedicated atlas entry. Keep the terrain
-        // renderable by falling back to the block's ordinary/snow variant.
-        const baseType = (overrideType ?? block.type) + (block.snowed && !ignoreSnow ? 100 : 0)
-        const fallback = Object.values(TerrainEnum1).find(item => item.index === baseType)
-        return fallback?.uv ?? TerrainEnum1.TERRAIN_DIRT.uv;
-    }
+    TERRAIN_SNOW_DIRT: {index: 101},
+    TERRAIN_SNOW_GRASS: {index: 102},
+    TERRAIN_SNOW_ROCK: {index: 103},
+    TERRAIN_SNOW_MUDDY_DIRT: {index: 104},
+    TERRAIN_SNOW_GRASS_WINTER: {index: 105},
 }
 
 export const MaterialEnumTrans = {

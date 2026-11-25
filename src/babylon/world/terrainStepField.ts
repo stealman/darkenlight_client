@@ -1,5 +1,5 @@
 import { Constants, Engine, RawTexture, Scene, Texture } from '@babylonjs/core'
-import type { Color3, Vector2, Vector3 } from '@babylonjs/core'
+import type { Color3, Vector3 } from '@babylonjs/core'
 import type { PBRCustomMaterial } from '@babylonjs/materials'
 import { Settings } from '@/settings/settings'
 import { fightSplatShader, MAX_FIGHT_SPLATS } from './fightSplatShader'
@@ -122,21 +122,6 @@ export class TerrainStepField {
             this.glowsDirty = false
             this.uploadGlows()
         }
-    }
-
-    configureAtlas(material: PBRCustomMaterial, snowOffsets: Vector2[], soilOffsets: Vector2[]) {
-        const atlasCoverage = (offsets: Vector2[]) => offsets.map(uv => `distance(uvc, vec2(${uv.x}, ${uv.y})) < 0.01`).join(' || ')
-        material.Vertex_Definitions(`${material.CustomParts.Vertex_Definitions ?? ''}
-            varying vec2 vStepAtlas;
-        `)
-        material.Vertex_MainEnd(`${material.CustomParts.Vertex_MainEnd ?? ''}
-            vStepAtlas = vec2(${atlasCoverage(snowOffsets)} ? 1.0 : 0.0, ${atlasCoverage(soilOffsets)} ? 1.0 : 0.0);
-        `)
-        material.Fragment_Definitions(`${material.CustomParts.Fragment_Definitions ?? ''}
-            varying vec2 vStepAtlas;
-        `)
-        this.configure(material, {snow: 'vStepAtlas.x', soil: 'vStepAtlas.y'})
-        this.configureGlow(material)
     }
 
     setGlow(id: string, x: number, y: number, z: number, radius: number, color: Color3, intensity: number) {

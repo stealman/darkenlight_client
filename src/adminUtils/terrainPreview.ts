@@ -1,4 +1,6 @@
 import { createTerrainFoliageRenderer } from "./terrainFoliageRenderer"
+import { createTerrainPreviewGrass } from './terrainPreviewGrass'
+import type { PreviewGrassDetail, PreviewGrassTuft } from './terrainPreviewGrass'
 import { createTerrainSurfaceRenderer } from './terrainSurfaceRenderer'
 import { ArcRotateCamera, Mesh, Scene, TransformNode, Vector3 } from '@babylonjs/core'
 import type { ArcRotateCameraPointersInput } from '@babylonjs/core'
@@ -101,10 +103,21 @@ export function createTerrainPreview(
         <label class="admin-utils__field"><span>Intenzita slunce <output for="terrainLightIntensity">100 %</output></span>
             <input id="terrainLightIntensity" type="range" min="0" max="200" value="100"></label>
         <label class="admin-utils__field"><input id="terrainFoliage" type="checkbox" checked> Zobrazit vegetaci</label>
+        <label class="admin-utils__field">Detail trávy<select id="terrainGrassDetail">
+            <option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option>
+        </select></label>
+        <label class="admin-utils__field"><span>Hustota trávy <output for="terrainGrassDensity">100 %</output></span>
+            <input id="terrainGrassDensity" type="range" min="0" max="100" value="100"></label>
+        <output id="terrainGrassStats" class="admin-utils__field"></output>
         <button type="button">Vycentrovat pohled</button>`
     const primary = controls.querySelector<HTMLSelectElement>('#terrainPrimary')!
     const secondary = controls.querySelector<HTMLSelectElement>('#terrainSecondary')!
     const foliageToggle = controls.querySelector<HTMLInputElement>('#terrainFoliage')!
+    const grassDetail = controls.querySelector<HTMLSelectElement>('#terrainGrassDetail')!
+    const grassDensity = controls.querySelector<HTMLInputElement>('#terrainGrassDensity')!
+    const grassDensityOutput = controls.querySelector<HTMLOutputElement>('output[for="terrainGrassDensity"]')!
+    const grassStats = controls.querySelector<HTMLOutputElement>('#terrainGrassStats')!
+    const formatCount = new Intl.NumberFormat('cs-CZ')
     const lightIntensity = controls.querySelector<HTMLInputElement>('#terrainLightIntensity')!
     const lightIntensityOutput = controls.querySelector<HTMLOutputElement>('output[for="terrainLightIntensity"]')!
     let baseSunIntensity = 0
@@ -140,7 +153,6 @@ export function createTerrainPreview(
     const foliage = new TransformNode('adminUtilsTerrainFoliage', scene)
     foliage.parent = terrain
     foliage.setEnabled(foliageToggle.checked)
-    foliageToggle.onchange = () => foliage.setEnabled(foliageToggle.checked)
 
     const {cameraPosition, cameraViewY} = Renderer.getCameraSetup()
     const target = new Vector3(0, cameraViewY, -2.8)
@@ -176,8 +188,31 @@ export function createTerrainPreview(
     let renderers: {
         surface: ReturnType<typeof createTerrainSurfaceRenderer>
         foliage: ReturnType<typeof createTerrainFoliageRenderer>
+        grass: ReturnType<typeof createTerrainPreviewGrass>
         paths: ReturnType<typeof createStonePathRenderer>
     } | undefined
+    let grassX = NaN, grassZ = NaN
+    const updateGrass = (force = false) => {
+        if (!renderers) return
+        const x = Math.round(camera.target.x + CENTER), z = Math.round(camera.target.z + CENTER)
+        if (!force && x === grassX && z === grassZ) return
+        grassX = x
+        grassZ = z
+        const density = grassDensity.valueAsNumber
+        const {count, triangles, budget} = renderers.grass.render(x, z, grassDetail.value as PreviewGrassDetail,
+            foliageToggle.checked ? density / 100 : 0)
+        grassDensityOutput.value = `${density} %`
+        grassStats.value = `Trsy: ${formatCount.format(count)} · Trojúhelníky: ${formatCount.format(triangles)} / ${formatCount.format(budget)}`
+    }
+    grassDetail.onchange = grassDensity.oninput = () => updateGrass(true)
+    foliageToggle.onchange = () => {
+        foliage.setEnabled(foliageToggle.checked)
+        updateGrass(true)
+    }
+    const grassObserver = camera.onViewMatrixChangedObservable.add(() => {
+        if (!controls.hidden && foliageToggle.checked) updateGrass()
+    })
+    terrain.onDisposeObservable.addOnce(() => camera.onViewMatrixChangedObservable.remove(grassObserver))
     const update = () => {
         const first = Number(primary.value)
         const second = Number(secondary.value)
@@ -234,19 +269,24 @@ export function createTerrainPreview(
             surface: createTerrainSurfaceRenderer(scene, terrain, transitionBoundary,
                 {map: demoMap, center: CENTER, boundaries: BOUNDARIES, isBank: isPondBankTile}),
             foliage: createTerrainFoliageRenderer(scene, foliage),
+            grass: createTerrainPreviewGrass(scene, foliage),
             paths: createStonePathRenderer(scene, terrain),
         }
         renderers.surface.render(demoMap, {transitionTiles, snow, snowPartner, snowOnRock, rockPartner, dirtPartner,
             shoreSurface: first, grassType, snowRockOnSoil, localBoundaries: false})
+        const grassTufts: PreviewGrassTuft[] = []
         renderers.foliage.render(demoMap, {
             atPondBank: isPondBankTile,
             pavingMoss: true,
+            replaceGrass: tuft => grassTufts.push(tuft),
             transitionWeight: (x, z) => {
                 if (!transitionTiles?.[Math.round(x)][Math.round(z)]) return 0
                 const distance = Math.abs(x - CENTER - terrainBoundaryOffset(z))
                 return Math.max(0, 1 - distance / TERRAIN_TRANSITION_REACH)
             },
         })
+        renderers.grass.setTufts(grassTufts)
+        updateGrass(true)
         renderers.paths.render(demoMap, (x, z) => demoMap[x]?.[z]?.totalHeight)
     }
     const resetCamera = () => {

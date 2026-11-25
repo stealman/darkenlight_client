@@ -7,6 +7,14 @@ import { MyPlayer } from '@/data/myPlayer'
 import { Settings } from '@/settings/settings'
 import { StoneBatch, STONE_SHAPE_COUNT } from '../../stoneBatch'
 
+const debrisMaterials = new Map([
+    [TerrainEnum1.TERRAIN_DIRT.index, MaterialEnum1.TERRAIN_DIRT.uv],
+    [TerrainEnum1.TERRAIN_GRASS.index, MaterialEnum1.TERRAIN_GRASS.uv],
+    [TerrainEnum1.TERRAIN_ROCK.index, MaterialEnum1.TERRAIN_ROCK.uv],
+    [TerrainEnum1.TERRAIN_MUDDY_DIRT.index, MaterialEnum1.TERRAIN_MUD.uv],
+    [TerrainEnum1.TERRAIN_GRASS_WINTER.index, MaterialEnum1.TERRAIN_WINTER_GRASS.uv],
+])
+
 // Pile variation is seeded by world, tile and variant.
 const PIECES = [
     [-0.21, -0.16, 0.30, 0.18, 0.22],
@@ -25,7 +33,7 @@ export class TerrainDebris extends BaseStaticObject {
     private readonly pieces: {matrix: Matrix, shape: number}[]
 
     constructor(type: number, position: Vector3) {
-        super(type, position, 0, MaterialEnum1.ROCK1.uv, StoneBatch.prefab)
+        super(type, position, 0, MaterialEnum1.TERRAIN_ROCK.uv, StoneBatch.prefab)
         const variant = type - 151
         const lowDetail = Settings.isDetalLevelLow()
         // Persisted type 153 retains the original large pile (now UI variant 4).
@@ -76,15 +84,12 @@ export class TerrainDebris extends BaseStaticObject {
         if (!block || block.type <= 0) return
         const hideSnow = this.isSnowSuppressed(block)
         const snowHeight = block.snowed ? WorldRenderer.getSnowSurfaceHeight(this.position.x, this.position.z) : undefined
-        const useBlockAtlas = block.type === TerrainEnum1.TERRAIN_ROCK.index
-        const renderType = hideSnow && (block.type === 2 || block.type === 5) ? TerrainEnum1.TERRAIN_DIRT.index : undefined
-        const uv = useBlockAtlas
-            ? MaterialEnum1.ROCK1.uv
-            : TerrainEnum1.getTerrainForBlock(block, true, renderType)
+        const type = hideSnow && (block.type === 2 || block.type === 5) ? TerrainEnum1.TERRAIN_DIRT.index : block.type
+        const uv = debrisMaterials.get(type) ?? MaterialEnum1.TERRAIN_DIRT.uv
         const y = snowHeight === undefined ? this.renderPosition.y : Math.max(this.renderPosition.y, snowHeight)
         const world = Matrix.Translation(this.renderPosition.x, y, this.renderPosition.z)
         for (const {matrix, shape} of this.pieces) {
-            StoneBatch.add(matrix.multiply(world), shape, uv, useBlockAtlas ? 'block' : 'terrain', snowHeight)
+            StoneBatch.add(matrix.multiply(world), shape, uv, snowHeight)
         }
     }
 }

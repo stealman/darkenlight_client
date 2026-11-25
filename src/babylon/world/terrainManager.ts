@@ -3,7 +3,7 @@ import type { MapBlock } from '@/data/worldDataManager'
 import { Color4, Matrix, Mesh, ParticleSystem, Scene, TransformNode, Vector2 } from '@babylonjs/core'
 import { updateWorldInstanceBuffers } from '@/babylon/world/worldInstanceBuffers'
 import { Builder } from '@/babylon/builder'
-import { MaterialEnum1, Materials, TerrainEnum1 } from '@/babylon/materials'
+import { MaterialEnum1 } from '@/babylon/materials'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { Settings } from '@/settings/settings'
 import { ViewportManager } from '@/utils/viewport'
@@ -31,11 +31,9 @@ export function getTerrainHeightOffset(block: MapBlock, hideSnow: boolean): numb
 }
 
 export const TerrainManager = {
-    terrainBlock1: null as Mesh | null,
     terrainPlane: null as Mesh | null,
     dungeonBlock: null as Mesh | null,
     terrainWater: null as TerrainWaterSurface | null,
-    terrainBlockMatrixBuffer: new Float32Array(0),
     waterPlane: null as Mesh | null,
     seaWaterLevel: null as number | null,
 
@@ -56,25 +54,14 @@ export const TerrainManager = {
         const terrainSteps = StepMarksRenderer.field
         const contactShadow = new TerrainContactShadow(scene, terrainSteps ?? undefined)
         this.contactShadow = contactShadow
-        terrainSteps?.configureAtlas(Materials.terrainMaterial!,
-            [TerrainEnum1.TERRAIN_SNOW_DIRT.uv, TerrainEnum1.TERRAIN_SNOW_ROCK.uv],
-            [TerrainEnum1.TERRAIN_DIRT.uv, TerrainEnum1.TERRAIN_MUDDY_DIRT.uv])
-        contactShadow.configure(Materials.terrainMaterial!, false, !!terrainSteps)
         IndoorTerrainOcclusionManager.initialize(scene, parent, this.renderers.createDungeonRockMaterial)
         this.hoverBlockMarker = Builder.createHorizontalPlane(scene, null, 1, 0)
-
-        // Static terrain-textured objects keep their own instance batch.
-        this.terrainBlock1 = Builder.createBlockWithFaces(scene, parent)
-        this.terrainBlock1.material = Materials.terrainMaterial
-        this.terrainBlock1.isPickable = true
-        this.terrainBlock1.thinInstanceEnablePicking = true
 
         this.terrainPlane = Builder.createHorizontalPlane(scene, parent, 1, 0)
         this.terrainPlane.setEnabled(false)
 
         this.terrainWater = new TerrainWaterSurface(scene, parent)
         if (Settings.isShadowsEnabled()) {
-            this.terrainBlock1.receiveShadows = true
             this.terrainPlane.receiveShadows = true
             this.terrainWater.mesh.receiveShadows = true
         }
@@ -120,7 +107,7 @@ export const TerrainManager = {
         return mesh
     },
 
-    renderTerrain(renderTerrainStatics?: (terrainMatrices: Matrix[], terrainUvData: Vector2[]) => void, snowCoverMask: Set<number> = new Set()) {
+    renderTerrain(snowCoverMask: Set<number> = new Set()) {
         const world = WorldDataManager.worldDataMap.get(MyPlayer.worldId)!
         const map = world.blockMap
         const center = MyPlayer.myChar.getPositionRounded()
@@ -134,7 +121,7 @@ export const TerrainManager = {
         } else {
             this.outdoorTerrain?.setEnabled(false)
         }
-        this.renderTerrainArea(map, world.planeBlockMap, snowCoverMask, center, renderTerrainStatics, outdoor)
+        this.renderTerrainArea(map, world.planeBlockMap, snowCoverMask, center, outdoor)
         this.contactShadow?.update(map, world.renderRevision, Lights.indoor ? [] : [
             ...BuildingManager.getBuildingFloorShadowFootprints(center),
             ...StaticsManager.getContactShadowFootprints(map),
@@ -147,11 +134,8 @@ export const TerrainManager = {
         planeBlockMap: (MapBlock | false)[][],
         snowCoverMask: Set<number>,
         viewportCenter?: {x: number, y: number, z: number},
-        renderTerrainStatics?: (terrainMatrices: Matrix[], terrainUvData: Vector2[]) => void,
         outdoor = false,
     ) {
-        const terrainMatrices1: Matrix[] = []
-        const terrainUvData1: Vector2[] = []
         const planeMatrices: Matrix[] = []
         const planeUvData: Vector2[] = []
         const waterTiles: {x: number, z: number, height: number}[] = []
@@ -222,11 +206,9 @@ export const TerrainManager = {
             }
         }
 
-        renderTerrainStatics?.(terrainMatrices1, terrainUvData1)
         IndoorTerrainOcclusionManager.finishTerrainRender()
 
         // Apply buffers for instances
-        this.terrainBlockMatrixBuffer = updateWorldInstanceBuffers(this.terrainBlock1!, terrainMatrices1, terrainUvData1)
         if (dungeon) updateWorldInstanceBuffers(dungeon, blockMatrices, blockUvs)
         this.dungeonBlock?.setEnabled(!!dungeon && blockMatrices.length > 0)
         updateWorldInstanceBuffers(this.terrainPlane!, planeMatrices, planeUvData)
@@ -237,7 +219,6 @@ export const TerrainManager = {
         } else this.waterFloor?.mesh.setEnabled(false)
 
         // Set enabled based on if there are instances to show
-        this.terrainBlock1!.setEnabled(terrainMatrices1.length > 0)
         this.terrainPlane!.setEnabled(planeMatrices.length > 0)
     },
 
