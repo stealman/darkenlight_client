@@ -4,9 +4,10 @@ import { MaterialEnum1, TerrainEnum1 } from '@/babylon/materials'
 import { MapBlock, WorldDataManager } from '@/data/worldDataManager'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { MyPlayer } from '@/data/myPlayer'
+import { Settings } from '@/settings/settings'
 import { StoneBatch, STONE_SHAPE_COUNT } from '../../stoneBatch'
 
-// Pile variation is seeded by world, tile and variant; piece sizes stay fixed.
+// Pile variation is seeded by world, tile and variant.
 const PIECES = [
     [-0.21, -0.16, 0.30, 0.18, 0.22],
     [0.23, -0.13, 0.22, 0.12, 0.18],
@@ -26,8 +27,9 @@ export class TerrainDebris extends BaseStaticObject {
     constructor(type: number, position: Vector3) {
         super(type, position, 0, MaterialEnum1.ROCK1.uv, StoneBatch.prefab)
         const variant = type - 151
+        const lowDetail = Settings.isDetalLevelLow()
         // Persisted type 153 retains the original large pile (now UI variant 4).
-        const scale = [0.55, 0.8, 1.1, 0.95, 1.35][variant]
+        const scale = [0.55, 0.8, 1.1, 0.95, 1.35][variant] * (lowDetail ? 1.2 : 1)
         let seed = Math.imul(MyPlayer.worldId, 73856093) ^ Math.imul(position.x, 19349663)
             ^ Math.imul(position.z, 83492791) ^ Math.imul(type, 2654435761)
         const random = () => {
@@ -37,11 +39,12 @@ export class TerrainDebris extends BaseStaticObject {
             return ((value ^ (value >>> 14)) >>> 0) / 0x100000000
         }
         const count = variant === 0 ? 2 + Math.floor(random() * 3) : [3, 5, 8, 6, 10][variant]
+        const visibleCount = lowDetail ? Math.ceil(count / 2) : count
         const orientation = random()
         const angle = orientation * Math.PI * 2
         const firstShape = Math.floor(orientation * STONE_SHAPE_COUNT)
         const cos = Math.cos(angle), sin = Math.sin(angle)
-        this.pieces = PIECES.slice(0, count).map(([x, z, width, height, depth], index) => {
+        this.pieces = PIECES.slice(0, visibleCount).map(([x, z, width, height, depth], index) => {
             const yaw = random() * Math.PI * 2
             // Keep the rotated fragment inside its tile even after position jitter.
             const halfX = (Math.abs(Math.cos(yaw)) * width + Math.abs(Math.sin(yaw)) * depth) * scale / 2

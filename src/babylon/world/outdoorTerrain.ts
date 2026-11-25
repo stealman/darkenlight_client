@@ -1,4 +1,4 @@
-import { BoundingInfo, TransformNode, Vector3 } from '@babylonjs/core'
+import { BoundingInfo, TransformNode, Vector3, type Mesh } from '@babylonjs/core'
 import { MapBlock } from '@/data/worldDataManager'
 import { Lights } from '@/babylon/scene/lights'
 import { ViewportManager } from '@/utils/viewport'
@@ -8,7 +8,7 @@ import { TERRAIN_RENDER_BORDER, visitBakedPaving } from './terrainRenderData'
 import type { TerrainRenderData } from './terrainRenderData'
 import { createTerrainSurfaceRenderer } from '@/adminUtils/terrainSurfaceRenderer'
 import { terrainWithoutSnow } from '@/adminUtils/terrainLocalTransitions'
-import { createTerrainFoliageRenderer } from '@/adminUtils/terrainFoliageRenderer'
+import type { createTerrainFoliageRenderer } from '@/adminUtils/terrainFoliageRenderer'
 import { BuildingManager } from './buildings/buildingManager'
 import { WATER_BLOCK_TYPE } from './terrainManager'
 import { sameSnowMask } from './snowCoverMask'
@@ -25,10 +25,12 @@ import type { TerrainStepField } from './terrainStepField'
 const REGION_SIZE = TERRAIN_ATLAS_REGION_SIZE
 
 type VisibleTile = {seen: number, faces?: OutdoorInstance[], foliage?: OutdoorInstance[]}
+type TerrainPatch = {key: number, span: number, faces: OutdoorInstance[]}
 type Region = {
     blocks: MapBlock[]
     hiddenSnow: number[]
     faces: (OutdoorInstance[] | undefined)[]
+    patches: (TerrainPatch | undefined)[]
     used: number
     map: MapBlock[][]
     left: number
@@ -51,7 +53,7 @@ function replaceInstances(previous?: OutdoorInstance[], next?: OutdoorInstance[]
 type TerrainView = {minX: number, minZ: number, maxX: number, maxZ: number}
 
 export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainView, contactShadow?: TerrainContactShadow,
-    terrainSteps?: TerrainStepField) {
+    terrainSteps?: TerrainStepField, foliageFactory?: typeof createTerrainFoliageRenderer) {
     const terrain = new TransformNode('outdoorTerrain', parent.getScene())
     terrain.parent = parent
     const detailedPaving = Settings.detailLevel.paving === 'detailed'
@@ -69,19 +71,19 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
     const batches = new Map(renderer.meshes.map(mesh => [mesh, new OutdoorInstanceBatch(mesh)]))
     const paving = createOutdoorPaving(terrain, detailedPaving, batch => batches.set(batch.mesh, batch), contactShadow, terrainSteps)
     const highDetail = Settings.isDetalLevelHigh()
-    const foliageDensity = highDetail ? 1 : Settings.isDetailLevelMedium() ? 2 / 3 : 1 / 3
-    const foliage = createTerrainFoliageRenderer(parent.getScene(), terrain, highDetail, foliageDensity)
-    for (const mesh of foliage.meshes) {
+    const foliage = foliageFactory?.(parent.getScene(), terrain, highDetail, highDetail ? 1 : 2 / 3)
+    const foliageBatches = new Map<Mesh, OutdoorInstanceBatch>()
+    for (const mesh of foliage?.meshes ?? []) {
         mesh.receiveShadows = Settings.isShadowsEnabled()
         Lights.registerSharedLightMesh(mesh)
         mesh.onDisposeObservable.addOnce(() => Lights.unregisterSharedLightMesh(mesh))
+        foliageBatches.set(mesh, new OutdoorInstanceBatch(mesh))
     }
-    const foliageBatches = new Map(foliage.meshes.map(mesh => [mesh, new OutdoorInstanceBatch(mesh)]))
     const visibleTiles = new Map<number, VisibleTile>()
     const minimum = new Vector3()
     const maximum = new Vector3()
     const maximumFoliage = new Vector3()
-    let foliageJobs: (() => void)[] = []
+    const foliageJobs: (() => void)[] = []
     const flushBatches = (list: Iterable<OutdoorInstanceBatch>, upper: Vector3) => {
         for (const batch of list) {
             batch.flush()
@@ -89,12 +91,14 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
             if (mesh.thinInstanceCount) mesh.getBoundingInfo().reConstruct(minimum, upper, mesh.getWorldMatrix())
         }
     }
-    const observer = terrain.getScene().onBeforeRenderObservable.add(() => {
-        if (!terrain.isEnabled() || !foliageJobs.length) return
-        foliageJobs.shift()!()
-        flushBatches(foliageBatches.values(), maximumFoliage)
-    })
-    terrain.onDisposeObservable.addOnce(() => terrain.getScene().onBeforeRenderObservable.remove(observer))
+    if (foliage) {
+        const observer = terrain.getScene().onBeforeRenderObservable.add(() => {
+            if (!terrain.isEnabled() || !foliageJobs.length) return
+            foliageJobs.shift()!()
+            flushBatches(foliageBatches.values(), maximumFoliage)
+        })
+        terrain.onDisposeObservable.addOnce(() => terrain.getScene().onBeforeRenderObservable.remove(observer))
+    }
     const regions = new Map<number, Region>()
     let currentMap: MapBlock[][] | undefined
     let currentCompiled: TerrainRenderData | undefined
@@ -106,9 +110,6 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
 
     return {
         setEnabled(enabled: boolean) { terrain.setEnabled(enabled) },
-        setFoliageVisible(visible: boolean) {
-            for (const mesh of foliage.meshes) mesh.isVisible = visible
-        },
         render(blockMap: MapBlock[][], center: {x: number, y: number, z: number}, snowCoverMask: ReadonlySet<number>,
             revision?: number, compiled?: TerrainRenderData, originalBlocks?: WeakSet<MapBlock>) {
             if (currentMap !== blockMap || currentCompiled !== compiled) {
@@ -122,7 +123,7 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
                 snowRevision++
             }
             terrain.setEnabled(true)
-            foliageJobs = []
+            foliageJobs.length = 0
             generation++
             const depth = blockMap[0]?.length ?? 0
             const minX = fixedView?.minX ?? Math.max(0, center.x + ViewportManager.minX)
@@ -132,18 +133,21 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
             const firstX = Math.floor(minX / REGION_SIZE) * REGION_SIZE
             const firstZ = Math.floor(minZ / REGION_SIZE) * REGION_SIZE
             let maxHeight = 0
+            let patchPadding = 1
             const isVisible = (x: number, z: number) =>
                 !!fixedView || ViewportManager.isPointInVisibleMatrix(x, z, 2, blockMap[x][z].totalHeight, 0, center)
             const containsSnow = (x: number, z: number, block: MapBlock) =>
                 block.snowed && snowCoverMask.has(x * blockMap.length + z)
-            const buildings = Array.from(BuildingManager.buildings.values(), building => ({
+            const buildings = foliage ? Array.from(BuildingManager.buildings.values(), building => ({
                 minX: building.data.x, minZ: building.data.z,
                 maxX: building.data.x + building.getWidth(), maxZ: building.data.z + building.getDepth(),
-            }))
-            const buildingsKey = JSON.stringify(buildings)
-            if (previousBuildings !== buildingsKey) {
-                previousBuildings = buildingsKey
-                buildingRevision++
+            })) : undefined
+            if (buildings) {
+                const buildingsKey = JSON.stringify(buildings)
+                if (previousBuildings !== buildingsKey) {
+                    previousBuildings = buildingsKey
+                    buildingRevision++
+                }
             }
 
             const prepareRegion = (x: number, z: number) => {
@@ -178,7 +182,7 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
                         return previous
                     }
                 }
-                const region: Region = {blocks: [], hiddenSnow: [], faces: [], used: generation, map: [], left, top, visible: [],
+                const region: Region = {blocks: [], hiddenSnow: [], faces: [], patches: [], used: generation, map: [], left, top, visible: [],
                     revision, snowRevision, hasPaving: false}
                 const exposed = new Map<MapBlock, MapBlock>()
                 let useBakedTerrain = !!compiled && compiled.width === blockMap.length && compiled.depth === depth
@@ -213,13 +217,26 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
                                 values[i + 1] += top
                             }
                         }
-                        source.forEachInstance((tile, matrix, uv, sourceIndex) => {
+                        source.forEachInstance((tile, matrix, uv, sourceIndex, span) => {
                             const localX = Math.floor(tile / (bottom - top))
                             const localZ = tile % (bottom - top)
                             const index = (localX + left - x) * REGION_SIZE + localZ + top - z
                             const translation = matrix.getTranslation()
                             matrix.setTranslationFromFloats(translation.x + left, translation.y, translation.z + top)
-                            const faces = region.faces[index] ??= []
+                            let faces: OutdoorInstance[]
+                            if (span > 1) {
+                                let patch = region.patches[index]
+                                if (!patch) {
+                                    // Use negative keys for patches in the shared visibility map.
+                                    patch = {key: -1 - ((localX + left) * depth + localZ + top), span, faces: []}
+                                    for (let dx = 0; dx < span; dx++) {
+                                        for (let dz = 0; dz < span; dz++) region.patches[index + dx * REGION_SIZE + dz] = patch
+                                    }
+                                }
+                                faces = patch.faces
+                            } else {
+                                faces = region.faces[index] ??= []
+                            }
                             faces.push({batch, matrix, uv, attributes, index: sourceIndex, slot: -1})
                         })
                     },
@@ -246,6 +263,7 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
             }
 
             const prepareFoliage = (region: Region, x: number, z: number) => {
+                if (!foliage || !buildings) return
                 region.visible.length = 0
                 if (region.foliage && region.buildingRevision === buildingRevision) return
                 const {left, top, map} = region
@@ -340,6 +358,20 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
                             visible.seen = generation
                             visible.faces = faces
                             visible.foliage = foliage
+                            const patch = region.patches[tile]
+                            if (patch) {
+                                patchPadding = Math.max(patchPadding, patch.span)
+                                const visiblePatch = visibleTiles.get(patch.key)
+                                if (visiblePatch?.seen !== generation) {
+                                    replaceInstances(visiblePatch?.faces, patch.faces)
+                                    if (visiblePatch) {
+                                        visiblePatch.faces = patch.faces
+                                        visiblePatch.seen = generation
+                                    } else {
+                                        visibleTiles.set(patch.key, {seen: generation, faces: patch.faces})
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -353,12 +385,13 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
                 replaceInstances(visible.foliage)
                 visibleTiles.delete(key)
             }
-            // Tile geometry fits inside its cell and its cliff only extends downward.
-            // Reuse that envelope rather than transforming eight corners per thin instance.
-            minimum.set(minX - 1, -2, minZ - 1)
-            maximum.set(maxX + 1, maxHeight + 1, maxZ + 1)
-            maximumFoliage.copyFrom(maximum).y += 1
-            flushBatches(foliageBatches.values(), maximumFoliage)
+            // A visible tile can keep the rest of its flat patch in the batch.
+            minimum.set(minX - patchPadding, -2, minZ - patchPadding)
+            maximum.set(maxX + patchPadding, maxHeight + 1, maxZ + patchPadding)
+            if (foliage) {
+                maximumFoliage.copyFrom(maximum).y += 1
+                flushBatches(foliageBatches.values(), maximumFoliage)
+            }
             flushBatches(batches.values(), maximum)
             paving.updateSurface(blockMap, minX, minZ, maxX, maxZ, snowCoverMask, snowRevision, revision)
         },

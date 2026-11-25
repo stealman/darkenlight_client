@@ -49,6 +49,45 @@ test('baked paving matches live layout across region borders', () => {
     assert.ok(actual.some(({stone: p}) => p.left < 11.5 && p.right > 11.5))
 })
 
+test('baked atlas patches require every rotated cell within the submitted region', () => {
+    const {terrainCoverLayout, visitTerrainAtlasPlacements, visitBakedTerrainAtlasPatches} =
+        require('../src/babylon/world/terrainAtlasPlacement.ts')
+    for (const size of [2, 3]) {
+        const turns = new Set()
+        const tiles = new Map(Array.from({length: size * size}, (_, tile) => [tile, 4]))
+        for (let originX = 0; originX < 16; originX++) {
+            const codes = new Uint16Array(tiles.size)
+            const expected = []
+            visitTerrainAtlasPlacements(new Map(tiles), size, size, originX, 17, terrainCoverLayout, false, false,
+                (tile, x, z, height, code) => {
+                    codes[tile] = code
+                    expected.push([tile, x, z, height, code])
+                })
+            turns.add(expected[0][4] & 3)
+            const readCode = (x, z) => codes[x * size + z]
+            const remaining = new Map(tiles)
+            const visited = [], patches = []
+            visitBakedTerrainAtlasPatches(remaining, size, size, terrainCoverLayout, () => true, readCode,
+                (...tile) => visited.push(tile), (...patch) => patches.push(patch))
+            assert.equal(remaining.size, 0)
+            assert.deepEqual(visited.sort((a, b) => a[0] - b[0]), expected.sort((a, b) => a[0] - b[0]))
+            assert.equal(patches.length, 1)
+            assert.deepEqual(patches[0].slice(0, 4), [0, 0, 4, size])
+
+            const clipped = new Map(tiles)
+            const unexpectedPatch = () => assert.fail('Accepted an incomplete atlas patch')
+            visitBakedTerrainAtlasPatches(clipped, size, size, terrainCoverLayout, x => x > 0, readCode,
+                unexpectedPatch, unexpectedPatch)
+            assert.deepEqual(clipped, tiles)
+            codes[0] = 0
+            visitBakedTerrainAtlasPatches(clipped, size, size, terrainCoverLayout, () => true, readCode,
+                unexpectedPatch, unexpectedPatch)
+            assert.deepEqual(clipped, tiles)
+        }
+        assert.equal(turns.size, 4)
+    }
+})
+
 test('direct client terrain matches protocol decoding for all terrain variants', async () => {
     const core = await import('@babylonjs/core/index.js')
     const source = readFileSync(join(__dirname, '../src/data/worldDataManager.ts'), 'utf8')

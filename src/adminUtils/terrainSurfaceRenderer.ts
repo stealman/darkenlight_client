@@ -366,6 +366,7 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
             const tile = map[x]?.[z]
             if (tile && tile.type > 0 && tile.type < WATER_BLOCK_TYPE && (tile.stonePath || tile.beigeStonePath)) return tile
         }
+        const canMergeTile = (x: number, z: number) => !pavingAt(x, z)
         const pavingFlags = (x: number, z: number) => {
             const tile = pavingAt(x, z)
             if (!tile) return 0
@@ -408,12 +409,12 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
             }
         }
         dirtAtlas.render(surfaces, takeTile(MUDDY_DIRT, rockPartner === MUDDY_DIRT || dirtPartner === MUDDY_DIRT ? true
-            : snowGrass || withRock || dirtPartner || snowPartner === DIRT ? undefined : false), surfaces.walls, submit)
+            : snowGrass || withRock || dirtPartner || snowPartner === DIRT ? undefined : false), surfaces.walls, submit, canMergeTile)
         dryDirtAtlas.render(surfaces, takeTile(DIRT, rockPartner === DIRT ? true
-            : dirtPartner || snowPartner === DIRT ? false : undefined), surfaces.dirtWalls, submit)
+            : dirtPartner || snowPartner === DIRT ? false : undefined), surfaces.dirtWalls, submit, canMergeTile)
         for (const {type, atlas} of grassAtlases) {
             atlas.render(surfaces, takeTile(type, type !== grassType ? undefined : snowGrass ? false
-                : rockPartner === type || (!withRock && !snow) ? true : undefined), undefined, submit)
+                : rockPartner === type || (!withRock && !snow) ? true : undefined), undefined, submit, canMergeTile)
         }
         snowAtlas.render(surfaces, takeTile(SNOW_DIRT, snow ? true : undefined), undefined, renderPavingSnow ? (mesh, batch, attributes) => {
             const values: number[] = []
@@ -427,8 +428,8 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
                 if (values.length) mesh.thinInstanceSetBuffer(paving.kind, new Float32Array(values), paving.stride)
                 batch.apply(mesh)
             }
-        } : submit)
-        rockAtlas.render(surfaces, takeTile(ROCK, withRock ? false : undefined), surfaces.rockWalls, submit)
+        } : submit, canMergeTile)
+        rockAtlas.render(surfaces, takeTile(ROCK, withRock ? false : undefined), surfaces.rockWalls, submit, canMergeTile)
         for (const mesh of transitionMeshes) {
             const batch = batches.get(mesh)
             if (!batch?.geometry.count) {

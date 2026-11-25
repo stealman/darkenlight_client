@@ -4,7 +4,7 @@ import { PBRCustomMaterial } from '@babylonjs/materials'
 import { getTerrainHeightOffset, WATER_BLOCK_TYPE } from '@/babylon/world/terrainManager'
 import type { MapBlock } from '@/data/worldDataManager'
 import { createTerrainPreviewPlane } from './terrainAtlasPreview'
-import { CARDINAL_NEIGHBORS } from './terrainFoliagePatches'
+import { TERRAIN_CARDINAL_EDGES } from '@/babylon/world/terrainRoofShape'
 import { terrainNoiseShader } from '@/babylon/world/terrainSurfaceShader'
 
 const FIELD_SIZE = 128
@@ -33,7 +33,7 @@ export function createTerrainPreviewWater(plane: Mesh, map: MapBlock[][], isBank
     const width = Math.max(...bankTiles.map(([x]) => x)) + 1.5 - minX
     const length = Math.max(...bankTiles.map(([, z]) => z)) + 1.5 - minZ
     const outline = (cells: [number, number][], inside: (x: number, z: number) => boolean) =>
-        cells.flatMap(([x, z]) => CARDINAL_NEIGHBORS.filter(([dx, dz]) => !inside(x + dx, z + dz))
+        cells.flatMap(([x, z]) => TERRAIN_CARDINAL_EDGES.filter(([dx, dz]) => !inside(x + dx, z + dz))
         .map(([dx, dz]) => ({x: x + dx * 0.5, z: z + dz * 0.5, dx, dz, bankX: x + dx, bankZ: z + dz, height: map[x][z].height})))
     const shore = outline(tiles, isWater)
     const bankOutline = outline(bankTiles, isInsideBank)

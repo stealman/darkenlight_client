@@ -4,11 +4,11 @@ import { TERRAIN_BEVEL_WIDTH, TERRAIN_VERTICAL_BEVEL_WIDTH } from '@/babylon/wor
 import { FoliageManager } from '@/babylon/world/foliageManager'
 import type { TerrainFoliage } from '@/babylon/world/foliageManager'
 import { WATER_BLOCK_TYPE } from '@/babylon/world/terrainManager'
+import { TERRAIN_CARDINAL_EDGES } from '@/babylon/world/terrainRoofShape'
 import type { MapBlock } from '@/data/worldDataManager'
 
-export const CARDINAL_NEIGHBORS = [[-1, 0], [1, 0], [0, -1], [0, 1]] as const
 const DIAGONAL_NEIGHBORS = [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const
-const TILE_NEIGHBORS = [...CARDINAL_NEIGHBORS, ...DIAGONAL_NEIGHBORS]
+const TILE_NEIGHBORS = [...TERRAIN_CARDINAL_EDGES, ...DIAGONAL_NEIGHBORS]
 
 export function createWaterEdgeTufts(map: MapBlock[][], profiles: ReadonlyMap<number, TerrainFoliage>, originX = 0, originZ = 0) {
     const tufts: {matrix: Matrix, uv: Vector2}[] = []
@@ -75,7 +75,7 @@ export function forEachFoliageWallFoot(map: MapBlock[][], terrain: number | unde
 ) => void) {
     map.forEach((row, x) => row.forEach((block, z) => {
         if (terrain !== undefined && FoliageManager.getTerrainIndex(block) !== terrain) return
-        CARDINAL_NEIGHBORS.forEach(([dx, dz], side) => {
+        TERRAIN_CARDINAL_EDGES.forEach(([dx, dz], side) => {
             const uphill = map[x + dx]?.[z + dz]
             if (block.type > 0 && uphill && uphill.totalHeight - block.totalHeight > 0.5) {
                 visit(x, z, block.totalHeight, dx, dz, side, uphill)

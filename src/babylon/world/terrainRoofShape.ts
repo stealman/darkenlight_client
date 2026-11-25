@@ -7,7 +7,7 @@ export const TERRAIN_ROOF_CORNERS = [
     [1, 1, TerrainCorner.SouthEast, TerrainEdge.South | TerrainEdge.East],
     [-1, 1, TerrainCorner.SouthWest, TerrainEdge.South | TerrainEdge.West],
 ] as const
-const cardinalEdges = [[-1, 0, TerrainEdge.West], [1, 0, TerrainEdge.East],
+export const TERRAIN_CARDINAL_EDGES = [[-1, 0, TerrainEdge.West], [1, 0, TerrainEdge.East],
     [0, -1, TerrainEdge.North], [0, 1, TerrainEdge.South]] as const
 
 export type RoofTile = {type: number, snowed: boolean, stonePath: boolean, beigeStonePath: boolean}
@@ -28,7 +28,7 @@ export function terrainRoofShape(x: number, z: number, tile: RoofTile, top: numb
     const snowy = isSnowRoof(tile)
     let bevel = 0
     if (!snowy && tile.type < 50 && !tile.stonePath && !tile.beigeStonePath) {
-        for (const [dx, dz, bit] of cardinalEdges) {
+        for (const [dx, dz, bit] of TERRAIN_CARDINAL_EDGES) {
             if (top > (heightAt(x + dx, z + dz) ?? top) + 1e-6) bevel |= bit
         }
     }

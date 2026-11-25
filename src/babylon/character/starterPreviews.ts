@@ -8,7 +8,7 @@ import {AudioManager} from '@/babylon/audio/audioManager'
 import {MagicArrowEffect, setSpellGlowEnabled} from '@/babylon/gfx/magicArrowEffect'
 import {Builder} from '@/babylon/builder'
 import {Materials, TerrainEnum1} from '@/babylon/materials'
-import {FoliageManager} from '@/babylon/world/foliageManager'
+import {WorldRenderer} from '@/babylon/world/worldRenderer'
 import {updateWorldInstanceBuffers} from '@/babylon/world/worldInstanceBuffers'
 import {getStarterEquipment} from '@game/character/starterEquipment'
 import {getStarterHairAppearance} from '@game/character/characterAppearance'
@@ -43,21 +43,25 @@ export async function startStarterPreviews(canvases: HTMLCanvasElement[], signal
     platforms.isPickable = false
     updateWorldInstanceBuffers(platforms, [Matrix.Identity(), Matrix.Translation(10, 0, 0)],
         [TerrainEnum1.TERRAIN_SNOW_GRASS.uv, TerrainEnum1.TERRAIN_SNOW_GRASS.uv])
-    const foliage = FoliageManager.createFoliageMesh(scene, platformRoot)
-    foliage.material = FoliageManager.foliageMaterial
-    foliage.layerMask = previewMask
-    foliage.isPickable = false
-    const foliageMatrices: Matrix[] = []
-    const foliageUvs: Vector2[] = []
-    const seed = Math.floor(Math.random() * 1000000)
-    for (let block = 0; block < classKeys.length; block++) {
-        for (let clump = 0; clump < 2; clump++) {
-            // Keep the clumps to either side of the character's feet.
-            const centerX = block * 10 + (clump === 0 ? -0.33 : 0.33)
-            FoliageManager.addSnowPreviewTuft(seed + block * 2 + clump, centerX, foliageMatrices, foliageUvs)
+    const foliage = WorldRenderer.foliage
+    const foliageMesh = foliage?.createFoliageMesh(scene, platformRoot)
+    if (foliage && foliageMesh) {
+        foliageMesh.material = foliage.foliageMaterial
+        foliageMesh.layerMask = previewMask
+        foliageMesh.isPickable = false
+        foliageMesh.receiveShadows = true
+        const foliageMatrices: Matrix[] = []
+        const foliageUvs: Vector2[] = []
+        const seed = Math.floor(Math.random() * 1000000)
+        for (let block = 0; block < classKeys.length; block++) {
+            for (let clump = 0; clump < 2; clump++) {
+                // Keep the clumps to either side of the character's feet.
+                const centerX = block * 10 + (clump === 0 ? -0.33 : 0.33)
+                foliage.addSnowPreviewTuft(seed + block * 2 + clump, centerX, foliageMatrices, foliageUvs)
+            }
         }
+        updateWorldInstanceBuffers(foliageMesh, foliageMatrices, foliageUvs)
     }
-    updateWorldInstanceBuffers(foliage, foliageMatrices, foliageUvs)
     const originalLights = scene.lights.map(light => ({light, enabled: light.isEnabled()}))
     originalLights.forEach(({light}) => light.setEnabled(false))
     const fill = new HemisphericLight('starterPreviewFill', Vector3.Up(), scene)
@@ -90,10 +94,9 @@ export async function startStarterPreviews(canvases: HTMLCanvasElement[], signal
         if (castsShadows) shadows.forEach(shadow => shadow.addShadowCaster(mesh, false))
     }
     platforms.receiveShadows = true
-    foliage.receiveShadows = true
     shadows.forEach(shadow => {
         shadow.addShadowCaster(platforms, false)
-        shadow.addShadowCaster(foliage, false)
+        if (foliageMesh) shadow.addShadowCaster(foliageMesh, false)
     })
     let previousActive: string | null = null
     let lastMysticCastRequest = mysticCastRequests()

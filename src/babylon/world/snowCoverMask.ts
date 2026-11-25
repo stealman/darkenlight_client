@@ -97,7 +97,7 @@ export function sameSnowMask(previous: ReadonlySet<number>, next: ReadonlySet<nu
 }
 
 export const createSnowCoverMask = (
-    trees: SnowCoverSource[],
+    trees: readonly SnowCoverSource[] | undefined,
     statics: SnowCoverStaticSource[],
     mapSize: number,
     worldId: number,
@@ -105,8 +105,10 @@ export const createSnowCoverMask = (
 ) => {
     const mask = new Set<number>()
     const vegetationMask = new Set<number>()
-    for (const tree of trees) {
-        addTreeVegetationMask(vegetationMask, tree, mapSize, worldId * 101 + 11, getHeight)
+    if (trees) {
+        for (const tree of trees) {
+            addTreeVegetationMask(vegetationMask, tree, mapSize, worldId * 101 + 11, getHeight)
+        }
     }
     for (const object of statics) {
         if (isShrubType(object.type)) {
@@ -118,7 +120,7 @@ export const createSnowCoverMask = (
                 for (let z = Math.max(0, startZ); z < endZ; z++) {
                     const tile = x * mapSize + z
                     mask.add(tile)
-                    vegetationMask.add(tile)
+                    if (trees) vegetationMask.add(tile)
                 }
             }
         } else if (object.type === 281) {

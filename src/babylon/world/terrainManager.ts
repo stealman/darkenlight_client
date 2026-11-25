@@ -13,6 +13,7 @@ import { smoothTerrainExperiment } from '@/babylon/world/terrainExperiment'
 import { BEVELED_TERRAIN_ENABLED, terrainBevelMask, terrainVerticalBevelMask, BeveledTerrain } from '@/babylon/world/beveledTerrain'
 import { SNOW_BLOCK_HEIGHT } from '@/babylon/world/beveledTerrainBlock'
 import type { createOutdoorTerrain } from './outdoorTerrain'
+import type { createTerrainFoliageRenderer } from '@/adminUtils/terrainFoliageRenderer'
 import { BuildingManager } from './buildings/buildingManager'
 import { TerrainContactShadow } from './terrainContactShadow'
 import { StaticsManager } from './statics/staticsManager'
@@ -41,10 +42,12 @@ export const TerrainManager = {
     hoverBlockMarker: null as Mesh | null,
     outdoorTerrain: null as ReturnType<typeof createOutdoorTerrain> | null,
     outdoorFactory: null as typeof createOutdoorTerrain | null,
+    outdoorFoliageFactory: undefined as typeof createTerrainFoliageRenderer | undefined,
     contactShadow: null as TerrainContactShadow | null,
 
-    initialize (scene: Scene) {
+    initialize (scene: Scene, foliageFactory?: typeof createTerrainFoliageRenderer) {
         this.outdoorTerrain = null
+        this.outdoorFoliageFactory = foliageFactory
         const terrainSteps = StepMarksRenderer.field
         const contactShadow = new TerrainContactShadow(scene, terrainSteps ?? undefined)
         this.contactShadow = contactShadow
@@ -142,7 +145,7 @@ export const TerrainManager = {
         const outdoor = this.usesOutdoorTerrain()
         if (outdoor && this.outdoorFactory) {
             this.outdoorTerrain ??= this.outdoorFactory(WorldRenderer.worldParentNode!, undefined,
-                this.contactShadow ?? undefined, StepMarksRenderer.field ?? undefined)
+                this.contactShadow ?? undefined, StepMarksRenderer.field ?? undefined, this.outdoorFoliageFactory)
             const load = WorldDataManager.terrainRenderLoad
             this.outdoorTerrain.render(map, center, snowCoverMask, world.renderRevision,
                 load?.worldId === MyPlayer.worldId ? load.data : undefined, world.originalBlocks)

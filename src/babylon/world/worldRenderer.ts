@@ -11,7 +11,7 @@ import { updateWorldInstanceBuffers } from '@/babylon/world/worldInstanceBuffers
 import { getTerrainHeightOffset, TerrainManager, WATER_BLOCK_TYPE } from '@/babylon/world/terrainManager'
 import { PBRCustomMaterial } from '@babylonjs/materials'
 import { StaticsManager } from '@/babylon/world/statics/staticsManager'
-import { FoliageManager } from '@/babylon/world/foliageManager'
+import type { FoliageManager } from '@/babylon/world/foliageManager'
 import { RockDebrisManager } from '@/babylon/world/rockDebrisManager'
 import { GMSpawns } from '@/gm/GmSpawns'
 import { GMManager, GmTabs } from '@/gm/GM'
@@ -50,10 +50,16 @@ export const WorldRenderer = {
     blockWithAlpha1: null as SymmetricBlock | null,
     translucentPlane: null as SymmetricBlock | null,
     worldParentNode: null as TransformNode | null,
+    foliage: null as typeof FoliageManager | null,
 
     lastPos: null as Vector3 | null,
 
-    initialize(scene: Scene) {
+    async initialize(scene: Scene) {
+        const foliageModules = Settings.isDetalLevelLow() ? null : await Promise.all([
+            import('@/babylon/world/foliageManager'),
+            import('@/adminUtils/terrainFoliageRenderer'),
+        ])
+        this.foliage = foliageModules?.[0].FoliageManager ?? null
         this.lastPos = null
         this.worldParentNode = new TransformNode("worldNode", scene)
 
@@ -79,12 +85,12 @@ export const WorldRenderer = {
         StoneBatch.initialize(scene, this.worldParentNode, Settings.isDetalLevelHigh())
 
         // Initialize managers
-        TerrainManager.initialize(scene)
+        TerrainManager.initialize(scene, foliageModules?.[1].createTerrainFoliageRenderer)
         IndoorTerrainOcclusionManager.initialize(scene, this.worldParentNode)
         TreeManager.initialize(scene)
         StaticsManager.initialize(scene)
         BuildingManager.initialize(scene, this.worldParentNode)
-        FoliageManager.initialize(scene, this.worldParentNode)
+        this.foliage?.initialize(scene, this.worldParentNode)
         FoggyAreaManager.initialize(scene)
 
         // Terrain receives local-light shadows, but does not need to cast into
@@ -130,7 +136,7 @@ export const WorldRenderer = {
         StoneBatch.clear()
         const blockMap = WorldDataManager.getBlockMap()
         const {mask: snowCoverMask, vegetationMask} = createSnowCoverMask(
-            TreeManager.allTrees,
+            this.foliage ? TreeManager.allTrees : undefined,
             StaticsManager.allStatics,
             blockMap.length,
             MyPlayer.worldId,
@@ -161,10 +167,10 @@ export const WorldRenderer = {
 
         // Render decorative foliage
         if (outdoorTerrain) {
-            FoliageManager.foliageMesh?.setEnabled(false)
-            FoliageManager.groundMesh?.setEnabled(false)
+            this.foliage?.foliageMesh?.setEnabled(false)
+            this.foliage?.groundMesh?.setEnabled(false)
         } else {
-            FoliageManager.renderFoliage(snowCoverMask, vegetationMask)
+            this.foliage?.renderFoliage(snowCoverMask, vegetationMask)
             RockDebrisManager.renderRockDebris(Lights.indoor)
         }
         StoneBatch.flush()

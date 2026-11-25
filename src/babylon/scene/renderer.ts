@@ -135,7 +135,7 @@ export const Renderer = {
         Lights.configureStaticLightMaterials()
         await CharacterManager.preloadModels(this.scene)
         StepMarksRenderer.initialize(this.scene)
-        WorldRenderer.initialize(this.scene)
+        await WorldRenderer.initialize(this.scene)
         WeatherManager.initialize()
         FightSplatsRenderer.initialize()
         GroundItemsManager.initialize(this.scene)

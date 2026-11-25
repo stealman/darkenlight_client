@@ -4,7 +4,8 @@ import { TerrainEnum1 } from '@/babylon/materials'
 import { FoliageManager } from '@/babylon/world/foliageManager'
 import type { TerrainFoliage } from '@/babylon/world/foliageManager'
 import type { MapBlock } from '@/data/worldDataManager'
-import { CARDINAL_NEIGHBORS, findFoliagePatch, forEachFoliageWallFoot, wallFootDecal } from './terrainFoliagePatches'
+import { TERRAIN_CARDINAL_EDGES } from '@/babylon/world/terrainRoofShape'
+import { findFoliagePatch, forEachFoliageWallFoot, wallFootDecal } from './terrainFoliagePatches'
 
 // Rows in the preview atlas, counted from the top.
 const GRASS = 0, LOW_GRASS = 1, TWIGS = 3, SCRUB = 4, MOSS = 6, PEBBLES = 7
@@ -47,7 +48,7 @@ export function createPavingMoss(map: MapBlock[][], visible: (x: number, z: numb
             if (roll(salt) < (patch === 0 ? 0.08 : 0.35)) continue
             place(x + (roll(salt + 1) - 0.5) * 0.70, z + (roll(salt + 2) - 0.5) * 0.70, salt, 0.005 + patch * 0.001)
         }
-        CARDINAL_NEIGHBORS.forEach(([dx, dz], side) => {
+        TERRAIN_CARDINAL_EDGES.forEach(([dx, dz], side) => {
             const adjacent = map[x + dx]?.[z + dz]
             const salt = 7860 + side * 16
             if (!adjacent || adjacent.stonePath || adjacent.beigeStonePath || !supportsMoss(adjacent, x + dx, z + dz)
@@ -133,7 +134,7 @@ export function createMuddyDirtFoliageProfiles(map: MapBlock[][], sunDirection: 
     const lightZ = -sunDirection.z / horizontal
     const slope = -sunDirection.y / horizontal
     const terrainHints = map.map((row, x) => row.map((block, z) => {
-        const byLedge = CARDINAL_NEIGHBORS.some(([dx, dz]) => (map[x + dx]?.[z + dz]?.height ?? block.height) > block.height)
+        const byLedge = TERRAIN_CARDINAL_EDGES.some(([dx, dz]) => (map[x + dx]?.[z + dz]?.height ?? block.height) > block.height)
         let shaded = false
         // Sample toward the preview sun once per tile, independent of the camera and shadow-map pixels.
         for (let distance = 0.5; distance <= 9; distance += 0.5) {

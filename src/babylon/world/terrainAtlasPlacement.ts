@@ -22,6 +22,7 @@ export const terrainCoverPatterns = [
 ]
 
 type Pattern = {size: number, origins: readonly (readonly number[])[]}
+type FinishPatch = (x: number, z: number, height: number, size: number, firstCell: number, turn: number) => void
 
 type AtlasPlacement = {size: number, height: number, variant: number, turn: number}
 
@@ -63,22 +64,68 @@ function variedPatchPlacement(placed: ReadonlyMap<number, AtlasPlacement>, strid
 
 export function terrainAtlasLayout(patterns: readonly Pattern[]) {
     const cells: (readonly [number, number])[] = [[0, 0]]
+    const patchSizes: number[] = []
     for (const {size, origins} of patterns) {
         for (const [u, v] of origins) {
+            patchSizes[cells.length] = size
             for (let dx = 0; dx < size; dx++) {
                 for (let dz = 0; dz < size; dz++) cells.push([u + dx, TERRAIN_ATLAS_TILES - v - size + dz])
             }
         }
     }
-    return {patterns, cells}
+    return {patterns, cells, patchSizes}
 }
 
 export const muddyDirtLayout = terrainAtlasLayout(muddyDirtPatterns)
 export const terrainCoverLayout = terrainAtlasLayout(terrainCoverPatterns)
 
+function rotatedPatchOffset(dx: number, dz: number, last: number, turn: number) {
+    return turn === 0 ? [dx, dz] : turn === 1 ? [dz, last - dx]
+        : turn === 2 ? [last - dx, last - dz] : [last - dz, dx]
+}
+
+// The exported atlas stores cells rather than patch records. Confirm the whole
+// rotated code sequence before joining tiles into a patch.
+export function visitBakedTerrainAtlasPatches(remaining: Map<number, number>, stride: number, width: number,
+    layout: ReturnType<typeof terrainAtlasLayout>, includeTile: (x: number, z: number) => boolean,
+    readCode: (x: number, z: number) => number, visit: (key: number, x: number, z: number, height: number, code: number) => void,
+    finishPatch: FinishPatch) {
+    for (const [key, height] of remaining) {
+        const x = Math.floor(key / stride), z = key % stride
+        if (!includeTile(x, z)) continue
+        const code = readCode(x, z)
+        const cell = code >> 2
+        const size = layout.patchSizes[cell]
+        if (size === undefined || size < 2) continue
+        const turn = code & 3
+        const [offsetX, offsetZ] = rotatedPatchOffset(0, 0, size - 1, turn)
+        const left = x - offsetX, top = z - offsetZ
+        if (left < 0 || top < 0 || left + size > width || top + size > stride) continue
+        let complete = true
+        for (let dx = 0; dx < size && complete; dx++) {
+            for (let dz = 0; dz < size && complete; dz++) {
+                const [rx, rz] = rotatedPatchOffset(dx, dz, size - 1, turn)
+                const tx = left + rx, tz = top + rz
+                complete = includeTile(tx, tz) && remaining.get(tx * stride + tz) === height
+                    && readCode(tx, tz) === (((cell + dx * size + dz) << 2) | turn)
+            }
+        }
+        if (!complete) continue
+        for (let tx = left; tx < left + size; tx++) {
+            for (let tz = top; tz < top + size; tz++) {
+                const tile = tx * stride + tz
+                remaining.delete(tile)
+                visit(tile, tx, tz, height, readCode(tx, tz))
+            }
+        }
+        finishPatch(left, top, height, size, cell, turn)
+    }
+}
+
 export function visitTerrainAtlasPlacements(remaining: Map<number, number>, stride: number, width: number,
     originX: number, originZ: number, layout: ReturnType<typeof terrainAtlasLayout>, varyPatches: boolean,
-    groupByRegion: boolean, visit: (key: number, x: number, z: number, height: number, code: number) => void) {
+    groupByRegion: boolean, visit: (key: number, x: number, z: number, height: number, code: number) => void,
+    finishPatch?: FinishPatch) {
     const placed = varyPatches ? new Map<number, AtlasPlacement>() : undefined
     const sameRegion = (x: number, z: number, nx: number, nz: number) => !groupByRegion ||
         (Math.floor((x + originX) / TERRAIN_ATLAS_REGION_SIZE) === Math.floor((nx + originX) / TERRAIN_ATLAS_REGION_SIZE)
@@ -99,19 +146,20 @@ export function visitTerrainAtlasPlacements(remaining: Map<number, number>, stri
             const appearance = placed && variedPatchPlacement(placed, stride, width, x, z, size, height, origins.length, hash, sameRegion)
             const variant = appearance?.variant ?? (hash >>> 5) % origins.length
             const turn = appearance?.turn ?? ((hash >>> 12) & 3)
+            const patchCell = firstCell + variant * size * size
             for (let dx = 0; dx < size; dx++) {
                 for (let dz = 0; dz < size; dz++) {
                     remaining.delete(key + dx * stride + dz)
-                    const [rx, rz] = turn === 0 ? [dx, dz] : turn === 1 ? [dz, last - dx]
-                        : turn === 2 ? [last - dx, last - dz] : [last - dz, dx]
+                    const [rx, rz] = rotatedPatchOffset(dx, dz, last, turn)
                     const tileX = x + rx
                     const tileZ = z + rz
                     const tileKey = tileX * stride + tileZ
                     if (appearance) placed!.set(tileKey, appearance)
-                    const cell = firstCell + variant * size * size + dx * size + dz
+                    const cell = patchCell + dx * size + dz
                     visit(tileKey, tileX, tileZ, height, (cell << 2) | turn)
                 }
             }
+            finishPatch?.(x, z, height, size, patchCell, turn)
         }
         firstCell += origins.length * size * size
     }

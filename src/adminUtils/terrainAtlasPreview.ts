@@ -5,7 +5,7 @@ import { addTerrainPreviewRoof, configureTerrainEdgeLighting, configureMuddyDirt
 import type { SubmitTerrainBatch, TerrainPreviewTriangle } from './terrainPreviewBatch'
 import type { TerrainPreviewSurfaces } from './terrainPreviewGeometry'
 import { muddyDirtLayout, muddyDirtPatterns, terrainCoverLayout, TERRAIN_ATLAS_TILES,
-    visitTerrainAtlasPlacements } from '@/babylon/world/terrainAtlasPlacement'
+    visitBakedTerrainAtlasPatches, visitTerrainAtlasPlacements } from '@/babylon/world/terrainAtlasPlacement'
 export { muddyDirtPatterns, terrainCoverPatterns, TERRAIN_ATLAS_TILES } from '@/babylon/world/terrainAtlasPlacement'
 
 
@@ -49,9 +49,11 @@ export function createTerrainAtlasPreview(plane: Mesh, name: string, atlas: Terr
 
     const render = ({atlasTops, stride, width, originX, originZ, includeTile, roofs, wetCorners,
                         rockDeposits, cornerFloors, compiled}: TerrainPreviewSurfaces, takeTile?: TerrainAtlasTileFilter,
-                    batch = new TerrainPreviewBatch(), submit?: SubmitTerrainBatch) => {
+                    batch = new TerrainPreviewBatch(), submit?: SubmitTerrainBatch,
+                    canMergeTile?: (x: number, z: number) => boolean) => {
         const remaining = atlasTops.get(atlas.type)!
-        const submitTile = (tileKey: number, tileX: number, tileZ: number, y: number, code: number) => {
+        const flatTiles: {key: number, matrix: Matrix, uv: Vector2}[] = []
+        const submitTile = (tileKey: number, tileX: number, tileZ: number, y: number, code: number, stageFlat = true) => {
             if (includeTile && !includeTile(tileX, tileZ)) return
             const turn = code & 3
             const matrix = Matrix.RotationY(turn * Math.PI / 2)
@@ -66,19 +68,43 @@ export function createTerrainAtlasPreview(plane: Mesh, name: string, atlas: Terr
             const options = {roundDirtEdges: roundEdges, wetCorners: wetMask, depositKind}
             // The corner extension and its roof must use the same material blend.
             if (!depositKind && takeTile?.(matrix, uv, tileX, tileZ, roof, footMask, floor)) return
+            if (stageFlat && !floor && !roof && !wetMask && !depositKind && canMergeTile?.(tileX, tileZ)) {
+                flatTiles.push({key: tileKey, matrix, uv})
+                return
+            }
             batch.tile = tileKey
             if (floor) addTerrainPreviewRoof(batch, matrix, uv, floor, {...options, mirrorAtTileEdge: true})
             addTerrainPreviewRoof(batch, matrix, uv, roof, options)
         }
+        const finishPatch = (x: number, z: number, height: number, size: number, cell: number, turn: number) => {
+            if (size > 1 && flatTiles.length === size * size) {
+                const matrix = Matrix.Scaling(size, 1, size).multiply(Matrix.RotationY(turn * Math.PI / 2))
+                const offset = (size - 1) / 2
+                matrix.setTranslationFromFloats(x + offset, height, z + offset)
+                const [u, v] = layout.cells[cell]
+                batch.tile = x * stride + z
+                batch.addPlane(matrix, new Vector2(u, v), {atlasSpan: size})
+            } else {
+                for (const tile of flatTiles) {
+                    batch.tile = tile.key
+                    batch.addPlane(tile.matrix, tile.uv)
+                }
+            }
+            flatTiles.length = 0
+        }
         if (compiled) {
+            const readCode = (x: number, z: number) => compiled.atlas[(x + originX) * compiled.depth + z + originZ]
+            if (canMergeTile && includeTile) {
+                visitBakedTerrainAtlasPatches(remaining, stride, width, layout, includeTile, readCode, submitTile, finishPatch)
+            }
             for (const [key, height] of remaining) {
                 const x = Math.floor(key / stride), z = key % stride
-                if (!includeTile?.(x, z)) continue
-                submitTile(key, x, z, height, compiled.atlas[(x + originX) * compiled.depth + z + originZ])
+                if (includeTile && !includeTile(x, z)) continue
+                submitTile(key, x, z, height, readCode(x, z), false)
             }
         } else {
             visitTerrainAtlasPlacements(remaining, stride, width, originX, originZ, layout, !!atlas.varyAdjacentPatches,
-                !!includeTile, submitTile)
+                !!includeTile, submitTile, canMergeTile ? finishPatch : undefined)
         }
 
         if (submit) submit(mesh, batch, batch.attributes(roundEdges, wetDirt, showRockDeposits))

@@ -33,11 +33,12 @@ export class TerrainPreviewBatch {
     private readonly wetTiles: number[] = []
     private readonly rockDeposits: number[] = []
     private readonly tiles: number[] = []
+    private readonly spans: number[] = []
     tile = -1
 
-    forEachInstance(visit: (tile: number, matrix: Matrix, uv: Vector2, index: number) => void) {
+    forEachInstance(visit: (tile: number, matrix: Matrix, uv: Vector2, index: number, span: number) => void) {
         for (let i = 0; i < this.matrices.length; i++) {
-            visit(this.tiles[i], this.matrices[i], this.origins[i], i)
+            visit(this.tiles[i], this.matrices[i], this.origins[i], i, this.spans[i] ?? 1)
         }
     }
 
@@ -56,11 +57,16 @@ export class TerrainPreviewBatch {
         return this.matrices.length
     }
 
-    addPlane(matrix: Matrix, origin: Vector2, options?: {blockAtlas?: boolean, bottomV?: number, dirtEdges?: TerrainSurfaceDetails}) {
-        const {blockAtlas = false, bottomV = 0, dirtEdges} = options ?? {}
-        const [a, b, c, d] = blockAtlas ? BLOCK_TOP_UVS : PLANE_UVS
+    addPlane(matrix: Matrix, origin: Vector2, options?: {blockAtlas?: boolean, bottomV?: number, dirtEdges?: TerrainSurfaceDetails, atlasSpan?: number}) {
+        const {blockAtlas = false, bottomV = 0, dirtEdges, atlasSpan = 1} = options ?? {}
+        const corners = blockAtlas ? BLOCK_TOP_UVS : PLANE_UVS
+        const [a, b, c, d] = atlasSpan === 1 ? corners : corners.map(uv => uv.scale(atlasSpan))
         const lowerLeft = bottomV === 0 ? a : new Vector2(a.x, bottomV)
         const lowerRight = bottomV === 0 ? b : new Vector2(b.x, bottomV)
+        if (atlasSpan > 1) {
+            this.spans[this.count] = atlasSpan
+            this.spans[this.count + 1] = atlasSpan
+        }
         this.addInstance(matrix, origin, [lowerLeft, lowerRight, c], dirtEdges)
         this.addInstance(HALF_TURN.multiply(matrix), origin, [c, d, lowerLeft], dirtEdges)
     }
