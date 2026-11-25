@@ -1,14 +1,14 @@
 import type { Matrix, Vector2 } from '@babylonjs/core'
 import type { PBRCustomMaterial } from '@babylonjs/materials'
 import { TerrainEnum1 } from '@/babylon/materials'
-import { FoliageManager } from '@/babylon/world/foliageManager'
+import { FoliageManager, GroundFoliageRow } from '@/babylon/world/foliageManager'
 import type { TerrainFoliage } from '@/babylon/world/foliageManager'
 import type { MapBlock } from '@/data/worldDataManager'
 import { findFoliagePatch, forEachFoliageWallFoot, wallFootDecal } from './terrainFoliagePatches'
 import { configureTerrainNoiseTexture, terrainNoiseShader } from '@/babylon/world/terrainSurfaceShader'
 
 const ROCK = TerrainEnum1.TERRAIN_ROCK.index
-const PEBBLES = 7, MOSS = 6, LICHEN = 13
+const {PEBBLES, MOSS, LICHEN} = GroundFoliageRow
 const LICHEN_PATCHES = {spacing: 4.6, salt: 2310, minRadius: 1.1, radiusRange: 1.3, rows: [LICHEN]}
 
 export const createRockFoliage = (originX: number, originZ: number): TerrainFoliage => ({

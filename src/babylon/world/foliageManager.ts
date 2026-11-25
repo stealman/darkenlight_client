@@ -5,12 +5,22 @@ import type { MapBlock } from '@/data/worldDataManager'
 import { MyPlayer } from '@/data/myPlayer'
 import { Builder } from '@/babylon/builder'
 
-const ATLAS_SIZE = 8
+const ATLAS_SIZE = 4
 const ATLAS_CELL_PIXELS = 64
 const SCATTER_CELL_SIZE = 4
 const CANDIDATES_PER_TILE = 2
 export const GRASS_ROOT_INSET = 0.015
-const UNUSED_GROUND_ROW = 6
+export const GroundFoliageRow = {
+    TWIGS: 1,
+    MOSS: 2,
+    PEBBLES: 3,
+    // The shaders remap these style rows to the physical sprites.
+    MOSSY_PEBBLES: 4,
+    SINGLE_MOSSY_PEBBLE: 5,
+    ROCK_PEBBLES: 6,
+    LIGHT_ROCK_PEBBLE: 7,
+    LICHEN: 8,
+} as const
 
 export type TerrainFoliage = {
     rows: readonly number[]
@@ -175,7 +185,7 @@ export const FoliageManager = {
                     // Keep the old ground scatter thresholds independent of grass density and masks.
                     if (!groundMesh || extraTuft || block.snowed || roll < tuftLimit) continue
                     const rows = config.groundRows
-                    let groundRow = scatter?.groundRow ?? (rows ? rows[this.hashTile(cellX, cellZ, salt + 2) % rows.length] : UNUSED_GROUND_ROW)
+                    let groundRow = scatter?.groundRow ?? (rows ? rows[this.hashTile(cellX, cellZ, salt + 2) % rows.length] : GroundFoliageRow.MOSS)
                     let groundSize: readonly [number, number] | undefined
                     const density = scatter?.groundDensity ?? tuftDensity
                     const multiplier = config.groundDensityMultipliers?.[groundRow] ?? 1
@@ -186,7 +196,7 @@ export const FoliageManager = {
                         groundRow = extra.row
                         groundSize = extra.size
                     }
-                    if (groundRow === UNUSED_GROUND_ROW || !canDecorate(block, x, z)) continue
+                    if (groundRow === GroundFoliageRow.MOSS || !canDecorate(block, x, z)) continue
                     const top = block.totalHeight
                     const sizeRange = groundSize ?? config.groundSizes?.[groundRow]
                     const sizeRoll = this.roll(cellX, cellZ, salt + 10)
@@ -288,8 +298,7 @@ export const FoliageManager = {
     },
 
     getAtlasOffset(x: number, z: number, row: number, salt = 0): Vector2 {
-        const columns = row < 3 ? ATLAS_SIZE : 4
-        return new Vector2(this.hashTile(x, z, salt + 3) % columns, ATLAS_SIZE - 1 - row)
+        return new Vector2(this.hashTile(x, z, salt + 3) % ATLAS_SIZE, ATLAS_SIZE - 1 - row)
     },
 
     tuftMatrix(x: number, z: number, centerX: number, top: number, centerZ: number, salt: number, height = 0.65): Matrix {

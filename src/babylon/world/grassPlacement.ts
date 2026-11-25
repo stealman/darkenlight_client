@@ -31,14 +31,19 @@ export function createForcedGrassTufts(map: MapBlock[][], x: number, z: number, 
 
     const depth = map[0].length
     return (FORCED_GRASS_LAYOUTS[level] ?? []).map(([dx, dz, width, height], index) => {
-        const nextX = Math.round(x + dx), nextZ = Math.round(z + dz)
+        const angle = FoliageManager.roll(x, z, 17511 + index) * Math.PI * 2
+        const offset = level <= 3 ? 0.08 + 0.10 * FoliageManager.roll(x, z, 17521 + index)
+            : 0.04 + 0.06 * FoliageManager.roll(x, z, 17521 + index)
+        const localX = dx + Math.cos(angle) * offset, localZ = dz + Math.sin(angle) * offset
+        const nextX = Math.round(x + localX), nextZ = Math.round(z + localZ)
         const next = map[nextX]?.[nextZ]
         const spill = canGrow(next) && next.height === ground.height && !exclusions.has(nextX * depth + nextZ)
         const block = spill ? next : ground
         const yaw = FoliageManager.roll(x, z, 17501 + index) * Math.PI * 2
-        const matrix = Matrix.Scaling(width, height, width).multiply(Matrix.RotationY(yaw))
-        const inset = spill ? 1 : 0.52
-        matrix.setTranslationFromFloats(x + dx * inset, block.height - GRASS_ROOT_INSET, z + dz * inset)
+        const wider = width * 1.22
+        const matrix = Matrix.Scaling(wider, height * 1.28, wider).multiply(Matrix.RotationY(yaw))
+        const inset = spill ? 1 : 0.45
+        matrix.setTranslationFromFloats(x + localX * inset, block.height - GRASS_ROOT_INSET, z + localZ * inset)
         return {matrix, forced: true, tone: block.type === TerrainEnum1.TERRAIN_GRASS.index ? 0 : 1,
             snowed: block.snowed && !hiddenSnow.has(spill ? nextX * depth + nextZ : x * depth + z)}
     })

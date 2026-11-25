@@ -1,18 +1,16 @@
 import { Vector2 } from '@babylonjs/core'
 import type { Matrix } from '@babylonjs/core'
 import type { PBRCustomMaterial } from '@babylonjs/materials'
-import { FoliageManager } from '@/babylon/world/foliageManager'
+import { FoliageManager, GroundFoliageRow } from '@/babylon/world/foliageManager'
 import type { TerrainFoliage } from '@/babylon/world/foliageManager'
 import type { MapBlock } from '@/data/worldDataManager'
 import { findFoliagePatch, forEachFoliageWallFoot } from './terrainFoliagePatches'
 
 export const GRASS_ROW = 0
-const TWIGS = 3, MOSS = 6, PEBBLES = 7
 export const DRY_GRASS = 5
-// The preview shader remaps these rows to the shared sprites with a different palette.
-const MOSSY_PEBBLES = 8, EMPTY_TUFT = 9, SINGLE_MOSSY_PEBBLE = 10
-const ROCK_PEBBLES = 11, LIGHT_ROCK_PEBBLE = 12
-const SNOW_COLUMN_OFFSET = 8
+const EMPTY_TUFT = 9
+const {TWIGS, MOSS, PEBBLES, MOSSY_PEBBLES, SINGLE_MOSSY_PEBBLE, ROCK_PEBBLES, LIGHT_ROCK_PEBBLE} = GroundFoliageRow
+const SNOW_COLUMN_OFFSET = 4
 const PEBBLE_ATLAS_Y = new Set([PEBBLES, MOSSY_PEBBLES, SINGLE_MOSSY_PEBBLE]
     .map(row => FoliageManager.getAtlasOffset(0, 0, row).y))
 const SINGLE_PEBBLE_SIZE = [0.43, 0.68] as const
@@ -53,7 +51,7 @@ export function createGrassFootTufts(map: MapBlock[][], terrainType: number, ori
         const spacing = 0.14 + roll(2) * 0.10
         for (let i = 0; i < count; i++) {
             const tuftSalt = salt + 12 + i * 12
-            // Anchor the root on the terrace and let the billboard intersect the wall.
+            // Anchor the tuft on the terrace close to the wall.
             const distanceToWall = 0.12 - 0.095 * roll(3 + i)
             const advance = 0.5 - distanceToWall
             const slide = center + (i - (count - 1) / 2) * spacing

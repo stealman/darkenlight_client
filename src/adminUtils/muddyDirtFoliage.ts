@@ -1,13 +1,14 @@
 import { Matrix } from '@babylonjs/core'
 import type { Vector2, Vector3 } from '@babylonjs/core'
 import { TerrainEnum1 } from '@/babylon/materials'
-import { FoliageManager } from '@/babylon/world/foliageManager'
+import { FoliageManager, GroundFoliageRow } from '@/babylon/world/foliageManager'
 import type { TerrainFoliage } from '@/babylon/world/foliageManager'
 import type { MapBlock } from '@/data/worldDataManager'
 import { TERRAIN_CARDINAL_EDGES } from '@/babylon/world/terrainRoofShape'
 import { findFoliagePatch, forEachFoliageWallFoot } from './terrainFoliagePatches'
 
-const GRASS = 0, TWIGS = 3, EMPTY_TUFT = 4, MOSS = 6, PEBBLES = 7
+const {TWIGS, MOSS, PEBBLES} = GroundFoliageRow
+const GRASS = 0, EMPTY_TUFT = 4
 export const LOW_GRASS = 1
 export const MUDDY_DRY_GRASS = 11
 const PLANT_PATCHES = {spacing: 5, salt: 1010, minRadius: 1.35, radiusRange: 1.55,
