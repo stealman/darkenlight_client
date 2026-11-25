@@ -13,6 +13,7 @@ import {updateWorldInstanceBuffers} from '@/babylon/world/worldInstanceBuffers'
 import {getStarterEquipment} from '@game/character/starterEquipment'
 import {getStarterHairAppearance} from '@game/character/characterAppearance'
 import {MagicArrow} from '@game/game/spells/magicArrow'
+import {CHARACTER_COLLISION_WIDTH} from '@game/game/mechanics/constants'
 
 /** Live Babylon views share the already loaded runtime models and equipment. */
 export async function startStarterPreviews(canvases: HTMLCanvasElement[], signal: AbortSignal, activeClass: () => string | null,
@@ -229,7 +230,7 @@ export async function startStarterPreviews(canvases: HTMLCanvasElement[], signal
                     img: cb.url, atts: new Map(), slot: cbType === 'W' ? 'R_HAND' : cb.slot}
             }
             const position = new Vector3(index * 10, 0, 0)
-            const character = new Character({id: -9001-index, name: '', gender, x: position.x, z: 0, bsz: 0.8, cls: classKey, equipSet,
+            const character = new Character({id: -9001-index, name: '', gender, x: position.x, z: 0, bsz: CHARACTER_COLLISION_WIDTH, cls: classKey, equipSet,
                 ...getStarterHairAppearance(classKey)}, false, position)
             characters.push(character)
             await character.createModel(true)

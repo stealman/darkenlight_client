@@ -72,6 +72,10 @@ export const StaticsManager = {
     staticsByType: new Map<number, Set<StaticObject>>(),
     collisionGrid: new CollisionGrid<StaticObject>(),
     visibleStatics : [] as StaticObject[],
+    staticsByTile: new Map<string, Set<StaticObject>>(),
+    dirtyStaticTiles: new Set<string>(),
+    staticPositions: null as {map: MapBlock[][], terrainRevision: number, floorRevision: number} | null,
+    cornerConnectionsDirty: true,
     dungeonEntrances: new Set<StaticObject>(),
     walkableObjectsByTile: new Map<string, StaticObject>(),
     benchesByTile: new Map<string, StaticObject[]>(),
@@ -82,6 +86,8 @@ export const StaticsManager = {
     deletePreviewStartTime: 0,
 
     initialize(scene: Scene) {
+        this.staticPositions = null
+        this.cornerConnectionsDirty = true
         StaticEquipPartsRenderer.initialize(WorldRenderer.worldParentNode!)
         StaticLeafPlanes.initialize(WorldRenderer.worldParentNode!)
     },
@@ -94,6 +100,8 @@ export const StaticsManager = {
     },
 
     addObject(obj: { tp: number, x: number, z: number, meta?: WallTorchMetadata | TorchStandMetadata | LanternStandMetadata | FireplaceMetadata | CemeteryEmberBowlMetadata | StoneEntranceMetadata | PalisadeMetadata | WalkableBlockMetadata | CampObjectMetadata | CampFenceMetadata | CemeteryObjectMetadata | CemeteryWallMetadata, tmp?: boolean }, resolveStacking = true) {
+        // Record the ground revision before placing the first object.
+        if (this.allStatics.length === 0) this.resolveStackedStaticPositions()
         const y = this.getBaseHeight(obj.x, obj.z, obj.tp)
         const pos = new Vector3(obj.x, y, obj.z)
         const rotation = Math.floor(Math.random() * 4) * Math.PI / 2
@@ -246,6 +254,12 @@ export const StaticsManager = {
 
         if (this.allStatics.length > previousCount) {
             const added = this.allStatics[this.allStatics.length - 1]
+            const tile = `${added.position.x};${added.position.z}`
+            let stack = this.staticsByTile.get(tile)
+            if (!stack) this.staticsByTile.set(tile, stack = new Set())
+            stack.add(added)
+            this.dirtyStaticTiles.add(tile)
+            this.cornerConnectionsDirty = true
             let objects = this.staticsByType.get(added.type)
             if (!objects) {
                 objects = new Set()
@@ -289,26 +303,37 @@ export const StaticsManager = {
     },
 
     resolveStackedStaticPositions() {
-        const surfaceHeights = new Map<string, number>()
-        for (const obj of this.allStatics) {
-            const y = this.getBaseHeight(obj.position.x, obj.position.z, obj.type)
-            obj.position.y = y
-            obj.renderPosition.y = y
-            const surfaceHeight = obj.getPlacementSurfaceHeight()
-            if (surfaceHeight == null || obj.shouldPlaceOnStatic()) continue
-            const key = `${obj.position.x};${obj.position.z}`
-            surfaceHeights.set(key, Math.max(surfaceHeights.get(key) ?? 0, surfaceHeight))
+        const world = WorldDataManager.worldDataMap.get(MyPlayer.worldId)
+        const floorRevision = BuildingManager.floorTilesRevision
+        const previous = this.staticPositions
+        const groundChanged = !!world && (previous?.map !== world.blockMap || previous.terrainRevision !== world.renderRevision
+            || previous.floorRevision !== floorRevision)
+        if (groundChanged) {
+            for (const [tile, stack] of this.staticsByTile) {
+                for (const obj of stack) {
+                    const y = this.getBaseHeight(obj.position.x, obj.position.z, obj.type)
+                    if (obj.position.y !== y) {
+                        obj.position.y = y
+                        this.dirtyStaticTiles.add(tile)
+                    }
+                }
+            }
+            this.staticPositions = {map: world.blockMap, terrainRevision: world.renderRevision, floorRevision}
         }
 
-        for (const obj of this.allStatics) {
-            if (!obj.shouldPlaceOnStatic()) continue
-            const surfaceHeight = surfaceHeights.get(`${obj.position.x};${obj.position.z}`) ?? 0
-            obj.renderPosition.y = obj.position.y + surfaceHeight
+        for (const tile of this.dirtyStaticTiles) {
+            const stack = this.staticsByTile.get(tile)
+            if (!stack) continue
+            let surfaceHeight = 0
+            for (const obj of stack) {
+                const height = obj.getPlacementSurfaceHeight()
+                if (height != null && !obj.shouldPlaceOnStatic()) surfaceHeight = Math.max(surfaceHeight, height)
+            }
+            for (const obj of stack) {
+                obj.renderPosition.y = obj.position.y + (obj.shouldPlaceOnStatic() ? surfaceHeight : 0)
+            }
         }
-    },
-
-    recountYPositions() {
-        this.resolveStackedStaticPositions()
+        this.dirtyStaticTiles.clear()
     },
 
     removeObjects(data: Array<{ x: number, z: number, tp?: number }>, finalize = true) {
@@ -357,6 +382,17 @@ export const StaticsManager = {
                 }
                 obj.dispose()
                 this.allStatics.splice(i, 1)
+                const tile = `${obj.position.x};${obj.position.z}`
+                const stack = this.staticsByTile.get(tile)
+                if (stack) {
+                    stack.delete(obj)
+                    if (stack.size > 0) this.dirtyStaticTiles.add(tile)
+                    else {
+                        this.staticsByTile.delete(tile)
+                        this.dirtyStaticTiles.delete(tile)
+                    }
+                }
+                this.cornerConnectionsDirty = true
                 if (finalize) {
                     this.resolveStackedStaticPositions()
                     StaticFireParticleManager.flush()
@@ -373,6 +409,10 @@ export const StaticsManager = {
         StoneBatch.flush()
         this.allStatics.forEach((obj) => obj.dispose())
         this.allStatics = []
+        this.staticsByTile.clear()
+        this.dirtyStaticTiles.clear()
+        this.staticPositions = null
+        this.cornerConnectionsDirty = false
         this.staticsByType.clear()
         this.collisionGrid.clear()
         this.visibleStatics = []
@@ -458,9 +498,9 @@ export const StaticsManager = {
         StaticLeafPlanes.clear()
         SpecimenPrefabs.clear()
 
-        this.allStatics.forEach((obj) => {
-            if (obj instanceof CampBarrel) obj.clearRenderMatrices()
-        })
+        for (const object of this.staticsByType.get(305) ?? []) {
+            if (object instanceof CampBarrel) object.clearRenderMatrices()
+        }
         this.resolveConnectingCorners()
         if (!visibilityReady) this.updateVisibleObjects()
         for (const element of this.visibleStatics) {
@@ -479,6 +519,7 @@ export const StaticsManager = {
     },
 
     resolveConnectingCorners() {
+        if (!this.cornerConnectionsDirty) return
         const palisades = this.allStatics.filter((obj): obj is PalisadeWall2 => obj instanceof PalisadeWall2)
         const fences = this.allStatics.filter((obj): obj is CampFence => obj instanceof CampFence)
         const cemeteryFences = this.allStatics.filter((obj): obj is CemeteryIronFence => obj instanceof CemeteryIronFence)
@@ -490,6 +531,7 @@ export const StaticsManager = {
         this.resolveCorners(cemeteryFences)
         this.resolveCorners(cemeteryWalls)
         this.resolveCorners(cemeteryStoneWalls)
+        this.cornerConnectionsDirty = false
     },
 
     resolveCorners<T extends PalisadeWall2 | CampFence | CemeteryIronFence | RuinedCemeteryWall | CemeteryStoneWall>(objects: T[]) {
@@ -583,23 +625,18 @@ export const StaticsManager = {
             return
         }
 
+        const playerPosition = MyPlayer.myChar.pos
         const soundVolumes = new Map<string, number>()
-
-        for (const obj of this.allStatics) {
-            const staticInfo = StaticObjectsCodebook.get(obj.type)
-            if (!staticInfo || !staticInfo.soundKey || staticInfo.soundDistance <= 0) {
-                continue
-            }
-
-            const distance = this.getDistanceToStaticFootprint(MyPlayer.myChar.pos, obj.position, staticInfo.size)
-            if (distance >= staticInfo.soundDistance) {
-                continue
-            }
-
-            const volumeRatio = 1 - ((distance - 1) / staticInfo.soundDistance)
-            const currentVolume = soundVolumes.get(staticInfo.soundKey) || 0
-            if (volumeRatio > currentVolume) {
-                soundVolumes.set(staticInfo.soundKey, volumeRatio)
+        for (const [type, objects] of this.staticsByType) {
+            const staticInfo = StaticObjectsCodebook.get(type)
+            if (!staticInfo?.soundKey || staticInfo.soundDistance <= 0) continue
+            for (const obj of objects) {
+                const distance = this.getDistanceToStaticFootprint(playerPosition, obj.position, staticInfo.size)
+                if (distance >= staticInfo.soundDistance) continue
+                const volumeRatio = 1 - ((distance - 1) / staticInfo.soundDistance)
+                if (volumeRatio > (soundVolumes.get(staticInfo.soundKey) ?? 0)) {
+                    soundVolumes.set(staticInfo.soundKey, volumeRatio)
+                }
             }
         }
 

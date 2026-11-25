@@ -136,6 +136,8 @@ export async function installAssetPreview(
         equipmentEditor.refresh(null)
         StaticsManager.allStatics.forEach(obj => { obj.onHidden(); obj.prefab?.clearMatrices(); obj.dispose() })
         StaticsManager.allStatics = []
+        StaticsManager.staticsByTile.clear()
+        StaticsManager.dirtyStaticTiles.clear()
         StaticsManager.staticsByType.clear()
         StaticsManager.walkableObjectsByTile.clear()
         StaticsManager.benchesByTile.clear()

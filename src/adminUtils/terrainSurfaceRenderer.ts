@@ -91,6 +91,7 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
     renderPavingSnow = true) {
     const wetness = !!demo || Settings.isDetalLevelHigh()
     const snowGlints = !!demo || !Settings.isDetalLevelLow()
+    const lowDetailTransitions = !demo && Settings.isDetalLevelLow()
     const plane = Builder.createHorizontalPlane(scene, parent, 1, 0)
     plane.name = 'adminUtilsTerrainTops'
     plane.receiveShadows = Settings.isShadowsEnabled()
@@ -147,7 +148,8 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
             (mudCover || dryCover ? muddyDirtPatterns : terrainCoverPatterns)[0].origins[0],
             (withDirt || drySubstrate ? muddyDirtPatterns : terrainCoverPatterns)[0].origins[0], transitionBoundary,
             withGrass ? wallSoil : undefined, withRock, atPond && pond ? {...pond, coverOnBank: mudCover} : undefined, soilRockWalls,
-            blendRockWalls ? rockAtlas.material : undefined, cover === snowAtlas.material, grassMaterials.has(cover))
+            blendRockWalls ? rockAtlas.material : undefined, cover === snowAtlas.material, grassMaterials.has(cover),
+            lowDetailTransitions)
         configureTerrainPreviewBatch(mesh, material, false)
         configureTerrainEdgeLighting(material, mudCover || soilRockWalls ? 'vec2(1.0)' : 'dirtCoverage', withRock && !mudCover)
         if (wetness && (mudCover || withDirt || (withGrass && wallSoil === dirtAtlas.material))) {

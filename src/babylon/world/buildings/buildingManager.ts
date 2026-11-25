@@ -1604,6 +1604,7 @@ export const BuildingManager = {
     buildings: new Map<number, RenderedBuilding>(),
     cachedBuildings: new Map<number, RenderedBuilding>(),
     floorTiles: new Map<string, RenderedBuilding>(),
+    floorTilesRevision: 0,
     collisionTiles: new Map<string, Set<RenderedBuilding>>(),
     housePrefabs: null as BuildingPrefabs | null,
     cabinPrefabs: null as BuildingPrefabs | null,
@@ -1724,7 +1725,10 @@ export const BuildingManager = {
                 : new BuildingView(data, data.tp === CABIN_TYPE ? this.cabinPrefabs! : this.housePrefabs, this.parent, this.fadeMaterial)
         this.buildings.set(data.id, building)
         const floorTiles = building.getFloorTiles()
-        if (floorTiles.length > 0) this.groundContactRevision++
+        if (floorTiles.length > 0) {
+            this.groundContactRevision++
+            this.floorTilesRevision++
+        }
         floorTiles.forEach((tile) => this.floorTiles.set(`${tile.x};${tile.z}`, building))
         building.getCollisionIndexTiles().forEach((tile) => {
             const key = `${tile.x};${tile.z}`
@@ -1753,6 +1757,7 @@ export const BuildingManager = {
             if (this.floorTiles.get(key) === building) {
                 this.floorTiles.delete(key)
                 this.groundContactRevision++
+                this.floorTilesRevision++
             }
         })
         building.getCollisionIndexTiles().forEach((tile) => {
@@ -2020,6 +2025,7 @@ export const BuildingManager = {
         this.cachedBuildings.forEach((building) => building.dispose())
         this.cachedBuildings.clear()
         this.floorTiles.clear()
+        this.floorTilesRevision++
         this.collisionTiles.clear()
         this.rebuildOpaqueBatch()
     },

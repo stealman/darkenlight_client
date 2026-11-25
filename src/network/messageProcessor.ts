@@ -389,7 +389,7 @@ export const MessageProcessor = {
             // chunk. Re-anchor objects that may have been created from the
             // placeholder height map, then rebuild the now-loaded area.
             TreeManager.recountYPositions()
-            StaticsManager.recountYPositions()
+            StaticsManager.resolveStackedStaticPositions()
             BuildingManager.recountYPositions()
             EquipmentDecorationsManager.recountYPositions()
             if (MyPlayer.myChar != null && WorldRenderer.block1 != null) {

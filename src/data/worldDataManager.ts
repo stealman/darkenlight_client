@@ -3,7 +3,6 @@ import { FetchWorldDataMsg } from '@/network/messages'
 import { Vector3 } from '@babylonjs/core'
 import { TreeManager } from '@/babylon/world/treeManager'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
-import { StaticsManager } from '@/babylon/world/statics/staticsManager'
 import { MyPlayer } from '@/data/myPlayer'
 import {loadLocalTerrainRenderData, localWorldMaps} from '@/local/worldBundle'
 import type {TerrainRenderData} from '@/babylon/world/terrainRenderData'
@@ -84,9 +83,6 @@ export const WorldDataManager = {
         this.worldDataMap.get(worldId)!.consumeMapUpdate(data)
         if (!MyPlayer.myChar) return
         TreeManager.recountYPositions()
-        TreeManager.renderTrees()
-        StaticsManager.recountYPositions()
-        StaticsManager.renderObjects()
         WorldRenderer.renderWorld()
     },
 

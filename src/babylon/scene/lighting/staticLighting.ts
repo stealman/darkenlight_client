@@ -129,15 +129,35 @@ export function configureStaticLightMaterials(host: StaticLightingHost) {
     }
 }
 
+function sameStaticLightProfile(a: StaticLightProfile, b: StaticLightProfile) {
+    return a.color.equals(b.color) && a.height === b.height && a.intensity === b.intensity && a.range === b.range
+        && a.flicker === b.flicker && a.flickerPosition === b.flickerPosition && a.pulse === b.pulse
+        && a.castsShadows === b.castsShadows && a.castsActorShadows === b.castsActorShadows
+        && (a.direction === b.direction || (a.direction != null && b.direction != null && a.direction.equals(b.direction)))
+        && a.angle === b.angle && a.priority === b.priority && a.outdoorRangeFactor === b.outdoorRangeFactor
+        && a.shadowMapSize === b.shadowMapSize
+}
+
 export function registerStaticLight(host: StaticLightingHost, id: string, position: Vector3, profile: StaticLightProfile) {
     let source = host.staticLights.get(id)
+    if (source?.visible && source.registeredPosition.equals(position)
+        && sameStaticLightProfile(source.registeredProfile, profile)) {
+        source.position = position
+        source.profile = profile
+        return
+    }
+
     const actorShadowModeChanged = source != null
-        && source.profile.castsActorShadows !== profile.castsActorShadows
+        && source.registeredProfile.castsActorShadows !== profile.castsActorShadows
+    // Static objects reuse mutable position and direction vectors when registering.
+    const registeredProfile = {...profile, direction: profile.direction?.clone(), color: profile.color.clone()}
     if (source == null) {
         source = {
             id,
             position,
             profile,
+            registeredPosition: position.clone(),
+            registeredProfile,
             visible: true,
             flickerPhase: getStaticLightFlickerPhase(id),
         }
@@ -145,6 +165,8 @@ export function registerStaticLight(host: StaticLightingHost, id: string, positi
     } else {
         source.position = position
         source.profile = profile
+        source.registeredPosition.copyFrom(position)
+        source.registeredProfile = registeredProfile
         source.visible = true
         host.staticLightSlots.forEach(slot => {
             if (slot.source === source) {
@@ -160,7 +182,7 @@ export function registerStaticLight(host: StaticLightingHost, id: string, positi
 
 export function unregisterStaticLight(host: StaticLightingHost, id: string) {
     const source = host.staticLights.get(id)
-    if (source != null) {
+    if (source?.visible) {
         source.visible = false
         host.staticLightAssignmentsDirty = true
     }

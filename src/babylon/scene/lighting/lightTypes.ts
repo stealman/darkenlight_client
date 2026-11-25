@@ -21,6 +21,8 @@ export interface StaticLightSource {
     id: string
     position: Vector3
     profile: StaticLightProfile
+    registeredPosition: Vector3
+    registeredProfile: StaticLightProfile
     visible: boolean
     flickerPhase: number
 }

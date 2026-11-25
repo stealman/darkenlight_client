@@ -32,6 +32,7 @@ export function createTerrainTransitionMaterial(
     snowWallRock?: PBRCustomMaterial,
     snowCover = false,
     grassCover = false,
+    lowDetail = false,
 ) {
     const material = new PBRCustomMaterial(name, grass.getScene())
     material.metallic = grass.metallic
@@ -101,6 +102,7 @@ export function createTerrainTransitionMaterial(
         vWallContact = terrainWallContact;
     `)
     material.Fragment_Definitions(`
+        ${lowDetail ? '#define TERRAIN_LOW_DETAIL_TRANSITIONS' : ''}
         varying vec2 vSurfacePatchUV;
         varying vec2 vPlacedSurfaceUV;
         varying vec4 vPlacedSurface;
@@ -154,15 +156,19 @@ export function createTerrainTransitionMaterial(
         TransitionNoise sampleTransitionNoise(vec2 p) {
             float clumps = terrainNoise(p * vec2(1.35, 1.95));
             float shape = (clumps - 0.5) * 1.65;
+            #ifdef TERRAIN_LOW_DETAIL_TRANSITIONS
+            float grain = 0.0;
+            #else
             ${grassCover ? `if (transitionBoundary.z > 0.5) {
                 // Map edges can face any direction. Use patches that vary along both world axes.
                 shape += (terrainNoise(p * vec2(2.8, 2.3) + vec2(3.0, 7.0)) - 0.5) * 1.5;
             } else` : ''} {
                 shape += sin(p.y * 1.45 + 0.4) * 0.58 + sin(p.y * 3.1) * 0.24;
             }
+            float grain = (terrainNoise(p * 6.8) - 0.5) * 0.58;
+            #endif
             // Compress only the longest excursions, leaving the small contours and grain intact.
             shape -= sign(shape) * max(abs(shape) - 0.65, 0.0) * 0.32;
-            float grain = (terrainNoise(p * 6.8) - 0.5) * 0.58;
             return TransitionNoise(shape, grain, mix(0.26, 0.68, clumps));
         }
 
@@ -332,7 +338,10 @@ export function createTerrainTransitionMaterial(
             ${wallDirt ? 'dirtUV = vPlacedSurfaceUV * wallDirtScale;' : ''}`}
         } else {
             float grassIslandSupport = smoothstep(0.2, 0.85, vPlacedSurface.w);
-            grassWeight = transitionGrassWeight(terrainXZ, sampleTransitionNoise(terrainXZ), grassIslandSupport,
+            TransitionNoise noise = sampleTransitionNoise(terrainXZ);
+            ${lowDetail && snowCover ? `// Break up high-contrast snow edges with one additional noise sample on the top face.
+            noise.grain = (terrainNoise(terrainXZ * 4.8) - 0.5) * 0.90;` : ''}
+            grassWeight = transitionGrassWeight(terrainXZ, noise, grassIslandSupport,
                 ${pondBank ? 'vPlacedSurface.z > 1.5' : 'false'}, coverDistance, boundaryDistance(vTerrainBoundaryCorners, vTerrainTile.xy));
         }
         ${wallDirt ? 'float snowWeight = min(snowFringe.x, 1.0 - grassWeight);' : ''}

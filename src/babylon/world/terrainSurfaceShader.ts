@@ -24,11 +24,16 @@ export const terrainFringeShader = `
         // Anchor the fringe to the world so it crosses wall joins.
         vec2 noisePosition = terrainXZ + vec2(edgeHeight * 1.17, -edgeHeight * 0.79);
         float clusters = terrainNoise(noisePosition * 2.55);
+        #ifdef TERRAIN_LOW_DETAIL_TRANSITIONS
+        float lobes = 0.5;
+        float edge = fromEdge;
+        #else
         float lobes = terrainNoise(noisePosition * 8.2 + vec2(4.7, 9.3));
-        float shape = smoothstep(0.17, 0.86, clusters) * 0.78 + lobes * 0.22;
-        float reach = mix(minReach, maxReach, shape);
         float grain = terrainNoise(noisePosition * 19.0 + vec2(fromEdge * 11.0, -fromEdge * 13.0)) - 0.5;
         float edge = fromEdge + grain * 0.10;
+        #endif
+        float shape = smoothstep(0.17, 0.86, clusters) * 0.78 + lobes * 0.22;
+        float reach = mix(minReach, maxReach, shape);
         float feather = mix(0.085, 0.15, lobes);
         float thickness = mix(0.68, 1.0, smoothstep(0.18, 0.62, clusters));
         return thickness * (1.0 - smoothstep(max(0.015, reach - feather), reach + feather, edge));

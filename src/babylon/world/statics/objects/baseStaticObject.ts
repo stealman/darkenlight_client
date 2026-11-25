@@ -3,6 +3,16 @@ import { Prefab, WorldRenderer } from '@/babylon/world/worldRenderer'
 import { StaticObjectInfo, StaticObjectsCodebook } from '@/babylon/world/statics/staticsCodebook'
 import { TerrainManager } from '@/babylon/world/terrainManager'
 
+function captureMatrixHeights(start: number, matrices: Matrix[], baseY: number[], indices: number[]) {
+    const count = matrices.length - start
+    baseY.length = indices.length = count
+    for (let i = 0; i < count; i++) {
+        const index = start + i
+        indices[i] = index
+        baseY[i] = matrices[index].m[13]
+    }
+}
+
 export interface StaticObject {
     type: number
     position: Vector3
@@ -97,49 +107,25 @@ export abstract class BaseStaticObject implements StaticObject {
     }
 
     clearRenderMatrixCapture() {
-        this.blockMatrixIndices = []
-        this.blockMatrixBaseY = []
-        this.alphaMatrixIndices = []
-        this.alphaMatrixBaseY = []
-        this.prefabMatrixIndices = []
-        this.prefabMatrixBaseY = []
-        this.translucentMatrixIndices = []
-        this.translucentMatrixBaseY = []
-        this.terrainMatrixIndices = []
-        this.terrainMatrixBaseY = []
+        this.blockMatrixIndices.length = this.blockMatrixBaseY.length = 0
+        this.alphaMatrixIndices.length = this.alphaMatrixBaseY.length = 0
+        this.prefabMatrixIndices.length = this.prefabMatrixBaseY.length = 0
+        this.translucentMatrixIndices.length = this.translucentMatrixBaseY.length = 0
+        this.terrainMatrixIndices.length = this.terrainMatrixBaseY.length = 0
     }
 
     captureRenderMatrices(blockStart: number, prefabStart: number, translucentStart: number, alphaStart: number) {
-        this.blockMatrixIndices = Array.from(
-            {length: WorldRenderer.block1!.matrices.length - blockStart},
-            (_, index) => blockStart + index,
-        )
-        this.blockMatrixBaseY = this.blockMatrixIndices.map((index) => WorldRenderer.block1!.matrices[index].m[13])
-        this.alphaMatrixIndices = Array.from(
-            {length: WorldRenderer.blockWithAlpha1!.matrices.length - alphaStart},
-            (_, index) => alphaStart + index,
-        )
-        this.alphaMatrixBaseY = this.alphaMatrixIndices.map((index) => WorldRenderer.blockWithAlpha1!.matrices[index].m[13])
+        captureMatrixHeights(blockStart, WorldRenderer.block1!.matrices, this.blockMatrixBaseY, this.blockMatrixIndices)
+        captureMatrixHeights(alphaStart, WorldRenderer.blockWithAlpha1!.matrices, this.alphaMatrixBaseY, this.alphaMatrixIndices)
         if (this.prefab) {
-            this.prefabMatrixIndices = Array.from(
-                {length: this.prefab.matrices.length - prefabStart},
-                (_, index) => prefabStart + index,
-            )
-            this.prefabMatrixBaseY = this.prefabMatrixIndices.map((index) => this.prefab!.matrices[index].m[13])
+            captureMatrixHeights(prefabStart, this.prefab.matrices, this.prefabMatrixBaseY, this.prefabMatrixIndices)
         }
-        this.translucentMatrixIndices = Array.from(
-            {length: WorldRenderer.translucentPlane!.matrices.length - translucentStart},
-            (_, index) => translucentStart + index,
-        )
-        this.translucentMatrixBaseY = this.translucentMatrixIndices.map((index) => WorldRenderer.translucentPlane!.matrices[index].m[13])
+        captureMatrixHeights(translucentStart, WorldRenderer.translucentPlane!.matrices,
+            this.translucentMatrixBaseY, this.translucentMatrixIndices)
     }
 
     captureTerrainMatrices(start: number, matrices: Matrix[]) {
-        this.terrainMatrixIndices = Array.from(
-            {length: matrices.length - start},
-            (_, index) => start + index,
-        )
-        this.terrainMatrixBaseY = this.terrainMatrixIndices.map((index) => matrices[index].m[13])
+        captureMatrixHeights(start, matrices, this.terrainMatrixBaseY, this.terrainMatrixIndices)
     }
 
     applyDeleteBounceOffset(offset: number): Mesh[] {

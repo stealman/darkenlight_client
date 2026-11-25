@@ -3,6 +3,7 @@ import { Item, EquipSlotModelsCb, WeaponCategories, WeaponTypes } from '@/data/i
 import { getLocale, t } from '@/i18n'
 import { Vector3 } from '@babylonjs/core'
 import { Utils } from '@/utils/utils'
+import { CHARACTER_COLLISION_WIDTH } from '@game/game/mechanics/constants'
 
 type NpcEquipmentItem = {
     modelId: number
@@ -28,7 +29,7 @@ export class Npc extends Character {
         super({
             ...data,
             cls: 'FIGHTER',
-            bsz: data.bsz ?? 0.8,
+            bsz: data.bsz ?? CHARACTER_COLLISION_WIDTH,
             equipSet: {}
         })
         this.type = data.type
@@ -133,7 +134,6 @@ export class Guard extends Npc {
             x: data.x,
             z: data.z,
             hpp: data.hpp,
-            bsz: 0.8,
             wr: data.guard?.wanderingRange ?? 0,
         })
         this.definitionId = data.guard.definitionId

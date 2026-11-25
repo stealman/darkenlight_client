@@ -85,6 +85,7 @@ test('type index follows addition, removal and clearing, preserving closest-obje
         '@/babylon/materials': {MaterialEnum1: {WOOD_1: {}, STEEL_1: {}, WOOD_2: {}}},
         '@/babylon/scene/lights': {Lights: {clearStaticLights() {}}},
         '@/babylon/world/statics/staticFireParticleManager': {StaticFireParticleManager: {flush() {}}},
+        '../stoneBatch': {StoneBatch: {clear() {}, flush() {}}},
     })
     manager.getBaseHeight = () => 0
     manager.resolveStackedStaticPositions = () => {}
@@ -104,6 +105,84 @@ test('type index follows addition, removal and clearing, preserving closest-obje
     assert.equal(manager.staticsByType.size, 0)
     manager.addObject({tp: 305, x: 0, z: 0})
     assert.equal(manager.getClosestStaticInDistance(305, position, 2).position.x, 0)
+})
+
+test('static stacking is reused until terrain, floors, or scenery change', () => {
+    const world = {blockMap: [[{totalHeight: 2}, {totalHeight: 2}]], renderRevision: 0}
+    const floors = {floorTilesRevision: 0, height: 0, getFloorHeightAtTile() {return this.height}}
+    const {StaticsManager: manager} = loadModule('babylon/world/statics/staticsManager.ts', {
+        '@/data/myPlayer': {MyPlayer: {worldId: 1}},
+        '@/data/worldDataManager': {WorldDataManager: {
+            worldDataMap: new Map([[1, world]]), getBlockMap: () => world.blockMap,
+        }},
+        '@/babylon/world/buildings/buildingManager': {BuildingManager: floors},
+        '@/babylon/world/snowCoverMask': {isShrubType: () => false},
+        '@/babylon/world/statics/objects/campObjects': {CampBarrel: class {}},
+    })
+    let reads = 0
+    const prop = (type, surface, onStatic) => ({
+        type, position: {x: 0, y: 0, z: 0}, renderPosition: {y: 0},
+        getPlacementSurfaceHeight() {reads++; return surface},
+        shouldPlaceOnStatic: () => onStatic, dispose() {},
+    })
+    const table = prop(304, 0.4, false), lamp = prop(263, null, true)
+    const unrelated = prop(304, null, false)
+    unrelated.position.z = 1
+    manager.staticsByTile.set('0;0', new Set([table, lamp]))
+    manager.staticsByTile.set('0;1', new Set([unrelated]))
+    manager.allStatics.push(unrelated)
+    manager.allStatics.push(table, lamp)
+    for (let i = 0; i < 100; i++) manager.resolveStackedStaticPositions()
+    assert.equal(reads, 3)
+    assert.equal(lamp.renderPosition.y, 2.4)
+
+    world.blockMap[0][0].totalHeight = 4
+    world.renderRevision++
+    manager.resolveStackedStaticPositions()
+    assert.equal(lamp.renderPosition.y, 4.4)
+    assert.equal(reads, 5)
+    floors.height = 0.5
+    floors.floorTilesRevision++
+    manager.resolveStackedStaticPositions()
+    assert.equal(lamp.renderPosition.y, 4.9)
+    const beforeRemoval = reads
+    manager.removeObjectAt(0, 0, 304, false)
+    manager.resolveStackedStaticPositions()
+    assert.equal(lamp.renderPosition.y, 4.5)
+    assert.equal(reads, beforeRemoval + 1)
+})
+
+test('unchanged static lights do not reschedule assignment or invalidate a shadow map', async () => {
+    const core = await import('@babylonjs/core/index.js')
+    const {registerStaticLight, unregisterStaticLight} = loadModule('babylon/scene/lighting/staticLighting.ts', {
+        '@babylonjs/core': core,
+    })
+    const host = {staticLights: new Map(), staticLightSlots: [], staticLightAssignmentsDirty: false}
+    const id = 'torch'
+    const position = new core.Vector3(1, 2, 3)
+    const profile = {color: core.Color3.White(), height: 1, intensity: 2, range: 4}
+    registerStaticLight(host, id, position, profile)
+    let invalidations = 0
+    host.staticLightSlots.push({source: host.staticLights.get(id), shadow: {
+        getDarkness: () => 0, getShadowMap: () => ({resetRefreshCounter() {invalidations++}}),
+    }})
+    host.staticLightAssignmentsDirty = false
+    for (let i = 0; i < 100; i++) registerStaticLight(host, id, position, {...profile})
+    assert.equal(host.staticLightAssignmentsDirty, false)
+    assert.equal(invalidations, 0)
+
+    position.y++
+    assert.equal(host.staticLights.get(id).position.y, position.y)
+    registerStaticLight(host, id, position, profile)
+    assert.equal(host.staticLightAssignmentsDirty, true)
+    assert.equal(invalidations, 1)
+    unregisterStaticLight(host, id)
+    host.staticLightAssignmentsDirty = false
+    unregisterStaticLight(host, id)
+    assert.equal(host.staticLightAssignmentsDirty, false)
+    registerStaticLight(host, id, position, profile)
+    assert.equal(host.staticLightAssignmentsDirty, true)
+    assert.equal(invalidations, 2)
 })
 
 test('name overlay uses visible IDs and tolerates IDs removed before the next visibility pass', async () => {
