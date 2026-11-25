@@ -86,7 +86,7 @@ export function createTerrainFoliageRenderer(scene: Scene, parent: TransformNode
                 const block = map[x]?.[z]
                 if (!block || !supportsFoliage(foliageMap[x][z], x, z) || !visible(x, z)) return
                 matrix.setTranslationFromFloats(matrix.m[12] + originX, block.totalHeight - GRASS_ROOT_INSET, matrix.m[14] + originZ)
-                placeGrass({matrix, tone: block.snowed ? 3 : dry ? 2 : block.type === GRASS ? 0 : 1})
+                placeGrass({matrix, tone: dry ? 2 : block.type === GRASS ? 0 : 1, snowed: block.snowed})
             } : undefined,
             groundDecals: muddyFoot.pebbles,
             blendedDecals,

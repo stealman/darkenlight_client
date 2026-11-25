@@ -52,7 +52,7 @@ export async function startStarterPreviews(canvases: HTMLCanvasElement[], signal
     const tufts = classKeys.flatMap((_, block) => [-0.33, 0.33].map((side, clump) => {
         const seed = block * 2 + clump
         return {matrix: FoliageManager.tuftMatrix(seed, 0, block * 10 + side, 0,
-            (FoliageManager.roll(seed, 0, 7) - 0.5) * 0.44, 0, 0.55), tone: 3 as const}
+            (FoliageManager.roll(seed, 0, 7) - 0.5) * 0.44, 0, 0.55), tone: 1 as const, snowed: true}
     }))
     grass.setTufts(tufts)
     grass.render(5, 0, Settings.isDetalLevelLow() ? 'low' : 'high', 1)

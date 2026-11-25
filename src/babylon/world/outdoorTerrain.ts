@@ -95,7 +95,7 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
     const lowDetail = Settings.isDetalLevelLow()
     const foliage = createTerrainFoliageRenderer(parent.getScene(), terrain, highDetail, highDetail ? 1 : 2 / 3, !lowDetail)
     const grass = GAME_GRASS_ENABLED ? createGrassRenderer(parent.getScene(), terrain, lowDetail ? 0 : GRASS_CONTACT_LIMIT,
-        lowDetail ? 0 : highDetail ? 15 : 10, true) : undefined
+        lowDetail ? 0 : highDetail ? 15 : 10, !lowDetail) : undefined
     for (const mesh of grass?.meshes ?? []) {
         mesh.receiveShadows = Settings.isShadowsEnabled()
         Lights.registerSharedLightMesh(mesh)

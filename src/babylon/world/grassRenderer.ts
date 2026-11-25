@@ -5,9 +5,9 @@ import { FoliageManager, GRASS_ROOT_INSET } from '@/babylon/world/foliageManager
 import { updateWorldInstanceBuffers } from '@/babylon/world/worldInstanceBuffers'
 import { createGrassContactShade, GRASS_CONTACT_TRIANGLES } from './grassContactShade'
 
-export type GrassTuft = {matrix: Matrix, tone: 0 | 1 | 2 | 3}
+export type GrassTuft = {matrix: Matrix, tone: 0 | 1 | 2, snowed?: boolean}
 export type GrassDetail = 'high' | 'medium' | 'low'
-export const GAME_GRASS_ENABLED = false // Toggle for the FPS comparison.
+export const GAME_GRASS_ENABLED = true // Toggle for the FPS comparison.
 export const GRASS_CONTACT_LIMIT = 4
 export const GRASS_MAX_BEND = 0.45
 const GRASS_BEND_IN_SECONDS = 0.079
@@ -220,10 +220,9 @@ export function createGrassRenderer(scene: Scene, parent: TransformNode, contact
         bladeHeight = Math.max(bladeHeight, maximum.y)
     }
     const shadeMatrices: Matrix[] = [], shadeStyles: Vector2[] = []
-    const shadeTriangles = shade ? GRASS_CONTACT_TRIANGLES : 0
     const shadeStylesByVariant = shade ? SHAPES.map((_, variant) => [new Vector2(variant, 0.155), new Vector2(variant, 0.19)]) : undefined
     type Candidate = {
-        matrix: Matrix, style: Vector2, coatedStyle?: Vector2, shadeStyle?: Vector2,
+        matrix: Matrix, style: Vector2, snowStyles?: {high: Vector2, medium: Vector2}, shadeStyle?: Vector2,
         variant: number, rank: number, distance: number, priority: number, lod: number
     }
     const candidateByTuft = new WeakMap<GrassTuft, Candidate>()
@@ -264,14 +263,14 @@ export function createGrassRenderer(scene: Scene, parent: TransformNode, contact
             candidates = tufts.map(tuft => {
                 const cached = candidateByTuft.get(tuft)
                 if (cached) return cached
-                const {matrix, tone} = tuft
+                const {matrix, tone, snowed} = tuft
                 const x = Math.round(matrix.m[12] * 1024), z = Math.round(matrix.m[14] * 1024)
                 const variant = FoliageManager.hashTile(x, z, 12201) % SHAPES.length
                 const colorVariation = FoliageManager.roll(x, z, 12200)
                 const candidate = {
                     matrix, style: new Vector2(tone, colorVariation),
-                    coatedStyle: tone === 3 ? new Vector2(4, colorVariation) : undefined,
-                    shadeStyle: shadeStylesByVariant?.[variant][tone === 3 ? 1 : 0],
+                    snowStyles: snowed ? {high: new Vector2(4, colorVariation), medium: new Vector2(3, colorVariation)} : undefined,
+                    shadeStyle: shadeStylesByVariant?.[variant][snowed ? 1 : 0],
                     variant,
                     rank: FoliageManager.roll(x, z, 12202), distance: 0, priority: 0, lod: 0,
                 }
@@ -285,6 +284,8 @@ export function createGrassRenderer(scene: Scene, parent: TransformNode, contact
             eligible.length = 0
             const budget = BUDGETS[detail]
             const minimumLod = DISTANCE_DETAIL[detail]
+            const showShade = !!shade && detail !== 'low'
+            const shadeTriangles = showShade ? GRASS_CONTACT_TRIANGLES : 0
             if (camera) parent.computeWorldMatrix().multiplyToRef(camera.getViewMatrix(), parentToView)
             const view = parentToView.m
             const depthSign = scene.useRightHandedSystem ? -1 : 1
@@ -306,15 +307,14 @@ export function createGrassRenderer(scene: Scene, parent: TransformNode, contact
                 eligible.sort((a, b) => a.priority - b.priority || a.distance - b.distance || a.rank - b.rank)
             }
             let triangles = 0, count = 0
-            const snowCoating = detail === 'high'
             for (const tuft of eligible) {
                 const variants = batches[tuft.variant]
                 const available = budget - triangles - shadeTriangles
                 const batch = variants[tuft.lod].triangles <= available ? variants[tuft.lod] : variants[2]
                 if (batch.triangles > available) break
                 batch.matrices.push(tuft.matrix)
-                batch.styles.push(snowCoating && tuft.coatedStyle ? tuft.coatedStyle : tuft.style)
-                if (tuft.shadeStyle) {
+                batch.styles.push(detail === 'low' ? tuft.style : tuft.snowStyles?.[detail] ?? tuft.style)
+                if (showShade && tuft.shadeStyle) {
                     shadeMatrices.push(tuft.matrix)
                     shadeStyles.push(tuft.shadeStyle)
                 }
