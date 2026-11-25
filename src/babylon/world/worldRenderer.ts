@@ -85,8 +85,7 @@ export const WorldRenderer = {
         StoneBatch.initialize(scene, this.worldParentNode, Settings.isDetalLevelHigh())
 
         // Initialize managers
-        TerrainManager.initialize(scene, foliageModules?.[1].createTerrainFoliageRenderer)
-        IndoorTerrainOcclusionManager.initialize(scene, this.worldParentNode)
+        await TerrainManager.initialize(scene, foliageModules?.[1].createTerrainFoliageRenderer)
         TreeManager.initialize(scene)
         StaticsManager.initialize(scene)
         BuildingManager.initialize(scene, this.worldParentNode)
@@ -269,6 +268,14 @@ export const WorldRenderer = {
 
     getSnowContactHeight(x: number, z: number) {
         if (this.staticTerrainContact) return this.getSnowSurfaceHeight(x, z)
+    },
+
+    getMuddyDirtContactHeight(x: number, z: number) {
+        if (!this.staticTerrainContact || Lights.indoor) return
+        const tile = WorldDataManager.getBlockMap()[x]?.[z]
+        if (!tile || tile.type !== TerrainEnum1.TERRAIN_MUDDY_DIRT.index || tile.snowed
+            || tile.stonePath || tile.beigeStonePath || BuildingManager.hasFloorAtTile(x, z)) return
+        return TerrainManager.usesOutdoorTerrain() ? outdoorSurfaceHeight(tile) : tile.height + getTerrainHeightOffset(tile, false)
     },
 
     getSnowSurfaceHeight(x: number, z: number) {

@@ -78,7 +78,6 @@ function createMaterial(scene: Scene) {
     material.usePhysicalLightFalloff = block.usePhysicalLightFalloff
     material.maxSimultaneousLights = block.maxSimultaneousLights
     material.AddUniform('stoneTerrainColor', 'sampler2D', terrain.albedoTexture)
-    material.AddUniform('stoneTerrainEmissive', 'sampler2D', terrain.emissiveTexture)
     for (const attribute of ['uvc', 'stonePosition1', 'stonePosition2', 'stoneNormal1', 'stoneNormal2']) {
         material.AddAttribute(attribute)
     }
@@ -113,7 +112,7 @@ function createMaterial(scene: Scene) {
     `)
     material.Fragment_Before_FinalColorComposition(`
         if (vStoneAtlas > 0.5 && vStoneAtlas < 1.5) {
-            finalEmissive = vEmissiveColor * toLinearSpace(texture2D(stoneTerrainEmissive, vStoneTerrainUV).rgb) * vLightingIntensity.y;
+            finalEmissive = vec3(0.0);
         }
     `)
     material.shadowDepthWrapper = new ShadowDepthWrapper(material, scene, { standalone: true })

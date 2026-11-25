@@ -40,8 +40,12 @@ export function configureBuildingRoofSnow(material: PBRCustomMaterial) {
     material.Vertex_Before_PositionUpdated(`
         ${parts.Vertex_Before_PositionUpdated}
         vBuildingSurface = floor(uvc / ${ATLAS_SIZE}.0);
-        uvUpdated -= ${ATLAS_SIZE}.0 * vBuildingSurface;
-        vHouseThatch = vec2(1.0 - step(0.01, distance(mod(uvc, ${ATLAS_SIZE}.0), vec2(${hay.x}, ${hay.y}))), uv.y);
+        // Buildings use whole-atlas offsets for surface flags, including the offset used for ember glow on ordinary blocks.
+        uvUpdated -= blockAtlasOffset;
+        blockAtlasOffset = mod(uvc, ${ATLAS_SIZE}.0);
+        uvUpdated += blockAtlasOffset;
+        vBlockTopGlow = 0.0;
+        vHouseThatch = vec2(1.0 - step(0.01, distance(blockAtlasOffset, vec2(${hay.x}, ${hay.y}))), uv.y);
     `)
     material.Fragment_Definitions(`
         ${parts.Fragment_Definitions}
@@ -148,7 +152,8 @@ export function configureBuildingRoofSnow(material: PBRCustomMaterial) {
                 if (cover > 0.0) {
                     vec2 snowUV = terrainContactSnowUV(snowXZ, 0.0);
                     vec3 roofSnow = toLinearSpace(texture2D(buildingSnowColor, snowUV).rgb);
-                    surfaceAlbedo = mix(surfaceAlbedo, roofSnow, cover);
+                    float snowBrightness = mix(0.86, 0.96, drift * 0.75 + detail * 0.25);
+                    surfaceAlbedo = mix(surfaceAlbedo, roofSnow * snowBrightness, cover);
                     // Thick snow on the house hides the ribbed thatch underneath.
                     float snowNormalBlend = house ? smoothstep(0.0, 0.72, cover) : cover * 0.65;
                     normalW = normalize(mix(normalW, geometricNormalW, snowNormalBlend));

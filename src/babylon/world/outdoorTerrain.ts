@@ -22,7 +22,8 @@ import type { PavingStone } from './stonePathLayout'
 import { outdoorSurfaceHeight } from './terrainRoofShape'
 import type { TerrainStepField } from './terrainStepField'
 
-export { createFallbackWaterFloor } from '@/adminUtils/terrainPreviewGeometry'
+export { createIndoorWaterFloor } from '@/adminUtils/terrainPreviewGeometry'
+export { createDungeonRockMaterial, dungeonRockUv } from '@/adminUtils/terrainAtlasPreview'
 
 const REGION_SIZE = TERRAIN_ATLAS_REGION_SIZE
 

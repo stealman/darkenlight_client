@@ -20,13 +20,14 @@ import {
     HOUSE_ROOF_EAVE_OVERHANG, HOUSE_ROOF_END_OVERHANG, HOUSE_ROOF_THICKNESS, HUMAN_HOUSE_WIDTH, SHED_ROOF_OVERHANG,
 } from './buildingRoofSnow'
 import { configureBuildingWallDamp, encodeWallDampUv } from './buildingWallDamp'
+import { createBuildingBoxSurface } from './buildingBoxSurface'
 import { CONTACT_SHADOW_STRENGTH, contactShadowFalloff } from '../terrainContactShadow'
 import type { ContactShadowFootprint } from '../terrainContactShadow'
 import { OutdoorInstanceBatch } from '../outdoorInstanceBatch'
 import type { OutdoorInstance } from '../outdoorInstanceBatch'
 import { appendPavingAttributes, createSimpleStonePathMesh, createStonePathRenderer, pavingStoneMatrix, PAVING_INSTANCE_ATTRIBUTE } from '../stonePathRenderer'
 import { StepMarksRenderer } from '../stepMarksRenderer'
-import { visitHouseFloorStones } from '../stonePathLayout'
+import { visitBuildingFloorStones } from '../stonePathLayout'
 import type { PavingStone } from '../stonePathLayout'
 
 export interface BuildingData {
@@ -75,18 +76,19 @@ const WALL_HEIGHT = 1
 const WALL_THICKNESS = 0.2
 const PILLAR_SIZE = 0.4
 
-const houseShadowFootprints: Omit<ContactShadowFootprint, 'height'>[] = []
-{
-    const left = -0.5, right = HOUSE_WIDTH - 0.5
-    const back = -0.5, front = HOUSE_DEPTH - 0.5
-    const wall = WALL_THICKNESS / 2, pillar = PILLAR_SIZE / 2
+function floorShadowFootprints(width: number, depth: number, wallThickness: number, pillarSize = 0) {
+    const footprints: Omit<ContactShadowFootprint, 'height'>[] = []
+    const left = -0.5, right = width - 0.5
+    const back = -0.5, front = depth - 0.5
+    const wall = wallThickness / 2, pillar = pillarSize / 2
     const add = (minX: number, minZ: number, maxX: number, maxZ: number) =>
-        houseShadowFootprints.push({minX, minZ, maxX, maxZ, reach: 0.60})
+        footprints.push({minX, minZ, maxX, maxZ, reach: 0.60})
     for (const side of [left, right]) {
         add(side - wall, back, side + wall, front)
-        for (const z of [back, front]) add(side - pillar, z - pillar, side + pillar, z + pillar)
+        if (pillar > 0) for (const z of [back, front]) add(side - pillar, z - pillar, side + pillar, z + pillar)
     }
     for (const side of [back, front]) add(left, side - wall, right, side + wall)
+    return footprints
 }
 
 const DOOR_CENTER_X = 2
@@ -144,8 +146,38 @@ interface BuildingPrefabs {
     glass: Mesh
     blocks: Record<OpaquePartGroup, BuildingBlockPart[]>
     glassPanes: Matrix[]
+    floor: BuildingFloor
+}
+
+interface BuildingFloor {
     paving: {stone: PavingStone, matrix: Matrix}[]
-    pavingColors: {kind: string, stride: number, values: number[]}[]
+    colors: {kind: string, stride: number, values: number[]}[]
+    shadows: ReturnType<typeof floorShadowFootprints>
+}
+
+function createBuildingFloor(width: number, depth: number, wall: number, pillar: number, detailed: boolean, porch = false): BuildingFloor {
+    const shadows = floorShadowFootprints(width, depth, wall, pillar)
+    const paving: BuildingFloor['paving'] = []
+    const colors: number[] = []
+    const entrance = (width - 1) / 2
+    visitBuildingFloorStones({left: -0.5, right: width - 0.5, front: -0.5, back: depth - 0.5},
+        porch ? {left: entrance - 1.5, right: entrance + 1.5, back: depth + 0.5} : undefined,
+        FLOOR_OVERHANG, FLOOR_PAVING_ORIGIN, stone => {
+            const matrix = pavingStoneMatrix(stone, true)
+            paving.push({stone, matrix})
+            if (detailed) return
+            // Bake the wall contact shadow into Babylon's instance color once per prefab.
+            const x = matrix.m[12], z = matrix.m[14]
+            let shade = 0
+            for (const footprint of shadows) {
+                const dx = Math.max(footprint.minX - x, 0, x - footprint.maxX)
+                const dz = Math.max(footprint.minZ - z, 0, z - footprint.maxZ)
+                shade = Math.max(shade, contactShadowFalloff(Math.hypot(dx, dz), footprint.reach))
+            }
+            const light = 1 - shade * CONTACT_SHADOW_STRENGTH
+            colors.push(light, light, light, 1)
+        })
+    return {paving, colors: [{kind: VertexBuffer.ColorInstanceKind, stride: 4, values: colors}], shadows}
 }
 
 class BuildingView {
@@ -553,22 +585,8 @@ class BuildingView {
         }
     }
 
-    pavingInstances(batch: OutdoorInstanceBatch, detailed: boolean, world: WorldData | undefined): OutdoorInstance[] {
-        const position = this.mesh.position
-        const transform = Matrix.RotationY(this.mesh.rotation.y).multiply(Matrix.Translation(position.x, position.y, position.z))
-        const uv = Vector2.Zero()
-        if (!detailed) {
-            const attributes = this.prefabs.pavingColors
-            return this.prefabs.paving.map(({matrix}, index) => ({batch, matrix: matrix.multiply(transform), uv, attributes, index, slot: -1}))
-        }
-        const attributes = [{kind: PAVING_INSTANCE_ATTRIBUTE, stride: 4, values: [] as number[]}]
-        return this.prefabs.paving.map(({stone, matrix}, index) => {
-            const placed = matrix.multiply(transform)
-            const terrain = world?.blockMap[Math.round(placed.m[12])]?.[Math.round(placed.m[14])]?.type ?? 0
-            appendPavingAttributes(attributes[0].values, stone, terrain)
-            return {batch, matrix: placed, uv, attributes, index, slot: -1}
-        })
-    }
+    get floor() { return this.prefabs.floor }
+    get floorMesh() { return this.mesh }
 
     updateFade(timeRate: number, playerInside: boolean, selectedTargetInside: boolean) {
         const hideRoof = playerInside || selectedTargetInside
@@ -639,14 +657,16 @@ class ShedView {
     private readonly postContacts = new Map<number, {height: number, snowy: boolean}>()
     private groundContactRevision = -1
     private roofSnow = false
-    private readonly roofUvData: number[] = []
-    private readonly snowyRoofUvData: number[] = []
+    private readonly roofUvData: number[]
+    private readonly snowyRoofUvData: number[]
     private roofPartStart = 0
     private previewYOffset = 0
 
     constructor(readonly data: BuildingData, parent: TransformNode, fadeMaterial: PBRMaterial) {
         const scene = parent.getScene()
         const roofParts: Mesh[] = []
+        const roofPartUvs: number[] = []
+        const snowyRoofPartUvs: number[] = []
         const plankUv = MaterialEnum1.WOOD_PLANKS_DARK.uv
         const highSide = this.getHighSide()
         const slopesAlongX = highSide === '-X' || highSide === '+X'
@@ -683,8 +703,8 @@ class ShedView {
             block.rotationQuaternion = Quaternion.FromRotationMatrix(rotation)
             const snowyUv = snowyMaterial ?? material
             for (let i = 0; i < block.getTotalVertices(); i++) {
-                this.roofUvData.push(material.x, material.y)
-                this.snowyRoofUvData.push(snowyUv.x, snowyUv.y)
+                roofPartUvs.push(material.x, material.y)
+                snowyRoofPartUvs.push(snowyUv.x, snowyUv.y)
             }
             roofParts.push(block)
         }
@@ -778,6 +798,7 @@ class ShedView {
             }
         }
 
+        const roofPlankCount = roofParts.length
         const battenLength = slopeLength - SHED_ROOF_BATTEN_END_INSET * 2
         const battenCenter = (slopesAlongX ? roofMinX : roofMinZ)
             + SHED_ROOF_BATTEN_END_INSET + battenLength / 2
@@ -840,11 +861,14 @@ class ShedView {
             roofMinZ + roofDepth / 2,
         )
 
-        this.roofMesh = Mesh.MergeMeshes(roofParts, true, true)!
-        this.roofMesh.name = `shed_${data.id}_roof`
+        const roofSurface = createBuildingBoxSurface(roofParts, roofPartUvs, `shed_${data.id}_roof`, {
+            alternatePartUvs: snowyRoofPartUvs, roofPlankCount,
+        })
+        this.roofMesh = roofSurface.mesh
+        this.roofUvData = roofSurface.atlasUvs
+        this.snowyRoofUvData = roofSurface.alternateUvs
         this.roofMesh.parent = parent
         this.roofMesh.material = fadeMaterial
-        this.roofMesh.setVerticesData('uvc', this.roofUvData, true, 2)
         this.roofMesh.isPickable = false
         this.roofMesh.setEnabled(false)
         this.recountYPosition()
@@ -1124,7 +1148,7 @@ class MausoleumView {
     playCloseSoundWhenClosed = false
     private previewYOffset = 0
 
-    constructor(readonly data: BuildingData, parent: TransformNode, fadeMaterial: PBRMaterial) {
+    constructor(readonly data: BuildingData, parent: TransformNode, fadeMaterial: PBRMaterial, readonly floor: BuildingFloor) {
         this.facing = data.facing === '+X' || data.facing === '-X' || data.facing === '-Z' ? data.facing : '+Z'
         const scene = parent.getScene()
         const frontParts: Mesh[] = []
@@ -1224,11 +1248,9 @@ class MausoleumView {
                     FLOOR_HEIGHT + MAUSOLEUM_GATE_HEIGHT * heightRatio,
                 )
             }
-            const mesh = Mesh.MergeMeshes(parts, true, true)!
-            mesh.name = `mausoleum_${data.id}_gate_${side}`
+            const {mesh} = createBuildingBoxSurface(parts, uvData, `mausoleum_${data.id}_gate_${side}`)
             mesh.parent = hinge
             mesh.material = fadeMaterial
-            mesh.setVerticesData('uvc', uvData, false, 2)
             mesh.isPickable = false
             mesh.setEnabled(false)
             Lights.registerSharedLightMesh(mesh)
@@ -1242,12 +1264,6 @@ class MausoleumView {
         this.doorProgress = data.doorOpen === true ? 1 : 0
         this.applyGateRotation()
 
-        // A tiled stone plinth avoids stretching the atlas over the full 5x5 footprint.
-        for (let x = 0; x < MAUSOLEUM_SIZE; x++) {
-            for (let z = 0; z < MAUSOLEUM_SIZE; z++) {
-                addBlock(0.98, FLOOR_HEIGHT, 0.98, x, FLOOR_HEIGHT / 2, z, darkStone)
-            }
-        }
         addBlock(1.55, 0.1, 0.62, MAUSOLEUM_ENTRANCE_CENTER_X, 0.05, 3.72, stone, wallGroup(['+Z']))
 
         const courseHeight = 0.4
@@ -1322,21 +1338,15 @@ class MausoleumView {
             }
         })
 
-        this.frontWallsMesh = Mesh.MergeMeshes(frontParts, true, true)!
-        this.frontWallsMesh.name = `mausoleum_${data.id}_front`
+        this.frontWallsMesh = createBuildingBoxSurface(frontParts, frontUvData, `mausoleum_${data.id}_front`).mesh
         this.frontWallsMesh.parent = parent
         this.frontWallsMesh.material = fadeMaterial
-        this.frontWallsMesh.setVerticesData('uvc', frontUvData, false, 2)
-        this.occlusionWallsMesh = Mesh.MergeMeshes(occlusionParts, true, true)!
-        this.occlusionWallsMesh.name = `mausoleum_${data.id}_occlusion_walls`
+        this.occlusionWallsMesh = createBuildingBoxSurface(occlusionParts, occlusionUvData, `mausoleum_${data.id}_occlusion_walls`).mesh
         this.occlusionWallsMesh.parent = parent
         this.occlusionWallsMesh.material = fadeMaterial
-        this.occlusionWallsMesh.setVerticesData('uvc', occlusionUvData, false, 2)
-        this.roofMesh = Mesh.MergeMeshes(roofParts, true, true)!
-        this.roofMesh.name = `mausoleum_${data.id}_roof`
+        this.roofMesh = createBuildingBoxSurface(roofParts, roofUvData, `mausoleum_${data.id}_roof`).mesh
         this.roofMesh.parent = parent
         this.roofMesh.material = fadeMaterial
-        this.roofMesh.setVerticesData('uvc', roofUvData, false, 2)
         for (const mesh of [this.frontWallsMesh, this.occlusionWallsMesh, this.roofMesh]) {
             mesh.isPickable = false
             mesh.setEnabled(false)
@@ -1350,7 +1360,7 @@ class MausoleumView {
     getWidth() { return MAUSOLEUM_SIZE }
     getDepth() { return MAUSOLEUM_SIZE }
 
-    private localTileToWorld(localX: number, localZ: number) {
+    localTileToWorld(localX: number, localZ: number) {
         if (this.facing === '+X') return {x: this.data.x + localZ, z: this.data.z + MAUSOLEUM_SIZE - 1 - localX}
         if (this.facing === '-Z') return {x: this.data.x + MAUSOLEUM_SIZE - 1 - localX, z: this.data.z + MAUSOLEUM_SIZE - 1 - localZ}
         if (this.facing === '-X') return {x: this.data.x + MAUSOLEUM_SIZE - 1 - localZ, z: this.data.z + localX}
@@ -1391,6 +1401,7 @@ class MausoleumView {
     }
 
     getFloorTiles() { return this.getOccupiedTiles() }
+    get floorMesh() { return this.roofMesh }
     hasFloor() { return true }
     affectsInteriorLighting() { return true }
 
@@ -1608,6 +1619,7 @@ export const BuildingManager = {
     collisionTiles: new Map<string, Set<RenderedBuilding>>(),
     housePrefabs: null as BuildingPrefabs | null,
     cabinPrefabs: null as BuildingPrefabs | null,
+    mausoleumFloor: null as BuildingFloor | null,
     opaqueBatchMesh: null as Mesh | null,
     groundContact: null as BuildingGroundContact | null,
     groundContactRevision: 0,
@@ -1615,7 +1627,7 @@ export const BuildingManager = {
     glassBatchMesh: null as Mesh | null,
     floorBatch: null as OutdoorInstanceBatch | null,
     detailedFloor: true,
-    floorViews: new Map<BuildingView, {world?: WorldData, revision?: number, height: number, instances: OutdoorInstance[]}>(),
+    floorViews: new Map<BuildingView | MausoleumView, {world?: WorldData, revision?: number, height: number, instances: OutdoorInstance[]}>(),
     fadeMaterial: null as PBRMaterial | null,
     parent: null as TransformNode | null,
     occlusionCheckIntervalFrames: 10,
@@ -1642,6 +1654,8 @@ export const BuildingManager = {
         this.fadeMaterial = fadeMaterial
         this.housePrefabs = this.createHousePrefab(scene)
         this.cabinPrefabs = this.createHousePrefab(scene, true)
+        this.mausoleumFloor = createBuildingFloor(MAUSOLEUM_SIZE, MAUSOLEUM_SIZE, MAUSOLEUM_WALL_THICKNESS,
+            MAUSOLEUM_PILLAR_SIZE, this.detailedFloor)
         this.opaqueBatchMesh = MeshBuilder.CreateBox('buildingOpaqueBlockBatch', {width: 1, height: 1, depth: 1, wrap: true}, scene)
         this.opaqueBatchMesh.parent = parent
         this.opaqueBatchMesh.position.y = -0.5
@@ -1721,7 +1735,7 @@ export const BuildingManager = {
         building ??= data.tp === SHED_TYPE
             ? new ShedView(data, this.parent, this.fadeMaterial)
             : data.tp === STONE_MAUSOLEUM_TYPE
-                ? new MausoleumView(data, this.parent, this.fadeMaterial)
+                ? new MausoleumView(data, this.parent, this.fadeMaterial, this.mausoleumFloor!)
                 : new BuildingView(data, data.tp === CABIN_TYPE ? this.cabinPrefabs! : this.housePrefabs, this.parent, this.fadeMaterial)
         this.buildings.set(data.id, building)
         const floorTiles = building.getFloorTiles()
@@ -1922,18 +1936,18 @@ export const BuildingManager = {
         })
     },
 
-    getHouseShadowFootprints(center: Vector3): ContactShadowFootprint[] {
+    getBuildingFloorShadowFootprints(center: Vector3): ContactShadowFootprint[] {
         const footprints: ContactShadowFootprint[] = []
         const map = WorldDataManager.getBlockMap()
         for (const building of this.buildings.values()) {
-            if (!(building instanceof BuildingView) || building.data.tp !== HUMAN_HOUSE_TYPE) continue
+            if (building instanceof ShedView) continue
             const {x, z} = building.data
             const height = map[x]?.[z]?.height
             if (height === undefined || x > center.x + ViewportManager.maxX + 2 || z > center.z + ViewportManager.maxZ + 2
                 || x + building.getWidth() < center.x + ViewportManager.minX - 2
                 || z + building.getDepth() < center.z + ViewportManager.minZ - 2) continue
 
-            for (const footprint of houseShadowFootprints) {
+            for (const footprint of building.floor.shadows) {
                 const a = building.localTileToWorld(footprint.minX, footprint.minZ)
                 const b = building.localTileToWorld(footprint.maxX, footprint.maxZ)
                 footprints.push({minX: Math.min(a.x, b.x), maxX: Math.max(a.x, b.x),
@@ -1985,13 +1999,12 @@ export const BuildingManager = {
         const revision = this.detailedFloor ? world?.renderRevision : undefined
         for (const [building, view] of this.floorViews) {
             if (building.visible && this.buildings.get(building.data.id) === building
-                && view.world === world && view.revision === revision && view.height === building.mesh.position.y) continue
+                && view.world === world && view.revision === revision && view.height === building.floorMesh.position.y) continue
             for (const instance of view.instances) instance.batch.remove(instance)
             this.floorViews.delete(building)
         }
         for (const building of this.buildings.values()) {
-            if (!(building instanceof BuildingView) || building.data.tp !== HUMAN_HOUSE_TYPE
-                || !building.visible || this.floorViews.has(building)) continue
+            if (building instanceof ShedView || !building.visible || this.floorViews.has(building)) continue
             if (!this.floorBatch && this.parent) {
                 const scene = this.parent.getScene()
                 let mesh: Mesh
@@ -2009,10 +2022,24 @@ export const BuildingManager = {
                 mesh.onDisposeObservable.addOnce(() => Lights.unregisterSharedLightMesh(mesh))
                 this.floorBatch = new OutdoorInstanceBatch(mesh)
             }
-            if (!this.floorBatch) continue
-            const instances = building.pavingInstances(this.floorBatch, this.detailedFloor, world)
-            for (const instance of instances) this.floorBatch.add(instance)
-            this.floorViews.set(building, {world, revision, height: building.mesh.position.y, instances})
+            const batch = this.floorBatch
+            if (!batch) continue
+            const {position, rotation} = building.floorMesh
+            const transform = Matrix.RotationY(rotation.y).multiply(Matrix.Translation(position.x, position.y, position.z))
+            const uv = Vector2.Zero()
+            const pavingData: number[] = []
+            const attributes = this.detailedFloor
+                ? [{kind: PAVING_INSTANCE_ATTRIBUTE, stride: 4, values: pavingData}] : building.floor.colors
+            const instances = building.floor.paving.map(({stone, matrix}, index) => {
+                const placed = matrix.multiply(transform)
+                if (this.detailedFloor) {
+                    const terrain = world?.blockMap[Math.round(placed.m[12])]?.[Math.round(placed.m[14])]?.type ?? 0
+                    appendPavingAttributes(pavingData, stone, terrain)
+                }
+                return {batch, matrix: placed, uv, attributes, index, slot: -1}
+            })
+            for (const instance of instances) batch.add(instance)
+            this.floorViews.set(building, {world, revision, height: position.y, instances})
         }
         this.floorBatch?.flush()
     },
@@ -2056,14 +2083,17 @@ export const BuildingManager = {
             rotationX = 0,
             group: PartGroup = 'base',
             rotationZ = 0,
+            gableSide?: 'wallMinX' | 'wallMaxX',
         ) => {
             const box = MeshBuilder.CreateBox(name, {width, height, depth, wrap: true}, scene)
             box.position.set(x, y, z)
             box.rotation.set(rotationX, 0, rotationZ)
             const uvData = groups[group].uvData
-            const wood = group.startsWith('wall') || group === 'door'
-            const surfaceUv = !cabin && group !== 'roof' && group !== 'glass'
-                ? encodeWallDampUv(material, y, wood ? 'wood' : material === MaterialEnum1.BRICK_GRAY.uv ? 'corner' : 'foundation')
+            const exteriorWall = group === 'wallMinX' || group === 'wallMaxX' || group === 'wallMinZ' || group === 'wallMaxZ'
+                ? group : gableSide
+            const surfaceUv = !cabin && (exteriorWall || (group !== 'roof' && group !== 'glass'))
+                ? encodeWallDampUv(material, y, exteriorWall ?? (group === 'door' ? 'wood'
+                    : material === MaterialEnum1.BRICK_GRAY.uv ? 'corner' : 'foundation'))
                 : material
             for (let i = 0; i < box.getTotalVertices(); i++) {
                 uvData.push(surfaceUv.x, surfaceUv.y)
@@ -2141,12 +2171,6 @@ export const BuildingManager = {
                     .multiply(Matrix.RotationY(rotationY))
                     .multiply(Matrix.Translation(x, WINDOW_BOTTOM + WINDOW_HEIGHT / 2, z)),
             )
-        }
-
-        if (cabin) for (let x = 0; x < HOUSE_WIDTH; x++) {
-            for (let z = 0; z < HOUSE_DEPTH; z++) {
-                addBox('buildingFloor', 1, FLOOR_HEIGHT, 1, x, FLOOR_HEIGHT / 2, z, MaterialEnum1.ROCK1.uv)
-            }
         }
 
         if (!cabin) for (const x of [-0.5, HOUSE_WIDTH - 0.5]) {
@@ -2380,6 +2404,8 @@ export const BuildingManager = {
                             MaterialEnum1.WOOD_PLANKS.uv,
                             0,
                             'roof',
+                            0,
+                            x < 0 ? 'wallMinX' : 'wallMaxX',
                         )
                     }
                 }
@@ -2429,21 +2455,21 @@ export const BuildingManager = {
 
         }
 
-        const mergeParts = (parts: Mesh[], uvData: number[], name: string, material: PBRMaterial) => {
-            const merged = Mesh.MergeMeshes(parts, true, true)!
+        const mergeParts = (parts: Mesh[], uvData: number[], name: string, material: PBRMaterial, exposedOnly = false) => {
+            const merged = exposedOnly ? createBuildingBoxSurface(parts, uvData, name).mesh : Mesh.MergeMeshes(parts, true, true)!
             merged.name = name
             merged.material = material
-            merged.setVerticesData('uvc', uvData, false, 2)
+            if (!exposedOnly) merged.setVerticesData('uvc', uvData, false, 2)
             merged.isPickable = false
             merged.setEnabled(false)
             return merged
         }
         const source = {
-            base: mergeParts(groups.base.parts, groups.base.uvData, 'humanHouseBaseSource', Materials.blockMat1!),
-            wallMinX: mergeParts(groups.wallMinX.parts, groups.wallMinX.uvData, 'humanHouseWallMinXSource', Materials.blockMat1!),
-            wallMaxX: mergeParts(groups.wallMaxX.parts, groups.wallMaxX.uvData, 'humanHouseWallMaxXSource', Materials.blockMat1!),
-            wallMinZ: mergeParts(groups.wallMinZ.parts, groups.wallMinZ.uvData, 'humanHouseWallMinZSource', Materials.blockMat1!),
-            wallMaxZ: mergeParts(groups.wallMaxZ.parts, groups.wallMaxZ.uvData, 'humanHouseWallMaxZSource', Materials.blockMat1!),
+            base: cabin ? null : mergeParts(groups.base.parts, groups.base.uvData, 'humanHouseBaseSource', Materials.blockMat1!),
+            wallMinX: mergeParts(groups.wallMinX.parts, groups.wallMinX.uvData, 'humanHouseWallMinXSource', Materials.blockMat1!, true),
+            wallMaxX: mergeParts(groups.wallMaxX.parts, groups.wallMaxX.uvData, 'humanHouseWallMaxXSource', Materials.blockMat1!, true),
+            wallMinZ: mergeParts(groups.wallMinZ.parts, groups.wallMinZ.uvData, 'humanHouseWallMinZSource', Materials.blockMat1!, true),
+            wallMaxZ: mergeParts(groups.wallMaxZ.parts, groups.wallMaxZ.uvData, 'humanHouseWallMaxZSource', Materials.blockMat1!, true),
         }
         type WallKey = 'wallMinX' | 'wallMaxX' | 'wallMinZ' | 'wallMaxZ'
         const wallKeys: WallKey[] = ['wallMinX', 'wallMaxX', 'wallMinZ', 'wallMaxZ']
@@ -2467,7 +2493,7 @@ export const BuildingManager = {
             const front = frontWallKeys[facing]
             variants[facing] = {
                 shell: mergePrefabs(
-                    [source.base, ...wallKeys.filter((key) => !front.includes(key)).map((key) => source[key])],
+                    [...(source.base ? [source.base] : []), ...wallKeys.filter((key) => !front.includes(key)).map((key) => source[key])],
                     `humanHouseShell5x3_${facing}`,
                 ),
                 frontWalls: mergePrefabs(
@@ -2476,35 +2502,15 @@ export const BuildingManager = {
                 ),
             }
         }
-        Object.values(source).forEach((mesh) => mesh.dispose())
-        const paving: BuildingPrefabs['paving'] = []
-        const colors: number[] = []
-        if (!cabin) visitHouseFloorStones({left: -0.5, right: HOUSE_WIDTH - 0.5, front: -0.5, back: HOUSE_DEPTH - 0.5},
-            {left: DOOR_CENTER_X - 1.5, right: DOOR_CENTER_X + 1.5, back: HOUSE_DEPTH + 0.5}, FLOOR_OVERHANG, FLOOR_PAVING_ORIGIN,
-            stone => {
-                const matrix = pavingStoneMatrix(stone, true)
-                paving.push({stone, matrix})
-                if (this.detailedFloor) return
-                // Bake the wall contact shadow into Babylon's instance color once per prefab.
-                const x = matrix.m[12], z = matrix.m[14]
-                let shade = 0
-                for (const footprint of houseShadowFootprints) {
-                    const dx = Math.max(footprint.minX - x, 0, x - footprint.maxX)
-                    const dz = Math.max(footprint.minZ - z, 0, z - footprint.maxZ)
-                    shade = Math.max(shade, contactShadowFalloff(Math.hypot(dx, dz), footprint.reach))
-                }
-                const light = 1 - shade * CONTACT_SHADOW_STRENGTH
-                colors.push(light, light, light, 1)
-            })
+        Object.values(source).forEach((mesh) => mesh?.dispose())
         return {
             variants,
-            roof: mergeParts(groups.roof.parts, groups.roof.uvData, 'humanHouseRoof5x3Prefab', this.fadeMaterial!),
-            door: mergeParts(groups.door.parts, groups.door.uvData, 'humanHouseDoor5x3Prefab', this.fadeMaterial!),
+            roof: mergeParts(groups.roof.parts, groups.roof.uvData, 'humanHouseRoof5x3Prefab', this.fadeMaterial!, cabin),
+            door: mergeParts(groups.door.parts, groups.door.uvData, 'humanHouseDoor5x3Prefab', this.fadeMaterial!, true),
             glass: mergeParts(groups.glass.parts, groups.glass.uvData, 'humanHouseGlass5x3Prefab', Materials.blockMatTrans!),
             blocks: blockParts,
             glassPanes,
-            paving,
-            pavingColors: [{kind: VertexBuffer.ColorInstanceKind, stride: 4, values: colors}],
+            floor: createBuildingFloor(HOUSE_WIDTH, HOUSE_DEPTH, WALL_THICKNESS, cabin ? 0 : PILLAR_SIZE, this.detailedFloor, !cabin),
         }
     },
 }

@@ -1,14 +1,21 @@
 import { Matrix, Mesh, Texture, Vector2 } from '@babylonjs/core'
+import type { Scene } from '@babylonjs/core'
+import type { MapBlock } from '@/data/worldDataManager'
+import { terrainNoiseShader } from '@/babylon/world/terrainNoiseShader'
 import { Builder } from '@/babylon/builder'
 import { Materials, TerrainEnum1 } from '@/babylon/materials'
-import { addTerrainPreviewRoof, configureTerrainEdgeLighting, configureMuddyDirtWetness, configureRockDeposits, configureTerrainPreviewBatch, TerrainPreviewBatch } from './terrainPreviewBatch'
+import { addTerrainPreviewRoof, COAL_DEPOSIT, configureTerrainEdgeLighting, configureMuddyDirtWetness, configureRockDeposits, configureTerrainPreviewBatch, TerrainPreviewBatch } from './terrainPreviewBatch'
 import type { SubmitTerrainBatch, TerrainPreviewTriangle } from './terrainPreviewBatch'
 import type { TerrainPreviewSurfaces } from './terrainPreviewGeometry'
-import { muddyDirtLayout, muddyDirtPatterns, terrainCoverLayout, TERRAIN_ATLAS_TILES,
+import { muddyDirtLayout, muddyDirtPatterns, terrainCoverLayout, terrainCoverPatterns, TERRAIN_ATLAS_TILES,
     visitBakedTerrainAtlasPatches, visitTerrainAtlasPlacements } from '@/babylon/world/terrainAtlasPlacement'
 import dirtColorUrl from './assets/dirt-atlas.png'
 import muddyDirtColorUrl from './assets/muddy-dirt-atlas.png'
 import dirtNormalUrl from './assets/muddy-dirt-normal-atlas.png'
+import rockColorUrl from './assets/rock-atlas.png'
+import rockNormalUrl from './assets/rock-normal-atlas.png'
+import snowColorUrl from './assets/snow-atlas.png'
+import snowNormalUrl from './assets/snow-normal-atlas.png'
 export { muddyDirtPatterns, terrainCoverPatterns, TERRAIN_ATLAS_TILES } from '@/babylon/world/terrainAtlasPlacement'
 
 
@@ -22,6 +29,70 @@ type TerrainAtlas = {
     showRockDeposits?: boolean
     varyAdjacentPatches?: boolean
     patterns: ReadonlyArray<{size: number, origins: readonly (readonly number[])[]}>
+}
+
+const rockAtlas: TerrainAtlas = {
+    type: TerrainEnum1.TERRAIN_ROCK.index, colorUrl: rockColorUrl,
+    normal: {url: rockNormalUrl, strength: 1.5}, patterns: terrainCoverPatterns,
+    varyAdjacentPatches: true, roundRockTop: true, showRockDeposits: true,
+}
+const snowAtlas: TerrainAtlas = {
+    type: TerrainEnum1.TERRAIN_SNOW_MUDDY_DIRT.index, colorUrl: snowColorUrl,
+    normal: {url: snowNormalUrl, strength: 1.5}, patterns: terrainCoverPatterns, varyAdjacentPatches: true,
+}
+
+export function createRockAtlas(plane: Mesh, name: string) {
+    return createTerrainAtlasPreview(plane, name, rockAtlas)
+}
+
+export function createSnowAtlas(plane: Mesh, name: string) {
+    return createTerrainAtlasPreview(plane, name, snowAtlas)
+}
+
+export function getRockDeposit(block: MapBlock) {
+    if (block.minableCoal) return COAL_DEPOSIT
+    if (!block.minableOreAvailable) return 0
+    const tier = block.minableOre ?? 3
+    return tier >= 1 && tier <= 5 ? tier : 3
+}
+
+const blockAtlasCells = terrainCoverPatterns[terrainCoverPatterns.length - 1].origins
+
+export function terrainBlockAtlasUv(x: number, z: number, level: number) {
+    const hash = Math.imul(x + 1, 73856093) ^ Math.imul(z + 1, 19349663) ^ Math.imul(level, 83492791)
+    const [u, v] = blockAtlasCells[(hash >>> 0) % blockAtlasCells.length]
+    return new Vector2(u, TERRAIN_ATLAS_TILES - v - 1)
+}
+
+export function dungeonRockUv(block: MapBlock, x: number, z: number, level: number) {
+    const uv = terrainBlockAtlasUv(x, z, level)
+    uv.x += (getRockDeposit(block) + 1) * TERRAIN_ATLAS_TILES
+    return uv
+}
+
+function createBlockAtlasMaterial(scene: Scene, name: string, atlas: TerrainAtlas) {
+    const material = createAtlasMaterial(scene, name, atlas)
+    material.Vertex_Before_PositionUpdated(`
+        vec2 faceUV = positionUpdated.xz + 0.5;
+        #ifdef NORMAL
+        if (abs(normal.y) < 0.5) {
+            faceUV = vec2(abs(normal.x) > 0.5 ? positionUpdated.z : positionUpdated.x, positionUpdated.y) + 0.5;
+        }
+        #endif
+        uvUpdated = vec2(mod(uvc.x, ${TERRAIN_ATLAS_TILES}.0), uvc.y) + clamp(faceUV, 0.005, 0.995);
+    `)
+    return material
+}
+
+export function createSnowBlockMaterial(scene: Scene, name: string) {
+    return createBlockAtlasMaterial(scene, name, snowAtlas)
+}
+
+export function createDungeonRockMaterial(scene: Scene, name: string) {
+    const material = createBlockAtlasMaterial(scene, name, rockAtlas)
+    material.Fragment_Definitions(terrainNoiseShader)
+    configureRockDeposits(material, `floor(uvc.x / ${TERRAIN_ATLAS_TILES}.0) - 1.0`)
+    return material
 }
 
 
@@ -49,7 +120,7 @@ export function createDirtAtlas(plane: Mesh, name: string, muddy: boolean, wetDi
 
 export function createTerrainAtlasPreview(plane: Mesh, name: string, atlas: TerrainAtlas) {
     const mesh = createTerrainPreviewPlane(plane, name)
-    const material = createAtlasMaterial(plane, name, atlas)
+    const material = createAtlasMaterial(plane.getScene(), name, atlas)
     configureTerrainPreviewBatch(mesh, material)
     const {roundDirtEdges = false, roundRockTop = false, wetDirt = false, showRockDeposits = false} = atlas
     const roundEdges = roundDirtEdges || roundRockTop
@@ -130,8 +201,7 @@ export function createTerrainAtlasPreview(plane: Mesh, name: string, atlas: Terr
     return {mesh, material, render}
 }
 
-function createAtlasMaterial(plane: Mesh, name: string, atlas: TerrainAtlas) {
-    const scene = plane.getScene()
+function createAtlasMaterial(scene: Scene, name: string, atlas: TerrainAtlas) {
     // Equal UV scales keep the normal strength consistent across quarter turns.
     const scale = 1 / TERRAIN_ATLAS_TILES
     const material = Materials.getPBRCustomMaterial(scene, name, '', atlas.colorUrl, scale, scale, false)

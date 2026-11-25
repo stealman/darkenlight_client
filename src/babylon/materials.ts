@@ -20,7 +20,6 @@ export const Materials = {
     BASE_PATH: './images/materials/',
 
     terrainMaterial: null as PBRCustomMaterial | null,
-    planeMaterial: null as PBRCustomMaterial | null,
 
     blockMatAlpha1: null as PBRCustomMaterial | null,
     blockMat1: null as PBRCustomMaterial | null,
@@ -34,7 +33,6 @@ export const Materials = {
 
     initialize(scene: Scene) {
         this.terrainMaterial = this.createTerrainMaterial1(scene)
-        this.planeMaterial = this.createPlaneMaterial(scene)
 
         this.blockMat1 = this.createBlockMat1(scene)
         this.blockMatAlpha1 = this.createBlockMatAlpha1(scene)
@@ -54,12 +52,6 @@ export const Materials = {
         material.emissiveTexture.vScale = 1 / 8
         material.emissiveColor = new Color3(1, 1, 1)
 
-        return material
-    },
-
-    createPlaneMaterial(scene: Scene): PBRCustomMaterial {
-        const material = this.getPBRCustomMaterial(scene, "plane_mats", this.BASE_PATH, 'plane_materials1.png', 1 / 8, 1 / 8, true)
-        material.alphaCutOff = 0.01
         return material
     },
 
@@ -370,27 +362,4 @@ export const TerrainEnum1 = {
 export const MaterialEnumTrans = {
     GLASS: new MaterialEnum(1, new Vector2(0.5, 14.5)),
     WATER: new MaterialEnum(2, new Vector2(0.5, 12.5)),
-}
-
-export const PlaneEnum1 = {
-    PLANE_DIRT: new MaterialEnum(1, new Vector2(2.5, 6.5)),
-    PLANE_GRASS: new MaterialEnum(2, new Vector2(0.5, 6.5)),
-    PLANE_ROCK: new MaterialEnum(3, new Vector2(6.5, 6.5)),
-    PLANE_MUDDY_DIRT: new MaterialEnum(4, new Vector2(0.5, 4.5)),
-    PLANE_GRASS_WINTER: new MaterialEnum(5, new Vector2(4.5, 4.5)),
-
-
-    PLANE_SNOW_DIRT: new MaterialEnum(101, new Vector2(4.5, 6.5)),
-    PLANE_SNOW_GRASS: new MaterialEnum(102, new Vector2(4.5, 6.5)),
-    PLANE_SNOW_ROCK: new MaterialEnum(103, new Vector2(4.5, 6.5)),
-    PLANE_SNOW_MUDDY_DIRT: new MaterialEnum(104, new Vector2(4.5, 6.5)),
-    PLANE_SNOW_GRASS_WINTER: new MaterialEnum(105, new Vector2(4.5, 6.5)),
-
-    getPlaneForBlock(block: MapBlock, ignoreSnow: boolean = false, overrideType?: number): Vector2 {
-        let type = overrideType ?? block.type;
-        if (block.snowed && !ignoreSnow) {
-            type += 100;
-        }
-        return Object.values(PlaneEnum1).find(item => item.index === type)?.uv;
-    }
 }

@@ -3,17 +3,15 @@ import type { MapBlock } from '@/data/worldDataManager'
 import { Color4, Matrix, Mesh, ParticleSystem, Scene, TransformNode, Vector2 } from '@babylonjs/core'
 import { updateWorldInstanceBuffers } from '@/babylon/world/worldInstanceBuffers'
 import { Builder } from '@/babylon/builder'
-import { MaterialEnum1, Materials, PlaneEnum1, TerrainEnum1 } from '@/babylon/materials'
+import { MaterialEnum1, Materials, TerrainEnum1 } from '@/babylon/materials'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { Settings } from '@/settings/settings'
 import { ViewportManager } from '@/utils/viewport'
 import { MyPlayer } from '@/data/myPlayer'
 import { IndoorTerrainOcclusionManager } from '@/babylon/world/indoorTerrainOcclusionManager'
 import { Lights } from '@/babylon/scene/lights'
-import { smoothTerrainExperiment } from '@/babylon/world/terrainExperiment'
-import { BEVELED_TERRAIN_ENABLED, terrainBevelMask, terrainVerticalBevelMask, BeveledTerrain } from '@/babylon/world/beveledTerrain'
 import { SNOW_BLOCK_HEIGHT } from '@/babylon/world/beveledTerrainBlock'
-import type { createOutdoorTerrain, createFallbackWaterFloor } from './outdoorTerrain'
+import type { createOutdoorTerrain, createIndoorWaterFloor } from './outdoorTerrain'
 import type { createTerrainFoliageRenderer } from '@/adminUtils/terrainFoliageRenderer'
 import { BuildingManager } from './buildings/buildingManager'
 import { TerrainContactShadow } from './terrainContactShadow'
@@ -24,12 +22,10 @@ import { configureTerrainWater } from './terrainWaterMaterial'
 import { outdoorSurfaceHeight, WATER_BLOCK_TYPE } from './terrainRoofShape'
 
 export { WATER_BLOCK_TYPE } from './terrainRoofShape'
-export const DIRT_BLOCK_TYPE = 1
-const GRASS_BLOCK_TYPES = new Set([2, 5])
 
 export function getTerrainHeightOffset(block: MapBlock, hideSnow: boolean): number {
     if (hideSnow) return block.type === WATER_BLOCK_TYPE ? -0.1 : 0
-    if (BEVELED_TERRAIN_ENABLED && block.snowed && block.type > 0 && block.type < WATER_BLOCK_TYPE
+    if (block.snowed && block.type > 0 && block.type < WATER_BLOCK_TYPE
         && !block.stonePath && !block.beigeStonePath) return SNOW_BLOCK_HEIGHT
     return block.heightOffset
 }
@@ -37,6 +33,7 @@ export function getTerrainHeightOffset(block: MapBlock, hideSnow: boolean): numb
 export const TerrainManager = {
     terrainBlock1: null as Mesh | null,
     terrainPlane: null as Mesh | null,
+    dungeonBlock: null as Mesh | null,
     terrainWater: null as TerrainWaterSurface | null,
     terrainBlockMatrixBuffer: new Float32Array(0),
     waterPlane: null as Mesh | null,
@@ -44,15 +41,17 @@ export const TerrainManager = {
 
     hoverBlockMarker: null as Mesh | null,
     outdoorTerrain: null as ReturnType<typeof createOutdoorTerrain> | null,
-    outdoorFactory: null as typeof createOutdoorTerrain | null,
-    waterFloor: null as ReturnType<typeof createFallbackWaterFloor> | null,
-    waterFloorFactory: null as typeof createFallbackWaterFloor | null,
+    renderers: null as typeof import('./outdoorTerrain') | null,
+    waterFloor: null as ReturnType<typeof createIndoorWaterFloor> | null,
     outdoorFoliageFactory: undefined as typeof createTerrainFoliageRenderer | undefined,
     contactShadow: null as TerrainContactShadow | null,
 
-    initialize (scene: Scene, foliageFactory?: typeof createTerrainFoliageRenderer) {
+    async initialize(scene: Scene, foliageFactory?: typeof createTerrainFoliageRenderer) {
+        this.renderers ??= await import('./outdoorTerrain')
+        const parent = WorldRenderer.worldParentNode!
         this.outdoorTerrain = null
         this.waterFloor = null
+        this.dungeonBlock = null
         this.outdoorFoliageFactory = foliageFactory
         const terrainSteps = StepMarksRenderer.field
         const contactShadow = new TerrainContactShadow(scene, terrainSteps ?? undefined)
@@ -60,32 +59,18 @@ export const TerrainManager = {
         terrainSteps?.configureAtlas(Materials.terrainMaterial!,
             [TerrainEnum1.TERRAIN_SNOW_DIRT.uv, TerrainEnum1.TERRAIN_SNOW_ROCK.uv],
             [TerrainEnum1.TERRAIN_DIRT.uv, TerrainEnum1.TERRAIN_MUDDY_DIRT.uv])
-        terrainSteps?.configureAtlas(Materials.planeMaterial!, [PlaneEnum1.PLANE_SNOW_DIRT.uv],
-            [PlaneEnum1.PLANE_DIRT.uv, PlaneEnum1.PLANE_MUDDY_DIRT.uv])
         contactShadow.configure(Materials.terrainMaterial!, false, !!terrainSteps)
-        contactShadow.configure(Materials.planeMaterial!, false, !!terrainSteps)
-        if (!this.outdoorFactory) {
-            void import('./outdoorTerrain').then(({createOutdoorTerrain, createFallbackWaterFloor}) => {
-                this.outdoorFactory = createOutdoorTerrain
-                this.waterFloorFactory = createFallbackWaterFloor
-                if (!scene.isDisposed && ViewportManager.viewPortInitialized) WorldRenderer.renderWorld()
-            }).catch(error => console.error('Unable to load outdoor terrain', error))
-        }
-        this.initializeMeshes(scene, WorldRenderer.worldParentNode, () => {
-            if (ViewportManager.viewPortInitialized) WorldRenderer.renderWorld()
-        })
-        this.hoverBlockMarker = Builder.createHorizontalPlane(scene, null,1, 0)
-    },
+        IndoorTerrainOcclusionManager.initialize(scene, parent, this.renderers.createDungeonRockMaterial)
+        this.hoverBlockMarker = Builder.createHorizontalPlane(scene, null, 1, 0)
 
-    initializeMeshes(scene: Scene, parent: TransformNode | null, onSmoothReady: () => void) {
-        // Terrain and plane blocks
-        this.terrainBlock1 = Builder.createBlockWithFaces(scene, parent!)
+        // Static terrain-textured objects keep their own instance batch.
+        this.terrainBlock1 = Builder.createBlockWithFaces(scene, parent)
         this.terrainBlock1.material = Materials.terrainMaterial
         this.terrainBlock1.isPickable = true
         this.terrainBlock1.thinInstanceEnablePicking = true
 
         this.terrainPlane = Builder.createHorizontalPlane(scene, parent, 1, 0)
-        this.terrainPlane.material = Materials.planeMaterial
+        this.terrainPlane.setEnabled(false)
 
         this.terrainWater = new TerrainWaterSurface(scene, parent)
         if (Settings.isShadowsEnabled()) {
@@ -102,9 +87,6 @@ export const TerrainManager = {
         this.waterPlane.renderingGroupId = 0
 
         this.applySeaWaterLevel()
-
-        if (BEVELED_TERRAIN_ENABLED) BeveledTerrain.initialize(scene, parent)
-        smoothTerrainExperiment?.initialize(scene, parent, onSmoothReady)
     },
 
     setSeaWaterLevel(seaWaterLevel: number | null) {
@@ -121,7 +103,21 @@ export const TerrainManager = {
     },
 
     usesOutdoorTerrain() {
-        return !Lights.indoor && !smoothTerrainExperiment && !!this.outdoorFactory
+        return !Lights.indoor
+    },
+
+    initializeDungeonBlock() {
+        const plane = this.terrainPlane!
+        const scene = plane.getScene()
+        const mesh = Builder.createBlockWithFaces(scene, plane.parent as TransformNode)
+        mesh.name = 'dungeonRockBlocks'
+        mesh.material = this.renderers!.createDungeonRockMaterial(scene, 'dungeonRock')
+        this.terrainPlane!.material = mesh.material
+        mesh.thinInstanceEnablePicking = true
+        mesh.receiveShadows = plane.receiveShadows
+        Lights.registerSharedLightMesh(mesh)
+        Lights.addShadowCaster(mesh, true)
+        return mesh
     },
 
     renderTerrain(renderTerrainStatics?: (terrainMatrices: Matrix[], terrainUvData: Vector2[]) => void, snowCoverMask: Set<number> = new Set()) {
@@ -129,8 +125,8 @@ export const TerrainManager = {
         const map = world.blockMap
         const center = MyPlayer.myChar.getPositionRounded()
         const outdoor = this.usesOutdoorTerrain()
-        if (outdoor && this.outdoorFactory) {
-            this.outdoorTerrain ??= this.outdoorFactory(WorldRenderer.worldParentNode!, undefined,
+        if (outdoor) {
+            this.outdoorTerrain ??= this.renderers!.createOutdoorTerrain(WorldRenderer.worldParentNode!, undefined,
                 this.contactShadow ?? undefined, StepMarksRenderer.field ?? undefined, this.outdoorFoliageFactory)
             const load = WorldDataManager.terrainRenderLoad
             this.outdoorTerrain.render(map, center, snowCoverMask, world.renderRevision,
@@ -140,7 +136,7 @@ export const TerrainManager = {
         }
         this.renderTerrainArea(map, world.planeBlockMap, snowCoverMask, center, renderTerrainStatics, outdoor)
         this.contactShadow?.update(map, world.renderRevision, Lights.indoor ? [] : [
-            ...BuildingManager.getHouseShadowFootprints(center),
+            ...BuildingManager.getBuildingFloorShadowFootprints(center),
             ...StaticsManager.getContactShadowFootprints(map),
         ])
         return outdoor
@@ -160,10 +156,12 @@ export const TerrainManager = {
         const planeUvData: Vector2[] = []
         const waterTiles: {x: number, z: number, height: number}[] = []
         const waterFloors = outdoor ? undefined : new Map<number, number>()
+        const rockUv = this.renderers!.dungeonRockUv
+        const dungeon = outdoor ? null : (this.dungeonBlock ??= this.initializeDungeonBlock())
+        const blockMatrices: Matrix[] = []
+        const blockUvs: Vector2[] = []
 
         IndoorTerrainOcclusionManager.beginTerrainRender(blockMap, Lights.indoor)
-        smoothTerrainExperiment?.begin()
-        if (BEVELED_TERRAIN_ENABLED) BeveledTerrain.begin()
 
         const maxIndex = blockMap.length - 1
         const minX = viewportCenter ? Math.max(0, viewportCenter.x + ViewportManager.minX) : 0
@@ -188,7 +186,6 @@ export const TerrainManager = {
                     WorldRenderer.block1!.matrices.push(pathMatrix)
                     WorldRenderer.block1!.uvData.push(block.beigeStonePath ? MaterialEnum1.ROCK1_BEIGE.uv : MaterialEnum1.ROCK1.uv)
                 }
-                const hideSnow = !outdoor && block.snowed && snowCoverMask.has(x * blockMap.length + z)
                 if (block.type === WATER_BLOCK_TYPE) {
                     waterFloors?.set(x * blockMap[0].length + z, outdoorSurfaceHeight(block)!)
                     if (this.seaWaterLevel === null || block.height > this.seaWaterLevel) {
@@ -197,104 +194,45 @@ export const TerrainManager = {
                     continue
                 }
 
-                const renderType = hideSnow && GRASS_BLOCK_TYPES.has(block.type) ? DIRT_BLOCK_TYPE : undefined
-                const heightOffset = getTerrainHeightOffset(block, hideSnow)
-                // A stone path is its own thin floor. Unlike snow it must not
-                // stretch the terrain block beneath it.
-                const terrainHeightOffset = block.stonePath || block.beigeStonePath ? 0 : heightOffset
-                let bevelMask = BEVELED_TERRAIN_ENABLED && !Lights.indoor
-                    ? terrainBevelMask(blockMap, x, z, snowCoverMask) : 0
-                if (BEVELED_TERRAIN_ENABLED && !Lights.indoor && !planeBlockMap[x][z]
-                    && block.type > 0 && block.type < WATER_BLOCK_TYPE && !block.stonePath && !block.beigeStonePath) {
-                    bevelMask |= terrainVerticalBevelMask(blockMap, x, z, block.height, snowCoverMask)
+                if (block.type <= 0) continue
+                const hideSnow = block.snowed && snowCoverMask.has(x * blockMap.length + z)
+                const heightOffset = block.stonePath || block.beigeStonePath ? 0 : getTerrainHeightOffset(block, hideSnow)
+                const uv = rockUv(block, x, z, block.height)
+                if (planeBlockMap[x][z]) {
+                    planeMatrices.push(Matrix.Translation(x, block.height + heightOffset, z))
+                    planeUvData.push(uv)
+                    continue
                 }
 
-                if (block.type > 0) {
-                    if (smoothTerrainExperiment?.accepts(block, x, z)) {
-                        smoothTerrainExperiment.requestTile(x, z)
-                    } else if (bevelMask && planeBlockMap[x][z]) {
-                        BeveledTerrain.add(bevelMask, true, x, z, block.height, terrainHeightOffset,
-                            PlaneEnum1.getPlaneForBlock(block, hideSnow, renderType))
-                    } else if (planeBlockMap[x][z]) {
-                        const matrix = Matrix.Translation(x, block.height + terrainHeightOffset, z)
-                        planeMatrices.push(matrix)
-                        planeUvData.push(PlaneEnum1.getPlaneForBlock(planeBlockMap[x][z] as MapBlock, hideSnow, renderType))
-                    } else {
+                const matrix = Matrix.Scaling(1, 1 + heightOffset, 1)
+                matrix.setTranslationFromFloats(x, block.height + heightOffset * 0.5, z)
+                IndoorTerrainOcclusionManager.routeTerrainBlock(x, z, block.height, matrix, uv, blockMatrices, blockUvs)
 
-                        // Find lowest height for surrounding blocks to avoid gaps
-                        let minHeight = block.height
-                        for (let offsetX = -1; offsetX <= 1; offsetX++) {
-                            for (let offsetZ = -1; offsetZ <= 1; offsetZ++) {
-                                if (offsetX === 0 && offsetZ === 0) {
-                                    continue
-                                }
-                                const neighborX = x + offsetX
-                                const neighborZ = z + offsetZ
-                                if (neighborX >= 0 && neighborX < blockMap.length && neighborZ >= 0 && neighborZ < blockMap.length) {
-                                    const neighborBlock = blockMap[neighborX][neighborZ]
-                                    if (neighborBlock.type > 0 && neighborBlock.height < minHeight) {
-                                        minHeight = neighborBlock.height
-                                    }
-                                }
-                            }
-                        }
-
-                        const matrix = Matrix.Scaling(1, 1 + terrainHeightOffset, 1)
-                        matrix.setTranslationFromFloats(x, block.height + terrainHeightOffset * 0.5, z)
-
-                        if (bevelMask) {
-                            BeveledTerrain.add(bevelMask, false, x, z, block.height, terrainHeightOffset,
-                                TerrainEnum1.getTerrainForBlock(block, hideSnow, renderType))
-                        } else IndoorTerrainOcclusionManager.routeTerrainBlock(
-                            x,
-                            z,
-                            block.height,
-                            matrix,
-                            TerrainEnum1.getTerrainForBlock(block, hideSnow, renderType),
-                            terrainMatrices1,
-                            terrainUvData1,
-                        )
-
-                        // If minheight is lower than current block height - 1, then fill the gap with blocks
-                        for (let fillHeight = minHeight + 1; fillHeight < block.height; fillHeight++) {
-                            // heightOffset only extends the top block (for example the 0.1 snow layer).
-                            // Applying it to the regular fill blocks moves their top down from the
-                            // snow block and leaves a visible horizontal gap in a terrain wall.
-                            const fillMatrix = Matrix.Translation(x, fillHeight, z);
-                            const fillType = GRASS_BLOCK_TYPES.has(block.type) ? DIRT_BLOCK_TYPE : renderType
-                            const verticalMask = BEVELED_TERRAIN_ENABLED && !Lights.indoor
-                                && block.type > 0 && block.type < WATER_BLOCK_TYPE && !block.stonePath && !block.beigeStonePath
-                                ? terrainVerticalBevelMask(blockMap, x, z, fillHeight, snowCoverMask) : 0
-                            if (verticalMask) {
-                                BeveledTerrain.add(verticalMask, false, x, z, fillHeight, 0,
-                                    TerrainEnum1.getTerrainForBlock(block, true, fillType))
-                            } else IndoorTerrainOcclusionManager.routeTerrainBlock(
-                                x,
-                                z,
-                                fillHeight,
-                                fillMatrix,
-                                TerrainEnum1.getTerrainForBlock(block, true, fillType),
-                                terrainMatrices1,
-                                terrainUvData1,
-                            )
-                        }
+                let minHeight = block.height
+                for (let dx = -1; dx <= 1; dx++) {
+                    for (let dz = -1; dz <= 1; dz++) {
+                        const neighbor = blockMap[x + dx]?.[z + dz]
+                        if (neighbor && neighbor.type > 0) minHeight = Math.min(minHeight, neighbor.height)
                     }
-
+                }
+                for (let level = minHeight + 1; level < block.height; level++) {
+                    IndoorTerrainOcclusionManager.routeTerrainBlock(x, z, level, Matrix.Translation(x, level, z),
+                        rockUv(block, x, z, level), blockMatrices, blockUvs)
                 }
             }
         }
 
         renderTerrainStatics?.(terrainMatrices1, terrainUvData1)
         IndoorTerrainOcclusionManager.finishTerrainRender()
-        smoothTerrainExperiment?.finish(blockMap, snowCoverMask)
-        if (BEVELED_TERRAIN_ENABLED) BeveledTerrain.finish()
 
         // Apply buffers for instances
         this.terrainBlockMatrixBuffer = updateWorldInstanceBuffers(this.terrainBlock1!, terrainMatrices1, terrainUvData1)
+        if (dungeon) updateWorldInstanceBuffers(dungeon, blockMatrices, blockUvs)
+        this.dungeonBlock?.setEnabled(!!dungeon && blockMatrices.length > 0)
         updateWorldInstanceBuffers(this.terrainPlane!, planeMatrices, planeUvData)
         this.terrainWater!.render(waterTiles, blockMap)
-        if (waterFloors?.size && this.waterFloorFactory) {
-            this.waterFloor ??= this.waterFloorFactory(this.terrainPlane!)
+        if (waterFloors?.size) {
+            this.waterFloor ??= this.renderers!.createIndoorWaterFloor(this.terrainPlane!)
             this.waterFloor.render(blockMap, waterFloors)
         } else this.waterFloor?.mesh.setEnabled(false)
 

@@ -7,9 +7,10 @@ import snowColorUrl from '@/adminUtils/assets/snow-atlas.png'
 
 const ATTRIBUTE = 'staticSnowContact'
 export const SNOW_CONTACT_MAX_HEIGHT = 0.24
+export const TREE_DAMP_MAX_HEIGHT = 1.0
 const DAMP_CONTACT = {
     moss: 1, hay: 3, wellBase: 4, wellRim: 5, wellRoofMoss: 7, walkableEdges: 8, mossyWood: 9,
-    woodTopWithMoss: 10, woodTopAndGroundMoss: 11, stumpCut: 12,
+    woodTopWithMoss: 10, woodTopAndGroundMoss: 11, stumpCut: 12, treeBark: 13,
 } as const
 export type DampContact = keyof typeof DAMP_CONTACT
 
@@ -142,6 +143,33 @@ export class StaticTerrainContact {
                     }
                 }
             }
+            if (dampProfile == ${DAMP_CONTACT.treeBark}.0 && snowDistance < ${TREE_DAMP_MAX_HEIGHT.toFixed(1)}) {
+                float aboveGround = max(snowDistance, 0.0);
+                vec2 barkXZ = mod(vPositionW.xz, 48.0);
+                // Use the same world-space pattern across trunk blocks and around their corners.
+                float streaks = terrainNoise(barkXZ * 12.0 + vec2(4.1, 9.7));
+                vec2 mossPosition = barkXZ + vec2(0.73, 0.89) * aboveGround;
+                float patches = terrainNoise(mossPosition * 8.0 + vec2(5.1, 13.7));
+                float grain = terrainNoise(mossPosition * 42.0 + vec2(9.3, 2.7));
+
+                // Match the brown range of the Muddy Dirt atlas where the bark meets the ground.
+                vec3 mudColor = toLinearSpace(mix(vec3(91.0, 75.0, 55.0), vec3(97.0, 81.0, 59.0), grain) / 255.0);
+                float mudReach = mix(0.10, 0.21, patches);
+                float mud = 1.0 - smoothstep(0.025, mudReach, aboveGround);
+                float groundLight = 0.85 * mud * smoothstep(-0.8, -0.05, geometricNormalW.y);
+                normalW = normalize(mix(normalW, vec3(0.0, 1.0, 0.0), groundLight));
+
+                float wetReach = mix(0.28, ${TREE_DAMP_MAX_HEIGHT.toFixed(1)}, smoothstep(0.25, 0.76, streaks));
+                float wet = 1.0 - smoothstep(wetReach * 0.18, wetReach, aboveGround);
+                surfaceAlbedo *= 1.0 - wet * mix(0.42, 0.65, grain);
+                surfaceAlbedo = mix(surfaceAlbedo, mudColor, mud);
+
+                float mossReach = mix(0.18, 0.33, smoothstep(0.30, 0.72, patches));
+                float moss = (1.0 - smoothstep(mossReach * 0.52, mossReach, aboveGround))
+                    * smoothstep(0.42, 0.68, patches * 0.78 + grain * 0.22);
+                float mossFacing = mix(0.14, 1.0, smoothstep(0.10, 0.85, -geometricNormalW.x));
+                surfaceAlbedo = mix(surfaceAlbedo, terrainContactMossColor(grain), moss * mossFacing * (1.0 - mud) * 0.84);
+            }
             bool wellBase = dampProfile == ${DAMP_CONTACT.wellBase}.0;
             bool wellRim = dampProfile == ${DAMP_CONTACT.wellRim}.0;
             bool mossyWood = dampProfile == ${DAMP_CONTACT.mossyWood}.0;
@@ -214,13 +242,15 @@ export class StaticTerrainContact {
         this.contacts.set(index, {height, snowReach: 0, damp: DAMP_CONTACT[damp]})
     }
 
-    setMeshSnow(mesh: Mesh, height: number | undefined, reach: number, blendGroundLighting = false) {
+    setMeshContact(mesh: Mesh, height: number | undefined, reach = 0, blendGroundLighting = false, damp?: DampContact) {
         const data = new Float32Array(mesh.getTotalVertices() * 3)
         if (height !== undefined) {
             const signedReach = blendGroundLighting ? -reach : reach
+            const dampProfile = damp ? DAMP_CONTACT[damp] : 0
             for (let i = 0; i < data.length; i += 3) {
                 data[i] = height
                 data[i + 1] = signedReach
+                data[i + 2] = dampProfile
             }
         }
         mesh.setVerticesData(ATTRIBUTE, data, false, 3)

@@ -11,7 +11,7 @@ import { Lights } from '@/babylon/scene/lights'
 import { WATER_BLOCK_TYPE } from '@/babylon/world/terrainManager'
 import { configureTerrainNoiseTexture } from '@/babylon/world/terrainSurfaceShader'
 import { Settings } from '@/settings/settings'
-import { createDirtAtlas, createTerrainAtlasPreview, createTerrainPreviewPlane, muddyDirtPatterns, terrainCoverPatterns } from './terrainAtlasPreview'
+import { createDirtAtlas, createRockAtlas, createSnowAtlas, createTerrainAtlasPreview, createTerrainPreviewPlane, muddyDirtPatterns, terrainCoverPatterns } from './terrainAtlasPreview'
 import type { TerrainAtlasTileFilter } from './terrainAtlasPreview'
 import { addTerrainPreviewRoof, configureTerrainEdgeLighting, configureMuddyDirtWetness, configureSnowmelt, configureSnowGlints, configureTerrainPreviewBatch, TerrainPreviewBatch } from './terrainPreviewBatch'
 import type { SubmitTerrainBatch } from './terrainPreviewBatch'
@@ -22,10 +22,6 @@ import { createTerrainTransitionMaterial, POND_BANK_FLAG, TERRAIN_TRANSITION_REA
 import winterGrassColorUrl from './assets/winter-grass-atlas.png'
 import grassColorUrl from './assets/grass-atlas.png'
 import winterGrassNormalUrl from './assets/winter-grass-normal-atlas.png'
-import snowColorUrl from './assets/snow-atlas.png'
-import snowNormalUrl from './assets/snow-normal-atlas.png'
-import rockColorUrl from './assets/rock-atlas.png'
-import rockNormalUrl from './assets/rock-normal-atlas.png'
 
 const MUDDY_DIRT = TerrainEnum1.TERRAIN_MUDDY_DIRT.index
 const DIRT = TerrainEnum1.TERRAIN_DIRT.index
@@ -94,9 +90,9 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
     const lowDetailTransitions = !demo && Settings.isDetalLevelLow()
     const simplifiedWallFringe = !demo && (Settings.isDetalLevelLow() || Settings.isDetailLevelMedium())
     const plane = Builder.createHorizontalPlane(scene, parent, 1, 0)
-    plane.name = 'adminUtilsTerrainTops'
+    plane.setEnabled(false)
     plane.receiveShadows = Settings.isShadowsEnabled()
-    const geometry = createTerrainPreviewGeometry(plane, [MUDDY_DIRT, DIRT, ...GRASS_TYPES, SNOW_DIRT, ROCK])
+    const geometry = createTerrainPreviewGeometry([MUDDY_DIRT, DIRT, ...GRASS_TYPES, SNOW_DIRT, ROCK])
     const pond = demo && createTerrainPreviewWater(plane, demo.map, demo.isBank, demo.center)
     const dirtAtlas = createDirtAtlas(plane, 'adminUtilsMuddyDirt', true, wetness)
     pond?.applyShoreWetness(dirtAtlas.material)
@@ -110,16 +106,9 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
         return {type, name, atlas}
     })
     const grassMaterials = new Set(grassAtlases.map(({atlas}) => atlas.material))
-    const snowAtlas = createTerrainAtlasPreview(plane, 'adminUtilsSnowDirt', {
-        type: SNOW_DIRT, colorUrl: snowColorUrl,
-        normal: {url: snowNormalUrl, strength: 1.5}, patterns: terrainCoverPatterns, varyAdjacentPatches: true,
-    })
+    const snowAtlas = createSnowAtlas(plane, 'adminUtilsSnowDirt')
     configureSnowGlints(snowAtlas.material, undefined, renderPavingSnow, snowGlints)
-    const rockAtlas = createTerrainAtlasPreview(plane, 'adminUtilsRock', {
-        type: ROCK, colorUrl: rockColorUrl,
-        normal: {url: rockNormalUrl, strength: 1.5},
-        patterns: terrainCoverPatterns, varyAdjacentPatches: true, roundRockTop: true, showRockDeposits: true,
-    })
+    const rockAtlas = createRockAtlas(plane, 'adminUtilsRock')
     if (!demo) {
         for (const {material} of [dirtAtlas, dryDirtAtlas, rockAtlas]) configureTerrainNoiseTexture(material, terrainSamplers)
         if (renderPavingSnow || snowGlints) configureTerrainNoiseTexture(snowAtlas.material, terrainSamplers)
@@ -200,7 +189,7 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
     const transitionMeshes = [snowTransition, snowRockTransition, snowRockMuddyWalls, snowRockDirtWalls,
         mudRockTransition, snowDirtTransition, dirtRockTransition, mudDirtTransition,
         ...Array.from(grassTransitions.values()).flatMap(transitions => Object.values(transitions))]
-    const meshes = [plane, geometry.deposits, dirtAtlas.mesh, dryDirtAtlas.mesh, snowAtlas.mesh, rockAtlas.mesh,
+    const meshes = [dirtAtlas.mesh, dryDirtAtlas.mesh, snowAtlas.mesh, rockAtlas.mesh,
         ...grassAtlases.map(({atlas}) => atlas.mesh), ...transitionMeshes]
     for (const mesh of meshes) {
         Lights.addShadowCaster(mesh, false)
@@ -365,7 +354,7 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
                 batch.wallData.push(topY ?? 0, bottomY ?? 0, topCover, bottomCover)
             }
             return batch.geometry
-        }, includeTile, originX, originZ, submit, !!demo, localBoundaries, compiled)
+        }, includeTile, originX, originZ, !!demo, localBoundaries, compiled)
         const islandMasks = transitionTiles || localTransitions ? grassIslandMasks(map) : undefined
         const pavingAt = (x: number, z: number) => {
             const tile = map[x]?.[z]

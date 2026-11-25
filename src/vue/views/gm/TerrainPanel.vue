@@ -92,9 +92,15 @@
 <script setup>
 
 import { BEIGE_STONE_PATH_TERRAIN_SELECTION, GMManager, STONE_PATH_TERRAIN_SELECTION, VOID_TERRAIN_SELECTION } from '@/gm/GM'
+import { muddyDirtPatterns, terrainCoverPatterns, TERRAIN_ATLAS_TILES } from '@/babylon/world/terrainAtlasPlacement'
+import dirtAtlas from '@/adminUtils/assets/dirt-atlas.png'
+import grassAtlas from '@/adminUtils/assets/grass-atlas.png'
+import rockAtlas from '@/adminUtils/assets/rock-atlas.png'
+import muddyDirtAtlas from '@/adminUtils/assets/muddy-dirt-atlas.png'
+import winterGrassAtlas from '@/adminUtils/assets/winter-grass-atlas.png'
+import snowAtlas from '@/adminUtils/assets/snow-atlas.png'
 
 // Terrrain edit constants
-const TERRAIN_TILE_SIZE = 128
 const affectedSize = GMManager.affectedSize
 const shiftKeyPressed = GMManager.shiftKeyPressed
 const selectedTerrain = GMManager.selectedTerrain
@@ -105,23 +111,31 @@ const minableOptions = Array.from({ length: 5 }, (_, index) => ({
     label: `Ore ${index + 1}`
 }))
 const terrains = [
-    { id: 2, x: 0.5, y: 0.5 },
-    { id: 1,  x: 2.5, y: 0.5 },
-    { id: 3, x: 6.5, y: 0.5 },
-    { id: 4, x: 0.5, y: 2.5 },
-    { id: 50, x: 2.5, y: 2.5 },
-    { id: 5, x: 4.5, y: 2.5 }
+    { id: 2, atlas: grassAtlas },
+    { id: 1, atlas: dirtAtlas, soil: true },
+    { id: 3, atlas: rockAtlas },
+    { id: 4, atlas: muddyDirtAtlas, soil: true },
+    { id: 50 },
+    { id: 5, atlas: winterGrassAtlas },
 ]
-const snow = { id: 100, x: 4.5, y: 0.5 }
-const unsnow = { id: 101, x: 4.5, y: 0.5 }
+const snow = { id: 100, atlas: snowAtlas }
+const unsnow = { id: 101 }
 const stonePath = { id: STONE_PATH_TERRAIN_SELECTION }
 const beigeStonePath = { id: BEIGE_STONE_PATH_TERRAIN_SELECTION }
 const voidTerrain = { id: VOID_TERRAIN_SELECTION }
 
-const getTerrainStyle = (t) => ({
-    backgroundImage: 'url(/images/materials/plane_materials1.png)',
-    backgroundPosition: `-${t.x * TERRAIN_TILE_SIZE}px -${t.y * TERRAIN_TILE_SIZE}px`
-})
+const getTerrainStyle = (terrain) => {
+    if (!terrain.atlas) return {backgroundColor: '#40565b'}
+    const patterns = terrain.soil ? muddyDirtPatterns : terrainCoverPatterns
+    const [x, y] = patterns.find(pattern => pattern.size === 1).origins[0]
+    const percent = 100 / (TERRAIN_ATLAS_TILES - 1)
+    const size = `${100 * TERRAIN_ATLAS_TILES}%`
+    return {
+        backgroundImage: `url("${terrain.atlas}")`,
+        backgroundSize: `${size} ${size}`,
+        backgroundPosition: `${x * percent}% ${y * percent}%`,
+    }
+}
 
 const selectTerrain = (id) => {
     terrainEditMode.value = 'terrain'

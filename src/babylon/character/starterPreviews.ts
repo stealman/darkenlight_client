@@ -7,7 +7,6 @@ import {EquipManager} from '@/babylon/item/equipManager'
 import {AudioManager} from '@/babylon/audio/audioManager'
 import {MagicArrowEffect, setSpellGlowEnabled} from '@/babylon/gfx/magicArrowEffect'
 import {Builder} from '@/babylon/builder'
-import {Materials, TerrainEnum1} from '@/babylon/materials'
 import {WorldRenderer} from '@/babylon/world/worldRenderer'
 import {updateWorldInstanceBuffers} from '@/babylon/world/worldInstanceBuffers'
 import {getStarterEquipment} from '@game/character/starterEquipment'
@@ -18,6 +17,8 @@ import {CHARACTER_COLLISION_WIDTH} from '@game/game/mechanics/constants'
 /** Live Babylon views share the already loaded runtime models and equipment. */
 export async function startStarterPreviews(canvases: HTMLCanvasElement[], signal: AbortSignal, activeClass: () => string | null,
                                           mysticCastRequests: () => number, gender: 'M' | 'F' = 'M'): Promise<void> {
+    if (signal.aborted) return
+    const {createSnowBlockMaterial, terrainBlockAtlasUv} = await import('@/adminUtils/terrainAtlasPreview')
     if (signal.aborted) return
     const classKeys = ['FIGHTER', 'MYSTIC'] as const
     const scene = Renderer.scene
@@ -39,11 +40,12 @@ export async function startStarterPreviews(canvases: HTMLCanvasElement[], signal
     const cameras: FreeCamera[] = []
     const platformRoot = new TransformNode('starterPreviewPlatforms', scene)
     const platforms = Builder.createBlockWithFaces(scene, platformRoot)
-    platforms.material = Materials.terrainMaterial
+    const platformMaterial = createSnowBlockMaterial(scene, 'starterPreviewSnow')
+    platforms.material = platformMaterial
     platforms.layerMask = previewMask
     platforms.isPickable = false
     updateWorldInstanceBuffers(platforms, [Matrix.Identity(), Matrix.Translation(10, 0, 0)],
-        [TerrainEnum1.TERRAIN_SNOW_GRASS.uv, TerrainEnum1.TERRAIN_SNOW_GRASS.uv])
+        [terrainBlockAtlasUv(0, 0, 0), terrainBlockAtlasUv(10, 0, 0)])
     const foliage = WorldRenderer.foliage
     const foliageMesh = foliage?.createFoliageMesh(scene, platformRoot)
     if (foliage && foliageMesh) {
@@ -209,6 +211,7 @@ export async function startStarterPreviews(canvases: HTMLCanvasElement[], signal
         shadowReceivers.forEach((receive, mesh) => { if (!mesh.isDisposed()) mesh.receiveShadows = receive })
         cameras.forEach(camera => camera.dispose())
         platformRoot.dispose()
+        platformMaterial.dispose(false, true)
         shadows.forEach(shadow => shadow.dispose())
         lights.forEach(light => light.dispose())
         fill.dispose()

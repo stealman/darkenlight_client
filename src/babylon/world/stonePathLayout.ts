@@ -94,11 +94,11 @@ function visitFootprints(bounds: Rectangle,
 
 type PathTile = {type: number, stonePath: boolean, beigeStonePath: boolean}
 
-export function visitHouseFloorStones(room: Rectangle, porch: Pick<Rectangle, 'left' | 'right' | 'back'>, overhang: number, height: number,
+export function visitBuildingFloorStones(room: Rectangle, porch: Pick<Rectangle, 'left' | 'right' | 'back'> | undefined, overhang: number, height: number,
     visit: (stone: PavingStone) => void) {
-    const bounds = {left: room.left - overhang, right: room.right + overhang,
-        front: room.front - overhang, back: porch.back}
     const ledgeEnd = room.back + overhang
+    const bounds = {left: room.left - overhang, right: room.right + overhang,
+        front: room.front - overhang, back: porch?.back ?? ledgeEnd}
     visitFootprints(bounds, (x0, x1, z0, z1, stoneX, stoneZ) => {
         const front = Math.max(bounds.front, z0)
         const left = Math.max(bounds.left, x0), right = Math.min(bounds.right, x1)
@@ -114,7 +114,7 @@ export function visitHouseFloorStones(room: Rectangle, porch: Pick<Rectangle, 'l
                 height, edge, seed, beige: false, rise: 0.033 + seed * 0.009,
                 variant: Math.floor(random(stoneX, stoneZ, salt + 1) * 8)})
         }
-        if (z1 <= ledgeEnd) emit(left, right, ledgeEnd, 157)
+        if (!porch || z1 <= ledgeEnd) emit(left, right, ledgeEnd, 157)
         else {
             emit(left, Math.min(right, porch.left), ledgeEnd, 157)
             emit(Math.max(left, porch.left), Math.min(right, porch.right), porch.back, 167)

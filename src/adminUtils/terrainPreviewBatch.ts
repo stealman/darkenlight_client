@@ -14,7 +14,6 @@ export type TerrainPreviewTriangle = {
 
 const HALF_TURN = Matrix.RotationY(Math.PI)
 const PLANE_UVS = [new Vector2(0, 0), new Vector2(1, 0), new Vector2(1, 1), new Vector2(0, 1)]
-const BLOCK_TOP_UVS = PLANE_UVS.map(uv => new Vector2(0.25 + 0.25 * uv.x, (1 + uv.y) / 3))
 // Preview heights stay inside these bounds. The sentinels put absent edges out of shader range.
 const NO_DIRT_EDGE = 10000
 export const COAL_DEPOSIT = -1
@@ -57,10 +56,9 @@ export class TerrainPreviewBatch {
         return this.matrices.length
     }
 
-    addPlane(matrix: Matrix, origin: Vector2, options?: {blockAtlas?: boolean, bottomV?: number, dirtEdges?: TerrainSurfaceDetails, atlasSpan?: number}) {
-        const {blockAtlas = false, bottomV = 0, dirtEdges, atlasSpan = 1} = options ?? {}
-        const corners = blockAtlas ? BLOCK_TOP_UVS : PLANE_UVS
-        const [a, b, c, d] = atlasSpan === 1 ? corners : corners.map(uv => uv.scale(atlasSpan))
+    addPlane(matrix: Matrix, origin: Vector2, options?: {bottomV?: number, dirtEdges?: TerrainSurfaceDetails, atlasSpan?: number}) {
+        const {bottomV = 0, dirtEdges, atlasSpan = 1} = options ?? {}
+        const [a, b, c, d] = atlasSpan === 1 ? PLANE_UVS : PLANE_UVS.map(uv => uv.scale(atlasSpan))
         const lowerLeft = bottomV === 0 ? a : new Vector2(a.x, bottomV)
         const lowerRight = bottomV === 0 ? b : new Vector2(b.x, bottomV)
         if (atlasSpan > 1) {
@@ -110,13 +108,13 @@ export class TerrainPreviewBatch {
 export function addTerrainPreviewRoof(
     batch: TerrainPreviewBatch, placement: Matrix, origin: Vector2,
     triangles?: readonly TerrainPreviewTriangle[],
-    options?: {blockAtlas?: boolean, mirrorAtTileEdge?: boolean, roundDirtEdges?: boolean, wetCorners?: number, depositKind?: number},
+    options?: {mirrorAtTileEdge?: boolean, roundDirtEdges?: boolean, wetCorners?: number, depositKind?: number},
 ) {
-    const {blockAtlas = false, mirrorAtTileEdge = false, roundDirtEdges = false, wetCorners = 0, depositKind = 0} = options ?? {}
+    const {mirrorAtTileEdge = false, roundDirtEdges = false, wetCorners = 0, depositKind = 0} = options ?? {}
     const center = placement.getTranslation()
     const wetTile: TerrainSurfaceDetails['wetTile'] = wetCorners ? [center.x, center.z, wetCorners] : undefined
     if (!triangles) {
-        batch.addPlane(placement, origin, {blockAtlas, dirtEdges: wetTile || depositKind ? {wetTile, depositKind} : undefined})
+        batch.addPlane(placement, origin, {dirtEdges: wetTile || depositKind ? {wetTile, depositKind} : undefined})
         return
     }
     const axis = placement.m
@@ -128,7 +126,7 @@ export function addTerrainPreviewRoof(
             u = 1 - Math.abs(1 - Math.abs(u))
             v = 1 - Math.abs(1 - Math.abs(v))
         }
-        return blockAtlas ? new Vector2(0.25 + 0.25 * u, (1 + v) / 3) : new Vector2(u, v)
+        return new Vector2(u, v)
     }
     for (const triangle of triangles) {
         const [a, b, c] = triangle.points
@@ -205,13 +203,13 @@ export function configureTerrainEdgeLighting(material: PBRCustomMaterial, covera
     `)
 }
 
-export function configureRockDeposits(material: PBRCustomMaterial) {
-    material.AddAttribute('terrainDeposit')
+export function configureRockDeposits(material: PBRCustomMaterial, atlasDeposit?: string) {
+    if (!atlasDeposit) material.AddAttribute('terrainDeposit')
     material.Vertex_Definitions(`${material.CustomParts.Vertex_Definitions}
-        attribute float terrainDeposit;
+        ${atlasDeposit ? '' : 'attribute float terrainDeposit;'}
         varying float vTerrainDeposit;
     `)
-    material.Vertex_MainBegin(`${material.CustomParts.Vertex_MainBegin ?? ''} vTerrainDeposit = terrainDeposit;`)
+    material.Vertex_MainBegin(`${material.CustomParts.Vertex_MainBegin ?? ''} vTerrainDeposit = ${atlasDeposit ?? 'terrainDeposit'};`)
     material.Fragment_Definitions(`${material.CustomParts.Fragment_Definitions ?? ''}
         varying float vTerrainDeposit;
         float oreVein;

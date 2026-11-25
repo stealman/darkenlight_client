@@ -8,7 +8,6 @@ import { MyPlayer } from '@/data/myPlayer'
 import { BuildingManager } from '@/babylon/world/buildings/buildingManager'
 import { Builder } from '@/babylon/builder'
 import { getTerrainHeightOffset, WATER_BLOCK_TYPE } from '@/babylon/world/terrainManager'
-import { smoothTerrainExperiment } from '@/babylon/world/terrainExperiment'
 
 const ATLAS_SIZE = 8
 const ATLAS_CELL_PIXELS = 32
@@ -357,7 +356,7 @@ export const FoliageManager = {
             for (let z = Math.round(worldZ - radius); z <= Math.round(worldZ + radius); z++) {
                 const block = blockMap[x]?.[z]
                 if (!block || block.snowed || Math.abs(block.totalHeight - top) > 1e-6
-                    || !supportsGround(block, x, z) || smoothTerrainExperiment?.accepts(block, x, z)) return false
+                    || !supportsGround(block, x, z)) return false
             }
         }
         return true

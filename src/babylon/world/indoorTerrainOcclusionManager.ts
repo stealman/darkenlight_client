@@ -1,7 +1,6 @@
 import { Matrix, Mesh, PBRMaterial, Scene, TransformNode, Vector2, Vector3 } from '@babylonjs/core'
 import { BabylonUtils } from '@/babylon/utils'
 import { Builder } from '@/babylon/builder'
-import { Materials } from '@/babylon/materials'
 import { MapBlock } from '@/data/worldDataManager'
 import { MyPlayer } from '@/data/myPlayer'
 import { TargetingManager } from '@/gui/targettingManager'
@@ -48,8 +47,9 @@ export const IndoorTerrainOcclusionManager = {
     enabled: false,
     targetSignature: '',
     targetRefreshElapsed: 0,
+    rockMaterialFactory: null as ((scene: Scene, name: string) => PBRMaterial) | null,
 
-    initialize(scene: Scene, parent: TransformNode) {
+    initialize(scene: Scene, parent: TransformNode, rockMaterialFactory: (scene: Scene, name: string) => PBRMaterial) {
         this.blocks = new Map()
         this.fadedMatrices = []
         this.fadedUvData = []
@@ -57,9 +57,9 @@ export const IndoorTerrainOcclusionManager = {
         this.enabled = false
         this.targetSignature = ''
         this.targetRefreshElapsed = 0
+        this.rockMaterialFactory = rockMaterialFactory
         Lights.enableTransparentShadowCasters()
-        this.fadedMaterial = Materials.createTerrainMaterial1(scene)
-        this.fadedMaterial.name = 'indoor_terrain_faded_material'
+        this.fadedMaterial = rockMaterialFactory(scene, 'indoor_terrain_faded_material')
         // Keep mesh.visibility at 1 so Babylon's transparent-shadow shader
         // produces a full-strength shadow. Visual fading is material-only.
         this.fadedMaterial.alpha = FADED_VISIBILITY
@@ -189,18 +189,6 @@ export const IndoorTerrainOcclusionManager = {
             }
         }
         return rebuildTerrain
-    },
-
-    clear() {
-        this.blocks.forEach(block => this.disposeTransitionMesh(block))
-        this.blocks.clear()
-        this.fadedMatrices = []
-        this.fadedUvData = []
-        this.targetSignature = ''
-        this.targetRefreshElapsed = 0
-        this.fadedMesh?.thinInstanceSetBuffer('matrix', new Float32Array(0), 16, false)
-        this.fadedMesh?.thinInstanceSetBuffer('uvc', new Float32Array(0), 2)
-        this.fadedMesh?.setEnabled(false)
     },
 
     getOcclusionTargets(): TerrainOcclusionTarget[] {
@@ -355,8 +343,9 @@ export const IndoorTerrainOcclusionManager = {
         // PBRCustomMaterial.clone() does not reliably preserve the custom uvc
         // atlas shader. Build a small shared material palette through the same
         // terrain factory instead of allocating a broken clone per block.
-        const material = Materials.createTerrainMaterial1(this.fadedMesh!.getScene())
-        material.name = `indoor_terrain_fading_material_${step}`
+        const scene = this.fadedMesh!.getScene()
+        const name = `indoor_terrain_fading_material_${step}`
+        const material = this.rockMaterialFactory!(scene, name)
         material.alpha = FADED_VISIBILITY + ((1 - FADED_VISIBILITY) * step / FADE_MATERIAL_STEPS)
         material.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHABLEND
         material.forceAlphaTest = false
