@@ -1,11 +1,15 @@
 import { RawTexture, Texture } from '@babylonjs/core'
 import type { Scene } from '@babylonjs/core'
 import type { PBRCustomMaterial } from '@babylonjs/materials'
+import { STATIC_LIGHT_LIMITS, STATIC_SHADOW_LIGHT_LIMITS } from '@/babylon/scene/lighting/lightConfig'
+import { Settings } from '@/settings/settings'
 import { TERRAIN_ATLAS_TILES, terrainCoverPatterns } from './terrainAtlasPlacement'
 
+const USE_TERRAIN_NOISE_TEXTURE = true
 const TERRAIN_NOISE_SIZE = 512
+const noiseTextures = new WeakMap<Scene, RawTexture>()
 
-export function createTerrainNoiseTexture(scene: Scene) {
+function createTerrainNoiseTexture(scene: Scene) {
     const values = new Uint8Array(TERRAIN_NOISE_SIZE ** 2)
     let seed = 0x6b842af1
     for (let i = 0; i < values.length; i++) {
@@ -22,7 +26,20 @@ export function createTerrainNoiseTexture(scene: Scene) {
     return texture
 }
 
-export function configureTerrainNoiseTexture(material: PBRCustomMaterial, texture: RawTexture) {
+export function configureTerrainNoiseTexture(material: PBRCustomMaterial, surfaceSamplers: number) {
+    if (!USE_TERRAIN_NOISE_TEXTURE) return
+    const scene = material.getScene()
+    const caps = scene.getEngine().getCaps()
+    const detailIndex = Settings.detailLevel.level - 1
+    const staticShadowSamplers = STATIC_SHADOW_LIGHT_LIMITS[detailIndex] ? STATIC_LIGHT_LIMITS[detailIndex] : 0
+    // Include environment maps, sun/personal shadow maps, and the new noise sampler.
+    const requiredSamplers = surfaceSamplers + (caps.textureLOD ? 3 : 5) + 2 + staticShadowSamplers + 1
+    if (caps.maxTexturesImageUnits < requiredSamplers) return
+    let texture = noiseTextures.get(scene)
+    if (!texture) {
+        texture = createTerrainNoiseTexture(scene)
+        noiseTextures.set(scene, texture)
+    }
     material.AddUniform('terrainNoiseTexture', 'sampler2D', texture)
     material.Fragment_Definitions(`\n#define TERRAIN_NOISE_TEXTURE\n${material.CustomParts.Fragment_Definitions ?? ''}`)
 }

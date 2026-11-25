@@ -1,7 +1,7 @@
 import { Texture, Vector2 } from '@babylonjs/core'
 import type { PBRCustomMaterial } from '@babylonjs/materials'
 import { MaterialEnum1 } from '@/babylon/materials'
-import { terrainContactSnowShader, terrainNoiseShader } from '../terrainSurfaceShader'
+import { configureTerrainNoiseTexture, terrainContactSnowShader, terrainNoiseShader } from '../terrainSurfaceShader'
 import snowColorUrl from '@/adminUtils/assets/snow-atlas.png'
 
 export const ATLAS_SIZE = 16
@@ -61,6 +61,8 @@ export function configureBuildingRoofSnow(material: PBRCustomMaterial) {
             return atlasUV;
         }
     `)
+    // Three block maps, snow, and the contact shadow on the opaque batch.
+    configureTerrainNoiseTexture(material, 5)
     material.Fragment_MainBegin(`
         ${parts.Fragment_MainBegin ?? ''}
         #if defined(ALBEDO) && ALBEDODIRECTUV == 0

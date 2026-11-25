@@ -1,7 +1,8 @@
 import { Texture } from '@babylonjs/core'
 import type { Mesh } from '@babylonjs/core'
 import type { PBRCustomMaterial } from '@babylonjs/materials'
-import { terrainContactMossShader, terrainContactSnowShader, terrainFringeShader, terrainNoiseShader } from '@/babylon/world/terrainSurfaceShader'
+import { configureTerrainNoiseTexture, terrainContactMossShader, terrainContactSnowShader, terrainFringeShader,
+    terrainNoiseShader } from '@/babylon/world/terrainSurfaceShader'
 import snowColorUrl from '@/adminUtils/assets/snow-atlas.png'
 
 const ATTRIBUTE = 'staticSnowContact'
@@ -58,6 +59,8 @@ export class StaticTerrainContact {
             ${terrainContactSnowShader}
             ${terrainContactMossShader}
         `)
+        // Stone batches also use two terrain maps in addition to the block maps and snow.
+        configureTerrainNoiseTexture(material, scatterOnTop ? 6 : 4)
         material.Fragment_Before_Lights(`
             ${material.CustomParts.Fragment_Before_Lights ?? ''}
             float snowDistance = vStaticSnowContact.x;

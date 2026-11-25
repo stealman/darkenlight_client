@@ -2,7 +2,7 @@ import { Matrix, Mesh, PBRMaterial, RawTexture, Texture, Vector2, VertexBuffer, 
 import type { Scene, TransformNode } from '@babylonjs/core'
 import { PBRCustomMaterial } from '@babylonjs/materials'
 import { TerrainEnum1 } from '@/babylon/materials'
-import { terrainNoiseShader } from '@/babylon/world/terrainSurfaceShader'
+import { configureTerrainNoiseTexture, terrainNoiseShader } from '@/babylon/world/terrainSurfaceShader'
 import { visitPavingStones } from './stonePathLayout'
 import { buildPavingSurfaceField } from './pavingSurfaceField'
 import type { PavingStone, StonePathBounds } from './stonePathLayout'
@@ -110,6 +110,8 @@ function createPavingMaterial(scene: Scene, surfaceSize: Vector2, surfaceOrigin:
             return (cell * 512.0 + 64.0 + clamp(mirrored, 0.012, 2.988) * 128.0) / vec2(2048.0, 1024.0);
         }
     `)
+    // Three paving maps, the outdoor terrain field, and the marks/shadow mask.
+    configureTerrainNoiseTexture(material, floor ? 4 : 5)
     material.Fragment_Before_Lights(`
         vec2 localUV = vStone.xz + 0.5;
         // The half-texel inset and no atlas mips keep independent cells isolated.

@@ -5,7 +5,7 @@ import { FoliageManager } from '@/babylon/world/foliageManager'
 import type { TerrainFoliage } from '@/babylon/world/foliageManager'
 import type { MapBlock } from '@/data/worldDataManager'
 import { findFoliagePatch, forEachFoliageWallFoot, wallFootDecal } from './terrainFoliagePatches'
-import { terrainNoiseShader } from '@/babylon/world/terrainSurfaceShader'
+import { configureTerrainNoiseTexture, terrainNoiseShader } from '@/babylon/world/terrainSurfaceShader'
 
 const ROCK = TerrainEnum1.TERRAIN_ROCK.index
 const PEBBLES = 7, MOSS = 6, LICHEN = 13
@@ -54,6 +54,7 @@ export function styleRockLichen(material: PBRCustomMaterial) {
         vec2 foliageAtlasOffset = uvc + vec2(0.0, vLichen * ${(mossY - lichenY).toFixed(1)});
     `)
     material.Fragment_Definitions(`${varyings}\n${terrainNoiseShader}`)
+    configureTerrainNoiseTexture(material, 2)
     material.Fragment_Custom_Alpha(`
         if (vLichen > 0.5) {
             vec2 p = vPositionW.xz + vPositionW.y * vec2(0.64, -0.73);
