@@ -156,7 +156,7 @@ test('snow contact composes the stone shader without pre-existing fragment defin
         const code = ts.transpileModule(source, {compilerOptions: {module: ts.ModuleKind.CommonJS}}).outputText
         const dependencies = {
             '@babylonjs/core': core,
-            '@/adminUtils/assets/snow-atlas.png': {default: ''},
+            '@/babylon/world/terrainTextureUrls': {terrainTextureUrls: {snow: '/images/terrain/snow-atlas.png'}},
             '@/babylon/world/terrainSurfaceShader': {
                 configureTerrainNoiseTexture() {},
                 terrainNoiseShader: '', terrainFringeShader: '', terrainContactSnowShader: '', terrainContactMossShader: '',

@@ -8,9 +8,7 @@ import { buildPavingSurfaceField } from './pavingSurfaceField'
 import type { PavingStone, StonePathBounds } from './stonePathLayout'
 import type { MapBlock } from '@/data/worldDataManager'
 import { Settings } from '@/settings/settings'
-import colorUrl from '@/adminUtils/assets/stone-path-atlas.png'
-import reliefUrl from '@/adminUtils/assets/stone-path-relief.png'
-import coverUrl from '@/adminUtils/assets/stone-path-cover-atlas.png'
+import { terrainTextureUrls } from '@/babylon/world/terrainTextureUrls'
 
 const HOUSE_FLOOR_STONE_BASE = -3.6
 
@@ -61,9 +59,9 @@ function createPavingMaterial(scene: Scene, surfaceSize: Vector2, surfaceOrigin:
         material.onDisposeObservable.add(() => texture.dispose())
         return texture
     }
-    material.AddUniform('pavingColor', 'sampler2D', load(colorUrl, true))
-    material.AddUniform('pavingRelief', 'sampler2D', load(reliefUrl, true))
-    material.AddUniform('pavingCover', 'sampler2D', load(coverUrl))
+    material.AddUniform('pavingColor', 'sampler2D', load(terrainTextureUrls.stonePath, true))
+    material.AddUniform('pavingRelief', 'sampler2D', load(terrainTextureUrls.stonePathRelief, true))
+    material.AddUniform('pavingCover', 'sampler2D', load(terrainTextureUrls.stonePathCover))
     if (!floor) {
         material.AddUniform('pavingSurfaces', 'sampler2D', null)
         material.AddUniform('pavingSurfaceSize', 'vec2', surfaceSize)
@@ -240,7 +238,7 @@ export function createSimpleStonePathMesh(scene: Scene, parent: TransformNode, f
     material.metallicF0Factor = 0
     material.specularIntensity = 0
     material.usePhysicalLightFalloff = false
-    const atlas = new Texture(colorUrl, scene, true, false, Texture.BILINEAR_SAMPLINGMODE)
+    const atlas = new Texture(terrainTextureUrls.stonePath, scene, true, false, Texture.BILINEAR_SAMPLINGMODE)
     atlas.wrapU = atlas.wrapV = Texture.CLAMP_ADDRESSMODE
     material.albedoTexture = atlas
     mesh.material = material

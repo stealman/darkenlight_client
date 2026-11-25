@@ -93,12 +93,7 @@
 
 import { BEIGE_STONE_PATH_TERRAIN_SELECTION, GMManager, STONE_PATH_TERRAIN_SELECTION, VOID_TERRAIN_SELECTION } from '@/gm/GM'
 import { muddyDirtPatterns, terrainCoverPatterns, TERRAIN_ATLAS_TILES } from '@/babylon/world/terrainAtlasPlacement'
-import dirtAtlas from '@/adminUtils/assets/dirt-atlas.png'
-import grassAtlas from '@/adminUtils/assets/grass-atlas.png'
-import rockAtlas from '@/adminUtils/assets/rock-atlas.png'
-import muddyDirtAtlas from '@/adminUtils/assets/muddy-dirt-atlas.png'
-import winterGrassAtlas from '@/adminUtils/assets/winter-grass-atlas.png'
-import snowAtlas from '@/adminUtils/assets/snow-atlas.png'
+import { terrainTextureUrls } from '@/babylon/world/terrainTextureUrls'
 
 // Terrrain edit constants
 const affectedSize = GMManager.affectedSize
@@ -111,14 +106,14 @@ const minableOptions = Array.from({ length: 5 }, (_, index) => ({
     label: `Ore ${index + 1}`
 }))
 const terrains = [
-    { id: 2, atlas: grassAtlas },
-    { id: 1, atlas: dirtAtlas, soil: true },
-    { id: 3, atlas: rockAtlas },
-    { id: 4, atlas: muddyDirtAtlas, soil: true },
+    { id: 2, atlas: terrainTextureUrls.grass },
+    { id: 1, atlas: terrainTextureUrls.dirt, soil: true },
+    { id: 3, atlas: terrainTextureUrls.rock },
+    { id: 4, atlas: terrainTextureUrls.muddyDirt, soil: true },
     { id: 50 },
-    { id: 5, atlas: winterGrassAtlas },
+    { id: 5, atlas: terrainTextureUrls.winterGrass },
 ]
-const snow = { id: 100, atlas: snowAtlas }
+const snow = { id: 100, atlas: terrainTextureUrls.snow }
 const unsnow = { id: 101 }
 const stonePath = { id: STONE_PATH_TERRAIN_SELECTION }
 const beigeStonePath = { id: BEIGE_STONE_PATH_TERRAIN_SELECTION }

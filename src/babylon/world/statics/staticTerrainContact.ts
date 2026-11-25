@@ -3,7 +3,7 @@ import type { Mesh } from '@babylonjs/core'
 import type { PBRCustomMaterial } from '@babylonjs/materials'
 import { configureTerrainNoiseTexture, terrainContactMossShader, terrainContactSnowShader, terrainFringeShader,
     terrainNoiseShader } from '@/babylon/world/terrainSurfaceShader'
-import snowColorUrl from '@/adminUtils/assets/snow-atlas.png'
+import { terrainTextureUrls } from '@/babylon/world/terrainTextureUrls'
 
 const ATTRIBUTE = 'staticSnowContact'
 export const SNOW_CONTACT_MAX_HEIGHT = 0.24
@@ -20,7 +20,7 @@ export class StaticTerrainContact {
     private buffer = new Float32Array(0)
 
     constructor(material: PBRCustomMaterial, scatterOnTop = false) {
-        this.snow = new Texture(snowColorUrl, material.getScene())
+        this.snow = new Texture(terrainTextureUrls.snow, material.getScene())
         this.snow.wrapU = this.snow.wrapV = Texture.CLAMP_ADDRESSMODE
         material.onDisposeObservable.addOnce(() => this.snow.dispose())
         this.configureMaterial(material, false, scatterOnTop)

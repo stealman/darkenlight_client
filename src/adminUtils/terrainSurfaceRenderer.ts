@@ -19,9 +19,7 @@ import { PAVING_SNOW_ATTRIBUTE, PAVING_SNOW_FLAG_SHIFT } from './terrainPreviewB
 import { createTerrainPreviewGeometry } from './terrainPreviewGeometry'
 import { createTerrainPreviewWater } from './terrainPreviewWater'
 import { createTerrainTransitionMaterial, POND_BANK_FLAG, TERRAIN_TRANSITION_REACH } from './terrainTransitionMaterial'
-import winterGrassColorUrl from './assets/winter-grass-atlas.png'
-import grassColorUrl from './assets/grass-atlas.png'
-import winterGrassNormalUrl from './assets/winter-grass-normal-atlas.png'
+import { terrainTextureUrls } from '@/babylon/world/terrainTextureUrls'
 
 const MUDDY_DIRT = TerrainEnum1.TERRAIN_MUDDY_DIRT.index
 const DIRT = TerrainEnum1.TERRAIN_DIRT.index
@@ -100,8 +98,8 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
     const grassAtlases = GRASS_TYPES.map(type => {
         const name = type === GRASS ? 'Grass' : 'WinterGrass'
         const atlas = createTerrainAtlasPreview(plane, type === GRASS ? 'adminUtilsGrassTerrain' : 'adminUtilsWinterGrass', {
-            type, colorUrl: type === GRASS ? grassColorUrl : winterGrassColorUrl,
-            normal: {url: winterGrassNormalUrl, strength: 0.75}, patterns: terrainCoverPatterns,
+            type, colorUrl: type === GRASS ? terrainTextureUrls.grass : terrainTextureUrls.winterGrass,
+            normal: {url: terrainTextureUrls.winterGrassNormal, strength: 0.75}, patterns: terrainCoverPatterns,
         })
         return {type, name, atlas}
     })

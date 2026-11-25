@@ -2,7 +2,7 @@ import { Texture, Vector2 } from '@babylonjs/core'
 import type { PBRCustomMaterial } from '@babylonjs/materials'
 import { MaterialEnum1 } from '@/babylon/materials'
 import { configureTerrainNoiseTexture, terrainContactSnowShader, terrainNoiseShader } from '../terrainSurfaceShader'
-import snowColorUrl from '@/adminUtils/assets/snow-atlas.png'
+import { terrainTextureUrls } from '@/babylon/world/terrainTextureUrls'
 
 export const ATLAS_SIZE = 16
 export const SHED_ROOF_OVERHANG = 0.1
@@ -25,7 +25,7 @@ export function encodeHouseRoofSnowUv(uv: Vector2, highSide: '+X' | '-X' | '+Z' 
 }
 
 export function configureBuildingRoofSnow(material: PBRCustomMaterial) {
-    const snow = new Texture(snowColorUrl, material.getScene())
+    const snow = new Texture(terrainTextureUrls.snow, material.getScene())
     snow.wrapU = snow.wrapV = Texture.CLAMP_ADDRESSMODE
     material.onDisposeObservable.addOnce(() => snow.dispose())
     material.AddUniform('buildingSnowColor', 'sampler2D', snow)

@@ -9,13 +9,7 @@ import type { SubmitTerrainBatch, TerrainPreviewTriangle } from './terrainPrevie
 import type { TerrainPreviewSurfaces } from './terrainPreviewGeometry'
 import { muddyDirtLayout, muddyDirtPatterns, terrainCoverLayout, terrainCoverPatterns, TERRAIN_ATLAS_TILES,
     visitBakedTerrainAtlasPatches, visitTerrainAtlasPlacements } from '@/babylon/world/terrainAtlasPlacement'
-import dirtColorUrl from './assets/dirt-atlas.png'
-import muddyDirtColorUrl from './assets/muddy-dirt-atlas.png'
-import dirtNormalUrl from './assets/muddy-dirt-normal-atlas.png'
-import rockColorUrl from './assets/rock-atlas.png'
-import rockNormalUrl from './assets/rock-normal-atlas.png'
-import snowColorUrl from './assets/snow-atlas.png'
-import snowNormalUrl from './assets/snow-normal-atlas.png'
+import { terrainTextureUrls } from '@/babylon/world/terrainTextureUrls'
 export { muddyDirtPatterns, terrainCoverPatterns, TERRAIN_ATLAS_TILES } from '@/babylon/world/terrainAtlasPlacement'
 
 
@@ -32,13 +26,13 @@ type TerrainAtlas = {
 }
 
 const rockAtlas: TerrainAtlas = {
-    type: TerrainEnum1.TERRAIN_ROCK.index, colorUrl: rockColorUrl,
-    normal: {url: rockNormalUrl, strength: 1.5}, patterns: terrainCoverPatterns,
+    type: TerrainEnum1.TERRAIN_ROCK.index, colorUrl: terrainTextureUrls.rock,
+    normal: {url: terrainTextureUrls.rockNormal, strength: 1.5}, patterns: terrainCoverPatterns,
     varyAdjacentPatches: true, roundRockTop: true, showRockDeposits: true,
 }
 const snowAtlas: TerrainAtlas = {
-    type: TerrainEnum1.TERRAIN_SNOW_MUDDY_DIRT.index, colorUrl: snowColorUrl,
-    normal: {url: snowNormalUrl, strength: 1.5}, patterns: terrainCoverPatterns, varyAdjacentPatches: true,
+    type: TerrainEnum1.TERRAIN_SNOW_MUDDY_DIRT.index, colorUrl: terrainTextureUrls.snow,
+    normal: {url: terrainTextureUrls.snowNormal, strength: 1.5}, patterns: terrainCoverPatterns, varyAdjacentPatches: true,
 }
 
 export function createRockAtlas(plane: Mesh, name: string) {
@@ -113,8 +107,8 @@ export function createTerrainPreviewPlane(plane: Mesh, name: string) {
 export function createDirtAtlas(plane: Mesh, name: string, muddy: boolean, wetDirt = false) {
     return createTerrainAtlasPreview(plane, name, {
         type: (muddy ? TerrainEnum1.TERRAIN_MUDDY_DIRT : TerrainEnum1.TERRAIN_DIRT).index,
-        colorUrl: muddy ? muddyDirtColorUrl : dirtColorUrl,
-        normal: {url: dirtNormalUrl, strength: 4}, patterns: muddyDirtPatterns, roundDirtEdges: true, wetDirt,
+        colorUrl: muddy ? terrainTextureUrls.muddyDirt : terrainTextureUrls.dirt,
+        normal: {url: terrainTextureUrls.muddyDirtNormal, strength: 4}, patterns: muddyDirtPatterns, roundDirtEdges: true, wetDirt,
     })
 }
 
