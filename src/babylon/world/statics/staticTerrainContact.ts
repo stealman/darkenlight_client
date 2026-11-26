@@ -12,6 +12,9 @@ export const SNOW_CONTACT_MAX_HEIGHT = 0.24
 export const TREE_DAMP_MAX_HEIGHT = 1.0
 export const GROUND_WEAR_MEDIUM_HEIGHT = 0.68
 export const GROUND_WEAR_HIGH_HEIGHT = 1.0
+export const FENCE_WOOD_PROFILE = {rail: 16, post: 17, postWithMoss: 18} as const
+export const FENCE_WOOD_MOISTURE_SCALE = 8
+export type FenceWoodMoisture = 0 | 1 | 2 | 3
 const DAMP_CONTACT = {
     moss: 1, hay: 3, wellBase: 4, wellRim: 5, wellRoofMoss: 7, walkableEdges: 8, mossyWood: 9,
     woodTopWithMoss: 10, woodTopAndGroundMoss: 11, stumpCut: 12, treeBark: 13, groundWear: 14, groundWearHigh: 15,
@@ -209,7 +212,8 @@ export class StaticTerrainContact {
             bool wellBase = dampProfile == ${DAMP_CONTACT.wellBase}.0;
             bool wellRim = dampProfile == ${DAMP_CONTACT.wellRim}.0;
             bool mossyWood = dampProfile == ${DAMP_CONTACT.mossyWood}.0;
-            bool withMoss = dampProfile == ${DAMP_CONTACT.moss}.0 || dampProfile == ${DAMP_CONTACT.woodTopAndGroundMoss}.0;
+            bool withMoss = dampProfile == ${DAMP_CONTACT.moss}.0 || dampProfile == ${DAMP_CONTACT.woodTopAndGroundMoss}.0
+                || dampProfile == ${FENCE_WOOD_PROFILE.postWithMoss}.0;
             bool dampHay = dampProfile == ${DAMP_CONTACT.hay}.0;
             if ((mossyWood || wellBase || withMoss || dampHay)
                 && snowDistance < (mossyWood ? 0.80 : wellBase ? 0.64 : 0.48)) {
@@ -316,6 +320,13 @@ export class StaticTerrainContact {
     addDamp(index: number, height: number, damp: DampContact, wear = 0) {
         // The integer selects the profile; the fraction carries wear without another instance attribute.
         this.contacts.set(index, {height, snowReach: 0, damp: DAMP_CONTACT[damp] + wear * 0.25})
+    }
+
+    addFenceWoodWeathering(index: number, part: 'rail' | 'post', moisture: FenceWoodMoisture) {
+        const contact = this.contacts.get(index) ?? {height: 0, snowReach: 0, damp: 0}
+        const profile = part === 'post' && contact.damp === DAMP_CONTACT.moss ? FENCE_WOOD_PROFILE.postWithMoss : FENCE_WOOD_PROFILE[part]
+        contact.damp = profile + moisture / FENCE_WOOD_MOISTURE_SCALE
+        this.contacts.set(index, contact)
     }
 
     markJoinedEdges(index: number, joinedEdges: number) {

@@ -162,7 +162,6 @@ export const StaticsManager = {
                 pos,
                 MaterialEnum1.WOOD_3.uv,
                 MaterialEnum1.WOOD_1.uv,
-                MaterialEnum1.WOOD_2.uv,
                 obj.meta as CampFenceMetadata,
             )); break
             case 208: this.allStatics.push(new CemeteryIronFence(obj.tp, pos, MaterialEnum1.BRICK_DARK_GRAY.uv, MaterialEnum1.STEEL_1.uv, obj.meta as CemeteryWallMetadata)); break

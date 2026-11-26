@@ -4,6 +4,7 @@ import { PBRCustomMaterial } from '@babylonjs/materials'
 import { FoliageManager, GRASS_ROOT_INSET } from '@/babylon/world/foliageManager'
 import { updateWorldInstanceBuffers } from '@/babylon/world/worldInstanceBuffers'
 import { createGrassContactShade, GRASS_CONTACT_TRIANGLES } from './grassContactShade'
+import { terrainNoiseShader } from './terrainNoiseShader'
 
 export type GrassTuft = {matrix: Matrix, tone: 0 | 1 | 2, snowed?: boolean, forced?: boolean}
 export type GrassDetail = 'high' | 'medium' | 'low'
@@ -172,12 +173,16 @@ export function createGrassRenderer(scene: Scene, parent: TransformNode, contact
             }
         }
     `)
-    material.Fragment_Definitions('varying vec4 vGrassStyle; varying float vGrassSnowRim;')
+    material.Fragment_Definitions(`
+        varying vec4 vGrassStyle;
+        varying float vGrassSnowRim;
+        ${terrainNoiseShader}
+    `)
     material.Fragment_Before_Lights(`
         float bladeHeight = vGrassStyle.y;
         float tone = vGrassStyle.z;
         vec3 root = vec3(0.045, 0.082, 0.019);
-        vec3 tip = vec3(0.28, 0.43, 0.095);
+        vec3 tip = vec3(0.19, 0.30, 0.073);
         if (tone > 0.5) {
             root = vec3(0.070, 0.082, 0.029);
             tip = vec3(0.32, 0.37, 0.13);
@@ -193,16 +198,30 @@ export function createGrassRenderer(scene: Scene, parent: TransformNode, contact
         float fiber = sin(vGrassStyle.x * 28.0 + sin(bladeHeight * 8.0) + vGrassStyle.w * 6.0);
         float vein = 1.0 - smoothstep(0.0, 0.15, abs(vGrassStyle.x - 0.5));
         float contrast = 1.0 - smoothstep(0.2, 0.95, fwidth(vGrassStyle.x) * 9.0);
+        vec2 grainUV = vGrassStyle.xy * vec2(6.0, 22.0) + vGrassStyle.w * vec2(17.0, 23.0);
+        vec2 grainFootprint = fwidth(grainUV);
+        float grainDetail = 1.0 - smoothstep(0.45, 1.1, max(grainFootprint.x, grainFootprint.y));
+        float grain = terrainNoise(grainUV) - 0.5;
         surfaceAlbedo *= mix(root, tip, smoothstep(0.0, 1.0, bladeHeight)) *
-            (0.85 + vGrassStyle.w * 0.30 + contrast * (0.05 * fiber + 0.09 * vein));
+            (0.85 + vGrassStyle.w * 0.30 + contrast * (0.05 * fiber + 0.09 * vein) + 0.18 * grain * grainDetail);
+        float snowCover = 0.0;
         if (tone > 3.5 && bladeHeight < 0.30) {
             // Use blade-local coordinates so the coating bends with the blade.
             float rim = vGrassSnowRim + 0.022 * sin(vGrassStyle.x * 15.0 + vGrassSnowRim * 33.0);
-            float cover = (1.0 - smoothstep(rim - 0.055, rim + 0.035, bladeHeight)) * 0.88;
+            snowCover = (1.0 - smoothstep(rim - 0.055, rim + 0.035, bladeHeight)) * 0.88;
             vec3 snow = vec3(0.66, 0.72, 0.80) * (0.96 + 0.04 * fiber * contrast);
-            surfaceAlbedo = mix(surfaceAlbedo, snow, cover);
+            surfaceAlbedo = mix(surfaceAlbedo, snow, snowCover);
         }
-        normalW = normalize(normalW + vec3(0.0, 0.45, 0.0));
+
+        // Turn the local grain into shallow relief using the deformed blade surface.
+        vec2 grainGradient = vec2(dFdx(grain), dFdy(grain));
+        vec3 bladeDx = dFdx(vPositionW), bladeDy = dFdy(vPositionW);
+        vec3 acrossX = cross(bladeDy, geometricNormalW), acrossY = cross(geometricNormalW, bladeDx);
+        float bladeDet = dot(bladeDx, acrossX);
+        vec3 grainSlope = 0.0018 * sign(bladeDet) * (grainGradient.x * acrossX + grainGradient.y * acrossY)
+            / max(abs(bladeDet), 1e-8);
+        vec3 grainNormal = grainDetail * (1.0 - snowCover) * grainSlope / max(1.0, length(grainSlope) * 5.0);
+        normalW = normalize(normalW + vec3(0.0, 0.45, 0.0) - grainNormal);
     `)
 
     const roots = rootShade ? SHAPES.map(() => [] as Vector2[]) : undefined

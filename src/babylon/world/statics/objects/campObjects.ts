@@ -8,6 +8,11 @@ import type { ContactShadowFootprint } from '@/babylon/world/terrainContactShado
 import { StaticEquipPartsRenderer } from '@/babylon/world/statics/staticEquipPartsRenderer'
 import { createOrientedStaticVariation, createStaticVariation, placeStaticPart } from '@/babylon/world/statics/staticVariation'
 import { MyPlayer } from '@/data/myPlayer'
+import { WorldDataManager } from '@/data/worldDataManager'
+import { TerrainEnum1 } from '@/babylon/materials'
+import { Lights } from '@/babylon/scene/lights'
+import type { FenceWoodMoisture } from '@/babylon/world/statics/staticTerrainContact'
+import { Settings } from '@/settings/settings'
 import { WeaponModelsCb } from '@/babylon/item/codebook/weaponModelsCb'
 
 export type CampObjectFacing = '-X' | '+X' | '-Z' | '+Z'
@@ -487,8 +492,6 @@ export class CampFence extends BaseStaticObject {
     private static readonly maxPostCrossShift = 0.014
     private readonly orientation: CampFenceOrientation
     private readonly railMaterial: Vector2
-    private readonly replacementMaterial: Vector2
-    private readonly replacementPick: number | null
     private readonly worldId: number
     private readonly section: Matrix
     private readonly heightScale: number
@@ -499,14 +502,12 @@ export class CampFence extends BaseStaticObject {
     private readonly damage: CampFenceDamage | null
     private cornerDirections: [Direction, Direction] | null = null
     private posts: CampFencePost[] | null = null
-    private railParts: {matrix: Matrix, material: Vector2}[] | null = null
+    private railMatrices: Matrix[] | null = null
 
-    constructor(type: number, position: Vector3, postMaterial: Vector2, railMaterial: Vector2, replacementMaterial: Vector2,
-        metadata?: CampFenceMetadata) {
+    constructor(type: number, position: Vector3, postMaterial: Vector2, railMaterial: Vector2, metadata?: CampFenceMetadata) {
         super(type, position, 0, postMaterial, TaperedBlockBatch.prefab)
         this.orientation = metadata?.orientation === 'X' ? 'X' : 'Z'
         this.railMaterial = railMaterial
-        this.replacementMaterial = replacementMaterial
         this.worldId = MyPlayer.worldId
         const variation = createOrientedStaticVariation(this.worldId, position, this.orientation)
         const heightScale = 1 + variation.signed(0, 70) * CampFence.sectionHeightVariation
@@ -520,18 +521,21 @@ export class CampFence extends BaseStaticObject {
         const sectionPitch = variation.signed(0, 8)
         const sectionRoll = variation.signed(0, 9)
         this.rails = CampFence.railCenters.map((center, index) => {
+            const heightVariation = variation.signed(index, 5)
+            const height = (CampFence.railHeight + heightVariation * (heightVariation < 0 ? 0.047 : 0.017)) * heightScale
+            const topRailDrop = index === CampFence.railCenters.length - 1 ? height * 0.25 : 0
             const frame = Matrix.RotationYawPitchRoll(
                 variation.signed(index, 0) * CampFence.maxRailYaw,
                 (sectionPitch + variation.signed(index, 1)) * CampFence.maxRailLean,
                 (sectionRoll + variation.signed(index, 2)) * CampFence.maxRailLean,
-            ).setTranslationFromFloats(0, 0.5 + (railBase + center + variation.signed(index, 6) * 0.021) * heightScale, 0)
+            ).setTranslationFromFloats(0,
+                0.5 + (railBase + center + variation.signed(index, 6) * 0.021) * heightScale - topRailDrop, 0)
                 .multiply(section)
-            const heightVariation = variation.signed(index, 5)
             return {
                 frame,
                 thickness: CampFence.railThickness * (1 + variation.signed(index, 3) * 0.28),
                 turnThickness: CampFence.railThickness * (1 + variation.signed(index, 4) * 0.28),
-                height: (CampFence.railHeight + heightVariation * (heightVariation < 0 ? 0.047 : 0.017)) * heightScale,
+                height,
                 firstEnd: 0.48 + variation.signed(index, 30) * 0.01,
                 secondEnd: 0.48 + variation.signed(index, 31) * 0.01,
                 twist: variation.signed(index, 50) * CampFence.maxRailTwist,
@@ -539,10 +543,9 @@ export class CampFence extends BaseStaticObject {
             }
         })
         const damaged = metadata?.damaged === true
-        const details = createStaticVariation(this.worldId, position, type)
-        this.replacementPick = details.unit(0, 5) < 0.25 ? details.unit(0, 6) : null
         this.damage = null
         if (damaged) {
+            const details = createStaticVariation(this.worldId, position, type)
             this.damage = {
                 level: Math.floor(details.unit(0, 0) * this.rails.length),
                 side: details.unit(0, 2) < 0.5 ? -1 : 1,
@@ -562,22 +565,38 @@ export class CampFence extends BaseStaticObject {
     setCornerDirections(directions: [Direction, Direction] | null) {
         if (this.cornerDirections || directions) {
             this.posts = null
-            this.railParts = null
+            this.railMatrices = null
         }
         this.cornerDirections = directions
     }
 
     render() {
         const posts = this.getPosts()
+        const moisture = Settings.isDetalLevelHigh() ? this.getWoodMoisture() : null
         for (const {matrix, shape} of posts) {
             TaperedBlockBatch.add(placeStaticPart(matrix, this.renderPosition), this.material, shape, 'moss')
+            if (moisture !== null && shape) {
+                TaperedBlockBatch.contact?.addFenceWoodWeathering(this.prefab!.matrices.length - 1, 'post', moisture)
+            }
         }
         const batch = WorldRenderer.block1!
-        this.railParts ??= this.buildRails(posts)
-        for (const {matrix, material} of this.railParts) {
+        this.railMatrices ??= this.buildRails(posts)
+        for (const matrix of this.railMatrices) {
+            if (moisture !== null) {
+                WorldRenderer.staticTerrainContact?.addFenceWoodWeathering(batch.matrices.length, 'rail', moisture)
+            }
             batch.matrices.push(placeStaticPart(matrix, this.renderPosition))
-            batch.uvData.push(material)
+            batch.uvData.push(this.railMaterial)
         }
+    }
+
+    private getWoodMoisture(): FenceWoodMoisture {
+        if (Lights.indoor) return 0
+        const tile = WorldDataManager.getBlockMap()[this.position.x]?.[this.position.z]
+        if (!tile || tile.stonePath || tile.beigeStonePath) return 0
+        if (tile.snowed || tile.type === TerrainEnum1.TERRAIN_GRASS.index) return 1
+        if (tile.type === TerrainEnum1.TERRAIN_MUDDY_DIRT.index) return 3
+        return tile.type === TerrainEnum1.TERRAIN_GRASS_WINTER.index ? 2 : 0
     }
 
     appendContactShadowFootprints(footprints: ContactShadowFootprint[], height: number) {
@@ -625,7 +644,6 @@ export class CampFence extends BaseStaticObject {
         const directions = this.cornerDirections
         const matrices: Matrix[] = []
         const damage = this.damage
-        let damageStart = -1
         // A dropped corner arm is short, so only the bottom rail can reach the ground from its post.
         const damagedLevel = directions && damage?.fallen ? 0 : damage?.level
         for (const [level, {frame, thickness, turnThickness, height, firstEnd, secondEnd, twist, turnTwist}] of this.rails.entries()) {
@@ -636,7 +654,6 @@ export class CampFence extends BaseStaticObject {
                 const rail = this.createRail(alongX, firstEnd + secondEnd, thickness, height,
                     alongX ? railCenter : 0, alongX ? 0 : railCenter, frame, twist)
                 if (damage && level === damagedLevel) {
-                    damageStart = matrices.length
                     this.addDamagedRail(matrices, rail, thickness, height, twist, damage, posts)
                 } else matrices.push(rail)
                 continue
@@ -652,21 +669,13 @@ export class CampFence extends BaseStaticObject {
                 const rail = this.createRail(direction.x !== 0, outerEnd - innerEnd, armThickness, height,
                     direction.x * railCenter, direction.z * railCenter, frame, armTwist)
                 if (damage && level === damagedLevel && arm === (damage.side > 0 ? 1 : 0)) {
-                    damageStart = matrices.length
                     const outerSide = direction.x || direction.z
                     const armPosts = outerSide < 0 ? [posts[arm], posts[2]] : [posts[2], posts[arm]]
                     this.addDamagedRail(matrices, rail, armThickness, height, armTwist, damage, armPosts, outerSide)
                 } else matrices.push(rail)
             }
         }
-        const damageParts = damage ? (damage.fallen ? 1 : 2) : 0
-        let replacement = this.replacementPick === null
-            ? -1 : Math.floor(this.replacementPick * (matrices.length - damageParts))
-        // A replaced board is intact, so skip all pieces of the damaged board.
-        if (damageStart >= 0 && replacement >= damageStart) replacement += damageParts
-        return matrices.map((matrix, index) => ({
-            matrix, material: index === replacement ? this.replacementMaterial : this.railMaterial,
-        }))
+        return matrices
     }
 
     private createRail(alongX: boolean, length: number, thickness: number, height: number,

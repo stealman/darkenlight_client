@@ -2,6 +2,7 @@ import { Vector2 } from '@babylonjs/core'
 import type { PBRCustomMaterial } from '@babylonjs/materials'
 import { ATLAS_SIZE } from './buildingRoofSnow'
 import { terrainContactMossShader } from '../terrainSurfaceShader'
+import { woodPatinaShader } from '../woodPatina'
 
 export const HOUSE_FOUNDATION_SURFACE = 13
 const CORNER = 14
@@ -63,6 +64,7 @@ export function configureBuildingWallDamp(material: PBRCustomMaterial) {
         #endif
 
         ${terrainContactMossShader}
+        ${woodPatinaShader}
     `)
     material.Fragment_Before_Lights(`
         ${parts.Fragment_Before_Lights}
@@ -112,14 +114,8 @@ export function configureBuildingWallDamp(material: PBRCustomMaterial) {
                 float alongWall = facesX ? vPositionW.z : vPositionW.x;
                 float acrossWall = facesX ? vPositionW.x : vPositionW.z;
                 vec2 patinaUV = vec2(alongWall, wallHeight) + acrossWall * vec2(0.67, 0.41);
-                float weathering = terrainNoise(patinaUV * vec2(2.2, 1.8)) * 0.78
-                    + terrainNoise(patinaUV * vec2(9.0, 4.5) + vec2(4.1, 7.8)) * 0.22;
                 float dry = smoothstep(height, height + 0.18, wallHeight);
-                float faded = smoothstep(0.36, 0.77, weathering) * dry;
-                float stain = (1.0 - smoothstep(0.19, 0.40, weathering)) * dry;
-                float woodLuma = dot(surfaceAlbedo, vec3(0.2126, 0.7152, 0.0722));
-                surfaceAlbedo = mix(surfaceAlbedo, vec3(woodLuma), faded * 0.30);
-                surfaceAlbedo *= 1.0 + faded * 0.20 - stain * 0.21;
+                surfaceAlbedo = applyWoodPatina(surfaceAlbedo, patinaUV, dry);
             }
         }
     `)
