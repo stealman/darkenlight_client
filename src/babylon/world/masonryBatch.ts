@@ -7,7 +7,7 @@ import { StaticTerrainContact } from './statics/staticTerrainContact'
 import { stoneAtlasRow, stoneAtlasShader } from './stoneAtlas'
 import { terrainTextureUrls } from './terrainTextureUrls'
 import { FULL_TOP_EXPOSURE, MASONRY_TOP_EXPOSURE, markMasonryTopExposure, masonryTopWeatheringFragment,
-    masonryTopWeatheringFunctions } from './masonryTopWeathering'
+    masonryTopWeatheringFunctions, TOP_CENTER_EXPOSURE } from './masonryTopWeathering'
 
 const OUTLINE = [[-0.50, -0.44], [-0.43, -0.50], [0.44, -0.50], [0.50, -0.45],
     [0.50, 0.43], [0.43, 0.50], [-0.45, 0.50], [-0.50, 0.42]]
@@ -57,8 +57,7 @@ function createMaterial(scene: Scene, weathering: boolean, topWeathering: boolea
     }
     material.AddAttribute('uvc')
     if (weathering) material.AddUniform('masonryRelief', 'sampler2D', load(terrainTextureUrls.stonePathRelief))
-    const varyings = 'varying vec2 vMasonryUV; varying float vMasonryRow;'
-        + (weathering ? 'varying float vMasonryCrown;' : '')
+    const varyings = 'varying vec2 vMasonryUV; varying float vMasonryRow; varying float vMasonryCrown;'
         + (topWeathering ? 'varying vec4 vMasonryTop;' : '')
     if (topWeathering) material.AddAttribute(MASONRY_TOP_EXPOSURE)
     material.Vertex_Definitions(`${stoneAtlasShader}${varyings} attribute vec2 uvc;
@@ -87,7 +86,7 @@ function createMaterial(scene: Scene, weathering: boolean, topWeathering: boolea
         float crownAmount = crownProfile * shape.x;
         float topWeight = 0.5 + p.y;
         vec3 crownOffset = vec3(0.0);
-        ${weathering ? 'vMasonryCrown = crownAmount;' : ''}
+        vMasonryCrown = crownAmount;
         if (crownAmount > 0.0) {
             // The two vertices of each chamfer run along different edges of the same skewed corner.
             vec2 corner = step(vec2(0.0), p.xz);
@@ -119,16 +118,16 @@ function createMaterial(scene: Scene, weathering: boolean, topWeathering: boolea
     material.albedoTexture = load(terrainTextureUrls.stonePath)
     material.Fragment_Definitions(varyings + stoneAtlasShader + (topWeathering ? masonryTopWeatheringFunctions : ''))
     material.Fragment_Before_Lights(`
+        vec3 dpX = dFdx(vPositionW), dpY = dFdy(vPositionW);
+        if (vMasonryCrown > 0.0) {
+            vec3 faceNormal = cross(dpX, dpY);
+            faceNormal *= inversesqrt(max(1e-16, dot(faceNormal, faceNormal)));
+            if (dot(faceNormal, normalW) < 0.0) faceNormal = -faceNormal;
+            normalW = normalize(mix(normalW, faceNormal, vMasonryCrown * 0.57));
+        }
         ${weathering ? `
             vec2 reliefUV = stoneReliefUV(vMasonryUV, vMasonryRow);
             vec2 bump = texture2D(masonryRelief, reliefUV).rg * 2.0 - 1.0;
-            vec3 dpX = dFdx(vPositionW), dpY = dFdy(vPositionW);
-            if (vMasonryCrown > 0.0) {
-                vec3 faceNormal = cross(dpX, dpY);
-                faceNormal *= inversesqrt(max(1e-16, dot(faceNormal, faceNormal)));
-                if (dot(faceNormal, normalW) < 0.0) faceNormal = -faceNormal;
-                normalW = normalize(mix(normalW, faceNormal, vMasonryCrown * 0.57));
-            }
             vec2 uvX = dFdx(vMasonryUV) * 8.0, uvY = dFdy(vMasonryUV) * 8.0;
             float detail = 1.0 - smoothstep(0.095, 0.34, max(length(uvX), length(uvY)));
             vec3 tangent = cross(dpY, normalW) * uvX.x + cross(normalW, dpX) * uvY.x;
@@ -203,11 +202,21 @@ export const MasonryBatch = {
         return index
     },
 
-    markExposedTops(layers: number[][], anchor: Vector3, irregular: boolean) {
+    markExposedTops(layers: number[][], anchor: Vector3, irregular: boolean, firstRevealedLayer: number) {
+        const capLayer = layers.length - 1
+        if (!this.topWeathering && firstRevealedLayer === capLayer) return
+        const batch = this.prefab!
         const x = Math.round(anchor.x), z = Math.round(anchor.z)
-        const terrain = irregular && WorldRenderer.getSnowSurfaceHeight(x, z) !== undefined ? 'snow'
-            : WorldRenderer.getMuddyDirtContactHeight(x, z) !== undefined ? 'mud' : undefined
-        markMasonryTopExposure(this.prefab!.matrices, layers, this.topExposure, terrain)
+        const terrain = !this.topWeathering ? undefined
+            : irregular && WorldRenderer.getSnowSurfaceHeight(x, z) !== undefined ? 'snow'
+                : WorldRenderer.getMuddyDirtContactHeight(x, z) !== undefined ? 'mud' : undefined
+        const masks = this.topWeathering ? this.topExposure : []
+        markMasonryTopExposure(batch.matrices, layers, masks, terrain, this.topWeathering ? 0 : firstRevealedLayer)
+        for (let layer = firstRevealedLayer; layer < capLayer; layer++) {
+            for (const index of layers[layer]) {
+                if (Math.abs(masks[index]) & TOP_CENTER_EXPOSURE) batch.uvData[index].x += 0.5
+            }
+        }
     },
 
     clear() {

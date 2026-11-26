@@ -2,13 +2,14 @@ import type { Matrix } from '@babylonjs/core'
 
 export const MASONRY_TOP_EXPOSURE = 'masonryTopExposure'
 export const FULL_TOP_EXPOSURE = 511
+export const TOP_CENTER_EXPOSURE = 1 << 4
 const MUDDY_MASONRY_TOP = FULL_TOP_EXPOSURE + 1
 
 // Pack nine sky-facing samples plus the terrain effect into one instance value.
 export function markMasonryTopExposure(matrices: readonly Matrix[], layers: readonly number[][], masks: number[],
-    terrain: 'snow' | 'mud' | undefined) {
+    terrain: 'snow' | 'mud' | undefined, firstLayer: number) {
     const covers: {x: number, z: number, xx: number, xz: number, zx: number, zz: number}[] = []
-    for (let layer = layers.length - 1; layer >= 0; layer--) {
+    for (let layer = layers.length - 1; layer >= firstLayer; layer--) {
         for (const index of layers[layer]) {
             const m = matrices[index].m
             if (covers.length === 0) {

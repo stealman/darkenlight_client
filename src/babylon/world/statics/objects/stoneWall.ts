@@ -19,6 +19,8 @@ export interface StoneWallMetadata extends WallMetadata {
 const ALONG_X = [{x: -1, z: 0}, {x: 1, z: 0}] as const
 const ALONG_Z = [{x: 0, z: -1}, {x: 0, z: 1}] as const
 const STONE_WALL_EMBED_DEPTH = 0.1
+const STONE_WALL_LAYOUT_HEIGHT = 1.4
+const STONE_WALL_TAPER_PER_HEIGHT = 0.1
 
 function fitSpan(direction: WallDirection, x: number, z: number, length: number) {
     const yaw = Math.atan2(x * direction.z - z * direction.x, x * direction.x + z * direction.z)
@@ -96,8 +98,9 @@ export class StoneWall extends OrientedWall {
         const b = this.seamPosition(second, wallsByTile)
         if (this.cornerDirections) {
             const variation = createStaticVariation(0, this.position, this.type)
-            this.segmentX = variation.signed(0) * this.roughness * 0.075
-            this.segmentZ = variation.signed(0, 1) * this.roughness * 0.075
+            const cornerOffset = this.roughness * (0.075 + 0.05 * this.roughness ** 2)
+            this.segmentX = variation.signed(0) * cornerOffset
+            this.segmentZ = variation.signed(0, 1) * cornerOffset
             this.cornerSpans = [
                 fitSpan(first, a.x - this.segmentX, a.z - this.segmentZ, 0.5),
                 fitSpan(second, b.x - this.segmentX, b.z - this.segmentZ, 0.5),
@@ -118,15 +121,20 @@ export class StoneWall extends OrientedWall {
         // A shared seam has one offset even when its two segments have different precision.
         const roughness = connected && neighbor ? Math.min(this.roughness, neighbor.roughness) : this.roughness
         const seam = {x: 2 * x + direction.x, z: 2 * z + direction.z}
-        const offset = createStaticVariation(0, seam, this.type).signed(0) * roughness * 0.15
+        const maxOffset = roughness * (0.15 + 0.1 * roughness ** 2)
+        const offset = createStaticVariation(0, seam, this.type).signed(0) * maxOffset
         return {x: direction.x * 0.5 + Math.abs(direction.z) * offset,
             z: direction.z * 0.5 + Math.abs(direction.x) * offset}
+    }
+
+    private get widthTaper() {
+        return (this.height + this.previewHeightOffset) * STONE_WALL_TAPER_PER_HEIGHT
     }
 
     appendContactShadowFootprints(footprints: ContactShadowFootprint[], height: number) {
         const x = this.renderPosition.x + this.segmentX
         const z = this.renderPosition.z + this.segmentZ
-        const halfWidth = 0.22 * (this.width / DEFAULT_STONE_WALL_WIDTH)
+        const halfWidth = this.width * 0.47 * (1 + this.widthTaper)
         const addHalf = ({x: dx, z: dz}: WallDirection, span?: WallSpan) => {
             const cos = span?.cos ?? 1, sin = span?.sin ?? 0
             const axisX = dx * cos + dz * sin, axisZ = dz * cos - dx * sin
@@ -149,16 +157,23 @@ export class StoneWall extends OrientedWall {
         const variation = createSineStaticVariation(this.position.x * 91.7 + this.position.z * 37.3 + 240, 17.1, 47.7)
         const roughness = this.roughness
         const variedHeight = this.height * (1 + variation.signed(0, 11) * roughness * 0.17)
-        const heightScale = (variedHeight + this.previewHeightOffset) / 1.4
-        const shortWallScale = Math.min(1, this.height + this.previewHeightOffset)
+        const heightScale = (variedHeight + this.previewHeightOffset) / STONE_WALL_LAYOUT_HEIGHT
+        const wallHeight = this.height + this.previewHeightOffset
+        const shortWallScale = Math.min(1, wallHeight)
         const widthScale = this.width / DEFAULT_STONE_WALL_WIDTH
+        const widthTaper = this.widthTaper
+        const widthScaleAt = (y: number) => widthScale * (1 + widthTaper * (1 - 2 * y / STONE_WALL_LAYOUT_HEIGHT))
         const narrowWallScale = Math.min(1, widthScale)
         const lowDetail = Settings.isDetalLevelLow()
-        const courseCount = Math.max(1, Math.round(shortWallScale * (lowDetail ? 2 : 4)))
+        const extraCourses = wallHeight >= 2 ? 2 : wallHeight >= 1.5 ? 1 : 0
+        const baseCourses = lowDetail ? 2 : 4
+        const courseCount = Math.max(1, Math.round(shortWallScale * baseCourses)) + extraCourses * (baseCourses / 2)
         const courseStep = 1.28 / courseCount
         const courseHeight = courseStep - 0.007
         const candidates = this.damage > 1 ? [] as WallStone[] : null
-        const layers = MasonryBatch.topWeathering ? Array.from({length: courseCount + 1}, () => [] as number[]) : null
+        const layers = MasonryBatch.topWeathering || (candidates && roughness > 0)
+            ? Array.from({length: courseCount + 1}, () => [] as number[]) : null
+        let firstRevealedLayer = courseCount
         const addStone = (matrix: Matrix, seed: number, layer: number) => {
             const instance = MasonryBatch.add(matrix, this.position, seed, false, roughness, false, layer === courseCount)
             layers?.[layer].push(instance)
@@ -199,7 +214,7 @@ export class StoneWall extends OrientedWall {
             stone(length, height, depth, alongX ? offset : 0, y, alongX ? 0 : offset, alongX, this.straightSpan)
         const cornerLayer = (directions: readonly WallDirection[], centerSize: number, height: number,
             thickness: number, y: number, gap: number) => {
-            const center = Math.min(0.98, centerSize * widthScale)
+            const center = Math.min(0.98, centerSize * widthScaleAt(y))
             const armLength = 0.49 - center * 0.5
             const coreSize = armLength < 0.06 ? 0.98 : center
             stone(coreSize, height, coreSize, 0, y, 0, true)
@@ -215,7 +230,7 @@ export class StoneWall extends OrientedWall {
             const coursesAbove = courseCount - course - 1
             damageTier = course > 0 && coursesAbove < (lowDetail ? 1 : 2) ? coursesAbove + 1 : -1
             const y = courseStep * 0.5 + course * courseStep
-            const thickness = (0.46 + variation.unit(course + 23) * 0.02) * widthScale
+            const thickness = (0.49 + variation.unit(course + 23) * 0.02) * widthScaleAt(y)
             if (this.cornerDirections) {
                 const center = (course % 2 === 0 ? 0.52 : 0.46) + roughness * variation.signed(course, 9) * 0.09
                 cornerLayer(this.cornerDirections, center, courseHeight, thickness, y, 0.008)
@@ -228,16 +243,17 @@ export class StoneWall extends OrientedWall {
         }
         layer = courseCount
         damageTier = 0
-        const capThickness = 0.51 * widthScale
+        const capY = 1.34
+        const capThickness = 0.49 * widthScaleAt(capY)
         if (this.cornerDirections) {
-            cornerLayer(this.cornerDirections, 0.54, 0.12, capThickness, 1.34, 0.006)
+            cornerLayer(this.cornerDirections, 0.46, 0.12, capThickness, capY, 0.006)
         } else if (!lowDetail && this.precision <= 5) {
             const joint = variation.signed(0, 10) * 0.16
             for (const [left, right] of [[-0.49, joint], [joint, 0.49]]) {
-                alongWall(right - left - 0.012, 0.12, capThickness, (left + right) / 2, 1.34)
+                alongWall(right - left - 0.012, 0.12, capThickness, (left + right) / 2, capY)
             }
         } else {
-            alongWall(0.984, 0.12, capThickness, 0, 1.34)
+            alongWall(0.984, 0.12, capThickness, 0, capY)
         }
 
         if (candidates) {
@@ -248,12 +264,13 @@ export class StoneWall extends OrientedWall {
                 // Higher levels keep the stones that have already fallen and may dislodge more.
                 if (rank < limit && severity >= (rank + variation.unit(rank, 13)) / limit) {
                     this.addFallenStone(candidate, rank, variation, candidate.layer === courseCount)
+                    if (roughness > 0) firstRevealedLayer = Math.min(firstRevealedLayer, candidate.layer - 1)
                 } else {
                     addStone(candidate.matrix, candidate.seed, candidate.layer)
                 }
             }
         }
-        if (layers) MasonryBatch.markExposedTops(layers, this.position, roughness > 0)
+        if (layers) MasonryBatch.markExposedTops(layers, this.position, roughness > 0, firstRevealedLayer)
     }
 
     private addFallenStone(stone: WallStone, rank: number, variation: ReturnType<typeof createSineStaticVariation>, crown: boolean) {
