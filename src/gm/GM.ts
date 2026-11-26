@@ -8,7 +8,7 @@ import { WorldDataManager } from '@/data/worldDataManager'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { WATER_BLOCK_TYPE } from '@/babylon/world/terrainRoofShape'
 import { TerrainEnum1 } from '@/babylon/materials'
-import { ref, watch } from 'vue'
+import { computed, ref, shallowRef, watch } from 'vue'
 import { Vector3 } from '@babylonjs/core'
 import { Utils } from '@/utils/utils'
 import { GMSpawns } from '@/gm/GmSpawns'
@@ -79,6 +79,28 @@ export const CEMETERY_STATIC_IDS = new Set([321, 322, 323, 324, 325, 328, 329, 3
 const WALL_FENCE_STATIC_IDS = new Set([201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 221, 222])
 const GENERAL_STATIC_IDS = new Set([404, 241, 242, 261, 262, 263, 281, 301, 302, 303, 304, 305, 306, 307, 308, 309, 310, 321, 322, 323, 324, 325, 328, 329, 330, 331, 332, 333, 334, 335, 336, 337])
 const LIGHT_SOURCE_STATIC_IDS = new Set([FIREPLACE_SMALL_STATIC_ID, FIREPLACE_LARGE_STATIC_ID, WALL_TORCH_STATIC_ID, TORCH_STAND_STATIC_ID, LANTERN_STAND_STATIC_ID, STONE_ENTRANCE_STATIC_ID, CEMETERY_EMBER_BOWL_STATIC_ID])
+
+const stoneWallAttributes = ['precision', 'damage', 'height', 'width'] as const
+type StoneWallAttribute = typeof stoneWallAttributes[number]
+type StoneWallBounds = {
+    orientation: 'X' | 'Z' | '–'
+    ranges: Record<StoneWallAttribute, {min: number, max: number}>
+}
+
+export const stoneWallAttributeValues = {
+    precision: Array.from({length: 10}, (_, index) => index + 1),
+    damage: Array.from({length: 11}, (_, index) => index),
+    height: Array.from({length: 8}, (_, index) => (index + 1) / 4),
+    width: Array.from({length: 9}, (_, index) => (index + 2) / 10),
+}
+
+export function validStoneWallBounds(bounds: StoneWallBounds) {
+    return stoneWallAttributes.every(attribute => {
+        const {min, max} = bounds.ranges[attribute]
+        const values = stoneWallAttributeValues[attribute]
+        return min <= max && values.includes(min) && values.includes(max)
+    })
+}
 
 const rectangularFootprint = (sizeX: number, sizeZ: number) => {
     const offsets: Array<{x: number, z: number}> = []
@@ -213,15 +235,17 @@ export const GMManager = {
     deleteConfirmationVisible: ref(false),
     deleteConfirmationTitle: ref(''),
     deleteConfirmationMessage: ref(''),
-    pendingDelete: null as {type: 'STATIC' | 'BUILDING', x: number, z: number} | null,
-    editingStatic: ref<StaticObject | null>(null),
+    pendingDelete: null as {type: 'STATIC' | 'BUILDING', x: number, z: number, staticType?: number} | null,
+    editingStatic: shallowRef<StaticObject | null>(null),
+    selectedStoneWallTiles: shallowRef<Array<{x: number, z: number}>>([]),
+    staticHoverActive: false,
     editingBuilding: ref<BuildingData | null>(null),
 
     tab: GmTabs.OVERVIEW,
 
     onEscape() {
         if (this.editingStatic.value) {
-            this.cancelStaticEdit()
+            this.clearStaticSelection()
         } else if (this.editingBuilding.value) {
             this.cancelBuildingEdit()
         } else if (this.equipmentDecorationDraftTile.value || this.equipmentDecorationEditing.value) {
@@ -256,8 +280,10 @@ export const GMManager = {
             GMSceneManager.spawnMarker?.setEnabled(false)
             GMSpawns.removeAllMarkers()
             GMFoggyAreas.removeMarkers()
+            this.clearStaticSelection()
+            this.staticHoverActive = false
+            StaticsManager.updateSelectionPreview(false, 0, 0, 0)
             this.closeDeleteConfirmation()
-            this.editingStatic.value = null
             this.editingBuilding.value = null
         }
         GMSceneManager.initialize(Renderer.scene)
@@ -267,7 +293,7 @@ export const GMManager = {
         }
     },
 
-    onLeftClickEvent() {
+    onLeftClickEvent(extendSelection = false) {
         if (this.pendingTerrainNavigation.value) return
         if (this.tab === GmTabs.TERRAIN_EDIT) {
             const data = []
@@ -378,38 +404,28 @@ export const GMManager = {
             }
         }
 
-        if (this.tab === GmTabs.WALLS_AND_FENCES_EDIT) {
-            const markerPos = new Vector3(GMSceneManager.hoverBlockMarker!.position.x, 0, GMSceneManager.hoverBlockMarker!.position.z)
-            if (this.editingStatic.value) {
+        const staticTypes = this.activeStaticTypes
+        if (staticTypes) {
+            const {x, z} = GMSceneManager.hoverBlockMarker!.position
+            if (extendSelection && this.tab === GmTabs.WALLS_AND_FENCES_EDIT) {
+                const wall = StaticsManager.getStoneWallAt(x, z)
+                if (wall) this.toggleStoneWallSelection(wall)
                 return
             }
-            if (this.selectedWallFence.value === -2) {
-                this.beginStaticEdit(markerPos.x, markerPos.z, WALL_FENCE_STATIC_IDS)
-            } else if (this.selectedWallFence.value > 0) {
-                Connector.sendMessage(new GMStaticObjectChange('ADD_OBJECT', [
-                    this.createWallFenceData(markerPos.x, markerPos.z, this.selectedWallFence.value),
-                ]))
-
-            } else if (this.selectedWallFence.value === -1) {
-                this.requestStaticDelete(markerPos.x, markerPos.z)
+            const [object] = StaticsManager.getObjectsOnTile(x, z, staticTypes)
+            if (object) {
+                this.beginStaticEdit(object)
+            } else if (this.editingStatic.value) {
+                this.clearStaticSelection()
+            } else {
+                const wallsAndFences = this.tab === GmTabs.WALLS_AND_FENCES_EDIT
+                const type = wallsAndFences ? this.selectedWallFence.value : this.selectedStatic.value
+                if (type > 0) {
+                    const data = wallsAndFences ? this.createWallFenceData(x, z, type) : this.createStaticData(x, z, type)
+                    Connector.sendMessage(new GMStaticObjectChange('ADD_OBJECT', [data]))
+                }
             }
-        }
-
-        if (this.tab === GmTabs.STATICS_EDIT) {
-            const markerPos = new Vector3(GMSceneManager.hoverBlockMarker!.position.x, 0, GMSceneManager.hoverBlockMarker!.position.z)
-            if (this.editingStatic.value) {
-                return
-            }
-            if (this.selectedStatic.value === -2) {
-                this.beginStaticEdit(markerPos.x, markerPos.z, GENERAL_STATIC_IDS)
-            } else if (this.selectedStatic.value > 0) {
-                Connector.sendMessage(new GMStaticObjectChange('ADD_OBJECT', [
-                    this.createStaticData(markerPos.x, markerPos.z, this.selectedStatic.value),
-                ]))
-
-            } else if (this.selectedStatic.value === -1) {
-                this.requestStaticDelete(markerPos.x, markerPos.z)
-            }
+            return
         }
 
         if (this.tab === GmTabs.EQUIPMENT_DECORATIONS_EDIT) {
@@ -501,23 +517,33 @@ export const GMManager = {
         }
     },
 
-    requestStaticDelete(x: number, z: number) {
-        if (!StaticsManager.getObjectsOnTile(x, z).some((obj) => obj.type === CAMP_BARREL_STATIC_ID)) {
+    deleteSelectedStatic() {
+        if (this.selectedStoneWallTiles.value.length > 1) return
+        const object = this.editingStatic.value
+        if (object) this.requestStaticDelete(object.position.x, object.position.z, object.type)
+    },
+
+    requestStaticDelete(x: number, z: number, staticType?: number) {
+        const isBarrel = staticType === undefined
+            ? StaticsManager.getObjectsOnTile(x, z).some((obj) => obj.type === CAMP_BARREL_STATIC_ID)
+            : staticType === CAMP_BARREL_STATIC_ID
+        if (!isBarrel) {
+            this.removeStatic(x, z, staticType)
             this.closeDeleteConfirmation()
-            Connector.sendMessage(new GMStaticObjectChange('REMOVE_ON_TILE', [{x, z}]))
             return
         }
         this.deleteConfirmationVisible.value = false
-        this.pendingDelete = {type: 'STATIC', x, z}
-        Connector.sendMessage(new GMStaticDeleteInfoRequest(x, z))
+        this.pendingDelete = {type: 'STATIC', x, z, staticType}
+        Connector.sendMessage(new GMStaticDeleteInfoRequest(x, z, staticType))
     },
 
     consumeStaticDeleteInfo(data: GMStaticDeleteInfoData) {
         if (this.pendingDelete?.type !== 'STATIC'
-            || this.pendingDelete.x !== data.x || this.pendingDelete.z !== data.z) return
+            || this.pendingDelete.x !== data.x || this.pendingDelete.z !== data.z
+            || this.pendingDelete.staticType !== data.staticType) return
         if (data.barrelCount === 0) {
-            Connector.sendMessage(new GMStaticObjectChange('REMOVE_ON_TILE', [{x: data.x, z: data.z}]))
-            this.pendingDelete = null
+            if (data.staticType === undefined) this.removeStatic(data.x, data.z)
+            this.closeDeleteConfirmation()
             return
         }
         const itemLabel = data.itemCount === 1 ? 'item' : data.itemCount >= 2 && data.itemCount <= 4 ? 'itemy' : 'itemů'
@@ -530,13 +556,21 @@ export const GMManager = {
 
     confirmDelete() {
         if (!this.pendingDelete) return
-        const {type, x, z} = this.pendingDelete
+        const {type, x, z, staticType} = this.pendingDelete
         if (type === 'BUILDING') {
             Connector.sendMessage(new GMBuildingChange('REMOVE_ON_TILE', {x, z}))
         } else {
-            Connector.sendMessage(new GMStaticObjectChange('REMOVE_ON_TILE', [{x, z}]))
+            this.removeStatic(x, z, staticType)
         }
         this.closeDeleteConfirmation()
+    },
+
+    removeStatic(x: number, z: number, staticType?: number) {
+        Connector.sendMessage(new GMStaticObjectChange('REMOVE_ON_TILE', [{x, z, type: staticType}]))
+        const selected = this.editingStatic.value
+        if (selected && selected.type === staticType && selected.position.x === x && selected.position.z === z) {
+            this.clearStaticSelection()
+        }
     },
 
     closeDeleteConfirmation() {
@@ -602,14 +636,78 @@ export const GMManager = {
         return data
     },
 
-    beginStaticEdit(x: number, z: number, allowedTypes: Set<number>) {
-        const object = StaticsManager.getObjectsOnTile(x, z).find((candidate) => allowedTypes.has(candidate.type))
-        if (!object) return
+    get activeStaticTypes() {
+        if (this.tab === GmTabs.WALLS_AND_FENCES_EDIT) return WALL_FENCE_STATIC_IDS
+        if (this.tab === GmTabs.STATICS_EDIT) return GENERAL_STATIC_IDS
+        return null
+    },
+
+    applyStoneWallBounds(bounds: StoneWallBounds, mode: 'randomize' | 'keepRatio') {
+        const walls = selectedStoneWalls.value
+        const current = selectedStoneWallAttributes.value
+        if (this.tab !== GmTabs.WALLS_AND_FENCES_EDIT || !current || !validStoneWallBounds(bounds)) return
+
+        const data = walls.map(wall => {
+            const {x, z} = wall.position
+            const meta: Record<string, number | string> = {}
+            for (const attribute of stoneWallAttributes) {
+                const values = stoneWallAttributeValues[attribute]
+                const min = values.indexOf(bounds.ranges[attribute].min)
+                const max = values.indexOf(bounds.ranges[attribute].max)
+                const original = current.ranges[attribute]
+                const originalIndex = values.indexOf(wall[attribute])
+                let index: number
+                if (mode === 'randomize') {
+                    index = min + Math.floor(Math.random() * (max - min + 1))
+                } else if (original.min === original.max) {
+                    index = Math.max(min, Math.min(max, originalIndex))
+                } else {
+                    const originalMin = values.indexOf(original.min)
+                    const originalMax = values.indexOf(original.max)
+                    index = min + Math.round((originalIndex - originalMin) * (max - min) / (originalMax - originalMin))
+                }
+                meta[attribute] = values[index]
+            }
+            if (bounds.orientation !== '–') meta.orientation = bounds.orientation
+            return {x, z, type: STONE_WALL_STATIC_ID, meta}
+        })
+        Connector.sendMessage(new GMStaticObjectChange('UPDATE_OBJECT', data))
+    },
+
+    toggleStoneWallSelection(wall: StaticObject) {
+        const {x, z} = wall.position
+        const tiles = this.selectedStoneWallTiles.value
+        if (tiles.length === 0) {
+            this.beginStaticEdit(wall)
+            return
+        }
+        const remaining = tiles.filter(tile => tile.x !== x || tile.z !== z)
+        if (remaining.length === tiles.length) {
+            this.selectedStoneWallTiles.value = [...tiles, {x, z}]
+        } else if (remaining.length > 1) {
+            this.selectedStoneWallTiles.value = remaining
+        } else {
+            this.clearStaticSelection()
+            const tile = remaining[0]
+            const selected = tile && StaticsManager.getStoneWallAt(tile.x, tile.z)
+            if (selected) this.beginStaticEdit(selected)
+        }
+    },
+
+    beginStaticEdit(object: StaticObject) {
+        const selected = this.editingStatic.value
+        if (this.selectedStoneWallTiles.value.length <= 1 && selected && selected.type === object.type
+            && selected.position.x === object.position.x && selected.position.z === object.position.z) return
+        this.clearStaticSelection()
 
         this.editingStatic.value = object
         if (this.tab === GmTabs.WALLS_AND_FENCES_EDIT) this.selectedWallFence.value = object.type
         else this.selectedStatic.value = object.type
 
+        if (object.type === STONE_WALL_STATIC_ID) {
+            const {x, z} = object.position
+            this.selectedStoneWallTiles.value = [{x, z}]
+        }
         const status = object.status ?? {}
         if (object.type === 404) {
             this.signCount.value = status.signCount ?? 4
@@ -657,25 +755,19 @@ export const GMManager = {
         }
     },
 
-    saveStaticEdit() {
+    clearStaticSelection() {
         const object = this.editingStatic.value
         if (!object) return
-        const data = this.tab === GmTabs.WALLS_AND_FENCES_EDIT
-            ? this.createWallFenceData(object.position.x, object.position.z, object.type)
-            : this.createStaticData(object.position.x, object.position.z, object.type)
-        Connector.sendMessage(new GMStaticObjectChange('UPDATE_OBJECT', [data]))
-        this.cancelStaticEdit()
-    },
-
-    cancelStaticEdit() {
-        if (this.editingStatic.value?.type === CAMP_FENCE_STATIC_ID) this.campFenceDamaged.value = false
-        if (this.editingStatic.value?.type === STONE_WALL_STATIC_ID) {
+        this.editingStatic.value = null
+        if (this.selectedStoneWallTiles.value.length) this.selectedStoneWallTiles.value = []
+        this.closeDeleteConfirmation()
+        if (object.type === CAMP_FENCE_STATIC_ID) this.campFenceDamaged.value = false
+        if (object.type === STONE_WALL_STATIC_ID) {
             this.stoneWallPrecision.value = DEFAULT_STONE_WALL_PRECISION
             this.stoneWallDamage.value = 1
             this.stoneWallHeight.value = 1
             this.stoneWallWidth.value = DEFAULT_STONE_WALL_WIDTH
         }
-        this.editingStatic.value = null
         if (this.tab === GmTabs.WALLS_AND_FENCES_EDIT) this.selectedWallFence.value = 0
         if (this.tab === GmTabs.STATICS_EDIT) this.selectedStatic.value = 0
     },
@@ -746,27 +838,17 @@ export const GMManager = {
         if (this.tab === GmTabs.SPAWNS_EDIT) {
             GMSpawns.onFrame(timeRate, actualTime)
         }
-        const deletingStatics = this.gmPanelVisible.value && (
-            (this.tab === GmTabs.STATICS_EDIT && this.selectedStatic.value === -1)
-            || (this.tab === GmTabs.WALLS_AND_FENCES_EDIT && this.selectedWallFence.value === -1)
-            || (this.tab === GmTabs.BIOME_EDIT && this.selectedTree.value === -1 && this.selectedShrub.value === -1)
-        )
-        const previewingStatics = deletingStatics || (this.gmPanelVisible.value && (
-            (this.tab === GmTabs.STATICS_EDIT && this.selectedStatic.value === -2 && !this.editingStatic.value)
-            || (this.tab === GmTabs.WALLS_AND_FENCES_EDIT && this.selectedWallFence.value === -2 && !this.editingStatic.value)
-        ))
+        const deletingStatics = this.gmPanelVisible.value && this.tab === GmTabs.BIOME_EDIT
+            && this.selectedTree.value === -1 && this.selectedShrub.value === -1
         const marker = GMSceneManager.hoverBlockMarker
-        const previewTypes = this.tab === GmTabs.STATICS_EDIT && this.selectedStatic.value === -2
-            ? GENERAL_STATIC_IDS
-            : this.tab === GmTabs.WALLS_AND_FENCES_EDIT && this.selectedWallFence.value === -2
-                ? WALL_FENCE_STATIC_IDS
-                : undefined
-        StaticsManager.updateDeletePreview(
-            previewingStatics && marker?.isEnabled() === true,
+        const staticTypes = this.activeStaticTypes
+        StaticsManager.updateSelectionPreview(
+            marker?.isEnabled() === true && (deletingStatics
+                || (this.gmPanelVisible.value && staticTypes !== null && this.staticHoverActive)),
             Math.round(marker?.position.x ?? 0),
             Math.round(marker?.position.z ?? 0),
             actualTime,
-            previewTypes,
+            staticTypes ?? undefined,
         )
         TreeManager.updateDeletePreview(
             deletingStatics && marker?.isEnabled() === true,
@@ -798,7 +880,7 @@ export const GMManager = {
     },
 
     updateStaticMarkerFootprint() {
-        const objectInfo = StaticObjectsCodebook.get(this.selectedStatic.value)
+        const objectInfo = this.editingStatic.value ? undefined : StaticObjectsCodebook.get(this.selectedStatic.value)
         if (!objectInfo) {
             GMSceneManager.setHoverBlockMarkerFootprint([{x: 0, z: 0}])
             return
@@ -964,9 +1046,8 @@ export const GMManager = {
         this.consumePointerMoveEvents = true
         this.consumeLeftClickEvents = true
         this.selectedWallFence.value = 0
-        this.editingStatic.value = null
         GMSceneManager.setHoverBlockMarkerSize(1)
-        GMSceneManager.hoverBlockMarker?.setEnabled(true)
+        GMSceneManager.hoverBlockMarker?.setEnabled(false)
     },
 
     openTabSpawnsEdit() {
@@ -986,9 +1067,8 @@ export const GMManager = {
         this.consumePointerMoveEvents = true
         this.consumeLeftClickEvents = true
         this.selectedStatic.value = 0
-        this.editingStatic.value = null
         GMSceneManager.setHoverBlockMarkerSize(1)
-        GMSceneManager.hoverBlockMarker?.setEnabled(true)
+        GMSceneManager.hoverBlockMarker?.setEnabled(false)
     },
 
     openTabEquipmentDecorationsEdit() {
@@ -1134,17 +1214,19 @@ export const GMManager = {
     },
 
     closeTabWallsAndFencesEdit() {
+        this.staticHoverActive = false
         this.consumePointerMoveEvents = false
         this.consumeLeftClickEvents = false
         GMSceneManager.hoverBlockMarker?.setEnabled(false)
-        this.editingStatic.value = null
+        this.clearStaticSelection()
     },
 
     closeTabStaticsEdit() {
+        this.staticHoverActive = false
         this.consumePointerMoveEvents = false
         this.consumeLeftClickEvents = false
         GMSceneManager.hoverBlockMarker?.setEnabled(false)
-        this.editingStatic.value = null
+        this.clearStaticSelection()
     },
 
     closeTabEquipmentDecorationsEdit() {
@@ -1430,7 +1512,64 @@ watch(GMManager.gmPanelVisible, visible => {
     }
 })
 
+watch(() => {
+    const object = GMManager.editingStatic.value
+    if (!object || GMManager.selectedStoneWallTiles.value.length > 1) return null
+    const {x, z} = object.position
+    const data = GMManager.tab === GmTabs.WALLS_AND_FENCES_EDIT
+        ? GMManager.createWallFenceData(x, z, object.type)
+        : GMManager.createStaticData(x, z, object.type)
+    return {object, data}
+}, (current, previous) => {
+    if (!current || current.object !== previous?.object || !current.data.meta) return
+    const {meta, ...target} = current.data
+    const {destinationWorldId, destinationX, destinationZ, ...attributes} = meta
+    const previousMeta = previous.data.meta
+    const changes = Object.fromEntries(Object.entries(attributes).filter(([key, value]) =>
+        value !== previousMeta?.[key]
+        && (key !== 'mountHeight' || (typeof value === 'number' && value >= -10 && value <= 10)),
+    ))
+    // A destination is validated as a whole, including when its world changes.
+    if (target.type === STONE_ENTRANCE_STATIC_ID
+        && Number.isInteger(destinationWorldId) && Number.isFinite(destinationX) && Number.isFinite(destinationZ)
+        && (destinationWorldId !== previousMeta?.destinationWorldId
+            || destinationX !== previousMeta?.destinationX || destinationZ !== previousMeta?.destinationZ)) {
+        Object.assign(changes, {destinationWorldId, destinationX, destinationZ})
+    }
+    if (Object.keys(changes).length) {
+        Connector.sendMessage(new GMStaticObjectChange('UPDATE_OBJECT', [{...target, meta: changes}]))
+    }
+})
+
+watch(GMManager.selectedStoneWallTiles, tiles => GMSceneManager.showSelectedStaticTiles(tiles))
+
+const selectedStoneWalls = computed(() => {
+    const tiles = GMManager.selectedStoneWallTiles.value
+    if (tiles.length < 2) return []
+    // Network updates can replace a wall instance at the same tile.
+    StaticsManager.objectsRevision.value
+    return tiles.flatMap(({x, z}) => {
+        const wall = StaticsManager.getStoneWallAt(x, z)
+        return wall ? [wall] : []
+    })
+})
+
+export const selectedStoneWallAttributes = computed<StoneWallBounds | null>(() => {
+    const walls = selectedStoneWalls.value
+    if (walls.length < 2) return null
+    const orientation = walls[0].getOrientation()
+    const range = (attribute: StoneWallAttribute) => {
+        const values = walls.map(wall => wall[attribute])
+        return {min: Math.min(...values), max: Math.max(...values)}
+    }
+    return {
+        orientation: walls.every(wall => wall.getOrientation() === orientation) ? orientation : '–',
+        ranges: {precision: range('precision'), damage: range('damage'), height: range('height'), width: range('width')},
+    }
+})
+
 watch([
+    GMManager.editingStatic,
     GMManager.selectedStatic,
     GMManager.campObjectFacing,
     GMManager.logPileLength,

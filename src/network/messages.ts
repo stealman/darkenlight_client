@@ -385,10 +385,10 @@ export class GMBuildingChange implements Message {
 
 export class GMStaticDeleteInfoRequest implements Message {
     t: number = 1021
-    d: {x: number, z: number}
+    d: {x: number, z: number, staticType?: number}
 
-    constructor(x: number, z: number) {
-        this.d = {x, z}
+    constructor(x: number, z: number, staticType?: number) {
+        this.d = staticType === undefined ? {x, z} : {x, z, staticType}
     }
 }
 

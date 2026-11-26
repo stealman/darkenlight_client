@@ -97,8 +97,13 @@ export const MessageProcessor = {
 
     async processResponse(response) {
         let starting = false
+        let staticChangesPending = false
         for (const element of response) {
             const msg = element
+            if (staticChangesPending && msg.t !== 15 && msg.t !== 16) {
+                WorldRenderer.renderWorld()
+                staticChangesPending = false
+            }
             switch (msg.t) {
                 case 104: this.processMagicArrow(msg.d); break
                 case 105: this.processHealingSpell(msg.d); break
@@ -152,8 +157,14 @@ export const MessageProcessor = {
                 case 12: this.charMoveDesynced(msg.d); break
                 case 13: this.processAddTree(msg.d); break
                 case 14: this.processRemoveTree(msg.d); break
-                case 15: this.processAddStaticObject(msg.d); break
-                case 16: this.processRemoveStaticObject(msg.d); break
+                case 15:
+                    this.processAddStaticObject(msg.d)
+                    staticChangesPending = true
+                    break
+                case 16:
+                    this.processRemoveStaticObject(msg.d)
+                    staticChangesPending = true
+                    break
                 case 17: this.processCharacterAttack(msg.d); break
                 case 18: this.processMonsterAttack(msg.d); break
                 case 19: this.processCharacterAttackFinished(msg.d); break
@@ -234,6 +245,7 @@ export const MessageProcessor = {
                     break
             }
         }
+        if (staticChangesPending) WorldRenderer.renderWorld()
         if (starting) {
             await GameManager.startGame()
             window.dispatchEvent(new Event('game:started'))
@@ -523,17 +535,15 @@ export const MessageProcessor = {
     },
 
     processAddStaticObject(data) {
-        StaticsManager.addObject(data)
-        WorldRenderer.renderWorld()
+        StaticsManager.addObject(data, false)
     },
 
     processRemoveStaticObject(data) {
         if (Array.isArray(data.objects)) {
-            StaticsManager.removeObjects(data.objects)
+            StaticsManager.removeObjects(data.objects, false)
         } else {
-            StaticsManager.removeObjectAt(data.x, data.z)
+            StaticsManager.removeObjectAt(data.x, data.z, undefined, false)
         }
-        WorldRenderer.renderWorld()
     },
 
     monsterMoveStop(data) {
@@ -773,6 +783,8 @@ export const MessageProcessor = {
         MonsterManager.clearWorld()
         NpcManager.clearWorld()
         TreeManager.clearWorld()
+        GMManager.clearStaticSelection()
+        GMManager.closeDeleteConfirmation()
         StaticsManager.clearWorld()
         BuildingManager.clearWorld()
         EquipmentDecorationsManager.clearWorld()

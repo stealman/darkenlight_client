@@ -565,6 +565,7 @@ export interface GMWorldBiomeTreesChangedData {
 }
 
 export interface GMStaticDeleteInfoData {
+    staticType?: number
     x: number
     z: number
     barrelCount: number

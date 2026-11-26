@@ -1,4 +1,4 @@
-import { Color3, Mesh, Ray, Scene, StandardMaterial } from '@babylonjs/core'
+import { Color3, Matrix, Mesh, Ray, Scene, StandardMaterial } from '@babylonjs/core'
 import { Builder } from '@/babylon/builder'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { Spawn } from '@/gm/GmSpawns'
@@ -12,6 +12,7 @@ export const GMSceneManager = {
     initialized: false,
     hoverBlockMarker: null as Mesh | null,
     hoverBlockMarkerTiles: [] as Array<{mesh: Mesh, offsetX: number, offsetZ: number}>,
+    selectedStaticMarker: null as Mesh | null,
     spawnMarker: null as Mesh | null,
 
     initialize (scene: Scene) {
@@ -21,6 +22,7 @@ export const GMSceneManager = {
 
         // Hover Block Marker
         this.hoverBlockMarker = Builder.createHorizontalPlane(scene, null,1, 0)
+        this.hoverBlockMarker.isPickable = false
         this.hoverBlockMarker.setEnabled(false)
 
         const material = new StandardMaterial("hoverBlockMat", scene)
@@ -31,6 +33,10 @@ export const GMSceneManager = {
             const enabled = this.hoverBlockMarker!.isEnabled()
             this.hoverBlockMarkerTiles.forEach((tile) => tile.mesh.setEnabled(enabled))
         })
+        this.selectedStaticMarker = Builder.createHorizontalPlane(scene, null, 1, 0)
+        this.selectedStaticMarker.material = material
+        this.selectedStaticMarker.isPickable = false
+        this.selectedStaticMarker.setEnabled(false)
 
         // Spawn Marker
         this.spawnMarker = Builder.createSpawnMarker(scene)
@@ -64,6 +70,7 @@ export const GMSceneManager = {
             tile.mesh.setEnabled(this.hoverBlockMarker.isEnabled() && tileHeight !== null)
             if (tileHeight !== null) tile.mesh.position.set(tileX, tileHeight, tileZ)
         }
+        return true
     },
 
     updateHoverBlockMarkerFromRay(ray: Ray) {
@@ -90,7 +97,7 @@ export const GMSceneManager = {
             height = markerHeight
         }
 
-        this.updateHoverBlockMarker(point!.x, point!.z)
+        return this.updateHoverBlockMarker(point!.x, point!.z)
     },
 
     getHoverBlockMarkerHeight(x: number, z: number): number | null {
@@ -138,6 +145,23 @@ export const GMSceneManager = {
     clearHoverBlockMarkerTiles() {
         this.hoverBlockMarkerTiles.forEach((tile) => tile.mesh.dispose())
         this.hoverBlockMarkerTiles = []
+    },
+
+    showSelectedStaticTiles(tiles: ReadonlyArray<{x: number, z: number}>) {
+        const marker = this.selectedStaticMarker
+        if (!marker) return
+        const matrices = new Float32Array(tiles.length * 16)
+        const matrix = Matrix.Identity()
+        let count = 0
+        for (const {x, z} of tiles) {
+            const height = this.getHoverBlockMarkerHeight(x, z)
+            if (height === null) continue
+            Matrix.TranslationToRef(x, height + 0.01, z, matrix)
+            matrix.copyToArray(matrices, count * 16)
+            count++
+        }
+        marker.thinInstanceSetBuffer('matrix', count ? matrices.subarray(0, count * 16) : null, 16)
+        marker.setEnabled(count > 0)
     },
 
     setHoverBlockMarkerEnabled(enabled: boolean) {

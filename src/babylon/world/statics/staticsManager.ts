@@ -2,6 +2,7 @@ import { createStaticVariation } from './staticVariation'
 import { WoodenSignpost, SignpostMetadata } from './objects/woodenSignpost'
 import { StandingBanner, BannerMetadata, SpecimenPrefabs } from './objects/specimens'
 import { Matrix, Scene, Vector3 } from '@babylonjs/core'
+import { ref } from 'vue'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { MaterialAlphaEnum1, MaterialEnum1, MaterialEnumTrans } from '@/babylon/materials'
 import { MapBlock, WorldDataManager } from '@/data/worldDataManager'
@@ -84,7 +85,8 @@ export const StaticsManager = {
     activeBarrel: null as CampBarrel | null,
     animatingBarrels: new Set<CampBarrel>(),
     deletePreviewObjects: new Set<StaticObject>(),
-    deletePreviewKey: '',
+    objectsRevision: ref(0),
+    previewTile: null as {x: number, z: number, revision: number, types?: Set<number>} | null,
     deletePreviewStartTime: 0,
 
     initialize(scene: Scene) {
@@ -253,6 +255,7 @@ export const StaticsManager = {
         }
 
         if (this.allStatics.length > previousCount) {
+            this.objectsRevision.value++
             const added = this.allStatics[this.allStatics.length - 1]
             const tile = `${added.position.x};${added.position.z}`
             let stack = this.staticsByTile.get(tile)
@@ -389,6 +392,7 @@ export const StaticsManager = {
                 }
                 obj.dispose()
                 this.allStatics.splice(i, 1)
+                this.objectsRevision.value++
                 const tile = `${obj.position.x};${obj.position.z}`
                 const stack = this.staticsByTile.get(tile)
                 if (stack) {
@@ -433,7 +437,8 @@ export const StaticsManager = {
         this.activeBarrel = null
         this.animatingBarrels.clear()
         this.deletePreviewObjects.clear()
-        this.deletePreviewKey = ''
+        this.previewTile = null
+        this.objectsRevision.value++
         this.renderObjects()
     },
 
@@ -464,18 +469,21 @@ export const StaticsManager = {
         if (bufferChanged) WorldRenderer.block1!.mesh.thinInstanceBufferUpdated('matrix')
     },
 
-    updateDeletePreview(active: boolean, x: number, z: number, time: number, allowedTypes?: Set<number>) {
-        const targets = active
-            ? this.getObjectsOnTile(x, z).filter((obj) => !allowedTypes || allowedTypes.has(obj.type))
-            : []
-        const targetKey = targets.map((obj) => `${obj.type}:${obj.position.x}:${obj.position.z}`).sort().join('|')
-        if (targetKey !== this.deletePreviewKey) {
-            const changedMeshes = new Set(Array.from(this.deletePreviewObjects)
-                .flatMap((obj) => obj.applyDeleteBounceOffset(0)))
-            changedMeshes.forEach((mesh) => mesh.thinInstanceBufferUpdated('matrix'))
-            this.deletePreviewObjects = new Set(targets)
-            this.deletePreviewKey = targetKey
-            this.deletePreviewStartTime = time
+    updateSelectionPreview(active: boolean, x: number, z: number, time: number, types?: Set<number>) {
+        const previous = this.previewTile
+        const revision = this.objectsRevision.value
+        if (active ? !previous || previous.x !== x || previous.z !== z || previous.revision !== revision
+            || previous.types !== types : previous !== null) {
+            const targets = active ? this.getObjectsOnTile(x, z, types) : []
+            if (types && targets.length > 1) targets.length = 1
+            this.previewTile = active ? {x, z, revision, types} : null
+            if (targets.length !== this.deletePreviewObjects.size || targets.some(obj => !this.deletePreviewObjects.has(obj))) {
+                const changedMeshes = new Set(Array.from(this.deletePreviewObjects)
+                    .flatMap((obj) => obj.applyDeleteBounceOffset(0)))
+                changedMeshes.forEach((mesh) => mesh.thinInstanceBufferUpdated('matrix'))
+                this.deletePreviewObjects = new Set(targets)
+                this.deletePreviewStartTime = time
+            }
         }
         if (this.deletePreviewObjects.size === 0) return
 
@@ -490,10 +498,17 @@ export const StaticsManager = {
         return this.benchesByTile.get(`${Math.round(x)};${Math.round(z)}`)?.[0] ?? null
     },
 
-    getObjectsOnTile(x: number, z: number): StaticObject[] {
-        let targets = this.allStatics.filter((obj) => x >= obj.position.x && x < obj.position.x + obj.getSizeX()
+    getStoneWallAt(x: number, z: number): StoneWall | undefined {
+        for (const object of this.staticsByTile.get(`${x};${z}`) ?? []) {
+            if (object instanceof StoneWall) return object
+        }
+    },
+
+    getObjectsOnTile(x: number, z: number, allowedTypes?: Set<number>): StaticObject[] {
+        let targets = this.allStatics.filter((obj) => (!allowedTypes || allowedTypes.has(obj.type))
+            && x >= obj.position.x && x < obj.position.x + obj.getSizeX()
             && z >= obj.position.z && z < obj.position.z + obj.getSizeZ())
-        if (targets.length === 0) {
+        if (targets.length === 0 && (!allowedTypes || allowedTypes.has(261))) {
             targets = this.allStatics.filter((obj) => obj.type === 261 && (
                 (obj.status?.facing === '-X' && obj.position.x - 1 === x && obj.position.z === z)
                 || (obj.status?.facing === '+X' && obj.position.x + 1 === x && obj.position.z === z)

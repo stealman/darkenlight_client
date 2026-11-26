@@ -37,6 +37,14 @@ export const Controller = {
     initializeController(scene: Scene) {
         this.hoverPointer = null
         this.nextHoverCheckTime = 0
+        const canvas = scene.getEngine().getRenderingCanvas()
+        const clearStaticHover = () => {
+            if (!GMManager.staticHoverActive) return
+            GMManager.staticHoverActive = false
+            GMSceneManager.hoverBlockMarker?.setEnabled(false)
+        }
+        canvas?.addEventListener('pointerleave', clearStaticHover)
+        scene.onDisposeObservable.addOnce(() => canvas?.removeEventListener('pointerleave', clearStaticHover))
         scene.onPointerObservable.add((pointerInfo) => {
             if (WorldAreaPreview.handlePointer(pointerInfo, scene)) return
             if ((pointerInfo.event as PointerEvent).pointerType === 'mouse' &&
@@ -68,8 +76,9 @@ export const Controller = {
                 if (pointerInfo.event.buttons === 1) {
                     if (pointerInfo.type === PointerEventTypes.POINTERDOWN) {
                         if (GMManager.consumeLeftClickEvents) {
-                            if (!GMManager.grassTool.value || this.resolvePointerMove(pointerInfo, scene, true)) {
-                                GMManager.onLeftClickEvent()
+                            if ((!GMManager.grassTool.value && !GMManager.activeStaticTypes)
+                                || this.resolvePointerMove(pointerInfo, scene, true)) {
+                                GMManager.onLeftClickEvent(pointerInfo.event.shiftKey)
                             }
                         } else {
                             this.resolveLeftPressed(pointerInfo, scene)
@@ -311,11 +320,12 @@ export const Controller = {
 
     resolvePointerMove(pointerInfo: PointerInfo, scene: Scene, pickClick = false) {
         const { clientX, clientY } = pointerInfo.event
+        const staticEditor = GMManager.activeStaticTypes !== null
 
         // if distance from last pointer move is less than 10px, ignore
         const dx = clientX - this.lastPointerMove.x
         const dy = clientY - this.lastPointerMove.y
-        if (!pickClick && Math.sqrt(dx * dx + dy * dy) < 10) {
+        if (!pickClick && !staticEditor && Math.sqrt(dx * dx + dy * dy) < 10) {
             return
         }
 
@@ -323,14 +333,18 @@ export const Controller = {
             ? mesh => mesh.isEnabled() && mesh.isPickable && mesh.isVisible
                 && TerrainManager.outdoorTerrain?.isSurfaceMesh(mesh) === true
             : undefined)
-        if (pickResult && pickResult.hit && pickResult.pickedPoint) {
-            GMSceneManager.updateHoverBlockMarker(pickResult.pickedPoint.x, pickResult.pickedPoint.z)
-        } else if (!pickClick && pickResult?.ray) {
-            GMSceneManager.updateHoverBlockMarkerFromRay(pickResult.ray)
-        }
-
         this.lastPointerMove = { x: clientX, y: clientY }
-        return !!pickResult?.pickedPoint
+        let foundTile = false
+        if (pickResult?.hit && pickResult.pickedPoint) {
+            foundTile = GMSceneManager.updateHoverBlockMarker(pickResult.pickedPoint.x, pickResult.pickedPoint.z) === true
+        } else if (pickResult?.ray && (!pickClick || staticEditor)) {
+            foundTile = GMSceneManager.updateHoverBlockMarkerFromRay(pickResult.ray) === true
+        }
+        if (staticEditor && GMManager.staticHoverActive !== foundTile) {
+            GMManager.staticHoverActive = foundTile
+            GMSceneManager.hoverBlockMarker?.setEnabled(foundTile)
+        }
+        return foundTile
     },
 
     processJoystick(dx: number, dy: number) {
