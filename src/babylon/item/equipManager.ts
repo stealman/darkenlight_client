@@ -481,9 +481,14 @@ export class EquipItemType {
         if (!type.mesh) return
         if (type._thinReady) return
 
+        if (type.instanceBuffer.length === 0) {
+            type.instanceBuffer = new Float32Array(8 * 16)
+            type.uvBuffer = new Float32Array(8 * 2)
+        }
         type.mesh.thinInstanceSetBuffer("matrix", type.instanceBuffer, 16, false) // dynamic
         type.mesh.thinInstanceRegisterAttribute("uvc", 2)
         type.mesh.thinInstanceSetBuffer("uvc", type.uvBuffer, 2, false) // dynamic
+        type.mesh.thinInstanceCount = type.count
 
         type._thinReady = true
     }
@@ -562,6 +567,17 @@ export const EquipManager = {
 
     getItemType(modelId: number): EquipItemType | undefined {
         return this.itemTypes.get(modelId)
+    },
+
+    async preloadWeapons() {
+        // Nearby models may already be loading. Finish the remaining work
+        // behind the overlay so walking into a settlement doesn't start it.
+        const types = this.itemTypes.values()
+        await Promise.all(Array.from({length: 4}, async () => {
+            for (const type of types) {
+                if (type.loadMesh) await this.requestModel(type.id)
+            }
+        }))
     },
 
     requestModel(modelId: number): Promise<void> | undefined {
@@ -671,9 +687,9 @@ export const EquipManager = {
         })
     },
 
-    async warmUpShaders() {
+    async warmUpShaders(appearanceTypes: readonly EquipItemType[] = []) {
         const batches = new Map<Material, EquipItemType[]>()
-        for (const type of this.itemTypes.values()) {
+        for (const type of [...this.itemTypes.values(), ...appearanceTypes]) {
             const mesh = type.mesh
             if (mesh?.material == null || mesh.isDisposed()) continue
             let batch = batches.get(mesh.material)
@@ -689,11 +705,17 @@ export const EquipManager = {
             for (const batch of pending) {
                 for (const type of batch) {
                     const mesh = type.mesh!
+                    const count = mesh.thinInstanceCount
                     try {
                         type.ensureThinBuffers(type)
+                        // Babylon selects THIN_INSTANCES from the actual count,
+                        // independently of the forceCompilation useInstances flag.
+                        if (count === 0) mesh.thinInstanceCount = 1
                         await mesh.material!.forceCompilationAsync(mesh, {useInstances: true})
                     } catch (error) {
                         console.warn(`Equipment shader warm-up failed for model ${type.id}`, error)
+                    } finally {
+                        mesh.thinInstanceCount = count
                     }
                 }
             }

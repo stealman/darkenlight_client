@@ -4,7 +4,8 @@ import type { StepCoverage } from '@/babylon/world/terrainStepField'
 import type { MapBlock } from '@/data/worldDataManager'
 import { visitBakedTerrainTransitions } from '@/babylon/world/terrainRenderData'
 import type { TerrainRenderData } from '@/babylon/world/terrainRenderData'
-import { findTerrainTransitions, hasTerrainTransition, terrainSurface } from '@/babylon/world/terrainTransitionField'
+import { findTerrainTransitions, hasTerrainTransition, NO_SNOWMELT_FIELD, sharedTerrainSurface, terrainSurface } from '@/babylon/world/terrainTransitionField'
+import type { TerrainBoundaryField } from '@/babylon/world/terrainTransitionField'
 import { Builder } from '@/babylon/builder'
 import { TerrainEnum1 } from '@/babylon/materials'
 import { Lights } from '@/babylon/scene/lights'
@@ -18,7 +19,8 @@ import type { SubmitTerrainBatch } from './terrainPreviewBatch'
 import { PAVING_SNOW_ATTRIBUTE, PAVING_SNOW_FLAG_SHIFT } from './terrainPreviewBatch'
 import { createTerrainPreviewGeometry } from './terrainPreviewGeometry'
 import { createTerrainPreviewWater } from './terrainPreviewWater'
-import { createTerrainTransitionMaterial, POND_BANK_FLAG, TERRAIN_TRANSITION_REACH } from './terrainTransitionMaterial'
+import { createTerrainJunctionMaterial, createTerrainTransitionMaterial, POND_BANK_FLAG, TERRAIN_TRANSITION_REACH } from './terrainTransitionMaterial'
+import type { TerrainJunctionLayer } from './terrainTransitionMaterial'
 import { terrainTextureUrls } from '@/babylon/world/terrainTextureUrls'
 
 const MUDDY_DIRT = TerrainEnum1.TERRAIN_MUDDY_DIRT.index
@@ -145,8 +147,9 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
             wetTransitions.add(mesh)
         }
         const snowCover = cover === snowAtlas.material
+        if (wetness) configureSnowmelt(material, snowCover ? (withGrass ? 'snowOnGrass' : 'snow')
+            : grassMaterials.has(cover) ? 'grass' : 'ground')
         if (snowCover) {
-            if (wetness) configureSnowmelt(material, withGrass)
             configureSnowGlints(material, withGrass ? 'grass' : 'standard', renderPavingSnow, snowGlints)
             if (renderPavingSnow) snowTransitions.add(mesh)
         }
@@ -190,7 +193,7 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
         ...Array.from(grassTransitions.values()).flatMap(transitions => Object.values(transitions))]
     const meshes = [dirtAtlas.mesh, dryDirtAtlas.mesh, snowAtlas.mesh, rockAtlas.mesh,
         ...grassAtlases.map(({atlas}) => atlas.mesh), ...transitionMeshes]
-    for (const mesh of meshes) {
+    const initializeMesh = (mesh: Mesh) => {
         Lights.addShadowCaster(mesh, false)
         if (!demo) {
             mesh.name = mesh.name.replace('adminUtils', 'world')
@@ -199,6 +202,51 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
             Lights.registerSharedLightMesh(mesh)
         }
     }
+    meshes.forEach(initializeMesh)
+    const junctionLayers = new Map<number, TerrainJunctionLayer>()
+    const addJunctionLayer = (type: number, kind: TerrainJunctionLayer['kind'], material: PBRCustomMaterial) => {
+        const patterns = kind === 'soil' || kind === 'mud' ? muddyDirtPatterns : terrainCoverPatterns
+        junctionLayers.set(type, {type, kind, material, origin: patterns[0].origins[0]})
+    }
+    addJunctionLayer(DIRT, 'soil', dryDirtAtlas.material)
+    addJunctionLayer(MUDDY_DIRT, 'mud', dirtAtlas.material)
+    addJunctionLayer(ROCK, 'rock', rockAtlas.material)
+    addJunctionLayer(SNOW_DIRT, 'snow', snowAtlas.material)
+    for (const {type, atlas} of grassAtlases) addJunctionLayer(type, 'grass', atlas.material)
+    const junctions = new Map<string, {mesh: Mesh, surfaces: number[]}>()
+    const junctionFor = (first: TerrainBoundaryField, second: TerrainBoundaryField) => {
+        const base = sharedTerrainSurface(first, second)
+        const other = (pair: TerrainBoundaryField) => pair.coverType === base ? pair.substrateType : pair.coverType
+        const surfaces = [base, other(first), other(second)]
+        const key = surfaces.join('-')
+        let junction = junctions.get(key)
+        if (junction) return junction
+        const layers = surfaces.map(type => junctionLayers.get(type)!)
+        const mesh = createTerrainPreviewPlane(plane, `adminUtilsTerrainJunction-${key}`)
+        const material = createTerrainJunctionMaterial(mesh.name, layers, [first, second], lowDetailTransitions)
+        configureTerrainPreviewBatch(mesh, material, false)
+        configureTerrainEdgeLighting(material, 'vec2(junctionSoil)')
+        if (wetness) {
+            if (surfaces.includes(MUDDY_DIRT)) {
+                configureMuddyDirtWetness(material, 'solid', 'junctionMud')
+                wetTransitions.add(mesh)
+            }
+            configureSnowmelt(material, 'junction')
+        }
+        const withSnow = surfaces.includes(SNOW_DIRT)
+        if (withSnow) {
+            configureSnowGlints(material, 'junction', renderPavingSnow, snowGlints)
+            if (renderPavingSnow) snowTransitions.add(mesh)
+        }
+        stepMaterials.set(material, {snow: withSnow ? 'snowGlintCoverage' : undefined, soil: 'junctionSoil'})
+        if (!demo) configureTerrainNoiseTexture(material, terrainSamplers)
+        initializeMesh(mesh)
+        transitionMeshes.push(mesh)
+        meshes.push(mesh)
+        junctions.set(key, junction = {mesh, surfaces})
+        return junction
+    }
+    const pairKey = (pair: TerrainBoundaryField) => pair.coverType * 128 + pair.substrateType
     const render = (map: MapBlock[][], options: TerrainRenderOptions) => {
         const {transitionTiles, snow = false, snowPartner = 0, snowOnRock = false, rockPartner = 0, dirtPartner = 0,
             shoreSurface = 0, grassType = WINTER_GRASS, snowRockOnSoil = false, localBoundaries = true,
@@ -222,13 +270,14 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
             const hasWater = map.some(row => row.some(tile => tile.type === WATER_BLOCK_TYPE))
             // Let the neighboring ground material carry across the rim onto the dirt bed.
             const read = !hasWater && compiled && compiledRegion && visitBakedTerrainTransitions(compiled, compiledRegion.x, compiledRegion.z,
-                (worldX, worldZ, coverType, substrateType, field, snowmeltOnly) => {
+                (worldX, worldZ, coverType, substrateType, field, snowmeltOnly, snowmeltField, secondary) => {
                     if (snowmeltOnly && !wetness) return
                     const x = worldX - originX, z = worldZ - originZ
                     const material = materialFor(coverType, substrateType)
                     if (!material || !map[x]?.[z]) return
                     localTransitions ??= map.map(() => [])
-                    localTransitions[x][z] = {cover: terrainSurface(map[x][z]) === coverType, coverType, substrateType, material, field, snowmeltOnly}
+                    localTransitions[x][z] = {cover: terrainSurface(map[x][z]) === coverType, coverType, substrateType, material,
+                        field, snowmeltOnly, snowmeltField, secondary}
                 })
             if (!read) localTransitions = findTerrainTransitions(map, materialFor, wetness,
                 tile => tile.type === WATER_BLOCK_TYPE ? MUDDY_DIRT : terrainSurface(tile))
@@ -377,7 +426,13 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
                     : type === pondCover && map[x][z].type !== WATER_BLOCK_TYPE && map[x][z].height === 0
                         && touchesTile(x, z, demo.isBank))
                 if (!localTransition && !pondTile && (cover === undefined || !transitionTiles?.[x][z])) return false
-                const mesh = localTransition?.material ?? (pondTile ? pondTransition : transitionMesh)
+                let firstBoundary: TerrainBoundaryField | undefined = localTransition
+                let secondBoundary = localTransition?.secondary
+                if (firstBoundary && secondBoundary && pairKey(firstBoundary) > pairKey(secondBoundary)) {
+                    [firstBoundary, secondBoundary] = [secondBoundary, firstBoundary]
+                }
+                const junction = firstBoundary && secondBoundary ? junctionFor(firstBoundary, secondBoundary) : undefined
+                const mesh = junction?.mesh ?? localTransition?.material ?? (pondTile ? pondTransition : transitionMesh)
                 const batch = batchFor(mesh)
                 const first = batch.geometry.count
                 batch.geometry.tile = x * surfaces.stride + z
@@ -389,13 +444,14 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
                 const placedCover = pondTile ? (pondCover === ROCK || pondCover === DIRT ? bank : !bank)
                     : localTransition?.cover ?? cover
                 const paving = snowTransitions.has(mesh) ? pavingFlags(x, z) * PAVING_SNOW_FLAG_SHIFT : 0
-                const flags = ((islandMasks?.[x][z] ?? 0) << 1) | (placedCover ? 1 : 0) | (pondTile ? POND_BANK_FLAG : 0) | paving
+                const flags = junction ? junction.surfaces.indexOf(type) | paving
+                    : ((islandMasks?.[x][z] ?? 0) << 1) | (placedCover ? 1 : 0) | (pondTile ? POND_BANK_FLAG : 0) | paving
                 for (let i = first; i < batch.geometry.count; i++) {
                     batch.surfaceData.push(x, z, angle, flags)
-                    batch.wallData.push(0, 0, 0, 0)
-                    if (localTransition) {
-                        batch.boundaryData.push(...localTransition.field)
-                        batch.footBoundaryData.push(0, 0, 0, 0)
+                    batch.wallData.push(...(secondBoundary?.field ?? [0, 0, 0, 0]))
+                    if (firstBoundary) {
+                        batch.boundaryData.push(...firstBoundary.field)
+                        batch.footBoundaryData.push(...(localTransition?.snowmeltField ?? NO_SNOWMELT_FIELD))
                     }
                 }
                 return true

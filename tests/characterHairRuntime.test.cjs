@@ -41,7 +41,7 @@ test('game models render data-driven shared hair and retain it across equipment 
         '@/babylon/scene/activeMeshFreezer': {ActiveMeshFreezer: {setSkeletonActive() {}}},
         '@/babylon/scene/lights': {Lights: {
             registerDynamicLightMesh() {}, addShadowCaster() {}, registerActorLightMesh() {},
-            unregisterActorLightMesh() {}, removeShadowCaster() {}, warmLocalPlayerLightMaterial: async () => {},
+            unregisterActorLightMesh() {}, removeShadowCaster() {}, supportsParallelShaderCompilation: () => false,
         }},
     }
     const equipment = load('babylon/item/equipManager.ts', deps)
@@ -82,7 +82,24 @@ test('game models render data-driven shared hair and retain it across equipment 
         }
         const type = models[0].equipSet.get('HAIR').type
         assert.equal(models[1].equipSet.get('HAIR').type, type)
+        const bodyMaterial = model => model.model.getChildMeshes().find(mesh => mesh.skeleton).material
+        assert.equal(bodyMaterial(models[0]), bodyMaterial(models[1]), 'Bodies in one scene share the prepared material')
         assert.equal(loads.get('/models/human/human_male_hair_1.glb'), 1)
+        const dormantType = await hair.loadCharacterHair(scene, 4)
+        const material = dormantType.mesh.material
+        const originalCompile = material.forceCompilationAsync
+        const warmupLayouts = []
+        material.forceCompilationAsync = async (mesh, options) => {
+            warmupLayouts.push([options.useInstances, mesh.hasThinInstances])
+        }
+        try {
+            await equipment.EquipManager.warmUpShaders([dormantType])
+        } finally {
+            material.forceCompilationAsync = originalCompile
+        }
+        assert.deepEqual(warmupLayouts, [[true, true]])
+        assert.equal(dormantType.mesh.thinInstanceCount, 0)
+        assert.equal(dormantType.mesh.isEnabled(), false)
         equipment.EquipManager.onFrame()
         assert.equal(type.mesh.thinInstanceCount, 2)
         assert.deepEqual(Array.from(type.uvBuffer.slice(0, 4)), [0, 0, 0.75, 0.5])

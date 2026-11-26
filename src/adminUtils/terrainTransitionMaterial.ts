@@ -5,6 +5,7 @@ import { terrainFringeShader, terrainNoiseShader } from '@/babylon/world/terrain
 import { terrainCoverPatterns } from './terrainAtlasPreview'
 import { POND_DISTANCE_RANGE } from '@/babylon/world/terrainWaterMaterial'
 import type { createTerrainPreviewWater } from './terrainPreviewWater'
+import type { TerrainBoundaryField } from '@/babylon/world/terrainTransitionField'
 
 const PATCH_SIZE = 3
 export const LOCAL_TRANSITION_NOISE_PERIOD = 48
@@ -13,6 +14,41 @@ const BOUNDARY_AMPLITUDE = 2
 const BOUNDARY_FREQUENCY = 0.32
 export const TERRAIN_TRANSITION_REACH = 4
 export const POND_BANK_FLAG = 32
+
+const transitionNoiseShader = `
+    struct TransitionNoise {
+        float shape;
+        float grain;
+        float halfWidth;
+    };
+
+    TransitionNoise sampleTransitionNoise(vec2 p, bool localGrass) {
+        float clumps = terrainNoise(p * vec2(1.35, 1.95));
+        float shape = (clumps - 0.5) * 1.65;
+        #ifdef TERRAIN_LOW_DETAIL_TRANSITIONS
+        float grain = 0.0;
+        #else
+        if (localGrass) {
+            shape += (terrainNoise(p * vec2(2.8, 2.3) + vec2(3.0, 7.0)) - 0.5) * 1.5;
+        } else {
+            shape += sin(p.y * 1.45 + 0.4) * 0.58 + sin(p.y * 3.1) * 0.24;
+        }
+        float grain = (terrainNoise(p * 6.8) - 0.5) * 0.58;
+        #endif
+        shape -= sign(shape) * max(abs(shape) - 0.65, 0.0) * 0.32;
+        return TransitionNoise(shape, grain, mix(0.26, 0.68, clumps));
+    }
+
+    float boundaryDistance(vec4 corners, vec2 tileUV) {
+        vec2 uv = clamp(tileUV, 0.0, 1.0);
+        return mix(mix(corners.x, corners.y, uv.x), mix(corners.z, corners.w, uv.x), uv.y);
+    }
+
+    float localTerrainCoverDistance(float distance, TransitionNoise noise, bool soften, bool rock) {
+        float shape = rock ? noise.shape * 0.64 + noise.grain * 0.78 : noise.shape + noise.grain;
+        return distance + shape * (soften ? 1.0 - smoothstep(0.75, 1.75, abs(distance)) : 1.0);
+    }
+`
 
 export function terrainBoundaryOffset(z: number) {
     return BOUNDARY_AMPLITUDE * Math.sin(z * BOUNDARY_FREQUENCY)
@@ -144,34 +180,10 @@ export function createTerrainTransitionMaterial(
             return edge * mix(0.68, 1.0, depth) * step(0.19, seed);
         }
 
-        float boundaryDistance(vec4 corners, vec2 tileUV) {
-            vec2 uv = clamp(tileUV, 0.0, 1.0);
-            return mix(mix(corners.x, corners.y, uv.x), mix(corners.z, corners.w, uv.x), uv.y);
-        }
+        ${transitionNoiseShader}
 
-        struct TransitionNoise {
-            float shape;
-            float grain;
-            float halfWidth;
-        };
-
-        TransitionNoise sampleTransitionNoise(vec2 p) {
-            float clumps = terrainNoise(p * vec2(1.35, 1.95));
-            float shape = (clumps - 0.5) * 1.65;
-            #ifdef TERRAIN_LOW_DETAIL_TRANSITIONS
-            float grain = 0.0;
-            #else
-            ${grassCover ? `if (transitionBoundary.z > 0.5) {
-                // Map edges can face any direction. Use patches that vary along both world axes.
-                shape += (terrainNoise(p * vec2(2.8, 2.3) + vec2(3.0, 7.0)) - 0.5) * 1.5;
-            } else` : ''} {
-                shape += sin(p.y * 1.45 + 0.4) * 0.58 + sin(p.y * 3.1) * 0.24;
-            }
-            float grain = (terrainNoise(p * 6.8) - 0.5) * 0.58;
-            #endif
-            // Compress only the longest excursions, leaving the small contours and grain intact.
-            shape -= sign(shape) * max(abs(shape) - 0.65, 0.0) * 0.32;
-            return TransitionNoise(shape, grain, mix(0.26, 0.68, clumps));
+        TransitionNoise pairTransitionNoise(vec2 p) {
+            return sampleTransitionNoise(p, ${grassCover ? 'transitionBoundary.z > 0.5' : 'false'});
         }
 
         float transitionGrassWeight(vec2 p, TransitionNoise noise, float grassIslandSupport, bool bank,
@@ -193,8 +205,7 @@ export function createTerrainTransitionMaterial(
             coverDistance = towardGrass + ${rockSubstrate ? 'shape * 0.64 + grain * 0.78' : 'shape + grain'};
             ${snowCover || grassCover ? `if (transitionBoundary.z > 0.5) {
                 // Fade contour noise before the last tiles of the local blend.
-                float noiseWeight = 1.0 - smoothstep(0.75, 1.75, abs(towardGrass));
-                coverDistance = towardGrass + (${grassCover && rockSubstrate ? 'shape * 0.64 + grain * 0.78' : 'shape + grain'}) * noiseWeight;
+                coverDistance = localTerrainCoverDistance(towardGrass, noise, true, ${grassCover && rockSubstrate});
                 return smoothstep(-halfWidth, halfWidth, coverDistance);
             }` : ''}
             float grass = smoothstep(-halfWidth, halfWidth, coverDistance);
@@ -243,7 +254,7 @@ export function createTerrainTransitionMaterial(
             float horizontalCover = 0.0;
             vec2 localCover = vec2(1.0);
             if (mixed || localTop || localBottom) {
-                TransitionNoise noise = sampleTransitionNoise(terrainXZ);
+                TransitionNoise noise = pairTransitionNoise(terrainXZ);
                 float coverDistance;
                 if (mixed) horizontalCover = transitionGrassWeight(terrainXZ, noise, 0.0, false, coverDistance, 0.0);
                 if (localTop) {
@@ -308,7 +319,7 @@ export function createTerrainTransitionMaterial(
         ${snowWallRock ? 'float wallRockWeight = 0.0; float mudFootLighting = 0.0; vec2 snowWallRockUV = vec2(0.0);' : ''}
         ${wallDirt ? 'vec2 snowFringe = vec2(0.0);' : ''}
         if (wall) {
-            ${soilRockWalls ? `grassWeight = transitionGrassWeight(terrainXZ, sampleTransitionNoise(terrainXZ), 0.0, false, coverDistance, 0.0);
+            ${soilRockWalls ? `grassWeight = transitionGrassWeight(terrainXZ, pairTransitionNoise(terrainXZ), 0.0, false, coverDistance, 0.0);
             // Sample the original wall tile on its own side, projecting only the second material onto it.
             vec2 alongWall = vec2(-geometricNormalW.z, geometricNormalW.x);
             vec2 wallPatch = wallFringeUV(vec2(dot(vPositionW.xz, alongWall), vPositionW.y + 0.5), vec2(0.0), 0.0);
@@ -330,7 +341,7 @@ export function createTerrainTransitionMaterial(
                 dirtUV = dirtOrigin + wallFringeUV(vSurfacePatchUV, geometricNormalW.xz, -aboveFoot) * dirtScale;
                 snowWallRockUV = vPlacedSurfaceUV * snowWallRockScale;
             } else {
-                wallRockWeight = transitionGrassWeight(terrainXZ, sampleTransitionNoise(terrainXZ), 0.0, false, coverDistance, 0.0);
+                wallRockWeight = transitionGrassWeight(terrainXZ, pairTransitionNoise(terrainXZ), 0.0, false, coverDistance, 0.0);
                 vec2 alongWall = vec2(-geometricNormalW.z, geometricNormalW.x);
                 vec2 wallPatch = wallFringeUV(vec2(dot(vPositionW.xz, alongWall), vPositionW.y + 0.5), vec2(0.0), 0.0);
                 // The placed bit identifies which of the two substrates owns the wall UV.
@@ -340,7 +351,7 @@ export function createTerrainTransitionMaterial(
             ${wallDirt ? 'dirtUV = vPlacedSurfaceUV * wallDirtScale;' : ''}`}
         } else {
             float grassIslandSupport = smoothstep(0.2, 0.85, vPlacedSurface.w);
-            TransitionNoise noise = sampleTransitionNoise(terrainXZ);
+            TransitionNoise noise = pairTransitionNoise(terrainXZ);
             ${lowDetail && snowCover ? `// Break up high-contrast snow edges with one additional noise sample on the top face.
             noise.grain = (terrainNoise(terrainXZ * 4.8) - 0.5) * 0.90;` : ''}
             grassWeight = transitionGrassWeight(terrainXZ, noise, grassIslandSupport,
@@ -422,6 +433,123 @@ export function createTerrainTransitionMaterial(
             normalW = normalize(roofNormal * blendedBump.z
                 - (tangentX * blendedBump.x + tangentZ * blendedBump.y) * tangentScale);
         }
+    `)
+    return material
+}
+
+export type TerrainJunctionLayer = {
+    type: number
+    kind: 'grass' | 'snow' | 'soil' | 'mud' | 'rock'
+    material: PBRCustomMaterial
+    origin: readonly number[]
+}
+
+export function createTerrainJunctionMaterial(name: string, layers: readonly TerrainJunctionLayer[],
+    pairs: readonly [TerrainBoundaryField, TerrainBoundaryField], lowDetail: boolean) {
+    const [base] = layers
+    const source = base.material
+    const material = new PBRCustomMaterial(name, source.getScene())
+    material.metallic = source.metallic
+    material.roughness = source.roughness
+    material.twoSidedLighting = source.twoSidedLighting
+    material.directIntensity = source.directIntensity
+    material.environmentIntensity = source.environmentIntensity
+    material.usePhysicalLightFalloff = source.usePhysicalLightFalloff
+    for (const [index, {material: layer, origin}] of layers.entries()) {
+        const color = layer.albedoTexture as Texture
+        const normal = layer.bumpTexture!
+        material.AddUniform(`junctionColor${index}`, 'sampler2D', color)
+        material.AddUniform(`junctionNormal${index}`, 'sampler2D', normal)
+        material.AddUniform(`junctionAtlas${index}`, 'vec3', new Vector3(
+            origin[0] * color.uScale, 1 - (origin[1] + PATCH_SIZE) * color.vScale, color.uScale))
+        material.AddUniform(`junctionRelief${index}`, 'float', normal.level)
+    }
+    material.AddAttribute('uvc')
+    material.AddAttribute('terrainSurface')
+    material.AddAttribute('terrainBoundaryCorners')
+    material.AddAttribute('terrainWallContact')
+    material.AddAttribute('terrainFootBoundaryCorners')
+    const varyings = `
+        varying vec4 vTerrainTile;
+        varying vec4 vTerrainFootBoundaryCorners;
+        varying vec4 vJunctionFirstBoundary;
+        varying vec4 vJunctionSecondBoundary;
+        varying vec3 vJunctionPlacement;
+        varying vec2 vJunctionUV;
+        varying vec2 vJunctionPatch;
+    `
+    material.Vertex_Definitions(`
+        ${varyings}
+        attribute vec2 uvc;
+        attribute vec4 terrainSurface;
+        attribute vec4 terrainBoundaryCorners;
+        attribute vec4 terrainWallContact;
+        attribute vec4 terrainFootBoundaryCorners;
+    `)
+    material.Vertex_After_WorldPosComputed(`
+        vec2 tileCenter = (world * vec4(terrainSurface.x, 0.0, terrainSurface.y, 1.0)).xz;
+        vec2 tileUV = worldPos.xz - tileCenter + 0.5;
+        vec2 noiseTile = mod(tileCenter + ${NOISE_QUARTER_PERIOD}.0, ${LOCAL_TRANSITION_NOISE_PERIOD}.0);
+        vTerrainTile = vec4(tileUV, noiseTile + tileUV - 0.5);
+        vTerrainFootBoundaryCorners = terrainFootBoundaryCorners;
+        vJunctionFirstBoundary = terrainBoundaryCorners;
+        vJunctionSecondBoundary = terrainWallContact;
+        vec2 axis = (world * vec4(cos(terrainSurface.z), 0.0, sin(terrainSurface.z), 0.0)).xz;
+        vJunctionPlacement = vec3(axis, mod(terrainSurface.w, 4.0));
+        vJunctionUV = terrainAtlasUV(positionUpdated);
+        vJunctionPatch = mod(floor(tileCenter + 0.5), ${PATCH_SIZE}.0) + tileUV;
+    `)
+    material.Fragment_Definitions(`
+        ${lowDetail ? '#define TERRAIN_LOW_DETAIL_TRANSITIONS' : ''}
+        ${varyings}
+        ${terrainNoiseShader}
+        ${transitionNoiseShader}
+    `)
+    const coverage = (...kinds: TerrainJunctionLayer['kind'][]) =>
+        layers.flatMap(({kind}, index) => kinds.includes(kind) ? [`weights[${index}]`] : []).join(' + ') || '0.0'
+    const edgeCode = pairs.map(({coverType, substrateType}, index) => {
+        const cover = layers.find(layer => layer.type === coverType)!.kind
+        const grass = cover === 'grass', snow = cover === 'snow'
+        const rock = layers.find(layer => layer.type === substrateType)!.kind === 'rock'
+        return `
+            TransitionNoise noise${index} = sampleTransitionNoise(terrainXZ, ${grass});
+            ${lowDetail && snow ? `noise${index}.grain = (terrainNoise(terrainXZ * 4.8) - 0.5) * 0.90;` : ''}
+            float edgeDistance${index} = boundaryDistance(${index === 0 ? 'vJunctionFirstBoundary' : 'vJunctionSecondBoundary'}, vTerrainTile.xy);
+            float contour${index} = localTerrainCoverDistance(edgeDistance${index}, noise${index}, ${grass || snow}, ${rock && !snow});
+            float cover${index} = smoothstep(-noise${index}.halfWidth, noise${index}.halfWidth, contour${index});
+            float neighbor${index} = ${base.type === coverType ? `1.0 - cover${index}` : `cover${index}`};
+        `
+    }).join('')
+    material.Fragment_Before_Lights(`
+        vec2 noisePhase = vTerrainTile.zw;
+        vec2 terrainXZ = min(abs(noisePhase), abs(${LOCAL_TRANSITION_NOISE_PERIOD}.0 - noisePhase)) - ${NOISE_QUARTER_PERIOD}.0;
+        const bool wall = false;
+        ${edgeCode}
+        // Share the overlap equally so the choice of primary boundary does not affect the result.
+        float overlap = 0.5 * neighbor0 * neighbor1;
+        vec3 weights = vec3((1.0 - neighbor0) * (1.0 - neighbor1), neighbor0 - overlap, neighbor1 - overlap);
+        float junctionSnow = ${coverage('snow')};
+        float junctionGrass = ${coverage('grass')};
+        float junctionMud = ${coverage('mud')};
+        float junctionSoil = ${coverage('mud', 'soil')};
+        vec2 axis = vJunctionPlacement.xy;
+        mat2 placedRotation = mat2(axis, vec2(-axis.y, axis.x));
+        surfaceAlbedo = vec3(0.0);
+        vec3 blendedBump = vec3(0.0);
+        ${layers.map((_, i) => `{
+            float placed = 1.0 - step(0.5, abs(vJunctionPlacement.z - ${i}.0));
+            vec3 atlas = junctionAtlas${i};
+            vec2 uv = mix(atlas.xy + vJunctionPatch * atlas.z, vJunctionUV * atlas.z, placed);
+            surfaceAlbedo += toLinearSpace(texture2D(junctionColor${i}, uv).rgb) * weights[${i}];
+            vec3 bump = texture2D(junctionNormal${i}, uv).xyz * 2.0 - 1.0;
+            bump.xy = mix(bump.xy, placedRotation * bump.xy, placed);
+            blendedBump += normalize(vec3(bump.xy * junctionRelief${i}, bump.z)) * weights[${i}];
+        }`).join('')}
+        vec3 roofNormal = geometricNormalW;
+        vec3 tangentX = vec3(1.0, 0.0, 0.0) - roofNormal * roofNormal.x;
+        vec3 tangentZ = vec3(0.0, 0.0, 1.0) - roofNormal * roofNormal.z;
+        float tangentScale = inversesqrt(max(dot(tangentX, tangentX), dot(tangentZ, tangentZ)));
+        normalW = normalize(roofNormal * blendedBump.z - (tangentX * blendedBump.x + tangentZ * blendedBump.y) * tangentScale);
     `)
     return material
 }

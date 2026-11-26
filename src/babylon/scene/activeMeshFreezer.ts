@@ -108,10 +108,8 @@ export const ActiveMeshFreezer = {
             return
         }
 
-        if (!scene.isReady()) {
-            return
-        }
-
+        // Babylon already waits for scene readiness inside freezeActiveMeshes.
+        // Let that request poll while rendering normally between checks.
         this.dirty = false
         this.freezePending = true
         scene.freezeActiveMeshes(

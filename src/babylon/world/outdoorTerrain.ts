@@ -100,19 +100,22 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
     terrain.parent = parent
     const detailedPaving = Settings.detailLevel.paving === 'detailed'
     const renderer = createTerrainSurfaceRenderer(parent.getScene(), terrain, new Vector3(0, 0, 1), undefined, detailedPaving)
-    for (const material of new Set(renderer.meshes.map(mesh => mesh.material))) {
+    const batches = new Map<Mesh, OutdoorInstanceBatch>()
+    const registerSurface = (mesh: Mesh) => {
+        const material = mesh.material
         if (material instanceof PBRCustomMaterial) {
             terrainSteps?.configure(material, renderer.stepMaterials.get(material))
             terrainSteps?.configureGlow(material)
             contactShadow?.configure(material, false, !!terrainSteps)
             configureTerrainTerraceEdges(material)
         }
-    }
-    for (const mesh of renderer.meshes) {
         const {minimum, maximum} = mesh.getBoundingInfo()
         mesh.rawBoundingInfo = new BoundingInfo(minimum, maximum)
+        const batch = new OutdoorInstanceBatch(mesh)
+        batches.set(mesh, batch)
+        return batch
     }
-    const batches = new Map(renderer.meshes.map(mesh => [mesh, new OutdoorInstanceBatch(mesh)]))
+    renderer.meshes.forEach(registerSurface)
     const paving = createOutdoorPaving(terrain, detailedPaving, batch => batches.set(batch.mesh, batch), contactShadow, terrainSteps)
     const highDetail = Settings.isDetalLevelHigh()
     const lowDetail = Settings.isDetalLevelLow()
@@ -341,7 +344,7 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
                     compiled: baked,
                     compiledRegion: baked ? {x, z} : undefined,
                     submit(mesh, source, attributes) {
-                        const batch = batches.get(mesh)!
+                        const batch = batches.get(mesh) ?? registerSurface(mesh)
                         const terraceEdges: number[] = []
                         attributes.push({kind: TERRACE_EDGE_ATTRIBUTE, stride: 4, values: terraceEdges})
                         for (const {kind, stride, values} of attributes) {

@@ -318,6 +318,10 @@ export const CharacterManager = {
         await CharacterModel.preload(scene)
     },
 
+    async warmUpAppearance(scene: Scene) {
+        await CharacterModel.warmUpAppearance(scene)
+    },
+
     clearWorld() {
         Array.from(this.characters.keys()).forEach((id) => this.removeCharacter(id))
     },

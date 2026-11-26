@@ -325,7 +325,8 @@ function createMasonryBatch(arched: boolean) {
         },
 
         add(matrix: Matrix, anchor: Vector3, seed: number, beige = false, roughness = 0, exposedTop = false, crown = false,
-            appearance?: 'headstone' | 'graveFrame' | 'graveCover' | 'polished' | {row: number, glowTop: boolean}) {
+            appearance?: 'headstone' | 'graveFrame' | 'graveCover' | 'polished' | 'wellBase' | 'wellRim'
+                | {row: number, glowTop: boolean}) {
             const polished = appearance === 'polished'
             const shape = polished ? 0 : roughness * 0.25 + (crown ? 0.5 : 0)
             const pedestal = typeof appearance === 'object' ? appearance : undefined
@@ -342,9 +343,14 @@ function createMasonryBatch(arched: boolean) {
                 batch.uvData.push(uv)
                 return index
             }
+            if (appearance === 'wellRim') {
+                WorldRenderer.addTerrainContactBlock(matrix, uv, false, 0, appearance, undefined, this)
+                return index
+            }
             if (this.topWeathering && exposedTop) this.topExposure[index] = FULL_TOP_EXPOSURE
             WorldRenderer.addWeatheredBlock(matrix, uv, anchor, 0.82,
-                {target: this, sampleAtCenter: true, highGroundWear: 'masonryGround', snowProfile: 'masonrySnow'})
+                {target: this, sampleAtCenter: true, highGroundWear: 'masonryGround', snowProfile: 'masonrySnow',
+                    groundDamp: appearance === 'wellBase' ? 'wellBase' : undefined})
             return index
         },
 

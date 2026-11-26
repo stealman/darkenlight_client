@@ -4,7 +4,7 @@ import type { PBRCustomMaterial } from '@babylonjs/materials'
 import { TERRAIN_BEVEL_DROP, TERRAIN_BEVEL_WIDTH } from '@/babylon/world/beveledTerrainBlock'
 import { updateWorldInstanceBuffers } from '@/babylon/world/worldInstanceBuffers'
 import { terrainNoiseShader } from '@/babylon/world/terrainSurfaceShader'
-import { SNOWMELT_DISTANCE_SCALE, SNOWMELT_MAX_DISTANCE } from '@/babylon/world/terrainTransitionField'
+import { SNOWMELT_DISTANCE_SCALE, SNOWMELT_DRY_DISTANCE, SNOWMELT_MAX_DISTANCE } from '@/babylon/world/terrainTransitionField'
 
 type TriangleUV = readonly [Vector2, Vector2, Vector2]
 export type TerrainPreviewTriangle = {
@@ -408,32 +408,44 @@ export function configureMuddyDirtWetness(material: PBRCustomMaterial, mode: 'so
     material.Fragment_Custom_MetallicRoughness('metallicRoughness.g = mix(metallicRoughness.g, 0.53, mudWetness);')
 }
 
-export function configureSnowmelt(material: PBRCustomMaterial, wallsOnly = false) {
+export function configureSnowmelt(material: PBRCustomMaterial, surface: 'snow' | 'snowOnGrass' | 'grass' | 'ground' | 'junction') {
+    const snowOnGrass = surface === 'snowOnGrass'
+    const snowCover = surface === 'snow' || snowOnGrass
+    const exposedGround = snowOnGrass ? '(wall ? 1.0 - grassWeight - snowWeight : (1.0 - grassWeight) * 0.58)'
+        : snowCover ? '1.0 - grassWeight' : surface === 'grass' ? 'mix(1.0, 0.58, grassWeight)'
+            : surface === 'junction' ? '1.0 - junctionSnow - 0.42 * junctionGrass' : '1.0'
+    const wallContact = snowOnGrass ? 'snowWeight > 0.0' : snowCover ? 'true' : 'false'
     material.Fragment_Definitions(`${material.CustomParts.Fragment_Definitions}
         float snowmeltWetness;
     `)
     material.Fragment_Before_Lights(`${material.CustomParts.Fragment_Before_Lights}
         snowmeltWetness = 0.0;
-        float exposedGround = ${wallsOnly ? '1.0 - grassWeight - snowWeight' : '1.0 - grassWeight'};
-        if (${wallsOnly ? 'wall && snowWeight > 0.0 && ' : ''}exposedGround > 0.0) {
+        float exposedGround = ${exposedGround};
+        float snowDistance = ${SNOWMELT_DRY_DISTANCE}.0;
+        if (!wall) {
+            // Roofs reuse the wall-foot attribute for the independent snow distance field.
+            ${surface === 'junction' ? '' : 'if (transitionBoundary.z > 0.5)'} snowDistance = boundaryDistance(vTerrainFootBoundaryCorners, vTerrainTile.xy);
+            ${snowCover && !snowOnGrass ? 'else snowDistance = max(0.0, -coverDistance);' : ''}
+        }
+        if (exposedGround > 0.0 && (wall ? (${wallContact}) : snowDistance < ${SNOWMELT_MAX_DISTANCE})) {
             vec2 p = vPositionW.xz + vPositionW.y * vec2(0.61, -0.47);
             float pooling = terrainNoise(p * 2.1 + vec2(3.7, 14.2));
-            ${wallsOnly ? `float snowDistance = snowFringe.y >= 0.0 ? snowFringe.y / topFringeDepth : -snowFringe.y;
-            float runoff = smoothstep(0.0, 0.24, snowWeight)
-                * (1.0 - smoothstep(0.13, 0.54, snowDistance / ${SNOWMELT_DISTANCE_SCALE}));` : `
             float runoff;
             if (wall) {
+                ${snowOnGrass ? `float fringeDistance = snowFringe.y >= 0.0 ? snowFringe.y / topFringeDepth : -snowFringe.y;
+                runoff = smoothstep(0.0, 0.24, snowWeight)
+                    * (1.0 - smoothstep(0.13, 0.54, fringeDistance / ${SNOWMELT_DISTANCE_SCALE}));` : snowCover ? `
                 float contact = max(grassAtEdges.x, grassAtEdges.y);
-                runoff = contact * (1.0 - smoothstep(0.13, 0.54, grassEdgeDistance / ${SNOWMELT_DISTANCE_SCALE}));
+                runoff = contact * (1.0 - smoothstep(0.13, 0.54, grassEdgeDistance / ${SNOWMELT_DISTANCE_SCALE}));` : 'runoff = 0.0;'}
             } else {
                 runoff = 1.0 - smoothstep(0.31 * ${SNOWMELT_DISTANCE_SCALE},
-                    mix(1.55 * ${SNOWMELT_DISTANCE_SCALE}, ${SNOWMELT_MAX_DISTANCE}, pooling), max(0.0, -coverDistance));
-            }`}
-            snowmeltWetness = runoff * mix(0.63, 1.0, pooling) * 1.25;
-            float exposedWetness = snowmeltWetness * exposedGround;
+                    mix(1.55 * ${SNOWMELT_DISTANCE_SCALE}, ${SNOWMELT_MAX_DISTANCE}, pooling), snowDistance);
+            }
+            float wetness = runoff * mix(0.63, 1.0, pooling) * 1.25;
+            float exposedWetness = wetness * exposedGround;
+            snowmeltWetness = wall ? wetness ${snowOnGrass ? '* (1.0 - grassWeight)' : ''} : exposedWetness;
             surfaceAlbedo *= 1.0 - 0.21 * exposedWetness;
             normalW = normalize(mix(normalW, geometricNormalW, 0.20 * exposedWetness));
-            ${wallsOnly ? 'snowmeltWetness *= (1.0 - grassWeight);' : ''}
         }
     `)
     material.Fragment_Custom_MetallicRoughness(`${material.CustomParts.Fragment_Custom_MetallicRoughness ?? ''}
@@ -441,7 +453,7 @@ export function configureSnowmelt(material: PBRCustomMaterial, wallsOnly = false
     `)
 }
 
-export function configureSnowGlints(material: PBRCustomMaterial, transition: 'standard' | 'grass' | undefined,
+export function configureSnowGlints(material: PBRCustomMaterial, transition: 'standard' | 'grass' | 'junction' | undefined,
     renderPavingSnow: boolean, varyRoughness: boolean) {
     if (renderPavingSnow) {
         if (!transition) material.AddAttribute(PAVING_SNOW_ATTRIBUTE)
@@ -461,7 +473,8 @@ export function configureSnowGlints(material: PBRCustomMaterial, transition: 'st
         float snowGlintCoverage;
         ${varyRoughness ? 'float snowGlintRoughness;' : ''}
     `)
-    const coverage = transition === 'grass' ? 'wall ? snowWeight : grassWeight' : transition ? 'grassWeight' : '1.0'
+    const coverage = transition === 'junction' ? 'junctionSnow'
+        : transition === 'grass' ? 'wall ? snowWeight : grassWeight' : transition ? 'grassWeight' : '1.0'
     material.Fragment_Before_Lights(`${material.CustomParts.Fragment_Before_Lights ?? ''}
         snowGlintCoverage = ${coverage};
         ${renderPavingSnow ? `

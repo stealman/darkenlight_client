@@ -1,4 +1,6 @@
 import { TERRAIN_ATLAS_REGION_SIZE } from './terrainAtlasPlacement'
+import { SNOWMELT_DRY_DISTANCE } from './terrainTransitionField'
+import type { TerrainBoundaryField } from './terrainTransitionField'
 import type { PavingStone, StonePathBounds } from './stonePathLayout'
 
 const MAGIC = 0x33524c44 // DLR3
@@ -9,11 +11,15 @@ export const TERRAIN_RENDER_WORLD_BUDGET = 10_000_000
 export const TERRAIN_RENDER_BORDER = 5
 export const TERRAIN_TRANSITION_RECORD_BYTES = 19
 export const TERRAIN_TRANSITION_SNOWMELT_FLAG = 128
+export const TERRAIN_TRANSITION_SNOWMELT_FIELD_FLAG = 128
+export const TERRAIN_SNOWMELT_FIELD_BYTES = 4
+export const TERRAIN_SECONDARY_TRANSITION_FLAG = 64
+export const TERRAIN_SECONDARY_TRANSITION_BYTES = 18
 export const TERRAIN_TRANSITION_FALLBACK = 0xffffffff
 
 // Bump the asset version when the format or precomputation rules change.
 export function terrainRenderAssetName(mapHash: string) {
-    return `assets/render/v9-${mapHash}.dlr`
+    return `assets/render/v11-${mapHash}.dlr`
 }
 
 export function terrainRenderBaseBytes(width: number, depth: number) {
@@ -98,23 +104,44 @@ export function terrainTransitionArea(width: number, depth: number, x: number, z
 }
 
 export function visitBakedTerrainTransitions(data: TerrainRenderData, x: number, z: number,
-    visit: (x: number, z: number, cover: number, substrate: number, field: number[], snowmeltOnly: boolean) => void) {
+    visit: (x: number, z: number, cover: number, substrate: number, field: number[], snowmeltOnly: boolean,
+        snowmeltField?: number[], secondary?: TerrainBoundaryField) => void) {
     const region = x / TERRAIN_ATLAS_REGION_SIZE * data.columns + z / TERRAIN_ATLAS_REGION_SIZE
     const start = data.transitionOffsets[region]
     if (!start) return true
     if (start === TERRAIN_TRANSITION_FALLBACK || start > data.transitionBytes.byteLength) return false
     const count = data.transitionBytes.getUint8(start - 1)
-    const end = start + count * TERRAIN_TRANSITION_RECORD_BYTES
-    if (end > data.transitionBytes.byteLength) return false
     const {left, top, bottom} = terrainTransitionArea(data.width, data.depth, x, z)
     const stride = bottom - top
-    for (let offset = start; offset < end; offset += TERRAIN_TRANSITION_RECORD_BYTES) {
+    let offset = start
+    for (let i = 0; i < count; i++) {
+        if (offset + TERRAIN_TRANSITION_RECORD_BYTES > data.transitionBytes.byteLength) return false
         const tile = data.transitionBytes.getUint8(offset)
         const packedCover = data.transitionBytes.getUint8(offset + 1)
         const cover = packedCover & ~TERRAIN_TRANSITION_SNOWMELT_FLAG
-        const substrate = data.transitionBytes.getUint8(offset + 2)
+        const packedSubstrate = data.transitionBytes.getUint8(offset + 2)
+        const substrate = packedSubstrate & ~(TERRAIN_TRANSITION_SNOWMELT_FIELD_FLAG | TERRAIN_SECONDARY_TRANSITION_FLAG)
         const field = Array.from({length: 4}, (_, i) => data.transitionBytes.getFloat32(offset + 3 + i * 4, true))
-        visit(left + Math.floor(tile / stride), top + tile % stride, cover, substrate, field, !!(packedCover & TERRAIN_TRANSITION_SNOWMELT_FLAG))
+        offset += TERRAIN_TRANSITION_RECORD_BYTES
+        let snowmeltField: number[] | undefined
+        if (packedSubstrate & TERRAIN_TRANSITION_SNOWMELT_FIELD_FLAG) {
+            if (offset + TERRAIN_SNOWMELT_FIELD_BYTES > data.transitionBytes.byteLength) return false
+            snowmeltField = Array.from({length: TERRAIN_SNOWMELT_FIELD_BYTES}, (_, j) =>
+                data.transitionBytes.getUint8(offset + j) * SNOWMELT_DRY_DISTANCE / 255)
+            offset += TERRAIN_SNOWMELT_FIELD_BYTES
+        }
+        let secondary: TerrainBoundaryField | undefined
+        if (packedSubstrate & TERRAIN_SECONDARY_TRANSITION_FLAG) {
+            if (offset + TERRAIN_SECONDARY_TRANSITION_BYTES > data.transitionBytes.byteLength) return false
+            secondary = {
+                coverType: data.transitionBytes.getUint8(offset),
+                substrateType: data.transitionBytes.getUint8(offset + 1),
+                field: Array.from({length: 4}, (_, j) => data.transitionBytes.getFloat32(offset + 2 + j * 4, true)),
+            }
+            offset += TERRAIN_SECONDARY_TRANSITION_BYTES
+        }
+        visit(left + Math.floor(tile / stride), top + tile % stride, cover, substrate, field,
+            !!(packedCover & TERRAIN_TRANSITION_SNOWMELT_FLAG), snowmeltField, secondary)
     }
     return true
 }

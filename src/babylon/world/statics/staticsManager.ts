@@ -209,8 +209,6 @@ export const StaticsManager = {
             case 310: this.allStatics.push(new StoneWell(
                 obj.tp,
                 pos,
-                MaterialEnum1.BRICK_GRAY.uv,
-                MaterialEnum1.ROCK1.uv,
                 MaterialEnum1.WOOD_3.uv,
                 MaterialEnum1.WOOD_PLANKS_DARK.uv,
                 MaterialEnum1.STEEL_1.uv,

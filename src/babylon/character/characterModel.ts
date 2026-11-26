@@ -22,7 +22,7 @@ import { modelAssetUrl } from '@/babylon/modelAssetUrl'
 import type { CharacterGender } from './characterAppearance'
 import { HUMAN_MODEL_FILE, HUMAN_ANIMATION_SPEED, WAND_RELEASE_FRAME, getHumanAnimationRange, prepareHumanSkeleton } from './humanModelRig'
 import { MagicArrow } from '@game/game/spells/magicArrow'
-import { applyCharacterEquipmentFitting, getCharacterHairFitting, preloadCharacterEquipmentFitting } from './characterEquipmentFitting'
+import { applyCharacterEquipmentFitting, getCharacterEquipmentSources, getCharacterHairFitting, preloadCharacterEquipmentFitting } from './characterEquipmentFitting'
 import { isLeatherArmorModelId } from '@game/character/items/codebook/armorsCodebook'
 import { StaticsManager } from '@/babylon/world/statics/staticsManager'
 import { BuildingManager } from '@/babylon/world/buildings/buildingManager'
@@ -30,8 +30,8 @@ import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import type { StaticObject } from '@/babylon/world/statics/objects/baseStaticObject'
 import { CharacterActions } from '@/data/actions/characterActions'
 import { characterHeadMatrix, getCharacterHeadType, loadCharacterHead } from './characterHead'
-import { createCharacterMaterial } from './characterMaterial'
-import { attachCharacterHair, isHairHiddenByHeadgear, hideCharacterHair, loadCharacterHair, setCharacterHairColorId } from './characterHair'
+import { getCharacterBodyMaterial } from './characterMaterial'
+import { attachCharacterHair, CHARACTER_HAIR_TYPES, FEMALE_CHARACTER_HAIR_TYPES, isHairHiddenByHeadgear, hideCharacterHair, loadCharacterHair, setCharacterHairColorId } from './characterHair'
 
 interface CharacterModelAppearance {
     renderHelmet?: boolean
@@ -137,14 +137,47 @@ export class CharacterModel implements EquipBearer {
             ...(['M', 'F'] as const).map(async gender => {
                 const container = await this.getContainer(scene, gender)
                 const pool = this.getPool(scene, gender)
+                const material = getCharacterBodyMaterial(scene, gender)
                 while (pool.length < this.preparedModelCount) {
                     const entries = container.instantiateModelsToScene(undefined, false, {doNotInstantiate: true})
-                    entries.rootNodes[0]?.setEnabled(false)
+                    const body = entries.rootNodes[0] as AbstractMesh
+                    this.configureBodyTransform(body)
+                    body.setEnabled(false)
+                    for (const mesh of body.getChildMeshes()) {
+                        mesh.material = material
+                        mesh.receiveShadows = true
+                    }
+                    if (entries.animationGroups.length > 0) this.prepareAnimations(entries)
+                    // Allocate the bone matrices and their GPU textures before
+                    // several pooled bodies can become visible on one frame.
+                    for (const skeleton of entries.skeletons) skeleton.prepare(true)
                     pool.push(entries)
                 }
             }),
-            loadCharacterHead(scene), loadCharacterHead(scene, 1, 'F'), loadCharacterHair(scene), loadCharacterHair(scene, 1, 'F'),
+            this.loadAppearanceSources(scene),
         ])
+    }
+
+    private static loadAppearanceSources(scene: Scene) {
+        return Promise.all([
+            loadCharacterHead(scene), loadCharacterHead(scene, 1, 'F'),
+            ...CHARACTER_HAIR_TYPES.map(({id}) => loadCharacterHair(scene, id)),
+            ...FEMALE_CHARACTER_HAIR_TYPES.map(({id}) => loadCharacterHair(scene, id, 'F')),
+        ])
+    }
+
+    static async warmUpAppearance(scene: Scene): Promise<void> {
+        const sources = await this.loadAppearanceSources(scene)
+        await EquipManager.warmUpShaders([...sources, ...getCharacterEquipmentSources(scene)])
+        for (const gender of ['M', 'F'] as const) {
+            for (const entries of this.getPool(scene, gender)) {
+                for (const mesh of entries.rootNodes[0]?.getChildMeshes() ?? []) {
+                    // Scene readiness also checks pooled meshes. Give them the
+                    // runtime light layout before their first shader is built.
+                    Lights.registerActorLightMesh(mesh)
+                }
+            }
+        }
     }
 
     private static getContainer(scene: Scene, gender: CharacterGender): Promise<AssetContainer> {
@@ -160,6 +193,38 @@ export class CharacterModel implements EquipBearer {
             containers.set(gender, promise)
         }
         return promise
+    }
+
+    private static configureBodyTransform(body: AbstractMesh) {
+        // Use the runtime scale in the pool too so Babylon prepares the
+        // same normal transformation in the body shader before activation.
+        // The negative Z scale preserves glTF handedness.
+        body.scaling = new Vector3(0.3, 0.28, -0.3)
+        body.rotation = Vector3.Zero()
+    }
+
+    private static prepareAnimations(entries: InstantiatedEntries): AnimationGroup[] {
+        const existing = this.preparedAnimations.get(entries)
+        if (existing) return existing
+        const source = entries.animationGroups[0]
+        // Unauthored actions keep separate groups but temporarily sample JAB.
+        const animations = [
+            'Idle', 'Walk', 'Run', 'CombatIdle', 'Slash', 'Jab',
+            'LeftSlash', 'RightSlash', 'HighJab', 'Slash2', 'BowAim',
+            'GreatAxeAttack', 'OreMining', 'Death', 'TwoHandedSwordAttack',
+            'TwoHandedSwordAttack2', 'CombatIdleTwoHanded', 'Pickup', 'SittingIdle',
+            'SPELL_CASTING_WAND_1', 'SPELL_RELEASE_WAND_1',
+        ].map(name => ({ name, ...getHumanAnimationRange(name) }))
+
+        const groups = animations.map(({name, startFrame, endFrame}) => {
+            const group = source.clone(name)
+            group.from = startFrame
+            group.to = endFrame
+            return group
+        })
+        entries.animationGroups.push(...groups)
+        this.preparedAnimations.set(entries, groups)
+        return groups
     }
 
     private static async instantiate(scene: Scene, gender: CharacterGender): Promise<InstantiatedEntries> {
@@ -227,28 +292,23 @@ export class CharacterModel implements EquipBearer {
                 this.instantiatedEntries = result
                 this.model = result.rootNodes[0] as AbstractMesh
                 this.model.parent = this.node
-                // Preserve the glTF root's handedness conversion.
-                this.model.scaling = new Vector3(0.3, 0.28, -0.3)
-                this.model.rotation = new Vector3(0, 0, 0)
+                CharacterModel.configureBodyTransform(this.model)
 
                 this.nameTextNode.parent = this.node
                 this.nameTextNode.position.y = this.parent.getModelHeight()
                 this.parent.nameDisplayTime = Date.now() + 3000
 
                 // Apply material
-                const material = createCharacterMaterial(scene, 'steveMaterial', this.bodyGender === 'F' ? '/models/human/human_female.png' : '/models/human/human_male.png')
+                const material = getCharacterBodyMaterial(scene, this.bodyGender)
                 this.model.getChildMeshes().forEach((mesh) => {
                     // Visibility is managed by Character.setVisible(). A moving
                     // body excluded by frustum culling when the active list is
                     // frozen would stay missing until the next invalidation.
                     mesh.alwaysSelectAsActiveMesh = true
                     mesh.material = material
+                    mesh.receiveShadows = true
                     Lights.addShadowCaster(mesh, true, false, true)
                     Lights.registerActorLightMesh(mesh)
-                    if (this.parent.isMyChar()) {
-                        void Lights.warmLocalPlayerLightMaterial(mesh)
-                    }
-                    mesh.receiveShadows = true
                 })
 
                 // Process animations
@@ -256,26 +316,7 @@ export class CharacterModel implements EquipBearer {
                     const animationGroup = result.animationGroups[0] // Assuming there is one animation group
                     animationGroup.stop()
 
-                    // Unauthored actions keep separate groups but temporarily sample JAB.
-                    const animations = [
-                        'Idle', 'Walk', 'Run', 'CombatIdle', 'Slash', 'Jab',
-                        'LeftSlash', 'RightSlash', 'HighJab', 'Slash2', 'BowAim',
-                        'GreatAxeAttack', 'OreMining', 'Death', 'TwoHandedSwordAttack',
-                        'TwoHandedSwordAttack2', 'CombatIdleTwoHanded', 'Pickup', 'SittingIdle',
-                        'SPELL_CASTING_WAND_1', 'SPELL_RELEASE_WAND_1',
-                    ].map(name => ({ name, ...getHumanAnimationRange(name) }))
-
-                    let newAnimationGroups = CharacterModel.preparedAnimations.get(result)
-                    if (!newAnimationGroups) {
-                        newAnimationGroups = animations.map(({ name, startFrame, endFrame }) => {
-                            const newGroup = animationGroup.clone(name)
-                            newGroup.from = startFrame
-                            newGroup.to = endFrame
-                            return newGroup
-                        })
-                        result.animationGroups.push(...newAnimationGroups)
-                        CharacterModel.preparedAnimations.set(result, newAnimationGroups)
-                    }
+                    const newAnimationGroups = CharacterModel.prepareAnimations(result)
 
                     this.idleAnim = newAnimationGroups[0]
                     this.walkAnim = newAnimationGroups[1]

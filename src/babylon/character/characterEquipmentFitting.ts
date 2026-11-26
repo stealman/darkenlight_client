@@ -55,6 +55,10 @@ export function preloadCharacterEquipmentFitting(scene: Scene, gender: Character
     return promise
 }
 
+export function getCharacterEquipmentSources(scene: Scene): EquipItemType[] {
+    return [...(scenes.get(scene)?.values() ?? [])].flatMap(({sources}) => [...sources.values()])
+}
+
 async function loadCharacterEquipmentFitting(scene: Scene, gender: CharacterGender) {
     const url = gender === 'F' ? '/admin-utils/equipment-modifiers-female.json' : '/admin-utils/equipment-modifiers.json'
     const response = await fetch(url, { cache: 'no-store' })

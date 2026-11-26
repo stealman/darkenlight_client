@@ -8,9 +8,11 @@ import {
     createTerrainRenderBuffer, decodeTerrainRenderData, terrainRenderAssetName,
     terrainRenderBaseBytes, terrainTransitionArea, TERRAIN_RENDER_BORDER, TERRAIN_RENDER_WORLD_BUDGET,
     TERRAIN_TRANSITION_FALLBACK, TERRAIN_TRANSITION_RECORD_BYTES, TERRAIN_TRANSITION_SNOWMELT_FLAG, PAVING_RECORD_BYTES,
+    TERRAIN_TRANSITION_SNOWMELT_FIELD_FLAG, TERRAIN_SNOWMELT_FIELD_BYTES,
+    TERRAIN_SECONDARY_TRANSITION_BYTES, TERRAIN_SECONDARY_TRANSITION_FLAG,
 } from '../src/babylon/world/terrainRenderData'
 import { isSnowRoof, outdoorSurfaceHeight, terrainRoofShape, terrainSurfaceAtlasType } from '../src/babylon/world/terrainRoofShape'
-import { findTerrainTransitions, hasTerrainTransition, terrainSurface } from '../src/babylon/world/terrainTransitionField'
+import { findTerrainTransitions, hasTerrainTransition, SNOWMELT_DRY_DISTANCE, terrainSurface } from '../src/babylon/world/terrainTransitionField'
 import { visitPavingStones } from '../src/babylon/world/stonePathLayout'
 import type { PavingStone } from '../src/babylon/world/stonePathLayout'
 
@@ -118,16 +120,30 @@ export function compileTerrainRenderData(bytes: Uint8Array) {
                 for (let tz = area.top; tz < area.bottom; tz++) {
                     const tile = field[tx - left][tz - top]
                     if (!tile) continue
-                    if (used + TERRAIN_TRANSITION_RECORD_BYTES > extraBudget) {
+                    const recordBytes = TERRAIN_TRANSITION_RECORD_BYTES + (tile.snowmeltField ? TERRAIN_SNOWMELT_FIELD_BYTES : 0)
+                        + (tile.secondary ? TERRAIN_SECONDARY_TRANSITION_BYTES : 0)
+                    if (used + recordBytes > extraBudget) {
                         result.transitionOffsets[region] = TERRAIN_TRANSITION_FALLBACK
                         break write
                     }
                     result.transitionBytes.setUint8(used, (tx - area.left) * stride + tz - area.top)
                     const packedCover = tile.coverType | (tile.snowmeltOnly ? TERRAIN_TRANSITION_SNOWMELT_FLAG : 0)
                     result.transitionBytes.setUint8(used + 1, packedCover)
-                    result.transitionBytes.setUint8(used + 2, tile.substrateType)
+                    const packedSubstrate = tile.substrateType | (tile.snowmeltField ? TERRAIN_TRANSITION_SNOWMELT_FIELD_FLAG : 0)
+                        | (tile.secondary ? TERRAIN_SECONDARY_TRANSITION_FLAG : 0)
+                    result.transitionBytes.setUint8(used + 2, packedSubstrate)
                     tile.field.forEach((value, index) => result.transitionBytes.setFloat32(used + 3 + index * 4, value, true))
-                    used += TERRAIN_TRANSITION_RECORD_BYTES
+                    tile.snowmeltField?.forEach((value, index) =>
+                        result.transitionBytes.setUint8(used + TERRAIN_TRANSITION_RECORD_BYTES + index,
+                            Math.round(value * 255 / SNOWMELT_DRY_DISTANCE)))
+                    if (tile.secondary) {
+                        const offset = used + TERRAIN_TRANSITION_RECORD_BYTES + (tile.snowmeltField ? TERRAIN_SNOWMELT_FIELD_BYTES : 0)
+                        result.transitionBytes.setUint8(offset, tile.secondary.coverType)
+                        result.transitionBytes.setUint8(offset + 1, tile.secondary.substrateType)
+                        tile.secondary.field.forEach((value, index) =>
+                            result.transitionBytes.setFloat32(offset + 2 + index * 4, value, true))
+                    }
+                    used += recordBytes
                     count++
                 }
             }

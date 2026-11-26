@@ -1,6 +1,7 @@
 import { Matrix, Vector2, Vector3 } from '@babylonjs/core'
 import { BaseStaticObject } from '@/babylon/world/statics/objects/baseStaticObject'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
+import { MasonryBatch } from '@/babylon/world/masonryBatch'
 import { TaperedBlockBatch } from '@/babylon/world/taperedBlockBatch'
 import type { StaticBaseContact } from '@/babylon/world/worldRenderer'
 import type { ContactShadowFootprint } from '@/babylon/world/terrainContactShadow'
@@ -50,7 +51,7 @@ function getWoodMoisture(position: Vector3): WoodMoisture | undefined {
 }
 
 type PartContact = boolean | Vector3 | StaticBaseContact | 'snowAndDampHay'
-    | 'wellBase' | 'wellRim' | 'wellRoofMoss' | 'stumpCut' | 'woodTopWithMoss'
+    | 'stumpCut' | 'woodTopWithMoss'
 
 function addPart(width: number, height: number, depth: number, x: number, y: number, z: number, material: Vector2, yaw = 0, roll = 0, contact: PartContact = false) {
     const matrix = Matrix.Scaling(width, height, depth)
@@ -65,7 +66,7 @@ function addPart(width: number, height: number, depth: number, x: number, y: num
             WorldRenderer.addTerrainContactBlock(matrix, material, false, undefined, 'mossyWood', contact)
             return
         }
-        if (contact === 'wellBase' || contact === 'wellRim' || contact === 'wellRoofMoss' || contact === 'stumpCut') {
+        if (contact === 'stumpCut') {
             WorldRenderer.addTerrainContactBlock(matrix, material, false, 0, contact)
             return
         }
@@ -258,49 +259,141 @@ export class WaterTrough extends CampObject {
 
 export class StoneWell extends BaseStaticObject {
     private static readonly BASE_WIDTH = 0.9
-    private readonly rimMaterial: Vector2
-    private readonly woodMaterial: Vector2
-    private readonly roofMaterial: Vector2
-    private readonly steelMaterial: Vector2
+    private readonly stones: {matrix: Matrix, seed: number, rim: boolean}[] = []
+    private readonly fittings: {matrix: Matrix, material: Vector2, moss: boolean}[] = []
 
-    constructor(type: number, position: Vector3, stoneMaterial: Vector2, rimMaterial: Vector2, woodMaterial: Vector2, roofMaterial: Vector2, steelMaterial: Vector2) {
-        super(type, position, 0, stoneMaterial, null)
-        this.rimMaterial = rimMaterial
-        this.woodMaterial = woodMaterial
-        this.roofMaterial = roofMaterial
-        this.steelMaterial = steelMaterial
+    constructor(type: number, position: Vector3, woodMaterial: Vector2, roofMaterial: Vector2, steelMaterial: Vector2) {
+        super(type, position, 0, woodMaterial, MasonryBatch.prefab)
+        const variation = createStaticVariation(MyPlayer.worldId, position, type)
+        this.buildStonework(variation)
+        this.buildRoof(variation, roofMaterial, steelMaterial)
     }
 
     getContactShadowSize() {
         return {width: StoneWell.BASE_WIDTH, depth: StoneWell.BASE_WIDTH}
     }
 
-    render() {
-        const x = this.renderPosition.x
-        const groundY = this.renderPosition.y + 0.5
-        const z = this.renderPosition.z
-
-        addPart(StoneWell.BASE_WIDTH, 0.75, 0.18, x, groundY + 0.375, z - 0.36, this.material, 0, 0, 'wellBase')
-        addPart(StoneWell.BASE_WIDTH, 0.75, 0.18, x, groundY + 0.375, z + 0.36, this.material, 0, 0, 'wellBase')
-        addPart(0.18, 0.75, 0.54, x - 0.36, groundY + 0.375, z, this.material, 0, 0, 'wellBase')
-        addPart(0.18, 0.75, 0.54, x + 0.36, groundY + 0.375, z, this.material, 0, 0, 'wellBase')
-
-        addPart(0.96, 0.1, 0.2, x, groundY + 0.75, z - 0.38, this.rimMaterial, 0, 0, 'wellRim')
-        addPart(0.96, 0.1, 0.2, x, groundY + 0.75, z + 0.38, this.rimMaterial, 0, 0, 'wellRim')
-        addPart(0.2, 0.1, 0.56, x - 0.38, groundY + 0.75, z, this.rimMaterial, 0, 0, 'wellRim')
-        addPart(0.2, 0.1, 0.56, x + 0.38, groundY + 0.75, z, this.rimMaterial, 0, 0, 'wellRim')
-
-        for (const postX of [-0.36, 0.36]) {
-            addPart(0.1, 1.15, 0.1, x + postX, groundY + 1.325, z, this.woodMaterial)
+    private buildStonework(variation: ReturnType<typeof createStaticVariation>) {
+        const courses = [0.18, 0.36, 0.54, 0.71, 0.80]
+        for (const [course, top] of courses.entries()) {
+            const rim = course === courses.length - 1
+            const bottom = courses[course - 1] ?? -0.025
+            const halfWidth = StoneWell.BASE_WIDTH * 0.5 + (rim ? 0.035 : 0)
+            const thickness = rim ? 0.21 : 0.19
+            for (let side = 0; side < 4; side++) {
+                const alongX = side < 2
+                const throughCorner = alongX === (course % 2 === 0)
+                const halfRun = halfWidth - (throughCorner ? 0 : thickness - 0.016)
+                const across = (side % 2 === 0 ? -1 : 1) * (halfWidth - thickness * 0.5)
+                const run = course * 4 + side
+                const count = throughCorner ? 3 : 2
+                let start = -halfRun
+                for (let index = 0; index < count; index++) {
+                    const part = run * 3 + index
+                    const end = index === count - 1 ? halfRun
+                        : -halfRun + 2 * halfRun * (index + 1) / count + variation.signed(part, 1) * 0.042
+                    const center = (start + end) * 0.5
+                    const offset = across + variation.signed(part, 2) * 0.012
+                    const matrix = Matrix.Scaling(end - start + 0.004,
+                        top - bottom + 0.018 + variation.signed(part, 3) * 0.02,
+                        thickness + variation.signed(part, 4) * 0.027)
+                        .multiply(Matrix.RotationYawPitchRoll((alongX ? 0 : Math.PI / 2) + variation.signed(part, 5) * 0.085,
+                            variation.signed(part, 6) * 0.075, variation.signed(part, 7) * 0.075))
+                        .setTranslationFromFloats(alongX ? center : offset,
+                            0.5 + (top + bottom) * 0.5 + variation.signed(part, 8) * 0.01, alongX ? offset : center)
+                    this.stones.push({matrix, seed: variation.unit(part), rim})
+                    start = end
+                }
+            }
         }
-        addPart(0.84, 0.1, 0.1, x, groundY + 1.72, z, this.woodMaterial)
+    }
 
-        const axleY = groundY + 1.32
-        addPart(1.02, 0.06, 0.06, x - 0.15, axleY, z, this.steelMaterial)
-        addPart(0.06, 0.24, 0.06, x - 0.66, axleY - 0.09, z, this.steelMaterial)
+    private buildRoof(variation: ReturnType<typeof createStaticVariation>, roofMaterial: Vector2, steelMaterial: Vector2) {
+        const frame = 60
+        const frameYaw = variation.signed(frame, 1) * 0.075
+        const frameTransform = Matrix.RotationY(frameYaw)
+        const ridgeY = 2.04 + variation.signed(frame, 2) * 0.035
+        const addFitting = (matrix: Matrix, material: Vector2, moss = false) => {
+            this.fittings.push({matrix: matrix.multiply(frameTransform), material, moss})
+        }
+        const roof = Matrix.RotationYawPitchRoll(variation.signed(frame, 3) * 0.045,
+            variation.signed(frame, 4) * 0.06, variation.signed(frame, 5) * 0.06)
+            .setTranslationFromFloats(variation.signed(frame, 6) * 0.035, ridgeY + 0.5, 0)
+        const postSupports: {brace: Vector3, axle: Vector3}[] = []
+        for (const side of [-1, 1]) {
+            for (let index = 0; index < 3; index++) {
+                const part = frame + (side < 0 ? 3 : 6) + index
+                const span = 0.58 + variation.signed(part, 1) * 0.05
+                const depth = 0.35 + variation.signed(part, 2) * 0.018
+                const thickness = 0.075 + variation.signed(part, 3) * 0.012
+                const skew = variation.signed(part, 4) * 0.045
+                const board = Matrix.FromValues(
+                    span, 0, skew, 0,
+                    0, thickness, 0, 0,
+                    0, 0, depth, 0,
+                    side * (span * 0.5 - 0.035), 0, 0, 1,
+                ).multiply(Matrix.RotationYawPitchRoll(variation.signed(part, 5) * 0.035,
+                    variation.signed(part, 6) * 0.04, -side * (0.42 + variation.signed(part, 7) * 0.05)))
+                board.setTranslationFromFloats(board.m[12], board.m[13] + variation.signed(part, 8) * 0.014,
+                    board.m[14] + (index - 1) * 0.325 + variation.signed(part, 9) * 0.01)
+                const panel = board.multiply(roof)
+                addFitting(panel, roofMaterial, side < 0)
+                if (index === 1) {
+                    const post = this.createPost(variation, frame + (side < 0 ? 1 : 2), side, panel)
+                    addFitting(post.matrix, this.material)
+                    postSupports.push(post)
+                }
+            }
+        }
 
-        addPart(0.62, 0.08, 1.02, x - 0.22, groundY + 1.93, z, this.roofMaterial, 0, 0.42, 'wellRoofMoss')
-        addPart(0.62, 0.08, 1.02, x + 0.22, groundY + 1.93, z, this.roofMaterial, 0, -0.42)
+        const [left, right] = postSupports
+        const brace = right.brace.subtract(left.brace)
+        const braceCenter = Vector3.Center(left.brace, right.brace)
+        addFitting(Matrix.Scaling(brace.length() + 0.12, 0.09, 0.095)
+            .multiply(Matrix.RotationYawPitchRoll(-Math.atan2(brace.z, brace.x), 0, Math.asin(brace.y / brace.length())))
+            .setTranslationFromFloats(braceCenter.x, braceCenter.y, braceCenter.z), this.material)
+
+        const axle = right.axle.subtract(left.axle)
+        const crank = left.axle.subtract(axle.normalizeToNew().scale(0.29))
+        const axleCenter = Vector3.Center(crank, right.axle)
+        addFitting(Matrix.Scaling(axle.length() + 0.34, 0.06, 0.06)
+            .multiply(Matrix.RotationY(-Math.atan2(axle.z, axle.x)))
+            .setTranslationFromFloats(axleCenter.x, axleCenter.y, axleCenter.z), steelMaterial)
+        addFitting(Matrix.Scaling(0.06, 0.24, 0.06).setTranslationFromFloats(crank.x, crank.y - 0.09, crank.z), steelMaterial)
+    }
+
+    private createPost(variation: ReturnType<typeof createStaticVariation>, part: number, side: number, panel: Matrix) {
+        const foot = new Vector3(side * 0.35 + variation.signed(part, 1) * 0.018, 1.23, variation.signed(part, 2) * 0.018)
+        const rotation = Matrix.RotationYawPitchRoll(variation.signed(part, 3) * 0.22,
+            variation.signed(part, 4) * 0.075, side * 0.04 + variation.signed(part, 5) * 0.06)
+        const axis = Vector3.TransformNormal(Vector3.Up(), rotation)
+        // End the tilted post just inside the board's underside, following the actual roof slope.
+        const toPanel = panel.clone().invert()
+        const height = (-0.22 - Vector3.TransformCoordinates(foot, toPanel).y) / Vector3.TransformNormal(axis, toPanel).y
+        const center = foot.add(axis.scale(height * 0.5))
+        const matrix = Matrix.Scaling(0.1 + variation.signed(part, 6) * 0.018, height, 0.1 + variation.signed(part, 7) * 0.013)
+            .multiply(rotation).setTranslationFromFloats(center.x, center.y, center.z)
+        return {
+            matrix,
+            brace: foot.add(axis.scale((2.22 - foot.y) / axis.y)),
+            axle: foot.add(axis.scale((1.82 - foot.y) / axis.y)),
+        }
+    }
+
+    render() {
+        for (const {matrix, seed, rim} of this.stones) {
+            MasonryBatch.add(placeStaticPart(matrix, this.renderPosition), this.renderPosition, seed,
+                false, rim ? 0.24 : 0.31, false, false, rim ? 'wellRim' : 'wellBase')
+        }
+        for (const {matrix, material, moss} of this.fittings) {
+            const placed = placeStaticPart(matrix, this.renderPosition)
+            if (moss) {
+                WorldRenderer.addTerrainContactBlock(placed, material, false, 0, 'wellRoofMoss')
+            } else {
+                WorldRenderer.block1!.matrices.push(placed)
+                WorldRenderer.block1!.uvData.push(material)
+            }
+        }
     }
 }
 

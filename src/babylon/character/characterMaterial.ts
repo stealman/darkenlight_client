@@ -1,5 +1,23 @@
 import { Color3, PBRMaterial, Scene, Texture } from '@babylonjs/core'
 import { PBRCustomMaterial } from '@babylonjs/materials'
+import type { CharacterGender } from './characterAppearance'
+
+const bodyMaterials = new WeakMap<Scene, Map<CharacterGender, PBRMaterial>>()
+
+export function getCharacterBodyMaterial(scene: Scene, gender: CharacterGender): PBRMaterial {
+    let materials = bodyMaterials.get(scene)
+    if (!materials) {
+        materials = new Map()
+        bodyMaterials.set(scene, materials)
+    }
+    let material = materials.get(gender)
+    if (!material) {
+        const body = gender === 'F' ? 'human_female' : 'human_male'
+        material = createCharacterMaterial(scene, `${body}-body`, `/models/human/${body}.png`)
+        materials.set(gender, material)
+    }
+    return material
+}
 
 // Body and detachable heads use the same colour and lighting response.
 export function createCharacterMaterial(scene: Scene, name: string, albedoPath?: string,

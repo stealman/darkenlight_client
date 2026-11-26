@@ -49,6 +49,65 @@ test('baked paving matches live layout across region borders', () => {
     assert.ok(actual.some(({stone: p}) => p.left < 11.5 && p.right > 11.5))
 })
 
+test('snowmelt crosses competing material transitions in live and baked terrain', () => {
+    const {compileTerrainRenderData} = require('../build/terrainRenderAssets.ts')
+    const {decodeTerrainRenderData, visitBakedTerrainTransitions} = require('../src/babylon/world/terrainRenderData.ts')
+    const {findTerrainTransitions, hasTerrainTransition, TERRAIN_SNOW_SURFACE} = require('../src/babylon/world/terrainTransitionField.ts')
+    const width = 18, depth = 4, height = 5
+    const palette = [[4, codec.TileFlags.snow], [4, 0], [2, 0]].map(([type, flags]) => ({
+        height, type, flags, ore: 0, originalHeight: height, originalType: type,
+    }))
+    const indices = Uint32Array.from({length: width * depth}, (_, i) => i < 10 * depth ? 0 : i < 12 * depth ? 1 : 2)
+    const map = Array.from({length: width}, (_, x) => Array.from({length: depth}, (_, z) => {
+        const {type, flags} = palette[indices[x * depth + z]]
+        return {type, height, snowed: !!flags, stonePath: false, beigeStonePath: false}
+    }))
+    const live = findTerrainTransitions(map, hasTerrainTransition)
+    assert.equal(live[10][1].coverType, TERRAIN_SNOW_SURFACE)
+    assert.equal(live[11][1].coverType, 2)
+    assert.deepEqual(live[11][1].snowmeltField, [1, 2, 1, 2])
+    assert.deepEqual(live[12][1].snowmeltField, [2, 3, 2, 3])
+    assert.equal(live[13][1].snowmeltOnly, false)
+    assert.equal(live[14][1]?.snowmeltField, undefined)
+    const withoutMelt = findTerrainTransitions(map, hasTerrainTransition, false)
+    assert.equal(withoutMelt[11][1].coverType, 2)
+    assert.equal(withoutMelt[11][1].snowmeltField, undefined)
+
+    const binary = compileTerrainRenderData(codec.encodeCompiledMap({width, depth, palette, indices}))
+    const data = decodeTerrainRenderData(binary, width, depth)
+    for (const regionX of [0, 12]) {
+        const baked = new Map()
+        assert.ok(visitBakedTerrainTransitions(data, regionX, 0, (x, z, cover, substrate, field, snowmeltOnly, melt, secondary) => {
+            if (z === 1) baked.set(x, {cover, substrate, field, snowmeltOnly, melt, secondary})
+        }))
+        for (const x of [11, 12]) {
+            assert.equal(baked.get(x).cover, 2)
+            assert.equal(baked.get(x).substrate, 4)
+            assert.equal(baked.get(x).snowmeltOnly, false)
+            assert.deepEqual(baked.get(x).melt, live[x][1].snowmeltField)
+            assert.deepEqual(baked.get(x).secondary, live[x][1].secondary)
+        }
+    }
+})
+
+test('mud keeps both its grass and rock boundaries when the nearest side changes', () => {
+    const {findTerrainTransitions, hasTerrainTransition, sharedTerrainSurface} = require('../src/babylon/world/terrainTransitionField.ts')
+    const map = [2, 2, 4, 4, 3, 3].map(type =>
+        Array.from({length: 4}, () => ({type, height: 4, snowed: false, stonePath: false, beigeStonePath: false})))
+    const transitions = findTerrainTransitions(map, hasTerrainTransition, false)
+    const left = transitions[2][1], right = transitions[3][1]
+    assert.equal(left.coverType, 2)
+    assert.equal(right.substrateType, 3)
+    assert.equal(sharedTerrainSurface(left, left.secondary), 4)
+    assert.equal(sharedTerrainSurface(right, right.secondary), 4)
+    // Each named pair has the same signed distance at the shared tile edge.
+    assert.equal(left.field[1], right.secondary.field[0])
+    assert.equal(left.secondary.field[1], right.field[0])
+    const narrow = findTerrainTransitions([map[0], map[1], map[2], map[4], map[5]], hasTerrainTransition, false)
+    assert.equal(narrow[1][1].secondary.substrateType, 3)
+    assert.equal(narrow[3][1].secondary.coverType, 2)
+})
+
 test('baked atlas patches require every rotated cell within the submitted region', () => {
     const {terrainCoverLayout, visitTerrainAtlasPlacements, visitBakedTerrainAtlasPatches} =
         require('../src/babylon/world/terrainAtlasPlacement.ts')

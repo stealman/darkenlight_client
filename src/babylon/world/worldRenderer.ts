@@ -349,7 +349,8 @@ export const WorldRenderer = {
 
     addWeatheredBlock(matrix: Matrix, uv: Vector2, anchor: Vector3, wear: number,
         options?: {snowReach?: number, blendGroundLighting?: boolean, includeMaskedSnow?: boolean,
-            target?: StaticBlockContactTarget, sampleAtCenter?: boolean, highGroundWear?: DampContact, snowProfile?: DampContact}) {
+            target?: StaticBlockContactTarget, sampleAtCenter?: boolean, highGroundWear?: DampContact,
+            snowProfile?: DampContact, groundDamp?: DampContact}) {
         const target = options?.target
         const batch = target?.prefab ?? this.block1!
         const index = batch.matrices.length
@@ -374,6 +375,10 @@ export const WorldRenderer = {
             if (snowReach > 0 && bottom < height + SNOW_CONTACT_MAX_HEIGHT * snowReach
                 && (options?.includeMaskedSnow ? isSnowRoof(tile) : this.getSnowSurfaceHeight(x, z) !== undefined)) {
                 contact.addSnow(index, height, snowReach, options?.blendGroundLighting ?? true, options?.snowProfile)
+            }
+        } else if (options?.groundDamp) {
+            if (Math.abs(bottom - height) <= 0.15) {
+                contact.addDamp(index, height, options.groundDamp)
             }
         } else if (wear > 0) {
             const damp = tile.type === TerrainEnum1.TERRAIN_MUDDY_DIRT.index ? 1

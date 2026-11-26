@@ -163,7 +163,7 @@ export const Renderer = {
         Lights.attachPersonalLight(MyPlayer.myModel!.node)
         MyStatusPanel.panel!.style.display = 'flex'
         const { WorldDataManager } = await import('@/data/worldDataManager')
-        await WorldDataManager.terrainRenderLoad?.ready
+        await Promise.all([WorldDataManager.terrainRenderLoad?.ready, EquipManager.preloadWeapons()])
 
         // The first scene uses the player and the nearby entities from the login frame.
         this.prepareGameView()
@@ -180,7 +180,7 @@ export const Renderer = {
         onWarmupProgress?.(0, 4)
         await WorldRenderer.warmUpOcclusionFadeShaders()
         onWarmupProgress?.(1, 4)
-        await EquipManager.warmUpShaders()
+        await CharacterManager.warmUpAppearance(this.scene)
         onWarmupProgress?.(2, 4)
         await MonsterManager.prepareModels()
         onWarmupProgress?.(3, 4)
