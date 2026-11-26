@@ -301,6 +301,7 @@ const onGameStarted = async () => {
     displayAccountCharacterNameDialog.value = false
     accountCharacterNameClaimClass.value = null
     loadingProgress.value = 100
+    syncAppViewportSize()
     gameLoading.value = false
     gameSessionActive.value = true
     loginRequestSentFlag.value = true

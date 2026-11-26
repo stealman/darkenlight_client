@@ -6,6 +6,7 @@ const {mkdtemp, rm} = require('node:fs/promises')
 async function main() {
     const root = resolve(__dirname, '..')
     const coldStart = process.argv.includes('--cold-start')
+    const touch = process.argv.includes('--touch')
     const cacheDir = await mkdtemp(join(root, 'node_modules/.vite-character-test-'))
     process.env.VITE_GM_MODE = 'false'
     const {createServer} = await import('vite')
@@ -14,7 +15,7 @@ async function main() {
     try {
         await vite.listen()
         browser = await chromium.launch({channel: 'chrome', headless: true, args: ['--enable-unsafe-swiftshader']})
-        const page = await browser.newPage(process.argv.includes('--touch')
+        const page = await browser.newPage(touch
             ? {viewport: {width: 844, height: 390}, isMobile: true, hasTouch: true,
                 userAgent: 'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36'}
             : {viewport: {width: 1280, height: 800}})
@@ -126,6 +127,45 @@ async function main() {
                 throw new Error('Page reloaded after choosing character class')
             }),
         ])
+        if (touch) {
+            const joystick = page.locator('#joystick-zone .back')
+            await joystick.waitFor({state: 'visible'})
+            const cdp = await page.context().newCDPSession(page)
+            const input = async (type, touchPoints) => cdp.send('Input.dispatchTouchEvent', {type, touchPoints})
+            await page.evaluate(async () => {
+                const {Controller} = await import('/src/controlls/controller.ts')
+                const processJoystick = Controller.processJoystick
+                window.__joystickMoves = []
+                window.__restoreJoystick = () => { Controller.processJoystick = processJoystick }
+                Controller.processJoystick = (x, y) => window.__joystickMoves.push({x, y})
+            })
+            try {
+                const checkCenter = async () => {
+                    await page.evaluate(() => { window.__joystickMoves.length = 0 })
+                    const {x, y, width, height} = await joystick.boundingBox()
+                    const center = {x: x + width / 2, y: y + height / 2}
+                    await input('touchStart', [center])
+                    await input('touchMove', [{x: center.x + width / 4, y: center.y}])
+                    await input('touchEnd', [])
+                    const moves = await page.evaluate(() => window.__joystickMoves)
+                    assert.ok(moves.length >= 3, `Expected a start, move and release, got ${JSON.stringify(moves)}`)
+                    assert.ok(Math.hypot(moves[0].x, moves[0].y) < .05, `Joystick center was offset: ${JSON.stringify(moves[0])}`)
+                    assert.ok(moves.some(({x, y}) => Math.abs(x - .5) < .08 && Math.abs(y) < .05), `Swipe did not point right: ${JSON.stringify(moves)}`)
+                    assert.deepEqual(moves.at(-1), {x: 0, y: 0})
+                }
+                await checkCenter()
+                // A visual layout shift can happen before the browser sends a resize event.
+                await page.locator('#touchControllsLayer').evaluate(element => { element.style.top = '-32px' })
+                await checkCenter()
+            } finally {
+                await cdp.detach()
+                await page.evaluate(() => {
+                    document.getElementById('touchControllsLayer').style.top = ''
+                    window.__restoreJoystick()
+                })
+            }
+            console.log('PASS: joystick center and swipe at game entry and after a layout shift')
+        }
         await renderedFrames()
         assert.equal(await page.evaluate(async () => {
             const {Renderer} = await import('/src/babylon/scene/renderer.ts')

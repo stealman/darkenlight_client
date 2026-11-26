@@ -2,6 +2,7 @@
     <div id="touchControllsLayer">
         <div
             id="joystick-zone"
+            ref="joystickZone"
             class="noselect"
             :class="{ 'touch-controls--settings-active': settingsActive }"
             style="position:absolute;left:20px;bottom:20px;width:150px;height:150px;"
@@ -12,7 +13,7 @@
 
 <script setup>
 
-import { onMounted, onUnmounted, ref } from 'vue'
+import { nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { Controller } from '@/controlls/controller'
 import nipplejs from 'nipplejs'
 import { Settings } from '@/settings/settings'
@@ -22,9 +23,13 @@ defineProps({
     settingsActive: Boolean,
 })
 
+const joystickZone = ref(null)
 let joystickManager = null;
 
-onMounted(() => {
+onMounted(async () => {
+    // The parent HUD uses v-show. Wait for its visibility update before
+    // NippleJS measures the static joystick's starting position.
+    await nextTick()
     updateFromSettings()
 })
 
@@ -34,8 +39,9 @@ onUnmounted(() => {
 })
 
 const updateFromSettings = () => {
+    const zone = joystickZone.value
+    if (!zone) return
     if (GuiButtonsManager.btnBackpack && GuiButtonsManager.btnCharacter) GuiButtonsManager.updatePositions()
-    const joystickZone = document.getElementById("joystick-zone")
 
     if (joystickManager) {
         joystickManager.destroy()
@@ -43,23 +49,24 @@ const updateFromSettings = () => {
     }
 
     if (!Settings.isPhoneOrTablet()) {
-        joystickZone.style.display = "none"
+        zone.style.display = "none"
         document.getElementById("btn-target-lock").style.display = "none"
         return;
     }
 
-    joystickZone.style.display =  "block"
+    zone.style.display = "block"
     const joySize = Settings.joystickSize
     const joyPos = { left: Math.round(joySize / 2) + "px", bottom: Math.round(joySize / 2) + "px" }
 
-    joystickZone.style.left = Settings.joystickLeft + "px"
-    joystickZone.style.bottom = Settings.joystickBottom + "px"
-    joystickZone.style.width = joySize + "px"
-    joystickZone.style.height = joySize + "px"
+    zone.style.left = Settings.joystickLeft + "px"
+    zone.style.bottom = Settings.joystickBottom + "px"
+    zone.style.width = joySize + "px"
+    zone.style.height = joySize + "px"
 
     joystickManager = nipplejs.create({
-        zone: joystickZone,
+        zone,
         mode: "static",
+        dynamicPage: true,
         position: joyPos,
         color: "transparent",
         restOpacity: 0.6,

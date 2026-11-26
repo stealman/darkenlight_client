@@ -98,6 +98,7 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
     terrainSteps?: TerrainStepField) {
     const terrain = new TransformNode('outdoorTerrain', parent.getScene())
     terrain.parent = parent
+    const lowDetail = Settings.isDetalLevelLow()
     const detailedPaving = Settings.detailLevel.paving === 'detailed'
     const renderer = createTerrainSurfaceRenderer(parent.getScene(), terrain, new Vector3(0, 0, 1), undefined, detailedPaving)
     const batches = new Map<Mesh, OutdoorInstanceBatch>()
@@ -107,7 +108,7 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
             terrainSteps?.configure(material, renderer.stepMaterials.get(material))
             terrainSteps?.configureGlow(material)
             contactShadow?.configure(material, false, !!terrainSteps)
-            configureTerrainTerraceEdges(material)
+            if (!lowDetail) configureTerrainTerraceEdges(material)
         }
         const {minimum, maximum} = mesh.getBoundingInfo()
         mesh.rawBoundingInfo = new BoundingInfo(minimum, maximum)
@@ -118,7 +119,6 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
     renderer.meshes.forEach(registerSurface)
     const paving = createOutdoorPaving(terrain, detailedPaving, batch => batches.set(batch.mesh, batch), contactShadow, terrainSteps)
     const highDetail = Settings.isDetalLevelHigh()
-    const lowDetail = Settings.isDetalLevelLow()
     const foliage = createTerrainFoliageRenderer(parent.getScene(), terrain, highDetail, highDetail ? 1 : 2 / 3, !lowDetail)
     const grass = GAME_GRASS_ENABLED ? createGrassRenderer(parent.getScene(), terrain, lowDetail ? 0 : GRASS_CONTACT_LIMIT,
         lowDetail ? 0 : highDetail ? 15 : 10, !lowDetail) : undefined
@@ -338,15 +338,15 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
                 renderer.render(map, {
                     includeTile: (tx, tz) => tx + left >= x && tx + left < x + REGION_SIZE
                         && tz + top >= z && tz + top < z + REGION_SIZE,
-                    canMergeTile: (tx, tz) => !masksAt(tx, tz),
+                    canMergeTile: lowDetail ? undefined : (tx, tz) => !masksAt(tx, tz),
                     originX: left,
                     originZ: top,
                     compiled: baked,
                     compiledRegion: baked ? {x, z} : undefined,
                     submit(mesh, source, attributes) {
                         const batch = batches.get(mesh) ?? registerSurface(mesh)
-                        const terraceEdges: number[] = []
-                        attributes.push({kind: TERRACE_EDGE_ATTRIBUTE, stride: 4, values: terraceEdges})
+                        const terraceEdges: number[] | undefined = lowDetail ? undefined : []
+                        if (terraceEdges) attributes.push({kind: TERRACE_EDGE_ATTRIBUTE, stride: 4, values: terraceEdges})
                         for (const {kind, stride, values} of attributes) {
                             if (kind !== 'terrainSurface' && kind !== 'terrainWetTile') continue
                             for (let i = 0; i < values.length; i += stride) {
@@ -357,7 +357,7 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
                         source.forEachInstance((tile, matrix, uv, sourceIndex, span) => {
                             const localX = Math.floor(tile / regionDepth)
                             const localZ = tile % regionDepth
-                            terraceEdges.push(localX + left, localZ + top, map[localX][localZ].height,
+                            terraceEdges?.push(localX + left, localZ + top, map[localX][localZ].height,
                                 span === 1 ? masksAt(localX, localZ) : 0)
                             const index = (localX + left - x) * REGION_SIZE + localZ + top - z
                             const translation = matrix.getTranslation()
