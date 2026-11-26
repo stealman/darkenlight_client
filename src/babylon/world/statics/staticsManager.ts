@@ -545,7 +545,8 @@ export const StaticsManager = {
         this.resolveCorners(fences)
         this.resolveCorners(cemeteryFences)
         this.resolveCorners(cemeteryWalls)
-        this.resolveCorners(stoneWalls)
+        const stoneWallsByTile = this.resolveCorners(stoneWalls)
+        for (const wall of stoneWalls) wall.updateSegmentLayout(stoneWallsByTile)
         this.cornerConnectionsDirty = false
     },
 
@@ -573,6 +574,7 @@ export const StaticsManager = {
                 object.setCornerDirections([continuations[0], turns[0]])
             }
         }
+        return objectsByTile
     },
 
     prepareRender() {

@@ -163,6 +163,8 @@ export const GMManager = {
     palisadeOrientation: ref('Z'),
     campFenceDamaged: ref(false),
     stoneWallPrecision: ref(10),
+    stoneWallDamage: ref(1),
+    stoneWallHeight: ref(1),
     spikedPalisadeFacing: ref('+Z'),
     walkableBlockHeight: ref(1),
     walkableBlockMaterial: ref('WOOD'),
@@ -549,7 +551,11 @@ export const GMManager = {
             || type === STONE_WALL_STATIC_ID) {
             data.meta = {orientation: this.palisadeOrientation.value}
             if (type === CAMP_FENCE_STATIC_ID) data.meta.damaged = this.campFenceDamaged.value
-            if (type === STONE_WALL_STATIC_ID) data.meta.precision = this.stoneWallPrecision.value
+            if (type === STONE_WALL_STATIC_ID) {
+                data.meta.precision = this.stoneWallPrecision.value
+                data.meta.damage = this.stoneWallDamage.value
+                data.meta.height = this.stoneWallHeight.value
+            }
         } else if (type === PALISADE_SPIKED_STATIC_ID) {
             data.meta = {facing: this.spikedPalisadeFacing.value}
         } else if (type === WALKABLE_BLOCK_STATIC_ID) {
@@ -618,7 +624,11 @@ export const GMManager = {
             || object.type === STONE_WALL_STATIC_ID) {
             this.palisadeOrientation.value = status.orientation === 'X' ? 'X' : 'Z'
             if (object.type === CAMP_FENCE_STATIC_ID) this.campFenceDamaged.value = status.damaged === true
-            if (object.type === STONE_WALL_STATIC_ID) this.stoneWallPrecision.value = status.precision ?? 10
+            if (object.type === STONE_WALL_STATIC_ID) {
+                this.stoneWallPrecision.value = status.precision ?? 10
+                this.stoneWallDamage.value = status.damage ?? 1
+                this.stoneWallHeight.value = status.height ?? 1
+            }
         } else if (object.type === PALISADE_SPIKED_STATIC_ID) {
             this.spikedPalisadeFacing.value = status.facing ?? '+Z'
         } else if (object.type === WALKABLE_BLOCK_STATIC_ID) {
@@ -657,7 +667,11 @@ export const GMManager = {
 
     cancelStaticEdit() {
         if (this.editingStatic.value?.type === CAMP_FENCE_STATIC_ID) this.campFenceDamaged.value = false
-        if (this.editingStatic.value?.type === STONE_WALL_STATIC_ID) this.stoneWallPrecision.value = 10
+        if (this.editingStatic.value?.type === STONE_WALL_STATIC_ID) {
+            this.stoneWallPrecision.value = 10
+            this.stoneWallDamage.value = 1
+            this.stoneWallHeight.value = 1
+        }
         this.editingStatic.value = null
         if (this.tab === GmTabs.WALLS_AND_FENCES_EDIT) this.selectedWallFence.value = 0
         if (this.tab === GmTabs.STATICS_EDIT) this.selectedStatic.value = 0

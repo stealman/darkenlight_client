@@ -218,6 +218,7 @@ export async function installAssetPreview(
                 WorldRenderer.block1!.mesh.material = useContact ? contactMaterial : Materials.blockMat1!
                 StoneBatch.setSnowContactEnabled(Settings.isDetalLevelHigh())
                 TaperedBlockBatch.setTerrainContactEnabled(useContact)
+                MasonryBatch.setTopWeatheringEnabled(Settings.isDetalLevelHigh())
                 biomes.prepareTerrain()
                 const isTree = choice.value.startsWith('tree:')
                 const isStoneWall = id === 210
@@ -239,6 +240,13 @@ export async function installAssetPreview(
                             StaticsManager.addObject({tp: id, x: x + (wallAlongX ? 2 : -offset),
                                 z: z + (wallAlongX ? -offset : 2),
                                 meta: {...data.meta, orientation: wallAlongX ? 'Z' : 'X'}, tmp: true}, false)
+                        }
+                        for (const [step, height] of [[3, 0.5], [4, 0.25]]) {
+                            StaticsManager.addObject({tp: id, x: x - (wallAlongX ? step : 0),
+                                z: z - (wallAlongX ? 0 : step), meta: {...data.meta, height}, tmp: true}, false)
+                            StaticsManager.addObject({tp: id, x: x + (wallAlongX ? 2 : -step),
+                                z: z + (wallAlongX ? -step : 2),
+                                meta: {...data.meta, height, orientation: wallAlongX ? 'Z' : 'X'}, tmp: true}, false)
                         }
                     } else {
                         StaticsManager.addObject({tp: id, x, z, meta: data.meta, tmp: true}, false)
@@ -269,7 +277,7 @@ export async function installAssetPreview(
                 if (obj?.type === 281) {
                     biomes.frame(1.6, 9, reset, obj.renderPosition.x - obj.position.x, obj.renderPosition.z - obj.position.z)
                 } else if (isStoneWall) {
-                    biomes.frame(0.65, 10, reset, wallAlongX ? 0 : -1, wallAlongX ? -1 : 0)
+                    biomes.frame(0.65, 12, reset, wallAlongX ? -1 : -2, wallAlongX ? -2 : -1)
                 } else {
                     biomes.frame(isTree ? 2.4 : 0.65, isTree ? 13 : 7, reset)
                 }

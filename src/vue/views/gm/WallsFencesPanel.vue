@@ -120,6 +120,18 @@
                     <option v-for="precision in 10" :key="precision" :value="precision">{{ precision }}</option>
                 </select>
             </label>
+            <label v-if="selectedObjectType === 'STONE_WALL'">
+                &nbsp;&nbsp;Poškození
+                <select v-model.number="stoneWallDamage">
+                    <option v-for="level in 11" :key="level" :value="level - 1">{{ level - 1 }}</option>
+                </select>
+            </label>
+            <label v-if="selectedObjectType === 'STONE_WALL'">
+                &nbsp;&nbsp;Výška
+                <select v-model.number="stoneWallHeight">
+                    <option v-for="quarter in 8" :key="quarter" :value="quarter / 4">{{ quarter / 4 }}</option>
+                </select>
+            </label>
         </div>
 
         <div style="margin-top: 1vh">
@@ -156,6 +168,8 @@ const selectedObject = GMManager.selectedWallFence
 const palisadeOrientation = GMManager.palisadeOrientation
 const campFenceDamaged = GMManager.campFenceDamaged
 const stoneWallPrecision = GMManager.stoneWallPrecision
+const stoneWallDamage = GMManager.stoneWallDamage
+const stoneWallHeight = GMManager.stoneWallHeight
 const spikedPalisadeFacing = GMManager.spikedPalisadeFacing
 const walkableBlockHeight = GMManager.walkableBlockHeight
 const walkableBlockMaterial = GMManager.walkableBlockMaterial

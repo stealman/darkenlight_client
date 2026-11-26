@@ -1,4 +1,5 @@
 import { Vector2 } from '@babylonjs/core'
+import { PBRCustomMaterial } from '@babylonjs/materials'
 import type { TransformNode } from '@babylonjs/core'
 import { Lights } from '@/babylon/scene/lights'
 import type { MapBlock } from '@/data/worldDataManager'
@@ -30,6 +31,7 @@ export function createOutdoorPaving(terrain: TransformNode, detailed: boolean,
             contactShadow?.configure(detailedRenderer.material, false, !!terrainSteps)
         }
         const mesh = detailedRenderer?.mesh ?? createSimpleStonePathMesh(scene, terrain)
+        if (!detailed && mesh.material instanceof PBRCustomMaterial) contactShadow?.configure(mesh.material)
         Lights.registerSharedLightMesh(mesh)
         mesh.onDisposeObservable.addOnce(() => Lights.unregisterSharedLightMesh(mesh))
         batch = new OutdoorInstanceBatch(mesh)
