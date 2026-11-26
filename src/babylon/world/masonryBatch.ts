@@ -232,7 +232,7 @@ function createMaterial(scene: Scene, weathering: boolean, topWeathering: boolea
             float relief = mix(0.84, 0.54, headstone);
             relief = mix(relief, 0.14, masonryPedestal);
             relief = mix(relief, mix(0.36, 0.20, masonryGraveCover), masonryGrave);
-            relief = mix(relief, 0.055, masonryPolished);
+            relief *= 1.0 - masonryPolished;
             normalW = normalize(normalW + (tangent * bump.x + bitangent * bump.y) * scale * relief * detail);
         ` : ''}
         float masonryEdgeShade = 0.0;
@@ -326,15 +326,22 @@ function createMasonryBatch(arched: boolean) {
 
         add(matrix: Matrix, anchor: Vector3, seed: number, beige = false, roughness = 0, exposedTop = false, crown = false,
             appearance?: 'headstone' | 'graveFrame' | 'graveCover' | 'polished' | {row: number, glowTop: boolean}) {
-            const shape = roughness * 0.25 + (crown ? 0.5 : 0)
+            const polished = appearance === 'polished'
+            const shape = polished ? 0 : roughness * 0.25 + (crown ? 0.5 : 0)
             const pedestal = typeof appearance === 'object' ? appearance : undefined
             const row = pedestal ? pedestal.row + PEDESTAL_ROW_OFFSET : stoneAtlasRow(beige, seed)
             const glow = pedestal?.glowTop ? TOP_GLOW_ROW_OFFSET : 0
             const headstone = appearance === 'headstone' ? HEADSTONE_ROW_OFFSET : 0
             const grave = appearance === 'graveCover' ? 2 * GRAVE_ROW_OFFSET : appearance === 'graveFrame' ? GRAVE_ROW_OFFSET : 0
-            const polished = appearance === 'polished' ? POLISHED_ROW_OFFSET : 0
-            const uv = new Vector2(Math.floor(seed * 413) % 8 + shape, row + glow + headstone + grave + polished + seed * 0.5)
-            const index = this.prefab!.matrices.length
+            const uv = new Vector2(Math.floor(seed * 413) % 8 + shape,
+                row + glow + headstone + grave + (polished ? POLISHED_ROW_OFFSET : 0) + seed * 0.5)
+            const batch = this.prefab!
+            const index = batch.matrices.length
+            if (polished) {
+                batch.matrices.push(matrix)
+                batch.uvData.push(uv)
+                return index
+            }
             if (this.topWeathering && exposedTop) this.topExposure[index] = FULL_TOP_EXPOSURE
             WorldRenderer.addWeatheredBlock(matrix, uv, anchor, 0.82,
                 {target: this, sampleAtCenter: true, highGroundWear: 'masonryGround', snowProfile: 'masonrySnow'})

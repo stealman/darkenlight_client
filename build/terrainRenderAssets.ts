@@ -65,7 +65,7 @@ export function compileTerrainRenderData(bytes: Uint8Array) {
         }
     }
     const canBlend = (a: typeof tiles[number], b: typeof tiles[number]) => {
-        if (a.height !== b.height || a.stonePath || a.beigeStonePath || b.stonePath || b.beigeStonePath) return false
+        if (a.height !== b.height) return false
         const first = terrainSurface(a), second = terrainSurface(b)
         return hasTerrainTransition(first, second) || hasTerrainTransition(second, first)
     }

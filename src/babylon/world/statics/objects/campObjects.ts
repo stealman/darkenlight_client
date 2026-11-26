@@ -142,14 +142,73 @@ abstract class CampObject extends BaseStaticObject {
 }
 
 export class CampBench extends CampObject {
-    render() {
-        for (const x of [-0.675, -0.225, 0.225, 0.675]) {
-            for (const z of [-0.115, 0.115]) {
-                this.part(0.43, 0.12, 0.21, x, 0.38, z)
+    private readonly planks: WoodPiece[]
+    private readonly legs: WoodPiece[]
+
+    constructor(type: number, position: Vector3, material: Vector2, accentMaterial: Vector2, metadata?: CampObjectMetadata) {
+        super(type, position, material, accentMaterial, metadata)
+        this.prefab = TaperedBlockBatch.prefab
+        const variation = createStaticVariation(MyPlayer.worldId, position, type)
+        const frame = Matrix.RotationY(this.yaw + variation.signed(0, 70) * 0.055)
+        const seatHeight = 0.44
+        const wideSide = variation.unit(0, 71) < 0.5 ? -1 : 1
+        const widthDifference = 0.025 + variation.unit(0, 72) * 0.013
+        const skewDirection = variation.unit(0, 73) < 0.5 ? -1 : 1
+        const seatSkew = skewDirection * (0.022 + variation.unit(0, 74) * 0.028)
+        this.planks = [-1, 1].map((side, index) => {
+            const thickness = 0.10 + variation.signed(index, 3) * 0.011
+            const width = 0.195 + side * wideSide * widthDifference + variation.signed(index, 4) * 0.005
+            const length = 1.79 + variation.signed(index, 5) * 0.095
+            const skew = Matrix.FromValues(
+                1, 0, seatSkew + variation.signed(index, 12) * 0.006, 0,
+                0, 1, 0, 0,
+                0, 0, 1, 0,
+                0, 0, 0, 1,
+            )
+            const shape = createWoodShape(variation, index, 1 + variation.signed(index, 8) * 0.075,
+                1 + variation.signed(index, 9) * 0.045, 0.040)
+            if (shape) {
+                const taper = (variation.unit(index, 13) < 0.5 ? -1 : 1) * (0.065 + variation.unit(index, 14) * 0.045)
+                // Shape the outer edges while keeping the edges along the seat gap aligned.
+                for (const corner of shape.foot) if (side * corner.y > 0) corner.y -= side * taper
+                for (const corner of shape.top) if (side * corner.y > 0) corner.y += side * taper
             }
+            return {
+                matrix: createHorizontalWoodMatrix(length, width, thickness, true, variation.signed(index, 6) * 0.04)
+                    .multiply(Matrix.RotationYawPitchRoll(variation.signed(index, 0) * 0.008,
+                        variation.signed(index, 1) * 0.028, variation.signed(index, 2) * 0.010))
+                    .multiply(skew)
+                    .setTranslationFromFloats(variation.signed(index, 7) * 0.045,
+                        0.5 + seatHeight - thickness / 2 + variation.signed(index, 10) * 0.004,
+                        side * (width / 2 + 0.022) + variation.signed(index, 11) * 0.004)
+                    .multiply(frame),
+                shape,
+            }
+        })
+        this.legs = [-1, 1].map((side, index) => {
+            const part = index + this.planks.length
+            const matrix = Matrix.Scaling(0.20 + variation.signed(part, 3) * 0.028,
+                seatHeight - 0.048 + variation.signed(part, 4) * 0.012, 0.35 + variation.signed(part, 5) * 0.031)
+                .multiply(Matrix.RotationYawPitchRoll(variation.signed(part, 0) * 0.095,
+                    variation.signed(part, 1) * 0.055, variation.signed(part, 2) * 0.082))
+            const {m} = matrix
+            const footX = side * (0.68 + variation.signed(part, 6) * 0.034)
+            const footZ = variation.signed(part, 7) * 0.021
+            return {
+                matrix: matrix.setTranslationFromFloats(footX + m[4] / 2, 0.49 + m[5] / 2, footZ + m[6] / 2).multiply(frame),
+                shape: createWoodShape(variation, part),
+            }
+        })
+    }
+
+    render() {
+        for (const {matrix, shape} of this.planks) {
+            TaperedBlockBatch.add(placeStaticPart(matrix, this.renderPosition), this.material, shape,
+                {patina: true, suppressDamage: true})
         }
-        for (const x of [-0.68, 0.68]) {
-            this.part(0.2, 0.32, 0.34, x, 0.16, 0, this.accentMaterial, 0, this.position)
+        const legWeather = {anchor: this.position, moisture: getWoodMoisture(this.position), upright: true}
+        for (const {matrix, shape} of this.legs) {
+            TaperedBlockBatch.add(placeStaticPart(matrix, this.renderPosition), this.accentMaterial, shape, legWeather)
         }
     }
 }

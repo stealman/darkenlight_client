@@ -267,8 +267,7 @@ export class StoneTomb extends MasonryCemeteryObject {
     render() {
         addMasonryPedestal(this, [0.92, 0.18, 1.82], this.yaw)
         for (const {matrix, seed, roughness, appearance} of this.stones) {
-            MasonryBatch.add(placeStaticPart(matrix, this.renderPosition), this.position, seed, appearance === 'polished',
-                roughness, appearance !== 'polished', false, appearance)
+            MasonryBatch.add(placeStaticPart(matrix, this.renderPosition), this.position, seed, false, roughness, true, false, appearance)
         }
     }
 }

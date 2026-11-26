@@ -13,7 +13,7 @@ export const TERRAIN_TRANSITION_FALLBACK = 0xffffffff
 
 // Bump the asset version when the format or precomputation rules change.
 export function terrainRenderAssetName(mapHash: string) {
-    return `assets/render/v7-${mapHash}.dlr`
+    return `assets/render/v8-${mapHash}.dlr`
 }
 
 export function terrainRenderBaseBytes(width: number, depth: number) {

@@ -25,7 +25,7 @@ import { CONTACT_SHADOW_STRENGTH, contactShadowFalloff } from '../terrainContact
 import type { ContactShadowFootprint } from '../terrainContactShadow'
 import { OutdoorInstanceBatch } from '../outdoorInstanceBatch'
 import type { OutdoorInstance } from '../outdoorInstanceBatch'
-import { appendPavingAttributes, createSimpleStonePathMesh, createStonePathRenderer, pavingStoneMatrix, PAVING_INSTANCE_ATTRIBUTE } from '../stonePathRenderer'
+import { appendPavingAttributes, createSimpleHouseFloorPavingMesh, createStonePathRenderer, pavingStoneMatrix, PAVING_INSTANCE_ATTRIBUTE } from '../stonePathRenderer'
 import { StepMarksRenderer } from '../stepMarksRenderer'
 import { visitBuildingFloorStones } from '../stonePathLayout'
 import type { PavingStone } from '../stonePathLayout'
@@ -2015,7 +2015,7 @@ export const BuildingManager = {
                     TerrainManager.contactShadow?.configure(floor.material, false, !!terrainMarks)
                     mesh = floor.mesh
                 } else {
-                    mesh = createSimpleStonePathMesh(scene, this.parent, true)
+                    mesh = createSimpleHouseFloorPavingMesh(scene, this.parent)
                 }
                 mesh.alwaysSelectAsActiveMesh = true
                 Lights.registerSharedLightMesh(mesh)

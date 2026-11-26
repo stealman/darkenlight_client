@@ -11,13 +11,21 @@ export function terraceCornerMasks(map: MapBlock[][], x: number, z: number) {
     let packed = 0
     for (const [dx, dz] of TERRAIN_ROOF_CORNERS) {
         let mask = 0
+        let fixed = false
         // Encode the four columns in world order so both sides of a seam agree.
         for (let i = 0; i < 4; i++) {
             const neighbor = map[x + Math.min(dx, 0) + (i % 2)]?.[z + Math.min(dz, 0) + (i >> 1)]
-            if (neighbor && neighbor.type > 0 && neighbor.height > tile.height - TERRAIN_STEP_HEIGHT) mask |= 1 << i
+            if (!neighbor || neighbor.type <= 0) continue
+            // The taller wall's foot and the water bed do not follow this rim.
+            if (neighbor.height > tile.height
+                || (neighbor.type === WATER_BLOCK_TYPE && neighbor.height === tile.height)) {
+                fixed = true
+                break
+            }
+            if (neighbor.height > tile.height - TERRAIN_STEP_HEIGHT) mask |= 1 << i
         }
         // Full corners and diagonally touching terraces have no single inward direction.
-        packed = packed * 16 + (mask === 15 || mask === 6 || mask === 9 ? 0 : mask)
+        packed = packed * 16 + (fixed || mask === 15 || mask === 6 || mask === 9 ? 0 : mask)
     }
     return packed
 }
@@ -43,7 +51,7 @@ export function configureTerrainTerraceEdges(material: PBRCustomMaterial) {
             if (lengthSquared < 1.0) return vec3(0.0);
             inward *= inversesqrt(lengthSquared);
             vec3 seed = vec3(corner, height) + 17.0;
-            float inset = mix(0.025, 0.13, terraceEdgeHash(seed));
+            float inset = mix(0.0375, 0.195, terraceEdgeHash(seed));
             float dropSeed = terraceEdgeHash(seed + vec3(29.1, 8.2, 47.5));
             // One occupied quadrant forms a convex corner. Its drop exceeds the straight-edge range.
             bool convexCorner = dot(filled, vec4(1.0)) == 1.0;
@@ -61,8 +69,8 @@ export function configureTerrainTerraceEdges(material: PBRCustomMaterial) {
             float rim = smoothstep(-0.24, -0.05, terrainPoint.y - height);
             if (rim > 0.0) {
                 vec2 corner = terrainTerraceEdge.xy - 0.5;
+                // Keep displacement linear along shared edges even when the bevel splits them differently.
                 vec2 uv = clamp(terrainPoint.xz - corner, 0.0, 1.0);
-                uv = smoothstep(vec2(0.0), vec2(1.0), uv);
                 vec3 nearEdge = mix(terraceCornerOffset(terraceMasks, 4096.0, corner, height),
                     terraceCornerOffset(terraceMasks, 256.0, corner + vec2(1.0, 0.0), height), uv.x);
                 vec3 farEdge = mix(terraceCornerOffset(terraceMasks, 16.0, corner + 1.0, height),

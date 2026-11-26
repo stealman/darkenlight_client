@@ -414,7 +414,7 @@ export const GMManager = {
                 if (wall) this.toggleStoneWallSelection(wall)
                 return
             }
-            const [object] = StaticsManager.getObjectsOnTile(x, z, staticTypes)
+            const object = this.placingStatic ? undefined : StaticsManager.getObjectsOnTile(x, z, staticTypes)[0]
             if (object) {
                 this.beginStaticEdit(object)
             } else if (this.editingStatic.value) {
@@ -645,6 +645,10 @@ export const GMManager = {
         return null
     },
 
+    get placingStatic() {
+        return this.tab === GmTabs.STATICS_EDIT && this.selectedStatic.value > 0 && !this.editingStatic.value
+    },
+
     applyStoneWallBounds(bounds: StoneWallBounds, mode: 'randomize' | 'keepRatio') {
         const walls = selectedStoneWalls.value
         const current = selectedStoneWallAttributes.value
@@ -849,7 +853,7 @@ export const GMManager = {
         const staticTypes = this.activeStaticTypes
         StaticsManager.updateSelectionPreview(
             marker?.isEnabled() === true && (deletingStatics
-                || (this.gmPanelVisible.value && staticTypes !== null && this.staticHoverActive)),
+                || (this.gmPanelVisible.value && staticTypes !== null && this.staticHoverActive && !this.placingStatic)),
             Math.round(marker?.position.x ?? 0),
             Math.round(marker?.position.z ?? 0),
             actualTime,

@@ -86,8 +86,9 @@ export function createBeveledTerrainVertexData(
     const sideNormals: Point[] = [[0, 0, -1], [1, 0, 0], [0, 0, 1], [-1, 0, 0]]
     for (let i = 0; i < 4; i++) {
         const next = (i + 1) % 4
-        const upward: Point = cornerSteps ? [0, 1, 0] : [sideNormals[i][0], mask & edges[i] ? 1 : 0, sideNormals[i][2]]
-        polygon([outer[i], outer[next], entry[next], exit[i]], upward)
+        // Without a horizontal bevel, a dropped rim still needs a vertical strip above the wall.
+        const outward: Point = mask & edges[i] ? [0, 1, 0] : sideNormals[i]
+        polygon([outer[i], outer[next], entry[next], exit[i]], outward)
         if (mask & cornerBits[i]) polygon([outer[i], entry[i], exit[i]], [0, 1, 0])
         polygon([[outer[i][0], -0.5, outer[i][2]], [outer[next][0], -0.5, outer[next][2]], outer[next], outer[i]], sideNormals[i])
     }
@@ -100,8 +101,6 @@ export function createBeveledTerrainVertexData(
     const emit = (a: Point, b: Point, c: Point, outward: Point) => {
         const normal = cross(a, b, c)
         if (Math.hypot(...normal) < 1e-9) return
-        // At a raised corner a zero-width roof strip can fold into a vertical sliver.
-        if (cornerSteps && outward[1] > 0 && Math.abs(normal[1]) < 1e-9) return
         const start = positions.length / 3
         positions.push(...a, ...b, ...c)
         if (normal.reduce((sum, n, axis) => sum + n * outward[axis], 0) > 0) indices.push(start, start + 2, start + 1)

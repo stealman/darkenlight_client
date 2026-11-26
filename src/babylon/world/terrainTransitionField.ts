@@ -22,16 +22,14 @@ export function findTerrainTransitions<T>(map: TransitionTile[][],
     const edges = new Map<number, Boundary<T>[]>()
     const directions = [[1, 0], [0, 1]] as const
     const corners = [[-0.5, -0.5], [0.5, -0.5], [-0.5, 0.5], [0.5, 0.5]] as const
-    const isPath = (tile: TransitionTile) => tile.stonePath || tile.beigeStonePath
     const distance = (x: number, z: number, edge: Boundary<T>) => Math.hypot(
         Math.max(0, Math.abs(x - edge.x) - (edge.alongX ? 0.5 : 0)),
         Math.max(0, Math.abs(z - edge.z) - (edge.alongX ? 0 : 0.5)),
     )
     map.forEach((row, x) => row.forEach((tile, z) => {
-        if (isPath(tile)) return
         for (const [dx, dz] of directions) {
             const neighbor = map[x + dx]?.[z + dz]
-            if (!neighbor || isPath(neighbor) || neighbor.height !== tile.height) continue
+            if (!neighbor || neighbor.height !== tile.height) continue
             let cover = surfaceOf(tile), substrate = surfaceOf(neighbor)
             let material = materialFor(cover, substrate)
             if (!material) {
@@ -47,7 +45,6 @@ export function findTerrainTransitions<T>(map: TransitionTile[][],
         }
     }))
     return map.map((row, x) => row.map((tile, z) => {
-        if (isPath(tile)) return undefined
         const type = surfaceOf(tile)
         const candidates: Boundary<T>[] = []
         const range = 4
