@@ -51,6 +51,7 @@ test('banner UV variants and sign faces share one batch; portals share their ble
             BRICK_BLACK: otherStone, BRICK_DARK_GRAY: otherStone,
         }},
         '@/data/worldDataManager': {WorldDataManager: {getBlockMap: () => entranceTerrain}},
+        '@/data/myPlayer': {MyPlayer: {worldId: 1}},
         '@/babylon/scene/lights': {Lights: {addShadowCaster() {}, registerSharedLightMesh() {}, registerStaticLight() {}, unregisterStaticLight() {}}},
         '@/babylon/world/worldRenderer': {WorldRenderer: world, Prefab},
         '@/babylon/world/statics/objects/baseStaticObject': {BaseStaticObject},
@@ -67,7 +68,8 @@ test('banner UV variants and sign faces share one batch; portals share their ble
             const resolved = name.startsWith('.') ? posix.normalize(posix.join(posix.dirname(path), name)) : name.replace(/^@\//, '')
             if (resolved.endsWith('worldRenderer')) return {WorldRenderer: world, Prefab}
             if (resolved.endsWith('baseStaticObject')) return {BaseStaticObject}
-            if (/staticSurfacePlanes|staticBlockDamage|terrainRoofShape|objects\/(specimens|woodenSignpost|walls)/.test(resolved)) return load(resolved)
+            if (resolved.endsWith('taperedBlockBatch')) return {TaperedBlockBatch: {add: (matrix, uv) => world.addTerrainContactBlock(matrix, uv)}}
+            if (/staticSurfacePlanes|staticBlockDamage|staticTerrainContact|staticWoodShape|staticVariation|palisadeWoodJoin|terrainRoofShape|objects\/(specimens|woodenSignpost|walls)/.test(resolved)) return load(resolved)
             return {}
         })
         return exports

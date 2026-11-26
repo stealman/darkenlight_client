@@ -23,6 +23,9 @@ test('clicking a signpost opens its reading view without selecting a target or s
     }
     const dependencies = {
         '@babylonjs/core': core,
+        '../staticVariation': load('babylon/world/statics/staticVariation.ts', {}),
+        '../staticWoodShape': {createWoodShape: () => null},
+        '../palisadeWoodJoin': {WOOD_POST_TOP_MOISTURE: 12},
         '@/babylon/audio/audioManager': {AudioManager: audio},
         'vue': {ref: value => ({value})},
         './baseStaticObject': {BaseStaticObject},
@@ -34,8 +37,8 @@ test('clicking a signpost opens its reading view without selecting a target or s
     }
     const {WoodenSignpost} = load('babylon/world/statics/objects/woodenSignpost.ts', dependencies)
     const sign = new WoodenSignpost(404, core.Vector3.Zero(), {signCount: 2, sign1: '+X', sign2: '-Z', sign1Text: 'Stará cesta; <mlýn>', sign2Text: 'Les\nZa řekou', sign3Text: 'Hidden'})
-    assert.equal(sign.intersectsRay(new core.Ray(new core.Vector3(.5, 2.42, -3), new core.Vector3(0, 0, 1))), true)
-    assert.equal(sign.intersectsRay(new core.Ray(new core.Vector3(.5, 2.265, -3), new core.Vector3(0, 0, 1))), false)
+    assert.equal(sign.intersectsRay(new core.Ray(new core.Vector3(.5, 1.92, -3), new core.Vector3(0, 0, 1))), true)
+    assert.equal(sign.intersectsRay(new core.Ray(new core.Vector3(.5, 1.69, -3), new core.Vector3(0, 0, 1))), false)
     const {SignpostReader: reader} = load('gui/signpostReader.ts', dependencies)
     const statics = {visibleStatics: [sign]}
     const sent = []
@@ -59,7 +62,10 @@ test('clicking a signpost opens its reading view without selecting a target or s
     assert.equal(clicks, 1, 'opening plays exactly one GUI click')
     assert.equal(stopped, true)
     assert.equal(hidden, true)
-    assert.deepEqual(reader.entries.value, [{direction: 'Sever', text: 'Stará cesta; <mlýn>'}, {direction: 'Západ', text: 'Les\nZa řekou'}])
+    assert.deepEqual(reader.entries.value, [
+        {direction: 'Sever', arrowRotation: 0, text: 'Stará cesta; <mlýn>'},
+        {direction: 'Východ', arrowRotation: 90, text: 'Les\nZa řekou'},
+    ])
     reader.closeFromBackdrop()
     assert.equal(reader.entries.value.length, 2, 'opening pointer click cannot immediately dismiss the view')
     assert.equal(clicks, 1, 'ignored close does not play a click')

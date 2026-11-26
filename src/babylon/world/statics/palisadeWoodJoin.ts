@@ -3,7 +3,9 @@ import { WOOD_PATINA_ONLY } from './staticTerrainContact'
 
 export const WOOD_BRACE_JOIN_POSITIVE = WOOD_PATINA_ONLY + 1
 export const WOOD_BRACE_JOIN_NEGATIVE = WOOD_PATINA_ONLY + 2
-export const WOOD_BEAM_JOIN_BASE = WOOD_PATINA_ONLY + 3
+export const WOOD_POST_TOP_MOISTURE = WOOD_PATINA_ONLY + 3
+// Beam joints add a positive packed height to this base.
+export const WOOD_BEAM_JOIN_BASE = WOOD_POST_TOP_MOISTURE
 export const WOOD_JOIN_MIN = -0.2
 export const WOOD_JOIN_STEP = 0.05
 

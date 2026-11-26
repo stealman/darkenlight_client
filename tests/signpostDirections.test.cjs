@@ -19,10 +19,18 @@ test('all eight sign directions render, can be picked and produce the correct re
         constructor(type, position, rotation, material) {this.renderPosition=position;this.material=material;this.prefab=prefab}
     }
     const mod = {exports:{}}
+    const variation = {exports:{}}
+    const variationSource = fs.readFileSync('src/babylon/world/statics/staticVariation.ts', 'utf8')
+    new Function('exports', ts.transpileModule(variationSource, {compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText)(variation.exports)
     new Function('exports','require',ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText)(mod.exports, id => ({
         '@babylonjs/core':{Vector2,Vector3,Matrix,Ray},
         './baseStaticObject':{BaseStaticObject},
         '../../worldRenderer':{WorldRenderer:world},
+        '../../taperedBlockBatch':{TaperedBlockBatch:{add:(matrix, uv)=>world.addTerrainContactBlock(matrix, uv)}},
+        '../staticVariation':variation.exports,
+        '../staticWoodShape':{createWoodShape:()=>null},
+        '../palisadeWoodJoin':{WOOD_POST_TOP_MOISTURE:12},
+        '@/data/myPlayer':{MyPlayer:{worldId:1}},
         '@/babylon/materials':{MaterialEnum1:{WOOD_3:{uv:new Vector2()},WOOD_PLANKS:{uv:new Vector2()}}},
         '../staticSurfacePlanes':{StaticSurfaceAtlas:{inscriptions:[new Vector2(),new Vector2()]},StaticSurfacePlanes:{getPrefab:()=>prefab}},
         '@/i18n':{t:key=>key},
@@ -60,8 +68,9 @@ test('all eight sign directions render, can be picked and produce the correct re
         world.block1.matrices=[];world.block1.uvData=[];prefab.matrices=[];prefab.uvData=[]
         sign.render()
         heights.forEach((height, i) => {
-            const inscription = Vector3.TransformCoordinates(Vector3.Zero(), prefab.matrices[i * 2])
-            assert(Math.abs(inscription.y - 7 - height) < 1e-5)
+            const frontY = prefab.matrices[i * 2].m[13]
+            const backY = prefab.matrices[i * 2 + 1].m[13]
+            assert(Math.abs((frontY + backY) / 2 - 7 - height) < 1e-5)
         })
         // A single west-pointing board is at the top, with no ghost hit at its old global row.
         if (directions[1] === '+Z') {
