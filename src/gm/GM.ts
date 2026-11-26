@@ -17,7 +17,7 @@ import { OnScreenMessageManager } from '@/gui/onScreenMessageManager'
 import { NpcManager } from '@/babylon/npc/npcManager'
 import { TargetingManager } from '@/gui/targettingManager'
 import { MyPlayer } from '@/data/myPlayer'
-import { DEFAULT_STONE_WALL_PRECISION, StaticObjectsCodebook } from '@/babylon/world/statics/staticsCodebook'
+import { DEFAULT_STONE_WALL_PRECISION, DEFAULT_STONE_WALL_WIDTH, StaticObjectsCodebook } from '@/babylon/world/statics/staticsCodebook'
 import { StaticsManager } from '@/babylon/world/statics/staticsManager'
 import { TreeManager } from '@/babylon/world/treeManager'
 import type { StaticObject } from '@/babylon/world/statics/objects/baseStaticObject'
@@ -64,7 +64,6 @@ export const PALISADE_SPIKED_STATIC_ID = 205
 export const WALKABLE_BLOCK_STATIC_ID = 206
 export const CAMP_FENCE_STATIC_ID = 207
 export const CEMETERY_IRON_FENCE_STATIC_ID = 208
-export const RUINED_CEMETERY_WALL_STATIC_ID = 209
 export const STONE_WALL_STATIC_ID = 210
 export const CAMP_BENCH_STATIC_ID = 301
 export const PLANK_PILE_STATIC_ID = 302
@@ -165,6 +164,7 @@ export const GMManager = {
     stoneWallPrecision: ref(DEFAULT_STONE_WALL_PRECISION),
     stoneWallDamage: ref(1),
     stoneWallHeight: ref(1),
+    stoneWallWidth: ref(DEFAULT_STONE_WALL_WIDTH),
     spikedPalisadeFacing: ref('+Z'),
     walkableBlockHeight: ref(1),
     walkableBlockMaterial: ref('WOOD'),
@@ -547,7 +547,7 @@ export const GMManager = {
     createWallFenceData(x: number, z: number, type: number) {
         const data: {x: number, z: number, type: number, meta?: Record<string, number | string | boolean>} = {x, z, type}
         if (type === PALISADE_WALL_2_STATIC_ID || type === PALISADE_SMALL_STATIC_ID || type === CAMP_FENCE_STATIC_ID
-            || type === CEMETERY_IRON_FENCE_STATIC_ID || type === RUINED_CEMETERY_WALL_STATIC_ID
+            || type === CEMETERY_IRON_FENCE_STATIC_ID
             || type === STONE_WALL_STATIC_ID) {
             data.meta = {orientation: this.palisadeOrientation.value}
             if (type === CAMP_FENCE_STATIC_ID) data.meta.damaged = this.campFenceDamaged.value
@@ -555,6 +555,7 @@ export const GMManager = {
                 data.meta.precision = this.stoneWallPrecision.value
                 data.meta.damage = this.stoneWallDamage.value
                 data.meta.height = this.stoneWallHeight.value
+                data.meta.width = this.stoneWallWidth.value
             }
         } else if (type === PALISADE_SPIKED_STATIC_ID) {
             data.meta = {facing: this.spikedPalisadeFacing.value}
@@ -620,7 +621,7 @@ export const GMManager = {
             this.lightRange.value = status.lightRange ?? 5
         }
         if (object.type === PALISADE_WALL_2_STATIC_ID || object.type === PALISADE_SMALL_STATIC_ID || object.type === CAMP_FENCE_STATIC_ID
-            || object.type === CEMETERY_IRON_FENCE_STATIC_ID || object.type === RUINED_CEMETERY_WALL_STATIC_ID
+            || object.type === CEMETERY_IRON_FENCE_STATIC_ID
             || object.type === STONE_WALL_STATIC_ID) {
             this.palisadeOrientation.value = status.orientation === 'X' ? 'X' : 'Z'
             if (object.type === CAMP_FENCE_STATIC_ID) this.campFenceDamaged.value = status.damaged === true
@@ -628,6 +629,7 @@ export const GMManager = {
                 this.stoneWallPrecision.value = status.precision ?? DEFAULT_STONE_WALL_PRECISION
                 this.stoneWallDamage.value = status.damage ?? 1
                 this.stoneWallHeight.value = status.height ?? 1
+                this.stoneWallWidth.value = status.width ?? DEFAULT_STONE_WALL_WIDTH
             }
         } else if (object.type === PALISADE_SPIKED_STATIC_ID) {
             this.spikedPalisadeFacing.value = status.facing ?? '+Z'
@@ -671,6 +673,7 @@ export const GMManager = {
             this.stoneWallPrecision.value = DEFAULT_STONE_WALL_PRECISION
             this.stoneWallDamage.value = 1
             this.stoneWallHeight.value = 1
+            this.stoneWallWidth.value = DEFAULT_STONE_WALL_WIDTH
         }
         this.editingStatic.value = null
         if (this.tab === GmTabs.WALLS_AND_FENCES_EDIT) this.selectedWallFence.value = 0

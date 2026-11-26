@@ -2,7 +2,7 @@ import { Matrix, Vector2, Vector3 } from '@babylonjs/core'
 import { BuildingManager } from '@/babylon/world/buildings/buildingManager'
 import { MasonryBatch } from '@/babylon/world/masonryBatch'
 import type { ContactShadowFootprint } from '@/babylon/world/terrainContactShadow'
-import { DEFAULT_STONE_WALL_PRECISION } from '@/babylon/world/statics/staticsCodebook'
+import { DEFAULT_STONE_WALL_PRECISION, DEFAULT_STONE_WALL_WIDTH } from '@/babylon/world/statics/staticsCodebook'
 import { createSineStaticVariation, createStaticVariation } from '@/babylon/world/statics/staticVariation'
 import { OrientedWall } from '@/babylon/world/statics/objects/orientedWall'
 import type { WallDirection, WallMetadata } from '@/babylon/world/statics/objects/orientedWall'
@@ -13,6 +13,7 @@ export interface StoneWallMetadata extends WallMetadata {
     precision?: number
     damage?: number
     height?: number
+    width?: number
 }
 
 const ALONG_X = [{x: -1, z: 0}, {x: 1, z: 0}] as const
@@ -42,6 +43,7 @@ export class StoneWall extends OrientedWall {
     readonly precision: number
     readonly damage: number
     readonly height: number
+    readonly width: number
     previewHeightOffset = 0
     private readonly roughness: number
     private segmentX = 0
@@ -60,8 +62,27 @@ export class StoneWall extends OrientedWall {
         const height = metadata?.height
         this.height = typeof height === 'number' && Number.isFinite(height)
             ? Math.max(1, Math.min(8, Math.round(height * 4))) / 4 : 1
+        const width = metadata?.width
+        this.width = typeof width === 'number' && Number.isFinite(width)
+            ? Math.max(2, Math.min(10, Math.round(width * 10))) / 10 : DEFAULT_STONE_WALL_WIDTH
         this.roughness = (10 - this.precision) / 9
-        this.status = {orientation: this.orientation, precision: this.precision, damage: this.damage, height: this.height}
+        this.status = {orientation: this.orientation, precision: this.precision, damage: this.damage, height: this.height, width: this.width}
+    }
+
+    override getCollisionTolerance() {
+        return (1 - this.width) * 0.5
+    }
+
+    override isObjectInCollision(tgtX: number, tgtZ: number, size: number): boolean {
+        if (!this.cornerDirections) return super.isObjectInCollision(tgtX, tgtZ, size)
+        const x = tgtX - this.position.x, z = tgtZ - this.position.z
+        const moverHalf = size * 0.5
+        const halfWidth = this.width * 0.5
+        return this.cornerDirections.some(({x: dx, z: dz}) => {
+            const along = x * dx + z * dz
+            return Math.abs(x * dz - z * dx) < halfWidth + moverHalf
+                && along > -halfWidth - moverHalf && along < 0.5 + moverHalf
+        })
     }
 
     private get segmentDirections() {
@@ -105,14 +126,15 @@ export class StoneWall extends OrientedWall {
     appendContactShadowFootprints(footprints: ContactShadowFootprint[], height: number) {
         const x = this.renderPosition.x + this.segmentX
         const z = this.renderPosition.z + this.segmentZ
+        const halfWidth = 0.22 * (this.width / DEFAULT_STONE_WALL_WIDTH)
         const addHalf = ({x: dx, z: dz}: WallDirection, span?: WallSpan) => {
             const cos = span?.cos ?? 1, sin = span?.sin ?? 0
             const axisX = dx * cos + dz * sin, axisZ = dz * cos - dx * sin
             const length = 0.49 * (span?.scale ?? 1)
             const centerX = x + axisX * length * 0.5, centerZ = z + axisZ * length * 0.5
             // Two short footprints follow bends closely without filling in the inside of a corner.
-            const halfX = Math.abs(axisX) * length * 0.5 + Math.abs(axisZ) * 0.22
-            const halfZ = Math.abs(axisZ) * length * 0.5 + Math.abs(axisX) * 0.22
+            const halfX = Math.abs(axisX) * length * 0.5 + Math.abs(axisZ) * halfWidth
+            const halfZ = Math.abs(axisZ) * length * 0.5 + Math.abs(axisX) * halfWidth
             footprints.push({minX: centerX - halfX, maxX: centerX + halfX,
                 minZ: centerZ - halfZ, maxZ: centerZ + halfZ, height, reach: 0.23})
         }
@@ -129,6 +151,8 @@ export class StoneWall extends OrientedWall {
         const variedHeight = this.height * (1 + variation.signed(0, 11) * roughness * 0.17)
         const heightScale = (variedHeight + this.previewHeightOffset) / 1.4
         const shortWallScale = Math.min(1, this.height + this.previewHeightOffset)
+        const widthScale = this.width / DEFAULT_STONE_WALL_WIDTH
+        const narrowWallScale = Math.min(1, widthScale)
         const lowDetail = Settings.isDetalLevelLow()
         const courseCount = Math.max(1, Math.round(shortWallScale * (lowDetail ? 2 : 4)))
         const courseStep = 1.28 / courseCount
@@ -136,7 +160,7 @@ export class StoneWall extends OrientedWall {
         const candidates = this.damage > 1 ? [] as WallStone[] : null
         const layers = MasonryBatch.topWeathering ? Array.from({length: courseCount + 1}, () => [] as number[]) : null
         const addStone = (matrix: Matrix, seed: number, layer: number) => {
-            const instance = MasonryBatch.add(matrix, this.position, seed, false, roughness)
+            const instance = MasonryBatch.add(matrix, this.position, seed, false, roughness, false, layer === courseCount)
             layers?.[layer].push(instance)
         }
         let index = 0
@@ -147,14 +171,15 @@ export class StoneWall extends OrientedWall {
             const part = index++
             const sample = (channel: number) => roughness === 0 ? 0 : variation.signed(part, channel) * roughness
             const spanScale = span?.scale ?? 1
-            const width = length * (1 + sample(1) * 0.07) * spanScale
+            const crown = layer === courseCount
+            const width = length * (1 + sample(1) * (crown ? 0.26 : 0.07)) * spanScale
             const blockHeight = height * (1 + sample(2) * 0.19) * heightScale
-            const depth = thickness * (1 + sample(3) * 0.22)
+            const depth = thickness * (1 + sample(3) * (crown ? 0.38 : 0.22))
             const wallYaw = (alongX ? 0 : Math.PI / 2) + (span?.yaw ?? 0)
-            const yaw = wallYaw + sample(4) * 0.24
+            const yaw = wallYaw + sample(4) * 0.24 * narrowWallScale
             const matrix = Matrix.Scaling(width, blockHeight, depth)
                 .multiply(Matrix.RotationYawPitchRoll(yaw, sample(5) * 0.21 * shortWallScale, sample(6) * 0.24 * shortWallScale))
-            const across = sample(7) * 0.075
+            const across = sample(7) * 0.075 * narrowWallScale
             const localX = alongX ? x * spanScale : x + across
             const localZ = alongX ? z + across : z * spanScale
             const worldX = span ? localX * span.cos + localZ * span.sin : localX
@@ -172,21 +197,28 @@ export class StoneWall extends OrientedWall {
         const alongX = this.orientation === 'X'
         const alongWall = (length: number, height: number, depth: number, offset: number, y: number) =>
             stone(length, height, depth, alongX ? offset : 0, y, alongX ? 0 : offset, alongX, this.straightSpan)
+        const cornerLayer = (directions: readonly WallDirection[], centerSize: number, height: number,
+            thickness: number, y: number, gap: number) => {
+            const center = Math.min(0.98, centerSize * widthScale)
+            const armLength = 0.49 - center * 0.5
+            const coreSize = armLength < 0.06 ? 0.98 : center
+            stone(coreSize, height, coreSize, 0, y, 0, true)
+            if (armLength < 0.06) return
+            const offset = (center + armLength) * 0.5
+            for (const [arm, direction] of directions.entries()) {
+                stone(armLength - gap, height, thickness, direction.x * offset, y, direction.z * offset,
+                    direction.x !== 0, this.cornerSpans?.[arm])
+            }
+        }
         for (let course = 0; course < courseCount; course++) {
             layer = course
             const coursesAbove = courseCount - course - 1
             damageTier = course > 0 && coursesAbove < (lowDetail ? 1 : 2) ? coursesAbove + 1 : -1
             const y = courseStep * 0.5 + course * courseStep
-            const thickness = 0.46 + variation.unit(course + 23) * 0.02
+            const thickness = (0.46 + variation.unit(course + 23) * 0.02) * widthScale
             if (this.cornerDirections) {
                 const center = (course % 2 === 0 ? 0.52 : 0.46) + roughness * variation.signed(course, 9) * 0.09
-                stone(center, courseHeight, center, 0, y, 0, true)
-                const armLength = 0.49 - center / 2
-                const offset = center / 2 + armLength / 2
-                for (const [arm, direction] of this.cornerDirections.entries()) {
-                    stone(armLength - 0.008, courseHeight, thickness,
-                        direction.x * offset, y, direction.z * offset, direction.x !== 0, this.cornerSpans?.[arm])
-                }
+                cornerLayer(this.cornerDirections, center, courseHeight, thickness, y, 0.008)
                 continue
             }
             const joint = (course % 2 === 0 ? -0.12 : 0.12) + variation.signed(course + 16) * (0.05 + roughness * 0.1)
@@ -196,18 +228,16 @@ export class StoneWall extends OrientedWall {
         }
         layer = courseCount
         damageTier = 0
+        const capThickness = 0.51 * widthScale
         if (this.cornerDirections) {
-            stone(0.54, 0.12, 0.54, 0, 1.34, 0, true)
-            for (const [arm, direction] of this.cornerDirections.entries()) {
-                stone(0.214, 0.12, 0.51, direction.x * 0.38, 1.34, direction.z * 0.38, direction.x !== 0, this.cornerSpans?.[arm])
-            }
+            cornerLayer(this.cornerDirections, 0.54, 0.12, capThickness, 1.34, 0.006)
         } else if (!lowDetail && this.precision <= 5) {
             const joint = variation.signed(0, 10) * 0.16
             for (const [left, right] of [[-0.49, joint], [joint, 0.49]]) {
-                alongWall(right - left - 0.012, 0.12, 0.51, (left + right) / 2, 1.34)
+                alongWall(right - left - 0.012, 0.12, capThickness, (left + right) / 2, 1.34)
             }
         } else {
-            alongWall(0.984, 0.12, 0.51, 0, 1.34)
+            alongWall(0.984, 0.12, capThickness, 0, 1.34)
         }
 
         if (candidates) {
@@ -217,7 +247,7 @@ export class StoneWall extends OrientedWall {
             for (const [rank, candidate] of candidates.entries()) {
                 // Higher levels keep the stones that have already fallen and may dislodge more.
                 if (rank < limit && severity >= (rank + variation.unit(rank, 13)) / limit) {
-                    this.addFallenStone(candidate, rank, variation)
+                    this.addFallenStone(candidate, rank, variation, candidate.layer === courseCount)
                 } else {
                     addStone(candidate.matrix, candidate.seed, candidate.layer)
                 }
@@ -226,14 +256,15 @@ export class StoneWall extends OrientedWall {
         if (layers) MasonryBatch.markExposedTops(layers, this.position, roughness > 0)
     }
 
-    private addFallenStone(stone: WallStone, rank: number, variation: ReturnType<typeof createSineStaticVariation>) {
+    private addFallenStone(stone: WallStone, rank: number, variation: ReturnType<typeof createSineStaticVariation>, crown: boolean) {
         const sample = (channel: number) => variation.unit(stone.part, channel)
         const sin = Math.sin(stone.wallYaw), cos = Math.cos(stone.wallYaw)
         const inner = this.cornerDirections?.find(direction => stone.alongX ? direction.z !== 0 : direction.x !== 0)
         let side = inner ? -Math.sign(inner.x * sin + inner.z * cos)
             : ((rank + Math.floor(variation.unit(0, 14) * 2)) % 2 ? 1 : -1)
         const leaning = sample(15) < 0.42
-        const reach = leaning ? 0.32 + sample(16) * 0.12 : 0.53 + sample(16) * 0.27
+        const reach = (leaning ? 0.32 + sample(16) * 0.12 : 0.53 + sample(16) * 0.27)
+            + (this.width - DEFAULT_STONE_WALL_WIDTH) * 0.5
         const stagger = (sample(17) - 0.5) * 0.32
         const sourceX = stone.matrix.m[12] + cos * stagger
         const sourceZ = stone.matrix.m[14] - sin * stagger
@@ -258,6 +289,6 @@ export class StoneWall extends OrientedWall {
             .multiply(Matrix.RotationYawPitchRoll(yaw, pitch, roll))
         const halfHeight = (Math.abs(matrix.m[1]) + Math.abs(matrix.m[5]) + Math.abs(matrix.m[9])) * 0.5
         matrix.setTranslationFromFloats(x, ground + halfHeight + 0.48, z)
-        MasonryBatch.add(matrix, new Vector3(x, ground, z), stone.seed, false, this.roughness, true)
+        MasonryBatch.add(matrix, new Vector3(x, ground, z), stone.seed, false, this.roughness, true, crown)
     }
 }

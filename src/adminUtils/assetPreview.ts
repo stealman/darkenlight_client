@@ -211,7 +211,9 @@ export async function installAssetPreview(
         if (!choice.value) return
         try {
             const id = Number(choice.value)
-            if (reset) parameters.value = JSON.stringify(tab === 'Statics' ? choice.value.startsWith('tree:') ? { size: 1 } : { ...StaticObjectsCodebook.get(id), meta: id === 403 ? { bannerIndex: 0 } : { facing: '+Z' } } : tab === 'Buildings' ? { facing: '+Z', ...(id === 2 ? {width: 5, depth: 3} : {}), doorOpen: false } : { ...Object.values(MonsterTypes).find(v => v.id === id) }, null, 2)
+            const isStoneWall = tab === 'Statics' && id === 210
+            if (reset && isStoneWall) parameters.value = JSON.stringify({type: id, name: StaticObjectsCodebook.get(id)!.name, meta: {}}, null, 2)
+            else if (reset) parameters.value = JSON.stringify(tab === 'Statics' ? choice.value.startsWith('tree:') ? { size: 1 } : { ...StaticObjectsCodebook.get(id), meta: id === 403 ? { bannerIndex: 0 } : { facing: '+Z' } } : tab === 'Buildings' ? { facing: '+Z', ...(id === 2 ? {width: 5, depth: 3} : {}), doorOpen: false } : { ...Object.values(MonsterTypes).find(v => v.id === id) }, null, 2)
             const data = JSON.parse(parameters.value)
             if (tab === 'Statics') {
                 const useContact = !Settings.isDetalLevelLow()
@@ -222,7 +224,6 @@ export async function installAssetPreview(
                 MasonryBatch.setTopWeatheringEnabled(Settings.isDetalLevelHigh())
                 biomes.prepareTerrain()
                 const isTree = choice.value.startsWith('tree:')
-                const isStoneWall = id === 210
                 const wallAlongX = data.meta?.orientation === 'X'
                 for (const {x, z} of biomes.slots) {
                     if (isTree) {

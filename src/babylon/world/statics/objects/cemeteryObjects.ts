@@ -314,17 +314,15 @@ export class StoneFrameGrave extends CemeteryObject {
     }
 }
 
-abstract class CemeteryWall extends OrientedWall {
-    protected readonly wear: number = 0.82
-    protected readonly blendGroundLighting: boolean = true
-    protected readonly accentMaterial: Vector2
+export class CemeteryIronFence extends OrientedWall {
+    private readonly accentMaterial: Vector2
 
     constructor(type: number, position: Vector3, material: Vector2, accentMaterial: Vector2, metadata?: WallMetadata) {
         super(type, position, material, null, metadata)
         this.accentMaterial = accentMaterial
     }
 
-    protected part(length: number, height: number, thickness: number, along: number, y: number, across: number, material = this.material, roll = 0) {
+    private part(length: number, height: number, thickness: number, along: number, y: number, across: number, material = this.material, roll = 0) {
         const alongX = this.orientation === 'X'
         this.worldPart(
             length,
@@ -339,7 +337,7 @@ abstract class CemeteryWall extends OrientedWall {
         )
     }
 
-    protected worldPart(width: number, height: number, depth: number, x: number, y: number, z: number, material = this.material, roll = 0, yaw = 0) {
+    private worldPart(width: number, height: number, depth: number, x: number, y: number, z: number, material = this.material, roll = 0, yaw = 0) {
         addPart(
             width,
             height,
@@ -349,17 +347,12 @@ abstract class CemeteryWall extends OrientedWall {
             this.renderPosition.z + z,
             material,
             this.position,
-            this.wear,
+            0.82,
             yaw,
             roll,
-            this.blendGroundLighting,
+            false,
         )
     }
-
-}
-
-export class CemeteryIronFence extends CemeteryWall {
-    protected override readonly blendGroundLighting = false
 
     render() {
         if (this.cornerDirections) {
@@ -411,110 +404,6 @@ export class CemeteryIronFence extends CemeteryWall {
                     this.accentMaterial,
                 )
             }
-        }
-    }
-}
-
-type FallenStone = {width: number, height: number, depth: number, x: number, z: number, roll: number, yaw: number}
-
-export class RuinedCemeteryWall extends CemeteryWall {
-    protected override readonly wear = 1.3
-
-    private readonly straightCap: readonly {height: number, lean: number}[]
-    private readonly cornerCap: readonly {height: number, lean: number}[]
-    private readonly straightDebris: readonly FallenStone[]
-    private readonly cornerDebris: readonly FallenStone[]
-
-    constructor(type: number, position: Vector3, material: Vector2, accentMaterial: Vector2, metadata?: WallMetadata) {
-        super(type, position, material, accentMaterial, metadata)
-        const variation = createCemeteryVariation(position)
-        this.straightCap = Array.from({length: 3}, (_, index) => ({
-            height: 0.34 + variation.unit(index) * 0.48,
-            lean: variation.signed(index + 4) * 0.08,
-        }))
-        this.cornerCap = Array.from({length: 4}, (_, index) => {
-            const part = 20 + Math.floor(index / 2) * 4 + index % 2
-            return {height: 0.3 + variation.unit(part) * 0.42, lean: variation.signed(part + 8) * 0.06}
-        })
-        this.straightDebris = this.createFallenStones(false, variation)
-        this.cornerDebris = this.createFallenStones(true, variation)
-    }
-
-    render() {
-        if (this.cornerDirections) {
-            this.renderCorner()
-            return
-        }
-        this.part(0.98, 0.65, 0.48, 0, 0.325, 0)
-        for (const [index, along] of [-0.33, 0, 0.33].entries()) {
-            const {height, lean} = this.straightCap[index]
-            this.part(0.3, height, 0.44, along, 0.65 + height / 2, 0, index === 1 ? this.accentMaterial : this.material, lean)
-        }
-        this.renderFallenStones(this.straightDebris)
-    }
-
-    private renderCorner() {
-        this.worldPart(0.52, 0.72, 0.52, 0, 0.36, 0)
-        for (const [armIndex, direction] of this.cornerDirections!.entries()) {
-            const alongX = direction.x !== 0
-            this.worldPart(
-                alongX ? 0.58 : 0.48,
-                0.65,
-                alongX ? 0.48 : 0.58,
-                direction.x * 0.29,
-                0.325,
-                direction.z * 0.29,
-            )
-            for (const [pieceIndex, distance] of [0.16, 0.4].entries()) {
-                const {height, lean} = this.cornerCap[armIndex * 2 + pieceIndex]
-                this.worldPart(
-                    alongX ? 0.26 : 0.42,
-                    height,
-                    alongX ? 0.42 : 0.26,
-                    direction.x * distance,
-                    0.65 + height / 2,
-                    direction.z * distance,
-                    pieceIndex === 0 ? this.accentMaterial : this.material,
-                    lean,
-                )
-            }
-        }
-        this.renderFallenStones(this.cornerDebris)
-    }
-
-    private createFallenStones(corner: boolean, variation: ReturnType<typeof createCemeteryVariation>): FallenStone[] {
-        const salt = corner ? 60 : 40
-        const count = 1 + Math.floor(variation.unit(salt) * 3)
-        return Array.from({length: count}, (_, i) => {
-            const randomSalt = salt + 1 + i * 9
-            const width = 0.16 + variation.unit(randomSalt) * 0.25
-            const height = 0.11 + variation.unit(randomSalt + 1) * 0.16
-            const depth = 0.15 + variation.unit(randomSalt + 2) * 0.24
-            let x: number
-            let z: number
-
-            if (corner) {
-                const angle = variation.unit(randomSalt + 3) * Math.PI * 2
-                const distance = 0.28 + variation.unit(randomSalt + 4) * 0.25
-                x = Math.cos(angle) * distance
-                z = Math.sin(angle) * distance
-            } else {
-                const along = (variation.unit(randomSalt + 3) - 0.5) * 0.88
-                const across = (variation.unit(randomSalt + 4) > 0.5 ? -1 : 1)
-                    * (0.3 + variation.unit(randomSalt + 5) * 0.2)
-                x = this.orientation === 'X' ? along : across
-                z = this.orientation === 'X' ? across : along
-            }
-
-            const roll = (variation.unit(randomSalt + 6) - 0.5) * 0.5
-            const yaw = variation.unit(randomSalt + 7) * Math.PI
-            return {width, height, depth, x, z, roll, yaw}
-        })
-    }
-
-    private renderFallenStones(stones: readonly FallenStone[]) {
-        for (const {width, height, depth, x, z, roll, yaw} of stones) {
-            this.worldPart(width, height, depth, x, height / 2, z, this.material, roll, yaw)
         }
     }
 }

@@ -54,7 +54,6 @@ import {
     GargoyleOnPedestal,
     FallenCemeteryCross,
     FallenCemeteryHeadstone,
-    RuinedCemeteryWall,
     StoneGargoyle,
     StoneFrameGrave,
     StoneTomb,
@@ -167,7 +166,6 @@ export const StaticsManager = {
                 obj.meta as CampFenceMetadata,
             )); break
             case 208: this.allStatics.push(new CemeteryIronFence(obj.tp, pos, MaterialEnum1.BRICK_DARK_GRAY.uv, MaterialEnum1.STEEL_1.uv, obj.meta as WallMetadata)); break
-            case 209: this.allStatics.push(new RuinedCemeteryWall(obj.tp, pos, MaterialEnum1.BRICK_GRAY.uv, MaterialEnum1.BRICK_GRAY.uv, obj.meta as WallMetadata)); break
             case 210: this.allStatics.push(new StoneWall(obj.tp, pos, obj.meta as StoneWallMetadata)); break
 
             case 221: this.allStatics.push(new Wall3(obj.tp, pos, rotation, MaterialEnum1.BRICK_GRAY.uv)); break
@@ -538,19 +536,17 @@ export const StaticsManager = {
         const palisades = this.allStatics.filter((obj): obj is PalisadeWall2 => obj instanceof PalisadeWall2)
         const fences = this.allStatics.filter((obj): obj is CampFence => obj instanceof CampFence)
         const cemeteryFences = this.allStatics.filter((obj): obj is CemeteryIronFence => obj instanceof CemeteryIronFence)
-        const cemeteryWalls = this.allStatics.filter((obj): obj is RuinedCemeteryWall => obj instanceof RuinedCemeteryWall)
         const stoneWalls = this.allStatics.filter((obj): obj is StoneWall => obj instanceof StoneWall)
 
         this.resolveCorners(palisades)
         this.resolveCorners(fences)
         this.resolveCorners(cemeteryFences)
-        this.resolveCorners(cemeteryWalls)
         const stoneWallsByTile = this.resolveCorners(stoneWalls)
         for (const wall of stoneWalls) wall.updateSegmentLayout(stoneWallsByTile)
         this.cornerConnectionsDirty = false
     },
 
-    resolveCorners<T extends PalisadeWall2 | CampFence | CemeteryIronFence | RuinedCemeteryWall | StoneWall>(objects: T[]) {
+    resolveCorners<T extends PalisadeWall2 | CampFence | CemeteryIronFence | StoneWall>(objects: T[]) {
         const objectsByTile = new Map(objects.map((obj) => [`${obj.position.x};${obj.position.z}`, obj]))
 
         for (const object of objects) {

@@ -25,6 +25,7 @@ export class StaticObjectInfo {
 }
 
 export const DEFAULT_STONE_WALL_PRECISION = 5
+export const DEFAULT_STONE_WALL_WIDTH = 0.5
 
 export const StaticObjectsCodebook: Map<number, StaticObjectInfo> = new Map([
     [151, new StaticObjectInfo(151, 'TerrainDebris1', false, 1, 0, 0, null)],
@@ -59,8 +60,7 @@ export const StaticObjectsCodebook: Map<number, StaticObjectInfo> = new Map([
     [206, new StaticObjectInfo(206, 'WalkableBlock', false, 1, 0, 0, null, 1, true)],
     [207, new StaticObjectInfo(207, 'CampFence', true, 1, 0.39, 0, null)],
     [208, new StaticObjectInfo(208, 'CemeteryIronFence', true, 1, 0.44, 0, null)],
-    [209, new StaticObjectInfo(209, 'RuinedCemeteryWall', true, 1, 0.3, 0, null)],
-    [210, new StaticObjectInfo(210, 'StoneWall', true, 1, 0.3, 0, null)],
+    [210, new StaticObjectInfo(210, 'StoneWall', true, 1, 0.25, 0, null)],
 
     [221, new StaticObjectInfo(221, 'Wall3_GRAY', true, 1, 0, 0, null)],
     [222, new StaticObjectInfo(222, 'Wall3_RED', true, 1, 0, 0, null)],

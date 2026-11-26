@@ -2,15 +2,17 @@ import type { Matrix } from '@babylonjs/core'
 
 export const MASONRY_TOP_EXPOSURE = 'masonryTopExposure'
 export const FULL_TOP_EXPOSURE = 511
+const MUDDY_MASONRY_TOP = FULL_TOP_EXPOSURE + 1
 
-// Pack nine sky-facing samples into one instance value. A negative mask allows snow on a partly sheltered ledge.
-export function markMasonryTopExposure(matrices: readonly Matrix[], layers: readonly number[][], masks: number[], shelfSnow: boolean) {
+// Pack nine sky-facing samples plus the terrain effect into one instance value.
+export function markMasonryTopExposure(matrices: readonly Matrix[], layers: readonly number[][], masks: number[],
+    terrain: 'snow' | 'mud' | undefined) {
     const covers: {x: number, z: number, xx: number, xz: number, zx: number, zz: number}[] = []
     for (let layer = layers.length - 1; layer >= 0; layer--) {
         for (const index of layers[layer]) {
             const m = matrices[index].m
             if (covers.length === 0) {
-                masks[index] = FULL_TOP_EXPOSURE
+                masks[index] = FULL_TOP_EXPOSURE + (terrain === 'mud' ? MUDDY_MASONRY_TOP : 0)
                 continue
             }
             let mask = 0
@@ -25,7 +27,9 @@ export function markMasonryTopExposure(matrices: readonly Matrix[], layers: read
                 })
                 if (!sheltered) mask |= 1 << (row * 3 + col)
             }
-            masks[index] = shelfSnow && mask > 0 && mask < FULL_TOP_EXPOSURE ? -mask : mask
+            if (mask > 0 && terrain === 'mud') mask += MUDDY_MASONRY_TOP
+            else if (terrain === 'snow' && mask > 0 && mask < FULL_TOP_EXPOSURE) mask = -mask
+            masks[index] = mask
         }
         for (const index of layers[layer]) {
             const m = matrices[index].m
@@ -38,11 +42,12 @@ export function markMasonryTopExposure(matrices: readonly Matrix[], layers: read
 }
 
 export const masonryTopWeatheringFunctions = `
+    float masonryPuddle;
     float masonryTopBit(float mask, vec2 index) {
         return mod(floor(mask / exp2(index.x + index.y * 3.0)), 2.0);
     }
     float masonrySkyExposure(vec3 top) {
-        float mask = floor(abs(top.z) + 0.5);
+        float mask = mod(floor(abs(top.z) + 0.5), ${MUDDY_MASONRY_TOP}.0);
         if (mask >= ${FULL_TOP_EXPOSURE}.0) return 1.0;
         vec2 grid = clamp((top.xy - 0.04) / 0.92, 0.0, 1.0) * 2.0;
         vec2 cell = min(floor(grid), vec2(1.0));
@@ -53,6 +58,7 @@ export const masonryTopWeatheringFunctions = `
 `
 
 export const masonryTopWeatheringFragment = `
+    masonryPuddle = 0.0;
     float masonryUp = smoothstep(0.38, 0.85, geometricNormalW.y);
     float sideEdge = smoothstep(-0.40, -0.08, geometricNormalW.y)
         * (1.0 - smoothstep(0.38, 0.65, geometricNormalW.y));
@@ -70,6 +76,18 @@ export const masonryTopWeatheringFragment = `
             float growth = exposed * max(masonryUp, spill);
             vec3 mossColor = terrainContactMossColor(grain) * vec3(0.80, 0.68, 0.84);
             surfaceAlbedo = mix(surfaceAlbedo, mossColor, growth * moss * 0.67);
+
+            if (vMasonryTop.z > ${MUDDY_MASONRY_TOP}.0 && geometricNormalW.y > 0.66) {
+                vec2 margin = min(vMasonryTop.xy, 1.0 - vMasonryTop.xy);
+                float basin = smoothstep(0.02, 0.20, min(margin.x, margin.y));
+                float pockets = terrainNoise(p * 4.35 + vec2(13.1, 2.8));
+                float pools = smoothstep(0.49, 0.76, pockets * 0.80 + patches * 0.20);
+                float level = smoothstep(0.66, 0.94, geometricNormalW.y);
+                masonryPuddle = exposed * basin * pools * level * (1.0 - moss * 0.48);
+                surfaceAlbedo *= 1.0 - masonryPuddle * 0.24;
+                vec3 waterNormal = normalize(mix(geometricNormalW, vec3(0.0, 1.0, 0.0), 0.72));
+                normalW = normalize(mix(normalW, waterNormal, masonryPuddle));
+            }
 
             float lichenSites = terrainNoise(p * 3.3 + vec2(18.7, 4.6));
             if (lichenSites > 0.64) {

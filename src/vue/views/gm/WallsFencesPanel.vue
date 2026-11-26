@@ -95,17 +95,6 @@
         </div>
 
         <div style="margin-top: 1vh">
-            <label class="tree-item" :class="{ selected: 'CEMETERY_WALL' === selectedObjectType }" @click="selectObjectType('CEMETERY_WALL')">Ruined Cemetery Wall</label>
-            <label v-if="selectedObjectType === 'CEMETERY_WALL'">
-                &nbsp;&nbsp;dir.
-                <select v-model="palisadeOrientation">
-                    <option value="X">X</option>
-                    <option value="Z">Z</option>
-                </select>
-            </label>
-        </div>
-
-        <div style="margin-top: 1vh">
             <label class="tree-item" :class="{ selected: 'STONE_WALL' === selectedObjectType }" @click="selectObjectType('STONE_WALL')">Stone Wall</label>
             <label v-if="selectedObjectType === 'STONE_WALL'">
                 &nbsp;&nbsp;dir.
@@ -130,6 +119,12 @@
                 &nbsp;&nbsp;Výška
                 <select v-model.number="stoneWallHeight">
                     <option v-for="quarter in 8" :key="quarter" :value="quarter / 4">{{ quarter / 4 }}</option>
+                </select>
+            </label>
+            <label v-if="selectedObjectType === 'STONE_WALL'">
+                &nbsp;&nbsp;Šířka
+                <select v-model.number="stoneWallWidth">
+                    <option v-for="step in 9" :key="step" :value="(step + 1) / 10">{{ ((step + 1) / 10).toFixed(1) }}</option>
                 </select>
             </label>
         </div>
@@ -170,6 +165,7 @@ const campFenceDamaged = GMManager.campFenceDamaged
 const stoneWallPrecision = GMManager.stoneWallPrecision
 const stoneWallDamage = GMManager.stoneWallDamage
 const stoneWallHeight = GMManager.stoneWallHeight
+const stoneWallWidth = GMManager.stoneWallWidth
 const spikedPalisadeFacing = GMManager.spikedPalisadeFacing
 const walkableBlockHeight = GMManager.walkableBlockHeight
 const walkableBlockMaterial = GMManager.walkableBlockMaterial
@@ -184,7 +180,6 @@ const objects = [
     { type: "WALKABLE_BLOCK", name: "WalkableBlock", id: 206 },
     { type: "CAMP_FENCE", name: "CampFence", id: 207 },
     { type: "CEMETERY_FENCE", name: "CemeteryIronFence", id: 208 },
-    { type: "CEMETERY_WALL", name: "RuinedCemeteryWall", id: 209 },
     { type: "STONE_WALL", name: "StoneWall", id: 210 },
 
     { type: "WALL3", name: "Wall3_GRAY", id: 221 },

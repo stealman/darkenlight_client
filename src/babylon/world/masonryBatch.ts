@@ -47,7 +47,7 @@ function createMaterial(scene: Scene, weathering: boolean, topWeathering: boolea
     const material = new PBRCustomMaterial('masonryAtlas', scene)
     material.metallic = 0
     material.roughness = 0.96
-    material.specularIntensity = 0
+    material.specularIntensity = topWeathering ? 0.45 : 0
     material.usePhysicalLightFalloff = false
     const load = (url: string) => {
         const texture = new Texture(url, scene, true, false, Texture.BILINEAR_SAMPLINGMODE)
@@ -58,14 +58,23 @@ function createMaterial(scene: Scene, weathering: boolean, topWeathering: boolea
     material.AddAttribute('uvc')
     if (weathering) material.AddUniform('masonryRelief', 'sampler2D', load(terrainTextureUrls.stonePathRelief))
     const varyings = 'varying vec2 vMasonryUV; varying float vMasonryRow;'
+        + (weathering ? 'varying float vMasonryCrown;' : '')
         + (topWeathering ? 'varying vec4 vMasonryTop;' : '')
     if (topWeathering) material.AddAttribute(MASONRY_TOP_EXPOSURE)
     material.Vertex_Definitions(`${stoneAtlasShader}${varyings} attribute vec2 uvc;
-        ${topWeathering ? `attribute float ${MASONRY_TOP_EXPOSURE};` : ''}`)
+        ${topWeathering ? `attribute float ${MASONRY_TOP_EXPOSURE};` : ''}
+        vec2 masonryCrownCorner(vec2 corner, float seed, float amount) {
+            vec2 jitter = fract(seed * vec2(57.79, 33.17)
+                + corner.x * vec2(0.37, 0.71) + corner.y * vec2(0.63, 0.29) + corner.x * corner.y * 0.19) - 0.5;
+            return (corner - 0.5) * (1.0 - amount * 0.18) + jitter * amount * 0.30;
+        }
+    `)
     material.Vertex_Before_PositionUpdated(`
-        // The fractional parts carry distortion amplitude and a stable stone seed.
+        // The fractional parts carry distortion, the crown profile and a stable stone seed.
         vec2 cell = floor(uvc);
-        vec2 shape = fract(uvc) * 2.0;
+        vec2 packedShape = fract(uvc);
+        float crownProfile = step(0.5, packedShape.x);
+        vec2 shape = vec2(mod(packedShape.x, 0.5) * 4.0, packedShape.y * 2.0);
         uvUpdated = stoneAtlasUV(cell, uvUpdated);
         vMasonryUV = uvUpdated;
         vMasonryRow = cell.y;
@@ -75,14 +84,33 @@ function createMaterial(scene: Scene, weathering: boolean, topWeathering: boolea
         vec2 slope = (fract(shape.y * vec2(31.57, 71.63)) * 2.0 - 1.0) * shape.x * 0.32;
         vec3 p = positionUpdated;
         float crown = dot(slope, p.xz);
-        positionUpdated += vec3(p.y * (shear.x + p.z * shear.z), (0.55 + p.y) * crown,
-            p.y * (shear.y - p.x * shear.z));
+        float crownAmount = crownProfile * shape.x;
+        float topWeight = 0.5 + p.y;
+        vec3 crownOffset = vec3(0.0);
+        ${weathering ? 'vMasonryCrown = crownAmount;' : ''}
+        if (crownAmount > 0.0) {
+            // The two vertices of each chamfer run along different edges of the same skewed corner.
+            vec2 corner = step(vec2(0.0), p.xz);
+            bool onXEdge = abs(p.x) > abs(p.z);
+            vec2 neighbor = onXEdge ? vec2(corner.x, 1.0 - corner.y) : vec2(1.0 - corner.x, corner.y);
+            float vertexSeed = shape.y + dot(corner, vec2(0.23, 0.47)) + (onXEdge ? 0.16 : 0.0);
+            float originalCut = 0.5 - min(abs(p.x), abs(p.z));
+            float cut = mix(originalCut, mix(0.06, 0.33, fract(vertexSeed * 37.19)), crownAmount);
+            vec2 topXZ = mix(masonryCrownCorner(corner, shape.y, crownAmount),
+                masonryCrownCorner(neighbor, shape.y, crownAmount), cut);
+            float lift = (fract(vertexSeed * 73.31) - 0.5) * 1.08 * crownAmount;
+            crownOffset = vec3(topXZ.x - p.x, lift, topXZ.y - p.z);
+        }
+        vec2 shapedXZ = p.xz + topWeight * crownOffset.xz;
+        positionUpdated += vec3(p.y * (shear.x + shapedXZ.y * shear.z), (0.55 + p.y) * crown,
+            p.y * (shear.y - shapedXZ.x * shear.z)) + topWeight * crownOffset;
     `)
     material.Vertex_Before_NormalUpdated(`
         #ifdef NORMAL
             // Transform the existing face normal by the deformation's inverse transpose.
             vec3 dx = vec3(1.0, (0.55 + p.y) * slope.x, -p.y * shear.z);
-            vec3 dy = vec3(shear.x + p.z * shear.z, 1.0 + crown, shear.y - p.x * shear.z);
+            vec3 dy = vec3(shear.x + (shapedXZ.y + p.y * crownOffset.z) * shear.z, 1.0 + crown,
+                shear.y - (shapedXZ.x + p.y * crownOffset.x) * shear.z) + crownOffset;
             vec3 dz = vec3(p.y * shear.z, (0.55 + p.y) * slope.y, 1.0);
             normalUpdated = normalize(cross(dy, dz) * normalUpdated.x
                 + cross(dz, dx) * normalUpdated.y + cross(dx, dy) * normalUpdated.z);
@@ -95,6 +123,12 @@ function createMaterial(scene: Scene, weathering: boolean, topWeathering: boolea
             vec2 reliefUV = stoneReliefUV(vMasonryUV, vMasonryRow);
             vec2 bump = texture2D(masonryRelief, reliefUV).rg * 2.0 - 1.0;
             vec3 dpX = dFdx(vPositionW), dpY = dFdy(vPositionW);
+            if (vMasonryCrown > 0.0) {
+                vec3 faceNormal = cross(dpX, dpY);
+                faceNormal *= inversesqrt(max(1e-16, dot(faceNormal, faceNormal)));
+                if (dot(faceNormal, normalW) < 0.0) faceNormal = -faceNormal;
+                normalW = normalize(mix(normalW, faceNormal, vMasonryCrown * 0.57));
+            }
             vec2 uvX = dFdx(vMasonryUV) * 8.0, uvY = dFdy(vMasonryUV) * 8.0;
             float detail = 1.0 - smoothstep(0.095, 0.34, max(length(uvX), length(uvY)));
             vec3 tangent = cross(dpY, normalW) * uvX.x + cross(normalW, dpX) * uvY.x;
@@ -107,6 +141,15 @@ function createMaterial(scene: Scene, weathering: boolean, topWeathering: boolea
     existingContact?.configureMaterial(material)
     if (topWeathering) {
         material.Fragment_Before_Lights((material.CustomParts.Fragment_Before_Lights ?? '') + masonryTopWeatheringFragment)
+        material.Fragment_Custom_MetallicRoughness(`
+            ${material.CustomParts.Fragment_Custom_MetallicRoughness ?? ''}
+            metallicRoughness.g = mix(metallicRoughness.g, 0.29, masonryPuddle);
+        `)
+        material.Fragment_Before_FinalColorComposition(`
+            #ifdef SPECULARTERM
+                finalSpecularScaled *= masonryPuddle;
+            #endif
+        `)
     }
     material.shadowDepthWrapper = new ShadowDepthWrapper(material, scene, {standalone: true})
     return {material, contact}
@@ -150,8 +193,9 @@ export const MasonryBatch = {
         this.contact = variant.contact
     },
 
-    add(matrix: Matrix, anchor: Vector3, seed: number, beige = false, roughness = 0, exposedTop = false) {
-        const uv = new Vector2(Math.floor(seed * 413) % 8 + roughness * 0.5, stoneAtlasRow(beige, seed) + seed * 0.5)
+    add(matrix: Matrix, anchor: Vector3, seed: number, beige = false, roughness = 0, exposedTop = false, crown = false) {
+        const shape = roughness * 0.25 + (crown ? 0.5 : 0)
+        const uv = new Vector2(Math.floor(seed * 413) % 8 + shape, stoneAtlasRow(beige, seed) + seed * 0.5)
         const index = this.prefab!.matrices.length
         if (this.topWeathering && exposedTop) this.topExposure[index] = FULL_TOP_EXPOSURE
         WorldRenderer.addWeatheredBlock(matrix, uv, anchor, 0.82,
@@ -160,8 +204,10 @@ export const MasonryBatch = {
     },
 
     markExposedTops(layers: number[][], anchor: Vector3, irregular: boolean) {
-        const shelfSnow = irregular && WorldRenderer.getSnowSurfaceHeight(Math.round(anchor.x), Math.round(anchor.z)) !== undefined
-        markMasonryTopExposure(this.prefab!.matrices, layers, this.topExposure, shelfSnow)
+        const x = Math.round(anchor.x), z = Math.round(anchor.z)
+        const terrain = irregular && WorldRenderer.getSnowSurfaceHeight(x, z) !== undefined ? 'snow'
+            : WorldRenderer.getMuddyDirtContactHeight(x, z) !== undefined ? 'mud' : undefined
+        markMasonryTopExposure(this.prefab!.matrices, layers, this.topExposure, terrain)
     },
 
     clear() {
