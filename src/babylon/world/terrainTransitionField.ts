@@ -1,7 +1,8 @@
 import type { RoofTile } from './terrainRoofShape'
 
 export const TERRAIN_SNOW_SURFACE = 104
-export const SNOWMELT_MAX_DISTANCE = 2.55
+export const SNOWMELT_DISTANCE_SCALE = 1.35
+export const SNOWMELT_MAX_DISTANCE = 2.55 * SNOWMELT_DISTANCE_SCALE
 const SNOWMELT_TILE_REACH = SNOWMELT_MAX_DISTANCE + Math.SQRT1_2
 export const terrainSurface = (tile: RoofTile) => tile.snowed ? TERRAIN_SNOW_SURFACE : tile.type
 export function hasTerrainTransition(cover: number, substrate: number) {
@@ -47,7 +48,7 @@ export function findTerrainTransitions<T>(map: TransitionTile[][],
     return map.map((row, x) => row.map((tile, z) => {
         const type = surfaceOf(tile)
         const candidates: Boundary<T>[] = []
-        const range = 4
+        const range = extendSnowmelt ? Math.ceil(SNOWMELT_TILE_REACH) : 4
         for (let bx = Math.floor(Math.max(0, x - range) / bucketSize); bx <= Math.floor((x + range) / bucketSize); bx++) {
             for (let bz = Math.floor(Math.max(0, z - range) / bucketSize); bz <= Math.min(columns - 1, Math.floor((z + range) / bucketSize)); bz++) {
                 for (const edge of edges.get(bx * columns + bz) ?? []) {

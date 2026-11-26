@@ -4,7 +4,7 @@ import type { PBRCustomMaterial } from '@babylonjs/materials'
 import { TERRAIN_BEVEL_DROP, TERRAIN_BEVEL_WIDTH } from '@/babylon/world/beveledTerrainBlock'
 import { updateWorldInstanceBuffers } from '@/babylon/world/worldInstanceBuffers'
 import { terrainNoiseShader } from '@/babylon/world/terrainSurfaceShader'
-import { SNOWMELT_MAX_DISTANCE } from '@/babylon/world/terrainTransitionField'
+import { SNOWMELT_DISTANCE_SCALE, SNOWMELT_MAX_DISTANCE } from '@/babylon/world/terrainTransitionField'
 
 type TriangleUV = readonly [Vector2, Vector2, Vector2]
 export type TerrainPreviewTriangle = {
@@ -419,15 +419,17 @@ export function configureSnowmelt(material: PBRCustomMaterial, wallsOnly = false
             vec2 p = vPositionW.xz + vPositionW.y * vec2(0.61, -0.47);
             float pooling = terrainNoise(p * 2.1 + vec2(3.7, 14.2));
             ${wallsOnly ? `float snowDistance = snowFringe.y >= 0.0 ? snowFringe.y / topFringeDepth : -snowFringe.y;
-            float runoff = smoothstep(0.0, 0.24, snowWeight) * (1.0 - smoothstep(0.13, 0.54, snowDistance));` : `
+            float runoff = smoothstep(0.0, 0.24, snowWeight)
+                * (1.0 - smoothstep(0.13, 0.54, snowDistance / ${SNOWMELT_DISTANCE_SCALE}));` : `
             float runoff;
             if (wall) {
                 float contact = max(grassAtEdges.x, grassAtEdges.y);
-                runoff = contact * (1.0 - smoothstep(0.13, 0.54, grassEdgeDistance));
+                runoff = contact * (1.0 - smoothstep(0.13, 0.54, grassEdgeDistance / ${SNOWMELT_DISTANCE_SCALE}));
             } else {
-                runoff = 1.0 - smoothstep(0.31, mix(1.55, ${SNOWMELT_MAX_DISTANCE}, pooling), max(0.0, -coverDistance));
+                runoff = 1.0 - smoothstep(0.31 * ${SNOWMELT_DISTANCE_SCALE},
+                    mix(1.55 * ${SNOWMELT_DISTANCE_SCALE}, ${SNOWMELT_MAX_DISTANCE}, pooling), max(0.0, -coverDistance));
             }`}
-            snowmeltWetness = runoff * mix(0.63, 1.0, pooling);
+            snowmeltWetness = runoff * mix(0.63, 1.0, pooling) * 1.25;
             float exposedWetness = snowmeltWetness * exposedGround;
             surfaceAlbedo *= 1.0 - 0.21 * exposedWetness;
             normalW = normalize(mix(normalW, geometricNormalW, 0.20 * exposedWetness));
@@ -435,7 +437,7 @@ export function configureSnowmelt(material: PBRCustomMaterial, wallsOnly = false
         }
     `)
     material.Fragment_Custom_MetallicRoughness(`${material.CustomParts.Fragment_Custom_MetallicRoughness ?? ''}
-        metallicRoughness.g = mix(metallicRoughness.g, 0.44, snowmeltWetness);
+        metallicRoughness.g = clamp(mix(metallicRoughness.g, 0.44, snowmeltWetness), 0.0, 1.0);
     `)
 }
 
