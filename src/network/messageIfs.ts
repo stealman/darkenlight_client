@@ -86,6 +86,7 @@ export interface FoggyAreaData {
     depth: number
     rotation: number
     intensity: number
+    ground?: boolean
 }
 
 export interface GuestCharacterNameCheckData {

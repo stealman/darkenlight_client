@@ -80,6 +80,9 @@
                 </select>
             </template>
         </div>
+        <div v-if="selectedObject === STONE_FRAME_GRAVE_STATIC_ID" style="margin-top: 1vh">
+            <label><input v-model="graveSlabDisplaced" type="checkbox"> Displaced</label>
+        </div>
 
         <div v-if="selectedObjectType === 'TORCH'" style="margin-top: 1vh; display: grid; gap: 6px">
             <label style="display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px">
@@ -164,7 +167,7 @@
 <script setup>
 import { SIGNPOST_DIRECTIONS } from '@/babylon/world/statics/objects/woodenSignpost'
 import { t } from '@/i18n'
-import { GMManager } from '@/gm/GM'
+import { GMManager, STONE_FRAME_GRAVE_STATIC_ID } from '@/gm/GM'
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { SignpostAreaPicker, directionToSignpostTarget } from '@/gm/signpostAreaPicker'
 import { WorldAreaManager } from '@/data/worldAreaManager'
@@ -177,6 +180,7 @@ const torchMountHeight = GMManager.torchMountHeight
 const lightIntensity = GMManager.lightIntensity
 const lightRange = GMManager.lightRange
 const campObjectFacing = GMManager.campObjectFacing
+const graveSlabDisplaced = GMManager.graveSlabDisplaced
 const logPileLength = GMManager.logPileLength
 const entranceFacing = GMManager.entranceFacing
 const entranceDestinationWorld = GMManager.entranceDestinationWorld
@@ -240,12 +244,7 @@ const objects = [
     { type: "CEMETERY", name: "Stone Cross", id: 322 },
     { type: "CEMETERY", name: "Stone Tomb 1x2", id: 323 },
     { type: "CEMETERY", name: "Obelisk", id: 324 },
-    { type: "CEMETERY", name: "Gargoyle", id: 325 },
-    { type: "CEMETERY", name: "Gargoyle on Pedestal", id: 328 },
-    { type: "CEMETERY", name: "Stone Frame Grave", id: 329 },
-    { type: "CEMETERY", name: "Stone Frame Grave (shifted slab)", id: 330 },
-    { type: "CEMETERY", name: "Headstone 2 (flat cap)", id: 331 },
-    { type: "CEMETERY", name: "Headstone 3 (small cross)", id: 332 },
+    { type: "CEMETERY", name: "Stone Frame Grave", id: STONE_FRAME_GRAVE_STATIC_ID },
     { type: "CEMETERY", name: "Empty Pedestal", id: 333 },
     { type: "CEMETERY", name: "Stone Cross Pedestal", id: 334 },
     { type: "CEMETERY", name: "Fallen Stone Cross", id: 335 },

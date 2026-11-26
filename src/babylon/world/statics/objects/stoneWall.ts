@@ -21,6 +21,7 @@ const ALONG_Z = [{x: 0, z: -1}, {x: 0, z: 1}] as const
 const STONE_WALL_EMBED_DEPTH = 0.1
 const STONE_WALL_LAYOUT_HEIGHT = 1.4
 const STONE_WALL_TAPER_PER_HEIGHT = 0.1
+const BOND_JOINT_SHIFT = 0.24
 
 function fitSpan(direction: WallDirection, x: number, z: number, length: number) {
     const yaw = Math.atan2(x * direction.z - z * direction.x, x * direction.x + z * direction.z)
@@ -52,6 +53,8 @@ export class StoneWall extends OrientedWall {
     private segmentZ = 0
     private straightSpan?: WallSpan
     private cornerSpans?: [WallSpan, WallSpan]
+    private previousStraight?: StoneWall
+    private nextStraight?: StoneWall
 
     constructor(type: number, position: Vector3, metadata?: StoneWallMetadata) {
         super(type, position, Vector2.Zero(), MasonryBatch.prefab, metadata)
@@ -92,8 +95,14 @@ export class StoneWall extends OrientedWall {
     }
 
     updateSegmentLayout(wallsByTile: ReadonlyMap<string, StoneWall>) {
-        if (this.roughness === 0) return
         const [first, second] = this.segmentDirections
+        const straightNeighbor = ({x, z}: WallDirection) => {
+            const neighbor = wallsByTile.get(`${this.position.x + x};${this.position.z + z}`)
+            return !this.cornerDirections && neighbor?.orientation === this.orientation && !neighbor.cornerDirections
+                ? neighbor : undefined
+        }
+        this.previousStraight = straightNeighbor(first)
+        this.nextStraight = straightNeighbor(second)
         const a = this.seamPosition(first, wallsByTile)
         const b = this.seamPosition(second, wallsByTile)
         if (this.cornerDirections) {
@@ -112,6 +121,22 @@ export class StoneWall extends OrientedWall {
             this.straightSpan = fitSpan(second, b.x - a.x, b.z - a.z, 1)
             this.cornerSpans = undefined
         }
+    }
+
+    private straightPoint(offset: number) {
+        const span = this.straightSpan
+        const distance = offset * (span?.scale ?? 1)
+        const alongX = this.orientation === 'X'
+        return {
+            x: this.renderPosition.x + this.segmentX + distance * (alongX ? span?.cos ?? 1 : span?.sin ?? 0),
+            z: this.renderPosition.z + this.segmentZ + distance * (alongX ? -(span?.sin ?? 0) : span?.cos ?? 1),
+        }
+    }
+
+    private canBondWith(neighbor?: StoneWall): neighbor is StoneWall {
+        return neighbor !== undefined && neighbor.height === this.height
+            && neighbor.previewHeightOffset === this.previewHeightOffset
+            && Math.abs(neighbor.renderPosition.y - this.renderPosition.y) < 0.001
     }
 
     private seamPosition(direction: WallDirection, wallsByTile: ReadonlyMap<string, StoneWall>) {
@@ -156,7 +181,10 @@ export class StoneWall extends OrientedWall {
         const baseY = origin.y + 0.5 - STONE_WALL_EMBED_DEPTH
         const variation = createSineStaticVariation(this.position.x * 91.7 + this.position.z * 37.3 + 240, 17.1, 47.7)
         const roughness = this.roughness
-        const variedHeight = this.height * (1 + variation.signed(0, 11) * roughness * 0.17)
+        const previous = this.canBondWith(this.previousStraight) ? this.previousStraight : undefined
+        const next = this.canBondWith(this.nextStraight) ? this.nextStraight : undefined
+        const bonded = !!(previous || next)
+        const variedHeight = bonded ? this.height : this.height * (1 + variation.signed(0, 11) * roughness * 0.17)
         const heightScale = (variedHeight + this.previewHeightOffset) / STONE_WALL_LAYOUT_HEIGHT
         const wallHeight = this.height + this.previewHeightOffset
         const shortWallScale = Math.min(1, wallHeight)
@@ -182,7 +210,7 @@ export class StoneWall extends OrientedWall {
         let damageTier = -1
         let layer = 0
         const stone = (length: number, height: number, thickness: number, x: number, y: number, z: number,
-            alongX: boolean, span?: WallSpan) => {
+            alongX: boolean, span?: WallSpan, center?: {x: number, z: number}) => {
             const part = index++
             const sample = (channel: number) => roughness === 0 ? 0 : variation.signed(part, channel) * roughness
             const spanScale = span?.scale ?? 1
@@ -199,8 +227,8 @@ export class StoneWall extends OrientedWall {
             const localZ = alongX ? z + across : z * spanScale
             const worldX = span ? localX * span.cos + localZ * span.sin : localX
             const worldZ = span ? localZ * span.cos - localX * span.sin : localZ
-            matrix.setTranslationFromFloats(origin.x + this.segmentX + worldX,
-                baseY + y * heightScale + sample(8) * 0.047 * shortWallScale, origin.z + this.segmentZ + worldZ)
+            matrix.setTranslationFromFloats((center?.x ?? origin.x + this.segmentX) + worldX,
+                baseY + y * heightScale + sample(8) * 0.047 * shortWallScale, (center?.z ?? origin.z + this.segmentZ) + worldZ)
             const seed = variation.unit(part)
             if (candidates && damageTier >= 0) {
                 candidates.push({matrix, part, layer, seed, priority: damageTier + variation.unit(part, 12),
@@ -212,6 +240,26 @@ export class StoneWall extends OrientedWall {
         const alongX = this.orientation === 'X'
         const alongWall = (length: number, height: number, depth: number, offset: number, y: number) =>
             stone(length, height, depth, alongX ? offset : 0, y, alongX ? 0 : offset, alongX, this.straightSpan)
+        const straightCourse = (height: number, thickness: number, y: number, gap: number, joint?: number) => {
+            const shift = layer % 2 === 1 ? BOND_JOINT_SHIFT : 0
+            const left = previous ? -0.5 + shift : -0.49
+            const right = next ? 0.5 + shift : 0.49
+            const ends = joint === undefined ? [left, right] : [left, joint, right]
+            for (let i = 1; i < ends.length; i++) {
+                const start = ends[i - 1], end = ends[i]
+                const length = end - start
+                if (end > 0.5 && next) {
+                    // This stone is owned by the tile it starts in. Its far end meets the next tile's first stone.
+                    const a = this.straightPoint(start)
+                    const b = next.straightPoint(end - 1)
+                    const span = fitSpan(this.segmentDirections[1], b.x - a.x, b.z - a.z, length)
+                    stone(length - gap, height, thickness * Math.min(1, next.width / this.width), 0, y, 0, alongX, span,
+                        {x: (a.x + b.x) / 2, z: (a.z + b.z) / 2})
+                } else {
+                    alongWall(length - gap, height, thickness, (start + end) / 2, y)
+                }
+            }
+        }
         const cornerLayer = (directions: readonly WallDirection[], centerSize: number, height: number,
             thickness: number, y: number, gap: number) => {
             const center = Math.min(0.98, centerSize * widthScaleAt(y))
@@ -236,10 +284,9 @@ export class StoneWall extends OrientedWall {
                 cornerLayer(this.cornerDirections, center, courseHeight, thickness, y, 0.008)
                 continue
             }
-            const joint = (course % 2 === 0 ? -0.12 : 0.12) + variation.signed(course + 16) * (0.05 + roughness * 0.1)
-            for (const [left, right] of [[-0.49, joint], [joint, 0.49]]) {
-                alongWall(right - left - 0.008, courseHeight, thickness, (left + right) / 2, y)
-            }
+            const joint = (course % 2 === 0 ? -0.12 : 0.12)
+                + variation.signed(course + 16) * (bonded ? 0.05 : 0.05 + roughness * 0.1)
+            straightCourse(courseHeight, thickness, y, 0.008, joint)
         }
         layer = courseCount
         damageTier = 0
@@ -248,10 +295,11 @@ export class StoneWall extends OrientedWall {
         if (this.cornerDirections) {
             cornerLayer(this.cornerDirections, 0.46, 0.12, capThickness, capY, 0.006)
         } else if (!lowDetail && this.precision <= 5) {
-            const joint = variation.signed(0, 10) * 0.16
-            for (const [left, right] of [[-0.49, joint], [joint, 0.49]]) {
-                alongWall(right - left - 0.012, 0.12, capThickness, (left + right) / 2, capY)
-            }
+            const joint = bonded ? (layer % 2 === 0 ? -0.12 : 0.12) + variation.signed(0, 10) * 0.05
+                : variation.signed(0, 10) * 0.16
+            straightCourse(0.12, capThickness, capY, 0.012, joint)
+        } else if (bonded) {
+            straightCourse(0.12, capThickness, capY, 0.008)
         } else {
             alongWall(0.984, 0.12, capThickness, 0, capY)
         }

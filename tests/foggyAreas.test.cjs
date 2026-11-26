@@ -7,10 +7,11 @@ const ts = require('typescript')
 test('fog uses camera bounds and preserves unchanged systems across visibility and GM changes', async () => {
     const b = await import('@babylonjs/core/index.js')
     const map = Array.from({length: 1024}, () => Array(1024).fill({totalHeight: 0}))
-    const settings = {isDetalLevelHigh: () => true}
+    const settings = {isFoggyAreasEnabled: () => true}
+    let terrainRevision = 0
     const mocks = {
         '@babylonjs/core': b,
-        '@/data/worldDataManager': {WorldDataManager: {getBlockMap: () => map}},
+        '@/data/worldDataManager': {WorldDataManager: {getBlockMap: () => map, getTerrainRevision: () => terrainRevision}},
         '@/utils/viewport': {ViewportManager: {viewPortInitialized: true}},
         '@/settings/settings': {Settings: settings},
         '@/babylon/scene/lights': {Lights: {indoor: false, daylightFactor: 1}},
@@ -50,6 +51,7 @@ test('fog uses camera bounds and preserves unchanged systems across visibility a
         manager.setAreas([distant, local])
         assert.equal(manager.systems.has(1), false, 'distant fog is outside actual camera bounds')
         const original = manager.systems.get(2).particles
+        assert.equal(original.area.ground, true, 'old areas default to ground fog')
         for (const x of [912, 913, 914, 913, 912, 911]) {
             player.position.x = x
             player.computeWorldMatrix(true)
@@ -91,11 +93,22 @@ test('fog uses camera bounds and preserves unchanged systems across visibility a
         const planes = b.Frustum.GetPlanes(camera.getTransformationMatrix())
         assert.equal(manager.isAreaVisible({...local, x: 850, z: 850}, planes), false, 'behind camera')
         assert.equal(manager.isAreaVisible({...local, width: 5, depth: 60, rotation: 90}, planes), true)
-        settings.isDetalLevelHigh = () => false
-        manager.refreshVisibleAreas()
+        manager.applyChange({...local, ground: false}, false)
+        const air = manager.systems.get(2).particles
         assert.equal(original.disposed, true)
+        assert.equal(air.area.ground, false)
+        manager.applyChange({...local, ground: true}, false)
+        const ground = manager.systems.get(2).particles
+        assert.equal(air.disposed, true)
+        terrainRevision++
+        manager.refreshVisibleAreas()
+        assert.equal(ground.disposed, true, 'ground fog refreshes its terrain heights after edits')
+        const updatedGround = manager.systems.get(2).particles
+        settings.isFoggyAreasEnabled = () => false
+        manager.refreshVisibleAreas()
+        assert.equal(updatedGround.disposed, true)
         assert.equal(manager.systems.size, 0)
-        settings.isDetalLevelHigh = () => true
+        settings.isFoggyAreasEnabled = () => true
         manager.refreshVisibleAreas()
         assert.ok(manager.systems.size > 0)
         manager.clearWorld()

@@ -74,10 +74,11 @@ export const STUMP_WITH_AXE_STATIC_ID = 307
 export const WATER_TROUGH_1X1_STATIC_ID = 308
 export const WATER_TROUGH_2X1_STATIC_ID = 309
 export const STONE_WELL_STATIC_ID = 310
-export const CEMETERY_STATIC_IDS = new Set([321, 322, 323, 324, 325, 328, 329, 330, 331, 332, 333, 334])
+export const STONE_FRAME_GRAVE_STATIC_ID = 329
+export const CEMETERY_STATIC_IDS = new Set([321, 322, 323, 324, STONE_FRAME_GRAVE_STATIC_ID, 333, 334])
 
 const WALL_FENCE_STATIC_IDS = new Set([201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 221, 222])
-const GENERAL_STATIC_IDS = new Set([404, 241, 242, 261, 262, 263, 281, 301, 302, 303, 304, 305, 306, 307, 308, 309, 310, 321, 322, 323, 324, 325, 328, 329, 330, 331, 332, 333, 334, 335, 336, 337])
+const GENERAL_STATIC_IDS = new Set([404, 241, 242, 261, 262, 263, 281, 301, 302, 303, 304, 305, 306, 307, 308, 309, 310, ...CEMETERY_STATIC_IDS, 335, 336, 337])
 const LIGHT_SOURCE_STATIC_IDS = new Set([FIREPLACE_SMALL_STATIC_ID, FIREPLACE_LARGE_STATIC_ID, WALL_TORCH_STATIC_ID, TORCH_STAND_STATIC_ID, LANTERN_STAND_STATIC_ID, STONE_ENTRANCE_STATIC_ID, CEMETERY_EMBER_BOWL_STATIC_ID])
 
 const stoneWallAttributes = ['precision', 'damage', 'height', 'width'] as const
@@ -205,6 +206,7 @@ export const GMManager = {
     shedHighSide: ref('+Z'),
     shedSideFills: ref({'+X': '', '-X': '', '+Z': '', '-Z': ''} as Record<string, string>),
     campObjectFacing: ref('+Z'),
+    graveSlabDisplaced: ref(false),
     logPileLength: ref(1),
     torchFacing: ref('-Z'),
     torchMountHeight: ref(2),
@@ -603,7 +605,7 @@ export const GMManager = {
     },
 
     createStaticData(x: number, z: number, type: number) {
-        const data: {x: number, z: number, type: number, meta?: Record<string, number | string>} = {x, z, type}
+        const data: {x: number, z: number, type: number, meta?: Record<string, number | string | boolean>} = {x, z, type}
         if (type === 404) {
             data.meta = {signCount: this.signCount.value}
             this.signDirections.value.forEach((direction, index) => { data.meta![`sign${index + 1}`] = direction })
@@ -624,6 +626,7 @@ export const GMManager = {
             || type === STUMP_WITH_AXE_STATIC_ID || type === WATER_TROUGH_2X1_STATIC_ID
             || CEMETERY_STATIC_IDS.has(type)) {
             data.meta = {facing: this.campObjectFacing.value}
+            if (type === STONE_FRAME_GRAVE_STATIC_ID) data.meta.displaced = this.graveSlabDisplaced.value
         } else if (type === STONE_ENTRANCE_STATIC_ID) {
             data.meta = {
                 facing: this.entranceFacing.value,
@@ -747,6 +750,7 @@ export const GMManager = {
             || object.type === STUMP_WITH_AXE_STATIC_ID || object.type === WATER_TROUGH_2X1_STATIC_ID
             || CEMETERY_STATIC_IDS.has(object.type)) {
             this.campObjectFacing.value = status.facing ?? '+Z'
+            if (object.type === STONE_FRAME_GRAVE_STATIC_ID) this.graveSlabDisplaced.value = status.displaced === true
         } else if (object.type === STONE_ENTRANCE_STATIC_ID) {
             this.entranceFacing.value = status.facing ?? '+Z'
             this.entranceDestinationWorld.value = status.destinationWorldId ?? MyPlayer.worldId
@@ -762,6 +766,7 @@ export const GMManager = {
         if (this.selectedStoneWallTiles.value.length) this.selectedStoneWallTiles.value = []
         this.closeDeleteConfirmation()
         if (object.type === CAMP_FENCE_STATIC_ID) this.campFenceDamaged.value = false
+        if (object.type === STONE_FRAME_GRAVE_STATIC_ID) this.graveSlabDisplaced.value = false
         if (object.type === STONE_WALL_STATIC_ID) {
             this.stoneWallPrecision.value = DEFAULT_STONE_WALL_PRECISION
             this.stoneWallDamage.value = 1

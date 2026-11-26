@@ -32,7 +32,7 @@ import { IndoorTerrainOcclusionManager } from '@/babylon/world/indoorTerrainOccl
 import { TerrainDebrisManager } from '@/babylon/world/terrainDebrisManager'
 import { StoneBatch } from '@/babylon/world/stoneBatch'
 import { TaperedBlockBatch } from '@/babylon/world/taperedBlockBatch'
-import { MasonryBatch } from '@/babylon/world/masonryBatch'
+import { ArchedMasonryBatch, MasonryBatch } from '@/babylon/world/masonryBatch'
 import { isSnowRoof, outdoorSurfaceHeight } from '@/babylon/world/terrainRoofShape'
 import {
     GROUND_WEAR_HIGH_HEIGHT, GROUND_WEAR_MEDIUM_HEIGHT, SNOW_CONTACT_MAX_HEIGHT, StaticTerrainContact,
@@ -112,6 +112,7 @@ export const WorldRenderer = {
         StoneBatch.initialize(scene, this.worldParentNode, Settings.isDetalLevelHigh())
         TaperedBlockBatch.initialize(scene, this.worldParentNode, this.staticTerrainContact !== null)
         MasonryBatch.initialize(scene, this.worldParentNode, this.staticTerrainContact !== null)
+        ArchedMasonryBatch.initialize(scene, this.worldParentNode, this.staticTerrainContact !== null)
 
         // Initialize managers
         await TerrainManager.initialize(scene)
@@ -127,6 +128,7 @@ export const WorldRenderer = {
         Lights.addShadowCaster(StoneBatch.prefab!.mesh, true, true)
         Lights.addShadowCaster(TaperedBlockBatch.prefab!.mesh, true, true)
         Lights.addShadowCaster(MasonryBatch.prefab!.mesh, true, true)
+        Lights.addShadowCaster(ArchedMasonryBatch.prefab!.mesh, true, true)
         // Transparent/alpha world geometry is not a local static-light caster.
         Lights.addShadowCaster(this.blockWithAlpha1.mesh, true)
         TreeManager.addAllShadowCasters()
@@ -160,6 +162,7 @@ export const WorldRenderer = {
         StoneBatch.clear()
         TaperedBlockBatch.clear()
         MasonryBatch.clear()
+        ArchedMasonryBatch.clear()
         const blockMap = WorldDataManager.getBlockMap()
         const snowCoverMask = createSnowCoverMask(StaticsManager.allStatics, blockMap.length)
         this.snowCoverMask = snowCoverMask
@@ -188,6 +191,7 @@ export const WorldRenderer = {
         StoneBatch.flush()
         TaperedBlockBatch.flush()
         MasonryBatch.flush()
+        ArchedMasonryBatch.flush()
         FoggyAreaManager.refreshVisibleAreas()
 
         if (GMManager.gmPanelVisible.value && GMManager.tab === GmTabs.SPAWNS_EDIT) {
@@ -220,6 +224,7 @@ export const WorldRenderer = {
         Lights.registerSharedLightMesh(StoneBatch.prefab!.mesh)
         Lights.registerSharedLightMesh(TaperedBlockBatch.prefab!.mesh)
         Lights.registerSharedLightMesh(MasonryBatch.prefab!.mesh)
+        Lights.registerSharedLightMesh(ArchedMasonryBatch.prefab!.mesh)
     },
 
     hideGrassOverrideMarkers() {

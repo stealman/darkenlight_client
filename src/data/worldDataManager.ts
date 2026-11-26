@@ -94,6 +94,10 @@ export const WorldDataManager = {
         return this.worldDataMap.get(MyPlayer.worldId)!.blockMap;
     },
 
+    getTerrainRevision() {
+        return this.worldDataMap.get(MyPlayer.worldId)?.renderRevision ?? 0
+    },
+
     getBlockOnPosition(pos: Vector3): MapBlock | null {
         const map = WorldDataManager.getBlockMap()
         return map[Math.floor(pos.x)]?.[Math.floor(pos.z)] ?? null

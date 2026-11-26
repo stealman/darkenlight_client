@@ -46,17 +46,12 @@ import {
     CemeteryCross,
     CemeteryCrossPedestal,
     CemeteryHeadstone,
-    CemeteryHeadstone2,
-    CemeteryHeadstone3,
     CemeteryIronFence,
     CemeteryObjectMetadata,
     CemeteryObelisk,
     CemeteryPedestal,
-    GargoyleOnPedestal,
-    FallenCemeteryCross,
-    FallenCemeteryHeadstone,
-    StoneGargoyle,
     StoneFrameGrave,
+    StoneFrameGraveMetadata,
     StoneTomb,
 } from '@/babylon/world/statics/objects/cemeteryObjects'
 import { TerrainDebris } from './objects/terrainDebris'
@@ -66,7 +61,7 @@ import type { WallMetadata } from './objects/orientedWall'
 import { StoneBatch } from '../stoneBatch'
 import type { ContactShadowFootprint } from '../terrainContactShadow'
 import { TaperedBlockBatch } from '../taperedBlockBatch'
-import { MasonryBatch } from '@/babylon/world/masonryBatch'
+import { ArchedMasonryBatch, MasonryBatch } from '@/babylon/world/masonryBatch'
 
 const isEmbeddedInSnow = (type: number) => isShrubType(type) || type === 281
 
@@ -179,7 +174,6 @@ export const StaticsManager = {
             case 262: this.allStatics.push(new TorchStand(
                 obj.tp,
                 pos,
-                MaterialEnum1.ROCK1.uv,
                 MaterialEnum1.STEEL_1.uv,
                 MaterialEnum1.WOOD_1.uv,
                 obj.meta as TorchStandMetadata,
@@ -187,7 +181,6 @@ export const StaticsManager = {
             case 263: this.allStatics.push(new LanternStand(
                 obj.tp,
                 pos,
-                MaterialEnum1.ROCK1.uv,
                 MaterialEnum1.STEEL_1.uv,
                 obj.meta as LanternStandMetadata,
             )); break
@@ -222,27 +215,15 @@ export const StaticsManager = {
                 MaterialEnum1.WOOD_PLANKS_DARK.uv,
                 MaterialEnum1.STEEL_1.uv,
             )); break
-            case 321: this.allStatics.push(new CemeteryHeadstone(obj.tp, pos, MaterialEnum1.ROCK1.uv, MaterialEnum1.BRICK_DARK_GRAY.uv, obj.meta as CemeteryObjectMetadata)); break
-            case 322: this.allStatics.push(new CemeteryCross(obj.tp, pos, MaterialEnum1.ROCK1.uv, MaterialEnum1.BRICK_DARK_GRAY.uv, obj.meta as CemeteryObjectMetadata)); break
-            case 323: this.allStatics.push(new StoneTomb(obj.tp, pos, MaterialEnum1.BRICK_GRAY.uv, MaterialEnum1.ROCK1.uv, obj.meta as CemeteryObjectMetadata)); break
+            case 321:
+            case 336: this.allStatics.push(new CemeteryHeadstone(obj.tp, pos, MaterialEnum1.BRICK_DARK_GRAY.uv, obj.meta as CemeteryObjectMetadata)); break
+            case 322:
+            case 335: this.allStatics.push(new CemeteryCross(obj.tp, pos, obj.meta as CemeteryObjectMetadata)); break
+            case 323: this.allStatics.push(new StoneTomb(obj.tp, pos, obj.meta as CemeteryObjectMetadata)); break
             case 324: this.allStatics.push(new CemeteryObelisk(obj.tp, pos, MaterialEnum1.BRICK_DARK_GRAY.uv, MaterialEnum1.ROCK1.uv, obj.meta as CemeteryObjectMetadata)); break
-            case 325: this.allStatics.push(new StoneGargoyle(obj.tp, pos, MaterialEnum1.ROCK1.uv, MaterialEnum1.BRICK_DARK_GRAY.uv, obj.meta as CemeteryObjectMetadata)); break
-            case 328: this.allStatics.push(new GargoyleOnPedestal(obj.tp, pos, MaterialEnum1.BRICK_DARK_GRAY.uv, MaterialEnum1.ROCK1.uv, obj.meta as CemeteryObjectMetadata)); break
-            case 329:
-            case 330: this.allStatics.push(new StoneFrameGrave(
-                obj.tp,
-                pos,
-                MaterialEnum1.BRICK_GRAY.uv,
-                MaterialEnum1.ROCK1.uv,
-                MaterialEnum1.WOOD_1.uv,
-                obj.meta as CemeteryObjectMetadata,
-            )); break
-            case 331: this.allStatics.push(new CemeteryHeadstone2(obj.tp, pos, MaterialEnum1.ROCK1.uv, MaterialEnum1.BRICK_DARK_GRAY.uv, obj.meta as CemeteryObjectMetadata)); break
-            case 332: this.allStatics.push(new CemeteryHeadstone3(obj.tp, pos, MaterialEnum1.ROCK1.uv, MaterialEnum1.BRICK_DARK_GRAY.uv, obj.meta as CemeteryObjectMetadata)); break
-            case 333: this.allStatics.push(new CemeteryPedestal(obj.tp, pos, MaterialEnum1.BRICK_DARK_GRAY.uv, MaterialEnum1.ROCK1.uv, obj.meta as CemeteryObjectMetadata)); break
-            case 334: this.allStatics.push(new CemeteryCrossPedestal(obj.tp, pos, MaterialEnum1.ROCK1.uv, MaterialEnum1.BRICK_DARK_GRAY.uv, obj.meta as CemeteryObjectMetadata)); break
-            case 335: this.allStatics.push(new FallenCemeteryCross(obj.tp, pos, MaterialEnum1.ROCK1.uv)); break
-            case 336: this.allStatics.push(new FallenCemeteryHeadstone(obj.tp, pos, MaterialEnum1.ROCK1.uv, MaterialEnum1.BRICK_DARK_GRAY.uv)); break
+            case 329: this.allStatics.push(new StoneFrameGrave(obj.tp, pos, MaterialEnum1.WOOD_1.uv, obj.meta as StoneFrameGraveMetadata)); break
+            case 333: this.allStatics.push(new CemeteryPedestal(obj.tp, pos, obj.meta as CemeteryObjectMetadata)); break
+            case 334: this.allStatics.push(new CemeteryCrossPedestal(obj.tp, pos, obj.meta as CemeteryObjectMetadata)); break
             case 337: this.allStatics.push(new CemeteryEmberBowl(
                 obj.tp,
                 pos,
@@ -422,6 +403,8 @@ export const StaticsManager = {
         TaperedBlockBatch.flush()
         MasonryBatch.clear()
         MasonryBatch.flush()
+        ArchedMasonryBatch.clear()
+        ArchedMasonryBatch.flush()
         this.allStatics.forEach((obj) => obj.dispose())
         this.allStatics = []
         this.staticsByTile.clear()

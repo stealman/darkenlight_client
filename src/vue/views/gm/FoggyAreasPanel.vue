@@ -20,6 +20,10 @@
                 <input v-model.number="selectedArea.intensity" type="number" min="1" max="10" step="1" :disabled="locked" @input="refreshPreview" />
             </label>
 
+            <label>Ground
+                <input v-model="selectedArea.ground" type="checkbox" :disabled="locked" />
+            </label>
+
             <div class="fog-actions">
                 <template v-if="selectedArea.id && !selectedAction">
                     <button @click="selectedAction = 'EDIT'">Edit</button>
@@ -72,7 +76,7 @@ const cancel = () => GMFoggyAreas.cancel()
     gap: 12px;
 }
 
-.fog-editor input {
+.fog-editor input[type="number"] {
     width: 84px;
 }
 

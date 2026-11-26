@@ -1,6 +1,8 @@
 import { Color3, Matrix, Vector2, Vector3 } from '@babylonjs/core'
 import { BaseStaticObject } from '@/babylon/world/statics/objects/baseStaticObject'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
+import { MasonryBatch } from '@/babylon/world/masonryBatch'
+import { addMasonryPedestal } from '@/babylon/world/statics/masonryPedestal'
 import { Lights } from '@/babylon/scene/lights'
 import {
     getStaticLightIntensityLevelFactor,
@@ -44,7 +46,6 @@ const LIGHT_FORWARD_OFFSET = 0.5
 
 export class LanternStand extends BaseStaticObject {
     private readonly facing: LanternStandFacing
-    private readonly baseMaterial: Vector2
     private readonly metalMaterial: Vector2
     private readonly lightIntensity: number
     private readonly lightRange: number
@@ -54,12 +55,10 @@ export class LanternStand extends BaseStaticObject {
     constructor(
         type: number,
         position: Vector3,
-        baseMaterial: Vector2,
         metalMaterial: Vector2,
         metadata?: LanternStandMetadata,
     ) {
-        super(type, position, 0, metalMaterial, null)
-        this.baseMaterial = baseMaterial
+        super(type, position, 0, metalMaterial, MasonryBatch.prefab)
         this.metalMaterial = metalMaterial
         this.facing = metadata?.facing === '-X' || metadata?.facing === '+X'
             || metadata?.facing === '-Z' || metadata?.facing === '+Z'
@@ -80,7 +79,7 @@ export class LanternStand extends BaseStaticObject {
         const lanternTopY = chainTopY - CHAIN_LENGTH
         const lanternCenterY = lanternTopY - LANTERN_HEIGHT / 2
 
-        this.renderPart(BASE_SIZE, BASE_HEIGHT, BASE_SIZE, this.renderPosition.x, poleBaseY + BASE_HEIGHT / 2, this.renderPosition.z, this.baseMaterial)
+        addMasonryPedestal(this, [BASE_SIZE, BASE_HEIGHT, BASE_SIZE])
         this.renderPart(POLE_WIDTH, POLE_HEIGHT, POLE_WIDTH, this.renderPosition.x, poleBaseY + POLE_HEIGHT / 2, this.renderPosition.z, this.metalMaterial)
         this.renderPart(
             normal.x === 0 ? ARM_WIDTH : ARM_LENGTH,
@@ -164,12 +163,8 @@ export class LanternStand extends BaseStaticObject {
 
     private renderPart(width: number, height: number, depth: number, x: number, y: number, z: number, material: Vector2) {
         const matrix = Matrix.Scaling(width, height, depth).multiply(Matrix.Translation(x, y, z))
-        if (material === this.baseMaterial) {
-            WorldRenderer.addWeatheredBlock(matrix, material, this.position, 0.7)
-        } else {
-            WorldRenderer.block1!.matrices.push(matrix)
-            WorldRenderer.block1!.uvData.push(material)
-        }
+        WorldRenderer.block1!.matrices.push(matrix)
+        WorldRenderer.block1!.uvData.push(material)
     }
 
     private registerFire() {

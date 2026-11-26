@@ -1,9 +1,11 @@
 import {
+    Constants,
     CustomParticleEmitter,
     GPUParticleSystem,
     Frustum,
     Plane,
     ParticleSystem,
+    RawTexture,
     Scene,
     ShaderStore,
     Texture,
@@ -14,28 +16,31 @@ import { ViewportManager } from '@/utils/viewport'
 import { Settings } from '@/settings/settings'
 import { reactive } from 'vue'
 import { Lights } from '@/babylon/scene/lights'
+import type { FoggyAreaData as FoggyAreaMessage } from '@/network/messageIfs'
 
-export interface FoggyAreaData {
-    id: number
-    x: number
-    z: number
-    width: number
-    depth: number
-    rotation: number
-    intensity: number
+export interface FoggyAreaData extends FoggyAreaMessage {
+    ground: boolean
 }
 
 const CAPACITY_LIMIT = 6000
 // Maximum cloud radius (12 / 2) plus maximum horizontal drift (2.6).
 const VISIBILITY_MARGIN = 9
 const FOG_ALPHA_FADE_DEFINE = '#define FOGGY_AREA_ALPHA_FADE'
-const NIGHT_PARTICLE_COLOR_FACTOR = 1.25
+const GROUND_FOG_DEFINE = '#define FOGGY_AREA_GROUND'
+const GROUND_FOG_TOP = 1.35
+const NIGHT_PARTICLE_COLOR_FACTOR = 0.75
 let fogAlphaFadeShaderInstalled = false
 
 function installFogAlphaFadeShader(): boolean {
     if (fogAlphaFadeShaderInstalled) return true
-    const shaderName = 'gpuRenderParticlesVertexShader'
-    const shader = ShaderStore.ShadersStore[shaderName]
+    const vertexName = 'gpuRenderParticlesVertexShader'
+    const fragmentName = 'gpuRenderParticlesPixelShader'
+    const vertex = ShaderStore.ShadersStore[vertexName]
+    const fragment = ShaderStore.ShadersStore[fragmentName]
+    if (vertex?.includes('float fogTerrainHeight(') && fragment?.includes('float fogTerrainHeight(')) {
+        fogAlphaFadeShaderInstalled = true
+        return true
+    }
     const source = 'vColor=color*vec4(1.0-ratio)+colorDead*vec4(ratio);\n#endif'
     const replacement = `vColor=color*vec4(1.0-ratio)+colorDead*vec4(ratio);
 #ifdef FOGGY_AREA_ALPHA_FADE
@@ -43,8 +48,42 @@ vColor.rgb=color.rgb;
 vColor.a=color.a*smoothstep(0.0,0.22,ratio)*(1.0-smoothstep(0.55,1.0,ratio));
 #endif
 #endif`
-    if (!shader?.includes(source)) return false
-    ShaderStore.ShadersStore[shaderName] = shader.replace(source, replacement)
+    const project = 'gl_Position=projection*viewPosition;'
+    const color = 'gl_FragColor=textureColor*vColor;'
+    if (!vertex?.includes(source) || !vertex.includes(project) || !fragment?.includes(color)) return false
+    const terrainLookup = `
+#ifdef FOGGY_AREA_GROUND
+uniform sampler2D fogTerrain;
+uniform vec4 fogTerrainBounds;
+float fogTerrainHeight(vec2 worldXZ) {
+    vec2 tile = floor(worldXZ) - fogTerrainBounds.xy;
+    return texture2D(fogTerrain, (tile + 0.5) / fogTerrainBounds.zw).r;
+}
+#endif
+`
+    ShaderStore.ShadersStore[vertexName] = vertex
+        .replace('void main() {', terrainLookup + 'void main() {')
+        .replace(source, replacement)
+        .replace(project, `
+#ifdef FOGGY_AREA_GROUND
+// The particle simulation stores Y relative to the terrain. Flatten the
+// billboard in world Y and place it at the height of its drifting center.
+vPositionW.y = position.y + (vPositionW.y - position.y) * 0.28 + fogTerrainHeight(position.xz);
+viewPosition = view * vec4(vPositionW, 1.0);
+#endif
+${project}`)
+    ShaderStore.ShadersStore[fragmentName] = fragment
+        .replace('void main() {', terrainLookup + `
+#ifdef FOGGY_AREA_GROUND
+varying vec3 vPositionW;
+#endif
+void main() {`)
+        .replace(color, `${color}
+#ifdef FOGGY_AREA_GROUND
+float aboveGround = vPositionW.y - fogTerrainHeight(vPositionW.xz);
+gl_FragColor.a *= smoothstep(0.0, 0.12, aboveGround)
+    * (1.0 - smoothstep(0.85, ${GROUND_FOG_TOP}, aboveGround));
+#endif`)
     fogAlphaFadeShaderInstalled = true
     return true
 }
@@ -73,21 +112,21 @@ export const FoggyAreaManager = {
         this.scene = scene
     },
 
-    setAreas(areas: FoggyAreaData[]) {
-        const next = (areas ?? []).map((area) => ({...area}))
+    setAreas(areas: FoggyAreaMessage[]) {
+        const next = areas.map((area) => ({...area, ground: area.ground !== false}))
         if (JSON.stringify(next) === JSON.stringify(this.areas)) return
         this.areas.splice(0, this.areas.length, ...next)
         this.refreshVisibleAreas()
     },
 
-    applyChange(area: FoggyAreaData, deleted: boolean) {
+    applyChange(area: FoggyAreaMessage, deleted: boolean) {
         const index = this.areas.findIndex((item) => item.id === area.id)
         if (deleted) {
             if (index >= 0) this.areas.splice(index, 1)
-        } else if (index >= 0) {
-            this.areas[index] = {...area}
         } else {
-            this.areas.push({...area})
+            const next = {...area, ground: area.ground !== false}
+            if (index >= 0) this.areas[index] = next
+            else this.areas.push(next)
         }
         this.refreshVisibleAreas()
     },
@@ -104,11 +143,12 @@ export const FoggyAreaManager = {
         camera.getViewMatrix()
         camera.getProjectionMatrix()
         const planes = Frustum.GetPlanes(camera.getTransformationMatrix())
+        const terrainRevision = WorldDataManager.getTerrainRevision()
         const activeIds = new Set<number>()
         for (const area of this.areas) {
             if (!this.isAreaVisible(area, planes)) continue
             activeIds.add(area.id)
-            const key = `${area.x}:${area.z}:${area.width}:${area.depth}:${area.rotation}:${area.intensity}`
+            const key = `${area.x}:${area.z}:${area.width}:${area.depth}:${area.rotation}:${area.intensity}:${area.ground ? terrainRevision : 'air'}`
             const existing = this.systems.get(area.id)
             if (existing?.key === key) continue
             existing?.particles.dispose(false)
@@ -142,12 +182,13 @@ export const FoggyAreaManager = {
             if (Math.hypot(dx, dz) > this.scene.fogEnd) return false
         }
         const map = WorldDataManager.getBlockMap()
+        const groundMargin = area.ground ? VISIBILITY_MARGIN : 0
         let minY = Infinity
         let maxY = -Infinity
-        for (let x = Math.max(0, Math.floor(area.x - extentX)); x <= Math.min(map.length - 1, Math.floor(area.x + extentX)); x++) {
+        for (let x = Math.max(0, Math.floor(area.x - extentX - groundMargin)); x <= Math.min(map.length - 1, Math.floor(area.x + extentX + groundMargin)); x++) {
             const column = map[x]
             if (!column) continue
-            for (let z = Math.max(0, Math.floor(area.z - extentZ)); z <= Math.min(column.length - 1, Math.floor(area.z + extentZ)); z++) {
+            for (let z = Math.max(0, Math.floor(area.z - extentZ - groundMargin)); z <= Math.min(column.length - 1, Math.floor(area.z + extentZ + groundMargin)); z++) {
                 const height = column[z]?.totalHeight
                 if (!Number.isFinite(height)) continue
                 minY = Math.min(minY, height)
@@ -155,9 +196,8 @@ export const FoggyAreaManager = {
             }
         }
         if (!Number.isFinite(minY)) return false
-        // Cloud centres rise up to 1.55 units above their terrain anchor.
-        minY += 0.12 - 6
-        maxY += 0.12 + 1.55 + 6
+        minY += area.ground ? 0 : 0.12 - 6
+        maxY += area.ground ? GROUND_FOG_TOP : 0.12 + 1.55 + 6
         for (const plane of planes) {
             const n = plane.normal
             // Support of the rotated ellipse, expanded by cloud size and drift.
@@ -180,6 +220,7 @@ export const FoggyAreaManager = {
         const rotation = area.rotation * Math.PI / 180
         const x = area.x + localX * Math.cos(rotation) - localZ * Math.sin(rotation)
         const z = area.z + localX * Math.sin(rotation) + localZ * Math.cos(rotation)
+        if (area.ground) return target.set(x, 0.28, z)
         const block = WorldDataManager.getBlockMap()?.[Math.floor(x)]?.[Math.floor(z)]
         target.set(x, block ? block.totalHeight + 0.12 : -10000, z)
         return target
@@ -200,7 +241,7 @@ export const FoggyAreaManager = {
             const drift = 0.8 + random(index, 5) * 1.8
             destination.set(
                 start.x + Math.cos(driftAngle) * drift,
-                start.y + 0.45 + random(index, 6) * 1.1,
+                start.y + (area.ground ? 0.18 + random(index, 6) * 0.34 : 0.45 + random(index, 6) * 1.1),
                 start.z + Math.sin(driftAngle) * drift,
             )
         }
@@ -211,7 +252,9 @@ export const FoggyAreaManager = {
         particles.fillDefines = (defines, blendMode, fillImageProcessing) => {
             fillDefines(defines, blendMode, fillImageProcessing)
             defines.push(FOG_ALPHA_FADE_DEFINE)
+            if (area.ground) defines.push(GROUND_FOG_DEFINE)
         }
+        if (area.ground) this.bindGroundTerrain(particles, area, this.scene)
         particles.particleTexture = this.texture
         particles.emitter = Vector3.Zero()
         particles.particleEmitterType = emitter
@@ -230,6 +273,36 @@ export const FoggyAreaManager = {
         return particles
     },
 
+    bindGroundTerrain(particles: GPUParticleSystem, area: FoggyAreaData, scene: Scene) {
+        const map = WorldDataManager.getBlockMap()
+        const radius = Math.max(area.width, area.depth) * 0.5 + VISIBILITY_MARGIN
+        const minX = Math.floor(area.x - radius)
+        const minZ = Math.floor(area.z - radius)
+        const width = Math.floor(area.x + radius) - minX + 1
+        const depth = Math.floor(area.z + radius) - minZ + 1
+        const heights = new Float32Array(width * depth)
+        for (let z = 0; z < depth; z++) {
+            for (let x = 0; x < width; x++) {
+                heights[z * width + x] = map[minX + x]?.[minZ + z]?.totalHeight ?? -10000
+            }
+        }
+        const terrain = RawTexture.CreateRTexture(heights, width, depth, scene, false, false,
+            Texture.NEAREST_SAMPLINGMODE, Constants.TEXTURETYPE_FLOAT)
+        terrain.wrapU = terrain.wrapV = Texture.CLAMP_ADDRESSMODE
+        const fillBindings = particles.fillUniformsAttributesAndSamplerNames.bind(particles)
+        particles.fillUniformsAttributesAndSamplerNames = (uniforms, attributes, samplers) => {
+            fillBindings(uniforms, attributes, samplers)
+            uniforms.push('fogTerrainBounds')
+            samplers.push('fogTerrain')
+        }
+        particles.onBeforeDrawParticlesObservable.add((effect) => {
+            if (!effect) return
+            effect.setFloat4('fogTerrainBounds', minX, minZ, width, depth)
+            effect.setTexture('fogTerrain', terrain)
+        })
+        particles.onDisposeObservable.addOnce(() => terrain.dispose())
+    },
+
     onFrame() {
         this.updateParticleColors(false)
     },
@@ -237,16 +310,13 @@ export const FoggyAreaManager = {
     updateParticleColors(force: boolean) {
         if (!this.systems.size || !this.scene) return
         const daylight = Lights.indoor ? 1 : Lights.daylightFactor
-        if (!force && Math.abs(daylight - this.lastLightingFactor) < 0.025) return
+        if (!force && daylight === this.lastLightingFactor) return
         this.lastLightingFactor = daylight
 
-        const fog = this.scene.fogColor
-        const nightRed = Math.min(1, (0.19 + fog.r * 0.4) * NIGHT_PARTICLE_COLOR_FACTOR)
-        const nightGreen = Math.min(1, (0.2 + fog.g * 0.4) * NIGHT_PARTICLE_COLOR_FACTOR)
-        const nightBlue = Math.min(1, (0.22 + fog.b * 0.4) * NIGHT_PARTICLE_COLOR_FACTOR)
-        const red = nightRed + (0.72 - nightRed) * daylight
-        const green = nightGreen + (0.75 - nightGreen) * daylight
-        const blue = nightBlue + (0.75 - nightBlue) * daylight
+        const colorFactor = NIGHT_PARTICLE_COLOR_FACTOR + (1 - NIGHT_PARTICLE_COLOR_FACTOR) * daylight
+        const red = 0.72 * colorFactor
+        const green = 0.75 * colorFactor
+        const blue = 0.75 * colorFactor
         const alpha = 0.06732 - daylight * 0.00732
         // Without a GPU color gradient, color1/color2 are captured by each
         // particle when it is emitted. Existing clouds retain their shade and

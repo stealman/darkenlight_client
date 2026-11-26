@@ -1,6 +1,8 @@
 import { Color3, Matrix, Vector2, Vector3 } from '@babylonjs/core'
 import { BaseStaticObject } from '@/babylon/world/statics/objects/baseStaticObject'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
+import { MasonryBatch } from '@/babylon/world/masonryBatch'
+import { addMasonryPedestal } from '@/babylon/world/statics/masonryPedestal'
 import { Lights } from '@/babylon/scene/lights'
 import { getStaticLightIntensityLevelFactor, getStaticLightLevel, getStaticLightRangeLevelFactor, LARGE_CAMPFIRE_SHADOW_MAP_SIZE, type StaticLightMetadata, OUTDOOR_STATIC_LIGHT_RANGE_FACTOR } from '@/babylon/scene/lighting/lightConfig'
 import { StaticFireParticleManager } from '@/babylon/world/statics/staticFireParticleManager'
@@ -28,7 +30,6 @@ const LIGHT_RANGE = 12
 
 export class TorchStand extends BaseStaticObject {
     private readonly facing: TorchStandFacing
-    private readonly baseMaterial: Vector2
     private readonly poleMaterial: Vector2
     private readonly firePosition = new Vector3()
     private readonly lightPosition = new Vector3()
@@ -38,13 +39,11 @@ export class TorchStand extends BaseStaticObject {
     constructor(
         type: number,
         position: Vector3,
-        baseMaterial: Vector2,
         poleMaterial: Vector2,
         torchMaterial: Vector2,
         metadata?: TorchStandMetadata,
     ) {
-        super(type, position, 0, torchMaterial, null)
-        this.baseMaterial = baseMaterial
+        super(type, position, 0, torchMaterial, MasonryBatch.prefab)
         this.poleMaterial = poleMaterial
         this.facing = metadata?.facing === '-X' || metadata?.facing === '+X'
             || metadata?.facing === '-Z' || metadata?.facing === '+Z'
@@ -56,8 +55,12 @@ export class TorchStand extends BaseStaticObject {
     }
 
     render() {
-        this.renderPart(BASE_SIZE, BASE_HEIGHT, BASE_SIZE, this.renderPosition.y + BASE_HEIGHT / 2 + 0.5, this.baseMaterial)
-        this.renderPart(POLE_WIDTH, POLE_HEIGHT, POLE_WIDTH, this.renderPosition.y + POLE_HEIGHT / 2 + 0.5, this.poleMaterial)
+        addMasonryPedestal(this, [BASE_SIZE, BASE_HEIGHT, BASE_SIZE])
+        WorldRenderer.addTerrainContactBlock(
+            Matrix.Scaling(POLE_WIDTH, POLE_HEIGHT, POLE_WIDTH)
+                .setTranslationFromFloats(this.renderPosition.x, this.renderPosition.y + POLE_HEIGHT / 2 + 0.5, this.renderPosition.z),
+            this.poleMaterial,
+        )
         this.renderTorch()
         this.registerFire()
     }
@@ -73,14 +76,6 @@ export class TorchStand extends BaseStaticObject {
     dispose() {
         Lights.unregisterStaticLight(this.getLightId())
         StaticFireParticleManager.unregister(this.getLightId())
-    }
-
-    private renderPart(width: number, height: number, depth: number, y: number, material: Vector2) {
-        WorldRenderer.addTerrainContactBlock(
-            Matrix.Scaling(width, height, depth)
-                .multiply(Matrix.Translation(this.renderPosition.x, y, this.renderPosition.z)),
-            material,
-        )
     }
 
     private renderTorch() {

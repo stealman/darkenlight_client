@@ -31,7 +31,7 @@ export const GMFoggyAreas = {
             this.selectedArea.value = null
             this.selectedAction.value = ''
         } else {
-            this.selectedArea.value = {id: 0, x, z, width: 12, depth: 8, rotation: 0, intensity: 5}
+            this.selectedArea.value = {id: 0, x, z, width: 12, depth: 8, rotation: 0, intensity: 5, ground: true}
         }
         this.renderMarkers()
     },
