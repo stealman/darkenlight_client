@@ -200,12 +200,63 @@ export function configureStaticBlockDamage(material: PBRCustomMaterial) {
             float split = 1.0 - smoothstep(width * 0.22, width, abs(fromCorner.x + fromCorner.y - center));
             return split * smoothstep(0.0, 0.10, reach) * (1.0 - smoothstep(0.62, 1.0, reach));
         }
+
+        float palisadeLongEdgeDamage(vec3 p, vec3 size, float seed) {
+            float along = (p.y + 0.5) * size.y;
+            float fromEnd = min(along, size.y - along);
+            vec2 sides = max(vec2(0.0), 0.5 - abs(p.xz)) * size.xz;
+            float fromEdge = sides.x + sides.y;
+            float edgeWidth = min(0.042, min(size.x, size.z) * 0.29);
+            if (fromEnd <= 0.025 || fromEdge >= edgeWidth) return 0.0;
+
+            // Use the same pattern on both faces that share each long edge.
+            vec2 corner = step(vec2(0.0), p.xz);
+            float band = along * 5.4;
+            vec2 cell = vec2(floor(band), seed + dot(corner, vec2(19.1, 37.7)));
+            float pick = terrainHash(cell);
+            if (pick < 0.43) return 0.0;
+            float center = mix(0.30, 0.70, terrainHash(cell + vec2(7.1, 3.7)));
+            float inset = edgeWidth * mix(0.34, 1.0, terrainHash(cell + vec2(4.5, 15.3)));
+            float across = fromEdge / inset;
+            if (across >= 1.0) return 0.0;
+            float notch = step(0.72, pick);
+            float span = mix(0.30, 0.14, notch) * mix(0.63, 1.0, terrainHash(cell + vec2(9.2, 22.3)));
+            float slant = mix(-0.13, 0.13, terrainHash(cell + vec2(3.5, 11.1)));
+            float alongCut = abs(fract(band) - center + across * slant) / span;
+            float cut = 1.0 - smoothstep(0.54, 1.0, across + alongCut);
+            return cut * smoothstep(0.025, 0.075, fromEnd);
+        }
+
+        float palisadeTopDamage(vec3 p, vec3 size, float seed, bool brace) {
+            vec2 faceUV = (brace ? p.yz : p.xz) + 0.5;
+            float bands = brace ? max(2.0, ceil(size.y * 4.6)) : 1.0;
+            vec2 bandUV = faceUV * vec2(bands, 1.0);
+            vec2 cell = vec2(floor(min(bandUV.x, bands - 0.001)), seed + 73.5);
+            float pick = terrainHash(cell);
+            if (pick < 0.28) return 0.0;
+            vec2 center = vec2(
+                mix(0.33, 0.67, terrainHash(cell + vec2(8.3, 3.4))),
+                mix(0.24, 0.76, terrainHash(cell + vec2(4.1, 11.5)))
+            );
+            vec2 d = vec2(bandUV.x - cell.x, faceUV.y) - center;
+            float slant = mix(-0.68, 0.68, terrainHash(cell + vec2(5.4, 17.1)));
+            float reach = mix(0.14, 0.32, pick);
+            float width = mix(0.035, 0.105, 1.0 - pick);
+            return 1.0 - smoothstep(0.58, 1.0, abs(d.x) / reach + abs(d.y + d.x * slant) / width);
+        }
+
+        float palisadeWoodNoise(vec3 p, vec3 size, float seed) {
+            vec3 metres = p * size;
+            vec2 at = metres.xz + metres.y * vec2(0.19, 0.13) + mod(seed, 31.0) * vec2(0.21, -0.37);
+            return terrainNoise(at * 54.0) * 0.64 + terrainNoise(at * 122.0 + vec2(8.1, 5.7)) * 0.36 - 0.5;
+        }
     `)
     material.Fragment_Before_Lights(`
         ${parts.Fragment_Before_Lights ?? ''}
         float damageFlags = floor(vStaticDamageLocal.w + 0.5);
         float damageKind = mod(damageFlags, 4.0);
         bool patinaOnly = woodWeathering >= ${WOOD_PATINA_ONLY}.0;
+        bool brace = woodWeathering > ${WOOD_PATINA_ONLY}.0 && woodWeathering < ${WOOD_BEAM_JOIN_BASE}.0;
         if (staticDamageHigh > 0.5 && woodWeathering > 0.0) {
             float exposure = 1.0 - smoothstep(0.16, 0.70, staticSnowCover);
             vec3 local = vStaticDamageLocal.xyz;
@@ -216,7 +267,6 @@ export function configureStaticBlockDamage(material: PBRCustomMaterial) {
                 surfaceAlbedo = applyWoodPatina(surfaceAlbedo, patinaUV, exposure);
                 float join = 0.0;
                 float mossRim = 0.0;
-                bool brace = woodWeathering > ${WOOD_PATINA_ONLY}.0 && woodWeathering < ${WOOD_BEAM_JOIN_BASE}.0;
                 if (woodWeathering >= ${WOOD_BEAM_JOIN_BASE}.0) {
                     bool facesX = abs(geometricNormalW.x) > abs(geometricNormalW.z);
                     float face = facesX ? step(0.0, geometricNormalW.x) : 2.0 + step(0.0, geometricNormalW.z);
@@ -278,9 +328,19 @@ export function configureStaticBlockDamage(material: PBRCustomMaterial) {
             damageCut = staticStoneDamage(vStaticDamageLocal.xyz, vStaticDamageSizeSeed.xyz, vStaticDamageSizeSeed.w,
                 floor(damageFlags * 0.25));
             damageSink = damageCut * 0.026;
-        } else if (damageKind == 2.0 && !patinaOnly) {
-            damageCut = staticWoodDamage(vStaticDamageLocal.xyz, vStaticDamageSizeSeed.xyz, vStaticDamageSizeSeed.w);
-            damageSink = damageCut * 0.0085;
+        } else if (damageKind == 2.0) {
+            if (patinaOnly && staticDamageHigh > 0.5) {
+                vec3 local = vStaticDamageLocal.xyz;
+                vec3 size = vStaticDamageSizeSeed.xyz;
+                float seed = vStaticDamageSizeSeed.w;
+                bool top = (brace ? -local.x : local.y) >= 0.499;
+                damageCut = palisadeLongEdgeDamage(local, size, seed);
+                if (top) damageCut = max(damageCut, palisadeTopDamage(local, size, seed, brace));
+                damageSink = damageCut * 0.013 + palisadeWoodNoise(local, size, seed) * (top ? 0.0031 : 0.0020);
+            } else if (!patinaOnly) {
+                damageCut = staticWoodDamage(vStaticDamageLocal.xyz, vStaticDamageSizeSeed.xyz, vStaticDamageSizeSeed.w);
+                damageSink = damageCut * 0.0085;
+            }
         }
         // Compute derivatives after the material branches reconverge.
         vec2 damageGradient = vec2(dFdx(damageSink), dFdy(damageSink));
@@ -292,7 +352,8 @@ export function configureStaticBlockDamage(material: PBRCustomMaterial) {
             vec3 damageSlope = sign(damageDet) * (damageGradient.x * damageCrossX + damageGradient.y * damageCrossY)
                 / max(abs(damageDet), 1e-8);
             normalW = normalize(normalW + damageExposure * damageSlope / max(1.0, length(damageSlope) * 1.65));
-            surfaceAlbedo *= 1.0 - damageExposure * damageCut * (damageKind == 1.0 ? 0.36 : 0.49);
+            float damageShade = damageKind == 1.0 ? 0.36 : (patinaOnly ? 0.68 : 0.49);
+            surfaceAlbedo *= 1.0 - damageExposure * damageCut * damageShade;
         }
     `)
 }
