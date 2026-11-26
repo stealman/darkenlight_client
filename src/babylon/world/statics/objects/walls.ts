@@ -9,6 +9,7 @@ import { createOrientedStaticVariation, createStaticVariation } from '@/babylon/
 import { TaperedBlockBatch } from '@/babylon/world/taperedBlockBatch'
 import { createHorizontalWoodMatrix, createWoodShape, MAX_PALISADE_WOOD_TWIST, type WoodPiece } from '../staticWoodShape'
 import { getBeamWoodJoin, getBraceWoodJoin } from '../palisadeWoodJoin'
+import { getWoodBearingFaces } from '../woodPileSupport'
 import { Settings } from '@/settings/settings'
 import { MyPlayer } from '@/data/myPlayer'
 import { getStaticLightIntensityLevelFactor, getStaticLightLevel, getStaticLightRangeLevelFactor, type StaticLightMetadata } from '@/babylon/scene/lighting/lightConfig'
@@ -58,6 +59,9 @@ interface PalisadeRenderProfile {
 }
 
 type PalisadeBrace = WoodPiece & {heightOffset: number}
+type PalisadeBraceDamage = {pick: number} & (
+    {kind: 'fallen', yaw: number, offset: number} | {kind: 'tilted', fixedEnd: number, angle: number}
+)
 const PALISADE_BEAM_CONTACT = {blendGroundLighting: true, damp: 'woodTopAndGroundMoss', suppressDamage: true, patina: true} as const
 const PALISADE_BRACE_CONTACT = {snowReach: 0, suppressDamage: true, patina: true} as const
 
@@ -105,6 +109,7 @@ export class PalisadeWall2 extends BaseStaticObject {
     private readonly beams: readonly (WoodPiece & {height: number, depthOffset: number})[]
     private readonly straightBraces: readonly PalisadeBrace[]
     private readonly cornerBraces: readonly PalisadeBrace[]
+    private readonly braceDamage: PalisadeBraceDamage | null
     private cornerDirections: [PalisadeDirection, PalisadeDirection] | null = null
 
     private static readonly MAX_LEAN = Math.PI / 90
@@ -126,6 +131,16 @@ export class PalisadeWall2 extends BaseStaticObject {
         this.status = {orientation: this.orientation}
         const variation = createOrientedStaticVariation(MyPlayer.worldId, position, this.orientation)
         const woodVariation = createStaticVariation(MyPlayer.worldId, position, type)
+        const pick = woodVariation.unit(0, 61)
+        if (woodVariation.unit(0, 60) >= 1 / 3) {
+            this.braceDamage = null
+        } else if (woodVariation.unit(0, 62) < 0.5) {
+            this.braceDamage = {pick, kind: 'fallen', yaw: woodVariation.signed(0, 63) * Math.PI / 12,
+                offset: 0.12 + woodVariation.unit(0, 64) * 0.05}
+        } else {
+            this.braceDamage = {pick, kind: 'tilted', fixedEnd: woodVariation.unit(0, 63) < 0.5 ? -1 : 1,
+                angle: (16 + woodVariation.unit(0, 64) * 12) * Math.PI / 180}
+        }
         const alongX = this.orientation === 'X'
         this.straightBeamOffsets = Array.from({length: this.profile.beamCount}, (_, index) => {
             const offset = -0.5 + this.profile.edgeGap + beamWidth / 2 + index * (beamWidth + this.profile.beamGap)
@@ -165,7 +180,7 @@ export class PalisadeWall2 extends BaseStaticObject {
 
     render() {
         const braces = Settings.isDetalLevelHigh() ? [] as Matrix[] : undefined
-        if (this.cornerDirections) this.renderCornerBraces(braces)
+        if (this.cornerDirections) this.renderCornerBraces(this.cornerDirections, braces)
         else this.renderStraightBraces(braces)
 
         const beamOffsets = this.getBeamOffsets()
@@ -209,7 +224,8 @@ export class PalisadeWall2 extends BaseStaticObject {
 
     private renderStraightBraces(braces?: Matrix[]) {
         const turn = Matrix.RotationY(this.orientation === 'Z' ? Math.PI / 2 : 0)
-        for (let sideIndex = 0; sideIndex < 2; sideIndex++) {
+        const damagedSide = this.braceDamage ? Math.floor(this.braceDamage.pick * this.straightBraces.length) : -1
+        for (let sideIndex = 0; sideIndex < this.straightBraces.length; sideIndex++) {
             const side = sideIndex === 0 ? -1 : 1
             const {heightOffset, matrix, shape} = this.straightBraces[sideIndex]
             const x = this.renderPosition.x
@@ -222,17 +238,24 @@ export class PalisadeWall2 extends BaseStaticObject {
                 + 0.5
 
             this.renderBrace(matrix.multiply(turn).setTranslationFromFloats(x, y, z), shape,
-                this.orientation === 'Z' ? -side : 0, this.orientation === 'X' ? -side : 0, braces)
+                this.orientation === 'Z' ? -side : 0, this.orientation === 'X' ? -side : 0,
+                sideIndex === damagedSide ? this.braceDamage : null, braces)
         }
     }
 
-    private renderCornerBraces(braces?: Matrix[]) {
-        for (let armIndex = 0; armIndex < this.cornerDirections!.length; armIndex++) {
-            const direction = this.cornerDirections![armIndex]
+    private renderCornerBraces(directions: [PalisadeDirection, PalisadeDirection], braces?: Matrix[]) {
+        const damagedIndex = this.braceDamage ? Math.floor(this.braceDamage.pick * this.cornerBraces.length) : -1
+        for (let armIndex = 0; armIndex < directions.length; armIndex++) {
+            const direction = directions[armIndex]
             const cornerBeamOffset = this.profile.cornerBeamOffsets[this.profile.cornerBeamOffsets.length - 1]
             const turn = Matrix.RotationY(Math.atan2(direction.z, direction.x))
             const normalX = -direction.z
             const normalZ = direction.x
+            const otherArm = directions[1 - armIndex]
+            // A loose brace falls outside the corner, clear of the other arm's posts.
+            const damagedSide = this.braceDamage?.kind === 'fallen'
+                ? Number(normalX * otherArm.x + normalZ * otherArm.z < 0)
+                : damagedIndex % 2
             for (let sideIndex = 0; sideIndex < 2; sideIndex++) {
                 const side = sideIndex === 0 ? -1 : 1
                 const {heightOffset, matrix, shape} = this.cornerBraces[armIndex * 2 + sideIndex]
@@ -248,15 +271,43 @@ export class PalisadeWall2 extends BaseStaticObject {
                     + 0.5
 
                 this.renderBrace(matrix.multiply(turn).setTranslationFromFloats(x, y, z), shape,
-                    -normalX * side, -normalZ * side, braces)
+                    -normalX * side, -normalZ * side,
+                    armIndex === Math.floor(damagedIndex / 2) && sideIndex === damagedSide ? this.braceDamage : null,
+                    braces)
             }
         }
     }
 
-    private renderBrace(matrix: Matrix, shape: WoodPiece['shape'], towardX: number, towardZ: number, braces?: Matrix[]) {
-        braces?.push(matrix)
-        TaperedBlockBatch.add(matrix, this.braceMaterial, shape,
-            braces ? {...PALISADE_BRACE_CONTACT, join: getBraceWoodJoin(matrix, towardX, towardZ)} : PALISADE_BRACE_CONTACT)
+    private renderBrace(matrix: Matrix, shape: WoodPiece['shape'], towardX: number, towardZ: number,
+        damage: PalisadeBraceDamage | null, braces?: Matrix[]) {
+        let placed = matrix
+        if (damage) {
+            const m = matrix.m
+            // Local Y follows the brace. Rotate about its horizontal perpendicular without changing its twist.
+            const axis = new Vector3(-m[6], 0, m[4])
+            const currentAngle = Math.atan2(m[5], Math.hypot(m[4], m[6]))
+            if (damage.kind === 'fallen') {
+                placed = matrix.multiply(Matrix.RotationAxis(axis, -currentAngle))
+                    .multiply(Matrix.RotationY(damage.yaw)).setTranslationFromFloats(0, 0, 0)
+                const {lowestY} = getWoodBearingFaces(placed, shape, true)
+                const groundClearance = 0.05
+                placed.setTranslationFromFloats(m[12] - towardX * damage.offset,
+                    this.renderPosition.y + 0.5 - lowestY + groundClearance, m[14] - towardZ * damage.offset)
+            } else {
+                placed = matrix.multiply(Matrix.RotationAxis(axis, damage.fixedEnd * damage.angle - currentAngle))
+                const pivot = damage.fixedEnd * 0.4
+                const p = placed.m
+                // Hold the brace near the fixed end while the loose end drops.
+                placed.setTranslationFromFloats(m[12] + pivot * (m[4] - p[4]),
+                    m[13] + pivot * (m[5] - p[5]), m[14] + pivot * (m[6] - p[6]))
+            }
+        }
+        if (damage?.kind !== 'fallen') braces?.push(placed)
+        const options = braces
+            ? {...PALISADE_BRACE_CONTACT, join: getBraceWoodJoin(placed, towardX, towardZ)}
+            : PALISADE_BRACE_CONTACT
+        TaperedBlockBatch.add(placed, this.braceMaterial, shape,
+            damage?.kind === 'fallen' ? {...options, anchor: this.position} : options)
     }
 
     isObjectInCollision(tgtX: number, tgtZ: number, size: number): boolean {
