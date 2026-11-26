@@ -1,11 +1,12 @@
 import { ShadowDepthWrapper } from '@babylonjs/core'
-import type { Matrix, Scene, TransformNode, Vector2 } from '@babylonjs/core'
+import type { Matrix, Scene, TransformNode, Vector2, Vector3 } from '@babylonjs/core'
 import { Builder } from '@/babylon/builder'
 import { Materials } from '@/babylon/materials'
+import { Settings } from '@/settings/settings'
 import { Prefab, WorldRenderer } from './worldRenderer'
-import { configureStaticBlockDamage } from './statics/staticBlockDamage'
+import { ALL_STONE_EDGES, configureStaticBlockDamage } from './statics/staticBlockDamage'
 import { StaticTerrainContact } from './statics/staticTerrainContact'
-import type { DampContact } from './statics/staticTerrainContact'
+import type { DampContact, WoodMoisture } from './statics/staticTerrainContact'
 
 // Each pair contains the -X and +X corners at the same local Z.
 export type BlockSection = readonly [Vector2, Vector2, Vector2, Vector2]
@@ -80,13 +81,28 @@ export const TaperedBlockBatch = {
         this.contact = variant?.contact ?? null
     },
 
-    add(matrix: Matrix, uv: Vector2, shape: TaperedBlockShape | null, damp?: DampContact) {
-        if (!shape) {
-            WorldRenderer.addTerrainContactBlock(matrix, uv, false, undefined, damp)
-            return
+    add(matrix: Matrix, uv: Vector2, shape: TaperedBlockShape | null,
+        options?: {damp?: DampContact, anchor?: Vector3, moisture?: WoodMoisture, upright?: boolean,
+            snowReach?: number, blendGroundLighting?: boolean, suppressDamage?: boolean, patina?: boolean}) {
+        const target = shape ? this : undefined
+        if (options?.anchor) {
+            WorldRenderer.addWeatheredBlock(matrix, uv, options.anchor, 0.64, {target, sampleAtCenter: true})
+        } else {
+            WorldRenderer.addTerrainContactBlock(matrix, uv, options?.blendGroundLighting, options?.snowReach, options?.damp,
+                undefined, target)
         }
-        WorldRenderer.addTerrainContactBlock(matrix, uv, false, undefined, damp, undefined, this)
-        this.shapes.push(shape)
+        if (shape) this.shapes.push(shape)
+        if (options?.suppressDamage || options?.patina || options?.moisture !== undefined) {
+            const batch = target?.prefab ?? WorldRenderer.block1!
+            const contact = target ? target.contact : WorldRenderer.staticTerrainContact
+            const index = batch.matrices.length - 1
+            if (options.patina && Settings.isDetalLevelHigh()) {
+                contact?.addWoodWeathering(index, 'patina')
+            } else {
+                if (options.suppressDamage) contact?.markJoinedEdges(index, ALL_STONE_EDGES)
+                if (options.moisture !== undefined) contact?.addWoodWeathering(index, options.moisture, options.upright)
+            }
+        }
     },
 
     clear() {

@@ -5,7 +5,9 @@ import { WorldDataManager } from '@/data/worldDataManager'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { isSnowRoof } from '@/babylon/world/terrainRoofShape'
 import { BaseStaticObject } from '@/babylon/world/statics/objects/baseStaticObject'
-import { createOrientedStaticVariation } from '@/babylon/world/statics/staticVariation'
+import { createOrientedStaticVariation, createStaticVariation } from '@/babylon/world/statics/staticVariation'
+import { TaperedBlockBatch } from '@/babylon/world/taperedBlockBatch'
+import { createHorizontalWoodMatrix, createWoodShape, MAX_PALISADE_WOOD_TWIST, type WoodPiece } from '../staticWoodShape'
 import { MyPlayer } from '@/data/myPlayer'
 import { getStaticLightIntensityLevelFactor, getStaticLightLevel, getStaticLightRangeLevelFactor, type StaticLightMetadata } from '@/babylon/scene/lighting/lightConfig'
 
@@ -53,7 +55,9 @@ interface PalisadeRenderProfile {
     cornerBraceLength: number
 }
 
-type PalisadeBrace = {shape: Matrix, heightOffset: number}
+type PalisadeBrace = WoodPiece & {heightOffset: number}
+const PALISADE_BEAM_CONTACT = {blendGroundLighting: true, damp: 'woodTopAndGroundMoss', suppressDamage: true, patina: true} as const
+const PALISADE_BRACE_CONTACT = {snowReach: 0, suppressDamage: true, patina: true} as const
 
 const PALISADE_LARGE_PROFILE: PalisadeRenderProfile = {
     beamCount: 3,
@@ -96,21 +100,19 @@ export class PalisadeWall2 extends BaseStaticObject {
     private readonly braceMaterial: Vector2
     private readonly profile: PalisadeRenderProfile
     private readonly straightBeamOffsets: readonly PalisadeDirection[]
-    private readonly beams: readonly {shape: Matrix, height: number, depthOffset: number}[]
+    private readonly beams: readonly (WoodPiece & {height: number, depthOffset: number})[]
     private readonly straightBraces: readonly PalisadeBrace[]
     private readonly cornerBraces: readonly PalisadeBrace[]
     private cornerDirections: [PalisadeDirection, PalisadeDirection] | null = null
 
-    private static readonly MAX_BEAM_TWIST = Math.PI / 24
     private static readonly MAX_LEAN = Math.PI / 90
     private static readonly BRACE_LENGTH = 0.95
     private static readonly MAX_BRACE_HEIGHT_OFFSET = 0.06
     private static readonly MAX_BRACE_ANGLE = Math.PI / 22
     private static readonly MAX_BRACE_SKEW = Math.PI / 70
-    private static readonly MAX_BRACE_TWIST = Math.PI / 22
 
     constructor(type: number, position: Vector3, material: Vector2, braceMaterial: Vector2, metadata?: PalisadeMetadata) {
-        super(type, position, 0, material, null)
+        super(type, position, 0, material, TaperedBlockBatch.prefab)
         this.braceMaterial = braceMaterial
         this.profile = type === 204 ? PALISADE_SMALL_PROFILE : PALISADE_LARGE_PROFILE
         const beamWidth = (
@@ -121,6 +123,7 @@ export class PalisadeWall2 extends BaseStaticObject {
         this.orientation = metadata?.orientation === 'X' ? 'X' : 'Z'
         this.status = {orientation: this.orientation}
         const variation = createOrientedStaticVariation(MyPlayer.worldId, position, this.orientation)
+        const woodVariation = createStaticVariation(MyPlayer.worldId, position, type)
         const alongX = this.orientation === 'X'
         this.straightBeamOffsets = Array.from({length: this.profile.beamCount}, (_, index) => {
             const offset = -0.5 + this.profile.edgeGap + beamWidth / 2 + index * (beamWidth + this.profile.beamGap)
@@ -129,49 +132,45 @@ export class PalisadeWall2 extends BaseStaticObject {
         const beamCount = Math.max(this.straightBeamOffsets.length, this.profile.cornerBeamOffsets.length * 2 + 1)
         this.beams = Array.from({length: beamCount}, (_, index) => {
             const height = this.profile.maxBeamHeight - variation.unit(index, 2) * this.profile.beamHeightVariation
-            const shape = Matrix.Scaling(
+            const matrix = Matrix.Scaling(
                 beamWidth + variation.signed(index, 6) * this.profile.maxWidthVariation,
                 height,
                 this.profile.beamDepth + variation.signed(index, 7) * this.profile.maxDepthVariation,
-            ).multiply(Matrix.RotationY(variation.signed(index, 3) * PalisadeWall2.MAX_BEAM_TWIST))
+            ).multiply(Matrix.RotationY(variation.signed(index, 3) * MAX_PALISADE_WOOD_TWIST))
                 .multiply(Matrix.RotationYawPitchRoll(
                     alongX ? 0 : Math.PI / 2,
                     variation.signed(index, 4) * PalisadeWall2.MAX_LEAN,
                     variation.signed(index, 5) * PalisadeWall2.MAX_LEAN,
                 ))
-            return {shape, height, depthOffset: variation.signed(index, 1) * this.profile.maxDepthOffset}
+            return {matrix, shape: createWoodShape(woodVariation, index), height,
+                depthOffset: variation.signed(index, 1) * this.profile.maxDepthOffset}
         })
-        const makeBraces = (count: number, length: number, channel: number) =>
+        const makeBraces = (count: number, length: number, channel: number, firstPart: number) =>
             Array.from({length: count}, (_, index): PalisadeBrace => ({
                 heightOffset: variation.signed(index, channel) * PalisadeWall2.MAX_BRACE_HEIGHT_OFFSET,
-                // Twist around the brace's local X axis before tilting or turning the brace.
-                shape: Matrix.Scaling(length, this.profile.braceHeight, this.profile.braceDepth)
-                    .multiply(Matrix.RotationX(variation.signed(index, channel + 2) * PalisadeWall2.MAX_BRACE_TWIST))
+                shape: createWoodShape(woodVariation, firstPart + index),
+                matrix: createHorizontalWoodMatrix(length, this.profile.braceDepth, this.profile.braceHeight, true,
+                    variation.signed(index, channel + 2) * MAX_PALISADE_WOOD_TWIST)
                     .multiply(Matrix.RotationYawPitchRoll(
                         variation.signed(index, channel + 3) * PalisadeWall2.MAX_BRACE_SKEW,
                         0,
                         variation.signed(index, channel + 1) * PalisadeWall2.MAX_BRACE_ANGLE,
                     )),
             }))
-        this.straightBraces = makeBraces(2, PalisadeWall2.BRACE_LENGTH, 100)
-        this.cornerBraces = makeBraces(4, this.profile.cornerBraceLength, 120)
+        this.straightBraces = makeBraces(2, PalisadeWall2.BRACE_LENGTH, 100, beamCount)
+        this.cornerBraces = makeBraces(4, this.profile.cornerBraceLength, 120, beamCount + 2)
     }
 
     render() {
         const beamOffsets = this.getBeamOffsets()
         for (let i = 0; i < beamOffsets.length; i++) {
-            const {depthOffset, height, shape} = this.beams[i]
+            const {depthOffset, height, matrix, shape} = this.beams[i]
             const x = this.renderPosition.x + beamOffsets[i].x
                 + (this.cornerDirections || this.orientation === 'Z' ? depthOffset : 0)
             const z = this.renderPosition.z + beamOffsets[i].z
                 + (this.cornerDirections || this.orientation === 'X' ? depthOffset : 0)
-            WorldRenderer.addTerrainContactBlock(
-                shape.clone().setTranslationFromFloats(x, this.renderPosition.y + height / 2 + 0.5, z),
-                this.material,
-                true,
-                undefined,
-                'woodTopAndGroundMoss',
-            )
+            TaperedBlockBatch.add(matrix.clone().setTranslationFromFloats(x, this.renderPosition.y + height / 2 + 0.5, z),
+                this.material, shape, PALISADE_BEAM_CONTACT)
         }
         if (this.cornerDirections) {
             this.renderCornerBraces()
@@ -210,7 +209,7 @@ export class PalisadeWall2 extends BaseStaticObject {
         const turn = Matrix.RotationY(this.orientation === 'Z' ? Math.PI / 2 : 0)
         for (let sideIndex = 0; sideIndex < 2; sideIndex++) {
             const side = sideIndex === 0 ? -1 : 1
-            const {heightOffset, shape} = this.straightBraces[sideIndex]
+            const {heightOffset, matrix, shape} = this.straightBraces[sideIndex]
             const x = this.renderPosition.x
                 + (this.orientation === 'Z' ? side * this.profile.braceFaceOffset : 0)
             const z = this.renderPosition.z
@@ -220,8 +219,8 @@ export class PalisadeWall2 extends BaseStaticObject {
                 + heightOffset
                 + 0.5
 
-            WorldRenderer.block1!.matrices.push(shape.multiply(turn).setTranslationFromFloats(x, y, z))
-            WorldRenderer.block1!.uvData.push(this.braceMaterial)
+            TaperedBlockBatch.add(matrix.multiply(turn).setTranslationFromFloats(x, y, z),
+                this.braceMaterial, shape, PALISADE_BRACE_CONTACT)
         }
     }
 
@@ -234,7 +233,7 @@ export class PalisadeWall2 extends BaseStaticObject {
             const normalZ = direction.x
             for (let sideIndex = 0; sideIndex < 2; sideIndex++) {
                 const side = sideIndex === 0 ? -1 : 1
-                const {heightOffset, shape} = this.cornerBraces[armIndex * 2 + sideIndex]
+                const {heightOffset, matrix, shape} = this.cornerBraces[armIndex * 2 + sideIndex]
                 const x = this.renderPosition.x
                     + direction.x * cornerBeamOffset / 2
                     + normalX * side * this.profile.braceFaceOffset
@@ -246,8 +245,8 @@ export class PalisadeWall2 extends BaseStaticObject {
                     + heightOffset
                     + 0.5
 
-                WorldRenderer.block1!.matrices.push(shape.multiply(turn).setTranslationFromFloats(x, y, z))
-                WorldRenderer.block1!.uvData.push(this.braceMaterial)
+                TaperedBlockBatch.add(matrix.multiply(turn).setTranslationFromFloats(x, y, z),
+                    this.braceMaterial, shape, PALISADE_BRACE_CONTACT)
             }
         }
     }

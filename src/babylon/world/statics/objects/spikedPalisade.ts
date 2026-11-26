@@ -1,7 +1,8 @@
 import { Matrix, Vector2, Vector3 } from '@babylonjs/core'
 import { BaseStaticObject } from '@/babylon/world/statics/objects/baseStaticObject'
-import { WorldRenderer } from '@/babylon/world/worldRenderer'
-import { createOrientedStaticVariation, placeStaticPart } from '@/babylon/world/statics/staticVariation'
+import { TaperedBlockBatch } from '@/babylon/world/taperedBlockBatch'
+import { createOrientedStaticVariation, createStaticVariation, placeStaticPart } from '@/babylon/world/statics/staticVariation'
+import { createHorizontalWoodMatrix, createWoodShape, MAX_PALISADE_WOOD_TWIST, type WoodPiece } from '../staticWoodShape'
 import { MyPlayer } from '@/data/myPlayer'
 
 export type SpikedPalisadeFacing = '-X' | '+X' | '-Z' | '+Z'
@@ -13,9 +14,9 @@ export interface SpikedPalisadeMetadata {
 
 export class SpikedPalisade extends BaseStaticObject {
     private readonly facing: SpikedPalisadeFacing
-    private readonly mainStakes: readonly Matrix[]
-    private readonly supports: readonly Matrix[]
-    private readonly connector: Matrix
+    private readonly mainStakes: readonly WoodPiece[]
+    private readonly supports: readonly WoodPiece[]
+    private readonly connector: WoodPiece
 
     private static readonly MAIN_STAKE_COUNT = 5
     private static readonly MAIN_STAKE_SPACING = 0.2
@@ -27,8 +28,8 @@ export class SpikedPalisade extends BaseStaticObject {
     private static readonly SUPPORT_SIZE = 0.075
     private static readonly BASE_ANGLE = Math.PI / 4
     private static readonly MAX_ANGLE_VARIATION = Math.PI / 60
-    private static readonly MAX_STAKE_TWIST = Math.PI / 22
-    private static readonly SNOW_REACH = 1.85
+    private static readonly STAKE_CONTACT = {blendGroundLighting: true, snowReach: 1.85, damp: 'moss', suppressDamage: true, patina: true} as const
+    private static readonly CONNECTOR_CONTACT = {snowReach: 0, suppressDamage: true, patina: true} as const
     private static readonly CONNECTOR_LENGTH = 0.95
     private static readonly CONNECTOR_HEIGHT = 0.09
     private static readonly CONNECTOR_DEPTH = 0.09
@@ -36,16 +37,16 @@ export class SpikedPalisade extends BaseStaticObject {
     private static readonly CONNECTOR_FORWARD_OFFSET = 0.13
     private static readonly MAX_CONNECTOR_LEAN = Math.PI / 32
     private static readonly MAX_CONNECTOR_SKEW = Math.PI / 70
-    private static readonly MAX_CONNECTOR_TWIST = Math.PI / 22
 
     constructor(type: number, position: Vector3, material: Vector2, metadata?: SpikedPalisadeMetadata) {
-        super(type, position, 0, material, null)
+        super(type, position, 0, material, TaperedBlockBatch.prefab)
         this.facing = metadata?.facing === '-X' || metadata?.facing === '+X'
             || metadata?.facing === '-Z' || metadata?.facing === '+Z'
             ? metadata.facing
             : metadata?.orientation === 'X' ? '+Z' : '+X'
         this.status = {facing: this.facing}
         const variation = createOrientedStaticVariation(MyPlayer.worldId, position, this.facing)
+        const woodVariation = createStaticVariation(MyPlayer.worldId, position, type)
         const axis = this.getAxis()
         const tiltSign = this.getTiltSign()
         this.mainStakes = Array.from({length: SpikedPalisade.MAIN_STAKE_COUNT}, (_, index) => {
@@ -55,35 +56,43 @@ export class SpikedPalisade extends BaseStaticObject {
             const depth = SpikedPalisade.MAIN_STAKE_SIZE + variation.signed(index, 204) * 0.008
             const angle = tiltSign * (SpikedPalisade.BASE_ANGLE
                 + variation.signed(index, 205) * SpikedPalisade.MAX_ANGLE_VARIATION)
-            return this.createStake(axis, offset, length, width, depth, angle,
-                variation.signed(index, 206) * SpikedPalisade.MAX_STAKE_TWIST)
+            return {
+                matrix: this.createStake(axis, offset, length, width, depth, angle,
+                    variation.signed(index, 206) * MAX_PALISADE_WOOD_TWIST),
+                shape: createWoodShape(woodVariation, index),
+            }
         })
         this.supports = Array.from({length: SpikedPalisade.SUPPORT_COUNT}, (_, index) => {
             const offset = (index - 1) * SpikedPalisade.SUPPORT_SPACING + variation.signed(index, 220) * 0.012
             const length = SpikedPalisade.SUPPORT_LENGTH - variation.unit(index, 221) * 0.08
             const angle = -tiltSign * (SpikedPalisade.BASE_ANGLE
                 + variation.signed(index, 222) * SpikedPalisade.MAX_ANGLE_VARIATION)
-            return this.createStake(axis, offset, length, SpikedPalisade.SUPPORT_SIZE, SpikedPalisade.SUPPORT_SIZE,
-                angle, variation.signed(index, 223) * SpikedPalisade.MAX_STAKE_TWIST)
+            return {
+                matrix: this.createStake(axis, offset, length, SpikedPalisade.SUPPORT_SIZE, SpikedPalisade.SUPPORT_SIZE,
+                    angle, variation.signed(index, 223) * MAX_PALISADE_WOOD_TWIST),
+                shape: createWoodShape(woodVariation, SpikedPalisade.MAIN_STAKE_COUNT + index),
+            }
         })
         const forward = this.getForwardNormal()
         const yaw = this.facing === '-X' || this.facing === '+X' ? Math.PI / 2 : 0
-        this.connector = Matrix.Scaling(SpikedPalisade.CONNECTOR_LENGTH, SpikedPalisade.CONNECTOR_HEIGHT, SpikedPalisade.CONNECTOR_DEPTH)
-            .multiply(Matrix.RotationX(variation.signed(0, 241) * SpikedPalisade.MAX_CONNECTOR_TWIST))
-            .multiply(Matrix.RotationYawPitchRoll(
-                yaw + variation.signed(0, 242) * SpikedPalisade.MAX_CONNECTOR_SKEW,
-                0,
-                variation.signed(0, 240) * SpikedPalisade.MAX_CONNECTOR_LEAN,
-            ))
-            .setTranslationFromFloats(forward.x * SpikedPalisade.CONNECTOR_FORWARD_OFFSET,
-                SpikedPalisade.CONNECTOR_HEIGHT_POSITION + 0.5, forward.z * SpikedPalisade.CONNECTOR_FORWARD_OFFSET)
+        this.connector = {
+            matrix: createHorizontalWoodMatrix(SpikedPalisade.CONNECTOR_LENGTH, SpikedPalisade.CONNECTOR_DEPTH,
+                SpikedPalisade.CONNECTOR_HEIGHT, true, variation.signed(0, 241) * MAX_PALISADE_WOOD_TWIST)
+                .multiply(Matrix.RotationYawPitchRoll(
+                    yaw + variation.signed(0, 242) * SpikedPalisade.MAX_CONNECTOR_SKEW,
+                    0,
+                    variation.signed(0, 240) * SpikedPalisade.MAX_CONNECTOR_LEAN,
+                ))
+                .setTranslationFromFloats(forward.x * SpikedPalisade.CONNECTOR_FORWARD_OFFSET,
+                    SpikedPalisade.CONNECTOR_HEIGHT_POSITION + 0.5, forward.z * SpikedPalisade.CONNECTOR_FORWARD_OFFSET),
+            shape: createWoodShape(woodVariation, SpikedPalisade.MAIN_STAKE_COUNT + SpikedPalisade.SUPPORT_COUNT),
+        }
     }
 
     render() {
         this.renderStakes(this.mainStakes)
-        const batch = WorldRenderer.block1!
-        batch.matrices.push(placeStaticPart(this.connector, this.renderPosition))
-        batch.uvData.push(this.material)
+        TaperedBlockBatch.add(placeStaticPart(this.connector.matrix, this.renderPosition), this.material,
+            this.connector.shape, SpikedPalisade.CONNECTOR_CONTACT)
         this.renderStakes(this.supports)
     }
 
@@ -94,10 +103,9 @@ export class SpikedPalisade extends BaseStaticObject {
             .setTranslationFromFloats(axis.x * offset, Math.cos(angle) * length / 2 + 0.5, axis.z * offset)
     }
 
-    private renderStakes(stakes: readonly Matrix[]) {
-        for (const stake of stakes) {
-            WorldRenderer.addTerrainContactBlock(placeStaticPart(stake, this.renderPosition),
-                this.material, true, SpikedPalisade.SNOW_REACH, 'moss')
+    private renderStakes(stakes: readonly WoodPiece[]) {
+        for (const {matrix, shape} of stakes) {
+            TaperedBlockBatch.add(placeStaticPart(matrix, this.renderPosition), this.material, shape, SpikedPalisade.STAKE_CONTACT)
         }
     }
 

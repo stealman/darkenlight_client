@@ -119,7 +119,7 @@ function createPavingMaterial(scene: Scene, surfaceSize: Vector2, surfaceOrigin:
         vec3 rock = toLinearSpace(texture2D(pavingColor, stoneUV).rgb);
         // Fade microdetail when a stone projects to a few screen pixels.
         float detail = 1.0 - smoothstep(0.095, 0.34, max(length(dFdx(localUV)), length(dFdy(localUV))));
-        vec2 gritNormal = (texture2D(pavingRelief, stoneUV).rg * 2.0 - 1.0) * (0.86 * detail);
+        vec2 gritNormal = (texture2D(pavingRelief, stoneUV).rg * 2.0 - 1.0) * (${floor ? '0.86' : '1.02'} * detail);
         float joint = smoothstep(0.27, 0.49, max(abs(vStone.x), abs(vStone.z)));
         float shoulder = 1.0 - smoothstep(0.29, 0.92, vStone.y);
         float rim = max(joint, shoulder);

@@ -92,6 +92,9 @@ export function createGrassRenderer(scene: Scene, parent: TransformNode, contact
     material.roughness = 0.89
     // Match terrain attenuation for player and campfire spotlights.
     material.usePhysicalLightFalloff = false
+    let grainRelief = 0
+    material.AddUniform('grassGrainRelief', 'float', undefined)
+    material.onBindObservable.add(() => material.getEffect()?.setFloat('grassGrainRelief', grainRelief))
     const usesTimedContacts = interactionRadius > 0
     const contacts = Array.from({length: contactCount}, (_, index) => {
         const start = new Vector4(), end = new Vector4()
@@ -213,15 +216,18 @@ export function createGrassRenderer(scene: Scene, parent: TransformNode, contact
             surfaceAlbedo = mix(surfaceAlbedo, snow, snowCover);
         }
 
-        // Turn the local grain into shallow relief using the deformed blade surface.
-        vec2 grainGradient = vec2(dFdx(grain), dFdy(grain));
-        vec3 bladeDx = dFdx(vPositionW), bladeDy = dFdy(vPositionW);
-        vec3 acrossX = cross(bladeDy, geometricNormalW), acrossY = cross(geometricNormalW, bladeDx);
-        float bladeDet = dot(bladeDx, acrossX);
-        vec3 grainSlope = 0.0018 * sign(bladeDet) * (grainGradient.x * acrossX + grainGradient.y * acrossY)
-            / max(abs(bladeDet), 1e-8);
-        vec3 grainNormal = grainDetail * (1.0 - snowCover) * grainSlope / max(1.0, length(grainSlope) * 5.0);
-        normalW = normalize(normalW + vec3(0.0, 0.45, 0.0) - grainNormal);
+        vec3 bladeNormal = normalW + vec3(0.0, 0.45, 0.0);
+        if (grassGrainRelief > 0.5) {
+            // Turn the local grain into shallow relief using the deformed blade surface.
+            vec2 grainGradient = vec2(dFdx(grain), dFdy(grain));
+            vec3 bladeDx = dFdx(vPositionW), bladeDy = dFdy(vPositionW);
+            vec3 acrossX = cross(bladeDy, geometricNormalW), acrossY = cross(geometricNormalW, bladeDx);
+            float bladeDet = dot(bladeDx, acrossX);
+            vec3 grainSlope = 0.0018 * sign(bladeDet) * (grainGradient.x * acrossX + grainGradient.y * acrossY)
+                / max(abs(bladeDet), 1e-8);
+            bladeNormal -= grainDetail * (1.0 - snowCover) * grainSlope / max(1.0, length(grainSlope) * 5.0);
+        }
+        normalW = normalize(bladeNormal);
     `)
 
     const roots = rootShade ? SHAPES.map(() => [] as Vector2[]) : undefined
@@ -298,6 +304,7 @@ export function createGrassRenderer(scene: Scene, parent: TransformNode, contact
             })
         },
         render(centerX: number, centerZ: number, detail: GrassDetail, density: number, camera?: Camera | null) {
+            grainRelief = detail === 'low' ? 0 : 1
             for (const batch of allBatches) batch.matrices.length = batch.styles.length = 0
             shadeMatrices.length = shadeStyles.length = 0
             eligible.length = 0

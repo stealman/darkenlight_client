@@ -2,16 +2,17 @@ import { Matrix, Vector2, Vector3 } from '@babylonjs/core'
 import { BaseStaticObject } from '@/babylon/world/statics/objects/baseStaticObject'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { TaperedBlockBatch } from '@/babylon/world/taperedBlockBatch'
-import type { BlockSection, TaperedBlockShape } from '@/babylon/world/taperedBlockBatch'
 import type { StaticBaseContact } from '@/babylon/world/worldRenderer'
 import type { ContactShadowFootprint } from '@/babylon/world/terrainContactShadow'
 import { StaticEquipPartsRenderer } from '@/babylon/world/statics/staticEquipPartsRenderer'
 import { createOrientedStaticVariation, createStaticVariation, placeStaticPart } from '@/babylon/world/statics/staticVariation'
+import { getWoodBearingFaces, getWoodSupportHeight } from '@/babylon/world/statics/woodPileSupport'
+import { createHorizontalWoodMatrix, createWoodShape, type WoodPiece } from '@/babylon/world/statics/staticWoodShape'
 import { MyPlayer } from '@/data/myPlayer'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { TerrainEnum1 } from '@/babylon/materials'
 import { Lights } from '@/babylon/scene/lights'
-import type { FenceWoodMoisture } from '@/babylon/world/statics/staticTerrainContact'
+import type { WoodMoisture } from '@/babylon/world/statics/staticTerrainContact'
 import { Settings } from '@/settings/settings'
 import { WeaponModelsCb } from '@/babylon/item/codebook/weaponModelsCb'
 
@@ -32,6 +33,20 @@ export interface CampFenceMetadata {
 interface Direction {
     x: number
     z: number
+}
+
+const MAX_WOOD_TWIST = Math.PI / 14
+const MAX_WOOD_YAW = Math.PI / 82
+const MAX_WOOD_LEAN = Math.PI / 72
+
+function getWoodMoisture(position: Vector3): WoodMoisture | undefined {
+    if (!Settings.isDetalLevelHigh()) return
+    if (Lights.indoor) return 0
+    const tile = WorldDataManager.getBlockMap()[position.x]?.[position.z]
+    if (!tile || tile.stonePath || tile.beigeStonePath) return 0
+    if (tile.snowed || tile.type === TerrainEnum1.TERRAIN_GRASS.index) return 1
+    if (tile.type === TerrainEnum1.TERRAIN_MUDDY_DIRT.index) return 3
+    return tile.type === TerrainEnum1.TERRAIN_GRASS_WINTER.index ? 2 : 0
 }
 
 type PartContact = boolean | Vector3 | StaticBaseContact | 'snowAndDampHay'
@@ -230,22 +245,86 @@ export class StoneWell extends BaseStaticObject {
     }
 }
 
-export class PlankPile extends CampObject {
+type WoodPilePlacement = readonly [x: number, layer: number, z: number, lean?: number]
+
+abstract class WoodPile extends CampObject {
+    private readonly variation = createStaticVariation(MyPlayer.worldId, this.position, this.type)
+    private pieces: WoodPiece[] | null = null
+
+    constructor(type: number, position: Vector3, material: Vector2, accentMaterial: Vector2, metadata?: CampObjectMetadata) {
+        super(type, position, material, accentMaterial, metadata)
+        this.prefab = TaperedBlockBatch.prefab
+    }
+
+    protected abstract buildPieces(): WoodPiece[]
+
     render() {
-        const bottomRowHeight = 0.12
-        const rows = [
-            [-0.2, bottomRowHeight, -0.16, -0.035],
-            [0.2, bottomRowHeight, 0.15, 0.025],
-            [-0.08, 0.24, 0.1, 0.02],
-            [0.13, 0.36, -0.08, -0.045],
-        ]
-        for (const [x, y, z, roll] of rows) {
-            this.part(0.82, 0.1, 0.16, x, y, z, this.material, roll, this.position)
+        const options = {anchor: this.position, moisture: getWoodMoisture(this.position)}
+        for (const {matrix, shape} of this.getPieces()) {
+            TaperedBlockBatch.add(placeStaticPart(matrix, this.renderPosition), this.material, shape, options)
         }
+    }
+
+    appendContactShadowFootprints(footprints: ContactShadowFootprint[], height: number) {
+        for (const {matrix: {m}} of this.getPieces()) {
+            if (m[13] - 0.5 > 0.2) continue
+            const x = this.renderPosition.x + m[12]
+            const z = this.renderPosition.z + m[14]
+            const halfX = (Math.abs(m[0]) + Math.abs(m[4]) + Math.abs(m[8])) * 0.5
+            const halfZ = (Math.abs(m[2]) + Math.abs(m[6]) + Math.abs(m[10])) * 0.5
+            footprints.push({minX: x - halfX, maxX: x + halfX, minZ: z - halfZ, maxZ: z + halfZ, height, reach: 0.15})
+        }
+    }
+
+    private getPieces() {
+        return this.pieces ??= this.buildPieces()
+    }
+
+    protected buildStack(length: number, width: number, height: number, alongX: boolean, placements: readonly WoodPilePlacement[]) {
+        const variation = this.variation
+        const supports: {layer: number, top: ReturnType<typeof getWoodBearingFaces>['top']}[] = []
+        return placements.map(([x, layer, z, baseLean = 0], index) => {
+            const pieceLength = length * (0.70 + variation.unit(index, 5) * 0.34)
+            const pieceWidth = width * (1 + variation.signed(index, 6) * 0.34)
+            const pieceHeight = height * (1 + variation.signed(index, 7) * 0.29)
+            const twist = variation.signed(index, 0) * MAX_WOOD_TWIST
+            // Give long logs the same visible tilt at their ends without sinking them deep into the ground.
+            const lean = baseLean + variation.signed(index, 1) * Math.min(MAX_WOOD_LEAN, 0.075 / pieceLength)
+            const yaw = variation.signed(index, 2) * Math.min(Math.PI / 15, 0.26 / pieceLength)
+            const matrix = createHorizontalWoodMatrix(pieceLength, pieceWidth, pieceHeight, alongX, twist)
+                .multiply(Matrix.RotationYawPitchRoll(yaw, alongX ? 0 : lean, alongX ? lean : 0))
+                .multiply(Matrix.RotationY(this.yaw))
+            const shape = createWoodShape(variation, index,
+                1 + variation.signed(index, 3) * 0.27, 1 + variation.signed(index, 4) * 0.27, 0.16)
+            const offset = this.rotateOffset(x, z)
+            matrix.setTranslationFromFloats(offset.x, 0, offset.z)
+            const faces = getWoodBearingFaces(matrix, shape, alongX)
+            let centerY = -faces.lowestY
+            for (const support of supports) {
+                if (support.layer < layer) {
+                    centerY = Math.max(centerY, getWoodSupportHeight(faces.bottom, support.top) - 0.004)
+                }
+            }
+            for (const corner of new Set(faces.top.flat())) corner.y += centerY
+            supports.push({layer, top: faces.top})
+            matrix.setTranslationFromFloats(offset.x, 0.5 + centerY, offset.z)
+            return {matrix, shape}
+        })
     }
 }
 
-export class LogPile extends CampObject {
+export class PlankPile extends WoodPile {
+    protected buildPieces() {
+        return this.buildStack(0.82, 0.16, 0.1, true, [
+            [-0.2, 0, -0.16, -0.035],
+            [0.2, 0, 0.15, 0.025],
+            [-0.08, 1, 0.1, 0.02],
+            [0.13, 2, -0.08, -0.045],
+        ])
+    }
+}
+
+export class LogPile extends WoodPile {
     private readonly length: number
 
     constructor(type: number, position: Vector3, material: Vector2, accentMaterial: Vector2, metadata?: CampObjectMetadata) {
@@ -259,15 +338,12 @@ export class LogPile extends CampObject {
         )
     }
 
-    render() {
+    protected buildPieces() {
         const logLength = this.length - 0.18
-        const bottomRowHeight = 0.13
-        for (const [x, y, z] of [
-            [-0.24, bottomRowHeight, -0.14], [0.24, bottomRowHeight, -0.14], [0, bottomRowHeight, 0.18],
-            [-0.14, 0.36, 0], [0.2, 0.36, 0.04], [0.02, 0.59, 0.01],
-        ]) {
-            this.part(0.18, 0.18, logLength, x, y, z, this.material, 0, this.position)
-        }
+        return this.buildStack(logLength, 0.18, 0.18, false, [
+            [-0.24, 0, -0.14], [0.24, 0, -0.14], [0, 0, 0.18],
+            [-0.14, 1, 0], [0.2, 1, 0.04], [0.02, 2, 0.01],
+        ])
     }
 
     getSizeX(): number {
@@ -447,39 +523,10 @@ interface CampFenceDamage {
     drops: readonly [number, number]
 }
 
-interface CampFencePost {
-    matrix: Matrix
-    shape: TaperedBlockShape | null
-}
-
-function varyPostSection(width: number, depth: number, sample: (channel: number) => number): BlockSection {
-    const corners = [
-        new Vector2(-0.5, -0.5), new Vector2(0.5, -0.5),
-        new Vector2(-0.5, 0.5), new Vector2(0.5, 0.5),
-    ] as const
-    let centerX = 0, centerZ = 0
-    for (const [index, corner] of corners.entries()) {
-        corner.x += sample(index * 2) * 0.08
-        corner.y += sample(index * 2 + 1) * 0.08
-        centerX += corner.x / 4
-        centerZ += corner.y / 4
-    }
-    for (const corner of corners) {
-        corner.x = (corner.x - centerX) * width
-        corner.y = (corner.y - centerZ) * depth
-    }
-    return corners
-}
-
 export class CampFence extends BaseStaticObject {
     private static readonly railCenters = [0.185, 0.42, 0.655]
     private static readonly railThickness = 0.045
     private static readonly railHeight = 0.1 * 4 / 3
-    private static readonly railTurnX = Matrix.RotationZ(-Math.PI / 2)
-    private static readonly railTurnZ = Matrix.RotationX(Math.PI / 2)
-    private static readonly maxRailYaw = Math.PI / 82
-    private static readonly maxRailLean = Math.PI / 72
-    private static readonly maxRailTwist = Math.PI / 14
     private static readonly maxSectionYaw = Math.PI / 42
     private static readonly maxSectionShift = 0.036
     private static readonly sectionHeightVariation = 0.13
@@ -501,7 +548,7 @@ export class CampFence extends BaseStaticObject {
     }[]
     private readonly damage: CampFenceDamage | null
     private cornerDirections: [Direction, Direction] | null = null
-    private posts: CampFencePost[] | null = null
+    private posts: WoodPiece[] | null = null
     private railMatrices: Matrix[] | null = null
 
     constructor(type: number, position: Vector3, postMaterial: Vector2, railMaterial: Vector2, metadata?: CampFenceMetadata) {
@@ -525,9 +572,9 @@ export class CampFence extends BaseStaticObject {
             const height = (CampFence.railHeight + heightVariation * (heightVariation < 0 ? 0.047 : 0.017)) * heightScale
             const topRailDrop = index === CampFence.railCenters.length - 1 ? height * 0.25 : 0
             const frame = Matrix.RotationYawPitchRoll(
-                variation.signed(index, 0) * CampFence.maxRailYaw,
-                (sectionPitch + variation.signed(index, 1)) * CampFence.maxRailLean,
-                (sectionRoll + variation.signed(index, 2)) * CampFence.maxRailLean,
+                variation.signed(index, 0) * MAX_WOOD_YAW,
+                (sectionPitch + variation.signed(index, 1)) * MAX_WOOD_LEAN,
+                (sectionRoll + variation.signed(index, 2)) * MAX_WOOD_LEAN,
             ).setTranslationFromFloats(0,
                 0.5 + (railBase + center + variation.signed(index, 6) * 0.021) * heightScale - topRailDrop, 0)
                 .multiply(section)
@@ -538,8 +585,8 @@ export class CampFence extends BaseStaticObject {
                 height,
                 firstEnd: 0.48 + variation.signed(index, 30) * 0.01,
                 secondEnd: 0.48 + variation.signed(index, 31) * 0.01,
-                twist: variation.signed(index, 50) * CampFence.maxRailTwist,
-                turnTwist: variation.signed(index, 51) * CampFence.maxRailTwist,
+                twist: variation.signed(index, 50) * MAX_WOOD_TWIST,
+                turnTwist: variation.signed(index, 51) * MAX_WOOD_TWIST,
             }
         })
         const damaged = metadata?.damaged === true
@@ -572,31 +619,20 @@ export class CampFence extends BaseStaticObject {
 
     render() {
         const posts = this.getPosts()
-        const moisture = Settings.isDetalLevelHigh() ? this.getWoodMoisture() : null
+        const moisture = getWoodMoisture(this.position)
+        const postWeather = {damp: 'moss', moisture, upright: true} as const
         for (const {matrix, shape} of posts) {
-            TaperedBlockBatch.add(placeStaticPart(matrix, this.renderPosition), this.material, shape, 'moss')
-            if (moisture !== null && shape) {
-                TaperedBlockBatch.contact?.addFenceWoodWeathering(this.prefab!.matrices.length - 1, 'post', moisture)
-            }
+            TaperedBlockBatch.add(placeStaticPart(matrix, this.renderPosition), this.material, shape, postWeather)
         }
         const batch = WorldRenderer.block1!
         this.railMatrices ??= this.buildRails(posts)
         for (const matrix of this.railMatrices) {
-            if (moisture !== null) {
-                WorldRenderer.staticTerrainContact?.addFenceWoodWeathering(batch.matrices.length, 'rail', moisture)
+            if (moisture !== undefined) {
+                WorldRenderer.staticTerrainContact?.addWoodWeathering(batch.matrices.length, moisture)
             }
             batch.matrices.push(placeStaticPart(matrix, this.renderPosition))
             batch.uvData.push(this.railMaterial)
         }
-    }
-
-    private getWoodMoisture(): FenceWoodMoisture {
-        if (Lights.indoor) return 0
-        const tile = WorldDataManager.getBlockMap()[this.position.x]?.[this.position.z]
-        if (!tile || tile.stonePath || tile.beigeStonePath) return 0
-        if (tile.snowed || tile.type === TerrainEnum1.TERRAIN_GRASS.index) return 1
-        if (tile.type === TerrainEnum1.TERRAIN_MUDDY_DIRT.index) return 3
-        return tile.type === TerrainEnum1.TERRAIN_GRASS_WINTER.index ? 2 : 0
     }
 
     appendContactShadowFootprints(footprints: ContactShadowFootprint[], height: number) {
@@ -640,7 +676,7 @@ export class CampFence extends BaseStaticObject {
             : [this.createPost(0, -1, false), this.createPost(0, 1, false)]
     }
 
-    private buildRails(posts: readonly CampFencePost[]) {
+    private buildRails(posts: readonly WoodPiece[]) {
         const directions = this.cornerDirections
         const matrices: Matrix[] = []
         const damage = this.damage
@@ -680,17 +716,13 @@ export class CampFence extends BaseStaticObject {
 
     private createRail(alongX: boolean, length: number, thickness: number, height: number,
         offsetX: number, offsetZ: number, frame: Matrix, twist: number) {
-        const {railTurnX, railTurnZ} = CampFence
-        // The atlas grain follows the box's local Y axis. Rotate it along the rail.
-        return Matrix.Scaling(alongX ? height : thickness, length, alongX ? thickness : height)
-            .multiply(Matrix.RotationY(twist))
-            .multiply(alongX ? railTurnX : railTurnZ)
+        return createHorizontalWoodMatrix(length, thickness, height, alongX, twist)
             .setTranslationFromFloats(offsetX, 0, offsetZ)
             .multiply(frame)
     }
 
     private addDamagedRail(matrices: Matrix[], rail: Matrix, thickness: number, height: number, twist: number,
-        damage: CampFenceDamage, posts: readonly CampFencePost[], armSide?: number) {
+        damage: CampFenceDamage, posts: readonly WoodPiece[], armSide?: number) {
         const m = rail.m
         const center = new Vector3(m[12], m[13], m[14])
         const axis = new Vector3(m[4], m[5], m[6])
@@ -740,7 +772,7 @@ export class CampFence extends BaseStaticObject {
         return this.createRail(false, overhang + reach, thickness, height, 0, (reach - overhang) / 2, frame, twist)
     }
 
-    private createPost(dx: number, dz: number, corner: boolean): CampFencePost {
+    private createPost(dx: number, dz: number, corner: boolean): WoodPiece {
         const central = dx === 0 && dz === 0
         const direction = dx < 0 ? '-X' : dx > 0 ? '+X' : dz < 0 ? '-Z' : dz > 0 ? '+Z' : this.orientation
         const variation = createOrientedStaticVariation(this.worldId, this.position, direction)
@@ -753,13 +785,9 @@ export class CampFence extends BaseStaticObject {
         const roll = variation.signed(part, 3) * lean * (corner && !central && dx === 0 ? 0.5 : 1)
         const width = (0.082 + variation.unit(part, 4) * 0.036) * thickness
         const depth = (0.082 + variation.unit(part, 5) * 0.036) * thickness
-        const shape = TaperedBlockBatch.contact ? {
-            foot: varyPostSection(1, 1, channel => variation.signed(part, channel + 20)),
-            top: varyPostSection(
-                (0.082 + variation.unit(part, 9) * 0.036) * thickness / width,
-                (0.082 + variation.unit(part, 10) * 0.036) * thickness / depth,
-                channel => variation.signed(part, channel + 40)),
-        } : null
+        const shape = createWoodShape(variation, part,
+            (0.082 + variation.unit(part, 9) * 0.036) * thickness / width,
+            (0.082 + variation.unit(part, 10) * 0.036) * thickness / depth)
         const twist = variation.signed(part, 6) * CampFence.maxPostTwist
         const along = CampFence.postOffset + variation.signed(part, 7) * CampFence.maxPostAlongShift
         const cross = variation.signed(part, 8) * CampFence.maxPostCrossShift * (corner ? 0.5 : 1)

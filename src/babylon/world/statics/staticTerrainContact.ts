@@ -12,9 +12,9 @@ export const SNOW_CONTACT_MAX_HEIGHT = 0.24
 export const TREE_DAMP_MAX_HEIGHT = 1.0
 export const GROUND_WEAR_MEDIUM_HEIGHT = 0.68
 export const GROUND_WEAR_HIGH_HEIGHT = 1.0
-export const FENCE_WOOD_PROFILE = {rail: 16, post: 17, postWithMoss: 18} as const
-export const FENCE_WOOD_MOISTURE_SCALE = 8
-export type FenceWoodMoisture = 0 | 1 | 2 | 3
+export const WOOD_WEATHERING_MOISTURE_LEVELS = 4
+export const WOOD_PATINA_ONLY = 2 * WOOD_WEATHERING_MOISTURE_LEVELS + 1
+export type WoodMoisture = 0 | 1 | 2 | 3
 const DAMP_CONTACT = {
     moss: 1, hay: 3, wellBase: 4, wellRim: 5, wellRoofMoss: 7, walkableEdges: 8, mossyWood: 9,
     woodTopWithMoss: 10, woodTopAndGroundMoss: 11, stumpCut: 12, treeBark: 13, groundWear: 14, groundWearHigh: 15,
@@ -22,7 +22,9 @@ const DAMP_CONTACT = {
 export type DampContact = keyof typeof DAMP_CONTACT
 
 export class StaticTerrainContact {
-    private readonly contacts = new Map<number, {height: number, snowReach: number, damp: number, joinedEdges?: number}>()
+    private readonly contacts = new Map<number, {
+        height: number, snowReach: number, damp: number, joinedEdges?: number, woodWeathering?: number
+    }>()
     private readonly snow: Texture
     private buffer = new Float32Array(0)
 
@@ -55,7 +57,7 @@ export class StaticTerrainContact {
             float staticJoinedEdges = 0.0;
             ${contactCode(
                 `// The roof profile is signed, so allow for -1 when unpacking the edge bits.
-                staticJoinedEdges = floor((staticSnowContact.z + 1.0) / ${JOINED_EDGE_STRIDE}.0);
+                staticJoinedEdges = max(0.0, floor((staticSnowContact.z + 1.0) / ${JOINED_EDGE_STRIDE}.0));
                 vStaticSnowContact = vec3(worldPos.y - staticSnowContact.x, staticSnowContact.y,
                     staticSnowContact.z - staticJoinedEdges * ${JOINED_EDGE_STRIDE}.0);`,
                 'vStaticSnowContact = vec3(0.0);',
@@ -77,7 +79,9 @@ export class StaticTerrainContact {
             ${material.CustomParts.Fragment_Before_Lights ?? ''}
             float snowDistance = vStaticSnowContact.x;
             float snowReach = abs(vStaticSnowContact.y);
-            float dampProfile = floor(vStaticSnowContact.z + 0.5);
+            float woodWeathering = max(0.0, -floor((vStaticSnowContact.z + 1.0) / ${JOINED_EDGE_STRIDE}.0));
+            float dampContact = vStaticSnowContact.z + woodWeathering * ${JOINED_EDGE_STRIDE}.0;
+            float dampProfile = floor(dampContact + 0.5);
             float staticSnowCover = 0.0;
             staticGroundWetness = 0.0;
             if (dampProfile == ${ROOF_SNOW_PROFILE}.0) {
@@ -212,8 +216,7 @@ export class StaticTerrainContact {
             bool wellBase = dampProfile == ${DAMP_CONTACT.wellBase}.0;
             bool wellRim = dampProfile == ${DAMP_CONTACT.wellRim}.0;
             bool mossyWood = dampProfile == ${DAMP_CONTACT.mossyWood}.0;
-            bool withMoss = dampProfile == ${DAMP_CONTACT.moss}.0 || dampProfile == ${DAMP_CONTACT.woodTopAndGroundMoss}.0
-                || dampProfile == ${FENCE_WOOD_PROFILE.postWithMoss}.0;
+            bool withMoss = dampProfile == ${DAMP_CONTACT.moss}.0 || dampProfile == ${DAMP_CONTACT.woodTopAndGroundMoss}.0;
             bool dampHay = dampProfile == ${DAMP_CONTACT.hay}.0;
             if ((mossyWood || wellBase || withMoss || dampHay)
                 && snowDistance < (mossyWood ? 0.80 : wellBase ? 0.64 : 0.48)) {
@@ -269,7 +272,7 @@ export class StaticTerrainContact {
             }
             if (dampProfile == ${DAMP_CONTACT.groundWear}.0 || dampProfile == ${DAMP_CONTACT.groundWearHigh}.0) {
                 float aboveGround = max(snowDistance, 0.0);
-                float wear = (vStaticSnowContact.z - dampProfile) * 4.0;
+                float wear = (dampContact - dampProfile) * 4.0;
                 bool high = dampProfile == ${DAMP_CONTACT.groundWearHigh}.0;
                 if (aboveGround < (high ? ${GROUND_WEAR_HIGH_HEIGHT.toFixed(1)} : ${GROUND_WEAR_MEDIUM_HEIGHT})) {
                     vec2 base = mod(vPositionW.xz, 48.0);
@@ -322,10 +325,10 @@ export class StaticTerrainContact {
         this.contacts.set(index, {height, snowReach: 0, damp: DAMP_CONTACT[damp] + wear * 0.25})
     }
 
-    addFenceWoodWeathering(index: number, part: 'rail' | 'post', moisture: FenceWoodMoisture) {
+    addWoodWeathering(index: number, moisture: WoodMoisture | 'patina', upright = false) {
         const contact = this.contacts.get(index) ?? {height: 0, snowReach: 0, damp: 0}
-        const profile = part === 'post' && contact.damp === DAMP_CONTACT.moss ? FENCE_WOOD_PROFILE.postWithMoss : FENCE_WOOD_PROFILE[part]
-        contact.damp = profile + moisture / FENCE_WOOD_MOISTURE_SCALE
+        contact.woodWeathering = moisture === 'patina' ? WOOD_PATINA_ONLY
+            : 1 + moisture + (upright ? WOOD_WEATHERING_MOISTURE_LEVELS : 0)
         this.contacts.set(index, contact)
     }
 
@@ -354,10 +357,11 @@ export class StaticTerrainContact {
         const grow = count * 3 > this.buffer.length
         if (grow) this.buffer = new Float32Array(Math.max(48, count * 3, this.buffer.length * 2))
         else this.buffer.fill(0, 0, count * 3)
-        for (const [index, {height, snowReach, damp, joinedEdges}] of this.contacts) {
+        for (const [index, {height, snowReach, damp, joinedEdges, woodWeathering}] of this.contacts) {
             this.buffer[index * 3] = height
             this.buffer[index * 3 + 1] = snowReach
-            this.buffer[index * 3 + 2] = damp + (joinedEdges ?? 0) * JOINED_EDGE_STRIDE
+            // Negative groups carry wood weathering, positive groups carry joined stone edges.
+            this.buffer[index * 3 + 2] = damp + (woodWeathering ? -woodWeathering : (joinedEdges ?? 0)) * JOINED_EDGE_STRIDE
         }
         if (grow) mesh.thinInstanceSetBuffer(ATTRIBUTE, this.buffer, 3, false)
         else mesh.thinInstanceBufferUpdated(ATTRIBUTE)

@@ -70,6 +70,11 @@ export interface StaticBaseContact {
     snowHeight: number | undefined
 }
 
+interface StaticBlockContactTarget {
+    prefab: Prefab | null
+    contact: StaticTerrainContact | null
+}
+
 export const WorldRenderer = {
     snowCoverMask: new Set<number>(),
     block1: null as SymmetricBlock | null,
@@ -270,7 +275,7 @@ export const WorldRenderer = {
     },
 
     addTerrainContactBlock(matrix: Matrix, uv: Vector2, blendGroundLighting = false, snowReach = 4 / 3,
-        damp?: DampContact, baseContact?: StaticBaseContact, target?: {prefab: Prefab | null, contact: StaticTerrainContact | null}) {
+        damp?: DampContact, baseContact?: StaticBaseContact, target?: StaticBlockContactTarget) {
         const batch = target?.prefab ?? this.block1!
         const contact = target ? target.contact : this.staticTerrainContact
         const index = batch.matrices.length
@@ -286,6 +291,7 @@ export const WorldRenderer = {
             }
             return
         }
+        if (snowReach <= 0 && !damp) return
 
         const m = matrix.m
         const foot = m[13] - m[5] * 0.5 - 0.5 // The wrapped cube prefab sits half a unit lower.
@@ -333,17 +339,20 @@ export const WorldRenderer = {
     },
 
     addWeatheredBlock(matrix: Matrix, uv: Vector2, anchor: Vector3, wear: number,
-        options?: {snowReach?: number, blendGroundLighting?: boolean, includeMaskedSnow?: boolean}) {
-        const batch = this.block1!
+        options?: {snowReach?: number, blendGroundLighting?: boolean, includeMaskedSnow?: boolean,
+            target?: StaticBlockContactTarget, sampleAtCenter?: boolean}) {
+        const target = options?.target
+        const batch = target?.prefab ?? this.block1!
         const index = batch.matrices.length
         batch.matrices.push(matrix)
         batch.uvData.push(uv)
-        const contact = this.staticTerrainContact
+        const contact = target ? target.contact : this.staticTerrainContact
         if (!contact || Lights.indoor) return
 
         const m = matrix.m
-        const x = Math.round(m[12] - m[4] * 0.5)
-        const z = Math.round(m[14] - m[6] * 0.5)
+        const fromCenter = options?.sampleAtCenter ? 0 : 0.5
+        const x = Math.round(m[12] - m[4] * fromCenter)
+        const z = Math.round(m[14] - m[6] * fromCenter)
         const tile = WorldDataManager.getBlockMap()[x]?.[z]
         if (!tile || tile.type <= 0 || tile.type >= WATER_BLOCK_TYPE || tile.stonePath || tile.beigeStonePath
             || BuildingManager.hasFloorAtTile(x, z)) return

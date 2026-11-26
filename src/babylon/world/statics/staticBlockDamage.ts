@@ -3,7 +3,7 @@ import type { Matrix, Vector2 } from '@babylonjs/core'
 import { BLOCK_TOP_GLOW_U_OFFSET, MaterialEnum1 } from '@/babylon/materials'
 import { Settings } from '@/settings/settings'
 import { woodPatinaShader } from '../woodPatina'
-import { FENCE_WOOD_MOISTURE_SCALE, FENCE_WOOD_PROFILE } from './staticTerrainContact'
+import { WOOD_PATINA_ONLY, WOOD_WEATHERING_MOISTURE_LEVELS } from './staticTerrainContact'
 
 const stone = [
     'ROCK1', 'ROCK1_BEIGE', 'TERRAIN_ROCK', 'BRICK_RED', 'BRICK_GRAY', 'BRICK_BLACK', 'BRICK_DARK_GRAY',
@@ -204,38 +204,44 @@ export function configureStaticBlockDamage(material: PBRCustomMaterial) {
         ${parts.Fragment_Before_Lights ?? ''}
         float damageFlags = floor(vStaticDamageLocal.w + 0.5);
         float damageKind = mod(damageFlags, 4.0);
-        if (staticDamageHigh > 0.5 && dampProfile >= ${FENCE_WOOD_PROFILE.rail}.0 && dampProfile <= ${FENCE_WOOD_PROFILE.postWithMoss}.0) {
-            float moisture = mix(0.24, 1.0, (vStaticSnowContact.z - dampProfile) * ${FENCE_WOOD_MOISTURE_SCALE}.0 / 3.0);
+        bool patinaOnly = woodWeathering == ${WOOD_PATINA_ONLY}.0;
+        if (staticDamageHigh > 0.5 && woodWeathering > 0.0) {
             float exposure = 1.0 - smoothstep(0.16, 0.70, staticSnowCover);
             vec3 local = vStaticDamageLocal.xyz;
-            vec3 edge = max(vec3(0.0), vec3(0.5) - abs(local));
             vec2 woodPosition = mod(vPositionW.xz, 48.0) + mod(vPositionW.y, 48.0) * vec2(0.68, -0.47);
-            float patches = terrainNoise(woodPosition * 10.0 + vec2(7.7, 3.1));
-            float grain = terrainNoise(woodPosition * 37.0 + vec2(2.4, 8.2));
-            float variation = patches * 0.77 + grain * 0.23;
-            float rim;
-            bool fencePost = dampProfile == ${FENCE_WOOD_PROFILE.post}.0 || dampProfile == ${FENCE_WOOD_PROFILE.postWithMoss}.0;
-            if (fencePost) {
-                float fromTop = 0.5 - local.y;
-                rim = 1.0 - smoothstep(0.0, mix(0.12, 0.33, patches), fromTop);
-            } else {
-                // Local Y follows the grain into the ends, even on a broken or rotated rail.
-                float railEdge = min(max(edge.x, edge.z), edge.y * 1.55);
-                rim = 1.0 - smoothstep(0.015, mix(0.12, 0.37, patches), railEdge);
-            }
-            float wet = rim * smoothstep(0.22, 0.72, variation) * mix(0.32, 0.90, moisture) * exposure;
             float lengthwise = local.y * vStaticDamageSizeSeed.y;
             vec2 patinaUV = vec2(lengthwise * 1.4, (local.x + local.z) * 0.36) + woodPosition * 0.48;
-            surfaceAlbedo = applyWoodPatina(surfaceAlbedo, patinaUV, exposure * (1.0 - wet * 0.65));
-            surfaceAlbedo *= mix(vec3(1.0), vec3(0.35, 0.42, 0.39), wet);
-            staticGroundWetness = max(staticGroundWetness, wet * 0.86);
-            float moss = rim * exposure * smoothstep(mix(0.54, 0.34, moisture),
-                mix(0.84, 0.65, moisture), variation) * mix(0.14, 0.64, moisture);
-            moss *= fencePost ? 1.0 - 0.48 * smoothstep(0.70, 0.95, geometricNormalW.y) : 0.65;
-            vec3 mossColor = terrainContactMossColor(grain);
-            float mossLuma = dot(mossColor, vec3(0.2126, 0.7152, 0.0722));
-            mossColor = mix(vec3(mossLuma), mossColor, 0.62) * 0.74;
-            surfaceAlbedo = mix(surfaceAlbedo, mossColor, moss);
+            if (patinaOnly) {
+                surfaceAlbedo = applyWoodPatina(surfaceAlbedo, patinaUV, exposure);
+            } else {
+                float moisture = mix(0.24, 1.0, mod(woodWeathering - 1.0, ${WOOD_WEATHERING_MOISTURE_LEVELS}.0)
+                    / ${WOOD_WEATHERING_MOISTURE_LEVELS - 1}.0);
+                float patches = terrainNoise(woodPosition * 10.0 + vec2(7.7, 3.1));
+                float grain = terrainNoise(woodPosition * 37.0 + vec2(2.4, 8.2));
+                float variation = patches * 0.77 + grain * 0.23;
+                float rim;
+                bool uprightWood = woodWeathering > ${WOOD_WEATHERING_MOISTURE_LEVELS}.0;
+                if (uprightWood) {
+                    float fromTop = 0.5 - local.y;
+                    rim = 1.0 - smoothstep(0.0, mix(0.12, 0.33, patches), fromTop);
+                } else {
+                    // Local Y follows the grain into the ends, even on a broken or rotated rail.
+                    vec3 edge = max(vec3(0.0), vec3(0.5) - abs(local));
+                    float railEdge = min(max(edge.x, edge.z), edge.y * 1.55);
+                    rim = 1.0 - smoothstep(0.015, mix(0.12, 0.37, patches), railEdge);
+                }
+                float wet = rim * smoothstep(0.22, 0.72, variation) * mix(0.32, 0.90, moisture) * exposure;
+                surfaceAlbedo = applyWoodPatina(surfaceAlbedo, patinaUV, exposure * (1.0 - wet * 0.65));
+                surfaceAlbedo *= mix(vec3(1.0), vec3(0.35, 0.42, 0.39), wet);
+                staticGroundWetness = max(staticGroundWetness, wet * 0.86);
+                float moss = rim * exposure * smoothstep(mix(0.54, 0.34, moisture),
+                    mix(0.84, 0.65, moisture), variation) * mix(0.14, 0.64, moisture);
+                moss *= uprightWood ? 1.0 - 0.48 * smoothstep(0.70, 0.95, geometricNormalW.y) : 0.65;
+                vec3 mossColor = terrainContactMossColor(grain);
+                float mossLuma = dot(mossColor, vec3(0.2126, 0.7152, 0.0722));
+                mossColor = mix(vec3(mossLuma), mossColor, 0.62) * 0.74;
+                surfaceAlbedo = mix(surfaceAlbedo, mossColor, moss);
+            }
         }
         float damageCut = 0.0;
         float damageSink = 0.0;
@@ -243,7 +249,7 @@ export function configureStaticBlockDamage(material: PBRCustomMaterial) {
             damageCut = staticStoneDamage(vStaticDamageLocal.xyz, vStaticDamageSizeSeed.xyz, vStaticDamageSizeSeed.w,
                 floor(damageFlags * 0.25));
             damageSink = damageCut * 0.026;
-        } else if (damageKind == 2.0) {
+        } else if (damageKind == 2.0 && !patinaOnly) {
             damageCut = staticWoodDamage(vStaticDamageLocal.xyz, vStaticDamageSizeSeed.xyz, vStaticDamageSizeSeed.w);
             damageSink = damageCut * 0.0085;
         }
