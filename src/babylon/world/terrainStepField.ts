@@ -295,6 +295,7 @@ export class TerrainStepField {
         }
         material.Fragment_Definitions(`
             ${material.CustomParts.Fragment_Definitions ?? ''}
+            vec2 stepWetness;
             vec4 terrainMarkTexel(int index, int row) {
                 ivec2 p = ivec2((index % ${TEXTURE_WIDTH}) * 4, row + index / ${TEXTURE_WIDTH});
                 return vec4(texelFetch(terrainStepData, p, 0).r,
@@ -364,7 +365,7 @@ export class TerrainStepField {
             if (terrainSplatsActive > 0.0 && geometricNormalW.y > 0.46) {
                 surfaceAlbedo = blendTerrainSplats(surfaceAlbedo, vPositionW, smoothstep(0.46, 0.90, geometricNormalW.y));
             }
-            vec2 stepWetness = vec2(0.0);
+            stepWetness = vec2(0.0);
             if (any(greaterThan(terrainStepsActive * vec2(${snow === '0.0' ? '0.0' : '1.0'}, ${soil === '0.0' ? '0.0' : '1.0'}), vec2(0.0)))
                 && geometricNormalW.y > 0.65) {
                 vec2 stepCoverage = vec2(${snow}, smoothstep(0.08, 0.70, ${soil}))

@@ -70,6 +70,7 @@ type TerrainRenderOptions = {
     snowRockOnSoil?: boolean
     localBoundaries?: boolean
     includeTile?: (x: number, z: number) => boolean
+    canMergeTile?: (x: number, z: number) => boolean
     originX?: number
     originZ?: number
     submit?: SubmitTerrainBatch
@@ -358,7 +359,7 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
             const tile = map[x]?.[z]
             if (tile && tile.type > 0 && tile.type < WATER_BLOCK_TYPE && (tile.stonePath || tile.beigeStonePath)) return tile
         }
-        const canMergeTile = (x: number, z: number) => !pavingAt(x, z)
+        const canMergeTile = (x: number, z: number) => !pavingAt(x, z) && (options.canMergeTile?.(x, z) ?? true)
         const pavingFlags = (x: number, z: number) => {
             const tile = pavingAt(x, z)
             if (!tile) return 0

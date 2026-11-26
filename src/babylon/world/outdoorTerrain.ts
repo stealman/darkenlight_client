@@ -28,6 +28,7 @@ import { visitPavingStones } from './stonePathLayout'
 import type { PavingStone } from './stonePathLayout'
 import { outdoorSurfaceHeight } from './terrainRoofShape'
 import type { TerrainStepField } from './terrainStepField'
+import { configureTerrainTerraceEdges, terraceCornerMasks, TERRACE_EDGE_ATTRIBUTE } from './terrainTerraceEdges'
 
 export { createIndoorWaterFloor } from '@/adminUtils/terrainPreviewGeometry'
 export { createDungeonRockMaterial, dungeonRockUv } from '@/adminUtils/terrainAtlasPreview'
@@ -104,6 +105,7 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
             terrainSteps?.configure(material, renderer.stepMaterials.get(material))
             terrainSteps?.configureGlow(material)
             contactShadow?.configure(material, false, !!terrainSteps)
+            configureTerrainTerraceEdges(material)
         }
     }
     for (const mesh of renderer.meshes) {
@@ -326,15 +328,22 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
                     return bare
                 }))
                 const baked = useBakedTerrain && !region.hiddenSnow.length ? compiled : undefined
+                const regionDepth = bottom - top
+                const cornerMasks: number[] = []
+                const masksAt = (tx: number, tz: number) =>
+                    cornerMasks[tx * regionDepth + tz] ??= terraceCornerMasks(map, tx, tz)
                 renderer.render(map, {
                     includeTile: (tx, tz) => tx + left >= x && tx + left < x + REGION_SIZE
                         && tz + top >= z && tz + top < z + REGION_SIZE,
+                    canMergeTile: (tx, tz) => !masksAt(tx, tz),
                     originX: left,
                     originZ: top,
                     compiled: baked,
                     compiledRegion: baked ? {x, z} : undefined,
                     submit(mesh, source, attributes) {
                         const batch = batches.get(mesh)!
+                        const terraceEdges: number[] = []
+                        attributes.push({kind: TERRACE_EDGE_ATTRIBUTE, stride: 4, values: terraceEdges})
                         for (const {kind, stride, values} of attributes) {
                             if (kind !== 'terrainSurface' && kind !== 'terrainWetTile') continue
                             for (let i = 0; i < values.length; i += stride) {
@@ -343,8 +352,10 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
                             }
                         }
                         source.forEachInstance((tile, matrix, uv, sourceIndex, span) => {
-                            const localX = Math.floor(tile / (bottom - top))
-                            const localZ = tile % (bottom - top)
+                            const localX = Math.floor(tile / regionDepth)
+                            const localZ = tile % regionDepth
+                            terraceEdges.push(localX + left, localZ + top, map[localX][localZ].height,
+                                span === 1 ? masksAt(localX, localZ) : 0)
                             const index = (localX + left - x) * REGION_SIZE + localZ + top - z
                             const translation = matrix.getTranslation()
                             matrix.setTranslationFromFloats(translation.x + left, translation.y, translation.z + top)
