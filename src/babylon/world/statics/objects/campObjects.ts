@@ -1,6 +1,8 @@
 import { Matrix, Vector2, Vector3 } from '@babylonjs/core'
 import { BaseStaticObject } from '@/babylon/world/statics/objects/baseStaticObject'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
+import { TaperedBlockBatch } from '@/babylon/world/taperedBlockBatch'
+import type { BlockSection, TaperedBlockShape } from '@/babylon/world/taperedBlockBatch'
 import type { StaticBaseContact } from '@/babylon/world/worldRenderer'
 import type { ContactShadowFootprint } from '@/babylon/world/terrainContactShadow'
 import { StaticEquipPartsRenderer } from '@/babylon/world/statics/staticEquipPartsRenderer'
@@ -440,6 +442,30 @@ interface CampFenceDamage {
     drops: readonly [number, number]
 }
 
+interface CampFencePost {
+    matrix: Matrix
+    shape: TaperedBlockShape | null
+}
+
+function varyPostSection(width: number, depth: number, sample: (channel: number) => number): BlockSection {
+    const corners = [
+        new Vector2(-0.5, -0.5), new Vector2(0.5, -0.5),
+        new Vector2(-0.5, 0.5), new Vector2(0.5, 0.5),
+    ] as const
+    let centerX = 0, centerZ = 0
+    for (const [index, corner] of corners.entries()) {
+        corner.x += sample(index * 2) * 0.08
+        corner.y += sample(index * 2 + 1) * 0.08
+        centerX += corner.x / 4
+        centerZ += corner.y / 4
+    }
+    for (const corner of corners) {
+        corner.x = (corner.x - centerX) * width
+        corner.y = (corner.y - centerZ) * depth
+    }
+    return corners
+}
+
 export class CampFence extends BaseStaticObject {
     private static readonly railCenters = [0.185, 0.42, 0.655]
     private static readonly railThickness = 0.045
@@ -448,6 +474,7 @@ export class CampFence extends BaseStaticObject {
     private static readonly railTurnZ = Matrix.RotationX(Math.PI / 2)
     private static readonly maxRailYaw = Math.PI / 82
     private static readonly maxRailLean = Math.PI / 72
+    private static readonly maxRailTwist = Math.PI / 14
     private static readonly maxSectionYaw = Math.PI / 42
     private static readonly maxSectionShift = 0.036
     private static readonly sectionHeightVariation = 0.13
@@ -466,16 +493,17 @@ export class CampFence extends BaseStaticObject {
     private readonly section: Matrix
     private readonly heightScale: number
     private readonly rails: readonly {
-        frame: Matrix, thickness: number, turnThickness: number, height: number, firstEnd: number, secondEnd: number
+        frame: Matrix, thickness: number, turnThickness: number, height: number, firstEnd: number, secondEnd: number,
+        twist: number, turnTwist: number
     }[]
     private readonly damage: CampFenceDamage | null
     private cornerDirections: [Direction, Direction] | null = null
-    private postMatrices: Matrix[] | null = null
+    private posts: CampFencePost[] | null = null
     private railParts: {matrix: Matrix, material: Vector2}[] | null = null
 
     constructor(type: number, position: Vector3, postMaterial: Vector2, railMaterial: Vector2, replacementMaterial: Vector2,
         metadata?: CampFenceMetadata) {
-        super(type, position, 0, postMaterial, null)
+        super(type, position, 0, postMaterial, TaperedBlockBatch.prefab)
         this.orientation = metadata?.orientation === 'X' ? 'X' : 'Z'
         this.railMaterial = railMaterial
         this.replacementMaterial = replacementMaterial
@@ -506,6 +534,8 @@ export class CampFence extends BaseStaticObject {
                 height: (CampFence.railHeight + heightVariation * (heightVariation < 0 ? 0.047 : 0.017)) * heightScale,
                 firstEnd: 0.48 + variation.signed(index, 30) * 0.01,
                 secondEnd: 0.48 + variation.signed(index, 31) * 0.01,
+                twist: variation.signed(index, 50) * CampFence.maxRailTwist,
+                turnTwist: variation.signed(index, 51) * CampFence.maxRailTwist,
             }
         })
         const damaged = metadata?.damaged === true
@@ -531,17 +561,16 @@ export class CampFence extends BaseStaticObject {
 
     setCornerDirections(directions: [Direction, Direction] | null) {
         if (this.cornerDirections || directions) {
-            this.postMatrices = null
+            this.posts = null
             this.railParts = null
         }
         this.cornerDirections = directions
     }
 
     render() {
-        const posts = this.getPostMatrices()
-        for (const post of posts) {
-            WorldRenderer.addTerrainContactBlock(placeStaticPart(post, this.renderPosition),
-                this.material, false, undefined, 'moss')
+        const posts = this.getPosts()
+        for (const {matrix, shape} of posts) {
+            TaperedBlockBatch.add(placeStaticPart(matrix, this.renderPosition), this.material, shape, 'moss')
         }
         const batch = WorldRenderer.block1!
         this.railParts ??= this.buildRails(posts)
@@ -552,17 +581,33 @@ export class CampFence extends BaseStaticObject {
     }
 
     appendContactShadowFootprints(footprints: ContactShadowFootprint[], height: number) {
-        for (const {m} of this.getPostMatrices()) {
+        for (const {matrix: {m}, shape} of this.getPosts()) {
             const x = this.renderPosition.x + m[12] - m[4] / 2
             const z = this.renderPosition.z + m[14] - m[6] / 2
-            const halfX = (Math.abs(m[0]) + Math.abs(m[8])) / 2
-            const halfZ = (Math.abs(m[2]) + Math.abs(m[10])) / 2
-            footprints.push({minX: x - halfX, maxX: x + halfX, minZ: z - halfZ, maxZ: z + halfZ, height, reach: 0.15})
+            let minX = x, maxX = x, minZ = z, maxZ = z
+            if (shape) {
+                for (const corner of shape.foot) {
+                    const wx = x + corner.x * m[0] + corner.y * m[8]
+                    const wz = z + corner.x * m[2] + corner.y * m[10]
+                    minX = Math.min(minX, wx)
+                    maxX = Math.max(maxX, wx)
+                    minZ = Math.min(minZ, wz)
+                    maxZ = Math.max(maxZ, wz)
+                }
+            } else {
+                const halfX = (Math.abs(m[0]) + Math.abs(m[8])) / 2
+                const halfZ = (Math.abs(m[2]) + Math.abs(m[10])) / 2
+                minX -= halfX
+                maxX += halfX
+                minZ -= halfZ
+                maxZ += halfZ
+            }
+            footprints.push({minX, maxX, minZ, maxZ, height, reach: 0.15})
         }
     }
 
-    private getPostMatrices() {
-        return this.postMatrices ??= this.buildPosts()
+    private getPosts() {
+        return this.posts ??= this.buildPosts()
     }
 
     private buildPosts() {
@@ -576,23 +621,23 @@ export class CampFence extends BaseStaticObject {
             : [this.createPost(0, -1, false), this.createPost(0, 1, false)]
     }
 
-    private buildRails(posts: readonly Matrix[]) {
+    private buildRails(posts: readonly CampFencePost[]) {
         const directions = this.cornerDirections
         const matrices: Matrix[] = []
         const damage = this.damage
         let damageStart = -1
         // A dropped corner arm is short, so only the bottom rail can reach the ground from its post.
         const damagedLevel = directions && damage?.fallen ? 0 : damage?.level
-        for (const [level, {frame, thickness, turnThickness, height, firstEnd, secondEnd}] of this.rails.entries()) {
+        for (const [level, {frame, thickness, turnThickness, height, firstEnd, secondEnd, twist, turnTwist}] of this.rails.entries()) {
             if (!directions) {
                 const alongX = this.orientation === 'X'
                 // Keep the ends near their tile edges when the whole fence shifts along its length.
                 const railCenter = (secondEnd - firstEnd) / 2 - frame.m[alongX ? 12 : 14]
                 const rail = this.createRail(alongX, firstEnd + secondEnd, thickness, height,
-                    alongX ? railCenter : 0, alongX ? 0 : railCenter, frame)
+                    alongX ? railCenter : 0, alongX ? 0 : railCenter, frame, twist)
                 if (damage && level === damagedLevel) {
                     damageStart = matrices.length
-                    this.addDamagedRail(matrices, rail, thickness, height, damage, posts)
+                    this.addDamagedRail(matrices, rail, thickness, height, twist, damage, posts)
                 } else matrices.push(rail)
                 continue
             }
@@ -603,13 +648,14 @@ export class CampFence extends BaseStaticObject {
                 const outerEnd = (arm === 0 ? firstEnd : secondEnd) - direction.x * frame.m[12] - direction.z * frame.m[14]
                 const railCenter = (outerEnd + innerEnd) / 2
                 const armThickness = arm === 0 ? thickness : turnThickness
+                const armTwist = arm === 0 ? twist : turnTwist
                 const rail = this.createRail(direction.x !== 0, outerEnd - innerEnd, armThickness, height,
-                    direction.x * railCenter, direction.z * railCenter, frame)
+                    direction.x * railCenter, direction.z * railCenter, frame, armTwist)
                 if (damage && level === damagedLevel && arm === (damage.side > 0 ? 1 : 0)) {
                     damageStart = matrices.length
                     const outerSide = direction.x || direction.z
                     const armPosts = outerSide < 0 ? [posts[arm], posts[2]] : [posts[2], posts[arm]]
-                    this.addDamagedRail(matrices, rail, armThickness, height, damage, armPosts, outerSide)
+                    this.addDamagedRail(matrices, rail, armThickness, height, armTwist, damage, armPosts, outerSide)
                 } else matrices.push(rail)
             }
         }
@@ -624,17 +670,18 @@ export class CampFence extends BaseStaticObject {
     }
 
     private createRail(alongX: boolean, length: number, thickness: number, height: number,
-        offsetX: number, offsetZ: number, frame: Matrix) {
+        offsetX: number, offsetZ: number, frame: Matrix, twist: number) {
         const {railTurnX, railTurnZ} = CampFence
         // The atlas grain follows the box's local Y axis. Rotate it along the rail.
         return Matrix.Scaling(alongX ? height : thickness, length, alongX ? thickness : height)
+            .multiply(Matrix.RotationY(twist))
             .multiply(alongX ? railTurnX : railTurnZ)
             .setTranslationFromFloats(offsetX, 0, offsetZ)
             .multiply(frame)
     }
 
-    private addDamagedRail(matrices: Matrix[], rail: Matrix, thickness: number, height: number,
-        damage: CampFenceDamage, posts: readonly Matrix[], armSide?: number) {
+    private addDamagedRail(matrices: Matrix[], rail: Matrix, thickness: number, height: number, twist: number,
+        damage: CampFenceDamage, posts: readonly CampFencePost[], armSide?: number) {
         const m = rail.m
         const center = new Vector3(m[12], m[13], m[14])
         const axis = new Vector3(m[4], m[5], m[6])
@@ -647,7 +694,7 @@ export class CampFence extends BaseStaticObject {
             if (damage.fallen && side !== outerSide) continue
             const outerEnd = side * halfLength
             const innerEnd = damage.fallen ? -outerEnd : split + (outerEnd - split) * 0.04
-            const post = posts[part].m
+            const post = posts[part].matrix.m
             const advance = (center.y - post[13]) / post[5]
             const postX = post[12] + post[4] * advance
             const postZ = post[14] + post[6] * advance
@@ -661,14 +708,14 @@ export class CampFence extends BaseStaticObject {
             attach.z = postZ + axis.z * (pivot - postOnRail) + axis.x * shift
             matrices.push(this.createDroopingPart(attach, axis, side,
                 Math.abs(outerEnd - pivot), Math.abs(innerEnd - pivot), thickness, height,
-                damage.bends[part], damage.drops[part], damage.fallen))
+                damage.bends[part], damage.drops[part], damage.fallen, -side * twist))
         }
     }
 
     private createDroopingPart(attach: Vector3, axis: Vector3, side: number, overhang: number, reach: number,
-        thickness: number, height: number, bend: number, drop: number, fallen: boolean) {
+        thickness: number, height: number, bend: number, drop: number, fallen: boolean, twist: number) {
         const groundClearance = attach.y - 0.5
-        const halfHeight = height / 2
+        const halfHeight = (height * Math.cos(twist) + thickness * Math.abs(Math.sin(twist))) / 2
         if (fallen) {
             // Allow very steep drops to touch without rotating the plank back past vertical.
             const steepest = Math.PI * 0.44
@@ -681,10 +728,10 @@ export class CampFence extends BaseStaticObject {
         const sideways = Math.sign(bend) * (fallen ? 0.27 + Math.abs(bend) * 0.40 : 0.13 + Math.abs(bend) * 0.21)
         const yaw = Math.atan2(-side * axis.x, -side * axis.z) + sideways
         const frame = Matrix.RotationYawPitchRoll(yaw, pitch, 0).setTranslationFromFloats(attach.x, attach.y, attach.z)
-        return this.createRail(false, overhang + reach, thickness, height, 0, (reach - overhang) / 2, frame)
+        return this.createRail(false, overhang + reach, thickness, height, 0, (reach - overhang) / 2, frame, twist)
     }
 
-    private createPost(dx: number, dz: number, corner: boolean) {
+    private createPost(dx: number, dz: number, corner: boolean): CampFencePost {
         const central = dx === 0 && dz === 0
         const direction = dx < 0 ? '-X' : dx > 0 ? '+X' : dz < 0 ? '-Z' : dz > 0 ? '+Z' : this.orientation
         const variation = createOrientedStaticVariation(this.worldId, this.position, direction)
@@ -697,6 +744,13 @@ export class CampFence extends BaseStaticObject {
         const roll = variation.signed(part, 3) * lean * (corner && !central && dx === 0 ? 0.5 : 1)
         const width = (0.082 + variation.unit(part, 4) * 0.036) * thickness
         const depth = (0.082 + variation.unit(part, 5) * 0.036) * thickness
+        const shape = TaperedBlockBatch.contact ? {
+            foot: varyPostSection(1, 1, channel => variation.signed(part, channel + 20)),
+            top: varyPostSection(
+                (0.082 + variation.unit(part, 9) * 0.036) * thickness / width,
+                (0.082 + variation.unit(part, 10) * 0.036) * thickness / depth,
+                channel => variation.signed(part, channel + 40)),
+        } : null
         const twist = variation.signed(part, 6) * CampFence.maxPostTwist
         const along = CampFence.postOffset + variation.signed(part, 7) * CampFence.maxPostAlongShift
         const cross = variation.signed(part, 8) * CampFence.maxPostCrossShift * (corner ? 0.5 : 1)
@@ -708,8 +762,9 @@ export class CampFence extends BaseStaticObject {
         const footZ = dz * along + dx * cross + (jointOffset?.z ?? 0) * 0.02
         // Pivot the lean around the sampled foot position on the ground.
         const m = matrix.m
-        return matrix.setTranslationFromFloats(footX + m[4] / 2, 0.5 + m[5] / 2, footZ + m[6] / 2)
+        const placed = matrix.setTranslationFromFloats(footX + m[4] / 2, 0.5 + m[5] / 2, footZ + m[6] / 2)
             .multiply(this.section)
+        return {matrix: placed, shape}
     }
 
     isObjectInCollision(tgtX: number, tgtZ: number, size: number): boolean {

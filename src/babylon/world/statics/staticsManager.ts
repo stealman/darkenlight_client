@@ -64,6 +64,7 @@ import {
 import { TerrainDebris } from './objects/terrainDebris'
 import { StoneBatch } from '../stoneBatch'
 import type { ContactShadowFootprint } from '../terrainContactShadow'
+import { TaperedBlockBatch } from '../taperedBlockBatch'
 
 const isEmbeddedInSnow = (type: number) => isShrubType(type) || type === 281
 
@@ -414,6 +415,8 @@ export const StaticsManager = {
         Lights.clearStaticLights()
         StoneBatch.clear()
         StoneBatch.flush()
+        TaperedBlockBatch.clear()
+        TaperedBlockBatch.flush()
         this.allStatics.forEach((obj) => obj.dispose())
         this.allStatics = []
         this.staticsByTile.clear()

@@ -123,7 +123,7 @@ export function configureStaticBlockDamage(material: PBRCustomMaterial) {
                 vStaticDamageSizeSeed = vec4(damageSize, damageSeed);
             }
         }
-        vStaticDamageLocal = vec4(positionUpdated, damageKind + 4.0 * staticJoinedEdges);
+        vStaticDamageLocal = vec4(position, damageKind + 4.0 * staticJoinedEdges);
     `)
     material.Fragment_Definitions(`
         ${parts.Fragment_Definitions ?? ''}
