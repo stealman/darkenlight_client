@@ -4,6 +4,7 @@ import { BLOCK_TOP_GLOW_U_OFFSET, MaterialEnum1 } from '@/babylon/materials'
 import { Settings } from '@/settings/settings'
 import { woodPatinaShader } from '../woodPatina'
 import { WOOD_PATINA_ONLY, WOOD_WEATHERING_MOISTURE_LEVELS } from './staticTerrainContact'
+import { WOOD_BEAM_JOIN_BASE, WOOD_BRACE_JOIN_POSITIVE, WOOD_JOIN_MIN, WOOD_JOIN_STEP } from './palisadeWoodJoin'
 
 const stone = [
     'ROCK1', 'ROCK1_BEIGE', 'TERRAIN_ROCK', 'BRICK_RED', 'BRICK_GRAY', 'BRICK_BLACK', 'BRICK_DARK_GRAY',
@@ -204,7 +205,7 @@ export function configureStaticBlockDamage(material: PBRCustomMaterial) {
         ${parts.Fragment_Before_Lights ?? ''}
         float damageFlags = floor(vStaticDamageLocal.w + 0.5);
         float damageKind = mod(damageFlags, 4.0);
-        bool patinaOnly = woodWeathering == ${WOOD_PATINA_ONLY}.0;
+        bool patinaOnly = woodWeathering >= ${WOOD_PATINA_ONLY}.0;
         if (staticDamageHigh > 0.5 && woodWeathering > 0.0) {
             float exposure = 1.0 - smoothstep(0.16, 0.70, staticSnowCover);
             vec3 local = vStaticDamageLocal.xyz;
@@ -213,6 +214,34 @@ export function configureStaticBlockDamage(material: PBRCustomMaterial) {
             vec2 patinaUV = vec2(lengthwise * 1.4, (local.x + local.z) * 0.36) + woodPosition * 0.48;
             if (patinaOnly) {
                 surfaceAlbedo = applyWoodPatina(surfaceAlbedo, patinaUV, exposure);
+                float join = 0.0;
+                float mossRim = 0.0;
+                bool brace = woodWeathering > ${WOOD_PATINA_ONLY}.0 && woodWeathering < ${WOOD_BEAM_JOIN_BASE}.0;
+                if (woodWeathering >= ${WOOD_BEAM_JOIN_BASE}.0) {
+                    bool facesX = abs(geometricNormalW.x) > abs(geometricNormalW.z);
+                    float face = facesX ? step(0.0, geometricNormalW.x) : 2.0 + step(0.0, geometricNormalW.z);
+                    float height = mod(floor((woodWeathering - ${WOOD_BEAM_JOIN_BASE}.0) / exp2(4.0 * face)), 16.0);
+                    if (height > 0.0) {
+                        float aboveBrace = lengthwise - (${WOOD_JOIN_MIN} + (height - 1.0) * ${WOOD_JOIN_STEP});
+                        join = smoothstep(-0.060, -0.020, aboveBrace) * (1.0 - smoothstep(0.025, 0.17, aboveBrace));
+                        join *= 1.0 - smoothstep(0.72, 0.97, abs(geometricNormalW.y));
+                        mossRim = join * (1.0 - smoothstep(0.015, 0.065, abs(aboveBrace)));
+                    }
+                } else if (brace) {
+                    float innerSide = woodWeathering == ${WOOD_BRACE_JOIN_POSITIVE}.0 ? 1.0 : -1.0;
+                    float fromInnerEdge = 0.5 - innerSide * local.z;
+                    join = smoothstep(0.64, 0.85, geometricNormalW.y);
+                    mossRim = join * mix(0.18, 1.0, 1.0 - smoothstep(0.08, 0.63, fromInnerEdge));
+                }
+                if (join > 0.0) {
+                    float patches = terrainNoise(woodPosition * 11.0 + vec2(3.1, 6.8));
+                    float grain = terrainNoise(woodPosition * 37.0 + vec2(9.6, 2.4));
+                    float wetPatches = smoothstep(0.20, 0.74, patches * 0.8 + grain * 0.2);
+                    float wet = join * exposure * (brace ? mix(0.80, 0.98, wetPatches) : wetPatches * 0.66);
+                    surfaceAlbedo *= 1.0 - wet * 0.36;
+                    float moss = mossRim * exposure * smoothstep(0.50, 0.81, patches * 0.78 + grain * 0.22);
+                    surfaceAlbedo = mix(surfaceAlbedo, terrainContactMossColor(grain) * 0.74, moss * (brace ? 0.34 : 0.12));
+                }
             } else {
                 float moisture = mix(0.24, 1.0, mod(woodWeathering - 1.0, ${WOOD_WEATHERING_MOISTURE_LEVELS}.0)
                     / ${WOOD_WEATHERING_MOISTURE_LEVELS - 1}.0);

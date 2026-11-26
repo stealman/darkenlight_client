@@ -83,7 +83,7 @@ export const TaperedBlockBatch = {
 
     add(matrix: Matrix, uv: Vector2, shape: TaperedBlockShape | null,
         options?: {damp?: DampContact, anchor?: Vector3, moisture?: WoodMoisture, upright?: boolean,
-            snowReach?: number, blendGroundLighting?: boolean, suppressDamage?: boolean, patina?: boolean}) {
+            snowReach?: number, blendGroundLighting?: boolean, suppressDamage?: boolean, patina?: boolean, join?: number}) {
         const target = shape ? this : undefined
         if (options?.anchor) {
             WorldRenderer.addWeatheredBlock(matrix, uv, options.anchor, 0.64, {target, sampleAtCenter: true})
@@ -97,7 +97,7 @@ export const TaperedBlockBatch = {
             const contact = target ? target.contact : WorldRenderer.staticTerrainContact
             const index = batch.matrices.length - 1
             if (options.patina && Settings.isDetalLevelHigh()) {
-                contact?.addWoodWeathering(index, 'patina')
+                contact?.addWoodWeathering(index, 'patina', false, options.join)
             } else {
                 if (options.suppressDamage) contact?.markJoinedEdges(index, ALL_STONE_EDGES)
                 if (options.moisture !== undefined) contact?.addWoodWeathering(index, options.moisture, options.upright)

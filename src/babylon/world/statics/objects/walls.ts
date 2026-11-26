@@ -8,6 +8,8 @@ import { BaseStaticObject } from '@/babylon/world/statics/objects/baseStaticObje
 import { createOrientedStaticVariation, createStaticVariation } from '@/babylon/world/statics/staticVariation'
 import { TaperedBlockBatch } from '@/babylon/world/taperedBlockBatch'
 import { createHorizontalWoodMatrix, createWoodShape, MAX_PALISADE_WOOD_TWIST, type WoodPiece } from '../staticWoodShape'
+import { getBeamWoodJoin, getBraceWoodJoin } from '../palisadeWoodJoin'
+import { Settings } from '@/settings/settings'
 import { MyPlayer } from '@/data/myPlayer'
 import { getStaticLightIntensityLevelFactor, getStaticLightLevel, getStaticLightRangeLevelFactor, type StaticLightMetadata } from '@/babylon/scene/lighting/lightConfig'
 
@@ -162,6 +164,10 @@ export class PalisadeWall2 extends BaseStaticObject {
     }
 
     render() {
+        const braces = Settings.isDetalLevelHigh() ? [] as Matrix[] : undefined
+        if (this.cornerDirections) this.renderCornerBraces(braces)
+        else this.renderStraightBraces(braces)
+
         const beamOffsets = this.getBeamOffsets()
         for (let i = 0; i < beamOffsets.length; i++) {
             const {depthOffset, height, matrix, shape} = this.beams[i]
@@ -169,13 +175,9 @@ export class PalisadeWall2 extends BaseStaticObject {
                 + (this.cornerDirections || this.orientation === 'Z' ? depthOffset : 0)
             const z = this.renderPosition.z + beamOffsets[i].z
                 + (this.cornerDirections || this.orientation === 'X' ? depthOffset : 0)
-            TaperedBlockBatch.add(matrix.clone().setTranslationFromFloats(x, this.renderPosition.y + height / 2 + 0.5, z),
-                this.material, shape, PALISADE_BEAM_CONTACT)
-        }
-        if (this.cornerDirections) {
-            this.renderCornerBraces()
-        } else {
-            this.renderStraightBraces()
+            const placed = matrix.clone().setTranslationFromFloats(x, this.renderPosition.y + height / 2 + 0.5, z)
+            TaperedBlockBatch.add(placed, this.material, shape,
+                braces ? {...PALISADE_BEAM_CONTACT, join: getBeamWoodJoin(placed, braces)} : PALISADE_BEAM_CONTACT)
         }
     }
 
@@ -205,7 +207,7 @@ export class PalisadeWall2 extends BaseStaticObject {
         return this.straightBeamOffsets
     }
 
-    private renderStraightBraces() {
+    private renderStraightBraces(braces?: Matrix[]) {
         const turn = Matrix.RotationY(this.orientation === 'Z' ? Math.PI / 2 : 0)
         for (let sideIndex = 0; sideIndex < 2; sideIndex++) {
             const side = sideIndex === 0 ? -1 : 1
@@ -219,12 +221,12 @@ export class PalisadeWall2 extends BaseStaticObject {
                 + heightOffset
                 + 0.5
 
-            TaperedBlockBatch.add(matrix.multiply(turn).setTranslationFromFloats(x, y, z),
-                this.braceMaterial, shape, PALISADE_BRACE_CONTACT)
+            this.renderBrace(matrix.multiply(turn).setTranslationFromFloats(x, y, z), shape,
+                this.orientation === 'Z' ? -side : 0, this.orientation === 'X' ? -side : 0, braces)
         }
     }
 
-    private renderCornerBraces() {
+    private renderCornerBraces(braces?: Matrix[]) {
         for (let armIndex = 0; armIndex < this.cornerDirections!.length; armIndex++) {
             const direction = this.cornerDirections![armIndex]
             const cornerBeamOffset = this.profile.cornerBeamOffsets[this.profile.cornerBeamOffsets.length - 1]
@@ -245,10 +247,16 @@ export class PalisadeWall2 extends BaseStaticObject {
                     + heightOffset
                     + 0.5
 
-                TaperedBlockBatch.add(matrix.multiply(turn).setTranslationFromFloats(x, y, z),
-                    this.braceMaterial, shape, PALISADE_BRACE_CONTACT)
+                this.renderBrace(matrix.multiply(turn).setTranslationFromFloats(x, y, z), shape,
+                    -normalX * side, -normalZ * side, braces)
             }
         }
+    }
+
+    private renderBrace(matrix: Matrix, shape: WoodPiece['shape'], towardX: number, towardZ: number, braces?: Matrix[]) {
+        braces?.push(matrix)
+        TaperedBlockBatch.add(matrix, this.braceMaterial, shape,
+            braces ? {...PALISADE_BRACE_CONTACT, join: getBraceWoodJoin(matrix, towardX, towardZ)} : PALISADE_BRACE_CONTACT)
     }
 
     isObjectInCollision(tgtX: number, tgtZ: number, size: number): boolean {

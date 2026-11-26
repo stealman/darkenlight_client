@@ -325,9 +325,9 @@ export class StaticTerrainContact {
         this.contacts.set(index, {height, snowReach: 0, damp: DAMP_CONTACT[damp] + wear * 0.25})
     }
 
-    addWoodWeathering(index: number, moisture: WoodMoisture | 'patina', upright = false) {
+    addWoodWeathering(index: number, moisture: WoodMoisture | 'patina', upright = false, join?: number) {
         const contact = this.contacts.get(index) ?? {height: 0, snowReach: 0, damp: 0}
-        contact.woodWeathering = moisture === 'patina' ? WOOD_PATINA_ONLY
+        contact.woodWeathering = moisture === 'patina' ? (join ?? WOOD_PATINA_ONLY)
             : 1 + moisture + (upright ? WOOD_WEATHERING_MOISTURE_LEVELS : 0)
         this.contacts.set(index, contact)
     }

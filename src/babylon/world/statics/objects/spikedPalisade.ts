@@ -3,7 +3,9 @@ import { BaseStaticObject } from '@/babylon/world/statics/objects/baseStaticObje
 import { TaperedBlockBatch } from '@/babylon/world/taperedBlockBatch'
 import { createOrientedStaticVariation, createStaticVariation, placeStaticPart } from '@/babylon/world/statics/staticVariation'
 import { createHorizontalWoodMatrix, createWoodShape, MAX_PALISADE_WOOD_TWIST, type WoodPiece } from '../staticWoodShape'
+import { getBeamWoodJoin, getBraceWoodJoin } from '../palisadeWoodJoin'
 import { MyPlayer } from '@/data/myPlayer'
+import { Settings } from '@/settings/settings'
 
 export type SpikedPalisadeFacing = '-X' | '+X' | '-Z' | '+Z'
 
@@ -90,10 +92,14 @@ export class SpikedPalisade extends BaseStaticObject {
     }
 
     render() {
-        this.renderStakes(this.mainStakes)
-        TaperedBlockBatch.add(placeStaticPart(this.connector.matrix, this.renderPosition), this.material,
-            this.connector.shape, SpikedPalisade.CONNECTOR_CONTACT)
-        this.renderStakes(this.supports)
+        const connector = placeStaticPart(this.connector.matrix, this.renderPosition)
+        const braces = Settings.isDetalLevelHigh() ? [connector] : undefined
+        const forward = this.getForwardNormal()
+        this.renderStakes(this.mainStakes, braces)
+        TaperedBlockBatch.add(connector, this.material, this.connector.shape, braces
+            ? {...SpikedPalisade.CONNECTOR_CONTACT, join: getBraceWoodJoin(connector, -forward.x, -forward.z)}
+            : SpikedPalisade.CONNECTOR_CONTACT)
+        this.renderStakes(this.supports, braces)
     }
 
     private createStake(axis: Vector3, offset: number, length: number, width: number, depth: number, angle: number, twist: number) {
@@ -103,9 +109,12 @@ export class SpikedPalisade extends BaseStaticObject {
             .setTranslationFromFloats(axis.x * offset, Math.cos(angle) * length / 2 + 0.5, axis.z * offset)
     }
 
-    private renderStakes(stakes: readonly WoodPiece[]) {
+    private renderStakes(stakes: readonly WoodPiece[], braces?: readonly Matrix[]) {
         for (const {matrix, shape} of stakes) {
-            TaperedBlockBatch.add(placeStaticPart(matrix, this.renderPosition), this.material, shape, SpikedPalisade.STAKE_CONTACT)
+            const placed = placeStaticPart(matrix, this.renderPosition)
+            TaperedBlockBatch.add(placed, this.material, shape, braces
+                ? {...SpikedPalisade.STAKE_CONTACT, join: getBeamWoodJoin(placed, braces)}
+                : SpikedPalisade.STAKE_CONTACT)
         }
     }
 
