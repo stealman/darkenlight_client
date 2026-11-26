@@ -12,6 +12,7 @@ function createLoader(core) {
         '@/babylon/materials': {MaterialEnum1: material, MaterialAlphaEnum1: material,
             MaterialEnumTrans: material, Materials: material},
         '@/babylon/scene/lights': {Lights: new Proxy({}, {get: () => () => {}})},
+        '@/babylon/world/masonryBatch': {MasonryBatch: {prefab: null, clear() {}, flush() {}}},
     }
     const load = (name, extra = '') => {
         if (cache.has(name)) return cache.get(name)
@@ -73,7 +74,6 @@ test('static manager preserves rotated footprints, connected fences and open dun
     manager.renderObjects = () => {}
     const {StoneEntrance, PalisadeWall2} = load('@/babylon/world/statics/objects/walls')
     const {CampFence} = load('@/babylon/world/statics/objects/campObjects')
-    const {CemeteryStoneWall} = load('@/babylon/world/statics/objects/cemeteryObjects')
     // Bypass portal lighting construction; exercise its real footprint and exact collision method.
     const {StaticObjectsCodebook} = load('@/babylon/world/statics/staticsCodebook')
     for (const facing of ['+Z', '-Z', '+X', '-X']) {

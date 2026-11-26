@@ -1,11 +1,12 @@
 import { Matrix, Vector2, Vector3 } from '@babylonjs/core'
 import { BaseStaticObject } from '@/babylon/world/statics/objects/baseStaticObject'
 import { BLOCK_TOP_GLOW_U_OFFSET } from '@/babylon/materials'
+import { OrientedWall } from '@/babylon/world/statics/objects/orientedWall'
+import type { WallMetadata } from '@/babylon/world/statics/objects/orientedWall'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { createSineStaticVariation } from '@/babylon/world/statics/staticVariation'
 
 export type CemeteryFacing = '-X' | '+X' | '-Z' | '+Z'
-export type CemeteryWallOrientation = 'X' | 'Z'
 
 function createCemeteryVariation(position: Vector3, offset = 0) {
     return createSineStaticVariation(position.x * 91.7 + position.z * 37.3 + offset, 17.1)
@@ -13,15 +14,6 @@ function createCemeteryVariation(position: Vector3, offset = 0) {
 
 export interface CemeteryObjectMetadata {
     facing?: CemeteryFacing
-}
-
-export interface CemeteryWallMetadata {
-    orientation?: CemeteryWallOrientation
-}
-
-export interface CemeteryWallDirection {
-    x: number
-    z: number
 }
 
 const CEMETERY_FRINGE_SNOW_CONTACT = {blendGroundLighting: false}
@@ -322,26 +314,14 @@ export class StoneFrameGrave extends CemeteryObject {
     }
 }
 
-abstract class CemeteryWall extends BaseStaticObject {
+abstract class CemeteryWall extends OrientedWall {
     protected readonly wear: number = 0.82
     protected readonly blendGroundLighting: boolean = true
-    protected readonly orientation: CemeteryWallOrientation
     protected readonly accentMaterial: Vector2
-    protected cornerDirections: [CemeteryWallDirection, CemeteryWallDirection] | null = null
 
-    constructor(type: number, position: Vector3, material: Vector2, accentMaterial: Vector2, metadata?: CemeteryWallMetadata) {
-        super(type, position, 0, material, null)
-        this.orientation = metadata?.orientation === 'X' ? 'X' : 'Z'
+    constructor(type: number, position: Vector3, material: Vector2, accentMaterial: Vector2, metadata?: WallMetadata) {
+        super(type, position, material, null, metadata)
         this.accentMaterial = accentMaterial
-        this.status = {orientation: this.orientation}
-    }
-
-    getOrientation(): CemeteryWallOrientation {
-        return this.orientation
-    }
-
-    setCornerDirections(directions: [CemeteryWallDirection, CemeteryWallDirection] | null) {
-        this.cornerDirections = directions
     }
 
     protected part(length: number, height: number, thickness: number, along: number, y: number, across: number, material = this.material, roll = 0) {
@@ -376,15 +356,6 @@ abstract class CemeteryWall extends BaseStaticObject {
         )
     }
 
-    isObjectInCollision(tgtX: number, tgtZ: number, size: number): boolean {
-        const moverHalf = size / 2
-        const toleranceX = this.orientation === 'X' ? 0 : this.getCollisionTolerance()
-        const toleranceZ = this.orientation === 'Z' ? 0 : this.getCollisionTolerance()
-        return tgtX - moverHalf < this.position.x + 0.5 - toleranceX
-            && tgtX + moverHalf > this.position.x - 0.5 + toleranceX
-            && tgtZ - moverHalf < this.position.z + 0.5 - toleranceZ
-            && tgtZ + moverHalf > this.position.z - 0.5 + toleranceZ
-    }
 }
 
 export class CemeteryIronFence extends CemeteryWall {
@@ -444,35 +415,6 @@ export class CemeteryIronFence extends CemeteryWall {
     }
 }
 
-export class CemeteryStoneWall extends CemeteryWall {
-    render() {
-        if (this.cornerDirections) {
-            this.renderCorner()
-            return
-        }
-        for (const y of [0.35, 1.05]) {
-            this.part(0.98, 0.7, 0.48, 0, y, 0)
-        }
-    }
-
-    private renderCorner() {
-        for (const y of [0.35, 1.05]) {
-            this.worldPart(0.52, 0.7, 0.52, 0, y, 0)
-            for (const direction of this.cornerDirections!) {
-                const alongX = direction.x !== 0
-                this.worldPart(
-                    alongX ? 0.58 : 0.48,
-                    0.7,
-                    alongX ? 0.48 : 0.58,
-                    direction.x * 0.29,
-                    y,
-                    direction.z * 0.29,
-                )
-            }
-        }
-    }
-}
-
 type FallenStone = {width: number, height: number, depth: number, x: number, z: number, roll: number, yaw: number}
 
 export class RuinedCemeteryWall extends CemeteryWall {
@@ -483,7 +425,7 @@ export class RuinedCemeteryWall extends CemeteryWall {
     private readonly straightDebris: readonly FallenStone[]
     private readonly cornerDebris: readonly FallenStone[]
 
-    constructor(type: number, position: Vector3, material: Vector2, accentMaterial: Vector2, metadata?: CemeteryWallMetadata) {
+    constructor(type: number, position: Vector3, material: Vector2, accentMaterial: Vector2, metadata?: WallMetadata) {
         super(type, position, material, accentMaterial, metadata)
         const variation = createCemeteryVariation(position)
         this.straightCap = Array.from({length: 3}, (_, index) => ({

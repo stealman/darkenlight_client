@@ -184,7 +184,8 @@ export function visitPavingStones(tileAt: (x: number, z: number) => PathTile | u
                 edge = Math.min(edge, 0.42)
             }
             const variant = Math.floor(random(stoneX, stoneZ, 47) * 8)
-            const rise = (0.018 + edge * 0.020 + seed * 0.031) * (2 / 3)
+            const heightVariation = 0.031 * (0.5 + (seed - 0.5) * 1.5)
+            const rise = (0.018 + edge * 0.020 + heightVariation) * (2 / 3)
             visit({...footprint, ...surface, seed, edge, rise, variant})
         }
 

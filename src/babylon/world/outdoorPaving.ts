@@ -5,7 +5,7 @@ import type { MapBlock } from '@/data/worldDataManager'
 import { Settings } from '@/settings/settings'
 import { OutdoorInstanceBatch } from './outdoorInstanceBatch'
 import type { OutdoorInstance } from './outdoorInstanceBatch'
-import { appendPavingAttributes, createSimpleStonePathMesh, createStonePathRenderer, pavingStoneMatrix, PAVING_INSTANCE_ATTRIBUTE } from './stonePathRenderer'
+import { appendPavingAttributes, createSimpleStonePathMesh, createStonePathRenderer, pavingColorRow, pavingStoneMatrix, PAVING_INSTANCE_ATTRIBUTE } from './stonePathRenderer'
 import type { PavingStone, StonePathBounds } from './stonePathLayout'
 import type { TerrainContactShadow } from './terrainContactShadow'
 import type { TerrainStepField } from './terrainStepField'
@@ -41,7 +41,7 @@ export function createOutdoorPaving(terrain: TransformNode, detailed: boolean,
         createRegionInstanceFactory() {
             if (!detailed) {
                 return (stone: PavingStone): OutdoorInstance =>
-                    ({batch: getBatch(), matrix: pavingStoneMatrix(stone), uv, slot: -1})
+                    ({batch: getBatch(), matrix: pavingStoneMatrix(stone), uv: new Vector2(stone.variant, pavingColorRow(stone)), slot: -1})
             }
             const values: number[] = []
             const attributes = [{kind: PAVING_INSTANCE_ATTRIBUTE, stride: 4, values}]

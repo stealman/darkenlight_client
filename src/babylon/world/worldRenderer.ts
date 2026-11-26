@@ -32,12 +32,13 @@ import { IndoorTerrainOcclusionManager } from '@/babylon/world/indoorTerrainOccl
 import { TerrainDebrisManager } from '@/babylon/world/terrainDebrisManager'
 import { StoneBatch } from '@/babylon/world/stoneBatch'
 import { TaperedBlockBatch } from '@/babylon/world/taperedBlockBatch'
+import { MasonryBatch } from '@/babylon/world/masonryBatch'
 import { isSnowRoof, outdoorSurfaceHeight } from '@/babylon/world/terrainRoofShape'
 import {
     GROUND_WEAR_HIGH_HEIGHT, GROUND_WEAR_MEDIUM_HEIGHT, SNOW_CONTACT_MAX_HEIGHT, StaticTerrainContact,
 } from '@/babylon/world/statics/staticTerrainContact'
 import type { DampContact } from '@/babylon/world/statics/staticTerrainContact'
-import { ALL_STONE_EDGES, configureStaticBlockDamage, markJoinedStoneEdges } from '@/babylon/world/statics/staticBlockDamage'
+import { configureStaticBlockDamage, markJoinedStoneEdges } from '@/babylon/world/statics/staticBlockDamage'
 
 // The viewport already renders a four-tile reserve. On touch devices, keep one
 // tile of that reserve instead of rebuilding every world buffer on every tile.
@@ -110,6 +111,7 @@ export const WorldRenderer = {
         this.translucentPlane.mesh.receiveShadows = true
         StoneBatch.initialize(scene, this.worldParentNode, Settings.isDetalLevelHigh())
         TaperedBlockBatch.initialize(scene, this.worldParentNode, this.staticTerrainContact !== null)
+        MasonryBatch.initialize(scene, this.worldParentNode, this.staticTerrainContact !== null)
 
         // Initialize managers
         await TerrainManager.initialize(scene)
@@ -124,6 +126,7 @@ export const WorldRenderer = {
         Lights.addShadowCaster(this.block1.mesh, true, true)
         Lights.addShadowCaster(StoneBatch.prefab!.mesh, true, true)
         Lights.addShadowCaster(TaperedBlockBatch.prefab!.mesh, true, true)
+        Lights.addShadowCaster(MasonryBatch.prefab!.mesh, true, true)
         // Transparent/alpha world geometry is not a local static-light caster.
         Lights.addShadowCaster(this.blockWithAlpha1.mesh, true)
         TreeManager.addAllShadowCasters()
@@ -156,6 +159,7 @@ export const WorldRenderer = {
         this.translucentPlane!.clearMatrices()
         StoneBatch.clear()
         TaperedBlockBatch.clear()
+        MasonryBatch.clear()
         const blockMap = WorldDataManager.getBlockMap()
         const snowCoverMask = createSnowCoverMask(StaticsManager.allStatics, blockMap.length)
         this.snowCoverMask = snowCoverMask
@@ -183,6 +187,7 @@ export const WorldRenderer = {
         if (!outdoorTerrain) RockDebrisManager.renderRockDebris(Lights.indoor)
         StoneBatch.flush()
         TaperedBlockBatch.flush()
+        MasonryBatch.flush()
         FoggyAreaManager.refreshVisibleAreas()
 
         if (GMManager.gmPanelVisible.value && GMManager.tab === GmTabs.SPAWNS_EDIT) {
@@ -214,6 +219,7 @@ export const WorldRenderer = {
         Lights.registerSharedLightMesh(this.translucentPlane!.mesh)
         Lights.registerSharedLightMesh(StoneBatch.prefab!.mesh)
         Lights.registerSharedLightMesh(TaperedBlockBatch.prefab!.mesh)
+        Lights.registerSharedLightMesh(MasonryBatch.prefab!.mesh)
     },
 
     hideGrassOverrideMarkers() {
@@ -263,13 +269,11 @@ export const WorldRenderer = {
         return material
     },
 
-    prepareStaticBlockDamage(start: number, suppressDamage: boolean) {
+    prepareStaticBlockDamage(start: number) {
         const contact = this.staticTerrainContact
         const batch = this.block1!
         if (!contact) return
-        if (suppressDamage) {
-            for (let index = start; index < batch.matrices.length; index++) contact.markJoinedEdges(index, ALL_STONE_EDGES)
-        } else if (batch.matrices.length - start >= 2) {
+        if (batch.matrices.length - start >= 2) {
             markJoinedStoneEdges(batch.matrices, batch.uvData, start, (index, mask) => contact.markJoinedEdges(index, mask))
         }
     },

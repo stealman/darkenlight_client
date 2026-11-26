@@ -4,6 +4,7 @@ import { PBRCustomMaterial } from '@babylonjs/materials'
 import { TerrainEnum1 } from '@/babylon/materials'
 import { configureTerrainNoiseTexture, terrainNoiseShader } from '@/babylon/world/terrainSurfaceShader'
 import { visitPavingStones } from './stonePathLayout'
+import { stoneAtlasRow, stoneAtlasShader } from './stoneAtlas'
 import { buildPavingSurfaceField } from './pavingSurfaceField'
 import type { PavingStone, StonePathBounds } from './stonePathLayout'
 import type { MapBlock } from '@/data/worldDataManager'
@@ -101,6 +102,7 @@ function createPavingMaterial(scene: Scene, surfaceSize: Vector2, surfaceOrigin:
     `)
     material.Fragment_Definitions(`
         ${varyings}
+        ${stoneAtlasShader}
         ${terrainNoiseShader}
         vec2 pavingProjection(vec2 p, vec2 cell) {
             vec2 mirrored = 3.0 - abs(mod(p, 6.0) - 3.0);
@@ -115,11 +117,13 @@ function createPavingMaterial(scene: Scene, surfaceSize: Vector2, surfaceOrigin:
         // The half-texel inset and no atlas mips keep independent cells isolated.
         vec2 cell = floor(vPaving.xy + 0.5);
         ${floor ? 'float floorTerrain = floor(cell.x / 8.0); cell.x = mod(cell.x, 8.0);' : ''}
-        vec2 stoneUV = (cell * 128.0 + 0.5 + localUV * 127.0) / 1024.0;
+        vec2 stoneUV = stoneAtlasUV(cell, localUV);
         vec3 rock = toLinearSpace(texture2D(pavingColor, stoneUV).rgb);
         // Fade microdetail when a stone projects to a few screen pixels.
         float detail = 1.0 - smoothstep(0.095, 0.34, max(length(dFdx(localUV)), length(dFdy(localUV))));
-        vec2 gritNormal = (texture2D(pavingRelief, stoneUV).rg * 2.0 - 1.0) * (${floor ? '0.86' : '1.02'} * detail);
+        // All three shades of each palette share the same relief cells in rows 0 and 1.
+        vec2 reliefUV = stoneReliefUV(stoneUV, cell.y);
+        vec2 gritNormal = (texture2D(pavingRelief, reliefUV).rg * 2.0 - 1.0) * (${floor ? '0.86' : '1.02'} * detail);
         float joint = smoothstep(0.27, 0.49, max(abs(vStone.x), abs(vStone.z)));
         float shoulder = 1.0 - smoothstep(0.29, 0.92, vStone.y);
         float rim = max(joint, shoulder);
@@ -214,15 +218,20 @@ export function pavingStoneMatrix(stone: PavingStone, floor = false) {
     return matrix
 }
 
+export function pavingColorRow(stone: PavingStone) {
+    // Float32 export can round seeds at the upper limit to 1.
+    return stoneAtlasRow(stone.beige, stone.seed)
+}
+
 export function appendPavingAttributes(values: number[], stone: PavingStone, floorTerrain = 0) {
-    values.push(stone.variant + floorTerrain * 8, Number(stone.beige), stone.seed, stone.edge)
+    values.push(stone.variant + floorTerrain * 8, pavingColorRow(stone), stone.seed, stone.edge)
 }
 
 export function createSimpleStonePathMesh(scene: Scene, parent: TransformNode, floor = false) {
     const mesh = createPavingMesh(scene, floor)
     mesh.parent = parent
 
-    // Use the first gray cell of the 1024 px atlas. Keep UVs inside its texel centers.
+    // Keep UVs inside a cell's texel centers; the path batch supplies its atlas offset.
     const positions = mesh.getVerticesData(VertexBuffer.PositionKind)!
     const uvs: number[] = []
     for (let i = 0; i < positions.length; i += 3) {
@@ -232,7 +241,12 @@ export function createSimpleStonePathMesh(scene: Scene, parent: TransformNode, f
     }
     mesh.setVerticesData(VertexBuffer.UVKind, uvs)
 
-    const material = new PBRMaterial(floor ? 'houseFloorPavingSimple' : 'terrainPavingSimple', scene)
+    const material = floor ? new PBRMaterial('houseFloorPavingSimple', scene) : new PBRCustomMaterial('terrainPavingSimple', scene)
+    if (material instanceof PBRCustomMaterial) {
+        material.AddAttribute('uvc')
+        material.Vertex_Definitions('attribute vec2 uvc;')
+        material.Vertex_Before_PositionUpdated('uvUpdated += uvc * 0.125;')
+    }
     material.metallic = 0
     material.roughness = 1
     material.metallicF0Factor = 0
