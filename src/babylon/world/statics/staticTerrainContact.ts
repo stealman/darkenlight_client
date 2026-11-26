@@ -18,6 +18,7 @@ export type WoodMoisture = 0 | 1 | 2 | 3
 const DAMP_CONTACT = {
     moss: 1, hay: 3, wellBase: 4, wellRim: 5, wellRoofMoss: 7, walkableEdges: 8, mossyWood: 9,
     woodTopWithMoss: 10, woodTopAndGroundMoss: 11, stumpCut: 12, treeBark: 13, groundWear: 14, groundWearHigh: 15,
+    masonryGround: 16, masonrySnow: 17,
 } as const
 export type DampContact = keyof typeof DAMP_CONTACT
 
@@ -176,9 +177,16 @@ export class StaticTerrainContact {
                     1.0 - smoothstep(snowHeightReach * 0.42, snowHeightReach + 0.035, aboveSnow));
                 if (snowCoverage > 0.0) {
                     vec2 snowUV = terrainContactSnowUV(vPositionW.xz, aboveSnow);
-                    surfaceAlbedo = mix(surfaceAlbedo, toLinearSpace(texture2D(staticSnowColor, snowUV).rgb), snowCoverage);
-                    // A negative reach lets the snow at the base catch light like the ground.
+                    vec3 snowTexel = texture2D(staticSnowColor, snowUV).rgb;
+                    vec3 snowColor = toLinearSpace(snowTexel);
                     const float groundLightHeight = 0.22;
+                    if (dampProfile == ${DAMP_CONTACT.masonrySnow}.0) {
+                        // Match the snow under the wall's terrain contact shadow, then fade up the bank.
+                        snowColor = masonrySnowAlbedo(snowTexel)
+                            * (1.0 - 0.36 * (1.0 - smoothstep(0.02, groundLightHeight, aboveSnow)));
+                    }
+                    surfaceAlbedo = mix(surfaceAlbedo, snowColor, snowCoverage);
+                    // A negative reach lets the snow at the base catch light like the ground.
                     if (vStaticSnowContact.y < 0.0 && contactCoverage > 0.0 && aboveSnow < groundLightHeight) {
                         float groundBlend = 0.9 * contactCoverage * (1.0 - smoothstep(0.02, groundLightHeight, aboveSnow))
                             * smoothstep(-0.8, -0.05, geometricNormalW.y);
@@ -270,10 +278,11 @@ export class StaticTerrainContact {
                 vec3 mossColor = terrainContactMossColor(grain) * vec3(0.73, 0.96, 0.70);
                 surfaceAlbedo = mix(surfaceAlbedo, mossColor, moss * 0.84);
             }
-            if (dampProfile == ${DAMP_CONTACT.groundWear}.0 || dampProfile == ${DAMP_CONTACT.groundWearHigh}.0) {
+            bool masonryGround = dampProfile == ${DAMP_CONTACT.masonryGround}.0;
+            if (dampProfile == ${DAMP_CONTACT.groundWear}.0 || dampProfile == ${DAMP_CONTACT.groundWearHigh}.0 || masonryGround) {
                 float aboveGround = max(snowDistance, 0.0);
                 float wear = (dampContact - dampProfile) * 4.0;
-                bool high = dampProfile == ${DAMP_CONTACT.groundWearHigh}.0;
+                bool high = dampProfile == ${DAMP_CONTACT.groundWearHigh}.0 || masonryGround;
                 if (aboveGround < (high ? ${GROUND_WEAR_HIGH_HEIGHT.toFixed(1)} : ${GROUND_WEAR_MEDIUM_HEIGHT})) {
                     vec2 base = mod(vPositionW.xz, 48.0);
                     vec2 p = base + aboveGround * vec2(0.67, -0.51);
@@ -287,18 +296,41 @@ export class StaticTerrainContact {
                     staticGroundWetness = min(0.9, wetEdge * mix(0.26, 1.0, blotches) * wear * 1.3);
                     surfaceAlbedo *= mix(vec3(1.0), vec3(0.32, 0.36, 0.38), staticGroundWetness);
 
-                    float mossReach = mix(0.18, 0.48, patches) * min(wear + 0.25, 1.0);
-                    float moss = (1.0 - smoothstep(0.025, mossReach, aboveGround))
-                        * wear * smoothstep(0.32, 0.70, patches) * 0.78;
-                    float grain = patches;
-                    if (high) {
-                        grain = terrainNoise(p * 36.0 + vec2(7.3, 1.2));
-                        float climb = max(0.15, mix(0.34, 0.95, patches) * min(wear + 0.25, 1.0));
-                        float shelter = mix(0.42, 1.0, smoothstep(-0.25, 0.72, -geometricNormalW.x));
-                        float colonies = smoothstep(0.46, 0.78, patches * 0.78 + grain * 0.22);
-                        moss = max(moss, colonies * (1.0 - smoothstep(0.12, climb, aboveGround)) * shelter * wear);
+                    if (masonryGround) {
+                        if (aboveGround < 0.40) {
+                            // The broad patches follow the foot of the wall and fade quickly above the first course.
+                            vec2 growthUV = base + aboveGround * vec2(0.34, -0.28);
+                            float clusters = terrainNoise(growthUV * 2.9 + vec2(3.2, 8.5));
+                            float grain = terrainNoise(growthUV * 32.0 + vec2(2.7, 6.4));
+                            float mossReach = mix(0.15, 0.40, clusters) * min(wear + 0.35, 1.0);
+                            float moss = (1.0 - smoothstep(0.02, mossReach, aboveGround))
+                                * smoothstep(0.19, 0.66, clusters * 0.83 + grain * 0.17) * wear;
+                            surfaceAlbedo = mix(surfaceAlbedo, terrainContactMossColor(grain), min(0.82, moss));
+
+                            float sites = terrainNoise(growthUV * 4.6 + vec2(15.2, 5.4));
+                            if (sites > 0.57) {
+                                float lobes = terrainNoise(growthUV * 18.0 + vec2(9.3, 2.6));
+                                float lichen = smoothstep(0.57, 0.76, sites)
+                                    * smoothstep(0.43, 0.72, lobes * 0.79 + grain * 0.21)
+                                    * (1.0 - smoothstep(0.08, 0.32, aboveGround)) * min(wear, 1.0);
+                                surfaceAlbedo = mix(surfaceAlbedo, terrainContactLichenColor(grain),
+                                    lichen * (1.0 - 0.55 * min(moss, 1.0)) * 0.64);
+                            }
+                        }
+                    } else {
+                        float mossReach = mix(0.18, 0.48, patches) * min(wear + 0.25, 1.0);
+                        float moss = (1.0 - smoothstep(0.025, mossReach, aboveGround))
+                            * wear * smoothstep(0.32, 0.70, patches) * 0.78;
+                        float grain = patches;
+                        if (high) {
+                            grain = terrainNoise(p * 36.0 + vec2(7.3, 1.2));
+                            float climb = max(0.15, mix(0.34, 0.95, patches) * min(wear + 0.25, 1.0));
+                            float shelter = mix(0.42, 1.0, smoothstep(-0.25, 0.72, -geometricNormalW.x));
+                            float colonies = smoothstep(0.46, 0.78, patches * 0.78 + grain * 0.22);
+                            moss = max(moss, colonies * (1.0 - smoothstep(0.12, climb, aboveGround)) * shelter * wear);
+                        }
+                        surfaceAlbedo = mix(surfaceAlbedo, terrainContactMossColor(grain), min(0.86, moss));
                     }
-                    surfaceAlbedo = mix(surfaceAlbedo, terrainContactMossColor(grain), min(0.86, moss));
                 }
             }
         `)

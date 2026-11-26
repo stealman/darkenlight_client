@@ -74,9 +74,15 @@ export const terrainContactMossShader = `
     vec3 terrainContactMossColor(float grain) {
         return toLinearSpace(mix(vec3(0.20, 0.25, 0.14), vec3(0.34, 0.41, 0.24), grain));
     }
+    vec3 terrainContactLichenColor(float grain) {
+        return toLinearSpace(mix(vec3(0.38, 0.31, 0.20), vec3(0.55, 0.47, 0.34), grain));
+    }
 `
 
 export const terrainContactSnowShader = `
+    vec3 masonrySnowAlbedo(vec3 texel) {
+        return toLinearSpace(texel * vec3(0.95, 0.975, 1.0));
+    }
     vec2 terrainContactSnowUV(vec2 worldXZ, float aboveSnow) {
         // Project the atlas patch up the face so the grain stays visible on vertical surfaces.
         vec2 patchUV = worldXZ + vec2(0.73, 0.89) * aboveSnow;

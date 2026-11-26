@@ -2,6 +2,7 @@ import { Matrix, Vector2, Vector3 } from '@babylonjs/core'
 import { BuildingManager } from '@/babylon/world/buildings/buildingManager'
 import { MasonryBatch } from '@/babylon/world/masonryBatch'
 import type { ContactShadowFootprint } from '@/babylon/world/terrainContactShadow'
+import { DEFAULT_STONE_WALL_PRECISION } from '@/babylon/world/statics/staticsCodebook'
 import { createSineStaticVariation, createStaticVariation } from '@/babylon/world/statics/staticVariation'
 import { OrientedWall } from '@/babylon/world/statics/objects/orientedWall'
 import type { WallDirection, WallMetadata } from '@/babylon/world/statics/objects/orientedWall'
@@ -16,6 +17,7 @@ export interface StoneWallMetadata extends WallMetadata {
 
 const ALONG_X = [{x: -1, z: 0}, {x: 1, z: 0}] as const
 const ALONG_Z = [{x: 0, z: -1}, {x: 0, z: 1}] as const
+const STONE_WALL_EMBED_DEPTH = 0.1
 
 function fitSpan(direction: WallDirection, x: number, z: number, length: number) {
     const yaw = Math.atan2(x * direction.z - z * direction.x, x * direction.x + z * direction.z)
@@ -40,6 +42,7 @@ export class StoneWall extends OrientedWall {
     readonly precision: number
     readonly damage: number
     readonly height: number
+    previewHeightOffset = 0
     private readonly roughness: number
     private segmentX = 0
     private segmentZ = 0
@@ -50,7 +53,7 @@ export class StoneWall extends OrientedWall {
         super(type, position, Vector2.Zero(), MasonryBatch.prefab, metadata)
         const precision = metadata?.precision
         this.precision = typeof precision === 'number' && Number.isFinite(precision)
-            ? Math.max(1, Math.min(10, Math.round(precision))) : 10
+            ? Math.max(1, Math.min(10, Math.round(precision))) : DEFAULT_STONE_WALL_PRECISION
         const damage = metadata?.damage
         this.damage = typeof damage === 'number' && Number.isFinite(damage)
             ? Math.max(0, Math.min(10, Math.round(damage))) : 1
@@ -120,10 +123,12 @@ export class StoneWall extends OrientedWall {
 
     render() {
         const origin = this.renderPosition
+        const baseY = origin.y + 0.5 - STONE_WALL_EMBED_DEPTH
         const variation = createSineStaticVariation(this.position.x * 91.7 + this.position.z * 37.3 + 240, 17.1, 47.7)
         const roughness = this.roughness
-        const heightScale = this.height / 1.4 * (1 + variation.signed(0, 11) * roughness * 0.17)
-        const shortWallScale = Math.min(1, this.height)
+        const variedHeight = this.height * (1 + variation.signed(0, 11) * roughness * 0.17)
+        const heightScale = (variedHeight + this.previewHeightOffset) / 1.4
+        const shortWallScale = Math.min(1, this.height + this.previewHeightOffset)
         const lowDetail = Settings.isDetalLevelLow()
         const courseCount = Math.max(1, Math.round(shortWallScale * (lowDetail ? 2 : 4)))
         const courseStep = 1.28 / courseCount
@@ -155,7 +160,7 @@ export class StoneWall extends OrientedWall {
             const worldX = span ? localX * span.cos + localZ * span.sin : localX
             const worldZ = span ? localZ * span.cos - localX * span.sin : localZ
             matrix.setTranslationFromFloats(origin.x + this.segmentX + worldX,
-                origin.y + y * heightScale + 0.5 + sample(8) * 0.047 * shortWallScale, origin.z + this.segmentZ + worldZ)
+                baseY + y * heightScale + sample(8) * 0.047 * shortWallScale, origin.z + this.segmentZ + worldZ)
             const seed = variation.unit(part)
             if (candidates && damageTier >= 0) {
                 candidates.push({matrix, part, layer, seed, priority: damageTier + variation.unit(part, 12),
@@ -218,7 +223,7 @@ export class StoneWall extends OrientedWall {
                 }
             }
         }
-        if (layers) MasonryBatch.markExposedTops(layers, this.position)
+        if (layers) MasonryBatch.markExposedTops(layers, this.position, roughness > 0)
     }
 
     private addFallenStone(stone: WallStone, rank: number, variation: ReturnType<typeof createSineStaticVariation>) {

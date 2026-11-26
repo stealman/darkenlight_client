@@ -16,6 +16,7 @@ import { StoneBatch } from '@/babylon/world/stoneBatch'
 import { TaperedBlockBatch } from '@/babylon/world/taperedBlockBatch'
 import { MasonryBatch } from '@/babylon/world/masonryBatch'
 import { StaticsManager } from '@/babylon/world/statics/staticsManager'
+import { StoneWall } from '@/babylon/world/statics/objects/stoneWall'
 import { StaticObjectsCodebook } from '@/babylon/world/statics/staticsCodebook'
 import { BuildingManager } from '@/babylon/world/buildings/buildingManager'
 import { TreeManager } from '@/babylon/world/treeManager'
@@ -236,6 +237,8 @@ export async function installAssetPreview(
                             StaticsManager.addObject({tp: id, x: x + (wallAlongX ? offset : 0),
                                 z: z + (wallAlongX ? 0 : offset), meta: data.meta, tmp: true}, false)
                         }
+                        const corner = StaticsManager.allStatics.at(-1)
+                        if (corner instanceof StoneWall) corner.previewHeightOffset = 0.5
                         for (let offset = 1; offset <= 2; offset++) {
                             StaticsManager.addObject({tp: id, x: x + (wallAlongX ? 2 : -offset),
                                 z: z + (wallAlongX ? -offset : 2),

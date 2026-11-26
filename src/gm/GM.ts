@@ -17,7 +17,7 @@ import { OnScreenMessageManager } from '@/gui/onScreenMessageManager'
 import { NpcManager } from '@/babylon/npc/npcManager'
 import { TargetingManager } from '@/gui/targettingManager'
 import { MyPlayer } from '@/data/myPlayer'
-import { StaticObjectsCodebook } from '@/babylon/world/statics/staticsCodebook'
+import { DEFAULT_STONE_WALL_PRECISION, StaticObjectsCodebook } from '@/babylon/world/statics/staticsCodebook'
 import { StaticsManager } from '@/babylon/world/statics/staticsManager'
 import { TreeManager } from '@/babylon/world/treeManager'
 import type { StaticObject } from '@/babylon/world/statics/objects/baseStaticObject'
@@ -162,7 +162,7 @@ export const GMManager = {
     selectedWallFence: ref (0),
     palisadeOrientation: ref('Z'),
     campFenceDamaged: ref(false),
-    stoneWallPrecision: ref(10),
+    stoneWallPrecision: ref(DEFAULT_STONE_WALL_PRECISION),
     stoneWallDamage: ref(1),
     stoneWallHeight: ref(1),
     spikedPalisadeFacing: ref('+Z'),
@@ -625,7 +625,7 @@ export const GMManager = {
             this.palisadeOrientation.value = status.orientation === 'X' ? 'X' : 'Z'
             if (object.type === CAMP_FENCE_STATIC_ID) this.campFenceDamaged.value = status.damaged === true
             if (object.type === STONE_WALL_STATIC_ID) {
-                this.stoneWallPrecision.value = status.precision ?? 10
+                this.stoneWallPrecision.value = status.precision ?? DEFAULT_STONE_WALL_PRECISION
                 this.stoneWallDamage.value = status.damage ?? 1
                 this.stoneWallHeight.value = status.height ?? 1
             }
@@ -668,7 +668,7 @@ export const GMManager = {
     cancelStaticEdit() {
         if (this.editingStatic.value?.type === CAMP_FENCE_STATIC_ID) this.campFenceDamaged.value = false
         if (this.editingStatic.value?.type === STONE_WALL_STATIC_ID) {
-            this.stoneWallPrecision.value = 10
+            this.stoneWallPrecision.value = DEFAULT_STONE_WALL_PRECISION
             this.stoneWallDamage.value = 1
             this.stoneWallHeight.value = 1
         }

@@ -154,13 +154,14 @@ export const MasonryBatch = {
         const uv = new Vector2(Math.floor(seed * 413) % 8 + roughness * 0.5, stoneAtlasRow(beige, seed) + seed * 0.5)
         const index = this.prefab!.matrices.length
         if (this.topWeathering && exposedTop) this.topExposure[index] = FULL_TOP_EXPOSURE
-        WorldRenderer.addWeatheredBlock(matrix, uv, anchor, 0.82, {target: this, sampleAtCenter: true})
+        WorldRenderer.addWeatheredBlock(matrix, uv, anchor, 0.82,
+            {target: this, sampleAtCenter: true, highGroundWear: 'masonryGround', snowProfile: 'masonrySnow'})
         return index
     },
 
-    markExposedTops(layers: number[][], anchor: Vector3) {
-        const snowy = WorldRenderer.getSnowSurfaceHeight(Math.round(anchor.x), Math.round(anchor.z)) !== undefined
-        markMasonryTopExposure(this.prefab!.matrices, layers, this.topExposure, snowy)
+    markExposedTops(layers: number[][], anchor: Vector3, irregular: boolean) {
+        const shelfSnow = irregular && WorldRenderer.getSnowSurfaceHeight(Math.round(anchor.x), Math.round(anchor.z)) !== undefined
+        markMasonryTopExposure(this.prefab!.matrices, layers, this.topExposure, shelfSnow)
     },
 
     clear() {

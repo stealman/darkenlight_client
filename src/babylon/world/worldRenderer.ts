@@ -344,7 +344,7 @@ export const WorldRenderer = {
 
     addWeatheredBlock(matrix: Matrix, uv: Vector2, anchor: Vector3, wear: number,
         options?: {snowReach?: number, blendGroundLighting?: boolean, includeMaskedSnow?: boolean,
-            target?: StaticBlockContactTarget, sampleAtCenter?: boolean}) {
+            target?: StaticBlockContactTarget, sampleAtCenter?: boolean, highGroundWear?: DampContact, snowProfile?: DampContact}) {
         const target = options?.target
         const batch = target?.prefab ?? this.block1!
         const index = batch.matrices.length
@@ -368,7 +368,7 @@ export const WorldRenderer = {
             const snowReach = options?.snowReach ?? 1.4
             if (snowReach > 0 && bottom < height + SNOW_CONTACT_MAX_HEIGHT * snowReach
                 && (options?.includeMaskedSnow ? isSnowRoof(tile) : this.getSnowSurfaceHeight(x, z) !== undefined)) {
-                contact.addSnow(index, height, snowReach, options?.blendGroundLighting ?? true)
+                contact.addSnow(index, height, snowReach, options?.blendGroundLighting ?? true, options?.snowProfile)
             }
         } else if (wear > 0) {
             const damp = tile.type === TerrainEnum1.TERRAIN_MUDDY_DIRT.index ? 1
@@ -378,7 +378,8 @@ export const WorldRenderer = {
             if (damp && bottom < height + reach) {
                 const seed = Math.sin(anchor.x * 91.7 + anchor.z * 37.3) * 43758.5453
                 const variation = 0.38 + (seed - Math.floor(seed)) * 0.83
-                contact.addDamp(index, height, high ? 'groundWearHigh' : 'groundWear', Math.min(1.5, wear * damp * variation))
+                contact.addDamp(index, height, high ? options?.highGroundWear ?? 'groundWearHigh' : 'groundWear',
+                    Math.min(1.5, wear * damp * variation))
             }
         }
     },

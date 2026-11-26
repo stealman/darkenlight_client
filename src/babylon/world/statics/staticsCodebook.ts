@@ -24,6 +24,8 @@ export class StaticObjectInfo {
     }
 }
 
+export const DEFAULT_STONE_WALL_PRECISION = 5
+
 export const StaticObjectsCodebook: Map<number, StaticObjectInfo> = new Map([
     [151, new StaticObjectInfo(151, 'TerrainDebris1', false, 1, 0, 0, null)],
     [152, new StaticObjectInfo(152, 'TerrainDebris2', false, 1, 0, 0, null)],
