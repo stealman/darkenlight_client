@@ -145,21 +145,54 @@ test('bench tile index preserves rounded positions, rotated footprints, overlaps
 test('tree manager indexes scaled trunks and updates its grid through removal and world reset', async () => {
     const core = await import('@babylonjs/core/index.js')
     const {load, dependencies} = createLoader(core)
+    const settings = {treesEnabled: true, detailLevel: {name: 'HIGH'}, isShadowsEnabled: () => true}
+    const batches = []
     dependencies['@/data/worldDataManager'] = {WorldDataManager: {getBlockMap: () =>
-        Array.from({length: 20}, () => Array.from({length: 20}, () => ({height: 0})))}}
-    dependencies['@/babylon/materials'].MaterialAlphaEnum1 = {getMaterialByIndex: () => new core.Vector2()}
+        Array.from({length: 20}, () => Array.from({length: 20}, () => ({height: 0, totalHeight: 0})))}}
+    dependencies['@/data/myPlayer'] = {MyPlayer: {worldId: 1}}
+    dependencies['@/settings/settings'] = {Settings: settings}
+    dependencies['@/utils/viewport'] = {ViewportManager: {viewPortInitialized: true,
+        isPointInVisibleMatrix: x => x < 10, isPointNearVisibleBounds: () => true}}
+    dependencies['@/babylon/scene/lights'] = {Lights: {indoor: false}}
+    dependencies['@/babylon/world/worldRenderer'] = {WorldRenderer: {getSnowSurfaceHeight: () => undefined}}
+    dependencies['@/babylon/materials'].TerrainEnum1 = {TERRAIN_GRASS_WINTER: {index: 5}}
+    dependencies['./collisionGrid'] = load('@/babylon/world/collisionGrid')
+    dependencies['./statics/staticVariation'] = load('@/babylon/world/statics/staticVariation')
+    dependencies['./trees/treeSpecies'] = load('@/babylon/world/trees/treeSpecies')
+    dependencies['./treeSpecies'] = dependencies['./trees/treeSpecies']
+    dependencies['./trees/treeGenerator'] = load('@/babylon/world/trees/treeGenerator')
+    dependencies['./trees/treeRenderer'] = {TreeRenderer: class {
+        setRevealTargets() {}
+        setSurfaceDetail() {}
+        rebuild(placements) {batches.push(placements.map(tree => tree.detail))}
+    }}
     const {TreeManager: manager} = load('@/babylon/world/treeManager')
-    manager.renderTrees = () => {}
-    for (const [type, x, z, size] of [[1, 4, 4, .5], [5, 8, 8, 5], [2, 10, 8, 2]]) manager.addTree({type, x, z, size})
+    await manager.initialize({onDisposeObservable: {addOnce() {}}}, null)
+    const points = [[1, 4, 4, .5], [5, 8, 8, 5], [2, 10, 8, 2], [17, 14, 14, 1], [18, 3, 12, 1.2]]
+    for (const [type, x, z, size] of points) assert.equal(manager.addTree({type, x, z, size}), true)
+    const items = points.map(([, x, z]) => manager.getTreeAt(x, z))
+    assert.equal(manager.addTree({type: 1, x: 4, z: 4, size: .5, level: 2}), false)
+    assert.equal(manager.getTreeAt(4, 4).level, 2)
+    manager.renderTrees(false)
+    settings.treesEnabled = false
+    manager.renderTrees(false)
+    manager.renderTrees(false)
+    assert.deepEqual(batches, [['HIGH', 'HIGH', 'SHADOW', 'SHADOW', 'HIGH'], []])
+    assert.equal(manager.visibleTrees.length, 0)
+    assert.equal(manager.isAnyTreeInDistance(new core.Vector3(4, 0, 4), 1.5), true)
+    settings.treesEnabled = true
+    manager.renderTrees(false)
+    assert.deepEqual(batches.at(-1), batches[0])
     for (let x = 0; x <= 15; x += .17) for (let z = 0; z <= 15; z += .19) {
         for (const size of [.4, .8, 2]) {
-            const expected = manager.allTrees.find(tree => Math.abs(tree.position.x - x) < (tree.scale * .75 + size) / 2
+            const expected = items.find(tree => Math.abs(tree.position.x - x) < (tree.scale * .75 + size) / 2
                 && Math.abs(tree.position.z - z) < (tree.scale * .75 + size) / 2)
             assert.deepEqual(manager.getPointInTree(x, z, size), expected ? {x: expected.position.x, z: expected.position.z} : null)
         }
     }
     manager.removeTreeAt(8, 8)
     assert.equal(manager.getPointInTree(7, 8, .4), null)
+    assert.equal(manager.getTreeAt(8, 8), undefined)
     manager.clearWorld()
     assert.equal(manager.collisionGrid.cells.size, 0)
     manager.addTree({type: 1, x: 4, z: 4, size: 1})

@@ -25,7 +25,7 @@ export const TreeLevelOverlay = {
             const level = tree.level ?? 1
             if (level <= 1) continue
             this.labelPosition.copyFrom(tree.position)
-            this.labelPosition.y += 4 * tree.scale
+            this.labelPosition.y += tree.visualHeight
             const screenPosition = ViewportManager.getPositionOnScreen(this.labelPosition)
             if (!screenPosition) continue
             const label = String(level)

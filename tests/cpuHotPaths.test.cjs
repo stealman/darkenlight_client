@@ -247,27 +247,36 @@ test('effect synchronization visits visible entities and ends effects when entit
     assert.equal(gfx.characterAffectKeys, keys[0]); assert.equal(gfx.monsterAffectKeys, keys[1])
 })
 
-test('tree fade updates only visible trees and still completes the return to opaque rendering', () => {
+test('tree reveal forwards the player and selected target without rebuilding geometry', async () => {
+    const core = await import('@babylonjs/core/index.js')
+    const player = {getModelHeight: () => 2}
+    const target = {getModelHeight: () => 3, pos: new core.Vector3(8, 1, 9)}
+    const myPlayer = {myChar: player, myModel: {node: {getAbsolutePosition: () => new core.Vector3(2, 0, 3)}}}
+    const targeting = {selectedTarget: target}
     let rebuilds = 0
+    let reveals
     const {TreeManager: trees} = loadModule('babylon/world/treeManager.ts', {
-        '@/babylon/world/worldRenderer': {WorldRenderer: {renderWorld() {rebuilds++}}},
-        '@/babylon/scene/lights': {Lights: {removeShadowCaster() {}}},
+        '@babylonjs/core': core,
+        './collisionGrid': loadModule('babylon/world/collisionGrid.ts', {}),
+        './trees/treeGenerator': {TreeVariants: class { warmUp() {} }},
+        './trees/treeRenderer': {TreeRenderer: class {
+            setRevealTargets(...args) {reveals = args}
+            rebuild() {rebuilds++}
+        }},
+        '@/data/myPlayer': {MyPlayer: myPlayer},
+        '@/gui/targettingManager': {TargetingManager: targeting},
+        '@/settings/settings': {Settings: {treesEnabled: true}},
     })
-    trees.allTrees.forEach = () => {throw new Error('scanned every loaded tree')}
-    const mesh = {visibility: .5, dispose() {}}
-    const tree = {fadeVisibility: .5, fadeTarget: 1, fadedMeshes: [mesh]}
-    trees.visibleTrees.push(tree)
-    trees.occlusionCheckFrame = 0
-    trees.onFrame(.1, null)
-    assert.ok(tree.fadeVisibility > .5 && tree.fadeVisibility < 1)
-    assert.equal(mesh.visibility, tree.fadeVisibility)
+    await trees.initialize({onDisposeObservable: {addOnce() {}}}, null)
+    trees.onFrame()
+    assert.deepEqual(reveals[0].asArray(), [2, 1.1, 3])
+    assert.deepEqual(reveals[1].asArray(), [8, 1 + 3 * .55, 9])
+    assert.equal(reveals[4], 3 * .60)
+    targeting.selectedTarget = player
+    trees.onFrame()
+    assert.equal(reveals.length, 1)
+    myPlayer.myModel = null
+    trees.onFrame()
+    assert.deepEqual(reveals, [null])
     assert.equal(rebuilds, 0)
-    trees.visibleTrees.length = 0
-    trees.onFrame(.1, null)
-    assert.equal(rebuilds, 0)
-    trees.visibleTrees.push(tree)
-    trees.onFrame(1, null)
-    assert.equal(tree.fadeVisibility, 1)
-    assert.equal(tree.fadedMeshes.length, 0)
-    assert.equal(rebuilds, 1)
 })

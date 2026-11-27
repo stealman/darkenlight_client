@@ -242,7 +242,6 @@ export const Renderer = {
             WorldRenderer.checkRenderWorld()
             if (IndoorTerrainOcclusionManager.onFrame(timeRate)) WorldRenderer.renderWorld()
             StaticsManager.onFrame(timeRate, actualTime)
-            TreeManager.onFrame(timeRate, this.camera)
             BuildingManager.onFrame(timeRate, this.camera)
             Lights.onFrame(timeRate)
             StepMarksRenderer.field?.onFrame(actualTime, Lights.indoor ? 1 : Lights.localLightFactor)
@@ -257,6 +256,7 @@ export const Renderer = {
             GfxManager.onFrame(actualTime)
             ArrowsManager.onFrame(timeRate, actualTime)
             TargetingManager.onFrame(timeRate, actualTime)
+            TreeManager.onFrame()
             OverlayManager.updateTargetMarkers(actualTime, Settings.targetMarkerOpacity)
             OnScreenMessageManager.onFrame(actualTime)
             if (!Settings.isDetalLevelLow()) {

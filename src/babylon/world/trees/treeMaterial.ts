@@ -8,7 +8,7 @@ import type { TreeSurfaceDetail } from './treeSpecies'
 
 const PALETTE = ['#695741', '#ded1b5', '#cc933a', '#71503a', '#626b46', '#566348', '#677148']
 
-export function createTreeMaterial(scene: Scene, detail: TreeSurfaceDetail, reveal: Vector4) {
+export function createTreeMaterial(scene: Scene, detail: TreeSurfaceDetail, reveal: Vector4, targetReveal: Vector4) {
     const weathering = detail !== 'LOW'
     const high = detail === 'HIGH'
     const material = new PBRCustomMaterial('proceduralTreeSurface:' + detail, scene)
@@ -18,6 +18,7 @@ export function createTreeMaterial(scene: Scene, detail: TreeSurfaceDetail, reve
     material.environmentIntensity = .92
     material.maxSimultaneousLights = 4
     material.AddUniform('treeReveal', 'vec4', reveal)
+    material.AddUniform('treeTargetReveal', 'vec4', targetReveal)
     for (const attribute of ['treeSurface', 'treeStyle', 'treeShape', 'treeJointA', 'treeJointB', 'treeOpacity']) material.AddAttribute(attribute)
     const varying = `
         varying vec4 vTreeSurface;
@@ -77,6 +78,16 @@ export function createTreeMaterial(scene: Scene, detail: TreeSurfaceDetail, reve
         float treeBayer2(vec2 cell) {
             return cell.y * 3.0 + cell.x * (2.0 - cell.y * 4.0);
         }
+        float treeRevealCoverage(vec4 reveal) {
+            if (reveal.z > 0.0 && gl_FragCoord.z * sign(reveal.w) < reveal.w) {
+                vec2 pixelOffset = gl_FragCoord.xy - reveal.xy;
+                float radiusSquared = dot(pixelOffset, pixelOffset) * reveal.z;
+                if (radiusSquared < 1.0) {
+                    return mix(0.30, 1.0, smoothstep(0.23, 1.0, sqrt(radiusSquared)));
+                }
+            }
+            return 1.0;
+        }
         vec2 treeGrainCoverage(vec2 phase) {
             return 1.0 - smoothstep(0.55, 1.8, fwidth(phase));
         }
@@ -91,15 +102,8 @@ export function createTreeMaterial(scene: Scene, detail: TreeSurfaceDetail, reve
     `)
     material.Fragment_MainBegin(`
         #ifndef SM_NORMALBIAS
-        float treeCoverage = vTreeOpacity;
-        if (treeReveal.z > 0.0 && gl_FragCoord.z * sign(treeReveal.w) < treeReveal.w) {
-            vec2 pixelOffset = gl_FragCoord.xy - treeReveal.xy;
-            float radiusSquared = dot(pixelOffset, pixelOffset) * treeReveal.z;
-            if (radiusSquared < 1.0) {
-                // Match coverage across branch layers and feather it in screen-space distance.
-                treeCoverage *= mix(0.30, 1.0, smoothstep(0.23, 1.0, sqrt(radiusSquared)));
-            }
-        }
+        // Overlapping cutouts and intersecting branches share the same screen-space holes.
+        float treeCoverage = vTreeOpacity * min(treeRevealCoverage(treeReveal), treeRevealCoverage(treeTargetReveal));
         if (treeCoverage < 0.999) {
             vec2 cell = floor(gl_FragCoord.xy);
             float threshold = treeBayer2(mod(cell, 2.0)) * 4.0 + treeBayer2(mod(floor(cell * 0.5), 2.0));

@@ -37,7 +37,8 @@ function installFogAlphaFadeShader(): boolean {
     const fragmentName = 'gpuRenderParticlesPixelShader'
     const vertex = ShaderStore.ShadersStore[vertexName]
     const fragment = ShaderStore.ShadersStore[fragmentName]
-    if (vertex?.includes('float fogTerrainHeight(') && fragment?.includes('float fogTerrainHeight(')) {
+    const groundHeightVarying = 'varying float vFogHeightAboveGround;'
+    if (vertex?.includes(groundHeightVarying) && fragment?.includes(groundHeightVarying)) {
         fogAlphaFadeShaderInstalled = true
         return true
     }
@@ -51,7 +52,13 @@ vColor.a=color.a*smoothstep(0.0,0.22,ratio)*(1.0-smoothstep(0.55,1.0,ratio));
     const project = 'gl_Position=projection*viewPosition;'
     const color = 'gl_FragColor=textureColor*vColor;'
     if (!vertex?.includes(source) || !vertex.includes(project) || !fragment?.includes(color)) return false
-    const terrainLookup = `
+    const groundHeightDeclaration = `
+#ifdef FOGGY_AREA_GROUND
+${groundHeightVarying}
+#endif
+`
+    ShaderStore.ShadersStore[vertexName] = vertex
+        .replace('void main() {', groundHeightDeclaration + `
 #ifdef FOGGY_AREA_GROUND
 uniform sampler2D fogTerrain;
 uniform vec4 fogTerrainBounds;
@@ -60,29 +67,23 @@ float fogTerrainHeight(vec2 worldXZ) {
     return texture2D(fogTerrain, (tile + 0.5) / fogTerrainBounds.zw).r;
 }
 #endif
-`
-    ShaderStore.ShadersStore[vertexName] = vertex
-        .replace('void main() {', terrainLookup + 'void main() {')
+void main() {`)
         .replace(source, replacement)
         .replace(project, `
 #ifdef FOGGY_AREA_GROUND
 // The particle simulation stores Y relative to the terrain. Flatten the
 // billboard in world Y and place it at the height of its drifting center.
-vPositionW.y = position.y + (vPositionW.y - position.y) * 0.28 + fogTerrainHeight(position.xz);
+vFogHeightAboveGround = position.y + (vPositionW.y - position.y) * 0.28;
+vPositionW.y = vFogHeightAboveGround + fogTerrainHeight(position.xz);
 viewPosition = view * vec4(vPositionW, 1.0);
 #endif
 ${project}`)
     ShaderStore.ShadersStore[fragmentName] = fragment
-        .replace('void main() {', terrainLookup + `
-#ifdef FOGGY_AREA_GROUND
-varying vec3 vPositionW;
-#endif
-void main() {`)
+        .replace('void main() {', groundHeightDeclaration + 'void main() {')
         .replace(color, `${color}
 #ifdef FOGGY_AREA_GROUND
-float aboveGround = vPositionW.y - fogTerrainHeight(vPositionW.xz);
-gl_FragColor.a *= smoothstep(0.0, 0.12, aboveGround)
-    * (1.0 - smoothstep(0.85, ${GROUND_FOG_TOP}, aboveGround));
+gl_FragColor.a *= smoothstep(0.0, 0.12, vFogHeightAboveGround)
+    * (1.0 - smoothstep(0.85, ${GROUND_FOG_TOP}, vFogHeightAboveGround));
 #endif`)
     fogAlphaFadeShaderInstalled = true
     return true

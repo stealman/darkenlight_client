@@ -62,6 +62,7 @@ export const Settings = {
     targetMarkerOpacity: 1,
     glowLayerOverride: null as boolean | null,
     foggyAreasOverride: null as boolean | null,
+    treesEnabled: true,
 
     hudSize: 1 as number,
     joystickSize: 100 as number,
@@ -99,6 +100,7 @@ export const Settings = {
         }
         this.detailLevelName = storedSettings.detailLevelName
         this.foggyAreasOverride = typeof storedSettings.foggyAreasOverride === 'boolean' ? storedSettings.foggyAreasOverride : null
+        this.treesEnabled = storedSettings.treesEnabled !== false
 
         this.brightness = clampBrightness(parseFloat(storedSettings.brightness))
         const storedCameraDistance = parseFloat(storedSettings.cameraDistance)
@@ -166,6 +168,7 @@ export const Settings = {
             ambientVolume: 1,
             glowLayerOverride: null as boolean | null,
             foggyAreasOverride: null as boolean | null,
+            treesEnabled: true,
             targetMarkerOpacity: 1,
             hudSize: 1,
 

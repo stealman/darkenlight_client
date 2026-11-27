@@ -11,7 +11,7 @@ const stone = [
     'ROCK1', 'ROCK1_BEIGE', 'TERRAIN_ROCK', 'BRICK_RED', 'BRICK_GRAY', 'BRICK_BLACK', 'BRICK_DARK_GRAY',
 ] as const
 const wood = [
-    'WOOD_1', 'WOOD_2', 'WOOD_3', 'WOOD_PLANKS', 'WOOD_PLANKS_DARK', 'WOOD_CUT', 'BIRCH_BARK', 'WILLOW_BARK',
+    'WOOD_1', 'WOOD_2', 'WOOD_3', 'WOOD_PLANKS', 'WOOD_PLANKS_DARK', 'WOOD_CUT',
 ] as const
 const matchesAtlasCells = (cells: readonly (typeof stone[number] | typeof wood[number])[]) => cells
     .map(cell => MaterialEnum1[cell].uv)

@@ -10,6 +10,7 @@ import {getDamagePositionSuffix} from '@/gui/combatText'
 import { OverlayManager } from '@/gui/overlay/overlayManager'
 import { MonsterManager } from '@/babylon/monsters/monsterManager'
 import { TreeManager } from '@/babylon/world/treeManager'
+import type { TreeData } from '@/babylon/world/treeManager'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { MiniMap } from '@/utils/minimap'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
@@ -519,14 +520,8 @@ export const MessageProcessor = {
             || (chunk.equipmentDecorations ?? []).some(point => near(point))
     },
 
-    processAddTree(data) {
-        const existing = TreeManager.allTrees.find(tree => tree.position.x === data.x && tree.position.z === data.z)
-        if (existing) {
-            existing.level = data.level ?? 1
-            return
-        }
-        TreeManager.addTree(data)
-        WorldRenderer.renderWorld()
+    processAddTree(data: TreeData) {
+        if (TreeManager.addTree(data)) WorldRenderer.renderWorld()
     },
 
     processRemoveTree(data) {

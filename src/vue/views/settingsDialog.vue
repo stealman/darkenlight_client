@@ -166,6 +166,8 @@
                             <tr>
                                 <td class="item-label"><label for="glow-layer-enabled">{{ t('settings.glowLayer') }}</label></td>
                                 <td><Checkbox input-id="glow-layer-enabled" v-model="glowLayerEnabled" binary /></td>
+                                <td class="item-label"><label for="trees-enabled">{{ t('settings.trees') }}</label></td>
+                                <td><Checkbox input-id="trees-enabled" v-model="treesEnabled" binary /></td>
                             </tr>
                         </tbody>
                     </table>
@@ -317,6 +319,7 @@ import { BRIGHTNESS_MAX, BRIGHTNESS_MIN, Settings } from '@/settings/settings'
 import { Renderer } from '@/babylon/scene/renderer'
 import { Lights } from '@/babylon/scene/lights'
 import { FoggyAreaManager } from '@/babylon/world/foggyAreaManager'
+import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { ActionButtonsManager } from '@/gui/actionButtonsManager'
 import { TargetingManager } from '@/gui/targettingManager'
 import { ViewportManager } from '@/utils/viewport'
@@ -340,6 +343,14 @@ const glowLayerEnabled = computed({
     set: (enabled) => {
         storedSettings.value.glowLayerOverride = enabled
         Renderer.updateSpellGlow()
+        storeSettings()
+    },
+})
+const treesEnabled = computed({
+    get: () => storedSettings.value.treesEnabled,
+    set: (enabled) => {
+        storedSettings.value.treesEnabled = enabled
+        WorldRenderer.refreshTreeRendering()
         storeSettings()
     },
 })
@@ -521,6 +532,7 @@ const miniMapSizeChanged = () => {
 const restoreDefaultSettings = () => {
     const defaultSettings = Settings.getDefaultSettings()
     const detailLevelChanged = storedSettings.value.detailLevelName !== defaultSettings.detailLevelName
+    const treeRenderingChanged = storedSettings.value.treesEnabled !== defaultSettings.treesEnabled
 
     Object.assign(storedSettings.value, defaultSettings)
     storedSettings.value.setDetailLevel(defaultSettings.detailLevelName)
@@ -529,6 +541,7 @@ const restoreDefaultSettings = () => {
     Settings.setVolume(defaultSettings.volume)
     Settings.setAmbientVolume(defaultSettings.ambientVolume)
     FoggyAreaManager.refreshVisibleAreas()
+    if (treeRenderingChanged) WorldRenderer.refreshTreeRendering()
     setLocale(defaultSettings.language)
     Renderer.brightnessChanged()
     Lights.brightnessChanged()

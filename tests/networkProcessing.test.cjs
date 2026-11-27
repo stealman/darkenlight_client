@@ -39,7 +39,7 @@ test('danger skull counts arrive with spawns and update only in the current worl
 
 test('world mutation messages render once through the complete world renderer', async () => {
     const calls = []
-    const TreeManager = {addTree() {calls.push('addTree')}, removeTreeAt() {calls.push('removeTree')},
+    const TreeManager = {addTree(data) {calls.push('addTree'); return data.levelOnly !== true}, removeTreeAt() {calls.push('removeTree')},
         renderTrees() {calls.push('trees')}}
     const StaticsManager = {addObject() {calls.push('addStatic')}, removeObjects() {calls.push('removeStatics')},
         removeObjectAt() {calls.push('removeStatic')}, renderObjects() {calls.push('statics')}}
@@ -56,6 +56,9 @@ test('world mutation messages render once through the complete world renderer', 
         await processor.processResponse([{t: type, d: data}])
         assert.deepEqual(calls, [expected, 'world', 'trees', 'statics'])
     }
+    calls.length = 0
+    await processor.processResponse([{t: 13, d: {levelOnly: true}}])
+    assert.deepEqual(calls, ['addTree'])
 })
 
 test('map-before-login ordering and the asynchronous login barrier remain intact', async () => {

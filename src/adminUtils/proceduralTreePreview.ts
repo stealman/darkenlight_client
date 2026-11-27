@@ -106,7 +106,7 @@ export function createProceduralTreePreview(scene: Scene, parent: TransformNode,
     }
     const hideMannequin = () => {
         mannequin?.setEnabled(false)
-        renderer?.setRevealTarget(null)
+        renderer?.setRevealTargets(null)
     }
     revealEnabled.onchange = () => {
         revealAngle.disabled = !revealEnabled.checked
@@ -121,7 +121,7 @@ export function createProceduralTreePreview(scene: Scene, parent: TransformNode,
         mannequin.position.set(position.x + Math.cos(angle) * distance, position.y, position.z + Math.sin(angle) * distance)
         mannequin.rotation.y = Math.PI / 2 - view.alpha
         revealCenter.copyFrom(mannequin.position).addInPlaceFromFloats(0, .87, 0)
-        renderer.setRevealTarget(revealCenter, view)
+        renderer.setRevealTargets(revealCenter, null, view)
     })
     scene.onDisposeObservable.addOnce(() => renderer?.dispose())
 

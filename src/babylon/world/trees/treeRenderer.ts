@@ -17,7 +17,7 @@ export interface TreePlacement {
     opacity?: number
 }
 
-interface Span { start: number, end: number }
+interface Span { start: number, end: number, offsetY: number }
 const BUFFERS = {matrix: 16, treeStyle: 4, treeShape: 4, treeJointA: 4, treeJointB: 4, treeOpacity: 1} as const
 type BufferName = keyof typeof BUFFERS
 const bufferNames = Object.keys(BUFFERS) as BufferName[]
@@ -66,7 +66,7 @@ class TreeBatch {
             part.endJoint?.toArray(this.buffers.treeJointB, offset)
             this.buffers.treeOpacity[this.count++] = placement.opacity ?? 1
         }
-        if (start !== this.count) this.spans.set(placement.id, {start, end: this.count})
+        if (start !== this.count) this.spans.set(placement.id, {start, end: this.count, offsetY: 0})
     }
 
     upload() {
@@ -90,6 +90,17 @@ class TreeBatch {
         values.fill(opacity, span.start, span.end)
         this.mesh.thinInstancePartialBufferUpdate('treeOpacity', values.subarray(span.start, span.end), span.start)
     }
+
+    setYOffset(id: number, offsetY: number) {
+        const span = this.spans.get(id)
+        if (!span || span.offsetY === offsetY) return
+        const start = span.start * 16, end = span.end * 16
+        const delta = offsetY - span.offsetY
+        const matrices = this.buffers.matrix
+        for (let i = start + 13; i < end; i += 16) matrices[i] += delta
+        span.offsetY = offsetY
+        this.mesh.thinInstancePartialBufferUpdate('matrix', matrices.subarray(start, end), start)
+    }
 }
 
 /** One source mesh per cross section or crown shape across all species. */
@@ -102,18 +113,24 @@ export class TreeRenderer {
     private readonly rotation = Quaternion.Identity()
     private readonly reveal = Vector4.Zero()
     private readonly revealCenter = Vector3.Zero()
+    private readonly targetReveal = Vector4.Zero()
+    private readonly targetRevealCenter = Vector3.Zero()
     private readonly revealProjection = Vector3.Zero()
     private revealRadius = 0
+    private targetRevealRadius = 0
     private revealCamera?: Camera
     private readonly revealObserver: Observer<Camera>
 
     constructor(
         private readonly scene: Scene,
         private readonly parent: TransformNode,
-        private readonly addShadowCaster: (mesh: Mesh) => void,
-        private readonly removeShadowCaster: (mesh: Mesh) => void,
+        private readonly addShadowCaster: (mesh: Mesh, shape: TreeShape, shadowOnly: boolean) => void,
+        private readonly removeShadowCaster: (mesh: Mesh, shape: TreeShape, shadowOnly: boolean) => void,
     ) {
-        this.revealObserver = scene.onBeforeCameraRenderObservable.add(camera => this.projectReveal(camera))
+        this.revealObserver = scene.onBeforeCameraRenderObservable.add(camera => {
+            this.projectReveal(camera, this.revealCenter, this.revealRadius, this.reveal)
+            this.projectReveal(camera, this.targetRevealCenter, this.targetRevealRadius, this.targetReveal)
+        })
     }
 
     setSurfaceDetail(detail: TreeSurfaceDetail) {
@@ -149,29 +166,35 @@ export class TreeRenderer {
         for (const batch of this.batches.values()) batch.setOpacity(id, opacity)
     }
 
-    setRevealTarget(center: Vector3 | null, camera?: Camera, radius = 1.3) {
-        this.revealRadius = center ? radius : 0
-        this.revealCamera = camera
-        if (center) this.revealCenter.copyFrom(center)
+    setYOffset(id: number, offsetY: number) {
+        for (const batch of this.batches.values()) batch.setYOffset(id, offsetY)
     }
 
-    private projectReveal(camera: Camera) {
-        this.reveal.z = 0
-        if (this.revealRadius <= 0 || (this.revealCamera && this.revealCamera !== camera)) return
+    setRevealTargets(center: Vector3 | null, target: Vector3 | null = null, camera?: Camera, radius = 1.3, targetRadius = radius) {
+        this.revealRadius = center ? radius : 0
+        this.targetRevealRadius = target ? targetRadius : 0
+        this.revealCamera = camera
+        if (center) this.revealCenter.copyFrom(center)
+        if (target) this.targetRevealCenter.copyFrom(target)
+    }
+
+    private projectReveal(camera: Camera, center: Vector3, radius: number, reveal: Vector4) {
+        reveal.z = 0
+        if (radius <= 0 || (this.revealCamera && this.revealCamera !== camera)) return
 
         const point = this.revealProjection
         const projection = camera.getProjectionMatrix()
-        Vector3.TransformCoordinatesToRef(this.revealCenter, camera.getViewMatrix(), point)
+        Vector3.TransformCoordinatesToRef(center, camera.getViewMatrix(), point)
         const depth = this.scene.useRightHandedSystem ? -point.z : point.z
         if (depth <= camera.minZ || depth >= camera.maxZ) return
         Vector3.TransformCoordinatesToRef(point, projection, point)
         const engine = this.scene.getEngine()
         const {x, y, width, height} = camera.viewport
-        const pixelRadius = this.revealRadius * Math.abs(projection.m[5]) * height * engine.getRenderHeight() / 2
+        const pixelRadius = radius * Math.abs(projection.m[5]) * height * engine.getRenderHeight() / 2
             / (camera.mode === Camera.PERSPECTIVE_CAMERA ? depth : 1)
         if (pixelRadius < 1) return
         const depthBuffer = engine.isNDCHalfZRange ? point.z : (point.z + 1) * 0.5
-        this.reveal.set(
+        reveal.set(
             (x + (point.x + 1) * width * 0.5) * engine.getRenderWidth(),
             (y + (point.y + 1) * height * 0.5) * engine.getRenderHeight(),
             1 / (pixelRadius * pixelRadius),
@@ -190,10 +213,15 @@ export class TreeRenderer {
         return {colorBatches, casterBatches, triangles}
     }
 
+    async warmUp() {
+        await Promise.all([...this.batches.values()].filter(batch => batch.count > 0)
+            .map(({mesh}) => mesh.material?.forceCompilationAsync(mesh, {useInstances: true})))
+    }
+
     dispose() {
         this.revealObserver.remove()
-        for (const {mesh} of this.batches.values()) {
-            this.removeShadowCaster(mesh)
+        for (const {mesh, shape, shadowOnly} of this.batches.values()) {
+            this.removeShadowCaster(mesh, shape, shadowOnly)
             mesh.dispose()
         }
         this.batches.clear()
@@ -204,7 +232,7 @@ export class TreeRenderer {
     private getMaterial() {
         let material = this.materials.get(this.surfaceDetail)
         if (!material) {
-            material = createTreeMaterial(this.scene, this.surfaceDetail, this.reveal)
+            material = createTreeMaterial(this.scene, this.surfaceDetail, this.reveal, this.targetReveal)
             this.materials.set(this.surfaceDetail, material)
         }
         return material
@@ -224,7 +252,7 @@ export class TreeRenderer {
         mesh.receiveShadows = !shadowOnly
         if (shadowOnly) mesh.layerMask = 0
         mesh.setEnabled(false)
-        this.addShadowCaster(mesh)
+        this.addShadowCaster(mesh, shape, shadowOnly)
         const batch = new TreeBatch(mesh, shape, shadowOnly)
         this.batches.set(key, batch)
         return batch

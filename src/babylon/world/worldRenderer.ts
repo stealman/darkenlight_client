@@ -116,7 +116,7 @@ export const WorldRenderer = {
 
         // Initialize managers
         await TerrainManager.initialize(scene)
-        TreeManager.initialize(scene)
+        await TreeManager.initialize(scene, this.worldParentNode)
         StaticsManager.initialize(scene)
         BuildingManager.initialize(scene, this.worldParentNode)
         FoggyAreaManager.initialize(scene)
@@ -131,7 +131,6 @@ export const WorldRenderer = {
         Lights.addShadowCaster(ArchedMasonryBatch.prefab!.mesh, true, true)
         // Transparent/alpha world geometry is not a local static-light caster.
         Lights.addShadowCaster(this.blockWithAlpha1.mesh, true)
-        TreeManager.addAllShadowCasters()
     },
 
     checkRenderWorld() {
@@ -149,6 +148,11 @@ export const WorldRenderer = {
                 this.lastPos.set(Math.round(x), Math.round(y), Math.round(z))
             }
         }
+    },
+
+    refreshTreeRendering() {
+        TreeManager.renderTrees(TerrainManager.usesOutdoorTerrain())
+        Lights.invalidateStaticShadowMaps()
     },
 
     /**
@@ -172,7 +176,7 @@ export const WorldRenderer = {
         const outdoorTerrain = TerrainManager.renderTerrain(snowCoverMask)
 
         // Render trees
-        TreeManager.renderTrees()
+        TreeManager.renderTrees(outdoorTerrain)
 
         // Render statics
         // Visibility and render captures were prepared before terrain contact shadows.
@@ -418,7 +422,7 @@ export const WorldRenderer = {
     async warmUpOcclusionFadeShaders() {
         try {
             await Promise.all([
-                TreeManager.warmUpFadeShaders(),
+                TreeManager.warmUpShaders(),
                 BuildingManager.warmUpFadeShader(),
                 IndoorTerrainOcclusionManager.warmUpFadeShader(),
             ])

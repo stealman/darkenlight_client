@@ -31,48 +31,13 @@
         </div>
     </div>
 
-    <!-- TREES -->
     <div style="margin-top: 2vh">
-        <div style="margin-top: 1vh">
-            <label class="tree-item" :class="{ selected: 'OAK' === selectedTreeType }" @click="selectTreeType('OAK')">Oak</label>
-            &nbsp;&nbsp;
-            <select v-if="selectedTreeType === 'OAK'" @change="selectTree($event.target.value)">
-                <option v-for="tree in trees.filter(t => t.type ==='OAK')" :key="tree.id" :value="tree.id" :selected="tree.id === selectedTree">
-                    {{ tree.name }}
-                </option>
-            </select>
-        </div>
-        <div style="margin-top: 1vh">
-            <label class="tree-item" :class="{ selected: 'PINE' === selectedTreeType }" @click="selectTreeType('PINE')">Pine</label>
-            &nbsp;&nbsp;
-            <select v-if="selectedTreeType === 'PINE'" @change="selectTree($event.target.value)">
-                <option v-for="tree in trees.filter(t => t.type ==='PINE')" :key="tree.id" :value="tree.id" :selected="tree.id === selectedTree">
-                    {{ tree.name }}
-                </option>
-            </select>
-        </div>
+        <button v-for="(types, species) in WORLD_TREE_TYPES" :key="species" type="button"
+                class="tree-item" :class="{ selected: selectedTree === types.ids[0] }"
+                :aria-pressed="selectedTree === types.ids[0]" @click="selectTree(types.ids[0])">
+            {{ TREE_SPECIES[species].name }}
+        </button>
     </div>
-
-    <div style="margin-top: 1vh">
-        <label class="tree-item" :class="{ selected: 'BIRCH' === selectedTreeType }" @click="selectTreeType('BIRCH')">Birch</label>
-        &nbsp;&nbsp;
-        <select v-if="selectedTreeType === 'BIRCH'" @change="selectTree($event.target.value)">
-            <option v-for="tree in trees.filter(t => t.type === 'BIRCH')" :key="tree.id" :value="tree.id" :selected="tree.id === selectedTree">
-                {{ tree.name }}
-            </option>
-        </select>
-    </div>
-
-    <div style="margin-top: 1vh">
-        <label class="tree-item" :class="{ selected: 'WILLOW' === selectedTreeType }" @click="selectTreeType('WILLOW')">Willow</label>
-        &nbsp;&nbsp;
-        <select v-if="selectedTreeType === 'WILLOW'" @change="selectTree($event.target.value)">
-            <option v-for="tree in trees.filter(t => t.type === 'WILLOW')" :key="tree.id" :value="tree.id" :selected="tree.id === selectedTree">
-                {{ tree.name }}
-            </option>
-        </select>
-    </div>
-
     <!-- SHRUBS -->
     <div style="margin-top: 1vh">
         <div style="margin-top: 1vh">
@@ -110,6 +75,7 @@
 <script setup>
 
 import { GMManager } from '@/gm/GM'
+import { TREE_SPECIES, WORLD_TREE_TYPES } from '@/babylon/world/trees/treeSpecies'
 import { ref, watch, nextTick } from 'vue'
 
 const treeLevelInput = ref(null)
@@ -121,30 +87,10 @@ watch(GMManager.editingTree, async (tree) => {
 })
 
 // Biome edit constants
-const selectedTreeType = ref("")
 const selectedTree = GMManager.selectedTree
 const selectedShrubType = ref("")
 const selectedShrub = GMManager.selectedShrub
 const grassTool = GMManager.grassTool
-
-const trees = [
-    { type: "OAK", name: "Oak_1", id: 1 },
-    { type: "OAK", name: "Oak_2", id: 2 },
-    { type: "OAK", name: "Oak_3", id: 3 },
-    { type: "OAK", name: "Oak_4", id: 4 },
-    { type: "PINE", name: "Pine_1", id: 5 },
-    { type: "PINE", name: "Pine_2", id: 6 },
-    { type: "PINE", name: "Pine_3", id: 7 },
-    { type: "PINE", name: "Pine_4", id: 8 },
-    { type: "BIRCH", name: "Birch_1", id: 9 },
-    { type: "BIRCH", name: "Birch_2", id: 10 },
-    { type: "BIRCH", name: "Birch_3", id: 11 },
-    { type: "BIRCH", name: "Birch_4", id: 12 },
-    { type: "WILLOW", name: "Willow_1", id: 13 },
-    { type: "WILLOW", name: "Willow_2", id: 14 },
-    { type: "WILLOW", name: "Willow_3", id: 15 },
-    { type: "WILLOW", name: "Willow_4", id: 16 }
-]
 
 const shrubs = [
     { type: "SHRUB2x2", name: "Shrub2x2_1", id: 101 },
@@ -163,32 +109,18 @@ const shrubs = [
     { type: "SHRUB1x1_SMALL", name: "Shrub1x1_S_4", id: 144 },
 ]
 
-const selectTreeType = (type) => {
-    grassTool.value = null
-    selectedShrub.value = 0
-    GMManager.editingTree.value = null
-    selectedTreeType.value = type
-    selectedShrubType.value = ""
-
-    // Preselect first tree of that type
-    const firstTree = trees.find(t => t.type === type)
-    if (firstTree) {
-        selectedTree.value = firstTree.id
-    }
-}
-
 const selectTree = (id) => {
+    grassTool.value = null
     GMManager.editingTree.value = null
-    selectedTree.value = parseInt(id)
+    selectedTree.value = id
     selectedShrub.value = 0
+    selectedShrubType.value = ""
 }
-
 const selectShrubType = (type) => {
     grassTool.value = null
     selectedTree.value = 0
     GMManager.editingTree.value = null
     selectedShrubType.value = type
-    selectedTreeType.value = ""
 
     // Preselect first shrub of that type
     const firstShrub = shrubs.find(s => s.type === type)
@@ -208,7 +140,6 @@ const selectNone = () => {
     GMManager.editingTree.value = null
     selectedTree.value = 0
     selectedShrub.value = 0
-    selectedTreeType.value = ""
     selectedShrubType.value = ""
 }
 
@@ -228,7 +159,6 @@ const selectDelete = () => {
     GMManager.editingTree.value = null
     selectedTree.value = -1
     selectedShrub.value = -1
-    selectedTreeType.value = ""
     selectedShrubType.value = ""
 }
 </script>

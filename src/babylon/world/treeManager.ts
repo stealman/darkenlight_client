@@ -1,835 +1,234 @@
-import { Camera, Matrix, Mesh, PBRMaterial, Scene, Vector2, Vector3, VertexBuffer } from '@babylonjs/core'
-import { Prefab, WorldRenderer } from '@/babylon/world/worldRenderer'
-import { MaterialAlphaEnum1, MaterialEnum1, Materials } from '@/babylon/materials'
+﻿import { Scene, TransformNode, Vector3 } from '@babylonjs/core'
+import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { WorldDataManager } from '@/data/worldDataManager'
-import { ViewportManager } from '@/utils/viewport'
-import { PrefabOak } from '@/babylon/world/prefabs/treeOak'
-import { PrefabFir } from '@/babylon/world/prefabs/treeFir'
-import { PrefabBirch } from '@/babylon/world/prefabs/treeBirch'
-import { PrefabWillow, WILLOW_WOOD_BLOCKS } from '@/babylon/world/prefabs/treeWillow'
-import { Lights } from '@/babylon/scene/lights'
 import { MyPlayer } from '@/data/myPlayer'
+import { ViewportManager } from '@/utils/viewport'
 import { TargetingManager } from '@/gui/targettingManager'
-import { segmentIntersectsAabb } from '@/babylon/geometryUtils'
-import { CollisionGrid } from '@/babylon/world/collisionGrid'
-import { SNOW_CONTACT_MAX_HEIGHT, TREE_DAMP_MAX_HEIGHT } from '@/babylon/world/statics/staticTerrainContact'
-import { configureStaticBlockDamage } from '@/babylon/world/statics/staticBlockDamage'
+import { Lights } from '@/babylon/scene/lights'
+import { Settings } from '@/settings/settings'
+import { TerrainEnum1 } from '@/babylon/materials'
+import { CollisionGrid } from './collisionGrid'
+import { outdoorSurfaceHeight } from './terrainRoofShape'
+import { createStaticVariation } from './statics/staticVariation'
+import { TreeVariants } from './trees/treeGenerator'
+import type { TreePlacement, TreeRenderer } from './trees/treeRenderer'
+import { TREE_SPECIES_BY_TYPE, TREE_VARIANT_COUNT, WORLD_TREE_TYPES } from './trees/treeSpecies'
+import type { TreeShape, TreeSurfaceDetail } from './trees/treeSpecies'
 
-const TREE_SNOW_REACH = 2.25
-
-type TrunkContact = {height: number, snow: boolean}
-
-function touchesTrunkContact(bottom: number, contact: TrunkContact): boolean {
-    const reach = contact.snow ? SNOW_CONTACT_MAX_HEIGHT * TREE_SNOW_REACH : TREE_DAMP_MAX_HEIGHT
-    return bottom < contact.height + reach
+export interface TreeData {
+    x: number
+    z: number
+    type: number
+    size: number
+    level?: number
 }
 
+interface WorldTree {
+    type: number
+    level: number
+    scale: number
+    position: Vector3
+    visualHeight: number
+    placement: TreePlacement
+}
+
+const trees = new Map<string, WorldTree>()
+const placements: TreePlacement[] = []
+const playerCenter = Vector3.Zero()
+const targetCenter = Vector3.Zero()
+const tileKey = (x: number, z: number) => x + ';' + z
+const castsNearbyShadow = (shape: TreeShape, shadowOnly: boolean) => !shadowOnly && (shape === 'wood6' || shape === 'wood12')
+let renderer: TreeRenderer | undefined
+let variants: TreeVariants | undefined
+let nextId = 0
+let deletePreviewTree: WorldTree | null = null
+let deletePreviewStartTime = 0
+let deletePreviewYOffset = 0
+
 export const TreeManager = {
-    fadedAlpha: 0.35,
-    fadeDuration: 0.3,
-    occlusionCheckIntervalFrames: 10,
-    occlusionCheckFrame: 0,
-    prefabs: {
-        tree1: null as Prefab | null,
-        tree2: null as Prefab | null,
-        birch: null as Prefab | null,
-        willow: null as Prefab | null,
-    },
-    fadedLeafMaterial: null as PBRMaterial | null,
-    fadedTrunkMaterial: null as PBRMaterial | null,
-    fadedPersonalShadowCasters: new WeakSet<Mesh>(),
-    allTrees : [] as Tree[],
-    collisionGrid: new CollisionGrid<Tree>(),
-    visibleTrees : [] as Tree[],
-    deletePreviewTree: null as Tree | null,
-    deletePreviewStartTime: 0,
-    renderCaptures: new WeakMap<Tree, {
-        blockIndices: number[], blockBaseY: number[], leafIndices: number[], leafBaseY: number[], fadedBaseY: number[]
-        contact?: TrunkContact
-    }>(),
+    collisionGrid: new CollisionGrid<WorldTree>(),
+    visibleTrees: [] as WorldTree[],
 
-    initialize(scene: Scene) {
-        // Stagger the ten-frame visibility jobs instead of concentrating all
-        // character, monster and world occlusion work into the same frame.
-        this.occlusionCheckFrame = 2
-        this.fadedPersonalShadowCasters = new WeakSet<Mesh>()
-        Lights.enableTransparentShadowCasters()
-        this.prefabs.tree1 = PrefabOak.getPrefab(scene)
-        this.prefabs.tree2 = PrefabFir.getPrefab(scene)
-        this.prefabs.birch = PrefabBirch.getPrefab(scene)
-        this.prefabs.willow = PrefabWillow.getPrefab(scene)
-        this.fadedLeafMaterial = Materials.createBlockMatAlpha1(scene)
-        this.configureFadedMaterial(this.fadedLeafMaterial, 'tree_leaves_faded_material', true)
-        const trunkMaterial = Materials.createBlockMat1(scene)
-        if (WorldRenderer.staticTerrainContact) {
-            WorldRenderer.staticTerrainContact.configureMaterial(trunkMaterial, true)
-            configureStaticBlockDamage(trunkMaterial)
-        }
-        this.configureFadedMaterial(trunkMaterial, 'tree_trunk_faded_material', false)
-        this.fadedTrunkMaterial = trunkMaterial
-    },
-
-    configureFadedMaterial(material: PBRMaterial, name: string, alphaCutout: boolean) {
-        material.name = name
-        material.alpha = 1
-        material.transparencyMode = alphaCutout
-            ? PBRMaterial.PBRMATERIAL_ALPHATESTANDBLEND
-            : PBRMaterial.PBRMATERIAL_ALPHABLEND
-        material.forceAlphaTest = alphaCutout
-        if (alphaCutout) {
-            // Mesh visibility is applied after Babylon's alpha test, so the
-            // faded crown can keep exactly the same cutout mask as its opaque
-            // thin-instance version. A lower cutoff fills the intended gaps
-            // with weak-alpha atlas pixels before the tree becomes translucent.
-            material.alphaCutOff = 0.5
-        }
-    },
-
-    createFadedMesh(
-        sourceMesh: Mesh,
-        name: string,
-        material: PBRMaterial,
-        uv: Vector2,
-        castPersonalShadow: boolean,
-    ): Mesh {
-        const mesh = new Mesh(name, sourceMesh.getScene())
-        const vertexKinds = [VertexBuffer.PositionKind, VertexBuffer.NormalKind, VertexBuffer.UVKind]
-        vertexKinds.forEach(kind => {
-            const data = sourceMesh.getVerticesData(kind, true, true, true)
-            const sourceBuffer = sourceMesh.getVertexBuffer(kind)
-            if (data != null && sourceBuffer != null) {
-                mesh.setVerticesData(kind, data, false, sourceBuffer.getStrideSize())
-            }
+    async initialize(scene: Scene, parent: TransformNode) {
+        const {TreeRenderer} = await import('./trees/treeRenderer')
+        variants = new TreeVariants()
+        variants.warmUp()
+        const treeRenderer = new TreeRenderer(scene, parent,
+            (mesh, shape, shadowOnly) => {
+                const near = castsNearbyShadow(shape, shadowOnly)
+                Lights.addShadowCaster(mesh, near, near)
+                if (!shadowOnly) Lights.registerSharedLightMesh(mesh)
+            },
+            (mesh, shape, shadowOnly) => {
+                const near = castsNearbyShadow(shape, shadowOnly)
+                Lights.removeShadowCaster(mesh, near, near)
+                if (!shadowOnly) Lights.unregisterSharedLightMesh(mesh)
+            },
+        )
+        renderer = treeRenderer
+        scene.onDisposeObservable.addOnce(() => {
+            treeRenderer.dispose()
+            if (renderer !== treeRenderer) return
+            renderer = undefined
+            variants = undefined
+            this.clearWorld()
         })
-        const indices = sourceMesh.getIndices(true, true)
-        if (indices != null) {
-            mesh.setIndices(indices)
-        }
-        const uvData = new Float32Array(mesh.getTotalVertices() * 2)
-        for (let i = 0; i < uvData.length; i += 2) {
-            uvData[i] = uv.x
-            uvData[i + 1] = uv.y
-        }
-        mesh.setVerticesData('uvc', uvData, false, 2)
-        mesh.material = material
-        mesh.parent = sourceMesh.parent
-        mesh.alwaysSelectAsActiveMesh = true
-        Lights.addShadowCaster(mesh, castPersonalShadow)
-        if (castPersonalShadow) {
-            this.fadedPersonalShadowCasters.add(mesh)
-        }
-        return mesh
     },
 
-    getTrunkContact(position: Vector3): TrunkContact | undefined {
-        const x = Math.floor(position.x)
-        const z = Math.floor(position.z)
-        const snow = WorldRenderer.getSnowContactHeight(x, z)
-        const height = snow ?? WorldRenderer.getMuddyDirtContactHeight(x, z)
-        return height === undefined ? undefined : {height, snow: snow !== undefined}
+    warmUpShaders() {
+        return renderer?.warmUp()
     },
 
-    addTrunkBlock(matrix: Matrix, uv: Vector2, contact?: TrunkContact) {
-        const batch = WorldRenderer.block1!
-        if (contact && touchesTrunkContact(matrix.m[13] - 0.5 - matrix.m[5] * 0.5, contact)) {
-            if (contact.snow) {
-                WorldRenderer.staticTerrainContact?.addSnow(batch.matrices.length, contact.height, TREE_SNOW_REACH, true)
-            } else {
-                WorldRenderer.staticTerrainContact?.addDamp(batch.matrices.length, contact.height, 'treeBark')
-            }
-        }
-        batch.matrices.push(matrix)
-        batch.uvData.push(uv)
-    },
-
-    setTrunkMeshContact(mesh: Mesh, contact?: TrunkContact) {
-        const bottom = mesh.position.y - mesh.scaling.y * 0.5
-        const active = contact && touchesTrunkContact(bottom, contact) ? contact : undefined
-        WorldRenderer.staticTerrainContact?.setMeshContact(mesh, active?.height,
-            active?.snow ? TREE_SNOW_REACH : 0, active?.snow, active && !active.snow ? 'treeBark' : undefined)
-    },
-
-    async warmUpFadeShaders() {
-        const leafSource = this.prefabs.tree1?.mesh
-        const trunkSource = WorldRenderer.block1?.mesh
-        if (leafSource == null || trunkSource == null || this.fadedLeafMaterial == null || this.fadedTrunkMaterial == null) {
+    onFrame() {
+        if (!Settings.treesEnabled) return
+        const node = MyPlayer.myModel?.node
+        if (!node || !MyPlayer.myChar) {
+            renderer?.setRevealTargets(null)
             return
         }
 
-        const leafMesh = this.createFadedMesh(
-            leafSource,
-            'tree_faded_leaf_shader_warmup',
-            this.fadedLeafMaterial,
-            MaterialAlphaEnum1.TREE_LEAF_LIGHT.uv,
-            false,
-        )
-        const trunkMesh = this.createFadedMesh(
-            trunkSource,
-            'tree_faded_trunk_shader_warmup',
-            this.fadedTrunkMaterial,
-            MaterialEnum1.WOOD_1.uv,
-            true,
-        )
-        this.setTrunkMeshContact(trunkMesh)
-        const meshes = [leafMesh, trunkMesh]
-        meshes.forEach(mesh => {
-            mesh.visibility = this.fadedAlpha
-            mesh.isPickable = false
-            mesh.setEnabled(false)
-        })
-
-        try {
-            await Promise.all(meshes.map(mesh => mesh.material?.forceCompilationAsync(mesh)))
-        } finally {
-            Lights.removeShadowCaster(leafMesh, false)
-            Lights.removeShadowCaster(trunkMesh, true)
-            meshes.forEach(mesh => mesh.dispose(false, false))
+        playerCenter.copyFrom(node.getAbsolutePosition()).addInPlaceFromFloats(0, MyPlayer.myChar.getModelHeight() * .55, 0)
+        const target = TargetingManager.selectedTarget
+        if (target && target !== MyPlayer.myChar) {
+            const height = target.getModelHeight()
+            targetCenter.copyFrom(target.pos).addInPlaceFromFloats(0, height * .55, 0)
+            renderer?.setRevealTargets(playerCenter, targetCenter, undefined, 1.3, Math.max(1.3, height * .60))
+        } else {
+            renderer?.setRevealTargets(playerCenter)
         }
     },
 
-    onFrame(timeRate: number, camera: Camera | null) {
-        let rebuildTrees = false
-        this.visibleTrees.forEach(tree => {
-            rebuildTrees = updateTreeFade(tree, timeRate, this.fadeDuration) || rebuildTrees
-        })
-
-        this.occlusionCheckFrame++
-        if (this.occlusionCheckFrame >= this.occlusionCheckIntervalFrames) {
-            this.occlusionCheckFrame = 0
-            rebuildTrees = this.updateTreeOcclusion(camera) || rebuildTrees
-        }
-
-        if (rebuildTrees) {
-            WorldRenderer.renderWorld()
-        }
+    getTreeAt(x: number, z: number) {
+        return trees.get(tileKey(x, z))
     },
 
-    updateTreeOcclusion(camera: Camera | null): boolean {
-        if (camera == null || MyPlayer.myModel == null) {
+    consumeTrees(data: readonly TreeData[]) {
+        for (const tree of data) this.addTree(tree)
+    },
+
+    addTree(data: TreeData) {
+        const {x, z, type, size} = data
+        const species = TREE_SPECIES_BY_TYPE.get(type)
+        if (!variants || !species || !Number.isFinite(size) || size <= 0) return false
+        const level = data.level ?? 1
+        const previous = this.getTreeAt(x, z)
+        if (previous?.type === type && previous.scale === size) {
+            previous.level = level
             return false
         }
-
-        const cameraPosition = camera.globalPosition
-        const playerCenter = MyPlayer.myModel.node.getAbsolutePosition().clone()
-        playerCenter.y += MyPlayer.myChar.getModelHeight() / 2
-        const occlusionTargets = [playerCenter]
-        const selectedTarget = TargetingManager.selectedTarget
-        if (selectedTarget != null && selectedTarget !== MyPlayer.myChar) {
-            occlusionTargets.push(new Vector3(
-                selectedTarget.pos.x,
-                selectedTarget.pos.y + (selectedTarget.getModelHeight() / 2),
-                selectedTarget.pos.z,
-            ))
-        }
-        const segments = occlusionTargets.map(target => {
-            const direction = target.subtract(cameraPosition)
-            const length = direction.length()
-            if (length > 0) {
-                direction.scaleInPlace(1 / length)
-            }
-            return { direction, length }
-        }).filter(segment => segment.length > 0)
-        if (segments.length === 0) {
-            return false
-        }
-
-        let changed = false
-
-        this.visibleTrees.forEach(tree => {
-            const shouldFade = segments.some(segment => tree.intersectsLeafOcclusionSegment(
-                cameraPosition,
-                segment.direction,
-                segment.length,
-            ))
-            if (tree.shouldFade !== shouldFade) {
-                tree.shouldFade = shouldFade
-                changed = true
-            }
-        })
-        return changed
-    },
-
-    addAllShadowCasters() {
-        Object.values(this.prefabs).forEach(prefab => {
-            // Alpha-cutout crowns produce severe projection artifacts when the
-            // player's nearby spotlight sits inside or directly below them.
-            // Crowns cast only sun shadows; static lights can opt into tree
-            // shadows later when a light is intentionally placed near them.
-            Lights.addShadowCaster(prefab!.mesh, false)
-        })
-    },
-
-    consumeTrees(data: [ { type: number, x: number, z: number, size: number, level?: number } ]) {
-        data.forEach(tree => {
-            this.addTree(tree)
-        })
-    },
-
-    addTree(tree: { type: number, x: number, z: number, size: number, level?: number }) {
-        const previousCount = this.allTrees.length
-        const y = WorldDataManager.getBlockMap()[tree.x][tree.z].height + 0.5
-        const size = tree.size
-        const rotation = Math.floor(Math.random() * 4) * Math.PI / 2
-        const pos = new Vector3(tree.x, y, tree.z)
-
-        switch (tree.type) {
-            case 1:
-                this.allTrees.push(new TreeOak(pos, rotation, size, MaterialAlphaEnum1.getMaterialByIndex(1)))
-                break
-            case 2:
-                this.allTrees.push(new TreeOak(pos, rotation, size, MaterialAlphaEnum1.getMaterialByIndex(2)))
-                break
-            case 3:
-                this.allTrees.push(new TreeOak(pos, rotation, size, MaterialAlphaEnum1.getMaterialByIndex(3)))
-                break
-            case 4:
-                this.allTrees.push(new TreeOak(pos, rotation, size, MaterialAlphaEnum1.getMaterialByIndex(4)))
-                break
-            case 5:
-                this.allTrees.push(new TreeFir(pos, rotation, size, MaterialAlphaEnum1.getMaterialByIndex(1)))
-                break
-            case 6:
-                this.allTrees.push(new TreeFir(pos, rotation, size, MaterialAlphaEnum1.getMaterialByIndex(2)))
-                break
-            case 7:
-                this.allTrees.push(new TreeFir(pos, rotation, size, MaterialAlphaEnum1.getMaterialByIndex(3)))
-                break
-            case 8:
-                this.allTrees.push(new TreeFir(pos, rotation, size, MaterialAlphaEnum1.getMaterialByIndex(4)))
-                break
-            case 9:
-            case 10:
-            case 11:
-            case 12:
-                this.allTrees.push(new TreeBirch(pos, rotation, size, MaterialAlphaEnum1.getMaterialByIndex(tree.type - 8)))
-                break
-            case 13:
-            case 14:
-            case 15:
-            case 16:
-                this.allTrees.push(new TreeWillow(pos, rotation, size, MaterialAlphaEnum1.getMaterialByIndex(tree.type - 12)))
-                break
-            default:
-                break
-        }
-        if (this.allTrees.length > previousCount) {
-            const added = this.allTrees[this.allTrees.length - 1]
-            added.level = tree.level ?? 1
-            const half = added.scale * 0.75 / 2
-            this.collisionGrid.add(added, added.position.x - half, added.position.z - half,
-                added.position.x + half, added.position.z + half)
-        }
+        if (previous) this.removeTreeAt(x, z)
+        const tile = WorldDataManager.getBlockMap()[x]?.[z]
+        const position = new Vector3(x, (tile?.height ?? 0) + .5, z)
+        const variation = createStaticVariation(MyPlayer.worldId, data, type)
+        const variant = variants.get(species, Math.floor(variation.unit(0) * TREE_VARIANT_COUNT))
+        const visualSize = size * WORLD_TREE_TYPES[species].scale
+        const tree: WorldTree = {type, level, scale: size, position, visualHeight: variant.height * visualSize,
+            placement: {id: nextId++, variant, position: position.clone(), size: visualSize, snow: 0, detail: 'LOW'}}
+        trees.set(tileKey(x, z), tree)
+        const half = size * .75 / 2
+        this.collisionGrid.add(tree, x - half, z - half, x + half, z + half)
+        return true
     },
 
     recountYPositions() {
-        this.allTrees.forEach(tree => {
-            const y = WorldDataManager.getBlockMap()[Math.floor(tree.position.x)][Math.floor(tree.position.z)].height + 0.5
-            tree.position.y = y
-        })
+        const map = WorldDataManager.getBlockMap()
+        for (const {position} of trees.values()) {
+            const tile = map[position.x]?.[position.z]
+            if (tile) position.y = tile.height + .5
+        }
     },
 
-    removeTrees(data: [ { x: number, z: number } ]) {
-        data.forEach(tree => {
-            this.removeTreeAt(tree.x, tree.z)
-        })
+    removeTrees(data: readonly {x: number, z: number}[]) {
+        for (const {x, z} of data) this.removeTreeAt(x, z)
     },
 
     removeTreeAt(x: number, z: number) {
-        for (let i = 0; i < this.allTrees.length; i++) {
-            if (this.allTrees[i].position.x === x && this.allTrees[i].position.z === z) {
-                if (this.deletePreviewTree === this.allTrees[i]) this.deletePreviewTree = null
-                disposeFadedTreeMeshes(this.allTrees[i])
-                this.collisionGrid.remove(this.allTrees[i])
-                this.allTrees.splice(i, 1)
-                break
-            }
+        const key = tileKey(x, z)
+        const tree = trees.get(key)
+        if (!tree) return
+        if (deletePreviewTree === tree) {
+            deletePreviewTree = null
+            deletePreviewYOffset = 0
         }
+        this.collisionGrid.remove(tree)
+        trees.delete(key)
     },
 
     clearWorld() {
-        this.allTrees.forEach(tree => disposeFadedTreeMeshes(tree))
-        this.allTrees = []
+        trees.clear()
         this.collisionGrid.clear()
-        this.visibleTrees = []
-        this.deletePreviewTree = null
-        this.renderCaptures = new WeakMap()
-        this.renderTrees()
+        this.visibleTrees.length = 0
+        placements.length = 0
+        nextId = 0
+        deletePreviewTree = null
+        deletePreviewYOffset = 0
+        renderer?.setRevealTargets(null)
+        renderer?.rebuild(placements)
     },
 
-    renderTrees() {
-        // Prefabs clear the matrices
-        Object.values(this.prefabs).forEach(prefab => {
-            prefab?.clearMatrices()
-        })
-
-
-        this.updateVisibleTrees()
-        const visibleTrees = new Set(this.visibleTrees)
-        this.allTrees.forEach(tree => {
-            if (!visibleTrees.has(tree)) {
-                tree.shouldFade = false
-                disposeFadedTreeMeshes(tree)
+    renderTrees(outdoor: boolean) {
+        this.visibleTrees.length = 0
+        if (!renderer) return
+        if (!Settings.treesEnabled || !ViewportManager.viewPortInitialized) {
+            renderer.setRevealTargets(null)
+            deletePreviewTree = null
+            deletePreviewYOffset = 0
+            if (placements.length) {
+                placements.length = 0
+                renderer.rebuild(placements)
             }
-        })
-        for (const element of this.visibleTrees) {
-            const blockStart = WorldRenderer.block1!.matrices.length
-            const leafStart = element.leavesPrefab.matrices.length
-            const contact = this.getTrunkContact(element.position)
-            const faded = element.shouldFade
-            if (faded) {
-                element.fadeTarget = this.fadedAlpha
-            } else if (element.fadedMeshes.length > 0) {
-                element.fadeTarget = 1
-            }
-
-            if (faded || element.fadedMeshes.length > 0) {
-                if (element.fadedMeshes.length === 0) {
-                    element.renderLeaves(true)
-                    element.renderTrunk(true, contact)
-                } else {
-                    const previous = this.renderCaptures.get(element)?.contact
-                    if (previous?.height !== contact?.height || previous?.snow !== contact?.snow) {
-                        for (const mesh of element.fadedMeshes) {
-                            if (mesh.material === this.fadedTrunkMaterial) this.setTrunkMeshContact(mesh, contact)
-                        }
-                    }
-                }
-            } else {
-                element.renderLeaves(false)
-                element.renderTrunk(false, contact)
-            }
-            const blockIndices = Array.from(
-                {length: WorldRenderer.block1!.matrices.length - blockStart},
-                (_, index) => blockStart + index,
-            )
-            const leafIndices = Array.from(
-                {length: element.leavesPrefab.matrices.length - leafStart},
-                (_, index) => leafStart + index,
-            )
-            this.renderCaptures.set(element, {
-                blockIndices,
-                blockBaseY: blockIndices.map((index) => WorldRenderer.block1!.matrices[index].m[13]),
-                leafIndices,
-                leafBaseY: leafIndices.map((index) => element.leavesPrefab.matrices[index].m[13]),
-                fadedBaseY: element.fadedMeshes.map((mesh) => mesh.position.y),
-                contact,
-            })
+            return
         }
 
-        // Prefabs update thin instance buffers
-        Object.values(this.prefabs).forEach(prefab => {
-            prefab?.setThinInstanceBuffers()
-
-            // Enable/disable mesh based on thin instance count
-            if (prefab!.mesh.thinInstanceCount && prefab!.mesh.thinInstanceCount > 0) {
-                prefab!.mesh.setEnabled(true)
-            } else {
-                prefab!.mesh.setEnabled(false)
-            }
-        })
-    },
-
-    updateVisibleTrees() {
-        this.visibleTrees = []
-
-        for (const element of this.allTrees) {
-            const tree = element
-            if (ViewportManager.isPointInVisibleMatrix(Math.floor(tree.position.x), Math.floor(tree.position.z), 2, tree.position.y)) {
-                this.visibleTrees.push(tree)
-            }
+        placements.length = 0
+        const map = WorldDataManager.getBlockMap()
+        const detail = Settings.detailLevel.name as TreeSurfaceDetail
+        const sunShadows = !Lights.indoor && Settings.isShadowsEnabled()
+        for (const tree of trees.values()) {
+            const {position: {x, y, z}, placement} = tree
+            const visible = ViewportManager.isPointInVisibleMatrix(x, z, 2, y)
+            // The lowest sun angle is 28 degrees. Keep a margin for the crown and lower ground.
+            if (!visible && (!sunShadows || !ViewportManager.isPointNearVisibleBounds(x, z, tree.visualHeight * 2 + 4))) continue
+            const tile = map[x]?.[z]
+            if (!tile) continue
+            placement.position.y = (outdoor ? outdoorSurfaceHeight(tile) : tile.totalHeight) ?? tile.height
+            placement.snow = WorldRenderer.getSnowSurfaceHeight(x, z) !== undefined ? 1
+                : !Lights.indoor && tile.type === TerrainEnum1.TERRAIN_GRASS_WINTER.index && !tile.snowed ? .38 : 0
+            placement.detail = visible ? detail : 'SHADOW'
+            placement.shadowOnly = !visible
+            placements.push(placement)
+            if (visible) this.visibleTrees.push(tree)
         }
-        return this.visibleTrees
+        renderer.setSurfaceDetail(detail)
+        renderer.rebuild(placements)
+        if (deletePreviewTree) renderer.setYOffset(deletePreviewTree.placement.id, deletePreviewYOffset)
     },
 
     updateDeletePreview(active: boolean, x: number, z: number, time: number) {
-        const target = active
-            ? this.allTrees.find((tree) => tree.position.x === x && tree.position.z === z) ?? null
-            : null
-        if (target !== this.deletePreviewTree) {
-            if (this.deletePreviewTree) this.applyDeleteBounceOffset(this.deletePreviewTree, 0)
-            this.deletePreviewTree = target
-            this.deletePreviewStartTime = time
+        if (!Settings.treesEnabled) return
+        const target = active ? this.getTreeAt(x, z) ?? null : null
+        if (target !== deletePreviewTree) {
+            if (deletePreviewTree) renderer?.setYOffset(deletePreviewTree.placement.id, 0)
+            deletePreviewTree = target
+            deletePreviewStartTime = time
         }
-        if (!this.deletePreviewTree) return
-        const elapsed = time - this.deletePreviewStartTime
-        const offset = ((Math.sin((elapsed * 0.008) - (Math.PI / 2)) + 1) * 0.5) * 0.175
-        this.applyDeleteBounceOffset(this.deletePreviewTree, offset)
+        if (target) {
+            deletePreviewYOffset = (Math.sin((time - deletePreviewStartTime) * .008 - Math.PI / 2) + 1) * .175
+            renderer?.setYOffset(target.placement.id, deletePreviewYOffset)
+        }
     },
 
-    applyDeleteBounceOffset(tree: Tree, offset: number) {
-        const capture = this.renderCaptures.get(tree)
-        if (!capture) return
-        const blockBuffer = WorldRenderer.block1!.matrixBuffer
-        capture.blockIndices.forEach((index, i) => {
-            blockBuffer[(index * 16) + 13] = capture.blockBaseY[i] + offset
-        })
-        const leafBuffer = tree.leavesPrefab.matrixBuffer
-        capture.leafIndices.forEach((index, i) => {
-            leafBuffer[(index * 16) + 13] = capture.leafBaseY[i] + offset
-        })
-        tree.fadedMeshes.forEach((mesh, i) => {
-            mesh.position.y = capture.fadedBaseY[i] + offset
-        })
-        if (capture.blockIndices.length > 0) WorldRenderer.block1!.mesh.thinInstanceBufferUpdated('matrix')
-        if (capture.leafIndices.length > 0) tree.leavesPrefab.mesh.thinInstanceBufferUpdated('matrix')
-    },
-
-    getPointInTree(x: number, z: number, size: number): { x: number, z: number } | null {
+    getPointInTree(x: number, z: number, size: number): {x: number, z: number} | null {
         const tree = this.collisionGrid.findFirst(x, z, size, tree => {
-            const combinedSize = ((tree.scale * 0.75) + size) / 2
-            return Math.abs(tree.position.x - x) < combinedSize && Math.abs(tree.position.z - z) < combinedSize
+            const half = (tree.scale * .75 + size) / 2
+            return Math.abs(tree.position.x - x) < half && Math.abs(tree.position.z - z) < half
         })
         return tree ? {x: tree.position.x, z: tree.position.z} : null
     },
 
-    isAnyTreeInDistance(pos: Vector3, maxDistance: number): boolean {
-        for (const tree of this.visibleTrees) {
-            if (Vector3.Distance(tree.position, pos) <= maxDistance) {
-                return true
-            }
-        }
-        return false
-    }
-}
-
-class TreeOak implements Tree {
-    protected leafHeightOffset = 1.55
-    position: Vector3
-    rotation: number
-    scale: number
-    leafMaterial: Vector2
-    woodMaterial: Vector2
-    leavesPrefab: Prefab
-    fadedMeshes: Mesh[] = []
-    fadeVisibility = 1
-    fadeTarget = 1
-    shouldFade = false
-
-    constructor(position: Vector3, rotation: number, scale: number, leafMaterial: Vector2) {
-        this.position = position
-        this.rotation = rotation
-        this.scale = scale
-        this.leafMaterial = leafMaterial
-        this.woodMaterial = Math.random() < 0.5 ? MaterialEnum1.WOOD_1.uv : MaterialEnum1.WOOD_2.uv
-        this.leavesPrefab = TreeManager.prefabs.tree1!
-    }
-
-    renderLeaves(faded: boolean) {
-        if (faded) {
-            const mesh = TreeManager.createFadedMesh(
-                this.leavesPrefab.mesh,
-                'tree_oak_faded',
-                TreeManager.fadedLeafMaterial!,
-                this.leafMaterial,
-                false,
-            )
-            mesh.position.set(this.position.x, this.position.y + (this.leafHeightOffset * this.scale), this.position.z)
-            mesh.rotation.y = this.rotation
-            mesh.scaling.setAll(this.scale)
-            mesh.visibility = this.fadeVisibility
-            this.fadedMeshes.push(mesh)
-            return
-        }
-
-        const matrix = Matrix.Translation( this.position.x, this.position.y + (this.leafHeightOffset * this.scale), this.position.z);
-        const rotationMatrix = Matrix.RotationY(this.rotation);
-        const scaleMatrix = Matrix.Scaling(this.scale, this.scale, this.scale);
-
-        this.leavesPrefab.matrices.push(scaleMatrix.multiply(rotationMatrix).multiply(matrix))
-        this.leavesPrefab.uvData.push(this.leafMaterial)
-    }
-
-    renderTrunk(faded: boolean, contact?: TrunkContact) {
-        const cos = Math.cos(this.rotation)
-        const sin = Math.sin(this.rotation)
-        const rotation = Matrix.RotationY(this.rotation)
-        const block = (x: number, y: number, z: number, size: number, height = size) => {
-            const px = this.position.x + (x * cos + z * sin) * this.scale
-            const py = this.position.y + y * this.scale
-            const pz = this.position.z + (z * cos - x * sin) * this.scale
-            const width = size * this.scale
-            const blockHeight = height * this.scale
-            if (faded) {
-                const mesh = TreeManager.createFadedMesh(
-                    WorldRenderer.block1!.mesh,
-                    'tree_oak_trunk_faded',
-                    TreeManager.fadedTrunkMaterial!,
-                    this.woodMaterial,
-                    true,
-                )
-                mesh.position.set(px, py - 0.5, pz)
-                mesh.rotation.y = this.rotation
-                mesh.scaling.set(width, blockHeight, width)
-                mesh.visibility = this.fadeVisibility
-                TreeManager.setTrunkMeshContact(mesh, contact)
-                this.fadedMeshes.push(mesh)
-                return
-            }
-            TreeManager.addTrunkBlock(Matrix.Scaling(width, blockHeight, width)
-                .multiply(rotation).multiply(Matrix.Translation(px, py, pz)), this.woodMaterial, contact)
-        }
-        for (let i = 0; i <= 4; i++) block(0, i * 0.5, 0, 0.5 * 0.85, 0.5)
-        for (const [x, y, z] of [
-            [-0.22, 1.45, 0.1], [-0.44, 1.66, 0.2], [-0.62, 1.8, 0.28],
-            [0.2, 1.6, -0.16], [0.4, 1.82, -0.32], [0.56, 2, -0.4],
-            [0.05, 1.8, 0.24], [0.1, 2, 0.45],
-        ]) block(x, y, z, 0.32 * 0.85)
-    }
-
-    intersectsLeafOcclusionSegment(origin: Vector3, direction: Vector3, maxDistance: number): boolean {
-        const halfWidth = 1.3 * this.scale
-        return segmentIntersectsAabb(
-            origin,
-            direction,
-            maxDistance,
-            new Vector3(
-                this.position.x - halfWidth,
-                this.position.y + (1.2 * this.scale),
-                this.position.z - halfWidth,
-            ),
-            new Vector3(
-                this.position.x + halfWidth,
-                this.position.y + (3.2 * this.scale),
-                this.position.z + halfWidth,
-            ),
-        )
-    }
-}
-
-class TreeWillow extends TreeOak {
-    constructor(position: Vector3, rotation: number, scale: number, leafMaterial: Vector2) {
-        super(position, rotation, scale, leafMaterial)
-        this.woodMaterial = MaterialEnum1.WILLOW_BARK.uv
-        this.leavesPrefab = TreeManager.prefabs.willow!
-        this.leafHeightOffset = 0
-    }
-
-    renderTrunk(faded: boolean, contact?: TrunkContact) {
-        const cos = Math.cos(this.rotation)
-        const sin = Math.sin(this.rotation)
-        const rotation = Matrix.RotationY(this.rotation)
-        for (const [x, y, z, width, height] of WILLOW_WOOD_BLOCKS) {
-            const px = this.position.x + (x * cos + z * sin) * this.scale
-            const py = this.position.y + y * this.scale
-            const pz = this.position.z + (z * cos - x * sin) * this.scale
-            if (faded) {
-                const mesh = TreeManager.createFadedMesh(WorldRenderer.block1!.mesh,
-                    'tree_willow_trunk_faded', TreeManager.fadedTrunkMaterial!, this.woodMaterial, true)
-                mesh.position.set(px, py - 0.5, pz)
-                mesh.rotation.y = this.rotation
-                mesh.scaling.set(width * this.scale, height * this.scale, width * this.scale)
-                mesh.visibility = this.fadeVisibility
-                TreeManager.setTrunkMeshContact(mesh, contact)
-                this.fadedMeshes.push(mesh)
-            } else {
-                TreeManager.addTrunkBlock(Matrix.Scaling(width * this.scale, height * this.scale, width * this.scale)
-                    .multiply(rotation).multiply(Matrix.Translation(px, py, pz)), this.woodMaterial, contact)
-            }
-        }
-    }
-
-    intersectsLeafOcclusionSegment(origin: Vector3, direction: Vector3, maxDistance: number): boolean {
-        return segmentIntersectsAabb(origin, direction, maxDistance,
-            new Vector3(this.position.x - 1.1 * this.scale, this.position.y + 0.1 * this.scale, this.position.z - 1.1 * this.scale),
-            new Vector3(this.position.x + 1.1 * this.scale, this.position.y + 2.2 * this.scale, this.position.z + 1.1 * this.scale))
-    }
-}
-
-class TreeBirch extends TreeOak {
-    constructor(position: Vector3, rotation: number, scale: number, leafMaterial: Vector2) {
-        super(position, rotation, scale, leafMaterial)
-        this.woodMaterial = MaterialEnum1.BIRCH_BARK.uv
-        this.leavesPrefab = TreeManager.prefabs.birch!
-        this.leafHeightOffset = 1
-    }
-
-    renderTrunk(faded: boolean, contact?: TrunkContact) {
-        const cos = Math.cos(this.rotation)
-        const sin = Math.sin(this.rotation)
-        const rotation = Matrix.RotationY(this.rotation)
-        const block = (x: number, y: number, width: number, height: number) => {
-            const px = this.position.x + x * cos * this.scale
-            const py = this.position.y + y * this.scale
-            const pz = this.position.z - x * sin * this.scale
-            if (faded) {
-                const mesh = TreeManager.createFadedMesh(WorldRenderer.block1!.mesh,
-                    'tree_birch_trunk_faded', TreeManager.fadedTrunkMaterial!, this.woodMaterial, true)
-                mesh.position.set(px, py - 0.5, pz)
-                mesh.rotation.y = this.rotation
-                mesh.scaling.set(width * this.scale, height * this.scale, width * this.scale)
-                mesh.visibility = this.fadeVisibility
-                TreeManager.setTrunkMeshContact(mesh, contact)
-                this.fadedMeshes.push(mesh)
-            } else {
-                TreeManager.addTrunkBlock(Matrix.Scaling(width * this.scale, height * this.scale, width * this.scale)
-                    .multiply(rotation).multiply(Matrix.Translation(px, py, pz)), this.woodMaterial, contact)
-            }
-        }
-        for (let i = 0; i < 5; i++) block(0, 0.2 + i * 0.4, 0.32, 0.4)
-        for (const side of [-1, 1]) {
-            for (let i = 1; i <= 4; i++) block(side * i * 0.16, 1.25 + i * 0.14, 0.22, 0.3)
-        }
-    }
-
-    intersectsLeafOcclusionSegment(origin: Vector3, direction: Vector3, maxDistance: number): boolean {
-        return segmentIntersectsAabb(origin, direction, maxDistance,
-            new Vector3(this.position.x - 1.25 * this.scale, this.position.y + 0.8 * this.scale, this.position.z - 1.25 * this.scale),
-            new Vector3(this.position.x + 1.25 * this.scale, this.position.y + 3.2 * this.scale, this.position.z + 1.25 * this.scale))
-    }
-}
-
-export class TreeFir implements Tree {
-    position: Vector3
-    rotation: number
-    scale: number
-    leafMaterial: Vector2
-    woodMaterial: Vector2
-    leavesPrefab: Prefab
-    fadedMeshes: Mesh[] = []
-    fadeVisibility = 1
-    fadeTarget = 1
-    shouldFade = false
-
-    constructor(position: Vector3, rotation: number, scale: number, leafMaterial: Vector2) {
-        this.position = position
-        this.rotation = rotation
-        this.scale = scale
-        this.leafMaterial = leafMaterial
-        this.woodMaterial = Math.random() < 0.5 ? MaterialEnum1.WOOD_1.uv : MaterialEnum1.WOOD_2.uv
-        this.leavesPrefab = TreeManager.prefabs.tree2!
-    }
-
-    renderLeaves(faded: boolean) {
-        if (faded) {
-            const mesh = TreeManager.createFadedMesh(
-                this.leavesPrefab.mesh,
-                'tree_fir_faded',
-                TreeManager.fadedLeafMaterial!,
-                this.leafMaterial,
-                false,
-            )
-            mesh.position.set(this.position.x, this.position.y - 1 + (2 * this.scale), this.position.z)
-            mesh.rotation.y = this.rotation
-            mesh.scaling.setAll(this.scale)
-            mesh.visibility = this.fadeVisibility
-            this.fadedMeshes.push(mesh)
-            return
-        }
-
-        const matrix = Matrix.Translation( this.position.x, this.position.y - 1 + (2 * this.scale), this.position.z);
-        const rotationMatrix = Matrix.RotationY(this.rotation);
-        const scaleMatrix = Matrix.Scaling(this.scale, this.scale, this.scale);
-
-        this.leavesPrefab.matrices.push(scaleMatrix.multiply(rotationMatrix).multiply(matrix))
-        this.leavesPrefab.uvData.push(this.leafMaterial)
-    }
-
-    renderTrunk(faded: boolean, contact?: TrunkContact) {
-        const scaleMatrix = Matrix.Scaling(this.scale / 2, this.scale / 2, this.scale / 2)
-
-        // Blocks for trunk
-        for (let i = 0; i <= 2 * this.scale; i += this.scale / 2) {
-            if (faded) {
-                const mesh = TreeManager.createFadedMesh(
-                    WorldRenderer.block1!.mesh,
-                    'tree_fir_trunk_faded',
-                    TreeManager.fadedTrunkMaterial!,
-                    this.woodMaterial,
-                    true,
-                )
-                mesh.position.set(this.position.x, this.position.y + i - 0.5, this.position.z)
-                mesh.scaling.setAll(this.scale / 2)
-                mesh.visibility = this.fadeVisibility
-                TreeManager.setTrunkMeshContact(mesh, contact)
-                this.fadedMeshes.push(mesh)
-                continue
-            }
-            const positionMatrix = Matrix.Translation(this.position.x, this.position.y + i, this.position.z)
-
-            TreeManager.addTrunkBlock(scaleMatrix.multiply(positionMatrix), this.woodMaterial, contact)
-        }
-    }
-
-    intersectsLeafOcclusionSegment(origin: Vector3, direction: Vector3, maxDistance: number): boolean {
-        const crownBaseY = this.position.y - 1 + (2 * this.scale)
-        for (const layer of FIR_OCCLUSION_LAYERS) {
-            const halfWidth = layer.halfWidth * this.scale
-            if (segmentIntersectsAabb(
-                origin,
-                direction,
-                maxDistance,
-                new Vector3(
-                    this.position.x - halfWidth,
-                    crownBaseY + (layer.minY * this.scale),
-                    this.position.z - halfWidth,
-                ),
-                new Vector3(
-                    this.position.x + halfWidth,
-                    crownBaseY + (layer.maxY * this.scale),
-                    this.position.z + halfWidth,
-                ),
-            )) {
-                return true
-            }
-        }
-        return false
-    }
-}
-
-interface Tree {
-    level?: number
-    position: Vector3
-    rotation: number
-    scale: number
-    leavesPrefab: Prefab
-    fadedMeshes: Mesh[]
-    fadeVisibility: number
-    fadeTarget: number
-    shouldFade: boolean
-
-    renderLeaves(faded: boolean): void
-    renderTrunk(faded: boolean, contact?: TrunkContact): void
-    intersectsLeafOcclusionSegment(origin: Vector3, direction: Vector3, maxDistance: number): boolean
-}
-
-const FIR_OCCLUSION_LAYERS = [
-    { minY: -0.35, maxY: 0.35, halfWidth: 1.3 },
-    { minY: 0.15, maxY: 0.85, halfWidth: 1.0 },
-    { minY: 0.65, maxY: 1.35, halfWidth: 0.8 },
-    { minY: 1.15, maxY: 1.85, halfWidth: 0.65 },
-    { minY: 1.75, maxY: 2.25, halfWidth: 0.4 },
-    { minY: 2.25, maxY: 2.75, halfWidth: 0.25 },
-]
-
-function updateTreeFade(tree: Tree, timeRate: number, duration: number): boolean {
-    if (tree.fadedMeshes.length === 0 || tree.fadeVisibility === tree.fadeTarget) {
-        return false
-    }
-
-    const step = ((1 - TreeManager.fadedAlpha) / duration) * timeRate
-    if (tree.fadeVisibility < tree.fadeTarget) {
-        tree.fadeVisibility = Math.min(tree.fadeVisibility + step, tree.fadeTarget)
-    } else {
-        tree.fadeVisibility = Math.max(tree.fadeVisibility - step, tree.fadeTarget)
-    }
-    tree.fadedMeshes.forEach(mesh => {
-        mesh.visibility = tree.fadeVisibility
-    })
-
-    if (tree.fadeTarget === 1 && tree.fadeVisibility === 1) {
-        disposeFadedTreeMeshes(tree)
-        return true
-    }
-    return false
-}
-
-function disposeFadedTreeMeshes(tree: Tree) {
-    tree.fadedMeshes.forEach(mesh => {
-        const castPersonalShadow = TreeManager.fadedPersonalShadowCasters.has(mesh)
-        Lights.removeShadowCaster(mesh, castPersonalShadow)
-        mesh.dispose(false, false)
-    })
-    tree.fadedMeshes = []
-    tree.fadeVisibility = 1
-    tree.fadeTarget = 1
+    isAnyTreeInDistance(pos: Vector3, maxDistance: number) {
+        const maxDistanceSquared = maxDistance * maxDistance
+        return this.collisionGrid.findFirst(pos.x, pos.z, 2 * maxDistance,
+            tree => Vector3.DistanceSquared(tree.position, pos) <= maxDistanceSquared) !== null
+    },
 }

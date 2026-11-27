@@ -8,6 +8,21 @@ export const TREE_SPECIES = {
 } as const
 
 export type TreeSpecies = keyof typeof TREE_SPECIES
+// Map assets and saved worlds store these IDs. Each legacy color keeps its ID as a seed salt.
+export const WORLD_TREE_TYPES = {
+    fir: {ids: [1, 2, 3, 4], scale: .64},
+    spruce: {ids: [5, 6, 7, 8], scale: .70},
+    birch: {ids: [9, 10, 11, 12], scale: .62},
+    evergreen: {ids: [13, 14, 15, 16], scale: .65},
+    twisted: {ids: [17], scale: .75},
+    autumn: {ids: [18], scale: .72},
+} as const satisfies Record<TreeSpecies, {ids: readonly number[], scale: number}>
+
+export const TREE_SPECIES_BY_TYPE = new Map<number, TreeSpecies>()
+for (const kind of Object.keys(WORLD_TREE_TYPES) as TreeSpecies[]) {
+    for (const id of WORLD_TREE_TYPES[kind].ids) TREE_SPECIES_BY_TYPE.set(id, kind)
+}
+
 export type TreeDetail = 'LOW' | 'MEDIUM' | 'HIGH' | 'SHADOW'
 export type TreeSurfaceDetail = Exclude<TreeDetail, 'SHADOW'>
 export const TREE_VARIANT_COUNT = 25

@@ -388,7 +388,7 @@ export const GMManager = {
                 Connector.sendMessage(new GMEditGrass({worldId: MyPlayer.worldId, x, z, mode: force ? 'force' : undefined}))
                 return
             }
-            const tree = TreeManager.allTrees.find(t => t.position.x === markerPos.x && t.position.z === markerPos.z)
+            const tree = TreeManager.getTreeAt(markerPos.x, markerPos.z)
             this.editingTree.value = null
             if (this.selectedTree.value === -1 && this.selectedShrub.value === -1) {
                 this.requestStaticDelete(markerPos.x, markerPos.z)

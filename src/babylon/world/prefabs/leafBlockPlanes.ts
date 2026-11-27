@@ -1,4 +1,4 @@
-import { Matrix, Mesh, MeshBuilder, Vector3 } from '@babylonjs/core'
+import { Matrix, Vector3 } from '@babylonjs/core'
 
 export function createLeafBlockPlaneMatrix(halfSize: Vector3, seed: number, face: number): Matrix {
     const variation = (seed % 5) / 4
@@ -15,19 +15,4 @@ export function createLeafBlockPlaneMatrix(halfSize: Vector3, seed: number, face
             -side * (0.08 + variation * 0.05),
         ))
         .multiply(Matrix.Translation(0, side * halfSize.y * 0.12, 0))
-}
-
-export function addLeafBlockPlanes(parts: Mesh[], block: Mesh, seed: number) {
-    const halfSize = block.getBoundingInfo().boundingBox.extendSize
-    for (let face = 0; face < 2; face++) {
-        const plane = MeshBuilder.CreatePlane('leafBlockTips', {
-            size: 1,
-            sideOrientation: Mesh.DOUBLESIDE,
-        }, block.getScene())
-        plane.bakeTransformIntoVertices(createLeafBlockPlaneMatrix(halfSize, seed, face))
-        plane.position.copyFrom(block.position)
-        // Keep the tips aligned with the block's own side faces when it is tilted.
-        plane.rotation.copyFrom(block.rotation)
-        parts.push(plane)
-    }
 }

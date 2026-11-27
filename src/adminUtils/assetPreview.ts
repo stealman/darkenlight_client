@@ -20,7 +20,6 @@ import { StaticsManager } from '@/babylon/world/statics/staticsManager'
 import { StoneWall } from '@/babylon/world/statics/objects/stoneWall'
 import { StaticObjectsCodebook } from '@/babylon/world/statics/staticsCodebook'
 import { BuildingManager } from '@/babylon/world/buildings/buildingManager'
-import { TreeManager } from '@/babylon/world/treeManager'
 import { StaticEquipPartsRenderer } from '@/babylon/world/statics/staticEquipPartsRenderer'
 import { StaticLeafPlanes } from '@/babylon/world/statics/staticLeafPlanes'
 import { EquipManager } from '@/babylon/item/equipManager'
@@ -31,7 +30,7 @@ import type { MeshAnimation } from '@/babylon/animations/animation'
 import { createTerrainPreview } from './terrainPreview'
 import { createStaticBiomePreview } from './staticBiomePreview'
 import { createProceduralTreePreview } from './proceduralTreePreview'
-import { TREE_SPECIES } from '@/babylon/world/trees/treeSpecies'
+import { TREE_SPECIES, TREE_SPECIES_BY_TYPE } from '@/babylon/world/trees/treeSpecies'
 import type { TreeSpecies } from '@/babylon/world/trees/treeSpecies'
 import { createSnowCoverMask } from '@/babylon/world/snowCoverMask'
 import { Settings } from '@/settings/settings'
@@ -111,6 +110,10 @@ export async function installAssetPreview(
     const storageKey = 'darkenlight.adminUtils.preview'
     let saved: {tab?: string, choice?: string} = {}
     try { saved = JSON.parse(localStorage.getItem(storageKey) || '{}') } catch { /* Ignore old sandbox settings. */ }
+    if (saved.choice?.startsWith('tree:')) {
+        const species = TREE_SPECIES_BY_TYPE.get(Number(saved.choice.slice(5)))
+        if (species) saved.choice = 'lowpoly:' + species
+    }
     let monster: MonsterModel | null = null
     let clips: [string, MeshAnimation][] = []
     let generation = 0
@@ -143,11 +146,10 @@ export async function installAssetPreview(
     const origin = new MapBlock(0, TerrainEnum1.TERRAIN_ROCK.index)
     origin.computeData()
     WorldDataManager.getBlockMap()[0][0] = origin
-    TreeManager.initialize(scene)
-    Object.values(TreeManager.prefabs).forEach(prefab => { if (prefab) prefab.mesh.parent = parent })
     StaticsManager.initialize(scene)
     BuildingManager.initialize(scene, parent)
-    const buffers = () => [WorldRenderer.block1!, WorldRenderer.blockWithAlpha1!, WorldRenderer.translucentPlane!, StoneBatch.prefab!, StaticLeafPlanes.prefab!, ...Object.values(TreeManager.prefabs).filter(p => p != null), ...StaticEquipPartsRenderer.prefabs.values(), ...SpecimenPrefabs.all]
+    const buffers = () => [WorldRenderer.block1!, WorldRenderer.blockWithAlpha1!, WorldRenderer.translucentPlane!,
+        StoneBatch.prefab!, StaticLeafPlanes.prefab!, ...StaticEquipPartsRenderer.prefabs.values(), ...SpecimenPrefabs.all]
     const terrain = createTerrainPreview(scene, parent, camera, ground, setTerrainLighting)
     panel.append(terrain.controls)
     const biomes = createStaticBiomePreview(scene, camera, ground, setStaticLighting, () => void show(false))
@@ -155,9 +157,8 @@ export async function installAssetPreview(
     const proceduralTrees = createProceduralTreePreview(scene, parent, parameters, () => void show(false))
     controls.insertBefore(proceduralTrees.controls, parameters.parentElement)
     biomes.setActive(false)
-    for (const batch of [StoneBatch.prefab!, TaperedBlockBatch.prefab!, MasonryBatch.prefab!, ArchedMasonryBatch.prefab!,
-        ...Object.values(TreeManager.prefabs)]) {
-        if (batch) Lights.addShadowCaster(batch.mesh, false)
+    for (const batch of [StoneBatch.prefab!, TaperedBlockBatch.prefab!, MasonryBatch.prefab!, ArchedMasonryBatch.prefab!]) {
+        Lights.addShadowCaster(batch.mesh, false)
     }
     const refreshBuildingBatches = () => {
         BuildingManager.rebuildOpaqueBatch()
@@ -206,8 +207,6 @@ export async function installAssetPreview(
         StaticsManager.walkableObjectsByTile.clear()
         StaticsManager.benchesByTile.clear()
         StaticsManager.dungeonEntrances.clear()
-        TreeManager.allTrees = []
-        TreeManager.collisionGrid.clear()
         BuildingManager.buildings.forEach(b => b.dispose())
         BuildingManager.buildings.clear()
         BuildingManager.floorTiles.clear()
@@ -217,8 +216,7 @@ export async function installAssetPreview(
     }
     const entries = () => tab === 'Statics'
         ? [...Object.entries(TREE_SPECIES).map(([kind, species]) => ({id: 'lowpoly:' + kind, name: species.name})),
-            ...Array.from(StaticObjectsCodebook.values(), v => ({id: String(v.type), name: v.name})),
-            ...Array.from({length: 16}, (_, i) => ({id: 'tree:' + (i + 1), name: ['Oak', 'Pine', 'Birch', 'Willow'][Math.floor(i / 4)] + ' ' + (i % 4 + 1)}))]
+            ...Array.from(StaticObjectsCodebook.values(), v => ({id: String(v.type), name: v.name}))]
         : tab === 'Buildings' ? ['House', 'Shed', 'Mausoleum', 'Cabin'].map((name, i) => ({id: String(i + 1), name}))
         : Object.entries(MonsterTypes).map(([key, type]) => ({
             id: String(type.id),
@@ -254,7 +252,7 @@ export async function installAssetPreview(
             proceduralTrees.controls.hidden = !species
             if (reset && species) proceduralTrees.restore(species)
             else if (reset && isStoneWall) parameters.value = JSON.stringify({type: id, name: StaticObjectsCodebook.get(id)!.name, meta: {}}, null, 2)
-            else if (reset) parameters.value = JSON.stringify(tab === 'Statics' ? choice.value.startsWith('tree:') ? { size: 1 } : { ...StaticObjectsCodebook.get(id), meta: id === 403 ? { bannerIndex: 0 } : { facing: '+Z' } } : tab === 'Buildings' ? { facing: '+Z', ...(id === 2 ? {width: 5, depth: 3} : {}), doorOpen: false } : { ...Object.values(MonsterTypes).find(v => v.id === id) }, null, 2)
+            else if (reset) parameters.value = JSON.stringify(tab === 'Statics' ? { ...StaticObjectsCodebook.get(id), meta: id === 403 ? { bannerIndex: 0 } : { facing: '+Z' } } : tab === 'Buildings' ? { facing: '+Z', ...(id === 2 ? {width: 5, depth: 3} : {}), doorOpen: false } : { ...Object.values(MonsterTypes).find(v => v.id === id) }, null, 2)
             const data = JSON.parse(parameters.value)
             if (tab === 'Statics') {
                 const useContact = !Settings.isDetalLevelLow()
@@ -265,23 +263,10 @@ export async function installAssetPreview(
                 MasonryBatch.setTopWeatheringEnabled(Settings.isDetalLevelHigh())
                 ArchedMasonryBatch.setTopWeatheringEnabled(Settings.isDetalLevelHigh())
                 biomes.prepareTerrain()
-                const isTree = choice.value.startsWith('tree:')
                 const wallAlongX = data.meta?.orientation === 'X'
                 const specimen = species && proceduralTrees.render(species, data, biomes.slots)
-                const legacyTreeCounts: number[] = []
                 for (const {x, z} of species ? [] : biomes.slots) {
-                    if (isTree) {
-                        TreeManager.addTree({type: Number(choice.value.split(':')[1]), x, z, size: Math.max(0.1, Number(data.size) || 1)})
-                        const tree = TreeManager.allTrees.at(-1)!
-                        tree.rotation = 0
-                        const trunk = WorldRenderer.block1!
-                        const crown = tree.leavesPrefab
-                        const trunkStart = trunk.matrices.length, crownStart = crown.matrices.length
-                        tree.renderTrunk(false, TreeManager.getTrunkContact(tree.position))
-                        tree.renderLeaves(false)
-                        legacyTreeCounts.push(((trunk.matrices.length - trunkStart) * trunk.mesh.getTotalIndices()
-                            + (crown.matrices.length - crownStart) * crown.mesh.getTotalIndices()) / 3)
-                    } else if (isStoneWall) {
+                    if (isStoneWall) {
                         // The last tile of the long arm becomes the corner through the normal wall resolver.
                         for (let offset = -2; offset <= 2; offset++) {
                             StaticsManager.addObject({tp: id, x: x + (wallAlongX ? offset : 0),
@@ -331,7 +316,7 @@ export async function installAssetPreview(
                 if (specimen) biomes.labelPlots(specimen.labels)
                 else {
                     for (const {prefab} of [TaperedBlockBatch, MasonryBatch, ArchedMasonryBatch]) batches.add(prefab!)
-                    const counts = isTree ? legacyTreeCounts : countStaticPlotTriangles(biomes.slots, batches)
+                    const counts = countStaticPlotTriangles(biomes.slots, batches)
                     biomes.labelPlots(counts.map(count => (isStoneWall ? 'Sestava · ' : '') + count.toLocaleString('cs-CZ') + ' △'))
                 }
                 if (specimen) {
@@ -342,7 +327,7 @@ export async function installAssetPreview(
                 } else if (isStoneWall) {
                     biomes.frame(0.65, 12, reset, wallAlongX ? -1 : -2, wallAlongX ? -2 : -1)
                 } else {
-                    biomes.frame(isTree ? 2.4 : 0.65, isTree ? 13 : 7, reset)
+                    biomes.frame(0.65, 7, reset)
                 }
             } else if (tab === 'Buildings') {
                 BuildingManager.addBuilding({...data, id: 1, tp: id, x: 0, z: 0})
