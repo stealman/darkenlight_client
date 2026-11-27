@@ -93,6 +93,9 @@
     "loadingCharacter": "Načítání postavy",
     "loadingWorld": "Příprava světa",
     "loadingLighting": "Příprava osvětlení",
+    "loadingTerrain": "Příprava terénu a materiálů",
+    "loadingAppearance": "Příprava postav a výbavy",
+    "loadingMonsters": "Příprava monster",
     "loadingStarting": "Spouštění hry",
     "loadingDisconnecting": "Odpojování"
   },

@@ -93,6 +93,9 @@
     "loadingCharacter": "Loading character",
     "loadingWorld": "Preparing world",
     "loadingLighting": "Preparing lighting",
+    "loadingTerrain": "Preparing terrain and materials",
+    "loadingAppearance": "Preparing characters and equipment",
+    "loadingMonsters": "Preparing monsters",
     "loadingStarting": "Starting game",
     "loadingDisconnecting": "Disconnecting"
   },

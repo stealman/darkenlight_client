@@ -22,7 +22,7 @@ import { TreeManager } from './treeManager'
 import { WATER_BLOCK_TYPE } from './terrainManager'
 import { sameSnowMask } from './snowCoverMask'
 import { OutdoorInstanceBatch } from './outdoorInstanceBatch'
-import { warmUpWorldInstanceMaterial } from './worldInstanceBuffers'
+import { warmUpWorldInstanceMaterials } from './worldInstanceBuffers'
 import type { OutdoorInstance } from './outdoorInstanceBatch'
 import { PBRCustomMaterial } from '@babylonjs/materials'
 import type { TerrainContactShadow } from './terrainContactShadow'
@@ -241,7 +241,7 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
     return {
         grass,
         prepareFrame,
-        async warmUp() {
+        async warmUp(onProgress?: (completed: number, total: number) => void) {
             let prepared = 0
             while (prepareNextRegion?.()) {
                 if (++prepared % 8 === 0) await new Promise(resolve => setTimeout(resolve, 0))
@@ -252,7 +252,17 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
             }
             flushBatches(foliageBatches.values(), maximumFoliage)
             refreshGrass()
-            for (const batch of [...batches.values(), ...foliageBatches.values()]) await warmUpWorldInstanceMaterial(batch.mesh)
+            const meshes = new Set<Mesh>(foliageBatches.keys())
+            for (const region of regions.values()) {
+                for (const faces of region.faces) {
+                    if (faces) for (const {batch} of faces) meshes.add(batch.mesh)
+                }
+                for (const patch of region.patches) {
+                    if (patch) for (const {batch} of patch.faces) meshes.add(batch.mesh)
+                }
+            }
+            // Prepared regions cover the initial view and its walking reserve.
+            await warmUpWorldInstanceMaterials(meshes, onProgress)
         },
         flushPreparedRegions() {
             if (!refreshPreparedRegions || !terrain.isEnabled()) return false

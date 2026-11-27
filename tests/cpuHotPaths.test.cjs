@@ -15,6 +15,43 @@ function loadModule(path, dependencies) {
     return exports
 }
 
+test('world shaders overlap across materials and warm the depth pre-pass in isolation', async () => {
+    const {warmUpWorldInstanceMaterials} = loadModule('babylon/world/worldInstanceBuffers.ts', {})
+    const started = []
+    const finish = []
+    const progress = []
+    let colorWrite = true
+    const engine = {
+        getCaps: () => ({parallelShaderCompile: {}}),
+        getColorWrite: () => colorWrite,
+        setColorWrite: value => {colorWrite = value},
+    }
+    const material = (needDepthPrePass = false) => ({
+        needDepthPrePass,
+        forceCompilationAsync(mesh) {
+            started.push([mesh.name, colorWrite])
+            return new Promise(resolve => finish.push(resolve))
+        },
+    })
+    const mesh = (name, material) => ({
+        name, material, thinInstanceCount: 1, getVertexBuffer: () => ({}), getEngine: () => engine,
+    })
+    const shared = material()
+    const warming = warmUpWorldInstanceMaterials([
+        mesh('ground', shared), mesh('edge', shared), mesh('grass', material()), mesh('glass', material(true)),
+    ], (completed, total) => progress.push([completed, total]))
+    assert.deepEqual(started, [['ground', true], ['grass', true]])
+    for (let i = 0; i < 5; i++) {
+        assert.ok(finish.length)
+        finish.shift()()
+        await new Promise(resolve => setImmediate(resolve))
+    }
+    await warming
+    assert.deepEqual(started, [['ground', true], ['grass', true], ['edge', true], ['glass', true], ['glass', false]])
+    assert.deepEqual(progress, [[0, 4], [1, 4], [2, 4], [3, 4], [4, 4]])
+    assert.equal(colorWrite, true)
+})
+
 test('the active mesh list only refreezes after movement stops', () => {
     const {ActiveMeshFreezer: freezer} = loadModule('babylon/scene/activeMeshFreezer.ts', {})
     const calls = []

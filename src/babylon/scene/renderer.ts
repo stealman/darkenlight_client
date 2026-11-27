@@ -159,7 +159,8 @@ export const Renderer = {
         if (!ViewportManager.viewPortInitialized) ViewportManager.calculateViewport(this.camera!)
     },
 
-    async gameStarted(onWarmupProgress?: (completed: number, total: number) => void) {
+    async gameStarted(onWarmupProgress?: (phase: 'terrain' | 'characters' | 'monsters' | 'lighting',
+        completed: number, total: number) => void) {
         Lights.sunLight.parent = MyPlayer.myModel!.node
         Lights.attachPersonalLight(MyPlayer.myModel!.node)
         MyStatusPanel.panel!.style.display = 'flex'
@@ -181,16 +182,15 @@ export const Renderer = {
         WorldRenderer.lastPos = MyPlayer.myChar.getPositionRounded()
         Lights.onFrame(0)
 
-        onWarmupProgress?.(0, 4)
-        await WorldRenderer.warmUpOcclusionFadeShaders()
-        onWarmupProgress?.(1, 4)
+        onWarmupProgress?.('terrain', 0, 1)
+        await WorldRenderer.warmUpOcclusionFadeShaders((completed, total) => onWarmupProgress?.('terrain', completed, total))
+        onWarmupProgress?.('characters', 0, 1)
         await CharacterManager.warmUpAppearance(this.scene)
-        onWarmupProgress?.(2, 4)
+        onWarmupProgress?.('monsters', 0, 1)
         await MonsterManager.prepareModels()
         WeatherManager.prepare()
-        onWarmupProgress?.(3, 4)
         await Lights.warmUpDayNightCycle((completed, total) => {
-            onWarmupProgress?.(3 + completed, 3 + total)
+            onWarmupProgress?.('lighting', completed, total)
         })
 
         ActiveMeshFreezer.start()

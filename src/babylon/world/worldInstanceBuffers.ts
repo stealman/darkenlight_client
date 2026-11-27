@@ -1,11 +1,10 @@
 import { Matrix, Mesh, Vector2 } from '@babylonjs/core'
+import type { Material } from '@babylonjs/core'
 
 // Mesh lifetime owns the retained CPU/GPU capacity, including empty batches.
 const buffersByMesh = new WeakMap<Mesh, {matrices: Float32Array, uv: Float32Array}>()
 
-export async function warmUpWorldInstanceMaterial(mesh: Mesh | null | undefined) {
-    const material = mesh?.material
-    if (!mesh || !material) return
+async function warmUpWorldInstanceMaterial(mesh: Mesh, material: Material) {
     const count = mesh.thinInstanceCount
     const temporary = !mesh.getVertexBuffer('world0')
     const skipBounds = mesh.doNotSyncBoundingInfo
@@ -30,6 +29,47 @@ export async function warmUpWorldInstanceMaterial(mesh: Mesh | null | undefined)
         else mesh.thinInstanceCount = count
         mesh.doNotSyncBoundingInfo = skipBounds
     }
+}
+
+export async function warmUpWorldInstanceMaterials(meshes: Iterable<Mesh | null | undefined>,
+    onProgress?: (completed: number, total: number) => void) {
+    const parallel = new Map<Material, Mesh[]>()
+    const depthPrePass: [Mesh, Material][] = []
+    let total = 0
+    for (const mesh of meshes) {
+        const material = mesh?.material
+        if (!mesh || !material) continue
+        total++
+        if (material.needDepthPrePass) {
+            depthPrePass.push([mesh, material])
+        } else {
+            let group = parallel.get(material)
+            if (!group) parallel.set(material, group = [])
+            group.push(mesh)
+        }
+    }
+    let completed = 0
+    onProgress?.(completed, total)
+    const warm = async (mesh: Mesh, material: Material) => {
+        try {
+            await warmUpWorldInstanceMaterial(mesh, material)
+        } catch (error) {
+            console.warn('World material warm-up failed', material.name, error)
+        } finally {
+            onProgress?.(++completed, total)
+        }
+    }
+    const groups = parallel.entries()
+    const supportsParallel = parallel.values().next().value?.[0]?.getEngine().getCaps().parallelShaderCompile
+    // A compilation temporarily changes the material's hot-swapping state.
+    // Each concurrent group owns a different material.
+    await Promise.all(Array.from({length: Math.min(parallel.size, supportsParallel ? 8 : 1)}, async () => {
+        for (const [material, group] of groups) {
+            for (const mesh of group) await warm(mesh, material)
+        }
+    }))
+    // The depth pre-pass changes the engine's color-write state.
+    for (const [mesh, material] of depthPrePass) await warm(mesh, material)
 }
 
 export function updateWorldInstanceBuffers(mesh: Mesh, matrices: Matrix[], uvData: Vector2[], refreshBounds = true): Float32Array {

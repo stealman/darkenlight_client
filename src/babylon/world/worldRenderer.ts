@@ -10,7 +10,7 @@ import {
 import { Builder } from '@/babylon/builder'
 import { Materials, TerrainEnum1 } from '@/babylon/materials'
 import { TreeManager } from '@/babylon/world/treeManager'
-import { updateWorldInstanceBuffers, warmUpWorldInstanceMaterial } from '@/babylon/world/worldInstanceBuffers'
+import { updateWorldInstanceBuffers, warmUpWorldInstanceMaterials } from '@/babylon/world/worldInstanceBuffers'
 import { getTerrainHeightOffset, TerrainManager, WATER_BLOCK_TYPE } from '@/babylon/world/terrainManager'
 import { PBRCustomMaterial } from '@babylonjs/materials'
 import { StaticsManager } from '@/babylon/world/statics/staticsManager'
@@ -477,18 +477,22 @@ export const WorldRenderer = {
         return TerrainManager.usesOutdoorTerrain() ? outdoorSurfaceHeight(tile) : tile.height + getTerrainHeightOffset(tile, false)
     },
 
-    async warmUpOcclusionFadeShaders() {
+    async warmUpOcclusionFadeShaders(onProgress?: (completed: number, total: number) => void) {
         try {
+            const meshes = [this.block1?.mesh, this.blockWithAlpha1?.mesh, this.translucentPlane?.mesh,
+                BuildingManager.opaqueBatchMesh, BuildingManager.glassBatchMesh, TerrainManager.terrainWater?.mesh]
+            const sharedTotal = meshes.filter(mesh => mesh?.material).length
+            let terrainTotal = 0
             await Promise.all([
-                TerrainManager.outdoorTerrain?.warmUp(),
+                TerrainManager.outdoorTerrain?.warmUp((completed, total) => {
+                    terrainTotal = total
+                    onProgress?.(completed, total + sharedTotal)
+                }),
                 TreeManager.warmUpShaders(),
                 BuildingManager.warmUpFadeShader(),
                 IndoorTerrainOcclusionManager.warmUpFadeShader(),
             ])
-            for (const mesh of [this.block1?.mesh, this.blockWithAlpha1?.mesh, this.translucentPlane?.mesh,
-                BuildingManager.opaqueBatchMesh, BuildingManager.glassBatchMesh, TerrainManager.terrainWater?.mesh]) {
-                await warmUpWorldInstanceMaterial(mesh)
-            }
+            await warmUpWorldInstanceMaterials(meshes, (completed, total) => onProgress?.(terrainTotal + completed, terrainTotal + total))
         } catch (error) {
             console.warn('World shader warm-up failed', error)
         }

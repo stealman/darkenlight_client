@@ -20,6 +20,12 @@ import uiImageSettings from '@/gui/uiImageSettings.json'
 
 const UI_IMAGE_PROGRESS_START = 5
 const UI_IMAGE_PROGRESS_END = 30
+const WARMUP_PROGRESS = {
+    terrain: {start: 81, end: 90, key: 'app.loadingTerrain'},
+    characters: {start: 90, end: 94, key: 'app.loadingAppearance'},
+    monsters: {start: 94, end: 96, key: 'app.loadingMonsters'},
+    lighting: {start: 96, end: 98, key: 'app.loadingLighting'},
+}
 
 function reportLoadingProgress(progress: number, phaseKey: string) {
     window.dispatchEvent(new CustomEvent('game:loading-progress', { detail: { progress, phaseKey } }))
@@ -72,10 +78,11 @@ export const GameManager = {
     },
 
     async startGame() {
-        reportLoadingProgress(80, 'app.loadingLighting')
-        await Renderer.gameStarted((completed, total) => {
+        reportLoadingProgress(80, 'app.loadingWorld')
+        await Renderer.gameStarted((phase, completed, total) => {
+            const {start, end, key} = WARMUP_PROGRESS[phase]
             const ratio = total > 0 ? completed / total : 1
-            reportLoadingProgress(80 + Math.floor(ratio * 18), 'app.loadingLighting')
+            reportLoadingProgress(start + Math.floor(ratio * (end - start)), key)
         })
         reportLoadingProgress(99, 'app.loadingStarting')
         this.started = true
