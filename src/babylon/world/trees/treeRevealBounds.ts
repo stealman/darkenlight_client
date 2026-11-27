@@ -1,4 +1,4 @@
-import { Vector3, Vector4 } from '@babylonjs/core'
+import { Frustum, Plane, Vector3, Vector4 } from '@babylonjs/core'
 import type { Matrix } from '@babylonjs/core'
 import type { TreeModel } from './treeGenerator'
 import type { TreePlacement } from './treeRenderer'
@@ -8,7 +8,7 @@ export interface TreeBounds { min: Vector3, max: Vector3 }
 export interface TreeRevealEntry { placement: TreePlacement, bounds: TreeBounds, transform: Matrix }
 type TreeRevealNode = TreeRevealEntry | {bounds: TreeBounds, left: TreeRevealNode, right: TreeRevealNode}
 
-type TreeModelRevealBounds = TreeBounds & {pieces: Map<TreeShape, Float32Array>}
+type TreeModelRevealBounds = TreeBounds & {radius: number, pieces: Map<TreeShape, Float32Array>}
 const modelBounds = new WeakMap<TreeModel, TreeModelRevealBounds>()
 
 // Bounds include the vertex shader deformation. Wood endpoints sweep spheres, and
@@ -52,9 +52,37 @@ export function getTreeModelBounds(model: TreeModel): TreeModelRevealBounds {
         }
         pieces.set(shape, packed)
     }
-    const bounds = {min, max, pieces}
+    const radius = Math.hypot(Math.max(Math.abs(min.x), Math.abs(max.x)), Math.max(Math.abs(min.z), Math.abs(max.z)))
+    const bounds = {min, max, radius, pieces}
     modelBounds.set(model, bounds)
     return bounds
+}
+
+export class TreeCameraFrustum {
+    private readonly planes = Array.from({length: 6}, () => new Plane(0, 0, 0, 0))
+    private readonly horizontal = new Float64Array(6)
+
+    update(viewProjection: Matrix, padding: number) {
+        Frustum.GetPlanesToRef(viewProjection, this.planes)
+        for (let i = 0; i < this.planes.length; i++) {
+            const plane = this.planes[i]
+            plane.d += padding
+            this.horizontal[i] = Math.hypot(plane.normal.x, plane.normal.z)
+        }
+    }
+
+    intersects(model: TreeModel, position: Vector3, scale: number) {
+        // An upright cylinder encloses the model at any yaw.
+        const {min, max, radius} = getTreeModelBounds(model)
+        const width = radius * scale
+        const bottom = min.y * scale, top = max.y * scale
+        for (let i = 0; i < this.planes.length; i++) {
+            const plane = this.planes[i]
+            const ny = plane.normal.y
+            if (plane.dotCoordinate(position) + this.horizontal[i] * width + ny * (ny > 0 ? top : bottom) < 0) return false
+        }
+        return true
+    }
 }
 
 export function projectTreeBounds(bounds: TreeBounds, transform: Matrix, point: Vector3, projected: TreeBounds) {

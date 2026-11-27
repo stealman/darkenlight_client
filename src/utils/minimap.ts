@@ -11,6 +11,7 @@ import {PartyManager} from '@/data/partyManager'
 
 const countFormat = {cs: new Intl.NumberFormat('cs'), en: new Intl.NumberFormat('en')}
 export const miniMapFps = ref('')
+export const miniMapRenderStats = ref('')
 
 export const MiniMap = {
     tooltipOwnerKey: 'mini-map' as string,
@@ -39,6 +40,7 @@ export const MiniMap = {
 
     initialize() {
         miniMapFps.value = ''
+        miniMapRenderStats.value = ''
         //const blockMap: MapBlock[][] = WorldDataManager.getBlockMap()
         this.mapWidth = 1024
         this.mapHeight = 1024
@@ -111,9 +113,12 @@ export const MiniMap = {
         }
     },
 
-    setDebugInfo(fps: number, theoreticalFps: string, activeMeshesMs: number, positionInfo: string) {
+    setDebugInfo(fps: number, theoreticalFps: string, activeMeshesMs: number, positionInfo: string,
+        drawCalls: number, activeFaces: number) {
         const fpsInfo = `${fps} | ${theoreticalFps}`
         miniMapFps.value = fpsInfo
+        const format = countFormat[getLocale()]
+        miniMapRenderStats.value = `DC ${format.format(drawCalls)} | AF ${format.format(activeFaces)}`
         this.fpsInfo = `${fpsInfo} | AM ${activeMeshesMs.toFixed(2)}ms`
         this.positionInfo = positionInfo
 

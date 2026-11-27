@@ -26,7 +26,7 @@ export interface MeshLightingHost {
     personalShadow: ShadowGenerator
     staticShadowGenerators: ShadowGenerator[]
     staticLightSlots: StaticLightSlot[]
-    sharedLightMeshes: Set<AbstractMesh>
+    sharedLightMeshes: Map<AbstractMesh, number | undefined>
     actorLightMeshes: Set<AbstractMesh>
     actorStaticShadowCasters: Set<AbstractMesh>
     unfilteredActorStaticShadowCasters: Set<AbstractMesh>
@@ -44,7 +44,7 @@ export interface MeshLightingHost {
 export function resetMeshLighting(host: MeshLightingHost) {
     // Recreate the collections so initialization also works when Vite HMR
     // reuses a Lights singleton created before a newly added field existed.
-    host.sharedLightMeshes = new Set<AbstractMesh>()
+    host.sharedLightMeshes = new Map<AbstractMesh, number | undefined>()
     host.actorLightMeshes = new Set<AbstractMesh>()
     host.actorStaticShadowCasters = new Set<AbstractMesh>()
     host.unfilteredActorStaticShadowCasters = new Set<AbstractMesh>()
@@ -58,9 +58,10 @@ export function resetMeshLighting(host: MeshLightingHost) {
     host.localPlayerLightWarmingMeshes = new Set<AbstractMesh>()
 }
 
-export function registerSharedLightMesh(host: MeshLightingHost, mesh: AbstractMesh) {
-    ensureMaterialLightCapacity(mesh, STATIC_LIGHT_LIMITS[Settings.detailLevel.level - 1] + 2)
-    host.sharedLightMeshes.add(mesh)
+export function registerSharedLightMesh(host: MeshLightingHost, mesh: AbstractMesh, staticLightLimit?: number) {
+    const capacity = (staticLightLimit ?? STATIC_LIGHT_LIMITS[Settings.detailLevel.level - 1]) + 2
+    ensureMaterialLightCapacity(mesh, capacity, staticLightLimit !== undefined)
+    host.sharedLightMeshes.set(mesh, staticLightLimit)
     updateSharedLightMesh(host, mesh)
 }
 
@@ -69,7 +70,7 @@ export function unregisterSharedLightMesh(host: MeshLightingHost, mesh: Abstract
 }
 
 export function updateSharedLightMeshes(host: MeshLightingHost) {
-    host.sharedLightMeshes.forEach(mesh => {
+    host.sharedLightMeshes.forEach((_limit, mesh) => {
         if (mesh.isDisposed()) {
             host.sharedLightMeshes.delete(mesh)
             return
@@ -81,8 +82,10 @@ export function updateSharedLightMeshes(host: MeshLightingHost) {
 export function updateSharedLightMesh(host: MeshLightingHost, mesh: AbstractMesh) {
     // Keep one immutable light layout for the whole outdoor cycle. Inactive
     // lights stay in the layout at zero intensity to avoid shader recompiles.
+    const staticLightLimit = getStaticLightLimit(host)
+    const meshLimit = host.sharedLightMeshes.get(mesh) ?? staticLightLimit
     const staticLights = host.staticLightSlots
-        .slice(0, getStaticLightLimit(host))
+        .slice(0, Math.min(staticLightLimit, meshLimit))
         .map(slot => slot.light)
     const selectedLights: Array<DirectionalLight | SpotLight> = host.indoor
         ? [host.personalLight, ...staticLights]
@@ -519,7 +522,7 @@ function shouldFilterStaticShadowCaster(mesh: AbstractMesh): boolean {
 }
 
 export function pruneDisposedMeshReferences(host: MeshLightingHost) {
-    host.sharedLightMeshes.forEach(mesh => {
+    host.sharedLightMeshes.forEach((_limit, mesh) => {
         if (mesh.isDisposed()) {
             host.sharedLightMeshes.delete(mesh)
         }
@@ -581,12 +584,13 @@ export function pruneDisposedMeshReferences(host: MeshLightingHost) {
     })
 }
 
-function ensureMaterialLightCapacity(mesh: AbstractMesh, requiredCapacity: number) {
+function ensureMaterialLightCapacity(mesh: AbstractMesh, requiredCapacity: number, exact = false) {
     const material = mesh.material as (Material & {maxSimultaneousLights?: number}) | null
     if (material == null || !('maxSimultaneousLights' in material)) {
         return
     }
-    if ((material.maxSimultaneousLights ?? 0) < requiredCapacity) {
+    const current = material.maxSimultaneousLights ?? 0
+    if (exact ? current !== requiredCapacity : current < requiredCapacity) {
         material.maxSimultaneousLights = requiredCapacity
     }
 }

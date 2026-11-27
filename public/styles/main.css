@@ -73,6 +73,7 @@ body {
     line-height: 12px;
     letter-spacing: 0;
     font-variant-numeric: tabular-nums;
+    text-align: right;
     pointer-events: none;
 }
 
@@ -110,7 +111,7 @@ div#emeralds-info {
 
 #gm-system-buttons {
     position: fixed;
-    top: calc(var(--hud-minimap-size, 100px) + 26px);
+    top: calc(var(--hud-minimap-size, 100px) + 38px);
     right: max(5px, env(safe-area-inset-right));
     z-index: 1000;
     display: flex;

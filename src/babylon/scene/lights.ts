@@ -81,7 +81,7 @@ export const Lights = {
     staticShadowGenerators: [] as ShadowGenerator[],
     staticLights: new Map<string, StaticLightSource>(),
     staticLightSlots: [] as StaticLightSlot[],
-    sharedLightMeshes: new Set<AbstractMesh>(),
+    sharedLightMeshes: new Map<AbstractMesh, number | undefined>(),
     actorLightMeshes: new Set<AbstractMesh>(),
     actorStaticShadowCasters: new Set<AbstractMesh>(),
     unfilteredActorStaticShadowCasters: new Set<AbstractMesh>(),
@@ -225,8 +225,8 @@ export const Lights = {
         this.unregisterSharedLightMesh(mesh)
     },
 
-    registerSharedLightMesh(mesh: AbstractMesh) {
-        registerSharedLightMesh(this, mesh)
+    registerSharedLightMesh(mesh: AbstractMesh, staticLightLimit?: number) {
+        registerSharedLightMesh(this, mesh, staticLightLimit)
     },
 
     unregisterSharedLightMesh(mesh: AbstractMesh) {

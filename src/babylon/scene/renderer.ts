@@ -284,10 +284,6 @@ export const Renderer = {
             EmeraldsManager.onFrame(actualTime)
         }
 
-        if (this.frame % 10 === 0) {
-            this.actualizeDebug()
-        }
-
         if (this.frame % 10 === 2) {
             StepMarksRenderer.update(actualTime)
             FightSplatsRenderer.update(actualTime)
@@ -314,6 +310,10 @@ export const Renderer = {
         if (MyPlayer.myChar) ActiveMeshFreezer.updateViewPosition(MyPlayer.myChar.pos)
         scene.render()
         flushActorVisualPreparation(scene, frameStartedAt)
+
+        if (this.frame % 10 === 0) {
+            this.actualizeDebug(scene)
+        }
 
         if (!ViewportManager.viewPortInitialized) ViewportManager.calculateViewport(this.camera)
     },
@@ -428,6 +428,8 @@ export const Renderer = {
         const { cameraPosition, cameraViewY } = this.getCameraSetup()
         this.camera.position.copyFrom(cameraPosition)
         this.camera.setTarget(new Vector3(0, cameraViewY, 0))
+        ViewportManager.viewPortInitialized = false
+        WorldRenderer.lastPos = null
     },
 
     createCamera() {
@@ -448,13 +450,15 @@ export const Renderer = {
         }
     },
 
-    actualizeDebug() {
-        const frameTime = this.instrumentation!.frameTimeCounter.lastSecAverage
+    actualizeDebug(scene: Scene) {
+        const instrumentation = this.instrumentation!
+        const frameTime = instrumentation.frameTimeCounter.lastSecAverage
         const theoreticalFps = frameTime > 0 ? (1000 / frameTime).toFixed(0) : '–'
-        const activeMeshesMs = this.instrumentation!.activeMeshesEvaluationTimeCounter.lastSecAverage
+        const activeMeshesMs = instrumentation.activeMeshesEvaluationTimeCounter.lastSecAverage
         MiniMap.setDebugInfo(
             this.fps, theoreticalFps, activeMeshesMs,
-            MyPlayer.myChar?.getPositionRounded().toString() ?? '-'
+            MyPlayer.myChar?.getPositionRounded().toString() ?? '-',
+            instrumentation.drawCallsCounter.current, scene.getActiveIndices() / 3
         )
     },
 

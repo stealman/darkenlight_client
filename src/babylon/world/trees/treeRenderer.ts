@@ -1,4 +1,4 @@
-import { Camera, Matrix, Mesh, PBRMaterial, Quaternion, Scene, TransformNode, Vector2, Vector3, Vector4 } from '@babylonjs/core'
+import { Camera, Matrix, Mesh, Quaternion, Scene, TransformNode, Vector2, Vector3, Vector4 } from '@babylonjs/core'
 import type { Material, Observer } from '@babylonjs/core'
 import { createTreeGeometry } from './treeGeometry'
 import type { TreeVariant } from './treeGenerator'
@@ -605,18 +605,12 @@ export class TreeRenderer {
             + (atlas ? ':' + atlas + '-card' : barkMode !== 'procedural' ? ':' + barkMode : '')
             + (groundContact ? ':ground' : '')
         const skipInactiveLights = this.skipInactiveLights || !(features & TREE_SHADER.lighting)
-        const baselineKey = baseKey + ':all-light-slots'
-        const key = skipInactiveLights ? baseKey : baselineKey
+        const key = skipInactiveLights ? baseKey : baseKey + ':all-light-slots'
         let material = this.materials.get(key)
         if (!material) {
             material = createTreeMaterial(this.scene, this.surfaceDetail, features, this.reveal, this.targetReveal,
                 vertexMask, skipInactiveLights, atlas, barkMode, groundContact)
             this.materials.set(key, material)
-        }
-        const comparison = this.materials.get(skipInactiveLights ? baselineKey : baseKey)
-        if (material instanceof PBRMaterial && comparison instanceof PBRMaterial
-            && material.maxSimultaneousLights < comparison.maxSimultaneousLights) {
-            material.maxSimultaneousLights = comparison.maxSimultaneousLights
         }
         return material
     }

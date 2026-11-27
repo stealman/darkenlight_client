@@ -376,6 +376,73 @@ test('effect synchronization visits visible entities and ends effects when entit
     assert.equal(gfx.characterAffectKeys, keys[0]); assert.equal(gfx.monsterAffectKeys, keys[1])
 })
 
+test('tree camera culling skips offscreen trees and keeps a margin at the edge', async () => {
+    const core = await import('@babylonjs/core/index.js')
+    const species = loadModule('babylon/world/trees/treeSpecies.ts', {})
+    const {TreeVariants} = loadModule('babylon/world/trees/treeGenerator.ts', {'@babylonjs/core': core, './treeSpecies': species})
+    const {TreeCameraFrustum, getTreeModelBounds} = loadModule('babylon/world/trees/treeRevealBounds.ts', {'@babylonjs/core': core})
+    const model = new TreeVariants(671439, 1).get('spruce', 0).models.HIGH
+    const radius = getTreeModelBounds(model).radius
+    const projection = core.Matrix.PerspectiveFovLH(Math.PI / 2, 1, .1, 100)
+    const frustum = new TreeCameraFrustum()
+    const position = new core.Vector3(0, 0, 20)
+    frustum.update(projection, 0)
+    assert.ok(frustum.intersects(model, position, 1))
+    // At a 90-degree field of view the right plane is x = z.
+    position.x = 20 + radius * Math.SQRT2 + .5
+    assert.equal(frustum.intersects(model, position, 1), false)
+    frustum.update(projection, 2)
+    assert.ok(frustum.intersects(model, position, 1))
+    position.x += 10
+    assert.equal(frustum.intersects(model, position, 1), false)
+})
+
+test('tree visibility is reused within a camera tile and refreshed after a viewport change', async () => {
+    const core = await import('@babylonjs/core/index.js')
+    const species = loadModule('babylon/world/trees/treeSpecies.ts', {})
+    const playerPosition = new core.Vector3(0, 0, 0)
+    const viewport = {viewPortInitialized: true, visibilityMatrix: [], isPointInVisibleMatrix: () => true}
+    const camera = {getViewMatrix() {}, getProjectionMatrix() {}, getTransformationMatrix() {}}
+    let updates = 0, tests = 0
+    const {TreeManager: trees} = loadModule('babylon/world/treeManager.ts', {
+        '@babylonjs/core': core,
+        '@/babylon/scene/renderer': {Renderer: {camera}},
+        '@/data/myPlayer': {MyPlayer: {myChar: {pos: playerPosition}}},
+        '@/data/worldDataManager': {WorldDataManager: {getBlockMap: () => [[{height: 0, totalHeight: 0}]]}},
+        '@/settings/settings': {Settings: {treesEnabled: true, isPhoneOrTablet: () => false, detailLevel: {name: 'LOW'}}},
+        '@/utils/viewport': {ViewportManager: viewport},
+        './collisionGrid': loadModule('babylon/world/collisionGrid.ts', {}),
+        './statics/staticVariation': {createStaticVariation: () => ({unit: () => 0})},
+        './trees/treeSpecies': species,
+        './trees/treeGenerator': {TreeVariants: class {
+            warmUp() {}
+            get() {return {height: 3, models: {LOW: {}}}}
+        }},
+        './trees/treeGroundSurface': {createTreeSnowFootprint: () => ({})},
+        './trees/treeRevealBounds': {TreeCameraFrustum: class {
+            update() {updates++}
+            intersects() {tests++; return true}
+        }},
+        './trees/treeRenderer': {TreeRenderer: class {
+            setSurfaceDetail() {}
+            setShadowCasting() {}
+            rebuild() {}
+        }},
+    })
+    await trees.initialize({onDisposeObservable: {addOnce() {}}}, null)
+    trees.addTree({x: 0, z: 0, type: species.WORLD_TREE_TYPES.spruce.ids[0], size: 1})
+    trees.renderTrees(false)
+    playerPosition.x = .2
+    trees.renderTrees(false)
+    assert.deepEqual([updates, tests], [1, 1])
+    playerPosition.x = 1
+    trees.renderTrees(false)
+    assert.deepEqual([updates, tests], [2, 2])
+    viewport.visibilityMatrix = []
+    trees.renderTrees(false)
+    assert.deepEqual([updates, tests], [3, 3])
+})
+
 test('tree reveal forwards the player and selected target without rebuilding geometry', async () => {
     const core = await import('@babylonjs/core/index.js')
     const player = {getModelHeight: () => 2}
@@ -390,6 +457,7 @@ test('tree reveal forwards the player and selected target without rebuilding geo
         './collisionGrid': loadModule('babylon/world/collisionGrid.ts', {}),
         './trees/treeSpecies': species,
         './trees/treeGenerator': {TreeVariants: class { warmUp() {} }},
+        './trees/treeRevealBounds': loadModule('babylon/world/trees/treeRevealBounds.ts', {'@babylonjs/core': core}),
         './trees/treeRenderer': {TreeRenderer: class {
             setRevealTargets(...args) {reveals = args}
             rebuild() {rebuilds++}

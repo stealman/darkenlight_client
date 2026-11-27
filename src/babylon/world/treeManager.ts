@@ -5,12 +5,15 @@ import { MyPlayer } from '@/data/myPlayer'
 import { ViewportManager } from '@/utils/viewport'
 import { TargetingManager } from '@/gui/targettingManager'
 import { Lights } from '@/babylon/scene/lights'
+import { Renderer } from '@/babylon/scene/renderer'
+import { TREE_STATIC_LIGHT_LIMITS } from '@/babylon/scene/lighting/lightConfig'
 import { Settings } from '@/settings/settings'
 import { CollisionGrid } from './collisionGrid'
 import { outdoorSurfaceHeight } from './terrainRoofShape'
 import { createStaticVariation } from './statics/staticVariation'
 import { TreeVariants } from './trees/treeGenerator'
 import { getTreeInstanceTemplates } from './trees/treeInstanceTemplates'
+import { TreeCameraFrustum } from './trees/treeRevealBounds'
 import { createTreeSnowFootprint, hasSnowNearTree, treeGroundType, treeSnowFootprintInRegion, treeSnowRegion } from './trees/treeGroundSurface'
 import type { TreeSnowFootprint, TreeSnowRegion } from './trees/treeGroundSurface'
 import type { TreePlacement, TreeRenderer } from './trees/treeRenderer'
@@ -35,6 +38,7 @@ interface WorldTree {
     placement: TreePlacement
     shadowPlacement: TreePlacement
     snowFootprint: TreeSnowFootprint
+    cameraVisibility?: {revision: number, height: number, detail: TreeSurfaceDetail, visible: boolean}
 }
 
 const trees = new Map<string, WorldTree>()
@@ -42,8 +46,13 @@ const placements: TreePlacement[] = []
 const snowFootprints: TreeSnowFootprint[] = []
 const playerCenter = Vector3.Zero()
 const targetCenter = Vector3.Zero()
+const treeCameraFrustum = new TreeCameraFrustum()
+const treeCameraTile = Vector3.Zero()
+let treeCameraViewport: typeof ViewportManager.visibilityMatrix | undefined
+let treeCameraRevision = 0
 const nearbyVariantDistances = new Float64Array(TREE_VARIANT_COUNT)
 const TREE_VARIANT_NEIGHBORHOOD = 18
+const WORLD_TREE_SIZE_MULTIPLIER = .85
 const tileKey = (x: number, z: number) => x + ';' + z
 let renderer: TreeRenderer | undefined
 let variants: TreeVariants | undefined
@@ -79,7 +88,7 @@ export const TreeManager = {
                 Lights.removeShadowCaster(mesh, near, near)
             },
             (mesh, enabled) => {
-                if (enabled) Lights.registerSharedLightMesh(mesh)
+                if (enabled) Lights.registerSharedLightMesh(mesh, TREE_STATIC_LIGHT_LIMITS[Settings.detailLevel.level - 1])
                 else Lights.unregisterSharedLightMesh(mesh)
             },
         )
@@ -133,9 +142,10 @@ export const TreeManager = {
         const {x, z, type, size} = data
         const species = TREE_SPECIES_BY_TYPE.get(type)
         if (!variants || !species || !Number.isFinite(size) || size <= 0) return false
+        const scale = size * WORLD_TREE_SIZE_MULTIPLIER
         const level = data.level ?? 1
         const previous = this.getTreeAt(x, z)
-        if (previous?.type === type && previous.scale === size) {
+        if (previous?.type === type && previous.scale === scale) {
             previous.level = level
             return false
         }
@@ -165,17 +175,17 @@ export const TreeManager = {
             }
         }
         const variant = variants.get(species, variantSlot)
-        const visualSize = size * WORLD_TREE_TYPES[species].scale
+        const visualSize = scale * WORLD_TREE_TYPES[species].scale
         const placement: TreePlacement = {id: nextId++, variant, position: position.clone(), size: visualSize, snow: 0,
             detail: 'LOW', fullBarkDetail: species === 'twisted'}
         // Both placements use the same terrain-adjusted position.
         const shadowPlacement: TreePlacement = {...placement, detail: 'SHADOW', shadowOnly: true}
         const snowFootprint = createTreeSnowFootprint(species, x, z, tile?.height ?? 0, variant.rootRadius * visualSize,
             variation.unit(0, 1), variation.unit(0, 2), variation.unit(0, 3))
-        const tree: WorldTree = {type, level, scale: size, position, visualHeight: variant.height * visualSize, variantSlot,
+        const tree: WorldTree = {type, level, scale, position, visualHeight: variant.height * visualSize, variantSlot,
             placement, shadowPlacement, snowFootprint}
         trees.set(tileKey(x, z), tree)
-        const half = size * .75 / 2
+        const half = scale * .75 / 2
         this.collisionGrid.add(tree, x - half, z - half, x + half, z + half)
         return true
     },
@@ -209,6 +219,7 @@ export const TreeManager = {
 
     clearWorld() {
         trees.clear()
+        treeCameraViewport = undefined
         this.collisionGrid.clear()
         this.visibleTrees.length = 0
         placements.length = 0
@@ -243,16 +254,30 @@ export const TreeManager = {
         const shadows = Settings.treeShadowsEnabled && Settings.isShadowsEnabled()
         const treeSnowEnabled = outdoor && (Settings.treeShaderFeatures & TREE_SHADER.snow) !== 0
         const playerPosition = MyPlayer.myChar?.pos
+        const camera = Renderer.camera
+        const cullByCamera = camera != null && playerPosition != null
+        if (cullByCamera) {
+            const tileX = Math.round(playerPosition.x), tileY = Math.round(playerPosition.y), tileZ = Math.round(playerPosition.z)
+            if (treeCameraViewport !== ViewportManager.visibilityMatrix || !treeCameraTile.equalsToFloats(tileX, tileY, tileZ)) {
+                camera.getViewMatrix()
+                camera.getProjectionMatrix()
+                // Keep the same planes throughout a tile to avoid changing instance batches as the camera interpolates.
+                treeCameraFrustum.update(camera.getTransformationMatrix(), Settings.isPhoneOrTablet() ? 3 : 2)
+                treeCameraTile.set(tileX, tileY, tileZ)
+                treeCameraViewport = ViewportManager.visibilityMatrix
+                treeCameraRevision++
+            }
+        }
         const snowRegion = this.snowRegion = treeSnowEnabled && playerPosition
             ? treeSnowRegion(playerPosition.x, playerPosition.z, ViewportManager) : undefined
         for (const tree of trees.values()) {
             const {position: {x, y, z}, placement, shadowPlacement, snowFootprint} = tree
-            const visible = ViewportManager.isPointInVisibleMatrix(x, z, 2, y)
+            const visibleTile = ViewportManager.isPointInVisibleMatrix(x, z, 2, y)
             // The lowest sun angle is 28 degrees. Keep a margin for the crown and lower ground.
-            const castsShadow = shadows && (visible || (!Lights.indoor
+            const castsShadow = shadows && (visibleTile || (!Lights.indoor
                 && ViewportManager.isPointNearVisibleBounds(x, z, tree.visualHeight * 2 + 4)))
             const showsSnowFootprint = !!snowRegion && treeSnowFootprintInRegion(snowFootprint, snowRegion)
-            if (!visible && !castsShadow && !showsSnowFootprint) continue
+            if (!visibleTile && !castsShadow && !showsSnowFootprint) continue
             const tile = map[x]?.[z]
             if (!tile) continue
             const groundType = outdoor ? treeGroundType(tile) : 0
@@ -261,13 +286,23 @@ export const TreeManager = {
                 snowFootprint.height = tile.height
                 if (hasSnowNearTree(map, snowFootprint, snowAtBase)) snowFootprints.push(snowFootprint)
             }
-            if (visible || castsShadow) placement.position.y = (outdoor ? outdoorSurfaceHeight(tile) : tile.totalHeight) ?? tile.height
-            if (visible) {
-                placement.groundType = groundType
-                placement.snow = snowAtBase ? snowFootprint.rootSnow : 0
-                placement.detail = detail
-                placements.push(placement)
+            if (visibleTile || castsShadow) placement.position.y = (outdoor ? outdoorSurfaceHeight(tile) : tile.totalHeight) ?? tile.height
+            if (visibleTile) {
                 this.visibleTrees.push(tree)
+                const visibility = tree.cameraVisibility ??= {revision: 0, height: 0, detail, visible: true}
+                if (cullByCamera && (visibility.revision !== treeCameraRevision
+                    || visibility.height !== placement.position.y || visibility.detail !== detail)) {
+                    visibility.revision = treeCameraRevision
+                    visibility.height = placement.position.y
+                    visibility.detail = detail
+                    visibility.visible = treeCameraFrustum.intersects(placement.variant.models[detail], placement.position, placement.size)
+                }
+                if (!cullByCamera || visibility.visible) {
+                    placement.groundType = groundType
+                    placement.snow = snowAtBase ? snowFootprint.rootSnow : 0
+                    placement.detail = detail
+                    placements.push(placement)
+                }
             }
             if (castsShadow) placements.push(shadowPlacement)
         }
