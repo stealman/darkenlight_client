@@ -22,6 +22,8 @@ import { createTerrainPreviewWater } from './terrainPreviewWater'
 import { createTerrainJunctionMaterial, createTerrainTransitionMaterial, POND_BANK_FLAG, TERRAIN_TRANSITION_REACH } from './terrainTransitionMaterial'
 import type { TerrainJunctionLayer } from './terrainTransitionMaterial'
 import { terrainTextureUrls } from '@/babylon/world/terrainTextureUrls'
+import { getTreeGroundSurface } from '@/babylon/world/trees/treeGroundSurface'
+import type { TerrainStepField } from '@/babylon/world/terrainStepField'
 
 const MUDDY_DIRT = TerrainEnum1.TERRAIN_MUDDY_DIRT.index
 const DIRT = TerrainEnum1.TERRAIN_DIRT.index
@@ -83,11 +85,13 @@ type TerrainRenderOptions = {
 type TerrainDemo = {map: MapBlock[][], center: number, boundaries: number[], isBank: (x: number, z: number) => boolean}
 
 export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode, transitionBoundary: Vector3, demo?: TerrainDemo,
-    renderPavingSnow = true) {
+    renderPavingSnow = true, treeGroundContact?: {steps?: TerrainStepField}) {
     const wetness = !!demo || Settings.isDetalLevelHigh()
     const snowGlints = !!demo || !Settings.isDetalLevelLow()
     // Keep one noise mode across terrain patches and transitions. Reserve six maps plus the marks/shadow mask.
     const terrainSamplers = 7
+    const treeGround = treeGroundContact ? getTreeGroundSurface(scene) : undefined
+    const snowSamplers = terrainSamplers + Number(!!treeGroundContact && !treeGroundContact.steps)
     const lowDetailTransitions = !demo && Settings.isDetalLevelLow()
     const simplifiedWallFringe = !demo && (Settings.isDetalLevelLow() || Settings.isDetailLevelMedium())
     const plane = Builder.createHorizontalPlane(scene, parent, 1, 0)
@@ -109,10 +113,11 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
     const grassMaterials = new Set(grassAtlases.map(({atlas}) => atlas.material))
     const snowAtlas = createSnowAtlas(plane, 'adminUtilsSnowDirt')
     configureSnowGlints(snowAtlas.material, undefined, renderPavingSnow, snowGlints)
+    treeGround?.configureSnowTerrain(snowAtlas.material, wetness, lowDetailTransitions, treeGroundContact?.steps)
     const rockAtlas = createRockAtlas(plane, 'adminUtilsRock')
     if (!demo) {
         for (const {material} of [dirtAtlas, dryDirtAtlas, rockAtlas]) configureTerrainNoiseTexture(material, terrainSamplers)
-        if (renderPavingSnow || snowGlints) configureTerrainNoiseTexture(snowAtlas.material, terrainSamplers)
+        if (renderPavingSnow || snowGlints) configureTerrainNoiseTexture(snowAtlas.material, snowSamplers)
     }
     const wetTransitions = new Set<Mesh>()
     const snowTransitions = new Set<Mesh>()
@@ -151,6 +156,7 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
             : grassMaterials.has(cover) ? 'grass' : 'ground')
         if (snowCover) {
             configureSnowGlints(material, withGrass ? 'grass' : 'standard', renderPavingSnow, snowGlints)
+            treeGround?.configureSnowTerrain(material, wetness, lowDetailTransitions, treeGroundContact?.steps)
             if (renderPavingSnow) snowTransitions.add(mesh)
         }
         const soilCover = mudCover || dryCover
@@ -166,7 +172,7 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
         if (atPond) {
             pond?.applyShoreWetness(material, mudCover ? 'grassWeight' : '(1.0 - grassWeight)')
         }
-        if (!demo) configureTerrainNoiseTexture(material, terrainSamplers)
+        if (!demo) configureTerrainNoiseTexture(material, snowCover ? snowSamplers : terrainSamplers)
         return mesh
     }
     const snowTransition = createTransition('adminUtilsSnowMuddyDirt', snowAtlas.material)
@@ -236,10 +242,11 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
         const withSnow = surfaces.includes(SNOW_DIRT)
         if (withSnow) {
             configureSnowGlints(material, 'junction', renderPavingSnow, snowGlints)
+            treeGround?.configureSnowTerrain(material, wetness, lowDetailTransitions, treeGroundContact?.steps)
             if (renderPavingSnow) snowTransitions.add(mesh)
         }
         stepMaterials.set(material, {snow: withSnow ? 'snowGlintCoverage' : undefined, soil: 'junctionSoil'})
-        if (!demo) configureTerrainNoiseTexture(material, terrainSamplers)
+        if (!demo) configureTerrainNoiseTexture(material, withSnow ? snowSamplers : terrainSamplers)
         initializeMesh(mesh)
         transitionMeshes.push(mesh)
         meshes.push(mesh)

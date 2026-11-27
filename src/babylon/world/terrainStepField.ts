@@ -4,6 +4,7 @@ import type { PBRCustomMaterial } from '@babylonjs/materials'
 import { Settings } from '@/settings/settings'
 import { fightSplatShader, MAX_FIGHT_SPLATS } from './fightSplatShader'
 import type { TerrainSplat } from './fightSplatShader'
+import { MAX_TREE_GROUND_TEXTURE_HEIGHT } from './trees/treeGroundSurface'
 
 export const MAX_STEP_MARKS = 250
 export const MAX_SOIL_STEPS = 100
@@ -49,6 +50,10 @@ export class TerrainStepField {
     private textureData = new Float32Array(ROW_SIZE * MARK_ROWS)
     private shadowWidth = 0
     private shadowHeight = 0
+    private shadowMask?: Uint8Array
+    private treeGroundPixels?: Uint8Array
+    private treeGroundWidth = 0
+    private treeGroundHeight = 0
     // Upload seconds relative to scene startup to keep the fade precise in a float.
     private readonly timeOrigin = Date.now()
     private time = 0
@@ -70,32 +75,77 @@ export class TerrainStepField {
     }
 
     get maxShadowHeight() {
-        return this.engine.getCaps().maxTextureSize - MARK_ROWS
+        return this.engine.getCaps().maxTextureSize - MARK_ROWS - MAX_TREE_GROUND_TEXTURE_HEIGHT
+    }
+
+    get treeGroundStartRow() {
+        return MARK_ROWS + this.shadowHeight
+    }
+
+    private resizePackedTexture() {
+        const width = Math.max(ROW_SIZE, this.shadowWidth, this.treeGroundWidth)
+        const height = this.treeGroundStartRow + this.treeGroundHeight
+        const size = this.texture.getSize()
+        if (size.width === width && size.height === height) return false
+        this.textureData = new Float32Array(width * height)
+        this.copyMarkRows(this.data, 0, STEP_ROWS, width)
+        this.copyMarkRows(this.splatData, STEP_ROWS, SPLAT_ROWS, width)
+        this.copyMarkRows(this.glowData, GLOW_START_ROW, GLOW_ROWS, width)
+        this.writeShadowRows(width)
+        this.writeTreeGroundRows(width)
+        this.texture.dispose()
+        this.texture = this.createTexture(width, height)
+        return true
     }
 
     updateContactShadow(mask: Uint8Array, width: number, height: number) {
-        // Use one fragment sampler for both effects on terrain with many light textures.
-        const textureWidth = Math.max(ROW_SIZE, width)
-        const size = this.texture.getSize()
-        const resize = size.width !== textureWidth || size.height !== height + MARK_ROWS
-        if (resize) {
-            this.textureData = new Float32Array(textureWidth * (height + MARK_ROWS))
-            this.copyMarkRows(this.data, 0, STEP_ROWS, textureWidth)
-            this.copyMarkRows(this.splatData, STEP_ROWS, SPLAT_ROWS, textureWidth)
-            this.copyMarkRows(this.glowData, GLOW_START_ROW, GLOW_ROWS, textureWidth)
-        }
+        this.shadowMask = mask
         this.shadowWidth = width
         this.shadowHeight = height
-        for (let z = 0; z < height; z++) {
-            const row = (MARK_ROWS + z) * textureWidth
-            for (let x = 0; x < width; x++) this.textureData[row + x] = mask[z * width + x] / 255
+        if (!this.resizePackedTexture()) {
+            const stride = this.texture.getSize().width
+            this.writeShadowRows(stride)
+            this.uploadRows(MARK_ROWS, height, stride)
         }
-        if (resize) {
-            this.texture.dispose()
-            this.texture = this.createTexture(textureWidth, height + MARK_ROWS)
-        } else {
-            this.upload(this.textureData.subarray(MARK_ROWS * textureWidth), MARK_ROWS, textureWidth, height)
+    }
+
+    updateTreeGround(pixels: Uint8Array, width: number, height: number) {
+        // Keep the terrain's fragment sampler count fixed even with all shadow maps active.
+        this.treeGroundPixels = pixels
+        this.treeGroundWidth = width
+        this.treeGroundHeight = height
+        if (!this.resizePackedTexture()) {
+            const stride = this.texture.getSize().width
+            this.writeTreeGroundRows(stride)
+            this.uploadRows(this.treeGroundStartRow, height, stride)
         }
+    }
+
+    private writeShadowRows(stride: number) {
+        const mask = this.shadowMask
+        if (!mask) return
+        for (let z = 0; z < this.shadowHeight; z++) {
+            const row = (MARK_ROWS + z) * stride
+            for (let x = 0; x < this.shadowWidth; x++) this.textureData[row + x] = mask[z * this.shadowWidth + x] / 255
+        }
+    }
+
+    private writeTreeGroundRows(stride: number) {
+        const pixels = this.treeGroundPixels
+        if (!pixels) return
+        const width = this.treeGroundWidth
+        for (let z = 0; z < this.treeGroundHeight; z++) {
+            const row = (this.treeGroundStartRow + z) * stride
+            for (let x = 0; x < width; x++) {
+                const i = (z * width + x) * 4
+                // An R32F texel holds the three 8-bit channels exactly.
+                this.textureData[row + x] = pixels[i] | (pixels[i + 1] << 8) | (pixels[i + 2] << 16)
+            }
+        }
+    }
+
+    private uploadRows(start: number, rows: number, width: number) {
+        this.upload(this.textureData.subarray(start * width, (start + rows) * width), start, width, rows)
     }
 
     private copyMarkRows(data: Float32Array, start: number, rows: number, textureWidth: number) {
@@ -276,7 +326,7 @@ export class TerrainStepField {
     }
 
     configure(material: PBRCustomMaterial, {snow = '0.0', soil = '0.0'}: StepCoverage = {}) {
-        material.AddUniform('terrainStepData', 'sampler2D', null)
+        material.AddUniform('terrainStepData', 'highp sampler2D', null)
         material.AddUniform('terrainStepTime', 'float', null)
         material.AddUniform('terrainStepsActive', 'vec2', null)
         material.AddUniform('terrainStepShadowSize', 'vec2', null)

@@ -3,14 +3,20 @@ import type { ArcRotateCamera } from '@babylonjs/core'
 import { Lights } from '@/babylon/scene/lights'
 import { StaticsManager } from '@/babylon/world/statics/staticsManager'
 import type { ContactShadowFootprint } from '@/babylon/world/terrainContactShadow'
+import { isSnowRoof, outdoorSurfaceHeight } from '@/babylon/world/terrainRoofShape'
+import { WorldRenderer } from '@/babylon/world/worldRenderer'
+import { createStaticVariation } from '@/babylon/world/statics/staticVariation'
 import { TreeVariants } from '@/babylon/world/trees/treeGenerator'
+import { createTreeSnowFootprint, treeGroundType } from '@/babylon/world/trees/treeGroundSurface'
+import type { TreeSnowFootprint } from '@/babylon/world/trees/treeGroundSurface'
+import { getTreeModelBounds } from '@/babylon/world/trees/treeRevealBounds'
 import { TreeRenderer } from '@/babylon/world/trees/treeRenderer'
 import type { TreePlacement } from '@/babylon/world/trees/treeRenderer'
-import { normalizeTreeBudgetMultiplier, TREE_BUDGET_MULTIPLIER, TREE_DEFAULT_SEED, TREE_VARIANT_COUNT } from '@/babylon/world/trees/treeSpecies'
+import { ALL_TREE_SHADER_FEATURES, normalizeTreeBudgetMultiplier, TREE_BUDGET_MULTIPLIER,
+    TREE_DEFAULT_SEED, TREE_PROTOTYPE_FACE_BUDGET, TREE_VARIANT_COUNT } from '@/babylon/world/trees/treeSpecies'
 import type { TreeDetail, TreeSpecies, TreeSurfaceDetail } from '@/babylon/world/trees/treeSpecies'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { Settings } from '@/settings/settings'
-import { TerrainEnum1 } from '@/babylon/materials'
 
 const STORAGE_KEY = 'darkenlight.adminUtils.proceduralTrees'
 type Parameters = {size: number, seed: number, variant: number, budgetMultiplier: number}
@@ -60,6 +66,9 @@ export function createProceduralTreePreview(scene: Scene, parent: TransformNode,
         <label class="admin-utils__field">Násobek rozpočtu trojúhelníků
             <input type="number" id="treeBudgetMultiplier" min="${TREE_BUDGET_MULTIPLIER.min}" max="${TREE_BUDGET_MULTIPLIER.max}" step="0.1">
         </label>
+        <label><input type="checkbox" id="treePrototype" checked>
+            Prototyp stromu (HIGH, ${TREE_PROTOTYPE_FACE_BUDGET.HIGH.toLocaleString('cs-CZ')} △)
+        </label>
         <label class="admin-utils__field">Krytí levého horního stromu <output id="treeOpacityValue">100 %</output>
             <input type="range" id="treeOpacity" min="0" max="100" value="100">
         </label>
@@ -71,6 +80,7 @@ export function createProceduralTreePreview(scene: Scene, parent: TransformNode,
     const get = <T extends HTMLElement>(id: string) => controls.querySelector<T>('#' + id)!
     const pass = get<HTMLSelectElement>('treePass')
     const budget = get<HTMLInputElement>('treeBudgetMultiplier')
+    const prototype = get<HTMLInputElement>('treePrototype')
     const opacity = get<HTMLInputElement>('treeOpacity')
     const revealEnabled = get<HTMLInputElement>('treeRevealEnabled')
     const revealAngle = get<HTMLInputElement>('treeRevealAngle')
@@ -96,6 +106,7 @@ export function createProceduralTreePreview(scene: Scene, parent: TransformNode,
         refresh()
     }
     pass.onchange = refresh
+    prototype.onchange = refresh
     budget.onchange = () => {
         write({...current, budgetMultiplier: normalizeTreeBudgetMultiplier(budget.valueAsNumber)})
         refresh()
@@ -149,22 +160,30 @@ export function createProceduralTreePreview(scene: Scene, parent: TransformNode,
             const nextFrameKey = `${kind}:${current.size}:${current.seed}:${current.variant}`
             const recenter = nextFrameKey !== frameKey
             frameKey = nextFrameKey
-            const nextPoolKey = `${current.seed}:${current.budgetMultiplier}`
+            const canShowPrototype = pass.value === 'color'
+            const usePrototype = canShowPrototype && prototype.checked
+            prototype.closest('label')!.hidden = !canShowPrototype
+            budget.disabled = usePrototype
+            const nextPoolKey = `${current.seed}:${current.budgetMultiplier}:${usePrototype}`
             if (!variants || nextPoolKey !== poolKey) {
                 poolKey = nextPoolKey
-                variants = new TreeVariants(current.seed, current.budgetMultiplier)
-                if (current.seed === TREE_DEFAULT_SEED && current.budgetMultiplier === DEFAULTS.budgetMultiplier) variants.warmUp()
+                variants = new TreeVariants(current.seed, current.budgetMultiplier, usePrototype)
+                if (!usePrototype && current.seed === TREE_DEFAULT_SEED && current.budgetMultiplier === DEFAULTS.budgetMultiplier) {
+                    variants.warmUp()
+                }
             }
             const pool = variants
             const shadowOnly = pass.value === 'shadow'
-            const surfaceDetail = Settings.detailLevel.name as TreeSurfaceDetail
+            const surfaceDetail = usePrototype ? 'HIGH' : Settings.detailLevel.name as TreeSurfaceDetail
             const detail: TreeDetail = pass.value === 'color' ? surfaceDetail : 'SHADOW'
             const map = WorldDataManager.getBlockMap()
             const footprints: ContactShadowFootprint[] = []
+            const snowFootprints: TreeSnowFootprint[] = []
             const placements: TreePlacement[] = plots.map(({x, z}, i) => {
                 const block = map[x][z]
                 const variant = pool.get(kind, current.variant + i)
-                const snow = block.snowed ? 1 : block.type === TerrainEnum1.TERRAIN_GRASS_WINTER.index ? .38 : 0
+                const groundType = treeGroundType(block)
+                let snow = 0
                 for (const [type, dx, dz] of [[151, -1, 1], [154, 1, 0], [155, 0, -1]]) {
                     StaticsManager.addObject({tp: type, x: x + dx, z: z + dz, tmp: true}, false)
                 }
@@ -172,13 +191,21 @@ export function createProceduralTreePreview(scene: Scene, parent: TransformNode,
                     const radius = variant.rootRadius * current.size
                     footprints.push({minX: x - radius, maxX: x + radius, minZ: z - radius, maxZ: z + radius,
                         height: block.height, reach: Math.max(.22, radius * .75)})
+                    if (groundType && isSnowRoof(block) && !WorldRenderer.snowCoverMask.has(x * map.length + z)) {
+                        const variation = createStaticVariation(current.seed, {x, z}, current.variant + i)
+                        const foot = createTreeSnowFootprint(kind, x, z, block.height, radius,
+                            variation.unit(0, 1), variation.unit(0, 2), variation.unit(0, 3))
+                        snow = foot.rootSnow
+                        snowFootprints.push(foot)
+                    }
                 }
-                return {id: i, variant, position: new Vector3(x, block.totalHeight, z), size: current.size,
-                    snow, detail, shadowOnly, opacity: i === 0 ? Number(opacity.value) / 100 : 1}
+                return {id: i, variant, position: new Vector3(x, outdoorSurfaceHeight(block) ?? block.height, z), size: current.size,
+                    snow, groundType, detail, shadowOnly, fullBarkDetail: kind === 'twisted',
+                    opacity: i === 0 ? Number(opacity.value) / 100 : 1}
             })
             renderer ??= new TreeRenderer(scene, parent, mesh => Lights.shadow?.addShadowCaster(mesh, false),
                 mesh => Lights.shadow?.removeShadowCaster(mesh, false))
-            renderer.setSurfaceDetail(surfaceDetail)
+            renderer.setSurfaceDetail(surfaceDetail, ALL_TREE_SHADER_FEATURES, true, usePrototype ? 'textured' : 'procedural')
             renderer.rebuild(placements)
             revealEnabled.disabled = shadowOnly
             revealAngle.disabled = shadowOnly || !revealEnabled.checked
@@ -192,9 +219,11 @@ export function createProceduralTreePreview(scene: Scene, parent: TransformNode,
             stats.value = `${triangles.toLocaleString('cs-CZ')} trojúhelníků ve 4 variantách · ${colorBatches} dávek pro obraz · ${shadows}`
             return {
                 footprints,
+                snowFootprints,
                 labels: placements.map(({variant}, i) =>
                     `#${(current.variant + i) % TREE_VARIANT_COUNT + 1} · ${variant.models[detail].triangles.toLocaleString('cs-CZ')} △`),
-                height: Math.max(...placements.map(({variant}) => variant.height)) * current.size,
+                height: Math.max(...placements.map(({variant}) => usePrototype ? getTreeModelBounds(variant.models.HIGH).max.y
+                    : variant.height)) * current.size,
                 width: Math.max(...placements.map(({variant}) => variant.spread)) * current.size,
                 recenter,
             }

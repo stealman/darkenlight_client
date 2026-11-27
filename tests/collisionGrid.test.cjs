@@ -149,25 +149,28 @@ test('tree manager indexes scaled trunks and updates its grid through removal an
         detailLevel: {name: 'HIGH'}, isShadowsEnabled: () => true}
     const batches = []
     let surface, shadowCasting
-    dependencies['@/data/worldDataManager'] = {WorldDataManager: {getBlockMap: () =>
-        Array.from({length: 20}, () => Array.from({length: 20}, () => ({height: 0, totalHeight: 0})))}}
+    const map = Array.from({length: 20}, () => Array.from({length: 20}, () => ({type: 4, height: 0, totalHeight: 0})))
+    map[4][4].snowed = true
+    dependencies['@/data/worldDataManager'] = {WorldDataManager: {getBlockMap: () => map}}
     dependencies['@/data/myPlayer'] = {MyPlayer: {worldId: 1}}
     dependencies['@/settings/settings'] = {Settings: settings}
     dependencies['@/utils/viewport'] = {ViewportManager: {viewPortInitialized: true,
         isPointInVisibleMatrix: x => x < 10, isPointNearVisibleBounds: () => true}}
     dependencies['@/babylon/scene/lights'] = {Lights: {indoor: false}}
-    dependencies['@/babylon/world/worldRenderer'] = {WorldRenderer: {getSnowSurfaceHeight: () => undefined}}
-    dependencies['@/babylon/materials'].TerrainEnum1 = {TERRAIN_GRASS_WINTER: {index: 5}}
+    dependencies['@/babylon/world/worldRenderer'] = {WorldRenderer: {getSnowSurfaceHeight: (x, z) =>
+        map[x][z].snowed ? 0 : undefined}}
     dependencies['./collisionGrid'] = load('@/babylon/world/collisionGrid')
     dependencies['./statics/staticVariation'] = load('@/babylon/world/statics/staticVariation')
     dependencies['./trees/treeSpecies'] = load('@/babylon/world/trees/treeSpecies')
     dependencies['./treeSpecies'] = dependencies['./trees/treeSpecies']
     dependencies['./trees/treeGenerator'] = load('@/babylon/world/trees/treeGenerator')
+    dependencies['./terrainRoofShape'] = dependencies['../terrainRoofShape'] = load('@/babylon/world/terrainRoofShape')
+    dependencies['./trees/treeGroundSurface'] = load('@/babylon/world/trees/treeGroundSurface')
     dependencies['./trees/treeRenderer'] = {TreeRenderer: class {
         setRevealTargets() {}
-        setSurfaceDetail(detail, features) {surface = {detail, features}}
+        setSurfaceDetail(detail, features, _skipInactiveLights, barkMode) {surface = {detail, features, barkMode}}
         setShadowCasting(enabled) {shadowCasting = enabled}
-        rebuild(placements) {batches.push(placements.map(tree => tree.detail))}
+        rebuild(placements) {batches.push(placements.map(tree => [tree.id, tree.detail, tree.shadowOnly === true]))}
     }}
     const {TreeManager: manager} = load('@/babylon/world/treeManager')
     await manager.initialize({onDisposeObservable: {addOnce() {}}}, null)
@@ -176,26 +179,33 @@ test('tree manager indexes scaled trunks and updates its grid through removal an
     const items = points.map(([, x, z]) => manager.getTreeAt(x, z))
     assert.equal(manager.addTree({type: 1, x: 4, z: 4, size: .5, level: 2}), false)
     assert.equal(manager.getTreeAt(4, 4).level, 2)
-    manager.renderTrees(false)
-    assert.deepEqual(surface, {detail: 'HIGH', features: 0})
+    assert.deepEqual(manager.renderTrees(true), [])
+    assert.deepEqual(surface, {detail: 'HIGH', features: 0, barkMode: 'textured'})
     assert.equal(shadowCasting, true)
     settings.treesEnabled = false
+    assert.deepEqual(manager.renderTrees(true), [])
     manager.renderTrees(false)
-    manager.renderTrees(false)
-    assert.deepEqual(batches, [['HIGH', 'HIGH', 'SHADOW', 'SHADOW', 'HIGH'], []])
+    assert.deepEqual(batches, [[
+        [0, 'HIGH', false], [0, 'SHADOW', true],
+        [1, 'HIGH', false], [1, 'SHADOW', true],
+        [2, 'SHADOW', true], [3, 'SHADOW', true],
+        [4, 'HIGH', false], [4, 'SHADOW', true],
+    ], []])
     assert.equal(manager.visibleTrees.length, 0)
     assert.equal(manager.isAnyTreeInDistance(new core.Vector3(4, 0, 4), 1.5), true)
     settings.treesEnabled = true
     manager.renderTrees(false)
     assert.deepEqual(batches.at(-1), batches[0])
     settings.treeShaderFeatures = dependencies['./treeSpecies'].TREE_SHADER.snow
-    manager.renderTrees(false)
-    assert.deepEqual(surface, {detail: 'HIGH', features: settings.treeShaderFeatures})
+    const ground = manager.renderTrees(true)
+    assert.deepEqual(ground.map(({x, z}) => [x, z]), [[4, 4], [8, 8]])
+    assert.equal(manager.getTreeAt(8, 8).placement.snow, 0)
+    assert.deepEqual(surface, {detail: 'HIGH', features: settings.treeShaderFeatures, barkMode: 'textured'})
     assert.deepEqual(batches.at(-1), batches[0])
     settings.treeShadowsEnabled = false
     manager.renderTrees(false)
     assert.equal(shadowCasting, false)
-    assert.deepEqual(batches.at(-1), ['HIGH', 'HIGH', 'HIGH'])
+    assert.deepEqual(batches.at(-1), [[0, 'HIGH', false], [1, 'HIGH', false], [4, 'HIGH', false]])
     for (let x = 0; x <= 15; x += .17) for (let z = 0; z <= 15; z += .19) {
         for (const size of [.4, .8, 2]) {
             const expected = items.find(tree => Math.abs(tree.position.x - x) < (tree.scale * .75 + size) / 2
@@ -210,6 +220,10 @@ test('tree manager indexes scaled trunks and updates its grid through removal an
     assert.equal(manager.collisionGrid.cells.size, 0)
     manager.addTree({type: 1, x: 4, z: 4, size: 1})
     assert.deepEqual(manager.getPointInTree(4, 4, .8), {x: 4, z: 4})
+    map[11][8].snowed = true
+    manager.addTree({type: 1, x: 11, z: 8, size: 1})
+    assert.deepEqual(manager.renderTrees(true).map(({x, z}) => [x, z]), [[4, 4], [11, 8]])
+    assert.deepEqual(batches.at(-1), [[0, 'HIGH', false]])
 })
 
 test('existing building index covers rotated houses, large sheds, mausoleums and open doors', async () => {

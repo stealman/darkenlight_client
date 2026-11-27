@@ -29,8 +29,9 @@ export const TREE_SHADER = {lighting: 1, bark: 2, relief: 4, snow: 8, reveal: 16
 export const ALL_TREE_SHADER_FEATURES = Object.values(TREE_SHADER).reduce((mask, feature) => mask | feature, 0)
 export const TREE_VARIANT_COUNT = 25
 export const TREE_DEFAULT_SEED = 671439
-export const TREE_FACE_BUDGET = {LOW: 1000, MEDIUM: 1900, HIGH: 2500, SHADOW: 240} as const
+export const TREE_FACE_BUDGET = {LOW: 2000, MEDIUM: 3800, HIGH: 5000, SHADOW: 360} as const
 export const TREE_BUDGET_MULTIPLIER = {min: 0.5, default: 2, max: 4} as const
+export const TREE_PROTOTYPE_FACE_BUDGET = {LOW: 1100, MEDIUM: 1900, HIGH: 3000} as const
 
 export function normalizeTreeBudgetMultiplier(multiplier: number) {
     return Number.isFinite(multiplier)
@@ -38,5 +39,6 @@ export function normalizeTreeBudgetMultiplier(multiplier: number) {
         : TREE_BUDGET_MULTIPLIER.default
 }
 
-export const TREE_SHAPE_FACES = {wood3: 7, wood6: 16, wood12: 34, leaf: 8, needles: 28, needlesShadow: 12} as const
+export const TREE_SHAPE_FACES = {wood3: 7, wood6: 16, wood16: 46, leaf: 16, needles: 48, needlesShadow: 32,
+    foliageCard: 8, birchCard: 8} as const
 export type TreeShape = keyof typeof TREE_SHAPE_FACES

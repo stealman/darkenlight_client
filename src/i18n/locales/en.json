@@ -169,9 +169,9 @@
     "trees": "Render trees",
     "treeShader": {
       "lighting": "PBR tree lighting",
-      "bark": "Bark grain",
+      "bark": "Bark detail",
       "relief": "Bark relief",
-      "snow": "Snow on trees",
+      "snow": "Snow at tree bases",
       "reveal": "Tree cutouts",
       "patina": "Patina and moss (Medium/High)"
     },

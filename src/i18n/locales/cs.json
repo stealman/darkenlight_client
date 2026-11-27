@@ -169,9 +169,9 @@
     "trees": "Vykreslovat stromy",
     "treeShader": {
       "lighting": "PBR osvětlení stromů",
-      "bark": "Kresba kůry",
+      "bark": "Detaily kůry",
       "relief": "Reliéf kůry",
-      "snow": "Sníh na stromech",
+      "snow": "Sníh u paty stromů",
       "reveal": "Průhledné výřezy stromů",
       "patina": "Patina a mech (MEDIUM/HIGH)"
     },

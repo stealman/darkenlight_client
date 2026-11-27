@@ -12,6 +12,8 @@ import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { StaticsManager } from '@/babylon/world/statics/staticsManager'
 import { TerrainContactShadow } from '@/babylon/world/terrainContactShadow'
 import type { ContactShadowFootprint } from '@/babylon/world/terrainContactShadow'
+import { getTreeGroundSurface } from '@/babylon/world/trees/treeGroundSurface'
+import type { TreeSnowFootprint } from '@/babylon/world/trees/treeGroundSurface'
 import { createTerrainSurfaceRenderer } from './terrainSurfaceRenderer'
 
 const STORAGE_KEY = 'darkenlight.adminUtils.staticBiomes'
@@ -188,10 +190,11 @@ export function createStaticBiomePreview(
                 label.textContent = specimens ? terrain + ' · ' + specimens[i] : terrain
             })
         },
-        renderTerrain(extraFootprints: ContactShadowFootprint[] = []) {
+        renderTerrain(extraFootprints: ContactShadowFootprint[] = [], treeSnowFootprints: TreeSnowFootprint[] = []) {
             const map = WorldDataManager.getBlockMap()
             contactShadow ??= new TerrainContactShadow(scene)
             contactShadow.update(map, terrainRevision, [...StaticsManager.getContactShadowFootprints(map), ...extraFootprints])
+            getTreeGroundSurface(scene).update(map, treeSnowFootprints, terrainRevision, WorldRenderer.snowCoverMask)
             const exposed = [...WorldRenderer.snowCoverMask].filter(tile => map[Math.floor(tile / map.length)][tile % map.length].snowed)
             const key = terrainKey + ':' + exposed.join(',')
             if (renderedTerrain === key) return
@@ -202,7 +205,7 @@ export function createStaticBiomePreview(
                 surface[x][z] = terrainWithoutSnow(map[x][z])
             }
             if (!surfaces) {
-                surfaces = createTerrainSurfaceRenderer(scene, terrainNode, Vector3.Zero())
+                surfaces = createTerrainSurfaceRenderer(scene, terrainNode, Vector3.Zero(), undefined, true, {})
                 for (const mesh of surfaces.meshes) mesh.receiveShadows = true
                 for (const material of new Set(surfaces.meshes.map(mesh => mesh.material))) {
                     if (material instanceof PBRCustomMaterial) contactShadow.configure(material)

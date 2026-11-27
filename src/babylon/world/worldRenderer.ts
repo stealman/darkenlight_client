@@ -151,8 +151,13 @@ export const WorldRenderer = {
     },
 
     refreshTreeRendering() {
-        TreeManager.renderTrees(TerrainManager.usesOutdoorTerrain())
+        this.renderTrees(TerrainManager.usesOutdoorTerrain())
         Lights.invalidateStaticShadowMaps()
+    },
+
+    renderTrees(outdoor: boolean) {
+        const footprints = TreeManager.renderTrees(outdoor)
+        TerrainManager.outdoorTerrain?.updateTreeSnow(footprints)
     },
 
     /**
@@ -176,7 +181,7 @@ export const WorldRenderer = {
         const outdoorTerrain = TerrainManager.renderTerrain(snowCoverMask)
 
         // Render trees
-        TreeManager.renderTrees(outdoorTerrain)
+        this.renderTrees(outdoorTerrain)
 
         // Render statics
         // Visibility and render captures were prepared before terrain contact shadows.

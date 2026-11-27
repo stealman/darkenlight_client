@@ -6,9 +6,31 @@ test('procedural trees reuse a deterministic pool within each mesh budget', asyn
     const server = await createServer({configFile: false, server: {middlewareMode: true}, appType: 'custom', logLevel: 'silent'})
     try {
         const {TreeVariants} = await server.ssrLoadModule('/src/babylon/world/trees/treeGenerator.ts')
-        const {TREE_SPECIES, TREE_VARIANT_COUNT, TREE_SHAPE_FACES, TREE_FACE_BUDGET} =
+        const {TREE_SPECIES, TREE_VARIANT_COUNT, TREE_SHAPE_FACES, TREE_FACE_BUDGET, TREE_BUDGET_MULTIPLIER,
+            TREE_PROTOTYPE_FACE_BUDGET} =
             await server.ssrLoadModule('/src/babylon/world/trees/treeSpecies.ts')
         const {createTreeGeometry} = await server.ssrLoadModule('/src/babylon/world/trees/treeGeometry.ts')
+        const {createTreeSnowFootprint, treeSnowDistance} =
+            await server.ssrLoadModule('/src/babylon/world/trees/treeGroundSurface.ts')
+        for (const phase of [0, .16, .32, .72, .88]) {
+            const near = createTreeSnowFootprint('spruce', 9, 7, 0, .5, .2, .2, phase)
+            const wide = createTreeSnowFootprint('spruce', 9, 7, 0, .5, .9, .8, phase)
+            const fir = createTreeSnowFootprint('fir', 9, 7, 0, .5, .9, .8, phase)
+            assert.ok(wide.radius > near.radius && wide.strength > near.strength)
+            assert.ok(treeSnowDistance(0, 0, wide) < -1.75)
+            assert.ok(treeSnowDistance(.45, 0, wide) < -1.75)
+            assert.ok(treeSnowDistance(.72 * wide.radius, 0, wide) < treeSnowDistance(-.72 * wide.radius, 0, wide))
+            assert.ok(fir.radius > wide.radius)
+            assert.ok(treeSnowDistance(-.45, 0, fir) < -1.75)
+            assert.ok(treeSnowDistance(-.43 * wide.radius, 0, wide) > 0)
+            assert.ok(treeSnowDistance(-.43 * near.radius, 0, near) < 0)
+            assert.ok(treeSnowDistance(wide.reach, 0, wide) >= 1.8)
+            for (const species of ['autumn', 'twisted']) {
+                const bare = createTreeSnowFootprint(species, 9, 7, 0, .5, .9, .8, phase)
+                assert.equal(treeSnowDistance(0, 0, bare), 1.8)
+                assert.equal(bare.rootSnow, 1)
+            }
+        }
         const {buildTreeRevealIndex, collectTreeRevealCandidates, overlapsTreeReveal, projectTreeBounds, TreeRevealFrustum} =
             await server.ssrLoadModule('/src/babylon/world/trees/treeRevealBounds.ts')
         const {Matrix, Mesh, NullEngine, Scene, Vector3, Vector4} = await import('@babylonjs/core')
@@ -43,6 +65,14 @@ test('procedural trees reuse a deterministic pool within each mesh budget', asyn
                 const mesh = new Mesh(shape, scene)
                 createTreeGeometry(mesh, shape)
                 assert.equal(mesh.getTotalIndices(), triangles * 3)
+                if (shape === 'foliageCard' || shape === 'birchCard') assert.equal(mesh.getTotalVertices(), 9)
+                if (!['leaf', 'needles', 'foliageCard', 'birchCard'].includes(shape)) continue
+                const positions = mesh.getVerticesData('position')
+                const surface = mesh.getVerticesData('treeSurface')
+                for (let i = 0; i < positions.length; i += 3) {
+                    assert.equal(surface[i], positions[i])
+                    assert.equal(surface[i + 1], positions[i + 2])
+                }
             }
         } finally { engine.dispose() }
 
@@ -54,7 +84,8 @@ test('procedural trees reuse a deterministic pool within each mesh budget', asyn
         const largerPool = new TreeVariants(671439, 4)
         const sameSeed = new TreeVariants(671439, 1)
         const otherSeed = new TreeVariants(42, 1)
-        const ranges = {LOW: [500, 1000], MEDIUM: [1000, 2000], HIGH: [2000, 2500], SHADOW: [1, 240]}
+        const prototypePool = new TreeVariants(671439, 2, true)
+        const largestPiece = Math.max(...Object.values(TREE_SHAPE_FACES))
         const geometry = ({shapes}) => [...shapes].map(([shape, parts]) => [shape, parts.map(part => part.matrix.m)])
         const trunk = ({shapes}) => [...shapes.values()].flat().find(({matrix}) =>
             matrix.m[12] === 0 && matrix.m[13] < -0.09 && matrix.m[14] === 0).matrix.m
@@ -72,7 +103,8 @@ test('procedural trees reuse a deterministic pool within each mesh budget', asyn
                 assert.deepEqual(geometry(expanded.models.SHADOW), geometry(variant.models.SHADOW))
                 yaws.add(variant.yaw)
                 for (const [detail, model] of Object.entries(variant.models)) {
-                    const [min, max] = ranges[detail]
+                    const max = TREE_FACE_BUDGET[detail]
+                    const min = detail === 'SHADOW' ? 1 : max - largestPiece + 1
                     assert.ok(model.triangles >= min && model.triangles <= max,
                         `${kind} ${detail} variant ${i}: ${model.triangles}`)
                     assert.equal(model.triangles, [...model.shapes].reduce((total, [shape, parts]) =>
@@ -83,9 +115,9 @@ test('procedural trees reuse a deterministic pool within each mesh budget', asyn
                     }
                     if (detail === 'SHADOW') continue
                     const upgraded = expanded.models[detail]
-                    const budget = TREE_FACE_BUDGET[detail] * 2
-                    assert.ok(upgraded.triangles > budget - 28 && upgraded.triangles <= budget,
-                        `${kind} ${detail} variant ${i} at 2×: ${upgraded.triangles}`)
+                    const budget = TREE_FACE_BUDGET[detail] * TREE_BUDGET_MULTIPLIER.default
+                    assert.ok(upgraded.triangles > budget - largestPiece && upgraded.triangles <= budget,
+                        `${kind} ${detail} variant ${i} at ${TREE_BUDGET_MULTIPLIER.default}×: ${upgraded.triangles}`)
                     assert.equal(upgraded.triangles, [...upgraded.shapes].reduce((total, [shape, parts]) =>
                         total + TREE_SHAPE_FACES[shape] * parts.length, 0))
                     assert.ok(upgraded.shapes.size <= 4)
@@ -93,11 +125,30 @@ test('procedural trees reuse a deterministic pool within each mesh budget', asyn
                 }
             }
             assert.equal(yaws.size, TREE_VARIANT_COUNT)
+            for (let i = 0; i < TREE_VARIANT_COUNT; i++) {
+                const prototype = prototypePool.get(kind, i)
+                const legacy = expandedPool.get(kind, i)
+                const cardShape = kind === 'birch' ? 'birchCard' : 'foliageCard'
+                for (const [detail, budget] of Object.entries(TREE_PROTOTYPE_FACE_BUDGET)) {
+                    const model = prototype.models[detail]
+                    assert.ok(model.triangles <= budget && model.triangles > budget - largestPiece, `${kind} ${detail}: ${model.triangles}`)
+                    assert.equal(model.shapes.has(cardShape), kind !== 'twisted')
+                    assert.ok(!model.shapes.has('needles') && !model.shapes.has('leaf'))
+                    assert.equal(model.triangles, [...model.shapes].reduce((total, [shape, parts]) =>
+                        total + TREE_SHAPE_FACES[shape] * parts.length, 0))
+                    assert.deepEqual(trunk(model), trunk(legacy.models[detail]))
+                }
+                const shadow = prototype.models.SHADOW
+                assert.ok(shadow.triangles <= TREE_FACE_BUDGET.SHADOW)
+                assert.ok(!shadow.shapes.has('foliageCard') && !shadow.shapes.has('birchCard'))
+                if (kind === 'birch') assert.ok(shadow.shapes.has('needlesShadow'))
+                else assert.deepEqual(geometry(shadow), geometry(legacy.models.SHADOW))
+            }
             for (const detail of ['LOW', 'MEDIUM', 'HIGH']) {
                 const base = TREE_FACE_BUDGET[detail]
                 assert.ok(smallerPool.get(kind, 0).models[detail].triangles <= base * 0.5)
                 const larger = largerPool.get(kind, 0).models[detail].triangles
-                assert.ok(larger > base * 4 - 28 && larger <= base * 4)
+                assert.ok(larger > base * 4 - largestPiece && larger <= base * 4)
             }
         }
     } finally { await server.close() }

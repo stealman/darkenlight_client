@@ -6,6 +6,8 @@ import { Lights } from '@/babylon/scene/lights'
 import { ViewportManager } from '@/utils/viewport'
 import { Settings } from '@/settings/settings'
 import { TERRAIN_ATLAS_REGION_SIZE } from './terrainAtlasPlacement'
+import { getTreeGroundSurface } from './trees/treeGroundSurface'
+import type { TreeSnowFootprint } from './trees/treeGroundSurface'
 import { TERRAIN_RENDER_BORDER, visitBakedPaving } from './terrainRenderData'
 import type { TerrainRenderData } from './terrainRenderData'
 import { createTerrainSurfaceRenderer } from '@/adminUtils/terrainSurfaceRenderer'
@@ -100,7 +102,9 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
     terrain.parent = parent
     const lowDetail = Settings.isDetalLevelLow()
     const detailedPaving = Settings.detailLevel.paving === 'detailed'
-    const renderer = createTerrainSurfaceRenderer(parent.getScene(), terrain, new Vector3(0, 0, 1), undefined, detailedPaving)
+    const treeGround = getTreeGroundSurface(parent.getScene())
+    const renderer = createTerrainSurfaceRenderer(parent.getScene(), terrain, new Vector3(0, 0, 1), undefined, detailedPaving,
+        {steps: terrainSteps})
     const batches = new Map<Mesh, OutdoorInstanceBatch>()
     const registerSurface = (mesh: Mesh) => {
         const material = mesh.material
@@ -145,7 +149,7 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
     let grassStats: ReturnType<ReturnType<typeof createGrassRenderer>['render']> | undefined
     let grassCenterX = 0, grassCenterZ = 0
     let grassOverrides: GrassOverrides | undefined
-    let forcedGrassTerrainRevision: number | undefined
+    let terrainRevision: number | undefined
     const forcedGrassCache = new Map<number, GrassTile | undefined>()
     const refreshGrass = () => {
         if (!grass) return
@@ -219,6 +223,9 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
 
     return {
         grass,
+        updateTreeSnow(footprints: readonly TreeSnowFootprint[]) {
+            if (currentMap) treeGround.update(currentMap, footprints, terrainRevision, previousSnow)
+        },
         isSurfaceMesh(mesh: AbstractMesh) { return batches.has(mesh as Mesh) },
         getGrassStats() { return terrain.isEnabled() ? grassStats : undefined },
         setEnabled(enabled: boolean) { terrain.setEnabled(enabled) },
@@ -235,9 +242,9 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
         },
         render(blockMap: MapBlock[][], center: {x: number, y: number, z: number}, snowCoverMask: ReadonlySet<number>,
             revision?: number, compiled?: TerrainRenderData, originalBlocks?: WeakSet<MapBlock>, overrides?: GrassOverrides) {
-            if (grassOverrides !== overrides || forcedGrassTerrainRevision !== revision) forcedGrassCache.clear()
+            if (grassOverrides !== overrides || terrainRevision !== revision) forcedGrassCache.clear()
             grassOverrides = overrides
-            forcedGrassTerrainRevision = revision
+            terrainRevision = revision
             if (currentMap !== blockMap || currentCompiled !== compiled) {
                 currentMap = blockMap
                 currentCompiled = compiled

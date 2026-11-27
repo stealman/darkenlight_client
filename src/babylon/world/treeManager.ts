@@ -6,14 +6,15 @@ import { ViewportManager } from '@/utils/viewport'
 import { TargetingManager } from '@/gui/targettingManager'
 import { Lights } from '@/babylon/scene/lights'
 import { Settings } from '@/settings/settings'
-import { TerrainEnum1 } from '@/babylon/materials'
 import { CollisionGrid } from './collisionGrid'
 import { outdoorSurfaceHeight } from './terrainRoofShape'
 import { createStaticVariation } from './statics/staticVariation'
 import { TreeVariants } from './trees/treeGenerator'
+import { createTreeSnowFootprint, hasSnowNearTree, treeGroundType } from './trees/treeGroundSurface'
+import type { TreeSnowFootprint } from './trees/treeGroundSurface'
 import type { TreePlacement, TreeRenderer } from './trees/treeRenderer'
 import { TREE_SHADER, TREE_SPECIES_BY_TYPE, TREE_VARIANT_COUNT, WORLD_TREE_TYPES } from './trees/treeSpecies'
-import type { TreeShape, TreeSurfaceDetail } from './trees/treeSpecies'
+import type { TreeSurfaceDetail } from './trees/treeSpecies'
 
 export interface TreeData {
     x: number
@@ -30,14 +31,16 @@ interface WorldTree {
     position: Vector3
     visualHeight: number
     placement: TreePlacement
+    shadowPlacement: TreePlacement
+    snowFootprint: TreeSnowFootprint
 }
 
 const trees = new Map<string, WorldTree>()
 const placements: TreePlacement[] = []
+const snowFootprints: TreeSnowFootprint[] = []
 const playerCenter = Vector3.Zero()
 const targetCenter = Vector3.Zero()
 const tileKey = (x: number, z: number) => x + ';' + z
-const castsNearbyShadow = (shape: TreeShape, shadowOnly: boolean) => !shadowOnly && (shape === 'wood6' || shape === 'wood12')
 let renderer: TreeRenderer | undefined
 let variants: TreeVariants | undefined
 let nextId = 0
@@ -53,15 +56,17 @@ export const TreeManager = {
 
     async initialize(scene: Scene, parent: TransformNode) {
         const {TreeRenderer} = await import('./trees/treeRenderer')
-        variants = new TreeVariants()
+        variants = new TreeVariants(undefined, undefined, true)
         variants.warmUp()
         const treeRenderer = new TreeRenderer(scene, parent,
             (mesh, shape, shadowOnly) => {
-                const near = castsNearbyShadow(shape, shadowOnly)
+                if (!shadowOnly) return
+                const near = shape === 'wood6'
                 Lights.addShadowCaster(mesh, near, near)
             },
             (mesh, shape, shadowOnly) => {
-                const near = castsNearbyShadow(shape, shadowOnly)
+                if (!shadowOnly) return
+                const near = shape === 'wood6'
                 Lights.removeShadowCaster(mesh, near, near)
             },
             (mesh, enabled) => {
@@ -131,8 +136,14 @@ export const TreeManager = {
         const variation = createStaticVariation(MyPlayer.worldId, data, type)
         const variant = variants.get(species, Math.floor(variation.unit(0) * TREE_VARIANT_COUNT))
         const visualSize = size * WORLD_TREE_TYPES[species].scale
+        const placement: TreePlacement = {id: nextId++, variant, position: position.clone(), size: visualSize, snow: 0,
+            detail: 'LOW', fullBarkDetail: species === 'twisted'}
+        // Both placements use the same terrain-adjusted position.
+        const shadowPlacement: TreePlacement = {...placement, detail: 'SHADOW', shadowOnly: true}
+        const snowFootprint = createTreeSnowFootprint(species, x, z, tile?.height ?? 0, variant.rootRadius * visualSize,
+            variation.unit(0, 1), variation.unit(0, 2), variation.unit(0, 3))
         const tree: WorldTree = {type, level, scale: size, position, visualHeight: variant.height * visualSize,
-            placement: {id: nextId++, variant, position: position.clone(), size: visualSize, snow: 0, detail: 'LOW'}}
+            placement, shadowPlacement, snowFootprint}
         trees.set(tileKey(x, z), tree)
         const half = size * .75 / 2
         this.collisionGrid.add(tree, x - half, z - half, x + half, z + half)
@@ -141,9 +152,12 @@ export const TreeManager = {
 
     recountYPositions() {
         const map = WorldDataManager.getBlockMap()
-        for (const {position} of trees.values()) {
+        for (const {position, snowFootprint} of trees.values()) {
             const tile = map[position.x]?.[position.z]
-            if (tile) position.y = tile.height + .5
+            if (tile) {
+                position.y = tile.height + .5
+                snowFootprint.height = tile.height
+            }
         }
     },
 
@@ -168,6 +182,7 @@ export const TreeManager = {
         this.collisionGrid.clear()
         this.visibleTrees.length = 0
         placements.length = 0
+        snowFootprints.length = 0
         nextId = 0
         deletePreviewTree = null
         deletePreviewYOffset = 0
@@ -177,7 +192,8 @@ export const TreeManager = {
 
     renderTrees(outdoor: boolean) {
         this.visibleTrees.length = 0
-        if (!renderer) return
+        snowFootprints.length = 0
+        if (!renderer) return snowFootprints
         if (!Settings.treesEnabled || !ViewportManager.viewPortInitialized) {
             renderer.setRevealTargets(null)
             deletePreviewTree = null
@@ -186,37 +202,51 @@ export const TreeManager = {
                 placements.length = 0
                 renderer.rebuild(placements)
             }
-            return
+            return snowFootprints
         }
 
         placements.length = 0
         const map = WorldDataManager.getBlockMap()
         const detail = Settings.detailLevel.name as TreeSurfaceDetail
-        const sunShadows = !Lights.indoor && Settings.treeShadowsEnabled && Settings.isShadowsEnabled()
+        const shadows = Settings.treeShadowsEnabled && Settings.isShadowsEnabled()
+        const treeSnowEnabled = outdoor && (Settings.treeShaderFeatures & TREE_SHADER.snow) !== 0
         for (const tree of trees.values()) {
-            const {position: {x, y, z}, placement} = tree
+            const {position: {x, y, z}, placement, shadowPlacement, snowFootprint} = tree
             const visible = ViewportManager.isPointInVisibleMatrix(x, z, 2, y)
             // The lowest sun angle is 28 degrees. Keep a margin for the crown and lower ground.
-            if (!visible && (!sunShadows || !ViewportManager.isPointNearVisibleBounds(x, z, tree.visualHeight * 2 + 4))) continue
+            const castsShadow = shadows && (visible || (!Lights.indoor
+                && ViewportManager.isPointNearVisibleBounds(x, z, tree.visualHeight * 2 + 4)))
+            const showsSnowFootprint = treeSnowEnabled && (visible || (snowFootprint.strength > 0
+                && ViewportManager.isPointNearVisibleBounds(x, z, snowFootprint.reach)))
+            if (!visible && !castsShadow && !showsSnowFootprint) continue
             const tile = map[x]?.[z]
             if (!tile) continue
-            placement.position.y = (outdoor ? outdoorSurfaceHeight(tile) : tile.totalHeight) ?? tile.height
-            placement.snow = WorldRenderer.getSnowSurfaceHeight(x, z) !== undefined ? 1
-                : !Lights.indoor && tile.type === TerrainEnum1.TERRAIN_GRASS_WINTER.index && !tile.snowed ? .38 : 0
-            placement.detail = visible ? detail : 'SHADOW'
-            placement.shadowOnly = !visible
-            placements.push(placement)
-            if (visible) this.visibleTrees.push(tree)
+            const groundType = outdoor ? treeGroundType(tile) : 0
+            const snowAtBase = showsSnowFootprint && groundType > 0 && WorldRenderer.getSnowSurfaceHeight(x, z) !== undefined
+            if (showsSnowFootprint && groundType) {
+                snowFootprint.height = tile.height
+                if (hasSnowNearTree(map, snowFootprint, snowAtBase)) snowFootprints.push(snowFootprint)
+            }
+            if (visible || castsShadow) placement.position.y = (outdoor ? outdoorSurfaceHeight(tile) : tile.totalHeight) ?? tile.height
+            if (visible) {
+                placement.groundType = groundType
+                placement.snow = snowAtBase ? snowFootprint.rootSnow : 0
+                placement.detail = detail
+                placements.push(placement)
+                this.visibleTrees.push(tree)
+            }
+            if (castsShadow) placements.push(shadowPlacement)
         }
         let features = Settings.treeShaderFeatures
         if (lightingProfileMode) {
             features &= ~TREE_SHADER.reveal
             features = lightingProfileMode === 'unlit' ? features & ~TREE_SHADER.lighting : features | TREE_SHADER.lighting
         }
-        renderer.setSurfaceDetail(detail, features, lightingProfileMode !== 'pbr')
-        renderer.setShadowCasting(Settings.treeShadowsEnabled)
+        renderer.setSurfaceDetail(detail, features, lightingProfileMode !== 'pbr', 'textured')
+        renderer.setShadowCasting(shadows)
         renderer.rebuild(placements)
         if (deletePreviewTree) renderer.setYOffset(deletePreviewTree.placement.id, deletePreviewYOffset)
+        return snowFootprints
     },
 
     updateDeletePreview(active: boolean, x: number, z: number, time: number) {

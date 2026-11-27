@@ -312,7 +312,7 @@ export async function installAssetPreview(
                 TaperedBlockBatch.flush()
                 MasonryBatch.flush()
                 ArchedMasonryBatch.flush()
-                biomes.renderTerrain(specimen ? specimen.footprints : undefined)
+                biomes.renderTerrain(specimen?.footprints, specimen?.snowFootprints)
                 if (specimen) biomes.labelPlots(specimen.labels)
                 else {
                     for (const {prefab} of [TaperedBlockBatch, MasonryBatch, ArchedMasonryBatch]) batches.add(prefab!)

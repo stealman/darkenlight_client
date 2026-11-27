@@ -1,11 +1,11 @@
 import { Matrix, Quaternion, Vector3 } from '@babylonjs/core'
 import { normalizeTreeBudgetMultiplier, TREE_BUDGET_MULTIPLIER, TREE_DEFAULT_SEED, TREE_FACE_BUDGET,
-    TREE_SHAPE_FACES, TREE_SPECIES, TREE_VARIANT_COUNT } from './treeSpecies'
+    TREE_PROTOTYPE_FACE_BUDGET, TREE_SHAPE_FACES, TREE_SPECIES, TREE_VARIANT_COUNT } from './treeSpecies'
 import type { TreeDetail, TreeShape, TreeSpecies } from './treeSpecies'
 
 const TAU = 2 * Math.PI
 const SPIRAL = Math.PI * (3 - Math.sqrt(5))
-const LEVEL = {LOW: 0, MEDIUM: 1, HIGH: 2, SHADOW: 0}
+const LEVEL = {LOW: 0, MEDIUM: 1, HIGH: 2}
 
 export interface TreePiece {
     matrix: Matrix
@@ -18,6 +18,7 @@ export interface TreePiece {
     startJoint?: Quaternion
     endJoint?: Quaternion
     radius: number
+    trunk?: boolean
 }
 
 interface Piece extends Omit<TreePiece, 'shape'> {
@@ -29,6 +30,7 @@ interface Growth {
     pieces: Piece[]
     level: number
     shade: boolean
+    birchLeaves?: boolean
 }
 
 export interface TreeModel {
@@ -86,18 +88,18 @@ function shapeFor(piece: Piece, detail: TreeDetail): TreeShape {
     if (piece.shape === 'needles') return detail === 'SHADOW' ? 'needlesShadow' : 'needles'
     if (detail === 'SHADOW') return piece.radius > 0.22 ? 'wood6' : 'wood3'
     const level = LEVEL[detail]
-    if (piece.radius >= [0.24, 0.17, 0.10][level]) return 'wood12'
+    if (piece.radius >= [0.24, 0.17, 0.10][level]) return 'wood16'
     return piece.radius >= [0.055, 0.038, 0.024][level] ? 'wood6' : 'wood3'
 }
 
-function addModelPiece(model: TreeModel, piece: Piece, shape: TreeShape) {
+function addModelPiece(model: TreeModel, piece: Omit<TreePiece, 'shape'>, shape: TreeShape) {
     let batch = model.shapes.get(shape)
     if (!batch) model.shapes.set(shape, batch = [])
     batch.push({...piece, shape})
     model.triangles += TREE_SHAPE_FACES[shape]
 }
 
-function addFineGrowth(model: TreeModel, budget: number, seed: number) {
+function addFineGrowth(model: TreeModel, budget: number, seed: number, behindCameraFacingSide?: (piece: TreePiece) => boolean) {
     if (budget - model.triangles < TREE_SHAPE_FACES.wood3) return
     const next = randomStream(seed)
     const range = (a: number, b: number) => a + (b - a) * next()
@@ -117,21 +119,29 @@ function addFineGrowth(model: TreeModel, budget: number, seed: number) {
         for (const anchor of anchors) {
             const remaining = budget - model.triangles
             if (remaining < TREE_SHAPE_FACES.wood3) return
-            if (anchor.shape === 'leaf' || anchor.shape === 'needles') {
+            const birchCard = anchor.shape === 'birchCard'
+            const card = anchor.shape === 'foliageCard' || birchCard
+            const back = behindCameraFacingSide?.(anchor) ?? false
+            if (back && (!card || pass > 0)) continue
+            if (card || anchor.shape === 'leaf' || anchor.shape === 'needles') {
+                if (card && pass >= (birchCard ? 2 : 4)) continue
                 const shape = anchor.shape
                 if (remaining < TREE_SHAPE_FACES[shape]) continue
                 const scale = Vector3.One()
                 const rotation = Quaternion.Identity()
                 anchor.matrix.decompose(scale, rotation)
-                const leaf = shape === 'leaf'
+                const leaf = birchCard || shape === 'leaf' || (card && anchor.palette === TREE_SPECIES.autumn.foliage)
+                const spreadSide = next() < .5 ? -1 : 1
                 const position = Vector3.TransformCoordinates(new Vector3(
-                    range(-.49, .49), range(-.14, .16), leaf ? range(-.18, .34) : range(.28, .63),
+                    leaf ? range(-.49, .49) : spreadSide * (card ? range(.21, .48) : range(.29, .66)),
+                    range(-.14, .16), leaf ? range(-.18, .34) : range(.26, .78),
                 ), anchor.matrix)
-                scale.scaleInPlace(range(.37, .60) * shrink)
-                rotation.multiplyInPlace(Quaternion.RotationYawPitchRoll(range(-.90, .90), range(-.38, .34), range(-.42, .42)))
+                scale.scaleInPlace((card ? range(.57, .84) : leaf ? range(.38, .63) : range(.31, .53)) * shrink)
+                const yaw = leaf ? range(-.9, .9) : spreadSide * range(.40, .95)
+                rotation.multiplyInPlace(Quaternion.RotationYawPitchRoll(yaw, range(-.38, .34), range(-.42, .42)))
                 addModelPiece(model, {
-                    ...anchor, shape, matrix: Matrix.Compose(scale, rotation, position), length: scale.z,
-                    tint: anchor.tint * range(.85, 1.18), taper: range(.78, 1.08),
+                    ...anchor, matrix: Matrix.Compose(scale, rotation, position), length: scale.z,
+                    tint: anchor.tint * range(.87, 1.16), taper: range(.78, 1.08), grain: anchor.grain + range(0, 37),
                 }, shape)
             } else {
                 const along = range(.21, .88)
@@ -154,27 +164,49 @@ function addFineGrowth(model: TreeModel, budget: number, seed: number) {
     }
 }
 
-function makeModel(growth: Growth[], detail: TreeDetail, multiplier: number, seed: number): TreeModel {
+function makeModel(growth: Growth[], detail: TreeDetail, multiplier: number, seed: number, prototypeYaw?: number): TreeModel {
     const accepted = new Set<Growth>()
     const model: TreeModel = {shapes: new Map(), triangles: 0}
     const shadow = detail === 'SHADOW'
-    const expanded = !shadow && multiplier > 1
-    const budget = Math.floor(TREE_FACE_BUDGET[detail] * (shadow ? 1 : multiplier))
-    const maxLevel = expanded ? LEVEL.HIGH : LEVEL[detail]
+    const prototype = !shadow && prototypeYaw !== undefined
+    const budget = prototype ? TREE_PROTOTYPE_FACE_BUDGET[detail] : Math.floor(TREE_FACE_BUDGET[detail] * (shadow ? 1 : multiplier))
+    // The fixed game view looks from negative X and Z. Rotate that direction into this variant's local space.
+    const backX = prototype ? Math.cos(prototypeYaw) - Math.sin(prototypeYaw) : 0
+    const backZ = prototype ? Math.cos(prototypeYaw) + Math.sin(prototypeYaw) : 0
+    const isBack = (piece: Omit<TreePiece, 'shape'>) => piece.matrix.m[12] * backX + piece.matrix.m[14] * backZ > .42
+    const maxLevel = shadow ? LEVEL.MEDIUM : LEVEL.HIGH
     for (const group of growth) {
-        if (group.level > maxLevel || (shadow && !group.shade)
+        if (group.level > maxLevel || (shadow && !group.shade) || (group.birchLeaves && prototypeYaw === undefined)
             || (group.parent && !accepted.has(group.parent))) continue
-        const shapes = group.pieces.map(piece => shapeFor(piece, detail))
+        if (prototype && group.level === 2 && group.pieces.every(piece => piece.radius > 0 && isBack(piece))) continue
+        // One solid spray represents a birch leaf cluster in the shadow pass.
+        const parts = shadow && group.birchLeaves ? [group.pieces[2]] : group.pieces
+        const shapes = parts.map(piece => {
+            if (shadow && group.birchLeaves) return 'needlesShadow'
+            if (prototype && piece.radius === 0) return group.birchLeaves ? 'birchCard' : 'foliageCard'
+            return shapeFor(piece, prototype && piece.radius < .26 && isBack(piece) ? 'LOW' : detail)
+        })
         const faces = shapes.reduce((total, shape) => total + TREE_SHAPE_FACES[shape], 0)
         if (model.triangles + faces > budget) continue
         accepted.add(group)
-        group.pieces.forEach((piece, i) => addModelPiece(model, piece, shapes[i]))
+        parts.forEach((piece, i) => {
+            const shape = shapes[i]
+            if (shape !== 'foliageCard') {
+                addModelPiece(model, piece, shape)
+                return
+            }
+            const width = piece.shape === 'leaf' ? 1.57 : 1.52
+            const length = piece.shape === 'leaf' ? 1.62 : 1.40
+            const matrix = Matrix.Scaling(width, 1, length).multiply(piece.matrix)
+            addModelPiece(model, {...piece, matrix, length: piece.length * length}, shape)
+        })
     }
-    if (expanded) addFineGrowth(model, budget, seed)
+    if (!shadow) addFineGrowth(model, budget, seed, prototype ? isBack : undefined)
     return model
 }
 
-export function generateTree(kind: TreeSpecies, seed: number, budgetMultiplier: number = TREE_BUDGET_MULTIPLIER.default): TreeVariant {
+export function generateTree(kind: TreeSpecies, seed: number, budgetMultiplier: number = TREE_BUDGET_MULTIPLIER.default,
+    usePrototype = false): TreeVariant {
     const species = TREE_SPECIES[kind]
     const next = randomStream(seed)
     const range = (a: number, b: number) => a + (b - a) * next()
@@ -185,7 +217,7 @@ export function generateTree(kind: TreeSpecies, seed: number, budgetMultiplier: 
     const turn = range(-1, 1) < 0 ? -1 : 1
     const tint = range(.86, 1.16)
     const growth: Growth[] = []
-    function add(pieces: Piece[], level = 0, shade = false, parent?: Growth) {
+    function add(pieces: Piece[], level = 0, shade = false, parent?: Growth): Growth {
         const group = {pieces, level, shade, parent}
         growth.push(group)
         return group
@@ -199,6 +231,23 @@ export function generateTree(kind: TreeSpecies, seed: number, budgetMultiplier: 
             palette: species.foliage, tint: tint * range(.68, 1.24), taper: range(.76, 1.10),
             length: scale.z, grain: next() * 37, shape: leaf ? 'leaf' : 'needles', radius: 0,
         }
+    }
+
+    const leafyBirch = usePrototype && kind === 'birch'
+    // A separate stream keeps the winter skeleton and its seeds identical with the prototype on or off.
+    const leafRandom = randomStream(seed ^ 0x185c32af)
+    const leafRange = (min: number, max: number) => min + (max - min) * leafRandom()
+    function addBirchCluster(center: Vector3, angle: number, size: number, parent: Growth, shade = false) {
+        const cards: Piece[] = []
+        for (let i = 0; i < 6; i++) {
+            const direction = angle + (i - 2.5) * .63 + leafRange(-.25, .25)
+            const start = spread(center, direction + Math.PI, size * leafRange(.27, .51), size * leafRange(-.28, .34))
+            const scale = new Vector3(size * leafRange(.65, .94), size * leafRange(.34, .63), size * leafRange(.98, 1.24))
+            const rotation = Quaternion.RotationYawPitchRoll(Math.PI / 2 - direction, leafRange(-.48, .39), leafRange(-.55, .55))
+            cards.push({matrix: Matrix.Compose(scale, rotation, start), palette: 0, tint: tint * leafRange(.85, 1.16),
+                taper: leafRange(.87, 1.08), length: scale.z, grain: leafRandom() * 37, shape: 'leaf', radius: 0})
+        }
+        add(cards, shade ? 0 : 1, shade, parent).birchLeaves = true
     }
 
     const evergreen = kind === 'evergreen'
@@ -223,6 +272,7 @@ export function generateTree(kind: TreeSpecies, seed: number, budgetMultiplier: 
         trunkRadii.push(rootRadius * Math.max(.035, (1 - fraction) ** (conical ? 1.02 : .83)) * range(.91, 1.11))
     }
     const core = path(trunk, trunkRadii, 0, true)
+    for (const piece of core.pieces) piece.trunk = true
 
     const rootCount = bent ? 6 : 5
     for (let i = 0; i < rootCount; i++) {
@@ -236,6 +286,7 @@ export function generateTree(kind: TreeSpecies, seed: number, budgetMultiplier: 
     }
 
     const bearing = next() * TAU
+    if (leafyBirch) addBirchCluster(trunk[8], bearing, width * .35, core, true)
     if (!conical) {
         if (evergreen) {
             for (let i = 0; i < 3; i++) {
@@ -262,6 +313,9 @@ export function generateTree(kind: TreeSpecies, seed: number, budgetMultiplier: 
             const radius = trunkRadii[index] * (leader ? range(.77, .90) : kind === 'twisted' ? range(.53, .80) : range(.42, .70))
             const limb = path([origin, elbow, bend, tip], [radius, radius * .61, radius * .30, Math.min(.012, radius * .13)],
                 0, i % 2 === 0, core)
+            if (leafyBirch && (i > 0 || leafRandom() > .36)) {
+                addBirchCluster(tip, angle, .43 + distance * .24, limb, i % 4 === 2)
+            }
             const forks = evergreen ? 2 : 4
             for (let j = 0; j < forks; j++) {
                 const side = j % 2 === 0 ? -1 : 1
@@ -272,7 +326,8 @@ export function generateTree(kind: TreeSpecies, seed: number, budgetMultiplier: 
                 const tip2 = spread(elbow2, dir + range(-.91, .91), reach * .63, rise * range(.06, .54))
                 const twig = Math.max(.018, radius * (j < 2 ? range(.29, .42) : range(.13, .26)))
                 const fork = path([start, elbow2, tip2], [twig, twig * .61, twig * .10],
-                    j < (kind === 'autumn' ? 1 : 2) ? 0 : 1, kind === 'autumn' && i % 2 === 0 && j === 0, limb)
+                    j < (kind === 'autumn' ? 1 : 2) ? 0 : 1, !evergreen && i % 2 === 0 && j === 0, limb)
+                if (leafyBirch && j < 2 && (i > 1 || j === 0)) addBirchCluster(tip2, dir, .29 + reach * .46, fork)
                 if (evergreen) {
                     const array = [foliage(elbow2.add(new Vector3(0, .16, 0)), dir,
                         new Vector3(reach * .89, .47, reach * 1.34), -.05)]
@@ -298,7 +353,7 @@ export function generateTree(kind: TreeSpecies, seed: number, budgetMultiplier: 
             }
             if (evergreen) {
                 add([foliage(Vector3.Lerp(elbow, bend, .74).add(new Vector3(0, .23, 0)), angle,
-                    new Vector3(distance * .47, .54, distance * .76), -.02)], 0, i % 2 === 0, limb)
+                    new Vector3(distance * .38, .54, distance * .69), -.02)], 0, i % 2 === 0, limb)
                 add([foliage(Vector3.Lerp(bend, tip, .6), angle + .54,
                     new Vector3(distance * .31, .40, distance * .57), -.06)], 2, false, limb)
             }
@@ -322,7 +377,8 @@ export function generateTree(kind: TreeSpecies, seed: number, budgetMultiplier: 
                 const b = spread(a, angle, distance * .53, range(.02, .18) * tierWidth)
                 const end = spread(b, angle + range(-.32, .32), distance * .46, -distance * range(.10, .29))
                 const radius = Math.max(.018, trunkRadii[i] * range(.24, .42))
-                const limb = path([a, b, end], [radius, radius * .58, .005], ragged || j === gap ? 0 : 1, false, core)
+                const castsLimbShadow = tier % 2 === 0 && j === tier % count
+                const limb = path([a, b, end], [radius, radius * .58, .005], ragged || j === gap ? 0 : 1, castsLimbShadow, core)
                 if (ragged && (j === gap || (tier === 2 && j !== 0))) {
                     path([b, spread(b, angle + .68 * turn, distance * .44, distance * .16)], [radius * .45, .004], 0, false, limb)
                     continue
@@ -342,7 +398,7 @@ export function generateTree(kind: TreeSpecies, seed: number, budgetMultiplier: 
 
     // Spread detail across the height and around the crown when a tier hits its triangle budget.
     // Parents precede their children inside each detail tier, and ties keep the seeded order.
-    const ordering = growth.map((group, i) => ({group, i, depth: 0, rank: next()}))
+    const ordering = growth.map((group, i) => ({group, i, depth: 0, rank: group.birchLeaves ? leafRandom() : next()}))
     const byGroup = new Map(ordering.map(entry => [entry.group, entry]))
     for (const entry of ordering) {
         const parent = entry.group.parent && byGroup.get(entry.group.parent)
@@ -352,16 +408,20 @@ export function generateTree(kind: TreeSpecies, seed: number, budgetMultiplier: 
     const ordered = ordering.map(entry => entry.group)
     const multiplier = normalizeTreeBudgetMultiplier(budgetMultiplier)
     const detailSeed = seed ^ 0xb79f5d2b
+    const prototypeYaw = usePrototype ? yaw : undefined
     return {height, rootRadius, yaw, spread: width, models: {
-        LOW: makeModel(ordered, 'LOW', multiplier, detailSeed), MEDIUM: makeModel(ordered, 'MEDIUM', multiplier, detailSeed),
-        HIGH: makeModel(ordered, 'HIGH', multiplier, detailSeed), SHADOW: makeModel(ordered, 'SHADOW', multiplier, detailSeed),
+        LOW: makeModel(ordered, 'LOW', multiplier, detailSeed, prototypeYaw),
+        MEDIUM: makeModel(ordered, 'MEDIUM', multiplier, detailSeed, prototypeYaw),
+        HIGH: makeModel(ordered, 'HIGH', multiplier, detailSeed, prototypeYaw),
+        SHADOW: makeModel(ordered, 'SHADOW', multiplier, detailSeed, prototypeYaw),
     }}
 }
 
 export class TreeVariants {
     private readonly pool = new Map<TreeSpecies, TreeVariant[]>()
 
-    constructor(private readonly seed = TREE_DEFAULT_SEED, private readonly budgetMultiplier: number = TREE_BUDGET_MULTIPLIER.default) {}
+    constructor(private readonly seed = TREE_DEFAULT_SEED, private readonly budgetMultiplier: number = TREE_BUDGET_MULTIPLIER.default,
+        private readonly usePrototype = false) {}
 
     get(kind: TreeSpecies, index: number): TreeVariant {
         const slot = ((index % TREE_VARIANT_COUNT) + TREE_VARIANT_COUNT) % TREE_VARIANT_COUNT
@@ -369,7 +429,7 @@ export class TreeVariants {
         if (!variants) this.pool.set(kind, variants = [])
         const salt = Object.keys(TREE_SPECIES).indexOf(kind) + 1
         const seed = this.seed ^ Math.imul(salt, 0x45d9f3b) ^ Math.imul(slot + 1, 0x27d4eb2d)
-        return variants[slot] ??= generateTree(kind, seed, this.budgetMultiplier)
+        return variants[slot] ??= generateTree(kind, seed, this.budgetMultiplier, this.usePrototype)
     }
 
     warmUp() {
