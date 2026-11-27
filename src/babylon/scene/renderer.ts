@@ -53,7 +53,7 @@ import { FoggyAreaManager } from '@/babylon/world/foggyAreaManager'
 import { ActiveMeshFreezer } from '@/babylon/scene/activeMeshFreezer'
 import { flushActorVisualPreparation, startActorVisualPreparation } from '@/babylon/scene/actorVisualPreparation'
 import { IndoorTerrainOcclusionManager } from '@/babylon/world/indoorTerrainOcclusionManager'
-import { modelAssetUrl } from '@/babylon/modelAssetUrl'
+import { modelAssetUrl, setSceneModelLod } from '@/babylon/modelAssetUrl'
 import { ActorContactShadows } from '@/babylon/world/actorContactShadows'
 
 function isTauriDesktop(): boolean {
@@ -107,6 +107,7 @@ export const Renderer = {
         this.engine = new Engine(canvas, Settings.detailLevel.antialias)
         this.engine.setHardwareScalingLevel(1)
         this.createScene(this.engine)
+        setSceneModelLod(this.scene, Settings.detailLevel.modelLod)
         this.updateSpellGlow()
         this.menuPreviewSceneUsed = false
 
@@ -458,7 +459,7 @@ export const Renderer = {
         MiniMap.setDebugInfo(
             this.fps, theoreticalFps, activeMeshesMs,
             MyPlayer.myChar?.getPositionRounded().toString() ?? '-',
-            instrumentation.drawCallsCounter.current, scene.getActiveIndices() / 3
+            instrumentation.drawCallsCounter.current, scene.getActiveIndices() / 3, ActiveMeshFreezer.unfreezeCount
         )
     },
 

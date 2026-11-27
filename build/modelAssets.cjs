@@ -2,21 +2,30 @@ const fs = require('node:fs')
 const path = require('node:path')
 const { createHash } = require('node:crypto')
 
+function* listModelAssets(directory, prefix = '/models') {
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+        const file = path.join(directory, entry.name)
+        const url = `${prefix}/${entry.name}`
+        if (entry.isDirectory()) yield* listModelAssets(file, url)
+        else if (entry.isFile()) yield { url, file }
+    }
+}
+
+function collectDevelopmentModelLodUrls(directory) {
+    return Object.fromEntries(
+        Array.from(listModelAssets(directory), ({ url }) => url)
+            .filter(url => /_lod[23]\.(glb|gltf)$/i.test(url))
+            .map(url => [url, url]),
+    )
+}
+
 // Emit immutable, content-addressed copies. glTF dependencies are rewritten
 // before hashing the parent, so a changed texture also versions its model.
 function collectModelAssets(directory) {
     const sources = new Map()
     const assets = new Map()
     const visiting = new Set()
-    function walk(folder, prefix = '/models') {
-        for (const entry of fs.readdirSync(folder, { withFileTypes: true })) {
-            const file = path.join(folder, entry.name)
-            const url = `${prefix}/${entry.name}`
-            if (entry.isDirectory()) walk(file, url)
-            else if (entry.isFile()) sources.set(url, fs.readFileSync(file))
-        }
-    }
-    walk(directory)
+    for (const { url, file } of listModelAssets(directory)) sources.set(url, fs.readFileSync(file))
 
     function emit(url) {
         if (assets.has(url)) return assets.get(url)
@@ -68,4 +77,4 @@ function collectModelAssets(directory) {
     }
 }
 
-module.exports = { collectModelAssets }
+module.exports = { collectDevelopmentModelLodUrls, collectModelAssets }

@@ -414,7 +414,7 @@ export class EquipItemType {
 
     /** Loads a GLB source mesh for weapons and vertex-colour armour. */
     async initializeMeshGlb(parentNode: TransformNode, scene: Scene, fileName: string, material: PBRMaterial | null, position: Vector3 = Vector3.Zero(), rotation: Vector3 = Vector3.Zero(), scale: Vector3 = Vector3.One(), castsShadows = true) {
-        const result = await SceneLoader.ImportMeshAsync('', '', modelAssetUrl('/models/equip/' + fileName), scene)
+        const result = await SceneLoader.ImportMeshAsync('', '', modelAssetUrl('/models/equip/' + fileName, scene), scene)
         if (scene.isDisposed) return
         const source = result.meshes[0].getChildMeshes()[0] as Mesh
         source.position = position

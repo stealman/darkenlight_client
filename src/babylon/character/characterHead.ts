@@ -58,7 +58,7 @@ export function loadCharacterHead(scene: Scene, headTypeId = DEFAULT_HEAD_TYPE_I
 }
 
 async function createHeadSource(scene: Scene, definition: ReturnType<typeof getCharacterHeadType>, gender: 'M' | 'F'): Promise<EquipItemType> {
-    const container = await SceneLoader.LoadAssetContainerAsync('', modelAssetUrl('/models/human/' + definition.file), scene)
+    const container = await SceneLoader.LoadAssetContainerAsync('', modelAssetUrl('/models/human/' + definition.file, scene), scene)
     try {
         const meshes = container.meshes.filter(mesh => mesh instanceof Mesh && mesh.getTotalVertices() > 0 && !mesh.skeleton)
         if (meshes.length !== 1) throw new Error(`Expected one rigid mesh in ${definition.file}`)

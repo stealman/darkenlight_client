@@ -34,7 +34,7 @@ export function getCharacterWeaponAttachmentMatrix(modifier: Matrix, correction:
 }
 
 export async function loadRawArmorGeometry(scene: Scene, file: string) {
-    const container = await SceneLoader.LoadAssetContainerAsync('', modelAssetUrl('/models/equip/armors/' + file), scene)
+    const container = await SceneLoader.LoadAssetContainerAsync('', modelAssetUrl('/models/equip/armors/' + file, scene), scene)
     try {
         const meshes = container.meshes.filter(mesh => mesh instanceof Mesh && mesh.getTotalVertices() > 0 && !mesh.skeleton)
         if (meshes.length !== 1) throw new Error(`Expected one rigid armor mesh in ${file}`)

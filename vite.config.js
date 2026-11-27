@@ -3,7 +3,7 @@ import vue from '@vitejs/plugin-vue'
 import { VitePWA } from 'vite-plugin-pwa'
 import fs from 'node:fs'
 import path from 'path'
-import { collectModelAssets } from './build/modelAssets.cjs'
+import { collectDevelopmentModelLodUrls, collectModelAssets } from './build/modelAssets.cjs'
 import { adminMonsterNamesPlugin } from './build/adminMonsterNames.cjs'
 import { adminEquipmentModifiersPlugin } from './build/adminEquipmentModifiers.cjs'
 import { collectUiImages } from './build/uiImages.cjs'
@@ -31,9 +31,10 @@ function collectPngEntries(directory, publicPath) {
 export default defineConfig(async ({ mode, command }) => {
     const gmAuthoring = command === 'serve' && loadEnv(mode, __dirname, 'VITE_').VITE_GM_MODE === 'true'
     const isTauriBuild = mode === 'tauri'
+    const modelsDir = path.resolve(__dirname, 'public/models')
     const modelAssets = command === 'build'
-        ? collectModelAssets(path.resolve(__dirname, 'public/models'))
-        : { urls: {}, files: [] }
+        ? collectModelAssets(modelsDir)
+        : { urls: collectDevelopmentModelLodUrls(modelsDir), files: [] }
     const armorImageEntries = collectPngEntries(
         path.resolve(__dirname, 'public/images/items/armor'),
         '/images/items/armor',

@@ -111,7 +111,7 @@ div#emeralds-info {
 
 #gm-system-buttons {
     position: fixed;
-    top: calc(var(--hud-minimap-size, 100px) + 38px);
+    top: calc(var(--hud-minimap-size, 100px) + 50px);
     right: max(5px, env(safe-area-inset-right));
     z-index: 1000;
     display: flex;

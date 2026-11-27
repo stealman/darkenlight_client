@@ -6,7 +6,7 @@ const vm = require('node:vm')
 const { createHash } = require('node:crypto')
 const { test } = require('node:test')
 const ts = require('typescript')
-const { collectModelAssets } = require('../build/modelAssets.cjs')
+const { collectDevelopmentModelLodUrls, collectModelAssets } = require('../build/modelAssets.cjs')
 const root = path.resolve(__dirname, '..')
 const assets = collectModelAssets(path.join(root, 'public/models'))
 const context = { exports: {}, __MODEL_ASSET_URLS__: assets.urls, location: { origin: 'https://darkenlight.net' } }
@@ -28,6 +28,44 @@ test('all model resources use content-hashed URLs, replacing manual dates withou
     for (const asset of assets.files) {
         const hash = createHash('sha256').update(asset.source).digest('hex').slice(0, 16)
         assert.ok(asset.fileName.includes(`.${hash}.`))
+    }
+})
+
+test('model LOD is scoped to its scene and uses available variants in development and release', () => {
+    const original = '/models/monsters/zombie.gltf'
+    const lod2 = '/models/monsters/zombie_lod2.gltf'
+    const lod3 = '/models/monsters/zombie_lod3.gltf'
+    const texture = '/models/monsters/zombie.png'
+    const developmentUrls = collectDevelopmentModelLodUrls(path.join(root, 'public/models'))
+    assert.equal(developmentUrls[lod2], lod2)
+    assert.equal(developmentUrls[lod3], lod3)
+    assert.equal(developmentUrls[original], undefined)
+
+    for (const manifest of [developmentUrls, assets.urls]) {
+        const urls = {...manifest}
+        const scope = {exports: {}, __MODEL_ASSET_URLS__: urls, location: context.location}
+        vm.runInNewContext(compile('src/babylon/modelAssetUrl.ts'), scope)
+        const {modelAssetUrl, setSceneModelLod} = scope.exports
+        const game = {}, preview = {}
+        const base = manifest[original] ?? original
+        assert.equal(modelAssetUrl(original, game), base)
+        setSceneModelLod(game, 2)
+        assert.equal(modelAssetUrl(original + '?v=old', game), manifest[lod2])
+        assert.equal(modelAssetUrl(original, preview), base)
+        assert.equal(modelAssetUrl(texture, game), manifest[texture] ?? texture)
+        setSceneModelLod(game, 3)
+        assert.equal(modelAssetUrl(original, game), manifest[lod3])
+        assert.equal(modelAssetUrl('/models/human/human_male.glb', game), manifest['/models/human/human_male_lod3.glb'])
+        for (const item of ['armors/male-armor-plate', 'weapons/broadsword']) {
+            const equipment = `/models/equip/${item}`
+            assert.ok(manifest[`${equipment}_lod2.glb`])
+            assert.equal(modelAssetUrl(`${equipment}.glb?v=old`, game), manifest[`${equipment}_lod2.glb`])
+        }
+        assert.equal(modelAssetUrl(lod2, game), manifest[lod2])
+        delete urls[lod3]
+        assert.equal(modelAssetUrl(original, game), base)
+        setSceneModelLod(game, 1)
+        assert.equal(modelAssetUrl(original, game), base)
     }
 })
 

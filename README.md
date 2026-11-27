@@ -48,9 +48,10 @@ existing Mongo accounts and characters are not used for local play.
 ## Generate model LODs
 
 From the client directory, run `yarn.cmd generate:lod` to scan `public/models`
-recursively. Each original GLB serves as LOD1. The script creates or regenerates
-`<name>_lod2.glb` and `<name>_lod3.glb` beside it. Both variants use the original
-as their source.
+recursively for GLB and glTF models. Each original serves as LOD1. The script
+creates or regenerates `<name>_lod2` and `<name>_lod3` beside it, preserving the
+file format. Both variants use the original as their source. Generated glTF files
+embed their buffers and images.
 
 Use `yarn.cmd generate:lod --output .\lod-preview` to preview the variants in a
 separate directory with the same subfolder structure. The script reports the

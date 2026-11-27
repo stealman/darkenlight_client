@@ -188,7 +188,7 @@ export class CharacterModel implements EquipBearer {
         if (!promise) {
             const file = gender === 'F' ? 'human_female.glb' : HUMAN_MODEL_FILE
             promise = Promise.all([
-                SceneLoader.LoadAssetContainerAsync('', modelAssetUrl('/models/human/' + file), scene),
+                SceneLoader.LoadAssetContainerAsync('', modelAssetUrl('/models/human/' + file, scene), scene),
                 preloadCharacterEquipmentFitting(scene, gender),
             ]).then(([container]) => container)
             containers.set(gender, promise)

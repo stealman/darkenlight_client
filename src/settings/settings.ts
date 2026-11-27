@@ -30,7 +30,7 @@ class DetailLevel {
     antialias: boolean = false
 
     constructor(level: number, name: string, shadowQuality: number, antialias: boolean,
-        readonly paving: 'simple' | 'detailed') {
+        readonly paving: 'simple' | 'detailed', readonly modelLod: 1 | 2 | 3) {
         this.level = level;
         this.name = name;
         this.shadowQuality = shadowQuality;
@@ -39,9 +39,9 @@ class DetailLevel {
 }
 
 export const DetailLevels = {
-    LOW: new DetailLevel(1, 'LOW', 0, true, 'simple'),
-    MEDIUM: new DetailLevel(2, 'MEDIUM', 1, true, 'detailed'),
-    HIGH: new DetailLevel(3, 'HIGH', 2, true, 'detailed'),
+    LOW: new DetailLevel(1, 'LOW', 0, true, 'simple', 3),
+    MEDIUM: new DetailLevel(2, 'MEDIUM', 1, true, 'detailed', 2),
+    HIGH: new DetailLevel(3, 'HIGH', 2, true, 'detailed', 1),
 }
 
 export const Settings = {

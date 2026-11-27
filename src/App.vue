@@ -8,6 +8,7 @@
             <div id="minimap-fps">
                 <div>FPS {{ miniMapFps }}</div>
                 <div>{{ miniMapRenderStats }}</div>
+                <div>Unfreeze {{ miniMapUnfreezeCount }}</div>
             </div>
             <div id="status-panels-host"></div>
             <PartyPanel v-if="gameSessionActive" />
@@ -229,7 +230,7 @@ import { NpcInteractionManager } from '@/data/npcInteractionManager'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { useI18n } from '@/i18n'
 import PartyPanel from '@/vue/views/PartyPanel.vue'
-import { miniMapFps, miniMapRenderStats } from '@/utils/minimap'
+import { miniMapFps, miniMapRenderStats, miniMapUnfreezeCount } from '@/utils/minimap'
 
 const canvas = ref<HTMLCanvasElement | null>(null)
 const miniMapCanvas = ref<HTMLCanvasElement | null>(null)

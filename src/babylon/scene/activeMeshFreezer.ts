@@ -9,6 +9,7 @@ export const ActiveMeshFreezer = {
     scene: null as Scene | null,
     running: false,
     frozen: false,
+    unfreezeCount: 0,
     dirty: true,
     lastChangeAt: 0,
     viewX: NaN,
@@ -24,6 +25,7 @@ export const ActiveMeshFreezer = {
         this.scene = scene
         this.running = false
         this.frozen = false
+        this.unfreezeCount = 0
         this.dirty = true
         this.lastChangeAt = 0
         this.viewX = this.viewY = this.viewZ = NaN
@@ -111,6 +113,7 @@ export const ActiveMeshFreezer = {
         this.detectParticleSystemChanges(scene)
         if (this.dirty && this.frozen) {
             scene.unfreezeActiveMeshes()
+            this.unfreezeCount++
             this.frozen = false
         }
     },

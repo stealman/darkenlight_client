@@ -59,7 +59,7 @@ export function loadCharacterHair(scene: Scene, typeId = 1, gender: 'M' | 'F' = 
 }
 
 async function createSource(scene: Scene, definition: typeof CHARACTER_HAIR_TYPES[number], gender: 'M' | 'F') {
-    const container = await SceneLoader.LoadAssetContainerAsync('', modelAssetUrl('/models/human/' + definition.file), scene)
+    const container = await SceneLoader.LoadAssetContainerAsync('', modelAssetUrl('/models/human/' + definition.file, scene), scene)
     try {
         const meshes = container.meshes.filter(mesh => mesh instanceof Mesh && mesh.getTotalVertices() > 0 && !mesh.skeleton)
         if (meshes.length !== 1) throw new Error(`Expected one rigid mesh in ${definition.file}`)

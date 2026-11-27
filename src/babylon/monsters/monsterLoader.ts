@@ -30,7 +30,7 @@ export const MonsterLoader = {
         if (!assetContainer) {
             assetContainer = await SceneLoader.LoadAssetContainerAsync(
                 "",
-                modelAssetUrl('/models/monsters/' + mobType.meshName), Renderer.scene
+                modelAssetUrl('/models/monsters/' + mobType.meshName, Renderer.scene), Renderer.scene
             )
             this.modelContainers.set(mobType.meshName, assetContainer)
         }

@@ -73,10 +73,12 @@ test('the active mesh list only refreezes after movement stops', () => {
     freezer.beforeRender()
     freezer.afterRender()
     assert.deepEqual(calls, ['freeze', 'unfreeze'])
+    assert.equal(freezer.unfreezeCount, 1)
     freezer.lastChangeAt = -Infinity
     freezer.beforeRender()
     freezer.afterRender()
     assert.deepEqual(calls, ['freeze', 'unfreeze', 'freeze'])
+    assert.equal(freezer.unfreezeCount, 1)
 })
 
 test('actor preparation processes one job per frame and releases waiters on scene disposal', async () => {
