@@ -483,15 +483,17 @@ test('tree visibility is reused within a camera tile and refreshed after a viewp
     assert.deepEqual([updates, tests], [3, 3])
 })
 
-test('tree reveal forwards the player and selected target without rebuilding geometry', async () => {
+test('tree reveal and night lighting update without rebuilding geometry', async () => {
     const core = await import('@babylonjs/core/index.js')
     const player = {getModelHeight: () => 2}
     const target = {getModelHeight: () => 3, pos: new core.Vector3(8, 1, 9)}
     const myPlayer = {myChar: player, myModel: {node: {getAbsolutePosition: () => new core.Vector3(2, 0, 3)}}}
     const targeting = {selectedTarget: target}
     const species = loadModule('babylon/world/trees/treeSpecies.ts', {})
+    const casters = []
+    const lights = {indoor: false, daylightFactor: 1, addShadowCaster(_mesh, personal, local) {casters.push([personal, local])}}
     let rebuilds = 0
-    let reveals
+    let reveals, nightFill
     const {TreeManager: trees} = loadModule('babylon/world/treeManager.ts', {
         '@babylonjs/core': core,
         './collisionGrid': loadModule('babylon/world/collisionGrid.ts', {}),
@@ -499,23 +501,37 @@ test('tree reveal forwards the player and selected target without rebuilding geo
         './trees/treeGenerator': {TreeVariants: class { warmUp() {} }},
         './trees/treeRevealBounds': loadModule('babylon/world/trees/treeRevealBounds.ts', {'@babylonjs/core': core}),
         './trees/treeRenderer': {TreeRenderer: class {
+            constructor(_scene, _parent, addCaster, _removeCaster, _setLighting, fill) {
+                nightFill = fill
+                addCaster({}, 'wood3', true)
+                addCaster({}, 'wood6', true)
+                addCaster({}, 'needlesShadow', true)
+                addCaster({}, 'foliageCard', false)
+            }
             setRevealTargets(...args) {reveals = args}
             rebuild() {rebuilds++}
         }},
         '@/data/myPlayer': {MyPlayer: myPlayer},
+        '@/babylon/scene/lights': {Lights: lights},
         '@/gui/targettingManager': {TargetingManager: targeting},
         '@/settings/settings': {Settings: {treesEnabled: true, treeShaderFeatures: species.TREE_SHADER.reveal, detailLevel: {name: 'LOW'}}},
     })
     await trees.initialize({onDisposeObservable: {addOnce() {}}}, null)
     trees.onFrame()
+    assert.deepEqual(casters, [[false, false], [true, true], [true, true]])
+    assert.deepEqual(nightFill.asArray(), [0, .1])
     assert.deepEqual(reveals[0].asArray(), [2, 1.1, 3])
     assert.deepEqual(reveals[1].asArray(), [8, 1 + 3 * .55, 9])
     assert.equal(reveals[4], 3 * .60)
     targeting.selectedTarget = player
+    lights.daylightFactor = 0
     trees.onFrame()
+    assert.deepEqual(nightFill.asArray(), [1, .1])
     assert.equal(reveals.length, 1)
     myPlayer.myModel = null
+    lights.indoor = true
     trees.onFrame()
+    assert.deepEqual(nightFill.asArray(), [0, .1])
     assert.deepEqual(reveals, [null])
     assert.equal(rebuilds, 0)
 })

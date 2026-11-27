@@ -32,6 +32,7 @@ export const TREE_DEFAULT_SEED = 671439
 export const TREE_FACE_BUDGET = {LOW: 2000, MEDIUM: 3800, HIGH: 5000, SHADOW: 360} as const
 export const TREE_BUDGET_MULTIPLIER = {min: 0.5, default: 2, max: 4} as const
 export const TREE_PROTOTYPE_FACE_BUDGET = {LOW: 1100, MEDIUM: 1900, HIGH: 3000} as const
+export const ROUNDED_CONIFER_FACE_INCREASE = 0.10
 
 export function normalizeTreeBudgetMultiplier(multiplier: number) {
     return Number.isFinite(multiplier)
@@ -40,5 +41,5 @@ export function normalizeTreeBudgetMultiplier(multiplier: number) {
 }
 
 export const TREE_SHAPE_FACES = {wood3: 7, wood6: 16, wood16: 46, leaf: 16, needles: 48, needlesShadow: 32,
-    foliageCard: 8, birchCard: 8} as const
+    foliageCard: 8, birchCard: 8, roundedFoliageCard: 16} as const
 export type TreeShape = keyof typeof TREE_SHAPE_FACES

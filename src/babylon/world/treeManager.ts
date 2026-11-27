@@ -1,4 +1,4 @@
-﻿import { Scene, TransformNode, Vector3 } from '@babylonjs/core'
+﻿import { Scene, TransformNode, Vector2, Vector3 } from '@babylonjs/core'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { MyPlayer } from '@/data/myPlayer'
@@ -18,7 +18,7 @@ import { createTreeSnowFootprint, hasSnowNearTree, treeGroundType, treeSnowFootp
 import type { TreeSnowFootprint, TreeSnowRegion } from './trees/treeGroundSurface'
 import type { TreePlacement, TreeRenderer } from './trees/treeRenderer'
 import { TREE_SHADER, TREE_SPECIES_BY_TYPE, TREE_VARIANT_COUNT, WORLD_TREE_TYPES } from './trees/treeSpecies'
-import type { TreeSurfaceDetail } from './trees/treeSpecies'
+import type { TreeShape, TreeSurfaceDetail } from './trees/treeSpecies'
 
 export interface TreeData {
     x: number
@@ -46,6 +46,8 @@ const placements: TreePlacement[] = []
 const snowFootprints: TreeSnowFootprint[] = []
 const playerCenter = Vector3.Zero()
 const targetCenter = Vector3.Zero()
+const treeNightFill = new Vector2(0, 0.1)
+const castsLocalTreeShadow = (shape: TreeShape) => shape === 'wood6' || !shape.startsWith('wood')
 const treeCameraFrustum = new TreeCameraFrustum()
 const treeCameraTile = Vector3.Zero()
 let treeCameraViewport: typeof ViewportManager.visibilityMatrix | undefined
@@ -79,18 +81,19 @@ export const TreeManager = {
         const treeRenderer = new TreeRenderer(scene, parent,
             (mesh, shape, shadowOnly) => {
                 if (!shadowOnly) return
-                const near = shape === 'wood6'
+                const near = castsLocalTreeShadow(shape)
                 Lights.addShadowCaster(mesh, near, near)
             },
             (mesh, shape, shadowOnly) => {
                 if (!shadowOnly) return
-                const near = shape === 'wood6'
+                const near = castsLocalTreeShadow(shape)
                 Lights.removeShadowCaster(mesh, near, near)
             },
             (mesh, enabled) => {
                 if (enabled) Lights.registerSharedLightMesh(mesh, TREE_STATIC_LIGHT_LIMITS[Settings.detailLevel.level - 1])
                 else Lights.unregisterSharedLightMesh(mesh)
             },
+            treeNightFill,
         )
         renderer = treeRenderer
         scene.onDisposeObservable.addOnce(() => {
@@ -112,6 +115,7 @@ export const TreeManager = {
     },
 
     onFrame() {
+        treeNightFill.x = Lights.indoor ? 0 : 1 - Lights.daylightFactor
         if (!Settings.treesEnabled || lightingProfileMode || !(Settings.treeShaderFeatures & TREE_SHADER.reveal)) return
         const node = MyPlayer.myModel?.node
         if (!node || !MyPlayer.myChar) {

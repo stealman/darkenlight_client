@@ -1,5 +1,5 @@
 import { Matrix, Quaternion, Vector3 } from '@babylonjs/core'
-import { normalizeTreeBudgetMultiplier, TREE_BUDGET_MULTIPLIER, TREE_DEFAULT_SEED, TREE_FACE_BUDGET,
+import { normalizeTreeBudgetMultiplier, ROUNDED_CONIFER_FACE_INCREASE, TREE_BUDGET_MULTIPLIER, TREE_DEFAULT_SEED, TREE_FACE_BUDGET,
     TREE_PROTOTYPE_FACE_BUDGET, TREE_SHAPE_FACES, TREE_SPECIES, TREE_VARIANT_COUNT } from './treeSpecies'
 import type { TreeDetail, TreeShape, TreeSpecies } from './treeSpecies'
 
@@ -162,6 +162,30 @@ function addFineGrowth(model: TreeModel, budget: number, seed: number, behindCam
         }
         if (model.triangles === previous) return
     }
+}
+
+function roundConiferFoliage(model: TreeModel) {
+    const cards = model.shapes.get('foliageCard')
+    if (!cards?.length) return
+    const facesPerUpgrade = TREE_SHAPE_FACES.roundedFoliageCard - TREE_SHAPE_FACES.foliageCard
+    const count = Math.min(cards.length, Math.floor(model.triangles * ROUNDED_CONIFER_FACE_INCREASE / facesPerUpgrade))
+    if (!count) return
+    // Spread the finer meshes throughout the existing crown without adding sprays.
+    const rounded: TreePiece[] = []
+    let kept = 0
+    for (let i = 0; i < cards.length; i++) {
+        const piece = cards[i]
+        if (Math.floor((i + 1) * count / cards.length) > rounded.length) {
+            piece.shape = 'roundedFoliageCard'
+            rounded.push(piece)
+        } else {
+            cards[kept++] = piece
+        }
+    }
+    cards.length = kept
+    if (!kept) model.shapes.delete('foliageCard')
+    model.shapes.set('roundedFoliageCard', rounded)
+    model.triangles += rounded.length * facesPerUpgrade
 }
 
 function makeModel(growth: Growth[], detail: TreeDetail, multiplier: number, seed: number, prototypeYaw?: number): TreeModel {
@@ -409,12 +433,18 @@ export function generateTree(kind: TreeSpecies, seed: number, budgetMultiplier: 
     const multiplier = normalizeTreeBudgetMultiplier(budgetMultiplier)
     const detailSeed = seed ^ 0xb79f5d2b
     const prototypeYaw = usePrototype ? yaw : undefined
-    return {height, rootRadius, yaw, spread: width, models: {
+    const models = {
         LOW: makeModel(ordered, 'LOW', multiplier, detailSeed, prototypeYaw),
         MEDIUM: makeModel(ordered, 'MEDIUM', multiplier, detailSeed, prototypeYaw),
         HIGH: makeModel(ordered, 'HIGH', multiplier, detailSeed, prototypeYaw),
         SHADOW: makeModel(ordered, 'SHADOW', multiplier, detailSeed, prototypeYaw),
-    }}
+    }
+    if (usePrototype && conical) {
+        roundConiferFoliage(models.LOW)
+        roundConiferFoliage(models.MEDIUM)
+        roundConiferFoliage(models.HIGH)
+    }
+    return {height, rootRadius, yaw, spread: width, models}
 }
 
 export class TreeVariants {

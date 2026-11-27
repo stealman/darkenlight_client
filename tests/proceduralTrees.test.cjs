@@ -7,7 +7,7 @@ test('procedural trees reuse a deterministic pool within each mesh budget', asyn
     try {
         const {TreeVariants} = await server.ssrLoadModule('/src/babylon/world/trees/treeGenerator.ts')
         const {TREE_SPECIES, TREE_VARIANT_COUNT, TREE_SHAPE_FACES, TREE_FACE_BUDGET, TREE_BUDGET_MULTIPLIER,
-            TREE_PROTOTYPE_FACE_BUDGET} =
+            TREE_PROTOTYPE_FACE_BUDGET, ROUNDED_CONIFER_FACE_INCREASE} =
             await server.ssrLoadModule('/src/babylon/world/trees/treeSpecies.ts')
         const {createTreeGeometry} = await server.ssrLoadModule('/src/babylon/world/trees/treeGeometry.ts')
         const {getTreeInstanceTemplates, placeTreeShape} =
@@ -80,7 +80,8 @@ test('procedural trees reuse a deterministic pool within each mesh budget', asyn
                 createTreeGeometry(mesh, shape)
                 assert.equal(mesh.getTotalIndices(), triangles * 3)
                 if (shape === 'foliageCard' || shape === 'birchCard') assert.equal(mesh.getTotalVertices(), 9)
-                if (!['leaf', 'needles', 'foliageCard', 'birchCard'].includes(shape)) continue
+                if (shape === 'roundedFoliageCard') assert.equal(mesh.getTotalVertices(), 15)
+                if (!['leaf', 'needles', 'foliageCard', 'birchCard', 'roundedFoliageCard'].includes(shape)) continue
                 const positions = mesh.getVerticesData('position')
                 const surface = mesh.getVerticesData('treeSurface')
                 for (let i = 0; i < positions.length; i += 3) {
@@ -169,8 +170,14 @@ test('procedural trees reuse a deterministic pool within each mesh budget', asyn
                 const cardShape = kind === 'birch' ? 'birchCard' : 'foliageCard'
                 for (const [detail, budget] of Object.entries(TREE_PROTOTYPE_FACE_BUDGET)) {
                     const model = prototype.models[detail]
-                    assert.ok(model.triangles <= budget && model.triangles > budget - largestPiece, `${kind} ${detail}: ${model.triangles}`)
-                    assert.equal(model.shapes.has(cardShape), kind !== 'twisted')
+                    const roundedCards = model.shapes.get('roundedFoliageCard')?.length ?? 0
+                    const extraPerCard = TREE_SHAPE_FACES.roundedFoliageCard - TREE_SHAPE_FACES.foliageCard
+                    const baseFaces = model.triangles - roundedCards * extraPerCard
+                    assert.ok(baseFaces <= budget && baseFaces > budget - largestPiece, `${kind} ${detail}: ${baseFaces}`)
+                    const plainCards = model.shapes.get(cardShape)?.length ?? 0
+                    assert.equal(plainCards + roundedCards > 0, kind !== 'twisted')
+                    assert.equal(roundedCards, kind === 'fir' || kind === 'spruce'
+                        ? Math.min(plainCards + roundedCards, Math.floor(baseFaces * ROUNDED_CONIFER_FACE_INCREASE / extraPerCard)) : 0)
                     assert.ok(!model.shapes.has('needles') && !model.shapes.has('leaf'))
                     assert.equal(model.triangles, [...model.shapes].reduce((total, [shape, parts]) =>
                         total + TREE_SHAPE_FACES[shape] * parts.length, 0))

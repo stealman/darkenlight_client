@@ -45,6 +45,18 @@ A new GM starts without equipment. Its character save is local, while each sessi
 loads the authored world with saved spawn and resource progress. GM world edits are saved to local MongoDB/PNGs;
 existing Mongo accounts and characters are not used for local play.
 
+## Generate model LODs
+
+From the client directory, run `yarn.cmd generate:lod` to scan `public/models`
+recursively. Each original GLB serves as LOD1. The script creates or regenerates
+`<name>_lod2.glb` and `<name>_lod3.glb` beside it. Both variants use the original
+as their source.
+
+Use `yarn.cmd generate:lod --output .\lod-preview` to preview the variants in a
+separate directory with the same subfolder structure. The script reports the
+actual triangle counts. Some meshes keep more triangles to stay within the
+geometric error tolerance. Use `--error <0–1>` to adjust that tolerance.
+
 ## Build and try a release
 
 Save and close GM authoring before building. From the client directory:

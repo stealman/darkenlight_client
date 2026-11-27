@@ -66,19 +66,24 @@ export function createTreeGeometry(mesh: Mesh, shape: TreeShape) {
             else surfaces.push(point[0], point[2], type)
         }
     }
-    if (shape === 'foliageCard' || shape === 'birchCard') {
+    if (shape === 'foliageCard' || shape === 'birchCard' || shape === 'roundedFoliageCard') {
         // A bent, double-sided surface with an indexed ridge. The alpha atlas defines its outline.
-        for (const [z, drop] of [[0, .12], [.55, .17], [1.25, -.35]]) {
+        const rounded = shape === 'roundedFoliageCard'
+        const rows = rounded ? [[0, .12], [.275, .195], [.55, .17], [.90, -.008], [1.25, -.35]]
+            : [[0, .12], [.55, .17], [1.25, -.35]]
+        for (const [z, drop] of rows) {
             for (const x of [-.88, 0, .88]) {
                 positions.push(x, drop - Math.abs(x) * .21, z)
-                const normal = new Vector3(x * .19, 1, z * .19).normalize()
+                const normal = new Vector3(x * .19, 1, rounded ? (1.334 * z - .458) * .42 : z * .19).normalize()
                 normals.push(normal.x, normal.y, normal.z)
                 surfaces.push(x, z, 2)
             }
         }
-        for (const a of [0, 1, 3, 4]) {
-            const b = a + 1, c = a + 3, d = c + 1
-            indices.push(a, b, c, b, d, c)
+        for (let row = 0; row < rows.length - 1; row++) {
+            for (let col = 0; col < 2; col++) {
+                const a = row * 3 + col, b = a + 1, c = a + 3, d = c + 1
+                indices.push(a, b, c, b, d, c)
+            }
         }
     } else if (shape === 'leaf' || shape === 'needles') {
         const leaf = shape === 'leaf'

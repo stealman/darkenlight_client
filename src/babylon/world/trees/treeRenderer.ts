@@ -38,9 +38,9 @@ type PackedTree = TreeRevealEntry & {
 }
 
 const SHAPE_BITS = {wood3: 1, wood6: 2, wood16: 4, leaf: 8, needles: 16, needlesShadow: 32,
-    foliageCard: 64, birchCard: 128} satisfies Record<TreeShape, number>
+    foliageCard: 64, birchCard: 128, roundedFoliageCard: 256} satisfies Record<TreeShape, number>
 function foliageAtlasForShape(shape: TreeShape) {
-    if (shape === 'foliageCard') return 'standard'
+    if (shape === 'foliageCard' || shape === 'roundedFoliageCard') return 'standard'
     if (shape === 'birchCard') return 'birch'
     return undefined
 }
@@ -223,6 +223,7 @@ export class TreeRenderer {
         private readonly addShadowCaster: (mesh: Mesh, shape: TreeShape, shadowOnly: boolean) => void,
         private readonly removeShadowCaster: (mesh: Mesh, shape: TreeShape, shadowOnly: boolean) => void,
         private readonly setSharedLighting?: (mesh: Mesh, enabled: boolean) => void,
+        private readonly nightFill?: Vector2,
     ) {
         this.partitionObserver = scene.onBeforeRenderObservable.add(() => {
             if (!(this.features & TREE_SHADER.reveal)) return
@@ -609,7 +610,7 @@ export class TreeRenderer {
         let material = this.materials.get(key)
         if (!material) {
             material = createTreeMaterial(this.scene, this.surfaceDetail, features, this.reveal, this.targetReveal,
-                vertexMask, skipInactiveLights, atlas, barkMode, groundContact)
+                vertexMask, skipInactiveLights, atlas, barkMode, groundContact, shadowOnly ? undefined : this.nightFill)
             this.materials.set(key, material)
         }
         return material

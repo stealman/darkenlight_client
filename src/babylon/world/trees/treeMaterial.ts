@@ -114,7 +114,7 @@ function loadBarkTexture(scene: Scene, file: string) {
 
 export function createTreeMaterial(scene: Scene, detail: TreeSurfaceDetail, features: number, reveal: Vector4, targetReveal: Vector4,
     vertexMask?: TreeVertexMaskProjection, skipInactiveLights = true, foliageAtlas?: FoliageAtlas, barkMode: TreeBarkMode = 'procedural',
-    groundContact = false) {
+    groundContact = false, nightFill?: Vector2) {
     const cards = foliageAtlas !== undefined
     const bark = !cards && (features & TREE_SHADER.bark) !== 0
     const relief = !cards && (features & TREE_SHADER.relief) !== 0
@@ -484,6 +484,10 @@ export function createTreeMaterial(scene: Scene, detail: TreeSurfaceDetail, feat
     if (groundContact) getTreeGroundSurface(scene).configure(material)
     const inputTint = cards ? `(${CARD_COLOR} * ${CARD_COLOR})` : 'vTreeColor'
     if (material instanceof PBRCustomMaterial) {
+        if (nightFill) {
+            material.AddUniform('treeNightFill', 'vec2', nightFill)
+            material.Fragment_Before_Fog('finalColor.rgb += surfaceAlbedo * treeNightFill.x * treeNightFill.y;')
+        }
         material.Fragment_Before_Lights(hasSurface
             ? `surfaceAlbedo *= treeSurfaceColor(vPositionW, geometricNormalW, normalW, ${inputTint});`
             : `surfaceAlbedo *= ${inputTint};`)
