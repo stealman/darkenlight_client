@@ -1,3 +1,4 @@
+import { ref } from 'vue'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { MyPlayer } from '@/data/myPlayer'
 import { WorldAreaManager } from '@/data/worldAreaManager'
@@ -9,6 +10,7 @@ import { Lights } from '@/babylon/scene/lights'
 import {PartyManager} from '@/data/partyManager'
 
 const countFormat = {cs: new Intl.NumberFormat('cs'), en: new Intl.NumberFormat('en')}
+export const miniMapFps = ref('')
 
 export const MiniMap = {
     tooltipOwnerKey: 'mini-map' as string,
@@ -36,6 +38,7 @@ export const MiniMap = {
     },
 
     initialize() {
+        miniMapFps.value = ''
         //const blockMap: MapBlock[][] = WorldDataManager.getBlockMap()
         this.mapWidth = 1024
         this.mapHeight = 1024
@@ -108,8 +111,10 @@ export const MiniMap = {
         }
     },
 
-    setDebugInfo(fpsInfo: string, positionInfo: string) {
-        this.fpsInfo = fpsInfo
+    setDebugInfo(fps: number, theoreticalFps: string, activeMeshesMs: number, positionInfo: string) {
+        const fpsInfo = `${fps} | ${theoreticalFps}`
+        miniMapFps.value = fpsInfo
+        this.fpsInfo = `${fpsInfo} | AM ${activeMeshesMs.toFixed(2)}ms`
         this.positionInfo = positionInfo
 
         if (TooltipOverlayManager.isVisibleFor(this.tooltipOwnerKey)) {

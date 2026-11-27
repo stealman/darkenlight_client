@@ -444,10 +444,11 @@ export const Renderer = {
     },
 
     actualizeDebug() {
-        const absoluteFPS = 1000 / this.instrumentation!.frameTimeCounter.lastSecAverage
+        const frameTime = this.instrumentation!.frameTimeCounter.lastSecAverage
+        const theoreticalFps = frameTime > 0 ? (1000 / frameTime).toFixed(0) : '–'
         const activeMeshesMs = this.instrumentation!.activeMeshesEvaluationTimeCounter.lastSecAverage
         MiniMap.setDebugInfo(
-            `${this.fps} | ${absoluteFPS.toFixed(0)} | AM ${activeMeshesMs.toFixed(2)}ms`,
+            this.fps, theoreticalFps, activeMeshesMs,
             MyPlayer.myChar?.getPositionRounded().toString() ?? '-'
         )
     },

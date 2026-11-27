@@ -5,6 +5,7 @@
         <canvas id="overlayCanvas" class="noselect game-session-canvas" :class="{ 'game-session-canvas--visible': gameSessionActive }"></canvas>
 
         <div v-show="gameSessionActive">
+            <div id="minimap-fps">FPS {{ miniMapFps }}</div>
             <div id="status-panels-host"></div>
             <PartyPanel v-if="gameSessionActive" />
             <div v-show="!gmPanelVisible" id="system-buttons">
@@ -225,6 +226,7 @@ import { NpcInteractionManager } from '@/data/npcInteractionManager'
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { useI18n } from '@/i18n'
 import PartyPanel from '@/vue/views/PartyPanel.vue'
+import { miniMapFps } from '@/utils/minimap'
 
 const canvas = ref<HTMLCanvasElement | null>(null)
 const miniMapCanvas = ref<HTMLCanvasElement | null>(null)
