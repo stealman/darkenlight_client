@@ -1,6 +1,9 @@
 import { Matrix, Vector2, Vector3 } from '@babylonjs/core'
 import { BaseStaticObject } from '@/babylon/world/statics/objects/baseStaticObject'
-import { ArchedMasonryBatch, MasonryBatch } from '@/babylon/world/masonryBatch'
+import { ArchedMasonryBatch, ArchedMasonryWithoutSun, MasonryBatch, MasonryWithoutSun } from '@/babylon/world/masonryBatch'
+import { TaperedBlocksWithoutSun } from '@/babylon/world/taperedBlockBatch'
+import { appendBoxContactShadow } from '@/babylon/world/terrainContactShadow'
+import type { ContactShadowFootprint } from '@/babylon/world/terrainContactShadow'
 import { addMasonryPedestal } from '@/babylon/world/statics/masonryPedestal'
 import { OrientedWall } from '@/babylon/world/statics/objects/orientedWall'
 import type { WallMetadata } from '@/babylon/world/statics/objects/orientedWall'
@@ -82,9 +85,33 @@ abstract class CemeteryObject extends BaseStaticObject {
 }
 
 abstract class MasonryCemeteryObject extends CemeteryObject {
+    private groundBoxIndex = -1
+    private groundBoxY = 0
+
     constructor(type: number, position: Vector3, material: Vector2, accentMaterial: Vector2, metadata?: CemeteryObjectMetadata) {
         super(type, position, material, accentMaterial, metadata)
         this.prefab = MasonryBatch.prefab
+    }
+
+    protected addGroundBox(matrix: Matrix, material: Vector2) {
+        this.groundBoxIndex = TaperedBlocksWithoutSun.prefab!.matrices.length
+        this.groundBoxY = matrix.m[13]
+        TaperedBlocksWithoutSun.addWeatheredBox(matrix, material, this.position, this.wear)
+    }
+
+    override clearRenderMatrixCapture() {
+        super.clearRenderMatrixCapture()
+        this.groundBoxIndex = -1
+    }
+
+    override applyDeleteBounceOffset(offset: number) {
+        const meshes = super.applyDeleteBounceOffset(offset)
+        const batch = TaperedBlocksWithoutSun.prefab
+        if (this.groundBoxIndex >= 0 && batch?.matrixBuffer.length) {
+            batch.matrixBuffer[this.groundBoxIndex * 16 + 13] = this.groundBoxY + offset
+            meshes.push(batch.mesh)
+        }
+        return meshes
     }
 }
 
@@ -105,6 +132,7 @@ export class CemeteryHeadstone extends MasonryCemeteryObject {
         super(type, position, Vector2.Zero(), accentMaterial, metadata)
         const variation = createStaticVariation(MyPlayer.worldId, position, type)
         this.fallen = type === 336
+        if (this.fallen) this.prefab = MasonryWithoutSun.prefab
         const low = variation.unit(18) < 0.33
         this.baseSize = low ? [0.78, 0.14, 0.46] : [0.82, 0.16, 0.48]
         this.arched = variation.unit(0) < 0.5
@@ -149,18 +177,26 @@ export class CemeteryHeadstone extends MasonryCemeteryObject {
     render() {
         if (!this.fallen) addMasonryPedestal(this, this.baseSize, this.heading)
         const slab = placeStaticPart(this.slab, this.renderPosition)
-        const batch = this.arched ? ArchedMasonryBatch : MasonryBatch
+        const rectangular = this.fallen ? MasonryWithoutSun : MasonryBatch
+        const arched = this.fallen ? ArchedMasonryWithoutSun : ArchedMasonryBatch
+        const batch = this.arched ? arched : rectangular
         const index = batch.add(slab, this.position, this.seed, false, this.roughness, true, false, 'headstone')
         if (this.arched) {
             this.archedIndex = index
             this.archedBaseY = slab.m[13]
         }
         for (const part of this.cross) {
-            MasonryBatch.add(placeStaticPart(part, this.renderPosition), this.position, this.seed, false, this.roughness, true, false, 'headstone')
+            rectangular.add(placeStaticPart(part, this.renderPosition), this.position, this.seed, false, this.roughness, true, false, 'headstone')
         }
         if (this.inscription) {
-            WorldRenderer.addWeatheredBlock(placeStaticPart(this.inscription, this.renderPosition), this.accentMaterial, this.position, this.wear)
+            const matrix = placeStaticPart(this.inscription, this.renderPosition)
+            if (this.fallen) this.addGroundBox(matrix, this.accentMaterial)
+            else WorldRenderer.addWeatheredBlock(matrix, this.accentMaterial, this.position, this.wear)
         }
+    }
+
+    appendContactShadowFootprints(footprints: ContactShadowFootprint[], height: number) {
+        if (this.fallen) appendBoxContactShadow(footprints, this.slab, this.renderPosition, height, 0.28)
     }
 
     clearRenderMatrixCapture() {
@@ -170,7 +206,7 @@ export class CemeteryHeadstone extends MasonryCemeteryObject {
 
     applyDeleteBounceOffset(offset: number) {
         const meshes = super.applyDeleteBounceOffset(offset)
-        const batch = ArchedMasonryBatch.prefab
+        const batch = (this.fallen ? ArchedMasonryWithoutSun : ArchedMasonryBatch).prefab
         if (this.archedIndex >= 0 && batch?.matrixBuffer.length) {
             batch.matrixBuffer[this.archedIndex * 16 + 13] = this.archedBaseY + offset
             meshes.push(batch.mesh)
@@ -193,6 +229,7 @@ export class CemeteryCross extends MasonryCemeteryObject {
         super(type, position, Vector2.Zero(), Vector2.Zero(), metadata)
         const variation = createStaticVariation(MyPlayer.worldId, position, CEMETERY_CROSS_TYPE)
         this.fallen = type === 335
+        if (this.fallen) this.prefab = MasonryWithoutSun.prefab
         this.scale = 0.75 + variation.unit(0, 14) * 0.35
         this.heading = this.fallen ? variation.unit(0) * Math.PI * 2 : this.yaw + variation.signed(0) * 0.18
         const pitch = (this.fallen ? -Math.PI / 2 : 0) + variation.signed(0, 1) * 0.045
@@ -224,9 +261,15 @@ export class CemeteryCross extends MasonryCemeteryObject {
                 [CROSS_BASE[0] * scale, CROSS_BASE[1] * scale, CROSS_BASE[2] * scale], this.heading,
                 [CROSS_UPPER_BASE[0] * scale, CROSS_UPPER_BASE[1] * scale, CROSS_UPPER_BASE[2] * scale])
         }
+        const batch = this.fallen ? MasonryWithoutSun : MasonryBatch
         for (const {matrix, seed, roughness} of this.stones) {
-            MasonryBatch.add(placeStaticPart(matrix, this.renderPosition), this.position, seed, false, roughness, true, false, 'headstone')
+            batch.add(placeStaticPart(matrix, this.renderPosition), this.position, seed, false, roughness, true, false, 'headstone')
         }
+    }
+
+    appendContactShadowFootprints(footprints: ContactShadowFootprint[], height: number) {
+        if (!this.fallen) return
+        for (const {matrix} of this.stones) appendBoxContactShadow(footprints, matrix, this.renderPosition, height, 0.26)
     }
 }
 
@@ -245,6 +288,7 @@ export class StoneTomb extends MasonryCemeteryObject {
 
     constructor(type: number, position: Vector3, metadata?: CemeteryObjectMetadata) {
         super(type, position, Vector2.Zero(), Vector2.Zero(), metadata)
+        this.prefab = MasonryWithoutSun.prefab
         const variation = createStaticVariation(MyPlayer.worldId, position, type)
         const frame = Matrix.RotationY(this.yaw)
         const addStone = (width: number, height: number, depth: number, x: number, y: number,
@@ -265,10 +309,14 @@ export class StoneTomb extends MasonryCemeteryObject {
     }
 
     render() {
-        addMasonryPedestal(this, [0.92, 0.18, 1.82], this.yaw)
+        addMasonryPedestal(this, [0.92, 0.18, 1.82], this.yaw, undefined, false, MasonryWithoutSun)
         for (const {matrix, seed, roughness, appearance} of this.stones) {
-            MasonryBatch.add(placeStaticPart(matrix, this.renderPosition), this.position, seed, false, roughness, true, false, appearance)
+            MasonryWithoutSun.add(placeStaticPart(matrix, this.renderPosition), this.position, seed, false, roughness, true, false, appearance)
         }
+    }
+
+    appendContactShadowFootprints(footprints: ContactShadowFootprint[], height: number) {
+        appendBoxContactShadow(footprints, this.stones[1].matrix, this.renderPosition, height, 0.44)
     }
 }
 
@@ -307,6 +355,7 @@ export class StoneFrameGrave extends MasonryCemeteryObject {
 
     constructor(type: number, position: Vector3, cavityMaterial: Vector2, metadata?: StoneFrameGraveMetadata) {
         super(type, position, cavityMaterial, Vector2.Zero(), metadata)
+        this.prefab = MasonryWithoutSun.prefab
         const displaced = metadata?.displaced === true
         this.status = {facing: this.facing, displaced}
         const variation = createStaticVariation(MyPlayer.worldId, position, type)
@@ -350,12 +399,17 @@ export class StoneFrameGrave extends MasonryCemeteryObject {
     }
 
     render() {
-        this.part(0.68, 0.05, 1.42, 0, 0.035, 0)
+        this.addGroundBox(Matrix.Scaling(0.68, 0.05, 1.42).multiply(Matrix.RotationY(this.yaw))
+            .setTranslationFromFloats(this.renderPosition.x, this.renderPosition.y + 0.535, this.renderPosition.z), this.material)
         for (const [index, {matrix, seed, roughness}] of this.stones.entries()) {
             const cover = index === this.stones.length - 1
-            MasonryBatch.add(placeStaticPart(matrix, this.renderPosition), this.position, seed, false, roughness,
+            MasonryWithoutSun.add(placeStaticPart(matrix, this.renderPosition), this.position, seed, false, roughness,
                 true, false, cover ? 'graveCover' : 'graveFrame')
         }
+    }
+
+    appendContactShadowFootprints(footprints: ContactShadowFootprint[], height: number) {
+        for (const {matrix} of this.stones) appendBoxContactShadow(footprints, matrix, this.renderPosition, height, 0.24)
     }
 
     getWalkableHeight(): number {

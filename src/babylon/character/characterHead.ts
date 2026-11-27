@@ -74,7 +74,13 @@ async function createHeadSource(scene: Scene, definition: ReturnType<typeof getC
         const type = new EquipItemType(new EquipCbItem(-(definition.id + (gender === 'F' ? 100 : 0)), mesh.name, Vector3.Zero(), Vector3.One(), null, null))
         type.mesh = mesh
         type.castsShadows = true
-        type.sunShadowEnabled = !Settings.isDetailLevelMedium()
+        if (EquipManager.headSunShadows?.scene === scene) {
+            const {minimum, maximum} = mesh.getBoundingInfo().boundingBox
+            type.sunShadowProxyTransform = Matrix.Scaling(maximum.x - minimum.x, maximum.y - minimum.y, maximum.z - minimum.z)
+                .setTranslationFromFloats((minimum.x + maximum.x) / 2, (minimum.y + maximum.y) / 2, (minimum.z + maximum.z) / 2)
+        }
+        const castsDetailedSunShadow = !type.sunShadowProxyTransform && !Settings.isDetailLevelMedium()
+        type.sunShadowEnabled = castsDetailedSunShadow
         Lights.registerDynamicLightMesh(mesh)
         Lights.addShadowCaster(mesh, true, false, false, true, (position, rangeSquared) => {
             if (Settings.isDetailLevelMedium() && !Lights.indoor && !type.hasLocalPlayerShadowEquipment()) return false
@@ -82,7 +88,7 @@ async function createHeadSource(scene: Scene, definition: ReturnType<typeof getC
                 if (Vector3.DistanceSquared(position, item.position) <= rangeSquared) return true
             }
             return false
-        }, true, !Settings.isDetailLevelMedium())
+        }, true, castsDetailedSunShadow)
         return type
     } finally {
         container.dispose()

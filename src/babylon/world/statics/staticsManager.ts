@@ -60,8 +60,9 @@ import type { StoneWallMetadata } from './objects/stoneWall'
 import type { WallMetadata } from './objects/orientedWall'
 import { StoneBatch } from '../stoneBatch'
 import type { ContactShadowFootprint, ContactShadowView } from '../terrainContactShadow'
-import { TaperedBlockBatch } from '../taperedBlockBatch'
-import { ArchedMasonryBatch, MasonryBatch } from '@/babylon/world/masonryBatch'
+import { taperedBlockBatches } from '../taperedBlockBatch'
+import { masonryBatches } from '@/babylon/world/masonryBatch'
+import { StaticSunShadowBoxes } from '../sunShadowProxyBatch'
 
 const isEmbeddedInSnow = (type: number) => isShrubType(type) || type === 281
 
@@ -397,12 +398,12 @@ export const StaticsManager = {
         Lights.clearStaticLights()
         StoneBatch.clear()
         StoneBatch.flush()
-        TaperedBlockBatch.clear()
-        TaperedBlockBatch.flush()
-        MasonryBatch.clear()
-        MasonryBatch.flush()
-        ArchedMasonryBatch.clear()
-        ArchedMasonryBatch.flush()
+        for (const {batch} of [...taperedBlockBatches, ...masonryBatches]) {
+            batch.clear()
+            batch.flush()
+        }
+        StaticSunShadowBoxes.walls.length = 0
+        StaticSunShadowBoxes.flush()
         this.allStatics.forEach((obj) => obj.dispose())
         this.allStatics = []
         this.staticsByTile.clear()

@@ -31,8 +31,9 @@ import { Settings } from '@/settings/settings'
 import { IndoorTerrainOcclusionManager } from '@/babylon/world/indoorTerrainOcclusionManager'
 import { TerrainDebrisManager } from '@/babylon/world/terrainDebrisManager'
 import { StoneBatch } from '@/babylon/world/stoneBatch'
-import { TaperedBlockBatch } from '@/babylon/world/taperedBlockBatch'
-import { ArchedMasonryBatch, MasonryBatch } from '@/babylon/world/masonryBatch'
+import { taperedBlockBatches } from '@/babylon/world/taperedBlockBatch'
+import { masonryBatches } from '@/babylon/world/masonryBatch'
+import { StaticSunShadowBoxes } from './sunShadowProxyBatch'
 import { isSnowRoof, outdoorSurfaceHeight } from '@/babylon/world/terrainRoofShape'
 import {
     GROUND_WEAR_HIGH_HEIGHT, GROUND_WEAR_MEDIUM_HEIGHT, SNOW_CONTACT_MAX_HEIGHT, StaticTerrainContact,
@@ -116,9 +117,10 @@ export const WorldRenderer = {
         this.translucentPlane.mesh.doNotSyncBoundingInfo = true
         this.translucentPlane.mesh.receiveShadows = true
         StoneBatch.initialize(scene, this.worldParentNode, Settings.isDetalLevelHigh())
-        TaperedBlockBatch.initialize(scene, this.worldParentNode, this.staticTerrainContact !== null)
-        MasonryBatch.initialize(scene, this.worldParentNode, this.staticTerrainContact !== null)
-        ArchedMasonryBatch.initialize(scene, this.worldParentNode, this.staticTerrainContact !== null)
+        for (const {batch} of [...taperedBlockBatches, ...masonryBatches]) {
+            batch.initialize(scene, this.worldParentNode, this.staticTerrainContact !== null)
+        }
+        if (Settings.isShadowsEnabled()) StaticSunShadowBoxes.initialize(scene, this.worldParentNode)
 
         // Initialize managers
         await TerrainManager.initialize(scene)
@@ -131,10 +133,10 @@ export const WorldRenderer = {
         // silhouette, but would otherwise be redrawn into its map every frame.
         Lights.addShadowCaster(TerrainManager.terrainPlane!, false)
         Lights.addShadowCaster(this.block1.mesh, true, true)
-        Lights.addShadowCaster(StoneBatch.prefab!.mesh, true, true)
-        Lights.addShadowCaster(TaperedBlockBatch.prefab!.mesh, true, true)
-        Lights.addShadowCaster(MasonryBatch.prefab!.mesh, true, true)
-        Lights.addShadowCaster(ArchedMasonryBatch.prefab!.mesh, true, true)
+        Lights.addShadowCaster(StoneBatch.prefab!.mesh, true, true, false, true, undefined, false, false)
+        for (const {batch, castsSunShadow} of [...taperedBlockBatches, ...masonryBatches]) {
+            Lights.addShadowCaster(batch.prefab!.mesh, true, true, false, true, undefined, false, castsSunShadow)
+        }
         // Transparent/alpha world geometry is not a local static-light caster.
         Lights.addShadowCaster(this.blockWithAlpha1.mesh, true)
     },
@@ -220,9 +222,8 @@ export const WorldRenderer = {
         this.blockWithAlpha1!.clearMatrices()
         this.translucentPlane!.clearMatrices()
         StoneBatch.clear()
-        TaperedBlockBatch.clear()
-        MasonryBatch.clear()
-        ArchedMasonryBatch.clear()
+        for (const {batch} of [...taperedBlockBatches, ...masonryBatches]) batch.clear()
+        StaticSunShadowBoxes.walls.length = 0
         // Render terrain
         StaticsManager.prepareRender()
         const outdoorTerrain = outdoorTerrainReady || this.renderTerrain()
@@ -245,9 +246,7 @@ export const WorldRenderer = {
 
         if (!outdoorTerrain) RockDebrisManager.renderRockDebris(Lights.indoor)
         StoneBatch.flush()
-        TaperedBlockBatch.flush()
-        MasonryBatch.flush()
-        ArchedMasonryBatch.flush()
+        for (const {batch} of [...taperedBlockBatches, ...masonryBatches]) batch.flush()
         FoggyAreaManager.refreshVisibleAreas()
 
         if (GMManager.gmPanelVisible.value && GMManager.tab === GmTabs.SPAWNS_EDIT) {
@@ -278,9 +277,7 @@ export const WorldRenderer = {
         Lights.registerSharedLightMesh(this.blockWithAlpha1!.mesh)
         Lights.registerSharedLightMesh(this.translucentPlane!.mesh)
         Lights.registerSharedLightMesh(StoneBatch.prefab!.mesh)
-        Lights.registerSharedLightMesh(TaperedBlockBatch.prefab!.mesh)
-        Lights.registerSharedLightMesh(MasonryBatch.prefab!.mesh)
-        Lights.registerSharedLightMesh(ArchedMasonryBatch.prefab!.mesh)
+        for (const {batch} of [...taperedBlockBatches, ...masonryBatches]) Lights.registerSharedLightMesh(batch.prefab!.mesh)
     },
 
     renderTerrain(deferContactShadow = false, center?: Vector3) {

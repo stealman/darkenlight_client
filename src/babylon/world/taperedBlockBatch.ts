@@ -1,5 +1,5 @@
-import { ShadowDepthWrapper } from '@babylonjs/core'
-import type { Matrix, Scene, TransformNode, Vector2, Vector3 } from '@babylonjs/core'
+import { ShadowDepthWrapper, Vector2 } from '@babylonjs/core'
+import type { Matrix, Scene, TransformNode, Vector3 } from '@babylonjs/core'
 import { Builder } from '@/babylon/builder'
 import { Materials } from '@/babylon/materials'
 import { Settings } from '@/settings/settings'
@@ -12,6 +12,9 @@ import type { DampContact, WoodMoisture } from './statics/staticTerrainContact'
 export type BlockSection = readonly [Vector2, Vector2, Vector2, Vector2]
 export type TaperedBlockShape = {foot: BlockSection, top: BlockSection}
 const CORNERS = ['blockFootNear', 'blockFootFar', 'blockTopNear', 'blockTopFar'] as const
+const BOX_SECTION: BlockSection = [new Vector2(-0.5, -0.5), new Vector2(0.5, -0.5),
+    new Vector2(-0.5, 0.5), new Vector2(0.5, 0.5)]
+const BOX_SHAPE = {foot: BOX_SECTION, top: BOX_SECTION}
 
 function createMaterial(scene: Scene) {
     const material = Materials.createBlockMat1(scene)
@@ -55,7 +58,7 @@ function createMaterial(scene: Scene) {
     return {material, contact}
 }
 
-export const TaperedBlockBatch = {
+const createTaperedBlockBatch = (name: string) => ({
     prefab: null as Prefab | null,
     contact: null as StaticTerrainContact | null,
     variant: null as ReturnType<typeof createMaterial> | null,
@@ -64,7 +67,7 @@ export const TaperedBlockBatch = {
 
     initialize(scene: Scene, parent: TransformNode, useContact: boolean) {
         const mesh = Builder.createWrappedBlock(scene, parent)
-        mesh.name = 'taperedStaticBlocks'
+        mesh.name = name
         mesh.receiveShadows = true
         mesh.setEnabled(false)
         this.prefab = new Prefab(mesh)
@@ -105,6 +108,11 @@ export const TaperedBlockBatch = {
         }
     },
 
+    addWeatheredBox(matrix: Matrix, uv: Vector2, anchor: Vector3, wear: number) {
+        WorldRenderer.addWeatheredBlock(matrix, uv, anchor, wear, {target: this})
+        this.shapes.push(BOX_SHAPE)
+    },
+
     clear() {
         this.prefab?.clearMatrices()
         this.contact?.clear()
@@ -136,4 +144,11 @@ export const TaperedBlockBatch = {
         }
         batch.mesh.setEnabled(count > 0)
     },
-}
+})
+
+export const TaperedBlockBatch = createTaperedBlockBatch('taperedStaticBlocks')
+export const TaperedBlocksWithoutSun = createTaperedBlockBatch('taperedStaticBlocksWithoutSun')
+export const taperedBlockBatches = [
+    {batch: TaperedBlockBatch, castsSunShadow: true},
+    {batch: TaperedBlocksWithoutSun, castsSunShadow: false},
+]

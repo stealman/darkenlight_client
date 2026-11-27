@@ -3,7 +3,7 @@ import {
     Material, Mesh, ParticleSystem, PBRMaterial,
     Quaternion,
     Scene,
-    SceneLoader, Texture, TrailMesh, TransformNode, Vector2, Vector3
+    SceneLoader, Texture, TrailMesh, TransformNode, Vector2, Vector3, VertexData
 } from '@babylonjs/core'
 import { WeaponsCbManager } from '@/babylon/item/codebook/weaponModelsCb'
 import { ArmorsCbManager } from '@/babylon/item/codebook/armorsModelsCb'
@@ -15,6 +15,7 @@ import { Settings } from '@/settings/settings'
 import { BabylonUtils } from '@/babylon/utils'
 import { ActiveMeshFreezer } from '@/babylon/scene/activeMeshFreezer'
 import { modelAssetUrl } from '@/babylon/modelAssetUrl'
+import { SunShadowProxyBatch } from '@/babylon/world/sunShadowProxyBatch'
 
 const WEAPON_TRAIL_START_DELAY = 150
 const WEAPON_TRAIL_FADE_DURATION = 180
@@ -403,6 +404,7 @@ export class EquipItemType {
     uvBufferDirty: boolean = true
     castsShadows: boolean = false
     sunShadowEnabled: boolean = false
+    sunShadowProxyTransform: Matrix | null = null
 
     constructor(data: EquipCbItem, readonly loadMesh?: () => Promise<void>) {
         this.id = data.id
@@ -466,7 +468,7 @@ export class EquipItemType {
     }
 
     updateOutdoorShadows() {
-        if (!Settings.isDetailLevelMedium() || !this.castsShadows || !this.mesh) return
+        if (!Settings.isDetailLevelMedium() || !this.castsShadows || !this.mesh || this.sunShadowProxyTransform) return
         const enabled = this.hasLocalPlayerShadowEquipment()
         if (enabled === this.sunShadowEnabled) return
         if (enabled) {
@@ -544,11 +546,13 @@ export const EquipManager = {
     pendingModels: new Map<EquipItemType, Promise<void>>(),
     equippedItems: new Map<EquipItemType, Set<EquipThinInstance>>(),
     dirtyItemTypes: new Set<EquipItemType>(),
+    headSunShadows: null as SunShadowProxyBatch | null,
 
     _tmpPos: new Matrix(),
     _tmpRot: new Matrix(),
     _tmpWorld: new Matrix(),
     _tmpModel: new Matrix(),
+    _tmpHeadShadow: new Matrix(),
 
     async initialize(scene: Scene) {
         // Equipment and its source meshes belong to one scene. A new session
@@ -557,6 +561,17 @@ export const EquipManager = {
         this.itemTypes = new Map()
         this.pendingModels = new Map()
         this.dirtyItemTypes.clear()
+        if (Settings.isShadowsEnabled()) {
+            const mesh = new Mesh('humanHeadSunShadow', scene)
+            // The icosahedron's extent is about 85% of its circumradius.
+            VertexData.CreateIcoSphere({radius: 0.588, subdivisions: 1, flat: false}).applyToMesh(mesh)
+            const batch = this.headSunShadows = new SunShadowProxyBatch(mesh)
+            mesh.onDisposeObservable.addOnce(() => {
+                if (this.headSunShadows === batch) this.headSunShadows = null
+            })
+        } else {
+            this.headSunShadows = null
+        }
         WeaponsCbManager.registerModels(this.itemTypes, scene)
         await this.initializeArmors(scene)
     },
@@ -643,12 +658,17 @@ export const EquipManager = {
         })
         this.dirtyItemTypes.clear()
 
+        const headShadows = this.headSunShadows
+        const collectHeadShadows = headShadows && !Lights.indoor && Lights.shadow.getDarkness() < 1
+        const localHeadOnly = Settings.isDetailLevelMedium()
+        headShadows?.clear()
         this.equippedItems.forEach((items, type) => {
             if (type.count <= 0) return
             if (!type.mesh) return
 
             type.ensureThinBuffers(type)
             const updateUvc = type.uvBufferDirty
+            const proxyTransform = collectHeadShadows ? type.sunShadowProxyTransform : null
 
             let i = 0
             items.forEach(item => {
@@ -674,6 +694,10 @@ export const EquipManager = {
                     type.uvBuffer[i * 2] = item.matVector.x
                     type.uvBuffer[i * 2 + 1] = item.matVector.y
                 }
+                if (proxyTransform && (!localHeadOnly || item.castsOutdoorShadow)) {
+                    proxyTransform.multiplyToRef(item.attachmentWorldMatrix ?? this._tmpWorld, this._tmpHeadShadow)
+                    headShadows!.add(this._tmpHeadShadow)
+                }
                 i++
             })
 
@@ -685,6 +709,7 @@ export const EquipManager = {
                 type.uvBufferDirty = false
             }
         })
+        headShadows?.flush()
     },
 
     async warmUpShaders(appearanceTypes: readonly EquipItemType[] = []) {

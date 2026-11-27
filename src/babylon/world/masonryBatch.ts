@@ -285,7 +285,7 @@ function createMaterial(scene: Scene, weathering: boolean, topWeathering: boolea
     return {material, contact}
 }
 
-function createMasonryBatch(arched: boolean) {
+function createMasonryBatch(arched: boolean, castsSunShadow = true) {
     return {
         prefab: null as Prefab | null,
         contact: null as StaticTerrainContact | null,
@@ -296,7 +296,8 @@ function createMasonryBatch(arched: boolean) {
         topBuffer: new Float32Array(0),
 
         initialize(scene: Scene, parent: TransformNode, weathering: boolean) {
-            const mesh = new Mesh(arched ? 'archedMasonryBlocks' : 'masonryBlocks', scene)
+            const name = arched ? 'archedMasonryBlocks' : 'masonryBlocks'
+            const mesh = new Mesh(castsSunShadow ? name : name + 'WithoutSun', scene)
             createGeometry(mesh, arched)
             mesh.parent = parent
             // Weathered static blocks use the same half-unit vertical mesh offset.
@@ -397,3 +398,12 @@ function createMasonryBatch(arched: boolean) {
 
 export const MasonryBatch = createMasonryBatch(false)
 export const ArchedMasonryBatch = createMasonryBatch(true)
+export const MasonryWithoutSun = createMasonryBatch(false, false)
+export const ArchedMasonryWithoutSun = createMasonryBatch(true, false)
+
+export const masonryBatches = [
+    {batch: MasonryBatch, castsSunShadow: true},
+    {batch: ArchedMasonryBatch, castsSunShadow: true},
+    {batch: MasonryWithoutSun, castsSunShadow: false},
+    {batch: ArchedMasonryWithoutSun, castsSunShadow: false},
+]

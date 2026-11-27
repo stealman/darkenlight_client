@@ -1,4 +1,5 @@
 import { RawTexture, Scene, Texture, Vector4 } from '@babylonjs/core'
+import type { Matrix, Vector3 } from '@babylonjs/core'
 import type { PBRCustomMaterial } from '@babylonjs/materials'
 import type { MapBlock } from '@/data/worldDataManager'
 import { WATER_BLOCK_TYPE } from './terrainManager'
@@ -23,6 +24,14 @@ export interface ContactShadowFootprint {
 }
 
 export type ContactShadowView = Pick<ContactShadowFootprint, 'minX' | 'minZ' | 'maxX' | 'maxZ'>
+
+export function appendBoxContactShadow(footprints: ContactShadowFootprint[], {m}: Matrix, origin: Vector3,
+    height: number, reach: number) {
+    const x = origin.x + m[12], z = origin.z + m[14]
+    const halfX = (Math.abs(m[0]) + Math.abs(m[4]) + Math.abs(m[8])) / 2
+    const halfZ = (Math.abs(m[2]) + Math.abs(m[6]) + Math.abs(m[10])) / 2
+    footprints.push({minX: x - halfX, maxX: x + halfX, minZ: z - halfZ, maxZ: z + halfZ, height, reach})
+}
 
 export function contactShadowView(center: {x: number, z: number}, viewport: ContactShadowView): ContactShadowView {
     const step = 16

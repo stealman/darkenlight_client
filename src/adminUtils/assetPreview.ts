@@ -14,8 +14,8 @@ import { Builder } from '@/babylon/builder'
 import { Materials, TerrainEnum1 } from '@/babylon/materials'
 import { MapBlock, WorldDataManager } from '@/data/worldDataManager'
 import { StoneBatch } from '@/babylon/world/stoneBatch'
-import { TaperedBlockBatch } from '@/babylon/world/taperedBlockBatch'
-import { ArchedMasonryBatch, MasonryBatch } from '@/babylon/world/masonryBatch'
+import { taperedBlockBatches } from '@/babylon/world/taperedBlockBatch'
+import { masonryBatches } from '@/babylon/world/masonryBatch'
 import { StaticsManager } from '@/babylon/world/statics/staticsManager'
 import { StoneWall } from '@/babylon/world/statics/objects/stoneWall'
 import { StaticObjectsCodebook } from '@/babylon/world/statics/staticsCodebook'
@@ -137,9 +137,9 @@ export async function installAssetPreview(
     WorldRenderer.blockWithAlpha1 = new SymmetricBlock(Builder.createBlock(scene, parent), Materials.blockMatAlpha1!)
     WorldRenderer.translucentPlane = new SymmetricBlock(Builder.createHorizontalPlane(scene, parent, 1, 0), Materials.blockMatTrans!)
     StoneBatch.initialize(scene, parent)
-    TaperedBlockBatch.initialize(scene, parent, true)
-    MasonryBatch.initialize(scene, parent, true)
-    ArchedMasonryBatch.initialize(scene, parent, true)
+    const staticBatches = [...taperedBlockBatches, ...masonryBatches].map(({batch}) => batch)
+    for (const batch of staticBatches) batch.initialize(scene, parent, true)
+    const staticBatchPrefabs = new Set(staticBatches.map(batch => batch.prefab!))
     // MyPlayer.worldId defaults to zero in the offline bootstrap.
     const { MyPlayer } = await import('@/data/myPlayer')
     WorldDataManager.replaceWorldData(MyPlayer.worldId, 64)
@@ -157,7 +157,7 @@ export async function installAssetPreview(
     const proceduralTrees = createProceduralTreePreview(scene, parent, parameters, () => void show(false))
     controls.insertBefore(proceduralTrees.controls, parameters.parentElement)
     biomes.setActive(false)
-    for (const batch of [StoneBatch.prefab!, TaperedBlockBatch.prefab!, MasonryBatch.prefab!, ArchedMasonryBatch.prefab!]) {
+    for (const batch of [StoneBatch.prefab!, ...staticBatchPrefabs]) {
         Lights.addShadowCaster(batch.mesh, false)
     }
     const refreshBuildingBatches = () => {
@@ -190,12 +190,10 @@ export async function installAssetPreview(
         equipmentEditor.refresh(null)
         staticContact?.clear()
         StoneBatch.clear()
-        TaperedBlockBatch.clear()
-        TaperedBlockBatch.flush()
-        MasonryBatch.clear()
-        MasonryBatch.flush()
-        ArchedMasonryBatch.clear()
-        ArchedMasonryBatch.flush()
+        for (const batch of staticBatches) {
+            batch.clear()
+            batch.flush()
+        }
         WorldRenderer.snowCoverMask.clear()
         StaticsManager.allStatics.forEach(obj => { obj.onHidden(); obj.prefab?.clearMatrices(); obj.dispose() })
         StaticsManager.allStatics = []
@@ -259,9 +257,8 @@ export async function installAssetPreview(
                 WorldRenderer.staticTerrainContact = useContact ? staticContact : null
                 WorldRenderer.block1!.mesh.material = useContact ? contactMaterial : Materials.blockMat1!
                 StoneBatch.setSnowContactEnabled(Settings.isDetalLevelHigh())
-                TaperedBlockBatch.setTerrainContactEnabled(useContact)
-                MasonryBatch.setTopWeatheringEnabled(Settings.isDetalLevelHigh())
-                ArchedMasonryBatch.setTopWeatheringEnabled(Settings.isDetalLevelHigh())
+                for (const {batch} of taperedBlockBatches) batch.setTerrainContactEnabled(useContact)
+                for (const {batch} of masonryBatches) batch.setTopWeatheringEnabled(Settings.isDetalLevelHigh())
                 biomes.prepareTerrain()
                 const wallAlongX = data.meta?.orientation === 'X'
                 const specimen = species && proceduralTrees.render(species, data, biomes.slots)
@@ -301,7 +298,7 @@ export async function installAssetPreview(
                 }
                 const batches = new Set(buffers())
                 for (const staticObject of StaticsManager.allStatics) {
-                    if (staticObject.prefab && staticObject.prefab !== TaperedBlockBatch.prefab && staticObject.prefab !== MasonryBatch.prefab) batches.add(staticObject.prefab)
+                    if (staticObject.prefab && !staticBatchPrefabs.has(staticObject.prefab)) batches.add(staticObject.prefab)
                 }
                 batches.forEach(batch => {
                     batch.setThinInstanceBuffers()
@@ -309,13 +306,11 @@ export async function installAssetPreview(
                 })
                 WorldRenderer.staticTerrainContact?.upload(WorldRenderer.block1!.mesh, WorldRenderer.block1!.matrices.length)
                 StoneBatch.flush()
-                TaperedBlockBatch.flush()
-                MasonryBatch.flush()
-                ArchedMasonryBatch.flush()
+                for (const batch of staticBatches) batch.flush()
                 biomes.renderTerrain(specimen?.footprints, specimen?.snowFootprints)
                 if (specimen) biomes.labelPlots(specimen.labels)
                 else {
-                    for (const {prefab} of [TaperedBlockBatch, MasonryBatch, ArchedMasonryBatch]) batches.add(prefab!)
+                    for (const prefab of staticBatchPrefabs) batches.add(prefab)
                     const counts = countStaticPlotTriangles(biomes.slots, batches)
                     biomes.labelPlots(counts.map(count => (isStoneWall ? 'Sestava · ' : '') + count.toLocaleString('cs-CZ') + ' △'))
                 }

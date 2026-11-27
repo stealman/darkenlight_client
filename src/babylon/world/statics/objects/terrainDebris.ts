@@ -7,6 +7,7 @@ import { MyPlayer } from '@/data/myPlayer'
 import { Settings } from '@/settings/settings'
 import { StoneBatch, STONE_SHAPE_COUNT } from '../../stoneBatch'
 import { createStaticVariationSequence } from '../staticVariation'
+import type { ContactShadowFootprint } from '../../terrainContactShadow'
 
 const debrisMaterials = new Map([
     [TerrainEnum1.TERRAIN_DIRT.index, MaterialEnum1.TERRAIN_DIRT.uv],
@@ -32,6 +33,7 @@ const PIECES = [
 
 export class TerrainDebris extends BaseStaticObject {
     private readonly pieces: {matrix: Matrix, shape: number}[]
+    private readonly contactHalfWidth: number
 
     constructor(type: number, position: Vector3) {
         super(type, position, 0, MaterialEnum1.TERRAIN_ROCK.uv, StoneBatch.prefab)
@@ -39,6 +41,7 @@ export class TerrainDebris extends BaseStaticObject {
         const lowDetail = Settings.isDetalLevelLow()
         // Persisted type 153 retains the original large pile (now UI variant 4).
         const scale = [0.55, 0.8, 1.1, 0.95, 1.35][variant] * (lowDetail ? 1.2 : 1)
+        this.contactHalfWidth = Math.min(0.4, scale * 0.27)
         const random = createStaticVariationSequence(MyPlayer.worldId, position, type)
         const count = variant === 0 ? 2 + Math.floor(random() * 3) : [3, 5, 8, 6, 10][variant]
         const visibleCount = lowDetail ? Math.ceil(count / 2) : count
@@ -71,6 +74,12 @@ export class TerrainDebris extends BaseStaticObject {
     private isSnowSuppressed(block: MapBlock): boolean {
         const mapSize = WorldDataManager.getBlockMap().length
         return block.snowed && WorldRenderer.snowCoverMask.has(this.position.x * mapSize + this.position.z)
+    }
+
+    appendContactShadowFootprints(footprints: ContactShadowFootprint[], height: number) {
+        const {x, z} = this.renderPosition
+        const half = this.contactHalfWidth
+        footprints.push({minX: x - half, maxX: x + half, minZ: z - half, maxZ: z + half, height, reach: 0.19})
     }
 
     render() {

@@ -397,6 +397,46 @@ test('tree camera culling skips offscreen trees and keeps a margin at the edge',
     assert.equal(frustum.intersects(model, position, 1), false)
 })
 
+test('sun shadow boxes share one mesh and gables stay out of the camera pass', async () => {
+    const core = await import('@babylonjs/core/index.js')
+    const engine = new core.NullEngine()
+    const scene = new core.Scene(engine)
+    try {
+        new core.FreeCamera('camera', new core.Vector3(0, 2, -6), scene).setTarget(core.Vector3.Zero())
+        const sun = new core.DirectionalLight('sun', new core.Vector3(-1, -1, 0), scene)
+        const shadow = new core.ShadowGenerator(128, sun)
+        const {StaticSunShadowBoxes: boxes, createSunShadowGable} = loadModule('babylon/world/sunShadowProxyBatch.ts', {
+            '@babylonjs/core': core,
+            '@/babylon/scene/lights': {Lights: {addShadowCaster(mesh, personal) {
+                assert.equal(personal, false)
+                shadow.addShadowCaster(mesh)
+            }}},
+        })
+        const parent = new core.TransformNode('world', scene)
+        boxes.initialize(scene, parent)
+        const gables = createSunShadowGable(scene, parent)
+        boxes.walls.push(core.Matrix.Translation(-2, 0, 0))
+        boxes.buildings.push(core.Matrix.Translation(2, 0, 0))
+        boxes.flush()
+        gables.add(core.Matrix.Translation(2, 1, 0))
+        gables.flush()
+        const [box, roof] = shadow.getShadowMap().renderList
+        assert.equal(box.thinInstanceCount, 2)
+        assert.equal(roof.thinInstanceCount, 1)
+        assert.equal(box.getTotalIndices() / 3, 12)
+        assert.equal(roof.getTotalIndices() / 3, 8)
+        scene.render()
+        assert.equal(scene.getActiveMeshes().length, 0)
+        boxes.walls.length = 0
+        boxes.buildings.length = 0
+        boxes.flush()
+        assert.equal(box.thinInstanceCount, 0)
+        assert.equal(box.isEnabled(), false)
+    } finally {
+        engine.dispose()
+    }
+})
+
 test('tree visibility is reused within a camera tile and refreshed after a viewport change', async () => {
     const core = await import('@babylonjs/core/index.js')
     const species = loadModule('babylon/world/trees/treeSpecies.ts', {})

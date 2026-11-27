@@ -14,6 +14,8 @@ import { WorldRenderer } from '../worldRenderer'
 import { TerrainManager, getTerrainHeightOffset, WATER_BLOCK_TYPE } from '../terrainManager'
 import { outdoorSurfaceHeight } from '../terrainRoofShape'
 import { sameSnowMask } from '../snowCoverMask'
+import { createSunShadowGable, StaticSunShadowBoxes } from '../sunShadowProxyBatch'
+import type { SunShadowProxyBatch } from '../sunShadowProxyBatch'
 import { BuildingGroundContact } from './buildingGroundContact'
 import {
     configureBuildingRoofSnow, encodeHouseRoofSnowUv, encodeRoofSnowUv, HOUSE_ROOF_ANGLE,
@@ -75,6 +77,13 @@ const FLOOR_PAVING_ORIGIN = FLOOR_HEIGHT - 0.026
 const WALL_HEIGHT = 1
 const WALL_THICKNESS = 0.2
 const PILLAR_SIZE = 0.4
+const BUILDING_WALL_TOP = FLOOR_HEIGHT + WALL_HEIGHT * 2
+const MAUSOLEUM_SHADOW_HEIGHT = 3.1
+
+function addBuildingShadowCaster(mesh: Mesh) {
+    const castsDetailedSunShadow = StaticSunShadowBoxes.batch?.scene !== mesh.getScene()
+    Lights.addShadowCaster(mesh, true, true, false, true, undefined, false, castsDetailedSunShadow)
+}
 
 function floorShadowFootprints(width: number, depth: number, wallThickness: number, pillarSize = 0) {
     const footprints: Omit<ContactShadowFootprint, 'height'>[] = []
@@ -243,9 +252,9 @@ class BuildingView {
         Lights.registerSharedLightMesh(this.frontWallsMesh)
         Lights.registerSharedLightMesh(this.roofMesh)
         Lights.registerSharedLightMesh(this.doorMesh)
-        Lights.addShadowCaster(this.frontWallsMesh, true, true)
-        Lights.addShadowCaster(this.roofMesh, true, true)
-        Lights.addShadowCaster(this.doorMesh, true, true)
+        addBuildingShadowCaster(this.frontWallsMesh)
+        addBuildingShadowCaster(this.roofMesh)
+        addBuildingShadowCaster(this.doorMesh)
     }
 
     applyXZTransform() {
@@ -305,6 +314,17 @@ class BuildingView {
 
     getDepth() {
         return this.facing === '+X' || this.facing === '-X' ? this.localWidth : HOUSE_DEPTH
+    }
+
+    appendSunShadowProxies(gables: SunShadowProxyBatch) {
+        const {x, z} = this.localTileToWorld((this.localWidth - 1) / 2, (HOUSE_DEPTH - 1) / 2)
+        const y = this.mesh.position.y
+        const rotation = Matrix.RotationY(this.mesh.rotation.y)
+        StaticSunShadowBoxes.buildings.push(Matrix.Scaling(this.localWidth, BUILDING_WALL_TOP, HOUSE_DEPTH)
+            .multiply(rotation).setTranslationFromFloats(x, y + BUILDING_WALL_TOP / 2, z))
+        gables.add(Matrix.Scaling(this.localWidth + 2 * ROOF_END_OVERHANG,
+            ROOF_RISE + ROOF_THICKNESS / 2, HOUSE_DEPTH + 2 * ROOF_EAVE_OVERHANG)
+            .multiply(rotation).setTranslationFromFloats(x, y + BUILDING_WALL_TOP, z))
     }
 
     localTileToWorld(localX: number, localZ: number) {
@@ -873,7 +893,7 @@ class ShedView {
         this.roofMesh.setEnabled(false)
         this.recountYPosition()
         Lights.registerSharedLightMesh(this.roofMesh)
-        Lights.addShadowCaster(this.roofMesh, true, true)
+        addBuildingShadowCaster(this.roofMesh)
     }
 
     getWidth() {
@@ -1119,6 +1139,10 @@ class ShedView {
         return SHED_POST_HEIGHT + progress * this.getRoofRise() + SHED_ROOF_THICKNESS / 2
     }
 
+    getSunShadowHeight() {
+        return SHED_POST_HEIGHT + this.getRoofRise() + SHED_ROOF_THICKNESS
+    }
+
     private getRoofRise() {
         const side = this.getHighSide()
         return SHED_ROOF_RISE_PER_TILE * (side === '-X' || side === '+X' ? this.getWidth() : this.getDepth())
@@ -1254,7 +1278,7 @@ class MausoleumView {
             mesh.isPickable = false
             mesh.setEnabled(false)
             Lights.registerSharedLightMesh(mesh)
-            Lights.addShadowCaster(mesh, true, true)
+            addBuildingShadowCaster(mesh)
             return {hinge, mesh}
         }
         const leftGate = createGateLeaf('left')
@@ -1351,7 +1375,7 @@ class MausoleumView {
             mesh.isPickable = false
             mesh.setEnabled(false)
             Lights.registerSharedLightMesh(mesh)
-            Lights.addShadowCaster(mesh, true, true)
+            addBuildingShadowCaster(mesh)
         }
         this.applyXZTransform()
         this.recountYPosition()
@@ -1519,7 +1543,7 @@ class MausoleumView {
             direction,
             maxDistance,
             new Vector3(this.data.x - 0.75, groundY, this.data.z - 0.75),
-            new Vector3(this.data.x + 3.75, groundY + 3.1, this.data.z + 3.75),
+            new Vector3(this.data.x + 3.75, groundY + MAUSOLEUM_SHADOW_HEIGHT, this.data.z + 3.75),
         )
     }
 
@@ -1621,6 +1645,7 @@ export const BuildingManager = {
     cabinPrefabs: null as BuildingPrefabs | null,
     mausoleumFloor: null as BuildingFloor | null,
     opaqueBatchMesh: null as Mesh | null,
+    gableSunShadows: null as SunShadowProxyBatch | null,
     groundContact: null as BuildingGroundContact | null,
     groundContactRevision: 0,
     groundContactTerrain: null as {world: WorldData, revision: number, snowMask: ReadonlySet<number>, outdoor: boolean, indoor: boolean} | null,
@@ -1642,6 +1667,11 @@ export const BuildingManager = {
         this.floorBatch = null
         this.detailedFloor = !Settings.isDetalLevelLow()
         this.parent = parent
+        this.gableSunShadows = StaticSunShadowBoxes.batch?.scene === scene ? createSunShadowGable(scene, parent) : null
+        const gableSunShadows = this.gableSunShadows
+        scene.onDisposeObservable.addOnce(() => {
+            if (this.gableSunShadows === gableSunShadows) this.gableSunShadows = null
+        })
         // Offset building occlusion from entity and tree visibility passes.
         this.occlusionCheckFrame = 5
         Lights.enableTransparentShadowCasters()
@@ -1668,7 +1698,7 @@ export const BuildingManager = {
         this.opaqueBatchMesh.receiveShadows = true
         this.opaqueBatchMesh.setEnabled(false)
         Lights.registerSharedLightMesh(this.opaqueBatchMesh)
-        Lights.addShadowCaster(this.opaqueBatchMesh, true, true)
+        addBuildingShadowCaster(this.opaqueBatchMesh)
         this.glassBatchMesh = MeshBuilder.CreatePlane('buildingGlassBatch', {width: 1, height: 1}, scene)
         this.glassBatchMesh.parent = parent
         this.glassBatchMesh.material = Materials.blockMatTrans!
@@ -1694,7 +1724,7 @@ export const BuildingManager = {
         mesh.isPickable = false
         mesh.setEnabled(false)
         Lights.registerSharedLightMesh(mesh)
-        Lights.addShadowCaster(mesh, true, true)
+        addBuildingShadowCaster(mesh)
         try {
             await this.fadeMaterial.forceCompilationAsync(mesh)
         } finally {
@@ -1821,7 +1851,10 @@ export const BuildingManager = {
             const offset = ((Math.sin((elapsed * 0.008) - (Math.PI / 2)) + 1) * 0.5) * 0.175
             changed = target.setPreviewYOffset(offset) || changed
         }
-        if (changed) this.rebuildOpaqueBatch()
+        if (changed) {
+            this.rebuildOpaqueBatch()
+            this.refreshSunShadows()
+        }
     },
 
     getFloorHeightAtTile(x: number, z: number) {
@@ -1869,6 +1902,7 @@ export const BuildingManager = {
     recountYPositions() {
         this.buildings.forEach((building) => building.recountYPosition())
         this.rebuildOpaqueBatch()
+        this.refreshSunShadows()
     },
 
     onFrame(timeRate: number, camera: Camera | null) {
@@ -1974,6 +2008,33 @@ export const BuildingManager = {
             if (building instanceof BuildingView && building.visible) building.refreshRoofSnow(this.groundContactRevision)
         })
         this.rebuildOpaqueBatch()
+        this.refreshSunShadows()
+    },
+
+    refreshSunShadows() {
+        const gables = this.gableSunShadows
+        if (!gables) return
+        const boxes = StaticSunShadowBoxes.buildings
+        boxes.length = 0
+        gables.clear()
+        if (!Lights.indoor) {
+            for (const building of this.buildings.values()) {
+                if (!building.visible) continue
+                if (building instanceof BuildingView) {
+                    building.appendSunShadowProxies(gables)
+                    continue
+                }
+                const shed = building instanceof ShedView
+                const width = building.getWidth(), depth = building.getDepth()
+                const height = shed ? building.getSunShadowHeight() : MAUSOLEUM_SHADOW_HEIGHT
+                const overhang = shed ? SHED_ROOF_OVERHANG : 0.25
+                const {x, z} = building.data
+                boxes.push(Matrix.Scaling(width + 2 * overhang, height, depth + 2 * overhang)
+                    .setTranslationFromFloats(x + (width - 1) / 2, building.roofMesh.position.y + height / 2, z + (depth - 1) / 2))
+            }
+        }
+        StaticSunShadowBoxes.flush()
+        gables.flush()
     },
 
     rebuildOpaqueBatch() {
@@ -2058,6 +2119,7 @@ export const BuildingManager = {
         this.floorTilesRevision++
         this.collisionTiles.clear()
         this.rebuildOpaqueBatch()
+        this.refreshSunShadows()
     },
 
     createHousePrefab(scene: Scene, cabin = false) {
@@ -2379,7 +2441,7 @@ export const BuildingManager = {
 
         }
 
-        const wallTop = FLOOR_HEIGHT + WALL_HEIGHT * 2
+        const wallTop = BUILDING_WALL_TOP
         if (cabin) {
             for (const x of [-0.5, HOUSE_WIDTH - 0.5]) {
                 for (let offset = 0; offset < ROOF_RISE; offset += 0.25) {

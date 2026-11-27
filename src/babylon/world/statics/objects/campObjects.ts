@@ -2,9 +2,10 @@ import { Matrix, Vector2, Vector3 } from '@babylonjs/core'
 import { BaseStaticObject } from '@/babylon/world/statics/objects/baseStaticObject'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { MasonryBatch } from '@/babylon/world/masonryBatch'
-import { TaperedBlockBatch } from '@/babylon/world/taperedBlockBatch'
+import { TaperedBlockBatch, TaperedBlocksWithoutSun } from '@/babylon/world/taperedBlockBatch'
 import type { StaticBaseContact } from '@/babylon/world/worldRenderer'
 import type { ContactShadowFootprint } from '@/babylon/world/terrainContactShadow'
+import { appendBoxContactShadow } from '@/babylon/world/terrainContactShadow'
 import { StaticEquipPartsRenderer } from '@/babylon/world/statics/staticEquipPartsRenderer'
 import { createOrientedStaticVariation, createStaticVariation, placeStaticPart } from '@/babylon/world/statics/staticVariation'
 import { getWoodBearingFaces, getWoodSupportHeight } from '@/babylon/world/statics/woodPileSupport'
@@ -405,7 +406,7 @@ abstract class WoodPile extends CampObject {
 
     constructor(type: number, position: Vector3, material: Vector2, accentMaterial: Vector2, metadata?: CampObjectMetadata) {
         super(type, position, material, accentMaterial, metadata)
-        this.prefab = TaperedBlockBatch.prefab
+        this.prefab = TaperedBlocksWithoutSun.prefab
     }
 
     protected abstract buildPieces(): WoodPiece[]
@@ -413,18 +414,13 @@ abstract class WoodPile extends CampObject {
     render() {
         const options = {anchor: this.position, moisture: getWoodMoisture(this.position)}
         for (const {matrix, shape} of this.getPieces()) {
-            TaperedBlockBatch.add(placeStaticPart(matrix, this.renderPosition), this.material, shape, options)
+            TaperedBlocksWithoutSun.add(placeStaticPart(matrix, this.renderPosition), this.material, shape, options)
         }
     }
 
     appendContactShadowFootprints(footprints: ContactShadowFootprint[], height: number) {
-        for (const {matrix: {m}} of this.getPieces()) {
-            if (m[13] - 0.5 > 0.2) continue
-            const x = this.renderPosition.x + m[12]
-            const z = this.renderPosition.z + m[14]
-            const halfX = (Math.abs(m[0]) + Math.abs(m[4]) + Math.abs(m[8])) * 0.5
-            const halfZ = (Math.abs(m[2]) + Math.abs(m[6]) + Math.abs(m[10])) * 0.5
-            footprints.push({minX: x - halfX, maxX: x + halfX, minZ: z - halfZ, maxZ: z + halfZ, height, reach: 0.15})
+        for (const {matrix} of this.getPieces()) {
+            if (matrix.m[13] - 0.5 <= 0.2) appendBoxContactShadow(footprints, matrix, this.renderPosition, height, 0.28)
         }
     }
 

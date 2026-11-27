@@ -1,6 +1,7 @@
 import { Matrix, Vector2, Vector3 } from '@babylonjs/core'
 import { BuildingManager } from '@/babylon/world/buildings/buildingManager'
-import { MasonryBatch } from '@/babylon/world/masonryBatch'
+import { MasonryWithoutSun } from '@/babylon/world/masonryBatch'
+import { StaticSunShadowBoxes } from '../../sunShadowProxyBatch'
 import type { ContactShadowFootprint } from '@/babylon/world/terrainContactShadow'
 import { DEFAULT_STONE_WALL_PRECISION, DEFAULT_STONE_WALL_WIDTH } from '@/babylon/world/statics/staticsCodebook'
 import { createSineStaticVariation, createStaticVariation } from '@/babylon/world/statics/staticVariation'
@@ -8,6 +9,7 @@ import { OrientedWall } from '@/babylon/world/statics/objects/orientedWall'
 import type { WallDirection, WallMetadata } from '@/babylon/world/statics/objects/orientedWall'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { Settings } from '@/settings/settings'
+import { Lights } from '@/babylon/scene/lights'
 
 export interface StoneWallMetadata extends WallMetadata {
     precision?: number
@@ -57,7 +59,7 @@ export class StoneWall extends OrientedWall {
     private nextStraight?: StoneWall
 
     constructor(type: number, position: Vector3, metadata?: StoneWallMetadata) {
-        super(type, position, Vector2.Zero(), MasonryBatch.prefab, metadata)
+        super(type, position, Vector2.Zero(), MasonryWithoutSun.prefab, metadata)
         const precision = metadata?.precision
         this.precision = typeof precision === 'number' && Number.isFinite(precision)
             ? Math.max(1, Math.min(10, Math.round(precision))) : DEFAULT_STONE_WALL_PRECISION
@@ -199,11 +201,11 @@ export class StoneWall extends OrientedWall {
         const courseStep = 1.28 / courseCount
         const courseHeight = courseStep - 0.007
         const candidates = this.damage > 1 ? [] as WallStone[] : null
-        const layers = MasonryBatch.topWeathering || (candidates && roughness > 0)
+        const layers = MasonryWithoutSun.topWeathering || (candidates && roughness > 0)
             ? Array.from({length: courseCount + 1}, () => [] as number[]) : null
         let firstRevealedLayer = courseCount
         const addStone = (matrix: Matrix, seed: number, layer: number) => {
-            const instance = MasonryBatch.add(matrix, this.position, seed, false, roughness, false, layer === courseCount)
+            const instance = MasonryWithoutSun.add(matrix, this.position, seed, false, roughness, false, layer === courseCount)
             layers?.[layer].push(instance)
         }
         let index = 0
@@ -318,7 +320,29 @@ export class StoneWall extends OrientedWall {
                 }
             }
         }
-        if (layers) MasonryBatch.markExposedTops(layers, this.position, roughness > 0, firstRevealedLayer)
+        if (layers) MasonryWithoutSun.markExposedTops(layers, this.position, roughness > 0, firstRevealedLayer)
+        const boxes = StaticSunShadowBoxes.walls
+        if (StaticSunShadowBoxes.batch && !Lights.indoor && wallHeight > 0) {
+            const height = (variedHeight + this.previewHeightOffset) * (1 - (this.damage - 1) / 90)
+            const width = this.width * 0.94
+            const x = origin.x + this.segmentX, z = origin.z + this.segmentZ
+            const y = baseY - 0.5 + height / 2
+            if (this.cornerDirections && this.cornerSpans) {
+                for (const [index, direction] of this.cornerDirections.entries()) {
+                    const span = this.cornerSpans[index]
+                    const length = span.scale * 0.5
+                    const axisX = direction.x * span.cos + direction.z * span.sin
+                    const axisZ = direction.z * span.cos - direction.x * span.sin
+                    boxes.push(Matrix.Scaling(length + width / 2, height, width)
+                        .multiply(Matrix.RotationY(Math.atan2(-axisZ, axisX)))
+                        .setTranslationFromFloats(x + axisX * (length / 2 - width / 4), y, z + axisZ * (length / 2 - width / 4)))
+                }
+            } else {
+                const yaw = (alongX ? 0 : Math.PI / 2) + (this.straightSpan?.yaw ?? 0)
+                boxes.push(Matrix.Scaling(this.straightSpan?.scale ?? 1, height, width)
+                    .multiply(Matrix.RotationY(yaw)).setTranslationFromFloats(x, y, z))
+            }
+        }
     }
 
     private addFallenStone(stone: WallStone, rank: number, variation: ReturnType<typeof createSineStaticVariation>, crown: boolean) {
@@ -354,6 +378,6 @@ export class StoneWall extends OrientedWall {
             .multiply(Matrix.RotationYawPitchRoll(yaw, pitch, roll))
         const halfHeight = (Math.abs(matrix.m[1]) + Math.abs(matrix.m[5]) + Math.abs(matrix.m[9])) * 0.5
         matrix.setTranslationFromFloats(x, ground + halfHeight + 0.48, z)
-        MasonryBatch.add(matrix, new Vector3(x, ground, z), stone.seed, false, this.roughness, true, crown)
+        MasonryWithoutSun.add(matrix, new Vector3(x, ground, z), stone.seed, false, this.roughness, true, crown)
     }
 }
