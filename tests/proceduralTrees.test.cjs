@@ -9,7 +9,33 @@ test('procedural trees reuse a deterministic pool within each mesh budget', asyn
         const {TREE_SPECIES, TREE_VARIANT_COUNT, TREE_SHAPE_FACES, TREE_FACE_BUDGET} =
             await server.ssrLoadModule('/src/babylon/world/trees/treeSpecies.ts')
         const {createTreeGeometry} = await server.ssrLoadModule('/src/babylon/world/trees/treeGeometry.ts')
-        const {Mesh, NullEngine, Scene} = await import('@babylonjs/core')
+        const {buildTreeRevealIndex, collectTreeRevealCandidates, overlapsTreeReveal, projectTreeBounds, TreeRevealFrustum} =
+            await server.ssrLoadModule('/src/babylon/world/trees/treeRevealBounds.ts')
+        const {Matrix, Mesh, NullEngine, Scene, Vector3, Vector4} = await import('@babylonjs/core')
+        const projected = {min: Vector3.Zero(), max: Vector3.Zero()}
+        const bounds = {min: new Vector3(-.2, -.2, .2), max: new Vector3(.2, .2, .4)}
+        const reveal = new Vector4(0, 0, 1, .5)
+        assert.ok(projectTreeBounds(bounds, Matrix.Identity(), Vector3.Zero(), projected))
+        assert.ok(overlapsTreeReveal(projected, reveal, .2, .2, false))
+        assert.equal(overlapsTreeReveal(projected, reveal, .2, .2, true), false)
+        reveal.x = .8
+        assert.equal(overlapsTreeReveal(projected, reveal, .2, .2, false), false)
+        const playerFrustum = new TreeRevealFrustum(), targetFrustum = new TreeRevealFrustum()
+        const perspective = Matrix.PerspectiveFovLH(Math.PI / 2, 1, .1, 100)
+        const target = Vector3.TransformCoordinates(new Vector3(0, 0, 8), perspective)
+        const entry = (id, x, z) => ({placement: {id}, bounds: {min: new Vector3(x - .2, -.2, z - .2),
+            max: new Vector3(x + .2, .2, z + .2)}})
+        const index = buildTreeRevealIndex([entry(1, 0, 4), entry(2, 3, 4), entry(3, 0, 9), entry(4, -3, 4)])
+        const candidates = []
+        playerFrustum.update(perspective, new Vector4(0, 0, 1, target.z), .15, .15, false)
+        targetFrustum.update(perspective, new Vector4(.75, 0, 1, target.z), .15, .15, false)
+        collectTreeRevealCandidates(index, playerFrustum, targetFrustum, candidates)
+        assert.deepEqual(candidates.map(({placement}) => placement.id).sort(), [1, 2])
+        candidates.length = 0
+        playerFrustum.update(perspective, new Vector4(-.4, 0, 1, target.z), .05, .05, false)
+        targetFrustum.update(perspective, Vector4.Zero(), 0, 0, false)
+        collectTreeRevealCandidates(index, playerFrustum, targetFrustum, candidates)
+        assert.deepEqual(candidates, [])
         const engine = new NullEngine()
         try {
             const scene = new Scene(engine)

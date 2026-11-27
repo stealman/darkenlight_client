@@ -105,7 +105,7 @@
                 </div>
             </div>
 
-            <div v-if="activeTabId == 2">
+            <div v-if="activeTabId == 2" style="max-height: 65vh; overflow-y: auto; overflow-x: hidden">
                 <label>{{ t('settings.graphicsLevel') }}</label>
                 <div class="dialog-actions" style="margin-top: 20px">
                     <button class="dialog-button" :class="storedSettings.detailLevel.name == 'HIGH' ? 'selected' : ''" @click="setDetailsLevel('HIGH')">
@@ -167,11 +167,34 @@
                                 <td class="item-label"><label for="glow-layer-enabled">{{ t('settings.glowLayer') }}</label></td>
                                 <td><Checkbox input-id="glow-layer-enabled" v-model="glowLayerEnabled" binary /></td>
                                 <td class="item-label"><label for="trees-enabled">{{ t('settings.trees') }}</label></td>
-                                <td><Checkbox input-id="trees-enabled" v-model="treesEnabled" binary /></td>
+                                <td><Checkbox input-id="trees-enabled" v-model="storedSettings.treesEnabled" binary @change="treeRenderingChanged" /></td>
+                            </tr>
+                            <tr>
+                                <td class="item-label"><label for="tree-shadows-enabled">{{ t('settings.treeShadows') }}</label></td>
+                                <td><Checkbox input-id="tree-shadows-enabled" v-model="storedSettings.treeShadowsEnabled" binary
+                                    :disabled="!storedSettings.treesEnabled" @change="treeRenderingChanged" /></td>
+                            </tr>
+                            <tr v-for="row in treeShaderRows" :key="row[0]">
+                                <template v-for="key in row" :key="key">
+                                    <td class="item-label"><label :for="'tree-shader-' + key">{{ t('settings.treeShader.' + key) }}</label></td>
+                                    <td><Checkbox :input-id="'tree-shader-' + key" binary
+                                        :model-value="(key !== 'patina' || storedSettings.detailLevel.name !== 'LOW') && Boolean(storedSettings.treeShaderFeatures & TREE_SHADER[key])"
+                                        :disabled="!storedSettings.treesEnabled || (key === 'patina' && storedSettings.detailLevel.name === 'LOW')"
+                                        @update:model-value="setTreeShaderFeature(TREE_SHADER[key], $event)" /></td>
+                                </template>
                             </tr>
                         </tbody>
                     </table>
                 </div>
+                <div class="dialog-actions">
+                    <button type="button" class="dialog-button" :disabled="measuringTreeLighting || !storedSettings.treesEnabled" @click="measureTreeLighting">
+                        <span class="ui-text-gradient--button-state">{{ t('settings.treeLightingProfiler.button') }}</span>
+                    </button>
+                </div>
+                <p v-if="measuringTreeLighting" role="status">{{ t('settings.treeLightingProfiler.running') }}</p>
+                <p v-else-if="treeLightingProfileFailed" role="status">{{ t('settings.treeLightingProfiler.failed') }}</p>
+                <textarea v-if="treeLightingProfile" :value="treeLightingProfile" :aria-label="t('settings.treeLightingProfiler.result')"
+                    rows="9" readonly style="width: 100%; box-sizing: border-box" />
             </div>
 
             <div v-if="activeTabId == 3">
@@ -320,6 +343,7 @@ import { Renderer } from '@/babylon/scene/renderer'
 import { Lights } from '@/babylon/scene/lights'
 import { FoggyAreaManager } from '@/babylon/world/foggyAreaManager'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
+import { TREE_SHADER } from '@/babylon/world/trees/treeSpecies'
 import { ActionButtonsManager } from '@/gui/actionButtonsManager'
 import { TargetingManager } from '@/gui/targettingManager'
 import { ViewportManager } from '@/utils/viewport'
@@ -330,6 +354,10 @@ const props = defineProps({
     visible: Boolean,
 })
 const storedSettings = ref(Settings)
+const treeShaderRows = [['lighting', 'reveal'], ['bark', 'relief'], ['snow', 'patina']]
+const measuringTreeLighting = ref(false)
+const treeLightingProfileFailed = ref(false)
+const treeLightingProfile = ref('')
 const foggyAreasEnabled = computed({
     get: () => storedSettings.value.isFoggyAreasEnabled(),
     set: (enabled) => {
@@ -343,14 +371,6 @@ const glowLayerEnabled = computed({
     set: (enabled) => {
         storedSettings.value.glowLayerOverride = enabled
         Renderer.updateSpellGlow()
-        storeSettings()
-    },
-})
-const treesEnabled = computed({
-    get: () => storedSettings.value.treesEnabled,
-    set: (enabled) => {
-        storedSettings.value.treesEnabled = enabled
-        WorldRenderer.refreshTreeRendering()
         storeSettings()
     },
 })
@@ -532,7 +552,6 @@ const miniMapSizeChanged = () => {
 const restoreDefaultSettings = () => {
     const defaultSettings = Settings.getDefaultSettings()
     const detailLevelChanged = storedSettings.value.detailLevelName !== defaultSettings.detailLevelName
-    const treeRenderingChanged = storedSettings.value.treesEnabled !== defaultSettings.treesEnabled
 
     Object.assign(storedSettings.value, defaultSettings)
     storedSettings.value.setDetailLevel(defaultSettings.detailLevelName)
@@ -541,7 +560,7 @@ const restoreDefaultSettings = () => {
     Settings.setVolume(defaultSettings.volume)
     Settings.setAmbientVolume(defaultSettings.ambientVolume)
     FoggyAreaManager.refreshVisibleAreas()
-    if (treeRenderingChanged) WorldRenderer.refreshTreeRendering()
+    WorldRenderer.refreshTreeRendering()
     setLocale(defaultSettings.language)
     Renderer.brightnessChanged()
     Lights.brightnessChanged()
@@ -558,6 +577,33 @@ const restoreDefaultSettings = () => {
 
 const storeSettings = () => {
     Settings.storeSettings()
+}
+
+const treeRenderingChanged = () => {
+    WorldRenderer.refreshTreeRendering()
+    storeSettings()
+}
+
+const setTreeShaderFeature = (feature, enabled) => {
+    const features = storedSettings.value.treeShaderFeatures
+    storedSettings.value.treeShaderFeatures = enabled ? features | feature : features & ~feature
+    treeRenderingChanged()
+}
+
+const measureTreeLighting = async () => {
+    measuringTreeLighting.value = true
+    treeLightingProfile.value = ''
+    treeLightingProfileFailed.value = false
+    try {
+        const {profileTreeLighting} = await import('@/babylon/world/trees/treeLightingProfiler')
+        treeLightingProfile.value = await profileTreeLighting() ?? ''
+        treeLightingProfileFailed.value = !treeLightingProfile.value
+    } catch (error) {
+        treeLightingProfileFailed.value = true
+        console.warn('Tree lighting profiling failed', error)
+    } finally {
+        measuringTreeLighting.value = false
+    }
 }
 
 const closeDialog = () => {

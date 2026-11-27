@@ -12,7 +12,7 @@ import { outdoorSurfaceHeight } from './terrainRoofShape'
 import { createStaticVariation } from './statics/staticVariation'
 import { TreeVariants } from './trees/treeGenerator'
 import type { TreePlacement, TreeRenderer } from './trees/treeRenderer'
-import { TREE_SPECIES_BY_TYPE, TREE_VARIANT_COUNT, WORLD_TREE_TYPES } from './trees/treeSpecies'
+import { TREE_SHADER, TREE_SPECIES_BY_TYPE, TREE_VARIANT_COUNT, WORLD_TREE_TYPES } from './trees/treeSpecies'
 import type { TreeShape, TreeSurfaceDetail } from './trees/treeSpecies'
 
 export interface TreeData {
@@ -44,6 +44,8 @@ let nextId = 0
 let deletePreviewTree: WorldTree | null = null
 let deletePreviewStartTime = 0
 let deletePreviewYOffset = 0
+export type TreeLightingProfileMode = 'unlit' | 'pbr' | 'active-lights'
+let lightingProfileMode: TreeLightingProfileMode | undefined
 
 export const TreeManager = {
     collisionGrid: new CollisionGrid<WorldTree>(),
@@ -57,12 +59,14 @@ export const TreeManager = {
             (mesh, shape, shadowOnly) => {
                 const near = castsNearbyShadow(shape, shadowOnly)
                 Lights.addShadowCaster(mesh, near, near)
-                if (!shadowOnly) Lights.registerSharedLightMesh(mesh)
             },
             (mesh, shape, shadowOnly) => {
                 const near = castsNearbyShadow(shape, shadowOnly)
                 Lights.removeShadowCaster(mesh, near, near)
-                if (!shadowOnly) Lights.unregisterSharedLightMesh(mesh)
+            },
+            (mesh, enabled) => {
+                if (enabled) Lights.registerSharedLightMesh(mesh)
+                else Lights.unregisterSharedLightMesh(mesh)
             },
         )
         renderer = treeRenderer
@@ -71,6 +75,7 @@ export const TreeManager = {
             if (renderer !== treeRenderer) return
             renderer = undefined
             variants = undefined
+            lightingProfileMode = undefined
             this.clearWorld()
         })
     },
@@ -79,8 +84,12 @@ export const TreeManager = {
         return renderer?.warmUp()
     },
 
+    setLightingProfile(mode?: TreeLightingProfileMode) {
+        lightingProfileMode = mode
+    },
+
     onFrame() {
-        if (!Settings.treesEnabled) return
+        if (!Settings.treesEnabled || lightingProfileMode || !(Settings.treeShaderFeatures & TREE_SHADER.reveal)) return
         const node = MyPlayer.myModel?.node
         if (!node || !MyPlayer.myChar) {
             renderer?.setRevealTargets(null)
@@ -183,7 +192,7 @@ export const TreeManager = {
         placements.length = 0
         const map = WorldDataManager.getBlockMap()
         const detail = Settings.detailLevel.name as TreeSurfaceDetail
-        const sunShadows = !Lights.indoor && Settings.isShadowsEnabled()
+        const sunShadows = !Lights.indoor && Settings.treeShadowsEnabled && Settings.isShadowsEnabled()
         for (const tree of trees.values()) {
             const {position: {x, y, z}, placement} = tree
             const visible = ViewportManager.isPointInVisibleMatrix(x, z, 2, y)
@@ -199,7 +208,13 @@ export const TreeManager = {
             placements.push(placement)
             if (visible) this.visibleTrees.push(tree)
         }
-        renderer.setSurfaceDetail(detail)
+        let features = Settings.treeShaderFeatures
+        if (lightingProfileMode) {
+            features &= ~TREE_SHADER.reveal
+            features = lightingProfileMode === 'unlit' ? features & ~TREE_SHADER.lighting : features | TREE_SHADER.lighting
+        }
+        renderer.setSurfaceDetail(detail, features, lightingProfileMode !== 'pbr')
+        renderer.setShadowCasting(Settings.treeShadowsEnabled)
         renderer.rebuild(placements)
         if (deletePreviewTree) renderer.setYOffset(deletePreviewTree.placement.id, deletePreviewYOffset)
     },

@@ -167,6 +167,21 @@
     "graphicsHigh": "High",
     "glowLayer": "Spell glow",
     "trees": "Render trees",
+    "treeShader": {
+      "lighting": "PBR tree lighting",
+      "bark": "Bark grain",
+      "relief": "Bark relief",
+      "snow": "Snow on trees",
+      "reveal": "Tree cutouts",
+      "patina": "Patina and moss (Medium/High)"
+    },
+    "treeShadows": "Tree shadows",
+    "treeLightingProfiler": {
+      "button": "Measure tree lighting",
+      "running": "Measuring. Stay in place and keep the game in the foreground.",
+      "failed": "The measurement could not finish. Try again while playing.",
+      "result": "Tree lighting measurement"
+    },
     "graphicsMedium": "Medium",
     "graphicsLow": "Low",
     "brightness": "Brightness",

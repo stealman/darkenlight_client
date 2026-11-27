@@ -145,8 +145,10 @@ test('bench tile index preserves rounded positions, rotated footprints, overlaps
 test('tree manager indexes scaled trunks and updates its grid through removal and world reset', async () => {
     const core = await import('@babylonjs/core/index.js')
     const {load, dependencies} = createLoader(core)
-    const settings = {treesEnabled: true, detailLevel: {name: 'HIGH'}, isShadowsEnabled: () => true}
+    const settings = {treesEnabled: true, treeShaderFeatures: 0, treeShadowsEnabled: true,
+        detailLevel: {name: 'HIGH'}, isShadowsEnabled: () => true}
     const batches = []
+    let surface, shadowCasting
     dependencies['@/data/worldDataManager'] = {WorldDataManager: {getBlockMap: () =>
         Array.from({length: 20}, () => Array.from({length: 20}, () => ({height: 0, totalHeight: 0})))}}
     dependencies['@/data/myPlayer'] = {MyPlayer: {worldId: 1}}
@@ -163,7 +165,8 @@ test('tree manager indexes scaled trunks and updates its grid through removal an
     dependencies['./trees/treeGenerator'] = load('@/babylon/world/trees/treeGenerator')
     dependencies['./trees/treeRenderer'] = {TreeRenderer: class {
         setRevealTargets() {}
-        setSurfaceDetail() {}
+        setSurfaceDetail(detail, features) {surface = {detail, features}}
+        setShadowCasting(enabled) {shadowCasting = enabled}
         rebuild(placements) {batches.push(placements.map(tree => tree.detail))}
     }}
     const {TreeManager: manager} = load('@/babylon/world/treeManager')
@@ -174,6 +177,8 @@ test('tree manager indexes scaled trunks and updates its grid through removal an
     assert.equal(manager.addTree({type: 1, x: 4, z: 4, size: .5, level: 2}), false)
     assert.equal(manager.getTreeAt(4, 4).level, 2)
     manager.renderTrees(false)
+    assert.deepEqual(surface, {detail: 'HIGH', features: 0})
+    assert.equal(shadowCasting, true)
     settings.treesEnabled = false
     manager.renderTrees(false)
     manager.renderTrees(false)
@@ -183,6 +188,14 @@ test('tree manager indexes scaled trunks and updates its grid through removal an
     settings.treesEnabled = true
     manager.renderTrees(false)
     assert.deepEqual(batches.at(-1), batches[0])
+    settings.treeShaderFeatures = dependencies['./treeSpecies'].TREE_SHADER.snow
+    manager.renderTrees(false)
+    assert.deepEqual(surface, {detail: 'HIGH', features: settings.treeShaderFeatures})
+    assert.deepEqual(batches.at(-1), batches[0])
+    settings.treeShadowsEnabled = false
+    manager.renderTrees(false)
+    assert.equal(shadowCasting, false)
+    assert.deepEqual(batches.at(-1), ['HIGH', 'HIGH', 'HIGH'])
     for (let x = 0; x <= 15; x += .17) for (let z = 0; z <= 15; z += .19) {
         for (const size of [.4, .8, 2]) {
             const expected = items.find(tree => Math.abs(tree.position.x - x) < (tree.scale * .75 + size) / 2

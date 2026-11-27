@@ -1,5 +1,6 @@
 import { AudioManager } from '@/babylon/audio/audioManager'
 import { ActionButtonsManager } from '@/gui/actionButtonsManager'
+import { ALL_TREE_SHADER_FEATURES } from '@/babylon/world/trees/treeSpecies'
 
 export const BRIGHTNESS_MIN = 0
 export const BRIGHTNESS_MAX = 10
@@ -63,6 +64,8 @@ export const Settings = {
     glowLayerOverride: null as boolean | null,
     foggyAreasOverride: null as boolean | null,
     treesEnabled: true,
+    treeShaderFeatures: 0,
+    treeShadowsEnabled: true,
 
     hudSize: 1 as number,
     joystickSize: 100 as number,
@@ -101,6 +104,10 @@ export const Settings = {
         this.detailLevelName = storedSettings.detailLevelName
         this.foggyAreasOverride = typeof storedSettings.foggyAreasOverride === 'boolean' ? storedSettings.foggyAreasOverride : null
         this.treesEnabled = storedSettings.treesEnabled !== false
+        this.treeShaderFeatures = Number.isInteger(storedSettings.treeShaderFeatures)
+            ? storedSettings.treeShaderFeatures & ALL_TREE_SHADER_FEATURES
+            : storedSettings.treeShaderEnabled === true ? ALL_TREE_SHADER_FEATURES : 0
+        this.treeShadowsEnabled = storedSettings.treeShadowsEnabled !== false
 
         this.brightness = clampBrightness(parseFloat(storedSettings.brightness))
         const storedCameraDistance = parseFloat(storedSettings.cameraDistance)
@@ -169,6 +176,8 @@ export const Settings = {
             glowLayerOverride: null as boolean | null,
             foggyAreasOverride: null as boolean | null,
             treesEnabled: true,
+            treeShaderFeatures: 0,
+            treeShadowsEnabled: true,
             targetMarkerOpacity: 1,
             hudSize: 1,
 

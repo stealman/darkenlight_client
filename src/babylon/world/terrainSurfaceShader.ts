@@ -1,6 +1,6 @@
 import { RawTexture, Texture } from '@babylonjs/core'
 import type { Scene } from '@babylonjs/core'
-import type { PBRCustomMaterial } from '@babylonjs/materials'
+import type { CustomMaterial, PBRCustomMaterial } from '@babylonjs/materials'
 import { STATIC_LIGHT_LIMITS, STATIC_SHADOW_LIGHT_LIMITS } from '@/babylon/scene/lighting/lightConfig'
 import { Settings } from '@/settings/settings'
 import { TERRAIN_ATLAS_TILES, terrainCoverPatterns } from './terrainAtlasPlacement'
@@ -28,7 +28,7 @@ function createTerrainNoiseTexture(scene: Scene) {
     return texture
 }
 
-export function configureTerrainNoiseTexture(material: PBRCustomMaterial, surfaceSamplers: number) {
+export function configureTerrainNoiseTexture(material: PBRCustomMaterial | CustomMaterial, surfaceSamplers: number) {
     if (!USE_TERRAIN_NOISE_TEXTURE) return
     const scene = material.getScene()
     const caps = scene.getEngine().getCaps()

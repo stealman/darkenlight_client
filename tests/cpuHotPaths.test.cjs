@@ -253,11 +253,13 @@ test('tree reveal forwards the player and selected target without rebuilding geo
     const target = {getModelHeight: () => 3, pos: new core.Vector3(8, 1, 9)}
     const myPlayer = {myChar: player, myModel: {node: {getAbsolutePosition: () => new core.Vector3(2, 0, 3)}}}
     const targeting = {selectedTarget: target}
+    const species = loadModule('babylon/world/trees/treeSpecies.ts', {})
     let rebuilds = 0
     let reveals
     const {TreeManager: trees} = loadModule('babylon/world/treeManager.ts', {
         '@babylonjs/core': core,
         './collisionGrid': loadModule('babylon/world/collisionGrid.ts', {}),
+        './trees/treeSpecies': species,
         './trees/treeGenerator': {TreeVariants: class { warmUp() {} }},
         './trees/treeRenderer': {TreeRenderer: class {
             setRevealTargets(...args) {reveals = args}
@@ -265,7 +267,7 @@ test('tree reveal forwards the player and selected target without rebuilding geo
         }},
         '@/data/myPlayer': {MyPlayer: myPlayer},
         '@/gui/targettingManager': {TargetingManager: targeting},
-        '@/settings/settings': {Settings: {treesEnabled: true}},
+        '@/settings/settings': {Settings: {treesEnabled: true, treeShaderFeatures: species.TREE_SHADER.reveal}},
     })
     await trees.initialize({onDisposeObservable: {addOnce() {}}}, null)
     trees.onFrame()

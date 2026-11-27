@@ -167,6 +167,21 @@
     "graphicsHigh": "Vysoká",
     "glowLayer": "Záře kouzel",
     "trees": "Vykreslovat stromy",
+    "treeShader": {
+      "lighting": "PBR osvětlení stromů",
+      "bark": "Kresba kůry",
+      "relief": "Reliéf kůry",
+      "snow": "Sníh na stromech",
+      "reveal": "Průhledné výřezy stromů",
+      "patina": "Patina a mech (MEDIUM/HIGH)"
+    },
+    "treeShadows": "Stíny stromů",
+    "treeLightingProfiler": {
+      "button": "Změřit osvětlení stromů",
+      "running": "Měřím. Zůstaň na místě a nech hru v popředí.",
+      "failed": "Měření se nepodařilo dokončit. Zkus ho znovu během hry.",
+      "result": "Výsledek měření osvětlení stromů"
+    },
     "graphicsMedium": "Střední",
     "graphicsLow": "Nízká",
     "brightness": "Jas",

@@ -25,6 +25,8 @@ for (const kind of Object.keys(WORLD_TREE_TYPES) as TreeSpecies[]) {
 
 export type TreeDetail = 'LOW' | 'MEDIUM' | 'HIGH' | 'SHADOW'
 export type TreeSurfaceDetail = Exclude<TreeDetail, 'SHADOW'>
+export const TREE_SHADER = {lighting: 1, bark: 2, relief: 4, snow: 8, reveal: 16, patina: 32} as const
+export const ALL_TREE_SHADER_FEATURES = Object.values(TREE_SHADER).reduce((mask, feature) => mask | feature, 0)
 export const TREE_VARIANT_COUNT = 25
 export const TREE_DEFAULT_SEED = 671439
 export const TREE_FACE_BUDGET = {LOW: 1000, MEDIUM: 1900, HIGH: 2500, SHADOW: 240} as const
