@@ -96,6 +96,26 @@ test('actor preparation processes one job per frame and releases waiters on scen
     assert.equal(visual.enqueueActorVisualPreparation(scene, () => {}), false)
 })
 
+test('sea rectangles cover open and submerged tiles without overlapping dry land or higher ponds', () => {
+    const {seaRectangles} = loadModule('babylon/world/seaWaterSurface.ts', {
+        './terrainRoofShape': {WATER_BLOCK_TYPE: 50},
+    })
+    const land = {type: 1, height: 5}
+    const bed = {type: 1, height: 3}
+    const sea = {type: 50, height: 4}
+    const pond = {type: 50, height: 6}
+    const rectangles = seaRectangles([[land, bed, sea], [land, bed, pond]], 4, {minX: 0, maxX: 1, minZ: -1, maxZ: 2})
+    assert.deepEqual(rectangles, [
+        {minX: 0, maxX: 1, minZ: -1, maxZ: -1},
+        {minX: 0, maxX: 0, minZ: 1, maxZ: 2},
+        {minX: 1, maxX: 1, minZ: 1, maxZ: 1},
+    ])
+    assert.deepEqual(seaRectangles([[land]], 5, {minX: 0, maxX: 0, minZ: 0, maxZ: 0}), [])
+    assert.deepEqual(seaRectangles([], 4, {minX: -4, maxX: 4, minZ: -4, maxZ: 4}), [
+        {minX: -4, maxX: 4, minZ: -4, maxZ: 4},
+    ])
+})
+
 test('water reuses the visible shoreline and rebuilds it when nearby terrain changes', () => {
     const uploads = []
     const mesh = {setEnabled() {}, getScene() {}, onDisposeObservable: {addOnce() {}}}

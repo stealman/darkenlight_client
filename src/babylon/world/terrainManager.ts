@@ -17,7 +17,7 @@ import { contactShadowView, TerrainContactShadow } from './terrainContactShadow'
 import { StaticsManager } from './statics/staticsManager'
 import { StepMarksRenderer } from './stepMarksRenderer'
 import { TerrainWaterSurface } from './terrainWaterSurface'
-import { configureTerrainWater } from './terrainWaterMaterial'
+import { SeaWaterSurface } from './seaWaterSurface'
 import { outdoorSurfaceHeight, WATER_BLOCK_TYPE } from './terrainRoofShape'
 
 export { WATER_BLOCK_TYPE } from './terrainRoofShape'
@@ -33,7 +33,7 @@ export const TerrainManager = {
     terrainPlane: null as Mesh | null,
     dungeonBlock: null as Mesh | null,
     terrainWater: null as TerrainWaterSurface | null,
-    waterPlane: null as Mesh | null,
+    seaWater: null as SeaWaterSurface | null,
     seaWaterLevel: null as number | null,
 
     hoverBlockMarker: null as Mesh | null,
@@ -64,27 +64,12 @@ export const TerrainManager = {
             this.terrainWater.mesh.receiveShadows = true
         }
 
-        this.waterPlane = Builder.createHorizontalPlane(scene, parent, 2048, 0)
-        configureTerrainWater(this.waterPlane, 'seaWater')
-        this.waterPlane.position.y = 1
-        this.waterPlane.isPickable = false
-        this.waterPlane.alwaysSelectAsActiveMesh = true
-        this.waterPlane.renderingGroupId = 0
-
-        this.applySeaWaterLevel()
+        this.seaWater = new SeaWaterSurface(scene, parent)
     },
 
     setSeaWaterLevel(seaWaterLevel: number | null) {
         this.seaWaterLevel = Number.isFinite(seaWaterLevel) ? seaWaterLevel : null
-        this.applySeaWaterLevel()
-    },
-
-    applySeaWaterLevel() {
-        const hasSea = this.seaWaterLevel !== null
-        this.waterPlane?.setEnabled(hasSea)
-        if (hasSea && this.waterPlane) {
-            this.waterPlane.position.y = this.seaWaterLevel!
-        }
+        this.seaWater?.reset()
     },
 
     usesOutdoorTerrain() {
@@ -135,6 +120,12 @@ export const TerrainManager = {
             this.outdoorTerrain?.setEnabled(false)
         }
         this.renderTerrainArea(map, world.planeBlockMap, snowCoverMask, center, outdoor, world.renderRevision)
+        if (this.seaWaterLevel !== null) {
+            this.seaWater?.render(map, this.seaWaterLevel, world.renderRevision, {
+                minX: center.x + ViewportManager.minX, minZ: center.z + ViewportManager.minZ,
+                maxX: center.x + ViewportManager.maxX, maxZ: center.z + ViewportManager.maxZ,
+            })
+        }
         const shadow = this.contactShadow
         if (shadow) {
             const view = contactShadowView(center, ViewportManager)

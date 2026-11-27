@@ -480,7 +480,8 @@ export const WorldRenderer = {
     async warmUpOcclusionFadeShaders(onProgress?: (completed: number, total: number) => void) {
         try {
             const meshes = [this.block1?.mesh, this.blockWithAlpha1?.mesh, this.translucentPlane?.mesh,
-                BuildingManager.opaqueBatchMesh, BuildingManager.glassBatchMesh, TerrainManager.terrainWater?.mesh]
+                BuildingManager.opaqueBatchMesh, BuildingManager.glassBatchMesh, TerrainManager.terrainWater?.mesh,
+                TerrainManager.seaWaterLevel === null ? undefined : TerrainManager.seaWater?.mesh]
             const sharedTotal = meshes.filter(mesh => mesh?.material).length
             let terrainTotal = 0
             await Promise.all([
