@@ -11,6 +11,7 @@ import { DetailLevels, Settings } from '@/settings/settings'
 import { WorldRenderer } from '@/babylon/world/worldRenderer'
 import { StaticsManager } from '@/babylon/world/statics/staticsManager'
 import { TerrainContactShadow } from '@/babylon/world/terrainContactShadow'
+import type { ContactShadowFootprint } from '@/babylon/world/terrainContactShadow'
 import { createTerrainSurfaceRenderer } from './terrainSurfaceRenderer'
 
 const STORAGE_KEY = 'darkenlight.adminUtils.staticBiomes'
@@ -171,21 +172,26 @@ export function createStaticBiomePreview(
             terrainKey = next
             terrainRevision++
             const map = WorldDataManager.getBlockMap()
-            for (const {x, z, input, label} of slots) {
+            for (const {x, z, input} of slots) {
                 const type = Number(input.value)
                 const block = new MapBlock(0, type > 100 ? type - 100 : type)
                 block.snowed = type > 100
                 block.computeData()
-                label.textContent = input.selectedOptions[0].textContent
                 for (let i = x - 13; i <= x + 13; i++) {
                     for (let j = z - 13; j <= z + 13; j++) map[i][j] = block
                 }
             }
         },
-        renderTerrain() {
+        labelPlots(specimens?: readonly string[]) {
+            slots.forEach(({input, label}, i) => {
+                const terrain = input.selectedOptions[0].textContent
+                label.textContent = specimens ? terrain + ' · ' + specimens[i] : terrain
+            })
+        },
+        renderTerrain(extraFootprints: ContactShadowFootprint[] = []) {
             const map = WorldDataManager.getBlockMap()
             contactShadow ??= new TerrainContactShadow(scene)
-            contactShadow.update(map, terrainRevision, StaticsManager.getContactShadowFootprints(map))
+            contactShadow.update(map, terrainRevision, [...StaticsManager.getContactShadowFootprints(map), ...extraFootprints])
             const exposed = [...WorldRenderer.snowCoverMask].filter(tile => map[Math.floor(tile / map.length)][tile % map.length].snowed)
             const key = terrainKey + ':' + exposed.join(',')
             if (renderedTerrain === key) return

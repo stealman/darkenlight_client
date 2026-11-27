@@ -2,6 +2,7 @@ import monsterNames from 'virtual:admin-monster-names'
 import { createMonsterEquipmentEditor } from './monsterEquipmentEditor'
 import { SpecimenPrefabs } from '@/babylon/world/statics/objects/specimens'
 import { ArcRotateCamera, Mesh, Scene, TransformNode, Vector3 } from '@babylonjs/core'
+import type { Matrix } from '@babylonjs/core'
 import type { CharacterModel } from '@/babylon/character/characterModel'
 import type { Monster } from '@/babylon/monsters/monster'
 import { MonsterModel } from '@/babylon/monsters/monsterModel'
@@ -29,8 +30,34 @@ import { Lights } from '@/babylon/scene/lights'
 import type { MeshAnimation } from '@/babylon/animations/animation'
 import { createTerrainPreview } from './terrainPreview'
 import { createStaticBiomePreview } from './staticBiomePreview'
+import { createProceduralTreePreview } from './proceduralTreePreview'
+import { TREE_SPECIES } from '@/babylon/world/trees/treeSpecies'
+import type { TreeSpecies } from '@/babylon/world/trees/treeSpecies'
 import { createSnowCoverMask } from '@/babylon/world/snowCoverMask'
 import { Settings } from '@/settings/settings'
+
+function countStaticPlotTriangles(
+    plots: readonly {x: number, z: number}[],
+    batches: Iterable<{mesh: Mesh, matrices: readonly Matrix[]}>,
+) {
+    const counts = plots.map(() => 0)
+    for (const {mesh, matrices} of batches) {
+        if (!mesh.isEnabled() || !mesh.isVisible || mesh.visibility <= 0) continue
+        const triangles = mesh.getTotalIndices() / 3
+        for (const {m} of matrices) {
+            // The plots are 35 tiles apart. A connected display belongs to the nearest plot.
+            let closest = 0, closestDistance = Infinity
+            for (const [i, {x, z}] of plots.entries()) {
+                const distance = (m[12] - x) ** 2 + (m[14] - z) ** 2
+                if (distance >= closestDistance) continue
+                closestDistance = distance
+                closest = i
+            }
+            counts[closest] += triangles
+        }
+    }
+    return counts
+}
 
 // This sandbox deliberately calls geometry factories, never the world/network loop.
 export async function installAssetPreview(
@@ -125,6 +152,8 @@ export async function installAssetPreview(
     panel.append(terrain.controls)
     const biomes = createStaticBiomePreview(scene, camera, ground, setStaticLighting, () => void show(false))
     controls.prepend(biomes.controls)
+    const proceduralTrees = createProceduralTreePreview(scene, parent, parameters, () => void show(false))
+    controls.insertBefore(proceduralTrees.controls, parameters.parentElement)
     biomes.setActive(false)
     for (const batch of [StoneBatch.prefab!, TaperedBlockBatch.prefab!, MasonryBatch.prefab!, ArchedMasonryBatch.prefab!,
         ...Object.values(TreeManager.prefabs)]) {
@@ -145,6 +174,8 @@ export async function installAssetPreview(
     }
     const clear = () => {
         generation++
+        proceduralTrees.clear()
+        proceduralTrees.controls.hidden = true
         parent.rotation.y = 0
         if (monster) {
             clips.forEach(([, clip]) => clip.stop())
@@ -185,7 +216,9 @@ export async function installAssetPreview(
         buffers().forEach(b => { b.clearMatrices(); b.setThinInstanceBuffers(); b.mesh.setEnabled(false) })
     }
     const entries = () => tab === 'Statics'
-        ? [...Array.from(StaticObjectsCodebook.values(), v => ({ id: String(v.type), name: v.name })), ...Array.from({length: 16}, (_, i) => ({id: 'tree:' + (i + 1), name: ['Oak', 'Pine', 'Birch', 'Willow'][Math.floor(i / 4)] + ' ' + (i % 4 + 1)}))]
+        ? [...Object.entries(TREE_SPECIES).map(([kind, species]) => ({id: 'lowpoly:' + kind, name: species.name})),
+            ...Array.from(StaticObjectsCodebook.values(), v => ({id: String(v.type), name: v.name})),
+            ...Array.from({length: 16}, (_, i) => ({id: 'tree:' + (i + 1), name: ['Oak', 'Pine', 'Birch', 'Willow'][Math.floor(i / 4)] + ' ' + (i % 4 + 1)}))]
         : tab === 'Buildings' ? ['House', 'Shed', 'Mausoleum', 'Cabin'].map((name, i) => ({id: String(i + 1), name}))
         : Object.entries(MonsterTypes).map(([key, type]) => ({
             id: String(type.id),
@@ -212,11 +245,15 @@ export async function installAssetPreview(
         const current = generation
         localStorage.setItem(storageKey, JSON.stringify({tab, choice: choice.value}))
         error.textContent = ''
+        if (tab === 'Statics') biomes.labelPlots()
         if (!choice.value) return
         try {
             const id = Number(choice.value)
             const isStoneWall = tab === 'Statics' && id === 210
-            if (reset && isStoneWall) parameters.value = JSON.stringify({type: id, name: StaticObjectsCodebook.get(id)!.name, meta: {}}, null, 2)
+            const species = tab === 'Statics' && choice.value.startsWith('lowpoly:') ? choice.value.slice(8) as TreeSpecies : undefined
+            proceduralTrees.controls.hidden = !species
+            if (reset && species) proceduralTrees.restore(species)
+            else if (reset && isStoneWall) parameters.value = JSON.stringify({type: id, name: StaticObjectsCodebook.get(id)!.name, meta: {}}, null, 2)
             else if (reset) parameters.value = JSON.stringify(tab === 'Statics' ? choice.value.startsWith('tree:') ? { size: 1 } : { ...StaticObjectsCodebook.get(id), meta: id === 403 ? { bannerIndex: 0 } : { facing: '+Z' } } : tab === 'Buildings' ? { facing: '+Z', ...(id === 2 ? {width: 5, depth: 3} : {}), doorOpen: false } : { ...Object.values(MonsterTypes).find(v => v.id === id) }, null, 2)
             const data = JSON.parse(parameters.value)
             if (tab === 'Statics') {
@@ -230,13 +267,20 @@ export async function installAssetPreview(
                 biomes.prepareTerrain()
                 const isTree = choice.value.startsWith('tree:')
                 const wallAlongX = data.meta?.orientation === 'X'
-                for (const {x, z} of biomes.slots) {
+                const specimen = species && proceduralTrees.render(species, data, biomes.slots)
+                const legacyTreeCounts: number[] = []
+                for (const {x, z} of species ? [] : biomes.slots) {
                     if (isTree) {
                         TreeManager.addTree({type: Number(choice.value.split(':')[1]), x, z, size: Math.max(0.1, Number(data.size) || 1)})
                         const tree = TreeManager.allTrees.at(-1)!
                         tree.rotation = 0
+                        const trunk = WorldRenderer.block1!
+                        const crown = tree.leavesPrefab
+                        const trunkStart = trunk.matrices.length, crownStart = crown.matrices.length
                         tree.renderTrunk(false, TreeManager.getTrunkContact(tree.position))
                         tree.renderLeaves(false)
+                        legacyTreeCounts.push(((trunk.matrices.length - trunkStart) * trunk.mesh.getTotalIndices()
+                            + (crown.matrices.length - crownStart) * crown.mesh.getTotalIndices()) / 3)
                     } else if (isStoneWall) {
                         // The last tile of the long arm becomes the corner through the normal wall resolver.
                         for (let offset = -2; offset <= 2; offset++) {
@@ -283,8 +327,17 @@ export async function installAssetPreview(
                 TaperedBlockBatch.flush()
                 MasonryBatch.flush()
                 ArchedMasonryBatch.flush()
-                biomes.renderTerrain()
-                if (obj?.type === 281) {
+                biomes.renderTerrain(specimen ? specimen.footprints : undefined)
+                if (specimen) biomes.labelPlots(specimen.labels)
+                else {
+                    for (const {prefab} of [TaperedBlockBatch, MasonryBatch, ArchedMasonryBatch]) batches.add(prefab!)
+                    const counts = isTree ? legacyTreeCounts : countStaticPlotTriangles(biomes.slots, batches)
+                    biomes.labelPlots(counts.map(count => (isStoneWall ? 'Sestava · ' : '') + count.toLocaleString('cs-CZ') + ' △'))
+                }
+                if (specimen) {
+                    biomes.frame(specimen.height * .46, Math.min(18, Math.max(8, specimen.height * 1.87, specimen.width * 4.15)),
+                        reset || specimen.recenter)
+                } else if (obj?.type === 281) {
                     biomes.frame(1.6, 9, reset, obj.renderPosition.x - obj.position.x, obj.renderPosition.z - obj.position.z)
                 } else if (isStoneWall) {
                     biomes.frame(0.65, 12, reset, wallAlongX ? -1 : -2, wallAlongX ? -2 : -1)
@@ -319,7 +372,8 @@ export async function installAssetPreview(
         } catch (e) { error.textContent = String(e); console.error(e) }
     }
     const list = (restore = false) => {
-        choice.replaceChildren(...entries().filter(v => (v.name + ' ' + v.id).toLowerCase().includes(search.value.toLowerCase())).map(v => new Option(v.id + ' · ' + v.name, v.id)))
+        choice.replaceChildren(...entries().filter(v => (v.name + ' ' + v.id).toLowerCase().includes(search.value.toLowerCase()))
+            .map(v => new Option(v.id.startsWith('lowpoly:') ? v.name : v.id + ' · ' + v.name, v.id)))
         if (restore && saved.tab === tab && Array.from(choice.options).some(o => o.value === saved.choice)) choice.value = saved.choice!
         void show(true)
     }
