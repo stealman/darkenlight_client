@@ -37,7 +37,7 @@ test('world transition blocks held input and movement until destination data and
         '@/babylon/world/weather/weatherManager': {WeatherManager: {setEnabled: noop}},
         '@/babylon/world/terrainManager': {TerrainManager: {setSeaWaterLevel: noop}},
         '@/utils/minimap': {MiniMap: {setEnvironmentType: noop}},
-        '@/data/worldDataManager': {WorldDataManager: {replaceWorldData: noop, worldDataMap: new Map()}},
+        '@/data/worldDataManager': {WorldDataManager: {replaceWorldData: noop, prepareTerrainRenderData: noop, worldDataMap: new Map()}},
         '@/data/worldAreaManager': {WorldAreaManager: {setWorld: noop}},
         '@/babylon/world/foggyAreaManager': {FoggyAreaManager: {setAreas: noop}},
         '@/data/actions/characterActions': {CharacterActions: {HEAL: {name: 'heal'}}},

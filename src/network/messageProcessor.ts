@@ -498,7 +498,8 @@ export const MessageProcessor = {
                 || data.a.some((chunk: WorldChunkVisibilityData) => this.chunkAffectsVisibleWorld(chunk))
                 || data.r.some((chunk: WorldChunkVisibilityData) => this.chunkAffectsVisibleWorld(chunk))
             if (rebuild) {
-                WorldRenderer.renderWorld()
+                if (GameManager.started && !MyPlayer.worldTransitionPending) WorldRenderer.requestStreamingRender()
+                else WorldRenderer.renderWorld()
             } else if (staticsChanged) {
                 // Static lights can reach beyond the visual footprint. Keep
                 // their visibility current without rebuilding geometry.

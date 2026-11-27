@@ -3,6 +3,35 @@ import { Matrix, Mesh, Vector2 } from '@babylonjs/core'
 // Mesh lifetime owns the retained CPU/GPU capacity, including empty batches.
 const buffersByMesh = new WeakMap<Mesh, {matrices: Float32Array, uv: Float32Array}>()
 
+export async function warmUpWorldInstanceMaterial(mesh: Mesh | null | undefined) {
+    const material = mesh?.material
+    if (!mesh || !material) return
+    const count = mesh.thinInstanceCount
+    const temporary = !mesh.getVertexBuffer('world0')
+    const skipBounds = mesh.doNotSyncBoundingInfo
+    try {
+        if (temporary) {
+            mesh.doNotSyncBoundingInfo = true
+            mesh.thinInstanceSetBuffer('matrix', new Float32Array(Matrix.Identity().m), 16, false)
+        } else if (!count) mesh.thinInstanceCount = 1
+        await material.forceCompilationAsync(mesh, {useInstances: true})
+        if (material.needDepthPrePass) {
+            const engine = mesh.getEngine()
+            const colorWrite = engine.getColorWrite()
+            engine.setColorWrite(false)
+            try {
+                await material.forceCompilationAsync(mesh, {useInstances: true})
+            } finally {
+                engine.setColorWrite(colorWrite)
+            }
+        }
+    } finally {
+        if (temporary) mesh.thinInstanceSetBuffer('matrix', null)
+        else mesh.thinInstanceCount = count
+        mesh.doNotSyncBoundingInfo = skipBounds
+    }
+}
+
 export function updateWorldInstanceBuffers(mesh: Mesh, matrices: Matrix[], uvData: Vector2[], refreshBounds = true): Float32Array {
     let buffers = buffersByMesh.get(mesh)
     if (!buffers) {

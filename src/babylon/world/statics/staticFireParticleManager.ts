@@ -90,6 +90,7 @@ const SHARED_STATIC_FIRE_SPRITE_CAPACITY = 256
 const STATIC_FIRE_SPRITE_FRAME_DELAY_MS = 35
 const PARTICLE_BASELINE_FPS = 60
 const RETIRING_SYSTEM_GRACE_MS = 100
+const FIRE_RANDOM_TEXTURE_SIZE = 512
 const PROFILE_CONFIGS: Record<StaticFireParticleProfile, StaticFireParticleProfileConfig> = {
     fireplaceSmall: {
         fireCapacity: 150,
@@ -515,6 +516,15 @@ export const StaticFireParticleManager = {
     },
 
     retireSystem(system: GPUParticleSystem) {
+        // Keep one fading generation per profile and particle type. As the
+        // viewport moves, older generations otherwise accumulate for seconds.
+        for (const retiring of this.retiringSystems) {
+            if (retiring.system.name !== system.name) continue
+            clearTimeout(retiring.timeout)
+            retiring.system.dispose(false)
+            this.retiringSystems.delete(retiring)
+            break
+        }
         system.emitRate = 0
         system.stop()
         const lifetimeMs = Math.ceil(
@@ -541,7 +551,8 @@ export const StaticFireParticleManager = {
         const emitRatePerSource = smoke ? config.smokeEmitRate * smokeFactor : config.fireEmitRate
         const system = new GPUParticleSystem(
             `${SHARED_SYSTEM_NAME_PREFIX}${smoke ? 'Smoke' : 'Fire'}_${profile}`,
-            { capacity: Math.max(1, capacityPerSource * sources.length) },
+            // Babylon defaults to two random textures as wide as the GPU allows.
+            {capacity: Math.max(1, capacityPerSource * sources.length), randomTextureSize: FIRE_RANDOM_TEXTURE_SIZE},
             this.scene!,
         )
 

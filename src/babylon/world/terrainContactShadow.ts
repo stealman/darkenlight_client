@@ -22,6 +22,16 @@ export interface ContactShadowFootprint {
     reach: number
 }
 
+export type ContactShadowView = Pick<ContactShadowFootprint, 'minX' | 'minZ' | 'maxX' | 'maxZ'>
+
+export function contactShadowView(center: {x: number, z: number}, viewport: ContactShadowView): ContactShadowView {
+    const step = 16
+    const x = Math.round(center.x / step) * step, z = Math.round(center.z / step) * step
+    const margin = step / 2 + 2
+    return {minX: x + viewport.minX - margin, minZ: z + viewport.minZ - margin,
+        maxX: x + viewport.maxX + margin, maxZ: z + viewport.maxZ + margin}
+}
+
 export class TerrainContactShadow {
     private readonly bounds = new Vector4(0, 0, 0, 0)
     private texture: RawTexture
@@ -101,7 +111,7 @@ export class TerrainContactShadow {
                     if (!tile || tile.type <= 0 || tile.type >= WATER_BLOCK_TYPE || Math.abs(tile.height - foot.height) > 0.15) continue
                     const dx = Math.max(foot.minX - wx, 0, wx - foot.maxX)
                     const index = z * width + x
-                    this.mask[index] = Math.max(this.mask[index], Math.round(255 * contactShadowFalloff(Math.hypot(dx, dz), reach)))
+                    this.mask[index] = Math.max(this.mask[index], Math.round(255 * contactShadowFalloff(Math.sqrt(dx * dx + dz * dz), reach)))
                 }
             }
         }

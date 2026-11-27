@@ -3,13 +3,17 @@ import { Node, Observer, Scene, Skeleton } from '@babylonjs/core'
 // Single A/B switch. Change this value and reload the client to compare the
 // normal Babylon active-mesh evaluation with the managed frozen list.
 export const ACTIVE_MESH_FREEZING_ENABLED = true
+const FREEZE_IDLE_MS = 250
 
 export const ActiveMeshFreezer = {
     scene: null as Scene | null,
     running: false,
     frozen: false,
-    freezePending: false,
     dirty: true,
+    lastChangeAt: 0,
+    viewX: NaN,
+    viewY: NaN,
+    viewZ: NaN,
     nodeObservers: new Map<Node, Observer<boolean>>(),
     particleSystems: [] as any[],
     particleStartedStates: [] as boolean[],
@@ -20,8 +24,9 @@ export const ActiveMeshFreezer = {
         this.scene = scene
         this.running = false
         this.frozen = false
-        this.freezePending = false
         this.dirty = true
+        this.lastChangeAt = 0
+        this.viewX = this.viewY = this.viewZ = NaN
         this.nodeObservers.clear()
         this.particleSystems = []
         this.particleStartedStates = []
@@ -47,6 +52,7 @@ export const ActiveMeshFreezer = {
         scene.onTransformNodeRemovedObservable.add(() => this.invalidate())
         scene.onBeforeRenderObservable.add(() => this.beforeRender())
         scene.onBeforeCameraRenderObservable.add(() => this.prepareActiveSkeletons())
+        scene.onAfterRenderObservable.add(() => this.afterRender())
     },
 
     start() {
@@ -62,6 +68,15 @@ export const ActiveMeshFreezer = {
             return
         }
         this.dirty = true
+        this.lastChangeAt = performance.now()
+    },
+
+    updateViewPosition({x, y, z}: {x: number, y: number, z: number}) {
+        if (x === this.viewX && y === this.viewY && z === this.viewZ) return
+        this.viewX = x
+        this.viewY = y
+        this.viewZ = z
+        this.invalidate()
     },
 
     setSkeletonActive(skeleton: Skeleton | undefined, active: boolean) {
@@ -94,47 +109,22 @@ export const ActiveMeshFreezer = {
         }
 
         this.detectParticleSystemChanges(scene)
-        if (!this.dirty || this.freezePending) {
-            return
-        }
-
-        // Give Babylon one complete render with live active-mesh evaluation
-        // after invalidation. Unfreezing and immediately freezing again in
-        // this same callback could keep newly configured meshes out of the
-        // rendered list until a later invalidation.
-        if (this.frozen) {
+        if (this.dirty && this.frozen) {
             scene.unfreezeActiveMeshes()
             this.frozen = false
-            return
         }
+    },
 
-        // Babylon already waits for scene readiness inside freezeActiveMeshes.
-        // Let that request poll while rendering normally between checks.
+    afterRender() {
+        const scene = this.scene
+        if (!ACTIVE_MESH_FREEZING_ENABLED || !this.running || !scene?.activeCamera || this.frozen
+            || performance.now() - this.lastChangeAt < FREEZE_IDLE_MS || !scene.getActiveMeshes().length) return
+        // Reuse the list Babylon already evaluated and rendered in this frame.
+        // freezeActiveMeshes() would first check readiness for every enabled mesh.
+        scene._activeMeshesFrozen = true
+        this.frozen = true
         this.dirty = false
-        this.freezePending = true
-        scene.freezeActiveMeshes(
-            false,
-            () => {
-                this.freezePending = false
-                this.frozen = true
-                this.refreshActiveSkeletons(scene)
-
-                // A mesh can be added by an async callback while Babylon is
-                // rebuilding the list. Keep that invalidation for next frame.
-                if (this.dirty) {
-                    scene.unfreezeActiveMeshes()
-                    this.frozen = false
-                }
-            },
-            (message) => {
-                this.freezePending = false
-                this.frozen = false
-                this.dirty = true
-                console.warn(`Unable to freeze active meshes: ${message}`)
-            },
-            false,
-            false,
-        )
+        this.refreshActiveSkeletons(scene)
     },
 
     detectParticleSystemChanges(scene: Scene) {
@@ -142,7 +132,7 @@ export const ActiveMeshFreezer = {
         if (systems.length !== this.particleSystems.length) {
             this.particleSystems.length = systems.length
             this.particleStartedStates.length = systems.length
-            this.dirty = true
+            this.invalidate()
         }
 
         for (let index = 0; index < systems.length; index++) {
@@ -151,7 +141,7 @@ export const ActiveMeshFreezer = {
             if (this.particleSystems[index] !== system || this.particleStartedStates[index] !== started) {
                 this.particleSystems[index] = system
                 this.particleStartedStates[index] = started
-                this.dirty = true
+                this.invalidate()
             }
         }
     },

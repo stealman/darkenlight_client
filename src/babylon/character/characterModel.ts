@@ -18,6 +18,7 @@ import { AudioUtils } from '@/babylon/audio/audioUtils'
 import { getCharacterModelEquipModifier } from '@/babylon/character/characterModelEquipModifiers'
 import { Settings } from '@/settings/settings'
 import { ActiveMeshFreezer } from '@/babylon/scene/activeMeshFreezer'
+import { waitForActorVisualPreparation } from '@/babylon/scene/actorVisualPreparation'
 import { modelAssetUrl } from '@/babylon/modelAssetUrl'
 import type { CharacterGender } from './characterAppearance'
 import { HUMAN_MODEL_FILE, HUMAN_ANIMATION_SPEED, WAND_RELEASE_FRAME, getHumanAnimationRange, prepareHumanSkeleton } from './humanModelRig'
@@ -227,8 +228,7 @@ export class CharacterModel implements EquipBearer {
         return groups
     }
 
-    private static async instantiate(scene: Scene, gender: CharacterGender): Promise<InstantiatedEntries> {
-        const container = await this.getContainer(scene, gender)
+    private static instantiate(scene: Scene, gender: CharacterGender, container: AssetContainer): InstantiatedEntries {
         const entries = this.getPool(scene, gender).pop()
             ?? container.instantiateModelsToScene(undefined, false, {doNotInstantiate: true})
         entries.rootNodes[0]?.setEnabled(true)
@@ -280,15 +280,14 @@ export class CharacterModel implements EquipBearer {
         // models are instantiated behind the loading overlay and only enabled
         // when their character first enters the viewport.
         await Promise.all([
-            this.instantiatedEntries ? Promise.resolve(this.instantiatedEntries) : CharacterModel.instantiate(scene, this.bodyGender),
+            this.instantiatedEntries ? undefined : CharacterModel.getContainer(scene, this.bodyGender),
             loadCharacterHead(scene, this.parent.headTypeId, this.bodyGender),
             hairHidden ? Promise.resolve(null) : loadCharacterHair(scene, hairTypeId, this.bodyGender),
         ])
-            .then(([result, headType, hairType]) => {
-                if (this.node.isDisposed()) {
-                    CharacterModel.release(scene, result, this.bodyGender)
-                    return
-                }
+            .then(async ([container, headType, hairType]) => {
+                if (!this.parent.isMyChar()) await waitForActorVisualPreparation(scene)
+                if (this.node.isDisposed() || scene.isDisposed) return
+                const result = this.instantiatedEntries ?? CharacterModel.instantiate(scene, this.bodyGender, container!)
                 this.instantiatedEntries = result
                 this.model = result.rootNodes[0] as AbstractMesh
                 this.model.parent = this.node

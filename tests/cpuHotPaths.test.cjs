@@ -15,6 +15,77 @@ function loadModule(path, dependencies) {
     return exports
 }
 
+test('the active mesh list only refreezes after movement stops', () => {
+    const {ActiveMeshFreezer: freezer} = loadModule('babylon/scene/activeMeshFreezer.ts', {})
+    const calls = []
+    freezer.scene = {
+        activeCamera: {},
+        particleSystems: [],
+        set _activeMeshesFrozen(value) {if (value) calls.push('freeze')},
+        unfreezeActiveMeshes() {calls.push('unfreeze')},
+        getActiveMeshes() {return {length: 1, data: [{}]}},
+    }
+    freezer.start()
+    freezer.lastChangeAt = -Infinity
+    freezer.beforeRender()
+    freezer.afterRender()
+    freezer.updateViewPosition({x: 1, y: 2, z: 3})
+    freezer.beforeRender()
+    freezer.afterRender()
+    freezer.updateViewPosition({x: 1.2, y: 2, z: 3})
+    freezer.beforeRender()
+    freezer.afterRender()
+    assert.deepEqual(calls, ['freeze', 'unfreeze'])
+    freezer.lastChangeAt = -Infinity
+    freezer.beforeRender()
+    freezer.afterRender()
+    assert.deepEqual(calls, ['freeze', 'unfreeze', 'freeze'])
+})
+
+test('actor preparation processes one job per frame and releases waiters on scene disposal', async () => {
+    const visual = loadModule('babylon/scene/actorVisualPreparation.ts', {})
+    let dispose
+    const scene = {onDisposeObservable: {addOnce: callback => {dispose = callback}}}
+    const calls = []
+    visual.startActorVisualPreparation(scene)
+    assert.ok(visual.enqueueActorVisualPreparation(scene, () => calls.push('monster')))
+    const pending = visual.waitForActorVisualPreparation(scene).then(() => calls.push('NPC'))
+    visual.enqueueActorVisualPreparation(scene, () => calls.push('removed'))
+    visual.flushActorVisualPreparation(scene, performance.now())
+    assert.deepEqual(calls, ['monster'])
+    dispose()
+    await pending
+    assert.deepEqual(calls, ['monster', 'NPC'])
+    assert.equal(visual.enqueueActorVisualPreparation(scene, () => {}), false)
+})
+
+test('water reuses the visible shoreline and rebuilds it when nearby terrain changes', () => {
+    const uploads = []
+    const mesh = {setEnabled() {}, getScene() {}, onDisposeObservable: {addOnce() {}}}
+    const {TerrainWaterSurface} = loadModule('babylon/world/terrainWaterSurface.ts', {
+        '@babylonjs/core': {
+            Matrix: {Translation: (x, y, z) => ({x, y, z})},
+            Vector2: class {set() {}},
+            Texture: {},
+            RawTexture: {CreateRGBATexture: () => ({dispose() {}, update: pixels => uploads.push(pixels.slice())})},
+        },
+        '@/babylon/builder': {Builder: {createHorizontalPlane: () => mesh}},
+        './terrainRoofShape': {WATER_BLOCK_TYPE: 50, TERRAIN_CARDINAL_EDGES: [[1, 0], [-1, 0], [0, 1], [0, -1]]},
+        './terrainWaterMaterial': {configureTerrainWater() {}, WATER_FIELD_RESOLUTION: 6, POND_DISTANCE_RANGE: 3},
+        './worldInstanceBuffers': {updateWorldInstanceBuffers() {}},
+    })
+    const surface = new TerrainWaterSurface({})
+    const map = Array.from({length: 5}, () => Array.from({length: 5}, () => ({type: 1, height: 0})))
+    map[2][2].type = 50
+    surface.render([{x: 2, z: 2, height: 0}], map, 0)
+    surface.render([{x: 2, z: 2, height: 0}], map, 0)
+    assert.equal(uploads.length, 1)
+    map[2][3].type = 50
+    surface.render([{x: 2, z: 2, height: 0}], map, 1)
+    assert.equal(uploads.length, 2)
+    assert.notDeepEqual(uploads[0], uploads[1])
+})
+
 test('actor lighting matches the previous stable sort and retains arrays when lights do not change', async () => {
     const core = await import('@babylonjs/core/index.js')
     const {updateActorLightMesh} = loadModule('babylon/scene/lighting/meshLighting.ts', {
@@ -111,6 +182,7 @@ test('static stacking is reused until terrain, floors, or scenery change', () =>
     const world = {blockMap: [[{totalHeight: 2}, {totalHeight: 2}]], renderRevision: 0}
     const floors = {floorTilesRevision: 0, height: 0, getFloorHeightAtTile() {return this.height}}
     const {StaticsManager: manager} = loadModule('babylon/world/statics/staticsManager.ts', {
+        vue: {ref: value => ({value})},
         '@/data/myPlayer': {MyPlayer: {worldId: 1}},
         '@/data/worldDataManager': {WorldDataManager: {
             worldDataMap: new Map([[1, world]]), getBlockMap: () => world.blockMap,

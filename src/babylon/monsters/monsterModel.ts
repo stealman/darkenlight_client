@@ -14,6 +14,7 @@ import { Utils } from '@/utils/utils'
 import { Renderer } from '@/babylon/scene/renderer'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { ActiveMeshFreezer } from '@/babylon/scene/activeMeshFreezer'
+import { enqueueActorVisualPreparation } from '@/babylon/scene/actorVisualPreparation'
 import { AudioManager, FootStepSpeeds, FootStepTypes } from '@/babylon/audio/audioManager'
 import { AudioUtils } from '@/babylon/audio/audioUtils'
 import { WATER_BLOCK_TYPE } from '@/babylon/world/terrainManager'
@@ -30,6 +31,7 @@ export class MonsterModel implements EquipBearer {
     initialized: boolean = false
     viewRequested: boolean = false
     preparingFirstView: boolean = false
+    private queuedFirstView = false
     selected: boolean = false
     selectedMaterialApplied: boolean = false
     node: Mesh
@@ -330,10 +332,11 @@ export class MonsterModel implements EquipBearer {
             this.applySelectedMaterial(false)
             await Lights.warmActorMaterial(this.mesh)
 
+            if (!this.initialized || this.node.isDisposed()) return
             this.applySelectedMaterial(true)
             await Lights.warmActorMaterial(this.mesh)
         } finally {
-            if (!this.node.isDisposed()) {
+            if (this.initialized && !this.node.isDisposed()) {
                 const shouldApplySelectedMaterial = this.selected && Lights.daylightFactor < 1
                 this.applySelectedMaterial(shouldApplySelectedMaterial)
                 this.selectedMaterialApplied = shouldApplySelectedMaterial
@@ -373,6 +376,18 @@ export class MonsterModel implements EquipBearer {
 
     addToView() {
         this.viewRequested = true
+        if (!this.initialized) {
+            if (this.queuedFirstView) return
+            this.queuedFirstView = enqueueActorVisualPreparation(this.nameTextNode.getScene(), () => {
+                this.queuedFirstView = false
+                if (this.viewRequested && !this.parent.killedTime && !this.nameTextNode.isDisposed()) this.showInView()
+            })
+            if (this.queuedFirstView) return
+        }
+        this.showInView()
+    }
+
+    private showInView() {
         const initializedNow = !this.initialized
         if (initializedNow) {
             this.initializeModel()

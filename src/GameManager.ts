@@ -67,7 +67,7 @@ export const GameManager = {
         reportLoadingProgress(70, 'app.loadingWorld')
         InventoryManager.initializeWeaponSetupsForCharacter()
         ActionButtonsManager.loadBindingsForCharacter(MyPlayer.myChar.id, MyPlayer.myChar.name)
-        this.onResize()
+        this.onResize(true)
         Renderer.prepareGameView()
     },
 
@@ -96,12 +96,13 @@ export const GameManager = {
         await Renderer.gameStopped()
     },
 
-    onResize() {
+    onResize(forceViewport = false) {
         Renderer.engine!.resize();
         OverlayManager.onResize()
-        ViewportManager.onResize()
+        const changed = ViewportManager.onResize(forceViewport)
         ActionButtonsManager.renderActionButtons()
         MyStatusPanel.onResize()
+        return changed
     }
 }
 

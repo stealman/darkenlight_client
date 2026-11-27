@@ -10,7 +10,7 @@ import {
 import { Builder } from '@/babylon/builder'
 import { Materials, TerrainEnum1 } from '@/babylon/materials'
 import { TreeManager } from '@/babylon/world/treeManager'
-import { updateWorldInstanceBuffers } from '@/babylon/world/worldInstanceBuffers'
+import { updateWorldInstanceBuffers, warmUpWorldInstanceMaterial } from '@/babylon/world/worldInstanceBuffers'
 import { getTerrainHeightOffset, TerrainManager, WATER_BLOCK_TYPE } from '@/babylon/world/terrainManager'
 import { PBRCustomMaterial } from '@babylonjs/materials'
 import { StaticsManager } from '@/babylon/world/statics/staticsManager'
@@ -22,7 +22,7 @@ import { ViewportManager } from '@/utils/viewport'
 import { WorldDataManager } from '@/data/worldDataManager'
 import { TargetingManager } from '@/gui/targettingManager'
 import { MyPlayer } from '@/data/myPlayer'
-import { createSnowCoverMask } from '@/babylon/world/snowCoverMask'
+import { createSnowCoverMask, sameSnowMask } from '@/babylon/world/snowCoverMask'
 import { BuildingManager } from '@/babylon/world/buildings/buildingManager'
 import { FoggyAreaManager } from '@/babylon/world/foggyAreaManager'
 import { GMFoggyAreas } from '@/gm/GmFoggyAreas'
@@ -87,9 +87,15 @@ export const WorldRenderer = {
     forcedGrassMarkers: null as Mesh | null,
 
     lastPos: null as Vector3 | null,
+    pendingStreamingRender: false,
+    pendingOutdoorScenery: false,
+    pendingTreeGround: undefined as (() => void) | undefined,
 
     async initialize(scene: Scene) {
         this.lastPos = null
+        this.pendingStreamingRender = false
+        this.pendingOutdoorScenery = false
+        this.pendingTreeGround = undefined
         this.grassExclusionMarkers?.dispose(false, true)
         this.grassExclusionMarkers = null
         this.forcedGrassMarkers?.dispose(false, true)
@@ -139,15 +145,35 @@ export const WorldRenderer = {
         const renderDue = this.lastPos == null
             || Math.abs(Math.round(x) - this.lastPos.x) >= renderStep
             || Math.abs(Math.round(z) - this.lastPos.z) >= renderStep
-        if (renderDue) {
+        if (renderDue || this.pendingStreamingRender) {
             if (ViewportManager.viewPortInitialized) {
                 WorldDataManager.fetchWorldDataIfNeeded()
-                WorldRenderer.renderWorld()
+                const stepX = Math.abs(x - (this.lastPos?.x ?? Infinity))
+                const stepZ = Math.abs(z - (this.lastPos?.z ?? Infinity))
+                if (TerrainManager.usesOutdoorTerrain() && Math.max(stepX, stepZ) <= renderStep + 1) {
+                    if (this.pendingOutdoorScenery) return false
+                    // The existing viewport margin covers one frame of movement.
+                    // Submit terrain first and scenery on the next frame.
+                    this.renderTerrain(true, renderDue ? undefined : this.lastPos ?? undefined)
+                    this.pendingStreamingRender = false
+                    this.pendingOutdoorScenery = true
+                } else {
+                    this.renderWorld()
+                }
                 TargetingManager.resetCycleIndex()
-                this.lastPos ??= new Vector3()
-                this.lastPos.set(Math.round(x), Math.round(y), Math.round(z))
+                if (renderDue) {
+                    this.lastPos ??= new Vector3()
+                    this.lastPos.set(Math.round(x), Math.round(y), Math.round(z))
+                }
+                return true
             }
         }
+        return false
+    },
+
+    requestStreamingRender() {
+        if (TerrainManager.usesOutdoorTerrain()) this.pendingStreamingRender = true
+        else this.renderWorld()
     },
 
     refreshTreeRendering(warmShaders = false) {
@@ -156,15 +182,39 @@ export const WorldRenderer = {
         if (warmShaders) void TreeManager.warmUpShaders()?.catch(error => console.warn('Tree shader warm-up failed', error))
     },
 
-    renderTrees(outdoor: boolean) {
+    renderTrees(outdoor: boolean, deferGround = false) {
         const footprints = TreeManager.renderTrees(outdoor)
-        TerrainManager.outdoorTerrain?.updateTreeSnow(footprints, TreeManager.snowRegion, TreeManager.collisionGrid.revision)
+        const region = TreeManager.snowRegion
+        const revision = TreeManager.collisionGrid.revision
+        this.pendingTreeGround = undefined
+        if (deferGround && footprints.length) {
+            // The tree manager gathers footprints in a reusable array.
+            const snapshot = footprints.slice()
+            this.pendingTreeGround = () => TerrainManager.outdoorTerrain?.updateTreeSnow(snapshot, region, revision)
+        } else {
+            TerrainManager.outdoorTerrain?.updateTreeSnow(footprints, region, revision)
+        }
+    },
+
+    flushMovementRendering() {
+        if (!ViewportManager.viewPortInitialized) return
+        if (this.pendingOutdoorScenery) {
+            this.renderWorld(TerrainManager.usesOutdoorTerrain())
+            return
+        }
+        if (TerrainManager.outdoorTerrain?.flushPreparedRegions()) return
+        const update = this.pendingTreeGround
+        this.pendingTreeGround = undefined
+        if (update) update()
+        else if (!TerrainManager.flushContactShadow()) TerrainManager.outdoorTerrain?.prepareFrame()
     },
 
     /**
      * Renders the world around the player
      */
-    renderWorld() {
+    renderWorld(outdoorTerrainReady = false) {
+        this.pendingOutdoorScenery = false
+        if (!outdoorTerrainReady) this.pendingStreamingRender = false
         this.block1!.clearMatrices()
         this.staticTerrainContact?.clear()
         this.blockWithAlpha1!.clearMatrices()
@@ -173,16 +223,12 @@ export const WorldRenderer = {
         TaperedBlockBatch.clear()
         MasonryBatch.clear()
         ArchedMasonryBatch.clear()
-        const blockMap = WorldDataManager.getBlockMap()
-        const snowCoverMask = createSnowCoverMask(StaticsManager.allStatics, blockMap.length)
-        this.snowCoverMask = snowCoverMask
-
         // Render terrain
         StaticsManager.prepareRender()
-        const outdoorTerrain = TerrainManager.renderTerrain(snowCoverMask)
+        const outdoorTerrain = outdoorTerrainReady || this.renderTerrain()
 
         // Render trees
-        this.renderTrees(outdoorTerrain)
+        this.renderTrees(outdoorTerrain, outdoorTerrainReady)
 
         // Render statics
         // Visibility and render captures were prepared before terrain contact shadows.
@@ -235,6 +281,12 @@ export const WorldRenderer = {
         Lights.registerSharedLightMesh(TaperedBlockBatch.prefab!.mesh)
         Lights.registerSharedLightMesh(MasonryBatch.prefab!.mesh)
         Lights.registerSharedLightMesh(ArchedMasonryBatch.prefab!.mesh)
+    },
+
+    renderTerrain(deferContactShadow = false, center?: Vector3) {
+        const snowCoverMask = createSnowCoverMask(StaticsManager.allStatics, WorldDataManager.getBlockMap().length)
+        if (!sameSnowMask(this.snowCoverMask, snowCoverMask)) this.snowCoverMask = snowCoverMask
+        return TerrainManager.renderTerrain(this.snowCoverMask, deferContactShadow, center)
     },
 
     hideGrassOverrideMarkers() {
@@ -428,12 +480,17 @@ export const WorldRenderer = {
     async warmUpOcclusionFadeShaders() {
         try {
             await Promise.all([
+                TerrainManager.outdoorTerrain?.warmUp(),
                 TreeManager.warmUpShaders(),
                 BuildingManager.warmUpFadeShader(),
                 IndoorTerrainOcclusionManager.warmUpFadeShader(),
             ])
+            for (const mesh of [this.block1?.mesh, this.blockWithAlpha1?.mesh, this.translucentPlane?.mesh,
+                BuildingManager.opaqueBatchMesh, BuildingManager.glassBatchMesh, TerrainManager.terrainWater?.mesh]) {
+                await warmUpWorldInstanceMaterial(mesh)
+            }
         } catch (error) {
-            console.warn('World occlusion fade shader warm-up failed', error)
+            console.warn('World shader warm-up failed', error)
         }
     }
 }
@@ -468,6 +525,7 @@ export class SymmetricBlock {
     constructor(mesh: Mesh, material: PBRCustomMaterial) {
         this.mesh = mesh
         this.mesh.material = material
+        this.mesh.setEnabled(false)
     }
 
     clearMatrices() {
@@ -477,5 +535,7 @@ export class SymmetricBlock {
 
     setThinInstanceBuffers() {
         this.matrixBuffer = updateWorldInstanceBuffers(this.mesh, this.matrices, this.uvData)
+        // Babylon draws the source mesh itself when a batch has no instances.
+        this.mesh.setEnabled(this.matrices.length > 0)
     }
 }

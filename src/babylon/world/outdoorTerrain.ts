@@ -22,6 +22,7 @@ import { TreeManager } from './treeManager'
 import { WATER_BLOCK_TYPE } from './terrainManager'
 import { sameSnowMask } from './snowCoverMask'
 import { OutdoorInstanceBatch } from './outdoorInstanceBatch'
+import { warmUpWorldInstanceMaterial } from './worldInstanceBuffers'
 import type { OutdoorInstance } from './outdoorInstanceBatch'
 import { PBRCustomMaterial } from '@babylonjs/materials'
 import type { TerrainContactShadow } from './terrainContactShadow'
@@ -37,6 +38,8 @@ export { createDungeonRockMaterial, dungeonRockUv } from '@/adminUtils/terrainAt
 
 const REGION_SIZE = TERRAIN_ATLAS_REGION_SIZE
 const GRASS_TILE_RANGE = 20
+const TERRAIN_CACHE_REGIONS = 320
+const TERRAIN_WARM_MARGIN = REGION_SIZE * 2
 
 type GrassTile = {x: number, z: number, tufts: GrassTuft[], minimum: Vector3, maximum: Vector3}
 type GrassOverrides = Pick<WorldData, 'noGrassTiles' | 'forcedGrassTiles'>
@@ -202,14 +205,25 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
             if (mesh.thinInstanceCount) mesh.getBoundingInfo().reConstruct(minimum, upper, mesh.getWorldMatrix())
         }
     }
-    const observer = terrain.getScene().onBeforeRenderObservable.add(() => {
-        if (!terrain.isEnabled() || !foliageJobs.length) return
-        foliageJobs.shift()!()
-        flushBatches(foliageBatches.values(), maximumFoliage)
-        refreshGrass()
-    })
+    const prepareFrame = () => {
+        if (!terrain.isEnabled()) return
+        if (preparePaving) {
+            const update = preparePaving
+            preparePaving = undefined
+            if (update()) return
+        }
+        const foliageJob = foliageJobs.shift()
+        if (foliageJob) {
+            foliageJob()
+            flushBatches(foliageBatches.values(), maximumFoliage)
+            refreshGrass()
+        } else {
+            prepareNextRegion?.()
+        }
+    }
+    const observer = fixedView ? terrain.getScene().onBeforeRenderObservable.add(prepareFrame) : undefined
     terrain.onDisposeObservable.addOnce(() => {
-        terrain.getScene().onBeforeRenderObservable.remove(observer)
+        if (observer) terrain.getScene().onBeforeRenderObservable.remove(observer)
         grass?.dispose()
     })
     const regions = new Map<number, Region>()
@@ -220,9 +234,31 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
     let snowRevision = 0
     let previousBuildings = ''
     let buildingRevision = 0
+    let prepareNextRegion: (() => boolean) | undefined
+    let preparePaving: (() => boolean) | undefined
+    let refreshPreparedRegions: (() => void) | undefined
 
     return {
         grass,
+        prepareFrame,
+        async warmUp() {
+            let prepared = 0
+            while (prepareNextRegion?.()) {
+                if (++prepared % 8 === 0) await new Promise(resolve => setTimeout(resolve, 0))
+            }
+            while (foliageJobs.length) {
+                foliageJobs.shift()!()
+                if (foliageJobs.length % 6 === 0) await new Promise(resolve => setTimeout(resolve, 0))
+            }
+            flushBatches(foliageBatches.values(), maximumFoliage)
+            refreshGrass()
+            for (const batch of [...batches.values(), ...foliageBatches.values()]) await warmUpWorldInstanceMaterial(batch.mesh)
+        },
+        flushPreparedRegions() {
+            if (!refreshPreparedRegions || !terrain.isEnabled()) return false
+            refreshPreparedRegions()
+            return true
+        },
         updateTreeSnow(footprints: readonly TreeSnowFootprint[], region: TreeSnowRegion | undefined, treeRevision: number) {
             if (currentMap) treeGround.update(currentMap, footprints, terrainRevision, previousSnow, region, treeRevision)
         },
@@ -241,7 +277,9 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
             if (terrain.isEnabled()) refreshGrass()
         },
         render(blockMap: MapBlock[][], center: {x: number, y: number, z: number}, snowCoverMask: ReadonlySet<number>,
-            revision?: number, compiled?: TerrainRenderData, originalBlocks?: WeakSet<MapBlock>, overrides?: GrassOverrides) {
+            revision?: number, compiled?: TerrainRenderData, originalBlocks?: WeakSet<MapBlock>, overrides?: GrassOverrides,
+            deferSnowRebuild = false): void {
+            refreshPreparedRegions = undefined
             if (grassOverrides !== overrides || terrainRevision !== revision) forcedGrassCache.clear()
             grassOverrides = overrides
             terrainRevision = revision
@@ -286,8 +324,9 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
             }
             const treeRevision = grass ? TreeManager.collisionGrid.revision : 0
             const staticRevision = grass ? StaticsManager.collisionGrid.revision : 0
+            const staleRegions: {x: number, z: number}[] = []
 
-            const prepareRegion = (x: number, z: number) => {
+            const prepareRegion = (x: number, z: number, defer = false) => {
                 const key = x * depth + z
                 const previous = regions.get(key)
                 if (previous && revision !== undefined && previous.revision === revision && previous.snowRevision === snowRevision) {
@@ -316,6 +355,14 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
                         previous.used = generation
                         previous.revision = revision
                         previous.snowRevision = snowRevision
+                        return previous
+                    }
+                    // The release map stays in place when entity chunks stream
+                    // in. Keep drawing the previous region while its snow cover
+                    // is rebuilt one region at a time.
+                    if (defer && revision !== undefined && previous.revision === revision) {
+                        staleRegions.push({x, z})
+                        previous.used = generation
                         return previous
                     }
                 }
@@ -500,8 +547,9 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
                             if (!isVisible(tx, tz)) continue
                             maxHeight = Math.max(maxHeight, blockMap[tx][tz].totalHeight)
                             if (!region) {
-                                region = prepareRegion(x, z)
-                                prepareFoliage(region, x, z)
+                                region = prepareRegion(x, z, deferSnowRebuild)
+                                if (region.snowRevision === snowRevision) prepareFoliage(region, x, z)
+                                else region.visible.length = 0
                             }
                             const tile = (tx - x) * REGION_SIZE + tz - z
                             region.visible.push(tile)
@@ -537,8 +585,39 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
                     }
                 }
             }
-            for (const [key, region] of regions) {
-                if (region.used < generation - 12) regions.delete(key)
+            if (regions.size > TERRAIN_CACHE_REGIONS) {
+                const oldRegions = [...regions].filter(([, region]) => region.used !== generation)
+                    .sort((a, b) => a[1].used - b[1].used)
+                for (const [key] of oldRegions) {
+                    regions.delete(key)
+                    if (regions.size <= TERRAIN_CACHE_REGIONS) break
+                }
+            }
+            if (!fixedView) {
+                const upcoming: {x: number, z: number, distance: number}[] = []
+                const left = Math.max(0, firstX - TERRAIN_WARM_MARGIN), top = Math.max(0, firstZ - TERRAIN_WARM_MARGIN)
+                const right = Math.min(blockMap.length - 1, maxX + TERRAIN_WARM_MARGIN)
+                const bottom = Math.min(depth - 1, maxZ + TERRAIN_WARM_MARGIN)
+                for (let x = left; x <= right; x += REGION_SIZE) {
+                    for (let z = top; z <= bottom; z += REGION_SIZE) {
+                        if (regions.has(x * depth + z)) continue
+                        upcoming.push({x, z, distance: (x + REGION_SIZE / 2 - center.x) ** 2 + (z + REGION_SIZE / 2 - center.z) ** 2})
+                    }
+                }
+                upcoming.sort((a, b) => b.distance - a.distance)
+                // Prepare one nearby terrain region in frames with no new visible foliage to scatter.
+                prepareNextRegion = upcoming.length || staleRegions.length ? () => {
+                    const stale = staleRegions.pop()
+                    const next = stale ?? upcoming.pop()
+                    if (!next) return false
+                    prepareRegion(next.x, next.z)
+                    if (stale && !staleRegions.length) {
+                        refreshPreparedRegions = () => this.render(blockMap, center, snowCoverMask, revision, compiled,
+                            originalBlocks, overrides, deferSnowRebuild)
+                    }
+                    if (!upcoming.length && !staleRegions.length) prepareNextRegion = undefined
+                    return true
+                } : undefined
             }
             for (const [key, visible] of visibleTiles) {
                 if (visible.seen === generation) continue
@@ -553,7 +632,9 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
             flushBatches(foliageBatches.values(), maximumFoliage)
             refreshGrass()
             flushBatches(batches.values(), maximum)
-            paving.updateSurface(blockMap, minX, minZ, maxX, maxZ, snowCoverMask, snowRevision, revision)
+            const updatePaving = () => paving.updateSurface(blockMap, minX, minZ, maxX, maxZ, snowCoverMask, snowRevision, revision)
+            preparePaving = deferSnowRebuild ? updatePaving : undefined
+            if (!deferSnowRebuild) updatePaving()
         },
     }
 }

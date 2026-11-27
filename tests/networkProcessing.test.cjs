@@ -75,6 +75,34 @@ test('map-before-login ordering and the asynchronous login barrier remain intact
     assert.deepEqual(calls, ['map', 'login', 'move'])
 })
 
+test('streaming chunks update collisions before scheduling scenery and render world transitions immediately', () => {
+    const calls = []
+    const noop = () => {}
+    const player = {myChar: {}, worldTransitionPending: false}
+    const {MessageProcessor: processor} = loadModule('network/messageProcessor.ts', {
+        '@/GameManager': {GameManager: {started: true}},
+        '@/data/myPlayer': {MyPlayer: player},
+        '@/babylon/world/treeManager': {TreeManager: {consumeTrees: noop}},
+        '@/babylon/world/statics/staticsManager': {StaticsManager: {
+            consumeObjects() {calls.push('collisions')}, resolveStackedStaticPositions: noop,
+        }},
+        '@/babylon/world/statics/staticFireParticleManager': {StaticFireParticleManager: {flush: noop}},
+        '@/babylon/world/buildings/buildingManager': {BuildingManager: {consumeBuildings: noop}},
+        '@/babylon/world/equipmentDecorationsManager': {EquipmentDecorationsManager: {consume: noop}},
+        '@/babylon/world/fightSplatsRenderer': {FightSplatsRenderer: {consumeSplats: noop}},
+        '@/babylon/world/worldRenderer': {WorldRenderer: {
+            block1: {}, requestStreamingRender() {calls.push('scheduled')}, renderWorld() {calls.push('immediate')},
+        }},
+    })
+    const chunk = {a: [{trees: [], statics: [{}]}], r: []}
+    processor.processWorldChunkData(chunk)
+    assert.deepEqual(calls, ['collisions', 'scheduled'])
+    player.worldTransitionPending = true
+    calls.length = 0
+    processor.processWorldChunkData(chunk)
+    assert.deepEqual(calls, ['collisions', 'immediate'])
+})
+
 test('initial nearby equipment data is processed before the first render', async (t) => {
     const calls = []
     const previousWindow = globalThis.window

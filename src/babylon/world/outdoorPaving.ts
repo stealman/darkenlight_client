@@ -47,13 +47,13 @@ export function createOutdoorPaving(terrain: TransformNode, detailed: boolean,
         resetSurface() { surfaceBounds = undefined },
         updateSurface(map: MapBlock[][], minX: number, minZ: number, maxX: number, maxZ: number,
             snowCoverMask: ReadonlySet<number>, snowRevision: number, revision?: number) {
-            if (!renderer?.mesh.thinInstanceCount) return
+            if (!renderer?.mesh.thinInstanceCount) return false
             const bounds = {minX: Math.max(0, minX - 1), minZ: Math.max(0, minZ - 1),
                 maxX: Math.min(map.length - 1, maxX + 1), maxZ: Math.min((map[0]?.length ?? 0) - 1, maxZ + 1)}
             if (revision !== undefined) {
                 if (surfaceBounds && surfaceRevision === revision && surfaceSnowRevision === snowRevision
                     && bounds.minX >= surfaceBounds.minX && bounds.minZ >= surfaceBounds.minZ
-                    && bounds.maxX <= surfaceBounds.maxX && bounds.maxZ <= surfaceBounds.maxZ) return
+                    && bounds.maxX <= surfaceBounds.maxX && bounds.maxZ <= surfaceBounds.maxZ) return false
 
                 // Preserve the sampling border and keep the field stationary for several tile crossings.
                 bounds.minX = Math.max(0, bounds.minX - SURFACE_RESERVE_TILES)
@@ -65,6 +65,7 @@ export function createOutdoorPaving(terrain: TransformNode, detailed: boolean,
             surfaceBounds = bounds
             surfaceRevision = revision
             surfaceSnowRevision = snowRevision
+            return true
         },
     }
 }

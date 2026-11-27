@@ -21,6 +21,8 @@ export const ViewportManager = {
 
     viewportWidth: 0,
     viewportHeight: 0,
+    renderWidth: 0,
+    renderHeight: 0,
 
     getScreenPosition(mesh) {
         if (Renderer.scene == null || Renderer.camera == null || Renderer.engine == null) {
@@ -34,16 +36,24 @@ export const ViewportManager = {
             Renderer.camera.viewport.toGlobal(Renderer.engine.getRenderWidth(), Renderer.engine.getRenderHeight()));
     },
 
-    onResize() {
+    onResize(force = true) {
         const baseMiniMapSize = Math.min(150, Math.min(window.innerHeight, window.innerWidth) / 5)
         const miniMapSize = Math.round(baseMiniMapSize * Settings.miniMapSize / 50)
         MiniMap.updateCanvasSize(miniMapSize, baseMiniMapSize)
         GuiButtonsManager.updatePositions()
-        this.viewPortInitialized = false
-
         const canvasBounds = Renderer.canvas?.getBoundingClientRect()
-        this.viewportWidth = canvasBounds?.width || window.innerWidth
-        this.viewportHeight = canvasBounds?.height || window.innerHeight
+        const width = canvasBounds?.width || window.innerWidth
+        const height = canvasBounds?.height || window.innerHeight
+        const renderWidth = Renderer.engine?.getRenderWidth() ?? 0
+        const renderHeight = Renderer.engine?.getRenderHeight() ?? 0
+        const changed = force || width !== this.viewportWidth || height !== this.viewportHeight
+            || renderWidth !== this.renderWidth || renderHeight !== this.renderHeight
+        if (changed) this.viewPortInitialized = false
+        this.viewportWidth = width
+        this.viewportHeight = height
+        this.renderWidth = renderWidth
+        this.renderHeight = renderHeight
+        return changed
     },
 
     isPointInVisibleMatrix(x, z, tolerance = 0, worldY: number | null = null, positiveXInset = 0,

@@ -42,10 +42,9 @@ export const TerrainDebrisManager = {
             for (let z = Math.max(0, pos.z + ViewportManager.minZ); z <= Math.min(size - 1, pos.z + ViewportManager.maxZ); z++) {
                 const block = map[x][z]
                 const key = x * size + z
-                if (block.type <= 0 || block.type >= 50 || block.minableOreAvailable || block.minableCoal
+                if (block.type <= 0 || block.type >= 50 || block.minableOreAvailable || block.minableCoal || this.roll(x, z, 401) >= 0.1
                     || occupied.has(key) || BuildingManager.hasFloorAtTile(x, z)
-                    || !ViewportManager.isPointInVisibleMatrix(x, z, 2, block.totalHeight)
-                    || this.roll(x, z, 401) >= 0.1) continue
+                    || !ViewportManager.isPointInVisibleMatrix(x, z, 2, block.totalHeight)) continue
                 // Compare base terrain heights: snow and surface layers do not form hills.
                 if (!NEIGHBORS.some(([dx, dz]) => {
                     const neighbor = map[x + dx]?.[z + dz]

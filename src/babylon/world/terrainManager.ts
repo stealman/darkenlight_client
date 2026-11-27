@@ -13,7 +13,7 @@ import { Lights } from '@/babylon/scene/lights'
 import { SNOW_BLOCK_HEIGHT } from '@/babylon/world/beveledTerrainBlock'
 import type { createOutdoorTerrain, createIndoorWaterFloor } from './outdoorTerrain'
 import { BuildingManager } from './buildings/buildingManager'
-import { TerrainContactShadow } from './terrainContactShadow'
+import { contactShadowView, TerrainContactShadow } from './terrainContactShadow'
 import { StaticsManager } from './statics/staticsManager'
 import { StepMarksRenderer } from './stepMarksRenderer'
 import { TerrainWaterSurface } from './terrainWaterSurface'
@@ -48,6 +48,7 @@ export const TerrainManager = {
         this.outdoorTerrain = null
         this.waterFloor = null
         this.dungeonBlock = null
+        this.pendingContactShadow = undefined
         const terrainSteps = StepMarksRenderer.field
         const contactShadow = new TerrainContactShadow(scene, terrainSteps ?? undefined)
         this.contactShadow = contactShadow
@@ -109,25 +110,40 @@ export const TerrainManager = {
         return mesh
     },
 
-    renderTerrain(snowCoverMask: Set<number> = new Set()) {
+    pendingContactShadow: undefined as (() => void) | undefined,
+
+    flushContactShadow() {
+        const update = this.pendingContactShadow
+        this.pendingContactShadow = undefined
+        if (!update) return false
+        update()
+        return true
+    },
+
+    renderTerrain(snowCoverMask: Set<number> = new Set(), deferContactShadow = false,
+        center = MyPlayer.myChar.getPositionRounded()) {
         const world = WorldDataManager.worldDataMap.get(MyPlayer.worldId)!
         const map = world.blockMap
-        const center = MyPlayer.myChar.getPositionRounded()
         const outdoor = this.usesOutdoorTerrain()
         if (outdoor) {
             this.outdoorTerrain ??= this.renderers!.createOutdoorTerrain(WorldRenderer.worldParentNode!, undefined,
                 this.contactShadow ?? undefined, StepMarksRenderer.field ?? undefined)
             const load = WorldDataManager.terrainRenderLoad
             this.outdoorTerrain.render(map, center, snowCoverMask, world.renderRevision,
-                load?.worldId === MyPlayer.worldId ? load.data : undefined, world.originalBlocks, world)
+                load?.worldId === MyPlayer.worldId ? load.data : undefined, world.originalBlocks, world, deferContactShadow)
         } else {
             this.outdoorTerrain?.setEnabled(false)
         }
-        this.renderTerrainArea(map, world.planeBlockMap, snowCoverMask, center, outdoor)
-        this.contactShadow?.update(map, world.renderRevision, Lights.indoor ? [] : [
-            ...BuildingManager.getBuildingFloorShadowFootprints(center),
-            ...StaticsManager.getContactShadowFootprints(map),
-        ])
+        this.renderTerrainArea(map, world.planeBlockMap, snowCoverMask, center, outdoor, world.renderRevision)
+        const shadow = this.contactShadow
+        if (shadow) {
+            const view = contactShadowView(center, ViewportManager)
+            this.pendingContactShadow = () => shadow.update(map, world.renderRevision, Lights.indoor ? [] : [
+                ...BuildingManager.getBuildingFloorShadowFootprints(view),
+                ...StaticsManager.getContactShadowFootprints(map, view),
+            ])
+            if (!deferContactShadow) this.flushContactShadow()
+        }
         return outdoor
     },
 
@@ -137,6 +153,7 @@ export const TerrainManager = {
         snowCoverMask: Set<number>,
         viewportCenter?: {x: number, y: number, z: number},
         outdoor = false,
+        terrainRevision?: number,
     ) {
         const planeMatrices: Matrix[] = []
         const planeUvData: Vector2[] = []
@@ -214,7 +231,7 @@ export const TerrainManager = {
         if (dungeon) updateWorldInstanceBuffers(dungeon, blockMatrices, blockUvs)
         this.dungeonBlock?.setEnabled(!!dungeon && blockMatrices.length > 0)
         updateWorldInstanceBuffers(this.terrainPlane!, planeMatrices, planeUvData)
-        this.terrainWater!.render(waterTiles, blockMap)
+        this.terrainWater!.render(waterTiles, blockMap, terrainRevision)
         if (waterFloors?.size) {
             this.waterFloor ??= this.renderers!.createIndoorWaterFloor(this.terrainPlane!)
             this.waterFloor.render(blockMap, waterFloors)

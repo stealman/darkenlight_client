@@ -4,14 +4,14 @@ import {
     MeshBuilder,
     ParticleSystem,
     Scene,
-    Texture, Vector2,
+    Texture,
     Vector3,
 } from '@babylonjs/core'
 import { MyPlayer } from '@/data/myPlayer'
 import { Renderer } from '@/babylon/scene/renderer'
 import { Settings } from '@/settings/settings'
 export const WeatherManager = {
-    actualWeather: null as WeatherEffect | null,
+    actualWeather: null as SnowEffect | null,
     enabled: true,
 
     initialize () {
@@ -31,45 +31,21 @@ export const WeatherManager = {
             } else {
                 this.actualWeather.stop()
             }
-        }
+        } else if (enabled && MyPlayer.myModel) this.prepare()
     },
 
-    update() {
-        if (!this.enabled) {
-            return
-        }
-        if (!this.actualWeather) {
+    prepare() {
+        if (this.enabled && !this.actualWeather) {
             this.actualWeather = new SnowEffect(Renderer.scene)
-            this.actualWeather.start()
         }
-
-        this.actualWeather?.update()
     },
 }
 
-interface WeatherEffect {
-    start() : void
-    stop() : void
-    update() : void
-}
-
-class SnowEffect implements WeatherEffect {
+class SnowEffect {
     snow: GPUParticleSystem
 
     constructor(scene: Scene) {
-        //console.log("Initializing snow effect")
-        let capacity = 8500
-        const particleSize = new Vector2(0.02, 0.03)
-        if (Settings.isDetailLevelMedium()) {
-            particleSize.x = 0.03
-            particleSize.y = 0.04
-            capacity = 6400
-        }
-        if (Settings.isDetalLevelLow()) {
-            particleSize.x = 0.05
-            particleSize.y = 0.06
-            capacity = 3400
-        }
+        const capacity = Settings.isDetalLevelLow() ? 3400 : Settings.isDetailLevelMedium() ? 6400 : 8500
 
         const snow = new GPUParticleSystem("snow", {
             capacity: capacity
@@ -85,7 +61,7 @@ class SnowEffect implements WeatherEffect {
             scene
         );
         snowEmitter.isVisible = false;
-        snowEmitter.parent = MyPlayer.myModel?.node
+        snowEmitter.parent = MyPlayer.myModel?.node ?? null
         snow.emitter = snowEmitter;
 
         snow.minSize = Settings.isDetalLevelHigh() ? 0.02 : 0.03;
@@ -124,8 +100,5 @@ class SnowEffect implements WeatherEffect {
     stop(): void {
         this.snow.stop()
         this.snow.reset()
-    }
-    update(): void {
-
     }
 }

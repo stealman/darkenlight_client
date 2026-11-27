@@ -22,7 +22,7 @@ import {
 import { configureBuildingWallDamp, encodeWallDampUv } from './buildingWallDamp'
 import { createBuildingBoxSurface } from './buildingBoxSurface'
 import { CONTACT_SHADOW_STRENGTH, contactShadowFalloff } from '../terrainContactShadow'
-import type { ContactShadowFootprint } from '../terrainContactShadow'
+import type { ContactShadowFootprint, ContactShadowView } from '../terrainContactShadow'
 import { OutdoorInstanceBatch } from '../outdoorInstanceBatch'
 import type { OutdoorInstance } from '../outdoorInstanceBatch'
 import { appendPavingAttributes, createSimpleHouseFloorPavingMesh, createStonePathRenderer, pavingStoneMatrix, PAVING_INSTANCE_ATTRIBUTE } from '../stonePathRenderer'
@@ -1666,6 +1666,7 @@ export const BuildingManager = {
         this.opaqueBatchMesh.alwaysSelectAsActiveMesh = true
         this.opaqueBatchMesh.doNotSyncBoundingInfo = true
         this.opaqueBatchMesh.receiveShadows = true
+        this.opaqueBatchMesh.setEnabled(false)
         Lights.registerSharedLightMesh(this.opaqueBatchMesh)
         Lights.addShadowCaster(this.opaqueBatchMesh, true, true)
         this.glassBatchMesh = MeshBuilder.CreatePlane('buildingGlassBatch', {width: 1, height: 1}, scene)
@@ -1674,6 +1675,7 @@ export const BuildingManager = {
         this.glassBatchMesh.isPickable = false
         this.glassBatchMesh.alwaysSelectAsActiveMesh = true
         this.glassBatchMesh.doNotSyncBoundingInfo = true
+        this.glassBatchMesh.setEnabled(false)
         Lights.registerSharedLightMesh(this.glassBatchMesh)
     },
 
@@ -1936,16 +1938,15 @@ export const BuildingManager = {
         })
     },
 
-    getBuildingFloorShadowFootprints(center: Vector3): ContactShadowFootprint[] {
+    getBuildingFloorShadowFootprints(view: ContactShadowView): ContactShadowFootprint[] {
         const footprints: ContactShadowFootprint[] = []
         const map = WorldDataManager.getBlockMap()
         for (const building of this.buildings.values()) {
             if (building instanceof ShedView) continue
             const {x, z} = building.data
             const height = map[x]?.[z]?.height
-            if (height === undefined || x > center.x + ViewportManager.maxX + 2 || z > center.z + ViewportManager.maxZ + 2
-                || x + building.getWidth() < center.x + ViewportManager.minX - 2
-                || z + building.getDepth() < center.z + ViewportManager.minZ - 2) continue
+            if (height === undefined || x > view.maxX || z > view.maxZ
+                || x + building.getWidth() < view.minX || z + building.getDepth() < view.minZ) continue
 
             for (const footprint of building.floor.shadows) {
                 const a = building.localTileToWorld(footprint.minX, footprint.minZ)
@@ -1991,6 +1992,8 @@ export const BuildingManager = {
         updateWorldInstanceBuffers(this.opaqueBatchMesh, matrices, uvData)
         groundContact.upload(this.opaqueBatchMesh, matrices.length)
         updateWorldInstanceBuffers(this.glassBatchMesh, glassMatrices, glassUvData)
+        this.opaqueBatchMesh.setEnabled(matrices.length > 0)
+        this.glassBatchMesh.setEnabled(glassMatrices.length > 0)
         this.updateFloorBatch()
     },
 

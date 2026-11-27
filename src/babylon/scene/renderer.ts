@@ -51,6 +51,7 @@ import { NIGHT_ENVIRONMENT_INTENSITY_FACTOR } from '@/babylon/scene/lighting/lig
 import { invoke } from '@tauri-apps/api/core'
 import { FoggyAreaManager } from '@/babylon/world/foggyAreaManager'
 import { ActiveMeshFreezer } from '@/babylon/scene/activeMeshFreezer'
+import { flushActorVisualPreparation, startActorVisualPreparation } from '@/babylon/scene/actorVisualPreparation'
 import { IndoorTerrainOcclusionManager } from '@/babylon/world/indoorTerrainOcclusionManager'
 import { modelAssetUrl } from '@/babylon/modelAssetUrl'
 import { ActorContactShadows } from '@/babylon/world/actorContactShadows'
@@ -176,6 +177,9 @@ export const Renderer = {
             GroundItemsManager.renderItems()
         }
         EquipManager.onFrame()
+        WorldDataManager.fetchWorldDataIfNeeded()
+        WorldRenderer.lastPos = MyPlayer.myChar.getPositionRounded()
+        Lights.onFrame(0)
 
         onWarmupProgress?.(0, 4)
         await WorldRenderer.warmUpOcclusionFadeShaders()
@@ -183,12 +187,14 @@ export const Renderer = {
         await CharacterManager.warmUpAppearance(this.scene)
         onWarmupProgress?.(2, 4)
         await MonsterManager.prepareModels()
+        WeatherManager.prepare()
         onWarmupProgress?.(3, 4)
         await Lights.warmUpDayNightCycle((completed, total) => {
             onWarmupProgress?.(3 + completed, 3 + total)
         })
 
         ActiveMeshFreezer.start()
+        startActorVisualPreparation(this.scene)
 
         const engine = this.engine!
         await new Promise<void>(resolve => {
@@ -214,6 +220,7 @@ export const Renderer = {
      * Main game loop
      */
     onFrame(scene: Scene) {
+        const frameStartedAt = performance.now()
         this.frame++
         const actualTime = new Date().getTime()
         let timeRate = this.engine!.getDeltaTime() / 1000
@@ -239,7 +246,7 @@ export const Renderer = {
             MyPlayer.onFrame(timeRate, actualTime)
             if (MyPlayer.myChar) WorldAreaManager.updateLocation(MyPlayer.worldId, MyPlayer.myChar.pos.x, MyPlayer.myChar.pos.z, actualTime)
             Materials.onFrame(actualTime)
-            WorldRenderer.checkRenderWorld()
+            if (!WorldRenderer.checkRenderWorld()) WorldRenderer.flushMovementRendering()
             if (IndoorTerrainOcclusionManager.onFrame(timeRate)) WorldRenderer.renderWorld()
             StaticsManager.onFrame(timeRate, actualTime)
             BuildingManager.onFrame(timeRate, this.camera)
@@ -294,10 +301,6 @@ export const Renderer = {
             MiniMap.updateMiniMap()
         }
 
-        if (this.frame % 60 === 30) {
-            WeatherManager.update()
-        }
-
         if (this.frame % 60 === 45) {
             AudioManager.processOneFrame()
         }
@@ -308,7 +311,9 @@ export const Renderer = {
 
         Connector.processMessages(actualTime)
         this.actorContactShadows?.update()
+        if (MyPlayer.myChar) ActiveMeshFreezer.updateViewPosition(MyPlayer.myChar.pos)
         scene.render()
+        flushActorVisualPreparation(scene, frameStartedAt)
 
         if (!ViewportManager.viewPortInitialized) ViewportManager.calculateViewport(this.camera)
     },

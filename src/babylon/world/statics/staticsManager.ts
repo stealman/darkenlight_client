@@ -59,7 +59,7 @@ import { StoneWall } from '@/babylon/world/statics/objects/stoneWall'
 import type { StoneWallMetadata } from './objects/stoneWall'
 import type { WallMetadata } from './objects/orientedWall'
 import { StoneBatch } from '../stoneBatch'
-import type { ContactShadowFootprint } from '../terrainContactShadow'
+import type { ContactShadowFootprint, ContactShadowView } from '../terrainContactShadow'
 import { TaperedBlockBatch } from '../taperedBlockBatch'
 import { ArchedMasonryBatch, MasonryBatch } from '@/babylon/world/masonryBatch'
 
@@ -571,17 +571,19 @@ export const StaticsManager = {
 
     prepareRender() {
         this.resolveStackedStaticPositions()
-        this.allStatics.forEach(object => object.clearRenderMatrixCapture())
+        this.visibleStatics.forEach(object => object.clearRenderMatrixCapture())
         this.updateVisibleObjects()
     },
 
-    getContactShadowFootprints(map: MapBlock[][]): ContactShadowFootprint[] {
+    getContactShadowFootprints(map: MapBlock[][], view?: ContactShadowView): ContactShadowFootprint[] {
         this.resolveConnectingCorners()
         const footprints: ContactShadowFootprint[] = []
-        for (const object of this.visibleStatics) {
+        for (const object of view ? this.allStatics : this.visibleStatics) {
+            const {x, y, z} = object.renderPosition
+            if (view && (x > view.maxX || z > view.maxZ
+                || x + object.getSizeX() < view.minX || z + object.getSizeZ() < view.minZ)) continue
             const size = object.getContactShadowSize?.()
             if (!size && !object.appendContactShadowFootprints) continue
-            const {x, y, z} = object.renderPosition
             const tile = map[object.position.x]?.[object.position.z]
             if (!tile || Math.abs(y - tile.totalHeight) > 0.15) continue
             if (size) footprints.push({

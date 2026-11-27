@@ -306,8 +306,7 @@ const onGameStarted = async () => {
     gameSessionActive.value = true
     loginRequestSentFlag.value = true
     await nextTick()
-    GameManager.onResize()
-    WorldRenderer.lastPos = null
+    if (GameManager.onResize()) WorldRenderer.lastPos = null
 }
 
 const onLoginFailed = () => {
@@ -520,8 +519,7 @@ const scheduleTouchControlsLayout = () => {
         touchControlsLayoutTimeout = null
         syncAppViewportSize()
         if (GameManager.started) {
-            GameManager.onResize()
-            WorldRenderer.lastPos = null
+            if (GameManager.onResize()) WorldRenderer.lastPos = null
         }
         if (Settings.isPhoneOrTablet()) {
             touchControls.value?.updateFromSettings?.()
@@ -910,8 +908,7 @@ const requestFullscreen = () => {
 function resizeEventHandler() {
     syncAppViewportSize()
     if (Renderer.engine && GameManager.started) {
-        GameManager.onResize()
-        WorldRenderer.lastPos = null
+        if (GameManager.onResize()) WorldRenderer.lastPos = null
     }
     scheduleTouchControlsLayout()
 }

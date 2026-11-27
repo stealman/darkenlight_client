@@ -25,6 +25,7 @@ const TREE_SNOWMELT_REACH_MULTIPLIER = 1.2
 const TREE_SNOW_OUTSIDE_DISTANCE = 1.8
 const TREE_SNOW_DISTANCE_RANGE = 6
 const SNOW_REGION_STEP = 8
+const CACHED_SNOW_STAMPS = 512
 
 type GroundTile = RoofTile & {height: number}
 export type TreeSnowRegion = {left: number, top: number, width: number, depth: number}
@@ -120,13 +121,27 @@ export function hasSnowNearTree(map: GroundTile[][], foot: TreeSnowFootprint, sn
 
 export function treeSnowDistance(dx: number, dz: number, foot: TreeSnowFootprint) {
     if (!foot.strength) return TREE_SNOW_OUTSIDE_DISTANCE
+    return snowStampShape(foot)(dx, dz)
+}
+
+function snowStampShape(foot: TreeSnowFootprint) {
     // Compress the western edge towards the stem on trees with a more open crown.
-    const x = dx < 0 ? dx * (1 + foot.westDrift * 1.9) : dx
-    const angle = Math.atan2(dz, x) + foot.phase * Math.PI * 2
-    const distance = Math.hypot(x, dz * 1.08)
+    const westScale = 1 + foot.westDrift * 1.9
+    const phase = foot.phase * Math.PI * 2
+    const cos3 = Math.cos(3 * phase), sin3 = Math.sin(3 * phase)
+    const cos5 = Math.cos(5 * phase), sin5 = Math.sin(5 * phase)
     const radius = foot.radius * (.78 + .22 * foot.strength)
-        * (1 + .12 * Math.cos(3 * angle) + .06 * Math.sin(5 * angle))
-    return distance - radius
+    return (dx: number, dz: number) => {
+        const x = dx < 0 ? dx * westScale : dx
+        const lengthSquared = x * x + dz * dz
+        const length = Math.sqrt(lengthSquared)
+        const c = length ? x / length : 1, s = length ? dz / length : 0
+        const c2 = c * c, s2 = s * s
+        // Multiple-angle identities avoid evaluating trig functions at every texel.
+        const lobe3 = c * (4 * c2 - 3) * cos3 - s * (3 - 4 * s2) * sin3
+        const lobe5 = s * (5 - s2 * (20 - 16 * s2)) * cos5 + c * (5 - c2 * (20 - 16 * c2)) * sin5
+        return Math.sqrt(lengthSquared + dz * dz * (1.08 ** 2 - 1)) - radius * (1 + .12 * lobe3 + .06 * lobe5)
+    }
 }
 
 // A tree's distance field depends on its seed and scale, not on the current view or snow-covered tiles.
@@ -138,10 +153,11 @@ function getSnowStamp(stamps: Map<TreeSnowFootprint, SnowStamp>, foot: TreeSnowF
     const width = (radiusInTiles * 2 + 1) * samples
     const values = new Uint8Array(width * width)
     const offset = radiusInTiles + .5
+    const distanceAt = snowStampShape(foot)
     for (let z = 0; z < width; z++) {
         const dz = (z + .5) / samples - offset
         for (let x = 0; x < width; x++) {
-            const distance = treeSnowDistance((x + .5) / samples - offset, dz, foot)
+            const distance = distanceAt((x + .5) / samples - offset, dz)
             values[z * width + x] = Math.min(255, Math.max(0, Math.round(
                 255 * (TREE_SNOW_OUTSIDE_DISTANCE - distance) / TREE_SNOW_DISTANCE_RANGE)))
         }
@@ -406,6 +422,7 @@ export class TreeGroundSurface {
         const sameWorld = map === this.map && revision === this.revision && snowCoverMask === this.snowCoverMask
             && treeRevision === this.treeRevision
         if (sameWorld && key === this.key) return
+        if (map !== this.map) this.stamps.clear()
         const previous = this.region
         const wasActive = this.bounds.z > 0
         this.region = region
@@ -416,11 +433,15 @@ export class TreeGroundSurface {
         this.key = key
         if (!footprints.length) {
             this.bounds.set(0, 0, 0, 0)
-            this.stamps.clear()
             return
         }
-        const active = new Set(footprints)
-        for (const foot of this.stamps.keys()) if (!active.has(foot)) this.stamps.delete(foot)
+        if (this.stamps.size > CACHED_SNOW_STAMPS) {
+            const active = new Set(footprints)
+            for (const foot of this.stamps.keys()) {
+                if (this.stamps.size <= CACHED_SNOW_STAMPS) break
+                if (!active.has(foot)) this.stamps.delete(foot)
+            }
+        }
 
         // Gameplay uses a padded world-space window. Preview bounds follow the specimen plots.
         if (!region) {
