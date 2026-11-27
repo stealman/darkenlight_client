@@ -10,8 +10,22 @@ test('procedural trees reuse a deterministic pool within each mesh budget', asyn
             TREE_PROTOTYPE_FACE_BUDGET} =
             await server.ssrLoadModule('/src/babylon/world/trees/treeSpecies.ts')
         const {createTreeGeometry} = await server.ssrLoadModule('/src/babylon/world/trees/treeGeometry.ts')
-        const {createTreeSnowFootprint, treeSnowDistance} =
+        const {getTreeInstanceTemplates, placeTreeShape} =
+            await server.ssrLoadModule('/src/babylon/world/trees/treeInstanceTemplates.ts')
+        const {createTreeSnowFootprint, treeSnowDistance, newTreeSnowBands} =
             await server.ssrLoadModule('/src/babylon/world/trees/treeGroundSurface.ts')
+        const previousRegion = {left: 16.5, top: 22.5, width: 12, depth: 10}
+        for (const dx of [-12, -4, 0, 4, 12]) for (const dz of [-10, -3, 0, 3, 10]) {
+            const next = {...previousRegion, left: previousRegion.left + dx, top: previousRegion.top + dz}
+            const contains = (region, x, z) => x >= region.left && x < region.left + region.width
+                && z >= region.top && z < region.top + region.depth
+            const bands = newTreeSnowBands(next, previousRegion)
+            for (let x = next.left + .5; x < next.left + next.width; x++) {
+                for (let z = next.top + .5; z < next.top + next.depth; z++) {
+                    assert.equal(bands.filter(band => contains(band, x, z)).length, contains(previousRegion, x, z) ? 0 : 1)
+                }
+            }
+        }
         for (const phase of [0, .16, .32, .72, .88]) {
             const near = createTreeSnowFootprint('spruce', 9, 7, 0, .5, .2, .2, phase)
             const wide = createTreeSnowFootprint('spruce', 9, 7, 0, .5, .9, .8, phase)
@@ -33,7 +47,7 @@ test('procedural trees reuse a deterministic pool within each mesh budget', asyn
         }
         const {buildTreeRevealIndex, collectTreeRevealCandidates, overlapsTreeReveal, projectTreeBounds, TreeRevealFrustum} =
             await server.ssrLoadModule('/src/babylon/world/trees/treeRevealBounds.ts')
-        const {Matrix, Mesh, NullEngine, Scene, Vector3, Vector4} = await import('@babylonjs/core')
+        const {Matrix, Mesh, NullEngine, Quaternion, Scene, Vector3, Vector4} = await import('@babylonjs/core')
         const projected = {min: Vector3.Zero(), max: Vector3.Zero()}
         const bounds = {min: new Vector3(-.2, -.2, .2), max: new Vector3(.2, .2, .4)}
         const reveal = new Vector4(0, 0, 1, .5)
@@ -85,6 +99,30 @@ test('procedural trees reuse a deterministic pool within each mesh budget', asyn
         const sameSeed = new TreeVariants(671439, 1)
         const otherSeed = new TreeVariants(42, 1)
         const prototypePool = new TreeVariants(671439, 2, true)
+        for (const kind of Object.keys(TREE_SPECIES)) {
+            const variant = prototypePool.get(kind, 3)
+            const position = new Vector3(957, 14.45, 917)
+            const size = .73
+            const style = 4.365
+            const transform = Matrix.Compose(new Vector3(size, size, size), Quaternion.RotationYawPitchRoll(variant.yaw, 0, 0), position)
+            for (const detail of ['LOW', 'MEDIUM', 'HIGH', 'SHADOW']) {
+                const shapes = getTreeInstanceTemplates(variant, detail)
+                assert.equal(getTreeInstanceTemplates(variant, detail), shapes)
+                for (const [shape, template] of shapes) {
+                    const packed = placeTreeShape(template, position, size, style, false, 1.5)
+                    assert.equal(packed.buffers.treeShape, template.treeShape)
+                    assert.equal(packed.buffers.treeJointA, template.treeJointA)
+                    assert.equal(packed.buffers.treeJointB, template.treeJointB)
+                    variant.models[detail].shapes.get(shape).forEach((piece, i) => {
+                        const expected = piece.matrix.multiply(transform).m
+                        for (let j = 0; j < 16; j++) assert.ok(Math.abs(packed.buffers.matrix[i * 16 + j] - expected[j]) < .00013)
+                        assert.equal(packed.buffers.treeStyle[i * 4 + 2], Math.fround(style))
+                        assert.equal(packed.buffers.treeStyle[i * 4 + 3], Math.fround(position.y))
+                        assert.equal(packed.buffers.treeBarkLimit[i], piece.trunk ? 1.5 : 0)
+                    })
+                }
+            }
+        }
         const largestPiece = Math.max(...Object.values(TREE_SHAPE_FACES))
         const geometry = ({shapes}) => [...shapes].map(([shape, parts]) => [shape, parts.map(part => part.matrix.m)])
         const trunk = ({shapes}) => [...shapes.values()].flat().find(({matrix}) =>

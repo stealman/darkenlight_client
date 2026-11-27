@@ -1,12 +1,13 @@
 import { Camera, Matrix, Mesh, PBRMaterial, Quaternion, Scene, TransformNode, Vector2, Vector3, Vector4 } from '@babylonjs/core'
 import type { Material, Observer } from '@babylonjs/core'
 import { createTreeGeometry } from './treeGeometry'
-import type { TreePiece, TreeVariant } from './treeGenerator'
+import type { TreeVariant } from './treeGenerator'
+import { getTreeInstanceTemplates, placeTreeShape } from './treeInstanceTemplates'
 import { createTreeMaterial } from './treeMaterial'
 import type { TreeBarkMode } from './treeMaterial'
 import { buildTreeRevealIndex, collectTreeRevealCandidates, getTreeModelBounds, overlapsTreeReveal,
     projectTreeBounds, TreeRevealFrustum } from './treeRevealBounds'
-import type { TreeRevealEntry } from './treeRevealBounds'
+import type { TreeBounds, TreeRevealEntry } from './treeRevealBounds'
 import { ALL_TREE_SHADER_FEATURES, TREE_SHADER, TREE_SHAPE_FACES } from './treeSpecies'
 import type { TreeDetail, TreeShape, TreeSurfaceDetail } from './treeSpecies'
 
@@ -23,11 +24,19 @@ export interface TreePlacement {
     opacity?: number
 }
 
-interface Span { start: number, end: number, offsetY: number }
+interface Span { start: number, end: number, offsetY: number, packed: PackedShape, opacity: number }
 const BUFFERS = {matrix: 16, treeStyle: 4, treeShape: 4, treeJointA: 4, treeJointB: 4, treeOpacity: 1, treeBarkLimit: 1} as const
 type BufferName = keyof typeof BUFFERS
 const namedBuffers = Object.keys(BUFFERS) as BufferName[]
 const regularBuffers = namedBuffers.filter(name => name !== 'treeBarkLimit')
+type PackedBufferName = Exclude<BufferName, 'treeOpacity'>
+const packedBuffers = namedBuffers.filter((name): name is PackedBufferName => name !== 'treeOpacity')
+type PackedShape = {count: number, buffers: Record<PackedBufferName, Float32Array>}
+type PackedTree = TreeRevealEntry & {
+    position: Vector3, variant: TreeVariant, detail: TreeDetail, size: number,
+    style: number, fullBarkDetail: boolean, shapes: Map<TreeShape, PackedShape>,
+}
+
 const SHAPE_BITS = {wood3: 1, wood6: 2, wood16: 4, leaf: 8, needles: 16, needlesShadow: 32,
     foliageCard: 64, birchCard: 128} satisfies Record<TreeShape, number>
 function foliageAtlasForShape(shape: TreeShape) {
@@ -40,9 +49,15 @@ const REVEAL_START_RADIUS = .55
 const REVEAL_KEEP_RADIUS = .65
 
 class TreeBatch {
-    readonly spans = new Map<number, Span>()
+    private spans = new Map<number, Span>()
+    private previousSpans = new Map<number, Span>()
     count = 0
-    private padding = 0
+    private previousCount = 0
+    private firstDirty = Infinity
+    private lastDirty = 0
+    private grew = false
+    private readonly minimum = Vector3.Zero()
+    private readonly maximum = Vector3.Zero()
     private capacity = 0
     private buffers = {matrix: new Float32Array(), treeStyle: new Float32Array(),
         treeShape: new Float32Array(), treeJointA: new Float32Array(), treeJointB: new Float32Array(),
@@ -56,10 +71,21 @@ class TreeBatch {
     }
 
     start(count: number) {
+        const previous = this.spans
+        this.spans = this.previousSpans
+        this.previousSpans = previous
         this.spans.clear()
+        this.previousCount = this.count
         this.count = 0
-        this.padding = 0
-        if (count <= this.capacity) return
+        this.firstDirty = Infinity
+        this.lastDirty = 0
+        this.minimum.setAll(Infinity)
+        this.maximum.setAll(-Infinity)
+        this.grew = count > this.capacity
+        if (this.grew) this.reserve(count)
+    }
+
+    private reserve(count: number) {
         this.capacity = Math.max(32, count, this.capacity * 2)
         for (const name of this.bufferNames) {
             const stride = BUFFERS[name]
@@ -68,49 +94,60 @@ class TreeBatch {
         }
     }
 
-    add(placement: TreePlacement, parts: readonly TreePiece[], transform: Matrix) {
-        const start = this.count
-        const {snow, groundType, position, fullBarkDetail} = placement
-        const trunkBarkLimit = placement.variant.height * placement.size / 3
-        this.padding = Math.max(this.padding, placement.variant.rootRadius * 1.4 * placement.size)
-        for (const part of parts) {
-            part.matrix.multiplyToArray(transform, this.buffers.matrix, this.count * 16)
-            const offset = this.count * 4
-            const style = this.buffers.treeStyle
-            style[offset] = part.palette
-            style[offset + 1] = part.tint
-            style[offset + 2] = groundType ? groundType + snow * .5 : 0
-            style[offset + 3] = position.y
-            const shape = this.buffers.treeShape
-            shape[offset] = part.taper
-            shape[offset + 1] = part.length
-            shape[offset + 2] = part.grain
-            shape[offset + 3] = part.radius / part.length
-            part.startJoint?.toArray(this.buffers.treeJointA, offset)
-            part.endJoint?.toArray(this.buffers.treeJointB, offset)
-            if (this.barkLimits) this.buffers.treeBarkLimit[this.count] = fullBarkDetail ? -1 : part.trunk ? trunkBarkLimit : 0
-            this.buffers.treeOpacity[this.count++] = placement.opacity ?? 1
+    async warmUp() {
+        const {mesh} = this
+        if (!this.capacity) this.reserve(1)
+        if (!this.count) mesh.thinInstanceCount = 1
+        try {
+            await mesh.material?.forceCompilationAsync(mesh, {useInstances: true})
+        } finally {
+            if (!this.count) mesh.thinInstanceCount = 0
         }
-        if (start !== this.count) this.spans.set(placement.id, {start, end: this.count, offsetY: 0})
+    }
+
+    add(placement: TreePlacement, shape: PackedShape, bounds: TreeBounds) {
+        if (!shape.count) return
+        const start = this.count
+        this.count += shape.count
+        const opacity = placement.opacity ?? 1
+        const previous = this.previousSpans.get(placement.id)
+        if (!this.grew && previous?.start === start && previous.packed === shape
+            && previous.opacity === opacity && previous.offsetY === 0) {
+            this.spans.set(placement.id, previous)
+        } else {
+            for (const name of packedBuffers) {
+                if (name === 'treeBarkLimit' && !this.barkLimits) continue
+                this.buffers[name].set(shape.buffers[name], start * BUFFERS[name])
+            }
+            this.buffers.treeOpacity.fill(opacity, start, this.count)
+            this.spans.set(placement.id, {start, end: this.count, offsetY: 0, packed: shape, opacity})
+            this.firstDirty = Math.min(this.firstDirty, start)
+            this.lastDirty = this.count
+        }
+        this.minimum.minimizeInPlace(bounds.min)
+        this.maximum.maximizeInPlace(bounds.max)
     }
 
     upload() {
+        if (this.count === this.previousCount && !this.lastDirty) return
         if (this.capacity > 0) this.mesh.thinInstanceCount = this.count
         this.mesh.setEnabled(this.count > 0)
         if (!this.count) return
-        for (const name of this.bufferNames) {
-            this.mesh.thinInstancePartialBufferUpdate(name, this.buffers[name].subarray(0, this.count * BUFFERS[name]), 0)
+        if (this.lastDirty) {
+            for (const name of this.bufferNames) {
+                const stride = BUFFERS[name]
+                const start = this.firstDirty * stride
+                this.mesh.thinInstancePartialBufferUpdate(name, this.buffers[name].subarray(start, this.lastDirty * stride), start)
+            }
         }
-        this.mesh.thinInstanceRefreshBoundingInfo()
-        // The shader tilts individual cross sections outside the source mesh's bounds.
-        const bounds = this.mesh.getBoundingInfo()
-        const pad = new Vector3(this.padding, this.padding, this.padding)
-        bounds.reConstruct(bounds.minimum.subtract(pad), bounds.maximum.add(pad), this.mesh.getWorldMatrix())
+        // These tree-level bounds include the vertex deformation used for reveal culling.
+        this.mesh.getBoundingInfo().reConstruct(this.minimum, this.maximum, this.mesh.getWorldMatrix())
     }
 
     setOpacity(id: number, opacity: number) {
         const span = this.spans.get(id)
         if (!span || this.shadowOnly) return
+        span.opacity = opacity
         const values = this.buffers.treeOpacity
         values.fill(opacity, span.start, span.end)
         this.mesh.thinInstancePartialBufferUpdate('treeOpacity', values.subarray(span.start, span.end), span.start)
@@ -162,6 +199,9 @@ export class TreeRenderer {
     private skipInactiveLights = true
     private barkMode: TreeBarkMode = 'procedural'
     private placements: readonly TreePlacement[] = []
+    private readonly packedTrees = new Map<TreePlacement, PackedTree>()
+    private readonly previousPlacements: TreePlacement[] = []
+    private revealModeChanged = false
     private cutoutTrees = new Map<number, number>()
     private nextCutoutTrees = new Map<number, number>()
     private readonly offsets = new Map<number, number>()
@@ -209,10 +249,14 @@ export class TreeRenderer {
         if (detail === this.surfaceDetail && features === this.features && skipInactiveLights === this.skipInactiveLights
             && barkMode === this.barkMode) return
         this.surfaceDetail = detail
+        this.revealModeChanged ||= !!((this.features ^ features) & TREE_SHADER.reveal)
         this.features = features
         this.skipInactiveLights = skipInactiveLights
         this.barkMode = barkMode
-        for (const {mesh, shape, cutout, shadowOnly} of this.batches.values()) mesh.material = this.getMaterial(cutout, shape, shadowOnly)
+        for (const {mesh, shape, cutout, shadowOnly} of this.batches.values()) {
+            mesh.material = this.getMaterial(cutout, shape, shadowOnly)
+            if (!shadowOnly) this.setSharedLighting?.(mesh, true)
+        }
     }
 
     setShadowCasting(enabled: boolean) {
@@ -226,11 +270,46 @@ export class TreeRenderer {
 
     rebuild(placements: readonly TreePlacement[]) {
         this.placements = placements
+        let changed = this.revealModeChanged || this.offsets.size > 0 || placements.length !== this.previousPlacements.length
+        for (let i = 0; i < placements.length; i++) {
+            const placement = placements[i]
+            const packed = this.packedTrees.get(placement)
+            const style = placement.groundType ? placement.groundType + placement.snow * .5 : 0
+            if (!packed || packed.variant !== placement.variant || packed.detail !== placement.detail || packed.size !== placement.size
+                || packed.style !== style || packed.fullBarkDetail !== !!placement.fullBarkDetail
+                || !packed.position.equals(placement.position)) {
+                this.packedTrees.set(placement, this.packTree(placement, style))
+                changed = true
+            }
+            if (this.previousPlacements[i] !== placement) changed = true
+        }
+        if (!changed) return
+        this.revealModeChanged = false
+        const active = new Set(placements)
+        for (const placement of this.packedTrees.keys()) if (!active.has(placement)) this.packedTrees.delete(placement)
+        this.previousPlacements.length = 0
+        for (const placement of placements) this.previousPlacements.push(placement)
         this.offsets.clear()
         this.rebuildRevealIndex()
         if (this.features & TREE_SHADER.reveal) this.selectCutoutTrees()
         else this.cutoutTrees.clear()
         this.uploadPlacements()
+    }
+
+    private packTree(placement: TreePlacement, style: number): PackedTree {
+        const {variant, detail, size, position} = placement
+        const fullBarkDetail = !!placement.fullBarkDetail
+        this.composePlacement(placement, position)
+        const transform = this.transform.clone()
+        const bounds = {min: Vector3.Zero(), max: Vector3.Zero()}
+        const model = variant.models[detail]
+        projectTreeBounds(getTreeModelBounds(model), transform, this.projectedPoint, bounds)
+        const shapes = new Map<TreeShape, PackedShape>()
+        const barkLimit = variant.height * size / 3
+        for (const [shape, template] of getTreeInstanceTemplates(variant, detail)) {
+            shapes.set(shape, placeTreeShape(template, position, size, style, fullBarkDetail, barkLimit))
+        }
+        return {placement, transform, bounds, position: position.clone(), variant, detail, size, style, fullBarkDetail, shapes}
     }
 
     private rebuildRevealIndex() {
@@ -243,11 +322,7 @@ export class TreeRenderer {
         for (const placement of this.placements) {
             if (placement.shadowOnly) continue
             if ((placement.opacity ?? 1) < .999) this.manualCutoutIds.add(placement.id)
-            this.composePlacement(placement, placement.position)
-            const transform = this.transform.clone()
-            const bounds = {min: Vector3.Zero(), max: Vector3.Zero()}
-            projectTreeBounds(getTreeModelBounds(placement.variant.models[placement.detail]), transform, this.projectedPoint, bounds)
-            this.revealEntries.set(placement.id, {placement, transform, bounds})
+            this.revealEntries.set(placement.id, this.packedTrees.get(placement)!)
         }
         this.revealIndex = buildTreeRevealIndex([...this.revealEntries.values()])
     }
@@ -258,12 +333,12 @@ export class TreeRenderer {
             const shadowOnly = placement.shadowOnly === true
             if (shadowOnly && changedShapes !== undefined) continue
             const mask = shadowOnly ? 0 : this.cutoutTrees.get(placement.id) ?? 0
-            for (const [shape, parts] of placement.variant.models[placement.detail].shapes) {
+            for (const [shape, packed] of this.packedTrees.get(placement)!.shapes) {
                 if (changedShapes !== undefined && !(changedShapes & SHAPE_BITS[shape])) continue
                 const cutout = (mask & SHAPE_BITS[shape]) !== 0
                 const key = this.key(shape, shadowOnly, cutout)
                 const batch = this.batches.get(key) ?? this.createBatch(key, shape, shadowOnly, cutout)
-                counts.set(batch, (counts.get(batch) ?? 0) + parts.length)
+                counts.set(batch, (counts.get(batch) ?? 0) + packed.count)
             }
         }
         const affected = this.affectedBatches(changedShapes)
@@ -272,11 +347,11 @@ export class TreeRenderer {
             const shadowOnly = placement.shadowOnly === true
             if (shadowOnly && changedShapes !== undefined) continue
             const mask = shadowOnly ? 0 : this.cutoutTrees.get(placement.id) ?? 0
-            this.composePlacement(placement, placement.position)
-            for (const [shape, parts] of placement.variant.models[placement.detail].shapes) {
+            const packed = this.packedTrees.get(placement)!
+            for (const [shape, parts] of packed.shapes) {
                 if (changedShapes !== undefined && !(changedShapes & SHAPE_BITS[shape])) continue
                 const cutout = (mask & SHAPE_BITS[shape]) !== 0
-                this.batches.get(this.key(shape, shadowOnly, cutout))!.add(placement, parts, this.transform)
+                this.batches.get(this.key(shape, shadowOnly, cutout))!.add(placement, parts, packed.bounds)
             }
         }
         for (const batch of affected) {
@@ -488,15 +563,19 @@ export class TreeRenderer {
 
     async warmUp() {
         const active = [...this.batches.values()].filter(batch => batch.count > 0)
-        const options = {useInstances: true}
-        const compile = active.map(({mesh}) => mesh.material?.forceCompilationAsync(mesh, options))
-        if (this.features & TREE_SHADER.reveal) {
-            for (const atlas of [undefined, 'standard', 'birch']) {
-                const opaque = active.find(batch => !batch.shadowOnly && !batch.cutout && foliageAtlasForShape(batch.shape) === atlas)
-                if (opaque) compile.push(this.getMaterial(true, opaque.shape).forceCompilationAsync(opaque.mesh, options))
+        if (!active.length) return
+        const representatives = new Map(active.map(batch => [batch.mesh.material, batch]))
+        // Prepare the same light layout and thin-instance defines the draw will use.
+        // Birch can enter the viewport later even if only conifers surround the spawn.
+        for (const shape of ['wood16', 'foliageCard', 'birchCard'] as const) {
+            for (const cutout of this.features & TREE_SHADER.reveal ? [false, true] : [false]) {
+                const material = this.getMaterial(cutout, shape)
+                if (representatives.has(material)) continue
+                const key = this.key(shape, false, cutout)
+                representatives.set(material, this.batches.get(key) ?? this.createBatch(key, shape, false, cutout))
             }
         }
-        await Promise.all(compile)
+        await Promise.all([...representatives.values()].map(batch => batch.warmUp()))
     }
 
     dispose() {
@@ -510,6 +589,8 @@ export class TreeRenderer {
         this.batches.clear()
         for (const material of this.materials.values()) material.dispose()
         this.materials.clear()
+        this.packedTrees.clear()
+        this.previousPlacements.length = 0
     }
 
     private getMaterial(cutout: boolean, shape: TreeShape, shadowOnly = false) {

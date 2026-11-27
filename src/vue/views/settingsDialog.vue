@@ -560,7 +560,7 @@ const restoreDefaultSettings = () => {
     Settings.setVolume(defaultSettings.volume)
     Settings.setAmbientVolume(defaultSettings.ambientVolume)
     FoggyAreaManager.refreshVisibleAreas()
-    WorldRenderer.refreshTreeRendering()
+    WorldRenderer.refreshTreeRendering(true)
     setLocale(defaultSettings.language)
     Renderer.brightnessChanged()
     Lights.brightnessChanged()
@@ -580,7 +580,7 @@ const storeSettings = () => {
 }
 
 const treeRenderingChanged = () => {
-    WorldRenderer.refreshTreeRendering()
+    WorldRenderer.refreshTreeRendering(true)
     storeSettings()
 }
 

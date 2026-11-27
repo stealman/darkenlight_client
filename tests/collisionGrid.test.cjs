@@ -152,9 +152,10 @@ test('tree manager indexes scaled trunks and updates its grid through removal an
     const map = Array.from({length: 20}, () => Array.from({length: 20}, () => ({type: 4, height: 0, totalHeight: 0})))
     map[4][4].snowed = true
     dependencies['@/data/worldDataManager'] = {WorldDataManager: {getBlockMap: () => map}}
-    dependencies['@/data/myPlayer'] = {MyPlayer: {worldId: 1}}
+    dependencies['@/data/myPlayer'] = {MyPlayer: {worldId: 1, myChar: {pos: new core.Vector3(4, 0, 4)}}}
     dependencies['@/settings/settings'] = {Settings: settings}
     dependencies['@/utils/viewport'] = {ViewportManager: {viewPortInitialized: true,
+        minX: -4, minZ: -4, maxX: 5, maxZ: 15,
         isPointInVisibleMatrix: x => x < 10, isPointNearVisibleBounds: () => true}}
     dependencies['@/babylon/scene/lights'] = {Lights: {indoor: false}}
     dependencies['@/babylon/world/worldRenderer'] = {WorldRenderer: {getSnowSurfaceHeight: (x, z) =>
@@ -164,6 +165,7 @@ test('tree manager indexes scaled trunks and updates its grid through removal an
     dependencies['./trees/treeSpecies'] = load('@/babylon/world/trees/treeSpecies')
     dependencies['./treeSpecies'] = dependencies['./trees/treeSpecies']
     dependencies['./trees/treeGenerator'] = load('@/babylon/world/trees/treeGenerator')
+    dependencies['./trees/treeInstanceTemplates'] = load('@/babylon/world/trees/treeInstanceTemplates')
     dependencies['./terrainRoofShape'] = dependencies['../terrainRoofShape'] = load('@/babylon/world/terrainRoofShape')
     dependencies['./trees/treeGroundSurface'] = load('@/babylon/world/trees/treeGroundSurface')
     dependencies['./trees/treeRenderer'] = {TreeRenderer: class {
@@ -224,6 +226,16 @@ test('tree manager indexes scaled trunks and updates its grid through removal an
     manager.addTree({type: 1, x: 11, z: 8, size: 1})
     assert.deepEqual(manager.renderTrees(true).map(({x, z}) => [x, z]), [[4, 4], [11, 8]])
     assert.deepEqual(batches.at(-1), [[0, 'HIGH', false]])
+    manager.clearWorld()
+    const slots = new Set()
+    for (let z = 0; z < 5; z++) for (let x = 0; x < 5; x++) {
+        manager.addTree({type: 1 + x % 4, x, z, size: 1})
+        slots.add(manager.getTreeAt(x, z).variantSlot)
+    }
+    assert.equal(slots.size, 25)
+    const slot = manager.getTreeAt(0, 0).variantSlot
+    manager.addTree({type: 1, x: 0, z: 0, size: 2})
+    assert.equal(manager.getTreeAt(0, 0).variantSlot, slot)
 })
 
 test('existing building index covers rotated houses, large sheds, mausoleums and open doors', async () => {

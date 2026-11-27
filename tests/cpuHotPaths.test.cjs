@@ -267,7 +267,7 @@ test('tree reveal forwards the player and selected target without rebuilding geo
         }},
         '@/data/myPlayer': {MyPlayer: myPlayer},
         '@/gui/targettingManager': {TargetingManager: targeting},
-        '@/settings/settings': {Settings: {treesEnabled: true, treeShaderFeatures: species.TREE_SHADER.reveal}},
+        '@/settings/settings': {Settings: {treesEnabled: true, treeShaderFeatures: species.TREE_SHADER.reveal, detailLevel: {name: 'LOW'}}},
     })
     await trees.initialize({onDisposeObservable: {addOnce() {}}}, null)
     trees.onFrame()

@@ -150,14 +150,15 @@ export const WorldRenderer = {
         }
     },
 
-    refreshTreeRendering() {
+    refreshTreeRendering(warmShaders = false) {
         this.renderTrees(TerrainManager.usesOutdoorTerrain())
         Lights.invalidateStaticShadowMaps()
+        if (warmShaders) void TreeManager.warmUpShaders()?.catch(error => console.warn('Tree shader warm-up failed', error))
     },
 
     renderTrees(outdoor: boolean) {
         const footprints = TreeManager.renderTrees(outdoor)
-        TerrainManager.outdoorTerrain?.updateTreeSnow(footprints)
+        TerrainManager.outdoorTerrain?.updateTreeSnow(footprints, TreeManager.snowRegion, TreeManager.collisionGrid.revision)
     },
 
     /**

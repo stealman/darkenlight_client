@@ -1,5 +1,5 @@
 import { RawTexture, Texture, Vector2, Vector4 } from '@babylonjs/core'
-import type { Scene } from '@babylonjs/core'
+import type { Engine, Scene } from '@babylonjs/core'
 import type { CustomMaterial, PBRCustomMaterial } from '@babylonjs/materials'
 import { muddyDirtPatterns, terrainCoverPatterns } from '../terrainAtlasPlacement'
 import { terrainTextureUrls } from '../terrainTextureUrls'
@@ -24,8 +24,11 @@ const TREE_SNOW_CLEARANCE_RADIUS_MULTIPLIER = 1.6
 const TREE_SNOWMELT_REACH_MULTIPLIER = 1.2
 const TREE_SNOW_OUTSIDE_DISTANCE = 1.8
 const TREE_SNOW_DISTANCE_RANGE = 6
+const SNOW_REGION_STEP = 8
 
 type GroundTile = RoofTile & {height: number}
+export type TreeSnowRegion = {left: number, top: number, width: number, depth: number}
+export type TreeGroundTextureRect = {x: number, y: number, width: number, height: number}
 export type TreeSnowFootprint = {
     x: number
     z: number
@@ -36,6 +39,35 @@ export type TreeSnowFootprint = {
     westDrift: number
     reach: number
     rootSnow: number
+}
+
+export function treeSnowRegion(x: number, z: number, view: {minX: number, minZ: number, maxX: number, maxZ: number}): TreeSnowRegion {
+    const half = SNOW_REGION_STEP / 2
+    const centerX = Math.round(Math.round(x) / SNOW_REGION_STEP) * SNOW_REGION_STEP
+    const centerZ = Math.round(Math.round(z) / SNOW_REGION_STEP) * SNOW_REGION_STEP
+    return {left: centerX + view.minX - half - 1.5, top: centerZ + view.minZ - half - 1.5,
+        width: view.maxX - view.minX + SNOW_REGION_STEP + 3, depth: view.maxZ - view.minZ + SNOW_REGION_STEP + 3}
+}
+
+export function treeSnowFootprintInRegion(foot: TreeSnowFootprint, region: TreeSnowRegion) {
+    const {x, z, reach} = foot
+    return x + reach >= region.left && x - reach < region.left + region.width
+        && z + reach >= region.top && z - reach < region.top + region.depth
+}
+
+function wrap(value: number, span: number) {
+    return (value % span + span) % span
+}
+
+export function newTreeSnowBands(region: TreeSnowRegion, previous: TreeSnowRegion): TreeSnowRegion[] {
+    const dx = region.left - previous.left, dz = region.top - previous.top
+    const {left, top, width, depth} = region
+    if (Math.abs(dx) >= width || Math.abs(dz) >= depth) return [region]
+    const bands: TreeSnowRegion[] = []
+    if (dx) bands.push({left: dx > 0 ? left + width - dx : left, top, width: Math.abs(dx), depth})
+    if (dz) bands.push({left: left + Math.max(0, -dx), top: dz > 0 ? top + depth - dz : top,
+        width: width - Math.abs(dx), depth: Math.abs(dz)})
+    return bands
 }
 
 const snowProfiles = {
@@ -97,6 +129,28 @@ export function treeSnowDistance(dx: number, dz: number, foot: TreeSnowFootprint
     return distance - radius
 }
 
+// A tree's distance field depends on its seed and scale, not on the current view or snow-covered tiles.
+type SnowStamp = {samples: number, width: number, values: Uint8Array}
+function getSnowStamp(stamps: Map<TreeSnowFootprint, SnowStamp>, foot: TreeSnowFootprint, samples: number, radiusInTiles: number) {
+    if (!foot.strength) return undefined
+    const cached = stamps.get(foot)
+    if (cached?.samples === samples) return cached
+    const width = (radiusInTiles * 2 + 1) * samples
+    const values = new Uint8Array(width * width)
+    const offset = radiusInTiles + .5
+    for (let z = 0; z < width; z++) {
+        const dz = (z + .5) / samples - offset
+        for (let x = 0; x < width; x++) {
+            const distance = treeSnowDistance((x + .5) / samples - offset, dz, foot)
+            values[z * width + x] = Math.min(255, Math.max(0, Math.round(
+                255 * (TREE_SNOW_OUTSIDE_DISTANCE - distance) / TREE_SNOW_DISTANCE_RANGE)))
+        }
+    }
+    const stamp = {samples, width, values}
+    stamps.set(foot, stamp)
+    return stamp
+}
+
 let sharedAtlas: Promise<Uint8ClampedArray> | undefined
 function loadGroundAtlas() {
     return sharedAtlas ??= (async () => {
@@ -126,10 +180,6 @@ const groundShader = (packed: boolean) => `
         highp uint rgb = uint(texelFetch(terrainStepData, pixel + ivec2(0, int(treeGroundStepRow)), 0).r);
         return vec3(float(rgb & 255u), float((rgb >> 8u) & 255u), float(rgb >> 16u)) / 255.0;
     }
-    float treeGroundPackedDistance(ivec2 pixel) {
-        highp uint packedPixel = uint(texelFetch(terrainStepData, pixel + ivec2(0, int(treeGroundStepRow) + ${ATLAS_HEIGHT}), 0).r);
-        return float(packedPixel & 255u) / 255.0;
-    }
     ` : ''}
     vec3 treeGroundPixel(vec2 pixel) {
         return ${packed ? 'treeGroundPackedPixel(ivec2(pixel))' : 'texture2D(treeGroundTexture, pixel * treeGroundTexel).rgb'};
@@ -151,18 +201,28 @@ const groundShader = (packed: boolean) => `
     bool treeGroundInField(vec2 pixel) {
         return treeGroundBounds.z > 0.0 && all(greaterThanEqual(pixel, vec2(0.0))) && all(lessThan(pixel, vec2(1.0)));
     }
+    vec2 treeGroundWrappedPixel(vec2 pixel) {
+        vec2 shifted = pixel + treeGroundFieldOrigin;
+        return shifted - step(treeGroundFieldExtent, shifted) * treeGroundFieldExtent;
+    }
+    vec3 treeGroundMaskCell(vec2 pixel) {
+        vec2 wrapped = treeGroundWrappedPixel(pixel);
+        return treeGroundPixel(wrapped + vec2(0.5, ${ATLAS_HEIGHT}.5));
+    }
     float treeGroundDistance(vec2 pixel) {
-        float mask;
-        ${packed ? `
         vec2 maskPixel = clamp(pixel * treeGroundFieldExtent - .5, vec2(0.0), treeGroundFieldExtent - 1.0);
-        ivec2 lo = ivec2(maskPixel);
-        ivec2 hi = min(lo + 1, ivec2(treeGroundFieldExtent) - 1);
+        vec2 lo = floor(maskPixel);
+        vec2 hi = min(lo + 1.0, treeGroundFieldExtent - 1.0);
         vec2 f = fract(maskPixel);
-        float a = mix(treeGroundPackedDistance(lo), treeGroundPackedDistance(ivec2(hi.x, lo.y)), f.x);
-        float b = mix(treeGroundPackedDistance(ivec2(lo.x, hi.y)), treeGroundPackedDistance(hi), f.x);
-        mask = mix(a, b, f.y);` : `
-        vec2 uv = pixel * treeGroundFieldExtent + vec2(0.0, ${ATLAS_HEIGHT}.0);
-        mask = treeGroundPixel(uv).r;`}
+        ${packed ? '' : `
+        vec2 wrapped = treeGroundWrappedPixel(lo);
+        if (all(lessThan(wrapped, treeGroundFieldExtent - 1.0)) || all(equal(lo, hi))) {
+            float mask = treeGroundPixel(wrapped + f + vec2(.5, ${ATLAS_HEIGHT}.5)).r;
+            return ${TREE_SNOW_OUTSIDE_DISTANCE} - mask * ${TREE_SNOW_DISTANCE_RANGE}.0;
+        }`}
+        float a = mix(treeGroundMaskCell(lo).r, treeGroundMaskCell(vec2(hi.x, lo.y)).r, f.x);
+        float b = mix(treeGroundMaskCell(vec2(lo.x, hi.y)).r, treeGroundMaskCell(hi).r, f.x);
+        float mask = mix(a, b, f.y);
         return ${TREE_SNOW_OUTSIDE_DISTANCE} - mask * ${TREE_SNOW_DISTANCE_RANGE}.0;
     }
 `
@@ -190,13 +250,18 @@ export class TreeGroundSurface {
     private readonly bounds = new Vector4(0, 0, 0, 0)
     private readonly texel = new Vector2(0, 0)
     private readonly fieldExtent = new Vector2(0, 0)
+    private readonly fieldOrigin = new Vector2(0, 0)
+    private readonly stamps = new Map<TreeSnowFootprint, SnowStamp>()
     private texture: RawTexture
     private pixels = new Uint8Array(4)
+    private uploadPixels = new Uint8Array()
     private atlas?: Uint8ClampedArray
     private packedField?: TerrainStepField
     private map?: GroundTile[][]
     private revision?: number
     private snowCoverMask?: ReadonlySet<number>
+    private region?: TreeSnowRegion
+    private treeRevision?: number
     private key = ''
     private disposed = false
 
@@ -247,12 +312,29 @@ export class TreeGroundSurface {
         if (this.atlas && this.bounds.z > 0) this.packedField?.updateTreeGround(this.pixels, width, height)
     }
 
+    private uploadBands(bands: readonly TreeGroundTextureRect[], width: number, height: number) {
+        const engine = this.scene.getEngine() as Engine
+        for (const band of bands) {
+            const stride = band.width * 4
+            const length = stride * band.height
+            if (this.uploadPixels.length < length) this.uploadPixels = new Uint8Array(length)
+            for (let z = 0; z < band.height; z++) {
+                const start = ((band.y + z) * width + band.x) * 4
+                this.uploadPixels.set(this.pixels.subarray(start, start + stride), z * stride)
+            }
+            engine.updateTextureData(this.texture.getInternalTexture()!, this.uploadPixels.subarray(0, length),
+                band.x, band.y, band.width, band.height)
+        }
+        if (this.atlas) this.packedField?.updateTreeGround(this.pixels, width, height, bands)
+    }
+
     configure(material: CustomMaterial | PBRCustomMaterial, packedField?: TerrainStepField) {
         if (packedField) material.AddUniform('treeGroundStepRow', 'float', null)
         else material.AddUniform('treeGroundTexture', 'sampler2D', null)
         material.AddUniform('treeGroundBounds', 'vec4', this.bounds)
         material.AddUniform('treeGroundTexel', 'vec2', this.texel)
         material.AddUniform('treeGroundFieldExtent', 'vec2', this.fieldExtent)
+        material.AddUniform('treeGroundFieldOrigin', 'vec2', this.fieldOrigin)
         const attach = material.AttachAfterBind.bind(material)
         material.AttachAfterBind = (mesh, effect) => {
             attach(mesh, effect)
@@ -295,8 +377,8 @@ export class TreeGroundSurface {
                 && snowGlintCoverage > 0.008 && geometricNormalW.y > 0.70) {
                 vec2 fieldUV = treeGroundFieldPixel(vPositionW.xz);
                 if (treeGroundInField(fieldUV)) {
-                    vec2 pixel = floor(fieldUV * treeGroundFieldExtent) + vec2(0.5, ${ATLAS_HEIGHT}.5);
-                    float groundType = floor(treeGroundPixel(pixel).g * 5.0 + 0.5);
+                    vec2 pixel = floor(fieldUV * treeGroundFieldExtent);
+                    float groundType = floor(treeGroundMaskCell(pixel).g * 5.0 + 0.5);
                     if (groundType > 0.0) {
                         vec2 contour = treeGroundSnowContour(fieldUV, vPositionW.xz);
                         float clearance = 1.0 - smoothstep(-contour.y, contour.y, contour.x);
@@ -318,63 +400,123 @@ export class TreeGroundSurface {
         `)
     }
 
-    update(map: GroundTile[][], footprints: readonly TreeSnowFootprint[], revision?: number, snowCoverMask?: ReadonlySet<number>) {
-        const key = JSON.stringify(footprints)
-        if (map === this.map && key === this.key && revision === this.revision && snowCoverMask === this.snowCoverMask) return
+    update(map: GroundTile[][], footprints: readonly TreeSnowFootprint[], revision?: number, snowCoverMask?: ReadonlySet<number>,
+        region?: TreeSnowRegion, treeRevision?: number) {
+        const key = JSON.stringify([region, footprints])
+        const sameWorld = map === this.map && revision === this.revision && snowCoverMask === this.snowCoverMask
+            && treeRevision === this.treeRevision
+        if (sameWorld && key === this.key) return
+        const previous = this.region
+        const wasActive = this.bounds.z > 0
+        this.region = region
+        this.treeRevision = treeRevision
         this.map = map
         this.revision = revision
         this.snowCoverMask = snowCoverMask
         this.key = key
         if (!footprints.length) {
             this.bounds.set(0, 0, 0, 0)
+            this.stamps.clear()
             return
         }
+        const active = new Set(footprints)
+        for (const foot of this.stamps.keys()) if (!active.has(foot)) this.stamps.delete(foot)
 
-        const reach = (foot: TreeSnowFootprint) => foot.reach
-        // Tile boundaries align with texel boundaries. Leave a blank border for bilinear filtering.
-        const left = Math.floor(Math.min(...footprints.map(foot => foot.x - reach(foot)))) - .5
-        const top = Math.floor(Math.min(...footprints.map(foot => foot.z - reach(foot)))) - .5
-        const spanX = Math.ceil(Math.max(...footprints.map(foot => foot.x + reach(foot)))) + .5 - left
-        const spanZ = Math.ceil(Math.max(...footprints.map(foot => foot.z + reach(foot)))) + .5 - top
+        // Gameplay uses a padded world-space window. Preview bounds follow the specimen plots.
+        if (!region) {
+            const left = Math.floor(Math.min(...footprints.map(foot => foot.x - foot.reach))) - .5
+            const top = Math.floor(Math.min(...footprints.map(foot => foot.z - foot.reach))) - .5
+            region = {left, top, width: Math.ceil(Math.max(...footprints.map(foot => foot.x + foot.reach))) + .5 - left,
+                depth: Math.ceil(Math.max(...footprints.map(foot => foot.z + foot.reach))) + .5 - top}
+        }
+        const {left, top, width: spanX, depth: spanZ} = region
         const samples = Math.min(SAMPLES_PER_TILE, Math.max(1, Math.floor(MAX_SAMPLES_PER_AXIS / Math.max(spanX, spanZ))))
-        const width = Math.round(spanX * samples)
-        const depth = Math.round(spanZ * samples)
+        const width = spanX * samples
+        const depth = spanZ * samples
         const texWidth = Math.max(ATLAS_WIDTH, Math.ceil(width / 64) * 64)
         const texHeight = ATLAS_HEIGHT + Math.ceil(depth / 64) * 64
         const current = this.texture.getSize()
-        if (current.width !== texWidth || current.height !== texHeight) this.resize(texWidth, texHeight)
-        else this.pixels.fill(0, ATLAS_HEIGHT * texWidth * 4)
-        for (const foot of footprints) {
-            const radius = reach(foot)
-            const minZ = Math.max(0, Math.floor((foot.z - radius - top) * samples))
-            const maxZ = Math.min(depth, Math.ceil((foot.z + radius - top) * samples))
-            const minX = Math.max(0, Math.floor((foot.x - radius - left) * samples))
-            const maxX = Math.min(width, Math.ceil((foot.x + radius - left) * samples))
-            for (let z = minZ; z < maxZ; z++) {
-                const worldZ = top + (z + .5) / samples
-                const tileZ = Math.floor(worldZ + .5)
-                for (let x = minX; x < maxX; x++) {
-                    const worldX = left + (x + .5) / samples
-                    const tileX = Math.floor(worldX + .5)
-                    const tile = map[tileX]?.[tileZ]
-                    if (!tile || Math.abs(tile.height - foot.height) > .05) continue
-                    const type = treeGroundType(tile)
-                    if (!type) continue
-                    const distance = treeSnowDistance(worldX - foot.x, worldZ - foot.z, foot)
-                    const intensity = Math.min(255, Math.max(0, Math.round(
-                        255 * (TREE_SNOW_OUTSIDE_DISTANCE - distance) / TREE_SNOW_DISTANCE_RANGE)))
-                    const index = ((z + ATLAS_HEIGHT) * texWidth + x) * 4
-                    if (isSnowRoof(tile) && !snowCoverMask?.has(tileX * map.length + tileZ)) this.pixels[index + 2] = 255
-                    if (intensity > this.pixels[index]) {
-                        this.pixels[index] = intensity
-                        this.pixels[index + 1] = type * 51
+        const resize = current.width !== texWidth || current.height !== texHeight
+        const dx = left - (previous?.left ?? left)
+        const dz = top - (previous?.top ?? top)
+        const shift = sameWorld && wasActive && !resize && !!this.region && previous && previous.width === spanX
+            && previous.depth === spanZ && (dx !== 0 || dz !== 0) && Math.abs(dx) < spanX && Math.abs(dz) < spanZ
+        const bands = shift && previous ? newTreeSnowBands(region, previous) : [region]
+        // Sliding the logical origin keeps overlapping world texels at the same GPU addresses.
+        if (shift) this.fieldOrigin.set(wrap(this.fieldOrigin.x + dx * samples, width),
+            wrap(this.fieldOrigin.y + dz * samples, depth))
+        else this.fieldOrigin.set(0, 0)
+        this.fieldExtent.set(width, depth)
+        this.bounds.set(left, top, 1 / spanX, 1 / spanZ)
+        if (resize) this.resize(texWidth, texHeight)
+        const uploads: TreeGroundTextureRect[] = []
+        for (const band of bands) {
+            for (const rect of this.textureBands(band, region, samples)) {
+                for (let row = rect.y; row < rect.y + rect.height; row++) {
+                    const start = (row * texWidth + rect.x) * 4
+                    this.pixels.fill(0, start, start + rect.width * 4)
+                }
+                uploads.push(rect)
+            }
+            for (const foot of footprints) this.paintBand(foot, band, region, map, snowCoverMask, samples, texWidth)
+        }
+        if (shift) this.uploadBands(uploads, texWidth, texHeight)
+        else this.upload(texWidth, texHeight)
+    }
+
+    private textureBands(band: TreeSnowRegion, region: TreeSnowRegion, samples: number) {
+        const {x: ox, y: oy} = this.fieldOrigin
+        const {x: width, y: depth} = this.fieldExtent
+        const x = wrap((band.left - region.left) * samples + ox, width)
+        const y = wrap((band.top - region.top) * samples + oy, depth)
+        const w = band.width * samples, h = band.depth * samples
+        const firstWidth = Math.min(w, width - x), firstHeight = Math.min(h, depth - y)
+        const rectangles: TreeGroundTextureRect[] = [{x, y: y + ATLAS_HEIGHT, width: firstWidth, height: firstHeight}]
+        if (w > firstWidth) rectangles.push({x: 0, y: y + ATLAS_HEIGHT, width: w - firstWidth, height: firstHeight})
+        if (h > firstHeight) {
+            rectangles.push({x, y: ATLAS_HEIGHT, width: firstWidth, height: h - firstHeight})
+            if (w > firstWidth) rectangles.push({x: 0, y: ATLAS_HEIGHT, width: w - firstWidth, height: h - firstHeight})
+        }
+        return rectangles
+    }
+
+    private paintBand(foot: TreeSnowFootprint, band: TreeSnowRegion, region: TreeSnowRegion, map: GroundTile[][],
+        snowCoverMask: ReadonlySet<number> | undefined, samples: number, texWidth: number) {
+        const radiusInTiles = Math.floor(foot.reach + .5)
+        const minTileX = Math.max(band.left + .5, foot.x - radiusInTiles)
+        const minTileZ = Math.max(band.top + .5, foot.z - radiusInTiles)
+        const maxTileX = Math.min(band.left + band.width - .5, foot.x + radiusInTiles)
+        const maxTileZ = Math.min(band.top + band.depth - .5, foot.z + radiusInTiles)
+        if (minTileX > maxTileX || minTileZ > maxTileZ) return
+        const stamp = getSnowStamp(this.stamps, foot, samples, radiusInTiles)
+        for (let tileX = minTileX; tileX <= maxTileX; tileX++) {
+            const row = map[tileX]
+            if (!row) continue
+            for (let tileZ = minTileZ; tileZ <= maxTileZ; tileZ++) {
+                const tile = row[tileZ]
+                if (!tile || Math.abs(tile.height - foot.height) > .05) continue
+                const type = treeGroundType(tile)
+                if (!type) continue
+                const snowy = isSnowRoof(tile) && !snowCoverMask?.has(tileX * map.length + tileZ)
+                if (!snowy && !stamp) continue
+                const paintX = wrap((tileX - region.left - .5) * samples + this.fieldOrigin.x, this.fieldExtent.x)
+                const paintZ = wrap((tileZ - region.top - .5) * samples + this.fieldOrigin.y, this.fieldExtent.y) + ATLAS_HEIGHT
+                const stampX = (tileX - foot.x + radiusInTiles) * samples
+                const stampZ = (tileZ - foot.z + radiusInTiles) * samples
+                for (let z = 0; z < samples; z++) {
+                    let pixel = ((paintZ + z) * texWidth + paintX) * 4
+                    let source = stamp ? (stampZ + z) * stamp.width + stampX : 0
+                    for (let x = 0; x < samples; x++, pixel += 4) {
+                        if (snowy) this.pixels[pixel + 2] = 255
+                        const intensity = stamp ? stamp.values[source++] : 0
+                        if (intensity > this.pixels[pixel]) {
+                            this.pixels[pixel] = intensity
+                            this.pixels[pixel + 1] = type * 51
+                        }
                     }
                 }
             }
         }
-        this.fieldExtent.set(width, depth)
-        this.bounds.set(left, top, 1 / spanX, 1 / spanZ)
-        this.upload(texWidth, texHeight)
     }
 }
 
@@ -400,8 +542,8 @@ export const treeRootGroundShader = (snow: boolean) => `
         if (baseSnow > 0.1 && y < 0.23) {
             vec2 fieldUV = treeGroundFieldPixel(p.xz);
             if (treeGroundInField(fieldUV)) {
-                vec2 pixel = floor(fieldUV * treeGroundFieldExtent) + vec2(0.5, ${ATLAS_HEIGHT}.5);
-                if (treeGroundPixel(pixel).b > 0.5) {
+                vec2 pixel = floor(fieldUV * treeGroundFieldExtent);
+                if (treeGroundMaskCell(pixel).b > 0.5) {
                     float cleared = 0.0;
                     if (baseSnow < 0.99) {
                         vec2 contour = treeGroundSnowContour(fieldUV, p.xz);

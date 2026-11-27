@@ -7,7 +7,7 @@ import { ViewportManager } from '@/utils/viewport'
 import { Settings } from '@/settings/settings'
 import { TERRAIN_ATLAS_REGION_SIZE } from './terrainAtlasPlacement'
 import { getTreeGroundSurface } from './trees/treeGroundSurface'
-import type { TreeSnowFootprint } from './trees/treeGroundSurface'
+import type { TreeSnowFootprint, TreeSnowRegion } from './trees/treeGroundSurface'
 import { TERRAIN_RENDER_BORDER, visitBakedPaving } from './terrainRenderData'
 import type { TerrainRenderData } from './terrainRenderData'
 import { createTerrainSurfaceRenderer } from '@/adminUtils/terrainSurfaceRenderer'
@@ -223,8 +223,8 @@ export function createOutdoorTerrain(parent: TransformNode, fixedView?: TerrainV
 
     return {
         grass,
-        updateTreeSnow(footprints: readonly TreeSnowFootprint[]) {
-            if (currentMap) treeGround.update(currentMap, footprints, terrainRevision, previousSnow)
+        updateTreeSnow(footprints: readonly TreeSnowFootprint[], region: TreeSnowRegion | undefined, treeRevision: number) {
+            if (currentMap) treeGround.update(currentMap, footprints, terrainRevision, previousSnow, region, treeRevision)
         },
         isSurfaceMesh(mesh: AbstractMesh) { return batches.has(mesh as Mesh) },
         getGrassStats() { return terrain.isEnabled() ? grassStats : undefined },

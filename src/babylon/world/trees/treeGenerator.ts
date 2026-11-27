@@ -432,9 +432,12 @@ export class TreeVariants {
         return variants[slot] ??= generateTree(kind, seed, this.budgetMultiplier, this.usePrototype)
     }
 
-    warmUp() {
+    warmUp(prepare?: (variant: TreeVariant) => void) {
         for (const kind of Object.keys(TREE_SPECIES) as TreeSpecies[]) {
-            for (let slot = 0; slot < TREE_VARIANT_COUNT; slot++) this.get(kind, slot)
+            for (let slot = 0; slot < TREE_VARIANT_COUNT; slot++) {
+                const variant = this.get(kind, slot)
+                prepare?.(variant)
+            }
         }
     }
 }

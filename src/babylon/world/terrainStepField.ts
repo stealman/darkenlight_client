@@ -5,6 +5,7 @@ import { Settings } from '@/settings/settings'
 import { fightSplatShader, MAX_FIGHT_SPLATS } from './fightSplatShader'
 import type { TerrainSplat } from './fightSplatShader'
 import { MAX_TREE_GROUND_TEXTURE_HEIGHT } from './trees/treeGroundSurface'
+import type { TreeGroundTextureRect } from './trees/treeGroundSurface'
 
 export const MAX_STEP_MARKS = 250
 export const MAX_SOIL_STEPS = 100
@@ -54,6 +55,7 @@ export class TerrainStepField {
     private treeGroundPixels?: Uint8Array
     private treeGroundWidth = 0
     private treeGroundHeight = 0
+    private treeGroundUpload = new Float32Array()
     // Upload seconds relative to scene startup to keep the fade precise in a float.
     private readonly timeOrigin = Date.now()
     private time = 0
@@ -79,13 +81,19 @@ export class TerrainStepField {
     }
 
     get treeGroundStartRow() {
-        return MARK_ROWS + this.shadowHeight
+        return MARK_ROWS
+    }
+
+    private get shadowStartRow() {
+        return this.treeGroundStartRow + this.treeGroundHeight
     }
 
     private resizePackedTexture() {
-        const width = Math.max(ROW_SIZE, this.shadowWidth, this.treeGroundWidth)
-        const height = this.treeGroundStartRow + this.treeGroundHeight
         const size = this.texture.getSize()
+        const maxSize = this.engine.getCaps().maxTextureSize
+        const width = Math.max(size.width, this.shadowWidth, this.treeGroundWidth)
+        const requiredHeight = this.shadowStartRow + this.shadowHeight
+        const height = Math.max(size.height, Math.min(maxSize, Math.ceil(requiredHeight / 64) * 64))
         if (size.width === width && size.height === height) return false
         this.textureData = new Float32Array(width * height)
         this.copyMarkRows(this.data, 0, STEP_ROWS, width)
@@ -105,19 +113,31 @@ export class TerrainStepField {
         if (!this.resizePackedTexture()) {
             const stride = this.texture.getSize().width
             this.writeShadowRows(stride)
-            this.uploadRows(MARK_ROWS, height, stride)
+            this.uploadRows(this.shadowStartRow, height, stride)
         }
     }
 
-    updateTreeGround(pixels: Uint8Array, width: number, height: number) {
+    updateTreeGround(pixels: Uint8Array, width: number, height: number, bands?: readonly TreeGroundTextureRect[]) {
         // Keep the terrain's fragment sampler count fixed even with all shadow maps active.
+        const previousShadowRow = this.shadowStartRow
         this.treeGroundPixels = pixels
         this.treeGroundWidth = width
         this.treeGroundHeight = height
         if (!this.resizePackedTexture()) {
             const stride = this.texture.getSize().width
-            this.writeTreeGroundRows(stride)
-            this.uploadRows(this.treeGroundStartRow, height, stride)
+            if (bands && previousShadowRow === this.shadowStartRow) {
+                for (const band of bands) {
+                    this.writeTreeGroundRows(stride, band)
+                    this.uploadTreeGroundBand(band, stride)
+                }
+            } else {
+                this.writeTreeGroundRows(stride)
+                this.uploadRows(this.treeGroundStartRow, height, stride)
+            }
+            if (this.shadowHeight && previousShadowRow !== this.shadowStartRow) {
+                this.writeShadowRows(stride)
+                this.uploadRows(this.shadowStartRow, this.shadowHeight, stride)
+            }
         }
     }
 
@@ -125,23 +145,38 @@ export class TerrainStepField {
         const mask = this.shadowMask
         if (!mask) return
         for (let z = 0; z < this.shadowHeight; z++) {
-            const row = (MARK_ROWS + z) * stride
+            const row = (this.shadowStartRow + z) * stride
             for (let x = 0; x < this.shadowWidth; x++) this.textureData[row + x] = mask[z * this.shadowWidth + x] / 255
         }
     }
 
-    private writeTreeGroundRows(stride: number) {
+    private writeTreeGroundRows(stride: number, band?: TreeGroundTextureRect) {
         const pixels = this.treeGroundPixels
         if (!pixels) return
         const width = this.treeGroundWidth
-        for (let z = 0; z < this.treeGroundHeight; z++) {
+        const left = band?.x ?? 0, top = band?.y ?? 0
+        const right = left + (band?.width ?? width), bottom = top + (band?.height ?? this.treeGroundHeight)
+        const rgba = new DataView(pixels.buffer, pixels.byteOffset, pixels.byteLength)
+        for (let z = top; z < bottom; z++) {
             const row = (this.treeGroundStartRow + z) * stride
-            for (let x = 0; x < width; x++) {
-                const i = (z * width + x) * 4
+            for (let x = left; x < right; x++) {
                 // An R32F texel holds the three 8-bit channels exactly.
-                this.textureData[row + x] = pixels[i] | (pixels[i + 1] << 8) | (pixels[i + 2] << 16)
+                this.textureData[row + x] = rgba.getUint32((z * width + x) * 4, true) & 0xffffff
             }
         }
+    }
+
+    private uploadTreeGroundBand(band: TreeGroundTextureRect, stride: number) {
+        const {x, y, width, height} = band
+        const startRow = this.treeGroundStartRow + y
+        const length = width * height
+        if (this.treeGroundUpload.length < length) this.treeGroundUpload = new Float32Array(length)
+        for (let row = 0; row < height; row++) {
+            const start = (startRow + row) * stride + x
+            this.treeGroundUpload.set(this.textureData.subarray(start, start + width), row * width)
+        }
+        this.engine.updateTextureData(this.texture.getInternalTexture()!, this.treeGroundUpload.subarray(0, length),
+            x, startRow, width, height)
     }
 
     private uploadRows(start: number, rows: number, width: number) {
@@ -330,6 +365,7 @@ export class TerrainStepField {
         material.AddUniform('terrainStepTime', 'float', null)
         material.AddUniform('terrainStepsActive', 'vec2', null)
         material.AddUniform('terrainStepShadowSize', 'vec2', null)
+        material.AddUniform('terrainStepShadowRow', 'float', null)
         material.AddUniform('terrainStepWetnessEnabled', 'float', null)
         material.AddUniform('terrainSplatsActive', 'float', null)
         const attach = material.AttachAfterBind.bind(material)
@@ -340,6 +376,7 @@ export class TerrainStepField {
             effect.setFloat('terrainStepTime', this.time)
             effect.setFloat2('terrainStepsActive', Number(marksEnabled && this.snowActive), Number(marksEnabled && this.soilActive))
             effect.setFloat2('terrainStepShadowSize', this.shadowWidth, this.shadowHeight)
+            effect.setFloat('terrainStepShadowRow', this.shadowStartRow)
             effect.setFloat('terrainStepWetnessEnabled', Number(this.wetSteps))
             effect.setFloat('terrainSplatsActive', Number(marksEnabled && this.splatsActive))
         }
@@ -366,7 +403,7 @@ export class TerrainStepField {
 
             float stepContactShadowTexel(ivec2 p) {
                 p = clamp(p, ivec2(0), ivec2(terrainStepShadowSize) - 1);
-                return texelFetch(terrainStepData, p + ivec2(0, ${MARK_ROWS}), 0).r;
+                return texelFetch(terrainStepData, p + ivec2(0, int(terrainStepShadowRow)), 0).r;
             }
 
             float stepContactShadow(vec2 uv) {
