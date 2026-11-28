@@ -1,5 +1,4 @@
 import { AssetContainer, Color3, Mesh, PBRMaterial, SceneLoader, Texture } from '@babylonjs/core'
-import type { Geometry } from '@babylonjs/core'
 import { Materials } from '@/babylon/materials'
 import { MonsterType } from '@/babylon/monsters/codebook/monsterCodebook'
 import { MonsterTemplate, MonsterTemplates } from '@/babylon/monsters/codebook/monsterTemplates'
@@ -12,7 +11,6 @@ export const MonsterLoader = {
     monstersMeshes: [] as Mesh[],
     monsterTemplates: new Map<number, MonsterTemplate>(),
     modelContainers: new Map<string, AssetContainer>(),
-    koboldLodByGeometry: import.meta.env.DEV ? new Map<Geometry, 1 | 2 | 3>() : undefined,
     shavedSheepMaterial: null as PBRMaterial | null,
     selectedShavedSheepMaterial: null as PBRMaterial | null,
 
@@ -20,7 +18,6 @@ export const MonsterLoader = {
         this.monstersMeshes = []
         this.monsterTemplates.clear()
         this.modelContainers.clear()
-        this.koboldLodByGeometry?.clear()
         this.shavedSheepMaterial = null
         this.selectedShavedSheepMaterial = null
         for (const key in MonsterTemplates) {
@@ -59,7 +56,6 @@ export const MonsterLoader = {
                 || far.getTotalIndices() >= near.getTotalIndices() || !nearBones || !farBones || nearBones.length !== farBones.length
                 || nearBones.some((bone, i) => bone.name !== farBones[i].name || bone.getIndex() !== farBones[i].getIndex())) return
             template.distanceLod = {near: near.geometry, far: far.geometry}
-            if (import.meta.env.DEV) this.koboldLodByGeometry?.set(far.geometry, lod === 1 ? 2 : 3)
         } catch (error) {
             console.warn(`Distance LOD unavailable for ${template.meshName}`, error)
         }
@@ -67,8 +63,7 @@ export const MonsterLoader = {
 
     async loadMonsterMesh (mobType: MonsterTemplate) {
         const path = '/models/monsters/' + mobType.meshName
-        const url = modelAssetUrl(path, Renderer.scene)
-        const assetContainer = await this.getModelContainer(url)
+        const assetContainer = await this.getModelContainer(modelAssetUrl(path, Renderer.scene))
 
         const material = Materials.getPBRMaterial(Renderer.scene, mobType.getMaterialName(), "/models/monsters/" + mobType.textureName, true, false, {
             metallic: 0,
@@ -95,15 +90,6 @@ export const MonsterLoader = {
         // for all their skins so back-face culling does not leave visible holes.
         if ([MonsterTemplates.KOBOLD.meshName, MonsterTemplates.KOBOLD_2.meshName].includes(mobType.meshName)) {
             material.backFaceCulling = false
-            if (import.meta.env.DEV) {
-                const lod = Settings.detailLevel.modelLod
-                const variant = __MODEL_ASSET_URLS__[path.replace(/\.gltf$/, `_lod${lod}.gltf`)]
-                for (const mesh of assetContainer.meshes) {
-                    if (mesh instanceof Mesh && mesh.geometry) {
-                        this.koboldLodByGeometry?.set(mesh.geometry, url === variant ? lod : 1)
-                    }
-                }
-            }
         }
         // Match the equipment materials' range-based attenuation. Babylon's
         // physical inverse-square falloff makes this short local light fade

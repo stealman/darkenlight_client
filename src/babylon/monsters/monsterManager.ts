@@ -21,13 +21,11 @@ export const MonsterManager = {
     monsters: new Map as Map<number, Monster>,
     killedMonsters: new Set<Monster>,
     visibleMonsters: new Set<number>(),
-    lastKoboldLodLogAt: 0,
 
     async initialize () {
         this.monsters = new Map<number, Monster>()
         this.killedMonsters = new Set<Monster>()
         this.visibleMonsters = new Set<number>()
-        this.lastKoboldLodLogAt = 0
         await MonsterLoader.initialize()
     },
 
@@ -223,20 +221,6 @@ export const MonsterManager = {
                 monster.setVisible(visible)
                 if (visible) monster.model.updateDistanceLod()
             })
-        }
-
-        const koboldLods = MonsterLoader.koboldLodByGeometry
-        if (koboldLods && actualTime - this.lastKoboldLodLogAt >= 1000) {
-            this.lastKoboldLodLogAt = actualTime
-            const counts = [0, 0, 0, 0]
-            for (const monster of this.monsters.values()) {
-                const model = monster.model
-                if (!monster.insideView || !model.initialized || !model.mesh.isEnabled()) continue
-                const geometry = model.mesh.geometry
-                const lod = geometry && koboldLods.get(geometry)
-                if (lod) counts[lod]++
-            }
-            console.log(`[Kobold LOD] LOD1: ${counts[1]} | LOD2: ${counts[2]} | LOD3: ${counts[3]}`)
         }
 
         this.monsters.forEach(monster => {
