@@ -234,28 +234,30 @@ function updateDynamicShadowMode(host: DayNightLightingHost, phase: number) {
     const personalShadowActive = host.indoor
         || phase < SUNRISE_SHADOW_SWITCH_PHASE
         || phase >= SUNSET_SHADOW_SWITCH_PHASE
-    setDynamicShadowActive(host.shadow, !personalShadowActive, host.sunShadowDarkness)
+    const refreshIntervalScale = Settings.isDetailLevelMedium() ? 2 : 1
+    setDynamicShadowActive(host.shadow, !personalShadowActive, host.sunShadowDarkness, refreshIntervalScale)
     setDynamicShadowActive(
         host.personalShadow,
         personalShadowActive,
         host.indoor ? INDOOR_PERSONAL_SHADOW_DARKNESS : OUTDOOR_PERSONAL_SHADOW_DARKNESS,
-        personalShadowActive ? getPersonalShadowRefreshRate(host) : undefined,
+        personalShadowActive ? getPersonalShadowRefreshRate(host, refreshIntervalScale) : 0,
     )
 }
 
-function getPersonalShadowRefreshRate(host: DayNightLightingHost) {
+function getPersonalShadowRefreshRate(host: DayNightLightingHost, refreshIntervalScale: number) {
     host.personalLight.computeTransformedInformation()
     const lightPosition = host.personalLight.getAbsolutePosition()
     const previous = host.personalShadowLightPosition
     const moved = !Number.isFinite(previous.x) || Vector3.DistanceSquared(lightPosition, previous) > 0.000001
     previous.copyFrom(lightPosition)
-    return moved ? RenderTargetTexture.REFRESHRATE_RENDER_ONEVERYFRAME
-        : intermittentShadowRefreshRate(host.personalLight.getScene().getEngine().getFps(),
-            host.personalShadow.getShadowMap()?.refreshRate ?? 0)
+    if (moved) return refreshIntervalScale
+
+    const currentInterval = host.personalShadow.getShadowMap()?.refreshRate ?? 0
+    return refreshIntervalScale * intermittentShadowRefreshRate(
+        host.personalLight.getScene().getEngine().getFps(), currentInterval / refreshIntervalScale)
 }
 
-function setDynamicShadowActive(shadow: ShadowGenerator, active: boolean, activeDarkness: number,
-    activeRefreshRate = RenderTargetTexture.REFRESHRATE_RENDER_ONEVERYFRAME) {
+function setDynamicShadowActive(shadow: ShadowGenerator, active: boolean, activeDarkness: number, activeRefreshRate: number) {
     const darkness = active ? activeDarkness : 1
     const activated = active && shadow.getDarkness() === 1
     if (shadow.getDarkness() !== darkness) {

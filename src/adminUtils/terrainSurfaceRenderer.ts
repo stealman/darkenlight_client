@@ -19,7 +19,7 @@ import type { SubmitTerrainBatch } from './terrainPreviewBatch'
 import { PAVING_SNOW_ATTRIBUTE, PAVING_SNOW_FLAG_SHIFT } from './terrainPreviewBatch'
 import { createTerrainPreviewGeometry } from './terrainPreviewGeometry'
 import { createTerrainPreviewWater } from './terrainPreviewWater'
-import { createTerrainJunctionMaterial, createTerrainTransitionMaterial, POND_BANK_FLAG, TERRAIN_TRANSITION_REACH } from './terrainTransitionMaterial'
+import { createTerrainJunctionMaterial, createTerrainTransitionMaterial, POND_BANK_FLAG, TERRAIN_JUNCTION_BASE_SHIFT, TERRAIN_TRANSITION_REACH } from './terrainTransitionMaterial'
 import type { TerrainJunctionLayer } from './terrainTransitionMaterial'
 import { terrainTextureUrls } from '@/babylon/world/terrainTextureUrls'
 import { getTreeGroundSurface } from '@/babylon/world/trees/treeGroundSurface'
@@ -220,16 +220,13 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
     addJunctionLayer(SNOW_DIRT, 'snow', snowAtlas.material)
     for (const {type, atlas} of grassAtlases) addJunctionLayer(type, 'grass', atlas.material)
     const junctions = new Map<string, {mesh: Mesh, surfaces: number[]}>()
-    const junctionFor = (first: TerrainBoundaryField, second: TerrainBoundaryField) => {
-        const base = sharedTerrainSurface(first, second)
-        const other = (pair: TerrainBoundaryField) => pair.coverType === base ? pair.substrateType : pair.coverType
-        const surfaces = [base, other(first), other(second)]
+    const junctionFor = (surfaces: number[]) => {
         const key = surfaces.join('-')
         let junction = junctions.get(key)
         if (junction) return junction
         const layers = surfaces.map(type => junctionLayers.get(type)!)
         const mesh = createTerrainPreviewPlane(plane, `adminUtilsTerrainJunction-${key}`)
-        const material = createTerrainJunctionMaterial(mesh.name, layers, [first, second], lowDetailTransitions)
+        const material = createTerrainJunctionMaterial(mesh.name, layers, lowDetailTransitions)
         configureTerrainPreviewBatch(mesh, material, false)
         configureTerrainEdgeLighting(material, 'vec2(junctionSoil)')
         if (wetness) {
@@ -253,7 +250,6 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
         junctions.set(key, junction = {mesh, surfaces})
         return junction
     }
-    const pairKey = (pair: TerrainBoundaryField) => pair.coverType * 128 + pair.substrateType
     const render = (map: MapBlock[][], options: TerrainRenderOptions) => {
         const {transitionTiles, snow = false, snowPartner = 0, snowOnRock = false, rockPartner = 0, dirtPartner = 0,
             shoreSurface = 0, grassType = WINTER_GRASS, snowRockOnSoil = false, localBoundaries = true,
@@ -435,10 +431,17 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
                 if (!localTransition && !pondTile && (cover === undefined || !transitionTiles?.[x][z])) return false
                 let firstBoundary: TerrainBoundaryField | undefined = localTransition
                 let secondBoundary = localTransition?.secondary
-                if (firstBoundary && secondBoundary && pairKey(firstBoundary) > pairKey(secondBoundary)) {
-                    [firstBoundary, secondBoundary] = [secondBoundary, firstBoundary]
+                let junction: ReturnType<typeof junctionFor> | undefined
+                let junctionBaseIndex = 0
+                if (firstBoundary && secondBoundary) {
+                    const base = sharedTerrainSurface(firstBoundary, secondBoundary)
+                    const firstOther = firstBoundary.coverType === base ? firstBoundary.substrateType : firstBoundary.coverType
+                    const secondOther = secondBoundary.coverType === base ? secondBoundary.substrateType : secondBoundary.coverType
+                    if (firstOther > secondOther) [firstBoundary, secondBoundary] = [secondBoundary, firstBoundary]
+                    const surfaces = [base, firstOther, secondOther].sort((a, b) => a - b)
+                    junctionBaseIndex = surfaces.indexOf(base)
+                    junction = junctionFor(surfaces)
                 }
-                const junction = firstBoundary && secondBoundary ? junctionFor(firstBoundary, secondBoundary) : undefined
                 const mesh = junction?.mesh ?? localTransition?.material ?? (pondTile ? pondTransition : transitionMesh)
                 const batch = batchFor(mesh)
                 const first = batch.geometry.count
@@ -451,7 +454,7 @@ export function createTerrainSurfaceRenderer(scene: Scene, parent: TransformNode
                 const placedCover = pondTile ? (pondCover === ROCK || pondCover === DIRT ? bank : !bank)
                     : localTransition?.cover ?? cover
                 const paving = snowTransitions.has(mesh) ? pavingFlags(x, z) * PAVING_SNOW_FLAG_SHIFT : 0
-                const flags = junction ? junction.surfaces.indexOf(type) | paving
+                const flags = junction ? junction.surfaces.indexOf(type) + junctionBaseIndex * TERRAIN_JUNCTION_BASE_SHIFT + paving
                     : ((islandMasks?.[x][z] ?? 0) << 1) | (placedCover ? 1 : 0) | (pondTile ? POND_BANK_FLAG : 0) | paving
                 for (let i = first; i < batch.geometry.count; i++) {
                     batch.surfaceData.push(x, z, angle, flags)

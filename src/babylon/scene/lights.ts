@@ -145,13 +145,15 @@ export const Lights = {
             : Settings.deviceType === 'TABLET' ? 13 : 15
 
         if (Settings.isShadowsEnabled()) {
-            this.shadow = new GameShadowGenerator(Settings.detailLevel.shadowQuality == 2 ? 4096 : 2048, this.sunLight, false)
-            this.shadow.usePoissonSampling = true
-            this.shadow.forceBackFacesOnly = true
-            this.personalShadow = new GameShadowGenerator(Settings.detailLevel.shadowQuality == 2 ? 2048 : 1024, this.personalLight, false)
-            this.personalShadow.bias = 0.005
-            this.personalShadow.usePoissonSampling = true
-            this.personalShadow.frustumEdgeFalloff = 0.3
+            const shadow = this.shadow = new GameShadowGenerator(Settings.detailLevel.shadowQuality == 2 ? 4096 : 2048, this.sunLight, false)
+            shadow.trackRenderedTransform = true
+            shadow.usePoissonSampling = true
+            shadow.forceBackFacesOnly = true
+            const personalShadow = this.personalShadow = new GameShadowGenerator(Settings.detailLevel.shadowQuality == 2 ? 2048 : 1024, this.personalLight, false)
+            personalShadow.trackRenderedTransform = true
+            personalShadow.bias = 0.005
+            personalShadow.usePoissonSampling = true
+            personalShadow.frustumEdgeFalloff = 0.3
             this.personalLight.shadowMinZ = 0.05
             this.personalLight.shadowMaxZ = this.personalLight.range
             this.personalLight.shadowEnabled = true

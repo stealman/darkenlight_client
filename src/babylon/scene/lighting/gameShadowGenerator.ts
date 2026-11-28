@@ -1,5 +1,5 @@
 import { ShadowGenerator } from '@babylonjs/core'
-import type { Effect, Scene } from '@babylonjs/core'
+import type { Effect, Matrix, Scene } from '@babylonjs/core'
 
 type ShadowBinding = {
     generator: ShadowGenerator
@@ -12,6 +12,26 @@ type ShadowBinding = {
 const bindingsByScene = new WeakMap<Scene, Map<string, ShadowBinding>>()
 
 export class GameShadowGenerator extends ShadowGenerator {
+    trackRenderedTransform = false
+    private renderedTransform?: Matrix
+    private bindingRenderedTransform = false
+
+    protected override _initializeShadowMap() {
+        super._initializeShadowMap()
+        this.renderedTransform = undefined
+        const shadowMap = this.getShadowMap()
+        shadowMap?.onBeforeRenderObservable.add(() => {
+            if (!this.trackRenderedTransform || shadowMap.refreshRate <= 1) return
+            const transform = super.getTransformMatrix()
+            if (this.renderedTransform) this.renderedTransform.copyFrom(transform)
+            else this.renderedTransform = transform.clone()
+        })
+    }
+
+    override getTransformMatrix() {
+        return (this.bindingRenderedTransform ? this.renderedTransform : undefined) ?? super.getTransformMatrix()
+    }
+
     override bindShadowLight(lightIndex: string, effect: Effect) {
         const scene = this.getLight().getScene()
         let bindings = bindingsByScene.get(scene)
@@ -27,7 +47,13 @@ export class GameShadowGenerator extends ShadowGenerator {
         if (last?.generator === this && last.effect === effect && last.renderId === renderId
             && scene.getCachedEffect() === effect) return
 
-        super.bindShadowLight(lightIndex, effect)
+        // Sample a skipped map with the transform that produced its contents.
+        this.bindingRenderedTransform = this.trackRenderedTransform && (this.getShadowMap()?.refreshRate ?? 0) > 1
+        try {
+            super.bindShadowLight(lightIndex, effect)
+        } finally {
+            this.bindingRenderedTransform = false
+        }
         if (last) {
             last.generator = this
             last.effect = effect

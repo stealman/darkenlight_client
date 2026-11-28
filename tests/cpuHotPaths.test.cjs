@@ -72,6 +72,46 @@ test('shadow bindings are reused only for the same light slot and render pass', 
     ])
 })
 
+test('an intermittent moving shadow samples the transform that rendered its map', () => {
+    const {Matrix, Observable} = require('babylonjs')
+    let renderId = 1
+    const scene = {getRenderId: () => renderId, getCachedEffect: () => effect}
+    const boundPositions = []
+    const effect = {setMatrix: (_, matrix) => boundPositions.push(matrix.getTranslation().x)}
+    class ShadowGenerator {
+        transform = Matrix.Identity()
+        getLight() {return {getScene: () => scene}}
+        _initializeShadowMap() {this.shadowMap = {refreshRate: 2, onBeforeRenderObservable: new Observable()}}
+        getShadowMap() {return this.shadowMap}
+        getTransformMatrix() {return this.transform}
+        bindShadowLight(slot, target) {target.setMatrix(slot, this.getTransformMatrix())}
+    }
+    const {GameShadowGenerator} = loadModule('babylon/scene/lighting/gameShadowGenerator.ts', {
+        '@babylonjs/core': {ShadowGenerator},
+    })
+    const generator = new GameShadowGenerator()
+    generator.trackRenderedTransform = true
+    generator._initializeShadowMap()
+    generator.transform.setTranslationFromFloats(10, 0, 0)
+    generator.getShadowMap().onBeforeRenderObservable.notifyObservers(0)
+    generator.bindShadowLight('0', effect)
+
+    renderId++
+    generator.transform.setTranslationFromFloats(11, 0, 0)
+    generator.bindShadowLight('0', effect)
+    assert.equal(generator.getTransformMatrix().getTranslation().x, 11)
+
+    renderId++
+    generator.getShadowMap().onBeforeRenderObservable.notifyObservers(0)
+    generator.bindShadowLight('0', effect)
+
+    renderId++
+    generator.getShadowMap().refreshRate = 1
+    generator.transform.setTranslationFromFloats(12, 0, 0)
+    generator.bindShadowLight('0', effect)
+    assert.deepEqual(boundPositions, [10, 10, 11, 12])
+})
+
 test('shadow cadence stays stable near a refresh threshold', () => {
     const {intermittentShadowRefreshRate: refreshRate} = loadModule('babylon/scene/lighting/lightConfig.ts', {
         '@babylonjs/core': {Vector3: class {normalize() {return this}}},
@@ -83,6 +123,60 @@ test('shadow cadence stays stable near a refresh threshold', () => {
     assert.equal(refreshRate(151, 4), 4)
     assert.equal(refreshRate(155, 4), 5)
     assert.equal(refreshRate(NaN, 5), 2)
+})
+
+test('medium doubles sun and personal shadow intervals when graphics detail changes', () => {
+    const babylon = require('babylonjs')
+    const engine = new babylon.NullEngine()
+    const scene = new babylon.Scene(engine)
+    try {
+        let detail = 'HIGH'
+        engine.getFps = () => 165
+        const dependencies = {'@babylonjs/core': babylon}
+        const lighting = loadModule('babylon/scene/lighting/dayNightLighting.ts', {
+            ...dependencies,
+            '@/babylon/scene/lighting/lightConfig': loadModule('babylon/scene/lighting/lightConfig.ts', dependencies),
+            '@/babylon/scene/lighting/lightningEffect': {LightningEffect: {apply() {}}},
+            '@/settings/settings': {
+                getBrightnessIntensityFactor: () => 1,
+                Settings: {isShadowsEnabled: () => detail !== 'LOW', isDetailLevelMedium: () => detail === 'MEDIUM'},
+            },
+        })
+        const mockShadow = () => {
+            const map = {refreshRate: 0, resetRefreshCounter() {}}
+            let darkness = 1
+            return {getShadowMap: () => map, getDarkness: () => darkness, setDarkness: value => {darkness = value}}
+        }
+        const host = {
+            sunLight: new babylon.DirectionalLight('sun', new babylon.Vector3(1, -1, 0), scene),
+            personalLight: new babylon.SpotLight('personal', babylon.Vector3.Zero(), babylon.Vector3.Down(), Math.PI / 2, 1, scene),
+            shadow: mockShadow(), personalShadow: mockShadow(), sunShadowDarkness: 0, indoor: false,
+            personalShadowLightPosition: new babylon.Vector3(NaN, NaN, NaN), buildingInteriorBlend: 0,
+            getEnvironmentIntensity: () => 1, updateSharedLightMeshes() {}, updateActorLightMeshes() {},
+        }
+        const synchronize = phase => lighting.synchronizeDayNightCycle(host, {day: 1, phase, cycleDurationMs: 3600000, paused: true})
+        const rates = () => [host.shadow.getShadowMap().refreshRate, host.personalShadow.getShadowMap().refreshRate]
+
+        synchronize(lighting.dayNightPreviewPhases.DAY)
+        assert.deepEqual(rates(), [1, 0])
+        detail = 'MEDIUM'
+        lighting.updateDayNightLighting(host)
+        assert.deepEqual(rates(), [2, 0])
+
+        synchronize(lighting.dayNightPreviewPhases.NIGHT)
+        assert.deepEqual(rates(), [0, 2])
+        lighting.updateDayNightLighting(host)
+        assert.deepEqual(rates(), [0, 10])
+        detail = 'HIGH'
+        lighting.updateDayNightLighting(host)
+        assert.deepEqual(rates(), [0, 5])
+        host.personalLight.position.x++
+        lighting.updateDayNightLighting(host)
+        assert.deepEqual(rates(), [0, 1])
+    } finally {
+        scene.dispose()
+        engine.dispose()
+    }
 })
 
 test('world shaders overlap across materials and warm the depth pre-pass in isolation', async () => {
@@ -591,19 +685,19 @@ test('tree reveal and night lighting update without rebuilding geometry', async 
     await trees.initialize({onDisposeObservable: {addOnce() {}}}, null)
     trees.onFrame()
     assert.deepEqual(casters, [[false, false], [true, true], [true, true]])
-    assert.deepEqual(nightFill.asArray(), [0, .1])
+    assert.deepEqual(nightFill.asArray(), [0, .05])
     assert.deepEqual(reveals[0].asArray(), [2, 1.1, 3])
     assert.deepEqual(reveals[1].asArray(), [8, 1 + 3 * .55, 9])
     assert.equal(reveals[4], 3 * .60)
     targeting.selectedTarget = player
     lights.daylightFactor = 0
     trees.onFrame()
-    assert.deepEqual(nightFill.asArray(), [1, .1])
+    assert.deepEqual(nightFill.asArray(), [1, .05])
     assert.equal(reveals.length, 1)
     myPlayer.myModel = null
     lights.indoor = true
     trees.onFrame()
-    assert.deepEqual(nightFill.asArray(), [0, .1])
+    assert.deepEqual(nightFill.asArray(), [0, .05])
     assert.deepEqual(reveals, [null])
     assert.equal(rebuilds, 0)
 })

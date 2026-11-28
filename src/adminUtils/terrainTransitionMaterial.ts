@@ -6,13 +6,14 @@ import { LOCAL_TRANSITION_NOISE_PERIOD, NOISE_QUARTER_PERIOD, terrainTransitionN
 import { terrainCoverPatterns } from './terrainAtlasPreview'
 import { POND_DISTANCE_RANGE } from '@/babylon/world/terrainWaterMaterial'
 import type { createTerrainPreviewWater } from './terrainPreviewWater'
-import type { TerrainBoundaryField } from '@/babylon/world/terrainTransitionField'
+import { hasTerrainTransition } from '@/babylon/world/terrainTransitionField'
 
 const PATCH_SIZE = 3
 const BOUNDARY_AMPLITUDE = 2
 const BOUNDARY_FREQUENCY = 0.32
 export const TERRAIN_TRANSITION_REACH = 4
 export const POND_BANK_FLAG = 32
+export const TERRAIN_JUNCTION_BASE_SHIFT = 4
 
 export function terrainBoundaryOffset(z: number) {
     return BOUNDARY_AMPLITUDE * Math.sin(z * BOUNDARY_FREQUENCY)
@@ -408,8 +409,7 @@ export type TerrainJunctionLayer = {
     origin: readonly number[]
 }
 
-export function createTerrainJunctionMaterial(name: string, layers: readonly TerrainJunctionLayer[],
-    pairs: readonly [TerrainBoundaryField, TerrainBoundaryField], lowDetail: boolean) {
+export function createTerrainJunctionMaterial(name: string, layers: readonly TerrainJunctionLayer[], lowDetail: boolean) {
     const [base] = layers
     const source = base.material
     const material = new PBRCustomMaterial(name, source.getScene())
@@ -459,7 +459,7 @@ export function createTerrainJunctionMaterial(name: string, layers: readonly Ter
         vJunctionFirstBoundary = terrainBoundaryCorners;
         vJunctionSecondBoundary = terrainWallContact;
         vec2 axis = (world * vec4(cos(terrainSurface.z), 0.0, sin(terrainSurface.z), 0.0)).xz;
-        vJunctionPlacement = vec3(axis, mod(terrainSurface.w, 4.0));
+        vJunctionPlacement = vec3(axis, mod(terrainSurface.w, ${TERRAIN_JUNCTION_BASE_SHIFT ** 2}.0));
         vJunctionUV = terrainAtlasUV(positionUpdated);
         vJunctionPatch = mod(floor(tileCenter + 0.5), ${PATCH_SIZE}.0) + tileUV;
     `)
@@ -471,27 +471,41 @@ export function createTerrainJunctionMaterial(name: string, layers: readonly Ter
     `)
     const coverage = (...kinds: TerrainJunctionLayer['kind'][]) =>
         layers.flatMap(({kind}, index) => kinds.includes(kind) ? [`weights[${index}]`] : []).join(' + ') || '0.0'
-    const edgeCode = pairs.map(({coverType, substrateType}, index) => {
-        const cover = layers.find(layer => layer.type === coverType)!.kind
-        const grass = cover === 'grass', snow = cover === 'snow'
-        const rock = layers.find(layer => layer.type === substrateType)!.kind === 'rock'
-        return `
-            TransitionNoise noise${index} = sampleTransitionNoise(terrainXZ, ${grass});
-            ${lowDetail && snow ? `noise${index}.grain = (terrainNoise(terrainXZ * 4.8) - 0.5) * 0.90;` : ''}
-            float edgeDistance${index} = boundaryDistance(${index === 0 ? 'vJunctionFirstBoundary' : 'vJunctionSecondBoundary'}, vTerrainTile.xy);
-            float contour${index} = localTerrainCoverDistance(edgeDistance${index}, noise${index}, ${grass || snow}, ${rock && !snow});
-            float cover${index} = smoothstep(-noise${index}.halfWidth, noise${index}.halfWidth, contour${index});
-            float neighbor${index} = ${base.type === coverType ? `1.0 - cover${index}` : `cover${index}`};
-        `
-    }).join('')
+    const edgeCode = layers.flatMap((base, baseIndex) => {
+        // Boundary attributes follow the two neighbors in canonical surface order.
+        const neighbors = layers.filter(layer => layer !== base)
+        if (neighbors.some(layer => !hasTerrainTransition(base.type, layer.type) && !hasTerrainTransition(layer.type, base.type))) return []
+        const boundaries = neighbors.map((neighbor, index) => {
+            const baseIsCover = hasTerrainTransition(base.type, neighbor.type)
+            const cover = baseIsCover ? base : neighbor
+            const substrate = baseIsCover ? neighbor : base
+            const grass = cover.kind === 'grass', snow = cover.kind === 'snow'
+            return `
+                TransitionNoise noise${index} = sampleTransitionNoise(terrainXZ, ${grass});
+                ${lowDetail && snow ? `noise${index}.grain = (terrainNoise(terrainXZ * 4.8) - 0.5) * 0.90;` : ''}
+                float edgeDistance${index} = boundaryDistance(${index === 0 ? 'vJunctionFirstBoundary' : 'vJunctionSecondBoundary'}, vTerrainTile.xy);
+                float contour${index} = localTerrainCoverDistance(edgeDistance${index}, noise${index},
+                    ${grass || snow}, ${substrate.kind === 'rock' && !snow});
+                float cover${index} = smoothstep(-noise${index}.halfWidth, noise${index}.halfWidth, contour${index});
+                float neighbor${index} = ${baseIsCover ? `1.0 - cover${index}` : `cover${index}`};
+            `
+        }).join('')
+        return [`if (abs(baseIndex - ${baseIndex}.0) < 0.5) {
+            ${boundaries}
+            float overlap = 0.5 * neighbor0 * neighbor1;
+            vec3 blend = vec3((1.0 - neighbor0) * (1.0 - neighbor1), neighbor0 - overlap, neighbor1 - overlap);
+            weights = blend.${['xyz', 'yxz', 'yzx'][baseIndex]};
+        }`]
+    }).join(' else ')
     material.Fragment_Before_Lights(`
         vec2 noisePhase = vTerrainTile.zw;
         vec2 terrainXZ = min(abs(noisePhase), abs(${LOCAL_TRANSITION_NOISE_PERIOD}.0 - noisePhase)) - ${NOISE_QUARTER_PERIOD}.0;
         const bool wall = false;
+        float placement = floor(vJunctionPlacement.z + 0.5);
+        float baseIndex = floor(placement / ${TERRAIN_JUNCTION_BASE_SHIFT}.0);
+        float placedLayer = mod(placement, ${TERRAIN_JUNCTION_BASE_SHIFT}.0);
+        vec3 weights = vec3(0.0);
         ${edgeCode}
-        // Share the overlap equally so the choice of primary boundary does not affect the result.
-        float overlap = 0.5 * neighbor0 * neighbor1;
-        vec3 weights = vec3((1.0 - neighbor0) * (1.0 - neighbor1), neighbor0 - overlap, neighbor1 - overlap);
         float junctionSnow = ${coverage('snow')};
         float junctionGrass = ${coverage('grass')};
         float junctionMud = ${coverage('mud')};
@@ -501,7 +515,7 @@ export function createTerrainJunctionMaterial(name: string, layers: readonly Ter
         surfaceAlbedo = vec3(0.0);
         vec3 blendedBump = vec3(0.0);
         ${layers.map((_, i) => `{
-            float placed = 1.0 - step(0.5, abs(vJunctionPlacement.z - ${i}.0));
+            float placed = 1.0 - step(0.5, abs(placedLayer - ${i}.0));
             vec3 atlas = junctionAtlas${i};
             vec2 uv = mix(atlas.xy + vJunctionPatch * atlas.z, vJunctionUV * atlas.z, placed);
             surfaceAlbedo += toLinearSpace(texture2D(junctionColor${i}, uv).rgb) * weights[${i}];

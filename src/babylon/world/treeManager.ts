@@ -46,7 +46,7 @@ const placements: TreePlacement[] = []
 const snowFootprints: TreeSnowFootprint[] = []
 const playerCenter = Vector3.Zero()
 const targetCenter = Vector3.Zero()
-const treeNightFill = new Vector2(0, 0.1)
+const treeNightFill = new Vector2(0, 0.05)
 const castsLocalTreeShadow = (shape: TreeShape) => shape === 'wood6' || !shape.startsWith('wood')
 const treeCameraFrustum = new TreeCameraFrustum()
 const treeCameraTile = Vector3.Zero()
