@@ -24,6 +24,9 @@ import { Lights } from '@/babylon/scene/lights'
 import { MyPlayer } from '@/data/myPlayer'
 import { GfxManager } from '@/babylon/gfx/gfxManager'
 
+const FAR_LOD_DISTANCE_SQUARED = 30 ** 2
+const NEAR_LOD_DISTANCE_SQUARED = 28 ** 2
+
 export class MonsterModel implements EquipBearer {
     private footStepSounds = new Map<string, Sound>()
     parent: Monster
@@ -93,10 +96,26 @@ export class MonsterModel implements EquipBearer {
         this.nameTextNode.parent = this.node
         this.nameTextNode.position.y = this.parent.getModelHeight() / this.template.scale.y
         this.initialized = true
+        this.updateDistanceLod(true)
 
         this.node.position.x = this.parent.pos.x
         this.node.position.z = this.parent.pos.z
         this.parent.nameDisplayTime = Date.now() + 3000
+    }
+
+    updateDistanceLod(initial = false) {
+        if (!this.initialized || this.preparingFirstView) return
+        const lod = this.template.distanceLod
+        const camera = Renderer.camera
+        if (!lod || !camera) return
+        if (initial) camera.getViewMatrix()
+        const threshold = !initial && this.mesh.geometry === lod.far ? NEAR_LOD_DISTANCE_SQUARED : FAR_LOD_DISTANCE_SQUARED
+        const geometry = Vector3.DistanceSquared(this.parent.pos, camera.globalPosition) >= threshold ? lod.far : lod.near
+        if (this.mesh.geometry === geometry) return
+        // Rebuild the single submesh's index range for both swap directions.
+        this.mesh.releaseSubMeshes()
+        geometry.applyToMesh(this.mesh)
+        ActiveMeshFreezer.invalidate()
     }
 
     assignRhand(type: number, matIndex: number, scale = Vector3.One(), rotation: Vector3 | null, position: Vector3 | null) {

@@ -1,4 +1,5 @@
 import { AnimationGroup, AssetContainer, Mesh, PBRMaterial, Skeleton, Vector3 } from '@babylonjs/core'
+import type { Geometry } from '@babylonjs/core'
 import { BabylonUtils } from '@/babylon/utils'
 import { Monster } from '@/babylon/monsters/monster'
 import { Lights } from '@/babylon/scene/lights'
@@ -30,6 +31,7 @@ export class MonsterTemplate {
 
     // Original GLTF data used as source of clones
     assetContainer?: AssetContainer
+    distanceLod?: Readonly<{near: Geometry, far: Geometry}>
     material?: PBRMaterial
     selectedMaterial?: PBRMaterial
 
@@ -63,6 +65,7 @@ export class MonsterTemplate {
         this.clonesInact = []
         this.clonesToReuse = []
         this.assetContainer = assetContainer
+        this.distanceLod = undefined
         this.assetContainer.animationGroups[0].pause()
     }
 
@@ -89,6 +92,7 @@ export class MonsterTemplate {
         clone.node.alwaysSelectAsActiveMesh = true
         clone.material = this.material
         clone.selectedMaterial = this.selectedMaterial
+        clone.distanceLod = this.distanceLod
 
         clone.node.getChildMeshes().forEach(mesh => {
             clone.mesh = mesh as Mesh
