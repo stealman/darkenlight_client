@@ -11,6 +11,7 @@ import {
     Vector3,
 } from '@babylonjs/core'
 import { getBrightnessIntensityFactor, Settings } from '@/settings/settings'
+import { GameShadowGenerator } from '@/babylon/scene/lighting/gameShadowGenerator'
 import type { DayNightCycleSync } from '@/network/messageIfs'
 import type { StaticLightProfile, StaticLightSlot, StaticLightSource } from '@/babylon/scene/lighting/lightTypes'
 import {
@@ -144,10 +145,10 @@ export const Lights = {
             : Settings.deviceType === 'TABLET' ? 13 : 15
 
         if (Settings.isShadowsEnabled()) {
-            this.shadow = new ShadowGenerator(Settings.detailLevel.shadowQuality == 2 ? 4096 : 2048, this.sunLight, false)
+            this.shadow = new GameShadowGenerator(Settings.detailLevel.shadowQuality == 2 ? 4096 : 2048, this.sunLight, false)
             this.shadow.usePoissonSampling = true
             this.shadow.forceBackFacesOnly = true
-            this.personalShadow = new ShadowGenerator(Settings.detailLevel.shadowQuality == 2 ? 2048 : 1024, this.personalLight, false)
+            this.personalShadow = new GameShadowGenerator(Settings.detailLevel.shadowQuality == 2 ? 2048 : 1024, this.personalLight, false)
             this.personalShadow.bias = 0.005
             this.personalShadow.usePoissonSampling = true
             this.personalShadow.frustumEdgeFalloff = 0.3

@@ -16,6 +16,17 @@ export const LARGE_CAMPFIRE_SHADOW_SLOT_COUNT = 4
 export const FILTER_ACTOR_STATIC_SHADOW_CASTERS_BY_DISTANCE = true
 export const ACTOR_STATIC_SHADOW_CASTER_UPDATE_SECONDS = 0.1
 export const STATIC_LIGHT_ASSIGNMENT_UPDATE_SECONDS = 0.1
+
+// Keep intermittent updates near 30–40 Hz on high-refresh displays. Small
+// changes around a boundary must not reset the render target's counter.
+export function intermittentShadowRefreshRate(fps: number, currentRate: number) {
+    if (!Number.isFinite(fps)) return 2
+    const rate = Math.max(2, Math.floor(fps / 30))
+    if (currentRate >= 2 && Math.abs(currentRate - rate) === 1
+        && Math.abs(fps - Math.max(currentRate, rate) * 30) < 5) return currentRate
+    return rate
+}
+
 export const STATIC_FIRE_SMOKE_PARTICLE_FACTORS = [0.4, 0.65, 1]
 // A/B switch: false restores the original per-object CPU particle systems.
 export const USE_SHARED_GPU_STATIC_FIRE_PARTICLES = true

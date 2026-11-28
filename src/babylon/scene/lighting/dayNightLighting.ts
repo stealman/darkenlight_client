@@ -15,6 +15,7 @@ import {
     INITIAL_DAY_NIGHT_PHASE,
     NIGHT_ENVIRONMENT_INTENSITY_FACTOR,
     OUTDOOR_PERSONAL_SHADOW_DARKNESS,
+    intermittentShadowRefreshRate,
 } from '@/babylon/scene/lighting/lightConfig'
 import { LightningEffect } from '@/babylon/scene/lighting/lightningEffect'
 
@@ -248,7 +249,9 @@ function getPersonalShadowRefreshRate(host: DayNightLightingHost) {
     const previous = host.personalShadowLightPosition
     const moved = !Number.isFinite(previous.x) || Vector3.DistanceSquared(lightPosition, previous) > 0.000001
     previous.copyFrom(lightPosition)
-    return moved ? RenderTargetTexture.REFRESHRATE_RENDER_ONEVERYFRAME : RenderTargetTexture.REFRESHRATE_RENDER_ONEVERYTWOFRAMES
+    return moved ? RenderTargetTexture.REFRESHRATE_RENDER_ONEVERYFRAME
+        : intermittentShadowRefreshRate(host.personalLight.getScene().getEngine().getFps(),
+            host.personalShadow.getShadowMap()?.refreshRate ?? 0)
 }
 
 function setDynamicShadowActive(shadow: ShadowGenerator, active: boolean, activeDarkness: number,

@@ -121,6 +121,9 @@ export const ViewportManager = {
     calculateViewport(camera) {
         const myPos = MyPlayer.myChar.getPositionRounded()
         const borderTilesByHeight: Vector3[][] = []
+        // This can run before the camera's first render. Babylon combines the cached matrices here.
+        camera.getViewMatrix()
+        camera.getProjectionMatrix()
         const frustumPlanes = Frustum.GetPlanes(camera.getTransformationMatrix())
 
         for (let heightLayer = 0; heightLayer <= this.downwardHeightLayers; heightLayer++) {

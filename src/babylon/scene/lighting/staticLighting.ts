@@ -7,6 +7,7 @@ import {
     Vector3,
 } from '@babylonjs/core'
 import { Materials } from '@/babylon/materials'
+import { GameShadowGenerator } from '@/babylon/scene/lighting/gameShadowGenerator'
 import { MyPlayer } from '@/data/myPlayer'
 import { getBrightnessIntensityFactor, Settings } from '@/settings/settings'
 import {
@@ -26,6 +27,7 @@ import {
     STATIC_LIGHT_PULSE_AMPLITUDE,
     STATIC_LIGHT_PULSE_PERIOD_SECONDS,
     STATIC_SHADOW_LIGHT_LIMITS,
+    intermittentShadowRefreshRate,
 } from '@/babylon/scene/lighting/lightConfig'
 import type {
     StaticLightProfile,
@@ -484,7 +486,7 @@ function selectStaticShadowGenerator(slot: StaticLightSlot, shadow: ShadowGenera
 }
 
 function createStaticShadowGenerator(host: StaticLightingHost, light: SpotLight, mapSize: number): ShadowGenerator {
-    const shadow = new ShadowGenerator(mapSize, light, false)
+    const shadow = new GameShadowGenerator(mapSize, light, false)
     shadow.bias = 0.005
     shadow.setDarkness(1)
     shadow.usePoissonSampling = true
@@ -498,7 +500,7 @@ function createStaticShadowGenerator(host: StaticLightingHost, light: SpotLight,
     return shadow
 }
 
-function setStaticShadowGeneratorActive(shadow: ShadowGenerator, active: boolean, hasDynamicCasters: boolean = false) {
+function setStaticShadowGeneratorActive(shadow: ShadowGenerator, active: boolean, hasDynamicCasters = false) {
     const darkness = active ? 0 : 1
     const previousDarkness = shadow.getDarkness()
     if (previousDarkness !== darkness) {
@@ -506,7 +508,7 @@ function setStaticShadowGeneratorActive(shadow: ShadowGenerator, active: boolean
     }
     const shadowMap = shadow.getShadowMap()
     const refreshRate = active && hasDynamicCasters
-        ? RenderTargetTexture.REFRESHRATE_RENDER_ONEVERYTWOFRAMES
+        ? intermittentShadowRefreshRate(shadow.getLight().getScene().getEngine().getFps(), shadowMap?.refreshRate ?? 0)
         : RenderTargetTexture.REFRESHRATE_RENDER_ONCE
     if (shadowMap && shadowMap.refreshRate !== refreshRate) {
         shadowMap.refreshRate = refreshRate

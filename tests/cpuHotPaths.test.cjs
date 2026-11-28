@@ -15,6 +15,76 @@ function loadModule(path, dependencies) {
     return exports
 }
 
+test('the first viewport calculation culls against initialized camera matrices', () => {
+    const babylon = require('babylonjs')
+    const engine = new babylon.NullEngine({renderWidth: 2560, renderHeight: 1313})
+    const scene = new babylon.Scene(engine)
+    try {
+        const spawn = new babylon.Vector3(951, 9, 996)
+        const parent = new babylon.TransformNode('player', scene)
+        parent.position.copyFrom(spawn)
+        const camera = new babylon.FreeCamera('game', new babylon.Vector3(-12, 12, -12), scene)
+        camera.setTarget(new babylon.Vector3(0, -2, 0))
+        camera.parent = parent
+        const {ViewportManager: viewport} = loadModule('utils/viewport.ts', {
+            '@babylonjs/core': babylon,
+            '@/data/myPlayer': {MyPlayer: {myChar: {getPositionRounded: () => spawn}}},
+        })
+
+        viewport.calculateViewport(camera)
+        assert.equal(viewport.isPointInVisibleMatrix(spawn.x, spawn.z, 0, spawn.y, 0, spawn), true)
+        assert.equal(viewport.isPointInVisibleMatrix(spawn.x - 45, spawn.z - 45, 0, spawn.y, 0, spawn), false)
+    } finally {
+        scene.dispose()
+        engine.dispose()
+    }
+})
+
+test('shadow bindings are reused only for the same light slot and render pass', () => {
+    const calls = []
+    class ShadowGenerator {
+        constructor(light) {this.light = light}
+        getLight() {return this.light}
+        bindShadowLight(slot, effect) {calls.push([this.light.name, slot, effect])}
+    }
+    const {GameShadowGenerator} = loadModule('babylon/scene/lighting/gameShadowGenerator.ts', {
+        '@babylonjs/core': {ShadowGenerator},
+    })
+    const effect = {}, otherEffect = {}
+    let renderId = 1, cachedEffect = effect
+    const scene = {getRenderId: () => renderId, getCachedEffect: () => cachedEffect}
+    const first = new GameShadowGenerator({getScene: () => scene, name: 'first'})
+    const second = new GameShadowGenerator({getScene: () => scene, name: 'second'})
+
+    first.bindShadowLight('0', effect)
+    first.bindShadowLight('0', effect)
+    first.bindShadowLight('1', effect)
+    second.bindShadowLight('0', effect)
+    first.bindShadowLight('0', effect)
+    cachedEffect = otherEffect
+    first.bindShadowLight('0', effect)
+    cachedEffect = effect
+    renderId++
+    first.bindShadowLight('0', effect)
+    assert.deepEqual(calls, [
+        ['first', '0', effect], ['first', '1', effect], ['second', '0', effect],
+        ['first', '0', effect], ['first', '0', effect], ['first', '0', effect],
+    ])
+})
+
+test('shadow cadence stays stable near a refresh threshold', () => {
+    const {intermittentShadowRefreshRate: refreshRate} = loadModule('babylon/scene/lighting/lightConfig.ts', {
+        '@babylonjs/core': {Vector3: class {normalize() {return this}}},
+    })
+    assert.equal(refreshRate(60, 0), 2)
+    assert.equal(refreshRate(165, 2), 5)
+    assert.equal(refreshRate(149, 5), 5)
+    assert.equal(refreshRate(145, 5), 4)
+    assert.equal(refreshRate(151, 4), 4)
+    assert.equal(refreshRate(155, 4), 5)
+    assert.equal(refreshRate(NaN, 5), 2)
+})
+
 test('world shaders overlap across materials and warm the depth pre-pass in isolation', async () => {
     const {warmUpWorldInstanceMaterials} = loadModule('babylon/world/worldInstanceBuffers.ts', {})
     const started = []
