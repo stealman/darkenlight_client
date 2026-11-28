@@ -5,6 +5,7 @@ import {LocalGameStorage, parseSave, restoreCharacterSave, type GameCollections}
 import type {GameStorage, StorageRequest} from '@game/db/storage'
 import {browserPlatform} from './browserPlatform'
 import type {HostMessage, WorkerMessage, WorkerStart} from './workerProtocol'
+import {characterGameMode} from './workerProtocol'
 import {GameProcessor} from '@game/processor/gameProcessor'
 import {CharactersManager} from '@game/character/charManager'
 import {CharacterRepo} from '@game/db/repositories/characters'
@@ -40,7 +41,7 @@ async function start(options: WorkerStart) {
     if (started) throw new Error('Local game has already started')
     started = true
     staticMaps = options.mode === 'play'
-    if (options.profile && (options.profile.id !== options.slot || options.profile.gm !== (options.mode === 'authoring'))) {
+    if (options.profile && (options.profile.id !== options.slot || characterGameMode(options.profile) !== options.mode)) {
         throw new Error('Character profile does not match its save or game mode')
     }
     let storage: GameStorage

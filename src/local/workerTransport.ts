@@ -18,7 +18,7 @@ export class WorkerTransport implements GameTransport {
     private ioQueue = Promise.resolve()
     private readonly connectionId = 'local-player'
 
-    constructor(mode: LocalGameMode, readonly saveSlot = 'default', profile?: CharacterProfile) {
+    constructor(readonly mode: LocalGameMode, readonly saveSlot = 'default', profile?: CharacterProfile) {
         if (!/^[a-zA-Z0-9_-]{1,64}$/.test(saveSlot)) throw new Error('Invalid save slot')
         this.worker = new Worker(new URL('./game.worker.ts', import.meta.url), {type: 'module'})
         this.ready = new Promise((resolve, reject) => {

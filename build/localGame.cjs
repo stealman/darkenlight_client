@@ -28,9 +28,14 @@ function localGamePlugin(serverRoot, authoringEnabled = false) {
                 }
                 const address = request.socket.remoteAddress
                 if (!isLocalAddress(address)
-                    || request.method !== 'POST' || request.headers['x-darkenlight-authoring'] !== token) {
+                    || !['HEAD', 'POST'].includes(request.method) || request.headers['x-darkenlight-authoring'] !== token) {
                     response.statusCode = 403
                     response.end(JSON.stringify({error: 'GM authoring is only available on this PC.'}))
+                    return
+                }
+                if (request.method === 'HEAD') {
+                    response.statusCode = 204
+                    response.end()
                     return
                 }
                 try {

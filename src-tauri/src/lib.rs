@@ -188,6 +188,8 @@ struct CharacterProfile {
     id: String,
     name: String,
     gm: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    authoring: Option<bool>,
     class_key: String,
     #[serde(default = "default_character_gender")]
     gender: String,
@@ -226,7 +228,7 @@ fn write_character_profile(app: tauri::AppHandle, profile: CharacterProfile) -> 
     use std::io::Write;
     save_slot_path(&app, &profile.id)?;
     if !profile.id.starts_with("char-")
-        || profile.gm
+        || profile.authoring.unwrap_or(profile.gm)
         || profile.name.trim().chars().count() < 3
         || profile.name.chars().count() > 40
         || !["FIGHTER", "MYSTIC"].contains(&profile.class_key.as_str())

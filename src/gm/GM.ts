@@ -271,6 +271,7 @@ export const GMManager = {
     },
 
     toggleGmPanel() {
+        if (Connector.localGameMode === 'play') return
         if (this.gmPanelVisible.value && this.deferTerrainNavigation(() => this.toggleGmPanel())) return
         if (this.gmPanelVisible.value) {
             WorldAreaPreview.clear()

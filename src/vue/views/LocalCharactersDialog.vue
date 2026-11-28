@@ -40,10 +40,13 @@
                         <input id="local-character-name" v-model="name" type="text" :disabled="busy" :aria-invalid="nameTaken" :aria-describedby="nameTaken ? 'local-character-name-error' : undefined" maxlength="40" autocomplete="off" />
                     </label>
                     <p v-if="nameTaken" id="local-character-name-error" class="local-character-name-error" role="alert">{{ t('login.accountCharacterNameTaken') }}</p>
-                    <label v-if="gmAllowed" class="local-character-gm" for="local-character-gm">
+                    <label class="local-character-gm" for="local-character-gm">
                         <Checkbox input-id="local-character-gm" v-model="gm" binary :disabled="busy" /> {{ t('localCharacters.gm') }}
                     </label>
-                    <p v-if="gm">{{ t('localCharacters.gmHint') }}</p>
+                    <label v-if="gm && authoringAvailable" class="local-character-gm" for="local-character-authoring">
+                        <Checkbox input-id="local-character-authoring" v-model="authoring" binary :disabled="busy" />
+                        {{ t('localCharacters.authoring') }}
+                    </label>
                     <div class="dialog-actions"><button class="dialog-button" :disabled="!canCreate">
                         <span class="ui-text-gradient--button-state">{{ t('localCharacters.create') }}</span>
                     </button></div>
@@ -60,6 +63,8 @@ import Checkbox from 'primevue/checkbox'
 import GameDialog from './GameDialog.vue'
 import GuestCharacterCreationDialog from './guestCharacterCreationDialog.vue'
 import {createProfile, deleteProfile, listProfiles, loadSave, type CharacterProfile} from '@/local/saveStore'
+import {canAuthorLocalWorld} from '@/local/authoring'
+import {characterGameMode} from '@/local/workerProtocol'
 import {useI18n} from '@/i18n'
 import {EJSON} from 'bson'
 import {OUTDOOR_DAY_NIGHT_CYCLE_DURATION_MS} from '@game/world/dayNightCycle'
@@ -67,9 +72,10 @@ import {AudioManager} from '@/babylon/audio/audioManager'
 
 const emit = defineEmits<{start: [profile: CharacterProfile], enter: []}>()
 const {t} = useI18n()
-const gmAllowed = import.meta.env.DEV && import.meta.env.VITE_GM_MODE === 'true'
 const profiles = ref<CharacterProfile[]>([])
-const visibleProfiles = computed(() => profiles.value.filter(profile => !profile.gm || gmAllowed))
+const authoringAvailable = ref(false)
+const authoring = ref(true)
+const visibleProfiles = computed(() => profiles.value.filter(profile => characterGameMode(profile) === 'play' || authoringAvailable.value))
 const summaries = ref<Record<string, {classKey: string, gameTimeMs: number}>>({})
 function characterClass(profile: CharacterProfile) {
     return profile.gm ? 'GM' : summaries.value[profile.id]?.classKey ?? profile.classKey
@@ -91,7 +97,9 @@ const error = ref('')
 const pendingDelete = ref<CharacterProfile | null>(null)
 onMounted(async () => {
     try {
-        profiles.value = await listProfiles()
+        const [available, savedProfiles] = await Promise.all([canAuthorLocalWorld(), listProfiles()])
+        authoringAvailable.value = available
+        profiles.value = savedProfiles
         profilesLoaded.value = true
         await Promise.all(visibleProfiles.value.map(async profile => {
             try {
@@ -128,7 +136,7 @@ async function removeCharacter() {
 async function create(classKey: 'FIGHTER' | 'MYSTIC', gender: 'M' | 'F' = 'M') {
     busy.value = true
     try {
-        const profile = await createProfile(name.value, gm.value, classKey, gender)
+        const profile = await createProfile(name.value, gm.value, classKey, gender, gm.value && authoringAvailable.value && authoring.value)
         chooseClass.value = false
         emit('start', profile)
     } catch (value) { error.value = String(value); chooseClass.value = false; busy.value = false }

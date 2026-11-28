@@ -24,3 +24,19 @@ test('GM authoring is opt-in and never includes its token in a release build', a
     assert.equal(response.statusCode, 403)
     assert.match(body.error, /VITE_GM_MODE=true/)
 })
+
+test('authoring availability uses the same local address and token checks as world edits', async () => {
+    const plugin = localGamePlugin('.', true)
+    const token = JSON.parse(plugin.config({}, {command: 'serve'}).define.__AUTHORING_TOKEN__)
+    let middleware
+    plugin.configureServer({middlewares: {use(path, handler) { middleware = handler }}})
+    for (const [remoteAddress, header, expected] of [
+        ['127.0.0.1', token, 204],
+        ['192.0.2.1', token, 403],
+        ['127.0.0.1', 'wrong', 403],
+    ]) {
+        const response = {setHeader() {}, end() {}}
+        await middleware({method: 'HEAD', socket: {remoteAddress}, headers: {'x-darkenlight-authoring': header}}, response)
+        assert.equal(response.statusCode, expected)
+    }
+})

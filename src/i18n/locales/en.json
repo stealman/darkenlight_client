@@ -1,6 +1,6 @@
 {
   "characterGender": {"label": "Gender", "male": "Male", "female": "Female"},
-  "localCharacters": {"empty": "No saved characters yet.", "continue": "Continue", "new": "New character", "gm": "Create a GM character", "gmHint": "GM character progress, equipment and spawn state are saved locally.", "create": "Create", "delete": "Delete", "deleteNamed": "Delete character {name}", "deleteTitle": "Delete character?", "deleteDescription": "Character {name} and their saved progress will be permanently deleted. This cannot be undone.", "cancel": "Cancel"},
+  "localCharacters": {"empty": "No saved characters yet.", "continue": "Continue", "new": "New character", "gm": "Create a GM character", "authoring": "Use the map authoring world", "create": "Create", "delete": "Delete", "deleteNamed": "Delete character {name}", "deleteTitle": "Delete character?", "deleteDescription": "Character {name} and their saved progress will be permanently deleted. This cannot be undone.", "cancel": "Cancel"},
   "signpost": {"northEast": "Northeast", "southEast": "Southeast", "southWest": "Southwest", "northWest": "Northwest", "title": "Signpost", "north": "North", "south": "South", "east": "East", "west": "West", "blank": "—", "read": "Read signpost"},
   "activityLog": {
     "partyCreated": "You created a party.",

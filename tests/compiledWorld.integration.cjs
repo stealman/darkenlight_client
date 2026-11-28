@@ -5,7 +5,8 @@ const {chromium} = require('playwright-core')
 async function main() {
     const root = resolve(__dirname, '..')
     const {preview} = await import('vite')
-    const server = await preview({root, configFile: join(root, 'vite.config.js'), preview: {host: '127.0.0.1', port: 0}, logLevel: 'warn'})
+    const server = await preview({root, configFile: join(root, 'vite.config.js'),
+        build: {outDir: process.env.DARKENLIGHT_TEST_DIST ?? 'dist'}, preview: {host: '127.0.0.1', port: 0}, logLevel: 'warn'})
     let browser
     try {
         browser = await chromium.launch({channel: 'chrome', headless: true, args: ['--enable-unsafe-swiftshader']})
@@ -25,9 +26,10 @@ async function main() {
             if (response.ok() && new URL(response.url()).pathname.endsWith('.dlr')) renderAssets.push(response.url())
         })
         page.on('websocket', socket => sockets.push(socket.url()))
-        await page.goto(`http://127.0.0.1:${server.httpServer.address().port}/`)
+        const url = `http://127.0.0.1:${server.httpServer.address().port}/`
+        await page.goto(url)
         await page.locator('#local-character-name').fill('PackagedHero')
-        assert.equal(await page.locator('#local-character-gm').count(), 0)
+        assert.equal(await page.locator('#local-character-gm').isChecked(), false)
         await page.locator('form button').click()
         await page.locator('.guest-character-class-label').filter({has: page.locator('.guest-character-creation-class--fighter')}).click()
         await page.locator('.guest-character-creation-continue-action').click()
@@ -65,6 +67,27 @@ async function main() {
         assert.deepEqual(sockets, [])
         assert.deepEqual(errors, [])
         console.log('PASS: production web build loads binary maps and precomputed terrain, renders, saves, logs out and restores a profile without map PNGs or WebSockets')
+
+        const mobile = await browser.newPage({serviceWorkers: 'block', viewport: {width: 844, height: 390},
+            deviceScaleFactor: 2, isMobile: true, hasTouch: true})
+        mobile.setDefaultTimeout(120000)
+        mobile.on('pageerror', error => errors.push(error.stack))
+        const authoringRequests = []
+        mobile.on('request', request => {
+            if (new URL(request.url()).pathname === '/__game_io') authoringRequests.push(request.url())
+        })
+        await mobile.goto(url)
+        await mobile.locator('#local-character-name').fill('PackagedGM')
+        await mobile.locator('label[for="local-character-gm"]').tap()
+        assert.equal(await mobile.locator('#local-character-authoring').count(), 0)
+        await mobile.locator('form button').tap()
+        await mobile.locator('#gm-system-buttons').waitFor()
+        await mobile.evaluate(() => window.dispatchEvent(new Event('game:session-ended')))
+        await mobile.locator('[data-profile-id]').tap()
+        await mobile.locator('#gm-system-buttons').waitFor()
+        assert.deepEqual(authoringRequests, [])
+        assert.deepEqual(errors, [])
+        console.log('PASS: packaged GM creation and save reload use the bundled world')
     } finally {
         await browser?.close()
         await new Promise((resolve, reject) => server.httpServer.close(error => error ? reject(error) : resolve()))

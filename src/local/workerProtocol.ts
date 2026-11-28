@@ -1,6 +1,12 @@
 import type {CharacterProfile} from './saveStore'
 import type {GameCommand, GameMessage} from '../network/transport'
 export type LocalGameMode = 'play' | 'authoring'
+
+export function characterGameMode(profile: CharacterProfile): LocalGameMode {
+    // GM saves created before this field existed always used the authoring world.
+    return profile.gm && profile.authoring !== false ? 'authoring' : 'play'
+}
+
 export interface WorkerStart {
     kind: 'start'
     mode: LocalGameMode

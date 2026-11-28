@@ -17,7 +17,7 @@
             </div>
             <div v-if="myCharRef?.className === 'GM'" id="gm-system-buttons">
                 <button type="button" class="hud-settings-button" aria-label="Debug" @click="showDebug" v-html="getInspectSvg('icon-white', 'icon-inspect')"></button>
-                <button type="button" class="gm-panel-button dialog-button" @click="toggleGmPanel()"><span class="ui-text-gradient--button-state">{{ t('app.gmPanel') }}</span></button>
+                <button v-if="Connector.localGameMode !== 'play'" type="button" class="gm-panel-button dialog-button" @click="toggleGmPanel()"><span class="ui-text-gradient--button-state">{{ t('app.gmPanel') }}</span></button>
             </div>
 
             <div id="gui-buttons">
@@ -202,6 +202,7 @@ import { Connector } from '@/network/connector'
 import MenuAtmosphere from '@/vue/views/MenuAtmosphere.vue'
 import LocalCharactersDialog from '@/vue/views/LocalCharactersDialog.vue'
 import type {CharacterProfile} from '@/local/saveStore'
+import {characterGameMode} from '@/local/workerProtocol'
 import {initializeLocalGameLifecycle} from '@/local/lifecycle'
 import GuestCharacterCreationDialog from '@/vue/views/guestCharacterCreationDialog.vue'
 import AccountCharacterNameDialog from '@/vue/views/accountCharacterNameDialog.vue'
@@ -354,7 +355,7 @@ const startLocalCharacter = async (profile: CharacterProfile) => {
     try {
         // Unmount previews before disposing their scene.
         await nextTick()
-        const connection = Connector.initialize(profile.gm ? 'authoring' : 'play', profile)
+        const connection = Connector.initialize(characterGameMode(profile), profile)
         if (Renderer.menuPreviewSceneUsed) {
             // The worker only sends world data after the login request. Build
             // the clean gameplay scene while it prepares the simulation.

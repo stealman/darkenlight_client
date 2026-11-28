@@ -29,11 +29,11 @@ yarn.cmd export:world
 yarn.cmd dev
 ```
 
-Export requires local MongoDB and source map PNGs. For GM authoring, set
-`VITE_GM_MODE=true` in `.env.local` (see `.env.example`) and restart `yarn dev`.
-This enables the GM checkbox; it never appears in release builds. Authoring runs
-in the browser on the authoring PC, using MongoDB and editable PNGs through the
-local development bridge. Tauri is not needed for authoring.
+Export requires local MongoDB and source map PNGs. The local character menu can
+create a GM in the bundled world, including on a phone and in a release build.
+For GM map authoring on the development PC, set `VITE_GM_MODE=true` in
+`.env.local` and restart `yarn dev`. Select the authoring world when creating
+the GM to use MongoDB and editable PNGs through the local development bridge.
 
 Create/select local characters by name, without accounts or passwords. Each has
 its own save; the menu also supports deleting a character and its save. Browser
@@ -41,9 +41,9 @@ saves use IndexedDB; desktop saves use the native app data directory. Saves hold
 character state, spawn and resource progress, and counters, not the authored world definition.
 Migration between changed source worlds remains undecided.
 
-A new GM starts without equipment. Its character save is local, while each session
-loads the authored world with saved spawn and resource progress. GM world edits are saved to local MongoDB/PNGs;
-existing Mongo accounts and characters are not used for local play.
+A new GM starts without equipment. Authoring sessions load the authored world
+with saved spawn and resource progress. GM world edits are saved to local
+MongoDB and map PNGs.
 
 ## Generate model LODs
 

@@ -27,6 +27,10 @@ export const Connector = {
         return this.transport instanceof WorkerTransport ? this.transport.saveSlot : undefined
     },
 
+    get localGameMode(): LocalGameMode | undefined {
+        return this.transport instanceof WorkerTransport ? this.transport.mode : undefined
+    },
+
     async initialize(mode: LocalGameMode = 'play', profile?: CharacterProfile) {
         const generation = ++this.generation
         if (this.transport) {
